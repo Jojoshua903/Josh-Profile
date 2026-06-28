@@ -40,7 +40,7 @@ const TRANSLATIONS = {
     'skill5.title': 'Content & Video',
     'skill5.desc': "YouTube, OBS, Restream — I've streamed study sessions and recorded podcasts. Still learning, still growing.",
     'skill6.title': 'Gaming',
-    'skill6.desc': "Minecraft, GTA, Geometry Dash, and whatever else looks fun. Gaming is how I unwind and get creative ideas.",
+    'skill6.desc': "Minecraft, Hollow Knight Silksong, and whatever else looks fun. Gaming is how I unwind and get creative ideas.",
 
     // Projects
     'proj.label': 'My Projects',
@@ -49,8 +49,8 @@ const TRANSLATIONS = {
     'proj1.desc': 'A ranking app I built where you can vote on and rank pretty much anything. Has its own domain and real users.',
     'proj2.name': 'WidR',
     'proj2.desc': 'My pinned GitHub repo — one of my main projects. Check it out for the code and details.',
-    'proj3.name': 'Miloduo',
-    'proj3.desc': 'I automated my Duolingo lessons with GitHub Actions. Yes, really. It runs on a schedule and does the lessons for me.',
+    'proj3.name': 'joshibrahim.nl',
+    'proj3.desc': 'This website — my personal portfolio site, built from scratch with custom animations, bilingual support, and a secret admin panel.',
     'proj4.name': 'More on GitHub',
     'proj4.desc': "I've got 12+ repos with all kinds of experiments and projects. Head over to my GitHub to explore.",
 
@@ -144,7 +144,7 @@ const TRANSLATIONS = {
     'skill5.title': 'Content & Video',
     'skill5.desc': 'YouTube, OBS, Restream — ik heb studiesessies gestreamd en podcasts opgenomen. Nog steeds aan het leren en groeien.',
     'skill6.title': 'Gaming',
-    'skill6.desc': 'Minecraft, GTA, Geometry Dash en alles wat er leuk uitziet. Gaming is hoe ik ontspan en creatieve ideeën krijg.',
+    'skill6.desc': 'Minecraft, Hollow Knight Silksong en alles wat er leuk uitziet. Gaming is hoe ik ontspan en creatieve ideeën krijg.',
 
     // Projects
     'proj.label': 'Mijn Projecten',
@@ -153,8 +153,8 @@ const TRANSLATIONS = {
     'proj1.desc': 'Een ranking-app die ik heb gebouwd waar je op van alles kunt stemmen en ranken. Heeft een eigen domein en echte gebruikers.',
     'proj2.name': 'WidR',
     'proj2.desc': "Mijn vastgepinde GitHub repo — een van mijn belangrijkste projecten. Bekijk de code en details.",
-    'proj3.name': 'Miloduo',
-    'proj3.desc': 'Ik heb mijn Duolingo-lessen geautomatiseerd met GitHub Actions. Ja, echt. Het draait op een schema en doet de lessen voor me.',
+    'proj3.name': 'joshibrahim.nl',
+    'proj3.desc': 'Deze website — mijn persoonlijke portfolio site, helemaal zelf gebouwd met custom animaties, tweetalige ondersteuning en een geheim adminpaneel.',
     'proj4.name': 'Meer op GitHub',
     'proj4.desc': "Ik heb 12+ repo's met allerlei experimenten en projecten. Ga naar mijn GitHub om te verkennen.",
 
