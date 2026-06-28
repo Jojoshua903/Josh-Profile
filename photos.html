@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Josh Ibrahim | Photos</title>
+  <style>
+    :root {
+      --bg: #F5F0E6;
+      --bg-alt: #EDE7D9;
+      --text: #1A1A2E;
+      --text-muted: #6B6B7B;
+      --accent: #E8503A;
+      --accent-secondary: #2D8B8B;
+      --accent-gold: #D4A853;
+      --font-display: "Didot", "Bodoni MT", "Playfair Display", "Times New Roman", serif;
+      --font-body: "Avenir Next", "Avenir", "Futura", "Helvetica Neue", sans-serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; overflow-x: hidden; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      cursor: none;
+      overflow-x: hidden;
+    }
+
+    #cursor-canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    .custom-cursor {
+      position: fixed;
+      width: 20px; height: 20px;
+      border: 2px solid var(--accent);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 10000;
+      transform: translate(-50%, -50%);
+      transition: width 0.3s, height 0.3s, border-color 0.3s, background 0.3s;
+      mix-blend-mode: difference;
+    }
+    .custom-cursor.hovering {
+      width: 50px; height: 50px;
+      background: rgba(232, 80, 58, 0.15);
+      border-color: var(--accent-secondary);
+    }
+    .cursor-dot {
+      position: fixed;
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 10000;
+      transform: translate(-50%, -50%);
+    }
+
+    /* NAV */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      padding: 24px 48px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      backdrop-filter: blur(12px);
+      background: rgba(245, 240, 230, 0.8);
+      transition: transform 0.4s ease;
+    }
+    nav.hidden { transform: translateY(-100%); }
+    .nav-logo {
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      text-decoration: none;
+    }
+    .nav-links { display: flex; gap: 32px; list-style: none; }
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      position: relative;
+      transition: color 0.3s;
+    }
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      bottom: -4px; left: 0;
+      width: 0; height: 2px;
+      background: var(--accent);
+      transition: width 0.3s ease;
+    }
+    .nav-links a:hover { color: var(--text); }
+    .nav-links a:hover::after { width: 100%; }
+    .nav-links a.active { color: var(--text); }
+    .nav-links a.active::after { width: 100%; }
+
+    /* PAGE HEADER */
+    .page-header {
+      padding: 160px 48px 80px;
+      position: relative;
+    }
+    .page-header .section-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .page-header .section-label::before {
+      content: '';
+      width: 40px; height: 1px;
+      background: var(--accent);
+    }
+    .page-title {
+      font-family: var(--font-display);
+      font-size: clamp(2.5rem, 7vw, 5rem);
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      margin-bottom: 20px;
+    }
+    .page-title .highlight {
+      color: var(--accent);
+      font-style: italic;
+    }
+    .page-subtitle {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      max-width: 500px;
+      line-height: 1.7;
+    }
+
+    /* FILTER BAR */
+    .filter-bar {
+      padding: 0 48px 48px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .filter-btn {
+      padding: 10px 24px;
+      border: 1px solid rgba(26, 26, 46, 0.12);
+      border-radius: 30px;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: var(--font-body);
+      font-size: 0.8rem;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: none;
+      transition: all 0.3s ease;
+    }
+    .filter-btn:hover, .filter-btn.active {
+      background: var(--text);
+      color: var(--bg);
+      border-color: var(--text);
+    }
+
+    /* MASONRY GALLERY */
+    .gallery {
+      padding: 0 48px 120px;
+      columns: 3;
+      column-gap: 20px;
+    }
+
+    .gallery-item {
+      break-inside: avoid;
+      margin-bottom: 20px;
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: none;
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .gallery-item.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .gallery-item:hover .gallery-overlay {
+      opacity: 1;
+    }
+    .gallery-item:hover .gallery-img {
+      transform: scale(1.05);
+    }
+
+    .gallery-img {
+      width: 100%;
+      display: block;
+      transition: transform 0.6s ease;
+    }
+
+    .gallery-placeholder {
+      width: 100%;
+      display: block;
+      border-radius: 12px;
+      position: relative;
+    }
+
+    .gallery-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(26, 26, 46, 0.7) 0%, transparent 60%);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 24px;
+      border-radius: 12px;
+    }
+    .gallery-overlay-title {
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+    .gallery-overlay-meta {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.7);
+      letter-spacing: 0.05em;
+    }
+
+    /* PLACEHOLDER GRADIENT IMAGES */
+    .ph { border-radius: 12px; }
+    .ph-1 { background: linear-gradient(135deg, #E8503A 0%, #D4A853 100%); aspect-ratio: 4/5; }
+    .ph-2 { background: linear-gradient(135deg, #2D8B8B 0%, #1A1A2E 100%); aspect-ratio: 3/4; }
+    .ph-3 { background: linear-gradient(135deg, #D4A853 0%, #E8503A 100%); aspect-ratio: 1/1; }
+    .ph-4 { background: linear-gradient(135deg, #1A1A2E 0%, #2D8B8B 100%); aspect-ratio: 5/4; }
+    .ph-5 { background: linear-gradient(135deg, #E8503A 0%, #2D8B8B 100%); aspect-ratio: 3/2; }
+    .ph-6 { background: linear-gradient(135deg, #2D8B8B 0%, #D4A853 100%); aspect-ratio: 4/5; }
+    .ph-7 { background: linear-gradient(135deg, #D4A853 0%, #1A1A2E 100%); aspect-ratio: 1/1; }
+    .ph-8 { background: linear-gradient(135deg, #1A1A2E 0%, #E8503A 100%); aspect-ratio: 3/4; }
+    .ph-9 { background: linear-gradient(135deg, #E8503A 30%, #D4A853 70%, #2D8B8B 100%); aspect-ratio: 5/4; }
+    .ph-10 { background: linear-gradient(135deg, #2D8B8B 0%, #E8503A 50%, #D4A853 100%); aspect-ratio: 4/5; }
+    .ph-11 { background: linear-gradient(135deg, #D4A853 0%, #2D8B8B 100%); aspect-ratio: 3/2; }
+    .ph-12 { background: linear-gradient(135deg, #1A1A2E 0%, #D4A853 100%); aspect-ratio: 1/1; }
+
+    .ph-label {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      color: rgba(255,255,255,0.3);
+      font-family: var(--font-display);
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    /* LIGHTBOX */
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(26, 26, 46, 0.92);
+      backdrop-filter: blur(20px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 60px;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+    .lightbox.open { display: flex; opacity: 1; }
+    .lightbox-content {
+      max-width: 80vw;
+      max-height: 80vh;
+      border-radius: 16px;
+      overflow: hidden;
+      position: relative;
+    }
+    .lightbox-content .gallery-placeholder {
+      width: 60vw;
+      max-height: 70vh;
+    }
+    .lightbox-info {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      padding: 32px;
+      background: linear-gradient(to top, rgba(26, 26, 46, 0.9), transparent);
+    }
+    .lightbox-title {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      color: #fff;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .lightbox-meta {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.6);
+    }
+    .lightbox-close {
+      position: fixed;
+      top: 32px; right: 32px;
+      width: 48px; height: 48px;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 50%;
+      background: transparent;
+      color: #fff;
+      font-size: 1.4rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: none;
+      transition: all 0.3s;
+      z-index: 201;
+    }
+    .lightbox-close:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.4);
+    }
+    .lightbox-nav {
+      position: fixed;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 48px; height: 48px;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 50%;
+      background: transparent;
+      color: #fff;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: none;
+      transition: all 0.3s;
+      z-index: 201;
+    }
+    .lightbox-nav:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.4);
+    }
+    .lightbox-prev { left: 32px; }
+    .lightbox-next { right: 32px; }
+
+    /* EMPTY STATE */
+    .upload-hint {
+      text-align: center;
+      padding: 80px 48px;
+      color: var(--text-muted);
+      display: none;
+    }
+    .upload-hint.show { display: block; }
+    .upload-hint p {
+      font-size: 0.95rem;
+      line-height: 1.7;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    /* SECRET ADMIN PANEL */
+    .admin-panel {
+      position: fixed;
+      top: 0; right: -480px;
+      width: 460px;
+      height: 100vh;
+      background: var(--text);
+      color: var(--bg);
+      z-index: 300;
+      padding: 32px;
+      overflow-y: auto;
+      transition: right 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+      box-shadow: -10px 0 40px rgba(0,0,0,0.3);
+    }
+    .admin-panel.open { right: 0; }
+    .admin-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(26,26,46,0.5);
+      z-index: 299;
+      display: none;
+      opacity: 0;
+      transition: opacity 0.4s;
+    }
+    .admin-overlay.open { display: block; opacity: 1; }
+
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+    }
+    .admin-title {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+    .admin-close {
+      width: 36px; height: 36px;
+      border: 1px solid rgba(245,240,230,0.2);
+      border-radius: 50%;
+      background: transparent;
+      color: var(--bg);
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .admin-close:hover { background: rgba(245,240,230,0.1); }
+
+    .admin-hint {
+      font-size: 0.8rem;
+      color: rgba(245,240,230,0.4);
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+
+    .admin-form { display: flex; flex-direction: column; gap: 16px; margin-bottom: 32px; }
+
+    .admin-field label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(245,240,230,0.5);
+      margin-bottom: 6px;
+    }
+    .admin-field input, .admin-field select {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid rgba(245,240,230,0.15);
+      border-radius: 8px;
+      background: rgba(245,240,230,0.05);
+      color: var(--bg);
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+    .admin-field input:focus, .admin-field select:focus {
+      border-color: var(--accent);
+    }
+    .admin-field input::placeholder { color: rgba(245,240,230,0.25); }
+    .admin-field select option { background: var(--text); color: var(--bg); }
+
+    .admin-preview {
+      width: 100%;
+      aspect-ratio: 4/3;
+      border-radius: 12px;
+      background: rgba(245,240,230,0.05);
+      border: 2px dashed rgba(245,240,230,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    .admin-preview img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      border-radius: 10px;
+    }
+    .admin-preview-empty {
+      font-size: 0.85rem;
+      color: rgba(245,240,230,0.2);
+      text-align: center;
+    }
+
+    .admin-btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #fff;
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .admin-btn:hover { background: #d04530; transform: translateY(-1px); }
+    .admin-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .admin-divider {
+      height: 1px;
+      background: rgba(245,240,230,0.1);
+      margin: 24px 0;
+    }
+
+    .admin-saved-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(245,240,230,0.5);
+      margin-bottom: 16px;
+    }
+
+    .admin-saved-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .admin-saved-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px;
+      border-radius: 8px;
+      background: rgba(245,240,230,0.05);
+    }
+    .admin-saved-thumb {
+      width: 48px; height: 48px;
+      border-radius: 6px;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    .admin-saved-info { flex: 1; min-width: 0; }
+    .admin-saved-name {
+      font-size: 0.85rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .admin-saved-cat {
+      font-size: 0.7rem;
+      color: rgba(245,240,230,0.4);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .admin-saved-delete {
+      width: 28px; height: 28px;
+      border: 1px solid rgba(245,240,230,0.15);
+      border-radius: 50%;
+      background: transparent;
+      color: rgba(245,240,230,0.4);
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all 0.3s;
+    }
+    .admin-saved-delete:hover { border-color: var(--accent); color: var(--accent); }
+
+    .admin-shortcut-badge {
+      position: fixed;
+      bottom: 72px; right: 24px;
+      font-size: 0.65rem;
+      color: rgba(26,26,46,0.08);
+      z-index: 10;
+      letter-spacing: 0.05em;
+      transition: opacity 0.3s;
+    }
+
+    .lang-toggle {
+      padding: 6px 14px;
+      border: 1px solid rgba(26,26,46,0.15);
+      border-radius: 20px;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: var(--font-body);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      cursor: none;
+      transition: all 0.3s;
+    }
+    .lang-toggle:hover { background: var(--text); color: var(--bg); }
+
+    /* FOOTER */
+    footer {
+      padding: 32px 48px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      border-top: 1px solid rgba(26, 26, 46, 0.06);
+      padding-bottom: 72px;
+    }
+
+    @media (max-width: 900px) {
+      .page-header, .filter-bar, .gallery { padding-left: 24px; padding-right: 24px; }
+      nav { padding: 20px 24px; }
+      .gallery { columns: 2; }
+      .nav-links { display: none; }
+      footer { flex-direction: column; gap: 12px; text-align: center; }
+      .lightbox { padding: 24px; }
+    }
+    @media (max-width: 500px) {
+      .gallery { columns: 1; }
+    }
+
+    @media print {
+      body { cursor: auto; }
+      #cursor-canvas, .custom-cursor, .cursor-dot, .lightbox { display: none; }
+      nav { position: static; }
+      .gallery { columns: 2; }
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="cursor-canvas"></canvas>
+  <div class="custom-cursor" id="cursor"></div>
+  <div class="cursor-dot" id="cursor-dot"></div>
+
+  <nav id="nav">
+    <a href="index.html" class="nav-logo">JI.</a>
+    <ul class="nav-links">
+      <li><a href="index.html#about" class="hoverable" data-i18n="nav.about">About</a></li>
+      <li><a href="index.html#expertise" class="hoverable" data-i18n="nav.skills">Skills</a></li>
+      <li><a href="index.html#projects" class="hoverable" data-i18n="nav.projects">Projects</a></li>
+      <li><a href="photos.html" class="hoverable active" data-i18n="nav.photos">Photos</a></li>
+      <li><a href="index.html#contact" class="hoverable" data-i18n="nav.contact">Contact</a></li>
+    </ul>
+    <button class="lang-toggle hoverable" onclick="setLang(getLang()==='en'?'nl':'en')">NL</button>
+  </nav>
+
+  <div class="page-header">
+    <div class="section-label" data-i18n="photos.label">Photography</div>
+    <h1 class="page-title" data-i18n="photos.title">Shots I <span class="highlight">like.</span></h1>
+    <p class="page-subtitle" data-i18n="photos.subtitle">
+      A collection of photos I've taken or moments I've captured.
+    </p>
+  </div>
+
+  <div class="filter-bar">
+    <button class="filter-btn active hoverable" data-filter="all" data-i18n="filter.all">All</button>
+    <button class="filter-btn hoverable" data-filter="nature" data-i18n="filter.nature">Nature</button>
+    <button class="filter-btn hoverable" data-filter="urban" data-i18n="filter.urban">Urban</button>
+    <button class="filter-btn hoverable" data-filter="tech" data-i18n="filter.tech">Tech</button>
+    <button class="filter-btn hoverable" data-filter="travel" data-i18n="filter.travel">Travel</button>
+  </div>
+
+  <div class="gallery" id="gallery"></div>
+
+  <div class="upload-hint" id="empty-state">
+    <p data-i18n="photos.empty">No photos yet. Press <strong>Shift+A</strong> to open the secret admin panel and add Imgur images.</p>
+  </div>
+
+  <!-- LIGHTBOX -->
+  <div class="lightbox" id="lightbox">
+    <button class="lightbox-close hoverable" id="lb-close">&times;</button>
+    <button class="lightbox-nav lightbox-prev hoverable" id="lb-prev">&#8592;</button>
+    <button class="lightbox-nav lightbox-next hoverable" id="lb-next">&#8594;</button>
+    <div class="lightbox-content" id="lb-content"></div>
+  </div>
+
+  <!-- SECRET ADMIN PANEL -->
+  <div class="admin-overlay" id="admin-overlay"></div>
+  <div class="admin-panel" id="admin-panel">
+    <div class="admin-header">
+      <div class="admin-title" data-i18n="admin.title">Secret Upload</div>
+      <button class="admin-close" id="admin-close">&times;</button>
+    </div>
+
+    <!-- FIREBASE CONFIG (shown if not configured) -->
+    <div id="firebase-setup" style="display:none;">
+      <div class="admin-hint" data-i18n="admin.fbHint">Connect to Firebase to save photos across devices. Enter your project ID and Web API key from the Firebase console.</div>
+      <div class="admin-form">
+        <div class="admin-field">
+          <label data-i18n="admin.fbProject">Firebase Project ID</label>
+          <input type="text" id="fb-project" placeholder="my-project-12345">
+        </div>
+        <div class="admin-field">
+          <label data-i18n="admin.fbKey">Web API Key</label>
+          <input type="text" id="fb-apikey" placeholder="AIzaSy...">
+        </div>
+        <button class="admin-btn" id="fb-save-config" data-i18n="admin.fbConnect">Connect to Firebase</button>
+      </div>
+      <div class="admin-divider"></div>
+    </div>
+
+    <!-- STATUS -->
+    <div id="fb-status" style="margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:8px;font-size:0.75rem;color:rgba(245,240,230,0.4);">
+        <span id="fb-dot" style="width:8px;height:8px;border-radius:50%;background:#555;display:inline-block;"></span>
+        <span id="fb-status-text" data-i18n="admin.fbNot">Not connected</span>
+        <button id="fb-reset" style="margin-left:auto;background:none;border:1px solid rgba(245,240,230,0.15);color:rgba(245,240,230,0.4);font-size:0.65rem;padding:4px 10px;border-radius:12px;cursor:pointer;font-family:var(--font-body);" data-i18n="admin.reset">Reset</button>
+      </div>
+    </div>
+
+    <div class="admin-hint" data-i18n="admin.hint">Paste an Imgur URL, give it a title, pick a category, and hit add. Syncs to Firebase in real time.</div>
+
+    <div class="admin-form">
+      <div class="admin-field">
+        <label data-i18n="admin.url">Imgur URL</label>
+        <input type="text" id="admin-url" placeholder="https://i.imgur.com/example.jpg">
+      </div>
+      <div class="admin-preview" id="admin-preview">
+        <div class="admin-preview-empty" data-i18n="admin.preview">Paste a URL above to preview</div>
+      </div>
+      <div class="admin-field">
+        <label data-i18n="admin.phTitle">Title</label>
+        <input type="text" id="admin-title" placeholder="Sunset at the beach">
+      </div>
+      <div class="admin-field">
+        <label data-i18n="admin.category">Category</label>
+        <select id="admin-category">
+          <option value="nature">Nature</option>
+          <option value="urban">Urban</option>
+          <option value="tech">Tech</option>
+          <option value="travel">Travel</option>
+        </select>
+      </div>
+      <button class="admin-btn" id="admin-add" disabled data-i18n="admin.add">Add Photo</button>
+    </div>
+
+    <div class="admin-divider"></div>
+    <div class="admin-saved-title" data-i18n="admin.saved">Saved Photos</div>
+    <div class="admin-saved-list" id="admin-list"></div>
+  </div>
+
+  <div class="admin-shortcut-badge">Shift+A</div>
+
+  <footer>
+    <span data-i18n="footer.copy">&copy; 2026 Josh Ibrahim</span>
+    <span data-i18n="footer.built">Built with code &amp; curiosity</span>
+  </footer>
+
+  <script src="lang.js"></script>
+  <script src="https://artifactcdn.diabrowser.engineering/ajax/libs/gsap/gsap.min.js"></script>
+  <script>
+    // ── ANTIGRAVITY PARTICLES (same as index) ──
+    const canvas = document.getElementById('cursor-canvas');
+    const ctx = canvas.getContext('2d');
+    const cursor = document.getElementById('cursor');
+    const cursorDot = document.getElementById('cursor-dot');
+    let mouse = { x: -9999, y: -9999 };
+    let cursorPos = { x: -100, y: -100 };
+    const REPULSION_RADIUS = 180, REPULSION_STRENGTH = 8, FRICTION = 0.92, RETURN_SPEED = 0.008;
+    const palette = [
+      {r:232,g:80,b:58},{r:45,g:139,b:139},{r:212,g:168,b:83},
+      {r:26,g:26,b:46},{r:180,g:100,b:60},{r:100,g:160,b:160}
+    ];
+    let ringParticles = [];
+    class RingParticle {
+      constructor() { this.reset(); }
+      reset() {
+        this.homeX = Math.random()*window.innerWidth; this.homeY = Math.random()*window.innerHeight;
+        this.x = this.homeX; this.y = this.homeY; this.vx = 0; this.vy = 0;
+        this.radius = Math.random()*28+6; this.lineWidth = Math.random()*2+0.5;
+        this.baseAlpha = Math.random()*0.18+0.04; this.alpha = this.baseAlpha;
+        const c = palette[Math.floor(Math.random()*palette.length)];
+        this.r=c.r;this.g=c.g;this.b=c.b;
+        this.driftAngle = Math.random()*Math.PI*2; this.driftSpeed = Math.random()*0.003+0.001;
+        this.driftRadius = Math.random()*30+10; this.rotation = Math.random()*Math.PI*2;
+        this.rotationSpeed = (Math.random()-0.5)*0.01;
+        this.dashOffset = Math.random()*100; this.hasDash = Math.random()>0.5;
+        this.isDouble = Math.random()>0.75;
+      }
+      update() {
+        const dx=this.x-mouse.x, dy=this.y-mouse.y, dist=Math.sqrt(dx*dx+dy*dy);
+        if (dist<REPULSION_RADIUS&&dist>0) {
+          const f=(1-dist/REPULSION_RADIUS)*REPULSION_STRENGTH, a=Math.atan2(dy,dx);
+          this.vx+=Math.cos(a)*f; this.vy+=Math.sin(a)*f;
+          this.alpha=Math.min(this.baseAlpha+0.15,0.35);
+        } else { this.alpha+=(this.baseAlpha-this.alpha)*0.05; }
+        this.vx*=FRICTION; this.vy*=FRICTION;
+        this.driftAngle+=this.driftSpeed;
+        this.vx+=(this.homeX+Math.cos(this.driftAngle)*this.driftRadius-this.x)*RETURN_SPEED;
+        this.vy+=(this.homeY+Math.sin(this.driftAngle*0.7)*this.driftRadius-this.y)*RETURN_SPEED;
+        this.x+=this.vx; this.y+=this.vy;
+        this.rotation+=this.rotationSpeed;
+      }
+      draw() {
+        ctx.save(); ctx.translate(this.x,this.y); ctx.rotate(this.rotation);
+        ctx.globalAlpha=this.alpha;
+        ctx.strokeStyle=`rgb(${this.r},${this.g},${this.b})`;
+        ctx.lineWidth=this.lineWidth;
+        if(this.hasDash){const s=this.radius*0.8;ctx.setLineDash([s,s*0.5]);ctx.lineDashOffset=this.dashOffset+this.rotation*10;}
+        ctx.beginPath();ctx.arc(0,0,this.radius,0,Math.PI*2);ctx.stroke();
+        if(this.isDouble){ctx.globalAlpha=this.alpha*0.5;ctx.lineWidth=this.lineWidth*0.6;ctx.setLineDash([]);
+        ctx.beginPath();ctx.arc(0,0,this.radius*0.6,0,Math.PI*2);ctx.stroke();}
+        ctx.restore();
+      }
+    }
+    function resizeCanvas(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;if(!ringParticles.length)initP();}
+    function initP(){ringParticles=[];for(let i=0;i<50;i++)ringParticles.push(new RingParticle());}
+    resizeCanvas();
+    window.addEventListener('resize',()=>{resizeCanvas();ringParticles.forEach(p=>p.reset());});
+    document.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;});
+    document.querySelectorAll('.hoverable').forEach(el=>{
+      el.addEventListener('mouseenter',()=>cursor.classList.add('hovering'));
+      el.addEventListener('mouseleave',()=>cursor.classList.remove('hovering'));
+    });
+    function animate(){
+      cursorPos.x+=(mouse.x-cursorPos.x)*0.15;cursorPos.y+=(mouse.y-cursorPos.y)*0.15;
+      cursor.style.left=cursorPos.x+'px';cursor.style.top=cursorPos.y+'px';
+      cursorDot.style.left=mouse.x+'px';cursorDot.style.top=mouse.y+'px';
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ringParticles.forEach(p=>{p.update();p.draw();});
+      requestAnimationFrame(animate);
+    }
+    animate();
+    if('ontouchstart' in window){cursor.style.display='none';cursorDot.style.display='none';canvas.style.display='none';document.body.style.cursor='auto';}
+
+    // ── FIREBASE FIRESTORE REST API ──
+    const FB_CONFIG_KEY = 'ji_fb_config';
+
+    function getFBConfig() {
+      try { return JSON.parse(localStorage.getItem(FB_CONFIG_KEY)) || null; }
+      catch { return null; }
+    }
+    function saveFBConfig(cfg) { localStorage.setItem(FB_CONFIG_KEY, JSON.stringify(cfg)); }
+
+    function firestoreURL(path) {
+      const cfg = getFBConfig();
+      if (!cfg) return null;
+      return `https://firestore.googleapis.com/v1/projects/${cfg.projectId}/databases/(default)/documents/${path}?key=${cfg.apiKey}`;
+    }
+
+    async function fbGetPhotos() {
+      const url = firestoreURL('photos');
+      if (!url) return [];
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(res.statusText);
+        const data = await res.json();
+        if (!data.documents) return [];
+        return data.documents.map(doc => ({
+          id: doc.name.split('/').pop(),
+          url: doc.fields.url?.stringValue || '',
+          title: doc.fields.title?.stringValue || 'Untitled',
+          category: doc.fields.category?.stringValue || 'nature',
+          createdAt: parseInt(doc.fields.createdAt?.integerValue || '0')
+        })).sort((a, b) => b.createdAt - a.createdAt);
+      } catch (e) {
+        console.error('Firebase read error:', e);
+        return [];
+      }
+    }
+
+    async function fbAddPhoto(photo) {
+      const url = firestoreURL('photos');
+      if (!url) return false;
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fields: {
+              url: { stringValue: photo.url },
+              title: { stringValue: photo.title },
+              category: { stringValue: photo.category },
+              createdAt: { integerValue: String(Date.now()) }
+            }
+          })
+        });
+        return res.ok;
+      } catch (e) {
+        console.error('Firebase write error:', e);
+        return false;
+      }
+    }
+
+    async function fbDeletePhoto(docId) {
+      const cfg = getFBConfig();
+      if (!cfg) return false;
+      const url = `https://firestore.googleapis.com/v1/projects/${cfg.projectId}/databases/(default)/documents/photos/${docId}?key=${cfg.apiKey}`;
+      try {
+        const res = await fetch(url, { method: 'DELETE' });
+        return res.ok;
+      } catch (e) {
+        console.error('Firebase delete error:', e);
+        return false;
+      }
+    }
+
+    // ── FIREBASE CONFIG UI ──
+    const fbSetup = document.getElementById('firebase-setup');
+    const fbProjectInput = document.getElementById('fb-project');
+    const fbApikeyInput = document.getElementById('fb-apikey');
+    const fbSaveBtn = document.getElementById('fb-save-config');
+    const fbDot = document.getElementById('fb-dot');
+    const fbStatusText = document.getElementById('fb-status-text');
+    const fbResetBtn = document.getElementById('fb-reset');
+
+    function updateFBStatus() {
+      const cfg = getFBConfig();
+      if (cfg) {
+        fbDot.style.background = '#4CAF50';
+        fbStatusText.textContent = t('admin.fbConnected') + ': ' + cfg.projectId;
+        fbSetup.style.display = 'none';
+      } else {
+        fbDot.style.background = '#E8503A';
+        fbStatusText.textContent = 'Not connected';
+        fbSetup.style.display = 'block';
+      }
+    }
+
+    fbSaveBtn.addEventListener('click', async () => {
+      const projectId = fbProjectInput.value.trim();
+      const apiKey = fbApikeyInput.value.trim();
+      if (!projectId || !apiKey) return;
+
+      fbSaveBtn.textContent = t('admin.connecting');
+      fbSaveBtn.disabled = true;
+
+      saveFBConfig({ projectId, apiKey });
+
+      try {
+        const testUrl = firestoreURL('photos');
+        const res = await fetch(testUrl);
+        if (!res.ok) throw new Error('Connection failed');
+        updateFBStatus();
+        await loadAndRender();
+        renderAdminList();
+      } catch (e) {
+        localStorage.removeItem(FB_CONFIG_KEY);
+        fbStatusText.textContent = t('admin.fbFail');
+        fbDot.style.background = '#E8503A';
+        fbSetup.style.display = 'block';
+      }
+
+      fbSaveBtn.textContent = t('admin.fbConnect');
+      fbSaveBtn.disabled = false;
+    });
+
+    fbResetBtn.addEventListener('click', () => {
+      localStorage.removeItem(FB_CONFIG_KEY);
+      updateFBStatus();
+      fbProjectInput.value = '';
+      fbApikeyInput.value = '';
+    });
+
+    // ── RENDER GALLERY ──
+    const gallery = document.getElementById('gallery');
+    const emptyState = document.getElementById('empty-state');
+    let cachedPhotos = [];
+
+    async function loadAndRender() {
+      cachedPhotos = await fbGetPhotos();
+      renderGallery(activeFilter);
+    }
+
+    function renderGallery(filter) {
+      if (!filter) filter = 'all';
+      gallery.innerHTML = '';
+
+      if (cachedPhotos.length === 0) {
+        emptyState.classList.add('show');
+        return;
+      }
+      emptyState.classList.remove('show');
+
+      const filtered = filter === 'all' ? cachedPhotos : cachedPhotos.filter(p => p.category === filter);
+      filtered.forEach((photo, i) => {
+        const item = document.createElement('div');
+        item.className = 'gallery-item hoverable';
+        item.dataset.category = photo.category;
+        item.dataset.title = photo.title;
+        item.dataset.meta = photo.category.charAt(0).toUpperCase() + photo.category.slice(1);
+        item.dataset.url = photo.url;
+        item.dataset.docId = photo.id;
+        item.innerHTML = `
+          <img src="${photo.url}" class="gallery-img" alt="${photo.title}" loading="lazy"
+               onerror="this.style.display='none';this.parentElement.querySelector('.gallery-overlay').style.opacity='1';">
+          <div class="gallery-overlay">
+            <div class="gallery-overlay-title">${photo.title}</div>
+            <div class="gallery-overlay-meta">${item.dataset.meta}</div>
+          </div>`;
+        gallery.appendChild(item);
+        setTimeout(() => item.classList.add('visible'), i * 80 + 50);
+      });
+
+      rebindGallery();
+    }
+
+    // ── GALLERY CLICKS + LIGHTBOX ──
+    const lightbox = document.getElementById('lightbox');
+    const lbContent = document.getElementById('lb-content');
+    const lbClose = document.getElementById('lb-close');
+    const lbPrev = document.getElementById('lb-prev');
+    const lbNext = document.getElementById('lb-next');
+    let currentIdx = 0;
+
+    function getVisibleItems() { return [...gallery.querySelectorAll('.gallery-item')]; }
+
+    function rebindGallery() {
+      getVisibleItems().forEach(item => {
+        item.addEventListener('click', () => {
+          currentIdx = getVisibleItems().indexOf(item);
+          openLightbox(item);
+        });
+        item.addEventListener('mouseenter', () => cursor.classList.add('hovering'));
+        item.addEventListener('mouseleave', () => cursor.classList.remove('hovering'));
+      });
+    }
+
+    function openLightbox(item) {
+      const url = item.dataset.url;
+      const title = item.dataset.title || '';
+      const meta = item.dataset.meta || '';
+      lbContent.innerHTML = `
+        <img src="${url}" style="width:auto;max-width:80vw;max-height:70vh;border-radius:12px;display:block;" alt="${title}">
+        <div class="lightbox-info">
+          <div class="lightbox-title">${title}</div>
+          <div class="lightbox-meta">${meta}</div>
+        </div>`;
+      lightbox.style.display = 'flex';
+      requestAnimationFrame(() => lightbox.classList.add('open'));
+    }
+
+    function closeLightbox() {
+      lightbox.classList.remove('open');
+      setTimeout(() => { lightbox.style.display = 'none'; }, 300);
+    }
+
+    lbClose.addEventListener('click', closeLightbox);
+    lightbox.addEventListener('click', e => { if (e.target === lightbox) closeLightbox(); });
+    lbPrev.addEventListener('click', e => {
+      e.stopPropagation();
+      const vis = getVisibleItems();
+      currentIdx = (currentIdx - 1 + vis.length) % vis.length;
+      openLightbox(vis[currentIdx]);
+    });
+    lbNext.addEventListener('click', e => {
+      e.stopPropagation();
+      const vis = getVisibleItems();
+      currentIdx = (currentIdx + 1) % vis.length;
+      openLightbox(vis[currentIdx]);
+    });
+
+    // ── FILTERS ──
+    let activeFilter = 'all';
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    filterBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        filterBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeFilter = btn.dataset.filter;
+        renderGallery(activeFilter);
+      });
+    });
+
+    // ── SECRET ADMIN PANEL ──
+    const adminPanel = document.getElementById('admin-panel');
+    const adminOverlay = document.getElementById('admin-overlay');
+    const adminClose = document.getElementById('admin-close');
+    const adminUrl = document.getElementById('admin-url');
+    const adminTitle = document.getElementById('admin-title');
+    const adminCategory = document.getElementById('admin-category');
+    const adminPreview = document.getElementById('admin-preview');
+    const adminAddBtn = document.getElementById('admin-add');
+    const adminList = document.getElementById('admin-list');
+
+    function openAdmin() {
+      adminPanel.classList.add('open');
+      adminOverlay.classList.add('open');
+      updateFBStatus();
+      renderAdminList();
+      adminUrl.focus();
+    }
+    function closeAdmin() {
+      adminPanel.classList.remove('open');
+      adminOverlay.classList.remove('open');
+    }
+
+    adminClose.addEventListener('click', closeAdmin);
+    adminOverlay.addEventListener('click', closeAdmin);
+
+    document.addEventListener('keydown', e => {
+      if (e.shiftKey && e.key === 'A') {
+        e.preventDefault();
+        adminPanel.classList.contains('open') ? closeAdmin() : openAdmin();
+      }
+      if (e.key === 'Escape') {
+        if (adminPanel.classList.contains('open')) closeAdmin();
+        else if (lightbox.classList.contains('open')) closeLightbox();
+      }
+      if (lightbox.classList.contains('open')) {
+        if (e.key === 'ArrowLeft') lbPrev.click();
+        if (e.key === 'ArrowRight') lbNext.click();
+      }
+    });
+
+    // URL preview
+    adminUrl.addEventListener('input', () => {
+      const url = adminUrl.value.trim();
+      if (url && (url.includes('imgur.com') || url.match(/\.(jpg|jpeg|png|gif|webp)/i))) {
+        const imgUrl = normalizeImgurUrl(url);
+        adminPreview.innerHTML = `<img src="${imgUrl}" alt="preview" onerror="this.parentElement.innerHTML='<div class=admin-preview-empty>Could not load image</div>';">`;
+        adminAddBtn.disabled = !getFBConfig();
+      } else {
+        adminPreview.innerHTML = '<div class="admin-preview-empty">Paste an Imgur URL to preview</div>';
+        adminAddBtn.disabled = true;
+      }
+    });
+
+    function normalizeImgurUrl(url) {
+      const match = url.match(/imgur\.com\/(\w+)$/);
+      if (match && !url.includes('i.imgur.com')) {
+        return `https://i.imgur.com/${match[1]}.jpg`;
+      }
+      return url;
+    }
+
+    // Add photo
+    adminAddBtn.addEventListener('click', async () => {
+      const url = normalizeImgurUrl(adminUrl.value.trim());
+      const title = adminTitle.value.trim() || 'Untitled';
+      const category = adminCategory.value;
+      if (!url) return;
+
+      adminAddBtn.textContent = t('admin.saving');
+      adminAddBtn.disabled = true;
+
+      const ok = await fbAddPhoto({ url, title, category });
+
+      if (ok) {
+        adminUrl.value = '';
+        adminTitle.value = '';
+        adminPreview.innerHTML = '<div class="admin-preview-empty">Paste a URL above to preview</div>';
+        await loadAndRender();
+        renderAdminList();
+      } else {
+        adminAddBtn.textContent = t('admin.error');
+      }
+
+      setTimeout(() => {
+        adminAddBtn.textContent = t('admin.add');
+        adminAddBtn.disabled = true;
+      }, 1000);
+    });
+
+    // Render admin list
+    function renderAdminList() {
+      if (cachedPhotos.length === 0) {
+        adminList.innerHTML = '<div style="color:rgba(245,240,230,0.3);font-size:0.85rem;">' + t('admin.noPhotos') + '</div>';
+        return;
+      }
+      adminList.innerHTML = cachedPhotos.map(p => `
+        <div class="admin-saved-item">
+          <img src="${p.url}" class="admin-saved-thumb" alt="${p.title}" onerror="this.style.background='rgba(245,240,230,0.1)';">
+          <div class="admin-saved-info">
+            <div class="admin-saved-name">${p.title}</div>
+            <div class="admin-saved-cat">${p.category}</div>
+          </div>
+          <button class="admin-saved-delete" data-id="${p.id}">&times;</button>
+        </div>`).join('');
+
+      adminList.querySelectorAll('.admin-saved-delete').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          btn.textContent = '...';
+          await fbDeletePhoto(btn.dataset.id);
+          await loadAndRender();
+          renderAdminList();
+        });
+      });
+    }
+
+    // ── NAV ──
+    let lastScroll = 0;
+    const nav = document.getElementById('nav');
+    window.addEventListener('scroll', () => {
+      const c = window.scrollY;
+      if (c > lastScroll && c > 100) nav.classList.add('hidden');
+      else nav.classList.remove('hidden');
+      lastScroll = c;
+    });
+
+    // ── INIT ──
+    updateFBStatus();
+    loadAndRender();
+    initLang();
+  </script>
+</body>
+</html>

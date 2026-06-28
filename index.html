@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Josh Ibrahim</title>
+  <style>
+    :root {
+      --bg: #F5F0E6;
+      --bg-alt: #EDE7D9;
+      --text: #1A1A2E;
+      --text-muted: #6B6B7B;
+      --accent: #E8503A;
+      --accent-secondary: #2D8B8B;
+      --accent-gold: #D4A853;
+      --font-display: "Didot", "Bodoni MT", "Playfair Display", "Times New Roman", serif;
+      --font-body: "Avenir Next", "Avenir", "Futura", "Helvetica Neue", sans-serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      overflow-x: hidden;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      cursor: none;
+      overflow-x: hidden;
+    }
+
+    #cursor-canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    .custom-cursor {
+      position: fixed;
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--accent);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 10000;
+      transform: translate(-50%, -50%);
+      transition: width 0.3s, height 0.3s, border-color 0.3s, background 0.3s;
+      mix-blend-mode: difference;
+    }
+
+    .custom-cursor.hovering {
+      width: 50px;
+      height: 50px;
+      background: rgba(232, 80, 58, 0.15);
+      border-color: var(--accent-secondary);
+    }
+
+    .cursor-dot {
+      position: fixed;
+      width: 6px;
+      height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 10000;
+      transform: translate(-50%, -50%);
+    }
+
+    /* NAV */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      padding: 24px 48px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      backdrop-filter: blur(12px);
+      background: rgba(245, 240, 230, 0.8);
+      transition: transform 0.4s ease;
+    }
+
+    nav.hidden { transform: translateY(-100%); }
+
+    .nav-logo {
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      position: relative;
+      transition: color 0.3s;
+    }
+
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      bottom: -4px; left: 0;
+      width: 0;
+      height: 2px;
+      background: var(--accent);
+      transition: width 0.3s ease;
+    }
+
+    .nav-links a:hover { color: var(--text); }
+    .nav-links a:hover::after { width: 100%; }
+
+    /* HERO */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 120px 48px 80px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 32px;
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    .hero-badge .dot {
+      width: 8px;
+      height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.5); }
+    }
+
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: clamp(3.5rem, 10vw, 9rem);
+      font-weight: 700;
+      line-height: 0.95;
+      letter-spacing: -0.04em;
+      color: var(--text);
+      margin-bottom: 40px;
+    }
+
+    .hero-title .line {
+      display: block;
+      overflow: hidden;
+    }
+
+    .hero-title .line span {
+      display: inline-block;
+      opacity: 0;
+      transform: translateY(100%);
+    }
+
+    .hero-title .line:nth-child(2) span {
+      color: var(--accent);
+    }
+
+    .hero-subtitle {
+      font-size: clamp(1rem, 2vw, 1.3rem);
+      color: var(--text-muted);
+      max-width: 520px;
+      line-height: 1.7;
+      font-weight: 400;
+      opacity: 0;
+      transform: translateY(30px);
+    }
+
+    .hero-scroll-indicator {
+      position: absolute;
+      bottom: 48px;
+      left: 48px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      opacity: 0;
+    }
+
+    .hero-scroll-indicator span {
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      writing-mode: vertical-rl;
+    }
+
+    .scroll-line {
+      width: 1px;
+      height: 60px;
+      background: linear-gradient(to bottom, var(--accent), transparent);
+      animation: scrollPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes scrollPulse {
+      0% { transform: scaleY(0); transform-origin: top; }
+      50% { transform: scaleY(1); transform-origin: top; }
+      51% { transform-origin: bottom; }
+      100% { transform: scaleY(0); transform-origin: bottom; }
+    }
+
+    .hero-floating-shapes {
+      position: absolute;
+      top: 0; right: 0;
+      width: 50%;
+      height: 100%;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .floating-shape {
+      position: absolute;
+      border-radius: 50%;
+      opacity: 0.08;
+    }
+
+    .floating-shape:nth-child(1) {
+      width: 400px; height: 400px;
+      background: var(--accent);
+      top: 10%; right: -10%;
+    }
+    .floating-shape:nth-child(2) {
+      width: 250px; height: 250px;
+      background: var(--accent-secondary);
+      top: 50%; right: 20%;
+    }
+    .floating-shape:nth-child(3) {
+      width: 150px; height: 150px;
+      background: var(--accent-gold);
+      top: 30%; right: 35%;
+    }
+
+    /* SECTION SHARED */
+    section {
+      padding: 120px 48px;
+      position: relative;
+    }
+
+    .section-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .section-label::before {
+      content: '';
+      width: 40px;
+      height: 1px;
+      background: var(--accent);
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 48px;
+    }
+
+    /* ABOUT */
+    .about {
+      background: var(--bg-alt);
+    }
+
+    .about-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: start;
+    }
+
+    .about-text p {
+      font-size: 1.1rem;
+      line-height: 1.8;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+
+    .about-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      padding-top: 20px;
+    }
+
+    .stat {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+
+    .stat-number {
+      font-family: var(--font-display);
+      font-size: 3rem;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .stat-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+    }
+
+    /* EXPERTISE */
+    .expertise-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      background: rgba(26, 26, 46, 0.08);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .expertise-card {
+      background: var(--bg);
+      padding: 48px 36px;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.4s ease;
+      opacity: 0;
+      transform: translateY(40px);
+    }
+
+    .expertise-card:hover {
+      background: var(--text);
+    }
+
+    .expertise-card:hover .expertise-icon,
+    .expertise-card:hover .expertise-title,
+    .expertise-card:hover .expertise-desc {
+      color: var(--bg);
+    }
+
+    .expertise-icon {
+      font-size: 2rem;
+      margin-bottom: 24px;
+      transition: color 0.4s;
+    }
+
+    .expertise-title {
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      transition: color 0.4s;
+    }
+
+    .expertise-desc {
+      font-size: 0.9rem;
+      line-height: 1.7;
+      color: var(--text-muted);
+      transition: color 0.4s;
+    }
+
+    .expertise-card-number {
+      position: absolute;
+      top: 20px; right: 24px;
+      font-family: var(--font-display);
+      font-size: 0.8rem;
+      color: rgba(26, 26, 46, 0.15);
+      font-weight: 700;
+      transition: color 0.4s;
+    }
+
+    .expertise-card:hover .expertise-card-number {
+      color: rgba(245, 240, 230, 0.2);
+    }
+
+    /* PROJECTS */
+    .projects {
+      background: var(--bg-alt);
+    }
+
+    .project-list {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .project-item {
+      display: grid;
+      grid-template-columns: 1fr 2fr auto;
+      gap: 40px;
+      align-items: center;
+      padding: 40px 32px;
+      background: var(--bg);
+      border-radius: 8px;
+      text-decoration: none;
+      color: inherit;
+      transition: all 0.4s ease;
+      opacity: 0;
+      transform: translateX(-40px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .project-item::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--accent);
+      transform: scaleY(0);
+      transition: transform 0.4s ease;
+    }
+
+    .project-item:hover::before {
+      transform: scaleY(1);
+    }
+
+    .project-item:hover {
+      transform: translateX(8px) !important;
+      box-shadow: -8px 0 30px rgba(232, 80, 58, 0.08);
+    }
+
+    .project-name {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .project-desc {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .project-tags {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .project-tag {
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 6px 14px;
+      border: 1px solid rgba(26, 26, 46, 0.12);
+      border-radius: 20px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* MARQUEE */
+    .marquee-section {
+      padding: 60px 0;
+      overflow: hidden;
+      border-top: 1px solid rgba(26, 26, 46, 0.08);
+      border-bottom: 1px solid rgba(26, 26, 46, 0.08);
+    }
+
+    .marquee-track {
+      display: flex;
+      animation: marquee 25s linear infinite;
+      width: max-content;
+    }
+
+    .marquee-item {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 4vw, 4rem);
+      font-weight: 700;
+      white-space: nowrap;
+      padding: 0 40px;
+      color: rgba(26, 26, 46, 0.06);
+      display: flex;
+      align-items: center;
+      gap: 40px;
+    }
+
+    .marquee-item .separator {
+      width: 12px;
+      height: 12px;
+      background: var(--accent);
+      border-radius: 50%;
+      opacity: 0.3;
+      flex-shrink: 0;
+    }
+
+    @keyframes marquee {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+
+    /* CONTACT */
+    .contact {
+      min-height: 60vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      text-align: center;
+      align-items: center;
+      padding-bottom: 120px;
+    }
+
+    .contact .section-label { justify-content: center; }
+    .contact .section-label::before { display: none; }
+
+    .contact-title {
+      font-family: var(--font-display);
+      font-size: clamp(2.5rem, 7vw, 6rem);
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      margin-bottom: 32px;
+    }
+
+    .contact-title .highlight {
+      color: var(--accent);
+      font-style: italic;
+    }
+
+    .contact-subtitle {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      margin-bottom: 48px;
+      max-width: 420px;
+      line-height: 1.7;
+    }
+
+    .contact-links {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .contact-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px 32px;
+      border: 1px solid rgba(26, 26, 46, 0.15);
+      border-radius: 40px;
+      text-decoration: none;
+      color: var(--text);
+      font-size: 0.9rem;
+      font-weight: 500;
+      letter-spacing: 0.03em;
+      transition: all 0.3s ease;
+    }
+
+    .contact-link:hover {
+      background: var(--text);
+      color: var(--bg);
+      border-color: var(--text);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(26, 26, 46, 0.15);
+    }
+
+    .contact-link svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* FOOTER */
+    footer {
+      padding: 32px 48px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      border-top: 1px solid rgba(26, 26, 46, 0.06);
+      padding-bottom: 72px;
+    }
+
+    /* REVEAL ANIMATIONS */
+    .reveal {
+      opacity: 0;
+      transform: translateY(40px);
+    }
+
+    .lang-toggle {
+      padding: 6px 14px;
+      border: 1px solid rgba(26,26,46,0.15);
+      border-radius: 20px;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: var(--font-body);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      cursor: none;
+      transition: all 0.3s;
+    }
+    .lang-toggle:hover { background: var(--text); color: var(--bg); }
+
+    /* RESPONSIVE */
+    @media (max-width: 900px) {
+      section, .hero { padding: 80px 24px; }
+      nav { padding: 20px 24px; }
+      .about-grid { grid-template-columns: 1fr; gap: 48px; }
+      .expertise-grid { grid-template-columns: 1fr; }
+      .project-item { grid-template-columns: 1fr; gap: 12px; }
+      .project-tags { justify-content: flex-start; }
+      .nav-links { display: none; }
+      footer { flex-direction: column; gap: 12px; text-align: center; }
+    }
+
+    @media print {
+      body { cursor: auto; }
+      #cursor-canvas, .custom-cursor, .cursor-dot { display: none; }
+      nav { position: static; backdrop-filter: none; }
+      .hero { min-height: auto; page-break-after: always; }
+      section { padding: 40px 24px; }
+      .marquee-section { display: none; }
+      .hero-scroll-indicator { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="cursor-canvas"></canvas>
+  <div class="custom-cursor" id="cursor"></div>
+  <div class="cursor-dot" id="cursor-dot"></div>
+
+  <nav id="nav">
+    <a href="#" class="nav-logo">JI.</a>
+    <ul class="nav-links">
+      <li><a href="index.html#about" class="hoverable" data-i18n="nav.about">About</a></li>
+      <li><a href="index.html#expertise" class="hoverable" data-i18n="nav.skills">Skills</a></li>
+      <li><a href="index.html#projects" class="hoverable" data-i18n="nav.projects">Projects</a></li>
+      <li><a href="photos.html" class="hoverable" data-i18n="nav.photos">Photos</a></li>
+      <li><a href="index.html#contact" class="hoverable" data-i18n="nav.contact">Contact</a></li>
+    </ul>
+    <button class="lang-toggle hoverable" onclick="setLang(getLang()==='en'?'nl':'en')">NL</button>
+  </nav>
+
+  <section class="hero" id="hero">
+    <div class="hero-floating-shapes">
+      <div class="floating-shape"></div>
+      <div class="floating-shape"></div>
+      <div class="floating-shape"></div>
+    </div>
+
+    <div class="hero-badge">
+      <span class="dot"></span>
+      <span data-i18n="hero.badge">Student &amp; Developer based in the Netherlands</span>
+    </div>
+
+    <h1 class="hero-title">
+      <span class="line"><span>Josh</span></span>
+      <span class="line"><span>Ibrahim</span></span>
+    </h1>
+
+    <p class="hero-subtitle" data-i18n="hero.subtitle">
+      Student by day, developer by night. I build stuff on
+      GitHub, mess around with code, and learn something new every day.
+    </p>
+
+    <div class="hero-scroll-indicator">
+      <span data-i18n="hero.scroll">Scroll</span>
+      <div class="scroll-line"></div>
+    </div>
+  </section>
+
+  <section class="about" id="about">
+    <div class="about-grid">
+      <div class="about-text">
+        <div class="section-label reveal" data-i18n="about.label">About</div>
+        <h2 class="section-title reveal" data-i18n="about.title">Student, coder,<br>always tinkering.</h2>
+        <p class="reveal" data-i18n="about.p1">
+          Hey, I'm Josh — a VWO student at Alfrink College in the Netherlands.
+          I spend a lot of my free time coding, building websites, and automating
+          random stuff on GitHub. If it can be built, I'll probably try.
+        </p>
+        <p class="reveal" data-i18n="about.p2">
+          Outside of code, I'm into tech, gaming, and figuring out how things
+          work. I like keeping things simple and learning by doing — most of
+          what I know comes from just diving in and seeing what happens.
+        </p>
+      </div>
+      <div class="about-stats">
+        <div class="stat">
+          <div class="stat-number">12+</div>
+          <div class="stat-label" data-i18n="stat.repos">GitHub repositories</div>
+        </div>
+        <div class="stat">
+          <div class="stat-number">3</div>
+          <div class="stat-label" data-i18n="stat.langs">Languages spoken</div>
+        </div>
+        <div class="stat">
+          <div class="stat-number">1</div>
+          <div class="stat-label" data-i18n="stat.yt">YouTube channel</div>
+        </div>
+        <div class="stat">
+          <div class="stat-number">100</div>
+          <div class="stat-label" data-i18n="stat.curiosity">% curiosity driven</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="marquee-section">
+    <div class="marquee-track">
+      <div class="marquee-item"><span data-i18n="mq.1">HTML/CSS/JS</span> <span class="separator"></span></div>
+      <div class="marquee-item"><span data-i18n="mq.2">GitHub Actions</span> <span class="separator"></span></div>
+      <div class="marquee-item"><span data-i18n="mq.3">Web Apps</span> <span class="separator"></span></div>
+      <div class="marquee-item"><span data-i18n="mq.4">Automation</span> <span class="separator"></span></div>
+      <div class="marquee-item"><span data-i18n="mq.5">Open Source</span> <span class="separator"></span></div>
+      <div class="marquee-item"><span data-i18n="mq.6">Tech Nerd</span> <span class="separator"></span></div>
+      <div class="marquee-item"><span data-i18n="mq.1">HTML/CSS/JS</span> <span class="separator"></span></div>
+      <div class="marquee-item"><span data-i18n="mq.2">GitHub Actions</span> <span class="separator"></span></div>
+      <div class="marquee-item"><span data-i18n="mq.3">Web Apps</span> <span class="separator"></span></div>
+      <div class="marquee-item"><span data-i18n="mq.4">Automation</span> <span class="separator"></span></div>
+      <div class="marquee-item"><span data-i18n="mq.5">Open Source</span> <span class="separator"></span></div>
+      <div class="marquee-item"><span data-i18n="mq.6">Tech Nerd</span> <span class="separator"></span></div>
+    </div>
+  </div>
+
+  <section id="expertise">
+    <div class="section-label reveal" data-i18n="skills.label">What I do</div>
+    <h2 class="section-title reveal" data-i18n="skills.title">Things I'm<br>good at (so far).</h2>
+    <div class="expertise-grid">
+      <div class="expertise-card hoverable">
+        <span class="expertise-card-number">01</span>
+        <div class="expertise-icon">&#x2666;</div>
+        <h3 class="expertise-title" data-i18n="skill1.title">Web Development</h3>
+        <p class="expertise-desc" data-i18n="skill1.desc">HTML, CSS, JavaScript — building sites and apps from scratch. This site you're looking at? Yeah, that kind of stuff.</p>
+      </div>
+      <div class="expertise-card hoverable">
+        <span class="expertise-card-number">02</span>
+        <div class="expertise-icon">&#x25B2;</div>
+        <h3 class="expertise-title" data-i18n="skill2.title">GitHub &amp; Automation</h3>
+        <p class="expertise-desc" data-i18n="skill2.desc">GitHub Actions, workflows, bots — if it can be automated, I've probably tried. Check out my repos to see what I mean.</p>
+      </div>
+      <div class="expertise-card hoverable">
+        <span class="expertise-card-number">03</span>
+        <div class="expertise-icon">&#x25CF;</div>
+        <h3 class="expertise-title" data-i18n="skill3.title">Problem Solving</h3>
+        <p class="expertise-desc" data-i18n="skill3.desc">Whether it's a coding bug or a math problem, I like figuring things out. Wiskunde B keeps me sharp.</p>
+      </div>
+      <div class="expertise-card hoverable">
+        <span class="expertise-card-number">04</span>
+        <div class="expertise-icon">&#x25C7;</div>
+        <h3 class="expertise-title" data-i18n="skill4.title">Tech &amp; Gadgets</h3>
+        <p class="expertise-desc" data-i18n="skill4.desc">Always up to date on the latest tech — from Apple betas to budget camping gear. I research everything.</p>
+      </div>
+      <div class="expertise-card hoverable">
+        <span class="expertise-card-number">05</span>
+        <div class="expertise-icon">&#x25A0;</div>
+        <h3 class="expertise-title" data-i18n="skill5.title">Content &amp; Video</h3>
+        <p class="expertise-desc" data-i18n="skill5.desc">YouTube, OBS, Restream — I've streamed study sessions and recorded podcasts. Still learning, still growing.</p>
+      </div>
+      <div class="expertise-card hoverable">
+        <span class="expertise-card-number">06</span>
+        <div class="expertise-icon">&#x2B21;</div>
+        <h3 class="expertise-title" data-i18n="skill6.title">Gaming</h3>
+        <p class="expertise-desc" data-i18n="skill6.desc">Minecraft, GTA, Geometry Dash, and whatever else looks fun. Gaming is how I unwind and get creative ideas.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="projects" id="projects">
+    <div class="section-label reveal" data-i18n="proj.label">My Projects</div>
+    <h2 class="section-title reveal" data-i18n="proj.title">Stuff I've built<br>and shipped.</h2>
+    <div class="project-list">
+      <a href="https://watinderanking.nl" target="_blank" class="project-item hoverable">
+        <div class="project-name" data-i18n="proj1.name">Wat in de Ranking</div>
+        <div class="project-desc" data-i18n="proj1.desc">A ranking app I built where you can vote on and rank pretty much anything. Has its own domain and real users.</div>
+        <div class="project-tags">
+          <span class="project-tag">Web App</span>
+          <span class="project-tag">HTML/JS</span>
+        </div>
+      </a>
+      <a href="https://github.com/Jojoshua903/WidR" target="_blank" class="project-item hoverable">
+        <div class="project-name" data-i18n="proj2.name">WidR</div>
+        <div class="project-desc" data-i18n="proj2.desc">My pinned GitHub repo — one of my main projects. Check it out for the code and details.</div>
+        <div class="project-tags">
+          <span class="project-tag">GitHub</span>
+          <span class="project-tag">Open Source</span>
+        </div>
+      </a>
+      <a href="https://github.com/Jojoshua903/miloduo" target="_blank" class="project-item hoverable">
+        <div class="project-name" data-i18n="proj3.name">Miloduo</div>
+        <div class="project-desc" data-i18n="proj3.desc">I automated my Duolingo lessons with GitHub Actions. Yes, really. It runs on a schedule and does the lessons for me.</div>
+        <div class="project-tags">
+          <span class="project-tag">Automation</span>
+          <span class="project-tag">GitHub Actions</span>
+        </div>
+      </a>
+      <a href="https://github.com/Jojoshua903" target="_blank" class="project-item hoverable">
+        <div class="project-name" data-i18n="proj4.name">More on GitHub</div>
+        <div class="project-desc" data-i18n="proj4.desc">I've got 12+ repos with all kinds of experiments and projects. Head over to my GitHub to explore.</div>
+        <div class="project-tags">
+          <span class="project-tag">GitHub</span>
+          <span class="project-tag">12+ Repos</span>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <div class="marquee-section">
+    <div class="marquee-track" style="animation-direction: reverse;">
+      <div class="marquee-item"><span data-i18n="mq2.1">Let's connect</span> <span class="separator"></span></div>
+      <div class="marquee-item"><span data-i18n="mq2.2">Always building</span> <span class="separator"></span></div>
+      <div class="marquee-item"><span data-i18n="mq2.3">Say hello</span> <span class="separator"></span></div>
+      <div class="marquee-item"><span data-i18n="mq2.4">Open to collabs</span> <span class="separator"></span></div>
+      <div class="marquee-item"><span data-i18n="mq2.1">Let's connect</span> <span class="separator"></span></div>
+      <div class="marquee-item"><span data-i18n="mq2.2">Always building</span> <span class="separator"></span></div>
+      <div class="marquee-item"><span data-i18n="mq2.3">Say hello</span> <span class="separator"></span></div>
+      <div class="marquee-item"><span data-i18n="mq2.4">Open to collabs</span> <span class="separator"></span></div>
+    </div>
+  </div>
+
+  <section class="contact" id="contact">
+    <div class="section-label reveal" data-i18n="contact.label">Get in touch</div>
+    <h2 class="contact-title reveal" data-i18n="contact.title">Say hi or<br>check my <span class="highlight">code.</span></h2>
+    <p class="contact-subtitle reveal" data-i18n="contact.subtitle">
+      Got a cool idea? Want to collab on something?
+      Or just want to say hi — hit me up.
+    </p>
+    <div class="contact-links reveal">
+      <a href="mailto:Josh@ibrahims.nl" class="contact-link hoverable">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+        <span data-i18n="contact.email">Email me</span>
+      </a>
+      <a href="https://github.com/Jojoshua903" target="_blank" class="contact-link hoverable">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65S8.93 17.38 9 18v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+        <span data-i18n="contact.github">GitHub</span>
+      </a>
+      <a href="https://www.instagram.com/joshibrahim903/" target="_blank" class="contact-link hoverable">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+        <span data-i18n="contact.insta">Instagram</span>
+      </a>
+    </div>
+  </section>
+
+  <footer>
+    <span data-i18n="footer.copy">&copy; 2026 Josh Ibrahim</span>
+    <span data-i18n="footer.built">Built with code &amp; curiosity</span>
+  </footer>
+
+  <script src="lang.js"></script>
+  <script src="https://artifactcdn.diabrowser.engineering/ajax/libs/gsap/gsap.min.js"></script>
+  <script>
+    // ── ANTIGRAVITY PARTICLE FIELD ──
+    const canvas = document.getElementById('cursor-canvas');
+    const ctx = canvas.getContext('2d');
+    const cursor = document.getElementById('cursor');
+    const cursorDot = document.getElementById('cursor-dot');
+
+    let mouse = { x: -9999, y: -9999 };
+    let cursorPos = { x: -100, y: -100 };
+
+    const REPULSION_RADIUS = 180;
+    const REPULSION_STRENGTH = 8;
+    const FRICTION = 0.92;
+    const RETURN_SPEED = 0.008;
+    const PARTICLE_COUNT = 65;
+
+    const palette = [
+      { r: 232, g: 80, b: 58 },
+      { r: 45, g: 139, b: 139 },
+      { r: 212, g: 168, b: 83 },
+      { r: 26, g: 26, b: 46 },
+      { r: 180, g: 100, b: 60 },
+      { r: 100, g: 160, b: 160 },
+    ];
+
+    let ringParticles = [];
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      if (ringParticles.length === 0) initParticles();
+    }
+
+    class RingParticle {
+      constructor() {
+        this.reset();
+      }
+      reset() {
+        this.homeX = Math.random() * window.innerWidth;
+        this.homeY = Math.random() * window.innerHeight;
+        this.x = this.homeX;
+        this.y = this.homeY;
+        this.vx = 0;
+        this.vy = 0;
+        this.radius = Math.random() * 28 + 6;
+        this.lineWidth = Math.random() * 2 + 0.5;
+        this.baseAlpha = Math.random() * 0.18 + 0.04;
+        this.alpha = this.baseAlpha;
+        const c = palette[Math.floor(Math.random() * palette.length)];
+        this.r = c.r; this.g = c.g; this.b = c.b;
+        this.driftAngle = Math.random() * Math.PI * 2;
+        this.driftSpeed = Math.random() * 0.003 + 0.001;
+        this.driftRadius = Math.random() * 30 + 10;
+        this.rotation = Math.random() * Math.PI * 2;
+        this.rotationSpeed = (Math.random() - 0.5) * 0.01;
+        this.dashOffset = Math.random() * 100;
+        this.hasDash = Math.random() > 0.5;
+        this.isDouble = Math.random() > 0.75;
+      }
+      update() {
+        const dx = this.x - mouse.x;
+        const dy = this.y - mouse.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < REPULSION_RADIUS && dist > 0) {
+          const force = (1 - dist / REPULSION_RADIUS) * REPULSION_STRENGTH;
+          const angle = Math.atan2(dy, dx);
+          this.vx += Math.cos(angle) * force;
+          this.vy += Math.sin(angle) * force;
+          this.alpha = Math.min(this.baseAlpha + 0.15, 0.35);
+        } else {
+          this.alpha += (this.baseAlpha - this.alpha) * 0.05;
+        }
+
+        this.vx *= FRICTION;
+        this.vy *= FRICTION;
+
+        this.driftAngle += this.driftSpeed;
+        const driftX = this.homeX + Math.cos(this.driftAngle) * this.driftRadius;
+        const driftY = this.homeY + Math.sin(this.driftAngle * 0.7) * this.driftRadius;
+
+        this.vx += (driftX - this.x) * RETURN_SPEED;
+        this.vy += (driftY - this.y) * RETURN_SPEED;
+
+        this.x += this.vx;
+        this.y += this.vy;
+        this.rotation += this.rotationSpeed;
+
+        if (Math.abs(this.vx) > 0.5 || Math.abs(this.vy) > 0.5) {
+          this.rotationSpeed += (Math.atan2(this.vy, this.vx) * 0.001 - this.rotationSpeed) * 0.02;
+        }
+      }
+      draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+        ctx.globalAlpha = this.alpha;
+        ctx.strokeStyle = `rgb(${this.r},${this.g},${this.b})`;
+        ctx.lineWidth = this.lineWidth;
+
+        if (this.hasDash) {
+          const seg = this.radius * 0.8;
+          ctx.setLineDash([seg, seg * 0.5]);
+          ctx.lineDashOffset = this.dashOffset + this.rotation * 10;
+        }
+
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        if (this.isDouble) {
+          ctx.globalAlpha = this.alpha * 0.5;
+          ctx.lineWidth = this.lineWidth * 0.6;
+          ctx.setLineDash([]);
+          ctx.beginPath();
+          ctx.arc(0, 0, this.radius * 0.6, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        ctx.restore();
+      }
+    }
+
+    function initParticles() {
+      ringParticles = [];
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        ringParticles.push(new RingParticle());
+      }
+    }
+
+    resizeCanvas();
+    window.addEventListener('resize', () => {
+      resizeCanvas();
+      ringParticles.forEach(p => p.reset());
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+    });
+
+    document.querySelectorAll('.hoverable').forEach(el => {
+      el.addEventListener('mouseenter', () => cursor.classList.add('hovering'));
+      el.addEventListener('mouseleave', () => cursor.classList.remove('hovering'));
+    });
+
+    function animate() {
+      cursorPos.x += (mouse.x - cursorPos.x) * 0.15;
+      cursorPos.y += (mouse.y - cursorPos.y) * 0.15;
+      cursor.style.left = cursorPos.x + 'px';
+      cursor.style.top = cursorPos.y + 'px';
+      cursorDot.style.left = mouse.x + 'px';
+      cursorDot.style.top = mouse.y + 'px';
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ringParticles.forEach(p => {
+        p.update();
+        p.draw();
+      });
+
+      requestAnimationFrame(animate);
+    }
+    animate();
+
+    // ── GSAP ANIMATIONS ──
+
+    // Hero entrance
+    const tl = gsap.timeline({ delay: 0.3 });
+    tl.to('.hero-badge', { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' })
+      .to('.hero-title .line span', {
+        opacity: 1, y: 0, duration: 1, ease: 'power4.out', stagger: 0.15
+      }, '-=0.4')
+      .to('.hero-subtitle', { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }, '-=0.5')
+      .to('.hero-scroll-indicator', { opacity: 1, duration: 0.6 }, '-=0.3');
+
+    // Floating shapes parallax
+    const shapes = document.querySelectorAll('.floating-shape');
+    document.addEventListener('mousemove', (e) => {
+      const x = (e.clientX / window.innerWidth - 0.5) * 2;
+      const y = (e.clientY / window.innerHeight - 0.5) * 2;
+      shapes.forEach((shape, i) => {
+        const speed = (i + 1) * 15;
+        gsap.to(shape, {
+          x: x * speed,
+          y: y * speed,
+          duration: 1.2,
+          ease: 'power2.out'
+        });
+      });
+    });
+
+    // Scroll reveals
+    const reveals = document.querySelectorAll('.reveal');
+    const observerOptions = { threshold: 0.15, rootMargin: '0px 0px -50px 0px' };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          gsap.to(entry.target, {
+            opacity: 1,
+            y: 0,
+            duration: 0.8,
+            ease: 'power3.out',
+            delay: entry.target.dataset.delay || 0
+          });
+          observer.unobserve(entry.target);
+        }
+      });
+    }, observerOptions);
+
+    reveals.forEach((el, i) => {
+      el.dataset.delay = (i % 3) * 0.1;
+      observer.observe(el);
+    });
+
+    // Stats counter animation
+    const stats = document.querySelectorAll('.stat');
+    const statObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry, idx) => {
+        if (entry.isIntersecting) {
+          gsap.to(entry.target, {
+            opacity: 1, y: 0, duration: 0.7,
+            ease: 'power3.out',
+            delay: idx * 0.15
+          });
+
+          const numEl = entry.target.querySelector('.stat-number');
+          const endVal = parseInt(numEl.textContent);
+          let obj = { val: 0 };
+          gsap.to(obj, {
+            val: endVal, duration: 1.5, ease: 'power2.out',
+            delay: idx * 0.15,
+            onUpdate: () => {
+              numEl.textContent = Math.round(obj.val) + (numEl.textContent.includes('+') ? '+' : '');
+            }
+          });
+
+          statObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.3 });
+
+    stats.forEach(s => statObserver.observe(s));
+
+    // Expertise cards
+    const cards = document.querySelectorAll('.expertise-card');
+    const cardObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry, idx) => {
+        if (entry.isIntersecting) {
+          gsap.to(entry.target, {
+            opacity: 1, y: 0, duration: 0.6,
+            ease: 'power3.out',
+            delay: idx * 0.1
+          });
+          cardObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+
+    cards.forEach(c => cardObserver.observe(c));
+
+    // Project items
+    const projects = document.querySelectorAll('.project-item');
+    const projObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry, idx) => {
+        if (entry.isIntersecting) {
+          gsap.to(entry.target, {
+            opacity: 1, x: 0, duration: 0.7,
+            ease: 'power3.out',
+            delay: idx * 0.12
+          });
+          projObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+
+    projects.forEach(p => projObserver.observe(p));
+
+    // Nav hide/show on scroll
+    let lastScroll = 0;
+    const nav = document.getElementById('nav');
+    window.addEventListener('scroll', () => {
+      const current = window.scrollY;
+      if (current > lastScroll && current > 100) {
+        nav.classList.add('hidden');
+      } else {
+        nav.classList.remove('hidden');
+      }
+      lastScroll = current;
+    });
+
+    // Smooth scroll for nav links
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        const target = document.querySelector(a.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth' });
+        }
+      });
+    });
+
+    if ('ontouchstart' in window) {
+      cursor.style.display = 'none';
+      cursorDot.style.display = 'none';
+      canvas.style.display = 'none';
+      document.body.style.cursor = 'auto';
+    }
+
+    initLang();
+  </script>
+</body>
+</html>
