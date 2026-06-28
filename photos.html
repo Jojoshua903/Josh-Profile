@@ -685,32 +685,6 @@
       <button class="admin-close" id="admin-close">&times;</button>
     </div>
 
-    <!-- FIREBASE CONFIG (shown if not configured) -->
-    <div id="firebase-setup" style="display:none;">
-      <div class="admin-hint" data-i18n="admin.fbHint">Connect to Firebase to save photos across devices. Enter your project ID and Web API key from the Firebase console.</div>
-      <div class="admin-form">
-        <div class="admin-field">
-          <label data-i18n="admin.fbProject">Firebase Project ID</label>
-          <input type="text" id="fb-project" placeholder="my-project-12345">
-        </div>
-        <div class="admin-field">
-          <label data-i18n="admin.fbKey">Web API Key</label>
-          <input type="text" id="fb-apikey" placeholder="AIzaSy...">
-        </div>
-        <button class="admin-btn" id="fb-save-config" data-i18n="admin.fbConnect">Connect to Firebase</button>
-      </div>
-      <div class="admin-divider"></div>
-    </div>
-
-    <!-- STATUS -->
-    <div id="fb-status" style="margin-bottom:16px;">
-      <div style="display:flex;align-items:center;gap:8px;font-size:0.75rem;color:rgba(245,240,230,0.4);">
-        <span id="fb-dot" style="width:8px;height:8px;border-radius:50%;background:#555;display:inline-block;"></span>
-        <span id="fb-status-text" data-i18n="admin.fbNot">Not connected</span>
-        <button id="fb-reset" style="margin-left:auto;background:none;border:1px solid rgba(245,240,230,0.15);color:rgba(245,240,230,0.4);font-size:0.65rem;padding:4px 10px;border-radius:12px;cursor:pointer;font-family:var(--font-body);" data-i18n="admin.reset">Reset</button>
-      </div>
-    </div>
-
     <div class="admin-hint" data-i18n="admin.hint">Paste an Imgur URL, give it a title, pick a category, and hit add. Syncs to Firebase in real time.</div>
 
     <div class="admin-form">
@@ -827,25 +801,16 @@
     if('ontouchstart' in window){cursor.style.display='none';cursorDot.style.display='none';canvas.style.display='none';document.body.style.cursor='auto';}
 
     // ── FIREBASE FIRESTORE REST API ──
-    const FB_CONFIG_KEY = 'ji_fb_config';
-
-    function getFBConfig() {
-      try { return JSON.parse(localStorage.getItem(FB_CONFIG_KEY)) || null; }
-      catch { return null; }
-    }
-    function saveFBConfig(cfg) { localStorage.setItem(FB_CONFIG_KEY, JSON.stringify(cfg)); }
+    const FB_PROJECT = 'josh-ibrahim-profile-site';
+    const FB_API_KEY = 'AIzaSyCdQt-c6LzxHDGUgieY77rG3xCpyA10-1Q';
 
     function firestoreURL(path) {
-      const cfg = getFBConfig();
-      if (!cfg) return null;
-      return `https://firestore.googleapis.com/v1/projects/${cfg.projectId}/databases/(default)/documents/${path}?key=${cfg.apiKey}`;
+      return `https://firestore.googleapis.com/v1/projects/${FB_PROJECT}/databases/(default)/documents/${path}?key=${FB_API_KEY}`;
     }
 
     async function fbGetPhotos() {
-      const url = firestoreURL('photos');
-      if (!url) return [];
       try {
-        const res = await fetch(url);
+        const res = await fetch(firestoreURL('photos'));
         if (!res.ok) throw new Error(res.statusText);
         const data = await res.json();
         if (!data.documents) return [];
@@ -863,10 +828,8 @@
     }
 
     async function fbAddPhoto(photo) {
-      const url = firestoreURL('photos');
-      if (!url) return false;
       try {
-        const res = await fetch(url, {
+        const res = await fetch(firestoreURL('photos'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -886,9 +849,7 @@
     }
 
     async function fbDeletePhoto(docId) {
-      const cfg = getFBConfig();
-      if (!cfg) return false;
-      const url = `https://firestore.googleapis.com/v1/projects/${cfg.projectId}/databases/(default)/documents/photos/${docId}?key=${cfg.apiKey}`;
+      const url = `https://firestore.googleapis.com/v1/projects/${FB_PROJECT}/databases/(default)/documents/photos/${docId}?key=${FB_API_KEY}`;
       try {
         const res = await fetch(url, { method: 'DELETE' });
         return res.ok;
@@ -897,63 +858,6 @@
         return false;
       }
     }
-
-    // ── FIREBASE CONFIG UI ──
-    const fbSetup = document.getElementById('firebase-setup');
-    const fbProjectInput = document.getElementById('fb-project');
-    const fbApikeyInput = document.getElementById('fb-apikey');
-    const fbSaveBtn = document.getElementById('fb-save-config');
-    const fbDot = document.getElementById('fb-dot');
-    const fbStatusText = document.getElementById('fb-status-text');
-    const fbResetBtn = document.getElementById('fb-reset');
-
-    function updateFBStatus() {
-      const cfg = getFBConfig();
-      if (cfg) {
-        fbDot.style.background = '#4CAF50';
-        fbStatusText.textContent = t('admin.fbConnected') + ': ' + cfg.projectId;
-        fbSetup.style.display = 'none';
-      } else {
-        fbDot.style.background = '#E8503A';
-        fbStatusText.textContent = 'Not connected';
-        fbSetup.style.display = 'block';
-      }
-    }
-
-    fbSaveBtn.addEventListener('click', async () => {
-      const projectId = fbProjectInput.value.trim();
-      const apiKey = fbApikeyInput.value.trim();
-      if (!projectId || !apiKey) return;
-
-      fbSaveBtn.textContent = t('admin.connecting');
-      fbSaveBtn.disabled = true;
-
-      saveFBConfig({ projectId, apiKey });
-
-      try {
-        const testUrl = firestoreURL('photos');
-        const res = await fetch(testUrl);
-        if (!res.ok) throw new Error('Connection failed');
-        updateFBStatus();
-        await loadAndRender();
-        renderAdminList();
-      } catch (e) {
-        localStorage.removeItem(FB_CONFIG_KEY);
-        fbStatusText.textContent = t('admin.fbFail');
-        fbDot.style.background = '#E8503A';
-        fbSetup.style.display = 'block';
-      }
-
-      fbSaveBtn.textContent = t('admin.fbConnect');
-      fbSaveBtn.disabled = false;
-    });
-
-    fbResetBtn.addEventListener('click', () => {
-      localStorage.removeItem(FB_CONFIG_KEY);
-      updateFBStatus();
-      fbProjectInput.value = '';
-      fbApikeyInput.value = '';
-    });
 
     // ── RENDER GALLERY ──
     const gallery = document.getElementById('gallery');
@@ -1112,7 +1016,7 @@
       if (url && (url.includes('imgur.com') || url.match(/\.(jpg|jpeg|png|gif|webp)/i))) {
         const imgUrl = normalizeImgurUrl(url);
         adminPreview.innerHTML = `<img src="${imgUrl}" alt="preview" onerror="this.parentElement.innerHTML='<div class=admin-preview-empty>Could not load image</div>';">`;
-        adminAddBtn.disabled = !getFBConfig();
+        adminAddBtn.disabled = false;
       } else {
         adminPreview.innerHTML = '<div class="admin-preview-empty">Paste an Imgur URL to preview</div>';
         adminAddBtn.disabled = true;
@@ -1192,7 +1096,6 @@
     });
 
     // ── INIT ──
-    updateFBStatus();
     loadAndRender();
     initLang();
   </script>
