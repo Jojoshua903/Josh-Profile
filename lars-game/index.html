@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Codex of Beings</title>
+<style>
+  :root {
+    --ink: #1a1230;
+    --paper: #fdf6e3;
+    --gold: #e0a92e;
+    --gold-deep: #b8801a;
+    --violet: #6b3fa0;
+    --violet-deep: #3d2064;
+    --ember: #e2603f;
+    --sand: #f4a259;
+    --mint: #5aa897;
+    --sky: #4a7fb5;
+    --card-shadow: rgba(61, 32, 100, 0.22);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Iowan Old Style', 'Palatino Linotype', 'Georgia', serif;
+    background: var(--paper);
+    background-image:
+      radial-gradient(circle at 15% 20%, rgba(224, 169, 46, 0.10), transparent 40%),
+      radial-gradient(circle at 85% 70%, rgba(107, 63, 160, 0.12), transparent 45%);
+    color: var(--ink);
+    line-height: 1.6;
+    overflow-x: hidden;
+    padding-bottom: 64px;
+  }
+
+  /* ---------- TOOLBAR ---------- */
+  .toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.8rem 1.5rem;
+    background: rgba(253, 246, 227, 0.86);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(107, 63, 160, 0.16);
+  }
+  .toolbar .brand {
+    font-family: 'Futura', 'Century Gothic', sans-serif;
+    font-size: 0.82rem;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--violet-deep);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .play-btn {
+    font-family: 'Futura', 'Century Gothic', sans-serif;
+    font-size: 0.78rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: #fffdf7;
+    background: linear-gradient(135deg, var(--violet-deep), var(--violet) 55%, var(--ember));
+    padding: 0.62rem 1.3rem;
+    border-radius: 999px;
+    box-shadow: 0 8px 20px -8px var(--card-shadow);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: transform 0.25s cubic-bezier(.2,.8,.2,1), box-shadow 0.25s;
+    border: 1px solid rgba(255,255,255,0.25);
+  }
+  .play-btn:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 12px 28px -8px var(--card-shadow);
+  }
+  .play-btn .pulse { animation: btnpulse 1.8s ease-in-out infinite; }
+  @keyframes btnpulse { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
+
+  /* ---------- HERO ---------- */
+  header.hero {
+    position: relative;
+    text-align: center;
+    padding: 5rem 1.5rem 3.5rem;
+    overflow: hidden;
+  }
+
+  .hero-glyphs {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.35;
+  }
+  .hero-glyph {
+    position: absolute;
+    font-size: 2.4rem;
+    animation: drift 14s ease-in-out infinite;
+  }
+
+  @keyframes drift {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-18px) rotate(12deg); }
+  }
+
+  .kicker {
+    font-family: 'Futura', 'Century Gothic', sans-serif;
+    letter-spacing: 0.42em;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    color: var(--violet);
+    margin-bottom: 1.2rem;
+    position: relative;
+  }
+
+  h1.title {
+    font-size: clamp(2.6rem, 8vw, 5.4rem);
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    position: relative;
+    text-shadow: 3px 3px 0 var(--gold);
+  }
+  h1.title em {
+    font-style: italic;
+    color: var(--violet-deep);
+    text-shadow: 3px 3px 0 var(--sand);
+  }
+
+  .subtitle {
+    max-width: 40rem;
+    margin: 1.6rem auto 0;
+    font-size: 1.1rem;
+    color: #4a3d5f;
+    position: relative;
+  }
+
+  .count-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1.8rem;
+    padding: 0.4rem 1.1rem;
+    border: 2px solid var(--violet);
+    border-radius: 999px;
+    font-family: 'Futura', 'Century Gothic', sans-serif;
+    font-size: 0.8rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--violet-deep);
+    background: rgba(255,255,255,0.5);
+    position: relative;
+  }
+
+  /* ---------- GALLERY ---------- */
+  main {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 1rem 1.5rem 4rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+    gap: 2.4rem;
+  }
+
+  .character {
+    position: relative;
+    background: #fffdf7;
+    border-radius: 20px;
+    padding: 0;
+    box-shadow: 0 18px 40px -18px var(--card-shadow);
+    border: 1px solid rgba(107, 63, 160, 0.12);
+    overflow: hidden;
+    transition: transform 0.4s cubic-bezier(.2,.8,.2,1), box-shadow 0.4s;
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  .character.in {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .character:hover {
+    transform: translateY(-8px) rotate(-0.4deg);
+    box-shadow: 0 30px 60px -20px var(--card-shadow);
+  }
+
+  .char-banner {
+    height: 130px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .char-banner .emblem {
+    font-size: 4.4rem;
+    filter: drop-shadow(0 6px 10px rgba(0,0,0,0.25));
+    z-index: 2;
+    transition: transform 0.5s cubic-bezier(.2,.8,.2,1);
+  }
+  .character:hover .emblem { transform: scale(1.15) rotate(-6deg); }
+
+  .char-banner::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.09) 0 12px, transparent 12px 24px);
+  }
+
+  .banner-devin { background: linear-gradient(135deg, var(--violet-deep), var(--violet) 60%, #8b5cc4); }
+  .banner-femi { background: linear-gradient(135deg, var(--ember), var(--sand) 70%, var(--gold)); }
+  .banner-caiza { background: linear-gradient(135deg, #12333f, #1f5480 55%, #5fa7d4); }
+  .banner-bull { background: linear-gradient(135deg, #4a2c14, #7a4a2a 60%, #a56a48); }
+
+  .char-body { padding: 1.6rem 1.6rem 1.8rem; }
+
+  .char-name {
+    font-size: 1.7rem;
+    line-height: 1.1;
+    color: var(--ink);
+    margin-bottom: 0.15rem;
+  }
+  .char-epithet {
+    font-family: 'Futura', 'Century Gothic', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--violet);
+    margin-bottom: 1rem;
+  }
+
+  .char-desc {
+    font-size: 1rem;
+    color: #3d3352;
+    margin-bottom: 1.3rem;
+  }
+
+  .traits {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .trait {
+    font-family: 'Futura', 'Century Gothic', sans-serif;
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.32rem 0.75rem;
+    border-radius: 999px;
+    background: rgba(107, 63, 160, 0.08);
+    color: var(--violet-deep);
+    border: 1px solid rgba(107, 63, 160, 0.18);
+  }
+  .character.femi .trait {
+    background: rgba(226, 96, 63, 0.10);
+    color: var(--ember);
+    border-color: rgba(226, 96, 63, 0.22);
+  }
+  .character.caiza .trait {
+    background: rgba(31, 84, 128, 0.10);
+    color: #1f5480;
+    border-color: rgba(31, 84, 128, 0.24);
+  }
+  .character.bull .trait {
+    background: rgba(122, 74, 42, 0.12);
+    color: #7a4a2a;
+    border-color: rgba(122, 74, 42, 0.26);
+  }
+
+  .domain-strip {
+    margin-top: 1.3rem;
+    padding-top: 1rem;
+    border-top: 1px dashed rgba(107,63,160,0.25);
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Futura', 'Century Gothic', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #6b6083;
+  }
+  .domain-strip strong { color: var(--ink); }
+
+  /* ---------- COMING SOON ---------- */
+  .character.placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 340px;
+    background: repeating-linear-gradient(45deg, #fffdf7 0 18px, #fbf3df 18px 36px);
+    border: 2px dashed rgba(107, 63, 160, 0.3);
+    box-shadow: none;
+    color: var(--violet);
+  }
+  .character.placeholder:hover { transform: translateY(-4px); box-shadow: 0 14px 30px -18px var(--card-shadow); }
+  .placeholder .qmark { font-size: 3.4rem; margin-bottom: 0.8rem; animation: pulse 2.6s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 0.5; transform: scale(1);} 50% { opacity: 1; transform: scale(1.08);} }
+  .placeholder .ph-title { font-size: 1.3rem; color: var(--violet-deep); }
+  .placeholder .ph-sub { font-size: 0.9rem; color: #6b6083; margin-top: 0.4rem; max-width: 16rem; }
+
+  footer {
+    text-align: center;
+    font-family: 'Futura', 'Century Gothic', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #8a7fa3;
+    padding: 1rem 1.5rem 2rem;
+  }
+
+  .character { cursor: pointer; }
+
+  /* character sheet modal */
+  #sheet {
+    position: fixed; inset: 0; z-index: 200; display: none;
+    align-items: center; justify-content: center; padding: 2rem;
+    background: rgba(30, 20, 52, 0.55); backdrop-filter: blur(6px);
+  }
+  #sheet.show { display: flex; }
+  .sheet-card {
+    position: relative; display: flex; width: min(780px, 94vw); max-height: 88vh; overflow: hidden;
+    background: #fffdf7; color: var(--ink); border-radius: 22px;
+    box-shadow: 0 34px 90px -24px rgba(61, 32, 100, 0.6); border: 1px solid rgba(107, 63, 160, 0.18);
+  }
+  #sheet-close {
+    position: absolute; top: 0.7rem; right: 0.9rem; z-index: 3;
+    width: 34px; height: 34px; border: none; border-radius: 50%; cursor: pointer;
+    background: rgba(0,0,0,0.18); color: #fff; font-size: 1.3rem; line-height: 1;
+  }
+  #sheet-close:hover { background: rgba(0,0,0,0.4); }
+  .sheet-art {
+    flex: 0 0 44%; min-width: 0; display: flex; align-items: center; justify-content: center; padding: 1.4rem;
+  }
+  .sheet-art.art-devin { background: linear-gradient(160deg, #efe6ff, #d8c7f0); }
+  .sheet-art.art-femi  { background: linear-gradient(160deg, #ffe9d6, #f6cfa8); }
+  .sheet-art.art-caiza { background: linear-gradient(160deg, #dcecf7, #b9d6ea); }
+  .sheet-art .big-emoji { font-size: clamp(5rem, 16vw, 9rem); filter: drop-shadow(0 10px 14px rgba(0,0,0,0.22)); }
+  .sheet-art img { width: 100%; height: auto; max-height: 72vh; object-fit: contain; filter: drop-shadow(0 12px 18px rgba(0,0,0,0.25)); }
+  .sheet-info { flex: 1 1 56%; min-width: 0; padding: 2rem 2rem 2.2rem; overflow-y: auto; }
+  .sheet-name { font-size: 2.1rem; line-height: 1.05; color: var(--ink); }
+  .sheet-epithet {
+    font-family: 'Futura', 'Century Gothic', sans-serif; text-transform: uppercase;
+    letter-spacing: 0.16em; font-size: 0.72rem; color: var(--violet); margin: 0.35rem 0 1.1rem;
+  }
+  .sheet-desc { font-size: 1.02rem; color: #3d3352; margin-bottom: 1.3rem; }
+  .sheet-stats { display: grid; grid-template-columns: auto 1fr; gap: 0.4rem 0.9rem; margin-bottom: 1.3rem; }
+  .sheet-stats .k {
+    font-family: 'Futura', 'Century Gothic', sans-serif; text-transform: uppercase;
+    letter-spacing: 0.08em; font-size: 0.66rem; color: #8a7fa3; align-self: center;
+  }
+  .sheet-stats .v { font-weight: 600; color: var(--ink); font-size: 0.92rem; }
+  .sheet-traits { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+  .sheet-traits .t {
+    font-family: 'Futura', 'Century Gothic', sans-serif; font-size: 0.66rem; letter-spacing: 0.08em;
+    text-transform: uppercase; padding: 0.32rem 0.75rem; border-radius: 999px;
+    background: rgba(107, 63, 160, 0.09); color: var(--violet-deep); border: 1px solid rgba(107, 63, 160, 0.18);
+  }
+  @media (max-width: 560px) {
+    .sheet-card { flex-direction: column; max-height: 90vh; }
+    .sheet-art { flex-basis: auto; }
+    .sheet-art img { max-height: 34vh; }
+  }
+
+  @media print {
+    .hero-glyphs { display: none; }
+    .character { opacity: 1; transform: none; break-inside: avoid; box-shadow: none; border: 1px solid #ccc; }
+    #sheet { display: none !important; }
+  }
+</style>
+</head>
+<body>
+  <nav class="toolbar">
+    <span class="brand">&#128027; The Codex of Beings</span>
+    <a class="play-btn" href="game.html"><span class="pulse">&#9654;</span> Enter Purgatory Park</a>
+  </nav>
+
+  <header class="hero">
+    <div class="hero-glyphs" id="glyphs"></div>
+    <div class="kicker">An Ever-Expanding Bestiary</div>
+    <h1 class="title">The Codex<br>of <em>Beings</em></h1>
+    <p class="subtitle">A living record of the souls, gods, and legends that walk this universe. Turn the page &mdash; more are always arriving.</p>
+    <div class="count-badge"><span id="dot">&#9679;</span> <span id="count-text">4 chronicled &middot; more to come</span></div>
+  </header>
+
+  <main id="gallery">
+    <article class="character devin" data-char="devin">
+      <div class="char-banner banner-devin"><span class="emblem">&#128027;</span></div>
+      <div class="char-body">
+        <h2 class="char-name">Devin de Snuitkever</h2>
+        <div class="char-epithet">The Modest Maker &middot; Warden of Purgatory</div>
+        <p class="char-desc">A godly, ethereal bug who spun the entire universe into being &mdash; and would never dream of bringing it up. Impossibly humble for a creator deity, he now presides over Purgatory, weighing the in-between with a gentle, unassuming hand.</p>
+        <div class="traits">
+          <span class="trait">Divine</span>
+          <span class="trait">Ethereal</span>
+          <span class="trait">Impossibly Modest</span>
+          <span class="trait">Universe-Maker</span>
+        </div>
+        <div class="domain-strip">
+          <span>Domain: <strong>Purgatory</strong></span>
+          <span>Class: <strong>God-Bug</strong></span>
+        </div>
+      </div>
+    </article>
+
+    <article class="character femi" data-char="femi">
+      <div class="char-banner banner-femi"><span class="emblem">&#127936;</span></div>
+      <div class="char-body">
+        <h2 class="char-name">Femi de Fennec</h2>
+        <div class="char-epithet">The Court Comet &middot; Desert Guard</div>
+        <p class="char-desc">An anthropomorphic fennec fox with ears that hear the whistle before it blows. Quick, clever, and utterly unstoppable on the hardwood &mdash; Femi is amazing at basketball, dancing circles around anyone bold enough to guard her.</p>
+        <div class="traits">
+          <span class="trait">Fennec Fox</span>
+          <span class="trait">Basketball Prodigy</span>
+          <span class="trait">Lightning-Fast</span>
+          <span class="trait">Anthropomorphic</span>
+        </div>
+        <div class="domain-strip">
+          <span>Position: <strong>Point Guard</strong></span>
+          <span>Class: <strong>Hooper</strong></span>
+        </div>
+      </div>
+    </article>
+
+    <article class="character caiza" data-char="caiza">
+      <div class="char-banner banner-caiza"><span class="emblem">&#128009;</span></div>
+      <div class="char-body">
+        <h2 class="char-name">Caiza</h2>
+        <div class="char-epithet">The Salt-Blooded Tide &middot; Storm Swimmer</div>
+        <p class="char-desc">A confident, independent water dragon with scales like deep-sea storms and a shark-tooth grin to match. She surfaces from the park's pond when someone proves patient enough to earn it &mdash; excellent swimmer, gifted mechanic, fiercely protective of her crew, and allergic to being told what to do.</p>
+        <div class="traits">
+          <span class="trait">Water Dragon</span>
+          <span class="trait">Saltwater</span>
+          <span class="trait">Confident</span>
+          <span class="trait">Protective</span>
+        </div>
+        <div class="domain-strip">
+          <span>Domain: <strong>The Deep</strong></span>
+          <span>Class: <strong>Storm Swimmer</strong></span>
+        </div>
+      </div>
+    </article>
+
+    <article class="character bull" data-char="bull">
+      <div class="char-banner banner-bull"><span class="emblem">&#128002;</span></div>
+      <div class="char-body">
+        <h2 class="char-name">Maxus</h2>
+        <div class="char-epithet">The Wandering Charge &middot; Big Softie</div>
+        <p class="char-desc">A burly, warm-hearted bull who thunders in from the horizon the instant he spots a flash of red. Two speeds &mdash; nap and CHARGE &mdash; and not much steering in between. Under all the muscle he's a gentle soul who's been searching a long time for somewhere to finally belong.</p>
+        <div class="traits">
+          <span class="trait">Bull</span>
+          <span class="trait">Impulsive Charger</span>
+          <span class="trait">Secret Softie</span>
+          <span class="trait">Loyal</span>
+        </div>
+        <div class="domain-strip">
+          <span>Origin: <strong>The Horizon</strong></span>
+          <span>Class: <strong>Wanderer</strong></span>
+        </div>
+      </div>
+    </article>
+
+    <article class="character placeholder">
+      <div class="qmark">&#10068;</div>
+      <div class="ph-title">Yet to be named</div>
+      <div class="ph-sub">More beings will be added to the Codex. Their legends are still being written.</div>
+    </article>
+  </main>
+
+  <!-- Character sheet modal (art left, info right) -->
+  <div id="sheet" aria-hidden="true">
+    <div class="sheet-card">
+      <button id="sheet-close" aria-label="Close">&times;</button>
+      <div class="sheet-art" id="sheet-art"></div>
+      <div class="sheet-info">
+        <div class="sheet-name" id="sheet-name"></div>
+        <div class="sheet-epithet" id="sheet-epithet"></div>
+        <p class="sheet-desc" id="sheet-desc"></p>
+        <div class="sheet-stats" id="sheet-stats"></div>
+        <div class="sheet-traits" id="sheet-traits"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>The Codex of Beings &middot; Vol. I</footer>
+
+  <script>
+    const glyphChars = ['&#128027;', '&#127936;', '&#10024;', '&#128302;', '&#127774;', '&#128171;'];
+    const container = document.getElementById('glyphs');
+    for (let i = 0; i < 6; i++) {
+      const g = document.createElement('span');
+      g.className = 'hero-glyph';
+      g.innerHTML = glyphChars[i];
+      g.style.left = (8 + Math.random() * 84) + '%';
+      g.style.top = (5 + Math.random() * 80) + '%';
+      g.style.animationDelay = (Math.random() * 8) + 's';
+      g.style.fontSize = (1.6 + Math.random() * 2) + 'rem';
+      container.appendChild(g);
+    }
+
+    const cards = document.querySelectorAll('.character');
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach((e, i) => {
+        if (e.isIntersecting) {
+          setTimeout(() => e.target.classList.add('in'), i * 90);
+          obs.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.15 });
+    cards.forEach(c => obs.observe(c));
+
+    /* ---------- Character sheets ---------- */
+    const BIOS = {
+      devin: {
+        img: 'images/devin.png',
+        emoji: '🐛',
+        name: 'Devin de Snuitkever',
+        epithet: 'The Modest Maker · Warden of Purgatory',
+        desc: "A godly, ethereal beetle who spun the entire universe into being — and would never dream of bringing it up. Impossibly humble for a creator deity, he now tends Purgatory's park: watering the flowers, keeping the sky a nice colour, and quietly hoping for a little company.",
+        stats: { Species: 'God-Beetle', Domain: 'Purgatory / the Park', Demeanor: 'Shy, gentle, self-effacing', Likes: 'Crooked trees, quiet company' },
+        traits: ['Divine', 'Ethereal', 'Impossibly Modest', 'Universe-Maker']
+      },
+      femi: {
+        img: 'images/femi.png',
+        emoji: '🏀',
+        name: 'Femi de Fennec',
+        epithet: 'The Court Comet · Desert Guard',
+        desc: "An anthropomorphic fennec fox with ears that hear the whistle before it blows. Cocky, quick, and impossible to guard — she rules the park court and never, ever misses. All trash talk on the outside, total softie once you win her over.",
+        stats: { Species: 'Fennec Fox', Age: '20', Jersey: 'OISTERWIJK 23', Position: 'Point Guard', Likes: 'Winning, races, showing off' },
+        traits: ['Basketball Prodigy', 'Lightning-Fast', 'Competitive', 'Secret Softie']
+      },
+      caiza: {
+        img: 'images/caiza.png',
+        emoji: '🐉',
+        name: 'Caiza',
+        epithet: 'The Salt-Blooded Tide · Storm Swimmer',
+        desc: "A confident, independent water dragon with navy scales, silver-ringed head-fins and a shark-tooth grin. She surfaces from the pond only for someone patient enough to earn it. Excellent swimmer, gifted mechanic, fiercely protective of her crew — and allergic to being told what to do.",
+        stats: { Species: 'Water Dragon', Pronouns: 'she/her', Age: '21', Likes: 'Ocean storms, old rock, late-night swims' },
+        traits: ['Saltwater', 'Confident', 'Independent', 'Protective']
+      },
+      bull: {
+        img: 'images/maxus.png',
+        emoji: '🐂',
+        name: 'Maxus',
+        epithet: 'The Wandering Charge · Big Softie',
+        desc: "A burly, warm-hearted bull who thunders in from the horizon the instant something catches his eye — steering optional. Two speeds, nap and CHARGE. Under all the muscle he's a gentle soul who's spent a long time searching for somewhere to belong, and this park might just be it.",
+        stats: { Species: 'Bull', Origin: 'The far horizon', Demeanor: 'Gruff, warm, impulsive', Likes: 'Good grass, hustle, quiet company' },
+        traits: ['Impulsive Charger', 'Secret Softie', 'Loyal', 'Gentle Giant']
+      }
+    };
+
+    const sheet = document.getElementById('sheet');
+    const sheetArt = document.getElementById('sheet-art');
+    function openSheet(who) {
+      const b = BIOS[who]; if (!b) return;
+      sheetArt.className = 'sheet-art art-' + who;
+      if (b.img) {
+        // real illustration if present, else fall back to the big emoji
+        sheetArt.innerHTML = '<img src="' + b.img + '" alt="' + b.name + '" onerror="this.replaceWith(Object.assign(document.createElement(\'span\'),{className:\'big-emoji\',textContent:\'' + b.emoji + '\'}))">';
+      } else {
+        sheetArt.innerHTML = '<span class="big-emoji">' + b.emoji + '</span>';
+      }
+      document.getElementById('sheet-name').textContent = b.name;
+      document.getElementById('sheet-epithet').textContent = b.epithet;
+      document.getElementById('sheet-desc').textContent = b.desc;
+      const stats = document.getElementById('sheet-stats'); stats.innerHTML = '';
+      for (const k in b.stats) {
+        const dk = document.createElement('span'); dk.className = 'k'; dk.textContent = k;
+        const dv = document.createElement('span'); dv.className = 'v'; dv.textContent = b.stats[k];
+        stats.appendChild(dk); stats.appendChild(dv);
+      }
+      const tr = document.getElementById('sheet-traits'); tr.innerHTML = '';
+      b.traits.forEach(t => { const s = document.createElement('span'); s.className = 't'; s.textContent = t; tr.appendChild(s); });
+      sheet.classList.add('show'); sheet.setAttribute('aria-hidden', 'false');
+    }
+    function closeSheet() { sheet.classList.remove('show'); sheet.setAttribute('aria-hidden', 'true'); }
+    document.getElementById('sheet-close').addEventListener('click', closeSheet);
+    sheet.addEventListener('click', e => { if (e.target === sheet) closeSheet(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+    cards.forEach(c => { const who = c.getAttribute('data-char'); if (who) c.addEventListener('click', () => openSheet(who)); });
+  </script>
+</body>
+</html>
