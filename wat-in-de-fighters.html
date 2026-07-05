@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wat In De Fighters</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230d0d18'/%3E%3Cpath d='M12 44 L20 12 L26 30 L32 14 L38 30 L44 12 L52 44 Z' fill='%23fdbb2d'/%3E%3Cpath d='M12 44 L52 44 L48 54 L16 54 Z' fill='%23e63946'/%3E%3C/svg%3E">
 <script src="https://artifactcdn.diabrowser.engineering/ajax/libs/tone/Tone.min.js"></script>
 <style>
   :root{
@@ -112,6 +113,10 @@
   .helper{font-family:Arial,sans-serif;font-weight:700;font-size:clamp(10px,1.5vw,13px);color:#cfd0e8;letter-spacing:.15em;margin-top:6px;}
   .roster{display:flex;flex-direction:column;gap:8px;width:100%;max-width:700px;margin-top:1.5%;flex-shrink:0;align-items:center;}
   .catgroup{width:100%;}
+  /* two categories sharing one line, split by a vertical divider */
+  .catpair{display:flex;width:100%;gap:12px;align-items:stretch;}
+  .catpair .catgroup{flex:1;min-width:0;}
+  .catdivider{flex:0 0 2px;align-self:stretch;background:linear-gradient(180deg,transparent,rgba(253,187,45,.5),transparent);border-radius:2px;}
   .cathead{font-family:Arial,sans-serif;font-weight:800;font-size:10px;letter-spacing:.18em;color:#fdbb2d;text-align:left;margin:0 0 4px 2px;display:flex;align-items:center;gap:7px;}
   .cathead::after{content:'';flex:1;height:2px;background:linear-gradient(90deg,rgba(253,187,45,.5),transparent);}
   .cathead .cicon{font-size:12px;}
@@ -356,6 +361,29 @@
   @keyframes vsBolt{from{opacity:0;transform:skewX(-8deg) scale(2.4) rotate(-12deg);}to{opacity:1;transform:skewX(-8deg) scale(1);}}
   .vsstage{font-family:Arial,sans-serif;font-weight:800;letter-spacing:.24em;font-size:clamp(11px,1.8vw,15px);color:#fdbb2d;margin-top:5%;opacity:0;animation:vsFade .4s .5s both;}
   @keyframes vsFade{to{opacity:.9;}}
+
+  /* pause overlay — sits above the match, dims the arena but leaves it visible */
+  #pause{
+    position:absolute;inset:0;z-index:18;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(8,8,16,.62);backdrop-filter:blur(2px);
+  }
+  #pause.hidden{display:none !important;}
+  .pausecard{
+    display:flex;flex-direction:column;gap:12px;width:min(84%,420px);
+    background:linear-gradient(180deg,#23235a,#12121f);
+    border:3px solid #fdbb2d;border-radius:18px;padding:22px 24px 20px;
+    box-shadow:0 12px 40px rgba(0,0,0,.6);
+  }
+  .pausetitle{
+    font-size:clamp(30px,6vw,52px);letter-spacing:.04em;text-align:center;
+    background:linear-gradient(180deg,#fdbb2d,#e63946);-webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 3px 0 rgba(0,0,0,.35);transform:skewX(-6deg);margin-bottom:4px;
+  }
+  .pausebtns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:8px;}
+  .pausebtns .btn{margin-top:0;font-size:clamp(15px,2.4vw,22px);padding:10px 26px;}
+  .pausehint{font-family:Arial,sans-serif;font-weight:700;font-size:11px;letter-spacing:.1em;color:#9a9cc0;text-align:center;margin-top:4px;}
+  .pausehint b{color:#fdbb2d;}
 </style>
 </head>
 <body>
@@ -394,6 +422,26 @@
   </div>
   <button id="muteBtn" title="Toggle music">🔊</button>
   <div id="achToast"><span class="tIcon">🏆</span><div><div id="achToastName">ACHIEVEMENT</div><div class="tSub">ACHIEVEMENT UNLOCKED</div></div></div>
+
+  <!-- PAUSE OVERLAY (Esc during a match) -->
+  <div id="pause" class="hidden">
+    <div class="pausecard">
+      <h2 class="pausetitle">PAUSED</h2>
+      <div class="setrow">
+        <div class="setlbl">MUSIC &amp; SFX<div class="sethint">All game audio.</div></div>
+        <button class="toggle" id="pauseMusic">ON</button>
+      </div>
+      <div class="setrow">
+        <div class="setlbl">MOBILE MODE<div class="sethint">On-screen touch buttons.</div></div>
+        <button class="toggle" id="pauseMobile">OFF</button>
+      </div>
+      <div class="pausebtns">
+        <button class="btn" id="resumeBtn">RESUME</button>
+        <button class="btn btn-back" id="quitBtn">QUIT TO MENU</button>
+      </div>
+      <div class="pausehint">Press <b>ESC</b> to resume</div>
+    </div>
+  </div>
 
   <!-- TITLE -->
   <div class="screen" id="title">
@@ -933,6 +981,18 @@ const ROSTER = [
     costume:{name:'RGB SETUP', color:'#00f5d4', dark:'#0b6e5f', acc:'visor'},
     costume2:{name:'RETRO GREY', color:'#adb5bd', dark:'#495057', acc:'antenna'},
     costume3:{name:'PLAYER TWO', color:'#e63946', dark:'#7a141d', acc:'goggles'}
+  },
+  {
+    id:'cavan', name:'CAVAN', color:'#ff7a1a', dark:'#a34400', skin:'#f0c8a8', locked:true,
+    desc:'Reckless Charger',
+    move:'FLYING TACKLE · launches himself forward shoulder-first',
+    up:'SKY CHARGE · rockets up and away',
+    sup:'RAMPAGE · a chain of unstoppable body-slams',
+    stats:{speed:4.0, jump:15.0, weight:1.05},
+    special:'launch',
+    costume:{name:'BLAZE', color:'#e63946', dark:'#7a141d', acc:'flame'},
+    costume2:{name:'STEEL RAM', color:'#6c757d', dark:'#343a40', acc:'horns'},
+    costume3:{name:'GOLDEN BULL', color:'#ffbe0b', dark:'#b3860a', acc:'crown'}
   }
 ];
 
@@ -967,6 +1027,7 @@ const TAUNTS = {
   ash:      { seq:['⚾','😤'],      cry:"MY TURN NOW!", emote:'point' },
   kayo:     { seq:['🐱','🐈'],      cry:"MEOW MEOW!",   emote:'spin' },
   jace:     { seq:['🎮','😎'],      cry:"GG EZ!",       emote:'shrug' },
+  cavan:    { seq:['💥','🔥'],      cry:"OUTTA MY WAY!", emote:'flex' },
 };
 
 /* ---------------- CLASSIC MODE STORIES ---------------- */
@@ -1003,6 +1064,7 @@ const STORY = {
   ash:     { title:'OUT OF THE SHADOW',   goal:"to prove he's more than Nathan's little brother", rival:'nathan' },
   kayo:    { title:'PURR-FECT TEAM',      goal:'to show two cats fight better than one', rival:'femi' },
   jace:    { title:'FINAL BOSS',          goal:'to clear the hardest level of all: real life', rival:'metaai' },
+  cavan:   { title:'FULL SEND',           goal:'to charge through anyone who stands in his way', rival:'yassin' },
 };
 // Build a 4-round gauntlet for a chosen character: 3 themed opponents + the rival.
 function buildClassicRun(c){
@@ -1181,8 +1243,7 @@ function drawIcon(g, c, S, costume, t){
     case 'bullets': // three bullet streaks
       g.fillStyle=white;
       for(let k=-1;k<=1;k++){ g.fillRect(-r*0.8, k*r*0.4-r*0.08, r*1.4, r*0.16); } break;
-    case 'controller': // game controller: rounded body + two grips, d-pad + buttons
-      g.fillStyle=white;
+    case 'controller': // game controller: rounded body + two grips, d-pad + buttons      g.fillStyle=white;
       g.beginPath(); g.ellipse(-r*0.55,r*0.15,r*0.4,r*0.5,0.4,0,Math.PI*2); g.fill();
       g.beginPath(); g.ellipse(r*0.55,r*0.15,r*0.4,r*0.5,-0.4,0,Math.PI*2); g.fill();
       g.fillRect(-r*0.6,-r*0.35,r*1.2,r*0.7);
@@ -1192,6 +1253,10 @@ function drawIcon(g, c, S, costume, t){
       // two face buttons
       g.beginPath(); g.arc(r*0.32,-r*0.12,r*0.09,0,Math.PI*2); g.fill();
       g.beginPath(); g.arc(r*0.5,r*0.06,r*0.09,0,Math.PI*2); g.fill(); break;
+    case 'launch': // forward-charge chevrons (self-propel tackle)
+      g.strokeStyle=white; g.lineWidth=Math.max(2.5,S*0.045); g.lineCap='round'; g.lineJoin='round';
+      for(let k=-1;k<=1;k++){ const ox=k*r*0.5;
+        g.beginPath(); g.moveTo(ox-r*0.35,-r*0.55); g.lineTo(ox+r*0.2,0); g.lineTo(ox-r*0.35,r*0.55); g.stroke(); } break;
     default:
       g.fillStyle=white; g.beginPath(); g.arc(0,0,r*0.7,0,Math.PI*2); g.fill();
   }
@@ -1613,6 +1678,21 @@ function drawFighter(g, c, x, y, w, h, face, t, state, costume){
     g.beginPath(); g.ellipse(cx2+4,cy2,4,6,-0.4,0,Math.PI*2); g.fill();
     g.fillRect(cx2-5,cy2-4,10,7);
     g.fillStyle=col; g.beginPath(); g.arc(cx2+3,cy2-1,1.4,0,Math.PI*2); g.fill();
+  } else if(c.id==='cavan'){ // reckless charger: spiky orange hair + forward-lean motion lines
+    // spiky orange hair
+    g.fillStyle='#ff7a1a';
+    for(let i=-2;i<=2;i++){ g.beginPath();
+      g.moveTo(i*headR*0.42-headR*0.2, -bodyH*0.82);
+      g.lineTo(i*headR*0.42, -bodyH*1.12 - (i===0?headR*0.15:0));
+      g.lineTo(i*headR*0.42+headR*0.2, -bodyH*0.82); g.closePath(); g.fill(); }
+    g.beginPath(); g.arc(0,-bodyH*0.78, headR*1.02, Math.PI, Math.PI*2); g.fill();
+    // determined brow
+    g.strokeStyle='#111'; g.lineWidth=2;
+    g.beginPath(); g.moveTo(headR*0.1,-bodyH*0.82); g.lineTo(headR*0.6,-bodyH*0.76); g.stroke();
+    // speed/motion lines trailing behind when attacking (the forward launch)
+    if(atk){ g.strokeStyle=col; g.lineWidth=2.5; g.globalAlpha=0.7;
+      for(let i=0;i<3;i++){ const yy=-bodyH*0.3+i*bodyH*0.28; g.beginPath(); g.moveTo(-bodyW*0.5,yy); g.lineTo(-bodyW*1.0-i*4,yy); g.stroke(); }
+      g.globalAlpha=1; }
   } else if(c.id==='kayo'){ // TWO CATS STACKED: Yara balances on top of Kayo
     g.restore();            // drop the standard humanoid body entirely
     g.save();
@@ -2411,6 +2491,8 @@ const Music = {
     const m = STAGE_MUSIC[stageId] || STAGE_MUSIC.nl;
     this.stop();
     this.curId=stageId;
+    // stage ambience follows the stage music; menu has none
+    if(typeof SFX!=='undefined'){ if(stageId==='menu') SFX.stopAmbience(); else SFX.startAmbience(stageId); }
     Tone.Transport.bpm.value = m.bpm;
     this.synth.oscillator.type = m.wave;
     this.bassSynth.oscillator.type = m.bassWave || 'sine';
@@ -2448,13 +2530,141 @@ const Music = {
   },
   toggle(){
     this.on=!this.on;
-    if(!this.on){ this.stop(); }
-    else if(running && stagePick){ this.play(stagePick.id); }
+    if(!this.on){ this.stop(); SFX.stopAmbience(); }
+    else if(running && stagePick){ this.play(stagePick.id); SFX.startAmbience(stagePick.id); }
     return this.on;
   }
 };
 
-/* ---------------- FIGHTER ENTITY ---------------- */
+/* ---------------- SOUND EFFECTS (Tone.js, synth-generated) ---------------- */
+// A dedicated set of synths so combat SFX are independent of the music volume.
+// Each attack type maps to a short characterful sound; every stage gets a looping
+// ambience bed (wind, water, city hum, etc.). All routed through Music.on so the
+// mute button silences everything at once.
+const SFX = {
+  ready:false, blip:null, noise:null, noiseEnv:null, tone:null, amb:null, ambSynth:null, ambLoop:null,
+  init(){
+    if(this.ready || typeof Tone==='undefined') return;
+    const out = new Tone.Volume(-8).toDestination();
+    // pitched blips (zaps, coins, tones)
+    this.blip = new Tone.Synth({ oscillator:{type:'square'}, envelope:{attack:0.001,decay:0.12,sustain:0,release:0.05}, volume:-10 }).connect(out);
+    this.tone = new Tone.Synth({ oscillator:{type:'triangle'}, envelope:{attack:0.002,decay:0.2,sustain:0.05,release:0.1}, volume:-9 }).connect(out);
+    // noise burst (whooshes, explosions, impacts)
+    this.noiseEnv = new Tone.AmplitudeEnvelope({ attack:0.001, decay:0.18, sustain:0, release:0.08 }).connect(out);
+    this.noiseFilt = new Tone.Filter(1800,'lowpass').connect(this.noiseEnv);
+    this.noise = new Tone.Noise('white'); this.noise.connect(this.noiseFilt); this.noise.start();
+    // ambience bed
+    this.ambVol = new Tone.Volume(-26).toDestination();
+    this.ready=true;
+  },
+  ensure(){ if(!Music.on) return false; this.init(); return this.ready; },
+  // a filtered noise burst — used for whoosh/boom/impact; cutoff sets its "color"
+  burst(cutoff, dur, vol){
+    if(!this.ensure()) return;
+    try{
+      this.noiseFilt.frequency.rampTo(cutoff, 0.01);
+      this.noiseEnv.decay = dur||0.16;
+      const t=Tone.now();
+      this.noiseEnv.triggerAttackRelease(dur||0.16, t);
+    }catch(e){}
+  },
+  // a quick pitched note (zap/coin/tone)
+  beep(note, dur, kind){
+    if(!this.ensure()) return;
+    try{ (kind==='tone'?this.tone:this.blip).triggerAttackRelease(note, dur||'16n', Tone.now()); }catch(e){}
+  },
+  // a rising or falling pitch sweep (super, launches)
+  sweep(from, to, dur){
+    if(!this.ensure()) return;
+    try{ const t=Tone.now(); this.tone.triggerAttackRelease(from, dur||0.25, t);
+      this.tone.frequency.setValueAtTime(Tone.Frequency(from).toFrequency(), t);
+      this.tone.frequency.rampTo(Tone.Frequency(to).toFrequency(), dur||0.25, t); }catch(e){}
+  },
+  // Fire the sound that matches a fighter's special/attack type.
+  attack(kind){
+    switch(kind){
+      case 'melee':      this.burst(2600, 0.09); break;
+      case 'pitch': case 'curve': case 'serve': case 'evilserve':
+                         this.burst(3000, 0.10); this.beep('C5','32n'); break;
+      case 'drone': case 'minidrone': case 'swarm': this.beep('A4','32n'); this.beep('E5','32n'); break;
+      case 'bolt':       this.beep('B5','16n'); this.burst(4000,0.08); break;
+      case 'dash': case 'glitch': this.sweep('C4','C6',0.14); break;
+      case 'pound': case 'shock': this.burst(600,0.22); break;
+      case 'bomb': case 'flask': this.burst(900,0.28); break;
+      case 'rocks':      this.burst(700,0.2); break;
+      case 'frost':      this.beep('E6','32n'); this.beep('B5','32n'); break;
+      case 'kick': case 'pounce': case 'twocat': this.burst(2400,0.1); this.beep('G4','32n'); break;
+      case 'soundwave':  this.sweep('C3','C2',0.3); break;
+      case 'coins':      this.beep('E6','32n'); this.beep('G6','32n'); break;
+      case 'slipper':    this.burst(2200,0.1); break;
+      case 'numbers':    this.beep('D5','32n'); break;
+      case 'football':   this.burst(2000,0.12); break;
+      case 'pellet': case 'bullets': this.burst(3200,0.06); break;
+      case 'breakdance': this.sweep('E4','E5',0.2); break;
+      case 'controller': this.beep('C5','32n'); this.beep('G5','32n'); this.burst(2500,0.08); break;
+      case 'launch': this.sweep('C3','G4',0.18); this.burst(1600,0.14); break;
+      default:           this.burst(2600,0.1);
+    }
+  },
+  hit(){ this.burst(1400,0.12); this.beep('G3','32n'); },
+  shieldHit(){ this.beep('C6','32n'); },
+  ko(){ this.sweep('C5','C3',0.5); this.burst(500,0.4); },
+  super(){ this.sweep('C4','C6',0.4); this.burst(1200,0.35); },
+  jump(){ this.beep('C5','32n','tone'); },
+  // ---- per-stage ambience: a looping motif/texture unique to each map ----
+  startAmbience(stageId){
+    if(!this.ensure()) return;
+    this.stopAmbience();
+    const A = STAGE_AMBIENCE[stageId];
+    if(!A) return;
+    try{
+      if(A.type==='noise'){
+        // textural bed (wind / sea / rain / snow) — slow-pulsing filtered noise
+        this.ambSynth = new Tone.Noise(A.color||'pink');
+        this.ambFilt = new Tone.Filter(A.cutoff||500,'lowpass').connect(this.ambVol);
+        this.ambSynth.connect(this.ambFilt); this.ambSynth.volume.value=A.vol||-30; this.ambSynth.start();
+        // gentle swell
+        this.ambLoop = new Tone.LFO(A.rate||0.15, (A.cutoff||500)*0.5, A.cutoff||500).start();
+        this.ambLoop.connect(this.ambFilt.frequency);
+      } else {
+        // melodic motif (bells / chimes / calls) — a slow sparse loop
+        this.ambSynth = new Tone.Synth({ oscillator:{type:A.wave||'sine'}, envelope:{attack:0.05,decay:0.6,sustain:0,release:0.4}, volume:A.vol||-24 }).connect(this.ambVol);
+        let i=0;
+        this.ambLoop = new Tone.Loop((time)=>{
+          const n=A.notes[i%A.notes.length]; i++;
+          if(n) this.ambSynth.triggerAttackRelease(n, '2n', time);
+        }, A.every||'1n').start(0);
+      }
+    }catch(e){}
+  },
+  stopAmbience(){
+    try{ if(this.ambLoop){ this.ambLoop.dispose(); this.ambLoop=null; } }catch(e){}
+    try{ if(this.ambSynth){ this.ambSynth.dispose(); this.ambSynth=null; } }catch(e){}
+    try{ if(this.ambFilt){ this.ambFilt.dispose(); this.ambFilt=null; } }catch(e){}
+  }
+};
+// Each stage's signature ambience. 'noise' = textural bed; 'motif' = sparse melody.
+const STAGE_AMBIENCE = {
+  nl:{ type:'motif', wave:'triangle', notes:['C5',null,'E5',null], every:'1n', vol:-26 },   // gentle countryside chimes
+  jp:{ type:'motif', wave:'sine',     notes:['E5','A4',null,'B4'], every:'1n', vol:-24 },    // koto plucks
+  us:{ type:'noise', color:'brown', cutoff:700, rate:0.2, vol:-28 },                          // city hum
+  ru:{ type:'noise', color:'white', cutoff:400, rate:0.1, vol:-30 },                          // cold wind / snow
+  tr:{ type:'motif', wave:'triangle', notes:['D5','F5',null,'E5'], every:'1n', vol:-26 },     // bazaar bells
+  it:{ type:'motif', wave:'triangle', notes:['G4','B4','D5',null], every:'1n', vol:-26 },     // mandolin
+  ie:{ type:'noise', color:'white', cutoff:900, rate:0.4, vol:-30 },                          // sea + light rain
+  es:{ type:'motif', wave:'sawtooth', notes:['E4','A4',null,'G4'], every:'1n', vol:-27 },     // flamenco pluck
+  au:{ type:'noise', color:'brown', cutoff:350, rate:0.08, vol:-28 },                         // outback wind (didgeridoo-ish)
+  mg:{ type:'motif', wave:'triangle', notes:['C5','G4','A4',null], every:'1n', vol:-26 },     // jungle marimba
+  cn:{ type:'motif', wave:'sine',     notes:['C5','D5','G5',null], every:'1n', vol:-25 },     // guzheng
+  br:{ type:'motif', wave:'triangle', notes:['A4','C5',null,'E5'], every:'2n', vol:-26 },     // samba shaker feel
+  in:{ type:'motif', wave:'sawtooth', notes:['C5','Db5',null,'E5'], every:'1n', vol:-27 },    // sitar drone
+  rs:{ type:'noise', color:'pink',  cutoff:600, rate:0.15, vol:-29 },                         // fortress wind
+  fr:{ type:'motif', wave:'triangle', notes:['G4','B4','D5',null], every:'1n', vol:-26 },     // accordion lilt
+  eg:{ type:'noise', color:'brown', cutoff:450, rate:0.06, vol:-28 },                         // desert wind
+  mx:{ type:'motif', wave:'square',   notes:['C5','E5','G5',null], every:'1n', vol:-27 },     // festive trumpet
+};
+
+
 class Fighter{
   constructor(def, x, isBot, costume, memeId){
     this.def=def;
@@ -2507,6 +2717,7 @@ let botCostume=0;              // chosen bot skin index for 1P config
 let hitStop=0;
 let shakeT=0;
 let classic=null;              // active Classic Mode run, or null
+let paused=false;              // true while the pause overlay is up (local matches only)
 
 /* ---------------- ONLINE NETCODE (Firebase RTDB via REST) ---------------- */
 // No SDK (the artifact CSP blocks it). We talk to the Realtime Database over its
@@ -2519,7 +2730,7 @@ const Net = {
   connected:false, isHost:false, roomCode:null, meSlot:null, foeSlot:null,
   _seq:0, _pollTimer:null, _waitTimer:null, _lastSend:0, _lastSentKey:null, _lastAppliedHit:0,
   _cur:null, _prev:null, _curRecvT:0, _prevRecvT:0, _avgGap:0, _renderX:undefined, _renderY:undefined, _pingEst:0,
-  _esFoe:null, _esHit:null, _useSSE:false,
+  _polling:false, _useSSE:false,
   _matchStarted:false, _searching:false, _abort:false,
 };
 function dbUrl(path){ return FIREBASE_DB_URL+'/'+path+'.json'; }
@@ -2600,6 +2811,8 @@ const ACHIEVEMENTS = [
     check:s=>Object.keys(s.data.stats).filter(k=>k.startsWith('stage_')).length>=8, unlocks:'kayo' },
   { id:'soccer',    name:'BACK OF THE NET',   icon:'⚽', desc:'Win a SOCCER match.',
     check:s=>s.stat('soccerWins')>=1, unlocks:'oela' },
+  { id:'win25',     name:'WARLORD',          icon:'⚔️', desc:'Win 25 matches.',
+    check:s=>s.stat('wins')>=25, unlocks:'cavan' },
 ];
 // Which hidden characters are locked behind which achievement:
 const UNLOCK_BY_CHAR = {}; ACHIEVEMENTS.forEach(a=>{ if(a.unlocks) UNLOCK_BY_CHAR[a.unlocks]=a.id; });
@@ -2663,10 +2876,10 @@ const costMap = {}; // id -> costume index 0..4
 
 // Fighter categories by playstyle — shown as titled groups on the select screen.
 const CATEGORIES = [
-  { name:'MELEE',   icon:'⚔️', ids:['reshman','lars','fionn','yassin','metaai','dean','thomas','kayo'] },
+  { name:'MELEE',   icon:'⚔️', ids:['reshman','lars','fionn','yassin','metaai','dean','thomas','kayo','cavan'] },
   { name:'RANGED',  icon:'🎯', ids:['nathan','milo','adam','evadam','deniz','niffo','jax','femi','enno','thorren','niek','giancarlo','oela'] },
-  { name:'HOMING',  icon:'🧲', ids:['josh','renas','devin','ati'] },
-  { name:'THROWERS',icon:'💣', ids:['daniel','doremalen','ash','jace'] },
+  { name:'HOMING',  icon:'🧲', ids:['josh','renas','devin','ati'], pairWithNext:true },
+  { name:'THROWERS',icon:'💣', ids:['daniel','doremalen','jace','ash'] },
 ];
 // map id -> category order so any unlisted fighter still lands somewhere sensible
 const CAT_OF = {}; CATEGORIES.forEach((cat,ci)=>cat.ids.forEach(id=>CAT_OF[id]=ci));
@@ -2711,15 +2924,29 @@ function buildCharTile(c){
   return el;
 }
 
-// build one titled group per category, in category order
-CATEGORIES.forEach((cat,ci)=>{
+// build one titled group per category, in category order.
+// A category flagged pairWithNext renders side-by-side with the following one,
+// split by a vertical divider, on a single line.
+function buildCatGroup(cat, ci){
   const group=document.createElement('div'); group.className='catgroup';
   group.innerHTML=`<div class="cathead"><span class="cicon">${cat.icon}</span>${cat.name}</div>`;
   const row=document.createElement('div'); row.className='catrow';
-  // members of this category, in roster order
   ROSTER.filter(c=>CAT_OF[c.id]===ci).forEach(c=> row.appendChild(buildCharTile(c)) );
   group.appendChild(row);
-  roster.appendChild(group);
+  return group;
+}
+CATEGORIES.forEach((cat,ci)=>{
+  if(cat._consumed) return;
+  if(cat.pairWithNext && CATEGORIES[ci+1]){
+    const pairWrap=document.createElement('div'); pairWrap.className='catpair';
+    pairWrap.appendChild(buildCatGroup(cat, ci));
+    const div=document.createElement('div'); div.className='catdivider'; pairWrap.appendChild(div);
+    pairWrap.appendChild(buildCatGroup(CATEGORIES[ci+1], ci+1));
+    CATEGORIES[ci+1]._consumed=true;
+    roster.appendChild(pairWrap);
+  } else {
+    roster.appendChild(buildCatGroup(cat, ci));
+  }
 });
 // any fighter not assigned to a category (safety net) goes in a final group
 const leftovers=ROSTER.filter(c=>CAT_OF[c.id]===undefined);
@@ -3326,44 +3553,18 @@ function netSendHit(dmg,kb,dir,launch){
   const evt={ dmg:+dmg.toFixed(1), kb:+(kb||0).toFixed(1), dir:dir||1, la:+(launch||0).toFixed(2), n:(++Net._seq)+Math.random() };
   dbPut('rooms/'+Net.roomCode+'/'+Net.foeSlot+'/hit', evt);
 }
-// Live updates via RTDB REST STREAMING (Server-Sent Events) — one persistent
-// connection each for the opponent's state and my incoming hits, instead of
-// polling the whole room 11x/sec. This is the big latency win.
-function sseListen(path, onData){
-  try{
-    const es=new EventSource(FIREBASE_DB_URL+'/'+path+'.json');
-    es.addEventListener('put', e=>{ try{ const d=JSON.parse(e.data); onData(d && d.data, d && d.path); }catch(_){} });
-    es.addEventListener('patch', e=>{ try{ const d=JSON.parse(e.data); onData(d && d.data, d && d.path); }catch(_){} });
-    return es;
-  }catch(e){ return null; }
-}
+// Live updates. We POLL the room over plain GET requests. (Browser EventSource
+// can't set the Accept:text/event-stream header Firebase streaming wants and fails
+// silently, so polling is the dependable transport here.) We poll fast for the
+// opponent's state, and interpolation smooths the gaps between responses.
 function netStartStream(){
   netStopStream();
-  Net._useSSE = (typeof EventSource!=='undefined');
-  if(Net._useSSE){
-    // opponent state stream
-    Net._esFoe = sseListen('rooms/'+Net.roomCode+'/'+Net.foeSlot+'/s', (data)=>{
-      if(data && typeof data==='object') netPushRemote(data);
-    });
-    // my incoming-hit stream
-    Net._esHit = sseListen('rooms/'+Net.roomCode+'/'+Net.meSlot+'/hit', (data)=>{
-      applyIncomingHit(data);
-    });
-    // a slow safety poll (every 1.2s) just to detect the room being torn down
-    Net._pollTimer=setInterval(async ()=>{
-      if(!Net.connected){ clearInterval(Net._pollTimer); return; }
-      const room=await dbGet('rooms/'+Net.roomCode);
-      if(room===null && Net._matchStarted){ foeDisconnected(); }
-    }, 1200);
-    if(!Net._esFoe){ Net._useSSE=false; netStartPoll(); }   // SSE blocked → fall back
-  } else {
-    netStartPoll();
-  }
+  Net._useSSE=false;
+  netStartPoll();
 }
 function netStopStream(){
-  clearInterval(Net._pollTimer);
-  if(Net._esFoe){ try{Net._esFoe.close();}catch(_){}} Net._esFoe=null;
-  if(Net._esHit){ try{Net._esHit.close();}catch(_){}} Net._esHit=null;
+  clearTimeout(Net._pollTimer); clearInterval(Net._pollTimer);
+  Net._polling=false;
 }
 function applyIncomingHit(hit){
   if(!hit || hit.n===Net._lastAppliedHit) return;
@@ -3378,18 +3579,28 @@ function foeDisconnected(){
   const me=players[Net.isHost?0:1], foe=players[Net.isHost?1:0];
   if(me && foe && !me.dead){ foe.stocks=0; if(!foe.dead) KO(foe); }
 }
-// Fallback: GET-poll the room (only used if SSE streaming is unavailable).
+// Fast GET-poll loop. Uses a self-rescheduling async call (not setInterval) so a
+// slow response never lets requests pile up on top of each other.
 function netStartPoll(){
   clearInterval(Net._pollTimer);
-  Net._pollTimer=setInterval(async ()=>{
-    if(!Net.connected){ clearInterval(Net._pollTimer); return; }
+  Net._polling=true;
+  let missed=0;
+  const tick=async ()=>{
+    if(!Net.connected || !Net._polling) return;
     const room=await dbGet('rooms/'+Net.roomCode);
+    if(!Net.connected || !Net._polling) return;
     if(room===null && Net._matchStarted){ foeDisconnected(); return; }
-    const foe=room && room[Net.foeSlot] && room[Net.foeSlot].s;
-    if(foe) netPushRemote(foe);
-    const hit=room && room[Net.meSlot] && room[Net.meSlot].hit;
-    applyIncomingHit(hit);
-  }, 90);
+    if(room){
+      missed=0;
+      const foe=room[Net.foeSlot] && room[Net.foeSlot].s;
+      if(foe && typeof foe==='object') netPushRemote(foe);
+      const hit=room[Net.meSlot] && room[Net.meSlot].hit;
+      applyIncomingHit(hit);
+    } else { missed++; }
+    // schedule the next poll ~70ms after this one resolves
+    Net._pollTimer=setTimeout(tick, 70);
+  };
+  tick();
 }
 function leaveRoom(){
   Net.connected=false; Net._searching=false; Net._matchStarted=false;
@@ -3479,6 +3690,7 @@ function flashOnlineHelper(msg){
 function tryAttack(f){
   if(f.attackTimer>0 || f.shielding || f.dead) return;
   f.attackTimer=18; f.state='attack';
+  SFX.attack('melee');
   // melee hitbox spawned in update via attackTimer window
   spawnParticles(f.cx + f.face*f.w*0.6, f.cy, f.def.color, 5);
 }
@@ -3493,6 +3705,7 @@ function tryTaunt(f){
 function trySpecial(f){
   if(f.specialCd>0 || f.shielding || f.dead) return;
   const s=f.def.special;
+  SFX.attack(s);
   if(s==='pitch'){
     // FASTBALL PITCH: a quick wind-up, then hurl a speeding baseball projectile
     f.attackTimer=14; f.state='attack'; f.specialCd=48;
@@ -3709,6 +3922,13 @@ function trySpecial(f){
     projectiles.push({owner:f, x:f.cx+f.face*22, y:f.cy-6, vx:f.face*8, vy:-8,
       life:120, dmg:12, kb:7, color:f.def.color, type:'controller', r:9, gravity:true, spin:0});
     spawnParticles(f.cx+f.face*20, f.cy, f.def.color, 6);
+  } else if(s==='launch'){
+    // FLYING TACKLE: Cavan hurls himself forward shoulder-first — a fast, committed
+    // self-propelled charge that hits hard on contact (dash-style contact window).
+    f.vx=f.face*18; f.vy=-3.5; f.specialCd=52; f.hitCd=Math.max(f.hitCd,10);
+    f._dashHit=20; f._dashDmg=13; f._dashKb=9; f.state='attack'; f.attackTimer=20;
+    spawnParticles(f.cx, f.cy, f.def.color, 16);
+    spawnParticles(f.cx, f.cy, '#ffd24a', 8);
   }
 }
 
@@ -3727,6 +3947,7 @@ function tryUpSpecial(f){
   }
   const s=f.def.special;
   f.state='attack';
+  SFX.sweep('E4','E6',0.22);   // recovery / up-special launch woosh
 
   if(s==='pitch'){
     // POP FLY: leap up with a rising bat swing (melee hitbox around/above)
@@ -3881,6 +4102,10 @@ function tryUpSpecial(f){
     projectiles.push({owner:f, x:f.cx, y:f.cy, vx:f.face*3, vy:-9,
       life:60, dmg:7, kb:5, color:f.def.color, type:'controller', r:8, gravity:true, spin:0});
     spawnParticles(f.cx,f.cy,f.def.color,10);
+  } else if(s==='launch'){
+    // SKY CHARGE: Cavan rockets up and forward, shoulder leading
+    f.vy=-16.5; f.vx+=f.face*6; f._upHit={life:16, dmg:13, kb:6, launch:0.95};
+    spawnParticles(f.cx,f.cy,f.def.color,12); spawnParticles(f.cx,f.cy,'#ffd24a',6);
   }
   spawnParticles(f.cx, f.y+f.h*0.5, '#ffffff', 6);
 }
@@ -3894,6 +4119,7 @@ function trySuper(f){
   if(!f.isBot){ Save.addStat('supers'); }
   f.superActive=40;
   f.hitCd=Math.max(f.hitCd,10);
+  SFX.super();
   announce((f.def.sup||'SUPER').split(' · ')[0]+'!');
   shakeT=Math.max(shakeT,16);
   spawnParticles(f.cx,f.cy,f.def.color,26);
@@ -3978,6 +4204,9 @@ function trySuper(f){
   } else if(s==='controller'){ // BUTTON MASH — a barrage of thrown controllers
     for(let i=0;i<7;i++) projectiles.push({owner:f,x:f.cx+f.face*22,y:f.cy-16+i*6,vx:f.face*(11+i*0.7),vy:-4+i*1.3,life:120,dmg:9,kb:6,color:f.def.color,type:'controller',r:8,gravity:true,spin:0});
     spawnParticles(f.cx+f.face*22,f.cy,f.def.color,18);
+  } else if(s==='launch'){ // RAMPAGE — a chain of unstoppable body-slams toward the foe
+    if(foe){ f.face = foe.cx>=f.cx?1:-1; }
+    f.vx=f.face*12; f._superKick=30;
   }
   updateHUD();
 }
@@ -4016,6 +4245,7 @@ function landHit(att,def,dmg,kb,dir,launch){
     const meIdx=Net.isHost?0:1;
     if(def!==players[meIdx]){
       netSendHit(dmg,kb,dir,launch);
+      SFX.hit();
       spawnParticles(def.cx,def.cy,'#fff',6);   // local sparkle for feedback
       return;
     }
@@ -4026,11 +4256,13 @@ function landHit(att,def,dmg,kb,dir,launch){
   dmg = dmg * aAtk * dDef;
   if(def.shielding && def.shieldHp>0){
     def.shieldHp-=dmg*2.5;
+    SFX.shieldHit();
     spawnParticles(def.cx,def.cy,'#8fefff',6);
     hitStop=4;
     return;
   }
   def.hp=Math.max(0, def.hp-dmg);
+  SFX.hit();
   const gm=currentMode();
   const gain=(gm.superGainMul||1);
   // Super charges mainly by TAKING damage, a little by dealing it (× meme super rate)
@@ -4131,7 +4363,7 @@ function botThink(bot, foe){
 
   bot.face=dir;
   const ranged = (bot.def.special==='pitch'||bot.def.special==='drone'||bot.def.special==='bolt'||bot.def.special==='bomb'||bot.def.special==='serve'||bot.def.special==='rocks'||bot.def.special==='minidrone'||bot.def.special==='frost'||bot.def.special==='flask'||bot.def.special==='swarm'||bot.def.special==='splash'||bot.def.special==='soundwave'||bot.def.special==='pounce'||bot.def.special==='evilserve'||bot.def.special==='numbers'||bot.def.special==='coins'||bot.def.special==='slipper'||bot.def.special==='pellet'||bot.def.special==='shock'||bot.def.special==='bullets'||bot.def.special==='football'||bot.def.special==='curve'||bot.def.special==='controller');
-  const rush = (bot.def.special==='dash'||bot.def.special==='pound'||bot.def.special==='kick'||bot.def.special==='glitch'||bot.def.special==='breakdance'||bot.def.special==='twocat');
+  const rush = (bot.def.special==='dash'||bot.def.special==='pound'||bot.def.special==='kick'||bot.def.special==='glitch'||bot.def.special==='breakdance'||bot.def.special==='twocat'||bot.def.special==='launch');
   // approach or space
   if(dist>170){
     bot.vx += dir*0.4;
@@ -4167,6 +4399,7 @@ function botThink(bot, foe){
 /* ---------------- MOVEMENT HELPERS ---------------- */
 function doJump(f){
   if(f.jumps>0){
+    if(f.onGround) SFX.jump();   // only the ground jump chirps, not the air jump
     f.vy=-f.def.stats.jump*(f.mJump||1);
     f.jumps--;
     f.onGround=false;
@@ -4503,6 +4736,7 @@ function scoreGoal(scorer){ // scorer: 0 = P1, 1 = P2
 }
 
 function KO(f){
+  SFX.ko();
   // SOCCER: no eliminations — a fighter who falls off just respawns
   if(currentMode().soccer){
     spawnParticles(Math.max(20,Math.min(W-20,f.cx)), Math.max(20,Math.min(H-20,f.cy)), f.def.color, 16);
@@ -4804,11 +5038,17 @@ function render(t){
 
   // ONLINE: small connection readout (avg update interval ≈ how fresh the foe is)
   if(mode==='online' && Net.connected){
-    const g=Net._pingEst||0;
-    const col = g<90?'#7ee081' : g<170?'#ffd24a' : '#ff6b6b';
+    const got = !!Net._cur;
+    const g=Math.round(Net._pingEst||0);
     ctx.font='bold 12px Arial'; ctx.textAlign='right'; ctx.textBaseline='bottom';
-    ctx.fillStyle=col; ctx.shadowColor='#000'; ctx.shadowBlur=4;
-    ctx.fillText((Net._useSSE?'LIVE':'POLL')+' · '+g+'ms', W-12, H-10);
+    ctx.shadowColor='#000'; ctx.shadowBlur=4;
+    if(!got){
+      ctx.fillStyle='#ffd24a';
+      ctx.fillText('CONNECTING…', W-12, H-10);
+    } else {
+      ctx.fillStyle = g<110?'#7ee081' : g<200?'#ffd24a' : '#ff6b6b';
+      ctx.fillText('NET · '+g+'ms', W-12, H-10);
+    }
     ctx.shadowBlur=0;
   }
 
@@ -5129,8 +5369,58 @@ function finishClassic(won){
 })();
 
 /* ---------------- MAIN LOOP ---------------- */
+/* ---------------- PAUSE ---------------- */
+function canPause(){ return running && mode!=='online'; }   // online can't pause (would desync)
+function togglePause(){
+  if(paused){ resumeGame(); }
+  else if(canPause()){ openPause(); }
+}
+function openPause(){
+  paused=true;
+  // reflect current audio/mobile state on the toggles
+  const mus=document.getElementById('pauseMusic');
+  mus.classList.toggle('on', Music.on); mus.textContent=Music.on?'ON':'OFF';
+  const mob=document.getElementById('pauseMobile');
+  const on=Save.getSetting('mobile',false);
+  mob.classList.toggle('on', on); mob.textContent=on?'ON':'OFF';
+  document.getElementById('pause').classList.remove('hidden');
+  // silence held keys so nobody keeps walking while paused
+  keys={};
+}
+function resumeGame(){
+  paused=false;
+  document.getElementById('pause').classList.add('hidden');
+}
+function quitToMenu(){
+  paused=false;
+  document.getElementById('pause').classList.add('hidden');
+  running=false;
+  classic=null;
+  Music.stop();
+  document.getElementById('hud').classList.add('hidden');
+  show('title');
+}
+document.getElementById('resumeBtn').onclick=resumeGame;
+document.getElementById('quitBtn').onclick=quitToMenu;
+document.getElementById('pauseMusic').onclick=(e)=>{
+  const on=Music.toggle();
+  const b=e.currentTarget; b.classList.toggle('on', on); b.textContent=on?'ON':'OFF';
+  // keep the corner mute button in sync
+  const mb=document.getElementById('muteBtn'); if(mb){ mb.textContent=on?'🔊':'🔇'; mb.classList.toggle('off',!on); }
+};
+document.getElementById('pauseMobile').onclick=(e)=>{
+  const now=!Save.getSetting('mobile',false);
+  Save.setSetting('mobile', now); applyMobileMode();
+  const b=e.currentTarget; b.classList.toggle('on', now); b.textContent=now?'ON':'OFF';
+};
+// ESC toggles pause during a local match
+window.addEventListener('keydown', e=>{
+  if(e.key==='Escape'){ e.preventDefault(); if(running || paused) togglePause(); }
+});
+
+/* ---------------- MAIN LOOP ---------------- */
 function frame(t){
-  if(running) update(t);
+  if(running && !paused) update(t);
   render(t);
   requestAnimationFrame(frame);
 }
