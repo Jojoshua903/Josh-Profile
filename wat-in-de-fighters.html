@@ -77,6 +77,11 @@
   .sub{font-family:Arial,sans-serif;font-weight:700;letter-spacing:.3em;font-size:clamp(10px,1.6vw,15px);color:#fdbb2d;margin-top:8px;opacity:.9;}
   /* nudge the title logo down so its skewed top never clips the box edge */
   #title h1{margin-top:0;padding-top:6px;}
+  /* Zennith takeover background (shown only once Zennith is unlocked) */
+  #zenithBg{position:absolute;inset:0;width:100%;height:100%;z-index:0;display:block;pointer-events:none;}
+  #zenithBg.hidden{display:none !important;}
+  /* keep all title content above the takeover canvas */
+  #title > *:not(#zenithBg){position:relative;z-index:1;}
   /* --- decluttered title layout --- */
   #title .medalbadge{margin-top:12px;font-size:clamp(12px,1.8vw,16px);padding:6px 14px;}
   /* PLAY is the hero action: larger and set apart */
@@ -445,6 +450,7 @@
 
   <!-- TITLE -->
   <div class="screen" id="title">
+    <canvas id="zenithBg" class="hidden"></canvas>
     <h1>WAT IN DE<br>FIGHTERS</h1>
     <div class="sub">PLATFORM  FIGHTER</div>
     <div class="medalbadge" id="medalBadge" title="Classic Mode medals earned">🏅 <span id="medalCount">0</span>/<span id="medalTotal">0</span> MEDALS</div>
@@ -996,31 +1002,46 @@ const ROSTER = [
   },
   {
     // HIDDEN OP #1 — unlocked at HALF of all medals. Not shown until earned.
-    id:'zenith', name:'ZENITH', color:'#00e5ff', dark:'#006b7a', skin:'#efe6ff',
+    id:'casper', name:'CASPER', color:'#e01e1e', dark:'#7a0f0f', skin:'#f0c8a8',
     hidden:true, opChar:true,
-    desc:'Ascended One',
-    move:'STAR LANCE · a hyper-fast piercing bolt',
-    up:'ASTRAL RISE · a blinding vertical surge',
-    sup:'SUPERNOVA · a devastating storm of light',
-    stats:{speed:4.6, jump:16.4, weight:1.1},
-    special:'bolt',
-    costume:{name:'PRISM', color:'#b5179e', dark:'#5a0a4d', acc:'halo'},
-    costume2:{name:'SOLAR', color:'#ffd60a', dark:'#b3860a', acc:'crown'},
-    costume3:{name:'VOID', color:'#3a0ca3', dark:'#160246', acc:'star'}
+    desc:'Car Lover',
+    move:'FLOOR IT · floors the gas and rams forward in his car',
+    up:'RAMP JUMP · launches off a ramp skyward',
+    sup:'DEMOLITION DERBY · a relentless high-speed ramming rampage',
+    stats:{speed:4.8, jump:15.6, weight:1.3},
+    special:'car',
+    costume:{name:'RACE BLUE', color:'#1e6ee0', dark:'#0f3a7a', acc:'goggles'},
+    costume2:{name:'MIDNIGHT', color:'#22223b', dark:'#0d0d1a', acc:'shades'},
+    costume3:{name:'GOLD RIDE', color:'#ffd60a', dark:'#b3860a', acc:'crown'}
   },
   {
     // HIDDEN OP #2 — unlocked at ALL medals. The ultimate secret fighter.
-    id:'omega', name:'OMEGA', color:'#ff2d55', dark:'#7a0f27', skin:'#20202a',
+    id:'robin', name:'ROBIN', color:'#38b000', dark:'#1f6b00', skin:'#f0c8a8',
     hidden:true, opChar:true,
-    desc:'The Final One',
-    move:'ANNIHILATE · a warping strike that erases distance',
-    up:'RIFT ASCEND · a reality-tearing warp',
-    sup:'OBLIVION · an all-consuming nova',
-    stats:{speed:5.0, jump:16.8, weight:1.25},
-    special:'dash',
-    costume:{name:'CRIMSON GOD', color:'#d00000', dark:'#5a0000', acc:'horns'},
-    costume2:{name:'GOLD OMEGA', color:'#ffd700', dark:'#8a6d00', acc:'crown'},
-    costume3:{name:'PHANTOM', color:'#212529', dark:'#000000', acc:'halo'}
+    desc:'Big Goofy Kid',
+    move:'MEGA FLOP · hurls his big body forward in a flying belly-flop',
+    up:'GROWTH SPURT · a towering leap',
+    sup:'TANTRUM · an unstoppable stomping rampage',
+    stats:{speed:4.4, jump:16.2, weight:1.5},
+    special:'slam',
+    costume:{name:'JUICE BOX', color:'#ff6d00', dark:'#7a3400', acc:'antenna'},
+    costume2:{name:'BLUE JAMMIES', color:'#3a86ff', dark:'#1a4a99', acc:'star'},
+    costume3:{name:'GOLD BABY', color:'#ffd700', dark:'#8a6d00', acc:'crown'}
+  },
+  {
+    // FINAL SECRET — "Nathan's worst nightmare". Unlocked only when EVERY
+    // achievement is earned. The strongest fighter in the game.
+    id:'zennith', name:'ZENNITH', color:'#6a040f', dark:'#1a0002', skin:'#2a2a33',
+    hidden:true, opChar:true, finalChar:true,
+    desc:"Nathan's Worst Nightmare",
+    move:'DOOM PITCH · a screaming cursed fastball that pierces',
+    up:'NIGHTMARE RISE · a shrieking void ascent',
+    sup:'PERFECT GAME · an apocalyptic storm of cursed baseballs',
+    stats:{speed:4.7, jump:16.2, weight:1.35},
+    special:'doom',
+    costume:{name:'BLOOD MOON', color:'#9d0208', dark:'#2b0000', acc:'horns'},
+    costume2:{name:'ABYSS', color:'#240046', dark:'#0a0018', acc:'halo'},
+    costume3:{name:'CURSED GOLD', color:'#ffba08', dark:'#7a5200', acc:'crown'}
   }
 ];
 
@@ -1056,8 +1077,9 @@ const TAUNTS = {
   kayo:     { seq:['🐱','🐈'],      cry:"MEOW MEOW!",   emote:'spin' },
   jace:     { seq:['🎮','😎'],      cry:"GG EZ!",       emote:'shrug' },
   cavan:    { seq:['💥','🔥'],      cry:"OUTTA MY WAY!", emote:'flex' },
-  zenith:   { seq:['✦','🌟'],      cry:"ASCEND.",      emote:'cast' },
-  omega:    { seq:['Ω','💀'],       cry:"THE END.",     emote:'vanish' },
+  casper:   { seq:['🏎️','😎'],      cry:"VROOM VROOM!",  emote:'spin' },
+  robin:    { seq:['🧃','😜'],      cry:"WHEEE!",        emote:'hop' },
+  zennith:  { seq:['⚾','💀'],       cry:"STRIKE... THREE.", emote:'vanish' },
 };
 
 /* ---------------- CLASSIC MODE STORIES ---------------- */
@@ -1095,8 +1117,9 @@ const STORY = {
   kayo:    { title:'PURR-FECT TEAM',      goal:'to show two cats fight better than one', rival:'femi' },
   jace:    { title:'FINAL BOSS',          goal:'to clear the hardest level of all: real life', rival:'metaai' },
   cavan:   { title:'FULL SEND',           goal:'to charge through anyone who stands in his way', rival:'yassin' },
-  zenith:  { title:'ASCENSION',           goal:'to prove there is no ceiling to power', rival:'omega' },
-  omega:   { title:'THE FINAL FORM',      goal:'to end the tournament forever', rival:'zenith' },
+  casper:  { title:'REDLINE',             goal:'to prove nothing on the track can catch him', rival:'robin' },
+  robin:   { title:'JUICE BOX CHAMPION',  goal:'to win the biggest playground brawl ever', rival:'casper' },
+  zennith: { title:'THE NIGHTMARE',       goal:'to prove he is the darkness Nathan could never beat', rival:'nathan' },
 };
 // Build a 4-round gauntlet for a chosen character: 3 themed opponents + the rival.
 function buildClassicRun(c){
@@ -1289,6 +1312,22 @@ function drawIcon(g, c, S, costume, t){
       g.strokeStyle=white; g.lineWidth=Math.max(2.5,S*0.045); g.lineCap='round'; g.lineJoin='round';
       for(let k=-1;k<=1;k++){ const ox=k*r*0.5;
         g.beginPath(); g.moveTo(ox-r*0.35,-r*0.55); g.lineTo(ox+r*0.2,0); g.lineTo(ox-r*0.35,r*0.55); g.stroke(); } break;
+    case 'doom': // cursed baseball: white ball, dark stitches + a menacing X
+      g.fillStyle=white; g.beginPath(); g.arc(0,0,r*0.85,0,Math.PI*2); g.fill();
+      g.strokeStyle='#6a040f'; g.lineWidth=Math.max(1.5,S*0.02);
+      g.beginPath(); g.arc(-r*0.5,0,r*0.9,-0.9,0.9); g.stroke();
+      g.beginPath(); g.arc(r*0.5,0,r*0.9,Math.PI-0.9,Math.PI+0.9); g.stroke();
+      g.strokeStyle='#6a040f'; g.lineWidth=Math.max(2,S*0.03);
+      g.beginPath(); g.moveTo(-r*0.4,-r*0.4); g.lineTo(r*0.4,r*0.4); g.moveTo(r*0.4,-r*0.4); g.lineTo(-r*0.4,r*0.4); g.stroke(); break;
+    case 'car': // little race car silhouette
+      g.fillStyle=white;
+      g.beginPath(); g.moveTo(-r,r*0.3); g.lineTo(-r*0.6,r*0.3); g.lineTo(-r*0.35,-r*0.15);
+      g.lineTo(r*0.1,-r*0.15); g.lineTo(r*0.35,-r*0.5); g.lineTo(r*0.7,-r*0.5); g.lineTo(r,r*0.3); g.closePath(); g.fill();
+      g.fillStyle=ink; g.beginPath(); g.arc(-r*0.45,r*0.4,r*0.22,0,Math.PI*2); g.fill();
+      g.beginPath(); g.arc(r*0.5,r*0.4,r*0.22,0,Math.PI*2); g.fill(); break;
+    case 'slam': // big fist / impact star
+      g.fillStyle=white; g.beginPath(); g.arc(0,0,r*0.95,0,Math.PI*2); g.fill();
+      g.fillStyle=ink; g.font='bold '+(r*1.1)+'px Arial'; g.textAlign='center'; g.textBaseline='middle'; g.fillText('!',0,0); break;
     default:
       g.fillStyle=white; g.beginPath(); g.arc(0,0,r*0.7,0,Math.PI*2); g.fill();
   }
@@ -1725,6 +1764,45 @@ function drawFighter(g, c, x, y, w, h, face, t, state, costume){
     if(atk){ g.strokeStyle=col; g.lineWidth=2.5; g.globalAlpha=0.7;
       for(let i=0;i<3;i++){ const yy=-bodyH*0.3+i*bodyH*0.28; g.beginPath(); g.moveTo(-bodyW*0.5,yy); g.lineTo(-bodyW*1.0-i*4,yy); g.stroke(); }
       g.globalAlpha=1; }
+  } else if(c.id==='casper'){ // car lover: driver's helmet + a car body wrapped around him
+    // racing helmet + visor
+    g.fillStyle=col; g.beginPath(); g.arc(0,-bodyH*0.8, headR*1.1, Math.PI, Math.PI*2); g.fill();
+    g.fillRect(-headR*1.1,-bodyH*0.8, headR*2.2, headR*0.5);
+    g.fillStyle='#111'; g.fillRect(-headR*0.9,-bodyH*0.74, headR*1.8, headR*0.5); // visor
+    // car body around the lower half (side view), wheels below
+    g.fillStyle=col;
+    g.beginPath();
+    g.moveTo(-bodyW*0.95, bodyH*0.5); g.lineTo(-bodyW*0.6, bodyH*0.05);
+    g.lineTo(bodyW*0.2, bodyH*0.05); g.lineTo(bodyW*0.55, bodyH*0.45);
+    g.lineTo(bodyW*1.0, bodyH*0.5); g.lineTo(bodyW*1.0, bodyH*0.75);
+    g.lineTo(-bodyW*0.95, bodyH*0.75); g.closePath(); g.fill();
+    // windshield tint
+    g.fillStyle='rgba(160,220,255,.5)';
+    g.beginPath(); g.moveTo(-bodyW*0.5,bodyH*0.1); g.lineTo(bodyW*0.1,bodyH*0.1); g.lineTo(bodyW*0.35,bodyH*0.4); g.lineTo(-bodyW*0.55,bodyH*0.4); g.closePath(); g.fill();
+    // wheels
+    g.fillStyle='#111';
+    g.beginPath(); g.arc(-bodyW*0.55, bodyH*0.78, bodyW*0.22, 0, Math.PI*2); g.fill();
+    g.beginPath(); g.arc(bodyW*0.6, bodyH*0.78, bodyW*0.22, 0, Math.PI*2); g.fill();
+    g.fillStyle='#ccc';
+    g.beginPath(); g.arc(-bodyW*0.55, bodyH*0.78, bodyW*0.09, 0, Math.PI*2); g.fill();
+    g.beginPath(); g.arc(bodyW*0.6, bodyH*0.78, bodyW*0.09, 0, Math.PI*2); g.fill();
+    // headlight + exhaust puff when driving
+    g.fillStyle='#fff'; g.beginPath(); g.arc(bodyW*0.95, bodyH*0.35, 3, 0, Math.PI*2); g.fill();
+  } else if(c.id==='robin'){ // big goofy kid: oversized round body + beanie + rosy cheeks
+    // extra-round belly overlay
+    g.fillStyle=col; g.beginPath(); g.arc(0,-bodyH*0.05, bodyW*0.7, 0, Math.PI*2); g.fill();
+    // beanie hat
+    g.fillStyle=dark; g.beginPath(); g.arc(0,-bodyH*0.82, headR*1.08, Math.PI, Math.PI*2); g.fill();
+    g.fillRect(-headR*1.08,-bodyH*0.82, headR*2.16, 4);
+    g.fillStyle='#fff'; g.beginPath(); g.arc(0,-bodyH*1.02, headR*0.35, 0, Math.PI*2); g.fill(); // pom-pom
+    // rosy cheeks + big grin
+    g.fillStyle='rgba(255,120,120,.6)';
+    g.beginPath(); g.arc(headR*0.55,-bodyH*0.7,2.6,0,Math.PI*2); g.fill();
+    g.beginPath(); g.arc(-headR*0.2,-bodyH*0.7,2.6,0,Math.PI*2); g.fill();
+    g.strokeStyle='#111'; g.lineWidth=1.5; g.beginPath(); g.arc(headR*0.2,-bodyH*0.74,3.2,0.1,Math.PI-0.1); g.stroke();
+    // juice box in hand when idle
+    if(!atk){ g.fillStyle='#ff6d00'; g.fillRect(armFwd, bodyH*0.05, 8, 11);
+      g.strokeStyle='#fff'; g.lineWidth=1; g.beginPath(); g.moveTo(armFwd+2,bodyH*0.05); g.lineTo(armFwd+2,bodyH*0.05-5); g.stroke(); }
   } else if(c.id==='kayo'){ // TWO CATS STACKED: Yara balances on top of Kayo
     g.restore();            // drop the standard humanoid body entirely
     g.save();
@@ -2635,6 +2713,9 @@ const SFX = {
       case 'breakdance': this.sweep('E4','E5',0.2); break;
       case 'controller': this.beep('C5','32n'); this.beep('G5','32n'); this.burst(2500,0.08); break;
       case 'launch': this.sweep('C3','G4',0.18); this.burst(1600,0.14); break;
+      case 'car': this.sweep('G2','C4',0.3); this.burst(900,0.2); break;   // engine rev
+      case 'slam': this.burst(500,0.26); this.beep('C3','16n'); break;      // heavy thud
+      case 'doom': this.beep('A5','16n'); this.sweep('C3','C2',0.3); this.burst(2000,0.14); break; // cursed shriek
       default:           this.burst(2600,0.1);
     }
   },
@@ -2822,53 +2903,88 @@ Save.load();
 
 /* ---------------- ACHIEVEMENTS ---------------- */
 // Each: id, name, desc, icon, and check(save) => bool (computed from stats/medals).
-// Some unlock a hidden character (unlocks: id).
+// Many gate a locked character. You start with ONE fighter per category and
+// unlock the rest by earning achievements; clearing EVERY achievement reveals
+// the final secret fighter (Zennith).
 const ACHIEVEMENTS = [
-  { id:'firstwin',  name:'FIRST BLOOD',      icon:'🥇', desc:'Win your first match.',
-    check:s=>s.stat('wins')>=1 },
-  { id:'win10',     name:'CONTENDER',        icon:'🔟', desc:'Win 10 matches.',
-    check:s=>s.stat('wins')>=10, unlocks:'ati' },
-  { id:'classic1',  name:'STORYTELLER',      icon:'📖', desc:'Clear Classic Mode with any fighter.',
-    check:s=>Object.keys(s.data.medals).length>=1, unlocks:'dean' },
-  { id:'super5',    name:'SUPERSTAR',        icon:'⭐', desc:'Unleash 5 Super attacks.',
-    check:s=>s.stat('supers')>=5, unlocks:'niek' },
-  { id:'boss',      name:'GIANT SLAYER',     icon:'🗡️', desc:'Defeat the Giant Boss.',
-    check:s=>s.stat('bossWins')>=1, unlocks:'thomas' },
-  { id:'medals5',   name:'HALL OF FAME',     icon:'🏛️', desc:'Earn 5 Classic Mode medals.',
-    check:s=>Object.keys(s.data.medals).length>=5, unlocks:'giancarlo' },
-  { id:'flawless',  name:'FLAWLESS',         icon:'💯', desc:'Win a match without losing a life.',
-    check:s=>s.stat('flawless')>=1, unlocks:'ash' },
-  { id:'meme10',    name:'MEME LORD',        icon:'😎', desc:'Win 5 matches with a meme equipped.',
-    check:s=>s.stat('memeWins')>=5 },
-  { id:'allstages', name:'GLOBETROTTER',     icon:'🌍', desc:'Fight on 8 different stages.',
-    check:s=>Object.keys(s.data.stats).filter(k=>k.startsWith('stage_')).length>=8, unlocks:'kayo' },
-  { id:'soccer',    name:'BACK OF THE NET',   icon:'⚽', desc:'Win a SOCCER match.',
-    check:s=>s.stat('soccerWins')>=1, unlocks:'oela' },
-  { id:'win25',     name:'WARLORD',          icon:'⚔️', desc:'Win 25 matches.',
-    check:s=>s.stat('wins')>=25, unlocks:'cavan' },
+  { id:'firstwin',  name:'FIRST BLOOD',     icon:'🥇', desc:'Win your first match.',            check:s=>s.stat('wins')>=1 },
+  { id:'win5',      name:'ON A ROLL',       icon:'🔥', desc:'Win 5 matches.',                    check:s=>s.stat('wins')>=5 },
+  { id:'win10',     name:'CONTENDER',       icon:'🔟', desc:'Win 10 matches.',                   check:s=>s.stat('wins')>=10 },
+  { id:'win25',     name:'WARLORD',         icon:'⚔️', desc:'Win 25 matches.',                   check:s=>s.stat('wins')>=25 },
+  { id:'win50',     name:'LEGEND',          icon:'👑', desc:'Win 50 matches.',                   check:s=>s.stat('wins')>=50 },
+  { id:'classic1',  name:'STORYTELLER',     icon:'📖', desc:'Clear Classic Mode with any fighter.', check:s=>Object.keys(s.data.medals).length>=1 },
+  { id:'medals3',   name:'RISING STAR',     icon:'🌟', desc:'Earn 3 Classic Mode medals.',        check:s=>Object.keys(s.data.medals).length>=3 },
+  { id:'medals5',   name:'HALL OF FAME',    icon:'🏛️', desc:'Earn 5 Classic Mode medals.',        check:s=>Object.keys(s.data.medals).length>=5 },
+  { id:'medals10',  name:'DECORATED',       icon:'🎖️', desc:'Earn 10 Classic Mode medals.',       check:s=>Object.keys(s.data.medals).length>=10 },
+  { id:'super1',    name:'FINISH HIM',      icon:'✨', desc:'Unleash your first Super.',          check:s=>s.stat('supers')>=1 },
+  { id:'super5',    name:'SUPERSTAR',       icon:'⭐', desc:'Unleash 5 Super attacks.',           check:s=>s.stat('supers')>=5 },
+  { id:'super20',   name:'OVERCHARGED',     icon:'💥', desc:'Unleash 20 Super attacks.',          check:s=>s.stat('supers')>=20 },
+  { id:'boss',      name:'GIANT SLAYER',    icon:'🗡️', desc:'Defeat the Giant Boss.',            check:s=>s.stat('bossWins')>=1 },
+  { id:'boss3',     name:'TITAN BREAKER',   icon:'🐉', desc:'Defeat the Giant Boss 3 times.',     check:s=>s.stat('bossWins')>=3 },
+  { id:'flawless',  name:'FLAWLESS',        icon:'💯', desc:'Win a match without losing a life.', check:s=>s.stat('flawless')>=1 },
+  { id:'flawless5', name:'UNTOUCHABLE',     icon:'🛡️', desc:'Win 5 matches flawlessly.',          check:s=>s.stat('flawless')>=5 },
+  { id:'meme5',     name:'MEME LORD',       icon:'😎', desc:'Win 5 matches with a meme equipped.', check:s=>s.stat('memeWins')>=5 },
+  { id:'meme15',    name:'MEME MACHINE',    icon:'🤪', desc:'Win 15 matches with a meme equipped.', check:s=>s.stat('memeWins')>=15 },
+  { id:'stages4',   name:'TRAVELER',        icon:'🧭', desc:'Fight on 4 different stages.',        check:s=>Object.keys(s.data.stats).filter(k=>k.startsWith('stage_')).length>=4 },
+  { id:'allstages', name:'GLOBETROTTER',    icon:'🌍', desc:'Fight on 8 different stages.',        check:s=>Object.keys(s.data.stats).filter(k=>k.startsWith('stage_')).length>=8 },
+  { id:'allstages2',name:'WORLD TOUR',      icon:'✈️', desc:'Fight on 14 different stages.',       check:s=>Object.keys(s.data.stats).filter(k=>k.startsWith('stage_')).length>=14 },
+  { id:'soccer',    name:'BACK OF THE NET', icon:'⚽', desc:'Win a SOCCER match.',                check:s=>s.stat('soccerWins')>=1 },
+  { id:'soccer3',   name:'HAT TRICK',       icon:'🥅', desc:'Win 3 SOCCER matches.',              check:s=>s.stat('soccerWins')>=3 },
+  { id:'ko50',      name:'KNOCKOUT KING',   icon:'🥊', desc:'Score 50 KOs.',                      check:s=>s.stat('kos')>=50 },
+  { id:'ko150',     name:'DEMOLITION MAN',  icon:'☄️', desc:'Score 150 KOs.',                     check:s=>s.stat('kos')>=150 },
+  { id:'sudden',    name:'SUDDEN IMPACT',   icon:'⚡', desc:'Win a SUDDEN DEATH match.',           check:s=>s.stat('suddenWins')>=1 },
+  { id:'moon',      name:'MOONWALKER',      icon:'🌙', desc:'Win a LOW GRAVITY match.',           check:s=>s.stat('moonWins')>=1 },
+  { id:'charged',   name:'POWER SURGE',     icon:'🔋', desc:'Win a SUPER CHARGE match.',          check:s=>s.stat('chargedWins')>=1 },
+  { id:'online1',   name:'CHALLENGER',      icon:'🌐', desc:'Win an ONLINE 1v1 duel.',            check:s=>s.stat('onlineWins')>=1 },
+  { id:'taunt',     name:'SHOWBOAT',        icon:'💃', desc:'Taunt 10 times.',                    check:s=>s.stat('taunts')>=10 },
 ];
-// Which hidden characters are locked behind which achievement:
-const UNLOCK_BY_CHAR = {}; ACHIEVEMENTS.forEach(a=>{ if(a.unlocks) UNLOCK_BY_CHAR[a.unlocks]=a.id; });
 
 // ---- OP hidden characters: unlocked by Classic Mode MEDAL count ----
-// The two OP fighters (opChar) are excluded from the denominator so they can't
-// gate themselves. zenith unlocks at HALF the medals, omega at ALL of them.
+// casper/robin are excluded from the medal denominator so they can't gate
+// themselves; casper unlocks at HALF the medals, robin at ALL of them.
+// zennith (finalChar) is the exception below: gated on ALL achievements.
 function normalRoster(){ return ROSTER.filter(c=>!c.opChar); }
 function medalsEarned(){ return normalRoster().filter(c=>Save.hasMedal(c.id)).length; }
 function medalsTotal(){ return normalRoster().length; }
-// medal requirement to unlock a given OP character (0 for non-OP)
 function opMedalReq(id){
   const total=medalsTotal();
-  if(id==='zenith') return Math.ceil(total/2);   // half of all medals
-  if(id==='omega')  return total;                 // every medal
+  if(id==='casper') return Math.ceil(total/2);   // half of all medals
+  if(id==='robin')  return total;                 // every medal
   return 0;
 }
+// All achievements earned? (gates the final secret fighter)
+function allAchievements(){ return ACHIEVEMENTS.every(a=>Save.hasAch(a.id)); }
+
+// ---- Character gating ----
+// You START with the FIRST fighter in each category (a free starter). Every other
+// normal fighter is locked behind an achievement, auto-assigned 1:1 so each
+// achievement you earn reveals a new fighter. opChars use medals; the final
+// fighter uses all-achievements.
+let _STARTERS=null, _UNLOCK_BY_CHAR=null;
+function computeUnlockMap(){
+  if(_UNLOCK_BY_CHAR) return;
+  _STARTERS = new Set();
+  CATEGORIES.forEach(cat=>{ if(!cat.secret){ const first=cat.ids.find(id=>{ const c=ROSTER.find(x=>x.id===id); return c && !c.opChar; }); if(first) _STARTERS.add(first); } });
+  // characters that need an achievement gate: all normal (non-OP) non-starters
+  const toGate = ROSTER.filter(c=>!c.opChar && !_STARTERS.has(c.id)).map(c=>c.id);
+  // achievements available to assign (skip the very first so FIRST BLOOD stays a freebie milestone)
+  const pool = ACHIEVEMENTS.map(a=>a.id);
+  _UNLOCK_BY_CHAR = {};
+  toGate.forEach((cid, i)=>{ _UNLOCK_BY_CHAR[cid] = pool[i % pool.length]; });
+}
+// name of the achievement gating a char (for hints)
+function achForChar(id){ computeUnlockMap(); return _UNLOCK_BY_CHAR[id]; }
 function charUnlocked(id){
   if(Save.data.dev) return true;
   const c=ROSTER.find(x=>x.id===id);
-  if(c && c.opChar) return medalsEarned() >= opMedalReq(id);
-  const req=UNLOCK_BY_CHAR[id]; return !req || Save.hasAch(req);
+  if(!c) return true;
+  if(c.finalChar) return allAchievements();          // Zennith: earn EVERYTHING
+  if(c.opChar) return medalsEarned() >= opMedalReq(id); // casper/robin: medals
+  computeUnlockMap();
+  if(_STARTERS.has(id)) return true;                  // free starter
+  const req=_UNLOCK_BY_CHAR[id]; return !req || Save.hasAch(req);
 }
+
 // Re-check all achievements; returns list of newly-earned ones (for toasts).
 function checkAchievements(){
   const newly=[];
@@ -2932,7 +3048,7 @@ const CATEGORIES = [
   { name:'RANGED',  icon:'🎯', ids:['nathan','milo','adam','evadam','deniz','niffo','jax','femi','enno','thorren','niek','giancarlo','oela'] },
   { name:'HOMING',  icon:'🧲', ids:['josh','renas','devin','ati'], pairWithNext:true },
   { name:'THROWERS',icon:'💣', ids:['daniel','doremalen','jace','ash'] },
-  { name:'SECRET',  icon:'✦', ids:['zenith','omega'], secret:true },
+  { name:'SECRET',  icon:'✦', ids:['casper','robin','zennith'], secret:true },
 ];
 // map id -> category order so any unlisted fighter still lands somewhere sensible
 const CAT_OF = {}; CATEGORIES.forEach((cat,ci)=>cat.ids.forEach(id=>CAT_OF[id]=ci));
@@ -3025,7 +3141,13 @@ function buildRoster(){
 buildRoster();
 
 // name of the achievement that unlocks a locked character (for the hint)
-function STORY_ACH_NAME(id){ const a=ACHIEVEMENTS.find(x=>x.id===UNLOCK_BY_CHAR[id]); return a?('UNLOCK: '+a.name):''; }
+function STORY_ACH_NAME(id){
+  const c=ROSTER.find(x=>x.id===id);
+  if(c && c.finalChar) return 'UNLOCK: EARN EVERY ACHIEVEMENT';
+  if(c && c.opChar) return id==='casper'?'UNLOCK: HALF THE MEDALS':'UNLOCK: ALL THE MEDALS';
+  const a=ACHIEVEMENTS.find(x=>x.id===achForChar(id));
+  return a?('UNLOCK: '+a.name):'';
+}
 
 // show a medal on tiles for characters that cleared Classic Mode; show locks
 function rebuildRosterMedals(){
@@ -3185,12 +3307,18 @@ function buildAchList(){
     const got=Save.hasAch(a.id);
     const row=document.createElement('div');
     row.className='ach'+(got?' done':'');
-    const unlockName = a.unlocks ? (ROSTER.find(r=>r.id===a.unlocks)||{}).name : null;
+    const unlockName = achUnlocksName(a.id);
     row.innerHTML=`<div class="ai">${a.icon}</div>
       <div><div class="at">${a.name}</div><div class="ad">${a.desc}</div>${unlockName?`<div class="au">UNLOCKS: ${unlockName}</div>`:''}</div>
       <div class="astate">${got?'DONE':'LOCKED'}</div>`;
     list.appendChild(row);
   });
+}
+// which fighter (if any) an achievement reveals — from the auto-assigned gate map
+function achUnlocksName(achId){
+  computeUnlockMap();
+  const cid=Object.keys(_UNLOCK_BY_CHAR).find(k=>_UNLOCK_BY_CHAR[k]===achId);
+  return cid ? (ROSTER.find(r=>r.id===cid)||{}).name : null;
 }
 document.getElementById('achBtn').onclick=()=>{ buildAchList(); show('achieve'); };
 document.getElementById('achBack').onclick=()=>{ show('title'); };
@@ -3289,7 +3417,7 @@ function pumpToasts(){
 // grant + refresh + toast any newly-earned achievements
 function grantAndToast(){
   const newly=checkAchievements();
-  if(newly.length){ rebuildRosterMedals(); refreshProfileLine(); queueAchToasts(newly); }
+  if(newly.length){ buildRoster(); refreshProfileLine(); queueAchToasts(newly); }
   return newly;
 }
 
@@ -3627,7 +3755,8 @@ function netSendProjectiles(){
     if(pr.owner===me && !pr._sent && !pr.ghost){
       pr._sent=true;
       fresh.push({ x:Math.round(pr.x), y:Math.round(pr.y), vx:+(pr.vx||0).toFixed(1), vy:+(pr.vy||0).toFixed(1),
-        ty:pr.type, r:pr.r||6, c:pr.color, g:pr.gravity?1:0, cu:pr.curve||0, dg:pr.digit||'' });
+        ty:pr.type, r:pr.r||6, c:pr.color, g:pr.gravity?1:0, cu:pr.curve||0, dg:pr.digit||'',
+        bl:pr.block||'', fa:pr.face||0 });
     }
   }
   if(!fresh.length) return;
@@ -3643,6 +3772,7 @@ function applyRemoteProjectiles(batch){
   batch.a.forEach(p=>{
     projectiles.push({ owner:foe, ghost:true, x:p.x, y:p.y, vx:p.vx, vy:p.vy,
       type:p.ty, r:p.r, color:p.c, gravity:!!p.g, curve:p.cu||0, digit:p.dg||undefined,
+      block:p.bl||undefined, face:p.fa||1,
       life:120, dmg:0, kb:0, spin:0 });
   });
 }
@@ -3833,6 +3963,7 @@ function tryAttack(f){
 function tryTaunt(f){
   if(f.dead || f.attackTimer>0 || f.tauntTimer>0 || Math.abs(f.vx)>0.6) return;
   f.tauntTimer=34;
+  if(!f.isBot) Save.addStat('taunts');
   // a little confetti burst + a hop of joy
   spawnParticles(f.cx, f.cy-6, f.def.color, 12);
   spawnParticles(f.cx, f.cy-6, '#fff', 6);
@@ -4064,10 +4195,27 @@ function trySpecial(f){
     f._dashHit=20; f._dashDmg=13; f._dashKb=9; f.state='attack'; f.attackTimer=20;
     spawnParticles(f.cx, f.cy, f.def.color, 16);
     spawnParticles(f.cx, f.cy, '#ffd24a', 8);
+  } else if(s==='car'){
+    // FLOOR IT: Casper guns his car forward — a very fast, hard-hitting ram (OP).
+    f.vx=f.face*22; f.vy=-2; f.specialCd=54; f.hitCd=Math.max(f.hitCd,12);
+    f._dashHit=22; f._dashDmg=16; f._dashKb=11; f.state='attack'; f.attackTimer=22;
+    // exhaust smoke + skid sparks
+    for(let i=0;i<10;i++) particles.push({x:f.cx-f.face*10,y:f.cy+f.h*0.2,vx:-f.face*(1+Math.random()*2),vy:(Math.random()-.5)*2,life:20,color:'#888',r:2+Math.random()*2});
+    spawnParticles(f.cx, f.cy, '#ffd24a', 8);
+  } else if(s==='slam'){
+    // MEGA FLOP: Robin belly-flops forward — heavy, wide, big knockback (OP).
+    f.vx=f.face*16; f.vy=-4.5; f.specialCd=58; f.hitCd=Math.max(f.hitCd,10);
+    f._dashHit=24; f._dashDmg=17; f._dashKb=12; f.state='attack'; f.attackTimer=24;
+    spawnParticles(f.cx, f.cy, f.def.color, 18);
+    spawnParticles(f.cx, f.cy, '#fff', 8);
+  } else if(s==='doom'){
+    // DOOM PITCH: a screaming cursed fastball that PIERCES through the foe (OP).
+    f.attackTimer=14; f.state='attack'; f.specialCd=40;
+    projectiles.push({owner:f, x:f.cx+f.face*30, y:f.cy-4, vx:f.face*19, vy:0,
+      life:70, dmg:16, kb:9, color:'#6a040f', type:'ball', r:9, pierce:true});
+    spawnParticles(f.cx+f.face*26, f.cy, '#6a040f', 10);
   }
 }
-
-/* UP SPECIAL — every fighter has a UNIQUE damaging recovery. Usable once per airtime; resets on landing. */
 function tryUpSpecial(f){
   if(f.dead || f.shielding) return;
   // Femi's Tail Spring is usable twice per airtime; everyone else once.
@@ -4241,6 +4389,20 @@ function tryUpSpecial(f){
     // SKY CHARGE: Cavan rockets up and forward, shoulder leading
     f.vy=-16.5; f.vx+=f.face*6; f._upHit={life:16, dmg:13, kb:6, launch:0.95};
     spawnParticles(f.cx,f.cy,f.def.color,12); spawnParticles(f.cx,f.cy,'#ffd24a',6);
+  } else if(s==='car'){
+    // RAMP JUMP: Casper launches off a ramp skyward
+    f.vy=-17; f.vx+=f.face*5; f._upHit={life:16, dmg:14, kb:6.5, launch:1.0};
+    for(let i=0;i<8;i++) particles.push({x:f.cx-f.face*8,y:f.cy+8,vx:-f.face*2,vy:1+Math.random()*2,life:18,color:'#888',r:2});
+    spawnParticles(f.cx,f.cy,'#ffd24a',8);
+  } else if(s==='slam'){
+    // GROWTH SPURT: Robin makes a towering leap
+    f.vy=-18; f._upHit={life:18, dmg:14, kb:6.5, launch:1.0};
+    spawnParticles(f.cx,f.cy,f.def.color,12); spawnParticles(f.cx,f.cy,'#fff',6);
+  } else if(s==='doom'){
+    // NIGHTMARE RISE: a shrieking void ascent that zaps nearby foes (OP)
+    f.vy=-17.5; f.hitCd=Math.max(f.hitCd,10);
+    players.forEach(o=>{ if(o!==f && !o.dead && o.hitCd<=0 && Math.hypot(o.cx-f.cx,o.cy-f.cy)<110){ landHit(f,o,15,6, o.cx>=f.cx?1:-1, 0.9); }});
+    spawnParticles(f.cx,f.cy,'#6a040f',16); spawnParticles(f.cx,f.cy,'#fff',8);
   }
   spawnParticles(f.cx, f.y+f.h*0.5, '#ffffff', 6);
 }
@@ -4342,6 +4504,24 @@ function trySuper(f){
   } else if(s==='launch'){ // RAMPAGE — a chain of unstoppable body-slams toward the foe
     if(foe){ f.face = foe.cx>=f.cx?1:-1; }
     f.vx=f.face*12; f._superKick=30;
+  } else if(s==='car'){ // CAR TURRET — spawns a car beside Casper that sprays bullets
+    if(foe){ f.face = foe.cx>=f.cx?1:-1; }
+    projectiles.push({owner:f, turret:true, x:f.cx+f.face*46, y:GROUND_Y-22, vx:0, vy:0,
+      type:'carturret', r:26, color:f.def.color, life:150, dmg:0, kb:0, fireCd:0, face:f.face});
+    spawnParticles(f.cx+f.face*46, GROUND_Y-22, f.def.color, 16);
+  } else if(s==='slam'){ // BLOCK BARRAGE — Robin hurls a volley of Minecraft blocks
+    for(let i=0;i<8;i++){
+      const kinds=['grass','dirt','stone','tnt','diamond'];
+      projectiles.push({owner:f, x:f.cx+f.face*20, y:f.cy-18+i*5, vx:f.face*(9+i*0.8), vy:-7+i*1.2,
+        life:150, dmg:10, kb:7, color:'#7a5230', type:'block', r:11, gravity:true, spin:0,
+        block:kinds[i%kinds.length]});
+    }
+    spawnParticles(f.cx+f.face*20, f.cy, '#8a5a2b', 16);
+  } else if(s==='doom'){ // PERFECT GAME — an apocalyptic storm of piercing cursed baseballs
+    for(let i=0;i<9;i++) projectiles.push({owner:f,x:f.cx+f.face*24,y:f.cy-20+i*6,vx:f.face*(14+i*0.6),vy:-4+i*1.2,life:110,dmg:14,kb:9,color:'#6a040f',type:'ball',r:9,pierce:true});
+    // plus cursed lightning columns raining down
+    for(let i=0;i<4;i++){ const tx=(i+0.5)*(W/4)+(Math.random()-.5)*30; strikes.push({x:tx,y:0,targetY:GROUND_Y,life:26,owner:f,warned:6+i*3,dmg:14,kb:8,launch:1.1}); }
+    spawnParticles(f.cx+f.face*22,f.cy,'#6a040f',20);
   }
   updateHUD();
 }
@@ -4497,8 +4677,8 @@ function botThink(bot, foe){
   }
 
   bot.face=dir;
-  const ranged = (bot.def.special==='pitch'||bot.def.special==='drone'||bot.def.special==='bolt'||bot.def.special==='bomb'||bot.def.special==='serve'||bot.def.special==='rocks'||bot.def.special==='minidrone'||bot.def.special==='frost'||bot.def.special==='flask'||bot.def.special==='swarm'||bot.def.special==='splash'||bot.def.special==='soundwave'||bot.def.special==='pounce'||bot.def.special==='evilserve'||bot.def.special==='numbers'||bot.def.special==='coins'||bot.def.special==='slipper'||bot.def.special==='pellet'||bot.def.special==='shock'||bot.def.special==='bullets'||bot.def.special==='football'||bot.def.special==='curve'||bot.def.special==='controller');
-  const rush = (bot.def.special==='dash'||bot.def.special==='pound'||bot.def.special==='kick'||bot.def.special==='glitch'||bot.def.special==='breakdance'||bot.def.special==='twocat'||bot.def.special==='launch');
+  const ranged = (bot.def.special==='pitch'||bot.def.special==='drone'||bot.def.special==='bolt'||bot.def.special==='bomb'||bot.def.special==='serve'||bot.def.special==='rocks'||bot.def.special==='minidrone'||bot.def.special==='frost'||bot.def.special==='flask'||bot.def.special==='swarm'||bot.def.special==='splash'||bot.def.special==='soundwave'||bot.def.special==='pounce'||bot.def.special==='evilserve'||bot.def.special==='numbers'||bot.def.special==='coins'||bot.def.special==='slipper'||bot.def.special==='pellet'||bot.def.special==='shock'||bot.def.special==='bullets'||bot.def.special==='football'||bot.def.special==='curve'||bot.def.special==='controller'||bot.def.special==='doom');
+  const rush = (bot.def.special==='dash'||bot.def.special==='pound'||bot.def.special==='kick'||bot.def.special==='glitch'||bot.def.special==='breakdance'||bot.def.special==='twocat'||bot.def.special==='launch'||bot.def.special==='car'||bot.def.special==='slam');
   // approach or space
   if(dist>170){
     bot.vx += dir*0.4;
@@ -4730,7 +4910,27 @@ function update(t){
       if(pr.gravity){ pr.vy+=0.5; }
       pr.x+=pr.vx; pr.y+=pr.vy; pr.life--;
       if(pr.type==='football' && pr.curve){ pr.vy+=pr.curve; pr.spin=(pr.spin||0)+0.3; }
+      if(pr.type==='carturret'){ pr.spin=(pr.spin||0)+0.02; } // wheels spin, no firing (bullets sync separately)
       return;
+    }
+    // CAR TURRET (Casper super): a parked car that sprays bullets at the foe.
+    if(pr.type==='carturret'){
+      pr.life--;
+      pr.spin=(pr.spin||0)+0.3;               // spinning wheels
+      pr.fireCd--;
+      if(pr.fireCd<=0){
+        pr.fireCd=6;                          // ~10 bullets/sec
+        const foe=players.find(o=>o!==pr.owner && !o.dead);
+        const dir = foe ? (foe.cx>=pr.x?1:-1) : (pr.face||1);
+        const ty = foe ? foe.cy : pr.y;
+        const ang = foe ? Math.atan2((ty-pr.y), (foe.cx-pr.x)) : 0;
+        const sp=16;
+        projectiles.push({owner:pr.owner, x:pr.x+dir*24, y:pr.y-6,
+          vx:(foe?Math.cos(ang):dir)*sp, vy:(foe?Math.sin(ang):0)*sp,
+          life:50, dmg:4, kb:2.6, color:'#ffd60a', type:'bullet', r:3});
+        spawnParticles(pr.x+dir*26, pr.y-6, '#ffd60a', 3);
+      }
+      return;   // the car body itself deals no contact damage
     }
     if(pr.homing){
       const foe=players.find(o=>o!==pr.owner && !o.dead);
@@ -4889,6 +5089,9 @@ function KO(f){
     return;
   }
   f.stocks--;
+  // count a KO for the human whenever they eliminate someone (not their own fighter)
+  const meIdx = mode==='online' ? (Net.isHost?0:1) : 0;
+  if((mode==='1p'||mode==='online') && f!==players[meIdx]) Save.addStat('kos');
   spawnParticles(f.cx<W/2? Math.max(20,Math.min(W-20,f.cx)):Math.min(W-20,f.cx),
                  Math.max(20,Math.min(H-20,f.cy)), f.def.color, 24);
   shakeT=14; hitStop=8;
@@ -5030,6 +5233,44 @@ function render(t){
       ctx.save(); ctx.translate(pr.x,pr.y); ctx.rotate(Math.sin(t/60)*0.4);
       ctx.beginPath(); ctx.ellipse(0,3,pr.r,pr.r*0.55,0,0,Math.PI*2); ctx.fill();
       ctx.beginPath(); ctx.arc(-pr.r*0.4,-1,pr.r*0.55,Math.PI,0); ctx.fill();
+      ctx.restore();
+    } else if(pr.type==='carturret'){
+      // parked bullet-spraying car (Casper super)
+      ctx.shadowBlur=10;
+      const dir=pr.face||1;
+      ctx.save(); ctx.translate(pr.x,pr.y); ctx.scale(dir,1);
+      // body
+      ctx.fillStyle=pr.color;
+      ctx.beginPath();
+      ctx.moveTo(-26,8); ctx.lineTo(-16,-6); ctx.lineTo(6,-6); ctx.lineTo(14,-18);
+      ctx.lineTo(pr.r*0.9,-18); ctx.lineTo(26,8); ctx.closePath(); ctx.fill();
+      // window
+      ctx.shadowBlur=0; ctx.fillStyle='rgba(160,220,255,.6)';
+      ctx.beginPath(); ctx.moveTo(-8,-6); ctx.lineTo(12,-6); ctx.lineTo(8,-16); ctx.lineTo(-6,-16); ctx.closePath(); ctx.fill();
+      // gun barrel out the front
+      ctx.fillStyle='#333'; ctx.fillRect(20,-8,14,5);
+      // spinning wheels
+      ctx.fillStyle='#111';
+      for(const wx of [-14,14]){ ctx.save(); ctx.translate(wx,10); ctx.rotate(pr.spin||0);
+        ctx.beginPath(); ctx.arc(0,0,8,0,Math.PI*2); ctx.fill();
+        ctx.strokeStyle='#ccc'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(-6,0); ctx.lineTo(6,0); ctx.moveTo(0,-6); ctx.lineTo(0,6); ctx.stroke();
+        ctx.restore(); }
+      ctx.restore();
+    } else if(pr.type==='block'){
+      // Minecraft-style cube: flat-shaded top + front + side faces (Robin super)
+      pr.spin=(pr.spin||0)+0.12;
+      const cols={ grass:['#7dbb42','#5a8f2e','#8a5a2b'], dirt:['#9c6b3f','#7a5230','#6b4526'],
+        stone:['#9a9a9a','#7d7d7d','#6a6a6a'], tnt:['#d64545','#b02b2b','#8a1f1f'],
+        diamond:['#5fe3e0','#3ec6c2','#2a9a97'] };
+      const c=cols[pr.block]||cols.dirt;
+      const s=pr.r;
+      ctx.save(); ctx.translate(pr.x,pr.y); ctx.rotate(Math.sin(pr.spin)*0.25);
+      ctx.shadowBlur=6;
+      ctx.fillStyle=c[1]; ctx.fillRect(-s,-s,s*2,s*2);       // front face
+      ctx.fillStyle=c[0]; ctx.beginPath(); ctx.moveTo(-s,-s); ctx.lineTo(-s+5,-s-5); ctx.lineTo(s+5,-s-5); ctx.lineTo(s,-s); ctx.closePath(); ctx.fill(); // top
+      ctx.fillStyle=c[2]; ctx.beginPath(); ctx.moveTo(s,-s); ctx.lineTo(s+5,-s-5); ctx.lineTo(s+5,s-5); ctx.lineTo(s,s); ctx.closePath(); ctx.fill(); // side
+      ctx.shadowBlur=0; ctx.strokeStyle='rgba(0,0,0,.35)'; ctx.lineWidth=1; ctx.strokeRect(-s,-s,s*2,s*2);
+      if(pr.block==='tnt'){ ctx.fillStyle='#fff'; ctx.font='bold '+(s*0.9)+'px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('TNT',0,0); }
       ctx.restore();
     } else if(pr.type==='pellet' || pr.type==='bullet'){
       // small fast projectile with a motion streak
@@ -5284,7 +5525,7 @@ function endMatch(){
     const iWon = players[meIdx].stocks>0;
     try{ leaveRoom(); }catch(e){}
     Net.connected=false;
-    if(iWon){ Save.addStat('wins'); if(players[meIdx].meme && players[meIdx].meme.id!=='none') Save.addStat('memeWins'); grantAndToast(); }
+    if(iWon){ Save.addStat('wins'); Save.addStat('onlineWins'); if(players[meIdx].meme && players[meIdx].meme.id!=='none') Save.addStat('memeWins'); grantAndToast(); }
     setTimeout(()=>{
       document.getElementById('hud').classList.add('hidden');
       Music.play('menu');
@@ -5303,7 +5544,11 @@ function endMatch(){
     Save.addStat('wins');
     if(p1.startStocks && p1.stocks>=p1.startStocks) Save.addStat('flawless');
     if(p1.meme && p1.meme.id!=='none') Save.addStat('memeWins');
+    const gmid=currentMode().id;
     if(currentMode().boss) Save.addStat('bossWins');
+    if(gmid==='sudden') Save.addStat('suddenWins');
+    if(gmid==='moon') Save.addStat('moonWins');
+    if(gmid==='charged') Save.addStat('chargedWins');
   }
   const newAch = (mode==='1p') ? grantAndToast() : [];
 
