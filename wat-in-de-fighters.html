@@ -993,6 +993,34 @@ const ROSTER = [
     costume:{name:'BLAZE', color:'#e63946', dark:'#7a141d', acc:'flame'},
     costume2:{name:'STEEL RAM', color:'#6c757d', dark:'#343a40', acc:'horns'},
     costume3:{name:'GOLDEN BULL', color:'#ffbe0b', dark:'#b3860a', acc:'crown'}
+  },
+  {
+    // HIDDEN OP #1 — unlocked at HALF of all medals. Not shown until earned.
+    id:'zenith', name:'ZENITH', color:'#00e5ff', dark:'#006b7a', skin:'#efe6ff',
+    hidden:true, opChar:true,
+    desc:'Ascended One',
+    move:'STAR LANCE · a hyper-fast piercing bolt',
+    up:'ASTRAL RISE · a blinding vertical surge',
+    sup:'SUPERNOVA · a devastating storm of light',
+    stats:{speed:4.6, jump:16.4, weight:1.1},
+    special:'bolt',
+    costume:{name:'PRISM', color:'#b5179e', dark:'#5a0a4d', acc:'halo'},
+    costume2:{name:'SOLAR', color:'#ffd60a', dark:'#b3860a', acc:'crown'},
+    costume3:{name:'VOID', color:'#3a0ca3', dark:'#160246', acc:'star'}
+  },
+  {
+    // HIDDEN OP #2 — unlocked at ALL medals. The ultimate secret fighter.
+    id:'omega', name:'OMEGA', color:'#ff2d55', dark:'#7a0f27', skin:'#20202a',
+    hidden:true, opChar:true,
+    desc:'The Final One',
+    move:'ANNIHILATE · a warping strike that erases distance',
+    up:'RIFT ASCEND · a reality-tearing warp',
+    sup:'OBLIVION · an all-consuming nova',
+    stats:{speed:5.0, jump:16.8, weight:1.25},
+    special:'dash',
+    costume:{name:'CRIMSON GOD', color:'#d00000', dark:'#5a0000', acc:'horns'},
+    costume2:{name:'GOLD OMEGA', color:'#ffd700', dark:'#8a6d00', acc:'crown'},
+    costume3:{name:'PHANTOM', color:'#212529', dark:'#000000', acc:'halo'}
   }
 ];
 
@@ -1028,6 +1056,8 @@ const TAUNTS = {
   kayo:     { seq:['🐱','🐈'],      cry:"MEOW MEOW!",   emote:'spin' },
   jace:     { seq:['🎮','😎'],      cry:"GG EZ!",       emote:'shrug' },
   cavan:    { seq:['💥','🔥'],      cry:"OUTTA MY WAY!", emote:'flex' },
+  zenith:   { seq:['✦','🌟'],      cry:"ASCEND.",      emote:'cast' },
+  omega:    { seq:['Ω','💀'],       cry:"THE END.",     emote:'vanish' },
 };
 
 /* ---------------- CLASSIC MODE STORIES ---------------- */
@@ -1065,6 +1095,8 @@ const STORY = {
   kayo:    { title:'PURR-FECT TEAM',      goal:'to show two cats fight better than one', rival:'femi' },
   jace:    { title:'FINAL BOSS',          goal:'to clear the hardest level of all: real life', rival:'metaai' },
   cavan:   { title:'FULL SEND',           goal:'to charge through anyone who stands in his way', rival:'yassin' },
+  zenith:  { title:'ASCENSION',           goal:'to prove there is no ceiling to power', rival:'omega' },
+  omega:   { title:'THE FINAL FORM',      goal:'to end the tournament forever', rival:'zenith' },
 };
 // Build a 4-round gauntlet for a chosen character: 3 themed opponents + the rival.
 function buildClassicRun(c){
@@ -2817,7 +2849,26 @@ const ACHIEVEMENTS = [
 ];
 // Which hidden characters are locked behind which achievement:
 const UNLOCK_BY_CHAR = {}; ACHIEVEMENTS.forEach(a=>{ if(a.unlocks) UNLOCK_BY_CHAR[a.unlocks]=a.id; });
-function charUnlocked(id){ if(Save.data.dev) return true; const req=UNLOCK_BY_CHAR[id]; return !req || Save.hasAch(req); }
+
+// ---- OP hidden characters: unlocked by Classic Mode MEDAL count ----
+// The two OP fighters (opChar) are excluded from the denominator so they can't
+// gate themselves. zenith unlocks at HALF the medals, omega at ALL of them.
+function normalRoster(){ return ROSTER.filter(c=>!c.opChar); }
+function medalsEarned(){ return normalRoster().filter(c=>Save.hasMedal(c.id)).length; }
+function medalsTotal(){ return normalRoster().length; }
+// medal requirement to unlock a given OP character (0 for non-OP)
+function opMedalReq(id){
+  const total=medalsTotal();
+  if(id==='zenith') return Math.ceil(total/2);   // half of all medals
+  if(id==='omega')  return total;                 // every medal
+  return 0;
+}
+function charUnlocked(id){
+  if(Save.data.dev) return true;
+  const c=ROSTER.find(x=>x.id===id);
+  if(c && c.opChar) return medalsEarned() >= opMedalReq(id);
+  const req=UNLOCK_BY_CHAR[id]; return !req || Save.hasAch(req);
+}
 // Re-check all achievements; returns list of newly-earned ones (for toasts).
 function checkAchievements(){
   const newly=[];
@@ -2881,6 +2932,7 @@ const CATEGORIES = [
   { name:'RANGED',  icon:'🎯', ids:['nathan','milo','adam','evadam','deniz','niffo','jax','femi','enno','thorren','niek','giancarlo','oela'] },
   { name:'HOMING',  icon:'🧲', ids:['josh','renas','devin','ati'], pairWithNext:true },
   { name:'THROWERS',icon:'💣', ids:['daniel','doremalen','jace','ash'] },
+  { name:'SECRET',  icon:'✦', ids:['zenith','omega'], secret:true },
 ];
 // map id -> category order so any unlisted fighter still lands somewhere sensible
 const CAT_OF = {}; CATEGORIES.forEach((cat,ci)=>cat.ids.forEach(id=>CAT_OF[id]=ci));
@@ -2928,36 +2980,49 @@ function buildCharTile(c){
 // build one titled group per category, in category order.
 // A category flagged pairWithNext renders side-by-side with the following one,
 // split by a vertical divider, on a single line.
+// A char with `hidden` stays completely out of the grid until it's unlocked —
+// no silhouette, no "?" tile (unlike normal locked chars, which show a mystery tile).
+function catVisibleChars(ci){
+  return ROSTER.filter(c=>CAT_OF[c.id]===ci && !(c.hidden && !charUnlocked(c.id)));
+}
 function buildCatGroup(cat, ci){
   const group=document.createElement('div'); group.className='catgroup';
   group.innerHTML=`<div class="cathead"><span class="cicon">${cat.icon}</span>${cat.name}</div>`;
   const row=document.createElement('div'); row.className='catrow';
-  ROSTER.filter(c=>CAT_OF[c.id]===ci).forEach(c=> row.appendChild(buildCharTile(c)) );
+  catVisibleChars(ci).forEach(c=> row.appendChild(buildCharTile(c)) );
   group.appendChild(row);
   return group;
 }
-CATEGORIES.forEach((cat,ci)=>{
-  if(cat._consumed) return;
-  if(cat.pairWithNext && CATEGORIES[ci+1]){
-    const pairWrap=document.createElement('div'); pairWrap.className='catpair';
-    pairWrap.appendChild(buildCatGroup(cat, ci));
-    const div=document.createElement('div'); div.className='catdivider'; pairWrap.appendChild(div);
-    pairWrap.appendChild(buildCatGroup(CATEGORIES[ci+1], ci+1));
-    CATEGORIES[ci+1]._consumed=true;
-    roster.appendChild(pairWrap);
-  } else {
-    roster.appendChild(buildCatGroup(cat, ci));
+function buildRoster(){
+  roster.innerHTML='';
+  CATEGORIES.forEach(c=>{ delete c._consumed; });
+  CATEGORIES.forEach((cat,ci)=>{
+    if(cat._consumed) return;
+    // a secret group with nothing unlocked yet renders nothing at all
+    if(cat.secret && catVisibleChars(ci).length===0){ return; }
+    if(cat.pairWithNext && CATEGORIES[ci+1]){
+      const pairWrap=document.createElement('div'); pairWrap.className='catpair';
+      pairWrap.appendChild(buildCatGroup(cat, ci));
+      const div=document.createElement('div'); div.className='catdivider'; pairWrap.appendChild(div);
+      pairWrap.appendChild(buildCatGroup(CATEGORIES[ci+1], ci+1));
+      CATEGORIES[ci+1]._consumed=true;
+      roster.appendChild(pairWrap);
+    } else {
+      roster.appendChild(buildCatGroup(cat, ci));
+    }
+  });
+  // any fighter not assigned to a category (safety net) goes in a final group
+  const leftovers=ROSTER.filter(c=>CAT_OF[c.id]===undefined && !(c.hidden && !charUnlocked(c.id)));
+  if(leftovers.length){
+    const group=document.createElement('div'); group.className='catgroup';
+    group.innerHTML=`<div class="cathead"><span class="cicon">✦</span>OTHER</div>`;
+    const row=document.createElement('div'); row.className='catrow';
+    leftovers.forEach(c=> row.appendChild(buildCharTile(c)) );
+    group.appendChild(row); roster.appendChild(group);
   }
-});
-// any fighter not assigned to a category (safety net) goes in a final group
-const leftovers=ROSTER.filter(c=>CAT_OF[c.id]===undefined);
-if(leftovers.length){
-  const group=document.createElement('div'); group.className='catgroup';
-  group.innerHTML=`<div class="cathead"><span class="cicon">✦</span>OTHER</div>`;
-  const row=document.createElement('div'); row.className='catrow';
-  leftovers.forEach(c=> row.appendChild(buildCharTile(c)) );
-  group.appendChild(row); roster.appendChild(group);
+  rebuildRosterMedals();
 }
+buildRoster();
 
 // name of the achievement that unlocks a locked character (for the hint)
 function STORY_ACH_NAME(id){ const a=ACHIEVEMENTS.find(x=>x.id===UNLOCK_BY_CHAR[id]); return a?('UNLOCK: '+a.name):''; }
@@ -3240,12 +3305,12 @@ document.getElementById('classicBtn').onclick=()=>{
 // profile line on the title screen (click to rename save)
 function refreshProfileLine(){
   const el=document.getElementById('profileLine');
-  const medals=Object.keys(Save.data.medals).length;
+  const medals=medalsEarned();   // count only the normal roster (OP chars excluded)
   el.innerHTML=`PROFILE: <b>${Save.data.profile}</b> · <span style="text-decoration:underline">rename</span>`;
   // medal badge next to CLASSIC MODE
   const mc=document.getElementById('medalCount'), mt=document.getElementById('medalTotal');
   if(mc) mc.textContent=medals;
-  if(mt) mt.textContent=ROSTER.length;
+  if(mt) mt.textContent=medalsTotal();
 }
 document.getElementById('profileLine').onclick=()=>{
   const name=prompt('Save profile name:', Save.data.profile);
@@ -5323,17 +5388,28 @@ function finishClassic(won){
   const sub=document.getElementById('resultSub');
   if(won){
     const firstClear = !Save.hasMedal(c.id);
+    // note which OP fighters were still locked BEFORE this medal is awarded
+    const opBefore = ROSTER.filter(o=>o.opChar && !charUnlocked(o.id)).map(o=>o.id);
     Save.awardClassic(c.id);                 // grants medal + epic skin, persists
     Save.addStat('wins',4);                  // a full run is 4 wins
     refreshProfileLine();
-    rebuildRosterMedals();
+    // a new medal can cross an OP threshold → rebuild the grid so it appears
+    buildRoster();
+    const opNow = ROSTER.filter(o=>o.opChar && charUnlocked(o.id) && opBefore.includes(o.id));
     title.textContent = classic.st.title+' — CLEARED!';
     title.style.filter='none';
     sub.innerHTML = firstClear
       ? `🏅 <span style="color:${c.color}">${c.name}</span> earned a MEDAL and unlocked the EPIC skin! Cycle costumes to equip it.`
       : `🏅 <span style="color:${c.color}">${c.name}</span> conquered Classic Mode again.`;
+    // dramatic reveal if this medal just unlocked a secret OP fighter
+    if(opNow.length){
+      const oc=opNow[0];
+      sub.innerHTML += `<br><br>✦ <span style="color:${oc.color}">SECRET FIGHTER UNLOCKED: ${oc.name}</span> ✦<br><span style="font-size:.85em;opacity:.85">A hidden OP fighter has appeared on the roster.</span>`;
+      announce('SECRET UNLOCKED!');
+    } else {
+      announce('CHAMPION!');
+    }
     sub.style.color='#fdbb2d';
-    announce('CHAMPION!');
     grantAndToast();                         // check STORYTELLER / HALL OF FAME / etc.
   } else {
     title.textContent='RUN OVER';
@@ -5369,10 +5445,12 @@ function finishClassic(won){
     return el;
   }
   CATEGORIES.forEach((cat,ci)=>{
+    const vis=ROSTER.filter(c=>CAT_OF[c.id]===ci && !(c.hidden && !charUnlocked(c.id)));
+    if(cat.secret && vis.length===0) return;   // hide the secret group until earned
     const group=document.createElement('div'); group.className='catgroup';
     group.innerHTML=`<div class="cathead"><span class="cicon">${cat.icon}</span>${cat.name}</div>`;
     const row=document.createElement('div'); row.className='catrow';
-    ROSTER.filter(c=>CAT_OF[c.id]===ci).forEach(c=>row.appendChild(buildOnlineTile(c)));
+    vis.forEach(c=>row.appendChild(buildOnlineTile(c)));
     group.appendChild(row); oRoster.appendChild(group);
   });
   const oLeft=ROSTER.filter(c=>CAT_OF[c.id]===undefined);
