@@ -38,11 +38,25 @@
   #world {
     position: absolute;
     top: 0; left: 0;
-    width: 1600px;
+    width: 2000px;
     height: 900px;
     z-index: 1;          /* own stacking context so child z-indexes stay below HUD/title/end */
     isolation: isolate;
+    transition: filter 1.4s ease;
   }
+  #world.night { filter: brightness(0.42) saturate(0.6) hue-rotate(-8deg); }
+  #world.night .sky { background: linear-gradient(180deg, #0d1030 0%, #1b1f45 55%, #2a2350 100%) !important; }
+
+  /* fade-to-black used by the knockout */
+  #fadeout {
+    position:absolute; inset:0; z-index:120; background:#000; opacity:0; pointer-events:none;
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    color:#e9e4f5; font-family:'Iowan Old Style','Georgia',serif; font-size:1.4rem; letter-spacing:0.02em;
+    transition:opacity 1.1s ease;
+  }
+  #fadeout.show { opacity:1; pointer-events:auto; }
+  #fadeout .ko-text { max-width:32rem; padding:2rem; opacity:0; transition:opacity 0.8s ease; }
+  #fadeout.show .ko-text { opacity:1; }
 
   .sky {
     position: absolute; top: 0; left: 0; width: 100%; height: 46%;
@@ -151,6 +165,81 @@
   .lamp .pole { position:absolute; bottom:0; left:50%; transform:translateX(-50%); width:8px; height:110px; background:#3a3a44; }
   .lamp .globe { position:absolute; bottom:104px; left:50%; transform:translateX(-50%); width:26px; height:26px; border-radius:50%; background:radial-gradient(circle,#fff6c8,#f2d06a); box-shadow:0 0 26px 10px rgba(255,235,150,0.6); }
 
+  /* wild flower field (right of the court) — a soft carpet of blossoms */
+  .flowerfield { position:absolute; }
+  .flowerfield .patch { position:absolute; width:100%; height:100%;
+    /* rectangle-ish, gentle bulge upper-left, curving in along the bottom-left to dodge the dig spot */
+    clip-path: path('M 30 40 C 10 22, 70 12, 130 20 L 560 8 C 600 8, 618 24, 616 60 L 616 300 C 616 340, 596 356, 556 356 L 250 356 C 210 356, 196 336, 196 300 C 196 262, 176 250, 138 250 L 40 250 C 14 250, 6 232, 8 200 L 8 90 C 8 64, 16 50, 30 40 Z');
+    background:
+      radial-gradient(circle at 12% 22%, #f492b6 0 7px, transparent 8px),
+      radial-gradient(circle at 30% 14%, #c79be8 0 6px, transparent 7px),
+      radial-gradient(circle at 48% 24%, #f8c24d 0 6px, transparent 7px),
+      radial-gradient(circle at 66% 16%, #f492b6 0 7px, transparent 8px),
+      radial-gradient(circle at 84% 26%, #c79be8 0 6px, transparent 7px),
+      radial-gradient(circle at 20% 44%, #f8c24d 0 6px, transparent 7px),
+      radial-gradient(circle at 40% 50%, #f492b6 0 7px, transparent 8px),
+      radial-gradient(circle at 58% 42%, #c79be8 0 6px, transparent 7px),
+      radial-gradient(circle at 76% 52%, #f8c24d 0 6px, transparent 7px),
+      radial-gradient(circle at 90% 44%, #f492b6 0 7px, transparent 8px),
+      radial-gradient(circle at 14% 68%, #c79be8 0 6px, transparent 7px),
+      radial-gradient(circle at 34% 74%, #f8c24d 0 6px, transparent 7px),
+      radial-gradient(circle at 52% 66%, #f492b6 0 7px, transparent 8px),
+      radial-gradient(circle at 70% 76%, #c79be8 0 6px, transparent 7px),
+      radial-gradient(circle at 88% 70%, #f8c24d 0 6px, transparent 7px),
+      radial-gradient(circle at 26% 90%, #f492b6 0 7px, transparent 8px),
+      radial-gradient(circle at 60% 90%, #c79be8 0 6px, transparent 7px),
+      radial-gradient(circle at 80% 92%, #f8c24d 0 6px, transparent 7px),
+      radial-gradient(ellipse at 50% 30%, #8fd07a 0%, #6cb857 55%, #4f9c43 100%);
+    box-shadow: inset 0 8px 22px rgba(0,0,0,0.14), 0 6px 14px rgba(0,0,0,0.12); }
+  .ff-bloom { position:absolute; width:22px; height:34px; transform-origin:bottom center; animation: sway 3.4s ease-in-out infinite; }
+  .ff-bloom:nth-child(2n) { animation-duration:4.1s; }
+  .ff-bloom:nth-child(3n) { animation-duration:2.9s; }
+  @keyframes sway { 0%,100%{transform:rotate(-3deg);} 50%{transform:rotate(3deg);} }
+  .ff-bloom::before { content:""; position:absolute; left:10px; bottom:0; width:2.5px; height:22px; background:linear-gradient(180deg,#4fa063,#3f8b52); }
+  .ff-bloom::after { content:""; position:absolute; left:2px; top:0; width:18px; height:18px; border-radius:50%;
+    background:
+      radial-gradient(circle at 50% 50%, #ffe15a 0 4px, transparent 4.5px),
+      conic-gradient(from 0deg, #ec5f95 0 60deg, #f88fb6 60deg 120deg, #ec5f95 120deg 180deg, #f88fb6 180deg 240deg, #ec5f95 240deg 300deg, #f88fb6 300deg 360deg);
+    box-shadow:0 2px 4px rgba(0,0,0,0.22); }
+  .ff-bloom:nth-child(3n)::after { background:
+      radial-gradient(circle at 50% 50%, #ffe15a 0 4px, transparent 4.5px),
+      conic-gradient(from 30deg, #a86fe0 0 72deg, #c79be8 72deg 144deg, #a86fe0 144deg 216deg, #c79be8 216deg 288deg, #a86fe0 288deg 360deg); }
+  .ff-bloom:nth-child(3n+1)::after { background:
+      radial-gradient(circle at 50% 50%, #d9662a 0 4px, transparent 4.5px),
+      conic-gradient(from 15deg, #f7a83e 0 90deg, #ffcf6e 90deg 180deg, #f7a83e 180deg 270deg, #ffcf6e 270deg 360deg); }
+
+  /* butterflies fluttering over the flower field */
+  .butterfly { position:absolute; width:16px; height:14px; z-index:640; pointer-events:none; }
+  .butterfly::before, .butterfly::after { content:""; position:absolute; top:0; width:8px; height:14px; border-radius:60% 60% 50% 50%;
+    background:radial-gradient(circle at 50% 40%, #ffd36b, #f2882f 70%); box-shadow:0 1px 2px rgba(0,0,0,0.2); }
+  .butterfly::before { left:0; transform-origin:right center; animation: flap 0.22s ease-in-out infinite; }
+  .butterfly::after  { right:0; transform-origin:left center;  animation: flap 0.22s ease-in-out infinite; }
+  .butterfly.b2::before, .butterfly.b2::after { background:radial-gradient(circle at 50% 40%, #f7b9d1, #e35f95 70%); }
+  .butterfly.b3::before, .butterfly.b3::after { background:radial-gradient(circle at 50% 40%, #cdb0ec, #9a5fd6 70%); }
+  @keyframes flap { 0%,100%{ transform:rotateY(0deg) scaleX(1); } 50%{ transform:rotateY(0deg) scaleX(0.35); } }
+  .butterfly.b1 { animation: drift1 7s ease-in-out infinite; }
+  .butterfly.b2 { animation: drift2 8.5s ease-in-out infinite; }
+  .butterfly.b3 { animation: drift3 6.2s ease-in-out infinite; }
+  @keyframes drift1 { 0%,100%{transform:translate(0,0);} 25%{transform:translate(40px,-24px);} 50%{transform:translate(90px,10px);} 75%{transform:translate(30px,26px);} }
+  @keyframes drift2 { 0%,100%{transform:translate(0,0);} 30%{transform:translate(-50px,20px);} 60%{transform:translate(-20px,-30px);} 80%{transform:translate(30px,8px);} }
+  @keyframes drift3 { 0%,100%{transform:translate(0,0);} 25%{transform:translate(-30px,-20px);} 55%{transform:translate(-70px,14px);} 80%{transform:translate(-24px,28px);} }
+  .butterfly.spooked { animation: spook 1.1s ease-out forwards; }
+  @keyframes spook { 0%{transform:translate(0,0);opacity:1;} 100%{transform:translate(0,-140px);opacity:0;} }
+
+  /* picnic area (left of the lake) — blanket, basket, little pillows */
+  .picnic { position:absolute; width:170px; height:110px; }
+  .picnic .blanket { position:absolute; inset:0; border-radius:10px; transform: perspective(300px) rotateX(52deg);
+    background:
+      repeating-linear-gradient(0deg, #e8574f 0 18px, #f4efe6 18px 36px),
+      repeating-linear-gradient(90deg, rgba(232,87,79,0.55) 0 18px, transparent 18px 36px);
+    box-shadow:0 10px 18px rgba(0,0,0,0.22); }
+  .picnic .basket { position:absolute; left:104px; top:26px; width:44px; height:32px; border-radius:6px 6px 8px 8px;
+    background:repeating-linear-gradient(45deg,#b5834a 0 5px,#946a37 5px 10px); box-shadow:0 4px 8px rgba(0,0,0,0.25); }
+  .picnic .basket::before { content:""; position:absolute; left:6px; top:-9px; width:32px; height:14px; border:3px solid #946a37; border-bottom:none; border-radius:16px 16px 0 0; }
+  .picnic .pillow { position:absolute; width:30px; height:22px; border-radius:7px; box-shadow:0 3px 5px rgba(0,0,0,0.2); }
+  .picnic .pillow.a { left:14px; top:20px; background:#7fb3d8; transform:rotate(-8deg); }
+  .picnic .pillow.b { left:40px; top:60px; background:#e8c15a; transform:rotate(6deg); }
+
   /* interactable objects */
   .interact { cursor:pointer; }
   .obj-prompt {
@@ -221,6 +310,10 @@
     font-family:'Futura','Century Gothic',sans-serif; font-size:0.72rem; letter-spacing:0.14em; text-transform:uppercase;
   }
   .topbar a, .topbar .hint { color:rgba(255,255,255,0.9); background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.2); padding:0.4rem 0.9rem; border-radius:999px; text-decoration:none; }
+  #musictoggle { color:rgba(255,255,255,0.9); background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.2); padding:0.4rem 0.9rem; border-radius:999px; cursor:pointer;
+    font-family:inherit; font-size:inherit; letter-spacing:inherit; text-transform:inherit; transition:background 0.2s; }
+  #musictoggle:hover { background:rgba(0,0,0,0.55); }
+  #musictoggle.off { opacity:0.6; }
 
   /* affection meters */
   .meters { position:absolute; top:0.7rem; left:50%; transform:translateX(-50%); z-index:30; display:flex; gap:1rem; }
@@ -230,6 +323,9 @@
   .meter.devin .fill { background:linear-gradient(90deg,#b98ee0,var(--violet)); }
   .meter.caiza .fill { background:linear-gradient(90deg,#8fd0ee,#1f5480); }
   .meter.bull .fill { background:linear-gradient(90deg,#c98f6a,#7a4a2a); }
+  .meter.luna .fill { background:linear-gradient(90deg,#dfe6ef,#7fcfc4); }
+  .meter.charlie .fill { background:linear-gradient(90deg,#f3c98a,#a9713a); }
+  .meter.vesper .fill { background:linear-gradient(90deg,#c9b8f0,#6a4fa0); }
 
   /* dazed headache stars orbiting the bull */
   #npc-bull.hurt .float { animation: dazedbob 1.2s ease-in-out infinite; }
@@ -250,6 +346,24 @@
   #inventory .inv-ico { font-size:1.05rem; }
   #inventory.bump { animation:invbump 0.4s ease; }
   @keyframes invbump { 0%,100%{transform:scale(1);} 40%{transform:scale(1.25);} }
+
+  /* keepsakes panel — toggled with K */
+  #keepsakepanel { position:absolute; inset:0; z-index:76; display:none; align-items:center; justify-content:center; background:rgba(13,7,24,0.55); backdrop-filter:blur(3px); }
+  #keepsakepanel.show { display:flex; }
+  #keepsakepanel .ks-card { background:rgba(253,246,240,0.98); color:var(--ink); border-radius:20px; padding:1.6rem 1.8rem; max-width:28rem; text-align:center; box-shadow:0 18px 50px -10px rgba(0,0,0,0.6); }
+  #keepsakepanel h3 { font-family:'Iowan Old Style','Georgia',serif; font-size:1.35rem; }
+  #keepsakepanel .ks-sub { font-size:0.84rem; color:#6b6083; margin:0.3rem 0 1.1rem; }
+  #keepsakepanel .ks-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.7rem; }
+  #keepsakepanel .ks-item { display:flex; align-items:center; gap:0.6rem; text-align:left; padding:0.7rem 0.8rem; border-radius:14px; background:#fff; border:2px solid transparent; }
+  #keepsakepanel .ks-item.wearable { cursor:pointer; transition:transform 0.15s,border-color 0.15s; }
+  #keepsakepanel .ks-item.wearable:hover { transform:translateY(-2px); border-color:var(--pink); }
+  #keepsakepanel .ks-item.worn { border-color:#4caf50; background:#f0fbf0; }
+  #keepsakepanel .ks-ico { font-size:1.7rem; }
+  #keepsakepanel .ks-name { font-family:'Iowan Old Style','Georgia',serif; font-size:0.96rem; line-height:1.15; }
+  #keepsakepanel .ks-tag { display:block; font-size:0.62rem; letter-spacing:0.1em; text-transform:uppercase; color:#9a7; margin-top:0.15rem; }
+  #keepsakepanel .ks-item.worn .ks-tag { color:#3f9c43; }
+  #keepsakepanel .ks-empty { color:#6b6083; font-size:0.92rem; padding:1rem 0; }
+  #keepsakepanel .ks-close { margin-top:1.1rem; font-family:'Futura','Century Gothic',sans-serif; letter-spacing:0.12em; text-transform:uppercase; font-size:0.72rem; background:none; border:none; color:#9a7; cursor:pointer; }
 
   /* toast for quick interactions */
   #toast {
@@ -278,6 +392,55 @@
   .choice { font-family:'Iowan Old Style','Georgia',serif; font-size:clamp(0.98rem,2vw,1.12rem); text-align:left; padding:0.8rem 1.3rem; border-radius:14px; background:rgba(253,246,240,0.94); color:var(--ink); border:2px solid transparent; cursor:pointer; transition:transform 0.2s,border-color 0.2s; }
   .choice:hover { transform:translateX(8px); border-color:var(--pink); }
 
+  /* picnic food menu */
+  #foodmenu { position:absolute; inset:0; z-index:75; display:none; align-items:center; justify-content:center; background:rgba(13,7,24,0.55); backdrop-filter:blur(3px); }
+  #foodmenu.show { display:flex; }
+  #foodmenu .card { background:rgba(253,246,240,0.97); color:var(--ink); border-radius:20px; padding:1.6rem 1.8rem; max-width:24rem; text-align:center; box-shadow:0 18px 50px -10px rgba(0,0,0,0.6); }
+  #foodmenu h3 { font-family:'Iowan Old Style','Georgia',serif; font-size:1.3rem; margin-bottom:1rem; }
+  #foodmenu .foods { display:grid; grid-template-columns:1fr 1fr; gap:0.7rem; }
+  #foodmenu .food { font-family:'Iowan Old Style','Georgia',serif; font-size:1.02rem; padding:0.8rem; border-radius:14px; background:#fff; border:2px solid transparent; cursor:pointer; transition:transform 0.15s,border-color 0.15s; }
+  #foodmenu .food:hover { transform:translateY(-3px); border-color:var(--pink); }
+  #foodmenu .food .fico { font-size:1.6rem; display:block; margin-bottom:0.25rem; }
+  #foodmenu .close { margin-top:1rem; font-family:'Futura','Century Gothic',sans-serif; letter-spacing:0.12em; text-transform:uppercase; font-size:0.72rem; background:none; border:none; color:#9a7; cursor:pointer; }
+
+  /* basketball timing minigame */
+  #hoopgame { position:absolute; inset:0; z-index:78; display:none; align-items:center; justify-content:center; background:rgba(13,7,24,0.6); backdrop-filter:blur(3px); }
+  #hoopgame.show { display:flex; }
+  #hoopgame .card { background:rgba(253,246,240,0.97); color:var(--ink); border-radius:20px; padding:1.6rem 2rem; text-align:center; box-shadow:0 18px 50px -10px rgba(0,0,0,0.6); }
+  #hoopgame h3 { font-family:'Iowan Old Style','Georgia',serif; font-size:1.25rem; margin-bottom:0.3rem; }
+  #hoopgame .sub { font-size:0.86rem; color:#6b6083; margin-bottom:1rem; }
+  #hoopgame .scores { display:flex; gap:1.6rem; justify-content:center; margin-bottom:1rem; font-family:'Futura','Century Gothic',sans-serif; letter-spacing:0.1em; text-transform:uppercase; font-size:0.72rem; color:#8a5a30; }
+  #hoopgame .scores b { display:block; font-size:1.5rem; color:var(--ember); letter-spacing:0; }
+  /* the horizontal red bar + green target + gliding arrow */
+  #hoopstage { position:relative; width:360px; margin:0 auto; }
+  /* little hoop + ball animation that plays above the bar on a make */
+  #hoopfx { position:relative; height:70px; margin-bottom:8px; }
+  #hoopfx .rim { position:absolute; left:50%; top:14px; transform:translateX(-50%); width:56px; height:14px; border:4px solid var(--ember); border-top:none; border-radius:0 0 28px 28px; }
+  #hoopfx .net { position:absolute; left:50%; top:24px; transform:translateX(-50%); width:44px; height:22px; border-left:2px solid rgba(0,0,0,0.25); border-right:2px solid rgba(0,0,0,0.25);
+    background:repeating-linear-gradient(90deg, transparent 0 6px, rgba(0,0,0,0.12) 6px 7px); clip-path:polygon(0 0,100% 0,72% 100%,28% 100%); }
+  #hoopfx .scoreball { position:absolute; left:50%; top:-30px; width:22px; height:22px; margin-left:-11px; border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #ffb463, #e8632a 70%); box-shadow:inset -2px -2px 3px rgba(0,0,0,0.3); opacity:0; }
+  #hoopfx.score .scoreball { animation: dunk 0.6s ease-in forwards; }
+  #hoopfx.score .net { animation: netswish 0.5s ease 0.3s; }
+  @keyframes dunk { 0%{ top:-30px; opacity:1; transform:scale(1);} 60%{ top:20px; opacity:1;} 100%{ top:52px; opacity:0; transform:scale(0.7);} }
+  @keyframes netswish { 0%,100%{ transform:translateX(-50%) scaleY(1);} 50%{ transform:translateX(-50%) scaleY(1.35);} }
+  /* miss: ball clanks the rim and bounces away */
+  #hoopfx.miss .scoreball { animation: clank 0.7s ease-in forwards; }
+  #hoopfx.miss .rim { animation: rimshake 0.4s ease; }
+  @keyframes clank { 0%{ top:-30px; left:50%; opacity:1; transform:rotate(0);} 35%{ top:8px; left:50%; opacity:1;} 40%{ top:2px; left:56%;} 100%{ top:60px; left:80%; opacity:0; transform:rotate(90deg);} }
+  @keyframes rimshake { 0%,100%{ transform:translateX(-50%) rotate(0);} 30%{ transform:translateX(-50%) rotate(-6deg);} 65%{ transform:translateX(-50%) rotate(4deg);} }
+  #hoopbar { position:relative; width:360px; height:64px; margin:0 auto; border-radius:14px; overflow:hidden;
+    background:linear-gradient(90deg,#e8574f,#c0392b); box-shadow:inset 0 0 0 3px rgba(0,0,0,0.15), 0 8px 20px rgba(0,0,0,0.3); }
+  #hoopzone { position:absolute; top:0; bottom:0; background:linear-gradient(90deg,#7ed957,#4caf50); box-shadow:inset 0 0 12px rgba(0,0,0,0.2); }
+  #hooparrow { position:absolute; top:-14px; width:0; height:0; border-left:12px solid transparent; border-right:12px solid transparent; border-top:20px solid #2a1a12;
+    filter:drop-shadow(0 1px 2px rgba(0,0,0,0.4)); }
+  #hooparrow::after { content:""; position:absolute; top:6px; left:-3px; width:6px; height:70px; background:rgba(42,26,18,0.85); border-radius:3px; }
+  #hoopgame .press-hint { margin-top:1rem; font-family:'Futura','Century Gothic',sans-serif; letter-spacing:0.12em; text-transform:uppercase; font-size:0.78rem; color:var(--violet-deep); }
+  #hoopgame .press-hint kbd { background:var(--violet-deep); color:#fff; border-radius:6px; padding:0.15rem 0.5rem; }
+  #hoopgame .result { min-height:1.4rem; margin-top:0.6rem; font-family:'Iowan Old Style','Georgia',serif; font-size:1.05rem; font-weight:bold; }
+  #hoopgame .result.make { color:#3f9c43; } #hoopgame .result.miss { color:#c0392b; }
+  #hoopgame .close { margin-top:1rem; font-family:'Futura','Century Gothic',sans-serif; letter-spacing:0.12em; text-transform:uppercase; font-size:0.72rem; background:none; border:none; color:#9a7; cursor:pointer; }
+
   /* mobile controls */
   #dpad { position:absolute; bottom:1.2rem; right:1.2rem; z-index:35; display:none; grid-template-columns:repeat(3,52px); grid-template-rows:repeat(3,52px); gap:4px; }
   #dpad button { background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.25); color:#fff; border-radius:12px; font-size:1.2rem; }
@@ -295,7 +458,12 @@
   #title .controls { font-family:'Futura',sans-serif; font-size:0.72rem; letter-spacing:0.1em; color:rgba(255,255,255,0.85); line-height:1.8; }
 
   /* END */
-  #endcard { position:absolute; inset:0; z-index:70; display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:1.1rem; padding:2rem; background:rgba(13,7,24,0.94); backdrop-filter:blur(4px); }
+  #endcard { position:absolute; inset:0; z-index:70; display:none; flex-direction:column; align-items:center; justify-content:flex-end; text-align:center; gap:1.1rem; padding:2rem; background:rgba(13,7,24,0.94); backdrop-filter:blur(4px);
+    background-size:contain; background-position:center top; background-repeat:no-repeat; }
+  /* dark scrim over the end illustration so the text stays readable */
+  #endcard.has-bg::before { content:""; position:absolute; inset:0; z-index:0;
+    background:linear-gradient(180deg, rgba(13,7,24,0.15) 0%, rgba(13,7,24,0.35) 40%, rgba(13,7,24,0.82) 72%, rgba(13,7,24,0.96) 100%); }
+  #endcard > * { position:relative; z-index:1; }
   #endcard.show { display:flex; }
   #endcard .ending-name { font-family:'Futura','Century Gothic',sans-serif; letter-spacing:0.3em; text-transform:uppercase; font-size:0.85rem; color:var(--pink); }
   #endcard h2 { font-size:clamp(1.8rem,6vw,3.2rem); line-height:1.1; }
@@ -335,6 +503,65 @@
     <div class="lamp" style="left:640px; top:520px;"><div class="pole"></div><div class="globe"></div></div>
     <div class="lamp" style="left:340px; top:560px;"><div class="pole"></div><div class="globe"></div></div>
 
+    <!-- wild flower field, right of the basketball court — full-right, curves in bottom-left to dodge the dig spot -->
+    <div class="flowerfield" style="left:1360px; top:470px; width:620px; height:400px;">
+      <div class="patch"></div>
+      <span class="ff-bloom" style="left:40px;  top:56px;"></span>
+      <span class="ff-bloom" style="left:100px; top:40px;"></span>
+      <span class="ff-bloom" style="left:170px; top:52px;"></span>
+      <span class="ff-bloom" style="left:240px; top:38px;"></span>
+      <span class="ff-bloom" style="left:310px; top:50px;"></span>
+      <span class="ff-bloom" style="left:380px; top:36px;"></span>
+      <span class="ff-bloom" style="left:450px; top:50px;"></span>
+      <span class="ff-bloom" style="left:520px; top:40px;"></span>
+      <span class="ff-bloom" style="left:580px; top:56px;"></span>
+      <span class="ff-bloom" style="left:30px;  top:110px;"></span>
+      <span class="ff-bloom" style="left:96px;  top:124px;"></span>
+      <span class="ff-bloom" style="left:162px; top:108px;"></span>
+      <span class="ff-bloom" style="left:230px; top:126px;"></span>
+      <span class="ff-bloom" style="left:300px; top:110px;"></span>
+      <span class="ff-bloom" style="left:370px; top:128px;"></span>
+      <span class="ff-bloom" style="left:440px; top:110px;"></span>
+      <span class="ff-bloom" style="left:510px; top:126px;"></span>
+      <span class="ff-bloom" style="left:576px; top:112px;"></span>
+      <span class="ff-bloom" style="left:44px;  top:180px;"></span>
+      <span class="ff-bloom" style="left:118px; top:196px;"></span>
+      <span class="ff-bloom" style="left:190px; top:180px;"></span>
+      <span class="ff-bloom" style="left:262px; top:198px;"></span>
+      <span class="ff-bloom" style="left:334px; top:182px;"></span>
+      <span class="ff-bloom" style="left:406px; top:200px;"></span>
+      <span class="ff-bloom" style="left:478px; top:184px;"></span>
+      <span class="ff-bloom" style="left:548px; top:198px;"></span>
+      <span class="ff-bloom" style="left:592px; top:180px;"></span>
+      <span class="ff-bloom" style="left:250px; top:262px;"></span>
+      <span class="ff-bloom" style="left:320px; top:278px;"></span>
+      <span class="ff-bloom" style="left:392px; top:260px;"></span>
+      <span class="ff-bloom" style="left:462px; top:278px;"></span>
+      <span class="ff-bloom" style="left:534px; top:262px;"></span>
+      <span class="ff-bloom" style="left:588px; top:246px;"></span>
+      <span class="ff-bloom" style="left:300px; top:322px;"></span>
+      <span class="ff-bloom" style="left:380px; top:334px;"></span>
+      <span class="ff-bloom" style="left:456px; top:322px;"></span>
+      <span class="ff-bloom" style="left:530px; top:332px;"></span>
+      <!-- butterflies drifting over the blooms -->
+      <span class="butterfly b1" style="left:120px; top:90px;"></span>
+      <span class="butterfly b2" style="left:250px; top:60px;"></span>
+      <span class="butterfly b3" style="left:360px; top:120px;"></span>
+      <span class="butterfly b1" style="left:450px; top:70px;"></span>
+      <span class="butterfly b2" style="left:520px; top:150px;"></span>
+      <span class="butterfly b3" style="left:300px; top:200px;"></span>
+      <span class="butterfly b1" style="left:180px; top:170px;"></span>
+      <span class="butterfly b2" style="left:430px; top:210px;"></span>
+    </div>
+
+    <!-- picnic area, to the left of the lake -->
+    <div class="picnic" style="left:36px; top:740px;">
+      <div class="blanket"></div>
+      <div class="pillow a"></div>
+      <div class="pillow b"></div>
+      <div class="basket"></div>
+    </div>
+
     <!-- diggable patch of soft earth on the far right -->
     <div id="digspot" style="left:1470px; top:800px;"></div>
 
@@ -346,6 +573,8 @@
     <div class="obj-prompt" id="op-dig" style="left:1490px; top:770px;">E: dig here</div>
     <div class="obj-prompt" id="op-shake1" style="left:170px; top:420px;">E: shake the tree</div>
     <div class="obj-prompt" id="op-shake2" style="left:1330px; top:420px;">E: shake the tree</div>
+    <div class="obj-prompt" id="op-flowers" style="left:1670px; top:660px;">E: chase butterflies</div>
+    <div class="obj-prompt" id="op-picnic" style="left:120px; top:760px;">E: have a picnic</div>
 
     <!-- NPCs (positioned in world coords) -->
     <div class="npc entity" id="npc-devin" style="left:760px; top:540px; width:110px;">
@@ -368,23 +597,58 @@
       <div class="float" id="bull-art"></div>
     </div>
 
+    <!-- Luna the snow leopard — only appears in the nighttime scene after the knockout -->
+    <div class="npc entity" id="npc-luna" style="left:0px; top:470px; width:130px; display:none;">
+      <div class="prompt" id="prompt-luna">Press E to talk</div>
+      <div class="float" id="luna-art"></div>
+    </div>
+
+    <!-- Charlie — emerges in the flower field when you leave a strawberry for him -->
+    <div class="npc entity" id="npc-charlie" style="left:1600px; top:560px; width:130px; display:none;">
+      <div class="prompt" id="prompt-charlie">Press E to talk</div>
+      <div class="float" id="charlie-art"></div>
+    </div>
+
+    <!-- Vesper — haunts the flower field at night, once Luna's story is complete -->
+    <div class="npc entity" id="npc-vesper" style="left:1770px; top:520px; width:130px; display:none;">
+      <div class="prompt" id="prompt-vesper">Press E to talk</div>
+      <div class="float" id="vesper-art"></div>
+    </div>
+
     <!-- Player -->
     <div class="entity" id="player" style="left:760px; top:700px;"></div>
   </div>
 
+  <!-- knockout fade -->
+  <div id="fadeout"><div class="ko-text" id="ko-text"></div></div>
+
   <!-- HUD -->
   <div class="topbar">
     <a href="index.html">&#8592; Back to Codex</a>
-    <span class="hint">WASD / Arrows to walk &middot; E to talk &amp; interact</span>
+    <span class="hint">WASD / Arrows to walk &middot; E to talk &amp; interact &middot; K for keepsakes</span>
+    <button id="musictoggle" title="Toggle music">&#127925; Music: On</button>
   </div>
   <div class="meters">
     <div class="meter devin">&#128027;<div class="bar"><div class="fill" id="m-devin"></div></div></div>
     <div class="meter femi">&#129418;<div class="bar"><div class="fill" id="m-femi"></div></div></div>
     <div class="meter caiza" id="meter-caiza" style="display:none;">&#128009;<div class="bar"><div class="fill" id="m-caiza"></div></div></div>
     <div class="meter bull" id="meter-bull" style="display:none;">&#128002;<div class="bar"><div class="fill" id="m-bull"></div></div></div>
+    <div class="meter luna" id="meter-luna" style="display:none;">&#128008;<div class="bar"><div class="fill" id="m-luna"></div></div></div>
+    <div class="meter charlie" id="meter-charlie" style="display:none;">&#128048;<div class="bar"><div class="fill" id="m-charlie"></div></div></div>
+    <div class="meter vesper" id="meter-vesper" style="display:none;">&#129417;<div class="bar"><div class="fill" id="m-vesper"></div></div></div>
   </div>
   <div id="toast"></div>
-  <div id="inventory"><span class="inv-slot"><span class="inv-ico">&#127804;</span> <span id="inv-flowers">0</span></span><span class="inv-slot"><span class="inv-ico">&#129704;</span> <span id="inv-rocks">0</span></span><span class="inv-slot inv-cloth" id="slot-cloth" style="display:none;" title="Click to use the red cloth"><span class="inv-ico">&#127937;</span> <span id="inv-cloth">0</span> <span class="use-tag">use</span></span></div>
+  <!-- keepsakes panel (toggle with K) -->
+  <div id="keepsakepanel">
+    <div class="ks-card">
+      <h3>Keepsakes</h3>
+      <div class="ks-sub">Gifts from the hearts you've won. Click a wearable one to put it on.</div>
+      <div id="ks-grid" class="ks-grid"></div>
+      <div id="ks-empty" class="ks-empty">No keepsakes yet — win someone's heart to earn theirs.</div>
+      <button class="ks-close" id="ks-close">Close &middot; press K</button>
+    </div>
+  </div>
+  <div id="inventory"><span class="inv-slot"><span class="inv-ico">&#127804;</span> <span id="inv-flowers">0</span></span><span class="inv-slot"><span class="inv-ico">&#129704;</span> <span id="inv-rocks">0</span></span><span class="inv-slot inv-cloth" id="slot-cloth" style="display:none;" title="Click to use the red cloth"><span class="inv-ico">&#127937;</span> <span id="inv-cloth">0</span> <span class="use-tag">use</span></span><span class="inv-slot" id="slot-strawberry" style="display:none;" title="Carry it to the flower field"><span class="inv-ico">&#127827;</span> <span class="use-tag">strawberry</span></span></div>
 
   <!-- Dialogue -->
   <div id="dialogue-wrap">
@@ -392,6 +656,42 @@
     <div id="nameplate" class="narrator">Narrator</div>
     <div id="dialogue"><span class="text" id="dtext"></span><div class="advance" id="advance">click / space &#9654;</div></div>
     <div id="choices"></div>
+  </div>
+
+  <!-- picnic food menu -->
+  <div id="foodmenu">
+    <div class="card">
+      <h3>What looks good from the basket?</h3>
+      <div class="foods">
+        <button class="food" data-food="strawberry"><span class="fico">&#127827;</span>Strawberry</button>
+        <button class="food" data-food="sandwich"><span class="fico">&#129386;</span>Sandwich</button>
+        <button class="food" data-food="cookie"><span class="fico">&#127850;</span>Cookie</button>
+        <button class="food" data-food="grapes"><span class="fico">&#127815;</span>Grapes</button>
+      </div>
+      <button class="close" id="food-close">Never mind</button>
+    </div>
+  </div>
+
+  <!-- basketball timing minigame -->
+  <div id="hoopgame">
+    <div class="card">
+      <h3>Shoot Some Hoops</h3>
+      <div class="sub">Press E when the arrow hits the green!</div>
+      <div class="scores">
+        <div>Current streak<b id="hoop-made">0</b></div>
+        <div>Best streak<b id="hoop-best">0</b></div>
+      </div>
+      <div id="hoopstage">
+        <div id="hoopfx"><div class="rim"></div><div class="net"></div><div class="scoreball"></div></div>
+        <div id="hoopbar">
+          <div id="hoopzone"></div>
+          <div id="hooparrow"></div>
+        </div>
+      </div>
+      <div class="result" id="hoop-result">&nbsp;</div>
+      <div class="press-hint">Press <kbd>E</kbd> to shoot &middot; <kbd>Esc</kbd> to leave</div>
+      <button class="close" id="hoop-close">Leave the court</button>
+    </div>
   </div>
 
   <!-- mobile dpad -->  <div id="dpad">
@@ -417,6 +717,7 @@
     <h2 id="ending-title"></h2>
     <p id="ending-body"></p>
     <div id="ending-tally"></div>
+    <div id="ending-gift" style="margin-top:0.4rem;font-family:'Iowan Old Style','Georgia',serif;color:#ffe15a;font-size:1rem;"></div>
     <div class="ebtns">
       <button class="start-btn" id="keepgoing">&#10084; Keep Wandering</button>
       <button class="start-btn" id="replay" style="background:rgba(255,255,255,0.14);color:#fdf6f0;">&#8635; Start Over</button>
@@ -587,6 +888,20 @@ const PLAYER_SVG = `<svg viewBox="0 0 160 230" xmlns="http://www.w3.org/2000/svg
   <path d="M79 100 Q82 104 79 106" stroke="#d9a781" stroke-width="2" fill="none" stroke-linecap="round"/>
   <path d="M72 112 Q80 118 88 112" stroke="#b06a4a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
   <circle cx="62" cy="106" r="4.5" fill="#f2a0c0" opacity="0.35"/><circle cx="98" cy="106" r="4.5" fill="#f2a0c0" opacity="0.35"/>
+  <!-- wearable keepsakes (hidden until equipped) -->
+  <g id="wear-pendant" style="display:none;">
+    <path d="M66 134 Q80 142 94 134" stroke="#2a2a30" stroke-width="1.6" fill="none"/>
+    <path d="M80 140 l-5 9 l5 5 l5 -5 z" fill="#efe6d6" stroke="#b7a98a" stroke-width="1"/>
+  </g>
+  <g id="wear-bracelet" style="display:none;">
+    <!-- dark cord band around the wrist so the beads read against skin -->
+    <path d="M27 194 Q34 189 41 194" stroke="#2a2333" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+    <circle cx="29" cy="195" r="3.8" fill="#f24b8a" stroke="#7a1f45" stroke-width="1"/>
+    <circle cx="34" cy="192" r="3.8" fill="#ffc21e" stroke="#8a5a00" stroke-width="1"/>
+    <circle cx="39" cy="194" r="3.8" fill="#8a4fe0" stroke="#3d1f70" stroke-width="1"/>
+    <circle cx="31" cy="200" r="3.8" fill="#2fd0b0" stroke="#0f5f4f" stroke-width="1"/>
+    <circle cx="37" cy="200" r="3.8" fill="#f24b8a" stroke="#7a1f45" stroke-width="1"/>
+  </g>
 </svg>`;
 
 // Caiza: water dragon — deep-blue scales w/ counter-shading, layered webbed fin-ears + piercings,
@@ -736,6 +1051,100 @@ function maxusArt(){
   return `<img src="images/maxus.png" alt="Maxus" style="width:100%;height:auto;display:block;filter:drop-shadow(0 10px 8px rgba(0,0,0,0.35))" onerror="this.replaceWith(document.createRange().createContextualFragment(bullSVG(false)));">`;
 }
 
+// Charlie — vector placeholder bunny until images/charlie.png loads
+const CHARLIE_SVG = `<svg viewBox="0 0 200 250" xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="100" cy="242" rx="42" ry="8" fill="rgba(0,0,0,0.28)"/>
+  <!-- tall ears -->
+  <path d="M84 96 Q72 30 82 18 Q96 30 94 96Z" fill="#d8c3a8" stroke="#b79d7d" stroke-width="1.5"/>
+  <path d="M116 96 Q128 30 118 18 Q104 30 106 96Z" fill="#d8c3a8" stroke="#b79d7d" stroke-width="1.5"/>
+  <path d="M85 92 Q80 46 86 34 Q92 46 91 92Z" fill="#f6d9e2"/>
+  <path d="M115 92 Q120 46 114 34 Q108 46 109 92Z" fill="#f6d9e2"/>
+  <!-- round fluffy body -->
+  <ellipse cx="100" cy="168" rx="46" ry="44" fill="#e4d4bf"/>
+  <!-- head -->
+  <ellipse cx="100" cy="112" rx="40" ry="38" fill="#ecdfcc"/>
+  <ellipse cx="100" cy="126" rx="16" ry="12" fill="#fbf4ea"/>
+  <ellipse cx="100" cy="120" rx="5" ry="4" fill="#e79bb0"/>
+  <circle cx="84" cy="106" r="6" fill="#2a1a12"/><circle cx="116" cy="106" r="6" fill="#2a1a12"/>
+  <circle cx="86" cy="104" r="2" fill="#fff"/><circle cx="118" cy="104" r="2" fill="#fff"/>
+  <path d="M90 132 Q100 140 110 132" stroke="#2a1a12" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M100 126 L100 132" stroke="#b79d7d" stroke-width="1.5"/>
+  <!-- little cotton tail -->
+  <circle cx="140" cy="182" r="12" fill="#fbf4ea"/>
+</svg>`;
+function charlieArt(){
+  return `<img src="images/charlie.png" alt="Charlie" style="width:100%;height:auto;display:block;filter:drop-shadow(0 10px 8px rgba(0,0,0,0.35))" onerror="this.replaceWith(document.createRange().createContextualFragment(CHARLIE_SVG));">`;
+}
+
+// Vesper — vector placeholder (a winged night-moth spirit) until images/vesper.png loads
+const VESPER_SVG = `<svg viewBox="0 0 200 250" xmlns="http://www.w3.org/2000/svg">
+  <defs><linearGradient id="vWing" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#c9b8f0"/><stop offset="100%" stop-color="#6a4fa0"/></linearGradient></defs>
+  <ellipse cx="100" cy="242" rx="40" ry="8" fill="rgba(0,0,0,0.28)"/>
+  <!-- moth wings -->
+  <path d="M96 150 Q34 120 26 176 Q40 212 96 196Z" fill="url(#vWing)" opacity="0.92"/>
+  <path d="M104 150 Q166 120 174 176 Q160 212 104 196Z" fill="url(#vWing)" opacity="0.92"/>
+  <circle cx="52" cy="168" r="7" fill="#efe6ff" opacity="0.7"/><circle cx="148" cy="168" r="7" fill="#efe6ff" opacity="0.7"/>
+  <!-- slim body -->
+  <path d="M88 150 Q100 162 112 150 L108 210 Q100 218 92 210Z" fill="#3a2f52"/>
+  <!-- head + hair -->
+  <circle cx="100" cy="112" r="34" fill="#efe6ff"/>
+  <path d="M66 110 Q64 66 100 62 Q136 66 134 110 Q138 86 116 78 Q126 96 100 80 Q74 96 84 78 Q62 86 66 110Z" fill="#4a3a6a"/>
+  <!-- feathery antennae -->
+  <path d="M84 66 Q74 40 66 30 M84 62 Q78 48 72 42" stroke="#4a3a6a" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M116 66 Q126 40 134 30 M116 62 Q122 48 128 42" stroke="#4a3a6a" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- eyes -->
+  <ellipse cx="88" cy="112" rx="5" ry="6.5" fill="#3a2f52"/><ellipse cx="112" cy="112" rx="5" ry="6.5" fill="#3a2f52"/>
+  <circle cx="89.5" cy="110" r="1.5" fill="#fff"/><circle cx="113.5" cy="110" r="1.5" fill="#fff"/>
+  <path d="M92 126 Q100 131 108 126" stroke="#8a5a9a" stroke-width="2" fill="none" stroke-linecap="round"/>
+</svg>`;
+function vesperArt(){
+  return `<img src="images/vesper.png" alt="Vesper" style="width:100%;height:auto;display:block;filter:drop-shadow(0 10px 8px rgba(0,0,0,0.35))" onerror="this.replaceWith(document.createRange().createContextualFragment(VESPER_SVG));">`;
+}
+
+// Luna the snow leopard — vector placeholder until images/luna.png is added
+const LUNA_SVG = `<svg viewBox="0 0 200 250" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="lFur" x1="0" y1="0" x2="0.3" y2="1"><stop offset="0%" stop-color="#eef2f7"/><stop offset="100%" stop-color="#c7d0dc"/></linearGradient>
+    <linearGradient id="lHair" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#e8ecf3"/><stop offset="100%" stop-color="#b9c3d2"/></linearGradient>
+  </defs>
+  <ellipse cx="100" cy="242" rx="44" ry="8" fill="rgba(0,0,0,0.28)"/>
+  <!-- fluffy tail with rosettes -->
+  <path d="M52 208 Q6 200 16 246 Q40 244 62 226Z" fill="url(#lFur)" stroke="#a9b4c4" stroke-width="1.5"/>
+  <circle cx="28" cy="228" r="4" fill="#8f9bb0" opacity="0.5"/><circle cx="44" cy="236" r="3.5" fill="#8f9bb0" opacity="0.5"/>
+  <!-- ears -->
+  <path d="M72 60 Q58 24 44 46 Q52 66 76 74Z" fill="url(#lFur)" stroke="#a9b4c4" stroke-width="1.5"/>
+  <path d="M128 60 Q142 24 156 46 Q148 66 124 74Z" fill="url(#lFur)" stroke="#a9b4c4" stroke-width="1.5"/>
+  <path d="M66 52 Q58 40 52 48 Q58 60 70 66Z" fill="#f7d6e0"/><path d="M134 52 Q142 40 148 48 Q142 60 130 66Z" fill="#f7d6e0"/>
+  <!-- soft grey-white hair -->
+  <path d="M60 98 Q54 46 100 44 Q146 46 140 98 Q150 128 132 150 L68 150 Q50 128 60 98Z" fill="url(#lHair)"/>
+  <!-- face -->
+  <circle cx="100" cy="104" r="40" fill="url(#lFur)"/>
+  <!-- rosette spots -->
+  <circle cx="74" cy="88" r="4" fill="#8f9bb0" opacity="0.45"/><circle cx="126" cy="90" r="4" fill="#8f9bb0" opacity="0.45"/><circle cx="112" cy="76" r="3" fill="#8f9bb0" opacity="0.4"/>
+  <!-- muzzle -->
+  <ellipse cx="100" cy="118" rx="15" ry="11" fill="#fbfdff"/>
+  <path d="M94 116 Q100 112 106 116 Q104 123 100 124 Q96 123 94 116Z" fill="#3a3a48"/>
+  <path d="M100 124 L100 130" stroke="#a9b4c4" stroke-width="1.5"/>
+  <!-- whiskers -->
+  <path d="M85 122 L64 118 M85 126 L66 130 M115 122 L136 118 M115 126 L134 130" stroke="#dfe6ef" stroke-width="1"/>
+  <!-- pale green-blue eyes -->
+  <path d="M78 90 Q86 86 94 90 Q90 98 86 98 Q80 96 78 90Z" fill="#fff"/>
+  <path d="M106 90 Q114 86 122 90 Q118 98 114 98 Q110 98 106 90Z" fill="#fff"/>
+  <circle cx="86" cy="92" r="4.6" fill="#7fcfc4"/><circle cx="114" cy="92" r="4.6" fill="#7fcfc4"/>
+  <circle cx="86" cy="92" r="2.2" fill="#1f2f38"/><circle cx="114" cy="92" r="2.2" fill="#1f2f38"/>
+  <circle cx="87.4" cy="90" r="1.3" fill="#fff"/><circle cx="115.4" cy="90" r="1.3" fill="#fff"/>
+  <!-- calm little smile -->
+  <path d="M90 122 Q100 128 110 122" stroke="#3a3a48" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <!-- body: cozy dark coat -->
+  <path d="M64 150 Q100 166 136 150 L146 226 L54 226Z" fill="#3b4760" stroke="#28304a" stroke-width="3"/>
+  <path d="M84 150 Q100 160 116 150" fill="none" stroke="#5a6a8a" stroke-width="2"/>
+  <path d="M64 154 Q42 178 46 210" stroke="url(#lFur)" stroke-width="12" fill="none" stroke-linecap="round"/>
+  <path d="M136 154 Q158 178 154 210" stroke="url(#lFur)" stroke-width="12" fill="none" stroke-linecap="round"/>
+</svg>`;
+function lunaArt(){
+  return `<img src="images/luna.png" alt="Luna" style="width:100%;height:auto;display:block;filter:drop-shadow(0 10px 8px rgba(0,0,0,0.35))" onerror="this.replaceWith(document.createRange().createContextualFragment(LUNA_SVG));">`;
+}
+
 // Caiza can use a real illustration if images/caiza.png exists; otherwise fall back to the SVG.
 // The <img> onerror swaps in the vector art so nothing breaks when the PNG isn't present yet.
 function caizaArt(){
@@ -754,13 +1163,16 @@ document.getElementById('devin-art').innerHTML = devinArt();
 document.getElementById('femi-art').innerHTML = femiArt(true);
 document.getElementById('player').innerHTML = PLAYER_SVG;
 document.getElementById('caiza-art').innerHTML = caizaArt();
+document.getElementById('luna-art').innerHTML = lunaArt();
+document.getElementById('charlie-art').innerHTML = charlieArt();
+document.getElementById('vesper-art').innerHTML = vesperArt();
 
 /* ============ WALK-AROUND ENGINE ============ */
 const world = document.getElementById('world');
 const player = document.getElementById('player');
 const gameEl = document.getElementById('game');
 const flyball = document.getElementById('flyball');
-const WORLD_W = 1600, WORLD_H = 900;
+const WORLD_W = 2000, WORLD_H = 900;
 let px = 760, py = 700;              // player world position
 const SPEED = 6;
 const keys = {};
@@ -771,10 +1183,14 @@ const npcs = {
   devin: { el: document.getElementById('npc-devin'), prompt: document.getElementById('prompt-devin'), x: 815, y: 660, visits:0, level:0, pending:null, tone:0 },
   femi:  { el: document.getElementById('npc-femi'),  prompt: document.getElementById('prompt-femi'),  x: 1240, y: 760, visits:0, level:0, pending:null, tone:0 },
   caiza: { el: document.getElementById('npc-caiza'), prompt: document.getElementById('prompt-caiza'), x: 360, y: 650, visits:0, level:0, pending:null, tone:0, hidden:true },
-  bull:  { el: document.getElementById('npc-bull'),  prompt: document.getElementById('prompt-bull'),  x: 545, y: 640, visits:0, level:0, pending:null, tone:0, hidden:true, hurt:false }
+  bull:  { el: document.getElementById('npc-bull'),  prompt: document.getElementById('prompt-bull'),  x: 545, y: 640, visits:0, level:0, pending:null, tone:0, hidden:true, hurt:false },
+  luna:  { el: document.getElementById('npc-luna'),  prompt: document.getElementById('prompt-luna'),  x: 65, y: 660, visits:0, level:0, pending:null, tone:0, hidden:true },
+  charlie:{ el: document.getElementById('npc-charlie'),prompt: document.getElementById('prompt-charlie'),x: 1665, y: 730, visits:0, level:0, pending:null, tone:0, hidden:true },
+  vesper:{ el: document.getElementById('npc-vesper'), prompt: document.getElementById('prompt-vesper'), x: 1835, y: 700, visits:0, level:0, pending:null, tone:0, hidden:true }
 };
 let bullHere = false;   // becomes true once he charges in
 let caizaAwake = false;   // becomes true once she rises from the pond
+let nightMode = false;    // becomes true after the knockout
 // Which task each character requires to move from level 0->1 and 1->2.
 const TASK_PLAN = {
   devin: ['flower','sit'],
@@ -782,7 +1198,7 @@ const TASK_PLAN = {
   caiza: ['flower','sit']
 };
 const TASK_HINT = {
-  shoot:  "sink a shot at the hoop (press E by the court)",
+  shoot:  "hit their target streak at the hoop (press E by the court)",
   skip:   "skip a stone on the pond (press E at the water's edge)",
   sit:    "sit a while on the bench (press E by it)",
   flower: "bring me a flower — pick one from the crooked tree, then come give it to me"
@@ -796,20 +1212,37 @@ const objects = {
   tree:   { x: 535,  y: 560, el: document.getElementById('op-tree'),   fn: ()=>pickFlower() },
   shake1: { x: 170,  y: 470, el: document.getElementById('op-shake1'), fn: ()=>shakeTree('tree1', [140, 455]) },
   shake2: { x: 1330, y: 470, el: document.getElementById('op-shake2'), fn: ()=>shakeTree('tree2', [1320, 470]) },
-  dig:    { x: 1500, y: 815, el: document.getElementById('op-dig'),    fn: ()=>digHere() }
+  dig:    { x: 1500, y: 815, el: document.getElementById('op-dig'),    fn: ()=>digHere() },
+  flowers:{ x: 1670, y: 690, el: document.getElementById('op-flowers'),fn: ()=>chaseButterflies() },
+  picnic: { x: 120,  y: 810, el: document.getElementById('op-picnic'), fn: ()=>havePicnic() }
 };
 
 document.addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
   if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) e.preventDefault();
   keys[k] = true;
+  // basketball minigame captures E / space to shoot, and Esc / Q to leave
+  if (hoopActive){
+    if (e.repeat) return;   // ignore auto-repeat so one press = one shot
+    if (k === 'e' || k === ' ' || k === 'enter'){ hoopShoot(); return; }
+    if (k === 'escape' || k === 'q'){ closeHoops(); return; }
+    return;
+  }
   if (k === 'e' && !dlgActive) tryInteract();
+  if (k === 'k' && !dlgActive && !busy) toggleKeepsakePanel();
+  if (k === ';' && !dlgActive && !busy){   // shortcut: instantly unearth a red cloth at the dig spot
+    if(Math.hypot(px-objects.dig.x, py-objects.dig.y) < 90){
+      inventory.cloth++; updateInventory();
+      const spot=document.getElementById('digspot'); spot.classList.remove('dug'); void spot.offsetWidth; spot.classList.add('dug');
+      emote(1500, 760, '🎏'); toast("You dig up a tattered RED CLOTH! (Click it in your inventory to use it.)", 4200);
+    }
+  }
   if ((k === ' ' || k === 'enter') && dlgActive) advance();
 });
 document.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
 document.querySelectorAll('#dpad button').forEach(b=>{
-  const set=(v)=>{ const k=b.dataset.k; if(k==='act'){ if(v){ if(dlgActive) advance(); else tryInteract(); } return;} keys[{up:'w',down:'s',left:'a',right:'d'}[k]]=v; };
+  const set=(v)=>{ const k=b.dataset.k; if(k==='act'){ if(v){ if(hoopActive) hoopShoot(); else if(dlgActive) advance(); else tryInteract(); } return;} keys[{up:'w',down:'s',left:'a',right:'d'}[k]]=v; };
   b.addEventListener('touchstart',e=>{e.preventDefault();set(true);});
   b.addEventListener('touchend',e=>{e.preventDefault();set(false);});
   b.addEventListener('mousedown',()=>set(true));
@@ -844,6 +1277,8 @@ function initDepth(){
   // the court is a flat ground surface — always behind everything (like the grass/path)
   const court = document.querySelector('#world .court');
   if (court) court.style.zIndex = 0;
+  // flower field & picnic blanket are flat ground decor — walk over them
+  document.querySelectorAll('#world .flowerfield, #world .picnic').forEach(el=>{ el.style.zIndex = 0; });
   // static scenery gets a fixed foot-based z-index; NPCs are updated live in the loop
   document.querySelectorAll('#world .tree, #world .lamp, #world .bench, #world .hoop')
     .forEach(el=>{ el.style.zIndex = Math.round(baseYOf(el)); });
@@ -889,7 +1324,8 @@ function loop(){
       const R=90; n.prompt.classList.toggle('show', d<R);
       if (d<R && d<best){ best=d; nearTarget={type:'npc',key}; } }
     for (const key in objects){ const o=objects[key]; if(o.hidden){ o.el.classList.remove('show'); continue; } const d=Math.hypot(px-o.x, py-o.y);
-      const R = key==='court' ? 150 : key==='bench' ? 115 : 85; o.el.classList.toggle('show', d<R);
+      const R = key==='court' ? 150 : key==='bench' ? 115 : (key==='picnic'||key==='flowers') ? 120 : 85; o.el.classList.toggle('show', d<R);
+      if(key==='flowers') o.el.textContent = (holdingStrawberry && !charlieHere) ? 'E: leave the strawberry' : 'E: chase butterflies';
       if (d<R && d<best){ best=d; nearTarget={type:'obj',key}; } }
     // rocks take priority: a rock within grab range always wins (so you can collect near a tree)
     let nearRock=null, rockBest=70;
@@ -911,20 +1347,90 @@ function tryInteract(){
 function emote(worldX, worldY, ch){ const e=document.createElement('div'); e.className='emote'; e.textContent=ch;
   e.style.left=worldX+'px'; e.style.top=worldY+'px'; world.appendChild(e); setTimeout(()=>e.remove(),1400); }
 
-function shootHoops(){ busy=true;
-  objects.court.el.classList.remove('show'); // hide prompt so it doesn't block the ball
-  flyball.style.display='block';
-  const startX=px, startY=py-120;      // from player's hands
-  const endX=1180, endY=470;           // the hoop rim
-  const t0=performance.now(), dur=850;
-  (function anim(t){ const p=Math.min((t-t0)/dur,1);
-    const x=startX+(endX-startX)*p, y=startY+(endY-startY)*p, arc=Math.sin(p*Math.PI)*150;
-    flyball.style.left=(x-14)+'px'; flyball.style.top=(y-arc)+'px';
-    if(p<1) requestAnimationFrame(anim);
-    else { flyball.style.display='none'; tasks.shoot=true; emote(1180,460,'🏀'); emote(1210,440,'✨'); toast("Swish! Nothing but net. Femi would be proud.");
-      setTimeout(()=>{ busy=false; }, 750); }   // small beat before the prompt can reappear
-  })(performance.now());
+/* ============ BASKETBALL TIMING MINIGAME ============ */
+let hoopActive=false, hoopRAF=null, hoopPos=0, hoopDir=1, hoopSpeed=1.9, hoopLocked=false;
+let hoopMade=0, hoopStreak=0, hoopSessionBest=0;
+const SHOOT_REQ = { femi: 15, bull: 10 };   // streak each character wants in one session
+const SHOOT_TARGET = Math.min(SHOOT_REQ.femi, SHOOT_REQ.bull);   // used only for generic messaging
+let hoopBest = parseInt(localStorage.getItem('purgatory_hoop_best')||'0', 10) || 0;
+const BAR_W=360, ARROW_W=24;
+const HOOP_BASE_SPEED=2.9;
+let zoneLeft=0, zoneW=0;
+
+function placeZone(){
+  // green zone shrinks a little as your streak climbs (min ~40px), and slides around
+  zoneW = Math.max(40, 100 - hoopStreak*6);
+  zoneLeft = 20 + Math.random()*(BAR_W - zoneW - 40);
+  const z=document.getElementById('hoopzone');
+  z.style.left=zoneLeft+'px'; z.style.width=zoneW+'px';
 }
+function shootHoops(){
+  busy=true; objects.court.el.classList.remove('show');
+  hoopMade=0; hoopStreak=0; hoopSessionBest=0;
+  document.getElementById('hoop-made').textContent=hoopStreak;
+  document.getElementById('hoop-best').textContent=hoopBest;
+  document.getElementById('hoop-result').textContent=' ';
+  document.getElementById('hoop-result').className='result';
+  document.getElementById('hoopgame').classList.add('show');
+  hoopActive=true; hoopLocked=false; hoopPos=0; hoopDir=1; hoopSpeed=HOOP_BASE_SPEED;
+  placeZone();
+  const arrow=document.getElementById('hooparrow');
+  let last=performance.now();
+  (function tick(t){
+    if(!hoopActive) return;
+    const dt=t-last; last=t;
+    hoopPos += hoopDir*hoopSpeed*(dt/16);
+    if(hoopPos<=0){ hoopPos=0; hoopDir=1; }
+    if(hoopPos>=BAR_W-ARROW_W){ hoopPos=BAR_W-ARROW_W; hoopDir=-1; }
+    arrow.style.left=hoopPos+'px';
+    hoopRAF=requestAnimationFrame(tick);
+  })(last);
+}
+function playHoopFx(){
+  const fx=document.getElementById('hoopfx');
+  fx.classList.remove('score','miss'); void fx.offsetWidth; fx.classList.add('score');
+}
+function playHoopMissFx(){
+  const fx=document.getElementById('hoopfx');
+  fx.classList.remove('score','miss'); void fx.offsetWidth; fx.classList.add('miss');
+}
+function hoopShoot(){
+  if(!hoopActive || hoopLocked) return;
+  const center = hoopPos + ARROW_W/2;
+  const inGreen = center >= zoneLeft && center <= zoneLeft+zoneW;
+  const res=document.getElementById('hoop-result');
+  if(inGreen){
+    hoopMade++; hoopStreak++;
+    if(hoopStreak>hoopSessionBest) hoopSessionBest=hoopStreak;
+    if(hoopStreak>hoopBest){ hoopBest=hoopStreak; localStorage.setItem('purgatory_hoop_best', hoopBest); }
+    document.getElementById('hoop-made').textContent=hoopStreak;
+    document.getElementById('hoop-best').textContent=hoopBest;
+    res.textContent='SWISH! 🏀'; res.className='result make';
+    playHoopFx();
+    hoopSpeed = Math.min(8, hoopSpeed + 0.4 + hoopStreak*0.12);   // ramps harder each make
+    hoopLocked=true;
+    setTimeout(()=>{ if(hoopActive){ placeZone(); res.textContent=' '; res.className='result'; hoopLocked=false; } }, 650);
+  } else {
+    res.textContent='Miss! Off the rim.'; res.className='result miss';
+    playHoopMissFx();
+    hoopStreak=0;
+    document.getElementById('hoop-made').textContent=hoopStreak;
+    hoopSpeed=HOOP_BASE_SPEED;
+    hoopLocked=true;
+    setTimeout(()=>{ if(hoopActive){ placeZone(); res.textContent=' '; res.className='result'; hoopLocked=false; } }, 650);
+  }
+}
+function closeHoops(){
+  hoopActive=false; if(hoopRAF) cancelAnimationFrame(hoopRAF);
+  document.getElementById('hoopgame').classList.remove('show');
+  document.getElementById('hoopfx').classList.remove('score','miss');
+  // record this session's best streak; each character checks it against their own target
+  tasks.shoot = hoopSessionBest;
+  if(hoopSessionBest>0) emote(1180,460,'🏀');
+  if(hoopSessionBest>0) toast(`Best streak this round: ${hoopSessionBest}. Best ever: ${hoopBest}.`, 2800);
+  busy=false;
+}
+document.getElementById('hoop-close').addEventListener('click', closeHoops);
 let skipCount = 0;
 let skipReadyAt = 0;             // throttle so you can't spam stones
 const SKIP_COOLDOWN = 1500;      // ms between throws
@@ -995,6 +1501,83 @@ function sitBench(){ busy=true;
   emote(480,650,'😌'); toast("You settle onto the bench and watch the endless golden hour.", 1800);
   setTimeout(()=>{ px=seatX; py=seatTop+133; tasks.sit=true; player.classList.remove('sitting'); player.style.transition='none'; busy=false; }, 1600);
 }
+
+/* Flower field — if you're carrying a strawberry, leave it and Charlie comes;
+   otherwise just chase the butterflies for a little joy */
+let holdingStrawberry = false;
+let charlieHere = false;
+function chaseButterflies(){
+  if(holdingStrawberry && !charlieHere){ leaveStrawberry(); return; }
+  busy=true;
+  const flies=document.querySelectorAll('.butterfly');
+  flies.forEach(f=>f.classList.add('spooked'));
+  emote(px, py-120, '🦋'); emote(px+34, py-150, '✨');
+  const lines=[
+    "You dash through the blooms and the butterflies scatter in a glittering cloud!",
+    "A butterfly lands on your nose for one perfect second, then flits away.",
+    "You spin through the flower field, petals and wings swirling everywhere."
+  ];
+  toast(lines[Math.floor(Math.random()*lines.length)], 2200);
+  // butterflies settle back onto the blooms after a moment
+  setTimeout(()=>{ flies.forEach(f=>f.classList.remove('spooked')); }, 1400);
+  setTimeout(()=>{ busy=false; }, 900);
+}
+
+/* place the strawberry in the field → Charlie sniffs it out and emerges after 5s */
+function leaveStrawberry(){
+  holdingStrawberry=false; updateInventory();
+  emote(1665, 700, '🍓');
+  toast("You set the strawberry down among the flowers and step back... something's rustling.", 4000);
+  setTimeout(()=>{ toast("The blooms are shaking! A little snout pokes through...", 3000); }, 2600);
+  setTimeout(()=>{ summonCharlie(); }, 5000);
+}
+function summonCharlie(){
+  charlieHere=true;
+  const el = npcs.charlie.el;
+  el.style.display='block';
+  document.getElementById('charlie-art').innerHTML = charlieArt();
+  el.style.clipPath='inset(0 0 100% 0)';
+  el.style.transform='translateY(50px)';
+  el.style.transition='clip-path 0.9s ease, transform 0.9s cubic-bezier(.2,.8,.2,1)';
+  requestAnimationFrame(()=>{ el.style.clipPath='inset(0 0 0% 0)'; el.style.transform='translateY(0)'; });
+  emote(1665, 640, '🐰'); emote(1700, 620, '❤️');
+  toast("A happy little bunny hops out of the flowers, nibbling the strawberry! “Charlie” — go say hi!", 6000);
+  setTimeout(()=>{ npcs.charlie.hidden=false; document.getElementById('meter-charlie').style.display='flex';
+    el.style.clipPath='none'; el.style.transform='none'; el.style.transition='none'; }, 950);
+}
+
+/* Picnic area — pick a food; the strawberry can be carried to the flower field */
+function havePicnic(){
+  document.getElementById('foodmenu').classList.add('show');
+  canMove=false;
+}
+function chooseFood(food){
+  document.getElementById('foodmenu').classList.remove('show'); canMove=true;
+  if(food==='strawberry'){
+    holdingStrawberry=true; updateInventory();
+    emote(px, py-120, '🍓');
+    toast("You pocket a plump red strawberry. It smells amazing — maybe someone in the park would love it. Try the flower field?", 4500);
+    return;
+  }
+  const bites={ sandwich:['🥪',"You munch a fluffy sandwich. Simple and perfect."],
+                cookie:['🍪',"You nibble a warm cookie. Crumbs everywhere. Worth it."],
+                grapes:['🍇',"You pop a few sweet grapes. Refreshing!"] };
+  const b=bites[food]||['😋','Yum.'];
+  busy=true;
+  const seatX = 120, seatTop = 700;
+  player.style.transition='left 0.35s ease, top 0.35s ease';
+  player.style.left=(seatX-48)+'px'; player.style.top=seatTop+'px';
+  player.classList.add('sitting');
+  emote(120, 760, b[0]); emote(150, 730, '😋');
+  toast(b[1]+" A lovely little picnic.", 2200);
+  setTimeout(()=>{ px=seatX; py=seatTop+133; player.classList.remove('sitting'); player.style.transition='none'; busy=false; }, 1700);
+}
+document.querySelectorAll('#foodmenu .food').forEach(b=>{
+  b.addEventListener('click', ()=>chooseFood(b.dataset.food));
+});
+document.getElementById('food-close').addEventListener('click', ()=>{
+  document.getElementById('foodmenu').classList.remove('show'); canMove=true;
+});
 /* ============ INVENTORY + TASK STATE ============ */
 const inventory = { flowers: 0, rocks: 0, cloth: 0 };
 const FLOWER_COOLDOWN = 30000;   // 30s between picks
@@ -1007,6 +1590,7 @@ function updateInventory(){
   document.getElementById('inv-rocks').textContent = inventory.rocks;
   document.getElementById('inv-cloth').textContent = inventory.cloth;
   document.getElementById('slot-cloth').style.display = inventory.cloth>0 ? 'flex' : 'none';
+  const sb=document.getElementById('slot-strawberry'); if(sb) sb.style.display = (typeof holdingStrawberry!=='undefined' && holdingStrawberry) ? 'flex' : 'none';
   const inv=document.getElementById('inventory'); inv.classList.remove('bump'); void inv.offsetWidth; inv.classList.add('bump'); }
 
 /* ============ DIGGING (far-right patch) ============
@@ -1036,13 +1620,13 @@ function digHere(){
 
 /* ============ RED CLOTH → BULL ENTRANCE ============ */
 function useCloth(){
-  if(inventory.cloth<=0 || bullHere || busy) return;
+  if(inventory.cloth<=0 || bullHere || busy || nightMode) return;
   inventory.cloth--; updateInventory();
   busy=true; canMove=false;
   toast("You wave the red cloth high overhead...", 1800);
   const el = npcs.bull.el;
   el.style.display='block';
-  el.style.left='1620px'; el.style.top='470px';   // off the right horizon
+  el.style.left='2040px'; el.style.top='470px';   // off the right horizon
   el.style.zIndex=Math.round(690);
   document.getElementById('bull-art').innerHTML = maxusArt();
   el.querySelector('.float').style.transform='scaleX(-1)';   // face left as he charges
@@ -1070,6 +1654,98 @@ function healBull(){
   const el=npcs.bull.el;
   el.classList.remove('hurt');
   document.getElementById('bull-art').innerHTML = maxusArt();   // resets art, clears stars overlay
+}
+
+/* ============ KNOCKOUT → NIGHT → LUNA ============ */
+function knockOut(){
+  busy=true; canMove=false;
+  const bel=npcs.bull.el;
+  // Maxus lunges, then everything goes black
+  bel.classList.add('bull-charge'); bel.style.left=(px-60)+'px'; bel.style.top=(py-100)+'px';
+  emote(px, py-120, '💥'); emote(px+30, py-140, '💢');
+  const fade=document.getElementById('fadeout'); const ko=document.getElementById('ko-text');
+  ko.textContent = "A blur of horns. A dull THUD. The world tips sideways and goes dark...";
+  fade.classList.add('show');
+  setTimeout(()=>enterNight(fade, ko), 2600);
+}
+function enterNight(fade, ko){
+  nightMode = true;
+  if(typeof Music!=='undefined') Music.setNight(true);
+  // night falls: Maxus storms off and the others head home. They're still "known" —
+  // Luna can walk you back to daytime later and everyone you've met returns.
+  ['devin','femi','caiza','bull'].forEach(k=>{ npcs[k].hidden=true; npcs[k].el.style.display='none'; npcs[k].prompt.classList.remove('show'); });
+  document.getElementById('meter-bull').style.display='none';
+  // Maxus cools off overnight — reset his charge pose so he returns calm in daylight
+  npcs.bull.el.classList.remove('bull-charge'); npcs.bull.el.style.left='470px'; npcs.bull.el.style.top='470px';
+  // clear any dropped rocks / reset time-of-day visuals
+  world.classList.add('night');
+  document.querySelectorAll('.lamp .globe').forEach(g=>g.style.filter='brightness(1.4)');
+  // Luna waits by the pond
+  npcs.luna.hidden=false; npcs.luna.el.style.display='block';
+  npcs.luna.el.style.zIndex = Math.round(640);
+  document.getElementById('meter-luna').style.display='flex';
+  // move the player to where they were "dragged to safety" — a bit of grass near the pond
+  px=470; py=720; player.style.left=(px-48)+'px'; player.style.top=(py-133)+'px';
+  ko.textContent = "You come to in the dark. The park is silent, the others long gone home. By the moonlit pond, a pale figure watches you...";
+  setTimeout(()=>{ fade.classList.remove('show'); canMove=true; busy=false; }, 2600);
+}
+
+/* Once you've won Luna's heart she can walk you between night and day.
+   In the daytime she stays by the pond; everyone you've met returns. */
+function setDaytime(){
+  nightMode=false;
+  world.classList.remove('night');
+  if(typeof Music!=='undefined') Music.setNight(false);
+  document.querySelectorAll('.lamp .globe').forEach(g=>g.style.filter='');
+  // helper: force an npc element into a clean, fully-visible state (clears leftover
+  // animation styles like clip-path / transform / opacity from earlier reveals)
+  const showNpc = (k)=>{ const el=npcs[k].el; npcs[k].hidden=false;
+    el.style.display='block'; el.style.opacity='1'; el.style.clipPath='none';
+    el.style.transform='none'; el.style.transition='none';
+    const fl=el.querySelector('.float'); if(fl) fl.style.transform='scaleX(1)'; };
+  // bring back the daytime cast you've unlocked
+  showNpc('devin'); showNpc('femi');
+  document.getElementById('devin-art').innerHTML = devinArt();
+  document.getElementById('femi-art').innerHTML = femiArt(true);
+  if(caizaAwake){ showNpc('caiza'); npcs.caiza.el.style.zIndex=Math.round(600);
+    document.getElementById('caiza-art').innerHTML = caizaArt();
+    document.getElementById('meter-caiza').style.display='flex'; }
+  if(bullHere){ showNpc('bull'); npcs.bull.el.classList.remove('bull-charge','hurt');
+    npcs.bull.el.style.left='470px'; npcs.bull.el.style.top='470px';
+    document.getElementById('bull-art').innerHTML = maxusArt();
+    document.getElementById('meter-bull').style.display='flex'; }
+  // Luna comes along, standing beside the pond in the sun
+  showNpc('luna');
+  document.getElementById('luna-art').innerHTML = lunaArt();
+}
+function setNighttime(){
+  nightMode=true;
+  world.classList.add('night');
+  if(typeof Music!=='undefined') Music.setNight(true);
+  document.querySelectorAll('.lamp .globe').forEach(g=>g.style.filter='brightness(1.4)');
+  ['devin','femi','caiza','bull'].forEach(k=>{ npcs[k].hidden=true; npcs[k].el.style.display='none'; npcs[k].prompt.classList.remove('show'); });
+  document.getElementById('meter-caiza').style.display = caizaAwake ? 'flex' : 'none';
+  document.getElementById('meter-bull').style.display = bullHere ? 'flex' : 'none';
+  npcs.luna.hidden=false; npcs.luna.el.style.display='block';
+  document.getElementById('luna-art').innerHTML = lunaArt();
+}
+function lunaToDay(){ endDialogue();
+  const fade=document.getElementById('fadeout'), ko=document.getElementById('ko-text');
+  ko.textContent="Luna takes your hand and leads you toward the treeline. The sky pinks, then gold — dawn.";
+  fade.classList.add('show'); busy=true; canMove=false;
+  setTimeout(()=>{ setDaytime();
+    ko.textContent="Morning. The park hums awake around you — and Luna's still right there by the pond, blinking in the sun.";
+    setTimeout(()=>{ fade.classList.remove('show'); busy=false; canMove=true; }, 1800);
+  }, 1600);
+}
+function lunaToNight(){ endDialogue();
+  const fade=document.getElementById('fadeout'), ko=document.getElementById('ko-text');
+  ko.textContent="Luna guides you back into the dark. The gold drains from the sky and the stars come out.";
+  fade.classList.add('show'); busy=true; canMove=false;
+  setTimeout(()=>{ setNighttime();
+    ko.textContent="Night again. Just the moon, the black-glass water, and Luna — exactly how she likes it.";
+    setTimeout(()=>{ fade.classList.remove('show'); busy=false; canMove=true; }, 1800);
+  }, 1600);
 }
 
 const rocks = [];            // {el, x, y, taken}
@@ -1128,7 +1804,7 @@ function toast(msg, dur){ const t=document.getElementById('toast'); t.textConten
   clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'), dur||2600); }
 
 /* ============ AFFECTION ============ */
-const aff = { devin:0, femi:0, caiza:0, bull:0 };
+const aff = { devin:0, femi:0, caiza:0, bull:0, luna:0, charlie:0, vesper:0 };
 function addAff(who,n){ const before=aff[who]; aff[who]=Math.max(0,Math.min(100,aff[who]+n));
   const bar=document.getElementById('m-'+who); if(bar) bar.style.width=aff[who]+'%';
   if(n>0 && portrait) emote(px-40, py-200, '❤️');
@@ -1137,8 +1813,10 @@ function addAff(who,n){ const before=aff[who]; aff[who]=Math.max(0,Math.min(100,
 }
 
 /* ============ NAMES / PORTRAITS ============ */
-const NAMES = { devin:'Devin de Snuitkever', femi:'Femi de Fennec', caiza:'Caiza', bull:'Maxus', narrator:'' };
-const PORTRAIT = { devin: DEVIN_SVG, femi: femiSVG(false), caiza: CAIZA_SVG, bull: bullSVG(false) };
+const NAMES = { devin:'Devin de Snuitkever', femi:'Femi de Fennec', caiza:'Caiza', bull:'Maxus', luna:'Luna', charlie:'Charlie', vesper:'Vesper', narrator:'' };
+const PORTRAIT = { devin: DEVIN_SVG, femi: femiSVG(false), caiza: CAIZA_SVG, bull: bullSVG(false), luna: LUNA_SVG, charlie: CHARLIE_SVG, vesper: VESPER_SVG };
+// each character's signature sign-off — said at the end of every conversation, and sometimes up front
+const TAGLINE = { devin:"No worries.", femi:"Never miss.", caiza:"Don't make it weird.", bull:"Dash on.", luna:"*Yawn~*", charlie:"*Nose twitch*", vesper:"Till dusk." };
 
 /* ============ DIALOGUE — light-hearted, multi-visit ============ */
 // Each character has an array of "conversation" nodes chosen by visit count.
@@ -1170,11 +1848,12 @@ const DLG = {
   devin_L2: { who:'devin', t:"You sat and watched the whole golden hour. For me. *his halo glows warm* I've arranged ten billion stars and not one made me feel the way you did, sitting quietly on a bench. I... I need to say something, and I may combust.", choices:[
     { t:"“I'm falling for you, Devin. All of you.”", go:'devin_love', tier:'good', aff:{devin:30}, tone:2 },
     { t:"“You're my favorite part of this whole park.”", go:'devin_love', tier:'meh', aff:{devin:24}, tone:0 },
-    { t:"“Relax, it's just a sunset, buddy.”", go:'devin_love', tier:'bad', aff:{devin:18}, tone:-2 }
+    { t:"“Relax, it's just a sunset, buddy.”", go:'devin_reject', tier:'bad', aff:{devin:4}, tone:-2 }
   ]},
+  devin_reject: { who:'devin', t:"*his halo dims to a sad little flicker* Oh. Just a sunset. I — yes. Of course. Forgive me, I got carried away. *shrinks* Do come back when you've a moment. I'll try not to make it strange next time.", end:0 },
   devin_love: { who:'devin', t:"*very quietly* ...Whatever we are — friend, or something even dearer — I know this: forever is a thing I can actually offer. And I would like to spend it near you. Stay. Please.", aff:{devin:100}, end:0 },
   devin_wait: { who:'devin', t:"Still hoping you'll ${HINT}, whenever you have a moment. No rush. I have, ah, all of time. But I'll be glad when you're back.", end:0 },
-  devinIdle: { who:'devin', t:"My favourite person in all creation, back again. The sky's extra gold today — I may have done that on purpose. Go say hi to the others, then come find me. ...And please, don't make a fuss.", end:0 },
+  devinIdle: { who:'devin', t:"My favourite person in all creation, back again. The sky's extra gold today — I may have done that on purpose. Go say hi to the others, then come find me.", end:0 },
 
   /* ========== FEMI — cocky/dismissive → buddies → crushing ========== */
   femi_L0: { who:'femi', t:"Oh, a spectator. Cute. Femi, twenty-one, undefeated, don't wear yourself out taking notes. You need something, or you just here to watch greatness happen?", choices:[
@@ -1186,7 +1865,7 @@ const DLG = {
   femi_L0_m: { who:'femi', t:"Behind the back, spin, fadeaway — *swish* — see? Never miss. Anyone can WATCH, though. Question is whether you can keep up. Jury's out on you, rookie.", next:'femi_L0_m2' },
   femi_L0_m2: { who:'femi', t:"Ugh, you're still standing there with that look. Fine, FINE, you've got a smidge of potential, maybe. Don't get excited. I'm gonna need to see it before I believe it, so quit stalling.", next:'femi_ask0' },
   femi_L0_b: { who:'femi', t:"Ex-CUSE me? *narrows eyes* I'll have you know the pond echoes my swishes back like a crowd. That counts. ...Rude. You're rude. I'm gonna need you to earn your way out of that one.", next:'femi_ask0' },
-  femi_ask0: { who:'femi', t:"Tell you what. Want me to take you seriously? Earn it. Go to the court and sink a shot — press E by the hoop. Swish it clean. Then maybe we talk like actual people.", assign:'shoot', end:1 },
+  femi_ask0: { who:'femi', t:"Tell you what. Want me to take you seriously? Earn it. Go to the court and hit FIFTEEN in a row — press E by the hoop, nail the green fifteen straight. THEN maybe we talk like actual people.", assign:'shoot', end:1 },
 
   femi_L1: { who:'femi', t:"You SWISHED it! Okay okay — I saw that, don't let it go to your head, that's MY thing. But... not bad, rookie. Upgrading you from 'spectator' to 'teammate.' What's up?", choices:[
     { t:"“Teach me. I want to be good like you.”", go:'femi_L1_g', tier:'good', aff:{femi:28}, tone:1 },
@@ -1202,11 +1881,12 @@ const DLG = {
   femi_L2: { who:'femi', t:"You got me a flower. It matches my bow. It MATCHES MY BOW. *ears completely up* Okay. Gonna say it 'cause I'm braver than you: I like you. A lot. Park's not quiet anymore and it's your fault.", choices:[
     { t:"“I like you too, Femi. Really.”", go:'femi_love', tier:'good', aff:{femi:30}, tone:2 },
     { t:"“You're the best part of this whole park.”", go:'femi_love', tier:'meh', aff:{femi:24}, tone:0 },
-    { t:"“Cool cool cool. So, wanna shoot hoops?”", go:'femi_love', tier:'bad', aff:{femi:18}, tone:-2 }
+    { t:"“Cool cool cool. So, wanna shoot hoops?”", go:'femi_reject', tier:'bad', aff:{femi:4}, tone:-2 }
   ]},
+  femi_reject: { who:'femi', t:"*her ears drop flat* ...Wow. Okay. I put myself ALL the way out there and you hit me with 'wanna shoot hoops.' *fake laugh* Cool. Real cool. Go run some laps and think about that, and come back when you've got a real answer for me.", end:0 },
   femi_love: { who:'femi', t:"*grinning so hard it must hurt* Okay. OKAY. Cool. Normal. I'm makin' you a bracelet and it's gonna say more than 'friend,' and no I'm not watchin' your reaction, definitely not. You and me. Against the sunset. Deal.", aff:{femi:100}, end:0 },
   femi_wait: { who:'femi', t:"Still waiting on you to ${HINT}! I'm choosing to believe you're building suspense. Don't leave a girl hanging.", end:0 },
-  femiIdle: { who:'femi', t:"There's my favorite. Wanna shoot around, or just let me win a race again? Go say hi to the others too — and remember: I never miss. Never have, never will.", end:0 },
+  femiIdle: { who:'femi', t:"There's my favorite. Wanna shoot around, or just let me win a race again? Go say hi to the others too.", end:0 },
 
   /* ========== CAIZA — guarded/prickly → thawing → devoted ========== */
   caiza_L0: { who:'caiza', t:"*shakes off the spray* Ten skips. Most quit at three. Doesn't mean I trust you — I don't do that fast. Caiza. Water dragon, mechanic, and I like my space. State your business.", choices:[
@@ -1234,11 +1914,12 @@ const DLG = {
   caiza_L2: { who:'caiza', t:"You sat with it. The whole golden hush, didn't flinch. *quiet a long moment* Most people can't stand their own company that long. You're not most people. I don't say things like this, so listen close — I trust you. That's everything, from me.", choices:[
     { t:"“I'd anchor to you and never drift.”", go:'caiza_love', tier:'good', aff:{caiza:30}, tone:2 },
     { t:"“Then let me be part of your crew, for good.”", go:'caiza_love', tier:'meh', aff:{caiza:24}, tone:0 },
-    { t:"“Big words from a pond lizard.”", go:'caiza_love', tier:'bad', aff:{caiza:18}, tone:-2 }
+    { t:"“Big words from a pond lizard.”", go:'caiza_reject', tier:'bad', aff:{caiza:4}, tone:-2 }
   ]},
+  caiza_reject: { who:'caiza', t:"*the armor slams back down, fins bristling* 'Pond lizard.' After all that. *turns half away* I don't bare my throat twice for someone who laughs at it. Go on. Cool off. Come back when you've decided whether you actually mean any of this.", end:0 },
   caiza_love: { who:'caiza', t:"*grins, all sharp teeth and no armor left* Then it's settled. You're mine to look out for now, and I don't let go of what's mine. First storm, we ride it — deep end, no fear. Welcome to the crew. Welcome to me.", aff:{caiza:100}, end:0 },
   caiza_wait: { who:'caiza', t:"You still haven't gone to ${HINT}. I'm patient — dragons are patient — but don't test how patient. Go on.", end:0 },
-  caizaIdle: { who:'caiza', t:"There's my favorite landlubber. Water's warm today. Go pester the bug and the fox, then come tell me about it. I like hearin' your voice. ...Don't make that weird.", end:0 },
+  caizaIdle: { who:'caiza', t:"There's my favorite landlubber. Water's warm today. Go pester the bug and the fox, then come tell me about it. I like hearin' your voice.", end:0 },
 
   /* ========== MAXUS the bull — hurt → treated → cold → warming → devoted ========== */
   bull_hurt: { who:'bull', t:"Ooogh... my head... Everything's spinnin'. Ran a bit too eager, hit that tree like a freight train. Nnngh. Don't suppose you've got somethin' soft and cool for a poor bull's achin' skull?", assign:'flower', end:1 },
@@ -1246,13 +1927,14 @@ const DLG = {
   bull_L0: { who:'bull', t:"*presses the flower to his head* ...Ahh. That's the stuff. Head's clearin'. Name's Maxus. Say — that fox on the court. Femi? *dreamy sigh* Prettiest crossover I ever saw. Think a bull's got a shot with a girl like that?", choices:[
     { t:"“I'm just glad you're okay, big guy.”", go:'bull_L0_g', tier:'good', aff:{bull:28}, tone:1 },
     { t:"“Femi, huh? She's really something.”", go:'bull_L0_m', tier:'meh', aff:{bull:18}, tone:0 },
-    { t:"“You headbutted a tree over a crush. Amazing.”", go:'bull_L0_b', tier:'bad', aff:{bull:6}, tone:-1 }
+    { t:"“A fat bull like YOU? She'd never. Pathetic.”", go:'bull_L0_rage', tier:'bad', aff:{bull:-20}, tone:-1 }
   ]},
+  bull_L0_rage: { who:'bull', t:"*the warmth drains from his eyes* ...What did you just say to me. *hooves scrape the dirt* I opened up to you. About HER. And you— *snorts, lowers his head* Bad move, little one. BAD move. Two speeds, remember? And it ain't nap.", act:'knockout' },
   bull_L0_g: { who:'bull', t:"*sniffs, gruff* ...Glad I'm okay. Huh. Ain't many check on a strange lovesick bull who wrecks the scenery. That's real decent of ya. Bulls don't forget kindness. ...Still. That fox, though. A fella can dream.", next:'bull_ask0' },
   bull_L0_m: { who:'bull', t:"Right?! *hearts practically in his eyes* Been moonin' over her since I skidded in. Reckon I'll work up the nerve one of these days. ...You're easy to talk to about it, y'know. Most folks just laugh at a bull in love.", next:'bull_L0_m2' },
   bull_L0_m2: { who:'bull', t:"You're still hangin' about, huh. Most folks scarper when a bull shakes the ground. ...I don't warm up quick, mind. But you listened to me pine like a calf and didn't mock me once. Gotta see what else a fella's made of first, though. Show me somethin'.", next:'bull_ask0' },
   bull_L0_b: { who:'bull', t:"*groans, blushing* Laugh it up, little one. A fella pines a LITTLE and this is the thanks. ...Fine, yeah, the crush and the tree are related. Don't you dare tell the fox.", next:'bull_ask0' },
-  bull_ask0: { who:'bull', t:"Tell you what, since you patched me up — go sink a shot on that court and show me you've got some hustle. Maybe Femi'll even notice, eh? A bull respects hustle. Then come back.", assign:'shoot', end:1 },
+  bull_ask0: { who:'bull', t:"Tell you what, since you patched me up — go sink TEN hoops in a row on that court and show me you've got real hustle. Maybe Femi'll even notice, eh? A bull respects a hot streak. Then come back.", assign:'shoot', end:1 },
   bull_L1: { who:'bull', t:"HAH! Nice shot, little one. You've got FIRE. ...Huh. Funny thing — I went to talk to Femi like I planned, and I kept, uh, comparin'. She's dazzlin', sure. But she doesn't listen the way you do. What's on your mind?", choices:[
     { t:"“I'd love to hear your story, Maxus.”", go:'bull_L1_g', tier:'good', aff:{bull:28}, tone:1 },
     { t:"“You should still go for it with Femi.”", go:'bull_L1_m', tier:'meh', aff:{bull:18}, tone:0 },
@@ -1266,17 +1948,125 @@ const DLG = {
   bull_L2: { who:'bull', t:"You sat with me and didn't say a word. Just... there. *sniffs* And it hit me, quiet-like: I came thunderin' in chasin' a flashy fox, and the whole time the one I was lookin' for was the one who stayed. It was you, little one. It was always gonna be you.", choices:[
     { t:"“You feel like home to me too, Maxus.”", go:'bull_love', tier:'good', aff:{bull:30}, tone:2 },
     { t:"“Then stay. The herd of us, right here.”", go:'bull_love', tier:'meh', aff:{bull:24}, tone:0 },
-    { t:"“Took you long enough, beefcake.”", go:'bull_love', tier:'bad', aff:{bull:18}, tone:-2 }
+    { t:"“Took you long enough, beefcake.”", go:'bull_reject', tier:'bad', aff:{bull:4}, tone:-2 }
   ]},
+  bull_reject: { who:'bull', t:"*his big shoulders slump, hurt* ...'Beefcake.' Huh. I bared my whole soft heart to ya, little one, and that's what I get. *snorts, quiet* A bull can take a hit. But that one stung. Go on. Come find me when you're ready to say what you really mean.", end:0 },
   bull_love: { who:'bull', t:"*gently bumps his big head against you, careful this time* Then it's settled, little one. The fox was a spark — but you're the whole hearth. Maxus stays. Whistle, wave, or holler and I'll come thunderin' every time. Slower near the trees, though. Lesson learned.", aff:{bull:100}, end:0 },
   bull_wait: { who:'bull', t:"Still owe me that one — ${HINT}. A bull's patient, but my hooves ain't gettin' younger.", end:0 },
-  bullIdle: { who:'bull', t:"There's my favorite. Grass is good, sky's gold, head's all healed. Two speeds, remember — nap, and CHARGE. And for you, little one? Always CHARGE. ...Carefully. Say hi to the others too.", end:0 }
+  bullIdle: { who:'bull', t:"There's my favorite. Grass is good, sky's gold, head's all healed. And for you, little one? Always CHARGE. ...Carefully. Say hi to the others too.", end:0 },
+
+  /* ========== LUNA the snow leopard — night-only, calm and mysterious ========== */
+  luna_L0: { who:'luna', t:"*a soft voice from the dark water's edge* ...You're awake. Careful — that bull hits like a landslide. I dragged you to the grass before he could stomp off. The others? Gone home when the sun died. It's just us now. I'm Luna.", choices:[
+    { t:"“Thank you for looking out for me.”", go:'luna_L0_g', tier:'good', aff:{luna:28}, tone:1 },
+    { t:"“Where did everyone go?”", go:'luna_L0_m', tier:'meh', aff:{luna:18}, tone:0 },
+    { t:"“Great. Stuck in the dark with a stranger.”", go:'luna_L0_b', tier:'bad', aff:{luna:6}, tone:-1 }
+  ]},
+  luna_L0_g: { who:'luna', t:"*the faintest smile* You're welcome. I don't do it for thanks — but it's nice to hear. Most folks fear the dark and the things in it. You just... said thank you. That's rare. I think I like you already.", next:'luna_ask0' },
+  luna_L0_m: { who:'luna', t:"Home, to their warm little beds. The park empties at nightfall — everyone but me. I'm a creature of moonlight and quiet. This hush is my whole world. You're the first company it's had in a long while.", next:'luna_L0_m2' },
+  luna_L0_m2: { who:'luna', t:"...You're still here, sitting with a snow leopard in the dark instead of running. Interesting. I don't warm to people quickly — the night taught me caution. But show me you mean it, and I might just thaw.", next:'luna_ask0' },
+  luna_L0_b: { who:'luna', t:"*ears flatten* Charming. I could've left you for the bull, you know. ...But I didn't. Mind your tongue in my night, stranger, or it gets very cold, very fast.", next:'luna_ask0' },
+  luna_ask0: { who:'luna', t:"If you'd care to earn a little trust — pick me a flower from the crooked tree. Even the moon deserves something soft now and then. Bring it, and we'll talk more.", assign:'flower', end:1 },
+
+  luna_L1: { who:'luna', t:"*takes the flower, holds it to the moonlight* ...It glows silver at night. You couldn't have known I'd love that. *quiet purr* Thank you. So — what keeps you wandering a dark and empty park, of all places?", choices:[
+    { t:"“Honestly? Meeting someone like you.”", go:'luna_L1_g', tier:'good', aff:{luna:28}, tone:1 },
+    { t:"“What's it like, being the only one at night?”", go:'luna_L1_m', tier:'meh', aff:{luna:18}, tone:0 },
+    { t:"“Beats getting headbutted, I guess.”", go:'luna_L1_b', tier:'bad', aff:{luna:6}, tone:-1 }
+  ]},
+  luna_L1_g: { who:'luna', t:"*goes still, then looks away, ears pink* ...Someone like me. You say the most disarming things. I've spent so long being the thing people avoid that I forgot someone might come looking. On purpose. For me.", next:'luna_ask1' },
+  luna_L1_m: { who:'luna', t:"Lonely, mostly. Beautiful, too — the pond turns to black glass, the stars double in it. I've had only my reflection to talk to for the longest time. It's... less lonely, with you sitting here. Don't tell my reflection.", next:'luna_L1_m2' },
+  luna_L1_m2: { who:'luna', t:"You keep coming back to the cold and quiet. Most can't stand it. ...I'm still deciding what to make of you. Prove you're not just passing through, and maybe I'll show you the softer side of midnight.", next:'luna_ask1' },
+  luna_L1_b: { who:'luna', t:"*dry laugh* It does beat that, yes. You've got a mouth on you. ...Luckily I've a soft spot for the ones brave enough to joke in the dark. Barely a soft spot. Don't push it.", next:'luna_ask1' },
+  luna_ask1: { who:'luna', t:"Come sit with me by the black water a while. No talking, no fidgeting — just the quiet and the moon. If you can be still with the night the way I am, then you truly get me. Then come back.", assign:'sit', end:1 },
+
+  luna_L2: { who:'luna', t:"*you sat with her under the whole silver hush* You didn't flinch, didn't fill the silence, didn't leave. *soft* Do you know how long I've waited for someone who could simply BE here, in the dark, with me? I stopped hoping. And then a bull knocked you into my night.", choices:[
+    { t:"“I'd stay in your night as long as you'll have me.”", go:'luna_love', tier:'good', aff:{luna:30}, tone:2 },
+    { t:"“The dark's not lonely with you in it.”", go:'luna_love', tier:'meh', aff:{luna:24}, tone:0 },
+    { t:"“Guess that bull did me a favor.”", go:'luna_reject', tier:'bad', aff:{luna:4}, tone:-2 }
+  ]},
+  luna_reject: { who:'luna', t:"*her ears flatten and she draws back into the dark* ...A favor. That's all this was to you. *cold* I opened up the quiet part of me and you made a joke of it. Go cool your head. Come find me when you can be honest about what this is.", end:0 },
+  luna_love: { who:'luna', t:"*presses her forehead to yours, cool and gentle* Then the night is ours. I'll keep the moon lit and the water calm, and you'll never sit in the dark alone again — nor will I. Stay, moonlit thing. Stay.", aff:{luna:100}, end:0 },
+  luna_wait: { who:'luna', t:"Still waiting for you to ${HINT}. The night is patient. So am I. ...Mostly.", end:0 },
+  lunaIdle: { who:'luna', t:"My favorite creature of the dark, returned. The water's like black glass tonight — come watch the stars double in it with me. Stay close.", choices:[
+    { t:"“Come see the park with me in the daytime?”", go:'luna_to_day', cond:()=>nightMode },
+    { t:"“Let's head back into the night.”", go:'luna_to_night', cond:()=>!nightMode },
+    { t:"“Just wanted to see you. That's all.”", go:'luna_stay' }
+  ]},
+  luna_to_day: { who:'luna', t:"*ears perk* The daylight? For you, moonlit thing, I'll brave the sun. Take my paw — I'll walk us into the morning. Hold on...", act:'toDay' },
+  luna_to_night: { who:'luna', t:"*a slow, pleased blink* Back to the black glass and the doubled stars. My favorite place, with my favorite company. Come — I'll lead the way home to the dark.", act:'toNight' },
+  luna_stay: { who:'luna', t:"*curls a little closer* Then just sit with me. The night — or the day — is nicer with you in it. Always is now.", end:0 },
+
+  /* ========== CHARLIE the bunny — bounding, sweet, loyal ========== */
+  charlie_L0: { who:'charlie', t:"*hops out of the flowers, nose going a mile a minute* You brought the strawberry! Nobody's come looking for me in AGES. I'm Charlie! Wanna be friends? Please please please say yes—", choices:[
+    { t:"“Of course, buddy! Come here!”", go:'charlie_L0_g', tier:'good', aff:{charlie:28}, tone:1 },
+    { t:"“You had a strawberry radar or something?”", go:'charlie_L0_m', tier:'meh', aff:{charlie:18}, tone:0 },
+    { t:"“Easy, little guy. Personal space.”", go:'charlie_L0_b', tier:'bad', aff:{charlie:6}, tone:-1 }
+  ]},
+  charlie_L0_g: { who:'charlie', t:"*does three happy binkies, ears flopping* YES! Best day! You smell like kindness and snacks, my two favorite things. I already like you SO much, is that weird? I don't care if it's weird.", next:'charlie_ask0' },
+  charlie_L0_m: { who:'charlie', t:"*proud nose wiggle* Strawberries are my FAVORITE. I can smell one from clear across the park. It's basically a superpower. You've got good taste in fruit AND in bunnies.", next:'charlie_L0_m2' },
+  charlie_L0_m2: { who:'charlie', t:"*flops onto his side, looks up hopefully* You didn't run off. Most folks just pet my ears once and go. But you're still here... does that mean we're hanging out? I'd really like it if we were hanging out.", next:'charlie_ask0' },
+  charlie_L0_b: { who:'charlie', t:"*ears fold down, sits politely* Oh — sorry, sorry. *scoots back an inch* I get excited. I'll be good. I'm a very good bun, I promise. ...Can I still be your friend? A little?", next:'charlie_ask0' },
+  charlie_ask0: { who:'charlie', t:"Ooh — could you pick me a flower from the crooked tree? I like to nibble the petals. It makes me feel fancy. Bring me one and I'll do my very best trick!", assign:'flower', end:1 },
+
+  charlie_L1: { who:'charlie', t:"*gently takes the flower, ears perked* Fanshy! *nibbles a petal, beams* Best trick incoming: I sat still for almost four whole seconds! Did you see?! That's a record. What do you wanna do now, friend?", choices:[
+    { t:"“Show me your happiest binky.”", go:'charlie_L1_g', tier:'good', aff:{charlie:28}, tone:1 },
+    { t:"“What do you do out here all day?”", go:'charlie_L1_m', tier:'meh', aff:{charlie:18}, tone:0 },
+    { t:"“Can you actually do a real trick?”", go:'charlie_L1_b', tier:'bad', aff:{charlie:6}, tone:-1 }
+  ]},
+  charlie_L1_g: { who:'charlie', t:"*EXPLODES into binkies, twists mid-air, laps the whole flower field, skids back* HAH! Did you SEE that?! I did that for YOU. My heart's going so fast. I think that's what happy feels like.", next:'charlie_ask1' },
+  charlie_L1_m: { who:'charlie', t:"Mostly I forage. Chase butterflies. Nap in the warm bits. Guard the strawberries. *quieter* It got kinda lonely, if I'm honest. But it's not lonely right now, so. That's new. I like new.", next:'charlie_L1_m2' },
+  charlie_L1_m2: { who:'charlie', t:"*tilts head, ears tipping* Are you gonna keep coming back? 'Cause I'd wait my whole life in these flowers if I knew you were coming back. ...That was a lot. Sorry. Bunnies feel things BIG. Prove you'll stay?", next:'charlie_ask1' },
+  charlie_L1_b: { who:'charlie', t:"*tries very hard, tips over sideways* ...That was supposed to be a bow. *nose twitching fast* Okay it wasn't great. But I did it with my WHOLE heart, and that counts more than being good at it. Right? Right.", next:'charlie_ask1' },
+  charlie_ask1: { who:'charlie', t:"Come sit in the flowers with me a while? Just you and me and the butterflies. Go sit on the bench first so I know you're the sitting-still type — then come right back. I'll be waiting. I'm great at waiting.", assign:'sit', end:1 },
+
+  charlie_L2: { who:'charlie', t:"*rests his soft chin on you, whole body wiggling* You came back. You always come back. *soft happy squeak* I gotta tell you something big, okay? Bigger than a thump. You're my favorite person in the whole wide park. My person.", choices:[
+    { t:"“You're my best friend too, Charlie.”", go:'charlie_love', tier:'good', aff:{charlie:30}, tone:2 },
+    { t:"“I'll always come back for you, buddy.”", go:'charlie_love', tier:'meh', aff:{charlie:24}, tone:0 },
+    { t:"“You're just saying that for strawberries.”", go:'charlie_reject', tier:'bad', aff:{charlie:4}, tone:-2 }
+  ]},
+  charlie_reject: { who:'charlie', t:"*ears fold flat, nose goes still* ...You think it's just the strawberries? *small voice* It was never the strawberries. It was you. *turns away* I'll be in the flowers if you change your mind about me.", end:0 },
+  charlie_love: { who:'charlie', t:"*leaps up, nuzzles your cheek, binkies in delirious circles* MY PERSON! Forever! I'm gonna guard you and love you and bring you every strawberry I ever find. That's a Charlie promise, and Charlie promises are UNBREAKABLE. *happiest little thump*", aff:{charlie:100}, end:0 },
+  charlie_wait: { who:'charlie', t:"Still waiting for you to ${HINT}! I'm SO good at waiting. Look at me wait. ...Okay please hurry though.", end:0 },
+  charlieIdle: { who:'charlie', t:"*sproing* My person's back! The flowers missed you. I missed you more. Wanna chase butterflies together? Go say hi to the others too, then come right back.", end:0 },
+
+  /* ========== VESPER the moth spirit — flower field at night, only after Luna ========== */
+  vesper_L0: { who:'vesper', t:"*wings unfurl from the shadows between the blooms, dusted silver by the moon* So. Luna finally trusts someone enough to share her night. That's how I knew it was safe to show myself. I'm Vesper. I drift in on the last of the dusk.", choices:[
+    { t:"“You're beautiful — like the night itself.”", go:'vesper_L0_g', tier:'good', aff:{vesper:28}, tone:1 },
+    { t:"“You've been watching me this whole time?”", go:'vesper_L0_m', tier:'meh', aff:{vesper:18}, tone:0 },
+    { t:"“Great, another creature lurking in the dark.”", go:'vesper_L0_b', tier:'bad', aff:{vesper:6}, tone:-1 }
+  ]},
+  vesper_L0_g: { who:'vesper', t:"*wings still, a slow silver shimmer* ...Oh. Most flinch when they first see the wings. You called them beautiful. *soft* I've waited a long time in these flowers to hear that. You may have just undone a century of hiding.", next:'vesper_ask0' },
+  vesper_L0_m: { who:'vesper', t:"Watching, yes. Judging, no. I keep to the flower field after dusk — it's the only place the light doesn't chase me off. You wandered in like you belonged here. That intrigued me enough to speak.", next:'vesper_L0_m2' },
+  vesper_L0_m2: { who:'vesper', t:"You linger. Good. The ones worth knowing always do. But I don't unfold for just anyone, moth or otherwise. Show me you mean to stay a while in my part of the dark, and I'll show you more.", next:'vesper_ask0' },
+  vesper_L0_b: { who:'vesper', t:"*wings fold, dimming* Lurking. Mm. That's what they always call it, the ones who never look twice. *cool* I'll be here among the flowers if you decide the dark deserves a second glance.", next:'vesper_ask0' },
+  vesper_ask0: { who:'vesper', t:"If you'd care to earn a moment of me — bring me a flower from the crooked tree. Moths adore what blooms by moonlight. Set it in my hands, and we'll talk on.", assign:'flower', end:1 },
+
+  vesper_L1: { who:'vesper', t:"*cups the flower, wings breathing open and shut* You remembered. It's been an age since anything was given to me rather than swatted at. *quiet* Tell me — what draws you back to the flower field once the sun is gone?", choices:[
+    { t:"“The company. Yours, specifically.”", go:'vesper_L1_g', tier:'good', aff:{vesper:28}, tone:1 },
+    { t:"“What's it like, living between dusk and dawn?”", go:'vesper_L1_m', tier:'meh', aff:{vesper:18}, tone:0 },
+    { t:"“Free light show, mostly.”", go:'vesper_L1_b', tier:'bad', aff:{vesper:6}, tone:-1 }
+  ]},
+  vesper_L1_g: { who:'vesper', t:"*the shimmer along her wings flushes warmer* Mine, specifically. *she almost laughs, startled by it* Do you know how rarely a thing of the night is wanted for itself? You keep saying the disarming thing. I find I don't mind.", next:'vesper_ask1' },
+  vesper_L1_m: { who:'vesper', t:"Beautiful and brief, both. I chase the last warm light each evening and mourn it each dawn. The flowers keep me company between. It's a small life, lived in the seam of the day. ...Less lonely, tonight.", next:'vesper_L1_m2' },
+  vesper_L1_m2: { who:'vesper', t:"Why am I telling a stranger the shape of my longing. *folds her wings, composed again* Because you keep returning, I suppose. Keep doing that. Prove the dark isn't just a novelty to you, and I'll open the rest of the way.", next:'vesper_ask1' },
+  vesper_L1_b: { who:'vesper', t:"*dry flutter* A light show. Yes, I do sparkle for the cheap seats. *cooler* Careful — flatter the wings and ignore the creature under them, and you'll find I fold up quite fast. Try again, softly.", next:'vesper_ask1' },
+  vesper_ask1: { who:'vesper', t:"Sit with me in the moonlit blooms a while — go rest on the bench first so I know you can be still, then return to me. The night rewards the patient, and so do I.", assign:'sit', end:1 },
+
+  vesper_L2: { who:'vesper', t:"*she settles her wings around you like a hush* You sat in my dark and didn't ask it to be brighter. Do you understand how rare that is? I have spent lifetimes being the thing people squint past on their way to the light. And you stopped. For me.", choices:[
+    { t:"“I'd stay in your dusk forever, Vesper.”", go:'vesper_love', tier:'good', aff:{vesper:30}, tone:2 },
+    { t:"“The night's not lonely with you in it.”", go:'vesper_love', tier:'meh', aff:{vesper:24}, tone:0 },
+    { t:"“Don't get all mushy on me, moth.”", go:'vesper_reject', tier:'bad', aff:{vesper:4}, tone:-2 }
+  ]},
+  vesper_reject: { who:'vesper', t:"*her wings snap shut, the shimmer gone cold* Mushy. Of course. I bared the softest part of a soft creature and you reached for a joke. *fading into the blooms* Find me when you can meet the dark without armor of your own.", end:0 },
+  vesper_love: { who:'vesper', t:"*presses her brow to yours, wings enclosing you both in silver* Then the dusk is ours, and every one after it. I'll dust your dreams with moonlight and never once ask you to squint past me. Stay, my keeper of the last light. Stay.", aff:{vesper:100}, end:0 },
+  vesper_wait: { who:'vesper', t:"Still waiting for you to ${HINT}. The night is patient — I learned patience from it. But do come back before dawn takes me.", end:0 },
+  vesperIdle: { who:'vesper', t:"*wings glimmering* My keeper of the last light returns. The blooms are silver tonight, just for you. Stay close — dawn's a long way off, and I'd spend all of it beside you.", end:0 }
 };
 
 // per-character state machine: cold(0) -> warming(1) -> in love(2)
-function taskDone(pending){
+function taskDone(pending, who){
   if(pending==='flower') return inventory.flowers > 0;   // must be holding one to give
-  return !!tasks[pending];                               // fresh action performed
+  if(pending==='shoot'){ const need = (SHOOT_REQ[who]||5); return (Number(tasks.shoot)||0) >= need; }  // per-character streak
+  return !!tasks[pending];                               // other fresh actions
 }
 function consumeTask(pending){
   if(pending==='flower'){ inventory.flowers--; updateInventory(); }
@@ -1294,7 +2084,7 @@ function openerFor(who){
   }
   // if they asked for a task and you've now done it (or can give the item), advance a level
   if(n.pending){
-    if(taskDone(n.pending)){ consumeTask(n.pending); n.pending=null; n.level++; }
+    if(taskDone(n.pending, who)){ consumeTask(n.pending); n.pending=null; n.level++; }
     else return who+'_wait';               // still waiting -> gate hint
   }
   if(n.level>=3) return who+'Idle';         // fully in love, past the confession
@@ -1334,11 +2124,20 @@ function goDlg(id){ curKey=id; cur=DLG[id]; choicesEl.innerHTML='';
   // (flower tasks are satisfied by giving one from inventory, so nothing to reset there.)
   if(cur.assign && npcs[who]){ npcs[who].pending=cur.assign; if(cur.assign!=='flower') tasks[cur.assign]=false; }
   name.className=who; name.textContent=NAMES[who]||'Narrator';
-  portrait.innerHTML = (who==='caiza') ? caizaArt() : (who==='femi') ? femiArt(false) : (who==='devin') ? devinArt() : (who==='bull') ? maxusArt() : (PORTRAIT[who] || '');
+  portrait.innerHTML = (who==='caiza') ? caizaArt() : (who==='femi') ? femiArt(false) : (who==='devin') ? devinArt() : (who==='bull') ? maxusArt() : (who==='luna') ? lunaArt() : (who==='charlie') ? charlieArt() : (who==='vesper') ? vesperArt() : (PORTRAIT[who] || '');
   dlg.classList.toggle('narrator-mode', who==='narrator');
   // substitute ${HINT} in "waiting" lines with the current pending task hint
   let text = cur.t;
   if(text.indexOf('${HINT}')>=0){ const pend = npcs[who] && npcs[who].pending; text = text.replace('${HINT}', TASK_HINT[pend]||'do a little something in the park'); }
+  // signature tagline: always at the end of a conversation (leaf/idle/end node),
+  // and ~35% of the time tacked onto their opening line too.
+  const tag = TAGLINE[who];
+  if(tag){
+    const isEnd = !cur.choices && (('end' in cur) || /Idle$/.test(curKey));   // conversation is wrapping up (not a branch point)
+    const isOpener = /_L0$/.test(curKey);                       // very first block of a chat
+    if(isEnd) text = text + '  ' + tag;
+    else if(isOpener && Math.random() < 0.35) text = tag + '  ' + text;
+  }
   cur._text = text;
   typeOut(text);
 }
@@ -1347,6 +2146,9 @@ function advance(){ if(!cur) return;
   if(!typed){ clearInterval(typing); dtext.textContent=cur._text||cur.t; typed=true;
     if(cur.choices) renderChoices(cur.choices); else advEl.style.display='block'; return; }
   if(cur.choices) return;
+  if(cur.act==='knockout'){ endDialogue(); knockOut(); return; }   // Maxus loses it
+  if(cur.act==='toDay'){ lunaToDay(); return; }                    // Luna walks you into daylight
+  if(cur.act==='toNight'){ lunaToNight(); return; }                // ...and back into the dark
   if(cur.next){ goDlg(cur.next); return; }
   endDialogue(); // reached a leaf → close, come back for more
 }
@@ -1370,13 +2172,74 @@ const ENDINGS = {
   bull: {
     warm: { label:'Home, at Last', title:"The Herd of Two", body:"Maxus lowers his huge head into your hands, gentle as morning. “Spent my whole life chargin' at horizons,” he rumbles, eyes wet, “lookin' for somewhere worth stoppin'. Turns out it was you.” He stays. He learns to slow down near the trees. He calls you his whole herd, and means it with every ounce of that enormous heart. Wherever you are is home now — and a very happy bull will thunder to your side, always." },
     cool: { label:'Charging Buddies', title:"Two Speeds, One Friend", body:"Maxus snorts a laugh and headbutts you — gently, lesson learned. “You keep me honest, little one, and you don't take my guff. I like that in a herd-mate.” The two of you spend the golden hours charging around the park (carefully) and napping in the shade. No fuss, no mush, just a big goofy bull who finally has a best friend to be ridiculous with. He'd still flatten a tree for you. Probably will, by accident." }
+  },
+  luna: {
+    warm: { label:'Kept by Moonlight', title:"The Night Is Ours", body:"Luna curls around you beneath a sky thick with doubled stars, her purr low as the tide. “I was the thing the daylight folk went home to get away from,” she murmurs. “And you came looking for me anyway.” She shows you the park no one else ever sees — black-glass water, silver flowers, the hush between the stars. She never lets you sit in the dark alone again, and you never let her. Two creatures of the quiet, home at last in the night." },
+    cool: { label:'Midnight Company', title:"Partners in the Dark", body:"Luna smirks, moonlight catching her pale fur. “You joke in the dark and you don't scare easy. I can work with that.” She teaches you to read the night — which shadows are safe, where the stars double clearest on the pond. No sappy speeches, just a standing invitation to every midnight she owns. The park's loneliest hour isn't lonely anymore. And that mouth of yours? She'd never admit she likes it. She likes it." }
+  },
+  charlie: {
+    warm: { label:'A Bunny and His Person', title:"Best Friends, Forever and Ever", body:"Charlie thumps his back feet in a joyful drumroll and does the biggest binky the park has ever seen. “MY PERSON,” he announces to the flowers, the sky, the butterflies, anyone who'll listen. He never leaves the strawberry patch far behind — but he never leaves your side either. Every morning starts with binkies, every afternoon with a nap in the sun-warm blooms, and every single day with a heart that's yours. A Charlie promise, unbreakable." },
+    cool: { label:'Loyal to the Bone', title:"The Best Bun in the Park", body:"Charlie brings you a slightly-nibbled strawberry, nose wiggling so fast it's a blur. “You're stuck with me now,” he grins, nudging it toward you like treasure. He'll guard your picnics, chase your butterflies, and flop dramatically in the flowers so you have to come check on him. No fuss, just a very good bun who finally found his very favorite human. He'd wait a thousand years in the flowers for you. He'd rather not have to." }
+  },
+  vesper: {
+    warm: { label:'Keeper of the Last Light', title:"Ours, Every Dusk After", body:"Vesper wraps her silver wings around you as the final light drains from the sky. “I spent so long being the thing the world looked past,” she whispers, “and you stopped, and stayed, and called me beautiful.” Now every evening ends in the moonlit flower field, the two of you dusted in starlight, and every dawn she lingers a breath longer before she has to go — because you're worth chasing the sun for. The seam between day and night isn't lonely anymore." },
+    cool: { label:'Creatures of the Dusk', title:"Partners in the Half-Light", body:"Vesper flutters a lazy circle around you, wings winking silver. “You don't squint past me and you don't fear the dark. I can work with that,” she says, feigning indifference badly. She teaches you which blooms open only at midnight and where the moonlight pools deepest. No grand vows, just a standing invitation to every dusk she drifts through. The night's quietest hour has company now — and she'd never admit how much that mends her." }
   }
 };
 const wooed = new Set();            // characters whose hearts you've won
-const TOTAL_WOOABLE = 4;            // devin, femi, caiza, maxus
+const TOTAL_WOOABLE = 7;            // devin, femi, caiza, maxus, luna, charlie, vesper
+// exclusive keepsake each character gives you when you win their heart
+const KEEPSAKE = {
+  devin:   { ico:'⭐', name:"Devin's Halo Charm",        note:"a tiny gold ring of starlight, warm to the touch" },
+  femi:    { ico:'📿', name:"Femi's #23 Bracelet",       note:"beaded, and it definitely says more than 'friend'", wear:'bracelet' },
+  caiza:   { ico:'🦷', name:"Caiza's Shark-Tooth Pendant",note:"salt-worn and sharp — a crew member's mark", wear:'pendant' },
+  bull:    { ico:'🎗️', name:"Maxus's Horn Ribbon",        note:"the ribbon he ties on for his favorite herd-mate" },
+  luna:    { ico:'🌙', name:"Luna's Moonstone",           note:"it glows softly, brightest under the night sky" },
+  charlie: { ico:'🍓', name:"Charlie's Strawberry Charm",  note:"his most prized treasure, given only to his person" },
+  vesper:  { ico:'🌙', name:"Vesper's Moonlit Wing-Dust",   note:"a shimmer of silver that clings to you after dusk" }
+};
+const ownedKeepsakes = new Set();   // characters whose keepsake you hold
+const worn = { bracelet:false, pendant:false };
+function awardKeepsake(who){
+  if(!KEEPSAKE[who]) return;
+  ownedKeepsakes.add(who);
+  toast(`${KEEPSAKE[who].ico} You received ${KEEPSAKE[who].name}! (Press K to view your keepsakes.)`, 4000);
+}
+function toggleWear(slot){
+  worn[slot] = !worn[slot];
+  const el=document.getElementById('wear-'+slot);
+  if(el) el.style.display = worn[slot] ? 'block' : 'none';
+}
+function renderKeepsakes(){
+  const grid=document.getElementById('ks-grid');
+  const empty=document.getElementById('ks-empty');
+  grid.innerHTML='';
+  if(ownedKeepsakes.size===0){ empty.style.display='block'; return; }
+  empty.style.display='none';
+  // stable order
+  ['devin','femi','caiza','bull','luna','charlie'].forEach(who=>{
+    if(!ownedKeepsakes.has(who)) return;
+    const k=KEEPSAKE[who];
+    const wearable = !!k.wear;
+    const isWorn = wearable && worn[k.wear];
+    const item=document.createElement('div');
+    item.className='ks-item'+(wearable?' wearable':'')+(isWorn?' worn':'');
+    item.innerHTML = `<span class="ks-ico">${k.ico}</span><span class="ks-name">${k.name}<span class="ks-tag">${wearable ? (isWorn?'Worn · click to remove':'Click to wear') : 'Keepsake'}</span></span>`;
+    if(wearable){ item.onclick=()=>{ toggleWear(k.wear); renderKeepsakes(); }; }
+    grid.appendChild(item);
+  });
+}
+function toggleKeepsakePanel(force){
+  const panel=document.getElementById('keepsakepanel');
+  const show = (force!==undefined) ? force : !panel.classList.contains('show');
+  if(show){ renderKeepsakes(); panel.classList.add('show'); }
+  else panel.classList.remove('show');
+}
+document.getElementById('ks-close').addEventListener('click', ()=>toggleKeepsakePanel(false));
 function triggerEnding(who){
   if(wooed.has(who)) return;        // only celebrate once each
   wooed.add(who);
+  awardKeepsake(who);               // grant their exclusive keepsake
   npcs[who].level = 3;              // routes future chats to their happy "together" idle line
   setTimeout(()=>{ endDialogue();
     const set = ENDINGS[who];
@@ -1384,20 +2247,201 @@ function triggerEnding(who){
     document.getElementById('ending-label').textContent=e.label;
     document.getElementById('ending-title').textContent=e.title;
     document.getElementById('ending-body').textContent=e.body;
+    // use the character's end illustration as the backdrop (bull's file is maxusend.png)
+    const endFile = (who==='bull' ? 'maxus' : who) + 'end.png';
+    const probe = new Image();
+    probe.onload = ()=>{ endcard.style.backgroundImage = `url("images/${endFile}")`; endcard.classList.add('has-bg'); };
+    probe.onerror = ()=>{ endcard.style.backgroundImage='none'; endcard.classList.remove('has-bg'); };
+    probe.src = `images/${endFile}`;
     const n = wooed.size;
     document.getElementById('ending-tally').textContent =
       n < TOTAL_WOOABLE ? `${NAMES[who]}'s heart is yours · ${n} of ${TOTAL_WOOABLE} won — keep wandering to win the rest`
                         : `All ${TOTAL_WOOABLE} hearts are yours. What a park. What a legend.`;
+    const k=KEEPSAKE[who];
+    document.getElementById('ending-gift').textContent = k ? `${k.ico} You received ${k.name} — ${k.note}.` : '';
     endcard.classList.add('show'); canMove=false;
   }, 400);
 }
 
 /* ============ TITLE / START / RESET ============ */
-document.getElementById('start').onclick=()=>{ document.getElementById('title').classList.add('gone'); canMove=true; };
+/* ============ AMBIENT BACKGROUND MUSIC (Web Audio, no files) ============
+   A cozy-park theme that actually moves: a multi-bar chord progression with a
+   walking bass and a lively, varied music-box melody (rests, runs, octave hops)
+   so it doesn't feel like one short loop. Softer, lower key at night. */
+const Music = (()=>{
+  let ctx=null, master=null, padGain=null, bassGain=null, arpTimer=null, started=false, on=true;
+  let bar=0, night=false, outNode=null;
+  let padVoices=[];
+
+  // note helper: semitones from A4 (440Hz)
+  const hz = n => 440 * Math.pow(2, n/12);
+  // named degrees for readability (relative to C)
+  const N = { C3:-21,D3:-19,E3:-17,F3:-16,G3:-14,A3:-12,B3:-10,
+              C4:-9,D4:-7,E4:-5,F4:-4,G4:-2,A4:0,B4:2,
+              C5:3,D5:5,E5:7,F5:8,G5:10,A5:12,B5:14,C6:15 };
+
+  // DAY progression: I–V–vi–IV (C G Am F) — warm and hopeful, 4 bars, then a lift
+  const DAY_PROG = [
+    { root:'C3', chord:['C4','E4','G4'], scale:['C4','D4','E4','G4','A4','C5','E5','D5'] },
+    { root:'G3', chord:['G3','B3','D4'], scale:['G4','A4','B4','D5','G5','E5','D5','B4'] },
+    { root:'A3', chord:['A3','C4','E4'], scale:['A4','C5','E5','A5','G5','E5','C5','A4'] },
+    { root:'F3', chord:['F3','A3','C4'], scale:['F4','G4','A4','C5','F5','E5','C5','A4'] },
+    { root:'C3', chord:['C4','E4','G4'], scale:['E5','G5','C6','G5','E5','C5','G4','E4'] },
+    { root:'G3', chord:['G3','B3','D4'], scale:['D5','G5','B5','G5','D5','B4','G4','D4'] },
+    { root:'F3', chord:['F3','A3','C4'], scale:['A4','C5','F5','A5','G5','F5','C5','A4'] },
+    { root:'G3', chord:['G3','B3','D4'], scale:['G4','B4','D5','G5','A5','G5','D5','B4'] }
+  ];
+  // NIGHT progression: vi–IV–I–V in A minor mood — softer, lower, dreamier
+  const NIGHT_PROG = [
+    { root:'A3', chord:['A3','C4','E4'], scale:['A4','C5','E5','C5','A4','E4','C4','A3'] },
+    { root:'F3', chord:['F3','A3','C4'], scale:['F4','A4','C5','A4','F4','C4','A3','F3'] },
+    { root:'C3', chord:['C3','E3','G3'], scale:['C4','E4','G4','E4','C4','G3','E3','C4'] },
+    { root:'E3', chord:['E3','G3','B3'], scale:['E4','G4','B4','G4','E4','B3','G3','E4'] },
+    { root:'A3', chord:['A3','C4','E4'], scale:['A4','E5','C5','A4','E4','A4','C5','E4'] },
+    { root:'D3', chord:['D3','F3','A3'], scale:['D4','F4','A4','F4','D4','A3','F3','D4'] },
+    { root:'C3', chord:['C3','E3','G3'], scale:['G4','E4','C4','E4','G4','C5','G4','E4'] },
+    { root:'E3', chord:['E3','G3','B3'], scale:['B4','G4','E4','G4','B4','E5','B4','G4'] }
+  ];
+
+  function ensure(){
+    if(ctx) return;
+    ctx = new (window.AudioContext||window.webkitAudioContext)();
+    master = ctx.createGain(); master.gain.value = 0.0; master.connect(ctx.destination);
+    const lp = ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=3000; lp.connect(master);
+    // gentle reverb-ish delay for space
+    const delay = ctx.createDelay(); delay.delayTime.value=0.28;
+    const fb = ctx.createGain(); fb.gain.value=0.22;
+    const wet = ctx.createGain(); wet.gain.value=0.18;
+    delay.connect(fb); fb.connect(delay); delay.connect(wet); wet.connect(lp);
+    padGain = ctx.createGain(); padGain.gain.value=0.11; padGain.connect(lp);
+    bassGain = ctx.createGain(); bassGain.gain.value=0.20; bassGain.connect(lp);
+    outNode = lp; delayNode = delay;
+  }
+  let delayNode=null;
+
+  function prog(){ return night ? NIGHT_PROG : DAY_PROG; }
+
+  function buildPad(chordNames){
+    padVoices.forEach(v=>{ try{v.osc.stop(); v.lfo.stop();}catch(e){} });
+    padVoices=[];
+    const now=ctx.currentTime;
+    chordNames.forEach(name=>{
+      const f=hz(N[name]);
+      const osc=ctx.createOscillator(); osc.type='sine'; osc.frequency.value=f;
+      const g=ctx.createGain(); g.gain.setValueAtTime(0.0001, now);
+      g.gain.linearRampToValueAtTime(0.3, now+0.4);
+      const lfo=ctx.createOscillator(); lfo.frequency.value=0.1+Math.random()*0.08;
+      const lfoG=ctx.createGain(); lfoG.gain.value=1.6;
+      lfo.connect(lfoG); lfoG.connect(osc.detune);
+      osc.connect(g); g.connect(padGain); osc.start(); lfo.start();
+      padVoices.push({osc, lfo});
+    });
+  }
+
+  function bass(name, when, dur){
+    const f=hz(N[name]);
+    const osc=ctx.createOscillator(); osc.type='sine'; osc.frequency.value=f;
+    const g=ctx.createGain();
+    g.gain.setValueAtTime(0.0001, when);
+    g.gain.exponentialRampToValueAtTime(0.5, when+0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001, when+dur);
+    osc.connect(g); g.connect(bassGain);
+    osc.start(when); osc.stop(when+dur+0.05);
+  }
+
+  function pluck(name, when, vel){
+    const f=hz(N[name]);
+    const osc=ctx.createOscillator(); osc.type='triangle'; osc.frequency.value=f;
+    const osc2=ctx.createOscillator(); osc2.type='sine'; osc2.frequency.value=f*2; // sparkle
+    const g=ctx.createGain(); const g2=ctx.createGain();
+    g.gain.setValueAtTime(0.0001, when);
+    g.gain.exponentialRampToValueAtTime(vel, when+0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, when+0.9);
+    g2.gain.setValueAtTime(0.0001, when);
+    g2.gain.exponentialRampToValueAtTime(vel*0.25, when+0.015);
+    g2.gain.exponentialRampToValueAtTime(0.0001, when+0.5);
+    osc.connect(g); g.connect(outNode); g.connect(delayNode);
+    osc2.connect(g2); g2.connect(outNode);
+    osc.start(when); osc.stop(when+1.0);
+    osc2.start(when); osc2.stop(when+0.6);
+  }
+
+  // one bar = 8 sixteenth-ish steps; varied rhythm patterns keep it alive
+  const RHYTHM = [
+    [1,0,1,1,0,1,0,1],
+    [1,1,0,1,0,1,1,0],
+    [1,0,1,0,1,1,0,1],
+    [1,1,0,1,1,0,1,0]
+  ];
+  const BEAT = 0.19;   // seconds per step → ~132 bpm feel, brisker than before
+
+  function playBar(){
+    if(!on || !ctx) return;
+    const p = prog();
+    const cell = p[bar % p.length];
+    const now = ctx.currentTime + 0.05;
+    // swap pad + drop bass roots at the top of each bar
+    buildPad(cell.chord);
+    bass(cell.root, now, BEAT*8*0.9);
+    if(bar%2===1) bass(cell.root, now+BEAT*4, BEAT*4*0.9); // walking half-bar pulse
+    // melody: pick this bar's rhythm and mostly follow the scale, with hops & rests
+    const rhythm = RHYTHM[(bar + (night?1:0)) % RHYTHM.length];
+    const scale = cell.scale;
+    for(let s=0;s<8;s++){
+      if(!rhythm[s]) continue;                      // rest → space
+      let idx = s;
+      if(Math.random()<0.22) idx = Math.floor(Math.random()*scale.length); // little run/skip
+      const name = scale[idx % scale.length];
+      const vel = 0.14 + (s===0?0.05:0) + Math.random()*0.03;
+      pluck(name, now + s*BEAT, vel);
+      if(s%4===0 && Math.random()<0.5) pluck(scale[(idx+2)%scale.length], now + s*BEAT + 0.01, vel*0.4); // gentle harmony
+    }
+    bar++;
+  }
+
+  function start(){
+    if(started) return; started=true;
+    ensure();
+    if(ctx.state==='suspended') ctx.resume();
+    master.gain.cancelScheduledValues(ctx.currentTime);
+    master.gain.setValueAtTime(master.gain.value, ctx.currentTime);
+    master.gain.linearRampToValueAtTime(on?0.55:0.0, ctx.currentTime+2.0);
+    playBar();
+    arpTimer = setInterval(playBar, BEAT*8*1000);   // schedule one bar at a time
+  }
+
+  function setNight(isNight){
+    if(night===isNight){ night=isNight; return; }
+    night=isNight; bar=0;
+  }
+
+  function toggle(){
+    on=!on;
+    if(ctx){
+      master.gain.cancelScheduledValues(ctx.currentTime);
+      master.gain.setValueAtTime(master.gain.value, ctx.currentTime);
+      master.gain.linearRampToValueAtTime(on?0.55:0.0, ctx.currentTime+0.5);
+    }
+    return on;
+  }
+  return { start, setNight, toggle, isOn:()=>on };
+})();
+
+document.getElementById('musictoggle').addEventListener('click', ()=>{
+  const on = Music.toggle();
+  const btn=document.getElementById('musictoggle');
+  btn.innerHTML = on ? '&#127925; Music: On' : '&#128263; Music: Off';
+  btn.classList.toggle('off', !on);
+});
+
+document.getElementById('start').onclick=()=>{ document.getElementById('title').classList.add('gone'); canMove=true; Music.start(); };
 document.getElementById('slot-cloth').addEventListener('click', ()=>{ if(!dlgActive) useCloth(); });
-function resetGame(){ endcard.classList.remove('show'); dlgActive=false; cur=null;
-  aff.devin=0; aff.femi=0; aff.caiza=0; aff.bull=0; addAff('devin',0); addAff('femi',0);
+function resetGame(){ endcard.classList.remove('show','has-bg'); endcard.style.backgroundImage='none'; dlgActive=false; cur=null;
+  aff.devin=0; aff.femi=0; aff.caiza=0; aff.bull=0; aff.luna=0; aff.charlie=0; addAff('devin',0); addAff('femi',0);
   wooed.clear();
+  ownedKeepsakes.clear(); worn.bracelet=false; worn.pendant=false;
+  document.getElementById('wear-bracelet').style.display='none'; document.getElementById('wear-pendant').style.display='none';
+  document.getElementById('keepsakepanel').classList.remove('show');
   for(const k in npcs){ npcs[k].visits=0; npcs[k].level=0; npcs[k].pending=null; npcs[k].tone=0; }
   tasks.shoot=false; tasks.sit=false;
   inventory.flowers=0; inventory.rocks=0; inventory.cloth=0; updateInventory(); flowerReadyAt=0;
@@ -1410,9 +2454,17 @@ function resetGame(){ endcard.classList.remove('show'); dlgActive=false; cur=nul
   bullHere=false; npcs.bull.hidden=true; npcs.bull.hurt=false;
   const bel=npcs.bull.el; bel.style.display='none'; bel.classList.remove('hurt','bull-charge'); const bs=bel.querySelector('.stars'); if(bs) bs.remove();
   document.getElementById('meter-bull').style.display='none'; document.getElementById('m-bull').style.width='0%';
-  px=760; py=700; canMove=true; }
+  nightMode=false; world.classList.remove('night'); document.getElementById('fadeout').classList.remove('show');
+  ['devin','femi'].forEach(k=>{ npcs[k].hidden=false; npcs[k].el.style.display='block'; });
+  npcs.luna.hidden=true; npcs.luna.el.style.display='none';
+  document.getElementById('meter-luna').style.display='none'; document.getElementById('m-luna').style.width='0%';
+  charlieHere=false; holdingStrawberry=false; npcs.charlie.hidden=true; npcs.charlie.el.style.display='none';
+  document.getElementById('meter-charlie').style.display='none'; document.getElementById('m-charlie').style.width='0%';
+  document.querySelectorAll('.lamp .globe').forEach(g=>g.style.filter='');
+  hoopActive=false; if(hoopRAF) cancelAnimationFrame(hoopRAF); document.getElementById('hoopgame').classList.remove('show');
+  px=760; py=700; canMove=true; if(typeof Music!=='undefined') Music.setNight(false); }
 document.getElementById('replay').onclick=resetGame;
-document.getElementById('keepgoing').onclick=()=>{ endcard.classList.remove('show'); canMove=true; };
+document.getElementById('keepgoing').onclick=()=>{ endcard.classList.remove('show','has-bg'); endcard.style.backgroundImage='none'; canMove=true; };
 </script>
 </body>
 </html>
