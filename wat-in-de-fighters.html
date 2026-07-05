@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wat In De Fighters</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230d0d18'/%3E%3Cpath d='M12 44 L20 12 L26 30 L32 14 L38 30 L44 12 L52 44 Z' fill='%23fdbb2d'/%3E%3Cpath d='M12 44 L52 44 L48 54 L16 54 Z' fill='%23e63946'/%3E%3C/svg%3E">
 <script src="https://artifactcdn.diabrowser.engineering/ajax/libs/tone/Tone.min.js"></script>
 <style>
   :root{
@@ -56,14 +57,14 @@
   .hidden{display:none !important;}
 
   /* content-heavy menus scroll from the top inside the fixed frame */
-  #select, #stage, #mode, #achieve, #settings{
+  #select, #stage, #mode, #achieve, #settings, #online, #stats, #howto{
     justify-content:flex-start;
     overflow-y:auto;
     padding-top:3%;
     padding-bottom:20px;
   }
-  #select::-webkit-scrollbar, #stage::-webkit-scrollbar, #mode::-webkit-scrollbar, #achieve::-webkit-scrollbar, #settings::-webkit-scrollbar{width:8px;}
-  #select::-webkit-scrollbar-thumb, #stage::-webkit-scrollbar-thumb, #mode::-webkit-scrollbar-thumb, #achieve::-webkit-scrollbar-thumb, #settings::-webkit-scrollbar-thumb{background:rgba(253,187,45,.5);border-radius:4px;}
+  #select::-webkit-scrollbar, #stage::-webkit-scrollbar, #mode::-webkit-scrollbar, #achieve::-webkit-scrollbar, #settings::-webkit-scrollbar, #online::-webkit-scrollbar, #stats::-webkit-scrollbar, #howto::-webkit-scrollbar{width:8px;}
+  #select::-webkit-scrollbar-thumb, #stage::-webkit-scrollbar-thumb, #mode::-webkit-scrollbar-thumb, #achieve::-webkit-scrollbar-thumb, #settings::-webkit-scrollbar-thumb, #online::-webkit-scrollbar-thumb, #stats::-webkit-scrollbar-thumb, #howto::-webkit-scrollbar-thumb{background:rgba(253,187,45,.5);border-radius:4px;}
   h1{
     font-size:clamp(30px,7vw,74px);
     letter-spacing:.04em;
@@ -76,10 +77,17 @@
   .sub{font-family:Arial,sans-serif;font-weight:700;letter-spacing:.3em;font-size:clamp(10px,1.6vw,15px);color:#fdbb2d;margin-top:8px;opacity:.9;}
   /* nudge the title logo down so its skewed top never clips the box edge */
   #title h1{margin-top:0;padding-top:6px;}
-  /* tighter button spacing on the title so everything fits the splash */
-  #title .btn{margin-top:16px;}
-  #title .classicrow{margin-top:16px;}
-  #title .profile{margin-top:12px;}
+  /* --- decluttered title layout --- */
+  #title .medalbadge{margin-top:12px;font-size:clamp(12px,1.8vw,16px);padding:6px 14px;}
+  /* PLAY is the hero action: larger and set apart */
+  #title .btn-hero{margin-top:22px;font-size:clamp(24px,4vw,38px);padding:16px 70px;}
+  /* the four secondary options sit in a tidy 2x2 grid */
+  #title .titlegrid{
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:12px 16px;margin-top:20px;width:100%;max-width:520px;
+  }
+  #title .titlegrid .btn{margin-top:0;width:100%;font-size:clamp(14px,2.2vw,20px);padding:12px 10px;}
+  #title .profile{margin-top:16px;}
   .btn{
     margin-top:26px;
     font-family:"Impact",sans-serif;letter-spacing:.08em;
@@ -105,6 +113,10 @@
   .helper{font-family:Arial,sans-serif;font-weight:700;font-size:clamp(10px,1.5vw,13px);color:#cfd0e8;letter-spacing:.15em;margin-top:6px;}
   .roster{display:flex;flex-direction:column;gap:8px;width:100%;max-width:700px;margin-top:1.5%;flex-shrink:0;align-items:center;}
   .catgroup{width:100%;}
+  /* two categories sharing one line, split by a vertical divider */
+  .catpair{display:flex;width:100%;gap:12px;align-items:stretch;}
+  .catpair .catgroup{flex:1;min-width:0;}
+  .catdivider{flex:0 0 2px;align-self:stretch;background:linear-gradient(180deg,transparent,rgba(253,187,45,.5),transparent);border-radius:2px;}
   .cathead{font-family:Arial,sans-serif;font-weight:800;font-size:10px;letter-spacing:.18em;color:#fdbb2d;text-align:left;margin:0 0 4px 2px;display:flex;align-items:center;gap:7px;}
   .cathead::after{content:'';flex:1;height:2px;background:linear-gradient(90deg,rgba(253,187,45,.5),transparent);}
   .cathead .cicon{font-size:12px;}
@@ -218,6 +230,16 @@
   .pod.right .who{flex-direction:row-reverse;text-align:right;justify-content:flex-start;}
   .pod.right{text-align:right;}
   .dmg{font-family:"Impact",sans-serif;font-size:clamp(16px,2.6vw,26px);line-height:1;}
+  .achbar{position:relative;height:14px;border-radius:7px;background:rgba(0,0,0,.4);box-shadow:0 0 0 2px rgba(0,0,0,.35) inset;margin:8px auto 0;overflow:hidden;max-width:420px;}
+  .achfill{position:absolute;top:0;bottom:0;left:0;border-radius:7px;background:linear-gradient(90deg,#fdbb2d,#ff5714);transition:width .3s ease;}
+  /* splash screen */
+  #splash{z-index:20;cursor:pointer;transition:opacity .5s ease;background:radial-gradient(circle at 50% 30%, #2a2a72 0%, #0d0d18 75%);}
+  #splash.fade-out{opacity:0;}
+  .splashTap{font-family:Arial,sans-serif;font-weight:700;font-size:clamp(11px,1.8vw,14px);letter-spacing:.18em;color:#fdbb2d;margin-top:34px;animation:splashpulse 1.4s ease-in-out infinite;}
+  @keyframes splashpulse{0%,100%{opacity:.45;}50%{opacity:1;}}
+  /* achievement chosen as home screen backdrop */
+  .homeIcon{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:min(50vw,260px);opacity:.07;line-height:1;pointer-events:none;display:none;}
+  .homeLabel{font-family:Arial,sans-serif;font-weight:700;font-size:clamp(9px,1.3vw,11px);letter-spacing:.14em;color:#fdbb2d;opacity:.85;margin-top:4px;display:none;}
   .hpbar{position:relative;height:14px;border-radius:7px;background:rgba(0,0,0,.4);box-shadow:0 0 0 2px rgba(0,0,0,.35) inset;margin-top:6px;overflow:hidden;}
   .pod.right .hpbar{direction:rtl;}
   .hpfill{position:absolute;top:0;bottom:0;left:0;border-radius:7px;transition:width .18s ease, background .18s ease;}
@@ -274,8 +296,32 @@
   .ach.done .at{color:#fdbb2d;}
   .ach .ad{font-family:Arial,sans-serif;font-weight:600;font-size:10px;color:#b8bce0;margin-top:2px;}
   .ach .au{font-family:Arial,sans-serif;font-weight:800;font-size:8px;letter-spacing:.1em;color:#9d4edd;margin-top:3px;}
-  .ach .astate{margin-left:auto;font-family:Arial,sans-serif;font-weight:800;font-size:10px;letter-spacing:.1em;color:#6a6a7a;}
+  .ach .astate{margin-left:auto;font-family:Arial,sans-serif;font-weight:800;font-size:10px;letter-spacing:.1em;color:#6a6a7a;flex-shrink:0;}
   .ach.done .astate{color:#7ee081;}
+  .bannerBtn{font-family:Arial,sans-serif;font-weight:800;font-size:9px;letter-spacing:.08em;color:#cfd0e8;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:6px 10px;cursor:pointer;white-space:nowrap;}
+  .bannerBtn:hover{background:rgba(255,255,255,.16);}
+  .bannerBtn.on{color:#0d0d18;background:#fdbb2d;border-color:#fdbb2d;}
+
+  /* stats screen */
+  .statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;width:100%;max-width:640px;margin-top:14px;flex-shrink:0;}
+  .statcard{background:rgba(255,255,255,.05);border:2px solid rgba(255,255,255,.14);border-radius:12px;padding:14px 8px;text-align:center;}
+  .statcard .sv{font-size:clamp(18px,3vw,28px);color:#fdbb2d;transform:skewX(-4deg);line-height:1;}
+  .statcard .sl{font-family:Arial,sans-serif;font-weight:700;font-size:8.5px;letter-spacing:.09em;color:#b8bce0;margin-top:6px;}
+
+  /* how to play / movelist screen */
+  .howsec{width:100%;max-width:560px;margin-top:10px;flex-shrink:0;}
+  .howsec h3{font-family:Arial,sans-serif;font-weight:800;font-size:12px;letter-spacing:.16em;color:#fdbb2d;text-align:left;margin:18px 0 8px;}
+  .howgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;}
+  .howcard{background:rgba(255,255,255,.05);border:2px solid rgba(255,255,255,.14);border-radius:10px;padding:8px 10px;text-align:left;}
+  .howcard .hk{font-family:Arial,sans-serif;font-weight:800;font-size:10px;letter-spacing:.06em;color:#fdbb2d;}
+  .howcard .hd{font-family:Arial,sans-serif;font-weight:600;font-size:10px;color:#cfd0e8;margin-top:2px;}
+  .movecard{display:flex;flex-direction:column;gap:3px;padding:10px 14px;border-radius:12px;border:2px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);text-align:left;margin-bottom:8px;}
+  .movecard .mcname{font-size:14px;letter-spacing:.03em;transform:skewX(-4deg);}
+  .movecard .mcdesc{font-family:Arial,sans-serif;font-weight:600;font-size:10px;color:#9d9fc4;margin-bottom:2px;}
+  .movecard .mv{font-family:Arial,sans-serif;font-weight:600;font-size:10.5px;color:#cfd0e8;}
+
+  /* volume sliders (settings) */
+  input[type=range]{width:140px;accent-color:#fdbb2d;height:18px;cursor:pointer;}
 
   /* settings menu */
   .setwrap{display:flex;flex-direction:column;gap:12px;width:100%;max-width:540px;margin-top:14px;flex-shrink:0;overflow-y:auto;}
@@ -349,6 +395,29 @@
   @keyframes vsBolt{from{opacity:0;transform:skewX(-8deg) scale(2.4) rotate(-12deg);}to{opacity:1;transform:skewX(-8deg) scale(1);}}
   .vsstage{font-family:Arial,sans-serif;font-weight:800;letter-spacing:.24em;font-size:clamp(11px,1.8vw,15px);color:#fdbb2d;margin-top:5%;opacity:0;animation:vsFade .4s .5s both;}
   @keyframes vsFade{to{opacity:.9;}}
+
+  /* pause overlay — sits above the match, dims the arena but leaves it visible */
+  #pause{
+    position:absolute;inset:0;z-index:18;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(8,8,16,.62);backdrop-filter:blur(2px);
+  }
+  #pause.hidden{display:none !important;}
+  .pausecard{
+    display:flex;flex-direction:column;gap:12px;width:min(84%,420px);
+    background:linear-gradient(180deg,#23235a,#12121f);
+    border:3px solid #fdbb2d;border-radius:18px;padding:22px 24px 20px;
+    box-shadow:0 12px 40px rgba(0,0,0,.6);
+  }
+  .pausetitle{
+    font-size:clamp(30px,6vw,52px);letter-spacing:.04em;text-align:center;
+    background:linear-gradient(180deg,#fdbb2d,#e63946);-webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 3px 0 rgba(0,0,0,.35);transform:skewX(-6deg);margin-bottom:4px;
+  }
+  .pausebtns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:8px;}
+  .pausebtns .btn{margin-top:0;font-size:clamp(15px,2.4vw,22px);padding:10px 26px;}
+  .pausehint{font-family:Arial,sans-serif;font-weight:700;font-size:11px;letter-spacing:.1em;color:#9a9cc0;text-align:center;margin-top:4px;}
+  .pausehint b{color:#fdbb2d;}
 </style>
 </head>
 <body>
@@ -388,19 +457,51 @@
   <button id="muteBtn" title="Toggle music">🔊</button>
   <div id="achToast"><span class="tIcon">🏆</span><div><div id="achToastName">ACHIEVEMENT</div><div class="tSub">ACHIEVEMENT UNLOCKED</div></div></div>
 
+  <!-- PAUSE OVERLAY (Esc during a match) -->
+  <div id="pause" class="hidden">
+    <div class="pausecard">
+      <h2 class="pausetitle">PAUSED</h2>
+      <div class="setrow">
+        <div class="setlbl">MUSIC &amp; SFX<div class="sethint">All game audio.</div></div>
+        <button class="toggle" id="pauseMusic">ON</button>
+      </div>
+      <div class="setrow">
+        <div class="setlbl">MOBILE MODE<div class="sethint">On-screen touch buttons.</div></div>
+        <button class="toggle" id="pauseMobile">OFF</button>
+      </div>
+      <div class="pausebtns">
+        <button class="btn" id="resumeBtn">RESUME</button>
+        <button class="btn btn-back" id="quitBtn">QUIT TO MENU</button>
+      </div>
+      <div class="pausehint">Press <b>ESC</b> to resume</div>
+    </div>
+  </div>
+
   <!-- TITLE -->
   <div class="screen" id="title">
+    <div class="homeIcon" id="homeIconBg"></div>
     <h1>WAT IN DE<br>FIGHTERS</h1>
     <div class="sub">PLATFORM  FIGHTER</div>
-    <button class="btn" id="startBtn">PLAY</button>
-    <div class="classicrow">
+    <div class="homeLabel" id="homeLabelText"></div>
+    <div class="medalbadge" id="medalBadge" title="Classic Mode medals earned">🏅 <span id="medalCount">0</span>/<span id="medalTotal">0</span> MEDALS</div>
+    <button class="btn btn-hero" id="startBtn">PLAY</button>
+    <div class="titlegrid">
+      <button class="btn btn-alt" id="onlineBtn">ONLINE 1v1</button>
       <button class="btn btn-alt" id="classicBtn">CLASSIC MODE</button>
-      <div class="medalbadge" id="medalBadge" title="Classic Mode medals earned">🏅 <span id="medalCount">0</span>/<span id="medalTotal">0</span></div>
+      <button class="btn btn-back" id="achBtn">ACHIEVEMENTS</button>
+      <button class="btn btn-back" id="settingsBtn">SETTINGS</button>
+      <button class="btn btn-back" id="statsBtn">STATS</button>
+      <button class="btn btn-back" id="howtoBtn">HOW TO PLAY</button>
     </div>
-    <button class="btn btn-back" id="achBtn">ACHIEVEMENTS</button>
-    <button class="btn btn-back" id="settingsBtn">SETTINGS</button>
     <div class="profile" id="profileLine"></div>
     <div class="madeby"></div>
+  </div>
+
+  <!-- SPLASH / INTRO SCREEN — sits on top of the title screen until dismissed -->
+  <div class="screen" id="splash">
+    <h1>WAT IN DE<br>FIGHTERS</h1>
+    <div class="sub">PLATFORM  FIGHTER</div>
+    <div class="splashTap">TAP OR PRESS ANY KEY TO START</div>
   </div>
 
   <!-- SETTINGS MENU -->
@@ -412,6 +513,14 @@
         <button class="toggle" id="mobileToggle">OFF</button>
       </div>
       <div class="setrow">
+        <div class="setlbl">MUSIC VOLUME<div class="sethint">Background music level.</div></div>
+        <input type="range" id="musicVolSlider" min="0" max="100" step="1">
+      </div>
+      <div class="setrow">
+        <div class="setlbl">SFX VOLUME<div class="sethint">Hit sounds and stage ambience.</div></div>
+        <input type="range" id="sfxVolSlider" min="0" max="100" step="1">
+      </div>
+      <div class="setrow">
         <div class="setlbl">DEV MODE<div class="sethint" id="devHint">Unlock every character with a password.</div></div>
         <button class="toggle" id="devToggle">OFF</button>
       </div>
@@ -420,6 +529,15 @@
         <div class="ctrltabs"><button class="ctrltab sel" data-cp="1">PLAYER 1</button><button class="ctrltab" data-cp="2">PLAYER 2</button></div>
         <div class="keygrid" id="keyGrid"></div>
         <button class="btn btn-back" id="resetKeys" style="font-size:13px;padding:6px 14px;">RESET TO DEFAULT</button>
+      </div>
+      <div class="setblock">
+        <div class="setlbl">SAVE DATA<div class="sethint">Download a backup of your progress, or restore one from a file.</div></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:8px;">
+          <button class="btn btn-back" id="exportSaveBtn" style="font-size:13px;padding:6px 14px;">⬇ EXPORT SAVE</button>
+          <button class="btn btn-back" id="importSaveBtn" style="font-size:13px;padding:6px 14px;">⬆ IMPORT SAVE</button>
+          <input type="file" id="importSaveInput" accept="application/json,.json" style="display:none">
+        </div>
+        <div class="sethint" id="saveIOStatus" style="margin-top:8px;min-height:14px;"></div>
       </div>
     </div>
     <button class="btn btn-back" id="settingsBack">◀ BACK</button>
@@ -430,8 +548,40 @@
   <div class="screen hidden" id="achieve">
     <h2 style="font-size:clamp(20px,4vw,40px);color:#fdbb2d;transform:skewX(-6deg);text-shadow:0 3px 0 rgba(0,0,0,.4);">ACHIEVEMENTS</h2>
     <div class="helper" id="achCount"></div>
+    <div class="achbar"><div class="achfill" id="achFill"></div></div>
     <div class="achlist" id="achList"></div>
     <button class="btn btn-back" id="achBack">◀ BACK</button>
+    <div class="madeby"></div>
+  </div>
+
+  <!-- STATS -->
+  <div class="screen hidden" id="stats">
+    <h2 style="font-size:clamp(20px,4vw,40px);color:#fdbb2d;transform:skewX(-6deg);text-shadow:0 3px 0 rgba(0,0,0,.4);">STATS</h2>
+    <div class="statgrid" id="statGrid"></div>
+    <button class="btn btn-back" id="statsBack">◀ BACK</button>
+    <div class="madeby"></div>
+  </div>
+
+  <!-- HOW TO PLAY / MOVELIST -->
+  <div class="screen hidden" id="howto">
+    <h2 style="font-size:clamp(20px,4vw,40px);color:#fdbb2d;transform:skewX(-6deg);text-shadow:0 3px 0 rgba(0,0,0,.4);">HOW TO PLAY</h2>
+    <div class="howsec">
+      <h3>THE BASICS</h3>
+      <div class="howgrid">
+        <div class="howcard"><div class="hk">ATTACK</div><div class="hd">Melee hit. Short range, low cooldown.</div></div>
+        <div class="howcard"><div class="hk">SPECIAL</div><div class="hd">Each fighter's signature move — see the movelist below.</div></div>
+        <div class="howcard"><div class="hk">UP-SPECIAL</div><div class="hd">A recovery move that also launches upward.</div></div>
+        <div class="howcard"><div class="hk">SUPER</div><div class="hd">A powerful move once your super meter is full. Meter charges as you deal and take damage.</div></div>
+        <div class="howcard"><div class="hk">SHIELD</div><div class="hd">Hold to block incoming hits. Your shield can break if it takes too much punishment.</div></div>
+        <div class="howcard"><div class="hk">JUMP</div><div class="hd">Two jumps in the air. Tap down to drop through platforms or taunt.</div></div>
+        <div class="howcard"><div class="hk">TAUNT</div><div class="hd">Show off between hits — some achievements track taunt count.</div></div>
+      </div>
+    </div>
+    <div class="howsec">
+      <h3>MOVELIST — ALL FIGHTERS</h3>
+      <div id="moveList"></div>
+    </div>
+    <button class="btn btn-back" id="howtoBack">◀ BACK</button>
     <div class="madeby"></div>
   </div>
 
@@ -451,8 +601,10 @@
     </div>
     <div class="modelbl">RULES</div>
     <div class="rules" id="ruleGrid"></div>
-    <button class="btn" id="modeGo">CONTINUE</button>
-    <button class="btn btn-back" id="modeBack">◀ BACK</button>
+    <div class="btnrow">
+      <button class="btn btn-back" id="modeBack">◀ BACK</button>
+      <button class="btn" id="modeGo">CONTINUE</button>
+    </div>
     <div class="controls">
       <b style="color:#4dd2ff">P1</b> &nbsp;MOVE A/D · JUMP W · DROP S · ATTACK J · SPECIAL K · UP-SPECIAL I · SUPER U · SHIELD L<br>
       <b style="color:#ff9f4d">P2</b> &nbsp;MOVE ← / → · JUMP ↑ · DROP ↓ · ATTACK . · SPECIAL / · UP-SPECIAL &apos; · SUPER , · SHIELD RSHIFT
@@ -530,6 +682,42 @@
       <div class="storytext" id="storyText"></div>
       <button class="btn" id="storyNext">NEXT ▶</button>
     </div>
+  </div>
+
+  <!-- ONLINE LOBBY -->
+  <div class="screen hidden" id="online">
+    <h2 style="font-size:clamp(20px,4vw,40px);color:#fdbb2d;transform:skewX(-6deg);text-shadow:0 3px 0 rgba(0,0,0,.4);">ONLINE 1v1</h2>
+    <div class="helper" id="onlineHelper">QUICK MATCH · PICK A FIGHTER, THEN FIND AN OPPONENT</div>
+    <div class="roster" id="onlineRoster"></div>
+    <div class="panels" id="onlinePanels"></div>
+    <div class="modelbl">MATCH SETUP (used if you host)</div>
+    <div class="rules" id="onlineRuleGrid" style="max-width:520px;"></div>
+    <div class="carousel" style="max-width:420px;margin-top:12px;">
+      <button class="arrow" id="onlineStagePrev" aria-label="Previous stage">◀</button>
+      <div class="stagecard" style="max-width:300px;">
+        <span class="flag" id="onlineFlag"></span>
+        <canvas id="onlineStageCanvas" width="300" height="169"></canvas>
+        <span class="sname" id="onlineStageName">STAGE</span>
+      </div>
+      <button class="arrow" id="onlineStageNext" aria-label="Next stage">▶</button>
+    </div>
+    <div class="btnrow">
+      <button class="btn btn-back" id="onlineBack">◀ BACK</button>
+      <button class="btn" id="quickMatchBtn">QUICK MATCH</button>
+    </div>
+    <div class="madeby"></div>
+  </div>
+
+  <!-- WAIT ROOM (searching / connecting) -->
+  <div class="screen hidden" id="waitroom">
+    <h2 style="font-size:clamp(20px,4vw,40px);color:#fdbb2d;transform:skewX(-6deg);text-shadow:0 3px 0 rgba(0,0,0,.4);">MATCHMAKING</h2>
+    <div class="storycard" style="max-width:min(88%,420px);gap:16px;">
+      <canvas id="waitCanvas" width="120" height="130"></canvas>
+      <div class="storyprog" id="waitStatus">SEARCHING FOR AN OPPONENT…</div>
+      <div class="memeblurb" id="waitSub" style="max-width:300px;">Keep this tab open. You'll drop straight into the fight when someone joins.</div>
+      <button class="btn btn-back" id="waitCancel" style="font-size:15px;padding:8px 22px;">CANCEL</button>
+    </div>
+    <div class="madeby"></div>
   </div>
 </div>
 
@@ -673,7 +861,7 @@ const ROSTER = [
     costume3:{name:'RING VETERAN', color:'#c1121f', dark:'#6a0a10', acc:'horns'}
   },
   {
-    id:'doremalen', name:'DOREMALEN', color:'#38b000', dark:'#1f6b00',
+    id:'doremalen', name:'MARK', color:'#38b000', dark:'#1f6b00',
     desc:'Science Teacher',
     move:'ACID FLASK · lobbed chemical splash',
     up:'ROCKET REACTION · fizzing launch',
@@ -782,7 +970,7 @@ const ROSTER = [
   },
   {
     id:'ati', name:'ATI', color:'#9d4edd', dark:'#5a277d', skin:'#e3b58f', locked:true,
-    desc:"Strict Mother",
+    desc:"Mother",
     move:'DOUBLE SMACK · a homing slipper + a returning boomerang slipper',
     up:'GROUNDED! · a scolding leap',
     sup:'HOUSE RULES · a flurry of slippers',
@@ -841,7 +1029,7 @@ const ROSTER = [
     costume3:{name:'CREAM SUIT', color:'#e9d8a6', dark:'#a3894a', acc:'star'}
   },
   {
-    id:'oela', name:'OELATUMBUSUM', color:'#2a9d8f', dark:'#145047', skin:'#5c3a21', locked:true,
+    id:'oela', name:'OELA', color:'#2a9d8f', dark:'#145047', skin:'#5c3a21', locked:true,
     desc:'African Striker',
     move:'ROCKET SHOT · rifles a curving football',
     up:'BICYCLE KICK · a soaring overhead flip',
@@ -851,6 +1039,97 @@ const ROSTER = [
     costume:{name:'HOME KIT', color:'#e9c46a', dark:'#a3801f', acc:'star'},
     costume2:{name:'AWAY KIT', color:'#e63946', dark:'#7a141d', acc:'crown'},
     costume3:{name:'CAPTAIN', color:'#457b9d', dark:'#1d3a4d', acc:'antenna'}
+  },
+  {
+    id:'ash', name:'ASH', color:'#ff8fa3', dark:'#a33a52', skin:'#f0c8a8', locked:true,
+    desc:"Little Brother",
+    move:'CURVEBALL · lobs a fast arcing baseball',
+    up:'POP-UP · a spring off a bouncing ball',
+    sup:'TRIPLE PLAY · three curving fastballs',
+    stats:{speed:3.7, jump:14.6, weight:0.92},
+    special:'curve',
+    costume:{name:'LITTLE LEAGUE', color:'#4cc9f0', dark:'#1b6a85', acc:'star'},
+    costume2:{name:'ROOKIE RED', color:'#e63946', dark:'#7a141d', acc:'antenna'},
+    costume3:{name:'NIGHT GAME', color:'#3a0ca3', dark:'#1a0552', acc:'goggles'}
+  },
+  {
+    id:'kayo', name:'KAYO & YARA', color:'#f9a03f', dark:'#a35e14', skin:'#e8b98f', locked:true,
+    desc:'Two Cats, One Fighter',
+    move:'POUNCE COMBO · one cat lunges, the other swipes',
+    up:'CAT STACK · the pair leap off each other',
+    sup:'NINE LIVES · a relentless tag-team frenzy',
+    stats:{speed:4.1, jump:15.4, weight:0.8},
+    special:'twocat',
+    costume:{name:'CALICO', color:'#e07a5f', dark:'#8a3f2a', acc:'bow'},
+    costume2:{name:'TUXEDO', color:'#2b2d42', dark:'#111321', acc:'shades'},
+    costume3:{name:'SNOW PAWS', color:'#e9ecef', dark:'#adb5bd', acc:'crown'}
+  },
+  {
+    id:'jace', name:'JACE', color:'#5a3fd6', dark:'#2e1f80', skin:'#e8b98f',
+    desc:'Pro Gamer',
+    move:'CONTROLLER TOSS · hurls an arcing controller',
+    up:'RAGE QUIT · a launching upward fling',
+    sup:'BUTTON MASH · a barrage of thrown controllers',
+    stats:{speed:3.3, jump:14.2, weight:1.0},
+    special:'controller',
+    costume:{name:'RGB SETUP', color:'#00f5d4', dark:'#0b6e5f', acc:'visor'},
+    costume2:{name:'RETRO GREY', color:'#adb5bd', dark:'#495057', acc:'antenna'},
+    costume3:{name:'PLAYER TWO', color:'#e63946', dark:'#7a141d', acc:'goggles'}
+  },
+  {
+    id:'cavan', name:'CAVAN', color:'#ff7a1a', dark:'#a34400', skin:'#f0c8a8', locked:true,
+    desc:'Reckless Charger',
+    move:'FLYING TACKLE · launches himself forward shoulder-first',
+    up:'SKY CHARGE · rockets up and away',
+    sup:'RAMPAGE · a chain of unstoppable body-slams',
+    stats:{speed:4.0, jump:15.0, weight:1.05},
+    special:'launch',
+    costume:{name:'BLAZE', color:'#e63946', dark:'#7a141d', acc:'flame'},
+    costume2:{name:'STEEL RAM', color:'#6c757d', dark:'#343a40', acc:'horns'},
+    costume3:{name:'GOLDEN BULL', color:'#ffbe0b', dark:'#b3860a', acc:'crown'}
+  },
+  {
+    // HIDDEN OP #1 — unlocked at HALF of all medals. Not shown until earned.
+    id:'casper', name:'CASPER', color:'#e01e1e', dark:'#7a0f0f', skin:'#f0c8a8',
+    hidden:true, opChar:true,
+    desc:'Car Lover',
+    move:'FLOOR IT · floors the gas and rams forward in his car',
+    up:'RAMP JUMP · launches off a ramp skyward',
+    sup:'DEMOLITION DERBY · a relentless high-speed ramming rampage',
+    stats:{speed:4.8, jump:15.6, weight:1.3},
+    special:'car',
+    costume:{name:'RACE BLUE', color:'#1e6ee0', dark:'#0f3a7a', acc:'goggles'},
+    costume2:{name:'MIDNIGHT', color:'#22223b', dark:'#0d0d1a', acc:'shades'},
+    costume3:{name:'GOLD RIDE', color:'#ffd60a', dark:'#b3860a', acc:'crown'}
+  },
+  {
+    // HIDDEN OP #2 — unlocked at ALL medals. The ultimate secret fighter.
+    id:'robin', name:'ROBIN', color:'#38b000', dark:'#1f6b00', skin:'#f0c8a8',
+    hidden:true, opChar:true,
+    desc:'Big Goofy Kid',
+    move:'MEGA FLOP · hurls his big body forward in a flying belly-flop',
+    up:'GROWTH SPURT · a towering leap',
+    sup:'TANTRUM · an unstoppable stomping rampage',
+    stats:{speed:4.4, jump:16.2, weight:1.5},
+    special:'slam',
+    costume:{name:'JUICE BOX', color:'#ff6d00', dark:'#7a3400', acc:'antenna'},
+    costume2:{name:'BLUE JAMMIES', color:'#3a86ff', dark:'#1a4a99', acc:'star'},
+    costume3:{name:'GOLD BABY', color:'#ffd700', dark:'#8a6d00', acc:'crown'}
+  },
+  {
+    // FINAL SECRET — "Nathan's worst nightmare". Unlocked only when EVERY
+    // achievement is earned. The strongest fighter in the game.
+    id:'zennith', name:'ZENNITH', color:'#6a040f', dark:'#1a0002', skin:'#2a2a33',
+    hidden:true, opChar:true, finalChar:true,
+    desc:"Nathan's Worst Nightmare",
+    move:'DOOM PITCH · a screaming cursed fastball that pierces',
+    up:'NIGHTMARE RISE · a shrieking void ascent',
+    sup:'PERFECT GAME · an apocalyptic storm of cursed baseballs',
+    stats:{speed:4.7, jump:16.2, weight:1.35},
+    special:'doom',
+    costume:{name:'BLOOD MOON', color:'#9d0208', dark:'#2b0000', acc:'horns'},
+    costume2:{name:'ABYSS', color:'#240046', dark:'#0a0018', acc:'halo'},
+    costume3:{name:'CURSED GOLD', color:'#ffba08', dark:'#7a5200', acc:'crown'}
   }
 ];
 
@@ -882,6 +1161,13 @@ const TAUNTS = {
   thomas:   { seq:['🌀','💥'],      cry:"FEEL THAT?",  emote:'flex' },
   giancarlo:{ seq:['🔫','🎩'],      cry:"FUGGEDABOUTIT!", emote:'point' },
   oela:     { seq:['⚽','🏆'],      cry:"GOOOAL!",     emote:'point' },
+  ash:      { seq:['⚾','😤'],      cry:"MY TURN NOW!", emote:'point' },
+  kayo:     { seq:['🐱','🐈'],      cry:"MEOW MEOW!",   emote:'spin' },
+  jace:     { seq:['🎮','😎'],      cry:"GG EZ!",       emote:'shrug' },
+  cavan:    { seq:['💥','🔥'],      cry:"OUTTA MY WAY!", emote:'flex' },
+  casper:   { seq:['🏎️','😎'],      cry:"VROOM VROOM!",  emote:'spin' },
+  robin:    { seq:['🧃','😜'],      cry:"WHEEE!",        emote:'hop' },
+  zennith:  { seq:['⚾','💀'],       cry:"STRIKE... THREE.", emote:'vanish' },
 };
 
 /* ---------------- CLASSIC MODE STORIES ---------------- */
@@ -915,6 +1201,13 @@ const STORY = {
   thomas:  { title:'FULL CIRCLE',         goal:'to roll over every doubter', rival:'giancarlo' },
   giancarlo:{title:'THE FAMILY BUSINESS', goal:'to run the whole block', rival:'thorren' },
   oela:    { title:'THE BEAUTIFUL GAME',  goal:'to score the goal that changes everything', rival:'nathan' },
+  ash:     { title:'OUT OF THE SHADOW',   goal:"to prove he's more than Nathan's little brother", rival:'nathan' },
+  kayo:    { title:'PURR-FECT TEAM',      goal:'to show two cats fight better than one', rival:'femi' },
+  jace:    { title:'FINAL BOSS',          goal:'to clear the hardest level of all: real life', rival:'metaai' },
+  cavan:   { title:'FULL SEND',           goal:'to charge through anyone who stands in his way', rival:'yassin' },
+  casper:  { title:'REDLINE',             goal:'to prove nothing on the track can catch him', rival:'robin' },
+  robin:   { title:'JUICE BOX CHAMPION',  goal:'to win the biggest playground brawl ever', rival:'casper' },
+  zennith: { title:'THE NIGHTMARE',       goal:'to prove he is the darkness Nathan could never beat', rival:'nathan' },
 };
 // Build a 4-round gauntlet for a chosen character: 3 themed opponents + the rival.
 function buildClassicRun(c){
@@ -997,6 +1290,26 @@ function drawIcon(g, c, S, costume, t){
       g.strokeStyle='#e63946'; g.lineWidth=Math.max(1.5,S*0.02);
       g.beginPath(); g.arc(-r*0.5,0,r*0.9,-0.9,0.9); g.stroke();
       g.beginPath(); g.arc(r*0.5,0,r*0.9,Math.PI-0.9,Math.PI+0.9); g.stroke(); break;
+    case 'curve': // baseball with a swerve arrow
+      g.fillStyle=white; g.beginPath(); g.arc(r*0.15,-r*0.1,r*0.62,0,Math.PI*2); g.fill();
+      g.strokeStyle='#e63946'; g.lineWidth=Math.max(1.2,S*0.016);
+      g.beginPath(); g.arc(r*0.15,-r*0.1,r*0.55,-0.9,0.9); g.stroke();
+      g.strokeStyle=white; g.lineWidth=Math.max(1.5,S*0.02);
+      g.beginPath(); g.moveTo(-r*0.8,r*0.7); g.quadraticCurveTo(-r*0.1,r*0.3,r*0.4,r*0.7); g.stroke();
+      g.beginPath(); g.moveTo(r*0.4,r*0.7); g.lineTo(r*0.15,r*0.5); g.moveTo(r*0.4,r*0.7); g.lineTo(r*0.55,r*0.42); g.stroke(); break;
+    case 'twocat': // two cat heads with pointy ears
+      for(let s=-1;s<=1;s+=2){
+        const cx=s*r*0.42;
+        g.fillStyle = s<0?white:ink;
+        g.beginPath(); g.arc(cx,r*0.15,r*0.5,0,Math.PI*2); g.fill();
+        // ears
+        g.beginPath(); g.moveTo(cx-r*0.4,-r*0.25); g.lineTo(cx-r*0.15,-r*0.6); g.lineTo(cx-r*0.05,-r*0.2); g.closePath(); g.fill();
+        g.beginPath(); g.moveTo(cx+r*0.4,-r*0.25); g.lineTo(cx+r*0.15,-r*0.6); g.lineTo(cx+r*0.05,-r*0.2); g.closePath(); g.fill();
+        // eyes
+        g.fillStyle = s<0?ink:white;
+        g.beginPath(); g.arc(cx-r*0.16,r*0.1,r*0.08,0,Math.PI*2); g.fill();
+        g.beginPath(); g.arc(cx+r*0.16,r*0.1,r*0.08,0,Math.PI*2); g.fill();
+      } break;
     case 'drone': case 'minidrone': // drone/rotor
       g.strokeStyle=white; g.beginPath(); g.moveTo(-r,-r*0.6); g.lineTo(r,-r*0.6); g.stroke();
       g.fillStyle=white; g.beginPath(); g.arc(0,r*0.1,r*0.55,0,Math.PI*2); g.fill();
@@ -1073,6 +1386,36 @@ function drawIcon(g, c, S, costume, t){
     case 'bullets': // three bullet streaks
       g.fillStyle=white;
       for(let k=-1;k<=1;k++){ g.fillRect(-r*0.8, k*r*0.4-r*0.08, r*1.4, r*0.16); } break;
+    case 'controller': // game controller: rounded body + two grips, d-pad + buttons      g.fillStyle=white;
+      g.beginPath(); g.ellipse(-r*0.55,r*0.15,r*0.4,r*0.5,0.4,0,Math.PI*2); g.fill();
+      g.beginPath(); g.ellipse(r*0.55,r*0.15,r*0.4,r*0.5,-0.4,0,Math.PI*2); g.fill();
+      g.fillRect(-r*0.6,-r*0.35,r*1.2,r*0.7);
+      g.fillStyle=ink;
+      // d-pad
+      g.fillRect(-r*0.5,-r*0.08,r*0.32,r*0.14); g.fillRect(-r*0.42,-r*0.24,r*0.14,r*0.46);
+      // two face buttons
+      g.beginPath(); g.arc(r*0.32,-r*0.12,r*0.09,0,Math.PI*2); g.fill();
+      g.beginPath(); g.arc(r*0.5,r*0.06,r*0.09,0,Math.PI*2); g.fill(); break;
+    case 'launch': // forward-charge chevrons (self-propel tackle)
+      g.strokeStyle=white; g.lineWidth=Math.max(2.5,S*0.045); g.lineCap='round'; g.lineJoin='round';
+      for(let k=-1;k<=1;k++){ const ox=k*r*0.5;
+        g.beginPath(); g.moveTo(ox-r*0.35,-r*0.55); g.lineTo(ox+r*0.2,0); g.lineTo(ox-r*0.35,r*0.55); g.stroke(); } break;
+    case 'doom': // cursed baseball: white ball, dark stitches + a menacing X
+      g.fillStyle=white; g.beginPath(); g.arc(0,0,r*0.85,0,Math.PI*2); g.fill();
+      g.strokeStyle='#6a040f'; g.lineWidth=Math.max(1.5,S*0.02);
+      g.beginPath(); g.arc(-r*0.5,0,r*0.9,-0.9,0.9); g.stroke();
+      g.beginPath(); g.arc(r*0.5,0,r*0.9,Math.PI-0.9,Math.PI+0.9); g.stroke();
+      g.strokeStyle='#6a040f'; g.lineWidth=Math.max(2,S*0.03);
+      g.beginPath(); g.moveTo(-r*0.4,-r*0.4); g.lineTo(r*0.4,r*0.4); g.moveTo(r*0.4,-r*0.4); g.lineTo(-r*0.4,r*0.4); g.stroke(); break;
+    case 'car': // little race car silhouette
+      g.fillStyle=white;
+      g.beginPath(); g.moveTo(-r,r*0.3); g.lineTo(-r*0.6,r*0.3); g.lineTo(-r*0.35,-r*0.15);
+      g.lineTo(r*0.1,-r*0.15); g.lineTo(r*0.35,-r*0.5); g.lineTo(r*0.7,-r*0.5); g.lineTo(r,r*0.3); g.closePath(); g.fill();
+      g.fillStyle=ink; g.beginPath(); g.arc(-r*0.45,r*0.4,r*0.22,0,Math.PI*2); g.fill();
+      g.beginPath(); g.arc(r*0.5,r*0.4,r*0.22,0,Math.PI*2); g.fill(); break;
+    case 'slam': // big fist / impact star
+      g.fillStyle=white; g.beginPath(); g.arc(0,0,r*0.95,0,Math.PI*2); g.fill();
+      g.fillStyle=ink; g.font='bold '+(r*1.1)+'px Arial'; g.textAlign='center'; g.textBaseline='middle'; g.fillText('!',0,0); break;
     default:
       g.fillStyle=white; g.beginPath(); g.arc(0,0,r*0.7,0,Math.PI*2); g.fill();
   }
@@ -1099,6 +1442,9 @@ function drawFighter(g, c, x, y, w, h, face, t, state, costume){
   const col = cos.color;
   const dark = cos.dark;
   const bodyW = w*0.5, bodyH = h*0.44;
+  // These characters replace the whole body with a custom drawing (blob / stacked
+  // cats), so we skip the standard humanoid limbs+head to avoid stray parts poking out.
+  const fullRedraw = (c.id==='kayo' || c.id==='reshman');
 
   // shadow ellipse
   g.save();
@@ -1110,6 +1456,10 @@ function drawFighter(g, c, x, y, w, h, face, t, state, costume){
   g.restore();
 
   // legs
+  const atk = state==='attack';
+  const armFwd = atk ? bodyW*0.55 : bodyW*0.28;
+  const headR = w*0.16;
+  if(!fullRedraw){
   g.fillStyle=dark;
   const legSwing = Math.sin(t/120)* (state==='run'?6:1);
   roundRect(g, -bodyW*0.42, bodyH*0.3, bodyW*0.32, h*0.24 + legSwing, 4);
@@ -1128,14 +1478,11 @@ function drawFighter(g, c, x, y, w, h, face, t, state, costume){
 
   // arms
   g.fillStyle=dark;
-  const atk = state==='attack';
-  const armFwd = atk ? bodyW*0.55 : bodyW*0.28;
   roundRect(g, armFwd-6, -bodyH*0.35, 10, bodyH*0.55, 5); // front arm
   roundRect(g, -bodyW*0.5, -bodyH*0.35, 10, bodyH*0.55, 5); // back arm
 
   // head
   g.fillStyle=c.skin||'#ffe3c4';
-  const headR = w*0.16;
   g.beginPath();
   g.arc(0, -bodyH*0.75, headR, 0, Math.PI*2);
   g.fill();
@@ -1143,6 +1490,7 @@ function drawFighter(g, c, x, y, w, h, face, t, state, costume){
   // eyes
   g.fillStyle='#111';
   g.beginPath(); g.arc(headR*0.35, -bodyH*0.78, 2.2, 0,Math.PI*2); g.fill();
+  }
 
   // --- character-specific flair ---
   if(c.id==='nathan'){ // baseball cap + bat
@@ -1461,6 +1809,129 @@ function drawFighter(g, c, x, y, w, h, face, t, state, costume){
     g.fillStyle='#111'; g.beginPath(); g.arc(bodyW*0.5, by, 2, 0, Math.PI*2); g.fill();
     // kicking leg when attacking
     if(atk){ g.strokeStyle=dark; g.lineWidth=5; g.beginPath(); g.moveTo(0,bodyH*0.4); g.lineTo(armFwd+10,bodyH*0.2); g.stroke(); }
+  } else if(c.id==='ash'){ // little brother: backwards cap, jersey, baseball in hand
+    // backwards cap
+    g.fillStyle=dark; g.beginPath(); g.arc(0,-bodyH*0.82,headR*1.0,Math.PI,0); g.fill();
+    g.fillRect(-headR*1.3,-bodyH*0.82, headR*0.9, 3); // brim to the back
+    // jersey number
+    g.fillStyle='#fff'; g.font='bold '+(bodyH*0.24)+'px Arial'; g.textAlign='center'; g.textBaseline='middle';
+    g.save(); g.scale(face,1); g.fillText('2',0,-bodyH*0.22); g.restore();
+    // baseball in the throwing hand
+    g.fillStyle='#fff'; g.strokeStyle='#e63946'; g.lineWidth=1;
+    const bx=atk?armFwd+12:bodyW*0.5, byy=atk?-bodyH*0.5:-bodyH*0.15;
+    g.beginPath(); g.arc(bx, byy, 5, 0, Math.PI*2); g.fill();
+    g.beginPath(); g.arc(bx-2, byy, 4, -0.8, 0.8); g.stroke();
+  } else if(c.id==='jace'){ // pro gamer: gaming headset + a controller held/thrown
+    // hair swoosh
+    g.fillStyle=dark; g.beginPath(); g.arc(0,-bodyH*0.84, headR*1.02, Math.PI, Math.PI*1.9); g.fill();
+    // gaming headset: band over the head + an earcup with a boom mic
+    g.strokeStyle='#111'; g.lineWidth=3;
+    g.beginPath(); g.arc(0,-bodyH*0.78, headR*1.05, Math.PI*1.15, Math.PI*1.85); g.stroke();
+    g.fillStyle=col; g.beginPath(); g.arc(-headR*0.95,-bodyH*0.74, headR*0.4,0,Math.PI*2); g.fill();
+    g.strokeStyle='#111'; g.lineWidth=2; g.beginPath(); g.moveTo(-headR*0.95,-bodyH*0.7); g.quadraticCurveTo(-headR*0.4,-bodyH*0.55,-headR*0.2,-bodyH*0.62); g.stroke();
+    // controller in the front hand (held low when idle, raised when attacking)
+    const cx2 = atk ? armFwd+10 : armFwd+2;
+    const cy2 = atk ? -bodyH*0.4 : bodyH*0.12;
+    g.fillStyle='#e9ecef';
+    g.beginPath(); g.ellipse(cx2-4,cy2,4,6,0.4,0,Math.PI*2); g.fill();
+    g.beginPath(); g.ellipse(cx2+4,cy2,4,6,-0.4,0,Math.PI*2); g.fill();
+    g.fillRect(cx2-5,cy2-4,10,7);
+    g.fillStyle=col; g.beginPath(); g.arc(cx2+3,cy2-1,1.4,0,Math.PI*2); g.fill();
+  } else if(c.id==='cavan'){ // reckless charger: spiky orange hair + forward-lean motion lines
+    // spiky orange hair
+    g.fillStyle='#ff7a1a';
+    for(let i=-2;i<=2;i++){ g.beginPath();
+      g.moveTo(i*headR*0.42-headR*0.2, -bodyH*0.82);
+      g.lineTo(i*headR*0.42, -bodyH*1.12 - (i===0?headR*0.15:0));
+      g.lineTo(i*headR*0.42+headR*0.2, -bodyH*0.82); g.closePath(); g.fill(); }
+    g.beginPath(); g.arc(0,-bodyH*0.78, headR*1.02, Math.PI, Math.PI*2); g.fill();
+    // determined brow
+    g.strokeStyle='#111'; g.lineWidth=2;
+    g.beginPath(); g.moveTo(headR*0.1,-bodyH*0.82); g.lineTo(headR*0.6,-bodyH*0.76); g.stroke();
+    // speed/motion lines trailing behind when attacking (the forward launch)
+    if(atk){ g.strokeStyle=col; g.lineWidth=2.5; g.globalAlpha=0.7;
+      for(let i=0;i<3;i++){ const yy=-bodyH*0.3+i*bodyH*0.28; g.beginPath(); g.moveTo(-bodyW*0.5,yy); g.lineTo(-bodyW*1.0-i*4,yy); g.stroke(); }
+      g.globalAlpha=1; }
+  } else if(c.id==='casper'){ // car lover: driver's helmet + a car body wrapped around him
+    // racing helmet + visor
+    g.fillStyle=col; g.beginPath(); g.arc(0,-bodyH*0.8, headR*1.1, Math.PI, Math.PI*2); g.fill();
+    g.fillRect(-headR*1.1,-bodyH*0.8, headR*2.2, headR*0.5);
+    g.fillStyle='#111'; g.fillRect(-headR*0.9,-bodyH*0.74, headR*1.8, headR*0.5); // visor
+    // car body around the lower half (side view), wheels below
+    g.fillStyle=col;
+    g.beginPath();
+    g.moveTo(-bodyW*0.95, bodyH*0.5); g.lineTo(-bodyW*0.6, bodyH*0.05);
+    g.lineTo(bodyW*0.2, bodyH*0.05); g.lineTo(bodyW*0.55, bodyH*0.45);
+    g.lineTo(bodyW*1.0, bodyH*0.5); g.lineTo(bodyW*1.0, bodyH*0.75);
+    g.lineTo(-bodyW*0.95, bodyH*0.75); g.closePath(); g.fill();
+    // windshield tint
+    g.fillStyle='rgba(160,220,255,.5)';
+    g.beginPath(); g.moveTo(-bodyW*0.5,bodyH*0.1); g.lineTo(bodyW*0.1,bodyH*0.1); g.lineTo(bodyW*0.35,bodyH*0.4); g.lineTo(-bodyW*0.55,bodyH*0.4); g.closePath(); g.fill();
+    // wheels
+    g.fillStyle='#111';
+    g.beginPath(); g.arc(-bodyW*0.55, bodyH*0.78, bodyW*0.22, 0, Math.PI*2); g.fill();
+    g.beginPath(); g.arc(bodyW*0.6, bodyH*0.78, bodyW*0.22, 0, Math.PI*2); g.fill();
+    g.fillStyle='#ccc';
+    g.beginPath(); g.arc(-bodyW*0.55, bodyH*0.78, bodyW*0.09, 0, Math.PI*2); g.fill();
+    g.beginPath(); g.arc(bodyW*0.6, bodyH*0.78, bodyW*0.09, 0, Math.PI*2); g.fill();
+    // headlight + exhaust puff when driving
+    g.fillStyle='#fff'; g.beginPath(); g.arc(bodyW*0.95, bodyH*0.35, 3, 0, Math.PI*2); g.fill();
+  } else if(c.id==='robin'){ // big goofy kid: oversized round body + beanie + rosy cheeks
+    // extra-round belly overlay
+    g.fillStyle=col; g.beginPath(); g.arc(0,-bodyH*0.05, bodyW*0.7, 0, Math.PI*2); g.fill();
+    // beanie hat
+    g.fillStyle=dark; g.beginPath(); g.arc(0,-bodyH*0.82, headR*1.08, Math.PI, Math.PI*2); g.fill();
+    g.fillRect(-headR*1.08,-bodyH*0.82, headR*2.16, 4);
+    g.fillStyle='#fff'; g.beginPath(); g.arc(0,-bodyH*1.02, headR*0.35, 0, Math.PI*2); g.fill(); // pom-pom
+    // rosy cheeks + big grin
+    g.fillStyle='rgba(255,120,120,.6)';
+    g.beginPath(); g.arc(headR*0.55,-bodyH*0.7,2.6,0,Math.PI*2); g.fill();
+    g.beginPath(); g.arc(-headR*0.2,-bodyH*0.7,2.6,0,Math.PI*2); g.fill();
+    g.strokeStyle='#111'; g.lineWidth=1.5; g.beginPath(); g.arc(headR*0.2,-bodyH*0.74,3.2,0.1,Math.PI-0.1); g.stroke();
+    // juice box in hand when idle
+    if(!atk){ g.fillStyle='#ff6d00'; g.fillRect(armFwd, bodyH*0.05, 8, 11);
+      g.strokeStyle='#fff'; g.lineWidth=1; g.beginPath(); g.moveTo(armFwd+2,bodyH*0.05); g.lineTo(armFwd+2,bodyH*0.05-5); g.stroke(); }
+  } else if(c.id==='kayo'){ // TWO CATS STACKED: Yara balances on top of Kayo
+    g.restore();            // drop the standard humanoid body entirely
+    g.save();
+    g.translate(x + w/2, y + h/2 + bob);
+    g.scale(face,1);
+    const catW = w*0.4, catH = h*0.3;
+    // draws a single cat centered at (cx,cy); top cat is smaller & darker
+    function drawCat(cx, cy, s, body, ear, eye, wag){
+      g.save(); g.translate(cx,cy); g.scale(s,s);
+      // tail (swishes)
+      g.strokeStyle=ear; g.lineWidth=5; g.lineCap='round';
+      g.beginPath(); g.moveTo(-catW*0.5, catH*0.2);
+      g.quadraticCurveTo(-catW*0.95, catH*0.1 + Math.sin(t/120+wag)*8, -catW*0.85, -catH*0.4); g.stroke();
+      // body (rounded)
+      g.fillStyle=body; roundRect(g, -catW*0.5, -catH*0.35, catW, catH*0.9, catH*0.4);
+      // head
+      g.beginPath(); g.arc(catW*0.28, -catH*0.3, catH*0.42, 0, Math.PI*2); g.fill();
+      // ears
+      g.fillStyle=ear;
+      g.beginPath(); g.moveTo(catW*0.1,-catH*0.55); g.lineTo(catW*0.18,-catH*0.95); g.lineTo(catW*0.34,-catH*0.6); g.closePath(); g.fill();
+      g.beginPath(); g.moveTo(catW*0.34,-catH*0.62); g.lineTo(catW*0.48,-catH*0.98); g.lineTo(catW*0.52,-catH*0.55); g.closePath(); g.fill();
+      // eyes
+      g.fillStyle=eye;
+      g.beginPath(); g.arc(catW*0.2,-catH*0.32,3,0,Math.PI*2); g.fill();
+      g.beginPath(); g.arc(catW*0.38,-catH*0.32,3,0,Math.PI*2); g.fill();
+      // little front paws
+      g.fillStyle=body; g.beginPath(); g.arc(catW*0.12,catH*0.42,catH*0.16,0,Math.PI*2); g.fill();
+      g.beginPath(); g.arc(catW*0.38,catH*0.42,catH*0.16,0,Math.PI*2); g.fill();
+      // whiskers
+      g.strokeStyle='rgba(255,255,255,.8)'; g.lineWidth=1;
+      g.beginPath(); g.moveTo(catW*0.32,-catH*0.24); g.lineTo(catW*0.62,-catH*0.28); g.moveTo(catW*0.32,-catH*0.2); g.lineTo(catW*0.62,-catH*0.16); g.stroke();
+      g.restore();
+    }
+    // bottom cat (Kayo) — full-size, main color
+    drawCat(0, catH*0.55, 1.0, col, dark, '#ffe66d', 0);
+    // top cat (Yara) — a bit smaller, sits on Kayo's shoulders; hops a touch
+    const topBob = Math.sin(t/100)*2;
+    drawCat(0, -catH*0.55 + topBob, 0.8, dark, col, '#8fefff', 1.6);
+    // attack: top cat throws a swipe forward
+    if(state==='attack'){ g.strokeStyle='#fff'; g.lineWidth=2;
+      for(let k=-1;k<=1;k++){ g.beginPath(); g.arc(catW*0.7,-catH*0.4,11,-0.5+k*0.35,0.5+k*0.35); g.stroke(); } }
   } else if(c.id==='reshman'){ // small shadow, glowing eyes
     g.restore(); // redraw as blob
     g.save();
@@ -2199,16 +2670,31 @@ const STAGE_MUSIC = {
     bass:['C2','G2','C2','G2','F2','C2','G2','C2'] },
 };
 
+// shared 0-100 slider percent -> dB offset, used by both Music and SFX volume controls.
+// 100 = 0dB (unchanged), 0 = effectively silent, in between is a smooth ramp.
+function pctToGainDb(pct){
+  pct = Math.max(0, Math.min(100, Math.round(pct)));
+  return pct<=0 ? -60 : (pct-100)*0.4;
+}
 const Music = {
-  ready:false, synth:null, bassSynth:null, part:null, bassSeq:null, on:true, curId:null,
+  ready:false, synth:null, bassSynth:null, part:null, bassSeq:null, on:true, curId:null, masterVol:null,
   init(){
     if(this.ready || typeof Tone==='undefined') return;
     // gentle reverb + slap delay make the tone pleasant instead of piercing
-    const reverb = new Tone.Reverb({ decay:2.4, wet:0.22 }).toDestination();
+    const reverb = new Tone.Reverb({ decay:2.4, wet:0.22 });
     const delay = new Tone.FeedbackDelay({ delayTime:'8n.', feedback:0.18, wet:0.12 }).connect(reverb);
+    this.masterVol = new Tone.Volume(pctToGainDb(Save.getSetting('musicVol',100))).toDestination();
+    reverb.connect(this.masterVol);
     this.synth = new Tone.Synth({ oscillator:{type:'triangle'}, envelope:{attack:0.02,decay:0.25,sustain:0.2,release:0.35}, volume:-16 }).connect(delay);
     this.bassSynth = new Tone.Synth({ oscillator:{type:'sine'}, envelope:{attack:0.03,decay:0.3,sustain:0.35,release:0.4}, volume:-13 }).connect(reverb);
     this.ready=true;
+  },
+  // pct: 0-100, persisted to settings so it's remembered next launch (and by
+  // export/import save). Safe to call before init() — it just gets picked up
+  // once the audio graph actually exists.
+  setVolume(pct){
+    Save.setSetting('musicVol', pct);
+    if(this.masterVol) this.masterVol.volume.value = pctToGainDb(pct);
   },
   async play(stageId){
     if(!this.on) return;
@@ -2218,6 +2704,8 @@ const Music = {
     const m = STAGE_MUSIC[stageId] || STAGE_MUSIC.nl;
     this.stop();
     this.curId=stageId;
+    // stage ambience follows the stage music; menu has none
+    if(typeof SFX!=='undefined'){ if(stageId==='menu') SFX.stopAmbience(); else SFX.startAmbience(stageId); }
     Tone.Transport.bpm.value = m.bpm;
     this.synth.oscillator.type = m.wave;
     this.bassSynth.oscillator.type = m.bassWave || 'sine';
@@ -2255,13 +2743,152 @@ const Music = {
   },
   toggle(){
     this.on=!this.on;
-    if(!this.on){ this.stop(); }
-    else if(running && stagePick){ this.play(stagePick.id); }
+    if(!this.on){ this.stop(); SFX.stopAmbience(); }
+    else if(running && stagePick){ this.play(stagePick.id); SFX.startAmbience(stagePick.id); }
     return this.on;
   }
 };
 
-/* ---------------- FIGHTER ENTITY ---------------- */
+/* ---------------- SOUND EFFECTS (Tone.js, synth-generated) ---------------- */
+// A dedicated set of synths so combat SFX are independent of the music volume.
+// Each attack type maps to a short characterful sound; every stage gets a looping
+// ambience bed (wind, water, city hum, etc.). All routed through Music.on so the
+// mute button silences everything at once.
+const SFX = {
+  ready:false, blip:null, noise:null, noiseEnv:null, tone:null, amb:null, ambSynth:null, ambLoop:null, out:null, ambVol:null,
+  init(){
+    if(this.ready || typeof Tone==='undefined') return;
+    const g = pctToGainDb(Save.getSetting('sfxVol',100));
+    this.out = new Tone.Volume(-8+g).toDestination();
+    // pitched blips (zaps, coins, tones)
+    this.blip = new Tone.Synth({ oscillator:{type:'square'}, envelope:{attack:0.001,decay:0.12,sustain:0,release:0.05}, volume:-10 }).connect(this.out);
+    this.tone = new Tone.Synth({ oscillator:{type:'triangle'}, envelope:{attack:0.002,decay:0.2,sustain:0.05,release:0.1}, volume:-9 }).connect(this.out);
+    // noise burst (whooshes, explosions, impacts)
+    this.noiseEnv = new Tone.AmplitudeEnvelope({ attack:0.001, decay:0.18, sustain:0, release:0.08 }).connect(this.out);
+    this.noiseFilt = new Tone.Filter(1800,'lowpass').connect(this.noiseEnv);
+    this.noise = new Tone.Noise('white'); this.noise.connect(this.noiseFilt); this.noise.start();
+    // ambience bed
+    this.ambVol = new Tone.Volume(-26+g).toDestination();
+    this.ready=true;
+  },
+  // pct: 0-100, shared by hit-sounds and ambience so the two stay balanced.
+  setVolume(pct){
+    Save.setSetting('sfxVol', pct);
+    const g=pctToGainDb(pct);
+    if(this.out) this.out.volume.value = -8+g;
+    if(this.ambVol) this.ambVol.volume.value = -26+g;
+  },
+  ensure(){ if(!Music.on) return false; this.init(); return this.ready; },
+  // a filtered noise burst — used for whoosh/boom/impact; cutoff sets its "color"
+  burst(cutoff, dur, vol){
+    if(!this.ensure()) return;
+    try{
+      this.noiseFilt.frequency.rampTo(cutoff, 0.01);
+      this.noiseEnv.decay = dur||0.16;
+      const t=Tone.now();
+      this.noiseEnv.triggerAttackRelease(dur||0.16, t);
+    }catch(e){}
+  },
+  // a quick pitched note (zap/coin/tone)
+  beep(note, dur, kind){
+    if(!this.ensure()) return;
+    try{ (kind==='tone'?this.tone:this.blip).triggerAttackRelease(note, dur||'16n', Tone.now()); }catch(e){}
+  },
+  // a rising or falling pitch sweep (super, launches)
+  sweep(from, to, dur){
+    if(!this.ensure()) return;
+    try{ const t=Tone.now(); this.tone.triggerAttackRelease(from, dur||0.25, t);
+      this.tone.frequency.setValueAtTime(Tone.Frequency(from).toFrequency(), t);
+      this.tone.frequency.rampTo(Tone.Frequency(to).toFrequency(), dur||0.25, t); }catch(e){}
+  },
+  // Fire the sound that matches a fighter's special/attack type.
+  attack(kind){
+    switch(kind){
+      case 'melee':      this.burst(2600, 0.09); break;
+      case 'pitch': case 'curve': case 'serve': case 'evilserve':
+                         this.burst(3000, 0.10); this.beep('C5','32n'); break;
+      case 'drone': case 'minidrone': case 'swarm': this.beep('A4','32n'); this.beep('E5','32n'); break;
+      case 'bolt':       this.beep('B5','16n'); this.burst(4000,0.08); break;
+      case 'dash': case 'glitch': this.sweep('C4','C6',0.14); break;
+      case 'pound': case 'shock': this.burst(600,0.22); break;
+      case 'bomb': case 'flask': this.burst(900,0.28); break;
+      case 'rocks':      this.burst(700,0.2); break;
+      case 'frost':      this.beep('E6','32n'); this.beep('B5','32n'); break;
+      case 'kick': case 'pounce': case 'twocat': this.burst(2400,0.1); this.beep('G4','32n'); break;
+      case 'soundwave':  this.sweep('C3','C2',0.3); break;
+      case 'coins':      this.beep('E6','32n'); this.beep('G6','32n'); break;
+      case 'slipper':    this.burst(2200,0.1); break;
+      case 'numbers':    this.beep('D5','32n'); break;
+      case 'football':   this.burst(2000,0.12); break;
+      case 'pellet': case 'bullets': this.burst(3200,0.06); break;
+      case 'breakdance': this.sweep('E4','E5',0.2); break;
+      case 'controller': this.beep('C5','32n'); this.beep('G5','32n'); this.burst(2500,0.08); break;
+      case 'launch': this.sweep('C3','G4',0.18); this.burst(1600,0.14); break;
+      case 'car': this.sweep('G2','C4',0.3); this.burst(900,0.2); break;   // engine rev
+      case 'slam': this.burst(500,0.26); this.beep('C3','16n'); break;      // heavy thud
+      case 'doom': this.beep('A5','16n'); this.sweep('C3','C2',0.3); this.burst(2000,0.14); break; // cursed shriek
+      default:           this.burst(2600,0.1);
+    }
+  },
+  hit(){ this.burst(1400,0.12); this.beep('G3','32n'); },
+  shieldHit(){ this.beep('C6','32n'); },
+  ko(){ this.sweep('C5','C3',0.5); this.burst(500,0.4); },
+  super(){ this.sweep('C4','C6',0.4); this.burst(1200,0.35); },
+  jump(){ this.beep('C5','32n','tone'); },
+  // ---- per-stage ambience: a looping motif/texture unique to each map ----
+  startAmbience(stageId){
+    if(!this.ensure()) return;
+    this.stopAmbience();
+    const A = STAGE_AMBIENCE[stageId];
+    if(!A) return;
+    try{
+      if(A.type==='noise'){
+        // textural bed (wind / sea / rain / snow) — slow-pulsing filtered noise
+        this.ambSynth = new Tone.Noise(A.color||'pink');
+        this.ambFilt = new Tone.Filter(A.cutoff||500,'lowpass').connect(this.ambVol);
+        this.ambSynth.connect(this.ambFilt); this.ambSynth.volume.value=A.vol||-30; this.ambSynth.start();
+        // gentle swell
+        this.ambLoop = new Tone.LFO(A.rate||0.15, (A.cutoff||500)*0.5, A.cutoff||500).start();
+        this.ambLoop.connect(this.ambFilt.frequency);
+      } else {
+        // melodic motif (bells / chimes / calls) — a slow sparse loop
+        this.ambSynth = new Tone.Synth({ oscillator:{type:A.wave||'sine'}, envelope:{attack:0.05,decay:0.6,sustain:0,release:0.4}, volume:A.vol||-24 }).connect(this.ambVol);
+        let i=0;
+        this.ambLoop = new Tone.Loop((time)=>{
+          const n=A.notes[i%A.notes.length]; i++;
+          if(n) this.ambSynth.triggerAttackRelease(n, '2n', time);
+        }, A.every||'1n').start(0);
+      }
+    }catch(e){}
+  },
+  stopAmbience(){
+    try{ if(this.ambLoop){ this.ambLoop.dispose(); this.ambLoop=null; } }catch(e){}
+    try{ if(this.ambSynth){ this.ambSynth.dispose(); this.ambSynth=null; } }catch(e){}
+    try{ if(this.ambFilt){ this.ambFilt.dispose(); this.ambFilt=null; } }catch(e){}
+  }
+};
+// Each stage's signature ambience. 'noise' = textural bed; 'motif' = sparse melody.
+const STAGE_AMBIENCE = {
+  nl:{ type:'motif', wave:'triangle', notes:['C5',null,'E5',null], every:'1n', vol:-26 },   // gentle countryside chimes
+  jp:{ type:'motif', wave:'sine',     notes:['E5','A4',null,'B4'], every:'1n', vol:-24 },    // koto plucks
+  us:{ type:'noise', color:'brown', cutoff:700, rate:0.2, vol:-28 },                          // city hum
+  ru:{ type:'noise', color:'white', cutoff:400, rate:0.1, vol:-30 },                          // cold wind / snow
+  tr:{ type:'motif', wave:'triangle', notes:['D5','F5',null,'E5'], every:'1n', vol:-26 },     // bazaar bells
+  it:{ type:'motif', wave:'triangle', notes:['G4','B4','D5',null], every:'1n', vol:-26 },     // mandolin
+  ie:{ type:'noise', color:'white', cutoff:900, rate:0.4, vol:-30 },                          // sea + light rain
+  es:{ type:'motif', wave:'sawtooth', notes:['E4','A4',null,'G4'], every:'1n', vol:-27 },     // flamenco pluck
+  au:{ type:'noise', color:'brown', cutoff:350, rate:0.08, vol:-28 },                         // outback wind (didgeridoo-ish)
+  mg:{ type:'motif', wave:'triangle', notes:['C5','G4','A4',null], every:'1n', vol:-26 },     // jungle marimba
+  cn:{ type:'motif', wave:'sine',     notes:['C5','D5','G5',null], every:'1n', vol:-25 },     // guzheng
+  br:{ type:'motif', wave:'triangle', notes:['A4','C5',null,'E5'], every:'2n', vol:-26 },     // samba shaker feel
+  in:{ type:'motif', wave:'sawtooth', notes:['C5','Db5',null,'E5'], every:'1n', vol:-27 },    // sitar drone
+  rs:{ type:'noise', color:'pink',  cutoff:600, rate:0.15, vol:-29 },                         // fortress wind
+  fr:{ type:'motif', wave:'triangle', notes:['G4','B4','D5',null], every:'1n', vol:-26 },     // accordion lilt
+  eg:{ type:'noise', color:'brown', cutoff:450, rate:0.06, vol:-28 },                         // desert wind
+  mx:{ type:'motif', wave:'square',   notes:['C5','E5','G5',null], every:'1n', vol:-27 },     // festive trumpet
+};
+
+
 class Fighter{
   constructor(def, x, isBot, costume, memeId){
     this.def=def;
@@ -2306,7 +2933,7 @@ let players=[], projectiles=[], particles=[], strikes=[], shocks=[], afterimages
 let soccerBall=null, soccerScore=[0,0], soccerGoalTimer=0;
 let keys={};
 let running=false;
-let mode='1p';                 // '1p' or '2p'  (opponent = human or bot)
+let mode='1p';                 // '1p', '2p', or 'online'
 let gameMode='stock';          // ruleset id (see GAMEMODES)
 let p1Pick=null, p2Pick=null;  // p2 is bot in 1p mode
 let p1Meme='none', p2Meme='none';
@@ -2314,6 +2941,42 @@ let botCostume=0;              // chosen bot skin index for 1P config
 let hitStop=0;
 let shakeT=0;
 let classic=null;              // active Classic Mode run, or null
+let paused=false;              // true while the pause overlay is up (local matches only)
+
+/* ---------------- ONLINE NETCODE (Firebase RTDB via REST) ---------------- */
+// No SDK (the artifact CSP blocks it). We talk to the Realtime Database over its
+// plain HTTPS REST API: GET/PUT/PATCH/DELETE on <dbURL>/<path>.json.
+// Model: each client simulates ONLY its own fighter and broadcasts that fighter's
+// state; the opponent fighter is drawn from their broadcast. Hits are sent as
+// events the other client applies to itself. Host owns rules + stage.
+const FIREBASE_DB_URL = 'https://widf-2b62d-default-rtdb.europe-west1.firebasedatabase.app';
+const Net = {
+  connected:false, isHost:false, roomCode:null, meSlot:null, foeSlot:null,
+  _seq:0, _pollTimer:null, _waitTimer:null, _lastSend:0, _lastSentKey:null, _lastAppliedHit:0,
+  _projSeq:0, _lastProjSeq:0, _fxSeq:0, _lastFxSeq:0,
+  _cur:null, _prev:null, _curRecvT:0, _prevRecvT:0, _avgGap:0, _renderX:undefined, _renderY:undefined, _pingEst:0,
+  _polling:false, _useSSE:false,
+  _matchStarted:false, _searching:false, _abort:false,
+};
+function dbUrl(path){ return FIREBASE_DB_URL+'/'+path+'.json'; }
+async function dbGet(path){
+  try{ const r=await fetch(dbUrl(path)); if(!r.ok) return undefined; return await r.json(); }
+  catch(e){ return undefined; }
+}
+async function dbPut(path, val){
+  try{ await fetch(dbUrl(path), {method:'PUT', body:JSON.stringify(val)}); return true; }
+  catch(e){ return false; }
+}
+async function dbPatch(path, val){
+  try{ await fetch(dbUrl(path), {method:'PATCH', body:JSON.stringify(val)}); return true; }
+  catch(e){ return false; }
+}
+async function dbDelete(path){
+  try{ await fetch(dbUrl(path), {method:'DELETE'}); return true; }
+  catch(e){ return false; }
+}
+function randCode(){ const A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s=''; for(let i=0;i<5;i++) s+=A[Math.floor(Math.random()*A.length)]; return s; }
+
 
 /* ---------------- SAVE SYSTEM (localStorage) ---------------- */
 // Progress persists in the browser across sessions. A profile name lets you
@@ -2327,6 +2990,12 @@ const Save = {
       const raw=localStorage.getItem(this.KEY);
       if(raw){ const d=JSON.parse(raw); this.data={ profile:d.profile||'PLAYER 1', medals:d.medals||{}, epics:d.epics||{}, achievements:d.achievements||{}, stats:d.stats||{}, dev:!!d.dev, devPass:d.devPass||'', settings:d.settings||{} }; }
     }catch(e){ /* storage blocked; run with in-memory defaults */ }
+  },
+  // replaces the whole save in one go (used by IMPORT SAVE); falls back to
+  // defaults per-field so an older or partial file never crashes the app.
+  loadFromObject(d){
+    this.data={ profile:(d&&d.profile)||'PLAYER 1', medals:(d&&d.medals)||{}, epics:(d&&d.epics)||{}, achievements:(d&&d.achievements)||{}, stats:(d&&d.stats)||{}, dev:!!(d&&d.dev), devPass:(d&&d.devPass)||'', settings:(d&&d.settings)||{} };
+    this.save();
   },
   save(){
     try{ localStorage.setItem(this.KEY, JSON.stringify(this.data)); }catch(e){}
@@ -2351,32 +3020,88 @@ Save.load();
 
 /* ---------------- ACHIEVEMENTS ---------------- */
 // Each: id, name, desc, icon, and check(save) => bool (computed from stats/medals).
-// Some unlock a hidden character (unlocks: id).
+// Many gate a locked character. You start with ONE fighter per category and
+// unlock the rest by earning achievements; clearing EVERY achievement reveals
+// the final secret fighter (Zennith).
 const ACHIEVEMENTS = [
-  { id:'firstwin',  name:'FIRST BLOOD',      icon:'🥇', desc:'Win your first match.',
-    check:s=>s.stat('wins')>=1 },
-  { id:'win10',     name:'CONTENDER',        icon:'🔟', desc:'Win 10 matches.',
-    check:s=>s.stat('wins')>=10, unlocks:'ati' },
-  { id:'classic1',  name:'STORYTELLER',      icon:'📖', desc:'Clear Classic Mode with any fighter.',
-    check:s=>Object.keys(s.data.medals).length>=1, unlocks:'dean' },
-  { id:'super5',    name:'SUPERSTAR',        icon:'⭐', desc:'Unleash 5 Super attacks.',
-    check:s=>s.stat('supers')>=5, unlocks:'niek' },
-  { id:'boss',      name:'GIANT SLAYER',     icon:'🗡️', desc:'Defeat the Giant Boss.',
-    check:s=>s.stat('bossWins')>=1, unlocks:'thomas' },
-  { id:'medals5',   name:'HALL OF FAME',     icon:'🏛️', desc:'Earn 5 Classic Mode medals.',
-    check:s=>Object.keys(s.data.medals).length>=5, unlocks:'giancarlo' },
-  { id:'flawless',  name:'FLAWLESS',         icon:'💯', desc:'Win a match without losing a life.',
-    check:s=>s.stat('flawless')>=1 },
-  { id:'meme10',    name:'MEME LORD',        icon:'😎', desc:'Win 5 matches with a meme equipped.',
-    check:s=>s.stat('memeWins')>=5 },
-  { id:'allstages', name:'GLOBETROTTER',     icon:'🌍', desc:'Fight on 8 different stages.',
-    check:s=>Object.keys(s.data.stats).filter(k=>k.startsWith('stage_')).length>=8 },
-  { id:'soccer',    name:'BACK OF THE NET',   icon:'⚽', desc:'Win a SOCCER match.',
-    check:s=>s.stat('soccerWins')>=1, unlocks:'oela' },
+  { id:'firstwin',  name:'FIRST BLOOD',     icon:'🥇', desc:'Win your first match.',            check:s=>s.stat('wins')>=1 },
+  { id:'win5',      name:'ON A ROLL',       icon:'🔥', desc:'Win 5 matches.',                    check:s=>s.stat('wins')>=5 },
+  { id:'win10',     name:'CONTENDER',       icon:'🔟', desc:'Win 10 matches.',                   check:s=>s.stat('wins')>=10 },
+  { id:'win25',     name:'WARLORD',         icon:'⚔️', desc:'Win 25 matches.',                   check:s=>s.stat('wins')>=25 },
+  { id:'win50',     name:'LEGEND',          icon:'👑', desc:'Win 50 matches.',                   check:s=>s.stat('wins')>=50 },
+  { id:'classic1',  name:'STORYTELLER',     icon:'📖', desc:'Clear Classic Mode with any fighter.', check:s=>Object.keys(s.data.medals).length>=1 },
+  { id:'medals3',   name:'RISING STAR',     icon:'🌟', desc:'Earn 3 Classic Mode medals.',        check:s=>Object.keys(s.data.medals).length>=3 },
+  { id:'medals5',   name:'HALL OF FAME',    icon:'🏛️', desc:'Earn 5 Classic Mode medals.',        check:s=>Object.keys(s.data.medals).length>=5 },
+  { id:'medals10',  name:'DECORATED',       icon:'🎖️', desc:'Earn 10 Classic Mode medals.',       check:s=>Object.keys(s.data.medals).length>=10 },
+  { id:'super1',    name:'FINISH HIM',      icon:'✨', desc:'Unleash your first Super.',          check:s=>s.stat('supers')>=1 },
+  { id:'super5',    name:'SUPERSTAR',       icon:'⭐', desc:'Unleash 5 Super attacks.',           check:s=>s.stat('supers')>=5 },
+  { id:'super20',   name:'OVERCHARGED',     icon:'💥', desc:'Unleash 20 Super attacks.',          check:s=>s.stat('supers')>=20 },
+  { id:'boss',      name:'GIANT SLAYER',    icon:'🗡️', desc:'Defeat the Giant Boss.',            check:s=>s.stat('bossWins')>=1 },
+  { id:'boss3',     name:'TITAN BREAKER',   icon:'🐉', desc:'Defeat the Giant Boss 3 times.',     check:s=>s.stat('bossWins')>=3 },
+  { id:'flawless',  name:'FLAWLESS',        icon:'💯', desc:'Win a match without losing a life.', check:s=>s.stat('flawless')>=1 },
+  { id:'flawless5', name:'UNTOUCHABLE',     icon:'🛡️', desc:'Win 5 matches flawlessly.',          check:s=>s.stat('flawless')>=5 },
+  { id:'meme5',     name:'MEME LORD',       icon:'😎', desc:'Win 5 matches with a meme equipped.', check:s=>s.stat('memeWins')>=5 },
+  { id:'meme15',    name:'MEME MACHINE',    icon:'🤪', desc:'Win 15 matches with a meme equipped.', check:s=>s.stat('memeWins')>=15 },
+  { id:'stages4',   name:'TRAVELER',        icon:'🧭', desc:'Fight on 4 different stages.',        check:s=>Object.keys(s.data.stats).filter(k=>k.startsWith('stage_')).length>=4 },
+  { id:'allstages', name:'GLOBETROTTER',    icon:'🌍', desc:'Fight on 8 different stages.',        check:s=>Object.keys(s.data.stats).filter(k=>k.startsWith('stage_')).length>=8 },
+  { id:'allstages2',name:'WORLD TOUR',      icon:'✈️', desc:'Fight on 14 different stages.',       check:s=>Object.keys(s.data.stats).filter(k=>k.startsWith('stage_')).length>=14 },
+  { id:'soccer',    name:'BACK OF THE NET', icon:'⚽', desc:'Win a SOCCER match.',                check:s=>s.stat('soccerWins')>=1 },
+  { id:'soccer3',   name:'HAT TRICK',       icon:'🥅', desc:'Win 3 SOCCER matches.',              check:s=>s.stat('soccerWins')>=3 },
+  { id:'ko50',      name:'KNOCKOUT KING',   icon:'🥊', desc:'Score 50 KOs.',                      check:s=>s.stat('kos')>=50 },
+  { id:'ko150',     name:'DEMOLITION MAN',  icon:'☄️', desc:'Score 150 KOs.',                     check:s=>s.stat('kos')>=150 },
+  { id:'sudden',    name:'SUDDEN IMPACT',   icon:'⚡', desc:'Win a SUDDEN DEATH match.',           check:s=>s.stat('suddenWins')>=1 },
+  { id:'moon',      name:'MOONWALKER',      icon:'🌙', desc:'Win a LOW GRAVITY match.',           check:s=>s.stat('moonWins')>=1 },
+  { id:'charged',   name:'POWER SURGE',     icon:'🔋', desc:'Win a SUPER CHARGE match.',          check:s=>s.stat('chargedWins')>=1 },
+  { id:'online1',   name:'CHALLENGER',      icon:'🌐', desc:'Win an ONLINE 1v1 duel.',            check:s=>s.stat('onlineWins')>=1 },
+  { id:'taunt',     name:'SHOWBOAT',        icon:'💃', desc:'Taunt 10 times.',                    check:s=>s.stat('taunts')>=10 },
 ];
-// Which hidden characters are locked behind which achievement:
-const UNLOCK_BY_CHAR = {}; ACHIEVEMENTS.forEach(a=>{ if(a.unlocks) UNLOCK_BY_CHAR[a.unlocks]=a.id; });
-function charUnlocked(id){ if(Save.data.dev) return true; const req=UNLOCK_BY_CHAR[id]; return !req || Save.hasAch(req); }
+
+// ---- OP hidden characters: unlocked by Classic Mode MEDAL count ----
+// casper/robin are excluded from the medal denominator so they can't gate
+// themselves; casper unlocks at HALF the medals, robin at ALL of them.
+// zennith (finalChar) is the exception below: gated on ALL achievements.
+function normalRoster(){ return ROSTER.filter(c=>!c.opChar); }
+function medalsEarned(){ return normalRoster().filter(c=>Save.hasMedal(c.id)).length; }
+function medalsTotal(){ return normalRoster().length; }
+function opMedalReq(id){
+  const total=medalsTotal();
+  if(id==='casper') return Math.ceil(total/2);   // half of all medals
+  if(id==='robin')  return total;                 // every medal
+  return 0;
+}
+// All achievements earned? (gates the final secret fighter)
+function allAchievements(){ return ACHIEVEMENTS.every(a=>Save.hasAch(a.id)); }
+
+// ---- Character gating ----
+// You START with the FIRST fighter in each category (a free starter). Every other
+// normal fighter is locked behind an achievement, auto-assigned 1:1 so each
+// achievement you earn reveals a new fighter. opChars use medals; the final
+// fighter uses all-achievements.
+let _STARTERS=null, _UNLOCK_BY_CHAR=null;
+function computeUnlockMap(){
+  if(_UNLOCK_BY_CHAR) return;
+  _STARTERS = new Set();
+  CATEGORIES.forEach(cat=>{ if(!cat.secret){ const first=cat.ids.find(id=>{ const c=ROSTER.find(x=>x.id===id); return c && !c.opChar; }); if(first) _STARTERS.add(first); } });
+  // characters that need an achievement gate: all normal (non-OP) non-starters
+  const toGate = ROSTER.filter(c=>!c.opChar && !_STARTERS.has(c.id)).map(c=>c.id);
+  // achievements available to assign (skip the very first so FIRST BLOOD stays a freebie milestone)
+  const pool = ACHIEVEMENTS.map(a=>a.id);
+  _UNLOCK_BY_CHAR = {};
+  toGate.forEach((cid, i)=>{ _UNLOCK_BY_CHAR[cid] = pool[i % pool.length]; });
+}
+// name of the achievement gating a char (for hints)
+function achForChar(id){ computeUnlockMap(); return _UNLOCK_BY_CHAR[id]; }
+function charUnlocked(id){
+  if(Save.data.dev) return true;
+  const c=ROSTER.find(x=>x.id===id);
+  if(!c) return true;
+  if(c.finalChar) return allAchievements();          // Zennith: earn EVERYTHING
+  if(c.opChar) return medalsEarned() >= opMedalReq(id); // casper/robin: medals
+  computeUnlockMap();
+  if(_STARTERS.has(id)) return true;                  // free starter
+  const req=_UNLOCK_BY_CHAR[id]; return !req || Save.hasAch(req);
+}
+
 // Re-check all achievements; returns list of newly-earned ones (for toasts).
 function checkAchievements(){
   const newly=[];
@@ -2436,10 +3161,11 @@ const costMap = {}; // id -> costume index 0..4
 
 // Fighter categories by playstyle — shown as titled groups on the select screen.
 const CATEGORIES = [
-  { name:'MELEE',   icon:'⚔️', ids:['reshman','lars','fionn','yassin','metaai','dean','thomas'] },
+  { name:'MELEE',   icon:'⚔️', ids:['reshman','lars','fionn','yassin','metaai','dean','thomas','kayo','cavan'] },
   { name:'RANGED',  icon:'🎯', ids:['nathan','milo','adam','evadam','deniz','niffo','jax','femi','enno','thorren','niek','giancarlo','oela'] },
-  { name:'HOMING',  icon:'🧲', ids:['josh','renas','devin','ati'] },
-  { name:'THROWERS',icon:'💣', ids:['daniel','doremalen'] },
+  { name:'HOMING',  icon:'🧲', ids:['josh','renas','devin','ati'], pairWithNext:true },
+  { name:'THROWERS',icon:'💣', ids:['daniel','doremalen','jace','ash'] },
+  { name:'SECRET',  icon:'✦', ids:['casper','robin','zennith'], secret:true },
 ];
 // map id -> category order so any unlisted fighter still lands somewhere sensible
 const CAT_OF = {}; CATEGORIES.forEach((cat,ci)=>cat.ids.forEach(id=>CAT_OF[id]=ci));
@@ -2484,28 +3210,61 @@ function buildCharTile(c){
   return el;
 }
 
-// build one titled group per category, in category order
-CATEGORIES.forEach((cat,ci)=>{
+// build one titled group per category, in category order.
+// A category flagged pairWithNext renders side-by-side with the following one,
+// split by a vertical divider, on a single line.
+// A char with `hidden` stays completely out of the grid until it's unlocked —
+// no silhouette, no "?" tile (unlike normal locked chars, which show a mystery tile).
+function catVisibleChars(ci){
+  return ROSTER.filter(c=>CAT_OF[c.id]===ci && !(c.hidden && !charUnlocked(c.id)));
+}
+function buildCatGroup(cat, ci){
   const group=document.createElement('div'); group.className='catgroup';
   group.innerHTML=`<div class="cathead"><span class="cicon">${cat.icon}</span>${cat.name}</div>`;
   const row=document.createElement('div'); row.className='catrow';
-  // members of this category, in roster order
-  ROSTER.filter(c=>CAT_OF[c.id]===ci).forEach(c=> row.appendChild(buildCharTile(c)) );
+  catVisibleChars(ci).forEach(c=> row.appendChild(buildCharTile(c)) );
   group.appendChild(row);
-  roster.appendChild(group);
-});
-// any fighter not assigned to a category (safety net) goes in a final group
-const leftovers=ROSTER.filter(c=>CAT_OF[c.id]===undefined);
-if(leftovers.length){
-  const group=document.createElement('div'); group.className='catgroup';
-  group.innerHTML=`<div class="cathead"><span class="cicon">✦</span>OTHER</div>`;
-  const row=document.createElement('div'); row.className='catrow';
-  leftovers.forEach(c=> row.appendChild(buildCharTile(c)) );
-  group.appendChild(row); roster.appendChild(group);
+  return group;
 }
+function buildRoster(){
+  roster.innerHTML='';
+  CATEGORIES.forEach(c=>{ delete c._consumed; });
+  CATEGORIES.forEach((cat,ci)=>{
+    if(cat._consumed) return;
+    // a secret group with nothing unlocked yet renders nothing at all
+    if(cat.secret && catVisibleChars(ci).length===0){ return; }
+    if(cat.pairWithNext && CATEGORIES[ci+1]){
+      const pairWrap=document.createElement('div'); pairWrap.className='catpair';
+      pairWrap.appendChild(buildCatGroup(cat, ci));
+      const div=document.createElement('div'); div.className='catdivider'; pairWrap.appendChild(div);
+      pairWrap.appendChild(buildCatGroup(CATEGORIES[ci+1], ci+1));
+      CATEGORIES[ci+1]._consumed=true;
+      roster.appendChild(pairWrap);
+    } else {
+      roster.appendChild(buildCatGroup(cat, ci));
+    }
+  });
+  // any fighter not assigned to a category (safety net) goes in a final group
+  const leftovers=ROSTER.filter(c=>CAT_OF[c.id]===undefined && !(c.hidden && !charUnlocked(c.id)));
+  if(leftovers.length){
+    const group=document.createElement('div'); group.className='catgroup';
+    group.innerHTML=`<div class="cathead"><span class="cicon">✦</span>OTHER</div>`;
+    const row=document.createElement('div'); row.className='catrow';
+    leftovers.forEach(c=> row.appendChild(buildCharTile(c)) );
+    group.appendChild(row); roster.appendChild(group);
+  }
+  rebuildRosterMedals();
+}
+buildRoster();
 
 // name of the achievement that unlocks a locked character (for the hint)
-function STORY_ACH_NAME(id){ const a=ACHIEVEMENTS.find(x=>x.id===UNLOCK_BY_CHAR[id]); return a?('UNLOCK: '+a.name):''; }
+function STORY_ACH_NAME(id){
+  const c=ROSTER.find(x=>x.id===id);
+  if(c && c.finalChar) return 'UNLOCK: EARN EVERY ACHIEVEMENT';
+  if(c && c.opChar) return id==='casper'?'UNLOCK: HALF THE MEDALS':'UNLOCK: ALL THE MEDALS';
+  const a=ACHIEVEMENTS.find(x=>x.id===achForChar(id));
+  return a?('UNLOCK: '+a.name):'';
+}
 
 // show a medal on tiles for characters that cleared Classic Mode; show locks
 function rebuildRosterMedals(){
@@ -2642,7 +3401,7 @@ document.getElementById('muteBtn').onclick=(e)=>{
 
 /* ---------------- SCREEN FLOW ---------------- */
 function show(id){
-  ['title','mode','select','stage','result','versus','story','achieve','settings'].forEach(s=>document.getElementById(s).classList.toggle('hidden', s!==id));
+  ['title','mode','select','stage','result','versus','story','achieve','settings','online','waitroom','stats','howto'].forEach(s=>document.getElementById(s).classList.toggle('hidden', s!==id));
   document.body.classList.remove('in-match');
   // reset any scrollable menu back to the top so its heading is always visible on entry
   const el=document.getElementById(id);
@@ -2650,30 +3409,115 @@ function show(id){
   // never let a leftover achievement toast pop while navigating pre-match menus
   if(id!=='result'){ _toastQ.length=0; const tt=document.getElementById('achToast'); if(tt) tt.classList.remove('show'); _toastBusy=false; }
   // menu screens share a catchy menu theme; the match screens use stage music
-  const menuScreens=['title','mode','select','stage','achieve','result','story','settings'];
+  const menuScreens=['title','mode','select','stage','achieve','result','story','settings','online','waitroom','stats','howto'];
   if(menuScreens.includes(id)){ if(Music.curId!=='menu') Music.play('menu'); }
 }
 
-document.getElementById('startBtn').onclick=()=>{ classic=null; show('mode'); };
+document.getElementById('startBtn').onclick=()=>{ classic=null; updateModeCards(); show('mode'); };
 
 // ACHIEVEMENTS menu
 function buildAchList(){
   const list=document.getElementById('achList'); list.innerHTML='';
   const done=ACHIEVEMENTS.filter(a=>Save.hasAch(a.id)).length;
   document.getElementById('achCount').textContent = done+' / '+ACHIEVEMENTS.length+' UNLOCKED';
+  const pct = ACHIEVEMENTS.length ? Math.round((done/ACHIEVEMENTS.length)*100) : 0;
+  document.getElementById('achFill').style.width = pct+'%';
+  const currentBanner = Save.getSetting('homeBanner', null);
   ACHIEVEMENTS.forEach(a=>{
     const got=Save.hasAch(a.id);
     const row=document.createElement('div');
     row.className='ach'+(got?' done':'');
-    const unlockName = a.unlocks ? (ROSTER.find(r=>r.id===a.unlocks)||{}).name : null;
+    const unlockName = achUnlocksName(a.id);
+    const isBanner = got && currentBanner===a.id;
+    const stateHtml = got
+      ? `<button class="bannerBtn${isBanner?' on':''}" data-id="${a.id}">${isBanner?'★ HOME SCREEN':'SET AS HOME'}</button>`
+      : 'LOCKED';
     row.innerHTML=`<div class="ai">${a.icon}</div>
       <div><div class="at">${a.name}</div><div class="ad">${a.desc}</div>${unlockName?`<div class="au">UNLOCKS: ${unlockName}</div>`:''}</div>
-      <div class="astate">${got?'DONE':'LOCKED'}</div>`;
+      <div class="astate">${stateHtml}</div>`;
     list.appendChild(row);
   });
+  list.querySelectorAll('.bannerBtn').forEach(btn=>{
+    btn.addEventListener('click',(e)=>{
+      e.stopPropagation();
+      const id=btn.dataset.id;
+      const cur=Save.getSetting('homeBanner', null);
+      Save.setSetting('homeBanner', cur===id ? null : id);
+      buildAchList();
+      applyHomeBanner();
+    });
+  });
+}
+// shows the chosen achievement (icon watermark + label) behind the title screen,
+// or hides it entirely if none is chosen — or if the chosen one is no longer
+// unlocked (e.g. after a progress reset), so it degrades gracefully either way.
+function applyHomeBanner(){
+  const bannerId = Save.getSetting('homeBanner', null);
+  const a = (bannerId && Save.hasAch(bannerId)) ? ACHIEVEMENTS.find(x=>x.id===bannerId) : null;
+  const bg=document.getElementById('homeIconBg'), lbl=document.getElementById('homeLabelText');
+  if(a){ bg.textContent=a.icon; bg.style.display='block'; lbl.textContent='SHOWCASING: '+a.name; lbl.style.display='block'; }
+  else { bg.style.display='none'; lbl.style.display='none'; }
+}
+// which fighter (if any) an achievement reveals — from the auto-assigned gate map
+function achUnlocksName(achId){
+  computeUnlockMap();
+  const cid=Object.keys(_UNLOCK_BY_CHAR).find(k=>_UNLOCK_BY_CHAR[k]===achId);
+  return cid ? (ROSTER.find(r=>r.id===cid)||{}).name : null;
 }
 document.getElementById('achBtn').onclick=()=>{ buildAchList(); show('achieve'); };
 document.getElementById('achBack').onclick=()=>{ show('title'); };
+
+/* ---------------- STATS SCREEN ---------------- */
+function buildStatsScreen(){
+  const grid=document.getElementById('statGrid'); grid.innerHTML='';
+  const stagesVisited = Object.keys(Save.data.stats).filter(k=>k.startsWith('stage_')).length;
+  const achDone = ACHIEVEMENTS.filter(a=>Save.hasAch(a.id)).length;
+  const entries=[
+    ['WINS', Save.stat('wins')],
+    ['KOs', Save.stat('kos')],
+    ['SUPERS USED', Save.stat('supers')],
+    ['FLAWLESS WINS', Save.stat('flawless')],
+    ['TAUNTS', Save.stat('taunts')],
+    ['BOSS WINS', Save.stat('bossWins')],
+    ['ONLINE WINS', Save.stat('onlineWins')],
+    ['SOCCER WINS', Save.stat('soccerWins')],
+    ['SUDDEN DEATH WINS', Save.stat('suddenWins')],
+    ['LOW GRAVITY WINS', Save.stat('moonWins')],
+    ['POWER SURGE WINS', Save.stat('chargedWins')],
+    ['MEME WINS', Save.stat('memeWins')],
+    ['MEDALS', medalsEarned()+' / '+medalsTotal()],
+    ['STAGES VISITED', stagesVisited+' / '+STAGES.length],
+    ['ACHIEVEMENTS', achDone+' / '+ACHIEVEMENTS.length],
+  ];
+  entries.forEach(([label,val])=>{
+    const c=document.createElement('div'); c.className='statcard';
+    c.innerHTML=`<div class="sv">${val}</div><div class="sl">${label}</div>`;
+    grid.appendChild(c);
+  });
+}
+document.getElementById('statsBtn').onclick=()=>{ buildStatsScreen(); show('stats'); };
+document.getElementById('statsBack').onclick=()=>{ show('title'); };
+
+/* ---------------- HOW TO PLAY / MOVELIST ---------------- */
+function buildMoveList(){
+  const list=document.getElementById('moveList'); list.innerHTML='';
+  ROSTER.filter(c=>!(c.hidden && !charUnlocked(c.id))).forEach(c=>{
+    const unlocked=charUnlocked(c.id);
+    const card=document.createElement('div'); card.className='movecard';
+    if(!unlocked){
+      const reqAch = ACHIEVEMENTS.find(a=>a.id===achForChar(c.id));
+      card.innerHTML=`<div class="mcname" style="color:${c.color}">${c.name}</div><div class="mcdesc">🔒 LOCKED — ${reqAch?('unlocks via: '+reqAch.name):'keep playing to unlock'}</div>`;
+    } else {
+      card.innerHTML=`<div class="mcname" style="color:${c.color}">${c.name}</div><div class="mcdesc">${c.desc}</div>
+        <div class="mv"><b style="color:${c.color}">K</b> ${c.move}</div>
+        <div class="mv"><b style="color:#fdbb2d">↑</b> ${c.up}</div>
+        <div class="mv"><b style="color:#ff5714">★</b> ${c.sup}</div>`;
+    }
+    list.appendChild(card);
+  });
+}
+document.getElementById('howtoBtn').onclick=()=>{ buildMoveList(); show('howto'); };
+document.getElementById('howtoBack').onclick=()=>{ show('title'); };
 
 /* ---------------- SETTINGS MENU ---------------- */
 const DEV_PASSWORD = 'WATIN2026';   // dev-mode unlock password
@@ -2713,10 +3557,14 @@ function refreshSettingsUI(){
   document.getElementById('devHint').textContent = Save.data.dev
     ? 'Dev mode ON — every character is unlocked.'
     : 'Unlock every character with a password.';
+  document.getElementById('musicVolSlider').value = Save.getSetting('musicVol', 100);
+  document.getElementById('sfxVolSlider').value = Save.getSetting('sfxVol', 100);
   buildKeyGrid();
 }
 document.getElementById('settingsBtn').onclick=()=>{ refreshSettingsUI(); show('settings'); };
 document.getElementById('settingsBack').onclick=()=>{ show('title'); };
+document.getElementById('musicVolSlider').oninput=(e)=>{ Music.setVolume(+e.target.value); };
+document.getElementById('sfxVolSlider').oninput=(e)=>{ SFX.setVolume(+e.target.value); };
 document.getElementById('mobileToggle').onclick=()=>{
   const now=!Save.getSetting('mobile',false);
   Save.setSetting('mobile', now);
@@ -2740,6 +3588,47 @@ document.querySelectorAll('.ctrltab').forEach(tab=>{
 document.getElementById('resetKeys').onclick=()=>{
   if(ctrlPlayer===1) SCHEME1={...DEFAULT_SCHEME1}; else SCHEME2={...DEFAULT_SCHEME2};
   saveScheme(); awaitingKey=null; buildKeyGrid();
+};
+/* ---- export / import save file, so progress survives a cleared browser or a new device ---- */
+document.getElementById('exportSaveBtn').onclick=()=>{
+  const statusEl=document.getElementById('saveIOStatus');
+  try{
+    const payload={ app:'watInDeFighters', saveVersion:1, exportedAt:new Date().toISOString(), data:Save.data };
+    const blob=new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const safeName=(Save.data.profile||'player').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-+|-+$)/g,'')||'player';
+    const a=document.createElement('a');
+    a.href=url; a.download='widr-fighters-save-'+safeName+'.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 2000);
+    statusEl.textContent='Save file downloaded.';
+  }catch(e){ statusEl.textContent="Couldn't export — try a different browser."; }
+};
+document.getElementById('importSaveBtn').onclick=()=>{ document.getElementById('importSaveInput').click(); };
+document.getElementById('importSaveInput').onchange=(e)=>{
+  const statusEl=document.getElementById('saveIOStatus');
+  const file=e.target.files[0];
+  e.target.value='';   // reset so re-picking the same file still fires onchange
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const parsed=JSON.parse(reader.result);
+      // accepts an EXPORT SAVE file (wrapped in {data:...}) OR a raw save
+      // object, so an older export format still imports fine.
+      const incoming=(parsed && typeof parsed==='object' && parsed.data && typeof parsed.data==='object') ? parsed.data : parsed;
+      if(!incoming || typeof incoming!=='object') throw new Error('bad format');
+      if(!confirm('This replaces your current profile, medals, achievements and settings. Continue?')) return;
+      Save.loadFromObject(incoming);
+      rebuildRosterMedals&&rebuildRosterMedals();
+      refreshProfileLine();
+      applyHomeBanner();
+      refreshSettingsUI();
+      statusEl.textContent='Save imported — welcome back, '+Save.data.profile+'.';
+    }catch(err){ statusEl.textContent="That file doesn't look like a valid save."; }
+  };
+  reader.onerror=()=>{ statusEl.textContent='Could not read that file.'; };
+  reader.readAsText(file);
 };
 // capture the next keypress when rebinding on the settings screen
 window.addEventListener('keydown', e=>{
@@ -2769,7 +3658,7 @@ function pumpToasts(){
 // grant + refresh + toast any newly-earned achievements
 function grantAndToast(){
   const newly=checkAchievements();
-  if(newly.length){ rebuildRosterMedals(); refreshProfileLine(); queueAchToasts(newly); }
+  if(newly.length){ buildRoster(); refreshProfileLine(); queueAchToasts(newly); }
   return newly;
 }
 
@@ -2785,18 +3674,19 @@ document.getElementById('classicBtn').onclick=()=>{
 // profile line on the title screen (click to rename save)
 function refreshProfileLine(){
   const el=document.getElementById('profileLine');
-  const medals=Object.keys(Save.data.medals).length;
+  const medals=medalsEarned();   // count only the normal roster (OP chars excluded)
   el.innerHTML=`PROFILE: <b>${Save.data.profile}</b> · <span style="text-decoration:underline">rename</span>`;
   // medal badge next to CLASSIC MODE
   const mc=document.getElementById('medalCount'), mt=document.getElementById('medalTotal');
   if(mc) mc.textContent=medals;
-  if(mt) mt.textContent=ROSTER.length;
+  if(mt) mt.textContent=medalsTotal();
 }
 document.getElementById('profileLine').onclick=()=>{
   const name=prompt('Save profile name:', Save.data.profile);
   if(name){ Save.setProfile(name); refreshProfileLine(); }
 };
 refreshProfileLine();
+applyHomeBanner();
 applyMobileMode();
 
 // build ruleset chips
@@ -2995,10 +3885,319 @@ function startMatch(){
   Music.play(stagePick.id);
 }
 
+/* ---------------- ONLINE MATCH ---------------- */
+// Called on BOTH clients once a room is paired. Host = P1 (left), joiner = P2 (right).
+// Rules + stage come from the room record (host chose them).
+function startOnlineMatch(){
+  mode='online';
+  ['title','mode','select','stage','result','versus','story','online','waitroom','achieve','settings'].forEach(s=>document.getElementById(s).classList.add('hidden'));
+  document.body.classList.add('in-match');
+  document.getElementById('hud').classList.remove('hidden');
+  PLATS = stagePick.layout();
+  const gm = currentMode();
+  const mainX = PLATS[0].x, mainW = PLATS[0].w;
+  const p1 = new Fighter(p1Pick, mainX+mainW*0.25, false, Net.p1Cos||0, 'none');
+  const p2 = new Fighter(p2Pick, mainX+mainW*0.65, false, Net.p2Cos||0, 'none');
+  [p1,p2].forEach(f=>{ f.maxHp=gm.hp; f.hp=gm.hp; f.stocks=gm.stocks; f.startStocks=gm.stocks; f.superMeter=gm.startSuper||0; });
+  players=[p1,p2];
+  projectiles=[]; particles=[]; strikes=[]; shocks=[]; afterimages=[];
+  soccerBall=null; soccerScore=[0,0];
+  document.getElementById('p1name').textContent=(Net.isHost?'YOU · ':'')+ 'P1 · '+p1Pick.name;
+  document.getElementById('p2name').textContent=(!Net.isHost?'YOU · ':'')+ 'P2 · '+p2Pick.name;
+  document.getElementById('p1name').style.color=p1Pick.color;
+  document.getElementById('p2name').style.color=p2Pick.color;
+  running=true;
+  Net.connected=true; Net._matchStarted=true; Net._cur=null; Net._prev=null; Net._lastSend=0; Net._lastSentKey=null; Net._lastAppliedHit=0;
+  Net._projSeq=0; Net._lastProjSeq=0; Net._fxSeq=0; Net._lastFxSeq=0;
+  Net._renderX=undefined; Net._renderY=undefined; Net._avgGap=0; Net._curRecvT=0; Net._prevRecvT=0; Net._pingEst=0;
+  netStartStream();
+  announce('FIGHT!');
+  updateHUD();
+  Music.play(stagePick.id);
+}
+
+// Serialize my fighter into a compact record and PUT it to my slot.
+// Sends at ~20/sec, but skips frames where nothing meaningful changed to cut traffic.
+function netSendState(force){
+  if(!Net.connected) return;
+  const now=performance.now();
+  if(!force && now-Net._lastSend < 50) return;   // up to ~20 updates/sec
+  const me=players[Net.isHost?0:1];
+  if(!me) return;
+  const s={ x:Math.round(me.x), y:Math.round(me.y), vx:+me.vx.toFixed(1), vy:+me.vy.toFixed(1),
+    fa:me.face, st:me.state, hp:Math.round(me.hp), sm:Math.round(me.superMeter),
+    sh:me.shielding?1:0, dd:me.dead&&me.stocks<=0?1:0 };
+  // skip identical frames (idle standing) so we don't spam the DB
+  const key=s.x+','+s.y+','+s.fa+','+s.st+','+s.hp+','+s.sh+','+s.dd;
+  if(!force && key===Net._lastSentKey) return;
+  Net._lastSentKey=key; Net._lastSend=now;
+  s.t=now; s.n=(++Net._seq);
+  dbPut('rooms/'+Net.roomCode+'/'+Net.meSlot+'/s', s);
+}
+// INTERPOLATION + EXTRAPOLATION: glide the opponent between snapshots, and when
+// the next packet is late, keep coasting along their last known velocity so they
+// never freeze. The blend window adapts to how fast packets are actually arriving.
+function netPushRemote(st){
+  if(!st) return;
+  const now=performance.now();
+  // measure real inter-packet gap → drives an adaptive interp window (responsive
+  // when packets are frequent, forgiving when they're sparse).
+  if(Net._curRecvT){
+    const gap=now-Net._curRecvT;
+    Net._avgGap = Net._avgGap ? Net._avgGap*0.8 + gap*0.2 : gap;
+  }
+  Net._prev = Net._cur || st;
+  Net._prevRecvT = Net._curRecvT || now;
+  Net._cur = st;
+  Net._curRecvT = now;
+  // non-positional bits apply immediately
+  const foe=players[Net.isHost?1:0];
+  if(foe){
+    foe.hp=(typeof st.hp==='number')?st.hp:foe.hp;
+    foe.superMeter=st.sm||0; foe.shielding=!!st.sh;
+    foe.face=st.fa||1; foe.state=st.st||'idle';
+    if(st.dd && !foe.dead){ foe.stocks=0; KO(foe); }
+    if(Net._renderX===undefined){ Net._renderX=st.x; Net._renderY=st.y; }
+  }
+}
+function netApplyRemote(){
+  const foe=players[Net.isHost?1:0];
+  const cur=Net._cur, prev=Net._prev;
+  if(!foe || !cur) return;
+  if(!prev){ foe.x=Net._renderX=cur.x; foe.y=Net._renderY=cur.y; foe.vx=0; foe.vy=0; return; }
+  const now=performance.now();
+  // Pure INTERPOLATION between the two most recent snapshots — NO velocity
+  // extrapolation. Coasting on vx/vy made a jumping/knocked foe overshoot and
+  // "fly away". If a packet is late we simply hold at cur (a brief pause), which
+  // reads far better than launching the ghost off-screen.
+  const win = Math.max(60, Math.min(130, Net._avgGap||90));
+  const a = Math.max(0, Math.min(1, (now-Net._curRecvT)/win));   // clamp 0..1, never past cur
+  const targetX = prev.x + (cur.x-prev.x)*a;
+  const targetY = prev.y + (cur.y-prev.y)*a;
+  // gently ease the drawn position toward the target so packet jitter doesn't pop.
+  // if the foe teleported far (respawn/blink), snap instead of gliding across the map.
+  const dx=targetX-Net._renderX, dy=targetY-Net._renderY;
+  if(Math.abs(dx)>220 || Math.abs(dy)>220){ Net._renderX=targetX; Net._renderY=targetY; }
+  else { Net._renderX += dx*0.5; Net._renderY += dy*0.5; }
+  foe.x=Net._renderX; foe.y=Net._renderY;
+  foe.vx=0; foe.vy=0;   // don't let the ghost self-propel; position is authoritative
+  // rough round-trip estimate for the on-screen ping readout (packet age + gap)
+  Net._pingEst = Math.round((Net._avgGap||0));
+}
+// Broadcast any projectiles the LOCAL player just spawned so the opponent can
+// render them too. They're sent as compact spawn records; the opponent recreates
+// them as VISUAL-ONLY ghosts (damage is handled separately via hit events).
+function netSendProjectiles(){
+  if(!Net.connected) return;
+  const me=players[Net.isHost?0:1];
+  if(!me) return;
+  // find projectiles spawned by me that haven't been broadcast yet
+  const fresh=[];
+  for(const pr of projectiles){
+    if(pr.owner===me && !pr._sent && !pr.ghost){
+      pr._sent=true;
+      fresh.push({ x:Math.round(pr.x), y:Math.round(pr.y), vx:+(pr.vx||0).toFixed(1), vy:+(pr.vy||0).toFixed(1),
+        ty:pr.type, r:pr.r||6, c:pr.color, g:pr.gravity?1:0, cu:pr.curve||0, dg:pr.digit||'',
+        bl:pr.block||'', fa:pr.face||0 });
+    }
+  }
+  if(!fresh.length) return;
+  const batch={ n:(++Net._projSeq), a:fresh };
+  dbPut('rooms/'+Net.roomCode+'/'+Net.meSlot+'/proj', batch);
+}
+// Recreate the opponent's projectiles locally as harmless visual ghosts.
+function applyRemoteProjectiles(batch){
+  if(!batch || batch.n===Net._lastProjSeq) return;
+  Net._lastProjSeq=batch.n;
+  const foe=players[Net.isHost?1:0];
+  if(!batch.a) return;
+  batch.a.forEach(p=>{
+    projectiles.push({ owner:foe, ghost:true, x:p.x, y:p.y, vx:p.vx, vy:p.vy,
+      type:p.ty, r:p.r, color:p.c, gravity:!!p.g, curve:p.cu||0, digit:p.dg||undefined,
+      block:p.bl||undefined, face:p.fa||1,
+      life:120, dmg:0, kb:0, spin:0 });
+  });
+}
+// Broadcast new lightning strikes + shockwaves the local player spawned this frame.
+function netSendEffects(){
+  if(!Net.connected) return;
+  const me=players[Net.isHost?0:1];
+  if(!me) return;
+  const fx=[];
+  for(const st of strikes){
+    if(st.owner===me && !st._sent && !st.ghost){ st._sent=true;
+      fx.push({k:'strike', x:Math.round(st.x), ty:Math.round(st.targetY), w:st.warned||0, l:st.life}); }
+  }
+  for(const sh of shocks){
+    if(!sh._sent && !sh.ghost){ sh._sent=true;
+      // only broadcast shocks near me (mine); harmless if a couple extra go out
+      fx.push({k:'shock', x:Math.round(sh.x), y:Math.round(sh.y), mx:Math.round(sh.max), l:sh.life, c:sh.color}); }
+  }
+  if(!fx.length) return;
+  dbPut('rooms/'+Net.roomCode+'/'+Net.meSlot+'/fx', { n:(++Net._fxSeq), a:fx });
+}
+// Recreate the opponent's strikes/shocks as visual-only ghosts.
+function applyRemoteEffects(batch){
+  if(!batch || batch.n===Net._lastFxSeq) return;
+  Net._lastFxSeq=batch.n;
+  const foe=players[Net.isHost?1:0];
+  if(!batch.a) return;
+  batch.a.forEach(e=>{
+    if(e.k==='strike'){
+      strikes.push({ ghost:true, owner:foe, x:e.x, y:0, targetY:e.ty, life:e.l||22, warned:e.w||0 });
+    } else if(e.k==='shock'){
+      shocks.push({ ghost:true, x:e.x, y:e.y, r:8, max:e.mx||120, life:e.l||16, color:e.c||'#fff' });
+    }
+  });
+}
+// Tell the opponent they got hit; they apply it to themselves.
+function netSendHit(dmg,kb,dir,launch){
+  if(!Net.connected) return;
+  const evt={ dmg:+dmg.toFixed(1), kb:+(kb||0).toFixed(1), dir:dir||1, la:+(launch||0).toFixed(2), n:(++Net._seq)+Math.random() };
+  dbPut('rooms/'+Net.roomCode+'/'+Net.foeSlot+'/hit', evt);
+}
+// Live updates. We POLL the room over plain GET requests. (Browser EventSource
+// can't set the Accept:text/event-stream header Firebase streaming wants and fails
+// silently, so polling is the dependable transport here.) We poll fast for the
+// opponent's state, and interpolation smooths the gaps between responses.
+function netStartStream(){
+  netStopStream();
+  Net._useSSE=false;
+  netStartPoll();
+}
+function netStopStream(){
+  clearTimeout(Net._pollTimer); clearInterval(Net._pollTimer);
+  Net._polling=false;
+}
+function applyIncomingHit(hit){
+  if(!hit || hit.n===Net._lastAppliedHit) return;
+  Net._lastAppliedHit=hit.n;
+  const me=players[Net.isHost?0:1];
+  if(me && !me.dead){
+    const att=players[Net.isHost?1:0];
+    landHit(att, me, hit.dmg, hit.kb, hit.dir, hit.la);   // resolves locally on me
+  }
+}
+function foeDisconnected(){
+  const me=players[Net.isHost?0:1], foe=players[Net.isHost?1:0];
+  if(me && foe && !me.dead){ foe.stocks=0; if(!foe.dead) KO(foe); }
+}
+// Fast GET-poll loop. Uses a self-rescheduling async call (not setInterval) so a
+// slow response never lets requests pile up on top of each other.
+function netStartPoll(){
+  clearInterval(Net._pollTimer);
+  Net._polling=true;
+  let missed=0;
+  const tick=async ()=>{
+    if(!Net.connected || !Net._polling) return;
+    const room=await dbGet('rooms/'+Net.roomCode);
+    if(!Net.connected || !Net._polling) return;
+    if(room===null && Net._matchStarted){ foeDisconnected(); return; }
+    if(room){
+      missed=0;
+      const foe=room[Net.foeSlot] && room[Net.foeSlot].s;
+      if(foe && typeof foe==='object') netPushRemote(foe);
+      const proj=room[Net.foeSlot] && room[Net.foeSlot].proj;
+      if(proj) applyRemoteProjectiles(proj);
+      const fx=room[Net.foeSlot] && room[Net.foeSlot].fx;
+      if(fx) applyRemoteEffects(fx);
+      const hit=room[Net.meSlot] && room[Net.meSlot].hit;
+      applyIncomingHit(hit);
+    } else { missed++; }
+    // schedule the next poll ~70ms after this one resolves
+    Net._pollTimer=setTimeout(tick, 70);
+  };
+  tick();
+}
+function leaveRoom(){
+  Net.connected=false; Net._searching=false; Net._matchStarted=false;
+  netStopStream();
+  if(Net.roomCode){ dbDelete('rooms/'+Net.roomCode); }   // whoever leaves clears the room
+  Net.roomCode=null;
+}
+
+// QUICK MATCH: scan for a room that is waiting for a joiner; if none, host one.
+async function quickMatch(){
+  if(!p1Pick){ flashOnlineHelper('PICK A FIGHTER FIRST!'); return; }
+  Net._abort=false; Net._searching=true;
+  show('waitroom');
+  setWait('SEARCHING FOR AN OPPONENT…','Looking for an open room…');
+  const myPick=p1Pick, myCos=costMap[p1Pick.id]||0;
+  // 1) Try to JOIN an existing open room.
+  const rooms=await dbGet('rooms');
+  let joinCode=null;
+  if(rooms && typeof rooms==='object'){
+    for(const code of Object.keys(rooms)){
+      const r=rooms[code];
+      if(r && r.status==='open' && r.host && !r.guest){ joinCode=code; break; }
+    }
+  }
+  if(Net._abort){ return; }
+  if(joinCode){
+    // JOIN as guest (P2)
+    Net.isHost=false; Net.roomCode=joinCode; Net.meSlot='p2'; Net.foeSlot='p1';
+    await dbPatch('rooms/'+joinCode, { guest:{ id:myPick.id, cos:myCos, name:Save.data.profile } });
+    await dbPatch('rooms/'+joinCode, { status:'full' });
+    const r=await dbGet('rooms/'+joinCode);
+    if(!r || !r.host){ setWait('THAT ROOM CLOSED','Retrying…'); setTimeout(quickMatch,600); return; }
+    // adopt host's rules + stage; host is P1, I'm P2
+    gameMode=r.gameMode||'giant';
+    stagePick=STAGES.find(s=>s.id===r.stage)||STAGES[0];
+    p1Pick=ROSTER.find(c=>c.id===r.host.id)||ROSTER[0];
+    p2Pick=myPick;
+    Net.p1Cos=r.host.cos||0; Net.p2Cos=myCos;
+    setWait('OPPONENT FOUND!','Starting…');
+    Net.connected=true;
+    setTimeout(()=>{ if(!Net._abort) startOnlineMatch(); }, 500);
+    return;
+  }
+  // 2) No open room — HOST one and wait for a guest.
+  const code=randCode();
+  Net.isHost=true; Net.roomCode=code; Net.meSlot='p1'; Net.foeSlot='p2';
+  Net.p1Cos=myCos;
+  await dbPut('rooms/'+code, {
+    status:'open', gameMode:gameMode, stage:stagePick.id,
+    host:{ id:myPick.id, cos:myCos, name:Save.data.profile }, ts:Date.now()
+  });
+  setWait('WAITING FOR A CHALLENGER…','Room ready — the next player who searches will join you.');
+  // poll my own room until a guest shows up
+  const waitTimer=setInterval(async ()=>{
+    if(Net._abort || !Net.roomCode){ clearInterval(waitTimer); return; }
+    const r=await dbGet('rooms/'+code);
+    if(r && r.guest){
+      clearInterval(waitTimer);
+      p1Pick=myPick;
+      p2Pick=ROSTER.find(c=>c.id===r.guest.id)||ROSTER[0];
+      Net.p1Cos=myCos; Net.p2Cos=r.guest.cos||0;
+      setWait('CHALLENGER FOUND!','Starting…');
+      Net.connected=true;
+      setTimeout(()=>{ if(!Net._abort) startOnlineMatch(); }, 500);
+    }
+  }, 700);
+  Net._waitTimer=waitTimer;
+}
+function cancelQuickMatch(){
+  Net._abort=true; Net._searching=false;
+  clearInterval(Net._waitTimer); netStopStream();
+  if(Net.roomCode){ dbDelete('rooms/'+Net.roomCode); Net.roomCode=null; }
+  Net.connected=false;
+  show('online');
+}
+function setWait(status,sub){
+  const st=document.getElementById('waitStatus'); if(st) st.textContent=status;
+  const sb=document.getElementById('waitSub'); if(sb && sub!==undefined) sb.textContent=sub;
+}
+function flashOnlineHelper(msg){
+  const h=document.getElementById('onlineHelper'); if(!h) return;
+  const prev=h.innerHTML; h.style.color='#e63946'; h.textContent=msg;
+  setTimeout(()=>{ h.style.color=''; h.innerHTML=prev; }, 1400);
+}
+
 /* ---------------- COMBAT ---------------- */
 function tryAttack(f){
   if(f.attackTimer>0 || f.shielding || f.dead) return;
   f.attackTimer=18; f.state='attack';
+  SFX.attack('melee');
   // melee hitbox spawned in update via attackTimer window
   spawnParticles(f.cx + f.face*f.w*0.6, f.cy, f.def.color, 5);
 }
@@ -3006,6 +4205,7 @@ function tryAttack(f){
 function tryTaunt(f){
   if(f.dead || f.attackTimer>0 || f.tauntTimer>0 || Math.abs(f.vx)>0.6) return;
   f.tauntTimer=34;
+  if(!f.isBot) Save.addStat('taunts');
   // a little confetti burst + a hop of joy
   spawnParticles(f.cx, f.cy-6, f.def.color, 12);
   spawnParticles(f.cx, f.cy-6, '#fff', 6);
@@ -3013,6 +4213,7 @@ function tryTaunt(f){
 function trySpecial(f){
   if(f.specialCd>0 || f.shielding || f.dead) return;
   const s=f.def.special;
+  SFX.attack(s);
   if(s==='pitch'){
     // FASTBALL PITCH: a quick wind-up, then hurl a speeding baseball projectile
     f.attackTimer=14; f.state='attack'; f.specialCd=48;
@@ -3210,10 +4411,53 @@ function trySpecial(f){
         life:46+i*2, dmg:3, kb:2.4, color:'#ffd60a', type:'bullet', r:3});
     }
     spawnParticles(f.cx+f.face*22, f.cy, '#ffd60a', 8);
+  } else if(s==='curve'){
+    // CURVEBALL: a fast arcing baseball — like Daniel's bomb toss but quicker and
+    // it just hits on contact (no explosion). Lobbed up-and-forward, gravity pulls it down.
+    f.attackTimer=14; f.state='attack'; f.specialCd=48;
+    projectiles.push({owner:f, x:f.cx+f.face*22, y:f.cy-6, vx:f.face*9, vy:-9,
+      life:120, dmg:11, kb:6, color:'#f4f4f4', type:'ball', r:7, gravity:true});
+    spawnParticles(f.cx+f.face*20, f.cy, '#fff', 6);
+  } else if(s==='twocat'){
+    // POUNCE COMBO: Kayo lunges in, Yara follows with a swipe — a fast two-hit rush
+    f.vx=f.face*13; f.vy=-2; f.specialCd=48;
+    f._dashHit=16; f._dashDmg=7; f._dashKb=5; f.state='attack'; f.attackTimer=18;
+    f._catFollow=10; // schedules Yara's follow-up swipe
+    spawnParticles(f.cx, f.cy, f.def.color, 12);
+  } else if(s==='controller'){
+    // CONTROLLER TOSS: hurls an arcing controller that hits on contact (thrower-style lob)
+    f.attackTimer=14; f.state='attack'; f.specialCd=50;
+    projectiles.push({owner:f, x:f.cx+f.face*22, y:f.cy-6, vx:f.face*8, vy:-8,
+      life:120, dmg:12, kb:7, color:f.def.color, type:'controller', r:9, gravity:true, spin:0});
+    spawnParticles(f.cx+f.face*20, f.cy, f.def.color, 6);
+  } else if(s==='launch'){
+    // FLYING TACKLE: Cavan hurls himself forward shoulder-first — a fast, committed
+    // self-propelled charge that hits hard on contact (dash-style contact window).
+    f.vx=f.face*18; f.vy=-3.5; f.specialCd=52; f.hitCd=Math.max(f.hitCd,10);
+    f._dashHit=20; f._dashDmg=13; f._dashKb=9; f.state='attack'; f.attackTimer=20;
+    spawnParticles(f.cx, f.cy, f.def.color, 16);
+    spawnParticles(f.cx, f.cy, '#ffd24a', 8);
+  } else if(s==='car'){
+    // FLOOR IT: Casper guns his car forward — a very fast, hard-hitting ram (OP).
+    f.vx=f.face*22; f.vy=-2; f.specialCd=54; f.hitCd=Math.max(f.hitCd,12);
+    f._dashHit=22; f._dashDmg=16; f._dashKb=11; f.state='attack'; f.attackTimer=22;
+    // exhaust smoke + skid sparks
+    for(let i=0;i<10;i++) particles.push({x:f.cx-f.face*10,y:f.cy+f.h*0.2,vx:-f.face*(1+Math.random()*2),vy:(Math.random()-.5)*2,life:20,color:'#888',r:2+Math.random()*2});
+    spawnParticles(f.cx, f.cy, '#ffd24a', 8);
+  } else if(s==='slam'){
+    // MEGA FLOP: Robin belly-flops forward — heavy, wide, big knockback (OP).
+    f.vx=f.face*16; f.vy=-4.5; f.specialCd=58; f.hitCd=Math.max(f.hitCd,10);
+    f._dashHit=24; f._dashDmg=17; f._dashKb=12; f.state='attack'; f.attackTimer=24;
+    spawnParticles(f.cx, f.cy, f.def.color, 18);
+    spawnParticles(f.cx, f.cy, '#fff', 8);
+  } else if(s==='doom'){
+    // DOOM PITCH: a screaming cursed fastball that PIERCES through the foe (OP).
+    f.attackTimer=14; f.state='attack'; f.specialCd=40;
+    projectiles.push({owner:f, x:f.cx+f.face*30, y:f.cy-4, vx:f.face*19, vy:0,
+      life:70, dmg:16, kb:9, color:'#6a040f', type:'ball', r:9, pierce:true});
+    spawnParticles(f.cx+f.face*26, f.cy, '#6a040f', 10);
   }
 }
-
-/* UP SPECIAL — every fighter has a UNIQUE damaging recovery. Usable once per airtime; resets on landing. */
 function tryUpSpecial(f){
   if(f.dead || f.shielding) return;
   // Femi's Tail Spring is usable twice per airtime; everyone else once.
@@ -3228,6 +4472,7 @@ function tryUpSpecial(f){
   }
   const s=f.def.special;
   f.state='attack';
+  SFX.sweep('E4','E6',0.22);   // recovery / up-special launch woosh
 
   if(s==='pitch'){
     // POP FLY: leap up with a rising bat swing (melee hitbox around/above)
@@ -3366,6 +4611,40 @@ function tryUpSpecial(f){
     f.vy=-16; f.vx+=f.face*3; f._upHit={life:14, dmg:10, kb:5, launch:0.7};
     for(let i=0;i<3;i++) projectiles.push({owner:f, x:f.cx, y:f.cy, vx:(Math.random()-.5)*4, vy:6+Math.random()*3,
       life:40, dmg:3, kb:2, color:'#ffd60a', type:'bullet', r:3, gravity:true});
+  } else if(s==='curve'){
+    // POP-UP: springs off a bounced baseball for a rising hop
+    f.vy=-16.5; f.vx+=f.face*2; f._upHit={life:16, dmg:11, kb:5.5, launch:0.85};
+    projectiles.push({owner:f, x:f.cx, y:f.cy, vx:f.face*3, vy:8,
+      life:50, dmg:7, kb:5, color:'#f4f4f4', type:'ball', r:6, gravity:true});
+    spawnParticles(f.cx,f.cy,'#fff',10);
+  } else if(s==='twocat'){
+    // CAT STACK: the two cats leap off each other for extra height
+    f.vy=-17.5; f.vx+=f.face*2.5; f._upHit={life:16, dmg:11, kb:5.5, launch:0.85};
+    spawnParticles(f.cx,f.cy,f.def.color,12); spawnParticles(f.cx,f.cy-10,f.def.dark,6);
+  } else if(s==='controller'){
+    // RAGE QUIT: a furious upward fling — leaps up hurling a controller overhead
+    f.vy=-16; f.attackTimer=16; f._upHit={life:16, dmg:12, kb:5.5, launch:0.9};
+    projectiles.push({owner:f, x:f.cx, y:f.cy, vx:f.face*3, vy:-9,
+      life:60, dmg:7, kb:5, color:f.def.color, type:'controller', r:8, gravity:true, spin:0});
+    spawnParticles(f.cx,f.cy,f.def.color,10);
+  } else if(s==='launch'){
+    // SKY CHARGE: Cavan rockets up and forward, shoulder leading
+    f.vy=-16.5; f.vx+=f.face*6; f._upHit={life:16, dmg:13, kb:6, launch:0.95};
+    spawnParticles(f.cx,f.cy,f.def.color,12); spawnParticles(f.cx,f.cy,'#ffd24a',6);
+  } else if(s==='car'){
+    // RAMP JUMP: Casper launches off a ramp skyward
+    f.vy=-17; f.vx+=f.face*5; f._upHit={life:16, dmg:14, kb:6.5, launch:1.0};
+    for(let i=0;i<8;i++) particles.push({x:f.cx-f.face*8,y:f.cy+8,vx:-f.face*2,vy:1+Math.random()*2,life:18,color:'#888',r:2});
+    spawnParticles(f.cx,f.cy,'#ffd24a',8);
+  } else if(s==='slam'){
+    // GROWTH SPURT: Robin makes a towering leap
+    f.vy=-18; f._upHit={life:18, dmg:14, kb:6.5, launch:1.0};
+    spawnParticles(f.cx,f.cy,f.def.color,12); spawnParticles(f.cx,f.cy,'#fff',6);
+  } else if(s==='doom'){
+    // NIGHTMARE RISE: a shrieking void ascent that zaps nearby foes (OP)
+    f.vy=-17.5; f.hitCd=Math.max(f.hitCd,10);
+    players.forEach(o=>{ if(o!==f && !o.dead && o.hitCd<=0 && Math.hypot(o.cx-f.cx,o.cy-f.cy)<110){ landHit(f,o,15,6, o.cx>=f.cx?1:-1, 0.9); }});
+    spawnParticles(f.cx,f.cy,'#6a040f',16); spawnParticles(f.cx,f.cy,'#fff',8);
   }
   spawnParticles(f.cx, f.y+f.h*0.5, '#ffffff', 6);
 }
@@ -3379,6 +4658,7 @@ function trySuper(f){
   if(!f.isBot){ Save.addStat('supers'); }
   f.superActive=40;
   f.hitCd=Math.max(f.hitCd,10);
+  SFX.super();
   announce((f.def.sup||'SUPER').split(' · ')[0]+'!');
   shakeT=Math.max(shakeT,16);
   spawnParticles(f.cx,f.cy,f.def.color,26);
@@ -3455,6 +4735,35 @@ function trySuper(f){
     spawnParticles(W/2,GROUND_Y,f.def.color,26);
   } else if(s==='bullets'){ // DRIVE-BY — a long sweeping hail of lead
     for(let i=0;i<14;i++) projectiles.push({owner:f,x:f.cx+f.face*24,y:f.cy-10+(Math.random()-.5)*24,vx:f.face*(13+Math.random()*3),vy:(Math.random()-.5)*2,life:60+i,dmg:3,kb:2.5,color:'#ffd60a',type:'bullet',r:3});
+  } else if(s==='curve'){ // TRIPLE PLAY — three curving fastballs at staggered heights
+    for(let i=0;i<3;i++){ const sw=(i-1)*0.12; projectiles.push({owner:f,x:f.cx+f.face*24,y:f.cy-14+i*12,vx:f.face*15,vy:-sw*20,life:90,dmg:9,kb:6,color:'#f4f4f4',type:'ball',r:8,curve:sw}); }
+    spawnParticles(f.cx+f.face*22,f.cy,'#fff',16);
+  } else if(s==='twocat'){ // NINE LIVES — a relentless tag-team melee frenzy
+    if(foe){ f.face=foe.cx>=f.cx?1:-1; } f.vx=f.face*11; f._superKick=30;
+  } else if(s==='controller'){ // BUTTON MASH — a barrage of thrown controllers
+    for(let i=0;i<7;i++) projectiles.push({owner:f,x:f.cx+f.face*22,y:f.cy-16+i*6,vx:f.face*(11+i*0.7),vy:-4+i*1.3,life:120,dmg:9,kb:6,color:f.def.color,type:'controller',r:8,gravity:true,spin:0});
+    spawnParticles(f.cx+f.face*22,f.cy,f.def.color,18);
+  } else if(s==='launch'){ // RAMPAGE — a chain of unstoppable body-slams toward the foe
+    if(foe){ f.face = foe.cx>=f.cx?1:-1; }
+    f.vx=f.face*12; f._superKick=30;
+  } else if(s==='car'){ // CAR TURRET — spawns a car beside Casper that sprays bullets
+    if(foe){ f.face = foe.cx>=f.cx?1:-1; }
+    projectiles.push({owner:f, turret:true, x:f.cx+f.face*46, y:GROUND_Y-22, vx:0, vy:0,
+      type:'carturret', r:26, color:f.def.color, life:150, dmg:0, kb:0, fireCd:0, face:f.face});
+    spawnParticles(f.cx+f.face*46, GROUND_Y-22, f.def.color, 16);
+  } else if(s==='slam'){ // BLOCK BARRAGE — Robin hurls a volley of Minecraft blocks
+    for(let i=0;i<8;i++){
+      const kinds=['grass','dirt','stone','tnt','diamond'];
+      projectiles.push({owner:f, x:f.cx+f.face*20, y:f.cy-18+i*5, vx:f.face*(9+i*0.8), vy:-7+i*1.2,
+        life:150, dmg:10, kb:7, color:'#7a5230', type:'block', r:11, gravity:true, spin:0,
+        block:kinds[i%kinds.length]});
+    }
+    spawnParticles(f.cx+f.face*20, f.cy, '#8a5a2b', 16);
+  } else if(s==='doom'){ // PERFECT GAME — an apocalyptic storm of piercing cursed baseballs
+    for(let i=0;i<9;i++) projectiles.push({owner:f,x:f.cx+f.face*24,y:f.cy-20+i*6,vx:f.face*(14+i*0.6),vy:-4+i*1.2,life:110,dmg:14,kb:9,color:'#6a040f',type:'ball',r:9,pierce:true});
+    // plus cursed lightning columns raining down
+    for(let i=0;i<4;i++){ const tx=(i+0.5)*(W/4)+(Math.random()-.5)*30; strikes.push({x:tx,y:0,targetY:GROUND_Y,life:26,owner:f,warned:6+i*3,dmg:14,kb:8,launch:1.1}); }
+    spawnParticles(f.cx+f.face*22,f.cy,'#6a040f',20);
   }
   updateHUD();
 }
@@ -3486,17 +4795,31 @@ function upHit(att,def){
   }
 }
 function landHit(att,def,dmg,kb,dir,launch){
+  // ONLINE damage model: I own only my fighter's HP. If I land a hit on the
+  // OPPONENT's ghost, I don't touch its HP locally — I send a hit event they apply
+  // to themselves. Damage TO me resolves locally and I broadcast my HP.
+  if(mode==='online'){
+    const meIdx=Net.isHost?0:1;
+    if(def!==players[meIdx]){
+      netSendHit(dmg,kb,dir,launch);
+      SFX.hit();
+      spawnParticles(def.cx,def.cy,'#fff',6);   // local sparkle for feedback
+      return;
+    }
+  }
   // meme stat scaling: attacker power, defender toughness
   const aAtk = att ? (att.mAtk||1) : 1;
   const dDef = def.mDef||1;
   dmg = dmg * aAtk * dDef;
   if(def.shielding && def.shieldHp>0){
     def.shieldHp-=dmg*2.5;
+    SFX.shieldHit();
     spawnParticles(def.cx,def.cy,'#8fefff',6);
     hitStop=4;
     return;
   }
   def.hp=Math.max(0, def.hp-dmg);
+  SFX.hit();
   const gm=currentMode();
   const gain=(gm.superGainMul||1);
   // Super charges mainly by TAKING damage, a little by dealing it (× meme super rate)
@@ -3508,7 +4831,8 @@ function landHit(att,def,dmg,kb,dir,launch){
   }
   const up = launch||0;
   // knockback eased by weight, scaled by ruleset; bosses are extra heavy
-  const kbm = 1.5 * gm.kbMul * (def.isBoss?0.4:1);
+  // (base tuned down globally so no single hit is a one-shot ring-out)
+  const kbm = 1.1 * gm.kbMul * (def.isBoss?0.4:1);
   def.vx = dir*kb*kbm/def.def.stats.weight;
   def.vy = -(kb*(0.7+up)*kbm)/def.def.stats.weight - 2;
   def.hitCd=14;
@@ -3595,8 +4919,8 @@ function botThink(bot, foe){
   }
 
   bot.face=dir;
-  const ranged = (bot.def.special==='pitch'||bot.def.special==='drone'||bot.def.special==='bolt'||bot.def.special==='bomb'||bot.def.special==='serve'||bot.def.special==='rocks'||bot.def.special==='minidrone'||bot.def.special==='frost'||bot.def.special==='flask'||bot.def.special==='swarm'||bot.def.special==='splash'||bot.def.special==='soundwave'||bot.def.special==='pounce'||bot.def.special==='evilserve'||bot.def.special==='numbers'||bot.def.special==='coins'||bot.def.special==='slipper'||bot.def.special==='pellet'||bot.def.special==='shock'||bot.def.special==='bullets'||bot.def.special==='football');
-  const rush = (bot.def.special==='dash'||bot.def.special==='pound'||bot.def.special==='kick'||bot.def.special==='glitch'||bot.def.special==='breakdance');
+  const ranged = (bot.def.special==='pitch'||bot.def.special==='drone'||bot.def.special==='bolt'||bot.def.special==='bomb'||bot.def.special==='serve'||bot.def.special==='rocks'||bot.def.special==='minidrone'||bot.def.special==='frost'||bot.def.special==='flask'||bot.def.special==='swarm'||bot.def.special==='splash'||bot.def.special==='soundwave'||bot.def.special==='pounce'||bot.def.special==='evilserve'||bot.def.special==='numbers'||bot.def.special==='coins'||bot.def.special==='slipper'||bot.def.special==='pellet'||bot.def.special==='shock'||bot.def.special==='bullets'||bot.def.special==='football'||bot.def.special==='curve'||bot.def.special==='controller'||bot.def.special==='doom');
+  const rush = (bot.def.special==='dash'||bot.def.special==='pound'||bot.def.special==='kick'||bot.def.special==='glitch'||bot.def.special==='breakdance'||bot.def.special==='twocat'||bot.def.special==='launch'||bot.def.special==='car'||bot.def.special==='slam');
   // approach or space
   if(dist>170){
     bot.vx += dir*0.4;
@@ -3632,6 +4956,7 @@ function botThink(bot, foe){
 /* ---------------- MOVEMENT HELPERS ---------------- */
 function doJump(f){
   if(f.jumps>0){
+    if(f.onGround) SFX.jump();   // only the ground jump chirps, not the air jump
     f.vy=-f.def.stats.jump*(f.mJump||1);
     f.jumps--;
     f.onGround=false;
@@ -3685,14 +5010,26 @@ function update(t){
   if(hitStop>0){ hitStop--; return; }
 
   const p1=players[0], p2=players[1];
-  if(p1) humanInput(p1, SCHEME1);
-  if(p2){
-    if(p2.isBot){ if(!p2.dead && p1 && !p1.dead) botThink(p2, p1); }
-    else humanInput(p2, SCHEME2);
+  if(mode==='online'){
+    // Drive only my own fighter locally; the opponent is network-driven.
+    const meIdx=Net.isHost?0:1;
+    if(players[meIdx]) humanInput(players[meIdx], SCHEME1);   // local player always uses P1 controls
+    netApplyRemote();   // snap the opponent to their latest synced state
+    netSendState();     // push my state (throttled inside)
+    netSendProjectiles(); // broadcast any projectiles I just spawned
+    netSendEffects();   // broadcast any lightning/shockwave effects I just spawned
+  } else {
+    if(p1) humanInput(p1, SCHEME1);
+    if(p2){
+      if(p2.isBot){ if(!p2.dead && p1 && !p1.dead) botThink(p2, p1); }
+      else humanInput(p2, SCHEME2);
+    }
   }
 
   // per-fighter physics
-  players.forEach(f=>{
+  players.forEach((f,idx)=>{
+    // in online play, skip local physics for the remote fighter (network drives it)
+    if(mode==='online' && idx===(Net.isHost?1:0)) return;
     if(f.dead){
       f.respawnTimer--;
       if(f.respawnTimer<=0){ respawn(f); }
@@ -3705,6 +5042,11 @@ function update(t){
     if(f.shieldHp<100) f.shieldHp=Math.min(100,f.shieldHp+0.6);
     if(f.dropTimer>0) f.dropTimer--;
     if(f._dashHit>0) f._dashHit--;
+    // Kayo & Yara: after Kayo's lunge, Yara follows with a second swipe window
+    if(f._catFollow>0){
+      f._catFollow--;
+      if(f._catFollow===0){ f._dashHit=12; f._dashDmg=8; f._dashKb=6; f.attackTimer=Math.max(f.attackTimer,12); spawnParticles(f.cx+f.face*10, f.cy, f.def.color, 8); }
+    }
     if(f._upHit){ f._upHit.life--; if(f._upHit.life<=0) f._upHit=null; }
     if(f.superActive>0) f.superActive--;
     if(f.tauntTimer>0){ f.tauntTimer--; }
@@ -3804,6 +5146,34 @@ function update(t){
 
   // projectiles
   projectiles.forEach(pr=>{
+    // GHOST projectiles (opponent's, shown online): move + render only, no damage,
+    // no explosions, no collision. Damage is authoritative via the shooter's hit events.
+    if(pr.ghost){
+      if(pr.gravity){ pr.vy+=0.5; }
+      pr.x+=pr.vx; pr.y+=pr.vy; pr.life--;
+      if(pr.type==='football' && pr.curve){ pr.vy+=pr.curve; pr.spin=(pr.spin||0)+0.3; }
+      if(pr.type==='carturret'){ pr.spin=(pr.spin||0)+0.02; } // wheels spin, no firing (bullets sync separately)
+      return;
+    }
+    // CAR TURRET (Casper super): a parked car that sprays bullets at the foe.
+    if(pr.type==='carturret'){
+      pr.life--;
+      pr.spin=(pr.spin||0)+0.3;               // spinning wheels
+      pr.fireCd--;
+      if(pr.fireCd<=0){
+        pr.fireCd=6;                          // ~10 bullets/sec
+        const foe=players.find(o=>o!==pr.owner && !o.dead);
+        const dir = foe ? (foe.cx>=pr.x?1:-1) : (pr.face||1);
+        const ty = foe ? foe.cy : pr.y;
+        const ang = foe ? Math.atan2((ty-pr.y), (foe.cx-pr.x)) : 0;
+        const sp=16;
+        projectiles.push({owner:pr.owner, x:pr.x+dir*24, y:pr.y-6,
+          vx:(foe?Math.cos(ang):dir)*sp, vy:(foe?Math.sin(ang):0)*sp,
+          life:50, dmg:4, kb:2.6, color:'#ffd60a', type:'bullet', r:3});
+        spawnParticles(pr.x+dir*26, pr.y-6, '#ffd60a', 3);
+      }
+      return;   // the car body itself deals no contact damage
+    }
     if(pr.homing){
       const foe=players.find(o=>o!==pr.owner && !o.dead);
       if(foe){
@@ -3867,10 +5237,10 @@ function update(t){
   strikes.forEach(st=>{
     st.life--;
     if(st.warned>0){ st.warned--; return; } // telegraph window
-    // deal damage in a column once, right after warn ends
+    // deal damage in a column once, right after warn ends (ghosts are visual-only)
     if(!st.hit){
       st.hit=true;
-      players.forEach(o=>{
+      if(!st.ghost) players.forEach(o=>{
         if(o===st.owner||o.dead||o.hitCd>0) return;
         if(Math.abs(o.cx-st.x)<40 && o.cy<st.targetY){
           landHit(st.owner,o,st.dmg||15,st.kb||8, o.cx>=st.x?1:-1, st.launch||1.2);
@@ -3953,6 +5323,7 @@ function scoreGoal(scorer){ // scorer: 0 = P1, 1 = P2
 }
 
 function KO(f){
+  SFX.ko();
   // SOCCER: no eliminations — a fighter who falls off just respawns
   if(currentMode().soccer){
     spawnParticles(Math.max(20,Math.min(W-20,f.cx)), Math.max(20,Math.min(H-20,f.cy)), f.def.color, 16);
@@ -3960,12 +5331,19 @@ function KO(f){
     return;
   }
   f.stocks--;
+  // count a KO for the human whenever they eliminate someone (not their own fighter)
+  const meIdx = mode==='online' ? (Net.isHost?0:1) : 0;
+  if((mode==='1p'||mode==='online') && f!==players[meIdx]) Save.addStat('kos');
   spawnParticles(f.cx<W/2? Math.max(20,Math.min(W-20,f.cx)):Math.min(W-20,f.cx),
                  Math.max(20,Math.min(H-20,f.cy)), f.def.color, 24);
   shakeT=14; hitStop=8;
   updateHUD();
   if(f.stocks<=0){
     f.dead=true; f.respawnTimer=99999;
+    // ONLINE: broadcast my death immediately so the opponent's match ends too
+    if(mode==='online' && Net.connected && f===players[Net.isHost?0:1]){
+      netSendState(true);
+    }
     endMatch();
   } else {
     f.dead=true; f.respawnTimer=50;
@@ -4031,6 +5409,13 @@ function render(t){
       ctx.beginPath(); for(let k=0;k<5;k++){ const a=-Math.PI/2+k*Math.PI*2/5; const px=Math.cos(a)*pr.r*0.42, py=Math.sin(a)*pr.r*0.42; k?ctx.lineTo(px,py):ctx.moveTo(px,py); } ctx.closePath(); ctx.fill();
       ctx.restore();
     } else if(pr.type==='serve'){
+      // tennis / cursed serve ball: filled circle with a curved seam
+      ctx.shadowBlur=8;
+      ctx.beginPath(); ctx.arc(pr.x,pr.y,pr.r,0,Math.PI*2); ctx.fill();
+      ctx.shadowBlur=0;
+      ctx.strokeStyle='rgba(255,255,255,.85)'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.arc(pr.x,pr.y,pr.r*0.75,-2.2,-0.4); ctx.stroke();
+      ctx.beginPath(); ctx.arc(pr.x,pr.y,pr.r*0.75,Math.PI-2.2,Math.PI-0.4); ctx.stroke();
     } else if(pr.type==='rock'){
       ctx.shadowBlur=6;
       ctx.beginPath();
@@ -4070,12 +5455,64 @@ function render(t){
       ctx.shadowBlur=0; ctx.strokeStyle='#a3830f'; ctx.lineWidth=1.5; ctx.stroke();
       ctx.fillStyle='#a3830f'; ctx.font='bold '+(pr.r*1.1)+'px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.fillText('$', pr.x, pr.y+1);
+    } else if(pr.type==='controller'){
+      // a tumbling game controller
+      pr.spin=(pr.spin||0)+0.35;
+      ctx.shadowBlur=10;
+      ctx.save(); ctx.translate(pr.x,pr.y); ctx.rotate(pr.spin);
+      ctx.fillStyle=pr.color;
+      ctx.beginPath(); ctx.ellipse(-pr.r*0.55,pr.r*0.15,pr.r*0.42,pr.r*0.55,0.4,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(pr.r*0.55,pr.r*0.15,pr.r*0.42,pr.r*0.55,-0.4,0,Math.PI*2); ctx.fill();
+      ctx.fillRect(-pr.r*0.62,-pr.r*0.38,pr.r*1.24,pr.r*0.76);
+      ctx.shadowBlur=0; ctx.fillStyle='#0d0d18';
+      ctx.fillRect(-pr.r*0.5,-pr.r*0.06,pr.r*0.3,pr.r*0.12); ctx.fillRect(-pr.r*0.42,-pr.r*0.22,pr.r*0.12,pr.r*0.44); // d-pad
+      ctx.beginPath(); ctx.arc(pr.r*0.34,-pr.r*0.1,pr.r*0.1,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(pr.r*0.5,pr.r*0.08,pr.r*0.1,0,Math.PI*2); ctx.fill();
+      ctx.restore();
     } else if(pr.type==='slipper'){
       // a flying red slipper
       ctx.shadowBlur=8;
       ctx.save(); ctx.translate(pr.x,pr.y); ctx.rotate(Math.sin(t/60)*0.4);
       ctx.beginPath(); ctx.ellipse(0,3,pr.r,pr.r*0.55,0,0,Math.PI*2); ctx.fill();
       ctx.beginPath(); ctx.arc(-pr.r*0.4,-1,pr.r*0.55,Math.PI,0); ctx.fill();
+      ctx.restore();
+    } else if(pr.type==='carturret'){
+      // parked bullet-spraying car (Casper super)
+      ctx.shadowBlur=10;
+      const dir=pr.face||1;
+      ctx.save(); ctx.translate(pr.x,pr.y); ctx.scale(dir,1);
+      // body
+      ctx.fillStyle=pr.color;
+      ctx.beginPath();
+      ctx.moveTo(-26,8); ctx.lineTo(-16,-6); ctx.lineTo(6,-6); ctx.lineTo(14,-18);
+      ctx.lineTo(pr.r*0.9,-18); ctx.lineTo(26,8); ctx.closePath(); ctx.fill();
+      // window
+      ctx.shadowBlur=0; ctx.fillStyle='rgba(160,220,255,.6)';
+      ctx.beginPath(); ctx.moveTo(-8,-6); ctx.lineTo(12,-6); ctx.lineTo(8,-16); ctx.lineTo(-6,-16); ctx.closePath(); ctx.fill();
+      // gun barrel out the front
+      ctx.fillStyle='#333'; ctx.fillRect(20,-8,14,5);
+      // spinning wheels
+      ctx.fillStyle='#111';
+      for(const wx of [-14,14]){ ctx.save(); ctx.translate(wx,10); ctx.rotate(pr.spin||0);
+        ctx.beginPath(); ctx.arc(0,0,8,0,Math.PI*2); ctx.fill();
+        ctx.strokeStyle='#ccc'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(-6,0); ctx.lineTo(6,0); ctx.moveTo(0,-6); ctx.lineTo(0,6); ctx.stroke();
+        ctx.restore(); }
+      ctx.restore();
+    } else if(pr.type==='block'){
+      // Minecraft-style cube: flat-shaded top + front + side faces (Robin super)
+      pr.spin=(pr.spin||0)+0.12;
+      const cols={ grass:['#7dbb42','#5a8f2e','#8a5a2b'], dirt:['#9c6b3f','#7a5230','#6b4526'],
+        stone:['#9a9a9a','#7d7d7d','#6a6a6a'], tnt:['#d64545','#b02b2b','#8a1f1f'],
+        diamond:['#5fe3e0','#3ec6c2','#2a9a97'] };
+      const c=cols[pr.block]||cols.dirt;
+      const s=pr.r;
+      ctx.save(); ctx.translate(pr.x,pr.y); ctx.rotate(Math.sin(pr.spin)*0.25);
+      ctx.shadowBlur=6;
+      ctx.fillStyle=c[1]; ctx.fillRect(-s,-s,s*2,s*2);       // front face
+      ctx.fillStyle=c[0]; ctx.beginPath(); ctx.moveTo(-s,-s); ctx.lineTo(-s+5,-s-5); ctx.lineTo(s+5,-s-5); ctx.lineTo(s,-s); ctx.closePath(); ctx.fill(); // top
+      ctx.fillStyle=c[2]; ctx.beginPath(); ctx.moveTo(s,-s); ctx.lineTo(s+5,-s-5); ctx.lineTo(s+5,s-5); ctx.lineTo(s,s); ctx.closePath(); ctx.fill(); // side
+      ctx.shadowBlur=0; ctx.strokeStyle='rgba(0,0,0,.35)'; ctx.lineWidth=1; ctx.strokeRect(-s,-s,s*2,s*2);
+      if(pr.block==='tnt'){ ctx.fillStyle='#fff'; ctx.font='bold '+(s*0.9)+'px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('TNT',0,0); }
       ctx.restore();
     } else if(pr.type==='pellet' || pr.type==='bullet'){
       // small fast projectile with a motion streak
@@ -4227,6 +5664,22 @@ function render(t){
     ctx.shadowBlur=0;
   }
 
+  // ONLINE: small connection readout (avg update interval ≈ how fresh the foe is)
+  if(mode==='online' && Net.connected){
+    const got = !!Net._cur;
+    const g=Math.round(Net._pingEst||0);
+    ctx.font='bold 12px Arial'; ctx.textAlign='right'; ctx.textBaseline='bottom';
+    ctx.shadowColor='#000'; ctx.shadowBlur=4;
+    if(!got){
+      ctx.fillStyle='#ffd24a';
+      ctx.fillText('CONNECTING…', W-12, H-10);
+    } else {
+      ctx.fillStyle = g<110?'#7ee081' : g<200?'#ffd24a' : '#ff6b6b';
+      ctx.fillText('NET · '+g+'ms', W-12, H-10);
+    }
+    ctx.shadowBlur=0;
+  }
+
   ctx.restore();
 }
 function roundRectStroke(g,x,y,w,h,r,stroke){
@@ -4308,12 +5761,36 @@ function endMatch(){
   const p1won = p1.stocks>0;
   const winnerDef = p1won ? p1.def : p2.def;
 
+  // ---- ONLINE: end duel, tear down the room, show a simple win/lose ----
+  if(mode==='online'){
+    const meIdx=Net.isHost?0:1;
+    const iWon = players[meIdx].stocks>0;
+    try{ leaveRoom(); }catch(e){}
+    Net.connected=false;
+    if(iWon){ Save.addStat('wins'); Save.addStat('onlineWins'); if(players[meIdx].meme && players[meIdx].meme.id!=='none') Save.addStat('memeWins'); grantAndToast(); }
+    setTimeout(()=>{
+      document.getElementById('hud').classList.add('hidden');
+      Music.play('menu');
+      const r=document.getElementById('result'); r.classList.remove('hidden');
+      const title=document.getElementById('resultTitle'); const sub=document.getElementById('resultSub');
+      title.textContent = iWon?'VICTORY!':'DEFEATED';
+      title.style.filter = iWon?'none':'grayscale(.4)';
+      sub.textContent = iWon?'You won the online duel!':'Your opponent won this one.';
+      sub.style.color = (iWon?players[meIdx]:players[Net.isHost?1:0]).def.color;
+    }, 900);
+    return;
+  }
+
   // ---- stat tracking (1P only; the human is P1) ----
   if(mode==='1p' && p1won){
     Save.addStat('wins');
     if(p1.startStocks && p1.stocks>=p1.startStocks) Save.addStat('flawless');
     if(p1.meme && p1.meme.id!=='none') Save.addStat('memeWins');
+    const gmid=currentMode().id;
     if(currentMode().boss) Save.addStat('bossWins');
+    if(gmid==='sudden') Save.addStat('suddenWins');
+    if(gmid==='moon') Save.addStat('moonWins');
+    if(gmid==='charged') Save.addStat('chargedWins');
   }
   const newAch = (mode==='1p') ? grantAndToast() : [];
 
@@ -4398,17 +5875,28 @@ function finishClassic(won){
   const sub=document.getElementById('resultSub');
   if(won){
     const firstClear = !Save.hasMedal(c.id);
+    // note which OP fighters were still locked BEFORE this medal is awarded
+    const opBefore = ROSTER.filter(o=>o.opChar && !charUnlocked(o.id)).map(o=>o.id);
     Save.awardClassic(c.id);                 // grants medal + epic skin, persists
     Save.addStat('wins',4);                  // a full run is 4 wins
     refreshProfileLine();
-    rebuildRosterMedals();
+    // a new medal can cross an OP threshold → rebuild the grid so it appears
+    buildRoster();
+    const opNow = ROSTER.filter(o=>o.opChar && charUnlocked(o.id) && opBefore.includes(o.id));
     title.textContent = classic.st.title+' — CLEARED!';
     title.style.filter='none';
     sub.innerHTML = firstClear
       ? `🏅 <span style="color:${c.color}">${c.name}</span> earned a MEDAL and unlocked the EPIC skin! Cycle costumes to equip it.`
       : `🏅 <span style="color:${c.color}">${c.name}</span> conquered Classic Mode again.`;
+    // dramatic reveal if this medal just unlocked a secret OP fighter
+    if(opNow.length){
+      const oc=opNow[0];
+      sub.innerHTML += `<br><br>✦ <span style="color:${oc.color}">SECRET FIGHTER UNLOCKED: ${oc.name}</span> ✦<br><span style="font-size:.85em;opacity:.85">A hidden OP fighter has appeared on the roster.</span>`;
+      announce('SECRET UNLOCKED!');
+    } else {
+      announce('CHAMPION!');
+    }
     sub.style.color='#fdbb2d';
-    announce('CHAMPION!');
     grantAndToast();                         // check STORYTELLER / HALL OF FAME / etc.
   } else {
     title.textContent='RUN OVER';
@@ -4419,9 +5907,180 @@ function finishClassic(won){
   classic=null;
 }
 
+/* ---------------- ONLINE LOBBY UI ---------------- */
+(function setupOnlineLobby(){
+  const oRoster=document.getElementById('onlineRoster');
+  const oPanels=document.getElementById('onlinePanels');
+  const oRules=document.getElementById('onlineRuleGrid');
+  let oStageIndex=0;
+
+  // roster tiles (reuses global p1Pick + costMap so the match spawns the same fighter)
+  function buildOnlineTile(c){
+    const el=document.createElement('div');
+    el.className='char'; el.dataset.id=c.id;
+    el.innerHTML=`<span class="pick"></span><canvas class="ic" width="96" height="96"></canvas><span class="nm" style="color:${c.color}">${c.name}</span>`;
+    const ic=el.querySelector('canvas').getContext('2d');
+    (function loop(t){
+      if(charUnlocked(c.id)) drawIcon(ic,c,96,costMap[c.id]||0,t);
+      else { ic.clearRect(0,0,96,96); ic.fillStyle='#1a1a24'; ic.fillRect(0,0,96,96); ic.fillStyle='#5a5a6a'; ic.font='bold 34px Arial'; ic.textAlign='center'; ic.textBaseline='middle'; ic.fillText('?',48,50); }
+      if(document.body.contains(el)) requestAnimationFrame(loop);
+    })(0);
+    el.addEventListener('click',()=>{
+      if(!charUnlocked(c.id)){ flashOnlineHelper('🔒 LOCKED — unlock it in single player first'); return; }
+      p1Pick=c; refreshOnlinePicks();
+    });
+    return el;
+  }
+  CATEGORIES.forEach((cat,ci)=>{
+    const vis=ROSTER.filter(c=>CAT_OF[c.id]===ci && !(c.hidden && !charUnlocked(c.id)));
+    if(cat.secret && vis.length===0) return;   // hide the secret group until earned
+    const group=document.createElement('div'); group.className='catgroup';
+    group.innerHTML=`<div class="cathead"><span class="cicon">${cat.icon}</span>${cat.name}</div>`;
+    const row=document.createElement('div'); row.className='catrow';
+    vis.forEach(c=>row.appendChild(buildOnlineTile(c)));
+    group.appendChild(row); oRoster.appendChild(group);
+  });
+  const oLeft=ROSTER.filter(c=>CAT_OF[c.id]===undefined);
+  if(oLeft.length){ const g=document.createElement('div'); g.className='catgroup'; g.innerHTML=`<div class="cathead"><span class="cicon">✦</span>OTHER</div>`; const r=document.createElement('div'); r.className='catrow'; oLeft.forEach(c=>r.appendChild(buildOnlineTile(c))); g.appendChild(r); oRoster.appendChild(g); }
+
+  function refreshOnlinePicks(){
+    document.querySelectorAll('#onlineRoster .char').forEach(el=>{
+      el.classList.toggle('sel1', p1Pick && p1Pick.id===el.dataset.id);
+      const pk=el.querySelector('.pick'); pk.innerHTML = (p1Pick && p1Pick.id===el.dataset.id) ? '<span class="p1">YOU</span>' : '';
+    });
+    oPanels.innerHTML='';
+    const p=document.createElement('div'); p.className='panel p1w';
+    if(!p1Pick){ p.innerHTML='<div class="tag">YOUR FIGHTER</div><div class="empty">— PICK ONE —</div>'; }
+    else {
+      p.innerHTML=`<div class="tag">YOUR FIGHTER</div><canvas width="120" height="120"></canvas>
+        <div class="pname" style="color:${p1Pick.color}">${p1Pick.name}</div><div class="dz">${p1Pick.desc}</div>
+        <button class="costbtn" title="Cycle costume">👕 <span class="costname"></span></button>
+        <div class="mv"><b style="color:${p1Pick.color}">K</b> ${p1Pick.move}</div>
+        <div class="mv"><b style="color:#fdbb2d">↑</b> ${p1Pick.up}</div>
+        <div class="mv"><b style="color:#ff5714">★</b> ${p1Pick.sup}</div>`;
+      const cc=p.querySelector('canvas').getContext('2d');
+      (function loop(t){ cc.clearRect(0,0,120,120); drawFighter(cc,p1Pick,30,22,60,82,1,t,'idle',costMap[p1Pick.id]||0); if(document.body.contains(p)) requestAnimationFrame(loop); })(0);
+      const cbtn=p.querySelector('.costbtn'), cname=p.querySelector('.costname');
+      const rc=()=>{ cname.textContent=resolveCostume(p1Pick,costMap[p1Pick.id]||0).name; cbtn.classList.toggle('on',(costMap[p1Pick.id]||0)>0); };
+      rc();
+      cbtn.onclick=(e)=>{ e.stopPropagation(); const n=COSTUME_COUNT+(Save.hasEpic(p1Pick.id)?1:0); costMap[p1Pick.id]=((costMap[p1Pick.id]||0)+1)%n; rc(); };
+    }
+    oPanels.appendChild(p);
+  }
+
+  // rule chips (host's choice; joiner inherits). Boss/soccer excluded — 1v1 duel only.
+  GAMEMODES.filter(gm=>!gm.boss && !gm.soccer).forEach(gm=>{
+    const el=document.createElement('div');
+    el.className='rule'+(gm.id===gameMode?' sel':'');
+    el.dataset.rule=gm.id;
+    el.innerHTML=`<div class="rt">${gm.name}</div><div class="rd">${gm.desc}</div>`;
+    el.onclick=()=>{ gameMode=gm.id; document.querySelectorAll('#onlineRuleGrid .rule').forEach(x=>x.classList.toggle('sel',x.dataset.rule===gm.id)); };
+    oRules.appendChild(el);
+  });
+  // if current gameMode is boss/soccer, default to giant for online
+  if(currentMode().boss || currentMode().soccer){ gameMode='giant'; }
+
+  // stage carousel
+  const oCanvas=document.getElementById('onlineStageCanvas'), oCtx=oCanvas.getContext('2d');
+  const oName=document.getElementById('onlineStageName'), oFlag=document.getElementById('onlineFlag');
+  function showOnlineStage(i){
+    oStageIndex=(i+STAGES.length)%STAGES.length;
+    stagePick=STAGES[oStageIndex];
+    oName.textContent=stagePick.name;
+    oFlag.innerHTML=stagePick.flag.map(c=>`<span style="background:${c}"></span>`).join('');
+  }
+  (function oCarLoop(t){ const st=STAGES[oStageIndex]; drawStageBg(oCtx,st,oCanvas.width,oCanvas.height,t);
+    const sx=oCanvas.width/W, sy=oCanvas.height/H;
+    st.layout().forEach(pl=>{ oCtx.fillStyle=pl.main?st.plat:st.platTop; oCtx.fillRect(pl.x*sx,pl.y*sy,pl.w*sx,Math.max(5,pl.h*sy)); });
+    requestAnimationFrame(oCarLoop); })(0);
+  document.getElementById('onlineStagePrev').onclick=()=>showOnlineStage(oStageIndex-1);
+  document.getElementById('onlineStageNext').onclick=()=>showOnlineStage(oStageIndex+1);
+
+  // entry from title
+  document.getElementById('onlineBtn').onclick=()=>{
+    mode='online'; classic=null;
+    if(currentMode().boss || currentMode().soccer) gameMode='giant';
+    document.querySelectorAll('#onlineRuleGrid .rule').forEach(x=>x.classList.toggle('sel',x.dataset.rule===gameMode));
+    if(!p1Pick || !charUnlocked(p1Pick.id)){ p1Pick=ROSTER.find(c=>charUnlocked(c.id))||ROSTER[0]; }
+    refreshOnlinePicks(); showOnlineStage(oStageIndex);
+    show('online');
+  };
+  document.getElementById('onlineBack').onclick=()=>{ mode='1p'; show('title'); };
+  document.getElementById('quickMatchBtn').onclick=()=>{ quickMatch(); };
+  document.getElementById('waitCancel').onclick=()=>{ cancelQuickMatch(); };
+  // little idle fighter on the waitroom card
+  const wc=document.getElementById('waitCanvas').getContext('2d');
+  (function wLoop(t){ wc.clearRect(0,0,120,130); if(p1Pick){ drawFighter(wc,p1Pick,30,25,60,82,1,t,'idle',costMap[p1Pick.id]||0); } requestAnimationFrame(wLoop); })(0);
+})();
+
+/* ---------------- MAIN LOOP ---------------- */
+/* ---------------- PAUSE ---------------- */
+function canPause(){ return running && mode!=='online'; }   // online can't pause (would desync)
+function togglePause(){
+  if(paused){ resumeGame(); }
+  else if(canPause()){ openPause(); }
+}
+function openPause(){
+  paused=true;
+  // reflect current audio/mobile state on the toggles
+  const mus=document.getElementById('pauseMusic');
+  mus.classList.toggle('on', Music.on); mus.textContent=Music.on?'ON':'OFF';
+  const mob=document.getElementById('pauseMobile');
+  const on=Save.getSetting('mobile',false);
+  mob.classList.toggle('on', on); mob.textContent=on?'ON':'OFF';
+  document.getElementById('pause').classList.remove('hidden');
+  // silence held keys so nobody keeps walking while paused
+  keys={};
+}
+function resumeGame(){
+  paused=false;
+  document.getElementById('pause').classList.add('hidden');
+}
+function quitToMenu(){
+  paused=false;
+  document.getElementById('pause').classList.add('hidden');
+  running=false;
+  classic=null;
+  Music.stop();
+  document.getElementById('hud').classList.add('hidden');
+  show('title');
+}
+document.getElementById('resumeBtn').onclick=resumeGame;
+document.getElementById('quitBtn').onclick=quitToMenu;
+document.getElementById('pauseMusic').onclick=(e)=>{
+  const on=Music.toggle();
+  const b=e.currentTarget; b.classList.toggle('on', on); b.textContent=on?'ON':'OFF';
+  // keep the corner mute button in sync
+  const mb=document.getElementById('muteBtn'); if(mb){ mb.textContent=on?'🔊':'🔇'; mb.classList.toggle('off',!on); }
+};
+document.getElementById('pauseMobile').onclick=(e)=>{
+  const now=!Save.getSetting('mobile',false);
+  Save.setSetting('mobile', now); applyMobileMode();
+  const b=e.currentTarget; b.classList.toggle('on', now); b.textContent=now?'ON':'OFF';
+};
+// ESC toggles pause during a local match
+window.addEventListener('keydown', e=>{
+  if(e.key==='Escape'){ e.preventDefault(); if(running || paused) togglePause(); }
+});
+
+/* ---------------- SPLASH SCREEN ---------------- */
+(function setupSplash(){
+  const splash=document.getElementById('splash');
+  let dismissed=false;
+  function dismiss(){
+    if(dismissed) return; dismissed=true;
+    splash.classList.add('fade-out');
+    setTimeout(()=>splash.classList.add('hidden'), 500);
+  }
+  splash.addEventListener('click', dismiss);
+  splash.addEventListener('touchstart', dismiss, {passive:true});
+  window.addEventListener('keydown', dismiss, {once:true});
+  setTimeout(dismiss, 2600);   // auto-continue if nobody taps
+})();
+
 /* ---------------- MAIN LOOP ---------------- */
 function frame(t){
-  if(running) update(t);
+  if(running && !paused) update(t);
   render(t);
   requestAnimationFrame(frame);
 }
