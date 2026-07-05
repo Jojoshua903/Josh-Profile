@@ -56,14 +56,14 @@
   .hidden{display:none !important;}
 
   /* content-heavy menus scroll from the top inside the fixed frame */
-  #select, #stage, #mode, #achieve, #settings{
+  #select, #stage, #mode, #achieve, #settings, #online{
     justify-content:flex-start;
     overflow-y:auto;
     padding-top:3%;
     padding-bottom:20px;
   }
-  #select::-webkit-scrollbar, #stage::-webkit-scrollbar, #mode::-webkit-scrollbar, #achieve::-webkit-scrollbar, #settings::-webkit-scrollbar{width:8px;}
-  #select::-webkit-scrollbar-thumb, #stage::-webkit-scrollbar-thumb, #mode::-webkit-scrollbar-thumb, #achieve::-webkit-scrollbar-thumb, #settings::-webkit-scrollbar-thumb{background:rgba(253,187,45,.5);border-radius:4px;}
+  #select::-webkit-scrollbar, #stage::-webkit-scrollbar, #mode::-webkit-scrollbar, #achieve::-webkit-scrollbar, #settings::-webkit-scrollbar, #online::-webkit-scrollbar{width:8px;}
+  #select::-webkit-scrollbar-thumb, #stage::-webkit-scrollbar-thumb, #mode::-webkit-scrollbar-thumb, #achieve::-webkit-scrollbar-thumb, #settings::-webkit-scrollbar-thumb, #online::-webkit-scrollbar-thumb{background:rgba(253,187,45,.5);border-radius:4px;}
   h1{
     font-size:clamp(30px,7vw,74px);
     letter-spacing:.04em;
@@ -76,10 +76,17 @@
   .sub{font-family:Arial,sans-serif;font-weight:700;letter-spacing:.3em;font-size:clamp(10px,1.6vw,15px);color:#fdbb2d;margin-top:8px;opacity:.9;}
   /* nudge the title logo down so its skewed top never clips the box edge */
   #title h1{margin-top:0;padding-top:6px;}
-  /* tighter button spacing on the title so everything fits the splash */
-  #title .btn{margin-top:16px;}
-  #title .classicrow{margin-top:16px;}
-  #title .profile{margin-top:12px;}
+  /* --- decluttered title layout --- */
+  #title .medalbadge{margin-top:12px;font-size:clamp(12px,1.8vw,16px);padding:6px 14px;}
+  /* PLAY is the hero action: larger and set apart */
+  #title .btn-hero{margin-top:22px;font-size:clamp(24px,4vw,38px);padding:16px 70px;}
+  /* the four secondary options sit in a tidy 2x2 grid */
+  #title .titlegrid{
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:12px 16px;margin-top:20px;width:100%;max-width:520px;
+  }
+  #title .titlegrid .btn{margin-top:0;width:100%;font-size:clamp(14px,2.2vw,20px);padding:12px 10px;}
+  #title .profile{margin-top:16px;}
   .btn{
     margin-top:26px;
     font-family:"Impact",sans-serif;letter-spacing:.08em;
@@ -392,13 +399,14 @@
   <div class="screen" id="title">
     <h1>WAT IN DE<br>FIGHTERS</h1>
     <div class="sub">PLATFORM  FIGHTER</div>
-    <button class="btn" id="startBtn">PLAY</button>
-    <div class="classicrow">
+    <div class="medalbadge" id="medalBadge" title="Classic Mode medals earned">🏅 <span id="medalCount">0</span>/<span id="medalTotal">0</span> MEDALS</div>
+    <button class="btn btn-hero" id="startBtn">PLAY</button>
+    <div class="titlegrid">
+      <button class="btn btn-alt" id="onlineBtn">ONLINE 1v1</button>
       <button class="btn btn-alt" id="classicBtn">CLASSIC MODE</button>
-      <div class="medalbadge" id="medalBadge" title="Classic Mode medals earned">🏅 <span id="medalCount">0</span>/<span id="medalTotal">0</span></div>
+      <button class="btn btn-back" id="achBtn">ACHIEVEMENTS</button>
+      <button class="btn btn-back" id="settingsBtn">SETTINGS</button>
     </div>
-    <button class="btn btn-back" id="achBtn">ACHIEVEMENTS</button>
-    <button class="btn btn-back" id="settingsBtn">SETTINGS</button>
     <div class="profile" id="profileLine"></div>
     <div class="madeby"></div>
   </div>
@@ -451,8 +459,10 @@
     </div>
     <div class="modelbl">RULES</div>
     <div class="rules" id="ruleGrid"></div>
-    <button class="btn" id="modeGo">CONTINUE</button>
-    <button class="btn btn-back" id="modeBack">◀ BACK</button>
+    <div class="btnrow">
+      <button class="btn btn-back" id="modeBack">◀ BACK</button>
+      <button class="btn" id="modeGo">CONTINUE</button>
+    </div>
     <div class="controls">
       <b style="color:#4dd2ff">P1</b> &nbsp;MOVE A/D · JUMP W · DROP S · ATTACK J · SPECIAL K · UP-SPECIAL I · SUPER U · SHIELD L<br>
       <b style="color:#ff9f4d">P2</b> &nbsp;MOVE ← / → · JUMP ↑ · DROP ↓ · ATTACK . · SPECIAL / · UP-SPECIAL &apos; · SUPER , · SHIELD RSHIFT
@@ -530,6 +540,42 @@
       <div class="storytext" id="storyText"></div>
       <button class="btn" id="storyNext">NEXT ▶</button>
     </div>
+  </div>
+
+  <!-- ONLINE LOBBY -->
+  <div class="screen hidden" id="online">
+    <h2 style="font-size:clamp(20px,4vw,40px);color:#fdbb2d;transform:skewX(-6deg);text-shadow:0 3px 0 rgba(0,0,0,.4);">ONLINE 1v1</h2>
+    <div class="helper" id="onlineHelper">QUICK MATCH · PICK A FIGHTER, THEN FIND AN OPPONENT</div>
+    <div class="roster" id="onlineRoster"></div>
+    <div class="panels" id="onlinePanels"></div>
+    <div class="modelbl">MATCH SETUP (used if you host)</div>
+    <div class="rules" id="onlineRuleGrid" style="max-width:520px;"></div>
+    <div class="carousel" style="max-width:420px;margin-top:12px;">
+      <button class="arrow" id="onlineStagePrev" aria-label="Previous stage">◀</button>
+      <div class="stagecard" style="max-width:300px;">
+        <span class="flag" id="onlineFlag"></span>
+        <canvas id="onlineStageCanvas" width="300" height="169"></canvas>
+        <span class="sname" id="onlineStageName">STAGE</span>
+      </div>
+      <button class="arrow" id="onlineStageNext" aria-label="Next stage">▶</button>
+    </div>
+    <div class="btnrow">
+      <button class="btn btn-back" id="onlineBack">◀ BACK</button>
+      <button class="btn" id="quickMatchBtn">QUICK MATCH</button>
+    </div>
+    <div class="madeby"></div>
+  </div>
+
+  <!-- WAIT ROOM (searching / connecting) -->
+  <div class="screen hidden" id="waitroom">
+    <h2 style="font-size:clamp(20px,4vw,40px);color:#fdbb2d;transform:skewX(-6deg);text-shadow:0 3px 0 rgba(0,0,0,.4);">MATCHMAKING</h2>
+    <div class="storycard" style="max-width:min(88%,420px);gap:16px;">
+      <canvas id="waitCanvas" width="120" height="130"></canvas>
+      <div class="storyprog" id="waitStatus">SEARCHING FOR AN OPPONENT…</div>
+      <div class="memeblurb" id="waitSub" style="max-width:300px;">Keep this tab open. You'll drop straight into the fight when someone joins.</div>
+      <button class="btn btn-back" id="waitCancel" style="font-size:15px;padding:8px 22px;">CANCEL</button>
+    </div>
+    <div class="madeby"></div>
   </div>
 </div>
 
@@ -673,7 +719,7 @@ const ROSTER = [
     costume3:{name:'RING VETERAN', color:'#c1121f', dark:'#6a0a10', acc:'horns'}
   },
   {
-    id:'doremalen', name:'DOREMALEN', color:'#38b000', dark:'#1f6b00',
+    id:'doremalen', name:'MARK', color:'#38b000', dark:'#1f6b00',
     desc:'Science Teacher',
     move:'ACID FLASK · lobbed chemical splash',
     up:'ROCKET REACTION · fizzing launch',
@@ -782,7 +828,7 @@ const ROSTER = [
   },
   {
     id:'ati', name:'ATI', color:'#9d4edd', dark:'#5a277d', skin:'#e3b58f', locked:true,
-    desc:"Strict Mother",
+    desc:"Mother",
     move:'DOUBLE SMACK · a homing slipper + a returning boomerang slipper',
     up:'GROUNDED! · a scolding leap',
     sup:'HOUSE RULES · a flurry of slippers',
@@ -841,7 +887,7 @@ const ROSTER = [
     costume3:{name:'CREAM SUIT', color:'#e9d8a6', dark:'#a3894a', acc:'star'}
   },
   {
-    id:'oela', name:'OELATUMBUSUM', color:'#2a9d8f', dark:'#145047', skin:'#5c3a21', locked:true,
+    id:'oela', name:'OELA', color:'#2a9d8f', dark:'#145047', skin:'#5c3a21', locked:true,
     desc:'African Striker',
     move:'ROCKET SHOT · rifles a curving football',
     up:'BICYCLE KICK · a soaring overhead flip',
@@ -851,6 +897,30 @@ const ROSTER = [
     costume:{name:'HOME KIT', color:'#e9c46a', dark:'#a3801f', acc:'star'},
     costume2:{name:'AWAY KIT', color:'#e63946', dark:'#7a141d', acc:'crown'},
     costume3:{name:'CAPTAIN', color:'#457b9d', dark:'#1d3a4d', acc:'antenna'}
+  },
+  {
+    id:'ash', name:'ASH', color:'#ff8fa3', dark:'#a33a52', skin:'#f0c8a8', locked:true,
+    desc:"Little Brother",
+    move:'CURVEBALL · lobs a fast arcing baseball',
+    up:'POP-UP · a spring off a bouncing ball',
+    sup:'TRIPLE PLAY · three curving fastballs',
+    stats:{speed:3.7, jump:14.6, weight:0.92},
+    special:'curve',
+    costume:{name:'LITTLE LEAGUE', color:'#4cc9f0', dark:'#1b6a85', acc:'star'},
+    costume2:{name:'ROOKIE RED', color:'#e63946', dark:'#7a141d', acc:'antenna'},
+    costume3:{name:'NIGHT GAME', color:'#3a0ca3', dark:'#1a0552', acc:'goggles'}
+  },
+  {
+    id:'kayo', name:'KAYO & YARA', color:'#f9a03f', dark:'#a35e14', skin:'#e8b98f', locked:true,
+    desc:'Two Cats, One Fighter',
+    move:'POUNCE COMBO · one cat lunges, the other swipes',
+    up:'CAT STACK · the pair leap off each other',
+    sup:'NINE LIVES · a relentless tag-team frenzy',
+    stats:{speed:4.1, jump:15.4, weight:0.8},
+    special:'twocat',
+    costume:{name:'CALICO', color:'#e07a5f', dark:'#8a3f2a', acc:'bow'},
+    costume2:{name:'TUXEDO', color:'#2b2d42', dark:'#111321', acc:'shades'},
+    costume3:{name:'SNOW PAWS', color:'#e9ecef', dark:'#adb5bd', acc:'crown'}
   }
 ];
 
@@ -882,6 +952,8 @@ const TAUNTS = {
   thomas:   { seq:['🌀','💥'],      cry:"FEEL THAT?",  emote:'flex' },
   giancarlo:{ seq:['🔫','🎩'],      cry:"FUGGEDABOUTIT!", emote:'point' },
   oela:     { seq:['⚽','🏆'],      cry:"GOOOAL!",     emote:'point' },
+  ash:      { seq:['⚾','😤'],      cry:"MY TURN NOW!", emote:'point' },
+  kayo:     { seq:['🐱','🐈'],      cry:"MEOW MEOW!",   emote:'spin' },
 };
 
 /* ---------------- CLASSIC MODE STORIES ---------------- */
@@ -915,6 +987,8 @@ const STORY = {
   thomas:  { title:'FULL CIRCLE',         goal:'to roll over every doubter', rival:'giancarlo' },
   giancarlo:{title:'THE FAMILY BUSINESS', goal:'to run the whole block', rival:'thorren' },
   oela:    { title:'THE BEAUTIFUL GAME',  goal:'to score the goal that changes everything', rival:'nathan' },
+  ash:     { title:'OUT OF THE SHADOW',   goal:"to prove he's more than Nathan's little brother", rival:'nathan' },
+  kayo:    { title:'PURR-FECT TEAM',      goal:'to show two cats fight better than one', rival:'femi' },
 };
 // Build a 4-round gauntlet for a chosen character: 3 themed opponents + the rival.
 function buildClassicRun(c){
@@ -997,6 +1071,26 @@ function drawIcon(g, c, S, costume, t){
       g.strokeStyle='#e63946'; g.lineWidth=Math.max(1.5,S*0.02);
       g.beginPath(); g.arc(-r*0.5,0,r*0.9,-0.9,0.9); g.stroke();
       g.beginPath(); g.arc(r*0.5,0,r*0.9,Math.PI-0.9,Math.PI+0.9); g.stroke(); break;
+    case 'curve': // baseball with a swerve arrow
+      g.fillStyle=white; g.beginPath(); g.arc(r*0.15,-r*0.1,r*0.62,0,Math.PI*2); g.fill();
+      g.strokeStyle='#e63946'; g.lineWidth=Math.max(1.2,S*0.016);
+      g.beginPath(); g.arc(r*0.15,-r*0.1,r*0.55,-0.9,0.9); g.stroke();
+      g.strokeStyle=white; g.lineWidth=Math.max(1.5,S*0.02);
+      g.beginPath(); g.moveTo(-r*0.8,r*0.7); g.quadraticCurveTo(-r*0.1,r*0.3,r*0.4,r*0.7); g.stroke();
+      g.beginPath(); g.moveTo(r*0.4,r*0.7); g.lineTo(r*0.15,r*0.5); g.moveTo(r*0.4,r*0.7); g.lineTo(r*0.55,r*0.42); g.stroke(); break;
+    case 'twocat': // two cat heads with pointy ears
+      for(let s=-1;s<=1;s+=2){
+        const cx=s*r*0.42;
+        g.fillStyle = s<0?white:ink;
+        g.beginPath(); g.arc(cx,r*0.15,r*0.5,0,Math.PI*2); g.fill();
+        // ears
+        g.beginPath(); g.moveTo(cx-r*0.4,-r*0.25); g.lineTo(cx-r*0.15,-r*0.6); g.lineTo(cx-r*0.05,-r*0.2); g.closePath(); g.fill();
+        g.beginPath(); g.moveTo(cx+r*0.4,-r*0.25); g.lineTo(cx+r*0.15,-r*0.6); g.lineTo(cx+r*0.05,-r*0.2); g.closePath(); g.fill();
+        // eyes
+        g.fillStyle = s<0?ink:white;
+        g.beginPath(); g.arc(cx-r*0.16,r*0.1,r*0.08,0,Math.PI*2); g.fill();
+        g.beginPath(); g.arc(cx+r*0.16,r*0.1,r*0.08,0,Math.PI*2); g.fill();
+      } break;
     case 'drone': case 'minidrone': // drone/rotor
       g.strokeStyle=white; g.beginPath(); g.moveTo(-r,-r*0.6); g.lineTo(r,-r*0.6); g.stroke();
       g.fillStyle=white; g.beginPath(); g.arc(0,r*0.1,r*0.55,0,Math.PI*2); g.fill();
@@ -1099,6 +1193,9 @@ function drawFighter(g, c, x, y, w, h, face, t, state, costume){
   const col = cos.color;
   const dark = cos.dark;
   const bodyW = w*0.5, bodyH = h*0.44;
+  // These characters replace the whole body with a custom drawing (blob / stacked
+  // cats), so we skip the standard humanoid limbs+head to avoid stray parts poking out.
+  const fullRedraw = (c.id==='kayo' || c.id==='reshman');
 
   // shadow ellipse
   g.save();
@@ -1110,6 +1207,10 @@ function drawFighter(g, c, x, y, w, h, face, t, state, costume){
   g.restore();
 
   // legs
+  const atk = state==='attack';
+  const armFwd = atk ? bodyW*0.55 : bodyW*0.28;
+  const headR = w*0.16;
+  if(!fullRedraw){
   g.fillStyle=dark;
   const legSwing = Math.sin(t/120)* (state==='run'?6:1);
   roundRect(g, -bodyW*0.42, bodyH*0.3, bodyW*0.32, h*0.24 + legSwing, 4);
@@ -1128,14 +1229,11 @@ function drawFighter(g, c, x, y, w, h, face, t, state, costume){
 
   // arms
   g.fillStyle=dark;
-  const atk = state==='attack';
-  const armFwd = atk ? bodyW*0.55 : bodyW*0.28;
   roundRect(g, armFwd-6, -bodyH*0.35, 10, bodyH*0.55, 5); // front arm
   roundRect(g, -bodyW*0.5, -bodyH*0.35, 10, bodyH*0.55, 5); // back arm
 
   // head
   g.fillStyle=c.skin||'#ffe3c4';
-  const headR = w*0.16;
   g.beginPath();
   g.arc(0, -bodyH*0.75, headR, 0, Math.PI*2);
   g.fill();
@@ -1143,6 +1241,7 @@ function drawFighter(g, c, x, y, w, h, face, t, state, costume){
   // eyes
   g.fillStyle='#111';
   g.beginPath(); g.arc(headR*0.35, -bodyH*0.78, 2.2, 0,Math.PI*2); g.fill();
+  }
 
   // --- character-specific flair ---
   if(c.id==='nathan'){ // baseball cap + bat
@@ -1461,6 +1560,59 @@ function drawFighter(g, c, x, y, w, h, face, t, state, costume){
     g.fillStyle='#111'; g.beginPath(); g.arc(bodyW*0.5, by, 2, 0, Math.PI*2); g.fill();
     // kicking leg when attacking
     if(atk){ g.strokeStyle=dark; g.lineWidth=5; g.beginPath(); g.moveTo(0,bodyH*0.4); g.lineTo(armFwd+10,bodyH*0.2); g.stroke(); }
+  } else if(c.id==='ash'){ // little brother: backwards cap, jersey, baseball in hand
+    // backwards cap
+    g.fillStyle=dark; g.beginPath(); g.arc(0,-bodyH*0.82,headR*1.0,Math.PI,0); g.fill();
+    g.fillRect(-headR*1.3,-bodyH*0.82, headR*0.9, 3); // brim to the back
+    // jersey number
+    g.fillStyle='#fff'; g.font='bold '+(bodyH*0.24)+'px Arial'; g.textAlign='center'; g.textBaseline='middle';
+    g.save(); g.scale(face,1); g.fillText('2',0,-bodyH*0.22); g.restore();
+    // baseball in the throwing hand
+    g.fillStyle='#fff'; g.strokeStyle='#e63946'; g.lineWidth=1;
+    const bx=atk?armFwd+12:bodyW*0.5, byy=atk?-bodyH*0.5:-bodyH*0.15;
+    g.beginPath(); g.arc(bx, byy, 5, 0, Math.PI*2); g.fill();
+    g.beginPath(); g.arc(bx-2, byy, 4, -0.8, 0.8); g.stroke();
+  } else if(c.id==='kayo'){ // TWO CATS STACKED: Yara balances on top of Kayo
+    g.restore();            // drop the standard humanoid body entirely
+    g.save();
+    g.translate(x + w/2, y + h/2 + bob);
+    g.scale(face,1);
+    const catW = w*0.4, catH = h*0.3;
+    // draws a single cat centered at (cx,cy); top cat is smaller & darker
+    function drawCat(cx, cy, s, body, ear, eye, wag){
+      g.save(); g.translate(cx,cy); g.scale(s,s);
+      // tail (swishes)
+      g.strokeStyle=ear; g.lineWidth=5; g.lineCap='round';
+      g.beginPath(); g.moveTo(-catW*0.5, catH*0.2);
+      g.quadraticCurveTo(-catW*0.95, catH*0.1 + Math.sin(t/120+wag)*8, -catW*0.85, -catH*0.4); g.stroke();
+      // body (rounded)
+      g.fillStyle=body; roundRect(g, -catW*0.5, -catH*0.35, catW, catH*0.9, catH*0.4);
+      // head
+      g.beginPath(); g.arc(catW*0.28, -catH*0.3, catH*0.42, 0, Math.PI*2); g.fill();
+      // ears
+      g.fillStyle=ear;
+      g.beginPath(); g.moveTo(catW*0.1,-catH*0.55); g.lineTo(catW*0.18,-catH*0.95); g.lineTo(catW*0.34,-catH*0.6); g.closePath(); g.fill();
+      g.beginPath(); g.moveTo(catW*0.34,-catH*0.62); g.lineTo(catW*0.48,-catH*0.98); g.lineTo(catW*0.52,-catH*0.55); g.closePath(); g.fill();
+      // eyes
+      g.fillStyle=eye;
+      g.beginPath(); g.arc(catW*0.2,-catH*0.32,3,0,Math.PI*2); g.fill();
+      g.beginPath(); g.arc(catW*0.38,-catH*0.32,3,0,Math.PI*2); g.fill();
+      // little front paws
+      g.fillStyle=body; g.beginPath(); g.arc(catW*0.12,catH*0.42,catH*0.16,0,Math.PI*2); g.fill();
+      g.beginPath(); g.arc(catW*0.38,catH*0.42,catH*0.16,0,Math.PI*2); g.fill();
+      // whiskers
+      g.strokeStyle='rgba(255,255,255,.8)'; g.lineWidth=1;
+      g.beginPath(); g.moveTo(catW*0.32,-catH*0.24); g.lineTo(catW*0.62,-catH*0.28); g.moveTo(catW*0.32,-catH*0.2); g.lineTo(catW*0.62,-catH*0.16); g.stroke();
+      g.restore();
+    }
+    // bottom cat (Kayo) — full-size, main color
+    drawCat(0, catH*0.55, 1.0, col, dark, '#ffe66d', 0);
+    // top cat (Yara) — a bit smaller, sits on Kayo's shoulders; hops a touch
+    const topBob = Math.sin(t/100)*2;
+    drawCat(0, -catH*0.55 + topBob, 0.8, dark, col, '#8fefff', 1.6);
+    // attack: top cat throws a swipe forward
+    if(state==='attack'){ g.strokeStyle='#fff'; g.lineWidth=2;
+      for(let k=-1;k<=1;k++){ g.beginPath(); g.arc(catW*0.7,-catH*0.4,11,-0.5+k*0.35,0.5+k*0.35); g.stroke(); } }
   } else if(c.id==='reshman'){ // small shadow, glowing eyes
     g.restore(); // redraw as blob
     g.save();
@@ -2306,7 +2458,7 @@ let players=[], projectiles=[], particles=[], strikes=[], shocks=[], afterimages
 let soccerBall=null, soccerScore=[0,0], soccerGoalTimer=0;
 let keys={};
 let running=false;
-let mode='1p';                 // '1p' or '2p'  (opponent = human or bot)
+let mode='1p';                 // '1p', '2p', or 'online'
 let gameMode='stock';          // ruleset id (see GAMEMODES)
 let p1Pick=null, p2Pick=null;  // p2 is bot in 1p mode
 let p1Meme='none', p2Meme='none';
@@ -2314,6 +2466,40 @@ let botCostume=0;              // chosen bot skin index for 1P config
 let hitStop=0;
 let shakeT=0;
 let classic=null;              // active Classic Mode run, or null
+
+/* ---------------- ONLINE NETCODE (Firebase RTDB via REST) ---------------- */
+// No SDK (the artifact CSP blocks it). We talk to the Realtime Database over its
+// plain HTTPS REST API: GET/PUT/PATCH/DELETE on <dbURL>/<path>.json.
+// Model: each client simulates ONLY its own fighter and broadcasts that fighter's
+// state; the opponent fighter is drawn from their broadcast. Hits are sent as
+// events the other client applies to itself. Host owns rules + stage.
+const FIREBASE_DB_URL = 'https://widf-2b62d-default-rtdb.europe-west1.firebasedatabase.app';
+const Net = {
+  connected:false, isHost:false, roomCode:null, meSlot:null, foeSlot:null,
+  _seq:0, _pollTimer:null, _waitTimer:null, _lastSend:0, _lastSentKey:null, _lastAppliedHit:0,
+  _cur:null, _prev:null, _curRecvT:0, _prevRecvT:0, _avgGap:0, _renderX:undefined, _renderY:undefined, _pingEst:0,
+  _esFoe:null, _esHit:null, _useSSE:false,
+  _matchStarted:false, _searching:false, _abort:false,
+};
+function dbUrl(path){ return FIREBASE_DB_URL+'/'+path+'.json'; }
+async function dbGet(path){
+  try{ const r=await fetch(dbUrl(path)); if(!r.ok) return undefined; return await r.json(); }
+  catch(e){ return undefined; }
+}
+async function dbPut(path, val){
+  try{ await fetch(dbUrl(path), {method:'PUT', body:JSON.stringify(val)}); return true; }
+  catch(e){ return false; }
+}
+async function dbPatch(path, val){
+  try{ await fetch(dbUrl(path), {method:'PATCH', body:JSON.stringify(val)}); return true; }
+  catch(e){ return false; }
+}
+async function dbDelete(path){
+  try{ await fetch(dbUrl(path), {method:'DELETE'}); return true; }
+  catch(e){ return false; }
+}
+function randCode(){ const A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s=''; for(let i=0;i<5;i++) s+=A[Math.floor(Math.random()*A.length)]; return s; }
+
 
 /* ---------------- SAVE SYSTEM (localStorage) ---------------- */
 // Progress persists in the browser across sessions. A profile name lets you
@@ -2366,11 +2552,11 @@ const ACHIEVEMENTS = [
   { id:'medals5',   name:'HALL OF FAME',     icon:'🏛️', desc:'Earn 5 Classic Mode medals.',
     check:s=>Object.keys(s.data.medals).length>=5, unlocks:'giancarlo' },
   { id:'flawless',  name:'FLAWLESS',         icon:'💯', desc:'Win a match without losing a life.',
-    check:s=>s.stat('flawless')>=1 },
+    check:s=>s.stat('flawless')>=1, unlocks:'ash' },
   { id:'meme10',    name:'MEME LORD',        icon:'😎', desc:'Win 5 matches with a meme equipped.',
     check:s=>s.stat('memeWins')>=5 },
   { id:'allstages', name:'GLOBETROTTER',     icon:'🌍', desc:'Fight on 8 different stages.',
-    check:s=>Object.keys(s.data.stats).filter(k=>k.startsWith('stage_')).length>=8 },
+    check:s=>Object.keys(s.data.stats).filter(k=>k.startsWith('stage_')).length>=8, unlocks:'kayo' },
   { id:'soccer',    name:'BACK OF THE NET',   icon:'⚽', desc:'Win a SOCCER match.',
     check:s=>s.stat('soccerWins')>=1, unlocks:'oela' },
 ];
@@ -2436,10 +2622,10 @@ const costMap = {}; // id -> costume index 0..4
 
 // Fighter categories by playstyle — shown as titled groups on the select screen.
 const CATEGORIES = [
-  { name:'MELEE',   icon:'⚔️', ids:['reshman','lars','fionn','yassin','metaai','dean','thomas'] },
+  { name:'MELEE',   icon:'⚔️', ids:['reshman','lars','fionn','yassin','metaai','dean','thomas','kayo'] },
   { name:'RANGED',  icon:'🎯', ids:['nathan','milo','adam','evadam','deniz','niffo','jax','femi','enno','thorren','niek','giancarlo','oela'] },
   { name:'HOMING',  icon:'🧲', ids:['josh','renas','devin','ati'] },
-  { name:'THROWERS',icon:'💣', ids:['daniel','doremalen'] },
+  { name:'THROWERS',icon:'💣', ids:['daniel','doremalen','ash'] },
 ];
 // map id -> category order so any unlisted fighter still lands somewhere sensible
 const CAT_OF = {}; CATEGORIES.forEach((cat,ci)=>cat.ids.forEach(id=>CAT_OF[id]=ci));
@@ -2642,7 +2828,7 @@ document.getElementById('muteBtn').onclick=(e)=>{
 
 /* ---------------- SCREEN FLOW ---------------- */
 function show(id){
-  ['title','mode','select','stage','result','versus','story','achieve','settings'].forEach(s=>document.getElementById(s).classList.toggle('hidden', s!==id));
+  ['title','mode','select','stage','result','versus','story','achieve','settings','online','waitroom'].forEach(s=>document.getElementById(s).classList.toggle('hidden', s!==id));
   document.body.classList.remove('in-match');
   // reset any scrollable menu back to the top so its heading is always visible on entry
   const el=document.getElementById(id);
@@ -2650,11 +2836,11 @@ function show(id){
   // never let a leftover achievement toast pop while navigating pre-match menus
   if(id!=='result'){ _toastQ.length=0; const tt=document.getElementById('achToast'); if(tt) tt.classList.remove('show'); _toastBusy=false; }
   // menu screens share a catchy menu theme; the match screens use stage music
-  const menuScreens=['title','mode','select','stage','achieve','result','story','settings'];
+  const menuScreens=['title','mode','select','stage','achieve','result','story','settings','online','waitroom'];
   if(menuScreens.includes(id)){ if(Music.curId!=='menu') Music.play('menu'); }
 }
 
-document.getElementById('startBtn').onclick=()=>{ classic=null; show('mode'); };
+document.getElementById('startBtn').onclick=()=>{ classic=null; updateModeCards(); show('mode'); };
 
 // ACHIEVEMENTS menu
 function buildAchList(){
@@ -2995,6 +3181,265 @@ function startMatch(){
   Music.play(stagePick.id);
 }
 
+/* ---------------- ONLINE MATCH ---------------- */
+// Called on BOTH clients once a room is paired. Host = P1 (left), joiner = P2 (right).
+// Rules + stage come from the room record (host chose them).
+function startOnlineMatch(){
+  mode='online';
+  ['title','mode','select','stage','result','versus','story','online','waitroom','achieve','settings'].forEach(s=>document.getElementById(s).classList.add('hidden'));
+  document.body.classList.add('in-match');
+  document.getElementById('hud').classList.remove('hidden');
+  PLATS = stagePick.layout();
+  const gm = currentMode();
+  const mainX = PLATS[0].x, mainW = PLATS[0].w;
+  const p1 = new Fighter(p1Pick, mainX+mainW*0.25, false, Net.p1Cos||0, 'none');
+  const p2 = new Fighter(p2Pick, mainX+mainW*0.65, false, Net.p2Cos||0, 'none');
+  [p1,p2].forEach(f=>{ f.maxHp=gm.hp; f.hp=gm.hp; f.stocks=gm.stocks; f.startStocks=gm.stocks; f.superMeter=gm.startSuper||0; });
+  players=[p1,p2];
+  projectiles=[]; particles=[]; strikes=[]; shocks=[]; afterimages=[];
+  soccerBall=null; soccerScore=[0,0];
+  document.getElementById('p1name').textContent=(Net.isHost?'YOU · ':'')+ 'P1 · '+p1Pick.name;
+  document.getElementById('p2name').textContent=(!Net.isHost?'YOU · ':'')+ 'P2 · '+p2Pick.name;
+  document.getElementById('p1name').style.color=p1Pick.color;
+  document.getElementById('p2name').style.color=p2Pick.color;
+  running=true;
+  Net.connected=true; Net._matchStarted=true; Net._cur=null; Net._prev=null; Net._lastSend=0; Net._lastSentKey=null; Net._lastAppliedHit=0;
+  Net._renderX=undefined; Net._renderY=undefined; Net._avgGap=0; Net._curRecvT=0; Net._prevRecvT=0; Net._pingEst=0;
+  netStartStream();
+  announce('FIGHT!');
+  updateHUD();
+  Music.play(stagePick.id);
+}
+
+// Serialize my fighter into a compact record and PUT it to my slot.
+// Sends at ~20/sec, but skips frames where nothing meaningful changed to cut traffic.
+function netSendState(force){
+  if(!Net.connected) return;
+  const now=performance.now();
+  if(!force && now-Net._lastSend < 50) return;   // up to ~20 updates/sec
+  const me=players[Net.isHost?0:1];
+  if(!me) return;
+  const s={ x:Math.round(me.x), y:Math.round(me.y), vx:+me.vx.toFixed(1), vy:+me.vy.toFixed(1),
+    fa:me.face, st:me.state, hp:Math.round(me.hp), sm:Math.round(me.superMeter),
+    sh:me.shielding?1:0, dd:me.dead&&me.stocks<=0?1:0 };
+  // skip identical frames (idle standing) so we don't spam the DB
+  const key=s.x+','+s.y+','+s.fa+','+s.st+','+s.hp+','+s.sh+','+s.dd;
+  if(!force && key===Net._lastSentKey) return;
+  Net._lastSentKey=key; Net._lastSend=now;
+  s.t=now; s.n=(++Net._seq);
+  dbPut('rooms/'+Net.roomCode+'/'+Net.meSlot+'/s', s);
+}
+// INTERPOLATION + EXTRAPOLATION: glide the opponent between snapshots, and when
+// the next packet is late, keep coasting along their last known velocity so they
+// never freeze. The blend window adapts to how fast packets are actually arriving.
+function netPushRemote(st){
+  if(!st) return;
+  const now=performance.now();
+  // measure real inter-packet gap → drives an adaptive interp window (responsive
+  // when packets are frequent, forgiving when they're sparse).
+  if(Net._curRecvT){
+    const gap=now-Net._curRecvT;
+    Net._avgGap = Net._avgGap ? Net._avgGap*0.8 + gap*0.2 : gap;
+  }
+  Net._prev = Net._cur || st;
+  Net._prevRecvT = Net._curRecvT || now;
+  Net._cur = st;
+  Net._curRecvT = now;
+  // non-positional bits apply immediately
+  const foe=players[Net.isHost?1:0];
+  if(foe){
+    foe.hp=(typeof st.hp==='number')?st.hp:foe.hp;
+    foe.superMeter=st.sm||0; foe.shielding=!!st.sh;
+    foe.face=st.fa||1; foe.state=st.st||'idle';
+    if(st.dd && !foe.dead){ foe.stocks=0; KO(foe); }
+    if(Net._renderX===undefined){ Net._renderX=st.x; Net._renderY=st.y; }
+  }
+}
+function netApplyRemote(){
+  const foe=players[Net.isHost?1:0];
+  const cur=Net._cur, prev=Net._prev;
+  if(!foe || !cur) return;
+  if(!prev){ foe.x=Net._renderX=cur.x; foe.y=Net._renderY=cur.y; foe.vx=cur.vx||0; foe.vy=cur.vy||0; return; }
+  const now=performance.now();
+  // adaptive window: clamp the measured average gap to a sane 55–140ms band.
+  const win = Math.max(55, Math.min(140, Net._avgGap||90));
+  const elapsed = now-Net._curRecvT;
+  let targetX, targetY;
+  if(elapsed <= win){
+    // between prev and cur: normal interpolation
+    const a = elapsed/win;
+    targetX = prev.x + (cur.x-prev.x)*a;
+    targetY = prev.y + (cur.y-prev.y)*a;
+  } else {
+    // packet is late: EXTRAPOLATE from cur along its velocity so motion continues.
+    // cap the coast at ~180ms so a long stall doesn't fling the ghost off-screen.
+    const over = Math.min(elapsed-win, 180);
+    targetX = cur.x + (cur.vx||0)*over/16.7;   // vx is per-frame (~60fps → 16.7ms)
+    targetY = cur.y + (cur.vy||0)*over/16.7;
+  }
+  // smooth the render position toward the target so corrections never snap.
+  Net._renderX += (targetX-Net._renderX)*0.35;
+  Net._renderY += (targetY-Net._renderY)*0.35;
+  foe.x=Net._renderX; foe.y=Net._renderY;
+  foe.vx=cur.vx||0; foe.vy=cur.vy||0;
+  // rough round-trip estimate for the on-screen ping readout (packet age + gap)
+  Net._pingEst = Math.round((Net._avgGap||0));
+}
+// Tell the opponent they got hit; they apply it to themselves.
+function netSendHit(dmg,kb,dir,launch){
+  if(!Net.connected) return;
+  const evt={ dmg:+dmg.toFixed(1), kb:+(kb||0).toFixed(1), dir:dir||1, la:+(launch||0).toFixed(2), n:(++Net._seq)+Math.random() };
+  dbPut('rooms/'+Net.roomCode+'/'+Net.foeSlot+'/hit', evt);
+}
+// Live updates via RTDB REST STREAMING (Server-Sent Events) — one persistent
+// connection each for the opponent's state and my incoming hits, instead of
+// polling the whole room 11x/sec. This is the big latency win.
+function sseListen(path, onData){
+  try{
+    const es=new EventSource(FIREBASE_DB_URL+'/'+path+'.json');
+    es.addEventListener('put', e=>{ try{ const d=JSON.parse(e.data); onData(d && d.data, d && d.path); }catch(_){} });
+    es.addEventListener('patch', e=>{ try{ const d=JSON.parse(e.data); onData(d && d.data, d && d.path); }catch(_){} });
+    return es;
+  }catch(e){ return null; }
+}
+function netStartStream(){
+  netStopStream();
+  Net._useSSE = (typeof EventSource!=='undefined');
+  if(Net._useSSE){
+    // opponent state stream
+    Net._esFoe = sseListen('rooms/'+Net.roomCode+'/'+Net.foeSlot+'/s', (data)=>{
+      if(data && typeof data==='object') netPushRemote(data);
+    });
+    // my incoming-hit stream
+    Net._esHit = sseListen('rooms/'+Net.roomCode+'/'+Net.meSlot+'/hit', (data)=>{
+      applyIncomingHit(data);
+    });
+    // a slow safety poll (every 1.2s) just to detect the room being torn down
+    Net._pollTimer=setInterval(async ()=>{
+      if(!Net.connected){ clearInterval(Net._pollTimer); return; }
+      const room=await dbGet('rooms/'+Net.roomCode);
+      if(room===null && Net._matchStarted){ foeDisconnected(); }
+    }, 1200);
+    if(!Net._esFoe){ Net._useSSE=false; netStartPoll(); }   // SSE blocked → fall back
+  } else {
+    netStartPoll();
+  }
+}
+function netStopStream(){
+  clearInterval(Net._pollTimer);
+  if(Net._esFoe){ try{Net._esFoe.close();}catch(_){}} Net._esFoe=null;
+  if(Net._esHit){ try{Net._esHit.close();}catch(_){}} Net._esHit=null;
+}
+function applyIncomingHit(hit){
+  if(!hit || hit.n===Net._lastAppliedHit) return;
+  Net._lastAppliedHit=hit.n;
+  const me=players[Net.isHost?0:1];
+  if(me && !me.dead){
+    const att=players[Net.isHost?1:0];
+    landHit(att, me, hit.dmg, hit.kb, hit.dir, hit.la);   // resolves locally on me
+  }
+}
+function foeDisconnected(){
+  const me=players[Net.isHost?0:1], foe=players[Net.isHost?1:0];
+  if(me && foe && !me.dead){ foe.stocks=0; if(!foe.dead) KO(foe); }
+}
+// Fallback: GET-poll the room (only used if SSE streaming is unavailable).
+function netStartPoll(){
+  clearInterval(Net._pollTimer);
+  Net._pollTimer=setInterval(async ()=>{
+    if(!Net.connected){ clearInterval(Net._pollTimer); return; }
+    const room=await dbGet('rooms/'+Net.roomCode);
+    if(room===null && Net._matchStarted){ foeDisconnected(); return; }
+    const foe=room && room[Net.foeSlot] && room[Net.foeSlot].s;
+    if(foe) netPushRemote(foe);
+    const hit=room && room[Net.meSlot] && room[Net.meSlot].hit;
+    applyIncomingHit(hit);
+  }, 90);
+}
+function leaveRoom(){
+  Net.connected=false; Net._searching=false; Net._matchStarted=false;
+  netStopStream();
+  if(Net.roomCode){ dbDelete('rooms/'+Net.roomCode); }   // whoever leaves clears the room
+  Net.roomCode=null;
+}
+
+// QUICK MATCH: scan for a room that is waiting for a joiner; if none, host one.
+async function quickMatch(){
+  if(!p1Pick){ flashOnlineHelper('PICK A FIGHTER FIRST!'); return; }
+  Net._abort=false; Net._searching=true;
+  show('waitroom');
+  setWait('SEARCHING FOR AN OPPONENT…','Looking for an open room…');
+  const myPick=p1Pick, myCos=costMap[p1Pick.id]||0;
+  // 1) Try to JOIN an existing open room.
+  const rooms=await dbGet('rooms');
+  let joinCode=null;
+  if(rooms && typeof rooms==='object'){
+    for(const code of Object.keys(rooms)){
+      const r=rooms[code];
+      if(r && r.status==='open' && r.host && !r.guest){ joinCode=code; break; }
+    }
+  }
+  if(Net._abort){ return; }
+  if(joinCode){
+    // JOIN as guest (P2)
+    Net.isHost=false; Net.roomCode=joinCode; Net.meSlot='p2'; Net.foeSlot='p1';
+    await dbPatch('rooms/'+joinCode, { guest:{ id:myPick.id, cos:myCos, name:Save.data.profile } });
+    await dbPatch('rooms/'+joinCode, { status:'full' });
+    const r=await dbGet('rooms/'+joinCode);
+    if(!r || !r.host){ setWait('THAT ROOM CLOSED','Retrying…'); setTimeout(quickMatch,600); return; }
+    // adopt host's rules + stage; host is P1, I'm P2
+    gameMode=r.gameMode||'giant';
+    stagePick=STAGES.find(s=>s.id===r.stage)||STAGES[0];
+    p1Pick=ROSTER.find(c=>c.id===r.host.id)||ROSTER[0];
+    p2Pick=myPick;
+    Net.p1Cos=r.host.cos||0; Net.p2Cos=myCos;
+    setWait('OPPONENT FOUND!','Starting…');
+    Net.connected=true;
+    setTimeout(()=>{ if(!Net._abort) startOnlineMatch(); }, 500);
+    return;
+  }
+  // 2) No open room — HOST one and wait for a guest.
+  const code=randCode();
+  Net.isHost=true; Net.roomCode=code; Net.meSlot='p1'; Net.foeSlot='p2';
+  Net.p1Cos=myCos;
+  await dbPut('rooms/'+code, {
+    status:'open', gameMode:gameMode, stage:stagePick.id,
+    host:{ id:myPick.id, cos:myCos, name:Save.data.profile }, ts:Date.now()
+  });
+  setWait('WAITING FOR A CHALLENGER…','Room ready — the next player who searches will join you.');
+  // poll my own room until a guest shows up
+  const waitTimer=setInterval(async ()=>{
+    if(Net._abort || !Net.roomCode){ clearInterval(waitTimer); return; }
+    const r=await dbGet('rooms/'+code);
+    if(r && r.guest){
+      clearInterval(waitTimer);
+      p1Pick=myPick;
+      p2Pick=ROSTER.find(c=>c.id===r.guest.id)||ROSTER[0];
+      Net.p1Cos=myCos; Net.p2Cos=r.guest.cos||0;
+      setWait('CHALLENGER FOUND!','Starting…');
+      Net.connected=true;
+      setTimeout(()=>{ if(!Net._abort) startOnlineMatch(); }, 500);
+    }
+  }, 700);
+  Net._waitTimer=waitTimer;
+}
+function cancelQuickMatch(){
+  Net._abort=true; Net._searching=false;
+  clearInterval(Net._waitTimer); netStopStream();
+  if(Net.roomCode){ dbDelete('rooms/'+Net.roomCode); Net.roomCode=null; }
+  Net.connected=false;
+  show('online');
+}
+function setWait(status,sub){
+  const st=document.getElementById('waitStatus'); if(st) st.textContent=status;
+  const sb=document.getElementById('waitSub'); if(sb && sub!==undefined) sb.textContent=sub;
+}
+function flashOnlineHelper(msg){
+  const h=document.getElementById('onlineHelper'); if(!h) return;
+  const prev=h.innerHTML; h.style.color='#e63946'; h.textContent=msg;
+  setTimeout(()=>{ h.style.color=''; h.innerHTML=prev; }, 1400);
+}
+
 /* ---------------- COMBAT ---------------- */
 function tryAttack(f){
   if(f.attackTimer>0 || f.shielding || f.dead) return;
@@ -3210,6 +3655,19 @@ function trySpecial(f){
         life:46+i*2, dmg:3, kb:2.4, color:'#ffd60a', type:'bullet', r:3});
     }
     spawnParticles(f.cx+f.face*22, f.cy, '#ffd60a', 8);
+  } else if(s==='curve'){
+    // CURVEBALL: a fast arcing baseball — like Daniel's bomb toss but quicker and
+    // it just hits on contact (no explosion). Lobbed up-and-forward, gravity pulls it down.
+    f.attackTimer=14; f.state='attack'; f.specialCd=48;
+    projectiles.push({owner:f, x:f.cx+f.face*22, y:f.cy-6, vx:f.face*9, vy:-9,
+      life:120, dmg:11, kb:6, color:'#f4f4f4', type:'ball', r:7, gravity:true});
+    spawnParticles(f.cx+f.face*20, f.cy, '#fff', 6);
+  } else if(s==='twocat'){
+    // POUNCE COMBO: Kayo lunges in, Yara follows with a swipe — a fast two-hit rush
+    f.vx=f.face*13; f.vy=-2; f.specialCd=48;
+    f._dashHit=16; f._dashDmg=7; f._dashKb=5; f.state='attack'; f.attackTimer=18;
+    f._catFollow=10; // schedules Yara's follow-up swipe
+    spawnParticles(f.cx, f.cy, f.def.color, 12);
   }
 }
 
@@ -3366,6 +3824,16 @@ function tryUpSpecial(f){
     f.vy=-16; f.vx+=f.face*3; f._upHit={life:14, dmg:10, kb:5, launch:0.7};
     for(let i=0;i<3;i++) projectiles.push({owner:f, x:f.cx, y:f.cy, vx:(Math.random()-.5)*4, vy:6+Math.random()*3,
       life:40, dmg:3, kb:2, color:'#ffd60a', type:'bullet', r:3, gravity:true});
+  } else if(s==='curve'){
+    // POP-UP: springs off a bounced baseball for a rising hop
+    f.vy=-16.5; f.vx+=f.face*2; f._upHit={life:16, dmg:11, kb:5.5, launch:0.85};
+    projectiles.push({owner:f, x:f.cx, y:f.cy, vx:f.face*3, vy:8,
+      life:50, dmg:7, kb:5, color:'#f4f4f4', type:'ball', r:6, gravity:true});
+    spawnParticles(f.cx,f.cy,'#fff',10);
+  } else if(s==='twocat'){
+    // CAT STACK: the two cats leap off each other for extra height
+    f.vy=-17.5; f.vx+=f.face*2.5; f._upHit={life:16, dmg:11, kb:5.5, launch:0.85};
+    spawnParticles(f.cx,f.cy,f.def.color,12); spawnParticles(f.cx,f.cy-10,f.def.dark,6);
   }
   spawnParticles(f.cx, f.y+f.h*0.5, '#ffffff', 6);
 }
@@ -3455,6 +3923,11 @@ function trySuper(f){
     spawnParticles(W/2,GROUND_Y,f.def.color,26);
   } else if(s==='bullets'){ // DRIVE-BY — a long sweeping hail of lead
     for(let i=0;i<14;i++) projectiles.push({owner:f,x:f.cx+f.face*24,y:f.cy-10+(Math.random()-.5)*24,vx:f.face*(13+Math.random()*3),vy:(Math.random()-.5)*2,life:60+i,dmg:3,kb:2.5,color:'#ffd60a',type:'bullet',r:3});
+  } else if(s==='curve'){ // TRIPLE PLAY — three curving fastballs at staggered heights
+    for(let i=0;i<3;i++){ const sw=(i-1)*0.12; projectiles.push({owner:f,x:f.cx+f.face*24,y:f.cy-14+i*12,vx:f.face*15,vy:-sw*20,life:90,dmg:9,kb:6,color:'#f4f4f4',type:'ball',r:8,curve:sw}); }
+    spawnParticles(f.cx+f.face*22,f.cy,'#fff',16);
+  } else if(s==='twocat'){ // NINE LIVES — a relentless tag-team melee frenzy
+    if(foe){ f.face=foe.cx>=f.cx?1:-1; } f.vx=f.face*11; f._superKick=30;
   }
   updateHUD();
 }
@@ -3486,6 +3959,17 @@ function upHit(att,def){
   }
 }
 function landHit(att,def,dmg,kb,dir,launch){
+  // ONLINE damage model: I own only my fighter's HP. If I land a hit on the
+  // OPPONENT's ghost, I don't touch its HP locally — I send a hit event they apply
+  // to themselves. Damage TO me resolves locally and I broadcast my HP.
+  if(mode==='online'){
+    const meIdx=Net.isHost?0:1;
+    if(def!==players[meIdx]){
+      netSendHit(dmg,kb,dir,launch);
+      spawnParticles(def.cx,def.cy,'#fff',6);   // local sparkle for feedback
+      return;
+    }
+  }
   // meme stat scaling: attacker power, defender toughness
   const aAtk = att ? (att.mAtk||1) : 1;
   const dDef = def.mDef||1;
@@ -3508,7 +3992,8 @@ function landHit(att,def,dmg,kb,dir,launch){
   }
   const up = launch||0;
   // knockback eased by weight, scaled by ruleset; bosses are extra heavy
-  const kbm = 1.5 * gm.kbMul * (def.isBoss?0.4:1);
+  // (base tuned down globally so no single hit is a one-shot ring-out)
+  const kbm = 1.1 * gm.kbMul * (def.isBoss?0.4:1);
   def.vx = dir*kb*kbm/def.def.stats.weight;
   def.vy = -(kb*(0.7+up)*kbm)/def.def.stats.weight - 2;
   def.hitCd=14;
@@ -3595,8 +4080,8 @@ function botThink(bot, foe){
   }
 
   bot.face=dir;
-  const ranged = (bot.def.special==='pitch'||bot.def.special==='drone'||bot.def.special==='bolt'||bot.def.special==='bomb'||bot.def.special==='serve'||bot.def.special==='rocks'||bot.def.special==='minidrone'||bot.def.special==='frost'||bot.def.special==='flask'||bot.def.special==='swarm'||bot.def.special==='splash'||bot.def.special==='soundwave'||bot.def.special==='pounce'||bot.def.special==='evilserve'||bot.def.special==='numbers'||bot.def.special==='coins'||bot.def.special==='slipper'||bot.def.special==='pellet'||bot.def.special==='shock'||bot.def.special==='bullets'||bot.def.special==='football');
-  const rush = (bot.def.special==='dash'||bot.def.special==='pound'||bot.def.special==='kick'||bot.def.special==='glitch'||bot.def.special==='breakdance');
+  const ranged = (bot.def.special==='pitch'||bot.def.special==='drone'||bot.def.special==='bolt'||bot.def.special==='bomb'||bot.def.special==='serve'||bot.def.special==='rocks'||bot.def.special==='minidrone'||bot.def.special==='frost'||bot.def.special==='flask'||bot.def.special==='swarm'||bot.def.special==='splash'||bot.def.special==='soundwave'||bot.def.special==='pounce'||bot.def.special==='evilserve'||bot.def.special==='numbers'||bot.def.special==='coins'||bot.def.special==='slipper'||bot.def.special==='pellet'||bot.def.special==='shock'||bot.def.special==='bullets'||bot.def.special==='football'||bot.def.special==='curve');
+  const rush = (bot.def.special==='dash'||bot.def.special==='pound'||bot.def.special==='kick'||bot.def.special==='glitch'||bot.def.special==='breakdance'||bot.def.special==='twocat');
   // approach or space
   if(dist>170){
     bot.vx += dir*0.4;
@@ -3685,14 +4170,24 @@ function update(t){
   if(hitStop>0){ hitStop--; return; }
 
   const p1=players[0], p2=players[1];
-  if(p1) humanInput(p1, SCHEME1);
-  if(p2){
-    if(p2.isBot){ if(!p2.dead && p1 && !p1.dead) botThink(p2, p1); }
-    else humanInput(p2, SCHEME2);
+  if(mode==='online'){
+    // Drive only my own fighter locally; the opponent is network-driven.
+    const meIdx=Net.isHost?0:1;
+    if(players[meIdx]) humanInput(players[meIdx], SCHEME1);   // local player always uses P1 controls
+    netApplyRemote();   // snap the opponent to their latest synced state
+    netSendState();     // push my state (throttled inside)
+  } else {
+    if(p1) humanInput(p1, SCHEME1);
+    if(p2){
+      if(p2.isBot){ if(!p2.dead && p1 && !p1.dead) botThink(p2, p1); }
+      else humanInput(p2, SCHEME2);
+    }
   }
 
   // per-fighter physics
-  players.forEach(f=>{
+  players.forEach((f,idx)=>{
+    // in online play, skip local physics for the remote fighter (network drives it)
+    if(mode==='online' && idx===(Net.isHost?1:0)) return;
     if(f.dead){
       f.respawnTimer--;
       if(f.respawnTimer<=0){ respawn(f); }
@@ -3705,6 +4200,11 @@ function update(t){
     if(f.shieldHp<100) f.shieldHp=Math.min(100,f.shieldHp+0.6);
     if(f.dropTimer>0) f.dropTimer--;
     if(f._dashHit>0) f._dashHit--;
+    // Kayo & Yara: after Kayo's lunge, Yara follows with a second swipe window
+    if(f._catFollow>0){
+      f._catFollow--;
+      if(f._catFollow===0){ f._dashHit=12; f._dashDmg=8; f._dashKb=6; f.attackTimer=Math.max(f.attackTimer,12); spawnParticles(f.cx+f.face*10, f.cy, f.def.color, 8); }
+    }
     if(f._upHit){ f._upHit.life--; if(f._upHit.life<=0) f._upHit=null; }
     if(f.superActive>0) f.superActive--;
     if(f.tauntTimer>0){ f.tauntTimer--; }
@@ -3966,6 +4466,10 @@ function KO(f){
   updateHUD();
   if(f.stocks<=0){
     f.dead=true; f.respawnTimer=99999;
+    // ONLINE: broadcast my death immediately so the opponent's match ends too
+    if(mode==='online' && Net.connected && f===players[Net.isHost?0:1]){
+      netSendState(true);
+    }
     endMatch();
   } else {
     f.dead=true; f.respawnTimer=50;
@@ -4031,6 +4535,13 @@ function render(t){
       ctx.beginPath(); for(let k=0;k<5;k++){ const a=-Math.PI/2+k*Math.PI*2/5; const px=Math.cos(a)*pr.r*0.42, py=Math.sin(a)*pr.r*0.42; k?ctx.lineTo(px,py):ctx.moveTo(px,py); } ctx.closePath(); ctx.fill();
       ctx.restore();
     } else if(pr.type==='serve'){
+      // tennis / cursed serve ball: filled circle with a curved seam
+      ctx.shadowBlur=8;
+      ctx.beginPath(); ctx.arc(pr.x,pr.y,pr.r,0,Math.PI*2); ctx.fill();
+      ctx.shadowBlur=0;
+      ctx.strokeStyle='rgba(255,255,255,.85)'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.arc(pr.x,pr.y,pr.r*0.75,-2.2,-0.4); ctx.stroke();
+      ctx.beginPath(); ctx.arc(pr.x,pr.y,pr.r*0.75,Math.PI-2.2,Math.PI-0.4); ctx.stroke();
     } else if(pr.type==='rock'){
       ctx.shadowBlur=6;
       ctx.beginPath();
@@ -4227,6 +4738,16 @@ function render(t){
     ctx.shadowBlur=0;
   }
 
+  // ONLINE: small connection readout (avg update interval ≈ how fresh the foe is)
+  if(mode==='online' && Net.connected){
+    const g=Net._pingEst||0;
+    const col = g<90?'#7ee081' : g<170?'#ffd24a' : '#ff6b6b';
+    ctx.font='bold 12px Arial'; ctx.textAlign='right'; ctx.textBaseline='bottom';
+    ctx.fillStyle=col; ctx.shadowColor='#000'; ctx.shadowBlur=4;
+    ctx.fillText((Net._useSSE?'LIVE':'POLL')+' · '+g+'ms', W-12, H-10);
+    ctx.shadowBlur=0;
+  }
+
   ctx.restore();
 }
 function roundRectStroke(g,x,y,w,h,r,stroke){
@@ -4307,6 +4828,26 @@ function endMatch(){
   const p1=players[0], p2=players[1];
   const p1won = p1.stocks>0;
   const winnerDef = p1won ? p1.def : p2.def;
+
+  // ---- ONLINE: end duel, tear down the room, show a simple win/lose ----
+  if(mode==='online'){
+    const meIdx=Net.isHost?0:1;
+    const iWon = players[meIdx].stocks>0;
+    try{ leaveRoom(); }catch(e){}
+    Net.connected=false;
+    if(iWon){ Save.addStat('wins'); if(players[meIdx].meme && players[meIdx].meme.id!=='none') Save.addStat('memeWins'); grantAndToast(); }
+    setTimeout(()=>{
+      document.getElementById('hud').classList.add('hidden');
+      Music.play('menu');
+      const r=document.getElementById('result'); r.classList.remove('hidden');
+      const title=document.getElementById('resultTitle'); const sub=document.getElementById('resultSub');
+      title.textContent = iWon?'VICTORY!':'DEFEATED';
+      title.style.filter = iWon?'none':'grayscale(.4)';
+      sub.textContent = iWon?'You won the online duel!':'Your opponent won this one.';
+      sub.style.color = (iWon?players[meIdx]:players[Net.isHost?1:0]).def.color;
+    }, 900);
+    return;
+  }
 
   // ---- stat tracking (1P only; the human is P1) ----
   if(mode==='1p' && p1won){
@@ -4418,6 +4959,110 @@ function finishClassic(won){
   }
   classic=null;
 }
+
+/* ---------------- ONLINE LOBBY UI ---------------- */
+(function setupOnlineLobby(){
+  const oRoster=document.getElementById('onlineRoster');
+  const oPanels=document.getElementById('onlinePanels');
+  const oRules=document.getElementById('onlineRuleGrid');
+  let oStageIndex=0;
+
+  // roster tiles (reuses global p1Pick + costMap so the match spawns the same fighter)
+  function buildOnlineTile(c){
+    const el=document.createElement('div');
+    el.className='char'; el.dataset.id=c.id;
+    el.innerHTML=`<span class="pick"></span><canvas class="ic" width="96" height="96"></canvas><span class="nm" style="color:${c.color}">${c.name}</span>`;
+    const ic=el.querySelector('canvas').getContext('2d');
+    (function loop(t){
+      if(charUnlocked(c.id)) drawIcon(ic,c,96,costMap[c.id]||0,t);
+      else { ic.clearRect(0,0,96,96); ic.fillStyle='#1a1a24'; ic.fillRect(0,0,96,96); ic.fillStyle='#5a5a6a'; ic.font='bold 34px Arial'; ic.textAlign='center'; ic.textBaseline='middle'; ic.fillText('?',48,50); }
+      if(document.body.contains(el)) requestAnimationFrame(loop);
+    })(0);
+    el.addEventListener('click',()=>{
+      if(!charUnlocked(c.id)){ flashOnlineHelper('🔒 LOCKED — unlock it in single player first'); return; }
+      p1Pick=c; refreshOnlinePicks();
+    });
+    return el;
+  }
+  CATEGORIES.forEach((cat,ci)=>{
+    const group=document.createElement('div'); group.className='catgroup';
+    group.innerHTML=`<div class="cathead"><span class="cicon">${cat.icon}</span>${cat.name}</div>`;
+    const row=document.createElement('div'); row.className='catrow';
+    ROSTER.filter(c=>CAT_OF[c.id]===ci).forEach(c=>row.appendChild(buildOnlineTile(c)));
+    group.appendChild(row); oRoster.appendChild(group);
+  });
+  const oLeft=ROSTER.filter(c=>CAT_OF[c.id]===undefined);
+  if(oLeft.length){ const g=document.createElement('div'); g.className='catgroup'; g.innerHTML=`<div class="cathead"><span class="cicon">✦</span>OTHER</div>`; const r=document.createElement('div'); r.className='catrow'; oLeft.forEach(c=>r.appendChild(buildOnlineTile(c))); g.appendChild(r); oRoster.appendChild(g); }
+
+  function refreshOnlinePicks(){
+    document.querySelectorAll('#onlineRoster .char').forEach(el=>{
+      el.classList.toggle('sel1', p1Pick && p1Pick.id===el.dataset.id);
+      const pk=el.querySelector('.pick'); pk.innerHTML = (p1Pick && p1Pick.id===el.dataset.id) ? '<span class="p1">YOU</span>' : '';
+    });
+    oPanels.innerHTML='';
+    const p=document.createElement('div'); p.className='panel p1w';
+    if(!p1Pick){ p.innerHTML='<div class="tag">YOUR FIGHTER</div><div class="empty">— PICK ONE —</div>'; }
+    else {
+      p.innerHTML=`<div class="tag">YOUR FIGHTER</div><canvas width="120" height="120"></canvas>
+        <div class="pname" style="color:${p1Pick.color}">${p1Pick.name}</div><div class="dz">${p1Pick.desc}</div>
+        <button class="costbtn" title="Cycle costume">👕 <span class="costname"></span></button>
+        <div class="mv"><b style="color:${p1Pick.color}">K</b> ${p1Pick.move}</div>
+        <div class="mv"><b style="color:#fdbb2d">↑</b> ${p1Pick.up}</div>
+        <div class="mv"><b style="color:#ff5714">★</b> ${p1Pick.sup}</div>`;
+      const cc=p.querySelector('canvas').getContext('2d');
+      (function loop(t){ cc.clearRect(0,0,120,120); drawFighter(cc,p1Pick,30,22,60,82,1,t,'idle',costMap[p1Pick.id]||0); if(document.body.contains(p)) requestAnimationFrame(loop); })(0);
+      const cbtn=p.querySelector('.costbtn'), cname=p.querySelector('.costname');
+      const rc=()=>{ cname.textContent=resolveCostume(p1Pick,costMap[p1Pick.id]||0).name; cbtn.classList.toggle('on',(costMap[p1Pick.id]||0)>0); };
+      rc();
+      cbtn.onclick=(e)=>{ e.stopPropagation(); const n=COSTUME_COUNT+(Save.hasEpic(p1Pick.id)?1:0); costMap[p1Pick.id]=((costMap[p1Pick.id]||0)+1)%n; rc(); };
+    }
+    oPanels.appendChild(p);
+  }
+
+  // rule chips (host's choice; joiner inherits). Boss/soccer excluded — 1v1 duel only.
+  GAMEMODES.filter(gm=>!gm.boss && !gm.soccer).forEach(gm=>{
+    const el=document.createElement('div');
+    el.className='rule'+(gm.id===gameMode?' sel':'');
+    el.dataset.rule=gm.id;
+    el.innerHTML=`<div class="rt">${gm.name}</div><div class="rd">${gm.desc}</div>`;
+    el.onclick=()=>{ gameMode=gm.id; document.querySelectorAll('#onlineRuleGrid .rule').forEach(x=>x.classList.toggle('sel',x.dataset.rule===gm.id)); };
+    oRules.appendChild(el);
+  });
+  // if current gameMode is boss/soccer, default to giant for online
+  if(currentMode().boss || currentMode().soccer){ gameMode='giant'; }
+
+  // stage carousel
+  const oCanvas=document.getElementById('onlineStageCanvas'), oCtx=oCanvas.getContext('2d');
+  const oName=document.getElementById('onlineStageName'), oFlag=document.getElementById('onlineFlag');
+  function showOnlineStage(i){
+    oStageIndex=(i+STAGES.length)%STAGES.length;
+    stagePick=STAGES[oStageIndex];
+    oName.textContent=stagePick.name;
+    oFlag.innerHTML=stagePick.flag.map(c=>`<span style="background:${c}"></span>`).join('');
+  }
+  (function oCarLoop(t){ const st=STAGES[oStageIndex]; drawStageBg(oCtx,st,oCanvas.width,oCanvas.height,t);
+    const sx=oCanvas.width/W, sy=oCanvas.height/H;
+    st.layout().forEach(pl=>{ oCtx.fillStyle=pl.main?st.plat:st.platTop; oCtx.fillRect(pl.x*sx,pl.y*sy,pl.w*sx,Math.max(5,pl.h*sy)); });
+    requestAnimationFrame(oCarLoop); })(0);
+  document.getElementById('onlineStagePrev').onclick=()=>showOnlineStage(oStageIndex-1);
+  document.getElementById('onlineStageNext').onclick=()=>showOnlineStage(oStageIndex+1);
+
+  // entry from title
+  document.getElementById('onlineBtn').onclick=()=>{
+    mode='online'; classic=null;
+    if(currentMode().boss || currentMode().soccer) gameMode='giant';
+    document.querySelectorAll('#onlineRuleGrid .rule').forEach(x=>x.classList.toggle('sel',x.dataset.rule===gameMode));
+    if(!p1Pick || !charUnlocked(p1Pick.id)){ p1Pick=ROSTER.find(c=>charUnlocked(c.id))||ROSTER[0]; }
+    refreshOnlinePicks(); showOnlineStage(oStageIndex);
+    show('online');
+  };
+  document.getElementById('onlineBack').onclick=()=>{ mode='1p'; show('title'); };
+  document.getElementById('quickMatchBtn').onclick=()=>{ quickMatch(); };
+  document.getElementById('waitCancel').onclick=()=>{ cancelQuickMatch(); };
+  // little idle fighter on the waitroom card
+  const wc=document.getElementById('waitCanvas').getContext('2d');
+  (function wLoop(t){ wc.clearRect(0,0,120,130); if(p1Pick){ drawFighter(wc,p1Pick,30,25,60,82,1,t,'idle',costMap[p1Pick.id]||0); } requestAnimationFrame(wLoop); })(0);
+})();
 
 /* ---------------- MAIN LOOP ---------------- */
 function frame(t){
