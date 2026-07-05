@@ -1597,6 +1597,22 @@ function drawFighter(g, c, x, y, w, h, face, t, state, costume){
     const bx=atk?armFwd+12:bodyW*0.5, byy=atk?-bodyH*0.5:-bodyH*0.15;
     g.beginPath(); g.arc(bx, byy, 5, 0, Math.PI*2); g.fill();
     g.beginPath(); g.arc(bx-2, byy, 4, -0.8, 0.8); g.stroke();
+  } else if(c.id==='jace'){ // pro gamer: gaming headset + a controller held/thrown
+    // hair swoosh
+    g.fillStyle=dark; g.beginPath(); g.arc(0,-bodyH*0.84, headR*1.02, Math.PI, Math.PI*1.9); g.fill();
+    // gaming headset: band over the head + an earcup with a boom mic
+    g.strokeStyle='#111'; g.lineWidth=3;
+    g.beginPath(); g.arc(0,-bodyH*0.78, headR*1.05, Math.PI*1.15, Math.PI*1.85); g.stroke();
+    g.fillStyle=col; g.beginPath(); g.arc(-headR*0.95,-bodyH*0.74, headR*0.4,0,Math.PI*2); g.fill();
+    g.strokeStyle='#111'; g.lineWidth=2; g.beginPath(); g.moveTo(-headR*0.95,-bodyH*0.7); g.quadraticCurveTo(-headR*0.4,-bodyH*0.55,-headR*0.2,-bodyH*0.62); g.stroke();
+    // controller in the front hand (held low when idle, raised when attacking)
+    const cx2 = atk ? armFwd+10 : armFwd+2;
+    const cy2 = atk ? -bodyH*0.4 : bodyH*0.12;
+    g.fillStyle='#e9ecef';
+    g.beginPath(); g.ellipse(cx2-4,cy2,4,6,0.4,0,Math.PI*2); g.fill();
+    g.beginPath(); g.ellipse(cx2+4,cy2,4,6,-0.4,0,Math.PI*2); g.fill();
+    g.fillRect(cx2-5,cy2-4,10,7);
+    g.fillStyle=col; g.beginPath(); g.arc(cx2+3,cy2-1,1.4,0,Math.PI*2); g.fill();
   } else if(c.id==='kayo'){ // TWO CATS STACKED: Yara balances on top of Kayo
     g.restore();            // drop the standard humanoid body entirely
     g.save();
@@ -3284,29 +3300,23 @@ function netApplyRemote(){
   const foe=players[Net.isHost?1:0];
   const cur=Net._cur, prev=Net._prev;
   if(!foe || !cur) return;
-  if(!prev){ foe.x=Net._renderX=cur.x; foe.y=Net._renderY=cur.y; foe.vx=cur.vx||0; foe.vy=cur.vy||0; return; }
+  if(!prev){ foe.x=Net._renderX=cur.x; foe.y=Net._renderY=cur.y; foe.vx=0; foe.vy=0; return; }
   const now=performance.now();
-  // adaptive window: clamp the measured average gap to a sane 55–140ms band.
-  const win = Math.max(55, Math.min(140, Net._avgGap||90));
-  const elapsed = now-Net._curRecvT;
-  let targetX, targetY;
-  if(elapsed <= win){
-    // between prev and cur: normal interpolation
-    const a = elapsed/win;
-    targetX = prev.x + (cur.x-prev.x)*a;
-    targetY = prev.y + (cur.y-prev.y)*a;
-  } else {
-    // packet is late: EXTRAPOLATE from cur along its velocity so motion continues.
-    // cap the coast at ~180ms so a long stall doesn't fling the ghost off-screen.
-    const over = Math.min(elapsed-win, 180);
-    targetX = cur.x + (cur.vx||0)*over/16.7;   // vx is per-frame (~60fps → 16.7ms)
-    targetY = cur.y + (cur.vy||0)*over/16.7;
-  }
-  // smooth the render position toward the target so corrections never snap.
-  Net._renderX += (targetX-Net._renderX)*0.35;
-  Net._renderY += (targetY-Net._renderY)*0.35;
+  // Pure INTERPOLATION between the two most recent snapshots — NO velocity
+  // extrapolation. Coasting on vx/vy made a jumping/knocked foe overshoot and
+  // "fly away". If a packet is late we simply hold at cur (a brief pause), which
+  // reads far better than launching the ghost off-screen.
+  const win = Math.max(60, Math.min(130, Net._avgGap||90));
+  const a = Math.max(0, Math.min(1, (now-Net._curRecvT)/win));   // clamp 0..1, never past cur
+  const targetX = prev.x + (cur.x-prev.x)*a;
+  const targetY = prev.y + (cur.y-prev.y)*a;
+  // gently ease the drawn position toward the target so packet jitter doesn't pop.
+  // if the foe teleported far (respawn/blink), snap instead of gliding across the map.
+  const dx=targetX-Net._renderX, dy=targetY-Net._renderY;
+  if(Math.abs(dx)>220 || Math.abs(dy)>220){ Net._renderX=targetX; Net._renderY=targetY; }
+  else { Net._renderX += dx*0.5; Net._renderY += dy*0.5; }
   foe.x=Net._renderX; foe.y=Net._renderY;
-  foe.vx=cur.vx||0; foe.vy=cur.vy||0;
+  foe.vx=0; foe.vy=0;   // don't let the ghost self-propel; position is authoritative
   // rough round-trip estimate for the on-screen ping readout (packet age + gap)
   Net._pingEst = Math.round((Net._avgGap||0));
 }
@@ -3693,6 +3703,12 @@ function trySpecial(f){
     f._dashHit=16; f._dashDmg=7; f._dashKb=5; f.state='attack'; f.attackTimer=18;
     f._catFollow=10; // schedules Yara's follow-up swipe
     spawnParticles(f.cx, f.cy, f.def.color, 12);
+  } else if(s==='controller'){
+    // CONTROLLER TOSS: hurls an arcing controller that hits on contact (thrower-style lob)
+    f.attackTimer=14; f.state='attack'; f.specialCd=50;
+    projectiles.push({owner:f, x:f.cx+f.face*22, y:f.cy-6, vx:f.face*8, vy:-8,
+      life:120, dmg:12, kb:7, color:f.def.color, type:'controller', r:9, gravity:true, spin:0});
+    spawnParticles(f.cx+f.face*20, f.cy, f.def.color, 6);
   }
 }
 
@@ -3859,6 +3875,12 @@ function tryUpSpecial(f){
     // CAT STACK: the two cats leap off each other for extra height
     f.vy=-17.5; f.vx+=f.face*2.5; f._upHit={life:16, dmg:11, kb:5.5, launch:0.85};
     spawnParticles(f.cx,f.cy,f.def.color,12); spawnParticles(f.cx,f.cy-10,f.def.dark,6);
+  } else if(s==='controller'){
+    // RAGE QUIT: a furious upward fling — leaps up hurling a controller overhead
+    f.vy=-16; f.attackTimer=16; f._upHit={life:16, dmg:12, kb:5.5, launch:0.9};
+    projectiles.push({owner:f, x:f.cx, y:f.cy, vx:f.face*3, vy:-9,
+      life:60, dmg:7, kb:5, color:f.def.color, type:'controller', r:8, gravity:true, spin:0});
+    spawnParticles(f.cx,f.cy,f.def.color,10);
   }
   spawnParticles(f.cx, f.y+f.h*0.5, '#ffffff', 6);
 }
@@ -3953,6 +3975,9 @@ function trySuper(f){
     spawnParticles(f.cx+f.face*22,f.cy,'#fff',16);
   } else if(s==='twocat'){ // NINE LIVES — a relentless tag-team melee frenzy
     if(foe){ f.face=foe.cx>=f.cx?1:-1; } f.vx=f.face*11; f._superKick=30;
+  } else if(s==='controller'){ // BUTTON MASH — a barrage of thrown controllers
+    for(let i=0;i<7;i++) projectiles.push({owner:f,x:f.cx+f.face*22,y:f.cy-16+i*6,vx:f.face*(11+i*0.7),vy:-4+i*1.3,life:120,dmg:9,kb:6,color:f.def.color,type:'controller',r:8,gravity:true,spin:0});
+    spawnParticles(f.cx+f.face*22,f.cy,f.def.color,18);
   }
   updateHUD();
 }
@@ -4105,7 +4130,7 @@ function botThink(bot, foe){
   }
 
   bot.face=dir;
-  const ranged = (bot.def.special==='pitch'||bot.def.special==='drone'||bot.def.special==='bolt'||bot.def.special==='bomb'||bot.def.special==='serve'||bot.def.special==='rocks'||bot.def.special==='minidrone'||bot.def.special==='frost'||bot.def.special==='flask'||bot.def.special==='swarm'||bot.def.special==='splash'||bot.def.special==='soundwave'||bot.def.special==='pounce'||bot.def.special==='evilserve'||bot.def.special==='numbers'||bot.def.special==='coins'||bot.def.special==='slipper'||bot.def.special==='pellet'||bot.def.special==='shock'||bot.def.special==='bullets'||bot.def.special==='football'||bot.def.special==='curve');
+  const ranged = (bot.def.special==='pitch'||bot.def.special==='drone'||bot.def.special==='bolt'||bot.def.special==='bomb'||bot.def.special==='serve'||bot.def.special==='rocks'||bot.def.special==='minidrone'||bot.def.special==='frost'||bot.def.special==='flask'||bot.def.special==='swarm'||bot.def.special==='splash'||bot.def.special==='soundwave'||bot.def.special==='pounce'||bot.def.special==='evilserve'||bot.def.special==='numbers'||bot.def.special==='coins'||bot.def.special==='slipper'||bot.def.special==='pellet'||bot.def.special==='shock'||bot.def.special==='bullets'||bot.def.special==='football'||bot.def.special==='curve'||bot.def.special==='controller');
   const rush = (bot.def.special==='dash'||bot.def.special==='pound'||bot.def.special==='kick'||bot.def.special==='glitch'||bot.def.special==='breakdance'||bot.def.special==='twocat');
   // approach or space
   if(dist>170){
@@ -4606,6 +4631,20 @@ function render(t){
       ctx.shadowBlur=0; ctx.strokeStyle='#a3830f'; ctx.lineWidth=1.5; ctx.stroke();
       ctx.fillStyle='#a3830f'; ctx.font='bold '+(pr.r*1.1)+'px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.fillText('$', pr.x, pr.y+1);
+    } else if(pr.type==='controller'){
+      // a tumbling game controller
+      pr.spin=(pr.spin||0)+0.35;
+      ctx.shadowBlur=10;
+      ctx.save(); ctx.translate(pr.x,pr.y); ctx.rotate(pr.spin);
+      ctx.fillStyle=pr.color;
+      ctx.beginPath(); ctx.ellipse(-pr.r*0.55,pr.r*0.15,pr.r*0.42,pr.r*0.55,0.4,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(pr.r*0.55,pr.r*0.15,pr.r*0.42,pr.r*0.55,-0.4,0,Math.PI*2); ctx.fill();
+      ctx.fillRect(-pr.r*0.62,-pr.r*0.38,pr.r*1.24,pr.r*0.76);
+      ctx.shadowBlur=0; ctx.fillStyle='#0d0d18';
+      ctx.fillRect(-pr.r*0.5,-pr.r*0.06,pr.r*0.3,pr.r*0.12); ctx.fillRect(-pr.r*0.42,-pr.r*0.22,pr.r*0.12,pr.r*0.44); // d-pad
+      ctx.beginPath(); ctx.arc(pr.r*0.34,-pr.r*0.1,pr.r*0.1,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(pr.r*0.5,pr.r*0.08,pr.r*0.1,0,Math.PI*2); ctx.fill();
+      ctx.restore();
     } else if(pr.type==='slipper'){
       // a flying red slipper
       ctx.shadowBlur=8;
