@@ -2729,6 +2729,7 @@ const FIREBASE_DB_URL = 'https://widf-2b62d-default-rtdb.europe-west1.firebaseda
 const Net = {
   connected:false, isHost:false, roomCode:null, meSlot:null, foeSlot:null,
   _seq:0, _pollTimer:null, _waitTimer:null, _lastSend:0, _lastSentKey:null, _lastAppliedHit:0,
+  _projSeq:0, _lastProjSeq:0, _fxSeq:0, _lastFxSeq:0,
   _cur:null, _prev:null, _curRecvT:0, _prevRecvT:0, _avgGap:0, _renderX:undefined, _renderY:undefined, _pingEst:0,
   _polling:false, _useSSE:false,
   _matchStarted:false, _searching:false, _abort:false,
@@ -3472,6 +3473,7 @@ function startOnlineMatch(){
   document.getElementById('p2name').style.color=p2Pick.color;
   running=true;
   Net.connected=true; Net._matchStarted=true; Net._cur=null; Net._prev=null; Net._lastSend=0; Net._lastSentKey=null; Net._lastAppliedHit=0;
+  Net._projSeq=0; Net._lastProjSeq=0; Net._fxSeq=0; Net._lastFxSeq=0;
   Net._renderX=undefined; Net._renderY=undefined; Net._avgGap=0; Net._curRecvT=0; Net._prevRecvT=0; Net._pingEst=0;
   netStartStream();
   announce('FIGHT!');
@@ -3547,6 +3549,70 @@ function netApplyRemote(){
   // rough round-trip estimate for the on-screen ping readout (packet age + gap)
   Net._pingEst = Math.round((Net._avgGap||0));
 }
+// Broadcast any projectiles the LOCAL player just spawned so the opponent can
+// render them too. They're sent as compact spawn records; the opponent recreates
+// them as VISUAL-ONLY ghosts (damage is handled separately via hit events).
+function netSendProjectiles(){
+  if(!Net.connected) return;
+  const me=players[Net.isHost?0:1];
+  if(!me) return;
+  // find projectiles spawned by me that haven't been broadcast yet
+  const fresh=[];
+  for(const pr of projectiles){
+    if(pr.owner===me && !pr._sent && !pr.ghost){
+      pr._sent=true;
+      fresh.push({ x:Math.round(pr.x), y:Math.round(pr.y), vx:+(pr.vx||0).toFixed(1), vy:+(pr.vy||0).toFixed(1),
+        ty:pr.type, r:pr.r||6, c:pr.color, g:pr.gravity?1:0, cu:pr.curve||0, dg:pr.digit||'' });
+    }
+  }
+  if(!fresh.length) return;
+  const batch={ n:(++Net._projSeq), a:fresh };
+  dbPut('rooms/'+Net.roomCode+'/'+Net.meSlot+'/proj', batch);
+}
+// Recreate the opponent's projectiles locally as harmless visual ghosts.
+function applyRemoteProjectiles(batch){
+  if(!batch || batch.n===Net._lastProjSeq) return;
+  Net._lastProjSeq=batch.n;
+  const foe=players[Net.isHost?1:0];
+  if(!batch.a) return;
+  batch.a.forEach(p=>{
+    projectiles.push({ owner:foe, ghost:true, x:p.x, y:p.y, vx:p.vx, vy:p.vy,
+      type:p.ty, r:p.r, color:p.c, gravity:!!p.g, curve:p.cu||0, digit:p.dg||undefined,
+      life:120, dmg:0, kb:0, spin:0 });
+  });
+}
+// Broadcast new lightning strikes + shockwaves the local player spawned this frame.
+function netSendEffects(){
+  if(!Net.connected) return;
+  const me=players[Net.isHost?0:1];
+  if(!me) return;
+  const fx=[];
+  for(const st of strikes){
+    if(st.owner===me && !st._sent && !st.ghost){ st._sent=true;
+      fx.push({k:'strike', x:Math.round(st.x), ty:Math.round(st.targetY), w:st.warned||0, l:st.life}); }
+  }
+  for(const sh of shocks){
+    if(!sh._sent && !sh.ghost){ sh._sent=true;
+      // only broadcast shocks near me (mine); harmless if a couple extra go out
+      fx.push({k:'shock', x:Math.round(sh.x), y:Math.round(sh.y), mx:Math.round(sh.max), l:sh.life, c:sh.color}); }
+  }
+  if(!fx.length) return;
+  dbPut('rooms/'+Net.roomCode+'/'+Net.meSlot+'/fx', { n:(++Net._fxSeq), a:fx });
+}
+// Recreate the opponent's strikes/shocks as visual-only ghosts.
+function applyRemoteEffects(batch){
+  if(!batch || batch.n===Net._lastFxSeq) return;
+  Net._lastFxSeq=batch.n;
+  const foe=players[Net.isHost?1:0];
+  if(!batch.a) return;
+  batch.a.forEach(e=>{
+    if(e.k==='strike'){
+      strikes.push({ ghost:true, owner:foe, x:e.x, y:0, targetY:e.ty, life:e.l||22, warned:e.w||0 });
+    } else if(e.k==='shock'){
+      shocks.push({ ghost:true, x:e.x, y:e.y, r:8, max:e.mx||120, life:e.l||16, color:e.c||'#fff' });
+    }
+  });
+}
 // Tell the opponent they got hit; they apply it to themselves.
 function netSendHit(dmg,kb,dir,launch){
   if(!Net.connected) return;
@@ -3594,6 +3660,10 @@ function netStartPoll(){
       missed=0;
       const foe=room[Net.foeSlot] && room[Net.foeSlot].s;
       if(foe && typeof foe==='object') netPushRemote(foe);
+      const proj=room[Net.foeSlot] && room[Net.foeSlot].proj;
+      if(proj) applyRemoteProjectiles(proj);
+      const fx=room[Net.foeSlot] && room[Net.foeSlot].fx;
+      if(fx) applyRemoteEffects(fx);
       const hit=room[Net.meSlot] && room[Net.meSlot].hit;
       applyIncomingHit(hit);
     } else { missed++; }
@@ -4459,6 +4529,8 @@ function update(t){
     if(players[meIdx]) humanInput(players[meIdx], SCHEME1);   // local player always uses P1 controls
     netApplyRemote();   // snap the opponent to their latest synced state
     netSendState();     // push my state (throttled inside)
+    netSendProjectiles(); // broadcast any projectiles I just spawned
+    netSendEffects();   // broadcast any lightning/shockwave effects I just spawned
   } else {
     if(p1) humanInput(p1, SCHEME1);
     if(p2){
@@ -4587,6 +4659,14 @@ function update(t){
 
   // projectiles
   projectiles.forEach(pr=>{
+    // GHOST projectiles (opponent's, shown online): move + render only, no damage,
+    // no explosions, no collision. Damage is authoritative via the shooter's hit events.
+    if(pr.ghost){
+      if(pr.gravity){ pr.vy+=0.5; }
+      pr.x+=pr.vx; pr.y+=pr.vy; pr.life--;
+      if(pr.type==='football' && pr.curve){ pr.vy+=pr.curve; pr.spin=(pr.spin||0)+0.3; }
+      return;
+    }
     if(pr.homing){
       const foe=players.find(o=>o!==pr.owner && !o.dead);
       if(foe){
@@ -4650,10 +4730,10 @@ function update(t){
   strikes.forEach(st=>{
     st.life--;
     if(st.warned>0){ st.warned--; return; } // telegraph window
-    // deal damage in a column once, right after warn ends
+    // deal damage in a column once, right after warn ends (ghosts are visual-only)
     if(!st.hit){
       st.hit=true;
-      players.forEach(o=>{
+      if(!st.ghost) players.forEach(o=>{
         if(o===st.owner||o.dead||o.hitCd>0) return;
         if(Math.abs(o.cx-st.x)<40 && o.cy<st.targetY){
           landHit(st.owner,o,st.dmg||15,st.kb||8, o.cx>=st.x?1:-1, st.launch||1.2);
