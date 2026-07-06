@@ -51,7 +51,7 @@
     position:absolute;inset:0;
     display:flex;flex-direction:column;align-items:center;justify-content:center;
     text-align:center;
-    background:radial-gradient(circle at 50% 30%, #23235a 0%, #0d0d18 70%);
+    background:radial-gradient(circle at 50% 30%, var(--menu-bg1,#23235a) 0%, var(--menu-bg2,#0d0d18) 70%);
     z-index:10;padding:4% 4% 6%;
   }
   .hidden{display:none !important;}
@@ -226,6 +226,14 @@
 
   /* HUD */
   #hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;padding:14px 20px;z-index:5;pointer-events:none;}
+  /* Classic-mode round indicator, centered at the very top during a run */
+  #roundBanner{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:6;pointer-events:none;
+    font-family:"Impact",sans-serif;letter-spacing:.08em;font-size:clamp(12px,1.9vw,17px);
+    color:#fdbb2d;background:rgba(13,13,24,.7);border:2px solid rgba(253,187,45,.6);
+    padding:5px 16px;border-radius:11px;transform:translateX(-50%) skewX(-6deg);white-space:nowrap;
+    box-shadow:0 3px 12px rgba(0,0,0,.5);}
+  #roundBanner.hidden{display:none !important;}
+  #roundBanner span{display:inline-block;transform:skewX(6deg);}
   .pod{width:38%;}
   .pod .who{display:flex;align-items:center;gap:8px;font-size:clamp(13px,2vw,20px);letter-spacing:.04em;transform:skewX(-5deg);}
   .pod.right .who{flex-direction:row-reverse;text-align:right;justify-content:flex-start;}
@@ -357,14 +365,41 @@
   .adRowVal{font-family:Arial,sans-serif;font-weight:700;font-size:12px;color:#eae6f5;margin-top:3px;line-height:1.4;}
   .adRowVal .who{color:#fdbb2d;font-weight:800;}
 
+  /* shop (menu themes) */
+  #shop{justify-content:flex-start;overflow-y:auto;padding-top:3%;padding-bottom:40px;}
+  #shop::-webkit-scrollbar{width:8px;} #shop::-webkit-scrollbar-thumb{background:rgba(253,187,45,.5);border-radius:4px;}
+  .shopgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;width:100%;max-width:640px;margin-top:14px;flex-shrink:0;}
+  .shopcard{position:relative;border-radius:14px;overflow:hidden;border:3px solid rgba(255,255,255,.16);background:rgba(255,255,255,.05);display:flex;flex-direction:column;align-items:center;padding:12px 10px 10px;gap:8px;transition:transform .1s, border-color .12s;}
+  .shopcard:hover{transform:translateY(-3px);}
+  .shopcard.owned{border-color:#fdbb2d;}
+  .shopcard.active{border-color:#00e5ff;box-shadow:0 0 0 2px #00e5ff, 0 0 16px rgba(0,229,255,.5);}
+  .shopcard .swatch{width:100%;height:56px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.4) inset;}
+  .shopcard .stitle{font-size:15px;letter-spacing:.02em;transform:skewX(-4deg);}
+  .shopcard .sbtn{font-family:Arial,sans-serif;font-weight:800;font-size:11px;letter-spacing:.05em;color:#0d0d18;background:linear-gradient(180deg,#fdbb2d,#f7931e);border:none;border-radius:8px;padding:7px 12px;cursor:pointer;white-space:nowrap;}
+  .shopcard .sbtn:hover{transform:scale(1.05);}
+  .shopcard .sbtn:disabled{background:#565b68;color:#9a9ea8;cursor:not-allowed;transform:none;}
+  .shopcard .sbtn.sel{background:linear-gradient(180deg,#8fefff,#00b8d9);}
+  .shopcard .sbtn.selon{background:#00e5ff;}
+  .shoptabs{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px;flex-shrink:0;}
+  .shoptab{font-family:Arial,sans-serif;font-weight:800;font-size:11px;letter-spacing:.05em;padding:8px 14px;border-radius:20px;border:none;cursor:pointer;background:#565b68;color:#cfd0e8;}
+  .shoptab.sel{background:#fdbb2d;color:#2a1a00;}
+  .shopgrouphead{grid-column:1/-1;font-family:Arial,sans-serif;font-weight:800;font-size:11px;letter-spacing:.14em;color:#fdbb2d;text-align:left;margin:6px 0 0 2px;}
+  .shopcard canvas{width:56px;height:56px;}
+
   /* skill tree screen */
   #skills{justify-content:flex-start;overflow-y:auto;padding-top:3%;padding-bottom:40px;}
   #skills::-webkit-scrollbar{width:8px;} #skills::-webkit-scrollbar-thumb{background:rgba(0,229,255,.5);border-radius:4px;}
-  .skilltree{display:flex;flex-direction:column;gap:10px;width:100%;max-width:520px;margin-top:14px;flex-shrink:0;}
-  .skillnode{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;border:2px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);text-align:left;}
-  .skillnode.owned{border-color:#00e5ff;background:rgba(0,229,255,.1);}
-  .skillnode.locked{opacity:.5;}
-  .skillnode .si{font-size:24px;width:30px;text-align:center;}
+  .skilltree{display:flex;flex-direction:column;align-items:center;gap:0;width:100%;max-width:440px;margin-top:14px;flex-shrink:0;}
+  /* connector "branch" between two skill nodes; turns cyan once the lower node is owned */
+  .skillconn{width:5px;height:26px;background:rgba(255,255,255,.18);border-radius:3px;flex-shrink:0;position:relative;}
+  .skillconn.lit{background:linear-gradient(180deg,#00e5ff,#00b8d9);box-shadow:0 0 8px rgba(0,229,255,.6);}
+  .skillnode{position:relative;display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:14px;border:2px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);text-align:left;width:100%;box-shadow:0 4px 14px rgba(0,0,0,.3);}
+  .skillnode .tierbadge{position:absolute;top:-9px;left:14px;font-family:Arial,sans-serif;font-weight:800;font-size:8px;letter-spacing:.12em;color:#0d0d18;background:#00e5ff;padding:2px 7px;border-radius:8px;}
+  .skillnode.locked .tierbadge{background:#565b68;color:#cfd0e8;}
+  .skillnode.owned{border-color:#00e5ff;background:rgba(0,229,255,.12);box-shadow:0 0 0 2px rgba(0,229,255,.35), 0 4px 14px rgba(0,0,0,.35);}
+  .skillnode.locked{opacity:.55;}
+  .skillnode .si{font-size:26px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(0,0,0,.25);text-align:center;flex-shrink:0;}
+  .skillnode.owned .si{background:radial-gradient(circle,rgba(0,229,255,.35),rgba(0,0,0,.2));}
   .skillnode .sname{font-size:14px;letter-spacing:.03em;color:#eae6f5;transform:skewX(-4deg);}
   .skillnode.owned .sname{color:#00e5ff;}
   .skillnode .sdesc{font-family:Arial,sans-serif;font-weight:600;font-size:10px;color:#b8bce0;margin-top:2px;}
@@ -511,6 +546,7 @@
       <div class="hpbar"><div class="hpfill" id="p1hp"></div></div>
       <div class="superbar"><div class="superfill" id="p1super"></div><span class="superlbl" id="p1superlbl">SUPER</span></div>
     </div>
+    <div id="roundBanner" class="hidden"><span id="roundBannerText">ROUND 1 / 4</span></div>
     <div class="pod right">
       <div class="who"><span id="p2name">BOT</span></div>
       <div class="dmg" id="p2dmg">250 / 250</div>
@@ -572,10 +608,10 @@
     <div class="titlegrid">
       <button class="btn btn-alt" id="onlineBtn">ONLINE 1v1</button>
       <button class="btn btn-alt" id="classicBtn">CLASSIC MODE</button>
+      <button class="btn btn-back" id="shopBtn">🛍 SHOP</button>
       <button class="btn btn-back" id="achBtn">ACHIEVEMENTS</button>
       <button class="btn btn-back" id="settingsBtn">SETTINGS</button>
       <button class="btn btn-back" id="statsBtn">STATS</button>
-      <button class="btn btn-back" id="howtoBtn">HOW TO PLAY</button>
     </div>
     <div class="profile" id="profileLine"></div>
     <div class="madeby"></div>
@@ -663,6 +699,21 @@
     <div class="madeby"></div>
   </div>
 
+  <!-- SHOP (menu themes, skins, memes) -->
+  <div class="screen hidden" id="shop">
+    <h2 style="font-size:clamp(20px,4vw,40px);color:#fdbb2d;transform:skewX(-6deg);text-shadow:0 3px 0 rgba(0,0,0,.4);">🛍 SHOP</h2>
+    <div class="helper">SPEND SHARDS ON MENU THEMES, SKINS &amp; MEMES</div>
+    <div class="currencybadge" id="shopCurrency">💎 <span id="shopCurrencyCount">0</span> SHARDS</div>
+    <div class="shoptabs">
+      <button class="shoptab sel" data-shoptab="themes">🎨 THEMES · 100</button>
+      <button class="shoptab" data-shoptab="skins">👕 SKINS · 50</button>
+      <button class="shoptab" data-shoptab="memes">😎 MEMES · 100</button>
+    </div>
+    <div class="shopgrid" id="shopGrid"></div>
+    <button class="btn btn-back" id="shopBack">◀ BACK</button>
+    <div class="madeby"></div>
+  </div>
+
   <!-- STATS -->
   <div class="screen hidden" id="stats">
     <h2 style="font-size:clamp(20px,4vw,40px);color:#fdbb2d;transform:skewX(-6deg);text-shadow:0 3px 0 rgba(0,0,0,.4);">STATS</h2>
@@ -722,6 +773,16 @@
     </div>
     <div class="modelbl">RULES</div>
     <div class="rules" id="ruleGrid"></div>
+    <div class="setwrap" id="customRules" style="max-width:520px;display:none;">
+      <div class="setrow">
+        <div class="setlbl">STOCKS (LIVES)<div class="sethint" id="customStockHint">2 lives each.</div></div>
+        <input type="range" id="customStockSlider" min="1" max="9" step="1">
+      </div>
+      <div class="setrow">
+        <div class="setlbl">HP PER LIFE<div class="sethint" id="customHpHint">150 HP.</div></div>
+        <input type="range" id="customHpSlider" min="30" max="500" step="10">
+      </div>
+    </div>
     <div class="btnrow">
       <button class="btn btn-back" id="modeBack">◀ BACK</button>
       <button class="btn" id="modeGo">CONTINUE</button>
@@ -1221,11 +1282,11 @@ const ROSTER = [
   {
     id:'maik', name:'MAIK', color:'#0aad55', dark:'#066b34', skin:'#e8b98f', locked:true,
     desc:'Supermarket Employee',
-    move:'CAN LOB · hurls an arcing tin can that bursts on impact',
+    move:'EGG TOSS · lobs an arcing egg that splats on impact',
     up:'STOCK BOOST · launches up on a crate of goods',
-    sup:'CLEAN-UP AISLE 5 · a huge splatter of spilled stock',
+    sup:'CLEAN-UP AISLE 5 · a barrage of splattering eggs',
     stats:{speed:3.1, jump:14.0, weight:1.05},
-    special:'flask',
+    special:'egg',
     costume:{name:'NIGHT SHIFT', color:'#22223b', dark:'#0d0d1a', acc:'visor'},
     costume2:{name:'FRESH PRODUCE', color:'#f4a259', dark:'#a1582a', acc:'goggles'},
     costume3:{name:'MANAGER', color:'#457b9d', dark:'#1d3a4d', acc:'antenna'}
@@ -1280,11 +1341,11 @@ const ROSTER = [
     id:'ankervos', name:'ANKER VOS', color:'#e8722c', dark:'#8a3f13',
     hidden:true, opChar:true, foxModel:true, secretCode:'vos',
     desc:'The Sly Fox',
-    move:'SLY SWIPE · a fan of raking claw marks',
-    up:'FOX SPRING · a nimble double backflip leap',
-    sup:'CUNNING FRENZY · a pouncing radial claw storm',
-    stats:{speed:4.3, jump:15.6, weight:0.8},
-    special:'pounce',
+    move:'FOXFIRE DASH · bounds forward leaving lingering blue foxfire flames',
+    up:'NINE-TAIL LEAP · a spiraling triple-jump with a flame burst',
+    sup:'WILL-O-WISP · a ring of homing foxfire spirits that hunt the foe',
+    stats:{speed:4.5, jump:15.8, weight:0.72},
+    special:'foxfire',
     costume:{name:'SILVER FOX', color:'#c9ccd6', dark:'#6a6f7e', acc:'star'},
     costume2:{name:'NIGHT PROWLER', color:'#2b2b3a', dark:'#0d0d16', acc:'shades'},
     costume3:{name:'GOLDEN TAIL', color:'#ffbe0b', dark:'#b3860a', acc:'crown'}
@@ -1326,7 +1387,7 @@ const TAUNTS = {
   casper:   { seq:['🏎️','😎'],      cry:"VROOM VROOM!",  emote:'spin' },
   robin:    { seq:['🧃','😜'],      cry:"WHEEE!",        emote:'hop' },
   zennith:  { seq:['⚾','💀'],       cry:"STRIKE... THREE.", emote:'vanish' },
-  maik:     { seq:['🛒','😅'],       cry:"CLEAN-UP AISLE 5!", emote:'shrug' },
+  maik:     { seq:['🥚','😅'],       cry:"CLEAN-UP AISLE 5!", emote:'shrug' },
   ankervos: { seq:['🦊','😏'],       cry:"too slow~",        emote:'spin' },
 };
 
@@ -1407,6 +1468,9 @@ const MEMES = [
     mult:{ hp:1.30, superGain:1.5 } },
 ];
 function getMeme(id){ return MEMES.find(m=>m.id===id) || MEMES[0]; }
+// which memes the player can actually pick: NONE is always free; the rest must be
+// bought in the SHOP (or unlocked via dev mode).
+function ownedMemes(){ return MEMES.filter(m=>m.id==='none' || Save.data.dev || Save.hasShopMeme(m.id)); }
 
 // --- skill tree (small, 3-node, personalized per character) ---
 // Node 1 & Node 2 are hand-authored PER CHARACTER — each fighter gets a totally
@@ -1487,9 +1551,9 @@ const CHAR_SKILL_NODES = {
   zennith:   [ {icon:'💀',name:'NIGHTMARE FUEL',       desc:'+15% damage; fueled by dread itself.',                                    effect:{atk:1.15}},
                {icon:'🖤',name:'SOUL DRAIN',            desc:'Heal 15% of damage dealt, drinking in fear.',                            effect:{lifesteal:0.15}} ],
   maik:      [ {icon:'📦',name:'STOCK ROOM',           desc:'+15% max HP from a back room full of supplies.',                          effect:{hp:1.15}},
-               {icon:'🥫',name:'BULK DISCOUNT',         desc:'-15% cooldown on CAN LOB; buy one, throw one free.',                     effect:{cdMult:0.85}} ],
+               {icon:'🥚',name:'BULK DISCOUNT',         desc:'-15% cooldown on EGG TOSS; buy a dozen, throw a dozen.',                 effect:{cdMult:0.85}} ],
   ankervos:  [ {icon:'🦊',name:'SLY FOOTWORK',         desc:'+10% move speed; the fox is never where you swing.',                     effect:{spd:1.10}},
-               {icon:'🐾',name:'CUNNING CLAWS',         desc:'Heal 12% of damage dealt on claw hits.',                                 effect:{lifesteal:0.12}} ],
+               {icon:'🔵',name:'FOXFIRE FEAST',         desc:'Heal 12% of damage dealt — the foxfire drinks their warmth.',            effect:{lifesteal:0.12}} ],
 };
 
 /* ---------------- SECOND SUPERS (skill-tree unlock) ---------------- */
@@ -1562,8 +1626,8 @@ const SUPER2 = {
     fire(f,foe){ f._dashHit=0; f._rampageHits=4; f._rampageCd=0; } },
   maik:     { name:'INVENTORY DUMP', desc:'A cascade of tumbling stock crates from above.',
     fire(f,foe){ for(let i=0;i<8;i++) projectiles.push({owner:f,x:(i+0.5)*(W/8)+(Math.random()-.5)*16,y:-20-i*14,vx:0,vy:5,life:170,dmg:10,kb:7,color:'#8a5a2b',type:'block',r:11,gravity:true,spin:0,block:'dirt'}); } },
-  ankervos: { name:'NINE-TAILS FLURRY', desc:'A sweeping fan of claw crescents and a pounce.',
-    fire(f,foe){ if(foe) f.face=foe.cx>=f.cx?1:-1; f.vx=f.face*12; f.vy=-5; f._dashHit=16; for(let i=-3;i<=3;i++){ projectiles.push({owner:f,x:f.cx+f.face*20,y:f.cy+i*3,vx:f.face*(10+Math.abs(i)),vy:i*2,life:30,dmg:7,kb:5,color:f.def.color,type:'claw',r:10,ang:Math.atan2(i*2,f.face*10)}); } } },
+  ankervos: { name:'INFERNO SPIRAL', desc:'A widening spiral of foxfire flames sweeps outward.',
+    fire(f,foe){ for(let i=0;i<12;i++){ const a=i/12*Math.PI*2*1.5; projectiles.push({owner:f,x:f.cx,y:f.cy,vx:Math.cos(a)*(4+i*0.4),vy:Math.sin(a)*(4+i*0.4),life:60,dmg:5,kb:5,color:'#6ec8ff',type:'flame',r:11,hitEvery:true,bobT:i}); } spawnParticles(f.cx,f.cy,'#6ec8ff',20); } },
   // OP / final fighters keep their signature feel with a second flavor too
   casper:   { name:'PIT STOP NITRO', desc:'A turret car plus a nitro ramming dash.',
     fire(f,foe){ if(foe) f.face=foe.cx>=f.cx?1:-1; f.vx=f.face*16; f._dashHit=26; f._dashDmg=10; f._dashKb=8; projectiles.push({owner:f,turret:true,x:f.cx-f.face*46,y:GROUND_Y-22,vx:0,vy:0,type:'carturret',r:26,color:f.def.color,life:130,dmg:0,kb:0,fireCd:0,face:-f.face}); } },
@@ -1623,7 +1687,10 @@ function resolveCostume(c, idx){
 // base 6 are always available; EPIC (medal) and SIGNATURE (skill tree) are added
 // only once unlocked, so cycling never lands on a skin that isn't earned yet.
 function allowedCostumeIdxs(id){
-  const arr=[0,1,2,3,4,5];
+  // DEFAULT (0) is always free; skins 1-5 must be bought in the SHOP (or dev mode);
+  // EPIC (6) and SIGNATURE (7) are earned via Classic medals / the skill tree.
+  const arr=[0];
+  for(let i=1;i<=5;i++){ if(Save.data.dev || Save.hasSkin(id,i)) arr.push(i); }
   if(Save.hasEpic(id)) arr.push(6);
   if(Save.hasSignature(id)) arr.push(7);
   return arr;
@@ -1697,6 +1764,11 @@ function drawIcon(g, c, S, costume, t){
     case 'flask': // flask
       g.fillStyle=white; g.beginPath(); g.moveTo(-r*0.25,-r*0.7); g.lineTo(r*0.25,-r*0.7); g.lineTo(r*0.6,r*0.7); g.lineTo(-r*0.6,r*0.7); g.closePath(); g.fill();
       g.fillStyle=ink; g.fillRect(-r*0.3,-r*0.85,r*0.6,r*0.2); break;
+    case 'egg': // egg with a yolk dot + a crack line
+      g.fillStyle=white; g.beginPath(); g.ellipse(0,r*0.08,r*0.72,r*0.98,0,0,Math.PI*2); g.fill();
+      g.fillStyle='#ffcf3a'; g.beginPath(); g.arc(-r*0.12,-r*0.02,r*0.26,0,Math.PI*2); g.fill(); // yolk
+      g.strokeStyle=ink; g.lineWidth=Math.max(1.2,S*0.016);
+      g.beginPath(); g.moveTo(-r*0.5,r*0.35); g.lineTo(-r*0.2,r*0.15); g.lineTo(r*0.05,r*0.4); g.lineTo(r*0.35,r*0.15); g.lineTo(r*0.55,r*0.4); g.stroke(); break;
     case 'swarm': // bug (oval body + antennae)
       g.fillStyle=white; g.beginPath(); g.ellipse(0,r*0.1,r*0.55,r*0.8,0,0,Math.PI*2); g.fill();
       g.strokeStyle=white; g.beginPath(); g.moveTo(-r*0.3,-r*0.6); g.lineTo(-r*0.6,-r); g.moveTo(r*0.3,-r*0.6); g.lineTo(r*0.6,-r); g.stroke();
@@ -1710,6 +1782,10 @@ function drawIcon(g, c, S, costume, t){
     case 'pounce': // claw slashes
       g.strokeStyle=white; g.lineWidth=Math.max(2,S*0.045);
       for(let i=-1;i<=1;i++){ g.beginPath(); g.moveTo(i*r*0.5-r*0.1,-r*0.8); g.quadraticCurveTo(i*r*0.5+r*0.3,0,i*r*0.5-r*0.1,r*0.8); g.stroke(); } break;
+    case 'foxfire': // blue foxfire wisp
+      g.fillStyle='#6ec8ff'; g.shadowColor='#6ec8ff';
+      g.beginPath(); g.moveTo(0,-r); g.quadraticCurveTo(r*0.8,0,0,r*0.75); g.quadraticCurveTo(-r*0.8,0,0,-r); g.fill();
+      g.fillStyle='#e0f4ff'; g.beginPath(); g.arc(0,r*0.1,r*0.32,0,Math.PI*2); g.fill(); break;
     case 'evilserve': // dark tennis ball with an X
       g.fillStyle=white; g.beginPath(); g.arc(0,0,r*0.85,0,Math.PI*2); g.fill();
       g.strokeStyle='#6a040f'; g.lineWidth=Math.max(2,S*0.03);
@@ -3228,8 +3304,10 @@ const SFX = {
       case 'drone': case 'minidrone': case 'swarm': this.beep('A4','32n'); this.beep('E5','32n'); break;
       case 'bolt':       this.beep('B5','16n'); this.burst(4000,0.08); break;
       case 'dash': case 'glitch': this.sweep('C4','C6',0.14); break;
+      case 'foxfire': this.sweep('E5','B5',0.2); this.burst(2600,0.08); break;
       case 'pound': case 'shock': this.burst(600,0.22); break;
       case 'bomb': case 'flask': this.burst(900,0.28); break;
+      case 'egg': this.burst(1600,0.12); this.beep('A4','32n'); break;
       case 'rocks':      this.burst(700,0.2); break;
       case 'frost':      this.beep('E6','32n'); this.beep('B5','32n'); break;
       case 'kick': case 'pounce': case 'twocat': this.burst(2400,0.1); this.beep('G4','32n'); break;
@@ -3446,17 +3524,17 @@ function randCode(){ const A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s=''; for(l
 // (medal) and which epic skins are unlocked.
 const Save = {
   KEY:'watInDeFighters_save_v1',
-  data:{ profile:'PLAYER 1', medals:{}, epics:{}, achievements:{}, stats:{}, dev:false, devPass:'', settings:{}, currency:0, skills:{}, secrets:{} },
+  data:{ profile:'PLAYER 1', medals:{}, epics:{}, achievements:{}, stats:{}, dev:false, devPass:'', settings:{}, currency:0, skills:{}, secrets:{}, themes:{} },
   load(){
     try{
       const raw=localStorage.getItem(this.KEY);
-      if(raw){ const d=JSON.parse(raw); this.data={ profile:d.profile||'PLAYER 1', medals:d.medals||{}, epics:d.epics||{}, achievements:d.achievements||{}, stats:d.stats||{}, dev:!!d.dev, devPass:d.devPass||'', settings:d.settings||{}, currency:d.currency||0, skills:d.skills||{}, secrets:d.secrets||{} }; }
+      if(raw){ const d=JSON.parse(raw); this.data={ profile:d.profile||'PLAYER 1', medals:d.medals||{}, epics:d.epics||{}, achievements:d.achievements||{}, stats:d.stats||{}, dev:!!d.dev, devPass:d.devPass||'', settings:d.settings||{}, currency:d.currency||0, skills:d.skills||{}, secrets:d.secrets||{}, themes:d.themes||{} }; }
     }catch(e){ /* storage blocked; run with in-memory defaults */ }
   },
   // replaces the whole save in one go (used by IMPORT SAVE); falls back to
   // defaults per-field so an older or partial file never crashes the app.
   loadFromObject(d){
-    this.data={ profile:(d&&d.profile)||'PLAYER 1', medals:(d&&d.medals)||{}, epics:(d&&d.epics)||{}, achievements:(d&&d.achievements)||{}, stats:(d&&d.stats)||{}, dev:!!(d&&d.dev), devPass:(d&&d.devPass)||'', settings:(d&&d.settings)||{}, currency:(d&&d.currency)||0, skills:(d&&d.skills)||{}, secrets:(d&&d.secrets)||{} };
+    this.data={ profile:(d&&d.profile)||'PLAYER 1', medals:(d&&d.medals)||{}, epics:(d&&d.epics)||{}, achievements:(d&&d.achievements)||{}, stats:(d&&d.stats)||{}, dev:!!(d&&d.dev), devPass:(d&&d.devPass)||'', settings:(d&&d.settings)||{}, currency:(d&&d.currency)||0, skills:(d&&d.skills)||{}, secrets:(d&&d.secrets)||{}, themes:(d&&d.themes)||{} };
     this.save();
   },
   save(){
@@ -3467,6 +3545,17 @@ const Save = {
   // secret-code character unlocks (e.g. Anker Vos via the "vos" title code)
   hasSecret(id){ return !!(this.data.secrets && this.data.secrets[id]); },
   grantSecret(id){ if(!this.data.secrets) this.data.secrets={}; if(this.data.secrets[id]) return false; this.data.secrets[id]=true; this.save(); return true; },
+  // ---- menu themes (bought from the SHOP for SHARDS; one per unlocked character) ----
+  hasTheme(id){ return !!(this.data.themes && this.data.themes[id]); },
+  buyTheme(id, cost){ if(this.currency()<cost) return false; if(!this.data.themes) this.data.themes={}; if(this.data.themes[id]) return false; this.data.currency-=cost; this.data.themes[id]=true; this.save(); return true; },
+  menuTheme(){ return this.getSetting('menuTheme', null); },
+  setMenuTheme(id){ this.setSetting('menuTheme', id); },
+  // ---- shop-bought skins & memes (stored under the same `themes` map, namespaced) ----
+  // skins: key 'skin:<charId>:<idx>' · memes: key 'meme:<memeId>'
+  hasSkin(charId, idx){ return !!(this.data.themes && this.data.themes['skin:'+charId+':'+idx]); },
+  buySkin(charId, idx, cost){ if(this.currency()<cost) return false; const k='skin:'+charId+':'+idx; if(!this.data.themes) this.data.themes={}; if(this.data.themes[k]) return false; this.data.currency-=cost; this.data.themes[k]=true; this.save(); return true; },
+  hasShopMeme(memeId){ return !!(this.data.themes && this.data.themes['meme:'+memeId]); },
+  buyMeme(memeId, cost){ if(this.currency()<cost) return false; const k='meme:'+memeId; if(!this.data.themes) this.data.themes={}; if(this.data.themes[k]) return false; this.data.currency-=cost; this.data.themes[k]=true; this.save(); return true; },
   awardClassic(id){ this.data.medals[id]=true; this.data.epics[id]=true; this.save(); },
   setProfile(name){ this.data.profile=(name||'PLAYER 1').slice(0,16); this.save(); },
   // achievement + stat helpers
@@ -3495,7 +3584,7 @@ const Save = {
     this.save();
     return true;
   },
-  reset(){ this.data={ profile:this.data.profile, medals:{}, epics:{}, achievements:{}, stats:{}, dev:false, devPass:this.data.devPass, settings:this.data.settings, currency:0, skills:{}, secrets:{} }; this.save(); }
+  reset(){ this.data={ profile:this.data.profile, medals:{}, epics:{}, achievements:{}, stats:{}, dev:false, devPass:this.data.devPass, settings:this.data.settings, currency:0, skills:{}, secrets:{}, themes:{} }; this.save(); }
 };
 Save.load();
 
@@ -3646,8 +3735,19 @@ const GAMEMODES = [
     hp:250, stocks:1, grav:1, kbMul:1, superMul:1, boss:true, oneP:true },
   { id:'soccer',   name:'SOCCER',       desc:'Knock the ball into the foe’s goal. First to 3!',
     hp:9999, stocks:1, grav:1, kbMul:1.2, superMul:1, soccer:true },
+  { id:'custom',   name:'CUSTOM',       desc:'Set your own stocks & HP.',
+    hp:150, stocks:2, grav:1, kbMul:1, superMul:1, custom:true },
 ];
-function currentMode(){ return GAMEMODES.find(m=>m.id===gameMode) || GAMEMODES[0]; }
+// clamp helpers for the custom rules
+const CUSTOM_HP_MIN=30, CUSTOM_HP_MAX=500, CUSTOM_STOCK_MIN=1, CUSTOM_STOCK_MAX=9;
+function customHp(){ return Math.max(CUSTOM_HP_MIN, Math.min(CUSTOM_HP_MAX, Save.getSetting('customHp',150)|0)); }
+function customStocks(){ return Math.max(CUSTOM_STOCK_MIN, Math.min(CUSTOM_STOCK_MAX, Save.getSetting('customStocks',2)|0)); }
+function currentMode(){
+  const m = GAMEMODES.find(m=>m.id===gameMode) || GAMEMODES[0];
+  // CUSTOM reads its HP/stocks live from the player's chosen sliders
+  if(m.custom) return {...m, hp:customHp(), stocks:customStocks(), desc:customStocks()+' lives · '+customHp()+' HP each.'};
+  return m;
+}
 
 /* input */
 addEventListener('keydown', e=>{ keys[e.key.toLowerCase()]=true; if(['arrowup','arrowdown','arrowleft','arrowright',' ','/',"'"].includes(e.key.toLowerCase()))e.preventDefault();});
@@ -3881,7 +3981,7 @@ function buildPanel(tag, cls, pick, who){
     mbtn.style.borderColor=m.color; mbtn.classList.toggle('on', m.id!=='none');
   }
   refreshMeme();
-  mbtn.addEventListener('click',(e)=>{ e.stopPropagation(); const i=MEMES.findIndex(m=>m.id===getM()); setM(MEMES[(i+1)%MEMES.length].id); refreshMeme(); });
+  mbtn.addEventListener('click',(e)=>{ e.stopPropagation(); const list=ownedMemes(); let i=list.findIndex(m=>m.id===getM()); if(i<0) i=0; setM(list[(i+1)%list.length].id); refreshMeme(); });
   // second-super selector (only present when this player owns the node)
   const sup2btn=p.querySelector('.superbtn');
   if(sup2btn){
@@ -3982,7 +4082,7 @@ document.getElementById('muteBtn').onclick=(e)=>{
 
 /* ---------------- SCREEN FLOW ---------------- */
 function show(id){
-  ['title','mode','select','stage','result','versus','story','achieve','achdetail','settings','online','waitroom','stats','howto','skills'].forEach(s=>document.getElementById(s).classList.toggle('hidden', s!==id));
+  ['title','mode','select','stage','result','versus','story','achieve','achdetail','shop','settings','online','waitroom','stats','howto','skills'].forEach(s=>document.getElementById(s).classList.toggle('hidden', s!==id));
   document.body.classList.remove('in-match');
   // reset any scrollable menu back to the top so its heading is always visible on entry
   const el=document.getElementById(id);
@@ -3990,11 +4090,11 @@ function show(id){
   // never let a leftover achievement toast pop while navigating pre-match menus
   if(id!=='result'){ _toastQ.length=0; const tt=document.getElementById('achToast'); if(tt) tt.classList.remove('show'); _toastBusy=false; }
   // menu screens share a catchy menu theme; the match screens use stage music
-  const menuScreens=['title','mode','select','stage','achieve','achdetail','result','story','settings','online','waitroom','stats','howto','skills'];
+  const menuScreens=['title','mode','select','stage','achieve','achdetail','shop','result','story','settings','online','waitroom','stats','howto','skills'];
   if(menuScreens.includes(id)){ if(Music.curId!=='menu') Music.play('menu'); }
 }
 
-document.getElementById('startBtn').onclick=()=>{ classic=null; updateModeCards(); show('mode'); };
+document.getElementById('startBtn').onclick=()=>{ classic=null; updateModeCards(); updateCustomRulesUI(); show('mode'); };
 
 // ACHIEVEMENTS menu
 function buildAchList(){
@@ -4112,6 +4212,116 @@ function renderAchDetail(){
 }
 document.getElementById('achDetailBack').onclick=()=>{ buildAchList(); show('achieve'); };
 
+/* ---------------- SHOP: character-themed menu themes ---------------- */
+const THEME_COST = 100;
+// Derive a menu backdrop palette from a fighter's colors: a rich center tint
+// that fades to near-black, so the menus feel themed without hurting readability.
+function themePalette(c){
+  return { bg1: mixHex(c.dark, '#000000', 0.25), bg2: mixHex(c.dark, '#0d0d18', 0.55), accent:c.color };
+}
+// apply the currently-selected theme (or the default) to every menu screen
+function applyMenuTheme(){
+  const id=Save.menuTheme();
+  const c=id ? ROSTER.find(x=>x.id===id) : null;
+  const root=document.getElementById('game');
+  if(c && charUnlocked(c.id) && Save.hasTheme(c.id)){
+    const p=themePalette(c);
+    root.style.setProperty('--menu-bg1', p.bg1);
+    root.style.setProperty('--menu-bg2', p.bg2);
+  } else {
+    root.style.removeProperty('--menu-bg1');
+    root.style.removeProperty('--menu-bg2');
+  }
+}
+// only fighters the player has actually unlocked can have a theme bought
+function themeableChars(){ return ROSTER.filter(c=>charUnlocked(c.id)); }
+const SKIN_COST = 50, MEME_COST = 100;
+let shopTab='themes';
+function buildShop(){
+  document.getElementById('shopCurrencyCount').textContent=Save.currency();
+  const grid=document.getElementById('shopGrid'); grid.innerHTML='';
+  if(shopTab==='themes') buildShopThemes(grid);
+  else if(shopTab==='skins') buildShopSkins(grid);
+  else buildShopMemes(grid);
+}
+function buildShopThemes(grid){
+  const activeId=Save.menuTheme();
+  const def=document.createElement('div');
+  def.className='shopcard'+(!activeId?' active':'');
+  def.innerHTML=`<div class="swatch" style="background:radial-gradient(circle at 50% 30%, #23235a, #0d0d18)"></div>
+    <div class="stitle" style="color:#cfd0e8">DEFAULT</div>
+    <button class="sbtn sel${!activeId?' selon':''}">${!activeId?'✓ ACTIVE':'USE'}</button>`;
+  def.querySelector('.sbtn').addEventListener('click',()=>{ Save.setMenuTheme(null); applyMenuTheme(); buildShop(); });
+  grid.appendChild(def);
+  themeableChars().forEach(c=>{
+    const owned=Save.hasTheme(c.id);
+    const active=Save.menuTheme()===c.id;
+    const p=themePalette(c);
+    const card=document.createElement('div');
+    card.className='shopcard'+(owned?' owned':'')+(active?' active':'');
+    let btn = !owned
+      ? `<button class="sbtn" ${Save.currency()>=THEME_COST?'':'disabled'}>💎 ${THEME_COST}</button>`
+      : `<button class="sbtn sel${active?' selon':''}">${active?'✓ ACTIVE':'USE'}</button>`;
+    card.innerHTML=`<div class="swatch" style="background:radial-gradient(circle at 50% 30%, ${p.bg1}, ${p.bg2})"></div>
+      <div class="stitle" style="color:${c.color}">${c.name}</div>${btn}`;
+    card.querySelector('.sbtn').addEventListener('click',()=>{
+      if(!Save.hasTheme(c.id)){ if(Save.buyTheme(c.id, THEME_COST)){ Save.setMenuTheme(c.id); applyMenuTheme(); buildShop(); refreshProfileLine(); } }
+      else { Save.setMenuTheme(active?null:c.id); applyMenuTheme(); buildShop(); }
+    });
+    grid.appendChild(card);
+  });
+}
+function buildShopSkins(grid){
+  // every unlocked fighter's buyable skins (personalized 1-3, JEWEL 4, SCHOOL 5)
+  const SKIN_IDXS=[1,2,3,4,5];
+  themeableChars().forEach(c=>{
+    const head=document.createElement('div'); head.className='shopgrouphead'; head.textContent=c.name;
+    grid.appendChild(head);
+    SKIN_IDXS.forEach(idx=>{
+      const cos=resolveCostume(c, idx);
+      const owned=Save.hasSkin(c.id, idx);
+      const card=document.createElement('div');
+      card.className='shopcard'+(owned?' owned':'');
+      const canvas=document.createElement('canvas'); canvas.width=96; canvas.height=96;
+      card.appendChild(canvas);
+      const title=document.createElement('div'); title.className='stitle'; title.style.color=c.color; title.textContent=cos.name;
+      card.appendChild(title);
+      const b=document.createElement('button'); b.className='sbtn';
+      if(owned){ b.classList.add('sel','selon'); b.textContent='OWNED ✓'; b.disabled=true; }
+      else { b.textContent='💎 '+SKIN_COST; if(Save.currency()<SKIN_COST) b.disabled=true; }
+      card.appendChild(b);
+      // live mini portrait preview in this skin
+      const g=canvas.getContext('2d');
+      (function loop(t){ g.clearRect(0,0,96,96); drawFighter(g, c, 18, 8, 60, 82, 1, t, 'idle', idx); if(document.body.contains(canvas)) requestAnimationFrame(loop); })(0);
+      if(!owned){ b.addEventListener('click',()=>{ if(Save.buySkin(c.id, idx, SKIN_COST)){ buildShop(); refreshProfileLine(); } }); }
+      grid.appendChild(card);
+    });
+  });
+}
+function buildShopMemes(grid){
+  MEMES.filter(m=>m.id!=='none').forEach(m=>{
+    const owned=Save.hasShopMeme(m.id);
+    const card=document.createElement('div');
+    card.className='shopcard'+(owned?' owned':'');
+    let btn = owned
+      ? `<button class="sbtn sel selon" disabled>OWNED ✓</button>`
+      : `<button class="sbtn" ${Save.currency()>=MEME_COST?'':'disabled'}>💎 ${MEME_COST}</button>`;
+    card.innerHTML=`<div class="swatch" style="background:radial-gradient(circle at 50% 30%, ${m.color}, #0d0d18);display:flex;align-items:center;justify-content:center;font-size:30px;">${m.icon}</div>
+      <div class="stitle" style="color:${m.color}">${m.name}</div>
+      <div class="sdesc" style="font-family:Arial,sans-serif;font-weight:600;font-size:9px;color:#b8bce0;text-align:center;line-height:1.3;min-height:26px;">${m.blurb}</div>${btn}`;
+    const b=card.querySelector('.sbtn');
+    if(!owned) b.addEventListener('click',()=>{ if(Save.buyMeme(m.id, MEME_COST)){ buildShop(); refreshProfileLine(); } });
+    grid.appendChild(card);
+  });
+}
+document.querySelectorAll('.shoptab').forEach(tab=>{
+  tab.onclick=()=>{ shopTab=tab.getAttribute('data-shoptab'); document.querySelectorAll('.shoptab').forEach(t=>t.classList.toggle('sel', t===tab)); buildShop(); };
+});
+document.getElementById('shopBtn').onclick=()=>{ shopTab='themes'; document.querySelectorAll('.shoptab').forEach(t=>t.classList.toggle('sel', t.getAttribute('data-shoptab')==='themes')); buildShop(); show('shop'); };
+document.getElementById('shopBack').onclick=()=>{ show('title'); };
+applyMenuTheme();
+
+
 /* ---------------- STATS SCREEN ---------------- */
 function buildStatsScreen(){
   const grid=document.getElementById('statGrid'); grid.innerHTML='';
@@ -4173,17 +4383,19 @@ function renderSkillTree(){
   const grid=document.getElementById('skillTreeGrid'); grid.innerHTML='';
   const nodes=skillTreeFor(c);
   const owned=Save.charSkills(c.id);
-  nodes.forEach(n=>{
+  nodes.forEach((n,i)=>{
     const isOwned = !!owned[n.id];
     const reqMet = !n.requires || owned[n.requires];
     const canAfford = Save.currency()>=n.cost;
+    // connector "branch" above each node (except the root); lit once this node is owned
+    if(i>0){ const conn=document.createElement('div'); conn.className='skillconn'+(isOwned?' lit':''); grid.appendChild(conn); }
     const el=document.createElement('div');
     el.className='skillnode'+(isOwned?' owned':(!reqMet?' locked':''));
     let stateHtml;
     if(isOwned) stateHtml=`<span style="color:#00e5ff;font-family:Arial,sans-serif;font-weight:800;font-size:11px;letter-spacing:.06em;">OWNED ✓</span>`;
     else if(!reqMet) stateHtml=`<span style="color:#6a6a7a;font-family:Arial,sans-serif;font-weight:800;font-size:10px;letter-spacing:.06em;">🔒 NEEDS PREVIOUS</span>`;
     else stateHtml=`<button class="skillbuy" ${canAfford?'':'disabled'}>💎 ${n.cost}</button>`;
-    el.innerHTML=`<span class="si">${n.icon}</span><div><div class="sname">${n.name}</div><div class="sdesc">${n.desc}</div></div><div class="sstate">${stateHtml}</div>`;
+    el.innerHTML=`<div class="tierbadge">TIER ${n.tier||(i+1)}</div><span class="si">${n.icon}</span><div><div class="sname">${n.name}</div><div class="sdesc">${n.desc}</div></div><div class="sstate">${stateHtml}</div>`;
     if(!isOwned && reqMet){
       const btn=el.querySelector('.skillbuy');
       btn.addEventListener('click', ()=>{
@@ -4220,7 +4432,7 @@ function buildMoveList(){
     list.appendChild(card);
   });
 }
-document.getElementById('howtoBtn').onclick=()=>{ buildMoveList(); show('howto'); };
+{ const hb=document.getElementById('howtoBtn'); if(hb) hb.onclick=()=>{ buildMoveList(); show('howto'); }; }
 document.getElementById('howtoBack').onclick=()=>{ show('title'); };
 
 /* ---------------- SETTINGS MENU ---------------- */
@@ -4447,8 +4659,27 @@ GAMEMODES.forEach(gm=>{
     if(el.classList.contains('disabled')) return;
     gameMode=gm.id;
     document.querySelectorAll('.rule').forEach(x=>x.classList.toggle('sel', x.dataset.rule===gm.id));
+    updateCustomRulesUI();
   });
 });
+// show the stocks/HP sliders only when CUSTOM rules are selected, and keep the
+// hints + rule-chip description in sync with the chosen values
+function updateCustomRulesUI(){
+  const wrap=document.getElementById('customRules');
+  const on=(gameMode==='custom');
+  if(wrap) wrap.style.display = on ? 'flex' : 'none';
+  const ss=document.getElementById('customStockSlider'), hs=document.getElementById('customHpSlider');
+  if(ss) ss.value=customStocks();
+  if(hs) hs.value=customHp();
+  const sh=document.getElementById('customStockHint'); if(sh) sh.textContent=customStocks()+(customStocks()===1?' life each.':' lives each.');
+  const hh=document.getElementById('customHpHint'); if(hh) hh.textContent=customHp()+' HP.';
+  // refresh the CUSTOM chip description so it mirrors the current settings
+  const chip=document.querySelector('.rule[data-rule="custom"] .rd');
+  if(chip) chip.textContent=customStocks()+' lives · '+customHp()+' HP each.';
+}
+document.getElementById('customStockSlider').oninput=(e)=>{ Save.setSetting('customStocks', +e.target.value); updateCustomRulesUI(); };
+document.getElementById('customHpSlider').oninput=(e)=>{ Save.setSetting('customHp', +e.target.value); updateCustomRulesUI(); };
+updateCustomRulesUI();
 
 // opponent (players) selection — just toggles, doesn't advance
 function updateModeCards(){
@@ -4589,11 +4820,26 @@ function flashHelper(msg){
 }
 
 /* ---------------- MATCH SETUP ---------------- */
+// Classic-mode round indicator shown at the top during a run (hidden otherwise)
+function updateRoundBanner(){
+  const b=document.getElementById('roundBanner');
+  if(!b) return;
+  if(classic && classic.active && classic.foes){
+    const total=classic.foes.length;
+    const cur=Math.min(classic.round+1, total);
+    const finale=(cur===total);
+    document.getElementById('roundBannerText').textContent = finale ? ('FINALE · ROUND '+cur+' / '+total) : ('ROUND '+cur+' / '+total);
+    b.classList.remove('hidden');
+  } else {
+    b.classList.add('hidden');
+  }
+}
 function startMatch(){
   // hide every menu screen
   ['title','mode','select','stage','result','versus','story','skills'].forEach(s=>document.getElementById(s).classList.add('hidden'));
   document.body.classList.add('in-match');
   document.getElementById('hud').classList.remove('hidden');
+  updateRoundBanner();
   // apply chosen stage layout
   PLATS = stagePick.layout();
   const gm = currentMode();
@@ -5041,7 +5287,12 @@ function trySpecial(f){
       life:120, dmg:12, kb:6, color:'#38b000', type:'flask', r:7, gravity:true, fuse:80});
     f.specialCd=62;
     spawnParticles(f.cx,f.cy,'#a7e86b',6);
-  } else if(s==='swarm'){
+  } else if(s==='egg'){
+    // EGG TOSS: a lobbed egg that arcs and splats into a small yolk burst on impact
+    f.attackTimer=12; f.state='attack'; f.specialCd=52;
+    projectiles.push({owner:f, x:f.cx+f.face*22, y:f.cy-6, vx:f.face*7, vy:-7.5,
+      life:120, dmg:11, kb:6, color:'#fff6e0', type:'egg', r:8, gravity:true, splat:true});
+    spawnParticles(f.cx+f.face*20, f.cy, '#fff6e0', 5);
     // BUG SWARM: a cluster of small homing insects
     f.attackTimer=12; f.state='attack'; f.specialCd=62;
     for(let i=0;i<4;i++){
@@ -5075,7 +5326,17 @@ function trySpecial(f){
         life:26, dmg:6, kb:4.5, color:f.def.color, type:'claw', r:9, ang:Math.atan2(i*2.4, f.face*10)});
     }
     spawnParticles(f.cx+f.face*22, f.cy, '#fff', 6);
-  } else if(s==='evilserve'){
+  } else if(s==='foxfire'){
+    // FOXFIRE DASH: a quick bounding dash that damages on contact and drops a
+    // trail of lingering blue foxfire flames behind for zoning hit-and-run play
+    f.vx=f.face*15; f.vy=-3; f.specialCd=58; f.hitCd=Math.max(f.hitCd,10);
+    f._dashHit=14; f._dashDmg=9; f._dashKb=6; f.state='attack'; f.attackTimer=16;
+    for(let i=0;i<3;i++){
+      projectiles.push({owner:f, x:f.cx-f.face*(i*26), y:f.cy+2,
+        vx:0, vy:0, life:70+i*8, dmg:4, kb:3.5, color:'#6ec8ff', type:'flame', r:11, hitEvery:true, hitCdOwn:0, bobT:i*3});
+    }
+    spawnParticles(f.cx, f.cy, '#6ec8ff', 14);
+    spawnParticles(f.cx, f.cy, '#fff', 6);
     // CURSE SERVE: a heavy, hard-hitting dark ball that ricochets (slower but stronger than Adam)
     f.attackTimer=16; f.state='attack'; f.specialCd=48;
     projectiles.push({owner:f, x:f.cx+f.face*28, y:f.cy-8, vx:f.face*14, vy:2,
@@ -5291,7 +5552,11 @@ function tryUpSpecial(f){
     f.vy=-16.5;
     areaBlast(f.cx, f.y+f.h, 80, 12, 5.5, f, '#38b000');
     for(let i=0;i<12;i++) particles.push({x:f.cx+(Math.random()-.5)*18,y:f.y+f.h,vx:(Math.random()-.5)*3,vy:2+Math.random()*4,life:20,color:'#a7e86b',r:2+Math.random()*2});
-  } else if(s==='swarm'){
+  } else if(s==='egg'){
+    // STOCK BOOST: springs up on a crate of goods with a rising hitbox
+    f.vy=-16; f.attackTimer=16;
+    f._upHit={life:16, dmg:13, kb:6, launch:0.8};
+    for(let i=0;i<8;i++) particles.push({x:f.cx+(Math.random()-.5)*16,y:f.y+f.h,vx:(Math.random()-.5)*3,vy:2+Math.random()*3,life:18,color:'#c9a06a',r:2+Math.random()*2});
     // WING BUZZ: flutter upward with a lingering bug hitbox
     f.vy=-15.5;
     f._upHit={life:20, dmg:11, kb:4, launch:0.6};
@@ -5316,6 +5581,12 @@ function tryUpSpecial(f){
     for(let i=-1;i<=1;i++) projectiles.push({owner:f, x:f.cx+i*8, y:f.cy-10, vx:i*3, vy:-7,
       life:20, dmg:5, kb:3, color:f.def.color, type:'claw', r:8, ang:-Math.PI/2+i*0.4});
     spawnParticles(f.cx,f.cy,f.def.color,10);
+  } else if(s==='foxfire'){
+    // NINE-TAIL LEAP: a high spiraling triple-jump that bursts foxfire around him
+    f.vy=-17.5; f.vx+=f.face*3;
+    f._upHit={life:16, dmg:12, kb:5, launch:0.8};
+    for(let i=0;i<8;i++){ const a=i/8*Math.PI*2; particles.push({x:f.cx+Math.cos(a)*14,y:f.cy+Math.sin(a)*14,vx:Math.cos(a)*2,vy:Math.sin(a)*2-1,life:22,color:'#6ec8ff',r:2+Math.random()*2}); }
+    spawnParticles(f.cx,f.cy,'#e0f4ff',8);
   } else if(s==='evilserve'){
     // DARK LOB: leap with a punishing downward spike
     f.vy=-14.5;
@@ -5459,7 +5730,9 @@ function trySuper(f){
     const tx = foe? foe.cx : f.cx+f.face*120;
     areaBlast(tx, GROUND_Y-30, 200, 30, 11, f, '#38b000');
     for(let i=0;i<20;i++) particles.push({x:tx+(Math.random()-.5)*80,y:GROUND_Y-30+(Math.random()-.5)*80,vx:(Math.random()-.5)*6,vy:(Math.random()-.5)*6,life:26,color:'#a7e86b',r:2+Math.random()*3});
-  } else if(s==='swarm'){ // INFESTATION — a huge cloud of homing bugs
+  } else if(s==='egg'){ // CLEAN-UP AISLE 5 — a barrage of splattering eggs rains down
+    for(let i=0;i<8;i++) projectiles.push({owner:f,x:(i+0.5)*(W/8)+(Math.random()-.5)*24,y:-20-i*16,vx:(Math.random()-.5)*2,vy:5,life:180,dmg:9,kb:6,color:'#fff6e0',type:'egg',r:8,gravity:true,splat:true});
+    spawnParticles(f.cx,f.cy,'#fff6e0',16);
     for(let i=0;i<12;i++) projectiles.push({owner:f,x:f.cx+f.face*18,y:f.cy-24+i*4,vx:f.face*3.5,vy:(i-6)*0.8,life:150,dmg:6,kb:4,color:f.def.color,type:'drone',r:5,homing:true});
   } else if(s==='splash'){ // TIDAL WAVE — a towering wave that rolls across the stage
     projectiles.push({owner:f, x:f.cx, y:GROUND_Y-90, vx:(f.face||1)*6, vy:0,
@@ -5476,6 +5749,11 @@ function trySuper(f){
       projectiles.push({owner:f, x:f.cx, y:f.cy, vx:Math.cos(a)*8, vy:Math.sin(a)*8,
         life:30, dmg:6, kb:6, color:f.def.color, type:'claw', r:10, ang:a}); }
     spawnParticles(f.cx,f.cy,f.def.color,20); spawnParticles(f.cx,f.cy,'#fff',10);
+  } else if(s==='foxfire'){ // WILL-O-WISP — a ring of homing foxfire spirits that hunt the foe
+    for(let i=0;i<8;i++){ const a=i/8*Math.PI*2;
+      projectiles.push({owner:f, x:f.cx+Math.cos(a)*30, y:f.cy+Math.sin(a)*30,
+        vx:Math.cos(a)*3, vy:Math.sin(a)*3, life:150, dmg:6, kb:5, color:'#6ec8ff', type:'flame', r:11, homing:true, hitEvery:true, bobT:i*2}); }
+    spawnParticles(f.cx,f.cy,'#6ec8ff',22); spawnParticles(f.cx,f.cy,'#e0f4ff',12);
   } else if(s==='evilserve'){ // BREAK POINT — a relentless storm of cursed ricochet balls
     for(let i=0;i<6;i++) projectiles.push({owner:f,x:f.cx+f.face*24,y:f.cy-14+i*5,vx:f.face*(12+i*0.7),vy:-3+i*1.4,life:150,dmg:12,kb:8,color:'#6a040f',type:'serve',r:9,gravity:true,bounces:4});
   } else if(s==='glitch'){ // SYSTEM OVERLOAD — a screen-filling homing packet swarm
@@ -5716,8 +5994,8 @@ function botThink(bot, foe){
   }
 
   bot.face=dir;
-  const ranged = (bot.def.special==='pitch'||bot.def.special==='drone'||bot.def.special==='bolt'||bot.def.special==='bomb'||bot.def.special==='serve'||bot.def.special==='rocks'||bot.def.special==='minidrone'||bot.def.special==='frost'||bot.def.special==='flask'||bot.def.special==='swarm'||bot.def.special==='splash'||bot.def.special==='soundwave'||bot.def.special==='pounce'||bot.def.special==='evilserve'||bot.def.special==='numbers'||bot.def.special==='coins'||bot.def.special==='slipper'||bot.def.special==='pellet'||bot.def.special==='shock'||bot.def.special==='bullets'||bot.def.special==='football'||bot.def.special==='curve'||bot.def.special==='controller'||bot.def.special==='doom');
-  const rush = (bot.def.special==='dash'||bot.def.special==='pound'||bot.def.special==='kick'||bot.def.special==='glitch'||bot.def.special==='breakdance'||bot.def.special==='twocat'||bot.def.special==='launch'||bot.def.special==='car'||bot.def.special==='slam');
+  const ranged = (bot.def.special==='pitch'||bot.def.special==='drone'||bot.def.special==='bolt'||bot.def.special==='bomb'||bot.def.special==='serve'||bot.def.special==='rocks'||bot.def.special==='minidrone'||bot.def.special==='frost'||bot.def.special==='flask'||bot.def.special==='egg'||bot.def.special==='swarm'||bot.def.special==='splash'||bot.def.special==='soundwave'||bot.def.special==='pounce'||bot.def.special==='evilserve'||bot.def.special==='numbers'||bot.def.special==='coins'||bot.def.special==='slipper'||bot.def.special==='pellet'||bot.def.special==='shock'||bot.def.special==='bullets'||bot.def.special==='football'||bot.def.special==='curve'||bot.def.special==='controller'||bot.def.special==='doom');
+  const rush = (bot.def.special==='dash'||bot.def.special==='pound'||bot.def.special==='kick'||bot.def.special==='glitch'||bot.def.special==='breakdance'||bot.def.special==='twocat'||bot.def.special==='launch'||bot.def.special==='car'||bot.def.special==='slam'||bot.def.special==='foxfire');
   // approach or space
   if(dist>170){
     bot.vx += dir*0.4;
@@ -6062,6 +6340,7 @@ function update(t){
     if(pr.gravity){ pr.vy+=0.5; }
     pr.x+=pr.vx; pr.y+=pr.vy; pr.life--;
     if(pr.type==='drone' && !pr.homing){ pr.vy=Math.sin(pr.life/6)*1.2; }
+    if(pr.type==='flame'){ pr.bobT=(pr.bobT||0)+0.2; pr.y+=Math.sin(pr.bobT)*0.5; pr.r=10+Math.sin(pr.bobT*1.4)*2; }
     if(pr.type==='football' && pr.curve){ pr.vy+=pr.curve; pr.spin=(pr.spin||0)+0.3; }
 
     // bomb / acid flask: explode on fuse timeout, ground contact, or fighter contact
@@ -6072,6 +6351,19 @@ function update(t){
       if(boom){
         const rad = pr.type==='flask'?95:130;
         areaBlast(pr.x, Math.min(pr.y,GROUND_Y-4), rad, pr.dmg, pr.kb, pr.owner, pr.color);
+        pr.life=0;
+      }
+      return;
+    }
+
+    // egg: splats into a small yolk burst on hitting the ground or a fighter
+    if(pr.type==='egg'){
+      let splat = pr.y+pr.r>=GROUND_Y;
+      players.forEach(o=>{ if(o!==pr.owner && !o.dead && Math.abs(pr.x-o.cx)<o.w*0.5+pr.r && Math.abs(pr.y-o.cy)<o.h*0.5+pr.r) splat=true; });
+      if(splat){
+        areaBlast(pr.x, Math.min(pr.y,GROUND_Y-4), 62, pr.dmg, pr.kb, pr.owner, '#ffd84a');
+        spawnParticles(pr.x, Math.min(pr.y,GROUND_Y-4), '#ffd84a', 10);
+        spawnParticles(pr.x, Math.min(pr.y,GROUND_Y-4), '#fff6e0', 8);
         pr.life=0;
       }
       return;
@@ -6358,6 +6650,24 @@ function render(t){
       ctx.beginPath(); ctx.arc(pr.x,pr.y,pr.r,0,Math.PI*2); ctx.fill();
       ctx.fillStyle='#cfe8b0'; ctx.fillRect(pr.x-2,pr.y-pr.r-3,4,4); // cork
       if(Math.floor(t/6)%2===0){ ctx.fillStyle='#eaffcf'; ctx.beginPath(); ctx.arc(pr.x+2,pr.y-2,1.6,0,Math.PI*2); ctx.fill(); }
+    } else if(pr.type==='egg'){
+      // a tumbling white egg with a warm sheen
+      ctx.shadowColor='#fff6e0'; ctx.shadowBlur=8;
+      ctx.save(); ctx.translate(pr.x,pr.y); ctx.rotate((pr.spin=(pr.spin||0)+0.25));
+      ctx.fillStyle='#fff6e0';
+      ctx.beginPath(); ctx.ellipse(0,0,pr.r*0.8,pr.r*1.05,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,.85)'; ctx.beginPath(); ctx.ellipse(-pr.r*0.25,-pr.r*0.35,pr.r*0.22,pr.r*0.3,0,0,Math.PI*2); ctx.fill(); // highlight
+      ctx.restore();
+    } else if(pr.type==='flame'){
+      // a flickering blue foxfire wisp
+      const flick=0.7+0.3*Math.sin((pr.bobT||0)*3);
+      ctx.shadowColor='#6ec8ff'; ctx.shadowBlur=16*flick;
+      ctx.fillStyle='#6ec8ff'; ctx.globalAlpha=Math.min(1,pr.life/24);
+      ctx.beginPath(); ctx.moveTo(pr.x,pr.y-pr.r*1.2*flick);
+      ctx.quadraticCurveTo(pr.x+pr.r*0.8,pr.y,pr.x,pr.y+pr.r*0.7);
+      ctx.quadraticCurveTo(pr.x-pr.r*0.8,pr.y,pr.x,pr.y-pr.r*1.2*flick); ctx.fill();
+      ctx.fillStyle='#e0f4ff'; ctx.beginPath(); ctx.arc(pr.x,pr.y,pr.r*0.35,0,Math.PI*2); ctx.fill();
+      ctx.globalAlpha=1;
     } else if(pr.type==='packet'){
       // AI data packet: a small glowing square with an inner bit
       ctx.shadowBlur=10;
