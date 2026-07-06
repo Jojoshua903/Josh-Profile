@@ -80,7 +80,12 @@
   /* --- decluttered title layout --- */
   #title .medalbadge{margin-top:12px;font-size:clamp(12px,1.8vw,16px);padding:6px 14px;}
   /* PLAY is the hero action: larger and set apart, but kept compact so the whole menu fits */
-  #title .btn-hero{margin-top:14px;font-size:clamp(18px,3vw,28px);padding:10px 50px;}
+  #title .btn-hero{margin-top:0;font-size:clamp(18px,3vw,28px);padding:10px 44px;}
+  /* PLAY + CAMPAIGN share one hero row as two big side-by-side buttons */
+  #title .herorow{display:flex;gap:14px;flex-wrap:wrap;align-items:center;justify-content:center;margin-top:14px;}
+  /* CAMPAIGN gets its own cyan hero look so it stands apart from PLAY */
+  #title .btn-campaign{background:linear-gradient(180deg,#8fefff,#00b8d9);box-shadow:0 6px 0 #0a7fa0, 0 10px 24px rgba(0,0,0,.4);}
+  #title .btn-campaign:active{box-shadow:0 2px 0 #0a7fa0;}
   /* the four secondary options sit in a tidy 2x2 grid */
   #title .titlegrid{
     display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
@@ -493,6 +498,39 @@
   .storytext{font-family:Georgia,serif;font-size:clamp(13px,2.2vw,17px);line-height:1.6;color:#eae6f5;text-align:center;min-height:80px;}
   .storytext .who{color:#fdbb2d;font-weight:bold;}
 
+  /* campaign hub */
+  #campaign, #mission{justify-content:flex-start;overflow-y:auto;padding-top:3%;padding-bottom:24px;}
+  #campaign::-webkit-scrollbar,#mission::-webkit-scrollbar{width:8px;}
+  #campaign::-webkit-scrollbar-thumb,#mission::-webkit-scrollbar-thumb{background:rgba(143,239,255,.5);border-radius:4px;}
+  #campaign{background:radial-gradient(circle at 50% 25%, #123a52 0%, #0d0d18 72%);}
+  #mission{background:radial-gradient(circle at 50% 40%, #123a52 0%, #0d0d18 78%);}
+  .campprog{position:relative;height:14px;border-radius:7px;background:rgba(0,0,0,.4);box-shadow:0 0 0 2px rgba(0,0,0,.35) inset;margin:10px auto 0;overflow:hidden;width:100%;max-width:520px;flex-shrink:0;}
+  .campfill{position:absolute;top:0;bottom:0;left:0;border-radius:7px;background:linear-gradient(90deg,#8fefff,#00b8d9);transition:width .3s ease;}
+  .campprognum{font-family:Arial,sans-serif;font-weight:800;font-size:11px;letter-spacing:.1em;color:#8fefff;margin-top:6px;flex-shrink:0;}
+  .camplist{display:flex;flex-direction:column;gap:7px;width:100%;max-width:520px;margin-top:14px;flex-shrink:0;}
+  .campact{font-family:Arial,sans-serif;font-weight:800;font-size:10px;letter-spacing:.16em;color:#8fefff;text-align:left;margin:10px 0 2px 2px;display:flex;align-items:center;gap:7px;}
+  .campact::after{content:'';flex:1;height:2px;background:linear-gradient(90deg,rgba(143,239,255,.5),transparent);}
+  .campmission{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:12px;border:2px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);text-align:left;}
+  .campmission.done{border-color:#7ee081;background:rgba(126,224,129,.10);}
+  .campmission.current{border-color:#8fefff;background:rgba(143,239,255,.12);box-shadow:0 0 0 2px rgba(143,239,255,.35);}
+  .campmission.locked{opacity:.5;}
+  .campmission .cmi{font-size:22px;width:30px;text-align:center;flex-shrink:0;}
+  .campmission .cmt{font-size:14px;letter-spacing:.03em;color:#eae6f5;transform:skewX(-4deg);}
+  .campmission.done .cmt{color:#7ee081;} .campmission.current .cmt{color:#8fefff;}
+  .campmission .cmd{font-family:Arial,sans-serif;font-weight:600;font-size:10px;color:#b8bce0;margin-top:2px;}
+  .campmission .cmu{font-family:Arial,sans-serif;font-weight:800;font-size:8px;letter-spacing:.1em;color:#ffd24a;margin-top:3px;}
+  .campmission .cmstate{margin-left:auto;font-family:Arial,sans-serif;font-weight:800;font-size:11px;letter-spacing:.08em;color:#6a6a7a;flex-shrink:0;}
+  .campmission.done .cmstate{color:#7ee081;} .campmission.current .cmstate{color:#8fefff;}
+  .missionname{font-size:clamp(20px,3.6vw,30px);letter-spacing:.03em;transform:skewX(-5deg);text-align:center;
+    background:linear-gradient(180deg,#8fefff,#00b8d9);-webkit-background-clip:text;background-clip:text;color:transparent;}
+
+  /* private-room code display in the wait room */
+  #waitCodeWrap{display:flex;flex-direction:column;align-items:center;gap:2px;}
+  #waitCodeWrap.hidden{display:none !important;}
+  .waitCodeLbl{font-family:Arial,sans-serif;font-weight:800;font-size:10px;letter-spacing:.18em;color:#8fefff;}
+  .waitCode{font-family:"Impact",sans-serif;font-size:clamp(34px,8vw,58px);letter-spacing:.22em;color:#fdbb2d;
+    text-shadow:0 3px 0 rgba(0,0,0,.4);transform:skewX(-4deg);padding:4px 10px;}
+
   /* versus splash */
   #versus{background:radial-gradient(circle at 50% 45%, #2a1836 0%, #0d0d18 75%);justify-content:center;}
   .vsrow{display:flex;align-items:center;justify-content:center;gap:2%;width:100%;}
@@ -609,7 +647,10 @@
     <div class="homeLabel" id="homeLabelText"></div>
     <div class="medalbadge" id="medalBadge" title="Classic Mode medals earned">🏅 <span id="medalCount">0</span>/<span id="medalTotal">0</span> MEDALS</div>
     <div class="currencybadge" id="currencyBadge" title="Earn SHARDS from wins, Classic clears, and 💎 gems that drop mid-match. Spend them in the SHOP and skill trees.">💎 <span id="currencyCount">0</span> SHARDS</div>
-    <button class="btn btn-hero" id="startBtn">PLAY</button>
+    <div class="herorow">
+      <button class="btn btn-hero" id="startBtn">PLAY</button>
+      <button class="btn btn-hero btn-campaign" id="campaignBtn">🗺 CAMPAIGN</button>
+    </div>
     <div class="titlegrid">
       <button class="btn btn-alt" id="onlineBtn">ONLINE 1v1</button>
       <button class="btn btn-alt" id="classicBtn">CLASSIC MODE</button>
@@ -894,10 +935,39 @@
     </div>
   </div>
 
+  <!-- CAMPAIGN HUB (mission list + save/continue) -->
+  <div class="screen hidden" id="campaign">
+    <h2 style="font-size:clamp(20px,4vw,40px);color:#8fefff;transform:skewX(-6deg);text-shadow:0 3px 0 rgba(0,0,0,.4);">🗺 CAMPAIGN</h2>
+    <div class="helper" id="campHelper">A LONG STORY RUN · PROGRESS SAVES BETWEEN MISSIONS</div>
+    <div class="campprog"><div class="campfill" id="campFill"></div></div>
+    <div class="campprognum" id="campProgNum"></div>
+    <div class="camplist" id="campList"></div>
+    <div class="btnrow" id="campBtnRow">
+      <button class="btn btn-back" id="campBack">◀ BACK</button>
+      <button class="btn btn-alt" id="campNewBtn">NEW CAMPAIGN</button>
+      <button class="btn" id="campContinueBtn">CONTINUE ▶</button>
+    </div>
+    <div class="madeby"></div>
+  </div>
+
+  <!-- CAMPAIGN MISSION BRIEFING (narration before each mission) -->
+  <div class="screen hidden" id="mission">
+    <div class="storycard">
+      <canvas id="missionCanvas" width="140" height="150"></canvas>
+      <div class="storyprog" id="missionAct">ACT I</div>
+      <div class="missionname" id="missionName">MISSION</div>
+      <div class="storytext" id="missionText"></div>
+      <div class="btnrow" style="padding:8px 0 0;margin-top:6px;">
+        <button class="btn btn-back" id="missionBack" style="font-size:15px;padding:8px 22px;">◀ SAVE &amp; QUIT</button>
+        <button class="btn" id="missionStart" style="font-size:15px;padding:8px 22px;">FIGHT ▶</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ONLINE LOBBY -->
   <div class="screen hidden" id="online">
     <h2 style="font-size:clamp(20px,4vw,40px);color:#fdbb2d;transform:skewX(-6deg);text-shadow:0 3px 0 rgba(0,0,0,.4);">ONLINE 1v1</h2>
-    <div class="helper" id="onlineHelper">QUICK MATCH · PICK A FIGHTER, THEN FIND AN OPPONENT</div>
+    <div class="helper" id="onlineHelper">QUICK MATCH finds anyone · CREATE / JOIN ROOM plays with a friend on your network via a code</div>
     <div class="roster" id="onlineRoster"></div>
     <div class="panels" id="onlinePanels"></div>
     <div class="modelbl">MATCH SETUP (used if you host)</div>
@@ -913,6 +983,8 @@
     </div>
     <div class="btnrow">
       <button class="btn btn-back" id="onlineBack">◀ BACK</button>
+      <button class="btn btn-alt" id="createRoomBtn">🔑 CREATE ROOM</button>
+      <button class="btn btn-alt" id="joinRoomBtn">🎮 JOIN ROOM</button>
       <button class="btn" id="quickMatchBtn">QUICK MATCH</button>
     </div>
     <div class="madeby"></div>
@@ -924,6 +996,11 @@
     <div class="storycard" style="max-width:min(88%,420px);gap:16px;">
       <canvas id="waitCanvas" width="120" height="130"></canvas>
       <div class="storyprog" id="waitStatus">SEARCHING FOR AN OPPONENT…</div>
+      <div id="waitCodeWrap" class="hidden">
+        <div class="waitCodeLbl">SHARE THIS ROOM CODE</div>
+        <div class="waitCode" id="waitCode">-----</div>
+        <button class="bannerBtn" id="waitCopyCode" style="margin-top:6px;">📋 COPY CODE</button>
+      </div>
       <div class="memeblurb" id="waitSub" style="max-width:300px;">Keep this tab open. You'll drop straight into the fight when someone joins.</div>
       <button class="btn btn-back" id="waitCancel" style="font-size:15px;padding:8px 22px;">CANCEL</button>
     </div>
@@ -1484,7 +1561,53 @@ function buildClassicRun(c){
   return { st, foes, intros };
 }
 
-/* ---------------- MEMES (Smash-style assist spirits) ---------------- */
+/* ---------------- CAMPAIGN MODE ---------------- */
+// A long, saveable single-player story: a 12-mission gauntlet split into acts.
+// Progress persists between missions (Save.campaign.mission), so you can quit to
+// the menu after any mission and CONTINUE later. Campaign character unlocks live
+// in their OWN save namespace (Save.campaign.unlocks) — winning a fighter here
+// does NOT grant it in the main game, and main-game unlocks don't carry in.
+//
+// Each mission: { act, name, foeId, boss?, blurb, unlock? }
+//  - foeId    : who you fight (falls back to a random roster fighter if missing)
+//  - boss     : true → the opponent fights as a GIANT boss (tougher, single life feel)
+//  - unlock   : campaign character id granted on clearing this mission
+//  - blurb    : narration shown on the mission card before the fight
+const CAMPAIGN_MISSIONS = [
+  // ACT I — THE UNDERCARD
+  { act:'ACT I · THE UNDERCARD', name:'FIRST STEPS', foeId:'niek',
+    blurb:'The tournament opens. A scrappy newcomer stands between you and the bracket. Win, and the road truly begins.' },
+  { act:'ACT I · THE UNDERCARD', name:'CROSSED WIRES', foeId:'josh', unlock:'renas',
+    blurb:'A tech prodigy floods the arena with drones. Beat him and his little brother RENAS joins your corner.' },
+  { act:'ACT I · THE UNDERCARD', name:'COLD OPEN', foeId:'deniz',
+    blurb:'The ice champion rules the undercard. Break the frozen crown to advance.' },
+  { act:'ACT I · THE UNDERCARD', name:'THE ENFORCER', foeId:'yassin', boss:true, unlock:'lars',
+    blurb:'A GIANT enforcer blocks the gate to Act II. Topple him and the dwarven smith LARS answers your call.' },
+  // ACT II — THE CONTENDERS
+  { act:'ACT II · THE CONTENDERS', name:'STORM WARNING', foeId:'milo',
+    blurb:'Lightning splits the sky. The wizard MILO tests whether you belong among the contenders.' },
+  { act:'ACT II · THE CONTENDERS', name:'FERAL', foeId:'femi', unlock:'kayo',
+    blurb:'A wild fighter hunts you across the stage. Earn the pack’s respect and KAYO fights at your side.' },
+  { act:'ACT II · THE CONTENDERS', name:'HOUSE RULES', foeId:'ati',
+    blurb:'Someone’s been rigging the brackets. Time to teach the house a lesson.' },
+  { act:'ACT II · THE CONTENDERS', name:'THE MONEY FIGHT', foeId:'thorren', boss:true, unlock:'jax',
+    blurb:'A GIANT of industry bought his way to the top. Beat him at his own game and the showman JAX signs on.' },
+  // ACT III — THE GAUNTLET
+  { act:'ACT III · THE GAUNTLET', name:'RUNTIME ERROR', foeId:'metaai',
+    blurb:'The machine has learned every move ever thrown. Prove a human can still win.' },
+  { act:'ACT III · THE GAUNTLET', name:'NO MERCY', foeId:'evadam', unlock:'adam',
+    blurb:'The cruelest rival in the circuit shows no mercy. Survive and his twin ADAM joins you out of spite.' },
+  { act:'ACT III · THE GAUNTLET', name:'THE SHADOW', foeId:'zennith', boss:true,
+    blurb:'A GIANT nightmare made of pure darkness rises. Everything so far was only a warm-up.' },
+  // FINALE
+  { act:'FINALE', name:'THE LAST CHAMPION', foeId:'robin', boss:true, unlock:'casper',
+    blurb:'The final champion waits at the summit. Win it all — and the legendary racer CASPER is yours forever in the campaign.' },
+];
+// how many missions total (for the "MISSION x / y" progress readout)
+function campaignTotal(){ return CAMPAIGN_MISSIONS.length; }
+// resolve a mission's foe to an actual roster fighter (safe fallback)
+function campaignFoe(m){ return ROSTER.find(o=>o.id===m.foeId) || ROSTER[Math.floor(Math.random()*ROSTER.length)]; }
+
 // Each meme grants stat multipliers. `none` is the "meme off" option.
 // mults: atk (damage dealt), def (damage taken, <1 = tankier), spd (move speed),
 // jump (jump height), hp (max HP), superGain (super charge rate), lifesteal (heal per hit).
@@ -3561,6 +3684,8 @@ let botCostume=0;              // chosen bot skin index for 1P config
 let hitStop=0;
 let shakeT=0;
 let classic=null;              // active Classic Mode run, or null
+let campaign=null;             // active Campaign run, or null
+let selectContext='main';      // 'main' | 'classic' | 'campaign' — which unlock set the roster shows
 let paused=false;              // true while the pause overlay is up (local matches only)
 
 /* ---------------- ONLINE NETCODE (Firebase RTDB via REST) ---------------- */
@@ -3604,17 +3729,19 @@ function randCode(){ const A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s=''; for(l
 // (medal) and which epic skins are unlocked.
 const Save = {
   KEY:'watInDeFighters_save_v1',
-  data:{ profile:'PLAYER 1', medals:{}, epics:{}, achievements:{}, stats:{}, dev:false, devPass:'', settings:{}, currency:0, skills:{}, secrets:{}, themes:{} },
+  data:{ profile:'PLAYER 1', medals:{}, epics:{}, achievements:{}, stats:{}, dev:false, devPass:'', settings:{}, currency:0, skills:{}, secrets:{}, themes:{}, campaign:{ started:false, char:null, mission:0, unlocks:{}, clears:0 } },
+  // campaign defaults, kept in one place so load/import always produce a full object
+  defCampaign(c){ c=c||{}; return { started:!!c.started, char:c.char||null, mission:c.mission||0, unlocks:c.unlocks||{}, clears:c.clears||0 }; },
   load(){
     try{
       const raw=localStorage.getItem(this.KEY);
-      if(raw){ const d=JSON.parse(raw); this.data={ profile:d.profile||'PLAYER 1', medals:d.medals||{}, epics:d.epics||{}, achievements:d.achievements||{}, stats:d.stats||{}, dev:!!d.dev, devPass:d.devPass||'', settings:d.settings||{}, currency:d.currency||0, skills:d.skills||{}, secrets:d.secrets||{}, themes:d.themes||{} }; }
+      if(raw){ const d=JSON.parse(raw); this.data={ profile:d.profile||'PLAYER 1', medals:d.medals||{}, epics:d.epics||{}, achievements:d.achievements||{}, stats:d.stats||{}, dev:!!d.dev, devPass:d.devPass||'', settings:d.settings||{}, currency:d.currency||0, skills:d.skills||{}, secrets:d.secrets||{}, themes:d.themes||{}, campaign:this.defCampaign(d.campaign) }; }
     }catch(e){ /* storage blocked; run with in-memory defaults */ }
   },
   // replaces the whole save in one go (used by IMPORT SAVE); falls back to
   // defaults per-field so an older or partial file never crashes the app.
   loadFromObject(d){
-    this.data={ profile:(d&&d.profile)||'PLAYER 1', medals:(d&&d.medals)||{}, epics:(d&&d.epics)||{}, achievements:(d&&d.achievements)||{}, stats:(d&&d.stats)||{}, dev:!!(d&&d.dev), devPass:(d&&d.devPass)||'', settings:(d&&d.settings)||{}, currency:(d&&d.currency)||0, skills:(d&&d.skills)||{}, secrets:(d&&d.secrets)||{}, themes:(d&&d.themes)||{} };
+    this.data={ profile:(d&&d.profile)||'PLAYER 1', medals:(d&&d.medals)||{}, epics:(d&&d.epics)||{}, achievements:(d&&d.achievements)||{}, stats:(d&&d.stats)||{}, dev:!!(d&&d.dev), devPass:(d&&d.devPass)||'', settings:(d&&d.settings)||{}, currency:(d&&d.currency)||0, skills:(d&&d.skills)||{}, secrets:(d&&d.secrets)||{}, themes:(d&&d.themes)||{}, campaign:this.defCampaign(d&&d.campaign) };
     this.save();
   },
   save(){
@@ -3664,7 +3791,18 @@ const Save = {
     this.save();
     return true;
   },
-  reset(){ this.data={ profile:this.data.profile, medals:{}, epics:{}, achievements:{}, stats:{}, dev:false, devPass:this.data.devPass, settings:this.data.settings, currency:0, skills:{}, secrets:{}, themes:{} }; this.save(); }
+  // ---- CAMPAIGN MODE (separate save slot; its own character unlocks) ----
+  // Progress and unlocks here are fully independent from the main-game roster.
+  campaign(){ if(!this.data.campaign) this.data.campaign=this.defCampaign(null); return this.data.campaign; },
+  campaignActive(){ return this.campaign().started && this.campaign().char; },
+  campaignHasChar(id){ return !!(this.campaign().unlocks && this.campaign().unlocks[id]); },
+  campaignUnlock(id){ const c=this.campaign(); if(!c.unlocks) c.unlocks={}; if(c.unlocks[id]) return false; c.unlocks[id]=true; this.save(); return true; },
+  // begin (or restart) a run with a chosen fighter, resetting mission progress
+  campaignStart(charId){ const c=this.campaign(); c.started=true; c.char=charId; c.mission=0; this.save(); },
+  campaignSetMission(n){ const c=this.campaign(); c.mission=n; this.save(); },
+  campaignMarkCleared(){ const c=this.campaign(); c.clears=(c.clears||0)+1; c.started=false; c.mission=0; this.save(); },
+  campaignAbandon(){ const c=this.campaign(); c.started=false; c.char=null; c.mission=0; this.save(); },
+  reset(){ this.data={ profile:this.data.profile, medals:{}, epics:{}, achievements:{}, stats:{}, dev:false, devPass:this.data.devPass, settings:this.data.settings, currency:0, skills:{}, secrets:{}, themes:{}, campaign:this.defCampaign(null) }; this.save(); }
 };
 Save.load();
 
@@ -3766,11 +3904,13 @@ function allAchievements(){ return ACHIEVEMENTS.every(a=>Save.hasAch(a.id)); }
 // normal fighter is locked behind an achievement, auto-assigned 1:1 so each
 // achievement you earn reveals a new fighter. opChars use medals; the final
 // fighter uses all-achievements.
-let _STARTERS=null, _UNLOCK_BY_CHAR=null;
+let _STARTERS=null, _UNLOCK_BY_CHAR=null, _CAMPAIGN_STARTERS=null;
 function computeUnlockMap(){
   if(_UNLOCK_BY_CHAR) return;
   _STARTERS = new Set();
   CATEGORIES.forEach(cat=>{ if(!cat.secret){ const first=cat.ids.find(id=>{ const c=ROSTER.find(x=>x.id===id); return c && !c.opChar; }); if(first) _STARTERS.add(first); } });
+  // Campaign shares the same free starter set, but tracks everything else on its own.
+  _CAMPAIGN_STARTERS = new Set(_STARTERS);
   // characters that need an achievement gate: all normal (non-OP) non-starters
   const toGate = ROSTER.filter(c=>!c.opChar && !_STARTERS.has(c.id)).map(c=>c.id);
   // achievements available to assign (skip the very first so FIRST BLOOD stays a freebie milestone)
@@ -3784,6 +3924,13 @@ function charUnlocked(id){
   if(Save.data.dev) return true;
   const c=ROSTER.find(x=>x.id===id);
   if(!c) return true;
+  // CAMPAIGN uses a completely separate unlock set — unlocking a fighter in the
+  // campaign never grants it in the main game, and vice-versa.
+  if(selectContext==='campaign'){
+    computeUnlockMap();
+    if(_CAMPAIGN_STARTERS.has(id)) return true;   // campaign's own free starters
+    return Save.campaignHasChar(id);              // otherwise earned inside the campaign
+  }
   if(c.secretCode) return Save.hasSecret(id);         // Anker Vos: typed secret code
   if(c.finalChar) return allAchievements();          // Zennith: earn EVERYTHING
   if(c.opChar) return medalsEarned() >= opMedalReq(id); // casper/robin: medals
@@ -4162,7 +4309,7 @@ document.getElementById('muteBtn').onclick=(e)=>{
 
 /* ---------------- SCREEN FLOW ---------------- */
 function show(id){
-  ['title','mode','select','stage','result','versus','story','achieve','achdetail','shop','minigame','settings','online','waitroom','stats','howto','skills'].forEach(s=>document.getElementById(s).classList.toggle('hidden', s!==id));
+  ['title','mode','select','stage','result','versus','story','achieve','achdetail','shop','minigame','settings','online','waitroom','stats','howto','skills','campaign','mission'].forEach(s=>document.getElementById(s).classList.toggle('hidden', s!==id));
   document.body.classList.remove('in-match');
   // reset any scrollable menu back to the top so its heading is always visible on entry
   const el=document.getElementById(id);
@@ -4170,11 +4317,11 @@ function show(id){
   // never let a leftover achievement toast pop while navigating pre-match menus
   if(id!=='result'){ _toastQ.length=0; const tt=document.getElementById('achToast'); if(tt) tt.classList.remove('show'); _toastBusy=false; }
   // menu screens share a catchy menu theme; the match screens use stage music
-  const menuScreens=['title','mode','select','stage','achieve','achdetail','shop','minigame','result','story','settings','online','waitroom','stats','howto','skills'];
+  const menuScreens=['title','mode','select','stage','achieve','achdetail','shop','minigame','result','story','settings','online','waitroom','stats','howto','skills','campaign','mission'];
   if(menuScreens.includes(id)){ if(Music.curId!=='menu') Music.play('menu'); }
 }
 
-document.getElementById('startBtn').onclick=()=>{ classic=null; updateModeCards(); updateCustomRulesUI(); show('mode'); };
+document.getElementById('startBtn').onclick=()=>{ classic=null; campaign=null; selectContext='main'; buildRoster(); updateModeCards(); updateCustomRulesUI(); show('mode'); };
 
 // ACHIEVEMENTS menu
 function buildAchList(){
@@ -4919,11 +5066,130 @@ function grantAndToast(){
 
 // CLASSIC MODE: go straight to character select in classic flavor
 document.getElementById('classicBtn').onclick=()=>{
-  mode='1p'; classic={pending:true};
+  mode='1p'; classic={pending:true}; campaign=null; selectContext='main';
   p1Pick=null; p2Pick=null;
+  buildRoster();
   document.getElementById('selHelper').innerHTML='CLASSIC MODE · PICK YOUR FIGHTER FOR A 4-ROUND STORY RUN';
   refreshPicks();
   show('select');
+};
+
+/* ---------------- CAMPAIGN MODE ---------------- */
+// Open the campaign hub: shows the mission list, overall progress, and lets you
+// either CONTINUE a saved run or start a NEW one. Because Save.campaign persists,
+// closing the tab mid-campaign and returning still lands you on the same mission.
+function openCampaignHub(){
+  classic=null; campaign=null;
+  buildCampaignHub();
+  show('campaign');
+}
+function buildCampaignHub(){
+  const cs=Save.campaign();
+  const list=document.getElementById('campList'); list.innerHTML='';
+  const total=campaignTotal();
+  const done=Math.min(cs.mission, total);
+  document.getElementById('campFill').style.width=(total?Math.round(done/total*100):0)+'%';
+  const startedChar = cs.started && cs.char ? (ROSTER.find(r=>r.id===cs.char)||{}).name : null;
+  document.getElementById('campProgNum').textContent =
+    (cs.clears? '★ CLEARED '+cs.clears+'× · ' : '') +
+    (startedChar ? ('IN PROGRESS AS '+startedChar+' · MISSION '+Math.min(cs.mission+1,total)+' / '+total)
+                 : (done>=total ? 'CAMPAIGN COMPLETE' : 'MISSION '+ (done+1) +' / '+total));
+  // group missions by act header, marking done / current / locked
+  let lastAct=null;
+  CAMPAIGN_MISSIONS.forEach((m,i)=>{
+    if(m.act!==lastAct){ lastAct=m.act; const h=document.createElement('div'); h.className='campact'; h.textContent=m.act; list.appendChild(h); }
+    const state = !cs.started ? 'locked'
+      : (i<cs.mission ? 'done' : (i===cs.mission ? 'current' : 'locked'));
+    const foe=campaignFoe(m);
+    const unlockName = m.unlock ? (ROSTER.find(r=>r.id===m.unlock)||{}).name : null;
+    const row=document.createElement('div');
+    row.className='campmission '+state;
+    const icon = state==='done' ? '✅' : (m.boss ? '💀' : (state==='current'?'⚔️':'🔒'));
+    const stateLbl = state==='done' ? 'CLEARED' : (state==='current' ? 'NEXT' : (m.boss?'BOSS':'LOCKED'));
+    row.innerHTML=`<div class="cmi">${icon}</div>
+      <div><div class="cmt">${i+1}. ${m.name}${m.boss?' · BOSS':''}</div>
+      <div class="cmd">vs <b style="color:${foe.color}">${foe.name}</b></div>
+      ${unlockName?`<div class="cmu">UNLOCKS: ${unlockName}</div>`:''}</div>
+      <div class="cmstate">${stateLbl}</div>`;
+    list.appendChild(row);
+  });
+  // continue vs new-campaign button state
+  const cont=document.getElementById('campContinueBtn');
+  const neu=document.getElementById('campNewBtn');
+  if(cs.started && cs.char && cs.mission<total){
+    cont.classList.remove('hidden'); cont.textContent='CONTINUE ▶';
+    neu.textContent='RESTART CAMPAIGN';
+  } else {
+    cont.classList.add('hidden');
+    neu.textContent='NEW CAMPAIGN';
+  }
+}
+document.getElementById('campaignBtn').onclick=openCampaignHub;
+document.getElementById('campBack').onclick=()=>{ selectContext='main'; buildRoster(); show('title'); };
+
+// CONTINUE: jump straight to the saved mission briefing
+document.getElementById('campContinueBtn').onclick=()=>{
+  const cs=Save.campaign();
+  if(!(cs.started && cs.char)){ return; }
+  resumeCampaign();
+};
+// NEW / RESTART: pick a fighter (from the campaign's own unlock set) for a fresh run
+document.getElementById('campNewBtn').onclick=()=>{
+  mode='1p'; classic=null; campaign=null; selectContext='campaign';
+  p1Pick=null; p2Pick=null;
+  buildRoster();
+  document.getElementById('selHelper').innerHTML='CAMPAIGN · CHOOSE YOUR FIGHTER FOR THE FULL STORY (SEPARATE UNLOCKS)';
+  refreshPicks();
+  show('select');
+};
+
+// begin a brand-new campaign run with the chosen fighter (called from character select)
+function beginCampaign(c){
+  Save.campaignStart(c.id);
+  campaign={ active:true, c, mission:0 };
+  selectContext='campaign';
+  showMission();
+}
+// resume the saved campaign from disk (mission index + chosen fighter)
+function resumeCampaign(){
+  const cs=Save.campaign();
+  const c=ROSTER.find(r=>r.id===cs.char) || ROSTER[0];
+  campaign={ active:true, c, mission:cs.mission };
+  selectContext='campaign';
+  showMission();
+}
+// mission briefing screen (narration + FIGHT / SAVE&QUIT)
+function showMission(){
+  const cm=campaign;
+  const total=campaignTotal();
+  if(cm.mission>=total){ finishCampaign(true); return; }
+  const m=CAMPAIGN_MISSIONS[cm.mission];
+  document.getElementById('missionAct').textContent = m.act+' · MISSION '+(cm.mission+1)+' / '+total;
+  document.getElementById('missionName').textContent = m.name;
+  document.getElementById('missionText').innerHTML = m.blurb;
+  show('mission');
+  // pose the player's fighter on the briefing card
+  const sc=document.getElementById('missionCanvas').getContext('2d');
+  cancelAnimationFrame(campaign._anim);
+  function loop(t){ sc.clearRect(0,0,140,150); drawFighter(sc, cm.c, 35, 30, 70, 95, 1, t, 'attack', costMap[cm.c.id]); campaign._anim=requestAnimationFrame(loop); }
+  campaign._anim=requestAnimationFrame(loop);
+}
+// FIGHT: launch the current mission's match
+document.getElementById('missionStart').onclick=()=>{
+  cancelAnimationFrame(campaign._anim);
+  const m=CAMPAIGN_MISSIONS[campaign.mission];
+  p1Pick=campaign.c;
+  p2Pick=campaignFoe(m);
+  gameMode = m.boss ? 'boss' : 'stock';    // boss missions spawn a GIANT foe
+  stagePick = STAGES[Math.floor(Math.random()*STAGES.length)];
+  showVersus();
+};
+// SAVE & QUIT: progress is already saved on disk; just return to the hub
+document.getElementById('missionBack').onclick=()=>{
+  cancelAnimationFrame(campaign._anim);
+  campaign=null;
+  buildCampaignHub();
+  show('campaign');
 };
 
 // profile line on the title screen (click to rename save)
@@ -5011,6 +5277,7 @@ document.getElementById('modeBack').onclick=()=>{ classic=null; show('title'); }
 // character-select "START MATCH" now advances to stage select (or begins a Classic run)
 document.getElementById('goBtn').onclick=()=>{
   if(!p1Pick){ flashHelper('PICK A FIGHTER FOR P1!'); return; }
+  if(selectContext==='campaign'){ beginCampaign(p1Pick); return; }
   if(classic && classic.pending){ beginClassic(p1Pick); return; }
   if(mode==='1p'){
     // use the player-chosen bot if set, otherwise pick a random other fighter
@@ -5089,12 +5356,16 @@ function showVersus(){
   // after the dramatic beat, start the fight
   setTimeout(()=>{ cancelAnimationFrame(_vsAnim); startMatch(); }, 1900);
 }
-document.getElementById('againBtn').onclick=()=>{ classic=null; refreshProfileLine(); show('title'); };
+document.getElementById('againBtn').onclick=()=>{ classic=null; campaign=null; selectContext='main'; buildRoster(); restoreDefaultRematch(); refreshProfileLine(); show('title'); };
 // INSTANT REMATCH: skip every menu and immediately re-fight with the same mode/rules/characters/stage
-document.getElementById('rematchBtn').onclick=()=>{ startMatch(); };
+function restoreDefaultRematch(){ const b=document.getElementById('rematchBtn'); b.textContent='INSTANT REMATCH'; b.onclick=()=>{ startMatch(); }; }
+restoreDefaultRematch();
 
 // BACK navigation
-document.getElementById('selBack').onclick=()=>{ if(classic){ classic=null; show('title'); } else { show('mode'); } };
+document.getElementById('selBack').onclick=()=>{
+  if(selectContext==='campaign'){ selectContext='main'; buildRoster(); buildCampaignHub(); show('campaign'); return; }
+  if(classic){ classic=null; show('title'); } else { show('mode'); }
+};
 document.getElementById('stageBack').onclick=()=>{ show('select'); };
 
 // RANDOM fighter picks (P1 always; P2 too in 2-player) — only from unlocked fighters
@@ -5135,7 +5406,7 @@ function updateRoundBanner(){
 }
 function startMatch(){
   // hide every menu screen
-  ['title','mode','select','stage','result','versus','story','skills'].forEach(s=>document.getElementById(s).classList.add('hidden'));
+  ['title','mode','select','stage','result','versus','story','skills','campaign','mission'].forEach(s=>document.getElementById(s).classList.add('hidden'));
   document.body.classList.add('in-match');
   document.getElementById('hud').classList.remove('hidden');
   updateRoundBanner();
@@ -5475,11 +5746,86 @@ function cancelQuickMatch(){
   clearInterval(Net._waitTimer); netStopStream();
   if(Net.roomCode){ dbDelete('rooms/'+Net.roomCode); Net.roomCode=null; }
   Net.connected=false;
+  const wrap=document.getElementById('waitCodeWrap'); if(wrap) wrap.classList.add('hidden');
   show('online');
 }
 function setWait(status,sub){
   const st=document.getElementById('waitStatus'); if(st) st.textContent=status;
   const sb=document.getElementById('waitSub'); if(sb && sub!==undefined) sb.textContent=sub;
+}
+// show/hide the big shareable room code in the wait room (host of a private room)
+function showWaitCode(code){
+  const wrap=document.getElementById('waitCodeWrap'); if(!wrap) return;
+  if(code){ document.getElementById('waitCode').textContent=code; wrap.classList.remove('hidden'); }
+  else { wrap.classList.add('hidden'); }
+}
+
+// CREATE ROOM: host a PRIVATE room and show a share code. Unlike QUICK MATCH this
+// room is never auto-joined by strangers (status 'private'); only someone who
+// types the exact code can join. Great for playing a friend on the same network.
+async function createRoom(){
+  if(!p1Pick){ flashOnlineHelper('PICK A FIGHTER FIRST!'); return; }
+  Net._abort=false; Net._searching=true;
+  show('waitroom');
+  const myPick=p1Pick, myCos=costMap[p1Pick.id]||0;
+  const code=randCode();
+  Net.isHost=true; Net.roomCode=code; Net.meSlot='p1'; Net.foeSlot='p2'; Net.p1Cos=myCos;
+  await dbPut('rooms/'+code, {
+    status:'private', gameMode:gameMode, stage:stagePick.id,
+    host:{ id:myPick.id, cos:myCos, name:Save.data.profile }, ts:Date.now()
+  });
+  if(Net._abort){ return; }
+  setWait('WAITING FOR YOUR FRIEND…','Share the code below. They tap JOIN ROOM and type it in.');
+  showWaitCode(code);
+  // poll my own room until the friend joins
+  clearInterval(Net._waitTimer);
+  const waitTimer=setInterval(async ()=>{
+    if(Net._abort || !Net.roomCode){ clearInterval(waitTimer); return; }
+    const r=await dbGet('rooms/'+code);
+    if(r && r.guest){
+      clearInterval(waitTimer);
+      showWaitCode(null);
+      p1Pick=myPick;
+      p2Pick=ROSTER.find(c=>c.id===r.guest.id)||ROSTER[0];
+      Net.p1Cos=myCos; Net.p2Cos=r.guest.cos||0;
+      setWait('FRIEND JOINED!','Starting…');
+      Net.connected=true;
+      setTimeout(()=>{ if(!Net._abort) startOnlineMatch(); }, 500);
+    }
+  }, 700);
+  Net._waitTimer=waitTimer;
+}
+
+// JOIN ROOM: connect to a specific room by its share code (as guest / P2).
+async function joinRoom(codeRaw){
+  if(!p1Pick){ flashOnlineHelper('PICK A FIGHTER FIRST!'); return; }
+  const code=(codeRaw||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,5);
+  if(code.length<5){ flashOnlineHelper('ENTER A 5-CHARACTER CODE'); return; }
+  Net._abort=false; Net._searching=true;
+  show('waitroom');
+  showWaitCode(null);
+  setWait('CONNECTING…','Looking for room '+code+'…');
+  const myPick=p1Pick, myCos=costMap[p1Pick.id]||0;
+  const r=await dbGet('rooms/'+code);
+  if(Net._abort){ return; }
+  if(!r || !r.host){ setWait('ROOM NOT FOUND','No open room with that code. Check it and try JOIN ROOM again.'); return; }
+  if(r.guest){ setWait('ROOM IS FULL','Someone already joined that room. Ask for a fresh code.'); return; }
+  // claim the guest slot
+  Net.isHost=false; Net.roomCode=code; Net.meSlot='p2'; Net.foeSlot='p1';
+  await dbPatch('rooms/'+code, { guest:{ id:myPick.id, cos:myCos, name:Save.data.profile } });
+  await dbPatch('rooms/'+code, { status:'full' });
+  const r2=await dbGet('rooms/'+code);
+  if(Net._abort){ return; }
+  if(!r2 || !r2.host){ setWait('THAT ROOM CLOSED','The host left. Ask for a new code.'); return; }
+  // adopt host's rules + stage; host is P1, I'm P2
+  gameMode=r2.gameMode||'giant';
+  stagePick=STAGES.find(s=>s.id===r2.stage)||STAGES[0];
+  p1Pick=ROSTER.find(c=>c.id===r2.host.id)||ROSTER[0];
+  p2Pick=myPick;
+  Net.p1Cos=r2.host.cos||0; Net.p2Cos=myCos;
+  setWait('CONNECTED!','Starting…');
+  Net.connected=true;
+  setTimeout(()=>{ if(!Net._abort) startOnlineMatch(); }, 500);
 }
 function flashOnlineHelper(msg){
   const h=document.getElementById('onlineHelper'); if(!h) return;
@@ -7440,6 +7786,34 @@ function endMatch(){
   }
   const newAch = (mode==='1p') ? grantAndToast() : [];
 
+  // ---- Campaign Mode progression ----
+  // On a win, advance the saved mission pointer, grant that mission's campaign
+  // unlock, then show the next briefing (or finish). On a loss, return to the
+  // briefing so the player can retry — progress is untouched and already saved.
+  if(campaign && campaign.active){
+    setTimeout(()=>{
+      document.getElementById('hud').classList.add('hidden');
+      if(p1won){
+        const m=CAMPAIGN_MISSIONS[campaign.mission];
+        let unlockedName=null;
+        if(m && m.unlock && Save.campaignUnlock(m.unlock)){
+          unlockedName=(ROSTER.find(r=>r.id===m.unlock)||{}).name;
+        }
+        campaign.mission++;
+        Save.campaignSetMission(campaign.mission);   // persist between missions
+        if(campaign.mission < campaignTotal()){
+          if(unlockedName) announce('UNLOCKED: '+unlockedName+'!');
+          showMission();                              // next mission briefing
+        } else {
+          finishCampaign(true);                       // whole campaign cleared
+        }
+      } else {
+        finishCampaign(false);                        // lost this mission — retry from briefing
+      }
+    }, 900);
+    return;
+  }
+
   // ---- Classic Mode progression ----
   if(classic && classic.active){
     setTimeout(()=>{
@@ -7558,6 +7932,48 @@ function finishClassic(won){
   classic=null;
 }
 
+// Campaign resolved for this mission. won=true only when the FINAL mission is
+// cleared (mid-campaign wins go straight to the next briefing in endMatch). On a
+// loss we offer a RETRY that reopens the current mission briefing — progress is
+// already saved, so nothing is lost.
+function finishCampaign(won){
+  const c=campaign.c;
+  Music.play('menu');
+  const r=document.getElementById('result');
+  r.classList.remove('hidden');
+  const title=document.getElementById('resultTitle');
+  const sub=document.getElementById('resultSub');
+  const rematch=document.getElementById('rematchBtn');
+  if(won){
+    Save.campaignMarkCleared();      // records the clear, resets the run pointer
+    Save.addCurrency(100);           // big bonus for finishing the whole campaign
+    refreshProfileLine();
+    rematch.classList.add('hidden');
+    title.textContent='CAMPAIGN CLEARED!';
+    title.style.filter='none';
+    sub.innerHTML = `<span style="color:${c.color}">${c.name}</span> conquered the entire campaign! <br>+100 💎 SHARDS · Start a NEW CAMPAIGN to unlock even more.`;
+    sub.style.color='#8fefff';
+    announce('CHAMPION!');
+    grantAndToast();
+    campaign=null;
+  } else {
+    // keep the run alive; RETRY reopens the same mission briefing
+    const failedMission=campaign.mission;
+    rematch.classList.remove('hidden');
+    rematch.textContent='RETRY MISSION';
+    title.textContent='MISSION FAILED';
+    title.style.filter='grayscale(.4)';
+    const m=CAMPAIGN_MISSIONS[failedMission];
+    sub.innerHTML = `<span style="color:${c.color}">${c.name}</span> fell on <b>${m?m.name:'the mission'}</b>. Your progress is saved — try again!`;
+    sub.style.color=c.color;
+    // one-shot: RETRY goes back to the briefing, then restores INSTANT REMATCH wiring
+    rematch.onclick=()=>{
+      restoreDefaultRematch();
+      showMission();
+    };
+  }
+}
+
 /* ---------------- ONLINE LOBBY UI ---------------- */
 (function setupOnlineLobby(){
   const oRoster=document.getElementById('onlineRoster');
@@ -7651,7 +8067,7 @@ function finishClassic(won){
 
   // entry from title
   document.getElementById('onlineBtn').onclick=()=>{
-    mode='online'; classic=null;
+    mode='online'; classic=null; campaign=null; selectContext='main';
     if(currentMode().boss || currentMode().soccer) gameMode='giant';
     document.querySelectorAll('#onlineRuleGrid .rule').forEach(x=>x.classList.toggle('sel',x.dataset.rule===gameMode));
     if(!p1Pick || !charUnlocked(p1Pick.id)){ p1Pick=ROSTER.find(c=>charUnlocked(c.id))||ROSTER[0]; }
@@ -7660,7 +8076,17 @@ function finishClassic(won){
   };
   document.getElementById('onlineBack').onclick=()=>{ mode='1p'; show('title'); };
   document.getElementById('quickMatchBtn').onclick=()=>{ quickMatch(); };
+  document.getElementById('createRoomBtn').onclick=()=>{ createRoom(); };
+  document.getElementById('joinRoomBtn').onclick=()=>{
+    const code=prompt('Enter your friend’s 5-character ROOM CODE:');
+    if(code!==null) joinRoom(code);
+  };
   document.getElementById('waitCancel').onclick=()=>{ cancelQuickMatch(); };
+  const copyBtn=document.getElementById('waitCopyCode');
+  if(copyBtn) copyBtn.onclick=()=>{
+    const code=document.getElementById('waitCode').textContent;
+    try{ navigator.clipboard.writeText(code); copyBtn.textContent='✓ COPIED'; setTimeout(()=>{copyBtn.textContent='📋 COPY CODE';},1400); }catch(e){}
+  };
   // little idle fighter on the waitroom card
   const wc=document.getElementById('waitCanvas').getContext('2d');
   (function wLoop(t){ wc.clearRect(0,0,120,130); if(p1Pick){ drawFighter(wc,p1Pick,30,25,60,82,1,t,'idle',costMap[p1Pick.id]||0); } requestAnimationFrame(wLoop); })(0);
@@ -7695,10 +8121,20 @@ function quitToMenu(){
   paused=false;
   document.getElementById('pause').classList.add('hidden');
   running=false;
-  classic=null;
+  const wasCampaign = campaign && campaign.active;
+  classic=null; campaign=null;
   Music.stop();
+  restoreDefaultRematch();
   document.getElementById('hud').classList.add('hidden');
-  show('title');
+  if(wasCampaign){
+    // campaign progress is saved per-mission; drop back to the hub to resume later
+    selectContext='main'; buildRoster();
+    buildCampaignHub();
+    show('campaign');
+  } else {
+    selectContext='main'; buildRoster();
+    show('title');
+  }
 }
 document.getElementById('resumeBtn').onclick=resumeGame;
 document.getElementById('quitBtn').onclick=quitToMenu;
