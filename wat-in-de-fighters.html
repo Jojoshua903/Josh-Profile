@@ -77,22 +77,42 @@
   .sub{font-family:Arial,sans-serif;font-weight:700;letter-spacing:.3em;font-size:clamp(10px,1.6vw,15px);color:#fdbb2d;margin-top:8px;opacity:.9;}
   /* nudge the title logo down so its skewed top never clips the box edge */
   #title h1{margin-top:0;padding-top:6px;}
-  /* --- decluttered title layout --- */
-  #title .medalbadge{margin-top:12px;font-size:clamp(12px,1.8vw,16px);padding:6px 14px;}
+  /* ---- polished title / home screen ---- */
+  #title{
+    justify-content:flex-start; padding-top:3.5%; overflow-y:auto;
+    background:
+      radial-gradient(circle at 50% 0%, rgba(253,187,45,.14), transparent 55%),
+      radial-gradient(circle at 50% 32%, #26265e 0%, #12122a 55%, #0a0a14 100%);
+  }
+  #title::-webkit-scrollbar{width:8px;} #title::-webkit-scrollbar-thumb{background:rgba(253,187,45,.5);border-radius:4px;}
+  /* logo block with an animated glow behind it */
+  #title .titleLogo{position:relative;display:flex;flex-direction:column;align-items:center;flex-shrink:0;}
+  #title .titleLogo h1{position:relative;z-index:1;animation:logoFloat 4s ease-in-out infinite;filter:drop-shadow(0 0 18px rgba(253,187,45,.25));}
+  @keyframes logoFloat{0%,100%{transform:skewX(-6deg) translateY(0);}50%{transform:skewX(-6deg) translateY(-5px);}}
+  /* unified stat bar: three chips in one row */
+  #title .statbar{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:center;margin-top:14px;flex-shrink:0;}
+  #title .statbar .medalbadge,#title .statbar .prestigebadge,#title .statbar .currencybadge{margin-top:0;font-size:clamp(12px,1.9vw,17px);padding:7px 15px;}
+  /* section labels above each button group */
+  #title .modelabel{font-family:Arial,sans-serif;font-weight:800;font-size:11px;letter-spacing:.28em;color:#fdbb2d;opacity:.7;margin-top:20px;flex-shrink:0;}
   /* PLAY is the hero action: larger and set apart, but kept compact so the whole menu fits */
-  #title .btn-hero{margin-top:0;font-size:clamp(18px,3vw,28px);padding:10px 44px;}
+  #title .btn-hero{margin-top:0;font-size:clamp(18px,3vw,28px);padding:12px 40px;}
   /* PLAY + CAMPAIGN share one hero row as two big side-by-side buttons */
-  #title .herorow{display:flex;gap:14px;flex-wrap:wrap;align-items:center;justify-content:center;margin-top:14px;}
+  #title .herorow{display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:center;margin-top:16px;flex-shrink:0;}
   /* CAMPAIGN gets its own cyan hero look so it stands apart from PLAY */
   #title .btn-campaign{background:linear-gradient(180deg,#8fefff,#00b8d9);box-shadow:0 6px 0 #0a7fa0, 0 10px 24px rgba(0,0,0,.4);}
   #title .btn-campaign:active{box-shadow:0 2px 0 #0a7fa0;}
-  /* the four secondary options sit in a tidy 2x2 grid */
-  #title .titlegrid{
-    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
-    gap:8px 12px;margin-top:12px;width:100%;max-width:460px;
+  /* mode buttons: 3-across row; menu buttons: 4-across row. Both auto-fit on mobile. */
+  #title .titlegrid{display:grid;gap:9px 12px;margin-top:10px;width:100%;flex-shrink:0;}
+  #title .titlegrid.modes3{grid-template-columns:repeat(3,minmax(0,1fr));max-width:560px;}
+  #title .titlegrid.menu4{grid-template-columns:repeat(4,minmax(0,1fr));max-width:560px;}
+  #title .titlegrid.modes3 .btn{font-size:clamp(11px,1.7vw,16px);padding:11px 6px;}
+  #title .titlegrid.menu4 .btn{font-size:clamp(10px,1.5vw,13px);padding:9px 5px;}
+  #title .titlegrid .btn{margin-top:0;width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  @media (max-width:560px){
+    #title .titlegrid.modes3{grid-template-columns:repeat(2,minmax(0,1fr));}
+    #title .titlegrid.menu4{grid-template-columns:repeat(2,minmax(0,1fr));}
   }
-  #title .titlegrid .btn{margin-top:0;width:100%;font-size:clamp(11px,1.7vw,15px);padding:8px 8px;}
-  #title .profile{margin-top:10px;}
+  #title .profile{margin-top:14px;}
   .btn{
     margin-top:26px;
     font-family:"Impact",sans-serif;letter-spacing:.08em;
@@ -311,6 +331,26 @@
   #title .btn-prestige:active{box-shadow:0 2px 0 #a06800;}
   #title .btn-prestige.hidden{display:none !important;}
   @keyframes prestigePulse{0%,100%{filter:brightness(1);}50%{filter:brightness(1.25);}}
+  /* prestige cosmetic: golden shimmering profile name on the title screen */
+  .prestige-name{
+    background:linear-gradient(90deg,#ffe27a,#ffd700,#fff6c8,#ffd700,#ffb400);
+    background-size:200% 100%;
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 0 8px rgba(255,215,0,.45);
+    animation:prestigeShine 3s linear infinite;
+  }
+  @keyframes prestigeShine{0%{background-position:0% 0;}100%{background-position:200% 0;}}
+  /* prestige cosmetic: golden shimmering border around every fighter select tile */
+  .char.prestige{
+    border-color:#ffd700 !important;
+    box-shadow:0 0 0 1px rgba(255,215,0,.6), 0 0 12px rgba(255,215,0,.45);
+    animation:prestigeTile 2.4s ease-in-out infinite;
+  }
+  @keyframes prestigeTile{0%,100%{box-shadow:0 0 0 1px rgba(255,215,0,.5), 0 0 8px rgba(255,215,0,.35);}50%{box-shadow:0 0 0 1px rgba(255,215,0,.9), 0 0 16px rgba(255,215,0,.6);}}
+  /* keep the P1/P2 selection glow readable on top of the gold */
+  .char.prestige.sel1{border-color:#4dd2ff !important;}
+  .char.prestige.sel2{border-color:#ff9f4d !important;}
+
   .currencybadge{
     font-family:"Impact",sans-serif;letter-spacing:.06em;font-size:clamp(13px,2vw,18px);
     color:#8fefff;background:rgba(0,229,255,.1);border:2px solid rgba(0,229,255,.4);
@@ -560,6 +600,32 @@
   .cutHint{font-family:Arial,sans-serif;font-weight:700;font-size:10px;letter-spacing:.16em;color:#8fefff;margin-top:10px;text-align:right;animation:splashpulse 1.4s ease-in-out infinite;}
   .cutSkip{position:absolute;top:12px;right:14px;z-index:3;margin-top:0;font-size:14px;padding:6px 16px;}
 
+  /* ---------------- SHOWDOWN MODE ---------------- */
+  #sdSelect{justify-content:flex-start;overflow-y:auto;padding-top:3%;padding-bottom:24px;
+    background:radial-gradient(circle at 50% 20%, #14324a 0%, #0d0d18 78%);}
+  #sdSelect::-webkit-scrollbar{width:8px;} #sdSelect::-webkit-scrollbar-thumb{background:rgba(143,239,255,.5);border-radius:4px;}
+  #sdResult{background:radial-gradient(circle at 50% 30%, #14324a 0%, #0d0d18 78%);}
+  .sdPlacement{font-family:"Impact",sans-serif;font-size:clamp(20px,4vw,34px);letter-spacing:.04em;color:#8fefff;
+    transform:skewX(-5deg);margin-top:6px;text-shadow:0 3px 0 rgba(0,0,0,.4);}
+  /* the Showdown HUD sits above the shared #cv arena canvas during a match */
+  #sdHud{position:absolute;inset:0;z-index:6;pointer-events:none;}
+  #sdHud.hidden{display:none !important;}
+  .sdTopbar{position:absolute;top:10px;left:0;right:0;display:flex;justify-content:space-between;align-items:center;
+    padding:0 16px;font-family:"Impact",sans-serif;letter-spacing:.05em;}
+  .sdTopbar>div{background:rgba(13,13,24,.7);border:2px solid rgba(143,239,255,.4);border-radius:10px;
+    padding:5px 13px;font-size:clamp(12px,1.9vw,18px);transform:skewX(-5deg);white-space:nowrap;}
+  .sdAlive{color:#fff;} .sdCubes{color:#8fefff;}
+  .sdZone{color:#ff7ad0;border-color:rgba(255,122,208,.5) !important;}
+  .sdZone.danger{color:#ff3b6b;border-color:rgba(255,59,107,.8) !important;animation:sdZonePulse .6s infinite;}
+  @keyframes sdZonePulse{0%,100%{opacity:.7;}50%{opacity:1;}}
+  .sdHealthWrap{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);width:min(360px,60%);}
+  .sdHpBar{position:relative;height:22px;border-radius:11px;background:rgba(0,0,0,.55);
+    box-shadow:0 0 0 2px rgba(0,0,0,.4) inset;overflow:hidden;}
+  .sdHpFill{position:absolute;top:0;bottom:0;left:0;border-radius:11px;
+    background:linear-gradient(90deg,#7ee081,#3fae5a);transition:width .12s ease, background .2s;}
+  .sdHpText{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    font-family:"Impact",sans-serif;font-size:13px;letter-spacing:.06em;color:#fff;text-shadow:0 1px 2px #000;}
+
   /* private-room code display in the wait room */
   #waitCodeWrap{display:flex;flex-direction:column;align-items:center;gap:2px;}
   #waitCodeWrap.hidden{display:none !important;}
@@ -678,24 +744,33 @@
   <!-- TITLE -->
   <div class="screen" id="title">
     <div class="homeIcon" id="homeIconBg"></div>
-    <h1>WAT IN DE<br>FIGHTERS</h1>
-    <div class="sub">PLATFORM  FIGHTER</div>
+    <div class="titleLogo">
+      <h1>WAT IN DE<br>FIGHTERS</h1>
+      <div class="sub">PLATFORM  FIGHTER</div>
+    </div>
     <div class="homeLabel" id="homeLabelText"></div>
-    <div class="medalbadge" id="medalBadge" title="Classic Mode medals earned">🏅 <span id="medalCount">0</span>/<span id="medalTotal">0</span> MEDALS</div>
-    <div class="prestigebadge hidden" id="prestigeBadge" title="Prestige level — earned by prestiging a full medal collection">⭐ PRESTIGE <span id="prestigeLevel">0</span></div>
+    <!-- unified stat bar: medals · prestige · shards sit together as one tidy row -->
+    <div class="statbar">
+      <div class="medalbadge" id="medalBadge" title="Classic Mode medals earned">🏅 <span id="medalCount">0</span>/<span id="medalTotal">0</span></div>
+      <div class="prestigebadge hidden" id="prestigeBadge" title="Prestige level — earned by prestiging a full medal collection">⭐ <span id="prestigeLevel">0</span></div>
+      <div class="currencybadge" id="currencyBadge" title="Earn SHARDS from wins, Classic clears, and 💎 gems that drop mid-match. Spend them in the SHOP and skill trees.">💎 <span id="currencyCount">0</span></div>
+    </div>
     <button class="btn btn-prestige hidden" id="prestigeBtn" title="Reset all your medals for a permanent prestige level + SHARDS">⭐ PRESTIGE UP!</button>
-    <div class="currencybadge" id="currencyBadge" title="Earn SHARDS from wins, Classic clears, and 💎 gems that drop mid-match. Spend them in the SHOP and skill trees.">💎 <span id="currencyCount">0</span> SHARDS</div>
     <div class="herorow">
-      <button class="btn btn-hero" id="startBtn">PLAY</button>
+      <button class="btn btn-hero" id="startBtn">▶ PLAY</button>
       <button class="btn btn-hero btn-campaign" id="campaignBtn">🗺 CAMPAIGN</button>
     </div>
-    <div class="titlegrid">
-      <button class="btn btn-alt" id="onlineBtn">ONLINE 1v1</button>
-      <button class="btn btn-alt" id="classicBtn">CLASSIC MODE</button>
+    <div class="modelabel">GAME MODES</div>
+    <div class="titlegrid modes3">
+      <button class="btn btn-alt" id="onlineBtn">🌐 ONLINE 1v1</button>
+      <button class="btn btn-alt" id="classicBtn">🏅 CLASSIC</button>
+      <button class="btn btn-alt" id="showdownBtn">🔫 SHOWDOWN</button>
+    </div>
+    <div class="titlegrid menu4">
       <button class="btn btn-back" id="shopBtn">🛍 SHOP</button>
-      <button class="btn btn-back" id="achBtn">ACHIEVEMENTS</button>
-      <button class="btn btn-back" id="settingsBtn">SETTINGS</button>
-      <button class="btn btn-back" id="statsBtn">STATS</button>
+      <button class="btn btn-back" id="achBtn">🏆 ACHIEVEMENTS</button>
+      <button class="btn btn-back" id="statsBtn">📊 STATS</button>
+      <button class="btn btn-back" id="settingsBtn">⚙ SETTINGS</button>
     </div>
     <div class="profile" id="profileLine"></div>
     <div class="madeby"></div>
@@ -999,8 +1074,10 @@
       <div class="storyprog" id="missionAct">ACT I</div>
       <div class="missionname" id="missionName">MISSION</div>
       <div class="storytext" id="missionText"></div>
+      <div class="storyprog" id="missionFighter" style="color:#8fefff;"></div>
       <div class="btnrow" style="padding:8px 0 0;margin-top:6px;">
         <button class="btn btn-back" id="missionBack" style="font-size:15px;padding:8px 22px;">◀ SAVE &amp; QUIT</button>
+        <button class="btn btn-alt hidden" id="missionChange" style="font-size:15px;padding:8px 22px;">🔄 CHANGE FIGHTER</button>
         <button class="btn" id="missionStart" style="font-size:15px;padding:8px 22px;">FIGHT ▶</button>
       </div>
     </div>
@@ -1066,6 +1143,45 @@
       <div class="memeblurb" id="waitSub" style="max-width:300px;">Keep this tab open. You'll drop straight into the fight when someone joins.</div>
       <button class="btn btn-back" id="waitCancel" style="font-size:15px;padding:8px 22px;">CANCEL</button>
     </div>
+    <div class="madeby"></div>
+  </div>
+
+  <!-- SHOWDOWN: fighter select -->
+  <div class="screen hidden" id="sdSelect">
+    <h2 style="font-size:clamp(20px,4vw,40px);color:#8fefff;transform:skewX(-6deg);text-shadow:0 3px 0 rgba(0,0,0,.4);">🔫 SHOWDOWN</h2>
+    <div class="helper">SOLO BATTLE ROYALE · <span id="sdPlayerCountLbl">10</span> BRAWLERS · LAST ONE STANDING WINS</div>
+    <div class="roster" id="sdRoster"></div>
+    <div class="panels" id="sdPanels"></div>
+    <div class="controls">
+      <b style="color:#8fefff">MOVE</b> W A S D &nbsp;·&nbsp; <b style="color:#8fefff">ATTACK</b> J / SPACE &nbsp;·&nbsp; smash 📦 boxes for 💎 POWER CUBES &nbsp;·&nbsp; avoid the ☠ toxic cloud
+    </div>
+    <div class="btnrow">
+      <button class="btn btn-back" id="sdBack">◀ BACK</button>
+      <button class="btn btn-alt" id="sdRandom">RANDOM</button>
+      <button class="btn" id="sdStart">DROP IN!</button>
+    </div>
+    <div class="madeby"></div>
+  </div>
+
+  <!-- SHOWDOWN: in-match HUD overlay (only visible during a Showdown match) -->
+  <div id="sdHud" class="hidden">
+    <div class="sdTopbar">
+      <div class="sdAlive">👥 <span id="sdAliveCount">10</span> LEFT</div>
+      <div class="sdZone" id="sdZoneInfo">☠ ZONE CLOSES IN <span id="sdZoneTimer">30</span></div>
+      <div class="sdCubes">💎 <span id="sdCubeCount">0</span> CUBES</div>
+    </div>
+    <div class="sdHealthWrap">
+      <div class="sdHpBar"><div class="sdHpFill" id="sdHpFill"></div><span class="sdHpText" id="sdHpText">100</span></div>
+    </div>
+  </div>
+
+  <!-- SHOWDOWN: result -->
+  <div class="screen hidden" id="sdResult">
+    <h1 id="sdResultTitle">VICTORY ROYALE</h1>
+    <div class="sub" id="sdResultSub"></div>
+    <div class="sdPlacement" id="sdPlacement"></div>
+    <button class="btn" id="sdRematch">DROP IN AGAIN</button>
+    <button class="btn btn-back" id="sdToMenu">MAIN MENU</button>
     <div class="madeby"></div>
   </div>
 </div>
@@ -3881,19 +3997,19 @@ function randCode(){ const A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s=''; for(l
 // (medal) and which epic skins are unlocked.
 const Save = {
   KEY:'watInDeFighters_save_v1',
-  data:{ profile:'PLAYER 1', medals:{}, epics:{}, achievements:{}, stats:{}, dev:false, devPass:'', settings:{}, currency:0, skills:{}, secrets:{}, themes:{}, hardcore:{}, prestige:0, campaign:{ started:false, char:null, mission:0, unlocks:{}, clears:0 } },
+  data:{ profile:'PLAYER 1', medals:{}, epics:{}, achievements:{}, stats:{}, dev:false, devPass:'', settings:{}, currency:0, skills:{}, secrets:{}, themes:{}, hardcore:{}, prestige:0, opkeep:{}, campaign:{ started:false, char:null, mission:0, unlocks:{}, clears:0 } },
   // campaign defaults, kept in one place so load/import always produce a full object
   defCampaign(c){ c=c||{}; return { started:!!c.started, char:c.char||null, mission:c.mission||0, unlocks:c.unlocks||{}, clears:c.clears||0 }; },
   load(){
     try{
       const raw=localStorage.getItem(this.KEY);
-      if(raw){ const d=JSON.parse(raw); this.data={ profile:d.profile||'PLAYER 1', medals:d.medals||{}, epics:d.epics||{}, achievements:d.achievements||{}, stats:d.stats||{}, dev:!!d.dev, devPass:d.devPass||'', settings:d.settings||{}, currency:d.currency||0, skills:d.skills||{}, secrets:d.secrets||{}, themes:d.themes||{}, hardcore:d.hardcore||{}, prestige:d.prestige||0, campaign:this.defCampaign(d.campaign) }; }
+      if(raw){ const d=JSON.parse(raw); this.data={ profile:d.profile||'PLAYER 1', medals:d.medals||{}, epics:d.epics||{}, achievements:d.achievements||{}, stats:d.stats||{}, dev:!!d.dev, devPass:d.devPass||'', settings:d.settings||{}, currency:d.currency||0, skills:d.skills||{}, secrets:d.secrets||{}, themes:d.themes||{}, hardcore:d.hardcore||{}, prestige:d.prestige||0, opkeep:d.opkeep||{}, campaign:this.defCampaign(d.campaign) }; }
     }catch(e){ /* storage blocked; run with in-memory defaults */ }
   },
   // replaces the whole save in one go (used by IMPORT SAVE); falls back to
   // defaults per-field so an older or partial file never crashes the app.
   loadFromObject(d){
-    this.data={ profile:(d&&d.profile)||'PLAYER 1', medals:(d&&d.medals)||{}, epics:(d&&d.epics)||{}, achievements:(d&&d.achievements)||{}, stats:(d&&d.stats)||{}, dev:!!(d&&d.dev), devPass:(d&&d.devPass)||'', settings:(d&&d.settings)||{}, currency:(d&&d.currency)||0, skills:(d&&d.skills)||{}, secrets:(d&&d.secrets)||{}, themes:(d&&d.themes)||{}, hardcore:(d&&d.hardcore)||{}, prestige:(d&&d.prestige)||0, campaign:this.defCampaign(d&&d.campaign) };
+    this.data={ profile:(d&&d.profile)||'PLAYER 1', medals:(d&&d.medals)||{}, epics:(d&&d.epics)||{}, achievements:(d&&d.achievements)||{}, stats:(d&&d.stats)||{}, dev:!!(d&&d.dev), devPass:(d&&d.devPass)||'', settings:(d&&d.settings)||{}, currency:(d&&d.currency)||0, skills:(d&&d.skills)||{}, secrets:(d&&d.secrets)||{}, themes:(d&&d.themes)||{}, hardcore:(d&&d.hardcore)||{}, prestige:(d&&d.prestige)||0, opkeep:(d&&d.opkeep)||{}, campaign:this.defCampaign(d&&d.campaign) };
     this.save();
   },
   save(){
@@ -3948,7 +4064,15 @@ const Save = {
   grantHardcore(id){ if(!this.data.hardcore) this.data.hardcore={}; if(this.data.hardcore[id]) return false; this.data.hardcore[id]=true; this.save(); return true; },
   // ---- PRESTIGE (reset all medals for a permanent, growing prestige level) ----
   prestige(){ return this.data.prestige||0; },
-  addPrestige(){ this.data.prestige=(this.data.prestige||0)+1; this.data.medals={}; this.save(); return this.data.prestige; },
+  // OP fighters (Casper/Robin) you keep permanently once earned — survives the
+  // medal reset that prestige performs.
+  hasOpKeep(id){ return !!(this.data.opkeep && this.data.opkeep[id]); },
+  keepOp(id){ if(!this.data.opkeep) this.data.opkeep={}; this.data.opkeep[id]=true; this.save(); },
+  addPrestige(){
+    // lock in any OP fighters currently unlocked so they stay after the reset
+    ROSTER.forEach(c=>{ if(c.opChar && charUnlocked(c.id)) { if(!this.data.opkeep) this.data.opkeep={}; this.data.opkeep[c.id]=true; } });
+    this.data.prestige=(this.data.prestige||0)+1; this.data.medals={}; this.save(); return this.data.prestige;
+  },
   // ---- CAMPAIGN MODE (separate save slot; its own character unlocks) ----
   // Progress and unlocks here are fully independent from the main-game roster.
   campaign(){ if(!this.data.campaign) this.data.campaign=this.defCampaign(null); return this.data.campaign; },
@@ -3957,10 +4081,11 @@ const Save = {
   campaignUnlock(id){ const c=this.campaign(); if(!c.unlocks) c.unlocks={}; if(c.unlocks[id]) return false; c.unlocks[id]=true; this.save(); return true; },
   // begin (or restart) a run with a chosen fighter, resetting mission progress
   campaignStart(charId){ const c=this.campaign(); c.started=true; c.char=charId; c.mission=0; this.save(); },
+  campaignSetChar(charId){ const c=this.campaign(); c.char=charId; this.save(); },   // mid-run fighter swap
   campaignSetMission(n){ const c=this.campaign(); c.mission=n; this.save(); },
   campaignMarkCleared(){ const c=this.campaign(); c.clears=(c.clears||0)+1; c.started=false; c.mission=0; this.save(); },
   campaignAbandon(){ const c=this.campaign(); c.started=false; c.char=null; c.mission=0; this.save(); },
-  reset(){ this.data={ profile:this.data.profile, medals:{}, epics:{}, achievements:{}, stats:{}, dev:false, devPass:this.data.devPass, settings:this.data.settings, currency:0, skills:{}, secrets:{}, themes:{}, hardcore:{}, prestige:0, campaign:this.defCampaign(null) }; this.save(); }
+  reset(){ this.data={ profile:this.data.profile, medals:{}, epics:{}, achievements:{}, stats:{}, dev:false, devPass:this.data.devPass, settings:this.data.settings, currency:0, skills:{}, secrets:{}, themes:{}, hardcore:{}, prestige:0, opkeep:{}, campaign:this.defCampaign(null) }; this.save(); }
 };
 Save.load();
 
@@ -4102,6 +4227,13 @@ function campaignRosterSet(){
   return s;
 }
 function inCampaignRoster(id){ return campaignRosterSet().has(id); }
+// campaign fighters the player can currently PLAY (starter + earned unlocks)
+function campaignPlayableIds(){
+  return [...campaignRosterSet()].filter(id=>{
+    if(_CAMPAIGN_STARTERS.has(id)) return true;
+    return Save.campaignHasChar(id);
+  });
+}
 // name of the achievement gating a char (for hints)
 function achForChar(id){ computeUnlockMap(); return _UNLOCK_BY_CHAR[id]; }
 function charUnlocked(id){
@@ -4117,7 +4249,7 @@ function charUnlocked(id){
   }
   if(c.secretCode) return Save.hasSecret(id);         // Anker Vos: typed secret code
   if(c.finalChar) return allAchievements();          // Zennith: earn EVERYTHING
-  if(c.opChar) return medalsEarned() >= opMedalReq(id); // casper/robin: medals
+  if(c.opChar) return Save.hasOpKeep(id) || medalsEarned() >= opMedalReq(id); // casper/robin: kept after prestige, else medal-gated
   computeUnlockMap();
   if(_STARTERS.has(id)) return true;                  // free starter
   const req=_UNLOCK_BY_CHAR[id]; return !req || Save.hasAch(req);
@@ -4222,7 +4354,7 @@ const CAT_OF = {}; CATEGORIES.forEach((cat,ci)=>cat.ids.forEach(id=>CAT_OF[id]=c
 function buildCharTile(c){
   costMap[c.id]=0;
   const el=document.createElement('div');
-  el.className='char'; el.dataset.id=c.id;
+  el.className='char'+(Save.prestige()>0?' prestige':''); el.dataset.id=c.id;
   el.innerHTML=`
     <span class="pick"></span>
     <span class="medal" style="display:none">🏅</span>
@@ -4516,15 +4648,17 @@ document.getElementById('muteBtn').onclick=(e)=>{
 
 /* ---------------- SCREEN FLOW ---------------- */
 function show(id){
-  ['title','mode','select','stage','result','versus','story','achieve','achdetail','shop','minigame','settings','online','waitroom','stats','howto','skills','campaign','mission','cutscene'].forEach(s=>document.getElementById(s).classList.toggle('hidden', s!==id));
+  ['title','mode','select','stage','result','versus','story','achieve','achdetail','shop','minigame','settings','online','waitroom','stats','howto','skills','campaign','mission','cutscene','sdSelect','sdResult'].forEach(s=>document.getElementById(s).classList.toggle('hidden', s!==id));
   document.body.classList.remove('in-match');
+  // Showdown HUD only belongs to a live Showdown match; hide it on any nav
+  const sdh=document.getElementById('sdHud'); if(sdh && id!=='__sdmatch') sdh.classList.add('hidden');
   // reset any scrollable menu back to the top so its heading is always visible on entry
   const el=document.getElementById(id);
   if(el) el.scrollTop=0;
   // never let a leftover achievement toast pop while navigating pre-match menus
   if(id!=='result'){ _toastQ.length=0; const tt=document.getElementById('achToast'); if(tt) tt.classList.remove('show'); _toastBusy=false; }
   // menu screens share a catchy menu theme; the match screens use stage music
-  const menuScreens=['title','mode','select','stage','achieve','achdetail','shop','minigame','result','story','settings','online','waitroom','stats','howto','skills','campaign','mission','cutscene'];
+  const menuScreens=['title','mode','select','stage','achieve','achdetail','shop','minigame','result','story','settings','online','waitroom','stats','howto','skills','campaign','mission','cutscene','sdSelect','sdResult'];
   if(menuScreens.includes(id)){ if(Music.curId!=='menu') Music.play('menu'); }
 }
 
@@ -5477,6 +5611,11 @@ function showMission(){
   document.getElementById('missionAct').textContent = m.act+' · MISSION '+(cm.mission+1)+' / '+total;
   document.getElementById('missionName').textContent = m.name;
   document.getElementById('missionText').innerHTML = m.blurb;
+  // show who you're fighting AS, and offer a swap once you've unlocked more goons
+  const fl=document.getElementById('missionFighter');
+  if(fl) fl.innerHTML = `PLAYING AS <b style="color:${cm.c.color}">${cm.c.name}</b>`;
+  const chBtn=document.getElementById('missionChange');
+  if(chBtn) chBtn.classList.toggle('hidden', campaignPlayableIds().length<=1);
   show('mission');
   // pose the player's fighter on the briefing card
   const sc=document.getElementById('missionCanvas').getContext('2d');
@@ -5500,6 +5639,19 @@ document.getElementById('missionStart').onclick=()=>{
   const foe=campaignFoe(CAMPAIGN_MISSIONS[idx]);
   playCutscene(campaignDialogue(idx).pre, ()=>launchMissionFight(), foe);
 };
+// CHANGE FIGHTER: hop back to the campaign character select mid-run. Picking a
+// fighter there swaps the active campaign brawler (see goBtn handler) rather than
+// starting a new run, so progress and unlocks are preserved.
+document.getElementById('missionChange').onclick=()=>{
+  cancelAnimationFrame(campaign._anim);
+  campaign._changing=true;
+  selectContext='campaign';
+  p1Pick=campaign.c; p2Pick=null;
+  buildRoster();
+  document.getElementById('selHelper').innerHTML='CAMPAIGN · PICK ANY FIGHTER YOU’VE UNLOCKED · YOUR PROGRESS IS KEPT';
+  refreshPicks();
+  show('select');
+};
 // SAVE & QUIT: progress is already saved on disk; just return to the hub
 document.getElementById('missionBack').onclick=()=>{
   cancelAnimationFrame(campaign._anim);
@@ -5512,7 +5664,13 @@ document.getElementById('missionBack').onclick=()=>{
 function refreshProfileLine(){
   const el=document.getElementById('profileLine');
   const medals=medalsEarned();   // count only the normal roster (OP chars excluded)
-  el.innerHTML=`PROFILE: <b>${Save.data.profile}</b> · <span style="text-decoration:underline">rename</span>`;
+  const pLvl=Save.prestige();
+  // prestige cosmetic: the profile name turns gold with a run of stars
+  const stars = pLvl>0 ? (' '+'⭐'.repeat(Math.min(pLvl,5)) + (pLvl>5?('×'+pLvl):'')) : '';
+  const nameHtml = pLvl>0
+    ? `<b class="prestige-name">${Save.data.profile}${stars}</b>`
+    : `<b>${Save.data.profile}</b>`;
+  el.innerHTML=`PROFILE: ${nameHtml} · <span style="text-decoration:underline">rename</span>`;
   // medal badge next to CLASSIC MODE
   const mc=document.getElementById('medalCount'), mt=document.getElementById('medalTotal');
   if(mc) mc.textContent=medals;
@@ -5522,9 +5680,8 @@ function refreshProfileLine(){
   // prestige badge (shown once you have any prestige) + prestige-up button (only
   // when every normal fighter has a medal). The medal badge shows a ⭐ marker per
   // completed collection so past prestiges stay visible even after the reset.
-  const pl=Save.prestige();
   const pb=document.getElementById('prestigeBadge'), plv=document.getElementById('prestigeLevel');
-  if(pb){ pb.classList.toggle('hidden', pl<=0); if(plv) plv.textContent=pl; }
+  if(pb){ pb.classList.toggle('hidden', pLvl<=0); if(plv) plv.textContent=pLvl; }
   const pBtn=document.getElementById('prestigeBtn');
   if(pBtn) pBtn.classList.toggle('hidden', !canPrestige());
   // hardcore tally appended to the medal badge title for a quick glance
@@ -5537,7 +5694,7 @@ document.getElementById('prestigeBtn').onclick=()=>{
   if(!canPrestige()){ return; }
   const lvl=Save.prestige()+1;
   const bonus=200*lvl;   // reward scales with each prestige
-  if(!confirm(`PRESTIGE ${lvl}?\n\nThis resets ALL your Classic medals (you'll re-earn them), but grants a permanent ⭐ PRESTIGE ${lvl} and +${bonus} 💎 SHARDS.\n\nHardcore medals, skills, skins and campaign progress are kept.`)) return;
+  if(!confirm(`PRESTIGE ${lvl}?\n\nThis resets ALL your Classic medals (you'll re-earn them), but grants a permanent ⭐ PRESTIGE ${lvl} and +${bonus} 💎 SHARDS.\n\nHardcore medals, skills, skins, campaign progress AND your secret fighters (Casper/Robin) are kept.`)) return;
   Save.addPrestige();
   Save.addCurrency(bonus);
   buildRoster();          // medals cleared → refresh the grid badges
@@ -5618,7 +5775,17 @@ document.getElementById('modeBack').onclick=()=>{ classic=null; show('title'); }
 // character-select "START MATCH" now advances to stage select (or begins a Classic run)
 document.getElementById('goBtn').onclick=()=>{
   if(!p1Pick){ flashHelper('PICK A FIGHTER FOR P1!'); return; }
-  if(selectContext==='campaign'){ beginCampaign(p1Pick); return; }
+  if(selectContext==='campaign'){
+    // mid-run swap: keep the campaign, just change the active fighter
+    if(campaign && campaign._changing){
+      campaign._changing=false;
+      campaign.c=p1Pick;
+      Save.campaignSetChar(p1Pick.id);   // persist the new fighter choice
+      showMission();
+      return;
+    }
+    beginCampaign(p1Pick); return;
+  }
   if(classic && classic.pending){ beginClassic(p1Pick); return; }
   if(mode==='1p'){
     // use the player-chosen bot if set, otherwise pick a random other fighter
@@ -5705,7 +5872,11 @@ restoreDefaultRematch();
 
 // BACK navigation
 document.getElementById('selBack').onclick=()=>{
-  if(selectContext==='campaign'){ selectContext='main'; buildRoster(); buildCampaignHub(); show('campaign'); return; }
+  if(selectContext==='campaign'){
+    // backing out of a mid-run fighter swap returns to the mission briefing
+    if(campaign && campaign._changing){ campaign._changing=false; showMission(); return; }
+    selectContext='main'; buildRoster(); buildCampaignHub(); show('campaign'); return;
+  }
   if(classic){ classic=null; show('title'); } else { show('mode'); }
 };
 document.getElementById('stageBack').onclick=()=>{ show('select'); };
@@ -7032,7 +7203,7 @@ function botThink(bot, foe){
     // in range: attack, maybe shield
     if(bot.aiTimer<=0){
       const r=Math.random();
-      if(r<0.15){ bot.shielding=true; bot.aiTimer=18*react; }
+      if(r<0.15 && canShield(bot)){ bot.shielding=true; bot.aiTimer=18*react; }
       else if(r<0.4){ trySpecial(bot); bot.aiTimer=30*react; }
       else { tryAttack(bot); bot.aiTimer=(18+Math.random()*15)*react; }
     } else {
@@ -7044,6 +7215,7 @@ function botThink(bot, foe){
   // random hop
   if(Math.random()<0.01 && bot.onGround) doJump(bot);
   if(bot.aiTimer>10) bot.shielding=false;
+  if(!canShield(bot)) bot.shielding=false;   // eclipse suppresses shields for the CPU too
 }
 
 /* ---------------- MOVEMENT HELPERS ---------------- */
@@ -7109,9 +7281,15 @@ function pollGamepads(){
   });
 }
 
+// Shielding is disabled for everyone while Zennith's PERFECT GAME super (the
+// cursed eclipse) is active — its dread tears shields apart. eclipseT>0 only
+// ever happens during that super, so this cleanly gates on it.
+function canShield(f){ return eclipseT<=0; }
+
 function humanInput(f, K){
   if(f.dead) return;
-  f.shielding = !!keys[K.shield] && f.onGround;
+  // While Zennith's PERFECT GAME eclipse is active, the dread suppresses all shields.
+  f.shielding = canShield(f) && !!keys[K.shield] && f.onGround;
   if(!f.shielding){
     if(keys[K.left]){ f.vx-=f.def.stats.speed*0.35*(f.mSpd||1); f.face=-1; if(f.onGround)f.state='run'; }
     if(keys[K.right]){ f.vx+=f.def.stats.speed*0.35*(f.mSpd||1); f.face=1; if(f.onGround)f.state='run'; }
@@ -8554,7 +8732,7 @@ document.getElementById('pauseDiffSlider').oninput=(e)=>{
 })();
 // ESC toggles pause during a local match
 window.addEventListener('keydown', e=>{
-  if(e.key==='Escape'){ e.preventDefault(); if(running || paused) togglePause(); }
+  if(e.key==='Escape'){ e.preventDefault(); if(SD.active){ sdQuit(); show('title'); } else if(running || paused) togglePause(); }
 });
 
 /* ---------------- SPLASH SCREEN ---------------- */
@@ -8572,14 +8750,423 @@ window.addEventListener('keydown', e=>{
   setTimeout(dismiss, 2600);   // auto-continue if nobody taps
 })();
 
+/* ============================================================================
+   SHOWDOWN MODE  (self-contained top-down battle royale)
+   ----------------------------------------------------------------------------
+   Modeled on Brawl Stars "Showdown". Runs in its OWN state + rAF loop and draws
+   to the shared #cv canvas via `ctx`. It deliberately does NOT touch the platform
+   fighter's update()/KO()/endMatch()/HUD, so every existing mode is unaffected.
+   Reuses: ROSTER, drawFighter(), keys{}, charUnlocked/costMap, SFX/Music, show().
+   ============================================================================ */
+const SD = {
+  // ---- tunable config (all gameplay knobs live here) ----
+  CFG:{
+    PLAYERS: 10,            // total brawlers = 1 human + (PLAYERS-1) AI
+    ARENA_W: 1400,          // logical arena size (bigger than the viewport; camera follows)
+    ARENA_H: 900,
+    BOX_COUNT: 22,          // destructible crates scattered around
+    BOX_HP: 3,
+    BASE_HP: 100,           // starting max health for every brawler
+    BASE_DMG: 10,           // basic-attack damage before power-cube bonuses
+    ATK_RANGE: 118,         // attack reach (top-down, radial)
+    ATK_ARC: 1.15,          // half-angle (radians) of the attack cone
+    ATK_COOLDOWN: 26,       // frames between attacks
+    MOVE_SPEED: 3.4,        // base movement speed (px/frame); scaled by fighter stats
+    CUBE_HP_BONUS: 12,      // +max HP per power cube
+    CUBE_DMG_BONUS: 2.4,    // +attack damage per power cube
+    CUBE_HEAL: 12,          // instant heal when a cube is collected
+    ZONE_GRACE: 9*60,       // frames before the toxic cloud first closes (9s)
+    ZONE_STEP: 7*60,        // frames between each shrink step
+    ZONE_SHRINK: 0.11,      // fraction of remaining play-radius removed per step
+    ZONE_DOT_BASE: 0.30,    // damage/frame when the match is young
+    ZONE_DOT_RAMP: 0.35,    // extra damage/frame added each shrink step (ramps up)
+    HEAL_REGEN: 0.10,       // out-of-combat passive regen per frame
+    HEAL_DELAY: 150,        // frames without taking damage before regen kicks in
+    AI_SIGHT: 340,          // how far AI can "see" targets
+    AI_BOX_SIGHT: 260,      // how far AI will path to a crate
+  },
+  active:false,
+  ents:[],       // all brawlers (index 0 = human)
+  boxes:[],      // destructible crates
+  cubes:[],      // dropped power cubes on the ground
+  hits:[],       // transient attack-arc visuals
+  fx:[],         // particles (local, so we never touch the platform pools)
+  cam:{x:0,y:0},
+  zone:{r:0, cx:0, cy:0, timer:0, step:0},
+  time:0,
+  aliveStart:0,
+  anim:null,
+  ended:false,
+  human:null,
+};
+
+// spawn a fresh power-cube pickup at (x,y)
+function sdSpawnCube(x,y){ SD.cubes.push({x,y,t:Math.random()*100}); }
+
+// local particle burst (kept separate from the platform `particles` pool)
+function sdParticles(x,y,color,n){
+  for(let i=0;i<n;i++) SD.fx.push({x,y,vx:(Math.random()-.5)*6,vy:(Math.random()-.5)*6,life:16+Math.random()*14,color,r:2+Math.random()*3});
+}
+
+// build a Showdown brawler entity from a roster def
+function sdMakeBrawler(def, x, y, isHuman){
+  const spd = (def.stats && def.stats.speed ? def.stats.speed/3.3 : 1); // normalize around Nathan
+  return {
+    def, x, y, vx:0, vy:0, face:1,
+    isHuman, ai:{ state:'wander', tx:x, ty:y, retarget:0, foe:null, box:null },
+    maxHp: SD.CFG.BASE_HP, hp: SD.CFG.BASE_HP,
+    dmg: SD.CFG.BASE_DMG,
+    speed: SD.CFG.MOVE_SPEED * (0.85 + spd*0.15),
+    cubes: 0,
+    atkCd: 0, atkAnim: 0,
+    hitFlash: 0, lastHurt: 999,
+    dead:false, place:0,
+    costume: isHuman ? (costMap[def.id]||0) : 0,
+    t: Math.random()*1000,
+    _aimX: 1, _aimY: 0,
+  };
+}
+
+// initialize a match with the human's chosen fighter
+function sdInit(humanDef){
+  const C=SD.CFG;
+  SD.ents=[]; SD.boxes=[]; SD.cubes=[]; SD.hits=[]; SD.fx=[];
+  SD.time=0; SD.ended=false;
+  SD.zone={ r:Math.hypot(C.ARENA_W,C.ARENA_H)/2*0.62, cx:C.ARENA_W/2, cy:C.ARENA_H/2, timer:C.ZONE_GRACE, step:0 };
+  // pick AI brawler defs from the unlocked roster (fall back to whole roster)
+  const pool=ROSTER.filter(c=>charUnlocked(c.id) && !c.opChar);
+  const aiPool=(pool.length?pool:ROSTER).filter(c=>c.id!==humanDef.id);
+  // spread spawn points evenly around a ring so nobody starts on top of another
+  const n=C.PLAYERS, cx=C.ARENA_W/2, cy=C.ARENA_H/2, ring=Math.min(C.ARENA_W,C.ARENA_H)*0.40;
+  for(let i=0;i<n;i++){
+    const a=(i/n)*Math.PI*2;
+    const x=cx+Math.cos(a)*ring, y=cy+Math.sin(a)*ring;
+    if(i===0){ const b=sdMakeBrawler(humanDef,x,y,true); SD.human=b; SD.ents.push(b); }
+    else { const def=aiPool.length?aiPool[(i-1)%aiPool.length]:ROSTER[0]; SD.ents.push(sdMakeBrawler(def,x,y,false)); }
+  }
+  SD.aliveStart=n;
+  // scatter destructible boxes (avoid the very edges)
+  for(let i=0;i<C.BOX_COUNT;i++){
+    const x=80+Math.random()*(C.ARENA_W-160), y=80+Math.random()*(C.ARENA_H-160);
+    SD.boxes.push({x,y,hp:C.BOX_HP,w:40,h:40});
+  }
+  SD.cam.x=SD.human.x-W/2; SD.cam.y=SD.human.y-H/2;
+}
+
+function sdAliveCount(){ return SD.ents.filter(e=>!e.dead).length; }
+function sdClamp(v,a,b){ return v<a?a:(v>b?b:v); }
+
+// resolve an attack: hit any brawler within range+arc in front of the attacker
+function sdAttack(att){
+  const C=SD.CFG;
+  att.atkCd=C.ATK_COOLDOWN; att.atkAnim=10;
+  const ang=Math.atan2((att._aimY||0),(att._aimX||att.face));
+  SD.hits.push({x:att.x,y:att.y,ang,life:8,color:att.def.color});
+  SFX && SFX.attack && SFX.attack('melee');
+  SD.ents.forEach(o=>{
+    if(o===att||o.dead) return;
+    const dx=o.x-att.x, dy=o.y-att.y, d=Math.hypot(dx,dy);
+    if(d>C.ATK_RANGE) return;
+    const to=Math.atan2(dy,dx);
+    let da=Math.abs(((to-ang+Math.PI*3)%(Math.PI*2))-Math.PI);
+    if(da>C.ATK_ARC) return;
+    sdDamage(att,o,att.dmg);
+    const kb=7; o.vx+=Math.cos(to)*kb; o.vy+=Math.sin(to)*kb;   // knockback
+  });
+}
+
+function sdDamage(att,o,dmg){
+  o.hp-=dmg; o.hitFlash=6; o.lastHurt=0;
+  sdParticles(o.x,o.y,o.def.color,6);
+  if(o.hp<=0 && !o.dead) sdEliminate(o,att);
+}
+
+function sdEliminate(o,by){
+  o.dead=true;
+  o.place=sdAliveCount()+1;   // placement = players still alive incl. this one
+  sdParticles(o.x,o.y,o.def.color,22);
+  SFX && SFX.ko && SFX.ko();
+  for(let i=0;i<Math.min(o.cubes,3);i++) sdSpawnCube(o.x+(Math.random()-.5)*30,o.y+(Math.random()-.5)*30);
+  if(o===SD.human){ sdEnd(false, o.place); return; }
+  if(sdAliveCount()<=1) sdEnd(SD.human && !SD.human.dead, 1);
+}
+
+// ---- AI: small readable state machine (wander → collect → fight → flee-zone) ----
+function sdThink(e){
+  const C=SD.CFG, ai=e.ai;
+  const zoneDist=Math.hypot(e.x-SD.zone.cx, e.y-SD.zone.cy);
+  const nearZoneEdge = zoneDist > SD.zone.r-90;   // getting close to / inside the cloud
+  if(nearZoneEdge){ ai.state='flee'; }            // fleeing the cloud is always top priority
+  else {
+    let foe=null,fd=1e9,box=null,bd=1e9;
+    SD.ents.forEach(o=>{ if(o===e||o.dead) return; const d=Math.hypot(o.x-e.x,o.y-e.y); if(d<fd){fd=d;foe=o;} });
+    SD.boxes.forEach(b=>{ const d=Math.hypot(b.x-e.x,b.y-e.y); if(d<bd){bd=d;box=b;} });
+    if(foe && fd<C.AI_SIGHT){ ai.state='fight'; ai.foe=foe; }
+    else if(box && bd<C.AI_BOX_SIGHT && e.cubes<6){ ai.state='collect'; ai.box=box; }
+    else ai.state='wander';
+  }
+  let tx,ty;
+  if(ai.state==='flee'){ tx=SD.zone.cx; ty=SD.zone.cy; }
+  else if(ai.state==='fight' && ai.foe && !ai.foe.dead){ tx=ai.foe.x; ty=ai.foe.y; }
+  else if(ai.state==='collect' && ai.box && SD.boxes.includes(ai.box)){ tx=ai.box.x; ty=ai.box.y; }
+  else {
+    if(ai.retarget<=0){ const a=Math.random()*Math.PI*2, r=Math.random()*SD.zone.r*0.7;
+      ai.tx=SD.zone.cx+Math.cos(a)*r; ai.ty=SD.zone.cy+Math.sin(a)*r; ai.retarget=60+Math.random()*90; }
+    ai.retarget--; tx=ai.tx; ty=ai.ty;
+  }
+  const dx=tx-e.x, dy=ty-e.y, d=Math.hypot(dx,dy)||1;
+  const closeEnough = (ai.state==='fight') ? C.ATK_RANGE*0.8 : (ai.state==='collect'? 46 : 14);
+  if(d>closeEnough){ e.vx+=(dx/d)*e.speed*0.5; e.vy+=(dy/d)*e.speed*0.5; e._aimX=dx/d; e._aimY=dy/d; e.face=dx>=0?1:-1; }
+  else { e._aimX=dx/d; e._aimY=dy/d; }
+  if(ai.state==='fight' && ai.foe && !ai.foe.dead){
+    const fd2=Math.hypot(ai.foe.x-e.x,ai.foe.y-e.y);
+    if(fd2<C.ATK_RANGE && e.atkCd<=0){ e._aimX=(ai.foe.x-e.x); e._aimY=(ai.foe.y-e.y); sdAttack(e); }
+  }
+  if(ai.state==='collect' && ai.box && SD.boxes.includes(ai.box)){
+    const bd2=Math.hypot(ai.box.x-e.x,ai.box.y-e.y);
+    if(bd2<52 && e.atkCd<=0){ e._aimX=(ai.box.x-e.x); e._aimY=(ai.box.y-e.y); sdAttackBox(e,ai.box); }
+  }
+}
+
+// attacking a crate (shared by human + AI)
+function sdAttackBox(att,box){
+  att.atkCd=SD.CFG.ATK_COOLDOWN; att.atkAnim=10;
+  const ang=Math.atan2(box.y-att.y, box.x-att.x);
+  SD.hits.push({x:att.x,y:att.y,ang,life:8,color:'#c9a24a'});
+  box.hp--; sdParticles(box.x,box.y,'#c9a24a',8);
+  if(box.hp<=0){
+    const i=SD.boxes.indexOf(box); if(i>=0) SD.boxes.splice(i,1);
+    sdSpawnCube(box.x,box.y); sdParticles(box.x,box.y,'#8fefff',14);
+  }
+}
+
+// ---- human input (top-down WASD + attack) ----
+function sdHumanInput(e){
+  let mx=0,my=0;
+  if(keys['a']||keys['arrowleft']) mx-=1;
+  if(keys['d']||keys['arrowright']) mx+=1;
+  if(keys['w']||keys['arrowup']) my-=1;
+  if(keys['s']||keys['arrowdown']) my+=1;
+  if(mx||my){ const m=Math.hypot(mx,my); e.vx+=(mx/m)*e.speed*0.6; e.vy+=(my/m)*e.speed*0.6; e._aimX=mx; e._aimY=my; if(mx) e.face=mx>0?1:-1; }
+  if(keys['j']||keys[' ']||keys['k']){
+    if(e.atkCd<=0){
+      let box=null,bd=1e9; SD.boxes.forEach(b=>{const d=Math.hypot(b.x-e.x,b.y-e.y); if(d<bd){bd=d;box=b;}});
+      if(box && bd<58){ sdAttackBox(e,box); } else sdAttack(e);
+    }
+  }
+}
+
+// ---- per-frame update ----
+function sdUpdate(){
+  const C=SD.CFG;
+  SD.time++;
+  if(SD.zone.timer>0) SD.zone.timer--;
+  else { SD.zone.r=Math.max(120, SD.zone.r*(1-C.ZONE_SHRINK)); SD.zone.step++; SD.zone.timer=C.ZONE_STEP; }
+  const zoneDot=C.ZONE_DOT_BASE + SD.zone.step*C.ZONE_DOT_RAMP;
+
+  SD.ents.forEach(e=>{
+    if(e.dead) return;
+    e.t++; if(e.atkCd>0)e.atkCd--; if(e.atkAnim>0)e.atkAnim--; if(e.hitFlash>0)e.hitFlash--; e.lastHurt++;
+    if(e.isHuman) sdHumanInput(e); else sdThink(e);
+    e.x+=e.vx; e.y+=e.vy; e.vx*=0.78; e.vy*=0.78;
+    e.x=sdClamp(e.x,24,C.ARENA_W-24); e.y=sdClamp(e.y,24,C.ARENA_H-24);
+    SD.boxes.forEach(b=>{ const dx=e.x-b.x,dy=e.y-b.y,d=Math.hypot(dx,dy); if(d<40&&d>0){ e.x=b.x+dx/d*40; e.y=b.y+dy/d*40; } });
+    const zd=Math.hypot(e.x-SD.zone.cx,e.y-SD.zone.cy);
+    if(zd>SD.zone.r){ e.hp-=zoneDot; e.lastHurt=0; if(e.t%6===0) sdParticles(e.x,e.y-10,'#ff7ad0',2); if(e.hp<=0&&!e.dead) sdEliminate(e,null); }
+    else if(e.lastHurt>C.HEAL_DELAY && e.hp<e.maxHp){ e.hp=Math.min(e.maxHp,e.hp+C.HEAL_REGEN); }
+  });
+
+  // soft separation so brawlers don't perfectly overlap
+  for(let i=0;i<SD.ents.length;i++) for(let j=i+1;j<SD.ents.length;j++){
+    const a=SD.ents[i],b=SD.ents[j]; if(a.dead||b.dead) continue;
+    const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy); if(d<40&&d>0){ const p=(40-d)/2; a.x-=dx/d*p; a.y-=dy/d*p; b.x+=dx/d*p; b.y+=dy/d*p; }
+  }
+
+  SD.cubes.forEach(cu=>{ cu.t++;
+    SD.ents.forEach(e=>{ if(e.dead) return; if(Math.hypot(e.x-cu.x,e.y-cu.y)<34){
+      e.cubes++; e.maxHp+=C.CUBE_HP_BONUS; e.dmg+=C.CUBE_DMG_BONUS; e.hp=Math.min(e.maxHp,e.hp+C.CUBE_HEAL);
+      sdParticles(cu.x,cu.y,'#8fefff',12); cu._gone=true; }});
+  });
+  SD.cubes=SD.cubes.filter(c=>!c._gone);
+
+  SD.hits.forEach(h=>h.life--); SD.hits=SD.hits.filter(h=>h.life>0);
+  SD.fx.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.vx*=0.9; p.vy*=0.9; p.life--; }); SD.fx=SD.fx.filter(p=>p.life>0);
+
+  const foc=SD.human && !SD.human.dead ? SD.human : (SD.ents.find(e=>!e.dead)||SD.human);
+  if(foc){ SD.cam.x+=((foc.x-W/2)-SD.cam.x)*0.12; SD.cam.y+=((foc.y-H/2)-SD.cam.y)*0.12; }
+  SD.cam.x=sdClamp(SD.cam.x,0,C.ARENA_W-W); SD.cam.y=sdClamp(SD.cam.y,0,C.ARENA_H-H);
+
+  sdUpdateHud();
+}
+
+function sdUpdateHud(){
+  const h=SD.human;
+  document.getElementById('sdAliveCount').textContent=sdAliveCount();
+  document.getElementById('sdCubeCount').textContent=h?h.cubes:0;
+  const hp=h?Math.max(0,Math.round(h.hp)):0, mx=h?h.maxHp:100;
+  const fill=document.getElementById('sdHpFill'); fill.style.width=(hp/mx*100)+'%';
+  fill.style.background = hp/mx>0.5?'linear-gradient(90deg,#7ee081,#3fae5a)':(hp/mx>0.22?'linear-gradient(90deg,#ffd24a,#f7931e)':'linear-gradient(90deg,#ff6b6b,#c92a2a)');
+  document.getElementById('sdHpText').textContent=hp+' / '+mx;
+  const zi=document.getElementById('sdZoneInfo');
+  const secs=Math.ceil(SD.zone.timer/60);
+  document.getElementById('sdZoneTimer').textContent=secs;
+  zi.classList.toggle('danger', SD.zone.timer<3*60);
+}
+
+// ---- render (top-down) ----
+function sdRender(){
+  const C=SD.CFG, cx=SD.cam.x, cy=SD.cam.y;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#12212e'; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(255,255,255,.05)'; ctx.lineWidth=1;
+  const g=80;
+  for(let x=-((cx)%g);x<W;x+=g){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for(let y=-((cy)%g);y<H;y+=g){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+  ctx.strokeStyle='rgba(143,239,255,.35)'; ctx.lineWidth=4; ctx.strokeRect(-cx,-cy,C.ARENA_W,C.ARENA_H);
+
+  SD.cubes.forEach(cu=>{ const sx=cu.x-cx, sy=cu.y-cy, bob=Math.sin(cu.t/12)*3;
+    ctx.save(); ctx.translate(sx,sy+bob); ctx.rotate(cu.t/40);
+    ctx.fillStyle='#8fefff'; ctx.shadowColor='#8fefff'; ctx.shadowBlur=10;
+    ctx.fillRect(-8,-8,16,16); ctx.shadowBlur=0; ctx.fillStyle='#fff'; ctx.fillRect(-3,-3,6,6); ctx.restore(); });
+
+  SD.boxes.forEach(b=>{ const sx=b.x-cx, sy=b.y-cy;
+    ctx.fillStyle='#7a5a2e'; ctx.fillRect(sx-20,sy-20,40,40);
+    ctx.strokeStyle='#3d2c14'; ctx.lineWidth=3; ctx.strokeRect(sx-20,sy-20,40,40);
+    ctx.beginPath(); ctx.moveTo(sx-20,sy-20); ctx.lineTo(sx+20,sy+20); ctx.moveTo(sx+20,sy-20); ctx.lineTo(sx-20,sy+20); ctx.stroke(); });
+
+  SD.hits.forEach(h=>{ const sx=h.x-cx, sy=h.y-cy; ctx.save(); ctx.translate(sx,sy); ctx.rotate(h.ang);
+    ctx.globalAlpha=h.life/8; ctx.fillStyle=h.color;
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,C.ATK_RANGE,-C.ATK_ARC,C.ATK_ARC); ctx.closePath(); ctx.fill();
+    ctx.globalAlpha=1; ctx.restore(); });
+
+  const order=SD.ents.filter(e=>!e.dead).slice().sort((a,b)=>a.y-b.y);
+  order.forEach(e=>{ const sx=e.x-cx, sy=e.y-cy;
+    ctx.fillStyle='rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(sx,sy+30,22,8,0,0,Math.PI*2); ctx.fill();
+    if(e.hitFlash>0){ ctx.save(); ctx.globalAlpha=0.5; ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(sx,sy,30,0,Math.PI*2); ctx.fill(); ctx.restore(); }
+    drawFighter(ctx, e.def, sx-27, sy-42, 54, 74, e.face, e.t*16, e.atkAnim>0?'attack':'idle', e.costume);
+    const barW=44, hpFrac=Math.max(0,e.hp/e.maxHp);
+    ctx.fillStyle='rgba(0,0,0,.55)'; ctx.fillRect(sx-barW/2,sy-52,barW,5);
+    ctx.fillStyle=e.isHuman?'#8fefff':(hpFrac>0.4?'#7ee081':'#ff6b6b'); ctx.fillRect(sx-barW/2,sy-52,barW*hpFrac,5);
+    if(e.isHuman){ ctx.fillStyle='#8fefff'; ctx.font='bold 9px Arial'; ctx.textAlign='center'; ctx.fillText('YOU',sx,sy-56); }
+    if(e.cubes>0){ ctx.fillStyle='#8fefff'; ctx.font='bold 9px Arial'; ctx.textAlign='center'; ctx.fillText('💎'+e.cubes,sx,sy+44); }
+  });
+
+  SD.fx.forEach(p=>{ ctx.globalAlpha=Math.max(0,p.life/24); ctx.fillStyle=p.color; ctx.fillRect(p.x-cx-p.r/2,p.y-cy-p.r/2,p.r,p.r); }); ctx.globalAlpha=1;
+
+  // toxic cloud: darken everything OUTSIDE the safe circle (even-odd fill)
+  const zx=SD.zone.cx-cx, zy=SD.zone.cy-cy;
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0,0,W,H); ctx.arc(zx,zy,SD.zone.r,0,Math.PI*2,true);
+  ctx.fillStyle='rgba(180,40,150,0.30)'; ctx.fill('evenodd');
+  ctx.beginPath(); ctx.arc(zx,zy,SD.zone.r,0,Math.PI*2);
+  ctx.strokeStyle='rgba(255,122,208,0.9)'; ctx.lineWidth=4; ctx.stroke();
+  ctx.restore();
+}
+
+// ---- own loop (independent of the platform frame()) ----
+function sdLoop(){
+  if(!SD.active) return;
+  if(!paused) sdUpdate();
+  sdRender();
+  SD.anim=requestAnimationFrame(sdLoop);
+}
+
+// ---- match lifecycle ----
+let sdPick=null;
+function sdStartMatch(def){
+  sdPick=def||sdPick||ROSTER[0];
+  SD.active=true; SD.ended=false;
+  document.body.classList.add('in-match');           // reveals the shared #cv canvas
+  document.getElementById('sdHud').classList.remove('hidden');
+  ['title','sdSelect','sdResult'].forEach(s=>document.getElementById(s).classList.add('hidden'));
+  Music && Music.stop && Music.stop();
+  sdInit(sdPick);
+  cancelAnimationFrame(SD.anim);
+  SD.anim=requestAnimationFrame(sdLoop);
+}
+function sdEnd(won, place){
+  if(SD.ended) return; SD.ended=true; SD.active=false;
+  cancelAnimationFrame(SD.anim);
+  document.body.classList.remove('in-match');
+  document.getElementById('sdHud').classList.add('hidden');
+  Music && Music.play && Music.play('menu');
+  const title=document.getElementById('sdResultTitle');
+  const sub=document.getElementById('sdResultSub');
+  const pl=document.getElementById('sdPlacement');
+  if(won){ title.textContent='VICTORY ROYALE!'; title.style.filter='none';
+    sub.textContent=sdPick.name+' is the last brawler standing.'; sub.style.color=sdPick.color;
+    pl.textContent='🏆 1st of '+SD.aliveStart;
+    if(Save && Save.addCurrency) Save.addCurrency(40);
+  } else {
+    title.textContent='ELIMINATED'; title.style.filter='grayscale(.4)';
+    sub.textContent=sdPick.name+' fell in the showdown.'; sub.style.color=sdPick.color;
+    const ord={1:'1st',2:'2nd',3:'3rd'}; const p=place||(sdAliveCount()+1);
+    pl.textContent='You placed '+(ord[p]||(p+'th'))+' of '+SD.aliveStart;
+  }
+  show('sdResult');
+}
+function sdQuit(){
+  SD.active=false; SD.ended=true; cancelAnimationFrame(SD.anim);
+  document.body.classList.remove('in-match');
+  document.getElementById('sdHud').classList.add('hidden');
+}
+
+/* ---------------- SHOWDOWN MENU WIRING ---------------- */
+(function setupShowdown(){
+  const roster=document.getElementById('sdRoster');
+  const panels=document.getElementById('sdPanels');
+  document.getElementById('sdPlayerCountLbl').textContent=SD.CFG.PLAYERS;
+
+  function refreshSdPanel(){
+    panels.innerHTML='';
+    const p=document.createElement('div'); p.className='panel p1w';
+    if(!sdPick){ p.innerHTML=`<div class="tag">BRAWLER</div><div class="empty">PICK A FIGHTER</div>`; panels.appendChild(p); return; }
+    p.innerHTML=`<div class="tag" style="color:#8fefff">YOUR BRAWLER</div>
+      <canvas width="120" height="120"></canvas>
+      <div class="pname" style="color:${sdPick.color}">${sdPick.name}</div>
+      <div class="dz">${sdPick.desc||''}</div>
+      <div class="mv"><b style="color:#8fefff">HP</b> ${SD.CFG.BASE_HP} &nbsp; <b style="color:#8fefff">DMG</b> ${SD.CFG.BASE_DMG}</div>`;
+    panels.appendChild(p);
+    const cc=p.querySelector('canvas').getContext('2d');
+    (function loop(t){ if(document.getElementById('sdSelect').classList.contains('hidden')) return;
+      cc.clearRect(0,0,120,120); drawFighter(cc, sdPick, 30, 22, 60, 82, 1, t, 'idle', costMap[sdPick.id]||0);
+      requestAnimationFrame(loop); })(0);
+  }
+  function buildSdRoster(){
+    roster.innerHTML='';
+    const group=document.createElement('div'); group.className='catgroup';
+    const row=document.createElement('div'); row.className='catrow'; row.style.justifyContent='center';
+    ROSTER.filter(c=>charUnlocked(c.id)).forEach(c=>{
+      const el=document.createElement('div'); el.className='char'; el.dataset.id=c.id;
+      el.innerHTML=`<span class="pick"></span><canvas class="ic" width="96" height="96"></canvas><span class="nm" style="color:${c.color}">${c.name}</span>`;
+      const ic=el.querySelector('canvas').getContext('2d');
+      (function loop(t){ if(!document.body.contains(el)) return; drawIcon(ic,c,96,costMap[c.id]||0,t); requestAnimationFrame(loop); })(0);
+      el.onclick=()=>{ sdPick=c; buildSdRoster(); refreshSdPanel(); };
+      if(sdPick && sdPick.id===c.id){ el.classList.add('sel1'); el.querySelector('.pick').innerHTML='<span class="p1">PICK</span>'; }
+      row.appendChild(el);
+    });
+    group.appendChild(row); roster.appendChild(group);
+  }
+
+  document.getElementById('showdownBtn').onclick=()=>{
+    classic=null; campaign=null; selectContext='main';
+    if(!sdPick || !charUnlocked(sdPick.id)) sdPick=ROSTER.find(c=>charUnlocked(c.id))||ROSTER[0];
+    buildSdRoster(); refreshSdPanel(); show('sdSelect');
+  };
+  document.getElementById('sdBack').onclick=()=>{ show('title'); };
+  document.getElementById('sdRandom').onclick=()=>{ const pool=ROSTER.filter(c=>charUnlocked(c.id)); sdPick=pool[Math.floor(Math.random()*pool.length)]; buildSdRoster(); refreshSdPanel(); };
+  document.getElementById('sdStart').onclick=()=>{ if(!sdPick){return;} sdStartMatch(sdPick); };
+  document.getElementById('sdRematch').onclick=()=>{ sdStartMatch(sdPick); };
+  document.getElementById('sdToMenu').onclick=()=>{ sdQuit(); show('title'); };
+})();
+
 /* ---------------- MAIN LOOP ---------------- */
 function frame(t){
   if(running && !paused) update(t);
   render(t);
   requestAnimationFrame(frame);
 }
-requestAnimationFrame(frame);
-</script>
+requestAnimationFrame(frame);</script>
 </body>
 </html>
  
