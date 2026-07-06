@@ -385,6 +385,9 @@
   .shoptab.sel{background:#fdbb2d;color:#2a1a00;}
   .shopgrouphead{grid-column:1/-1;font-family:Arial,sans-serif;font-weight:800;font-size:11px;letter-spacing:.14em;color:#fdbb2d;text-align:left;margin:6px 0 0 2px;}
   .shopcard canvas{width:56px;height:56px;}
+  /* minigame (gem rush) */
+  .mghud{font-family:"Impact",sans-serif;letter-spacing:.06em;font-size:clamp(16px,2.6vw,24px);color:#8fefff;margin-top:10px;transform:skewX(-5deg);}
+  #mgCanvas{width:min(92%,640px);max-width:640px;aspect-ratio:16/9;background:radial-gradient(circle at 50% 20%, #16213e, #0a0e1f);border:3px solid #8fefff;border-radius:14px;margin-top:10px;box-shadow:0 0 24px rgba(143,239,255,.25);touch-action:none;}
 
   /* skill tree screen */
   #skills{justify-content:flex-start;overflow-y:auto;padding-top:3%;padding-bottom:40px;}
@@ -603,7 +606,7 @@
     <div class="sub">PLATFORM  FIGHTER</div>
     <div class="homeLabel" id="homeLabelText"></div>
     <div class="medalbadge" id="medalBadge" title="Classic Mode medals earned">🏅 <span id="medalCount">0</span>/<span id="medalTotal">0</span> MEDALS</div>
-    <div class="currencybadge" id="currencyBadge" title="Spend SHARDS on each fighter's skill tree">💎 <span id="currencyCount">0</span> SHARDS</div>
+    <div class="currencybadge" id="currencyBadge" title="Earn SHARDS from wins, Classic clears, and 💎 gems that drop mid-match. Spend them in the SHOP and skill trees.">💎 <span id="currencyCount">0</span> SHARDS</div>
     <button class="btn btn-hero" id="startBtn">PLAY</button>
     <div class="titlegrid">
       <button class="btn btn-alt" id="onlineBtn">ONLINE 1v1</button>
@@ -704,6 +707,7 @@
     <h2 style="font-size:clamp(20px,4vw,40px);color:#fdbb2d;transform:skewX(-6deg);text-shadow:0 3px 0 rgba(0,0,0,.4);">🛍 SHOP</h2>
     <div class="helper">SPEND SHARDS ON MENU THEMES, SKINS &amp; MEMES</div>
     <div class="currencybadge" id="shopCurrency">💎 <span id="shopCurrencyCount">0</span> SHARDS</div>
+    <button class="btn btn-alt" id="minigameBtn" style="margin-top:12px;font-size:clamp(13px,2vw,18px);padding:8px 22px;">🎮 PLAY GEM RUSH — EARN SHARDS</button>
     <div class="shoptabs">
       <button class="shoptab sel" data-shoptab="themes">🎨 THEMES · 100</button>
       <button class="shoptab" data-shoptab="skins">👕 SKINS · 50</button>
@@ -711,6 +715,19 @@
     </div>
     <div class="shopgrid" id="shopGrid"></div>
     <button class="btn btn-back" id="shopBack">◀ BACK</button>
+    <div class="madeby"></div>
+  </div>
+
+  <!-- MINIGAME: GEM RUSH (catch falling gems for SHARDS) -->
+  <div class="screen hidden" id="minigame">
+    <h2 style="font-size:clamp(20px,4vw,40px);color:#8fefff;transform:skewX(-6deg);text-shadow:0 3px 0 rgba(0,0,0,.4);">🎮 GEM RUSH</h2>
+    <div class="helper" id="mgHelper">CATCH THE 💎 · DODGE THE 💣 · MOVE WITH ← → / A D / MOUSE</div>
+    <div class="mghud"><span id="mgScore">💎 0</span> &nbsp;·&nbsp; <span id="mgTime">⏱ 30</span></div>
+    <canvas id="mgCanvas" width="640" height="360"></canvas>
+    <div class="btnrow">
+      <button class="btn btn-back" id="mgBack">◀ BACK</button>
+      <button class="btn" id="mgStart">START</button>
+    </div>
     <div class="madeby"></div>
   </div>
 
@@ -1172,6 +1189,18 @@ const ROSTER = [
     costume3:{name:'NIGHT ROBE', color:'#3c096c', dark:'#180230', acc:'crown'}
   },
   {
+    id:'bastiaan', name:'BASTIAAN', color:'#5b8c5a', dark:'#33502f', skin:'#e8b98f', locked:true,
+    desc:'Biologist',
+    move:'SPORE CLOUD · releases three homing spore puffs',
+    up:'CANE VAULT · pole-vaults up on his cane, whacking foes',
+    sup:'BLOOM BURST · a swarm of homing pollen spores',
+    stats:{speed:3.2, jump:14.2, weight:1.0},
+    special:'spores',
+    costume:{name:'FIELD KHAKI', color:'#a3956a', dark:'#5e5539', acc:'goggles'},
+    costume2:{name:'LAB COAT', color:'#e9ecef', dark:'#9aa0a6', acc:'antenna'},
+    costume3:{name:'DEEP FOREST', color:'#2d6a4f', dark:'#14342a', acc:'star'}
+  },
+  {
     id:'dean', name:'DEAN', color:'#f15bb5', dark:'#9b1f6e', skin:'#c98f5a', locked:true,
     desc:'Breakdancer',
     move:'WINDMILL · a spinning multi-hit that deflects shots',
@@ -1389,6 +1418,7 @@ const TAUNTS = {
   zennith:  { seq:['⚾','💀'],       cry:"STRIKE... THREE.", emote:'vanish' },
   maik:     { seq:['🥚','😅'],       cry:"CLEAN-UP AISLE 5!", emote:'shrug' },
   ankervos: { seq:['🦊','😏'],       cry:"too slow~",        emote:'spin' },
+  bastiaan: { seq:['🌿','🔬'],       cry:"FASCINATING!",     emote:'cast' },
 };
 
 /* ---------------- CLASSIC MODE STORIES ---------------- */
@@ -1431,6 +1461,7 @@ const STORY = {
   zennith: { title:'THE NIGHTMARE',       goal:'to prove he is the darkness Nathan could never beat', rival:'nathan' },
   maik:    { title:'CLOSING TIME',         goal:'to defend the store from the after-hours brawlers', rival:'giancarlo' },
   ankervos:{ title:'THE SLY ONE',          goal:'to outfox every fighter in the bracket', rival:'femi' },
+  bastiaan:{ title:'FIELD STUDY',          goal:'to catalogue the rarest specimen of all: a champion', rival:'devin' },
 };
 // Build a 4-round gauntlet for a chosen character: 3 themed opponents + the rival.
 function buildClassicRun(c){
@@ -1466,6 +1497,22 @@ const MEMES = [
     mult:{ spd:1.25, jump:1.18 } },
   { id:'goblin', name:'GOBLIN MACHINE', icon:'👺', color:'#2a9d8f', blurb:'+30% max HP · +50% super charge (greedy tank).',
     mult:{ hp:1.30, superGain:1.5 } },
+  { id:'caramba', name:'AY CARAMBA',    icon:'😱', color:'#ff9f1c', blurb:'+40% attack power — go all in (−20% defense).',
+    mult:{ atk:1.40, def:1.20 } },
+  { id:'cake',    name:'CAKE IS CAKE',  icon:'🍰', color:'#f7a8b8', blurb:'+35% max HP — soft, sweet and hard to finish off.',
+    mult:{ hp:1.35 } },
+  { id:'wiskunde',name:'WISKUNDE TIA',  icon:'📐', color:'#3a86ff', blurb:'+45% super charge — calculate the perfect moment.',
+    mult:{ superGain:1.45 } },
+  { id:'baka',    name:'AYO BAKA',      icon:'🍜', color:'#e63946', blurb:'+22% speed · +15% attack (reckless rush).',
+    mult:{ spd:1.22, atk:1.15 } },
+  { id:'beste',   name:'BESTE',         icon:'🏆', color:'#ffd60a', blurb:'A little of everything: +12% atk · +12% HP · +12% speed.',
+    mult:{ atk:1.12, hp:1.12, spd:1.12 } },
+  { id:'lekker',  name:'LEKKER SPELEN', icon:'😎', color:'#06d6a0', blurb:'+20% speed · +20% jump — just vibing out there.',
+    mult:{ spd:1.20, jump:1.20 } },
+  { id:'kaasvet', name:'KAASVET',       icon:'🧀', color:'#ffca3a', blurb:'−18% damage taken · heal 12% of damage dealt (greasy & tanky).',
+    mult:{ def:0.82, lifesteal:0.12 } },
+  { id:'pizzablik',name:'PIZZA IN BLIK',icon:'🍕', color:'#d62828', blurb:'+28% attack · heal 18% of damage dealt (canned power).',
+    mult:{ atk:1.28, lifesteal:0.18 } },
 ];
 function getMeme(id){ return MEMES.find(m=>m.id===id) || MEMES[0]; }
 // which memes the player can actually pick: NONE is always free; the rest must be
@@ -1554,6 +1601,8 @@ const CHAR_SKILL_NODES = {
                {icon:'🥚',name:'BULK DISCOUNT',         desc:'-15% cooldown on EGG TOSS; buy a dozen, throw a dozen.',                 effect:{cdMult:0.85}} ],
   ankervos:  [ {icon:'🦊',name:'SLY FOOTWORK',         desc:'+10% move speed; the fox is never where you swing.',                     effect:{spd:1.10}},
                {icon:'🔵',name:'FOXFIRE FEAST',         desc:'Heal 12% of damage dealt — the foxfire drinks their warmth.',            effect:{lifesteal:0.12}} ],
+  bastiaan:  [ {icon:'🧫',name:'CULTURED STRAIN',      desc:'+15% damage; a more potent spore culture.',                             effect:{atk:1.15}},
+               {icon:'🌱',name:'FAST GROWTH',          desc:'-15% cooldown on SPORE CLOUD; the colony spreads faster.',               effect:{cdMult:0.85}} ],
 };
 
 /* ---------------- SECOND SUPERS (skill-tree unlock) ---------------- */
@@ -1628,6 +1677,8 @@ const SUPER2 = {
     fire(f,foe){ for(let i=0;i<8;i++) projectiles.push({owner:f,x:(i+0.5)*(W/8)+(Math.random()-.5)*16,y:-20-i*14,vx:0,vy:5,life:170,dmg:10,kb:7,color:'#8a5a2b',type:'block',r:11,gravity:true,spin:0,block:'dirt'}); } },
   ankervos: { name:'INFERNO SPIRAL', desc:'A widening spiral of foxfire flames sweeps outward.',
     fire(f,foe){ for(let i=0;i<12;i++){ const a=i/12*Math.PI*2*1.5; projectiles.push({owner:f,x:f.cx,y:f.cy,vx:Math.cos(a)*(4+i*0.4),vy:Math.sin(a)*(4+i*0.4),life:60,dmg:5,kb:5,color:'#6ec8ff',type:'flame',r:11,hitEvery:true,bobT:i}); } spawnParticles(f.cx,f.cy,'#6ec8ff',20); } },
+  bastiaan: { name:'PETRI OUTBREAK', desc:'A dense creeping cloud of homing spores floods the stage.',
+    fire(f,foe){ for(let i=0;i<12;i++) projectiles.push({owner:f,x:f.cx+f.face*16,y:f.cy-28+i*5,vx:f.face*2.5,vy:(i-6)*0.7,life:170,dmg:5,kb:3.5,color:'#8fbf6a',type:'drone',r:6,homing:true}); spawnParticles(f.cx,f.cy,'#8fbf6a',20); } },
   // OP / final fighters keep their signature feel with a second flavor too
   casper:   { name:'PIT STOP NITRO', desc:'A turret car plus a nitro ramming dash.',
     fire(f,foe){ if(foe) f.face=foe.cx>=f.cx?1:-1; f.vx=f.face*16; f._dashHit=26; f._dashDmg=10; f._dashKb=8; projectiles.push({owner:f,turret:true,x:f.cx-f.face*46,y:GROUND_Y-22,vx:0,vy:0,type:'carturret',r:26,color:f.def.color,life:130,dmg:0,kb:0,fireCd:0,face:-f.face}); } },
@@ -1669,16 +1720,14 @@ function mixHex(a,b,t){ const A=hexToRgb(a),B=hexToRgb(b); return rgbToHex(A[0]+
 function jewelPalette(c){
   return { color: mixHex(c.color, '#b5179e', 0.35), dark: mixHex(c.dark, '#3a0ca3', 0.4) };
 }
-// Number of selectable costumes: DEFAULT + 3 personalized + JEWEL + SCHOOL (+ EPIC when unlocked)
-const COSTUME_COUNT = 6;   // base count; EPIC (index 6) is added per-character once unlocked
+// Number of selectable costumes: DEFAULT + 3 personalized (+ EPIC / SIGNATURE when unlocked)
+const COSTUME_COUNT = 4;   // base count; EPIC (index 6) is added per-character once unlocked
 // Resolve a costume index to {name, color, dark, acc}.
-// 0 default · 1-3 personalized · 4 JEWEL · 5 SCHOOL · 6 EPIC (Classic Mode reward)
+// 0 default · 1-3 personalized · 6 EPIC (Classic Mode reward) · 7 SIGNATURE (skill tree)
 function resolveCostume(c, idx){
   if(idx===1 && c.costume)  return {name:c.costume.name,  color:c.costume.color,  dark:c.costume.dark,  acc:c.costume.acc};
   if(idx===2 && c.costume2) return {name:c.costume2.name, color:c.costume2.color, dark:c.costume2.dark, acc:c.costume2.acc};
   if(idx===3 && c.costume3) return {name:c.costume3.name, color:c.costume3.color, dark:c.costume3.dark, acc:c.costume3.acc};
-  if(idx===4){ const j=jewelPalette(c); return {name:'JEWEL', color:j.color, dark:j.dark, acc:'star'}; }
-  if(idx===5){ return {name:'SCHOOL', color:'#1d3557', dark:'#0b1b30', acc:'bow', shirt:'#f1f4f8'}; }
   if(idx===6){ return {name:'EPIC', color:mixHex(c.color,'#ffd700',0.5), dark:mixHex(c.dark,'#b8860b',0.5), acc:'crown', epic:true}; }
   if(idx===7){ return {name:'SIGNATURE', color:mixHex(c.color,'#00e5ff',0.4), dark:mixHex(c.dark,'#0a3a45',0.4), acc:c.costume?c.costume.acc:'star', signature:true}; }
   return {name:'DEFAULT', color:c.color, dark:c.dark, acc:null};
@@ -1687,10 +1736,10 @@ function resolveCostume(c, idx){
 // base 6 are always available; EPIC (medal) and SIGNATURE (skill tree) are added
 // only once unlocked, so cycling never lands on a skin that isn't earned yet.
 function allowedCostumeIdxs(id){
-  // DEFAULT (0) is always free; skins 1-5 must be bought in the SHOP (or dev mode);
+  // DEFAULT (0) is always free; skins 1-3 must be bought in the SHOP (or dev mode);
   // EPIC (6) and SIGNATURE (7) are earned via Classic medals / the skill tree.
   const arr=[0];
-  for(let i=1;i<=5;i++){ if(Save.data.dev || Save.hasSkin(id,i)) arr.push(i); }
+  for(let i=1;i<=3;i++){ if(Save.data.dev || Save.hasSkin(id,i)) arr.push(i); }
   if(Save.hasEpic(id)) arr.push(6);
   if(Save.hasSignature(id)) arr.push(7);
   return arr;
@@ -1773,6 +1822,11 @@ function drawIcon(g, c, S, costume, t){
       g.fillStyle=white; g.beginPath(); g.ellipse(0,r*0.1,r*0.55,r*0.8,0,0,Math.PI*2); g.fill();
       g.strokeStyle=white; g.beginPath(); g.moveTo(-r*0.3,-r*0.6); g.lineTo(-r*0.6,-r); g.moveTo(r*0.3,-r*0.6); g.lineTo(r*0.6,-r); g.stroke();
       g.strokeStyle=ink; g.lineWidth=Math.max(1,S*0.014); g.beginPath(); g.moveTo(-r*0.5,-r*0.2); g.lineTo(r*0.5,-r*0.2); g.moveTo(-r*0.5,r*0.2); g.lineTo(r*0.5,r*0.2); g.stroke(); break;
+    case 'spores': // a cluster of drifting spore puffs
+      g.fillStyle=white;
+      const sp=[[0,-r*0.4,r*0.42],[-r*0.5,r*0.25,r*0.34],[r*0.5,r*0.2,r*0.36],[0,r*0.55,r*0.28]];
+      sp.forEach(p=>{ g.beginPath(); g.arc(p[0],p[1],p[2],0,Math.PI*2); g.fill(); });
+      g.fillStyle=ink; sp.forEach(p=>{ g.beginPath(); g.arc(p[0],p[1],p[2]*0.35,0,Math.PI*2); g.fill(); }); break;
     case 'splash': // water droplet
       g.fillStyle=white; g.beginPath(); g.moveTo(0,-r); g.bezierCurveTo(r*0.9,-r*0.1,r*0.7,r*0.9,0,r); g.bezierCurveTo(-r*0.7,r*0.9,-r*0.9,-r*0.1,0,-r); g.closePath(); g.fill();
       g.fillStyle='rgba(255,255,255,.5)'; g.beginPath(); g.arc(-r*0.2,r*0.3,r*0.2,0,Math.PI*2); g.fill(); break;
@@ -2078,6 +2132,27 @@ function drawFighter(g, c, x, y, w, h, face, t, state, costume){
       g.fillStyle='#38b000';
       g.beginPath(); g.moveTo(bodyW*0.42,bodyH*0.05); g.lineTo(bodyW*0.5,bodyH*0.05); g.lineTo(bodyW*0.56,bodyH*0.28); g.lineTo(bodyW*0.36,bodyH*0.28); g.closePath(); g.fill();
       g.fillStyle='#cfd8dc'; g.fillRect(bodyW*0.43,bodyH*0.0, 6,5);
+    }
+  } else if(c.id==='bastiaan'){ // biologist: round glasses, field coat, and a cane
+    // field coat panel
+    g.fillStyle='#dfe3d6';
+    roundRect(g, -bodyW*0.42, -bodyH*0.28, bodyW*0.84, bodyH*0.7, 6);
+    g.strokeStyle=dark; g.lineWidth=2; g.beginPath(); g.moveTo(0,-bodyH*0.28); g.lineTo(0,bodyH*0.36); g.stroke();
+    // round spectacles
+    g.strokeStyle='#111'; g.lineWidth=1.6;
+    g.beginPath(); g.arc(headR*0.35,-bodyH*0.78,3.4,0,Math.PI*2); g.stroke();
+    g.beginPath(); g.arc(-headR*0.35,-bodyH*0.78,3.4,0,Math.PI*2); g.stroke();
+    g.beginPath(); g.moveTo(-headR*0.05,-bodyH*0.78); g.lineTo(headR*0.05,-bodyH*0.78); g.stroke();
+    // little leaf tucked on the lapel
+    g.fillStyle='#5b8c5a'; g.beginPath(); g.ellipse(-bodyW*0.22,-bodyH*0.12,3,5,-0.5,0,Math.PI*2); g.fill();
+    // cane: held upright when idle, swung forward when attacking
+    g.strokeStyle='#7a5230'; g.lineWidth=3; g.lineCap='round';
+    if(atk){
+      g.beginPath(); g.moveTo(armFwd,-bodyH*0.1); g.lineTo(armFwd+w*0.3,-bodyH*0.4); g.stroke();
+      g.beginPath(); g.arc(armFwd+w*0.3,-bodyH*0.42,4,Math.PI*0.5,Math.PI*1.6); g.stroke(); // handle hook
+    } else {
+      g.beginPath(); g.moveTo(armFwd+4,-bodyH*0.2); g.lineTo(armFwd+4,bodyH*0.45); g.stroke();
+      g.beginPath(); g.arc(armFwd,-bodyH*0.2,4,-Math.PI*0.5,Math.PI*0.6); g.stroke(); // handle hook
     }
   } else if(c.id==='devin'){ // weevil bug: antennae, snout, wing shells
     // wing shell split down the back/body
@@ -3302,6 +3377,7 @@ const SFX = {
       case 'pitch': case 'curve': case 'serve': case 'evilserve':
                          this.burst(3000, 0.10); this.beep('C5','32n'); break;
       case 'drone': case 'minidrone': case 'swarm': this.beep('A4','32n'); this.beep('E5','32n'); break;
+      case 'spores': this.burst(1200,0.14); this.beep('D5','32n'); break;
       case 'bolt':       this.beep('B5','16n'); this.burst(4000,0.08); break;
       case 'dash': case 'glitch': this.sweep('C4','C6',0.14); break;
       case 'foxfire': this.sweep('E5','B5',0.2); this.burst(2600,0.08); break;
@@ -3468,6 +3544,8 @@ class Fighter{
 
 /* ---------------- GAME STATE ---------------- */
 let players=[], projectiles=[], particles=[], strikes=[], shocks=[], afterimages=[], blackholes=[];
+let shardPickups=[];   // floating 💎 bonus gems that spawn mid-match; grab for bonus SHARDS
+let shardSpawnTimer=0;  // frames until the next shard gem may spawn
 let eclipseT=0; // Zennith PERFECT GAME: frames left of the cursed solar eclipse (darkened sky + slower super gain)
 let soccerBall=null, soccerScore=[0,0], soccerGoalTimer=0;
 let keys={};
@@ -3802,7 +3880,7 @@ const CATEGORIES = [
   { name:'MELEE',   icon:'⚔️', ids:['reshman','lars','fionn','yassin','metaai','dean','thomas','kayo','cavan'] },
   { name:'RANGED',  icon:'🎯', ids:['nathan','milo','adam','evadam','deniz','niffo','jax','femi','enno','thorren','niek','giancarlo','oela'], shareRowWithNext:true },
   { name:'THROWERS',icon:'💣', ids:['daniel','doremalen','jace','ash','maik'] },
-  { name:'HOMING',  icon:'🧲', ids:['josh','renas','devin','ati'], shareRowWithNext:true },
+  { name:'HOMING',  icon:'🧲', ids:['josh','renas','devin','ati','bastiaan'], shareRowWithNext:true },
   { name:'SECRET',  icon:'✦', ids:['casper','robin','zennith','ankervos'], secret:true },
 ];
 // map id -> category order so any unlisted fighter still lands somewhere sensible
@@ -4082,7 +4160,7 @@ document.getElementById('muteBtn').onclick=(e)=>{
 
 /* ---------------- SCREEN FLOW ---------------- */
 function show(id){
-  ['title','mode','select','stage','result','versus','story','achieve','achdetail','shop','settings','online','waitroom','stats','howto','skills'].forEach(s=>document.getElementById(s).classList.toggle('hidden', s!==id));
+  ['title','mode','select','stage','result','versus','story','achieve','achdetail','shop','minigame','settings','online','waitroom','stats','howto','skills'].forEach(s=>document.getElementById(s).classList.toggle('hidden', s!==id));
   document.body.classList.remove('in-match');
   // reset any scrollable menu back to the top so its heading is always visible on entry
   const el=document.getElementById(id);
@@ -4090,7 +4168,7 @@ function show(id){
   // never let a leftover achievement toast pop while navigating pre-match menus
   if(id!=='result'){ _toastQ.length=0; const tt=document.getElementById('achToast'); if(tt) tt.classList.remove('show'); _toastBusy=false; }
   // menu screens share a catchy menu theme; the match screens use stage music
-  const menuScreens=['title','mode','select','stage','achieve','achdetail','shop','result','story','settings','online','waitroom','stats','howto','skills'];
+  const menuScreens=['title','mode','select','stage','achieve','achdetail','shop','minigame','result','story','settings','online','waitroom','stats','howto','skills'];
   if(menuScreens.includes(id)){ if(Music.curId!=='menu') Music.play('menu'); }
 }
 
@@ -4272,8 +4350,8 @@ function buildShopThemes(grid){
   });
 }
 function buildShopSkins(grid){
-  // every unlocked fighter's buyable skins (personalized 1-3, JEWEL 4, SCHOOL 5)
-  const SKIN_IDXS=[1,2,3,4,5];
+  // every unlocked fighter's buyable skins (the 3 personalized costumes)
+  const SKIN_IDXS=[1,2,3];
   themeableChars().forEach(c=>{
     const head=document.createElement('div'); head.className='shopgrouphead'; head.textContent=c.name;
     grid.appendChild(head);
@@ -4320,6 +4398,140 @@ document.querySelectorAll('.shoptab').forEach(tab=>{
 document.getElementById('shopBtn').onclick=()=>{ shopTab='themes'; document.querySelectorAll('.shoptab').forEach(t=>t.classList.toggle('sel', t.getAttribute('data-shoptab')==='themes')); buildShop(); show('shop'); };
 document.getElementById('shopBack').onclick=()=>{ show('title'); };
 applyMenuTheme();
+
+/* ---------------- MINIGAME: GEM RUSH ----------------
+   A quick catch game: gems fall from the top — catch them in your basket to earn
+   SHARDS; dodge bombs (they cost you time). Runs ~30s, then banks what you caught.
+   Fully self-contained: its own canvas, rAF loop, and input handlers. */
+const MG = {
+  cv:null, ctx:null, W:640, H:360,
+  running:false, anim:null,
+  basketX:320, basketW:78, basketH:20,
+  items:[], spawnT:0, score:0, timeLeft:0, lastT:0,
+  keys:{left:false,right:false}, mouseX:null,
+};
+function mgInit(){
+  MG.cv=document.getElementById('mgCanvas');
+  MG.ctx=MG.cv.getContext('2d');
+  // pointer / touch steering (map client X to canvas X)
+  const toCanvasX=(clientX)=>{ const r=MG.cv.getBoundingClientRect(); return (clientX-r.left)/r.width*MG.W; };
+  MG.cv.addEventListener('mousemove', e=>{ MG.mouseX=toCanvasX(e.clientX); });
+  MG.cv.addEventListener('mouseleave', ()=>{ MG.mouseX=null; });
+  MG.cv.addEventListener('touchmove', e=>{ if(e.touches[0]){ MG.mouseX=toCanvasX(e.touches[0].clientX); e.preventDefault(); } }, {passive:false});
+  MG.cv.addEventListener('touchstart', e=>{ if(e.touches[0]){ MG.mouseX=toCanvasX(e.touches[0].clientX); } }, {passive:true});
+  // keyboard steering (only while the minigame screen is up)
+  window.addEventListener('keydown', e=>{
+    if(document.getElementById('minigame').classList.contains('hidden')) return;
+    const k=e.key.toLowerCase();
+    if(k==='arrowleft'||k==='a'){ MG.keys.left=true; MG.mouseX=null; }
+    if(k==='arrowright'||k==='d'){ MG.keys.right=true; MG.mouseX=null; }
+  });
+  window.addEventListener('keyup', e=>{
+    const k=e.key.toLowerCase();
+    if(k==='arrowleft'||k==='a') MG.keys.left=false;
+    if(k==='arrowright'||k==='d') MG.keys.right=false;
+  });
+}
+function mgStart(){
+  if(MG.running) return;
+  MG.running=true;
+  MG.items=[]; MG.spawnT=0; MG.score=0; MG.timeLeft=30; MG.basketX=MG.W/2; MG.mouseX=null;
+  MG.keys.left=MG.keys.right=false;
+  document.getElementById('mgStart').textContent='PLAYING…';
+  document.getElementById('mgStart').disabled=true;
+  document.getElementById('mgHelper').textContent='CATCH THE 💎 · DODGE THE 💣';
+  MG.lastT=performance.now();
+  cancelAnimationFrame(MG.anim);
+  mgLoop(MG.lastT);
+}
+function mgEnd(){
+  MG.running=false;
+  document.getElementById('mgStart').textContent='PLAY AGAIN';
+  document.getElementById('mgStart').disabled=false;
+  if(MG.score>0){
+    Save.addCurrency(MG.score);
+    refreshProfileLine();
+    document.getElementById('mgHelper').innerHTML='TIME! You banked <b style="color:#8fefff">💎 '+MG.score+' SHARDS</b>. Play again?';
+  } else {
+    document.getElementById('mgHelper').textContent='TIME! No gems caught — give it another go!';
+  }
+}
+function mgLoop(now){
+  if(!MG.running) return;
+  const g=MG.ctx, W=MG.W, H=MG.H;
+  const dt=Math.min(50, now-MG.lastT); MG.lastT=now;
+  MG.timeLeft -= dt/1000;
+  if(MG.timeLeft<=0){ MG.timeLeft=0; mgDraw(); mgEnd(); return; }
+  // move basket
+  const speed=7;
+  if(MG.mouseX!=null){ MG.basketX += (MG.mouseX-MG.basketX)*0.35; }
+  else { if(MG.keys.left) MG.basketX-=speed; if(MG.keys.right) MG.basketX+=speed; }
+  MG.basketX=Math.max(MG.basketW/2, Math.min(W-MG.basketW/2, MG.basketX));
+  // spawn items (mostly gems, some bombs; ramps up slightly over time)
+  MG.spawnT-=dt;
+  if(MG.spawnT<=0){
+    const bomb=Math.random()<0.24;
+    MG.items.push({ x:24+Math.random()*(W-48), y:-16, vy:2.4+Math.random()*2.2+(30-MG.timeLeft)*0.05, r:13, bomb });
+    MG.spawnT=430+Math.random()*320;
+  }
+  // update items + catch detection
+  const by=H-30;
+  MG.items.forEach(it=>{
+    it.y += it.vy*(dt/16.7);
+    const caught = it.y+it.r>=by-MG.basketH && it.y-it.r<=by && Math.abs(it.x-MG.basketX)<MG.basketW/2+it.r-2;
+    if(caught && !it.done){
+      it.done=true; it.dead=true;
+      if(it.bomb){ MG.timeLeft=Math.max(0, MG.timeLeft-3); SFX.hit(); }
+      else { MG.score+=1; SFX.beep('E6','32n'); }
+    }
+    if(it.y-it.r>H) it.dead=true;
+  });
+  MG.items=MG.items.filter(it=>!it.dead);
+  // HUD
+  document.getElementById('mgScore').textContent='💎 '+MG.score;
+  document.getElementById('mgTime').textContent='⏱ '+Math.ceil(MG.timeLeft);
+  mgDraw();
+  MG.anim=requestAnimationFrame(mgLoop);
+}
+function mgDraw(){
+  const g=MG.ctx, W=MG.W, H=MG.H;
+  g.clearRect(0,0,W,H);
+  // falling items
+  MG.items.forEach(it=>{
+    g.save(); g.translate(it.x,it.y);
+    if(it.bomb){
+      g.fillStyle='#2b2d42'; g.beginPath(); g.arc(0,0,it.r,0,Math.PI*2); g.fill();
+      g.strokeStyle='#f4a300'; g.lineWidth=2; g.beginPath(); g.moveTo(it.r*0.5,-it.r*0.6); g.lineTo(it.r*1.1,-it.r*1.2); g.stroke();
+      g.fillStyle='#ff5714'; g.beginPath(); g.arc(it.r*1.1,-it.r*1.2,2.4,0,Math.PI*2); g.fill();
+    } else {
+      g.shadowColor='#8fefff'; g.shadowBlur=12; g.fillStyle='#8fefff';
+      g.beginPath(); g.moveTo(0,-it.r); g.lineTo(it.r*0.8,-it.r*0.1); g.lineTo(0,it.r); g.lineTo(-it.r*0.8,-it.r*0.1); g.closePath(); g.fill();
+      g.shadowBlur=0; g.fillStyle='rgba(255,255,255,.85)'; g.beginPath(); g.moveTo(0,-it.r); g.lineTo(it.r*0.3,-it.r*0.1); g.lineTo(0,-it.r*0.1); g.closePath(); g.fill();
+    }
+    g.restore();
+  });
+  // basket
+  const by=H-30;
+  g.fillStyle='#fdbb2d';
+  roundRect(g, MG.basketX-MG.basketW/2, by-MG.basketH, MG.basketW, MG.basketH, 6);
+  g.fillStyle='#b06a10'; g.fillRect(MG.basketX-MG.basketW/2, by-4, MG.basketW, 4);
+  g.strokeStyle='rgba(255,255,255,.5)'; g.lineWidth=2;
+  for(let i=1;i<4;i++){ const x=MG.basketX-MG.basketW/2+i*(MG.basketW/4); g.beginPath(); g.moveTo(x,by-MG.basketH); g.lineTo(x,by); g.stroke(); }
+}
+mgInit();
+document.getElementById('minigameBtn').onclick=()=>{
+  MG.running=false; cancelAnimationFrame(MG.anim);
+  MG.score=0; MG.timeLeft=30; MG.items=[]; MG.basketX=MG.W/2;
+  document.getElementById('mgStart').textContent='START'; document.getElementById('mgStart').disabled=false;
+  document.getElementById('mgHelper').textContent='CATCH THE 💎 · DODGE THE 💣 · MOVE WITH ← → / A D / MOUSE';
+  document.getElementById('mgScore').textContent='💎 0';
+  document.getElementById('mgTime').textContent='⏱ 30';
+  mgDraw();
+  show('minigame');
+};
+document.getElementById('mgStart').onclick=()=>{ mgStart(); };
+document.getElementById('mgBack').onclick=()=>{ MG.running=false; cancelAnimationFrame(MG.anim); buildShop(); show('shop'); };
+
 
 
 /* ---------------- STATS SCREEN ---------------- */
@@ -4862,7 +5074,7 @@ function startMatch(){
     p2.maxHp=Math.round(gm.hp*2.2); p2.hp=p2.maxHp;
   }
   players=[p1,p2];
-  projectiles=[]; particles=[]; strikes=[]; shocks=[]; afterimages=[]; blackholes=[]; eclipseT=0;
+  projectiles=[]; particles=[]; strikes=[]; shocks=[]; afterimages=[]; blackholes=[]; eclipseT=0; shardPickups=[]; shardSpawnTimer=300;
   // SOCCER: spawn a ball + two goals, reset the score
   soccerBall=null; soccerScore=[0,0]; soccerGoalTimer=0;
   if(gm.soccer){
@@ -4895,7 +5107,7 @@ function startOnlineMatch(){
   const p2 = new Fighter(p2Pick, mainX+mainW*0.65, false, Net.p2Cos||0, 'none');
   [p1,p2].forEach(f=>{ f.maxHp=gm.hp; f.hp=gm.hp; f.stocks=gm.stocks; f.startStocks=gm.stocks; f.superMeter=gm.startSuper||0; });
   players=[p1,p2];
-  projectiles=[]; particles=[]; strikes=[]; shocks=[]; afterimages=[]; blackholes=[]; eclipseT=0;
+  projectiles=[]; particles=[]; strikes=[]; shocks=[]; afterimages=[]; blackholes=[]; eclipseT=0; shardPickups=[]; shardSpawnTimer=300;
   soccerBall=null; soccerScore=[0,0];
   document.getElementById('p1name').textContent=(Net.isHost?'YOU · ':'')+ 'P1 · '+p1Pick.name;
   document.getElementById('p2name').textContent=(!Net.isHost?'YOU · ':'')+ 'P2 · '+p2Pick.name;
@@ -5293,6 +5505,7 @@ function trySpecial(f){
     projectiles.push({owner:f, x:f.cx+f.face*22, y:f.cy-6, vx:f.face*7, vy:-7.5,
       life:120, dmg:11, kb:6, color:'#fff6e0', type:'egg', r:8, gravity:true, splat:true});
     spawnParticles(f.cx+f.face*20, f.cy, '#fff6e0', 5);
+  } else if(s==='swarm'){
     // BUG SWARM: a cluster of small homing insects
     f.attackTimer=12; f.state='attack'; f.specialCd=62;
     for(let i=0;i<4;i++){
@@ -5300,6 +5513,14 @@ function trySpecial(f){
         life:100, dmg:5, kb:3.5, color:f.def.color, type:'drone', r:5, homing:true});
     }
     spawnParticles(f.cx+f.face*20, f.cy, f.def.color, 6);
+  } else if(s==='spores'){
+    // SPORE CLOUD: three drifting homing spore puffs that seek the foe
+    f.attackTimer=14; f.state='attack'; f.specialCd=64;
+    for(let i=0;i<3;i++){
+      projectiles.push({owner:f, x:f.cx+f.face*22, y:f.cy-10+i*9, vx:f.face*(3.5+Math.random()), vy:(i-1)*1.2,
+        life:110, dmg:6, kb:4, color:'#8fbf6a', type:'drone', r:7, homing:true});
+    }
+    spawnParticles(f.cx+f.face*20, f.cy, '#8fbf6a', 7);
   } else if(s==='splash'){
     // GEYSER SPOUT: a rapid burst of arcing water bubbles that pop on contact,
     // with a little backward recoil (otter pushes off the water jet)
@@ -5557,10 +5778,16 @@ function tryUpSpecial(f){
     f.vy=-16; f.attackTimer=16;
     f._upHit={life:16, dmg:13, kb:6, launch:0.8};
     for(let i=0;i<8;i++) particles.push({x:f.cx+(Math.random()-.5)*16,y:f.y+f.h,vx:(Math.random()-.5)*3,vy:2+Math.random()*3,life:18,color:'#c9a06a',r:2+Math.random()*2});
+  } else if(s==='swarm'){
     // WING BUZZ: flutter upward with a lingering bug hitbox
     f.vy=-15.5;
     f._upHit={life:20, dmg:11, kb:4, launch:0.6};
     for(let i=0;i<10;i++) particles.push({x:f.cx+(Math.random()-.5)*24,y:f.cy+(Math.random()-.5)*20,vx:(Math.random()-.5)*3,vy:-1-Math.random()*2,life:20,color:f.def.color,r:2});
+  } else if(s==='spores'){
+    // CANE VAULT: pole-vaults up on his cane, whacking foes with a rising hit
+    f.vy=-16; f.attackTimer=18;
+    f._upHit={life:16, dmg:14, kb:6, launch:0.9};
+    for(let i=0;i<8;i++) particles.push({x:f.cx+(Math.random()-.5)*14,y:f.y+f.h,vx:(Math.random()-.5)*2,vy:1+Math.random()*2,life:16,color:'#8fbf6a',r:2});
   } else if(s==='splash'){
     // OTTER ROLL: a spinning diagonal water-slide — glides up AND forward,
     // hitting repeatedly along the way (uses the dash contact window)
@@ -5733,7 +5960,11 @@ function trySuper(f){
   } else if(s==='egg'){ // CLEAN-UP AISLE 5 — a barrage of splattering eggs rains down
     for(let i=0;i<8;i++) projectiles.push({owner:f,x:(i+0.5)*(W/8)+(Math.random()-.5)*24,y:-20-i*16,vx:(Math.random()-.5)*2,vy:5,life:180,dmg:9,kb:6,color:'#fff6e0',type:'egg',r:8,gravity:true,splat:true});
     spawnParticles(f.cx,f.cy,'#fff6e0',16);
+  } else if(s==='swarm'){ // INFESTATION — a huge cloud of homing bugs
     for(let i=0;i<12;i++) projectiles.push({owner:f,x:f.cx+f.face*18,y:f.cy-24+i*4,vx:f.face*3.5,vy:(i-6)*0.8,life:150,dmg:6,kb:4,color:f.def.color,type:'drone',r:5,homing:true});
+  } else if(s==='spores'){ // BLOOM BURST — a big swarm of homing pollen spores
+    for(let i=0;i<11;i++) projectiles.push({owner:f,x:f.cx+f.face*18,y:f.cy-24+i*4,vx:f.face*3,vy:(i-5)*0.8,life:160,dmg:6,kb:4,color:'#8fbf6a',type:'drone',r:6,homing:true});
+    spawnParticles(f.cx,f.cy,'#8fbf6a',18);
   } else if(s==='splash'){ // TIDAL WAVE — a towering wave that rolls across the stage
     projectiles.push({owner:f, x:f.cx, y:GROUND_Y-90, vx:(f.face||1)*6, vy:0,
       life:170, dmg:6, kb:9, color:'#7ad7ff', type:'wave', r:70, hitEvery:true});
@@ -5994,7 +6225,7 @@ function botThink(bot, foe){
   }
 
   bot.face=dir;
-  const ranged = (bot.def.special==='pitch'||bot.def.special==='drone'||bot.def.special==='bolt'||bot.def.special==='bomb'||bot.def.special==='serve'||bot.def.special==='rocks'||bot.def.special==='minidrone'||bot.def.special==='frost'||bot.def.special==='flask'||bot.def.special==='egg'||bot.def.special==='swarm'||bot.def.special==='splash'||bot.def.special==='soundwave'||bot.def.special==='pounce'||bot.def.special==='evilserve'||bot.def.special==='numbers'||bot.def.special==='coins'||bot.def.special==='slipper'||bot.def.special==='pellet'||bot.def.special==='shock'||bot.def.special==='bullets'||bot.def.special==='football'||bot.def.special==='curve'||bot.def.special==='controller'||bot.def.special==='doom');
+  const ranged = (bot.def.special==='pitch'||bot.def.special==='drone'||bot.def.special==='bolt'||bot.def.special==='bomb'||bot.def.special==='serve'||bot.def.special==='rocks'||bot.def.special==='minidrone'||bot.def.special==='frost'||bot.def.special==='flask'||bot.def.special==='egg'||bot.def.special==='swarm'||bot.def.special==='spores'||bot.def.special==='splash'||bot.def.special==='soundwave'||bot.def.special==='pounce'||bot.def.special==='evilserve'||bot.def.special==='numbers'||bot.def.special==='coins'||bot.def.special==='slipper'||bot.def.special==='pellet'||bot.def.special==='shock'||bot.def.special==='bullets'||bot.def.special==='football'||bot.def.special==='curve'||bot.def.special==='controller'||bot.def.special==='doom');
   const rush = (bot.def.special==='dash'||bot.def.special==='pound'||bot.def.special==='kick'||bot.def.special==='glitch'||bot.def.special==='breakdance'||bot.def.special==='twocat'||bot.def.special==='launch'||bot.def.special==='car'||bot.def.special==='slam'||bot.def.special==='foxfire');
   // approach or space
   if(dist>170){
@@ -6456,7 +6687,76 @@ function update(t){
 
   if(soccerBall) updateSoccer();
 
+  updateShardPickups();
+
   if(shakeT>0)shakeT--;
+}
+
+/* ---------------- SHARD PICKUPS (a fun mid-match way to earn SHARDS) ---------------- */
+// Every so often a glittering 💎 gem drops onto the stage. Touch it with a HUMAN
+// fighter to bank a few bonus SHARDS — a little treasure-hunt on top of the fight.
+// Skipped in online matches (keeps netcode simple) and only human players collect.
+const SHARD_PICKUP_VALUE = 5;
+function humanFighters(){
+  // in local play P1 is always human; P2 is human only in 2P mode
+  const arr=[];
+  if(players[0] && !players[0].isBot) arr.push(players[0]);
+  if(players[1] && !players[1].isBot) arr.push(players[1]);
+  return arr;
+}
+function updateShardPickups(){
+  if(mode==='online') return;               // no pickups online
+  if(!PLATS || !PLATS[0]) return;
+  // maybe spawn a new gem (cap of 2 on screen so they stay special)
+  if(shardSpawnTimer>0) shardSpawnTimer--;
+  if(shardSpawnTimer<=0 && shardPickups.length<2){
+    const main=PLATS[0];
+    const gx = main.x + 40 + Math.random()*(main.w-80);
+    shardPickups.push({ x:gx, y:-20, vy:2, r:11, life:600, grounded:false, bob:Math.random()*6 });
+    shardSpawnTimer = 600 + Math.floor(Math.random()*600);   // ~10-20s between gems at 60fps
+  }
+  const main=PLATS[0];
+  shardPickups.forEach(g=>{
+    g.life--;
+    if(!g.grounded){
+      g.vy+=0.4; g.y+=g.vy;
+      // settle on the main platform top
+      if(g.y >= main.y - g.r && g.x>main.x && g.x<main.x+main.w){ g.y=main.y-g.r; g.vy=0; g.grounded=true; }
+      if(g.y > H+40) g.life=0;              // fell off the stage
+    } else {
+      g.bob+=0.12;
+    }
+    // collection: any human fighter touching the gem banks bonus shards
+    humanFighters().forEach(f=>{
+      if(f.dead) return;
+      if(Math.abs(f.cx-g.x) < f.w*0.5+g.r && Math.abs(f.cy-g.y) < f.h*0.6+g.r && g.life>0){
+        g.life=0;
+        Save.addCurrency(SHARD_PICKUP_VALUE);
+        SFX.beep('E6','16n'); SFX.beep('B6','16n');
+        spawnParticles(g.x,g.y,'#8fefff',14); spawnParticles(g.x,g.y,'#fff',8);
+        announce('+'+SHARD_PICKUP_VALUE+' 💎');
+        updateHUD();
+      }
+    });
+  });
+  shardPickups=shardPickups.filter(g=>g.life>0);
+}
+// draw the floating gems (called from the render loop)
+function drawShardPickups(t){
+  shardPickups.forEach(g=>{
+    const yy = g.y + (g.grounded ? Math.sin(g.bob)*3 : 0);
+    ctx.save();
+    ctx.translate(g.x, yy);
+    // fade out in the last second of life
+    ctx.globalAlpha = g.life<60 ? Math.max(0.2, g.life/60) : 1;
+    ctx.shadowColor='#8fefff'; ctx.shadowBlur=14;
+    // diamond gem
+    ctx.fillStyle='#8fefff';
+    ctx.beginPath(); ctx.moveTo(0,-g.r); ctx.lineTo(g.r*0.8,-g.r*0.1); ctx.lineTo(0,g.r); ctx.lineTo(-g.r*0.8,-g.r*0.1); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='#e0f7ff'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,.8)'; ctx.beginPath(); ctx.moveTo(0,-g.r); ctx.lineTo(g.r*0.3,-g.r*0.1); ctx.lineTo(0,-g.r*0.1); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  });
 }
 
 // Goal dimensions: a goal mouth on each side wall
@@ -6589,6 +6889,9 @@ function render(t){
     ctx.fillStyle=stagePick.platTop;
     ctx.fillRect(pl.x+4, pl.y, pl.w-8, 3);
   });
+
+  // bonus SHARD gems (a mid-match way to earn shards)
+  drawShardPickups(t);
 
   // projectiles
   projectiles.forEach(pr=>{
