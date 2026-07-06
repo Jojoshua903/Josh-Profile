@@ -388,6 +388,8 @@
   /* minigame (gem rush) */
   .mghud{font-family:"Impact",sans-serif;letter-spacing:.06em;font-size:clamp(16px,2.6vw,24px);color:#8fefff;margin-top:10px;transform:skewX(-5deg);}
   #mgCanvas{width:min(92%,640px);max-width:640px;aspect-ratio:16/9;background:radial-gradient(circle at 50% 20%, #16213e, #0a0e1f);border:3px solid #8fefff;border-radius:14px;margin-top:10px;box-shadow:0 0 24px rgba(143,239,255,.25);touch-action:none;}
+  .mgcombo{color:#fdbb2d;font-size:.85em;opacity:.95;}
+  #mgBest{color:#ffd76a;font-size:.85em;}
 
   /* skill tree screen */
   #skills{justify-content:flex-start;overflow-y:auto;padding-top:3%;padding-bottom:40px;}
@@ -722,7 +724,7 @@
   <div class="screen hidden" id="minigame">
     <h2 style="font-size:clamp(20px,4vw,40px);color:#8fefff;transform:skewX(-6deg);text-shadow:0 3px 0 rgba(0,0,0,.4);">🎮 GEM RUSH</h2>
     <div class="helper" id="mgHelper">CATCH THE 💎 · DODGE THE 💣 · MOVE WITH ← → / A D / MOUSE</div>
-    <div class="mghud"><span id="mgScore">💎 0</span> &nbsp;·&nbsp; <span id="mgTime">⏱ 30</span></div>
+    <div class="mghud"><span id="mgScore">💎 0</span> &nbsp;·&nbsp; <span id="mgCombo" class="mgcombo"></span> &nbsp;·&nbsp; <span id="mgTime">⏱ 30</span> &nbsp;·&nbsp; <span id="mgBest">🏆 0</span></div>
     <canvas id="mgCanvas" width="640" height="360"></canvas>
     <div class="btnrow">
       <button class="btn btn-back" id="mgBack">◀ BACK</button>
@@ -4402,17 +4404,34 @@ applyMenuTheme();
 /* ---------------- MINIGAME: GEM RUSH ----------------
    A quick catch game: gems fall from the top — catch them in your basket to earn
    SHARDS; dodge bombs (they cost you time). Runs ~30s, then banks what you caught.
-   Fully self-contained: its own canvas, rAF loop, and input handlers. */
+   Fully self-contained: its own canvas, rAF loop, and input handlers.
+   Item types: gem (1pt), rare gold gem (5pt, rarer), clock gem (+3s bonus time),
+   bomb (-3s + resets combo). Consecutive gem catches build a combo multiplier;
+   missing a gem (letting it fall) or catching a bomb resets it. Best score is
+   persisted via Save so there's something to chase between sessions. */
 const MG = {
   cv:null, ctx:null, W:640, H:360,
   running:false, anim:null,
-  basketX:320, basketW:78, basketH:20,
-  items:[], spawnT:0, score:0, timeLeft:0, lastT:0,
+  basketX:320, basketW:78, basketH:20, squash:0,
+  items:[], particles:[], popups:[], spawnT:0, score:0, timeLeft:0, lastT:0,
+  combo:0, comboBest:0, shake:0, best:0,
   keys:{left:false,right:false}, mouseX:null,
 };
+function mgComboMult(){ return Math.min(5, 1+Math.floor(MG.combo/3)); }
+function mgSpawnParticles(x,y,color,n){
+  for(let i=0;i<n;i++){
+    const a=Math.random()*Math.PI*2, sp=1.2+Math.random()*2.6;
+    MG.particles.push({ x,y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp-1, life:1, color });
+  }
+}
+function mgSpawnPopup(x,y,text,color){
+  MG.popups.push({ x,y, text, color, life:1 });
+}
 function mgInit(){
   MG.cv=document.getElementById('mgCanvas');
   MG.ctx=MG.cv.getContext('2d');
+  MG.best=Save.getSetting('mgBest',0);
+  const bestEl=document.getElementById('mgBest'); if(bestEl) bestEl.textContent='🏆 '+MG.best;
   // pointer / touch steering (map client X to canvas X)
   const toCanvasX=(clientX)=>{ const r=MG.cv.getBoundingClientRect(); return (clientX-r.left)/r.width*MG.W; };
   MG.cv.addEventListener('mousemove', e=>{ MG.mouseX=toCanvasX(e.clientX); });
@@ -4435,11 +4454,13 @@ function mgInit(){
 function mgStart(){
   if(MG.running) return;
   MG.running=true;
-  MG.items=[]; MG.spawnT=0; MG.score=0; MG.timeLeft=30; MG.basketX=MG.W/2; MG.mouseX=null;
+  MG.items=[]; MG.particles=[]; MG.popups=[]; MG.spawnT=0; MG.score=0; MG.timeLeft=30; MG.basketX=MG.W/2; MG.mouseX=null;
+  MG.combo=0; MG.comboBest=0; MG.shake=0; MG.squash=0;
   MG.keys.left=MG.keys.right=false;
   document.getElementById('mgStart').textContent='PLAYING…';
   document.getElementById('mgStart').disabled=true;
-  document.getElementById('mgHelper').textContent='CATCH THE 💎 · DODGE THE 💣';
+  document.getElementById('mgHelper').textContent='CATCH THE 💎 · DODGE THE 💣 · CHAIN GEMS FOR A COMBO';
+  document.getElementById('mgCombo').textContent='';
   MG.lastT=performance.now();
   cancelAnimationFrame(MG.anim);
   mgLoop(MG.lastT);
@@ -4448,14 +4469,20 @@ function mgEnd(){
   MG.running=false;
   document.getElementById('mgStart').textContent='PLAY AGAIN';
   document.getElementById('mgStart').disabled=false;
+  document.getElementById('mgCombo').textContent='';
+  let newBest=false;
+  if(MG.score>MG.best){ MG.best=MG.score; Save.setSetting('mgBest', MG.best); newBest=true; }
+  document.getElementById('mgBest').textContent='🏆 '+MG.best;
   if(MG.score>0){
     Save.addCurrency(MG.score);
     refreshProfileLine();
-    document.getElementById('mgHelper').innerHTML='TIME! You banked <b style="color:#8fefff">💎 '+MG.score+' SHARDS</b>. Play again?';
+    const bestTag = newBest? ' <b style="color:#ffd76a">· NEW BEST!</b>' : '';
+    document.getElementById('mgHelper').innerHTML='TIME! You banked <b style="color:#8fefff">💎 '+MG.score+' SHARDS</b>'+bestTag+'. Play again?';
   } else {
     document.getElementById('mgHelper').textContent='TIME! No gems caught — give it another go!';
   }
 }
+function mgBreakCombo(){ MG.combo=0; }
 function mgLoop(now){
   if(!MG.running) return;
   const g=MG.ctx, W=MG.W, H=MG.H;
@@ -4467,12 +4494,20 @@ function mgLoop(now){
   if(MG.mouseX!=null){ MG.basketX += (MG.mouseX-MG.basketX)*0.35; }
   else { if(MG.keys.left) MG.basketX-=speed; if(MG.keys.right) MG.basketX+=speed; }
   MG.basketX=Math.max(MG.basketW/2, Math.min(W-MG.basketW/2, MG.basketX));
-  // spawn items (mostly gems, some bombs; ramps up slightly over time)
+  MG.squash=Math.max(0, MG.squash-dt*0.006);
+  MG.shake=Math.max(0, MG.shake-dt*0.02);
+  // spawn items — mostly gems, some rare/time gems, some bombs; ramps up over time
   MG.spawnT-=dt;
   if(MG.spawnT<=0){
-    const bomb=Math.random()<0.24;
-    MG.items.push({ x:24+Math.random()*(W-48), y:-16, vy:2.4+Math.random()*2.2+(30-MG.timeLeft)*0.05, r:13, bomb });
-    MG.spawnT=430+Math.random()*320;
+    const elapsed=30-MG.timeLeft;
+    const roll=Math.random();
+    let type;
+    if(roll<0.20) type='bomb';
+    else if(roll<0.30) type='rare';
+    else if(roll<0.38) type='time';
+    else type='gem';
+    MG.items.push({ x:24+Math.random()*(W-48), y:-16, vy:2.4+Math.random()*2.2+elapsed*0.055, r:type==='rare'?11:13, type });
+    MG.spawnT=Math.max(230, 430+Math.random()*320-elapsed*4);
   }
   // update items + catch detection
   const by=H-30;
@@ -4481,51 +4516,103 @@ function mgLoop(now){
     const caught = it.y+it.r>=by-MG.basketH && it.y-it.r<=by && Math.abs(it.x-MG.basketX)<MG.basketW/2+it.r-2;
     if(caught && !it.done){
       it.done=true; it.dead=true;
-      if(it.bomb){ MG.timeLeft=Math.max(0, MG.timeLeft-3); SFX.hit(); }
-      else { MG.score+=1; SFX.beep('E6','32n'); }
+      MG.squash=1;
+      if(it.type==='bomb'){
+        MG.timeLeft=Math.max(0, MG.timeLeft-3); SFX.hit(); mgBreakCombo(); MG.shake=1;
+        mgSpawnParticles(it.x,by-MG.basketH,'#ff5714',14);
+        mgSpawnPopup(it.x,by-MG.basketH,'-3s','#ff5714');
+      } else if(it.type==='time'){
+        MG.timeLeft=Math.min(45, MG.timeLeft+3); SFX.beep('A5','16n');
+        mgSpawnParticles(it.x,by-MG.basketH,'#7CFC98',12);
+        mgSpawnPopup(it.x,by-MG.basketH,'+3s','#7CFC98');
+      } else {
+        MG.combo++; if(MG.combo>MG.comboBest) MG.comboBest=MG.combo;
+        const mult=mgComboMult();
+        const val=(it.type==='rare'?5:1)*mult;
+        MG.score+=val;
+        SFX.beep(it.type==='rare'?'A6':'E6','32n');
+        const col=it.type==='rare'?'#ffd76a':'#8fefff';
+        mgSpawnParticles(it.x,by-MG.basketH,col, it.type==='rare'?16:9);
+        mgSpawnPopup(it.x,by-MG.basketH,'+'+val+(mult>1?' ×'+mult:''),col);
+      }
     }
-    if(it.y-it.r>H) it.dead=true;
+    if(it.y-it.r>H){ it.dead=true; if(it.type==='gem'||it.type==='rare') mgBreakCombo(); }
   });
   MG.items=MG.items.filter(it=>!it.dead);
+  // particles + popups
+  MG.particles.forEach(p=>{ p.x+=p.vx*(dt/16.7); p.y+=p.vy*(dt/16.7); p.vy+=0.12*(dt/16.7); p.life-=dt/420; });
+  MG.particles=MG.particles.filter(p=>p.life>0);
+  MG.popups.forEach(p=>{ p.y-=0.6*(dt/16.7); p.life-=dt/650; });
+  MG.popups=MG.popups.filter(p=>p.life>0);
   // HUD
   document.getElementById('mgScore').textContent='💎 '+MG.score;
   document.getElementById('mgTime').textContent='⏱ '+Math.ceil(MG.timeLeft);
+  document.getElementById('mgCombo').textContent = MG.combo>=3 ? ('🔥 ×'+mgComboMult()) : '';
   mgDraw();
   MG.anim=requestAnimationFrame(mgLoop);
 }
 function mgDraw(){
   const g=MG.ctx, W=MG.W, H=MG.H;
   g.clearRect(0,0,W,H);
+  g.save();
+  if(MG.shake>0){ const s=MG.shake*7; g.translate((Math.random()-0.5)*s,(Math.random()-0.5)*s); }
   // falling items
   MG.items.forEach(it=>{
     g.save(); g.translate(it.x,it.y);
-    if(it.bomb){
+    if(it.type==='bomb'){
       g.fillStyle='#2b2d42'; g.beginPath(); g.arc(0,0,it.r,0,Math.PI*2); g.fill();
       g.strokeStyle='#f4a300'; g.lineWidth=2; g.beginPath(); g.moveTo(it.r*0.5,-it.r*0.6); g.lineTo(it.r*1.1,-it.r*1.2); g.stroke();
       g.fillStyle='#ff5714'; g.beginPath(); g.arc(it.r*1.1,-it.r*1.2,2.4,0,Math.PI*2); g.fill();
+    } else if(it.type==='time'){
+      g.shadowColor='#7CFC98'; g.shadowBlur=12; g.fillStyle='#0d2a1a';
+      g.beginPath(); g.arc(0,0,it.r,0,Math.PI*2); g.fill();
+      g.strokeStyle='#7CFC98'; g.lineWidth=2.4; g.beginPath(); g.arc(0,0,it.r,0,Math.PI*2); g.stroke();
+      g.shadowBlur=0; g.beginPath(); g.moveTo(0,0); g.lineTo(0,-it.r*0.6); g.moveTo(0,0); g.lineTo(it.r*0.4,it.r*0.15); g.stroke();
     } else {
-      g.shadowColor='#8fefff'; g.shadowBlur=12; g.fillStyle='#8fefff';
+      const rare=it.type==='rare';
+      const col=rare?'#ffd76a':'#8fefff';
+      g.shadowColor=col; g.shadowBlur=rare?16:12; g.fillStyle=col;
       g.beginPath(); g.moveTo(0,-it.r); g.lineTo(it.r*0.8,-it.r*0.1); g.lineTo(0,it.r); g.lineTo(-it.r*0.8,-it.r*0.1); g.closePath(); g.fill();
       g.shadowBlur=0; g.fillStyle='rgba(255,255,255,.85)'; g.beginPath(); g.moveTo(0,-it.r); g.lineTo(it.r*0.3,-it.r*0.1); g.lineTo(0,-it.r*0.1); g.closePath(); g.fill();
+      if(rare){ g.strokeStyle='rgba(255,255,255,.7)'; g.lineWidth=1.4; g.beginPath(); g.moveTo(0,-it.r*1.3); g.lineTo(0,it.r*1.3); g.moveTo(-it.r*0.9,0); g.lineTo(it.r*0.9,0); g.stroke(); }
     }
     g.restore();
   });
-  // basket
+  // particles (catch bursts)
+  MG.particles.forEach(p=>{
+    g.globalAlpha=Math.max(0,p.life);
+    g.fillStyle=p.color;
+    g.beginPath(); g.arc(p.x,p.y,2.4,0,Math.PI*2); g.fill();
+  });
+  g.globalAlpha=1;
+  // popups ("+1", "+5 ×2", "-3s"...)
+  MG.popups.forEach(p=>{
+    g.globalAlpha=Math.max(0,p.life);
+    g.font='700 15px Arial,sans-serif'; g.textAlign='center'; g.fillStyle=p.color;
+    g.fillText(p.text, p.x, p.y);
+  });
+  g.globalAlpha=1;
+  // basket (squashes briefly on a catch)
   const by=H-30;
+  const sq=MG.squash>0? 1+MG.squash*0.22 : 1;
+  const bw=MG.basketW*sq, bh=MG.basketH*(1/Math.max(1,sq*0.6+0.4));
   g.fillStyle='#fdbb2d';
-  roundRect(g, MG.basketX-MG.basketW/2, by-MG.basketH, MG.basketW, MG.basketH, 6);
-  g.fillStyle='#b06a10'; g.fillRect(MG.basketX-MG.basketW/2, by-4, MG.basketW, 4);
+  roundRect(g, MG.basketX-bw/2, by-bh, bw, bh, 6);
+  g.fillStyle='#b06a10'; g.fillRect(MG.basketX-bw/2, by-4, bw, 4);
   g.strokeStyle='rgba(255,255,255,.5)'; g.lineWidth=2;
-  for(let i=1;i<4;i++){ const x=MG.basketX-MG.basketW/2+i*(MG.basketW/4); g.beginPath(); g.moveTo(x,by-MG.basketH); g.lineTo(x,by); g.stroke(); }
+  for(let i=1;i<4;i++){ const x=MG.basketX-bw/2+i*(bw/4); g.beginPath(); g.moveTo(x,by-bh); g.lineTo(x,by); g.stroke(); }
+  g.restore();
 }
 mgInit();
 document.getElementById('minigameBtn').onclick=()=>{
   MG.running=false; cancelAnimationFrame(MG.anim);
-  MG.score=0; MG.timeLeft=30; MG.items=[]; MG.basketX=MG.W/2;
+  MG.score=0; MG.timeLeft=30; MG.items=[]; MG.particles=[]; MG.popups=[]; MG.basketX=MG.W/2; MG.combo=0; MG.shake=0; MG.squash=0;
   document.getElementById('mgStart').textContent='START'; document.getElementById('mgStart').disabled=false;
   document.getElementById('mgHelper').textContent='CATCH THE 💎 · DODGE THE 💣 · MOVE WITH ← → / A D / MOUSE';
   document.getElementById('mgScore').textContent='💎 0';
   document.getElementById('mgTime').textContent='⏱ 30';
+  document.getElementById('mgCombo').textContent='';
+  document.getElementById('mgBest').textContent='🏆 '+(Save.getSetting('mgBest',0));
   mgDraw();
   show('minigame');
 };
@@ -5558,6 +5645,7 @@ function trySpecial(f){
     }
     spawnParticles(f.cx, f.cy, '#6ec8ff', 14);
     spawnParticles(f.cx, f.cy, '#fff', 6);
+  } else if(s==='evilserve'){
     // CURSE SERVE: a heavy, hard-hitting dark ball that ricochets (slower but stronger than Adam)
     f.attackTimer=16; f.state='attack'; f.specialCd=48;
     projectiles.push({owner:f, x:f.cx+f.face*28, y:f.cy-8, vx:f.face*14, vy:2,
