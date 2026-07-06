@@ -3271,6 +3271,169 @@ function drawStageBg(g, st, cw, ch, t){
     [cw*0.12, cw*0.86].forEach(cxx=>{ g.fillRect(cxx-3,gy-ch*0.12,6,ch*0.12); g.fillRect(cxx-3,gy-ch*0.09,-8,4); g.fillRect(cxx+3,gy-ch*0.07,8,4); });
     // papel picado banner
     for(let i=0;i<10;i++){ g.fillStyle=['#ff5714','#ffd60a','#00a86b','#e01e5a'][i%4]; g.beginPath(); g.moveTo(i*cw*0.1,ch*0.1); g.lineTo(i*cw*0.1+cw*0.05,ch*0.1); g.lineTo(i*cw*0.1+cw*0.025,ch*0.15); g.closePath(); g.fill(); }
+  } else if(st.decor==='zoetermeer'){ // ZOETERMEER: Mandelabrug over rail + A12, Alfrink College, RandstadRail
+    // soft sun
+    g.fillStyle='rgba(255,247,210,.7)'; g.beginPath(); g.arc(cw*0.84,ch*0.2,ch*0.08,0,Math.PI*2); g.fill();
+    // distant modern-centre skyline (het Forum / Cadenza high-rises)
+    g.fillStyle='rgba(90,110,130,.5)';
+    const sbw=cw*0.05;
+    for(let i=0;i<6;i++){ const bx=cw*0.5+i*sbw*1.1; const bh=(gy*0.5)*(0.5+((i*41)%10)/10); g.fillRect(bx, gy*0.5-bh+gy*0.06, sbw, bh); }
+    // lit windows on the skyline
+    g.fillStyle='rgba(253,220,120,.7)';
+    for(let i=0;i<20;i++){ g.fillRect(cw*0.5+(i*37)%(cw*0.34), gy*0.5-((i*23)%Math.floor(gy*0.34))+gy*0.06, 2,2); }
+    // Alfrink College building (left) — brick block with red-accent roof, "school" feel
+    const ax=cw*0.08, aw=cw*0.16, aTop=gy*0.56;
+    g.fillStyle='#c96a4a'; g.fillRect(ax, aTop, aw, gy-aTop);               // brick body
+    g.fillStyle='#7a1f16'; g.fillRect(ax-4, aTop-8, aw+8, 10);              // red roof band
+    g.fillStyle='#eaf2f7';                                                  // window grid
+    for(let r=0;r<3;r++) for(let c=0;c<4;c++){ g.fillRect(ax+8+c*(aw-12)/4, aTop+10+r*((gy-aTop-10)/3), (aw-20)/4, 8); }
+    g.fillStyle='#fdbb2d'; g.font='bold '+Math.max(8,Math.round(cw*0.011))+'px Arial'; g.textAlign='center';
+    g.fillText('ALFRINK', ax+aw/2, aTop-12);
+    // the Dobbe water strip along the ground on the right
+    g.fillStyle='rgba(61,143,176,.35)'; g.fillRect(cw*0.68, gy-8, cw*0.32, ch-gy+8);
+    for(let i=0;i<5;i++){ g.strokeStyle='rgba(255,255,255,.4)'; g.lineWidth=1; g.beginPath(); g.moveTo(cw*0.7+i*cw*0.05, gy+6); g.lineTo(cw*0.72+i*cw*0.05, gy+6); g.stroke(); }
+    // THE MANDELABRUG — a covered span across the middle, over the rail/A12 trench
+    const bx0=cw*0.30, bx1=cw*0.70, bY=gy*0.42;
+    // trench underneath (A12 + railway) sitting on the ground band
+    g.fillStyle='#cdbfa4'; g.fillRect(bx0-6, gy-2, (bx1-bx0)+12, 2);
+    g.fillStyle='#e0a24a'; g.fillRect(bx0, gy-1, bx1-bx0, 3);               // A12 ribbon on ground
+    // bridge piers
+    g.fillStyle='#b5842a'; g.fillRect(cw*0.30, bY, 8, gy-bY); g.fillRect(cw*0.70-8, bY, 8, gy-bY);
+    // deck
+    g.fillStyle='#d9a441'; g.fillRect(bx0, bY, bx1-bx0, 12);
+    // covered roof (arched)
+    g.strokeStyle='#b5842a'; g.lineWidth=Math.max(3,cw*0.006);
+    g.beginPath(); g.moveTo(bx0, bY); g.quadraticCurveTo((bx0+bx1)/2, bY-ch*0.05, bx1, bY); g.stroke();
+    g.fillStyle='rgba(232,200,119,.7)';
+    g.beginPath(); g.moveTo(bx0, bY); g.quadraticCurveTo((bx0+bx1)/2, bY-ch*0.05, bx1, bY); g.lineTo(bx1,bY-3); g.quadraticCurveTo((bx0+bx1)/2, bY-ch*0.05-3, bx0, bY-3); g.closePath(); g.fill();
+    g.fillStyle='#3a2600'; g.font='bold '+Math.max(8,Math.round(cw*0.012))+'px Arial'; g.textAlign='center';
+    g.fillText('MANDELABRUG', (bx0+bx1)/2, bY-ch*0.055);
+    // a little RandstadRail tram gliding across below the bridge
+    const trx = bx0 + ((t?t/28:0) % (bx1-bx0+40)) - 20;
+    g.fillStyle='#e4572e'; g.fillRect(trx, gy-16, 34, 12);
+    g.fillStyle='#ffd9cf'; g.fillRect(trx+4, gy-13, 8, 6); g.fillRect(trx+16, gy-13, 8, 6);
+    g.fillStyle='#7a2016'; g.fillRect(trx+2, gy-5, 6, 3); g.fillRect(trx+26, gy-5, 6, 3);
+  } else if(st.decor==='neon'){ // NEO TOKYO: rainy cyberpunk skyline, holograms, reflections
+    const T=t||0;
+    // hazy moon glow
+    g.fillStyle='rgba(255,120,190,.18)'; g.beginPath(); g.arc(cw*0.5,ch*0.22,ch*0.22,0,Math.PI*2); g.fill();
+    g.fillStyle='rgba(255,220,240,.85)'; g.beginPath(); g.arc(cw*0.5,ch*0.2,ch*0.06,0,Math.PI*2); g.fill();
+    // far skyline layer (dim)
+    g.fillStyle='rgba(40,30,70,.6)';
+    for(let i=0;i<12;i++){ const bx=i*cw*0.09; const bh=(gy*0.55)*(0.35+((i*53)%10)/10); g.fillRect(bx, gy-bh, cw*0.085, bh); }
+    // mid skyline layer with neon edges
+    for(let i=0;i<8;i++){
+      const bx=cw*0.02+i*cw*0.125, bh=(gy*0.62)*(0.45+((i*71)%10)/10), by=gy-bh;
+      g.fillStyle='rgba(22,16,42,.92)'; g.fillRect(bx, by, cw*0.1, bh);
+      // neon rim (alternating cyan/magenta), pulsing
+      const pulse=0.55+0.45*Math.sin(T/300+i);
+      g.strokeStyle=(i%2? 'rgba(0,240,255,'+pulse+')':'rgba(255,60,200,'+pulse+')'); g.lineWidth=2;
+      g.strokeRect(bx+1, by+1, cw*0.1-2, bh-2);
+      // window dots
+      g.fillStyle=(i%2?'rgba(0,240,255,.5)':'rgba(255,120,220,.5)');
+      for(let w=0;w<10;w++){ if((i*7+w*13)%3===0) g.fillRect(bx+6+(w%3)*(cw*0.03), by+8+Math.floor(w/3)*(bh/4), 4,4); }
+    }
+    // giant holographic torii + kanji sign on the tallest tower
+    g.fillStyle='rgba(255,60,200,'+(0.5+0.3*Math.sin(T/220))+')';
+    g.fillRect(cw*0.62, gy*0.28, cw*0.16, 6); g.fillRect(cw*0.62, gy*0.28, 5, gy*0.3); g.fillRect(cw*0.735, gy*0.28, 5, gy*0.3);
+    g.font='bold '+Math.round(cw*0.03)+'px Arial'; g.textAlign='center';
+    g.fillStyle='rgba(0,240,255,'+(0.6+0.3*Math.sin(T/180))+')'; g.fillText('未来', cw*0.7, gy*0.45);
+    // flying drone/hovercar with light trail
+    const hx=(T/8)%(cw+120)-60, hy=gy*0.3+Math.sin(T/240)*ch*0.03;
+    g.fillStyle='rgba(255,240,120,.8)'; g.fillRect(hx,hy,16,5);
+    g.fillStyle='rgba(255,240,120,.25)'; g.fillRect(hx-40,hy+1,40,3);
+    // wet street reflections on the ground band
+    g.fillStyle='rgba(10,6,24,.5)'; g.fillRect(0,gy,cw,ch-gy);
+    for(let i=0;i<8;i++){ const rx=cw*0.05+i*cw*0.12; g.fillStyle=(i%2?'rgba(0,240,255,.16)':'rgba(255,60,200,.16)'); g.fillRect(rx, gy+4, cw*0.02, ch-gy-6); }
+    // rain streaks
+    g.strokeStyle='rgba(180,220,255,.35)'; g.lineWidth=1;
+    for(let i=0;i<60;i++){ const rx=(i*89 + T*1.2)%cw; const ry=(i*57 + T*3)%gy; g.beginPath(); g.moveTo(rx,ry); g.lineTo(rx-3,ry+12); g.stroke(); }
+  } else if(st.decor==='volcano'){ // VOLCANO: erupting cone, lava, embers, ash
+    const T=t||0;
+    // ash sky haze
+    g.fillStyle='rgba(60,20,20,.25)'; g.fillRect(0,0,cw,gy);
+    // back ridge
+    g.fillStyle='#3a2420'; g.beginPath(); g.moveTo(0,gy); g.lineTo(cw*0.3,gy*0.5); g.lineTo(cw*0.55,gy); g.closePath(); g.fill();
+    // main volcano cone
+    g.fillStyle='#2a1a16'; g.beginPath(); g.moveTo(cw*0.36,gy); g.lineTo(cw*0.62,gy*0.24); g.lineTo(cw*0.88,gy); g.closePath(); g.fill();
+    // glowing crater + inner lava
+    g.fillStyle='#ff7a1a'; g.beginPath(); g.moveTo(cw*0.585,gy*0.26); g.lineTo(cw*0.655,gy*0.26); g.lineTo(cw*0.66,gy*0.30); g.lineTo(cw*0.58,gy*0.30); g.closePath(); g.fill();
+    // lava flows down the cone (two wobbling rivers)
+    g.strokeStyle='#ff4500'; g.lineWidth=Math.max(4,cw*0.008); g.lineCap='round';
+    for(let f=0; f<2; f++){
+      g.beginPath(); g.moveTo(cw*0.61, gy*0.30);
+      for(let s=1;s<=6;s++){ const yy=gy*0.30+s*(gy*0.7/6); const xx=cw*(0.61+(f? 0.02:-0.02)*s)+Math.sin(T/300+s+f)*cw*0.01; g.lineTo(xx,yy); }
+      g.stroke();
+    }
+    // glow at crater
+    g.fillStyle='rgba(255,120,20,'+(0.3+0.2*Math.sin(T/200))+')'; g.beginPath(); g.arc(cw*0.62,gy*0.27,ch*0.09,0,Math.PI*2); g.fill();
+    // molten ground pools
+    g.fillStyle='#c81e00'; g.fillRect(0,gy,cw,ch-gy);
+    g.fillStyle='rgba(255,140,0,'+(0.5+0.2*Math.sin(T/150))+')';
+    for(let i=0;i<6;i++){ g.beginPath(); g.ellipse(cw*(0.1+i*0.16), gy+ (ch-gy)*0.5, cw*0.05, (ch-gy)*0.28,0,0,Math.PI*2); g.fill(); }
+    // rising embers
+    for(let i=0;i<40;i++){ const ex=(i*83 + Math.sin(T/200+i)*20)%cw; const ey=gy-((i*47 + T*1.6)%(gy)); const a=1-(gy-ey)/gy; g.fillStyle='rgba(255,'+(120+((i*7)%100))+',20,'+(0.3+0.5*a)+')'; g.fillRect(ex,ey,2+((i%3)),2+((i%3))); }
+    // ash flakes drifting down
+    for(let i=0;i<24;i++){ const ax=(i*97 - T*0.6)%cw; const ay=(i*61 + T*1.1)%gy; g.fillStyle='rgba(120,110,110,.5)'; g.fillRect((ax+cw)%cw,ay,2,2); }
+  } else if(st.decor==='atlantis'){ // ATLANTIS: sunken ruins, light rays, bubbles, fish, coral
+    const T=t||0;
+    // deep water gradient overlay
+    const wg=g.createLinearGradient(0,0,0,ch); wg.addColorStop(0,'rgba(20,90,130,.35)'); wg.addColorStop(1,'rgba(4,26,52,.6)');
+    g.fillStyle=wg; g.fillRect(0,0,cw,ch);
+    // god rays from the surface
+    g.save(); g.globalCompositeOperation='lighter';
+    for(let i=0;i<5;i++){ const rx=cw*(0.12+i*0.2)+Math.sin(T/600+i)*cw*0.02; g.fillStyle='rgba(150,220,255,'+(0.05+0.03*Math.sin(T/400+i))+')'; g.beginPath(); g.moveTo(rx,0); g.lineTo(rx+cw*0.06,0); g.lineTo(rx+cw*0.14,gy); g.lineTo(rx-cw*0.02,gy); g.closePath(); g.fill(); }
+    g.restore();
+    // sunken temple: columns + pediment
+    g.fillStyle='rgba(180,200,190,.5)';
+    const cols=[0.12,0.2,0.28,0.68,0.76,0.84];
+    cols.forEach(cx0=>{ g.fillRect(cw*cx0, gy*0.5, cw*0.03, gy-gy*0.5); g.fillRect(cw*cx0-4, gy*0.5-8, cw*0.03+8, 8); g.fillRect(cw*cx0-4, gy-6, cw*0.03+8, 6); });
+    g.fillStyle='rgba(160,185,180,.45)'; g.beginPath(); g.moveTo(cw*0.1,gy*0.5-8); g.lineTo(cw*0.34,gy*0.34); g.lineTo(cw*0.34,gy*0.5-8); g.closePath(); g.fill();
+    // broken central arch
+    g.strokeStyle='rgba(190,210,200,.5)'; g.lineWidth=cw*0.02; g.beginPath(); g.arc(cw*0.5,gy,cw*0.12,Math.PI,Math.PI*1.6); g.stroke();
+    // coral clusters on the seabed
+    ['#ff6f91','#ffb347','#c56cf0'].forEach((col,ci)=>{ g.fillStyle=col; const cx0=cw*(0.4+ci*0.08); for(let b=0;b<5;b++){ g.beginPath(); g.arc(cx0+(b-2)*6, gy+ (ch-gy)*0.5 - (b%2)*8, 5,0,Math.PI*2); g.fill(); } });
+    // schools of fish swimming across
+    for(let i=0;i<10;i++){ const fx=(T/6 + i*cw*0.12)%(cw+40)-20; const fy=gy*0.4+ (i*37)%Math.floor(gy*0.4) + Math.sin(T/200+i)*8; g.fillStyle='rgba(255,214,120,.85)'; g.beginPath(); g.moveTo(fx,fy); g.lineTo(fx-8,fy-4); g.lineTo(fx-8,fy+4); g.closePath(); g.fill(); }
+    // rising bubbles
+    for(let i=0;i<34;i++){ const bx=(i*71 + Math.sin(T/160+i)*12)%cw; const by=gy-((i*53 + T*0.9)%gy); g.strokeStyle='rgba(210,240,255,.5)'; g.lineWidth=1; g.beginPath(); g.arc(bx,by,1.5+((i%3)),0,Math.PI*2); g.stroke(); }
+    // seabed tint
+    g.fillStyle='rgba(10,40,60,.5)'; g.fillRect(0,gy,cw,ch-gy);
+  } else if(st.decor==='aurora'){ // AURORA PEAKS: northern lights, snowy mountains, pines, frozen lake
+    const T=t||0;
+    // starfield
+    for(let i=0;i<60;i++){ const sx=(i*97)%cw, sy=(i*53)%(gy*0.55); const tw=0.4+0.6*Math.abs(Math.sin(T/400+i)); g.fillStyle='rgba(255,255,255,'+tw*0.8+')'; g.fillRect(sx,sy,i%7===0?2:1,i%7===0?2:1); }
+    // aurora ribbons (layered, waving)
+    g.save(); g.globalCompositeOperation='lighter';
+    const bands=[['rgba(60,255,170,',gy*0.16],['rgba(90,150,255,',gy*0.24],['rgba(200,90,255,',gy*0.32]];
+    bands.forEach(([col,baseY],bi)=>{
+      g.beginPath();
+      for(let x=0;x<=cw;x+=cw/40){ const y=baseY+Math.sin(x/cw*6+T/500+bi)*ch*0.05+Math.sin(x/cw*13+T/300)*ch*0.02; if(x===0)g.moveTo(x,y); else g.lineTo(x,y); }
+      for(let x=cw;x>=0;x-=cw/40){ const y=baseY+ch*0.06+Math.sin(x/cw*6+T/500+bi)*ch*0.05; g.lineTo(x,y); }
+      g.closePath(); g.fillStyle=col+(0.12+0.06*Math.sin(T/350+bi))+')'; g.fill();
+    });
+    g.restore();
+    // moon
+    g.fillStyle='rgba(240,248,255,.9)'; g.beginPath(); g.arc(cw*0.82,gy*0.24,ch*0.05,0,Math.PI*2); g.fill();
+    // back mountains (snow-capped)
+    function mtn(baseCol,capCol,peaks,scale,yOff){ g.fillStyle=baseCol; g.beginPath(); g.moveTo(0,gy); let px=0; peaks.forEach((p,i)=>{ g.lineTo(px+p.w*0.5, gy-p.h*scale-yOff); px+=p.w; }); g.lineTo(cw,gy); g.closePath(); g.fill(); }
+    g.fillStyle='#2a3350'; g.beginPath(); g.moveTo(0,gy);
+    const backPk=[cw*0.18,cw*0.5,cw*0.34,cw*0.62,cw*0.2]; let bxp=0; g.lineTo(0,gy*0.62);
+    [0.5,0.35,0.55,0.4,0.5].forEach((h,i)=>{ bxp+=cw*0.22; g.lineTo(bxp, gy-gy*h); }); g.lineTo(cw,gy); g.closePath(); g.fill();
+    // front mountains
+    g.fillStyle='#3c4870'; g.beginPath(); g.moveTo(0,gy);
+    let fxp=0; [0.62,0.42,0.7,0.5].forEach((h)=>{ g.lineTo(fxp, gy-gy*h); fxp+=cw*0.33; }); g.lineTo(cw,gy); g.closePath(); g.fill();
+    // snow caps on front peaks
+    g.fillStyle='rgba(255,255,255,.9)'; let sxp=0; [0.62,0.42,0.7,0.5].forEach((h)=>{ g.beginPath(); g.moveTo(sxp-cw*0.05,gy-gy*h+ch*0.05); g.lineTo(sxp,gy-gy*h); g.lineTo(sxp+cw*0.05,gy-gy*h+ch*0.05); g.closePath(); g.fill(); sxp+=cw*0.33; });
+    // pine trees along the base
+    g.fillStyle='#16351f';
+    for(let i=0;i<14;i++){ const px=cw*0.02+i*cw*0.07; const th=ch*0.06+((i*13)%3)*ch*0.01; g.beginPath(); g.moveTo(px,gy); g.lineTo(px-8,gy); g.lineTo(px,gy-th); g.lineTo(px+8,gy); g.closePath(); g.fill(); g.fillStyle='#0f2617'; g.fillRect(px-1,gy-2,2,2); g.fillStyle='#16351f'; }
+    // frozen-lake ground reflecting the aurora
+    const lg=g.createLinearGradient(0,gy,0,ch); lg.addColorStop(0,'rgba(120,200,220,.35)'); lg.addColorStop(1,'rgba(40,80,120,.55)');
+    g.fillStyle=lg; g.fillRect(0,gy,cw,ch-gy);
+    g.fillStyle='rgba(120,255,200,.10)'; g.fillRect(0,gy+4,cw,6);
+    // falling snow
+    for(let i=0;i<30;i++){ const px=(i*67 + Math.sin(T/220+i)*14)%cw; const py=(i*53 + T*0.8)%gy; g.fillStyle='rgba(255,255,255,.8)'; g.beginPath(); g.arc(px,py,1.5,0,Math.PI*2); g.fill(); }
   }
   g.restore();
 
@@ -3344,6 +3507,53 @@ function pillarsLayout(){
     {x:W*0.40, y:H*0.44, w:W*0.20, h:14},
   ];
 }
+// ZOETERMEER — fight on the Mandelabrug: a raised covered span across the middle,
+// with the ground below and two low side ledges. Deck matches the drawn bridge
+// (x 0.30–0.70 at gy*0.42, gy = H*0.78 → y ≈ H*0.328).
+function zoetermeerLayout(){
+  return [
+    {x:W*0.14, y:H*0.80, w:W*0.72, h:22, main:true},   // ground beside rail/A12
+    {x:W*0.30, y:H*0.328, w:W*0.40, h:14},              // the Mandelabrug deck
+    {x:W*0.10, y:H*0.56, w:W*0.16, h:14},               // ledge by Alfrink College
+    {x:W*0.74, y:H*0.56, w:W*0.16, h:14},               // ledge by the Dobbe water
+  ];
+}
+// NEO TOKYO — rooftop hopping: main street + staggered rooftops
+function neonLayout(){
+  return [
+    {x:W*0.16, y:H*0.80, w:W*0.68, h:22, main:true},
+    {x:W*0.10, y:H*0.58, w:W*0.20, h:14},
+    {x:W*0.70, y:H*0.58, w:W*0.20, h:14},
+    {x:W*0.40, y:H*0.44, w:W*0.20, h:14},
+  ];
+}
+// VOLCANO — asymmetric rock ledges climbing the cone
+function volcanoLayout(){
+  return [
+    {x:W*0.20, y:H*0.80, w:W*0.60, h:22, main:true},
+    {x:W*0.12, y:H*0.60, w:W*0.18, h:16},
+    {x:W*0.66, y:H*0.54, w:W*0.20, h:16},
+    {x:W*0.40, y:H*0.40, w:W*0.18, h:14},
+  ];
+}
+// ATLANTIS — sunken temple: broad floor + two column-top platforms + arch keystone
+function atlantisLayout(){
+  return [
+    {x:W*0.18, y:H*0.80, w:W*0.64, h:22, main:true},
+    {x:W*0.10, y:H*0.50, w:W*0.22, h:14},
+    {x:W*0.68, y:H*0.50, w:W*0.22, h:14},
+    {x:W*0.42, y:H*0.60, w:W*0.16, h:14},
+  ];
+}
+// AURORA PEAKS — mountain ledges + a high summit platform
+function auroraLayout(){
+  return [
+    {x:W*0.16, y:H*0.80, w:W*0.68, h:22, main:true},
+    {x:W*0.14, y:H*0.56, w:W*0.20, h:14},
+    {x:W*0.66, y:H*0.56, w:W*0.20, h:14},
+    {x:W*0.42, y:H*0.38, w:W*0.16, h:14},
+  ];
+}
 
 const STAGES = [
   {
@@ -3352,6 +3562,13 @@ const STAGES = [
     plat:'#8a5a2b', platTop:'#c9973f', accent:'#AE1C28',
     layout:standardLayout,
     decor:'windmill'
+  },
+  {
+    id:'ztm', name:'ZOETERMEER', flag:['#AE1C28','#FFFFFF','#21468B'],
+    sky:['#8ec9e8','#c7e6f4','#8aa86a'], // Dutch daytime sky over green
+    plat:'#b5842a', platTop:'#d9a441', accent:'#e4572e', // Mandelabrug gold + tram red
+    layout:zoetermeerLayout,
+    decor:'zoetermeer'
   },
   {
     id:'jp', name:'JAPAN', flag:['#FFFFFF','#BC002D','#FFFFFF'],
@@ -3464,6 +3681,34 @@ const STAGES = [
     plat:'#a05a2c', platTop:'#d68a4a', accent:'#006847',
     layout:pillarsLayout,
     decor:'aztec'
+  },
+  {
+    id:'neo', name:'NEO TOKYO', flag:['#ff3cc8','#0a0620','#00f0ff'],
+    sky:['#1a0b3a','#3a1060','#6a1a7a'], // neon night
+    plat:'#1a1230', platTop:'#00f0ff', accent:'#ff3cc8',
+    layout:neonLayout,
+    decor:'neon'
+  },
+  {
+    id:'volcano', name:'VOLCANO', flag:['#c81e00','#3a2420','#ff7a1a'],
+    sky:['#3a1512','#7a2a18','#c04520'], // smoky red sky
+    plat:'#2a1a16', platTop:'#ff6a2a', accent:'#ff4500',
+    layout:volcanoLayout,
+    decor:'volcano'
+  },
+  {
+    id:'atlantis', name:'ATLANTIS', flag:['#0a3b5c','#1f9ac0','#8fe0ff'],
+    sky:['#0a3b5c','#12708f','#04203c'], // deep sea
+    plat:'#3a6f78', platTop:'#8fd6e0', accent:'#1f9ac0',
+    layout:atlantisLayout,
+    decor:'atlantis'
+  },
+  {
+    id:'aurora', name:'AURORA PEAKS', flag:['#3cffaa','#0a1030','#5a96ff'],
+    sky:['#050a24','#0e1a44','#1a2a56'], // polar night
+    plat:'#3c4870', platTop:'#cfe6ff', accent:'#3cffaa',
+    layout:auroraLayout,
+    decor:'aurora'
   }
 ];
 
