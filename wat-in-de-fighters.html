@@ -57,14 +57,14 @@
   .hidden{display:none !important;}
 
   /* content-heavy menus scroll from the top inside the fixed frame */
-  #select, #stage, #mode, #achieve, #settings, #online, #stats, #howto{
+  #select, #stage, #mode, #achieve, #settings, #online, #stats, #howto, #story{
     justify-content:flex-start;
     overflow-y:auto;
     padding-top:3%;
     padding-bottom:20px;
   }
-  #select::-webkit-scrollbar, #stage::-webkit-scrollbar, #mode::-webkit-scrollbar, #achieve::-webkit-scrollbar, #settings::-webkit-scrollbar, #online::-webkit-scrollbar, #stats::-webkit-scrollbar, #howto::-webkit-scrollbar{width:8px;}
-  #select::-webkit-scrollbar-thumb, #stage::-webkit-scrollbar-thumb, #mode::-webkit-scrollbar-thumb, #achieve::-webkit-scrollbar-thumb, #settings::-webkit-scrollbar-thumb, #online::-webkit-scrollbar-thumb, #stats::-webkit-scrollbar-thumb, #howto::-webkit-scrollbar-thumb{background:rgba(253,187,45,.5);border-radius:4px;}
+  #select::-webkit-scrollbar, #stage::-webkit-scrollbar, #mode::-webkit-scrollbar, #achieve::-webkit-scrollbar, #settings::-webkit-scrollbar, #online::-webkit-scrollbar, #stats::-webkit-scrollbar, #howto::-webkit-scrollbar, #story::-webkit-scrollbar{width:8px;}
+  #select::-webkit-scrollbar-thumb, #stage::-webkit-scrollbar-thumb, #mode::-webkit-scrollbar-thumb, #achieve::-webkit-scrollbar-thumb, #settings::-webkit-scrollbar-thumb, #online::-webkit-scrollbar-thumb, #stats::-webkit-scrollbar-thumb, #howto::-webkit-scrollbar-thumb, #story::-webkit-scrollbar-thumb{background:rgba(253,187,45,.5);border-radius:4px;}
   h1{
     font-size:clamp(30px,7vw,74px);
     letter-spacing:.04em;
@@ -82,7 +82,7 @@
     justify-content:flex-start; padding-top:3.5%; overflow-y:auto;
     background:
       radial-gradient(circle at 50% 0%, rgba(253,187,45,.14), transparent 55%),
-      radial-gradient(circle at 50% 32%, #26265e 0%, #12122a 55%, #0a0a14 100%);
+      radial-gradient(circle at 50% 32%, var(--menu-bg1,#26265e) 0%, var(--menu-bg2,#12122a) 55%, #0a0a14 100%);
   }
   #title::-webkit-scrollbar{width:8px;} #title::-webkit-scrollbar-thumb{background:rgba(253,187,45,.5);border-radius:4px;}
   /* logo block with an animated glow behind it */
@@ -113,6 +113,16 @@
     #title .titlegrid.menu4{grid-template-columns:repeat(2,minmax(0,1fr));}
   }
   #title .profile{margin-top:14px;}
+  /* Season Mode status readout on the title screen: a plain (non-clickable)
+     status line, plus a small, visually-quiet pill button for abandoning the
+     run — kept subordinate to the main SEASON button so it doesn't compete. */
+  .seasonStatusWrap{display:flex;flex-direction:column;align-items:center;gap:5px;margin-top:8px;flex-shrink:0;}
+  .seasonStatusText{font-family:Arial,sans-serif;font-weight:700;font-size:11px;letter-spacing:.06em;color:#cfd0e8;opacity:.8;}
+  .seasonAbandonBtn{font-family:Arial,sans-serif;font-weight:800;font-size:10px;letter-spacing:.1em;
+    color:#ff9d9d;background:rgba(255,80,80,.08);border:1px solid rgba(255,80,80,.3);
+    border-radius:20px;padding:5px 14px;cursor:pointer;transition:background .12s,transform .08s,border-color .12s;}
+  .seasonAbandonBtn:hover{background:rgba(255,80,80,.18);border-color:rgba(255,80,80,.5);}
+  .seasonAbandonBtn:active{transform:scale(.95);}
   .btn{
     margin-top:26px;
     font-family:"Impact",sans-serif;letter-spacing:.08em;
@@ -319,11 +329,12 @@
   .medalbadge span{color:#fef6e4;}
   .prestigebadge{
     font-family:"Impact",sans-serif;letter-spacing:.06em;font-size:clamp(13px,2.1vw,19px);
-    color:#ffd700;background:rgba(255,215,0,.12);border:2px solid rgba(255,215,0,.55);
+    color:var(--ptier-c1,#ffd700);background:rgba(var(--ptier-glow,255,215,0),.12);border:2px solid rgba(var(--ptier-glow,255,215,0),.55);
     padding:7px 15px;border-radius:10px;transform:skewX(-6deg);white-space:nowrap;margin-top:8px;
-    text-shadow:0 0 10px rgba(255,215,0,.5);
+    text-shadow:0 0 10px rgba(var(--ptier-glow,255,215,0),.5);
   }
   .prestigebadge span{color:#fff;}
+  .prestigebadge .ptiername{font-size:.7em;opacity:.85;margin-left:2px;}
   .prestigebadge.hidden{display:none !important;}
   #title .btn-prestige{margin-top:10px;font-size:clamp(13px,2vw,18px);padding:9px 22px;
     background:linear-gradient(180deg,#ffe27a,#f0a500);box-shadow:0 6px 0 #a06800, 0 10px 24px rgba(0,0,0,.4);
@@ -331,25 +342,33 @@
   #title .btn-prestige:active{box-shadow:0 2px 0 #a06800;}
   #title .btn-prestige.hidden{display:none !important;}
   @keyframes prestigePulse{0%,100%{filter:brightness(1);}50%{filter:brightness(1.25);}}
-  /* prestige cosmetic: golden shimmering profile name on the title screen */
+  /* prestige cosmetic: shimmering profile name on the title screen. Colors come
+     from --ptier-c1/c2 (set per prestige tier, 1-10) so the look upgrades each
+     time the player prestiges again, all the way to the tier-10 MYTHIC form. */
   .prestige-name{
-    background:linear-gradient(90deg,#ffe27a,#ffd700,#fff6c8,#ffd700,#ffb400);
+    background:linear-gradient(90deg,var(--ptier-c2,#ffb400),var(--ptier-c1,#ffd700),#fff6c8,var(--ptier-c1,#ffd700),var(--ptier-c2,#ffb400));
     background-size:200% 100%;
     -webkit-background-clip:text;background-clip:text;color:transparent;
-    text-shadow:0 0 8px rgba(255,215,0,.45);
+    text-shadow:0 0 8px rgba(var(--ptier-glow,255,215,0),.45);
     animation:prestigeShine 3s linear infinite;
   }
   @keyframes prestigeShine{0%{background-position:0% 0;}100%{background-position:200% 0;}}
-  /* prestige cosmetic: golden shimmering border around every fighter select tile */
+  /* prestige cosmetic: shimmering border around every fighter select tile */
   .char.prestige{
-    border-color:#ffd700 !important;
-    box-shadow:0 0 0 1px rgba(255,215,0,.6), 0 0 12px rgba(255,215,0,.45);
+    border-color:var(--ptier-c1,#ffd700) !important;
+    box-shadow:0 0 0 1px rgba(var(--ptier-glow,255,215,0),.6), 0 0 12px rgba(var(--ptier-glow,255,215,0),.45);
     animation:prestigeTile 2.4s ease-in-out infinite;
   }
-  @keyframes prestigeTile{0%,100%{box-shadow:0 0 0 1px rgba(255,215,0,.5), 0 0 8px rgba(255,215,0,.35);}50%{box-shadow:0 0 0 1px rgba(255,215,0,.9), 0 0 16px rgba(255,215,0,.6);}}
-  /* keep the P1/P2 selection glow readable on top of the gold */
+  @keyframes prestigeTile{0%,100%{box-shadow:0 0 0 1px rgba(var(--ptier-glow,255,215,0),.5), 0 0 8px rgba(var(--ptier-glow,255,215,0),.35);}50%{box-shadow:0 0 0 1px rgba(var(--ptier-glow,255,215,0),.9), 0 0 16px rgba(var(--ptier-glow,255,215,0),.6);}}
+  /* keep the P1/P2 selection glow readable on top of the tier color */
   .char.prestige.sel1{border-color:#4dd2ff !important;}
   .char.prestige.sel2{border-color:#ff9f4d !important;}
+  /* tier-10 MYTHIC form: the ultimate prestige cosmetic — a shifting prismatic
+     hue-rotate layered on top of everything above, unlocked only at prestige 10 */
+  @keyframes prestigeHue{0%{filter:hue-rotate(0deg);}100%{filter:hue-rotate(360deg);}}
+  .ptier-mythic .prestige-name{ animation-name:prestigeShine, prestigeHue; animation-duration:3s, 2.5s; animation-timing-function:linear, linear; animation-iteration-count:infinite, infinite; }
+  .ptier-mythic .prestigebadge{ animation:prestigeHue 2.5s linear infinite; }
+  .ptier-mythic .char.prestige{ animation-name:prestigeTile, prestigeHue; animation-duration:2.4s, 2.5s; animation-timing-function:ease-in-out, linear; animation-iteration-count:infinite, infinite; }
 
   .currencybadge{
     font-family:"Impact",sans-serif;letter-spacing:.06em;font-size:clamp(13px,2vw,18px);
@@ -547,12 +566,20 @@
 
   /* story screen */
   #story{background:radial-gradient(circle at 50% 40%, #23184a 0%, #0d0d18 78%);}
-  .storycard{max-width:min(88%,540px);display:flex;flex-direction:column;align-items:center;gap:12px;
-    background:rgba(255,255,255,.05);border:3px solid rgba(253,187,45,.4);border-radius:18px;padding:22px 26px 26px;}
-  .storycard canvas{width:110px;height:118px;}
+  .storycard{max-width:min(88%,540px);display:flex;flex-direction:column;align-items:center;gap:8px;
+    background:rgba(255,255,255,.05);border:3px solid rgba(253,187,45,.4);border-radius:18px;padding:16px 20px 20px;}
+  .storycard canvas{width:clamp(70px,14vw,110px);height:clamp(75px,15vw,118px);}
   .storyprog{font-family:Arial,sans-serif;font-weight:800;letter-spacing:.2em;font-size:11px;color:#fdbb2d;}
-  .storytext{font-family:Georgia,serif;font-size:clamp(13px,2.2vw,17px);line-height:1.6;color:#eae6f5;text-align:center;min-height:80px;}
+  .storytext{font-family:Georgia,serif;font-size:clamp(13px,2.2vw,17px);line-height:1.5;color:#eae6f5;text-align:center;min-height:40px;}
   .storytext .who{color:#fdbb2d;font-weight:bold;}
+  /* season mode: league news banners + standings strip, injected into .storytext */
+  .leagueEvent{font-family:Arial,sans-serif;font-size:clamp(11px,1.7vw,14px);line-height:1.4;color:#fdbb2d;
+    background:rgba(253,187,45,.1);border:1px solid rgba(253,187,45,.35);border-radius:10px;
+    padding:6px 12px;margin:8px auto;max-width:440px;}
+  .leagueStandings{font-family:Arial,sans-serif;font-size:clamp(10px,1.5vw,12px);letter-spacing:.02em;color:#cfd0e8;
+    background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:10px;
+    padding:6px 12px;margin:8px auto 0;max-width:480px;line-height:1.4;}
+  .leagueStandings .lsTitle{font-family:Arial,sans-serif;font-weight:800;letter-spacing:.2em;font-size:10px;color:#8fefff;margin-bottom:3px;}
 
   /* campaign hub */
   #campaign, #mission{justify-content:flex-start;overflow-y:auto;padding-top:3%;padding-bottom:24px;}
@@ -600,31 +627,7 @@
   .cutHint{font-family:Arial,sans-serif;font-weight:700;font-size:10px;letter-spacing:.16em;color:#8fefff;margin-top:10px;text-align:right;animation:splashpulse 1.4s ease-in-out infinite;}
   .cutSkip{position:absolute;top:12px;right:14px;z-index:3;margin-top:0;font-size:14px;padding:6px 16px;}
 
-  /* ---------------- SHOWDOWN MODE ---------------- */
-  #sdSelect{justify-content:flex-start;overflow-y:auto;padding-top:3%;padding-bottom:24px;
-    background:radial-gradient(circle at 50% 20%, #14324a 0%, #0d0d18 78%);}
-  #sdSelect::-webkit-scrollbar{width:8px;} #sdSelect::-webkit-scrollbar-thumb{background:rgba(143,239,255,.5);border-radius:4px;}
-  #sdResult{background:radial-gradient(circle at 50% 30%, #14324a 0%, #0d0d18 78%);}
-  .sdPlacement{font-family:"Impact",sans-serif;font-size:clamp(20px,4vw,34px);letter-spacing:.04em;color:#8fefff;
-    transform:skewX(-5deg);margin-top:6px;text-shadow:0 3px 0 rgba(0,0,0,.4);}
-  /* the Showdown HUD sits above the shared #cv arena canvas during a match */
-  #sdHud{position:absolute;inset:0;z-index:6;pointer-events:none;}
-  #sdHud.hidden{display:none !important;}
-  .sdTopbar{position:absolute;top:10px;left:0;right:0;display:flex;justify-content:space-between;align-items:center;
-    padding:0 16px;font-family:"Impact",sans-serif;letter-spacing:.05em;}
-  .sdTopbar>div{background:rgba(13,13,24,.7);border:2px solid rgba(143,239,255,.4);border-radius:10px;
-    padding:5px 13px;font-size:clamp(12px,1.9vw,18px);transform:skewX(-5deg);white-space:nowrap;}
-  .sdAlive{color:#fff;} .sdCubes{color:#8fefff;}
-  .sdZone{color:#ff7ad0;border-color:rgba(255,122,208,.5) !important;}
-  .sdZone.danger{color:#ff3b6b;border-color:rgba(255,59,107,.8) !important;animation:sdZonePulse .6s infinite;}
-  @keyframes sdZonePulse{0%,100%{opacity:.7;}50%{opacity:1;}}
-  .sdHealthWrap{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);width:min(360px,60%);}
-  .sdHpBar{position:relative;height:22px;border-radius:11px;background:rgba(0,0,0,.55);
-    box-shadow:0 0 0 2px rgba(0,0,0,.4) inset;overflow:hidden;}
-  .sdHpFill{position:absolute;top:0;bottom:0;left:0;border-radius:11px;
-    background:linear-gradient(90deg,#7ee081,#3fae5a);transition:width .12s ease, background .2s;}
-  .sdHpText{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-    font-family:"Impact",sans-serif;font-size:13px;letter-spacing:.06em;color:#fff;text-shadow:0 1px 2px #000;}
+
 
   /* private-room code display in the wait room */
   #waitCodeWrap{display:flex;flex-direction:column;align-items:center;gap:2px;}
@@ -752,7 +755,7 @@
     <!-- unified stat bar: medals · prestige · shards sit together as one tidy row -->
     <div class="statbar">
       <div class="medalbadge" id="medalBadge" title="Classic Mode medals earned">🏅 <span id="medalCount">0</span>/<span id="medalTotal">0</span></div>
-      <div class="prestigebadge hidden" id="prestigeBadge" title="Prestige level — earned by prestiging a full medal collection">⭐ <span id="prestigeLevel">0</span></div>
+      <div class="prestigebadge hidden" id="prestigeBadge" title="Prestige level — earned by prestiging a full medal collection">⭐ <span id="prestigeLevel">0</span> <span class="ptiername" id="prestigeTierName"></span></div>
       <div class="currencybadge" id="currencyBadge" title="Earn SHARDS from wins, Classic clears, and 💎 gems that drop mid-match. Spend them in the SHOP and skill trees.">💎 <span id="currencyCount">0</span></div>
     </div>
     <button class="btn btn-prestige hidden" id="prestigeBtn" title="Reset all your medals for a permanent prestige level + SHARDS">⭐ PRESTIGE UP!</button>
@@ -764,7 +767,11 @@
     <div class="titlegrid modes3">
       <button class="btn btn-alt" id="onlineBtn">🌐 ONLINE 1v1</button>
       <button class="btn btn-alt" id="classicBtn">🏅 CLASSIC</button>
-      <button class="btn btn-alt" id="showdownBtn">🔫 SHOWDOWN</button>
+      <button class="btn btn-alt" id="seasonBtn">🏆 SEASON</button>
+    </div>
+    <div class="seasonStatusWrap hidden" id="seasonStatusWrap">
+      <div class="seasonStatusText" id="seasonStatusText"></div>
+      <button class="seasonAbandonBtn" id="seasonSub">✕ ABANDON SEASON</button>
     </div>
     <div class="titlegrid menu4">
       <button class="btn btn-back" id="shopBtn">🛍 SHOP</button>
@@ -1042,13 +1049,14 @@
     <div class="vsstage" id="vsStage">STAGE</div>
   </div>
 
-  <!-- STORY (Classic Mode narration) -->
+  <!-- STORY (Classic Mode + Season Mode narration) -->
   <div class="screen hidden" id="story">
     <div class="storycard">
       <canvas id="storyCanvas" width="140" height="150"></canvas>
       <div class="storyprog" id="storyProg">ROUND 1 / 4</div>
       <div class="storytext" id="storyText"></div>
       <button class="btn" id="storyNext">NEXT ▶</button>
+      <div class="helper hidden" id="storySaveQuit" style="cursor:pointer;margin-top:-6px;">💾 progress is saved — <span style="text-decoration:underline">quit to title</span></div>
     </div>
   </div>
 
@@ -1146,44 +1154,7 @@
     <div class="madeby"></div>
   </div>
 
-  <!-- SHOWDOWN: fighter select -->
-  <div class="screen hidden" id="sdSelect">
-    <h2 style="font-size:clamp(20px,4vw,40px);color:#8fefff;transform:skewX(-6deg);text-shadow:0 3px 0 rgba(0,0,0,.4);">🔫 SHOWDOWN</h2>
-    <div class="helper">SOLO BATTLE ROYALE · <span id="sdPlayerCountLbl">10</span> BRAWLERS · LAST ONE STANDING WINS</div>
-    <div class="roster" id="sdRoster"></div>
-    <div class="panels" id="sdPanels"></div>
-    <div class="controls">
-      <b style="color:#8fefff">MOVE</b> W A S D &nbsp;·&nbsp; <b style="color:#8fefff">ATTACK</b> J / SPACE &nbsp;·&nbsp; smash 📦 boxes for 💎 POWER CUBES &nbsp;·&nbsp; avoid the ☠ toxic cloud
-    </div>
-    <div class="btnrow">
-      <button class="btn btn-back" id="sdBack">◀ BACK</button>
-      <button class="btn btn-alt" id="sdRandom">RANDOM</button>
-      <button class="btn" id="sdStart">DROP IN!</button>
-    </div>
-    <div class="madeby"></div>
-  </div>
 
-  <!-- SHOWDOWN: in-match HUD overlay (only visible during a Showdown match) -->
-  <div id="sdHud" class="hidden">
-    <div class="sdTopbar">
-      <div class="sdAlive">👥 <span id="sdAliveCount">10</span> LEFT</div>
-      <div class="sdZone" id="sdZoneInfo">☠ ZONE CLOSES IN <span id="sdZoneTimer">30</span></div>
-      <div class="sdCubes">💎 <span id="sdCubeCount">0</span> CUBES</div>
-    </div>
-    <div class="sdHealthWrap">
-      <div class="sdHpBar"><div class="sdHpFill" id="sdHpFill"></div><span class="sdHpText" id="sdHpText">100</span></div>
-    </div>
-  </div>
-
-  <!-- SHOWDOWN: result -->
-  <div class="screen hidden" id="sdResult">
-    <h1 id="sdResultTitle">VICTORY ROYALE</h1>
-    <div class="sub" id="sdResultSub"></div>
-    <div class="sdPlacement" id="sdPlacement"></div>
-    <button class="btn" id="sdRematch">DROP IN AGAIN</button>
-    <button class="btn btn-back" id="sdToMenu">MAIN MENU</button>
-    <div class="madeby"></div>
-  </div>
 </div>
 
 <script>
@@ -2123,6 +2094,7 @@ function resolveCostume(c, idx){
   if(idx===3 && c.costume3) return {name:c.costume3.name, color:c.costume3.color, dark:c.costume3.dark, acc:c.costume3.acc};
   if(idx===6){ return {name:'EPIC', color:mixHex(c.color,'#ffd700',0.5), dark:mixHex(c.dark,'#b8860b',0.5), acc:'crown', epic:true}; }
   if(idx===7){ return {name:'SIGNATURE', color:mixHex(c.color,'#00e5ff',0.4), dark:mixHex(c.dark,'#0a3a45',0.4), acc:c.costume?c.costume.acc:'star', signature:true}; }
+  if(idx===8 && c.id==='nathan'){ return {name:'CHAMPION', color:mixHex(c.color,'#ffd700',0.4), dark:mixHex(c.dark,'#4a0e14',0.5), acc:'cape', champion:true}; }
   return {name:'DEFAULT', color:c.color, dark:c.dark, acc:null};
 }
 // which costume indices a given character has actually earned the right to wear —
@@ -2135,6 +2107,7 @@ function allowedCostumeIdxs(id){
   for(let i=1;i<=3;i++){ if(Save.data.dev || Save.hasSkin(id,i)) arr.push(i); }
   if(Save.hasEpic(id)) arr.push(6);
   if(Save.hasSignature(id)) arr.push(7);
+  if(id==='nathan' && Save.hasCampaignSkin()) arr.push(8);
   return arr;
 }
 
@@ -2374,6 +2347,7 @@ function drawFighter(g, c, x, y, w, h, face, t, state, costume){
   // was blurring the whole body every frame and driving the lag)
   if(cos.epic){ g.save(); g.globalAlpha=0.35+0.25*Math.sin(t/120); g.strokeStyle='#ffd700'; g.lineWidth=3; roundRectStroke ? 0:0; g.beginPath(); roundRect(g,-bodyW/2-2,-bodyH*0.55-2,bodyW+4,bodyH+4,9); g.stroke(); g.restore(); }
   if(cos.signature){ g.save(); g.globalAlpha=0.35+0.25*Math.sin(t/90); g.strokeStyle='#00e5ff'; g.lineWidth=3; g.beginPath(); roundRect(g,-bodyW/2-2,-bodyH*0.55-2,bodyW+4,bodyH+4,9); g.stroke(); g.restore(); }
+  if(cos.champion){ g.save(); g.globalAlpha=0.35+0.25*Math.sin(t/100); g.strokeStyle='#ff5714'; g.lineWidth=3; g.beginPath(); roundRect(g,-bodyW/2-2,-bodyH*0.55-2,bodyW+4,bodyH+4,9); g.stroke(); g.restore(); }
   roundRect(g, -bodyW/2, -bodyH*0.55, bodyW, bodyH, 8);
   // SCHOOL uniform: white shirt panel down the middle of the blazer
   if(cos.shirt){
@@ -4219,6 +4193,7 @@ let botCostume=0;              // chosen bot skin index for 1P config
 let hitStop=0;
 let shakeT=0;
 let classic=null;              // active Classic Mode run, or null
+let season=null;               // active Season Mode run, or null
 let campaign=null;             // active Campaign run, or null
 let selectContext='main';      // 'main' | 'classic' | 'campaign' — which unlock set the roster shows
 let paused=false;              // true while the pause overlay is up (local matches only)
@@ -4264,19 +4239,19 @@ function randCode(){ const A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s=''; for(l
 // (medal) and which epic skins are unlocked.
 const Save = {
   KEY:'watInDeFighters_save_v1',
-  data:{ profile:'PLAYER 1', medals:{}, epics:{}, achievements:{}, stats:{}, dev:false, devPass:'', settings:{}, currency:0, skills:{}, secrets:{}, themes:{}, hardcore:{}, prestige:0, opkeep:{}, campaign:{ started:false, char:null, mission:0, unlocks:{}, clears:0 } },
+  data:{ profile:'PLAYER 1', medals:{}, epics:{}, achievements:{}, stats:{}, dev:false, devPass:'', settings:{}, currency:0, skills:{}, secrets:{}, themes:{}, hardcore:{}, prestige:0, opkeep:{}, campaign:{ started:false, char:null, mission:0, unlocks:{}, clears:0 }, season:null },
   // campaign defaults, kept in one place so load/import always produce a full object
   defCampaign(c){ c=c||{}; return { started:!!c.started, char:c.char||null, mission:c.mission||0, unlocks:c.unlocks||{}, clears:c.clears||0 }; },
   load(){
     try{
       const raw=localStorage.getItem(this.KEY);
-      if(raw){ const d=JSON.parse(raw); this.data={ profile:d.profile||'PLAYER 1', medals:d.medals||{}, epics:d.epics||{}, achievements:d.achievements||{}, stats:d.stats||{}, dev:!!d.dev, devPass:d.devPass||'', settings:d.settings||{}, currency:d.currency||0, skills:d.skills||{}, secrets:d.secrets||{}, themes:d.themes||{}, hardcore:d.hardcore||{}, prestige:d.prestige||0, opkeep:d.opkeep||{}, campaign:this.defCampaign(d.campaign) }; }
+      if(raw){ const d=JSON.parse(raw); this.data={ profile:d.profile||'PLAYER 1', medals:d.medals||{}, epics:d.epics||{}, achievements:d.achievements||{}, stats:d.stats||{}, dev:!!d.dev, devPass:d.devPass||'', settings:d.settings||{}, currency:d.currency||0, skills:d.skills||{}, secrets:d.secrets||{}, themes:d.themes||{}, hardcore:d.hardcore||{}, prestige:d.prestige||0, opkeep:d.opkeep||{}, campaign:this.defCampaign(d.campaign), season:d.season||null }; }
     }catch(e){ /* storage blocked; run with in-memory defaults */ }
   },
   // replaces the whole save in one go (used by IMPORT SAVE); falls back to
   // defaults per-field so an older or partial file never crashes the app.
   loadFromObject(d){
-    this.data={ profile:(d&&d.profile)||'PLAYER 1', medals:(d&&d.medals)||{}, epics:(d&&d.epics)||{}, achievements:(d&&d.achievements)||{}, stats:(d&&d.stats)||{}, dev:!!(d&&d.dev), devPass:(d&&d.devPass)||'', settings:(d&&d.settings)||{}, currency:(d&&d.currency)||0, skills:(d&&d.skills)||{}, secrets:(d&&d.secrets)||{}, themes:(d&&d.themes)||{}, hardcore:(d&&d.hardcore)||{}, prestige:(d&&d.prestige)||0, opkeep:(d&&d.opkeep)||{}, campaign:this.defCampaign(d&&d.campaign) };
+    this.data={ profile:(d&&d.profile)||'PLAYER 1', medals:(d&&d.medals)||{}, epics:(d&&d.epics)||{}, achievements:(d&&d.achievements)||{}, stats:(d&&d.stats)||{}, dev:!!(d&&d.dev), devPass:(d&&d.devPass)||'', settings:(d&&d.settings)||{}, currency:(d&&d.currency)||0, skills:(d&&d.skills)||{}, secrets:(d&&d.secrets)||{}, themes:(d&&d.themes)||{}, hardcore:(d&&d.hardcore)||{}, prestige:(d&&d.prestige)||0, opkeep:(d&&d.opkeep)||{}, campaign:this.defCampaign(d&&d.campaign), season:(d&&d.season)||null };
     this.save();
   },
   save(){
@@ -4296,6 +4271,10 @@ const Save = {
   // skins: key 'skin:<charId>:<idx>' · memes: key 'meme:<memeId>'
   hasSkin(charId, idx){ return !!(this.data.themes && this.data.themes['skin:'+charId+':'+idx]); },
   buySkin(charId, idx, cost){ if(this.currency()<cost) return false; const k='skin:'+charId+':'+idx; if(!this.data.themes) this.data.themes={}; if(this.data.themes[k]) return false; this.data.currency-=cost; this.data.themes[k]=true; this.save(); return true; },
+  // ---- campaign-clear reward: a unique NATHAN skin, granted the first time the
+  // whole campaign is beaten with ANY fighter (not tied to who did the clearing) ----
+  hasCampaignSkin(){ return !!(this.data.themes && this.data.themes['skin:nathan:champion']); },
+  grantCampaignSkin(){ if(!this.data.themes) this.data.themes={}; if(this.data.themes['skin:nathan:champion']) return false; this.data.themes['skin:nathan:champion']=true; this.save(); return true; },
   hasShopMeme(memeId){ return !!(this.data.themes && this.data.themes['meme:'+memeId]); },
   buyMeme(memeId, cost){ if(this.currency()<cost) return false; const k='meme:'+memeId; if(!this.data.themes) this.data.themes={}; if(this.data.themes[k]) return false; this.data.currency-=cost; this.data.themes[k]=true; this.save(); return true; },
   awardClassic(id){ this.data.medals[id]=true; this.data.epics[id]=true; this.save(); },
@@ -4352,7 +4331,13 @@ const Save = {
   campaignSetMission(n){ const c=this.campaign(); c.mission=n; this.save(); },
   campaignMarkCleared(){ const c=this.campaign(); c.clears=(c.clears||0)+1; c.started=false; c.mission=0; this.save(); },
   campaignAbandon(){ const c=this.campaign(); c.started=false; c.char=null; c.mission=0; this.save(); },
-  reset(){ this.data={ profile:this.data.profile, medals:{}, epics:{}, achievements:{}, stats:{}, dev:false, devPass:this.data.devPass, settings:this.data.settings, currency:0, skills:{}, secrets:{}, themes:{}, hardcore:{}, prestige:0, opkeep:{}, campaign:this.defCampaign(null) }; this.save(); }
+  // ---- SEASON MODE (persists between games so a run can be closed and resumed) ----
+  // Stored as a plain, JSON-safe snapshot (see serializeSeason/hydrateSeason below);
+  // the live `season` object with its object references is rebuilt from this on load.
+  seasonGet(){ return this.data.season||null; },
+  seasonSave(snap){ this.data.season=snap; this.save(); },
+  seasonClear(){ this.data.season=null; this.save(); },
+  reset(){ this.data={ profile:this.data.profile, medals:{}, epics:{}, achievements:{}, stats:{}, dev:false, devPass:this.data.devPass, settings:this.data.settings, currency:0, skills:{}, secrets:{}, themes:{}, hardcore:{}, prestige:0, opkeep:{}, campaign:this.defCampaign(null), season:null }; this.save(); }
 };
 Save.load();
 
@@ -4452,6 +4437,42 @@ function skillsMasteredCount(){ return ROSTER.filter(c=>skillTreeComplete(c.id))
 function hardcoreEarned(){ return normalRoster().filter(c=>Save.hasHardcore(c.id)).length; }
 // can the player PRESTIGE? only when every normal fighter has a (regular) medal.
 function canPrestige(){ return medalsEarned()>=medalsTotal() && medalsTotal()>0; }
+// ---- PRESTIGE COSMETIC REWARD: a shimmering "rank aura" (profile name glow,
+// prestige badge and fighter-select tile border) that gets a brand-new look
+// every time the player prestiges again, from PRESTIGE 1 up through PRESTIGE
+// 10 — where it reaches its final, animated MYTHIC form. ----
+const PRESTIGE_TIERS = [
+  null,
+  { name:'BRONZE',   c1:'#cd7f32', c2:'#8a5522', glow:'205,127,50' },
+  { name:'SILVER',   c1:'#d7d7e0', c2:'#9a9aa8', glow:'215,215,224' },
+  { name:'GOLD',     c1:'#ffd700', c2:'#ffb400', glow:'255,215,0' },
+  { name:'PLATINUM', c1:'#e5e4e2', c2:'#adadad', glow:'229,228,226' },
+  { name:'EMERALD',  c1:'#50c878', c2:'#1e7d47', glow:'80,200,120' },
+  { name:'SAPPHIRE', c1:'#4d9fff', c2:'#0f52ba', glow:'77,159,255' },
+  { name:'RUBY',     c1:'#ff4d6d', c2:'#e0115f', glow:'255,77,109' },
+  { name:'AMETHYST', c1:'#c58fff', c2:'#9966cc', glow:'197,143,255' },
+  { name:'DIAMOND',  c1:'#b9f2ff', c2:'#6fd6ea', glow:'185,242,255' },
+  { name:'MYTHIC',   c1:'#ffd700', c2:'#ff4dff', glow:'255,215,0' },
+];
+function prestigeTierIndex(lvl){ return lvl<=0 ? 0 : Math.max(1, Math.min(10, lvl)); }
+// applies the current tier's colors as CSS variables on #game so every prestige
+// cosmetic (name shimmer, badge, tile border) reads the same rank aura at once
+function applyPrestigeCosmetic(){
+  const root=document.getElementById('game');
+  const t=prestigeTierIndex(Save.prestige());
+  if(t>0){
+    const tier=PRESTIGE_TIERS[t];
+    root.style.setProperty('--ptier-c1', tier.c1);
+    root.style.setProperty('--ptier-c2', tier.c2);
+    root.style.setProperty('--ptier-glow', tier.glow);
+    root.classList.toggle('ptier-mythic', t===10);
+  } else {
+    root.style.removeProperty('--ptier-c1');
+    root.style.removeProperty('--ptier-c2');
+    root.style.removeProperty('--ptier-glow');
+    root.classList.remove('ptier-mythic');
+  }
+}
 function opMedalReq(id){
   const total=medalsTotal();
   if(id==='casper') return Math.ceil(total/2);   // half of all medals
@@ -4656,7 +4677,7 @@ function buildCharTile(c){
   }
   requestAnimationFrame(iconLoop);
 
-  const canPickFoe = ()=> mode==='2p' || (mode==='1p' && !(classic&&classic.pending) && gameMode!=='boss');
+  const canPickFoe = ()=> mode==='2p' || (mode==='1p' && !(classic&&classic.pending) && !(season&&season.pending) && gameMode!=='boss');
   el.addEventListener('click', (e)=>{
     if(!charUnlocked(c.id)){ flashHelper('🔒 '+ (STORY_ACH_NAME(c.id)||'LOCKED') ); return; }
     if(canPickFoe() && e.shiftKey){ p2Pick=c; }
@@ -4866,7 +4887,7 @@ function refreshPicks(){
   panels.appendChild(buildPanel('PLAYER 1','p1w',p1Pick,'p1'));
   if(mode==='2p'){
     panels.appendChild(buildPanel('PLAYER 2','p2w',p2Pick,'p2'));
-  } else if(!(classic&&classic.pending) && gameMode!=='boss'){
+  } else if(!(classic&&classic.pending) && !(season&&season.pending) && gameMode!=='boss'){
     // normal 1P: show a BOT config panel (shift/right-click a fighter to set it)
     panels.appendChild(buildPanel('BOT (optional)','p2w',p2Pick,'bot'));
   }
@@ -4927,21 +4948,22 @@ document.getElementById('muteBtn').onclick=(e)=>{
 
 /* ---------------- SCREEN FLOW ---------------- */
 function show(id){
-  ['title','mode','select','stage','result','versus','story','achieve','achdetail','shop','minigame','settings','online','waitroom','stats','howto','skills','campaign','mission','cutscene','sdSelect','sdResult'].forEach(s=>document.getElementById(s).classList.toggle('hidden', s!==id));
+  ['title','mode','select','stage','result','versus','story','achieve','achdetail','shop','minigame','settings','online','waitroom','stats','howto','skills','campaign','mission','cutscene'].forEach(s=>document.getElementById(s).classList.toggle('hidden', s!==id));
   document.body.classList.remove('in-match');
-  // Showdown HUD only belongs to a live Showdown match; hide it on any nav
-  const sdh=document.getElementById('sdHud'); if(sdh && id!=='__sdmatch') sdh.classList.add('hidden');
   // reset any scrollable menu back to the top so its heading is always visible on entry
   const el=document.getElementById(id);
   if(el) el.scrollTop=0;
   // never let a leftover achievement toast pop while navigating pre-match menus
   if(id!=='result'){ _toastQ.length=0; const tt=document.getElementById('achToast'); if(tt) tt.classList.remove('show'); _toastBusy=false; }
   // menu screens share a catchy menu theme; the match screens use stage music
-  const menuScreens=['title','mode','select','stage','achieve','achdetail','shop','minigame','result','story','settings','online','waitroom','stats','howto','skills','campaign','mission','cutscene','sdSelect','sdResult'];
+  const menuScreens=['title','mode','select','stage','achieve','achdetail','shop','minigame','result','story','settings','online','waitroom','stats','howto','skills','campaign','mission','cutscene'];
   if(menuScreens.includes(id)){ if(Music.curId!=='menu') Music.play('menu'); }
+  // the title screen's SEASON button always reflects whatever's on disk, even
+  // if you got here after backing out of some other mode mid-run
+  if(id==='title' && typeof refreshSeasonButton==='function') refreshSeasonButton();
 }
 
-document.getElementById('startBtn').onclick=()=>{ classic=null; campaign=null; selectContext='main'; buildRoster(); updateModeCards(); updateCustomRulesUI(); show('mode'); };
+document.getElementById('startBtn').onclick=()=>{ classic=null; campaign=null; season=null; selectContext='main'; buildRoster(); updateModeCards(); updateCustomRulesUI(); show('mode'); };
 
 // ACHIEVEMENTS menu
 function buildAchList(){
@@ -5410,6 +5432,7 @@ function buildStatsScreen(){
     ['☠ HARDCORE MEDALS', hardcoreEarned()+' / '+medalsTotal()],
     ['🌟 SKILLS MASTERED', skillsMasteredCount()+' / '+ROSTER.length],
     ['⭐ PRESTIGE LEVEL', Save.prestige()],
+    ['🏆 CAMPAIGNS CLEARED', Save.campaign().clears||0],
     ['STAGES VISITED', stagesVisited+' / '+STAGES.length],
     ['ACHIEVEMENTS', achDone+' / '+ACHIEVEMENTS.length],
   ];
@@ -5709,7 +5732,7 @@ document.getElementById('classicBtn').onclick=()=>{
 // either CONTINUE a saved run or start a NEW one. Because Save.campaign persists,
 // closing the tab mid-campaign and returning still lands you on the same mission.
 function openCampaignHub(){
-  classic=null; campaign=null;
+  classic=null; campaign=null; season=null;
   buildCampaignHub();
   show('campaign');
 }
@@ -5765,7 +5788,7 @@ document.getElementById('campContinueBtn').onclick=()=>{
 };
 // NEW / RESTART: pick a fighter (from the campaign's own unlock set) for a fresh run
 document.getElementById('campNewBtn').onclick=()=>{
-  mode='1p'; classic=null; campaign=null; selectContext='campaign';
+  mode='1p'; classic=null; campaign=null; season=null; selectContext='campaign';
   p1Pick=null; p2Pick=null;
   buildRoster();
   document.getElementById('selHelper').innerHTML='CAMPAIGN · CHOOSE YOUR FIGHTER FOR THE FULL STORY (SEPARATE UNLOCKS)';
@@ -5960,13 +5983,22 @@ function refreshProfileLine(){
   // prestige badge (shown once you have any prestige) + prestige-up button (only
   // when every normal fighter has a medal). The medal badge shows a ⭐ marker per
   // completed collection so past prestiges stay visible even after the reset.
+  applyPrestigeCosmetic();
   const pb=document.getElementById('prestigeBadge'), plv=document.getElementById('prestigeLevel');
-  if(pb){ pb.classList.toggle('hidden', pLvl<=0); if(plv) plv.textContent=pLvl; }
+  if(pb){
+    pb.classList.toggle('hidden', pLvl<=0);
+    if(plv) plv.textContent=pLvl;
+    const tName=document.getElementById('prestigeTierName');
+    const tier=PRESTIGE_TIERS[prestigeTierIndex(pLvl)];
+    if(tName) tName.textContent = tier ? '· '+tier.name : '';
+    pb.title = tier ? `Prestige ${pLvl} — ${tier.name} rank aura` : 'Prestige level — earned by prestiging a full medal collection';
+  }
   const pBtn=document.getElementById('prestigeBtn');
   if(pBtn) pBtn.classList.toggle('hidden', !canPrestige());
   // hardcore tally appended to the medal badge title for a quick glance
   const mb=document.getElementById('medalBadge');
   if(mb){ const hc=hardcoreEarned(); mb.title = 'Classic medals earned · ☠ '+hc+' hardcore · 🌟 '+skillsMasteredCount()+' skill-mastered'; }
+  if(typeof refreshSeasonButton==='function') refreshSeasonButton();
 }
 // PRESTIGE: trade a full medal collection for a permanent prestige star + bonus
 // SHARDS. Medals reset (so you can chase them again), but prestige only grows.
@@ -5974,13 +6006,15 @@ document.getElementById('prestigeBtn').onclick=()=>{
   if(!canPrestige()){ return; }
   const lvl=Save.prestige()+1;
   const bonus=200*lvl;   // reward scales with each prestige
-  if(!confirm(`PRESTIGE ${lvl}?\n\nThis resets ALL your Classic medals (you'll re-earn them), but grants a permanent ⭐ PRESTIGE ${lvl} and +${bonus} 💎 SHARDS.\n\nHardcore medals, skills, skins, campaign progress AND your secret fighters (Casper/Robin) are kept.`)) return;
+  const newTier=PRESTIGE_TIERS[prestigeTierIndex(lvl)];
+  const tierMsg = newTier ? `\n\nYou'll also unlock the ${newTier.name} rank aura — a new shimmering look for your name, prestige badge and fighter tiles.` : '';
+  if(!confirm(`PRESTIGE ${lvl}?\n\nThis resets ALL your Classic medals (you'll re-earn them), but grants a permanent ⭐ PRESTIGE ${lvl} and +${bonus} 💎 SHARDS.${tierMsg}\n\nHardcore medals, skills, skins, campaign progress AND your secret fighters (Casper/Robin) are kept.`)) return;
   Save.addPrestige();
   Save.addCurrency(bonus);
   buildRoster();          // medals cleared → refresh the grid badges
   refreshProfileLine();
   announce('PRESTIGE '+lvl+'!');
-  alert(`⭐ Welcome to PRESTIGE ${lvl}! +${bonus} 💎 SHARDS awarded. Your medal hunt begins anew.`);
+  alert(`⭐ Welcome to PRESTIGE ${lvl}! +${bonus} 💎 SHARDS awarded.${newTier?' New '+newTier.name+' rank aura unlocked!':''} Your medal hunt begins anew.`);
 };
 document.getElementById('profileLine').onclick=()=>{
   const name=prompt('Save profile name:', Save.data.profile);
@@ -6067,6 +6101,7 @@ document.getElementById('goBtn').onclick=()=>{
     beginCampaign(p1Pick); return;
   }
   if(classic && classic.pending){ beginClassic(p1Pick); return; }
+  if(season && season.pending){ beginSeason(p1Pick); return; }
   if(mode==='1p'){
     // use the player-chosen bot if set, otherwise pick a random other fighter
     if(!p2Pick){
@@ -6093,6 +6128,7 @@ function showStory(){
   document.getElementById('storyProg').textContent = (cm.round<cm.foes.length? 'ROUND '+(cm.round+1)+' / '+cm.foes.length : 'FINALE');
   document.getElementById('storyText').innerHTML = cm.intros[cm.round];
   document.getElementById('storyNext').textContent = (cm.round===0?'BEGIN ▶':'NEXT ▶');
+  document.getElementById('storySaveQuit').classList.add('hidden'); // Classic runs aren't saved between rounds
   show('story');
   // draw the player's fighter posing on the story card
   const sc=document.getElementById('storyCanvas').getContext('2d');
@@ -6101,6 +6137,18 @@ function showStory(){
   classic._anim=requestAnimationFrame(loop);
 }
 document.getElementById('storyNext').onclick=()=>{
+  if(season && season.active){
+    cancelAnimationFrame(season._anim);
+    const g=season.games[season.round];
+    p1Pick = season.c;
+    p2Pick = ROSTER.find(o=>o.id===g.foeId) || ROSTER[0];
+    stagePick = STAGES[Math.floor(Math.random()*STAGES.length)];
+    // Rivalry Week and the Championship give the CPU a hyped-up meme boost
+    p1Meme='none';
+    p2Meme = (g.type!=='regular') ? pickOne(MEMES.filter(m=>m.id!=='none')).id : 'none';
+    showVersus();
+    return;
+  }
   cancelAnimationFrame(classic._anim);
   // set up the round's match
   p1Pick = classic.c;
@@ -6109,6 +6157,12 @@ document.getElementById('storyNext').onclick=()=>{
   showVersus();
 };
 
+// SEASON MODE: quit to title between games — the run is already saved on disk
+// (every game auto-saves), so this is purely a "leave now, resume later" exit.
+document.getElementById('storySaveQuit').onclick=()=>{
+  if(!(season && season.active)) return;
+  season=null; selectContext='main'; buildRoster(); show('title');
+};
 document.getElementById('fightBtn').onclick=()=>{ showVersus(); };
 
 // VERSUS splash: show both fighters in a pose, then start the match
@@ -6145,7 +6199,7 @@ function showVersus(){
   // after the dramatic beat, start the fight
   setTimeout(()=>{ cancelAnimationFrame(_vsAnim); startMatch(); }, 1900);
 }
-document.getElementById('againBtn').onclick=()=>{ classic=null; campaign=null; selectContext='main'; buildRoster(); restoreDefaultRematch(); refreshProfileLine(); show('title'); };
+document.getElementById('againBtn').onclick=()=>{ classic=null; campaign=null; season=null; selectContext='main'; buildRoster(); restoreDefaultRematch(); refreshProfileLine(); show('title'); };
 // INSTANT REMATCH: skip every menu and immediately re-fight with the same mode/rules/characters/stage
 function restoreDefaultRematch(){ const b=document.getElementById('rematchBtn'); b.textContent='INSTANT REMATCH'; b.onclick=()=>{ startMatch(); }; }
 restoreDefaultRematch();
@@ -6157,7 +6211,7 @@ document.getElementById('selBack').onclick=()=>{
     if(campaign && campaign._changing){ campaign._changing=false; showMission(); return; }
     selectContext='main'; buildRoster(); buildCampaignHub(); show('campaign'); return;
   }
-  if(classic){ classic=null; show('title'); } else { show('mode'); }
+  if(classic){ classic=null; show('title'); } else if(season){ season=null; show('title'); } else { show('mode'); }
 };
 document.getElementById('stageBack').onclick=()=>{ show('select'); };
 
@@ -8740,6 +8794,28 @@ function endMatch(){
     return;
   }
 
+  // ---- Season Mode progression ----
+  // Unlike Classic, a loss does NOT end the run — every game is played, the
+  // record is tracked, and the final grade is revealed after game 8.
+  if(season && season.active){
+    setTimeout(()=>{
+      document.getElementById('hud').classList.add('hidden');
+      const foe = ROSTER.find(o=>o.id===season.games[season.round].foeId) || ROSTER[0];
+      if(p1won){ season.wins++; } else { season.losses++; }
+      season.lastResult = { won:p1won, foe };
+      advanceSeasonStandings(season.standings, foe, p1won);   // this week's league results
+      season.round++;
+      Save.seasonSave(serializeSeason(season));   // auto-save between games
+      refreshSeasonButton();
+      if(season.round < season.games.length){
+        showSeasonStory();
+      } else {
+        finishSeason();
+      }
+    }, 900);
+    return;
+  }
+
   setTimeout(()=>{
     document.getElementById('hud').classList.add('hidden');
     Music.play('menu');
@@ -8861,8 +8937,13 @@ function finishCampaign(won){
     // play the closing cutscene FIRST (campaign.c must still exist for the player
     // portrait), then present the results screen.
     playCutscene(CAMPAIGN_ENDING, ()=>{
+      const firstClear = (Save.campaign().clears||0)===0;
       Save.campaignMarkCleared();      // records the clear, resets the run pointer
       Save.addCurrency(100);           // big bonus for finishing the whole campaign
+      let skinLine='';
+      if(firstClear && Save.grantCampaignSkin()){
+        skinLine = ` <br>🏆 <span style="color:${ROSTER.find(r=>r.id==='nathan').color}">NATHAN</span> unlocked an exclusive CHAMPION skin — cycle his costumes to equip it!`;
+      }
       refreshProfileLine();
       Music.play('menu');
       const r=document.getElementById('result');
@@ -8870,7 +8951,7 @@ function finishCampaign(won){
       rematch.classList.add('hidden');
       title.textContent='CAMPAIGN CLEARED!';
       title.style.filter='none';
-      sub.innerHTML = `<span style="color:${c.color}">${c.name}</span> conquered the entire campaign! <br>+100 💎 SHARDS · Start a NEW CAMPAIGN to unlock even more.`;
+      sub.innerHTML = `<span style="color:${c.color}">${c.name}</span> conquered the entire campaign! <br>+100 💎 SHARDS · Start a NEW CAMPAIGN to unlock even more.${skinLine}`;
       sub.style.color='#8fefff';
       announce('CHAMPION!');
       grantAndToast();
@@ -8994,7 +9075,7 @@ function finishCampaign(won){
 
   // entry from title
   document.getElementById('onlineBtn').onclick=()=>{
-    mode='online'; classic=null; campaign=null; selectContext='main';
+    mode='online'; classic=null; campaign=null; season=null; selectContext='main';
     if(currentMode().boss || currentMode().soccer) gameMode='giant';
     document.querySelectorAll('#onlineRuleGrid .rule').forEach(x=>x.classList.toggle('sel',x.dataset.rule===gameMode));
     if(!p1Pick || !charUnlocked(p1Pick.id)){ p1Pick=ROSTER.find(c=>charUnlocked(c.id))||ROSTER[0]; }
@@ -9050,7 +9131,7 @@ function quitToMenu(){
   document.getElementById('pause').classList.add('hidden');
   running=false;
   const wasCampaign = campaign && campaign.active;
-  classic=null; campaign=null;
+  classic=null; campaign=null; season=null;
   Music.stop();
   restoreDefaultRematch();
   document.getElementById('hud').classList.add('hidden');
@@ -9106,7 +9187,7 @@ document.getElementById('pauseDiffSlider').oninput=(e)=>{
 })();
 // ESC toggles pause during a local match
 window.addEventListener('keydown', e=>{
-  if(e.key==='Escape'){ e.preventDefault(); if(SD.active){ sdQuit(); show('title'); } else if(running || paused) togglePause(); }
+  if(e.key==='Escape'){ e.preventDefault(); if(running || paused) togglePause(); }
 });
 
 /* ---------------- SPLASH SCREEN ---------------- */
@@ -9125,414 +9206,353 @@ window.addEventListener('keydown', e=>{
 })();
 
 /* ============================================================================
-   SHOWDOWN MODE  (self-contained top-down battle royale)
+   SEASON MODE
    ----------------------------------------------------------------------------
-   Modeled on Brawl Stars "Showdown". Runs in its OWN state + rAF loop and draws
-   to the shared #cv canvas via `ctx`. It deliberately does NOT touch the platform
-   fighter's update()/KO()/endMatch()/HUD, so every existing mode is unaffected.
-   Reuses: ROSTER, drawFighter(), keys{}, charUnlocked/costMap, SFX/Music, show().
+   An 8-game "career": pick a fighter and play through a season using the SAME
+   versus/match/HUD flow as every other mode (Fighter, startMatch, endMatch,
+   etc. are untouched). Between games a story card shows a short, randomized
+   recap of the last result plus a preview of what's next, so no two seasons
+   read quite the same. Game 7 is always a RIVALRY grudge match against the
+   fighter's story-mode rival; Game 8 is the CHAMPIONSHIP, whose flavor text
+   reacts to whether the record earned a real title shot. Losing a game does
+   NOT end the season — you play every game and get a final grade (and a
+   SHARDS bonus) based on your overall record.
+
+   PERSISTENCE: progress auto-saves to Save.data.season (see serializeSeason/
+   hydrateSeason) after the run begins and after every game, so closing the
+   tab mid-season and coming back later resumes exactly where you left off —
+   same schedule, same record, same league standings. The TITLE screen's
+   SEASON button becomes "CONTINUE SEASON" whenever a run is in progress.
+
+   LEAGUE FLAVOR: at the start of a season, a LEAGUE is drawn — the fighter's
+   story rival plus a random set of other roster members (a fresh lineup every
+   new season). Every opponent on the 8-game schedule, and every entry in the
+   standings table, comes from that same league — so you'll only ever face
+   (and only ever see ranked) fighters who are actually part of this season's
+   leaderboard. The standings update each week (both from your own results and
+   a few "elsewhere in the league" games), so the season feels like part of a
+   living league rather than just your own scoreboard.
+   Random LEAGUE EVENTS (sponsor bonuses, schedule shakeups, hot streaks, etc.)
+   can also fire between games, adding bonus SHARDS or swapping in a surprise
+   opponent — so replaying the mode with the same fighter still plays out
+   differently run to run.
    ============================================================================ */
-const SD = {
-  // ---- tunable config (all gameplay knobs live here) ----
-  CFG:{
-    PLAYERS: 10,            // total brawlers = 1 human + (PLAYERS-1) AI
-    ARENA_W: 1400,          // logical arena size (bigger than the viewport; camera follows)
-    ARENA_H: 900,
-    BOX_COUNT: 22,          // destructible crates scattered around
-    BOX_HP: 3,
-    BASE_HP: 100,           // starting max health for every brawler
-    BASE_DMG: 10,           // basic-attack damage before power-cube bonuses
-    ATK_RANGE: 118,         // attack reach (top-down, radial)
-    ATK_ARC: 1.15,          // half-angle (radians) of the attack cone
-    ATK_COOLDOWN: 26,       // frames between attacks
-    MOVE_SPEED: 3.4,        // base movement speed (px/frame); scaled by fighter stats
-    CUBE_HP_BONUS: 12,      // +max HP per power cube
-    CUBE_DMG_BONUS: 2.4,    // +attack damage per power cube
-    CUBE_HEAL: 12,          // instant heal when a cube is collected
-    ZONE_GRACE: 9*60,       // frames before the toxic cloud first closes (9s)
-    ZONE_STEP: 7*60,        // frames between each shrink step
-    ZONE_SHRINK: 0.11,      // fraction of remaining play-radius removed per step
-    ZONE_DOT_BASE: 0.30,    // damage/frame when the match is young
-    ZONE_DOT_RAMP: 0.35,    // extra damage/frame added each shrink step (ramps up)
-    HEAL_REGEN: 0.10,       // out-of-combat passive regen per frame
-    HEAL_DELAY: 150,        // frames without taking damage before regen kicks in
-    AI_SIGHT: 340,          // how far AI can "see" targets
-    AI_BOX_SIGHT: 260,      // how far AI will path to a crate
-  },
-  active:false,
-  ents:[],       // all brawlers (index 0 = human)
-  boxes:[],      // destructible crates
-  cubes:[],      // dropped power cubes on the ground
-  hits:[],       // transient attack-arc visuals
-  fx:[],         // particles (local, so we never touch the platform pools)
-  cam:{x:0,y:0},
-  zone:{r:0, cx:0, cy:0, timer:0, step:0},
-  time:0,
-  aliveStart:0,
-  anim:null,
-  ended:false,
-  human:null,
-};
+const SEASON_LENGTH = 8;
+// how many OTHER fighters make up a single season's league/leaderboard
+// (rival included). Drawn fresh every new season, so which fighters you can
+// even face — and who shows up in the standings — changes run to run.
+const SEASON_LEAGUE_SIZE = 8;
 
-// spawn a fresh power-cube pickup at (x,y)
-function sdSpawnCube(x,y){ SD.cubes.push({x,y,t:Math.random()*100}); }
+// small helper: grab a random entry from an array
+function pickOne(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
-// local particle burst (kept separate from the platform `particles` pool)
-function sdParticles(x,y,color,n){
-  for(let i=0;i<n;i++) SD.fx.push({x,y,vx:(Math.random()-.5)*6,vy:(Math.random()-.5)*6,life:16+Math.random()*14,color,r:2+Math.random()*3});
+// build the 8-game schedule for a chosen fighter. First, draw this season's
+// LEAGUE: the story rival plus a random set of other fighters (a fresh
+// lineup every new season). Every game on the schedule — the 6 regular-season
+// opponents, Rivalry Week, and the Championship — is then drawn ONLY from
+// that league, so you'll never face someone outside this season's leaderboard.
+function buildSeasonRun(c){
+  const st = STORY[c.id] || { title:'THE SEASON', goal:'to become champion', rival:'nathan' };
+  const rivalId = st.rival===c.id ? (ROSTER.find(o=>o.id!==c.id)||ROSTER[0]).id : st.rival;
+  const otherPool = ROSTER.filter(o=>o.id!==c.id && o.id!==rivalId).sort(()=>Math.random()-0.5);
+  // this season's league: the rival + a random slice of everyone else
+  const leagueOthers = otherPool.slice(0, Math.max(0, SEASON_LEAGUE_SIZE-1));
+  const leagueIds = [rivalId, ...leagueOthers.map(o=>o.id)];
+  const regularFoes = leagueOthers.slice(0,6);
+  const finalFoe = leagueOthers[6] || leagueOthers[0] || ROSTER.find(o=>o.id===rivalId);
+  const games = [
+    ...regularFoes.map((f,i)=>({ foeId:f.id, type:'regular', label:'GAME '+(i+1)+' / '+SEASON_LENGTH })),
+    { foeId: rivalId,     type:'rivalry', label:'GAME 7 / '+SEASON_LENGTH+' · RIVALRY WEEK' },
+    { foeId: finalFoe.id, type:'final',   label:'GAME 8 / '+SEASON_LENGTH+' · CHAMPIONSHIP' },
+  ];
+  return { st, games, leagueIds };
 }
 
-// build a Showdown brawler entity from a roster def
-function sdMakeBrawler(def, x, y, isHuman){
-  const spd = (def.stats && def.stats.speed ? def.stats.speed/3.3 : 1); // normalize around Nathan
+/* ---------------- SEASON PERSISTENCE ---------------- */
+// The live `season` object holds actual fighter/foe object references (handy
+// for drawing + narration), but Save storage needs a plain, JSON-safe shape.
+// serializeSeason/hydrateSeason convert between the two so a run can be
+// closed mid-week and picked back up later with everything intact.
+function serializeSeason(se){
   return {
-    def, x, y, vx:0, vy:0, face:1,
-    isHuman, ai:{ state:'wander', tx:x, ty:y, retarget:0, foe:null, box:null },
-    maxHp: SD.CFG.BASE_HP, hp: SD.CFG.BASE_HP,
-    dmg: SD.CFG.BASE_DMG,
-    speed: SD.CFG.MOVE_SPEED * (0.85 + spd*0.15),
-    cubes: 0,
-    atkCd: 0, atkAnim: 0,
-    hitFlash: 0, lastHurt: 999,
-    dead:false, place:0,
-    costume: isHuman ? (costMap[def.id]||0) : 0,
-    t: Math.random()*1000,
-    _aimX: 1, _aimY: 0,
+    charId: se.c.id,
+    stTitle: se.st.title, stGoal: se.st.goal, stRival: se.st.rival,
+    games: se.games.map(g=>({ foeId:g.foeId, type:g.type, label:g.label })),
+    round: se.round, wins: se.wins, losses: se.losses,
+    lastResult: se.lastResult ? { foeId: se.lastResult.foe.id, won: se.lastResult.won } : null,
+    standings: se.standings, events: se.events || [],
   };
 }
-
-// initialize a match with the human's chosen fighter
-function sdInit(humanDef){
-  const C=SD.CFG;
-  SD.ents=[]; SD.boxes=[]; SD.cubes=[]; SD.hits=[]; SD.fx=[];
-  SD.time=0; SD.ended=false;
-  SD.zone={ r:Math.hypot(C.ARENA_W,C.ARENA_H)/2*0.62, cx:C.ARENA_W/2, cy:C.ARENA_H/2, timer:C.ZONE_GRACE, step:0 };
-  // pick AI brawler defs from the unlocked roster (fall back to whole roster)
-  const pool=ROSTER.filter(c=>charUnlocked(c.id) && !c.opChar);
-  const aiPool=(pool.length?pool:ROSTER).filter(c=>c.id!==humanDef.id);
-  // spread spawn points evenly around a ring so nobody starts on top of another
-  const n=C.PLAYERS, cx=C.ARENA_W/2, cy=C.ARENA_H/2, ring=Math.min(C.ARENA_W,C.ARENA_H)*0.40;
-  for(let i=0;i<n;i++){
-    const a=(i/n)*Math.PI*2;
-    const x=cx+Math.cos(a)*ring, y=cy+Math.sin(a)*ring;
-    if(i===0){ const b=sdMakeBrawler(humanDef,x,y,true); SD.human=b; SD.ents.push(b); }
-    else { const def=aiPool.length?aiPool[(i-1)%aiPool.length]:ROSTER[0]; SD.ents.push(sdMakeBrawler(def,x,y,false)); }
-  }
-  SD.aliveStart=n;
-  // scatter destructible boxes (avoid the very edges)
-  for(let i=0;i<C.BOX_COUNT;i++){
-    const x=80+Math.random()*(C.ARENA_W-160), y=80+Math.random()*(C.ARENA_H-160);
-    SD.boxes.push({x,y,hp:C.BOX_HP,w:40,h:40});
-  }
-  SD.cam.x=SD.human.x-W/2; SD.cam.y=SD.human.y-H/2;
+function hydrateSeason(sv){
+  const c = ROSTER.find(o=>o.id===sv.charId) || ROSTER[0];
+  const st = { title: sv.stTitle, goal: sv.stGoal, rival: sv.stRival };
+  const lastResult = sv.lastResult
+    ? { won: sv.lastResult.won, foe: ROSTER.find(o=>o.id===sv.lastResult.foeId) || ROSTER[0] }
+    : null;
+  // fallback for an older save with no standings yet: rebuild the league
+  // from whoever actually appears on the schedule (+ the rival)
+  const fallbackIds = Array.from(new Set([sv.stRival, ...sv.games.map(g=>g.foeId)]));
+  return {
+    active:true, c, st, games: sv.games, round: sv.round, wins: sv.wins, losses: sv.losses,
+    lastResult, standings: sv.standings || initSeasonStandings(fallbackIds), events: sv.events || [],
+  };
 }
+// a saved season is "in progress" (resumable) as long as it hasn't played its last game
+function seasonInProgress(sv){ return !!(sv && sv.games && sv.round < sv.games.length); }
 
-function sdAliveCount(){ return SD.ents.filter(e=>!e.dead).length; }
-function sdClamp(v,a,b){ return v<a?a:(v>b?b:v); }
-
-// resolve an attack: hit any brawler within range+arc in front of the attacker
-function sdAttack(att){
-  const C=SD.CFG;
-  att.atkCd=C.ATK_COOLDOWN; att.atkAnim=10;
-  const ang=Math.atan2((att._aimY||0),(att._aimX||att.face));
-  SD.hits.push({x:att.x,y:att.y,ang,life:8,color:att.def.color});
-  SFX && SFX.attack && SFX.attack('melee');
-  SD.ents.forEach(o=>{
-    if(o===att||o.dead) return;
-    const dx=o.x-att.x, dy=o.y-att.y, d=Math.hypot(dx,dy);
-    if(d>C.ATK_RANGE) return;
-    const to=Math.atan2(dy,dx);
-    let da=Math.abs(((to-ang+Math.PI*3)%(Math.PI*2))-Math.PI);
-    if(da>C.ATK_ARC) return;
-    sdDamage(att,o,att.dmg);
-    const kb=7; o.vx+=Math.cos(to)*kb; o.vy+=Math.sin(to)*kb;   // knockback
+/* ---------------- SEASON LEAGUE STANDINGS ---------------- */
+// The table for THIS season's league only — the rival plus the random set of
+// fighters drawn for this run (see buildSeasonRun). Every opponent you can
+// possibly face comes from this same list, so a "new season" really does
+// mean a new lineup, and the standings never show fighters you can't play.
+function initSeasonStandings(leagueIds){
+  return leagueIds.map(id=>({ id, w:0, l:0 }));
+}
+// called once per game you play: the week's foe gets a real result against
+// you, and a handful of OTHER league games are simulated "elsewhere" so the
+// table keeps moving even for fighters you never face.
+function advanceSeasonStandings(standings, foe, p1won){
+  const entry = standings.find(s=>s.id===foe.id);
+  if(entry){ if(p1won) entry.l++; else entry.w++; }
+  const others = standings.filter(s=>s.id!==foe.id).sort(()=>Math.random()-0.5);
+  const pairs = Math.min(3, Math.floor(others.length/2));
+  for(let i=0;i<pairs;i++){
+    const a=others[i*2], b=others[i*2+1];
+    if(!a||!b) continue;
+    if(Math.random()<0.5){ a.w++; b.l++; } else { b.w++; a.l++; }
+  }
+}
+// compact standings strip shown under the season story text: top 4 by wins,
+// plus your own record, so you can always see where you stand in the league.
+function seasonStandingsHtml(se){
+  const rows = se.standings.slice().sort((a,b)=> (b.w-b.l)-(a.w-a.l) || b.w-a.w);
+  const lines = rows.slice(0,4).map(s=>{
+    const f = ROSTER.find(o=>o.id===s.id) || {name:s.id, color:'#cfd0e8'};
+    return `<span style="color:${f.color}">${f.name}</span> ${s.w}-${s.l}`;
   });
+  return `<div class="leagueStandings"><div class="lsTitle">LEAGUE STANDINGS</div>${lines.join(' &nbsp;·&nbsp; ')}<br>YOU: <b style="color:${se.c.color}">${se.c.name}</b> ${se.wins}-${se.losses}</div>`;
 }
 
-function sdDamage(att,o,dmg){
-  o.hp-=dmg; o.hitFlash=6; o.lastHurt=0;
-  sdParticles(o.x,o.y,o.def.color,6);
-  if(o.hp<=0 && !o.dead) sdEliminate(o,att);
+/* ---------------- SEASON LEAGUE EVENTS ---------------- */
+// Small between-games news beats. Most are flavor + a SHARDS bonus; "wildcard"
+// actually rewrites the upcoming game's opponent, so the same fighter's season
+// can play out with a different schedule every time. Never fires on the
+// opener or the championship game, and never repeats within a single run.
+const SEASON_EVENTS = [
+  { id:'upset_alert', bonus:5,
+    html:(se)=>`📰 <b>LEAGUE NEWS:</b> A stunning upset shook up the standings elsewhere in the league this week. +5 💎 for keeping up with the headlines.` },
+  { id:'sponsor_bonus', bonus:10,
+    html:(se)=>`💼 <b>SPONSOR DEAL:</b> A new sponsor is backing <span class="who">${se.c.name}</span> this week. +10 💎 bonus.` },
+  { id:'bye_week', bonus:8,
+    html:(se)=>`😌 <b>LIGHT SCHEDULE:</b> A quieter week around the league gives everyone room to breathe. +8 💎 for the downtime.` },
+  { id:'hot_streak', bonus:12, condition:(se)=> se.lastResult && se.lastResult.won,
+    html:(se)=>`🔥 <b>HOT STREAK:</b> The win streak is turning heads around the league. +12 💎 endorsement bonus.` },
+  { id:'bounce_back', bonus:6, condition:(se)=> se.lastResult && !se.lastResult.won,
+    html:(se)=>`💪 <b>BOUNCE-BACK WEEK:</b> The locker room rallies behind ${se.c.name} after last week's loss. +6 💎 for the pep talk.` },
+  { id:'wildcard', bonus:0,
+    condition:(se)=> se.standings.some(s=> !se.games.some(g=>g.foeId===s.id)),
+    apply:(se)=>{
+      const used = new Set(se.games.map(g=>g.foeId));
+      const pool = se.standings.filter(s=>!used.has(s.id)).map(s=>ROSTER.find(o=>o.id===s.id)).filter(Boolean);
+      if(!pool.length) return null;
+      const wc = pickOne(pool);
+      const g = se.games[se.round];
+      g.foeId = wc.id;
+      if(!/WILDCARD/.test(g.label)) g.label += ' · WILDCARD';
+      return wc;
+    },
+    html:(se, wc)=>`⚡ <b>SCHEDULE SHAKEUP:</b> This week's scheduled opponent pulled out — <span class="who">${wc.name}</span> steps in from the league as a surprise WILDCARD challenger!` },
+];
+// runs at most once per game (never the opener or the finale), skips events
+// already used this run, and returns the HTML banner to splice into the story
+// text (or '' if nothing fired). Also persists any mechanical change (like a
+// wildcard swap) immediately so it survives a reload.
+function maybeSeasonEvent(se){
+  if(se.round===0 || se.round===se.games.length-1) return '';
+  if(Math.random()>0.4) return '';
+  const used = se.events || (se.events=[]);
+  const pool = SEASON_EVENTS.filter(ev=> !used.includes(ev.id) && (!ev.condition || ev.condition(se)));
+  if(!pool.length) return '';
+  const ev = pickOne(pool);
+  const extra = ev.apply ? ev.apply(se) : null;
+  if(ev.apply && !extra) return ''; // apply() bailed out (e.g. no eligible wildcard) — skip quietly
+  used.push(ev.id);
+  if(ev.bonus){ Save.addCurrency(ev.bonus); refreshProfileLine(); }
+  return `<div class="leagueEvent">${ev.html(se, extra)}</div>`;
 }
 
-function sdEliminate(o,by){
-  o.dead=true;
-  o.place=sdAliveCount()+1;   // placement = players still alive incl. this one
-  sdParticles(o.x,o.y,o.def.color,22);
-  SFX && SFX.ko && SFX.ko();
-  for(let i=0;i<Math.min(o.cubes,3);i++) sdSpawnCube(o.x+(Math.random()-.5)*30,o.y+(Math.random()-.5)*30);
-  if(o===SD.human){ sdEnd(false, o.place); return; }
-  if(sdAliveCount()<=1) sdEnd(SD.human && !SD.human.dead, 1);
-}
+/* ---------------- SEASON STORYLINE TEXT ---------------- */
+// Every pool has several variants so replaying the mode doesn't repeat itself.
+const SEASON_OPENERS = [
+  c=>`A brand-new season tips off. Every fighter in the bracket wants the same trophy — but only one goes home with it. <span class="who">${c.name}</span> steps up first.`,
+  c=>`The arena is packed for opening night. <span class="who">${c.name}</span> has one goal this year: go all the way.`,
+  c=>`A fresh season, a clean slate. The pundits have their picks — none of them are <span class="who">${c.name}</span>.`,
+  c=>`Preseason hype is over. It's time for <span class="who">${c.name}</span> to prove it on the stage.`,
+];
+const SEASON_RECAP_WIN = [
+  (c,foe)=>`Last time out, <span class="who">${c.name}</span> put away <span class="who">${foe.name}</span> in style.`,
+  (c,foe)=>`Coming off a win over <span class="who">${foe.name}</span>, the crowd is buzzing.`,
+  (c,foe)=>`<span class="who">${c.name}</span> is riding a wave of momentum after downing <span class="who">${foe.name}</span>.`,
+  (c,foe)=>`The highlight reels are still playing <span class="who">${c.name}</span>'s win over <span class="who">${foe.name}</span>.`,
+];
+const SEASON_RECAP_LOSS = [
+  (c,foe)=>`<span class="who">${foe.name}</span> handed <span class="who">${c.name}</span> a tough loss last week — time for a bounce-back.`,
+  (c,foe)=>`Nobody expected the loss to <span class="who">${foe.name}</span>. The doubters are loud this week.`,
+  (c,foe)=>`Still smarting from the defeat to <span class="who">${foe.name}</span>, <span class="who">${c.name}</span> needs a response.`,
+  (c,foe)=>`The locker room is quiet after that one against <span class="who">${foe.name}</span>. Time to move on.`,
+];
+const SEASON_PREVIEW = [
+  (c,foe)=>`Up next: <span class="who">${foe.name}</span> stands in the way.`,
+  (c,foe)=>`This week's matchup: <span class="who">${foe.name}</span>, looking for an upset.`,
+  (c,foe)=>`Scouting report says <span class="who">${foe.name}</span> is dangerous — don't look past this one.`,
+  (c,foe)=>`Another week, another test: <span class="who">${foe.name}</span> is on the schedule.`,
+];
+const SEASON_RIVALRY_PREVIEW = [
+  (c,foe,st)=>`Circle the calendar. <span class="who">${foe.name}</span> — the one rival ${c.name} always hears about — is up next. This is personal.`,
+  (c,foe,st)=>`Rivalry Week. <span class="who">${foe.name}</span> has been trash-talking all season. Time to answer.`,
+  (c,foe,st)=>`Every season comes down to this rematch. <span class="who">${c.name}</span> vs <span class="who">${foe.name}</span> — again.`,
+];
+const SEASON_FINAL_LEAD = [
+  (c,foe,w,l)=>`The record is <b>${w}-${l}</b> — good enough for a title shot! <span class="who">${foe.name}</span> stands between <span class="who">${c.name}</span> and the CHAMPIONSHIP.`,
+  (c,foe,w,l)=>`It all comes down to this. At <b>${w}-${l}</b>, <span class="who">${c.name}</span> earned a shot at the crown against <span class="who">${foe.name}</span>.`,
+  (c,foe,w,l)=>`The season built to this moment: the CHAMPIONSHIP, against <span class="who">${foe.name}</span>. One more win.`,
+];
+const SEASON_FINAL_LONGSHOT = [
+  (c,foe,w,l)=>`At <b>${w}-${l}</b>, the road was rocky — but the last game is still a CHAMPIONSHIP shot. <span class="who">${foe.name}</span> won't make it easy.`,
+  (c,foe,w,l)=>`Nobody expected a <b>${w}-${l}</b> team to see the finale, but here it is: one last chance against <span class="who">${foe.name}</span>.`,
+  (c,foe,w,l)=>`A scrappy <b>${w}-${l}</b> season comes down to a final statement game against <span class="who">${foe.name}</span>.`,
+];
 
-// ---- AI: small readable state machine (wander → collect → fight → flee-zone) ----
-function sdThink(e){
-  const C=SD.CFG, ai=e.ai;
-  const zoneDist=Math.hypot(e.x-SD.zone.cx, e.y-SD.zone.cy);
-  const nearZoneEdge = zoneDist > SD.zone.r-90;   // getting close to / inside the cloud
-  if(nearZoneEdge){ ai.state='flee'; }            // fleeing the cloud is always top priority
-  else {
-    let foe=null,fd=1e9,box=null,bd=1e9;
-    SD.ents.forEach(o=>{ if(o===e||o.dead) return; const d=Math.hypot(o.x-e.x,o.y-e.y); if(d<fd){fd=d;foe=o;} });
-    SD.boxes.forEach(b=>{ const d=Math.hypot(b.x-e.x,b.y-e.y); if(d<bd){bd=d;box=b;} });
-    if(foe && fd<C.AI_SIGHT){ ai.state='fight'; ai.foe=foe; }
-    else if(box && bd<C.AI_BOX_SIGHT && e.cubes<6){ ai.state='collect'; ai.box=box; }
-    else ai.state='wander';
+// pre-fight narration for the current game, shown on the shared #story card
+function showSeasonStory(){
+  const se=season;
+  let g=se.games[se.round];
+  document.getElementById('storyProg').textContent = g.label;
+  let html='';
+  if(se.round===0){
+    html += pickOne(SEASON_OPENERS)(se.c);
+  } else if(se.lastResult){
+    const pool = se.lastResult.won ? SEASON_RECAP_WIN : SEASON_RECAP_LOSS;
+    html += pickOne(pool)(se.c, se.lastResult.foe);
   }
-  let tx,ty;
-  if(ai.state==='flee'){ tx=SD.zone.cx; ty=SD.zone.cy; }
-  else if(ai.state==='fight' && ai.foe && !ai.foe.dead){ tx=ai.foe.x; ty=ai.foe.y; }
-  else if(ai.state==='collect' && ai.box && SD.boxes.includes(ai.box)){ tx=ai.box.x; ty=ai.box.y; }
-  else {
-    if(ai.retarget<=0){ const a=Math.random()*Math.PI*2, r=Math.random()*SD.zone.r*0.7;
-      ai.tx=SD.zone.cx+Math.cos(a)*r; ai.ty=SD.zone.cy+Math.sin(a)*r; ai.retarget=60+Math.random()*90; }
-    ai.retarget--; tx=ai.tx; ty=ai.ty;
-  }
-  const dx=tx-e.x, dy=ty-e.y, d=Math.hypot(dx,dy)||1;
-  const closeEnough = (ai.state==='fight') ? C.ATK_RANGE*0.8 : (ai.state==='collect'? 46 : 14);
-  if(d>closeEnough){ e.vx+=(dx/d)*e.speed*0.5; e.vy+=(dy/d)*e.speed*0.5; e._aimX=dx/d; e._aimY=dy/d; e.face=dx>=0?1:-1; }
-  else { e._aimX=dx/d; e._aimY=dy/d; }
-  if(ai.state==='fight' && ai.foe && !ai.foe.dead){
-    const fd2=Math.hypot(ai.foe.x-e.x,ai.foe.y-e.y);
-    if(fd2<C.ATK_RANGE && e.atkCd<=0){ e._aimX=(ai.foe.x-e.x); e._aimY=(ai.foe.y-e.y); sdAttack(e); }
-  }
-  if(ai.state==='collect' && ai.box && SD.boxes.includes(ai.box)){
-    const bd2=Math.hypot(ai.box.x-e.x,ai.box.y-e.y);
-    if(bd2<52 && e.atkCd<=0){ e._aimX=(ai.box.x-e.x); e._aimY=(ai.box.y-e.y); sdAttackBox(e,ai.box); }
-  }
-}
-
-// attacking a crate (shared by human + AI)
-function sdAttackBox(att,box){
-  att.atkCd=SD.CFG.ATK_COOLDOWN; att.atkAnim=10;
-  const ang=Math.atan2(box.y-att.y, box.x-att.x);
-  SD.hits.push({x:att.x,y:att.y,ang,life:8,color:'#c9a24a'});
-  box.hp--; sdParticles(box.x,box.y,'#c9a24a',8);
-  if(box.hp<=0){
-    const i=SD.boxes.indexOf(box); if(i>=0) SD.boxes.splice(i,1);
-    sdSpawnCube(box.x,box.y); sdParticles(box.x,box.y,'#8fefff',14);
-  }
-}
-
-// ---- human input (top-down WASD + attack) ----
-function sdHumanInput(e){
-  let mx=0,my=0;
-  if(keys['a']||keys['arrowleft']) mx-=1;
-  if(keys['d']||keys['arrowright']) mx+=1;
-  if(keys['w']||keys['arrowup']) my-=1;
-  if(keys['s']||keys['arrowdown']) my+=1;
-  if(mx||my){ const m=Math.hypot(mx,my); e.vx+=(mx/m)*e.speed*0.6; e.vy+=(my/m)*e.speed*0.6; e._aimX=mx; e._aimY=my; if(mx) e.face=mx>0?1:-1; }
-  if(keys['j']||keys[' ']||keys['k']){
-    if(e.atkCd<=0){
-      let box=null,bd=1e9; SD.boxes.forEach(b=>{const d=Math.hypot(b.x-e.x,b.y-e.y); if(d<bd){bd=d;box=b;}});
-      if(box && bd<58){ sdAttackBox(e,box); } else sdAttack(e);
-    }
-  }
-}
-
-// ---- per-frame update ----
-function sdUpdate(){
-  const C=SD.CFG;
-  SD.time++;
-  if(SD.zone.timer>0) SD.zone.timer--;
-  else { SD.zone.r=Math.max(120, SD.zone.r*(1-C.ZONE_SHRINK)); SD.zone.step++; SD.zone.timer=C.ZONE_STEP; }
-  const zoneDot=C.ZONE_DOT_BASE + SD.zone.step*C.ZONE_DOT_RAMP;
-
-  SD.ents.forEach(e=>{
-    if(e.dead) return;
-    e.t++; if(e.atkCd>0)e.atkCd--; if(e.atkAnim>0)e.atkAnim--; if(e.hitFlash>0)e.hitFlash--; e.lastHurt++;
-    if(e.isHuman) sdHumanInput(e); else sdThink(e);
-    e.x+=e.vx; e.y+=e.vy; e.vx*=0.78; e.vy*=0.78;
-    e.x=sdClamp(e.x,24,C.ARENA_W-24); e.y=sdClamp(e.y,24,C.ARENA_H-24);
-    SD.boxes.forEach(b=>{ const dx=e.x-b.x,dy=e.y-b.y,d=Math.hypot(dx,dy); if(d<40&&d>0){ e.x=b.x+dx/d*40; e.y=b.y+dy/d*40; } });
-    const zd=Math.hypot(e.x-SD.zone.cx,e.y-SD.zone.cy);
-    if(zd>SD.zone.r){ e.hp-=zoneDot; e.lastHurt=0; if(e.t%6===0) sdParticles(e.x,e.y-10,'#ff7ad0',2); if(e.hp<=0&&!e.dead) sdEliminate(e,null); }
-    else if(e.lastHurt>C.HEAL_DELAY && e.hp<e.maxHp){ e.hp=Math.min(e.maxHp,e.hp+C.HEAL_REGEN); }
-  });
-
-  // soft separation so brawlers don't perfectly overlap
-  for(let i=0;i<SD.ents.length;i++) for(let j=i+1;j<SD.ents.length;j++){
-    const a=SD.ents[i],b=SD.ents[j]; if(a.dead||b.dead) continue;
-    const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy); if(d<40&&d>0){ const p=(40-d)/2; a.x-=dx/d*p; a.y-=dy/d*p; b.x+=dx/d*p; b.y+=dy/d*p; }
-  }
-
-  SD.cubes.forEach(cu=>{ cu.t++;
-    SD.ents.forEach(e=>{ if(e.dead) return; if(Math.hypot(e.x-cu.x,e.y-cu.y)<34){
-      e.cubes++; e.maxHp+=C.CUBE_HP_BONUS; e.dmg+=C.CUBE_DMG_BONUS; e.hp=Math.min(e.maxHp,e.hp+C.CUBE_HEAL);
-      sdParticles(cu.x,cu.y,'#8fefff',12); cu._gone=true; }});
-  });
-  SD.cubes=SD.cubes.filter(c=>!c._gone);
-
-  SD.hits.forEach(h=>h.life--); SD.hits=SD.hits.filter(h=>h.life>0);
-  SD.fx.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.vx*=0.9; p.vy*=0.9; p.life--; }); SD.fx=SD.fx.filter(p=>p.life>0);
-
-  const foc=SD.human && !SD.human.dead ? SD.human : (SD.ents.find(e=>!e.dead)||SD.human);
-  if(foc){ SD.cam.x+=((foc.x-W/2)-SD.cam.x)*0.12; SD.cam.y+=((foc.y-H/2)-SD.cam.y)*0.12; }
-  SD.cam.x=sdClamp(SD.cam.x,0,C.ARENA_W-W); SD.cam.y=sdClamp(SD.cam.y,0,C.ARENA_H-H);
-
-  sdUpdateHud();
-}
-
-function sdUpdateHud(){
-  const h=SD.human;
-  document.getElementById('sdAliveCount').textContent=sdAliveCount();
-  document.getElementById('sdCubeCount').textContent=h?h.cubes:0;
-  const hp=h?Math.max(0,Math.round(h.hp)):0, mx=h?h.maxHp:100;
-  const fill=document.getElementById('sdHpFill'); fill.style.width=(hp/mx*100)+'%';
-  fill.style.background = hp/mx>0.5?'linear-gradient(90deg,#7ee081,#3fae5a)':(hp/mx>0.22?'linear-gradient(90deg,#ffd24a,#f7931e)':'linear-gradient(90deg,#ff6b6b,#c92a2a)');
-  document.getElementById('sdHpText').textContent=hp+' / '+mx;
-  const zi=document.getElementById('sdZoneInfo');
-  const secs=Math.ceil(SD.zone.timer/60);
-  document.getElementById('sdZoneTimer').textContent=secs;
-  zi.classList.toggle('danger', SD.zone.timer<3*60);
-}
-
-// ---- render (top-down) ----
-function sdRender(){
-  const C=SD.CFG, cx=SD.cam.x, cy=SD.cam.y;
-  ctx.clearRect(0,0,W,H);
-  ctx.fillStyle='#12212e'; ctx.fillRect(0,0,W,H);
-  ctx.strokeStyle='rgba(255,255,255,.05)'; ctx.lineWidth=1;
-  const g=80;
-  for(let x=-((cx)%g);x<W;x+=g){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
-  for(let y=-((cy)%g);y<H;y+=g){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
-  ctx.strokeStyle='rgba(143,239,255,.35)'; ctx.lineWidth=4; ctx.strokeRect(-cx,-cy,C.ARENA_W,C.ARENA_H);
-
-  SD.cubes.forEach(cu=>{ const sx=cu.x-cx, sy=cu.y-cy, bob=Math.sin(cu.t/12)*3;
-    ctx.save(); ctx.translate(sx,sy+bob); ctx.rotate(cu.t/40);
-    ctx.fillStyle='#8fefff'; ctx.shadowColor='#8fefff'; ctx.shadowBlur=10;
-    ctx.fillRect(-8,-8,16,16); ctx.shadowBlur=0; ctx.fillStyle='#fff'; ctx.fillRect(-3,-3,6,6); ctx.restore(); });
-
-  SD.boxes.forEach(b=>{ const sx=b.x-cx, sy=b.y-cy;
-    ctx.fillStyle='#7a5a2e'; ctx.fillRect(sx-20,sy-20,40,40);
-    ctx.strokeStyle='#3d2c14'; ctx.lineWidth=3; ctx.strokeRect(sx-20,sy-20,40,40);
-    ctx.beginPath(); ctx.moveTo(sx-20,sy-20); ctx.lineTo(sx+20,sy+20); ctx.moveTo(sx+20,sy-20); ctx.lineTo(sx-20,sy+20); ctx.stroke(); });
-
-  SD.hits.forEach(h=>{ const sx=h.x-cx, sy=h.y-cy; ctx.save(); ctx.translate(sx,sy); ctx.rotate(h.ang);
-    ctx.globalAlpha=h.life/8; ctx.fillStyle=h.color;
-    ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,C.ATK_RANGE,-C.ATK_ARC,C.ATK_ARC); ctx.closePath(); ctx.fill();
-    ctx.globalAlpha=1; ctx.restore(); });
-
-  const order=SD.ents.filter(e=>!e.dead).slice().sort((a,b)=>a.y-b.y);
-  order.forEach(e=>{ const sx=e.x-cx, sy=e.y-cy;
-    ctx.fillStyle='rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(sx,sy+30,22,8,0,0,Math.PI*2); ctx.fill();
-    if(e.hitFlash>0){ ctx.save(); ctx.globalAlpha=0.5; ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(sx,sy,30,0,Math.PI*2); ctx.fill(); ctx.restore(); }
-    drawFighter(ctx, e.def, sx-27, sy-42, 54, 74, e.face, e.t*16, e.atkAnim>0?'attack':'idle', e.costume);
-    const barW=44, hpFrac=Math.max(0,e.hp/e.maxHp);
-    ctx.fillStyle='rgba(0,0,0,.55)'; ctx.fillRect(sx-barW/2,sy-52,barW,5);
-    ctx.fillStyle=e.isHuman?'#8fefff':(hpFrac>0.4?'#7ee081':'#ff6b6b'); ctx.fillRect(sx-barW/2,sy-52,barW*hpFrac,5);
-    if(e.isHuman){ ctx.fillStyle='#8fefff'; ctx.font='bold 9px Arial'; ctx.textAlign='center'; ctx.fillText('YOU',sx,sy-56); }
-    if(e.cubes>0){ ctx.fillStyle='#8fefff'; ctx.font='bold 9px Arial'; ctx.textAlign='center'; ctx.fillText('💎'+e.cubes,sx,sy+44); }
-  });
-
-  SD.fx.forEach(p=>{ ctx.globalAlpha=Math.max(0,p.life/24); ctx.fillStyle=p.color; ctx.fillRect(p.x-cx-p.r/2,p.y-cy-p.r/2,p.r,p.r); }); ctx.globalAlpha=1;
-
-  // toxic cloud: darken everything OUTSIDE the safe circle (even-odd fill)
-  const zx=SD.zone.cx-cx, zy=SD.zone.cy-cy;
-  ctx.save();
-  ctx.beginPath(); ctx.rect(0,0,W,H); ctx.arc(zx,zy,SD.zone.r,0,Math.PI*2,true);
-  ctx.fillStyle='rgba(180,40,150,0.30)'; ctx.fill('evenodd');
-  ctx.beginPath(); ctx.arc(zx,zy,SD.zone.r,0,Math.PI*2);
-  ctx.strokeStyle='rgba(255,122,208,0.9)'; ctx.lineWidth=4; ctx.stroke();
-  ctx.restore();
-}
-
-// ---- own loop (independent of the platform frame()) ----
-function sdLoop(){
-  if(!SD.active) return;
-  if(!paused) sdUpdate();
-  sdRender();
-  SD.anim=requestAnimationFrame(sdLoop);
-}
-
-// ---- match lifecycle ----
-let sdPick=null;
-function sdStartMatch(def){
-  sdPick=def||sdPick||ROSTER[0];
-  SD.active=true; SD.ended=false;
-  document.body.classList.add('in-match');           // reveals the shared #cv canvas
-  document.getElementById('sdHud').classList.remove('hidden');
-  ['title','sdSelect','sdResult'].forEach(s=>document.getElementById(s).classList.add('hidden'));
-  Music && Music.stop && Music.stop();
-  sdInit(sdPick);
-  cancelAnimationFrame(SD.anim);
-  SD.anim=requestAnimationFrame(sdLoop);
-}
-function sdEnd(won, place){
-  if(SD.ended) return; SD.ended=true; SD.active=false;
-  cancelAnimationFrame(SD.anim);
-  document.body.classList.remove('in-match');
-  document.getElementById('sdHud').classList.add('hidden');
-  Music && Music.play && Music.play('menu');
-  const title=document.getElementById('sdResultTitle');
-  const sub=document.getElementById('sdResultSub');
-  const pl=document.getElementById('sdPlacement');
-  if(won){ title.textContent='VICTORY ROYALE!'; title.style.filter='none';
-    sub.textContent=sdPick.name+' is the last brawler standing.'; sub.style.color=sdPick.color;
-    pl.textContent='🏆 1st of '+SD.aliveStart;
-    if(Save && Save.addCurrency) Save.addCurrency(40);
+  // a league event may fire here (and, for 'wildcard', rewrite g.foeId/label —
+  // so we re-read g/foe AFTER this call to make sure the preview text below
+  // always matches who you're actually about to fight)
+  const eventHtml = maybeSeasonEvent(se);
+  g = se.games[se.round];
+  const foe = ROSTER.find(o=>o.id===g.foeId) || ROSTER[0];
+  if(eventHtml) html += '<br>'+eventHtml;
+  html += `<br>SEASON RECORD: <b>${se.wins}-${se.losses}</b><br>`;
+  if(g.type==='rivalry'){
+    html += pickOne(SEASON_RIVALRY_PREVIEW)(se.c, foe, se.st);
+  } else if(g.type==='final'){
+    const contending = se.wins >= Math.ceil((SEASON_LENGTH-2)/2);
+    html += (contending ? pickOne(SEASON_FINAL_LEAD) : pickOne(SEASON_FINAL_LONGSHOT))(se.c, foe, se.wins, se.losses);
   } else {
-    title.textContent='ELIMINATED'; title.style.filter='grayscale(.4)';
-    sub.textContent=sdPick.name+' fell in the showdown.'; sub.style.color=sdPick.color;
-    const ord={1:'1st',2:'2nd',3:'3rd'}; const p=place||(sdAliveCount()+1);
-    pl.textContent='You placed '+(ord[p]||(p+'th'))+' of '+SD.aliveStart;
+    html += pickOne(SEASON_PREVIEW)(se.c, foe);
   }
-  show('sdResult');
+  html += seasonStandingsHtml(se);
+  document.getElementById('storyText').innerHTML = html;
+  document.getElementById('storyNext').textContent = (se.round===0?'BEGIN ▶':'NEXT ▶');
+  document.getElementById('storySaveQuit').classList.remove('hidden');
+  show('story');
+  const sc=document.getElementById('storyCanvas').getContext('2d');
+  cancelAnimationFrame(season._anim);
+  function loop(t){ sc.clearRect(0,0,140,150); drawFighter(sc, se.c, 35, 30, 70, 95, 1, t, 'attack', costMap[se.c.id]); season._anim=requestAnimationFrame(loop); }
+  season._anim=requestAnimationFrame(loop);
+  // persist now too (covers a wildcard swap, or simply resuming later mid-preview)
+  Save.seasonSave(serializeSeason(se));
+  refreshSeasonButton();
 }
-function sdQuit(){
-  SD.active=false; SD.ended=true; cancelAnimationFrame(SD.anim);
-  document.body.classList.remove('in-match');
-  document.getElementById('sdHud').classList.add('hidden');
+
+/* ---------------- SEASON MODE FLOW ---------------- */
+function beginSeason(c){
+  const run = buildSeasonRun(c);
+  season = { active:true, c, st:run.st, games:run.games, round:0, wins:0, losses:0, lastResult:null, standings:initSeasonStandings(run.leagueIds), events:[] };
+  gameMode='stock'; // season plays standard rules
+  showSeasonStory();
+}
+// resume a season saved to disk — skips fighter select and drops you right
+// back into the current game's preview, exactly where you left off.
+function resumeSeason(){
+  const sv=Save.seasonGet();
+  if(!seasonInProgress(sv)) return;
+  season = hydrateSeason(sv);
+  gameMode='stock';
+  mode='1p'; classic=null; campaign=null;
+  showSeasonStory();
+}
+document.getElementById('seasonBtn').onclick=()=>{
+  if(seasonInProgress(Save.seasonGet())){ resumeSeason(); return; }
+  mode='1p'; season={pending:true}; classic=null; campaign=null; selectContext='main';
+  p1Pick=null; p2Pick=null;
+  buildRoster();
+  document.getElementById('selHelper').innerHTML='SEASON MODE · PICK YOUR FIGHTER FOR AN 8-GAME SEASON';
+  refreshPicks();
+  show('select');
+};
+// ABANDON & START NEW: only offered while a season is already in progress
+document.getElementById('seasonSub').onclick=(e)=>{
+  e.stopPropagation();
+  if(!seasonInProgress(Save.seasonGet())) return;
+  if(!confirm('Abandon your current season and start a brand-new one?')) return;
+  Save.seasonClear();
+  refreshSeasonButton();
+  mode='1p'; season={pending:true}; classic=null; campaign=null; selectContext='main';
+  p1Pick=null; p2Pick=null;
+  buildRoster();
+  document.getElementById('selHelper').innerHTML='SEASON MODE · PICK YOUR FIGHTER FOR AN 8-GAME SEASON';
+  refreshPicks();
+  show('select');
+};
+// keeps the title screen's SEASON button (and the abandon/continue subtext)
+// in sync with whatever's currently saved — called from refreshProfileLine()
+// so it updates everywhere that already refreshes the home screen.
+function refreshSeasonButton(){
+  const btn=document.getElementById('seasonBtn'), wrap=document.getElementById('seasonStatusWrap'), txt=document.getElementById('seasonStatusText');
+  if(!btn) return;
+  const sv=Save.seasonGet();
+  if(seasonInProgress(sv)){
+    btn.textContent='🏆 CONTINUE SEASON';
+    btn.title='Resume your saved season — Game '+(sv.round+1)+' / '+sv.games.length;
+    if(wrap){
+      wrap.classList.remove('hidden');
+      if(txt) txt.textContent='Season in progress: '+sv.wins+'-'+sv.losses+' · Game '+(sv.round+1)+'/'+sv.games.length;
+    }
+  } else {
+    btn.textContent='🏆 SEASON';
+    btn.title='';
+    if(wrap) wrap.classList.add('hidden');
+  }
 }
 
-/* ---------------- SHOWDOWN MENU WIRING ---------------- */
-(function setupShowdown(){
-  const roster=document.getElementById('sdRoster');
-  const panels=document.getElementById('sdPanels');
-  document.getElementById('sdPlayerCountLbl').textContent=SD.CFG.PLAYERS;
-
-  function refreshSdPanel(){
-    panels.innerHTML='';
-    const p=document.createElement('div'); p.className='panel p1w';
-    if(!sdPick){ p.innerHTML=`<div class="tag">BRAWLER</div><div class="empty">PICK A FIGHTER</div>`; panels.appendChild(p); return; }
-    p.innerHTML=`<div class="tag" style="color:#8fefff">YOUR BRAWLER</div>
-      <canvas width="120" height="120"></canvas>
-      <div class="pname" style="color:${sdPick.color}">${sdPick.name}</div>
-      <div class="dz">${sdPick.desc||''}</div>
-      <div class="mv"><b style="color:#8fefff">HP</b> ${SD.CFG.BASE_HP} &nbsp; <b style="color:#8fefff">DMG</b> ${SD.CFG.BASE_DMG}</div>`;
-    panels.appendChild(p);
-    const cc=p.querySelector('canvas').getContext('2d');
-    (function loop(t){ if(document.getElementById('sdSelect').classList.contains('hidden')) return;
-      cc.clearRect(0,0,120,120); drawFighter(cc, sdPick, 30, 22, 60, 82, 1, t, 'idle', costMap[sdPick.id]||0);
-      requestAnimationFrame(loop); })(0);
-  }
-  function buildSdRoster(){
-    roster.innerHTML='';
-    const group=document.createElement('div'); group.className='catgroup';
-    const row=document.createElement('div'); row.className='catrow'; row.style.justifyContent='center';
-    ROSTER.filter(c=>charUnlocked(c.id)).forEach(c=>{
-      const el=document.createElement('div'); el.className='char'; el.dataset.id=c.id;
-      el.innerHTML=`<span class="pick"></span><canvas class="ic" width="96" height="96"></canvas><span class="nm" style="color:${c.color}">${c.name}</span>`;
-      const ic=el.querySelector('canvas').getContext('2d');
-      (function loop(t){ if(_alive(el)){ drawIcon(ic,c,96,costMap[c.id]||0,t); } requestAnimationFrame(loop); })(0);
-      el.onclick=()=>{ sdPick=c; buildSdRoster(); refreshSdPanel(); };
-      if(sdPick && sdPick.id===c.id){ el.classList.add('sel1'); el.querySelector('.pick').innerHTML='<span class="p1">PICK</span>'; }
-      row.appendChild(el);
-    });
-    group.appendChild(row); roster.appendChild(group);
-  }
-
-  document.getElementById('showdownBtn').onclick=()=>{
-    classic=null; campaign=null; selectContext='main';
-    if(!sdPick || !charUnlocked(sdPick.id)) sdPick=ROSTER.find(c=>charUnlocked(c.id))||ROSTER[0];
-    buildSdRoster(); refreshSdPanel(); show('sdSelect');
-  };
-  document.getElementById('sdBack').onclick=()=>{ show('title'); };
-  document.getElementById('sdRandom').onclick=()=>{ const pool=ROSTER.filter(c=>charUnlocked(c.id)); sdPick=pool[Math.floor(Math.random()*pool.length)]; buildSdRoster(); refreshSdPanel(); };
-  document.getElementById('sdStart').onclick=()=>{ if(!sdPick){return;} sdStartMatch(sdPick); };
-  document.getElementById('sdRematch').onclick=()=>{ sdStartMatch(sdPick); };
-  document.getElementById('sdToMenu').onclick=()=>{ sdQuit(); show('title'); };
-})();
+// Season run resolved: show a final grade + SHARDS bonus based on the record.
+function finishSeason(){
+  const c=season.c;
+  const w=season.wins, l=season.losses;
+  Save.seasonClear();   // run is complete — clear the saved slot so SEASON offers a fresh start next time
+  Music.play('menu');
+  const r=document.getElementById('result');
+  r.classList.remove('hidden');
+  document.getElementById('rematchBtn').classList.add('hidden'); // Season is a scripted run — no instant rematch
+  const title=document.getElementById('resultTitle');
+  const sub=document.getElementById('resultSub');
+  let tier, bonus;
+  if(w>=SEASON_LENGTH){ tier='UNDEFEATED CHAMPION'; bonus=150; }
+  else if(w>=6){ tier='LEAGUE CHAMPION'; bonus=100; }
+  else if(w>=4){ tier='PLAYOFF SEASON'; bonus=60; }
+  else if(w>=2){ tier='REBUILDING SEASON'; bonus=30; }
+  else { tier='LOTTERY SEASON'; bonus=15; }
+  Save.addCurrency(bonus);
+  refreshProfileLine();
+  title.textContent = tier+'!';
+  title.style.filter = (w>=4) ? 'none' : 'grayscale(.4)';
+  const finalRank = season.standings.slice().sort((a,b)=>(b.w-b.l)-(a.w-a.l)).filter(s=> (s.w-s.l) > (w-l)).length + 1;
+  sub.innerHTML = `<span style="color:${c.color}">${c.name}</span> finished the season <b>${w}-${l}</b> — <b>#${finalRank}</b> in the league. <br>+${bonus} 💎 SHARDS bonus!`;
+  sub.style.color = c.color;
+  grantAndToast();
+  season=null;
+}
 
 /* ---------------- MAIN LOOP ---------------- */
 function frame(t){
