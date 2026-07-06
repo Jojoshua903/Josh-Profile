@@ -297,6 +297,20 @@
     padding:9px 16px;border-radius:10px;transform:skewX(-6deg);white-space:nowrap;
   }
   .medalbadge span{color:#fef6e4;}
+  .prestigebadge{
+    font-family:"Impact",sans-serif;letter-spacing:.06em;font-size:clamp(13px,2.1vw,19px);
+    color:#ffd700;background:rgba(255,215,0,.12);border:2px solid rgba(255,215,0,.55);
+    padding:7px 15px;border-radius:10px;transform:skewX(-6deg);white-space:nowrap;margin-top:8px;
+    text-shadow:0 0 10px rgba(255,215,0,.5);
+  }
+  .prestigebadge span{color:#fff;}
+  .prestigebadge.hidden{display:none !important;}
+  #title .btn-prestige{margin-top:10px;font-size:clamp(13px,2vw,18px);padding:9px 22px;
+    background:linear-gradient(180deg,#ffe27a,#f0a500);box-shadow:0 6px 0 #a06800, 0 10px 24px rgba(0,0,0,.4);
+    animation:prestigePulse 1.3s ease-in-out infinite;}
+  #title .btn-prestige:active{box-shadow:0 2px 0 #a06800;}
+  #title .btn-prestige.hidden{display:none !important;}
+  @keyframes prestigePulse{0%,100%{filter:brightness(1);}50%{filter:brightness(1.25);}}
   .currencybadge{
     font-family:"Impact",sans-serif;letter-spacing:.06em;font-size:clamp(13px,2vw,18px);
     color:#8fefff;background:rgba(0,229,255,.1);border:2px solid rgba(0,229,255,.4);
@@ -485,6 +499,8 @@
 
   /* classic-mode medal on select tiles */
   .char .medal{position:absolute;top:2px;right:3px;font-size:12px;z-index:2;filter:drop-shadow(0 1px 1px #000);}
+  .char .hcmedal{position:absolute;top:2px;left:3px;font-size:12px;z-index:2;color:#ff5757;filter:drop-shadow(0 1px 1px #000);}
+  .char .skillmedal{position:absolute;bottom:22px;right:3px;font-size:12px;z-index:2;filter:drop-shadow(0 1px 2px #000);}
   .char .lock{position:absolute;top:50%;left:50%;transform:translate(-50%,-60%);font-size:20px;z-index:2;filter:drop-shadow(0 1px 2px #000);}
   .char.locked{opacity:.8;cursor:not-allowed;}
   .char.locked .nm{color:#6a6a7a !important;}
@@ -523,6 +539,26 @@
   .campmission.done .cmstate{color:#7ee081;} .campmission.current .cmstate{color:#8fefff;}
   .missionname{font-size:clamp(20px,3.6vw,30px);letter-spacing:.03em;transform:skewX(-5deg);text-align:center;
     background:linear-gradient(180deg,#8fefff,#00b8d9);-webkit-background-clip:text;background-clip:text;color:transparent;}
+
+  /* campaign cutscene (dialogue between missions) */
+  #cutscene{justify-content:flex-end;cursor:pointer;padding:0;
+    background:radial-gradient(circle at 50% 20%, #1a1030 0%, #0d0d18 80%);}
+  .cutStage{position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:space-between;padding:0 4% 150px;pointer-events:none;}
+  .cutSpeaker{display:flex;flex-direction:column;align-items:center;gap:4px;opacity:.35;transition:opacity .2s, transform .2s;transform:scale(.9);}
+  .cutSpeaker.active{opacity:1;transform:scale(1);}
+  .cutSpeaker.left canvas{transform:none;}
+  .cutSpeaker.right canvas{transform:scaleX(-1);}
+  .cutSpeaker canvas{width:clamp(120px,20vw,180px);height:auto;filter:drop-shadow(0 8px 16px rgba(0,0,0,.6));}
+  .cutName{font-size:clamp(13px,2vw,18px);letter-spacing:.04em;transform:skewX(-5deg);text-shadow:0 2px 0 rgba(0,0,0,.5);}
+  .cutBox{position:relative;z-index:2;width:100%;max-width:760px;margin:0 auto 22px;
+    background:linear-gradient(180deg,rgba(23,23,50,.96),rgba(13,13,24,.96));
+    border:3px solid #8fefff;border-radius:16px;padding:16px 22px 14px;box-shadow:0 10px 40px rgba(0,0,0,.6);}
+  .cutWho{font-family:"Impact",sans-serif;letter-spacing:.06em;font-size:clamp(15px,2.4vw,22px);transform:skewX(-5deg);margin-bottom:6px;}
+  .cutWho.narr{color:#9a9cc0;}
+  .cutLine{font-family:Georgia,serif;font-size:clamp(14px,2.3vw,19px);line-height:1.55;color:#eae6f5;min-height:54px;}
+  .cutLine.narr{font-style:italic;color:#cfd0e8;}
+  .cutHint{font-family:Arial,sans-serif;font-weight:700;font-size:10px;letter-spacing:.16em;color:#8fefff;margin-top:10px;text-align:right;animation:splashpulse 1.4s ease-in-out infinite;}
+  .cutSkip{position:absolute;top:12px;right:14px;z-index:3;margin-top:0;font-size:14px;padding:6px 16px;}
 
   /* private-room code display in the wait room */
   #waitCodeWrap{display:flex;flex-direction:column;align-items:center;gap:2px;}
@@ -646,6 +682,8 @@
     <div class="sub">PLATFORM  FIGHTER</div>
     <div class="homeLabel" id="homeLabelText"></div>
     <div class="medalbadge" id="medalBadge" title="Classic Mode medals earned">🏅 <span id="medalCount">0</span>/<span id="medalTotal">0</span> MEDALS</div>
+    <div class="prestigebadge hidden" id="prestigeBadge" title="Prestige level — earned by prestiging a full medal collection">⭐ PRESTIGE <span id="prestigeLevel">0</span></div>
+    <button class="btn btn-prestige hidden" id="prestigeBtn" title="Reset all your medals for a permanent prestige level + SHARDS">⭐ PRESTIGE UP!</button>
     <div class="currencybadge" id="currencyBadge" title="Earn SHARDS from wins, Classic clears, and 💎 gems that drop mid-match. Spend them in the SHOP and skill trees.">💎 <span id="currencyCount">0</span> SHARDS</div>
     <div class="herorow">
       <button class="btn btn-hero" id="startBtn">PLAY</button>
@@ -868,6 +906,10 @@
       <div class="setlbl">SKILL TREE UPGRADES<div class="sethint">Apply purchased skill-tree bonuses in this match. Turn off for a vanilla, stats-only fight.</div></div>
       <button class="toggle" id="skillTreeToggle">ON</button>
     </div>
+    <div class="setrow" id="ultraRow" style="max-width:520px;display:none;border-color:rgba(230,57,70,.5);background:rgba(230,57,70,.10);">
+      <div class="setlbl">☠ ULTRA HARD MODE<div class="sethint">Classic only. The CPU fights ferociously — and you get just ONE life for the whole run. No mercy.</div></div>
+      <button class="toggle" id="ultraToggle">OFF</button>
+    </div>
     <div class="btnrow">
       <button class="btn btn-back" id="selBack">◀ BACK</button>
       <button class="btn btn-alt" id="randChar">RANDOM</button>
@@ -962,6 +1004,26 @@
         <button class="btn" id="missionStart" style="font-size:15px;padding:8px 22px;">FIGHT ▶</button>
       </div>
     </div>
+  </div>
+
+  <!-- CAMPAIGN CUTSCENE (character dialogue between missions) -->
+  <div class="screen hidden" id="cutscene">
+    <div class="cutStage">
+      <div class="cutSpeaker left" id="cutLeft">
+        <canvas id="cutCanvasL" width="180" height="210"></canvas>
+        <div class="cutName" id="cutNameL"></div>
+      </div>
+      <div class="cutSpeaker right" id="cutRight">
+        <canvas id="cutCanvasR" width="180" height="210"></canvas>
+        <div class="cutName" id="cutNameR"></div>
+      </div>
+    </div>
+    <div class="cutBox">
+      <div class="cutWho" id="cutWho"></div>
+      <div class="cutLine" id="cutLine"></div>
+      <div class="cutHint" id="cutHint">CLICK / TAP TO CONTINUE</div>
+    </div>
+    <button class="btn cutSkip" id="cutSkip">SKIP ▶</button>
   </div>
 
   <!-- ONLINE LOBBY -->
@@ -1607,6 +1669,96 @@ const CAMPAIGN_MISSIONS = [
 function campaignTotal(){ return CAMPAIGN_MISSIONS.length; }
 // resolve a mission's foe to an actual roster fighter (safe fallback)
 function campaignFoe(m){ return ROSTER.find(o=>o.id===m.foeId) || ROSTER[Math.floor(Math.random()*ROSTER.length)]; }
+
+/* ---------------- CAMPAIGN CUTSCENES & DIALOGUE ---------------- */
+// Each mission gets a short PRE-fight exchange and a POST-win exchange, plus a
+// one-time OPENING intro and a CLOSING finale. A line is { who, line }:
+//   who:'p'      → the player's chosen fighter (usually Nathan)
+//   who:<id>     → any roster fighter (the foe, or a newly-recruited ally)
+//   who:'narr'   → narrator caption (no portrait, italic)
+// Lines are hand-written to give each fighter a distinct voice.
+const CAMPAIGN_OPENING = [
+  { who:'narr', line:'The Wat In De Fighters World Tournament. One bracket. Dozens of fighters. A single champion.' },
+  { who:'p',    line:"Everyone says a sandlot kid doesn't belong here. Time to prove them all wrong." },
+  { who:'narr', line:'Twelve fights stand between you and the crown. Some rivals you beat… will fight at your side.' },
+];
+const CAMPAIGN_ENDING = [
+  { who:'narr', line:'The final bell. The arena falls silent, then erupts.' },
+  { who:'p',    line:'From the sandlot to the summit. Nobody can call me a nobody now.' },
+  { who:'narr', line:'CHAMPION of the Wat In De Fighters World Tournament. The whole roster salutes you.' },
+];
+// pre/post keyed by mission index
+const CAMPAIGN_DIALOGUE = [
+  { // 0 FIRST STEPS vs niek
+    pre:[ {who:'niek', line:"You want the badge for winning? Cute. I earn everything the hard way, rookie."},
+          {who:'p', line:"Then earning this one should feel great. Step up."} ],
+    post:[ {who:'niek', line:"…Alright. That badge's yours. Don't make me regret respecting you."} ],
+  },
+  { // 1 CROSSED WIRES vs josh → unlock renas
+    pre:[ {who:'josh', line:"My drones have already mapped every move you've got. Statistically, you lose."},
+          {who:'p', line:"Statistics never met a fastball."} ],
+    post:[ {who:'josh', line:"Huh. My models were wrong. That's… kind of exciting, actually."},
+           {who:'renas', line:"You beat my big brother?! Okay, okay — I'm coming with YOU. Teach me that."} ],
+  },
+  { // 2 COLD OPEN vs deniz
+    pre:[ {who:'deniz', line:"The undercard is my kingdom of ice. You'll freeze before you climb."},
+          {who:'p', line:"Then I'll just have to swing fast enough to stay warm."} ],
+    post:[ {who:'deniz', line:"Impossible… the crown cracks. Go on then. The contenders await you."} ],
+  },
+  { // 3 THE ENFORCER vs yassin (boss) → unlock lars
+    pre:[ {who:'narr', line:"A mountain of muscle blocks the gate to Act II."},
+          {who:'yassin', line:"Nobody passes the Enforcer. Nobody."},
+          {who:'p', line:"First time for everything."} ],
+    post:[ {who:'yassin', line:"Gh… you hit like a freight train. The gate is… yours."},
+           {who:'lars', line:"HA! Anyone who topples that oaf earns a dwarf's loyalty. Lars, at your forge's service!"} ],
+  },
+  { // 4 STORM WARNING vs milo
+    pre:[ {who:'milo', line:"Lightning answers to me alone. Can your little bat catch a thunderbolt?"},
+          {who:'p', line:"Only one way to find out. Bring the storm."} ],
+    post:[ {who:'milo', line:"You swung between the bolts… incredible. The contenders will remember this."} ],
+  },
+  { // 5 FERAL vs femi → unlock kayo
+    pre:[ {who:'femi', line:"*a low growl* You smell like prey. The pack is watching."},
+          {who:'p', line:"Watch closely then."} ],
+    post:[ {who:'femi', line:"*the growl becomes a grin* You've got teeth. The pack respects that."},
+           {who:'kayo', line:"Mrrow~ Two cats are better than one! I'm joining the fun team — that's YOU!"} ],
+  },
+  { // 6 HOUSE RULES vs ati
+    pre:[ {who:'ati', line:"The brackets are… let's say 'arranged'. House always wins, kid."},
+          {who:'p', line:"Then I'll flip the table."} ],
+    post:[ {who:'ati', line:"You broke the house rules. Fine. Fair fight. …I hate fair fights."} ],
+  },
+  { // 7 THE MONEY FIGHT vs thorren (boss) → unlock jax
+    pre:[ {who:'thorren', line:"I BOUGHT my way to the top. What did you bring? Grass stains?"},
+          {who:'p', line:"Heart. Try buying that."} ],
+    post:[ {who:'thorren', line:"Ugh — no refunds on a beating like that."},
+           {who:'jax', line:"Yo! Anyone who dethrones Mr. Moneybags headlines MY show. Jax, on the mic and on your side!"} ],
+  },
+  { // 8 RUNTIME ERROR vs metaai
+    pre:[ {who:'metaai', line:"I have simulated this fight 4,000,000 times. You win in zero of them."},
+          {who:'p', line:"Guess I'm about to make it one."} ],
+    post:[ {who:'metaai', line:"ERROR… ERROR… recalculating. A human beat the machine. Fascinating."} ],
+  },
+  { // 9 NO MERCY vs evadam → unlock adam
+    pre:[ {who:'evadam', line:"Mercy is for losers. I'll break you and enjoy it."},
+          {who:'p', line:"Big talk. Let's hear it after the bell."} ],
+    post:[ {who:'evadam', line:"Tch. You're tougher than you look. Whatever."},
+           {who:'adam', line:"You made my twin eat his words — I've waited YEARS for that. Count me in."} ],
+  },
+  { // 10 THE SHADOW vs zennith (boss)
+    pre:[ {who:'narr', line:"The sky darkens. Something wrong steps out of the black."},
+          {who:'zennith', line:"I am every fear you swallowed on the sandlot. I am what you become if you fall."},
+          {who:'p', line:"Then I'll just have to keep standing."} ],
+    post:[ {who:'zennith', line:"…you do not break. How? …No matter. One champion remains beyond me."} ],
+  },
+  { // 11 THE LAST CHAMPION vs robin (boss) → unlock casper
+    pre:[ {who:'robin', line:"I'm the biggest, goofiest, TOUGHEST kid on the whole playground! Nobody beats me!"},
+          {who:'p', line:"Everything I fought for comes down to this. Let's go."} ],
+    post:[ {who:'robin', line:"Waaah— okay okay you win, you're the champ, that was so cool!"},
+           {who:'casper', line:"Kid, that was pure redline racing. Casper's riding with a champion from now on."} ],
+  },
+];
+function campaignDialogue(idx){ return CAMPAIGN_DIALOGUE[idx] || {pre:[],post:[]}; }
 
 // Each meme grants stat multipliers. `none` is the "meme off" option.
 // mults: atk (damage dealt), def (damage taken, <1 = tankier), spd (move speed),
@@ -3729,19 +3881,19 @@ function randCode(){ const A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s=''; for(l
 // (medal) and which epic skins are unlocked.
 const Save = {
   KEY:'watInDeFighters_save_v1',
-  data:{ profile:'PLAYER 1', medals:{}, epics:{}, achievements:{}, stats:{}, dev:false, devPass:'', settings:{}, currency:0, skills:{}, secrets:{}, themes:{}, campaign:{ started:false, char:null, mission:0, unlocks:{}, clears:0 } },
+  data:{ profile:'PLAYER 1', medals:{}, epics:{}, achievements:{}, stats:{}, dev:false, devPass:'', settings:{}, currency:0, skills:{}, secrets:{}, themes:{}, hardcore:{}, prestige:0, campaign:{ started:false, char:null, mission:0, unlocks:{}, clears:0 } },
   // campaign defaults, kept in one place so load/import always produce a full object
   defCampaign(c){ c=c||{}; return { started:!!c.started, char:c.char||null, mission:c.mission||0, unlocks:c.unlocks||{}, clears:c.clears||0 }; },
   load(){
     try{
       const raw=localStorage.getItem(this.KEY);
-      if(raw){ const d=JSON.parse(raw); this.data={ profile:d.profile||'PLAYER 1', medals:d.medals||{}, epics:d.epics||{}, achievements:d.achievements||{}, stats:d.stats||{}, dev:!!d.dev, devPass:d.devPass||'', settings:d.settings||{}, currency:d.currency||0, skills:d.skills||{}, secrets:d.secrets||{}, themes:d.themes||{}, campaign:this.defCampaign(d.campaign) }; }
+      if(raw){ const d=JSON.parse(raw); this.data={ profile:d.profile||'PLAYER 1', medals:d.medals||{}, epics:d.epics||{}, achievements:d.achievements||{}, stats:d.stats||{}, dev:!!d.dev, devPass:d.devPass||'', settings:d.settings||{}, currency:d.currency||0, skills:d.skills||{}, secrets:d.secrets||{}, themes:d.themes||{}, hardcore:d.hardcore||{}, prestige:d.prestige||0, campaign:this.defCampaign(d.campaign) }; }
     }catch(e){ /* storage blocked; run with in-memory defaults */ }
   },
   // replaces the whole save in one go (used by IMPORT SAVE); falls back to
   // defaults per-field so an older or partial file never crashes the app.
   loadFromObject(d){
-    this.data={ profile:(d&&d.profile)||'PLAYER 1', medals:(d&&d.medals)||{}, epics:(d&&d.epics)||{}, achievements:(d&&d.achievements)||{}, stats:(d&&d.stats)||{}, dev:!!(d&&d.dev), devPass:(d&&d.devPass)||'', settings:(d&&d.settings)||{}, currency:(d&&d.currency)||0, skills:(d&&d.skills)||{}, secrets:(d&&d.secrets)||{}, themes:(d&&d.themes)||{}, campaign:this.defCampaign(d&&d.campaign) };
+    this.data={ profile:(d&&d.profile)||'PLAYER 1', medals:(d&&d.medals)||{}, epics:(d&&d.epics)||{}, achievements:(d&&d.achievements)||{}, stats:(d&&d.stats)||{}, dev:!!(d&&d.dev), devPass:(d&&d.devPass)||'', settings:(d&&d.settings)||{}, currency:(d&&d.currency)||0, skills:(d&&d.skills)||{}, secrets:(d&&d.secrets)||{}, themes:(d&&d.themes)||{}, hardcore:(d&&d.hardcore)||{}, prestige:(d&&d.prestige)||0, campaign:this.defCampaign(d&&d.campaign) };
     this.save();
   },
   save(){
@@ -3791,6 +3943,12 @@ const Save = {
     this.save();
     return true;
   },
+  // ---- HARDCORE medals (Classic cleared with ULTRA HARD MODE on) ----
+  hasHardcore(id){ return !!(this.data.hardcore && this.data.hardcore[id]); },
+  grantHardcore(id){ if(!this.data.hardcore) this.data.hardcore={}; if(this.data.hardcore[id]) return false; this.data.hardcore[id]=true; this.save(); return true; },
+  // ---- PRESTIGE (reset all medals for a permanent, growing prestige level) ----
+  prestige(){ return this.data.prestige||0; },
+  addPrestige(){ this.data.prestige=(this.data.prestige||0)+1; this.data.medals={}; this.save(); return this.data.prestige; },
   // ---- CAMPAIGN MODE (separate save slot; its own character unlocks) ----
   // Progress and unlocks here are fully independent from the main-game roster.
   campaign(){ if(!this.data.campaign) this.data.campaign=this.defCampaign(null); return this.data.campaign; },
@@ -3802,7 +3960,7 @@ const Save = {
   campaignSetMission(n){ const c=this.campaign(); c.mission=n; this.save(); },
   campaignMarkCleared(){ const c=this.campaign(); c.clears=(c.clears||0)+1; c.started=false; c.mission=0; this.save(); },
   campaignAbandon(){ const c=this.campaign(); c.started=false; c.char=null; c.mission=0; this.save(); },
-  reset(){ this.data={ profile:this.data.profile, medals:{}, epics:{}, achievements:{}, stats:{}, dev:false, devPass:this.data.devPass, settings:this.data.settings, currency:0, skills:{}, secrets:{}, themes:{}, campaign:this.defCampaign(null) }; this.save(); }
+  reset(){ this.data={ profile:this.data.profile, medals:{}, epics:{}, achievements:{}, stats:{}, dev:false, devPass:this.data.devPass, settings:this.data.settings, currency:0, skills:{}, secrets:{}, themes:{}, hardcore:{}, prestige:0, campaign:this.defCampaign(null) }; this.save(); }
 };
 Save.load();
 
@@ -3890,6 +4048,18 @@ function achTip(a){ const m=ACH_META[a.id]; return (m&&m.tip)||'Keep playing to 
 function normalRoster(){ return ROSTER.filter(c=>!c.opChar); }
 function medalsEarned(){ return normalRoster().filter(c=>Save.hasMedal(c.id)).length; }
 function medalsTotal(){ return normalRoster().length; }
+// ---- SKILL-TREE COMPLETION ---- a fighter is "mastered" once every node in
+// their skill tree is bought. Shown with a badge on the character select.
+function skillTreeComplete(id){
+  const c=ROSTER.find(x=>x.id===id); if(!c) return false;
+  const nodes=skillTreeFor(c);
+  return nodes.length>0 && nodes.every(n=>Save.hasSkill(id, n.id));
+}
+function skillsMasteredCount(){ return ROSTER.filter(c=>skillTreeComplete(c.id)).length; }
+// ---- HARDCORE completion ---- every normal fighter cleared on ULTRA HARD.
+function hardcoreEarned(){ return normalRoster().filter(c=>Save.hasHardcore(c.id)).length; }
+// can the player PRESTIGE? only when every normal fighter has a (regular) medal.
+function canPrestige(){ return medalsEarned()>=medalsTotal() && medalsTotal()>0; }
 function opMedalReq(id){
   const total=medalsTotal();
   if(id==='casper') return Math.ceil(total/2);   // half of all medals
@@ -3909,8 +4079,9 @@ function computeUnlockMap(){
   if(_UNLOCK_BY_CHAR) return;
   _STARTERS = new Set();
   CATEGORIES.forEach(cat=>{ if(!cat.secret){ const first=cat.ids.find(id=>{ const c=ROSTER.find(x=>x.id===id); return c && !c.opChar; }); if(first) _STARTERS.add(first); } });
-  // Campaign shares the same free starter set, but tracks everything else on its own.
-  _CAMPAIGN_STARTERS = new Set(_STARTERS);
+  // CAMPAIGN starts with ONLY Nathan (the main character). Every other campaign
+  // fighter must be earned by clearing the mission that unlocks it.
+  _CAMPAIGN_STARTERS = new Set(['nathan']);
   // characters that need an achievement gate: all normal (non-OP) non-starters
   const toGate = ROSTER.filter(c=>!c.opChar && !_STARTERS.has(c.id)).map(c=>c.id);
   // achievements available to assign (skip the very first so FIRST BLOOD stays a freebie milestone)
@@ -3918,6 +4089,19 @@ function computeUnlockMap(){
   _UNLOCK_BY_CHAR = {};
   toGate.forEach((cid, i)=>{ _UNLOCK_BY_CHAR[cid] = pool[i % pool.length]; });
 }
+// The set of fighters that appear on the CAMPAIGN character-select grid: the
+// starter (Nathan) plus every fighter unlockable by a campaign mission. Foes you
+// only fight (but can't play) and unrelated roster fighters are hidden entirely.
+let _CAMPAIGN_ROSTER=null;
+function campaignRosterSet(){
+  if(_CAMPAIGN_ROSTER) return _CAMPAIGN_ROSTER;
+  computeUnlockMap();
+  const s=new Set(_CAMPAIGN_STARTERS);
+  CAMPAIGN_MISSIONS.forEach(m=>{ if(m.unlock) s.add(m.unlock); });
+  _CAMPAIGN_ROSTER=s;
+  return s;
+}
+function inCampaignRoster(id){ return campaignRosterSet().has(id); }
 // name of the achievement gating a char (for hints)
 function achForChar(id){ computeUnlockMap(); return _UNLOCK_BY_CHAR[id]; }
 function charUnlocked(id){
@@ -4042,6 +4226,8 @@ function buildCharTile(c){
   el.innerHTML=`
     <span class="pick"></span>
     <span class="medal" style="display:none">🏅</span>
+    <span class="hcmedal" style="display:none" title="Hardcore medal — cleared Classic on Ultra Hard">☠</span>
+    <span class="skillmedal" style="display:none" title="Skill tree fully mastered">🌟</span>
     <span class="lock" style="display:none">🔒</span>
     <canvas class="ic" width="96" height="96"></canvas>
     <span class="nm" style="color:${c.color}">${c.name}</span>`;
@@ -4083,7 +4269,9 @@ function buildCharTile(c){
 // A char with `hidden` stays completely out of the grid until it's unlocked —
 // no silhouette, no "?" tile (unlike normal locked chars, which show a mystery tile).
 function catVisibleChars(ci){
-  return ROSTER.filter(c=>CAT_OF[c.id]===ci && !(c.hidden && !charUnlocked(c.id)));
+  return ROSTER.filter(c=>CAT_OF[c.id]===ci
+    && !(c.hidden && !charUnlocked(c.id))
+    && (selectContext!=='campaign' || inCampaignRoster(c.id)));   // campaign grid: only campaign fighters
 }
 function buildCatGroup(cat, ci){
   const group=document.createElement('div'); group.className='catgroup';
@@ -4126,7 +4314,8 @@ function buildRoster(){
     }
   });
   // any fighter not assigned to a category (safety net) goes in a final group
-  const leftovers=ROSTER.filter(c=>CAT_OF[c.id]===undefined && !(c.hidden && !charUnlocked(c.id)));
+  const leftovers=ROSTER.filter(c=>CAT_OF[c.id]===undefined && !(c.hidden && !charUnlocked(c.id))
+    && (selectContext!=='campaign' || inCampaignRoster(c.id)));
   if(leftovers.length){
     const group=document.createElement('div'); group.className='catgroup';
     group.innerHTML=`<div class="cathead"><span class="cicon">✦</span>OTHER</div>`;
@@ -4149,10 +4338,17 @@ function STORY_ACH_NAME(id){
 
 // show a medal on tiles for characters that cleared Classic Mode; show locks
 function rebuildRosterMedals(){
+  const inCampaign = (selectContext==='campaign');
   document.querySelectorAll('.char').forEach(el=>{
     const id=el.dataset.id;
+    // main-game medals (regular + hardcore) don't apply inside the campaign grid
     const m=el.querySelector('.medal');
-    if(m) m.style.display = Save.hasMedal(id) ? 'block' : 'none';
+    if(m) m.style.display = (!inCampaign && Save.hasMedal(id)) ? 'block' : 'none';
+    const hc=el.querySelector('.hcmedal');
+    if(hc) hc.style.display = (!inCampaign && Save.hasHardcore(id)) ? 'block' : 'none';
+    // skill-tree mastery is global (skills are shared across modes)
+    const sm=el.querySelector('.skillmedal');
+    if(sm) sm.style.display = skillTreeComplete(id) ? 'block' : 'none';
     const lk=el.querySelector('.lock');
     if(lk) lk.style.display = charUnlocked(id) ? 'none' : 'block';
     el.classList.toggle('locked', !charUnlocked(id));
@@ -4237,6 +4433,17 @@ function refreshPicks(){
   // bot difficulty lives here now — only meaningful when fighting the CPU (1P)
   const diffRow=document.getElementById('selDiffRow');
   if(diffRow){ diffRow.style.display = (mode==='2p') ? 'none' : 'flex'; updateBotDiffHint(); }
+  // ULTRA HARD toggle is Classic-only
+  const ultraRow=document.getElementById('ultraRow');
+  if(ultraRow){
+    const showUltra = !!(classic && classic.pending);
+    ultraRow.style.display = showUltra ? 'flex' : 'none';
+    if(showUltra){
+      const ut=document.getElementById('ultraToggle');
+      const on=Save.getSetting('classicUltra',false);
+      ut.classList.toggle('on',on); ut.textContent=on?'ON':'OFF';
+    }
+  }
   // grid selection highlights
   document.querySelectorAll('.char').forEach(el=>{
     el.classList.remove('sel1','sel2');
@@ -4309,7 +4516,7 @@ document.getElementById('muteBtn').onclick=(e)=>{
 
 /* ---------------- SCREEN FLOW ---------------- */
 function show(id){
-  ['title','mode','select','stage','result','versus','story','achieve','achdetail','shop','minigame','settings','online','waitroom','stats','howto','skills','campaign','mission'].forEach(s=>document.getElementById(s).classList.toggle('hidden', s!==id));
+  ['title','mode','select','stage','result','versus','story','achieve','achdetail','shop','minigame','settings','online','waitroom','stats','howto','skills','campaign','mission','cutscene'].forEach(s=>document.getElementById(s).classList.toggle('hidden', s!==id));
   document.body.classList.remove('in-match');
   // reset any scrollable menu back to the top so its heading is always visible on entry
   const el=document.getElementById(id);
@@ -4317,7 +4524,7 @@ function show(id){
   // never let a leftover achievement toast pop while navigating pre-match menus
   if(id!=='result'){ _toastQ.length=0; const tt=document.getElementById('achToast'); if(tt) tt.classList.remove('show'); _toastBusy=false; }
   // menu screens share a catchy menu theme; the match screens use stage music
-  const menuScreens=['title','mode','select','stage','achieve','achdetail','shop','minigame','result','story','settings','online','waitroom','stats','howto','skills','campaign','mission'];
+  const menuScreens=['title','mode','select','stage','achieve','achdetail','shop','minigame','result','story','settings','online','waitroom','stats','howto','skills','campaign','mission','cutscene'];
   if(menuScreens.includes(id)){ if(Music.curId!=='menu') Music.play('menu'); }
 }
 
@@ -4787,6 +4994,9 @@ function buildStatsScreen(){
     ['POWER SURGE WINS', Save.stat('chargedWins')],
     ['MEME WINS', Save.stat('memeWins')],
     ['MEDALS', medalsEarned()+' / '+medalsTotal()],
+    ['☠ HARDCORE MEDALS', hardcoreEarned()+' / '+medalsTotal()],
+    ['🌟 SKILLS MASTERED', skillsMasteredCount()+' / '+ROSTER.length],
+    ['⭐ PRESTIGE LEVEL', Save.prestige()],
     ['STAGES VISITED', stagesVisited+' / '+STAGES.length],
     ['ACHIEVEMENTS', achDone+' / '+ACHIEVEMENTS.length],
   ];
@@ -4845,7 +5055,7 @@ function renderSkillTree(){
     if(!isOwned && reqMet){
       const btn=el.querySelector('.skillbuy');
       btn.addEventListener('click', ()=>{
-        if(Save.buySkill(c.id, n.id, n.cost)){ renderSkillTree(); flashHelperOn('skillsCurrencyCount'); }
+        if(Save.buySkill(c.id, n.id, n.cost)){ renderSkillTree(); rebuildRosterMedals(); flashHelperOn('skillsCurrencyCount'); }
       });
     }
     grid.appendChild(el);
@@ -4958,6 +5168,12 @@ document.getElementById('skillTreeToggle').onclick=()=>{
   Save.setSetting('skillTreeOn', now);
   const stt=document.getElementById('skillTreeToggle');
   stt.classList.toggle('on', now); stt.textContent=now?'ON':'OFF';
+};
+document.getElementById('ultraToggle').onclick=()=>{
+  const now=!Save.getSetting('classicUltra',false);
+  Save.setSetting('classicUltra', now);
+  const ut=document.getElementById('ultraToggle');
+  ut.classList.toggle('on', now); ut.textContent=now?'ON':'OFF';
 };
 document.querySelectorAll('.ctrltab').forEach(tab=>{
   tab.onclick=()=>{
@@ -5148,7 +5364,8 @@ function beginCampaign(c){
   Save.campaignStart(c.id);
   campaign={ active:true, c, mission:0 };
   selectContext='campaign';
-  showMission();
+  // play the one-time opening intro, then drop into the first mission briefing
+  playCutscene(CAMPAIGN_OPENING, ()=>showMission(), null);
 }
 // resume the saved campaign from disk (mission index + chosen fighter)
 function resumeCampaign(){
@@ -5158,6 +5375,99 @@ function resumeCampaign(){
   selectContext='campaign';
   showMission();
 }
+
+/* ---------------- CAMPAIGN CUTSCENE PLAYER ---------------- */
+// Plays a sequence of { who, line } dialogue beats on the #cutscene screen, one
+// at a time, advancing on click/tap or a SKIP button. `foe` is the mission foe
+// used to resolve any right-side speaker portrait; `who:'p'` is the player.
+let _cut=null;
+function cutResolve(who, foe){
+  if(who==='p') return campaign ? campaign.c : (p1Pick||ROSTER[0]);
+  if(who==='narr') return null;
+  return ROSTER.find(r=>r.id===who) || foe || null;
+}
+function playCutscene(lines, onDone, foe){
+  cancelAnimationFrame(campaign && campaign._anim);
+  // skip gracefully if there's nothing to say
+  if(!lines || !lines.length){ onDone && onDone(); return; }
+  _cut={ lines, i:0, onDone, foe, anim:null, start:performance.now() };
+  show('cutscene');
+  cancelAnimationFrame(_cut.anim);
+  const cl=document.getElementById('cutCanvasL').getContext('2d');
+  const cr=document.getElementById('cutCanvasR').getContext('2d');
+  function loop(now){
+    cl.clearRect(0,0,180,210); cr.clearRect(0,0,180,210);
+    if(_cut.leftDef)  drawFighter(cl, _cut.leftDef,  30, 30, 120, 165, 1, now, _cut.leftPose||'idle',  costForCut(_cut.leftDef));
+    if(_cut.rightDef) drawFighter(cr, _cut.rightDef, 30, 30, 120, 165, 1, now, _cut.rightPose||'idle', costForCut(_cut.rightDef));
+    _cut.anim=requestAnimationFrame(loop);
+  }
+  _cut.anim=requestAnimationFrame(loop);
+  renderCutLine();
+}
+// pick a sensible costume for a cutscene portrait (player uses their chosen skin)
+function costForCut(def){
+  if(!def) return 0;
+  if(campaign && def===campaign.c) return costMap[def.id]||0;
+  return 0;
+}
+function renderCutLine(){
+  const beat=_cut.lines[_cut.i];
+  const foe=_cut.foe;
+  const speakerId=beat.who;
+  const def=cutResolve(speakerId, foe);
+  const isNarr=(speakerId==='narr');
+  const isPlayer=(speakerId==='p');
+  // player speaks from the left, everyone else from the right; narrator: no portraits
+  const leftEl=document.getElementById('cutLeft'), rightEl=document.getElementById('cutRight');
+  if(isNarr){
+    _cut.leftDef=null; _cut.rightDef=null;
+    leftEl.classList.remove('active'); rightEl.classList.remove('active');
+    leftEl.style.visibility='hidden'; rightEl.style.visibility='hidden';
+  } else if(isPlayer){
+    _cut.leftDef=def; _cut.leftPose='attack';
+    leftEl.style.visibility='visible';
+    leftEl.classList.add('active'); rightEl.classList.remove('active');
+    document.getElementById('cutNameL').textContent=def?def.name:'';
+    document.getElementById('cutNameL').style.color=def?def.color:'#fff';
+    // keep the last foe portrait visible but dimmed if we've already met them
+    rightEl.style.visibility = _cut.rightDef ? 'visible' : 'hidden';
+  } else {
+    _cut.rightDef=def; _cut.rightPose='attack';
+    rightEl.style.visibility='visible';
+    rightEl.classList.add('active'); leftEl.classList.remove('active');
+    document.getElementById('cutNameR').textContent=def?def.name:'';
+    document.getElementById('cutNameR').style.color=def?def.color:'#fff';
+    leftEl.style.visibility = _cut.leftDef ? 'visible' : 'hidden';
+  }
+  const who=document.getElementById('cutWho');
+  const lineEl=document.getElementById('cutLine');
+  who.textContent = isNarr ? '' : (def?def.name:'');
+  who.style.color = isNarr ? '#9a9cc0' : (def?def.color:'#fff');
+  who.classList.toggle('narr', isNarr);
+  lineEl.classList.toggle('narr', isNarr);
+  lineEl.textContent=beat.line;
+  document.getElementById('cutHint').textContent =
+    (_cut.i>=_cut.lines.length-1) ? 'CLICK / TAP TO CONTINUE ▶' : 'CLICK / TAP TO CONTINUE';
+}
+function advanceCutscene(){
+  if(!_cut) return;
+  _cut.i++;
+  if(_cut.i>=_cut.lines.length){ endCutscene(); return; }
+  renderCutLine();
+}
+function endCutscene(){
+  if(!_cut) return;
+  cancelAnimationFrame(_cut.anim);
+  const done=_cut.onDone; _cut=null;
+  done && done();
+}
+// click/tap anywhere advances; SKIP jumps straight to the end
+document.getElementById('cutscene').addEventListener('click',(e)=>{
+  if(e.target && e.target.id==='cutSkip') return;   // handled below
+  advanceCutscene();
+});
+document.getElementById('cutSkip').addEventListener('click',(e)=>{ e.stopPropagation(); endCutscene(); });
+
 // mission briefing screen (narration + FIGHT / SAVE&QUIT)
 function showMission(){
   const cm=campaign;
@@ -5174,15 +5484,21 @@ function showMission(){
   function loop(t){ sc.clearRect(0,0,140,150); drawFighter(sc, cm.c, 35, 30, 70, 95, 1, t, 'attack', costMap[cm.c.id]); campaign._anim=requestAnimationFrame(loop); }
   campaign._anim=requestAnimationFrame(loop);
 }
-// FIGHT: launch the current mission's match
-document.getElementById('missionStart').onclick=()=>{
-  cancelAnimationFrame(campaign._anim);
+// launch the current mission's actual match (after any pre-fight dialogue)
+function launchMissionFight(){
   const m=CAMPAIGN_MISSIONS[campaign.mission];
   p1Pick=campaign.c;
   p2Pick=campaignFoe(m);
   gameMode = m.boss ? 'boss' : 'stock';    // boss missions spawn a GIANT foe
   stagePick = STAGES[Math.floor(Math.random()*STAGES.length)];
   showVersus();
+}
+// FIGHT: play the mission's pre-fight banter, then start the match
+document.getElementById('missionStart').onclick=()=>{
+  cancelAnimationFrame(campaign._anim);
+  const idx=campaign.mission;
+  const foe=campaignFoe(CAMPAIGN_MISSIONS[idx]);
+  playCutscene(campaignDialogue(idx).pre, ()=>launchMissionFight(), foe);
 };
 // SAVE & QUIT: progress is already saved on disk; just return to the hub
 document.getElementById('missionBack').onclick=()=>{
@@ -5203,7 +5519,32 @@ function refreshProfileLine(){
   if(mt) mt.textContent=medalsTotal();
   const cc=document.getElementById('currencyCount');
   if(cc) cc.textContent=Save.currency();
+  // prestige badge (shown once you have any prestige) + prestige-up button (only
+  // when every normal fighter has a medal). The medal badge shows a ⭐ marker per
+  // completed collection so past prestiges stay visible even after the reset.
+  const pl=Save.prestige();
+  const pb=document.getElementById('prestigeBadge'), plv=document.getElementById('prestigeLevel');
+  if(pb){ pb.classList.toggle('hidden', pl<=0); if(plv) plv.textContent=pl; }
+  const pBtn=document.getElementById('prestigeBtn');
+  if(pBtn) pBtn.classList.toggle('hidden', !canPrestige());
+  // hardcore tally appended to the medal badge title for a quick glance
+  const mb=document.getElementById('medalBadge');
+  if(mb){ const hc=hardcoreEarned(); mb.title = 'Classic medals earned · ☠ '+hc+' hardcore · 🌟 '+skillsMasteredCount()+' skill-mastered'; }
 }
+// PRESTIGE: trade a full medal collection for a permanent prestige star + bonus
+// SHARDS. Medals reset (so you can chase them again), but prestige only grows.
+document.getElementById('prestigeBtn').onclick=()=>{
+  if(!canPrestige()){ return; }
+  const lvl=Save.prestige()+1;
+  const bonus=200*lvl;   // reward scales with each prestige
+  if(!confirm(`PRESTIGE ${lvl}?\n\nThis resets ALL your Classic medals (you'll re-earn them), but grants a permanent ⭐ PRESTIGE ${lvl} and +${bonus} 💎 SHARDS.\n\nHardcore medals, skills, skins and campaign progress are kept.`)) return;
+  Save.addPrestige();
+  Save.addCurrency(bonus);
+  buildRoster();          // medals cleared → refresh the grid badges
+  refreshProfileLine();
+  announce('PRESTIGE '+lvl+'!');
+  alert(`⭐ Welcome to PRESTIGE ${lvl}! +${bonus} 💎 SHARDS awarded. Your medal hunt begins anew.`);
+};
 document.getElementById('profileLine').onclick=()=>{
   const name=prompt('Save profile name:', Save.data.profile);
   if(name){ Save.setProfile(name); refreshProfileLine(); }
@@ -5295,7 +5636,8 @@ document.getElementById('goBtn').onclick=()=>{
 /* ---------------- CLASSIC MODE RUN ---------------- */
 function beginClassic(c){
   const run = buildClassicRun(c);
-  classic = { active:true, c, foes:run.foes, intros:run.intros, st:run.st, round:0 };
+  const ultra = !!Save.getSetting('classicUltra', false);
+  classic = { active:true, c, foes:run.foes, intros:run.intros, st:run.st, round:0, ultra };
   gameMode='stock'; // classic uses standard rules
   showStory();
 }
@@ -5398,7 +5740,8 @@ function updateRoundBanner(){
     const total=classic.foes.length;
     const cur=Math.min(classic.round+1, total);
     const finale=(cur===total);
-    document.getElementById('roundBannerText').textContent = finale ? ('FINALE · ROUND '+cur+' / '+total) : ('ROUND '+cur+' / '+total);
+    const ultra = classic.ultra ? '☠ ULTRA · ' : '';
+    document.getElementById('roundBannerText').textContent = ultra + (finale ? ('FINALE · ROUND '+cur+' / '+total) : ('ROUND '+cur+' / '+total));
     b.classList.remove('hidden');
   } else {
     b.classList.add('hidden');
@@ -5406,7 +5749,7 @@ function updateRoundBanner(){
 }
 function startMatch(){
   // hide every menu screen
-  ['title','mode','select','stage','result','versus','story','skills','campaign','mission'].forEach(s=>document.getElementById(s).classList.add('hidden'));
+  ['title','mode','select','stage','result','versus','story','skills','campaign','mission','cutscene'].forEach(s=>document.getElementById(s).classList.add('hidden'));
   document.body.classList.add('in-match');
   document.getElementById('hud').classList.remove('hidden');
   updateRoundBanner();
@@ -5430,6 +5773,11 @@ function startMatch(){
     p2.w=Math.round(54*1.8); p2.h=Math.round(74*1.8);
     p2.y=GROUND_Y-p2.h; p2.isBoss=true;
     p2.maxHp=Math.round(gm.hp*2.2); p2.hp=p2.maxHp;
+  }
+  // ULTRA HARD (Classic): the player gets a SINGLE life — one KO ends the run.
+  // The CPU keeps its normal stocks, so the deck is stacked hard against you.
+  if(ultraActive()){
+    p1.stocks=1; p1.startStocks=1;
   }
   players=[p1,p2];
   projectiles=[]; particles=[]; strikes=[]; shocks=[]; afterimages=[]; blackholes=[]; eclipseT=0; shardPickups=[]; shardSpawnTimer=300;
@@ -6597,12 +6945,17 @@ const BOT_DIFF_LEVELS = [
   { name:'AVERAGE', act:1.0,  react:1.0 },
   { name:'HARD',    act:1.6,  react:0.55 },
 ];
+// ULTRA HARD MODE (Classic only): far faster reactions + relentless aggression,
+// well beyond the normal HARD slider. Not selectable on the difficulty slider —
+// it's forced whenever an ultra Classic run is active.
+const BOT_DIFF_ULTRA = { name:'ULTRA', act:2.6, react:0.28 };
+function ultraActive(){ return !!(classic && classic.active && classic.ultra); }
 function botDiffLevel(){
   let n = Save.getSetting('botDifficulty', 1);
   n = Math.max(0, Math.min(BOT_DIFF_LEVELS.length-1, n|0));
   return n;
 }
-function BOT_DIFF(){ return BOT_DIFF_LEVELS[botDiffLevel()]; }
+function BOT_DIFF(){ return ultraActive() ? BOT_DIFF_ULTRA : BOT_DIFF_LEVELS[botDiffLevel()]; }
 
 function botThink(bot, foe){
   bot.aiTimer--;
@@ -7794,19 +8147,25 @@ function endMatch(){
     setTimeout(()=>{
       document.getElementById('hud').classList.add('hidden');
       if(p1won){
-        const m=CAMPAIGN_MISSIONS[campaign.mission];
+        const idx=campaign.mission;
+        const m=CAMPAIGN_MISSIONS[idx];
+        const foe=campaignFoe(m);
         let unlockedName=null;
         if(m && m.unlock && Save.campaignUnlock(m.unlock)){
           unlockedName=(ROSTER.find(r=>r.id===m.unlock)||{}).name;
         }
-        campaign.mission++;
-        Save.campaignSetMission(campaign.mission);   // persist between missions
-        if(campaign.mission < campaignTotal()){
-          if(unlockedName) announce('UNLOCKED: '+unlockedName+'!');
-          showMission();                              // next mission briefing
-        } else {
-          finishCampaign(true);                       // whole campaign cleared
-        }
+        // play the post-fight banter (the loser reacts + any new ally speaks up),
+        // THEN advance to the next mission briefing or the finale.
+        playCutscene(campaignDialogue(idx).post, ()=>{
+          campaign.mission++;
+          Save.campaignSetMission(campaign.mission);   // persist between missions
+          if(campaign.mission < campaignTotal()){
+            if(unlockedName) announce('UNLOCKED: '+unlockedName+'!');
+            showMission();                              // next mission briefing
+          } else {
+            finishCampaign(true);                       // whole campaign cleared
+          }
+        }, foe);
       } else {
         finishCampaign(false);                        // lost this mission — retry from briefing
       }
@@ -7904,15 +8263,23 @@ function finishClassic(won){
     Save.awardClassic(c.id);                 // grants medal + epic skin, persists
     Save.addStat('wins',4);                  // a full run is 4 wins
     Save.addCurrency(50);                    // bonus SHARDS for clearing the whole run
+    // HARDCORE MEDAL: the run was cleared with ULTRA HARD MODE (1 life, brutal CPU)
+    let gotHardcore=false;
+    if(classic.ultra){ gotHardcore = Save.grantHardcore(c.id); if(gotHardcore) Save.addCurrency(75); }
     refreshProfileLine();
     // a new medal can cross an OP threshold → rebuild the grid so it appears
     buildRoster();
     const opNow = ROSTER.filter(o=>o.opChar && charUnlocked(o.id) && opBefore.includes(o.id));
-    title.textContent = classic.st.title+' — CLEARED!';
+    title.textContent = classic.st.title+(classic.ultra?' — SURVIVED!':' — CLEARED!');
     title.style.filter='none';
     sub.innerHTML = firstClear
       ? `🏅 <span style="color:${c.color}">${c.name}</span> earned a MEDAL and unlocked the EPIC skin! Cycle costumes to equip it. <br>+50 💎 SHARDS bonus!`
       : `🏅 <span style="color:${c.color}">${c.name}</span> conquered Classic Mode again. <br>+50 💎 SHARDS bonus!`;
+    if(classic.ultra){
+      sub.innerHTML += gotHardcore
+        ? `<br><br>☠ <span style="color:#ff5757">HARDCORE MEDAL EARNED</span> — one life, no mercy. +75 💎 bonus!`
+        : `<br><br>☠ <span style="color:#ff5757">Hardcore run cleared again.</span>`;
+    }
     // dramatic reveal if this medal just unlocked a secret OP fighter
     if(opNow.length){
       const oc=opNow[0];
@@ -7938,25 +8305,34 @@ function finishClassic(won){
 // already saved, so nothing is lost.
 function finishCampaign(won){
   const c=campaign.c;
-  Music.play('menu');
-  const r=document.getElementById('result');
-  r.classList.remove('hidden');
   const title=document.getElementById('resultTitle');
   const sub=document.getElementById('resultSub');
   const rematch=document.getElementById('rematchBtn');
   if(won){
-    Save.campaignMarkCleared();      // records the clear, resets the run pointer
-    Save.addCurrency(100);           // big bonus for finishing the whole campaign
-    refreshProfileLine();
-    rematch.classList.add('hidden');
-    title.textContent='CAMPAIGN CLEARED!';
-    title.style.filter='none';
-    sub.innerHTML = `<span style="color:${c.color}">${c.name}</span> conquered the entire campaign! <br>+100 💎 SHARDS · Start a NEW CAMPAIGN to unlock even more.`;
-    sub.style.color='#8fefff';
-    announce('CHAMPION!');
-    grantAndToast();
-    campaign=null;
-  } else {
+    // play the closing cutscene FIRST (campaign.c must still exist for the player
+    // portrait), then present the results screen.
+    playCutscene(CAMPAIGN_ENDING, ()=>{
+      Save.campaignMarkCleared();      // records the clear, resets the run pointer
+      Save.addCurrency(100);           // big bonus for finishing the whole campaign
+      refreshProfileLine();
+      Music.play('menu');
+      const r=document.getElementById('result');
+      r.classList.remove('hidden');
+      rematch.classList.add('hidden');
+      title.textContent='CAMPAIGN CLEARED!';
+      title.style.filter='none';
+      sub.innerHTML = `<span style="color:${c.color}">${c.name}</span> conquered the entire campaign! <br>+100 💎 SHARDS · Start a NEW CAMPAIGN to unlock even more.`;
+      sub.style.color='#8fefff';
+      announce('CHAMPION!');
+      grantAndToast();
+      campaign=null;
+    }, campaignFoe(CAMPAIGN_MISSIONS[CAMPAIGN_MISSIONS.length-1]));
+    return;
+  }
+  Music.play('menu');
+  const r=document.getElementById('result');
+  r.classList.remove('hidden');
+  {
     // keep the run alive; RETRY reopens the same mission briefing
     const failedMission=campaign.mission;
     rematch.classList.remove('hidden');
@@ -8108,7 +8484,7 @@ function openPause(){
   const on=Save.getSetting('mobile',false);
   mob.classList.toggle('on', on); mob.textContent=on?'ON':'OFF';
   const pd=document.getElementById('pauseDiffSlider');
-  if(pd){ pd.value=botDiffLevel(); const ph=document.getElementById('pauseDiffHint'); if(ph) ph.textContent='Currently '+BOT_DIFF_LEVELS[botDiffLevel()].name+'.'; }
+  if(pd){ pd.value=botDiffLevel(); const ph=document.getElementById('pauseDiffHint'); if(ph) ph.textContent = ultraActive() ? '☠ ULTRA HARD MODE — locked for this run.' : ('Currently '+BOT_DIFF_LEVELS[botDiffLevel()].name+'.'); pd.disabled=ultraActive(); }
   document.getElementById('pause').classList.remove('hidden');
   // silence held keys so nobody keeps walking while paused
   keys={};
