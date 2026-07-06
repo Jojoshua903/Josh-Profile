@@ -1611,7 +1611,7 @@ const ROSTER = [
     id:'zennith', name:'ZENNITH', color:'#6a040f', dark:'#1a0002', skin:'#2a2a33',
     hidden:true, opChar:true, finalChar:true,
     desc:"Nathan's Worst Nightmare",
-    move:'DOOM PITCH · a screaming cursed fastball that pierces',
+    move:'DOOM PITCH · three homing cursed comets that pierce everything',
     up:'NIGHTMARE RISE · a shrieking void ascent',
     sup:'PERFECT GAME · an apocalyptic storm of cursed baseballs',
     stats:{speed:4.7, jump:16.2, weight:1.35},
@@ -2321,6 +2321,25 @@ function drawFighter(g, c, x, y, w, h, face, t, state, costume){
   if(emote==='spin'){ g.rotate(Math.sin(t/50)*0.5); }               // playful wobble-spin
   g.translate(0, bob);
 
+  // --- lightweight secondary motion: squash & stretch, applied to EVERY fighter ---
+  // One shared scale() call before any drawing happens, so this covers the full
+  // roster for free — including the custom full-model characters (Kayo, Reshman,
+  // fox) that skip the standard limb-drawing code below. Kept deliberately cheap:
+  // no extra shapes, no shadowBlur/gradients, just a per-frame scale factor.
+  let sqx=1, sqy=1;
+  if(state==='hit'){
+    const flinch=Math.max(0,1-(t%260)/130); sqx=1+flinch*0.16; sqy=1-flinch*0.14; // impact judder
+  } else if(state==='attack'){
+    sqx=1.05; sqy=0.97; // forward punch-through
+  } else if(state==='run'){
+    sqy=1+Math.sin(t/120)*0.035; sqx=1-Math.sin(t/120)*0.025; // bouncy stride
+  } else if(state==='shield'){
+    sqy=0.94; sqx=1.04; // braced crouch
+  } else if(!emote){
+    sqy=1+Math.sin(t/500)*0.012; // idle breathing
+  }
+  g.scale(sqx, sqy);
+
   // resolve costume palette + bonus accessory
   const cos = resolveCostume(c, costume||0);
   const col = cos.color;
@@ -2351,9 +2370,10 @@ function drawFighter(g, c, x, y, w, h, face, t, state, costume){
 
   // body
   g.fillStyle=col;
-  // EPIC costume: radiant golden glow behind the fighter
-  if(cos.epic){ g.save(); g.shadowColor='#ffd700'; g.shadowBlur=14+6*Math.sin(t/120); g.fillStyle=col; roundRect(g,-bodyW/2,-bodyH*0.55,bodyW,bodyH,8); g.restore(); }
-  if(cos.signature){ g.save(); g.shadowColor='#00e5ff'; g.shadowBlur=12+5*Math.sin(t/90); g.fillStyle=col; roundRect(g,-bodyW/2,-bodyH*0.55,bodyW,bodyH,8); g.restore(); }
+  // EPIC / SIGNATURE costume glow — a cheap pulsing outline (no shadowBlur, which
+  // was blurring the whole body every frame and driving the lag)
+  if(cos.epic){ g.save(); g.globalAlpha=0.35+0.25*Math.sin(t/120); g.strokeStyle='#ffd700'; g.lineWidth=3; roundRectStroke ? 0:0; g.beginPath(); roundRect(g,-bodyW/2-2,-bodyH*0.55-2,bodyW+4,bodyH+4,9); g.stroke(); g.restore(); }
+  if(cos.signature){ g.save(); g.globalAlpha=0.35+0.25*Math.sin(t/90); g.strokeStyle='#00e5ff'; g.lineWidth=3; g.beginPath(); roundRect(g,-bodyW/2-2,-bodyH*0.55-2,bodyW+4,bodyH+4,9); g.stroke(); g.restore(); }
   roundRect(g, -bodyW/2, -bodyH*0.55, bodyW, bodyH, 8);
   // SCHOOL uniform: white shirt panel down the middle of the blazer
   if(cos.shirt){
@@ -2363,8 +2383,9 @@ function drawFighter(g, c, x, y, w, h, face, t, state, costume){
 
   // arms
   g.fillStyle=dark;
-  roundRect(g, armFwd-6, -bodyH*0.35, 10, bodyH*0.55, 5); // front arm
-  roundRect(g, -bodyW*0.5, -bodyH*0.35, 10, bodyH*0.55, 5); // back arm
+  const armSwing = state==='run' ? Math.sin(t/120)*5 : Math.sin(t/500)*1.2; // counter-swing, matches leg cadence when running, subtle sway otherwise
+  roundRect(g, armFwd-6, -bodyH*0.35+armSwing, 10, bodyH*0.55, 5); // front arm
+  roundRect(g, -bodyW*0.5, -bodyH*0.35-armSwing, 10, bodyH*0.55, 5); // back arm
 
   // head
   g.fillStyle=c.skin||'#ffe3c4';
@@ -4182,6 +4203,7 @@ class Fighter{
 
 /* ---------------- GAME STATE ---------------- */
 let players=[], projectiles=[], particles=[], strikes=[], shocks=[], afterimages=[], blackholes=[];
+let voidfx=[];   // Zennith's cursed slash arcs & void rings (drawn with additive glow)
 let shardPickups=[];   // floating 💎 bonus gems that spawn mid-match; grab for bonus SHARDS
 let shardSpawnTimer=0;  // frames until the next shard gem may spawn
 let eclipseT=0; // Zennith PERFECT GAME: frames left of the cursed solar eclipse (darkened sky + slower super gain)
@@ -4596,6 +4618,15 @@ const CATEGORIES = [
 // map id -> category order so any unlisted fighter still lands somewhere sensible
 const CAT_OF = {}; CATEGORIES.forEach((cat,ci)=>cat.ids.forEach(id=>CAT_OF[id]=ci));
 
+// Perf: cheap "is this element actually visible right now" check. Screens are
+// toggled with a `.hidden{display:none}` class rather than removed from the
+// DOM, so `document.body.contains(el)` alone stays true forever — every
+// character-tile / preview canvas kept animating at 60fps even while buried
+// behind other menus (or an in-progress match). offsetParent is null both
+// when detached AND when any ancestor is display:none, so this one check
+// covers both cases and lets hidden preview loops actually stop.
+function _alive(el){ return !!el && el.offsetParent !== null; }
+
 function buildCharTile(c){
   costMap[c.id]=0;
   const el=document.createElement('div');
@@ -4610,16 +4641,18 @@ function buildCharTile(c){
     <span class="nm" style="color:${c.color}">${c.name}</span>`;
   const ic=el.querySelector('canvas').getContext('2d');
   function iconLoop(t){
-    if(charUnlocked(c.id)){
-      drawIcon(ic, c, 96, costMap[c.id], t);
-    } else {
-      // locked: dark silhouette with a "?"
-      ic.clearRect(0,0,96,96);
-      ic.fillStyle='#1a1a24'; ic.fillRect(0,0,96,96);
-      ic.fillStyle='#33333f'; ic.beginPath(); ic.arc(48,42,22,0,Math.PI*2); ic.fill(); ic.fillRect(30,58,36,30);
-      ic.fillStyle='#5a5a6a'; ic.font='bold 34px Arial'; ic.textAlign='center'; ic.textBaseline='middle'; ic.fillText('?',48,50);
+    if(_alive(el)){
+      if(charUnlocked(c.id)){
+        drawIcon(ic, c, 96, costMap[c.id], t);
+      } else {
+        // locked: dark silhouette with a "?"
+        ic.clearRect(0,0,96,96);
+        ic.fillStyle='#1a1a24'; ic.fillRect(0,0,96,96);
+        ic.fillStyle='#33333f'; ic.beginPath(); ic.arc(48,42,22,0,Math.PI*2); ic.fill(); ic.fillRect(30,58,36,30);
+        ic.fillStyle='#5a5a6a'; ic.font='bold 34px Arial'; ic.textAlign='center'; ic.textBaseline='middle'; ic.fillText('?',48,50);
+      }
     }
-    if(document.body.contains(el)) requestAnimationFrame(iconLoop);
+    requestAnimationFrame(iconLoop);
   }
   requestAnimationFrame(iconLoop);
 
@@ -4762,9 +4795,8 @@ function buildPanel(tag, cls, pick, who){
   const getCos=()=> isBotPanel ? botCostume : costMap[pick.id];
   const setCos=(v)=>{ if(isBotPanel) botCostume=v; else costMap[pick.id]=v; };
   function loop(t){
-    cc.clearRect(0,0,120,120);
-    drawFighter(cc, pick, 30, 22, 60, 82, 1, t, 'idle', getCos());
-    if(document.body.contains(p)) requestAnimationFrame(loop);
+    if(_alive(p)){ cc.clearRect(0,0,120,120); drawFighter(cc, pick, 30, 22, 60, 82, 1, t, 'idle', getCos()); }
+    requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
   const cbtn=p.querySelector('.costbtn'), cname=p.querySelector('.costname');
@@ -4865,16 +4897,18 @@ function showStage(i){
 }
 // draw the current carousel stage continuously
 function carLoop(t){
-  const st=STAGES[stageIndex];
-  drawStageBg(carCtx, st, carCanvas.width, carCanvas.height, t);
-  // render the stage's ACTUAL layout, scaled from game space to the preview canvas
-  const sx=carCanvas.width/W, sy=carCanvas.height/H;
-  st.layout().forEach(pl=>{
-    carCtx.fillStyle = pl.main ? st.plat : st.platTop;
-    carCtx.fillRect(pl.x*sx, pl.y*sy, pl.w*sx, Math.max(6, pl.h*sy));
-    carCtx.fillStyle = st.platTop;
-    carCtx.fillRect(pl.x*sx+2, pl.y*sy, pl.w*sx-4, 2);
-  });
+  if(_alive(carCanvas)){
+    const st=STAGES[stageIndex];
+    drawStageBg(carCtx, st, carCanvas.width, carCanvas.height, t);
+    // render the stage's ACTUAL layout, scaled from game space to the preview canvas
+    const sx=carCanvas.width/W, sy=carCanvas.height/H;
+    st.layout().forEach(pl=>{
+      carCtx.fillStyle = pl.main ? st.plat : st.platTop;
+      carCtx.fillRect(pl.x*sx, pl.y*sy, pl.w*sx, Math.max(6, pl.h*sy));
+      carCtx.fillStyle = st.platTop;
+      carCtx.fillRect(pl.x*sx+2, pl.y*sy, pl.w*sx-4, 2);
+    });
+  }
   requestAnimationFrame(carLoop);
 }
 requestAnimationFrame(carLoop);
@@ -5105,7 +5139,7 @@ function buildShopSkins(grid){
       card.appendChild(b);
       // live mini portrait preview in this skin
       const g=canvas.getContext('2d');
-      (function loop(t){ g.clearRect(0,0,96,96); drawFighter(g, c, 18, 8, 60, 82, 1, t, 'idle', idx); if(document.body.contains(canvas)) requestAnimationFrame(loop); })(0);
+      (function loop(t){ if(_alive(canvas)){ g.clearRect(0,0,96,96); drawFighter(g, c, 18, 8, 60, 82, 1, t, 'idle', idx); } requestAnimationFrame(loop); })(0);
       if(!owned){ b.addEventListener('click',()=>{ if(Save.buySkin(c.id, idx, SKIN_COST)){ buildShop(); refreshProfileLine(); } }); }
       grid.appendChild(card);
     });
@@ -5403,9 +5437,10 @@ function openSkillTree(charId, returnTo){
   renderSkillTree();
   if(!_skillsLoopStarted){
     _skillsLoopStarted=true;
-    const sc=document.getElementById('skillsPortrait').getContext('2d');
+    const skillsPortraitEl=document.getElementById('skillsPortrait');
+    const sc=skillsPortraitEl.getContext('2d');
     (function loop(t){
-      if(skillsChar){ sc.clearRect(0,0,120,120); drawFighter(sc, skillsChar, 30, 22, 60, 82, 1, t, 'idle', costMap[skillsChar.id]||0); }
+      if(skillsChar && _alive(skillsPortraitEl)){ sc.clearRect(0,0,120,120); drawFighter(sc, skillsChar, 30, 22, 60, 82, 1, t, 'idle', costMap[skillsChar.id]||0); }
       requestAnimationFrame(loop);
     })(0);
   }
@@ -6196,7 +6231,7 @@ function startMatch(){
     p1.stocks=1; p1.startStocks=1;
   }
   players=[p1,p2];
-  projectiles=[]; particles=[]; strikes=[]; shocks=[]; afterimages=[]; blackholes=[]; eclipseT=0; shardPickups=[]; shardSpawnTimer=300;
+  projectiles=[]; particles=[]; strikes=[]; shocks=[]; afterimages=[]; blackholes=[]; voidfx=[]; eclipseT=0; shardPickups=[]; shardSpawnTimer=300;
   // SOCCER: spawn a ball + two goals, reset the score
   soccerBall=null; soccerScore=[0,0]; soccerGoalTimer=0;
   if(gm.soccer){
@@ -6229,7 +6264,7 @@ function startOnlineMatch(){
   const p2 = new Fighter(p2Pick, mainX+mainW*0.65, false, Net.p2Cos||0, 'none');
   [p1,p2].forEach(f=>{ f.maxHp=gm.hp; f.hp=gm.hp; f.stocks=gm.stocks; f.startStocks=gm.stocks; f.superMeter=gm.startSuper||0; });
   players=[p1,p2];
-  projectiles=[]; particles=[]; strikes=[]; shocks=[]; afterimages=[]; blackholes=[]; eclipseT=0; shardPickups=[]; shardSpawnTimer=300;
+  projectiles=[]; particles=[]; strikes=[]; shocks=[]; afterimages=[]; blackholes=[]; voidfx=[]; eclipseT=0; shardPickups=[]; shardSpawnTimer=300;
   soccerBall=null; soccerScore=[0,0];
   document.getElementById('p1name').textContent=(Net.isHost?'YOU · ':'')+ 'P1 · '+p1Pick.name;
   document.getElementById('p2name').textContent=(!Net.isHost?'YOU · ':'')+ 'P2 · '+p2Pick.name;
@@ -6604,6 +6639,12 @@ function tryAttack(f){
   SFX.attack('melee');
   // melee hitbox spawned in update via attackTimer window
   spawnParticles(f.cx + f.face*f.w*0.6, f.cy, f.def.color, 5);
+  // ZENNITH: the VOID SLASH leaves a screaming crescent of dark energy
+  if(f.def.id==='zennith'){
+    voidfx.push({kind:'slash', x:f.cx+f.face*f.w*0.7, y:f.cy, face:f.face, life:16, max:16, r:f.w*1.15});
+    SFX.attack('doom');
+    spawnParticles(f.cx + f.face*f.w*0.8, f.cy, '#c77dff', 8);
+  }
 }
 // TAUNT / EMOTE — cosmetic celebration on solid ground; no combat effect
 function tryTaunt(f){
@@ -6883,11 +6924,18 @@ function trySpecial(f){
     spawnParticles(f.cx, f.cy, f.def.color, 18);
     spawnParticles(f.cx, f.cy, '#fff', 8);
   } else if(s==='doom'){
-    // DOOM PITCH: a screaming cursed fastball that PIERCES through the foe (OP).
-    f.attackTimer=14; f.state='attack'; f.specialCd=40;
-    projectiles.push({owner:f, x:f.cx+f.face*30, y:f.cy-4, vx:f.face*19, vy:0,
-      life:70, dmg:16, kb:9, color:'#6a040f', type:'ball', r:9, pierce:true});
-    spawnParticles(f.cx+f.face*26, f.cy, '#6a040f', 10);
+    // DOOM PITCH (OP): Zennith rips open the void and hurls THREE screaming cursed
+    // comets — each pierces every foe AND homes in, trailing dark flame. A void ring
+    // bursts from his hand with a jolt of screen-shake.
+    f.attackTimer=16; f.state='attack'; f.specialCd=52;
+    voidfx.push({kind:'ring', x:f.cx+f.face*26, y:f.cy-4, life:18, max:18, r:8, maxR:64});
+    for(let i=0;i<3;i++){
+      projectiles.push({owner:f, x:f.cx+f.face*30, y:f.cy-4+(i-1)*14, vx:f.face*(15+i*2), vy:(i-1)*2.2,
+        life:96, dmg:15, kb:9, color:'#6a040f', type:'doomcomet', r:10, pierce:true, homing:true, voidTrail:true, spin:0});
+    }
+    spawnParticles(f.cx+f.face*26, f.cy-4, '#c77dff', 16);
+    spawnParticles(f.cx+f.face*26, f.cy-4, '#6a040f', 12);
+    hitStop=Math.max(hitStop,4); shakeT=Math.max(shakeT,10);
   }
   // QUICK RECOVERY skill node: shortens whatever cooldown this special just set
   f.specialCd = Math.max(1, Math.round(f.specialCd * (f.sCdMult||1)));
@@ -7252,12 +7300,22 @@ function trySuper(f){
 
 function meleeHit(att, def){
   if(def.hitCd>0||def.dead) return;
-  const reach=att.w*0.55;
+  // Zennith's normal is the OP VOID SLASH: longer reach, big damage + knockback.
+  const zen = att.def.id==='zennith';
+  const reach=att.w*(zen?1.05:0.55);
   const hx=att.cx+att.face*(att.w*0.5+reach*0.5);
-  const withinX=Math.abs(hx-def.cx) < att.w*0.55+def.w*0.5;
-  const withinY=Math.abs(att.cy-def.cy) < att.h*0.6;
+  const withinX=Math.abs(hx-def.cx) < att.w*(zen?0.9:0.55)+def.w*0.5;
+  const withinY=Math.abs(att.cy-def.cy) < att.h*(zen?0.85:0.6);
   if(withinX && withinY){
-    landHit(att,def,7,4.5, att.face, 0);
+    if(zen){
+      landHit(att,def,20,11, att.face, 0.35);   // OP normal
+      def.superMeter=Math.min(100, def.superMeter+4);
+      spawnParticles(def.cx, def.cy, '#c77dff', 10);
+      spawnParticles(def.cx, def.cy, '#6a040f', 8);
+      hitStop=Math.max(hitStop,4); shakeT=Math.max(shakeT,6);
+    } else {
+      landHit(att,def,7,4.5, att.face, 0);
+    }
   }
 }
 function dashHit(att,def){
@@ -7328,7 +7386,10 @@ function landHit(att,def,dmg,kb,dir,launch){
 }
 
 /* ---------------- PARTICLES ---------------- */
+const MAX_PARTICLES=220;   // hard cap so bursts can't pile up and tank the framerate
 function spawnParticles(x,y,color,n){
+  // if we're already near the cap, drop the oldest particles to make room
+  if(particles.length+n > MAX_PARTICLES){ particles.splice(0, (particles.length+n)-MAX_PARTICLES); }
   for(let i=0;i<n;i++){
     particles.push({x,y,vx:(Math.random()-.5)*7,vy:(Math.random()-.5)*7-1,life:20+Math.random()*15,color,r:2+Math.random()*3});
   }
@@ -7767,8 +7828,9 @@ function update(t){
       const foe=players.find(o=>o!==pr.owner && !o.dead);
       if(foe){
         const ang=Math.atan2(foe.cy-pr.y, foe.cx-pr.x);
-        pr.vx += Math.cos(ang)*0.4; pr.vy += Math.sin(ang)*0.4;
-        const sp=Math.hypot(pr.vx,pr.vy), max=6.5;
+        const turn = pr.type==='doomcomet' ? 0.7 : 0.4;   // comets home hard
+        pr.vx += Math.cos(ang)*turn; pr.vy += Math.sin(ang)*turn;
+        const sp=Math.hypot(pr.vx,pr.vy), max=(pr.type==='doomcomet'?15:6.5);
         if(sp>max){ pr.vx=pr.vx/sp*max; pr.vy=pr.vy/sp*max; }
       }
     }
@@ -7781,6 +7843,10 @@ function update(t){
     if(pr.gravity){ pr.vy+=0.5; }
     pr.x+=pr.vx; pr.y+=pr.vy; pr.life--;
     if(pr.type==='drone' && !pr.homing){ pr.vy=Math.sin(pr.life/6)*1.2; }
+    if(pr.type==='doomcomet'){ pr.spin=(pr.spin||0)+0.5;
+      // trail of cursed void flame
+      if(pr.life%2===0){ voidfx.push({kind:'trail', x:pr.x, y:pr.y, life:12, max:12, r:pr.r*0.9}); }
+    }
     if(pr.type==='flame'){ pr.bobT=(pr.bobT||0)+0.2; pr.y+=Math.sin(pr.bobT)*0.5; pr.r=10+Math.sin(pr.bobT*1.4)*2; }
     if(pr.type==='football' && pr.curve){ pr.vy+=pr.curve; pr.spin=(pr.spin||0)+0.3; }
 
@@ -7894,6 +7960,9 @@ function update(t){
   particles=particles.filter(p=>p.life>0);
   afterimages.forEach(a=>a.life--);
   afterimages=afterimages.filter(a=>a.life>0);
+  // Zennith void FX (slash arcs, comet trails, hand rings) — just tick + expire
+  voidfx.forEach(v=>v.life--);
+  voidfx=voidfx.filter(v=>v.life>0);
 
   if(soccerBall) updateSoccer();
 
@@ -8127,6 +8196,23 @@ function render(t){
       ctx.shadowBlur=0; ctx.strokeStyle='#e63946'; ctx.lineWidth=1.5;
       ctx.beginPath(); ctx.arc(pr.x-pr.r*0.4,pr.y,pr.r*0.9,-0.9,0.9); ctx.stroke();
       ctx.beginPath(); ctx.arc(pr.x+pr.r*0.4,pr.y,pr.r*0.9,Math.PI-0.9,Math.PI+0.9); ctx.stroke();
+    } else if(pr.type==='doomcomet'){
+      // ZENNITH cursed comet: a black core wrapped in a violet void halo + spinning cross
+      ctx.save(); ctx.translate(pr.x,pr.y);
+      // outer void halo (additive glow)
+      ctx.globalCompositeOperation='lighter';
+      ctx.fillStyle='rgba(157,78,221,'+(0.5+0.3*Math.sin(t/60))+')'; ctx.shadowColor='#c77dff'; ctx.shadowBlur=22;
+      ctx.beginPath(); ctx.arc(0,0,pr.r*1.5,0,Math.PI*2); ctx.fill();
+      ctx.globalCompositeOperation='source-over';
+      // black core
+      ctx.shadowBlur=0; ctx.fillStyle='#0a0010';
+      ctx.beginPath(); ctx.arc(0,0,pr.r*0.95,0,Math.PI*2); ctx.fill();
+      // blood-red rim
+      ctx.strokeStyle='#6a040f'; ctx.lineWidth=2.4; ctx.beginPath(); ctx.arc(0,0,pr.r*0.95,0,Math.PI*2); ctx.stroke();
+      // spinning cursed X
+      ctx.rotate(pr.spin||0); ctx.strokeStyle='#ff2a4d'; ctx.lineWidth=2.2; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(-pr.r*0.5,-pr.r*0.5); ctx.lineTo(pr.r*0.5,pr.r*0.5); ctx.moveTo(pr.r*0.5,-pr.r*0.5); ctx.lineTo(-pr.r*0.5,pr.r*0.5); ctx.stroke();
+      ctx.restore();
     } else if(pr.type==='football'){
       ctx.save(); ctx.translate(pr.x,pr.y); ctx.rotate(pr.spin||0);
       ctx.shadowBlur=8; ctx.fillStyle='#fff';
@@ -8354,6 +8440,39 @@ function render(t){
     ctx.restore();
   });
 
+  // ZENNITH void FX — cursed slash crescents, comet trails & hand rings (additive glow)
+  voidfx.forEach(v=>{
+    const p=v.life/v.max;
+    ctx.save();
+    ctx.globalCompositeOperation='lighter';
+    if(v.kind==='slash'){
+      // a screaming crescent that sweeps in the swing direction and fades
+      ctx.translate(v.x, v.y);
+      ctx.scale(v.face,1);
+      ctx.rotate((1-p)*0.9 - 0.45);
+      ctx.strokeStyle='rgba(199,125,255,'+(0.85*p)+')';
+      ctx.shadowColor='#c77dff'; ctx.shadowBlur=18;
+      ctx.lineWidth=6*p+2; ctx.lineCap='round';
+      ctx.beginPath(); ctx.arc(0,0,v.r,-1.1,1.1); ctx.stroke();
+      // inner blood-red edge
+      ctx.strokeStyle='rgba(255,42,77,'+(0.7*p)+')'; ctx.lineWidth=2.4;
+      ctx.beginPath(); ctx.arc(0,0,v.r*0.86,-1.0,1.0); ctx.stroke();
+    } else if(v.kind==='trail'){
+      ctx.fillStyle='rgba(157,78,221,'+(0.4*p)+')'; ctx.shadowColor='#9d4edd'; ctx.shadowBlur=14;
+      ctx.beginPath(); ctx.arc(v.x,v.y,v.r*p,0,Math.PI*2); ctx.fill();
+    } else if(v.kind==='ring'){
+      // expanding void ring bursting from Zennith's hand
+      const rr=v.r + (v.maxR-v.r)*(1-p);
+      ctx.strokeStyle='rgba(199,125,255,'+(0.8*p)+')'; ctx.shadowColor='#c77dff'; ctx.shadowBlur=20;
+      ctx.lineWidth=4*p+1;
+      ctx.beginPath(); ctx.arc(v.x,v.y,rr,0,Math.PI*2); ctx.stroke();
+      ctx.strokeStyle='rgba(255,42,77,'+(0.6*p)+')'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(v.x,v.y,rr*0.7,0,Math.PI*2); ctx.stroke();
+    }
+    ctx.restore();
+  });
+  ctx.globalCompositeOperation='source-over';
+
   // glitch afterimages (Meta AI blink trail)
   afterimages.forEach(a=>{
     ctx.save();
@@ -8376,9 +8495,16 @@ function render(t){
       ctx.globalAlpha=1;
     }
     ctx.save();
-    // super aura (charged & ready)
+    // super aura (charged & ready) — cheap double-ring glow instead of a full-body
+    // shadowBlur (blurring the whole fighter every frame was the main lag source)
     if(f.superMeter>=100 && f.superActive<=0){
-      ctx.shadowColor=f.def.color; ctx.shadowBlur=16+6*Math.sin(t/120);
+      const pulse=0.5+0.5*Math.sin(t/120);
+      ctx.save();
+      ctx.strokeStyle=f.def.color; ctx.globalAlpha=0.35+0.35*pulse; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.arc(f.cx,f.cy,f.w*0.72,0,Math.PI*2); ctx.stroke();
+      ctx.globalAlpha=0.15+0.2*pulse; ctx.lineWidth=6;
+      ctx.beginPath(); ctx.arc(f.cx,f.cy,f.w*0.72+3,0,Math.PI*2); ctx.stroke();
+      ctx.restore();
     }
     // flicker when invulnerable
     if(f.hitCd>0 && Math.floor(t/60)%2===0) ctx.globalAlpha=0.5;
@@ -8787,9 +8913,11 @@ function finishCampaign(won){
     el.innerHTML=`<span class="pick"></span><canvas class="ic" width="96" height="96"></canvas><span class="nm" style="color:${c.color}">${c.name}</span>`;
     const ic=el.querySelector('canvas').getContext('2d');
     (function loop(t){
-      if(charUnlocked(c.id)) drawIcon(ic,c,96,costMap[c.id]||0,t);
-      else { ic.clearRect(0,0,96,96); ic.fillStyle='#1a1a24'; ic.fillRect(0,0,96,96); ic.fillStyle='#5a5a6a'; ic.font='bold 34px Arial'; ic.textAlign='center'; ic.textBaseline='middle'; ic.fillText('?',48,50); }
-      if(document.body.contains(el)) requestAnimationFrame(loop);
+      if(_alive(el)){
+        if(charUnlocked(c.id)) drawIcon(ic,c,96,costMap[c.id]||0,t);
+        else { ic.clearRect(0,0,96,96); ic.fillStyle='#1a1a24'; ic.fillRect(0,0,96,96); ic.fillStyle='#5a5a6a'; ic.font='bold 34px Arial'; ic.textAlign='center'; ic.textBaseline='middle'; ic.fillText('?',48,50); }
+      }
+      requestAnimationFrame(loop);
     })(0);
     el.addEventListener('click',()=>{
       if(!charUnlocked(c.id)){ flashOnlineHelper('🔒 LOCKED — unlock it in single player first'); return; }
@@ -8826,7 +8954,7 @@ function finishCampaign(won){
         <div class="mv"><b style="color:#fdbb2d">↑</b> ${p1Pick.up}</div>
         <div class="mv"><b style="color:#ff5714">★</b> ${p1Pick.sup}</div>`;
       const cc=p.querySelector('canvas').getContext('2d');
-      (function loop(t){ cc.clearRect(0,0,120,120); drawFighter(cc,p1Pick,30,22,60,82,1,t,'idle',costMap[p1Pick.id]||0); if(document.body.contains(p)) requestAnimationFrame(loop); })(0);
+      (function loop(t){ if(_alive(p)){ cc.clearRect(0,0,120,120); drawFighter(cc,p1Pick,30,22,60,82,1,t,'idle',costMap[p1Pick.id]||0); } requestAnimationFrame(loop); })(0);
       const cbtn=p.querySelector('.costbtn'), cname=p.querySelector('.costname');
       const rc=()=>{ cname.textContent=resolveCostume(p1Pick,costMap[p1Pick.id]||0).name; cbtn.classList.toggle('on',(costMap[p1Pick.id]||0)>0); };
       rc();
@@ -8887,8 +9015,9 @@ function finishCampaign(won){
     try{ navigator.clipboard.writeText(code); copyBtn.textContent='✓ COPIED'; setTimeout(()=>{copyBtn.textContent='📋 COPY CODE';},1400); }catch(e){}
   };
   // little idle fighter on the waitroom card
-  const wc=document.getElementById('waitCanvas').getContext('2d');
-  (function wLoop(t){ wc.clearRect(0,0,120,130); if(p1Pick){ drawFighter(wc,p1Pick,30,25,60,82,1,t,'idle',costMap[p1Pick.id]||0); } requestAnimationFrame(wLoop); })(0);
+  const waitCanvasEl=document.getElementById('waitCanvas');
+  const wc=waitCanvasEl.getContext('2d');
+  (function wLoop(t){ if(_alive(waitCanvasEl)){ wc.clearRect(0,0,120,130); if(p1Pick){ drawFighter(wc,p1Pick,30,25,60,82,1,t,'idle',costMap[p1Pick.id]||0); } } requestAnimationFrame(wLoop); })(0);
 })();
 
 /* ---------------- MAIN LOOP ---------------- */
@@ -9385,7 +9514,7 @@ function sdQuit(){
       const el=document.createElement('div'); el.className='char'; el.dataset.id=c.id;
       el.innerHTML=`<span class="pick"></span><canvas class="ic" width="96" height="96"></canvas><span class="nm" style="color:${c.color}">${c.name}</span>`;
       const ic=el.querySelector('canvas').getContext('2d');
-      (function loop(t){ if(!document.body.contains(el)) return; drawIcon(ic,c,96,costMap[c.id]||0,t); requestAnimationFrame(loop); })(0);
+      (function loop(t){ if(_alive(el)){ drawIcon(ic,c,96,costMap[c.id]||0,t); } requestAnimationFrame(loop); })(0);
       el.onclick=()=>{ sdPick=c; buildSdRoster(); refreshSdPanel(); };
       if(sdPick && sdPick.id===c.id){ el.classList.add('sel1'); el.querySelector('.pick').innerHTML='<span class="p1">PICK</span>'; }
       row.appendChild(el);
