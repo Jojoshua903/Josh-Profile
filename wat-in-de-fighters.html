@@ -173,6 +173,25 @@
   .char .nm{width:100%;font-size:clamp(8px,1.3vw,11px);letter-spacing:.02em;text-align:center;padding:3px 1px;background:rgba(0,0,0,.35);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .char .pick{position:absolute;top:2px;left:3px;font-size:10px;font-weight:800;font-family:Arial,sans-serif;letter-spacing:.02em;text-shadow:0 1px 2px #000;z-index:2;}
   .char .pick .p1{color:#4dd2ff;} .char .pick .p2{color:#ff9f4d;}
+  /* special per-character tag badge (e.g. DIH's CHEEKY tag) */
+  .char .chartag{position:absolute;top:2px;right:2px;z-index:2;
+    font-family:Arial,sans-serif;font-weight:800;font-size:6.5px;letter-spacing:.06em;
+    color:#0d0d18;background:linear-gradient(180deg,#ff9bc0,#e05b8a);
+    border-radius:5px;padding:2px 4px;text-shadow:none;box-shadow:0 1px 3px rgba(0,0,0,.5);}
+  /* hover popup shown over a locked fighter tile: how to unlock it */
+  #lockTip{
+    position:absolute;z-index:30;pointer-events:none;
+    max-width:200px;padding:8px 11px;border-radius:10px;
+    background:rgba(13,13,24,.96);border:2px solid #fdbb2d;
+    box-shadow:0 8px 24px rgba(0,0,0,.6);
+    transform:translate(-50%,-100%);
+    transition:opacity .1s;
+  }
+  #lockTip.hidden{display:none;}
+  #lockTip .ltTitle{font-family:"Impact",sans-serif;letter-spacing:.04em;font-size:13px;color:#fdbb2d;transform:skewX(-4deg);}
+  #lockTip .ltHow{font-family:Arial,sans-serif;font-weight:700;font-size:10.5px;line-height:1.4;color:#eae6f5;margin-top:4px;}
+  #lockTip::after{content:'';position:absolute;left:50%;bottom:-8px;transform:translateX(-50%);
+    border-left:7px solid transparent;border-right:7px solid transparent;border-top:8px solid #fdbb2d;}
 
   /* selected-fighter detail panels (Smash-style side portraits) */
   .panels{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:16px;width:100%;max-width:640px;flex-shrink:0;}
@@ -799,6 +818,7 @@
     </div>
   </div>
   <button id="muteBtn" title="Toggle music">🔊</button>
+  <div id="lockTip" class="hidden"><div class="ltTitle"></div><div class="ltHow"></div></div>
   <div id="achToast"><span class="tIcon">🏆</span><div><div id="achToastName">ACHIEVEMENT</div><div class="tSub">ACHIEVEMENT UNLOCKED</div></div></div>
 
   <!-- PAUSE OVERLAY (Esc during a match) -->
@@ -1694,6 +1714,22 @@ const ROSTER = [
     costume3:{name:'CURSED GOLD', color:'#ffba08', dark:'#7a5200', acc:'crown'}
   },
   {
+    // DIH — a cheeky one-eyed worm fighter (the name is a playful innuendo, kept
+    // firmly PG). Drawn as a segmented worm (wormModel), never a humanoid.
+    id:'dih', name:'DIH', color:'#e59bb0', dark:'#a85d74',
+    wormModel:true,
+    tag:'CHEEKY',
+    desc:'The Cheeky One',
+    move:'RISE TO THE OCCASION · springs up and pokes the foe',
+    up:'STAND TALL · shoots straight up on a spout',
+    sup:'THE BIG REVEAL · a colossal worm rises across the stage',
+    stats:{speed:3.3, jump:13.6, weight:0.95},
+    special:'worm',
+    costume:{name:'MOOD RING', color:'#c65b7c', dark:'#7a2f47', acc:'antenna'},
+    costume2:{name:'MORNING GLORY', color:'#e6b800', dark:'#8a6d00', acc:'crown'},
+    costume3:{name:'COLD SHOWER', color:'#4a86c9', dark:'#1f4a7a', acc:'goggles'}
+  },
+  {
     // SECRET FOX — Anker Vos. Not gated on medals or achievements; unlocked by
     // typing the secret code "vos" on the title screen (see title keydown hook).
     // Drawn as a full fox (foxModel), never a humanoid.
@@ -1717,6 +1753,7 @@ const TAUNTS = {
   josh:     { seq:['💻','✔'],     cry:"EZ.",         emote:'shrug' },
   milo:     { seq:['⚡','✦'],      cry:"ZAP!",        emote:'cast' },    // raises staff, sparks
   reshman:  { seq:['👻','…'],     cry:"boo.",        emote:'vanish' },  // flickers
+  dih:      { seq:['🍆','~'],      cry:"stand up!",   emote:'spin' },    // cheeky wobble
   lars:     { seq:['🔨','💢'],     cry:"HRAAGH!",     emote:'flex' },    // flexes / stomp
   daniel:   { seq:['💣','🔥'],     cry:"BOOM BABY!",  emote:'toss' },    // tosses bomb up
   adam:     { seq:['🎾','😎'],     cry:"GAME. SET.",  emote:'serve' },   // twirls racket
@@ -2152,6 +2189,8 @@ const SUPER2 = {
     fire(f,foe){ projectiles.push({owner:f,x:f.cx,y:GROUND_Y-90,vx:(f.face||1)*6,vy:0,life:170,dmg:6,kb:9,color:'#ff6d00',type:'wave',r:70,hitEvery:true}); } },
   zennith:  { name:'ETERNAL NIGHT', desc:'A total eclipse and roaming black holes of dread.',
     fire(f,foe){ eclipseT=220; for(let i=0;i<3;i++) blackholes.push({owner:f,x:(i+1)*(W/4)+(Math.random()-.5)*50,y:GROUND_Y-100-Math.random()*80,r:4,maxR:42+i*4,life:200,dmg:2.4,pull:1.1}); for(let i=0;i<6;i++){ const tx=(i+0.5)*(W/6); strikes.push({x:tx,y:0,targetY:GROUND_Y,life:26,owner:f,warned:6+i*3,dmg:13,kb:8,launch:1.0}); } } },
+  dih:      { name:'DROP THE MIC', desc:'Opens a churning pit under the foe that sucks them right in.',
+    fire(f,foe){ const tx=foe?foe.cx:f.cx+f.face*120; blackholes.push({owner:f,x:tx,y:GROUND_Y-50,r:6,maxR:52,life:170,dmg:2.6,pull:1.2}); for(let i=0;i<3;i++) shocks.push({x:tx,y:GROUND_Y,r:8+i*18,max:150,life:22,color:'#a1663a'}); for(let i=0;i<16;i++) particles.push({x:tx+(Math.random()-.5)*70,y:GROUND_Y-2,vx:(Math.random()-.5)*4,vy:-2-Math.random()*5,life:24,color:i%2?'#7a4a1e':'#c98f52',r:2+Math.random()*2}); } },
 };
 function hasSuper2Def(id){ return !!SUPER2[id]; }
 
@@ -2375,6 +2414,15 @@ function drawIcon(g, c, S, costume, t){
     case 'slam': // big fist / impact star
       g.fillStyle=white; g.beginPath(); g.arc(0,0,r*0.95,0,Math.PI*2); g.fill();
       g.fillStyle=ink; g.font='bold '+(r*1.1)+'px Arial'; g.textAlign='center'; g.textBaseline='middle'; g.fillText('!',0,0); break;
+    case 'worm': // a curling worm
+      g.strokeStyle=white; g.lineWidth=Math.max(3,S*0.09); g.lineCap='round';
+      g.beginPath();
+      g.moveTo(-r*0.8, r*0.6);
+      g.quadraticCurveTo(-r*0.2, r*0.2, r*0.1, -r*0.1);
+      g.quadraticCurveTo(r*0.5, -r*0.4, r*0.7, -r*0.7);
+      g.stroke();
+      g.fillStyle=white; g.beginPath(); g.arc(r*0.7,-r*0.7,r*0.28,0,Math.PI*2); g.fill();
+      g.fillStyle=ink; g.beginPath(); g.arc(r*0.78,-r*0.78,r*0.09,0,Math.PI*2); g.fill(); break;
     default:
       g.fillStyle=white; g.beginPath(); g.arc(0,0,r*0.7,0,Math.PI*2); g.fill();
   }
@@ -2422,7 +2470,7 @@ function drawFighter(g, c, x, y, w, h, face, t, state, costume){
   const bodyW = w*0.5, bodyH = h*0.44;
   // These characters replace the whole body with a custom drawing (blob / stacked
   // cats), so we skip the standard humanoid limbs+head to avoid stray parts poking out.
-  const fullRedraw = (c.id==='kayo' || c.id==='reshman' || c.foxModel);
+  const fullRedraw = (c.id==='kayo' || c.id==='reshman' || c.foxModel || c.wormModel);
 
   // shadow ellipse
   g.save();
@@ -3009,6 +3057,54 @@ function drawFighter(g, c, x, y, w, h, face, t, state, costume){
     // claw slash arc when attacking
     if(atk){ g.strokeStyle='#fff'; g.lineWidth=2;
       for(let k=-1;k<=1;k++){ g.beginPath(); g.arc(armFox+bodyW*0.2, -bodyH*0.15, 12, -0.5+k*0.35, 0.5+k*0.35); g.stroke(); } }
+  } else if(c.wormModel){ // DIH — a segmented worm that rears its head up to fight
+    g.restore();
+    g.save();
+    g.translate(x + w/2, y + h/2 + bob);
+    g.scale(face,1);
+    const belly = mixHex(col,'#ffffff',0.55);
+    // wriggle speed picks up when running/attacking
+    const wr = (state==='run') ? t/70 : (state==='attack'? t/55 : t/150);
+    const segN = 7;
+    const segR = w*0.15;
+    // The worm coils on the ground then rears its front segments upward. We lay
+    // segments from the tail (down-right, low) to the head (up-front), each offset
+    // by a sine wave so the whole body undulates.
+    const pts=[];
+    for(let i=0;i<segN;i++){
+      const f2=i/(segN-1);                       // 0 tail … 1 head
+      // base path: sweep from back-low to front, rising toward the head
+      const px = (-0.5 + f2*1.05) * w*0.5;
+      const rise = Math.pow(f2,1.6) * bodyH*1.15; // head lifts up
+      const py = bodyH*0.5 - rise + Math.sin(wr + i*0.9)* (segR*0.5) * (1-f2*0.4);
+      pts.push({x:px, y:py, r:segR*(0.7+0.5*f2)}); // segments grow toward the head
+    }
+    // draw body segments back-to-front so the head overlaps
+    for(let i=0;i<segN;i++){
+      const p=pts[i];
+      g.fillStyle = (i%2===0)? col : belly;
+      g.beginPath(); g.arc(p.x, p.y, p.r, 0, Math.PI*2); g.fill();
+    }
+    // ground shadow already drawn; add faint segment ridges
+    g.strokeStyle='rgba(0,0,0,.15)'; g.lineWidth=1.5;
+    for(let i=1;i<segN;i++){ g.beginPath(); g.arc(pts[i].x, pts[i].y, pts[i].r*0.8, Math.PI*0.15, Math.PI*0.85); g.stroke(); }
+    // head (front segment) detailing
+    const head=pts[segN-1];
+    g.fillStyle=col; g.beginPath(); g.arc(head.x, head.y, head.r*1.05, 0, Math.PI*2); g.fill();
+    // eyes on little stalks (antennae), leaning forward
+    g.strokeStyle=dark; g.lineWidth=2.5;
+    for(const sx of [0.35,0.72]){
+      const ex=head.x+head.r*sx, ey=head.y-head.r*0.9;
+      g.beginPath(); g.moveTo(head.x+head.r*sx*0.6, head.y-head.r*0.4); g.lineTo(ex, ey); g.stroke();
+      g.fillStyle='#fff'; g.beginPath(); g.arc(ex, ey, 3.2, 0, Math.PI*2); g.fill();
+      g.fillStyle='#111'; g.beginPath(); g.arc(ex+0.8, ey, 1.6, 0, Math.PI*2); g.fill();
+    }
+    // smile
+    g.strokeStyle='#111'; g.lineWidth=1.5;
+    g.beginPath(); g.arc(head.x+head.r*0.45, head.y+head.r*0.15, head.r*0.4, 0.15, Math.PI-0.15); g.stroke();
+    // attack: the head lunges with a chomp arc
+    if(atk){ g.strokeStyle='#fff'; g.lineWidth=2;
+      for(let k=-1;k<=1;k++){ g.beginPath(); g.arc(head.x+head.r*1.2, head.y, 11, -0.5+k*0.35, 0.5+k*0.35); g.stroke(); } }
   }
 
   // ---- costume accessory (themed costumes only; inverted/gray are pure recolors) ----
@@ -4293,6 +4389,7 @@ class Fighter{
 /* ---------------- GAME STATE ---------------- */
 let players=[], projectiles=[], particles=[], strikes=[], shocks=[], afterimages=[], blackholes=[];
 let voidfx=[];   // Zennith's cursed slash arcs & void rings (drawn with additive glow)
+let sandworms=[];   // DIH's GIANT SANDWORM super — colossal animated worms erupting across the stage
 let shardPickups=[];   // floating 💎 bonus gems that spawn mid-match; grab for bonus SHARDS
 let shardSpawnTimer=0;  // frames until the next shard gem may spawn
 let eclipseT=0; // Zennith PERFECT GAME: frames left of the cursed solar eclipse (darkened sky + slower super gain)
@@ -4805,7 +4902,7 @@ const costMap = {}; // id -> costume index 0..4
 
 // Fighter categories by playstyle — shown as titled groups on the select screen.
 const CATEGORIES = [
-  { name:'MELEE',   icon:'⚔️', ids:['reshman','lars','fionn','yassin','metaai','dean','thomas','kayo','cavan'] },
+  { name:'MELEE',   icon:'⚔️', ids:['reshman','lars','fionn','yassin','metaai','dean','thomas','kayo','cavan','dih'] },
   { name:'RANGED',  icon:'🎯', ids:['nathan','milo','adam','evadam','deniz','niffo','jax','femi','enno','thorren','niek','giancarlo','oela'], shareRowWithNext:true },
   { name:'THROWERS',icon:'💣', ids:['daniel','doremalen','jace','ash','maik'] },
   { name:'HOMING',  icon:'🧲', ids:['josh','renas','devin','ati','bastiaan'], shareRowWithNext:true },
@@ -4829,6 +4926,7 @@ function buildCharTile(c){
   el.className='char'+(Save.prestige()>0?' prestige':''); el.dataset.id=c.id;
   el.innerHTML=`
     <span class="pick"></span>
+    ${c.tag?`<span class="chartag">${c.tag}</span>`:''}
     <span class="medal" style="display:none">🏅</span>
     <span class="hcmedal" style="display:none" title="Hardcore medal — cleared Classic on Ultra Hard">☠</span>
     <span class="skillmedal" style="display:none" title="Skill tree fully mastered">🌟</span>
@@ -4864,8 +4962,30 @@ function buildCharTile(c){
     if(!charUnlocked(c.id)) return;
     if(canPickFoe()){ p2Pick=c; refreshPicks(); }
   });
+  // hover popup: for a still-locked fighter, show HOW to unlock it
+  el.addEventListener('mouseenter', ()=>{ if(!charUnlocked(c.id)) showLockTip(c.id, el); });
+  el.addEventListener('mouseleave', hideLockTip);
   return el;
 }
+// shared floating tooltip anchored above a locked tile
+function showLockTip(id, el){
+  const tip=document.getElementById('lockTip'); if(!tip) return;
+  const info=unlockHint(id);
+  tip.querySelector('.ltTitle').textContent='🔒 '+info.title;
+  tip.querySelector('.ltHow').textContent=info.how;
+  tip.classList.remove('hidden');
+  // position centered above the tile, in #game's coordinate space
+  const game=document.getElementById('game');
+  const gr=game.getBoundingClientRect(), r=el.getBoundingClientRect();
+  let left=r.left-gr.left+r.width/2;
+  let top=r.top-gr.top-8;
+  // keep it inside the frame horizontally
+  const half=Math.min(200, tip.offsetWidth)/2+6;
+  left=Math.max(half, Math.min(gr.width-half, left));
+  tip.style.left=left+'px';
+  tip.style.top=top+'px';
+}
+function hideLockTip(){ const tip=document.getElementById('lockTip'); if(tip) tip.classList.add('hidden'); }
 
 // build one titled group per category, in category order.
 // A category flagged shareRowWithNext is combined with the following one into a
@@ -4941,6 +5061,21 @@ function STORY_ACH_NAME(id){
   const a=ACHIEVEMENTS.find(x=>x.id===achForChar(id));
   return a?('UNLOCK: '+a.name):'';
 }
+// Richer unlock info for the hover popup: { title, how } describing HOW to get a
+// still-locked fighter. Falls back gracefully for OP / final / campaign fighters.
+function unlockHint(id){
+  const c=ROSTER.find(x=>x.id===id);
+  if(!c) return { title:'LOCKED', how:'Keep playing to unlock.' };
+  if(selectContext==='campaign'){
+    return { title:'LOCKED', how:'Clear the campaign mission that unlocks this fighter.' };
+  }
+  if(c.finalChar) return { title:'THE FINAL SECRET', how:'Earn EVERY achievement in the game to reveal this fighter.' };
+  if(c.opChar) return { title:'SECRET FIGHTER', how: id==='casper' ? 'Earn HALF of all Classic Mode medals.' : 'Earn ALL Classic Mode medals.' };
+  if(c.secretCode) return { title:'HIDDEN FIGHTER', how:'A secret code unlocks this one…' };
+  const a=ACHIEVEMENTS.find(x=>x.id===achForChar(id));
+  if(a) return { title:'ACHIEVEMENT: '+a.name, how:a.desc };
+  return { title:'LOCKED', how:'Keep playing to unlock.' };
+}
 
 // show a medal on tiles for characters that cleared Classic Mode; show locks
 function rebuildRosterMedals(){
@@ -4957,6 +5092,9 @@ function rebuildRosterMedals(){
     if(sm) sm.style.display = skillTreeComplete(id) ? 'block' : 'none';
     const lk=el.querySelector('.lock');
     if(lk) lk.style.display = charUnlocked(id) ? 'none' : 'block';
+    // hide the special tag while the fighter is still locked (don't spoil it)
+    const tg=el.querySelector('.chartag');
+    if(tg) tg.style.display = charUnlocked(id) ? 'block' : 'none';
     el.classList.toggle('locked', !charUnlocked(id));
   });
 }
@@ -6551,7 +6689,7 @@ function startMatch(){
     p1.stocks=1; p1.startStocks=1;
   }
   players=[p1,p2];
-  projectiles=[]; particles=[]; strikes=[]; shocks=[]; afterimages=[]; blackholes=[]; voidfx=[]; eclipseT=0; shardPickups=[]; shardSpawnTimer=300;
+  projectiles=[]; particles=[]; strikes=[]; shocks=[]; afterimages=[]; blackholes=[]; voidfx=[]; sandworms=[]; eclipseT=0; shardPickups=[]; shardSpawnTimer=300;
   // SOCCER: spawn a ball + two goals, reset the score
   soccerBall=null; soccerScore=[0,0]; soccerGoalTimer=0;
   if(gm.soccer){
@@ -6586,7 +6724,7 @@ function startOnlineMatch(){
   const p2 = new Fighter(p2Pick, mainX+mainW*0.65, false, Net.p2Cos||0, 'none');
   [p1,p2].forEach(f=>{ f.maxHp=gm.hp; f.hp=gm.hp; f.stocks=gm.stocks; f.startStocks=gm.stocks; f.superMeter=gm.startSuper||0; });
   players=[p1,p2];
-  projectiles=[]; particles=[]; strikes=[]; shocks=[]; afterimages=[]; blackholes=[]; voidfx=[]; eclipseT=0; shardPickups=[]; shardSpawnTimer=300;
+  projectiles=[]; particles=[]; strikes=[]; shocks=[]; afterimages=[]; blackholes=[]; voidfx=[]; sandworms=[]; eclipseT=0; shardPickups=[]; shardSpawnTimer=300;
   soccerBall=null; soccerScore=[0,0];
   document.getElementById('p1name').textContent=(Net.isHost?'YOU · ':'')+ 'P1 · '+p1Pick.name;
   document.getElementById('p2name').textContent=(!Net.isHost?'YOU · ':'')+ 'P2 · '+p2Pick.name;
@@ -7259,6 +7397,16 @@ function trySpecial(f){
     spawnParticles(f.cx+f.face*26, f.cy-4, '#c77dff', 16);
     spawnParticles(f.cx+f.face*26, f.cy-4, '#6a040f', 12);
     hitStop=Math.max(hitStop,4); shakeT=Math.max(shakeT,10);
+  } else if(s==='worm'){
+    // BURROW STRIKE: DIH dives underground (brief invulnerability + a dirt spray),
+    // tunnels to just under the foe, then erupts with an upward-launching soil
+    // shockwave. Kicks off a short burrow sequence handled in updateWormBurrow().
+    const foe=players.find(o=>o!==f && !o.dead);
+    f.specialCd=70; f.hitCd=Math.max(f.hitCd,26);   // invulnerable while underground
+    f._burrow = { t:18, tx: foe ? foe.cx : f.cx + f.face*180 };
+    f.state='attack'; f.attackTimer=18;
+    // dive spray
+    for(let i=0;i<12;i++) particles.push({x:f.cx+(Math.random()-.5)*20, y:f.y+f.h, vx:(Math.random()-.5)*5, vy:-Math.random()*5, life:20, color:i%2?'#7a4a1e':'#a1663a', r:2+Math.random()*2});
   }
   // QUICK RECOVERY skill node: shortens whatever cooldown this special just set
   f.specialCd = Math.max(1, Math.round(f.specialCd * (f.sCdMult||1)));
@@ -7466,6 +7614,11 @@ function tryUpSpecial(f){
     f.vy=-17.5; f.hitCd=Math.max(f.hitCd,10);
     players.forEach(o=>{ if(o!==f && !o.dead && o.hitCd<=0 && Math.hypot(o.cx-f.cx,o.cy-f.cy)<110){ landHit(f,o,15,6, o.cx>=f.cx?1:-1, 0.9); }});
     spawnParticles(f.cx,f.cy,'#6a040f',16); spawnParticles(f.cx,f.cy,'#fff',8);
+  } else if(s==='worm'){
+    // DIRT GEYSER: DIH rockets straight up on a spout of soil, launching anyone caught in the column
+    f.vy=-16.5;
+    f._upHit={life:16, dmg:11, kb:5.5, launch:0.85};
+    for(let i=0;i<10;i++) particles.push({x:f.cx+(Math.random()-.5)*16, y:f.y+f.h, vx:(Math.random()-.5)*3, vy:2+Math.random()*4, life:20, color:i%2?'#7a4a1e':'#a1663a', r:2+Math.random()*2});
   }
   spawnParticles(f.cx, f.y+f.h*0.5, '#ffffff', 6);
 }
@@ -7617,6 +7770,29 @@ function trySuper(f){
     }
     spawnParticles(f.cx+f.face*22,f.cy,'#6a040f',20);
     spawnParticles(f.cx,f.cy,'#240046',16);
+  } else if(s==='worm'){ // GIANT SANDWORM — a colossal worm erupts and arcs across the stage
+    // Two enormous sandworms burst from the ground and swim through the air in a
+    // sine arc, sweeping toward the foe. Anything they pass through gets chomped
+    // and launched. Fully animated (segmented body + gnashing maw) in render.
+    const foe2=players.find(o=>o!==f && !o.dead);
+    const dir = foe2 ? (foe2.cx>=f.cx?1:-1) : f.face;
+    for(let k=0;k<2;k++){
+      sandworms.push({
+        owner:f, dir:(k===0?dir:-dir),
+        x: (k===0? (dir>0? -80 : W+80) : (dir>0? W+80 : -80)),   // enter from opposite edges
+        baseY: GROUND_Y-6,
+        amp: 150+k*30,          // how high it arcs
+        span: 1.0,              // 0..1 progress across the stage
+        vx: (k===0?dir:-dir)*8.5,
+        life: 150,
+        seg: 16,                // body segments
+        r: 30,                  // head radius
+        hist: [],               // recent head positions → body follows
+        hitCd:{}                // per-victim cooldown so it multi-hits gently
+      });
+    }
+    shakeT=Math.max(shakeT,18);
+    for(let i=0;i<24;i++) particles.push({x:W*Math.random(), y:GROUND_Y-2, vx:(Math.random()-.5)*4, vy:-2-Math.random()*6, life:26, color:i%2?'#7a4a1e':'#c98f52', r:2+Math.random()*3});
   }
   updateHUD();
 }
@@ -7812,7 +7988,7 @@ function botThink(bot, foe){
   }
 
   bot.face=dir;
-  const ranged = (bot.def.special==='pitch'||bot.def.special==='drone'||bot.def.special==='bolt'||bot.def.special==='bomb'||bot.def.special==='serve'||bot.def.special==='rocks'||bot.def.special==='minidrone'||bot.def.special==='frost'||bot.def.special==='flask'||bot.def.special==='egg'||bot.def.special==='swarm'||bot.def.special==='spores'||bot.def.special==='splash'||bot.def.special==='soundwave'||bot.def.special==='pounce'||bot.def.special==='evilserve'||bot.def.special==='numbers'||bot.def.special==='coins'||bot.def.special==='slipper'||bot.def.special==='pellet'||bot.def.special==='shock'||bot.def.special==='bullets'||bot.def.special==='football'||bot.def.special==='curve'||bot.def.special==='controller'||bot.def.special==='doom');
+  const ranged = (bot.def.special==='pitch'||bot.def.special==='drone'||bot.def.special==='bolt'||bot.def.special==='bomb'||bot.def.special==='serve'||bot.def.special==='rocks'||bot.def.special==='minidrone'||bot.def.special==='frost'||bot.def.special==='flask'||bot.def.special==='egg'||bot.def.special==='swarm'||bot.def.special==='spores'||bot.def.special==='splash'||bot.def.special==='soundwave'||bot.def.special==='pounce'||bot.def.special==='evilserve'||bot.def.special==='numbers'||bot.def.special==='coins'||bot.def.special==='slipper'||bot.def.special==='pellet'||bot.def.special==='shock'||bot.def.special==='bullets'||bot.def.special==='football'||bot.def.special==='curve'||bot.def.special==='controller'||bot.def.special==='doom'||bot.def.special==='worm');
   const rush = (bot.def.special==='dash'||bot.def.special==='pound'||bot.def.special==='kick'||bot.def.special==='glitch'||bot.def.special==='breakdance'||bot.def.special==='twocat'||bot.def.special==='launch'||bot.def.special==='car'||bot.def.special==='slam'||bot.def.special==='foxfire');
   // approach or space
   if(dist>170){
@@ -8048,6 +8224,92 @@ function hazardDraw(t){
   }
 }
 
+/* ---------------- GIANT SANDWORM (DIH super) ---------------- */
+// Each sandworm swims through the air in a sine arc, its head leading and the
+// body trailing along a recorded path. Foes near the head get chomped + launched.
+function updateSandworms(){
+  sandworms.forEach(sw=>{
+    sw.life--;
+    // progress across the stage → drives the sine arc height
+    sw.x += sw.vx;
+    const prog = (sw.dir>0) ? (sw.x/W) : (1 - sw.x/W);      // 0 at entry … 1 at far side
+    const arc = Math.sin(Math.max(0,Math.min(1,prog))*Math.PI); // 0→1→0 hump
+    const hy = sw.baseY - arc*sw.amp;
+    // record head position so the body can follow
+    sw.hist.unshift({x:sw.x, y:hy});
+    if(sw.hist.length > sw.seg*4) sw.hist.length = sw.seg*4;
+    sw.headY = hy;
+    // damage: foes within reach of the head get chomped (short per-victim cooldown)
+    players.forEach((o,idx)=>{
+      if(o===sw.owner || o.dead) return;
+      // online: only the local sim applies damage to its own fighter
+      if(mode==='online' && idx===(Net.isHost?1:0)) return;
+      const k=o.def.id+idx;
+      if(sw.hitCd[k]>0){ sw.hitCd[k]--; return; }
+      if(Math.hypot(o.cx-sw.x, o.cy-hy) < sw.r+o.w*0.5){
+        landHit(sw.owner, o, 12, 9, o.cx>=sw.x?sw.dir:-sw.dir, 1.1);
+        sw.hitCd[k]=18;
+        spawnParticles(o.cx,o.cy,'#c98f52',10);
+      }
+    });
+    // dirt spray when near the ground (entry/exit)
+    if(hy>sw.baseY-40 && sw.life%2===0) spawnParticles(sw.x, sw.baseY-2, Math.random()<.5?'#7a4a1e':'#c98f52', 3);
+  });
+  // retire worms that have left the stage or run out of life
+  sandworms = sandworms.filter(sw=> sw.life>0 && sw.x>-160 && sw.x<W+160);
+}
+function drawSandworms(t){
+  sandworms.forEach(sw=>{
+    const col = sw.owner.def.color, dk = sw.owner.def.dark;
+    // body: sample the head-position history at even spacing so segments trail behind
+    const step = Math.max(1, Math.floor(sw.hist.length/sw.seg));
+    ctx.save();
+    for(let i=sw.seg-1;i>=0;i--){
+      const h = sw.hist[Math.min(sw.hist.length-1, i*step)];
+      if(!h) continue;
+      const f2 = i/(sw.seg-1);                 // 0 head … 1 tail
+      const r = sw.r*(1 - f2*0.7);             // taper toward the tail
+      ctx.fillStyle = (i%2===0)? col : dk;
+      ctx.beginPath(); ctx.arc(h.x, h.y, r, 0, Math.PI*2); ctx.fill();
+      // segment ridge highlight
+      ctx.fillStyle='rgba(255,255,255,.10)';
+      ctx.beginPath(); ctx.arc(h.x, h.y-r*0.3, r*0.5, 0, Math.PI*2); ctx.fill();
+    }
+    // head detailing at the front of the history
+    const head = sw.hist[0] || {x:sw.x, y:sw.headY||sw.baseY};
+    const hr = sw.r;
+    // gnashing maw — a set of triangular teeth that open/close over time
+    const open = 0.35 + 0.35*Math.abs(Math.sin(t/70));
+    ctx.save();
+    ctx.translate(head.x, head.y);
+    ctx.scale(sw.dir, 1);
+    // mouth cavity
+    ctx.fillStyle = dk;
+    ctx.beginPath(); ctx.arc(hr*0.35, 0, hr*0.9, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#3a1c0c';
+    ctx.beginPath(); ctx.arc(hr*0.55, 0, hr*0.55, 0, Math.PI*2); ctx.fill();
+    // radial teeth ring around the maw
+    ctx.fillStyle = '#f4ead2';
+    const teeth = 9;
+    for(let k=0;k<teeth;k++){
+      const a = (k/teeth)*Math.PI*2;
+      const rr = hr*(0.55 + open*0.35);
+      const bx = hr*0.55 + Math.cos(a)*hr*0.55;
+      const by = Math.sin(a)*hr*0.55;
+      const tx = hr*0.55 + Math.cos(a)*rr;
+      const ty = Math.sin(a)*rr;
+      const nx = -Math.sin(a), ny = Math.cos(a);
+      ctx.beginPath();
+      ctx.moveTo(bx+nx*hr*0.12, by+ny*hr*0.12);
+      ctx.lineTo(bx-nx*hr*0.12, by-ny*hr*0.12);
+      ctx.lineTo(tx, ty);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+    ctx.restore();
+  });
+}
+
 /* control schemes */
 const DEFAULT_SCHEME1={left:'a',right:'d',jump:'w',drop:'s',attack:'j',special:'k',shield:'l',up:'i',super:'u'};
 const DEFAULT_SCHEME2={left:'arrowleft',right:'arrowright',jump:'arrowup',drop:'arrowdown',attack:'.',special:'/',shield:'shift',up:"'",super:','};
@@ -8168,6 +8430,26 @@ function update(t){
     if(f.shieldHp<100) f.shieldHp=Math.min(100,f.shieldHp+0.6);
     if(f.dropTimer>0) f.dropTimer--;
     if(f._dashHit>0) f._dashHit--;
+    // DIH BURROW STRIKE: tunnel toward the target, then erupt on surfacing
+    if(f._burrow){
+      f._burrow.t--;
+      f.hitCd=Math.max(f.hitCd,2);              // stay invulnerable underground
+      // glide toward the target x while "under" the ground
+      f.x += (f._burrow.tx - f.cx)*0.28;
+      f.vx=0; f.vy=0; f.y=GROUND_Y-f.h;         // ride along the floor
+      // dirt trail
+      if(f._burrow.t%2===0) particles.push({x:f.cx+(Math.random()-.5)*16, y:GROUND_Y-2, vx:(Math.random()-.5)*3, vy:-Math.random()*3, life:16, color:Math.random()<.5?'#7a4a1e':'#a1663a', r:2+Math.random()*2});
+      if(f._burrow.t<=0){
+        // ERUPT: pop up at the target with a soil geyser that launches upward
+        f.x = f._burrow.tx - f.w/2; f.y=GROUND_Y-f.h; f.vy=-9;
+        areaBlast(f.cx, GROUND_Y-10, 96, 12, 7, f, '#a1663a');
+        for(let i=0;i<18;i++) particles.push({x:f.cx+(Math.random()-.5)*40, y:GROUND_Y-4, vx:(Math.random()-.5)*6, vy:-4-Math.random()*7, life:26, color:i%2?'#7a4a1e':'#c98f52', r:2+Math.random()*3});
+        // extra upward pop on anyone right on top of the eruption
+        players.forEach(o=>{ if(o!==f && !o.dead && o.hitCd<=0 && Math.abs(o.cx-f.cx)<70){ landHit(f,o,10,7,o.cx>=f.cx?1:-1,1.2); }});
+        shakeT=Math.max(shakeT,12);
+        f._burrow=null;
+      }
+    }
     // Kayo & Yara: after Kayo's lunge, Yara follows with a second swipe window
     if(f._catFollow>0){
       f._catFollow--;
@@ -8309,6 +8591,7 @@ function update(t){
 
   // stage hazards (eruptions, blizzard gusts, etc.)
   if(Hazard.id) hazardWorldTick(t);
+  if(sandworms.length) updateSandworms();
 
   // projectiles
   projectiles.forEach(pr=>{
@@ -8642,6 +8925,7 @@ function respawn(f){
   f.x = (f===players[0]? mainX+mainW*0.3 : mainX+mainW*0.6);
   f.y=H*0.2; f.vx=0;f.vy=0; f.dmg=0; f.hp=f.maxHp;
   f.hitCd=60; f.state='idle'; f.shieldHp=100; f.jumps=2; f.upUsed=false;
+  f._burrow=null;
   updateHUD();
 }
 
@@ -9003,6 +9287,16 @@ function render(t){
       return; // hidden while KO'd (short)
     }
     if(f.dead) return;
+    // DIH is underground during BURROW STRIKE — draw a scooting dirt mound, not the worm
+    if(f._burrow){
+      ctx.save();
+      ctx.fillStyle='#7a4a1e';
+      ctx.beginPath(); ctx.ellipse(f.cx, GROUND_Y-4, 22, 12, 0, Math.PI, 0); ctx.fill();
+      ctx.fillStyle='#a1663a';
+      ctx.beginPath(); ctx.ellipse(f.cx, GROUND_Y-4, 14, 8, 0, Math.PI, 0); ctx.fill();
+      ctx.restore();
+      return;
+    }
     // super activation burst ring
     if(f.superActive>0){
       const p=f.superActive/40;
@@ -9088,6 +9382,9 @@ function render(t){
     ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
   });
   ctx.globalAlpha=1;
+
+  // GIANT SANDWORM (DIH super) — drawn big and bold over everything
+  if(sandworms.length) drawSandworms(t);
 
   // SOCCER: goals + ball + scoreboard
   if(currentMode().soccer){
