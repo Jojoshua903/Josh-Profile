@@ -57,7 +57,7 @@
   .hidden{display:none !important;}
 
   /* content-heavy menus scroll from the top inside the fixed frame */
-  #select, #stage, #mode, #achieve, #settings, #online, #stats, #howto, #story{
+  #select, #stage, #mode, #achieve, #settings, #online, #stats, #howto, #story, #leaderboard{
     justify-content:flex-start;
     overflow-y:auto;
     padding-top:3%;
@@ -104,13 +104,13 @@
   /* mode buttons: 3-across row; menu buttons: 4-across row. Both auto-fit on mobile. */
   #title .titlegrid{display:grid;gap:9px 12px;margin-top:10px;width:100%;flex-shrink:0;}
   #title .titlegrid.modes3{grid-template-columns:repeat(3,minmax(0,1fr));max-width:560px;}
-  #title .titlegrid.menu4{grid-template-columns:repeat(4,minmax(0,1fr));max-width:560px;}
+  #title .titlegrid.menu4{grid-template-columns:repeat(5,minmax(0,1fr));max-width:600px;}
   #title .titlegrid.modes3 .btn{font-size:clamp(11px,1.7vw,16px);padding:11px 6px;}
-  #title .titlegrid.menu4 .btn{font-size:clamp(10px,1.5vw,13px);padding:9px 5px;}
+  #title .titlegrid.menu4 .btn{font-size:clamp(9px,1.35vw,12px);padding:9px 4px;}
   #title .titlegrid .btn{margin-top:0;width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   @media (max-width:560px){
     #title .titlegrid.modes3{grid-template-columns:repeat(2,minmax(0,1fr));}
-    #title .titlegrid.menu4{grid-template-columns:repeat(2,minmax(0,1fr));}
+    #title .titlegrid.menu4{grid-template-columns:repeat(3,minmax(0,1fr));}
   }
   #title .profile{margin-top:14px;}
   /* Season Mode status readout on the title screen: a plain (non-clickable)
@@ -258,6 +258,14 @@
   .dots{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px;flex-shrink:0;max-width:420px;}
   .dot{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.25);cursor:pointer;transition:background .12s, transform .12s;}
   .dot.on{background:#fdbb2d;transform:scale(1.3);}
+  /* stage hazard badge on the stage-select card */
+  .stageHazard{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;flex-shrink:0;
+    margin-top:12px;max-width:440px;padding:8px 16px;border-radius:12px;
+    background:rgba(255,87,20,.12);border:2px solid rgba(255,87,20,.45);}
+  .stageHazard.hidden{display:none !important;}
+  .stageHazard .hzIcon{font-size:18px;}
+  .stageHazard .hzName{font-family:"Impact",sans-serif;letter-spacing:.06em;font-size:clamp(13px,2vw,17px);color:#ffb37a;transform:skewX(-5deg);}
+  .stageHazard .hzDesc{font-family:Arial,sans-serif;font-weight:700;font-size:10px;letter-spacing:.03em;color:#e6d3c4;width:100%;text-align:center;}
 
   /* HUD */
   #hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;padding:14px 20px;z-index:5;pointer-events:none;}
@@ -725,6 +733,34 @@
   .pausebtns .btn{margin-top:0;font-size:clamp(15px,2.4vw,22px);padding:10px 26px;}
   .pausehint{font-family:Arial,sans-serif;font-weight:700;font-size:11px;letter-spacing:.1em;color:#9a9cc0;text-align:center;margin-top:4px;}
   .pausehint b{color:#fdbb2d;}
+
+  /* ---- live leaderboard ---- */
+  #leaderboard::-webkit-scrollbar{width:8px;}
+  #leaderboard::-webkit-scrollbar-thumb{background:rgba(253,187,45,.5);border-radius:4px;}
+  .lbTabs{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:14px;flex-shrink:0;}
+  .lbTab{font-family:Arial,sans-serif;font-weight:800;font-size:11px;letter-spacing:.1em;
+    color:#cfd0e8;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.18);
+    border-radius:20px;padding:7px 16px;cursor:pointer;transition:background .12s,border-color .12s,transform .08s,color .12s;}
+  .lbTab:hover{background:rgba(255,255,255,.14);transform:translateY(-1px);}
+  .lbTab.sel{color:#0d0d18;background:#fdbb2d;border-color:#fdbb2d;}
+  .lbStatus{font-family:Arial,sans-serif;font-weight:700;font-size:11px;letter-spacing:.12em;color:#9a9cc0;margin-top:10px;flex-shrink:0;}
+  .lbTable{display:flex;flex-direction:column;gap:6px;width:100%;max-width:600px;margin-top:14px;flex-shrink:0;}
+  .lbHead,.lbRow{display:grid;grid-template-columns:44px 1fr 64px 74px 64px;gap:6px;align-items:center;}
+  .lbHead{font-family:Arial,sans-serif;font-weight:800;font-size:9px;letter-spacing:.12em;color:#fdbb2d;opacity:.7;padding:2px 12px;}
+  .lbHead .lbNum,.lbHead .lbStat{text-align:center;}
+  .lbHead .lbStat.act{opacity:1;color:#ffd24a;}
+  .lbRow{padding:10px 12px;border-radius:12px;border:2px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);text-align:left;}
+  .lbRow.me{border-color:#fdbb2d;background:rgba(253,187,45,.14);}
+  .lbRow .lbNum{font-family:"Impact",sans-serif;font-size:18px;color:#fdbb2d;text-align:center;}
+  .lbRow.top1 .lbNum{color:#ffd700;} .lbRow.top2 .lbNum{color:#c0c9d6;} .lbRow.top3 .lbNum{color:#cd8032;}
+  .lbRow .lbName{font-size:15px;letter-spacing:.03em;transform:skewX(-4deg);color:#eae6f5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .lbRow.me .lbName{color:#fdbb2d;}
+  .lbRow .lbName .lbYou{font-family:Arial,sans-serif;font-weight:800;font-size:8px;letter-spacing:.1em;color:#0d0d18;background:#fdbb2d;border-radius:6px;padding:2px 6px;margin-left:7px;transform:skewX(4deg);display:inline-block;vertical-align:middle;}
+  .lbRow .lbName .lbPr{font-family:Arial,sans-serif;font-weight:800;font-size:8px;color:#ffd700;margin-left:6px;letter-spacing:.05em;}
+  .lbRow .lbStat{font-family:"Impact",sans-serif;font-size:17px;text-align:center;color:#fef6e4;}
+  .lbRow .lbStat.sub{font-size:13px;color:#9a9cc0;}
+  .lbRow .lbStat.act{color:#ffd24a;}
+  .lbEmpty{font-family:Arial,sans-serif;font-weight:700;font-size:12px;color:#9a9cc0;letter-spacing:.06em;text-align:center;padding:30px 10px;line-height:1.6;}
 </style>
 </head>
 <body>
@@ -820,6 +856,7 @@
     </div>
     <div class="titlegrid menu4">
       <button class="btn btn-back" id="shopBtn">🛍 SHOP</button>
+      <button class="btn btn-back" id="leaderboardBtn">🏆 RANKS</button>
       <button class="btn btn-back" id="achBtn">🏆 ACHIEVEMENTS</button>
       <button class="btn btn-back" id="statsBtn">📊 STATS</button>
       <button class="btn btn-back" id="settingsBtn">⚙ SETTINGS</button>
@@ -1059,6 +1096,7 @@
       <button class="arrow" id="stageNext" aria-label="Next stage">▶</button>
     </div>
     <div class="dots" id="stageDots"></div>
+    <div class="stageHazard hidden" id="stageHazard"></div>
     <div class="btnrow">
       <button class="btn btn-back" id="stageBack">◀ BACK</button>
       <button class="btn btn-alt" id="randStage">RANDOM STAGE</button>
@@ -1204,6 +1242,17 @@
       <div class="memeblurb" id="waitSub" style="max-width:300px;">Keep this tab open. You'll drop straight into the fight when someone joins.</div>
       <button class="btn btn-back" id="waitCancel" style="font-size:15px;padding:8px 22px;">CANCEL</button>
     </div>
+    <div class="madeby"></div>
+  </div>
+
+  <!-- LIVE LEADERBOARD (global, shared over the same online backend) -->
+  <div class="screen hidden" id="leaderboard">
+    <h2 style="font-size:clamp(20px,4vw,40px);color:#fdbb2d;transform:skewX(-6deg);text-shadow:0 3px 0 rgba(0,0,0,.4);">🏆 LEADERBOARD</h2>
+    <div class="helper">GLOBAL RANKINGS · UPDATES LIVE AS PLAYERS WIN</div>
+    <div class="lbTabs" id="lbTabs"></div>
+    <div class="lbStatus" id="lbStatus">Loading standings…</div>
+    <div class="lbTable" id="lbTable"></div>
+    <button class="btn btn-back" id="lbBack" style="margin-top:16px;">◀ BACK</button>
     <div class="madeby"></div>
   </div>
 
@@ -3721,7 +3770,8 @@ const STAGES = [
     sky:['#f4c77b','#ffe6b0','#d98a3a'], // desert heat
     plat:'#c2a06a', platTop:'#e0c48a', accent:'#CE1126',
     layout:pyramidLayout,
-    decor:'pyramids'
+    decor:'pyramids',
+    hazard:'sandstorm'
   },
   {
     id:'mx', name:'MEXICO', flag:['#006847','#FFFFFF','#CE1126'],
@@ -3742,26 +3792,38 @@ const STAGES = [
     sky:['#3a1512','#7a2a18','#c04520'], // smoky red sky
     plat:'#2a1a16', platTop:'#ff6a2a', accent:'#ff4500',
     layout:volcanoLayout,
-    decor:'volcano'
+    decor:'volcano',
+    hazard:'eruption'
   },
   {
     id:'atlantis', name:'ATLANTIS', flag:['#0a3b5c','#1f9ac0','#8fe0ff'],
     sky:['#0a3b5c','#12708f','#04203c'], // deep sea
     plat:'#3a6f78', platTop:'#8fd6e0', accent:'#1f9ac0',
     layout:atlantisLayout,
-    decor:'atlantis'
+    decor:'atlantis',
+    hazard:'current'
   },
   {
     id:'aurora', name:'AURORA PEAKS', flag:['#3cffaa','#0a1030','#5a96ff'],
     sky:['#050a24','#0e1a44','#1a2a56'], // polar night
     plat:'#3c4870', platTop:'#cfe6ff', accent:'#3cffaa',
     layout:auroraLayout,
-    decor:'aurora'
+    decor:'aurora',
+    hazard:'blizzard'
   }
 ];
 
 let stagePick = STAGES[0];
 let PLATS = standardLayout();
+
+// player-facing blurbs for the stage hazards (shown on the stage-select card and
+// announced at the start of a match)
+const HAZARD_INFO = {
+  current:   { icon:'🌊', name:'OCEAN CURRENT', desc:'A shifting current drags you sideways.' },
+  eruption:  { icon:'🌋', name:'ERUPTIONS',     desc:'Lava geysers burst from the ground.' },
+  blizzard:  { icon:'❄️', name:'BLIZZARD',       desc:'Icy footing and sudden polar gusts.' },
+  sandstorm: { icon:'🏜️', name:'SANDSTORM',     desc:'Gusting desert wind pushes fighters.' }
+};
 
 /* ---------------- STAGE MUSIC (Tone.js) ---------------- */
 // Each stage has a longer, multi-phrase theme built from note/duration pairs
@@ -4235,6 +4297,9 @@ let shardPickups=[];   // floating 💎 bonus gems that spawn mid-match; grab fo
 let shardSpawnTimer=0;  // frames until the next shard gem may spawn
 let eclipseT=0; // Zennith PERFECT GAME: frames left of the cursed solar eclipse (darkened sky + slower super gain)
 let soccerBall=null, soccerScore=[0,0], soccerGoalTimer=0;
+// Which fighter in `players` is the local human? P1 in every local mode; in an
+// online duel the host controls P1 (0) and the joiner controls P2 (1).
+function localPlayerIdx(){ return (mode==='online') ? (Net.isHost?0:1) : 0; }
 let keys={};
 let running=false;
 let mode='1p';                 // '1p', '2p', or 'online'
@@ -4284,6 +4349,55 @@ async function dbDelete(path){
   catch(e){ return false; }
 }
 function randCode(){ const A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s=''; for(let i=0;i<5;i++) s+=A[Math.floor(Math.random()*A.length)]; return s; }
+
+/* ---------------- LIVE LEADERBOARD (Firebase RTDB via REST) ---------------- */
+// A single global scoreboard shared by everyone, stored under `leaderboard/<id>`
+// on the same Realtime Database the online netcode already uses. Each player owns
+// one entry keyed by a random device id (kept in localStorage) so replaying only
+// updates your own row. We push total wins; the screen fetches every row, sorts
+// them client-side, and highlights the local player.
+const Leaderboard = {
+  _idKey:'watInDeFighters_lbid_v1',
+  _pollTimer:null,
+  // a stable anonymous id for this device/save, generated once
+  myId(){
+    let id=null;
+    try{ id=localStorage.getItem(this._idKey); }catch(e){}
+    if(!id){ id='p_'+randCode()+randCode(); try{ localStorage.setItem(this._idKey, id); }catch(e){} }
+    return id;
+  },
+  // sanitise the profile name into something safe to show
+  myName(){ return (Save.data.profile||'PLAYER 1').slice(0,16); },
+  // push our current totals. Fire-and-forget; failures are silent (offline is fine).
+  async submit(){
+    const wins=Save.stat('wins'), online=Save.stat('onlineWins'), flawless=Save.stat('flawless');
+    const medals=Object.keys(Save.data.medals||{}).length;
+    if(wins<=0 && online<=0 && medals<=0 && flawless<=0) return;   // nothing worth ranking yet
+    await dbPut('leaderboard/'+this.myId(), {
+      name:this.myName(), wins, online, flawless, medals,
+      prestige:Save.prestige()||0, t:Date.now()
+    });
+  },
+  // fetch every row and return an array sorted by the chosen key ('wins' | 'flawless' | 'medals')
+  async fetchTop(sortKey){
+    const raw=await dbGet('leaderboard');
+    if(!raw || typeof raw!=='object') return [];
+    const rows=Object.keys(raw).map(id=>Object.assign({id}, raw[id]))
+      .filter(r=>r && typeof r.wins==='number');
+    const k=(sortKey==='flawless'||sortKey==='medals')?sortKey:'wins';
+    const val=(r,key)=> (key==='medals'?(r.medals||0):(r[key]||0));
+    // primary = chosen stat; then fall back through the other stats, prestige, and age
+    rows.sort((a,b)=>
+      (val(b,k)-val(a,k))
+      || (val(b,'wins')-val(a,'wins'))
+      || (val(b,'medals')-val(a,'medals'))
+      || (val(b,'flawless')-val(a,'flawless'))
+      || ((b.prestige||0)-(a.prestige||0))
+      || ((a.t||0)-(b.t||0))
+    );
+    return rows;
+  }
+};
 
 
 /* ---------------- SAVE SYSTEM (localStorage) ---------------- */
@@ -4971,6 +5085,12 @@ function showStage(i){
   stagePick = STAGES[stageIndex];
   carName.textContent = stagePick.name;
   carFlag.innerHTML = stagePick.flag.map(c=>`<span style="background:${c}"></span>`).join('');
+  const hz=document.getElementById('stageHazard');
+  if(hz){
+    const info=stagePick.hazard && HAZARD_INFO[stagePick.hazard];
+    if(info){ hz.innerHTML='<span class="hzIcon">'+info.icon+'</span><span class="hzName">'+info.name+'</span><span class="hzDesc">'+info.desc+'</span>'; hz.classList.remove('hidden'); }
+    else hz.classList.add('hidden');
+  }
   document.querySelectorAll('.dot').forEach((d,di)=>d.classList.toggle('on', di===stageIndex));
 }
 // draw the current carousel stage continuously
@@ -5005,7 +5125,7 @@ document.getElementById('muteBtn').onclick=(e)=>{
 
 /* ---------------- SCREEN FLOW ---------------- */
 function show(id){
-  ['title','mode','select','stage','result','versus','story','achieve','achdetail','shop','minigame','settings','online','waitroom','stats','howto','skills','campaign','mission','cutscene'].forEach(s=>document.getElementById(s).classList.toggle('hidden', s!==id));
+  ['title','mode','select','stage','result','versus','story','achieve','achdetail','shop','minigame','settings','online','waitroom','stats','howto','skills','campaign','mission','cutscene','leaderboard'].forEach(s=>document.getElementById(s).classList.toggle('hidden', s!==id));
   document.body.classList.remove('in-match');
   // reset any scrollable menu back to the top so its heading is always visible on entry
   const el=document.getElementById(id);
@@ -5013,7 +5133,7 @@ function show(id){
   // never let a leftover achievement toast pop while navigating pre-match menus
   if(id!=='result'){ _toastQ.length=0; const tt=document.getElementById('achToast'); if(tt) tt.classList.remove('show'); _toastBusy=false; }
   // menu screens share a catchy menu theme; the match screens use stage music
-  const menuScreens=['title','mode','select','stage','achieve','achdetail','shop','minigame','result','story','settings','online','waitroom','stats','howto','skills','campaign','mission','cutscene'];
+  const menuScreens=['title','mode','select','stage','achieve','achdetail','shop','minigame','result','story','settings','online','waitroom','stats','howto','skills','campaign','mission','cutscene','leaderboard'];
   if(menuScreens.includes(id)){ if(Music.curId!=='menu') Music.play('menu'); }
   // the title screen's SEASON button always reflects whatever's on disk, even
   // if you got here after backing out of some other mode mid-run
@@ -5501,6 +5621,81 @@ function buildStatsScreen(){
 }
 document.getElementById('statsBtn').onclick=()=>{ buildStatsScreen(); show('stats'); };
 document.getElementById('statsBack').onclick=()=>{ show('title'); };
+
+/* ---------------- LIVE LEADERBOARD SCREEN ---------------- */
+// Fetches the global standings and re-renders them. While the screen is open we
+// also push our own latest totals once and re-poll every few seconds so the
+// board stays live as other players win.
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+let _lbSort='wins';   // 'wins' | 'flawless' | 'medals'
+const LB_SORTS=[{key:'wins',label:'WINS'},{key:'flawless',label:'FLAWLESS'},{key:'medals',label:'MEDALS'}];
+function renderLbTabs(){
+  const wrap=document.getElementById('lbTabs');
+  if(!wrap) return;
+  wrap.innerHTML=LB_SORTS.map(s=>'<button class="lbTab'+(s.key===_lbSort?' sel':'')+'" data-lbsort="'+s.key+'">'+s.label+'</button>').join('');
+  wrap.querySelectorAll('.lbTab').forEach(b=>b.onclick=()=>{
+    _lbSort=b.dataset.lbsort; renderLbTabs(); renderLeaderboard();
+  });
+}
+async function renderLeaderboard(){
+  const table=document.getElementById('lbTable');
+  const status=document.getElementById('lbStatus');
+  const myId=Leaderboard.myId();
+  let rows;
+  try{ rows=await Leaderboard.fetchTop(_lbSort); }
+  catch(e){ rows=null; }
+  // if we navigated away mid-fetch, don't clobber another screen
+  if(document.getElementById('leaderboard').classList.contains('hidden')){
+    if(Leaderboard._pollTimer){ clearInterval(Leaderboard._pollTimer); Leaderboard._pollTimer=null; }
+    return;
+  }
+  if(rows===null){
+    status.textContent='Couldn’t reach the leaderboard — check your connection.';
+    return;
+  }
+  if(!rows.length){
+    status.textContent='';
+    table.innerHTML='<div class="lbEmpty">No ranked players yet.<br>Win a match to claim the top spot!</div>';
+    return;
+  }
+  const mine=rows.findIndex(r=>r.id===myId);
+  const sortLabel=(LB_SORTS.find(s=>s.key===_lbSort)||LB_SORTS[0]).label.toLowerCase();
+  status.textContent = (mine>=0 ? 'You’re ranked #'+(mine+1)+' of '+rows.length : rows.length+' players ranked') + ' by '+sortLabel+' · live';
+  const hcls=k=>'lbStat'+(k===_lbSort?' act':'');
+  let html='<div class="lbHead"><div class="lbNum">#</div><div>PLAYER</div>'
+    +'<div class="'+hcls('wins')+'">WINS</div>'
+    +'<div class="'+hcls('flawless')+'">FLAWLESS</div>'
+    +'<div class="'+hcls('medals')+'">MEDALS</div></div>';
+  rows.slice(0,50).forEach((r,i)=>{
+    const rank=i+1;
+    const cls=['lbRow', r.id===myId?'me':'', rank<=3?('top'+rank):''].filter(Boolean).join(' ');
+    const pr=(r.prestige>0)?'<span class="lbPr">★P'+r.prestige+'</span>':'';
+    const you=(r.id===myId)?'<span class="lbYou">YOU</span>':'';
+    const cell=k=>'<div class="lbStat'+(k===_lbSort?' act':' sub')+'">'+(k==='medals'?(r.medals||0):(r[k]||0))+'</div>';
+    html+='<div class="'+cls+'">'
+      +'<div class="lbNum">'+rank+'</div>'
+      +'<div class="lbName">'+escapeHtml(r.name||'PLAYER')+pr+you+'</div>'
+      +cell('wins')+cell('flawless')+cell('medals')
+      +'</div>';
+  });
+  table.innerHTML=html;
+}
+function openLeaderboard(){
+  document.getElementById('lbStatus').textContent='Loading standings…';
+  document.getElementById('lbTable').innerHTML='';
+  renderLbTabs();
+  show('leaderboard');
+  Leaderboard.submit();          // push our latest totals so we appear/refresh
+  renderLeaderboard();
+  if(Leaderboard._pollTimer) clearInterval(Leaderboard._pollTimer);
+  Leaderboard._pollTimer=setInterval(renderLeaderboard, 5000);   // stay live
+}
+function closeLeaderboard(){
+  if(Leaderboard._pollTimer){ clearInterval(Leaderboard._pollTimer); Leaderboard._pollTimer=null; }
+  show('title');
+}
+document.getElementById('leaderboardBtn').onclick=openLeaderboard;
+document.getElementById('lbBack').onclick=closeLeaderboard;
 
 /* ---------------- SKILL TREE ---------------- */
 // small, 3-node, personalized-per-character tree (see skillTreeFor()); spend
@@ -6326,6 +6521,7 @@ function startMatch(){
   updateRoundBanner();
   // apply chosen stage layout
   PLATS = stagePick.layout();
+  Hazard.reset();
   const gm = currentMode();
   const p2IsBot = (mode==='1p');
   const mainX = PLATS[0].x, mainW = PLATS[0].w;
@@ -6365,6 +6561,7 @@ function startMatch(){
   running=true;
   if(!Save.stat('stage_'+stagePick.id)) Save.addStat('stage_'+stagePick.id,1);
   announce(gm.id==='stock' ? 'FIGHT!' : gm.name+'!');
+  announceHazard();
   updateHUD();
   Music.play(stagePick.id);
 }
@@ -6378,6 +6575,7 @@ function startOnlineMatch(){
   document.body.classList.add('in-match');
   document.getElementById('hud').classList.remove('hidden');
   PLATS = stagePick.layout();
+  Hazard.reset();
   const gm = currentMode();
   const mainX = PLATS[0].x, mainW = PLATS[0].w;
   const p1 = new Fighter(p1Pick, mainX+mainW*0.25, false, Net.p1Cos||0, 'none');
@@ -6396,6 +6594,7 @@ function startOnlineMatch(){
   Net._renderX=undefined; Net._renderY=undefined; Net._avgGap=0; Net._curRecvT=0; Net._prevRecvT=0; Net._pingEst=0;
   netStartStream();
   announce('FIGHT!');
+  announceHazard();
   updateHUD();
   Music.play(stagePick.id);
 }
@@ -7658,6 +7857,193 @@ function doJump(f){
 /* ---------------- PHYSICS + UPDATE ---------------- */
 const GRAV=0.62, FRICTION=0.82, AIRFRICTION=0.94, MAXFALL=15;
 
+/* ---------------- STAGE HAZARDS ---------------- */
+// Each hazard-tagged stage gets a unique environmental effect that acts on the
+// fighters every frame. Some are steady forces (Atlantis current, Egypt wind),
+// others fire on a timer (Volcano eruptions, Aurora blizzard gusts). State for
+// the timed ones lives on the shared Hazard object, reset at the start of a match.
+const Hazard = {
+  id:null,          // active hazard id (null = none)
+  // volcano
+  ventX:0, eruptTimer:0, geysers:[],
+  // aurora blizzard
+  gustDir:1, gustTimer:0, gustPower:0,
+  reset(){
+    this.id = (stagePick && stagePick.hazard) || null;
+    this.geysers = [];
+    this.eruptTimer = 220;                 // frames until first volcano eruption
+    this.ventX = W*0.5;                    // eruptions rise from the stage centre
+    this.gustDir = Math.random()<0.5?-1:1;
+    this.gustTimer = 300;                  // frames until first blizzard gust
+    this.gustPower = 0;
+  }
+};
+// A damage/knockback hit from the environment (no attacker). Kept separate from
+// landHit() because that one assumes a real attacker for super-meter + colors.
+function stageHazardHit(f, dmg, kbx, kby){
+  if(f.dead || f.hitCd>0) return;
+  if(f.shielding && f.shieldHp>0){ f.shieldHp-=dmg*2.2; spawnParticles(f.cx,f.cy,'#8fefff',5); return; }
+  f.hp=Math.max(0, f.hp-dmg);
+  f.superMeter=Math.min(100, f.superMeter + dmg*1.4*(f.mSuper||1));
+  const w=f.def.stats.weight||1;
+  f.vx += kbx/w; f.vy = kby/w;
+  f.hitCd=12; f.state='hit';
+  hitStop=Math.max(hitStop,3); shakeT=Math.max(shakeT,8);
+  spawnParticles(f.cx,f.cy,'#fff',8);
+  updateHUD();
+  if(f.hp<=0 && !f.dead) KO(f);
+}
+// Per-fighter force, applied every physics frame BEFORE the position integrates.
+function hazardTick(f, t){
+  switch(Hazard.id){
+    case 'current': {
+      // Atlantis: a slow ocean current that reverses direction on a long cycle,
+      // nudging fighters sideways; water also makes falls a touch floatier.
+      const dir = Math.sin(t/2600);        // smooth -1..1 sweep
+      f.vx += dir*0.13;
+      if(!f.onGround && f.vy>0) f.vy *= 0.985;   // mild buoyancy while sinking
+      break;
+    }
+    case 'sandstorm': {
+      // Egypt: gusty desert wind — a steady base push plus a stronger airborne
+      // shove, so aerial fighters get carried further than grounded ones.
+      const gust = Math.sin(t/900)*0.9 + Math.sin(t/337)*0.35;   // 0-centred, gusty
+      f.vx += gust*(f.onGround?0.06:0.16);
+      break;
+    }
+    case 'blizzard': {
+      // Aurora Peaks: icy footing (low friction handled below) + periodic polar
+      // wind gusts that blast everyone one way for a couple of seconds.
+      if(Hazard.gustPower>0){
+        f.vx += Hazard.gustDir*Hazard.gustPower*(f.onGround?0.10:0.22);
+      }
+      // slippery ice: bleed friction back toward "on skates" while grounded
+      if(f.onGround && !f.shielding){ f.vx *= 1.06; }   // counteracts some of FRICTION
+      break;
+    }
+  }
+}
+// World-level hazard logic (spawns, timers, damage) — called once per frame.
+function hazardWorldTick(t){
+  if(Hazard.id==='eruption'){
+    // Volcano: the central vent erupts on a timer, throwing a lava geyser column
+    // that launches and burns anyone standing over it.
+    if(--Hazard.eruptTimer<=0){
+      Hazard.eruptTimer = 260 + Math.floor(Math.random()*160);
+      Hazard.ventX = W*(0.32+Math.random()*0.36);          // vary where it blows
+      Hazard.geysers.push({ x:Hazard.ventX, warn:36, life:0, dur:64, hitDone:false });
+    }
+    Hazard.geysers.forEach(g=>{
+      if(g.warn>0){ g.warn--; return; }
+      g.life++;
+      // damage window: while the column is actively spewing
+      if(g.life>4 && g.life<40){
+        players.forEach((f,idx)=>{
+          if(mode==='online' && idx===(Net.isHost?1:0)) return;
+          if(f.dead) return;
+          if(Math.abs(f.cx-g.x)<52 && f.y+f.h>GROUND_Y-260){
+            stageHazardHit(f, 0.8, (f.cx>=g.x?1:-1)*3, -13);
+          }
+        });
+        if(g.life%3===0) spawnParticles(g.x+(Math.random()-.5)*40, GROUND_Y-Math.random()*220, Math.random()<0.5?'#ff6a2a':'#ffd24a', 3);
+      }
+    });
+    Hazard.geysers = Hazard.geysers.filter(g=> g.warn>0 || g.life<g.dur);
+  }
+  if(Hazard.id==='blizzard'){
+    if(--Hazard.gustTimer<=0){
+      Hazard.gustTimer = 360 + Math.floor(Math.random()*220);
+      Hazard.gustDir = Math.random()<0.5?-1:1;
+      Hazard.gustPower = 1;                 // ramps down over the gust
+    }
+    if(Hazard.gustPower>0){
+      Hazard.gustPower -= 0.012;            // ~80-frame gust
+      if(Hazard.gustPower<0) Hazard.gustPower=0;
+    }
+  }
+}
+// Visual overlays for the active hazard. Drawn on top of the arena each frame.
+function hazardDraw(t){
+  if(Hazard.id==='current'){
+    // drifting current streaks + rising bubbles
+    ctx.save();
+    const dir = Math.sin(t/2600);
+    ctx.globalAlpha=0.18; ctx.strokeStyle='#8fe0ff'; ctx.lineWidth=2;
+    for(let i=0;i<7;i++){
+      const y=GROUND_Y-40-i*46 - ((t*0.02*(1+i*0.1))%46);
+      const off=((t*0.6*dir)+(i*90))% (W+160) - 80;
+      ctx.beginPath();
+      ctx.moveTo(off, y);
+      ctx.lineTo(off+70*(dir>=0?1:-1), y+ (dir>=0?6:-6));
+      ctx.stroke();
+    }
+    ctx.globalAlpha=0.5; ctx.fillStyle='#bfefff';
+    for(let i=0;i<10;i++){
+      const bx=((i*137 + t*0.5*(1+i%3))%W);
+      const by=GROUND_Y-((t*0.9+i*80)% (GROUND_Y*0.9));
+      ctx.beginPath(); ctx.arc(bx,by,1.5+(i%3),0,Math.PI*2); ctx.fill();
+    }
+    // a directional arrow hint near the bottom
+    ctx.globalAlpha=0.35; ctx.fillStyle='#8fe0ff';
+    ctx.font='700 12px Arial'; ctx.textAlign='center';
+    ctx.fillText(dir>=0?'CURRENT  →':'←  CURRENT', W/2, GROUND_Y-8);
+    ctx.restore();
+  } else if(Hazard.id==='sandstorm'){
+    ctx.save();
+    const gust = Math.sin(t/900)*0.9 + Math.sin(t/337)*0.35;
+    ctx.globalAlpha=0.10+0.06*Math.abs(gust);
+    ctx.fillStyle='#e0c48a';
+    ctx.fillRect(0,0,W,H);
+    ctx.globalAlpha=0.5;
+    ctx.strokeStyle='#f2e0b0'; ctx.lineWidth=1.5;
+    for(let i=0;i<26;i++){
+      const y=(i*53 + (t*0.3))%H;
+      const x=((i*211 + t*(2.6+2.4*gust)))%(W+200)-100;
+      ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+ (14+18*Math.abs(gust)), y+2); ctx.stroke();
+    }
+    ctx.restore();
+  } else if(Hazard.id==='eruption'){
+    ctx.save();
+    Hazard.geysers.forEach(g=>{
+      if(g.warn>0){
+        // warning glow on the ground before it blows
+        const a=0.3+0.4*Math.sin(t/60);
+        ctx.globalAlpha=a; ctx.fillStyle='#ff4500';
+        ctx.beginPath(); ctx.ellipse(g.x,GROUND_Y-4,46,10,0,0,Math.PI*2); ctx.fill();
+        return;
+      }
+      const p=Math.min(1, g.life/12);
+      const h=260*p*(g.life>40? Math.max(0,1-(g.life-40)/24):1);
+      const grad=ctx.createLinearGradient(g.x,GROUND_Y,g.x,GROUND_Y-h);
+      grad.addColorStop(0,'#ffd24a'); grad.addColorStop(0.5,'#ff6a2a'); grad.addColorStop(1,'rgba(255,69,0,0)');
+      ctx.globalAlpha=0.9; ctx.fillStyle=grad;
+      const w=54+8*Math.sin(t/40);
+      ctx.beginPath();
+      ctx.moveTo(g.x-w/2,GROUND_Y);
+      ctx.quadraticCurveTo(g.x-w*0.2, GROUND_Y-h*0.6, g.x, GROUND_Y-h);
+      ctx.quadraticCurveTo(g.x+w*0.2, GROUND_Y-h*0.6, g.x+w/2, GROUND_Y);
+      ctx.closePath(); ctx.fill();
+    });
+    ctx.restore();
+  } else if(Hazard.id==='blizzard'){
+    ctx.save();
+    const active=Hazard.gustPower>0;
+    const drift=(Hazard.gustDir*(active?Hazard.gustPower:0.15));
+    ctx.globalAlpha=active?0.85:0.5; ctx.fillStyle='#eaf4ff';
+    for(let i=0;i<60;i++){
+      const y=((i*29 + t*(1.2+ (active?3.5*Hazard.gustPower:0.6))))%H;
+      const x=((i*97 + t*(0.6 + drift*6)))%(W+80)-40;
+      ctx.beginPath(); ctx.arc(x,y,1.3+(i%3)*0.7,0,Math.PI*2); ctx.fill();
+    }
+    if(active){
+      ctx.globalAlpha=0.25*Hazard.gustPower; ctx.fillStyle='#cfe6ff';
+      ctx.font='700 13px Arial'; ctx.textAlign='center';
+      ctx.fillText(Hazard.gustDir>=0?'❄ BLIZZARD  →':'←  BLIZZARD ❄', W/2, 40);
+    }
+    ctx.restore();
+  }
+}
+
 /* control schemes */
 const DEFAULT_SCHEME1={left:'a',right:'d',jump:'w',drop:'s',attack:'j',special:'k',shield:'l',up:'i',super:'u'};
 const DEFAULT_SCHEME2={left:'arrowleft',right:'arrowright',jump:'arrowup',drop:'arrowdown',attack:'.',special:'/',shield:'shift',up:"'",super:','};
@@ -7864,6 +8250,9 @@ function update(t){
     // gravity (scaled by ruleset)
     f.vy+=GRAV*currentMode().grav; if(f.vy>MAXFALL)f.vy=MAXFALL;
 
+    // per-stage environmental force (Atlantis current, Egypt wind, etc.)
+    if(Hazard.id) hazardTick(f, t);
+
     f.x+=f.vx; f.y+=f.vy;
 
     // friction
@@ -7913,6 +8302,9 @@ function update(t){
       KO(f);
     }
   });
+
+  // stage hazards (eruptions, blizzard gusts, etc.)
+  if(Hazard.id) hazardWorldTick(t);
 
   // projectiles
   projectiles.forEach(pr=>{
@@ -8638,6 +9030,53 @@ function render(t){
     }
   });
 
+  // "YOU" marker: a small floating label + bobbing arrow over the local player's
+  // fighter, so in the heat of a 1v1 it's always clear which one you're driving.
+  (function drawYouMarker(){
+    const me = players[localPlayerIdx()];
+    if(!me || me.dead) return;
+    const bob = Math.sin(t/220)*3;
+    const cx = me.cx;
+    const topY = me.y - 20 + bob;   // just above the fighter's head
+    ctx.save();
+    ctx.font = '700 12px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    const label = 'YOU';
+    const tw = ctx.measureText(label).width;
+    const padX = 7, padY = 4, bw = tw + padX*2, bh = 17;
+    const bx = cx - bw/2, by = topY - bh;
+    // rounded pill background
+    const r = 6;
+    ctx.beginPath();
+    ctx.moveTo(bx+r, by);
+    ctx.arcTo(bx+bw, by, bx+bw, by+bh, r);
+    ctx.arcTo(bx+bw, by+bh, bx, by+bh, r);
+    ctx.arcTo(bx, by+bh, bx, by, r);
+    ctx.arcTo(bx, by, bx+bw, by, r);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(13,13,24,.82)';
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = me.def.color;
+    ctx.stroke();
+    // label text
+    ctx.fillStyle = '#fef6e4';
+    ctx.fillText(label, cx, by + bh - padY - 1);
+    // little downward-pointing arrow tip toward the fighter
+    ctx.beginPath();
+    ctx.moveTo(cx-5, by+bh);
+    ctx.lineTo(cx+5, by+bh);
+    ctx.lineTo(cx, by+bh+6);
+    ctx.closePath();
+    ctx.fillStyle = me.def.color;
+    ctx.fill();
+    ctx.restore();
+  })();
+
+  // stage hazard visuals (current streaks, lava geysers, weather)
+  if(Hazard.id) hazardDraw(t);
+
   // particles
   particles.forEach(p=>{
     ctx.globalAlpha=Math.max(0,p.life/35);
@@ -8766,6 +9205,12 @@ function announce(txt){
   el.textContent=txt; el.classList.remove('show');
   void el.offsetWidth; el.classList.add('show');
 }
+// after the FIGHT! pop, flash the stage hazard's name so players know what to expect
+function announceHazard(){
+  const info = stagePick && stagePick.hazard && HAZARD_INFO[stagePick.hazard];
+  if(!info) return;
+  setTimeout(()=>{ if(running) announce(info.icon+' '+info.name); }, 1100);
+}
 function endMatch(){
   running=false;
   Music.stop();
@@ -8779,7 +9224,7 @@ function endMatch(){
     const iWon = players[meIdx].stocks>0;
     try{ leaveRoom(); }catch(e){}
     Net.connected=false;
-    if(iWon){ Save.addStat('wins'); Save.addStat('onlineWins'); if(players[meIdx].meme && players[meIdx].meme.id!=='none') Save.addStat('memeWins'); Save.addCurrency(20); grantAndToast(); }
+    if(iWon){ Save.addStat('wins'); Save.addStat('onlineWins'); if(players[meIdx].meme && players[meIdx].meme.id!=='none') Save.addStat('memeWins'); Save.addCurrency(20); grantAndToast(); Leaderboard.submit(); }
     setTimeout(()=>{
       document.getElementById('hud').classList.add('hidden');
       Music.play('menu');
@@ -8805,6 +9250,7 @@ function endMatch(){
     if(gmid==='moon') Save.addStat('moonWins');
     if(gmid==='charged') Save.addStat('chargedWins');
     Save.addCurrency(20);   // SHARDS earned from a battle win — spend on a fighter's skill tree
+    Leaderboard.submit();
   }
   const newAch = (mode==='1p') ? grantAndToast() : [];
 
@@ -8917,6 +9363,7 @@ function endMatchSoccer(scorer){
     Save.addStat('wins'); Save.addStat('soccerWins');
     if(p1.meme && p1.meme.id!=='none') Save.addStat('memeWins');
     Save.addCurrency(20);
+    Leaderboard.submit();
   }
   const newAch = (mode==='1p') ? grantAndToast() : [];
   setTimeout(()=>{
