@@ -965,7 +965,7 @@
     <div class="howsec">
       <h3>THE BASICS</h3>
       <div class="howgrid">
-        <div class="howcard"><div class="hk">ATTACK</div><div class="hd">Melee hit. Short range, low cooldown.</div></div>
+        <div class="howcard"><div class="hk">ATTACK</div><div class="hd">Melee hit on the ground. In the AIR it becomes a unique AERIAL — some spike foes down, others pop them up.</div></div>
         <div class="howcard"><div class="hk">SPECIAL</div><div class="hd">Each fighter's signature move — see the movelist below.</div></div>
         <div class="howcard"><div class="hk">UP-SPECIAL</div><div class="hd">A recovery move that also launches upward.</div></div>
         <div class="howcard"><div class="hk">SUPER</div><div class="hd">A powerful move once your super meter is full. Meter charges as you deal and take damage.</div></div>
@@ -4214,6 +4214,7 @@ class Fighter{
     this.tauntTimer=0;   // frames of taunt/emote pose
     this.state='idle';
     this.attackTimer=0;
+    this._aerial=null;   // active aerial-attack profile while airborne, else null
     this.specialCd=0;
     this.hitCd=0;      // invuln after being hit
     this.shielding=false;
@@ -5574,8 +5575,11 @@ function buildMoveList(){
       const reqAch = ACHIEVEMENTS.find(a=>a.id===achForChar(c.id));
       card.innerHTML=`<div class="mcname" style="color:${c.color}">${c.name}</div><div class="mcdesc">🔒 LOCKED — ${reqAch?('unlocks via: '+reqAch.name):'keep playing to unlock'}</div>`;
     } else {
+      const aer = aerialFor(c);
+      const aerHint = (aer.launch<0) ? 'spikes foes down' : (aer.launch>0.25 ? 'pops foes up' : 'quick air hit');
       card.innerHTML=`<div class="mcname" style="color:${c.color}">${c.name}</div><div class="mcdesc">${c.desc}</div>
         <div class="mv"><b style="color:${c.color}">K</b> ${c.move}</div>
+        <div class="mv"><b style="color:#8fefff">J (air)</b> ${aer.name} · ${aerHint}</div>
         <div class="mv"><b style="color:#fdbb2d">↑</b> ${c.up}</div>
         <div class="mv"><b style="color:#ff5714">★</b> ${c.sup}</div>`;
     }
@@ -6753,9 +6757,109 @@ function flashOnlineHelper(msg){
 }
 
 /* ---------------- COMBAT ---------------- */
+/* ---------------- AERIAL ATTACKS (Smash-style) ---------------- */
+// Pressing ATTACK in the air fires a character-specific aerial instead of the
+// ground jab. Each aerial is a small profile keyed by the fighter's `special`
+// type (the same field that themes their icon/SFX), so every archetype gets a
+// fitting move without hand-writing all 36. Profile fields:
+//   name   – shown nowhere critical, handy for the movelist/how-to
+//   dmg    – base damage
+//   kb     – base knockback
+//   reachX – horizontal hitbox reach multiplier (× body width)
+//   reachY – vertical hitbox reach multiplier (× body height)
+//   launch – knockback vertical bias: >0 pops UP (juggle), <0 SPIKES down
+//   vy     – optional self-velocity nudge on startup (e.g. a diving spike)
+//   sfx    – SFX.attack() key to play
+//   fx     – optional (f)=>void for extra visual flair on startup
+const AERIAL_DEFAULT = { name:'AIR SLASH', dmg:8, kb:5, reachX:0.7, reachY:0.75, launch:0.15, sfx:'melee' };
+const AERIALS = {
+  // baseball family — a downward "spike" swing, very Smash dair
+  pitch:  { name:'AIR SLAM',      dmg:11, kb:7,  reachX:0.7, reachY:0.9, launch:-1.4, sfx:'pitch' },
+  curve:  { name:'DIVING CURVE',  dmg:9,  kb:6,  reachX:0.7, reachY:0.9, launch:-1.3, sfx:'curve' },
+  doom:   { name:'CURSED DIVE',   dmg:14, kb:9,  reachX:0.85,reachY:1.0, launch:-1.6, sfx:'doom',
+            fx:f=>voidfx.push({kind:'slash',x:f.cx,y:f.cy+10,face:f.face,life:14,max:14,r:f.w*1.1}) },
+  // drone / bug / swarm — a spinning multi-reach buzz-swipe that pops up
+  drone:    { name:'ROTOR SPIN',  dmg:9,  kb:5,  reachX:0.9, reachY:0.8, launch:0.35, sfx:'drone' },
+  minidrone:{ name:'BUZZ KICK',   dmg:8,  kb:5,  reachX:0.85,reachY:0.8, launch:0.35, sfx:'minidrone' },
+  swarm:    { name:'WING SLASH',  dmg:8,  kb:5,  reachX:0.9, reachY:0.85,launch:0.3,  sfx:'swarm' },
+  spores:   { name:'SPORE PUFF',  dmg:8,  kb:5,  reachX:0.9, reachY:0.85,launch:0.3,  sfx:'spores' },
+  // magic / energy — a radial burst around the body, pops up
+  bolt:   { name:'AIR SPARK',     dmg:10, kb:6,  reachX:0.85,reachY:0.9, launch:0.4,  sfx:'bolt' },
+  glitch: { name:'GLITCH SWIPE',  dmg:9,  kb:6,  reachX:0.85,reachY:0.85,launch:0.35, sfx:'glitch' },
+  frost:  { name:'ICE FAN',       dmg:9,  kb:6,  reachX:0.85,reachY:0.9, launch:0.3,  sfx:'frost' },
+  foxfire:{ name:'FLAME TWIRL',   dmg:9,  kb:6,  reachX:0.9, reachY:0.9, launch:0.35, sfx:'foxfire' },
+  numbers:{ name:'AIR FORMULA',   dmg:9,  kb:6,  reachX:0.8, reachY:0.85,launch:0.3,  sfx:'numbers' },
+  // heavy / slam — a big downward stomp that spikes
+  pound:  { name:'AIR POUND',     dmg:13, kb:8,  reachX:0.75,reachY:1.0, launch:-1.5, vy:6, sfx:'pound' },
+  shock:  { name:'BODY SPLASH',   dmg:12, kb:8,  reachX:0.8, reachY:0.95,launch:-1.4, vy:6, sfx:'shock' },
+  slam:   { name:'FLYING FLOP',   dmg:13, kb:8,  reachX:0.85,reachY:1.0, launch:-1.5, vy:6, sfx:'slam' },
+  launch: { name:'AIR TACKLE',    dmg:12, kb:8,  reachX:0.95,reachY:0.8, launch:0.1,  sfx:'launch' },
+  car:    { name:'AIR RAM',       dmg:12, kb:8,  reachX:0.95,reachY:0.8, launch:0.05, sfx:'car' },
+  // strikers / martial — a forward flying kick that carries momentum
+  kick:   { name:'FLYING KNEE',   dmg:11, kb:7,  reachX:0.9, reachY:0.8, launch:0.1,  sfx:'kick' },
+  pounce: { name:'AIR CLAW',      dmg:10, kb:6,  reachX:0.9, reachY:0.85,launch:0.2,  sfx:'pounce' },
+  twocat: { name:'CAT DIVE',      dmg:10, kb:6,  reachX:0.9, reachY:0.85,launch:0.25, sfx:'twocat' },
+  breakdance:{name:'AIR FLARE',   dmg:10, kb:6,  reachX:0.95,reachY:0.9, launch:0.3,  sfx:'breakdance' },
+  football:{ name:'BICYCLE KICK', dmg:11, kb:7,  reachX:0.9, reachY:0.85,launch:0.25, sfx:'football' },
+  // racket / serve — a downward smash spike
+  serve:  { name:'AIR SMASH',     dmg:11, kb:7,  reachX:0.8, reachY:0.9, launch:-1.3, sfx:'serve' },
+  evilserve:{name:'DARK SMASH',   dmg:12, kb:8,  reachX:0.85,reachY:0.95,launch:-1.45,sfx:'evilserve' },
+  // thrown / lobbed — a quick air toss that pops up
+  bomb:   { name:'AIR BOMB',      dmg:11, kb:7,  reachX:0.8, reachY:0.85,launch:0.4,  sfx:'bomb' },
+  flask:  { name:'AIR FLASK',     dmg:10, kb:6,  reachX:0.8, reachY:0.85,launch:0.35, sfx:'flask' },
+  egg:    { name:'AIR EGG',       dmg:9,  kb:6,  reachX:0.8, reachY:0.85,launch:0.35, sfx:'egg' },
+  coins:  { name:'COIN SWIPE',    dmg:9,  kb:6,  reachX:0.8, reachY:0.85,launch:0.3,  sfx:'coins' },
+  slipper:{ name:'AIR SMACK',     dmg:10, kb:7,  reachX:0.85,reachY:0.85,launch:0.2,  sfx:'slipper' },
+  controller:{name:'AIR TOSS',    dmg:9,  kb:6,  reachX:0.85,reachY:0.85,launch:0.3,  sfx:'controller' },
+  // shooters / ranged — a spinning kick-back
+  pellet: { name:'AIR SHOT',      dmg:9,  kb:6,  reachX:0.85,reachY:0.8, launch:0.2,  sfx:'pellet' },
+  bullets:{ name:'AIR SPRAY',     dmg:9,  kb:6,  reachX:0.9, reachY:0.8, launch:0.15, sfx:'bullets' },
+  soundwave:{name:'AIR BOOM',     dmg:10, kb:8,  reachX:0.95,reachY:0.85,launch:0.3,  sfx:'soundwave' },
+  // water / shadow / rock
+  splash: { name:'WATER SPIN',    dmg:9,  kb:6,  reachX:0.9, reachY:0.85,launch:0.3,  sfx:'splash' },
+  dash:   { name:'SHADOW SWIPE',  dmg:9,  kb:6,  reachX:0.85,reachY:0.85,launch:0.25, sfx:'dash' },
+  rocks:  { name:'BOULDER DROP',  dmg:12, kb:8,  reachX:0.8, reachY:0.95,launch:-1.4, vy:5, sfx:'rocks' },
+};
+function aerialFor(def){ return AERIALS[def.special] || AERIAL_DEFAULT; }
+// Fire an aerial: sets the attack window + an `_aerial` profile the hit code reads.
+function tryAerial(f){
+  const a = aerialFor(f.def);
+  f.attackTimer=16; f.state='attack';
+  f._aerial = { def:a, hit:false };
+  if(a.vy){ f.vy = Math.max(f.vy, a.vy); }   // diving spikes nudge downward
+  SFX.attack(a.sfx || 'melee');
+  spawnParticles(f.cx + f.face*f.w*0.5, f.cy, f.def.color, 6);
+  if(a.fx) a.fx(f);
+  // ZENNITH keeps its signature void crescent on aerials too
+  if(f.def.id==='zennith' && !a.fx){
+    voidfx.push({kind:'slash', x:f.cx+f.face*f.w*0.5, y:f.cy, face:f.face, life:14, max:14, r:f.w*1.05});
+    SFX.attack('doom');
+  }
+}
+// Apply the current aerial's hit (called from the melee active window). One
+// connect per aerial. Uses the profile's reach + launch so spikes send foes
+// down and pop-ups juggle them upward.
+function aerialHit(att, def){
+  if(!att._aerial || att._aerial.hit || def.hitCd>0 || def.dead || att===def) return;
+  const a=att._aerial.def;
+  const withinX=Math.abs(att.cx-def.cx) < att.w*a.reachX + def.w*0.5;
+  const withinY=Math.abs(att.cy-def.cy) < att.h*a.reachY;
+  if(withinX && withinY){
+    landHit(att,def,a.dmg,a.kb, att.face, a.launch||0);
+    att._aerial.hit=true;   // single connect
+    spawnParticles(def.cx, def.cy, att.def.color, 8);
+    hitStop=Math.max(hitStop,3); shakeT=Math.max(shakeT,4);
+  }
+}
+
 function tryAttack(f){
   if(f.attackTimer>0 || f.shielding || f.dead) return;
+  // AERIAL: pressing ATTACK while airborne triggers a character-specific air move
+  // (Smash-style). Ground attack is unchanged. The aerial's hit is applied in the
+  // melee active-window using the fighter's AERIAL profile (see AERIALS/aerialHit).
+  if(!f.onGround){ tryAerial(f); return; }
   f.attackTimer=18; f.state='attack';
+  f._aerial=null;
   SFX.attack('melee');
   // melee hitbox spawned in update via attackTimer window
   spawnParticles(f.cx + f.face*f.w*0.6, f.cy, f.def.color, 5);
@@ -7772,7 +7876,7 @@ function update(t){
       return;
     }
     // timers
-    if(f.attackTimer>0){ f.attackTimer--; if(f.attackTimer===0 && f.state==='attack') f.state='idle'; }
+    if(f.attackTimer>0){ f.attackTimer--; if(f.attackTimer===0 && f.state==='attack'){ f.state='idle'; f._aerial=null; } }
     if(f.specialCd>0) f.specialCd--;
     if(f.hitCd>0) f.hitCd--;
     if(f.shieldHp<100) f.shieldHp=Math.min(100,f.shieldHp+0.6);
@@ -7897,7 +8001,8 @@ function update(t){
 
     // melee hitbox active window
     if(f.state==='attack' && f.attackTimer>4 && f.attackTimer<16){
-      players.forEach(o=>{ if(o!==f) meleeHit(f,o); });
+      if(f._aerial){ players.forEach(o=>{ if(o!==f) aerialHit(f,o); }); }
+      else players.forEach(o=>{ if(o!==f) meleeHit(f,o); });
     }
     // dash hit
     if(f._dashHit>0){
@@ -9240,15 +9345,23 @@ window.addEventListener('keydown', e=>{
 /* ---------------- SPLASH SCREEN ---------------- */
 (function setupSplash(){
   const splash=document.getElementById('splash');
+  if(!splash) return;
   let dismissed=false;
   function dismiss(){
     if(dismissed) return; dismissed=true;
     splash.classList.add('fade-out');
     setTimeout(()=>splash.classList.add('hidden'), 500);
+    // stop listening once we've started dismissing
+    ['keydown','pointerdown','mousedown','click','touchstart'].forEach(ev=>{
+      window.removeEventListener(ev, dismiss, true);
+    });
   }
-  splash.addEventListener('click', dismiss);
-  splash.addEventListener('touchstart', dismiss, {passive:true});
-  window.addEventListener('keydown', dismiss, {once:true});
+  // Listen broadly (any key OR any tap/click, captured on the window so nothing
+  // can swallow it first) so the player can NEVER get stuck on the intro. Also
+  // keep a hard auto-continue timer as a final safety net.
+  ['keydown','pointerdown','mousedown','click','touchstart'].forEach(ev=>{
+    window.addEventListener(ev, dismiss, true);
+  });
   setTimeout(dismiss, 2600);   // auto-continue if nobody taps
 })();
 
