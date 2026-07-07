@@ -52,6 +52,13 @@
   }
   #world.night { filter: brightness(0.42) saturate(0.6) hue-rotate(-8deg); }
   #world.night .sky { background: linear-gradient(180deg, #0d1030 0%, #1b1f45 55%, #2a2350 100%) !important; }
+  /* at night the left grove strip (painted on #world's own background) must match the night sky too */
+  #world.night {
+    background:
+      linear-gradient(180deg, var(--grass) 0%, var(--grass-dk) 100%) 0 378px / 100% 522px no-repeat,
+      linear-gradient(180deg, #0d1030 0%, #1b1f45 55%, #2a2350 100%) 0 0 / 100% 414px no-repeat,
+      var(--grass-dk);
+  }
   /* all original park scenery lives in this shifted group so we could open up
      empty world on the LEFT for the great tree without renumbering every prop */
   #worldshift { position:absolute; top:0; left:480px; width:2750px; height:900px; }
@@ -109,20 +116,28 @@
     background: repeating-linear-gradient(0deg, #c98a4a 0 22px, #bd7f42 22px 44px);
     border: 5px solid #f4ead2; border-radius: 6px;
     box-shadow: 0 10px 24px rgba(0,0,0,0.25);
+    transform-origin: center bottom; scale: 1.08;
   }
   .court .key { position:absolute; top:0; left:50%; transform:translateX(-50%); width:90px; height:70px; border:4px solid #f4ead2; border-top:none; }
   .court .circle { position:absolute; top:52px; left:50%; transform:translateX(-50%); width:60px; height:60px; border:4px solid #f4ead2; border-radius:50%; }
   /* hoop stands at the top-center edge of the court: pole base ~ (1180, 520) */
-  .hoop { position:absolute; left:1176px; top:452px; width:8px; height:80px; background:#8a6a4a; }
+  .hoop { position:absolute; left:1176px; top:452px; width:8px; height:80px; background:#8a6a4a; transform-origin:center bottom; scale:1.45; }
   .hoop::before { content:""; position:absolute; top:-4px; left:-26px; width:52px; height:34px; background:#fff; border:3px solid #ccc; border-radius:4px; }
   .hoop::after { content:""; position:absolute; top:26px; left:-20px; width:40px; height:10px; border:3px solid var(--ember); border-radius:0 0 20px 20px; border-top:none; }
 
-  /* trees — element bottom = base of trunk; height covers trunk + leaves */
-  .tree { position:absolute; width:130px; height:190px; transform-origin:bottom center; }
+  /* trees — element bottom = base of trunk; height covers trunk + leaves.
+     scale (composes with each tree's inline transform:scale) bumps them up to match the bigger cast. */
+  .tree { position:absolute; width:130px; height:190px; transform-origin:bottom center; scale:1.28; }
   .tree .trunk { position:absolute; bottom:0; left:50%; transform:translateX(-50%); width:22px; height:70px; background:linear-gradient(90deg,#8a5a34,#6a441f); border-radius:6px; }
   .tree .leaves { position:absolute; bottom:52px; left:50%; transform:translateX(-50%); width:130px; height:130px; border-radius:50%;
     background:radial-gradient(circle at 40% 35%, #86c96f, #4e9440 70%); box-shadow: inset -8px -8px 18px rgba(0,0,0,0.15); transform-origin:50% 90%; }
   .tree.shaking .leaves { animation: rustle 0.6s ease-in-out; }
+  /* Gerald — Devin's crooked tree: a bent, characterful trunk and a canopy that leans off to one side */
+  .tree.gerald .trunk { width:20px; height:78px; border-radius:8px 10px 6px 6px;
+    transform:translateX(-50%) rotate(7deg) skewX(-6deg); transform-origin:bottom center; }
+  .tree.gerald .trunk::after { content:""; position:absolute; left:-9px; bottom:30px; width:16px; height:9px;
+    background:linear-gradient(90deg,#8a5a34,#6a441f); border-radius:6px; transform:rotate(-28deg); }
+  .tree.gerald .leaves { transform:translateX(calc(-50% + 18px)) translateY(-8px) rotate(7deg); transform-origin:50% 90%; }
   @keyframes rustle {
     0%,100% { transform: translateX(-50%) rotate(0deg); }
     20% { transform: translateX(-50%) rotate(4deg); }
@@ -165,12 +180,12 @@
   #flowerpatch .flower::after { transition:transform 0.5s cubic-bezier(.2,.8,.2,1), opacity 0.5s; }
 
   /* bench */
-  .bench { position:absolute; width:120px; height:38px; }  .bench .seat { position:absolute; top:6px; width:120px; height:14px; background:#b07a44; border-radius:4px; box-shadow:0 4px 0 #8a5a30; }
+  .bench { position:absolute; width:120px; height:38px; transform-origin:center bottom; scale:1.35; }  .bench .seat { position:absolute; top:6px; width:120px; height:14px; background:#b07a44; border-radius:4px; box-shadow:0 4px 0 #8a5a30; }
   .bench .leg { position:absolute; bottom:0; width:10px; height:24px; background:#6a441f; }
   .bench .leg.l { left:12px; } .bench .leg.r { right:12px; }
 
   /* lamps — element bottom = base of pole; height covers pole + globe */
-  .lamp { position:absolute; width:26px; height:140px; }
+  .lamp { position:absolute; width:26px; height:140px; transform-origin:center bottom; scale:1.25; }
   .lamp .pole { position:absolute; bottom:0; left:50%; transform:translateX(-50%); width:8px; height:110px; background:#3a3a44; }
   .lamp .globe { position:absolute; bottom:104px; left:50%; transform:translateX(-50%); width:26px; height:26px; border-radius:50%; background:radial-gradient(circle,#fff6c8,#f2d06a); box-shadow:0 0 26px 10px rgba(255,235,150,0.6); }
   /* at night each park lamp casts a soft pool of warm light on the ground below it */
@@ -182,7 +197,7 @@
   @keyframes lampflicker { 0%,100%{ opacity:0.85; } 50%{ opacity:1; } }
 
   /* park vending machine — starts broken, Caiza repairs it into the gift shop */
-  .vending { position:absolute; width:74px; height:120px; }
+  .vending { position:absolute; width:74px; height:120px; transform-origin:center bottom; scale:1.22; }
   .vending .cabinet { position:absolute; bottom:0; left:0; width:74px; height:116px; border-radius:8px 8px 4px 4px;
     background:linear-gradient(160deg,#c0453e,#8f2f2a 70%); box-shadow:0 8px 16px rgba(0,0,0,0.3), inset 0 2px 0 rgba(255,255,255,0.15); border:2px solid #6f221e; }
   .vending .glass { position:absolute; top:10px; left:8px; width:42px; height:74px; border-radius:4px;
@@ -281,7 +296,7 @@
   @keyframes spook { 0%{transform:translate(0,0);opacity:1;} 100%{transform:translate(0,-140px);opacity:0;} }
 
   /* picnic area (left of the lake) — blanket, basket, little pillows */
-  .picnic { position:absolute; width:170px; height:110px; }
+  .picnic { position:absolute; width:170px; height:110px; transform-origin:center bottom; scale:1.3; }
   .picnic .blanket { position:absolute; inset:0; border-radius:10px; transform: perspective(300px) rotateX(52deg);
     background:
       repeating-linear-gradient(0deg, #e8574f 0 18px, #f4efe6 18px 36px),
@@ -308,7 +323,7 @@
     background: radial-gradient(circle at 50% 45%, rgba(255,255,255,0.4), rgba(255,240,246,0.16) 55%, transparent 74%);
     box-shadow: 0 0 46px rgba(255,255,255,0.22) inset; }
   /* a little wishing stone in the middle of the clearing */
-  .grove-stone { position:absolute; width:46px; height:30px; border-radius:50% / 42%;
+  .grove-stone { position:absolute; width:46px; height:30px; border-radius:50% / 42%; transform-origin:center bottom; scale:1.3;
     background:linear-gradient(160deg,#cdc6bd,#918a80 60%,#6f685e);
     box-shadow:0 6px 10px rgba(0,0,0,0.3), inset 0 -4px 7px rgba(0,0,0,0.25); }
   .grove-stone::before { content:"🌸"; position:absolute; left:50%; top:-15px; transform:translateX(-50%); font-size:0.95rem; }
@@ -498,39 +513,28 @@
   .crates span { position:absolute; width:44px; height:40px; background:repeating-linear-gradient(90deg,#a5763f 0 10px,#8a5f38 10px 12px); border:3px solid #6f4c2c; border-radius:3px; }
   .crates span:nth-child(1){ left:0; bottom:0; } .crates span:nth-child(2){ left:24px; bottom:34px; width:40px; height:36px; }
 
-  /* ── placed decorations (positioned by JS; override the furniture classes' own centering) ── */
-  .decor { position:absolute; transform:none !important; }
-  .decor.editable { cursor:grab; outline:2px dashed rgba(255,255,255,0.35); outline-offset:3px; border-radius:6px; }
-  .decor.editable:hover { outline-color:#ffd86a; }
-  .decor.selected { outline:3px solid #ffd86a !important; box-shadow:0 0 18px rgba(255,210,90,0.6); cursor:grabbing; }
-  /* wall pieces hang on the back wall (top band) */
-  .decor.wall { z-index:4; }
-  .wallart { }
-  .wallart .frame { position:absolute; inset:0; border:6px solid #6f4c2c; border-radius:4px;
-    background:linear-gradient(135deg,#8fd0c0 0 40%,#f0c05a 40% 70%,#d98c8c 70%); box-shadow:0 4px 8px rgba(0,0,0,0.35); }
-  .wallclock { }
-  .wallclock .face { position:absolute; inset:0; border-radius:50%; background:radial-gradient(circle,#fff6e0,#e6cf9e);
-    border:5px solid #4a3220; box-shadow:0 3px 6px rgba(0,0,0,0.35); }
-  .wallclock .face::before { content:""; position:absolute; left:50%; top:24%; width:2px; height:26%; background:#3a2718; transform-origin:bottom; }
-  .wallclock .face::after { content:""; position:absolute; left:50%; top:36%; width:2px; height:16%; background:#3a2718; transform-origin:bottom; transform:rotate(80deg); }
-  .pennant { background:
-      linear-gradient(-45deg, transparent 49%, #d86a6a 49%) 0 0/36px 44px repeat-x; filter:drop-shadow(0 3px 3px rgba(0,0,0,0.3)); }
-  .pennant::before { content:""; position:absolute; left:0; right:0; top:0; height:4px; background:#4a3220; }
-  .sconce .flame { position:absolute; left:50%; top:4px; transform:translateX(-50%); width:16px; height:22px; border-radius:50% 50% 50% 50%/60% 60% 40% 40%;
-    background:radial-gradient(circle at 50% 70%,#fff0b0,#ef9a3a 70%); box-shadow:0 0 14px 4px rgba(255,180,80,0.7); }
-  .sconce::after { content:""; position:absolute; left:50%; bottom:0; transform:translateX(-50%); width:20px; height:8px; border-radius:3px; background:#4a3220; }
+  /* ── purchasable wall decorations ── */
+  .mpainting { position:absolute; width:90px; height:70px; z-index:2; }
+  .mpainting .frame { position:absolute; inset:0; border-radius:4px; background:linear-gradient(180deg,#caa15e,#8a5f38); box-shadow:0 4px 8px rgba(0,0,0,0.3); }
+  .mpainting .scene { position:absolute; inset:8px; border-radius:2px; background:linear-gradient(180deg,#8fc9f0 0 55%,#7bbf6a 55% 100%); box-shadow:inset 0 0 6px rgba(0,0,0,0.25); }
+  .mwreath { position:absolute; width:70px; height:70px; z-index:2; border-radius:50%;
+    background:radial-gradient(circle, transparent 0 40%, #4e9440 42% 60%, transparent 62%); box-shadow:0 3px 7px rgba(0,0,0,0.3); }
+  .mwreath::after { content:"🌸"; position:absolute; top:-6px; left:50%; transform:translateX(-50%); font-size:0.9rem; }
+  .mbanner { position:absolute; width:120px; height:56px; z-index:2; display:flex; gap:4px; }
+  .mbanner span { flex:1; height:100%; clip-path:polygon(0 0,100% 0,50% 100%); }
+  .mbanner span:nth-child(1){ background:#d8756a; } .mbanner span:nth-child(2){ background:#e9c15a; } .mbanner span:nth-child(3){ background:#8fb9c7; }
 
-  /* interior designer HUD */
-  #designer-bar { position:absolute; left:50%; bottom:16px; transform:translateX(-50%); z-index:60; display:none;
-    background:rgba(28,18,10,0.92); color:#f4e6cf; border:2px solid #6f4c2c; border-radius:14px; padding:0.6rem 0.9rem;
-    font-family:'Futura','Century Gothic',sans-serif; font-size:0.8rem; letter-spacing:0.04em; box-shadow:0 10px 30px rgba(0,0,0,0.5);
-    display:none; align-items:center; gap:0.7rem; max-width:92vw; flex-wrap:wrap; justify-content:center; }
-  #designer-bar.show { display:flex; }
-  #designer-bar b { color:#ffd86a; }
-  #designer-bar .dbtn { background:#fff4ea; color:#4a3220; border:2px solid #6f4c2c; border-radius:10px; padding:0.35rem 0.7rem; cursor:pointer; font-weight:700; }
-  #designer-bar .dbtn:hover { background:#ffe9cf; }
-  #designer-bar .dbtn.danger { background:#e8b3a8; }
-  #designer-bar .dchip { background:rgba(255,255,255,0.12); border-radius:8px; padding:0.25rem 0.5rem; }
+  /* placed decor items are pre-centered by JS, so cancel the class-level translate */
+  .decor-item { transform:none !important; }
+  /* designer mode: outline movable pieces + show a grab cursor; the selected one glows */
+  #interior.designing .decor-item { outline:3px dashed rgba(255,225,150,0.9); outline-offset:3px; cursor:grab; }
+  #interior.designing .decor-item.selected { outline:3px solid #ffd66a; box-shadow:0 0 22px 6px rgba(255,210,120,0.7); }
+  #designer-bar { position:absolute; left:50%; bottom:16px; transform:translateX(-50%); z-index:130; display:none;
+    background:rgba(30,20,12,0.92); color:#ffe9cf; border:2px solid #6f4c2c; border-radius:14px; padding:0.6rem 1rem;
+    font-family:'Futura','Century Gothic',sans-serif; font-size:0.82rem; letter-spacing:0.04em; box-shadow:0 10px 30px rgba(0,0,0,0.5); text-align:center; }
+  #designer-bar.show { display:block; }
+  #designer-bar b { color:#ffd66a; }
+  #designer-bar .dhint { display:block; margin-top:0.3rem; opacity:0.85; font-size:0.72rem; }
 
   /* drifting petals — soft, slow, looping fall */
   .petal { position:absolute; width:9px; height:9px; border-radius:60% 40% 60% 40%; pointer-events:none;
@@ -578,11 +582,14 @@
   /* ENTITIES */
   .entity { position:absolute; width:120px; transform-origin:bottom center; }
   .entity svg { width:100%; height:auto; display:block; filter: drop-shadow(0 10px 8px rgba(0,0,0,0.35)); }
-  #player, #iplayer { width:96px; z-index:6; transition: none; }
+  #player, #iplayer { width:132px; z-index:6; transition: none; }
   #player.walk svg, #iplayer.walk svg { animation: bobwalk 0.4s ease-in-out infinite; }
   @keyframes bobwalk { 0%,100%{transform:translateY(0) rotate(-1deg);} 50%{transform:translateY(-5px) rotate(1deg);} }
-  #player.sitting svg { animation: sitdown 1.6s ease forwards; transform-origin:bottom center; }
-  #player.dashing svg { animation: dashzip 0.28s ease-out; }
+  /* the PNG player uses swapped walk frames; add a gentle vertical bob on the frames too */
+  #player.walk img, #iplayer.walk img { animation: bobwalkimg 0.34s ease-in-out infinite; }
+  @keyframes bobwalkimg { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-4px);} }
+  #player.sitting svg, #player.sitting img { animation: sitdown 1.6s ease forwards; transform-origin:bottom center; }
+  #player.dashing svg, #player.dashing img { animation: dashzip 0.28s ease-out; }
   @keyframes dashzip { 0%{ filter:drop-shadow(0 10px 8px rgba(0,0,0,0.35)) brightness(1.4); opacity:0.6; } 100%{ filter:drop-shadow(0 10px 8px rgba(0,0,0,0.35)); opacity:1; } }
   @keyframes sitdown {
     0%   { transform: translateY(0) scaleY(1); }
@@ -594,6 +601,13 @@
   .npc { z-index:5; }
   .npc .float { animation: idle 3s ease-in-out infinite; }
   @keyframes idle { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-6px);} }
+  /* Treehouse residents can face-flip WITHOUT mirroring their "Press E" label: the bob
+     animation lives on the inner art element, freeing the .float's transform slot for the flip. */
+  .npc .float.iwander { animation:none; }                 /* wandering: art child handles the bob */
+  .npc .float.iwander > * { animation: idle 3s ease-in-out infinite; }
+  .npc .float.iwander.iwalking > * { animation: iwalkbob 0.5s ease-in-out infinite; }
+  @keyframes iwalkbob { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-4px);} }
+  .npc .float.face-left { transform: scaleX(-1); }        /* flips only the art, not the label */
 
   /* interaction prompt — sits BELOW the character */
   .prompt {
@@ -713,8 +727,12 @@
   #nameplate.devin { background:linear-gradient(135deg,var(--violet-deep),var(--violet)); }
   #nameplate.femi { background:linear-gradient(135deg,var(--ember),var(--sand)); }
   #nameplate.narrator { background:rgba(60,45,90,0.7); font-style:italic; visibility:hidden; }
-  #dialogue { background:var(--box); backdrop-filter:blur(6px); border:2px solid rgba(255,255,255,0.14); border-radius:6px 22px 22px 22px; padding:1.4rem 1.7rem 1.5rem; min-height:7rem; font-size:clamp(1.02rem,2vw,1.3rem); line-height:1.55; cursor:pointer; }
+  #dialogue { position:relative; background:var(--box); backdrop-filter:blur(6px); border:2px solid rgba(255,255,255,0.14); border-radius:6px 22px 22px 22px; padding:1.4rem 1.7rem 1.5rem; min-height:7rem; font-size:clamp(1.02rem,2vw,1.3rem); line-height:1.55; cursor:pointer; }
   #dialogue.narrator-mode { font-style:italic; color:#d9cdec; }
+  /* first time reading a line: not clickable-to-skip, with a gentle "reading…" cue */
+  #dialogue.locked-read { cursor:default; }
+  #dialogue.locked-read::after { content:"reading\2026"; position:absolute; right:1.5rem; bottom:0.5rem;
+    font-family:'Futura',sans-serif; font-size:0.68rem; letter-spacing:0.14em; color:rgba(255,255,255,0.35); }
   .advance { text-align:right; font-family:'Futura',sans-serif; font-size:0.75rem; letter-spacing:0.12em; color:rgba(255,255,255,0.6); margin-top:0.4rem; animation:bob 1.4s ease-in-out infinite; }
   @keyframes bob { 0%,100%{opacity:.6;} 50%{opacity:1;} }
   #choices { display:flex; flex-direction:column; gap:0.6rem; margin-top:0.8rem; }
@@ -821,7 +839,8 @@
 
     <div class="tree" id="tree1" style="left:150px; top:280px; transform:scale(1.1);"><div class="leaves"></div><div class="trunk"></div></div>
     <div class="tree" id="tree2" style="left:1330px; top:250px; transform:scale(1.3);"><div class="leaves"></div><div class="trunk"></div></div>
-    <div class="tree" style="left:470px; top:320px; transform:scale(0.85);"><div class="leaves"></div><div class="trunk"></div></div>
+    <!-- Gerald — Devin's beloved crooked tree; leans on purpose -->
+    <div class="tree gerald" id="gerald" style="left:470px; top:320px; transform:scale(0.85);"><div class="leaves"></div><div class="trunk"></div></div>
 
     <!-- physical flower patch at the foot of the crooked tree -->
     <div id="flowerpatch" style="left:498px; top:520px;">
@@ -998,34 +1017,34 @@
 
 
     <!-- NPCs (positioned in world coords) -->
-    <div class="npc entity" id="npc-devin" style="left:760px; top:540px; width:110px;">
+    <div class="npc entity" id="npc-devin" style="left:760px; top:527px; width:120px;">
       <div class="prompt" id="prompt-devin">Press E</div>
       <div class="float" id="devin-art"></div>
     </div>
-    <div class="npc entity" id="npc-femi" style="left:1180px; top:640px; width:120px;">
+    <div class="npc entity" id="npc-femi" style="left:1180px; top:655px; width:109px;">
       <div class="prompt" id="prompt-femi">Press E</div>
       <div class="float" id="femi-art"></div>
     </div>
     <!-- Caiza rises from the pond after 10 stone skips; hidden until then -->
-    <div class="npc entity" id="npc-caiza" style="left:185px; top:410px; width:130px; display:none;">
+    <div class="npc entity" id="npc-caiza" style="left:185px; top:412px; width:128px; display:none;">
       <div class="prompt" id="prompt-caiza">Press E</div>
       <div class="float" id="caiza-art"></div>
     </div>
 
     <!-- Bull (Maxus) charges in when the red cloth is used; hidden until then -->
-    <div class="npc entity" id="npc-bull" style="left:1560px; top:560px; width:150px; display:none;">
+    <div class="npc entity" id="npc-bull" style="left:1560px; top:574px; width:132px; display:none;">
       <div class="prompt" id="prompt-bull">Press E</div>
       <div class="float" id="bull-art"></div>
     </div>
 
     <!-- Luna the snow leopard — only appears in the nighttime scene after the knockout -->
-    <div class="npc entity" id="npc-luna" style="left:0px; top:470px; width:130px; display:none;">
+    <div class="npc entity" id="npc-luna" style="left:0px; top:483px; width:120px; display:none;">
       <div class="prompt" id="prompt-luna">Press E</div>
       <div class="float" id="luna-art"></div>
     </div>
 
     <!-- Charlie — emerges in the flower field when you leave a strawberry for him -->
-    <div class="npc entity" id="npc-charlie" style="left:1600px; top:560px; width:130px; display:none;">
+    <div class="npc entity" id="npc-charlie" style="left:1600px; top:588px; width:109px; display:none;">
       <div class="prompt" id="prompt-charlie">Press E</div>
       <div class="float" id="charlie-art"></div>
     </div>
@@ -1064,8 +1083,10 @@
       </div>
       <div class="int-hall-sign" style="left:1020px;">Treehouse</div>
 
-      <!-- ── placed decorations live here (empty to start; bought from Caiza's machine and
-           arranged with the Interior Designer once you've unlocked it) ── -->
+      <!-- ── main-room floor decoration ── -->
+      <!-- big round rug under the sitting area (a FIXED carpet — can't be moved by the designer) -->
+      <div class="mrug" style="left:640px; top:620px;"></div>
+      <!-- purchased & placed decorations are injected here by renderDecor() -->
       <div id="int-decor"></div>
 
       <!-- night dim overlay: keeps the interior darker at night than by day, without hiding the warm lights -->
@@ -1088,14 +1109,8 @@
   <!-- knockout fade -->
   <div id="fadeout"><div class="ko-text" id="ko-text"></div></div>
 
-  <!-- interior designer control bar (shown only inside the treehouse when the designer is on) -->
-  <div id="designer-bar">
-    <span class="dchip" id="dz-hint">Click a piece, drag to move &middot; <b>[</b>/<b>]</b> cycle</span>
-    <button class="dbtn" id="dz-place">Place from stash</button>
-    <button class="dbtn" id="dz-store" style="display:none;">Store selected</button>
-    <span class="dchip" id="dz-stash">Stash: 0</span>
-    <button class="dbtn" id="dz-done">Done</button>
-  </div>
+  <!-- interior designer toolbar (fixed HUD; shown only while arranging decorations) -->
+  <div id="designer-bar"></div>
 
   <!-- HUD -->
   <div class="topbar">
@@ -1651,13 +1666,37 @@ function devinArt(){
 
 document.getElementById('devin-art').innerHTML = devinArt();
 document.getElementById('femi-art').innerHTML = femiArt(true);
-document.getElementById('player').innerHTML = PLAYER_SVG;
-// The interior player is a second copy of the same SVG in the DOM at once — give its
-// gradients unique IDs so url(#pHood)/url(#pGlow) don't collide with the park player
-// (duplicate IDs would make the hoodie fill resolve to the wrong/blank gradient).
-document.getElementById('iplayer').innerHTML = PLAYER_SVG
-  .replace(/id="pHood"/g,'id="pHoodI"').replace(/url\(#pHood\)/g,'url(#pHoodI)')
-  .replace(/id="pGlow"/g,'id="pGlowI"').replace(/url\(#pGlow\)/g,'url(#pGlowI)');
+// Player now uses real PNG frames (standing + two walking frames). Facing is a horizontal
+// flip based on the last left/right input; walking alternates frame 1 and 2. If a PNG is
+// missing, the <img> onerror swaps in the original vector so nothing breaks.
+const PLAYER_FRAMES = { stand:'images/playerstanding.png', walk1:'images/playerwalking1.png', walk2:'images/playerwalking2.png', walk3:'images/playerwalking3.png' };
+// walk cycle plays 1 → 3 → 2 → 3 → (repeat), a back-and-forth so frame 3 is the mid-stride pose
+const WALK_SEQ = ['walk1','walk3','walk2','walk3'];
+function playerImgHTML(id){
+  return `<img id="${id}" src="${PLAYER_FRAMES.stand}" alt="You" draggable="false" `+
+    `style="width:100%;height:auto;display:block;filter:drop-shadow(0 10px 8px rgba(0,0,0,0.35))" `+
+    `onerror="this.onerror=null;this.replaceWith(document.createRange().createContextualFragment(PLAYER_SVG));">`;
+}
+document.getElementById('player').innerHTML = playerImgHTML('player-frame');
+document.getElementById('iplayer').innerHTML = playerImgHTML('iplayer-frame');
+// facing + walk-frame state (shared visual logic for both the park and treehouse player)
+let playerFacing = 1;      // 1 = right, -1 = left; persists while standing
+let iplayerFacing = 1;
+// per-character sprite widths (height tiers): Caiza/Maxus taller, Femi/Charlie shorter,
+// Devin/Nico/Luna the base. Used for the treehouse residents so they match the park sizes.
+const CHAR_WIDTH = { devin:120, femi:109, caiza:128, bull:132, luna:120, charlie:109, nico:120 };
+let walkFrameTick = 0;     // advances each animated frame to alternate the two walk poses
+function setPlayerVisual(el, imgId, facing, moving){
+  if(!el) return;
+  // the PNG art faces LEFT by default, so invert: facing 1 (moving right) needs scaleX(-1)
+  el.style.transform = 'scaleX('+(-facing)+')';
+  const img = document.getElementById(imgId);
+  if(!img || img.tagName!=='IMG') return;   // fell back to SVG — nothing to swap
+  let src;
+  if(moving){ src = PLAYER_FRAMES[ WALK_SEQ[ Math.floor(walkFrameTick/13) % WALK_SEQ.length ] ]; }
+  else { src = PLAYER_FRAMES.stand; }
+  if(img.getAttribute('src')!==src) img.setAttribute('src', src);
+}
 document.getElementById('caiza-art').innerHTML = caizaArt();
 document.getElementById('luna-art').innerHTML = lunaArt();
 document.getElementById('charlie-art').innerHTML = charlieArt();
@@ -1695,6 +1734,19 @@ let bullHere = false;   // becomes true once he charges in
 let caizaAwake = false;   // becomes true once she rises from the pond
 let nightMode = false;    // becomes true after the knockout
 let sawNightViaKO = false;  // once you've experienced the knockout-night, the treehouse beds are yours
+let bullMoved = false;    // after his first hang out (once healed) Maxus ambles SW between the picnic & bench
+// Maxus's resting spot once he's settled in (southwest, between the picnic and the bench)
+const BULL_HOME = { x:300, y:770 };
+function relocateBull(){
+  if(bullMoved || !npcs.bull) return;
+  bullMoved = true;
+  npcs.bull.x = BULL_HOME.x; npcs.bull.y = BULL_HOME.y;
+  const el = npcs.bull.el;
+  el.style.left = (BULL_HOME.x - el.offsetWidth/2)+'px';
+  el.style.top  = (BULL_HOME.y - el.offsetHeight)+'px';
+  el.style.zIndex = Math.round(BULL_HOME.y);
+  if(typeof requestSave==='function') requestSave();
+}
 // Which task each character requires to move from level 0->1 and 1->2.
 const TASK_PLAN = {
   devin: ['flower','sit'],
@@ -1736,10 +1788,16 @@ document.addEventListener('keydown', e => {
     return;
   }
   if (k === 'escape'){
-    if (dlgActive){ endDialogue(); return; }
+    if (dlgActive){ if(pendingEnding){ const w=pendingEnding; pendingEnding=null; triggerEnding(w); } else endDialogue(); return; }
+    if (scene==='interior' && designing){ exitDesigner(); return; }
     if (scene==='interior' && !busy){ exitTreehouse(); return; }
   }
-  if (k === 'e' && !dlgActive){ if(scene==='interior') interiorInteract(); else tryInteract(); }
+  // interior designer: P toggles it, and while designing E grabs/drops the piece
+  if (k === 'p' && scene==='interior' && !dlgActive && !busy){ toggleDesigner(); return; }
+  if (k === 'e' && !dlgActive){
+    if(scene==='interior' && designing){ if(designSel==null) designerGrabNearest(); else designerDrop(); return; }
+    if(scene==='interior') interiorInteract(); else tryInteract();
+  }
   if (k === 'k' && !dlgActive && !busy) toggleKeepsakePanel();
   if (k === 'j' && !dlgActive && !busy) toggleNotebook();
   if (k === ';' && !dlgActive && !busy){   // shortcut: instantly unearth a red cloth at the dig spot
@@ -1831,13 +1889,17 @@ function loop(){
       let ny=Math.max(430, Math.min(WORLD_H-40, py+stepY));
       if(!blocked(nx, py)) px=nx;
       if(!blocked(px, ny)) py=ny;
-      if (dx<0) player.style.transform='scaleX(-1)'; else if (dx>0) player.style.transform='scaleX(1)';
+      if (dx<0) playerFacing=-1; else if (dx>0) playerFacing=1;
+      walkFrameTick++;
+      setPlayerVisual(player, 'player-frame', playerFacing, true);
       player.classList.add('walk');
       facingX = dx/len; facingY = dy/len;   // remember heading for Femi's dash
-    } else player.classList.remove('walk');
+    } else { player.classList.remove('walk'); setPlayerVisual(player, 'player-frame', playerFacing, false); }
 
-    player.style.left = Math.round(px-48)+'px';
-    player.style.top  = Math.round(py-133)+'px';   // align sprite's feet/shadow to py
+    // anchor the sprite's feet to (px,py) using its actual rendered size (so resizing the
+    // player art keeps it standing on the same ground point)
+    player.style.left = Math.round(px - player.offsetWidth/2)+'px';
+    player.style.top  = Math.round(py - player.offsetHeight)+'px';
     player.style.zIndex = Math.round(py);   // depth: behind things with larger base-y, in front of smaller
 
     const vw = gameEl.clientWidth, vh = gameEl.clientHeight;
@@ -1847,6 +1909,14 @@ function loop(){
     if (WORLD_H < vh) camY = (vh-WORLD_H)/2;
     world.style.transform = `translate3d(${Math.round(camX)}px,${Math.round(camY)}px,0)`;
 
+    // time-of-day guard: keep the wrong cast out of the park no matter how we got here.
+    // (Charlie is daytime-only; Nico is night-only; Luna only shows by day once wooed.)
+    if(nightMode){ if(npcs.charlie){ npcs.charlie.hidden=true; npcs.charlie.el.style.display='none'; } }
+    else {
+      if(npcs.nico){ npcs.nico.hidden=true; npcs.nico.el.style.display='none'; }
+      if(npcs.luna && !(wooed.has('luna')||npcs.luna.level>=3)){ npcs.luna.hidden=true; npcs.luna.el.style.display='none'; }
+      if(npcs.charlie && charlieHere && npcs.charlie.hidden){ npcs.charlie.hidden=false; npcs.charlie.el.style.display='block'; }
+    }
     // proximity — tighter ranges; court keeps a longer reach
     nearTarget = null; let best = Infinity;
     for (const key in npcs){ const n=npcs[key]; if(n.hidden){ continue; }
@@ -2048,12 +2118,12 @@ function riseCaiza(){
 }
 function sitBench(){ busy=true;
   // move player onto the bench seat (bench top-left 420,700; seat surface ~712)
-  const seatX = 480, seatTop = 574;   // element top so the sprite's bottom rests on the seat
+  const seatX = 480, feetY = 707;   // keep the sprite's feet resting on the seat regardless of its height
   player.style.transition='left 0.35s ease, top 0.35s ease';
-  player.style.left=(seatX-48)+'px'; player.style.top=seatTop+'px';
+  player.style.left=(seatX - player.offsetWidth/2)+'px'; player.style.top=(feetY - player.offsetHeight)+'px';
   player.classList.add('sitting');
   emote(480,650,'😌'); toast("You settle onto the bench and watch the endless golden hour.", 1800);
-  setTimeout(()=>{ px=seatX; py=seatTop+133; tasks.sit=true; player.classList.remove('sitting'); player.style.transition='none'; busy=false; }, 1600);
+  setTimeout(()=>{ px=seatX; py=feetY; tasks.sit=true; player.classList.remove('sitting'); player.style.transition='none'; busy=false; }, 1600);
 }
 
 /* Flower field — if you're carrying a strawberry, leave it and Charlie comes;
@@ -2061,7 +2131,10 @@ function sitBench(){ busy=true;
 let holdingStrawberry = false;
 let charlieHere = false;
 function chaseButterflies(){
-  if(holdingStrawberry && !charlieHere){ leaveStrawberry(); return; }
+  if(holdingStrawberry && !charlieHere){
+    if(nightMode){ toast("It's too dark — the butterflies are asleep and no bunny's going to come out now. Try again by day.", 3200); return; }
+    leaveStrawberry(); return;
+  }
   busy=true;
   const flies=document.querySelectorAll('.butterfly');
   flies.forEach(f=>f.classList.add('spooked'));
@@ -2183,13 +2256,13 @@ function chooseFood(food){
                 grapes:['🍇',"You pop a few sweet grapes. Refreshing!"] };
   const b=bites[food]||['😋','Yum.'];
   busy=true;
-  const seatX = 120, seatTop = 700;
+  const seatX = 120, feetY = 833;
   player.style.transition='left 0.35s ease, top 0.35s ease';
-  player.style.left=(seatX-48)+'px'; player.style.top=seatTop+'px';
+  player.style.left=(seatX - player.offsetWidth/2)+'px'; player.style.top=(feetY - player.offsetHeight)+'px';
   player.classList.add('sitting');
   emote(120, 760, b[0]); emote(150, 730, '😋');
   toast(b[1]+" A lovely little picnic.", 2200);
-  setTimeout(()=>{ px=seatX; py=seatTop+133; player.classList.remove('sitting'); player.style.transition='none'; busy=false; }, 1700);
+  setTimeout(()=>{ px=seatX; py=feetY; player.classList.remove('sitting'); player.style.transition='none'; busy=false; }, 1700);
 }
 document.querySelectorAll('#foodmenu .food').forEach(b=>{
   b.addEventListener('click', ()=>chooseFood(b.dataset.food));
@@ -2332,6 +2405,8 @@ function enterNight(fade, ko){
   // Luna can walk you back to daytime later and everyone you've met returns.
   ['devin','femi','caiza','bull'].forEach(k=>{ npcs[k].hidden=true; npcs[k].el.style.display='none'; npcs[k].prompt.classList.remove('show'); });
   document.getElementById('meter-bull').style.display='none';
+  // Charlie is a daytime critter — he's tucked away in the flowers at night
+  if(npcs.charlie){ npcs.charlie.hidden=true; npcs.charlie.el.style.display='none'; npcs.charlie.prompt.classList.remove('show'); document.getElementById('meter-charlie').style.display='none'; }
   // Maxus cools off overnight — reset his charge pose so he returns calm in daylight
   npcs.bull.el.classList.remove('bull-charge'); npcs.bull.el.style.left='470px'; npcs.bull.el.style.top='470px';
   // clear any dropped rocks / reset time-of-day visuals
@@ -2347,13 +2422,14 @@ function enterNight(fade, ko){
   document.getElementById('nico-art').innerHTML = nicoArt();
   document.getElementById('meter-nico').style.display='flex';
   // move the player to where they were "dragged to safety" — a bit of grass near the pond
-  px=470; py=720; player.style.left=(px-48)+'px'; player.style.top=(py-133)+'px';
+  px=470; py=720; player.style.left=(px - player.offsetWidth/2)+'px'; player.style.top=(py - player.offsetHeight)+'px';
   ko.textContent = "You come to in the dark. The park is silent, the others long gone home. By the moonlit pond, a pale figure watches you...";
   setTimeout(()=>{ fade.classList.remove('show'); canMove=true; busy=false; }, 2600);
 }
 
-/* Once you've won Luna's heart she can walk you between night and day.
-   In the daytime she stays by the pond; everyone you've met returns. */
+/* Once you've won Luna's heart she can walk you between night and day. Until then she's a
+   creature of the night only, and never appears in the daytime park. */
+function lunaDayOk(){ return wooed.has('luna') || (npcs.luna && npcs.luna.level>=3); }
 function setDaytime(){
   nightMode=false;
   world.classList.remove('night');
@@ -2374,12 +2450,19 @@ function setDaytime(){
     document.getElementById('caiza-art').innerHTML = caizaArt();
     document.getElementById('meter-caiza').style.display='flex'; }
   if(bullHere){ showNpc('bull'); npcs.bull.el.classList.remove('bull-charge','hurt');
-    npcs.bull.el.style.left='470px'; npcs.bull.el.style.top='470px';
+    if(bullMoved){ npcs.bull.el.style.left=(BULL_HOME.x - npcs.bull.el.offsetWidth/2)+'px'; npcs.bull.el.style.top=(BULL_HOME.y - npcs.bull.el.offsetHeight)+'px'; }
+    else { npcs.bull.el.style.left='470px'; npcs.bull.el.style.top='470px'; }
     document.getElementById('bull-art').innerHTML = maxusArt();
     document.getElementById('meter-bull').style.display='flex'; }
-  // Luna comes along, standing beside the pond in the sun
-  showNpc('luna');
-  document.getElementById('luna-art').innerHTML = lunaArt();
+  // Charlie is a daytime park critter — bring him back to the flower field if you've befriended him
+  if(charlieHere){ showNpc('charlie');
+    document.getElementById('charlie-art').innerHTML = charlieArt();
+    document.getElementById('meter-charlie').style.display='flex'; }
+  else { npcs.charlie.hidden=true; npcs.charlie.el.style.display='none'; document.getElementById('meter-charlie').style.display='none'; }
+  // Luna only joins the daytime once you've won her heart (she'll walk you between night & day);
+  // otherwise she stays a creature of the night and is nowhere to be seen in the sun.
+  if(wooed.has('luna') || (npcs.luna && npcs.luna.level>=3)){ showNpc('luna'); document.getElementById('luna-art').innerHTML = lunaArt(); document.getElementById('meter-luna').style.display='flex'; }
+  else { npcs.luna.hidden=true; npcs.luna.el.style.display='none'; npcs.luna.prompt.classList.remove('show'); document.getElementById('meter-luna').style.display='none'; }
   // Nico is nocturnal — he heads off when the sun's up
   npcs.nico.hidden=true; npcs.nico.el.style.display='none'; npcs.nico.prompt.classList.remove('show');
   document.getElementById('meter-nico').style.display='none';
@@ -2390,9 +2473,10 @@ function setNighttime(){
   applyNightFilter();
   if(typeof Music!=='undefined') Music.setNight(true);
   document.querySelectorAll('.lamp .globe').forEach(g=>g.style.filter='brightness(1.4)');
-  ['devin','femi','caiza','bull'].forEach(k=>{ npcs[k].hidden=true; npcs[k].el.style.display='none'; npcs[k].prompt.classList.remove('show'); });
+  ['devin','femi','caiza','bull','charlie'].forEach(k=>{ npcs[k].hidden=true; npcs[k].el.style.display='none'; npcs[k].prompt.classList.remove('show'); });
   document.getElementById('meter-caiza').style.display = caizaAwake ? 'flex' : 'none';
   document.getElementById('meter-bull').style.display = bullHere ? 'flex' : 'none';
+  document.getElementById('meter-charlie').style.display = 'none';
   npcs.luna.hidden=false; npcs.luna.el.style.display='block';
   document.getElementById('luna-art').innerHTML = lunaArt();
   // Nico returns with the night
@@ -2582,8 +2666,9 @@ function buildInterior(){
     bp.style.left=r._bedX+'px'; bp.style.top=(bedY-4)+'px'; bp.textContent='E: sleep'; host.appendChild(bp);
     // character anchor (residents only)
     if(r.who){
+      const cw = CHAR_WIDTH[r.who] || 120;
       const npc=document.createElement('div'); npc.className='npc entity'; npc.id='inpc-'+r.key;
-      npc.style.left=(r._standX-60)+'px'; npc.style.top=(r._standY-120)+'px'; npc.style.width='120px'; npc.style.display='none';
+      npc.style.left=(r._standX-cw/2)+'px'; npc.style.top=(r._standY-120)+'px'; npc.style.width=cw+'px'; npc.style.display='none';
       npc.innerHTML='<div class="prompt" id="iprompt-'+r.key+'">Press E</div><div class="float" id="i'+r.key+'-art"></div>';
       host.appendChild(npc);
     }
@@ -2610,70 +2695,203 @@ const INT_LIGHTS = [
 // so nothing per-lamp to paint here. Kept as a no-op so existing call sites stay valid.
 function applyInteriorLights(){}
 
-/* ══════════════ TREEHOUSE DECORATIONS & INTERIOR DESIGNER ══════════════
-   The common room starts empty. Once Caiza's machine hits its tier-2 upgrade it sometimes
-   stocks house/wall decorations. Owned decor sits in decorInventory until you place it with
-   the Interior Designer (unlocked at Nico level 1). You can move any PLACED decoration, but
-   never the fixed things (entrance/hatch, beds, walls, carpets). Nico level 2 lets you also
-   decorate the sleeping rooms and store pieces back into inventory. */
-// each decoration type: a label, icon, footprint (w,h), and an HTML builder for its look
-const DECOR_TYPES = {
-  plant:    { name:'Potted Plant',  ico:'🪴', w:70,  h:110, wall:false, html:'<div class="pot"></div><div class="leaves"></div>', cls:'mplant' },
-  bookshelf:{ name:'Bookshelf',     ico:'📚', w:150, h:180, wall:false, html:'<span class="shelf"></span><span class="shelf"></span><span class="shelf"></span>', cls:'bookshelf' },
-  chair:    { name:'Rocking Chair', ico:'🪑', w:70,  h:90,  wall:false, html:'<div class="back"></div><div class="seat"></div><div class="rock"></div>', cls:'mchair' },
-  floorlamp:{ name:'Floor Lamp',    ico:'🛋️', w:50,  h:150, wall:false, html:'<div class="shade"></div><div class="stem"></div><div class="glow"></div>', cls:'floorlamp', light:true },
-  table:    { name:'Little Table',  ico:'🫖', w:120, h:70,  wall:false, html:'<div class="top"></div><div class="tlamp"></div><div class="mug"></div>', cls:'mtable', light:true },
-  crates:   { name:'Crate Stack',   ico:'📦', w:70,  h:70,  wall:false, html:'<span></span><span></span>', cls:'crates' },
-  rugdecor: { name:'Round Rug',     ico:'🟣', w:300, h:120, wall:false, html:'', cls:'mrug', flat:true },
-  painting: { name:'Framed Painting',ico:'🖼️', w:90, h:70, wall:true, html:'<div class="frame"></div>', cls:'wallart' },
-  clock:    { name:'Wall Clock',    ico:'🕰️', w:56,  h:56,  wall:true, html:'<div class="face"></div>', cls:'wallclock' },
-  pennant:  { name:'Pennant Banner',ico:'🚩', w:180, h:44,  wall:true, html:'', cls:'pennant' },
-  sconce:   { name:'Wall Sconce',   ico:'🔦', w:34,  h:54,  wall:true, html:'<div class="flame"></div>', cls:'sconce', light:true }
+/* ============ TREEHOUSE DECORATIONS & INTERIOR DESIGNER ============
+   The common room starts bare. Once Caiza's vending machine hits its tier-2 upgrade it
+   sometimes stocks house/wall decorations. Bought decor is placed in the common room (or,
+   with Nico level 2, in a sleeping room), and the interior-designer mode (unlocked at Nico
+   level 1) lets you drag the movable pieces around. Fixed things — the entrance/hatch, beds,
+   walls, rugs, nameplates — can't be moved. */
+const DECOR_CATALOG = {
+  table:    { cls:'mtable',    label:'Round Table',   icon:'🪑', price:3, w:120, h:70, box:{w:80,h:40},
+              html:'<div class="top"></div><div class="tlamp"></div><div class="mug"></div>', light:{dx:0,dy:-24,r:170,hue:'warm'} },
+  bookshelf:{ cls:'bookshelf', label:'Bookshelf',     icon:'📚', price:4, w:150, h:180, box:{w:150,h:40},
+              html:'<span class="shelf"></span><span class="shelf"></span><span class="shelf"></span>', wall:true },
+  plant:    { cls:'mplant',    label:'Potted Plant',  icon:'🪴', price:2, w:70, h:110, box:{w:48,h:30},
+              html:'<div class="pot"></div><div class="leaves"></div>' },
+  chair:    { cls:'mchair',    label:'Rocking Chair', icon:'🪑', price:3, w:70, h:90, box:{w:48,h:26},
+              html:'<div class="back"></div><div class="seat"></div><div class="rock"></div>' },
+  floorlamp:{ cls:'floorlamp', label:'Floor Lamp',    icon:'💡', price:3, w:50, h:150, box:{w:30,h:24},
+              html:'<div class="shade"></div><div class="stem"></div><div class="glow"></div>', light:{dx:0,dy:16,r:210,hue:'warm'} },
+  crates:   { cls:'crates',    label:'Crate Stack',   icon:'📦', price:2, w:70, h:70, box:{w:64,h:30},
+              html:'<span></span><span></span>' },
+  stool:    { cls:'stool',     label:'Cushion Stool', icon:'🟢', price:1, w:46, h:36, box:{w:40,h:20},
+              html:'' },
+  painting: { cls:'mpainting', label:'Wall Painting', icon:'🖼️', price:3, w:90, h:70, box:null,
+              html:'<div class="frame"></div><div class="scene"></div>', wall:true },
+  wreath:   { cls:'mwreath',   label:'Leaf Wreath',   icon:'🌿', price:2, w:70, h:70, box:null,
+              html:'', wall:true },
+  banner:   { cls:'mbanner',   label:'Cozy Banner',   icon:'🎏', price:2, w:120, h:56, box:null,
+              html:'<span></span><span></span><span></span>', wall:true }
 };
-let decorInventory = {};   // {typeKey: count} owned-but-unplaced
-let placedDecor = [];      // [{id, type, x, y, room}] room = 'common' or an alcove key
-let decorSeq = 1;
-let designerMode = false;
-let designerSel = null;    // currently-selected placed decor id
-// where a decoration may live: the common floor, or (with Nico lvl2) inside a room
-function decorUnlocked(){ return (npcs.nico && (npcs.nico.level||0) >= 1); }   // the designer itself
-function decorRoomsUnlocked(){ return (npcs.nico && (npcs.nico.level||0) >= 2); }   // decorate sleeping rooms too
-function vendDecorUnlocked(){ return vendingFixed && vendStockLevel >= 3; }    // Caiza tier-2 (top-shelf) upgrade
-// clamp a decor position to the common-room floor (or a room's interior)
-function decorBounds(room){
-  if(room==='common') return { x0:60, y0:500, x1:INT_W-60, y1:INT_H-70 };
-  // an alcove interior (for wall pieces we allow the upper band; for floor pieces the lower band)
-  const idx = IROOMS.findIndex(r=>r.key===room);
-  const rx = ALC_X0 + idx*ALC_W;
-  return { x0:rx+IWT+10, y0:ALC_TOP+40, x1:rx+ALC_W-IWT-10, y1:ALC_BOT-20 };
+// which decorations each resident is DRAWN to — they'll linger near these far more often.
+// (types not listed are "neutral" and visited only occasionally.)
+const DECOR_PREF = {
+  devin:   ['plant','wreath','painting'],   // the gentle gardener-god loves greenery & art
+  femi:    ['banner','stool','crates'],     // sporty fox likes pennants & things to perch on
+  caiza:   ['crates','bookshelf','floorlamp'], // practical, likes crates and a reading nook
+  bull:    ['crates','table','chair'],      // big guy gravitates to sturdy furniture & the table
+  charlie: ['plant','wreath','stool']       // bunny adores plants and soft cushions
+};
+// how restless each resident is: >1 = paces around more (faster, shorter pauses),
+// <1 = calmer (slower, lingers longer). Femi & Charlie are bouncy; Devin & Caiza are chill.
+const ACTIVITY = { femi:1.6, charlie:1.8, bull:1.0, devin:0.55, caiza:0.6 };
+function activityOf(who){ return ACTIVITY[who] || 1; }
+let decorPlaced = [];   // [{ id, type, x, y, room }]  room: 'common' or a resident key
+let decorNextId = 1;
+let decorStock = null;  // { type } currently offered by the vending machine this cycle, or null
+const DECOR_BLOCKERS = [];   // collision boxes for placed floor decor
+let designing = false;       // interior-designer mode active?
+let designSel = null;        // the decor id currently grabbed in the designer
+
+// footprint blocker for a placed floor decor item (wall decor has box:null → no collision)
+function decorBox(d){
+  const cat = DECOR_CATALOG[d.type]; if(!cat || !cat.box) return null;
+  return { x:d.x - cat.box.w/2, y:d.y + (cat.h/2) - cat.box.h, w:cat.box.w, h:cat.box.h };
 }
+function rebuildDecorBlockers(){
+  DECOR_BLOCKERS.length = 0;
+  decorPlaced.forEach(d=>{ if(d.room!=='common') return; const b=decorBox(d); if(b) DECOR_BLOCKERS.push(b); });
+}
+// draw every placed decoration into #int-decor (common room) or the matching alcove
 function renderDecor(){
   const host = document.getElementById('int-decor');
   if(!host) return;
   host.innerHTML='';
-  placedDecor.forEach(d=>{
-    const t = DECOR_TYPES[d.type]; if(!t) return;
-    const el=document.createElement('div');
-    el.className='decor '+(t.cls||'')+(t.wall?' wall':'')+(designerMode?' editable':'')+(designerSel===d.id?' selected':'');
-    el.dataset.id=d.id;
-    el.style.left=(d.x - t.w/2)+'px';
-    el.style.top=(d.y - (t.wall? 0 : t.h))+'px';
-    el.style.width=t.w+'px'; el.style.height=t.h+'px';
-    el.style.zIndex = t.flat ? 1 : (t.wall ? 4 : Math.round(d.y));
-    el.innerHTML=t.html;
+  decorPlaced.forEach(d=>{
+    const cat = DECOR_CATALOG[d.type]; if(!cat) return;
+    const el = document.createElement('div');
+    el.className = cat.cls + ' decor-item';
+    el.dataset.id = d.id;
+    el.style.left = (d.x - cat.w/2) + 'px';
+    el.style.top  = (d.y - cat.h/2) + 'px';
+    el.style.zIndex = Math.round(d.y + cat.h/2);
+    el.innerHTML = cat.html;
     host.appendChild(el);
   });
   rebuildDecorBlockers();
 }
-// floor decorations block the player a little (wall pieces & flat rugs don't)
-function rebuildDecorBlockers(){
-  DECOR_BLOCKERS.length=0;
-  placedDecor.forEach(d=>{
-    const t=DECOR_TYPES[d.type]; if(!t||t.wall||t.flat) return;
-    DECOR_BLOCKERS.push({ x:d.x - t.w*0.35, y:d.y - 18, w:t.w*0.7, h:26 });
-  });
+
+/* ── the interior designer ──
+   Unlocked once you reach Nico affection level 1. It lets you pick up any placed decoration
+   and set it down somewhere new. Fixed things (entrance/hatch, beds, walls, rugs, nameplates)
+   are never selectable. Nico level 2 improves it: you can also carry decor INTO the sleeping
+   rooms (not just the common room), and movement is finer/free-form. */
+function designerUnlocked(){ return (npcs.nico && npcs.nico.level>=1); }
+function designerPro(){ return (npcs.nico && npcs.nico.level>=2); }   // level-2 upgrade
+
+// where can a decor item legally sit? Common floor always; sleeping rooms only with the pro upgrade.
+function decorSpotOk(type, x, y){
+  const cat = DECOR_CATALOG[type]; if(!cat) return false;
+  // inside the common floor band (in front of the alcoves)
+  if(x>ALC_X0 && x<ALC_X0+IROOMS.length*ALC_W && y>ALC_BOT+20 && y<INT_H-40) return true;
+  // wall decor may hug the back wall band across the top
+  if(cat.wall && y>ALC_TOP-40 && y<ALC_TOP+60 && x>40 && x<INT_W-40) return true;
+  // pro designers may also place inside an unlocked, reachable alcove
+  if(designerPro()){
+    for(let i=0;i<IROOMS.length;i++){
+      const x0=ALC_X0+i*ALC_W;
+      if(x>x0+IWT+10 && x<x0+ALC_W-IWT-10 && y>ALC_TOP+30 && y<ALC_BOT-10) return true;
+    }
+  }
+  return false;
 }
-const DECOR_BLOCKERS = [];
+function decorLabel(id){ const d=decorPlaced.find(z=>z.id===id); return d ? (DECOR_CATALOG[d.type]?DECOR_CATALOG[d.type].label:d.type) : ''; }
+function updateDesignerBar(){
+  const bar=document.getElementById('designer-bar');
+  if(!bar) return;
+  if(!designing){ bar.classList.remove('show'); return; }
+  bar.classList.add('show');
+  const proNote = designerPro()
+    ? "Nico's eye for it means you can even decorate the bedrooms."
+    : "Reach Nico level 2 to also decorate the bedrooms.";
+  if(designSel==null){
+    bar.innerHTML = `<b>Interior Designer</b> — walk up to a piece and press <b>E</b> to pick it up. <span class="dhint">Press <b>P</b> to finish · ${proNote}</span>`;
+  } else {
+    bar.innerHTML = `Carrying <b>${decorLabel(designSel)}</b> — walk it where you like, press <b>E</b> to set it down. <span class="dhint">Green = valid spot · Press <b>P</b> to finish</span>`;
+  }
+}
+function enterDesigner(){
+  if(!designerUnlocked()){ toast("You don't have an eye for arranging yet. (Reach affection level 1 with Nico.)", 3000); return; }
+  if(scene!=='interior') return;
+  if(!decorPlaced.length){ toast("Nothing to arrange yet — buy some decorations from Caiza's machine first.", 3200); return; }
+  designing=true; designSel=null;
+  document.getElementById('interior').classList.add('designing');
+  document.querySelectorAll('#interior .obj-prompt, #interior .prompt').forEach(p=>p.classList.remove('show'));
+  updateDesignerBar();
+  toast("🎨 Interior designer on. Press P to finish.", 2200);
+}
+function exitDesigner(){
+  designing=false; designSel=null;
+  const scn=document.getElementById('interior'); if(scn) scn.classList.remove('designing');
+  document.querySelectorAll('#int-decor .decor-item.selected').forEach(e=>e.classList.remove('selected'));
+  updateDesignerBar();
+  if(typeof requestSave==='function') requestSave();
+}
+function toggleDesigner(){ if(designing) exitDesigner(); else enterDesigner(); }
+// pick up the nearest movable decoration (within reach of the player)
+function designerGrabNearest(){
+  let best=Infinity, pick=null;
+  decorPlaced.forEach(d=>{
+    const dd=Math.hypot(ipx-d.x, ipy-d.y);
+    if(dd<130 && dd<best){ best=dd; pick=d; }
+  });
+  if(!pick){ toast("Get a little closer to a decoration to pick it up.", 2000); return; }
+  designSel=pick.id;
+  document.querySelectorAll('#int-decor .decor-item').forEach(e=>e.classList.toggle('selected', +e.dataset.id===designSel));
+  updateDesignerBar();
+}
+// set the carried decoration down at the player's feet, if the spot is valid
+function designerDrop(){
+  const d=decorPlaced.find(z=>z.id===designSel); if(!d) return;
+  const tx=Math.round(ipx), ty=Math.round(ipy-20);   // drop just in front of the player
+  if(!decorSpotOk(d.type, tx, ty)){ toast("Can't place it there. Try the common room floor (or a bedroom, with Nico's level-2 eye).", 2600); return; }
+  d.x=tx; d.y=ty;
+  // which room is this now in? common by default; if inside an alcove, tag that resident
+  d.room='common';
+  for(let i=0;i<IROOMS.length;i++){ const x0=ALC_X0+i*ALC_W;
+    if(tx>x0+IWT && tx<x0+ALC_W-IWT && ty<ALC_BOT){ d.room=IROOMS[i].key; break; } }
+  designSel=null;
+  renderDecor();
+  updateDesignerBar();
+  if(typeof requestSave==='function') requestSave();
+  toast("Placed. Looks good!", 1400);
+}
+// live preview: while carrying, the selected piece follows the player each frame
+function designerFollow(){
+  if(!designing || designSel==null) return;
+  const d=decorPlaced.find(z=>z.id===designSel); if(!d) return;
+  const cat=DECOR_CATALOG[d.type]; if(!cat) return;
+  const el=document.querySelector('#int-decor .decor-item[data-id="'+designSel+'"]');
+  if(!el) return;
+  const tx=ipx, ty=ipy-20;
+  el.style.left=(tx-cat.w/2)+'px'; el.style.top=(ty-cat.h/2)+'px'; el.style.zIndex=Math.round(ty+cat.h/2)+20;
+  el.style.opacity = decorSpotOk(d.type, tx, ty) ? '1' : '0.5';
+  el.style.filter = decorSpotOk(d.type, tx, ty) ? 'drop-shadow(0 0 10px rgba(120,255,150,0.9))' : 'drop-shadow(0 0 10px rgba(255,90,90,0.9))';
+}
+
+/* ── vending-machine decor ── once Caiza's tier-2 upgrade is live, each restock cycle has a
+   chance to stock one random house/wall decoration for sale, on top of the usual gifts. */
+const DECOR_TIER = 3;   // vendStockLevel at which the top-shelf (tier-2) upgrade is unlocked
+function decorUnlockedAtShop(){ return vendStockLevel >= DECOR_TIER; }
+function rollDecorStock(){
+  if(!decorUnlockedAtShop()){ decorStock=null; return; }
+  const types = Object.keys(DECOR_CATALOG);
+  // ~45% of cycles the machine has a decoration in the side slot
+  decorStock = (Math.random() < 0.45) ? { type: types[Math.floor(Math.random()*types.length)] } : null;
+}
+// place a freshly-bought decoration somewhere sensible in the common room to start
+function addBoughtDecor(type){
+  const cat=DECOR_CATALOG[type]; if(!cat) return;
+  // spread new items along the common floor so they don't stack
+  const n=decorPlaced.length;
+  const x = cat.wall ? (300 + (n*160)%1400) : (400 + (n*180)%1200);
+  const y = cat.wall ? (ALC_TOP+20) : (560 + (n%3)*70);
+  decorPlaced.push({ id:decorNextId++, type, x, y, room: cat.wall?'common':'common' });
+  renderDecor();
+  if(typeof requestSave==='function') requestSave();
+}
+
+
 // interior collision: keep the player's feet out of any wall box (with a small radius),
 // and out of any room whose front is currently barred (locked at night)
 function iBlocked(nx, ny){
@@ -2707,14 +2925,16 @@ function renderInterior(){
     if(el){
       if(hangout){
         el.style.display='block';
-        el.style.left=((r.hx||r._standX)-60)+'px';
-        el.style.top=((r.hy||r._standY)-120)+'px';
-        el.style.zIndex=Math.round(r.hy||r._standY);
-        r._hereX = r.hx; r._hereY = r.hy;
+        // seed the wander state at their default hangout spot the first time they appear
+        if(r._hereX==null){ r._hereX = r.hx || r._standX; r._hereY = r.hy || r._standY; r._tx=null; r._ty=null; r._pause=30+Math.floor(Math.random()*90); }
+        el.style.left=(r._hereX - el.offsetWidth/2)+'px';
+        el.style.top=(r._hereY - el.offsetHeight)+'px';
+        el.style.zIndex=Math.round(r._hereY);
         document.getElementById('i'+r.key+'-art').innerHTML = r.art();
+        const fl=el.querySelector('.float'); if(fl){ fl.classList.add('iwander'); fl.classList.remove('iwalking','face-left'); }
       } else {
         el.style.display='none';
-        r._hereX = null; r._hereY = null;
+        r._hereX = null; r._hereY = null; r._tx=null; r._ty=null;
       }
     }
     // door bars the front when the room is locked
@@ -2730,6 +2950,89 @@ function nightChat(who){
   dlgActive=true;
   showLine(who, text, null);   // single line + their tagline, click/space to close
 }
+
+/* ── residents wander the common room at night ──
+   Instead of standing on a fixed spot, each present resident strolls slowly around the
+   common floor. They pick new destinations weighted toward decorations they're drawn to
+   (see DECOR_PREF), so they linger near the things they like and only occasionally drift
+   past neutral spots. Their live position feeds proximity/chat via _hereX/_hereY. */
+const WANDER_SPEED = 0.9;                       // px/frame — a slow amble
+const WANDER_MINX = ALC_X0 + 60;
+const WANDER_MAXX = ALC_X0 + IROOMS.length*ALC_W - 60;
+const WANDER_MINY = ALC_BOT + 50;
+const WANDER_MAXY = INT_H - 80;
+function wanderClearOf(x, y){
+  // keep wander targets/steps out of furniture collision boxes
+  for(const b of DECOR_BLOCKERS){ if(x>b.x-26 && x<b.x+b.w+26 && y>b.y-26 && y<b.y+b.h+26) return false; }
+  for(const b of IBLOCKERS){ if(x>b.x-26 && x<b.x+b.w+26 && y>b.y-26 && y<b.y+b.h+26) return false; }
+  return true;
+}
+function pickWanderTarget(r){
+  // decorations this resident likes, that are actually placed in the common room
+  const liked = decorPlaced.filter(d=> d.room==='common' && (DECOR_PREF[r.key]||[]).includes(d.type));
+  const anyDecor = decorPlaced.filter(d=> d.room==='common');
+  let tx, ty;
+  const roll = Math.random();
+  if(liked.length && roll < 0.65){
+    // head toward a liked decoration and loiter just in front of it
+    const d = liked[Math.floor(Math.random()*liked.length)];
+    tx = d.x + (Math.random()*70-35);
+    ty = Math.min(WANDER_MAXY, d.y + 46 + Math.random()*26);
+  } else if(anyDecor.length && roll < 0.80){
+    // occasionally drift toward a neutral decoration
+    const d = anyDecor[Math.floor(Math.random()*anyDecor.length)];
+    tx = d.x + (Math.random()*80-40);
+    ty = Math.min(WANDER_MAXY, d.y + 44 + Math.random()*30);
+  } else {
+    // otherwise just a random spot on the floor
+    tx = WANDER_MINX + Math.random()*(WANDER_MAXX-WANDER_MINX);
+    ty = WANDER_MINY + Math.random()*(WANDER_MAXY-WANDER_MINY);
+  }
+  tx = Math.max(WANDER_MINX, Math.min(WANDER_MAXX, tx));
+  ty = Math.max(WANDER_MINY, Math.min(WANDER_MAXY, ty));
+  // nudge off any furniture we'd overlap
+  let tries=0; while(!wanderClearOf(tx,ty) && tries<8){ tx += (Math.random()*80-40); ty += (Math.random()*60-30);
+    tx=Math.max(WANDER_MINX,Math.min(WANDER_MAXX,tx)); ty=Math.max(WANDER_MINY,Math.min(WANDER_MAXY,ty)); tries++; }
+  r._tx = tx; r._ty = ty;
+}
+function wanderResidents(){
+  IROOMS.forEach(r=>{
+    if(!r.who) return;
+    const el = document.getElementById('inpc-'+r.key);
+    if(!el || el.style.display==='none' || r._hereX==null) return;
+    // if the player steps close, stop and hold still so it's easy to chat
+    if(Math.hypot(ipx-r._hereX, ipy-r._hereY) < 115){
+      const fl0=el.querySelector('.float'); if(fl0) fl0.classList.remove('iwalking');
+      return;
+    }
+    if(r._pause>0){ r._pause--; return; }
+    if(r._tx==null) pickWanderTarget(r);
+    const ddx = r._tx - r._hereX, ddy = r._ty - r._hereY;
+    const dist = Math.hypot(ddx, ddy);
+    if(dist < 6){
+      // arrived — linger a while (longer if this is a spot they like; less if they're restless)
+      const liked = (DECOR_PREF[r.key]||[]).some(t=> decorPlaced.some(d=> d.room==='common' && d.type===t && Math.hypot(d.x-r._hereX, d.y-(r._hereY-46))<80));
+      const act = activityOf(r.key);
+      const base = liked ? (180 + Math.floor(Math.random()*180)) : (60 + Math.floor(Math.random()*90));
+      r._pause = Math.round(base / act);   // restless characters rest less between strolls
+      pickWanderTarget(r);
+      const fl=el.querySelector('.float'); if(fl) fl.classList.remove('iwalking');
+      return;
+    }
+    const spd = WANDER_SPEED * activityOf(r.key);   // restless characters amble a bit quicker
+    const nx = r._hereX + (ddx/dist)*spd;
+    const ny = r._hereY + (ddy/dist)*spd;
+    // step if clear; otherwise repick a target so they don't grind against furniture
+    if(wanderClearOf(nx, ny)){ r._hereX = nx; r._hereY = ny; }
+    else { pickWanderTarget(r); }
+    // face travel direction (flip only the art so the "Press E" label stays readable)
+    const fl=el.querySelector('.float');
+    if(fl){ fl.classList.add('iwander','iwalking'); fl.classList.toggle('face-left', ddx < 0); }
+    el.style.left = Math.round(r._hereX - el.offsetWidth/2)+'px';
+    el.style.top  = Math.round(r._hereY - el.offsetHeight)+'px';
+    el.style.zIndex = Math.round(r._hereY);
+  });
+}
 function enterTreehouse(){
   if(busy || dlgActive) return;
   scene='interior';
@@ -2743,8 +3046,10 @@ function enterTreehouse(){
   for(const key in objects){ objects[key].el.classList.remove('show'); }
   for(const key in npcs){ npcs[key].prompt.classList.remove('show'); }
   toast("You climb up into the treehouse.", 1600);
+  if(designerUnlocked() && decorPlaced.length){ setTimeout(()=>toast("🎨 Press P to arrange your decorations.", 2600), 1700); }
 }
 function exitTreehouse(){
+  if(designing) exitDesigner();
   scene='park';
   document.getElementById('interior').classList.remove('on');
   document.getElementById('iplayer').style.display='none';
@@ -2808,10 +3113,12 @@ function interiorLoop(){
       let ny=Math.max(INT_MINY, Math.min(INT_MAXY, ipy+stepY));
       if(!iBlocked(nx, ipy)) ipx=nx;      // resolve axes independently so you slide along walls
       if(!iBlocked(ipx, ny)) ipy=ny;
-      if(dx<0) ip.style.transform='scaleX(-1)'; else if(dx>0) ip.style.transform='scaleX(1)';
+      if(dx<0) iplayerFacing=-1; else if(dx>0) iplayerFacing=1;
+      walkFrameTick++;
+      setPlayerVisual(ip, 'iplayer-frame', iplayerFacing, true);
       ip.classList.add('walk');
-    } else ip.classList.remove('walk');
-    ip.style.left=Math.round(ipx-48)+'px'; ip.style.top=Math.round(ipy-133)+'px'; ip.style.zIndex=Math.round(ipy)+10;
+    } else { ip.classList.remove('walk'); setPlayerVisual(ip, 'iplayer-frame', iplayerFacing, false); }
+    ip.style.left=Math.round(ipx - ip.offsetWidth/2)+'px'; ip.style.top=Math.round(ipy - ip.offsetHeight)+'px'; ip.style.zIndex=Math.round(ipy)+10;
     // camera pans the interior
     const vw=gameEl.clientWidth, vh=gameEl.clientHeight;
     let camX=Math.max(Math.min(vw/2 - ipx, 0), vw - INT_W);
@@ -2819,6 +3126,10 @@ function interiorLoop(){
     if(INT_W<vw) camX=(vw-INT_W)/2;
     if(INT_H<vh) camY=(vh-INT_H)/2;
     world.style.transform=`translate3d(${Math.round(camX)}px,${Math.round(camY)}px,0)`;
+    // residents amble around the common room, drawn to decorations they like
+    wanderResidents();
+    // interior designer: carried piece tracks the player; skip normal interaction prompts
+    if(designing){ designerFollow(); iNear=null; requestAnimationFrame(interiorLoop); return; }
     // proximity
     iNear=null; let best=Infinity;
     IROOMS.forEach(r=>{
@@ -2938,8 +3249,12 @@ function addAff(who,n,raw){ const before=aff[who];
   aff[who]=Math.max(0,Math.min(100,aff[who]+n));
   const bar=document.getElementById('m-'+who); if(bar) bar.style.width=aff[who]+'%';
   if(n>0 && portrait) emote(px-40, py-200, '❤️');
-  // hitting 100 with a character triggers their sweet ending once
-  if(aff[who]>=100 && before<100) triggerEnding(who);
+  // hitting 100 with a character earns their ending — but hold it until they've finished
+  // their final line and you dismiss it (so the end screen never covers unread dialogue).
+  if(aff[who]>=100 && before<100 && !wooed.has(who)){
+    if(dlgActive) pendingEnding = who;        // fire when the current dialogue is dismissed
+    else triggerEnding(who);                  // no dialogue open (rare) → celebrate now
+  }
   // Caiza's vending-machine restocks track your bond with her; the repair itself only
   // happens the next time you actually talk to her (see openInteractMenu), not the instant
   // her affection crosses the threshold mid-conversation elsewhere.
@@ -3165,7 +3480,7 @@ const DLG = {
     { t:"“Just killing time, honestly.”", go:'nico_L1_b', tier:'bad', aff:{nico:6}, tone:-1 }
   ]},
   nico_L1_g: { who:'nico', t:"*goes a little pink behind the viewfinder* You want to see what I see? That's — nobody's ever asked to look THROUGH the camera with me. It's just... the small stuff nobody slows down for. I could show you. If you stick around.", next:'nico_ask1' },
-  nico_L1_m: { who:'nico', t:"*quietly* Fell through river ice as a pup. Long story, cold ending, I made it out. Water and I have an... understanding now: it stays over there, I stay over here. The camera was how I found something to love that wasn't the river. It worked.", next:'nico_L1_m2' },
+  nico_L1_m: { who:'nico', t:"*quietly* My twin brother Niffo dumped a huge wave on me when we were pups — meant it as a joke, nearly drowned me instead. Water and I have had an... understanding ever since: it stays over there, I stay over here. The camera was how I found something to love that wasn't the water. It worked.", next:'nico_L1_m2' },
   nico_L1_m2: { who:'nico', t:"...Huh. Didn't mean to get heavy. *clears throat* Anyway — are you actually interested, or just being polite? 'Cause I'd love to show you more, but I've been let down by fair-weather company before. Prove you'll come back?", next:'nico_ask1' },
   nico_L1_b: { who:'nico', t:"Killing time. Right. *snaps the lens cap on* Well — don't let me keep you from your busy schedule of standing around. ...Kidding. Mostly. Stick around if you want; the light's better with someone in the frame.", next:'nico_ask1' },
   nico_ask1: { who:'nico', t:"Come sit on the bench with me a while? I want to get a long exposure of the lamplight, and it turns out those come out warmer when I'm not out here alone. Go on — then come back and be in the shot.", assign:'sit', end:1 },
@@ -3431,8 +3746,8 @@ const TOPICS = {
     { key:'op_luna',  cat:'Opinions',  label:'On Luna',   unlock:U.and(U.metOthers(3), U.level(1)), t:"The snow leopard? We share the night shift. She's the best subject in the park — sits perfectly still, never blinks at the flash. We don't talk much. We don't have to. Night folk understand each other." },
     { key:'op_caiza', cat:'Opinions',  label:'On Caiza',  unlock:U.and(U.metOthers(3), U.level(1)), t:"The water dragon? *shudders* She LIVES in the pond. Voluntarily. In the WATER. ...She fixed my tripod once without being asked, though. Left it by the bench. So. Respect. From a safe, dry distance." },
     { key:'dreams',   cat:'Dreams',    label:'Dreams',    unlock:U.level(1), t:"One photo. Just one, of the pond at night — the real shot, from the water's edge. I've never been able to make myself get close enough. Maybe someday. Maybe if someone stood there with me." },
-    { key:'memories', cat:'Memories',  label:'Memories',  unlock:U.and(U.level(2), U.asked(4)), t:"*quiet* I fell through river ice when I was small. Dark, cold, couldn't find up. A photographer pulled me out — I remember the click of her camera more than the cold. Got my first camera that winter. Been hiding behind one ever since." },
-    { key:'friends',  cat:'Friends',   label:'Friends',   unlock:U.and(U.level(2), U.asked(5)), t:"I don't have many. Easier to document people than to, you know, be one around them. But you keep showing up in my frames on purpose. ...That's new. That's a friend, I think. My first in a long while." }
+    { key:'memories', cat:'Memories',  label:'Memories',  unlock:U.and(U.level(2), U.asked(4)), t:"*quiet* You want to know why I won't go near the water? My twin brother, Niffo. We were pups, messing around at the shore, and he thought it'd be hilarious to splash me — except he sent up this HUGE wave. It rolled right over me. Dark, cold, couldn't find up, couldn't breathe. He got me out, terrified, apologizing... but I've never trusted the water since. Got my first camera not long after. Been hiding behind one ever since." },
+    { key:'friends',  cat:'Friends',   label:'Friends',   unlock:U.and(U.level(2), U.asked(5)), t:"Honestly? Before this park, I only really had two. My twin brother Niffo — chaos incarnate, nearly drowned me once, but he's my brother. And little Fionn, my nephew — the sweetest pup, always begging me to photograph him. That was it. That was my whole circle. But you keep showing up in my frames on purpose. ...That's new. I think that makes you the third." }
   ]
 };
 
@@ -3563,6 +3878,7 @@ function vendingCycle(){
     if(vendFeatured && el){ el.classList.remove('rare'); }
     vendFeatured = null;
   }
+  rollDecorStock();   // maybe stock a house decoration this cycle (needs the tier-2 upgrade)
   updateVendTimerDisplay();
 }
 // ticks once a second just to refresh the floating countdown label — cheap, no game-state changes
@@ -3636,10 +3952,32 @@ function useVending(){
     const tag = s.special ? ' ⭐RARE' : '';
     return { t:`${ITEM_ICON[s.key]||''} ${ITEM_SHORT[s.key]||s.key}${tag} — ${s.price}🪨${ok?'':' (need more rocks)'}`, fn:()=>buyVending(s) };
   });
+  // tier-2 upgrade: a rotating house/wall decoration in the machine's side slot
+  if(decorStock && DECOR_CATALOG[decorStock.type]){
+    const cat = DECOR_CATALOG[decorStock.type];
+    const ok = inventory.rocks >= cat.price;
+    choices.push({ t:`${cat.icon} ${cat.label} 🏠DECOR — ${cat.price}🪨${ok?'':' (need more rocks)'}`, fn:()=>buyDecor(decorStock.type) });
+  }
   choices.push({ t:'← Leave', fn:()=>endDialogue() });
   const rareNote = vendFeatured ? ` A rare item is glinting behind the glass tonight — grab it while it lasts.` : '';
-  DLG['__vending__'] = { who:'narrator', t:`Caiza's gift machine hums warmly. You have ${inventory.rocks} rock${inventory.rocks===1?'':'s'} to spend. (Rocks are tokens — dig or shake trees for more.)${rareNote}`, noShuffle:true, choices };
+  const decorNote = decorStock ? ` The side slot has a ${DECOR_CATALOG[decorStock.type].label.toLowerCase()} for the treehouse.` : '';
+  DLG['__vending__'] = { who:'narrator', t:`Caiza's gift machine hums warmly. You have ${inventory.rocks} rock${inventory.rocks===1?'':'s'} to spend. (Rocks are tokens — dig or shake trees for more.)${rareNote}${decorNote}`, noShuffle:true, choices };
   dlgActive=true; wrap.classList.add('show'); goDlg('__vending__');
+}
+function buyDecor(type){
+  const cat = DECOR_CATALOG[type]; if(!cat) return;
+  if(inventory.rocks < cat.price){
+    showLineNarr("Not enough rocks for that. The machine blinks a grumpy little red light. Go dig up some more stones.", 'backToVending');
+    return;
+  }
+  inventory.rocks -= cat.price; updateInventory();
+  addBoughtDecor(type);
+  decorStock = null;   // sold out until the next cycle
+  const el=vendEl(); if(el){ el.classList.add('buzz'); setTimeout(()=>el.classList.remove('buzz'),500); }
+  const hint = designerUnlocked()
+    ? " (Head up to the treehouse and press P to rearrange your decorations.)"
+    : " (Reach affection level 1 with Nico to unlock the interior designer and rearrange it.)";
+  showLineNarr(`*ka-CHUNK* A flat-pack ${cat.label.toLowerCase()} thunks into the tray. It's now up in the treehouse common room.${hint}`, 'backToVending');
 }
 function buyVending(s){
   if(inventory.rocks < s.price){
@@ -3764,11 +4102,11 @@ const NOTEBOOK_DATA = {
     hobbies: "Night photography — long exposures, star trails, roughly four hundred photos of one specific bench.",
     dreams: "One photo of the pond at night, taken from the water's edge. He's never been able to get close enough. Wants to, though. Badly.",
     gift: "A shiny trinket — he'll photograph it before he even thanks you. Flowers are a close second.",
-    relationships: "Only out at night, shares the dark with Luna — a comfortable, wordless understanding between the two night owls. Keeps a nervous, dry-land distance from Caiza and her pond.",
+    relationships: "Only out at night, shares the dark with Luna — a comfortable, wordless understanding between the two night owls. Keeps a nervous, dry-land distance from Caiza and her pond. Back home his whole world was two people: his twin brother Niffo and his little nephew Fionn.",
     notes: [
       "Only comes out at night. An otter who avoids water — there's a whole story there.",
       "Has photographed that bench roughly four hundred times. Each one is \"different,\" apparently.",
-      "Told me he fell through river ice as a pup. Got his first camera that same winter. It clicked, so to speak.",
+      "His twin brother Niffo nearly drowned him as a pup with one huge splash — that's where the water fear started. Got his first camera not long after.",
       "Set the camera down for once — for me. Said he stopped being scared of one thing tonight, and it wasn't the water."
     ]
   }
@@ -3983,6 +4321,9 @@ function doHangout(who){
     showLine('bull', "Maxus is still woozy from the tree — his head's pounding too hard to hang out. Give him a flower (Give Gift) to ease the ache first.", 'backToMenu');
     return;
   }
+  // once he's healed and you share your first hang out, Maxus ambles off to his cozy
+  // spot in the southwest, between the picnic and the bench
+  if(who==='bull' && !n.hurt) relocateBull();
   // run the full tiered conversation + environment tasks; affection accumulates and the
   // ending only fires once it organically reaches 100 (the love node no longer force-completes)
   startDialogue(who);
@@ -4000,13 +4341,26 @@ const wrap=document.getElementById('dialogue-wrap'), name=document.getElementByI
       dlg=document.getElementById('dialogue'), advEl=document.getElementById('advance'),
       portrait=document.getElementById('portrait'), endcard=document.getElementById('endcard');
 let dlgActive=false, cur=null, typing=null, typed=true, curKey=null;
+// dialogue you've already read in full — a first read can't be skipped (you must let it type
+// out so you actually read it); anything you've seen before can be clicked/spacebarred past.
+const seenDlg = new Set();
+let curFirstRead = false;   // is the node currently on screen being read for the very first time?
+let pendingEnding = null;    // a character whose ending should fire once their final line is dismissed
+// transient menu / one-liner nodes are always skippable (not "story" you need to read)
+function isSkippableKey(id){ return !id || /^__.*__$/.test(id); }
 
 function startDialogue(who){ dlgActive=true; wrap.classList.add('show'); npcs[who].visits++; goDlg(openerFor(who)); }
 function endDialogue(){ dlgActive=false; wrap.classList.remove('show'); cur=null; }
 
 function typeOut(str){ clearInterval(typing); dtext.textContent=''; typed=false; advEl.style.display='none'; choicesEl.innerHTML='';
+  // while a first-time line is typing, dim the advance hint so it's clear you can't skip yet
+  dlg.classList.toggle('locked-read', curFirstRead);
   let i=0; typing=setInterval(()=>{ dtext.textContent+=str[i++]; if(i>=str.length){ clearInterval(typing); typed=true;
-    if(cur.choices) renderChoices(cur.choices); else advEl.style.display='block'; } },18); }
+    if(curKey) seenDlg.add(curKey);           // now fully read — future views can be skipped
+    dlg.classList.remove('locked-read');
+    if(cur.choices) renderChoices(cur.choices); else advEl.style.display='block';
+    if(curFirstRead && typeof requestSave==='function') requestSave();
+  } },18); }
 
 function renderChoices(list){ choicesEl.innerHTML='';
   choicesEl.classList.toggle('grid2x2', curKey==='__mainmenu__');
@@ -4026,6 +4380,8 @@ let curWho=null;
 const idleAffReadyAt = {};          // per-character cooldown so post-confession Idle hangouts aren't spammable
 const IDLE_AFF_COOLDOWN = 45000;    // 45s between affection gains from just hanging out
 function goDlg(id){ curKey=id; cur=DLG[id]; choicesEl.innerHTML='';
+  // a real story node read for the first time can't be skipped through
+  curFirstRead = !isSkippableKey(id) && !seenDlg.has(id);
   if(cur.aff){
     const isIdleNode = /Idle$/.test(id) || /_affwait$/.test(id) || id==='luna_stay';   // cozy "just hanging out" beats — cooldown-gated
     for(const w in cur.aff){
@@ -4063,9 +4419,14 @@ function goDlg(id){ curKey=id; cur=DLG[id]; choicesEl.innerHTML='';
 }
 
 function advance(){ if(!cur) return;
-  if(!typed){ clearInterval(typing); dtext.textContent=cur._text||cur.t; typed=true;
+  if(!typed){
+    if(curFirstRead) return;   // first time reading this line — let it type out, no skipping
+    clearInterval(typing); dtext.textContent=cur._text||cur.t; typed=true;
+    if(curKey) seenDlg.add(curKey);
     if(cur.choices) renderChoices(cur.choices); else advEl.style.display='block'; return; }
   if(cur.choices) return;
+  // if this dismissal completes a character's love confession, roll their ending now
+  if(pendingEnding){ const who=pendingEnding; pendingEnding=null; triggerEnding(who); return; }
   if(cur.act==='knockout'){ endDialogue(); knockOut(); return; }   // Maxus loses it
   if(cur.act==='toDay'){ lunaToDay(); return; }                    // Luna walks you into daylight
   if(cur.act==='toNight'){ lunaToNight(); return; }                // ...and back into the dark
@@ -4188,6 +4549,8 @@ function collectSaveData(){
     holdingStrawberry: !!holdingStrawberry,
     specialInv: Object.assign({}, specialInv),
     vendingFixed: !!vendingFixed, vendStockLevel: vendStockLevel||0,
+    decorPlaced: JSON.parse(JSON.stringify(decorPlaced)), decorNextId: decorNextId||1,
+    decorStock: decorStock||null,
     tasks: Object.assign({}, tasks),
     wooed: Array.from(wooed),
     ownedKeepsakes: Array.from(ownedKeepsakes),
@@ -4200,7 +4563,9 @@ function collectSaveData(){
     topicUnlockSeen: topicSeen,
     nightMode: !!nightMode, bullHere: !!bullHere, caizaAwake: !!caizaAwake, charlieHere: !!charlieHere,
     sawNightViaKO: !!sawNightViaKO,
+    bullMoved: !!bullMoved,
     treeRocksGiven: treeRocksGiven||0, skipCount: skipCount||0,
+    seenDlg: Array.from(seenDlg),
     px, py,
     hoopBest: hoopBest||0
   };
@@ -4229,6 +4594,9 @@ function applySaveData(data){
     holdingStrawberry = !!data.holdingStrawberry;
     Object.assign(specialInv, data.specialInv||{});
     vendingFixed = !!data.vendingFixed; vendStockLevel = data.vendStockLevel||0;
+    if(Array.isArray(data.decorPlaced)) decorPlaced = data.decorPlaced;
+    if(typeof data.decorNextId==='number') decorNextId = data.decorNextId;
+    if(typeof data.decorStock!=='undefined') decorStock = data.decorStock;
     Object.assign(tasks, data.tasks||{});
     wooed.clear(); (data.wooed||[]).forEach(w=>wooed.add(w));
     ownedKeepsakes.clear(); (data.ownedKeepsakes||[]).forEach(w=>ownedKeepsakes.add(w));
@@ -4239,8 +4607,10 @@ function applySaveData(data){
     for(const k in (data.discoveredPref||{})){ discoveredPref[k]=Object.assign(discoveredPref[k]||{}, data.discoveredPref[k]); }
     Object.assign(asked, data.asked||{});
     for(const k in (data.topicUnlockSeen||{})){ if(!topicUnlockSeen[k]) topicUnlockSeen[k]=new Set(); (data.topicUnlockSeen[k]||[]).forEach(t=>topicUnlockSeen[k].add(t)); }
+    if(Array.isArray(data.seenDlg)) data.seenDlg.forEach(k=>seenDlg.add(k));
     nightMode=!!data.nightMode; bullHere=!!data.bullHere; caizaAwake=!!data.caizaAwake; charlieHere=!!data.charlieHere;
     sawNightViaKO=!!data.sawNightViaKO;
+    bullMoved=!!data.bullMoved;
     treeRocksGiven=data.treeRocksGiven||0; skipCount=data.skipCount||0;
     if(typeof data.px==='number') px=data.px;
     if(typeof data.py==='number') py=data.py;
@@ -4251,11 +4621,29 @@ function applySaveData(data){
 // re-syncs the DOM/UI to whatever's currently in the state variables (used right after loading a save)
 function refreshVisualsFromState(){
   for(const who in aff){ const bar=document.getElementById('m-'+who); if(bar) bar.style.width=(aff[who]||0)+'%'; }
+  // art for caiza/bull/luna/charlie/nico is injected lazily when they first appear; on a
+  // fresh load we must (re)inject it for anyone currently present, or they render invisible.
+  const ART = { devin:()=>devinArt(), femi:()=>femiArt(true), caiza:()=>caizaArt(), bull:()=>maxusArt(),
+                luna:()=>lunaArt(), charlie:()=>charlieArt(), nico:()=>nicoArt() };
   for(const who in npcs){
     const n=npcs[who];
     if(n.el) n.el.style.display = n.hidden ? 'none' : 'block';
     const meter=document.getElementById('meter-'+who);
     if(meter) meter.style.display = n.hidden ? 'none' : 'block';
+    if(!n.hidden){ const a=document.getElementById(who+'-art'); if(a && ART[who] && !a.innerHTML.trim()) a.innerHTML = ART[who](); }
+  }
+  // Maxus: make sure he's standing at the right spot with a clean pose when present
+  if(npcs.bull && npcs.bull.el && bullHere){
+    npcs.bull.el.classList.remove('bull-charge');
+    const bfl=npcs.bull.el.querySelector('.float'); if(bfl) bfl.style.transform='scaleX(1)';
+    if(bullMoved){
+      npcs.bull.x=BULL_HOME.x; npcs.bull.y=BULL_HOME.y;
+      npcs.bull.el.style.left=(BULL_HOME.x - npcs.bull.el.offsetWidth/2)+'px';
+      npcs.bull.el.style.top=(BULL_HOME.y - npcs.bull.el.offsetHeight)+'px';
+      npcs.bull.el.style.zIndex=Math.round(BULL_HOME.y);
+    } else {
+      npcs.bull.el.style.left='470px'; npcs.bull.el.style.top='470px'; npcs.bull.el.style.zIndex=Math.round(600);
+    }
   }
   if(npcs.bull && npcs.bull.el) npcs.bull.el.classList.toggle('hurt', !!npcs.bull.hurt);
   updateInventory();
@@ -4267,6 +4655,19 @@ function refreshVisualsFromState(){
   if(nightMode){ world.classList.add('night'); if(typeof Music!=='undefined') Music.setNight(true); }
   else { world.classList.remove('night'); if(typeof Music!=='undefined') Music.setNight(false); }
   applyNightFilter();
+  // enforce time-of-day visibility so a loaded save never shows the wrong cast in the park:
+  const hidePark=(k)=>{ if(!npcs[k]) return; npcs[k].hidden=true; if(npcs[k].el) npcs[k].el.style.display='none'; if(npcs[k].prompt) npcs[k].prompt.classList.remove('show'); const m=document.getElementById('meter-'+k); if(m) m.style.display='none'; };
+  const showPark=(k)=>{ if(!npcs[k]) return; npcs[k].hidden=false; if(npcs[k].el) npcs[k].el.style.display='block'; const m=document.getElementById('meter-'+k); if(m) m.style.display='flex'; };
+  if(nightMode){
+    hidePark('charlie');                         // daytime critter — not in the park at night
+    if(charlieHere && npcs.nico){ /* nico shows at night handled below */ }
+    if(npcs.nico){ npcs.nico.hidden=false; npcs.nico.el.style.display='block'; document.getElementById('nico-art').innerHTML=nicoArt(); document.getElementById('meter-nico').style.display='flex'; }
+  } else {
+    hidePark('nico');                            // nocturnal — gone by day
+    if(charlieHere) showPark('charlie'); else hidePark('charlie');
+    if(wooed.has('luna') || (npcs.luna && npcs.luna.level>=3)) { /* Luna may stay in day */ } else hidePark('luna');
+  }
+  if(typeof renderDecor==='function') renderDecor();
 }
 
 /* ============ NOTEBOOK PANEL RENDERING ============ */
@@ -4352,7 +4753,8 @@ function triggerEnding(who){
   wooed.add(who);
   awardKeepsake(who);               // grant their exclusive keepsake
   npcs[who].level = 3;              // routes future chats to their happy "together" idle line
-  setTimeout(()=>{ endDialogue();
+  endDialogue();
+  setTimeout(()=>{
     const set = ENDINGS[who];
     const e = (npcs[who].tone >= 0) ? set.warm : set.cool;   // sincere route -> warm, playful/blunt route -> cool
     document.getElementById('ending-label').textContent=e.label;
@@ -4578,6 +4980,8 @@ function resetGame(){ closeInteractMenu(); endcard.classList.remove('show','has-
   document.getElementById('keepsakepanel').classList.remove('show');
   document.getElementById('notebookpanel').classList.remove('show');
   NB_ORDER.forEach(w=>{ notebookSeen[w] = { likes:false, dislikes:false, hobbies:false, dreams:false, memories:false, gift:false, relationships:false }; learnedOpinions[w]=[]; delete learnedMemories[w]; discoveredPref[w]={}; });
+  seenDlg.clear();
+  pendingEnding = null;
   nbActiveWho = null;
   for(const k in npcs){ npcs[k].visits=0; npcs[k].level=0; npcs[k].pending=null; npcs[k].tone=0; npcs[k].gaveFlower=false; npcs[k].gaveSpecial=false; npcs[k].met=false; idleAffReadyAt[k]=0; giftReadyAt[k]=0; asked[k]=0; if(topicUnlockSeen[k]) topicUnlockSeen[k].clear(); }
   tasks.shoot=false; tasks.sit=false;
@@ -4587,9 +4991,10 @@ function resetGame(){ closeInteractMenu(); endcard.classList.remove('show','has-
   const patch=document.getElementById('flowerpatch'); if(patch) patch.classList.remove('picked');
   skipCount=0; skipReadyAt=0; caizaAwake=false; npcs.caiza.hidden=true;
   vendingFixed=false; vendStockLevel=0; wishReadyAt=0; stopVendingCycle(); Object.values(SPECIAL_GIFTS).forEach(s=>{ specialInv[s.key]=0; }); { const v=document.getElementById('vending'); if(v){ v.classList.remove('fixed','buzz','rare'); v.classList.add('broken'); } }
+  decorPlaced=[]; decorNextId=1; decorStock=null; if(designing) exitDesigner(); if(typeof renderDecor==='function') renderDecor();
   const cel=npcs.caiza.el; cel.style.display='none'; cel.style.clipPath=''; cel.style.transform='';
   document.getElementById('meter-caiza').style.display='none'; document.getElementById('m-caiza').style.width='0%';
-  bullHere=false; npcs.bull.hidden=true; npcs.bull.hurt=false;
+  bullHere=false; bullMoved=false; npcs.bull.x=545; npcs.bull.y=640; npcs.bull.hidden=true; npcs.bull.hurt=false;
   const bel=npcs.bull.el; bel.style.display='none'; bel.classList.remove('hurt','bull-charge'); const bs=bel.querySelector('.stars'); if(bs) bs.remove();
   document.getElementById('meter-bull').style.display='none'; document.getElementById('m-bull').style.width='0%';
   nightMode=false; world.classList.remove('night'); applyNightFilter(); document.getElementById('fadeout').classList.remove('show');
