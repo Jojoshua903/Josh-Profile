@@ -2330,6 +2330,16 @@ const SUPER2 = {
     fire(f,foe){ eclipseT=220; for(let i=0;i<3;i++) blackholes.push({owner:f,x:(i+1)*(W/4)+(Math.random()-.5)*50,y:GROUND_Y-100-Math.random()*80,r:4,maxR:42+i*4,life:200,dmg:2.4,pull:1.1}); for(let i=0;i<6;i++){ const tx=(i+0.5)*(W/6); strikes.push({x:tx,y:0,targetY:GROUND_Y,life:26,owner:f,warned:6+i*3,dmg:13,kb:8,launch:1.0}); } } },
   dih:      { name:'DROP THE MIC', desc:'Opens a churning pit under the foe that sucks them right in.',
     fire(f,foe){ const tx=foe?foe.cx:f.cx+f.face*120; blackholes.push({owner:f,x:tx,y:GROUND_Y-50,r:6,maxR:52,life:170,dmg:2.6,pull:1.2}); for(let i=0;i<3;i++) shocks.push({x:tx,y:GROUND_Y,r:8+i*18,max:150,life:22,color:'#a1663a'}); for(let i=0;i<16;i++) particles.push({x:tx+(Math.random()-.5)*70,y:GROUND_Y-2,vx:(Math.random()-.5)*4,vy:-2-Math.random()*5,life:24,color:i%2?'#7a4a1e':'#c98f52',r:2+Math.random()*2}); } },
+  raaf:     { name:'TALON DIVE', desc:'Rockets skyward, then stoops into a diving talon strike trailing slicing feathers.',
+    fire(f,foe){ if(foe) f.face=foe.cx>=f.cx?1:-1; f.vy=-13; f.vx=f.face*6; f._dashHit=26; f._dashDmg=11; f._dashKb=7;
+      for(let i=0;i<8;i++) projectiles.push({owner:f,x:f.cx-f.face*(10+i*8),y:f.cy-4,vx:-f.face*(2+i*0.4),vy:2+i*0.3,life:60,dmg:5,kb:3,color:'#2b2f3a',type:'feather',r:6});
+      spawnParticles(f.cx,f.cy,'#2b2f3a',18); } },
+  janjacob: { name:'RED INK REVIEW', desc:'A hailstorm of graded papers rains down, every one marked in furious red ink.',
+    fire(f,foe){ for(let i=0;i<14;i++) projectiles.push({owner:f,x:(i+0.5)*(W/14)+(Math.random()-.5)*16,y:-16-i*8,vx:(Math.random()-.5)*2,vy:5+Math.random()*2,life:170,dmg:8,kb:5,color:'#d62828',type:'board',r:9,gravity:true});
+      spawnParticles(f.cx,f.cy,'#f4f4f4',16); } },
+  sarp:     { name:'720 MEGAFLIP', desc:'A gravity-defying spin trick that showers the arena in sparks.',
+    fire(f,foe){ if(foe) f.face=foe.cx>=f.cx?1:-1; f.vy=-10; f._spin=50; f._vortexSpin=50;
+      spawnParticles(f.cx,f.cy,'#ffd24a',20); } },
 };
 function hasSuper2Def(id){ return !!SUPER2[id]; }
 
@@ -5011,6 +5021,16 @@ const ACHIEVEMENTS = [
   { id:'charged',   name:'POWER SURGE',     icon:'🔋', desc:'Win a SUPER CHARGE match.',          check:s=>s.stat('chargedWins')>=1 },
   { id:'online1',   name:'CHALLENGER',      icon:'🌐', desc:'Win an ONLINE 1v1 duel.',            check:s=>s.stat('onlineWins')>=1 },
   { id:'taunt',     name:'SHOWBOAT',        icon:'💃', desc:'Taunt 10 times.',                    check:s=>s.stat('taunts')>=10 },
+  { id:'win100',    name:'HALL OF LEGENDS', icon:'🏆', desc:'Win 100 matches.',                   check:s=>s.stat('wins')>=100 },
+  { id:'ko300',     name:'RAMPAGE',         icon:'💢', desc:'Score 300 KOs.',                     check:s=>s.stat('kos')>=300 },
+  { id:'super50',   name:'SUPERNOVA',       icon:'🌠', desc:'Unleash 50 Super attacks.',           check:s=>s.stat('supers')>=50 },
+  { id:'flawless10',name:'PERFECTIONIST',   icon:'🧊', desc:'Win 10 matches flawlessly.',          check:s=>s.stat('flawless')>=10 },
+  { id:'meme30',    name:'MEME GOD',        icon:'🐸', desc:'Win 30 matches with a meme equipped.', check:s=>s.stat('memeWins')>=30 },
+  { id:'boss5',     name:'BOSS HUNTER',     icon:'🏹', desc:'Defeat the Giant Boss 5 times.',     check:s=>s.stat('bossWins')>=5 },
+  { id:'medals15',  name:'GOLD STANDARD',   icon:'🥇', desc:'Earn 15 Classic Mode medals.',       check:s=>Object.keys(s.data.medals).length>=15 },
+  { id:'online5',   name:'DUEL MASTER',     icon:'🎮', desc:'Win 5 ONLINE 1v1 duels.',            check:s=>s.stat('onlineWins')>=5 },
+  { id:'taunt50',   name:'SHOWOFF SUPREME', icon:'🕺', desc:'Taunt 50 times.',                    check:s=>s.stat('taunts')>=50 },
+  { id:'coins1000', name:'COIN COLLECTOR',  icon:'💰', desc:'Accumulate 1000 currency.',          check:s=>s.data.currency>=1000 },
 ];
 
 // Per-achievement metadata for the big detail screen: how progress is measured
@@ -5047,6 +5067,16 @@ const ACH_META = {
   charged:   { prog:s=>[s.stat('chargedWins'),1],     unit:'wins',       tip:'Win a SUPER CHARGE match — supers come fast here.' },
   online1:   { prog:s=>[s.stat('onlineWins'),1],      unit:'wins',       tip:'Win an ONLINE 1v1 duel against another player.' },
   taunt:     { prog:s=>[s.stat('taunts'),10],         unit:'taunts',     tip:'Tap DOWN on solid ground (not a platform edge) to taunt.' },
+  win100:    { prog:s=>[s.stat('wins'),100],          unit:'wins',       tip:'A marathon milestone — every mode\'s wins count toward it.' },
+  ko300:     { prog:s=>[s.stat('kos'),300],           unit:'KOs',        tip:'Stack up knockouts over many stock matches.' },
+  super50:   { prog:s=>[s.stat('supers'),50],         unit:'supers',     tip:'Land supers often — SUPER CHARGE rules fill the meter fast.' },
+  flawless10:{ prog:s=>[s.stat('flawless'),10],       unit:'flawless wins', tip:'Ten no-life-lost wins — GIANT rules make this easier to track.' },
+  meme30:    { prog:s=>[s.stat('memeWins'),30],       unit:'meme wins',  tip:'Keep a meme equipped every match to stack these up over time.' },
+  boss5:     { prog:s=>[s.stat('bossWins'),5],        unit:'boss wins',  tip:'Beat the Giant Boss five separate times.' },
+  medals15:  { prog:s=>[Object.keys(s.data.medals).length,15], unit:'medals', tip:'Fifteen Classic clears with different fighters.' },
+  online5:   { prog:s=>[s.stat('onlineWins'),5],      unit:'wins',       tip:'Five ONLINE 1v1 duel wins against other players.' },
+  taunt50:   { prog:s=>[s.stat('taunts'),50],         unit:'taunts',     tip:'Taunt on solid ground 50 times total — stay cool while you do it.' },
+  coins1000: { prog:s=>[s.data.currency,1000],        unit:'coins',      tip:'Earn currency from match wins and Classic Mode runs.' },
 };
 function achProgress(a){ const m=ACH_META[a.id]; if(!m||!m.prog) return null; const [cur,goal]=m.prog(Save); return {cur:Math.min(cur,goal), raw:cur, goal, unit:m.unit||''}; }
 function achTip(a){ const m=ACH_META[a.id]; return (m&&m.tip)||'Keep playing to earn this achievement.'; }
@@ -5135,6 +5165,9 @@ function computeUnlockMap(){
   const pool = ACHIEVEMENTS.map(a=>a.id);
   _UNLOCK_BY_CHAR = {};
   toGate.forEach((cid, i)=>{ _UNLOCK_BY_CHAR[cid] = pool[i % pool.length]; });
+  // Explicit override: SARP is always unlocked by SHOWOFF SUPREME (taunt50) —
+  // thematically fitting for the cool kid who never breaks a sweat.
+  _UNLOCK_BY_CHAR['sarp'] = 'taunt50';
 }
 // The set of fighters that appear on the CAMPAIGN character-select grid: the
 // starter (Nathan) plus every fighter unlockable by a campaign mission. Foes you
@@ -5273,7 +5306,7 @@ const costMap = {}; // id -> costume index 0..4
 // Fighter categories by playstyle — shown as titled groups on the select screen.
 const CATEGORIES = [
   { name:'MELEE',   icon:'⚔️', ids:['reshman','lars','fionn','yassin','metaai','dean','thomas','kayo','cavan'], shareRowWithNext:true },
-  { name:'SPECIALIST', icon:'🃏', ids:['raaf','dih','janjacob','sarp'], dividerAfter:'raaf' },
+  { name:'SPECIALIST', icon:'🃏', ids:['raaf','dih','janjacob','sarp'], dividerAfter:'dih' },
   { name:'RANGED',  icon:'🎯', ids:['nathan','milo','adam','evadam','deniz','niffo','jax','femi','enno','thorren','niek','giancarlo','oela'], shareRowWithNext:true },
   { name:'THROWERS',icon:'💣', ids:['daniel','doremalen','jace','ash','maik'] },
   { name:'HOMING',  icon:'🧲', ids:['josh','renas','devin','ati','bastiaan'], shareRowWithNext:true },
@@ -5380,7 +5413,7 @@ function buildCatGroup(cat, ci){
 }
 // Append a category's tiles into a row, honouring an optional in-row `dividerAfter`
 // id — this drops a thin vertical line between two specific fighters (used to set
-// RAAF apart from the rest of the SPECIALIST class, mirroring the class dividers).
+// DIH apart from the rest of the SPECIALIST class, mirroring the class dividers).
 function appendCatTiles(row, chars, cat){
   chars.forEach(c=>{
     row.appendChild(buildCharTile(c));
