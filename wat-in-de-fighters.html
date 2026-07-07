@@ -581,6 +581,51 @@
     padding:6px 12px;margin:8px auto 0;max-width:480px;line-height:1.4;}
   .leagueStandings .lsTitle{font-family:Arial,sans-serif;font-weight:800;letter-spacing:.2em;font-size:10px;color:#8fefff;margin-bottom:3px;}
 
+  /* --- SEASON: two-column layout (story card + big standings board side by side) --- */
+  #story.season{flex-direction:row;align-items:flex-start;justify-content:center;gap:18px;flex-wrap:wrap;
+    padding-top:4%;overflow-y:auto;}
+  #story.season .storycard{max-width:min(92%,460px);flex:1 1 360px;}
+  .seasonBoard{flex:1 1 300px;max-width:340px;align-self:stretch;
+    background:rgba(10,14,30,.55);border:3px solid rgba(143,239,255,.4);border-radius:18px;
+    padding:14px 14px 16px;box-shadow:0 8px 30px rgba(0,0,0,.45);}
+  .seasonBoard .sbTitle{font-family:"Impact",sans-serif;letter-spacing:.08em;font-size:clamp(16px,2.4vw,22px);
+    color:#8fefff;text-align:center;transform:skewX(-5deg);margin-bottom:4px;}
+  .seasonBoard .sbSub{font-family:Arial,sans-serif;font-weight:700;font-size:9px;letter-spacing:.14em;color:#9a9cc0;text-align:center;margin-bottom:10px;}
+  .sbRow{display:grid;grid-template-columns:22px 1fr auto auto;gap:8px;align-items:center;
+    padding:6px 8px;border-radius:9px;font-family:Arial,sans-serif;font-size:clamp(11px,1.6vw,13px);}
+  .sbRow+.sbRow{margin-top:3px;}
+  .sbRow.you{background:rgba(253,187,45,.14);box-shadow:0 0 0 1px rgba(253,187,45,.4) inset;}
+  .sbRow.clinch{box-shadow:0 0 0 1px rgba(126,224,129,.5) inset;}
+  .sbRank{font-weight:800;color:#8fefff;text-align:center;}
+  .sbName{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .sbRec{font-weight:700;color:#eae6f5;font-variant-numeric:tabular-nums;}
+  .sbDiff{font-weight:700;color:#9a9cc0;font-variant-numeric:tabular-nums;min-width:26px;text-align:right;}
+  .sbRow.you .sbName{color:#fdbb2d;}
+  .seasonBoard .sbLegend{font-family:Arial,sans-serif;font-weight:600;font-size:8.5px;letter-spacing:.06em;color:#8a8fa8;text-align:center;margin-top:10px;line-height:1.5;}
+  .seasonBoard .sbSchedule{margin-top:12px;border-top:1px solid rgba(255,255,255,.12);padding-top:10px;}
+  .seasonBoard .sbSchedTitle{font-family:Arial,sans-serif;font-weight:800;letter-spacing:.14em;font-size:9px;color:#8fefff;margin-bottom:6px;text-align:center;}
+  .sbGame{display:flex;align-items:center;gap:6px;font-family:Arial,sans-serif;font-size:10px;color:#b8bce0;padding:3px 4px;border-radius:6px;}
+  .sbGame .sbg{width:14px;text-align:center;flex-shrink:0;}
+  .sbGame.done{opacity:.6;} .sbGame.now{background:rgba(143,239,255,.14);color:#8fefff;font-weight:800;}
+  .sbGame.win .sbg{color:#7ee081;} .sbGame.loss .sbg{color:#ff8f8f;}
+
+  /* --- SEASON: interactive interview between games --- */
+  .seasonInterview{width:100%;max-width:440px;margin:6px auto 2px;
+    background:rgba(143,239,255,.06);border:2px solid rgba(143,239,255,.3);border-radius:14px;padding:12px 14px;}
+  .seasonInterview .siQ{font-family:Georgia,serif;font-style:italic;font-size:clamp(12px,1.9vw,15px);color:#8fefff;line-height:1.4;text-align:center;margin-bottom:4px;}
+  .seasonInterview .siQ b{color:#fdbb2d;font-style:normal;}
+  .siOpts{display:flex;flex-direction:column;gap:7px;margin-top:8px;}
+  .siOpt{font-family:Arial,sans-serif;font-weight:700;font-size:clamp(11px,1.6vw,13px);color:#eae6f5;
+    background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.16);border-radius:10px;
+    padding:8px 12px;cursor:pointer;text-align:left;transition:transform .1s,border-color .12s,background .12s;}
+  .siOpt:hover{transform:translateY(-2px);border-color:#8fefff;background:rgba(143,239,255,.12);}
+  .siOpt.picked{border-color:#fdbb2d;background:rgba(253,187,45,.14);cursor:default;}
+  .siOpt.dim{opacity:.4;pointer-events:none;}
+  .siReply{font-family:Georgia,serif;font-size:clamp(11px,1.7vw,14px);color:#eae6f5;line-height:1.45;text-align:center;margin-top:10px;
+    background:rgba(255,255,255,.05);border-radius:10px;padding:8px 12px;}
+  .siReply .who{color:#fdbb2d;font-weight:bold;}
+  .siReply .bonus{color:#8fefff;font-weight:800;}
+
   /* campaign hub */
   #campaign, #mission{justify-content:flex-start;overflow-y:auto;padding-top:3%;padding-bottom:24px;}
   #campaign::-webkit-scrollbar,#mission::-webkit-scrollbar{width:8px;}
@@ -1051,13 +1096,21 @@
 
   <!-- STORY (Classic Mode + Season Mode narration) -->
   <div class="screen hidden" id="story">
-    <div class="storycard">
+    <div class="storycard" id="storyCard">
       <canvas id="storyCanvas" width="140" height="150"></canvas>
       <div class="storyprog" id="storyProg">ROUND 1 / 4</div>
       <div class="storytext" id="storyText"></div>
+      <!-- SEASON interview: interactive question with clickable answers -->
+      <div class="seasonInterview hidden" id="seasonInterview">
+        <div class="siQ" id="siQ"></div>
+        <div class="siOpts" id="siOpts"></div>
+        <div class="siReply hidden" id="siReply"></div>
+      </div>
       <button class="btn" id="storyNext">NEXT ▶</button>
       <div class="helper hidden" id="storySaveQuit" style="cursor:pointer;margin-top:-6px;">💾 progress is saved — <span style="text-decoration:underline">quit to title</span></div>
     </div>
+    <!-- SEASON standings live in their OWN block beside the story card (season only) -->
+    <div class="seasonBoard hidden" id="seasonBoard"></div>
   </div>
 
   <!-- CAMPAIGN HUB (mission list + save/continue) -->
@@ -4537,7 +4590,11 @@ function charUnlocked(id){
   }
   if(c.secretCode) return Save.hasSecret(id);         // Anker Vos: typed secret code
   if(c.finalChar) return allAchievements();          // Zennith: earn EVERYTHING
-  if(c.opChar) return Save.hasOpKeep(id) || medalsEarned() >= opMedalReq(id); // casper/robin: kept after prestige, else medal-gated
+  if(c.opChar){ // casper/robin: kept permanently once earned, so a later prestige never re-locks them
+    if(Save.hasOpKeep(id)) return true;
+    if(medalsEarned() >= opMedalReq(id)){ Save.keepOp(id); return true; } // earned now → lock in the keep immediately
+    return false;
+  }
   computeUnlockMap();
   if(_STARTERS.has(id)) return true;                  // free starter
   const req=_UNLOCK_BY_CHAR[id]; return !req || Save.hasAch(req);
@@ -4986,7 +5043,7 @@ function buildAchList(){
     } else {
       hint.innerHTML=`<div class="ai">❓</div>
         <div><div class="at">A HIDDEN FOX</div>
-        <div class="ad">A secret fighter is watching. On the <b>title screen</b>, simply <b>type his kind</b> — the three-letter Dutch word for “fox” (f-o-x → <b>“vos”</b>) — to lure <b>${c.name}</b> out of hiding.</div></div>
+        <div class="ad">A secret fighter is watching. Prove yourself over a full <b>SEASON</b> — finish with a <b>winning record (4+ wins)</b> to lure <b>${c.name}</b> out of hiding.</div></div>
         <div class="astate">SECRET</div>`;
     }
     list.appendChild(hint);
@@ -6125,6 +6182,11 @@ function beginClassic(c){
 }
 function showStory(){
   const cm=classic;
+  // Classic uses the SAME #story screen as Season, so make sure the season-only
+  // two-column layout + side board + interview are cleared before showing it.
+  document.getElementById('story').classList.remove('season');
+  document.getElementById('seasonBoard').classList.add('hidden');
+  document.getElementById('seasonInterview').classList.add('hidden');
   document.getElementById('storyProg').textContent = (cm.round<cm.foes.length? 'ROUND '+(cm.round+1)+' / '+cm.foes.length : 'FINALE');
   document.getElementById('storyText').innerHTML = cm.intros[cm.round];
   document.getElementById('storyNext').textContent = (cm.round===0?'BEGIN ▶':'NEXT ▶');
@@ -6161,6 +6223,10 @@ document.getElementById('storyNext').onclick=()=>{
 // (every game auto-saves), so this is purely a "leave now, resume later" exit.
 document.getElementById('storySaveQuit').onclick=()=>{
   if(!(season && season.active)) return;
+  cancelAnimationFrame(season._anim);
+  document.getElementById('story').classList.remove('season');
+  document.getElementById('seasonBoard').classList.add('hidden');
+  document.getElementById('seasonInterview').classList.add('hidden');
   season=null; selectContext='main'; buildRoster(); show('title');
 };
 document.getElementById('fightBtn').onclick=()=>{ showVersus(); };
@@ -8803,7 +8869,9 @@ function endMatch(){
       const foe = ROSTER.find(o=>o.id===season.games[season.round].foeId) || ROSTER[0];
       if(p1won){ season.wins++; } else { season.losses++; }
       season.lastResult = { won:p1won, foe };
-      advanceSeasonStandings(season.standings, foe, p1won);   // this week's league results
+      if(!season._log) season._log={};
+      season._log[season.round] = p1won;          // record this game's result for the schedule strip
+      advanceSeasonStandings(season.standings, foe, p1won);   // this week's league results (3 CPU wins + 3 losses)
       season.round++;
       Save.seasonSave(serializeSeason(season));   // auto-save between games
       refreshSeasonButton();
@@ -9162,29 +9230,8 @@ document.getElementById('pauseDiffSlider').oninput=(e)=>{
   Save.setSetting('botDifficulty', +e.target.value);
   updateBotDiffHint();
 };
-/* ---- SECRET CODE: type "vos" on the title screen to unlock Anker Vos ---- */
-(function setupSecretCodes(){
-  let buf='';
-  const CODE_CHARS=/^[a-z]$/;
-  window.addEventListener('keydown', e=>{
-    // only listen while the title screen is showing and no menu is capturing input
-    const titleVisible = !document.getElementById('title').classList.contains('hidden');
-    if(!titleVisible) return;
-    const k=e.key.toLowerCase();
-    if(!CODE_CHARS.test(k)) return;
-    buf=(buf+k).slice(-8);
-    ROSTER.forEach(c=>{
-      if(!c.secretCode || Save.hasSecret(c.id)) return;
-      if(buf.endsWith(c.secretCode)){
-        if(Save.grantSecret(c.id)){
-          buildRoster();
-          queueAchToasts([{icon:'🦊', name:c.name+' UNLOCKED!'}]);
-          buf='';
-        }
-      }
-    });
-  });
-})();
+/* ---- SECRET CODE unlocks: DISABLED. Anker Vos is now earned only by WINNING a
+   Season (see finishSeason), so typing "vos" on the title screen does nothing. ---- */
 // ESC toggles pause during a local match
 window.addEventListener('keydown', e=>{
   if(e.key==='Escape'){ e.preventDefault(); if(running || paused) togglePause(); }
@@ -9237,36 +9284,53 @@ window.addEventListener('keydown', e=>{
    opponent — so replaying the mode with the same fighter still plays out
    differently run to run.
    ============================================================================ */
+// A season is 7 league games (you face every other league member exactly once)
+// plus a CHAMPIONSHIP finale — 8 games total.
 const SEASON_LENGTH = 8;
-// how many OTHER fighters make up a single season's league/leaderboard
-// (rival included). Drawn fresh every new season, so which fighters you can
-// even face — and who shows up in the standings — changes run to run.
-const SEASON_LEAGUE_SIZE = 8;
+// The league is the player + 7 random fighters (drawn fresh every new season).
+// You ONLY ever face members of this league, and the standings only ever show
+// these fighters — so a new season really means a brand-new lineup.
+const SEASON_LEAGUE_SIZE = 8;   // player + 7 others
+const SEASON_OPPONENTS = SEASON_LEAGUE_SIZE - 1;   // 7 CPUs you face across the regular season
 
 // small helper: grab a random entry from an array
 function pickOne(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
-// build the 8-game schedule for a chosen fighter. First, draw this season's
-// LEAGUE: the story rival plus a random set of other fighters (a fresh
-// lineup every new season). Every game on the schedule — the 6 regular-season
-// opponents, Rivalry Week, and the Championship — is then drawn ONLY from
-// that league, so you'll never face someone outside this season's leaderboard.
+// Build a season for a chosen fighter. Draw 7 random OTHER fighters as this
+// season's league (the story rival is always included when possible, for flavor).
+// The regular season is a single round-robin: you face all 7 league members once,
+// in a random order. Game 8 (the CHAMPIONSHIP) has NO fixed foe here — it is
+// decided later from the final standings (the best-record CPU). See pickFinalFoe().
 function buildSeasonRun(c){
   const st = STORY[c.id] || { title:'THE SEASON', goal:'to become champion', rival:'nathan' };
   const rivalId = st.rival===c.id ? (ROSTER.find(o=>o.id!==c.id)||ROSTER[0]).id : st.rival;
-  const otherPool = ROSTER.filter(o=>o.id!==c.id && o.id!==rivalId).sort(()=>Math.random()-0.5);
-  // this season's league: the rival + a random slice of everyone else
-  const leagueOthers = otherPool.slice(0, Math.max(0, SEASON_LEAGUE_SIZE-1));
-  const leagueIds = [rivalId, ...leagueOthers.map(o=>o.id)];
-  const regularFoes = leagueOthers.slice(0,6);
-  const finalFoe = leagueOthers[6] || leagueOthers[0] || ROSTER.find(o=>o.id===rivalId);
-  const games = [
-    ...regularFoes.map((f,i)=>({ foeId:f.id, type:'regular', label:'GAME '+(i+1)+' / '+SEASON_LENGTH })),
-    { foeId: rivalId,     type:'rivalry', label:'GAME 7 / '+SEASON_LENGTH+' · RIVALRY WEEK' },
-    { foeId: finalFoe.id, type:'final',   label:'GAME 8 / '+SEASON_LENGTH+' · CHAMPIONSHIP' },
-  ];
+  const rival = ROSTER.find(o=>o.id===rivalId);
+  // pool of everyone eligible to fill the league (not the player, not the rival)
+  const pool = ROSTER.filter(o=>o.id!==c.id && o.id!==rivalId).sort(()=>Math.random()-0.5);
+  // this season's league: the rival + a random slice, 7 others total
+  const leagueOthers = [ ...(rival?[rival]:[]), ...pool ].slice(0, SEASON_OPPONENTS);
+  const leagueIds = leagueOthers.map(o=>o.id);
+  // regular season = face each league member once, in random order
+  const order = leagueOthers.slice().sort(()=>Math.random()-0.5);
+  const games = order.map((f,i)=>({
+    foeId:f.id,
+    type: f.id===rivalId ? 'rivalry' : 'regular',
+    label:'GAME '+(i+1)+' / '+SEASON_LENGTH+(f.id===rivalId?' · RIVALRY WEEK':''),
+  }));
+  // the finale: opponent is TBD (best-record CPU), resolved after game 7
+  games.push({ foeId:null, type:'final', label:'GAME '+SEASON_LENGTH+' / '+SEASON_LENGTH+' · CHAMPIONSHIP' });
   return { st, games, leagueIds };
 }
+// The CHAMPIONSHIP foe is the CPU with the best league record (most net wins),
+// tie-broken by wins then a coin flip — never the player. Resolved right before
+// the final game so it reflects the whole season's results.
+function pickFinalFoe(se){
+  const ranked = se.standings.slice()
+    .sort((a,b)=> (b.w-b.l)-(a.w-a.l) || (b.w-a.w) || (Math.random()-0.5));
+  const best = ranked[0];
+  return best ? (ROSTER.find(o=>o.id===best.id) || ROSTER[0]) : ROSTER[0];
+}
+
 
 /* ---------------- SEASON PERSISTENCE ---------------- */
 // The live `season` object holds actual fighter/foe object references (handy
@@ -9281,6 +9345,7 @@ function serializeSeason(se){
     round: se.round, wins: se.wins, losses: se.losses,
     lastResult: se.lastResult ? { foeId: se.lastResult.foe.id, won: se.lastResult.won } : null,
     standings: se.standings, events: se.events || [],
+    log: se._log || {}, interviewed: se._interviewedRounds || {}, interviewRoll: se._interviewRoll || {},
   };
 }
 function hydrateSeason(sv){
@@ -9291,10 +9356,11 @@ function hydrateSeason(sv){
     : null;
   // fallback for an older save with no standings yet: rebuild the league
   // from whoever actually appears on the schedule (+ the rival)
-  const fallbackIds = Array.from(new Set([sv.stRival, ...sv.games.map(g=>g.foeId)]));
+  const fallbackIds = Array.from(new Set([sv.stRival, ...sv.games.map(g=>g.foeId).filter(Boolean)]));
   return {
     active:true, c, st, games: sv.games, round: sv.round, wins: sv.wins, losses: sv.losses,
     lastResult, standings: sv.standings || initSeasonStandings(fallbackIds), events: sv.events || [],
+    _log: sv.log || {}, _interviewedRounds: sv.interviewed || {}, _interviewRoll: sv.interviewRoll || {},
   };
 }
 // a saved season is "in progress" (resumable) as long as it hasn't played its last game
@@ -9308,35 +9374,68 @@ function seasonInProgress(sv){ return !!(sv && sv.games && sv.round < sv.games.l
 function initSeasonStandings(leagueIds){
   return leagueIds.map(id=>({ id, w:0, l:0 }));
 }
-// called once per game you play: the week's foe gets a real result against
-// you, and a handful of OTHER league games are simulated "elsewhere" so the
-// table keeps moving even for fighters you never face.
+// Called once per game you play. The week's foe gets a real result against you.
+// Then the OTHER league members play each other "elsewhere" — and because the
+// league is the player + 7 CPUs, exactly 6 CPUs are left when you subtract your
+// weekly opponent. They pair off into 3 games, so EVERY week produces exactly
+// 3 more wins and 3 more losses across the league — no phantom or skipped games.
 function advanceSeasonStandings(standings, foe, p1won){
-  const entry = standings.find(s=>s.id===foe.id);
+  const entry = foe ? standings.find(s=>s.id===foe.id) : null;
   if(entry){ if(p1won) entry.l++; else entry.w++; }
-  const others = standings.filter(s=>s.id!==foe.id).sort(()=>Math.random()-0.5);
-  const pairs = Math.min(3, Math.floor(others.length/2));
-  for(let i=0;i<pairs;i++){
-    const a=others[i*2], b=others[i*2+1];
-    if(!a||!b) continue;
+  // the remaining CPUs (everyone except the fighter you just played) pair up
+  const others = standings.filter(s=> !foe || s.id!==foe.id).sort(()=>Math.random()-0.5);
+  for(let i=0;i+1<others.length;i+=2){
+    const a=others[i], b=others[i+1];
     if(Math.random()<0.5){ a.w++; b.l++; } else { b.w++; a.l++; }
   }
 }
-// compact standings strip shown under the season story text: top 4 by wins,
-// plus your own record, so you can always see where you stand in the league.
-function seasonStandingsHtml(se){
-  const rows = se.standings.slice().sort((a,b)=> (b.w-b.l)-(a.w-a.l) || b.w-a.w);
-  const lines = rows.slice(0,4).map(s=>{
+// Build the FULL league table as its own block (shown beside the story text).
+// Includes every league fighter + YOU, ranked by net wins, with a clinch marker
+// and a compact schedule strip so you always know what's played and what's next.
+function seasonBoardHtml(se){
+  // combine YOU with the CPU standings into one ranked table
+  const rows = se.standings.map(s=>({ id:s.id, w:s.w, l:s.l, you:false }));
+  rows.push({ id:se.c.id, w:se.wins, l:se.losses, you:true });
+  rows.sort((a,b)=> (b.w-b.l)-(a.w-a.l) || (b.w-a.w) || 0);
+  // how many games remain for the player (used to flag a clinched top-2 finish)
+  const played = se.round;   // regular-season games already played
+  const rowsHtml = rows.map((s,i)=>{
     const f = ROSTER.find(o=>o.id===s.id) || {name:s.id, color:'#cfd0e8'};
-    return `<span style="color:${f.color}">${f.name}</span> ${s.w}-${s.l}`;
-  });
-  return `<div class="leagueStandings"><div class="lsTitle">LEAGUE STANDINGS</div>${lines.join(' &nbsp;·&nbsp; ')}<br>YOU: <b style="color:${se.c.color}">${se.c.name}</b> ${se.wins}-${se.losses}</div>`;
+    const diff = (s.w-s.l);
+    const diffStr = (diff>0?'+':'')+diff;
+    const cls = 'sbRow'+(s.you?' you':'')+(i===0 && played>=SEASON_OPPONENTS?' clinch':'');
+    return `<div class="${cls}">
+      <span class="sbRank">${i+1}</span>
+      <span class="sbName" style="color:${f.color}">${f.name}${s.you?' (YOU)':''}</span>
+      <span class="sbRec">${s.w}-${s.l}</span>
+      <span class="sbDiff">${diffStr}</span>
+    </div>`;
+  }).join('');
+  // schedule strip: your 8 games with result markers
+  const sched = se.games.map((g,i)=>{
+    const done = i < se.round;
+    const now = i === se.round;
+    let foe = g.foeId ? ROSTER.find(o=>o.id===g.foeId) : null;
+    let mark='•', extraCls='';
+    if(done && se._log && se._log[i]!==undefined){ const won=se._log[i]; mark = won?'✓':'✗'; extraCls = won?' win':' loss'; }
+    const nm = g.type==='final' ? (foe?foe.name:'CHAMPIONSHIP') : (foe?foe.name:'—');
+    const tag = g.type==='rivalry' ? ' ⚔' : (g.type==='final' ? ' 🏆' : '');
+    return `<div class="sbGame${done?' done':''}${now?' now':''}${extraCls}"><span class="sbg">${mark}</span>G${i+1}: ${nm}${tag}</div>`;
+  }).join('');
+  return `<div class="sbTitle">🏆 LEAGUE TABLE</div>
+    <div class="sbSub">${se.c.name.toUpperCase()}'S LEAGUE · ${SEASON_LEAGUE_SIZE} FIGHTERS</div>
+    ${rowsHtml}
+    <div class="sbLegend">RANK · FIGHTER · W-L · DIFF<br>Top of the table after the regular season makes the CHAMPIONSHIP.</div>
+    <div class="sbSchedule">
+      <div class="sbSchedTitle">YOUR SCHEDULE</div>
+      ${sched}
+    </div>`;
 }
 
 /* ---------------- SEASON LEAGUE EVENTS ---------------- */
-// Small between-games news beats. Most are flavor + a SHARDS bonus; "wildcard"
-// actually rewrites the upcoming game's opponent, so the same fighter's season
-// can play out with a different schedule every time. Never fires on the
+// Small between-games news beats — flavor + a SHARDS bonus. The schedule itself
+// is a fixed round-robin (you face every league member once), so events never
+// change who you fight; they just add color and rewards. Never fires on the
 // opener or the championship game, and never repeats within a single run.
 const SEASON_EVENTS = [
   { id:'upset_alert', bonus:5,
@@ -9349,19 +9448,6 @@ const SEASON_EVENTS = [
     html:(se)=>`🔥 <b>HOT STREAK:</b> The win streak is turning heads around the league. +12 💎 endorsement bonus.` },
   { id:'bounce_back', bonus:6, condition:(se)=> se.lastResult && !se.lastResult.won,
     html:(se)=>`💪 <b>BOUNCE-BACK WEEK:</b> The locker room rallies behind ${se.c.name} after last week's loss. +6 💎 for the pep talk.` },
-  { id:'wildcard', bonus:0,
-    condition:(se)=> se.standings.some(s=> !se.games.some(g=>g.foeId===s.id)),
-    apply:(se)=>{
-      const used = new Set(se.games.map(g=>g.foeId));
-      const pool = se.standings.filter(s=>!used.has(s.id)).map(s=>ROSTER.find(o=>o.id===s.id)).filter(Boolean);
-      if(!pool.length) return null;
-      const wc = pickOne(pool);
-      const g = se.games[se.round];
-      g.foeId = wc.id;
-      if(!/WILDCARD/.test(g.label)) g.label += ' · WILDCARD';
-      return wc;
-    },
-    html:(se, wc)=>`⚡ <b>SCHEDULE SHAKEUP:</b> This week's scheduled opponent pulled out — <span class="who">${wc.name}</span> steps in from the league as a surprise WILDCARD challenger!` },
 ];
 // runs at most once per game (never the opener or the finale), skips events
 // already used this run, and returns the HTML banner to splice into the story
@@ -9423,10 +9509,107 @@ const SEASON_FINAL_LONGSHOT = [
   (c,foe,w,l)=>`A scrappy <b>${w}-${l}</b> season comes down to a final statement game against <span class="who">${foe.name}</span>.`,
 ];
 
+/* ---------------- SEASON INTERVIEWS (interactive between-game beats) ---------------- */
+// A press-conference question with clickable answers. Each answer gives a short
+// in-character reply, a small SHARDS bonus, and (for flavor) sets a "mood" the
+// recap can nod to. Purely additive — the fighter can still hit NEXT any time.
+// Questions adapt to context (coming off a win/loss, rivalry week, the finals).
+const SEASON_INTERVIEWS = {
+  // shown after a WIN
+  win:[
+    { q:(c,foe)=>`Reporter: “That win over <b>${foe?foe.name:'your rival'}</b> looked easy. Getting cocky?”`,
+      opts:[
+        { t:`“Every fighter in this league is dangerous. Head down, keep working.”`, bonus:8, reply:c=>`Humble and hungry. The league respects the answer.` },
+        { t:`“Easy? That's the level I'm at now.”`, bonus:6, reply:c=>`Bold. The rivals are already clipping that quote for their wall.` },
+        { t:`“Next question.”`, bonus:5, reply:c=>`Short and cold. Classic champion energy.` },
+      ] },
+  ],
+  // shown after a LOSS
+  loss:[
+    { q:(c,foe)=>`Reporter: “<b>${foe?foe.name:'They'}</b> got the better of you. What went wrong?”`,
+      opts:[
+        { t:`“I'll own it. Back to the lab — you'll see a better me next week.”`, bonus:8, reply:c=>`Accountability. The locker room stands a little taller.` },
+        { t:`“One bad night. It won't happen twice.”`, bonus:6, reply:c=>`Defiant. The comeback narrative writes itself.` },
+        { t:`“Ask them how their hand feels after hitting my guard all night.”`, bonus:5, reply:c=>`Salty — but the crowd eats it up.` },
+      ] },
+  ],
+  // generic mid-season
+  neutral:[
+    { q:(c)=>`Reporter: “Fans want to know — what's fueling <b>${c.name}</b> this season?”`,
+      opts:[
+        { t:`“The doubters. Keep 'em coming.”`, bonus:7, reply:c=>`A rallying cry. Merch sales tick up.` },
+        { t:`“Honestly? The love of the game.”`, bonus:7, reply:c=>`Wholesome. A new wave of young fans signs on.` },
+        { t:`“Winning. Simple as that.”`, bonus:6, reply:c=>`No-nonsense. The sponsors love a closer.` },
+      ] },
+    { q:(c)=>`Reporter: “Any message for the rest of the league?”`,
+      opts:[
+        { t:`“Catch me if you can.”`, bonus:7, reply:c=>`The gauntlet is thrown. Rivals take notice.` },
+        { t:`“Respect to everyone. See you in the finals.”`, bonus:7, reply:c=>`Sportsmanlike. The pundits nod approvingly.` },
+      ] },
+  ],
+  // rivalry week
+  rivalry:[
+    { q:(c,foe)=>`Reporter: “It's Rivalry Week against <b>${foe?foe.name:'your rival'}</b>. How personal is this?”`,
+      opts:[
+        { t:`“Strictly business. I let my fists talk.”`, bonus:9, reply:c=>`Ice cold. The tension is electric.` },
+        { t:`“Personal? You have no idea.”`, bonus:8, reply:c=>`The arena is going to be ROCKING for this one.` },
+      ] },
+  ],
+  // championship
+  final:[
+    { q:(c,foe)=>`Reporter: “The CHAMPIONSHIP is here — <b>${foe?foe.name:'the league's best'}</b> earned this spot. Ready?”`,
+      opts:[
+        { t:`“I've earned this too. Let's settle it in the ring.”`, bonus:12, reply:c=>`Steel-eyed. This is what the whole season was for.` },
+        { t:`“One fight for everything. Exactly how it should be.”`, bonus:12, reply:c=>`The crowd roars. History is one win away.` },
+      ] },
+  ],
+};
+// Render an interview into the #seasonInterview block. `key` selects the pool.
+// Picks one question at random per game (stable across a single showing) and
+// wires up the answer buttons. Only awards a bonus once per game.
+function renderSeasonInterview(se, key){
+  const wrap=document.getElementById('seasonInterview');
+  const qEl=document.getElementById('siQ'), optsEl=document.getElementById('siOpts'), replyEl=document.getElementById('siReply');
+  const pool = SEASON_INTERVIEWS[key] || SEASON_INTERVIEWS.neutral;
+  if(!pool || !pool.length){ wrap.classList.add('hidden'); return; }
+  const foe = se.lastResult ? se.lastResult.foe : (ROSTER.find(o=>o.id===(se.games[se.round]||{}).foeId)||null);
+  const item = pool[Math.floor(Math.random()*pool.length)];
+  qEl.innerHTML = item.q(se.c, foe);
+  optsEl.innerHTML='';
+  replyEl.classList.add('hidden'); replyEl.innerHTML='';
+  const answered = se._interviewedRounds && se._interviewedRounds[se.round];
+  item.opts.forEach(o=>{
+    const b=document.createElement('button');
+    b.className='siOpt'; b.innerHTML=o.t;
+    b.onclick=()=>{
+      if(se._interviewedRounds && se._interviewedRounds[se.round]) return;   // one answer per game
+      if(!se._interviewedRounds) se._interviewedRounds={};
+      se._interviewedRounds[se.round]=true;
+      optsEl.querySelectorAll('.siOpt').forEach(x=>{ x.classList.add('dim'); });
+      b.classList.remove('dim'); b.classList.add('picked');
+      Save.addCurrency(o.bonus); refreshProfileLine();
+      replyEl.innerHTML = `${o.reply(se.c)} <span class="bonus">+${o.bonus} 💎</span>`;
+      replyEl.classList.remove('hidden');
+      Save.seasonSave(serializeSeason(se));
+    };
+    if(answered) b.classList.add('dim');
+    optsEl.appendChild(b);
+  });
+  if(answered){ replyEl.innerHTML=`<span class="who">${se.c.name}</span> already spoke to the press this week.`; replyEl.classList.remove('hidden'); }
+  wrap.classList.remove('hidden');
+}
+
 // pre-fight narration for the current game, shown on the shared #story card
 function showSeasonStory(){
   const se=season;
   let g=se.games[se.round];
+  // Resolve the CHAMPIONSHIP opponent NOW (once), from the final standings: the
+  // best-record CPU earns the title shot. Locked in so it can't drift on reload.
+  if(g.type==='final' && !g.foeId){
+    const champ = pickFinalFoe(se);
+    g.foeId = champ.id;
+    Save.seasonSave(serializeSeason(se));
+  }
   document.getElementById('storyProg').textContent = g.label;
   let html='';
   if(se.round===0){
@@ -9435,9 +9618,7 @@ function showSeasonStory(){
     const pool = se.lastResult.won ? SEASON_RECAP_WIN : SEASON_RECAP_LOSS;
     html += pickOne(pool)(se.c, se.lastResult.foe);
   }
-  // a league event may fire here (and, for 'wildcard', rewrite g.foeId/label —
-  // so we re-read g/foe AFTER this call to make sure the preview text below
-  // always matches who you're actually about to fight)
+  // a flavor league event may fire here (bonus SHARDS + a headline)
   const eventHtml = maybeSeasonEvent(se);
   g = se.games[se.round];
   const foe = ROSTER.find(o=>o.id===g.foeId) || ROSTER[0];
@@ -9446,13 +9627,37 @@ function showSeasonStory(){
   if(g.type==='rivalry'){
     html += pickOne(SEASON_RIVALRY_PREVIEW)(se.c, foe, se.st);
   } else if(g.type==='final'){
-    const contending = se.wins >= Math.ceil((SEASON_LENGTH-2)/2);
+    const contending = se.wins >= Math.ceil(SEASON_OPPONENTS/2);
     html += (contending ? pickOne(SEASON_FINAL_LEAD) : pickOne(SEASON_FINAL_LONGSHOT))(se.c, foe, se.wins, se.losses);
   } else {
     html += pickOne(SEASON_PREVIEW)(se.c, foe);
   }
-  html += seasonStandingsHtml(se);
   document.getElementById('storyText').innerHTML = html;
+
+  // --- interview: pick a context-appropriate pool, but only offer one on some
+  // weeks so it stays a treat (always on rivalry + finals; ~60% otherwise). ---
+  let interviewKey = null;
+  if(g.type==='rivalry') interviewKey='rivalry';
+  else if(g.type==='final') interviewKey='final';
+  else if(se.round>0 && se.lastResult) interviewKey = se.lastResult.won ? 'win' : 'loss';
+  else if(se.round>0) interviewKey='neutral';
+  // stable per-round decision so a reload doesn't flip it on/off
+  if(!se._interviewRoll) se._interviewRoll={};
+  if(se._interviewRoll[se.round]===undefined){
+    se._interviewRoll[se.round] = (g.type==='rivalry'||g.type==='final') ? true : (Math.random()<0.6);
+  }
+  if(interviewKey && se._interviewRoll[se.round]){
+    renderSeasonInterview(se, interviewKey);
+  } else {
+    document.getElementById('seasonInterview').classList.add('hidden');
+  }
+
+  // --- the league table lives in its OWN block beside the story card ---
+  document.getElementById('story').classList.add('season');
+  const board=document.getElementById('seasonBoard');
+  board.classList.remove('hidden');
+  board.innerHTML = seasonBoardHtml(se);
+
   document.getElementById('storyNext').textContent = (se.round===0?'BEGIN ▶':'NEXT ▶');
   document.getElementById('storySaveQuit').classList.remove('hidden');
   show('story');
@@ -9460,7 +9665,7 @@ function showSeasonStory(){
   cancelAnimationFrame(season._anim);
   function loop(t){ sc.clearRect(0,0,140,150); drawFighter(sc, se.c, 35, 30, 70, 95, 1, t, 'attack', costMap[se.c.id]); season._anim=requestAnimationFrame(loop); }
   season._anim=requestAnimationFrame(loop);
-  // persist now too (covers a wildcard swap, or simply resuming later mid-preview)
+  // persist now too (covers the finals-foe lock-in, or resuming later mid-preview)
   Save.seasonSave(serializeSeason(se));
   refreshSeasonButton();
 }
@@ -9544,11 +9749,21 @@ function finishSeason(){
   else if(w>=2){ tier='REBUILDING SEASON'; bonus=30; }
   else { tier='LOTTERY SEASON'; bonus=15; }
   Save.addCurrency(bonus);
+  // SPECIAL CAREER REWARD: winning a Season (a PLAYOFF SEASON or better — 4+ wins)
+  // permanently unlocks the secret fox fighter ANKER VOS. Granted once; kept
+  // forever, so it survives prestige & resets. A losing record earns no fighter.
+  const foxDef = ROSTER.find(o=>o.id==='ankervos');
+  const foxUnlocked = (w>=4) && foxDef && Save.grantSecret('ankervos');
+  let rewardLine = '';
+  if(foxUnlocked){
+    rewardLine = ` <br>🦊 SECRET FIGHTER UNLOCKED: <span style="color:${foxDef.color}">${foxDef.name}</span> joins your roster — a winning career pays off!`;
+  }
   refreshProfileLine();
+  buildRoster();   // reveal the newly-unlocked secret fighter on the select grid
   title.textContent = tier+'!';
   title.style.filter = (w>=4) ? 'none' : 'grayscale(.4)';
   const finalRank = season.standings.slice().sort((a,b)=>(b.w-b.l)-(a.w-a.l)).filter(s=> (s.w-s.l) > (w-l)).length + 1;
-  sub.innerHTML = `<span style="color:${c.color}">${c.name}</span> finished the season <b>${w}-${l}</b> — <b>#${finalRank}</b> in the league. <br>+${bonus} 💎 SHARDS bonus!`;
+  sub.innerHTML = `<span style="color:${c.color}">${c.name}</span> finished the season <b>${w}-${l}</b> — <b>#${finalRank}</b> in the league. <br>+${bonus} 💎 SHARDS bonus!${rewardLine}`;
   sub.style.color = c.color;
   grantAndToast();
   season=null;
