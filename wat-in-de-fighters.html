@@ -4295,6 +4295,196 @@ function drawStageBg(g, st, cw, ch, t){
     g.fillStyle='rgba(120,255,200,.10)'; g.fillRect(0,gy+4,cw,6);
     // falling snow
     for(let i=0;i<30;i++){ const px=(i*67 + Math.sin(T/220+i)*14)%cw; const py=(i*53 + T*0.8)%gy; g.fillStyle='rgba(255,255,255,.8)'; g.beginPath(); g.arc(px,py,1.5,0,Math.PI*2); g.fill(); }
+  } else if(st.decor==='candy'){ // CANDY KINGDOM: lollipop trees, gumdrop hills, candy canes, floating sweets
+    const T=t||0;
+    // big soft sun
+    g.fillStyle='rgba(255,240,180,.7)'; g.beginPath(); g.arc(cw*0.5, ch*0.2, ch*0.1, 0, Math.PI*2); g.fill();
+    // rolling pastel gumdrop hills (back to front)
+    ['#ffd1e8','#ffc3a0','#c9f7c0'].forEach((col,li)=>{ g.fillStyle=col; g.beginPath(); g.moveTo(0,gy);
+      for(let x=0;x<=cw;x+=cw/6){ g.quadraticCurveTo(x+cw/12, gy-ch*(0.12+li*0.05)-Math.sin(x/cw*6+li)*ch*0.02, x+cw/6, gy-ch*(0.06+li*0.03)); }
+      g.lineTo(cw,gy); g.closePath(); g.fill(); });
+    // candy-cane striped pillars
+    [cw*0.12, cw*0.86].forEach(px=>{ for(let s=0;s<8;s++){ g.fillStyle=s%2?'#ff5b7f':'#ffffff'; g.fillRect(px-6, gy*0.4+s*(gy*0.5/8), 12, gy*0.5/8); }
+      g.fillStyle='#ff5b7f'; g.beginPath(); g.arc(px, gy*0.4, 8, Math.PI, 0); g.fill(); });
+    // lollipop trees (swirl candy on a stick)
+    [cw*0.28, cw*0.7, cw*0.5].forEach((px,i)=>{ const py=gy*(0.52+ (i%2)*0.06);
+      g.strokeStyle='#e8e8f0'; g.lineWidth=4; g.beginPath(); g.moveTo(px,gy); g.lineTo(px,py); g.stroke();
+      const swirl=['#ff9ecb','#8fe3ff','#fff2a0'][i%3];
+      g.fillStyle=swirl; g.beginPath(); g.arc(px,py,ch*0.06,0,Math.PI*2); g.fill();
+      g.strokeStyle='rgba(255,255,255,.8)'; g.lineWidth=2; g.beginPath();
+      for(let a=0;a<10;a++){ const r=ch*0.06*(a/10); const an=a*0.9+T/400; g.lineTo(px+Math.cos(an)*r, py+Math.sin(an)*r); } g.stroke(); });
+    // floating candies drifting across
+    for(let i=0;i<10;i++){ const cx0=(i*cw*0.12 + T/12)%(cw+40)-20; const cy0=ch*0.28+Math.sin(T/300+i)*ch*0.05;
+      g.fillStyle=['#ff5b7f','#8fe3ff','#a0f0a0','#ffd24a'][i%4]; g.beginPath(); g.arc(cx0,cy0,5,0,Math.PI*2); g.fill();
+      g.strokeStyle='rgba(255,255,255,.7)'; g.lineWidth=1; g.beginPath(); g.moveTo(cx0-9,cy0); g.lineTo(cx0-5,cy0); g.moveTo(cx0+5,cy0); g.lineTo(cx0+9,cy0); g.stroke(); }
+    // sprinkle ground
+    g.fillStyle='rgba(255,255,255,.35)'; g.fillRect(0,gy,cw,ch-gy);
+    for(let i=0;i<40;i++){ g.fillStyle=['#ff5b7f','#8fe3ff','#a0f0a0','#ffd24a'][i%4]; g.save(); g.translate((i*53)%cw, gy+((i*37)%(ch-gy))); g.rotate(i); g.fillRect(-3,-1,6,2); g.restore(); }
+  } else if(st.decor==='haunted'){ // HAUNTED MANOR: full moon, bats, gravestones, dead tree, ghosts, fog
+    const T=t||0;
+    // full moon with craters + glow
+    g.fillStyle='rgba(220,230,255,.15)'; g.beginPath(); g.arc(cw*0.72, ch*0.24, ch*0.16, 0, Math.PI*2); g.fill();
+    g.fillStyle='#e8ecf5'; g.beginPath(); g.arc(cw*0.72, ch*0.24, ch*0.1, 0, Math.PI*2); g.fill();
+    g.fillStyle='rgba(160,170,190,.5)'; [[0.7,0.2,4],[0.75,0.26,3],[0.68,0.28,2.5]].forEach(m=>{ g.beginPath(); g.arc(cw*m[0],ch*m[1],m[2],0,Math.PI*2); g.fill(); });
+    // creepy manor silhouette
+    g.fillStyle='#141020'; g.fillRect(cw*0.1, gy*0.5, cw*0.26, gy*0.5-gy*0.5+gy*0.5);
+    g.fillRect(cw*0.1, gy*0.5, cw*0.26, gy-gy*0.5);
+    g.beginPath(); g.moveTo(cw*0.1,gy*0.5); g.lineTo(cw*0.16,gy*0.36); g.lineTo(cw*0.23,gy*0.5); g.closePath(); g.fill();
+    g.beginPath(); g.moveTo(cw*0.23,gy*0.5); g.lineTo(cw*0.29,gy*0.34); g.lineTo(cw*0.36,gy*0.5); g.closePath(); g.fill();
+    // lit windows flicker
+    g.fillStyle='rgba(255,190,60,'+(0.5+0.4*Math.sin(T/120))+')'; g.fillRect(cw*0.14, gy*0.58, 10,14); g.fillRect(cw*0.28, gy*0.58, 10,14);
+    // bare dead tree on the right
+    g.strokeStyle='#0e0a16'; g.lineWidth=6; g.lineCap='round';
+    const tx=cw*0.9, tyB=gy; g.beginPath(); g.moveTo(tx,tyB); g.lineTo(tx,gy*0.55); g.stroke();
+    g.lineWidth=3; [[-1,0.6],[1,0.5],[-1,0.42],[1,0.4]].forEach(b=>{ g.beginPath(); g.moveTo(tx,gy*b[1]); g.lineTo(tx+b[0]*cw*0.05, gy*b[1]-ch*0.06); g.stroke(); });
+    // drifting ghosts
+    for(let i=0;i<3;i++){ const gx=(cw*0.2+i*cw*0.3 + T/16)%(cw+60)-30; const gyy=gy*0.45+Math.sin(T/260+i)*ch*0.06;
+      g.fillStyle='rgba(200,230,255,'+(0.18+0.1*Math.sin(T/200+i))+')';
+      g.beginPath(); g.arc(gx,gyy,ch*0.035,Math.PI,0); g.lineTo(gx+ch*0.035,gyy+ch*0.05);
+      for(let w=0;w<3;w++){ g.lineTo(gx+ch*0.035-w*ch*0.023-ch*0.011, gyy+ch*0.05-(w%2)*ch*0.012); } g.lineTo(gx-ch*0.035,gyy+ch*0.05); g.closePath(); g.fill();
+      g.fillStyle='rgba(20,10,30,.6)'; g.beginPath(); g.arc(gx-4,gyy-2,2,0,Math.PI*2); g.arc(gx+4,gyy-2,2,0,Math.PI*2); g.fill(); }
+    // flitting bats
+    g.fillStyle='#0a0612';
+    for(let i=0;i<6;i++){ const bx=(i*cw*0.17 + T/6)%(cw+30)-15; const by=ch*0.16+Math.sin(T/90+i*2)*ch*0.05; const fl=Math.sin(T/40+i)*4;
+      g.beginPath(); g.moveTo(bx,by); g.quadraticCurveTo(bx-6,by-fl,bx-11,by); g.quadraticCurveTo(bx-6,by+2,bx,by+2); g.quadraticCurveTo(bx+6,by+2,bx+11,by); g.quadraticCurveTo(bx+6,by-fl,bx,by); g.closePath(); g.fill(); }
+    // gravestones on the ground
+    g.fillStyle='#2a2636';
+    [0.44,0.56,0.64].forEach((gx0,i)=>{ const px=cw*gx0; g.fillRect(px-8, gy-22, 16, 22); g.beginPath(); g.arc(px, gy-22, 8, Math.PI, 0); g.fill();
+      g.strokeStyle='#4a4658'; g.lineWidth=1.5; g.beginPath(); g.moveTo(px-4,gy-16); g.lineTo(px+4,gy-16); g.moveTo(px,gy-19); g.lineTo(px,gy-10); g.stroke(); });
+    // low graveyard fog
+    g.fillStyle='rgba(120,140,170,.10)'; for(let i=0;i<3;i++){ g.beginPath(); g.ellipse((cw*0.3+i*cw*0.3 + T/40)%cw, gy-6, cw*0.16, 10,0,0,Math.PI*2); g.fill(); }
+  } else if(st.decor==='space'){ // SPACE STATION: starfield, ringed planet, satellites, Earth, console lights
+    const T=t||0;
+    // deep-space starfield
+    for(let i=0;i<80;i++){ const sx=(i*89)%cw, sy=(i*53)%gy; const tw=0.4+0.6*Math.abs(Math.sin(T/300+i)); g.fillStyle='rgba(255,255,255,'+tw*0.9+')'; g.fillRect(sx,sy,i%9===0?2:1,i%9===0?2:1); }
+    // distant ringed planet
+    g.fillStyle='#c98f5a'; g.beginPath(); g.arc(cw*0.24, ch*0.26, ch*0.11, 0, Math.PI*2); g.fill();
+    g.fillStyle='rgba(200,150,90,.5)'; g.beginPath(); g.ellipse(cw*0.24, ch*0.26, ch*0.2, ch*0.05, -0.4, 0, Math.PI*2); g.fill();
+    g.save(); g.beginPath(); g.arc(cw*0.24,ch*0.26,ch*0.11,0,Math.PI*2); g.clip(); g.fillStyle='rgba(120,80,40,.5)'; g.fillRect(cw*0.24-ch*0.11,ch*0.26-2,ch*0.22,4); g.restore();
+    // big blue Earth curving along the bottom horizon
+    const eg=g.createRadialGradient(cw*0.5, gy+ch*0.5, ch*0.1, cw*0.5, gy+ch*0.5, cw*0.6);
+    eg.addColorStop(0,'#2a7fff'); eg.addColorStop(0.7,'#1a4faa'); eg.addColorStop(1,'#0a1f4a');
+    g.fillStyle=eg; g.beginPath(); g.arc(cw*0.5, gy+ch*0.55, cw*0.62, Math.PI*1.15, Math.PI*1.85); g.fill();
+    g.fillStyle='rgba(120,220,140,.5)'; g.beginPath(); g.ellipse(cw*0.42, gy+ch*0.02, cw*0.1, ch*0.03, 0.3,0,Math.PI*2); g.fill();
+    g.fillStyle='rgba(255,255,255,.4)'; g.beginPath(); g.ellipse(cw*0.6, gy-ch*0.01, cw*0.08, ch*0.02, -0.2,0,Math.PI*2); g.fill();
+    // orbiting satellite with panels
+    const satx=(T/5)%(cw+80)-40, saty=ch*0.15+Math.sin(T/300)*ch*0.03;
+    g.fillStyle='#9aa6c0'; g.fillRect(satx-3,saty-3,6,6); g.fillStyle='#3a86ff'; g.fillRect(satx-16,saty-2,10,4); g.fillRect(satx+6,saty-2,10,4);
+    // station hull band behind the deck with blinking console lights
+    g.fillStyle='rgba(30,36,60,.85)'; g.fillRect(0,gy-8,cw,ch-gy+8);
+    for(let i=0;i<16;i++){ const on=(Math.floor(T/40)+i)%3===0; g.fillStyle=on?(i%2?'#4dffa0':'#ff6d6d'):'rgba(80,90,120,.6)'; g.fillRect(cw*0.04+i*cw*0.058, gy-5, 6, 3); }
+  } else if(st.decor==='pirate'){ // PIRATE COVE: ship + sails, ocean waves, seagulls, island, treasure
+    const T=t||0;
+    // warm sky already; distant island
+    g.fillStyle='#3f6b4a'; g.beginPath(); g.ellipse(cw*0.16, gy*0.72, cw*0.12, ch*0.06,0,Math.PI,0); g.fill();
+    g.strokeStyle='#5a3a1e'; g.lineWidth=3; g.beginPath(); g.moveTo(cw*0.16,gy*0.72); g.lineTo(cw*0.17,gy*0.6); g.stroke();
+    g.fillStyle='#3f8a3f'; for(let a=0;a<4;a++){ const ang=Math.PI+a*0.5; g.beginPath(); g.moveTo(cw*0.17,gy*0.6); g.lineTo(cw*0.17+Math.cos(ang)*16,gy*0.6+Math.sin(ang)*10); g.lineTo(cw*0.17+Math.cos(ang+0.2)*14,gy*0.6+Math.sin(ang+0.2)*8); g.closePath(); g.fill(); }
+    // tall ship mast + rigging + two sails (billowing)
+    const mx=cw*0.5; g.strokeStyle='#4a2e18'; g.lineWidth=6; g.beginPath(); g.moveTo(mx,gy); g.lineTo(mx,gy*0.2); g.stroke();
+    g.fillStyle='#efe4c9'; const bil=Math.sin(T/300)*6;
+    g.beginPath(); g.moveTo(mx,gy*0.26); g.quadraticCurveTo(mx-cw*0.12-bil, gy*0.34, mx-cw*0.02, gy*0.46); g.lineTo(mx, gy*0.46); g.closePath(); g.fill();
+    g.beginPath(); g.moveTo(mx,gy*0.5); g.quadraticCurveTo(mx-cw*0.14-bil, gy*0.58, mx-cw*0.02, gy*0.7); g.lineTo(mx, gy*0.7); g.closePath(); g.fill();
+    // skull & crossbones flag at the top
+    g.fillStyle='#141018'; g.fillRect(mx, gy*0.18, cw*0.07, gy*0.05);
+    g.fillStyle='#fff'; g.beginPath(); g.arc(mx+cw*0.035, gy*0.20, 4,0,Math.PI*2); g.fill(); g.fillRect(mx+cw*0.02,gy*0.215,cw*0.03,2);
+    // hull along the bottom
+    g.fillStyle='#5a3418'; g.beginPath(); g.moveTo(cw*0.28,gy); g.lineTo(cw*0.72,gy); g.lineTo(cw*0.66,gy+ch*0.1); g.lineTo(cw*0.34,gy+ch*0.1); g.closePath(); g.fill();
+    g.fillStyle='#3a2410'; for(let i=0;i<5;i++){ g.beginPath(); g.arc(cw*0.36+i*cw*0.07, gy+ch*0.03, 4,0,Math.PI*2); g.fill(); }
+    // ocean waves band with moving crests
+    const og=g.createLinearGradient(0,gy,0,ch); og.addColorStop(0,'#2a86b8'); og.addColorStop(1,'#14496e'); g.fillStyle=og; g.fillRect(0,gy,cw,ch-gy);
+    g.strokeStyle='rgba(255,255,255,.4)'; g.lineWidth=2;
+    for(let r=0;r<3;r++){ g.beginPath(); for(let x=0;x<=cw;x+=cw/20){ const y=gy+ch*0.04+r*ch*0.06+Math.sin(x/cw*8+T/200+r)*4; if(x===0)g.moveTo(x,y); else g.lineTo(x,y); } g.stroke(); }
+    // seagulls
+    g.strokeStyle='rgba(255,255,255,.8)'; g.lineWidth=2;
+    for(let i=0;i<4;i++){ const bx=(i*cw*0.24 + T/9)%(cw+40)-20; const by=ch*0.16+Math.sin(T/120+i)*ch*0.03; const fl=Math.sin(T/50+i)*3; g.beginPath(); g.moveTo(bx-6,by); g.quadraticCurveTo(bx,by-4-fl,bx+6,by); g.stroke(); }
+  } else if(st.decor==='oasis'){ // DESERT OASIS: dunes, sun, palms, water pool, mirage shimmer, camel
+    const T=t||0;
+    // blazing sun with haze
+    g.fillStyle='rgba(255,220,140,.5)'; g.beginPath(); g.arc(cw*0.7, ch*0.24, ch*0.16, 0, Math.PI*2); g.fill();
+    g.fillStyle='#ffe08a'; g.beginPath(); g.arc(cw*0.7, ch*0.24, ch*0.08, 0, Math.PI*2); g.fill();
+    // rolling sand dunes (back to front)
+    ['#e6c07a','#d9a441','#c98a2e'].forEach((col,li)=>{ g.fillStyle=col; g.beginPath(); g.moveTo(0,gy);
+      for(let x=0;x<=cw;x+=cw/4){ g.quadraticCurveTo(x+cw/8, gy-ch*(0.1+li*0.05), x+cw/4, gy-ch*(0.04+li*0.02)); } g.lineTo(cw,gy); g.closePath(); g.fill(); });
+    // little oasis pool with mirage shimmer
+    g.fillStyle='rgba(80,180,210,.7)'; g.beginPath(); g.ellipse(cw*0.34, gy-6, cw*0.14, ch*0.03,0,0,Math.PI*2); g.fill();
+    g.fillStyle='rgba(255,255,255,'+(0.2+0.15*Math.sin(T/150))+')'; g.fillRect(cw*0.22, gy-7, cw*0.24, 2);
+    // palm trees around the pool
+    [cw*0.26, cw*0.42].forEach((px,pi)=>{ g.strokeStyle='#6b4a2b'; g.lineWidth=5; g.beginPath(); g.moveTo(px,gy); g.quadraticCurveTo(px+ (pi?-8:8),gy-ch*0.16,px+(pi?-4:4),gy-ch*0.24); g.stroke();
+      g.fillStyle='#3f8a3f'; for(let a=0;a<6;a++){ const ang=Math.PI+a*0.42+Math.sin(T/500+a)*0.05; const bx=px+(pi?-4:4); g.beginPath(); g.moveTo(bx,gy-ch*0.24); g.lineTo(bx+Math.cos(ang)*26,gy-ch*0.24+Math.sin(ang)*16); g.lineTo(bx+Math.cos(ang+0.2)*22,gy-ch*0.24+Math.sin(ang+0.2)*13); g.closePath(); g.fill(); } });
+    // camel silhouette resting on a dune
+    g.fillStyle='rgba(90,55,25,.85)'; const kx=cw*0.82, ky=gy-8;
+    g.beginPath(); g.ellipse(kx,ky-ch*0.03,cw*0.05,ch*0.03,0,0,Math.PI*2); g.fill();
+    g.beginPath(); g.arc(kx-cw*0.03,ky-ch*0.05,ch*0.02,0,Math.PI*2); g.arc(kx+cw*0.03,ky-ch*0.05,ch*0.02,0,Math.PI*2); g.fill(); // two humps
+    g.beginPath(); g.moveTo(kx+cw*0.045,ky-ch*0.03); g.lineTo(kx+cw*0.075,ky-ch*0.08); g.lineTo(kx+cw*0.06,ky-ch*0.03); g.closePath(); g.fill(); // neck/head
+    g.fillRect(kx-cw*0.02,ky,3,ch*0.03); g.fillRect(kx+cw*0.02,ky,3,ch*0.03);
+    // heat-shimmer specks
+    for(let i=0;i<20;i++){ const px=(i*79)%cw, py=gy-4-((i*13+T*0.6)%ch*0.1); g.fillStyle='rgba(255,255,255,.12)'; g.fillRect(px,py,3,1); }
+  } else if(st.decor==='clockwork'){ // CLOCKWORK FACTORY: brass gears, pistons, pipes, steam
+    const T=t||0;
+    // dim brass interior wall
+    g.fillStyle='rgba(60,44,26,.6)'; g.fillRect(0,0,cw,gy);
+    // big turning gears (drawn by rotating spokes + teeth)
+    function gear(gx,gy0,r,teeth,spd,col){ g.save(); g.translate(gx,gy0); g.rotate(T*spd);
+      g.fillStyle=col; g.beginPath(); g.arc(0,0,r,0,Math.PI*2); g.fill();
+      g.fillStyle=mixHex(col,'#000000',0.3); for(let k=0;k<teeth;k++){ const a=k/teeth*Math.PI*2; g.save(); g.rotate(a); g.fillRect(r-2,-r*0.14,r*0.22,r*0.28); g.restore(); }
+      g.fillStyle=mixHex(col,'#000000',0.45); g.beginPath(); g.arc(0,0,r*0.25,0,Math.PI*2); g.fill();
+      g.strokeStyle=mixHex(col,'#000000',0.35); g.lineWidth=3; for(let k=0;k<6;k++){ g.save(); g.rotate(k/6*Math.PI*2); g.beginPath(); g.moveTo(0,0); g.lineTo(0,-r*0.8); g.stroke(); g.restore(); } g.restore(); }
+    gear(cw*0.2, gy*0.42, ch*0.14, 12, 0.004, '#b08d3a');
+    gear(cw*0.36, gy*0.6, ch*0.1, 10, -0.006, '#8a6d2a');
+    gear(cw*0.82, gy*0.4, ch*0.16, 14, -0.003, '#b08d3a');
+    // brass pipes across the top
+    g.strokeStyle='#7a5e2a'; g.lineWidth=10; g.lineCap='round';
+    g.beginPath(); g.moveTo(0,ch*0.1); g.lineTo(cw*0.5,ch*0.1); g.lineTo(cw*0.55,ch*0.18); g.lineTo(cw,ch*0.18); g.stroke();
+    g.strokeStyle='#5a441e'; g.lineWidth=2; g.beginPath(); g.moveTo(0,ch*0.1); g.lineTo(cw,ch*0.1); g.stroke();
+    // pistons pumping near the ground
+    for(let i=0;i<3;i++){ const px=cw*(0.5+i*0.14); const pump=Math.sin(T/60+i)*10; g.fillStyle='#9aa0a8'; g.fillRect(px-4, gy-40+pump, 8, 40-pump); g.fillStyle='#c0c6ce'; g.fillRect(px-8, gy-46+pump, 16, 8); }
+    // steam puffs venting
+    for(let i=0;i<12;i++){ const vx=cw*0.6; const vy=gy-((i*20+T*1.4)%(gy*0.5)); const a=1-((gy-vy)/(gy*0.5)); g.fillStyle='rgba(230,230,235,'+(0.25*a)+')'; g.beginPath(); g.arc(vx+Math.sin(T/100+i)*10, vy, 5+ (1-a)*10,0,Math.PI*2); g.fill(); }
+    // rivet floor band
+    g.fillStyle='rgba(40,30,16,.6)'; g.fillRect(0,gy,cw,ch-gy);
+    g.fillStyle='#7a5e2a'; for(let i=0;i<20;i++){ g.beginPath(); g.arc(cw*0.03+i*cw*0.05, gy+8, 2,0,Math.PI*2); g.fill(); }
+  } else if(st.decor==='skycastle'){ // SKY CASTLE: floating castle in the clouds, waterfalls, rainbow, birds
+    const T=t||0;
+    // soft sun + rainbow arc
+    g.fillStyle='rgba(255,245,200,.7)'; g.beginPath(); g.arc(cw*0.8, ch*0.22, ch*0.09,0,Math.PI*2); g.fill();
+    ['#ff6d6d','#ffb14d','#ffe24a','#6ad06a','#4db3ff','#a06bff'].forEach((col,ri)=>{ g.strokeStyle=col; g.globalAlpha=0.4; g.lineWidth=5; g.beginPath(); g.arc(cw*0.3, gy*0.9, ch*0.4-ri*6, Math.PI*1.15, Math.PI*1.75); g.stroke(); }); g.globalAlpha=1;
+    // fluffy cloud banks (parallax)
+    g.fillStyle='rgba(255,255,255,.85)';
+    for(let i=0;i<5;i++){ const cx0=(i*cw*0.24 + T/30)%(cw+120)-60; const cy0=ch*(0.3+ (i%2)*0.12); [[-0.05,0,26],[0.03,0.02,22],[-0.02,0.03,18]].forEach(p=>{ g.beginPath(); g.arc(cx0+cw*p[0], cy0+ch*p[1], p[2],0,Math.PI*2); g.fill(); }); }
+    // the floating castle: a rock island with towers + waterfalls
+    const isx=cw*0.5, isy=gy*0.5;
+    g.fillStyle='#6a5a44'; g.beginPath(); g.moveTo(isx-cw*0.16,isy); g.lineTo(isx+cw*0.16,isy); g.lineTo(isx+cw*0.06,isy+ch*0.16); g.lineTo(isx-cw*0.06,isy+ch*0.16); g.closePath(); g.fill();
+    g.fillStyle='#4a3f30'; g.beginPath(); g.moveTo(isx-cw*0.06,isy+ch*0.16); g.lineTo(isx+cw*0.06,isy+ch*0.16); g.lineTo(isx,isy+ch*0.24); g.closePath(); g.fill();
+    // castle towers
+    g.fillStyle='#c9ccd6'; [[-0.1,0.09,ch*0.13],[0,0.11,ch*0.17],[0.1,0.09,ch*0.13]].forEach(t2=>{ g.fillRect(isx+cw*t2[0]-t2[1]*0.5, isy-t2[2], t2[1], t2[2]); g.fillStyle='#8f2f3f'; g.beginPath(); g.moveTo(isx+cw*t2[0]-t2[1]*0.6, isy-t2[2]); g.lineTo(isx+cw*t2[0], isy-t2[2]-ch*0.05); g.lineTo(isx+cw*t2[0]+t2[1]*0.6, isy-t2[2]); g.closePath(); g.fill(); g.fillStyle='#c9ccd6'; });
+    // waterfalls spilling off the island underside
+    g.strokeStyle='rgba(160,220,255,.6)'; g.lineWidth=3;
+    for(let i=-1;i<=1;i++){ const wx=isx+i*cw*0.06; g.beginPath(); g.moveTo(wx,isy+ch*0.16); for(let s=0;s<5;s++){ g.lineTo(wx+Math.sin(T/120+s+i)*3, isy+ch*0.16+s*ch*0.06); } g.stroke(); }
+    // birds
+    g.strokeStyle='rgba(60,60,80,.6)'; g.lineWidth=2;
+    for(let i=0;i<5;i++){ const bx=(i*cw*0.2 + T/10)%(cw+30)-15; const by=ch*0.2+Math.sin(T/100+i)*ch*0.04; g.beginPath(); g.moveTo(bx-5,by); g.quadraticCurveTo(bx,by-4,bx+5,by); g.stroke(); }
+    // low cloud floor
+    g.fillStyle='rgba(255,255,255,.5)'; g.fillRect(0,gy,cw,ch-gy);
+    for(let i=0;i<6;i++){ g.fillStyle='rgba(255,255,255,.7)'; g.beginPath(); g.arc(cw*0.08+i*cw*0.17, gy+6, 16,0,Math.PI*2); g.fill(); }
+  } else if(st.decor==='toxic'){ // TOXIC WASTELAND: dead skyline, toxic pools, barrels, gas clouds, cracks
+    const T=t||0;
+    // sickly green haze sky
+    g.fillStyle='rgba(80,120,40,.25)'; g.fillRect(0,0,cw,gy);
+    // dead, broken skyline
+    g.fillStyle='rgba(20,26,18,.9)';
+    for(let i=0;i<9;i++){ const bx=i*cw*0.12; const bh=(gy*0.5)*(0.4+((i*47)%10)/10); const jag=(i%3)*6; g.fillRect(bx, gy-bh, cw*0.1, bh); g.fillRect(bx+cw*0.03, gy-bh-jag, cw*0.02, jag); }
+    // hazy sickly sun
+    g.fillStyle='rgba(180,220,80,.3)'; g.beginPath(); g.arc(cw*0.24, ch*0.22, ch*0.1,0,Math.PI*2); g.fill();
+    // drifting toxic gas clouds
+    for(let i=0;i<4;i++){ const gx=(i*cw*0.3 + T/40)%(cw+80)-40; const gyy=gy*0.5+Math.sin(T/300+i)*ch*0.05; g.fillStyle='rgba(120,200,60,'+(0.06+0.04*Math.sin(T/200+i))+')'; g.beginPath(); g.ellipse(gx,gyy,cw*0.12,ch*0.05,0,0,Math.PI*2); g.fill(); }
+    // hazard barrels near the ground
+    ['#3fa02f','#c9a02a'].forEach((col,bi)=>{ const px=cw*(0.3+bi*0.42); g.fillStyle=col; g.fillRect(px-8, gy-24, 16, 24); g.fillStyle='rgba(0,0,0,.3)'; g.fillRect(px-8, gy-18, 16, 3); g.fillRect(px-8, gy-10, 16, 3);
+      g.fillStyle='#141018'; g.font='bold 10px Arial'; g.textAlign='center'; g.fillText('☣', px, gy-11); });
+    // glowing toxic ground pools
+    const tg=g.createLinearGradient(0,gy,0,ch); tg.addColorStop(0,'#4a7a1e'); tg.addColorStop(1,'#20340e'); g.fillStyle=tg; g.fillRect(0,gy,cw,ch-gy);
+    g.fillStyle='rgba(150,255,80,'+(0.35+0.15*Math.sin(T/160))+')'; for(let i=0;i<5;i++){ g.beginPath(); g.ellipse(cw*(0.14+i*0.18), gy+(ch-gy)*0.55, cw*0.05,(ch-gy)*0.24,0,0,Math.PI*2); g.fill(); }
+    // rising toxic bubbles
+    for(let i=0;i<16;i++){ const bx=(i*71)%cw; const by=gy+((ch-gy)*0.9)-((i*23+T*0.8)%((ch-gy))); g.strokeStyle='rgba(180,255,120,.5)'; g.lineWidth=1; g.beginPath(); g.arc(bx,by,1.5+(i%3),0,Math.PI*2); g.stroke(); }
   }
   g.restore();
 
@@ -4413,6 +4603,77 @@ function auroraLayout(){
     {x:W*0.14, y:H*0.56, w:W*0.20, h:14},
     {x:W*0.66, y:H*0.56, w:W*0.20, h:14},
     {x:W*0.42, y:H*0.38, w:W*0.16, h:14},
+  ];
+}
+// CANDY KINGDOM — soft symmetric candy shelves
+function candyLayout(){
+  return [
+    {x:W*0.20, y:H*0.80, w:W*0.60, h:22, main:true},
+    {x:W*0.12, y:H*0.56, w:W*0.20, h:16},
+    {x:W*0.68, y:H*0.56, w:W*0.20, h:16},
+    {x:W*0.40, y:H*0.40, w:W*0.20, h:14},
+  ];
+}
+// HAUNTED MANOR — crooked gravestone ledges
+function hauntedLayout(){
+  return [
+    {x:W*0.18, y:H*0.80, w:W*0.64, h:22, main:true},
+    {x:W*0.10, y:H*0.58, w:W*0.18, h:14},
+    {x:W*0.72, y:H*0.52, w:W*0.18, h:14},
+    {x:W*0.42, y:H*0.42, w:W*0.16, h:14},
+  ];
+}
+// SPACE STATION — a central deck with two floating panels + a high antenna platform
+function spaceLayout(){
+  return [
+    {x:W*0.24, y:H*0.80, w:W*0.52, h:22, main:true},
+    {x:W*0.10, y:H*0.54, w:W*0.20, h:14},
+    {x:W*0.70, y:H*0.54, w:W*0.20, h:14},
+    {x:W*0.42, y:H*0.36, w:W*0.16, h:14},
+  ];
+}
+// PIRATE COVE — the ship deck (main) + crow's nest + two rigging platforms
+function pirateLayout(){
+  return [
+    {x:W*0.18, y:H*0.80, w:W*0.64, h:22, main:true},
+    {x:W*0.16, y:H*0.56, w:W*0.18, h:14},
+    {x:W*0.66, y:H*0.56, w:W*0.18, h:14},
+    {x:W*0.42, y:H*0.36, w:W*0.16, h:12},   // crow's nest
+  ];
+}
+// DESERT OASIS — flat dune floor + palm-shaded ledges
+function oasisLayout(){
+  return [
+    {x:W*0.20, y:H*0.80, w:W*0.60, h:22, main:true},
+    {x:W*0.12, y:H*0.58, w:W*0.20, h:14},
+    {x:W*0.68, y:H*0.58, w:W*0.20, h:14},
+  ];
+}
+// CLOCKWORK FACTORY — stepped gantry platforms
+function clockworkLayout(){
+  return [
+    {x:W*0.16, y:H*0.80, w:W*0.44, h:22, main:true},
+    {x:W*0.60, y:H*0.64, w:W*0.24, h:14},
+    {x:W*0.30, y:H*0.50, w:W*0.20, h:14},
+    {x:W*0.62, y:H*0.38, w:W*0.18, h:14},
+  ];
+}
+// SKY CASTLE — floating islands at varied heights
+function skycastleLayout(){
+  return [
+    {x:W*0.26, y:H*0.80, w:W*0.48, h:22, main:true},
+    {x:W*0.10, y:H*0.58, w:W*0.20, h:14},
+    {x:W*0.70, y:H*0.52, w:W*0.20, h:14},
+    {x:W*0.42, y:H*0.40, w:W*0.16, h:14},
+  ];
+}
+// TOXIC WASTELAND — cracked slab + broken concrete ledges
+function toxicLayout(){
+  return [
+    {x:W*0.18, y:H*0.80, w:W*0.64, h:22, main:true},
+    {x:W*0.12, y:H*0.56, w:W*0.18, h:14},
+    {x:W*0.70, y:H*0.56, w:W*0.18, h:14},
+    {x:W*0.40, y:H*0.42, w:W*0.20, h:14},
   ];
 }
 
@@ -4574,6 +4835,65 @@ const STAGES = [
     layout:auroraLayout,
     decor:'aurora',
     hazard:'blizzard'
+  },
+  {
+    id:'candy', name:'CANDY KINGDOM', flag:['#ff5b7f','#ffffff','#8fe3ff'],
+    sky:['#ffe0f0','#fff2f8','#c9f7c0'], // bright bubblegum sky
+    plat:'#d98cae', platTop:'#ffd6e8', accent:'#ff5b7f',
+    layout:candyLayout,
+    decor:'candy'
+  },
+  {
+    id:'haunted', name:'HAUNTED MANOR', flag:['#6a4a8a','#0a0612','#8fbf6a'],
+    sky:['#1a1030','#2a1846','#3a2a1a'], // eerie violet night
+    plat:'#2a2636', platTop:'#6a6480', accent:'#8f5bd6',
+    layout:hauntedLayout,
+    decor:'haunted'
+  },
+  {
+    id:'space', name:'SPACE STATION', flag:['#00e5ff','#0a0620','#ffd24a'],
+    sky:['#03040f','#070b1e','#0a1030'], // void of space
+    plat:'#2a3350', platTop:'#7fe0ff', accent:'#00e5ff',
+    layout:spaceLayout,
+    decor:'space',
+    hazard:'meteors'
+  },
+  {
+    id:'pirate', name:'PIRATE COVE', flag:['#141018','#ffffff','#c9a02a'],
+    sky:['#4a86c9','#89c7ff','#e8c98f'], // bright sea-day sky
+    plat:'#5a3418', platTop:'#a5713a', accent:'#c9a02a',
+    layout:pirateLayout,
+    decor:'pirate',
+    hazard:'current'
+  },
+  {
+    id:'oasis', name:'DESERT OASIS', flag:['#e8c07a','#f4a259','#3f8a3f'],
+    sky:['#ffd98a','#ffe9b8','#e6c07a'], // hot desert haze
+    plat:'#c98a2e', platTop:'#e6c07a', accent:'#3f8a3f',
+    layout:oasisLayout,
+    decor:'oasis',
+    hazard:'sandstorm'
+  },
+  {
+    id:'clockwork', name:'CLOCKWORK FACTORY', flag:['#b08d3a','#3a2c14','#c0c6ce'],
+    sky:['#2a1f10','#3e2e16','#4a3a1e'], // dim brass interior
+    plat:'#5a441e', platTop:'#b08d3a', accent:'#c9a53a',
+    layout:clockworkLayout,
+    decor:'clockwork'
+  },
+  {
+    id:'skycastle', name:'SKY CASTLE', flag:['#8fd3ff','#ffffff','#a06bff'],
+    sky:['#7ec8ff','#b8e4ff','#eaf4ff'], // bright airy heavens
+    plat:'#6a5a44', platTop:'#c9ccd6', accent:'#4db3ff',
+    layout:skycastleLayout,
+    decor:'skycastle'
+  },
+  {
+    id:'toxic', name:'TOXIC WASTELAND', flag:['#6ad06a','#20340e','#c9a02a'],
+    sky:['#3a4a20','#5a6a2a','#7a8a3a'], // sickly green smog
+    plat:'#2c3a1e', platTop:'#8fbf6a', accent:'#6ad06a',
+    layout:toxicLayout,
+    decor:'toxic'
   }
 ];
 
@@ -4586,7 +4906,8 @@ const HAZARD_INFO = {
   current:   { icon:'🌊', name:'OCEAN CURRENT', desc:'A shifting current drags you sideways.' },
   eruption:  { icon:'🌋', name:'ERUPTIONS',     desc:'Lava geysers burst from the ground.' },
   blizzard:  { icon:'❄️', name:'BLIZZARD',       desc:'Icy footing and sudden polar gusts.' },
-  sandstorm: { icon:'🏜️', name:'SANDSTORM',     desc:'Gusting desert wind pushes fighters.' }
+  sandstorm: { icon:'🏜️', name:'SANDSTORM',     desc:'Gusting desert wind pushes fighters.' },
+  meteors:   { icon:'☄️', name:'METEOR SHOWER', desc:'Meteors crash down — mind the target rings.' }
 };
 
 /* ---------------- STAGE MUSIC (Tone.js) ---------------- */
@@ -6890,8 +7211,9 @@ function openLeaderboard(){
   document.getElementById('lbTable').innerHTML='';
   renderLbTabs();
   show('leaderboard');
-  Leaderboard.submit();          // push our latest totals so we appear/refresh
-  renderLeaderboard();
+  // push our latest totals+username FIRST, then render — so we appear/refresh in
+  // the standings immediately instead of waiting for the next 5s poll.
+  Promise.resolve(Leaderboard.submit()).then(renderLeaderboard).catch(renderLeaderboard);
   if(Leaderboard._pollTimer) clearInterval(Leaderboard._pollTimer);
   Leaderboard._pollTimer=setInterval(renderLeaderboard, 5000);   // stay live
 }
@@ -7475,11 +7797,14 @@ document.getElementById('prestigeBtn').onclick=()=>{
 };
 document.getElementById('profileLine').onclick=()=>{
   const name=prompt('Save profile name:', Save.data.profile);
-  if(name){ Save.setProfile(name); refreshProfileLine(); }
+  if(name){ Save.setProfile(name); refreshProfileLine(); Leaderboard.submit(); }   // push the new username to the live ranks right away
 };
 refreshProfileLine();
 applyHomeBanner();
 applyMobileMode();
+// Seed the live leaderboard on boot so a returning player with wins/medals shows
+// up (and their current username is current) even before they open RANKS or win.
+try{ Leaderboard.submit(); }catch(e){}
 
 // build ruleset chips
 const ruleGrid=document.getElementById('ruleGrid');
@@ -9472,6 +9797,8 @@ const Hazard = {
   ventX:0, eruptTimer:0, geysers:[],
   // aurora blizzard
   gustDir:1, gustTimer:0, gustPower:0,
+  // space station meteor shower
+  meteorTimer:0, meteors:[],
   reset(){
     this.id = (stagePick && stagePick.hazard) || null;
     this.geysers = [];
@@ -9480,6 +9807,8 @@ const Hazard = {
     this.gustDir = Math.random()<0.5?-1:1;
     this.gustTimer = 300;                  // frames until first blizzard gust
     this.gustPower = 0;
+    this.meteors = [];
+    this.meteorTimer = 180;                // frames until the first meteor falls
   }
 };
 // A damage/knockback hit from the environment (no attacker). Kept separate from
@@ -9565,6 +9894,39 @@ function hazardWorldTick(t){
       if(Hazard.gustPower<0) Hazard.gustPower=0;
     }
   }
+  if(Hazard.id==='meteors'){
+    // Space Station: micro-meteors streak down on a timer. Each telegraphs with a
+    // target shadow on the ground, then a rock falls; standing on the impact spot
+    // when it lands launches and burns you. Fair to dodge — the warning is generous.
+    if(--Hazard.meteorTimer<=0){
+      Hazard.meteorTimer = 150 + Math.floor(Math.random()*120);
+      const n = 1 + (Math.random()<0.35?1:0);   // sometimes a double drop
+      for(let k=0;k<n;k++){
+        const tx = W*(0.14 + Math.random()*0.72);
+        Hazard.meteors.push({ x:tx, warn:44, y:-40, vy:0, landed:0, hitDone:false, spin:Math.random()*6 });
+      }
+    }
+    Hazard.meteors.forEach(m=>{
+      if(m.warn>0){ m.warn--; if(m.warn===0){ m.y=-40; m.vy=13; } return; }
+      if(m.landed>0){ m.landed--; return; }
+      m.vy += 0.7; m.y += m.vy; m.spin += 0.3;
+      // trailing sparks
+      if(Math.floor(t)%2===0) particles.push({x:m.x+(Math.random()-.5)*10, y:m.y-14, vx:(Math.random()-.5)*2, vy:-1-Math.random()*2, life:16, color:Math.random()<0.5?'#ffb14d':'#ff6d6d', r:2+Math.random()*2});
+      if(m.y>=GROUND_Y-6){
+        m.y=GROUND_Y-6; m.landed=18; m.hitDone=true;
+        spawnParticles(m.x, GROUND_Y-6, '#ffb14d', 14); spawnParticles(m.x, GROUND_Y-6, '#ff6d6d', 8);
+        shakeT=Math.max(shakeT,10);
+        players.forEach((f,idx)=>{
+          if(mode==='online' && idx===(Net.isHost?1:0)) return;
+          if(f.dead) return;
+          if(Math.abs(f.cx-m.x)<58 && f.y+f.h>GROUND_Y-40){
+            stageHazardHit(f, 9, (f.cx>=m.x?1:-1)*6, -12);
+          }
+        });
+      }
+    });
+    Hazard.meteors = Hazard.meteors.filter(m=> m.warn>0 || m.landed>0 || m.y<GROUND_Y-6);
+  }
 }
 // Visual overlays for the active hazard. Drawn on top of the arena each frame.
 function hazardDraw(t){
@@ -9644,6 +10006,33 @@ function hazardDraw(t){
       ctx.font='700 13px Arial'; ctx.textAlign='center';
       ctx.fillText(Hazard.gustDir>=0?'❄ BLIZZARD  →':'←  BLIZZARD ❄', W/2, 40);
     }
+    ctx.restore();
+  } else if(Hazard.id==='meteors'){
+    ctx.save();
+    Hazard.meteors.forEach(m=>{
+      if(m.warn>0){
+        // telegraph: a pulsing target ring on the ground where it'll land
+        const a=0.35+0.4*Math.sin(t/50);
+        ctx.globalAlpha=a; ctx.strokeStyle='#ff6d6d'; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.ellipse(m.x, GROUND_Y-4, 40, 9, 0, 0, Math.PI*2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(m.x-10,GROUND_Y-4); ctx.lineTo(m.x+10,GROUND_Y-4); ctx.moveTo(m.x,GROUND_Y-13); ctx.lineTo(m.x,GROUND_Y+5); ctx.stroke();
+        return;
+      }
+      if(m.landed>0){
+        // brief impact flash
+        ctx.globalAlpha=Math.max(0,m.landed/18)*0.7; ctx.fillStyle='#ffb14d';
+        ctx.beginPath(); ctx.arc(m.x, GROUND_Y-6, 30*(1-m.landed/18)+8, 0, Math.PI*2); ctx.fill();
+        return;
+      }
+      // the falling meteor: glowing rock + fiery tail
+      ctx.globalAlpha=0.5; ctx.strokeStyle='#ff8a3a'; ctx.lineWidth=6; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(m.x, m.y-26); ctx.lineTo(m.x, m.y-2); ctx.stroke();
+      ctx.globalAlpha=1; ctx.save(); ctx.translate(m.x,m.y); ctx.rotate(m.spin);
+      ctx.fillStyle='#6a5a4a'; ctx.beginPath(); ctx.arc(0,0,9,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#3a2f26'; ctx.beginPath(); ctx.arc(-3,-2,2.5,0,Math.PI*2); ctx.arc(3,2,2,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle='#ffb14d'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(0,0,10,0,Math.PI*2); ctx.stroke();
+      ctx.restore();
+    });
     ctx.restore();
   }
 }
