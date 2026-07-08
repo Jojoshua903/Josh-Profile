@@ -392,19 +392,33 @@
     background:radial-gradient(circle at 50% 30%,#2a1c10,#160d06 78%); box-shadow:0 0 0 6px #3a2718, inset 0 6px 14px rgba(0,0,0,0.6); z-index:2; }
   #interior .hatch .ldr { position:absolute; left:52px; top:-6px; width:16px; height:16px; border-radius:3px; background:#8a5f38; }
 
+  /* ── jukebox: a cozy retro cabinet that appears once you've won three dance battles ── */
+  #interior .jukebox { position:absolute; z-index:3; transform:translate(-50%,-100%); cursor:default; }
+  #interior .jukebox .jb-body { position:relative; width:88px; height:126px; border-radius:16px 16px 8px 8px;
+    background:linear-gradient(180deg,#b0472f,#7d2f1f); box-shadow:0 10px 18px -6px rgba(0,0,0,0.6), inset 0 2px 0 rgba(255,255,255,0.18); border:2px solid #5c2114; }
+  #interior .jukebox .jb-screen { position:absolute; left:14px; top:12px; right:14px; height:34px; border-radius:18px 18px 6px 6px;
+    background:linear-gradient(180deg,#ffd88a,#ffb347); box-shadow:inset 0 0 8px rgba(140,60,0,0.5); }
+  #interior .jukebox .jb-speaker { position:absolute; left:16px; top:58px; right:16px; bottom:12px; border-radius:6px;
+    background:repeating-linear-gradient(0deg,#3a170e 0 4px,#5c2114 4px 8px); }
+  #interior .jukebox .jb-note { position:absolute; left:50%; top:-22px; transform:translateX(-50%); font-size:1.1rem; color:#ffd88a; opacity:0; text-shadow:0 0 8px #ffb347; }
+  #interior .jukebox.playing .jb-note { animation:jbNote 1.4s ease-in-out infinite; }
+  #interior .jukebox.playing .jb-screen { animation:jbGlow 1.2s ease-in-out infinite; }
+  @keyframes jbNote { 0%{opacity:0; transform:translate(-50%,4px);} 40%{opacity:1;} 100%{opacity:0; transform:translate(-50%,-20px);} }
+  @keyframes jbGlow { 0%,100%{filter:brightness(1);} 50%{filter:brightness(1.35);} }
+
   /* ── a bedroom alcove: an inner back panel + two standing side walls drawn in front view ── */
   .iroom { position:absolute; z-index:2; }
-  /* the alcove's own inner back wall (a touch lighter than the great back wall) */
+  /* the alcove's own inner back wall — tinted per-room via --rw / --rw2 (falls back to the wood tone) */
   .iroom .rback { position:absolute; left:0; top:0; width:100%; height:170px;
-    background:repeating-linear-gradient(90deg,#8a6440 0 44px,#805a38 44px 48px), linear-gradient(180deg,#906a44,#7a5533);
+    background:repeating-linear-gradient(90deg,var(--rw,#8a6440) 0 44px,var(--rw2,#805a38) 44px 48px), linear-gradient(180deg,var(--rw,#906a44),var(--rw2,#7a5533));
     box-shadow:inset 0 -14px 22px rgba(0,0,0,0.28); border-radius:4px 4px 0 0; }
-  #interior.night-in .iroom .rback { background:repeating-linear-gradient(90deg,#835f3c 0 44px,#7a5636 44px 48px), linear-gradient(180deg,#8a6440,#725031); }
+  #interior.night-in .iroom .rback { filter:brightness(0.72) saturate(0.85); }
   /* alcove floor patch */
   .iroom .rfloor { position:absolute; left:0; top:150px; width:100%; height:120px; border-radius:0 0 4px 4px;
     background:linear-gradient(180deg,rgba(255,240,220,0.10),rgba(0,0,0,0.10)); }
   .iroom .rug { position:absolute; left:50%; bottom:14px; transform:translateX(-50%); width:150px; height:52px; border-radius:50%;
-    background:radial-gradient(circle,#b5628f,#7d3f66); opacity:0.75; }
-  #interior.night-in .iroom .rug { opacity:0.5; }
+    background:radial-gradient(circle,var(--rug,#b5628f),var(--rugEdge,#7d3f66)); opacity:0.8; }
+  #interior.night-in .iroom .rug { opacity:0.55; }
   /* a standing side wall — front face + a thin angled top cap for a little depth */
   .iwall { position:absolute; z-index:5; }
   .iwall .face { position:absolute; left:0; bottom:0; width:100%; height:100%;
@@ -434,9 +448,19 @@
   .ibed.player .quilt{ background:repeating-linear-gradient(45deg,#a8d8ff 0 10px,#7fbdf0 10px 20px); }
   /* soft room lamp */
   .iroom .ilamp { position:absolute; width:26px; height:56px; z-index:4; }
-  .iroom .ilamp .glow { position:absolute; top:0; left:-6px; width:38px; height:38px; border-radius:50%; background:radial-gradient(circle,#ffe6a3,rgba(230,179,74,0)); }
+  .iroom .ilamp .glow { position:absolute; top:0; left:-6px; width:38px; height:38px; border-radius:50%; background:radial-gradient(circle,var(--glow,#ffe6a3),rgba(230,179,74,0)); }
   .iroom .ilamp .pole { position:absolute; bottom:0; left:11px; width:4px; height:40px; background:#3a2718; }
-  #interior.night-in .iroom .ilamp .glow { filter:brightness(1.3); }
+  #interior.night-in .iroom .ilamp .glow { filter:brightness(1.35); }
+  /* ── per-room personal decorations ── */
+  /* framed posters hung on the back panel (position set inline so a room can carry several) */
+  .rdec-wall { position:absolute; z-index:2; }
+  .rdec-poster { width:44px; height:52px; display:flex; align-items:center; justify-content:center; font-size:1.4rem;
+    background:linear-gradient(180deg,#fdf3e2,#ecdcc2); border:4px solid #6f4c2c; border-radius:4px; box-shadow:0 4px 8px rgba(0,0,0,0.3); }
+  #interior.night-in .rdec-poster { background:linear-gradient(180deg,#d9cbe6,#c2b0d8); border-color:#3a2c4c; }
+  /* floor props in the corners of the alcove (position set inline) */
+  .rdec-floor { position:absolute; z-index:3; font-size:1.6rem; filter:drop-shadow(0 3px 3px rgba(0,0,0,0.35)); }
+  /* a little accessory resting on the bed */
+  .rdec-bed { position:absolute; left:8px; top:-16px; z-index:4; font-size:1.5rem; filter:drop-shadow(0 3px 3px rgba(0,0,0,0.35)); }
   /* a room's door: hidden until the room is locked, then it slides across the front opening */
   .idoor { position:absolute; z-index:6; display:none; align-items:center; justify-content:center;
     background:repeating-linear-gradient(90deg,#7a5030 0 16px,#6d4728 16px 20px), linear-gradient(180deg,#7d5836,#5f4026);
@@ -635,9 +659,24 @@
   #journaltoggle { color:rgba(255,255,255,0.9); background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.2); padding:0.4rem 0.9rem; border-radius:999px; cursor:pointer;
     font-family:inherit; font-size:inherit; letter-spacing:inherit; text-transform:inherit; transition:background 0.2s; }
   #journaltoggle:hover { background:rgba(0,0,0,0.55); }
+  #controlstoggle { color:rgba(255,255,255,0.9); background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.2); padding:0.4rem 0.9rem; border-radius:999px; cursor:pointer;
+    font-family:inherit; font-size:inherit; letter-spacing:inherit; text-transform:inherit; transition:background 0.2s; }
+  #controlstoggle:hover { background:rgba(0,0,0,0.55); }
+  /* controls panel overlay */
+  #controlspanel { position:absolute; inset:0; z-index:90; display:none; align-items:center; justify-content:center; background:rgba(13,7,24,0.55); backdrop-filter:blur(3px); }
+  #controlspanel.show { display:flex; }
+  #controlspanel .ctrl-card { background:rgba(253,246,240,0.98); color:var(--ink); border-radius:20px; padding:1.5rem 1.7rem; max-width:26rem; width:calc(100% - 3rem); box-shadow:0 20px 55px -12px rgba(0,0,0,0.6); }
+  #controlspanel h3 { font-family:'Iowan Old Style','Georgia',serif; font-size:1.4rem; margin-bottom:1rem; text-align:center; }
+  .ctrl-list { list-style:none; display:flex; flex-direction:column; gap:0.55rem; }
+  .ctrl-list li { display:flex; align-items:center; gap:0.9rem; font-family:'Iowan Old Style','Georgia',serif; font-size:0.98rem; }
+  .ctrl-key { flex:none; min-width:6.5rem; text-align:center; font-family:'Futura','Century Gothic',sans-serif; font-size:0.72rem; letter-spacing:0.06em; text-transform:uppercase; font-weight:700;
+    background:#efe4d6; border:1.5px solid #cbb79c; border-radius:8px; padding:0.35rem 0.5rem; color:#5a4023; }
+  .ctrl-close { display:block; margin:1.3rem auto 0; font-family:'Futura','Century Gothic',sans-serif; letter-spacing:0.12em; text-transform:uppercase; font-size:0.72rem; background:none; border:none; color:#9a7; cursor:pointer; }
+  /* on narrow screens nudge the meters up a touch */
+  @media (max-width: 720px){ .meters { top:3rem; } }
 
-  /* affection meters */
-  .meters { position:absolute; top:0.7rem; left:50%; transform:translateX(-50%); z-index:30; display:flex; gap:1rem; }
+  /* affection meters — sit below the top controls row so they never overlap it */
+  .meters { position:absolute; top:3.2rem; left:50%; transform:translateX(-50%); z-index:30; display:flex; flex-wrap:wrap; justify-content:center; gap:0.6rem 1rem; max-width:calc(100vw - 2rem); }
   .meter { background:rgba(0,0,0,0.4); border-radius:999px; padding:0.3rem 0.7rem 0.3rem 0.4rem; display:flex; align-items:center; gap:0.4rem; font-family:'Futura',sans-serif; font-size:0.7rem; }
   .meter .bar { width:70px; height:8px; background:rgba(255,255,255,0.25); border-radius:4px; overflow:hidden; }
   .meter .fill { height:100%; width:0%; background:linear-gradient(90deg,var(--pink),var(--ember)); transition:width 0.5s; }
@@ -706,6 +745,16 @@
   .nb-sec p.locked { font-style:italic; color:#a89bb5; }
   .nb-notes div { font-family:'Iowan Old Style','Georgia',serif; font-size:0.92rem; line-height:1.4; margin-bottom:0.35rem; }
   .nb-empty { color:#6b6083; font-size:0.92rem; padding:1rem 0; text-align:center; }
+  #nb-favors:empty { display:none; }
+  .nb-favors-box { background:rgba(155,187,119,0.12); border:1px solid rgba(155,187,119,0.35); border-radius:10px; padding:0.6rem 0.75rem; margin-bottom:0.9rem; }
+  .nb-favors-box h4 { font-family:'Futura','Century Gothic',sans-serif; font-size:0.66rem; letter-spacing:0.12em; text-transform:uppercase; color:#7fae5a; margin:0 0 0.4rem; }
+  .fav-item { font-family:'Iowan Old Style','Georgia',serif; font-size:0.9rem; line-height:1.35; margin-bottom:0.5rem; }
+  .fav-route { font-weight:bold; color:#4f6b39; }
+  .fav-kind { font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em; color:#7fae5a; background:rgba(127,174,90,0.16); border-radius:6px; padding:0.05rem 0.35rem; }
+  .fav-note { font-style:italic; color:#5c6a4b; font-size:0.85rem; margin-top:0.1rem; }
+  .fav-history { margin-top:0.5rem; border-top:1px dashed rgba(155,187,119,0.4); padding-top:0.45rem; }
+  .fav-history h5 { font-family:'Futura','Century Gothic',sans-serif; font-size:0.58rem; letter-spacing:0.1em; text-transform:uppercase; color:#9a7; margin:0 0 0.3rem; }
+  .fav-done { font-family:'Iowan Old Style','Georgia',serif; font-size:0.82rem; color:#6b6053; line-height:1.35; }
   .nb-close { align-self:center; font-family:'Futura','Century Gothic',sans-serif; letter-spacing:0.12em; text-transform:uppercase; font-size:0.72rem; background:none; border:none; color:#9a7; cursor:pointer; }
 
   /* toast for quick interactions */
@@ -737,6 +786,7 @@
   @keyframes bob { 0%,100%{opacity:.6;} 50%{opacity:1;} }
   #choices { display:flex; flex-direction:column; gap:0.6rem; margin-top:0.8rem; }
   #choices.grid2x2 { display:grid; grid-template-columns:1fr 1fr; gap:0.6rem; }
+  #choices.grid2x2 .choice:nth-child(5) { grid-column:1 / -1; }
   .choice { font-family:'Iowan Old Style','Georgia',serif; font-size:clamp(0.98rem,2vw,1.12rem); text-align:left; padding:0.8rem 1.3rem; border-radius:14px; background:rgba(253,246,240,0.94); color:var(--ink); border:2px solid transparent; cursor:pointer; transition:transform 0.2s,border-color 0.2s; }
   .choice:hover { transform:translateX(8px); border-color:var(--pink); }
 
@@ -790,6 +840,34 @@
   #hoopgame .result.make { color:#3f9c43; } #hoopgame .result.miss { color:#c0392b; }
   #hoopgame .close { margin-top:1rem; font-family:'Futura','Century Gothic',sans-serif; letter-spacing:0.12em; text-transform:uppercase; font-size:0.72rem; background:none; border:none; color:#9a7; cursor:pointer; }
 
+  /* Dance Battle — reuses the overlay card styling from #hoopgame */
+  #dancegame { position:absolute; inset:0; z-index:79; display:none; align-items:center; justify-content:center; background:rgba(13,7,24,0.68); backdrop-filter:blur(3px); }
+  #dancegame.show { display:flex; }
+  #dancegame .card { background:rgba(253,246,240,0.97); color:var(--ink); border-radius:20px; padding:1.6rem 2rem; text-align:center; box-shadow:0 18px 50px -10px rgba(0,0,0,0.6); }
+  #dancegame h3 { font-family:'Iowan Old Style','Georgia',serif; font-size:1.25rem; margin-bottom:0.3rem; }
+  #dancegame .sub { font-size:0.86rem; color:#6b6083; margin-bottom:1rem; }
+  #dancegame .scores { display:flex; gap:1.6rem; justify-content:center; margin-bottom:1rem; font-family:'Futura','Century Gothic',sans-serif; letter-spacing:0.1em; text-transform:uppercase; font-size:0.72rem; color:#8a5a30; }
+  #dancegame .scores b { display:block; font-size:1.5rem; color:var(--ember); letter-spacing:0; }
+  #dancestage { display:flex; justify-content:center; }
+  #dancefloor { position:relative; width:340px; height:300px; overflow:hidden; border-radius:14px; background:linear-gradient(180deg,#1b1030,#2a1748); box-shadow:inset 0 0 30px rgba(0,0,0,0.5); }
+  .dance-lanes { position:absolute; inset:0; display:flex; }
+  .dance-lanes .lane { flex:1; border-right:1px solid rgba(255,255,255,0.06); }
+  .dance-lanes .lane:last-child { border-right:none; }
+  .dance-hitline { position:absolute; left:0; right:0; bottom:48px; height:56px; border-top:2px solid rgba(255,255,255,0.55); border-bottom:2px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.06); }
+  .dance-targets { position:absolute; left:0; right:0; bottom:56px; display:flex; }
+  .dance-target { flex:1; display:flex; align-items:center; justify-content:center; font-size:1.5rem; color:rgba(255,255,255,0.35); }
+  .dance-target.lit { color:#ffd76a; text-shadow:0 0 12px #ffb347; transform:scale(1.25); }
+  .dance-arrow { position:absolute; width:25%; text-align:center; font-size:1.7rem; color:#8fd3ff; text-shadow:0 0 8px rgba(80,180,255,0.6); will-change:transform; }
+  .dance-arrow.a-perfect { color:#7CFC98; text-shadow:0 0 12px #3f9c43; }
+  .dance-arrow.a-good { color:#ffe28a; }
+  #dancegame .result { min-height:1.4rem; margin-top:0.6rem; font-family:'Iowan Old Style','Georgia',serif; font-size:1.05rem; font-weight:bold; }
+  #dancegame .result.perfect { color:#3f9c43; } #dancegame .result.good { color:#c8922a; } #dancegame .result.miss { color:#c0392b; }
+  #dancegame .press-hint { margin-top:1rem; font-family:'Futura','Century Gothic',sans-serif; letter-spacing:0.12em; text-transform:uppercase; font-size:0.78rem; color:var(--violet-deep); }
+  #dancegame .press-hint kbd { background:var(--violet-deep); color:#fff; border-radius:6px; padding:0.15rem 0.5rem; }
+  #dancegame .close { margin-top:1rem; font-family:'Futura','Century Gothic',sans-serif; letter-spacing:0.12em; text-transform:uppercase; font-size:0.72rem; background:none; border:none; color:#9a7; cursor:pointer; }
+  #dance-grade { font-size:3.2rem; font-weight:bold; font-family:'Futura','Century Gothic',sans-serif; }
+
+
   /* mobile controls */
   #dpad { position:absolute; bottom:1.2rem; right:1.2rem; z-index:35; display:none; grid-template-columns:repeat(3,52px); grid-template-rows:repeat(3,52px); gap:4px; }
   #dpad button { background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.25); color:#fff; border-radius:12px; font-size:1.2rem; }
@@ -806,6 +884,39 @@
   .start-btn:hover { transform:scale(1.05); }
   #title .controls { font-family:'Futura',sans-serif; font-size:0.72rem; letter-spacing:0.1em; color:rgba(255,255,255,0.85); line-height:1.8; }
   #title .save-note { font-family:'Futura',sans-serif; font-size:0.66rem; letter-spacing:0.06em; color:rgba(255,255,255,0.55); margin-top:0.5rem; }
+  /* ── save-slot picker on the title screen ── */
+  #slotpicker { display:flex; flex-wrap:wrap; gap:0.9rem; justify-content:center; max-width:40rem; }
+  .slot-card { width:11.5rem; background:rgba(253,246,240,0.96); color:var(--ink); border-radius:16px; padding:0.9rem 0.9rem 0.8rem;
+    box-shadow:0 10px 26px -10px rgba(0,0,0,0.5); text-align:center; display:flex; flex-direction:column; gap:0.5rem; }
+  .slot-card .slot-name { font-family:'Futura','Century Gothic',sans-serif; letter-spacing:0.14em; text-transform:uppercase; font-size:0.68rem; font-weight:700; color:#8a6a3a; }
+  .slot-card .slot-summary { font-family:'Iowan Old Style','Georgia',serif; font-size:0.86rem; line-height:1.35; min-height:2.6rem; display:flex; align-items:center; justify-content:center; }
+  .slot-card .slot-summary .empty { color:#a99; font-style:italic; }
+  .slot-card .slot-play { font-family:'Futura','Century Gothic',sans-serif; letter-spacing:0.12em; text-transform:uppercase; font-size:0.74rem; padding:0.6rem 0.5rem; border:none; border-radius:999px;
+    background:linear-gradient(135deg,var(--pink),var(--sand)); color:var(--violet-deep); cursor:pointer; transition:transform 0.2s; }
+  .slot-card .slot-play:hover { transform:scale(1.05); }
+  .slot-card .slot-del { font-family:'Futura',sans-serif; letter-spacing:0.1em; text-transform:uppercase; font-size:0.6rem; background:none; border:none; color:#c07a6a; cursor:pointer; opacity:0.85; }
+  .slot-card .slot-del:hover { opacity:1; text-decoration:underline; }
+  .slot-card .slot-del.hidden { visibility:hidden; }
+  .slot-card .slot-file { font-family:'Iowan Old Style','Georgia',serif; font-size:1rem; font-weight:600; color:var(--ink); display:flex; align-items:center; justify-content:center; gap:0.35rem; }
+  .slot-card .slot-file .fe { font-size:1.2rem; }
+
+  /* ── new-file naming dialog ── */
+  #newfile { position:absolute; inset:0; z-index:65; display:none; align-items:center; justify-content:center; background:rgba(13,7,24,0.6); backdrop-filter:blur(3px); }
+  #newfile.show { display:flex; }
+  #newfile .nf-card { background:rgba(253,246,240,0.98); color:var(--ink); border-radius:18px; padding:1.5rem 1.6rem; width:calc(100% - 3rem); max-width:24rem; box-shadow:0 20px 55px -12px rgba(0,0,0,0.6); }
+  #newfile h3 { font-family:'Iowan Old Style','Georgia',serif; font-size:1.35rem; margin-bottom:1rem; text-align:center; }
+  #newfile .nf-row { display:flex; align-items:center; gap:0.7rem; margin-bottom:0.9rem; }
+  #newfile .nf-emoji { font-size:1.9rem; flex:none; width:2.6rem; height:2.6rem; display:flex; align-items:center; justify-content:center; background:#efe4d6; border-radius:12px; }
+  #newfile .nf-row input { flex:1; font-family:'Iowan Old Style','Georgia',serif; font-size:1.05rem; padding:0.6rem 0.8rem; border:2px solid #cbb79c; border-radius:10px; background:#fff; color:var(--ink); }
+  #newfile .nf-row input:focus { outline:none; border-color:var(--pink); }
+  #newfile .nf-emojis { display:flex; flex-wrap:wrap; gap:0.35rem; justify-content:center; margin-bottom:1.1rem; }
+  #newfile .nf-emojis button { font-size:1.25rem; width:2.3rem; height:2.3rem; border:2px solid transparent; border-radius:10px; background:#f3ece2; cursor:pointer; transition:transform 0.12s,border-color 0.12s; }
+  #newfile .nf-emojis button:hover { transform:scale(1.1); }
+  #newfile .nf-emojis button.sel { border-color:var(--pink); background:#fff; }
+  #newfile .nf-btns { display:flex; gap:0.7rem; justify-content:center; }
+  #newfile .nf-start, #newfile .nf-cancel { font-family:'Futura','Century Gothic',sans-serif; letter-spacing:0.12em; text-transform:uppercase; font-size:0.74rem; padding:0.7rem 1.4rem; border:none; border-radius:999px; cursor:pointer; }
+  #newfile .nf-start { background:linear-gradient(135deg,var(--pink),var(--sand)); color:var(--violet-deep); }
+  #newfile .nf-cancel { background:#e6ddd0; color:#7a6a55; }
 
   /* END */
   #endcard { position:absolute; inset:0; z-index:70; display:none; flex-direction:column; align-items:center; justify-content:flex-end; text-align:center; gap:1.1rem; padding:2rem; background:rgba(13,7,24,0.94); backdrop-filter:blur(4px);
@@ -1097,6 +1208,11 @@
       <div class="int-warmtint"></div>
       <!-- exit hatch (ladder down), on the floor down front -->
       <div class="hatch" style="left:960px; top:770px;"><div class="ldr"></div></div>
+      <!-- jukebox (hidden until 3 dance battles are won) — plays the park & battle themes on demand -->
+      <div class="jukebox" id="int-jukebox" style="left:300px; top:700px; display:none;">
+        <div class="jb-body"><div class="jb-screen"></div><div class="jb-speaker"></div><div class="jb-note">♪</div></div>
+      </div>
+      <div class="obj-prompt" id="ip-juke" style="left:300px; top:660px;">E: jukebox</div>
       <!-- rooms, walls, doors and nameplates are generated by script into here -->
       <div id="int-rooms"></div>
       <!-- exit prompt -->
@@ -1115,7 +1231,7 @@
   <!-- HUD -->
   <div class="topbar">
     <a href="index.html">&#8592; Back to Codex</a>
-    <span class="hint">WASD / Arrows to walk &middot; E to talk &amp; interact &middot; K for keepsakes &middot; J for journal</span>
+    <button id="controlstoggle" title="Show controls">&#127918; Controls</button>
     <button id="journaltoggle" title="Open your journal">&#128220; Journal</button>
     <button id="musictoggle" title="Toggle music">&#127925; Music: On</button>
   </div>
@@ -1129,6 +1245,22 @@
     <div class="meter nico" id="meter-nico" style="display:none;">&#129446;<div class="bar"><div class="fill" id="m-nico"></div></div></div>
   </div>
   <div id="toast"></div>
+  <!-- controls panel (toggle with the Controls button) -->
+  <div id="controlspanel">
+    <div class="ctrl-card">
+      <h3>Controls</h3>
+      <ul class="ctrl-list">
+        <li><span class="ctrl-key">WASD / Arrows</span><span>Walk around</span></li>
+        <li><span class="ctrl-key">E</span><span>Talk &amp; interact</span></li>
+        <li><span class="ctrl-key">Space</span><span>Advance dialogue &middot; dash (once Femi likes you)</span></li>
+        <li><span class="ctrl-key">K</span><span>Keepsakes</span></li>
+        <li><span class="ctrl-key">J</span><span>Journal</span></li>
+        <li><span class="ctrl-key">P</span><span>Interior designer (in the treehouse)</span></li>
+        <li><span class="ctrl-key">Esc</span><span>Close dialogue / leave a menu</span></li>
+      </ul>
+      <button class="ctrl-close" id="controls-close">Got it &middot; close</button>
+    </div>
+  </div>
   <!-- keepsakes panel (toggle with K) -->
   <div id="keepsakepanel">
     <div class="ks-card">
@@ -1146,6 +1278,7 @@
       <div class="nb-sub">What I've learned so far, in my own words.</div>
       <div class="nb-body">
         <div class="nb-tabs" id="nb-tabs"></div>
+        <div id="nb-favors"></div>
         <div class="nb-page">
           <div class="nb-charname" id="nb-charname"></div>
           <div id="nb-sections"></div>
@@ -1201,6 +1334,29 @@
     </div>
   </div>
 
+  <!-- Dance Battle overlay -->
+  <div id="dancegame">
+    <div class="card">
+      <h3 id="dance-title">Dance Battle</h3>
+      <div class="sub" id="dance-sub">Hit the arrows in time! Use <b>W A S D</b> or the arrow keys.</div>
+      <div class="scores">
+        <div>Round<b id="dance-round">1</b></div>
+        <div>Combo<b id="dance-combo">0</b></div>
+        <div>Score<b id="dance-score">0</b></div>
+      </div>
+      <div id="dancestage">
+        <div id="dancefloor">
+          <div class="dance-lanes" id="dance-lanes"></div>
+          <div class="dance-hitline"></div>
+          <div class="dance-targets" id="dance-targets"></div>
+        </div>
+      </div>
+      <div class="result" id="dance-result">&nbsp;</div>
+      <div class="press-hint">Tap the matching key as each arrow reaches the line &middot; <kbd>Esc</kbd> to bow out</div>
+      <button class="close" id="dance-close">Step off the floor</button>
+    </div>
+  </div>
+
   <!-- mobile dpad -->  <div id="dpad">
     <button class="up" data-k="up">&#9650;</button>
     <button class="left" data-k="left">&#9664;</button>
@@ -1214,10 +1370,26 @@
     <div class="tag">A Cozy Park Dating Sim</div>
     <h1>Purgatory Park</h1>
     <div class="tag" style="letter-spacing:0.2em;">Befriend the beings of the park</div>
-    <button class="start-btn" id="continueBtn" style="display:none;">&#8635; Continue</button>
-    <button class="start-btn" id="start">&#9654; Enter the Park</button>
+    <div class="tag" style="margin-top:1.1rem; opacity:0.85;">Choose a save file</div>
+    <div id="slotpicker"></div>
     <div class="controls">Walk with <b>WASD</b> or <b>arrow keys</b> &middot; Press <b>E</b> to chat or use things in the park &middot; Do a character's little tasks to grow closer &middot; And keep an eye out &mdash; the park has its secrets</div>
-    <div class="save-note" id="saveNote" style="display:none;">Your progress saves automatically in this browser.</div>
+    <div class="save-note" id="saveNote">Each slot saves automatically in this browser.</div>
+  </div>
+
+  <!-- new-file naming dialog (name + emoji) -->
+  <div id="newfile">
+    <div class="nf-card">
+      <h3>Name your file</h3>
+      <div class="nf-row">
+        <span class="nf-emoji" id="nf-emoji">🌳</span>
+        <input id="nf-name" type="text" maxlength="16" placeholder="Your park…" autocomplete="off" />
+      </div>
+      <div class="nf-emojis" id="nf-emojis"></div>
+      <div class="nf-btns">
+        <button class="nf-cancel" id="nf-cancel">Cancel</button>
+        <button class="nf-start" id="nf-start">🌱 Start</button>
+      </div>
+    </div>
   </div>
 
   <!-- Sweetheart-secured celebration (dismissable — game keeps going) -->
@@ -1713,7 +1885,19 @@ const PAD = 480;              // width of the new empty strip opened on the left
 const RENDER_W = WORLD_W + PAD;   // full rendered world width
 const WORLD_MIN_X = -420;     // gameplay coords can now go left of 0 into the tree grove
 let px = 760, py = 700;              // player world position
-const SPEED = 6;
+const SPEED = 6;                     // movement per 60fps frame (scaled by frame delta so speed is FPS-independent)
+// frame-delta scaling: keeps walking speed constant even if the frame rate dips (heavier scenes,
+// background tabs, etc.). Returns a multiplier where 1.0 == a clean 60fps frame, clamped so a
+// long stall (e.g. tab was hidden) can't teleport the player.
+let _lastMoveT = performance.now();
+let _moveScale = 1;   // last computed frame-delta multiplier (shared so both loops don't double-consume the clock)
+function moveScale(){
+  const now = performance.now();
+  let dt = now - _lastMoveT; _lastMoveT = now;
+  if(dt <= 0) dt = 16.67;
+  _moveScale = Math.min(3, dt / 16.67);   // cap at 3x (≈20fps) so a hitch doesn't fling you across the map
+  return _moveScale;
+}
 const keys = {};
 let canMove = false;
 let busy = false;
@@ -1760,6 +1944,168 @@ const TASK_HINT = {
   flower: "bring me a flower — pick one from the crooked tree, then come give it to me"
 };
 
+/* ============ SOCIAL FAVORS ============
+   The park people have their own lives and quiet fondnesses for each other. Now and then,
+   when you drop by, someone asks you to carry a word or a small thing to somebody else —
+   not a quest, just being neighborly. Delivering it warms both of them to you a little, and
+   sometimes nudges the world (two of them will go sit together). If you never get around to
+   it, they sort it out themselves and mention it kindly next time. Everything the player is
+   currently holding for someone lives in the Journal's "Passing Along" page — no popups. */
+// Favors are generated on the fly so ANY character can reach out about ANY other. Each favor
+// is one of three kinds, rolled evenly: a `message` (pass along words), a `gift` (a kind word
+// + a little thing that lifts the mood), or an `item` (return/hand over something of theirs).
+// Per-character voice snippets keep everyone sounding like themselves no matter the pairing.
+const FAVOR_KINDS = ['message','gift','item'];
+const FAVOR_GIFTS = {
+  devin:'a tiny hand-colored sky', femi:'a lucky bottlecap', caiza:'a polished tide-shell',
+  bull:'a big pretty wildflower', luna:'a pressed night-blooming petal', charlie:'a shiny acorn',
+  nico:'a smooth dark river-stone'
+};
+const FAVOR_ITEMS = {
+  devin:'a little beetle charm he lent out', femi:'his spare wristband', caiza:'a fang-shaped pendant',
+  bull:'his old bandana', luna:'a moon-pale ribbon', charlie:'his second-favorite marble',
+  nico:'a folded note he never sent'
+};
+// how each giver phrases the ask — {N} = recipient name, {IT} = the thing (gift/item only)
+const FAVOR_VOICE = {
+  devin: {
+    message: "If you should pass {N}, would you carry a kind word from me? Tell them an old god thinks fondly of them.",
+    gift:    "Might you bring {N} this — {IT}? A small thing, made with care. It may brighten their day.",
+    item:    "Ah — {N} left {IT} with me a while ago. Would you be so good as to return it? I do hate holding what isn't mine."
+  },
+  femi: {
+    message: "Yo, do me a solid — tell {N} I said they're alright. Don't make it weird, just… tell 'em.",
+    gift:    "Take {N} this, yeah? {IT}. Little pick-me-up. They'll know it's from the legend.",
+    item:    "Oh! {N}'s {IT} — been meaning to get it back to them. Can you run it over? You're the best."
+  },
+  caiza: {
+    message: "…Fine. Tell {N} I don't hate 'em. That's as soft as I get. Word for word, park-dweller.",
+    gift:    "Give {N} this — {IT}. And no, I'm not going soft. Drop it and walk off. Don't grin at me.",
+    item:    "{N} left {IT} near the pond. Take it back before I throw it in. …Don't actually tell 'em I'd do that."
+  },
+  bull: {
+    message: "Hey, if ya see {N}, tell 'em ol' Maxus is rootin' for 'em, would ya? Warms me to say it.",
+    gift:    "Carry this over to {N} for me? {IT}. Just a lil' somethin' to make 'em smile. Don't make a fuss.",
+    item:    "Shoot — {N}'s {IT} got left with me. Mind takin' it back their way? Much obliged, little one."
+  },
+  luna: {
+    message: "Would you carry a whisper to {N} for me? Tell them the night thinks of them kindly.",
+    gift:    "Please bring {N} this — {IT}. Some small light for them to keep. It suits them, I think.",
+    item:    "{N} left {IT} in my care. Would you see it home again? I would hate for them to worry."
+  },
+  charlie: {
+    message: "OOH — can you tell {N} I think they're SO cool?! Tell 'em, tell 'em! They gotta know!",
+    gift:    "Give {N} this!! {IT}!! I found it and I KNEW they'd love it! Go go go!",
+    item:    "Oops — I still got {N}'s {IT}! Can you give it back? I forget stuff when I'm bouncy, hehe!"
+  },
+  nico: {
+    message: "…If it isn't too much — tell {N} I'm glad they exist. I can't quite say it to their face.",
+    gift:    "Would you bring {N} this? {IT}. It's quiet and small, like me. Maybe they'll like it.",
+    item:    "{N} lent me {IT}. I've held it too long. Please… give it back for me? I don't like being a burden."
+  }
+};
+// the recipient's grateful reply, by their own voice — {G} = giver name
+const FAVOR_REPLY = {
+  devin:   { message:"Oh — {G} said that? How lovely. Do tell them the sentiment is returned, warmly.",
+             gift:"For me? From {G}? How thoughtful. It shall have pride of place. My thanks — and theirs.",
+             item:"Ah, returned safe and sound! Bless {G} for remembering, and you for carrying it. Much obliged." },
+  femi:    { message:"{G} said that about ME? Ha! Course they did. Tell 'em right back, yeah?",
+             gift:"{G} sent me this?! Okay, okay, that's actually really cool. Tell 'em I owe 'em one.",
+             item:"Yesss, been lookin' for this! {G}'s a real one. And so are you — nice work." },
+  caiza:   { message:"…{G} said that. Huh. …Tell 'em I heard it. And that it's… mutual. Ugh. Don't push it.",
+             gift:"{G} gave me THIS? …It's not bad. Fine. Tell 'em it's not bad. That's a compliment from me.",
+             item:"Finally. Tell {G} thanks for hangin' onto it. …And thanks to you, I guess. Don't let it go to your head." },
+  bull:    { message:"Aw, {G} said that? Well shoot, that just made my whole day. Tell 'em right back, would ya?",
+             gift:"{G} sent me somethin'? That's real sweet of 'em. You tell {G} thank you kindly from big ol' me.",
+             item:"Well lookie here — thought I'd lost track of that! Thank {G} for me, and you too, little one." },
+  luna:    { message:"{G} said that…? That is a gift in itself. Tell them the feeling is shared, softly.",
+             gift:"From {G}? It's beautiful. I'll keep it close. Please carry my gratitude back to them.",
+             item:"Home at last. Thank {G} for its safekeeping — and thank you for its return. Kind of you both." },
+  charlie: { message:"{G} THINKS I'M COOL?! AAAA! Tell 'em I think THEY'RE cool times a MILLION! Bye!!",
+             gift:"{G} GAVE ME A PRESENT?! BEST DAY EVER! Tell 'em THANK YOU a hundred times!!",
+             item:"MY thing! You found it! Tell {G} thanks for keeping it safe! You're the BEST!" },
+  nico:    { message:"…{G} said that. About me. …Tell them — tell them I feel the same. Thank you for carrying it.",
+             gift:"{G} thought of me? …That means more than they know. Please tell them thank you. Quietly.",
+             item:"Oh — I'd wondered where it went. Tell {G} thank you for keeping it. And… thank you, too." }
+};
+// how the giver waves it off if you never delivered — {N} = recipient
+const FAVOR_SELF = {
+  devin:   "Oh — I caught {N} myself and passed it along. But thank you for being willing, truly.",
+  femi:    "Eh, ran into {N} and handled it. No sweat. 'Preciate you though, for real.",
+  caiza:   "{N} came by. I dealt with it. …Don't need to make a thing of it. But — thanks for offering.",
+  bull:    "Caught up with {N} myself, all sorted! But it was awful kind of ya to say you would.",
+  luna:    "The night brought {N} to me, and I said my piece. Still — thank you for being ready to help.",
+  charlie: "Oh! I bounced over to {N} already, hehe! But thanks for sayin' you'd help, you're so nice!",
+  nico:    "…{N} found me, and I managed the words. But I won't forget you were willing. Thank you."
+};
+function favorThing(who, kind){ return kind==='gift' ? (FAVOR_GIFTS[who]||'a little something') : kind==='item' ? (FAVOR_ITEMS[who]||"something of theirs") : null; }
+// build all four lines for a from→to pair of a given kind
+function makeFavor(from, to, kind){
+  const N = NAMES[to], G = NAMES[from];
+  const thing = favorThing(from, kind);
+  const req = FAVOR_VOICE[from][kind].replace(/\{N\}/g, N).replace(/\{IT\}/g, thing||'');
+  const reply = FAVOR_REPLY[to][kind].replace(/\{G\}/g, G);
+  const self = FAVOR_SELF[from].replace(/\{N\}/g, N);
+  let deliver;
+  if(kind==='message') deliver = `${G} wanted you to hear something: a kind word passed your way.`;
+  else if(kind==='gift') deliver = `${G} sent this along for you — ${thing}.`;
+  else deliver = `${G} asked me to return ${thing} to you.`;
+  return { req, deliver, reply, self, item:thing };
+}
+// backfill text on a favor object that may have come from an older save (had only from/to/kind)
+function ensureFavorText(f){
+  if(f && f.deliver && f.reply && f.self) return f;
+  const lines = makeFavor(f.from, f.to, f.kind);
+  f.req=lines.req; f.deliver=lines.deliver; f.reply=lines.reply; f.self=lines.self; f.item=lines.item;
+  return f;
+}
+// A favor may only be offered once both people are met/around, the giver likes you a little,
+// and there isn't already an active or completed one between that exact pair+kind.
+const activeFavors = [];      // {id, from, to, kind, item, req, deliver, reply, self, offeredAt}
+const resolvedFavors = [];    // {from, to, kind, how:'delivered'|'self', when}  — for the journal history
+let favorNextId = 1;
+let lastFavorOfferAt = 0;     // global cooldown so offers feel occasional, not constant
+let favorCheckAt = 0;         // throttle for the stale-favor sweep in the game loop
+const FAVOR_OFFER_COOLDOWN = 75000;   // ~1.25 min of real time between new offers
+const FAVOR_LAPSE_MS = 240000;        // if undelivered ~4 min, the giver handles it themselves
+const FAVOR_TRIGGER_CHANCE = 0.18;    // low base chance per eligible conversation (kind rolled 1/3 each after)
+function hasActiveFavor(from, to, kind){ return activeFavors.some(f=>f.from===from && f.to===to && f.kind===kind); }
+function favorAlreadyDone(from, to, kind){ return resolvedFavors.some(f=>f.from===from && f.to===to && f.kind===kind); }
+// any active favor the player is currently carrying FOR delivery TO `who`
+function favorToDeliver(who){ return activeFavors.find(f=>f.to===who); }
+// who could `giver` plausibly reach out to right now? any OTHER met + available character.
+function favorRecipientsFor(giver){
+  return Object.keys(npcs).filter(to=>{
+    if(to===giver) return false;
+    if(!FAVOR_REPLY[to]) return false;                 // must have a voice
+    if(!iAvailable(to)) return false;                  // has to actually be around
+    if(!(npcs[to].met || npcs[to].visits>0)) return false;  // and you've met them
+    return true;
+  });
+}
+// pick a favor `who` could hand you right now, if the stars line up
+function pickOfferableFavor(who){
+  const now = Date.now();
+  if(now - lastFavorOfferAt < FAVOR_OFFER_COOLDOWN) return null;
+  if(!FAVOR_VOICE[who]) return null;                   // giver must have a voice
+  if(favorToDeliver(who)) return null;                 // don't ask while you're mid-errand for them
+  if((aff[who]||0) < 12) return null;                  // needs to like you a touch first
+  if(Math.random() > FAVOR_TRIGGER_CHANCE) return null;// low base chance — favors stay occasional
+  const recipients = favorRecipientsFor(who);
+  if(!recipients.length) return null;
+  // even split across the three kinds, then a valid (not-already-active/done) pairing of that kind
+  const kindsShuffled = FAVOR_KINDS.slice().sort(()=>Math.random()-0.5);
+  const rShuffled = recipients.slice().sort(()=>Math.random()-0.5);
+  for(const kind of kindsShuffled){
+    for(const to of rShuffled){
+      if(hasActiveFavor(who,to,kind)) continue;
+      if(favorAlreadyDone(who,to,kind)) continue;
+      return { from:who, to, kind };
+    }
+  }
+  return null;
+}
+
 // interactable environment objects: world point (where the player stands to use it) + prompt element + handler
 const objects = {
   court:  { x: 1180, y: 640, el: document.getElementById('op-court'),  fn: ()=>shootHoops() },
@@ -1787,7 +2133,15 @@ document.addEventListener('keydown', e => {
     if (k === 'escape' || k === 'q'){ closeHoops(); return; }
     return;
   }
+  // dance battle captures the four direction keys as step inputs, Esc / Q to bow out
+  if (danceActive || danceEnding){
+    if (k === 'escape' || k === 'q'){ closeDance(); return; }
+    if (danceActive && !e.repeat && k in DANCE_KEYS){ danceHit(DANCE_KEYS[k]); return; }
+    if (danceEnding && (k==='e' || k===' ' || k==='enter')){ closeDance(); return; }
+    return;
+  }
   if (k === 'escape'){
+    const cp=document.getElementById('controlspanel'); if(cp && cp.classList.contains('show')){ toggleControls(false); return; }
     if (dlgActive){ if(pendingEnding){ const w=pendingEnding; pendingEnding=null; triggerEnding(w); } else endDialogue(); return; }
     if (scene==='interior' && designing){ exitDesigner(); return; }
     if (scene==='interior' && !busy){ exitTreehouse(); return; }
@@ -1801,10 +2155,11 @@ document.addEventListener('keydown', e => {
   if (k === 'k' && !dlgActive && !busy) toggleKeepsakePanel();
   if (k === 'j' && !dlgActive && !busy) toggleNotebook();
   if (k === ';' && !dlgActive && !busy){   // shortcut: instantly unearth a red cloth at the dig spot
-    if(Math.hypot(px-objects.dig.x, py-objects.dig.y) < 90){
-      inventory.cloth++; updateInventory();
+    if(!clothFound && Math.hypot(px-objects.dig.x, py-objects.dig.y) < 90){
+      inventory.cloth++; clothFound=true; updateInventory();
       const spot=document.getElementById('digspot'); spot.classList.remove('dug'); void spot.offsetWidth; spot.classList.add('dug');
       emote(1500, 760, '🎏'); toast("You dig up a tattered RED CLOTH! (Click it in your inventory to use it.)", 4200);
+      if(typeof requestSave==='function') requestSave();
     }
   }
   if ((k === ' ' || k === 'enter') && dlgActive) advance();
@@ -1875,6 +2230,8 @@ function initDepth(){
 requestAnimationFrame(initDepth);
 
 function loop(){
+  if(performance.now() > favorCheckAt){ favorCheckAt = performance.now()+8000; autoResolveStaleFavors(); }
+  const mscale = moveScale();   // advance the frame-delta clock every frame (even while idle)
   if (scene==='park' && canMove && !dlgActive && !busy){
     let dx=0, dy=0;
     if (keys['w']||keys['arrowup']) dy-=1;
@@ -1883,7 +2240,7 @@ function loop(){
     if (keys['d']||keys['arrowright']) dx+=1;
     if (dx||dy){
       const len = Math.hypot(dx,dy)||1;
-      const stepX=(dx/len)*SPEED, stepY=(dy/len)*SPEED;
+      const stepX=(dx/len)*SPEED*mscale, stepY=(dy/len)*SPEED*mscale;
       // resolve axes independently so you can slide along obstacles
       let nx=Math.max(WORLD_MIN_X+60, Math.min(WORLD_W-60, px+stepX));
       let ny=Math.max(430, Math.min(WORLD_H-40, py+stepY));
@@ -2055,6 +2412,263 @@ function closeHoops(){
   busy=false;
 }
 document.getElementById('hoop-close').addEventListener('click', closeHoops);
+
+/* ============ DANCE BATTLE ============
+   A rhythm face-off with any character. Arrows scroll down four lanes; hit W/A/S/D (or arrows)
+   as each reaches the line. Rounds get faster and busier. Your accuracy earns a grade, and the
+   grade decides how much affection you win — dance well and they warm to you fast. Cozy trash
+   talk keeps it in-character. Gated by a cooldown so it can't be farmed for affection. */
+let danceActive=false, danceRAF=null, danceWho=null;
+let danceArrows=[];        // live arrows: {lane, hitTime, el, dead, judged}
+let danceChart=[];         // pending spawns for the round: {lane, beat}  (beat index from round start)
+let danceRound=1, danceCombo=0, danceScore=0, danceHits=0, danceTotal=0, dancePerfects=0;
+let danceChartIdx=0, danceEnding=false;
+let danceBeatDur=0.5, danceAnchor=0, danceRoundBeat0=0, danceRoundEndBeat=0;
+const DANCE_LANES = 4;                                   // left / down / up / right
+const DANCE_KEYS  = { a:0, arrowleft:0, s:1, arrowdown:1, w:2, arrowup:2, d:3, arrowright:3 };
+const DANCE_GLYPH = ['◀','▼','▲','▶'];
+const DANCE_ROUNDS = 3;                                   // how many rounds per battle
+const DANCE_FLOOR_H = 300, DANCE_HITLINE_Y = 224;        // pixel y (from top) where the hit target sits
+const DANCE_FALL_BEATS = 4;                               // how many beats an arrow takes to fall to the line
+// judging by VISUAL distance from the hit line (px) — matches exactly what the player sees & reacts to,
+// so it isn't thrown off by audio-output latency. Generous windows keep it fun, not punishing.
+const DANCE_PERFECT_PX = 34, DANCE_GOOD_PX = 72;
+const DANCE_MISS_PX = 96;                                 // once this far PAST the line, it's a miss
+let danceReadyAt = {};                                    // per-character cooldown vs affection farming
+const DANCE_COOLDOWN = 60000;                             // 60s between affection-earning battles
+let danceWins = 0;                                        // battles finished at grade C or better (unlocks the jukebox at 3)
+const JUKEBOX_UNLOCK = 3;
+// ---- collectible song discs: bought from the vending machine (10 rocks), played on the jukebox ----
+const SONG_DISCS = [
+  { key:'arcade', name:'Neon Arcade',    icon:'💿', blurb:'a bright, bouncy chiptune banger' },
+  { key:'lounge', name:'Midnight Lounge',icon:'📀', blurb:'a smooth, mellow jazz groove' },
+  { key:'anthem', name:'Sunrise Anthem', icon:'🪩', blurb:'a soaring, hopeful theme' }
+];
+const DISC_PRICE = 10;
+const discsOwned = new Set();   // disc keys the player has bought
+// escalating step charts: notes land on beats/half-beats. Higher round = busier chart.
+function danceBuildRound(round){
+  // spacing in beats between notes: round 1 = every beat, later rounds add off-beats
+  const notes = 12 + round*4;                             // 16, 20, 24
+  const spacing = round>=3 ? 1 : round===2 ? 1 : 1;       // whole-beat base
+  const chart = [];
+  let beat = 4;                                           // 4-beat lead-in (one bar) before first note
+  for(let i=0;i<notes;i++){
+    let lane = Math.floor(Math.random()*DANCE_LANES);
+    chart.push({ lane, beat });
+    // advance: mostly a whole beat; on higher rounds sprinkle half-beat doubles
+    if(round>=2 && Math.random()<0.25) beat += 0.5; else beat += 1;
+  }
+  const endBeat = beat + DANCE_FALL_BEATS + 2;            // let the last arrow fall + a little tail
+  return { chart, endBeat };
+}
+const DANCE_TAUNT = {
+  devin:   ["A god can move, you know.","Keep up, little dancer!","Ooh — nicely done!"],
+  femi:    ["That all you got?!","LET'S GOOO!","Okay okay, you can move!"],
+  caiza:   ["Pfft. Try harder.","…Not bad, park-dweller.","Hmph. Lucky feet."],
+  bull:    ["Yeehaw, look at you go!","Big feet, big moves!","Haha! You got RHYTHM!"],
+  luna:    ["Dance with the dark…","Graceful. Truly.","The night keeps your beat."],
+  charlie: ["WEEE DANCING!!","GO GO GO!!","YOU'RE SO GOOD!!"],
+  nico:    ["…oh. you're good.","d-don't watch me trip…","that was… really cool."]
+};
+function danceLaneX(lane){ return (lane + 0.5) * (100/DANCE_LANES); }   // % center of a lane
+function startDanceBattle(who){
+  if(!who) return;
+  danceWho = who; danceActive=true; danceEnding=false; busy=true;
+  danceArrows=[]; danceChart=[]; danceRound=1; danceCombo=0; danceScore=0;
+  danceHits=0; danceTotal=0; dancePerfects=0; danceChartIdx=0;
+  // build lanes + targets once
+  const lanes=document.getElementById('dance-lanes'); lanes.innerHTML='';
+  const targets=document.getElementById('dance-targets'); targets.innerHTML='';
+  for(let i=0;i<DANCE_LANES;i++){
+    const l=document.createElement('div'); l.className='lane'; lanes.appendChild(l);
+    const t=document.createElement('div'); t.className='dance-target'; t.textContent=DANCE_GLYPH[i]; t.dataset.lane=i; targets.appendChild(t);
+  }
+  document.getElementById('dance-title').textContent = `Dance Battle · ${NAMES[danceWho]}`;
+  const styleName = (typeof Music!=='undefined' && Music.danceStyleName) ? Music.danceStyleName(danceWho) : 'Dance';
+  document.getElementById('dance-sub').innerHTML = `♪ <em>${styleName}</em> ♪ — ${NAMES[danceWho].split(' ')[0]}'s jam! Hit the arrows with <b>W A S D</b> or the arrow keys.`;
+  document.getElementById('dance-round').textContent = danceRound;
+  document.getElementById('dance-combo').textContent = 0;
+  document.getElementById('dance-score').textContent = 0;
+  const res=document.getElementById('dance-result'); res.textContent='Ready…'; res.className='result';
+  document.getElementById('dancegame').classList.add('show');
+  // start the music FIRST so its beat grid (anchor) exists, then align the chart to it
+  if(typeof Music!=='undefined') Music.enterDance(1, danceWho);
+  danceLoadRound(1);
+  danceRAF = requestAnimationFrame(danceTick);
+}
+// read the live musical beat grid (audio-clock accurate). Fallback if music is off.
+function danceGrid(){
+  const info = (typeof Music!=='undefined') ? Music.danceBeatInfo() : null;
+  if(info && info.active){ danceBeatDur = info.beatDur; danceAnchor = info.anchor; return info; }
+  // music off / unavailable: run our own steady grid off performance clock (still internally consistent)
+  danceBeatDur = danceBeatDur || 0.5;
+  return { anchor: danceAnchor, beatDur: danceBeatDur, ctxNow: (performance.now()/1000) - danceClockOffset, active:false };
+}
+let danceClockOffset = 0;
+function danceLoadRound(round){
+  danceRound = round;
+  if(round>1 && typeof Music!=='undefined') Music.danceRound(round);   // re-anchors the grid at new tempo
+  let grid = danceGrid();
+  // music off / unavailable: establish our own steady grid anchored to "now"
+  if(!grid.active){
+    danceBeatDur = 0.5;                                  // 120bpm fallback so it's still danceable
+    danceClockOffset = 0;
+    danceAnchor = performance.now()/1000 + 0.12;
+    grid = { anchor:danceAnchor, beatDur:danceBeatDur, ctxNow:performance.now()/1000, active:false };
+  }
+  const built = danceBuildRound(round);
+  danceChart = built.chart; danceChartIdx = 0;
+  // the round's beat 0 = the next whole beat after "now", so notes always land cleanly on the grid
+  const beatsSinceAnchor = (grid.ctxNow - grid.anchor) / grid.beatDur;
+  danceRoundBeat0 = Math.max(0, Math.ceil(beatsSinceAnchor)) + 0.001;   // start on an upcoming beat boundary
+  danceRoundEndBeat = danceRoundBeat0 + built.endBeat;
+  document.getElementById('dance-round').textContent = round;
+  const res=document.getElementById('dance-result');
+  res.textContent = round===1 ? 'Ready…' : `Round ${round}! Faster now!`; res.className='result';
+}
+function danceSpawnArrow(note){
+  const grid = danceGrid();
+  const hitTime = grid.anchor + (danceRoundBeat0 + note.beat) * grid.beatDur;
+  const el=document.createElement('div'); el.className='dance-arrow'; el.textContent=DANCE_GLYPH[note.lane];
+  el.style.left = danceLaneX(note.lane)+'%'; el.style.transform='translate(-50%,0)';
+  el.style.top='-30px';
+  document.getElementById('dancefloor').appendChild(el);
+  danceArrows.push({ lane:note.lane, hitTime, el, dead:false, judged:false });
+  danceTotal++;
+}
+function danceTick(){
+  if(!danceActive){ return; }
+  const grid = danceGrid();
+  const now = grid.ctxNow;
+  const travel = DANCE_FALL_BEATS * grid.beatDur;   // seconds an arrow takes to fall to the line
+  // spawn arrows once they enter the visible fall window (hitTime - travel <= now)
+  while(danceChartIdx < danceChart.length){
+    const note = danceChart[danceChartIdx];
+    const hitTime = grid.anchor + (danceRoundBeat0 + note.beat) * grid.beatDur;
+    if(hitTime - travel <= now){ danceSpawnArrow(note); danceChartIdx++; }
+    else break;
+  }
+  // position every arrow purely from audio time so it crosses the line exactly on its beat
+  for(const a of danceArrows){
+    if(a.dead) continue;
+    const remaining = a.hitTime - now;                 // secs until it should be hit
+    const progress = 1 - (remaining / travel);          // 0 at spawn, 1 at the line
+    a.y = progress * DANCE_HITLINE_Y;
+    a.el.style.top = a.y + 'px';
+    // missed only once it's visibly dropped well BELOW the hit line
+    if(!a.judged && (a.y - DANCE_HITLINE_Y) > DANCE_MISS_PX){
+      a.judged=true; a.dead=true; a.el.remove(); danceMiss();
+    }
+  }
+  danceArrows = danceArrows.filter(a=>!a.dead);
+  // round over when every charted note has spawned, none remain, and the round's end beat passed
+  const roundEndTime = grid.anchor + danceRoundEndBeat * grid.beatDur;
+  if(danceChartIdx>=danceChart.length && danceArrows.length===0 && now > roundEndTime){
+    if(danceRound < DANCE_ROUNDS){ danceLoadRound(danceRound+1); }
+    else { danceFinish(); return; }
+  }
+  danceRAF = requestAnimationFrame(danceTick);
+}
+function danceLitTarget(lane){
+  const t=document.querySelector('.dance-target[data-lane="'+lane+'"]');
+  if(!t) return; t.classList.add('lit'); setTimeout(()=>t.classList.remove('lit'), 120);
+}
+function danceHit(lane){
+  if(!danceActive || danceEnding) return;
+  danceLitTarget(lane);
+  // nearest un-judged arrow in this lane, by VISUAL distance from the hit line (what you see)
+  let best=null, bestPx=Infinity;
+  for(const a of danceArrows){
+    if(a.dead || a.judged || a.lane!==lane) continue;
+    const px = Math.abs(a.y - DANCE_HITLINE_Y);
+    if(px < bestPx){ bestPx=px; best=a; }
+  }
+  const res=document.getElementById('dance-result');
+  if(best && bestPx <= DANCE_GOOD_PX){
+    best.judged=true; best.dead=true; best.el.remove();
+    if(bestPx <= DANCE_PERFECT_PX){
+      dancePerfects++; danceHits++; danceCombo++; danceScore += 100 + danceCombo*5;
+      res.textContent='PERFECT! ✨'; res.className='result perfect';
+      if(typeof Music!=='undefined') Music.hit(true);
+    } else {
+      danceHits++; danceCombo++; danceScore += 50 + danceCombo*3;
+      res.textContent='Good!'; res.className='result good';
+      if(typeof Music!=='undefined') Music.hit(false);
+    }
+    document.getElementById('dance-combo').textContent = danceCombo;
+    document.getElementById('dance-score').textContent = danceScore;
+  } else {
+    // pressed with nothing near the line — a small combo break, no phantom total
+    danceCombo=0; document.getElementById('dance-combo').textContent = 0;
+    res.textContent='—'; res.className='result';
+  }
+}
+function danceMiss(){
+  danceCombo=0;
+  document.getElementById('dance-combo').textContent = 0;
+  const res=document.getElementById('dance-result'); res.textContent='Miss!'; res.className='result miss';
+}
+function danceGrade(acc){
+  if(acc>=0.95) return {g:'S', aff:14, line:"Flawless! You two moved like one."};
+  if(acc>=0.85) return {g:'A', aff:11, line:"Incredible rhythm — they're beaming."};
+  if(acc>=0.70) return {g:'B', aff:8,  line:"Great moves! That was a blast."};
+  if(acc>=0.50) return {g:'C', aff:5,  line:"Some solid steps in there."};
+  if(acc>=0.25) return {g:'D', aff:2,  line:"A little clumsy, but you had fun."};
+  return {g:'F', aff:0, line:"Two left feet today — they laugh it off."};
+}
+function danceFinish(){
+  danceEnding=true; danceActive=false;
+  if(danceRAF) cancelAnimationFrame(danceRAF);
+  danceArrows.forEach(a=>a.el&&a.el.remove()); danceArrows=[];
+  if(typeof Music!=='undefined') Music.exitDance();   // ease the music back to the calm park groove
+  const acc = danceTotal>0 ? danceHits/danceTotal : 0;
+  const gr = danceGrade(acc);
+  const who = danceWho;
+  // count a battle as "won" at grade B or better — three wins unlock the treehouse jukebox
+  const wonThis = (gr.g==='S' || gr.g==='A' || gr.g==='B');
+  let justUnlocked = false;
+  if(wonThis){
+    const before = danceWins; danceWins++;
+    if(before < JUKEBOX_UNLOCK && danceWins >= JUKEBOX_UNLOCK) justUnlocked = true;
+    requestSave();
+  }
+  // affection reward — only if off cooldown, so it can't be farmed. raw=true for exact value.
+  const now = performance.now();
+  let gained = 0;
+  if(gr.aff>0){
+    if(now >= (danceReadyAt[who]||0)){
+      gained = gr.aff; addAff(who, gr.aff, true);
+      danceReadyAt[who] = now + DANCE_COOLDOWN;
+    }
+  }
+  const stage=document.getElementById('dancefloor');
+  const taunts = DANCE_TAUNT[who] || ["Nice moves!"];
+  const taunt = taunts[Math.min(taunts.length-1, gr.g==='S'||gr.g==='A' ? 2 : gr.g==='F' ? 0 : 1)];
+  let jukeNote = '';
+  if(justUnlocked){
+    jukeNote = `<br><b style="color:#8fd3ff">🎵 Jukebox unlocked! Find it up in the treehouse.</b>`;
+  } else if(wonThis && danceWins < JUKEBOX_UNLOCK){
+    jukeNote = `<br><span style="color:#9a7">Dance wins: ${danceWins}/${JUKEBOX_UNLOCK} toward a treehouse jukebox</span>`;
+  }
+  document.getElementById('dance-result').innerHTML =
+    `<span id="dance-grade">${gr.g}</span><br>${gr.line}<br><em>${NAMES[who]}: “${taunt}”</em>` +
+    (gained>0 ? `<br><b style="color:var(--ember)">+${gained} affection</b>` : (gr.aff>0 ? `<br><span style="color:#9a7">(already danced recently — no bonus)</span>` : '')) +
+    jukeNote;
+  document.getElementById('dance-result').className='result '+(gr.g==='S'||gr.g==='A'?'perfect':gr.g==='F'?'miss':'good');
+  document.getElementById('dance-close').textContent = 'Take a bow';
+}
+function closeDance(){
+  danceActive=false; danceEnding=false; if(danceRAF) cancelAnimationFrame(danceRAF);
+  danceArrows.forEach(a=>a.el&&a.el.remove()); danceArrows=[];
+  if(typeof Music!=='undefined') Music.exitDance();   // restore the ambient tempo if bowing out early
+  document.getElementById('dancegame').classList.remove('show');
+  document.getElementById('dance-close').textContent = 'Step off the floor';
+  const who=danceWho; danceWho=null; busy=false;
+  if(who) emote(px-20, py-200, '💃');
+}
+document.getElementById('dance-close').addEventListener('click', closeDance);
+
 let skipCount = 0;
 let skipReadyAt = 0;             // throttle so you can't spam stones
 const SKIP_COOLDOWN = 1500;      // ms between throws
@@ -2313,6 +2927,7 @@ function renderSpecialSlots(){
    25% rock · 74% nothing · 1% red cloth */
 let digReadyAt = 0;
 const DIG_COOLDOWN = 1200;
+let clothFound = false;   // the red cloth is a one-time find — never dug up twice
 function digHere(){
   const now = performance.now();
   if(now < digReadyAt) return;
@@ -2329,9 +2944,10 @@ function digHere(){
   const cShell   = cTrinket + (0.08 + 0.03*charlieLuck);
   const cRock    = cShell   + (0.28 + 0.04*charlieLuck);
   const roll = Math.random();
-  if(roll < cCloth){            // red cloth
-    inventory.cloth++; updateInventory();
+  if(!clothFound && roll < cCloth){            // red cloth (a one-time find)
+    inventory.cloth++; clothFound=true; updateInventory();
     emote(1500, 760, '🎏'); toast("Something bright in the dirt — a tattered RED CLOTH! You tuck it away. (Click it in your inventory to use it.)", 4200);
+    if(typeof requestSave==='function') requestSave();
   } else if(roll < cTrinket){     // a rare shiny trinket (a coveted gift)
     inventory.trinket++; updateInventory();
     emote(1500, 760, '✨'); toast("Something glints in the soil — a tiny SHINY TRINKET! Someone might treasure this.", 3200);
@@ -2532,6 +3148,27 @@ const IROOMS = [
   { key:'charlie', label:"Charlie's Room", who:'charlie',art:()=>charlieArt(), hx:1560, hy:760 },
   { key:'player',  label:"Your Room",      who:null,     art:null }
 ];
+// per-room decorations so each bedroom feels personal: wall pieces (hung across the back
+// panel), floor props, and an accessory on the bed. `wall` and `floor` are arrays now, so
+// each room can carry several themed items. Positions are handled by CSS (spread across the wall).
+const ROOM_DECOR = {
+  devin:   { wall:['🌅','🌙','⭐'], bed:'✨', floor:['🪴','🔭'] },
+  femi:    { wall:['🏀','🏅','📸'], bed:'🏀', floor:['🏆','👟'] },
+  caiza:   { wall:['🌊','🗺️','⚓'], bed:'🐚', floor:['📦','🍶'] },
+  bull:    { wall:['🎗️','🌾','🔔'], bed:'🐂', floor:['🏋️','🪵'] },
+  charlie: { wall:['🍓','🎨','🌈'], bed:'🧸', floor:['🥕','🧺'] },
+  player:  { wall:['🎏','🗺️','🎐'], bed:'📖', floor:['🕯️','🪴'] }
+};
+// per-room look: an accent color that tints the back wall + rug + lamp glow, so each alcove
+// reads as a distinctly different space at a glance (not just different trinkets).
+const ROOM_STYLE = {
+  devin:   { wall:'#a8894f', wall2:'#977a44', rug:'#e6b35c', rugEdge:'#c8913a', glow:'#ffe6a3' },   // warm gold, sunrise god
+  femi:    { wall:'#4f8a7a', wall2:'#447a6c', rug:'#57c0a6', rugEdge:'#3a9a82', glow:'#b6ffe8' },    // teal, sporty
+  caiza:   { wall:'#5566a8', wall2:'#4a5a97', rug:'#7d8fd6', rugEdge:'#5566b8', glow:'#bcd0ff' },    // deep sea blue
+  bull:    { wall:'#a86a4f', wall2:'#976044', rug:'#e0895f', rugEdge:'#c46b41', glow:'#ffd0a3' },    // rust/earth, ranch
+  charlie: { wall:'#b06590', wall2:'#9e5a82', rug:'#f2a5cd', rugEdge:'#e07db0', glow:'#ffd6ef' },    // candy pink, playful
+  player:  { wall:'#5f7aa8', wall2:'#546c97', rug:'#8fb8ec', rugEdge:'#6f9adb', glow:'#d0e6ff' }     // soft blue, cozy you
+};
 // basic night-time small talk in the treehouse — no gift/ask/hangout, just a cozy line.
 // One is picked at random each time you press E on a resident hanging out in the main room.
 const NIGHT_CHAT = {
@@ -2567,6 +3204,8 @@ const NIGHT_CHAT = {
   ]
 };
 const HATCH_PT = { x:1020, y:790 };
+const JUKE_PT = { x:300, y:720 };   // where you stand to use the jukebox (matches its DOM position)
+function jukeboxUnlocked(){ return danceWins >= JUKEBOX_UNLOCK; }
 const IBLOCKERS = [];   // interior wall boxes, filled by buildInterior()
 
 // a resident is "available" (exists in the world / you've unlocked them) — used to decide
@@ -2614,13 +3253,27 @@ function buildInterior(){
     const cx = x0 + ALC_W/2;
     // ── the alcove shell (back panel + floor patch + rug + lamp) ──
     const wrap = document.createElement('div');
-    wrap.className='iroom'; wrap.id='iroom-'+r.key;
+    wrap.className='iroom room-'+r.key; wrap.id='iroom-'+r.key;
     wrap.style.left=x0+'px'; wrap.style.top=ALC_TOP+'px'; wrap.style.width=ALC_W+'px'; wrap.style.height=alcH+'px';
+    const st = ROOM_STYLE[r.key] || {};
+    const dec = ROOM_DECOR[r.key] || {};
+    // several wall posters spread across the back panel
+    const wallItems = (dec.wall||[]).map((emo,wi)=>{
+      const leftPct = 14 + wi*30;   // spread them out horizontally
+      const topPx = 18 + (wi%2)*10; // slight stagger
+      return `<div class="rdec-wall" style="left:${leftPct}%; top:${topPx}px;"><div class="rdec-poster">${emo}</div></div>`;
+    }).join('');
+    // a couple of floor props tucked in the corners
+    const floorItems = (dec.floor||[]).map((emo,fi)=>{
+      const side = fi===0 ? `right:12px;` : `left:14px;`;
+      return `<div class="rdec-floor" style="${side} bottom:${14+ (fi%2)*4}px;">${emo}</div>`;
+    }).join('');
     wrap.innerHTML =
-      '<div class="rback"></div>'+
+      '<div class="rback"'+(st.wall?` style="--rw:${st.wall}; --rw2:${st.wall2||st.wall};"`:'')+'></div>'+
       '<div class="rfloor" style="top:'+(ALC_BACKH-20)+'px; height:'+(alcH-ALC_BACKH+20)+'px;"></div>'+
-      '<div class="rug"></div>'+
-      '<div class="ilamp" style="left:'+(ALC_W-56)+'px; top:26px;"><div class="glow"></div><div class="pole"></div></div>';
+      '<div class="rug"'+(st.rug?` style="--rug:${st.rug}; --rugEdge:${st.rugEdge||st.rug};"`:'')+'></div>'+
+      wallItems + floorItems +
+      '<div class="ilamp" style="left:'+(ALC_W-56)+'px; top:26px;"><div class="glow"'+(st.glow?` style="--glow:${st.glow};"`:'')+'></div><div class="pole"></div></div>';
     host.appendChild(wrap);
     // ── standing side walls (front-view: a face + a skewed top cap) ──
     const mkwall=(wx)=>{ const el=document.createElement('div'); el.className='iwall';
@@ -2635,7 +3288,8 @@ function buildInterior(){
     const bedX = x0 + 44, bedY = ALC_TOP + ALC_BACKH - 26;
     const bed=document.createElement('div'); bed.className='ibed '+r.key;
     bed.style.left=bedX+'px'; bed.style.top=bedY+'px';
-    bed.innerHTML='<div class="frame"></div><div class="mattress"></div><div class="pillow"></div><div class="quilt"></div>';
+    bed.innerHTML='<div class="frame"></div><div class="mattress"></div><div class="pillow"></div><div class="quilt"></div>'+
+      ((ROOM_DECOR[r.key]&&ROOM_DECOR[r.key].bed) ? '<div class="rdec-bed">'+ROOM_DECOR[r.key].bed+'</div>' : '');
     host.appendChild(bed);
     // ── nameplate hung above the open front of the alcove ──
     const plate=document.createElement('div'); plate.className='idoorplate'; plate.textContent=r.label;
@@ -2896,6 +3550,10 @@ function addBoughtDecor(type){
 // and out of any room whose front is currently barred (locked at night)
 function iBlocked(nx, ny){
   const rad=20;
+  // the jukebox is solid once it's here (its base sits around JUKE_PT)
+  if(jukeboxUnlocked()){
+    if(nx > JUKE_PT.x-48 && nx < JUKE_PT.x+48 && ny > JUKE_PT.y-30 && ny < JUKE_PT.y+16) return true;
+  }
   for(const b of IBLOCKERS){
     if(nx > b.x-rad && nx < b.x+b.w+rad && ny > b.y-rad && ny < b.y+b.h+rad) return true;
   }
@@ -2942,6 +3600,9 @@ function renderInterior(){
     // nameplate shows a lock when barred
     if(r._plate) r._plate.textContent = barred ? ('🔒 '+r.label) : r.label;
   });
+  // jukebox appears only once you've won three dance battles
+  const jb=document.getElementById('int-jukebox');
+  if(jb) jb.style.display = jukeboxUnlocked() ? 'block' : 'none';
 }
 // a cozy, treehouse/night-themed one-liner — basic chat only, no gift/ask/hangout
 function nightChat(who){
@@ -2949,6 +3610,45 @@ function nightChat(who){
   const text = lines[Math.floor(Math.random()*lines.length)];
   dlgActive=true;
   showLine(who, text, null);   // single line + their tagline, click/space to close
+}
+// ── jukebox menu: pick a track to play in the treehouse (unlocked after 3 dance wins) ──
+function jukeStatusLabel(){
+  const t = (typeof Music!=='undefined' && Music.currentTrack) ? Music.currentTrack() : null;
+  let nm = 'nothing right now';
+  if(t==='dance') nm='Purgatory Groove';
+  else if(t==='day') nm='Park Daytime';
+  else if(t==='night') nm='Park Nightfall';
+  else if(t && t.indexOf('disc:')===0){ const d=SONG_DISCS.find(x=>x.key===t.slice(5)); nm = d ? '“'+d.name+'”' : 'a disc'; }
+  return `The old jukebox hums, ready. Now playing: ${nm}. What'll it be?`;
+}
+function jukePlay(which){
+  if(typeof Music!=='undefined'){ Music.playTrack(which); }
+  const jb=document.getElementById('int-jukebox'); if(jb) jb.classList.add('playing');
+  openJukebox();   // re-open so the "now playing" line updates
+}
+function jukeStop(){
+  if(typeof Music!=='undefined'){ Music.jukeboxOff(nightMode); }
+  const jb=document.getElementById('int-jukebox'); if(jb) jb.classList.remove('playing');
+  endDialogue();
+}
+function openJukebox(){
+  dlgActive=true; wrap.classList.add('show');
+  const choices = [
+    { t:'🎶 Purgatory Groove (battle theme)', fn:()=>jukePlay('dance') },
+    { t:'☀️ Park — Daytime', fn:()=>jukePlay('day') },
+    { t:'🌙 Park — Nightfall', fn:()=>jukePlay('night') }
+  ];
+  // owned song discs
+  SONG_DISCS.filter(d=>discsOwned.has(d.key)).forEach(d=>{
+    choices.push({ t:`${d.icon} “${d.name}”`, fn:()=>jukePlay('disc:'+d.key) });
+  });
+  if(!discsOwned.size){
+    choices.push({ t:'🛒 (buy song discs at the vending machine)', fn:()=>openJukebox() });
+  }
+  choices.push({ t:'⏹ Stop / back to normal', fn:()=>jukeStop() });
+  choices.push({ t:'← Leave the jukebox', fn:()=>endDialogue() });
+  DLG['__jukebox__'] = { who:'narrator', t: jukeStatusLabel(), noShuffle:true, choices };
+  goDlg('__jukebox__');
 }
 
 /* ── residents wander the common room at night ──
@@ -3047,9 +3747,13 @@ function enterTreehouse(){
   for(const key in npcs){ npcs[key].prompt.classList.remove('show'); }
   toast("You climb up into the treehouse.", 1600);
   if(designerUnlocked() && decorPlaced.length){ setTimeout(()=>toast("🎨 Press P to arrange your decorations.", 2600), 1700); }
+  if(jukeboxUnlocked()){ setTimeout(()=>toast("🎵 Your jukebox is over on the left — press E by it.", 2600), 2700); }
 }
 function exitTreehouse(){
   if(designing) exitDesigner();
+  // if the jukebox was playing, hand music back to the park's real day/night state
+  if(typeof Music!=='undefined' && Music.currentTrack && Music.currentTrack()){ Music.jukeboxOff(nightMode); }
+  const jb=document.getElementById('int-jukebox'); if(jb) jb.classList.remove('playing');
   scene='park';
   document.getElementById('interior').classList.remove('on');
   document.getElementById('iplayer').style.display='none';
@@ -3095,6 +3799,7 @@ function interiorInteract(){
   if(!iNear || dlgActive || busy) return;
   if(iNear.type==='hatch'){ exitTreehouse(); return; }
   if(iNear.type==='bed'){ interiorSleep(iNear.key); return; }
+  if(iNear.type==='juke'){ openJukebox(); return; }
   if(iNear.type==='npc'){ nightChat(iNear.key); return; }   // basic treehouse chat only
 }
 // interior movement + camera + proximity, runs only while inside the treehouse
@@ -3108,7 +3813,7 @@ function interiorLoop(){
     const ip=document.getElementById('iplayer');
     if(dx||dy){
       const len=Math.hypot(dx,dy)||1;
-      const stepX=(dx/len)*SPEED, stepY=(dy/len)*SPEED;
+      const stepX=(dx/len)*SPEED*_moveScale, stepY=(dy/len)*SPEED*_moveScale;
       let nx=Math.max(INT_MINX, Math.min(INT_MAXX, ipx+stepX));
       let ny=Math.max(INT_MINY, Math.min(INT_MAXY, ipy+stepY));
       if(!iBlocked(nx, ipy)) ipx=nx;      // resolve axes independently so you slide along walls
@@ -3164,6 +3869,13 @@ function interiorLoop(){
     const dh=Math.hypot(ipx-HATCH_PT.x, ipy-HATCH_PT.y);
     hp.classList.toggle('show', dh<105);
     if(dh<105 && dh<best){ best=dh; iNear={type:'hatch'}; }
+    // jukebox (only once unlocked)
+    const jp=document.getElementById('ip-juke');
+    if(jukeboxUnlocked()){
+      const dj=Math.hypot(ipx-JUKE_PT.x, ipy-JUKE_PT.y);
+      jp.classList.toggle('show', dj<100);
+      if(dj<100 && dj<best){ best=dj; iNear={type:'juke'}; }
+    } else if(jp){ jp.classList.remove('show'); }
   }
   requestAnimationFrame(interiorLoop);
 }
@@ -3958,6 +4670,11 @@ function useVending(){
     const ok = inventory.rocks >= cat.price;
     choices.push({ t:`${cat.icon} ${cat.label} 🏠DECOR — ${cat.price}🪨${ok?'':' (need more rocks)'}`, fn:()=>buyDecor(decorStock.type) });
   }
+  // song discs — original tracks for the treehouse jukebox (only ones you don't own yet)
+  SONG_DISCS.filter(d=>!discsOwned.has(d.key)).forEach(d=>{
+    const ok = inventory.rocks >= DISC_PRICE;
+    choices.push({ t:`${d.icon} “${d.name}” 🎵DISC — ${DISC_PRICE}🪨${ok?'':' (need more rocks)'}`, fn:()=>buyDisc(d.key) });
+  });
   choices.push({ t:'← Leave', fn:()=>endDialogue() });
   const rareNote = vendFeatured ? ` A rare item is glinting behind the glass tonight — grab it while it lasts.` : '';
   const decorNote = decorStock ? ` The side slot has a ${DECOR_CATALOG[decorStock.type].label.toLowerCase()} for the treehouse.` : '';
@@ -3978,6 +4695,23 @@ function buyDecor(type){
     ? " (Head up to the treehouse and press P to rearrange your decorations.)"
     : " (Reach affection level 1 with Nico to unlock the interior designer and rearrange it.)";
   showLineNarr(`*ka-CHUNK* A flat-pack ${cat.label.toLowerCase()} thunks into the tray. It's now up in the treehouse common room.${hint}`, 'backToVending');
+}
+function buyDisc(key){
+  const disc = SONG_DISCS.find(d=>d.key===key); if(!disc) return;
+  if(discsOwned.has(key)){ showLineNarr("You've already got that disc spinning in your collection.", 'backToVending'); return; }
+  if(inventory.rocks < DISC_PRICE){
+    showLineNarr("Not enough rocks for a disc — they're 10 apiece. The machine blinks a grumpy red light. Go dig up more stones.", 'backToVending');
+    return;
+  }
+  inventory.rocks -= DISC_PRICE; updateInventory();
+  discsOwned.add(key);
+  const el=vendEl(); if(el){ el.classList.add('buzz'); setTimeout(()=>el.classList.remove('buzz'),500); }
+  emote(637, 740, disc.icon);
+  if(typeof requestSave==='function') requestSave();
+  const jukeHint = jukeboxUnlocked()
+    ? " Pop it into the treehouse jukebox to give it a spin."
+    : " Win three dance battles to unlock the treehouse jukebox and play it.";
+  showLineNarr(`*clunk!* ${disc.icon} “${disc.name}” — ${disc.blurb} — drops into the tray.${jukeHint}`, 'backToVending');
 }
 function buyVending(s){
   if(inventory.rocks < s.price){
@@ -4129,7 +4863,78 @@ function openInteractMenu(who){
   if(who==='caiza'){ repairVendingCheck(); upgradeVendingCheck(); }   // she may have just fixed/restocked the machine
   wrap.classList.add('show');
   checkNewTopics(who);   // nudge if getting closer has opened up new things to ask
+  // Social favors come first — before the menu — so they feel like the person speaking, not a task.
+  // 1) Are you carrying something for THIS person? Hand it over.
+  const inbound = favorToDeliver(who);
+  if(inbound){ deliverFavor(inbound); return; }
+  // 2) Might they ask YOU to carry something to someone else?
+  const offer = pickOfferableFavor(who);
+  if(offer){ offerFavor(who, offer); return; }
   showMainMenu();
+}
+// The giver hands you a favor: their line, then straight into the usual menu (no popup, no "accept").
+function offerFavor(who, offer){
+  const lines = makeFavor(offer.from, offer.to, offer.kind);   // generate this pairing's voice lines
+  activeFavors.push({ id: favorNextId++, from:offer.from, to:offer.to, kind:offer.kind, item:lines.item,
+    req:lines.req, deliver:lines.deliver, reply:lines.reply, self:lines.self, offeredAt: Date.now() });
+  lastFavorOfferAt = Date.now();
+  requestSave();
+  showLine(who, lines.req, 'toMainMenu');
+}
+// You reach the recipient — pass it along. Small warmth to BOTH of them, a world-nudge, journal entry.
+function deliverFavor(f){
+  ensureFavorText(f);   // regenerate lines if this favor came from an older save
+  // remove from carried
+  const i = activeFavors.indexOf(f); if(i>=0) activeFavors.splice(i,1);
+  resolvedFavors.push({ from:f.from, to:f.to, kind:f.kind, how:'delivered', when: Date.now() });
+  addAff(f.from, 4); addAff(f.to, 5);   // both warm to you for being the go-between
+  onFavorDelivered(f);                   // let the world respond (two of them meet up)
+  requestSave();
+  // recipient's grateful reply, but frame the delivery first as a narrator beat so it reads naturally
+  showLineNarr(f.deliver, ()=> showLine(f.to, f.reply, 'toMainMenu') );
+}
+// If a carried favor sits too long, the giver quietly resolves it themselves and tells you so.
+function autoResolveStaleFavors(){
+  if(dlgActive) return;
+  const now = Date.now();
+  for(let i=activeFavors.length-1;i>=0;i--){
+    const f = activeFavors[i];
+    if(now - f.offeredAt < FAVOR_LAPSE_MS) continue;
+    ensureFavorText(f);
+    activeFavors.splice(i,1);
+    resolvedFavors.push({ from:f.from, to:f.to, kind:f.kind, how:'self', when: now, selfLine:f.self });
+    // a gentle, non-blocking heads-up — no popup dialogue, just a toast
+    toast(`${NAMES[f.from]} took care of that errand with ${NAMES[f.to]} themselves.`, 3200);
+    requestSave();
+  }
+}
+// The world quietly rearranges when you connect two people: the giver drifts over to settle
+// near the one they were thinking of, so you'll see them sharing a spot afterward. Persisted
+// via favorMeetups and re-applied on load. Only moves daytime park-dwellers.
+const favorMeetups = [];   // {who, x, y} — a giver's new resting spot beside their friend
+function placeNpcAt(who, x, y){
+  const n = npcs[who]; if(!n || !n.el) return;
+  n.x = x; n.y = y;
+  n.el.style.left = Math.round(x - n.el.offsetWidth/2)+'px';
+  n.el.style.top  = Math.round(y - n.el.offsetHeight)+'px';
+  n.el.style.zIndex = Math.round(y);
+}
+function applyFavorMeetups(){ favorMeetups.forEach(m=>placeNpcAt(m.who, m.x, m.y)); }
+function onFavorDelivered(f){
+  // move the GIVER to settle beside the RECIPIENT — daytime park cast only, never Maxus
+  // (he has his own settled spot) or the night crowd (they're elsewhere).
+  const mover = f.from, anchor = f.to;
+  const PARKABLE = ['devin','femi','caiza','charlie'];
+  if(!PARKABLE.includes(mover)) return;
+  const an = npcs[anchor]; if(!an || an.hidden || !iAvailable(anchor)) return;
+  if(nightMode) return;
+  if(favorMeetups.some(m=>m.who===mover)) return;   // already relocated once
+  const side = (npcs[mover].x < an.x) ? -1 : 1;
+  const nx = Math.max(120, Math.min(2300, an.x + side*95));
+  const ny = Math.max(440, Math.min(830, an.y + 6));
+  favorMeetups.push({ who:mover, x:nx, y:ny });
+  placeNpcAt(mover, nx, ny);
+  emote(nx, ny-120, '💛');
 }
 function closeInteractMenu(){
   dlgActive = false; imWho = null;
@@ -4181,7 +4986,8 @@ function showMainMenu(){
     { t:'💬 Talk', fn:()=>doChat(imWho) },
     { t:'❓ Ask', fn:()=>showAskMenu() },
     { t:'🎈 Hang Out', fn:()=>doHangout(imWho) },
-    { t:'🎁 Give Gift', fn:()=>showGiftMenu() }
+    { t:'🎁 Give Gift', fn:()=>showGiftMenu() },
+    { t:'💃 Dance Battle', fn:()=>{ const w=imWho; endDialogue(); startDanceBattle(w); } }
   ]};
   goDlg('__mainmenu__');
 }
@@ -4427,10 +5233,12 @@ function advance(){ if(!cur) return;
   if(cur.choices) return;
   // if this dismissal completes a character's love confession, roll their ending now
   if(pendingEnding){ const who=pendingEnding; pendingEnding=null; triggerEnding(who); return; }
+  if(typeof cur.act==='function'){ const f=cur.act; cur=null; f(); return; }   // custom continuation (e.g. favor delivery chain)
   if(cur.act==='knockout'){ endDialogue(); knockOut(); return; }   // Maxus loses it
   if(cur.act==='toDay'){ lunaToDay(); return; }                    // Luna walks you into daylight
   if(cur.act==='toNight'){ lunaToNight(); return; }                // ...and back into the dark
   if(cur.act==='backToMenu'){ endDialogue(); return; }   // Chat / Gift finish → close the conversation
+  if(cur.act==='toMainMenu'){ showMainMenu(); return; }   // favor request said → still let them Talk/Ask/Gift
   if(cur.act==='backToAsk'){ showAskMenu(); return; }      // Ask returns to the topic list
   if(cur.act==='backToVending'){ useVending(); return; }   // vending purchase → back to the shop
   if(cur.act==='backToMenuClose'){ endDialogue(); return; } // broken-machine one-liner → close
@@ -4531,8 +5339,24 @@ document.getElementById('ks-close').addEventListener('click', ()=>toggleKeepsake
    future updates to the game may shift things slightly — a save may load a little
    imperfectly after an update, but it won't corrupt or crash; missing fields just fall
    back to defaults. */
-const SAVE_KEY = 'purgatoryPark_save_v1';
+const SAVE_KEY = 'purgatoryPark_save_v1';   // legacy single-save key (migrated into slot 1)
+let fileName = '';     // player-chosen name for the current save file
+let fileEmoji = '🌳';  // player-chosen emoji for the current save file
 const SAVE_VERSION = 1;
+// ── three save slots ──
+const SLOT_KEYS = ['purgatoryPark_slot1','purgatoryPark_slot2','purgatoryPark_slot3'];
+let activeSlot = 0;   // which slot the current session writes to (0..2)
+function slotKey(i){ return SLOT_KEYS[i]; }
+function readSlot(i){ try{ const s=localStorage.getItem(SLOT_KEYS[i]); return s?JSON.parse(s):null; }catch(e){ return null; } }
+function slotUsed(i){ try{ return !!localStorage.getItem(SLOT_KEYS[i]); }catch(e){ return false; } }
+function deleteSlot(i){ try{ localStorage.removeItem(SLOT_KEYS[i]); }catch(e){} }
+// migrate a pre-slots single save into slot 1 the first time, so nobody loses progress
+(function migrateLegacySave(){
+  try{
+    const legacy = localStorage.getItem(SAVE_KEY);
+    if(legacy && !localStorage.getItem(SLOT_KEYS[0])){ localStorage.setItem(SLOT_KEYS[0], legacy); localStorage.removeItem(SAVE_KEY); }
+  }catch(e){}
+})();
 function collectSaveData(){
   const npcData = {};
   for(const k in npcs){
@@ -4543,6 +5367,7 @@ function collectSaveData(){
   for(const k in topicUnlockSeen){ topicSeen[k] = Array.from(topicUnlockSeen[k]||[]); }
   return {
     v: SAVE_VERSION, savedAt: Date.now(),
+    fileName: fileName||'', fileEmoji: fileEmoji||'🌳',
     aff: Object.assign({}, aff),
     npcs: npcData,
     inventory: Object.assign({}, inventory),
@@ -4564,26 +5389,35 @@ function collectSaveData(){
     nightMode: !!nightMode, bullHere: !!bullHere, caizaAwake: !!caizaAwake, charlieHere: !!charlieHere,
     sawNightViaKO: !!sawNightViaKO,
     bullMoved: !!bullMoved,
+    clothFound: !!clothFound,
+    activeFavors: JSON.parse(JSON.stringify(activeFavors)),
+    resolvedFavors: JSON.parse(JSON.stringify(resolvedFavors)),
+    favorMeetups: JSON.parse(JSON.stringify(favorMeetups)),
+    favorNextId: favorNextId||1, lastFavorOfferAt: lastFavorOfferAt||0,
     treeRocksGiven: treeRocksGiven||0, skipCount: skipCount||0,
     seenDlg: Array.from(seenDlg),
     px, py,
-    hoopBest: hoopBest||0
+    hoopBest: hoopBest||0,
+    danceWins: danceWins||0,
+    discsOwned: Array.from(discsOwned)
   };
 }
 function saveGame(silent){
   try{
-    localStorage.setItem(SAVE_KEY, JSON.stringify(collectSaveData()));
+    localStorage.setItem(SLOT_KEYS[activeSlot], JSON.stringify(collectSaveData()));
     if(!silent) toast('💾 Progress saved.', 1400);
   }catch(e){ /* storage unavailable (private browsing / quota) — fail quietly, nothing lost in-session */ }
 }
-function hasSavedGame(){ try{ return !!localStorage.getItem(SAVE_KEY); }catch(e){ return false; } }
-function clearSavedGame(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
+function hasSavedGame(){ return slotUsed(activeSlot); }
+function clearSavedGame(){ deleteSlot(activeSlot); }
 // debounced autosave — call after anything progress-relevant happens; coalesces bursts of changes
 let saveDebounceTimer=null;
 function requestSave(){ clearTimeout(saveDebounceTimer); saveDebounceTimer=setTimeout(()=>saveGame(true), 1200); }
 function applySaveData(data){
   if(!data || typeof data!=='object') return;
   try{
+    if(typeof data.fileName==='string') fileName = data.fileName;
+    if(typeof data.fileEmoji==='string') fileEmoji = data.fileEmoji;
     Object.assign(aff, data.aff||{});
     for(const k in (data.npcs||{})){
       if(!npcs[k]) continue;
@@ -4611,12 +5445,21 @@ function applySaveData(data){
     nightMode=!!data.nightMode; bullHere=!!data.bullHere; caizaAwake=!!data.caizaAwake; charlieHere=!!data.charlieHere;
     sawNightViaKO=!!data.sawNightViaKO;
     bullMoved=!!data.bullMoved;
+    clothFound=!!data.clothFound || !!data.bullHere || (data.inventory && (data.inventory.cloth||0)>0);
+    activeFavors.length=0; if(Array.isArray(data.activeFavors)) data.activeFavors.forEach(f=>activeFavors.push(f));
+    resolvedFavors.length=0; if(Array.isArray(data.resolvedFavors)) data.resolvedFavors.forEach(f=>resolvedFavors.push(f));
+    favorMeetups.length=0; if(Array.isArray(data.favorMeetups)) data.favorMeetups.forEach(m=>favorMeetups.push(m));
+    if(typeof data.favorNextId==='number') favorNextId=data.favorNextId;
+    if(typeof data.lastFavorOfferAt==='number') lastFavorOfferAt=data.lastFavorOfferAt;
     treeRocksGiven=data.treeRocksGiven||0; skipCount=data.skipCount||0;
     if(typeof data.px==='number') px=data.px;
     if(typeof data.py==='number') py=data.py;
     if(typeof data.hoopBest==='number') hoopBest=Math.max(hoopBest, data.hoopBest);
+    if(typeof data.danceWins==='number') danceWins=data.danceWins;
+    discsOwned.clear(); if(Array.isArray(data.discsOwned)) data.discsOwned.forEach(k=>discsOwned.add(k));
   }catch(e){ console.warn('Save data restored partially; some older fields may not match this version.', e); }
   refreshVisualsFromState();
+  applyFavorMeetups();   // re-seat anyone who moved to be beside a friend
 }
 // re-syncs the DOM/UI to whatever's currently in the state variables (used right after loading a save)
 function refreshVisualsFromState(){
@@ -4698,10 +5541,38 @@ function renderGiftPrefs(who){
   }
   return `<div class="nb-sec"><h4>Gift Preferences</h4>${body}</div>`;
 }
+// The Journal's "Passing Along" page — everything you're currently ferrying between people,
+// plus a quiet log of connections you've helped make. No task language, no popups.
+function favorLineFor(f){
+  ensureFavorText(f);
+  const carry = (f.kind!=='message' && f.item) ? ` (carrying ${f.item})` : '';
+  const kindTag = f.kind==='message' ? 'a word' : f.kind==='gift' ? 'a gift' : 'their thing';
+  return `<div class="fav-item"><span class="fav-route">${NAMES[f.from]} → ${NAMES[f.to]}</span> <span class="fav-kind">${kindTag}</span>${carry}<div class="fav-note">${f.deliver}</div></div>`;
+}
+function renderFavorsJournal(){
+  const el = document.getElementById('nb-favors'); if(!el) return;
+  if(!activeFavors.length && !resolvedFavors.length){ el.innerHTML=''; return; }
+  let html = '<div class="nb-favors-box"><h4>Passing Along</h4>';
+  if(activeFavors.length){
+    html += activeFavors.map(favorLineFor).join('');
+  } else {
+    html += `<p class="locked">Nothing to carry right now — but people talk. Someone may ask.</p>`;
+  }
+  if(resolvedFavors.length){
+    const recent = resolvedFavors.slice(-4).reverse();
+    html += '<div class="fav-history"><h5>Connections made</h5>' + recent.map(r=>{
+      const how = r.how==='delivered' ? 'you passed it along' : 'they sorted it out themselves';
+      return `<div class="fav-done">&#8226; ${NAMES[r.from]} &amp; ${NAMES[r.to]} — ${how}</div>`;
+    }).join('') + '</div>';
+  }
+  html += '</div>';
+  el.innerHTML = html;
+}
 function renderNotebook(){
   const tabsEl=document.getElementById('nb-tabs');
   const met = nbMetChars();
   tabsEl.innerHTML='';
+  renderFavorsJournal();
   if(!met.length){
     document.getElementById('nb-charname').textContent='';
     document.getElementById('nb-sections').innerHTML = '<div class="nb-empty">You haven\u2019t met anyone yet. Go say hello.</div>';
@@ -4747,6 +5618,14 @@ function toggleNotebook(force){
 }
 document.getElementById('nb-close').addEventListener('click', ()=>toggleNotebook(false));
 document.getElementById('journaltoggle').addEventListener('click', ()=>toggleNotebook());
+// controls panel — a quick reference the player can pop open any time
+function toggleControls(force){
+  const p=document.getElementById('controlspanel');
+  const show = (typeof force==='boolean') ? force : !p.classList.contains('show');
+  p.classList.toggle('show', show);
+}
+document.getElementById('controlstoggle').addEventListener('click', ()=>toggleControls());
+document.getElementById('controls-close').addEventListener('click', ()=>toggleControls(false));
 
 function triggerEnding(who){
   if(wooed.has(who)) return;        // only celebrate once each
@@ -4789,9 +5668,9 @@ const Music = (()=>{
   // note helper: semitones from A4 (440Hz)
   const hz = n => 440 * Math.pow(2, n/12);
   // named degrees for readability (relative to C)
-  const N = { C3:-21,D3:-19,E3:-17,F3:-16,G3:-14,A3:-12,B3:-10,
-              C4:-9,D4:-7,E4:-5,F4:-4,G4:-2,A4:0,B4:2,
-              C5:3,D5:5,E5:7,F5:8,G5:10,A5:12,B5:14,C6:15 };
+  const N = { C3:-21,D3:-19,E3:-17,F3:-16,G3:-14,A3:-12,Bb3:-11,B3:-10,
+              C4:-9,D4:-7,E4:-5,F4:-4,G4:-2,A4:0,Bb4:1,B4:2,
+              C5:3,D5:5,E5:7,F5:8,G5:10,A5:12,Bb5:13,B5:14,C6:15 };
 
   // DAY progression: I–V–vi–IV (C G Am F) — warm and hopeful, 4 bars, then a lift
   const DAY_PROG = [
@@ -4839,7 +5718,9 @@ const Music = (()=>{
     padVoices=[];
     const now=ctx.currentTime;
     chordNames.forEach(name=>{
-      const f=hz(N[name]);
+      const semi = (N[name]!==undefined) ? N[name] : DN[name];   // park notes live in N; dance-only notes (e.g. Bb) in DN
+      if(semi===undefined) return;
+      const f=hz(semi);
       const osc=ctx.createOscillator(); osc.type='sine'; osc.frequency.value=f;
       const g=ctx.createGain(); g.gain.setValueAtTime(0.0001, now);
       g.gain.linearRampToValueAtTime(0.3, now+0.4);
@@ -4852,7 +5733,8 @@ const Music = (()=>{
   }
 
   function bass(name, when, dur){
-    const f=hz(N[name]);
+    const semi = (N[name]!==undefined) ? N[name] : DN[name];   // low roots (A2/F2/Bb2…) live in DN
+    const f=hz(semi!==undefined?semi:N.C3);
     const osc=ctx.createOscillator(); osc.type='sine'; osc.frequency.value=f;
     const g=ctx.createGain();
     g.gain.setValueAtTime(0.0001, when);
@@ -4886,10 +5768,266 @@ const Music = (()=>{
     [1,0,1,0,1,1,0,1],
     [1,1,0,1,1,0,1,0]
   ];
-  const BEAT = 0.19;   // seconds per step → ~132 bpm feel, brisker than before
+  const BEAT_AMBIENT = 0.19;   // seconds per step → ~132 bpm feel (relaxed park groove)
+  let BEAT = BEAT_AMBIENT;     // current step length (shrinks during a dance battle for a faster track)
+  let danceMode = false;       // when true, add a driving drum kit + four-on-the-floor pulse
+
+  // ---- percussion for dance mode ----
+  function kick(when){
+    const osc=ctx.createOscillator(); const g=ctx.createGain();
+    osc.type='sine'; osc.frequency.setValueAtTime(150, when); osc.frequency.exponentialRampToValueAtTime(45, when+0.12);
+    g.gain.setValueAtTime(0.0001, when); g.gain.exponentialRampToValueAtTime(0.9, when+0.005); g.gain.exponentialRampToValueAtTime(0.0001, when+0.18);
+    osc.connect(g); g.connect(master); osc.start(when); osc.stop(when+0.2);
+  }
+  function hat(when, open){
+    const bufSize=ctx.sampleRate*0.05; const buf=ctx.createBuffer(1,bufSize,ctx.sampleRate); const d=buf.getChannelData(0);
+    for(let i=0;i<bufSize;i++) d[i]=Math.random()*2-1;
+    const src=ctx.createBufferSource(); src.buffer=buf;
+    const hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=7000;
+    const g=ctx.createGain(); g.gain.setValueAtTime(0.0001, when); g.gain.exponentialRampToValueAtTime(open?0.28:0.16, when+0.005); g.gain.exponentialRampToValueAtTime(0.0001, when+(open?0.14:0.05));
+    src.connect(hp); hp.connect(g); g.connect(master); src.start(when); src.stop(when+0.16);
+  }
+  function snare(when){
+    const bufSize=ctx.sampleRate*0.12; const buf=ctx.createBuffer(1,bufSize,ctx.sampleRate); const d=buf.getChannelData(0);
+    for(let i=0;i<bufSize;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/bufSize,2);
+    const src=ctx.createBufferSource(); src.buffer=buf;
+    const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=1800;
+    const g=ctx.createGain(); g.gain.setValueAtTime(0.5, when); g.gain.exponentialRampToValueAtTime(0.0001, when+0.14);
+    src.connect(bp); bp.connect(g); g.connect(master); src.start(when); src.stop(when+0.16);
+  }
+  // hand-clap: two quick noise bursts, brighter than the snare (pop flavor)
+  function clap(when){
+    for(let k=0;k<2;k++){
+      const t=when + k*0.012;
+      const bufSize=ctx.sampleRate*0.06; const buf=ctx.createBuffer(1,bufSize,ctx.sampleRate); const d=buf.getChannelData(0);
+      for(let i=0;i<bufSize;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/bufSize,3);
+      const src=ctx.createBufferSource(); src.buffer=buf;
+      const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=2200;
+      const g=ctx.createGain(); g.gain.setValueAtTime(0.4, t); g.gain.exponentialRampToValueAtTime(0.0001, t+0.1);
+      src.connect(bp); bp.connect(g); g.connect(master); src.start(t); src.stop(t+0.12);
+    }
+  }
+  // a bright melodic stab fired when the player nails an arrow — makes hits feel musical
+  function stab(strong){
+    if(!ctx || !on) return;
+    const when = ctx.currentTime + 0.01;
+    // during a battle, stab in the active genre's key so it fits that character's track
+    const sc = danceMode ? curStyle().stab : prog()[bar % prog().length].scale;
+    const name = sc[Math.floor(Math.random()*sc.length)];
+    pluck(name, when, strong?0.22:0.14);
+    if(strong) pluck(sc[(sc.indexOf(name)+2+sc.length)%sc.length], when+0.02, 0.12);
+  }
+
+  /* ===== PER-CHARACTER DANCE-BATTLE SONGS =====
+     Each character brings their own genre to the floor: their own progression, bass riff,
+     lead hook, drum pattern, tempo, and instrument voices. A battle plays only that person's
+     track — never the park loop. 16 sixteenth-steps per bar; BEAT = one sixteenth. */
+  const DN = { C2:-36,D2:-33,E2:-31,F2:-30,G2:-28,A2:-26,Bb2:-25,B2:-24,C3:-21,D3:-19,E3:-17,F3:-16,G3:-14,A3:-12,Bb3:-11,B3:-10,
+               C4:-9,D4:-7,E4:-5,F4:-4,G4:-2,A4:0,Bb4:1,B4:2,C5:3,D5:5,E5:7,F5:8,G5:10,A5:12,Bb5:13,B5:14,C6:15,D6:17,E6:19 };
+  // drum voice helpers get a velocity so genres can hit harder or softer
+  // (kick/hat/snare are defined above; here are style-flavored lead & bass voices)
+  // bass voice styles: 'square' punchy synth, 'saw' gritty rock, 'sine' round/warm, 'pluck' upright-ish
+  function styleBass(name, when, dur, kind){
+    const semi=(DN[name]!==undefined)?DN[name]:N[name]; const f=hz(semi!==undefined?semi:DN.C3);
+    const osc=ctx.createOscillator();
+    osc.type = kind==='saw' ? 'sawtooth' : kind==='sine' ? 'sine' : (kind==='tri'||kind==='pluck') ? 'triangle' : 'square';
+    osc.frequency.value=f;
+    const lp=ctx.createBiquadFilter(); lp.type='lowpass';
+    lp.frequency.setValueAtTime(kind==='saw'?1400:900, when); lp.frequency.exponentialRampToValueAtTime(kind==='sine'?200:300, when+dur);
+    const g=ctx.createGain();
+    g.gain.setValueAtTime(0.0001, when); g.gain.exponentialRampToValueAtTime(kind==='saw'?0.5:0.42, when+0.008); g.gain.exponentialRampToValueAtTime(0.0001, when+dur);
+    osc.connect(lp); lp.connect(g); g.connect(master);
+    osc.start(when); osc.stop(when+dur+0.03);
+  }
+  // lead voice styles: 'saw' bright synth, 'square' chiptune/pop, 'tri' soft/lofi, 'twang' country, 'bell' celestial
+  function styleLead(name, when, vel, kind){
+    const semi=(DN[name]!==undefined)?DN[name]:N[name]; const f=hz(semi!==undefined?semi:N.A4);
+    const osc=ctx.createOscillator();
+    const osc2=ctx.createOscillator();
+    let filt=3600, tail=0.34;
+    if(kind==='square'){ osc.type='square'; osc2.type='square'; osc2.detune.value=6; filt=4200; }
+    else if(kind==='tri'){ osc.type='triangle'; osc2.type='sine'; osc2.detune.value=4; filt=1800; tail=0.5; }
+    else if(kind==='twang'){ osc.type='triangle'; osc2.type='sawtooth'; osc2.detune.value=3; filt=2600; tail=0.4; }
+    else if(kind==='bell'){ osc.type='sine'; osc2.type='sine'; osc2.frequency.value=f*2; filt=5000; tail=0.6; }
+    else { osc.type='sawtooth'; osc2.type='square'; osc2.detune.value=8; filt=3600; }   // 'saw'
+    osc.frequency.value=f; if(kind!=='bell') osc2.frequency.value=f;
+    const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.setValueAtTime(filt, when); lp.frequency.exponentialRampToValueAtTime(1400, when+0.35);
+    const g=ctx.createGain(); g.gain.setValueAtTime(0.0001, when); g.gain.exponentialRampToValueAtTime(vel, when+0.01); g.gain.exponentialRampToValueAtTime(0.0001, when+tail);
+    osc.connect(lp); osc2.connect(lp); lp.connect(g); g.connect(master); g.connect(delayNode);
+    osc.start(when); osc.stop(when+tail+0.06); osc2.start(when); osc2.stop(when+tail+0.06);
+  }
+
+  // Each style: base tempo (16th length), per-round speedup, progression (root+chord), a 2-bar
+  // lead hook (32 steps, '.'=rest), a 16-step bass pattern, a stab scale, drum pattern flags,
+  // and voice kinds. Genres are hand-tuned per character.
+  const DANCE_STYLES = {
+    // MAXUS — Country: warm major, boom-chick shuffle, twangy lead, walking bass
+    bull: { name:'Country Hoedown', beat:0.150, rstep:0.008, leadVoice:'twang', bassVoice:'pluck',
+      prog:[ {root:'G2',chord:['G3','B3','D4']}, {root:'C3',chord:['C4','E4','G4']}, {root:'G2',chord:['G3','B3','D4']}, {root:'D3',chord:['D4','F4','A4']} ],
+      bass:[1,0,0,0,1,0,1,0, 1,0,0,0,1,0,1,0],
+      drum:{ kick:[0,8], snare:[4,12], hat:[2,6,10,14], swing:0.06 },
+      stab:['G4','B4','D5','G5','A4','B4','D5','E5'],
+      hook:['G4','.','B4','.','D5','.','B4','G4', '.','.','A4','.','B4','.','.','.',
+            'D5','.','B4','.','G4','.','A4','B4', '.','G4','.','D4','G4','.','.','.'] },
+    // CAIZA — Rock: minor, driving straight-8, gritty saw bass + saw lead, power-chord energy
+    caiza: { name:'Tidal Rock', beat:0.130, rstep:0.008, leadVoice:'saw', bassVoice:'saw',
+      prog:[ {root:'E2',chord:['E3','G3','B3']}, {root:'C3',chord:['C4','E4','G4']}, {root:'G2',chord:['G3','B3','D4']}, {root:'D3',chord:['D4','F4','A4']} ],
+      bass:[1,0,1,0,1,0,1,0, 1,0,1,0,1,1,0,0],
+      drum:{ kick:[0,4,8,12], snare:[4,12], hat:[2,6,10,14], swing:0 },
+      stab:['E4','G4','A4','B4','D5','E5','G5','A5'],
+      hook:['E5','.','D5','B4','.','E5','.','G5', 'E5','.','B4','.','A4','.','.','.',
+            'G4','.','A4','B4','.','D5','.','E5', 'B4','.','.','G4','A4','.','B4','.'] },
+    // FEMI — really fast: high tempo, busy 16ths, punchy DnB-ish, bright saw
+    femi: { name:'Hyperspeed', beat:0.098, rstep:0.006, leadVoice:'saw', bassVoice:'square',
+      prog:[ {root:'A2',chord:['A3','C4','E4']}, {root:'F2',chord:['F3','A3','C4']}, {root:'C3',chord:['C4','E4','G4']}, {root:'G2',chord:['G3','B3','D4']} ],
+      bass:[1,1,0,1,1,0,1,1, 1,0,1,1,0,1,1,0],
+      drum:{ kick:[0,3,8,10], snare:[4,12], hat:[0,2,4,6,8,10,12,14], swing:0 },
+      stab:['A4','C5','E5','G5','A5','C6','E6','D6'],
+      hook:['A5','C6','E5','A5','C6','A5','E5','C5', 'A4','C5','E5','G5','A5','.','G5','E5',
+            'C5','E5','G5','C6','A5','G5','E5','C5', 'A4','.','C5','E5','A5','C6','A5','.'] },
+    // CHARLIE — bubblegum pop: bright major, four-on-floor, bouncy square lead, super upbeat
+    charlie: { name:'Bubblegum Pop', beat:0.128, rstep:0.007, leadVoice:'square', bassVoice:'square',
+      prog:[ {root:'C3',chord:['C4','E4','G4']}, {root:'G2',chord:['G3','B3','D4']}, {root:'A2',chord:['A3','C4','E4']}, {root:'F2',chord:['F3','A3','C4']} ],
+      bass:[1,0,1,0,1,0,1,0, 1,0,1,0,1,0,1,0],
+      drum:{ kick:[0,4,8,12], snare:[4,12], hat:[2,6,10,14], clap:[4,12], swing:0 },
+      stab:['C5','E5','G5','A5','C6','G5','E5','D5'],
+      hook:['C5','E5','G5','.','E5','G5','C6','.', 'A5','G5','E5','.','G5','.','.','.',
+            'F5','A5','C6','.','A5','C6','F5','.', 'E5','G5','C6','.','G5','E5','C5','.'] },
+    // LUNA — lofi: slow, laid-back, swung, soft triangle lead, mellow round bass
+    luna: { name:'Moonlit Lofi', beat:0.170, rstep:0.004, leadVoice:'tri', bassVoice:'sine',
+      prog:[ {root:'A2',chord:['A3','C4','E4']}, {root:'F2',chord:['F3','A3','C4']}, {root:'C3',chord:['C4','E4','G4']}, {root:'G2',chord:['G3','B3','D4']} ],
+      bass:[1,0,0,0,0,0,1,0, 1,0,0,0,0,1,0,0],
+      drum:{ kick:[0,10], snare:[4,12], hat:[2,6,14], swing:0.12 },
+      stab:['A4','C5','E5','G4','A4','C5','D5','E5'],
+      hook:['E5','.','.','C5','.','A4','.','.', 'C5','.','.','E5','.','.','.','.',
+            'D5','.','.','A4','.','.','C5','.', 'A4','.','.','.','E4','.','.','.'] },
+    // NICO — synthwave / darkwave: moody minor, arpeggiated, retro pulse
+    nico: { name:'Neon Nightdrive', beat:0.132, rstep:0.007, leadVoice:'saw', bassVoice:'square',
+      prog:[ {root:'D3',chord:['D4','F4','A4']}, {root:'Bb2',chord:['Bb3','D4','F4']}, {root:'F2',chord:['F3','A3','C4']}, {root:'A2',chord:['A3','C4','E4']} ],
+      bass:[1,0,0,1,0,0,1,0, 1,0,0,1,0,0,1,0],
+      drum:{ kick:[0,4,8,12], snare:[4,12], hat:[2,6,10,14], swing:0 },
+      stab:['D4','F4','A4','D5','F5','A5','E5','C5'],
+      hook:['D5','A4','F4','A4','D5','A4','F4','A4', 'C5','A4','F4','A4','C5','.','A4','F4',
+            'Bb4','F4','D4','F4','Bb4','F4','D4','F4', 'A4','E4','C4','E4','A4','.','.','.'] },
+    // DEVIN — celestial / orchestral electronica: bright, majestic, sparkly bell lead
+    devin: { name:'Celestial Waltz', beat:0.150, rstep:0.006, leadVoice:'bell', bassVoice:'sine',
+      prog:[ {root:'C3',chord:['C4','E4','G4']}, {root:'A2',chord:['A3','C4','E4']}, {root:'F2',chord:['F3','A3','C4']}, {root:'G2',chord:['G3','B3','D4']} ],
+      bass:[1,0,0,1,0,0,1,0, 1,0,0,1,0,0,1,0],
+      drum:{ kick:[0,6,12], snare:[8], hat:[0,2,4,6,8,10,12,14], swing:0.08 },
+      stab:['C5','E5','G5','C6','E6','G5','E5','D5'],
+      hook:['C5','E5','G5','C6','G5','E5','.','.', 'A4','C5','E5','A5','E5','C5','.','.',
+            'F4','A4','C5','F5','C5','A4','.','.', 'G4','B4','D5','G5','B5','D6','.','.'] }
+  };
+  const DANCE_DEFAULT = 'caiza';   // fallback style if a character has none defined
+  let curStyleKey = DANCE_DEFAULT;
+  function curStyle(){ return DANCE_STYLES[curStyleKey] || DANCE_STYLES[DANCE_DEFAULT]; }
+  let danceBar = 0;   // dance track's own bar counter (independent of the park's `bar`)
+  let danceAnchor = 0; // audio-clock time (ctx.currentTime) of dance bar 0, step 0 — the shared beat grid
+  function playDanceBar(){
+    if(!on || !ctx) return;
+    // Anchor every note to a fixed grid so the beat never drifts (setInterval jitter is absorbed).
+    const barStart = danceAnchor + danceBar*16*BEAT;
+    // if we've fallen behind (tab was backgrounded etc.), jump the grid forward to ~now
+    if(barStart < ctx.currentTime - 0.02){ danceAnchor = ctx.currentTime + 0.06 - danceBar*16*BEAT; }
+    const now = danceAnchor + danceBar*16*BEAT;
+    const S = curStyle();
+    const cell = S.prog[danceBar % S.prog.length];
+    const step = BEAT;                                  // one sixteenth
+    const swing = (S.drum.swing||0) * step;            // delay off-beats for a laid-back feel
+    const at = (s)=> now + s*step + ((s%2===1)?swing:0);
+    // --- drums per genre ---
+    const D = S.drum;
+    for(let s=0;s<16;s++){
+      if(D.kick && D.kick.includes(s)) kick(at(s));
+      if(D.snare && D.snare.includes(s)) snare(at(s));
+      if(D.clap && D.clap.includes(s)) clap(at(s));
+      if(D.hat && D.hat.includes(s)) hat(at(s), s===14);
+    }
+    // --- bass riff (16-step pattern on this bar's root, in this genre's voice) ---
+    for(let s=0;s<16;s++){
+      if(S.bass[s]) styleBass(cell.root, at(s), step*1.4, S.bassVoice);
+    }
+    // --- lead hook: the 2-bar signature riff, played on even/odd bars, in this genre's voice ---
+    const hookHalf = (danceBar % 2) * 16;
+    for(let s=0;s<16;s++){
+      const nm = S.hook[hookHalf + s];
+      if(nm && nm!=='.') styleLead(nm, at(s), 0.17 + (s%4===0?0.03:0), S.leadVoice);
+    }
+    // --- a sustained low pad on the chord for body (rebuilt each bar) ---
+    buildPad(cell.chord);
+    danceBar++;
+  }
+
+  /* ===== COLLECTIBLE SONG DISCS =====
+     Original tracks you buy from the vending machine and spin on the treehouse jukebox.
+     Each disc is a self-contained composition: its own chords, an 8-step melody line, a
+     bass pattern, tempo, and a voice ('pluck' warm / 'lead' bright saw). They loop, and never
+     play at the same time as the park loop or a battle. Note names resolve from N, else DN. */
+  function anyHz(name){ const s = (N[name]!==undefined)?N[name]:DN[name]; return hz(s!==undefined?s:0); }
+  function discNote(name, when, vel, voice){
+    if(voice==='lead'){ styleLead(name, when, vel, 'saw'); return; }
+    pluck(name, when, vel);
+  }
+  const DISC_SONGS = {
+    // "Neon Arcade" — upbeat major chiptune, bright saw lead, quick tempo
+    arcade: {
+      beat:0.135, steps:8, voice:'lead', kick:true,
+      prog:[
+        { root:'C3', chord:['C4','E4','G4'], mel:['C5','E5','G5','E5','C5','G4','C5','E5'] },
+        { root:'A2', chord:['A3','C4','E4'], mel:['A4','C5','E5','C5','A4','E4','A4','C5'] },
+        { root:'F2', chord:['F3','A3','C4'], mel:['F4','A4','C5','A4','F4','C4','F4','A4'] },
+        { root:'G2', chord:['G3','B3','D4'], mel:['G4','B4','D5','G5','D5','B4','G4','D4'] }
+      ],
+      bassPat:[1,0,1,0,1,0,1,1]
+    },
+    // "Midnight Lounge" — smooth minor jazz, warm plucks, slower and mellow
+    lounge: {
+      beat:0.205, steps:8, voice:'pluck', kick:false,
+      prog:[
+        { root:'D3', chord:['D4','F4','A4'], mel:['A4','D5','F5','E5','.','D5','A4','F4'] },
+        { root:'G2', chord:['G3','Bb3','D4'],mel:['Bb4','D5','G5','.','F5','D5','.','Bb4'] },
+        { root:'Bb2',chord:['Bb3','D4','F4'],mel:['F4','Bb4','D5','.','C5','Bb4','.','F4'] },
+        { root:'A2', chord:['A3','C4','E4'], mel:['E5','.','C5','A4','.','E4','A4','.'] }
+      ],
+      bassPat:[1,0,0,1,0,0,1,0]
+    },
+    // "Sunrise Anthem" — hopeful, soaring major, big pads + bright lead, mid tempo
+    anthem: {
+      beat:0.17, steps:8, voice:'lead', kick:true,
+      prog:[
+        { root:'F2', chord:['F3','A3','C4'], mel:['C5','F5','A5','G5','F5','C5','A4','F4'] },
+        { root:'C3', chord:['C4','E4','G4'], mel:['E5','G5','C6','G5','E5','C5','G4','E4'] },
+        { root:'D3', chord:['D4','F4','A4'], mel:['A4','D5','F5','A5','F5','D5','A4','F4'] },
+        { root:'Bb2',chord:['Bb3','D4','F4'],mel:['F5','D5','Bb4','D5','F5','Bb5','F5','D5'] }
+      ],
+      bassPat:[1,0,1,0,1,1,0,1]
+    }
+  };
+  let discBar = 0, discSong = null;
+  function playDiscBar(){
+    if(!on || !ctx || !discSong) return;
+    const song = DISC_SONGS[discSong]; if(!song){ return; }
+    const step = song.beat;
+    const now = ctx.currentTime + 0.05;
+    const cell = song.prog[discBar % song.prog.length];
+    buildPad(cell.chord);
+    bass(cell.root, now, step*song.steps*0.9);
+    for(let s=0;s<song.steps;s++){
+      const t = now + s*step;
+      if(song.kick && s%2===0) kick(t);
+      if(song.bassPat[s]) bass(cell.root, t, step*0.9);
+      const nm = cell.mel[s];
+      if(nm && nm!=='.') discNote(nm, t, song.voice==='lead'?0.16:0.15, song.voice);
+    }
+    discBar++;
+  }
 
   function playBar(){
     if(!on || !ctx) return;
+    // Only one music source at a time: disc > battle > park loop.
+    if(discSong){ playDiscBar(); return; }
+    // During a battle the park loop steps aside entirely — only the original dance song plays.
+    if(danceMode){ playDanceBar(); return; }
     const p = prog();
     const cell = p[bar % p.length];
     const now = ctx.currentTime + 0.05;
@@ -4912,6 +6050,15 @@ const Music = (()=>{
     bar++;
   }
 
+  // (re)start the scheduler; a dance bar is 16 steps, a park bar is 8.
+  function reschedule(){
+    if(arpTimer) clearInterval(arpTimer);
+    let barMs;
+    if(discSong && DISC_SONGS[discSong]){ const s=DISC_SONGS[discSong]; barMs = s.beat*s.steps*1000; }
+    else { const stepsPerBar = danceMode ? 16 : 8; barMs = BEAT*stepsPerBar*1000; }
+    arpTimer = setInterval(playBar, barMs);
+  }
+
   function start(){
     if(started) return; started=true;
     ensure();
@@ -4920,7 +6067,7 @@ const Music = (()=>{
     master.gain.setValueAtTime(master.gain.value, ctx.currentTime);
     master.gain.linearRampToValueAtTime(on?0.55:0.0, ctx.currentTime+2.0);
     playBar();
-    arpTimer = setInterval(playBar, BEAT*8*1000);   // schedule one bar at a time
+    reschedule();   // schedule one bar at a time at the current tempo
   }
 
   function setNight(isNight){
@@ -4937,7 +6084,83 @@ const Music = (()=>{
     }
     return on;
   }
-  return { start, setNight, toggle, isOn:()=>on };
+  // ---- dance battle hooks ----
+  const DANCE_LEAD_IN = 0.12;   // small delay so the first bar isn't clipped
+  // tempo comes from the active genre: its base 16th length, tightened a little each round.
+  function danceTempoFor(round){ const S=curStyle(); return Math.max(0.075, S.beat - (round-1)*(S.rstep||0.008)); }
+  // enter a battle groove in `who`'s genre; `round` (1..) tightens the tempo a little each round.
+  function enterDance(round, who){
+    if(!ctx) return;                                   // audio not started yet — nothing to do
+    if(who && DANCE_STYLES[who]) curStyleKey = who; else curStyleKey = DANCE_DEFAULT;
+    danceMode = true;
+    danceBar = 0;                                       // start this character's song from its top
+    BEAT = danceTempoFor(round);                        // sixteenth-note length for this genre
+    danceAnchor = ctx.currentTime + DANCE_LEAD_IN;      // audio time of the very first step (shared grid)
+    master.gain.cancelScheduledValues(ctx.currentTime);
+    master.gain.setValueAtTime(master.gain.value, ctx.currentTime);
+    master.gain.linearRampToValueAtTime(on?0.6:0.0, ctx.currentTime+0.4);
+    playDanceBar();                                     // kick off immediately, no silent lead-in
+    reschedule();
+  }
+  // adjust tempo mid-battle when a new round starts — re-anchor so the new grid stays locked.
+  function danceRound(round){
+    if(!ctx || !danceMode) return;
+    BEAT = danceTempoFor(round);
+    danceBar = 0;                                       // restart the bar grid at the new tempo
+    danceAnchor = ctx.currentTime + DANCE_LEAD_IN;
+    reschedule();
+  }
+  // the name of the track playing for a given character (for the battle UI)
+  function danceStyleName(who){ const S = DANCE_STYLES[who] || DANCE_STYLES[DANCE_DEFAULT]; return S.name; }
+  function exitDance(){
+    if(!ctx){ danceMode=false; BEAT=BEAT_AMBIENT; return; }
+    danceMode = false; BEAT = BEAT_AMBIENT;
+    master.gain.cancelScheduledValues(ctx.currentTime);
+    master.gain.setValueAtTime(master.gain.value, ctx.currentTime);
+    master.gain.linearRampToValueAtTime(on?0.55:0.0, ctx.currentTime+0.6);
+    playBar();                                          // resume the park loop right away
+    reschedule();
+  }
+  function hit(strong){ if(danceMode) stab(strong); }
+  // the shared beat grid the dance game syncs its arrows to. A "beat" = 4 sixteenth-steps.
+  function danceBeatInfo(){
+    return ctx ? { anchor:danceAnchor, beatDur:BEAT*4, ctxNow:ctx.currentTime, active:danceMode } : null;
+  }
+  // ---- jukebox: play a chosen track on demand (overrides the automatic day/night pick) ----
+  let jukeTrack = null;   // 'day' | 'night' | 'dance' | 'disc:<key>' | null(=auto/off)
+  function playTrack(which){
+    if(!ctx){ start(); if(!ctx) return; }               // make sure audio exists
+    if(ctx.state==='suspended') ctx.resume();
+    jukeTrack = which;
+    if(which && which.indexOf('disc:')===0){
+      const key = which.slice(5);
+      if(DISC_SONGS[key]){
+        discSong = key; discBar = 0; danceMode = false;
+        playDiscBar();
+        reschedule();
+        return;
+      }
+    }
+    discSong = null;                                     // any non-disc pick stops a spinning disc
+    if(which==='dance'){
+      curStyleKey = DANCE_DEFAULT;                        // jukebox "battle theme" = the default rock groove
+      danceMode = true; danceBar = 0; BEAT = danceTempoFor(1);
+      danceAnchor = ctx.currentTime + DANCE_LEAD_IN;
+      playDanceBar();
+    } else {
+      danceMode = false; BEAT = BEAT_AMBIENT;
+      night = (which==='night');
+      bar = 0; playBar();
+    }
+    reschedule();
+  }
+  function currentTrack(){ return jukeTrack; }
+  // stop the jukebox override and hand the music back to the game's day/night state
+  function jukeboxOff(isNight){
+    jukeTrack = null; danceMode = false; discSong = null; BEAT = BEAT_AMBIENT;
+    night = !!isNight; if(ctx){ bar=0; playBar(); reschedule(); }
+  }
+  return { start, setNight, toggle, isOn:()=>on, enterDance, danceRound, exitDance, hit, danceBeatInfo, playTrack, currentTrack, jukeboxOff, danceStyleName };
 })();
 
 document.getElementById('musictoggle').addEventListener('click', ()=>{
@@ -4947,27 +6170,78 @@ document.getElementById('musictoggle').addEventListener('click', ()=>{
   btn.classList.toggle('off', !on);
 });
 
-document.getElementById('start').onclick=()=>{
-  if(hasSavedGame()){
-    if(!confirm("Starting a new game will erase your saved progress in this browser. Continue anyway?")) return;
-    clearSavedGame();
-  }
+// ── title screen save-slot picker ──
+// short description of what's in a slot (name/emoji + hearts won + when it was last played)
+function slotSummary(i){
+  const d = readSlot(i);
+  if(!d) return null;
+  const hearts = Array.isArray(d.wooed) ? d.wooed.length : 0;
+  let when = '';
+  if(d.savedAt){ const days = Math.floor((Date.now()-d.savedAt)/86400000);
+    when = days<=0 ? 'today' : days===1 ? 'yesterday' : (days+' days ago'); }
+  return { hearts, when, name:(d.fileName||''), emoji:(d.fileEmoji||'🌳') };
+}
+function beginSession(slot, data){
+  activeSlot = slot;
+  if(data) applySaveData(data);
   document.getElementById('title').classList.add('gone'); canMove=true; Music.start();
-};
-document.getElementById('continueBtn').onclick=()=>{
-  let data=null;
-  try{ data = JSON.parse(localStorage.getItem(SAVE_KEY)); }catch(e){}
-  applySaveData(data);
-  document.getElementById('title').classList.add('gone'); canMove=true; Music.start();
-};
-// title screen: offer Continue only if a save actually exists
-(function initTitleForSave(){
-  if(hasSavedGame()){
-    const cb=document.getElementById('continueBtn'); if(cb) cb.style.display='inline-block';
-    const sb=document.getElementById('start'); if(sb) sb.textContent = '🌱 New Game';
+}
+// palette of file emojis to choose from
+const FILE_EMOJIS = ['🌳','🌸','🍄','🌙','⭐','🐝','🦊','🐉','🦈','🐰','📷','🌼','🔥','💧','🍓','🎏'];
+let nfSlot = -1, nfEmoji = '🌳';
+function openNewFile(slot){
+  nfSlot = slot; nfEmoji = FILE_EMOJIS[Math.floor(Math.random()*FILE_EMOJIS.length)];
+  document.getElementById('nf-emoji').textContent = nfEmoji;
+  const nm=document.getElementById('nf-name'); nm.value='';
+  const grid=document.getElementById('nf-emojis'); grid.innerHTML='';
+  FILE_EMOJIS.forEach(e=>{
+    const b=document.createElement('button'); b.textContent=e; b.classList.toggle('sel', e===nfEmoji);
+    b.onclick=()=>{ nfEmoji=e; document.getElementById('nf-emoji').textContent=e;
+      grid.querySelectorAll('button').forEach(x=>x.classList.toggle('sel', x.textContent===e)); };
+    grid.appendChild(b);
+  });
+  document.getElementById('newfile').classList.add('show');
+  setTimeout(()=>nm.focus(), 50);
+}
+function confirmNewFile(){
+  const nm=document.getElementById('nf-name').value.trim();
+  fileName = nm || ('File '+(nfSlot+1));
+  fileEmoji = nfEmoji;
+  document.getElementById('newfile').classList.remove('show');
+  beginSession(nfSlot, null);
+  saveGame(true);   // stamp the new name/emoji into the slot right away
+}
+function renderSlotPicker(){
+  const host = document.getElementById('slotpicker');
+  if(!host) return;
+  host.innerHTML='';
+  for(let i=0;i<3;i++){
+    const sum = slotSummary(i);
+    const card = document.createElement('div'); card.className='slot-card';
+    const used = !!sum;
+    const label = used ? `<div class="slot-file"><span class="fe">${sum.emoji}</span>${(sum.name||('File '+(i+1))).replace(/</g,'&lt;')}</div>`
+                       : `<div class="slot-name">File ${i+1}</div>`;
+    const summaryHtml = used
+      ? `<div class="slot-summary">${sum.hearts} of ${TOTAL_WOOABLE} heart${sum.hearts===1?'':'s'} won<br><span style="opacity:0.6;font-size:0.74rem;">played ${sum.when}</span></div>`
+      : `<div class="slot-summary"><span class="empty">— empty —</span></div>`;
+    card.innerHTML =
+      label+
+      summaryHtml+
+      `<button class="slot-play">${used?'▶ Continue':'🌱 New Game'}</button>`+
+      `<button class="slot-del${used?'':' hidden'}">🗑 Delete</button>`;
+    card.querySelector('.slot-play').onclick = ()=>{
+      if(used){ beginSession(i, readSlot(i)); }
+      else { openNewFile(i); }   // name + emoji before starting
+    };
+    const del = card.querySelector('.slot-del');
+    if(used){ del.onclick = ()=>{ if(confirm(`Delete File ${i+1}? This can't be undone.`)){ deleteSlot(i); renderSlotPicker(); } }; }
+    host.appendChild(card);
   }
-  const note=document.getElementById('saveNote'); if(note) note.style.display='block';
-})();
+}
+document.getElementById('nf-start').onclick = confirmNewFile;
+document.getElementById('nf-name').addEventListener('keydown', e=>{ if(e.key==='Enter') confirmNewFile(); });
+document.getElementById('nf-cancel').onclick = ()=>{ document.getElementById('newfile').classList.remove('show'); };
+renderSlotPicker();
 // autosave: a steady backstop timer plus a save right before the tab/window closes
 setInterval(()=>{ if(canMove) saveGame(true); }, 20000);
 window.addEventListener('beforeunload', ()=>{ if(canMove) saveGame(true); });
@@ -4987,7 +6261,7 @@ function resetGame(){ closeInteractMenu(); endcard.classList.remove('show','has-
   tasks.shoot=false; tasks.sit=false;
   inventory.flowers=0; inventory.rocks=0; inventory.cloth=0; inventory.shell=0; inventory.trinket=0; inventory.mushroom=0; updateInventory(); flowerReadyAt=0;
   rocks.slice().forEach(rk=>{ rk.el.remove(); }); rocks.length=0;
-  treeShakeReadyAt.tree1=0; treeShakeReadyAt.tree2=0; treeRocksGiven=0; digReadyAt=0; dashReadyAt=0;
+  treeShakeReadyAt.tree1=0; treeShakeReadyAt.tree2=0; treeRocksGiven=0; digReadyAt=0; dashReadyAt=0; clothFound=false;
   const patch=document.getElementById('flowerpatch'); if(patch) patch.classList.remove('picked');
   skipCount=0; skipReadyAt=0; caizaAwake=false; npcs.caiza.hidden=true;
   vendingFixed=false; vendStockLevel=0; wishReadyAt=0; stopVendingCycle(); Object.values(SPECIAL_GIFTS).forEach(s=>{ specialInv[s.key]=0; }); { const v=document.getElementById('vending'); if(v){ v.classList.remove('fixed','buzz','rare'); v.classList.add('broken'); } }
@@ -5009,7 +6283,11 @@ function resetGame(){ closeInteractMenu(); endcard.classList.remove('show','has-
   document.getElementById('meter-charlie').style.display='none'; document.getElementById('m-charlie').style.width='0%';
   document.querySelectorAll('.lamp .globe').forEach(g=>g.style.filter='');
   hoopActive=false; if(hoopRAF) cancelAnimationFrame(hoopRAF); document.getElementById('hoopgame').classList.remove('show');
+  danceActive=false; danceEnding=false; if(danceRAF) cancelAnimationFrame(danceRAF); danceArrows.forEach(a=>a.el&&a.el.remove()); danceArrows=[]; danceWho=null; danceWins=0; danceReadyAt={}; discsOwned.clear(); document.getElementById('dancegame').classList.remove('show'); if(typeof Music!=='undefined') Music.exitDance();
   px=760; py=700; canMove=true; if(typeof Music!=='undefined') Music.setNight(false);
+  // clear the social-favor state and restore anyone who'd wandered off to sit with a friend
+  activeFavors.length=0; resolvedFavors.length=0; favorMeetups.length=0; favorNextId=1; lastFavorOfferAt=0;
+  npcs.devin.x=815; npcs.devin.y=660; npcs.femi.x=1240; npcs.femi.y=760; npcs.charlie.x=1665; npcs.charlie.y=730;
   clearSavedGame(); }
 document.getElementById('replay').onclick=resetGame;
 document.getElementById('keepgoing').onclick=()=>{ endcard.classList.remove('show','has-bg'); endcard.style.backgroundImage='none'; canMove=true; };
