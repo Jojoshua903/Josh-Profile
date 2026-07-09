@@ -315,6 +315,35 @@
     font-size: 12px; letter-spacing: 1px; text-transform: uppercase; transition: all .12s;
   }
   .cut-skip:hover { background: rgba(255,90,31,0.2); }
+
+  /* Title + Raaf row */
+  .title-row {
+    display: flex; align-items: center; justify-content: center;
+    gap: 14px; margin-bottom: 4px;
+  }
+
+  /* Menu Raaf */
+  .menu-raaf {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    pointer-events: none; max-width: 220px;
+    animation: raafPopIn .4s ease-out;
+  }
+  @keyframes raafPopIn { from { transform: translateY(14px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .menu-raaf-bubble {
+    background: rgba(244,233,216,0.96);
+    border: 2px solid rgba(255,180,32,0.8);
+    color: #1a0e14;
+    border-radius: 12px; padding: 8px 12px;
+    font-size: 12.5px; font-weight: 600; line-height: 1.3;
+    position: relative;
+  }
+  .menu-raaf-bubble::after {
+    content: ''; position: absolute; left: 50%; transform: translateX(-50%); bottom: -10px;
+    border-width: 10px 8px 0 8px; border-style: solid;
+    border-color: rgba(244,233,216,0.96) transparent transparent transparent;
+  }
+  .menu-raaf canvas { display: block; }
+  @media (max-width: 640px) { .menu-raaf { display: none; } }
 </style>
 </head>
 <body>
@@ -332,7 +361,13 @@
   <!-- Start screen -->
   <div class="overlay" id="startScreen">
     <div class="embers-bg" id="titleEmbers"></div>
-    <div class="title">Demon<br>Derby</div>
+    <div class="title-row">
+      <div class="title">Demon<br>Derby</div>
+      <div class="menu-raaf" id="menuRaaf">
+        <div class="menu-raaf-bubble" id="menuRaafBubble"></div>
+        <canvas id="menuRaafCv" width="120" height="110"></canvas>
+      </div>
+    </div>
     <div class="tagline">— Nathan vs Zenith · Home Run Showdown —</div>
     <div class="subtitle">The diamond cracked open and the demon <b>Zenith</b> climbed out, cursed baseball in claw. You are <b>Nathan</b> — send his pitches over the fence to banish him.</div>
     <div class="lore">Read the pitch. Charge your swing. Send it over the fence.</div>
@@ -403,7 +438,7 @@
       <div class="cut-vs">⚔</div>
       <div class="cut-char cut-zenith" id="cutZenithWrap">
         <canvas id="cutZenithCv" width="150" height="200"></canvas>
-        <div class="cut-name zenith">ZENITH</div>
+        <div class="cut-name zenith" id="cutFoeName">ZENITH</div>
       </div>
     </div>
     <div class="cut-bubble" id="cutBubble">
@@ -470,7 +505,7 @@ const MAX_OUTS = 3;
 
 // Difficulty presets: pitch speed, curve, and how forgiving the timing window is
 const DIFFICULTY = {
-  rookie:    { name: 'Rookie',    spdBase: 5.2, spdRamp: 0.30, curve: 1.1, win: 78, hr: 0.74, label: '#4fb36b' },
+  rookie:    { name: 'Rookie',    spdBase: 5.2, spdRamp: 0.30, curve: 1.1, win: 78, hr: 0.72, label: '#4fb36b' },
   pro:       { name: 'Pro',       spdBase: 6.4, spdRamp: 0.55, curve: 1.9, win: 58, hr: 0.80, label: '#ffb020' },
   nightmare: { name: 'Nightmare', spdBase: 7.6, spdRamp: 0.85, curve: 2.8, win: 42, hr: 0.86, label: '#c81e3a' }
 };
@@ -509,7 +544,7 @@ let batAngle = 0;
 let lastDistance = 0;      // ft of last home run
 let lastLongest = 0;       // longest HR this game
 
-// Raaf the raven — heckling commentator (Zenith only)
+// Raaf the raven — commentator. Heckles vs Zenith, cheers in training.
 let raafText = '';
 let raafTimer = 0;         // frames the speech bubble stays up
 const RAAF = {
@@ -525,8 +560,13 @@ const RAAF = {
     "That's not a home run, that's an eviction notice.",
     "Somewhere, a demon is quietly crying."
   ],
-  combo: [
+  combo2: [
     "Back-to-back?! Save some for the rest of us.",
+    "Two straight! Zenith did NOT see that coming.",
+    "That's a pair of dingers. The demon's rattled.",
+    "Two in a row — now we're talking."
+  ],
+  comboBig: [
     "You're on FIRE. Literally, check the outfield.",
     "Zenith is filing a complaint with management.",
     "The demon is sweating. I can smell brimstone panic.",
@@ -578,20 +618,121 @@ const RAAF = {
     "I believe in you. Mostly. Around 60%."
   ]
 };
+// Friendly, encouraging lines for training with little brother Ash
+const RAAF_ASH = {
+  homer: [
+    "WOW! Even Ash is clapping down there.",
+    "Dinger! Ash is gonna want your autograph.",
+    "Big-league swing! Ash saw the whole thing.",
+    "That's how it's done. Ash is beaming.",
+    "Perfect contact. Practice is paying off!",
+    "Boom! You're getting the hang of this.",
+    "Textbook. Ash is taking notes for later.",
+    "Send Ash to fetch it — he loves that part."
+  ],
+  combo2: [
+    "Two in a row! Ash can barely keep up.",
+    "Back-to-back bombs in the backyard league!",
+    "That's two straight — Ash is amazed!",
+    "Two dingers in a row! Ash cheers louder."
+  ],
+  comboBig: [
+    "You're heating up, and Ash is thrilled.",
+    "Nice rhythm! Ash is cheering his lungs out.",
+    "Ash just did a little victory dance.",
+    "What a streak! Ash can't stop grinning.",
+    "You're unstoppable! Ash is starstruck."
+  ],
+  fly: [
+    "So close! Ash almost caught it.",
+    "Nearly gone — a touch more oomph.",
+    "Good cut! Charge it up a bit more next time.",
+    "Deep! Ash is impressed anyway.",
+    "Warning track. You're right there."
+  ],
+  grounder: [
+    "Little grounder. Ash fields it, no worries.",
+    "Get under it a touch more. You've got this.",
+    "Bit early, but a good practice hack.",
+    "Ash rolls it back. Try again, champ!",
+    "Keep the swing level — almost there."
+  ],
+  strike: [
+    "Missed it! No biggie, that's what practice is for.",
+    "Ash giggles. 'Try again, big bro!'",
+    "Whiff! Watch Ash's slow lob and time it.",
+    "Swing a hair earlier — you'll square it up.",
+    "Shake it off. Ash believes in you.",
+    "That one fooled you. They're supposed to be easy!"
+  ],
+  neutral: [
+    "Just practice. Have fun with it.",
+    "Ash lobs 'em slow. Watch it all the way in.",
+    "Relax the shoulders. Nice and easy.",
+    "Little brother's got a gentle arm. Sit back.",
+    "Time the release, then let it rip.",
+    "No demons here — just backyard baseball."
+  ]
+};
 function raafSay(kind) {
-  if (mode === 'training') return;
-  const bank = RAAF[kind] || RAAF.neutral;
+  const bank = (mode === 'training' ? RAAF_ASH : RAAF)[kind] ||
+               (mode === 'training' ? RAAF_ASH : RAAF).neutral;
   raafText = bank[Math.floor(Math.random()*bank.length)];
   raafTimer = 150;
+}
+
+// Raaf's main-menu splash lines — a fresh one each time you land on the menu
+const RAAF_MENU = [
+  "Caw! Back for more, I see.",
+  "The demon's been trash-talking you all day.",
+  "Pick Nightmare. I dare you. I double-dare you.",
+  "I've got the best seat on the whole fence.",
+  "Nathan! My favorite mildly-competent slugger.",
+  "Zenith sharpened his curveball. Just so you know.",
+  "Warm up with Ash if you're feeling shy.",
+  "Ten bucks says you choke on pitch one. Kidding! ...mostly.",
+  "A raven, a bat, and a demon walk into a ballpark...",
+  "Endless mode is where legends and quitters are made.",
+  "I flew here from three leagues over for this.",
+  "Rookie? Pro? Nightmare? Choose your suffering.",
+  "The fence misses you. Go say hi. Loudly.",
+  "Swing hard. I'll narrate. It's a good system.",
+  "Fun fact: I've never actually caught a home run.",
+  "Zenith left the mound smelling of sulfur again.",
+  "Your career stats are looking... character-building.",
+  "Charge the bat. Read the pitch. Make me proud.",
+  "I heckle out of love. Mostly love. Some spite.",
+  "Ash brought orange slices. Very professional.",
+  "Press Play. The underworld isn't gonna banish itself.",
+  "New personal best today? Only one way to find out.",
+  "I believe in you. Statistically. A little.",
+  "That music toggle? Chef's kiss. Turn it on.",
+  "Demon Derby: now with 100% more raven commentary.",
+  "Go on, hit a dinger. I'll act surprised.",
+  "One good swing and Zenith goes back downstairs."
+];
+
+function showMenuRaaf() {
+  const bubble = document.getElementById('menuRaafBubble');
+  if (bubble) bubble.textContent = RAAF_MENU[Math.floor(Math.random()*RAAF_MENU.length)];
+  const cv = document.getElementById('menuRaafCv');
+  if (cv) {
+    const c = cv.getContext('2d');
+    c.clearRect(0,0,cv.width,cv.height);
+    c.save(); c.translate(52, 66); c.scale(2.0, 2.0);
+    drawRaafFigure(c);
+    c.restore();
+  }
 }
 
 // Plate/strike-zone geometry (where the ball crosses = perfect timing)
 const PLATE_Y = H - 150;
 const BATTER_X = 250;
 
-// Training is a gentle fixed preset regardless of difficulty buttons
+// Training is a gentle fixed preset regardless of difficulty buttons.
+// Wide timing window + low HR threshold so a well-timed swing clears the fence.
 function diffCfg() {
-  if (mode === 'training') return { name:'Ash', spdBase: 3.6, spdRamp: 0.18, curve: 0.5, win: 88, hr: 0.60, label:'#4fb36b' };
+  if (mode === 'training') return { name:'Ash', spdBase: 3.4, spdRamp: 0.12, curve: 0.4, win: 100, hr: 0.42, label:'#ff7ab0' };
   return DIFFICULTY[difficulty];
 }
 
@@ -606,7 +747,7 @@ function reset() {
   particles = []; hitBall = null; ball = null;
   raafText = ''; raafTimer = 0;
   updateHUD();
-  if (mode !== 'training') { raafSay('neutral'); }
+  raafSay('neutral');
   nextPitch();
 }
 
@@ -655,8 +796,7 @@ function nextPitch() {
 function releasePitch() {
   state = 'pitch';
   const cfg = diffCfg();
-  // In endless, difficulty ramps with pitches survived
-  const ramp = gameType === 'endless' ? pitchNum : pitchNum;
+  const ramp = pitchNum;
   const speed = cfg.spdBase + ramp * cfg.spdRamp + Math.random()*1.0;
   const curve = (Math.random()-0.5) * (cfg.curve + ramp * (mode==='training'?0:0.12));
   const startX = 640, startY = 210;
@@ -689,7 +829,7 @@ function releaseSwing() {
   const cfg = diffCfg();
   if (ball) {
     const dist = Math.abs(ball.y - PLATE_Y);
-    const horizOk = Math.abs(ball.x - BATTER_X) < (mode==='training'?170:130);
+    const horizOk = Math.abs(ball.x - BATTER_X) < (mode==='training'?190:130);
     if (dist < cfg.win && horizOk) {
       contactWindowHit = true;
       resolveContact(dist, cfg);
@@ -702,8 +842,10 @@ function releaseSwing() {
 
 function resolveContact(dist, cfg) {
   const timing = 1 - Math.min(dist / cfg.win, 1);   // 1 = perfect timing
-  // Combined quality: timing gates contact, power adds distance
-  const quality = timing * (0.55 + power * 0.45);
+  // Timing is the main driver; power adds a distance boost.
+  // Perfect timing alone reaches 0.78, so a well-timed swing clears the fence
+  // even at low charge; power pushes quality up toward 1.0 for max distance.
+  const quality = timing * (0.78 + power * 0.22);
   ball.active = false;
   const bx = ball.x, by = ball.y;
 
@@ -719,7 +861,7 @@ function resolveContact(dist, cfg) {
   shake(quality >= cfg.hr ? 16 : 8);
   batCrack(quality);
 
-  const flyThresh = cfg.hr - 0.28;
+  const flyThresh = cfg.hr - 0.24;
   if (quality >= cfg.hr) {
     homeRuns++; combo++;
     lastDistance = Math.round(360 + quality*160 + power*40);
@@ -729,7 +871,7 @@ function resolveContact(dist, cfg) {
     resultText = combo > 1 ? ('HOME RUN!  x' + combo + ' COMBO') : 'HOME RUN!';
     resultColor = '#ffd45e';
     hrSting();
-    raafSay(combo > 1 ? 'combo' : 'homer');
+    raafSay(combo >= 3 ? 'comboBig' : (combo === 2 ? 'combo2' : 'homer'));
   } else if (quality >= flyThresh) {
     combo = 0;
     score += 30;
@@ -845,7 +987,7 @@ wireSelectors();
 document.getElementById('playBtn').onclick = () => {
   startScreen.classList.add('hidden');
   if (mode === 'training') {
-    beginGame();
+    playCutscene(pickDialogue('trainIntro'), beginGame);
   } else {
     playCutscene(pickDialogue('intro'), beginGame);
   }
@@ -856,7 +998,7 @@ function beginGame() {
   reset();
   startMusic();
 }
-replayBtn.onclick = () => { endScreen.classList.add('hidden'); startScreen.classList.remove('hidden'); renderCareer(); };
+replayBtn.onclick = () => { endScreen.classList.add('hidden'); startScreen.classList.remove('hidden'); renderCareer(); showMenuRaaf(); };
 
 // ---------- UPDATE ----------
 function update() {
@@ -1020,7 +1162,7 @@ function draw() {
   else drawZenith(600, 250);
   drawNathan(BATTER_X, PLATE_Y);
 
-  if (mode !== 'training') drawRaaf();
+  drawRaaf();
 
   drawTimingMeter();
   drawPowerMeter();
@@ -1263,7 +1405,7 @@ function drawAsh(x, y) {
 }
 
 function drawRaaf() {
-  // Raaf the raven perches on a post near the left field, heckling between pitches
+  // Raaf the raven perches on a post near the left field, commenting between pitches
   const rx = 95, ry = H*0.40 - 6;   // perched on top of the fence line
   const t = Date.now();
   const bob = Math.sin(t/500) * 2;
@@ -1275,36 +1417,7 @@ function drawRaaf() {
   ctx.strokeStyle = '#0d1f12'; ctx.lineWidth = 4; ctx.lineCap = 'round';
   ctx.beginPath(); ctx.moveTo(-2, 14); ctx.lineTo(-2, 26); ctx.stroke();
 
-  // tail
-  ctx.fillStyle = '#15121a';
-  ctx.beginPath();
-  ctx.moveTo(-4, 2); ctx.lineTo(-22, 8); ctx.lineTo(-4, 12);
-  ctx.closePath(); ctx.fill();
-
-  // body
-  ctx.fillStyle = '#1c1822';
-  ctx.beginPath(); ctx.ellipse(0, 2, 12, 15, 0, 0, 7); ctx.fill();
-  // wing
-  ctx.fillStyle = '#12101a';
-  ctx.beginPath(); ctx.ellipse(2, 3, 7, 12, 0.2, 0, 7); ctx.fill();
-
-  // head
-  ctx.fillStyle = '#1c1822';
-  ctx.beginPath(); ctx.arc(4, -13, 8, 0, 7); ctx.fill();
-  // beak (points right, toward the plate)
-  ctx.fillStyle = '#ffb020';
-  ctx.beginPath();
-  ctx.moveTo(11, -14); ctx.lineTo(22, -12); ctx.lineTo(11, -9);
-  ctx.closePath(); ctx.fill();
-  // glowing eye
-  ctx.fillStyle = '#ff5a1f';
-  ctx.shadowColor = '#ff5a1f'; ctx.shadowBlur = 6;
-  ctx.beginPath(); ctx.arc(6, -14, 1.9, 0, 7); ctx.fill();
-  ctx.shadowBlur = 0;
-  // legs
-  ctx.strokeStyle = '#ffb020'; ctx.lineWidth = 1.6;
-  ctx.beginPath(); ctx.moveTo(-2, 15); ctx.lineTo(-3, 22); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(3, 15); ctx.lineTo(4, 22); ctx.stroke();
+  drawRaafFigure(ctx);
 
   // name tag
   ctx.fillStyle = 'rgba(28,24,34,0.9)';
@@ -1317,6 +1430,40 @@ function drawRaaf() {
   if (raafTimer > 0 && raafText) {
     drawRaafBubble(rx + 26, ry + bob - 24, raafText, raafTimer);
   }
+}
+
+// Draws just the raven body at the current origin, on any 2D context
+function drawRaafFigure(c) {
+  // tail
+  c.fillStyle = '#15121a';
+  c.beginPath();
+  c.moveTo(-4, 2); c.lineTo(-22, 8); c.lineTo(-4, 12);
+  c.closePath(); c.fill();
+
+  // body
+  c.fillStyle = '#1c1822';
+  c.beginPath(); c.ellipse(0, 2, 12, 15, 0, 0, 7); c.fill();
+  // wing
+  c.fillStyle = '#12101a';
+  c.beginPath(); c.ellipse(2, 3, 7, 12, 0.2, 0, 7); c.fill();
+
+  // head
+  c.fillStyle = '#1c1822';
+  c.beginPath(); c.arc(4, -13, 8, 0, 7); c.fill();
+  // beak (points right, toward the plate)
+  c.fillStyle = '#ffb020';
+  c.beginPath();
+  c.moveTo(11, -14); c.lineTo(22, -12); c.lineTo(11, -9);
+  c.closePath(); c.fill();
+  // glowing eye
+  c.fillStyle = '#ff5a1f';
+  c.shadowColor = '#ff5a1f'; c.shadowBlur = 6;
+  c.beginPath(); c.arc(6, -14, 1.9, 0, 7); c.fill();
+  c.shadowBlur = 0;
+  // legs
+  c.strokeStyle = '#ffb020'; c.lineWidth = 1.6;
+  c.beginPath(); c.moveTo(-2, 15); c.lineTo(-3, 22); c.stroke();
+  c.beginPath(); c.moveTo(3, 15); c.lineTo(4, 22); c.stroke();
 }
 
 function drawRaafBubble(x, y, text, timer) {
@@ -1512,7 +1659,6 @@ function endGame() {
   saveStats(); renderCareer();
 
   const pb = homeRuns === career.best && homeRuns > 0;
-  const total = gameType === 'endless' ? (pitchNum) : TOTAL_PITCHES;
   const line1 = gameType === 'endless'
     ? 'Home Runs: <span>' + homeRuns + '</span>  ·  Pitches faced: <span>' + pitchNum + '</span>'
     : 'Home Runs: <span>' + homeRuns + '</span> / ' + TOTAL_PITCHES;
@@ -1523,7 +1669,7 @@ function endGame() {
     (pb ? '<br><span style="color:#5dff8a">&#9733; New personal best!</span>' : '');
   stopMusic();
 
-  // Zenith mode gets an outcome cutscene before the end screen
+  // Outcome cutscenes: Zenith gets win/fail, training gets Ash send-offs
   if (mode === 'zenith') {
     const banished = homeRuns >= 3;   // demon retreats / legend
     playCutscene(pickDialogue(banished ? 'win' : 'fail'), () => {
@@ -1531,12 +1677,16 @@ function endGame() {
       endScreen.classList.remove('hidden');
     });
   } else {
-    endScreen.classList.remove('hidden');
+    const good = homeRuns >= 3;
+    playCutscene(pickDialogue(good ? 'trainWin' : 'trainFail'), () => {
+      cutscene.classList.add('hidden');
+      endScreen.classList.remove('hidden');
+    });
   }
 }
 
 // ---------- CUTSCENE DIALOGUE ----------
-// Each line: { who: 'nathan'|'zenith', text: '...' }
+// Each line: { who: 'nathan'|'zenith'|'ash', text: '...' }
 const DIALOGUE = {
   intro: [
     [ {who:'zenith', text:"So. Another mortal with a stick and a dream."},
@@ -1592,6 +1742,42 @@ const DIALOGUE = {
     [ {who:'zenith', text:"You swung at shadows all game long."},
       {who:'nathan', text:"Those shadows had wicked movement."},
       {who:'zenith', text:"Excuses. Try again, if you dare."} ]
+  ],
+  trainIntro: [
+    [ {who:'ash', text:"Okay big bro, I'll go easy! Ready?"},
+      {who:'nathan', text:"Lob 'em in, Ash. Let's get my swing loose."},
+      {who:'ash', text:"Slow and floaty, just for you. Here it comes!"} ],
+    [ {who:'nathan', text:"No demons today. Just you and me, kid."},
+      {who:'ash', text:"I've been practicing my pitch! Watch this."},
+      {who:'nathan', text:"Show me what you've got, little guy."} ],
+    [ {who:'ash', text:"Bet you can't hit ten in a row!"},
+      {who:'nathan', text:"Bet I can. Loser does the dishes."},
+      {who:'ash', text:"Deal! Okay... batter up, Nathan!"} ],
+    [ {who:'ash', text:"Raaf came to watch us practice too!"},
+      {who:'nathan', text:"Then let's put on a show. Nice and easy, Ash."},
+      {who:'ash', text:"Here's my super-slow special. Go!"} ]
+  ],
+  trainWin: [
+    [ {who:'ash', text:"WHOA! You crushed those, Nathan!"},
+      {who:'nathan', text:"All thanks to your pitching, Ash."},
+      {who:'ash', text:"Zenith better watch out now!"} ],
+    [ {who:'nathan', text:"That's the swing I needed. Thanks, buddy."},
+      {who:'ash', text:"Can we play again? Pleeease?"},
+      {who:'nathan', text:"Anytime, kid. Anytime."} ],
+    [ {who:'ash', text:"You're SO ready for the demon now!"},
+      {who:'nathan', text:"Feeling good. That was great practice."},
+      {who:'ash', text:"High five! ...okay, wing five with Raaf too."} ]
+  ],
+  trainFail: [
+    [ {who:'ash', text:"Aw, tough round! You'll get 'em next time."},
+      {who:'nathan', text:"Yeah... my timing needs work. Again?"},
+      {who:'ash', text:"Yeah! I'll lob 'em extra slow, promise."} ],
+    [ {who:'nathan', text:"Even your slow ones got me today, Ash."},
+      {who:'ash', text:"Hehe. Watch the ball all the way in!"},
+      {who:'nathan', text:"Good tip. Let's run it back."} ],
+    [ {who:'ash', text:"Don't worry, that's what practice is for!"},
+      {who:'nathan', text:"Right you are. One more round, coach."},
+      {who:'ash', text:"Coach Ash, reporting for duty!"} ]
   ]
 };
 
@@ -1607,6 +1793,7 @@ const cutSpeaker = document.getElementById('cutSpeaker');
 const cutLineEl = document.getElementById('cutLine');
 const cutNathanCv = document.getElementById('cutNathanCv');
 const cutZenithCv = document.getElementById('cutZenithCv');
+const cutFoeName = document.getElementById('cutFoeName');
 
 function pickDialogue(kind){
   const set = DIALOGUE[kind];
@@ -1616,6 +1803,14 @@ function pickDialogue(kind){
 function playCutscene(lines, onDone){
   cutLines = lines; cutIdx = 0; cutDone = onDone; cutActive = true;
   cutscene.classList.remove('hidden');
+  // Foe portrait + label depends on mode
+  if (mode === 'training') {
+    cutFoeName.textContent = 'ASH';
+    cutFoeName.className = 'cut-name zenith';
+  } else {
+    cutFoeName.textContent = 'ZENITH';
+    cutFoeName.className = 'cut-name zenith';
+  }
   seedCutEmbers();
   renderCutPortraits();
   showCutLine();
@@ -1623,11 +1818,12 @@ function playCutscene(lines, onDone){
 
 function showCutLine(){
   const line = cutLines[cutIdx];
-  cutSpeaker.textContent = line.who === 'zenith' ? 'ZENITH' : 'NATHAN';
-  cutSpeaker.className = 'cut-speaker ' + line.who;
+  const isNathan = line.who === 'nathan';
+  cutSpeaker.textContent = isNathan ? 'NATHAN' : (line.who === 'ash' ? 'ASH' : 'ZENITH');
+  cutSpeaker.className = 'cut-speaker ' + (isNathan ? 'nathan' : 'zenith');
   // dim the non-speaker portrait
-  document.getElementById('cutNathanWrap').style.opacity = line.who === 'nathan' ? '1' : '0.4';
-  document.getElementById('cutZenithWrap').style.opacity = line.who === 'zenith' ? '1' : '0.4';
+  document.getElementById('cutNathanWrap').style.opacity = isNathan ? '1' : '0.4';
+  document.getElementById('cutZenithWrap').style.opacity = isNathan ? '0.4' : '1';
   cutTyped = 0;
   clearInterval(cutTypeTimer);
   cutTypeTimer = setInterval(() => {
@@ -1681,9 +1877,15 @@ function renderCutPortraits(){
 
   const zc = cutZenithCv.getContext('2d');
   zc.clearRect(0,0,cutZenithCv.width,cutZenithCv.height);
-  zc.save(); zc.translate(75, 120); zc.scale(1.7, 1.7);
-  drawZenithPortrait(zc);
-  zc.restore();
+  if (mode === 'training') {
+    zc.save(); zc.translate(75, 150); zc.scale(2.3, 2.3);
+    drawAshPortrait(zc);
+    zc.restore();
+  } else {
+    zc.save(); zc.translate(75, 120); zc.scale(1.7, 1.7);
+    drawZenithPortrait(zc);
+    zc.restore();
+  }
 }
 
 // Simplified static portraits drawn on an arbitrary context
@@ -1719,7 +1921,6 @@ function drawNathanPortrait(c){
 }
 
 function drawZenithPortrait(c){
-  const t = Date.now();
   // aura
   c.globalAlpha = 0.3;
   const aura = c.createRadialGradient(0,0,4,0,0,70);
@@ -1744,6 +1945,35 @@ function drawZenithPortrait(c){
   // wicked grin
   c.strokeStyle='#ffd45e'; c.lineWidth=1.8;
   c.beginPath(); c.arc(0,-18,7,0.2,Math.PI-0.2); c.stroke();
+}
+
+function drawAshPortrait(c){
+  // legs
+  c.strokeStyle = '#7a4a20'; c.lineWidth = 6; c.lineCap='round';
+  c.beginPath(); c.moveTo(-4,26); c.lineTo(-9,48); c.stroke();
+  c.beginPath(); c.moveTo(4,26); c.lineTo(9,48); c.stroke();
+  // pink tee
+  c.fillStyle = '#ff7ab0';
+  c.beginPath(); c.moveTo(-13,-4); c.lineTo(13,-4); c.lineTo(9,28); c.lineTo(-9,28); c.closePath(); c.fill();
+  c.fillStyle = '#fff'; c.font='bold 10px Trebuchet MS'; c.textAlign='center';
+  c.fillText('#1', 0, 16);
+  // head
+  c.fillStyle = '#e8b98a'; c.beginPath(); c.arc(0,-16,11,0,7); c.fill();
+  // pink cap
+  c.fillStyle = '#ff4fa0';
+  c.beginPath(); c.arc(0,-18,12,Math.PI,2*Math.PI); c.fill();
+  c.fillRect(-12,-18,24,4);
+  c.fillRect(-21,-18,10,4); // brim to side
+  // happy eyes
+  c.fillStyle = '#3a2530';
+  c.beginPath(); c.arc(-3.5,-16,1.9,0,7); c.fill();
+  c.beginPath(); c.arc(3.5,-16,1.9,0,7); c.fill();
+  // big grin
+  c.strokeStyle='#7a1420'; c.lineWidth=1.6;
+  c.beginPath(); c.arc(0,-12,4.5,0.12,Math.PI-0.12); c.stroke();
+  // little wave
+  c.strokeStyle = '#e8b98a'; c.lineWidth = 5; c.lineCap='round';
+  c.beginPath(); c.moveTo(9,2); c.lineTo(20,-8); c.stroke();
 }
 
 function seedCutEmbers(){
@@ -1921,6 +2151,7 @@ function loop() {
 }
 loop();
 renderCareer();
+showMenuRaaf();
 
 // ---------- Title screen floating embers ----------
 (function seedTitleEmbers(){
