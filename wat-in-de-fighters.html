@@ -429,6 +429,9 @@
   }
   .journalIconBtn:hover{transform:scale(1.1);background:rgba(253,187,45,.24);}
   .journalIconBtn:active{transform:scale(.94);}
+  /* ETERNAL GAUNTLET skull shortcut — a menacing crimson-violet twin of the journal icon */
+  .gauntletIconBtn{background:rgba(255,84,112,.14);border-color:rgba(255,84,112,.55);color:#ff8fa3;}
+  .gauntletIconBtn:hover{background:rgba(255,84,112,.28);}
 
   /* achievements menu */
   #achieve{justify-content:flex-start;overflow-y:auto;padding-top:3%;padding-bottom:40px;}
@@ -1056,6 +1059,7 @@
       <div class="prestigebadge hidden" id="prestigeBadge" title="Prestige level — earned by prestiging a full medal collection">⭐ <span id="prestigeLevel">0</span> <span class="ptiername" id="prestigeTierName"></span></div>
       <div class="currencybadge" id="currencyBadge" title="Earn SHARDS from wins, Classic clears, and 💎 gems that drop mid-match. Spend them in the SHOP and skill trees.">💎 <span id="currencyCount">0</span></div>
       <button class="journalIconBtn" id="journalBtn" title="JOURNAL — read fighter lore, unlocked by winning matches">📖</button>
+      <button class="journalIconBtn gauntletIconBtn" id="gauntletBtn" title="ETERNAL GAUNTLET — beat all 44 rivals with one fighter for a unique skin">☠</button>
     </div>
     <button class="btn btn-prestige hidden" id="prestigeBtn" title="Reset all your medals for a permanent prestige level + SHARDS">⭐ PRESTIGE UP!</button>
     <!-- PLAY is the hero action; CAMPAIGN sits beside it as a second big button -->
@@ -2995,6 +2999,31 @@ const SUPER2 = {
     fire(f,foe){ if(foe) f.face=foe.cx>=f.cx?1:-1; f.vx=f.face*16; f.vy=-2; f._dashHit=30; f._dashDmg=12; f._dashKb=9;
       for(let i=0;i<4;i++) spawnCloud(f.cx+f.face*(i*80), f.cy+20-i*18);   // trail of stepping-stone clouds
       spawnParticles(f.cx,f.cy,'#eaf4ff',18); } },
+  randomkid:{ name:'SENTRY BARRAGE', desc:'Bolts down a line of three auto-turrets that blanket the stage in covering fire.',
+    fire(f,foe){
+      // Deploy a coordinated wall of three sentries spread across the near half of
+      // the stage. Built with the same shape as spawnKidTurret so updateKidTurrets/
+      // drawKidTurrets handle them exactly like a normal DEPLOY TURRET — the front
+      // one is a MEGA turret for extra punch. A super earns the right to exceed the
+      // usual 2-turret cap, so these are pushed directly.
+      const groundY = f.y + f.h;
+      for(let i=0;i<3;i++){
+        const mega = (i===0);
+        const w = mega ? KIDTURRET_W*1.5 : KIDTURRET_W;
+        const h = mega ? KIDTURRET_H*1.5 : KIDTURRET_H;
+        let cx = f.cx + f.face*(46 + i*96);
+        cx = Math.max(w*0.6, Math.min(W-w*0.6, cx));
+        kidTurrets.push({ owner:f, x:cx, groundY, w, h, mega,
+          life: mega?150:KIDTURRET_LIFE, max: mega?150:KIDTURRET_LIFE, born:0,
+          hp: mega?60:26, maxHp: mega?60:26, raise:0,
+          fireCd: mega?10:20+i*6, aim:f.face, recoil:0 });
+        for(let p=0;p<8;p++) particles.push({x:cx+(Math.random()-.5)*w, y:groundY, vx:(Math.random()-.5)*2.5, vy:-Math.random()*2, life:20, color:'#c98f52', r:2+Math.random()*2});
+      }
+      if(f && !f.isBot){ Save.addStat('gadgetsDeployed'); }
+      SFX.attack && SFX.attack('build');
+      spawnParticles(f.cx, f.cy, f.def.color, 18);
+      spawnParticles(f.cx, f.cy, '#fff', 10);
+    } },
 };
 function hasSuper2Def(id){ return !!SUPER2[id]; }
 
@@ -3031,6 +3060,65 @@ function jewelPalette(c){
 }
 // Number of selectable costumes: DEFAULT + 3 personalized (+ EPIC / SIGNATURE when unlocked)
 const COSTUME_COUNT = 4;   // base count; EPIC (index 6) is added per-character once unlocked
+
+// ---- ETERNAL GAUNTLET reward skins (costume index 9) ----
+// One hand-tuned, uniquely-themed cosmetic per fighter, granted only by beating the
+// full 44-foe Eternal Gauntlet with that fighter. Each entry is a full costume
+// {name,color,dark,acc}; any fighter without an entry falls back to a shimmering
+// gold-forged recolor so the reward always exists for every character.
+const GAUNTLET_SKINS = {
+  nathan:{name:'ETERNAL SLUGGER', color:'#ff2d55', dark:'#4a0010', acc:'flame'},
+  josh:{name:'SINGULARITY CODER', color:'#00ffd0', dark:'#00302a', acc:'visor'},
+  milo:{name:'GODSTORM ARCHMAGE', color:'#c77dff', dark:'#2a0a55', acc:'star'},
+  reshman:{name:'VOIDLORD ETERNAL', color:'#7b2fff', dark:'#0a0018', acc:'halo'},
+  lars:{name:'FORGEFATHER TITAN', color:'#ff7a1a', dark:'#3d1400', acc:'horns'},
+  daniel:{name:'DETONATION WARLORD', color:'#ff4d00', dark:'#3a0a00', acc:'mohawk'},
+  adam:{name:'GRAND SLAM CHAMPION', color:'#eaff00', dark:'#4a5200', acc:'crown'},
+  fionn:{name:'TECTONIC COLOSSUS', color:'#ff5e3a', dark:'#3a1408', acc:'goggles'},
+  renas:{name:'HYPERSONIC SCOUT', color:'#00e5ff', dark:'#003a45', acc:'antenna'},
+  deniz:{name:'ABSOLUTE ZERO KING', color:'#5ecaff', dark:'#0a2a55', acc:'crown'},
+  yassin:{name:'INFERNO WARDEN', color:'#ff6a00', dark:'#3a1000', acc:'horns'},
+  doremalen:{name:'EVERGREEN SOVEREIGN', color:'#4dff88', dark:'#0a3a1a', acc:'crown'},
+  devin:{name:'APEX BEETLE LORD', color:'#b57bff', dark:'#2a1055', acc:'horns'},
+  niffo:{name:'TITANIUM SENTINEL', color:'#9fd8ff', dark:'#1a3a55', acc:'visor'},
+  jax:{name:'HEADLINER SUPREME', color:'#ff2d78', dark:'#4a0022', acc:'star'},
+  femi:{name:'PRIMAL ALPHA', color:'#ff8c1a', dark:'#3a1a00', acc:'horns'},
+  evadam:{name:'NEMESIS ASCENDANT', color:'#ff0033', dark:'#1a0004', acc:'horns'},
+  metaai:{name:'OMEGA INTELLIGENCE', color:'#00a2ff', dark:'#001a3a', acc:'visor'},
+  enno:{name:'MIDNIGHT MONARCH', color:'#6a8cff', dark:'#0a1a45', acc:'crown'},
+  thorren:{name:'PRISMATIC OVERLORD', color:'#ff5edb', dark:'#3a0a45', acc:'star'},
+  ati:{name:'FORTUNE ARCHITECT', color:'#c77dff', dark:'#2a0a55', acc:'crown'},
+  bastiaan:{name:'WILDGROVE WARDEN', color:'#7aff9e', dark:'#0a3a1a', acc:'horns'},
+  dean:{name:'NEON HEARTBREAKER', color:'#ff6ad5', dark:'#3a0a2a', acc:'star'},
+  niek:{name:'IRONLEAF GUARDIAN', color:'#8fff6a', dark:'#1a3a0a', acc:'crown'},
+  thomas:{name:'AZURE VANGUARD', color:'#4d9fff', dark:'#0a1a4a', acc:'visor'},
+  giancarlo:{name:'OBSIDIAN DON', color:'#ffb000', dark:'#1a0f00', acc:'crown'},
+  oela:{name:'EMERALD REVENANT', color:'#3dffc0', dark:'#0a3a30', acc:'halo'},
+  ash:{name:'ROSEFIRE PHOENIX', color:'#ff8fb0', dark:'#4a0a24', acc:'flame'},
+  kayo:{name:'TWIN ECLIPSE', color:'#ffb84d', dark:'#3a2200', acc:'horns'},
+  jace:{name:'ARCANE ASCENDANT', color:'#9d6aff', dark:'#1a0a4a', acc:'star'},
+  cavan:{name:'SOLAR BLAZE', color:'#ff9500', dark:'#3a1a00', acc:'flame'},
+  maik:{name:'VERDANT DYNAMO', color:'#3dff6a', dark:'#0a3a14', acc:'antenna'},
+  casper:{name:'CRIMSON VELOCITY', color:'#ff2020', dark:'#3a0000', acc:'goggles'},
+  robin:{name:'EMERALD LEGEND', color:'#3dff5e', dark:'#0a3a10', acc:'crown'},
+  zennith:{name:'ABYSSAL ETERNAL', color:'#8f00ff', dark:'#0a0014', acc:'halo'},
+  dih:{name:'ROSE ROYALE', color:'#ff9bd0', dark:'#4a1a34', acc:'crown'},
+  raaf:{name:'NIGHTFEATHER LORD', color:'#5a6aff', dark:'#0a0a2a', acc:'halo'},
+  janjacob:{name:'GOLDEN CRAFTSMAN', color:'#ffb000', dark:'#3a2200', acc:'crown'},
+  sarp:{name:'STORMTIDE CAPTAIN', color:'#4dc8ff', dark:'#0a2a4a', acc:'crown'},
+  ankervos:{name:'BLAZING VANGUARD', color:'#ff7a2a', dark:'#3a1400', acc:'flame'},
+  marloes:{name:'ORCHID SORCERESS', color:'#e08fff', dark:'#3a0a4a', acc:'star'},
+  zurm:{name:'ANCIENT GOLEM KING', color:'#ffca6a', dark:'#3a2a0a', acc:'horns'},
+  guiseppe:{name:'SCARLET MAESTRO', color:'#ff3a4a', dark:'#3a0008', acc:'crown'},
+  claudio:{name:'CELESTIAL ANGEL', color:'#eaffff', dark:'#6a8cbf', acc:'halo'},
+  randomkid:{name:'MASTER ENGINEER', color:'#ffca00', dark:'#3a2a00', acc:'goggles'},
+};
+function gauntletSkin(c){
+  const g = GAUNTLET_SKINS[c.id];
+  if(g) return {name:g.name, color:g.color, dark:g.dark, acc:g.acc, gauntlet:true};
+  // fallback: a molten-gold forged recolor of the fighter's own palette
+  return {name:'GAUNTLET LEGEND', color:mixHex(c.color,'#ffcf40',0.55), dark:mixHex(c.dark,'#5a3a00',0.5), acc:'flame', gauntlet:true};
+}
 // Resolve a costume index to {name, color, dark, acc}.
 // 0 default · 1-3 personalized · 6 EPIC (Classic Mode reward) · 7 SIGNATURE (skill tree)
 function resolveCostume(c, idx){
@@ -3040,6 +3128,7 @@ function resolveCostume(c, idx){
   if(idx===6){ return {name:'EPIC', color:mixHex(c.color,'#ffd700',0.5), dark:mixHex(c.dark,'#b8860b',0.5), acc:'crown', epic:true}; }
   if(idx===7){ return {name:'SIGNATURE', color:mixHex(c.color,'#00e5ff',0.4), dark:mixHex(c.dark,'#0a3a45',0.4), acc:c.costume?c.costume.acc:'star', signature:true}; }
   if(idx===8 && c.id==='nathan'){ return {name:'CHAMPION', color:mixHex(c.color,'#ffd700',0.4), dark:mixHex(c.dark,'#4a0e14',0.5), acc:'cape', champion:true}; }
+  if(idx===9){ return gauntletSkin(c); }
   return {name:'DEFAULT', color:c.color, dark:c.dark, acc:null};
 }
 // which costume indices a given character has actually earned the right to wear —
@@ -3053,6 +3142,7 @@ function allowedCostumeIdxs(id){
   if(Save.hasEpic(id)) arr.push(6);
   if(Save.hasSignature(id)) arr.push(7);
   if(id==='nathan' && Save.hasCampaignSkin()) arr.push(8);
+  if(Save.hasGauntletSkin(id)) arr.push(9);
   return arr;
 }
 
@@ -3356,6 +3446,7 @@ function drawFighter(g, c, x, y, w, h, face, t, state, costume){
   if(cos.epic){ g.save(); g.globalAlpha=0.35+0.25*Math.sin(t/120); g.strokeStyle='#ffd700'; g.lineWidth=3; roundRectStroke ? 0:0; g.beginPath(); roundRect(g,-bodyW/2-2,-bodyH*0.55-2,bodyW+4,bodyH+4,9); g.stroke(); g.restore(); }
   if(cos.signature){ g.save(); g.globalAlpha=0.35+0.25*Math.sin(t/90); g.strokeStyle='#00e5ff'; g.lineWidth=3; g.beginPath(); roundRect(g,-bodyW/2-2,-bodyH*0.55-2,bodyW+4,bodyH+4,9); g.stroke(); g.restore(); }
   if(cos.champion){ g.save(); g.globalAlpha=0.35+0.25*Math.sin(t/100); g.strokeStyle='#ff5714'; g.lineWidth=3; g.beginPath(); roundRect(g,-bodyW/2-2,-bodyH*0.55-2,bodyW+4,bodyH+4,9); g.stroke(); g.restore(); }
+  if(cos.gauntlet){ g.save(); const hue=(t/16)%360; g.globalAlpha=0.5+0.3*Math.sin(t/90); g.strokeStyle='hsl('+hue+',100%,65%)'; g.lineWidth=3.5; g.beginPath(); roundRect(g,-bodyW/2-3,-bodyH*0.55-3,bodyW+6,bodyH+6,10); g.stroke(); g.restore(); }
   roundRect(g, -bodyW/2, -bodyH*0.55, bodyW, bodyH, 8);
   // SCHOOL uniform: white shirt panel down the middle of the blazer
   if(cos.shirt){
@@ -4297,6 +4388,7 @@ function drawFighter(g, c, x, y, w, h, face, t, state, costume){
     // EPIC / SIGNATURE glow rings
     if(cos.epic){ g.save(); g.globalAlpha=0.4+0.2*Math.sin(t/120); g.strokeStyle='#ffd700'; g.lineWidth=3; g.beginPath(); g.arc(0,-bodyH*0.05,bodyW*0.7,0,Math.PI*2); g.stroke(); g.restore(); }
     if(cos.signature){ g.save(); g.globalAlpha=0.4+0.2*Math.sin(t/90); g.strokeStyle='#00e5ff'; g.lineWidth=3; g.beginPath(); g.arc(0,-bodyH*0.05,bodyW*0.7,0,Math.PI*2); g.stroke(); g.restore(); }
+    if(cos.gauntlet){ g.save(); const hue=(t/16)%360; g.globalAlpha=0.5+0.3*Math.sin(t/90); g.strokeStyle='hsl('+hue+',100%,65%)'; g.lineWidth=3.5; g.beginPath(); g.arc(0,-bodyH*0.05,bodyW*0.74,0,Math.PI*2); g.stroke(); g.restore(); }
     // a little swept quiff of cloud on top (gives him a "boy" silhouette)
     g.fillStyle=col; g.beginPath();
     g.moveTo(-bodyW*0.05,-bodyH*0.62); g.quadraticCurveTo(bodyW*0.3,-bodyH*0.95, bodyW*0.36,-bodyH*0.6);
@@ -6411,19 +6503,19 @@ const Leaderboard = {
 // (medal) and which epic skins are unlocked.
 const Save = {
   KEY:'watInDeFighters_save_v1',
-  data:{ profile:'PLAYER 1', medals:{}, epics:{}, achievements:{}, stats:{}, dev:false, devPass:'', settings:{}, currency:0, skills:{}, secrets:{}, themes:{}, hardcore:{}, prestige:0, opkeep:{}, campaign:{ started:false, char:null, mission:0, unlocks:{}, clears:0 }, season:null, charWins:{}, openworld:{} },
+  data:{ profile:'PLAYER 1', medals:{}, epics:{}, achievements:{}, stats:{}, dev:false, devPass:'', settings:{}, currency:0, skills:{}, secrets:{}, themes:{}, hardcore:{}, prestige:0, opkeep:{}, campaign:{ started:false, char:null, mission:0, unlocks:{}, clears:0 }, season:null, charWins:{}, openworld:{}, gauntlet:{}, gauntletSkins:{} },
   // campaign defaults, kept in one place so load/import always produce a full object
   defCampaign(c){ c=c||{}; return { started:!!c.started, char:c.char||null, mission:c.mission||0, unlocks:c.unlocks||{}, clears:c.clears||0 }; },
   load(){
     try{
       const raw=localStorage.getItem(this.KEY);
-      if(raw){ const d=JSON.parse(raw); this.data={ profile:d.profile||'PLAYER 1', medals:d.medals||{}, epics:d.epics||{}, achievements:d.achievements||{}, stats:d.stats||{}, dev:!!d.dev, devPass:d.devPass||'', settings:d.settings||{}, currency:d.currency||0, skills:d.skills||{}, secrets:d.secrets||{}, themes:d.themes||{}, hardcore:d.hardcore||{}, prestige:d.prestige||0, opkeep:d.opkeep||{}, campaign:this.defCampaign(d.campaign), season:d.season||null, charWins:d.charWins||{}, openworld:d.openworld||{} }; }
+      if(raw){ const d=JSON.parse(raw); this.data={ profile:d.profile||'PLAYER 1', medals:d.medals||{}, epics:d.epics||{}, achievements:d.achievements||{}, stats:d.stats||{}, dev:!!d.dev, devPass:d.devPass||'', settings:d.settings||{}, currency:d.currency||0, skills:d.skills||{}, secrets:d.secrets||{}, themes:d.themes||{}, hardcore:d.hardcore||{}, prestige:d.prestige||0, opkeep:d.opkeep||{}, campaign:this.defCampaign(d.campaign), season:d.season||null, charWins:d.charWins||{}, openworld:d.openworld||{}, gauntlet:d.gauntlet||{}, gauntletSkins:d.gauntletSkins||{} }; }
     }catch(e){ /* storage blocked; run with in-memory defaults */ }
   },
   // replaces the whole save in one go (used by IMPORT SAVE); falls back to
   // defaults per-field so an older or partial file never crashes the app.
   loadFromObject(d){
-    this.data={ profile:(d&&d.profile)||'PLAYER 1', medals:(d&&d.medals)||{}, epics:(d&&d.epics)||{}, achievements:(d&&d.achievements)||{}, stats:(d&&d.stats)||{}, dev:!!(d&&d.dev), devPass:(d&&d.devPass)||'', settings:(d&&d.settings)||{}, currency:(d&&d.currency)||0, skills:(d&&d.skills)||{}, secrets:(d&&d.secrets)||{}, themes:(d&&d.themes)||{}, hardcore:(d&&d.hardcore)||{}, prestige:(d&&d.prestige)||0, opkeep:(d&&d.opkeep)||{}, campaign:this.defCampaign(d&&d.campaign), season:(d&&d.season)||null, charWins:(d&&d.charWins)||{}, openworld:(d&&d.openworld)||{} };
+    this.data={ profile:(d&&d.profile)||'PLAYER 1', medals:(d&&d.medals)||{}, epics:(d&&d.epics)||{}, achievements:(d&&d.achievements)||{}, stats:(d&&d.stats)||{}, dev:!!(d&&d.dev), devPass:(d&&d.devPass)||'', settings:(d&&d.settings)||{}, currency:(d&&d.currency)||0, skills:(d&&d.skills)||{}, secrets:(d&&d.secrets)||{}, themes:(d&&d.themes)||{}, hardcore:(d&&d.hardcore)||{}, prestige:(d&&d.prestige)||0, opkeep:(d&&d.opkeep)||{}, campaign:this.defCampaign(d&&d.campaign), season:(d&&d.season)||null, charWins:(d&&d.charWins)||{}, openworld:(d&&d.openworld)||{}, gauntlet:(d&&d.gauntlet)||{}, gauntletSkins:(d&&d.gauntletSkins)||{} };
     this.save();
   },
   save(){
@@ -6470,6 +6562,15 @@ const Save = {
   equipped(cat){ return this.getSetting('equip_'+cat, null); },
   setEquipped(cat, id){ this.setSetting('equip_'+cat, id); },
   awardClassic(id){ this.data.medals[id]=true; this.data.epics[id]=true; this.save(); },
+  // ---- ETERNAL GAUNTLET: per-character saved run + the unique skin reward ----
+  // Progress persists between battles so a run can be quit and resumed later.
+  // Stored per fighter id as { order:[foeIds...], round:N }. The GAUNTLET skin
+  // (costume index 9) is granted the first time a fighter clears all 44 foes.
+  gauntletRun(id){ return (this.data.gauntlet && this.data.gauntlet[id]) || null; },
+  gauntletSave(id, run){ if(!this.data.gauntlet) this.data.gauntlet={}; this.data.gauntlet[id]=run; this.save(); },
+  gauntletClearRun(id){ if(this.data.gauntlet && this.data.gauntlet[id]){ delete this.data.gauntlet[id]; this.save(); } },
+  hasGauntletSkin(id){ return !!(this.data.gauntletSkins && this.data.gauntletSkins[id]); },
+  grantGauntletSkin(id){ if(!this.data.gauntletSkins) this.data.gauntletSkins={}; if(this.data.gauntletSkins[id]) return false; this.data.gauntletSkins[id]=true; this.save(); return true; },
   setProfile(name){ this.data.profile=(name||'PLAYER 1').slice(0,16); this.save(); },
   // achievement + stat helpers
   hasAch(id){ return !!this.data.achievements[id]; },
@@ -6543,7 +6644,7 @@ const Save = {
   seasonGet(){ return this.data.season||null; },
   seasonSave(snap){ this.data.season=snap; this.save(); },
   seasonClear(){ this.data.season=null; this.save(); },
-  reset(){ this.data={ profile:this.data.profile, medals:{}, epics:{}, achievements:{}, stats:{}, dev:false, devPass:this.data.devPass, settings:this.data.settings, currency:0, skills:{}, secrets:{}, themes:{}, hardcore:{}, prestige:0, opkeep:{}, campaign:this.defCampaign(null), season:null }; this.save(); }
+  reset(){ this.data={ profile:this.data.profile, medals:{}, epics:{}, achievements:{}, stats:{}, dev:false, devPass:this.data.devPass, settings:this.data.settings, currency:0, skills:{}, secrets:{}, themes:{}, hardcore:{}, prestige:0, opkeep:{}, campaign:this.defCampaign(null), season:null, gauntlet:{}, gauntletSkins:{} }; this.save(); }
 };
 Save.load();
 
@@ -7336,7 +7437,7 @@ function refreshPicks(){
   // ULTRA HARD toggle is Classic-only
   const ultraRow=document.getElementById('ultraRow');
   if(ultraRow){
-    const showUltra = !!(classic && classic.pending);
+    const showUltra = !!(classic && classic.pending && !classic.gauntlet);
     ultraRow.style.display = showUltra ? 'flex' : 'none';
     if(showUltra){
       const ut=document.getElementById('ultraToggle');
@@ -8703,6 +8804,17 @@ document.getElementById('classicBtn').onclick=()=>{
   show('select');
 };
 
+// ETERNAL GAUNTLET: fight all 44 other fighters in a row (120 HP · 3 stocks),
+// progress saved between battles. Clear it to earn that fighter's unique skin.
+document.getElementById('gauntletBtn').onclick=()=>{
+  mode='1p'; classic={pending:true, gauntlet:true}; campaign=null; season=null; selectContext='main';
+  p1Pick=null; p2Pick=null;
+  buildRoster();
+  document.getElementById('selHelper').innerHTML='☠ ETERNAL GAUNTLET · PICK YOUR FIGHTER · SURVIVE ALL 44 RIVALS FOR A UNIQUE SKIN';
+  refreshPicks();
+  show('select');
+};
+
 /* ---------------- CAMPAIGN MODE ---------------- */
 // Open the campaign hub: shows the mission list, overall progress, and lets you
 // either CONTINUE a saved run or start a NEW one. Because Save.campaign persists,
@@ -9156,7 +9268,7 @@ document.getElementById('goBtn').onclick=()=>{
     }
     beginCampaign(p1Pick); return;
   }
-  if(classic && classic.pending){ beginClassic(p1Pick); return; }
+  if(classic && classic.pending){ if(classic.gauntlet){ beginGauntlet(p1Pick); } else { beginClassic(p1Pick); } return; }
   if(season && season.pending){ beginSeason(p1Pick); return; }
   if(mode==='1p'){
     // use the player-chosen bot if set, otherwise pick a random other fighter
@@ -9179,6 +9291,43 @@ function beginClassic(c){
   gameMode='stock'; // classic uses standard rules
   showStory();
 }
+
+/* ---------------- ETERNAL GAUNTLET RUN ---------------- */
+// Fight every other fighter in the roster (all 44) back-to-back at 120 HP · 3 stocks.
+// Progress is saved between battles (Save.gauntlet[charId]) so the run can be quit
+// from the between-round screen and resumed later. Clearing the whole gauntlet grants
+// that fighter's unique GAUNTLET skin (costume index 9), a permanent cosmetic reward.
+function buildGauntletRun(c){
+  // resume a saved run for this fighter if one exists and is still valid…
+  const saved = Save.gauntletRun(c.id);
+  let order;
+  if(saved && Array.isArray(saved.order) && saved.order.length){
+    order = saved.order.map(id=>ROSTER.find(o=>o.id===id)).filter(Boolean);
+  }
+  // …otherwise build a fresh shuffled order of every fighter except the player.
+  if(!order || !order.length){
+    order = ROSTER.filter(o=>o.id!==c.id).slice().sort(()=>Math.random()-0.5);
+    Save.gauntletSave(c.id, { order:order.map(o=>o.id), round:0 });
+  }
+  const round = (saved && Number.isInteger(saved.round)) ? Math.min(saved.round, order.length) : 0;
+  return { foes:order, round };
+}
+function gauntletIntro(cm, round){
+  const total=cm.foes.length;
+  const foe=cm.foes[round];
+  if(round===0) return `The <span class="who">ETERNAL GAUNTLET</span> begins. <span class="who">${cm.c.name}</span> must defeat all <b>${total}</b> rivals in a row — 120 HP, 3 lives each. First to fall: <span class="who">${foe.name}</span>.`;
+  if(round===total-1) return `The <b>FINAL</b> rival stands between <span class="who">${cm.c.name}</span> and eternal glory. <span class="who">${foe.name}</span> blocks the last step. Win this and the GAUNTLET is conquered.`;
+  const left=total-round;
+  return `Rival <b>${round+1}</b> of <b>${total}</b>. <span class="who">${foe.name}</span> steps up — <b>${left}</b> foes remain on the road to the unique skin.`;
+}
+function beginGauntlet(c){
+  const run = buildGauntletRun(c);
+  classic = { active:true, gauntlet:true, c, foes:run.foes, round:run.round };
+  // dynamic per-round narration (44 rounds — generated, not a fixed list like Classic)
+  classic.intros = classic.foes.map((_,i)=>gauntletIntro(classic, i));
+  gameMode='stock'; // 120 HP · 3 stocks
+  showStory();
+}
 function showStory(){
   const cm=classic;
   // Classic uses the SAME #story screen as Season, so make sure the season-only
@@ -9186,10 +9335,16 @@ function showStory(){
   document.getElementById('story').classList.remove('season');
   document.getElementById('seasonBoard').classList.add('hidden');
   document.getElementById('seasonInterview').classList.add('hidden');
-  document.getElementById('storyProg').textContent = (cm.round<cm.foes.length? 'ROUND '+(cm.round+1)+' / '+cm.foes.length : 'FINALE');
+  const isGaunt = !!cm.gauntlet;
+  document.getElementById('storyProg').textContent = isGaunt
+    ? (cm.round<cm.foes.length ? 'RIVAL '+(cm.round+1)+' / '+cm.foes.length : 'GAUNTLET COMPLETE')
+    : (cm.round<cm.foes.length ? 'ROUND '+(cm.round+1)+' / '+cm.foes.length : 'FINALE');
   document.getElementById('storyText').innerHTML = cm.intros[cm.round];
   document.getElementById('storyNext').textContent = (cm.round===0?'BEGIN ▶':'NEXT ▶');
-  document.getElementById('storySaveQuit').classList.add('hidden'); // Classic runs aren't saved between rounds
+  // Gauntlet runs auto-save between battles → offer a SAVE & QUIT exit. Classic does not.
+  const sq=document.getElementById('storySaveQuit');
+  if(isGaunt){ sq.textContent='SAVE & QUIT'; sq.classList.remove('hidden'); }
+  else { sq.classList.add('hidden'); }
   show('story');
   // draw the player's fighter posing on the story card
   const sc=document.getElementById('storyCanvas').getContext('2d');
@@ -9221,6 +9376,14 @@ document.getElementById('storyNext').onclick=()=>{
 // SEASON MODE: quit to title between games — the run is already saved on disk
 // (every game auto-saves), so this is purely a "leave now, resume later" exit.
 document.getElementById('storySaveQuit').onclick=()=>{
+  // ETERNAL GAUNTLET: progress is already saved to disk between battles, so this
+  // just leaves to the title — CONTINUE later picks up on the same rival.
+  if(classic && classic.active && classic.gauntlet){
+    cancelAnimationFrame(classic._anim);
+    Save.gauntletSave(classic.c.id, { order:classic.foes.map(o=>o.id), round:classic.round });
+    classic=null; selectContext='main'; buildRoster(); show('title');
+    return;
+  }
   if(!(season && season.active)) return;
   cancelAnimationFrame(season._anim);
   document.getElementById('story').classList.remove('season');
@@ -9310,6 +9473,12 @@ function updateRoundBanner(){
   if(classic && classic.active && classic.foes){
     const total=classic.foes.length;
     const cur=Math.min(classic.round+1, total);
+    if(classic.gauntlet){
+      const finale=(cur===total);
+      document.getElementById('roundBannerText').textContent = '☠ GAUNTLET · ' + (finale ? ('FINAL RIVAL '+cur+' / '+total) : ('RIVAL '+cur+' / '+total));
+      b.classList.remove('hidden');
+      return;
+    }
     const finale=(cur===total);
     const ultra = classic.ultra ? '☠ ULTRA · ' : '';
     document.getElementById('roundBannerText').textContent = ultra + (finale ? ('FINALE · ROUND '+cur+' / '+total) : ('ROUND '+cur+' / '+total));
@@ -9924,8 +10093,15 @@ function flashOnlineHelper(msg){
 }
 
 /* ---------------- COMBAT ---------------- */
+// MARLOES · SECOND WIND: any offensive action (melee / special / super) interrupts
+// her passive regen, pausing it and resetting the ramp — just like taking a hit.
+// She only heals while fully disengaged: no getting hit AND no attacking.
+function marloesInterruptRegen(f){
+  if(f && f.def && f.def.special==='granny'){ f._regenPause=180; f._regenT=0; }
+}
 function tryAttack(f){
   if(f.attackTimer>0 || f.shielding || f.dead) return;
+  marloesInterruptRegen(f);   // MARLOES: attacking breaks her SECOND WIND recovery
   f.attackTimer=18; f.state='attack';
   SFX.attack('melee');
   // melee hitbox spawned in update via attackTimer window
@@ -9951,6 +10127,7 @@ function tryTaunt(f){
 }
 function trySpecial(f){
   if(f.specialCd>0 || f.shielding || f.dead) return;
+  marloesInterruptRegen(f);   // MARLOES: her own attacks pause SECOND WIND too
   const s=f.def.special;
   SFX.attack(s);
   if(s==='pitch'){
@@ -10602,6 +10779,7 @@ function tryUpSpecial(f){
 /* SUPER — charges by taking damage; at 100% unleashes a powerful personalized attack. */
 function trySuper(f){
   if(f.dead || f.shielding || f.superMeter<100) return;
+  marloesInterruptRegen(f);   // MARLOES: unleashing her super also breaks recovery
   const foe=players.find(o=>o!==f && !o.dead);
   const s=f.def.special;
   f.superMeter=0;
@@ -13532,6 +13710,22 @@ function endMatch(){
   if(classic && classic.active){
     setTimeout(()=>{
       document.getElementById('hud').classList.add('hidden');
+      // ETERNAL GAUNTLET: on a win, advance + auto-save; on a loss, keep progress
+      // so the player retries the SAME rival (nothing is lost).
+      if(classic.gauntlet){
+        if(p1won){
+          classic.round++;
+          Save.gauntletSave(classic.c.id, { order:classic.foes.map(o=>o.id), round:classic.round });
+          if(classic.round < classic.foes.length){
+            showStory();                   // next rival narration
+          } else {
+            finishGauntlet(true);          // beat all 44 → grant the unique skin
+          }
+        } else {
+          finishGauntlet(false);           // fell — retry this rival, progress kept
+        }
+        return;
+      }
       if(p1won){
         classic.round++;
         if(classic.round < classic.foes.length){
@@ -13683,7 +13877,48 @@ function finishClassic(won){
   classic=null;
 }
 
-// Campaign resolved for this mission. won=true only when the FINAL mission is
+// ETERNAL GAUNTLET resolved. won=true only after all 44 rivals fall → grant the
+// fighter's unique GAUNTLET skin + clear the saved run. On a loss the run is kept
+// (progress already saved) and RETRY re-fights the SAME rival.
+function finishGauntlet(won){
+  const c=classic.c;
+  const total=classic.foes.length;
+  Music.play('menu');
+  const r=document.getElementById('result');
+  r.classList.remove('hidden');
+  const title=document.getElementById('resultTitle');
+  const sub=document.getElementById('resultSub');
+  const rematch=document.getElementById('rematchBtn');
+  if(won){
+    const firstClear = Save.grantGauntletSkin(c.id);   // unique skin (costume idx 9)
+    Save.gauntletClearRun(c.id);                        // wipe the saved run — it's done
+    Save.addCurrency(200);                              // hefty bonus for the full gauntlet (each battle already paid out)
+    refreshProfileLine();
+    buildRoster();
+    rematch.classList.add('hidden');
+    const skin=gauntletSkin(c);
+    title.textContent='ETERNAL CHAMPION!';
+    title.style.filter='none';
+    sub.innerHTML = firstClear
+      ? `☠ <span style="color:${c.color}">${c.name}</span> defeated all ${total} rivals and earned the exclusive <span style="color:${skin.color}">${skin.name}</span> skin! Cycle costumes to equip it. <br>+200 💎 SHARDS bonus!`
+      : `☠ <span style="color:${c.color}">${c.name}</span> conquered the Eternal Gauntlet again. <br>+200 💎 SHARDS bonus!`;
+    sub.style.color='#fdbb2d';
+    playVictoryFlair(true);
+    announce('ETERNAL CHAMPION!');
+    grantAndToast();
+    classic=null;
+  } else {
+    // progress is already saved; keep the run object alive so RETRY re-fights this rival
+    rematch.classList.remove('hidden');
+    rematch.textContent='RETRY RIVAL';
+    title.textContent='GAUNTLET FALTERED';
+    title.style.filter='grayscale(.4)';
+    const foe=classic.foes[classic.round];
+    sub.innerHTML = `<span style="color:${c.color}">${c.name}</span> fell to <b>${foe?foe.name:'a rival'}</b> at rival <b>${classic.round+1}</b> / ${total}. Progress is saved — try again!`;
+    sub.style.color=c.color;
+    rematch.onclick=()=>{ restoreDefaultRematch(); showStory(); };
+  }
+}
 // cleared (mid-campaign wins go straight to the next briefing in endMatch). On a
 // loss we offer a RETRY that reopens the current mission briefing — progress is
 // already saved, so nothing is lost.
