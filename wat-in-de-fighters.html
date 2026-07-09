@@ -6593,6 +6593,15 @@ const ACHIEVEMENTS = [
   { id:'taunt50',   name:'SHOWOFF SUPREME', icon:'🕺', desc:'Taunt 50 times.',                    check:s=>s.stat('taunts')>=50 },
   { id:'coins1000', name:'COIN COLLECTOR',  icon:'💰', desc:'Accumulate 1000 currency.',          check:s=>s.data.currency>=1000 },
   { id:'gadgets',   name:'GADGETEER',       icon:'🔧', desc:'Deploy 12 autonomous gadgets (drones, turrets, sentries).', check:s=>s.stat('gadgetsDeployed')>=12 },
+  // ---- SECRET easter-egg achievements ----
+  // These stay cryptic in the list until earned (see buildAchList). Each is granted
+  // the moment its matching easter egg fires (the egg handlers set these flags).
+  { id:'egg_konami', secret:true, name:'THE OLD WAYS',    icon:'🎮', desc:'You remembered the code. ↑↑↓↓←→←→ B A', check:s=>s.hasSecret('egg_konami') },
+  { id:'egg_money',  secret:true, name:'SHOW ME THE MONEY',icon:'💰', desc:'You told the game exactly what you wanted.', check:s=>s.hasSecret('egg_money') },
+  { id:'egg_leet',   secret:true, name:'1337',            icon:'💾', desc:'Spelled it out like a true hacker.', check:s=>s.hasSecret('egg_leet') },
+  { id:'egg_dia',    secret:true, name:'HELLO, DIA',      icon:'🌐', desc:'You greeted the browser you live in.', check:s=>s.hasSecret('egg_dia') },
+  { id:'egg_koffie', secret:true, name:'KOFFIE BREAK',    icon:'☕', desc:'Fueled the devs with a hot one.', check:s=>s.hasSecret('egg_koffie') },
+  { id:'egg_logo',   secret:true, name:'PARTY STARTER',   icon:'🎊', desc:'Poked the logo until it threw a party.', check:s=>s.hasSecret('egg_logo') },
 ];
 
 // Per-achievement metadata for the big detail screen: how progress is measured
@@ -6639,6 +6648,14 @@ const ACH_META = {
   taunt50:   { prog:s=>[s.stat('taunts'),50],         unit:'taunts',     tip:'Taunt on solid ground 50 times total — stay cool while you do it.' },
   coins1000: { prog:s=>[s.data.currency,1000],        unit:'coins',      tip:'Earn currency from match wins and Classic Mode runs.' },
   gadgets:   { prog:s=>[s.stat('gadgetsDeployed'),12], unit:'gadgets',   tip:'Use a super or special that deploys drones, a car-turret, or a scrap-turret — JOSH and CASPER are great for this. Unlocks RANDOM KID.' },
+  // secret eggs — the tip is only ever seen AFTER unlocking (the detail screen is
+  // locked for unearned secrets), so it can cheerfully spell out how you did it.
+  egg_konami:{ tip:'Entered the KONAMI code on a menu: ↑ ↑ ↓ ↓ ← → ← → B A.' },
+  egg_money: { tip:'Typed "money" on the title screen. Cha-ching.' },
+  egg_leet:  { tip:'Typed "leet" on the title screen. 1337 h4x0r.' },
+  egg_dia:   { tip:'Typed "dia" on the title screen — a wave to the browser.' },
+  egg_koffie:{ tip:'Typed "koffie" on the title screen. ☕' },
+  egg_logo:  { tip:'Clicked the WAT IN DE FIGHTERS logo 10 times fast.' },
 };
 function achProgress(a){ const m=ACH_META[a.id]; if(!m||!m.prog) return null; const [cur,goal]=m.prog(Save); return {cur:Math.min(cur,goal), raw:cur, goal, unit:m.unit||''}; }
 function achTip(a){ const m=ACH_META[a.id]; return (m&&m.tip)||'Keep playing to earn this achievement.'; }
@@ -7463,17 +7480,23 @@ function buildAchList(){
   ACHIEVEMENTS.forEach(a=>{
     const got=Save.hasAch(a.id);
     const row=document.createElement('div');
-    row.className='ach'+(got?' done':'');
+    row.className='ach'+(got?' done':'')+(a.secret?' secretHint':'');
     const unlockName = achUnlocksName(a.id);
     const isBanner = got && currentBanner===a.id;
+    // secret achievements stay cryptic until earned so we don't spoil how to get them
+    const hideSecret = a.secret && !got;
+    const showIcon = hideSecret ? '❓' : a.icon;
+    const showName = hideSecret ? '???' : a.name;
+    const showDesc = hideSecret ? 'A hidden secret. Poke around — you\'ll know it when you find it.' : a.desc;
     const stateHtml = got
       ? `<button class="bannerBtn${isBanner?' on':''}" data-id="${a.id}">${isBanner?'★ HOME SCREEN':'SET AS HOME'}</button>`
-      : 'LOCKED';
-    row.innerHTML=`<div class="ai">${a.icon}</div>
-      <div><div class="at">${a.name}</div><div class="ad">${a.desc}</div>${unlockName?`<div class="au">UNLOCKS: ${unlockName}</div>`:''}</div>
+      : (a.secret ? 'SECRET' : 'LOCKED');
+    row.innerHTML=`<div class="ai">${showIcon}</div>
+      <div><div class="at">${showName}</div><div class="ad">${showDesc}</div>${(!hideSecret && unlockName)?`<div class="au">UNLOCKS: ${unlockName}</div>`:''}</div>
       <div class="astate">${stateHtml}</div>
       <div class="achArrow">›</div>`;
-    row.addEventListener('click', ()=> openAchDetail(a.id));
+    // don't open a spoiler-y detail screen for an unearned secret
+    if(!hideSecret) row.addEventListener('click', ()=> openAchDetail(a.id));
     list.appendChild(row);
   });
   list.querySelectorAll('.bannerBtn').forEach(btn=>{
@@ -8637,6 +8660,7 @@ function pumpToasts(){
   const t=document.getElementById('achToast');
   t.querySelector('.tIcon').textContent=a.icon;
   document.getElementById('achToastName').textContent=a.name;
+  t.querySelector('.tSub').textContent = a.sub || 'ACHIEVEMENT UNLOCKED';
   t.classList.add('show');
   setTimeout(()=>{ t.classList.remove('show'); setTimeout(()=>{ _toastBusy=false; pumpToasts(); }, 500); }, 2200);
 }
@@ -13907,6 +13931,117 @@ document.getElementById('pauseDiffSlider').oninput=(e)=>{
 window.addEventListener('keydown', e=>{
   if(e.key==='Escape'){ e.preventDefault(); if(running || paused) togglePause(); }
 });
+
+/* ---------------- EASTER EGGS ---------------- */
+// Hidden goodies for curious players. Two input channels:
+//   • a rolling text buffer that matches typed secret WORDS
+//   • an arrow/letter sequence matcher for the classic KONAMI code
+// All only listen while a menu is up (never mid-fight) and each reward fires once.
+(function setupEasterEggs(){
+  // celebratory toast that reuses the achievement-toast UI, with a custom subtitle
+  function eggToast(icon, name, sub){ queueAchToasts([{icon, name, sub:sub||'✦ SECRET FOUND ✦'}]); }
+  // a burst of confetti over the whole frame (independent of the results-screen fx)
+  function eggConfetti(){
+    const cv=document.createElement('canvas');
+    const game=document.getElementById('game');
+    cv.width=1000; cv.height=562;
+    cv.style.cssText='position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:40;';
+    game.appendChild(cv);
+    const g=cv.getContext('2d');
+    const cols=['#ff9bc0','#8fefff','#ffd24a','#7ee081','#c77dff','#ff5714'];
+    const parts=[];
+    for(let i=0;i<160;i++) parts.push({x:Math.random()*1000,y:-Math.random()*200,vx:(Math.random()-.5)*3,vy:2+Math.random()*4,r:3+Math.random()*4,c:cols[i%cols.length],spin:Math.random()*6});
+    let frames=0;
+    (function loop(){
+      g.clearRect(0,0,1000,562); frames++;
+      parts.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=0.06; p.spin+=0.2;
+        g.save(); g.globalAlpha=Math.max(0,1-frames/150); g.translate(p.x,p.y); g.rotate(p.spin); g.fillStyle=p.c; g.fillRect(-p.r,-p.r*0.5,p.r*2,p.r); g.restore(); });
+      if(frames<150) requestAnimationFrame(loop); else cv.remove();
+    })();
+  }
+  // only react while a menu screen is visible (not during a live match)
+  function onMenu(){ return !document.body.classList.contains('in-match'); }
+
+  // ----- reward handlers (each guarded so it only pays out once) -----
+  function grantShards(id, amount, icon, name){
+    if(Save.hasSecret(id)){ eggToast(icon, name, '✦ ALREADY FOUND ✦'); return; }
+    Save.grantSecret(id); Save.addCurrency(amount);
+    refreshProfileLine();
+    if(typeof checkAchievements==='function') checkAchievements();   // record the matching secret achievement
+    eggToast(icon, name, '✦ +'+amount+' 💎 SHARDS ✦');
+    try{ SFX.super(); }catch(_){}
+  }
+  const CODES = {
+    // typing "vos" makes the long-teased HIDDEN FIGHTER real: unlock Anker Vos
+    vos(){
+      const fox=ROSTER.find(c=>c.secretCode==='vos');
+      if(fox && Save.grantSecret(fox.id)){
+        if(typeof buildRoster==='function') buildRoster();
+        eggToast('🦊', fox.name+' UNLOCKED!', '✦ SECRET FIGHTER ✦');
+        eggConfetti(); try{ SFX.super(); }catch(_){}
+      } else {
+        eggToast('🦊', 'ANKER VOS', '✦ ALREADY UNLOCKED ✦');
+      }
+    },
+    // typing "money" rains a pile of SHARDS (once)
+    money(){ grantShards('egg_money', 500, '💰', 'SHOW ME THE MONEY!'); eggConfetti(); },
+    // a nod to the browser this game lives in
+    dia(){ grantShards('egg_dia', 100, '🌐', 'DIA SAYS HI!'); },
+    // free coffee for the devs
+    koffie(){ grantShards('egg_koffie', 100, '☕', 'KOFFIE TIME!'); },
+    // 1337 speak
+    leet(){ grantShards('egg_leet', 1337, '💾', 'ELITE!'); eggConfetti(); },
+  };
+  let textBuf='';
+  const MAXLEN=8;
+
+  // KONAMI: ↑ ↑ ↓ ↓ ← → ← → b a  →  a big SHARDS jackpot, once
+  const KONAMI=['arrowup','arrowup','arrowdown','arrowdown','arrowleft','arrowright','arrowleft','arrowright','b','a'];
+  let konamiIdx=0;
+
+  window.addEventListener('keydown', e=>{
+    if(!onMenu()) return;
+    const k=(e.key||'').toLowerCase();
+
+    // konami sequence tracking
+    if(k===KONAMI[konamiIdx]){
+      konamiIdx++;
+      if(konamiIdx===KONAMI.length){
+        konamiIdx=0;
+        grantShards('egg_konami', 3000, '🎮', 'KONAMI CODE!');
+        eggConfetti();
+      }
+    } else {
+      // allow a mis-press to restart the run (handle the case the wrong key IS step 0)
+      konamiIdx = (k===KONAMI[0]) ? 1 : 0;
+    }
+
+    // typed-word buffer (letters only, so arrow keys don't pollute it)
+    if(k.length===1 && k>='a' && k<='z'){
+      textBuf=(textBuf+k).slice(-MAXLEN);
+      for(const code in CODES){
+        if(textBuf.endsWith(code)){ CODES[code](); textBuf=''; break; }
+      }
+    }
+  });
+
+  // ----- title-logo click streak: tap the logo 10× for a silly surprise -----
+  const logo=document.querySelector('#title .titleLogo');
+  if(logo){
+    let clicks=0, resetT=null;
+    logo.style.cursor='pointer';
+    logo.addEventListener('click', ()=>{
+      if(!onMenu()) return;
+      clicks++;
+      clearTimeout(resetT); resetT=setTimeout(()=>{ clicks=0; }, 1500);
+      if(clicks>=10){
+        clicks=0;
+        eggConfetti();
+        grantShards('egg_logo', 250, '🎊', 'YOU FOUND THE PARTY!');
+      }
+    });
+  }
+})();
 
 /* ---------------- SPLASH SCREEN ---------------- */
 (function setupSplash(){
