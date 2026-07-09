@@ -645,6 +645,8 @@
 
   /* classic-mode medal on select tiles */
   .char .medal{position:absolute;top:2px;right:3px;font-size:12px;z-index:2;filter:drop-shadow(0 1px 1px #000);}
+  /* small rarity gem in the tile's bottom-left corner (shown once unlocked) */
+  .char .rarityDot{position:absolute;bottom:20px;left:4px;width:8px;height:8px;border-radius:50%;z-index:2;}
   .char .hcmedal{position:absolute;top:2px;left:3px;font-size:12px;z-index:2;color:#ff5757;filter:drop-shadow(0 1px 1px #000);}
   .char .skillmedal{position:absolute;bottom:22px;right:3px;font-size:12px;z-index:2;filter:drop-shadow(0 1px 2px #000);}
   .char .lock{position:absolute;top:50%;left:50%;transform:translate(-50%,-60%);font-size:20px;z-index:2;filter:drop-shadow(0 1px 2px #000);}
@@ -1030,7 +1032,7 @@
       </div>
       <div class="setrow">
         <div class="setlbl">BOT DIFFICULTY<div class="sethint" id="pauseDiffHint">Currently AVERAGE.</div></div>
-        <input type="range" id="pauseDiffSlider" min="0" max="2" step="1">
+        <input type="range" id="pauseDiffSlider" min="0" max="3" step="1">
       </div>
       <div class="pausebtns">
         <button class="btn" id="resumeBtn">RESUME</button>
@@ -1105,6 +1107,33 @@
       <div class="setrow">
         <div class="setlbl">OFF-SCREEN MAGNIFIER<div class="sethint">Smash-style zoom bubble on fighters knocked off-screen.</div></div>
         <button class="toggle" id="magToggle">ON</button>
+      </div>
+      <div class="setblock">
+        <div class="setlbl">BATTLE EFFECTS<div class="sethint">Extra visual polish on every hit. Turn any off if you prefer a calmer, flatter screen.</div></div>
+        <div class="setrow" style="border:none;background:none;padding:8px 0 0;">
+          <div class="setlbl">SCREEN SHAKE<div class="sethint">Camera shake on hits, blasts &amp; ultimates.</div></div>
+          <button class="toggle" id="fxShakeToggle">ON</button>
+        </div>
+        <div class="setrow" style="border:none;background:none;padding:8px 0 0;">
+          <div class="setlbl">HIT FLASHES<div class="sethint">Fighters flash white the instant they're hit.</div></div>
+          <button class="toggle" id="fxFlashToggle">ON</button>
+        </div>
+        <div class="setrow" style="border:none;background:none;padding:8px 0 0;">
+          <div class="setlbl">DAMAGE NUMBERS<div class="sethint">Floating damage numbers pop off each hit.</div></div>
+          <button class="toggle" id="fxNumbersToggle">ON</button>
+        </div>
+        <div class="setrow" style="border:none;background:none;padding:8px 0 0;">
+          <div class="setlbl">PARTICLES<div class="sethint">Sparks, dust &amp; explosion debris.</div></div>
+          <button class="toggle" id="fxParticlesToggle">ON</button>
+        </div>
+        <div class="setrow" style="border:none;background:none;padding:8px 0 0;">
+          <div class="setlbl">SLOW-MO ON FINAL HIT<div class="sethint">Brief hit-stop freeze frames, plus a slow-motion beat on a KO.</div></div>
+          <button class="toggle" id="fxSlowmoToggle">ON</button>
+        </div>
+      </div>
+      <div class="setrow">
+        <div class="setlbl">RANDOM EVENTS<div class="sethint">Small chance of a surprise twist each match — double damage, tiny/giant mode, meteors, healing rain &amp; more.</div></div>
+        <button class="toggle" id="randomEventsToggle">ON</button>
       </div>
       <div class="setrow">
         <div class="setlbl">MUSIC VOLUME<div class="sethint">Background music level.</div></div>
@@ -1184,6 +1213,7 @@
       <button class="shoptab" data-shoptab="songs">🎵 SONGS · 50</button>
       <button class="shoptab" data-shoptab="skins">👕 SKINS · 50</button>
       <button class="shoptab" data-shoptab="memes">😎 MEMES · 100</button>
+      <button class="shoptab" data-shoptab="cosmetics">✨ COSMETICS</button>
     </div>
     <div class="shopgrid" id="shopGrid"></div>
     <button class="btn btn-back" id="shopBack">◀ BACK</button>
@@ -1319,7 +1349,7 @@
     <div class="panels" id="panels"></div>
     <div class="setrow" id="selDiffRow" style="max-width:520px;">
       <div class="setlbl">BOT DIFFICULTY<div class="sethint" id="selDiffHint">How tough the CPU fights. Currently AVERAGE.</div></div>
-      <input type="range" id="selDiffSlider" min="0" max="2" step="1">
+      <input type="range" id="selDiffSlider" min="0" max="3" step="1">
     </div>
     <div class="setrow" style="max-width:520px;">
       <div class="setlbl">SKILL TREE UPGRADES<div class="sethint">Apply purchased skill-tree bonuses in this match. Turn off for a vanilla, stats-only fight.</div></div>
@@ -1362,10 +1392,12 @@
 
   <!-- RESULT -->
   <div class="screen hidden" id="result">
-    <h1 id="resultTitle">VICTORY</h1>
-    <div class="sub" id="resultSub"></div>
-    <button class="btn" id="rematchBtn">INSTANT REMATCH</button>
-    <button class="btn btn-back" id="againBtn">MAIN MENU</button>
+    <canvas id="victoryFx" width="1000" height="562" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;"></canvas>
+    <div id="resultEmote" class="hidden" style="position:absolute;top:18%;left:50%;transform:translateX(-50%);z-index:3;display:flex;align-items:center;gap:10px;background:rgba(13,13,24,.82);border:2px solid #fdbb2d;border-radius:14px;padding:8px 18px;box-shadow:0 6px 20px rgba(0,0,0,.5);"><span id="resultEmoteIcon" style="font-size:26px;"></span><span id="resultEmoteText" style="font-family:Impact;letter-spacing:.04em;font-size:20px;color:#fdbb2d;transform:skewX(-5deg);"></span></div>
+    <h1 id="resultTitle" style="position:relative;z-index:2;">VICTORY</h1>
+    <div class="sub" id="resultSub" style="position:relative;z-index:2;"></div>
+    <button class="btn" id="rematchBtn" style="position:relative;z-index:2;">INSTANT REMATCH</button>
+    <button class="btn btn-back" id="againBtn" style="position:relative;z-index:2;">MAIN MENU</button>
     <div class="madeby"></div>
   </div>
 
@@ -6152,6 +6184,10 @@ class Fighter{
 
 /* ---------------- GAME STATE ---------------- */
 let players=[], projectiles=[], particles=[], strikes=[], shocks=[], afterimages=[], blackholes=[];
+let dmgNums=[];  // floating damage-number popups (gated behind the DAMAGE NUMBERS setting)
+// Battle-effects settings gate. Each defaults ON; players can silence any of them
+// individually in SETTINGS. Read through FX(key) everywhere an effect is triggered.
+function FX(key){ return Save.getSetting(key, true) !== false; }
 let voidfx=[];   // Zennith's cursed slash arcs & void rings (drawn with additive glow)
 let sandworms=[];   // DIH's GIANT SANDWORM super — colossal animated worms erupting across the stage
 // CLAUDIO's CLOUD PLATFORM mechanic — conjured, standable, temporary platforms.
@@ -6277,6 +6313,7 @@ let p1Super2=false, p2Super2=false;   // per-player: use the SECOND SUPER this m
 let botCostume=0;              // chosen bot skin index for 1P config
 let hitStop=0;
 let shakeT=0;
+let _matchDamage=0;   // human damage dealt this match (flushed to Save at match end)
 let classic=null;              // active Classic Mode run, or null
 let season=null;               // active Season Mode run, or null
 let campaign=null;             // active Campaign run, or null
@@ -6424,6 +6461,14 @@ const Save = {
   grantCampaignSkin(){ if(!this.data.themes) this.data.themes={}; if(this.data.themes['skin:nathan:champion']) return false; this.data.themes['skin:nathan:champion']=true; this.save(); return true; },
   hasShopMeme(memeId){ return !!(this.data.themes && this.data.themes['meme:'+memeId]); },
   buyMeme(memeId, cost){ if(this.currency()<cost) return false; const k='meme:'+memeId; if(!this.data.themes) this.data.themes={}; if(this.data.themes[k]) return false; this.data.currency-=cost; this.data.themes[k]=true; this.save(); return true; },
+  // ---- generic COSMETICS bought from the SHOP (titles, victory animations, profile
+  // icons, backgrounds, emotes). Ownership lives under the same `themes` map,
+  // namespaced '<cat>:<id>'. The equipped pick per category is a setting so it's
+  // remembered and travels with export/import.
+  hasCosmetic(cat, id){ return !!(this.data.themes && this.data.themes[cat+':'+id]); },
+  buyCosmetic(cat, id, cost){ if(this.currency()<cost) return false; const k=cat+':'+id; if(!this.data.themes) this.data.themes={}; if(this.data.themes[k]) return false; this.data.currency-=cost; this.data.themes[k]=true; this.save(); return true; },
+  equipped(cat){ return this.getSetting('equip_'+cat, null); },
+  setEquipped(cat, id){ this.setSetting('equip_'+cat, id); },
   awardClassic(id){ this.data.medals[id]=true; this.data.epics[id]=true; this.save(); },
   setProfile(name){ this.data.profile=(name||'PLAYER 1').slice(0,16); this.save(); },
   // achievement + stat helpers
@@ -6431,6 +6476,13 @@ const Save = {
   grantAch(id){ if(!this.data.achievements[id]){ this.data.achievements[id]=true; this.save(); return true; } return false; },
   stat(k){ return this.data.stats[k]||0; },
   addStat(k,n){ this.data.stats[k]=(this.data.stats[k]||0)+(n===undefined?1:n); this.save(); },
+  // WIN STREAK: a win extends the current streak (and records a new best); a loss
+  // resets it to zero. Stored as plain stats so it travels with export/import.
+  bumpStreak(won){
+    if(won){ const s=(this.data.stats.streak||0)+1; this.data.stats.streak=s; if(s>(this.data.stats.bestStreak||0)) this.data.stats.bestStreak=s; }
+    else { this.data.stats.streak=0; }
+    this.save();
+  },
   // ---- per-character win tracking (powers the JOURNAL) ----
   charWins(id){ return (this.data.charWins && this.data.charWins[id])||0; },
   addCharWin(id,n){ if(!this.data.charWins) this.data.charWins={}; this.data.charWins[id]=(this.data.charWins[id]||0)+(n===undefined?1:n); this.save(); },
@@ -6718,6 +6770,37 @@ function campaignPlayableIds(){
 }
 // name of the achievement gating a char (for hints)
 function achForChar(id){ computeUnlockMap(); return _UNLOCK_BY_CHAR[id]; }
+
+/* ---------------- CHARACTER RARITY + COLLECTION ---------------- */
+// Rarity is derived from each fighter's existing gating so we don't have to tag the
+// whole roster by hand: starters are COMMON, achievement-gated fighters RARE,
+// hidden/locked specials EPIC, secret-code fighters LEGENDARY, the final boss
+// fighter MYTHIC, and anything explicitly flagged `event` is SPECIAL EVENT.
+const RARITY = {
+  common:    { name:'COMMON',        color:'#b8c0d0', rank:0 },
+  rare:      { name:'RARE',          color:'#4dd2ff', rank:1 },
+  epic:      { name:'EPIC',          color:'#c77dff', rank:2 },
+  legendary: { name:'LEGENDARY',     color:'#ffd24a', rank:3 },
+  mythic:    { name:'MYTHIC',        color:'#ff5cae', rank:4 },
+  event:     { name:'SPECIAL EVENT', color:'#7ee081', rank:5 },
+};
+function fighterRarity(c){
+  if(!c) return 'common';
+  if(c.eventChar) return 'event';
+  if(c.finalChar) return 'mythic';
+  if(c.secretCode) return 'legendary';
+  if(c.opChar) return 'legendary';
+  computeUnlockMap();
+  if(_STARTERS && _STARTERS.has(c.id)) return 'common';
+  if(c.locked || c.hidden) return 'epic';
+  return 'rare';
+}
+function collectionCounts(){
+  const list = ROSTER.filter(c=>!c.hidden || charUnlocked(c.id));
+  const total=list.length;
+  const owned=list.filter(c=>charUnlocked(c.id)).length;
+  return { owned, total };
+}
 function charUnlocked(id){
   if(Save.data.dev) return true;
   const c=ROSTER.find(x=>x.id===id);
@@ -6772,6 +6855,10 @@ const GAMEMODES = [
     hp:250, stocks:1, grav:1, kbMul:1, superMul:1, boss:true, oneP:true },
   { id:'soccer',   name:'SOCCER',       desc:'Knock the ball into the foe’s goal. First to 3!',
     hp:9999, stocks:1, grav:1, kbMul:1.2, superMul:1, soccer:true },
+  { id:'onehp',    name:'ONE HP',       desc:'1 HP each · one clean hit decides it. Pure nerves.',
+    hp:1, stocks:1, grav:1, kbMul:1.4, superMul:1 },
+  { id:'randomizer',name:'RANDOMIZER',  desc:'Random fighters + random stage every match. Chaos.',
+    hp:150, stocks:2, grav:1, kbMul:1, superMul:1, randomize:true },
   { id:'custom',   name:'CUSTOM',       desc:'Set your own stocks & HP.',
     hp:150, stocks:2, grav:1, kbMul:1, superMul:1, custom:true },
 ];
@@ -6782,9 +6869,113 @@ function customStocks(){ return Math.max(CUSTOM_STOCK_MIN, Math.min(CUSTOM_STOCK
 function currentMode(){
   const m = GAMEMODES.find(m=>m.id===gameMode) || GAMEMODES[0];
   // CUSTOM reads its HP/stocks live from the player's chosen sliders
-  if(m.custom) return {...m, hp:customHp(), stocks:customStocks(), desc:customStocks()+' lives · '+customHp()+' HP each.'};
-  return m;
+  let base = m.custom ? {...m, hp:customHp(), stocks:customStocks(), desc:customStocks()+' lives · '+customHp()+' HP each.'} : m;
+  // A rolled RANDOM EVENT can bend the ruleset for this match (gravity, tempo,
+  // damage). Its modifiers layer on top of whatever mode is active.
+  if(typeof RandEvent!=='undefined' && RandEvent.active && RandEvent.mods){
+    base = {...base};
+    if(RandEvent.mods.grav!=null)  base.grav  = (base.grav||1)  * RandEvent.mods.grav;
+    if(RandEvent.mods.speed!=null) base.speed = (base.speed||1) * RandEvent.mods.speed;
+  }
+  return base;
 }
+
+/* ---------------- RANDOM BATTLE EVENTS ---------------- */
+// Every match has a small chance of a surprise twist. Purely for spice; toggle off
+// in SETTINGS. Modifiers are read through currentMode() (grav/speed) and applied to
+// the fighters at match start (size/damage). Timed events (rain/meteors) tick in
+// the update loop while a match is running.
+const RANDOM_EVENTS = [
+  { id:'double', name:'DOUBLE DAMAGE!', icon:'⚔️', color:'#ff5714', mods:{ dmg:2 } },
+  { id:'tiny',   name:'TINY MODE!',     icon:'🐜', color:'#8fefff', mods:{ scale:0.6 } },
+  { id:'giant',  name:'GIANT MODE!',    icon:'🦣', color:'#ffd24a', mods:{ scale:1.5 } },
+  { id:'lowgrav',name:'LOW GRAVITY!',   icon:'🌙', color:'#c77dff', mods:{ grav:0.55 } },
+  { id:'fast',   name:'FAST MODE!',     icon:'💨', color:'#7ee081', mods:{ speed:1.5 } },
+  { id:'meteors',name:'METEOR SHOWER!', icon:'☄️', color:'#ff8f4d', mods:{}, timed:'meteors' },
+  { id:'rain',   name:'HEALING RAIN!',  icon:'🌧️', color:'#8ff0a6', mods:{}, timed:'rain' },
+];
+const RandEvent = {
+  active:null, mods:null, timedId:null,
+  t:0, timer:0, drops:[],   // shared state for timed events
+  clear(){ this.active=null; this.mods=null; this.timedId=null; this.t=0; this.timer=0; this.drops=[]; },
+  // roll at match start; returns the picked event or null. Skipped for special
+  // modes (soccer/boss/tutorial/online) where a twist would be disruptive/unfair.
+  roll(){
+    this.clear();
+    if(!FX('randomEvents')) return null;
+    if(mode==='online' || tutorial) return null;
+    const gm = GAMEMODES.find(m=>m.id===gameMode) || GAMEMODES[0];
+    if(gm.soccer || gm.boss) return null;
+    if(Math.random() > 0.35) return null;   // ~35% of eligible matches get an event
+    const ev = RANDOM_EVENTS[(Math.random()*RANDOM_EVENTS.length)|0];
+    this.active = ev; this.mods = ev.mods||{}; this.timedId = ev.timed||null;
+    this.timer = ev.timed==='rain' ? 60 : 150;
+    return ev;
+  },
+  // apply the one-shot fighter modifiers (size + stored damage mult) at match start
+  applyToFighters(list){
+    if(!this.active || !this.mods) return;
+    if(this.mods.scale){
+      list.forEach(f=>{ f.w=Math.round(f.w*this.mods.scale); f.h=Math.round(f.h*this.mods.scale); f.y=GROUND_Y-f.h; });
+    }
+    if(this.mods.dmg){ list.forEach(f=>{ f.eventDmgMul=this.mods.dmg; }); }
+  },
+  // per-frame tick for timed events (called from update while running)
+  tick(){
+    if(!this.active || !this.timedId) return;
+    this.t++;
+    if(this.timedId==='meteors'){
+      if(--this.timer<=0){
+        this.timer = 90 + Math.floor(Math.random()*90);
+        const mx = 60 + Math.random()*(W-120);
+        this.drops.push({ x:mx, y:-20, vy:5+Math.random()*3, r:16, kind:'meteor' });
+      }
+      this.drops.forEach(d=>{ d.y+=d.vy; d.vy+=0.25; });
+      // impact
+      for(let i=this.drops.length-1;i>=0;i--){
+        const d=this.drops[i];
+        if(d.y>=GROUND_Y-4){
+          spawnParticles(d.x, GROUND_Y-6, '#ff6d2a', 14); spawnParticles(d.x, GROUND_Y-6, '#ffd24a', 8);
+          if(FX('fxShake')) shakeT=Math.max(shakeT,10);
+          players.forEach(o=>{ if(!o.dead && o.hitCd<=0 && Math.abs(o.cx-d.x)<60){ stageHazardHit(o, 12, (o.cx>=d.x?1:-1)*7, -6); } });
+          this.drops.splice(i,1);
+        }
+      }
+    } else if(this.timedId==='rain'){
+      if(--this.timer<=0){
+        this.timer = 50;
+        // heal both living fighters a little; a gentle back-and-forth match extender
+        players.forEach(o=>{ if(!o.dead && o.hp<o.maxHp){ o.hp=Math.min(o.maxHp, o.hp+6); spawnParticles(o.cx, o.cy-o.h*0.4, '#8ff0a6', 5); } });
+        updateHUD();
+      }
+      // ambient falling droplets
+      if(this.t%3===0){ this.drops.push({ x:Math.random()*W, y:-10, vy:4+Math.random()*3, r:2, kind:'drop' }); }
+      this.drops.forEach(d=>{ d.y+=d.vy; });
+      this.drops = this.drops.filter(d=> d.y < H+10);
+    }
+  },
+  // draw timed-event visuals (called from render, inside the shake transform)
+  draw(){
+    if(!this.active || !this.timedId) return;
+    const g=ctx;
+    if(this.timedId==='meteors'){
+      this.drops.forEach(d=>{
+        g.save(); g.translate(d.x,d.y);
+        g.shadowColor='#ff6d2a'; g.shadowBlur=16; g.fillStyle='#3a1204';
+        g.beginPath(); g.arc(0,0,d.r,0,Math.PI*2); g.fill();
+        g.shadowBlur=0; g.strokeStyle='#ff8f4d'; g.lineWidth=2; g.stroke();
+        // fiery tail
+        g.globalAlpha=0.5; g.fillStyle='#ffb14d';
+        g.beginPath(); g.moveTo(-d.r*0.5,-d.r); g.lineTo(d.r*0.4,-d.r*3.2); g.lineTo(d.r*0.5,-d.r); g.closePath(); g.fill();
+        g.restore();
+      });
+    } else if(this.timedId==='rain'){
+      g.save(); g.strokeStyle='rgba(143,240,166,.55)'; g.lineWidth=2; g.lineCap='round';
+      this.drops.forEach(d=>{ g.beginPath(); g.moveTo(d.x,d.y); g.lineTo(d.x-2,d.y+10); g.stroke(); });
+      g.restore();
+    }
+  }
+};
 
 /* input */
 addEventListener('keydown', e=>{ keys[e.key.toLowerCase()]=true; if(['arrowup','arrowdown','arrowleft','arrowright',' ','/',"'"].includes(e.key.toLowerCase()))e.preventDefault();});
@@ -6859,8 +7050,10 @@ function buildCharTile(c){
   costMap[c.id]=0;
   const el=document.createElement('div');
   el.className='char'+(Save.prestige()>0?' prestige':''); el.dataset.id=c.id;
+  const rar=RARITY[fighterRarity(c)];
   el.innerHTML=`
     <span class="pick"></span>
+    <span class="rarityDot" title="${rar.name}" style="display:${charUnlocked(c.id)?'block':'none'};background:${rar.color};box-shadow:0 0 6px ${rar.color}"></span>
     ${c.tag?`<span class="chartag">${c.tag}</span>`:''}
     <span class="medal" style="display:none">🏅</span>
     <span class="hcmedal" style="display:none" title="Hardcore medal — cleared Classic on Ultra Hard">☠</span>
@@ -7216,6 +7409,7 @@ document.getElementById('muteBtn').onclick=(e)=>{
 function show(id){
   ['title','mode','select','stage','result','versus','story','achieve','achdetail','shop','minigame','settings','online','waitroom','stats','howto','skills','campaign','mission','cutscene','leaderboard','tutDone','journal','openworld'].forEach(s=>document.getElementById(s).classList.toggle('hidden', s!==id));
   document.body.classList.remove('in-match');
+  if(id!=='result' && typeof stopVictoryFlair==='function') stopVictoryFlair();
   // reset any scrollable menu back to the top so its heading is always visible on entry
   const el=document.getElementById(id);
   if(el) el.scrollTop=0;
@@ -7435,26 +7629,134 @@ function applyMenuTheme(){
     setMenuPalette(null); return;
   }
   const c=id ? ROSTER.find(x=>x.id===id) : null;
-  if(c && charUnlocked(c.id) && Save.hasTheme(c.id)){ setMenuPalette(themePalette(c)); }
-  else { setMenuPalette(null); }
+  if(c && charUnlocked(c.id) && Save.hasTheme(c.id)){ setMenuPalette(themePalette(c)); return; }
+  // No THEME equipped → fall back to a shop-bought BACKGROUND if the player owns +
+  // equipped one (cosmetics tab). Its colors feed the same --menu-bg vars.
+  const bd=getEquippedBackdrop();
+  if(bd && Save.hasCosmetic('bg', bd.id)){ setMenuPalette({ bg1:bd.c1, bg2:bd.c2 }); return; }
+  setMenuPalette(null);
 }
 // only fighters the player has actually unlocked can have a theme bought
 function themeableChars(){ return ROSTER.filter(c=>charUnlocked(c.id)); }
 const SKIN_COST = 50, MEME_COST = 100;
 const SONG_COST = 50;
 let shopTab='themes';
+
+/* ---------------- COSMETICS CATALOGS (extra ways to spend SHARDS) ---------------- */
+// Five cosmetic categories, all bought + equipped from the SHOP. They're purely
+// for flair: a TITLE + PROFILE ICON show on the title screen next to your name, a
+// BACKGROUND themes the menus, a VICTORY animation plays on the results screen, and
+// an EMOTE is flashed after a win. Ownership + equipped pick persist via Save.
+const COSMETIC_COST = { title:60, victory:120, icon:40, bg:90, emote:70 };
+const TITLES = [
+  { id:'rookie',   name:'THE ROOKIE',      color:'#8fefff' },
+  { id:'brawler',  name:'BRAWLER',         color:'#ffd24a' },
+  { id:'menace',   name:'RINGSIDE MENACE', color:'#ff5714' },
+  { id:'legend',   name:'LIVING LEGEND',   color:'#c77dff' },
+  { id:'champ',    name:'UNDISPUTED CHAMP',color:'#ffd700' },
+  { id:'goat',     name:'THE G.O.A.T.',    color:'#7ee081' },
+];
+const VICTORY_ANIMS = [
+  { id:'confetti', name:'CONFETTI RAIN',  icon:'🎉', color:'#ff9bc0' },
+  { id:'fireworks',name:'FIREWORKS',      icon:'🎆', color:'#ffd24a' },
+  { id:'goldrush', name:'GOLD SHOWER',    icon:'💰', color:'#ffd700' },
+  { id:'flames',   name:'RING OF FIRE',   icon:'🔥', color:'#ff5714' },
+  { id:'stars',    name:'SHOOTING STARS', icon:'⭐', color:'#8fefff' },
+];
+const PROFILE_ICONS = [
+  { id:'crown', name:'CROWN',   icon:'👑', color:'#ffd700' },
+  { id:'fist',  name:'FIST',    icon:'👊', color:'#ff5714' },
+  { id:'skull', name:'SKULL',   icon:'💀', color:'#cfd0e8' },
+  { id:'bolt',  name:'BOLT',    icon:'⚡', color:'#ffd24a' },
+  { id:'flame', name:'FLAME',   icon:'🔥', color:'#ff9f4d' },
+  { id:'star',  name:'STAR',    icon:'🌟', color:'#8fefff' },
+  { id:'heart', name:'HEART',   icon:'❤️', color:'#ff8fa3' },
+  { id:'alien', name:'ALIEN',   icon:'👾', color:'#c77dff' },
+];
+const MENU_BACKDROPS = [
+  { id:'sunset', name:'SUNSET',   c1:'#7a1f4a', c2:'#1a0a2e' },
+  { id:'ocean',  name:'DEEP SEA', c1:'#0a3a5e', c2:'#04121f' },
+  { id:'forest', name:'EMERALD',  c1:'#14502f', c2:'#04140c' },
+  { id:'ember',  name:'EMBER',    c1:'#6a1f0a', c2:'#1a0603' },
+  { id:'royal',  name:'ROYAL',    c1:'#2a0a6a', c2:'#0a0428' },
+  { id:'mono',   name:'MIDNIGHT', c1:'#2a2a3a', c2:'#08080e' },
+];
+const EMOTES = [
+  { id:'gg',    name:'GG',        icon:'🤝', text:'GG!' },
+  { id:'ez',    name:'TOO EASY',  icon:'😎', text:'TOO EASY.' },
+  { id:'laugh', name:'LOL',       icon:'😂', text:'HAHA!' },
+  { id:'flex',  name:'FLEX',      icon:'💪', text:'GET STRONG.' },
+  { id:'wave',  name:'BYE',       icon:'👋', text:'BYE BYE!' },
+  { id:'fire',  name:'ON FIRE',   icon:'🔥', text:"I'M ON FIRE!" },
+];
+function getEquippedTitle(){ const id=Save.equipped('title'); return id?TITLES.find(x=>x.id===id):null; }
+function getEquippedIcon(){ const id=Save.equipped('icon'); return id?PROFILE_ICONS.find(x=>x.id===id):null; }
+function getEquippedBackdrop(){ const id=Save.equipped('bg'); return id?MENU_BACKDROPS.find(x=>x.id===id):null; }
+function getEquippedEmote(){ const id=Save.equipped('emote'); return id?EMOTES.find(x=>x.id===id):null; }
+function getEquippedVictory(){ const id=Save.equipped('victory'); return id?VICTORY_ANIMS.find(x=>x.id===id):null; }
+
 function buildShop(){
   document.getElementById('shopCurrencyCount').textContent=Save.currency();
   const helper=document.getElementById('shopHelper');
   if(helper) helper.innerHTML =
       shopTab==='themes' ? 'HOVER A THEME TO PREVIEW IT LIVE · CLICK TO BUY OR EQUIP'
     : shopTab==='songs'  ? 'TAP ▶ PREVIEW TO HEAR A SONG · BUY IT, THEN EQUIP AS YOUR MENU MUSIC'
+    : shopTab==='cosmetics' ? 'BUY TITLES, VICTORY ANIMATIONS, ICONS, BACKGROUNDS &amp; EMOTES · CLICK TO EQUIP'
     : 'SPEND SHARDS ON MENU THEMES, SONGS, SKINS &amp; MEMES';
   const grid=document.getElementById('shopGrid'); grid.innerHTML='';
   if(shopTab==='themes') buildShopThemes(grid);
   else if(shopTab==='songs') buildShopSongs(grid);
   else if(shopTab==='skins') buildShopSkins(grid);
+  else if(shopTab==='cosmetics') buildShopCosmetics(grid);
   else buildShopMemes(grid);
+}
+// TITLES · VICTORY ANIMATIONS · PROFILE ICONS · BACKGROUNDS · EMOTES — five extra
+// cosmetic categories, each in its own labelled group. Buying unlocks it; clicking
+// an owned card equips it (or unequips if it's already the active one).
+function buildShopCosmetics(grid){
+  const groups = [
+    { cat:'title',   head:'🏷 TITLES · '+COSMETIC_COST.title,             list:TITLES },
+    { cat:'victory', head:'🎬 VICTORY ANIMATIONS · '+COSMETIC_COST.victory, list:VICTORY_ANIMS },
+    { cat:'icon',    head:'🖼 PROFILE ICONS · '+COSMETIC_COST.icon,        list:PROFILE_ICONS },
+    { cat:'bg',      head:'🌄 BACKGROUNDS · '+COSMETIC_COST.bg,            list:MENU_BACKDROPS },
+    { cat:'emote',   head:'💬 CHARACTER EMOTES · '+COSMETIC_COST.emote,    list:EMOTES },
+  ];
+  groups.forEach(g=>{
+    const head=document.createElement('div'); head.className='shopgrouphead'; head.textContent=g.head; grid.appendChild(head);
+    const cost=COSMETIC_COST[g.cat];
+    g.list.forEach(item=>{
+      const owned=Save.hasCosmetic(g.cat, item.id);
+      const active=Save.equipped(g.cat)===item.id;
+      const card=document.createElement('div');
+      card.className='shopcard'+(active?' active':owned?' owned':'');
+      // build a category-appropriate swatch
+      let swatch;
+      if(g.cat==='title'){
+        swatch=`<div class="swatch" style="display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 30%, #23235a, #0d0d18)"><span style="font-family:Impact;font-size:13px;letter-spacing:.04em;transform:skewX(-6deg);color:${item.color}">${item.name}</span></div>`;
+      } else if(g.cat==='bg'){
+        swatch=`<div class="swatch" style="background:radial-gradient(circle at 50% 30%, ${item.c1}, ${item.c2})"></div>`;
+      } else {
+        swatch=`<div class="swatch" style="display:flex;align-items:center;justify-content:center;font-size:30px;background:radial-gradient(circle at 50% 30%, ${item.color||'#23235a'}, #0d0d18)">${item.icon||'⭐'}</div>`;
+      }
+      const subtitle = (g.cat==='title') ? '' : `<div class="stitle" style="color:${item.color||'#cfd0e8'}">${item.name}</div>`;
+      let btn = owned
+        ? `<button class="sbtn sel${active?' selon':''}">${active?'✓ EQUIPPED':'EQUIP'}</button>`
+        : `<button class="sbtn" ${Save.currency()>=cost?'':'disabled'}>💎 ${cost}</button>`;
+      card.innerHTML = swatch + subtitle + btn;
+      const b=card.querySelector('.sbtn');
+      if(owned){
+        b.addEventListener('click',()=>{
+          Save.setEquipped(g.cat, active?null:item.id);
+          applyMenuTheme(); refreshProfileLine(); buildShop();
+        });
+      } else {
+        b.addEventListener('click',()=>{
+          if(Save.buyCosmetic(g.cat, item.id, cost)){ Save.setEquipped(g.cat, item.id); applyMenuTheme(); refreshProfileLine(); buildShop(); }
+        });
+      }
+      grid.appendChild(card);
+    });
+  });
 }
 function buildShopThemes(grid){
   const activeId=Save.menuTheme();
@@ -7854,6 +8156,9 @@ function buildStatsScreen(){
   const achDone = ACHIEVEMENTS.filter(a=>Save.hasAch(a.id)).length;
   const entries=[
     ['WINS', Save.stat('wins')],
+    ['CURRENT STREAK', '🔥 '+Save.stat('streak')],
+    ['BEST STREAK', '🏆 '+Save.stat('bestStreak')],
+    ['TOTAL DAMAGE DEALT', Save.stat('totalDamage').toLocaleString()],
     ['KOs', Save.stat('kos')],
     ['SUPERS USED', Save.stat('supers')],
     ['FLAWLESS WINS', Save.stat('flawless')],
@@ -7866,6 +8171,7 @@ function buildStatsScreen(){
     ['POWER SURGE WINS', Save.stat('chargedWins')],
     ['MEME WINS', Save.stat('memeWins')],
     ['MEDALS', medalsEarned()+' / '+medalsTotal()],
+    ['🎴 FIGHTERS UNLOCKED', collectionCounts().owned+' / '+collectionCounts().total],
     ['☠ HARDCORE MEDALS', hardcoreEarned()+' / '+medalsTotal()],
     ['🌟 SKILLS MASTERED', skillsMasteredCount()+' / '+ROSTER.length],
     ['⭐ PRESTIGE LEVEL', Save.prestige()],
@@ -8179,6 +8485,10 @@ function refreshSettingsUI(){
     : 'Unlock every character with a password.';
   document.getElementById('musicVolSlider').value = Save.getSetting('musicVol', 100);
   document.getElementById('sfxVolSlider').value = Save.getSetting('sfxVol', 100);
+  [['fxShakeToggle','fxShake'],['fxFlashToggle','fxFlash'],['fxNumbersToggle','fxNumbers'],['fxParticlesToggle','fxParticles'],['fxSlowmoToggle','fxSlowmo'],['randomEventsToggle','randomEvents']].forEach(([elId,key])=>{
+    const el=document.getElementById(elId); if(!el) return;
+    const on=FX(key); el.classList.toggle('on', on); el.textContent=on?'ON':'OFF';
+  });
   buildKeyGrid();
 }
 document.getElementById('settingsBtn').onclick=()=>{ refreshSettingsUI(); show('settings'); };
@@ -8207,6 +8517,12 @@ document.getElementById('magToggle').onclick=()=>{
   Save.setSetting('magnifier', !Save.getSetting('magnifier', true));
   refreshSettingsUI();
 };
+// Battle-effects toggles — each defaults ON; turning one off silences that effect
+// everywhere it's used (see the FX() checks in landHit / render / the update tick).
+[['fxShakeToggle','fxShake'],['fxFlashToggle','fxFlash'],['fxNumbersToggle','fxNumbers'],['fxParticlesToggle','fxParticles'],['fxSlowmoToggle','fxSlowmo'],['randomEventsToggle','randomEvents']].forEach(([elId,key])=>{
+  const el=document.getElementById(elId); if(!el) return;
+  el.onclick=()=>{ Save.setSetting(key, !FX(key)); refreshSettingsUI(); };
+});
 document.getElementById('devToggle').onclick=()=>{
   if(Save.data.dev){ Save.setDev(false); buildRoster(); refreshSettingsUI(); return; }
   const entry=prompt('Enter the dev password to unlock all characters:');
@@ -8600,6 +8916,74 @@ document.getElementById('missionBack').onclick=()=>{
 };
 
 // profile line on the title screen (click to rename save)
+/* ---------------- VICTORY FLAIR (shop cosmetics on the results screen) ---------------- */
+// On a WIN, play the equipped VICTORY animation on the results canvas and flash the
+// equipped EMOTE. Both are optional shop cosmetics; nothing plays if none is equipped
+// or the player lost. Self-contained rAF loop that stops when the screen changes.
+let _vfxAnim=null;
+function stopVictoryFlair(){
+  if(_vfxAnim){ cancelAnimationFrame(_vfxAnim); _vfxAnim=null; }
+  const cv=document.getElementById('victoryFx'); if(cv){ const g=cv.getContext('2d'); g.clearRect(0,0,cv.width,cv.height); }
+  const em=document.getElementById('resultEmote'); if(em) em.classList.add('hidden');
+}
+function playVictoryFlair(won){
+  stopVictoryFlair();
+  if(!won) return;
+  // EMOTE popup
+  const emote=getEquippedEmote();
+  if(emote){
+    const em=document.getElementById('resultEmote');
+    document.getElementById('resultEmoteIcon').textContent=emote.icon;
+    document.getElementById('resultEmoteText').textContent=emote.text;
+    em.classList.remove('hidden');
+  }
+  // VICTORY animation
+  const anim=getEquippedVictory();
+  if(!anim) return;
+  const cv=document.getElementById('victoryFx'); if(!cv) return;
+  const g=cv.getContext('2d'); const W=cv.width, H=cv.height;
+  const parts=[];
+  const palette = anim.id==='confetti' ? ['#ff9bc0','#8fefff','#ffd24a','#7ee081','#c77dff']
+    : anim.id==='fireworks' ? ['#ffd24a','#ff5714','#8fefff','#ff9bc0']
+    : anim.id==='goldrush' ? ['#ffd700','#ffe27a','#f0a500']
+    : anim.id==='flames' ? ['#ff5714','#ff9f4d','#ffd24a']
+    : ['#8fefff','#fff6c8','#c77dff'];
+  function spawn(n){
+    for(let i=0;i<n;i++){
+      if(anim.id==='fireworks'){
+        const cx=W*(0.2+Math.random()*0.6), cy=H*(0.2+Math.random()*0.3);
+        for(let k=0;k<18;k++){ const a=k/18*Math.PI*2; parts.push({x:cx,y:cy,vx:Math.cos(a)*(2+Math.random()*2),vy:Math.sin(a)*(2+Math.random()*2),life:40+Math.random()*20,g:0.04,c:palette[i%palette.length],r:3}); }
+      } else if(anim.id==='flames'){
+        parts.push({x:Math.random()*W,y:H+10,vx:(Math.random()-.5)*1.5,vy:-2-Math.random()*3,life:50+Math.random()*30,g:-0.02,c:palette[(Math.random()*palette.length)|0],r:4+Math.random()*4});
+      } else if(anim.id==='stars'){
+        parts.push({x:Math.random()*W,y:-10,vx:(Math.random()-.5)*2,vy:2+Math.random()*3,life:60,g:0.02,c:palette[(Math.random()*palette.length)|0],r:2+Math.random()*3,star:true});
+      } else { // confetti / goldrush rain
+        parts.push({x:Math.random()*W,y:-10,vx:(Math.random()-.5)*2,vy:2+Math.random()*3,life:80,g:0.05,c:palette[(Math.random()*palette.length)|0],r:3+Math.random()*3,spin:Math.random()*6});
+      }
+    }
+  }
+  let frame=0;
+  function loop(){
+    g.clearRect(0,0,W,H);
+    frame++;
+    // keep spawning while the screen is up
+    if(anim.id==='fireworks'){ if(frame%22===0) spawn(2); }
+    else if(frame<220){ spawn(anim.id==='flames'?4:3); }
+    parts.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=p.g; p.life--; if(p.spin!=null)p.spin+=0.2; });
+    for(let i=parts.length-1;i>=0;i--){ if(parts[i].life<=0||parts[i].y>H+20) parts.splice(i,1); }
+    parts.forEach(p=>{
+      g.save(); g.globalAlpha=Math.min(1,p.life/30); g.fillStyle=p.c;
+      if(p.star){ g.translate(p.x,p.y); g.rotate(frame*0.1);
+        g.beginPath(); for(let k=0;k<5;k++){ const a=-Math.PI/2+k*Math.PI*2/5; const rr=k%1?p.r:p.r; g.lineTo(Math.cos(a)*p.r*2, Math.sin(a)*p.r*2); } g.closePath(); g.fill();
+      } else if(p.spin!=null){ g.translate(p.x,p.y); g.rotate(p.spin); g.fillRect(-p.r,-p.r*0.5,p.r*2,p.r); }
+      else { g.beginPath(); g.arc(p.x,p.y,p.r,0,Math.PI*2); g.fill(); }
+      g.restore();
+    });
+    if(document.getElementById('result').classList.contains('hidden')){ stopVictoryFlair(); return; }
+    _vfxAnim=requestAnimationFrame(loop);
+  }
+  _vfxAnim=requestAnimationFrame(loop);
+}
 function refreshProfileLine(){
   const el=document.getElementById('profileLine');
   const medals=medalsEarned();   // count only the normal roster (OP chars excluded)
@@ -8609,7 +8993,13 @@ function refreshProfileLine(){
   const nameHtml = pLvl>0
     ? `<b class="prestige-name">${Save.data.profile}${stars}</b>`
     : `<b>${Save.data.profile}</b>`;
-  el.innerHTML=`PROFILE: ${nameHtml} · <span style="text-decoration:underline">rename</span>`;
+  // shop cosmetics: an equipped PROFILE ICON prefixes the name; an equipped TITLE
+  // shows as a colored tag after it.
+  const ic=getEquippedIcon();
+  const ti=getEquippedTitle();
+  const iconHtml = ic ? `${ic.icon} ` : '';
+  const titleHtml = ti ? ` · <b style="color:${ti.color}">${ti.name}</b>` : '';
+  el.innerHTML=`PROFILE: ${iconHtml}${nameHtml}${titleHtml} · <span style="text-decoration:underline">rename</span>`;
   // medal badge next to CLASSIC MODE
   const mc=document.getElementById('medalCount'), mt=document.getElementById('medalTotal');
   if(mc) mc.textContent=medals;
@@ -8716,10 +9106,12 @@ updateModeCards();
 // CONTINUE from mode screen -> character select
 document.getElementById('modeGo').onclick=()=>{
   p1Pick=null; p2Pick=null; botCostume=0; p1Meme='none'; p2Meme='none';
-  document.getElementById('selHelper').innerHTML = mode==='2p'
+  const cc=collectionCounts();
+  const collLine = `<div style="margin-top:5px;font-size:11px;letter-spacing:.1em;color:#fdbb2d;opacity:.9">🎴 COLLECTION ${cc.owned}/${cc.total} FIGHTERS UNLOCKED</div>`;
+  document.getElementById('selHelper').innerHTML = (mode==='2p'
     ? 'CLICK = <span style="color:#4dd2ff">P1</span> &nbsp;·&nbsp; SHIFT-CLICK or RIGHT-CLICK = <span style="color:#ff9f4d">P2</span>'
     : (gameMode==='boss' ? 'CLICK YOUR FIGHTER · A GIANT BOSS AWAITS'
-       : 'CLICK = YOU &nbsp;·&nbsp; SHIFT-CLICK = SET THE BOT (optional)');
+       : 'CLICK = YOU &nbsp;·&nbsp; SHIFT-CLICK = SET THE BOT (optional)')) + collLine;
   refreshPicks();
   show('select');
 };
@@ -8903,6 +9295,18 @@ function updateRoundBanner(){
   }
 }
 function startMatch(){
+  // RANDOMIZER mode: reroll both fighters (from the unlocked roster) + the stage
+  // right before the match builds, so every fight is a fresh surprise.
+  if(gameMode==='randomizer'){
+    const pool = ROSTER.filter(c=>charUnlocked(c.id));
+    if(pool.length){
+      p1Pick = pickOne(pool);
+      p2Pick = pickOne(pool);
+      costMap[p1Pick.id] = Math.floor(Math.random()*4);
+      costMap[p2Pick.id] = Math.floor(Math.random()*4);
+    }
+    stagePick = pickOne(STAGES);
+  }
   // hide every menu screen
   ['title','mode','select','stage','result','versus','story','skills','campaign','mission','cutscene'].forEach(s=>document.getElementById(s).classList.add('hidden'));
   document.body.classList.add('in-match');
@@ -8914,6 +9318,8 @@ function startMatch(){
   clouds=[];   // CLAUDIO: start each match with no conjured cloud platforms
   kidTurrets=[];   // RANDOM KID: start each match with no deployed sentries
   Hazard.reset();
+  RandEvent.roll();          // maybe roll a surprise twist for this match
+  _matchDamage=0;            // reset per-match damage tally
   const gm = currentMode();
   const p2IsBot = (mode==='1p');
   const mainX = PLATS[0].x, mainW = PLATS[0].w;
@@ -8932,6 +9338,9 @@ function startMatch(){
     p2.w=Math.round(54*1.8); p2.h=Math.round(74*1.8);
     p2.y=GROUND_Y-p2.h; p2.isBoss=true;
     p2.maxHp=Math.round(gm.hp*2.2); p2.hp=p2.maxHp;
+    // MULTI-PHASE BOSS: starts in phase 1; crossing HP thresholds enrages it into
+    // faster, harder phases (see the phase check in the update tick).
+    p2.bossPhase=1; p2.bossRoar=0; p2.aiRage=1;
   }
   // ULTRA HARD (Classic): the player gets a SINGLE life — one KO ends the run.
   // The CPU keeps its normal stocks, so the deck is stacked hard against you.
@@ -8939,7 +9348,7 @@ function startMatch(){
     p1.stocks=1; p1.startStocks=1;
   }
   players=[p1,p2];
-  projectiles=[]; particles=[]; strikes=[]; shocks=[]; afterimages=[]; blackholes=[]; voidfx=[]; sandworms=[]; eclipseT=0; kidTurrets=[]; shardPickups=[]; shardSpawnTimer=300; clearCameos();
+  projectiles=[]; particles=[]; strikes=[]; shocks=[]; afterimages=[]; blackholes=[]; voidfx=[]; sandworms=[]; dmgNums=[]; eclipseT=0; kidTurrets=[]; shardPickups=[]; shardSpawnTimer=300; clearCameos();
   // SOCCER: spawn a ball + two goals, reset the score
   soccerBall=null; soccerScore=[0,0]; soccerGoalTimer=0;
   if(gm.soccer){
@@ -8952,8 +9361,11 @@ function startMatch(){
   document.getElementById('p2name').style.color=p2Pick.color;
   running=true;
   if(!Save.stat('stage_'+stagePick.id)) Save.addStat('stage_'+stagePick.id,1);
+  RandEvent.applyToFighters(players);   // size/damage tweaks for a rolled event
   announce(gm.id==='stock' ? 'FIGHT!' : gm.name+'!');
   announceHazard();
+  // if a surprise event rolled, flash its name after the FIGHT!/hazard callouts
+  if(RandEvent.active){ const ev=RandEvent.active; setTimeout(()=>announce(ev.name), 1200); }
   updateHUD();
   Music.play(stagePick.id);
 }
@@ -9078,7 +9490,7 @@ function tutorialAdvance(){
 function tutorialTeardown(){
   running=false; Music.stop();
   tutorial=null; players=[];
-  projectiles=[]; particles=[]; strikes=[]; shocks=[]; afterimages=[]; blackholes=[]; voidfx=[]; sandworms=[]; shardPickups=[]; kidTurrets=[];
+  projectiles=[]; particles=[]; strikes=[]; shocks=[]; afterimages=[]; blackholes=[]; voidfx=[]; sandworms=[]; dmgNums=[]; shardPickups=[]; kidTurrets=[];
   document.getElementById('tutCoach').classList.add('hidden');
   document.getElementById('tutSkip').classList.add('hidden');
   document.getElementById('hud').classList.add('hidden');
@@ -9110,13 +9522,15 @@ function startOnlineMatch(){
   clouds=[];   // CLAUDIO: start each match with no conjured cloud platforms
   kidTurrets=[];   // RANDOM KID: start each match with no deployed sentries
   Hazard.reset();
+  RandEvent.roll();          // maybe roll a surprise twist for this match
+  _matchDamage=0;            // reset per-match damage tally
   const gm = currentMode();
   const mainX = PLATS[0].x, mainW = PLATS[0].w;
   const p1 = new Fighter(p1Pick, mainX+mainW*0.25, false, Net.p1Cos||0, 'none');
   const p2 = new Fighter(p2Pick, mainX+mainW*0.65, false, Net.p2Cos||0, 'none');
   [p1,p2].forEach(f=>{ f.maxHp=gm.hp; f.hp=gm.hp; f.stocks=gm.stocks; f.startStocks=gm.stocks; f.superMeter=gm.startSuper||0; });
   players=[p1,p2];
-  projectiles=[]; particles=[]; strikes=[]; shocks=[]; afterimages=[]; blackholes=[]; voidfx=[]; sandworms=[]; eclipseT=0; kidTurrets=[]; shardPickups=[]; shardSpawnTimer=300; clearCameos();
+  projectiles=[]; particles=[]; strikes=[]; shocks=[]; afterimages=[]; blackholes=[]; voidfx=[]; sandworms=[]; dmgNums=[]; eclipseT=0; kidTurrets=[]; shardPickups=[]; shardSpawnTimer=300; clearCameos();
   soccerBall=null; soccerScore=[0,0];
   document.getElementById('p1name').textContent=(Net.isHost?'YOU · ':'')+ 'P1 · '+p1Pick.name;
   document.getElementById('p2name').textContent=(!Net.isHost?'YOU · ':'')+ 'P2 · '+p2Pick.name;
@@ -10456,6 +10870,10 @@ function landHit(att,def,dmg,kb,dir,launch){
   const aAtk = att ? (att.mAtk||1) : 1;
   const dDef = def.mDef||1;
   dmg = dmg * aAtk * dDef;
+  // ENRAGED BOSS: an enraged multi-phase boss hits progressively harder each phase.
+  if(att && att.isBoss && att.bossDmgMul) dmg *= att.bossDmgMul;
+  // RANDOM EVENT: DOUBLE DAMAGE (or any dmg-scaling event) multiplies every hit.
+  if(att && att.eventDmgMul) dmg *= att.eventDmgMul;
   // JAN JACOB · DETENTION MARK: his hits on a foe HE marked deal +40% damage.
   if(att && att.def && att.def.special==='chalk' && def._marked && def._marked.by===att && def._marked.t>0){
     dmg *= 1.4;
@@ -10474,7 +10892,14 @@ function landHit(att,def,dmg,kb,dir,launch){
     return;
   }
   def.hp=Math.max(0, def.hp-dmg);
+  // STATS: tally total damage the human (P1, non-bot) deals. Accumulated in memory
+  // and flushed to the save at match end so we're not hitting localStorage per hit.
+  if(att && !att.isBot && att===players[0] && mode!=='2p'){ _matchDamage += dmg; }
   SFX.hit();
+  // BATTLE EFFECTS: white hit-flash on the struck fighter + a floating damage number.
+  // Both are cosmetic and individually toggleable in SETTINGS.
+  if(FX('fxFlash')) def._flash=8;
+  if(FX('fxNumbers')) spawnDamageNumber(def.cx, def.cy - def.h*0.5, dmg, (kb>=10||(launch||0)>=0.9));
   // GUISEPPE · RIPEN: taking a hit bruises him — his freshness meter drops back to
   // unripe, so he must stay untouched again to rebuild his damage bonus.
   if(def.def && def.def.special==='seed'){ def._ripe=0; def._ripeT=0; spawnParticles(def.cx,def.cy,'#7ac74f',6); }
@@ -10515,7 +10940,8 @@ function landHit(att,def,dmg,kb,dir,launch){
   def.vy = launchY;
   def.hitCd=14;
   def.state='hit';
-  hitStop=6; shakeT=8;
+  if(FX('fxSlowmo')) hitStop=6;
+  if(FX('fxShake')) shakeT=8;
   spawnParticles(def.cx,def.cy,'#fff',10);
   spawnParticles(def.cx,def.cy,att.def.color,8);
   updateHUD();
@@ -10525,11 +10951,23 @@ function landHit(att,def,dmg,kb,dir,launch){
 /* ---------------- PARTICLES ---------------- */
 const MAX_PARTICLES=220;   // hard cap so bursts can't pile up and tank the framerate
 function spawnParticles(x,y,color,n){
+  if(!FX('fxParticles')) return;   // PARTICLES setting off → no dust/sparks/debris anywhere
   // if we're already near the cap, drop the oldest particles to make room
   if(particles.length+n > MAX_PARTICLES){ particles.splice(0, (particles.length+n)-MAX_PARTICLES); }
   for(let i=0;i<n;i++){
     particles.push({x,y,vx:(Math.random()-.5)*7,vy:(Math.random()-.5)*7-1,life:20+Math.random()*15,color,r:2+Math.random()*3});
   }
+}
+
+/* ---------------- FLOATING DAMAGE NUMBERS ---------------- */
+// A short-lived number that rises off the struck fighter. `big` hits (heavy
+// knockback / launchers) render larger and hotter. Gated by the DAMAGE NUMBERS
+// setting at the call site in landHit().
+const MAX_DMGNUMS=40;
+function spawnDamageNumber(x,y,dmg,big){
+  if(dmgNums.length>=MAX_DMGNUMS) dmgNums.shift();
+  dmgNums.push({ x:x+(Math.random()-.5)*10, y, vy:-1.1-Math.random()*0.5,
+    life:46, max:46, val:Math.max(1,Math.round(dmg)), big:!!big });
 }
 
 /* ---------------- AREA BLAST (bomb explosion / ground-pound shockwave) ---------------- */
@@ -10556,8 +10994,9 @@ function areaBlast(x,y,radius,dmg,kb,owner,color){
 // original, hand-tuned behavior exactly.
 const BOT_DIFF_LEVELS = [
   { name:'EASY',    act:0.55, react:1.7 },
-  { name:'AVERAGE', act:1.0,  react:1.0 },
+  { name:'NORMAL',  act:1.0,  react:1.0 },
   { name:'HARD',    act:1.6,  react:0.55 },
+  { name:'INSANE',  act:2.2,  react:0.35 },
 ];
 // ULTRA HARD MODE (Classic only): far faster reactions + relentless aggression,
 // well beyond the normal HARD slider. Not selectable on the difficulty slider —
@@ -10571,13 +11010,19 @@ function botDiffLevel(){
 }
 function BOT_DIFF(){ return ultraActive() ? BOT_DIFF_ULTRA : BOT_DIFF_LEVELS[botDiffLevel()]; }
 
+// A special that fires a projectile / works from range (vs. a rush/melee dash move).
+const RANGED_SPECIALS = new Set(['pitch','drone','bolt','bomb','serve','rocks','minidrone','frost','flask','egg','swarm','spores','splash','soundwave','pounce','evilserve','numbers','coins','slipper','pellet','shock','bullets','football','curve','controller','doom','worm']);
+function isRangedSpecial(s){ return RANGED_SPECIALS.has(s); }
 function botThink(bot, foe){
   bot.aiTimer--;
   // difficulty tuning: EASY reacts slower and acts less often, HARD the opposite.
   // AVERAGE keeps the original values (act=1, react=1). `act` scales action chance,
   // `react` scales cooldown between decisions (>1 = slower/lazier).
   const D = BOT_DIFF();
-  const act = D.act, react = D.react;
+  // A multi-phase boss ramps up its aggression (aiRage) as it takes damage — this
+  // folds straight into how often it acts and how quickly it re-decides.
+  const rage = bot.aiRage || 1;
+  const act = D.act * rage, react = D.react / rage;
   // SOCCER: chase the ball and knock it toward the opponent's (left) goal
   if(soccerBall && currentMode().soccer){
     const b=soccerBall;
@@ -10607,9 +11052,45 @@ function botThink(bot, foe){
   const dist = Math.abs(dx);
   const dir = dx>0?1:-1;
 
-  // unleash Super when charged (favor doing it when the foe is in front / mid-range)
-  if(bot.superMeter>=100 && bot.onGround && dist<340 && Math.random()<0.06*act){
-    bot.face=dir; trySuper(bot); return;
+  // unleash Super when charged (favor doing it when the foe is in front / mid-range).
+  // Smarter targeting: much more eager to fire when the foe is low on HP (a finisher)
+  // or when the bot itself is hurt (spend it before losing it).
+  if(bot.superMeter>=100 && bot.onGround && dist<340){
+    const foeLow = foe.hp < foe.maxHp*0.3;
+    const meLow  = bot.hp < bot.maxHp*0.3;
+    const eager  = foeLow ? 0.22 : (meLow ? 0.14 : 0.06);
+    if(Math.random()<eager*act){ bot.face=dir; trySuper(bot); return; }
+  }
+
+  // DODGE INCOMING PROJECTILES: if a fast shot is closing in at roughly the bot's
+  // height, jump or shield out of the way. Harder difficulties react more reliably.
+  const inbound = projectiles.find(pr=> pr.owner!==bot && Math.abs(pr.y-bot.cy)<46
+      && Math.abs(pr.x-bot.cx)<150 && Math.sign(pr.vx)===Math.sign(bot.cx-pr.x));
+  if(inbound && bot.onGround && bot.aiTimer<=0 && Math.random()<0.5*act){
+    if(canShield(bot) && Math.random()<0.5){ bot.shielding=true; bot.aiTimer=16*react; }
+    else { doJump(bot); bot.aiTimer=12*react; }
+  }
+
+  // RETREAT ON LOW HP: when badly hurt, the CPU plays keep-away — back off toward the
+  // safe center of the stage, shield more, and (if ranged) chip from distance instead
+  // of trading blows. Scaled by difficulty so EASY still fights recklessly.
+  const hpFrac = bot.hp/Math.max(1,bot.maxHp);
+  const retreating = hpFrac < 0.28 && bot.superMeter < 100 && Math.random() < (0.6*act);
+  if(retreating && dist < 260){
+    const away = -dir;                          // move away from the foe…
+    const toCenter = (W/2 - bot.cx)>0?1:-1;     // …but bias back toward center, not off-stage
+    const push = (Math.abs(bot.cx-W/2) > W*0.28) ? toCenter : away;
+    bot.vx += push*0.5;
+    bot.face = dir;                             // keep facing the foe to defend / poke
+    if(bot.aiTimer<=0){
+      const r=Math.random();
+      if(r<0.5 && canShield(bot)){ bot.shielding=true; bot.aiTimer=22*react; }
+      else if(bot.def && isRangedSpecial(bot.def.special) && dist>110){ trySpecial(bot); bot.aiTimer=40*react; }
+      else bot.aiTimer=16*react;
+    }
+    // hop away from a close, higher foe to reset spacing
+    if(dist<70 && bot.onGround && Math.random()<0.15*act) doJump(bot);
+    return;
   }
 
   // recover if off-stage
@@ -10667,6 +11148,38 @@ function botThink(bot, foe){
   if(Math.random()<0.01 && bot.onGround) doJump(bot);
   if(bot.aiTimer>10) bot.shielding=false;
   if(!canShield(bot)) bot.shielding=false;   // eclipse suppresses shields for the CPU too
+}
+
+/* ---------------- BOSS PHASES (multi-phase enrage) ---------------- */
+// A GIANT BOSS fights in escalating phases. Crossing an HP threshold triggers an
+// enrage: it grows slightly, hits harder, moves faster (aiRage feeds botThink), and
+// roars — a screen-shaking beat with a burst of particles + an on-screen callout.
+// Phase 1 → 2 at 60% HP, phase 2 → 3 ("FINAL PHASE") at 30% HP.
+const BOSS_PHASES = [
+  { at:0.60, rage:1.4,  grow:1.06, dmg:1.2,  label:'THE BOSS IS ENRAGED!' },
+  { at:0.30, rage:1.85, grow:1.12, dmg:1.45, label:'FINAL PHASE!' },
+];
+function bossPhaseTick(boss){
+  if(boss.bossRoar>0){ boss.bossRoar--; if(boss.bossRoar>0 && boss.bossRoar%3===0) spawnParticles(boss.cx, boss.cy, '#ff5714', 4); }
+  const frac = boss.hp/Math.max(1,boss.maxHp);
+  const next = boss.bossPhase; // 1-indexed phase we're currently in
+  const idx = next-1;          // index into BOSS_PHASES for the NEXT transition
+  if(idx < BOSS_PHASES.length && frac <= BOSS_PHASES[idx].at){
+    const ph = BOSS_PHASES[idx];
+    boss.bossPhase = next+1;
+    boss.aiRage = ph.rage;
+    boss.bossDmgMul = ph.dmg;     // read by damage-dealing paths if present; harmless otherwise
+    // grow the boss a touch, keeping its feet on the ground
+    const nw=Math.round(boss.w*ph.grow), nh=Math.round(boss.h*ph.grow);
+    boss.y -= (nh-boss.h); boss.w=nw; boss.h=nh;
+    boss.bossRoar=36; boss.hitCd=Math.max(boss.hitCd,20);   // brief super-armor on transition
+    if(FX('fxShake')) shakeT=Math.max(shakeT,20);
+    if(FX('fxSlowmo')) hitStop=Math.max(hitStop,10);
+    spawnParticles(boss.cx, boss.cy, '#ff5714', 22);
+    spawnParticles(boss.cx, boss.cy, '#ffd24a', 14);
+    try{ SFX.super(); }catch(e){}
+    announce(ph.label);
+  }
 }
 
 /* ---------------- MOVEMENT HELPERS ---------------- */
@@ -11246,7 +11759,8 @@ function humanInput(f, K){
 }
 
 function update(t){
-  if(hitStop>0){ hitStop--; return; }
+  if(hitStop>0 && FX('fxSlowmo')){ hitStop--; return; }
+  if(hitStop>0 && !FX('fxSlowmo')) hitStop=0;   // slow-mo off → never freeze the sim
 
   pollGamepads();   // fold controller state into keys[] before reading input
   const p1=players[0], p2=players[1];
@@ -11267,6 +11781,7 @@ function update(t){
       else humanInput(p2, SCHEME2);
     }
   }
+  if(p2 && p2.isBoss && !p2.dead) bossPhaseTick(p2);
   if(tutorial) tutorialTick();
 
   tickPlatforms();   // move any moving platforms + carry riders before physics
@@ -11687,6 +12202,10 @@ function update(t){
   // particles
   particles.forEach(p=>{ p.x+=p.vx;p.y+=p.vy;p.vy+=0.15;p.life--; });
   particles=particles.filter(p=>p.life>0);
+  // floating damage numbers + per-fighter hit-flash timers
+  dmgNums.forEach(d=>{ d.y+=d.vy; d.vy*=0.94; d.life--; });
+  dmgNums=dmgNums.filter(d=>d.life>0);
+  players.forEach(f=>{ if(f._flash>0) f._flash--; });
   afterimages.forEach(a=>a.life--);
   afterimages=afterimages.filter(a=>a.life>0);
   // Zennith void FX (slash arcs, comet trails, hand rings) — just tick + expire
@@ -11697,6 +12216,7 @@ function update(t){
 
   updateShardPickups();
   updateCameos();
+  RandEvent.tick();   // timed random events (meteor shower / healing rain)
 
   if(shakeT>0)shakeT--;
 }
@@ -12001,10 +12521,13 @@ function KO(f){
   if((mode==='1p'||mode==='online') && f!==players[meIdx]) Save.addStat('kos');
   spawnParticles(f.cx<W/2? Math.max(20,Math.min(W-20,f.cx)):Math.min(W-20,f.cx),
                  Math.max(20,Math.min(H-20,f.cy)), f.def.color, 24);
-  shakeT=14; hitStop=8;
+  if(FX('fxShake')) shakeT=14;
+  if(FX('fxSlowmo')) hitStop=8;
   updateHUD();
   if(f.stocks<=0){
     f.dead=true; f.respawnTimer=99999;
+    // SLOW-MO ON FINAL HIT: the match-ending KO gets a longer freeze-frame beat.
+    if(FX('fxSlowmo')) hitStop=Math.max(hitStop,26);
     // ONLINE: broadcast my death immediately so the opponent's match ends too
     if(mode==='online' && Net.connected && f===players[Net.isHost?0:1]){
       netSendState(true);
@@ -12029,7 +12552,7 @@ let bgT=0;
 function render(t){
   ctx.clearRect(0,0,W,H);
   ctx.save();
-  if(shakeT>0){ ctx.translate((Math.random()-.5)*shakeT, (Math.random()-.5)*shakeT); }
+  if(shakeT>0 && FX('fxShake')){ ctx.translate((Math.random()-.5)*shakeT, (Math.random()-.5)*shakeT); }
 
   // themed stage background
   drawStageBg(ctx, stagePick, W, H, t);
@@ -12549,6 +13072,25 @@ function render(t){
     // flicker when invulnerable
     if(f.hitCd>0 && Math.floor(t/60)%2===0) ctx.globalAlpha=0.5;
     drawFighter(ctx, f.def, f.x, f.y, f.w, f.h, f.face, t, f.state, f.costume);
+    // ENRAGED BOSS ROAR: pulsing red aura on the frames right after a phase change.
+    if(f.bossRoar>0){
+      const p=f.bossRoar/36;
+      ctx.save();
+      ctx.globalAlpha=0.5*p; ctx.strokeStyle='#ff2a4d'; ctx.lineWidth=5;
+      ctx.beginPath(); ctx.arc(f.cx,f.cy,f.w*(0.6+(1-p)*0.9),0,Math.PI*2); ctx.stroke();
+      ctx.restore();
+    }
+    // HIT FLASH: tint just-drawn fighter pixels white for a few frames after a hit.
+    // source-atop paints only where the fighter already is, so we get a clean
+    // silhouette flash without a rectangle. Gated by the HIT FLASHES setting.
+    if(f._flash>0 && FX('fxFlash')){
+      ctx.globalAlpha = Math.min(1, f._flash/8) * 0.85;
+      ctx.globalCompositeOperation = 'source-atop';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(f.x-6, f.y-6, f.w+12, f.h+12);
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1;
+    }
     ctx.restore();
     // ---- SPECIALIST mechanic overlays ----
     // SARP: a golden STYLE meter ring that fills as he lands hits; glows at full.
@@ -12626,6 +13168,7 @@ function render(t){
 
   // stage hazard visuals (current streaks, lava geysers, weather)
   if(Hazard.id) hazardDraw(t);
+  RandEvent.draw();   // random-event visuals (meteors / healing rain)
 
   // particles
   particles.forEach(p=>{
@@ -12688,6 +13231,24 @@ function render(t){
 
   // Smash-style off-screen magnifiers (toggle in Settings)
   if(Save.getSetting('magnifier', true)) drawMagnifiers(t);
+
+  // FLOATING DAMAGE NUMBERS (drawn last, inside the shake transform so they ride the arena)
+  if(dmgNums.length){
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    dmgNums.forEach(d=>{
+      const a=Math.min(1, d.life/d.max*1.6);
+      const sz=d.big?30:20;
+      ctx.save();
+      ctx.globalAlpha=a;
+      ctx.font='bold '+sz+'px Impact, Arial';
+      ctx.lineWidth=4; ctx.strokeStyle='rgba(0,0,0,.75)';
+      ctx.fillStyle=d.big?'#ff5714':'#ffe27a';
+      ctx.strokeText(d.val, d.x, d.y);
+      ctx.fillText(d.val, d.x, d.y);
+      ctx.restore();
+    });
+    ctx.globalAlpha=1;
+  }
 
   ctx.restore();
 }
@@ -12862,6 +13423,9 @@ function announceHazard(){
 function endMatch(){
   running=false;
   Music.stop();
+  RandEvent.clear();
+  // flush this match's accumulated human damage into the career total
+  if(_matchDamage>0){ Save.addStat('totalDamage', Math.round(_matchDamage)); _matchDamage=0; }
   const p1=players[0], p2=players[1];
   const p1won = p1.stocks>0;
   const winnerDef = p1won ? p1.def : p2.def;
@@ -12890,6 +13454,7 @@ function endMatch(){
   // ---- stat tracking (1P only; the human is P1) ----
   if(mode==='1p' && p1won){
     Save.addStat('wins');
+    Save.bumpStreak(true);   // win streak: extend + track the best
     recordJournalWin(p1.def.id);   // JOURNAL: counts toward this fighter's lore unlocks
     if(p1.startStocks && p1.stocks>=p1.startStocks) Save.addStat('flawless');
     if(p1.meme && p1.meme.id!=='none') Save.addStat('memeWins');
@@ -12900,6 +13465,8 @@ function endMatch(){
     if(gmid==='charged') Save.addStat('chargedWins');
     Save.addCurrency(20);   // SHARDS earned from a battle win — spend on a fighter's skill tree
     Leaderboard.submit();
+  } else if(mode==='1p' && !p1won){
+    Save.bumpStreak(false);  // a loss snaps the streak back to zero
   }
   const newAch = (mode==='1p') ? grantAndToast() : [];
 
@@ -12999,6 +13566,7 @@ function endMatch(){
       sub.textContent = `${winnerDef.name} is the last one standing`;
     }
     sub.style.color=winnerDef.color;
+    playVictoryFlair(mode==='2p' ? true : p1won);
   }, 900);
 }
 
@@ -13034,6 +13602,7 @@ function endMatchSoccer(scorer){
       sub.textContent = `${winnerDef.name} wins ${soccerScore[0]} — ${soccerScore[1]}`;
     }
     sub.style.color=winnerDef.color;
+    playVictoryFlair(mode==='2p' ? true : p1won);
   }, 900);
 }
 
@@ -13079,6 +13648,7 @@ function finishClassic(won){
       announce('CHAMPION!');
     }
     sub.style.color='#fdbb2d';
+    playVictoryFlair(true);
     grantAndToast();                         // check STORYTELLER / HALL OF FAME / etc.
   } else {
     title.textContent='RUN OVER';
