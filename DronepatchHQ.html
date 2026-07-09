@@ -1,0 +1,1929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Josh &amp; Renas: Dronepatch HQ</title>
+<style>
+  :root{
+    --bg:#f4ede1;
+    --paper:#fffdf7;
+    --ink:#1c1a17;
+    --accent:#ff5b34;
+    --accent2:#0a8f6f;
+    --accent3:#ffc043;
+    --grid:#e6dccb;
+    --danger:#e5342a;
+    --shadow:rgba(28,26,23,.18);
+    --mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg);
+    background-image:radial-gradient(var(--grid) 1.4px,transparent 1.4px);
+    background-size:22px 22px;
+    color:var(--ink);
+    font-family:"Trebuchet MS","Gill Sans",Avenir,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overflow:hidden;
+  }
+  .wrap{
+    max-width:1180px;
+    height:100vh;
+    margin:0 auto;
+    padding:14px 18px 64px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+
+  /* HEADER */
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{
+    width:46px;height:46px;border-radius:12px;
+    background:var(--ink);color:var(--accent3);
+    display:grid;place-items:center;font-size:26px;
+    transform:rotate(-4deg);
+    box-shadow:4px 4px 0 var(--accent);
+  }
+  .title h1{
+    font-size:clamp(20px,3.4vw,30px);
+    letter-spacing:-.5px;line-height:1;
+  }
+  .title h1 span{color:var(--accent)}
+  .title p{font-size:12px;opacity:.65;margin-top:3px;font-family:var(--mono)}
+
+  .stats{display:flex;gap:10px;flex-wrap:wrap}
+  .stat{
+    background:var(--paper);
+    border:2px solid var(--ink);
+    border-radius:12px;
+    padding:6px 12px;
+    box-shadow:3px 3px 0 var(--shadow);
+    min-width:78px;
+  }
+  .stat b{display:block;font-size:19px;line-height:1}
+  .stat small{font-size:9.5px;text-transform:uppercase;letter-spacing:.8px;opacity:.6;font-weight:bold}
+  .stat.cash b{color:var(--accent2)}
+  .stat.time b{color:var(--accent)}
+
+  /* BROTHERS BAR */
+  .bros{display:flex;gap:10px}
+  .bro{
+    flex:1;
+    background:var(--paper);
+    border:2px solid var(--ink);
+    border-radius:14px;
+    padding:8px 12px;
+    display:flex;align-items:center;gap:10px;
+    box-shadow:3px 3px 0 var(--shadow);
+    position:relative;overflow:hidden;
+  }
+  .bro .face{font-size:30px}
+  .bro .info{flex:1}
+  .bro .info h3{font-size:14px;display:flex;align-items:center;gap:6px}
+  .bro .role{font-size:10px;opacity:.6;font-family:var(--mono)}
+  .energy{height:9px;border-radius:6px;background:var(--grid);margin-top:5px;overflow:hidden;border:1px solid var(--ink)}
+  .energy i{display:block;height:100%;background:var(--accent3);transition:width .3s,background .3s}
+  .bro.busy{opacity:.55}
+  .bro .cd{
+    position:absolute;top:0;right:0;bottom:0;
+    background:rgba(255,91,52,.16);
+    width:0%;transition:width .1s linear;pointer-events:none;
+  }
+
+  /* MAIN LAYOUT */
+  .board{
+    flex:1;
+    display:grid;
+    grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);
+    gap:12px;
+    min-height:0;
+  }
+  .panel{
+    background:var(--paper);
+    border:2px solid var(--ink);
+    border-radius:16px;
+    box-shadow:5px 5px 0 var(--shadow);
+    display:flex;flex-direction:column;
+    min-height:0;overflow:hidden;
+  }
+  .panel h2{
+    font-size:12px;text-transform:uppercase;letter-spacing:1.2px;
+    padding:9px 14px;border-bottom:2px dashed var(--grid);
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .panel h2 .pill{
+    background:var(--ink);color:var(--paper);
+    font-size:10px;border-radius:20px;padding:2px 9px;letter-spacing:.5px;
+  }
+
+  /* DRONE FLEET */
+  .fleet{padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+  .drone{
+    border:2px solid var(--ink);
+    border-radius:13px;
+    padding:9px 11px;
+    background:#fff;
+    position:relative;
+    transition:transform .12s;
+  }
+  .drone:hover{transform:translateY(-1px)}
+  .drone .top{display:flex;align-items:center;gap:9px}
+  .drone .icon{font-size:22px;transition:transform .4s}
+  .drone.flying .icon{animation:hover 1.1s ease-in-out infinite}
+  @keyframes hover{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-4px) rotate(3deg)}}
+  .drone .name{font-weight:bold;font-size:14px}
+  .drone .tag{font-family:var(--mono);font-size:9.5px;opacity:.55}
+  .drone .state{
+    margin-left:auto;font-size:10px;font-weight:bold;
+    text-transform:uppercase;letter-spacing:.6px;padding:3px 8px;border-radius:20px;
+    background:var(--grid);
+  }
+  .drone.flying .state{background:var(--accent2);color:#fff}
+  .drone.lowbatt .state{background:var(--accent3)}
+  .drone.broken .state{background:var(--danger);color:#fff}
+  .drone.charging .state{background:#3d7de0;color:#fff}
+
+  .bars{display:flex;gap:8px;margin-top:8px}
+  .barwrap{flex:1}
+  .barwrap label{font-size:8.5px;text-transform:uppercase;letter-spacing:.5px;opacity:.6;font-weight:bold;display:flex;justify-content:space-between}
+  .bar{height:8px;border-radius:5px;background:var(--grid);overflow:hidden;border:1px solid var(--ink);margin-top:2px}
+  .bar i{display:block;height:100%;transition:width .25s}
+  .bar.batt i{background:var(--accent2)}
+  .bar.batt.low i{background:var(--danger)}
+  .bar.prog i{background:var(--accent)}
+
+  .drone .actions{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+  .abtn{
+    flex:1;min-width:64px;
+    border:2px solid var(--ink);border-radius:9px;
+    background:var(--paper);cursor:pointer;
+    font-family:inherit;font-weight:bold;font-size:11px;
+    padding:6px 4px;transition:all .1s;
+    box-shadow:2px 2px 0 var(--shadow);
+  }
+  .abtn:hover:not(:disabled){transform:translate(-1px,-1px);box-shadow:3px 3px 0 var(--shadow)}
+  .abtn:active:not(:disabled){transform:translate(1px,1px);box-shadow:1px 1px 0 var(--shadow)}
+  .abtn:disabled{opacity:.35;cursor:not-allowed;box-shadow:none}
+  .abtn.go{background:var(--accent2);color:#fff}
+  .abtn.fix{background:var(--danger);color:#fff}
+  .abtn.chg{background:#3d7de0;color:#fff}
+
+  .assigned{font-size:9.5px;font-family:var(--mono);margin-top:6px;opacity:.7;min-height:12px}
+
+  /* RIGHT COLUMN */
+  .rightcol{display:flex;flex-direction:column;gap:12px;min-height:0}
+  .jobs{flex:1;display:flex;flex-direction:column;min-height:0}
+  .joblist{padding:10px 12px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+  .job{
+    border:2px dashed var(--ink);
+    border-radius:11px;padding:8px 10px;background:#fff;
+    display:flex;flex-direction:column;gap:5px;
+    position:relative;overflow:hidden;
+  }
+  .job .jtop{display:flex;align-items:center;gap:7px}
+  .job .jicon{font-size:19px}
+  .job .jname{font-weight:bold;font-size:13px}
+  .job .pay{margin-left:auto;font-weight:bold;color:var(--accent2);font-size:14px}
+  .job .meta{font-size:10px;font-family:var(--mono);opacity:.7;display:flex;gap:10px;flex-wrap:wrap}
+  .job .expire{height:5px;border-radius:4px;background:var(--grid);overflow:hidden}
+  .job .expire i{display:block;height:100%;background:var(--accent);transition:width .1s linear}
+  .job.hot{border-color:var(--danger)}
+  .job.hot .jname::after{content:" 🔥"}
+
+  .log{height:120px;flex-shrink:0}
+  .logbox{
+    padding:8px 12px;overflow-y:auto;font-family:var(--mono);
+    font-size:11px;line-height:1.55;display:flex;flex-direction:column;
+  }
+  .logbox p{margin-bottom:2px;opacity:.85}
+  .logbox p .who{color:var(--accent);font-weight:bold}
+  .logbox p .who.r{color:var(--accent2)}
+
+  /* MODALS / OVERLAYS */
+  .overlay{
+    position:fixed;inset:0;background:rgba(28,26,23,.72);
+    display:flex;align-items:center;justify-content:center;z-index:50;
+    padding:24px 20px;overflow-y:auto;
+  }
+  .card{
+    background:var(--paper);border:3px solid var(--ink);
+    border-radius:20px;box-shadow:8px 8px 0 var(--accent);
+    max-width:560px;width:100%;padding:26px 28px;text-align:center;
+    margin:auto;
+  }
+  .card h2{font-size:26px;margin-bottom:8px;border:none;padding:0;justify-content:center}
+  .card p{font-size:14px;line-height:1.6;margin-bottom:8px;opacity:.85}
+  .card .big{font-size:15px;margin:14px 0}
+  .card ul{text-align:left;font-size:13px;line-height:1.7;margin:12px auto;max-width:400px}
+  .card button{
+    margin-top:14px;border:2px solid var(--ink);border-radius:12px;
+    background:var(--accent);color:#fff;font-family:inherit;font-weight:bold;
+    font-size:16px;padding:11px 26px;cursor:pointer;box-shadow:4px 4px 0 var(--shadow);
+  }
+  .card button:hover{transform:translate(-1px,-1px)}
+
+  /* MAIN MENU */
+  .menu-card{position:relative;overflow:hidden}
+  .menu-drones{display:flex;justify-content:center;gap:22px;font-size:40px;margin-bottom:6px}
+  .menu-drones .md{display:inline-block;animation:menuhover 2.2s ease-in-out infinite;animation-delay:var(--d)}
+  @keyframes menuhover{0%,100%{transform:translateY(0) rotate(-5deg)}50%{transform:translateY(-10px) rotate(5deg)}}
+  .menu-logo{
+    font-size:clamp(30px,6vw,44px);line-height:1;letter-spacing:-1px;
+    border:none;padding:0;justify-content:center;margin-bottom:4px;
+  }
+  .menu-logo span{color:var(--accent)}
+  .menu-btns{display:flex;flex-direction:column;gap:10px;max-width:280px;margin:18px auto 0}
+  .mbtn{
+    margin:0;border:2px solid var(--ink);border-radius:12px;
+    background:var(--paper);color:var(--ink);font-family:inherit;font-weight:bold;
+    font-size:15px;padding:12px 20px;cursor:pointer;box-shadow:3px 3px 0 var(--shadow);
+    transition:transform .1s,box-shadow .1s;
+  }
+  .mbtn:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--shadow)}
+  .mbtn:active{transform:translate(1px,1px);box-shadow:1px 1px 0 var(--shadow)}
+  .mbtn.primary{background:var(--accent);color:#fff;font-size:17px}
+  .menu-panel{
+    margin-top:16px;text-align:left;border:2px dashed var(--ink);border-radius:14px;
+    padding:14px 16px;background:#fff;font-size:13px;line-height:1.6;
+  }
+  .menu-panel h5{font-size:13px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+  .menu-panel ul{margin:0 0 0 4px;list-style:none}
+  .menu-panel li{margin-bottom:6px}
+  .menu-panel .castrow{display:flex;gap:12px;align-items:flex-start;margin-bottom:10px}
+  .menu-panel .castrow .ce{font-size:26px;flex-shrink:0}
+  .menu-panel .castrow b{display:block}
+  .menu-panel .castrow small{opacity:.7;font-size:11px}
+
+  .run-list{display:flex;flex-direction:column;gap:6px;max-height:38vh;overflow-y:auto}
+  .run-row{
+    display:flex;align-items:center;gap:10px;
+    border:2px solid var(--ink);border-radius:10px;padding:7px 10px;background:var(--paper);
+  }
+  .run-row.best{border-color:var(--accent2);box-shadow:2px 2px 0 rgba(10,143,111,.3)}
+  .run-row .rgrade{font-size:22px;flex-shrink:0}
+  .run-row .rmid{flex:1;min-width:0;line-height:1.2}
+  .run-row .rmid b{font-size:15px;color:var(--accent2)}
+  .run-row .rmid small{display:block;font-size:9.5px;font-family:var(--mono);opacity:.6}
+  .run-row .rstats{font-size:10px;font-family:var(--mono);opacity:.75;text-align:right;flex-shrink:0}
+
+  /* SHOP */
+  .shop-card{max-width:620px}
+  .shop-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .shop-head h2{border:none;padding:0;margin:0}
+  .shop-cash{font-size:16px;background:var(--accent2);color:#fff;border:2px solid var(--ink);border-radius:12px;padding:5px 12px;box-shadow:2px 2px 0 var(--shadow)}
+  .shop-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0;text-align:left}
+  .shop-item{
+    border:2px solid var(--ink);border-radius:14px;padding:12px;background:#fff;
+    display:flex;flex-direction:column;gap:6px;box-shadow:3px 3px 0 var(--shadow);
+  }
+  .shop-item .si-ic{font-size:30px}
+  .shop-item h4{font-size:14px;line-height:1.15}
+  .shop-item p{font-size:11px;opacity:.75;line-height:1.4;flex:1;margin:0}
+  .shop-item .si-lvl{font-size:9px;font-family:var(--mono);opacity:.6;text-transform:uppercase;letter-spacing:.5px}
+  .shop-item .si-buy{
+    margin-top:2px;border:2px solid var(--ink);border-radius:10px;background:var(--accent3);
+    color:var(--ink);font-family:inherit;font-weight:bold;font-size:13px;padding:8px;cursor:pointer;
+    box-shadow:2px 2px 0 var(--shadow);transition:transform .1s;
+  }
+  .shop-item .si-buy:hover:not(:disabled){transform:translate(-1px,-1px)}
+  .shop-item .si-buy:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
+  .shop-item.bought{border-color:var(--accent2);background:#f0faf6}
+  .shop-item.maxed .si-buy{background:var(--grid)}
+  .shop-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .shop-actions .mbtn{margin:0}
+  @media (max-width:560px){ .shop-grid{grid-template-columns:1fr} }
+  .assignPick{display:flex;gap:12px;margin:16px 0}
+  .assignPick .pick{
+    flex:1;border:2px solid var(--ink);border-radius:14px;padding:14px;cursor:pointer;
+    background:#fff;transition:all .12s;
+  }
+  .assignPick .pick:hover:not(.dis){background:var(--accent3);transform:translateY(-2px)}
+  .assignPick .pick.dis{opacity:.4;cursor:not-allowed}
+  .assignPick .pick .f{font-size:34px}
+  .assignPick .pick h4{font-size:15px;margin:5px 0 2px}
+  .assignPick .pick small{font-size:10px;font-family:var(--mono);opacity:.7}
+
+  .job-select{display:flex;flex-direction:column;gap:8px;margin:14px 0;max-height:44vh;overflow-y:auto;text-align:left}
+  .job-opt{
+    display:flex;align-items:center;gap:10px;
+    border:2px solid var(--ink);border-radius:12px;padding:9px 12px;
+    background:#fff;cursor:pointer;transition:all .1s;box-shadow:2px 2px 0 var(--shadow);
+  }
+  .job-opt:hover{background:var(--accent3);transform:translate(-1px,-1px);box-shadow:3px 3px 0 var(--shadow)}
+  .job-opt .joi{font-size:24px;flex-shrink:0}
+  .job-opt .jomid{flex:1;min-width:0}
+  .job-opt .jomid b{font-size:14px;display:block}
+  .job-opt .jomid small{font-size:10px;font-family:var(--mono);opacity:.7}
+  .job-opt .jopay{font-weight:bold;color:var(--accent2);font-size:16px;flex-shrink:0}
+  .job-opt.urgent{border-color:var(--danger)}
+  .job-select .empty{font-size:13px;opacity:.6;padding:10px;text-align:center;font-family:var(--mono)}
+  .step-label{font-size:11px;text-transform:uppercase;letter-spacing:1px;font-weight:bold;opacity:.6;margin-top:4px}
+
+  .toast{
+    position:fixed;bottom:64px;left:50%;transform:translateX(-50%);
+    background:var(--ink);color:var(--paper);padding:9px 18px;border-radius:30px;
+    font-weight:bold;font-size:13px;z-index:40;box-shadow:0 6px 20px rgba(0,0,0,.3);
+    opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px)}
+
+  /* CHARACTER PORTRAITS */
+  .cast{display:flex;gap:16px;justify-content:center;margin:14px 0 6px;flex-wrap:wrap}
+  .charcard{
+    border:2px solid var(--ink);border-radius:16px;padding:10px 12px 12px;
+    background:#fff;width:150px;box-shadow:4px 4px 0 var(--shadow);
+  }
+  .charcard svg{width:100%;height:150px;display:block}
+  .charcard h4{font-size:14px;margin-top:6px;text-align:center}
+  .charcard small{font-size:10px;font-family:var(--mono);opacity:.7;display:block;text-align:center;line-height:1.4;margin-top:2px}
+  .charcard.ati{border-color:var(--danger);box-shadow:4px 4px 0 rgba(229,52,42,.4)}
+  .charcard.ati h4{color:var(--danger)}
+
+  /* ATI ALERT */
+  .ati-alert{
+    position:fixed;top:0;left:0;right:0;
+    background:var(--danger);color:#fff;
+    padding:10px 16px;z-index:45;
+    display:flex;align-items:center;gap:12px;
+    box-shadow:0 4px 16px rgba(0,0,0,.3);
+    transform:translateY(-120%);transition:transform .35s cubic-bezier(.2,1.2,.4,1);
+    font-weight:bold;
+  }
+  .ati-alert.show{transform:translateY(0)}
+  .ati-alert .aface{font-size:30px;animation:shake .5s ease-in-out infinite}
+  @keyframes shake{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+  .ati-alert .amsg{flex:1;font-size:13px;line-height:1.35}
+  .ati-alert .amsg b{text-decoration:underline}
+  .ati-alert .acount{
+    flex-shrink:0;font-size:20px;font-weight:bold;min-width:34px;text-align:center;
+    background:rgba(255,255,255,.2);border-radius:10px;padding:4px 8px;font-variant-numeric:tabular-nums;
+  }
+  .ati-alert .acount.low{background:#fff;color:var(--ink);animation:countpulse .5s ease-in-out infinite}
+  @keyframes countpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
+  .ati-alert .abtns{display:flex;gap:8px}
+  .ati-alert .aopt{
+    border:2px solid #fff;border-radius:10px;background:rgba(255,255,255,.15);
+    color:#fff;font-family:inherit;font-weight:bold;font-size:12px;
+    padding:7px 12px;cursor:pointer;white-space:nowrap;position:relative;
+  }
+  .ati-alert .aopt:hover{background:#fff;color:#1c1a17}
+  .ati-alert .aopt.default{border-style:dashed}
+  .ati-alert .aopt.default::after{
+    content:"auto";position:absolute;top:-8px;left:50%;transform:translateX(-50%);
+    font-size:8px;background:#fff;color:#1c1a17;padding:1px 5px;border-radius:8px;letter-spacing:.5px;
+  }
+  .ati-alert .ameter{position:absolute;left:0;bottom:0;height:4px;background:rgba(255,255,255,.85);width:100%;transition:width .1s linear}
+
+  .bro.grounded{filter:grayscale(.7)}
+  .bro .ground-badge{
+    position:absolute;top:4px;right:6px;font-size:9px;font-weight:bold;
+    background:var(--danger);color:#fff;padding:2px 6px;border-radius:10px;
+    letter-spacing:.4px;
+  }
+
+  /* ATI meter in header */
+  .stat.ati b{color:var(--danger)}
+
+  /* TUTORIAL */
+  .tut-spot{
+    position:fixed;z-index:60;border:3px solid var(--accent3);border-radius:14px;
+    box-shadow:0 0 0 4000px rgba(28,26,23,.72);
+    pointer-events:none;transition:all .35s ease;
+  }
+  .tut-box{
+    position:fixed;z-index:61;background:var(--paper);border:3px solid var(--ink);
+    border-radius:16px;box-shadow:6px 6px 0 var(--accent);
+    max-width:320px;padding:16px 18px;transition:all .35s ease;
+  }
+  .tut-box h4{font-size:15px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+  .tut-box p{font-size:12.5px;line-height:1.55;opacity:.9;margin-bottom:4px}
+  .tut-box .tnav{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
+  .tut-box .tcount{font-size:10px;font-family:var(--mono);opacity:.6}
+  .tut-box .tbtn{
+    border:2px solid var(--ink);border-radius:10px;background:var(--accent);color:#fff;
+    font-family:inherit;font-weight:bold;font-size:12px;padding:6px 14px;cursor:pointer;
+    box-shadow:2px 2px 0 var(--shadow);
+  }
+  .tut-box .tskip{background:none;border:none;color:var(--ink);opacity:.5;font-size:11px;cursor:pointer;text-decoration:underline;font-family:inherit}
+
+  @media (max-width:860px){
+    body{overflow:auto}
+    .wrap{height:auto;min-height:100vh}
+    .board{grid-template-columns:1fr}
+    .log{height:100px}
+    .ati-alert{flex-wrap:wrap}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo">🚁</div>
+      <div class="title">
+        <h1>Dronepatch <span>HQ</span></h1>
+        <p>josh_&amp;_renas // garage_ops_v1.7</p>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat cash"><b id="s-cash">$0</b><small>Cash</small></div>
+      <div class="stat time"><b id="s-day">Day 1</b><small id="s-clock">08:00</small></div>
+      <div class="stat"><b id="s-done">0</b><small>Delivered</small></div>
+      <div class="stat"><b id="s-fail">0</b><small id="s-fail-label">Failed</small></div>
+      <div class="stat ati"><b id="s-suspicion">0%</b><small>Heat 🔥</small></div>
+    </div>
+  </header>
+
+  <div class="bros">
+    <div class="bro" id="bro-josh">
+      <div class="face">🤓</div>
+      <div class="info">
+        <h3>Josh <small style="font-weight:normal;opacity:.6;font-size:10px">(you, the nerd)</small></h3>
+        <div class="role">specialty: fast flights, tricky routes</div>
+        <div class="energy"><i style="width:100%"></i></div>
+      </div>
+      <div class="cd"></div>
+    </div>
+    <div class="bro" id="bro-renas">
+      <div class="face">🧒</div>
+      <div class="info">
+        <h3>Renas <small style="font-weight:normal;opacity:.6;font-size:10px">(lil bro)</small></h3>
+        <div class="role">specialty: repairs &amp; charging, slower flights</div>
+        <div class="energy"><i style="width:100%"></i></div>
+      </div>
+      <div class="cd"></div>
+    </div>
+  </div>
+
+  <div class="board">
+    <div class="panel">
+      <h2>The Fleet <span class="pill" id="fleet-count">0 drones</span></h2>
+      <div class="fleet" id="fleet"></div>
+    </div>
+
+    <div class="rightcol">
+      <div class="panel jobs">
+        <h2>Delivery Requests <span class="pill" id="job-count">0 open</span></h2>
+        <div class="joblist" id="joblist"></div>
+      </div>
+      <div class="panel log">
+        <h2>Garage Radio 📻</h2>
+        <div class="logbox" id="logbox"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="ati-alert" id="atiAlert">
+  <div class="aface">👩</div>
+  <div class="amsg" id="atiMsg"></div>
+  <div class="acount" id="atiCount"></div>
+  <div class="abtns" id="atiBtns"></div>
+  <div class="ameter" id="atiMeter"></div>
+</div>
+
+<div class="tut-spot" id="tutSpot" style="display:none"></div>
+<div class="tut-box" id="tutBox" style="display:none">
+  <h4 id="tutTitle"></h4>
+  <p id="tutBody"></p>
+  <div class="tnav">
+    <button class="tskip" id="tutSkip">skip tutorial</button>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="tcount" id="tutCount"></span>
+      <button class="tbtn" id="tutNext">Next ▸</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="menuOverlay">
+  <div class="card menu-card">
+    <div class="menu-drones" aria-hidden="true">
+      <span class="md" style="--d:0s">🚁</span>
+      <span class="md" style="--d:.6s">🛸</span>
+      <span class="md" style="--d:1.1s">🚁</span>
+    </div>
+    <h2 class="menu-logo">Dronepatch <span>HQ</span></h2>
+    <p style="font-family:var(--mono);font-size:12px;opacity:.7;margin-bottom:2px">josh_&amp;_renas // garage_ops_v1.7</p>
+    <p style="max-width:400px;margin:10px auto 4px">Two brothers. One garage. A whole neighborhood of drone deliveries — and a mom who <b style="color:var(--danger)">really</b> hates the noise.</p>
+    <div class="menu-btns">
+      <button id="menuPlay" class="mbtn primary">▶ Story Mode (3 days)</button>
+      <button id="menuEndless" class="mbtn">♾️ Endless Mode</button>
+      <button id="menuContinueStory" class="mbtn" style="display:none">▶ Continue Story</button>
+      <button id="menuContinueEndless" class="mbtn" style="display:none">▶ Continue Endless</button>
+      <button id="menuHow" class="mbtn">📖 How to Play</button>
+      <button id="menuCast" class="mbtn">👥 Meet the Cast</button>
+      <button id="menuRuns" class="mbtn">📊 Run Tracker</button>
+    </div>
+    <div id="menuPanel" class="menu-panel" style="display:none"></div>
+    <p style="font-size:11px;opacity:.55;margin-top:16px">bank the most cash · shop between days · don't get caught</p>
+  </div>
+</div>
+
+<div class="overlay" id="startOverlay" style="display:none">
+  <div class="card">
+    <h2>🚁 Dronepatch HQ</h2>
+    <p>Josh (the tech nerd) and his little brother <b>Renas</b> turned the garage into a drone delivery empire. Problem: the whole neighborhood wants stuff flown to them at once.</p>
+
+    <div class="cast">
+      <div class="charcard">
+        <svg viewBox="0 0 100 130" xmlns="http://www.w3.org/2000/svg">
+          <!-- Josh: dark turquoise jacket, one robotic eye -->
+          <ellipse cx="50" cy="126" rx="30" ry="5" fill="rgba(28,26,23,.12)"/>
+          <!-- neck -->
+          <rect x="44" y="60" width="12" height="12" fill="#e8b48c"/>
+          <!-- jacket body -->
+          <path d="M26 72 Q50 64 74 72 L80 122 Q50 128 20 122 Z" fill="#0d5c52"/>
+          <path d="M50 66 L50 122" stroke="#0a463e" stroke-width="2"/>
+          <!-- collar -->
+          <path d="M40 68 L50 78 L60 68 L58 62 L42 62 Z" fill="#0a463e"/>
+          <!-- zipper pull -->
+          <circle cx="50" cy="88" r="2" fill="#ffc043"/>
+          <!-- arms -->
+          <path d="M26 72 L18 108 L26 110 L32 78 Z" fill="#0d5c52"/>
+          <path d="M74 72 L82 108 L74 110 L68 78 Z" fill="#0d5c52"/>
+          <!-- head -->
+          <circle cx="50" cy="42" r="20" fill="#f0c199"/>
+          <!-- hair (nerdy side part) -->
+          <path d="M30 40 Q30 20 50 20 Q70 20 70 40 Q64 30 50 30 Q40 30 34 42 Z" fill="#5a3a22"/>
+          <!-- normal eye (left) -->
+          <circle cx="42" cy="42" r="3" fill="#2a2a2a"/>
+          <!-- glasses frame around normal eye -->
+          <circle cx="42" cy="42" r="6" fill="none" stroke="#2a2a2a" stroke-width="1.5"/>
+          <!-- robotic eye (right) -->
+          <circle cx="58" cy="42" r="7" fill="#111"/>
+          <circle cx="58" cy="42" r="5" fill="#00e0c6"/>
+          <circle cx="58" cy="42" r="2" fill="#fff"/>
+          <path d="M50 42 L52 42 M64 42 L66 42" stroke="#00e0c6" stroke-width="1.5"/>
+          <!-- glasses bridge -->
+          <path d="M48 42 L51 42" stroke="#2a2a2a" stroke-width="1.5"/>
+          <!-- smile -->
+          <path d="M44 52 Q50 57 56 52" fill="none" stroke="#b06a3a" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+        <h4>🤓 Josh</h4>
+        <small>dark turquoise jacket · one robotic eye · flies fast</small>
+      </div>
+
+      <div class="charcard">
+        <svg viewBox="0 0 100 130" xmlns="http://www.w3.org/2000/svg">
+          <!-- Renas: light blue outfit + beanie -->
+          <ellipse cx="50" cy="126" rx="28" ry="5" fill="rgba(28,26,23,.12)"/>
+          <rect x="45" y="62" width="10" height="10" fill="#eab488"/>
+          <!-- hoodie body -->
+          <path d="M28 74 Q50 66 72 74 L77 122 Q50 128 23 122 Z" fill="#7ec8f0"/>
+          <!-- hoodie pocket -->
+          <path d="M38 98 Q50 104 62 98 L60 112 L40 112 Z" fill="#63b4e0"/>
+          <!-- drawstrings -->
+          <path d="M46 76 L45 90 M54 76 L55 90" stroke="#fff" stroke-width="1.5"/>
+          <!-- arms -->
+          <path d="M28 74 L20 106 L28 108 L34 80 Z" fill="#7ec8f0"/>
+          <path d="M72 74 L80 106 L72 108 L66 80 Z" fill="#7ec8f0"/>
+          <!-- head -->
+          <circle cx="50" cy="44" r="18" fill="#f4c9a0"/>
+          <!-- beanie -->
+          <path d="M31 40 Q31 20 50 20 Q69 20 69 40 Z" fill="#4a9fd6"/>
+          <rect x="30" y="38" width="40" height="7" rx="3" fill="#3a8bc4"/>
+          <!-- beanie pom -->
+          <circle cx="50" cy="18" r="4" fill="#d6ecfa"/>
+          <!-- eyes -->
+          <circle cx="43" cy="45" r="2.6" fill="#2a2a2a"/>
+          <circle cx="57" cy="45" r="2.6" fill="#2a2a2a"/>
+          <!-- cheeky grin -->
+          <path d="M43 53 Q50 60 57 53" fill="none" stroke="#b06a3a" stroke-width="1.8" stroke-linecap="round"/>
+          <!-- little tooth -->
+          <rect x="48" y="55" width="4" height="3" fill="#fff"/>
+        </svg>
+        <h4>🧒 Renas</h4>
+        <small>light blue outfit · beanie · repair &amp; charge pro</small>
+      </div>
+
+      <div class="charcard ati">
+        <svg viewBox="0 0 100 130" xmlns="http://www.w3.org/2000/svg">
+          <!-- ATI / Mom: the antagonist -->
+          <ellipse cx="50" cy="126" rx="30" ry="5" fill="rgba(28,26,23,.12)"/>
+          <rect x="45" y="60" width="10" height="12" fill="#e8b48c"/>
+          <!-- blouse (purple) -->
+          <path d="M25 74 Q50 64 75 74 L82 122 Q50 128 18 122 Z" fill="#7b3fa0"/>
+          <!-- apron -->
+          <path d="M40 78 L60 78 L62 122 L38 122 Z" fill="#e0d4c0"/>
+          <path d="M44 78 L44 72 L56 72 L56 78" fill="none" stroke="#e0d4c0" stroke-width="3"/>
+          <!-- arms crossed vibe -->
+          <path d="M25 74 L34 96 L44 92 L34 78 Z" fill="#7b3fa0"/>
+          <path d="M75 74 L66 96 L56 92 L66 78 Z" fill="#7b3fa0"/>
+          <!-- head -->
+          <circle cx="50" cy="42" r="19" fill="#f0c199"/>
+          <!-- hair bun -->
+          <path d="M31 42 Q31 20 50 20 Q69 20 69 42 Q62 32 50 32 Q38 32 31 42 Z" fill="#3a2a1a"/>
+          <circle cx="50" cy="18" r="6" fill="#3a2a1a"/>
+          <!-- glasses -->
+          <circle cx="43" cy="43" r="6.5" fill="rgba(255,255,255,.35)" stroke="#2a2a2a" stroke-width="1.8"/>
+          <circle cx="57" cy="43" r="6.5" fill="rgba(255,255,255,.35)" stroke="#2a2a2a" stroke-width="1.8"/>
+          <path d="M49.5 43 L50.5 43" stroke="#2a2a2a" stroke-width="1.8"/>
+          <path d="M36.5 43 L34 41" stroke="#2a2a2a" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M63.5 43 L66 41" stroke="#2a2a2a" stroke-width="1.8" stroke-linecap="round"/>
+          <!-- stern eyes behind glasses -->
+          <circle cx="43" cy="43" r="2" fill="#2a2a2a"/>
+          <circle cx="57" cy="43" r="2" fill="#2a2a2a"/>
+          <!-- frown -->
+          <path d="M44 55 Q50 51 56 55" fill="none" stroke="#8a3a2a" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <h4>👩 ATI (Mom)</h4>
+        <small>the antagonist · hates drone noise · issues chores &amp; curfews</small>
+      </div>
+
+      <div class="charcard" style="border-color:#2f9e44;box-shadow:4px 4px 0 rgba(47,158,68,.4)">
+        <svg viewBox="0 0 100 130" xmlns="http://www.w3.org/2000/svg">
+          <!-- Robin: big goofy kid in green with a juice box -->
+          <ellipse cx="50" cy="126" rx="30" ry="5" fill="rgba(28,26,23,.12)"/>
+          <rect x="44" y="62" width="12" height="10" fill="#e8b48c"/>
+          <!-- green shirt (big kid) -->
+          <path d="M22 74 Q50 62 78 74 L84 122 Q50 130 16 122 Z" fill="#2f9e44"/>
+          <path d="M40 74 Q50 82 60 74 L58 70 L42 70 Z" fill="#268a3a"/>
+          <!-- left arm down -->
+          <path d="M22 74 L14 108 L23 110 L30 80 Z" fill="#2f9e44"/>
+          <!-- right arm holding juice box up -->
+          <path d="M78 74 L70 92 L62 88 L68 78 Z" fill="#2f9e44"/>
+          <!-- juice box -->
+          <rect x="58" y="76" width="13" height="16" rx="2" fill="#ffd43b" stroke="#c9a400" stroke-width="1.5"/>
+          <rect x="61" y="70" width="3" height="7" fill="#8ac6ff"/>
+          <path d="M62 70 L59 64" stroke="#8ac6ff" stroke-width="2" stroke-linecap="round"/>
+          <!-- head (big round goofy) -->
+          <circle cx="50" cy="42" r="21" fill="#f4c9a0"/>
+          <!-- messy hair -->
+          <path d="M29 38 Q30 18 50 18 Q70 18 71 38 Q64 28 57 32 Q52 26 45 32 Q38 28 29 38 Z" fill="#8a5a2a"/>
+          <!-- big goofy eyes -->
+          <circle cx="42" cy="42" r="4" fill="#fff" stroke="#2a2a2a" stroke-width="1"/>
+          <circle cx="43" cy="43" r="2" fill="#2a2a2a"/>
+          <circle cx="58" cy="42" r="4" fill="#fff" stroke="#2a2a2a" stroke-width="1"/>
+          <circle cx="59" cy="43" r="2" fill="#2a2a2a"/>
+          <!-- big grin -->
+          <path d="M40 52 Q50 62 60 52" fill="none" stroke="#b06a3a" stroke-width="2" stroke-linecap="round"/>
+          <rect x="46" y="55" width="8" height="4" rx="1" fill="#fff"/>
+        </svg>
+        <h4>🧃 Robin</h4>
+        <small>goofy neighbor kid · begs to fly (and crashes) drones</small>
+      </div>
+
+      <div class="charcard" style="border-color:#1877f2;box-shadow:4px 4px 0 rgba(24,119,242,.4)">
+        <svg viewBox="0 0 100 130" xmlns="http://www.w3.org/2000/svg">
+          <!-- Meta AI: blue robot -->
+          <ellipse cx="50" cy="126" rx="28" ry="5" fill="rgba(28,26,23,.12)"/>
+          <!-- body -->
+          <rect x="30" y="66" width="40" height="46" rx="8" fill="#1877f2"/>
+          <rect x="38" y="74" width="24" height="18" rx="4" fill="#0d5bc0"/>
+          <!-- chest light -->
+          <circle cx="50" cy="83" r="4" fill="#8ac6ff"/>
+          <!-- arms -->
+          <rect x="18" y="70" width="10" height="30" rx="5" fill="#1877f2"/>
+          <rect x="72" y="70" width="10" height="30" rx="5" fill="#1877f2"/>
+          <circle cx="23" cy="102" r="5" fill="#0d5bc0"/>
+          <circle cx="77" cy="102" r="5" fill="#0d5bc0"/>
+          <!-- neck -->
+          <rect x="46" y="58" width="8" height="10" fill="#0d5bc0"/>
+          <!-- head -->
+          <rect x="30" y="26" width="40" height="34" rx="10" fill="#2b8cff"/>
+          <!-- antenna -->
+          <line x1="50" y1="26" x2="50" y2="16" stroke="#0d5bc0" stroke-width="2.5"/>
+          <circle cx="50" cy="14" r="3.5" fill="#ff5b34"/>
+          <!-- visor -->
+          <rect x="36" y="36" width="28" height="12" rx="6" fill="#0a2540"/>
+          <!-- glowing eyes -->
+          <circle cx="44" cy="42" r="3" fill="#8ac6ff"/>
+          <circle cx="56" cy="42" r="3" fill="#8ac6ff"/>
+          <!-- mouth grille -->
+          <line x1="42" y1="53" x2="58" y2="53" stroke="#0d5bc0" stroke-width="2"/>
+          <line x1="45" y1="50" x2="45" y2="56" stroke="#0d5bc0" stroke-width="1.5"/>
+          <line x1="50" y1="50" x2="50" y2="56" stroke="#0d5bc0" stroke-width="1.5"/>
+          <line x1="55" y1="50" x2="55" y2="56" stroke="#0d5bc0" stroke-width="1.5"/>
+        </svg>
+        <h4>🤖 Meta AI</h4>
+        <small>rogue robot · drains batteries &amp; jams pay (Day 2+)</small>
+      </div>
+    </div>
+
+    <p class="big"><b>Your job:</b> juggle the fleet. Assign a brother to each drone, launch deliveries, keep batteries alive… and don't let <b style="color:var(--danger)">Mom (ATI)</b> catch on.</p>
+    <ul>
+      <li>🎯 Accept jobs before their timer runs out.</li>
+      <li>🔋 Watch batteries — a dead drone mid-flight = a <b>crash</b> (repair needed).</li>
+      <li>🛠️ Only <b>one brother per drone</b> at a time. Both get tired — let them rest.</li>
+      <li>🔥 Flying raises <b>Heat</b>, and it climbs on its own as the days go on. Max it out and an enemy raids the garage.</li>
+    </ul>
+    <p style="font-size:12px;opacity:.7">You have <b>3 days</b>. Bank as much cash as you can.</p>
+    <button id="startBtn">Open the garage door ▸</button>
+  </div>
+</div>
+
+<div class="overlay" id="assignOverlay" style="display:none">
+  <div class="card">
+    <h2 id="assignTitle">Assign a brother</h2>
+    <p id="assignSub"></p>
+    <div id="jobSelect" class="job-select" style="display:none"></div>
+    <div id="broSelect">
+      <div class="assignPick">
+        <div class="pick" id="pickJosh" data-bro="josh">
+          <div class="f">🤓</div><h4>Josh</h4><small id="joshHint"></small>
+        </div>
+        <div class="pick" id="pickRenas" data-bro="renas">
+          <div class="f">🧒</div><h4>Renas</h4><small id="renasHint"></small>
+        </div>
+      </div>
+    </div>
+    <button id="assignCancel" style="background:var(--paper);color:var(--ink)">Cancel</button>
+  </div>
+</div>
+
+<div class="overlay" id="endOverlay" style="display:none">
+  <div class="card">
+    <h2 id="endTitle">Shift over!</h2>
+    <p id="endSummary"></p>
+    <p class="big" id="endGrade"></p>
+    <button id="restartBtn">Run it back 🔄</button>
+  </div>
+</div>
+
+<div class="overlay" id="shopOverlay" style="display:none">
+  <div class="card shop-card">
+    <div class="shop-head">
+      <h2>🛒 Overnight Shop</h2>
+      <div class="shop-cash">💵 <b id="shopCash">$0</b></div>
+    </div>
+    <p id="shopSub" style="opacity:.8">Day <b id="shopDayFrom">1</b> wrapped. Spend your cash before Day <b id="shopDayTo">2</b> — stock rotates every night.</p>
+    <div class="shop-grid" id="shopGrid"></div>
+    <div class="shop-actions">
+      <button id="shopSave" class="mbtn">💾 Save &amp; quit to menu</button>
+      <button id="shopNext" class="mbtn primary">Start next day ▸</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+  const rand = (a,b)=>a+Math.random()*(b-a);
+  const pick = arr => arr[Math.floor(Math.random()*arr.length)];
+
+  // ---- GAME STATE ----
+  const DAY_LEN = 75;      // seconds of real time per in-game day
+  const TOTAL_DAYS = 3;
+  const START_HOUR = 8, END_HOUR = 20;
+
+  const G = {
+    running:false,
+    mode:"story",       // "story" (3 days) or "endless" (until 100 missed)
+    cash:0, done:0, fail:0, missed:0,
+    day:1, dayT:0,
+    drones:[], jobs:[],
+    bros:{
+      josh:{name:"Josh",emoji:"🤓",energy:100,busy:false,cd:0,cdMax:0,flySpeed:1.35,repairSpeed:0.75,chargeSpeed:0.8,grounded:0},
+      renas:{name:"Renas",emoji:"🧒",energy:100,busy:false,cd:0,cdMax:0,flySpeed:0.85,repairSpeed:1.5,chargeSpeed:1.5,grounded:0}
+    },
+    jobTimer:0,
+    pending:null, // {type, droneId}
+    suspicion:0,       // Mom's Radar 0-100
+    atiActive:false,   // a raid is currently on screen
+    atiTimer:0,        // countdown while raid is live
+    atiCooldown:8,     // min time before another raid
+    curfew:0,          // seconds of reduced flight windows remaining
+    upg:{},            // purchased upgrade counts, keyed by upgrade id
+    fleetSize:4,       // grows via upgrade
+    tutorial:false,
+    tutStep:0,
+    last:0
+  };
+  const MISS_LIMIT=100; // endless mode ends after this many expired orders
+
+  const DRONE_NAMES=["Buzz","Pixel","Waffle","Tofu","Zippy","Comet","Noodle","Bolt"];
+  const DRONE_EMOJI=["🚁","🛸","🛩️","🚁"];
+  const PACKAGES=[
+    {n:"Pizza run",i:"🍕"},{n:"Tacos",i:"🌮"},{n:"Boba order",i:"🧋"},
+    {n:"Lego set",i:"🧱"},{n:"Graphics card",i:"🖥️"},{n:"Cat treats",i:"🐱"},
+    {n:"Textbook",i:"📚"},{n:"Sneakers",i:"👟"},{n:"Birthday cake",i:"🎂"},
+    {n:"Game cartridge",i:"🎮"},{n:"Medicine",i:"💊"},{n:"Coffee beans",i:"☕"}
+  ];
+
+  // ---- UPGRADES (roguelike shop) ----
+  // effect helpers read counts from G.upg[id]
+  const UPGRADES=[
+    {id:"battery", icon:"🔋", name:"Beefier Batteries", desc:"+20% battery drain resistance in flight.", cost:60, max:3},
+    {id:"rotor",   icon:"🌀", name:"Overclocked Rotors", desc:"All flights are 15% faster.", cost:70, max:3},
+    {id:"payout",  icon:"💵", name:"Loyalty Program", desc:"+15% cash on every delivery.", cost:80, max:3},
+    {id:"solar",   icon:"☀️", name:"Solar Trickle", desc:"Idle drones slowly recharge instead of draining.", cost:65, max:1},
+    {id:"dampen",  icon:"🔇", name:"Sound Dampener", desc:"Heat builds 30% slower per level.", cost:75, max:3},
+    {id:"drone",   icon:"🚁", name:"Extra Drone", desc:"Add a brand-new drone to the fleet.", cost:120, max:4},
+    {id:"coffee",  icon:"☕", name:"Energy Drinks", desc:"Brothers tire 25% slower per level.", cost:55, max:3},
+    {id:"toolkit", icon:"🧰", name:"Pro Toolkit", desc:"Repairs & charges finish 30% faster.", cost:60, max:3},
+    {id:"insure",  icon:"🛡️", name:"Crash Insurance", desc:"Earn $25 whenever a drone crashes.", cost:70, max:1},
+    {id:"antivirus",icon:"🦠",name:"Antivirus Suite", desc:"Meta AI attacks are 50% weaker.", cost:65, max:1},
+    {id:"snacks",  icon:"🍪", name:"Snack Stash", desc:"Robin leaves you alone more often.", cost:50, max:1},
+    {id:"radar",   icon:"📉", name:"Chill Pills for Mom", desc:"Heat also passively cools over time.", cost:70, max:2}
+  ];
+  const lvl = id => G.upg[id]||0;
+  const has = id => lvl(id)>0;
+
+  // ---- SETUP ----
+  function initFleet(){
+    G.drones=[];
+    const n = G.fleetSize||4;
+    for(let i=0;i<n;i++){
+      G.drones.push({
+        id:"d"+i,
+        name:DRONE_NAMES[i%DRONE_NAMES.length],
+        emoji:DRONE_EMOJI[i%DRONE_EMOJI.length],
+        batt:rand(70,100),
+        state:"idle",      // idle | flying | charging | repairing | broken
+        prog:0, progMax:0,
+        job:null,
+        pilot:null,        // 'josh' | 'renas'
+        crashChanceRoll:0
+      });
+    }
+  }
+
+  function newJob(){
+    const p=pick(PACKAGES);
+    const dist=Math.round(rand(3,10));       // distance factor
+    const pay=Math.round(dist*rand(6,11))+10;
+    const life=rand(16,30);                  // seconds before it expires
+    return {
+      id:"j"+Date.now()+Math.floor(Math.random()*999),
+      name:p.n, icon:p.i,
+      dist, pay,
+      life, lifeMax:life,
+      hot:life<20
+    };
+  }
+
+  // ---- LOG ----
+  function log(msg, who){
+    const box=$("logbox");
+    const p=document.createElement("p");
+    if(who){
+      const cls = who==="renas"?"who r":"who";
+      const label = who==="josh"?"Josh:":who==="renas"?"Renas:":who;
+      p.innerHTML=`<span class="${cls}">${label}</span> ${msg}`;
+    } else {
+      p.innerHTML=msg;
+    }
+    box.appendChild(p);
+    while(box.children.length>60) box.removeChild(box.firstChild);
+    box.scrollTop=box.scrollHeight; // auto-scroll to newest
+  }
+  let toastT;
+  function toast(msg){
+    const t=$("toast"); t.textContent=msg; t.classList.add("show");
+    clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),1600);
+  }
+
+  const JOSH_LINES=["Recalculating the optimal vector… done.","Overclocked the rotors, hold on.","This is basically a physics problem.","Trust the algorithm.","Ping is low, we're good."];
+  const RENAS_LINES=["I got it I got it!","Can I press the big button?","Fixed it with tape mostly.","Battery's charging, promise.","Josh look, no hands!"];
+
+  // ---- RENDER ----
+  function fmtClock(){
+    const left=Math.max(0, DAY_LEN-G.dayT);
+    const m=Math.floor(left/60), s=Math.floor(left%60);
+    return m+":"+String(s).padStart(2,"0")+" left";
+  }
+
+  function renderStats(){
+    $("s-cash").textContent="$"+G.cash;
+    $("s-day").textContent = G.mode==="endless" ? ("Day "+G.day) : ("Day "+G.day+"/"+TOTAL_DAYS);
+    const clockEl=$("s-clock");
+    clockEl.textContent=fmtClock();
+    clockEl.style.color = (DAY_LEN-G.dayT)<12 ? "var(--danger)" : "";
+    $("s-done").textContent=G.done;
+    if(G.mode==="endless"){
+      $("s-fail").textContent=G.missed+"/"+MISS_LIMIT;
+      $("s-fail-label").textContent="Missed";
+      $("s-fail").style.color = G.missed>=MISS_LIMIT*0.8 ? "var(--danger)" : "";
+    } else {
+      $("s-fail").textContent=G.fail;
+      $("s-fail-label").textContent="Failed";
+      $("s-fail").style.color="";
+    }
+    $("s-suspicion").textContent=Math.round(G.suspicion)+"%";
+    $("fleet-count").textContent=G.drones.length+" drones";
+    $("job-count").textContent=G.jobs.length+" open";
+  }
+
+  function renderBros(){
+    for(const key of ["josh","renas"]){
+      const b=G.bros[key];
+      const el=$("bro-"+key);
+      el.classList.toggle("busy", b.busy);
+      el.classList.toggle("grounded", b.grounded>0);
+      el.querySelector(".energy i").style.width=b.energy+"%";
+      el.querySelector(".energy i").style.background = b.energy<30 ? "var(--danger)" : "var(--accent3)";
+      const cd=el.querySelector(".cd");
+      cd.style.width = (b.busy && b.cdMax>0) ? (100-(b.cd/b.cdMax*100))+"%" : "0%";
+      // grounded badge
+      let badge=el.querySelector(".ground-badge");
+      if(b.grounded>0){
+        if(!badge){ badge=document.createElement("div"); badge.className="ground-badge"; el.appendChild(badge); }
+        badge.textContent="GROUNDED "+Math.ceil(b.grounded)+"s";
+      } else if(badge){ badge.remove(); }
+    }
+  }
+
+  function droneStateLabel(d){
+    if(d.state==="idle") return "Idle";
+    if(d.state==="flying") return "Flying";
+    if(d.state==="charging") return "Charging";
+    if(d.state==="repairing") return "Repairing";
+    if(d.state==="broken") return "Crashed";
+    return d.state;
+  }
+
+  function buildDroneEl(d){
+    const el=document.createElement("div");
+    el.id=d.id; el.className="drone";
+    el.innerHTML=`
+      <div class="top">
+        <div class="icon">${d.emoji}</div>
+        <div>
+          <div class="name">${d.name}</div>
+          <div class="tag">unit_${d.id}</div>
+        </div>
+        <div class="state js-state"></div>
+      </div>
+      <div class="bars">
+        <div class="barwrap">
+          <label><span>Battery</span><span class="js-battpct"></span></label>
+          <div class="bar batt js-battbar"><i></i></div>
+        </div>
+        <div class="barwrap js-progwrap" style="display:none">
+          <label><span class="js-proglabel"></span><span class="js-progpct"></span></label>
+          <div class="bar prog"><i></i></div>
+        </div>
+      </div>
+      <div class="assigned js-assigned"></div>
+      <div class="actions">
+        <button class="abtn go" data-act="launch" data-id="${d.id}">🚀 Deliver</button>
+        <button class="abtn chg" data-act="charge" data-id="${d.id}">⚡ Charge</button>
+        <button class="abtn fix" data-act="repair" data-id="${d.id}">🛠️ Repair</button>
+      </div>`;
+    return el;
+  }
+
+  function renderFleet(){
+    const wrap=$("fleet");
+    // remove cards for drones no longer present (e.g. confiscated)
+    Array.from(wrap.children).forEach(child=>{
+      if(!G.drones.some(d=>d.id===child.id)) child.remove();
+    });
+    G.drones.forEach(d=>{
+      let el=document.getElementById(d.id);
+      if(!el){ el=buildDroneEl(d); wrap.appendChild(el); }
+
+      const battLow=d.batt<25;
+      const pilotName = d.pilot ? G.bros[d.pilot].name : "";
+
+      el.className="drone "+d.state+(battLow?" lowbatt":"")+(d.state==="flying"?" flying":"");
+      el.querySelector(".js-state").textContent=droneStateLabel(d);
+      el.querySelector(".js-battpct").textContent=Math.round(d.batt)+"%";
+      el.querySelector(".js-battbar").classList.toggle("low",battLow);
+      el.querySelector(".js-battbar>i").style.width=Math.max(0,d.batt)+"%";
+
+      const progwrap=el.querySelector(".js-progwrap");
+      if(d.progMax>0){
+        progwrap.style.display="";
+        el.querySelector(".js-proglabel").textContent = d.state==="repairing"?"Repair":d.state==="charging"?"Charge":"Delivery";
+        el.querySelector(".js-progpct").textContent=Math.round(d.prog/d.progMax*100)+"%";
+        progwrap.querySelector("i").style.width=Math.min(100,d.prog/d.progMax*100)+"%";
+      } else {
+        progwrap.style.display="none";
+      }
+
+      el.querySelector(".js-assigned").textContent =
+        d.state==="flying"&&d.job ? `📦 ${d.job.icon} ${d.job.name} · piloted by ${pilotName}` :
+        d.state==="charging" ? `⚡ ${pilotName} is charging it` :
+        d.state==="repairing" ? `🛠️ ${pilotName} is fixing it` :
+        d.state==="broken" ? `💥 crashed! needs a repair` :
+        `ready for orders`;
+
+      // update button enabled state in place (never rebuild the buttons)
+      el.querySelector(".go").disabled = !(d.state==="idle");
+      el.querySelector(".chg").disabled = !((d.state==="idle") && d.batt<99);
+      el.querySelector(".fix").disabled = !(d.state==="broken");
+    });
+  }
+
+  function renderJobs(){
+    const wrap=$("joblist");
+    wrap.innerHTML="";
+    if(G.jobs.length===0){
+      wrap.innerHTML=`<p style="font-size:12px;opacity:.55;padding:6px;font-family:var(--mono)">no requests right now… enjoy the quiet 🌤️</p>`;
+      return;
+    }
+    G.jobs.forEach(j=>{
+      const el=document.createElement("div");
+      el.className="job"+(j.life<8?" hot":"");
+      el.innerHTML=`
+        <div class="jtop">
+          <div class="jicon">${j.icon}</div>
+          <div class="jname">${j.name}</div>
+          <div class="pay">$${j.pay}</div>
+        </div>
+        <div class="meta"><span>📏 ${j.dist} km</span><span>⏱️ expires in ${Math.ceil(j.life)}s</span></div>
+        <div class="expire"><i style="width:${j.life/j.lifeMax*100}%"></i></div>
+      `;
+      wrap.appendChild(el);
+    });
+  }
+
+  function render(){
+    renderStats(); renderBros(); renderFleet(); renderJobs();
+  }
+
+  // ---- ACTIONS ----
+  function broAvailable(key){ const b=G.bros[key]; return !b.busy && b.grounded<=0 && b.energy>=15; }
+  function anyBroFree(){ return broAvailable("josh") || broAvailable("renas"); }
+  G.anyFlying = ()=>G.drones.some(d=>d.state==="flying");
+
+  function openAssign(type, droneId){
+    const d=G.drones.find(x=>x.id===droneId);
+    G.pending={type,droneId,job:null};
+    $("assignOverlay").style.display="flex";
+
+    if(type==="launch"){
+      // STEP 1: pick which order to deliver
+      showJobStep(d);
+    } else {
+      // charge / repair go straight to picking a brother
+      showBroStep(type, d);
+    }
+  }
+
+  function showJobStep(d){
+    $("assignTitle").textContent="Pick an order for "+d.name;
+    $("assignSub").textContent="Choose which delivery to fly. Battery: "+Math.round(d.batt)+"%";
+    $("broSelect").style.display="none";
+    const sel=$("jobSelect");
+    sel.style.display="flex";
+    sel.innerHTML="";
+    if(G.jobs.length===0){
+      sel.innerHTML=`<div class="empty">No open orders right now.<br>Wait for a request to come in 🌤️</div>`;
+      return;
+    }
+    // sort by soonest to expire so urgent ones surface
+    const jobs=[...G.jobs].sort((a,b)=>a.life-b.life);
+    jobs.forEach(j=>{
+      const willDrain=j.dist*6;
+      const risky = d.batt < willDrain;
+      const opt=document.createElement("div");
+      opt.className="job-opt"+(j.life<10?" urgent":"");
+      opt.innerHTML=`
+        <div class="joi">${j.icon}</div>
+        <div class="jomid">
+          <b>${j.name}</b>
+          <small>📏 ${j.dist}km · ⏱️ ${Math.ceil(j.life)}s left${risky?` · ⚠️ low battery`:``}</small>
+        </div>
+        <div class="jopay">$${j.pay}</div>`;
+      opt.addEventListener("click",()=>selectJob(j.id));
+      sel.appendChild(opt);
+    });
+  }
+
+  function selectJob(jobId){
+    const j=G.jobs.find(x=>x.id===jobId);
+    if(!j){ toast("That order just expired!"); return refreshJobStep(); }
+    G.pending.job=j;
+    const d=G.drones.find(x=>x.id===G.pending.droneId);
+    showBroStep("launch", d, j);
+  }
+
+  function refreshJobStep(){
+    const d=G.drones.find(x=>x.id===G.pending.droneId);
+    if(d) showJobStep(d);
+  }
+
+  function showBroStep(type, d, j){
+    $("jobSelect").style.display="none";
+    $("broSelect").style.display="block";
+    const titles={
+      launch:"Who flies "+(j?j.name:"this")+"?",
+      charge:"Who charges "+d.name+"?",
+      repair:"Who repairs "+d.name+"?"
+    };
+    $("assignTitle").textContent=titles[type];
+    let sub="";
+    if(type==="launch"&&j){ sub=`${j.icon} ${j.name} — $${j.pay} · ${j.dist}km`; }
+    else if(type==="charge"){ sub=`Currently ${Math.round(d.batt)}% charged`; }
+    else if(type==="repair"){ sub=`${d.name} crashed and needs fixing`; }
+    $("assignSub").textContent=sub;
+
+    const jh=$("joshHint"), rh=$("renasHint");
+    if(type==="launch"){ jh.textContent="fast flyer ⚡"; rh.textContent="slower flyer 🐢"; }
+    else if(type==="repair"){ jh.textContent="slow fixer"; rh.textContent="repair pro 🛠️"; }
+    else { jh.textContent="okay charger"; rh.textContent="charge pro ⚡"; }
+
+    setupPick("josh"); setupPick("renas");
+  }
+  function setupPick(key){
+    const el=$("pick"+key.charAt(0).toUpperCase()+key.slice(1));
+    const b=G.bros[key];
+    const tired=b.energy<15;
+    if(b.busy||tired||b.grounded>0){
+      el.classList.add("dis");
+      el.querySelector("small").textContent = b.grounded>0 ? "grounded by Mom 🚫" : b.busy? "busy right now" : "too tired 😴";
+    } else {
+      el.classList.remove("dis");
+    }
+  }
+
+  function assignTo(key){
+    if(!G.pending) return;
+    const b=G.bros[key];
+    if(b.busy || b.energy<15 || b.grounded>0) return;
+    const {type,droneId}=G.pending;
+    const d=G.drones.find(x=>x.id===droneId);
+    if(!d){ closeAssign(); return; }
+
+    if(type==="launch"){
+      // use the order the player picked in step 1
+      let j=G.pending.job && G.jobs.find(x=>x.id===G.pending.job.id);
+      if(!j){ toast("That order expired! Pick another."); return showJobStep(d); }
+      G.jobs=G.jobs.filter(x=>x.id!==j.id);
+      d.job=j;
+      d.state="flying";
+      // curfew makes flights take longer (sneaking around)
+      const curfewMult = G.curfew>0 ? 1.4 : 1;
+      const rotor = 1 - 0.15*lvl("rotor");   // faster flights
+      d.progMax = j.dist / b.flySpeed * 1.1 * curfewMult * rotor;   // seconds
+      d.prog=0;
+      d.pilot=key;
+      // crash risk: if battery won't survive the trip
+      const battCost = j.dist * 6;
+      d.crashChanceRoll = d.batt < battCost ? 1 : 0;
+      busyBro(key, d.progMax);
+      // every launch is noisy → Mom notices (a lot)
+      raiseSuspicion(G.curfew>0 ? 30 : 20);
+      log(`launching ${j.icon} <b>${j.name}</b> on ${d.name}.`, key);
+      log(pick(key==="josh"?JOSH_LINES:RENAS_LINES), key);
+    }
+    else if(type==="charge"){
+      d.state="charging";
+      const tool = 1 + 0.3*lvl("toolkit");
+      d.progMax=(100-d.batt)/ (28*b.chargeSpeed*tool);
+      d.prog=0; d.pilot=key;
+      busyBro(key, d.progMax);
+      log(`plugging in <b>${d.name}</b> to charge.`, key);
+    }
+    else if(type==="repair"){
+      d.state="repairing";
+      const tool = 1 + 0.3*lvl("toolkit");
+      d.progMax = 6 / (b.repairSpeed*tool);
+      d.prog=0; d.pilot=key;
+      busyBro(key, d.progMax);
+      log(`getting the toolbox for <b>${d.name}</b>.`, key);
+    }
+    render();
+    closeAssign();
+  }
+
+  function busyBro(key, dur){
+    const b=G.bros[key];
+    b.busy=true; b.cd=0; b.cdMax=dur;
+  }
+  function freeBro(key){
+    const b=G.bros[key];
+    b.busy=false; b.cd=0; b.cdMax=0;
+  }
+
+  function closeAssign(){
+    $("assignOverlay").style.display="none";
+    $("jobSelect").style.display="none";
+    $("broSelect").style.display="block";
+    G.pending=null;
+  }
+
+  // ---- TICK ----
+  function tick(dt){
+    if(!G.running) return;
+    if(G.tutorial) return; // freeze the sim during the tutorial
+
+    // enemy raid live countdown
+    if(G.atiActive){
+      G.atiTimer-=dt;
+      $("atiMeter").style.width=Math.max(0,G.atiTimer/(G.atiTimerMax||9)*100)+"%";
+      const secs=Math.max(0,Math.ceil(G.atiTimer));
+      const cEl=$("atiCount");
+      cEl.textContent=secs;
+      cEl.classList.toggle("low", secs<=3);
+      if(G.atiTimer<=0){ autoResolveRaid(); }
+      // sim keeps running under the alert, so don't return
+    }
+    G.atiCooldown=Math.max(0,G.atiCooldown-dt);
+    // suspicion creeps up on its own each day (Mom's patience wears thin) and cools only a little when quiet
+    if(!G.atiActive){
+      const dayFactor = Math.min(G.day, 5);           // cap so endless mode stays fair
+      const dampen = Math.max(0.25, 1 - 0.3*lvl("dampen"));
+      const drift = (0.9 + dayFactor*0.7) * dampen;   // ambient noise annoyance
+      const passiveCool = lvl("radar")>0 ? dt*(0.6*lvl("radar")) : 0;
+      const cool = (G.anyFlying() ? 0 : dt*1.1) + passiveCool;
+      G.suspicion=Math.min(100, Math.max(0, G.suspicion + dt*drift - cool));
+    }
+    if(G.suspicion>=100 && !G.atiActive && G.atiCooldown<=0) triggerRaid();
+    // curfew decays
+    if(G.curfew>0) G.curfew=Math.max(0,G.curfew-dt);
+    if(G.jam>0) G.jam=Math.max(0,G.jam-dt);
+
+    // clock / day progression
+    G.dayT+=dt;
+    if(G.dayT>=DAY_LEN){
+      G.dayT=0;
+      // story mode ends after the final day
+      if(G.mode==="story" && G.day>=TOTAL_DAYS){ endGame(); return; }
+      endOfDay(); // pause & open the shop
+      return;
+    }
+
+    // spawn jobs (rate scales with day, capped for endless)
+    G.jobTimer-=dt;
+    const dayFactorSpawn = Math.min(G.day, 5);
+    const spawnEvery = Math.max(2.2, 5.5 - dayFactorSpawn*0.9);
+    const maxOpen = 6;
+    if(G.jobTimer<=0 && G.jobs.length<maxOpen){
+      G.jobs.push(newJob());
+      G.jobTimer=rand(spawnEvery*0.7, spawnEvery*1.3);
+    }
+
+    // job expiry
+    for(let i=G.jobs.length-1;i>=0;i--){
+      const j=G.jobs[i];
+      j.life-=dt;
+      if(j.life<=0){
+        G.jobs.splice(i,1);
+        G.fail++;
+        G.missed++;
+        log(`❌ <b>${j.name}</b> order expired. (${G.missed}${G.mode==="endless"?"/"+MISS_LIMIT:""} missed)`);
+        if(G.mode==="endless" && G.missed>=MISS_LIMIT){ endGame(); return; }
+      }
+    }
+
+    // brother cooldowns / passive energy
+    for(const key of ["josh","renas"]){
+      const b=G.bros[key];
+      if(b.grounded>0){
+        b.grounded=Math.max(0,b.grounded-dt);
+        b.energy=Math.min(100,b.energy + dt*1.5); // chores are boring but restful-ish
+        if(b.grounded===0) log(`✅ <b>${b.name}</b> finished the chore and is free again.`);
+        continue;
+      }
+      if(b.busy){
+        b.cd+=dt;
+        const coffee = 1 - 0.25*lvl("coffee");
+        b.energy=Math.max(0,b.energy - dt*2.1*coffee); // working drains energy
+      } else {
+        b.energy=Math.min(100,b.energy + dt*3.4); // resting restores
+      }
+    }
+
+    // drone progress
+    G.drones.forEach(d=>{
+      if(d.state==="flying"){
+        d.prog+=dt;
+        const battResist = 1 - 0.2*lvl("battery");
+        d.batt=Math.max(0, d.batt - dt*(d.job.dist*0.9)*battResist);
+        // mid-air death
+        if(d.batt<=0){
+          crash(d,"ran out of battery mid-air");
+          return;
+        }
+        if(d.prog>=d.progMax){
+          completeDelivery(d);
+        }
+      }
+      else if(d.state==="charging"){
+        d.prog+=dt;
+        d.batt=Math.min(100, d.batt + dt*(100/(d.progMax)));
+        if(d.prog>=d.progMax){
+          d.batt=100;
+          finishTask(d,`⚡ <b>${d.name}</b> fully charged.`);
+        }
+      }
+      else if(d.state==="repairing"){
+        d.prog+=dt;
+        if(d.prog>=d.progMax){
+          d.batt=Math.max(d.batt, 60);
+          finishTask(d,`🛠️ <b>${d.name}</b> repaired and back online.`);
+        }
+      }
+      else if(d.state==="idle"){
+        if(has("solar")){
+          d.batt=Math.min(100, d.batt + dt*2.0); // solar trickle recharges idle drones
+        } else {
+          d.batt=Math.max(0,d.batt - dt*0.4);     // standby self-drain
+        }
+      }
+    });
+
+    render();
+  }
+
+  function crash(d, reason){
+    const pilot=d.pilot;
+    if(pilot) freeBro(pilot);
+    d.state="broken";
+    d.job=null; d.prog=0; d.progMax=0; d.batt=Math.min(d.batt,8);
+    G.fail++;
+    d.pilot=null;
+    log(`💥 <b>${d.name}</b> ${reason}. It crashed!`);
+    if(has("insure")){ G.cash+=25; log(`🛡️ Crash insurance paid out <b>+$25</b>.`); }
+    if(pilot) log(pick(pilot==="josh"?["Well. The math was right, the battery wasn't.","Noted for next time."]:["It wasn't me! …okay maybe a little.","Oopsie."]), pilot);
+    toast("💥 "+d.name+" crashed!");
+  }
+
+  function completeDelivery(d){
+    const j=d.job;
+    const pilot=d.pilot;
+    freeBro(pilot);
+    // small random crash on landing if battery ended very low
+    if(d.batt<10 && Math.random()<0.35){
+      crash(d, "clipped a tree on a low battery");
+      return;
+    }
+    const jammed = G.jam>0;
+    const payMult = (1 + 0.15*lvl("payout")) * (jammed?0.5:1);
+    const pay = Math.round(j.pay*payMult);
+    G.cash+=pay;
+    G.done++;
+    log(`✅ delivered ${j.icon} <b>${j.name}</b> — <b>+$${pay}</b>${jammed?` <small>(jammed!)</small>`:``}!`, pilot);
+    toast("✅ +$"+pay);
+    d.state="idle"; d.job=null; d.prog=0; d.progMax=0; d.pilot=null;
+  }
+
+  function finishTask(d, msg){
+    const pilot=d.pilot;
+    if(pilot) freeBro(pilot);
+    d.state="idle"; d.prog=0; d.progMax=0; d.pilot=null;
+    log(msg);
+  }
+
+  // ---- ANTAGONISTS: ATI (Mom), Robin, Meta AI ----
+  const FOES={
+    ati:{name:"ATI (Mom)",emoji:"👩",color:"#7b3fa0"},
+    robin:{name:"Robin",emoji:"🧃",color:"#2f9e44"},
+    meta:{name:"Meta AI",emoji:"🤖",color:"#1877f2"}
+  };
+  const ATI_RAIDS=[
+    {
+      foe:"ati", key:"chores",
+      msg:`ATI: "That racket again?! One of you is doing the dishes. <b>NOW.</b>"`,
+      opts:[
+        {label:"Send Josh 🤓", act:()=>groundBro("josh",14,"is stuck on dish duty")},
+        {label:"Send Renas 🧒", act:()=>groundBro("renas",14,"is stuck on dish duty")}
+      ]
+    },
+    {
+      foe:"ati", key:"curfew",
+      msg:`ATI: "It's getting late. <b>No more loud flights</b> for a while, understood?"`,
+      opts:[
+        {label:"Fine, we'll be quiet 🤫", act:()=>{ G.curfew=18; log(`🌙 Curfew! Flights are slower for a bit.`); }},
+        {label:"Bribe her with $40 💸", act:()=>{ if(G.cash>=40){G.cash-=40; log(`💸 Paid Mom $40 to look the other way.`);} else {G.curfew=18; log(`Not enough cash… curfew it is.`);} }}
+      ]
+    },
+    {
+      foe:"ati", key:"confiscate",
+      msg:`ATI: "I'm confiscating a drone until you two calm down!"`,
+      opts:[
+        {label:"Beg (lower radar) 🙏", act:()=>{ G.suspicion=Math.max(0,G.suspicion-45); log(`🙏 You calmed Mom down. Radar dropped.`); }},
+        {label:"Let her take one 😩", act:()=>confiscateDrone()}
+      ]
+    },
+    {
+      foe:"robin", key:"robin_snack", minDay:1,
+      msg:`Robin *slurps juice box* : "Whoaaa cool drones! Can I fly one? Pleeease?"`,
+      opts:[
+        {label:"Let him try 🧃", act:()=>robinCrash()},
+        {label:"Give him $15 to go away 💸", act:()=>{ if(G.cash>=15){G.cash-=15; log(`🧃 Robin took the $15 and wandered off, satisfied.`);} else {robinCrash();} }}
+      ]
+    },
+    {
+      foe:"robin", key:"robin_block", minDay:1,
+      msg:`Robin plops down in the middle of the garage: "I'm just gonna chill right here."`,
+      opts:[
+        {label:"Squeeze around him 🙈", act:()=>{ G.curfew=Math.max(G.curfew,12); log(`🧃 Robin's in the way — flights are cramped and slow for a bit.`); }},
+        {label:"Bribe with a juice box 🧃", act:()=>{ if(G.cash>=8){G.cash-=8; log(`🧃 One juice box later, Robin happily leaves.`);} else {G.curfew=Math.max(G.curfew,12); log(`No juice money… you work around him.`);} }}
+      ]
+    },
+    {
+      foe:"meta", key:"meta_hack", minDay:2,
+      msg:`META AI: "BEEP. I have detected your fleet. Optimizing... a battery has been remotely drained."`,
+      opts:[
+        {label:"Reboot the drones 🔌", act:()=>metaDrain(0.5)},
+        {label:"Fight the firewall 🛡️", act:()=>{ if(Math.random()<0.5){ log(`🛡️ Josh out-coded Meta AI. Batteries safe!`); } else { metaDrain(1); log(`💥 Firewall failed — full drain!`);} }}
+      ]
+    },
+    {
+      foe:"meta", key:"meta_jam", minDay:2,
+      msg:`META AI: "BEEP BOOP. Jamming your signals. Deliveries will pay LESS while I'm online."`,
+      opts:[
+        {label:"Wait it out 😐", act:()=>{ G.jam=16; log(`🤖 Signal jammed — payouts cut for a while.`); }},
+        {label:"Pay $30 for clean bandwidth 💸", act:()=>{ if(G.cash>=30){G.cash-=30; log(`📡 Bought clean bandwidth. Meta AI retreats.`);} else {G.jam=16; log(`Not enough cash… payouts stay jammed.`);} }}
+      ]
+    }
+  ];
+
+  function robinCrash(){
+    // Robin grabs a random flying/idle drone and crashes it
+    const target = G.drones.find(d=>d.state==="flying") || pick(G.drones.filter(d=>d.state==="idle")) || G.drones[0];
+    if(target){
+      if(target.state==="flying"){ crash(target,"was snatched mid-air by Robin"); }
+      else { crash(target,"got 'flown' straight into the wall by Robin"); }
+    }
+    log(`🧃 Robin: "oops. hehe."`);
+  }
+  function metaDrain(mult){
+    const av = has("antivirus") ? 0.5 : 1;   // antivirus halves the drain
+    G.drones.forEach(d=>{ if(d.state!=="broken") d.batt=Math.max(0, d.batt - (30+30*mult)*av); });
+    log(`🤖 Meta AI drained the fleet's batteries${av<1?` <small>(antivirus softened it)</small>`:``}.`);
+    // any flying drone that hit 0 crashes on next tick automatically
+  }
+
+  function raiseSuspicion(amt){
+    if(G.tutorial) return; // no radar during tutorial
+    G.suspicion=Math.min(100,G.suspicion+amt);
+    if(G.suspicion>=100 && !G.atiActive && G.atiCooldown<=0){
+      triggerRaid();
+    }
+  }
+
+  function triggerRaid(){
+    G.atiActive=true;
+    G.atiTimer=9;                // seconds to decide
+    G.atiTimerMax=9;
+    G.suspicion=Math.max(0,G.suspicion-55); // partly resets the meter
+    G.atiCooldown=9;
+    G.raidCount=(G.raidCount||0)+1;
+    // only raids unlocked by the current day
+    let pool=ATI_RAIDS.filter(r=>(r.minDay||1)<=G.day);
+    // Snack Stash: Robin bugs you far less often
+    if(has("snacks")) pool=pool.filter(r=>r.foe!=="robin" || Math.random()<0.25);
+    if(pool.length===0) pool=ATI_RAIDS.filter(r=>(r.minDay||1)<=G.day);
+    const raid=pick(pool);
+    G.currentRaid=raid;
+    const foe=FOES[raid.foe||"ati"];
+    const alert=$("atiAlert");
+    alert.style.background=foe.color;
+    alert.querySelector(".aface").textContent=foe.emoji;
+    $("atiMsg").innerHTML=raid.msg;
+    const btns=$("atiBtns"); btns.innerHTML="";
+    raid.opts.forEach((o,i)=>{
+      const b=document.createElement("button");
+      b.className="aopt"+(i===0?" default":""); // left option is the auto-pick
+      b.textContent=o.label;
+      b.onclick=()=>{ o.act(); resolveRaid(); };
+      btns.appendChild(b);
+    });
+    $("atiCount").textContent=Math.ceil(G.atiTimer);
+    alert.classList.add("show");
+    log(`${foe.emoji} <b>${foe.name.toUpperCase()} ALERT!</b> They've barged into the garage.`);
+    toast(`${foe.emoji} ${foe.name}!`);
+  }
+
+  function resolveRaid(){
+    G.atiActive=false;
+    G.currentRaid=null;
+    $("atiAlert").classList.remove("show");
+    render();
+  }
+
+  function autoResolveRaid(){
+    // timer ran out → automatically take the LEFT (first) option
+    if(G.currentRaid){
+      log(`⏰ Time's up — you went with the first option by default.`);
+      G.currentRaid.opts[0].act();
+    }
+    resolveRaid();
+  }
+
+  function groundBro(key, dur, why){
+    const b=G.bros[key];
+    // if busy, their current task gets abandoned
+    if(b.busy){
+      const d=G.drones.find(x=>x.pilot===key);
+      if(d){
+        if(d.state==="flying"){ crash(d,"was abandoned when Mom called "+b.name); }
+        else { d.state="idle"; d.prog=0; d.progMax=0; d.pilot=null; }
+      }
+      freeBro(key);
+    }
+    b.grounded=dur;
+    log(`🚫 <b>${b.name}</b> ${why} for ${dur}s.`);
+  }
+
+  function confiscateDrone(){
+    const active=G.drones.find(d=>d.state==="idle") || G.drones[0];
+    if(!active) return;
+    if(active.state==="flying"){ crash(active,"was grabbed out of the sky by Mom"); }
+    G.drones=G.drones.filter(d=>d.id!==active.id);
+    // return it next day
+    G.confiscated=G.confiscated||[];
+    G.confiscated.push({drone:active, day:G.day});
+    log(`📦 Mom confiscated <b>${active.name}</b>. You'll get it back tomorrow.`);
+  }
+
+  // ---- TUTORIAL ----
+  const TUT_STEPS=[
+    {sel:"#joblist", title:"📦 Delivery Requests", body:"Orders show up here with a payout, distance, and a timer. If the timer hits zero, you lose the job. Take the good ones fast."},
+    {sel:"#fleet", title:"🚁 Your Fleet", body:"Each drone can Deliver, Charge, or Repair. Watch the battery bar — launching on a low battery risks a mid-air crash."},
+    {sel:".bros", title:"🤓🧒 The Brothers", body:"Only ONE brother can work a drone at a time. Josh flies fast; Renas is the repair & charge pro. They tire out, so let them rest."},
+    {sel:"#s-suspicion", title:"🔥 Heat Meter", body:"Flying is noisy, and Heat also climbs on its own as days pass. Fill it and an enemy raids the garage — Mom grounds a brother, Robin crashes a drone, or Meta AI attacks. Deal with them fast!"},
+    {sel:"#logbox", title:"📻 Garage Radio", body:"Josh and Renas narrate everything here. That's the whole game — now open the garage and start dispatching!"}
+  ];
+
+  function startTutorial(){
+    G.tutorial=true; G.tutStep=0;
+    showTutStep();
+  }
+  function showTutStep(){
+    const step=TUT_STEPS[G.tutStep];
+    if(!step){ endTutorial(); return; }
+    const target=document.querySelector(step.sel);
+    const spot=$("tutSpot"), box=$("tutBox");
+    spot.style.display="block"; box.style.display="block";
+    const r=target.getBoundingClientRect();
+    const pad=8;
+    spot.style.top=(r.top-pad)+"px";
+    spot.style.left=(r.left-pad)+"px";
+    spot.style.width=(r.width+pad*2)+"px";
+    spot.style.height=(r.height+pad*2)+"px";
+    $("tutTitle").textContent=step.title;
+    $("tutBody").textContent=step.body;
+    $("tutCount").textContent=(G.tutStep+1)+" / "+TUT_STEPS.length;
+    $("tutNext").textContent = G.tutStep===TUT_STEPS.length-1 ? "Let's go! ▸" : "Next ▸";
+    // position box near the spot but keep on-screen
+    const bw=320, bh=box.offsetHeight||160;
+    let bx=r.left, by=r.bottom+14;
+    if(by+bh>window.innerHeight-10) by=Math.max(10,r.top-bh-14);
+    if(bx+bw>window.innerWidth-10) bx=window.innerWidth-bw-10;
+    if(bx<10) bx=10;
+    box.style.left=bx+"px"; box.style.top=by+"px";
+  }
+  function nextTutStep(){ G.tutStep++; showTutStep(); }
+  function endTutorial(){
+    G.tutorial=false;
+    $("tutSpot").style.display="none";
+    $("tutBox").style.display="none";
+    log(`🔓 Tutorial done. Bring on the orders!`);
+  }
+
+  // ---- END ----
+  function endGame(){
+    G.running=false;
+    clearSave(G.mode); // finishing a run clears its save slot
+    const score=G.cash - G.fail*15;
+    let grade,msg;
+    if(G.mode==="endless"){
+      $("endTitle").textContent="Out of business!";
+      if(G.cash>=1200){grade="🏆 Endless Legend";msg=`You survived ${G.day} days before the ${MISS_LIMIT} misses caught up.`;}
+      else if(G.cash>=600){grade="🥇 Seasoned Operator";msg=`${G.day} days of chaos. Not bad at all.`;}
+      else if(G.cash>=250){grade="🥈 Getting the Hang of It";msg=`Made it ${G.day} days.`;}
+      else {grade="🥉 Short-Lived";msg="The neighborhood found a new courier.";}
+      $("endSummary").innerHTML=`Endless run over — you hit <b>${MISS_LIMIT} missed orders</b>.<br>Banked <b>$${G.cash}</b> over <b>${G.day}</b> days · Delivered <b>${G.done}</b> · Crashes <b>${G.fail-G.missed}</b>`;
+    } else {
+      $("endTitle").textContent="Shift over!";
+      if(score>=600){grade="🏆 Drone Tycoons";msg="Josh is already designing v2. Renas wants a cut.";}
+      else if(score>=380){grade="🥇 Solid Operators";msg="The garage stays open another summer.";}
+      else if(score>=180){grade="🥈 Getting There";msg="Mom says clean up the crashed drones.";}
+      else {grade="🥉 Rough Start";msg="Renas maybe shouldn't have flown that many.";}
+      $("endSummary").innerHTML=`You banked <b>$${G.cash}</b> across ${TOTAL_DAYS} days.<br>Deliveries: <b>${G.done}</b> · Failed/crashed: <b>${G.fail}</b> · Raids survived: <b>${G.raidCount||0}</b>`;
+    }
+    $("endGrade").innerHTML=`${grade}<br><small style="font-size:12px;opacity:.7">${msg}</small>`;
+    saveRun({
+      date:Date.now(), mode:G.mode,
+      cash:G.cash, done:G.done, fail:G.fail, days:G.day,
+      raids:G.raidCount||0, score, grade
+    });
+    $("endOverlay").style.display="flex";
+  }
+
+  // ---- DAY FLOW + SHOP ----
+  function endOfDay(){
+    G.running=false; // pause the sim
+    // clear the board of open orders — leftover ones do NOT count as missed
+    const leftover=G.jobs.length;
+    G.jobs=[];
+    G.jobTimer=1;
+    if(leftover>0) log(`🌆 Day's over — ${leftover} open order${leftover>1?"s":""} cleared (no penalty).`);
+    // overnight recovery
+    G.bros.josh.energy=Math.min(100,G.bros.josh.energy+40);
+    G.bros.renas.energy=Math.min(100,G.bros.renas.energy+40);
+    G.suspicion=Math.max(0,G.suspicion-30);
+    G.curfew=0; G.jam=0;
+    // return confiscated drones
+    if(G.confiscated && G.confiscated.length){
+      G.confiscated.forEach(c=>{
+        c.drone.state="idle"; c.drone.job=null; c.drone.prog=0; c.drone.progMax=0; c.drone.pilot=null;
+        G.drones.push(c.drone);
+      });
+      G.confiscated=[];
+    }
+    openShop();
+  }
+
+  function rollShopStock(){
+    // pick 3 distinct upgrades that aren't maxed out
+    const avail=UPGRADES.filter(u=>lvl(u.id)<u.max);
+    const shuffled=avail.slice().sort(()=>Math.random()-0.5);
+    G.shopStock=shuffled.slice(0,3);
+  }
+
+  function openShop(){
+    if(!G.shopStock) rollShopStock();
+    $("shopDayFrom").textContent=G.day;
+    $("shopDayTo").textContent=G.day+1;
+    renderShop();
+    $("shopOverlay").style.display="flex";
+  }
+
+  function priceOf(u){
+    // each level already owned makes the next one ~60% more expensive
+    return Math.round(u.cost * Math.pow(1.6, lvl(u.id)) / 5) * 5;
+  }
+
+  function renderShop(){
+    $("shopCash").textContent="$"+G.cash;
+    const grid=$("shopGrid"); grid.innerHTML="";
+    if(!G.shopStock || G.shopStock.length===0){
+      grid.innerHTML=`<p style="grid-column:1/-1;opacity:.6;text-align:center">All upgrades maxed out — you're fully loaded! 🚀</p>`;
+      return;
+    }
+    G.shopStock.forEach(u=>{
+      const cur=lvl(u.id);
+      const maxed=cur>=u.max;
+      const price=priceOf(u);
+      const afford=G.cash>=price;
+      const el=document.createElement("div");
+      el.className="shop-item"+(cur>0?" bought":"")+(maxed?" maxed":"");
+      el.innerHTML=`
+        <div class="si-ic">${u.icon}</div>
+        <h4>${u.name}</h4>
+        <p>${u.desc}</p>
+        <div class="si-lvl">${u.max>1?`level ${cur}/${u.max}`:(cur>0?"owned":"one-time")}</div>
+        <button class="si-buy" data-id="${u.id}" ${maxed||!afford?"disabled":""}>
+          ${maxed?"MAXED":("Buy · $"+price)}
+        </button>`;
+      grid.appendChild(el);
+    });
+  }
+
+  function buyUpgrade(id){
+    const u=UPGRADES.find(x=>x.id===id);
+    if(!u) return;
+    const price=priceOf(u);
+    if(lvl(id)>=u.max || G.cash<price) return;
+    G.cash-=price;
+    G.upg[id]=lvl(id)+1;
+    if(id==="drone") addDrone();
+    log(`🛒 Bought <b>${u.name}</b>${u.max>1?` (lvl ${G.upg[id]})`:""} for $${price}.`);
+    renderShop();
+  }
+
+  function addDrone(){
+    const i=G.fleetSize;
+    G.fleetSize++;
+    G.drones.push({
+      id:"d"+i,
+      name:DRONE_NAMES[i%DRONE_NAMES.length],
+      emoji:DRONE_EMOJI[i%DRONE_EMOJI.length],
+      batt:100, state:"idle", prog:0, progMax:0, job:null, pilot:null, crashChanceRoll:0
+    });
+    $("fleet").innerHTML=""; // rebuild fleet list to include the new drone
+  }
+
+  function beginDay(){
+    $("shopOverlay").style.display="none";
+    G.shopStock=null;         // fresh stock next night
+    G.day++;
+    G.running=true;
+    log(`☀️ <b>Day ${G.day}</b> begins. Orders are picking up!`);
+    render();
+  }
+
+  // ---- RUN TRACKER (localStorage) ----
+  const RUNS_KEY="dronehq_runs";
+  function loadRuns(){
+    try{ return JSON.parse(localStorage.getItem(RUNS_KEY)||"[]"); }catch(e){ return []; }
+  }
+  function saveRun(run){
+    try{
+      const runs=loadRuns();
+      runs.push(run);
+      // keep the most recent 50
+      localStorage.setItem(RUNS_KEY, JSON.stringify(runs.slice(-50)));
+    }catch(e){/* storage may be unavailable */}
+  }
+  function runTrackerHTML(){
+    const runs=loadRuns().slice().reverse();
+    if(runs.length===0){
+      return `<h5>📊 Run Tracker</h5><p style="opacity:.6">No runs yet. Play a game and your results will show up here — saved right in your browser.</p>`;
+    }
+    const best=Math.max(...runs.map(r=>r.cash));
+    const totalGames=runs.length;
+    const rows=runs.map(r=>{
+      const d=new Date(r.date);
+      const when=d.toLocaleDateString(undefined,{month:"short",day:"numeric"})+" "+d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"});
+      const isBest=r.cash===best;
+      return `<div class="run-row${isBest?' best':''}">
+        <div class="rgrade">${r.grade.split(" ")[0]}</div>
+        <div class="rmid"><b>$${r.cash}</b><small>${when}</small></div>
+        <div class="rstats">✅ ${r.done} · ❌ ${r.fail} · 👾 ${r.raids}</div>
+      </div>`;
+    }).join("");
+    return `<h5>📊 Run Tracker</h5>
+      <p style="opacity:.7;margin-bottom:8px">${totalGames} run${totalGames>1?"s":""} · best bank <b style="color:var(--accent2)">$${best}</b></p>
+      <div class="run-list">${rows}</div>
+      <button id="clearRuns" class="mbtn" style="margin-top:10px;font-size:13px;padding:8px 14px">🗑️ Clear history</button>`;
+  }
+
+  function startGame(mode){
+    G.mode = (mode==="endless") ? "endless" : "story";
+    G.running=true; G.cash=0; G.done=0; G.fail=0; G.missed=0;
+    G.day=1; G.dayT=0; G.jobs=[]; G.jobTimer=1;
+    G.suspicion=0; G.atiActive=false; G.atiTimer=0; G.atiCooldown=10; G.curfew=0; G.jam=0; G.raidCount=0;
+    G.confiscated=[]; G.currentRaid=null; G.shopStock=null;
+    G.upg={}; G.fleetSize=4;
+    G.startedAt=Date.now();
+    G.bros.josh.energy=100; G.bros.josh.busy=false; G.bros.josh.cd=0; G.bros.josh.cdMax=0; G.bros.josh.grounded=0;
+    G.bros.renas.energy=100; G.bros.renas.busy=false; G.bros.renas.cd=0; G.bros.renas.cdMax=0; G.bros.renas.grounded=0;
+    initFleet();
+    $("fleet").innerHTML="";
+    $("atiAlert").classList.remove("show");
+    $("shopOverlay").style.display="none";
+    $("menuOverlay").style.display="none";
+    $("startOverlay").style.display="none";
+    $("endOverlay").style.display="none";
+    log(`🔓 Garage open (${G.mode==="endless"?"Endless":"Story"} mode). Josh and Renas are ready.`);
+    render();
+    // run the tutorial once the board is laid out
+    requestAnimationFrame(()=>requestAnimationFrame(startTutorial));
+  }
+
+  // ---- SAVE / LOAD (one slot per mode) ----
+  const SAVE_KEY = mode => "dronehq_save_"+mode;
+  function hasSave(mode){
+    try{ return !!localStorage.getItem(SAVE_KEY(mode)); }catch(e){ return false; }
+  }
+  function clearSave(mode){
+    try{ localStorage.removeItem(SAVE_KEY(mode)); }catch(e){}
+  }
+  function saveGame(){
+    // called from the shop, so the sim is paused between days
+    const data={
+      mode:G.mode, cash:G.cash, done:G.done, fail:G.fail, missed:G.missed,
+      day:G.day, upg:G.upg, fleetSize:G.fleetSize, raidCount:G.raidCount||0,
+      shopStock:(G.shopStock||[]).map(u=>u.id),
+      savedAt:Date.now()
+    };
+    try{ localStorage.setItem(SAVE_KEY(G.mode), JSON.stringify(data)); return true; }
+    catch(e){ return false; }
+  }
+  function loadGame(mode){
+    let data;
+    try{ data=JSON.parse(localStorage.getItem(SAVE_KEY(mode))||"null"); }catch(e){ data=null; }
+    if(!data) return false;
+    G.mode=mode;
+    G.cash=data.cash; G.done=data.done; G.fail=data.fail; G.missed=data.missed||0;
+    G.day=data.day; G.upg=data.upg||{}; G.fleetSize=data.fleetSize||4; G.raidCount=data.raidCount||0;
+    G.dayT=0; G.jobs=[]; G.jobTimer=1;
+    G.suspicion=0; G.atiActive=false; G.atiTimer=0; G.atiCooldown=10; G.curfew=0; G.jam=0;
+    G.confiscated=[]; G.currentRaid=null;
+    G.bros.josh.energy=100; G.bros.josh.busy=false; G.bros.josh.cd=0; G.bros.josh.cdMax=0; G.bros.josh.grounded=0;
+    G.bros.renas.energy=100; G.bros.renas.busy=false; G.bros.renas.cd=0; G.bros.renas.cdMax=0; G.bros.renas.grounded=0;
+    // restore the shop stock the player was looking at
+    G.shopStock=(data.shopStock||[]).map(id=>UPGRADES.find(u=>u.id===id)).filter(Boolean);
+    if(G.shopStock.length===0) G.shopStock=null;
+    initFleet(); // builds fleetSize drones
+    $("fleet").innerHTML="";
+    $("atiAlert").classList.remove("show");
+    $("menuOverlay").style.display="none";
+    $("startOverlay").style.display="none";
+    $("endOverlay").style.display="none";
+    log(`💾 Loaded your ${mode==="endless"?"Endless":"Story"} save — start of Day ${data.day}.`);
+    render();
+    openShop(); // resume at the between-day shop, then Start next day
+    return true;
+  }
+
+  // ---- LOOP ----
+  function loop(ts){
+    if(!G.last) G.last=ts;
+    let dt=(ts-G.last)/1000;
+    G.last=ts;
+    if(dt>0.25) dt=0.25; // clamp after tab switches
+    tick(dt);
+    requestAnimationFrame(loop);
+  }
+
+  // ---- EVENTS ----
+  $("fleet").addEventListener("click", e=>{
+    const btn=e.target.closest(".abtn");
+    if(!btn||btn.disabled) return;
+    if(G.atiActive){ toast("Deal with Mom first! 👩"); return; }
+    if(G.tutorial){ endTutorial(); } // clicking a drone skips the tutorial and plays on
+    const act=btn.dataset.act, id=btn.dataset.id;
+    openAssign(act, id);
+  });
+  $("pickJosh").addEventListener("click",()=>{ if(!$("pickJosh").classList.contains("dis")) assignTo("josh"); });
+  $("pickRenas").addEventListener("click",()=>{ if(!$("pickRenas").classList.contains("dis")) assignTo("renas"); });
+  $("assignCancel").addEventListener("click", closeAssign);
+  $("startBtn").addEventListener("click", ()=>startGame(G.pendingMode||"story"));
+  $("restartBtn").addEventListener("click", ()=>{
+    $("endOverlay").style.display="none";
+    showMenu();
+  });
+  $("tutNext").addEventListener("click", nextTutStep);
+  $("tutSkip").addEventListener("click", endTutorial);
+  window.addEventListener("resize", ()=>{ if(G.tutorial) showTutStep(); });
+
+  // ---- SHOP EVENTS ----
+  $("shopGrid").addEventListener("click", e=>{
+    const btn=e.target.closest(".si-buy");
+    if(btn && !btn.disabled) buyUpgrade(btn.dataset.id);
+  });
+  $("shopNext").addEventListener("click", beginDay);
+  $("shopSave").addEventListener("click", ()=>{
+    const ok=saveGame();
+    toast(ok ? "💾 Game saved" : "Couldn't save (storage blocked)");
+    $("shopOverlay").style.display="none";
+    showMenu();
+  });
+
+  // ---- MAIN MENU ----
+  function showMenu(){
+    G.running=false;
+    $("menuOverlay").style.display="flex";
+    $("startOverlay").style.display="none";
+    $("shopOverlay").style.display="none";
+    $("menuPanel").style.display="none";
+    G.menuOpen=null;
+    // show Continue buttons only when a save exists for that mode
+    $("menuContinueStory").style.display   = hasSave("story")   ? "" : "none";
+    $("menuContinueEndless").style.display = hasSave("endless") ? "" : "none";
+  }
+  const HOW_HTML=`
+    <h5>📖 How to Play</h5>
+    <ul>
+      <li>🎯 <b>Accept jobs</b> before their timer runs out — bigger distance pays more.</li>
+      <li>🚀 Hit <b>Deliver</b> on a drone, then pick a brother to fly it.</li>
+      <li>🔋 Keep <b>batteries</b> up. Launch too low and the drone crashes mid-air.</li>
+      <li>🛠️ Use <b>Charge</b> and <b>Repair</b> — Renas is the pro at both.</li>
+      <li>🧑‍🔧 One brother per drone. They tire out, so let them rest.</li>
+      <li>👾 <b>Enemies</b> raid the garage: ATI (Mom) grounds a brother or grabs a drone, Robin crashes drones or blocks the garage, and Meta AI drains batteries or jams your pay. Deal with each raid fast!</li>
+      <li>🛒 Between days a <b>shop</b> opens with 3 random upgrades — spend your cash, then you can <b>save & quit</b> and continue later.</li>
+      <li>🎮 <b>Story</b> = 3 days for the highest bank. <b>Endless</b> = keep going until you miss ${MISS_LIMIT} orders.</li>
+    </ul>`;
+  const CAST_HTML=`
+    <h5>👥 Meet the Cast</h5>
+    <div class="castrow"><div class="ce">🤓</div><div><b>Josh — the tech nerd (you)</b><small>Dark turquoise jacket, one robotic eye. Flies fast, weak at repairs.</small></div></div>
+    <div class="castrow"><div class="ce">🧒</div><div><b>Renas — little brother</b><small>Light blue outfit and beanie. Slower pilot, ace at charging & fixing.</small></div></div>
+    <div class="castrow"><div class="ce">👩</div><div><b>ATI — Mom (antagonist)</b><small>Purple outfit, glasses, permanent frown. Grounds a brother, calls curfews, or confiscates a drone.</small></div></div>
+    <div class="castrow"><div class="ce">🧃</div><div><b>Robin — goofy neighbor kid (antagonist)</b><small>Big kid in green, always with a juice box. Begs to fly your drones (and crashes them) or plops down and blocks the garage.</small></div></div>
+    <div class="castrow"><div class="ce">🤖</div><div><b>Meta AI — rogue robot (antagonist)</b><small>A blue robot that hacks in from Day 2 on. Remotely drains your batteries or jams signals so deliveries pay half.</small></div></div>`;
+
+  function toggleMenuPanel(which, html){
+    const panel=$("menuPanel");
+    if(G.menuOpen===which){ panel.style.display="none"; G.menuOpen=null; return; }
+    panel.innerHTML=html; panel.style.display="block"; G.menuOpen=which;
+  }
+  $("menuPlay").addEventListener("click", ()=>{
+    G.pendingMode="story";
+    $("menuOverlay").style.display="none";
+    $("startOverlay").style.display="flex";
+  });
+  $("menuEndless").addEventListener("click", ()=>{
+    G.pendingMode="endless";
+    startGame("endless");
+  });
+  $("menuContinueStory").addEventListener("click", ()=>loadGame("story"));
+  $("menuContinueEndless").addEventListener("click", ()=>loadGame("endless"));
+  $("menuHow").addEventListener("click", ()=>toggleMenuPanel("how",HOW_HTML));
+  $("menuCast").addEventListener("click", ()=>toggleMenuPanel("cast",CAST_HTML));
+  $("menuRuns").addEventListener("click", ()=>toggleMenuPanel("runs",runTrackerHTML()));
+  // clear-history button lives inside the run tracker panel (created on demand)
+  $("menuPanel").addEventListener("click", e=>{
+    if(e.target && e.target.id==="clearRuns"){
+      try{ localStorage.removeItem(RUNS_KEY); }catch(err){}
+      $("menuPanel").innerHTML=runTrackerHTML();
+    }
+  });
+
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
