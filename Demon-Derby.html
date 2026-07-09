@@ -1,0 +1,1942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demon Derby</title>
+<style>
+  :root {
+    --ash: #1a0e14;
+    --ember: #ff5a1f;
+    --ember-hot: #ffb020;
+    --blood: #c81e3a;
+    --field: #2f7d43;
+    --field-dark: #1f5c30;
+    --dirt: #b8783c;
+    --bone: #f4e9d8;
+    --smoke: #3a2530;
+    --gold: #ffd45e;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    background: radial-gradient(circle at 50% 20%, #3a1622 0%, #1a0e14 60%, #0d0709 100%);
+    font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+    color: var(--bone);
+    overflow: hidden;
+    user-select: none;
+  }
+  #wrap {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  canvas {
+    display: block;
+    background: #0d0709;
+    box-shadow: 0 0 80px rgba(255,90,31,0.25), inset 0 0 120px rgba(0,0,0,0.6);
+    max-width: 100%;
+    max-height: calc(100% - 60px);
+    border-radius: 6px;
+  }
+
+  /* HUD */
+  #hud {
+    position: absolute;
+    top: 18px; left: 0; right: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 28px;
+    pointer-events: none;
+    font-weight: bold;
+    letter-spacing: 1px;
+  }
+  .hud-box {
+    background: rgba(26,14,20,0.72);
+    border: 1px solid rgba(255,180,32,0.4);
+    padding: 8px 16px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    font-size: 13px;
+    backdrop-filter: blur(3px);
+  }
+  .hud-box .big { font-size: 26px; color: var(--gold); display:block; line-height:1; }
+  #pitchCount { color: var(--ember); }
+
+  /* Overlays */
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background: radial-gradient(circle at 50% 40%, rgba(58,22,34,0.92), rgba(13,7,9,0.97));
+    z-index: 10;
+    padding: 20px;
+    overflow-y: auto;
+  }
+  #startScreen {
+    justify-content: flex-start;
+    padding: 3vh 20px 80px;
+  }
+  .overlay.hidden { display: none; }
+  .embers-bg {
+    position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0;
+  }
+  .embers-bg i {
+    position: absolute; bottom: -12px; width: 4px; height: 4px; border-radius: 50%;
+    background: radial-gradient(circle, #ffd45e, #ff5a1f 60%, transparent);
+    animation: rise linear infinite;
+    opacity: 0;
+  }
+  @keyframes rise {
+    0% { transform: translateY(0) scale(1); opacity: 0; }
+    12% { opacity: 0.9; }
+    100% { transform: translateY(-105vh) scale(0.3); opacity: 0; }
+  }
+  .overlay > *:not(.embers-bg) { position: relative; z-index: 1; }
+  .title {
+    font-size: clamp(34px, 6.5vw, 66px);
+    line-height: 0.9;
+    font-weight: 900;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    background: linear-gradient(180deg, var(--ember-hot), var(--blood));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 40px rgba(255,90,31,0.5);
+    margin-bottom: 2px;
+    animation: titlePulse 3s ease-in-out infinite;
+  }
+  .title .vs {
+    -webkit-text-fill-color: var(--bone);
+    font-size: 0.5em;
+    letter-spacing: 6px;
+    opacity: 0.7;
+  }
+  @keyframes titlePulse {
+    0%,100% { filter: drop-shadow(0 0 8px rgba(255,90,31,0.3)); }
+    50% { filter: drop-shadow(0 0 22px rgba(255,90,31,0.65)); }
+  }
+  .tagline {
+    font-size: clamp(11px, 1.6vw, 14px);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--gold);
+    opacity: 0.85;
+    margin-bottom: 12px;
+  }
+  .subtitle {
+    font-size: clamp(12px, 1.7vw, 14px);
+    color: var(--bone);
+    opacity: 0.78;
+    max-width: 520px;
+    margin-bottom: 14px;
+    line-height: 1.5;
+  }
+  .subtitle b { color: var(--ember-hot); }
+  .lore {
+    font-size: clamp(11px, 1.6vw, 13px);
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--blood);
+    margin-bottom: 18px;
+  }
+  .mode-label {
+    font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+    opacity: 0.6; margin-bottom: 8px;
+  }
+  .mode-row {
+    display: flex; gap: 14px; flex-wrap: wrap; justify-content: center;
+    margin-bottom: 16px;
+  }
+  .mode-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 11px 22px; min-width: 190px;
+  }
+  .mode-btn .mode-title { font-size: 17px; }
+  .mode-btn .mode-sub {
+    font-size: 10.5px; font-weight: 600; letter-spacing: 0.5px;
+    text-transform: none; opacity: 0.9;
+  }
+  .mode-btn.training {
+    background: linear-gradient(180deg, #ff7ab0, #d61f7a);
+    box-shadow: 0 6px 0 #8a1250, 0 10px 30px rgba(255,122,176,0.35);
+  }
+  .mode-btn.training:hover { box-shadow: 0 8px 0 #8a1250, 0 14px 34px rgba(255,122,176,0.5); }
+  .mode-btn.training:active { box-shadow: 0 2px 0 #8a1250; }
+  .mode-btn { opacity: 0.55; filter: grayscale(0.4); transition: opacity .12s, filter .12s, transform .08s; }
+  .mode-btn.selected { opacity: 1; filter: none; outline: 2px solid var(--gold); outline-offset: 3px; }
+
+  /* Pill selectors */
+  .pill-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px; }
+  .pill {
+    pointer-events: auto; cursor: pointer; font-family: inherit; font-weight: bold;
+    background: rgba(26,14,20,0.7); color: var(--bone);
+    border: 1px solid rgba(255,180,32,0.35);
+    padding: 9px 18px; border-radius: 22px; font-size: 13px;
+    letter-spacing: 1px; text-transform: uppercase; transition: all .12s;
+  }
+  .pill:hover { border-color: var(--gold); }
+  .pill.selected { background: linear-gradient(180deg, var(--ember-hot), var(--ember)); color: #1a0e14; border-color: var(--gold); }
+  .pill.danger.selected { background: linear-gradient(180deg, var(--blood), #7a1020); color: #fff; }
+  .play-btn { margin-top: 6px; margin-bottom: 4px; }
+  .btn {
+    pointer-events: auto;
+    cursor: pointer;
+    background: linear-gradient(180deg, var(--ember), var(--blood));
+    color: #fff;
+    border: none;
+    padding: 14px 40px;
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border-radius: 6px;
+    box-shadow: 0 6px 0 #7a1020, 0 10px 30px rgba(255,90,31,0.4);
+    transition: transform .08s, box-shadow .08s;
+    font-family: inherit;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 0 #7a1020, 0 14px 34px rgba(255,90,31,0.55); }
+  .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #7a1020; }
+  .how {
+    margin-top: 14px;
+    font-size: 11.5px;
+    opacity: 0.65;
+    max-width: 460px;
+    line-height: 1.6;
+  }
+  .how kbd {
+    background: rgba(255,180,32,0.18);
+    border: 1px solid rgba(255,180,32,0.5);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-family: inherit;
+    color: var(--gold);
+  }
+  #finalStats { font-size: 18px; margin-bottom: 20px; line-height: 1.7; }
+  #finalStats span { color: var(--gold); font-weight: 900; }
+  .verdict { font-size: clamp(22px, 4vw, 34px); font-weight: 900; margin-bottom: 14px; }
+  .win { color: var(--gold); text-shadow: 0 0 30px rgba(255,212,94,0.6); }
+  .lose { color: var(--blood); text-shadow: 0 0 30px rgba(200,30,58,0.6); }
+
+  /* Career stats */
+  .career {
+    margin-top: 16px;
+    width: min(540px, 92vw);
+    background: rgba(26,14,20,0.6);
+    border: 1px solid rgba(255,180,32,0.28);
+    border-radius: 10px;
+    padding: 11px 16px 13px;
+    backdrop-filter: blur(3px);
+  }
+  .career-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .career-title {
+    font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--gold); font-weight: 900;
+  }
+  .career-reset {
+    background: transparent; border: 1px solid rgba(255,90,31,0.5);
+    color: var(--ember); font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+    padding: 3px 10px; border-radius: 4px; cursor: pointer; font-family: inherit; font-weight: bold;
+    pointer-events: auto; transition: background .1s;
+  }
+  .career-reset:hover { background: rgba(255,90,31,0.18); }
+  .career-grid {
+    display: grid; grid-template-columns: repeat(3, minmax(0,1fr));
+    gap: 8px 8px;
+  }
+  .stat { display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .stat-val { font-size: 22px; font-weight: 900; color: var(--bone); line-height: 1; }
+  .stat-lbl { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; opacity: 0.6; margin-top: 3px; }
+
+  /* Music toggle */
+  #musicToggle {
+    position: absolute; bottom: 66px; right: 20px; z-index: 12;
+    background: rgba(26,14,20,0.8); color: var(--gold);
+    border: 1px solid rgba(255,180,32,0.5);
+    padding: 8px 14px; border-radius: 20px; cursor: pointer;
+    font-family: inherit; font-weight: bold; font-size: 12px; letter-spacing: 1px;
+    text-transform: uppercase; backdrop-filter: blur(4px);
+    transition: transform .08s, background .1s;
+  }
+  #musicToggle:hover { background: rgba(58,22,34,0.9); transform: translateY(-1px); }
+  #musicToggle.on { color: #5dff8a; border-color: rgba(93,255,138,0.6); }
+
+  /* Cutscene */
+  #cutscene { justify-content: center; gap: 0; }
+  .cut-stage {
+    display: flex; align-items: flex-end; justify-content: center; gap: clamp(20px, 6vw, 80px);
+    margin-bottom: 26px;
+  }
+  .cut-char { display: flex; flex-direction: column; align-items: center; }
+  .cut-char canvas { display: block; }
+  .cut-nathan { animation: slideInLeft .5s ease-out; }
+  .cut-zenith { animation: slideInRight .5s ease-out; }
+  @keyframes slideInLeft { from { transform: translateX(-60px); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes slideInRight { from { transform: translateX(60px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .cut-name {
+    margin-top: 6px; font-weight: 900; font-size: 15px; letter-spacing: 3px;
+    padding: 4px 16px; border-radius: 4px;
+  }
+  .cut-name.nathan { background: rgba(200,30,58,0.9); color: #fff; }
+  .cut-name.zenith { background: rgba(122,20,32,0.9); color: var(--gold); }
+  .cut-vs { font-size: 34px; color: var(--ember); align-self: center; opacity: 0.8; filter: drop-shadow(0 0 10px rgba(255,90,31,0.6)); }
+  .cut-bubble {
+    width: min(640px, 92vw); min-height: 96px;
+    background: rgba(13,7,9,0.9); border: 2px solid rgba(255,180,32,0.55);
+    border-radius: 12px; padding: 16px 22px; text-align: left;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+  }
+  .cut-speaker {
+    font-size: 13px; font-weight: 900; letter-spacing: 3px; text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .cut-speaker.nathan { color: var(--blood); }
+  .cut-speaker.zenith { color: var(--gold); }
+  .cut-line { font-size: clamp(15px, 2.4vw, 19px); line-height: 1.5; color: var(--bone); }
+  .cut-line .caret { animation: blink 1s steps(1) infinite; color: var(--ember); }
+  @keyframes blink { 50% { opacity: 0; } }
+  .cut-controls {
+    display: flex; align-items: center; gap: 18px; margin-top: 18px;
+  }
+  .cut-hint { font-size: 12px; letter-spacing: 1px; opacity: 0.55; text-transform: uppercase; }
+  .cut-skip {
+    pointer-events: auto; cursor: pointer; font-family: inherit; font-weight: bold;
+    background: rgba(26,14,20,0.8); color: var(--gold);
+    border: 1px solid rgba(255,180,32,0.5); padding: 8px 18px; border-radius: 20px;
+    font-size: 12px; letter-spacing: 1px; text-transform: uppercase; transition: all .12s;
+  }
+  .cut-skip:hover { background: rgba(255,90,31,0.2); }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="900" height="600"></canvas>
+
+  <button id="musicToggle" title="Toggle music">&#9835; Music: Off</button>
+
+  <div id="hud">
+    <div class="hud-box">Home Runs<span class="big" id="hrCount">0</span></div>
+    <div class="hud-box" style="text-align:center" id="centerBox"><span id="centerLabel">Pitch</span><span class="big" id="pitchCount">1 / 9</span><span id="oppName" style="font-size:10px;color:var(--bone);opacity:0.75;display:block;letter-spacing:2px;">VS ZENITH</span></div>
+    <div class="hud-box" style="text-align:right">Score<span class="big" id="scoreVal">0</span></div>
+  </div>
+
+  <!-- Start screen -->
+  <div class="overlay" id="startScreen">
+    <div class="embers-bg" id="titleEmbers"></div>
+    <div class="title">Demon<br>Derby</div>
+    <div class="tagline">— Nathan vs Zenith · Home Run Showdown —</div>
+    <div class="subtitle">The diamond cracked open and the demon <b>Zenith</b> climbed out, cursed baseball in claw. You are <b>Nathan</b> — send his pitches over the fence to banish him.</div>
+    <div class="lore">Read the pitch. Charge your swing. Send it over the fence.</div>
+
+    <div class="mode-label">1 · Pick your pitcher</div>
+    <div class="mode-row">
+      <button class="btn mode-btn opp-btn selected" id="startBtn" data-opp="zenith">
+        <span class="mode-title">Face Zenith</span>
+        <span class="mode-sub">The demon. Fast, cursed, cruel.</span>
+      </button>
+      <button class="btn mode-btn training opp-btn" id="trainBtn" data-opp="training">
+        <span class="mode-title">Train with Ash</span>
+        <span class="mode-sub">Your little brother lobs it slow &amp; easy.</span>
+      </button>
+    </div>
+
+    <div class="mode-label">2 · Difficulty</div>
+    <div class="pill-row" id="diffRow">
+      <button class="pill selected" data-diff="rookie">Rookie</button>
+      <button class="pill" data-diff="pro">Pro</button>
+      <button class="pill danger" data-diff="nightmare">Nightmare</button>
+    </div>
+
+    <div class="mode-label">3 · Game type</div>
+    <div class="pill-row" id="gameRow">
+      <button class="pill selected" data-game="showdown">9-Pitch Showdown</button>
+      <button class="pill" data-game="endless">Endless · Survival</button>
+    </div>
+
+    <button class="btn play-btn" id="playBtn">▶ Play Ball</button>
+
+    <div class="how">
+      <kbd>HOLD</kbd> Space / Click to charge power &middot; <kbd>RELEASE</kbd> to swing.<br>
+      Time your release for contact; more charge = more distance. Survival: 3 misses and you're out.
+    </div>
+
+    <div class="career" id="careerPanel">
+      <div class="career-head">
+        <span class="career-title">Career Stats</span>
+        <button class="career-reset" id="resetStatsBtn">Reset</button>
+      </div>
+      <div class="career-grid">
+        <div class="stat"><span class="stat-val" id="csGames">0</span><span class="stat-lbl">Games</span></div>
+        <div class="stat"><span class="stat-val" id="csHr">0</span><span class="stat-lbl">Home Runs</span></div>
+        <div class="stat"><span class="stat-val" id="csBest">0</span><span class="stat-lbl">Best (1 game)</span></div>
+        <div class="stat"><span class="stat-val" id="csLongest">0</span><span class="stat-lbl">Longest HR (ft)</span></div>
+        <div class="stat"><span class="stat-val" id="csSurv">0</span><span class="stat-lbl">Best Survival Run</span></div>
+        <div class="stat"><span class="stat-val" id="csZenith">0</span><span class="stat-lbl">Zenith Banished</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- End screen -->
+  <div class="overlay hidden" id="endScreen">
+    <div class="verdict" id="verdict"></div>
+    <div id="finalStats"></div>
+    <button class="btn" id="replayBtn">Rematch</button>
+  </div>
+
+  <!-- Cutscene -->
+  <div class="overlay hidden" id="cutscene">
+    <div class="embers-bg" id="cutEmbers"></div>
+    <div class="cut-stage">
+      <div class="cut-char cut-nathan" id="cutNathanWrap">
+        <canvas id="cutNathanCv" width="150" height="200"></canvas>
+        <div class="cut-name nathan">NATHAN</div>
+      </div>
+      <div class="cut-vs">⚔</div>
+      <div class="cut-char cut-zenith" id="cutZenithWrap">
+        <canvas id="cutZenithCv" width="150" height="200"></canvas>
+        <div class="cut-name zenith">ZENITH</div>
+      </div>
+    </div>
+    <div class="cut-bubble" id="cutBubble">
+      <div class="cut-speaker" id="cutSpeaker">NATHAN</div>
+      <div class="cut-line" id="cutLine"></div>
+    </div>
+    <div class="cut-controls">
+      <span class="cut-hint">Click / Space to continue</span>
+      <button class="cut-skip" id="cutSkip">Skip ▸</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://artifactcdn.diabrowser.engineering/ajax/libs/tone/Tone.min.js"></script>
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+// UI refs
+const hrCountEl = document.getElementById('hrCount');
+const pitchCountEl = document.getElementById('pitchCount');
+const scoreValEl = document.getElementById('scoreVal');
+const startScreen = document.getElementById('startScreen');
+const endScreen = document.getElementById('endScreen');
+const startBtn = document.getElementById('startBtn');
+const trainBtn = document.getElementById('trainBtn');
+const replayBtn = document.getElementById('replayBtn');
+const verdictEl = document.getElementById('verdict');
+const finalStatsEl = document.getElementById('finalStats');
+const musicToggle = document.getElementById('musicToggle');
+const resetStatsBtn = document.getElementById('resetStatsBtn');
+
+// ---------- CAREER STATS ----------
+const STATS_KEY = 'demonDerbyStats';
+const defaultStats = { games:0, hr:0, best:0, score:0, zenith:0, longest:0, survBest:0 };
+let career = loadStats();
+
+function loadStats() {
+  try {
+    const raw = localStorage.getItem(STATS_KEY);
+    if (raw) return Object.assign({}, defaultStats, JSON.parse(raw));
+  } catch(e) {}
+  return Object.assign({}, defaultStats);
+}
+function saveStats() {
+  try { localStorage.setItem(STATS_KEY, JSON.stringify(career)); } catch(e) {}
+}
+function renderCareer() {
+  document.getElementById('csGames').textContent = career.games;
+  document.getElementById('csHr').textContent = career.hr;
+  document.getElementById('csBest').textContent = career.best;
+  document.getElementById('csLongest').textContent = career.longest;
+  document.getElementById('csSurv').textContent = career.survBest;
+  document.getElementById('csZenith').textContent = career.zenith;
+}
+resetStatsBtn.onclick = () => {
+  career = Object.assign({}, defaultStats);
+  saveStats(); renderCareer();
+};
+
+const TOTAL_PITCHES = 9;
+const MAX_OUTS = 3;
+
+// Difficulty presets: pitch speed, curve, and how forgiving the timing window is
+const DIFFICULTY = {
+  rookie:    { name: 'Rookie',    spdBase: 5.2, spdRamp: 0.30, curve: 1.1, win: 78, hr: 0.74, label: '#4fb36b' },
+  pro:       { name: 'Pro',       spdBase: 6.4, spdRamp: 0.55, curve: 1.9, win: 58, hr: 0.80, label: '#ffb020' },
+  nightmare: { name: 'Nightmare', spdBase: 7.6, spdRamp: 0.85, curve: 2.8, win: 42, hr: 0.86, label: '#c81e3a' }
+};
+
+let mode = 'zenith';       // zenith | training
+let difficulty = 'rookie'; // rookie | pro | nightmare
+let gameType = 'showdown'; // showdown | endless
+let state = 'idle';        // idle | windup | pitch | charging | swing | result | over
+
+let pitchNum = 0;
+let homeRuns = 0;
+let score = 0;
+let outs = 0;
+let combo = 0;             // consecutive homers (survival flavor)
+
+// Power meter (hold to charge)
+let charging = false;
+let power = 0;             // 0..1
+let powerDir = 1;
+
+// Timing meter — tracks how close the ball is to the sweet spot right now
+let timingFill = 0;
+let inSweetSpot = false;
+
+// Ball state
+let ball = null;
+let hitBall = null;
+let swingT = -1;
+let contactWindowHit = false;
+let resultText = '';
+let resultTimer = 0;
+let particles = [];
+let stars = [];
+let shakeT = 0, shakeMag = 0;
+let batAngle = 0;
+let lastDistance = 0;      // ft of last home run
+let lastLongest = 0;       // longest HR this game
+
+// Raaf the raven — heckling commentator (Zenith only)
+let raafText = '';
+let raafTimer = 0;         // frames the speech bubble stays up
+const RAAF = {
+  homer: [
+    "Caw! That ball's in another area code.",
+    "Zenith's gonna feel that one in the morning.",
+    "GONE! Somebody fetch it from the underworld.",
+    "Textbook. Chef's kiss. *raven noises*",
+    "That's a souvenir for a very lucky ghost.",
+    "I lost sight of it. It went to space.",
+    "The fence never stood a chance, honestly.",
+    "Put it on a postcard. 'Wish you were here, Zenith.'",
+    "That's not a home run, that's an eviction notice.",
+    "Somewhere, a demon is quietly crying."
+  ],
+  combo: [
+    "Back-to-back?! Save some for the rest of us.",
+    "You're on FIRE. Literally, check the outfield.",
+    "Zenith is filing a complaint with management.",
+    "The demon is sweating. I can smell brimstone panic.",
+    "Streak's alive! I'm getting emotional up here.",
+    "Okay show-off, we get it, you're good.",
+    "That's a rhythm. Zenith hates rhythm.",
+    "Keep this up and I'll need a bigger perch."
+  ],
+  fly: [
+    "Ooh, warning-track power. So close.",
+    "The wall says hello. And goodbye.",
+    "A few more feet and I'd be applauding.",
+    "Loud out. Zenith got lucky there.",
+    "So close I felt the breeze up here.",
+    "Robbed by gravity. Rude gravity.",
+    "That one needed one more sandwich for lunch.",
+    "Deep, but the fence had other plans."
+  ],
+  grounder: [
+    "That's a worm-burner, my guy.",
+    "You beat it into the dirt. Rude.",
+    "Even I could've fielded that one.",
+    "Weak sauce. Put some mustard on it.",
+    "The grass felt that. The grass is upset.",
+    "Groundball to nobody in particular.",
+    "That had all the power of a gentle sigh.",
+    "Dig it out of the infield, champ."
+  ],
+  strike: [
+    "Swing? No swing? Bold strategy either way.",
+    "Yikes. The bat is for hitting, just FYI.",
+    "Zenith cackling. I'm cackling. We're all cackling.",
+    "That pitch had your number AND your address.",
+    "You blinked. He noticed.",
+    "Whiff so big it made its own wind.",
+    "The catcher didn't even move. Neither did you.",
+    "That's a strike in nine dimensions.",
+    "I've seen scarecrows with better timing.",
+    "Don't worry, the ball was probably cursed. Oh wait."
+  ],
+  neutral: [
+    "Lock in. He throws heat.",
+    "Watch the release. Trust me, I have great eyes.",
+    "I flew a long way to heckle you. Perform.",
+    "Zenith's got that look. Stay ready.",
+    "Breathe. Then obliterate it.",
+    "The mound smells like sulfur and spite today.",
+    "Charge it up. Make him regret climbing out.",
+    "I believe in you. Mostly. Around 60%."
+  ]
+};
+function raafSay(kind) {
+  if (mode === 'training') return;
+  const bank = RAAF[kind] || RAAF.neutral;
+  raafText = bank[Math.floor(Math.random()*bank.length)];
+  raafTimer = 150;
+}
+
+// Plate/strike-zone geometry (where the ball crosses = perfect timing)
+const PLATE_Y = H - 150;
+const BATTER_X = 250;
+
+// Training is a gentle fixed preset regardless of difficulty buttons
+function diffCfg() {
+  if (mode === 'training') return { name:'Ash', spdBase: 3.6, spdRamp: 0.18, curve: 0.5, win: 88, hr: 0.60, label:'#4fb36b' };
+  return DIFFICULTY[difficulty];
+}
+
+// ---- Background embers ----
+for (let i = 0; i < 60; i++) {
+  stars.push({ x: Math.random()*W, y: Math.random()*H, r: Math.random()*2+0.5, s: Math.random()*0.4+0.1, o: Math.random()*0.5+0.2 });
+}
+
+function reset() {
+  pitchNum = 0; homeRuns = 0; score = 0; outs = 0; combo = 0;
+  lastDistance = 0; lastLongest = 0;
+  particles = []; hitBall = null; ball = null;
+  raafText = ''; raafTimer = 0;
+  updateHUD();
+  if (mode !== 'training') { raafSay('neutral'); }
+  nextPitch();
+}
+
+function updateHUD() {
+  hrCountEl.textContent = homeRuns;
+  scoreValEl.textContent = score;
+  const label = document.getElementById('centerLabel');
+  if (gameType === 'endless') {
+    label.textContent = 'Outs';
+    pitchCountEl.innerHTML = renderOuts();
+  } else {
+    label.textContent = 'Pitch';
+    pitchCountEl.textContent = Math.min(pitchNum+1, TOTAL_PITCHES) + ' / ' + TOTAL_PITCHES;
+  }
+  const opp = document.getElementById('oppName');
+  if (opp) {
+    const dn = mode === 'training' ? 'ASH' : 'ZENITH · ' + DIFFICULTY[difficulty].name.toUpperCase();
+    opp.textContent = (mode === 'training' ? 'TRAINING · ' : 'VS ') + dn;
+  }
+}
+
+function renderOuts() {
+  let s = '';
+  for (let i=0;i<MAX_OUTS;i++){
+    s += '<span style="color:' + (i<outs?'#c81e3a':'rgba(255,255,255,0.25)') + '">✕</span>';
+  }
+  return s;
+}
+
+function nextPitch() {
+  if (gameType === 'showdown' && pitchNum >= TOTAL_PITCHES) { endGame(); return; }
+  if (gameType === 'endless' && outs >= MAX_OUTS) { endGame(); return; }
+  state = 'windup';
+  swingT = -1;
+  contactWindowHit = false;
+  hitBall = null;
+  resultText = '';
+  charging = false; power = 0; powerDir = 1;
+  lastDistance = 0;
+  setTimeout(() => {
+    if (state !== 'windup') return;
+    releasePitch();
+  }, 850);
+}
+
+function releasePitch() {
+  state = 'pitch';
+  const cfg = diffCfg();
+  // In endless, difficulty ramps with pitches survived
+  const ramp = gameType === 'endless' ? pitchNum : pitchNum;
+  const speed = cfg.spdBase + ramp * cfg.spdRamp + Math.random()*1.0;
+  const curve = (Math.random()-0.5) * (cfg.curve + ramp * (mode==='training'?0:0.12));
+  const startX = 640, startY = 210;
+  ball = {
+    x: startX, y: startY,
+    vx: (BATTER_X - startX) / (PLATE_Y - startY) * speed,
+    vy: speed,
+    curve: curve,
+    active: true,
+    r: 9,
+    trail: []
+  };
+}
+
+// ---------- POWER / SWING ----------
+function beginCharge() {
+  if (state !== 'pitch') return;
+  charging = true;
+  power = 0; powerDir = 1;
+  state = 'charging';
+}
+
+function releaseSwing() {
+  if (state !== 'charging') return;
+  charging = false;
+  if (!ball || !ball.active) { state = 'pitch'; return; }
+  state = 'swing';
+  swingT = 0;
+  batAngle = 0;
+  const cfg = diffCfg();
+  if (ball) {
+    const dist = Math.abs(ball.y - PLATE_Y);
+    const horizOk = Math.abs(ball.x - BATTER_X) < (mode==='training'?170:130);
+    if (dist < cfg.win && horizOk) {
+      contactWindowHit = true;
+      resolveContact(dist, cfg);
+    } else {
+      contactWindowHit = false;
+      batWhiff();
+    }
+  }
+}
+
+function resolveContact(dist, cfg) {
+  const timing = 1 - Math.min(dist / cfg.win, 1);   // 1 = perfect timing
+  // Combined quality: timing gates contact, power adds distance
+  const quality = timing * (0.55 + power * 0.45);
+  ball.active = false;
+  const bx = ball.x, by = ball.y;
+
+  hitBall = {
+    x: bx, y: by,
+    vx: (7 + quality*13) * (0.7 + Math.random()*0.4),
+    vy: -(6 + quality*13),
+    r: 9, dead: false, trail: [],
+    fire: quality >= cfg.hr
+  };
+
+  spawnContactBurst(bx, by, quality);
+  shake(quality >= cfg.hr ? 16 : 8);
+  batCrack(quality);
+
+  const flyThresh = cfg.hr - 0.28;
+  if (quality >= cfg.hr) {
+    homeRuns++; combo++;
+    lastDistance = Math.round(360 + quality*160 + power*40);
+    if (lastDistance > lastLongest) lastLongest = lastDistance;
+    const comboBonus = combo > 1 ? (combo-1)*25 : 0;
+    score += 100 + Math.round(quality*50) + comboBonus;
+    resultText = combo > 1 ? ('HOME RUN!  x' + combo + ' COMBO') : 'HOME RUN!';
+    resultColor = '#ffd45e';
+    hrSting();
+    raafSay(combo > 1 ? 'combo' : 'homer');
+  } else if (quality >= flyThresh) {
+    combo = 0;
+    score += 30;
+    resultText = 'Deep fly... caught at the wall.';
+    resultColor = '#ffb020';
+    hitBall.willDie = true;
+    registerMiss();
+    raafSay('fly');
+  } else {
+    combo = 0;
+    score += 10;
+    resultText = 'Grounder. Weak contact.';
+    resultColor = '#e8c8a0';
+    hitBall.willDie = true;
+    hitBall.vy = -(3 + quality*4);
+    registerMiss();
+    raafSay('grounder');
+  }
+  updateHUD();
+  finishSwingSoon();
+}
+
+function registerMiss() {
+  // A non-homer counts as an out only in survival mode
+  if (gameType === 'endless') { outs++; updateHUD(); }
+}
+
+let resultColor = '#fff';
+
+function finishSwingSoon() {
+  setTimeout(() => { state = 'result'; resultTimer = 60; }, 1400);
+}
+
+function missSwing() {
+  // Ball passed the plate untouched, or a swing-and-miss resolved to nothing
+  combo = 0;
+  if (gameType === 'endless') { outs++; }
+  resultText = mode === 'training' ? 'Ooh, missed it! Ash tries again.' : 'Strike! Zenith cackles.';
+  resultColor = mode === 'training' ? '#ffb020' : '#c81e3a';
+  updateHUD();
+  raafSay('strike');
+  setTimeout(() => { state = 'result'; resultTimer = 45; }, 700);
+}
+
+function spawnContactBurst(x, y, q) {
+  const n = Math.round(20 + q*40);
+  for (let i=0;i<n;i++){
+    const a = Math.random()*Math.PI*2;
+    const sp = Math.random()* (4 + q*8);
+    particles.push({
+      x, y,
+      vx: Math.cos(a)*sp, vy: Math.sin(a)*sp - 2,
+      life: 1, decay: 0.015 + Math.random()*0.02,
+      r: Math.random()*4+1.5,
+      c: q>0.8 ? (Math.random()>0.5?'#ffd45e':'#ff5a1f') : '#ffe8c0'
+    });
+  }
+}
+
+function spawnFireTrail(x, y) {
+  particles.push({
+    x: x + (Math.random()-0.5)*6, y: y + (Math.random()-0.5)*6,
+    vx:(Math.random()-0.5)*1, vy:(Math.random()-0.5)*1 - 0.5,
+    life: 1, decay: 0.04, r: Math.random()*5+2,
+    c: Math.random()>0.5?'#ff5a1f':'#ffb020'
+  });
+}
+
+function shake(mag){ shakeT = 18; shakeMag = mag; }
+
+// ---------- INPUT (hold to charge, release to swing) ----------
+function pressDown(){ beginCharge(); }
+function pressUp(){ releaseSwing(); }
+
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (cutActive) { if (!e.repeat) advanceCut(); return; }
+    if (!e.repeat) pressDown();
+  }
+});
+document.addEventListener('keyup', e => {
+  if (e.code === 'Space') { e.preventDefault(); if (cutActive) return; pressUp(); }
+});
+canvas.addEventListener('mousedown', e => { e.preventDefault(); pressDown(); });
+canvas.addEventListener('mouseup', e => { e.preventDefault(); pressUp(); });
+canvas.addEventListener('touchstart', e => { e.preventDefault(); pressDown(); }, {passive:false});
+canvas.addEventListener('touchend', e => { e.preventDefault(); pressUp(); }, {passive:false});
+
+// ---------- Title screen selectors ----------
+function wireSelectors(){
+  document.querySelectorAll('.opp-btn').forEach(b => {
+    b.onclick = () => {
+      mode = b.dataset.opp === 'training' ? 'training' : 'zenith';
+      document.querySelectorAll('.opp-btn').forEach(x => x.classList.toggle('selected', x===b));
+    };
+  });
+  document.querySelectorAll('#diffRow .pill').forEach(b => {
+    b.onclick = () => {
+      difficulty = b.dataset.diff;
+      document.querySelectorAll('#diffRow .pill').forEach(x => x.classList.toggle('selected', x===b));
+    };
+  });
+  document.querySelectorAll('#gameRow .pill').forEach(b => {
+    b.onclick = () => {
+      gameType = b.dataset.game;
+      document.querySelectorAll('#gameRow .pill').forEach(x => x.classList.toggle('selected', x===b));
+    };
+  });
+}
+wireSelectors();
+
+document.getElementById('playBtn').onclick = () => {
+  startScreen.classList.add('hidden');
+  if (mode === 'training') {
+    beginGame();
+  } else {
+    playCutscene(pickDialogue('intro'), beginGame);
+  }
+};
+function beginGame() {
+  cutscene.classList.add('hidden');
+  state = 'idle';
+  reset();
+  startMusic();
+}
+replayBtn.onclick = () => { endScreen.classList.add('hidden'); startScreen.classList.remove('hidden'); renderCareer(); };
+
+// ---------- UPDATE ----------
+function update() {
+  // background embers
+  for (const s of stars){ s.y -= s.s; if (s.y < -5){ s.y = H+5; s.x = Math.random()*W; } }
+
+  // timing meter: fill grows as the ball approaches the plate
+  if ((state === 'pitch' || state === 'charging' || state === 'swing') && ball && ball.active) {
+    const startY = 210;
+    timingFill = Math.max(0, Math.min(1, (ball.y - startY) / (PLATE_Y - startY)));
+    const cfg = diffCfg();
+    inSweetSpot = Math.abs(ball.y - PLATE_Y) < cfg.win;
+  } else {
+    timingFill = 0;
+    inSweetSpot = false;
+  }
+
+  // power meter oscillates while charging
+  if (state === 'charging') {
+    power += powerDir * 0.035;
+    if (power >= 1) { power = 1; powerDir = -1; }
+    if (power <= 0) { power = 0; powerDir = 1; }
+  }
+
+  // ball keeps flying during pitch, charging, and whiff-swing
+  const ballFlying = (state === 'pitch' || state === 'charging' || (state === 'swing' && !contactWindowHit));
+  if (ballFlying && ball && ball.active) {
+    ball.trail.push({x:ball.x, y:ball.y});
+    if (ball.trail.length > 12) ball.trail.shift();
+    ball.vx += ball.curve * 0.08;
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+    if (ball.y > PLATE_Y + 70) {
+      ball.active = false;
+      missSwing();
+    }
+  }
+
+  if (swingT >= 0) {
+    swingT += 1;
+    batAngle = Math.sin(Math.min(swingT/10, 1) * Math.PI) * 2.4;
+    if (swingT > 16) swingT = -1;
+  }
+
+  // batted ball physics
+  if (hitBall && !hitBall.dead) {
+    hitBall.trail.push({x:hitBall.x, y:hitBall.y});
+    if (hitBall.trail.length > 18) hitBall.trail.shift();
+    hitBall.vy += 0.32; // gravity
+    hitBall.x += hitBall.vx;
+    hitBall.y += hitBall.vy;
+    if (hitBall.fire) spawnFireTrail(hitBall.x, hitBall.y);
+    // die at fence for non-HR
+    if (hitBall.willDie && hitBall.y > PLATE_Y - 10 && hitBall.vy > 0) hitBall.dead = true;
+    if (hitBall.x > W + 40 || hitBall.y > H + 40) hitBall.dead = true;
+  }
+
+  // particles
+  for (const p of particles){
+    p.x += p.vx; p.y += p.vy; p.vy += 0.12; p.life -= p.decay;
+  }
+  particles = particles.filter(p => p.life > 0);
+
+  if (shakeT > 0) shakeT--;
+  if (raafTimer > 0) raafTimer--;
+
+  if (state === 'result') {
+    resultTimer--;
+    if (resultTimer <= 0) {
+      pitchNum++;
+      updateHUD();
+      nextPitch();
+    }
+  }
+}
+
+// ---------- DRAW ----------
+function draw() {
+  ctx.save();
+  if (shakeT > 0) {
+    const dx = (Math.random()-0.5)*shakeMag, dy = (Math.random()-0.5)*shakeMag;
+    ctx.translate(dx, dy);
+  }
+
+  // Sky / hell backdrop
+  const sky = ctx.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0, '#43121f');
+  sky.addColorStop(0.4, '#6e1c22');
+  sky.addColorStop(0.55, '#c8451f');
+  sky.addColorStop(0.62, '#1f5c30');
+  sky.addColorStop(1, '#123a1f');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0,0,W,H);
+
+  // embers
+  for (const s of stars){
+    ctx.globalAlpha = s.o;
+    ctx.fillStyle = '#ffb020';
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 7); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Outfield fence
+  const fenceY = H*0.40;
+  ctx.strokeStyle = '#0d1f12';
+  ctx.lineWidth = 6;
+  ctx.strokeRect(-3, fenceY, W+6, 14);
+  ctx.fillStyle = '#163a20';
+  ctx.fillRect(0, fenceY, W, 14);
+  // "HOME RUN" markings on fence
+  ctx.fillStyle = 'rgba(255,212,94,0.5)';
+  ctx.font = 'bold 13px Trebuchet MS';
+  ctx.textAlign = 'center';
+  for (let x=90; x<W; x+=200){ ctx.fillText('◆ 420 ◆', x, fenceY+11); }
+
+  // Grass gradient below fence
+  const grass = ctx.createLinearGradient(0,fenceY,0,H);
+  grass.addColorStop(0, '#2f7d43');
+  grass.addColorStop(1, '#1b5230');
+  ctx.fillStyle = grass;
+  ctx.fillRect(0, fenceY+14, W, H);
+
+  // mowed stripes
+  ctx.globalAlpha = 0.08;
+  for (let i=0;i<12;i++){
+    ctx.fillStyle = i%2? '#ffffff':'#000000';
+    ctx.beginPath();
+    ctx.moveTo(W*0.55, fenceY+14);
+    ctx.lineTo(W*0.55 + (i-6)*90, H);
+    ctx.lineTo(W*0.55 + (i-5)*90, H);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Pitcher's mound
+  ctx.fillStyle = '#8a5a2b';
+  ctx.beginPath();
+  ctx.ellipse(600, 300, 78, 30, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#b8783c';
+  ctx.beginPath();
+  ctx.ellipse(600, 296, 66, 24, 0, 0, 7); ctx.fill();
+
+  // Batter's dirt circle
+  ctx.fillStyle = '#8a5a2b';
+  ctx.beginPath();
+  ctx.ellipse(BATTER_X, PLATE_Y+40, 120, 42, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#b8783c';
+  ctx.beginPath();
+  ctx.ellipse(BATTER_X, PLATE_Y+40, 104, 34, 0, 0, 7); ctx.fill();
+  // home plate
+  ctx.fillStyle = '#f4e9d8';
+  ctx.beginPath();
+  ctx.moveTo(BATTER_X+40, PLATE_Y+52);
+  ctx.lineTo(BATTER_X+64, PLATE_Y+52);
+  ctx.lineTo(BATTER_X+64, PLATE_Y+64);
+  ctx.lineTo(BATTER_X+52, PLATE_Y+74);
+  ctx.lineTo(BATTER_X+40, PLATE_Y+64);
+  ctx.closePath(); ctx.fill();
+
+  if (mode === 'training') drawAsh(600, 258);
+  else drawZenith(600, 250);
+  drawNathan(BATTER_X, PLATE_Y);
+
+  if (mode !== 'training') drawRaaf();
+
+  drawTimingMeter();
+  drawPowerMeter();
+
+  // ball trail + ball
+  if (ball && ball.active) {
+    for (let i=0;i<ball.trail.length;i++){
+      const t = ball.trail[i]; const a = i/ball.trail.length;
+      ctx.globalAlpha = a*0.5;
+      ctx.fillStyle = '#c81e3a';
+      ctx.beginPath(); ctx.arc(t.x, t.y, ball.r*a, 0, 7); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    // cursed ball
+    const g = ctx.createRadialGradient(ball.x-3, ball.y-3, 1, ball.x, ball.y, ball.r+4);
+    g.addColorStop(0, '#fff');
+    g.addColorStop(0.5, '#ff7a3a');
+    g.addColorStop(1, '#8a0e1e');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, 7); ctx.fill();
+    // seams
+    ctx.strokeStyle = 'rgba(60,0,0,0.7)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r*0.7, 0.5, 2.2); ctx.stroke();
+    // glow
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = '#ff5a1f';
+    ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r+7, 0, 7); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // batted ball
+  if (hitBall && !hitBall.dead) {
+    for (let i=0;i<hitBall.trail.length;i++){
+      const t = hitBall.trail[i]; const a = i/hitBall.trail.length;
+      ctx.globalAlpha = a*0.6;
+      ctx.fillStyle = hitBall.fire ? '#ffb020' : '#ffffff';
+      ctx.beginPath(); ctx.arc(t.x, t.y, hitBall.r*a, 0, 7); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#f4e9d8';
+    ctx.beginPath(); ctx.arc(hitBall.x, hitBall.y, hitBall.r, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#c81e3a'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(hitBall.x, hitBall.y, hitBall.r*0.7, 0.5, 2.2); ctx.stroke();
+  }
+
+  // particles
+  for (const p of particles){
+    ctx.globalAlpha = Math.max(p.life,0);
+    ctx.fillStyle = p.c;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Result banner
+  if (resultText && (state==='result' || state==='swing')) {
+    ctx.textAlign = 'center';
+    ctx.font = '900 44px Trebuchet MS';
+    ctx.fillStyle = resultColor;
+    ctx.shadowColor = resultColor; ctx.shadowBlur = 24;
+    ctx.fillText(resultText, W/2, 130);
+    ctx.shadowBlur = 0;
+    if (resultText.indexOf('HOME RUN') === 0 && lastDistance) {
+      ctx.font = '900 26px Trebuchet MS';
+      ctx.fillStyle = '#ffb020';
+      ctx.fillText(lastDistance + ' ft', W/2, 166);
+    }
+  }
+
+  ctx.restore();
+}
+
+// ---- Characters ----
+function drawZenith(x, y) {
+  ctx.save();
+  ctx.translate(x, y);
+  const bob = Math.sin(Date.now()/400)*4;
+  ctx.translate(0, bob);
+
+  // shadow aura
+  ctx.globalAlpha = 0.3;
+  const aura = ctx.createRadialGradient(0,10,4,0,10,60);
+  aura.addColorStop(0,'#ff5a1f'); aura.addColorStop(1,'transparent');
+  ctx.fillStyle = aura;
+  ctx.beginPath(); ctx.arc(0,10,60,0,7); ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // body (robe)
+  ctx.fillStyle = '#2a0d16';
+  ctx.beginPath();
+  ctx.moveTo(-22, 55); ctx.lineTo(-14,-6); ctx.lineTo(14,-6); ctx.lineTo(22,55);
+  ctx.closePath(); ctx.fill();
+  // robe trim
+  ctx.strokeStyle = '#c81e3a'; ctx.lineWidth=2; ctx.stroke();
+
+  // head
+  ctx.fillStyle = '#7a1420';
+  ctx.beginPath(); ctx.arc(0,-20,15,0,7); ctx.fill();
+  // horns
+  ctx.fillStyle = '#f4e9d8';
+  ctx.beginPath(); ctx.moveTo(-11,-30); ctx.lineTo(-20,-46); ctx.lineTo(-6,-32); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(11,-30); ctx.lineTo(20,-46); ctx.lineTo(6,-32); ctx.closePath(); ctx.fill();
+  // eyes
+  ctx.fillStyle = '#ffd45e';
+  ctx.shadowColor = '#ffb020'; ctx.shadowBlur = 8;
+  ctx.beginPath(); ctx.arc(-5,-21,2.4,0,7); ctx.fill();
+  ctx.beginPath(); ctx.arc(5,-21,2.4,0,7); ctx.fill();
+  ctx.shadowBlur = 0;
+  // grin
+  ctx.strokeStyle='#ffd45e'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.arc(0,-15,6,0.2,Math.PI-0.2); ctx.stroke();
+
+  // throwing arm (animate on pitch)
+  let armAngle = -0.5;
+  if (state==='pitch' || state==='charging' || state==='swing') armAngle = 0.9;
+  if (state==='windup') armAngle = -1.4;
+  ctx.strokeStyle = '#7a1420'; ctx.lineWidth = 7; ctx.lineCap='round';
+  ctx.beginPath();
+  ctx.moveTo(-6,4);
+  ctx.lineTo(-6 - Math.cos(armAngle)*26, 4 + Math.sin(armAngle)*26);
+  ctx.stroke();
+
+  // name tag
+  ctx.fillStyle = 'rgba(200,30,58,0.85)';
+  ctx.fillRect(-34, 58, 68, 18);
+  ctx.fillStyle = '#fff'; ctx.font='bold 12px Trebuchet MS'; ctx.textAlign='center';
+  ctx.fillText('ZENITH', 0, 71);
+
+  ctx.restore();
+}
+
+function drawNathan(x, y) {
+  ctx.save();
+  ctx.translate(x, y);
+
+  // legs
+  ctx.strokeStyle = '#7a1020'; ctx.lineWidth = 8; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(-4,30); ctx.lineTo(-12,58); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(4,30); ctx.lineTo(12,58); ctx.stroke();
+
+  // body (red jersey)
+  ctx.fillStyle = '#d61f34';
+  ctx.beginPath();
+  ctx.moveTo(-14,-6); ctx.lineTo(14,-6); ctx.lineTo(10,32); ctx.lineTo(-10,32);
+  ctx.closePath(); ctx.fill();
+  // jersey stripe
+  ctx.strokeStyle = '#f4e9d8'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(0,-6); ctx.lineTo(0,32); ctx.stroke();
+
+  // head
+  ctx.fillStyle = '#e8b98a';
+  ctx.beginPath(); ctx.arc(0,-18,12,0,7); ctx.fill();
+  // helmet
+  ctx.fillStyle = '#c81e3a';
+  ctx.beginPath(); ctx.arc(0,-20,13,Math.PI,2*Math.PI); ctx.fill();
+  ctx.fillRect(-13,-20,26,4);
+  // brim points right, toward the mound
+  ctx.fillRect(10,-20,10,4);
+  // small face detail facing right (nose)
+  ctx.fillStyle = '#d99f6f';
+  ctx.beginPath(); ctx.arc(9,-17,2,0,7); ctx.fill();
+
+  // arms + bat, cocked back over the right shoulder, facing the pitcher
+  ctx.save();
+  ctx.translate(6,2);
+  ctx.rotate(batAngle - 2.2);   // rest: bat up over shoulder; swing sweeps toward mound
+  // arm
+  ctx.strokeStyle = '#e8b98a'; ctx.lineWidth = 6; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(-6,0); ctx.lineTo(14,-6); ctx.stroke();
+  // bat
+  const bg = ctx.createLinearGradient(14,-6,52,-30);
+  bg.addColorStop(0,'#c98b3c'); bg.addColorStop(1,'#f0c47a');
+  ctx.strokeStyle = bg; ctx.lineWidth = 7; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(12,-4); ctx.lineTo(50,-30); ctx.stroke();
+  // bat knob
+  ctx.fillStyle='#8a5a2b'; ctx.beginPath(); ctx.arc(12,-4,4,0,7); ctx.fill();
+  ctx.restore();
+
+  // name tag
+  ctx.fillStyle = 'rgba(200,30,58,0.9)';
+  ctx.fillRect(-30, 60, 60, 18);
+  ctx.fillStyle = '#fff'; ctx.font='bold 12px Trebuchet MS'; ctx.textAlign='center';
+  ctx.fillText('NATHAN', 0, 73);
+
+  ctx.restore();
+}
+
+function drawAsh(x, y) {
+  ctx.save();
+  ctx.translate(x, y);
+  const bob = Math.sin(Date.now()/500)*3;
+  ctx.translate(0, bob);
+
+  // little brother — small, cheerful, oversized cap
+  // legs
+  ctx.strokeStyle = '#7a4a20'; ctx.lineWidth = 6; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(-3,26); ctx.lineTo(-8,46); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(3,26); ctx.lineTo(8,46); ctx.stroke();
+
+  // body (pink tee)
+  ctx.fillStyle = '#ff7ab0';
+  ctx.beginPath();
+  ctx.moveTo(-11,-4); ctx.lineTo(11,-4); ctx.lineTo(8,28); ctx.lineTo(-8,28);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.font='bold 9px Trebuchet MS'; ctx.textAlign='center';
+  ctx.fillText('#1', 0, 16);
+
+  // head
+  ctx.fillStyle = '#e8b98a';
+  ctx.beginPath(); ctx.arc(0,-15,10,0,7); ctx.fill();
+  // oversized backwards cap
+  ctx.fillStyle = '#ff4fa0';
+  ctx.beginPath(); ctx.arc(0,-17,11,Math.PI,2*Math.PI); ctx.fill();
+  ctx.fillRect(-11,-17,22,4);
+  ctx.fillRect(-19,-17,9,4); // brim to the LEFT (backwards, facing batter)
+  // happy eyes
+  ctx.fillStyle = '#3a2530';
+  ctx.beginPath(); ctx.arc(-3,-15,1.8,0,7); ctx.fill();
+  ctx.beginPath(); ctx.arc(4,-15,1.8,0,7); ctx.fill();
+  // big grin
+  ctx.strokeStyle='#7a1420'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.arc(0,-11,4,0.15,Math.PI-0.15); ctx.stroke();
+
+  // throwing arm — gentle underhand lob
+  let armAngle = 0.3;
+  if (state==='pitch' || state==='charging' || state==='swing') armAngle = 1.1;
+  if (state==='windup') armAngle = -0.3;
+  ctx.strokeStyle = '#e8b98a'; ctx.lineWidth = 5; ctx.lineCap='round';
+  ctx.beginPath();
+  ctx.moveTo(-4,2);
+  ctx.lineTo(-4 - Math.cos(armAngle)*20, 2 + Math.sin(armAngle)*20);
+  ctx.stroke();
+
+  // name tag
+  ctx.fillStyle = 'rgba(255,79,160,0.9)';
+  ctx.fillRect(-26, 48, 52, 17);
+  ctx.fillStyle = '#fff'; ctx.font='bold 11px Trebuchet MS'; ctx.textAlign='center';
+  ctx.fillText('ASH', 0, 60);
+
+  ctx.restore();
+}
+
+function drawRaaf() {
+  // Raaf the raven perches on a post near the left field, heckling between pitches
+  const rx = 95, ry = H*0.40 - 6;   // perched on top of the fence line
+  const t = Date.now();
+  const bob = Math.sin(t/500) * 2;
+
+  ctx.save();
+  ctx.translate(rx, ry + bob);
+
+  // little perch stub on the fence
+  ctx.strokeStyle = '#0d1f12'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-2, 14); ctx.lineTo(-2, 26); ctx.stroke();
+
+  // tail
+  ctx.fillStyle = '#15121a';
+  ctx.beginPath();
+  ctx.moveTo(-4, 2); ctx.lineTo(-22, 8); ctx.lineTo(-4, 12);
+  ctx.closePath(); ctx.fill();
+
+  // body
+  ctx.fillStyle = '#1c1822';
+  ctx.beginPath(); ctx.ellipse(0, 2, 12, 15, 0, 0, 7); ctx.fill();
+  // wing
+  ctx.fillStyle = '#12101a';
+  ctx.beginPath(); ctx.ellipse(2, 3, 7, 12, 0.2, 0, 7); ctx.fill();
+
+  // head
+  ctx.fillStyle = '#1c1822';
+  ctx.beginPath(); ctx.arc(4, -13, 8, 0, 7); ctx.fill();
+  // beak (points right, toward the plate)
+  ctx.fillStyle = '#ffb020';
+  ctx.beginPath();
+  ctx.moveTo(11, -14); ctx.lineTo(22, -12); ctx.lineTo(11, -9);
+  ctx.closePath(); ctx.fill();
+  // glowing eye
+  ctx.fillStyle = '#ff5a1f';
+  ctx.shadowColor = '#ff5a1f'; ctx.shadowBlur = 6;
+  ctx.beginPath(); ctx.arc(6, -14, 1.9, 0, 7); ctx.fill();
+  ctx.shadowBlur = 0;
+  // legs
+  ctx.strokeStyle = '#ffb020'; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.moveTo(-2, 15); ctx.lineTo(-3, 22); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(3, 15); ctx.lineTo(4, 22); ctx.stroke();
+
+  // name tag
+  ctx.fillStyle = 'rgba(28,24,34,0.9)';
+  ctx.fillRect(-16, 28, 40, 15);
+  ctx.fillStyle = '#ffb020'; ctx.font = 'bold 10px Trebuchet MS'; ctx.textAlign = 'center';
+  ctx.fillText('RAAF', 4, 39);
+  ctx.restore();
+
+  // speech bubble
+  if (raafTimer > 0 && raafText) {
+    drawRaafBubble(rx + 26, ry + bob - 24, raafText, raafTimer);
+  }
+}
+
+function drawRaafBubble(x, y, text, timer) {
+  ctx.save();
+  ctx.font = '600 13px Trebuchet MS';
+  // wrap text to a max width
+  const maxW = 230;
+  const words = text.split(' ');
+  let lines = [], line = '';
+  for (const w of words) {
+    const test = line ? line + ' ' + w : w;
+    if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; }
+    else line = test;
+  }
+  if (line) lines.push(line);
+
+  const lh = 17, padX = 12, padY = 9;
+  let bw = 0;
+  for (const l of lines) bw = Math.max(bw, ctx.measureText(l).width);
+  bw += padX*2;
+  const bh = lines.length*lh + padY*2;
+  // keep on screen
+  let bx = x, by = y - bh;
+  if (bx + bw > W - 10) bx = W - 10 - bw;
+  if (by < 8) by = 8;
+
+  // fade near the end
+  const alpha = Math.min(1, timer/20);
+  ctx.globalAlpha = alpha;
+
+  // bubble
+  ctx.fillStyle = 'rgba(244,233,216,0.96)';
+  ctx.strokeStyle = 'rgba(255,180,32,0.8)';
+  ctx.lineWidth = 2;
+  roundRect(bx, by, bw, bh, 10); ctx.fill(); ctx.stroke();
+  // tail pointing down toward the raven
+  ctx.beginPath();
+  ctx.moveTo(bx + 14, by + bh - 1);
+  ctx.lineTo(bx + 6, by + bh + 12);
+  ctx.lineTo(bx + 26, by + bh - 1);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(244,233,216,0.96)'; ctx.fill();
+
+  // text
+  ctx.fillStyle = '#1a0e14';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  lines.forEach((l, i) => ctx.fillText(l, bx + padX, by + padY + i*lh));
+  ctx.textBaseline = 'alphabetic';
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function drawPowerMeter() {
+  // Vertical power gauge beside the batter; fills while charging
+  const showing = state === 'charging' || (state === 'swing' && contactWindowHit);
+  const bw = 20, bh = 150;
+  const bx = BATTER_X - 92, by = PLATE_Y - 90;
+
+  // frame
+  ctx.save();
+  ctx.fillStyle = 'rgba(13,7,9,0.7)';
+  ctx.strokeStyle = 'rgba(255,180,32,0.45)';
+  ctx.lineWidth = 1.5;
+  roundRect(bx, by, bw, bh, 6); ctx.fill(); ctx.stroke();
+
+  // fill (bottom-up)
+  const p = state === 'charging' ? power : (state==='swing' && contactWindowHit ? power : 0);
+  const fh = (bh-4) * p;
+  const grad = ctx.createLinearGradient(0, by+bh, 0, by);
+  grad.addColorStop(0, '#4fb36b');
+  grad.addColorStop(0.6, '#ffb020');
+  grad.addColorStop(1, '#c81e3a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(bx+2, by+bh-2-fh, bw-4, fh);
+
+  // sweet-power marker (~80% = big hit zone)
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  ctx.setLineDash([3,3]);
+  const my = by + bh - 2 - (bh-4)*0.8;
+  ctx.beginPath(); ctx.moveTo(bx, my); ctx.lineTo(bx+bw, my); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // label
+  ctx.fillStyle = 'rgba(244,233,216,0.7)';
+  ctx.font = 'bold 10px Trebuchet MS'; ctx.textAlign='center';
+  ctx.fillText('POWER', bx + bw/2, by - 8);
+  ctx.restore();
+
+  if (!showing) {
+    // dim hint prompt during pitch before charge
+    if (state === 'pitch') {
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,212,94,0.85)';
+      ctx.font = 'bold 13px Trebuchet MS'; ctx.textAlign='center';
+      ctx.fillText('HOLD to charge', BATTER_X, PLATE_Y - 96);
+      ctx.restore();
+    }
+  }
+}
+
+function drawTimingMeter() {
+  // Horizontal meter below the plate showing swing timing
+  const mw = 260, mh = 16;
+  const mx = BATTER_X - mw/2, my = PLATE_Y + 96;
+  const active = (state === 'pitch' || state === 'charging' || state === 'swing') && ball && ball.active;
+
+  // track
+  ctx.fillStyle = 'rgba(13,7,9,0.75)';
+  ctx.strokeStyle = 'rgba(255,180,32,0.4)';
+  ctx.lineWidth = 1.5;
+  roundRect(mx, my, mw, mh, 8); ctx.fill(); ctx.stroke();
+
+  // sweet-spot zone (green band near the end of the track)
+  const winStr = diffCfg().win;
+  const startY = 210;
+  const total = PLATE_Y - startY;
+  const halfBand = (winStr / total);            // fraction of track width
+  const centerFrac = 1;                          // plate is at fill=1 (right edge)
+  const bandStart = Math.max(0, centerFrac - halfBand);
+  ctx.fillStyle = 'rgba(79,179,107,0.5)';
+  const bx = mx + bandStart*mw;
+  const bw = mw - bandStart*mw;
+  ctx.fillRect(bx+1, my+2, bw-2, mh-4);
+  // sweet-spot label
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.font = '9px Trebuchet MS'; ctx.textAlign='center';
+  ctx.fillText('SWING', mx + mw + 26, my + 12);
+
+  // moving marker
+  if (active) {
+    const px = mx + timingFill * mw;
+    ctx.fillStyle = inSweetSpot ? '#5dff8a' : '#ffb020';
+    ctx.shadowColor = inSweetSpot ? '#5dff8a' : '#ff5a1f';
+    ctx.shadowBlur = inSweetSpot ? 16 : 6;
+    ctx.beginPath();
+    ctx.moveTo(px, my-5);
+    ctx.lineTo(px+6, my-13);
+    ctx.lineTo(px-6, my-13);
+    ctx.closePath(); ctx.fill();
+    ctx.fillRect(px-2, my-4, 4, mh+8);
+    ctx.shadowBlur = 0;
+  }
+
+  // caption
+  ctx.fillStyle = active && inSweetSpot ? '#5dff8a' : 'rgba(244,233,216,0.6)';
+  ctx.font = 'bold 11px Trebuchet MS'; ctx.textAlign='center';
+  ctx.fillText(active && inSweetSpot ? 'SWING NOW!' : 'TIMING', BATTER_X, my + mh + 16);
+}
+
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.arcTo(x+w, y, x+w, y+h, r);
+  ctx.arcTo(x+w, y+h, x, y+h, r);
+  ctx.arcTo(x, y+h, x, y, r);
+  ctx.arcTo(x, y, x+w, y, r);
+  ctx.closePath();
+}
+
+// ---------- END ----------
+function endGame() {
+  state = 'over';
+  let verdict, cls;
+
+  if (gameType === 'endless') {
+    verdict = homeRuns >= 10 ? 'UNSTOPPABLE!' :
+              homeRuns >= 5  ? 'Survivor of the Derby!' :
+              homeRuns >= 1  ? 'Struck out — but you got some!' :
+                               'Struck out swinging.';
+    cls = homeRuns >= 1 ? 'win' : 'lose';
+  } else if (mode === 'training') {
+    if (homeRuns >= 6) { verdict = 'BATTING CLINIC! Ash is amazed.'; cls='win'; }
+    else if (homeRuns >= 3) { verdict = 'Nice swings! Ash high-fives you.'; cls='win'; }
+    else if (homeRuns >= 1) { verdict = 'Good start — keep practicing!'; cls='win'; }
+    else { verdict = 'No dingers yet. Ash cheers you on.'; cls='lose'; }
+  } else {
+    if (homeRuns >= 6) { verdict = 'LEGEND — ZENITH BANISHED!'; cls='win'; }
+    else if (homeRuns >= 3) { verdict = 'SLUGGER! The demon retreats.'; cls='win'; }
+    else if (homeRuns >= 1) { verdict = 'You got a few over the fence.'; cls='win'; }
+    else { verdict = 'Zenith wins this round...'; cls='lose'; }
+  }
+  verdictEl.textContent = verdict;
+  verdictEl.className = 'verdict ' + cls;
+
+  // Record career stats
+  career.games += 1;
+  career.hr += homeRuns;
+  career.score += score;
+  if (homeRuns > career.best) career.best = homeRuns;
+  if (lastLongest > career.longest) career.longest = lastLongest;
+  if (gameType === 'endless' && homeRuns > career.survBest) career.survBest = homeRuns;
+  if (mode === 'zenith' && gameType === 'showdown' && homeRuns >= 3) career.zenith += 1;
+  saveStats(); renderCareer();
+
+  const pb = homeRuns === career.best && homeRuns > 0;
+  const total = gameType === 'endless' ? (pitchNum) : TOTAL_PITCHES;
+  const line1 = gameType === 'endless'
+    ? 'Home Runs: <span>' + homeRuns + '</span>  ·  Pitches faced: <span>' + pitchNum + '</span>'
+    : 'Home Runs: <span>' + homeRuns + '</span> / ' + TOTAL_PITCHES;
+  finalStatsEl.innerHTML =
+    line1 + '<br>' +
+    'Final Score: <span>' + score + '</span>' +
+    (lastLongest ? '<br>Longest HR: <span>' + lastLongest + ' ft</span>' : '') +
+    (pb ? '<br><span style="color:#5dff8a">&#9733; New personal best!</span>' : '');
+  stopMusic();
+
+  // Zenith mode gets an outcome cutscene before the end screen
+  if (mode === 'zenith') {
+    const banished = homeRuns >= 3;   // demon retreats / legend
+    playCutscene(pickDialogue(banished ? 'win' : 'fail'), () => {
+      cutscene.classList.add('hidden');
+      endScreen.classList.remove('hidden');
+    });
+  } else {
+    endScreen.classList.remove('hidden');
+  }
+}
+
+// ---------- CUTSCENE DIALOGUE ----------
+// Each line: { who: 'nathan'|'zenith', text: '...' }
+const DIALOGUE = {
+  intro: [
+    [ {who:'zenith', text:"So. Another mortal with a stick and a dream."},
+      {who:'nathan', text:"Nathan. Cleanup hitter. And you're standing on my mound."},
+      {who:'zenith', text:"Your mound? I clawed up through home plate itself."},
+      {who:'nathan', text:"Then I'll knock you right back down through it."} ],
+    [ {who:'nathan', text:"Nine pitches, demon. That's all I need."},
+      {who:'zenith', text:"Confident. I do so love breaking the confident ones."},
+      {who:'nathan', text:"Talk less. Pitch more."} ],
+    [ {who:'zenith', text:"The last batter left his bat... and his soul."},
+      {who:'nathan', text:"I brought a spare bat. Souls I'm keeping."},
+      {who:'zenith', text:"We'll see, little slugger. We'll see."} ],
+    [ {who:'zenith', text:"You smell that? Sulfur and fresh-cut grass."},
+      {who:'nathan', text:"Smells like a save opportunity to me."},
+      {who:'zenith', text:"Cute. Let's find out how far cute travels."} ],
+    [ {who:'nathan', text:"Every ball you throw goes back over the fence."},
+      {who:'zenith', text:"Bold words for a man gripping a wooden twig."},
+      {who:'nathan', text:"This 'twig' has sent demons home before."} ],
+    [ {who:'zenith', text:"I've struck out saints, Nathan. Kings. Heroes."},
+      {who:'nathan', text:"Never a guy from the minor leagues, though."},
+      {who:'zenith', text:"...that's oddly unsettling. Batter up."} ],
+    [ {who:'zenith', text:"When you fail, the underworld gets a new pitcher."},
+      {who:'nathan', text:"When YOU fail, I get bragging rights forever."},
+      {who:'zenith', text:"Then let us both play for keeps."} ],
+    [ {who:'nathan', text:"Raaf says you flinch on your curveball."},
+      {who:'zenith', text:"That RAVEN talks too much."},
+      {who:'nathan', text:"He's usually right, too. Let's go."} ]
+  ],
+  win: [
+    [ {who:'nathan', text:"That's the ballgame. Back to the pit with you."},
+      {who:'zenith', text:"Impossible... my curveball is CURSED..."},
+      {who:'nathan', text:"Curses don't mean much against good timing."} ],
+    [ {who:'zenith', text:"You... you actually banished me?!"},
+      {who:'nathan', text:"Told you. Knocked you right back down."},
+      {who:'zenith', text:"I'll remember this, slugger... aaargh!"} ],
+    [ {who:'nathan', text:"Grand finale's over the fence, demon."},
+      {who:'zenith', text:"The fence... betrayed me..."},
+      {who:'nathan', text:"Fences do that. Go home."} ],
+    [ {who:'zenith', text:"No mortal has ever hit me like that."},
+      {who:'nathan', text:"First time for everything. See you never."},
+      {who:'zenith', text:"This isn't the last inning, Nathan..."} ]
+  ],
+  fail: [
+    [ {who:'zenith', text:"Hah! Not a single one over the fence."},
+      {who:'nathan', text:"...I'll get you next at-bat."},
+      {who:'zenith', text:"There won't BE a next one. Or will there?"} ],
+    [ {who:'nathan', text:"My timing was off. Just off."},
+      {who:'zenith', text:"'Just off' is how all mortals lose, Nathan."},
+      {who:'nathan', text:"Reset the count. I'm not done."} ],
+    [ {who:'zenith', text:"The mound is mine. As is your pride."},
+      {who:'nathan', text:"Keep the mound. I'm keeping the grudge."},
+      {who:'zenith', text:"Come back when your swing means something."} ],
+    [ {who:'zenith', text:"You swung at shadows all game long."},
+      {who:'nathan', text:"Those shadows had wicked movement."},
+      {who:'zenith', text:"Excuses. Try again, if you dare."} ]
+  ]
+};
+
+let cutActive = false;
+let cutLines = [];
+let cutIdx = 0;
+let cutTyped = 0;         // chars revealed
+let cutTypeTimer = null;
+let cutDone = null;       // callback when finished
+const cutscene = document.getElementById('cutscene');
+const cutBubble = document.getElementById('cutBubble');
+const cutSpeaker = document.getElementById('cutSpeaker');
+const cutLineEl = document.getElementById('cutLine');
+const cutNathanCv = document.getElementById('cutNathanCv');
+const cutZenithCv = document.getElementById('cutZenithCv');
+
+function pickDialogue(kind){
+  const set = DIALOGUE[kind];
+  return set[Math.floor(Math.random()*set.length)];
+}
+
+function playCutscene(lines, onDone){
+  cutLines = lines; cutIdx = 0; cutDone = onDone; cutActive = true;
+  cutscene.classList.remove('hidden');
+  seedCutEmbers();
+  renderCutPortraits();
+  showCutLine();
+}
+
+function showCutLine(){
+  const line = cutLines[cutIdx];
+  cutSpeaker.textContent = line.who === 'zenith' ? 'ZENITH' : 'NATHAN';
+  cutSpeaker.className = 'cut-speaker ' + line.who;
+  // dim the non-speaker portrait
+  document.getElementById('cutNathanWrap').style.opacity = line.who === 'nathan' ? '1' : '0.4';
+  document.getElementById('cutZenithWrap').style.opacity = line.who === 'zenith' ? '1' : '0.4';
+  cutTyped = 0;
+  clearInterval(cutTypeTimer);
+  cutTypeTimer = setInterval(() => {
+    cutTyped++;
+    renderCutText();
+    if (cutTyped >= line.text.length) { clearInterval(cutTypeTimer); }
+  }, 22);
+  renderCutText();
+}
+
+function renderCutText(){
+  const line = cutLines[cutIdx];
+  const shown = line.text.slice(0, cutTyped);
+  const caret = cutTyped < line.text.length ? '<span class="caret">▍</span>' : '';
+  cutLineEl.innerHTML = shown + caret;
+}
+
+function advanceCut(){
+  if (!cutActive) return;
+  const line = cutLines[cutIdx];
+  if (cutTyped < line.text.length) {
+    // finish typing instantly on first tap
+    cutTyped = line.text.length;
+    clearInterval(cutTypeTimer);
+    renderCutText();
+    return;
+  }
+  cutIdx++;
+  if (cutIdx >= cutLines.length) { finishCut(); return; }
+  showCutLine();
+}
+
+function finishCut(){
+  cutActive = false;
+  clearInterval(cutTypeTimer);
+  const cb = cutDone; cutDone = null;
+  if (cb) cb();
+}
+
+document.getElementById('cutSkip').onclick = (e) => { e.stopPropagation(); finishCut(); };
+cutscene.addEventListener('mousedown', advanceCut);
+cutscene.addEventListener('touchstart', (e) => { e.preventDefault(); advanceCut(); }, {passive:false});
+
+// Portraits: reuse the character artwork, scaled up
+function renderCutPortraits(){
+  const nc = cutNathanCv.getContext('2d');
+  nc.clearRect(0,0,cutNathanCv.width,cutNathanCv.height);
+  nc.save(); nc.translate(75, 150); nc.scale(2.1, 2.1);
+  drawNathanPortrait(nc);
+  nc.restore();
+
+  const zc = cutZenithCv.getContext('2d');
+  zc.clearRect(0,0,cutZenithCv.width,cutZenithCv.height);
+  zc.save(); zc.translate(75, 120); zc.scale(1.7, 1.7);
+  drawZenithPortrait(zc);
+  zc.restore();
+}
+
+// Simplified static portraits drawn on an arbitrary context
+function drawNathanPortrait(c){
+  // legs
+  c.strokeStyle = '#7a1020'; c.lineWidth = 8; c.lineCap='round';
+  c.beginPath(); c.moveTo(-5,30); c.lineTo(-12,58); c.stroke();
+  c.beginPath(); c.moveTo(5,30); c.lineTo(12,58); c.stroke();
+  // jersey
+  c.fillStyle = '#d61f34';
+  c.beginPath(); c.moveTo(-15,-6); c.lineTo(15,-6); c.lineTo(11,32); c.lineTo(-11,32); c.closePath(); c.fill();
+  c.strokeStyle = '#f4e9d8'; c.lineWidth=3;
+  c.beginPath(); c.moveTo(0,-6); c.lineTo(0,32); c.stroke();
+  // head
+  c.fillStyle = '#e8b98a'; c.beginPath(); c.arc(0,-20,13,0,7); c.fill();
+  // helmet
+  c.fillStyle = '#c81e3a'; c.beginPath(); c.arc(0,-22,14,Math.PI,2*Math.PI); c.fill();
+  c.fillRect(-14,-22,28,4);
+  // eyes (facing viewer)
+  c.fillStyle = '#2a1a12';
+  c.beginPath(); c.arc(-4,-19,1.8,0,7); c.fill();
+  c.beginPath(); c.arc(4,-19,1.8,0,7); c.fill();
+  // determined mouth
+  c.strokeStyle = '#7a3a25'; c.lineWidth=1.6;
+  c.beginPath(); c.moveTo(-4,-13); c.lineTo(4,-13); c.stroke();
+  // bat over shoulder
+  c.save(); c.rotate(-0.5);
+  const bg = c.createLinearGradient(6,0,34,-34);
+  bg.addColorStop(0,'#c98b3c'); bg.addColorStop(1,'#f0c47a');
+  c.strokeStyle = bg; c.lineWidth = 7; c.lineCap='round';
+  c.beginPath(); c.moveTo(10,6); c.lineTo(34,-30); c.stroke();
+  c.restore();
+}
+
+function drawZenithPortrait(c){
+  const t = Date.now();
+  // aura
+  c.globalAlpha = 0.3;
+  const aura = c.createRadialGradient(0,0,4,0,0,70);
+  aura.addColorStop(0,'#ff5a1f'); aura.addColorStop(1,'transparent');
+  c.fillStyle = aura; c.beginPath(); c.arc(0,0,70,0,7); c.fill();
+  c.globalAlpha = 1;
+  // robe
+  c.fillStyle = '#2a0d16';
+  c.beginPath(); c.moveTo(-26,58); c.lineTo(-16,-8); c.lineTo(16,-8); c.lineTo(26,58); c.closePath(); c.fill();
+  c.strokeStyle = '#c81e3a'; c.lineWidth=2; c.stroke();
+  // head
+  c.fillStyle = '#7a1420'; c.beginPath(); c.arc(0,-24,17,0,7); c.fill();
+  // horns
+  c.fillStyle = '#f4e9d8';
+  c.beginPath(); c.moveTo(-12,-35); c.lineTo(-22,-54); c.lineTo(-6,-37); c.closePath(); c.fill();
+  c.beginPath(); c.moveTo(12,-35); c.lineTo(22,-54); c.lineTo(6,-37); c.closePath(); c.fill();
+  // glowing eyes
+  c.fillStyle = '#ffd45e'; c.shadowColor = '#ffb020'; c.shadowBlur = 10;
+  c.beginPath(); c.arc(-6,-25,2.8,0,7); c.fill();
+  c.beginPath(); c.arc(6,-25,2.8,0,7); c.fill();
+  c.shadowBlur = 0;
+  // wicked grin
+  c.strokeStyle='#ffd45e'; c.lineWidth=1.8;
+  c.beginPath(); c.arc(0,-18,7,0.2,Math.PI-0.2); c.stroke();
+}
+
+function seedCutEmbers(){
+  const box = document.getElementById('cutEmbers');
+  if (!box || box.childElementCount) return;
+  for (let i=0;i<20;i++){
+    const e = document.createElement('i');
+    const size = 2 + Math.random()*5;
+    e.style.left = (Math.random()*100) + '%';
+    e.style.width = size + 'px'; e.style.height = size + 'px';
+    e.style.animationDuration = (4 + Math.random()*6) + 's';
+    e.style.animationDelay = (-Math.random()*8) + 's';
+    box.appendChild(e);
+  }
+}
+
+// ---------- MUSIC & SFX ----------
+let musicOn = false;
+let musicReady = false;
+let musicPlaying = false;
+let currentTheme = null;   // 'zenith' | 'training'
+let bassSynth, leadSynth, drumSynth, bassSeq, leadSeq, drumLoop;
+let sfxReady = false;
+let crackSynth, crackNoise, whooshNoise;
+
+function buildSfx() {
+  if (sfxReady || typeof Tone === 'undefined') return;
+  // Bat crack = short filtered noise burst + a woody pitched thock
+  crackNoise = new Tone.NoiseSynth({
+    noise: { type: 'white' },
+    envelope: { attack: 0.001, decay: 0.09, sustain: 0 },
+    volume: -4
+  }).toDestination();
+  crackSynth = new Tone.MembraneSynth({
+    pitchDecay: 0.008, octaves: 2,
+    envelope: { attack: 0.001, decay: 0.14, sustain: 0 },
+    volume: -6
+  }).toDestination();
+  whooshNoise = new Tone.NoiseSynth({
+    noise: { type: 'pink' },
+    envelope: { attack: 0.02, decay: 0.18, sustain: 0 },
+    volume: -18
+  }).toDestination();
+  sfxReady = true;
+}
+
+function batCrack(quality) {
+  buildSfx();
+  if (!sfxReady) return;
+  if (Tone.context.state !== 'running') { Tone.start().catch(()=>{}); }
+  const now = Tone.now();
+  const vel = 0.5 + quality*0.5;
+  try {
+    crackNoise.triggerAttackRelease('16n', now, vel);
+    crackSynth.triggerAttackRelease(quality > 0.8 ? 'A2' : 'F2', '16n', now, vel);
+  } catch(e) {}
+}
+
+function batWhiff() {
+  buildSfx();
+  if (!sfxReady) return;
+  if (Tone.context.state !== 'running') { Tone.start().catch(()=>{}); }
+  try { whooshNoise.triggerAttackRelease('8n', Tone.now()); } catch(e) {}
+}
+
+function buildMusic(theme) {
+  if (typeof Tone === 'undefined') return;
+  // Rebuild if switching themes
+  if (musicReady && currentTheme === theme) return;
+  if (musicReady && currentTheme !== theme) {
+    // tear down old sequences
+    try { bassSeq.dispose(); leadSeq.dispose(); drumLoop.dispose();
+          bassSynth.dispose(); leadSynth.dispose(); drumSynth.dispose(); } catch(e) {}
+    musicReady = false; musicPlaying = false;
+  }
+
+  const reverb = new Tone.Reverb({ decay: theme==='training'?1.4:2.4, wet: theme==='training'?0.15:0.22 }).toDestination();
+  const master = new Tone.Volume(-8).connect(reverb);
+
+  if (theme === 'training') {
+    // Bright, bouncy, playful backyard-practice tune (major key)
+    bassSynth = new Tone.MonoSynth({
+      oscillator: { type: 'square' },
+      filter: { Q: 1, type: 'lowpass' },
+      envelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.2 },
+      filterEnvelope: { attack: 0.01, decay: 0.2, sustain: 0.3, baseFrequency: 180, octaves: 2 }
+    }).connect(master);
+    leadSynth = new Tone.Synth({
+      oscillator: { type: 'triangle' },
+      envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.2 },
+      volume: -10
+    }).connect(master);
+    drumSynth = new Tone.MembraneSynth({ volume: -10 }).connect(master);
+
+    const bassNotes = ['C2','C2','G2','G2','A2','A2','F2','G2'];
+    bassSeq = new Tone.Sequence((t,n)=>bassSynth.triggerAttackRelease(n,'8n',t), bassNotes, '8n');
+    const leadNotes = ['C4','E4','G4','C5','B4','G4','A4', null, 'F4','A4','C5', null, 'G4','E4','C4', null];
+    leadSeq = new Tone.Sequence((t,n)=>{ if(n) leadSynth.triggerAttackRelease(n,'16n',t); }, leadNotes, '16n');
+    drumLoop = new Tone.Loop((t)=>drumSynth.triggerAttackRelease('C2','8n',t), '4n');
+    Tone.Transport.bpm.value = 112;
+  } else {
+    // Dark, driving minor progression (ballpark-organ-meets-hell)
+    bassSynth = new Tone.MonoSynth({
+      oscillator: { type: 'sawtooth' },
+      filter: { Q: 2, type: 'lowpass' },
+      envelope: { attack: 0.02, decay: 0.2, sustain: 0.3, release: 0.2 },
+      filterEnvelope: { attack: 0.02, decay: 0.3, sustain: 0.4, baseFrequency: 120, octaves: 2.5 }
+    }).connect(master);
+    leadSynth = new Tone.Synth({
+      oscillator: { type: 'triangle' },
+      envelope: { attack: 0.01, decay: 0.15, sustain: 0.1, release: 0.3 },
+      volume: -12
+    }).connect(master);
+    drumSynth = new Tone.MembraneSynth({ volume: -6 }).connect(master);
+
+    const bassNotes = ['D2','D2','F2','A2','C3','A2','G2','F2'];
+    bassSeq = new Tone.Sequence((t,n)=>bassSynth.triggerAttackRelease(n,'8n',t), bassNotes, '8n');
+    const leadNotes = ['D4', null, 'F4', 'A4', 'G4', null, 'C4', 'D4', 'A4', null, 'F4', null, 'E4', null, 'D4', null];
+    leadSeq = new Tone.Sequence((t,n)=>{ if(n) leadSynth.triggerAttackRelease(n,'16n',t); }, leadNotes, '16n');
+    drumLoop = new Tone.Loop((t)=>drumSynth.triggerAttackRelease('C1','8n',t), '4n');
+    Tone.Transport.bpm.value = 128;
+  }
+
+  currentTheme = theme;
+  musicReady = true;
+}
+
+async function startMusic() {
+  if (!musicOn) return;
+  const theme = mode === 'training' ? 'training' : 'zenith';
+  buildMusic(theme);
+  buildSfx();
+  if (!musicReady) return;
+  try { await Tone.start(); } catch(e) {}
+  if (musicPlaying && currentTheme === theme) return;
+  Tone.Transport.cancel(); Tone.Transport.stop();
+  bassSeq.start(0); leadSeq.start('0:1'); drumLoop.start(0);
+  Tone.Transport.start();
+  musicPlaying = true;
+}
+
+function stopMusic() {
+  if (!musicReady || !musicPlaying) return;
+  Tone.Transport.stop();
+  try { bassSeq.stop(); leadSeq.stop(); drumLoop.stop(); } catch(e) {}
+  musicPlaying = false;
+}
+
+function hrSting() {
+  if (!musicOn || !musicReady || !leadSynth) return;
+  const now = Tone.now();
+  const notes = currentTheme === 'training' ? ['C5','E5','G5','C6'] : ['D5','F5','A5','D6'];
+  notes.forEach((n,i) => {
+    leadSynth.triggerAttackRelease(n, '16n', now + i*0.07);
+  });
+}
+
+musicToggle.onclick = async () => {
+  musicOn = !musicOn;
+  musicToggle.textContent = musicOn ? '♫ Music: On' : '♫ Music: Off';
+  musicToggle.classList.toggle('on', musicOn);
+  if (musicOn) {
+    if (state !== 'idle' && state !== 'over') await startMusic();
+    else { buildSfx(); try { await Tone.start(); } catch(e){} }
+  } else {
+    stopMusic();
+  }
+};
+
+// ---------- LOOP ----------
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();
+renderCareer();
+
+// ---------- Title screen floating embers ----------
+(function seedTitleEmbers(){
+  const box = document.getElementById('titleEmbers');
+  if (!box) return;
+  for (let i=0;i<28;i++){
+    const e = document.createElement('i');
+    const size = 2 + Math.random()*5;
+    e.style.left = (Math.random()*100) + '%';
+    e.style.width = size + 'px';
+    e.style.height = size + 'px';
+    e.style.animationDuration = (4 + Math.random()*6) + 's';
+    e.style.animationDelay = (-Math.random()*8) + 's';
+    box.appendChild(e);
+  }
+})();
+</script>
+</body>
+</html>
