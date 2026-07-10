@@ -1,0 +1,1996 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Minecenary</title>
+<style>
+  :root {
+    --stone: #3a3530;
+    --stone-dark: #262320;
+    --gold: #e7b84f;
+    --copper: #c47a44;
+    --moss: #6b8f4a;
+    --blood: #b4433a;
+    --parchment: #e8dcc0;
+    --ink: #2b241b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    background: #14110e;
+    color: var(--parchment);
+    font-family: "Georgia", "Times New Roman", serif;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  #app {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  canvas {
+    display: block;
+    background: #0d0b09;
+    image-rendering: pixelated;
+    box-shadow: 0 0 0 3px #000, 0 0 40px rgba(0,0,0,0.8);
+  }
+  /* HUD */
+  #hud {
+    position: absolute;
+    top: 12px; left: 12px; right: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+    pointer-events: none;
+    font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  }
+  .panel {
+    background: rgba(20,16,12,0.82);
+    border: 2px solid #5a4a33;
+    border-radius: 6px;
+    padding: 8px 12px;
+    box-shadow: inset 0 0 12px rgba(0,0,0,0.6);
+  }
+  /* Stats spread horizontally across the top */
+  #stats {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 18px;
+    font-size: 13.5px;
+  }
+  #stats b { color: var(--gold); }
+  .stat {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .stat .lbl { color: #c9bda0; }
+  .stat .val { color: #f0e6cc; }
+  .stat:empty { display: none; }
+  /* Controls panel sits at the top-right, below the stat bar */
+  #controls {
+    align-self: flex-end;
+    text-align: right;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .bar { width: 110px; height: 12px; background: #1a1512; border:1px solid #000; border-radius:3px; overflow:hidden; }
+  .bar > div { height:100%; transition: width .15s; }
+  #hpFill { background: linear-gradient(90deg,#b4433a,#e06a5e); }
+  #poundFill { background: linear-gradient(90deg,#a67c1e,#e7b84f); transition: width .12s; }
+  #poundFill.ready { background: linear-gradient(90deg,#e7b84f,#fff2c4); box-shadow:0 0 8px #e7b84f; animation:pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.65} }
+  #hint {
+    position:absolute; bottom:16px; left:50%; transform:translateX(-50%);
+    font-family:"Trebuchet MS",sans-serif; font-size:13px; color:#c9bda0;
+    background:rgba(20,16,12,0.8); padding:6px 14px; border-radius:20px;
+    border:1px solid #4a3d2a; pointer-events:none; text-align:center;
+  }
+  /* Overlays */
+  .overlay {
+    position:absolute; inset:0; display:none;
+    align-items:center; justify-content:center;
+    background:rgba(8,6,4,0.9); z-index:20;
+    flex-direction:column; text-align:center; padding:24px;
+  }
+  .overlay.show { display:flex; }
+  .card {
+    background:var(--parchment); color:var(--ink);
+    max-width:560px; width:100%; padding:32px 36px;
+    border-radius:10px; border:4px solid #7a5c34;
+    box-shadow:0 18px 50px rgba(0,0,0,0.7);
+  }
+  .card h1 { font-size:38px; letter-spacing:1px; margin-bottom:6px; color:#5a3d1c; }
+  .card h2 { font-size:26px; margin-bottom:14px; color:#5a3d1c; }
+  .card p { font-size:16px; line-height:1.6; margin-bottom:14px; }
+  .card .lead { font-style:italic; color:#6b5a3f; }
+  button {
+    font-family:"Trebuchet MS",sans-serif; font-weight:bold;
+    background:#7a5c34; color:#fff5e0; border:none; padding:12px 22px;
+    font-size:16px; border-radius:6px; cursor:pointer; margin:6px 4px;
+    box-shadow:0 4px 0 #513b1f; transition:transform .05s, box-shadow .05s;
+  }
+  button:hover { background:#8a6a3e; }
+  button:active { transform:translateY(3px); box-shadow:0 1px 0 #513b1f; }
+  button.ghost { background:#c9b48a; color:#3a2c15; box-shadow:0 4px 0 #a08a5f; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  /* Main menu */
+  #titleScreen { background: radial-gradient(circle at 50% 30%, #241a12 0%, #0d0b09 80%); }
+  .menu-card { text-align:center; max-width:520px; }
+  .menu-title {
+    font-size:60px; letter-spacing:2px; margin:0 0 2px; color:#e7b84f;
+    text-shadow:0 3px 0 #7a5c34, 0 6px 14px rgba(0,0,0,0.6);
+  }
+  .menu-sub { font-style:italic; color:#b8a67e; margin-bottom:24px; font-size:16px; }
+  .menu-buttons { display:flex; flex-direction:column; gap:2px; align-items:center; }
+  .menu-buttons button { width:260px; font-size:18px; padding:14px 22px; }
+  .menu-foot { margin-top:22px; color:#6b5a3f; font-size:12px; }
+  /* How-to-play panel */
+  #howto .card { max-width:600px; text-align:left; }
+  #howto .card p { font-size:14.5px; margin-bottom:10px; }
+  #howto .card b { color:#5a3d1c; }
+  /* Intro dialogue */
+  #introScreen { background:rgba(8,6,4,0.94); justify-content:flex-end; padding-bottom:60px; }
+  .dialogue-box {
+    background:var(--parchment); color:var(--ink);
+    max-width:640px; width:100%; padding:22px 26px 18px;
+    border-radius:10px; border:4px solid #7a5c34;
+    box-shadow:0 18px 50px rgba(0,0,0,0.7); text-align:left; position:relative;
+  }
+  .dlg-speaker { font-weight:bold; color:#5a3d1c; font-size:15px; margin-bottom:6px; letter-spacing:.3px; }
+  .dlg-text { font-size:17px; line-height:1.55; min-height:52px; }
+  .dlg-row { display:flex; justify-content:space-between; align-items:center; margin-top:14px; }
+  .dlg-hint { color:#8a7959; font-size:12.5px; font-style:italic; }
+  /* Fionn dialog */
+  #shop .card { max-width:640px; text-align:left; }
+  .shopRow {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:10px 12px; border-bottom:1px dashed #b09a6f;
+  }
+  .shopRow small { display:block; color:#6b5a3f; font-size:12.5px; }
+  .mineral-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); gap:8px; margin:10px 0 4px; }
+  .mineral-chip {
+    display:flex; align-items:center; gap:6px; padding:6px 8px;
+    background:#ddcba0; border-radius:5px; font-size:13px; border:1px solid #b09a6f;
+  }
+  .mineral-chip.found { background:#c7e0a6; border-color:#7fa85a; }
+  .mineral-chip .sw { width:16px; height:16px; border-radius:3px; border:1px solid rgba(0,0,0,.3); }
+  .toast {
+    position:absolute; top:70px; left:50%; transform:translateX(-50%);
+    background:rgba(30,22,12,0.92); border:1px solid var(--gold);
+    color:var(--gold); padding:8px 18px; border-radius:20px;
+    font-family:"Trebuchet MS",sans-serif; font-size:14px; z-index:15;
+    opacity:0; transition:opacity .3s, transform .3s; pointer-events:none;
+    white-space:nowrap;
+  }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(-6px); }
+  .kbd { display:inline-block; background:#4a3d2a; color:#f0e6cc; border-radius:4px; padding:1px 7px; font-family:monospace; font-size:12px; margin:0 1px; border-bottom:2px solid #241d12;}
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="game" width="960" height="600"></canvas>
+
+  <div id="hud">
+    <div class="panel" id="stats">
+      <div class="stat"><span class="lbl">❤️ Health</span><div class="bar"><div id="hpFill" style="width:100%"></div></div></div>
+      <div class="stat"><span class="lbl">💥 Pound</span><div class="bar"><div id="poundFill" style="width:0%"></div></div></div>
+      <div class="stat"><span class="lbl">⛏️ Pickaxe</span><span class="val"><b id="pickName">Wooden</b> <span id="pickTier"></span></span></div>
+      <div class="stat"><span class="lbl">💎 Minerals</span><span class="val"><b id="mineralCount">0</b> / <b id="mineralTotal">8</b></span></div>
+      <div class="stat"><span class="lbl">🪙 Gold</span><span class="val"><b id="goldCount">0</b></span></div>
+      <div class="stat" id="boltRow" style="display:none;"><span class="lbl">🏹 Bolts</span><span class="val"><b id="boltCount">0</b></span></div>
+      <div class="stat"><span class="lbl">⛰️ Depth</span><span class="val"><b id="depthLbl">Surface</b></span></div>
+      <div class="stat" id="niffoRow" style="color:#8fd0e6;"></div>
+      <div class="stat" id="questRow" style="color:#c7e0a6;flex:1 1 220px;"></div>
+    </div>
+    <div class="panel" id="controls">
+      <div><span class="kbd">WASD</span>/<span class="kbd">↑←↓→</span> move, auto-mine</div>
+      <div><span class="kbd">Space</span> / <span class="kbd">click</span> ground pound</div>
+      <div><span class="kbd">F</span> fire crossbow</div>
+      <div><span class="kbd">E</span> talk / accept quest / light beacon</div>
+      <div><button id="saveBtn" style="pointer-events:auto;padding:5px 12px;font-size:12px;box-shadow:0 3px 0 #513b1f;margin:4px 0 0;">💾 Save</button></div>
+    </div>
+  </div>
+
+  <div id="hint"></div>
+  <div class="toast" id="toast"></div>
+
+  <!-- Main Menu -->
+  <div class="overlay show" id="titleScreen">
+    <div class="menu-card">
+      <h1 class="menu-title">⛏️ MINECENARY</h1>
+      <p class="menu-sub">mine deep · hunt monsters · get paid</p>
+      <div class="menu-buttons">
+        <button id="newGameBtn">⛏️ New Game</button>
+        <button id="continueBtn" class="ghost">📜 Continue</button>
+        <button id="howtoBtn" class="ghost">❓ How to Play</button>
+      </div>
+      <div class="menu-foot">A stout dwarf-for-hire in a mountain full of ore, wyrms, and odd little folk.</div>
+    </div>
+  </div>
+
+  <!-- How to Play -->
+  <div class="overlay" id="howto">
+    <div class="card">
+      <h2>❓ How to Play</h2>
+      <p><b>Move</b> with WASD or arrows. Walking into dirt, stone, or ore <b>mines it automatically</b>; walking into an enemy attacks it.</p>
+      <p><b>Ground Pound</b> (Space / click): a shockwave that shatters everything around you and damages nearby foes. It charges as you mine stone — watch the Pound meter.</p>
+      <p><b>Crossbow</b> (F): a ranged weapon you can buy from Fionn, fired in the direction you're facing.</p>
+      <p><b>Talk / interact</b> (E): sell ore &amp; upgrade at <b>Fionn's hut</b>, take jobs from the cave <b>gnomes</b>, light <b>crystal beacons</b>, or chat with <b>Dih</b> the worm and <b>Niffo</b> the otter.</p>
+      <p>Bring Fionn one of every <b>mineral</b> (8 total) to win. Beware the <b>Deep Wyrms</b> below. Every new game carves a brand-new cave.</p>
+      <div style="text-align:right;margin-top:8px;">
+        <button id="howtoBack" class="ghost">Back to Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Intro dialogue (skippable, plays on New Game) -->
+  <div class="overlay" id="introScreen">
+    <div class="dialogue-box">
+      <div class="dlg-speaker" id="dlgSpeaker">Fionn</div>
+      <div class="dlg-text" id="dlgText"></div>
+      <div class="dlg-row">
+        <span class="dlg-hint">Click or press Space / Enter to continue</span>
+        <div>
+          <button id="dlgSkip" class="ghost" style="padding:8px 16px;font-size:14px;">Skip ⏭</button>
+          <button id="dlgNext" style="padding:8px 18px;font-size:14px;">Next ▶</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shop / Fionn -->
+  <div class="overlay" id="shop">
+    <div class="card">
+      <h2>🧔‍♂️ Geologist Fionn's Hut</h2>
+      <p class="lead" id="fionnLine">"Back so soon, Lars? Let's see what the mountain gave up."</p>
+      <div id="mineralGrid" class="mineral-grid"></div>
+      <div id="upgradeArea"></div>
+      <div style="text-align:right;margin-top:14px;">
+        <button id="sellAllBtn">🪙 Sell Loose Ore</button>
+        <button id="closeShop" class="ghost">Back to the Dig</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Death -->
+  <div class="overlay" id="deathScreen">
+    <div class="card">
+      <h1 style="color:#8a2f27;">💀 Lars Has Fallen</h1>
+      <p id="deathText">The dark took you.</p>
+      <button id="reviveBtn">Rise Again</button>
+    </div>
+  </div>
+
+  <!-- Dih the Worm -->
+  <div class="overlay" id="dihScreen">
+    <div class="card" style="border-color:#9a5a7a;">
+      <h2 style="color:#7a3d5a;">🪱 Dih the Cave Worm</h2>
+      <p class="lead" id="dihLine"></p>
+      <div style="text-align:right;margin-top:10px;">
+        <button id="dihGift" class="ghost" style="display:none;">Accept Dih's Gift</button>
+        <button id="closeDih">Wriggle Along</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Niffo the Otter merchant -->
+  <div class="overlay" id="niffoScreen">
+    <div class="card" style="border-color:#5a7a8a;">
+      <h2 style="color:#2f5566;">🦦 Niffo the Otter's Rare Wares</h2>
+      <p class="lead" id="niffoLine">"Cousin Fionn sent me up the river with the good stuff. Rare curios — one of each, while I'm here!"</p>
+      <div id="niffoWares"></div>
+      <div style="text-align:right;margin-top:14px;">
+        <button id="closeNiffo" class="ghost">Farewell, Niffo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quest-giver Gnome -->
+  <div class="overlay" id="npcScreen">
+    <div class="card" style="border-color:#6a8f4a;">
+      <h2 id="npcName" style="color:#3d5a24;">⛏️ Gnome</h2>
+      <p class="lead" id="npcLine"></p>
+      <div style="text-align:right;margin-top:12px;">
+        <button id="npcAccept" style="display:none;">Accept</button>
+        <button id="npcTurnin" style="display:none;">Turn in</button>
+        <button id="closeNpc" class="ghost">Leave</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Win -->
+  <div class="overlay" id="winScreen">
+    <div class="card">
+      <h1 style="color:#5a3d1c;">🏆 A Complete Collection!</h1>
+      <p>You hand Fionn the final glittering sample. He arranges all eight on his velvet tray and beams.</p>
+      <p class="lead">"Lars, you magnificent digger — the finest survey this range has ever seen. The drinks are on me tonight!"</p>
+      <button id="winNewGame">Dig a New Mountain</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const SAVE_KEY = "lars_deep_delver_v1";
+
+  // ---------- Config ----------
+  const TILE = 32;
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const VIEW_W = canvas.width, VIEW_H = canvas.height;
+
+  // Mineral / ore definitions. hardness = min pickaxe tier to mine.
+  const MINERALS = [
+    { id:"coal",     name:"Coal",      color:"#2b2b2b", edge:"#000", hardness:0, value:3,  minDepth:0 },
+    { id:"copper",   name:"Copper",    color:"#c47a44", edge:"#7a4a26", hardness:0, value:5,  minDepth:0 },
+    { id:"iron",     name:"Iron",      color:"#a8a29a", edge:"#5c5852", hardness:1, value:9,  minDepth:2 },
+    { id:"silver",   name:"Silver",    color:"#d7dde3", edge:"#8a929c", hardness:1, value:14, minDepth:3 },
+    { id:"gold",     name:"Gold",      color:"#e7b84f", edge:"#a67c1e", hardness:2, value:22, minDepth:4 },
+    { id:"emerald",  name:"Emerald",   color:"#3fbf6f", edge:"#1c703c", hardness:2, value:30, minDepth:5 },
+    { id:"ruby",     name:"Ruby",      color:"#d43b52", edge:"#7d1c2c", hardness:3, value:42, minDepth:6 },
+    { id:"diamond",  name:"Diamond",   color:"#8fe6ff", edge:"#3a9bbf", hardness:3, value:60, minDepth:7 },
+  ];
+  const MINERAL_TOTAL = MINERALS.length;
+
+  // Pickaxe tiers: tier index -> {name, cost, dmg}
+  const PICKS = [
+    { name:"Wooden",  color:"#8a5a2b", dmg:1, cost:0 },
+    { name:"Iron",    color:"#b7b2aa", dmg:2, cost:40 },
+    { name:"Gold",    color:"#e7b84f", dmg:3, cost:110 },
+    { name:"Diamond", color:"#8fe6ff", dmg:5, cost:260 },
+  ];
+
+  // Niffo the otter's rare, one-time-purchase upgrades (permanent, saved).
+  const NIFFO_UPGRADES = [
+    { id:"heart",   name:"Otter's Heart",     cost:80,  desc:"+8 max health, and heal to full." },
+    { id:"quake",   name:"Quakestone Charm",  cost:120, desc:"Ground Pound reaches 1 tile further and hits harder." },
+    { id:"swift",   name:"Swift Paws",        cost:100, desc:"Charge your Ground Pound noticeably faster." },
+    { id:"magnet",  name:"River-Pearl Magnet",cost:90,  desc:"Loose ore is never dropped when you die." },
+  ];
+  // Niffo appears on the surface every few minutes for a limited window.
+  const NIFFO_PERIOD_MS = 150*1000;    // arrives once every ~2.5 minutes
+  const NIFFO_STAY_MS   = 45*1000;     // and lingers for 45 seconds
+
+  // Tile types
+  const T_EMPTY = 0, T_DIRT = 1, T_ROCK = 2, T_WALL = 3, T_ORE = 4, T_SURFACE = 5, T_HUT = 6, T_BEACON = 7;
+
+  // Quest templates. type drives which objective/mechanic tracks progress.
+  //   hunt   -> kill N of an enemy type
+  //   fetch  -> collect N of a mineral, then hand it in
+  //   depth  -> reach a given depth level
+  //   beacon -> light N crystal beacons scattered in the cave (new mechanic)
+  const QUEST_TEMPLATES = [
+    { type:"hunt",   target:"wyrm",  need:1, title:"Wyrm Bounty",       giver:"Grothi", desc:"Slay a Deep Wyrm in the lower mines.",           reward:60, rewardKind:"gold" },
+    { type:"hunt",   target:"golem", need:4, title:"Golem Culling",     giver:"Bemba",  desc:"Smash 4 Rock Golems.",                            reward:35, rewardKind:"gold" },
+    { type:"hunt",   target:"bat",   need:6, title:"Batty Trouble",     giver:"Pip",    desc:"Clear out 6 cave Bats.",                          reward:24, rewardKind:"gold" },
+    { type:"fetch",  target:"iron",  need:3, title:"Iron Order",        giver:"Bemba",  desc:"Bring me 3 Iron ore.",                            reward:30, rewardKind:"gold" },
+    { type:"fetch",  target:"silver",need:2, title:"Silver Commission", giver:"Grothi", desc:"Bring me 2 Silver ore.",                          reward:40, rewardKind:"gold" },
+    { type:"fetch",  target:"emerald",need:1,title:"A Green Gift",      giver:"Pip",    desc:"Fetch me 1 Emerald.",                             reward:45, rewardKind:"heal" },
+    { type:"depth",  target:5,       need:1, title:"Into the Deep",     giver:"Pip",    desc:"Descend to cave Level 5 or below.",               reward:35, rewardKind:"bolts" },
+    { type:"beacon", target:null,    need:3, title:"Light the Dark",    giver:"Grothi", desc:"Light 3 crystal beacons in the caves.",           reward:55, rewardKind:"pound" },
+  ];
+
+  // ---------- Game State ----------
+  let state = null;
+  let cols, rows;
+
+  function defaultState() {
+    return {
+      seed: (Math.random()*1e9)|0,
+      pick: 0,
+      gold: 0,
+      hp: 10,
+      maxHp: 10,
+      loose: {},          // ore id -> count of loose (unsold) ore
+      delivered: {},      // mineral id -> true once given to Fionn
+      hasCrossbow: false, // bought Lars's ranged weapon from Fionn
+      bolts: 0,           // ammo for the crossbow
+      pound: 0,           // ground-pound charge, 0..POUND_MAX (fills by mining stone)
+      px: 0, py: 0,       // player tile pos
+      dihMet: false,      // has Lars talked to Dih this cave
+      dihGifted: false,   // has Dih given his one-time gift
+      deaths: 0,          // total deaths (escalating penalty)
+      niffo: {},          // rare-upgrade id -> true (bought from Niffo)
+      playMs: 0,          // total play time this save (drives Niffo's visits)
+      quest: null,        // active quest {tplIndex, progress, done}
+      questsDone: 0,      // completed-quest counter (for flavour)
+      beaconsLit: 0,      // beacons lit toward a beacon quest
+      started: false,
+    };
+  }
+
+  // ---------- RNG (seeded, mulberry32) ----------
+  function makeRng(seed) {
+    let a = seed >>> 0;
+    return function() {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // ---------- Map ----------
+  // The world is a tall vertical shaft. Row 0-2 = surface with Fionn's hut.
+  // Deeper rows are harder (more rock, rarer ores).
+  let map;         // 2D array [row][col] of tile type
+  let oreAt;       // "r,c" -> mineral id
+  let tileHp;      // "r,c" -> remaining hits
+  let enemies = [];
+  let worm = null;     // Dih the Cave Worm — one per cave, at a random spot
+  let npcs = [];       // small quest-giver gnomes placed in the caves
+  let beacons = [];    // crystal beacon tiles {r,c,lit} for beacon quests
+  let hutRect;     // {c0,c1,row} location of hut on surface
+
+  const MAP_COLS = 40;
+  const SURFACE_ROWS = 3;
+  const CAVE_ROWS = 60;
+
+  function depthOfRow(r) {
+    // depth "level" 0..~ for difficulty & ore gating
+    return Math.max(0, Math.floor((r - SURFACE_ROWS) / 7));
+  }
+
+  function generateWorld() {
+    cols = MAP_COLS;
+    rows = SURFACE_ROWS + CAVE_ROWS;
+    const rng = makeRng(state.seed);
+    map = [];
+    oreAt = {};
+    tileHp = {};
+    enemies = [];
+
+    for (let r = 0; r < rows; r++) {
+      const row = new Array(cols).fill(T_ROCK);
+      map.push(row);
+    }
+
+    // Surface: open sky area + ground line
+    for (let r = 0; r < SURFACE_ROWS; r++) {
+      for (let c = 0; c < cols; c++) map[r][c] = T_SURFACE;
+    }
+    // Hut on the surface near the cave entrance (left-center)
+    const hutC = 4;
+    hutRect = { c0: hutC, c1: hutC+2, row: SURFACE_ROWS-1 };
+    map[SURFACE_ROWS-1][hutC] = T_HUT;
+    map[SURFACE_ROWS-1][hutC+1] = T_HUT;
+    map[SURFACE_ROWS-1][hutC+2] = T_HUT;
+
+    // Cave entrance shaft: randomize its column each game so the whole
+    // layout shifts, not just the ore. Keep it a few tiles right of the hut.
+    const entranceC = Math.min(cols-4, hutC + 3 + Math.floor(rng()*8));
+
+    // Fill cave with dirt/rock using noise. Density varies per game so some
+    // mountains are cramped and rocky, others open and dirt-heavy.
+    const dirtBias = 0.34 + rng()*0.22; // 0.34..0.56
+    for (let r = SURFACE_ROWS; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const n = rng();
+        // border always solid wall
+        if (c === 0 || c === cols-1 || r === rows-1) { map[r][c] = T_WALL; continue; }
+        map[r][c] = n < dirtBias ? T_DIRT : T_ROCK;
+      }
+    }
+
+    // Carve a spanning network of tunnels. A random number of walkers, each
+    // with its own randomized wandering behaviour, guarantees the entrance
+    // connects downward while producing a fresh maze every seed.
+    const carveBlob = (r, c, rad) => {
+      for (let dr=-rad; dr<=rad; dr++) for (let dc=-rad; dc<=rad; dc++) {
+        const rr=r+dr, cc=c+dc;
+        if (rr>=SURFACE_ROWS && rr<rows-1 && cc>0 && cc<cols-1) map[rr][cc]=T_EMPTY;
+      }
+    };
+
+    const walkers = 5 + Math.floor(rng()*4); // 5..8
+    for (let w = 0; w < walkers; w++) {
+      // First two walkers start at the entrance to guarantee reachability;
+      // the rest start at random points along the main descent.
+      let c, r;
+      if (w < 2) { c = entranceC; r = SURFACE_ROWS; }
+      else { c = 1 + Math.floor(rng()*(cols-2)); r = SURFACE_ROWS + Math.floor(rng()*Math.min(20, CAVE_ROWS)); }
+      const steps = 200 + Math.floor(rng()*220);
+      // each walker has its own directional temperament
+      const downBias = 0.35 + rng()*0.25;
+      const wob = 0.15 + rng()*0.2;
+      for (let s = 0; s < steps; s++) {
+        carveBlob(r, c, rng() < 0.15 ? 1 : 0);
+        // occasional wider cavern room
+        if (rng() < 0.02) carveBlob(r, c, 2);
+        const roll = rng();
+        if (roll < downBias) r++;
+        else if (roll < downBias + wob) c++;
+        else if (roll < downBias + 2*wob) c--;
+        else if (roll < downBias + 2*wob + 0.08) r = Math.max(SURFACE_ROWS, r-1);
+        else r++;
+        r = Math.min(rows-2, Math.max(SURFACE_ROWS, r));
+        c = Math.min(cols-2, Math.max(1, c));
+      }
+    }
+
+    // Scatter a handful of large open caverns at random depths for variety.
+    const caverns = 3 + Math.floor(rng()*4);
+    for (let i = 0; i < caverns; i++) {
+      const cr = SURFACE_ROWS + 4 + Math.floor(rng()*(CAVE_ROWS-6));
+      const cc = 3 + Math.floor(rng()*(cols-6));
+      const rw = 2 + Math.floor(rng()*3), rh = 2 + Math.floor(rng()*3);
+      for (let dr=-rh; dr<=rh; dr++) for (let dc=-rw; dc<=rw; dc++) {
+        if (dr*dr/(rh*rh) + dc*dc/(rw*rw) > 1) continue; // elliptical
+        const rr=cr+dr, ccx=cc+dc;
+        if (rr>=SURFACE_ROWS && rr<rows-1 && ccx>0 && ccx<cols-1) map[rr][ccx]=T_EMPTY;
+      }
+    }
+
+    // Guaranteed vertical entrance shaft (2 wide) so you can always get in
+    for (let r = SURFACE_ROWS-1; r < SURFACE_ROWS+4; r++) {
+      map[r][entranceC] = T_EMPTY;
+      map[r][entranceC+1] = T_EMPTY;
+    }
+    map[SURFACE_ROWS-1][entranceC] = T_SURFACE;
+    map[SURFACE_ROWS-1][entranceC+1] = T_SURFACE;
+
+    // Scatter ore veins. Each mineral gets several deposits at/after its minDepth.
+    MINERALS.forEach(min => {
+      const deposits = 6 + Math.floor(rng()*5);
+      let placed = 0, attempts = 0;
+      while (placed < deposits && attempts < 400) {
+        attempts++;
+        const startRow = SURFACE_ROWS + min.minDepth * 7 + Math.floor(rng() * (CAVE_ROWS - min.minDepth*7 - 2));
+        const r = Math.min(rows-2, Math.max(SURFACE_ROWS, startRow));
+        const c = 1 + Math.floor(rng()*(cols-2));
+        if (map[r][c] === T_WALL) continue;
+        // vein of 1-3 ore tiles
+        const veinSize = 1 + Math.floor(rng()*3);
+        for (let v = 0; v < veinSize; v++) {
+          const rr = Math.min(rows-2, Math.max(SURFACE_ROWS, r + (Math.floor(rng()*3)-1)));
+          const cc = Math.min(cols-2, Math.max(1, c + (Math.floor(rng()*3)-1)));
+          if (map[rr][cc] === T_WALL) continue;
+          map[rr][cc] = T_ORE;
+          oreAt[rr+","+cc] = min.id;
+          tileHp[rr+","+cc] = 2 + min.hardness; // tougher ore = more hits
+        }
+        placed++;
+      }
+    });
+
+    // Spawn enemies in open cave tiles, more/tougher deeper
+    const openCells = [];
+    for (let r = SURFACE_ROWS+3; r < rows-1; r++)
+      for (let c = 1; c < cols-1; c++)
+        if (map[r][c] === T_EMPTY) openCells.push([r,c]);
+
+    const enemyCount = 26;
+    for (let i = 0; i < enemyCount && openCells.length; i++) {
+      const idx = Math.floor(rng()*openCells.length);
+      const [r,c] = openCells.splice(idx,1)[0];
+      const d = depthOfRow(r);
+      let type;
+      const roll = rng();
+      if (d <= 1) type = roll < 0.7 ? "slime" : "bat";
+      else if (d <= 3) type = roll < 0.45 ? "slime" : (roll < 0.8 ? "bat" : "golem");
+      else if (d <= 5) type = roll < 0.3 ? "bat" : (roll < 0.85 ? "golem" : "wyrm");
+      else type = roll < 0.25 ? "bat" : (roll < 0.6 ? "golem" : "wyrm");
+      enemies.push(makeEnemy(type, c, r));
+    }
+
+    // Guarantee a few Deep Wyrms in the lowest reaches so hunts are possible.
+    const deepCells = openCells.filter(([r]) => depthOfRow(r) >= 4);
+    const wyrmGoal = 2 + Math.floor(rng()*2); // 2..3 guaranteed
+    for (let i = 0; i < wyrmGoal && deepCells.length; i++) {
+      const idx = Math.floor(rng()*deepCells.length);
+      const [r,c] = deepCells.splice(idx,1)[0];
+      enemies.push(makeEnemy("wyrm", c, r));
+    }
+
+    // Dih the Cave Worm: exactly one per cave, at a random open cell.
+    // Uses the seeded rng so his spot regenerates consistently for a saved cave.
+    worm = null;
+    if (openCells.length) {
+      const [wr, wc] = openCells[Math.floor(rng()*openCells.length)];
+      worm = { r: wr, c: wc, bob: 0 };
+    }
+
+    // Quest-giver gnomes: three little folk scattered through the caves, each
+    // stationed at its own depth band so quests spread across the mine.
+    npcs = [];
+    const givers = ["Pip","Bemba","Grothi"];
+    givers.forEach((name, gi) => {
+      // Pip shallow, Bemba mid, Grothi deep
+      const band = [ [0,3], [2,6], [5,99] ][gi];
+      const bandCells = openCells.filter(([r]) => {
+        const d = depthOfRow(r); return d>=band[0] && d<=band[1];
+      });
+      const pool = bandCells.length ? bandCells : openCells;
+      if (!pool.length) return;
+      const pick = pool[Math.floor(rng()*pool.length)];
+      const idx = openCells.indexOf(pick);
+      if (idx>=0) openCells.splice(idx,1);
+      npcs.push({ name, r:pick[0], c:pick[1] });
+    });
+
+    // Crystal beacons for the "light the dark" mechanic: a handful of dormant
+    // shrines embedded in the cave. Lighting them progresses beacon quests.
+    beacons = [];
+    const beaconGoal = 4 + Math.floor(rng()*2);
+    for (let i=0; i<beaconGoal && openCells.length; i++){
+      const idx = Math.floor(rng()*openCells.length);
+      const [r,c] = openCells.splice(idx,1)[0];
+      map[r][c] = T_BEACON;
+      beacons.push({ r, c, lit:false });
+    }
+
+    // Player starts at hut entrance on the surface
+    state.px = entranceC;
+    state.py = SURFACE_ROWS-1;
+    // reset per-cave beacon progress on regeneration
+    state.beaconsLit = 0;
+  }
+
+  function makeEnemy(type, c, r) {
+    const defs = {
+      slime: { hp:2,  dmg:1, color:"#6b8f4a", speed:0.018, name:"Slime" },
+      bat:   { hp:2,  dmg:1, color:"#7a5c8a", speed:0.045, name:"Bat" },
+      golem: { hp:6,  dmg:3, color:"#8a7c68", speed:0.012, name:"Rock Golem" },
+      wyrm:  { hp:20, dmg:5, color:"#8a3d5a", speed:0.03,  name:"Deep Wyrm" },
+    };
+    const d = defs[type];
+    return { type, c, r, x:c, y:r, hp:d.hp, maxHp:d.hp, dmg:d.dmg,
+             color:d.color, speed:d.speed, name:d.name, moveT:0, flash:0,
+             big: type==="wyrm" };
+  }
+
+  // ---------- Player render pos (smooth) ----------
+  let renderX = 0, renderY = 0;
+  let moveCooldown = 0;
+  let attackFlash = 0;
+  let hitFlash = 0;
+  let shakeT = 0;
+  let spaceHeld = false;
+  let facing = {x:0, y:1};
+
+  // ---------- Camera ----------
+  let camY = 0;
+  const VIEW_COLS = Math.floor(VIEW_W / TILE); // 30
+  const VIEW_ROWS = Math.floor(VIEW_H / TILE); // ~18
+
+  // ---------- Input ----------
+  const keys = {};
+  function introVisible(){ return document.getElementById("introScreen").classList.contains("show"); }
+
+  window.addEventListener("keydown", e => {
+    if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key)) e.preventDefault();
+    // While the intro dialogue plays, Space/Enter advances it and nothing else fires.
+    if (introVisible()){
+      if (e.key === " " || e.key === "Enter") advanceIntro();
+      return;
+    }
+    keys[e.key.toLowerCase()] = true;
+    if (e.key === "e" || e.key === "E") tryTalk();
+    if ((e.key === "f" || e.key === "F") && state && state.started && !paused) fireCrossbow();
+  });
+  window.addEventListener("keyup", e => { keys[e.key.toLowerCase()] = false; });
+
+  canvas.addEventListener("mousedown", e => {
+    if (!state || !state.started || paused) return;
+    doGroundPound();
+  });
+
+  // Click anywhere on the intro dialogue box advances it.
+  document.getElementById("introScreen").addEventListener("mousedown", e => {
+    // ignore clicks on the actual buttons (they have their own handlers)
+    if (e.target.tagName === "BUTTON") return;
+    advanceIntro();
+  });
+
+  // ---------- Movement / actions ----------
+  function tileType(r,c){ if(r<0||c<0||r>=rows||c>=cols) return T_WALL; return map[r][c]; }
+  function isSolid(t){ return t===T_ROCK||t===T_DIRT||t===T_WALL||t===T_ORE||t===T_HUT; }
+  function isMineable(t){ return t===T_DIRT||t===T_ROCK||t===T_ORE; }
+
+  function enemyAt(r,c){ return enemies.find(e => e.hp>0 && e.c===c && e.r===r); }
+
+  function tryMove(dx,dy){
+    facing = {x:dx, y:dy};
+    const nc = state.px+dx, nr = state.py+dy;
+    const t = tileType(nr,nc);
+    const foe = enemyAt(nr,nc);
+    if (foe) { attackEnemy(foe); return; }
+    if (isMineable(t)) { mineTile(nr,nc); return; }
+    if (!isSolid(t)) {
+      state.px = nc; state.py = nr;
+    }
+  }
+
+  function doAction(){
+    const nc = state.px+facing.x, nr = state.py+facing.y;
+    const foe = enemyAt(nr,nc);
+    if (foe) { attackEnemy(foe); return; }
+    const t = tileType(nr,nc);
+    if (isMineable(t)) mineTile(nr,nc);
+  }
+
+  function mineTile(r,c){
+    attackFlash = 1;
+    const t = map[r][c];
+    const key = r+","+c;
+    if (t === T_ORE) {
+      const mid = oreAt[key];
+      const min = MINERALS.find(m=>m.id===mid);
+      if (min.hardness > state.pick) {
+        toast(`⛏️ ${min.name} is too hard for your ${PICKS[state.pick].name} pickaxe!`);
+        return;
+      }
+      tileHp[key] = (tileHp[key] ?? (2+min.hardness)) - PICKS[state.pick].dmg;
+      if (tileHp[key] <= 0) {
+        map[r][c] = T_EMPTY;
+        state.loose[mid] = (state.loose[mid]||0) + 1;
+        delete oreAt[key];
+        toast(`💎 Mined ${min.name}!`);
+        spawnParticles(c,r,min.color);
+        gainPound(2);
+      }
+    } else {
+      tileHp[key] = (tileHp[key] ?? (t===T_ROCK?3:1)) - PICKS[state.pick].dmg;
+      if (tileHp[key] <= 0) {
+        map[r][c] = T_EMPTY;
+        spawnParticles(c,r,"#6a5a44");
+        // stone (rock) charges the pound more than soft dirt
+        gainPound(t===T_ROCK ? 3 : 1);
+      }
+    }
+  }
+
+  function enemyBonus(type){ return type==="wyrm" ? 25 : type==="golem" ? 6 : 2; }
+
+  function onEnemyKilled(e){
+    state.gold += enemyBonus(e.type);
+    questOnKill(e.type);
+  }
+
+  function attackEnemy(foe){
+    attackFlash = 1;
+    foe.hp -= PICKS[state.pick].dmg;
+    foe.flash = 1;
+    spawnParticles(foe.c, foe.r, "#c0392b");
+    if (foe.hp <= 0) {
+      onEnemyKilled(foe);
+      toast(`⚔️ Slew a ${foe.name}! +${enemyBonus(foe.type)} gold`);
+    }
+  }
+
+  function damagePlayer(dmg){
+    state.hp -= dmg;
+    hitFlash = 1;
+    if (state.hp <= 0) { state.hp = 0; die(); }
+  }
+
+  // ---------- Ground Pound (AoE) ----------
+  const POUND_MAX = 30;      // charge needed for a full pound
+  const POUND_RADIUS = 2;    // base tiles (Chebyshev) affected
+  const POUND_DMG = 4;       // base damage to each enemy hit
+  let shockwave = null;      // {x,y,t} visual ring
+
+  function poundRadius(){ return POUND_RADIUS + (state.niffo && state.niffo.quake ? 1 : 0); }
+  function poundDamage(){ return POUND_DMG + (state.niffo && state.niffo.quake ? 3 : 0); }
+
+  function gainPound(amount){
+    if (state.niffo && state.niffo.swift) amount *= 1.6; // Swift Paws
+    const before = state.pound||0;
+    state.pound = Math.min(POUND_MAX, before + amount);
+    if (before < POUND_MAX && state.pound >= POUND_MAX) toast("💥 Ground Pound charged! Press Space.");
+  }
+
+  function doGroundPound(){
+    if ((state.pound||0) < POUND_MAX) return; // only fires when fully charged
+    state.pound = 0;
+    attackFlash = 1;
+    hitFlash = 0.4;
+    const RAD = poundRadius(), DMG = poundDamage();
+    shockwave = { c: state.px, r: state.py, t: 1, rad: RAD };
+
+    // Damage every enemy within the radius
+    let hits = 0, kills = 0;
+    for (const e of enemies) {
+      if (e.hp <= 0) continue;
+      const d = Math.max(Math.abs(e.c-state.px), Math.abs(e.r-state.py));
+      if (d <= RAD) {
+        e.hp -= DMG; e.flash = 1; hits++;
+        spawnParticles(e.c, e.r, "#c0392b");
+        if (e.hp <= 0) {
+          kills++;
+          onEnemyKilled(e);
+        }
+      }
+    }
+    // Shatter mineable tiles in the ring (respecting pickaxe tier for ore)
+    for (let dr=-RAD; dr<=RAD; dr++) {
+      for (let dc=-RAD; dc<=RAD; dc++) {
+        const rr=state.py+dr, cc=state.px+dc;
+        if (rr<0||cc<0||rr>=rows||cc>=cols) continue;
+        const t = map[rr][cc];
+        const key = rr+","+cc;
+        if (t===T_ORE) {
+          const mid = oreAt[key];
+          const min = MINERALS.find(m=>m.id===mid);
+          if (min.hardness > state.pick) continue; // too hard even for the pound
+          map[rr][cc]=T_EMPTY; state.loose[mid]=(state.loose[mid]||0)+1;
+          delete oreAt[key]; spawnParticles(cc,rr,min.color);
+        } else if (t===T_DIRT || t===T_ROCK) {
+          map[rr][cc]=T_EMPTY; spawnParticles(cc,rr,"#6a5a44");
+        }
+      }
+    }
+    // camera/screen shake
+    shakeT = 240;
+    if (kills > 0) toast(`💥 GROUND POUND! Crushed ${kills} enem${kills===1?"y":"ies"}!`);
+    else if (hits > 0) toast(`💥 GROUND POUND! Hit ${hits} for ${DMG} each.`);
+    else toast("💥 GROUND POUND!");
+  }
+
+  // ---------- Particles ----------
+  let particles = [];
+  let bolts = [];   // active crossbow bolts in flight
+  function spawnParticles(c,r,color){
+    for (let i=0;i<8;i++){
+      particles.push({
+        x:(c+0.5)*TILE, y:(r+0.5)*TILE,
+        vx:(Math.random()-0.5)*3, vy:(Math.random()-0.5)*3-1,
+        life:1, color
+      });
+    }
+  }
+
+  // ---------- Ranged weapon ----------
+  const BOLT_DMG = 3;
+  const BOLT_SPEED = 0.35;     // tiles per frame-step
+  let fireCooldown = 0;
+
+  function fireCrossbow(){
+    if (!state.hasCrossbow) { toast("Buy the Crossbow from Fionn first."); return; }
+    if (state.bolts <= 0) { toast("Out of bolts! Buy more from Fionn."); return; }
+    if (fireCooldown > 0) return;
+    // aim in the current facing direction; if idle-facing zero, default right
+    let dx = facing.x, dy = facing.y;
+    if (dx === 0 && dy === 0) dx = 1;
+    state.bolts--;
+    fireCooldown = 320;
+    attackFlash = 1;
+    bolts.push({
+      x: state.px + 0.5, y: state.py + 0.5,
+      dx, dy, life: 14  // max tiles traveled
+    });
+    updateHud();
+  }
+
+  function updateBolts(dt){
+    for (const b of bolts) {
+      if (b.dead) continue;
+      // step in small increments for collision accuracy
+      const stepCount = 3;
+      for (let s = 0; s < stepCount; s++) {
+        b.x += b.dx * BOLT_SPEED / stepCount;
+        b.y += b.dy * BOLT_SPEED / stepCount;
+        const tc = Math.floor(b.x), tr = Math.floor(b.y);
+        const t = tileType(tr, tc);
+        if (isSolid(t)) { b.dead = true; spawnParticles(tc, tr, "#c9b48a"); break; }
+        const foe = enemyAt(tr, tc);
+        if (foe) {
+          foe.hp -= BOLT_DMG; foe.flash = 1;
+          spawnParticles(tc, tr, "#c0392b");
+          if (foe.hp <= 0) {
+            onEnemyKilled(foe);
+            toast(`🎯 Shot down a ${foe.name}! +${enemyBonus(foe.type)} gold`);
+          }
+          b.dead = true; break;
+        }
+      }
+      b.life -= BOLT_SPEED;
+      if (b.life <= 0) b.dead = true;
+    }
+    bolts = bolts.filter(b => !b.dead);
+  }
+
+
+  // ---------- Enemy AI ----------
+  function updateEnemies(dt){
+    for (const e of enemies) {
+      if (e.hp<=0) continue;
+      if (e.flash>0) e.flash -= dt*0.005;
+      // distance to player
+      const dist = Math.abs(e.c-state.px)+Math.abs(e.r-state.py);
+      // adjacent -> attack
+      if (dist === 1) {
+        e.atkT = (e.atkT||0) + dt;
+        if (e.atkT > 700) { e.atkT = 0; damagePlayer(e.dmg); }
+        continue;
+      }
+      // chase if within aggro range, else wander occasionally
+      e.moveT += dt;
+      const interval = 1/e.speed;
+      if (e.moveT < interval) continue;
+      e.moveT = 0;
+      let dc=0, dr=0;
+      if (dist <= 8) {
+        // greedy step toward player, avoid solid
+        const options = [];
+        if (state.px > e.c) options.push([1,0]);
+        if (state.px < e.c) options.push([-1,0]);
+        if (state.py > e.r) options.push([0,1]);
+        if (state.py < e.r) options.push([0,0-1]);
+        for (const [oc,or] of options) {
+          const nr=e.r+or, nc=e.c+oc;
+          if (!isSolid(tileType(nr,nc)) && !enemyAt(nr,nc) && !(nr===state.py&&nc===state.px)) { dc=oc; dr=or; break; }
+        }
+      } else if (Math.random()<0.4) {
+        const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+        const [oc,or]=dirs[Math.floor(Math.random()*4)];
+        if (!isSolid(tileType(e.r+or,e.c+oc)) && !enemyAt(e.r+or,e.c+oc)) { dc=oc; dr=or; }
+      }
+      if (dc||dr){ e.c+=dc; e.r+=dr; }
+    }
+  }
+
+  // ---------- Game flow ----------
+  let paused = false;
+
+  function beginGame(){
+    state = defaultState();
+    state.started = true;
+    generateWorld();
+    bolts = []; particles = []; shockwave = null; shakeT = 0;
+    renderX = state.px; renderY = state.py;
+    hideAll();
+    paused = false;
+    save();
+    setHint("Walk into dirt or stone to mine automatically. Mining stone charges your Ground Pound — unleash it with Space.");
+  }
+
+  // ---------- Intro dialogue (skippable, plays before a new game) ----------
+  const INTRO_LINES = [
+    { who:"Fionn",  text:"Lars! You made it. Word is you're the finest dwarf-for-hire this side of the range." },
+    { who:"Lars",   text:"Pickaxe's sharp and my beard's braided. What's the job, Fionn?" },
+    { who:"Fionn",  text:"This mountain's uncharted. I need a sample of every mineral in it — all eight — for my survey." },
+    { who:"Fionn",  text:"Mind the dark, though. Slimes and bats near the top... rock golems below... and deep down, the wyrms." },
+    { who:"Lars",   text:"Wyrms don't scare a Minecenary. Point me at the cave mouth." },
+    { who:"Fionn",  text:"That's the spirit. My hut's right here at the entrance — bring me ore, I'll pay and re-arm you. Now dig!" },
+  ];
+  let introIdx = 0;
+
+  function startNewGame(){
+    // begin fresh, then play the skippable intro dialogue over the new world
+    beginGame();
+    introIdx = 0;
+    paused = true;               // freeze the world while the intro plays
+    document.getElementById("hint").textContent = "";
+    show("introScreen");
+    renderIntroLine();
+  }
+
+  function renderIntroLine(){
+    const line = INTRO_LINES[introIdx];
+    document.getElementById("dlgSpeaker").textContent = line.who;
+    document.getElementById("dlgText").textContent = line.text;
+    document.getElementById("dlgNext").textContent = introIdx >= INTRO_LINES.length-1 ? "Begin ⛏️" : "Next ▶";
+  }
+
+  function advanceIntro(){
+    introIdx++;
+    if (introIdx >= INTRO_LINES.length) { endIntro(); return; }
+    renderIntroLine();
+  }
+
+  function endIntro(){
+    hide("introScreen");
+    paused = false;
+    setHint("Head down the shaft by the hut. Walk into stone to mine; mining charges your Ground Pound (Space).");
+  }
+
+  function continueGame(){
+    const s = loadSave();
+    if (!s) { toast("No saved dig found."); return; }
+    state = s;
+    generateWorld();       // regenerate deterministic map from saved seed
+    bolts = []; particles = []; shockwave = null; shakeT = 0;
+    // re-remove ore that was already mined? We saved loose+delivered but not tile edits.
+    // For simplicity, mined-out tiles are restored on continue except delivered minerals still count.
+    renderX = state.px; renderY = state.py;
+    hideAll();
+    paused = false;
+    setHint("Welcome back, Lars.");
+  }
+
+  function die(){
+    paused = true;
+    state.deaths = (state.deaths||0) + 1;
+
+    // Penalty: lose HALF your gold, and drop all loose (uncatalogued) ore
+    // back into the mountain. Delivered minerals are safe with Fionn.
+    const goldLost = Math.floor(state.gold * 0.5);
+    state.gold -= goldLost;
+
+    // River-Pearl Magnet (from Niffo) keeps your loose ore through death.
+    const keepOre = state.niffo && state.niffo.magnet;
+    let oreLost = 0;
+    if (!keepOre) {
+      for (const id in state.loose) oreLost += state.loose[id]||0;
+      state.loose = {};
+    }
+
+    // Every 2nd death cracks your pickaxe down one tier (min Wooden).
+    let brokePick = false;
+    if (state.deaths % 2 === 0 && state.pick > 0) { state.pick--; brokePick = true; }
+
+    const parts = [`You drop <b>${goldLost}</b> gold in the scramble to the surface.`];
+    if (oreLost > 0) parts.push(`<b>${oreLost}</b> loose ore samples scatter into the dark and are lost.`);
+    else if (keepOre) parts.push(`Your River-Pearl Magnet keeps every loose ore safe.`);
+    if (brokePick) parts.push(`Your pickaxe cracks and downgrades to <b>${PICKS[state.pick].name}</b>.`);
+    parts.push(`Catalogued minerals are safe with Fionn. Death #${state.deaths}.`);
+    document.getElementById("deathText").innerHTML = parts.join(" ");
+
+    show("deathScreen");
+    save();
+  }
+
+  function revive(){
+    state.hp = state.maxHp;
+    // return to surface entrance
+    const entranceC = hutRect.c0 + 4;
+    state.px = entranceC; state.py = SURFACE_ROWS-1;
+    renderX = state.px; renderY = state.py;
+    hideAll();
+    paused = false;
+  }
+
+  function checkWin(){
+    const done = MINERALS.every(m => state.delivered[m.id]);
+    if (done) { paused = true; show("winScreen"); }
+  }
+
+  // ---------- Fionn / Shop ----------
+  function nearHut(){
+    // player standing adjacent to any hut tile or on surface near it
+    for (let c=hutRect.c0-1; c<=hutRect.c1+1; c++){
+      if (Math.abs(state.px-c)<=1 && Math.abs(state.py-hutRect.row)<=1) return true;
+    }
+    return false;
+  }
+
+  function nearWorm(){
+    if (!worm) return false;
+    const d = Math.abs(state.px-worm.c) + Math.abs(state.py-worm.r);
+    return d <= 1;
+  }
+
+  // ---------- Niffo the Otter (periodic surface merchant) ----------
+  function niffoTile(){
+    // stands on the surface just left of the hut
+    return { c: Math.max(1, hutRect.c0 - 2), r: SURFACE_ROWS-1 };
+  }
+  function niffoHere(){
+    // present during the last NIFFO_STAY_MS of each NIFFO_PERIOD_MS window
+    const t = state.playMs % NIFFO_PERIOD_MS;
+    return t >= (NIFFO_PERIOD_MS - NIFFO_STAY_MS);
+  }
+  function niffoMsLeft(){
+    if (!niffoHere()) return 0;
+    const t = state.playMs % NIFFO_PERIOD_MS;
+    return NIFFO_PERIOD_MS - t;
+  }
+  function niffoMsUntil(){
+    const t = state.playMs % NIFFO_PERIOD_MS;
+    return (NIFFO_PERIOD_MS - NIFFO_STAY_MS) - t;
+  }
+  function nearNiffo(){
+    if (!niffoHere()) return false;
+    const n = niffoTile();
+    return Math.abs(state.px-n.c)<=1 && Math.abs(state.py-n.r)<=1;
+  }
+
+  // ---------- Quests ----------
+  function activeQuest(){ return state.quest ? QUEST_TEMPLATES[state.quest.tplIndex] : null; }
+
+  function nearNpc(){
+    return npcs.find(n => Math.abs(state.px-n.c)<=1 && Math.abs(state.py-n.r)<=1) || null;
+  }
+
+  function questProgressText(q, prog){
+    if (q.type==="hunt")   return `Slain ${prog}/${q.need} ${enemyName(q.target)}${q.need>1?"s":""}`;
+    if (q.type==="fetch")  return `Have ${state.loose[q.target]||0}/${q.need} ${mineralName(q.target)}`;
+    if (q.type==="depth")  return `Reach Level ${q.target} (deepest so far: ${state._deepestLevel||0})`;
+    if (q.type==="beacon") return `Beacons lit ${state.beaconsLit||0}/${q.need}`;
+    return "";
+  }
+  function enemyName(t){ return {slime:"Slime",bat:"Bat",golem:"Rock Golem",wyrm:"Deep Wyrm"}[t]||t; }
+  function mineralName(id){ const m=MINERALS.find(x=>x.id===id); return m?m.name:id; }
+
+  function questReadyToTurnIn(){
+    const q = activeQuest(); if (!q || !state.quest) return false;
+    if (q.type==="hunt")   return (state.quest.progress||0) >= q.need;
+    if (q.type==="fetch")  return (state.loose[q.target]||0) >= q.need;
+    if (q.type==="depth")  return (state._deepestLevel||0) >= q.target;
+    if (q.type==="beacon") return (state.beaconsLit||0) >= q.need;
+    return false;
+  }
+
+  function questOnKill(type){
+    const q = activeQuest();
+    if (q && q.type==="hunt" && q.target===type){
+      state.quest.progress = (state.quest.progress||0)+1;
+      if (state.quest.progress >= q.need) toast(`✅ ${q.title}: quarry slain! Return to ${q.giver}.`);
+      else toast(`🎯 ${q.title}: ${state.quest.progress}/${q.need}`);
+    }
+  }
+
+  function questOnDepth(level){
+    state._deepestLevel = Math.max(state._deepestLevel||0, level);
+    const q = activeQuest();
+    if (q && q.type==="depth" && level>=q.target && !state.quest._announced){
+      state.quest._announced = true;
+      toast(`✅ ${q.title}: depth reached! Return to ${q.giver}.`);
+    }
+  }
+
+  function lightBeacon(b){
+    if (b.lit) { toast("This beacon is already glowing."); return; }
+    b.lit = true;
+    state.beaconsLit = (state.beaconsLit||0)+1;
+    spawnParticles(b.c, b.r, "#8fe6ff");
+    const q = activeQuest();
+    if (q && q.type==="beacon"){
+      if (state.beaconsLit >= q.need) toast(`✅ ${q.title}: all beacons lit! Return to ${q.giver}.`);
+      else toast(`🔦 Beacon lit ${state.beaconsLit}/${q.need}`);
+    } else {
+      toast("🔦 A crystal beacon flares to life.");
+    }
+    save();
+  }
+
+  function tryTalk(){
+    if (!state || !state.started || paused) return;
+    if (nearNiffo()) { openNiffo(); return; }
+    if (nearHut()) { openShop(); return; }
+    if (nearWorm()) { openDih(); return; }
+    const npc = nearNpc();
+    if (npc) { openNpc(npc); return; }
+    // a beacon adjacent? light it
+    const b = beacons.find(x => !x.lit && Math.abs(state.px-x.c)<=1 && Math.abs(state.py-x.r)<=1);
+    if (b) { lightBeacon(b); return; }
+    toast("Nobody's close enough. (Press E by Fionn, Niffo, a gnome, a beacon, or Dih.)");
+  }
+
+  // Pick a fresh quest for a giver, avoiding the one already active.
+  function questForGiver(name){
+    const opts = QUEST_TEMPLATES
+      .map((t,i)=>({t,i}))
+      .filter(o => o.t.giver===name && !(state.quest && state.quest.tplIndex===o.i));
+    if (!opts.length) return null;
+    return opts[Math.floor(Math.random()*opts.length)];
+  }
+
+  function openNpc(npc){
+    paused = true;
+    const q = activeQuest();
+    const line = document.getElementById("npcLine");
+    const acceptBtn = document.getElementById("npcAccept");
+    const turninBtn = document.getElementById("npcTurnin");
+    document.getElementById("npcName").textContent = `⛏️ ${npc.name} the Gnome`;
+
+    // If the active quest belongs to this giver, offer progress / turn-in.
+    if (q && q.giver===npc.name){
+      if (questReadyToTurnIn()){
+        line.textContent = `"${npc.name}: You did it! Hand it over, Lars."`;
+        acceptBtn.style.display="none";
+        turninBtn.style.display="inline-block";
+        turninBtn.textContent = `Turn in "${q.title}"`;
+      } else {
+        line.textContent = `"${npc.name}: Still working on it? ${questProgressText(q, state.quest.progress)}."`;
+        acceptBtn.style.display="none";
+        turninBtn.style.display="none";
+      }
+    } else if (q){
+      // has a quest from someone else
+      line.textContent = `"${npc.name}: Finish ${activeQuest().giver}'s job first — one task at a time, digger."`;
+      acceptBtn.style.display="none";
+      turninBtn.style.display="none";
+    } else {
+      // offer a new quest
+      const offer = questForGiver(npc.name);
+      if (offer){
+        npc._offer = offer.i;
+        const t = offer.t;
+        line.innerHTML = `"${npc.name}: I've a job for you." <br><b>${t.title}</b> — ${t.desc}<br><small>Reward: ${rewardText(t)}</small>`;
+        acceptBtn.style.display="inline-block";
+        acceptBtn.textContent = `Accept "${t.title}"`;
+        turninBtn.style.display="none";
+      } else {
+        line.textContent = `"${npc.name}: Nothing for you right now. Come back later."`;
+        acceptBtn.style.display="none";
+        turninBtn.style.display="none";
+      }
+    }
+    show("npcScreen");
+    npcContext = npc;
+  }
+
+  let npcContext = null;
+
+  function rewardText(t){
+    if (t.rewardKind==="gold")  return `${t.reward} gold`;
+    if (t.rewardKind==="heal")  return `${t.reward} gold + full heal`;
+    if (t.rewardKind==="bolts") return `${t.reward} gold + 15 bolts`;
+    if (t.rewardKind==="pound") return `${t.reward} gold + instant Ground Pound charge`;
+    return `${t.reward} gold`;
+  }
+
+  function acceptQuest(){
+    if (!npcContext || npcContext._offer==null) return;
+    state.quest = { tplIndex: npcContext._offer, progress: 0 };
+    const t = QUEST_TEMPLATES[npcContext._offer];
+    toast(`📜 Quest accepted: ${t.title}`);
+    hide("npcScreen"); paused=false;
+    updateHud(); save();
+  }
+
+  function turnInQuest(){
+    const q = activeQuest();
+    if (!q || !questReadyToTurnIn()) return;
+    // grant reward
+    state.gold += q.reward;
+    if (q.rewardKind==="heal") state.hp = state.maxHp;
+    if (q.rewardKind==="bolts"){ state.hasCrossbow = true; state.bolts += 15; }
+    if (q.rewardKind==="pound") state.pound = POUND_MAX;
+    // fetch quests consume the ore
+    if (q.type==="fetch"){ state.loose[q.target] = Math.max(0,(state.loose[q.target]||0) - q.need); }
+    state.questsDone = (state.questsDone||0)+1;
+    state.quest = null;
+    toast(`🏆 Quest complete! +${q.reward} gold.`);
+    hide("npcScreen"); paused=false;
+    updateHud(); save();
+  }
+
+  const DIH_CHATTER = [
+    "\"Sssalutations, Lars! I'm Dih. Most diggers try to squash me. You're... nicer.\"",
+    "\"The deep stone hums if you press your ear to it. Golems hate that.\"",
+    "\"I once wriggled clean through a diamond vein. Took a week. Worth it.\"",
+    "\"Fionn owes me three pebbles and a kind word. Don't tell him I said so.\"",
+    "\"Careful down deep — the dark drinks torchlight like ale.\"",
+  ];
+
+  function openDih(){
+    paused = true;
+    const line = document.getElementById("dihLine");
+    const giftBtn = document.getElementById("dihGift");
+    if (!state.dihGifted) {
+      line.textContent = "\"A friendly face! Nobody talks to Dih. Here — take this, digger. A little something I've been curling around.\"";
+      giftBtn.style.display = "inline-block";
+    } else {
+      line.textContent = DIH_CHATTER[Math.floor(Math.random()*DIH_CHATTER.length)];
+      giftBtn.style.display = "none";
+    }
+    state.dihMet = true;
+    show("dihScreen");
+    save();
+  }
+
+  function acceptDihGift(){
+    // One-time-ever reward: a pile of gold + a full heal, scaled to be meaningful early.
+    const reward = 45;
+    state.gold += reward;
+    state.hp = state.maxHp;
+    state.dihGifted = true;
+    hide("dihScreen");
+    paused = false;
+    toast(`🪱 Dih gifted you ${reward} gold and patched you up!`);
+    updateHud();
+    save();
+  }
+
+  function openNiffo(){
+    paused = true;
+    renderNiffo();
+    show("niffoScreen");
+  }
+
+  function renderNiffo(){
+    const wares = document.getElementById("niffoWares");
+    let html = "";
+    NIFFO_UPGRADES.forEach(u => {
+      const owned = state.niffo && state.niffo[u.id];
+      const canAfford = state.gold >= u.cost;
+      html += `<div class="shopRow">
+        <div><b>${u.name}</b><small>${u.desc}</small></div>
+        ${owned
+          ? `<button disabled>OWNED</button>`
+          : `<button class="niffoBuy" data-id="${u.id}" ${canAfford?"":"disabled"}>🪙 ${u.cost}</button>`}
+      </div>`;
+    });
+    wares.innerHTML = html;
+    wares.querySelectorAll(".niffoBuy").forEach(btn => {
+      btn.onclick = () => buyNiffo(btn.getAttribute("data-id"));
+    });
+    const left = Math.ceil(niffoMsLeft()/1000);
+    document.getElementById("niffoLine").textContent =
+      `"Cousin Fionn sent me up the river with the good stuff. One of each, while I'm here — back down the river in about ${left}s!"`;
+  }
+
+  function buyNiffo(id){
+    const u = NIFFO_UPGRADES.find(x=>x.id===id);
+    if (!u || (state.niffo && state.niffo[id]) || state.gold < u.cost) return;
+    state.gold -= u.cost;
+    state.niffo = state.niffo || {};
+    state.niffo[id] = true;
+    if (id==="heart"){ state.maxHp += 8; state.hp = state.maxHp; }
+    toast(`🦦 Bought ${u.name}!`);
+    renderNiffo(); updateHud(); save();
+  }
+
+  function openShop(){
+    paused = true;
+    renderShop();
+    show("shop");
+  }
+
+  function renderShop(){
+    // Deliver any loose minerals we haven't delivered yet (first sample goes to collection)
+    const grid = document.getElementById("mineralGrid");
+    grid.innerHTML = "";
+    MINERALS.forEach(m => {
+      const found = state.delivered[m.id];
+      const chip = document.createElement("div");
+      chip.className = "mineral-chip" + (found?" found":"");
+      chip.innerHTML = `<span class="sw" style="background:${m.color}"></span>${m.name}${found?" ✓":""}`;
+      grid.appendChild(chip);
+    });
+
+    // Upgrade area
+    const ua = document.getElementById("upgradeArea");
+    const next = PICKS[state.pick+1];
+    let html = `<div class="shopRow"><div><b>Deliver &amp; Sell</b><small>First sample of each mineral completes your survey. Extras sell for gold.</small></div></div>`;
+    if (next) {
+      const canAfford = state.gold >= next.cost;
+      html += `<div class="shopRow">
+        <div><b>Upgrade to ${next.name} Pickaxe</b><small>Damage ${PICKS[state.pick].dmg} → ${next.dmg}. Mines harder ore.</small></div>
+        <button id="buyPick" ${canAfford?"":"disabled"}>🪙 ${next.cost}</button>
+      </div>`;
+    } else {
+      html += `<div class="shopRow"><div><b>Diamond Pickaxe</b><small>Fully upgraded — nothing in this mountain can resist you.</small></div><button disabled>MAX</button></div>`;
+    }
+    // Heal
+    const healCost = 15;
+    html += `<div class="shopRow">
+      <div><b>Rest &amp; Heal</b><small>Restore full health at the hut fire.</small></div>
+      <button id="buyHeal" ${state.gold>=healCost && state.hp<state.maxHp?"":"disabled"}>🪙 ${healCost}</button>
+    </div>`;
+    // Ranged weapon
+    const crossbowCost = 70;
+    if (!state.hasCrossbow) {
+      html += `<div class="shopRow">
+        <div><b>Dwarven Crossbow</b><small>Lars's ranged weapon. Press F to shoot bolts and hit enemies from a distance. Comes with 15 bolts.</small></div>
+        <button id="buyCrossbow" ${state.gold>=crossbowCost?"":"disabled"}>🪙 ${crossbowCost}</button>
+      </div>`;
+    } else {
+      const boltPack = 10, boltCost = 12;
+      html += `<div class="shopRow">
+        <div><b>Bolts ×${boltPack}</b><small>Ammo for your crossbow. You have <b>${state.bolts}</b> bolts.</small></div>
+        <button id="buyBolts" ${state.gold>=boltCost?"":"disabled"}>🪙 ${boltCost}</button>
+      </div>`;
+    }
+    ua.innerHTML = html;
+
+    const bp = document.getElementById("buyPick");
+    if (bp) bp.onclick = () => {
+      const n = PICKS[state.pick+1];
+      if (state.gold >= n.cost) { state.gold -= n.cost; state.pick++; toast(`⛏️ Upgraded to ${n.name} pickaxe!`); renderShop(); updateHud(); save(); }
+    };
+    const bh = document.getElementById("buyHeal");
+    if (bh) bh.onclick = () => {
+      if (state.gold>=15 && state.hp<state.maxHp){ state.gold-=15; state.hp=state.maxHp; toast("❤️ Fully healed!"); renderShop(); updateHud(); save(); }
+    };
+    const bc = document.getElementById("buyCrossbow");
+    if (bc) bc.onclick = () => {
+      if (state.gold>=70){ state.gold-=70; state.hasCrossbow=true; state.bolts+=15; toast("🏹 Crossbow acquired! Press F to fire."); renderShop(); updateHud(); save(); }
+    };
+    const bb = document.getElementById("buyBolts");
+    if (bb) bb.onclick = () => {
+      if (state.gold>=12){ state.gold-=12; state.bolts+=10; toast("🎯 +10 bolts"); renderShop(); updateHud(); save(); }
+    };
+
+    document.getElementById("fionnLine").textContent = fionnLine();
+  }
+
+  function fionnLine(){
+    const found = MINERALS.filter(m=>state.delivered[m.id]).length;
+    if (found===0) return `"Ah, Lars! Bring me one of every mineral in this mountain — all ${MINERAL_TOTAL} — and I'll make it worth your while."`;
+    if (found===MINERAL_TOTAL) return `"By my beard, you've found them all! Let me see that last one..."`;
+    return `"${found} of ${MINERAL_TOTAL} minerals catalogued. Keep digging — the good stuff is deeper, and it bites back."`;
+  }
+
+  function sellAll(){
+    // deliver first-of-each as survey samples, sell the rest for gold
+    let gained = 0, newFinds = 0;
+    for (const mid in state.loose) {
+      let n = state.loose[mid];
+      const min = MINERALS.find(m=>m.id===mid);
+      if (!state.delivered[mid] && n>0) { state.delivered[mid]=true; n--; newFinds++; }
+      gained += n * min.value;
+      state.loose[mid] = 0;
+    }
+    state.gold += gained;
+    if (newFinds>0) toast(`📜 ${newFinds} new mineral(s) catalogued! +${gained} gold`);
+    else if (gained>0) toast(`🪙 Sold ore for ${gained} gold`);
+    else toast("Nothing loose to sell.");
+    renderShop(); updateHud(); save();
+    checkWin();
+  }
+
+  // ---------- HUD ----------
+  function updateHud(){
+    document.getElementById("hpFill").style.width = (state.hp/state.maxHp*100)+"%";
+    const pf = document.getElementById("poundFill");
+    pf.style.width = ((state.pound||0)/POUND_MAX*100)+"%";
+    pf.classList.toggle("ready", (state.pound||0)>=POUND_MAX);
+    document.getElementById("pickName").textContent = PICKS[state.pick].name;
+    document.getElementById("pickTier").textContent = "★".repeat(state.pick+1);
+    const found = MINERALS.filter(m=>state.delivered[m.id]).length;
+    document.getElementById("mineralCount").textContent = found;
+    document.getElementById("mineralTotal").textContent = MINERAL_TOTAL;
+    document.getElementById("goldCount").textContent = state.gold;
+    const boltRow = document.getElementById("boltRow");
+    boltRow.style.display = state.hasCrossbow ? "flex" : "none";
+    document.getElementById("boltCount").textContent = state.bolts;
+    const d = depthOfRow(state.py);
+    document.getElementById("depthLbl").textContent = state.py < SURFACE_ROWS ? "Surface" : ("Level "+d);
+    const nr = document.getElementById("niffoRow");
+    if (niffoHere()) { nr.innerHTML = `🦦 Niffo here! (${Math.ceil(niffoMsLeft()/1000)}s)`; }
+    else { nr.innerHTML = `🦦 Niffo in ${Math.ceil(niffoMsUntil()/1000)}s`; }
+
+    const qr = document.getElementById("questRow");
+    const q = activeQuest();
+    if (q){
+      const ready = questReadyToTurnIn();
+      qr.innerHTML = `📜 <b>${q.title}</b> — ${questProgressText(q, state.quest.progress)}${ready?" ✅ ready!":""}`;
+    } else {
+      qr.innerHTML = `📜 No quest — find a gnome (<span style="color:#ffe14d">!</span>) in the caves.`;
+    }
+  }
+
+  let hintT = 0;
+  function setHint(txt){ document.getElementById("hint").textContent = txt; hintT = 6000; }
+
+  let toastT = 0;
+  function toast(msg){
+    const el = document.getElementById("toast");
+    el.textContent = msg; el.classList.add("show"); toastT = 2200;
+  }
+
+  // ---------- Overlays ----------
+  function show(id){ document.getElementById(id).classList.add("show"); }
+  function hide(id){ document.getElementById(id).classList.remove("show"); }
+  function hideAll(){ ["titleScreen","howto","introScreen","shop","deathScreen","winScreen","dihScreen","niffoScreen","npcScreen"].forEach(hide); }
+
+  // ---------- Save / Load ----------
+  function save(){
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+      const b = document.getElementById("saveBtn");
+      if (b){ b.textContent="💾 Saved!"; setTimeout(()=>b.textContent="💾 Save",900); }
+    } catch(e){ toast("Could not save (storage blocked)."); }
+  }
+  function loadSave(){
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return null;
+      const s = JSON.parse(raw);
+      if (!s || typeof s.seed!=="number") return null;
+      return s;
+    } catch(e){ return null; }
+  }
+  function hasSave(){ return !!loadSave(); }
+
+  // ---------- Rendering ----------
+  function draw(){
+    ctx.clearRect(0,0,VIEW_W,VIEW_H);
+
+    // screen shake from ground pound
+    ctx.save();
+    if (shakeT>0){
+      const m = (shakeT/240)*6;
+      ctx.translate((Math.random()-0.5)*m, (Math.random()-0.5)*m);
+    }
+
+    // Camera follows player, clamped
+    const targetCam = Math.round(renderY - VIEW_ROWS/2);
+    camY += (targetCam - camY) * 0.15;
+    camY = Math.max(0, Math.min(rows - VIEW_ROWS, camY));
+    const camYr = camY;
+
+    // Draw tiles
+    const startRow = Math.floor(camYr);
+    const endRow = Math.min(rows, startRow + VIEW_ROWS + 2);
+    for (let r = startRow; r < endRow; r++) {
+      for (let c = 0; c < cols; c++) {
+        const t = map[r][c];
+        const x = c*TILE;
+        const y = (r - camYr)*TILE;
+        drawTile(t, x, y, r, c);
+      }
+    }
+
+    // Particles
+    for (const p of particles) {
+      ctx.globalAlpha = Math.max(0,p.life);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x-2, p.y-(camYr*TILE)-2, 4,4);
+    }
+    ctx.globalAlpha = 1;
+
+    // Enemies
+    for (const e of enemies) {
+      if (e.hp<=0) continue;
+      if (e.r < startRow-1 || e.r > endRow+1) continue;
+      drawEnemy(e, e.c*TILE, (e.r-camYr)*TILE);
+    }
+
+    // Dih the Worm
+    if (worm && worm.r >= startRow-1 && worm.r <= endRow+1) {
+      drawWorm(worm.c*TILE, (worm.r-camYr)*TILE);
+    }
+
+    // Quest-giver gnomes
+    for (const n of npcs){
+      if (n.r < startRow-1 || n.r > endRow+1) continue;
+      drawNpcGnome(n.c*TILE, (n.r-camYr)*TILE, n.name);
+    }
+
+    // Niffo the Otter (on the surface, only when visiting)
+    if (niffoHere()){
+      const n = niffoTile();
+      if (n.r >= startRow-1 && n.r <= endRow+1) drawNiffo(n.c*TILE, (n.r-camYr)*TILE);
+    }
+
+    // Bolts in flight
+    for (const b of bolts) {
+      const bx = b.x*TILE, by = (b.y-camYr)*TILE;
+      ctx.save();
+      ctx.translate(bx, by);
+      ctx.rotate(Math.atan2(b.dy, b.dx));
+      ctx.fillStyle = "#e8dcc0";
+      ctx.fillRect(-7, -1.5, 12, 3);
+      ctx.fillStyle = "#8a929c";
+      ctx.beginPath();
+      ctx.moveTo(5,-3); ctx.lineTo(10,0); ctx.lineTo(5,3); ctx.fill();
+      ctx.restore();
+    }
+
+    // Player
+    drawPlayer(renderX*TILE, (renderY-camYr)*TILE);
+
+    // Ground-pound shockwave ring
+    if (shockwave){
+      const cx = (shockwave.c+0.5)*TILE;
+      const cy = (shockwave.r+0.5-camYr)*TILE;
+      const maxR = ((shockwave.rad||POUND_RADIUS)+0.6)*TILE;
+      const rad = maxR * (1 - shockwave.t);
+      ctx.strokeStyle = `rgba(231,184,79,${shockwave.t})`;
+      ctx.lineWidth = 5*shockwave.t + 1;
+      ctx.beginPath(); ctx.arc(cx, cy, rad, 0, Math.PI*2); ctx.stroke();
+      ctx.strokeStyle = `rgba(255,255,255,${shockwave.t*0.6})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(cx, cy, rad*0.6, 0, Math.PI*2); ctx.stroke();
+    }
+
+    // end shake transform (vignette / flashes should not shake)
+    ctx.restore();
+
+    // Darkness / vignette that grows with depth
+    const depth = Math.max(0, (renderY - SURFACE_ROWS) / CAVE_ROWS);
+    drawVignette(depth);
+
+    // hit flash
+    if (hitFlash>0){
+      ctx.fillStyle = `rgba(180,50,40,${hitFlash*0.35})`;
+      ctx.fillRect(0,0,VIEW_W,VIEW_H);
+    }
+  }
+
+  function drawTile(t,x,y,r,c){
+    if (t===T_EMPTY){
+      // cave floor gradient by depth
+      const d = Math.max(0,(r-SURFACE_ROWS)/CAVE_ROWS);
+      const v = 22 - d*8;
+      ctx.fillStyle = `rgb(${18+v|0},${14+v*0.7|0},${11+v*0.5|0})`;
+      ctx.fillRect(x,y,TILE,TILE);
+      return;
+    }
+    if (t===T_SURFACE){
+      // sky + ground line
+      const grd = ctx.createLinearGradient(0,y,0,y+TILE);
+      grd.addColorStop(0,"#7fb0d8"); grd.addColorStop(1,"#a9cbe6");
+      ctx.fillStyle = grd; ctx.fillRect(x,y,TILE,TILE);
+      // grass at the bottom surface row
+      if (r===SURFACE_ROWS-1){
+        ctx.fillStyle="#6b8f4a"; ctx.fillRect(x,y+TILE-8,TILE,8);
+        ctx.fillStyle="#5a7a3c"; ctx.fillRect(x,y+TILE-8,TILE,3);
+      }
+      return;
+    }
+    if (t===T_HUT){ drawHut(x,y,c); return; }
+    if (t===T_BEACON){ drawBeacon(x,y,r,c); return; }
+
+    // solid tiles: dirt / rock / wall / ore
+    let base, top;
+    if (t===T_DIRT){ base="#6a4a2c"; top="#7d5a36"; }
+    else if (t===T_ROCK){ base="#4a453e"; top="#5a544b"; }
+    else if (t===T_WALL){ base="#2a2622"; top="#332e29"; }
+    else if (t===T_ORE){ base="#4a453e"; top="#5a544b"; }
+    ctx.fillStyle = base; ctx.fillRect(x,y,TILE,TILE);
+    ctx.fillStyle = top; ctx.fillRect(x+2,y+2,TILE-4,TILE-6);
+    // subtle texture
+    ctx.fillStyle = "rgba(0,0,0,0.12)";
+    ctx.fillRect(x+ (c*7%TILE), y+ (r*11%TILE), 3,3);
+
+    if (t===T_ORE){
+      const mid = oreAt[r+","+c];
+      const m = MINERALS.find(mm=>mm.id===mid);
+      if (m){
+        // ore gems embedded
+        ctx.fillStyle = m.edge; ctx.fillRect(x+7,y+7,10,10);
+        ctx.fillStyle = m.color; ctx.fillRect(x+8,y+8,8,8);
+        ctx.fillStyle = "rgba(255,255,255,0.5)"; ctx.fillRect(x+9,y+9,3,3);
+        ctx.fillStyle = m.edge; ctx.fillRect(x+18,y+16,7,7);
+        ctx.fillStyle = m.color; ctx.fillRect(x+19,y+17,5,5);
+      }
+    }
+  }
+
+  function drawHut(x,y,c){
+    // sky behind
+    ctx.fillStyle="#a9cbe6"; ctx.fillRect(x,y,TILE,TILE);
+    // hut body (3 tiles wide) - draw walls
+    ctx.fillStyle="#8a5a34"; ctx.fillRect(x,y+8,TILE,TILE-8);
+    ctx.fillStyle="#6e4526"; ctx.fillRect(x,y+8,TILE,3);
+    // roof only on outer edges to form a triangle-ish look
+    ctx.fillStyle="#b4433a";
+    if (c===hutRect.c0){ ctx.fillRect(x+TILE/2,y,TILE/2,10); }
+    else if (c===hutRect.c1){ ctx.fillRect(x,y,TILE/2,10); }
+    else { ctx.fillRect(x,y-4,TILE,12); }
+    // door in the middle tile
+    if (c===hutRect.c0+1){
+      ctx.fillStyle="#3a2412"; ctx.fillRect(x+10,y+16,12,16);
+      ctx.fillStyle="#e7b84f"; ctx.fillRect(x+18,y+24,2,2);
+    }
+  }
+
+  function drawBeacon(x,y,r,c){
+    // cave floor beneath
+    const d = Math.max(0,(r-SURFACE_ROWS)/CAVE_ROWS);
+    const v = 22 - d*8;
+    ctx.fillStyle = `rgb(${18+v|0},${14+v*0.7|0},${11+v*0.5|0})`;
+    ctx.fillRect(x,y,TILE,TILE);
+    const b = beacons.find(bb=>bb.r===r && bb.c===c);
+    const lit = b && b.lit;
+    // stone base
+    ctx.fillStyle="#4a453e"; ctx.fillRect(x+9,y+22,14,8);
+    ctx.fillStyle="#5a544b"; ctx.fillRect(x+10,y+22,12,3);
+    // crystal
+    const glow = lit ? (0.6+0.4*Math.sin(performance.now()/300)) : 0;
+    ctx.save();
+    ctx.translate(x+TILE/2, y+16);
+    if (lit){
+      ctx.shadowColor = "#8fe6ff"; ctx.shadowBlur = 18*glow;
+    }
+    ctx.fillStyle = lit ? "#8fe6ff" : "#3a5560";
+    ctx.beginPath();
+    ctx.moveTo(0,-12); ctx.lineTo(6,2); ctx.lineTo(0,10); ctx.lineTo(-6,2); ctx.closePath(); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = lit ? "#e8fbff" : "#4a6570";
+    ctx.beginPath(); ctx.moveTo(0,-8); ctx.lineTo(2,0); ctx.lineTo(0,4); ctx.lineTo(-2,0); ctx.closePath(); ctx.fill();
+    ctx.restore();
+    if (!lit){
+      ctx.font="10px serif";
+      ctx.globalAlpha = 0.4+0.4*Math.sin(performance.now()/400);
+      ctx.fillText("✨", x+TILE/2+6, y+8);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function drawNpcGnome(x,y,name){
+    ctx.save();
+    ctx.translate(x,y);
+    const bob = Math.sin(performance.now()/350 + x)*1.5;
+    // little gnome: pointed hat, beard, tunic
+    ctx.fillStyle="#3a2a1a"; ctx.fillRect(11,27,4,3); ctx.fillRect(17,27,4,3); // boots
+    ctx.fillStyle="#4a7a3c"; ctx.fillRect(10,19+bob,12,9); // tunic
+    ctx.fillStyle="#e0b088"; ctx.fillRect(12,13+bob,8,6); // face
+    ctx.fillStyle="#d8d2c4"; ctx.fillRect(11,17+bob,10,4); // beard
+    ctx.fillStyle="#b4433a"; // pointed hat
+    ctx.beginPath(); ctx.moveTo(16,4+bob); ctx.lineTo(23,14+bob); ctx.lineTo(9,14+bob); ctx.closePath(); ctx.fill();
+    ctx.fillStyle="#1a1a1a"; ctx.fillRect(13,15+bob,1.5,1.5); ctx.fillRect(18,15+bob,1.5,1.5); // eyes
+    // quest marker: "!" if can give/turn in, else dimmer
+    ctx.font="bold 13px serif";
+    ctx.globalAlpha = 0.6+0.4*Math.sin(performance.now()/300);
+    ctx.fillStyle="#ffe14d";
+    ctx.fillText("!", 15, 2+bob);
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  function drawPlayer(x,y){
+    const s = TILE;
+    ctx.save();
+    ctx.translate(x,y);
+    // body (stout dwarf)
+    // boots
+    ctx.fillStyle="#3a2a1a"; ctx.fillRect(7,26,7,5); ctx.fillRect(18,26,7,5);
+    // torso / tunic
+    ctx.fillStyle="#4a6b8a"; ctx.fillRect(7,17,18,10);
+    // belt
+    ctx.fillStyle="#3a2a1a"; ctx.fillRect(7,23,18,3);
+    ctx.fillStyle="#e7b84f"; ctx.fillRect(14,23,4,3);
+    // head/skin
+    ctx.fillStyle="#e0b088"; ctx.fillRect(10,8,12,8);
+    // helmet
+    ctx.fillStyle="#7a6a55"; ctx.fillRect(9,5,14,5); ctx.fillRect(9,8,14,2);
+    // big beard
+    ctx.fillStyle="#b0632c"; ctx.fillRect(9,14,14,7);
+    ctx.fillRect(11,20,10,3);
+    // eyes
+    ctx.fillStyle="#1a1a1a"; ctx.fillRect(12,11,2,2); ctx.fillRect(18,11,2,2);
+    // pickaxe in facing direction
+    const p = PICKS[state.pick];
+    ctx.fillStyle="#5a3d1c";
+    const swing = attackFlash>0 ? 4 : 0;
+    if (facing.x>=0){ ctx.fillRect(24,12-swing,3,14); ctx.fillStyle=p.color; ctx.fillRect(22,9-swing,8,4);}
+    else { ctx.fillRect(5,12-swing,3,14); ctx.fillStyle=p.color; ctx.fillRect(2,9-swing,8,4);}
+    // crossbow on the back when equipped
+    if (state.hasCrossbow){
+      ctx.strokeStyle="#6e4526"; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(6,18); ctx.lineTo(3,14); ctx.moveTo(6,18); ctx.lineTo(3,22); ctx.stroke();
+      ctx.fillStyle="#8a929c"; ctx.fillRect(4,17,6,2);
+    }
+    ctx.restore();
+  }
+
+  function drawEnemy(e,x,y){
+    ctx.save();
+    ctx.translate(x,y);
+    const flash = e.flash>0;
+    if (e.type==="slime"){
+      ctx.fillStyle = flash?"#fff":e.color;
+      ctx.beginPath();
+      ctx.ellipse(16,22,11,9,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle="#000"; ctx.fillRect(11,19,2,2); ctx.fillRect(19,19,2,2);
+    } else if (e.type==="bat"){
+      ctx.fillStyle = flash?"#fff":e.color;
+      ctx.fillRect(12,12,8,7);
+      const wob = Math.sin(performance.now()/120)*3;
+      ctx.beginPath(); ctx.moveTo(12,15); ctx.lineTo(3,10+wob); ctx.lineTo(6,18); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(20,15); ctx.lineTo(29,10+wob); ctx.lineTo(26,18); ctx.fill();
+      ctx.fillStyle="#f5d020"; ctx.fillRect(13,14,2,2); ctx.fillRect(17,14,2,2);
+    } else if (e.type==="wyrm"){
+      // Big serpentine deep wyrm — a trailing body + fanged head, drawn larger than a tile.
+      const t = performance.now()/260;
+      ctx.fillStyle = flash?"#fff":e.color;
+      // coiled body segments trailing behind
+      for (let i=5;i>=1;i--){
+        const sx = 16 - i*4 + Math.sin(t + i*0.6)*3;
+        const sy = 20 + Math.cos(t + i*0.5)*3;
+        const rad = 6 + (5-i)*1.2;
+        ctx.globalAlpha = 0.85;
+        ctx.beginPath(); ctx.ellipse(sx, sy, rad, rad, 0, 0, Math.PI*2); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      // head
+      ctx.fillStyle = flash?"#fff":"#a0466a";
+      ctx.beginPath(); ctx.ellipse(18, 15+Math.sin(t)*2, 11, 9, 0, 0, Math.PI*2); ctx.fill();
+      // horns
+      ctx.fillStyle="#e8dcc0";
+      ctx.beginPath(); ctx.moveTo(12,8); ctx.lineTo(9,0); ctx.lineTo(15,7); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(24,8); ctx.lineTo(27,0); ctx.lineTo(21,7); ctx.fill();
+      // glowing eyes
+      ctx.fillStyle="#ffe14d"; ctx.fillRect(13,13,3,3); ctx.fillRect(21,13,3,3);
+      ctx.fillStyle="#c0392b"; ctx.fillRect(14,14,1.4,1.4); ctx.fillRect(22,14,1.4,1.4);
+      // fangs
+      ctx.fillStyle="#fff"; ctx.fillRect(15,21,2,4); ctx.fillRect(20,21,2,4);
+    } else {
+      ctx.fillStyle = flash?"#fff":e.color;
+      ctx.fillRect(6,10,20,18);
+      ctx.fillStyle="#6a5c48"; ctx.fillRect(6,10,20,4);
+      ctx.fillStyle="#c0392b"; ctx.fillRect(10,15,3,3); ctx.fillRect(19,15,3,3);
+      ctx.fillStyle="#5a4c3a"; ctx.fillRect(9,22,5,5); ctx.fillRect(18,22,5,5);
+    }
+    // hp pip
+    if (e.hp < e.maxHp){
+      ctx.fillStyle="#000"; ctx.fillRect(6,4,20,3);
+      ctx.fillStyle="#b4433a"; ctx.fillRect(6,4,20*(e.hp/e.maxHp),3);
+    }
+    ctx.restore();
+  }
+
+  function drawWorm(x,y){
+    ctx.save();
+    ctx.translate(x,y);
+    const bob = Math.sin(performance.now()/300)*2;
+    // segmented pink worm poking out of the floor
+    const segs = [[16,26],[14,22],[16,18],[19,15],[17,11]];
+    for (let i=segs.length-1; i>=0; i--){
+      const sx = segs[i][0], sy = segs[i][1];
+      const rad = 6 - i*0.6;
+      ctx.fillStyle = i%2 ? "#c97a9a" : "#d98fae";
+      ctx.beginPath();
+      ctx.ellipse(sx, sy + (i>1?bob:0), rad+1, rad, 0, 0, Math.PI*2);
+      ctx.fill();
+    }
+    // head highlight + eyes
+    const hx = segs[segs.length-1][0], hy = segs[segs.length-1][1]+bob;
+    ctx.fillStyle="#e8afc6"; ctx.beginPath(); ctx.ellipse(hx,hy,5,4.5,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle="#2a1a22"; ctx.fillRect(hx-3,hy-1,1.6,1.6); ctx.fillRect(hx+1.4,hy-1,1.6,1.6);
+    // little talk sparkle so players notice him
+    ctx.font = "10px serif";
+    const tt = performance.now()/500;
+    ctx.globalAlpha = 0.5+0.5*Math.sin(tt);
+    ctx.fillText("💬", hx+3, hy-7);
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  function drawNiffo(x,y){
+    ctx.save();
+    ctx.translate(x,y);
+    const bob = Math.sin(performance.now()/400)*1.5;
+    // little market stall behind him
+    ctx.fillStyle="#8a5a34"; ctx.fillRect(2,4,28,3);
+    ctx.fillStyle="#5a7a8a"; ctx.fillRect(2,1,28,3);
+    // otter body (sits on the grass)
+    ctx.fillStyle="#7a5230";
+    ctx.beginPath(); ctx.ellipse(16,24+bob,8,7,0,0,Math.PI*2); ctx.fill();
+    // belly
+    ctx.fillStyle="#b89a72"; ctx.beginPath(); ctx.ellipse(16,25+bob,4.5,5,0,0,Math.PI*2); ctx.fill();
+    // head
+    ctx.fillStyle="#7a5230"; ctx.beginPath(); ctx.ellipse(16,15+bob,6,5.5,0,0,Math.PI*2); ctx.fill();
+    // ears
+    ctx.fillRect(11,11+bob,2,2); ctx.fillRect(19,11+bob,2,2);
+    // muzzle
+    ctx.fillStyle="#c9b48a"; ctx.beginPath(); ctx.ellipse(16,17+bob,3,2.5,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle="#2a1a12"; ctx.fillRect(15,17+bob,2,1.5); // nose
+    // eyes
+    ctx.fillStyle="#2a1a12"; ctx.fillRect(13,14+bob,1.8,1.8); ctx.fillRect(18,14+bob,1.8,1.8);
+    // sparkle so players notice
+    ctx.font = "10px serif";
+    ctx.globalAlpha = 0.5+0.5*Math.sin(performance.now()/500);
+    ctx.fillText("✨", 22, 8);
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  function drawVignette(depth){
+    const r = VIEW_W*0.75;
+    const px = renderX*TILE + TILE/2;
+    const py = (renderY-camY)*TILE + TILE/2;
+    const light = Math.max(0.15, 0.9 - depth*0.9); // deeper = darker
+    const g = ctx.createRadialGradient(px,py, TILE*2, px,py, r);
+    g.addColorStop(0, `rgba(0,0,0,0)`);
+    g.addColorStop(1, `rgba(0,0,0,${Math.min(0.92, 0.35+depth*0.7)})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,VIEW_W,VIEW_H);
+  }
+
+  // ---------- Main loop ----------
+  let last = performance.now();
+  function loop(now){
+    const dt = Math.min(50, now-last); last = now;
+    if (state && state.started && !paused) update(dt);
+    if (state) draw();
+    requestAnimationFrame(loop);
+  }
+
+  function update(dt){
+    // accumulate play time (drives Niffo's arrivals)
+    const wasHere = niffoHere();
+    state.playMs = (state.playMs||0) + dt;
+    if (niffoHere() && !wasHere) toast("🦦 Niffo the otter has surfaced by the hut with rare wares!");
+
+    // movement with cooldown (grid based)
+    moveCooldown -= dt;
+    const wantUp = keys["w"]||keys["arrowup"];
+    const wantDown = keys["s"]||keys["arrowdown"];
+    const wantLeft = keys["a"]||keys["arrowleft"];
+    const wantRight = keys["d"]||keys["arrowright"];
+    if (moveCooldown<=0){
+      if (wantUp){ tryMove(0,-1); moveCooldown=120; }
+      else if (wantDown){ tryMove(0,1); moveCooldown=120; }
+      else if (wantLeft){ tryMove(-1,0); moveCooldown=120; }
+      else if (wantRight){ tryMove(1,0); moveCooldown=120; }
+    }
+    // Space triggers the ground pound (fires once per press when charged)
+    if (keys[" "]){ if (!spaceHeld){ spaceHeld=true; doGroundPound(); } }
+    else spaceHeld=false;
+
+    // smooth render pos
+    renderX += (state.px - renderX)*0.35;
+    renderY += (state.py - renderY)*0.35;
+
+    updateEnemies(dt);
+    updateBolts(dt);
+    if (fireCooldown > 0) fireCooldown -= dt;
+
+    // particles
+    for (const p of particles){ p.x+=p.vx; p.y+=p.vy; p.vy+=0.15; p.life-=dt*0.002; }
+    particles = particles.filter(p=>p.life>0);
+
+    // flashes decay
+    if (attackFlash>0) attackFlash -= dt*0.008;
+    if (hitFlash>0) hitFlash -= dt*0.004;
+    if (shakeT>0) shakeT -= dt;
+    if (shockwave){ shockwave.t -= dt*0.003; if (shockwave.t<=0) shockwave=null; }
+
+    // toast / hint timers
+    if (toastT>0){ toastT-=dt; if (toastT<=0) document.getElementById("toast").classList.remove("show"); }
+    if (hintT>0){ hintT-=dt; if (hintT<=0) document.getElementById("hint").textContent=""; }
+
+    // if Niffo's shop is open but he's departed, close it
+    if (document.getElementById("niffoScreen").classList.contains("show") && !niffoHere()){
+      hide("niffoScreen"); paused=false; toast("🦦 Niffo slipped back into the river.");
+    }
+
+    // track deepest level reached (for depth quests)
+    if (state.py >= SURFACE_ROWS) questOnDepth(depthOfRow(state.py));
+
+    // near-NPC prompt
+    const npc = nearNpc();
+    const nearBeacon = beacons.find(x=>!x.lit && Math.abs(state.px-x.c)<=1 && Math.abs(state.py-x.r)<=1);
+    if (nearNiffo()) setHintPersistent("Press E to browse Niffo's rare wares!");
+    else if (nearHut()) setHintPersistent("Press E to talk to Fionn at his hut.");
+    else if (npc) setHintPersistent(`Press E to talk to ${npc.name} the Gnome.`);
+    else if (nearBeacon) setHintPersistent("Press E to light this crystal beacon.");
+    else if (nearWorm()) setHintPersistent("Press E to talk to Dih the Cave Worm.");
+    else if (hintPersistent){ hintPersistent=false; document.getElementById("hint").textContent=""; }
+
+    updateHud();
+  }
+
+  let hintPersistent=false;
+  function setHintPersistent(txt){
+    if (hintT>0) return; // don't clobber a temporary hint
+    hintPersistent=true;
+    document.getElementById("hint").textContent = txt;
+  }
+
+  // ---------- Buttons ----------
+  document.getElementById("newGameBtn").onclick = startNewGame;
+  document.getElementById("continueBtn").onclick = continueGame;
+  document.getElementById("howtoBtn").onclick = () => { hide("titleScreen"); show("howto"); };
+  document.getElementById("howtoBack").onclick = () => { hide("howto"); show("titleScreen"); };
+  document.getElementById("dlgNext").onclick = advanceIntro;
+  document.getElementById("dlgSkip").onclick = endIntro;
+  document.getElementById("reviveBtn").onclick = revive;
+  document.getElementById("winNewGame").onclick = startNewGame;
+  document.getElementById("closeShop").onclick = () => { hide("shop"); paused=false; save(); };
+  document.getElementById("sellAllBtn").onclick = sellAll;
+  document.getElementById("saveBtn").onclick = () => save();
+  document.getElementById("closeDih").onclick = () => { hide("dihScreen"); paused=false; save(); };
+  document.getElementById("closeNiffo").onclick = () => { hide("niffoScreen"); paused=false; save(); };
+  document.getElementById("closeNpc").onclick = () => { hide("npcScreen"); paused=false; save(); };
+  document.getElementById("npcAccept").onclick = acceptQuest;
+  document.getElementById("npcTurnin").onclick = turnInQuest;
+  document.getElementById("dihGift").onclick = acceptDihGift;
+
+  // Enable/disable continue button
+  document.getElementById("continueBtn").disabled = !hasSave();
+
+  // kick off
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
