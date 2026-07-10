@@ -370,6 +370,11 @@
   .profile{font-family:Arial,sans-serif;font-weight:700;font-size:11px;letter-spacing:.14em;color:#9a9cc0;margin-top:14px;cursor:pointer;}
   .profile b{color:#fdbb2d;}
   .profile:hover{color:#cfd0e8;}
+  /* rotating group "words of wisdom" on the title screen */
+  .wisdomLine{font-family:Arial,sans-serif;font-weight:700;font-style:italic;font-size:11px;letter-spacing:.06em;
+    color:#8a8fbf;margin-top:6px;opacity:.85;max-width:90%;text-align:center;min-height:15px;}
+  .wisdomLine::before{content:'“';} .wisdomLine::after{content:'”';}
+  .wisdomLine:empty::before,.wisdomLine:empty::after{content:'';}
   /* CLASSIC MODE button + medal badge side by side */
   .classicrow{display:flex;align-items:center;gap:12px;margin-top:26px;flex-wrap:wrap;justify-content:center;}
   .classicrow .btn{margin-top:0;}
@@ -1125,6 +1130,7 @@
       <button class="btn btn-back" id="settingsBtn">⚙ SETTINGS</button>
     </div>
     <div class="profile" id="profileLine"></div>
+    <div class="wisdomLine" id="wisdomLine"></div>
     <div class="madeby"></div>
   </div>
 
@@ -2829,11 +2835,66 @@ const MEMES = [
     mult:{ def:0.82, lifesteal:0.12 } },
   { id:'pizzablik',name:'PIZZA IN BLIK',icon:'🍕', color:'#d62828', blurb:'+28% attack · heal 18% of damage dealt (canned power).',
     mult:{ atk:1.28, lifesteal:0.18 } },
+  // ---- INSIDE-JOKE PACK (group "words of wisdom") ----
+  { id:'brrdeniz', name:'BRR BRR DENIZ', icon:'❄️', color:'#7ad7ff', blurb:'+30% speed · +14% jump — brr brr, zoom zoom.',
+    mult:{ spd:1.30, jump:1.14 } },
+  { id:'pindakaas',name:'4 POTJES PINDAKAAS', icon:'🥜', color:'#c68a3e', blurb:'+40% max HP — four jars of pure stodge.',
+    mult:{ hp:1.40 } },
+  { id:'stukjes',  name:'220 STUKJES', icon:'🧩', color:'#8338ec', blurb:'+50% super charge — one piece at a time.',
+    mult:{ superGain:1.50 } },
+  { id:'stockholm',name:'GRAND STOCKHOLM', icon:'🗺️', color:'#4361ee', blurb:'Metropolitan tank: +25% HP · −15% damage taken.',
+    mult:{ hp:1.25, def:0.85 } },
+  { id:'detention',name:'COME AND GET ME', icon:'✏️', color:'#e59bb0', blurb:'Detention rush: +33% attack · +25% speed (−25% defense).',
+    mult:{ atk:1.33, spd:1.25, def:1.25 } },
+  { id:'afkraken', name:'AFKRAKEN', icon:'💢', color:'#e01e1e', blurb:'Zonder genade: +45% attack — no mercy (−20% defense).',
+    mult:{ atk:1.45, def:1.20 } },
+  { id:'deeltje',  name:'1 DEELTJE', icon:'⚛️', color:'#43aa8b', blurb:'Featherweight particle: +28% speed · +22% jump.',
+    mult:{ spd:1.28, jump:1.22 } },
+  { id:'fellevlam',name:'FELLE VLAM', icon:'🔥', color:'#ff5714', blurb:'Bright flame: +25% attack · +25% super charge.',
+    mult:{ atk:1.25, superGain:1.25 } },
 ];
 function getMeme(id){ return MEMES.find(m=>m.id===id) || MEMES[0]; }
 // which memes the player can actually pick: NONE is always free; the rest must be
 // bought in the SHOP (or unlocked via dev mode).
 function ownedMemes(){ return MEMES.filter(m=>m.id==='none' || Save.data.dev || Save.hasShopMeme(m.id)); }
+
+// ---- GROUP "WORDS OF WISDOM" ----
+// Real inside-jokes from the group chat. Used two ways: rotating on the title
+// screen (WISDOM), and flashed as announcer callouts on big fight moments (below).
+const WISDOM = [
+  'voor de 90s konden ze niet praten','mass beste revival','viking raggen','donderdag',
+  'mijn vader was een kanarie','lekker spelen','brr brr deniz','namast-ei','0,26 mol',
+  'flat sac','ik wil niet naar erasmus','mentor toets','i have a dih',
+  'ja leuk heb je je rekenmachine bij je','timothy a yap','kaasvet','bizarre beets so gy',
+  'ik ben chopped en ik ben er trots op','debado debado','kogelvis','solitair op poki',
+  'josh tasman','slechste','evil adam','soortelijke weerstand van kalium','xyleem',
+  'nummer 7 van spanje','sir of the lake','heb je die addon','wie staat er in het slagveld',
+  'in range of my cane','brainrot stack','7.7 goed gedaan','Methaan Ethaan Propaan Buthaan',
+  'top 10 4V respect moments','goblin machine','gekke berekeningen','gibraltarse apen',
+  'ik kan alleen in vanilla bouwen','je hebt je dagelijkse crashout gebruikt',
+  'afkraken zonder genade','ayo baka','Renas Bina','string tring tring pling','reshman freshman',
+  'what about the dih','schrijf een brief verander een leven','wiskunde tia','23 24 25 26',
+  '220 stukjes','pools klinks mongolisch','cake is cake','muna maatje','ay caramba',
+  'giftig gas','je gedraagt je als 1 deeltje','felle vlam','als er blokken zijn kan je bouwen',
+  'familie reym','ik dacht dat je rookworst kon eten','grand stockholm metropolitan area',
+  'niet elke held is aardig','na het eten','ik heb een agenda','onderzoek heeft bewezen makker',
+  'skibidi pb','chopp chopp','ik ben tenminste geen nerd','niks is beloofd in het leven',
+  'puntjes op de i','0.008 levens','Tennis en Tobin','ush ush ush','stilte voor de storm',
+  'ik ben je opperbaas','ik ben je medewerker','morale levensles','yassin we dit',
+  'boe-tabel','genius at work','detention come and get me','de betekenis van 10',
+  'poen poen poen','road to registration','sticker dance party','ik zei dih','4 potjes pindakaas',
+];
+function randomWisdom(){ return WISDOM[Math.floor(Math.random()*WISDOM.length)]; }
+// announcer callouts — each fires on a specific fight moment (see FIGHT ANNOUNCER
+// hooks in landHit / KO / endMatch). All caps for the on-screen pop.
+const SHOUT = {
+  bigCombo: ['AFKRAKEN ZONDER GENADE!','CHOPP CHOPP!','GENIUS AT WORK!','TOP 10 RESPECT MOMENT!','SKIBIDI PB!'],
+  ko:       ['JE HEBT JE DAGELIJKSE CRASHOUT GEBRUIKT!','SLECHSTE!','KOGELVIS!','CHOPPED!','BOE-TABEL!'],
+  flawless: ['RESPECT MOMENT!','7.7 GOED GEDAAN!','NIET ELKE HELD IS AARDIG!','STILTE VOOR DE STORM!'],
+  super:    ['FELLE VLAM!','GOBLIN MACHINE!','GRAND STOCKHOLM!','VIKING RAGGEN!'],
+};
+function shout(pool){ if(!pool||!pool.length) return; announce(pool[Math.floor(Math.random()*pool.length)]); }
+
 
 // --- skill tree (small, 3-node, personalized per character) ---
 // Node 1 & Node 2 are hand-authored PER CHARACTER — each fighter gets a totally
@@ -6481,6 +6542,8 @@ function registerComboHit(att){
     comboBanner.big=1;
     comboBanner.side=(att===players[1])?1:0;   // P2 combos read on the right
     if(s.count===5||s.count===8||s.count===12){ SFX.beep && SFX.beep('C6','16n'); }
+    // FIGHT ANNOUNCER: a group-quote callout for a big chain
+    if(s.count===10) shout(SHOUT.bigCombo);
   }
 }
 function breakCombo(f){ if(f) comboState.delete(f); }
@@ -7801,6 +7864,8 @@ function show(id){
   // the title screen's SEASON button always reflects whatever's on disk, even
   // if you got here after backing out of some other mode mid-run
   if(id==='title' && typeof refreshSeasonButton==='function') refreshSeasonButton();
+  // rotate a fresh group "word of wisdom" every time we land on the title
+  if(id==='title'){ const wl=document.getElementById('wisdomLine'); if(wl) wl.textContent=randomWisdom(); }
 }
 
 document.getElementById('startBtn').onclick=()=>{ classic=null; campaign=null; season=null; selectContext='main'; buildRoster(); updateModeCards(); updateCustomRulesUI(); show('mode'); };
@@ -13119,6 +13184,8 @@ function KO(f){
     if(FX('fxSlowmo')) hitStop=Math.max(hitStop,26);
     // CINEMATIC KO ZOOM: punch the camera in on the fallen fighter for the finish.
     triggerKoZoom(f);
+    // FIGHT ANNOUNCER: a group-quote callout after the KO pop settles
+    setTimeout(()=>shout(SHOUT.ko), 700);
     // ONLINE: broadcast my death immediately so the opponent's match ends too
     if(mode==='online' && Net.connected && f===players[Net.isHost?0:1]){
       netSendState(true);
@@ -14728,6 +14795,8 @@ window.addEventListener('keydown', e=>{
     if(dismissed) return; dismissed=true;
     splash.classList.add('fade-out');
     setTimeout(()=>splash.classList.add('hidden'), 500);
+    // seed the title's rotating group quote on first reveal
+    const wl=document.getElementById('wisdomLine'); if(wl && !wl.textContent) wl.textContent=randomWisdom();
     // stop listening once we've started dismissing
     ['keydown','pointerdown','mousedown','click','touchstart'].forEach(ev=>{
       window.removeEventListener(ev, dismiss, true);
