@@ -34,3 +34,37 @@ A handful of browser games, each a self-contained HTML file:
 
 ## Structure
 
+```
+index.html                  # Portfolio homepage
+photos.html                 # Photo gallery + secret admin panel
+lang.js                     # EN/NL translations and language toggle
+CNAME                       # Custom domain (joshibrahim.nl)
+Demon-Derby.html            # Games
+DronepatchHQ.html
+Minecenary.html
+minecenary.html
+wat-in-de-fighters.html
+lars-game/
+```
+
+## Running locally
+
+No build step — it's static HTML/CSS/JS. Just open `index.html` in a browser, or serve the
+folder with any static server for correct relative paths.
+
+## Tech
+
+- HTML, CSS, JavaScript (no framework)
+- [GSAP](https://gsap.com/) for animations
+- Firebase (photo gallery sync)
+- GitHub Pages for hosting
+
+## Contact
+
+- **Site:** [joshibrahim.nl](https://joshibrahim.nl)
+- **Email:** Josh@joshibrahim.nl
+- **GitHub:** [@Jojoshua903](https://github.com/Jojoshua903)
+
+---
+
+Built with code & curiosity.
