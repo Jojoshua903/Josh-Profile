@@ -47,6 +47,16 @@
   #muteBtn:hover{transform:scale(1.1);background:rgba(13,13,24,.85);}
   #muteBtn.off{opacity:.55;}
 
+  /* in-match quick-keys hint chip: shows briefly at match start, then fades out */
+  #quickHint{
+    position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:6;pointer-events:none;
+    font-family:Arial,sans-serif;font-weight:800;font-size:10px;letter-spacing:.14em;color:#cfd0e8;
+    background:rgba(13,13,24,.6);border:1px solid rgba(253,187,45,.4);border-radius:20px;padding:5px 14px;
+    transition:opacity .6s ease;
+  }
+  #quickHint.hidden{display:none;}
+  #quickHint.fade{opacity:0;}
+
   /* circular STATS + SETTINGS shortcuts pinned to the title screen's top-right,
      sitting just left of the mute button so all the corner controls line up */
   .titleCorner{position:absolute;top:10px;right:54px;z-index:12;display:flex;gap:8px;}
@@ -123,7 +133,7 @@
   /* two tidy grids: the four secondary modes (4-across) and the six menu shortcuts
      (6-across). Both auto-fit to fewer columns on narrow screens. */
   #title .titlegrid{display:grid;gap:8px 10px;margin-top:8px;width:100%;flex-shrink:0;}
-  #title .titlegrid.modes4{grid-template-columns:repeat(4,minmax(0,1fr));max-width:600px;}
+  #title .titlegrid.modes4{grid-template-columns:repeat(3,minmax(0,1fr));max-width:600px;}
   #title .titlegrid.menu6{grid-template-columns:repeat(6,minmax(0,1fr));max-width:640px;}
   #title .titlegrid.modes4 .btn{font-size:clamp(10px,1.5vw,14px);padding:11px 5px;}
   #title .titlegrid.menu6 .btn{font-size:clamp(8px,1.2vw,11px);padding:9px 3px;}
@@ -753,6 +763,23 @@
   .padtest .ptbtn.on .br{color:#3a2600;}
   .padtest .ptaction{font-family:Arial,sans-serif;font-weight:800;font-size:11px;letter-spacing:.06em;color:#8fefff;text-align:center;margin-top:10px;min-height:14px;}
 
+  /* post-match stat card on the result screen */
+  .matchStats{display:grid;grid-template-columns:repeat(2,minmax(120px,160px));gap:8px 10px;margin:14px auto 4px;max-width:360px;}
+  .matchStats.hidden{display:none;}
+  .matchStats .msrow{display:flex;flex-direction:column;align-items:center;padding:8px 6px;border-radius:10px;background:rgba(0,0,0,.32);border:2px solid rgba(253,187,45,.28);}
+  .matchStats .msval{font-family:"Impact",sans-serif;letter-spacing:.03em;font-size:clamp(18px,3vw,24px);color:#fdbb2d;line-height:1;}
+  .matchStats .mslbl{font-family:Arial,sans-serif;font-weight:800;font-size:8.5px;letter-spacing:.12em;color:#cfd0e8;margin-top:5px;text-transform:uppercase;}
+
+  /* per-character stats list (STATS screen) */
+  .charStatList{display:flex;flex-direction:column;gap:6px;width:100%;max-width:560px;margin:12px auto 0;}
+  .charStatRow{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;background:rgba(255,255,255,.05);border:2px solid rgba(255,255,255,.12);}
+  .charStatRow .csname{flex:1;min-width:0;font-family:"Impact",sans-serif;letter-spacing:.02em;font-size:15px;transform:skewX(-4deg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .charStatRow .csstat{font-family:Arial,sans-serif;font-weight:800;font-size:10px;letter-spacing:.04em;color:#cfd0e8;text-align:center;min-width:52px;}
+  .charStatRow .csstat b{display:block;font-family:"Impact",sans-serif;font-size:15px;color:#fdbb2d;letter-spacing:.03em;}
+  .charStatTabs{display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap;}
+  .charStatTab{font-family:Arial,sans-serif;font-weight:800;font-size:11px;letter-spacing:.06em;padding:6px 14px;border-radius:8px;border:none;cursor:pointer;background:#565b68;color:#cfd0e8;}
+  .charStatTab.sel{background:#fdbb2d;color:#2a1a00;}
+
   /* mobile touch controls */
   #touch{position:absolute;inset:0;z-index:15;pointer-events:none;display:none;}
   #touch.on{display:block;}
@@ -1170,6 +1197,7 @@
     </div>
   </div>
   <div id="announce"><span id="announceText"></span></div>
+  <div id="quickHint" class="hidden">ESC pause · R rematch</div>
   <div id="touch">
     <div class="tpad left">
       <div class="tbtn" data-act="left">◀</div>
@@ -1245,7 +1273,7 @@
         <button class="btn" id="resumeBtn">RESUME</button>
         <button class="btn btn-back" id="quitBtn">QUIT TO MENU</button>
       </div>
-      <div class="pausehint">Press <b>ESC</b> to resume</div>
+      <div class="pausehint">Press <b>ESC</b> to resume &nbsp;·&nbsp; <b>R</b> to rematch</div>
     </div>
   </div>
 
@@ -1283,6 +1311,8 @@
       <button class="btn btn-alt" id="classicBtn">🏅 CLASSIC</button>
       <button class="btn btn-alt" id="seasonBtn">🏆 SEASON</button>
       <button class="btn btn-openworld" id="openWorldBtn">🌍 OPEN WORLD</button>
+      <button class="btn btn-alt" id="bossRushBtn">💀 BOSS RUSH</button>
+      <button class="btn btn-alt" id="dailyBtn">📅 DAILY</button>
     </div>
     <div class="seasonStatusWrap hidden" id="seasonStatusWrap">
       <div class="seasonStatusText" id="seasonStatusText"></div>
@@ -1478,7 +1508,12 @@
   <!-- STATS -->
   <div class="screen hidden" id="stats">
     <h2 style="font-size:clamp(20px,4vw,40px);color:#fdbb2d;transform:skewX(-6deg);text-shadow:0 3px 0 rgba(0,0,0,.4);">STATS</h2>
+    <div class="charStatTabs">
+      <button class="charStatTab sel" data-stab="overall">OVERALL</button>
+      <button class="charStatTab" data-stab="byfighter">BY FIGHTER</button>
+    </div>
     <div class="statgrid" id="statGrid"></div>
+    <div class="charStatList hidden" id="charStatList"></div>
     <button class="btn btn-back" id="statsBack">◀ BACK</button>
     <div class="madeby"></div>
   </div>
@@ -1672,6 +1707,7 @@
     <div id="resultEmote" class="hidden" style="position:absolute;top:18%;left:50%;transform:translateX(-50%);z-index:3;display:flex;align-items:center;gap:10px;background:rgba(13,13,24,.82);border:2px solid #fdbb2d;border-radius:14px;padding:8px 18px;box-shadow:0 6px 20px rgba(0,0,0,.5);"><span id="resultEmoteIcon" style="font-size:26px;"></span><span id="resultEmoteText" style="font-family:Impact;letter-spacing:.04em;font-size:20px;color:#fdbb2d;transform:skewX(-5deg);"></span></div>
     <h1 id="resultTitle" style="position:relative;z-index:2;">VICTORY</h1>
     <div class="sub" id="resultSub" style="position:relative;z-index:2;"></div>
+    <div id="matchStats" class="matchStats hidden" style="position:relative;z-index:2;"></div>
     <button class="btn" id="rematchBtn" style="position:relative;z-index:2;">INSTANT REMATCH</button>
     <button class="btn btn-back" id="againBtn" style="position:relative;z-index:2;">MAIN MENU</button>
     <div class="madeby"></div>
@@ -3893,6 +3929,86 @@ function drawIcon(g, c, S, costume, t){
   g.restore();
 }
 
+// ---- BOSS RUSH bespoke bodies. Called from drawFighter after the transform is set
+// to the fighter's center (already scaled by face). Each boss is a big, menacing
+// silhouette distinct from any roster fighter. `w,h` are the (already enlarged) box.
+function drawBoss(g, c, w, h, t, state, col, dark){
+  const bw=w*0.5, bh=h*0.46;
+  const atk = state==='attack';
+  const pulse = 0.5+0.5*Math.sin(t/220);
+  // soft ground shadow (drawn in screen space)
+  g.save(); g.setTransform(1,0,0,1,0,0); g.restore();
+  if(c.bossArt==='voidmaw'){
+    // a hovering dark sphere-maw ringed with violet fire, a jagged mouth + one eye
+    g.save(); g.globalAlpha=0.5+0.3*pulse; g.strokeStyle='#c77dff'; g.lineWidth=4;
+    g.beginPath(); g.arc(0,0,bw*1.05,0,Math.PI*2); g.stroke(); g.restore();
+    g.fillStyle=dark; g.beginPath(); g.arc(0,0,bw*0.9,0,Math.PI*2); g.fill();
+    g.fillStyle=col; g.beginPath(); g.arc(0,0,bw*0.66,0,Math.PI*2); g.fill();
+    // swirling core
+    g.save(); g.rotate(t/60); g.strokeStyle='rgba(255,255,255,.25)'; g.lineWidth=2;
+    for(let k=1;k<=3;k++){ g.beginPath(); g.arc(0,0,bw*0.2*k,0,2.2); g.stroke(); } g.restore();
+    // jagged maw
+    g.fillStyle='#0a0012';
+    g.beginPath(); g.moveTo(-bw*0.5, bh*0.15);
+    for(let i=0;i<=6;i++){ const a=i/6; g.lineTo(-bw*0.5+bw*a, bh*(0.15+((i%2)?0.16:0.0))); }
+    g.lineTo(bw*0.5, bh*0.15); g.lineTo(bw*0.4,bh*0.42); g.lineTo(-bw*0.4,bh*0.42); g.closePath(); g.fill();
+    // single glowing eye
+    g.fillStyle='#ffd6ff'; g.beginPath(); g.arc(bw*0.18,-bh*0.2,bw*0.16,0,Math.PI*2); g.fill();
+    g.fillStyle='#7b2cbf'; g.beginPath(); g.arc(bw*0.22,-bh*0.2,bw*0.07,0,Math.PI*2); g.fill();
+    if(atk){ g.strokeStyle='#c77dff'; g.lineWidth=3; g.beginPath(); g.arc(0,0,bw*1.2,0,Math.PI*2); g.stroke(); }
+  } else if(c.bossArt==='clockwork'){
+    // a broad brass golem: boxy torso with a gear chest, riveted shoulders, glowing eyes
+    const steam = mixHex(col,'#fff2c0',0.4);
+    // legs
+    g.fillStyle=dark; g.fillRect(-bw*0.5, bh*0.3, bw*0.35, bh*0.7); g.fillRect(bw*0.15, bh*0.3, bw*0.35, bh*0.7);
+    // torso
+    g.fillStyle=col; g.beginPath(); roundRect(g,-bw*0.72,-bh*0.6,bw*1.44,bh*1.0,8); g.fill();
+    // shoulders (riveted balls)
+    g.fillStyle=dark; g.beginPath(); g.arc(-bw*0.78,-bh*0.4,bw*0.28,0,Math.PI*2); g.fill(); g.beginPath(); g.arc(bw*0.78,-bh*0.4,bw*0.28,0,Math.PI*2); g.fill();
+    // arms (front arm raises on attack)
+    g.strokeStyle=dark; g.lineWidth=Math.max(6,bw*0.22); g.lineCap='round';
+    g.beginPath(); g.moveTo(-bw*0.78,-bh*0.35); g.lineTo(-bw*0.9, bh*0.2); g.stroke();
+    g.beginPath(); g.moveTo(bw*0.78,-bh*0.35); g.lineTo(bw*(atk?0.6:0.95), atk?-bh*0.5:bh*0.2); g.stroke();
+    // spinning gear chest
+    g.save(); g.translate(0,-bh*0.05); g.rotate(t/90);
+    g.fillStyle=steam; for(let i=0;i<8;i++){ g.save(); g.rotate(i/8*Math.PI*2); g.fillRect(-bw*0.06,-bw*0.5,bw*0.12,bw*0.2); g.restore(); }
+    g.beginPath(); g.arc(0,0,bw*0.32,0,Math.PI*2); g.fill();
+    g.fillStyle=dark; g.beginPath(); g.arc(0,0,bw*0.14,0,Math.PI*2); g.fill(); g.restore();
+    // head + glowing eyes
+    g.fillStyle=dark; roundRect(g,-bw*0.28,-bh*1.0,bw*0.56,bh*0.44,5); g.fill();
+    g.fillStyle='#ffd24a'; g.beginPath(); g.arc(-bw*0.12,-bh*0.8,bw*0.07,0,Math.PI*2); g.fill(); g.beginPath(); g.arc(bw*0.12,-bh*0.8,bw*0.07,0,Math.PI*2); g.fill();
+    // steam puffs
+    if(Math.floor(t/12)%3===0){ g.fillStyle='rgba(255,255,255,.4)'; g.beginPath(); g.arc(bw*0.8,-bh*0.9,bw*0.12*pulse+2,0,Math.PI*2); g.fill(); }
+  } else if(c.bossArt==='emberwing'){
+    // a phoenix: fiery body, big swept wings, plumed crest, blazing tail
+    const flame = mixHex(col,'#ffd24a',0.5);
+    const flap = Math.sin(t/90)*(state==='run'?0.5:0.25) + (atk?-0.4:0);
+    // tail feathers
+    g.fillStyle=flame; g.save(); g.translate(0,bh*0.2);
+    for(let i=-1;i<=1;i++){ g.save(); g.rotate(i*0.4+Math.sin(t/120)*0.1);
+      g.beginPath(); g.moveTo(0,0); g.quadraticCurveTo(-bw*0.1,bh*0.8,0,bh*1.1); g.quadraticCurveTo(bw*0.1,bh*0.8,0,0); g.fill(); g.restore(); }
+    g.restore();
+    // wings (behind body)
+    [-1,1].forEach(side=>{ g.save(); g.scale(side,1); g.translate(bw*0.4,-bh*0.1); g.rotate(flap*side);
+      g.fillStyle=col; g.beginPath(); g.moveTo(0,0);
+      g.quadraticCurveTo(bw*1.1,-bh*0.5, bw*1.3,bh*0.2);
+      g.quadraticCurveTo(bw*0.7,bh*0.1, 0,bh*0.4); g.closePath(); g.fill();
+      g.fillStyle=flame; g.beginPath(); g.moveTo(bw*0.3,-bh*0.05); g.quadraticCurveTo(bw*0.95,-bh*0.25,bw*1.15,bh*0.15); g.quadraticCurveTo(bw*0.7,bh*0.05,bw*0.3,bh*0.2); g.closePath(); g.fill();
+      g.restore(); });
+    // body
+    g.fillStyle=col; g.beginPath(); g.ellipse(0,0,bw*0.5,bh*0.6,0,0,Math.PI*2); g.fill();
+    g.fillStyle=flame; g.beginPath(); g.ellipse(0,bh*0.05,bw*0.32,bh*0.42,0,0,Math.PI*2); g.fill();
+    // head + crest + beak
+    g.fillStyle=col; g.beginPath(); g.arc(bw*0.15,-bh*0.55,bw*0.28,0,Math.PI*2); g.fill();
+    g.fillStyle=flame; for(let i=0;i<3;i++){ g.save(); g.translate(bw*0.05,-bh*0.78); g.rotate(-0.4+i*0.35+Math.sin(t/100)*0.08);
+      g.beginPath(); g.moveTo(0,0); g.quadraticCurveTo(-bw*0.05,-bh*0.4,bw*0.05,-bh*0.5); g.quadraticCurveTo(bw*0.1,-bh*0.3,0,0); g.fill(); g.restore(); }
+    g.fillStyle='#ffd24a'; g.beginPath(); g.moveTo(bw*0.38,-bh*0.55); g.lineTo(bw*0.62,-bh*0.48); g.lineTo(bw*0.38,-bh*0.42); g.closePath(); g.fill();
+    g.fillStyle='#0d0d18'; g.beginPath(); g.arc(bw*0.22,-bh*0.6,bw*0.05,0,Math.PI*2); g.fill();
+    // ember sparks
+    if(Math.floor(t/8)%2===0){ g.fillStyle='#ffd24a'; for(let i=0;i<3;i++){ g.beginPath(); g.arc((Math.random()-.5)*bw, bh*0.6+((t/6+i*10)%20), 2, 0, Math.PI*2); g.fill(); } }
+  }
+}
+
 // Each character drawn procedurally so they look distinct.
 function drawFighter(g, c, x, y, w, h, face, t, state, costume, accOverride){
   // x,y = top-left of bounding box; face = 1 right, -1 left
@@ -3922,6 +4038,10 @@ function drawFighter(g, c, x, y, w, h, face, t, state, costume, accOverride){
     sqy=1+Math.sin(t/120)*0.035; sqx=1-Math.sin(t/120)*0.025; // bouncy stride
   } else if(state==='shield'){
     sqy=0.94; sqx=1.04; // braced crouch
+  } else if(state==='dodge'){
+    // rolling tumble: tuck low + a quick spin lean
+    sqy=0.82; sqx=1.12;
+    g.rotate(Math.sin(t/40)*0.6);
   } else if(!emote){
     sqy=1+Math.sin(t/500)*0.012; // idle breathing
   }
@@ -3936,7 +4056,7 @@ function drawFighter(g, c, x, y, w, h, face, t, state, costume, accOverride){
   const bodyW = w*0.5, bodyH = h*0.44;
   // These characters replace the whole body with a custom drawing (blob / stacked
   // cats), so we skip the standard humanoid limbs+head to avoid stray parts poking out.
-  const fullRedraw = (c.id==='kayo' || c.id==='reshman' || c.foxModel || c.wormModel || c.birdModel || c.grannyModel || c.wormTorsoModel || c.appleModel || c.cloudModel);
+  const fullRedraw = (c.id==='kayo' || c.id==='reshman' || c.foxModel || c.wormModel || c.birdModel || c.grannyModel || c.wormTorsoModel || c.appleModel || c.cloudModel || c.bossArt);
 
   // shadow ellipse
   g.save();
@@ -4935,6 +5055,13 @@ function drawFighter(g, c, x, y, w, h, face, t, state, costume, accOverride){
       g.fillStyle=mixHex(col,'#7fb0ff',0.6);
       for(let i=-1;i<=1;i++){ const dx=i*bodyW*0.34, dy=bodyH*0.55+((t/8+i*20)%20); g.beginPath(); g.ellipse(dx, dy, 2, 3.4, 0, 0, Math.PI*2); g.fill(); }
     }
+  } else if(c.bossArt){
+    // ---- BOSS RUSH bespoke bodies (drawBoss handles each art variant) ----
+    g.restore();
+    g.save();
+    g.translate(x + w/2, y + h/2 + bob);
+    g.scale(face,1);
+    drawBoss(g, c, w, h, t, state, col, dark);
   }
 
   // ---- costume accessory (themed costumes only; inverted/gray are pure recolors) ----
@@ -6941,6 +7068,7 @@ class Fighter{
     this.dead=false;
     this.aiTimer=0;
     this.aiAction=null;
+    this._dodgeT=0; this._dodgeCd=0; this._dodgeHeldL=false; this._dodgeHeldR=false;
   }
   get cx(){return this.x+this.w/2;}
   get cy(){return this.y+this.h/2;}
@@ -7257,9 +7385,16 @@ let botCostume=0;              // chosen bot skin index for 1P config
 let hitStop=0;
 let shakeT=0;
 let _matchDamage=0;   // human damage dealt this match (flushed to Save at match end)
+// Per-match tally shown on the post-match STAT SCREEN and folded into career/per-fighter
+// totals at match end. Reset in startMatch / startMatch2v2. `dmgTaken` and `kos` count
+// only the human's P1 fighter; `time` is the frame count since the match started.
+let MatchStats = { dmgDealt:0, dmgTaken:0, biggest:0, kos:0, taken:0, frames:0, combo:0 };
+function resetMatchStats(){ MatchStats = { dmgDealt:0, dmgTaken:0, biggest:0, kos:0, taken:0, frames:0, combo:0 }; }
 let classic=null;              // active Classic Mode run, or null
 let season=null;               // active Season Mode run, or null
 let campaign=null;             // active Campaign run, or null
+let bossrun=null;              // active BOSS RUSH run { c, bosses:[ids], round }, or null
+let dailyActive=false;         // true while playing today's DAILY CHALLENGE
 let selectContext='main';      // 'main' | 'classic' | 'campaign' — which unlock set the roster shows
 let paused=false;              // true while the pause overlay is up (local matches only)
 let chatOpen=false;            // true while the in-battle CHAT / command console is open
@@ -7446,6 +7581,22 @@ const Save = {
   // ---- per-character win tracking (powers the JOURNAL) ----
   charWins(id){ return (this.data.charWins && this.data.charWins[id])||0; },
   addCharWin(id,n){ if(!this.data.charWins) this.data.charWins={}; this.data.charWins[id]=(this.data.charWins[id]||0)+(n===undefined?1:n); this.save(); },
+  // ---- per-character career stats (matches / dmg / kos / biggest hit) for the STATS screen ----
+  // Stored under data.charStats[id] = { matches, dmg, kos, biggest }.
+  charStat(id, key){ return (this.data.charStats && this.data.charStats[id] && this.data.charStats[id][key])||0; },
+  addCharStat(id, key, n){ if(!this.data.charStats) this.data.charStats={}; if(!this.data.charStats[id]) this.data.charStats[id]={}; this.data.charStats[id][key]=(this.data.charStats[id][key]||0)+(n===undefined?1:n); this.save(); },
+  setCharStat(id, key, v){ if(!this.data.charStats) this.data.charStats={}; if(!this.data.charStats[id]) this.data.charStats[id]={}; this.data.charStats[id][key]=v; this.save(); },
+  // ---- DAILY CHALLENGE: last-cleared date string + a consecutive-day streak ----
+  dailyState(){ return this.data.daily || (this.data.daily={ lastDate:null, streak:0, bestStreak:0, total:0 }); },
+  dailyDoneToday(key){ return this.dailyState().lastDate===key; },
+  dailyComplete(key, prevKey){
+    const d=this.dailyState();
+    if(d.lastDate===key) return false;         // already done today
+    d.streak = (d.lastDate===prevKey) ? (d.streak+1) : 1;   // consecutive day extends streak
+    if(d.streak>(d.bestStreak||0)) d.bestStreak=d.streak;
+    d.lastDate=key; d.total=(d.total||0)+1;
+    this.save(); return true;
+  },
   // ---- OPEN WORLD progress (per-hero save slot: level/xp/gold/quests/landmarks/pos) ----
   owSlot(id){ return (this.data.openworld && this.data.openworld[id]) || null; },
   owSave(id, slot){ if(!this.data.openworld) this.data.openworld={}; this.data.openworld[id]=slot; this.save(); },
@@ -7857,6 +8008,27 @@ const GAMEMODES = [
   { id:'custom',   name:'CUSTOM',       desc:'Set your own stocks & HP.',
     hp:150, stocks:2, grav:1, kbMul:1, superMul:1, custom:true },
 ];
+// ---- BOSS RUSH bosses: bespoke AI-only characters, never in the playable roster.
+// Each has its own art (drawBoss) and a unique special added to trySpecial. They're
+// fought back-to-back in the BOSS RUSH run; scaling ramps up each fight.
+const BOSS_RUSH = [
+  { id:'voidmaw', name:'VOIDMAW', color:'#7b2cbf', dark:'#3a015c', bossChar:true, bossArt:'voidmaw',
+    desc:'The hunger between stars', special:'bvoid',
+    move:'VOID ORBS · crushing spheres of dark', up:'WARP', sup:'SINGULARITY',
+    stats:{speed:2.4, jump:12.5, weight:1.5}, hpMul:2.4, sizeMul:1.7,
+    blurb:'A maw of collapsed light. It flings crushing void orbs and warps space around it.' },
+  { id:'clockwork', name:'CLOCKWORK', color:'#c9a227', dark:'#6b5410', bossChar:true, bossArt:'clockwork',
+    desc:'The tireless engine', special:'bquake',
+    move:'PISTON QUAKE · ground shockwaves', up:'GEAR LAUNCH', sup:'OVERWIND',
+    stats:{speed:2.0, jump:11.0, weight:2.0}, hpMul:2.8, sizeMul:1.85,
+    blurb:'A brass golem of gears and steam. Its piston slams send shockwaves rolling across the floor.' },
+  { id:'emberwing', name:'EMBERWING', color:'#ff6b35', dark:'#9d2b00', bossChar:true, bossArt:'emberwing',
+    desc:'The last phoenix', special:'bember',
+    move:'FIREBIRD · homing embers', up:'REBIRTH RISE', sup:'INFERNO',
+    stats:{speed:3.2, jump:15.5, weight:1.1}, hpMul:2.5, sizeMul:1.6,
+    blurb:'A phoenix wreathed in flame. It rains homing embers and dives in blazing arcs.' },
+];
+function bossById(id){ return BOSS_RUSH.find(b=>b.id===id) || null; }
 // clamp helpers for the custom rules
 const CUSTOM_HP_MIN=30, CUSTOM_HP_MAX=500, CUSTOM_STOCK_MIN=1, CUSTOM_STOCK_MAX=9;
 function customHp(){ return Math.max(CUSTOM_HP_MIN, Math.min(CUSTOM_HP_MAX, Save.getSetting('customHp',150)|0)); }
@@ -8470,6 +8642,9 @@ function show(id){
   ['title','mode','select','stage','result','versus','story','achieve','achdetail','shop','minigame','settings','online','waitroom','stats','skin','howto','skills','campaign','mission','cutscene','leaderboard','tutDone','journal','openworld'].forEach(s=>document.getElementById(s).classList.toggle('hidden', s!==id));
   document.body.classList.remove('in-match');
   document.body.classList.remove('hud2v2');
+  // the post-match stat card only shows for normal matches (renderMatchStats re-reveals it)
+  { const ms=document.getElementById('matchStats'); if(ms) ms.classList.add('hidden'); }
+  { const qh=document.getElementById('quickHint'); if(qh) qh.classList.add('hidden'); }
   // leaving the settings screen stops the live controller watcher
   if(id!=='settings' && typeof stopPadWatch==='function') stopPadWatch();
   if(id!=='result' && typeof stopVictoryFlair==='function') stopVictoryFlair();
@@ -9283,6 +9458,9 @@ function buildStatsScreen(){
     ['☠ HARDCORE MEDALS', hardcoreEarned()+' / '+medalsTotal()],
     ['🌟 SKILLS MASTERED', skillsMasteredCount()+' / '+ROSTER.length],
     ['⭐ PRESTIGE LEVEL', Save.prestige()],
+    ['📅 DAILY STREAK', '🔥 '+(Save.dailyState().streak||0)],
+    ['📅 BEST DAILY STREAK', '🏆 '+(Save.dailyState().bestStreak||0)],
+    ['💀 BOSS RUSH CLEARS', Save.stat('bossRushClears')],
     ['🏆 CAMPAIGNS CLEARED', Save.campaign().clears||0],
     ['STAGES VISITED', stagesVisited+' / '+STAGES.length],
     ['ACHIEVEMENTS', achDone+' / '+ACHIEVEMENTS.length],
@@ -9293,7 +9471,42 @@ function buildStatsScreen(){
     grid.appendChild(c);
   });
 }
-document.getElementById('statsBtn').onclick=()=>{ buildStatsScreen(); show('stats'); };
+// per-character stats: one row per fighter the player has actually used, sorted by
+// matches played. Shows wins (from charWins) + matches / KOs / total dmg / biggest hit.
+function buildCharStatList(){
+  const list=document.getElementById('charStatList'); if(!list) return;
+  list.innerHTML='';
+  const rows=ROSTER.map(c=>({
+    c, wins:Save.charWins(c.id), matches:Save.charStat(c.id,'matches'),
+    kos:Save.charStat(c.id,'kos'), dmg:Save.charStat(c.id,'dmg'), biggest:Save.charStat(c.id,'biggest')
+  })).filter(r=>r.matches>0 || r.wins>0)
+     .sort((a,b)=> (b.matches-a.matches) || (b.wins-a.wins));
+  if(!rows.length){
+    list.innerHTML='<div class="charStatRow"><div class="csname" style="color:#9a9cc0;font-style:italic">No fighter stats yet — play a match to start tracking.</div></div>';
+    return;
+  }
+  rows.forEach(r=>{
+    const row=document.createElement('div'); row.className='charStatRow';
+    row.innerHTML =
+      '<div class="csname" style="color:'+r.c.color+'">'+r.c.name+'</div>'+
+      '<div class="csstat"><b>'+r.wins+'</b>WINS</div>'+
+      '<div class="csstat"><b>'+r.matches+'</b>PLAYED</div>'+
+      '<div class="csstat"><b>'+r.kos+'</b>KOs</div>'+
+      '<div class="csstat"><b>'+Math.round(r.dmg).toLocaleString()+'</b>DMG</div>'+
+      '<div class="csstat"><b>'+Math.round(r.biggest)+'</b>BIG HIT</div>';
+    list.appendChild(row);
+  });
+}
+function showStatsTab(which){
+  const grid=document.getElementById('statGrid'), list=document.getElementById('charStatList');
+  const overall = which!=='byfighter';
+  if(grid) grid.classList.toggle('hidden', !overall);
+  if(list) list.classList.toggle('hidden', overall);
+  document.querySelectorAll('.charStatTab').forEach(t=>t.classList.toggle('sel', t.dataset.stab===(overall?'overall':'byfighter')));
+  if(overall) buildStatsScreen(); else buildCharStatList();
+}
+document.querySelectorAll('.charStatTab').forEach(tab=>{ tab.onclick=()=>showStatsTab(tab.dataset.stab); });
+document.getElementById('statsBtn').onclick=()=>{ showStatsTab('overall'); show('stats'); };
 document.getElementById('statsBack').onclick=()=>{ show('title'); };
 
 /* ---------------- SKIN EDITOR ---------------- */
@@ -10614,6 +10827,7 @@ document.getElementById('goBtn').onclick=()=>{
   if(!p1Pick){ flashHelper('PICK A FIGHTER FOR P1!'); return; }
   if(selectContext==='ow'){ owPicking=false; document.getElementById('goBtn').textContent='START MATCH'; OW.start(p1Pick); return; }
   if(selectContext==='training'){ beginTraining(p1Pick); return; }
+  if(selectContext==='bossrush'){ selectContext='main'; startBossRush(p1Pick); return; }
   if(selectContext==='campaign'){
     // mid-run swap: keep the campaign, just change the active fighter
     if(campaign && campaign._changing){
@@ -10788,7 +11002,7 @@ function showVersus(){
   // after the dramatic beat, start the fight
   setTimeout(()=>{ cancelAnimationFrame(_vsAnim); startMatch(); }, 1900);
 }
-document.getElementById('againBtn').onclick=()=>{ classic=null; campaign=null; season=null; selectContext='main'; buildRoster(); restoreDefaultRematch(); refreshProfileLine(); show('title'); };
+document.getElementById('againBtn').onclick=()=>{ classic=null; campaign=null; season=null; bossrun=null; dailyActive=false; selectContext='main'; buildRoster(); restoreDefaultRematch(); refreshProfileLine(); show('title'); };
 // INSTANT REMATCH: skip every menu and immediately re-fight with the same mode/rules/characters/stage
 function restoreDefaultRematch(){ const b=document.getElementById('rematchBtn'); b.textContent='INSTANT REMATCH'; b.onclick=()=>{ startMatch(); }; }
 restoreDefaultRematch();
@@ -10797,6 +11011,7 @@ restoreDefaultRematch();
 document.getElementById('selBack').onclick=()=>{
   if(selectContext==='ow'){ owPicking=false; document.getElementById('goBtn').textContent='START MATCH'; selectContext='main'; buildRoster(); show('title'); return; }
   if(selectContext==='training'){ document.getElementById('goBtn').textContent='START MATCH'; selectContext='main'; buildRoster(); show('title'); return; }
+  if(selectContext==='bossrush'){ document.getElementById('goBtn').textContent='START MATCH'; selectContext='main'; buildRoster(); show('title'); return; }
   if(selectContext==='campaign'){
     // backing out of a mid-run fighter swap returns to the mission briefing
     if(campaign && campaign._changing){ campaign._changing=false; showMission(); return; }
@@ -10835,6 +11050,12 @@ function flashHelper(msg){
 function updateRoundBanner(){
   const b=document.getElementById('roundBanner');
   if(!b) return;
+  if(bossrun && bossrun.active && bossrun.bosses){
+    const total=bossrun.bosses.length, cur=Math.min(bossrun.round+1,total);
+    document.getElementById('roundBannerText').textContent = '💀 BOSS RUSH · '+(cur===total?'FINAL BOSS ':'BOSS ')+cur+' / '+total;
+    b.classList.remove('hidden');
+    return;
+  }
   if(classic && classic.active && classic.foes){
     const total=classic.foes.length;
     const cur=Math.min(classic.round+1, total);
@@ -10882,6 +11103,7 @@ function startMatch(){
   Hazard.reset();
   RandEvent.roll();          // maybe roll a surprise twist for this match
   _matchDamage=0;            // reset per-match damage tally
+  resetMatchStats();         // fresh post-match stat tally
   const gm = currentMode();
   // ---- LOCAL 2v2: four human fighters, two teams, no friendly fire ----
   if(mode==='2v2'){ startMatch2v2(gm); return; }
@@ -10905,6 +11127,19 @@ function startMatch(){
     // MULTI-PHASE BOSS: starts in phase 1; crossing HP thresholds enrages it into
     // faster, harder phases (see the phase check in the update tick).
     p2.bossPhase=1; p2.bossRoar=0; p2.aiRage=1;
+  }
+  // BOSS RUSH: p2Pick is a bespoke boss def. Scale size + HP by its own multipliers,
+  // ramping a little each round, and mark it a boss so the phase AI kicks in.
+  if(bossrun && bossrun.active && p2Pick.bossChar){
+    const bd=p2Pick;
+    const rampHp = 1 + bossrun.round*0.15;     // later bosses hit tankier
+    p2.w=Math.round(54*(bd.sizeMul||1.6)); p2.h=Math.round(74*(bd.sizeMul||1.6));
+    p2.y=GROUND_Y-p2.h; p2.isBoss=true;
+    p2.maxHp=Math.round(gm.hp*(bd.hpMul||2.4)*rampHp); p2.hp=p2.maxHp;
+    p2.bossPhase=1; p2.bossRoar=0; p2.aiRage=1;
+    p2.stocks=1; p2.startStocks=1;
+    // the player gets a fair 2 stocks per boss so a run is a real gauntlet, not a wipe
+    p1.stocks=2; p1.startStocks=2;
   }
   // ULTRA HARD (Classic): the player gets a SINGLE life — one KO ends the run.
   // The CPU keeps its normal stocks, so the deck is stacked hard against you.
@@ -10934,6 +11169,7 @@ function startMatch(){
   if(RandEvent.active){ const ev=RandEvent.active; setTimeout(()=>announce(ev.name), 1200); }
   updateHUD();
   Music.play(stagePick.id);
+  showQuickHint();
 }
 
 /* ---------------- LOCAL 2v2 MATCH SETUP ---------------- */
@@ -10979,6 +11215,7 @@ function startMatch2v2(gm){
   if(RandEvent.active){ const ev=RandEvent.active; setTimeout(()=>announce(ev.name), 1200); }
   updateHUD();
   Music.play(stagePick.id);
+  showQuickHint();
 }
 
 /* ---------------- INTERACTIVE TUTORIAL ---------------- */
@@ -11136,6 +11373,28 @@ document.getElementById('trainingBtn').onclick=()=>{
   if(typeof refreshPicks==='function') refreshPicks();
   show('select');
 };
+// DAILY CHALLENGE: today's fixed fighter/foe/stage/rule. Same for everyone each day.
+document.getElementById('dailyBtn').onclick=()=>{
+  const spec=dailySpec();
+  const d=Save.dailyState();
+  const done=Save.dailyDoneToday(spec.key);
+  const ruleName=(GAMEMODES.find(g=>g.id===spec.rule)||{}).name||spec.rule;
+  const streakLine = d.streak>0 ? ('\n\n🔥 Current streak: '+d.streak+' day'+(d.streak===1?'':'s')+' (best '+(d.bestStreak||d.streak)+').') : '';
+  const doneLine = done ? '\n\n✅ You already cleared today\'s challenge — playing again won\'t change your streak.' : '\n\nClear it once today for +40 💎 and a streak day.';
+  const msg = '📅 DAILY CHALLENGE\n\nFighter: '+spec.fighter.name+'\nOpponent: '+spec.foe.name+'\nStage: '+spec.stage.name+'\nRules: '+ruleName+doneLine+streakLine+'\n\nStart now?';
+  if(confirm(msg)) startDaily();
+};
+// BOSS RUSH: pick a fighter, then face every bespoke boss back-to-back.
+document.getElementById('bossRushBtn').onclick=()=>{
+  classic=null; campaign=null; season=null; tutorial=null; bossrun=null;
+  mode='1p'; gameMode='stock'; selectContext='bossrush'; p1Pick=null; p2Pick=null;
+  buildRoster();
+  const helper=document.getElementById('selHelper');
+  if(helper) helper.innerHTML='💀 BOSS RUSH · PICK YOUR CHAMPION — '+BOSS_RUSH.length+' BOSSES, 2 LIVES EACH';
+  const gb=document.getElementById('goBtn'); if(gb) gb.textContent='💀 START BOSS RUSH';
+  if(typeof refreshPicks==='function') refreshPicks();
+  show('select');
+};
 function beginTraining(c){
   selectContext='main';
   mode='1p'; gameMode='stock';
@@ -11236,6 +11495,7 @@ function startOnlineMatch(){
   Hazard.reset();
   RandEvent.roll();          // maybe roll a surprise twist for this match
   _matchDamage=0;            // reset per-match damage tally
+  resetMatchStats();         // fresh post-match stat tally
   const gm = currentMode();
   const mainX = PLATS[0].x, mainW = PLATS[0].w;
   const p1 = new Fighter(p1Pick, mainX+mainW*0.25, false, Net.p1Cos||0, 'none');
@@ -11257,6 +11517,7 @@ function startOnlineMatch(){
   announceHazard();
   updateHUD();
   Music.play(stagePick.id);
+  showQuickHint();
 }
 
 // Serialize my fighter into a compact record and PUT it to my slot.
@@ -12021,6 +12282,34 @@ function trySpecial(f){
     f.attackTimer=16; f.state='attack'; f.specialCd=64;
     spawnKidTurret(f);
     spawnParticles(f.cx+f.face*44, f.cy, '#ffce7a', 8);
+  } else if(s==='bvoid'){
+    // VOIDMAW · VOID ORBS: lob two heavy dark spheres in a spread toward the foe.
+    const foe=players.find(o=>isFoe(f,o) && !o.dead);
+    const dir = foe ? (foe.cx>=f.cx?1:-1) : f.face;
+    f.face=dir; f.attackTimer=16; f.state='attack'; f.specialCd=70;
+    for(let i=0;i<2;i++){
+      projectiles.push({owner:f, x:f.cx+dir*40, y:f.cy-20+i*24, vx:dir*(7+i), vy:-2+i*2,
+        life:90, dmg:14, kb:8, color:'#7b2cbf', type:'voidorb', r:14, gravity:true, spin:0});
+    }
+    spawnParticles(f.cx+dir*40, f.cy, '#c77dff', 12);
+    if(typeof voidfx!=='undefined') voidfx.push({kind:'ring', x:f.cx, y:f.cy, life:16, max:16, r:f.w*0.9});
+  } else if(s==='bquake'){
+    // CLOCKWORK · PISTON QUAKE: slam the ground, sending a shockwave rolling each way
+    // plus a close-range blast. Rooted, heavy, telegraphed by the wind-up.
+    f.attackTimer=22; f.state='attack'; f.specialCd=84; f.vx=0;
+    areaBlast(f.cx, f.y+f.h, 150, 12, 8, f, '#c9a227');
+    [-1,1].forEach(d=>{ projectiles.push({owner:f, x:f.cx+d*30, y:GROUND_Y-14, vx:d*9, vy:0,
+      life:70, dmg:11, kb:7, color:'#e8c65a', type:'quakewave', r:16}); });
+    shakeT=Math.max(shakeT,16);
+    spawnParticles(f.cx, f.y+f.h, '#e8c65a', 16);
+  } else if(s==='bember'){
+    // EMBERWING · FIREBIRD: fan of three homing embers that seek the foe.
+    f.attackTimer=14; f.state='attack'; f.specialCd=60;
+    for(let i=0;i<3;i++){
+      projectiles.push({owner:f, x:f.cx+f.face*30, y:f.cy-14+i*12, vx:f.face*6, vy:(i-1)*2.2,
+        life:120, dmg:8, kb:5, color:'#ff6b35', type:'ember', r:10, homing:true});
+    }
+    spawnParticles(f.cx+f.face*30, f.cy, '#ffb14a', 12);
   }
   // QUICK RECOVERY skill node: shortens whatever cooldown this special just set
   f.specialCd = Math.max(1, Math.round(f.specialCd * (f.sCdMult||1)));
@@ -12630,6 +12919,9 @@ function landHit(att,def,dmg,kb,dir,launch){
   // STATS: tally total damage the human (P1, non-bot) deals. Accumulated in memory
   // and flushed to the save at match end so we're not hitting localStorage per hit.
   if(att && !att.isBot && att===players[0] && mode!=='2p' && mode!=='2v2'){ _matchDamage += dmg; }
+  // POST-MATCH STAT SCREEN: track P1's dealt/taken damage + biggest single hit this match
+  if(att===players[0] && att!==def){ MatchStats.dmgDealt += dmg; if(dmg>MatchStats.biggest) MatchStats.biggest=dmg; }
+  if(def===players[0] && att!==def){ MatchStats.dmgTaken += dmg; }
   SFX.hit();
   // BATTLE EFFECTS: white hit-flash on the struck fighter + a floating damage number.
   // Both are cosmetic and individually toggleable in SETTINGS.
@@ -12842,7 +13134,7 @@ function botThink(bot, foe){
   }
 
   bot.face=dir;
-  const ranged = (bot.def.special==='pitch'||bot.def.special==='drone'||bot.def.special==='bolt'||bot.def.special==='bomb'||bot.def.special==='serve'||bot.def.special==='rocks'||bot.def.special==='minidrone'||bot.def.special==='frost'||bot.def.special==='flask'||bot.def.special==='egg'||bot.def.special==='swarm'||bot.def.special==='spores'||bot.def.special==='splash'||bot.def.special==='soundwave'||bot.def.special==='pounce'||bot.def.special==='evilserve'||bot.def.special==='numbers'||bot.def.special==='coins'||bot.def.special==='slipper'||bot.def.special==='pellet'||bot.def.special==='shock'||bot.def.special==='bullets'||bot.def.special==='football'||bot.def.special==='curve'||bot.def.special==='controller'||bot.def.special==='doom'||bot.def.special==='worm');
+  const ranged = (bot.def.special==='pitch'||bot.def.special==='drone'||bot.def.special==='bolt'||bot.def.special==='bomb'||bot.def.special==='serve'||bot.def.special==='rocks'||bot.def.special==='minidrone'||bot.def.special==='frost'||bot.def.special==='flask'||bot.def.special==='egg'||bot.def.special==='swarm'||bot.def.special==='spores'||bot.def.special==='splash'||bot.def.special==='soundwave'||bot.def.special==='pounce'||bot.def.special==='evilserve'||bot.def.special==='numbers'||bot.def.special==='coins'||bot.def.special==='slipper'||bot.def.special==='pellet'||bot.def.special==='shock'||bot.def.special==='bullets'||bot.def.special==='football'||bot.def.special==='curve'||bot.def.special==='controller'||bot.def.special==='doom'||bot.def.special==='worm'||bot.def.special==='bvoid'||bot.def.special==='bember'||bot.def.special==='bquake');
   const rush = (bot.def.special==='dash'||bot.def.special==='pound'||bot.def.special==='kick'||bot.def.special==='glitch'||bot.def.special==='breakdance'||bot.def.special==='twocat'||bot.def.special==='launch'||bot.def.special==='car'||bot.def.special==='slam'||bot.def.special==='foxfire');
   // approach or space
   if(dist>170){
@@ -13550,8 +13842,40 @@ function pollGamepads(){
 // ever happens during that super, so this cleanly gates on it.
 function canShield(f){ return eclipseT<=0; }
 
+// DODGE ROLL: a quick invincible hop in `dir` (-1 left / +1 right). Duration + speed
+// are fixed; i-frames are applied by keeping hitCd topped up while _dodgeT runs.
+function startDodge(f, dir){
+  f._dodgeT=15;                  // ~0.25s roll
+  f.face=dir;
+  f.vx=dir*11;                   // roll burst
+  f.vy=0;
+  f.state='dodge';
+  f.shielding=false;
+  breakCombo(f);                 // rolling out of a hit resets your own combo chain
+  spawnParticles(f.cx - dir*10, f.y+f.h-4, '#dfe8ff', 8);
+  if(typeof SFX!=='undefined' && SFX.beep){ try{ SFX.beep('A4','32n'); }catch(e){} }
+}
 function humanInput(f, K){
   if(f.dead) return;
+  // DODGE ROLL: tapping LEFT or RIGHT while shielding on the ground performs a quick
+  // roll with brief invincibility (i-frames), then a short cooldown. Edge-triggered so
+  // holding a direction doesn't chain rolls. _dodgeT>0 keeps the roll animating; while
+  // rolling the fighter ignores normal movement input.
+  if(f._dodgeCd>0) f._dodgeCd--;
+  const wantDodge = canShield(f) && !!keys[K.shield] && f.onGround && f._dodgeT<=0 && f._dodgeCd<=0;
+  if(wantDodge && keys[K.left] && !f._dodgeHeldL){ startDodge(f,-1); }
+  if(wantDodge && keys[K.right] && !f._dodgeHeldR){ startDodge(f, 1); }
+  f._dodgeHeldL = !!keys[K.left];
+  f._dodgeHeldR = !!keys[K.right];
+  // while a roll is active, run it out and skip the rest of input handling
+  if(f._dodgeT>0){
+    f._dodgeT--;
+    f.shielding=false;
+    f.state='dodge';
+    f.hitCd=Math.max(f.hitCd, f._dodgeT+1);   // stay invulnerable for the roll
+    if(f._dodgeT<=0){ f._dodgeCd=26; }        // ~0.43s cooldown after a roll
+    return;
+  }
   // While Zennith's PERFECT GAME eclipse is active, the dread suppresses all shields.
   f.shielding = canShield(f) && !!keys[K.shield] && f.onGround;
   if(!f.shielding){
@@ -13587,6 +13911,7 @@ function update(t){
   if(hitStop>0 && !FX('fxSlowmo')) hitStop=0;   // slow-mo off → never freeze the sim
 
   pollGamepads();   // fold controller state into keys[] before reading input
+  if(running) MatchStats.frames++;   // match duration for the post-match stat screen
   const p1=players[0], p2=players[1];
   if(mode==='online'){
     // Drive only my own fighter locally; the opponent is network-driven.
@@ -14496,6 +14821,8 @@ function KO(f){
   // count a KO for the human whenever they eliminate someone (not their own fighter)
   const meIdx = mode==='online' ? (Net.isHost?0:1) : 0;
   if((mode==='1p'||mode==='online') && f!==players[meIdx]) Save.addStat('kos');
+  // POST-MATCH STAT SCREEN: P1's KOs scored vs lives lost this match
+  if(f===players[0]) MatchStats.taken++; else MatchStats.kos++;
   // CHAT: the CPU gloats when it KOs the human
   if(mode==='1p' && f===players[0]) chatOnEvent('botKO');
   spawnParticles(f.cx<W/2? Math.max(20,Math.min(W-20,f.cx)):Math.min(W-20,f.cx),
@@ -14936,6 +15263,35 @@ function render(t){
       ctx.beginPath(); ctx.ellipse(pr.r*0.14,pr.r*0.05,pr.r*0.12,pr.r*0.2,-0.3,0,Math.PI*2); ctx.fill();
       ctx.fillStyle='#8fbf6a'; ctx.beginPath(); ctx.arc(pr.r*0.5,-pr.r*0.1,pr.r*0.16,0,Math.PI*2); ctx.fill();
       ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(pr.r*0.56,-pr.r*0.14,pr.r*0.05,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    } else if(pr.type==='voidorb'){
+      // VOIDMAW orb: a dark sphere with a glowing violet rim + a swallowed highlight
+      pr.spin=(pr.spin||0)+0.2;
+      ctx.save(); ctx.translate(pr.x,pr.y);
+      ctx.shadowColor='#c77dff'; ctx.shadowBlur=18;
+      ctx.fillStyle='#1a0330'; ctx.beginPath(); ctx.arc(0,0,pr.r,0,Math.PI*2); ctx.fill();
+      ctx.shadowBlur=0; ctx.strokeStyle='#c77dff'; ctx.lineWidth=2.5; ctx.beginPath(); ctx.arc(0,0,pr.r,0,Math.PI*2); ctx.stroke();
+      ctx.strokeStyle='rgba(199,125,255,.5)'; ctx.lineWidth=1.5;
+      for(let k=1;k<=2;k++){ ctx.beginPath(); ctx.arc(0,0,pr.r*0.62*k/2,pr.spin,pr.spin+2.4); ctx.stroke(); }
+      ctx.restore();
+    } else if(pr.type==='quakewave'){
+      // CLOCKWORK shockwave: a rolling dust crescent hugging the ground
+      ctx.save(); ctx.translate(pr.x,pr.y);
+      const d=Math.sign(pr.vx)||1;
+      ctx.fillStyle=pr.color; ctx.globalAlpha=0.85;
+      ctx.beginPath(); ctx.moveTo(-d*pr.r,8);
+      ctx.quadraticCurveTo(-d*pr.r,-pr.r*1.4,d*pr.r*0.3,-pr.r*1.4);
+      ctx.quadraticCurveTo(d*pr.r,-pr.r,d*pr.r,8); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha=1; ctx.fillStyle='#fff6d0';
+      ctx.beginPath(); ctx.arc(d*pr.r*0.2,-pr.r*1.2,pr.r*0.18,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    } else if(pr.type==='ember'){
+      // EMBERWING ember: a flickering flame teardrop with a hot core
+      ctx.save(); ctx.translate(pr.x,pr.y);
+      ctx.shadowColor='#ff6b35'; ctx.shadowBlur=14;
+      ctx.fillStyle='#ff6b35'; ctx.beginPath(); ctx.arc(0,0,pr.r,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#ffd24a'; ctx.beginPath(); ctx.arc(0,0,pr.r*0.55,0,Math.PI*2); ctx.fill();
+      ctx.shadowBlur=0; ctx.fillStyle='#fff6d0'; ctx.beginPath(); ctx.arc(0,-pr.r*0.15,pr.r*0.25,0,Math.PI*2); ctx.fill();
       ctx.restore();
     } else {
       ctx.beginPath(); ctx.arc(pr.x,pr.y,pr.r,0,Math.PI*2); ctx.fill();
@@ -15507,6 +15863,34 @@ function endMatch(){
     return;
   }
 
+  // ---- BOSS RUSH progression ----
+  // Win → advance to the next boss (or finish the run); lose → run ends on the result
+  // screen. Between bosses we jump straight into the next fight (no menu) with a callout.
+  if(bossrun && bossrun.active){
+    if(p1won){
+      bossrun.round++;
+      if(bossrun.round < bossrun.bosses.length){
+        setTimeout(()=>{
+          p2Pick = bossById(bossrun.bosses[bossrun.round]);
+          stagePick = STAGES[Math.floor(Math.random()*STAGES.length)];
+          announce('NEXT BOSS!');
+          startMatch();
+        }, 1100);
+      } else {
+        setTimeout(()=>{ document.getElementById('hud').classList.add('hidden'); finishBossRush(true); }, 900);
+      }
+    } else {
+      setTimeout(()=>{ document.getElementById('hud').classList.add('hidden'); finishBossRush(false); }, 900);
+    }
+    return;
+  }
+
+  // ---- DAILY CHALLENGE result ----
+  if(dailyActive){
+    setTimeout(()=>{ document.getElementById('hud').classList.add('hidden'); finishDaily(p1won); }, 900);
+    return;
+  }
+
   // ---- stat tracking (1P only; the human is P1) ----
   if(mode==='1p' && p1won){
     Save.addStat('wins');
@@ -15644,10 +16028,33 @@ function endMatch(){
       sub.textContent = `${winnerDef.name} is the last one standing`;
     }
     sub.style.color=winnerDef.color;
+    renderMatchStats();
     playVictoryFlair((mode==='2p'||mode==='2v2') ? true : p1won);
   }, 900);
 }
 
+// ---- POST-MATCH STAT SCREEN + PER-CHARACTER STATS ----
+function fmtTime(frames){ const s=Math.max(0,Math.round(frames/60)); const m=Math.floor(s/60); return m>0 ? (m+':'+String(s%60).padStart(2,'0')) : (s+'s'); }
+// paint the four-tile match summary on the result screen, and fold the tallies into
+// the per-fighter career stats for P1's chosen fighter.
+function renderMatchStats(){
+  const box=document.getElementById('matchStats'); if(!box) return;
+  const cells=[
+    ['DMG DEALT', Math.round(MatchStats.dmgDealt)],
+    ['BIGGEST HIT', Math.round(MatchStats.biggest)],
+    ['KOs', MatchStats.kos],
+    ['TIME', fmtTime(MatchStats.frames)],
+  ];
+  box.innerHTML = cells.map(([lbl,val])=>'<div class="msrow"><div class="msval">'+val+'</div><div class="mslbl">'+lbl+'</div></div>').join('');
+  box.classList.remove('hidden');
+  // fold into per-fighter career stats (only P1's fighter, only real matches)
+  if(p1Pick && p1Pick.id && mode!=='online'){
+    Save.addCharStat(p1Pick.id, 'matches', 1);
+    Save.addCharStat(p1Pick.id, 'dmg', Math.round(MatchStats.dmgDealt));
+    Save.addCharStat(p1Pick.id, 'kos', MatchStats.kos);
+    const b=Math.round(MatchStats.biggest); if(b>Save.charStat(p1Pick.id,'biggest')) Save.setCharStat(p1Pick.id,'biggest',b);
+  }
+}
 // Soccer match resolved: first to 3 goals wins.
 function endMatchSoccer(scorer){
   running=false; Music.stop();
@@ -15685,6 +16092,103 @@ function endMatchSoccer(scorer){
 }
 
 // Classic run resolved: award (or show defeat) then return to the result screen.
+/* ---------------- BOSS RUSH RUN ---------------- */
+// Fight all bespoke bosses back-to-back with the chosen fighter. Player gets 2 stocks
+// per boss (set in startMatch); a full clear grants a big SHARD reward + a stat.
+function startBossRush(c){
+  classic=null; season=null; campaign=null; tutorial=null; training=null;
+  selectContext='main'; mode='1p'; gameMode='stock';
+  p1Pick=c; p1Meme='none'; p1Super2=false; costMap[c.id]=costMap[c.id]||0;
+  bossrun = { active:true, c, bosses:BOSS_RUSH.map(b=>b.id), round:0 };
+  p2Pick = bossById(bossrun.bosses[0]);
+  stagePick = STAGES[Math.floor(Math.random()*STAGES.length)];
+  announce('BOSS RUSH!');
+  startMatch();
+}
+function finishBossRush(won){
+  const run=bossrun; bossrun=null;
+  Music.play('menu');
+  const r=document.getElementById('result'); r.classList.remove('hidden');
+  document.getElementById('rematchBtn').classList.add('hidden');
+  const title=document.getElementById('resultTitle');
+  const sub=document.getElementById('resultSub');
+  const total=run.bosses.length;
+  if(won){
+    Save.addStat('bossRushClears'); Save.addStat('wins', total);
+    Save.addCurrency(120); grantAndToast(); Leaderboard.submit();
+    title.textContent='BOSS RUSH CLEARED!';
+    title.style.filter='none';
+    sub.innerHTML = `<span style="color:${run.c.color}">${run.c.name}</span> toppled all ${total} bosses! <br>+120 💎 SHARDS`;
+    announce('LEGEND!');
+  } else {
+    const beaten=run.round;
+    title.textContent='BOSS RUSH — FALLEN';
+    title.style.filter='grayscale(.4)';
+    sub.innerHTML = beaten>0
+      ? `<span style="color:${run.c.color}">${run.c.name}</span> downed ${beaten} of ${total} bosses before falling.`
+      : `The first boss proved too much. Try again!`;
+  }
+  renderMatchStats();
+  playVictoryFlair(won);
+}
+/* ---------------- DAILY CHALLENGE ---------------- */
+// A deterministic once-a-day match: today's date seeds the fighter, opponent, stage
+// and ruleset, so everyone gets the same challenge. Beating it (once per day) extends
+// a streak and pays out SHARDS. Uses a simple string-hash RNG so it's stable per day.
+function dailyKey(d){ d=d||new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+function dailyPrevKey(){ const d=new Date(); d.setDate(d.getDate()-1); return dailyKey(d); }
+function _seedFrom(str){ let h=2166136261; for(let i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619); } return (h>>>0); }
+function dailySpec(){
+  const key=dailyKey();
+  let s=_seedFrom(key);
+  const rnd=()=>{ s=(Math.imul(s,1103515245)+12345)>>>0; return s/4294967296; };
+  const pick=arr=>arr[Math.floor(rnd()*arr.length)];
+  const RULES=['stock','giant','sudden','moon','fast','charged','onehp'];
+  const pool = ROSTER.filter(c=>charUnlocked(c.id));
+  const fighter = pick(pool.length?pool:ROSTER);
+  let foe = pick(ROSTER); if(foe.id===fighter.id) foe = pick(ROSTER);
+  return { key, fighter, foe, stage:pick(STAGES), rule:pick(RULES) };
+}
+function startDaily(){
+  const spec=dailySpec();
+  classic=null; season=null; campaign=null; bossrun=null; tutorial=null; training=null;
+  selectContext='main'; mode='1p'; dailyActive=true;
+  gameMode=spec.rule;
+  p1Pick=spec.fighter; p2Pick=spec.foe;
+  p1Meme='none'; p2Meme='none'; p1Super2=false; p2Super2=false; botCostume=0;
+  costMap[p1Pick.id]=costMap[p1Pick.id]||0; costMap[p2Pick.id]=costMap[p2Pick.id]||0;
+  stagePick=spec.stage;
+  // reflect the fixed rule chip selection so currentMode() reads it
+  document.querySelectorAll('.rule').forEach(x=>x.classList.toggle('sel', x.dataset.rule===gameMode));
+  announce('DAILY CHALLENGE!');
+  startMatch();
+}
+function finishDaily(won){
+  const wasDaily=dailyActive; dailyActive=false;
+  Music.play('menu');
+  const r=document.getElementById('result'); r.classList.remove('hidden');
+  document.getElementById('rematchBtn').classList.add('hidden');
+  const title=document.getElementById('resultTitle');
+  const sub=document.getElementById('resultSub');
+  if(won){
+    const key=dailyKey();
+    const firstToday = Save.dailyComplete(key, dailyPrevKey());
+    const d=Save.dailyState();
+    if(firstToday){ Save.addCurrency(40); grantAndToast(); Leaderboard.submit(); }
+    title.textContent='DAILY CLEARED!';
+    title.style.filter='none';
+    sub.innerHTML = firstToday
+      ? `🔥 Streak: <b>${d.streak}</b> day${d.streak===1?'':'s'} · +40 💎 SHARDS<br>Come back tomorrow for a new challenge.`
+      : `Already cleared today — come back tomorrow! Streak: <b>${d.streak}</b>.`;
+    announce('DAILY DONE!');
+  } else {
+    title.textContent='DAILY — FAILED';
+    title.style.filter='grayscale(.4)';
+    sub.textContent = `Today's challenge beat you. Try again — you keep your streak until tomorrow.`;
+  }
+  renderMatchStats();
+  playVictoryFlair(won);
+}
 function finishClassic(won){
   const c=classic.c;
   Music.play('menu');
@@ -15993,7 +16497,7 @@ function quitToMenu(){
   // same for the Training Room
   if(training){ trainingTeardown(); selectContext='main'; buildRoster(); document.getElementById('goBtn').textContent='START MATCH'; show('title'); return; }
   const wasCampaign = campaign && campaign.active;
-  classic=null; campaign=null; season=null;
+  classic=null; campaign=null; season=null; bossrun=null; dailyActive=false;
   Music.stop();
   restoreDefaultRematch();
   document.getElementById('hud').classList.add('hidden');
@@ -16026,9 +16530,31 @@ document.getElementById('pauseDiffSlider').oninput=(e)=>{
 };
 /* ---- SECRET CODE unlocks: DISABLED. Anker Vos is now earned only by WINNING a
    Season (see finishSeason), so typing "vos" on the title screen does nothing. ---- */
-// ESC toggles pause during a local match
+// ESC toggles pause during a local match; R does a quick rematch when it's safe.
+function canQuickRematch(){
+  // only plain local 1P / 2P / 2v2 matches — never scripted runs, online, tutorial,
+  // training, soccer or the daily (those own their own flow / would break a run).
+  return (running||paused) && !tutorial && !training && !classic && !season &&
+         !campaign && !bossrun && !dailyActive && mode!=='online' && !currentMode().soccer;
+}
+function quickRematch(){
+  if(!canQuickRematch()) return;
+  if(paused) resumeGame();
+  startMatch();   // same fighters / stage / rules
+}
+// briefly flash the ESC/R hint chip when a rematch-eligible match begins
+let _quickHintT=null;
+function showQuickHint(){
+  const el=document.getElementById('quickHint'); if(!el) return;
+  clearTimeout(_quickHintT);
+  if(!canQuickRematch()){ el.classList.add('hidden'); return; }
+  el.classList.remove('hidden','fade');
+  _quickHintT=setTimeout(()=>{ el.classList.add('fade'); setTimeout(()=>el.classList.add('hidden'), 700); }, 3600);
+}
 window.addEventListener('keydown', e=>{
-  if(e.key==='Escape'){ e.preventDefault(); if(chatOpen){ closeChat(); return; } if(running || paused) togglePause(); }
+  if(e.key==='Escape'){ e.preventDefault(); if(chatOpen){ closeChat(); return; } if(running || paused) togglePause(); return; }
+  // R = instant rematch (ignored while typing in the chat box)
+  if((e.key==='r'||e.key==='R') && !chatOpen && canQuickRematch()){ e.preventDefault(); quickRematch(); }
 });
 
 /* ---------------- IN-BATTLE CHAT + COMMAND CONSOLE ---------------- */
