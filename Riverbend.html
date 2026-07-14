@@ -1,0 +1,1910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Riverbend</title>
+<style>
+  :root{
+    --wood:#8a5a3b;--wood-d:#6b4429;--ink:#2b2016;--cream:#fff7e8;
+    --gold:#f2a541;--leaf:#5c9a4f;--coral:#e8705c;
+    /* location-driven, set by JS */
+    --sky:#ffe8c2;--sky2:#ffd39b;--w-top:#a8e6d4;--w-mid:#4fb8c4;--w-deep:#12556e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{font-family:'Georgia','Iowan Old Style',serif;color:var(--ink);overflow:hidden;-webkit-font-smoothing:antialiased;background:#123;}
+  #game{position:fixed;inset:0;}
+  canvas{display:block;width:100%;height:100%;touch-action:none;}
+
+  .hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;padding:14px 16px;pointer-events:none;z-index:5;gap:10px;flex-wrap:wrap;}
+  .panel{background:rgba(255,247,232,.93);border:3px solid var(--wood-d);border-radius:16px;box-shadow:0 6px 0 rgba(107,68,41,.35), inset 0 2px 0 rgba(255,255,255,.6);padding:9px 13px;pointer-events:auto;}
+  .stat-row{display:flex;gap:14px;align-items:center;}
+  .stat{display:flex;flex-direction:column;line-height:1.05;}
+  .stat b{font-size:20px;color:var(--wood-d);font-family:'Trebuchet MS',sans-serif;}
+  .stat span{font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:#9a7b5a;font-family:'Trebuchet MS',sans-serif;}
+  .title-badge{display:flex;align-items:center;gap:10px;}
+  .title-badge .otter-emo{font-size:28px;filter:drop-shadow(0 2px 0 rgba(0,0,0,.15));}
+  /* visible clock dial */
+  #clockDial{position:relative;width:42px;height:42px;border-radius:50%;flex-shrink:0;
+    background:radial-gradient(circle at 50% 38%, #fff6df, #ffe6b0);border:3px solid var(--wood-d);
+    box-shadow:inset 0 2px 0 rgba(255,255,255,.7),0 3px 0 rgba(107,68,41,.3);overflow:hidden;}
+  #clockFace{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:16px;}
+  #clockHand{position:absolute;left:50%;top:50%;width:2.5px;height:15px;background:var(--wood-d);border-radius:2px;
+    transform-origin:50% 100%;transform:translate(-50%,-100%) rotate(0deg);z-index:2;}
+  #clockPivot{position:absolute;left:50%;top:50%;width:6px;height:6px;background:var(--coral);border-radius:50%;transform:translate(-50%,-50%);z-index:3;}
+  .title-badge h1{font-size:18px;letter-spacing:.02em;color:var(--wood-d);}
+  .title-badge p{font-size:10px;color:#9a7b5a;font-family:'Trebuchet MS',sans-serif;letter-spacing:.08em;}
+  #locName{font-weight:700;}
+
+  .btn{font-family:'Trebuchet MS',sans-serif;font-weight:700;font-size:12px;letter-spacing:.05em;text-transform:uppercase;background:var(--gold);color:#4a2f12;border:3px solid var(--wood-d);border-radius:12px;padding:8px 12px;cursor:pointer;pointer-events:auto;box-shadow:0 4px 0 var(--wood-d);transition:transform .08s, box-shadow .08s;}
+  .btn:hover{transform:translateY(-1px);box-shadow:0 5px 0 var(--wood-d);}
+  .btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--wood-d);}
+  .btn.alt{background:var(--cream);color:var(--wood-d);}
+  .btn.sm{padding:6px 10px;font-size:11px;box-shadow:0 3px 0 var(--wood-d);}
+  .btn:disabled{opacity:.5;cursor:not-allowed;filter:grayscale(.5);}
+  .menu-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
+
+  #buffBar{position:absolute;left:16px;bottom:16px;display:flex;gap:8px;z-index:6;pointer-events:none;flex-wrap:wrap;max-width:60%;}
+  .buff-chip{background:rgba(255,247,232,.95);border:2px solid var(--leaf);border-radius:20px;padding:5px 12px;font-family:'Trebuchet MS',sans-serif;font-size:12px;color:#4a2f12;box-shadow:0 3px 0 rgba(74,122,63,.4);display:flex;align-items:center;gap:6px;}
+  .buff-chip b{color:var(--leaf);}
+
+  #walkCtrls{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);display:none;gap:14px;z-index:7;align-items:center;}
+  .walk-btn{font-family:'Trebuchet MS',sans-serif;font-weight:700;font-size:22px;background:rgba(255,247,232,.95);color:var(--wood-d);border:3px solid var(--wood-d);border-radius:16px;width:60px;height:60px;cursor:pointer;box-shadow:0 5px 0 var(--wood-d);user-select:none;-webkit-user-select:none;touch-action:manipulation;}
+  .walk-btn.act{width:auto;padding:0 22px;font-size:15px;letter-spacing:.06em;text-transform:uppercase;background:var(--gold);color:#4a2f12;}
+  .walk-btn:active{transform:translateY(3px);box-shadow:0 2px 0 var(--wood-d);}
+  .walk-btn:disabled{opacity:.4;}
+
+  #prompt{position:absolute;left:50%;bottom:110px;transform:translateX(-50%);background:rgba(43,32,22,.86);color:var(--cream);padding:10px 20px;border-radius:30px;font-family:'Trebuchet MS',sans-serif;font-size:15px;letter-spacing:.03em;z-index:6;text-align:center;box-shadow:0 4px 14px rgba(0,0,0,.25);transition:opacity .3s;max-width:82%;}
+  #prompt small{display:block;opacity:.75;font-size:12px;margin-top:2px;}
+
+  #castMeter{position:absolute;left:50%;bottom:150px;transform:translateX(-50%);width:280px;height:26px;background:rgba(255,247,232,.9);border:3px solid var(--wood-d);border-radius:14px;overflow:hidden;z-index:6;display:none;box-shadow:0 4px 0 rgba(107,68,41,.35);}
+  #castFill{position:absolute;top:0;bottom:0;left:0;width:0%;background:linear-gradient(90deg,#7cc47a,var(--gold),var(--coral));}
+
+  #reel{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(360px,90vw);z-index:20;display:none;}
+  .reel-card{background:rgba(255,247,232,.97);border:4px solid var(--wood-d);border-radius:22px;padding:16px 20px 20px;box-shadow:0 14px 0 rgba(107,68,41,.3),0 24px 50px rgba(0,0,0,.3);text-align:center;}
+  .reel-card h2{font-size:20px;color:var(--wood-d);margin-bottom:2px;transition:color .1s;}
+  .reel-card h2.warn{color:var(--coral);}
+  .reel-card .fishname{font-family:'Trebuchet MS',sans-serif;font-size:12px;color:#9a7b5a;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;}
+  #reelCanvas{width:100%;max-width:320px;height:auto;display:block;margin:0 auto;border-radius:16px;cursor:pointer;touch-action:none;}
+  .meters{margin:12px 2px 0;display:flex;flex-direction:column;gap:7px;}
+  .meter-row{display:flex;align-items:center;gap:8px;}
+  .meter-lbl{font-family:'Trebuchet MS',sans-serif;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#9a7b5a;width:88px;text-align:right;flex-shrink:0;}
+  .meter{flex:1;height:15px;background:rgba(0,0,0,.1);border:2px solid var(--wood-d);border-radius:9px;overflow:hidden;}
+  #staminaFill{height:100%;width:100%;background:linear-gradient(90deg,#4a9a6a,#8fd07e);transition:width .08s;}
+  #tensionFill{height:100%;width:0%;background:linear-gradient(90deg,#7cc47a,var(--gold),var(--coral));transition:width .06s;}
+  .reel-hint{font-family:'Trebuchet MS',sans-serif;font-size:11.5px;color:#9a7b5a;margin-top:11px;letter-spacing:.02em;line-height:1.4;}
+  .reel-hint b{color:var(--coral);}
+
+  .overlay{position:absolute;inset:0;background:rgba(31,49,60,.55);backdrop-filter:blur(3px);z-index:70;display:none;align-items:center;justify-content:center;padding:24px;}
+  .modal{position:relative;background:var(--cream);border:4px solid var(--wood-d);border-radius:24px;width:min(760px,95vw);max-height:88vh;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4);display:flex;flex-direction:column;}
+  .modal-head{display:flex;justify-content:space-between;align-items:center;padding:15px 22px;border-bottom:3px solid rgba(107,68,41,.25);background:linear-gradient(180deg,#fff,var(--cream));}
+  .modal-head h2{color:var(--wood-d);font-size:23px;letter-spacing:.01em;}
+  .modal-head .sub{font-family:'Trebuchet MS',sans-serif;font-size:12px;color:#9a7b5a;letter-spacing:.1em;text-transform:uppercase;}
+  .x{background:none;border:none;font-size:26px;cursor:pointer;color:var(--wood-d);line-height:1;}
+  .modal-body{padding:18px 22px 30px;overflow-y:auto;}
+
+  .tabs{display:flex;gap:8px;padding:12px 22px 0;flex-wrap:wrap;}
+  .tab{font-family:'Trebuchet MS',sans-serif;font-weight:700;font-size:12px;letter-spacing:.05em;text-transform:uppercase;background:#efe3cd;border:3px solid var(--wood-d);border-bottom:none;border-radius:12px 12px 0 0;padding:8px 14px;cursor:pointer;color:#9a7b5a;}
+  .tab.active{background:var(--cream);color:var(--wood-d);}
+
+  .enc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;}
+  .enc-card{border:3px solid var(--wood-d);border-radius:16px;padding:12px;background:#fff;position:relative;text-align:center;box-shadow:0 4px 0 rgba(107,68,41,.18);}
+  .enc-card.locked{background:#efe6d4;color:#b3a488;filter:grayscale(.4);}
+  .enc-card.locked .emo{filter:blur(6px) grayscale(1);opacity:.5;}
+  .enc-card.locked .en-name{color:#b3a488;}
+  .enc-card .emo{font-size:42px;display:block;margin:4px 0 8px;filter:drop-shadow(0 3px 2px rgba(0,0,0,.15));}
+  .enc-card .en-name{font-weight:700;font-size:15px;color:var(--wood-d);}
+  .enc-card .en-rare{font-family:'Trebuchet MS',sans-serif;font-size:10px;letter-spacing:.12em;text-transform:uppercase;margin-top:3px;}
+  .enc-card .en-desc{font-family:'Trebuchet MS',sans-serif;font-size:11px;color:#7d6a4f;margin-top:7px;line-height:1.35;}
+  .enc-card .en-count{position:absolute;top:8px;right:10px;font-family:'Trebuchet MS',sans-serif;font-size:11px;color:#9a7b5a;}
+  .enc-card .en-price{margin-top:8px;font-family:'Trebuchet MS',sans-serif;font-size:12px;color:var(--gold);font-weight:700;}
+  .enc-card .en-loc{position:absolute;top:8px;left:10px;font-size:14px;}
+  .r-common{color:#7d8a6a;}.r-uncommon{color:#4a9a6a;}.r-rare{color:#3a7fb5;}.r-epic{color:#9a5fc4;}.r-legendary{color:#e08a2a;}
+
+  .enc-summary{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:16px;font-family:'Trebuchet MS',sans-serif;}
+  .enc-summary div b{font-size:22px;color:var(--wood-d);}
+  .enc-summary div span{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#9a7b5a;display:block;}
+
+  /* catch confetti */
+  #confetti{position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:20px;}
+  #confetti i{position:absolute;top:-14px;width:9px;height:14px;border-radius:2px;opacity:.95;animation:confFall linear forwards;}
+  @keyframes confFall{0%{transform:translateY(-20px) rotate(0);opacity:1;}100%{transform:translateY(560px) rotate(540deg);opacity:0;}}
+
+  /* list rows for market / cook / requests / shop */
+  .row{display:flex;align-items:center;gap:12px;border:3px solid var(--wood-d);border-radius:14px;background:#fff;padding:11px 14px;margin-bottom:10px;box-shadow:0 3px 0 rgba(107,68,41,.15);}
+  .row .r-emo{font-size:34px;flex-shrink:0;}
+  .row .r-main{flex:1;min-width:0;}
+  .row .r-title{font-weight:700;color:var(--wood-d);font-size:15px;}
+  .row .r-desc{font-family:'Trebuchet MS',sans-serif;font-size:12px;color:#7d6a4f;line-height:1.35;margin-top:2px;}
+  .row .r-side{text-align:right;font-family:'Trebuchet MS',sans-serif;flex-shrink:0;display:flex;flex-direction:column;gap:6px;align-items:flex-end;}
+  .pill{display:inline-block;background:#efe3cd;border-radius:20px;padding:2px 9px;font-family:'Trebuchet MS',sans-serif;font-size:11px;color:#7d6a4f;margin:1px 2px;}
+  .pill.have{background:#d8f0cf;color:#3f6a32;}
+  .pill.need{background:#f6d9d2;color:#a24a38;}
+  .lead{font-family:'Trebuchet MS',sans-serif;color:#7d6a4f;font-size:14px;line-height:1.5;margin-bottom:14px;}
+  .empty{font-family:'Trebuchet MS',sans-serif;color:#9a7b5a;font-style:italic;text-align:center;padding:30px;}
+  .loc-card{border:3px solid var(--wood-d);border-radius:16px;padding:14px;margin-bottom:12px;display:flex;gap:14px;align-items:center;box-shadow:0 4px 0 rgba(107,68,41,.15);}
+  .loc-card .l-emo{font-size:40px;}
+  .loc-card.current{outline:3px dashed var(--gold);outline-offset:2px;}
+
+  #catchPop{text-align:center;}
+  #catchPop .big-emo{font-size:84px;filter:drop-shadow(0 6px 4px rgba(0,0,0,.2));animation:pop .5s cubic-bezier(.2,1.5,.4,1);}
+  @keyframes pop{0%{transform:scale(0) rotate(-20deg);}100%{transform:scale(1) rotate(0);}}
+  #catchPop h2{font-size:28px;color:var(--wood-d);margin-top:6px;}
+  #catchPop .rare-tag{font-family:'Trebuchet MS',sans-serif;letter-spacing:.14em;text-transform:uppercase;font-size:13px;margin-top:2px;}
+  #catchPop .stats{display:flex;gap:24px;justify-content:center;margin:16px 0 6px;font-family:'Trebuchet MS',sans-serif;flex-wrap:wrap;}
+  #catchPop .stats b{font-size:19px;color:var(--wood-d);display:block;}
+  #catchPop .stats span{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#9a7b5a;}
+  #catchPop .flavor{font-family:'Trebuchet MS',sans-serif;font-size:13px;color:#7d6a4f;font-style:italic;margin:10px 0 16px;line-height:1.4;}
+  .newbadge{display:inline-block;background:var(--coral);color:#fff;font-family:'Trebuchet MS',sans-serif;font-size:11px;letter-spacing:.14em;padding:3px 10px;border-radius:20px;text-transform:uppercase;margin-top:6px;}
+
+  #toast{position:absolute;left:50%;top:70px;transform:translateX(-50%);background:rgba(43,32,22,.92);color:var(--cream);font-family:'Trebuchet MS',sans-serif;padding:9px 18px;border-radius:24px;font-size:14px;z-index:40;opacity:0;transition:opacity .25s, transform .25s;pointer-events:none;box-shadow:0 6px 16px rgba(0,0,0,.3);}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(4px);}
+
+  .fade-out{opacity:0 !important;}
+  @media (max-width:640px){.title-badge h1{font-size:15px;}.stat b{font-size:16px;}#buffBar{max-width:90%;}}
+
+  /* ---------- Main menu ---------- */
+  #menu{position:absolute;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:linear-gradient(180deg,#ffe8c2,#ffd39b 42%,#a8e6d4 43%,#4fb8c4 72%,#12556e);text-align:center;padding:24px;}
+  #menu .logo{font-size:76px;filter:drop-shadow(0 6px 0 rgba(0,0,0,.12));animation:floaty 3s ease-in-out infinite;}
+  @keyframes floaty{0%,100%{transform:translateY(0) rotate(-3deg);}50%{transform:translateY(-10px) rotate(3deg);}}
+  #menu h1{font-family:'Georgia',serif;font-size:46px;color:#fff7e8;margin-top:6px;letter-spacing:.01em;text-shadow:0 3px 0 #6b4429,0 6px 12px rgba(0,0,0,.25);}
+  #menu .tag{font-family:'Trebuchet MS',sans-serif;color:#fff7e8;letter-spacing:.14em;text-transform:uppercase;font-size:12px;margin-top:4px;text-shadow:0 1px 3px rgba(0,0,0,.3);}
+  #menu .card{background:rgba(255,247,232,.95);border:4px solid var(--wood-d);border-radius:22px;padding:20px 22px;margin-top:26px;
+    box-shadow:0 12px 0 rgba(107,68,41,.3),0 20px 40px rgba(0,0,0,.25);width:min(340px,90vw);}
+  #menu .card h2{font-family:'Trebuchet MS',sans-serif;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#9a7b5a;margin-bottom:12px;}
+  #menu .bigbtn{display:block;width:100%;font-family:'Trebuchet MS',sans-serif;font-weight:700;font-size:16px;letter-spacing:.04em;
+    background:var(--gold);color:#4a2f12;border:3px solid var(--wood-d);border-radius:14px;padding:13px;margin-bottom:10px;cursor:pointer;
+    box-shadow:0 5px 0 var(--wood-d);transition:transform .08s,box-shadow .08s;}
+  #menu .bigbtn:hover{transform:translateY(-1px);box-shadow:0 6px 0 var(--wood-d);}
+  #menu .bigbtn:active{transform:translateY(3px);box-shadow:0 2px 0 var(--wood-d);}
+  #menu .bigbtn.ghost{background:var(--cream);color:var(--wood-d);}
+  #menu .bigbtn:disabled{opacity:.5;cursor:not-allowed;}
+  #menu .savebox{font-family:'Trebuchet MS',sans-serif;font-size:13px;color:#7d6a4f;line-height:1.5;background:#fff;border:2px dashed rgba(107,68,41,.4);border-radius:12px;padding:11px;margin-bottom:14px;text-align:left;}
+  #menu .savebox b{color:var(--wood-d);}
+  #menu .savebox .none{color:#b3a488;font-style:italic;}
+  #menu .foot{font-family:'Trebuchet MS',sans-serif;font-size:11px;color:rgba(255,247,232,.85);margin-top:18px;letter-spacing:.04em;}
+  #menuBtn{}
+
+  /* Error reporter */
+  #errbox{position:absolute;left:12px;right:12px;bottom:70px;z-index:99;background:#3a1414;color:#ffd9d0;
+    border:2px solid #a24a38;border-radius:12px;padding:12px 14px;font-family:ui-monospace,Menlo,monospace;font-size:12px;
+    display:none;white-space:pre-wrap;box-shadow:0 8px 24px rgba(0,0,0,.4);max-height:40vh;overflow:auto;}
+  #errbox b{color:#ff9a8a;}
+</style>
+</head>
+<body>
+<script>
+/* Early error reporter — installed before the main script parses,
+   so even a syntax error in the main script surfaces on screen. */
+window.addEventListener('error',function(ev){
+  var box=document.getElementById('errbox');if(!box)return;
+  box.style.display='block';
+  box.innerHTML='<b>Something went wrong:</b>\n'+(ev.message||ev.error)+
+    (ev.filename?('\n'+ev.filename.split('/').pop()+':'+ev.lineno+':'+ev.colno):'');
+});
+</script>
+<div id="errbox"></div>
+<div id="game"><canvas id="c"></canvas></div>
+
+<!-- Main menu -->
+<div id="menu">
+  <div class="logo">🦦</div>
+  <h1>Riverbend</h1>
+  <div class="tag">A cozy fishing tale</div>
+  <div class="card">
+    <h2>Your journey</h2>
+    <div class="savebox" id="saveBox"></div>
+    <button class="bigbtn" id="mContinue">▶ Continue</button>
+    <button class="bigbtn ghost" id="mNew">✦ New Game</button>
+    <button class="bigbtn ghost" id="mHelp">? How to play</button>
+  </div>
+  <div class="foot">Progress saves automatically as you play</div>
+</div>
+
+<div class="hud">
+  <div class="panel title-badge">
+    <div id="clockDial"><div id="clockHand"></div><div id="clockPivot"></div><div id="clockFace">☀️</div></div>
+    <div>
+      <h1>Riverbend</h1>
+      <p><span id="locEmo">🏞️</span> <span id="locName">The Riverbend</span> <span id="clock">· ☀️ Morning</span></p>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="stat-row">
+      <div class="stat"><b id="sClams">0</b><span>🐚 Clams</span></div>
+      <div class="stat"><b id="sCaught">0</b><span>Caught</span></div>
+      <div class="stat"><b id="sDex">0/28</b><span>Journal</span></div>
+    </div>
+  </div>
+  <div class="menu-row">
+    <button class="btn sm" id="btnMode">🏘️ Go to Town</button>
+    <button class="btn sm alt" id="btnEnc">📖 Journal</button>
+    <button class="btn sm alt" id="btnQuests">📋 Quests</button>
+    <button class="btn sm alt" id="btnAch">🏅 Goals</button>
+    <button class="btn sm alt" id="btnHelp">?</button>
+    <button class="btn sm alt" id="btnMute">🔊</button>
+    <button class="btn sm alt" id="btnMenu">☰ Menu</button>
+  </div>
+</div>
+
+<div id="buffBar"></div>
+<div id="castMeter"><div id="castFill"></div></div>
+<div id="prompt"></div>
+<div id="toast"></div>
+
+<div id="walkCtrls">
+  <button class="walk-btn" id="walkL">◀</button>
+  <button class="walk-btn act" id="walkAct">E · Interact</button>
+  <button class="walk-btn" id="walkR">▶</button>
+</div>
+
+<div id="reel">
+  <div class="reel-card">
+    <h2 id="reelTitle">A bite!</h2>
+    <div class="fishname" id="reelName">Something tugs the line…</div>
+    <canvas id="reelCanvas" width="320" height="300"></canvas>
+    <div class="meters">
+      <div class="meter-row"><span class="meter-lbl">Fish stamina</span><div class="meter"><div id="staminaFill"></div></div></div>
+      <div class="meter-row"><span class="meter-lbl">Line tension</span><div class="meter"><div id="tensionFill"></div></div></div>
+    </div>
+    <div class="reel-hint" id="reelHint">Hold to REEL and drain the fish — but let go the instant it <b>LUNGES</b> or the line snaps!</div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div><h2 id="modalTitle">Journal</h2><div class="sub" id="modalSub"></div></div>
+      <button class="x" id="modalX">×</button>
+    </div>
+    <div id="modalTabs" class="tabs" style="display:none;"></div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   NIFFO'S RIVERBEND — a cozy fishing game (expanded)
+   ============================================================ */
+const cvs=document.getElementById('c'),ctx=cvs.getContext('2d');
+let W=0,H=0,DPR=Math.min(window.devicePixelRatio||1,2);
+function resize(){W=innerWidth;H=innerHeight;cvs.width=W*DPR;cvs.height=H*DPR;cvs.style.width=W+'px';cvs.style.height=H+'px';ctx.setTransform(DPR,0,0,DPR,0,0);}
+addEventListener('resize',resize);resize();
+
+/* ---------- LOCATIONS ---------- */
+const LOCATIONS=[
+  {id:'river', name:'The Riverbend', emo:'🏞️', unlock:0,   depthLabel:'The deep bend',
+   sky:['#ffe8c2','#ffd39b'], water:['#a8e6d4','#4fb8c4','#12556e'], hill:'#8fce7a',
+   blurb:"Where Niffo learned to fish. Gentle current, friendly faces.",
+   music:{bpm:82, scale:['C4','D4','E4','G4','A4','C5','D5','E5'], bass:['C2','G2','A2','F2'], synth:'triangle', pad:'sine', mood:'warm'}},
+  {id:'marsh', name:'Misty Marsh', emo:'🌾', unlock:120, depthLabel:'The bog depths',
+   sky:['#d9e6cf','#b7cfa6'], water:['#9db98a','#5f8f66','#274e3c'], hill:'#6f9a5a',
+   blurb:"Reeds, fog, and things that lurk beneath the lily mats.",
+   music:{bpm:66, scale:['D4','E4','F4','A4','C5','D5','F5'], bass:['D2','A2','Bb2','F2'], synth:'sine', pad:'sine', mood:'foggy'}},
+  {id:'cove',  name:'Coral Cove', emo:'🐚', unlock:400, depthLabel:'The reef trench',
+   sky:['#ffe1e6','#ffc2cf'], water:['#a6f0e6','#39c2c9','#0e6d8a'], hill:'#f4b6a0',
+   blurb:"Warm saltwater full of colour. Rumours of something huge below.",
+   music:{bpm:104, scale:['E4','F#4','G#4','B4','C#5','E5','F#5','G#5'], bass:['E2','B2','C#3','A2'], synth:'triangle', pad:'triangle', mood:'bright'}},
+  {id:'frost', name:'Frostpeak Lake', emo:'🏔️', unlock:1000, depthLabel:'The glacier abyss',
+   sky:['#dceaf5','#bcd6ec'], water:['#cfeaf3','#7fb6d4','#123a5c'], hill:'#e8f0f6',
+   blurb:"Ice-cold, crystal clear, and home to the strangest legends of all.",
+   music:{bpm:72, scale:['A4','B4','C5','E5','F#5','A5','B5'], bass:['A1','E2','F#2','D2'], synth:'sine', pad:'sine', mood:'crystal'}},
+];
+const LOC_BY_ID=Object.fromEntries(LOCATIONS.map(l=>[l.id,l]));
+
+/* ============================================================
+   AUDIO — procedural music (per location) + SFX via Tone.js
+   ============================================================ */
+const Audio={
+  ready:false, muted:false, started:false,
+  master:null, musicBus:null, sfxBus:null,
+  lead:null, pad:null, bass:null, pluck:null, noise:null, blip:null, sub:null,
+  loops:[], curMusic:null,
+};
+function initAudio(){
+  if(Audio.started)return;
+  Audio.started=true;
+  // Load Tone.js on demand, AFTER the game is already running, so audio
+  // can never block or break rendering. If it fails, the game stays silent.
+  if(typeof Tone!=='undefined'){ setupAudio(); return; }
+  try{
+    const s=document.createElement('script');
+    s.src='https://artifactcdn.diabrowser.engineering/ajax/libs/tone/Tone.min.js';
+    s.onload=()=>{ try{ setupAudio(); }catch(e){} };
+    s.onerror=()=>{ /* stay silent */ };
+    document.head.appendChild(s);
+  }catch(e){}
+}
+function setupAudio(){
+  if(Audio.ready||typeof Tone==='undefined')return;
+  try{
+    Tone.start();
+    Audio.master=new Tone.Volume(-6).toDestination();
+    Audio.musicBus=new Tone.Volume(-9).connect(Audio.master);
+    Audio.sfxBus=new Tone.Volume(-2).connect(Audio.master);
+    const reverb=new Tone.Reverb({decay:3.5,wet:0.35}).connect(Audio.musicBus);
+    // music voices
+    Audio.lead=new Tone.Synth({oscillator:{type:'triangle'},envelope:{attack:0.02,decay:0.3,sustain:0.15,release:0.9},volume:-8}).connect(reverb);
+    Audio.pad=new Tone.PolySynth(Tone.Synth,{oscillator:{type:'sine'},envelope:{attack:1.4,decay:0.6,sustain:0.7,release:3},volume:-20}).connect(reverb);
+    Audio.bass=new Tone.Synth({oscillator:{type:'sine'},envelope:{attack:0.05,decay:0.4,sustain:0.5,release:0.8},volume:-12}).connect(Audio.musicBus);
+    // sfx voices
+    Audio.pluck=new Tone.Synth({oscillator:{type:'triangle'},envelope:{attack:0.005,decay:0.15,sustain:0,release:0.1},volume:-6}).connect(Audio.sfxBus);
+    Audio.blip=new Tone.Synth({oscillator:{type:'square'},envelope:{attack:0.005,decay:0.08,sustain:0,release:0.05},volume:-12}).connect(Audio.sfxBus);
+    Audio.sub=new Tone.MembraneSynth({volume:-8}).connect(Audio.sfxBus);
+    Audio.noise=new Tone.NoiseSynth({noise:{type:'white'},envelope:{attack:0.005,decay:0.2,sustain:0},volume:-20}).connect(Audio.sfxBus);
+    Audio.ready=true;
+    Tone.Transport.start();
+    if(!Audio.muted)startMusic(state.loc);
+  }catch(e){ /* audio optional */ }
+}
+function startMusic(locId){
+  if(!Audio.ready)return;
+  stopMusic();
+  const m=LOC_BY_ID[locId].music;
+  Tone.Transport.bpm.rampTo(m.bpm,1.5);
+  Audio.lead.oscillator.type=m.synth;
+  Audio.pad.set({oscillator:{type:m.pad}});
+  let step=0, bar=0;
+  // arpeggiated lead — sparse, cozy
+  const lead=new Tone.Loop(time=>{
+    if(Audio.muted)return;
+    step++;
+    // play a note ~55% of steps for a relaxed feel
+    if(Math.random()<0.58){
+      const note=m.scale[Math.floor(Math.random()*m.scale.length)];
+      try{Audio.lead.triggerAttackRelease(note,'8n',time,0.5+Math.random()*0.4);}catch(e){}
+    }
+  },'4n').start(0);
+  // slow chord pad every 2 bars
+  const pad=new Tone.Loop(time=>{
+    if(Audio.muted)return;
+    const root=m.bass[bar%m.bass.length];
+    const third=m.scale[(bar*2)%m.scale.length];
+    const fifth=m.scale[(bar*2+2)%m.scale.length];
+    try{Audio.pad.triggerAttackRelease([root.replace(/\d/,'3'),third,fifth],'1m',time,0.5);}catch(e){}
+    bar++;
+  },'1m').start(0);
+  // gentle bass on beat 1 & 3
+  const bass=new Tone.Loop(time=>{
+    if(Audio.muted)return;
+    const n=m.bass[Math.floor(bar)%m.bass.length];
+    try{Audio.bass.triggerAttackRelease(n,'4n',time,0.6);}catch(e){}
+  },'2n').start(0);
+  Audio.loops=[lead,pad,bass];Audio.curMusic=locId;
+}
+function stopMusic(){Audio.loops.forEach(l=>{try{l.stop();l.dispose();}catch(e){}});Audio.loops=[];Audio.curMusic=null;}
+function toggleMute(){
+  Audio.muted=!Audio.muted;
+  const btn=document.getElementById('btnMute');if(btn)btn.textContent=Audio.muted?'🔇':'🔊';
+  try{if(Audio.master)Audio.master.mute=Audio.muted;}catch(e){}
+  if(!Audio.muted&&Audio.ready&&!Audio.curMusic)startMusic(state.loc);
+  try{localStorage.setItem('niffo_muted',Audio.muted?'1':'0');}catch(e){}
+}
+// SFX helpers — all guarded so silence never breaks the game
+function sfx(name,arg){
+  if(!Audio.ready||Audio.muted)return;
+  const now=Tone.now();
+  try{switch(name){
+    case 'castCharge': Audio.blip.triggerAttackRelease('C5','16n',now,0.15); break;
+    case 'castSplash': Audio.noise.triggerAttackRelease('16n',now); Audio.sub.triggerAttackRelease('C2','8n',now,0.5); break;
+    case 'bite':       Audio.blip.triggerAttackRelease('E6','16n',now); Audio.blip.triggerAttackRelease('B6','16n',now+0.09); break;
+    case 'reel':       Audio.pluck.triggerAttackRelease('G4','32n',now,0.3); break;
+    case 'lunge':      Audio.sub.triggerAttackRelease('E2','8n',now,0.7); Audio.noise.triggerAttackRelease('8n',now); break;
+    case 'snap':       Audio.noise.triggerAttackRelease('4n',now); Audio.sub.triggerAttackRelease('A1','4n',now,0.9); break;
+    case 'catch':      ['C5','E5','G5','C6'].forEach((n,i)=>Audio.pluck.triggerAttackRelease(n,'16n',now+i*0.08,0.6)); break;
+    case 'newSpecies': ['C5','E5','G5','C6','E6','G6'].forEach((n,i)=>Audio.pluck.triggerAttackRelease(n,'16n',now+i*0.07,0.7)); break;
+    case 'coin':       Audio.blip.triggerAttackRelease('B5','32n',now,0.4); Audio.blip.triggerAttackRelease('E6','32n',now+0.06,0.4); break;
+    case 'buy':        Audio.pluck.triggerAttackRelease('G4','16n',now); Audio.pluck.triggerAttackRelease('C5','16n',now+0.1); break;
+    case 'talk':       Audio.blip.triggerAttackRelease(arg||'A5','32n',now,0.25); break;
+    case 'step':       Audio.blip.triggerAttackRelease('C3','64n',now,0.12); break;
+    case 'ui':         Audio.blip.triggerAttackRelease('E5','32n',now,0.2); break;
+  }}catch(e){}
+}
+
+/* ---------- TOWN (walkable) ---------- */
+// Critter styling — each NPC drawn in Niffo's hand-shaped style.
+// kind drives ears/features; fur/belly are palette.
+const CRITTERS={
+  otter:  {fur:'#a06a44',belly:'#e8cfa6',ear:'round',feat:'whiskers'},
+  badger: {fur:'#8f8a86',belly:'#f2efe8',ear:'round',feat:'stripe'},
+  capybara:{fur:'#b07a4a',belly:'#d8b48a',ear:'tiny',feat:'chef'},
+  marmot: {fur:'#c49a5a',belly:'#eaddb0',ear:'round',feat:'teeth'},
+  heron:  {fur:'#cfd8e0',belly:'#ffffff',ear:'none',feat:'beak'},
+  rabbit: {fur:'#d8c4b0',belly:'#f6ece0',ear:'long',feat:'none'},
+  hedgehog:{fur:'#9a7a5a',belly:'#e8d4b8',ear:'tiny',feat:'spikes'},
+  turtle: {fur:'#7fa86a',belly:'#d8c48a',ear:'none',feat:'shell'},
+  squirrel:{fur:'#c47a3a',belly:'#f0d8b0',ear:'tuft',feat:'bushytail'},
+  duck:   {fur:'#eae4d0',belly:'#fff8e8',ear:'none',feat:'beak'},
+  frog:   {fur:'#7cbf5c',belly:'#d8ecb0',ear:'none',feat:'frogeyes'},
+};
+// Buildings placed along a street in world-x coordinates. action = modal opener id.
+const BUILDINGS=[
+  {id:'market', name:'Fish Market',    emo:'🏪', x:340,  color:'#e8a24a', roof:'#b56a2a', action:'market', sign:'🐚', npc:'Marla the Merchant', kind:'badger'},
+  {id:'kitchen',name:"Niffo's Kitchen",emo:'🍳', x:640,  color:'#e37a6a', roof:'#a84838', action:'cook',   sign:'🍲', npc:'Chef Capybara',     kind:'capybara'},
+  {id:'board',  name:'Request Board',  emo:'📋', x:940,  color:'#7cb87a', roof:'#4a8a48', action:'req',    sign:'📌', npc:'Mayor Marmot',      kind:'marmot'},
+  {id:'tackle', name:'Tackle Shop',    emo:'🎣', x:1240, color:'#6aa8c4', roof:'#3a6f8b', action:'shop',   sign:'⚙️', npc:'Ferris the Fixer',  kind:'otter'},
+  {id:'dock',   name:'Travel Dock',    emo:'🗺️', x:1540, color:'#c4a06a', roof:'#8a6a3a', action:'travel', sign:'⛵', npc:'Captain Heron',     kind:'heron'},
+];
+const TOWN_W=1820; // world width of the street
+// wandering townsfolk (talkable)
+const TOWNSFOLK=[
+  {name:'Bramble',kind:'rabbit',lines:["Morning! Or... afternoon? I lose track out here.","They say the deepest fish only bite at dusk. Old wives' tale, probably.","Careful with that Ironwood Rod, it's heavier than it looks."]},
+  {name:'Prickles',kind:'hedgehog',lines:["Ooh, caught anything legendary yet?","I tried fishing once. Poked a hole in the boat. Never again.","Chef Capybara's chowder is worth every clam. Trust me."]},
+  {name:'Old Turtle',kind:'turtle',lines:["In my day, the Riverbend Dragon was just a story...","Patience, young otter. The lake rewards the patient.","I've watched this town for ninety years. It's a good town."]},
+  {name:'Kit',kind:'squirrel',lines:["Did you SEE the size of that catfish?! No? Well, it was HUGE.","Race you to the dock! ...actually, you'd win. You have legs that work.","Mayor Marmot's always got a job going. Good clams in it."]},
+];
+let folk=[];
+function seedFolk(){folk=TOWNSFOLK.map((f,i)=>({...f,x:220+Math.random()*(TOWN_W-400),dir:Math.random()<.5?-1:1,sp:0.15+Math.random()*0.25,ph:Math.random()*10,line:0}));}
+seedFolk();
+
+/* ---------- NPC QUESTS ----------
+   Each villager offers a chain of personal quests. Types:
+   'catchId'  — catch N of a specific species
+   'catchRare'— catch N fish of at least a rarity tier
+   'catchNight'/'catchSeason' — catch N fish under a condition
+   Progress is counted live as you land fish. Turn in by talking again. */
+const QUEST_LINES={
+  Bramble:[
+    {type:'catchId',fish:'perch',n:2,reward:40,text:"Oh! Could you catch me a couple of River Perch? They're my favourite to sketch.",done:"Two perch, beautifully stripy. Thank you!"},
+    {type:'catchRare',tier:2,n:1,reward:90,text:"I'm feeling bold — bring me anything rare or better and I'll pay well!",done:"A rare beauty! You've made my week."},
+  ],
+  Prickles:[
+    {type:'catchNight',n:3,reward:70,text:"I'm too prickly to fish at night. Land 3 fish after dark for me?",done:"Three midnight catches! You're braver than me."},
+    {type:'catchId',fish:'puff',n:1,reward:80,text:"A Puffer Pete, if you can! I want to see it puff up.",done:"It puffed! Worth every clam."},
+  ],
+  'Old Turtle':[
+    {type:'catchSeason',season:'winter',n:2,reward:120,text:"In winter, the lake reveals its secrets. Bring me 2 fish caught in winter.",done:"Winter's bounty. The old ways hold true."},
+    {type:'catchRare',tier:3,n:1,reward:200,text:"Before I nap for the season... bring me something epic. One will do.",done:"Epic indeed. Now I can rest easy."},
+  ],
+  Kit:[
+    {type:'catchId',fish:'catfish',n:1,reward:60,text:"The HUGE catfish! Prove it's real — catch one and show me!",done:"I KNEW IT! Look at the whiskers!"},
+    {type:'catchRare',tier:1,n:4,reward:110,text:"Race you! Catch 4 uncommon-or-better fish before you get bored.",done:"Four! You're faster than you look."},
+  ],
+};
+function questDef(npcName,idx){const line=QUEST_LINES[npcName];return line&&line[idx]?line[idx]:null;}
+function questProgressText(q){
+  const def=questDef(q.npc,q.idx);if(!def)return '';
+  if(def.type==='catchId'){const sp=SPECIES.find(s=>s.id===def.fish);return `${q.prog}/${def.n} ${sp?sp.name:def.fish}`;}
+  if(def.type==='catchRare'){return `${q.prog}/${def.n} ${['common','uncommon','rare','epic','legendary'][def.tier]}+ fish`;}
+  if(def.type==='catchNight'){return `${q.prog}/${def.n} caught at night`;}
+  if(def.type==='catchSeason'){return `${q.prog}/${def.n} caught in ${def.season}`;}
+  return '';
+}
+// does a just-caught fish advance quest q?
+function questMatches(def,fish){
+  if(def.type==='catchId')return fish.id===def.fish;
+  if(def.type==='catchRare')return RARE_ORDER[fish.rare]>=def.tier;
+  if(def.type==='catchNight')return isNight();
+  if(def.type==='catchSeason')return curSeason()===def.season;
+  return false;
+}
+
+/* ---------- MODE ---------- */
+let mode='fishing'; // 'fishing' | 'town'
+// Niffo walking state in town
+let hero={x:180,vx:0,facing:1,walking:false};
+let camX=0;
+let nearBuilding=null;
+let nearFolk=null;
+let speechFolk=null, speechText='', speechTimer=0;
+
+/* ---------- FISH (tagged by location) ---------- */
+const SPECIES=[
+  // RIVER
+  {id:'minnow',loc:'river',name:'Pebble Minnow',emo:'🐟',rare:'common',depth:[0,.4],price:3,minW:.1,maxW:.5,speed:1.0,flavor:"Barely a snack, but Niffo appreciates the effort."},
+  {id:'sunny',loc:'river',name:'Sunfish Sam',emo:'🐠',rare:'common',depth:[0,.5],price:5,minW:.3,maxW:1.2,speed:1.1,flavor:"Glimmers gold when the light hits just right."},
+  {id:'perch',loc:'river',name:'River Perch',emo:'🎣',rare:'common',depth:[.1,.6],price:7,minW:.4,maxW:1.8,speed:1.2,flavor:"Stripy and stubborn. A classic riverbend catch."},
+  {id:'trout',loc:'river',name:'Speckled Trout',emo:'🐡',rare:'uncommon',depth:[.3,.7],price:14,minW:.8,maxW:3.2,speed:1.5,flavor:"Fights like it's got somewhere to be."},
+  {id:'crab',loc:'river',name:'Grumpy Crab',emo:'🦀',rare:'uncommon',depth:[.2,.55],price:12,minW:.2,maxW:1.0,speed:.8,flavor:"Pinched Niffo twice. Niffo forgives it."},
+  {id:'eel',loc:'river',name:'Ribbon Eel',emo:'🪱',rare:'rare',depth:[.5,.85],price:26,minW:.6,maxW:2.6,speed:1.9,flavor:"Slippery as a secret. Niffo nearly lost it thrice."},
+  {id:'catfish',loc:'river',name:'Whisker Catfish',emo:'🐟',rare:'rare',depth:[.45,.8],price:30,minW:1.5,maxW:5.5,speed:1.2,flavor:"Grumbles from the muddy bottom. Big and bewhiskered."},
+  {id:'dragon',loc:'river',name:'Riverbend Dragon',emo:'🐉',rare:'legendary',depth:[.85,1],price:260,minW:8,maxW:30,speed:2.8,flavor:"The old legend of the deep bend. Niffo will never forget this."},
+  // MARSH
+  {id:'tadpole',loc:'marsh',name:'Fat Tadpole',emo:'🐸',rare:'common',depth:[0,.35],price:6,minW:.05,maxW:.4,speed:1.3,flavor:"Not quite a frog, not quite anything. Very content."},
+  {id:'mudfish',loc:'marsh',name:'Mudskip',emo:'🐟',rare:'common',depth:[.05,.45],price:8,minW:.3,maxW:1.5,speed:1.4,flavor:"Skips across the mud like it's late for something."},
+  {id:'newt',loc:'marsh',name:'Marsh Newt',emo:'🦎',rare:'uncommon',depth:[.15,.55],price:16,minW:.2,maxW:1.1,speed:1.6,flavor:"Regrows its tail. Niffo finds this deeply impressive."},
+  {id:'snail',loc:'marsh',name:'Bog Snail',emo:'🐌',rare:'uncommon',depth:[.1,.5],price:13,minW:.1,maxW:.9,speed:.5,flavor:"The slowest fight Niffo has ever had. Weirdly relaxing."},
+  {id:'lantern',loc:'marsh',name:'Lantern Carp',emo:'🏮',rare:'rare',depth:[.5,.85],price:34,minW:1,maxW:4,speed:1.7,flavor:"Glows softly in the fog. Nobody knows why. It's nice."},
+  {id:'willow',loc:'marsh',name:'Willow Wisp Fish',emo:'🎐',rare:'epic',depth:[.6,.95],price:70,minW:.5,maxW:2.5,speed:2.1,flavor:"Drifts like marsh-light. Blink and you'll miss it."},
+  {id:'hydra',loc:'marsh',name:'Bog Hydra',emo:'🐲',rare:'legendary',depth:[.85,1],price:320,minW:10,maxW:34,speed:2.9,flavor:"Three heads, one very bad temper. Legend of the bog depths."},
+  // COVE
+  {id:'clownfish',loc:'cove',name:'Cove Clown',emo:'🐠',rare:'common',depth:[0,.4],price:8,minW:.2,maxW:1,speed:1.4,flavor:"Bright orange and enormously pleased with itself."},
+  {id:'starfish',loc:'cove',name:'Wishing Starfish',emo:'⭐',rare:'common',depth:[.05,.4],price:9,minW:.3,maxW:1.3,speed:.7,flavor:"Niffo made a wish. It's a secret."},
+  {id:'puff',loc:'cove',name:'Puffer Pete',emo:'🐡',rare:'uncommon',depth:[.3,.65],price:20,minW:.6,maxW:2,speed:1.3,flavor:"Puffs up when nervous, which is always."},
+  {id:'squid',loc:'cove',name:'Ink Squidling',emo:'🦑',rare:'uncommon',depth:[.45,.75],price:22,minW:.5,maxW:2.4,speed:1.8,flavor:"Left a little cloud of ink as a goodbye gift."},
+  {id:'tropic',loc:'cove',name:'Rainbow Wanderer',emo:'🐠',rare:'rare',depth:[.4,.8],price:40,minW:.7,maxW:2.8,speed:1.9,flavor:"Every scale a different colour. Painfully beautiful."},
+  {id:'jelly',loc:'cove',name:'Moon Jelly',emo:'🎐',rare:'rare',depth:[.55,.85],price:36,minW:.3,maxW:1.5,speed:.9,flavor:"Drifts like a lantern. Niffo held it very gently."},
+  {id:'octo',loc:'cove',name:'Old Man Octo',emo:'🐙',rare:'epic',depth:[.65,.95],price:80,minW:2,maxW:6,speed:2.0,flavor:"Eight arms, one thousand years of ocean gossip."},
+  {id:'kraken',loc:'cove',name:'Cove Kraken',emo:'🦑',rare:'legendary',depth:[.88,1],price:400,minW:14,maxW:44,speed:3.0,flavor:"The trench monster of sailor's tales. It let Niffo win."},
+  // FROST
+  {id:'iceminnow',loc:'frost',name:'Frost Minnow',emo:'❄️',rare:'common',depth:[0,.4],price:10,minW:.1,maxW:.6,speed:1.2,flavor:"Cold to the touch, warm in the heart."},
+  {id:'char',loc:'frost',name:'Glacier Char',emo:'🐟',rare:'uncommon',depth:[.25,.6],price:24,minW:.8,maxW:3.5,speed:1.6,flavor:"Silver-blue and swift. Loves the meltwater."},
+  {id:'crystalfish',loc:'frost',name:'Crystalfin',emo:'💎',rare:'rare',depth:[.45,.8],price:48,minW:.6,maxW:2.6,speed:1.8,flavor:"Half fish, half gemstone. Niffo can't stop staring."},
+  {id:'penguin',loc:'frost',name:'Lost Penguin',emo:'🐧',rare:'epic',depth:[.4,.75],price:90,minW:3,maxW:9,speed:2.2,flavor:"Not a fish. Niffo gave it a fish and let it go."},
+  {id:'wyrm',loc:'frost',name:'Abyss Wyrm',emo:'🐍',rare:'epic',depth:[.7,.95],price:110,minW:4,maxW:16,speed:2.5,flavor:"Coils up from the glacier abyss. Ancient and patient."},
+  {id:'leviathan',loc:'frost',name:'Frostpeak Leviathan',emo:'🐋',rare:'legendary',depth:[.9,1],price:600,minW:20,maxW:70,speed:3.1,flavor:"The last legend. The whole lake went quiet when it surfaced."},
+];
+const RARE_ORDER={common:0,uncommon:1,rare:2,epic:3,legendary:4};
+
+/* ---------- SEASON & TIME availability ----------
+   Fish can be gated by season ('spring'|'summer'|'autumn'|'winter')
+   and/or time ('day'|'night'). Untagged fish appear anytime.
+   Tagged fish only bite in their window (and get a big boost). */
+const FISH_TAGS={
+  // river
+  sunny:{season:'summer'}, crab:{season:'summer',time:'day'}, eel:{time:'night'},
+  catfish:{time:'night'}, dragon:{season:'autumn',time:'night'},
+  // marsh
+  tadpole:{season:'spring'}, newt:{season:'spring',time:'day'},
+  lantern:{time:'night'}, willow:{time:'night'}, hydra:{season:'autumn',time:'night'},
+  // cove
+  clownfish:{season:'summer',time:'day'}, starfish:{season:'summer'},
+  tropic:{season:'summer'}, jelly:{time:'night'}, octo:{time:'night'}, kraken:{season:'summer',time:'night'},
+  // frost
+  iceminnow:{season:'winter'}, char:{season:'winter'}, crystalfish:{season:'winter',time:'night'},
+  penguin:{season:'winter',time:'day'}, wyrm:{time:'night'}, leviathan:{season:'winter',time:'night'},
+};
+SPECIES.forEach(sp=>{const tg=FISH_TAGS[sp.id];if(tg){sp.season=tg.season||null;sp.timeOfDay=tg.time||null;}else{sp.season=null;sp.timeOfDay=null;}});
+const SEASONS=[
+  {id:'spring',name:'Spring',emo:'🌸',tint:'#8fd07e'},
+  {id:'summer',name:'Summer',emo:'☀️',tint:'#ffd36b'},
+  {id:'autumn',name:'Autumn',emo:'🍂',tint:'#e89a4a'},
+  {id:'winter',name:'Winter',emo:'❄️',tint:'#cfe6f5'},
+];
+const SEASON_BY_ID=Object.fromEntries(SEASONS.map(s=>[s.id,s]));
+const RARE_WEIGHT={common:60,uncommon:34,rare:16,epic:5,legendary:1};
+
+/* ---------- RECIPES (cooking → buffs) ---------- */
+// need: {fishId or rarity: count}. Buffs are temporary, measured in casts.
+const RECIPES=[
+  {id:'stew',   name:'Riverbend Stew', emo:'🍲', casts:8,
+   need:[{any:'common',n:3}], buff:{luck:0.35}, blurb:"Hearty and humble. +35% chance the next bites run rarer.",
+   buffLabel:'🍀 Lucky Line'},
+  {id:'skewer', name:'Grilled Skewer', emo:'🍢', casts:6,
+   need:[{any:'uncommon',n:2}], buff:{sell:0.25}, blurb:"Smoky and rich. +25% clams from every sale while it lasts.",
+   buffLabel:'💰 Market Day'},
+  {id:'sushi',  name:'Cove Sushi', emo:'🍣', casts:6,
+   need:[{loc:'cove',n:2}], buff:{calm:0.3}, blurb:"Delicate and fresh. Fish fight 30% slower — easier reels.",
+   buffLabel:'🌊 Steady Hands'},
+  {id:'chowder',name:'Frost Chowder', emo:'🥣', casts:7,
+   need:[{loc:'frost',n:2}], buff:{tension:0.35}, blurb:"Warming to the bones. Tension builds 35% slower on the reel.",
+   buffLabel:'🔥 Warm Grip'},
+  {id:'feast',  name:'Legend Feast', emo:'🥘', casts:5,
+   need:[{any:'rare',n:2}], buff:{luck:0.6,sell:0.3}, blurb:"A once-a-week banquet. Big luck AND big sale bonuses.",
+   buffLabel:'✨ Feast Glow'},
+];
+
+/* ---------- GEAR (bought with clams, permanent) ---------- */
+const GEAR=[
+  {id:'rod2', name:'Willow Rod', emo:'🎣', cost:150, blurb:"A springier rod. Casts reach 15% deeper water.", effect:{reach:0.15}},
+  {id:'rod3', name:'Ironwood Rod', emo:'🎣', cost:600, blurb:"Casts reach a further 20% deeper. Legends await.", effect:{reach:0.20}, req:'rod2'},
+  {id:'reel2',name:'Smooth Reel', emo:'⚙️', cost:220, blurb:"A buttery reel. Tension builds 20% slower.", effect:{tension:0.20}},
+  {id:'reel3',name:'Precision Reel', emo:'⚙️', cost:700, blurb:"Master-crafted. A further 20% slower tension.", effect:{tension:0.20}, req:'reel2'},
+  {id:'net',  name:'Wide Net', emo:'🥅', cost:300, blurb:"A roomier net. +18% net size on the reel duel.", effect:{net:0.18}},
+  {id:'bait', name:'Glimmer Bait Tin', emo:'🪤', cost:260, blurb:"Shiny lures. +25% baseline chance of rarer bites.", effect:{luck:0.25}},
+  {id:'lamp', name:'Otter Lantern', emo:'🏮', cost:180, blurb:"Fish bite faster — shorter waits between casts.", effect:{fast:0.4}},
+];
+
+/* ---------- SAVE / STATE ---------- */
+const SAVE_KEY='niffo_riverbend_v2';
+let state={clams:0,caught:0,dex:{},inv:{},loc:'river',unlocked:['river'],gear:[],
+  buffs:[], // {recipeId, castsLeft}
+  reqDone:0, req:null, trophy:null, earned:0,
+  day:0, season:'spring', quests:[], questsDone:0,
+  bounty:null, bountyDay:-1, bountyDone:false, achievements:[]};
+function load(){try{const s=JSON.parse(localStorage.getItem(SAVE_KEY));if(s)Object.assign(state,s);}catch(e){}}
+function save(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(state));}catch(e){}}
+load();
+
+/* current location object */
+function curLoc(){return LOC_BY_ID[state.loc];}
+
+/* apply location palette to CSS + scene */
+function applyLoc(){
+  const L=curLoc();
+  document.documentElement.style.setProperty('--sky',L.sky[0]);
+  document.documentElement.style.setProperty('--sky2',L.sky[1]);
+  document.documentElement.style.setProperty('--w-top',L.water[0]);
+  document.documentElement.style.setProperty('--w-mid',L.water[1]);
+  document.documentElement.style.setProperty('--w-deep',L.water[2]);
+  document.getElementById('locName').textContent=L.name;
+  document.getElementById('locEmo').textContent=L.emo;
+}
+
+/* ---------- gear/buff aggregate effects ---------- */
+function gearEffect(key){
+  let v=0; state.gear.forEach(id=>{const g=GEAR.find(x=>x.id===id); if(g&&g.effect[key])v+=g.effect[key];});
+  return v;
+}
+function buffEffect(key){
+  let v=0; state.buffs.forEach(b=>{const r=RECIPES.find(x=>x.id===b.recipeId); if(r&&r.buff[key])v+=r.buff[key];});
+  return v;
+}
+function totalLuck(){return gearEffect('luck')+buffEffect('luck')+darkness()*0.35;}
+
+/* ---------- HUD ---------- */
+function refreshHUD(){
+  document.getElementById('sClams').textContent=state.clams;
+  document.getElementById('sCaught').textContent=state.caught;
+  document.getElementById('sDex').textContent=Object.keys(state.dex).length+'/'+SPECIES.length;
+  renderBuffs();
+}
+function renderBuffs(){
+  const bar=document.getElementById('buffBar');
+  bar.innerHTML=state.buffs.map(b=>{
+    const r=RECIPES.find(x=>x.id===b.recipeId);
+    return `<div class="buff-chip">${r.buffLabel} <b>${b.castsLeft}</b></div>`;
+  }).join('');
+}
+
+/* ============================================================
+   WORLD RENDER
+   ============================================================ */
+let t=0;
+
+/* ---------- DAY / NIGHT ---------- */
+// dayT: 0..1 across a full day. 0=dawn, .25=midday, .5=dusk, .75=midnight.
+let dayT=0.12; // start mid-morning
+const DAY_LEN=5400; // frames for a full cycle (~90s at 60fps)
+const DAYS_PER_SEASON=2; // in-game days before the season turns
+function tickDay(){
+  const prev=dayT; dayT=(dayT+1/DAY_LEN)%1;
+  if(dayT<prev){ // a day just rolled over
+    state.day=(state.day||0)+1;
+    const newSeason=SEASONS[Math.floor(state.day/DAYS_PER_SEASON)%4].id;
+    if(newSeason!==state.season){ state.season=newSeason; onSeasonChange(); }
+    save();
+  }
+}
+function curSeason(){return state.season||'spring';}
+function isNight(){return darkness()>0.4;}
+function onSeasonChange(){
+  const s=SEASON_BY_ID[curSeason()];
+  toast(`${s.emo} ${s.name} has arrived in the valley!`);
+  seedAmbient(); // reflect new seasonal fish in the ambient swimmers
+}
+// darkness 0 (full day) .. 1 (deep night)
+function darkness(){
+  // brightness peaks around midday (0.25), lowest around midnight (0.75)
+  const b=Math.sin((dayT-0.0)*Math.PI*2 - Math.PI/2)*0.5+0.5; // 0 at midnight-ish,1 midday
+  return 1-Math.max(0,Math.min(1,b*1.15));
+}
+// warm tint at dawn/dusk
+function goldenAmt(){
+  const dawn=Math.max(0,1-Math.abs(dayT-0.04)/0.09);
+  const dusk=Math.max(0,1-Math.abs(dayT-0.5)/0.1);
+  return Math.min(1,dawn+dusk);
+}
+function timeLabel(){
+  if(dayT<0.08)return 'Dawn';if(dayT<0.2)return 'Morning';if(dayT<0.32)return 'Midday';
+  if(dayT<0.45)return 'Afternoon';if(dayT<0.55)return 'Dusk';if(dayT<0.98)return 'Night';return 'Dawn';
+}
+function timeIcon(){const l=timeLabel();return {Dawn:'🌅',Morning:'☀️',Midday:'🌞',Afternoon:'🌤️',Dusk:'🌇',Night:'🌙'}[l]||'☀️';}
+let _lastClock='';
+function updateTimeHUD(){
+  const s=SEASON_BY_ID[curSeason()];
+  const txt='· '+s.emo+' '+s.name+' · '+timeIcon()+' '+timeLabel();
+  if(txt!==_lastClock){_lastClock=txt;const el=document.getElementById('clock');if(el)el.textContent=txt;
+    const face=document.getElementById('clockFace');if(face)face.textContent=isNight()?'🌙':'☀️';}
+  // rotate the clock hand: full sweep per day, noon(dayT .25) points up
+  const hand=document.getElementById('clockHand');
+  if(hand)hand.style.transform='translate(-50%,-100%) rotate('+((dayT-0.25)*360)+'deg)';
+}
+// mix two hex colors
+function mix(a,b,f){const pa=hx(a),pb=hx(b);return `rgb(${Math.round(pa[0]+(pb[0]-pa[0])*f)},${Math.round(pa[1]+(pb[1]-pa[1])*f)},${Math.round(pa[2]+(pb[2]-pa[2])*f)})`;}
+function hx(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+// apply time-of-day overlay to whole canvas (call last)
+function drawDayOverlay(){
+  const d=darkness(),g=goldenAmt();
+  // gentle seasonal color wash
+  const s=SEASON_BY_ID[curSeason()];
+  ctx.save();ctx.globalAlpha=0.10;ctx.fillStyle=s.tint;ctx.fillRect(0,0,W,H);ctx.restore();
+  if(g>0.02){ctx.save();ctx.globalAlpha=g*0.28;ctx.fillStyle='#ff9a4a';ctx.fillRect(0,0,W,H);ctx.restore();}
+  if(d>0.02){ctx.save();ctx.globalAlpha=d*0.62;ctx.fillStyle='#0d1b3a';ctx.fillRect(0,0,W,H);ctx.restore();}
+}
+// stars for night skies
+const stars=[];for(let i=0;i<70;i++)stars.push({x:Math.random(),y:Math.random()*0.5,r:Math.random()*1.4+0.4,tw:Math.random()*6});
+function drawCelestial(topH){
+  const d=darkness();
+  // stars fade in with darkness
+  if(d>0.15){ctx.save();ctx.fillStyle='#fff';
+    stars.forEach(s=>{ctx.globalAlpha=d*(0.5+0.5*Math.sin(t*0.03+s.tw));ctx.beginPath();ctx.arc(s.x*W,s.y*topH,s.r,0,7);ctx.fill();});
+    ctx.restore();}
+  // sun by day (peak at midday), moon by night (peak at midnight)
+  const night=darkness()>0.4;
+  const phase=night?(dayT-0.75):(dayT-0.25); // 0 at that body's peak
+  const cx=W*0.5+Math.sin(phase*Math.PI*2)*W*0.42;
+  const height=Math.cos(phase*Math.PI*2); // 1 at peak
+  const cy=topH*0.85-height*topH*0.6;
+  ctx.save();
+  if(night){ctx.globalAlpha=Math.min(1,d*1.4);ctx.fillStyle='#f2f0d8';ctx.beginPath();ctx.arc(cx,cy,22,0,7);ctx.fill();
+    ctx.globalAlpha=1;ctx.fillStyle=mix(curLoc().sky[0],'#0a1430',d*0.8);ctx.beginPath();ctx.arc(cx+8,cy-6,20,0,7);ctx.fill();
+  }else{ctx.globalAlpha=.9;ctx.fillStyle='#ffcf6b';ctx.beginPath();ctx.arc(cx,cy,32,0,7);ctx.fill();ctx.globalAlpha=.25;ctx.beginPath();ctx.arc(cx,cy,50,0,7);ctx.fill();}
+  ctx.restore();
+}
+function bankY(){return H*0.46;}
+function niffoPos(){return {x:W*0.5,y:bankY()-6};}
+let ripples=[];
+function addRipple(x,y,max=42){ripples.push({x,y,r:6,max,a:1});}
+
+/* ---------- VFX particles + screen shake ---------- */
+let particles=[]; // {x,y,vx,vy,life,max,col,size,grav,emoji,spin,rot}
+let shake=0;      // screen-shake magnitude (px), decays
+function burst(x,y,opts={}){
+  const n=opts.n||14;
+  for(let i=0;i<n;i++){
+    const a=Math.random()*Math.PI*2, sp=(opts.spd||3)*(0.4+Math.random());
+    particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-(opts.up||2),
+      life:0,max:opts.max||46,col:(opts.cols||['#fff'])[Math.floor(Math.random()*(opts.cols?opts.cols.length:1))],
+      size:(opts.size||3)*(0.6+Math.random()*0.8),grav:opts.grav!=null?opts.grav:0.12,
+      emoji:opts.emoji?(Array.isArray(opts.emoji)?opts.emoji[Math.floor(Math.random()*opts.emoji.length)]:opts.emoji):null,
+      rot:Math.random()*6,spin:(Math.random()-0.5)*0.3});
+  }
+}
+function addShake(m){shake=Math.min(16,shake+m);}
+function updateParticles(){
+  particles.forEach(p=>{p.life++;p.x+=p.vx;p.y+=p.vy;p.vy+=p.grav;p.vx*=0.99;p.rot+=p.spin;});
+  particles=particles.filter(p=>p.life<p.max);
+  if(shake>0.1)shake*=0.85;else shake=0;
+}
+function drawParticles(){
+  particles.forEach(p=>{const a=1-p.life/p.max;ctx.save();ctx.globalAlpha=Math.max(0,a);
+    if(p.emoji){ctx.translate(p.x,p.y);ctx.rotate(p.rot);ctx.font=(p.size*4)+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(p.emoji,0,0);}
+    else{ctx.fillStyle=p.col;ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,7);ctx.fill();}
+    ctx.restore();});
+}
+let line={state:'idle',power:0,dir:1,bx:0,by:0,targetX:0,targetY:0,depth:0,vx:0,vy:0};
+
+const clouds=[];for(let i=0;i<5;i++)clouds.push({x:Math.random()*1000,y:20+Math.random()*90,s:.4+Math.random()*.6,w:70+Math.random()*70});
+let ambient=[];
+function seedAmbient(){
+  ambient=[];
+  let pool=SPECIES.filter(s=>s.loc===state.loc&&fishInWindow(s));
+  if(pool.length===0)pool=SPECIES.filter(s=>s.loc===state.loc);
+  for(let i=0;i<7;i++){const sp=pool[Math.floor(Math.random()*pool.length)];ambient.push({x:Math.random(),y:.5+Math.random()*.45,s:(Math.random()<.5?-1:1)*(.02+Math.random()*.04),emo:sp.emo,sc:.6+Math.random()*.5});}
+}
+seedAmbient();
+const lilies=[];for(let i=0;i<4;i++)lilies.push({x:Math.random(),y:.48+Math.random()*.06,s:14+Math.random()*10});
+
+function cssVar(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+
+function drawSky(){
+  const bY=bankY(),L=curLoc(),d=darkness();
+  let g=ctx.createLinearGradient(0,0,0,bY);
+  g.addColorStop(0,mix(L.sky[0],'#0a1430',d*0.8));g.addColorStop(1,mix(L.sky[1],'#16264a',d*0.8));
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,bY);
+  drawCelestial(bY);
+  ctx.fillStyle=`rgba(255,255,255,${0.8-d*0.55})`;
+  clouds.forEach(c=>{c.x-=0.15*c.s;if(c.x<-c.w)c.x=W+c.w;const y=c.y,w=c.w;
+    ctx.beginPath();ctx.arc(c.x,y,w*0.3,0,7);ctx.arc(c.x+w*0.28,y+4,w*0.24,0,7);ctx.arc(c.x-w*0.26,y+6,w*0.22,0,7);ctx.arc(c.x+w*0.05,y-w*0.12,w*0.22,0,7);ctx.fill();});
+  ctx.fillStyle=L.hill;ctx.beginPath();ctx.moveTo(0,bY);
+  for(let x=0;x<=W;x+=40)ctx.lineTo(x,bY-24-Math.sin(x*0.01)*14);
+  ctx.lineTo(W,bY);ctx.closePath();ctx.fill();
+}
+function drawWater(){
+  const bY=bankY(),L=curLoc();
+  let g=ctx.createLinearGradient(0,bY,0,H);
+  g.addColorStop(0,L.water[0]);g.addColorStop(.4,L.water[1]);g.addColorStop(1,L.water[2]);
+  ctx.fillStyle=g;ctx.fillRect(0,bY,W,H-bY);
+  ctx.save();for(let i=0;i<6;i++){const yy=bY+(H-bY)*(i/6);ctx.globalAlpha=0.05;ctx.fillStyle='#fff';ctx.fillRect(0,yy+Math.sin(t*0.002+i)*3,W,2);}ctx.restore();
+  ctx.strokeStyle='rgba(255,255,255,.5)';ctx.lineWidth=3;ctx.beginPath();
+  for(let x=0;x<=W;x+=12){const y=bY+Math.sin(x*0.03+t*0.004)*3;x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.stroke();
+  ambient.forEach(a=>{a.x+=a.s*0.0016;if(a.x>1.1)a.x=-0.1;if(a.x<-0.1)a.x=1.1;
+    const px=a.x*W,py=bY+(H-bY)*a.y;ctx.save();ctx.globalAlpha=.5;ctx.font=`${20*a.sc}px serif`;
+    ctx.translate(px,py+Math.sin(t*0.003+a.x*10)*4);if(a.s<0)ctx.scale(-1,1);ctx.fillText(a.emo,0,0);ctx.restore();});
+  lilies.forEach(l=>{ctx.save();ctx.translate(l.x*W,bY+6+Math.sin(t*0.003+l.x*9)*2);
+    ctx.fillStyle='#4a9a4f';ctx.beginPath();ctx.ellipse(0,0,l.s,l.s*0.55,0,0.5,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#ffd6e8';ctx.beginPath();ctx.arc(l.s*0.3,-2,3.5,0,7);ctx.fill();ctx.restore();});
+}
+function drawLogAndNiffo(){
+  const bY=bankY(),n=niffoPos();
+  ctx.save();ctx.fillStyle='#8a5a3b';roundRect(n.x-70,bY-14,140,26,10);ctx.fill();
+  ctx.fillStyle='#6b4429';roundRect(n.x-70,bY+2,140,10,6);ctx.fill();
+  ctx.strokeStyle='rgba(107,68,41,.6)';ctx.lineWidth=2;
+  for(let i=-1;i<=1;i++){ctx.beginPath();ctx.arc(n.x+i*44,bY-1,5,0,7);ctx.stroke();}ctx.restore();
+  drawNiffo(n.x,n.y-30,1);
+}
+function drawNiffo(x,y,s){
+  ctx.save();ctx.translate(x,y);ctx.scale(s,s);ctx.translate(0,Math.sin(t*0.004)*1.5);
+  ctx.fillStyle='#8a5a3b';ctx.beginPath();ctx.moveTo(18,22);ctx.quadraticCurveTo(46,20,52,34);ctx.quadraticCurveTo(40,30,20,30);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#a06a44';ctx.beginPath();ctx.ellipse(0,18,22,26,0,0,7);ctx.fill();
+  ctx.fillStyle='#e8cfa6';ctx.beginPath();ctx.ellipse(0,22,13,18,0,0,7);ctx.fill();
+  ctx.strokeStyle='#8a5a3b';ctx.lineWidth=7;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(-6,10);ctx.lineTo(14,-2);ctx.stroke();
+  ctx.fillStyle='#a06a44';ctx.beginPath();ctx.ellipse(0,-12,18,16,0,0,7);ctx.fill();
+  ctx.beginPath();ctx.arc(-13,-24,5,0,7);ctx.arc(13,-24,5,0,7);ctx.fill();
+  ctx.fillStyle='#7a5236';ctx.beginPath();ctx.arc(-13,-24,2.5,0,7);ctx.arc(13,-24,2.5,0,7);ctx.fill();
+  ctx.fillStyle='#f0dcc0';ctx.beginPath();ctx.ellipse(0,-6,11,9,0,0,7);ctx.fill();
+  ctx.fillStyle='#2b2016';ctx.beginPath();ctx.arc(-7,-14,2.6,0,7);ctx.arc(7,-14,2.6,0,7);ctx.fill();
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(-6,-15,.9,0,7);ctx.arc(8,-15,.9,0,7);ctx.fill();
+  ctx.fillStyle='#4a2f22';ctx.beginPath();ctx.ellipse(0,-8,3,2.2,0,0,7);ctx.fill();
+  ctx.strokeStyle='rgba(74,47,34,.6)';ctx.lineWidth=1;ctx.beginPath();
+  ctx.moveTo(-4,-6);ctx.lineTo(-16,-8);ctx.moveTo(-4,-4);ctx.lineTo(-16,-3);ctx.moveTo(4,-6);ctx.lineTo(16,-8);ctx.moveTo(4,-4);ctx.lineTo(16,-3);ctx.stroke();
+  ctx.fillStyle='rgba(232,112,92,.35)';ctx.beginPath();ctx.arc(-11,-7,3,0,7);ctx.arc(11,-7,3,0,7);ctx.fill();
+  ctx.restore();
+}
+function drawRodAndLine(){
+  const n=niffoPos();const rodTipX=n.x+18,rodTipY=n.y-34+Math.sin(t*0.004)*1.5;
+  ctx.save();ctx.strokeStyle='#5a3a22';ctx.lineWidth=4;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(n.x+8,n.y-30);ctx.quadraticCurveTo(rodTipX+22,rodTipY-24,rodTipX+38,rodTipY-40);ctx.stroke();
+  const tipX=rodTipX+38,tipY=rodTipY-40;ctx.restore();
+  if(line.state==='idle'||line.state==='charging'){
+    ctx.strokeStyle='rgba(60,40,25,.7)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(tipX,tipY);ctx.lineTo(tipX+2,tipY+18);ctx.stroke();
+    ctx.font='12px serif';ctx.fillText('•',tipX-2,tipY+24);
+    if(line.state==='charging'){const pw=line.power;ctx.save();ctx.globalAlpha=.4;ctx.strokeStyle='#f2a541';ctx.setLineDash([4,4]);ctx.lineWidth=2;
+      const tx=n.x,ty=bankY()+(H-bankY())*(0.15+pw*0.8);ctx.beginPath();ctx.moveTo(tipX,tipY);ctx.quadraticCurveTo((tipX+tx)/2,tipY-60-pw*40,tx,ty);ctx.stroke();ctx.restore();}
+    return;
+  }
+  ctx.strokeStyle='rgba(60,40,25,.75)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(tipX,tipY);
+  const midX=(tipX+line.bx)/2,midY=Math.min(tipY,line.by)-10;ctx.quadraticCurveTo(midX,midY,line.bx,line.by);ctx.stroke();
+  const jig=(line.state==='biting')?Math.sin(t*0.05)*3:0;
+  ctx.save();ctx.translate(line.bx,line.by+jig);
+  ctx.fillStyle='#e8705c';ctx.beginPath();ctx.arc(0,0,7,Math.PI,0);ctx.fill();
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(0,0,7,0,Math.PI);ctx.fill();
+  ctx.strokeStyle='#2b2016';ctx.lineWidth=1;ctx.beginPath();ctx.arc(0,0,7,0,7);ctx.stroke();ctx.beginPath();ctx.moveTo(-7,0);ctx.lineTo(7,0);ctx.stroke();ctx.restore();
+  if(line.state==='biting'){ctx.save();ctx.font='16px serif';ctx.fillText('❗',line.bx+8,line.by-8+jig);ctx.restore();}
+}
+function roundRect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function drawDepthGuide(){
+  if(line.state!=='charging')return;const bY=bankY(),L=curLoc();
+  ctx.save();ctx.font='11px "Trebuchet MS",sans-serif';ctx.textAlign='left';
+  [['Shallows',.15,'rgba(60,50,30,.7)'],['Mid current',.45,'rgba(40,60,90,.75)'],[L.depthLabel,.82,'rgba(90,40,120,.8)']].forEach(z=>{
+    ctx.fillStyle=z[2];ctx.fillText(z[0],10,bY+(H-bY)*z[1]);});ctx.restore();
+}
+
+function frame(){
+  requestAnimationFrame(frame);
+  try{ frameBody(); }
+  catch(err){
+    const box=document.getElementById('errbox');
+    if(box){box.style.display='block';box.innerHTML='<b>Render error:</b>\n'+(err&&err.stack?err.stack:err);}
+  }
+}
+function frameBody(){
+  t++;if(!menuOpen())tickDay();updateTimeHUD();ctx.clearRect(0,0,W,H);
+  updateParticles();
+  // night fireflies — gentle drifting glow
+  if(darkness()>0.45&&Math.random()<0.08){
+    const fy=(mode==='town'?H*0.55:bankY())*(0.4+Math.random()*0.5);
+    particles.push({x:Math.random()*W,y:fy,vx:(Math.random()-0.5)*0.4,vy:-0.2-Math.random()*0.3,
+      life:0,max:120+Math.random()*80,col:'#ffe98a',size:1.6+Math.random(),grav:-0.002,emoji:null,rot:0,spin:0});
+  }
+  const sh=shake>0.1?shake:0;
+  ctx.save();
+  if(sh)ctx.translate((Math.random()-0.5)*sh,(Math.random()-0.5)*sh);
+  if(mode==='town'){drawTown();drawParticles();ctx.restore();drawDayOverlay();return;}
+  drawSky();drawWater();drawDepthGuide();
+  ripples.forEach(rp=>{rp.r+=0.8;rp.a-=0.02;});ripples=ripples.filter(rp=>rp.a>0);
+  ctx.save();ripples.forEach(rp=>{ctx.globalAlpha=Math.max(0,rp.a)*0.6;ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(rp.x,rp.y,rp.r,0,7);ctx.stroke();});ctx.restore();
+  updateLine();drawLogAndNiffo();drawRodAndLine();drawParticles();
+  ctx.restore();
+  drawDayOverlay();
+}
+
+/* ============================================================
+   TOWN MODE — walkable street with buildings + NPCs
+   ============================================================ */
+function groundY(){return H*0.78;}
+function updateTown(){
+  const speed=6.6;
+  hero.vx=0;
+  if(keyLeft){hero.vx=-speed;hero.facing=-1;}
+  if(keyRight){hero.vx=speed;hero.facing=1;}
+  hero.x+=hero.vx;hero.walking=hero.vx!==0;
+  hero.x=Math.max(120,Math.min(TOWN_W-120,hero.x));
+  if(hero.walking&&t%14===0)sfx('step');
+  const target=hero.x-W*0.5;
+  camX=Math.max(0,Math.min(TOWN_W-W,target));
+  if(TOWN_W<W)camX=(TOWN_W-W)/2;
+  // nearest building
+  nearBuilding=null;let bb=90;
+  BUILDINGS.forEach(b=>{const d=Math.abs(b.x-hero.x);if(d<bb){bb=d;nearBuilding=b;}});
+  // nearest folk (only if no building closer)
+  nearFolk=null;let bf=60;
+  folk.forEach(f=>{const d=Math.abs(f.x-hero.x);if(d<bf){bf=d;nearFolk=f;}});
+  // folk wander — pause when talking to Niffo
+  folk.forEach(f=>{if(speechFolk===f)return;f.x+=f.dir*f.sp;if(f.x<180){f.x=180;f.dir=1;}if(f.x>TOWN_W-180){f.x=TOWN_W-180;f.dir=-1;}if(Math.random()<0.004)f.dir*=-1;});
+  // speech countdown
+  if(speechTimer>0){speechTimer--;if(speechTimer===0)speechFolk=null;}
+  // prompt priority: building > folk > default
+  if(nearBuilding)setPrompt(`Press <b>E</b> to visit the ${nearBuilding.name}`,`${nearBuilding.npc} is here`);
+  else if(nearFolk){const aq=getActiveQuest(nearFolk.name);const def=aq&&questDef(nearFolk.name,aq.idx);
+    const tag=def&&aq.prog>=def.n?' ✅ quest ready!':def?' 📋 quest active':'';
+    setPrompt(`Press <b>E</b> to talk to ${nearFolk.name}${tag}`,`It's ${timeLabel().toLowerCase()} in town`);}
+  else setPrompt('◀ ▶ or A / D to walk · it is '+timeLabel(),'Press E by a villager or shop to interact');
+}
+function drawTown(){
+  updateTown();
+  const gY=groundY(),L=curLoc(),d=darkness();
+  let g=ctx.createLinearGradient(0,0,0,gY);
+  g.addColorStop(0,mix(L.sky[0],'#0a1430',d*0.8));g.addColorStop(1,mix(L.sky[1],'#16264a',d*0.8));
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,gY);
+  drawCelestial(gY);
+  // parallax hills
+  ctx.fillStyle=mix(L.hill,'#12203a',d*0.7);ctx.globalAlpha=.75;
+  ctx.beginPath();ctx.moveTo(0,gY);
+  for(let x=0;x<=W;x+=40)ctx.lineTo(x,gY-70-Math.sin((x+camX*0.3)*0.006)*40);
+  ctx.lineTo(W,gY);ctx.closePath();ctx.fill();ctx.globalAlpha=1;
+  // clouds
+  ctx.fillStyle=`rgba(255,255,255,${0.8-d*0.55})`;
+  clouds.forEach(c=>{c.x-=0.12*c.s;if(c.x<-c.w)c.x=W+c.w;const y=c.y*0.8,w=c.w;
+    ctx.beginPath();ctx.arc(c.x,y,w*0.3,0,7);ctx.arc(c.x+w*0.28,y+4,w*0.24,0,7);ctx.arc(c.x-w*0.26,y+6,w*0.22,0,7);ctx.fill();});
+  // ground / cobble street
+  let gg=ctx.createLinearGradient(0,gY,0,H);gg.addColorStop(0,mix('#c8a878','#2a3350',d*0.7));gg.addColorStop(1,mix('#a3835a','#1c2340',d*0.7));
+  ctx.fillStyle=gg;ctx.fillRect(0,gY,W,H-gY);
+  ctx.fillStyle=mix('#b89468','#333c5a',d*0.7);ctx.fillRect(0,gY,W,10);
+  ctx.fillStyle=`rgba(120,90,55,${0.35-d*0.2})`;
+  for(let wx=(-camX%50)+(camX<0?50:0);wx<W;wx+=50){for(let r=0;r<3;r++){ctx.beginPath();ctx.arc(wx+(r%2?25:0),gY+30+r*28,4,0,7);ctx.fill();}}
+  // street lamps at night (world-anchored)
+  if(d>0.35){for(let lx=150;lx<TOWN_W;lx+=300){const sx=lx-camX;if(sx<-30||sx>W+30)continue;
+    ctx.strokeStyle='#3a2c1c';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(sx,gY);ctx.lineTo(sx,gY-70);ctx.stroke();
+    ctx.save();ctx.globalAlpha=Math.min(1,d*1.3);ctx.fillStyle='#ffe08a';ctx.shadowColor='#ffd166';ctx.shadowBlur=22;
+    ctx.beginPath();ctx.arc(sx,gY-74,7,0,7);ctx.fill();ctx.restore();}}
+  // buildings
+  BUILDINGS.forEach(b=>{const sx=b.x-camX;if(sx<-160||sx>W+160)return;drawBuilding(sx,gY,b,nearBuilding&&nearBuilding.id===b.id);});
+  // townsfolk
+  folk.forEach(f=>{const sx=f.x-camX;if(sx<-60||sx>W+60)return;
+    const talking=speechFolk===f;
+    drawCritter(sx,gY-4,f.kind,{facing:f.dir<0?-1:1,bob:Math.abs(Math.sin(t*0.06+f.ph))*2+(talking?Math.sin(t*0.2)*1.5:0),scale:0.95,walking:!talking&&f.x!==f._px});
+    f._px=f.x;
+    if(talking)drawSpeech(sx,gY-46,speechText);});
+  // hero
+  drawWalkingNiffo(hero.x-camX,gY-4);
+}
+function drawSpeech(sx,sy,text){
+  ctx.save();ctx.font='13px "Trebuchet MS",sans-serif';ctx.textAlign='left';
+  const words=text.split(' ');const lines=[];let cur='';const maxW=190;
+  words.forEach(w=>{const test=cur?cur+' '+w:w;if(ctx.measureText(test).width>maxW){lines.push(cur);cur=w;}else cur=test;});
+  if(cur)lines.push(cur);
+  const bw=Math.min(maxW+22,Math.max(...lines.map(l=>ctx.measureText(l).width))+22);
+  const bh=lines.length*18+16;const bx=Math.max(8,Math.min(W-bw-8,sx-bw/2)),by=sy-bh;
+  ctx.fillStyle='rgba(255,247,232,.97)';ctx.strokeStyle='#6b4429';ctx.lineWidth=2.5;
+  roundRect(bx,by,bw,bh,10);ctx.fill();ctx.stroke();
+  // tail
+  ctx.beginPath();ctx.moveTo(sx-6,by+bh-1);ctx.lineTo(sx+6,by+bh-1);ctx.lineTo(sx,by+bh+9);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.fillStyle='#4a2f12';lines.forEach((l,i)=>ctx.fillText(l,bx+11,by+22+i*18));
+  ctx.restore();
+}
+function drawBuilding(sx,gY,b,active){
+  const bw=150,bh=130,bx=sx-bw/2,by=gY-bh;
+  ctx.save();
+  // glow if active
+  if(active){ctx.shadowColor='rgba(242,165,65,.9)';ctx.shadowBlur=26;}
+  // body
+  ctx.fillStyle=b.color;roundRect(bx,by,bw,bh,10);ctx.fill();
+  ctx.shadowBlur=0;
+  // roof
+  ctx.fillStyle=b.roof;ctx.beginPath();ctx.moveTo(bx-12,by+6);ctx.lineTo(sx,by-44);ctx.lineTo(bx+bw+12,by+6);ctx.closePath();ctx.fill();
+  // roof flag
+  ctx.strokeStyle='#5a3a22';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(sx,by-44);ctx.lineTo(sx,by-64);ctx.stroke();
+  ctx.fillStyle=b.roof;ctx.beginPath();ctx.moveTo(sx,by-64);ctx.lineTo(sx+18,by-58);ctx.lineTo(sx,by-52);ctx.closePath();ctx.fill();
+  // door
+  ctx.fillStyle='#6b4429';roundRect(sx-22,gY-58,44,58,8);ctx.fill();
+  ctx.fillStyle='#8a5a3b';roundRect(sx-16,gY-50,32,50,6);ctx.fill();
+  ctx.fillStyle='#f2d9a0';ctx.beginPath();ctx.arc(sx+9,gY-26,2.5,0,7);ctx.fill();
+  // windows — glow warmly at night
+  const nite=darkness()>0.35;
+  ctx.save();
+  if(nite){ctx.shadowColor='#ffd166';ctx.shadowBlur=16;ctx.fillStyle='#ffdf8c';}else ctx.fillStyle='#fff3d0';
+  roundRect(bx+18,by+22,30,26,5);ctx.fill();roundRect(bx+bw-48,by+22,30,26,5);ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle='rgba(90,60,35,.5)';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(bx+33,by+22);ctx.lineTo(bx+33,by+48);ctx.moveTo(bx+18,by+35);ctx.lineTo(bx+48,by+35);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(bx+bw-33,by+22);ctx.lineTo(bx+bw-33,by+48);ctx.moveTo(bx+bw-48,by+35);ctx.lineTo(bx+bw-18,by+35);ctx.stroke();
+  // hanging sign
+  ctx.font='26px serif';ctx.textAlign='center';ctx.fillText(b.sign,sx,by+80);
+  // name plate
+  ctx.fillStyle='rgba(43,32,22,.85)';roundRect(sx-70,by-30,140,24,8);ctx.fill();
+  ctx.fillStyle='#fff7e8';ctx.font='13px "Trebuchet MS",sans-serif';ctx.fillText(b.emo+' '+b.name,sx,by-13);
+  // shopkeeper NPC standing by the door, in Niffo's style
+  ctx.restore();
+  drawCritter(sx+46, gY-4, b.kind, {facing:-1, bob:Math.abs(Math.sin(t*0.05+b.x))*1.5, scale:0.92});
+  return;
+}
+function drawWalkingNiffo(x,y){
+  // shadow (untransformed)
+  ctx.save();ctx.fillStyle='rgba(0,0,0,.15)';ctx.beginPath();ctx.ellipse(x,y+6,28,7,0,0,7);ctx.fill();ctx.restore();
+  ctx.save();ctx.translate(x,y);
+  if(hero.facing<0)ctx.scale(-1,1);
+  const step=hero.walking?Math.sin(t*0.35):0;
+  const bob=hero.walking?Math.abs(Math.sin(t*0.35))*3:Math.sin(t*0.05)*1.2;
+  ctx.translate(0,-bob);
+  const S=1.15;ctx.scale(S,S);
+  // legs
+  ctx.strokeStyle='#8a5a3b';ctx.lineWidth=6;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(-6,20);ctx.lineTo(-6+step*7,34);ctx.moveTo(6,20);ctx.lineTo(6-step*7,34);ctx.stroke();
+  // tail
+  ctx.fillStyle='#8a5a3b';ctx.beginPath();ctx.moveTo(-16,10);ctx.quadraticCurveTo(-40,8+step*4,-46,22);ctx.quadraticCurveTo(-34,16,-14,18);ctx.closePath();ctx.fill();
+  // body
+  ctx.fillStyle='#a06a44';ctx.beginPath();ctx.ellipse(0,8,18,22,0,0,7);ctx.fill();
+  ctx.fillStyle='#e8cfa6';ctx.beginPath();ctx.ellipse(2,12,10,15,0,0,7);ctx.fill();
+  // rod on shoulder
+  ctx.strokeStyle='#5a3a22';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-8,-6);ctx.lineTo(20,-30);ctx.stroke();
+  // arm
+  ctx.strokeStyle='#a06a44';ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(2,2);ctx.lineTo(-6,-6);ctx.stroke();
+  // head
+  ctx.fillStyle='#a06a44';ctx.beginPath();ctx.ellipse(4,-16,15,14,0,0,7);ctx.fill();
+  ctx.beginPath();ctx.arc(-6,-27,4,0,7);ctx.arc(12,-27,4,0,7);ctx.fill();
+  ctx.fillStyle='#7a5236';ctx.beginPath();ctx.arc(-6,-27,2,0,7);ctx.arc(12,-27,2,0,7);ctx.fill();
+  ctx.fillStyle='#f0dcc0';ctx.beginPath();ctx.ellipse(8,-11,9,7,0,0,7);ctx.fill();
+  ctx.fillStyle='#2b2016';ctx.beginPath();ctx.arc(2,-18,2.2,0,7);ctx.arc(11,-18,2.2,0,7);ctx.fill();
+  ctx.fillStyle='#4a2f22';ctx.beginPath();ctx.ellipse(9,-12,2.4,1.8,0,0,7);ctx.fill();
+  ctx.fillStyle='rgba(232,112,92,.35)';ctx.beginPath();ctx.arc(3,-9,2.5,0,7);ctx.fill();
+  ctx.restore();
+}
+
+/* Generic Niffo-style critter — used for every villager & shopkeeper.
+   opts: {facing:1|-1, bob:px, scale, walking} */
+function drawCritter(x,y,kind,opts={}){
+  const c=CRITTERS[kind]||CRITTERS.otter;
+  const facing=opts.facing||1, sc=opts.scale||1, bob=opts.bob||0;
+  // shadow
+  ctx.save();ctx.fillStyle='rgba(0,0,0,.14)';ctx.beginPath();ctx.ellipse(x,y+5,20*sc,6*sc,0,0,7);ctx.fill();ctx.restore();
+  ctx.save();ctx.translate(x,y-bob);ctx.scale(facing*sc,sc);
+  const step=opts.walking?Math.sin(t*0.32):0;
+  // feet
+  ctx.strokeStyle=c.fur;ctx.lineWidth=5;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(-5,18);ctx.lineTo(-5+step*6,30);ctx.moveTo(5,18);ctx.lineTo(5-step*6,30);ctx.stroke();
+
+  // tail / shell / bushy tail (behind body)
+  if(c.feat==='bushytail'){ctx.fillStyle=c.fur;ctx.beginPath();ctx.moveTo(-10,6);ctx.quadraticCurveTo(-34,-6,-30,-26);ctx.quadraticCurveTo(-20,-14,-8,4);ctx.closePath();ctx.fill();}
+  else if(c.feat==='shell'){/* shell drawn as body below */}
+  else {ctx.fillStyle=c.fur;ctx.beginPath();ctx.moveTo(-12,10);ctx.quadraticCurveTo(-30,10,-34,20);ctx.quadraticCurveTo(-24,15,-10,16);ctx.closePath();ctx.fill();}
+
+  // body
+  ctx.fillStyle=c.fur;ctx.beginPath();ctx.ellipse(0,6,16,19,0,0,7);ctx.fill();
+  if(c.feat==='shell'){ // turtle shell overlay
+    ctx.fillStyle='#8a6a3a';ctx.beginPath();ctx.ellipse(0,4,17,17,0,0,7);ctx.fill();
+    ctx.strokeStyle='#6b4e28';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(-12,4);ctx.lineTo(12,4);ctx.moveTo(0,-12);ctx.lineTo(0,18);ctx.stroke();
+  } else {
+    ctx.fillStyle=c.belly;ctx.beginPath();ctx.ellipse(2,10,9,13,0,0,7);ctx.fill();
+  }
+  // arm (little wave)
+  ctx.strokeStyle=c.fur;ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(2,0);ctx.lineTo(10,-6);ctx.stroke();
+
+  // head
+  ctx.fillStyle=c.fur;ctx.beginPath();ctx.ellipse(3,-15,13,12,0,0,7);ctx.fill();
+  // ears
+  if(c.ear==='round'){ctx.beginPath();ctx.arc(-5,-25,4,0,7);ctx.arc(11,-25,4,0,7);ctx.fill();
+    ctx.fillStyle=mix(c.fur,'#000',0.2);ctx.beginPath();ctx.arc(-5,-25,2,0,7);ctx.arc(11,-25,2,0,7);ctx.fill();}
+  else if(c.ear==='long'){ctx.beginPath();ctx.ellipse(-3,-30,3.5,10,-.2,0,7);ctx.fill();ctx.ellipse(9,-30,3.5,10,.2,0,7);ctx.fill();
+    ctx.fillStyle='#f6d9d2';ctx.beginPath();ctx.ellipse(-3,-30,1.6,7,-.2,0,7);ctx.fill();ctx.ellipse(9,-30,1.6,7,.2,0,7);ctx.fill();}
+  else if(c.ear==='tuft'){ctx.beginPath();ctx.moveTo(-6,-26);ctx.lineTo(-9,-34);ctx.lineTo(-2,-27);ctx.closePath();ctx.moveTo(10,-26);ctx.lineTo(13,-34);ctx.lineTo(6,-27);ctx.closePath();ctx.fill();}
+  else if(c.ear==='tiny'){ctx.beginPath();ctx.arc(-4,-24,2.5,0,7);ctx.arc(10,-24,2.5,0,7);ctx.fill();}
+  // muzzle / beak
+  if(c.feat==='beak'){ctx.fillStyle='#f2b23a';ctx.beginPath();ctx.moveTo(12,-14);ctx.lineTo(26,-12);ctx.lineTo(12,-9);ctx.closePath();ctx.fill();}
+  else if(c.feat!=='frogeyes'){ctx.fillStyle=c.belly;ctx.beginPath();ctx.ellipse(7,-11,8,6,0,0,7);ctx.fill();
+    ctx.fillStyle='#3a2418';ctx.beginPath();ctx.ellipse(8,-12,2,1.6,0,0,7);ctx.fill();}
+  // eyes
+  ctx.fillStyle='#2b2016';
+  if(c.feat==='frogeyes'){ // bulging eyes on top
+    ctx.fillStyle=c.fur;ctx.beginPath();ctx.arc(-3,-24,5,0,7);ctx.arc(9,-24,5,0,7);ctx.fill();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(-3,-24,3,0,7);ctx.arc(9,-24,3,0,7);ctx.fill();
+    ctx.fillStyle='#2b2016';ctx.beginPath();ctx.arc(-2,-24,1.5,0,7);ctx.arc(10,-24,1.5,0,7);ctx.fill();
+  } else {
+    ctx.beginPath();ctx.arc(0,-16,2,0,7);ctx.arc(8,-16,2,0,7);ctx.fill();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(0.6,-16.6,.7,0,7);ctx.arc(8.6,-16.6,.7,0,7);ctx.fill();
+  }
+  // per-kind extras
+  if(c.feat==='whiskers'){ctx.strokeStyle='rgba(74,47,34,.5)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(7,-10);ctx.lineTo(18,-12);ctx.moveTo(7,-9);ctx.lineTo(18,-8);ctx.stroke();}
+  if(c.feat==='stripe'){ctx.fillStyle='#3a3330';ctx.beginPath();ctx.moveTo(-2,-27);ctx.lineTo(2,-27);ctx.lineTo(2,-6);ctx.lineTo(-2,-6);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#fff';ctx.fillRect(3,-27,3,20);ctx.fillRect(-6,-27,3,20);}
+  if(c.feat==='teeth'){ctx.fillStyle='#fff';ctx.fillRect(5,-8,4,3);}
+  if(c.feat==='spikes'){ctx.fillStyle=mix(c.fur,'#000',0.3);for(let i=-1;i<4;i++){ctx.beginPath();ctx.moveTo(-10+i*7,-8);ctx.lineTo(-8+i*7,-20);ctx.lineTo(-4+i*7,-8);ctx.closePath();ctx.fill();}}
+  if(c.feat==='chef'){ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(3,-28,10,6,0,0,7);ctx.fill();ctx.fillRect(-6,-28,18,6);}
+  // blush
+  ctx.fillStyle='rgba(232,112,92,.3)';ctx.beginPath();ctx.arc(-2,-11,2.2,0,7);ctx.fill();
+  ctx.restore();
+}
+
+/* ---------- Casting physics ---------- */
+function updateLine(){
+  const bY=bankY();
+  if(line.state==='charging'){line.power+=line.dir*0.018;if(line.power>=1){line.power=1;line.dir=-1;}if(line.power<=0){line.power=0;line.dir=1;}
+    document.getElementById('castFill').style.width=(line.power*100)+'%';}
+  if(line.state==='flying'){line.bx+=line.vx;line.by+=line.vy;line.vy+=0.9;
+    if(line.by>=line.targetY){line.by=line.targetY;line.state='insea';addRipple(line.bx,line.by,52);addRipple(line.bx,line.by,30);
+      sfx('castSplash');burst(line.bx,line.by,{n:12,spd:2.6,up:1.5,grav:0.22,size:2.5,cols:['#cfeeffcc','#ffffff','#a8e6d4']});
+      line.depth=Math.max(0,Math.min(1,(line.by-bY)/(H-bY)));startWaiting();}}
+  if(line.state==='insea'||line.state==='biting')line.by+=Math.sin(t*0.03)*0.15;
+}
+let charging=false;
+function beginCharge(){if(line.state!=='idle')return;charging=true;line.state='charging';line.power=0;line.dir=1;sfx('castCharge');
+  document.getElementById('castMeter').style.display='block';setPrompt('Release to cast!','Longer power = farther & deeper water');}
+function releaseCharge(){if(line.state!=='charging')return;charging=false;document.getElementById('castMeter').style.display='none';
+  const n=niffoPos(),pw=line.power;line.by=bankY()-34;
+  const reach=Math.min(1,(0.15+pw*0.82)*(1+gearEffect('reach')));
+  line.targetX=n.x+(Math.random()*40-20);line.targetY=bankY()+(H-bankY())*reach;line.bx=n.x+20;
+  line.vx=(line.targetX-line.bx)/26;line.vy=-10-pw*4;line.state='flying';hidePrompt();}
+
+/* ---------- Waiting / bite ---------- */
+let biteTimer=null,pendingFish=null;
+function startWaiting(){
+  line.state='insea';setPrompt("Line's out… wait for a bite 🎣",'Niffo is being very patient');
+  const fastMul=1-Math.min(0.6,gearEffect('fast'));
+  const wait=(1000+Math.random()*3000)*fastMul;
+  biteTimer=setTimeout(()=>{pendingFish=pickFish(line.depth);line.state='biting';addRipple(line.bx,line.by,26);sfx('bite');
+    burst(line.bx,line.by,{n:8,spd:2,up:1,grav:0.2,size:2,cols:['#ffffff','#ffe08a']});
+    setPrompt('BITE! Press SPACE / click to hook it! 🐟','Quick — before it gets away');
+    biteTimer=setTimeout(()=>{if(line.state==='biting')missBite();},1450);},wait);
+}
+function missBite(){clearTimeout(biteTimer);pendingFish=null;resetLine();setPrompt('It got away… 🫧','Cast again — the river is patient');
+  setTimeout(()=>{if(line.state==='idle')showIdlePrompt();},1500);}
+function hookIt(){clearTimeout(biteTimer);startReel(pendingFish);}
+function resetLine(){line.state='idle';line.power=0;line.bx=0;line.by=0;}
+function showIdlePrompt(){
+  ensureBounty();
+  const bsp=SPECIES.find(s=>s.id===state.bounty);
+  const bountyStr=(bsp&&!state.bountyDone)?`⭐ Today's Bounty: ${bsp.emo} ${bsp.name} · `:'';
+  setPrompt('Hold SPACE or hold click to charge your cast',bountyStr+(darkness()>0.4?'🌙 Night fishing — rarer bites · ':'')+`Aim for ${curLoc().depthLabel.toLowerCase()} for rarer fish`);
+}
+
+/* ---------- Fish selection (location + depth + season/time + luck) ---------- */
+// Is this fish in its season/time window right now?
+function fishInWindow(sp){
+  if(sp.season&&sp.season!==curSeason())return false;
+  if(sp.timeOfDay==='night'&&!isNight())return false;
+  if(sp.timeOfDay==='day'&&isNight())return false;
+  return true;
+}
+// short label of a fish's season/time requirement, '' if anytime
+function windowHint(sp){
+  const bits=[];
+  if(sp.season)bits.push(SEASON_BY_ID[sp.season].emo+' '+SEASON_BY_ID[sp.season].name);
+  if(sp.timeOfDay==='night')bits.push('🌙 Night');
+  if(sp.timeOfDay==='day')bits.push('☀️ Day');
+  return bits.join(' · ');
+}
+function pickFish(depth){
+  const luck=totalLuck();
+  let pool=SPECIES.filter(sp=>sp.loc===state.loc&&depth>=sp.depth[0]-0.05&&depth<=sp.depth[1]+0.05);
+  if(pool.length===0)pool=SPECIES.filter(sp=>sp.loc===state.loc);
+  // drop fish that are out of their season/time window (they simply aren't around)
+  let avail=pool.filter(fishInWindow);
+  if(avail.length===0)avail=pool.filter(sp=>!sp.season&&!sp.timeOfDay);
+  if(avail.length===0)avail=pool;
+  const depthBoost=1+depth*3;
+  let weighted=avail.map(sp=>{let w=RARE_WEIGHT[sp.rare];
+    if(sp.rare!=='common'){w*=depthBoost*0.5;w*=(1+luck);}
+    if(RARE_ORDER[sp.rare]>=3)w*=depth;
+    if(sp.season||sp.timeOfDay)w*=1.6; // in-window special fish are a treat
+    return {sp,w:Math.max(0.2,w)};});
+  const total=weighted.reduce((a,b)=>a+b.w,0);let r=Math.random()*total;
+  for(const it of weighted){r-=it.w;if(r<=0)return it.sp;}return avail[0];
+}
+
+/* ============================================================
+   REEL MINIGAME — "Read the Lunge"
+   The fish cycles: CALM (safe to reel) → WINDUP (telegraph) →
+   LUNGE (danger). Hold to reel: drains the fish's stamina but
+   raises line tension. During a LUNGE, reeling spikes tension —
+   you must LET GO to give slack. Win by draining stamina to zero;
+   lose if tension maxes out. Reading the tell is the whole game.
+   ============================================================ */
+let reel=null;const reelEl=document.getElementById('reel');
+const rc=document.getElementById('reelCanvas'),rctx=rc.getContext('2d');
+function startReel(fish){
+  hidePrompt();reelEl.style.display='block';
+  document.getElementById('reelName').textContent=fish.name+' '+fish.emo;
+  document.getElementById('reelTitle').textContent='Hooked!';
+  const tensionSlow=1-Math.min(0.7,gearEffect('tension')+buffEffect('tension')); // gear/food ease tension
+  const calm=1-Math.min(0.6,buffEffect('calm'));                                  // sushi = longer calm windows
+  const grip=1+gearEffect('net');                                                 // wide net = faster stamina drain
+  const rr=RARE_ORDER[fish.rare];
+  reel={
+    fish,
+    phase:'calm', phaseT:60+Math.random()*40,   // frames left in phase
+    stamina:1,                                    // 1 -> 0 to win
+    tension:0,                                    // 0 -> 1 loses
+    reeling:false,
+    fx:0.5, fy:0.5, ftilt:0, fscale:1, shake:0,
+    // difficulty scales with rarity & fish.speed
+    drain:(0.0042+0.0006*(fish.speed))*grip,      // stamina drained per frame while reeling
+    tensionRise:(0.010+0.0016*rr)*tensionSlow,    // tension per frame reeling in CALM
+    lungeSpike:(0.028+0.006*rr)*tensionSlow,      // tension per frame reeling during LUNGE
+    tensionBleed:0.011,                           // tension lost per frame when NOT reeling
+    calmMin:(42-rr*4)*(2-calm), calmMax:(88-rr*5)*(2-calm),
+    windup:Math.max(20,34-rr*3),                  // telegraph length (rarer = shorter warning)
+    lungeMin:26-rr*2, lungeMax:44-rr*2,
+    lunges:0, flashT:0,
+  };
+  reelRAF=requestAnimationFrame(reelLoop);
+}
+function nextPhase(r){
+  if(r.phase==='calm'){ r.phase='windup'; r.phaseT=r.windup; r.flashT=r.windup; sfx('bite'); }
+  else if(r.phase==='windup'){ r.phase='lunge'; r.phaseT=r.lungeMin+Math.random()*(r.lungeMax-r.lungeMin); r.shake=1; r.lunges++; sfx('lunge'); addShake(6); }
+  else { r.phase='calm'; r.phaseT=r.calmMin+Math.random()*(r.calmMax-r.calmMin); }
+}
+let reelRAF=null;
+function reelLoop(){
+  if(!reel)return;const r=reel;
+  r.phaseT--;
+  if(r.phaseT<=0)nextPhase(r);
+
+  const lunging=r.phase==='lunge';
+  const windup=r.phase==='windup';
+
+  // --- core tug logic ---
+  if(r.reeling){
+    if(lunging){ r.tension+=r.lungeSpike; r.stamina+=0.0016; }   // fighting the lunge = danger + fish recovers a touch
+    else { r.tension+=r.tensionRise*(windup?1.6:1); r.stamina-=r.drain; } // safe reeling drains stamina
+    if(t%9===0)sfx('reel');                                       // rhythmic reel clicks
+  } else {
+    r.tension-=r.tensionBleed;                                    // slack lets tension recover
+    if(lunging)r.stamina-=r.drain*0.25;                           // riding out a lunge tires the fish a little
+  }
+  r.tension=Math.max(0,Math.min(1,r.tension));
+  r.stamina=Math.max(0,Math.min(1,r.stamina));
+  if(r.tension>0.85)addShake((r.tension-0.85)*4);                  // shake as the line nears snapping
+
+  // --- fish animation state ---
+  const tgtTilt = lunging? (r.fx<0.5?-0.7:0.7) : windup? -0.35 : Math.sin(t*0.06)*0.12;
+  r.ftilt += (tgtTilt-r.ftilt)*0.2;
+  if(lunging){ r.fx += (Math.random()-0.5)*0.06; r.fy += (Math.random()-0.5)*0.05; }
+  else { r.fx += ( (0.5+Math.sin(t*0.02)*0.18) - r.fx)*0.04; r.fy += ((0.5+Math.sin(t*0.03)*0.12)-r.fy)*0.04; }
+  r.fx=Math.max(0.18,Math.min(0.82,r.fx)); r.fy=Math.max(0.28,Math.min(0.78,r.fy));
+  r.fscale += ((lunging?1.16:1)-r.fscale)*0.2;
+  if(r.flashT>0)r.flashT--;
+  if(r.shake>0)r.shake*=0.86;
+
+  drawReelScene(r);
+  updateReelMeters(r);
+
+  if(r.tension>=1){endReel(false,'The line snapped! 💥');return;}
+  if(r.stamina<=0){endReel(true);return;}
+  reelRAF=requestAnimationFrame(reelLoop);
+}
+function updateReelMeters(r){
+  document.getElementById('staminaFill').style.width=(r.stamina*100)+'%';
+  document.getElementById('tensionFill').style.width=(r.tension*100)+'%';
+  const title=document.getElementById('reelTitle'),hint=document.getElementById('reelHint');
+  if(r.phase==='lunge'){title.textContent='LET GO! 🌊';title.className='warn';hint.innerHTML='It’s <b>LUNGING</b> — release NOW to give slack!';}
+  else if(r.phase==='windup'){title.textContent='It’s winding up…';title.className='warn';hint.innerHTML='A lunge is coming — <b>get ready to release</b>.';}
+  else {title.textContent='Reel it in!';title.className='';hint.innerHTML='<b>Hold</b> to reel and tire the fish while it’s calm.';}
+}
+function drawReelScene(r){
+  const w=rc.width,h=rc.height;
+  // water
+  let g=rctx.createLinearGradient(0,0,0,h);
+  const L=curLoc();
+  g.addColorStop(0,L.water[0]);g.addColorStop(.55,L.water[1]);g.addColorStop(1,L.water[2]);
+  rctx.fillStyle=g;rctx.fillRect(0,0,w,h);
+  // caustic shimmer
+  rctx.save();rctx.globalAlpha=.08;rctx.fillStyle='#fff';
+  for(let i=0;i<5;i++){rctx.fillRect(0,(h/5)*i+Math.sin(t*0.03+i)*6,w,3);}rctx.restore();
+  // bubbles
+  rctx.save();rctx.globalAlpha=.4;rctx.fillStyle='#fff';
+  for(let i=0;i<8;i++){const bx=(i*53+ (t*0.6))%w;const by=h-((t*1.3+i*40)%h);rctx.beginPath();rctx.arc(bx,by,1.5+i%3,0,7);rctx.fill();}rctx.restore();
+
+  const sx=r.shake*(Math.random()-0.5)*10;
+  const fxp=r.fx*w+sx, fyp=r.fy*h;
+  // line from top-center (rod tip) to fish mouth
+  const tipX=w*0.5, tipY=-4;
+  const tense=r.tension;
+  rctx.strokeStyle=`rgb(${Math.round(90+tense*165)},${Math.round(70-tense*40)},${Math.round(40-tense*30)})`;
+  rctx.lineWidth=1.5+tense*2.5;
+  rctx.beginPath();rctx.moveTo(tipX,tipY);
+  // taut when reeling, slack curve when not
+  const slack=r.reeling?0:34;
+  rctx.quadraticCurveTo((tipX+fxp)/2, (tipY+fyp)/2+slack, fxp, fyp-14*r.fscale);
+  rctx.stroke();
+  // tension sparks near snapping
+  if(tense>0.8){rctx.save();rctx.globalAlpha=(tense-0.8)*5*(0.5+0.5*Math.sin(t));rctx.strokeStyle='#fff';rctx.lineWidth=1;
+    for(let i=0;i<3;i++){const yy=tipY+(fyp-tipY)*Math.random();const xx=tipX+(fxp-tipX)*(yy-tipY)/(fyp-tipY);rctx.beginPath();rctx.moveTo(xx-5,yy);rctx.lineTo(xx+5,yy+3);rctx.stroke();}rctx.restore();}
+
+  // windup warning ring
+  if(r.phase==='windup'){const p=r.flashT/r.windup;rctx.save();rctx.globalAlpha=0.8;
+    rctx.strokeStyle='#ffdf6b';rctx.lineWidth=3;rctx.beginPath();rctx.arc(fxp,fyp,20+p*34,0,7);rctx.stroke();rctx.restore();}
+
+  // the fish (emoji, tilted/scaled)
+  rctx.save();rctx.translate(fxp,fyp);rctx.rotate(r.ftilt);rctx.scale(r.fscale,r.fscale);
+  if(r.phase==='lunge'){rctx.shadowColor=r.reeling?'#ff5a3c':'#fff';rctx.shadowBlur=16;}
+  rctx.font='46px serif';rctx.textAlign='center';rctx.textBaseline='middle';
+  rctx.fillText(r.fish.emo,0,0);
+  rctx.restore();
+
+  // Niffo peeking from the top corner, holding the rod
+  rctx.save();rctx.translate(w-30,20);
+  if(r.tension>0.85)rctx.translate((Math.random()-0.5)*3,0);
+  rctx.font='30px serif';rctx.textAlign='center';rctx.fillText('🦦',0,0);rctx.restore();
+
+  // vignette when tension high
+  if(tense>0.6){rctx.save();rctx.globalAlpha=(tense-0.6)*1.4;
+    let vg=rctx.createRadialGradient(w/2,h/2,h*0.3,w/2,h/2,h*0.75);
+    vg.addColorStop(0,'rgba(200,40,20,0)');vg.addColorStop(1,'rgba(180,30,15,0.55)');
+    rctx.fillStyle=vg;rctx.fillRect(0,0,w,h);rctx.restore();}
+}
+function setReeling(v){ if(reel)reel.reeling=v; }
+function endReel(win,msg){cancelAnimationFrame(reelRAF);const fish=reel.fish;reel=null;reelEl.style.display='none';resetLine();
+  if(win){landFish(fish);}
+  else{sfx('snap');addShake(12);setPrompt(msg||'It slipped away…','Try again — Niffo dusts himself off');setTimeout(()=>{if(line.state==='idle')showIdlePrompt();},1600);}
+}
+
+/* ---------- Landing a fish ---------- */
+function tickBuffs(){
+  state.buffs.forEach(b=>b.castsLeft--);
+  const expired=state.buffs.filter(b=>b.castsLeft<=0);
+  state.buffs=state.buffs.filter(b=>b.castsLeft>0);
+  if(expired.length)toast(expired.map(b=>RECIPES.find(x=>x.id===b.recipeId).buffLabel+' faded').join(' · '));
+}
+function landFish(fish){
+  const weight=+(fish.minW+Math.random()*(fish.maxW-fish.minW)).toFixed(2);
+  // clams from catch scale with weight
+  const value=Math.round(fish.price*(0.7+weight/fish.maxW*0.9));
+  state.clams+=value;state.caught++;state.earned=(state.earned||0)+value;
+  state.inv[fish.id]=(state.inv[fish.id]||0)+1;
+  const prev=state.dex[fish.id],isNew=!prev,best=prev?Math.max(prev.best,weight):weight,isRecord=prev?weight>prev.best:true;
+  state.dex[fish.id]={count:(prev?prev.count:0)+1,best};
+  // biggest-catch trophy across all species
+  const isTrophy=!state.trophy||weight>state.trophy.weight;
+  if(isTrophy)state.trophy={id:fish.id,name:fish.name,emo:fish.emo,weight,loc:state.loc};
+  tickBuffs();
+  const reqMsg=checkRequest();
+  const questMsg=advanceQuests(fish);
+  const bountyBonus=checkBounty(fish);
+  const newAch=checkAchievements();
+  save();refreshHUD();
+  sfx(isNew?'newSpecies':'catch');
+  const extra=bountyBonus?`⭐ Daily Bounty! +${bountyBonus} 🐚`:(reqMsg||questMsg);
+  showCatch(fish,weight,value,isNew,isRecord,extra,isTrophy);
+  if(newAch.length){newAch.forEach((a,i)=>setTimeout(()=>{toast(`🏅 ${a.name} unlocked! +${a.reward} 🐚`);sfx('newSpecies');},900+i*1400));}
+}
+function showCatch(fish,weight,value,isNew,isRecord,reqMsg,isTrophy){
+  hideTabs();
+  document.getElementById('modalTitle').textContent='Niffo caught something!';
+  document.getElementById('modalSub').textContent='Splash! Into the basket it goes';
+  document.getElementById('modalBody').innerHTML=`<div id="catchPop">
+    <div class="big-emo">${fish.emo}</div>
+    ${isNew?'<div class="newbadge">New species!</div>':''}
+    ${isTrophy&&!isNew?'<div class="newbadge" style="background:var(--gold);color:#4a2f12;">🏆 Biggest catch yet!</div>':''}
+    <h2>${fish.name}</h2>
+    <div class="rare-tag r-${fish.rare}">${fish.rare} · ${curLoc().emo} ${curLoc().name}</div>
+    <div class="stats">
+      <div><b>${weight} kg</b><span>Weight ${isRecord?'· 🏆 record':''}</span></div>
+      <div><b>+${value} 🐚</b><span>Clams earned</span></div>
+      <div><b>×${state.inv[fish.id]}</b><span>In basket</span></div>
+    </div>
+    <div class="flavor">"${fish.flavor}"</div>
+    ${reqMsg?`<div class="newbadge" style="background:var(--leaf);">${reqMsg}</div>`:''}
+    <div style="margin-top:16px;"><button class="btn" id="catchAgain">Cast again 🎣</button></div>
+  </div>`;
+  openOverlay();
+  spawnConfetti(RARE_ORDER[fish.rare]>=2||isNew?70:34);
+  document.getElementById('catchAgain').onclick=()=>{closeOverlay();showIdlePrompt();};
+}
+function spawnConfetti(n){
+  const modal=overlay.querySelector('.modal');if(!modal)return;
+  let box=document.getElementById('confetti');
+  if(box)box.remove();
+  box=document.createElement('div');box.id='confetti';
+  const cols=['#f2a541','#e8705c','#5c9a4f','#3a7fb5','#9a5fc4','#ffdf6b','#fff'];
+  let h='';
+  for(let i=0;i<n;i++){const l=Math.random()*100,d=1.1+Math.random()*1.4,delay=Math.random()*0.4,
+    c=cols[Math.floor(Math.random()*cols.length)],w=6+Math.random()*6;
+    h+=`<i style="left:${l}%;background:${c};width:${w}px;height:${w*1.5}px;animation-duration:${d}s;animation-delay:${delay}s;"></i>`;}
+  box.innerHTML=h;modal.appendChild(box);
+  setTimeout(()=>{if(box)box.remove();},2600);
+}
+
+/* ============================================================
+   MODAL FRAMEWORK
+   ============================================================ */
+const overlay=document.getElementById('overlay');
+function openOverlay(){overlay.style.display='flex';}
+function closeOverlay(){overlay.style.display='none';hideTabs();}
+function hideTabs(){document.getElementById('modalTabs').style.display='none';}
+function setHead(title,sub){document.getElementById('modalTitle').textContent=title;document.getElementById('modalSub').textContent=sub||'';}
+document.getElementById('modalX').onclick=()=>{closeOverlay();if(line.state==='idle')showIdlePrompt();};
+overlay.addEventListener('click',e=>{if(e.target===overlay){closeOverlay();if(line.state==='idle')showIdlePrompt();}});
+
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),2200);}
+
+/* ---------- TRAVEL ---------- */
+function openTravel(){
+  hideTabs();setHead('Travel','Where shall Niffo cast today?');
+  let html=`<p class="lead">Each spot holds its own fish. New spots unlock with clams — then it's yours forever.</p>`;
+  LOCATIONS.forEach(L=>{
+    const unlocked=state.unlocked.includes(L.id),current=state.loc===L.id;
+    const found=SPECIES.filter(s=>s.loc===L.id&&state.dex[s.id]).length;
+    const tot=SPECIES.filter(s=>s.loc===L.id).length;
+    html+=`<div class="loc-card ${current?'current':''}" style="background:linear-gradient(120deg,${L.sky[1]},${L.water[0]});">
+      <div class="l-emo">${L.emo}</div>
+      <div class="r-main">
+        <div class="r-title">${L.name} ${current?'· <span style="color:#4a2f12;">here now</span>':''}</div>
+        <div class="r-desc">${L.blurb}</div>
+        <div style="margin-top:5px;"><span class="pill">${found}/${tot} logged</span></div>
+      </div>
+      <div class="r-side">
+        ${current?'<span class="pill have">Current spot</span>':
+          unlocked?`<button class="btn sm" data-go="${L.id}">Travel here</button>`:
+          `<span class="pill ${state.clams>=L.unlock?'have':'need'}">${L.unlock} 🐚</span><button class="btn sm" data-unlock="${L.id}" ${state.clams<L.unlock?'disabled':''}>Unlock</button>`}
+      </div></div>`;
+  });
+  document.getElementById('modalBody').innerHTML=html;openOverlay();
+  document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>travelTo(b.dataset.go));
+  document.querySelectorAll('[data-unlock]').forEach(b=>b.onclick=()=>{
+    const L=LOC_BY_ID[b.dataset.unlock];if(state.clams<L.unlock)return;
+    state.clams-=L.unlock;state.unlocked.push(L.id);save();refreshHUD();sfx('newSpecies');toast(`Unlocked ${L.name}! 🗺️`);travelTo(L.id);});
+}
+function travelTo(id){if(!state.unlocked.includes(id))return;state.loc=id;save();applyLoc();seedAmbient();refreshHUD();closeOverlay();
+  if(line.state!=='idle'){clearTimeout(biteTimer);resetLine();}
+  if(mode==='town')exitTown();
+  if(Audio.ready&&!Audio.muted)startMusic(id);
+  toast(`Now fishing: ${LOC_BY_ID[id].name} ${LOC_BY_ID[id].emo}`);showIdlePrompt();}
+
+/* ---------- JOURNAL ---------- */
+function openEncyclopedia(){
+  hideTabs();setHead("Niffo's Field Journal",'Everything Niffo has pulled from the water');
+  const found=Object.keys(state.dex).length;
+  const totalW=Object.values(state.dex).reduce((a,d)=>a+d.best,0);
+  let html=`<div class="enc-summary">
+    <div><b>${found}/${SPECIES.length}</b><span>Species found</span></div>
+    <div><b>${state.caught}</b><span>Total catches</span></div>
+    <div><b>${state.clams} 🐚</b><span>Clam bank</span></div>
+    <div><b>${(state.earned||0)} 🐚</b><span>Total earned</span></div>
+    <div><b>${totalW.toFixed(1)} kg</b><span>Record weights</span></div>
+  </div>`;
+  if(state.trophy){const tr=state.trophy;html+=`<div class="row" style="background:linear-gradient(120deg,#fbeecb,#f6d9a0);">
+    <div class="r-emo">${tr.emo}</div><div class="r-main">
+    <div class="r-title">🏆 Personal Best: ${tr.name}</div>
+    <div class="r-desc">${tr.weight} kg — the biggest thing Niffo has ever landed, caught at ${LOC_BY_ID[tr.loc]?LOC_BY_ID[tr.loc].name:'the water'}.</div>
+    </div></div>`;}
+  LOCATIONS.forEach(L=>{
+    const list=SPECIES.filter(s=>s.loc===L.id);
+    const f=list.filter(s=>state.dex[s.id]).length;
+    html+=`<h3 style="font-family:Georgia,serif;color:var(--wood-d);margin:6px 0 10px;">${L.emo} ${L.name} <span style="font-family:'Trebuchet MS',sans-serif;font-size:12px;color:#9a7b5a;font-weight:normal;">(${f}/${list.length})</span></h3><div class="enc-grid" style="margin-bottom:18px;">`;
+    list.forEach(sp=>{const d=state.dex[sp.id];const wh=windowHint(sp);
+      if(d){html+=`<div class="enc-card"><div class="en-count">×${d.count}</div>
+        <span class="emo">${sp.emo}</span><div class="en-name">${sp.name}</div>
+        <div class="en-rare r-${sp.rare}">${sp.rare}</div><div class="en-desc">${sp.flavor}</div>
+        ${wh?`<div class="en-desc" style="color:#9a7b5a;margin-top:4px;">${wh}</div>`:''}
+        <div class="en-price">Best ${d.best.toFixed(2)} kg · ${sp.price}🐚</div></div>`;}
+      else{const hint=sp.depth[0]>=.85?'Deepest water':sp.depth[0]>=.5?'Deep water':sp.depth[0]>=.3?'Mid current':'Shallows';
+        html+=`<div class="enc-card locked"><span class="emo">${sp.emo}</span><div class="en-name">???</div>
+        <div class="en-rare r-${sp.rare}">${sp.rare}</div><div class="en-desc">Not yet discovered.<br>Try: ${hint}${wh?'<br>'+wh:''}</div></div>`;}});
+    html+=`</div>`;
+  });
+  document.getElementById('modalBody').innerHTML=html;openOverlay();
+}
+
+/* ---------- MARKET (sell fish) ---------- */
+function invEntries(){return Object.entries(state.inv).filter(([id,n])=>n>0).map(([id,n])=>({sp:SPECIES.find(s=>s.id===id),n}));}
+function openMarket(){
+  hideTabs();setHead('The Market','Sell your basket for clams');
+  const items=invEntries();const sellMul=1+buffEffect('sell');
+  let html=`<p class="lead">Otter market prices. Selling here gives full base price${sellMul>1?` (+${Math.round(buffEffect('sell')*100)}% market bonus active!)`:''}. Rare fish are worth holding for requests — check the board first.</p>`;
+  if(items.length===0){html+=`<div class="empty">Your basket is empty. Go catch something! 🎣</div>`;}
+  else{
+    let totalVal=0;
+    items.sort((a,b)=>RARE_ORDER[b.sp.rare]-RARE_ORDER[a.sp.rare]);
+    items.forEach(({sp,n})=>{const each=Math.round(sp.price*sellMul);totalVal+=each*n;
+      html+=`<div class="row"><div class="r-emo">${sp.emo}</div>
+        <div class="r-main"><div class="r-title">${sp.name} <span class="r-${sp.rare}" style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;">${sp.rare}</span></div>
+          <div class="r-desc">In basket: ×${n} · ${each} 🐚 each</div></div>
+        <div class="r-side">
+          <button class="btn sm" data-sell="${sp.id}" data-all="0">Sell 1</button>
+          <button class="btn sm alt" data-sell="${sp.id}" data-all="1">Sell all (+${each*n})</button>
+        </div></div>`;});
+    const commonVal=items.filter(({sp})=>RARE_ORDER[sp.rare]<=1).reduce((a,{sp,n})=>a+Math.round(sp.price*sellMul)*n,0);
+    html=html.replace('</p>',`</p><div class="row" style="background:#fbf1dc;"><div class="r-emo">🐚</div><div class="r-main"><div class="r-title">Quick sell</div><div class="r-desc">Whole basket: ${totalVal} 🐚 · commons &amp; uncommons only: ${commonVal} 🐚</div></div><div class="r-side"><button class="btn sm alt" id="sellCommonBtn" ${commonVal>0?'':'disabled'}>Sell junk</button><button class="btn sm" id="sellAllBtn">Sell all</button></div></div>`);
+  }
+  document.getElementById('modalBody').innerHTML=html;openOverlay();
+  document.querySelectorAll('[data-sell]').forEach(b=>b.onclick=()=>{
+    const sp=SPECIES.find(s=>s.id===b.dataset.sell);const all=b.dataset.all==='1';
+    const qty=all?state.inv[sp.id]:1;const each=Math.round(sp.price*(1+buffEffect('sell')));
+    state.inv[sp.id]-=qty;if(state.inv[sp.id]<=0)delete state.inv[sp.id];
+    state.clams+=each*qty;state.earned=(state.earned||0)+each*qty;save();refreshHUD();sfx('coin');toast(`Sold ${qty}× ${sp.name} for ${each*qty} 🐚`);openMarket();});
+  const sab=document.getElementById('sellAllBtn');
+  if(sab)sab.onclick=()=>{let got=0;const m=1+buffEffect('sell');invEntries().forEach(({sp,n})=>{got+=Math.round(sp.price*m)*n;});
+    state.inv={};state.clams+=got;state.earned=(state.earned||0)+got;save();refreshHUD();sfx('coin');toast(`Sold the whole basket for ${got} 🐚`);openMarket();};
+  const scb=document.getElementById('sellCommonBtn');
+  if(scb)scb.onclick=()=>{let got=0;const m=1+buffEffect('sell');
+    invEntries().forEach(({sp,n})=>{if(RARE_ORDER[sp.rare]<=1){got+=Math.round(sp.price*m)*n;delete state.inv[sp.id];}});
+    state.clams+=got;state.earned=(state.earned||0)+got;save();refreshHUD();sfx('coin');toast(`Sold the small fry for ${got} 🐚 — kept the rare ones`);openMarket();};
+}
+
+/* ---------- COOK (fish → buffs) ---------- */
+function countBy(pred){return invEntries().reduce((a,{sp,n})=>a+(pred(sp)?n:0),0);}
+function canCook(rec){return rec.need.every(req=>{
+  if(req.any)return countBy(sp=>sp.rare===req.any)>=req.n;
+  if(req.loc)return countBy(sp=>sp.loc===req.loc)>=req.n;
+  return true;});}
+function consumeFor(rec){
+  rec.need.forEach(req=>{let left=req.n;
+    // consume cheapest matching fish first
+    const matches=invEntries().filter(({sp})=>req.any?sp.rare===req.any:req.loc?sp.loc===req.loc:false).sort((a,b)=>a.sp.price-b.sp.price);
+    for(const m of matches){if(left<=0)break;const take=Math.min(left,m.n);state.inv[m.sp.id]-=take;if(state.inv[m.sp.id]<=0)delete state.inv[m.sp.id];left-=take;}});
+}
+function reqLabel(req){
+  const label=req.any?`${req.any} fish`:req.loc?`${LOC_BY_ID[req.loc].name} fish`:'fish';
+  const have=req.any?countBy(sp=>sp.rare===req.any):req.loc?countBy(sp=>sp.loc===req.loc):0;
+  return `<span class="pill ${have>=req.n?'have':'need'}">${have}/${req.n} ${label}</span>`;
+}
+function openCook(){
+  hideTabs();setHead("Niffo's Kitchen",'Cook your catch into temporary buffs');
+  let html=`<p class="lead">Turn fish into hot meals. Each dish grants a buff that lasts a number of casts — stack them before chasing a legendary. Buffs count down as you fish.</p>`;
+  RECIPES.forEach(rec=>{const ok=canCook(rec);
+    html+=`<div class="row"><div class="r-emo">${rec.emo}</div>
+      <div class="r-main"><div class="r-title">${rec.name} <span class="pill" style="background:#e8dcf5;color:#6a4a9a;">${rec.buffLabel} · ${rec.casts} casts</span></div>
+        <div class="r-desc">${rec.blurb}</div>
+        <div style="margin-top:5px;">${rec.need.map(reqLabel).join('')}</div></div>
+      <div class="r-side"><button class="btn sm" data-cook="${rec.id}" ${ok?'':'disabled'}>Cook</button></div></div>`;});
+  document.getElementById('modalBody').innerHTML=html;openOverlay();
+  document.querySelectorAll('[data-cook]').forEach(b=>b.onclick=()=>{
+    const rec=RECIPES.find(r=>r.id===b.dataset.cook);if(!canCook(rec))return;
+    consumeFor(rec);
+    const existing=state.buffs.find(x=>x.recipeId===rec.id);
+    if(existing)existing.castsLeft+=rec.casts;else state.buffs.push({recipeId:rec.id,castsLeft:rec.casts});
+    save();refreshHUD();sfx('buy');toast(`Cooked ${rec.name}! ${rec.buffLabel} active`);openCook();});
+}
+
+/* ---------- REQUESTS (quests) ---------- */
+function rollRequest(){
+  // pick a species the player has discovered-ish; reward = premium over sell
+  const pool=SPECIES.filter(s=>state.unlocked.includes(s.loc)&&RARE_ORDER[s.rare]<=3);
+  const sp=pool[Math.floor(Math.random()*pool.length)];
+  const qty=RARE_ORDER[sp.rare]>=2?1:(2+Math.floor(Math.random()*3));
+  const reward=Math.round(sp.price*qty*(1.6+RARE_ORDER[sp.rare]*0.35))+15;
+  const clients=['Mayor Marmot','Beavis the Baker','Auntie Heron','Chef Capybara','Old Turtle','Kit the Kingfisher'];
+  state.req={fishId:sp.id,qty,reward,client:clients[Math.floor(Math.random()*clients.length)],progress:0};
+  save();
+}
+function checkRequest(){
+  if(!state.req)return '';
+  if(pendingFishJustCaught && state.req.fishId===pendingFishJustCaught){
+    state.req.progress=(state.req.progress||0)+1;
+    if(state.req.progress>=state.req.qty){
+      const r=state.req;state.clams+=r.reward;state.reqDone++;state.req=null;save();
+      return `Request complete! +${r.reward} 🐚`;
+    }
+  }
+  return '';
+}
+let pendingFishJustCaught=null;
+// hook into landFish: set the marker just before checkRequest is used
+const _landFish=landFish;
+landFish=function(fish){pendingFishJustCaught=fish.id;_landFish(fish);pendingFishJustCaught=null;};
+
+function openRequests(){
+  hideTabs();setHead('The Request Board','Townsfolk want specific fish — big rewards');
+  if(!state.req)rollRequest();
+  const r=state.req,sp=SPECIES.find(s=>s.id===r.fishId),L=LOC_BY_ID[sp.loc];
+  const have=state.inv[sp.id]||0;
+  const canFill=have>0;
+  let html=`<p class="lead">Complete requests for clam rewards well above market rate. You've completed <b>${state.reqDone}</b> so far. Deliver from your basket, or catch it fresh — either counts.</p>`;
+  html+=`<div class="row" style="background:#fbf1dc;"><div class="r-emo">${sp.emo}</div>
+    <div class="r-main"><div class="r-title">${r.client} needs ${r.qty}× ${sp.name}</div>
+      <div class="r-desc">Found in ${L.emo} ${L.name}. Progress: ${r.progress||0}/${r.qty} · You hold ${have} in basket.</div>
+      <div style="margin-top:5px;"><span class="pill ${canFill?'have':'need'}">${sp.rare}</span><span class="pill" style="background:#e8dcf5;color:#6a4a9a;">Reward ${r.reward} 🐚</span></div></div>
+    <div class="r-side">
+      <button class="btn sm" id="deliverBtn" ${canFill?'':'disabled'}>Deliver from basket</button>
+      <button class="btn sm alt" id="rerollBtn">New request (skip)</button>
+    </div></div>`;
+  document.getElementById('modalBody').innerHTML=html;openOverlay();
+  document.getElementById('deliverBtn').onclick=()=>{
+    let need=r.qty-(r.progress||0);const have2=state.inv[sp.id]||0;const give=Math.min(need,have2);
+    if(give<=0)return;state.inv[sp.id]-=give;if(state.inv[sp.id]<=0)delete state.inv[sp.id];
+    r.progress=(r.progress||0)+give;
+    if(r.progress>=r.qty){state.clams+=r.reward;state.reqDone++;state.req=null;save();refreshHUD();toast(`Request complete! +${r.reward} 🐚`);}
+    else{save();refreshHUD();toast(`Delivered ${give}. ${r.qty-r.progress} to go.`);}
+    openRequests();};
+  document.getElementById('rerollBtn').onclick=()=>{rollRequest();openRequests();};
+}
+
+/* ---------- GEAR SHOP ---------- */
+function openShop(){
+  hideTabs();setHead("Otter's Tackle Shop",'Permanent upgrades bought with clams');
+  let html=`<p class="lead">Spend clams on gear that stays with you forever. Better rods reach deeper water; smooth reels resist tension; wide nets and bait make every catch easier.</p>`;
+  GEAR.forEach(g=>{const owned=state.gear.includes(g.id);
+    const reqOk=!g.req||state.gear.includes(g.req);
+    const afford=state.clams>=g.cost;
+    html+=`<div class="row"><div class="r-emo">${g.emo}</div>
+      <div class="r-main"><div class="r-title">${g.name} ${owned?'<span class="pill have">Owned</span>':''}</div>
+        <div class="r-desc">${g.blurb}${g.req&&!reqOk?` <span class="pill need">Needs ${GEAR.find(x=>x.id===g.req).name}</span>`:''}</div></div>
+      <div class="r-side">${owned?'<span class="pill have">✓</span>':
+        `<span class="pill ${afford?'have':'need'}">${g.cost} 🐚</span><button class="btn sm" data-buy="${g.id}" ${afford&&reqOk?'':'disabled'}>Buy</button>`}</div></div>`;});
+  document.getElementById('modalBody').innerHTML=html;openOverlay();
+  document.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{
+    const g=GEAR.find(x=>x.id===b.dataset.buy);if(state.clams<g.cost||state.gear.includes(g.id))return;
+    if(g.req&&!state.gear.includes(g.req))return;
+    state.clams-=g.cost;state.gear.push(g.id);save();refreshHUD();sfx('buy');toast(`Bought ${g.name}! ${g.emo}`);openShop();});
+}
+
+/* ---------- HELP ---------- */
+function openHelp(){
+  hideTabs();setHead('How to fish with Niffo','A quick guide for the riverbend');
+  document.getElementById('modalBody').innerHTML=`
+  <div style="font-family:'Trebuchet MS',sans-serif;line-height:1.6;color:#5a4a35;font-size:15px;">
+    <p style="margin-bottom:10px;"><b style="color:#6b4429;">Cast.</b> Hold <b>SPACE</b> or hold a click to charge power, release to send the line. More power = deeper water = rarer fish.</p>
+    <p style="margin-bottom:10px;"><b style="color:#6b4429;">Hook &amp; reel.</b> Tap when you see <b>❗ BITE!</b> to hook it. Then it's a tug-of-war: <b>hold to reel</b> and drain the fish's <b>stamina</b> while it's calm — but watch for the tell. When it winds up and <b>LUNGES</b>, <b>let go</b> to give slack, or the <b>line tension</b> spikes and snaps. Drain stamina to zero to land it.</p>
+    <p style="margin-bottom:10px;"><b style="color:#6b4429;">🏘️ Visit town.</b> Tap <b>Go to Town</b> (or press <b>T</b>) to walk the street. Use <b>◀ ▶ / A / D</b> to walk, then press <b>E</b> at a shop's door to go in:</p>
+    <p style="margin-bottom:10px;padding-left:12px;">🏪 <b>Fish Market</b> — sell your catch · 🍳 <b>Kitchen</b> — cook fish into buffs · 📋 <b>Request Board</b> — premium jobs · 🎣 <b>Tackle Shop</b> — permanent gear · 🗺️ <b>Travel Dock</b> — sail to other spots.</p>
+    <p style="margin-bottom:10px;"><b style="color:#6b4429;">💬 Chat with villagers.</b> Walk up to a townsperson and press <b>E</b> to talk. Press <b>E</b> again to hear their next line.</p>
+    <p style="margin-bottom:10px;"><b style="color:#6b4429;">🌙 Day &amp; night · 🍂 Seasons.</b> Time passes as you play — dawn to night — and the season turns every couple of days (spring → summer → autumn → winter). Both matter: <b>some fish only bite at night</b>, others <b>only in a certain season</b>. The Journal shows each fish's window. A moonlit winter cast can land things you'd never see at noon in spring.</p>
+    <p style="margin-bottom:10px;"><b style="color:#6b4429;">📋 Quests.</b> Villagers in town ask personal favours — talk to one (press <b>E</b>) to accept, catch what they need, then talk again to collect your reward. Track them all in the <b>📋 Quests</b> log.</p>
+    <p style="margin-bottom:10px;"><b style="color:#6b4429;">⭐ Daily Bounty · 🏅 Goals.</b> Each day a bounty fish is posted (shown on the cast prompt and in <b>🏅 Goals</b>) — catch it for a bonus. The Goals screen also tracks milestone <b>achievements</b> that pay out clams as you hit them. The little <b>clock dial</b> up top shows the time of day at a glance.</p>
+    <p style="margin-bottom:10px;"><b style="color:#6b4429;">🗺️ Four spots</b> — Riverbend, Misty Marsh, Coral Cove, Frostpeak Lake — each with its own fish, unlocked at the Travel Dock.</p>
+    <p style="margin-bottom:10px;"><b style="color:#6b4429;">📖 Journal</b> logs all <b>${SPECIES.length}</b> species with record weights and flavor. Catch them all!</p>
+    <p style="margin-bottom:10px;"><b style="color:#6b4429;">🔊 Sound.</b> Each spot has its own cozy music, with splashes, bites, reeling and catches. Toggle it anytime with the <b>🔊</b> button.</p>
+    <p style="color:#9a7b5a;font-style:italic;">Progress saves automatically. Good luck out there. 🦦</p>
+  </div>`;openOverlay();
+}
+
+/* ---------- PROMPT ---------- */
+const promptEl=document.getElementById('prompt');
+function setPrompt(main,sub){promptEl.innerHTML=main.replace(/SPACE/g,'<b>SPACE</b>')+(sub?`<small>${sub}</small>`:'');promptEl.classList.remove('fade-out');}
+function hidePrompt(){promptEl.classList.add('fade-out');}
+
+/* ---------- MODE SWITCHING ---------- */
+const walkCtrls=document.getElementById('walkCtrls');
+const btnMode=document.getElementById('btnMode');
+function enterTown(){
+  if(line.state!=='idle'){clearTimeout(biteTimer);resetLine();}
+  mode='town';hero.x=180;hero.facing=1;camX=0;seedFolk();
+  walkCtrls.style.display='flex';btnMode.textContent='🎣 Go Fishing';
+  document.getElementById('castMeter').style.display='none';
+  document.getElementById('buffBar').style.display='none';
+}
+function exitTown(){
+  mode='fishing';walkCtrls.style.display='none';btnMode.textContent='🏘️ Go to Town';
+  document.getElementById('buffBar').style.display='flex';
+  keyLeft=keyRight=false;showIdlePrompt();
+}
+function toggleMode(){ if(menuOpen())return; mode==='fishing'?enterTown():exitTown(); }
+
+const ACTIONS={market:openMarket,cook:openCook,req:openRequests,shop:openShop,travel:openTravel};
+function townAction(){
+  if(nearBuilding&&ACTIONS[nearBuilding.action]){ACTIONS[nearBuilding.action]();return;}
+  if(nearFolk){talkTo(nearFolk);return;}
+}
+function talkTo(f){
+  sfx('talk',['G5','A5','B5','E5'][(f.line+1)%4]);
+  f.dir=hero.x<f.x?-1:1;hero.facing=hero.x<f.x?1:-1;
+  const active=getActiveQuest(f.name);
+  if(active){
+    const def=questDef(f.name,active.idx);
+    if(active.prog>=def.n){ // ready to turn in
+      state.clams+=def.reward;state.questsDone=(state.questsDone||0)+1;
+      state.quests=state.quests.filter(q=>q!==active);
+      state.npcQuestIdx=state.npcQuestIdx||{};state.npcQuestIdx[f.name]=active.idx+1;
+      save();refreshHUD();sfx('coin');
+      speak(f,`${def.done} (+${def.reward} 🐚)`);
+    } else {
+      speak(f,`${questProgressText(active)} so far — keep at it!`);
+    }
+    return;
+  }
+  // offer next quest?
+  const nextIdx=(state.npcQuestIdx&&state.npcQuestIdx[f.name])||0;
+  const def=questDef(f.name,nextIdx);
+  if(def && Math.random()<0.6){ // sometimes they just chat
+    state.quests=state.quests||[];
+    state.quests.push({npc:f.name,idx:nextIdx,prog:0});
+    save();sfx('newSpecies');
+    speak(f,`📋 ${def.text}`);
+    return;
+  }
+  // plain chatter
+  speak(f,f.lines[f.line%f.lines.length]);f.line++;
+}
+function speak(f,text){speechFolk=f;speechText=text;speechTimer=340;}
+
+/* ---------- Quest engine ---------- */
+function getActiveQuest(npc){return (state.quests||[]).find(q=>q.npc===npc);}
+function advanceQuests(fish){
+  if(!state.quests||!state.quests.length)return null;
+  let msg=null;
+  state.quests.forEach(q=>{
+    const def=questDef(q.npc,q.idx);if(!def)return;
+    if(q.prog<def.n && questMatches(def,fish)){
+      q.prog++;
+      if(q.prog>=def.n)msg=`${q.npc}'s quest ready to turn in!`;
+    }
+  });
+  return msg;
+}
+
+/* ============================================================
+   DAILY BOUNTY — a target fish that rotates each in-game day.
+   Catch it that day for a big bonus. Rerolls when the day turns.
+   ============================================================ */
+function rollBounty(){
+  // choose from species in unlocked locations, weighted toward mid-rarity
+  const pool=SPECIES.filter(s=>state.unlocked.includes(s.loc)&&RARE_ORDER[s.rare]<=3);
+  const sp=pool[Math.floor(Math.random()*pool.length)];
+  state.bounty=sp.id;state.bountyDay=state.day;state.bountyDone=false;
+}
+function ensureBounty(){ if(state.bounty===null||state.bountyDay!==state.day) rollBounty(); }
+function bountyReward(sp){ return Math.round(sp.price*2.5)+40; }
+// called when a fish is landed; returns bonus clams (and marks done)
+function checkBounty(fish){
+  ensureBounty();
+  if(!state.bountyDone && fish.id===state.bounty){
+    const sp=SPECIES.find(s=>s.id===fish.id);const bonus=bountyReward(sp);
+    state.clams+=bonus;state.earned=(state.earned||0)+bonus;state.bountyDone=true;
+    return bonus;
+  }
+  return 0;
+}
+
+/* ============================================================
+   ACHIEVEMENTS — one-time milestones, each grants clams once.
+   ============================================================ */
+const ACHIEVEMENTS=[
+  {id:'first',   name:'First Catch',      emo:'🎣', reward:20,  desc:'Land your very first fish.',           test:()=>state.caught>=1},
+  {id:'ten',     name:'Getting the Hang', emo:'🐟', reward:40,  desc:'Catch 10 fish.',                        test:()=>state.caught>=10},
+  {id:'fifty',   name:'Seasoned Angler',  emo:'🪝', reward:120, desc:'Catch 50 fish.',                        test:()=>state.caught>=50},
+  {id:'dex10',   name:'Budding Naturalist',emo:'📖', reward:80, desc:'Log 10 species in the Journal.',        test:()=>Object.keys(state.dex).length>=10},
+  {id:'dexall',  name:'Master Naturalist',emo:'🏅', reward:500, desc:'Log every species.',                    test:()=>Object.keys(state.dex).length>=SPECIES.length},
+  {id:'legend',  name:'Legend Hunter',    emo:'🐉', reward:200, desc:'Catch a legendary fish.',               test:()=>Object.keys(state.dex).some(id=>{const s=SPECIES.find(x=>x.id===id);return s&&s.rare==='legendary';})},
+  {id:'rich',    name:'Clam Tycoon',      emo:'🐚', reward:150, desc:'Earn 1,000 clams in total.',            test:()=>(state.earned||0)>=1000},
+  {id:'traveler',name:'Well Travelled',   emo:'🗺️', reward:100, desc:'Unlock all four fishing spots.',        test:()=>state.unlocked.length>=LOCATIONS.length},
+  {id:'quests3', name:'Good Neighbour',   emo:'🤝', reward:90,  desc:'Complete 3 villager quests.',           test:()=>(state.questsDone||0)>=3},
+  {id:'gearhead',name:'Tackled Up',       emo:'⚙️', reward:100, desc:'Own 3 pieces of gear.',                 test:()=>state.gear.length>=3},
+];
+// evaluate achievements; returns array of newly-unlocked names
+function checkAchievements(){
+  state.achievements=state.achievements||[];
+  const newly=[];
+  ACHIEVEMENTS.forEach(a=>{
+    if(!state.achievements.includes(a.id) && a.test()){
+      state.achievements.push(a.id);state.clams+=a.reward;state.earned=(state.earned||0)+a.reward;
+      newly.push(a);
+    }
+  });
+  return newly;
+}
+function openQuests(){
+  hideTabs();setHead('Quest Log','Personal favours from the townsfolk');
+  const active=state.quests||[];
+  let html=`<p class="lead">Villagers in town ask for personal favours — talk to them (press <b>E</b>) to accept a quest, then talk again once you've done it to collect. Completed: <b>${state.questsDone||0}</b>.</p>`;
+  if(active.length===0){
+    html+=`<div class="empty">No active quests. Head into town (🏘️) and chat with the villagers — they'll have favours to ask.</div>`;
+  } else {
+    active.forEach(q=>{const def=questDef(q.npc,q.idx);if(!def)return;
+      const f=TOWNSFOLK.find(x=>x.name===q.npc);const ready=q.prog>=def.n;
+      html+=`<div class="row"><div class="r-emo">${ready?'✅':'📋'}</div>
+        <div class="r-main"><div class="r-title">${q.npc} ${ready?'<span class="pill have">Ready!</span>':''}</div>
+          <div class="r-desc">${def.text}</div>
+          <div style="margin-top:5px;"><span class="pill ${ready?'have':''}">${questProgressText(q)}</span><span class="pill" style="background:#e8dcf5;color:#6a4a9a;">Reward ${def.reward} 🐚</span></div></div>
+        <div class="r-side"><span class="pill">${ready?'Talk to turn in':'In town: '+q.npc}</span></div></div>`;});
+  }
+  document.getElementById('modalBody').innerHTML=html;openOverlay();
+}
+
+/* ---------- ACHIEVEMENTS + DAILY BOUNTY viewer ---------- */
+function openAchievements(){
+  hideTabs();setHead('Achievements','Milestones & the day\'s bounty');
+  ensureBounty();
+  const bsp=SPECIES.find(s=>s.id===state.bounty);
+  const got=(state.achievements||[]).length;
+  let html='';
+  if(bsp){const rew=bountyReward(bsp);
+    html+=`<div class="row" style="background:linear-gradient(120deg,#fff4d6,#ffe3a8);">
+      <div class="r-emo">${state.bountyDone?'✅':bsp.emo}</div>
+      <div class="r-main"><div class="r-title">⭐ Daily Bounty — ${bsp.name}</div>
+        <div class="r-desc">${state.bountyDone?'Claimed today! A fresh bounty arrives tomorrow.':`Catch a ${bsp.name} today for a bonus. Found in ${LOC_BY_ID[bsp.loc].emo} ${LOC_BY_ID[bsp.loc].name}.`}</div></div>
+      <div class="r-side"><span class="pill ${state.bountyDone?'have':''}">+${rew} 🐚</span></div></div>`;}
+  html+=`<p class="lead" style="margin-top:14px;">Unlocked <b>${got}/${ACHIEVEMENTS.length}</b> — each pays out clams once, automatically.</p>`;
+  ACHIEVEMENTS.forEach(a=>{const done=(state.achievements||[]).includes(a.id);
+    html+=`<div class="row" ${done?'':'style="opacity:.6;"'}>
+      <div class="r-emo">${done?a.emo:'🔒'}</div>
+      <div class="r-main"><div class="r-title">${a.name} ${done?'<span class="pill have">Done</span>':''}</div>
+        <div class="r-desc">${a.desc}</div></div>
+      <div class="r-side"><span class="pill ${done?'have':''}">+${a.reward} 🐚</span></div></div>`;});
+  document.getElementById('modalBody').innerHTML=html;openOverlay();
+}
+
+/* ---------- INPUT ---------- */
+function startMenuUp(){const m=document.getElementById('menu');return m&&m.style.display!=='none';}
+function menuOpen(){return overlay.style.display==='flex'||startMenuUp();}
+let keyLeft=false,keyRight=false;
+function primaryDown(){
+  if(menuOpen())return;
+  if(mode==='town'){ return; } // town uses E to interact
+  if(line.state==='idle'){beginCharge();return;}
+  if(line.state==='biting'){hookIt();return;}
+  if(reel){setReeling(true);return;}
+}
+function primaryUp(){
+  if(menuOpen())return;
+  if(mode==='town')return;
+  if(line.state==='charging'){releaseCharge();return;}
+  if(reel){setReeling(false);return;}
+}
+let spaceHeld=false;
+addEventListener('keydown',e=>{
+  if(e.code==='Space'){e.preventDefault();if(!spaceHeld){spaceHeld=true;primaryDown();}}
+  if((e.code==='KeyE'||e.code==='Enter')&&mode==='town'&&!menuOpen()){townAction();}
+  if(e.code==='ArrowLeft'||e.code==='KeyA')keyLeft=true;
+  if(e.code==='ArrowRight'||e.code==='KeyD')keyRight=true;
+  if(e.code==='KeyT'&&!menuOpen())toggleMode();
+  if(e.code==='KeyJ')openEncyclopedia();
+  if(e.code==='Escape')closeOverlay();
+});
+addEventListener('keyup',e=>{
+  if(e.code==='Space'){e.preventDefault();spaceHeld=false;primaryUp();}
+  if(e.code==='ArrowLeft'||e.code==='KeyA')keyLeft=false;
+  if(e.code==='ArrowRight'||e.code==='KeyD')keyRight=false;
+});
+cvs.addEventListener('pointerdown',e=>{e.preventDefault();primaryDown();});
+addEventListener('pointerup',()=>primaryUp());
+reelEl.addEventListener('pointerdown',e=>{e.preventDefault();setReeling(true);});
+reelEl.addEventListener('pointerup',e=>{e.preventDefault();setReeling(false);});
+reelEl.addEventListener('pointerleave',e=>{setReeling(false);});
+
+// on-screen walk buttons (press-and-hold)
+function bindHold(el,set){
+  const on=e=>{e.preventDefault();set(true);};const off=e=>{e.preventDefault();set(false);};
+  el.addEventListener('pointerdown',on);el.addEventListener('pointerup',off);
+  el.addEventListener('pointerleave',off);el.addEventListener('pointercancel',off);
+}
+bindHold(document.getElementById('walkL'),v=>keyLeft=v);
+bindHold(document.getElementById('walkR'),v=>keyRight=v);
+document.getElementById('walkAct').addEventListener('pointerdown',e=>{e.preventDefault();if(!menuOpen())townAction();});
+
+/* ---------- BUTTON WIRING ---------- */
+btnMode.onclick=toggleMode;
+document.getElementById('btnEnc').onclick=()=>{sfx('ui');openEncyclopedia();};
+document.getElementById('btnQuests').onclick=()=>{sfx('ui');openQuests();};
+document.getElementById('btnAch').onclick=()=>{sfx('ui');openAchievements();};
+document.getElementById('btnHelp').onclick=()=>{sfx('ui');openHelp();};
+document.getElementById('btnMute').onclick=toggleMute;
+
+/* ---------- MAIN MENU ---------- */
+const menuScreen=document.getElementById('menu');
+function hasSave(){try{return !!localStorage.getItem(SAVE_KEY);}catch(e){return false;}}
+function buildSaveBox(){
+  const box=document.getElementById('saveBox');
+  const cont=document.getElementById('mContinue');
+  if(hasSave()&&(state.caught>0||Object.keys(state.dex).length>0||state.clams>0)){
+    const found=Object.keys(state.dex).length;
+    box.innerHTML=`<b>Saved journey found.</b><br>${state.caught} fish caught · ${found}/${SPECIES.length} logged · ${state.clams} 🐚<br>Currently at ${curLoc().emo} ${curLoc().name}.`;
+    cont.disabled=false;
+  } else {
+    box.innerHTML=`<span class="none">No saved journey yet — start a new one and Niffo will remember your progress.</span>`;
+    cont.disabled=true;
+  }
+}
+function startGame(){
+  initAudio(); // first user gesture — unlock + start music
+  menuScreen.style.display='none';
+  applyLoc();seedAmbient();refreshHUD();mode='fishing';showIdlePrompt();
+}
+function newGame(){
+  if(hasSave()&&!confirm('Start a new journey? This erases your current save.'))return;
+  state={clams:0,caught:0,dex:{},inv:{},loc:'river',unlocked:['river'],gear:[],buffs:[],reqDone:0,req:null,trophy:null,earned:0,day:0,season:'spring',quests:[],questsDone:0,bounty:null,bountyDay:-1,bountyDone:false,achievements:[]};
+  try{localStorage.removeItem(SAVE_KEY);}catch(e){}
+  save();startGame();
+}
+document.getElementById('mContinue').onclick=()=>startGame();
+document.getElementById('mNew').onclick=()=>newGame();
+document.getElementById('mHelp').onclick=()=>openHelp();
+function openMainMenu(){
+  save();closeOverlay();
+  if(mode==='town')exitTown();
+  hidePrompt();buildSaveBox();menuScreen.style.display='flex';
+}
+document.getElementById('btnMenu').onclick=openMainMenu;
+
+/* ---------- BOOT ---------- */
+let _booted=false;
+function boot(){
+  if(_booted)return;_booted=true;
+  try{
+    resize();
+    try{Audio.muted=localStorage.getItem('niffo_muted')==='1';}catch(e){}
+    const mb=document.getElementById('btnMute');if(mb)mb.textContent=Audio.muted?'🔇':'🔊';
+    applyLoc();refreshHUD();showIdlePrompt();buildSaveBox();
+    frame();
+  }catch(err){
+    const box=document.getElementById('errbox');
+    if(box){box.style.display='block';box.innerHTML='<b>Startup error:</b>\n'+(err&&err.stack?err.stack:err);}
+  }
+}
+boot();
+window.addEventListener('load',boot);
+</script>
+</body>
+</html>
