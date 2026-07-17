@@ -1,0 +1,1915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bomb Squad</title>
+<style>
+  :root {
+    --wall: #3a2f27;
+    --wall-hi: #574839;
+    --floor: #d8c39a;
+    --floor-dk: #cbb488;
+    --rubble: #8a6b4f;
+    --rubble-dk: #6e543c;
+    --steel: #6d7078;
+    --steel-hi: #9aa0aa;
+    --daniel: #f2b134;
+    --reshman: #2b2440;
+    --bomb: #1c1c22;
+    --fuse: #ff5b3a;
+    --exit: #38c172;
+    --hud-bg: #16110d;
+    --paper: #fff7e6;
+    --danger: #e0392b;
+    --barrel: #b5482a;
+    --guard: #7d2b8f;
+    --power: #2e9bd6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    background: radial-gradient(circle at 30% 10%, #2a2018, #120d09 70%);
+    font-family: "Courier New", Courier, monospace;
+    color: var(--paper);
+    overflow: hidden;
+  }
+  #app {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 10px 12px 60px;
+  }
+  .title-bar { text-align: center; line-height: 1; user-select: none; }
+  .title-bar h1 {
+    font-family: "Impact", "Arial Black", sans-serif;
+    font-size: clamp(24px, 5vw, 46px);
+    letter-spacing: 3px;
+    color: var(--daniel);
+    text-shadow: 3px 3px 0 var(--danger), 6px 6px 0 #000;
+    transform: skew(-6deg);
+  }
+  .title-bar .sub {
+    font-size: clamp(9px, 2vw, 12px);
+    letter-spacing: 4px;
+    color: #c9b58c;
+    margin-top: 3px;
+    text-transform: uppercase;
+  }
+  .hud {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    font-size: 12px;
+    letter-spacing: 1px;
+  }
+  .chip {
+    background: var(--hud-bg);
+    border: 2px solid var(--wall-hi);
+    border-radius: 8px;
+    padding: 5px 11px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: uppercase;
+    box-shadow: inset 0 0 0 1px #000;
+  }
+  .chip b { color: var(--daniel); font-size: 14px; }
+  .chip.danger b { color: var(--danger); }
+  .chip.timer b { color: #ffd23a; }
+  .chip.timer.low b { color: var(--danger); animation: blink .5s steps(2,start) infinite; }
+  @keyframes blink { 50% { opacity: .3; } }
+  .stage-wrap {
+    position: relative;
+    border: 6px solid var(--wall);
+    border-radius: 10px;
+    background: #1a130d;
+    box-shadow: 0 18px 40px rgba(0,0,0,.6), inset 0 0 0 3px #000;
+    line-height: 0;
+  }
+  canvas { display: block; border-radius: 4px; image-rendering: pixelated; }
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+    background: rgba(10,7,4,.9);
+    text-align: center;
+    padding: 30px 34px;
+    border-radius: 4px;
+    z-index: 5;
+    overflow-y: auto;
+  }
+  .overlay.hidden { display: none; }
+  .overlay h2 {
+    font-family: "Impact", "Arial Black", sans-serif;
+    font-size: clamp(22px, 4.5vw, 38px);
+    letter-spacing: 2px;
+    color: var(--daniel);
+    text-shadow: 2px 2px 0 var(--danger);
+    margin-bottom: 2px;
+  }
+  .overlay p { max-width: 420px; font-size: 13px; line-height: 1.75; color: #ddcba6; }
+  .overlay .cast { display: flex; gap: 44px; margin: 6px 0; }
+  .overlay .cast div { font-size: 11px; width: 118px; color: #cbb58c; line-height: 1.5; }
+  .overlay .cast .face { font-size: 34px; display:block; margin-bottom: 8px; }
+  .overlay .cast b { color: var(--paper); letter-spacing: 2px; display: block; margin-bottom: 4px; }
+  .legend {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 34px;
+    font-size: 11.5px;
+    color: #cbb58c;
+    text-align: left;
+    max-width: 440px;
+    line-height: 1.4;
+  }
+  .legend span b { color: var(--paper); }
+  .btn {
+    font-family: "Impact", "Arial Black", sans-serif;
+    letter-spacing: 2px;
+    font-size: 17px;
+    padding: 9px 24px;
+    border: none;
+    border-radius: 8px;
+    background: var(--daniel);
+    color: #201509;
+    cursor: pointer;
+    box-shadow: 0 5px 0 #a8721c;
+    transition: transform .05s, box-shadow .05s;
+    text-transform: uppercase;
+  }
+  .btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #a8721c; }
+  .btn-ghost {
+    background: transparent;
+    color: var(--daniel);
+    box-shadow: inset 0 0 0 2px var(--daniel);
+    font-size: 14px;
+    padding: 8px 20px;
+  }
+  .btn-ghost:active { transform: translateY(2px); box-shadow: inset 0 0 0 2px var(--daniel); }
+  .chip-btn {
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: var(--paper);
+    text-transform: uppercase;
+  }
+  .chip-btn:not([disabled]):hover { border-color: var(--daniel); color: var(--daniel); }
+  .chip-btn[disabled] { opacity: .4; cursor: default; }
+  /* main menu */
+  .menu-hero { text-align: center; user-select: none; margin-bottom: 4px; }
+  .menu-logo {
+    font-family: "Impact", "Arial Black", sans-serif;
+    font-size: clamp(34px, 8vw, 64px);
+    letter-spacing: 4px;
+    color: var(--daniel);
+    text-shadow: 3px 3px 0 var(--danger), 6px 6px 0 #000;
+    transform: skew(-6deg);
+    line-height: 1;
+  }
+  .menu-tag {
+    font-size: clamp(10px, 2vw, 13px);
+    letter-spacing: 5px;
+    color: #c9b58c;
+    margin-top: 10px;
+    text-transform: uppercase;
+  }
+  .menu-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 22px;
+  }
+  .menu-panel.hidden { display: none; }
+  .menu-buttons { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+  .controls {
+    font-size: 11px;
+    color: #a89572;
+    letter-spacing: 1px;
+    text-align: center;
+    line-height: 1.7;
+  }
+  .controls kbd {
+    background: #241b12;
+    border: 1px solid var(--wall-hi);
+    border-bottom-width: 3px;
+    border-radius: 4px;
+    padding: 1px 7px;
+    color: var(--paper);
+    font-family: inherit;
+  }
+  .flash { animation: flash .35s ease-out; }
+  @keyframes flash { 0%{filter:brightness(3.5)} 100%{filter:brightness(1)} }
+  .shake { animation: shake .3s; }
+  @keyframes shake {
+    0%,100%{transform:translate(0,0)} 25%{transform:translate(-4px,2px)}
+    50%{transform:translate(3px,-3px)} 75%{transform:translate(-2px,-2px)}
+  }
+  /* high-score run tracker */
+  .scoreboard {
+    width: 100%;
+    max-width: 400px;
+    background: rgba(0,0,0,.35);
+    border: 2px solid var(--wall-hi);
+    border-radius: 10px;
+    padding: 14px 16px;
+    text-align: left;
+  }
+  .scoreboard h3 {
+    font-family: "Impact", "Arial Black", sans-serif;
+    letter-spacing: 3px;
+    font-size: 15px;
+    color: var(--daniel);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+  .scoreboard ol { list-style: none; counter-reset: rank; }
+  .scoreboard li {
+    counter-increment: rank;
+    display: grid;
+    grid-template-columns: 22px 1fr auto;
+    gap: 10px;
+    align-items: center;
+    font-size: 12.5px;
+    color: #ddcba6;
+    padding: 5px 4px;
+    border-bottom: 1px dashed rgba(255,255,255,.08);
+  }
+  .scoreboard li:last-child { border-bottom: none; }
+  .scoreboard li::before {
+    content: counter(rank);
+    font-weight: bold;
+    color: #8a7b5c;
+    text-align: right;
+  }
+  .scoreboard li.top::before { color: var(--daniel); }
+  .scoreboard li .sc { text-align: right; font-weight: bold; color: var(--paper); font-size: 13px; }
+  .scoreboard li .meta { color: #9d8a68; font-size: 11px; }
+  .scoreboard li.fresh { animation: pop .5s ease-out; }
+  .scoreboard li.fresh .sc { color: var(--exit); }
+  @keyframes pop { 0%{transform:scale(1.15);background:rgba(56,193,114,.25)} 100%{transform:scale(1)} }
+  .scoreboard .empty { font-size: 12px; color: #8a7b5c; text-align: center; padding: 8px; }
+  /* dash meter */
+  .chip.dash b { color: var(--reshman-eye, #b98bff); }
+  .dash-meter {
+    width: 46px; height: 8px; border-radius: 4px;
+    background: #2a2018; border: 1px solid var(--wall-hi);
+    overflow: hidden; display: inline-block; vertical-align: middle;
+  }
+  .dash-meter i {
+    display: block; height: 100%;
+    background: linear-gradient(90deg,#7a5cff,#b98bff);
+    width: 100%; transition: width .12s linear;
+  }
+  .dash-meter.charging i { background: #6d7078; }
+  /* mode + mutator selectors */
+  .section-label {
+    font-family: "Impact", "Arial Black", sans-serif;
+    letter-spacing: 3px;
+    font-size: 13px;
+    color: var(--daniel);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+  .mode-select, .mutators { width: 100%; max-width: 460px; }
+  .mult-badge {
+    font-family: "Courier New", monospace;
+    letter-spacing: 1px;
+    font-size: 12px;
+    color: var(--exit);
+    border: 1px solid rgba(56,193,114,.4);
+    border-radius: 999px;
+    padding: 1px 8px;
+    margin-left: 6px;
+  }
+  .mode-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 10px;
+  }
+  .mode-card {
+    text-align: left;
+    background: rgba(0,0,0,.35);
+    border: 2px solid var(--wall-hi);
+    border-radius: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: border-color .12s, transform .08s, background .12s;
+  }
+  .mode-card:hover { border-color: #8a7b5c; }
+  .mode-card.sel { border-color: var(--daniel); background: rgba(242,177,52,.12); }
+  .mode-card .mc-name {
+    font-family: "Impact","Arial Black",sans-serif;
+    letter-spacing: 1.5px;
+    font-size: 15px;
+    color: var(--paper);
+    display: flex; align-items: center; gap: 7px;
+  }
+  .mode-card.sel .mc-name { color: var(--daniel); }
+  .mode-card .mc-desc { font-size: 11px; color: #b3a17d; line-height: 1.4; margin-top: 4px; }
+  .mode-card .mc-icon { font-size: 17px; }
+  .mutator-grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .mutator-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(0,0,0,.3);
+    border: 2px solid var(--wall-hi);
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 11.5px;
+    color: #b3a17d;
+    cursor: pointer;
+    transition: all .12s;
+    letter-spacing: .5px;
+  }
+  .mutator-chip:hover { border-color: #8a7b5c; }
+  .mutator-chip.on { border-color: var(--power); color: #eaf6ff; background: rgba(46,155,214,.15); }
+  .mutator-chip .m-plus { color: var(--exit); font-weight: bold; font-size: 10.5px; }
+  .clear-btn {
+    display: block;
+    margin: 12px auto 0;
+    background: transparent;
+    border: 1px solid rgba(224,57,43,.4);
+    color: #c98a82;
+    border-radius: 6px;
+    padding: 5px 14px;
+    font-family: inherit;
+    font-size: 11px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+  .clear-btn:hover { border-color: var(--danger); color: var(--danger); }
+  .chip.mode b { color: var(--power); }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="title-bar">
+    <h1>BOMB SQUAD</h1>
+    <div class="sub">Daniel &amp; Reshman · Demolition Detail</div>
+  </div>
+
+  <div class="hud">
+    <div class="chip mode" id="chip-mode">Mode <b id="hud-mode">Campaign</b></div>
+    <div class="chip">Level <b id="hud-level">1</b></div>
+    <div class="chip">Bombs <b id="hud-bombs">2</b></div>
+    <div class="chip">Range <b id="hud-range">1</b></div>
+    <div class="chip">Rubble <b id="hud-rubble">0</b></div>
+    <div class="chip timer" id="chip-timer">Time <b id="hud-timer">0</b></div>
+    <div class="chip dash">Dash <span class="dash-meter" id="dash-meter"><i></i></span></div>
+    <div class="chip danger">Lives <b id="hud-lives">3</b></div>
+    <div class="chip">Score <b id="hud-score">0</b></div>
+    <button class="chip chip-btn" id="btn-pause" title="Pause (P or Esc)" disabled>❚❚ Pause</button>
+    <button class="chip chip-btn" id="btn-mute" title="Mute (M)">🔊 Sound</button>
+  </div>
+
+  <div class="stage-wrap">
+    <canvas id="game" width="600" height="600"></canvas>
+
+    <div class="overlay" id="overlay-start">
+      <div class="menu-hero">
+        <div class="menu-logo">BOMB SQUAD</div>
+        <div class="menu-tag">Daniel &amp; Reshman · Demolition Detail</div>
+      </div>
+
+      <div class="menu-panel" id="menu-main">
+        <div class="cast">
+          <div><span class="face">🧨</span><b>DANIEL</b>Demolition bomber. Steady hands, questionable friends.</div>
+          <div><span class="face">👤</span><b>RESHMAN</b>A small shadowy blob. Loyal, jittery, allergic to blasts.</div>
+        </div>
+
+        <div class="mode-select">
+          <div class="section-label">Choose a mode</div>
+          <div class="mode-grid" id="mode-grid"></div>
+        </div>
+
+        <div class="mutators">
+          <div class="section-label">Modifiers <span class="mult-badge" id="mult-badge">×1.0</span></div>
+          <div class="mutator-grid" id="mutator-grid"></div>
+        </div>
+
+        <div class="menu-buttons">
+          <button class="btn" id="btn-start">START DIG</button>
+          <button class="btn btn-ghost" id="btn-howto">HOW TO PLAY</button>
+        </div>
+      </div>
+
+      <div class="menu-panel hidden" id="menu-howto">
+        <div class="legend">
+          <span>🟫 <b>Rubble</b> — blow it up to clear</span>
+          <span>🟥 <b>Barrel</b> — explodes in a big cross</span>
+          <span>⬜ <b>Steel</b> — indestructible, blocks blasts</span>
+          <span>🟪 <b>Guard</b> — patrols; deadly on touch</span>
+          <span>🟦 <b>Crate</b> — power-ups under rubble</span>
+          <span>🟩 <b>Exit</b> — hidden; dig it out, then leave</span>
+        </div>
+        <p>Clear the rubble, dodge the guards, grab power-ups, and reach the exit before time runs out. Keep Reshman out of your blasts, and on later sites bring your friend to the exit too. Tap <b>Shift</b> to dash Reshman out of danger. Pause anytime with <b>P</b> or <b>Esc</b>. Pick a <b>mode</b> and stack <b>modifiers</b> on the menu for a higher score multiplier and a fresh challenge each run.</p>
+        <button class="btn btn-ghost" id="btn-howto-back">BACK</button>
+      </div>
+
+      <div class="scoreboard" id="scoreboard-start">
+        <h3>Top Runs · <span id="scores-start-mode">Campaign</span></h3>
+        <ol id="scores-start"></ol>
+        <button class="clear-btn" id="btn-clear-scores">Clear scores</button>
+      </div>
+    </div>
+
+    <div class="overlay hidden" id="overlay-pause">
+      <h2>PAUSED</h2>
+      <p>Site secured. Take a breath — the guards are frozen too.</p>
+      <div class="menu-buttons">
+        <button class="btn" id="btn-resume">RESUME</button>
+        <button class="btn btn-ghost" id="btn-quit">QUIT TO MENU</button>
+      </div>
+    </div>
+
+    <div class="overlay hidden" id="overlay-level">
+      <h2 id="lvl-title">SITE CLEARED</h2>
+      <p id="lvl-msg"></p>
+      <button class="btn" id="btn-next">NEXT SITE</button>
+    </div>
+
+    <div class="overlay hidden" id="overlay-over">
+      <h2 id="over-title">BOOM. GAME OVER</h2>
+      <p id="over-msg"></p>
+      <div class="scoreboard" id="scoreboard-over">
+        <h3>Top Runs · <span id="scores-over-mode">Campaign</span></h3>
+        <ol id="scores-over"></ol>
+      </div>
+      <div class="menu-buttons">
+        <button class="btn" id="btn-retry">RETRY</button>
+        <button class="btn btn-ghost" id="btn-over-menu">MAIN MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    Move: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / arrows &nbsp;·&nbsp; Bomb: <kbd>Space</kbd> &nbsp;·&nbsp; Dash: <kbd>Shift</kbd> &nbsp;·&nbsp; Pause: <kbd>P</kbd> &nbsp;·&nbsp; Mute: <kbd>M</kbd>
+  </div>
+</div>
+
+<script src="https://artifactcdn.diabrowser.engineering/ajax/libs/tone/Tone.min.js"></script>
+<script>
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+
+  const COLS = 15, ROWS = 15;
+  const TILE = canvas.width / COLS; // 40
+
+  // tile types
+  const FLOOR = 0, WALL = 1, RUBBLE = 2, STEEL = 3, EXIT = 4, BARREL = 5, CRATE = 6;
+  // negative rubble variants encode "something is hidden underneath"
+  // -EXIT: exit under rubble, -CRATE: powerup under rubble
+  // CRATE tile itself is a destructible box already exposed
+
+  const POWER = { BOMB: 'bomb', RANGE: 'range', LIFE: 'life' };
+
+  const els = {
+    level: document.getElementById('hud-level'),
+    bombs: document.getElementById('hud-bombs'),
+    range: document.getElementById('hud-range'),
+    rubble: document.getElementById('hud-rubble'),
+    timer: document.getElementById('hud-timer'),
+    lives: document.getElementById('hud-lives'),
+    score: document.getElementById('hud-score'),
+    chipTimer: document.getElementById('chip-timer'),
+    dashMeter: document.getElementById('dash-meter'),
+    dashFill: document.querySelector('#dash-meter i'),
+    pauseBtn: document.getElementById('btn-pause'),
+    muteBtn: document.getElementById('btn-mute'),
+    mode: document.getElementById('hud-mode'),
+    chipMode: document.getElementById('chip-mode'),
+  };
+
+  const ovStart = document.getElementById('overlay-start');
+  const ovLevel = document.getElementById('overlay-level');
+  const ovOver  = document.getElementById('overlay-over');
+  const ovPause = document.getElementById('overlay-pause');
+  const menuMain = document.getElementById('menu-main');
+  const menuHowto = document.getElementById('menu-howto');
+
+  // ---------------------------------------------------------------
+  // AUDIO — Tone.js synth music + SFX. Everything is synthesized, no files.
+  // Music is an evolving chord progression with a wandering melody and a
+  // walking bass, arranged into A/B sections so it never loops too tightly.
+  // ---------------------------------------------------------------
+  const Audio = (() => {
+    let ready = false;      // Tone started (needs a user gesture)
+    let muted = false;
+    let built = false;
+    let master, musicBus, sfxBus;
+    let bass, lead, pad, pluck, kick, hat;
+    let chordSeq, drumSeq;
+    let sfxSynth, noise, noiseEnv, zap;
+    let curMode = 'campaign';
+    const hasTone = typeof Tone !== 'undefined';
+
+    // ---- Music theory material ----
+    // An 8-bar progression in A minor (Am – F – C – G – Dm – F – E – Am-ish),
+    // each entry: bass root, and the chord tones the melody/pad can use.
+    const PROG = [
+      { bass:'A1', chord:['A2','C3','E3'],  scale:['A3','B3','C4','D4','E4','G4','A4'] },
+      { bass:'F1', chord:['F2','A2','C3'],  scale:['F3','G3','A3','C4','D4','F4'] },
+      { bass:'C2', chord:['C3','E3','G3'],  scale:['C4','D4','E4','G4','A4','C5'] },
+      { bass:'G1', chord:['G2','B2','D3'],  scale:['G3','A3','B3','D4','E4','G4'] },
+      { bass:'D2', chord:['D3','F3','A3'],  scale:['D4','E4','F4','A4','C5','D5'] },
+      { bass:'F1', chord:['F2','A2','C3'],  scale:['F3','A3','C4','D4','F4','A4'] },
+      { bass:'E2', chord:['E3','G3','B3'],  scale:['E4','F4','G4','B4','C5','E5'] },
+      { bass:'A1', chord:['A2','C3','E3'],  scale:['A3','C4','E4','G4','A4','B4','E5'] },
+    ];
+    // rhythmic templates for the lead (1 = note, 0 = rest) over 8 sixteenths/bar-half
+    const RHYTHMS = [
+      [1,0,1,0, 1,1,0,1],
+      [1,0,0,1, 0,1,0,0],
+      [1,1,0,1, 1,0,1,0],
+      [0,1,0,1, 1,0,0,1],
+    ];
+    let melodyIdx = 0; // wanders through the current chord's scale
+
+    function build(){
+      if (built || !hasTone) return;
+      built = true;
+      master = new Tone.Gain(0.85).toDestination();
+      const comp = new Tone.Compressor(-22, 3).connect(master);
+      musicBus = new Tone.Gain(0.55).connect(comp);
+      sfxBus = new Tone.Gain(0.6).connect(comp);
+
+      // shared, warm space: gentle reverb + a soft ping-pong delay for the lead
+      const reverb = new Tone.Reverb({ decay: 3.4, wet: 0.26 }).connect(musicBus);
+      const delay = new Tone.PingPongDelay({ delayTime:'8n.', feedback:0.28, wet:0.22 }).connect(reverb);
+
+      // rounded triangle bass with a slow filter for warmth
+      bass = new Tone.MonoSynth({
+        oscillator:{type:'triangle'},
+        envelope:{attack:0.02,decay:0.3,sustain:0.6,release:0.4},
+        filter:{Q:1,type:'lowpass'},
+        filterEnvelope:{attack:0.02,decay:0.4,sustain:0.4,baseFrequency:180,octaves:2}
+      }).connect(musicBus);
+      bass.volume.value = -11;
+
+      // soft FM lead for the melody, into delay+reverb
+      lead = new Tone.FMSynth({
+        harmonicity:2, modulationIndex:6,
+        oscillator:{type:'sine'}, modulation:{type:'triangle'},
+        envelope:{attack:0.01,decay:0.2,sustain:0.15,release:0.4},
+        modulationEnvelope:{attack:0.02,decay:0.2,sustain:0.1,release:0.3}
+      }).connect(delay);
+      lead.volume.value = -16;
+
+      // breathy pad chords
+      pad = new Tone.PolySynth(Tone.AMSynth,{
+        harmonicity:1.5,
+        oscillator:{type:'sine'}, modulation:{type:'sine'},
+        envelope:{attack:1.2,decay:0.6,sustain:0.7,release:2.4}
+      }).connect(reverb);
+      pad.volume.value = -24;
+
+      // gentle pluck for offbeat sparkle
+      pluck = new Tone.Synth({
+        oscillator:{type:'triangle'},
+        envelope:{attack:0.005,decay:0.18,sustain:0,release:0.15}
+      }).connect(delay);
+      pluck.volume.value = -22;
+
+      kick = new Tone.MembraneSynth({ octaves:5, pitchDecay:0.05 }).connect(musicBus);
+      kick.volume.value = -9;
+      hat = new Tone.NoiseSynth({ noise:{type:'white'}, envelope:{attack:0.001,decay:0.04,sustain:0} }).connect(musicBus);
+      hat.volume.value = -28;
+
+      // ---- SFX voices ----
+      sfxSynth = new Tone.Synth({ oscillator:{type:'square'}, envelope:{attack:0.001,decay:0.08,sustain:0,release:0.05} }).connect(sfxBus);
+      sfxSynth.volume.value = -12;
+      const nfilt = new Tone.Filter(800,'lowpass').connect(sfxBus);
+      noiseEnv = new Tone.AmplitudeEnvelope({ attack:0.001, decay:0.35, sustain:0, release:0.1 }).connect(nfilt);
+      noise = new Tone.Noise('brown').connect(noiseEnv); noise.start();
+      zap = new Tone.Synth({ oscillator:{type:'sawtooth'}, envelope:{attack:0.001,decay:0.15,sustain:0,release:0.05} }).connect(sfxBus);
+      zap.volume.value = -14;
+
+      // ---- Music: one event per bar drives harmony, bass walk, melody phrase ----
+      let bar = 0;
+      chordSeq = new Tone.Loop((time)=>{
+        const p = PROG[bar % PROG.length];
+        const sectionB = Math.floor(bar/8) % 2 === 1; // alternate texture every 8 bars
+        const beat = Tone.Time('4n').toSeconds();
+        const six = Tone.Time('16n').toSeconds();
+
+        // --- pad: sustained chord on the downbeat (skip some bars in section B for space)
+        if (!(sectionB && bar%2===1)) {
+          pad.triggerAttackRelease(p.chord, '1m', time, 0.6);
+        }
+
+        // --- walking bass: root, fifth, octave, passing note across the bar
+        const root = p.bass;
+        const fifth = Tone.Frequency(root).transpose(7).toNote();
+        const oct = Tone.Frequency(root).transpose(12).toNote();
+        const next = PROG[(bar+1)%PROG.length].bass;
+        const walk = sectionB ? [root, oct, fifth, next] : [root, fifth, root, fifth];
+        walk.forEach((n,i)=> bass.triggerAttackRelease(n, '8n', time + i*beat, 0.9));
+
+        // --- melody: a phrase from this chord's scale, with rests and contour
+        const rhythm = RHYTHMS[(bar + (sectionB?2:0)) % RHYTHMS.length];
+        const scale = p.scale;
+        for (let i=0;i<rhythm.length;i++){
+          if (!rhythm[i]) continue;
+          // wander: mostly stepwise, occasional leap, wrap within scale
+          melodyIdx += (Math.random()<0.7 ? (Math.random()<0.5?1:-1) : (Math.random()<0.5?2:-2));
+          melodyIdx = ((melodyIdx % scale.length) + scale.length) % scale.length;
+          const note = scale[melodyIdx];
+          const vel = 0.35 + Math.random()*0.35;
+          lead.triggerAttackRelease(note, i%2? '16n':'8n', time + i*(beat/2) + six, vel);
+        }
+
+        // --- pluck sparkle on offbeats in section A only
+        if (!sectionB){
+          const pn = p.chord[bar % p.chord.length];
+          pluck.triggerAttackRelease(Tone.Frequency(pn).transpose(12).toNote(), '16n', time + 2.5*beat, 0.5);
+        }
+
+        bar++;
+      }, '1m');
+
+      // --- drums: a light two-bar groove with fills, tuned per mode later
+      let d = 0;
+      drumSeq = new Tone.Loop((time)=>{
+        const s = d % 8;                    // eighth-note position in a bar
+        if (s===0 || s===4) kick.triggerAttackRelease('C1','8n',time);
+        if (s===6 && (Math.floor(d/8)%2===1)) kick.triggerAttackRelease('C1','8n',time); // syncopated bar 2
+        if (s%2===1) hat.triggerAttackRelease('16n',time);
+        d++;
+      }, '8n');
+
+      Tone.Transport.bpm.value = 96;
+    }
+
+    async function ensure(){
+      if (!hasTone) return false;
+      if (!ready){
+        try { await Tone.start(); ready = true; } catch(e){ return false; }
+      }
+      build();
+      return true;
+    }
+
+    // mode-specific character (tempo + instrument color + drum/lead presence)
+    function applyMode(mode){
+      if (!built) return;
+      curMode = mode;
+      const cfg = {
+        campaign:  { bpm:98,  bass:'triangle', lead:-16, drums:-9,  hat:-28, sway:true  },
+        endless:   { bpm:112, bass:'sawtooth', lead:-15, drums:-8,  hat:-24, sway:false },
+        timeattack:{ bpm:132, bass:'square',   lead:-15, drums:-7,  hat:-22, sway:false },
+        sudden:    { bpm:88,  bass:'sine',     lead:-19, drums:-10, hat:-32, sway:true  },
+      }[mode] || { bpm:98, bass:'triangle', lead:-16, drums:-9, hat:-28, sway:true };
+      Tone.Transport.bpm.rampTo(cfg.bpm, 2.0);
+      // gentle triplet swing on calmer modes for a nicer feel
+      Tone.Transport.swing = cfg.sway ? 0.18 : 0.04;
+      Tone.Transport.swingSubdivision = '8n';
+      bass.oscillator.type = cfg.bass;
+      lead.volume.rampTo(cfg.lead, 1.0);
+      kick.volume.rampTo(cfg.drums, 1.0);
+      hat.volume.rampTo(cfg.hat, 1.0);
+    }
+
+    async function startMusic(mode){
+      if (muted) return;
+      if (!(await ensure())) return;
+      applyMode(mode);
+      if (Tone.Transport.state !== 'started'){
+        chordSeq.start(0); drumSeq.start('0:0:0');
+        Tone.Transport.start('+0.1');
+      }
+    }
+    function stopMusic(){
+      if (!built) return;
+      try { Tone.Transport.pause(); } catch(e){}
+    }
+    function resumeMusic(){
+      if (!built || muted) return;
+      try { Tone.Transport.start(); } catch(e){}
+    }
+
+    // ---- SFX ----
+    function safe(fn){ if (!ready || muted || !built) return; try{ fn(); }catch(e){} }
+    // monotonic time so rapid same-frame triggers never share a start time
+    let lastT = 0;
+    const now = () => { let t = Tone.now(); if (t <= lastT) t = lastT + 0.02; lastT = t; return t; };
+    const sfx = {
+      step(){ safe(()=>{ sfxSynth.volume.value=-20; sfxSynth.triggerAttackRelease('C5','32n', now()); }); },
+      plant(){ safe(()=>{ sfxSynth.volume.value=-10; sfxSynth.triggerAttackRelease('G4','16n', now()); }); },
+      dash(){ safe(()=>{ const t=now(); zap.triggerAttackRelease('C4','16n', t); zap.frequency.rampTo('C6',0.15,t); }); },
+      pickup(){ safe(()=>{ const t=now(); sfxSynth.volume.value=-8; sfxSynth.triggerAttackRelease('C5','16n',t); sfxSynth.triggerAttackRelease('E5','16n',t+0.08); sfxSynth.triggerAttackRelease('G5','16n',t+0.16); }); },
+      explode(){ safe(()=>{ const t=now(); noiseEnv.triggerAttackRelease(0.3,t); kick.triggerAttackRelease('C1','4n',t); }); },
+      guard(){ safe(()=>{ const t=now(); zap.triggerAttackRelease('A3','8n',t); zap.frequency.rampTo('A1',0.18,t); }); },
+      clear(){ safe(()=>{ const t=now(); const seq=['C4','E4','G4','C5']; sfxSynth.volume.value=-6; seq.forEach((n,i)=>sfxSynth.triggerAttackRelease(n,'8n',t+i*0.12)); }); },
+      hurt(){ safe(()=>{ const t=now(); zap.triggerAttackRelease('E3','4n',t); zap.frequency.rampTo('E2',0.4,t); }); },
+      over(){ safe(()=>{ const t=now(); const seq=['A3','G3','F3','E3']; sfxSynth.volume.value=-6; seq.forEach((n,i)=>sfxSynth.triggerAttackRelease(n,'8n',t+i*0.18)); }); },
+    };
+
+    function toggleMute(){
+      muted = !muted;
+      if (built) master.gain.rampTo(muted?0:0.9, 0.15);
+      return muted;
+    }
+    function isMuted(){ return muted; }
+
+    return { ensure, startMusic, stopMusic, resumeMusic, applyMode, sfx, toggleMute, isMuted, get muted(){ return muted; } };
+  })();
+
+  let state = {};
+  let paused = false;
+
+  // ---- Game modes ----
+  const MODES = {
+    campaign: {
+      name: 'Campaign',
+      icon: '🏗️',
+      desc: 'Hand-built sites, then endless procedural. 3 lives, difficulty climbs.',
+      lives: 3, endless: true, useTemplates: true, sharedTimer: false, baseMult: 1.0,
+    },
+    endless: {
+      name: 'Endless',
+      icon: '♾️',
+      desc: 'Skip the tutorial sites. Pure procedural gauntlet, ramps forever.',
+      lives: 3, endless: true, useTemplates: false, sharedTimer: false, baseMult: 1.15,
+    },
+    timeattack: {
+      name: 'Time Attack',
+      icon: '⏱️',
+      desc: 'One shared clock. Clearing a site refuels it. Race until it hits zero.',
+      lives: 99, endless: true, useTemplates: false, sharedTimer: true, baseMult: 1.25,
+    },
+    sudden: {
+      name: 'Sudden Death',
+      icon: '💀',
+      desc: 'One life. One blast. No respawns. Highest nerve wins.',
+      lives: 1, endless: true, useTemplates: true, sharedTimer: false, baseMult: 1.5,
+    },
+  };
+
+  // ---- Mutators (optional modifiers, stack a score multiplier) ----
+  const MUTATORS = {
+    shortfuse: { name: 'Short Fuse', icon: '🔥', mult: 0.20, desc: 'Bombs blow up twice as fast.' },
+    frenzy:    { name: 'Frenzy',     icon: '⚡', mult: 0.25, desc: 'Guards move much faster.' },
+    swarm:     { name: 'Swarm',      icon: '👹', mult: 0.30, desc: 'Extra guards on every site.' },
+    fragile:   { name: 'Fragile',    icon: '🥚', mult: 0.20, desc: 'Barrels everywhere; big chains.' },
+    darkness:  { name: 'Blackout',   icon: '🔦', mult: 0.35, desc: 'Only see near Daniel & Reshman.' },
+  };
+
+  let selectedMode = 'campaign';
+  const activeMutators = new Set();
+
+  function totalMultiplier(){
+    let m = MODES[selectedMode].baseMult;
+    for (const id of activeMutators) m += MUTATORS[id].mult;
+    return Math.round(m*100)/100;
+  }
+
+  function newGameState() {
+    const mode = MODES[selectedMode];
+    return {
+      mode: selectedMode,
+      level: 1,
+      lives: mode.lives,
+      score: 0,
+      maxBombs: 2,
+      range: 1,
+      running: false,
+      mult: totalMultiplier(),
+      mutators: new Set(activeMutators),
+      streak: 0,        // consecutive clears without a death
+      bestStreak: 0,
+      sharedTime: mode.sharedTimer ? 60 : 0,
+    };
+  }
+
+  // ---------------------------------------------------------------
+  // LEVEL LAYOUTS
+  // Hand-authored templates using a legend. Rows are strings.
+  //   . floor     # wall/steel border handled automatically
+  //   S steel pillar   R rubble   B barrel   G guard spawn
+  //   C crate (exposed powerup box)   X exit-under-rubble
+  //   P player start   (Reshman starts with player)
+  //   space = floor
+  // Templates are 13 wide x 13 tall (interior); border added automatically.
+  // ---------------------------------------------------------------
+  const INNER = 13; // COLS-2
+
+  const TEMPLATES = [
+    // 1: gentle intro — open with scattered rubble, one guard
+    [
+      "P.....R......",
+      "..S.S.S.S.S..",
+      ".R..R....R.R.",
+      "..S.S.S.S.S..",
+      "...R...C...R.",
+      "..S.S.S.S.S..",
+      ".R....G....R.",
+      "..S.S.S.S.S..",
+      ".R...R...R.R.",
+      "..S.S.S.S.S..",
+      ".R..R...R..R.",
+      "..S.S.S.S.S..",
+      "......R.....X",
+    ],
+    // 2: barrel corridors — use chain blasts, two guards
+    [
+      "P..R..B..R...",
+      ".SSS.SSS.SSS.",
+      "...R.....R..G",
+      "R.B.......B.R",
+      ".SSS.SSS.SSS.",
+      "....C.....C..",
+      "R.B...R...B.R",
+      ".SSS.SSS.SSS.",
+      "G..R.....R...",
+      "R.B.......B.R",
+      ".SSS.SSS.SSS.",
+      "...R..B..R...",
+      "R...........X",
+    ],
+    // 3: the maze — tight walls and lanes, but always a floor path through
+    [
+      "P...S...S...R",
+      ".S.SS.S.SS.S.",
+      ".S...R...C.S.",
+      ".SSS.SSS.SS..",
+      "...R.G.....S.",
+      ".S.SSS.SSS.S.",
+      ".SR...C...RS.",
+      ".S.SSS.SSS.S.",
+      ".S.....G.R...",
+      "..SS.SSS.SSS.",
+      ".S.C...R...S.",
+      ".S.SS.S.SS.S.",
+      "R...S...S...X",
+    ],
+    // 4: barrel vault — lots of barrels, three guards, crate rewards
+    [
+      "P.B.B.B.B.B.R",
+      ".S.S.S.S.S.S.",
+      "RB.G.RBR.G.BR",
+      ".S.S.S.S.S.S.",
+      "..RB..C..BR..",
+      ".S.S.S.S.S.S.",
+      "RB..R.G.R..BR",
+      ".S.S.S.S.S.S.",
+      "..C..RBR..C..",
+      ".S.S.S.S.S.S.",
+      "RB.G.RBR.G.BR",
+      ".S.S.S.S.S.S.",
+      "R.B.B.B.B.B.X",
+    ],
+    // 5: fortress — exit deep in a steel core, four guards
+    [
+      "P...G.....G..",
+      ".SSSSS.SSSSS.",
+      ".S.R.....R.S.",
+      ".S.SSS.SSS.S.",
+      ".S.S.C.C.S.SR",
+      "GS.S.SSS.S.SG",
+      "RS.S.S.RS.S.R",
+      ".S.S.SSS.S.S.",
+      ".S.S.RBR.S.S.",
+      ".S.SSS.SSS.S.",
+      ".S.RR.G.RR.S.",
+      ".SSSSS.SSSSS.",
+      "R...B..B....X",
+    ],
+  ];
+
+  function parseTemplate(tpl) {
+    const grid = [];
+    for (let y=0;y<ROWS;y++){ grid[y]=[]; for(let x=0;x<COLS;x++) grid[y][x]=FLOOR; }
+    // border
+    for (let x=0;x<COLS;x++){ grid[0][x]=WALL; grid[ROWS-1][x]=WALL; }
+    for (let y=0;y<ROWS;y++){ grid[y][0]=WALL; grid[y][COLS-1]=WALL; }
+
+    const guards = [];
+    let start = { x:1, y:1 };
+    for (let ry=0; ry<INNER; ry++) {
+      const row = tpl[ry] || '';
+      for (let rx=0; rx<INNER; rx++) {
+        const ch = row[rx] || '.';
+        const gx = rx+1, gy = ry+1;
+        switch(ch){
+          case 'S': grid[gy][gx]=STEEL; break;
+          case 'R': grid[gy][gx]=RUBBLE; break;
+          case 'B': grid[gy][gx]=BARREL; break;
+          case 'C': grid[gy][gx]=CRATE; break;
+          case 'X': grid[gy][gx]=-EXIT; break;
+          case 'G': guards.push({x:gx,y:gy}); grid[gy][gx]=FLOOR; break;
+          case 'P': start={x:gx,y:gy}; grid[gy][gx]=FLOOR; break;
+          default: grid[gy][gx]=FLOOR;
+        }
+      }
+    }
+    return { grid, start, guards };
+  }
+
+  // Procedural generator for levels beyond the templates (keeps ramping up)
+  function generateProcedural(level) {
+    const grid = [];
+    for (let y=0;y<ROWS;y++){ grid[y]=[]; for(let x=0;x<COLS;x++){
+      if (x===0||y===0||x===COLS-1||y===ROWS-1) grid[y][x]=WALL;
+      else if (x%2===0 && y%2===0) grid[y][x]=STEEL;
+      else grid[y][x]=FLOOR;
+    }}
+    const start={x:1,y:1};
+    const safe = new Set(['1,1','2,1','1,2','3,1','1,3']);
+    const key=(x,y)=>x+','+y;
+    const rubbleTarget = Math.min(24 + level*2, 60);
+    let placed=0,g=0;
+    while(placed<rubbleTarget && g<6000){ g++;
+      const x=1+Math.floor(Math.random()*(COLS-2)), y=1+Math.floor(Math.random()*(ROWS-2));
+      if (grid[y][x]!==FLOOR || safe.has(key(x,y))) continue;
+      const r=Math.random();
+      grid[y][x] = r<0.12 ? BARREL : r<0.18 ? CRATE : RUBBLE;
+      placed++;
+    }
+    // hidden exit far corner under rubble
+    let done=false,e=0;
+    while(!done && e<3000){ e++;
+      const x=COLS-2-Math.floor(Math.random()*3), y=ROWS-2-Math.floor(Math.random()*3);
+      if (x>1 && y>1 && (grid[y][x]===RUBBLE)) { grid[y][x]=-EXIT; done=true; }
+    }
+    if (!done) grid[ROWS-2][COLS-2]=-EXIT;
+    // guards scale with level
+    const guards=[];
+    const gcount = Math.min(3+Math.floor(level/2), 7);
+    let gg=0;
+    while(guards.length<gcount && gg<3000){ gg++;
+      const x=1+Math.floor(Math.random()*(COLS-2)), y=1+Math.floor(Math.random()*(ROWS-2));
+      if (grid[y][x]!==FLOOR) continue;
+      if (Math.abs(x-1)+Math.abs(y-1) < 5) continue; // not too close to start
+      guards.push({x,y});
+    }
+    return { grid, start, guards };
+  }
+
+  // ---------------------------------------------------------------
+  // Solvability guard: rubble / barrels / crates are all destructible, so a
+  // level is solvable iff the player can reach every rubble+exit tile when
+  // those destructible tiles count as passable. Only WALL and STEEL block.
+  // If the hidden exit (or any rubble) is walled off by steel, we carve the
+  // fewest steel tiles needed to reconnect it, so no level can ever softlock.
+  function passableForSolve(t){ return t!==WALL && t!==STEEL; }
+
+  function reachableSet(grid, start){
+    const seen = Array.from({length:ROWS},()=>new Array(COLS).fill(false));
+    const q=[[start.x,start.y]]; seen[start.y][start.x]=true;
+    const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+    while(q.length){
+      const [x,y]=q.shift();
+      for (const [dx,dy] of dirs){
+        const nx=x+dx, ny=y+dy;
+        if (nx<1||ny<1||nx>=COLS-1||ny>=ROWS-1) continue;
+        if (seen[ny][nx]) continue;
+        if (!passableForSolve(grid[ny][nx])) continue;
+        seen[ny][nx]=true; q.push([nx,ny]);
+      }
+    }
+    return seen;
+  }
+
+  // Carve a straight-ish steel corridor from a reachable cell to the target.
+  function carvePathTo(grid, seen, tx, ty){
+    // find nearest reachable cell (BFS outward from target ignoring steel,
+    // then walk back turning steel into floor until we touch the reachable set)
+    const prev = Array.from({length:ROWS},()=>new Array(COLS).fill(null));
+    const dist = Array.from({length:ROWS},()=>new Array(COLS).fill(Infinity));
+    const q=[[tx,ty]]; dist[ty][tx]=0;
+    const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+    let hit=null;
+    while(q.length){
+      const [x,y]=q.shift();
+      if (seen[y][x]){ hit=[x,y]; break; }
+      for (const [dx,dy] of dirs){
+        const nx=x+dx, ny=y+dy;
+        if (nx<1||ny<1||nx>=COLS-1||ny>=ROWS-1) continue;
+        if (grid[ny][nx]===WALL) continue;            // never carve the border
+        if (dist[ny][nx]!==Infinity) continue;
+        dist[ny][nx]=dist[y][x]+1; prev[ny][nx]=[x,y];
+        q.push([nx,ny]);
+      }
+    }
+    if (!hit) return false;
+    // walk from the reachable hit back to target, converting steel to floor
+    let cur=hit;
+    while(cur && !(cur[0]===tx && cur[1]===ty)){
+      const [x,y]=cur;
+      if (grid[y][x]===STEEL) grid[y][x]=FLOOR;
+      cur=prev[y][x];
+      // also clear the target-side neighbour chain
+      if (cur){ const [px,py]=cur; if (grid[py][px]===STEEL) grid[py][px]=FLOOR; }
+    }
+    return true;
+  }
+
+  function ensureSolvable(base){
+    const { grid, start } = base;
+    // make sure the start cell and its immediate area aren't fully boxed:
+    // gather all targets that must be reachable
+    const targets=[];
+    for (let y=1;y<ROWS-1;y++) for (let x=1;x<COLS-1;x++){
+      const t=grid[y][x];
+      if (t===RUBBLE || t===-EXIT || t===BARREL || t===CRATE) targets.push([x,y]);
+    }
+    let guard=0;
+    while(guard++<40){
+      const seen=reachableSet(grid,start);
+      // the exit tile is the critical one
+      let unreachable=null;
+      // prioritise the exit
+      for (let y=1;y<ROWS-1;y++) for (let x=1;x<COLS-1;x++){
+        if (grid[y][x]===-EXIT && !seen[y][x]) { unreachable=[x,y]; break; }
+      }
+      if (!unreachable){
+        for (const [x,y] of targets){ if (!seen[y][x]) { unreachable=[x,y]; break; } }
+      }
+      if (!unreachable) break; // fully solvable
+      if (!carvePathTo(grid, seen, unreachable[0], unreachable[1])) break;
+    }
+    return base;
+  }
+
+  // ---------------------------------------------------------------
+  function buildLevel(level) {
+    const mode = MODES[state.mode];
+    const muts = state.mutators;
+    const base = (mode.useTemplates && level <= TEMPLATES.length)
+      ? parseTemplate(TEMPLATES[level-1])
+      : generateProcedural(level);
+
+    // Fragile mutator: sprinkle extra barrels onto random floor tiles
+    if (muts.has('fragile')) {
+      let extra = 6, tries = 0;
+      while (extra>0 && tries<600) {
+        tries++;
+        const x=1+Math.floor(Math.random()*(COLS-2)), y=1+Math.floor(Math.random()*(ROWS-2));
+        if (base.grid[y][x]===FLOOR && !(x===base.start.x&&y===base.start.y)) { base.grid[y][x]=BARREL; extra--; }
+      }
+    }
+
+    ensureSolvable(base);
+
+    // Swarm mutator: add extra guard spawns on open floor away from start
+    let guardSpawns = base.guards.slice();
+    if (muts.has('swarm')) {
+      let add=2, tries=0;
+      while (add>0 && tries<600) {
+        tries++;
+        const x=1+Math.floor(Math.random()*(COLS-2)), y=1+Math.floor(Math.random()*(ROWS-2));
+        if (base.grid[y][x]!==FLOOR) continue;
+        if (Math.abs(x-base.start.x)+Math.abs(y-base.start.y)<5) continue;
+        if (guardSpawns.some(g=>g.x===x&&g.y===y)) continue;
+        guardSpawns.push({x,y}); add--;
+      }
+    }
+
+    const frenzy = muts.has('frenzy');
+    const guards = guardSpawns.map((g,i) => ({
+      x:g.x, y:g.y, px:g.x, py:g.y,
+      dir: [[1,0],[-1,0],[0,1],[0,-1]][i%4],
+      moveEvery: Math.max((frenzy? 12 : 18) - level, frenzy? 5 : 8),
+      cd: Math.floor(Math.random()*10),
+      alive: true,
+      smart: level >= 3 && i % 2 === 0,
+    }));
+
+    // require Reshman at exit from level 4 onward (campaign story beat)
+    const needReshman = level >= 4;
+    // per-level timer (ignored when the mode uses a single shared clock)
+    const timeLimit = mode.sharedTimer ? 0 : Math.max(75 - level*4, 35);
+    const fuse = muts.has('shortfuse') ? 60 : 120;
+    return {
+      grid: base.grid,
+      start: base.start,
+      bombs: [], explosions: [], particles: [], floaters: [],
+      guards,
+      maxBombs: state.maxBombs,
+      range: state.range,
+      exitRevealed: false,
+      needReshman,
+      timeLimit,
+      timeLeft: timeLimit,
+      timeTick: 0,
+      fuse,
+      finished: false,
+      player: { x:base.start.x, y:base.start.y, px:base.start.x, py:base.start.y, dir:'down', alive:true, invuln:0 },
+      reshman: { x:base.start.x, y:base.start.y, px:base.start.x, py:base.start.y, trail:[], alive:true, dashCd:0 },
+    };
+  }
+
+  let lvl = null;
+  let anim = { t: 0 };
+  let pendingAction = null;
+  const DASH_MAX = 300; // frames to fully recharge (~5s at 60fps)
+  const DASH_DIST = 2;  // tiles Reshman leaps
+
+  // ---- Helpers ----
+  function isWalkBlock(t) { return t===WALL||t===STEEL||t===RUBBLE||t===BARREL||t===CRATE; }
+  function isBlastBlock(t){ return t===WALL||t===STEEL; }
+  function bombAt(x,y){ return lvl.bombs.find(b=>b.x===x&&b.y===y); }
+  function guardAt(x,y){ return lvl.guards.find(g=>g.alive&&g.x===x&&g.y===y); }
+  function lerp(a,b,t){ return a+(b-a)*t; }
+
+  function tryMove(dx,dy){
+    if (!lvl||!lvl.player.alive||!state.running) return;
+    const p=lvl.player;
+    p.dir = dx<0?'left':dx>0?'right':dy<0?'up':'down';
+    const nx=p.x+dx, ny=p.y+dy;
+    if (nx<0||ny<0||nx>=COLS||ny>=ROWS) return;
+    let t=lvl.grid[ny][nx];
+    if (t===-EXIT) t=RUBBLE;
+    if (isWalkBlock(t)) return;
+    if (bombAt(nx,ny)) return;
+    lvl.reshman.trail.push({x:p.x,y:p.y});
+    if (lvl.reshman.trail.length>3) lvl.reshman.trail.shift();
+    p.x=nx; p.y=ny;
+    Audio.sfx.step();
+    stepReshman();
+    // step onto a guard?
+    if (guardAt(nx,ny)) { killPlayer('A guard caught Daniel!'); return; }
+    checkExit();
+  }
+
+  function stepReshman(){
+    const r=lvl.reshman;
+    if (r.trail.length>=2){ const tg=r.trail[0]; r.x=tg.x; r.y=tg.y; }
+  }
+
+  // Reshman leaps in Daniel's facing direction to escape a blast / cross a gap.
+  // Slides up to DASH_DIST tiles, stopping before any blocking tile or bomb.
+  function dashReshman(){
+    if (!lvl||!lvl.reshman.alive||!lvl.player.alive||!state.running) return;
+    const r=lvl.reshman;
+    if (r.dashCd>0) return;
+    const dmap={left:[-1,0],right:[1,0],up:[0,-1],down:[0,1]};
+    const [dx,dy]=dmap[lvl.player.dir]||[0,1];
+    let nx=r.x, ny=r.y, moved=0;
+    for (let i=0;i<DASH_DIST;i++){
+      const tx=nx+dx, ty=ny+dy;
+      if (tx<1||ty<1||tx>=COLS-1||ty>=ROWS-1) break;
+      let t=lvl.grid[ty][tx];
+      if (t===-EXIT) t=RUBBLE;
+      if (isWalkBlock(t)) break;
+      if (bombAt(tx,ty)) break;
+      nx=tx; ny=ty; moved++;
+    }
+    if (moved===0){ floater(r.x,r.y,'BLOCKED','#9d8a68'); return; }
+    r.x=nx; r.y=ny;
+    // realign the follow trail so Reshman doesn't snap back next step
+    r.trail=[{x:nx,y:ny},{x:nx,y:ny}];
+    r.dashCd=DASH_MAX;
+    // dash puff
+    Audio.sfx.dash();
+    burst(r.x,r.y,'#b98bff');
+    floater(r.x,r.y,'DASH!','#b98bff');
+  }
+
+  function checkExit(){
+    const p=lvl.player;
+    if (!lvl.exitRevealed) return;
+    const onExit = lvl.grid[p.y][p.x]===EXIT;
+    if (!onExit) return;
+    if (lvl.needReshman) {
+      const rOnExitOrAdj = (lvl.reshman.x===p.x&&lvl.reshman.y===p.y) ||
+        (Math.abs(lvl.reshman.x-p.x)+Math.abs(lvl.reshman.y-p.y)<=1);
+      if (!rOnExitOrAdj) { floater(p.x,p.y,'BRING RESHMAN!', '#ffd23a'); return; }
+    }
+    levelClear();
+  }
+
+  function plantBomb(){
+    if (!lvl||!lvl.player.alive||!state.running) return;
+    const p=lvl.player;
+    if (lvl.bombs.length>=lvl.maxBombs) return;
+    if (bombAt(p.x,p.y)) return;
+    lvl.bombs.push({ x:p.x, y:p.y, t:0, fuse:lvl.fuse||120, range:lvl.range });
+    Audio.sfx.plant();
+  }
+
+  // ---- Explosions ----
+  function detonate(bomb){
+    const cells=[{x:bomb.x,y:bomb.y}];
+    const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+    const range = bomb.barrel ? bomb.range : bomb.range;
+    for (const [dx,dy] of dirs){
+      for (let i=1;i<=range;i++){
+        const x=bomb.x+dx*i, y=bomb.y+dy*i;
+        if (x<1||y<1||x>=COLS-1||y>=ROWS-1) break;
+        const t=lvl.grid[y][x];
+        if (isBlastBlock(t)) break;
+        cells.push({x,y});
+        if (t===RUBBLE){ lvl.grid[y][x]=FLOOR; addScore(10); break; }
+        if (t===-EXIT){ lvl.grid[y][x]=EXIT; lvl.exitRevealed=true; floater(x,y,'EXIT FOUND!','#38c172'); addScore(25); break; }
+        if (t===CRATE){ lvl.grid[y][x]=FLOOR; spawnPowerup(x,y); break; }
+        if (t===BARREL){ lvl.grid[y][x]=FLOOR; queueBarrel(x,y); break; }
+      }
+    }
+    // center tile contents
+    handleCenter(bomb.x,bomb.y);
+
+    lvl.explosions.push({ cells, t:0, life:26 });
+
+    // chain bombs caught in blast
+    for (const b of lvl.bombs){
+      if (b===bomb||b.exploding) continue;
+      if (cells.some(c=>c.x===b.x&&c.y===b.y)) b.fuse=Math.min(b.fuse,5);
+    }
+
+    // damage characters & guards
+    for (const c of cells){
+      if (lvl.player.alive && lvl.player.invuln<=0 && lvl.player.x===c.x&&lvl.player.y===c.y)
+        killPlayer('Daniel stood in his own blast.');
+      if (lvl.reshman.alive && lvl.reshman.x===c.x&&lvl.reshman.y===c.y) killReshman();
+      const g=guardAt(c.x,c.y);
+      if (g){ g.alive=false; addScore(50); floater(c.x,c.y,'+50','#f2b134'); burst(c.x,c.y,'#c86bd6'); Audio.sfx.guard(); }
+    }
+
+    for (const c of cells) burst(c.x,c.y, Math.random()<.5?'#ff9b3a':'#ffd23a');
+    Audio.sfx.explode();
+    flashStage(); shakeStage();
+  }
+
+  function handleCenter(x,y){
+    const t=lvl.grid[y][x];
+    if (t===RUBBLE) lvl.grid[y][x]=FLOOR;
+    else if (t===-EXIT){ lvl.grid[y][x]=EXIT; lvl.exitRevealed=true; }
+    else if (t===CRATE){ lvl.grid[y][x]=FLOOR; spawnPowerup(x,y); }
+    else if (t===BARREL){ lvl.grid[y][x]=FLOOR; queueBarrel(x,y); }
+  }
+
+  // Barrels explode with a bigger cross AFTER a short delay (secondary blast)
+  let barrelQueue = [];
+  function queueBarrel(x,y){ barrelQueue.push({x,y,delay:4}); }
+  function processBarrels(){
+    for (const bq of barrelQueue) bq.delay--;
+    const ready = barrelQueue.filter(b=>b.delay<=0);
+    barrelQueue = barrelQueue.filter(b=>b.delay>0);
+    for (const b of ready){
+      // secondary blast with range 3 (barrels are powerful)
+      detonate({ x:b.x, y:b.y, range:3, barrel:true });
+    }
+  }
+
+  function spawnPowerup(x,y){
+    const roll=Math.random();
+    const type = roll<0.5 ? POWER.BOMB : roll<0.85 ? POWER.RANGE : POWER.LIFE;
+    lvl.grid[y][x]=CRATE*0; // floor
+    lvl.powerups = lvl.powerups||[];
+    lvl.powerups.push({x,y,type,t:0});
+  }
+
+  function collectPowerups(){
+    if (!lvl.powerups) return;
+    const p=lvl.player;
+    for (const pu of lvl.powerups){
+      if (pu.dead) continue;
+      if (pu.x===p.x && pu.y===p.y){
+        pu.dead=true;
+        if (pu.type===POWER.BOMB){ state.maxBombs++; lvl.maxBombs=state.maxBombs; floater(pu.x,pu.y,'+BOMB','#2e9bd6'); }
+        else if (pu.type===POWER.RANGE){ state.range++; lvl.range=state.range; floater(pu.x,pu.y,'+RANGE','#2e9bd6'); }
+        else { state.lives++; floater(pu.x,pu.y,'+1 LIFE','#38c172'); }
+        addScore(30);
+        Audio.sfx.pickup();
+      }
+    }
+    lvl.powerups = lvl.powerups.filter(pu=>!pu.dead);
+  }
+
+  // ---- Guards ----
+  function updateGuards(){
+    for (const g of lvl.guards){
+      if (!g.alive) continue;
+      g.cd--;
+      if (g.cd>0) continue;
+      g.cd = g.moveEvery;
+      let moved=false;
+      if (g.smart && Math.random()<0.6){
+        // step toward player
+        const p=lvl.player;
+        const options=[[Math.sign(p.x-g.x),0],[0,Math.sign(p.y-g.y)]].filter(d=>d[0]||d[1]);
+        for (const d of options){
+          if (tryGuardStep(g,d[0],d[1])) { moved=true; break; }
+        }
+      }
+      if (!moved){
+        // continue in current dir, else pick a new random valid dir
+        if (!tryGuardStep(g,g.dir[0],g.dir[1])){
+          const dirs=[[1,0],[-1,0],[0,1],[0,-1]].sort(()=>Math.random()-0.5);
+          for (const d of dirs){ if (tryGuardStep(g,d[0],d[1])){ g.dir=d; moved=true; break; } }
+        }
+      }
+      // caught the player?
+      if (g.x===lvl.player.x && g.y===lvl.player.y && lvl.player.invuln<=0)
+        killPlayer('A guard caught Daniel!');
+    }
+  }
+  function tryGuardStep(g,dx,dy){
+    const nx=g.x+dx, ny=g.y+dy;
+    if (nx<1||ny<1||nx>=COLS-1||ny>=ROWS-1) return false;
+    const t=lvl.grid[ny][nx];
+    if (isWalkBlock(t) && t!==RUBBLE) { /* steel/wall/barrel/crate block */ }
+    if (t===WALL||t===STEEL||t===RUBBLE||t===BARREL||t===CRATE) return false;
+    if (bombAt(nx,ny)) return false;
+    if (guardAt(nx,ny)) return false;
+    g.x=nx; g.y=ny; g.dir=[dx,dy];
+    return true;
+  }
+
+  // ---- Deaths ----
+  function killReshman(){
+    if (!lvl.reshman.alive) return;
+    lvl.reshman.alive=false;
+    killPlayer('Reshman got caught in the blast! Protect your friend.');
+  }
+  function killPlayer(reason){
+    if (!lvl.player.alive) return;
+    lvl.player.alive=false;
+    state.running=false;
+    state.lives--;
+    if (state.streak>state.bestStreak) state.bestStreak=state.streak;
+    state.streak=0;
+    Audio.sfx.hurt();
+    updateHUD();
+    burst(lvl.player.x,lvl.player.y,'#ff5b3a');
+    setTimeout(()=>{ if (state.lives<=0) gameOver(reason); else respawn(reason); }, 900);
+  }
+  function respawn(reason){
+    document.getElementById('lvl-title').textContent='OUCH!';
+    document.getElementById('lvl-msg').textContent = reason+' You have '+state.lives+' life(s) left. Same site, fresh charges.';
+    document.getElementById('btn-next').textContent='TRY AGAIN';
+    ovLevel.classList.remove('hidden');
+    els.pauseBtn.disabled=true;
+    pendingAction='respawn';
+  }
+
+  // ---- Timer expiry ----
+  function timeUp(){
+    if (!lvl.player.alive) return;
+    killPlayer('Out of time! The site sealed up.');
+  }
+
+  // ---- Score / HUD ----
+  function addScore(n){ state.score+=Math.round(n*(state.mult||1)); updateHUD(); }
+  function rubbleRemaining(){
+    let n=0; for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){ const t=lvl.grid[y][x]; if(t===RUBBLE||t===-EXIT) n++; }
+    return n;
+  }
+  function updateHUD(){
+    const modeName = state.mode ? MODES[state.mode].name : MODES[selectedMode].name;
+    if (els.mode) els.mode.textContent = modeName + (state.mult>1 ? ' ×'+state.mult : '');
+    els.level.textContent=state.level;
+    els.bombs.textContent=lvl?(lvl.maxBombs-lvl.bombs.length):state.maxBombs;
+    els.range.textContent=lvl?lvl.range:state.range;
+    els.rubble.textContent=lvl?rubbleRemaining():0;
+    const shared = state.mode && MODES[state.mode].sharedTimer;
+    const t = shared ? state.sharedTime : (lvl?lvl.timeLeft:0);
+    els.timer.textContent=Math.ceil(t);
+    els.lives.textContent=(state.mode && MODES[state.mode].lives>=99)?'∞':state.lives;
+    els.score.textContent=state.score;
+    if (t<=10) els.chipTimer.classList.add('low'); else els.chipTimer.classList.remove('low');
+    // dash meter
+    const cd = lvl ? lvl.reshman.dashCd : 0;
+    const pct = Math.max(0, Math.round((1 - cd/DASH_MAX)*100));
+    els.dashFill.style.width = pct+'%';
+    els.dashMeter.classList.toggle('charging', cd>0);
+  }
+
+  // ---- Level flow ----
+  function levelClear(){
+    if (lvl.finished) return;
+    lvl.finished=true;
+    state.running=false;
+    Audio.sfx.clear();
+    state.streak++;
+    if (state.streak>state.bestStreak) state.bestStreak=state.streak;
+    const mode=MODES[state.mode];
+    let msg;
+    if (mode.sharedTimer){
+      const refuel = Math.max(30 - state.level, 14); // less refuel deeper in
+      state.sharedTime += refuel;
+      addScore(100+state.level*20);
+      msg = 'Cleared with the clock ticking. +'+refuel+'s added. Streak ×'+state.streak+'.';
+    } else {
+      const timeBonus=Math.ceil(lvl.timeLeft)*5;
+      addScore(100+state.level*20+timeBonus);
+      msg = 'Daniel'+(lvl.needReshman?' and Reshman':'')+' reached the exit. Time bonus +'+timeBonus+'. Streak ×'+state.streak+'.';
+    }
+    document.getElementById('lvl-title').textContent='SITE CLEARED!';
+    document.getElementById('lvl-msg').textContent = msg + ' On to the next site — it gets meaner.';
+    document.getElementById('btn-next').textContent='NEXT SITE';
+    ovLevel.classList.remove('hidden');
+    els.pauseBtn.disabled=true;
+    pendingAction='next';
+  }
+  function gameOver(reason){
+    state.running=false;
+    els.pauseBtn.disabled=true;
+    Audio.stopMusic();
+    Audio.sfx.over();
+    if (state.streak>state.bestStreak) state.bestStreak=state.streak;
+    const rank = recordScore(state.mode, state.score, state.level-1, state.bestStreak);
+    document.getElementById('over-title').textContent='BOOM. GAME OVER';
+    document.getElementById('over-msg').textContent =
+      reason+' You cleared '+(state.level-1)+' site(s) in '+MODES[state.mode].name+
+      ', best streak ×'+state.bestStreak+'. Final score: '+state.score+'.'+
+      (rank>=0 ? ' New run logged'+(rank===0?' — best run yet!':'')+'.' : '');
+    document.getElementById('scores-over-mode').textContent = MODES[state.mode].name;
+    renderScores('scores-over', rank, state.mode);
+    ovOver.classList.remove('hidden');
+  }
+
+  function startLevel(){
+    barrelQueue=[];
+    lvl=buildLevel(state.level);
+    lvl.maxBombs=state.maxBombs;
+    lvl.range=state.range;
+    lvl.powerups=[];
+    lvl.player.invuln=45;
+    paused=false;
+    ovPause.classList.add('hidden');
+    els.pauseBtn.disabled=false;
+    state.running=true;
+    updateHUD();
+  }
+  function startGame(){
+    state=newGameState();
+    ovStart.classList.add('hidden');
+    ovLevel.classList.add('hidden');
+    ovOver.classList.add('hidden');
+    Audio.startMusic(state.mode);
+    startLevel();
+  }
+
+  // ---- Pause ----
+  function canPause(){ return lvl && lvl.player.alive && !lvl.finished && (state.running||paused); }
+  function togglePause(){ paused ? resumeGame() : pauseGame(); }
+  function pauseGame(){
+    if (!canPause() || paused) return;
+    paused=true;
+    state.running=false;
+    Audio.stopMusic();
+    ovPause.classList.remove('hidden');
+    els.pauseBtn.textContent='▶ Resume';
+  }
+  function resumeGame(){
+    if (!paused) return;
+    paused=false;
+    state.running=true;
+    Audio.resumeMusic();
+    ovPause.classList.add('hidden');
+    els.pauseBtn.textContent='❚❚ Pause';
+  }
+  function quitToMenu(){
+    paused=false;
+    state.running=false;
+    lvl=null;
+    Audio.stopMusic();
+    ovPause.classList.add('hidden');
+    ovLevel.classList.add('hidden');
+    ovOver.classList.add('hidden');
+    showMainMenu();
+  }
+  function showMainMenu(){
+    els.pauseBtn.disabled=true;
+    els.pauseBtn.textContent='❚❚ Pause';
+    menuHowto.classList.add('hidden');
+    menuMain.classList.remove('hidden');
+    refreshMenuScores();
+    ovStart.classList.remove('hidden');
+    updateHUD();
+  }
+  function refreshMenuScores(){
+    document.getElementById('scores-start-mode').textContent = MODES[selectedMode].name;
+    renderScores('scores-start', -1, selectedMode);
+  }
+
+  // ---- High-score run tracker (per-mode, persisted locally) ----
+  const HS_KEY='bombsquad_highscores_v2';
+  function loadAll(){
+    try { const raw=localStorage.getItem(HS_KEY); return raw?JSON.parse(raw):{}; }
+    catch(e){ return {}; }
+  }
+  function saveAll(obj){
+    try { localStorage.setItem(HS_KEY, JSON.stringify(obj)); } catch(e){}
+  }
+  function loadScores(mode){ const all=loadAll(); return all[mode]||[]; }
+  // returns index of the newly inserted score in its mode board, or -1 if it didn't make top 5
+  function recordScore(mode, score, sites, streak){
+    const all=loadAll();
+    const list=all[mode]||[];
+    const entry={ score, sites, streak:streak||0, date:Date.now() };
+    list.push(entry);
+    list.sort((a,b)=>b.score-a.score);
+    const trimmed=list.slice(0,5);
+    all[mode]=trimmed;
+    saveAll(all);
+    return trimmed.indexOf(entry);
+  }
+  function clearAllScores(){ saveAll({}); }
+  function fmtDate(ts){
+    const d=new Date(ts);
+    return d.toLocaleDateString(undefined,{month:'short',day:'numeric'});
+  }
+  function renderScores(targetId, freshIdx, mode){
+    const ol=document.getElementById(targetId);
+    if (!ol) return;
+    const list=loadScores(mode||selectedMode);
+    ol.innerHTML='';
+    if (!list.length){
+      const li=document.createElement('li');
+      li.className='empty';
+      li.style.gridColumn='1 / -1';
+      li.textContent='No runs yet — go make some rubble.';
+      ol.appendChild(li);
+      return;
+    }
+    list.forEach((s,i)=>{
+      const li=document.createElement('li');
+      if (i===0) li.classList.add('top');
+      if (i===freshIdx) li.classList.add('fresh');
+      const streakTxt = s.streak ? ' · ×'+s.streak+' streak' : '';
+      li.innerHTML='<span class="meta">'+s.sites+' site'+(s.sites===1?'':'s')+streakTxt+' · '+fmtDate(s.date)+'</span>'+
+                   '<span class="sc">'+s.score.toLocaleString()+'</span>';
+      ol.appendChild(li);
+    });
+  }
+
+  // ---- Floating text ----
+  function floater(x,y,text,color){ lvl.floaters.push({x:x*TILE+TILE/2,y:y*TILE+TILE/2,text,color,life:50}); }
+  function burst(x,y,color){
+    for (let i=0;i<5;i++) lvl.particles.push({
+      x:x*TILE+TILE/2, y:y*TILE+TILE/2,
+      vx:(Math.random()-.5)*5, vy:(Math.random()-.5)*5,
+      life:18+Math.random()*14, r:2+Math.random()*4, hue:color
+    });
+  }
+
+  // ---- Rendering ----
+  function draw(){
+    anim.t++;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    if (!lvl){ requestAnimationFrame(draw); return; }
+
+    for (let y=0;y<ROWS;y++) for (let x=0;x<COLS;x++){
+      const t=lvl.grid[y][x], px=x*TILE, py=y*TILE;
+      drawFloor(px,py,x,y);
+      if (t===WALL) drawWall(px,py);
+      else if (t===STEEL) drawSteel(px,py);
+      else if (t===RUBBLE||t===-EXIT) drawRubble(px,py);
+      else if (t===EXIT) drawExit(px,py);
+      else if (t===BARREL) drawBarrel(px,py);
+      else if (t===CRATE) drawCrate(px,py);
+    }
+
+    if (lvl.powerups) for (const pu of lvl.powerups){ pu.t++; drawPowerup(pu); }
+    for (const b of lvl.bombs) drawBomb(b);
+    for (const e of lvl.explosions) drawExplosion(e);
+    for (const g of lvl.guards) if (g.alive) drawGuard(g);
+    if (lvl.reshman.alive) drawReshman(lvl.reshman);
+    if (lvl.player.alive) drawDaniel(lvl.player);
+
+    for (const p of lvl.particles){
+      ctx.globalAlpha=Math.max(0,p.life/34); ctx.fillStyle=p.hue;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha=1;
+    for (const f of lvl.floaters){
+      ctx.globalAlpha=Math.max(0,f.life/50);
+      ctx.fillStyle=f.color; ctx.font='bold 13px monospace';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(f.text,f.x,f.y-(50-f.life)*0.5);
+    }
+    ctx.globalAlpha=1;
+
+    // Blackout mutator: cover the board in fog with light around the duo
+    if (state.mutators && state.mutators.has('darkness') && lvl.player.alive){
+      drawBlackout();
+    }
+
+    update();
+    requestAnimationFrame(draw);
+  }
+
+  function drawBlackout(){
+    const fog=document.createElement('canvas');
+    fog.width=canvas.width; fog.height=canvas.height;
+    const fx=fog.getContext('2d');
+    fx.fillStyle='rgba(6,4,2,0.93)';
+    fx.fillRect(0,0,fog.width,fog.height);
+    fx.globalCompositeOperation='destination-out';
+    const holes=[{o:lvl.player, r:TILE*2.6}];
+    if (lvl.reshman.alive) holes.push({o:lvl.reshman, r:TILE*2.0});
+    for (const h of holes){
+      const cx=h.o.px*TILE+TILE/2, cy=h.o.py*TILE+TILE/2;
+      const g=fx.createRadialGradient(cx,cy,TILE*0.4,cx,cy,h.r);
+      g.addColorStop(0,'rgba(0,0,0,1)');
+      g.addColorStop(0.7,'rgba(0,0,0,0.85)');
+      g.addColorStop(1,'rgba(0,0,0,0)');
+      fx.fillStyle=g;
+      fx.beginPath(); fx.arc(cx,cy,h.r,0,Math.PI*2); fx.fill();
+    }
+    ctx.drawImage(fog,0,0);
+  }
+
+  function drawFloor(px,py,x,y){ ctx.fillStyle=(x+y)%2===0?getCss('--floor'):getCss('--floor-dk'); ctx.fillRect(px,py,TILE,TILE); }
+  function drawWall(px,py){
+    ctx.fillStyle=getCss('--wall'); ctx.fillRect(px,py,TILE,TILE);
+    ctx.fillStyle=getCss('--wall-hi'); ctx.fillRect(px+2,py+2,TILE-4,4); ctx.fillRect(px+2,py+2,4,TILE-4);
+  }
+  function drawSteel(px,py){
+    ctx.fillStyle=getCss('--steel'); ctx.fillRect(px+2,py+2,TILE-4,TILE-4);
+    ctx.fillStyle=getCss('--steel-hi'); ctx.fillRect(px+4,py+4,TILE-14,4);
+    ctx.fillStyle='#4b4e55'; ctx.fillRect(px+2,py+TILE-8,TILE-4,6);
+    ctx.fillStyle='#3a3d43';
+    ctx.fillRect(px+5,py+5,3,3); ctx.fillRect(px+TILE-8,py+5,3,3);
+    ctx.fillRect(px+5,py+TILE-8,3,3); ctx.fillRect(px+TILE-8,py+TILE-8,3,3);
+  }
+  function drawRubble(px,py){
+    ctx.fillStyle=getCss('--rubble'); ctx.fillRect(px+2,py+2,TILE-4,TILE-4);
+    ctx.fillStyle=getCss('--rubble-dk');
+    const rocks=[[6,7,10,8],[20,6,12,10],[10,22,14,10],[24,20,9,9]];
+    for (const [rx,ry,rw,rh] of rocks) ctx.fillRect(px+rx,py+ry,rw,rh);
+    ctx.fillStyle='#a5866a'; ctx.fillRect(px+7,py+8,4,4); ctx.fillRect(px+22,py+8,4,4);
+    ctx.strokeStyle='rgba(255,215,90,.5)'; ctx.lineWidth=1; ctx.strokeRect(px+2.5,py+2.5,TILE-5,TILE-5);
+  }
+  function drawBarrel(px,py){
+    const cx=px+TILE/2;
+    ctx.fillStyle=getCss('--barrel'); roundRect(px+8,py+5,TILE-16,TILE-10,4); ctx.fill();
+    ctx.fillStyle='#8f3419'; ctx.fillRect(px+8,py+12,TILE-16,3); ctx.fillRect(px+8,py+TILE-16,3,0);
+    ctx.fillStyle='#d96b4a'; ctx.fillRect(px+11,py+7,3,TILE-14);
+    // hazard symbol
+    ctx.fillStyle='#ffd23a'; ctx.font='bold 14px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('☢', cx, py+TILE/2+1);
+    ctx.strokeStyle='#5c2210'; ctx.lineWidth=1; ctx.strokeRect(px+8,py+5,TILE-16,TILE-10);
+  }
+  function drawCrate(px,py){
+    ctx.fillStyle=getCss('--power'); roundRect(px+6,py+6,TILE-12,TILE-12,3); ctx.fill();
+    ctx.strokeStyle='#1b6e9c'; ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.moveTo(px+6,py+6); ctx.lineTo(px+TILE-6,py+TILE-6);
+    ctx.moveTo(px+TILE-6,py+6); ctx.lineTo(px+6,py+TILE-6);
+    ctx.stroke();
+    ctx.fillStyle='#eaf6ff'; ctx.font='bold 16px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('?', px+TILE/2, py+TILE/2+1);
+  }
+  function drawPowerup(pu){
+    const cx=pu.x*TILE+TILE/2, cy=pu.y*TILE+TILE/2 + Math.sin(pu.t*0.12)*2;
+    ctx.save(); ctx.translate(cx,cy);
+    const glow=0.5+0.5*Math.sin(pu.t*0.2);
+    ctx.globalAlpha=0.4+glow*0.3; ctx.fillStyle=getCss('--power');
+    ctx.beginPath(); ctx.arc(0,0,TILE*0.34,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1; ctx.fillStyle='#eaf6ff';
+    ctx.beginPath(); ctx.arc(0,0,TILE*0.24,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#12668f'; ctx.font='bold 16px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(pu.type===POWER.BOMB?'✚':pu.type===POWER.RANGE?'↔':'♥', 0, 1);
+    ctx.restore();
+  }
+  function drawExit(px,py){
+    const pulse=0.5+0.5*Math.sin(anim.t*0.1);
+    ctx.fillStyle=getCss('--exit'); ctx.fillRect(px+3,py+3,TILE-6,TILE-6);
+    ctx.fillStyle=`rgba(255,255,255,${0.35+pulse*0.4})`; ctx.fillRect(px+8,py+8,TILE-16,TILE-16);
+    ctx.fillStyle='#0d3d22'; ctx.font='bold 12px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('OUT',px+TILE/2,py+TILE/2+1);
+  }
+  function drawBomb(b){
+    const cx=b.x*TILE+TILE/2, cy=b.y*TILE+TILE/2;
+    const wob=1+0.08*Math.sin(b.t*0.4);
+    const near=b.fuse<40 && Math.floor(b.t/6)%2===0;
+    ctx.save(); ctx.translate(cx,cy); ctx.scale(wob,1/wob);
+    ctx.fillStyle=near?'#ff5b3a':getCss('--bomb'); ctx.beginPath(); ctx.arc(0,3,TILE*0.3,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.25)'; ctx.beginPath(); ctx.arc(-5,-2,4,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle='#caa15e'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(cx+6,cy-8); ctx.quadraticCurveTo(cx+12,cy-16,cx+8,cy-20); ctx.stroke();
+    ctx.fillStyle=Math.floor(b.t/3)%2?'#ffd23a':'#ff5b3a';
+    ctx.beginPath(); ctx.arc(cx+8,cy-21,3+Math.random()*1.5,0,Math.PI*2); ctx.fill();
+  }
+  function drawExplosion(e){
+    const k=e.t/e.life;
+    for (const c of e.cells){
+      const px=c.x*TILE, py=c.y*TILE;
+      ctx.globalAlpha=Math.max(0,1-k);
+      const r=TILE*0.55*(0.6+0.4*Math.sin(k*Math.PI));
+      const grad=ctx.createRadialGradient(px+TILE/2,py+TILE/2,2,px+TILE/2,py+TILE/2,r);
+      grad.addColorStop(0,'#fff6c9'); grad.addColorStop(0.4,'#ffb62e'); grad.addColorStop(1,'rgba(224,57,43,0)');
+      ctx.fillStyle=grad; ctx.fillRect(px,py,TILE,TILE);
+    }
+    ctx.globalAlpha=1;
+  }
+  function drawGuard(g){
+    g.px=lerp(g.px,g.x,0.3); g.py=lerp(g.py,g.y,0.3);
+    const cx=g.px*TILE+TILE/2, cy=g.py*TILE+TILE/2;
+    const t=anim.t*0.2;
+    ctx.fillStyle='rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(cx,cy+TILE*0.32,TILE*0.26,TILE*0.09,0,0,Math.PI*2); ctx.fill();
+    // spiky patrol bot
+    ctx.fillStyle=g.smart?'#b03bd0':getCss('--guard');
+    ctx.beginPath();
+    const R=TILE*0.28;
+    for (let a=0;a<Math.PI*2;a+=Math.PI/6){
+      const rr=R+(a%(Math.PI/3)<0.01?4:0)+Math.sin(t)*1.5;
+      const x=Math.cos(a)*rr, y=Math.sin(a)*rr;
+      a===0?ctx.moveTo(cx+x,cy+y):ctx.lineTo(cx+x,cy+y);
+    }
+    ctx.closePath(); ctx.fill();
+    // eye
+    ctx.fillStyle='#ffe08a'; ctx.beginPath(); ctx.arc(cx,cy,5,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#3a0f45';
+    const ex=Math.sign(g.dir[0])*2, ey=Math.sign(g.dir[1])*2;
+    ctx.beginPath(); ctx.arc(cx+ex,cy+ey,2.4,0,Math.PI*2); ctx.fill();
+  }
+  function drawDaniel(p){
+    p.px=lerp(p.px,p.x,0.35); p.py=lerp(p.py,p.y,0.35);
+    const cx=p.px*TILE+TILE/2, cy=p.py*TILE+TILE/2;
+    const bob=Math.sin(anim.t*0.2)*((Math.abs(p.px-p.x)+Math.abs(p.py-p.y))>0.02?2:0.6);
+    if (p.invuln>0 && Math.floor(anim.t/4)%2===0) ctx.globalAlpha=0.4;
+    ctx.fillStyle='rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(cx,cy+TILE*0.34,TILE*0.28,TILE*0.1,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=getCss('--daniel'); roundRect(cx-11,cy-4+bob,22,18,5); ctx.fill();
+    ctx.fillStyle='#7a4a12'; ctx.fillRect(cx-11,cy+6+bob,22,3);
+    ctx.fillStyle='#f6d3a1'; ctx.beginPath(); ctx.arc(cx,cy-8+bob,8,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#e0392b'; ctx.beginPath(); ctx.arc(cx,cy-10+bob,8.5,Math.PI,0); ctx.fill(); ctx.fillRect(cx-10,cy-10+bob,20,3);
+    ctx.fillStyle='#22160a';
+    const ex=p.dir==='left'?-3:p.dir==='right'?3:0;
+    ctx.fillRect(cx-4+ex,cy-9+bob,2,2); ctx.fillRect(cx+2+ex,cy-9+bob,2,2);
+    ctx.globalAlpha=1;
+  }
+  function drawReshman(r){
+    r.px=lerp(r.px,r.x,0.25); r.py=lerp(r.py,r.y,0.25);
+    const cx=r.px*TILE+TILE/2, cy=r.py*TILE+TILE/2, t=anim.t*0.15;
+    ctx.save(); ctx.translate(cx,cy);
+    ctx.globalAlpha=0.25; ctx.fillStyle='#5a4f7a'; ctx.beginPath(); ctx.arc(0,2,TILE*0.42,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1; ctx.fillStyle=getCss('--reshman');
+    ctx.beginPath(); const R=TILE*0.3;
+    for (let a=0;a<=Math.PI*2+0.01;a+=Math.PI/8){
+      const wob=R+Math.sin(a*3+t)*2.2; const x=Math.cos(a)*wob, y=Math.sin(a)*wob*0.9+3;
+      a===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.arc(-5,10,3,0,Math.PI*2); ctx.arc(5,10,3,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#f2b134'; ctx.beginPath(); ctx.arc(-4,-2,2.4,0,Math.PI*2); ctx.arc(4,-2,2.4,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(-4,-3,0.9,0,Math.PI*2); ctx.arc(4,-3,0.9,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+  function roundRect(x,y,w,h,r){
+    ctx.beginPath(); ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+  }
+
+  // ---- Update loop ----
+  function update(){
+    if (!lvl) return;
+    if (paused) { updateHUD(); return; } // full freeze while paused; draw still runs
+
+    if (state.running){
+      lvl.timeTick++;
+      if (lvl.timeTick>=60){
+        lvl.timeTick=0;
+        if (MODES[state.mode].sharedTimer){
+          state.sharedTime--; if (state.sharedTime<=0){ state.sharedTime=0; timeUp(); }
+        } else {
+          lvl.timeLeft--; if (lvl.timeLeft<=0){ lvl.timeLeft=0; timeUp(); }
+        }
+      }
+      if (lvl.player.invuln>0) lvl.player.invuln--;
+      if (lvl.reshman.dashCd>0) lvl.reshman.dashCd--;
+      if (anim.t%1===0) updateGuardsThrottled();
+    }
+
+    for (const b of lvl.bombs){ b.t++; b.fuse--; if (b.fuse<=0&&!b.exploding) b.exploding=true; }
+    const exploded=lvl.bombs.filter(b=>b.exploding);
+    for (const b of exploded) detonate(b);
+    lvl.bombs=lvl.bombs.filter(b=>!b.exploding);
+
+    processBarrels();
+
+    for (const e of lvl.explosions) e.t++;
+    lvl.explosions=lvl.explosions.filter(e=>e.t<e.life);
+
+    for (const p of lvl.particles){ p.x+=p.vx; p.y+=p.vy; p.vy+=0.12; p.life--; }
+    lvl.particles=lvl.particles.filter(p=>p.life>0);
+
+    for (const f of lvl.floaters) f.life--;
+    lvl.floaters=lvl.floaters.filter(f=>f.life>0);
+
+    if (state.running){ collectPowerups(); }
+
+    updateHUD();
+  }
+
+  // guards update at their own cadence (per-guard cd already handles speed)
+  function updateGuardsThrottled(){ updateGuards(); }
+
+  // ---- utils ----
+  const cssCache={};
+  function getCss(v){ if(!cssCache[v]) cssCache[v]=getComputedStyle(document.documentElement).getPropertyValue(v).trim(); return cssCache[v]; }
+  function flashStage(){ const w=document.querySelector('.stage-wrap'); w.classList.remove('flash'); void w.offsetWidth; w.classList.add('flash'); }
+  function shakeStage(){ const w=document.querySelector('.stage-wrap'); w.classList.remove('shake'); void w.offsetWidth; w.classList.add('shake'); }
+
+  // ---- Input ----
+  const held={};
+  window.addEventListener('keydown',(e)=>{
+    const k=e.key.toLowerCase();
+    if ([' ','arrowup','arrowdown','arrowleft','arrowright'].includes(k)) e.preventDefault();
+    if (held[k]) return; held[k]=true;
+    if (k==='m'){ setMuted(Audio.toggleMute()); return; }
+    // pause/resume works whenever a live level is on screen
+    if ((k==='p'||k==='escape') && canPause()){ togglePause(); return; }
+    if (!state.running) return;
+    if (k==='w'||k==='arrowup') tryMove(0,-1);
+    else if (k==='s'||k==='arrowdown') tryMove(0,1);
+    else if (k==='a'||k==='arrowleft') tryMove(-1,0);
+    else if (k==='d'||k==='arrowright') tryMove(1,0);
+    else if (k===' ') plantBomb();
+    else if (k==='shift') dashReshman();
+  });
+  window.addEventListener('keyup',(e)=>{ held[e.key.toLowerCase()]=false; });
+
+  // ---- Buttons ----
+  document.getElementById('btn-start').addEventListener('click',startGame);
+  document.getElementById('btn-retry').addEventListener('click',startGame);
+  document.getElementById('btn-over-menu').addEventListener('click',quitToMenu);
+  document.getElementById('btn-howto').addEventListener('click',()=>{
+    menuMain.classList.add('hidden'); menuHowto.classList.remove('hidden');
+  });
+  document.getElementById('btn-howto-back').addEventListener('click',()=>{
+    menuHowto.classList.add('hidden'); menuMain.classList.remove('hidden');
+  });
+  els.pauseBtn.addEventListener('click',()=>{ if (canPause()) togglePause(); });
+  els.muteBtn.addEventListener('click',()=>{ setMuted(Audio.toggleMute()); });
+  function setMuted(m){ els.muteBtn.textContent = m ? '🔇 Muted' : '🔊 Sound'; }
+  document.getElementById('btn-resume').addEventListener('click',resumeGame);
+  document.getElementById('btn-quit').addEventListener('click',quitToMenu);
+  document.getElementById('btn-next').addEventListener('click',()=>{
+    ovLevel.classList.add('hidden');
+    if (pendingAction==='next') state.level++;
+    startLevel();
+    pendingAction=null;
+  });
+  document.getElementById('btn-clear-scores').addEventListener('click',()=>{
+    clearAllScores();
+    refreshMenuScores();
+  });
+
+  // ---- Menu: build mode cards + mutator chips ----
+  function buildMenu(){
+    const mg=document.getElementById('mode-grid');
+    mg.innerHTML='';
+    Object.entries(MODES).forEach(([id,m])=>{
+      const card=document.createElement('button');
+      card.className='mode-card'+(id===selectedMode?' sel':'');
+      card.dataset.mode=id;
+      card.innerHTML='<div class="mc-name"><span class="mc-icon">'+m.icon+'</span>'+m.name+'</div>'+
+                     '<div class="mc-desc">'+m.desc+'</div>';
+      card.addEventListener('click',()=>{
+        selectedMode=id;
+        mg.querySelectorAll('.mode-card').forEach(c=>c.classList.toggle('sel',c.dataset.mode===id));
+        updateMultBadge();
+        refreshMenuScores();
+      });
+      mg.appendChild(card);
+    });
+
+    const wg=document.getElementById('mutator-grid');
+    wg.innerHTML='';
+    Object.entries(MUTATORS).forEach(([id,mu])=>{
+      const chip=document.createElement('button');
+      chip.className='mutator-chip'+(activeMutators.has(id)?' on':'');
+      chip.dataset.mut=id;
+      chip.title=mu.desc;
+      chip.innerHTML=mu.icon+' '+mu.name+' <span class="m-plus">+'+Math.round(mu.mult*100)+'%</span>';
+      chip.addEventListener('click',()=>{
+        if (activeMutators.has(id)) activeMutators.delete(id); else activeMutators.add(id);
+        chip.classList.toggle('on',activeMutators.has(id));
+        updateMultBadge();
+      });
+      wg.appendChild(chip);
+    });
+    updateMultBadge();
+  }
+  function updateMultBadge(){
+    document.getElementById('mult-badge').textContent='×'+totalMultiplier().toFixed(2).replace(/0$/,'');
+  }
+
+  buildMenu();
+  updateHUD();
+  refreshMenuScores();
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>
