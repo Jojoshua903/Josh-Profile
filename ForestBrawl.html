@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Forest Brawl</title>
 <style>
   :root{
@@ -212,6 +212,30 @@
     color:#fff; font-weight:bold; font-size:clamp(11px,2.4vw,15px); letter-spacing:1px; cursor:pointer;
   }
   #touchSuper:active{background:rgba(180,90,230,.8);}
+  /* ---------- Phone layout: shrink chrome; rotate to landscape when held upright ---------- */
+  body.touch{ padding-bottom:0; overflow:hidden; }
+  body.touch #wrap{ width:100vw; height:100dvh; aspect-ratio:auto; }
+  body.touch canvas{ border-radius:0; box-shadow:none; }
+  body.touch .screen{ border-radius:0; }
+  body.touch #hud{ top:6px; left:6px; right:6px; }
+  body.touch .panel{ min-width:0; padding:5px 8px; border-width:1px; }
+  body.touch .panel .name{ font-size:11px; margin-bottom:3px; }
+  body.touch #enemyList{ font-size:10px !important; line-height:1.35 !important; }
+  body.touch #centerHud{ top:6px; }
+  body.touch #timer{ font-size:13px; }
+  body.touch #scoreLine{ font-size:11px; }
+  body.touch #controls{ display:none; }   /* keyboard hint is useless on touch */
+  body.touch #muteBtn, body.touch #optionsBtn{ width:32px; height:32px; font-size:15px; top:6px; }
+  body.touch #optionsBtn{ right:44px; }
+  body.touch #muteBtn{ right:6px; }
+  /* held upright (portrait): rotate the whole frame 90° clockwise so the game plays in landscape */
+  @media (orientation: portrait){
+    body.touch #wrap{
+      position:fixed; top:0; left:100vw;
+      width:100dvh; height:100vw;             /* swapped dims: fills the screen when rotated */
+      transform-origin:top left; transform:rotate(90deg);
+    }
+  }
   .fade-in{animation:fadein .4s ease;}
   @keyframes fadein{from{opacity:0; transform:translateY(12px);} to{opacity:1; transform:none;}}
 </style>
@@ -268,7 +292,7 @@
       <button class="btn" id="toRelay">EMBER RELAY (2v2)</button>
       <button class="btn small" id="toRoad">TROPHY ROAD</button>
     </div>
-    <div style="margin-top:14px; font-size:11px; letter-spacing:2px; opacity:.5;">BUILD v68 · options-menu (⚙) + telefoon-modus met touch-joysticks (auto-detect)</div>
+    <div style="margin-top:14px; font-size:11px; letter-spacing:2px; opacity:.5;">BUILD v70 · telefoon-modus draait 90° naar landscape (rechtop houden) + input mee-geroteerd</div>
   </div>
 
   <!-- Character select -->
@@ -3201,14 +3225,18 @@ document.getElementById('touchToggle').onclick=()=>{
 // show/hide the on-screen sticks depending on state + whether we're playing
 function updateTouchUI(){
   const el=document.getElementById('touchUI'); if(!el) return;
-  const on = state==="play" && touchActive();
+  const ton=touchActive();
+  document.body.classList.toggle('touch', ton);   // switch to the full-screen phone layout
+  const on = state==="play" && ton;
   if(on) el.classList.remove('hidden'); else el.classList.add('hidden');
   // the keyboard-controls hint is meaningless on touch — hide it there
   const ctrls=document.getElementById('controls');
-  if(ctrls && touchActive()) ctrls.classList.add('hidden');
+  if(ctrls && ton) ctrls.classList.add('hidden');
 }
 
 /* ---------- Touch stick handling ---------- */
+// true when the play frame is CSS-rotated 90° cw (touch mode + portrait screen)
+function frameRotated(){ return document.body.classList.contains('touch') && window.matchMedia('(orientation: portrait)').matches; }
 function bindStick(elId, onVec, onEnd){
   const el=document.getElementById(elId); if(!el) return;
   let active=-1;   // pointerId currently controlling this stick
@@ -3216,11 +3244,16 @@ function bindStick(elId, onVec, onEnd){
   const update=(e)=>{
     const r=el.getBoundingClientRect();
     const cx=r.left+r.width/2, cy=r.top+r.height/2, rad=r.width/2;
-    let dx=e.clientX-cx, dy=e.clientY-cy;
+    let sx=e.clientX-cx, sy=e.clientY-cy;
+    // if the frame is rotated 90° cw, convert the screen delta into game-space delta
+    let dx=sx, dy=sy;
+    if(frameRotated()){ dx=sy; dy=-sx; }
     const m=Math.hypot(dx,dy)||1; const clampM=Math.min(m,rad);
     const nx=dx/m, ny=dy/m;
-    if(nub) nub.style.transform=`translate(calc(-50% + ${nx*clampM}px), calc(-50% + ${ny*clampM}px))`;
-    onVec(nx, ny, clampM/rad);   // unit dir + magnitude 0..1
+    // the nub moves in SCREEN space (it lives inside the rotated frame), so use the raw screen delta
+    const sm=Math.hypot(sx,sy)||1, snx=sx/sm, sny=sy/sm, sc=Math.min(sm,rad);
+    if(nub) nub.style.transform=`translate(calc(-50% + ${snx*sc}px), calc(-50% + ${sny*sc}px))`;
+    onVec(nx, ny, clampM/rad);   // unit dir (game space) + magnitude 0..1
   };
   el.addEventListener('pointerdown',e=>{ e.preventDefault(); active=e.pointerId; el.setPointerCapture(e.pointerId); initAudio(); update(e); });
   el.addEventListener('pointermove',e=>{ if(e.pointerId!==active)return; e.preventDefault(); update(e); });
@@ -3324,6 +3357,7 @@ function renderCosmetics(){
 
 /* ---------- Main loop (fixed timestep: sim always runs at 60Hz regardless of render FPS) ---------- */
 loadSave();
+updateTouchUI();   // apply phone layout immediately if on a touch device
 let _lastT=performance.now(), _acc=0;
 const STEP=1000/60;           // ms per logical tick
 function loop(now){
