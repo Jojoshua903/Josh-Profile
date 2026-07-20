@@ -194,24 +194,24 @@
   #touchUI{ position:absolute; inset:0; z-index:8; pointer-events:none; }
   #touchUI.hidden{display:none;}
   .tstick{
-    position:absolute; bottom:5%; width:34%; max-width:190px; aspect-ratio:1/1;
+    position:absolute; bottom:6%; left:4%; width:26%; max-width:150px; aspect-ratio:1/1;
     border-radius:50%; background:rgba(255,255,255,.08);
     border:2px solid rgba(255,255,255,.22); pointer-events:auto; touch-action:none;
   }
-  #moveStick{left:3%;}
-  #aimStick{right:3%;}
   .tnub{
     position:absolute; left:50%; top:50%; width:42%; height:42%;
     transform:translate(-50%,-50%); border-radius:50%;
     background:rgba(244,196,48,.55); border:2px solid rgba(255,255,255,.5);
   }
-  #touchSuper{
-    position:absolute; right:3%; bottom:calc(5% + 40%); width:22%; max-width:110px; aspect-ratio:1/1;
-    max-height:110px; border-radius:50%; pointer-events:auto; touch-action:none;
-    border:2px solid rgba(244,196,48,.7); background:rgba(140,60,180,.55);
-    color:#fff; font-weight:bold; font-size:clamp(11px,2.4vw,15px); letter-spacing:1px; cursor:pointer;
+  #touchAttack, #touchSuper{
+    position:absolute; right:4%; width:18%; max-width:96px; aspect-ratio:1/1;
+    border-radius:50%; pointer-events:auto; touch-action:none; cursor:pointer;
+    color:#fff; font-weight:bold; font-size:clamp(10px,2.2vw,14px); letter-spacing:1px;
   }
-  #touchSuper:active{background:rgba(180,90,230,.8);}
+  #touchAttack{ bottom:7%; border:2px solid rgba(255,150,90,.8); background:rgba(224,90,58,.55); }
+  #touchAttack:active{ background:rgba(255,120,80,.85); }
+  #touchSuper{ bottom:calc(7% + 22%); border:2px solid rgba(244,196,48,.7); background:rgba(140,60,180,.55); }
+  #touchSuper:active{ background:rgba(180,90,230,.85); }
   /* ---------- Phone layout: shrink chrome; rotate to landscape when held upright ---------- */
   body.touch{ padding-bottom:0; overflow:hidden; }
   body.touch #wrap{ width:100vw; height:100dvh; aspect-ratio:auto; }
@@ -228,12 +228,17 @@
   body.touch #muteBtn, body.touch #optionsBtn{ width:32px; height:32px; font-size:15px; top:6px; }
   body.touch #optionsBtn{ right:44px; }
   body.touch #muteBtn{ right:6px; }
-  /* held upright (portrait): rotate the whole frame 90° clockwise so the game plays in landscape */
+  /* held upright (portrait): rotate the whole frame 90° clockwise so the game plays in landscape.
+     Keep the arena at 4:3 (letterboxed) so nothing stretches. After rotation the usable area is
+     [viewport height] wide by [viewport width] tall, so fit a 4:3 box inside that and center it. */
   @media (orientation: portrait){
+    body.touch{ background:#0a1408; }
     body.touch #wrap{
-      position:fixed; top:0; left:100vw;
-      width:100dvh; height:100vw;             /* swapped dims: fills the screen when rotated */
-      transform-origin:top left; transform:rotate(90deg);
+      position:fixed; top:50%; left:50%;
+      /* after a 90° turn: on-screen width = wrap HEIGHT (≤100vw), on-screen height = wrap WIDTH (≤100dvh) */
+      width:min(100dvh, 133.333vw);   /* the long (4) side, shown vertically after rotation */
+      height:min(75dvh, 100vw);       /* the short (3) side, shown horizontally after rotation */
+      transform-origin:center center; transform:translate(-50%,-50%) rotate(90deg);
     }
   }
   .fade-in{animation:fadein .4s ease;}
@@ -269,7 +274,7 @@
   <!-- Touch controls (shown only during play on touch devices) -->
   <div id="touchUI" class="hidden">
     <div id="moveStick" class="tstick"><div class="tnub"></div></div>
-    <div id="aimStick" class="tstick"><div class="tnub"></div></div>
+    <button id="touchAttack" class="tbtn">FIRE</button>
     <button id="touchSuper" class="tbtn">SUPER</button>
   </div>
 
@@ -292,7 +297,7 @@
       <button class="btn" id="toRelay">EMBER RELAY (2v2)</button>
       <button class="btn small" id="toRoad">TROPHY ROAD</button>
     </div>
-    <div style="margin-top:14px; font-size:11px; letter-spacing:2px; opacity:.5;">BUILD v70 · telefoon-modus draait 90° naar landscape (rechtop houden) + input mee-geroteerd</div>
+    <div style="margin-top:14px; font-size:11px; letter-spacing:2px; opacity:.5;">BUILD v71 · telefoon: 4:3 zonder stretch, kleinere knoppen, FIRE-knop met auto-aim</div>
   </div>
 
   <!-- Character select -->
@@ -737,8 +742,8 @@ function charGear(charId){
 let state = "title";
 let chosen = null;
 let keys = {}, mouse={x:W/2,y:H/2,down:false};
-// on-screen touch controls: left stick moves, right stick aims + auto-fires; super via a button
-const touch={ moveX:0, moveY:0, aimX:0, aimY:0, firing:false, superTap:false };
+// on-screen touch controls: left stick moves, right buttons attack (auto-aim) + super
+const touch={ moveX:0, moveY:0, attacking:false, superTap:false };
 let entities=[], projectiles=[], bombs=[], particles=[], floaters=[], bushes=[], trees=[], iceTrail=[], bats=[], exhaust=[], wetFloor=[];
 let player=null;
 let matchTime, defeated, frame=0;
@@ -1416,14 +1421,21 @@ function update(){
       else if(player.slipTimer>0) moveWithSlip(player, 0, 0, sp);   // keep skidding with no input
       circleWall(player);
     }
-    // aim: touch aim-stick > arrow keys > mouse
+    // aim: on touch we auto-aim the nearest enemy; else aim-stick > arrow keys > mouse
     let ax=0,ay=0;
     if(keys['arrowup'])ay--; if(keys['arrowdown'])ay++; if(keys['arrowleft'])ax--; if(keys['arrowright'])ax++;
-    if(ton && (touch.aimX||touch.aimY)){ const m=Math.hypot(touch.aimX,touch.aimY)||1; player.aim={x:touch.aimX/m,y:touch.aimY/m}; }
+    if(ton){
+      // auto-aim: face the nearest living enemy so tapping attack just works
+      let best=null,bd=1e9;
+      entities.forEach(o=>{ if(o===player||o.dead||o.isBanshee)return; if(gameMode==="relay"&&o.team===player.team)return;
+        const dd=dist(player,o); if(dd<bd){bd=dd;best=o;} });
+      if(best){ const m=Math.hypot(best.x-player.x,best.y-player.y)||1; player.aim={x:(best.x-player.x)/m,y:(best.y-player.y)/m}; }
+      else if(Math.hypot(dx,dy)>0.05){ const m=Math.hypot(dx,dy); player.aim={x:dx/m,y:dy/m}; }  // no enemy: face movement
+    }
     else if(ax||ay){ const m=Math.hypot(ax,ay); player.aim={x:ax/m,y:ay/m}; }
-    else if(!ton){ const mx=mouse.x+cam.x, my=mouse.y+cam.y; const m=Math.hypot(mx-player.x,my-player.y)||1; player.aim={x:(mx-player.x)/m,y:(my-player.y)/m}; }
+    else { const mx=mouse.x+cam.x, my=mouse.y+cam.y; const m=Math.hypot(mx-player.x,my-player.y)||1; player.aim={x:(mx-player.x)/m,y:(my-player.y)/m}; }
     const busy = player.diving>0||player.smashing>0||player.dashing>0||player.hopping>0;
-    if((keys['j']||mouse.down||(ton&&touch.firing)) && !busy) fighterAttack(player);
+    if((keys['j']||mouse.down||(ton&&touch.attacking)) && !busy) fighterAttack(player);
     if((keys['k']||keys[' ']||touch.superTap) && !busy) fighterSuper(player);
     touch.superTap=false;   // consume the tap
   }
@@ -3262,7 +3274,15 @@ function bindStick(elId, onVec, onEnd){
   el.addEventListener('pointercancel',release);
 }
 bindStick('moveStick', (nx,ny,mag)=>{ touch.moveX=nx*mag; touch.moveY=ny*mag; }, ()=>{ touch.moveX=0; touch.moveY=0; });
-bindStick('aimStick',  (nx,ny,mag)=>{ touch.aimX=nx; touch.aimY=ny; touch.firing = mag>0.25; }, ()=>{ touch.aimX=0; touch.aimY=0; touch.firing=false; });
+// FIRE button: hold to keep attacking (auto-aim handles direction)
+(function(){
+  const atk=document.getElementById('touchAttack'); if(!atk) return;
+  let id=-1;
+  atk.addEventListener('pointerdown',e=>{ e.preventDefault(); id=e.pointerId; atk.setPointerCapture(e.pointerId); initAudio(); touch.attacking=true; });
+  const rel=e=>{ if(e.pointerId!==id)return; id=-1; touch.attacking=false; };
+  atk.addEventListener('pointerup',rel);
+  atk.addEventListener('pointercancel',rel);
+})();
 (function(){
   const sup=document.getElementById('touchSuper'); if(!sup) return;
   sup.addEventListener('pointerdown',e=>{ e.preventDefault(); initAudio(); touch.superTap=true; });
