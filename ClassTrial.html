@@ -160,7 +160,7 @@ input[type=color]{width:44px;height:38px;padding:2px;background:#0e050b;border:2
 .fx-vignette::after{content:"";position:absolute;inset:0;box-shadow:inset 0 0 200px 60px rgba(0,0,0,.8)}
 .fx-pulse{animation:bgpulse 2.4s ease-in-out infinite}
 @keyframes bgpulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.25) saturate(1.3)}}
-.trial-hud{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;gap:12px;
+.trial-hud{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
   padding:12px 18px;z-index:20}
 .exit-btn{background:var(--ink);color:#fff;border:2px solid var(--hot);border-radius:8px;padding:8px 12px;font-weight:bold;font-size:13px}
 .phase-tag{background:var(--gold);color:var(--ink);border-radius:20px;padding:5px 14px;font-weight:bold;font-size:12px;text-transform:uppercase;letter-spacing:1px}
@@ -170,8 +170,8 @@ input[type=color]{width:44px;height:38px;padding:2px;background:#0e050b;border:2
 .pdot.cur{background:var(--pink);box-shadow:0 0 8px var(--pink)}
 
 /* stage */
-.stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:70px 20px 20px;z-index:10}
-.stage-inner{width:100%;max-width:900px;text-align:center}
+.stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:70px 20px 20px;z-index:10;overflow-y:auto}
+.stage-inner{width:100%;max-width:900px;text-align:center;margin:auto}
 
 /* speaker plate */
 .speaker-plate{display:inline-flex;align-items:center;gap:14px;margin-bottom:18px}
@@ -201,10 +201,10 @@ input[type=color]{width:44px;height:38px;padding:2px;background:#0e050b;border:2
 
 /* truth bullet tray */
 .bullet-tray{position:absolute;bottom:0;left:0;right:0;background:rgba(10,4,10,.92);border-top:3px solid var(--gold);
-  padding:14px 18px 22px;transform:translateY(100%);transition:transform .3s;z-index:15}
+  padding:14px 18px 22px;transform:translateY(100%);transition:transform .3s;z-index:15;max-height:55vh;display:flex;flex-direction:column}
 .bullet-tray.up{transform:translateY(0)}
-.bullet-tray h3{font-size:14px;color:var(--gold);margin-bottom:10px;text-align:center}
-.bullets{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;justify-content:center;flex-wrap:wrap}
+.bullet-tray h3{font-size:14px;color:var(--gold);margin-bottom:10px;text-align:center;flex:0 0 auto}
+.bullets{display:flex;gap:12px;overflow-y:auto;padding:2px 4px 6px;justify-content:center;flex-wrap:wrap;flex:1 1 auto;min-height:0}
 .bullet{min-width:150px;max-width:200px;background:linear-gradient(160deg,#ffe27a,#ff9f1c);color:var(--ink);
   border:3px solid var(--ink);border-radius:12px;padding:12px;text-align:left;box-shadow:3px 3px 0 rgba(0,0,0,.5);
   transition:transform .1s}
@@ -256,6 +256,15 @@ details.seg[open] summary{border-bottom:2px dashed #4a2338;margin-bottom:12px}
 .big-sprite{width:120px;height:120px;border-radius:18px;border:5px solid #fff;display:flex;align-items:center;justify-content:center;
   font-size:64px;box-shadow:0 0 0 5px var(--ink),6px 6px 0 rgba(0,0,0,.6);position:relative}
 .speaker-plate.with-sprite{align-items:flex-end}
+/* custom uploaded sprite: larger portrait, no plate chrome, sits beside the name */
+.big-sprite.custom{background:transparent!important;border:none;box-shadow:none;border-radius:0;
+  width:auto;height:170px}
+.big-sprite.custom img{height:170px;width:auto;max-width:150px;object-fit:contain;
+  filter:drop-shadow(4px 6px 6px rgba(0,0,0,.6));display:block}
+.sprite-upload-preview{width:64px;height:64px;border-radius:10px;object-fit:cover;border:2px solid var(--cyan);background:#0e050b}
+.sprite-src-toggle{display:flex;gap:6px;margin:8px 0 4px}
+.sprite-src-toggle button{font-size:11px;font-weight:bold;padding:4px 10px;border-radius:20px;border:2px solid #4a2338;background:#0e050b;color:var(--paper);text-transform:uppercase}
+.sprite-src-toggle button.sel{border-color:var(--cyan);background:var(--cyan);color:var(--ink)}
 @keyframes spriteShake{0%,100%{transform:translate(0,0)}25%{transform:translate(-3px,2px)}75%{transform:translate(3px,-2px)}}
 
 /* ---------- music editor ---------- */
@@ -362,6 +371,52 @@ details.seg[open] summary{border-bottom:2px dashed #4a2338;margin-bottom:12px}
 .share-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .name-input-row{display:flex;gap:8px;margin-bottom:14px}
 .name-input-row input{flex:1}
+
+/* ---------- lives HUD ---------- */
+.lives-hud{display:inline-flex;gap:2px;align-items:center;font-size:18px;line-height:1;filter:drop-shadow(1px 1px 0 var(--ink))}
+.lives-hud.hidden{display:none}
+.lives-hud .lost{opacity:.28;filter:grayscale(1)}
+.lives-hud.pop{animation:lifepop .4s}
+@keyframes lifepop{0%{transform:scale(1)}40%{transform:scale(1.5)}100%{transform:scale(1)}}
+
+/* ---------- in-trial reference button + panel ---------- */
+.ref-btn{background:var(--ink);color:#fff;border:2px solid var(--cyan);border-radius:8px;padding:7px 11px;font-weight:bold;font-size:12px;margin-left:6px}
+.ref-panel{position:absolute;inset:0;z-index:60;background:rgba(6,2,6,.82);display:none;align-items:center;justify-content:center;padding:24px}
+.ref-panel.show{display:flex}
+.ref-inner{background:var(--panel);border:4px solid var(--cyan);border-radius:16px;box-shadow:8px 8px 0 rgba(0,0,0,.6);width:100%;max-width:680px;max-height:86vh;display:flex;flex-direction:column;overflow:hidden}
+.ref-head{display:flex;align-items:center;gap:12px;padding:14px 20px;background:linear-gradient(90deg,var(--purple),var(--cyan));border-bottom:4px solid var(--gold)}
+.ref-head h2{font-size:20px;color:#fff;text-shadow:2px 2px 0 var(--ink)}
+.ref-head .modal-close{margin-left:auto}
+.ref-body{padding:18px 20px;overflow-y:auto}
+.ref-body h3{font-size:14px;color:var(--gold);margin:14px 0 8px;letter-spacing:1px}
+.ref-body h3:first-child{margin-top:0}
+
+/* ---------- Hangman's Gambit ---------- */
+.hangman-answer{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:18px 0}
+.hslot{width:46px;height:56px;border:3px solid var(--cyan);border-radius:8px;background:rgba(0,229,255,.08);
+  display:flex;align-items:center;justify-content:center;font-family:Impact,sans-serif;font-size:30px;color:#fff;cursor:pointer;transition:transform .1s}
+.hslot.filled{background:var(--cyan);color:var(--ink)}
+.hslot.space{border-color:transparent;background:transparent;cursor:default;width:22px}
+.hslot:hover{transform:translateY(-3px)}
+.letter-pool{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:16px 0}
+.hletter{width:52px;height:52px;border:3px solid var(--ink);border-radius:10px;
+  background:linear-gradient(160deg,#ffe27a,#ff9f1c);color:var(--ink);font-family:Impact,sans-serif;font-size:28px;
+  box-shadow:3px 3px 0 rgba(0,0,0,.5);cursor:pointer;transition:transform .1s}
+.hletter:hover{transform:translateY(-4px) rotate(-2deg)}
+.hletter.used{opacity:.25;pointer-events:none;transform:scale(.9)}
+.hint-line{font-size:14px;color:#e7b8cf;text-align:center;font-family:"Trebuchet MS",sans-serif;margin-bottom:6px}
+
+/* ---------- game over ---------- */
+.gameover{text-align:center}
+.gameover .go-title{font-family:Impact,sans-serif;font-size:min(15vw,120px);color:var(--hot);text-transform:uppercase;
+  text-shadow:5px 5px 0 var(--ink);animation:slam .5s cubic-bezier(.2,1.6,.4,1)}
+.gameover p{font-size:16px;color:var(--paper);margin:12px 0 20px}
+
+/* ---------- bullet filter chips (editor) ---------- */
+.bf-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.bf-chip{display:inline-flex;align-items:center;gap:6px;background:#0e050b;border:2px solid #4a2338;border-radius:20px;
+  padding:5px 12px;font-size:12px;color:var(--paper);text-transform:none;font-weight:bold;cursor:pointer;margin:0}
+.bf-chip input{margin:0}
 </style>
 </head>
 <body>
@@ -425,6 +480,7 @@ details.seg[open] summary{border-bottom:2px dashed #4a2338;margin-bottom:12px}
           <button class="btn lime" id="addShowdown">+ Pick a Bullet</button>
           <button class="btn hot" id="addRebuttal">+ Rebuttal Showdown</button>
           <button class="btn gold" id="addClosing">+ Closing Argument</button>
+          <button class="btn cyan" id="addHangman">+ Hangman's Gambit</button>
         </div>
         <div id="scriptList"></div>
       </div>
@@ -492,6 +548,14 @@ details.seg[open] summary{border-bottom:2px dashed #4a2338;margin-bottom:12px}
             <div class="field"><label>Effect</label><select id="tFx"></select></div>
           </div>
         </div>
+        <div class="card" style="border-color:var(--hot)">
+          <label>❤️ Lives</label>
+          <div class="mini" style="margin-bottom:8px">How many wrong answers the player can survive across the whole trial. Every wrong choice in a minigame costs one life — hit zero and it's game over.</div>
+          <div class="card-row">
+            <div class="field small"><label>Lives (1-8)</label>
+              <input type="number" id="tLives" min="1" max="8" value="3"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -504,8 +568,10 @@ details.seg[open] summary{border-bottom:2px dashed #4a2338;margin-bottom:12px}
   <div class="trial-hud">
     <button class="exit-btn" id="btnExit">✕ Exit Trial</button>
     <span class="phase-tag" id="phaseTag">Intro</span>
+    <span class="lives-hud hidden" id="livesHud"></span>
     <div class="progress-dots" id="progressDots"></div>
-    <button class="mute-btn" id="muteBtn" style="margin-left:10px">🔊 Music On</button>
+    <button class="ref-btn" id="btnRef">📋 Case Notes</button>
+    <button class="mute-btn" id="muteBtn" style="margin-left:6px">🔊 Music On</button>
   </div>
   <div class="now-playing hidden" id="nowPlaying"><span class="eq"><span></span><span></span><span></span></span> <span id="npName"></span></div>
   <div class="stage"><div class="stage-inner" id="stageInner"></div></div>
@@ -517,6 +583,17 @@ details.seg[open] summary{border-bottom:2px dashed #4a2338;margin-bottom:12px}
   <button class="btn gold tray-toggle hidden" id="trayToggle">🔸 Bullets</button>
 
   <div class="flash hidden" id="flash"><div class="flash-text" id="flashText"></div></div>
+
+  <!-- in-trial reference panel (case notes) -->
+  <div class="ref-panel" id="refPanel">
+    <div class="ref-inner">
+      <div class="ref-head">
+        <h2>📋 Case Notes</h2>
+        <button class="modal-close" id="refClose">✕</button>
+      </div>
+      <div class="ref-body" id="refBody"></div>
+    </div>
+  </div>
 </div>
 
 <!-- ================= SAVE / LOAD / SHARE MODAL ================= -->
@@ -662,7 +739,7 @@ let state = null;
 function blankState(){
   return {
     info:{title:"Untitled Class Trial", intro:"", culprit:"", ending:"",
-      bg:"courtroom", fx:"speedlines",
+      bg:"courtroom", fx:"speedlines", lives:3,
       previewOn:true, previewEvents:[], previewText:""},
     characters:[],
     bullets:[],
@@ -727,7 +804,7 @@ function renderChars(){
     d.innerHTML=`
       <div class="card-row">
         <div style="text-align:center">
-          <div class="avatar sprite-face" style="background:${c.color};width:64px;height:64px"><span class="sprite-emoji">${c.sprite}</span></div>
+          <div class="avatar sprite-face" style="background:${c.color};width:64px;height:64px">${c.customSprite?`<img class="sprite-upload-preview" src="${c.customSprite}" alt="sprite">`:`<span class="sprite-emoji">${c.sprite}</span>`}</div>
           <div class="mini" style="margin-top:4px">Preview</div>
         </div>
         <div style="flex:1;min-width:220px">
@@ -740,7 +817,13 @@ function renderChars(){
             <div class="field small"><label>Color</label><input type="color" data-f="color" value="${c.color}"></div>
             <div style="margin-left:auto;align-self:flex-end"><button class="del" data-del>Delete</button></div>
           </div>
-          <label>Sprite Face</label>
+          <label>Custom Sprite Image</label>
+          <div class="mini" style="margin-bottom:6px">Upload your own character art (PNG/JPG). It shows larger than the emoji faces during the trial. Transparent PNGs look best. Leave empty to use an emoji face below.</div>
+          <div class="add-bar">
+            <button class="btn cyan sm" data-upsprite>⬆️ Upload Sprite</button>
+            ${c.customSprite?`<button class="btn ghost sm" data-clearsprite>✕ Remove Custom Sprite</button>`:``}
+          </div>
+          <label style="margin-top:10px">Sprite Face (used when no custom image)</label>
           <div class="sprite-grid" data-spritegrid>
             ${SPRITES.map(sp=>`<button class="sprite-opt ${sp===c.sprite?'sel':''}" data-sprite="${sp}">${sp}</button>`).join("")}
           </div>
@@ -750,12 +833,26 @@ function renderChars(){
           </div>
         </div>
       </div>`;
-    const preview=d.querySelector(".sprite-emoji");
+    const preview=d.querySelector(".sprite-face");
     d.querySelectorAll("[data-f]").forEach(inp=>{
       inp.addEventListener("input",()=>{ c[inp.dataset.f]=inp.value; if(inp.dataset.f==="color"){d.querySelector(".avatar").style.background=inp.value;} save(); refreshCharDropdowns(); });
     });
+    const upBtn=d.querySelector("[data-upsprite]");
+    upBtn.addEventListener("click",()=>{
+      const inp=document.createElement("input"); inp.type="file"; inp.accept="image/*";
+      inp.onchange=()=>{ const f=inp.files[0]; if(!f) return;
+        if(f.size>3*1024*1024){ toast("Image is large — trials may be slow to share. Try under 3MB."); }
+        const r=new FileReader();
+        r.onload=()=>{ c.customSprite=r.result; renderChars(); save(); toast("Custom sprite added"); };
+        r.readAsDataURL(f);
+      };
+      inp.click();
+    });
+    const clearBtn=d.querySelector("[data-clearsprite]");
+    if(clearBtn) clearBtn.addEventListener("click",()=>{ delete c.customSprite; renderChars(); save(); toast("Custom sprite removed"); });
     d.querySelectorAll("[data-sprite]").forEach(btn=>{
-      btn.addEventListener("click",()=>{ c.sprite=btn.dataset.sprite; preview.textContent=c.sprite;
+      btn.addEventListener("click",()=>{ c.sprite=btn.dataset.sprite;
+        if(!c.customSprite){ const em=preview.querySelector(".sprite-emoji"); if(em) em.textContent=c.sprite; }
         d.querySelectorAll("[data-sprite]").forEach(b=>b.classList.toggle("sel",b===btn)); save(); });
     });
     d.querySelectorAll("[data-expr]").forEach(btn=>{
@@ -840,6 +937,15 @@ function fxOptions(sel){
   let o='<option value="">— keep current effect —</option>';
   EFFECTS.forEach(f=>{ o+=`<option value="${f.id}" ${f.id===sel?"selected":""}>${esc(f.name)}</option>`; });
   return o;
+}
+// checkbox list to restrict which truth bullets appear during a minigame
+function bulletFilterUI(seg){
+  if(!state.bullets.length) return `<div class="mini">Add truth bullets first to filter them here.</div>`;
+  const sel=seg.bulletFilter||[];
+  const boxes=state.bullets.map(b=>`
+    <label class="bf-chip"><input type="checkbox" data-bf="${b.id}" ${sel.includes(b.id)?"checked":""}> ${esc(b.name||"Bullet")}</label>`).join("");
+  return `<div class="bf-hint mini">Leave all unchecked to show every truth bullet. Check some to show only those during this minigame.</div>
+    <div class="bf-list">${boxes}</div>`;
 }
 
 /* ---- MUSIC EDITOR ---- */
@@ -969,6 +1075,8 @@ function renderScript(){
           <div class="help">A 1v1 clash. The opponent throws a series of attacks on your reasoning. Advance through them, then <b>counter the flawed one</b> by presenting the correct truth bullet. Mark exactly one attack as the flawed point and choose the bullet that shatters it.</div>
           <div data-rstmts>${rebHTML || '<div class="empty">No attacks yet.</div>'}</div>
           <div class="add-bar"><button class="btn cyan sm" data-addrstmt>+ Add Attack</button></div>
+          <label style="margin-top:12px">🔸 Truth Bullets shown in this showdown</label>
+          ${bulletFilterUI(seg)}
           <div class="field" style="margin-top:12px"><label>Victory line (after the counter lands)</label>
             <textarea data-f="winLine" placeholder="Checkmate. Your whole argument just fell apart!">${esc(seg.winLine||"")}</textarea></div>
         </div>`;
@@ -1020,6 +1128,37 @@ function renderScript(){
           <div class="field" style="margin-top:12px"><label>Success line (when the sequence is correct)</label>
             <textarea data-f="successLine" placeholder="And that completes the picture. There's no other way it could have happened!">${esc(seg.successLine||"")}</textarea></div>
         </div>`;
+    } else if(seg.type==="hangman"){
+      det.innerHTML=`
+        <summary>🔤 Hangman's Gambit <span class="seg-badge">${esc((seg.word||"").toUpperCase()||"no word")}</span>
+          <div class="reorder">
+            <button class="btn sm ghost" data-up>▲</button>
+            <button class="btn sm ghost" data-down>▼</button>
+            <button class="del" data-del>✕</button>
+          </div>
+        </summary>
+        <div class="seg-body">
+          <div class="card-row">
+            <div class="field"><label>Asking Character</label><select data-f="speaker">${charOptions(seg.speaker)}</select></div>
+            <div class="field small"><label>😐 Expression</label><select data-f="expr">${exprOptions(seg.expr)}</select></div>
+            <div class="field"><label>🎵 Music</label><select class="music-select" data-f="music">${musicOptions(seg.music)}</select></div>
+          </div>
+          <div class="card-row">
+            <div class="field"><label>🎬 Background</label><select data-f="bg">${bgOptions(seg.bg)}</select></div>
+            <div class="field"><label>✨ Effect</label><select data-f="fx">${fxOptions(seg.fx)}</select></div>
+          </div>
+          <div class="card-row">
+            <div class="field"><label>The Answer Word or Phrase</label>
+              <input type="text" data-f="word" value="${esc(seg.word||"")}" placeholder="POISON"></div>
+            <div class="field small"><label>Decoy letters (0-10)</label>
+              <input type="number" data-f="extraLetters" min="0" max="10" value="${seg.extraLetters!=null?seg.extraLetters:3}"></div>
+          </div>
+          <div class="field"><label>Hint / Question</label>
+            <input type="text" data-f="hint" value="${esc(seg.hint||"")}" placeholder="What was the real cause of death?"></div>
+          <div class="help">The player spells out the answer by clicking scrambled letters into the blanks. The word's own letters are shuffled in with the decoy letters you add. Spaces are kept as gaps automatically. Clicking a letter into the wrong blank costs a life; clicking a filled blank clears it. Letters are matched case-insensitively.</div>
+          <div class="field"><label>Success line</label>
+            <textarea data-f="successLine" placeholder="That's it! The word that unravels the whole case!">${esc(seg.successLine||"")}</textarea></div>
+        </div>`;
     } else {
       let stmtHTML="";
       seg.statements.forEach((s,si)=>{
@@ -1061,6 +1200,8 @@ function renderScript(){
           <div class="help">Each statement below scrolls past the player. Wrap the contradictory phrase in <b>[square brackets]</b> to make it a glowing weak point, then choose the truth bullet that refutes it. The player must shoot the right bullet at the right weak point.</div>
           <div data-stmts>${stmtHTML || '<div class="empty">No statements yet.</div>'}</div>
           <div class="add-bar"><button class="btn cyan sm" data-addstmt>+ Add Statement</button></div>
+          <label style="margin-top:12px">🔸 Truth Bullets shown in this debate</label>
+          ${bulletFilterUI(seg)}
           <div class="field" style="margin-top:12px"><label>Break line (said when the correct bullet lands)</label>
             <textarea data-f="breakLine" placeholder="That's your contradiction! You couldn't have been there!">${esc(seg.breakLine||"")}</textarea></div>
         </div>`;
@@ -1068,6 +1209,15 @@ function renderScript(){
     // wiring
     det.querySelectorAll("[data-f]").forEach(inp=>{
       inp.addEventListener("input",()=>{ seg[inp.dataset.f]=inp.value; save(); if(inp.dataset.f==="speaker" && seg.type==="dialogue"){ const b=det.querySelector("summary .seg-badge"); if(b) b.textContent=charName(inp.value);} });
+    });
+    det.querySelectorAll("[data-bf]").forEach(cb=>{
+      cb.addEventListener("change",()=>{
+        seg.bulletFilter=seg.bulletFilter||[];
+        const id=cb.dataset.bf;
+        if(cb.checked){ if(!seg.bulletFilter.includes(id)) seg.bulletFilter.push(id); }
+        else seg.bulletFilter=seg.bulletFilter.filter(x=>x!==id);
+        save();
+      });
     });
     det.querySelectorAll("[data-sf]").forEach(inp=>{
       inp.addEventListener("input",()=>{
@@ -1150,11 +1300,16 @@ function renderSettings(){
   $("#tTitle").value=state.info.title||"";
   $("#tIntro").value=state.info.intro||"";
   $("#tEnding").value=state.info.ending||"";
+  $("#tLives").value=state.info.lives||3;
   // background / effect selects
   $("#tBg").innerHTML=BACKGROUNDS.map(b=>`<option value="${b.id}" ${b.id===(state.info.bg||"courtroom")?"selected":""}>${esc(b.name)}</option>`).join("");
   $("#tFx").innerHTML=EFFECTS.map(f=>`<option value="${f.id}" ${f.id===(state.info.fx||"none")?"selected":""}>${esc(f.name)}</option>`).join("");
   refreshCharDropdowns();
 }
+$("#tLives").addEventListener("input",e=>{
+  let v=parseInt(e.target.value,10); if(isNaN(v)) v=3; v=Math.max(1,Math.min(8,v));
+  state.info.lives=v; save();
+});
 
 /* ---- INVESTIGATION PREVIEW EDITOR ---- */
 function renderPreview(){
@@ -1213,6 +1368,10 @@ $("#addRebuttal").addEventListener("click",()=>{
 $("#addClosing").addEventListener("click",()=>{
   state.script.push({type:"closing",id:uid(),speaker:"",prompt:"",music:"",successLine:"",_open:true,
     events:[{id:uid(),text:"",false:false},{id:uid(),text:"",false:false},{id:uid(),text:"",false:false}]}); renderScript(); save();
+});
+$("#addHangman").addEventListener("click",()=>{
+  state.script.push({type:"hangman",id:uid(),speaker:"",expr:"",music:"",bg:"",fx:"",
+    word:"",hint:"",successLine:"",extraLetters:3,_open:true}); renderScript(); save();
 });
 
 /* settings inputs */
@@ -1458,13 +1617,51 @@ function startTrial(){
   const err=validate();
   if(err){ toast(err); return; }
   play.classList.add("show");
+  const maxLives=Math.max(1,Math.min(8,state.info.lives||3));
   // build a flat step list
-  run={ steps:buildSteps(), idx:0, selectedBullet:null, curBg:null, curFx:null };
+  run={ steps:buildSteps(), idx:0, selectedBullet:null, curBg:null, curFx:null, maxLives, lives:maxLives, gameOver:false };
   applyStage(state.info.bg||"courtroom", state.info.fx||"none");
+  renderLives();
   buildProgressDots();
   showStep();
 }
-function exitTrial(){ play.classList.remove("show"); $("#bulletTray").classList.remove("up"); stopMusic(); }
+function exitTrial(){ play.classList.remove("show"); $("#bulletTray").classList.remove("up"); $("#refPanel").classList.remove("show"); stopMusic(); }
+
+/* ---- lives ---- */
+function renderLives(){
+  const el=$("#livesHud");
+  if(!run || !run.maxLives){ el.classList.add("hidden"); return; }
+  el.classList.remove("hidden");
+  let h="";
+  for(let i=0;i<run.maxLives;i++){ h+=`<span class="${i<run.lives?"":"lost"}">${i<run.lives?"❤️":"🤍"}</span>`; }
+  el.innerHTML=h;
+}
+// returns true if the trial should continue, false if this triggered game over
+function loseLife(){
+  if(!run || run.gameOver) return false;
+  run.lives=Math.max(0,run.lives-1);
+  renderLives();
+  const el=$("#livesHud"); el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop");
+  if(run.lives<=0){ run.gameOver=true; setTimeout(gameOver,900); return false; }
+  return true;
+}
+function gameOver(){
+  $("#trayToggle").classList.add("hidden"); $("#bulletTray").classList.remove("up");
+  playSong("verdict");
+  stage.innerHTML=`<div class="center-msg gameover">
+    <div class="go-title">Game Over</div>
+    <p>The truth slipped away. The blackened walks free... unless you try again.</p>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <button class="btn pink" style="font-size:16px;padding:12px 24px" id="goRetry">↺ Restart Trial</button>
+      <button class="btn ghost" style="font-size:16px;padding:12px 24px" id="goEdit">✎ Back to Editor</button>
+    </div>
+  </div>`;
+  $("#goRetry").addEventListener("click",()=>{
+    run.lives=run.maxLives; run.gameOver=false; run.idx=0; run.selectedBullet=null;
+    renderLives(); applyStage(state.info.bg||"courtroom", state.info.fx||"none"); showStep();
+  });
+  $("#goEdit").addEventListener("click",exitTrial);
+}
 
 function validate(){
   if(!state.characters.length) return "Add at least one character first.";
@@ -1483,6 +1680,7 @@ function buildSteps(){
     else if(seg.type==="showdown") steps.push({kind:"showdown",...base});
     else if(seg.type==="closing") steps.push({kind:"closing",...base});
     else if(seg.type==="rebuttal") steps.push({kind:"rebuttal",...base});
+    else if(seg.type==="hangman") steps.push({kind:"hangman",...base});
     else steps.push({kind:"debate",...base});
   });
   steps.push({kind:"verdict"});
@@ -1525,11 +1723,13 @@ function updateDots(){
 
 function speakerPlate(char, expr){
   if(!char) return "";
-  const sprite=char.sprite||"🙂";
   const useExpr=expr||char.expr||"normal";
   const fx=EXPR_FX[useExpr]||"";
+  const inner = char.customSprite
+    ? `<div class="big-sprite custom"><img src="${char.customSprite}" alt="${esc(char.name)}" style="${fx}"></div>`
+    : `<div class="big-sprite" style="background:${char.color}"><span style="${fx}">${char.sprite||"🙂"}</span></div>`;
   return `<div class="speaker-plate with-sprite">
-    <div class="big-sprite" style="background:${char.color}"><span style="${fx}">${sprite}</span></div>
+    ${inner}
     <div><div class="speaker-name" style="color:${char.color}">${esc(char.name)}</div>
     <div class="speaker-title">${esc(char.title)||"&nbsp;"}</div></div>
   </div>`;
@@ -1550,6 +1750,7 @@ function showStep(){
   if(step.kind==="debate") return renderDebate(step.seg);
   if(step.kind==="showdown") return renderShowdown(step.seg);
   if(step.kind==="rebuttal") return renderRebuttal(step.seg);
+  if(step.kind==="hangman") return renderHangman(step.seg);
   if(step.kind==="closing") return renderClosing(step.seg);
   if(step.kind==="verdict") return renderVerdict();
 }
@@ -1600,6 +1801,7 @@ function renderDialogue(seg){
 function renderDebate(seg){
   $("#phaseTag").textContent="Nonstop Debate";
   run.debate={seg, si:0, solved:false};
+  run.trayBullets=trayBulletsFor(seg);
   $("#trayToggle").classList.remove("hidden");
   renderTrayBullets();
   showStatement();
@@ -1632,10 +1834,15 @@ function showStatement(){
   $("#nextStmt").addEventListener("click",()=>{ run.debate.si=(run.debate.si+1)%seg.statements.length; showStatement(); });
   $("#openTray").addEventListener("click",()=>{ $("#bulletTray").classList.toggle("up"); });
 }
+function trayBulletsFor(seg){
+  const filter=seg && seg.bulletFilter && seg.bulletFilter.length ? seg.bulletFilter : null;
+  return filter ? state.bullets.filter(b=>filter.includes(b.id)) : state.bullets;
+}
 function renderTrayBullets(){
   const el=$("#trayBullets"); el.innerHTML="";
-  if(!state.bullets.length){ el.innerHTML='<div class="mini">No truth bullets defined. (You can still click Next to skip.)</div>'; return; }
-  state.bullets.forEach(b=>{
+  const bullets=run.trayBullets||state.bullets;
+  if(!bullets.length){ el.innerHTML='<div class="mini">No truth bullets available here. (You can still click Next to skip.)</div>'; return; }
+  bullets.forEach(b=>{
     const d=document.createElement("div"); d.className="bullet"; d.dataset.id=b.id;
     d.innerHTML=`<div class="bname">🔸 ${esc(b.name||"Bullet")}</div><div class="bdesc">${esc(b.desc)}</div>`;
     d.addEventListener("click",()=>{
@@ -1664,7 +1871,9 @@ function resolveShot(stmt){
     },850);
   } else {
     doFlash("wrong","MISS!");
-    // small penalty flavor, stay on statement
+    run.selectedBullet=null;
+    $$("#trayBullets .bullet").forEach(x=>x.classList.remove("selected"));
+    loseLife();
   }
 }
 function doFlash(kind,text){
@@ -1674,6 +1883,22 @@ function doFlash(kind,text){
 }
 
 $("#trayToggle").addEventListener("click",()=>$("#bulletTray").classList.toggle("up"));
+
+/* ---- in-trial reference panel (case notes) ---- */
+function renderRefPanel(){
+  const events=(state.info.previewEvents||[]).filter(e=>e&&e.trim());
+  const findings = events.length ? `
+    <h3>🔍 INVESTIGATION FINDINGS</h3>
+    ${events.map((e,i)=>`<div class="finding"><span class="fn">${i+1}</span> ${esc(e)}</div>`).join("")}` : "";
+  const brief = (state.info.previewText||"").trim() ? `<div class="lead" style="text-align:left;margin-bottom:14px">${esc(state.info.previewText)}</div>` : "";
+  const bullets = state.bullets.length ? `
+    <h3>🔸 TRUTH BULLETS</h3>
+    <div class="brief-bullets">${state.bullets.map(b=>`<div class="brief-bullet"><div class="bn">🔸 ${esc(b.name||"Bullet")}</div><div class="bd">${esc(b.desc)}</div></div>`).join("")}</div>` : '<div class="mini">No truth bullets in this trial.</div>';
+  $("#refBody").innerHTML = brief + findings + bullets;
+}
+$("#btnRef").addEventListener("click",()=>{ renderRefPanel(); $("#refPanel").classList.add("show"); });
+$("#refClose").addEventListener("click",()=>$("#refPanel").classList.remove("show"));
+$("#refPanel").addEventListener("click",e=>{ if(e.target===$("#refPanel")) $("#refPanel").classList.remove("show"); });
 
 /* ---- REBUTTAL SHOWDOWN (1v1: opponent attacks, counter the flaw) ---- */
 function renderRebuttal(seg){
@@ -1689,20 +1914,19 @@ function renderRebuttal(seg){
   </div>`;
   $("#rebStart").addEventListener("click",()=>{
     if(!stmts.length){ nextStep(); return; }
-    run.reb={seg, opp, stmts, si:0, hp:stmts.length}; run.selectedBullet=null;
+    run.reb={seg, opp, stmts, si:0}; run.selectedBullet=null;
+    run.trayBullets=trayBulletsFor(seg);
     $("#trayToggle").classList.remove("hidden");
     renderTrayBullets();
     rebStatement();
   });
 }
 function rebStatement(){
-  const {seg,opp,stmts,si,hp}=run.reb;
+  const {seg,opp,stmts,si}=run.reb;
   const s=stmts[si];
   const isFlawed=!!s.flawed;
   stage.innerHTML=`
     ${speakerPlate(opp, isFlawed?"smug":"angry")}
-    <div class="hp-bar"><div class="hp-fill" style="width:${(hp/stmts.length)*100}%"></div></div>
-    <div class="hp-label">Your resolve: ${hp}/${stmts.length}</div>
     <div class="attack-box ${isFlawed?"flawed":""}" id="atkBox">${esc(s.text)||"…"}</div>
     <div class="debate-controls">
       <button class="btn ghost" id="rebPrev" ${si===0?"disabled style=opacity:.4":""}>◀ Back</button>
@@ -1740,21 +1964,107 @@ function rebResolve(s){
     },850);
   } else {
     doFlash("wrong","WRONG BULLET!");
-    run.reb.hp=Math.max(0,run.reb.hp-1);
+    run.selectedBullet=null;
+    $$("#trayBullets .bullet").forEach(x=>x.classList.remove("selected"));
     toast("That's not the right evidence to counter this!");
-    if(run.reb.hp<=0){ setTimeout(rebGameOver,850); }
+    loseLife();
   }
 }
-function rebGameOver(){
-  const {opp}=run.reb;
-  $("#trayToggle").classList.add("hidden"); $("#bulletTray").classList.remove("up");
-  stage.innerHTML=`<div class="center-msg">
-    ${speakerPlate(opp,"smug")}
-    <div class="reb-banner">SILENCED!</div>
-    <div class="attack-box">Your resolve shattered. But the truth won't stay buried — try again!</div>
-    <button class="btn hot" style="font-size:16px;padding:12px 24px;margin-top:18px" id="rebRetry">↺ Retry Showdown</button>
-  </div>`;
-  $("#rebRetry").addEventListener("click",()=>{ run.reb.hp=run.reb.stmts.length; run.reb.si=0; run.selectedBullet=null; $("#trayToggle").classList.remove("hidden"); renderTrayBullets(); rebStatement(); });
+
+/* ---- HANGMAN'S GAMBIT (spell the answer from scrambled letters) ---- */
+function renderHangman(seg){
+  $("#phaseTag").textContent="Hangman's Gambit";
+  const char=charById(seg.speaker);
+  const word=(seg.word||"").toUpperCase();
+  const letters=word.replace(/[^A-Z0-9]/gi,"").split(""); // the required letters (excludes spaces/punct)
+  if(!letters.length){
+    stage.innerHTML=`<div class="center-msg">${speakerPlate(char,seg.expr)}
+      <h2 style="color:var(--gold)">Hangman's Gambit</h2>
+      <p>No answer word set for this puzzle.</p>
+      <button class="btn cyan" id="skipHang">Skip ▶</button></div>`;
+    $("#skipHang").addEventListener("click",nextStep); return;
+  }
+  // build the slot template preserving the exact characters (spaces render as gaps)
+  const template=word.split(""); // includes spaces & punctuation
+  // pool = required letters + decoys, shuffled
+  const extra=Math.max(0,Math.min(10, parseInt(seg.extraLetters,10)||0));
+  const ALPHA="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const pool=letters.slice();
+  for(let i=0;i<extra;i++){ pool.push(ALPHA[Math.floor(Math.random()*ALPHA.length)]); }
+  const poolLetters=shuffle(pool.map((ch,idx)=>({ch,idx,used:false})));
+  // filled[i] holds the pool item index placed in slot i (only for letter slots)
+  const filled={};
+
+  function isLetterSlot(i){ return /[A-Z0-9]/i.test(template[i]); }
+
+  function draw(){
+    const slotHTML=template.map((ch,i)=>{
+      if(!isLetterSlot(i)) return `<div class="hslot space"></div>`;
+      const fi=filled[i];
+      const shown = fi!=null ? poolLetters[fi].ch : "";
+      return `<div class="hslot ${fi!=null?"filled":""}" data-slot="${i}">${shown}</div>`;
+    }).join("");
+    const poolHTML=poolLetters.map((p,pi)=>`<button class="hletter ${p.used?"used":""}" data-pool="${pi}">${p.ch}</button>`).join("");
+    stage.innerHTML=`
+      ${speakerPlate(char, seg.expr)}
+      <div class="showdown-q">🔤 Hangman's Gambit</div>
+      ${seg.hint?`<div class="hint-line">💡 ${esc(seg.hint)}</div>`:""}
+      <div class="hangman-answer">${slotHTML}</div>
+      <div class="letter-pool">${poolHTML}</div>
+      <div class="debate-controls">
+        <button class="btn ghost" id="hangClear">↺ Clear</button>
+        <button class="btn gold" id="hangSubmit">✔️ Confirm Answer</button>
+      </div>
+      <div class="mini" style="margin-top:10px;text-align:center">Click letters into the blanks to spell the answer. Click a blank to clear it. A wrong letter in a slot costs a life.</div>`;
+    // clicking a pool letter fills the next empty slot
+    $$(".hletter").forEach(btn=>{
+      btn.addEventListener("click",()=>{
+        const pi=+btn.dataset.pool; if(poolLetters[pi].used) return;
+        const nextEmpty=template.findIndex((ch,i)=>isLetterSlot(i) && filled[i]==null);
+        if(nextEmpty<0){ toast("All blanks are filled — Confirm or Clear."); return; }
+        // wrong-letter check: does this letter match the required letter for that slot?
+        if(poolLetters[pi].ch!==template[nextEmpty].toUpperCase()){
+          doFlash("wrong","WRONG!");
+          const alive=loseLife();
+          if(!alive) return;
+          toast("That letter doesn't belong there!");
+          return; // do not place a wrong letter
+        }
+        filled[nextEmpty]=pi; poolLetters[pi].used=true; draw();
+      });
+    });
+    // clicking a filled slot clears it
+    $$(".hslot").forEach(sl=>{
+      sl.addEventListener("click",()=>{
+        const i=+sl.dataset.slot; if(isNaN(i)) return;
+        if(filled[i]!=null){ poolLetters[filled[i]].used=false; delete filled[i]; draw(); }
+      });
+    });
+    $("#hangClear").addEventListener("click",()=>{ Object.keys(filled).forEach(k=>{ poolLetters[filled[k]].used=false; }); for(const k in filled) delete filled[k]; draw(); });
+    $("#hangSubmit").addEventListener("click",submit);
+  }
+
+  function submit(){
+    const allFilled=template.every((ch,i)=>!isLetterSlot(i) || filled[i]!=null);
+    if(!allFilled){ toast("Fill in every blank first."); return; }
+    const guess=template.map((ch,i)=>isLetterSlot(i)?poolLetters[filled[i]].ch:ch).join("");
+    if(guess.toUpperCase()===word){
+      doFlash("correct","SOLVED!");
+      setTimeout(()=>{
+        stage.innerHTML=`<div class="center-msg">
+          ${speakerPlate(char,"smug")}
+          <h2 style="color:var(--lime)">THAT'S THE WORD!</h2>
+          <p>${esc(seg.successLine||"The answer spells itself out — there's no denying it now!")}</p>
+          <button class="btn lime" style="font-size:16px;padding:12px 24px" id="hangCont">Continue ▶</button>
+        </div>`;
+        $("#hangCont").addEventListener("click",nextStep);
+      },850);
+    } else {
+      // since wrong letters are blocked on placement, this rarely triggers; still guard
+      doFlash("wrong","WRONG!"); loseLife();
+    }
+  }
+  draw();
 }
 
 /* ---- PICK A BULLET (simple pick-a-bullet minigame) ---- */
@@ -1795,7 +2105,9 @@ function renderShowdown(seg){
         },850);
       } else {
         btn.classList.add("wrong"); doFlash("wrong","WRONG!");
+        const alive=loseLife();
         setTimeout(()=>{
+          if(!alive) return; // game over screen already shown
           stage.innerHTML=`<div class="center-msg">
             ${speakerPlate(char,"angry")}
             <h2 style="color:var(--hot)">NOT QUITE!</h2>
@@ -1882,8 +2194,10 @@ function renderClosing(seg){
       },850);
     } else {
       doFlash("wrong","WRONG!");
+      const alive=loseLife();
       // highlight mistakes then let them retry
       setTimeout(()=>{
+        if(!alive) return; // game over shown
         const slotBox=$("#slotBox");
         if(slotBox){
           $$("#slotBox .evt").forEach((node,i)=>{
@@ -1938,7 +2252,7 @@ function sampleTrial(){
       intro:"The body of Kaito, the Ultimate Astronaut, was found in the locked A/V room this morning. The killer claims they were nowhere near the scene. But every lie leaves a crack — let's find the truth!",
       culprit:c3,
       ending:"With the alibi shattered and the projector remote in hand, there's no more room to run. The blackened has been exposed, and the truth of the A/V room is finally clear.",
-      bg:"courtroom", fx:"speedlines",
+      bg:"courtroom", fx:"speedlines", lives:3,
       previewOn:true,
       previewText:"We only had a few hours to investigate before the trial. Here's everything we managed to piece together at the scene.",
       previewEvents:[
@@ -1986,6 +2300,9 @@ function sampleTrial(){
           {id:uid(),text:"I was asleep in the dorms, and nothing places me at that locked door!",flawed:true,answerBullet:b3,counterLine:"Wrong! Your batting glove was jammed in that very lock — you WERE at the door!"},
           {id:uid(),text:"Even the remote clock could've been knocked over by anyone.",flawed:false,answerBullet:"",counterLine:""}
         ]},
+      {type:"hangman",id:uid(),speaker:c2,expr:"normal",music:"reveal",bg:"matrix",fx:"static",
+        word:"BATTING GLOVE",hint:"What single object places the killer at the locked door?",extraLetters:4,
+        successLine:"Exactly. The batting glove in the lock — that's what puts you at the scene."},
       {type:"closing",id:uid(),speaker:c1,expr:"normal",music:"reveal",bg:"void",fx:"embers",prompt:"Let me lay out exactly what happened that night, step by step.",
         successLine:"That's the whole sequence. From the argument to the frozen clock — it all points to one person.",
         events:[
