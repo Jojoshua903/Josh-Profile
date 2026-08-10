@@ -1,0 +1,2027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Class Trial Maker</title>
+<style>
+:root{
+  --pink:#ff3d7f;
+  --hot:#ff0066;
+  --cyan:#00e5ff;
+  --lime:#c6ff00;
+  --purple:#7b2ff7;
+  --ink:#12060f;
+  --paper:#fff4f9;
+  --panel:#1a0a16;
+  --gold:#ffd23f;
+  --gray:#2a1522;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:"Trebuchet MS","Segoe UI",sans-serif;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(255,61,127,.25), transparent 40%),
+    radial-gradient(circle at 85% 80%, rgba(0,229,255,.18), transparent 45%),
+    repeating-linear-gradient(45deg,#1a0a16 0 22px,#20101c 22px 44px);
+  color:var(--paper);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+h1,h2,h3{font-family:"Impact","Arial Black",sans-serif;letter-spacing:1px;text-transform:uppercase}
+button{font-family:inherit;cursor:pointer}
+.hidden{display:none !important}
+
+/* ---------- top bar ---------- */
+.topbar{
+  display:flex;align-items:center;gap:14px;padding:14px 22px;
+  background:linear-gradient(90deg,var(--hot),var(--purple));
+  border-bottom:4px solid var(--gold);
+  box-shadow:0 4px 0 rgba(0,0,0,.4);
+  position:sticky;top:0;z-index:50;flex-wrap:wrap;
+}
+.logo{font-size:26px;color:#fff;text-shadow:3px 3px 0 var(--ink);white-space:nowrap}
+.logo .accent{color:var(--gold)}
+.spacer{flex:1}
+.mode-toggle{display:flex;gap:6px}
+.btn{
+  border:3px solid var(--ink);border-radius:6px;padding:9px 16px;font-weight:bold;
+  font-size:14px;text-transform:uppercase;letter-spacing:.5px;
+  background:var(--paper);color:var(--ink);box-shadow:3px 3px 0 var(--ink);
+  transition:transform .08s, box-shadow .08s;
+}
+.btn:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--ink)}
+.btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+.btn.on{background:var(--gold)}
+.btn.cyan{background:var(--cyan)}
+.btn.lime{background:var(--lime)}
+.btn.pink{background:var(--pink);color:#fff}
+.btn.hot{background:var(--hot);color:#fff}
+.btn.ghost{background:transparent;color:#fff;box-shadow:3px 3px 0 var(--ink)}
+.btn.sm{padding:5px 10px;font-size:12px;box-shadow:2px 2px 0 var(--ink)}
+
+/* ---------- layout ---------- */
+.wrap{max-width:1200px;margin:0 auto;padding:22px 18px 90px}
+.editor-grid{display:grid;grid-template-columns:260px minmax(0,1fr);gap:20px}
+@media(max-width:820px){.editor-grid{grid-template-columns:1fr}}
+
+.side{
+  background:var(--panel);border:3px solid var(--ink);border-radius:12px;
+  padding:14px;box-shadow:5px 5px 0 rgba(0,0,0,.5);align-self:start;
+  position:sticky;top:88px;
+}
+.side h3{font-size:15px;color:var(--gold);margin-bottom:10px}
+.nav-item{
+  display:flex;align-items:center;gap:8px;width:100%;text-align:left;
+  border:2px solid transparent;border-radius:8px;padding:9px 11px;margin-bottom:6px;
+  background:var(--gray);color:var(--paper);font-weight:bold;font-size:13px;
+}
+.nav-item:hover{border-color:var(--pink)}
+.nav-item.active{background:var(--pink);color:#fff;border-color:var(--gold)}
+.nav-count{margin-left:auto;background:rgba(0,0,0,.35);border-radius:20px;padding:1px 8px;font-size:11px}
+
+.panel{
+  background:var(--panel);border:3px solid var(--ink);border-radius:12px;
+  padding:20px;box-shadow:6px 6px 0 rgba(0,0,0,.5);
+}
+.panel-head{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.panel-head h2{font-size:22px;color:var(--cyan)}
+.panel-head .desc{font-size:12px;color:#e7b8cf;width:100%;font-family:inherit;text-transform:none;font-weight:normal}
+
+/* ---------- cards / forms ---------- */
+.card{
+  background:var(--gray);border:2px solid var(--ink);border-radius:10px;
+  padding:14px;margin-bottom:14px;box-shadow:3px 3px 0 rgba(0,0,0,.4);
+}
+.card-row{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
+label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--gold);margin-bottom:4px;font-weight:bold}
+input[type=text],textarea,select{
+  width:100%;background:#0e050b;border:2px solid #4a2338;border-radius:6px;
+  color:var(--paper);padding:9px 10px;font-family:inherit;font-size:14px;
+}
+input[type=text]:focus,textarea:focus,select:focus{outline:none;border-color:var(--cyan)}
+textarea{resize:vertical;min-height:60px}
+.field{flex:1;min-width:160px;margin-bottom:10px}
+.field.small{flex:0 0 130px}
+.color-dot{width:28px;height:28px;border-radius:50%;border:2px solid #fff;display:inline-block;vertical-align:middle}
+input[type=color]{width:44px;height:38px;padding:2px;background:#0e050b;border:2px solid #4a2338;border-radius:6px;cursor:pointer}
+
+.pill{display:inline-flex;align-items:center;gap:6px;background:var(--ink);border:2px solid var(--pink);
+  border-radius:20px;padding:4px 10px;font-size:12px;margin:0 6px 6px 0}
+.chip{font-size:11px;font-weight:bold;padding:2px 9px;border-radius:20px;text-transform:uppercase}
+.chip.spoken{background:var(--cyan);color:var(--ink)}
+.chip.weak{background:var(--gold);color:var(--ink)}
+.chip.lie{background:var(--hot);color:#fff}
+
+.add-bar{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap}
+.empty{color:#c98db0;font-style:italic;font-size:13px;padding:10px 0;text-align:center;font-family:inherit}
+.mini{font-size:11px;color:#c98db0;margin-top:3px;font-family:inherit;text-transform:none}
+.del{background:var(--hot);color:#fff;border:2px solid var(--ink);border-radius:6px;padding:4px 9px;font-size:12px;font-weight:bold;box-shadow:2px 2px 0 var(--ink)}
+.grip{cursor:grab;color:#c98db0;font-weight:bold;padding:0 4px}
+
+.debate-line{display:grid;grid-template-columns:120px 1fr 150px 40px;gap:10px;align-items:start;margin-bottom:10px}
+@media(max-width:640px){.debate-line{grid-template-columns:1fr}}
+
+/* ---------- TRIAL PLAY MODE ---------- */
+#play{min-height:100vh;position:fixed;inset:0;z-index:100;display:none;
+  background:radial-gradient(circle at 50% 40%,#2a0a1e,#0a0308 75%);overflow:hidden}
+#play.show{display:block}
+
+/* selectable backgrounds (applied to #playBg) */
+#playBg{position:absolute;inset:0;z-index:0;transition:opacity .5s;background-size:cover}
+.bg-courtroom{background:radial-gradient(circle at 50% 30%,#3a1230,#0a0308 78%)}
+.bg-crimson{background:radial-gradient(circle at 50% 40%,#5a0d16,#180205 80%)}
+.bg-void{background:radial-gradient(ellipse at 50% 50%,#1b1533,#05040a 80%)}
+.bg-neon{background:linear-gradient(135deg,#1a0033,#3a0d5c 45%,#08111f)}
+.bg-blood{background:linear-gradient(180deg,#2a0308,#5a0510 50%,#2a0308),repeating-linear-gradient(90deg,rgba(255,0,0,.05) 0 30px,transparent 30px 60px)}
+.bg-white{background:radial-gradient(circle at 50% 30%,#fff,#e7d6e0 80%)}
+.bg-sunset{background:linear-gradient(180deg,#ff6b35,#ff3d7f 55%,#7b2ff7)}
+.bg-matrix{background:linear-gradient(180deg,#001a0d,#003318 60%,#000)}
+/* the stage text should stay readable on light bg */
+#play.light-bg .dialogue-box,#play.light-bg .statement-box,#play.light-bg .showdown-q{color:#12060f}
+
+/* selectable effects (applied to #playFx) */
+#playFx{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden}
+.fx-speedlines::before{content:"";position:absolute;inset:-20%;
+  background:repeating-conic-gradient(from 0deg at 50% 50%,rgba(255,255,255,.09) 0deg 3deg,transparent 3deg 8deg);
+  animation:spin 8s linear infinite;opacity:.5}
+.fx-rain::before{content:"";position:absolute;inset:0;
+  background:repeating-linear-gradient(105deg,transparent 0 8px,rgba(120,180,255,.14) 8px 9px);
+  animation:rain .5s linear infinite}
+@keyframes rain{to{background-position:0 40px}}
+.fx-embers .ember{position:absolute;bottom:-10px;width:6px;height:6px;border-radius:50%;background:var(--gold);
+  box-shadow:0 0 8px var(--gold);animation:rise linear infinite}
+@keyframes rise{to{transform:translateY(-105vh) translateX(30px);opacity:0}}
+.fx-static::before{content:"";position:absolute;inset:0;opacity:.06;
+  background-image:radial-gradient(rgba(255,255,255,.9) 1px,transparent 1px);background-size:3px 3px;
+  animation:flick .12s steps(2) infinite}
+@keyframes flick{50%{opacity:.12}}
+.fx-vignette::after{content:"";position:absolute;inset:0;box-shadow:inset 0 0 200px 60px rgba(0,0,0,.8)}
+.fx-pulse{animation:bgpulse 2.4s ease-in-out infinite}
+@keyframes bgpulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.25) saturate(1.3)}}
+.trial-hud{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;gap:12px;
+  padding:12px 18px;z-index:20}
+.exit-btn{background:var(--ink);color:#fff;border:2px solid var(--hot);border-radius:8px;padding:8px 12px;font-weight:bold;font-size:13px}
+.phase-tag{background:var(--gold);color:var(--ink);border-radius:20px;padding:5px 14px;font-weight:bold;font-size:12px;text-transform:uppercase;letter-spacing:1px}
+.progress-dots{display:flex;gap:6px;margin-left:auto}
+.pdot{width:12px;height:12px;border-radius:50%;background:rgba(255,255,255,.2);border:1px solid #fff}
+.pdot.done{background:var(--lime)}
+.pdot.cur{background:var(--pink);box-shadow:0 0 8px var(--pink)}
+
+/* stage */
+.stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:70px 20px 20px;z-index:10}
+.stage-inner{width:100%;max-width:900px;text-align:center}
+
+/* speaker plate */
+.speaker-plate{display:inline-flex;align-items:center;gap:14px;margin-bottom:18px}
+.avatar{width:74px;height:74px;border-radius:14px;border:4px solid #fff;display:flex;align-items:center;justify-content:center;
+  font-size:34px;font-family:Impact,sans-serif;box-shadow:0 0 0 4px var(--ink),4px 4px 0 rgba(0,0,0,.6);color:#fff}
+.speaker-name{font-family:Impact,sans-serif;font-size:26px;text-align:left;text-shadow:2px 2px 0 var(--ink)}
+.speaker-title{font-size:12px;color:var(--gold);text-align:left;text-transform:uppercase;letter-spacing:1px}
+
+/* dialogue box */
+.dialogue-box{background:rgba(10,4,10,.85);border:3px solid var(--cyan);border-radius:14px;
+  padding:26px 30px;font-size:22px;line-height:1.5;min-height:120px;text-align:left;
+  box-shadow:0 0 24px rgba(0,229,255,.3);position:relative}
+.dialogue-box .cue{position:absolute;bottom:10px;right:16px;font-size:13px;color:var(--cyan);animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.2}}
+
+/* nonstop debate statement highlighting */
+.statement-box{background:rgba(10,4,10,.9);border:3px solid #fff;border-radius:14px;padding:30px;
+  font-size:26px;line-height:1.6;min-height:150px;display:flex;align-items:center;justify-content:center;text-align:center;
+  box-shadow:0 0 30px rgba(255,61,127,.35)}
+.weakpoint{color:var(--gold);border-bottom:4px solid var(--gold);cursor:pointer;padding:2px 6px;border-radius:4px;
+  animation:shimmer 1.4s infinite;font-weight:bold}
+@keyframes shimmer{0%,100%{text-shadow:0 0 4px var(--gold)}50%{text-shadow:0 0 16px var(--gold),0 0 28px var(--gold)}}
+.weakpoint:hover{background:rgba(255,210,63,.2)}
+
+.debate-controls{display:flex;gap:12px;justify-content:center;align-items:center;margin-top:22px;flex-wrap:wrap}
+.stmt-counter{font-size:13px;color:#c98db0}
+
+/* truth bullet tray */
+.bullet-tray{position:absolute;bottom:0;left:0;right:0;background:rgba(10,4,10,.92);border-top:3px solid var(--gold);
+  padding:14px 18px 22px;transform:translateY(100%);transition:transform .3s;z-index:15}
+.bullet-tray.up{transform:translateY(0)}
+.bullet-tray h3{font-size:14px;color:var(--gold);margin-bottom:10px;text-align:center}
+.bullets{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;justify-content:center;flex-wrap:wrap}
+.bullet{min-width:150px;max-width:200px;background:linear-gradient(160deg,#ffe27a,#ff9f1c);color:var(--ink);
+  border:3px solid var(--ink);border-radius:12px;padding:12px;text-align:left;box-shadow:3px 3px 0 rgba(0,0,0,.5);
+  transition:transform .1s}
+.bullet:hover{transform:translateY(-4px) rotate(-1deg)}
+.bullet.selected{outline:4px solid var(--cyan);transform:translateY(-6px)}
+.bullet .bname{font-family:Impact,sans-serif;font-size:15px;margin-bottom:4px}
+.bullet .bdesc{font-size:11px;line-height:1.3;font-family:"Trebuchet MS",sans-serif}
+
+.tray-toggle{position:absolute;bottom:14px;right:18px;z-index:16}
+
+/* verdict / feedback flash */
+.flash{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:40;pointer-events:none}
+.flash-text{font-family:Impact,sans-serif;font-size:min(16vw,140px);text-transform:uppercase;
+  animation:slam .5s cubic-bezier(.2,1.6,.4,1);text-shadow:6px 6px 0 var(--ink)}
+@keyframes slam{0%{transform:scale(2.5) rotate(-8deg);opacity:0}60%{transform:scale(.9) rotate(2deg);opacity:1}100%{transform:scale(1) rotate(-4deg);opacity:1}}
+.flash.correct .flash-text{color:var(--lime)}
+.flash.wrong .flash-text{color:var(--hot)}
+
+.speedlines{position:absolute;inset:0;background:repeating-conic-gradient(from 0deg at 50% 50%,rgba(255,255,255,.08) 0deg 3deg,transparent 3deg 8deg);
+  animation:spin 8s linear infinite;pointer-events:none;opacity:.5}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.center-msg{text-align:center;max-width:640px;margin:0 auto}
+.center-msg h2{font-size:34px;color:var(--gold);margin-bottom:14px;text-shadow:3px 3px 0 var(--ink)}
+.center-msg p{font-size:16px;line-height:1.5;margin-bottom:20px;color:var(--paper)}
+
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;
+  border:2px solid var(--cyan);border-radius:8px;padding:10px 18px;font-weight:bold;z-index:200;box-shadow:4px 4px 0 rgba(0,0,0,.5)}
+
+.help{font-size:12px;color:#e7b8cf;font-family:inherit;text-transform:none;line-height:1.5;margin-bottom:14px}
+.section-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+details.seg{background:var(--gray);border:2px solid var(--ink);border-radius:10px;margin-bottom:12px;padding:0 14px;box-shadow:3px 3px 0 rgba(0,0,0,.4)}
+details.seg summary{cursor:pointer;padding:12px 0;font-family:Impact,sans-serif;font-size:15px;color:var(--cyan);list-style:none;display:flex;align-items:center;gap:10px}
+details.seg summary::-webkit-details-marker{display:none}
+details.seg[open] summary{border-bottom:2px dashed #4a2338;margin-bottom:12px}
+.seg-body{padding-bottom:14px}
+.seg-badge{font-size:11px;background:var(--ink);border-radius:20px;padding:2px 9px;color:var(--gold)}
+.reorder{display:flex;gap:4px;margin-left:auto}
+
+/* ---------- sprites ---------- */
+.sprite-face{position:relative;overflow:hidden}
+.sprite-emoji{font-size:38px;line-height:1}
+.sprite-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:6px;margin-top:6px}
+.sprite-opt{background:#0e050b;border:2px solid #4a2338;border-radius:8px;padding:6px 0;font-size:26px;text-align:center}
+.sprite-opt.sel{border-color:var(--cyan);background:rgba(0,229,255,.12)}
+.expr-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.expr-opt{font-size:11px;font-weight:bold;padding:4px 9px;border-radius:20px;border:2px solid #4a2338;background:#0e050b;color:var(--paper);text-transform:uppercase}
+.expr-opt.sel{border-color:var(--gold);background:var(--gold);color:var(--ink)}
+.big-sprite{width:120px;height:120px;border-radius:18px;border:5px solid #fff;display:flex;align-items:center;justify-content:center;
+  font-size:64px;box-shadow:0 0 0 5px var(--ink),6px 6px 0 rgba(0,0,0,.6);position:relative}
+.speaker-plate.with-sprite{align-items:flex-end}
+@keyframes spriteShake{0%,100%{transform:translate(0,0)}25%{transform:translate(-3px,2px)}75%{transform:translate(3px,-2px)}}
+
+/* ---------- music editor ---------- */
+.song-card{display:flex;align-items:center;gap:12px;background:#0e050b;border:2px solid #4a2338;border-radius:10px;padding:10px 12px;margin-bottom:8px}
+.song-swatch{width:38px;height:38px;border-radius:8px;flex:0 0 38px;display:flex;align-items:center;justify-content:center;font-size:20px}
+.song-meta{flex:1}
+.song-meta .sn{font-family:Impact,sans-serif;font-size:15px}
+.song-meta .sd{font-size:11px;color:#c98db0;font-family:inherit;text-transform:none}
+.music-pill{display:inline-flex;align-items:center;gap:6px;background:var(--ink);border:2px solid var(--purple);border-radius:20px;padding:3px 10px;font-size:11px;margin-top:8px}
+.music-select{max-width:240px}
+.now-playing{position:absolute;top:56px;right:18px;z-index:18;background:rgba(10,4,10,.85);border:2px solid var(--purple);
+  border-radius:20px;padding:5px 12px;font-size:11px;color:#e0b3ff;display:flex;align-items:center;gap:6px}
+.eq{display:inline-flex;gap:2px;align-items:flex-end;height:12px}
+.eq span{width:2px;background:var(--purple);animation:eq .6s infinite ease-in-out}
+.eq span:nth-child(2){animation-delay:.2s}.eq span:nth-child(3){animation-delay:.4s}
+@keyframes eq{0%,100%{height:3px}50%{height:12px}}
+.mute-btn{background:var(--ink);color:#fff;border:2px solid var(--purple);border-radius:8px;padding:6px 10px;font-weight:bold;font-size:12px}
+
+/* ---------- rebuttal showdown ---------- */
+.showdown-q{background:rgba(10,4,10,.9);border:3px solid var(--pink);border-radius:14px;padding:26px;font-size:24px;
+  line-height:1.5;text-align:center;box-shadow:0 0 26px rgba(255,61,127,.4);margin-bottom:20px}
+.choice-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.choice{background:linear-gradient(160deg,#ffe27a,#ff9f1c);color:var(--ink);border:3px solid var(--ink);border-radius:12px;
+  padding:16px;text-align:left;box-shadow:3px 3px 0 rgba(0,0,0,.5);transition:transform .1s}
+.choice:hover{transform:translateY(-4px) rotate(-1deg)}
+.choice.right{background:linear-gradient(160deg,#c6ff00,#7ac400);outline:4px solid #fff}
+.choice.wrong{background:linear-gradient(160deg,#ff6b8a,#c40033);color:#fff;outline:4px solid #fff}
+.choice .cn{font-family:Impact,sans-serif;font-size:16px;margin-bottom:4px}
+.choice .cd{font-size:12px;line-height:1.3;font-family:"Trebuchet MS",sans-serif}
+
+/* ---------- closing argument ---------- */
+.closing-wrap{display:grid;grid-template-columns:1fr 1fr;gap:16px;text-align:left}
+@media(max-width:720px){.closing-wrap{grid-template-columns:1fr}}
+.closing-col h3{font-size:14px;color:var(--gold);margin-bottom:8px;text-align:center}
+.pool,.slots{min-height:140px;background:rgba(10,4,10,.75);border:3px dashed #4a2338;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.slots{border-style:solid;border-color:var(--cyan)}
+.evt{background:linear-gradient(160deg,#fff4f9,#ffd9ea);color:var(--ink);border:3px solid var(--ink);border-radius:10px;
+  padding:10px 12px;font-weight:bold;font-size:14px;box-shadow:2px 2px 0 rgba(0,0,0,.4);cursor:grab;display:flex;align-items:center;gap:8px}
+.evt:active{cursor:grabbing}
+.evt .num{background:var(--ink);color:#fff;border-radius:50%;width:22px;height:22px;flex:0 0 22px;display:flex;align-items:center;justify-content:center;font-size:12px;font-family:Impact,sans-serif}
+.evt.dragging{opacity:.4}
+.evt.correct-evt{outline:3px solid var(--lime)}
+.evt.wrong-evt{outline:3px solid var(--hot);background:linear-gradient(160deg,#ffd9e2,#ff9fb3)}
+.evt-hint{font-size:11px;color:#c98db0;font-family:inherit;text-transform:none;text-align:center;margin-top:6px}
+.closing-comic{background:rgba(10,4,10,.9);border:3px solid var(--pink);border-radius:14px;padding:18px 22px;font-size:18px;
+  line-height:1.5;text-align:center;margin-bottom:16px;box-shadow:0 0 24px rgba(255,61,127,.3)}
+.slot-empty{color:#c98db0;font-style:italic;font-size:13px;text-align:center;padding:20px 0;font-family:inherit}
+
+/* ---------- investigation briefing (play) ---------- */
+.briefing{background:rgba(10,4,10,.88);border:3px solid var(--gold);border-radius:16px;padding:24px 28px;text-align:left;max-width:760px;margin:0 auto;box-shadow:0 0 30px rgba(255,210,63,.25)}
+.briefing h2{color:var(--gold);font-size:26px;margin-bottom:6px;text-align:center}
+.briefing .lead{font-size:15px;color:var(--paper);line-height:1.5;margin-bottom:18px;text-align:center;font-family:"Trebuchet MS",sans-serif}
+.briefing h3{font-size:14px;color:var(--cyan);margin:16px 0 8px;letter-spacing:1px}
+.finding{display:flex;gap:10px;align-items:flex-start;background:rgba(0,229,255,.06);border-left:3px solid var(--cyan);border-radius:6px;padding:8px 12px;margin-bottom:6px;font-size:14px;font-family:"Trebuchet MS",sans-serif}
+.finding .fn{background:var(--cyan);color:var(--ink);border-radius:50%;width:22px;height:22px;flex:0 0 22px;display:flex;align-items:center;justify-content:center;font-size:12px;font-family:Impact,sans-serif}
+.brief-bullets{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+.brief-bullet{flex:1 1 220px;background:linear-gradient(160deg,#ffe27a,#ff9f1c);color:var(--ink);border:3px solid var(--ink);border-radius:10px;padding:10px 12px;box-shadow:2px 2px 0 rgba(0,0,0,.4)}
+.brief-bullet .bn{font-family:Impact,sans-serif;font-size:14px;margin-bottom:3px}
+.brief-bullet .bd{font-size:12px;line-height:1.3;font-family:"Trebuchet MS",sans-serif}
+
+/* ---------- rebuttal 1v1 (play) ---------- */
+.reb-banner{font-family:Impact,sans-serif;font-size:min(9vw,64px);color:var(--hot);text-transform:uppercase;
+  text-shadow:4px 4px 0 var(--ink);text-align:center;animation:slam .5s cubic-bezier(.2,1.6,.4,1);margin-bottom:10px}
+.attack-box{background:rgba(10,4,10,.9);border:3px solid var(--hot);border-radius:14px;padding:26px 30px;font-size:23px;
+  line-height:1.5;text-align:center;min-height:120px;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 30px rgba(255,0,102,.4);position:relative}
+.attack-box.flawed{border-color:var(--gold);box-shadow:0 0 34px rgba(255,210,63,.5);cursor:pointer}
+.attack-box.flawed::after{content:"⚡ WEAK POINT — present a bullet!";position:absolute;top:-12px;left:50%;transform:translateX(-50%);
+  background:var(--gold);color:var(--ink);font-size:11px;font-family:Impact,sans-serif;padding:3px 12px;border-radius:20px;letter-spacing:1px}
+.attack-box.flawed{animation:shimmer 1.4s infinite}
+.hp-bar{height:14px;background:rgba(255,255,255,.15);border:2px solid #fff;border-radius:10px;overflow:hidden;max-width:280px;margin:0 auto 4px}
+.hp-fill{height:100%;background:linear-gradient(90deg,var(--lime),var(--cyan));transition:width .3s}
+.hp-label{font-size:11px;color:#c98db0;text-align:center;margin-bottom:14px}
+/* editor event rows */
+.evt-edit{display:grid;grid-template-columns:60px 1fr 160px 110px;gap:10px;align-items:center;margin-bottom:8px}
+@media(max-width:640px){.evt-edit{grid-template-columns:1fr}}
+.evt-order-badge{background:var(--cyan);color:var(--ink);border-radius:6px;text-align:center;font-family:Impact,sans-serif;padding:8px 0}
+.evt-false-badge{background:var(--hot);color:#fff;border-radius:6px;text-align:center;font-family:Impact,sans-serif;padding:8px 0;font-size:11px}
+
+/* ---------- save / load / share modal ---------- */
+.modal-overlay{position:fixed;inset:0;background:rgba(6,2,6,.8);z-index:300;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.show{display:flex}
+.modal{background:var(--panel);border:4px solid var(--gold);border-radius:16px;box-shadow:8px 8px 0 rgba(0,0,0,.6);
+  width:100%;max-width:640px;max-height:88vh;overflow:auto;padding:0}
+.modal-head{display:flex;align-items:center;gap:12px;padding:16px 20px;background:linear-gradient(90deg,var(--hot),var(--purple));
+  border-bottom:4px solid var(--gold);position:sticky;top:0;z-index:2}
+.modal-head h2{font-size:22px;color:#fff;text-shadow:2px 2px 0 var(--ink)}
+.modal-close{margin-left:auto;background:var(--ink);color:#fff;border:2px solid #fff;border-radius:8px;padding:6px 11px;font-weight:bold;font-size:14px}
+.modal-body{padding:18px 20px 24px}
+.modal-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.mtab{border:3px solid var(--ink);border-radius:8px;padding:8px 14px;font-weight:bold;font-size:13px;text-transform:uppercase;
+  background:var(--gray);color:var(--paper);box-shadow:2px 2px 0 var(--ink)}
+.mtab.on{background:var(--gold);color:var(--ink)}
+.mpane{display:none}.mpane.on{display:block}
+.save-row{display:flex;gap:10px;align-items:center;background:var(--gray);border:2px solid var(--ink);border-radius:10px;
+  padding:12px 14px;margin-bottom:10px;box-shadow:2px 2px 0 rgba(0,0,0,.4)}
+.save-row .si{flex:1;min-width:0}
+.save-row .st{font-family:Impact,sans-serif;font-size:16px;color:var(--cyan);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.save-row .sm{font-size:11px;color:#c98db0;font-family:inherit}
+.save-actions{display:flex;gap:6px;flex-wrap:wrap}
+.share-box{width:100%;min-height:120px;font-family:monospace;font-size:12px;word-break:break-all;
+  background:#0e050b;border:2px solid #4a2338;border-radius:8px;color:var(--lime);padding:10px;resize:vertical}
+.modal-note{font-size:12px;color:#e7b8cf;line-height:1.5;margin:6px 0 14px;font-family:"Trebuchet MS",sans-serif}
+.share-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.name-input-row{display:flex;gap:8px;margin-bottom:14px}
+.name-input-row input{flex:1}
+</style>
+</head>
+<body>
+
+<!-- ================= EDITOR ================= -->
+<div class="topbar">
+  <div class="logo">CLASS <span class="accent">TRIAL</span> MAKER</div>
+  <div class="spacer"></div>
+  <div class="mode-toggle">
+    <button class="btn cyan" id="btnLibrary">💾 Save / Load / Share</button>
+    <button class="btn ghost" id="btnSample">Load Sample</button>
+    <button class="btn pink" id="btnPlay">▶ Start Trial</button>
+  </div>
+</div>
+
+<div class="wrap" id="editor">
+  <div class="editor-grid">
+    <div class="side">
+      <h3>Builder</h3>
+      <button class="nav-item active" data-tab="characters">🎭 Characters <span class="nav-count" id="cCount">0</span></button>
+      <button class="nav-item" data-tab="bullets">🔸 Truth Bullets <span class="nav-count" id="bCount">0</span></button>
+      <button class="nav-item" data-tab="script">💬 Trial Script <span class="nav-count" id="sCount">0</span></button>
+      <button class="nav-item" data-tab="music">🎵 Music</button>
+      <button class="nav-item" data-tab="preview">📋 Investigation</button>
+      <button class="nav-item" data-tab="settings">⚙️ Trial Info</button>
+      <div style="margin-top:16px;border-top:2px dashed #4a2338;padding-top:12px">
+        <div class="mini">Autosaves to this browser. Use Export to keep a backup file.</div>
+      </div>
+    </div>
+
+    <div>
+      <!-- CHARACTERS -->
+      <div class="panel tab" data-tab="characters">
+        <div class="panel-head">
+          <h2>🎭 Characters</h2>
+          <div class="desc">Your cast of Ultimates. Give each a name, talent, color, and initials for their avatar plate.</div>
+        </div>
+        <div id="charList"></div>
+        <div class="add-bar"><button class="btn lime" id="addChar">+ Add Character</button></div>
+      </div>
+
+      <!-- TRUTH BULLETS -->
+      <div class="panel tab hidden" data-tab="bullets">
+        <div class="panel-head">
+          <h2>🔸 Truth Bullets</h2>
+          <div class="desc">Evidence the player fires at contradictions. Write the name, a short description, and mark which debate weak points each bullet correctly refutes.</div>
+        </div>
+        <div id="bulletList"></div>
+        <div class="add-bar"><button class="btn lime" id="addBullet">+ Add Truth Bullet</button></div>
+      </div>
+
+      <!-- SCRIPT -->
+      <div class="panel tab hidden" data-tab="script">
+        <div class="panel-head">
+          <h2>💬 Trial Script</h2>
+          <div class="desc">Build the flow of the trial. Add dialogue beats and Nonstop Debates in any order. Drag using the arrows to reorder segments.</div>
+        </div>
+        <div class="add-bar" style="margin-bottom:16px">
+          <button class="btn cyan" id="addDialogue">+ Dialogue Beat</button>
+          <button class="btn pink" id="addDebate">+ Nonstop Debate</button>
+          <button class="btn lime" id="addShowdown">+ Pick a Bullet</button>
+          <button class="btn hot" id="addRebuttal">+ Rebuttal Showdown</button>
+          <button class="btn gold" id="addClosing">+ Closing Argument</button>
+        </div>
+        <div id="scriptList"></div>
+      </div>
+
+      <!-- MUSIC -->
+      <div class="panel tab hidden" data-tab="music">
+        <div class="panel-head">
+          <h2>🎵 Music Editor</h2>
+          <div class="desc">Every song is generated live in the browser (no files needed). Preview them here, then assign a track to any script segment in the Trial Script tab. The music changes automatically as the trial reaches each segment.</div>
+        </div>
+        <div id="songList"></div>
+        <div class="card" style="border-color:var(--purple)">
+          <div class="mini" style="margin-bottom:8px">🎧 Assign songs per segment in the <b>Trial Script</b> tab — each dialogue, debate, and showdown has a "Music" dropdown. Whatever is playing carries forward until the next segment sets a new track.</div>
+        </div>
+      </div>
+
+      <!-- INVESTIGATION PREVIEW -->
+      <div class="panel tab hidden" data-tab="preview">
+        <div class="panel-head">
+          <h2>📋 Investigation Preview</h2>
+          <div class="desc">Since the investigation phase is skipped, this briefing catches the player up before the trial: what happened during the investigation, plus the truth bullets they've collected. Shown right after the case intro.</div>
+        </div>
+        <div class="card">
+          <label style="display:flex;align-items:center;gap:8px;text-transform:none;color:var(--paper);font-size:14px">
+            <input type="checkbox" id="pvOn"> Show the investigation briefing before the trial
+          </label>
+        </div>
+        <div class="card">
+          <div class="field"><label>Briefing intro (optional)</label>
+            <textarea id="pvText" placeholder="Here's what we uncovered during the investigation..."></textarea></div>
+        </div>
+        <div class="card">
+          <label>Investigation Findings (the events the player should know)</label>
+          <div class="mini" style="margin-bottom:8px">These are shown as a numbered list of what was discovered. Reorder with the arrows.</div>
+          <div id="pvEventList"></div>
+          <div class="add-bar"><button class="btn cyan sm" id="addPvEvent">+ Add Finding</button></div>
+        </div>
+        <div class="card" style="border-color:var(--gold)">
+          <div class="mini">🔸 Your <b>Truth Bullets</b> are shown automatically in the briefing so the player knows their evidence. Edit them in the Truth Bullets tab.</div>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="panel tab hidden" data-tab="settings">
+        <div class="panel-head">
+          <h2>⚙️ Trial Info</h2>
+          <div class="desc">Set the scene and the closing verdict.</div>
+        </div>
+        <div class="card">
+          <div class="field"><label>Trial Title</label><input type="text" id="tTitle" placeholder="The First Blood Peril"></div>
+          <div class="field"><label>Case Intro (shown before the trial begins)</label>
+            <textarea id="tIntro" placeholder="A body has been discovered in the A/V room. It's time for a class trial..."></textarea></div>
+          <div class="card-row">
+            <div class="field"><label>The Blackened (culprit) — for the finale reveal</label>
+              <select id="tCulprit"></select></div>
+          </div>
+          <div class="field"><label>Ending — victory text</label>
+            <textarea id="tEnding" placeholder="The truth is laid bare. The blackened has been exposed!"></textarea></div>
+        </div>
+        <div class="card" style="border-color:var(--cyan)">
+          <label>🎬 Default Stage Look</label>
+          <div class="mini" style="margin-bottom:8px">The starting background and effect for the trial. Any segment can override these in the Trial Script tab.</div>
+          <div class="card-row">
+            <div class="field"><label>Background</label><select id="tBg"></select></div>
+            <div class="field"><label>Effect</label><select id="tFx"></select></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= PLAY ================= -->
+<div id="play">
+  <div id="playBg" class="bg-courtroom"></div>
+  <div id="playFx"></div>
+  <div class="trial-hud">
+    <button class="exit-btn" id="btnExit">✕ Exit Trial</button>
+    <span class="phase-tag" id="phaseTag">Intro</span>
+    <div class="progress-dots" id="progressDots"></div>
+    <button class="mute-btn" id="muteBtn" style="margin-left:10px">🔊 Music On</button>
+  </div>
+  <div class="now-playing hidden" id="nowPlaying"><span class="eq"><span></span><span></span><span></span></span> <span id="npName"></span></div>
+  <div class="stage"><div class="stage-inner" id="stageInner"></div></div>
+
+  <div class="bullet-tray" id="bulletTray">
+    <h3>🔸 TRUTH BULLETS — click one, then click the glowing weak point</h3>
+    <div class="bullets" id="trayBullets"></div>
+  </div>
+  <button class="btn gold tray-toggle hidden" id="trayToggle">🔸 Bullets</button>
+
+  <div class="flash hidden" id="flash"><div class="flash-text" id="flashText"></div></div>
+</div>
+
+<!-- ================= SAVE / LOAD / SHARE MODAL ================= -->
+<div class="modal-overlay" id="libModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>💾 Save · Load · Share</h2>
+      <button class="modal-close" id="libClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-tabs">
+        <button class="mtab on" data-mtab="library">📚 My Trials</button>
+        <button class="mtab" data-mtab="share">🔗 Share Code</button>
+        <button class="mtab" data-mtab="file">📄 File Backup</button>
+      </div>
+
+      <!-- LIBRARY -->
+      <div class="mpane on" data-mpane="library">
+        <div class="modal-note">Save the trial you're building to this browser under a name, then load it back anytime. Your saves stay on this device.</div>
+        <div class="name-input-row">
+          <input type="text" id="saveName" placeholder="Name this trial (e.g. Chapter 1 - The A/V Room)">
+          <button class="btn lime" id="doSave">💾 Save</button>
+        </div>
+        <div id="savedList"></div>
+      </div>
+
+      <!-- SHARE CODE -->
+      <div class="mpane" data-mpane="share">
+        <div class="modal-note">Generate a share code for the current trial, then send it to anyone. They paste it here and hit Load to play your exact trial. You can also copy a full share link.</div>
+        <div class="share-actions" style="margin-bottom:10px">
+          <button class="btn cyan" id="genCode">Generate Share Code</button>
+          <button class="btn ghost" id="copyCode">📋 Copy Code</button>
+          <button class="btn ghost" id="copyLink">🔗 Copy Share Link</button>
+        </div>
+        <textarea class="share-box" id="shareBox" placeholder="Your share code will appear here — or paste a code you received, then hit Load Code."></textarea>
+        <div class="share-actions">
+          <button class="btn lime" id="loadCode">Load Pasted Code</button>
+        </div>
+      </div>
+
+      <!-- FILE -->
+      <div class="mpane" data-mpane="file">
+        <div class="modal-note">Download the current trial as a <b>.json</b> file to keep a permanent backup, or import a file you saved earlier.</div>
+        <div class="share-actions">
+          <button class="btn cyan" id="btnExport">⬇️ Export to File</button>
+          <button class="btn ghost" id="btnImport">⬆️ Import from File</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://artifactcdn.diabrowser.engineering/ajax/libs/tone/Tone.min.js"></script>
+<script>
+/* ============================================================
+   DATA MODEL
+============================================================ */
+const uid = () => Math.random().toString(36).slice(2,9);
+const AVATARS = ["#ff3d7f","#00e5ff","#c6ff00","#7b2ff7","#ffd23f","#ff6b35","#4deeea","#f038ff","#00f5a0","#ff5470"];
+
+/* sprite face options (system emoji, no external assets) */
+const SPRITES = ["🙂","😎","😠","😱","😏","😭","😈","🤔","😐","😤","🥺","😄","🫣","😒","🤨","😵","👿","🤡","🧑‍🚀","🕵️"];
+const EXPRESSIONS = ["normal","angry","shocked","smug","sad","broken"];
+const EXPR_FX = {
+  normal:"", angry:"filter:hue-rotate(-20deg) saturate(1.4);animation:none",
+  shocked:"animation:spriteShake .25s infinite", smug:"transform:rotate(-4deg)",
+  sad:"filter:grayscale(.4) brightness(.85)", broken:"filter:hue-rotate(160deg) contrast(1.3)"
+};
+
+/* selectable stage backgrounds & effects */
+const BACKGROUNDS = [
+  {id:"courtroom", name:"Courtroom Purple", cls:"bg-courtroom", light:false},
+  {id:"crimson", name:"Crimson Chamber", cls:"bg-crimson", light:false},
+  {id:"void", name:"Cosmic Void", cls:"bg-void", light:false},
+  {id:"neon", name:"Neon City", cls:"bg-neon", light:false},
+  {id:"blood", name:"Blood Stripes", cls:"bg-blood", light:false},
+  {id:"sunset", name:"Despair Sunset", cls:"bg-sunset", light:false},
+  {id:"matrix", name:"Data Green", cls:"bg-matrix", light:false},
+  {id:"white", name:"Blinding White", cls:"bg-white", light:true}
+];
+const EFFECTS = [
+  {id:"none", name:"None", cls:""},
+  {id:"speedlines", name:"Speed Lines", cls:"fx-speedlines"},
+  {id:"rain", name:"Rain", cls:"fx-rain"},
+  {id:"embers", name:"Rising Embers", cls:"fx-embers"},
+  {id:"static", name:"TV Static", cls:"fx-static"},
+  {id:"vignette", name:"Dark Vignette", cls:"fx-vignette"},
+  {id:"pulse", name:"Tension Pulse", cls:"fx-pulse"}
+];
+function bgById(id){ return BACKGROUNDS.find(b=>b.id===id); }
+function fxById(id){ return EFFECTS.find(f=>f.id===id); }
+
+/* pre-made trial songs, synthesized with Tone.js.
+   Each song is a multi-section composition (A/B/bridge) so it runs long and
+   doesn't feel like a 1-bar loop. Notation: melody as a flat array of
+   {n:note|null, d:duration} events; chords per section; a bass root pattern. */
+function seq(str){ // "C4:8n Eb4:8n r:4n" -> events
+  return str.trim().split(/\s+/).map(tok=>{
+    const [n,d]=tok.split(":");
+    return {n:(n==="r"?null:n), d:d||"8n"};
+  });
+}
+const SONGS = [
+  {id:"none", name:"— Silence —", icon:"🔇", desc:"No music."},
+  {id:"tension", name:"Rising Tension", icon:"🎹", desc:"Slow, ominous build for accusations.",
+    color:"#7b2ff7", bpm:100, wave:"sawtooth", drums:false,
+    chords:[["C3","Eb3","G3"],["Ab2","C3","Eb3"],["Bb2","D3","F3"],["G2","Bb2","D3"]],
+    bass:["C2","Ab1","Bb1","G1"],
+    melody:seq("C4:4n r:8n Eb4:8n G4:4n F4:8n Eb4:8n D4:2n Eb4:8n F4:8n G4:8n Ab4:8n G4:4n r:4n "+
+               "Ab4:4n G4:8n F4:8n Eb4:4n D4:8n C4:8n Bb3:2n r:4n C4:8n D4:8n Eb4:4n r:4n G3:2n")},
+  {id:"debate", name:"Nonstop Debate", icon:"⚡", desc:"Fast, driving loop for the heat of argument.",
+    color:"#ff3d7f", bpm:152, wave:"square", drums:true,
+    chords:[["E3","G3","B3"],["E3","G3","B3"],["A3","C4","E4"],["B3","D4","F#4"]],
+    bass:["E2","E2","A1","B1"],
+    melody:seq("E4:8n B4:8n E5:8n B4:8n G4:8n B4:8n E5:8n G5:8n F#5:8n E5:8n B4:8n E5:8n D5:8n B4:8n G4:8n B4:8n "+
+               "A4:8n E5:8n A5:8n E5:8n C5:8n E5:8n A5:8n C6:8n B5:8n F#5:8n D5:8n F#5:8n B4:8n D5:8n F#5:8n r:8n "+
+               "E5:16n F#5:16n G5:16n A5:16n B5:8n G5:8n E5:8n B4:8n E5:4n r:4n")},
+  {id:"despair", name:"Creeping Despair", icon:"🌫️", desc:"Sparse, unsettling minor motif.",
+    color:"#00e5ff", bpm:76, wave:"triangle", drums:false,
+    chords:[["A2","C3","E3"],["F2","A2","C3"],["D2","F2","A2"],["E2","G2","B2"]],
+    bass:["A1","F1","D1","E1"],
+    melody:seq("A3:4n r:4n E4:8n C4:8n A3:2n r:8n C4:8n D4:4n r:4n F4:4n E4:8n D4:8n "+
+               "C4:2n r:8n A3:8n B3:4n r:4n E4:8n G4:8n E4:4n r:4n A3:2n r:2n")},
+  {id:"reveal", name:"Moment of Truth", icon:"🔦", desc:"Bright, resolute theme for the reveal.",
+    color:"#c6ff00", bpm:120, wave:"triangle", drums:true,
+    chords:[["C3","E3","G3"],["G2","B2","D3"],["A2","C3","E3"],["F2","A2","C3"]],
+    bass:["C2","G1","A1","F1"],
+    melody:seq("G4:8n C5:8n E5:8n G5:4n E5:8n C5:8n D5:8n G4:8n B4:8n D5:4n r:8n G4:8n "+
+               "A4:8n C5:8n E5:8n A5:4n G5:8n E5:8n F4:8n A4:8n C5:8n F5:4n E5:8n C5:8n "+
+               "E5:8n G5:8n C6:4n B5:8n G5:8n C5:2n r:4n")},
+  {id:"verdict", name:"Punishment Time", icon:"⚖️", desc:"Heavy, marching finale.",
+    color:"#ff6b35", bpm:130, wave:"sawtooth", drums:true,
+    chords:[["D3","F3","A3"],["D3","F3","A3"],["Bb2","D3","F3"],["A2","C#3","E3"]],
+    bass:["D2","D2","Bb1","A1"],
+    melody:seq("D4:8n D4:8n F4:8n A4:8n D5:4n A4:8n F4:8n D4:8n F4:8n A4:8n D5:8n F5:4n r:8n "+
+               "Bb4:8n D5:8n F5:8n Bb5:4n A5:8n F5:8n A4:8n C#5:8n E5:8n A5:4n G5:8n E5:8n "+
+               "D5:8n F5:8n A5:8n D6:4n A5:8n F5:8n D5:2n r:4n")}
+];
+function songById(id){ return SONGS.find(s=>s.id===id); }
+
+let state = null;
+
+function blankState(){
+  return {
+    info:{title:"Untitled Class Trial", intro:"", culprit:"", ending:"",
+      bg:"courtroom", fx:"speedlines",
+      previewOn:true, previewEvents:[], previewText:""},
+    characters:[],
+    bullets:[],
+    script:[]
+  };
+}
+
+/* ---------- persistence ---------- */
+const KEY="dr_trial_maker_v1";        // current working trial (autosave)
+const LIB_KEY="dr_trial_maker_lib_v1"; // named library of saved trials
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+function load(){
+  try{ const raw=localStorage.getItem(KEY); if(raw){ return JSON.parse(raw);} }catch(e){}
+  return null;
+}
+function loadLibrary(){
+  try{ const raw=localStorage.getItem(LIB_KEY); if(raw){ return JSON.parse(raw);} }catch(e){}
+  return [];
+}
+function saveLibrary(lib){ try{ localStorage.setItem(LIB_KEY, JSON.stringify(lib)); }catch(e){} }
+
+/* ---------- share codes (compact, URL-safe base64 of JSON) ---------- */
+function toShareCode(obj){
+  try{
+    const json=JSON.stringify(obj);
+    // encodeURIComponent handles unicode (emoji sprites) safely before btoa
+    const b64=btoa(unescape(encodeURIComponent(json)));
+    return b64.replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+  }catch(e){ return ""; }
+}
+function fromShareCode(code){
+  try{
+    let b64=code.trim().replace(/-/g,"+").replace(/_/g,"/");
+    while(b64.length%4) b64+="=";
+    const json=decodeURIComponent(escape(atob(b64)));
+    return JSON.parse(json);
+  }catch(e){ return null; }
+}
+
+/* ============================================================
+   EDITOR RENDER
+============================================================ */
+const $ = s=>document.querySelector(s);
+const $$ = s=>Array.from(document.querySelectorAll(s));
+
+function charName(id){ const c=state.characters.find(c=>c.id===id); return c?c.name:"(unknown)"; }
+function charById(id){ return state.characters.find(c=>c.id===id); }
+
+function renderCounts(){
+  $("#cCount").textContent=state.characters.length;
+  $("#bCount").textContent=state.bullets.length;
+  $("#sCount").textContent=state.script.length;
+}
+
+/* ---- CHARACTERS ---- */
+function renderChars(){
+  const el=$("#charList"); el.innerHTML="";
+  if(!state.characters.length){ el.innerHTML='<div class="empty">No characters yet. Add your first Ultimate!</div>'; }
+  state.characters.forEach((c,i)=>{
+    if(!c.sprite) c.sprite="🙂"; if(!c.expr) c.expr="normal";
+    const d=document.createElement("div"); d.className="card";
+    d.innerHTML=`
+      <div class="card-row">
+        <div style="text-align:center">
+          <div class="avatar sprite-face" style="background:${c.color};width:64px;height:64px"><span class="sprite-emoji">${c.sprite}</span></div>
+          <div class="mini" style="margin-top:4px">Preview</div>
+        </div>
+        <div style="flex:1;min-width:220px">
+          <div class="card-row">
+            <div class="field"><label>Name</label><input type="text" data-f="name" value="${esc(c.name)}"></div>
+            <div class="field"><label>Ultimate Talent</label><input type="text" data-f="title" value="${esc(c.title)}" placeholder="Ultimate ..."></div>
+          </div>
+          <div class="card-row">
+            <div class="field small"><label>Initials</label><input type="text" maxlength="3" data-f="initials" value="${esc(c.initials)}" placeholder="AB"></div>
+            <div class="field small"><label>Color</label><input type="color" data-f="color" value="${c.color}"></div>
+            <div style="margin-left:auto;align-self:flex-end"><button class="del" data-del>Delete</button></div>
+          </div>
+          <label>Sprite Face</label>
+          <div class="sprite-grid" data-spritegrid>
+            ${SPRITES.map(sp=>`<button class="sprite-opt ${sp===c.sprite?'sel':''}" data-sprite="${sp}">${sp}</button>`).join("")}
+          </div>
+          <label style="margin-top:10px">Default Expression</label>
+          <div class="expr-row" data-exprrow>
+            ${EXPRESSIONS.map(x=>`<button class="expr-opt ${x===c.expr?'sel':''}" data-expr="${x}">${x}</button>`).join("")}
+          </div>
+        </div>
+      </div>`;
+    const preview=d.querySelector(".sprite-emoji");
+    d.querySelectorAll("[data-f]").forEach(inp=>{
+      inp.addEventListener("input",()=>{ c[inp.dataset.f]=inp.value; if(inp.dataset.f==="color"){d.querySelector(".avatar").style.background=inp.value;} save(); refreshCharDropdowns(); });
+    });
+    d.querySelectorAll("[data-sprite]").forEach(btn=>{
+      btn.addEventListener("click",()=>{ c.sprite=btn.dataset.sprite; preview.textContent=c.sprite;
+        d.querySelectorAll("[data-sprite]").forEach(b=>b.classList.toggle("sel",b===btn)); save(); });
+    });
+    d.querySelectorAll("[data-expr]").forEach(btn=>{
+      btn.addEventListener("click",()=>{ c.expr=btn.dataset.expr;
+        d.querySelectorAll("[data-expr]").forEach(b=>b.classList.toggle("sel",b===btn)); save(); });
+    });
+    d.querySelector("[data-del]").addEventListener("click",()=>{
+      state.characters.splice(i,1); cleanupCharRefs(c.id); renderChars(); renderScript(); renderCounts(); refreshCharDropdowns(); save();
+    });
+    el.appendChild(d);
+  });
+  renderCounts();
+}
+function cleanupCharRefs(id){
+  if(state.info.culprit===id) state.info.culprit="";
+  state.script.forEach(seg=>{
+    if(seg.type==="dialogue" && seg.speaker===id) seg.speaker="";
+    if(seg.type==="debate") seg.statements.forEach(s=>{ if(s.speaker===id) s.speaker=""; });
+  });
+}
+
+/* ---- BULLETS ---- */
+function renderBullets(){
+  const el=$("#bulletList"); el.innerHTML="";
+  if(!state.bullets.length){ el.innerHTML='<div class="empty">No truth bullets yet. Add the evidence the player will use!</div>'; }
+  state.bullets.forEach((b,i)=>{
+    const d=document.createElement("div"); d.className="card";
+    d.innerHTML=`
+      <div class="card-row">
+        <div style="font-size:26px;padding-top:20px">🔸</div>
+        <div style="flex:1;min-width:220px">
+          <div class="card-row">
+            <div class="field"><label>Bullet Name</label><input type="text" data-f="name" value="${esc(b.name)}" placeholder="Monokuma File #1"></div>
+            <div style="align-self:flex-end;margin-bottom:10px"><button class="del" data-del>Delete</button></div>
+          </div>
+          <div class="field"><label>Description</label><textarea data-f="desc" placeholder="The cause of death was...">${esc(b.desc)}</textarea></div>
+        </div>
+      </div>`;
+    d.querySelectorAll("[data-f]").forEach(inp=>{
+      inp.addEventListener("input",()=>{ b[inp.dataset.f]=inp.value; save(); });
+    });
+    d.querySelector("[data-del]").addEventListener("click",()=>{
+      state.bullets.splice(i,1); cleanupBulletRefs(b.id); renderBullets(); renderScript(); renderCounts(); save();
+    });
+    el.appendChild(d);
+  });
+  renderCounts();
+}
+function cleanupBulletRefs(id){
+  state.script.forEach(seg=>{
+    if(seg.type==="debate") seg.statements.forEach(s=>{ if(s.answerBullet===id) s.answerBullet=""; });
+  });
+}
+
+/* ---- SCRIPT ---- */
+function charOptions(sel){
+  let o='<option value="">— choose speaker —</option>';
+  state.characters.forEach(c=>{ o+=`<option value="${c.id}" ${c.id===sel?"selected":""}>${esc(c.name||"(unnamed)")}</option>`; });
+  return o;
+}
+function bulletOptions(sel){
+  let o='<option value="">— no correct bullet —</option>';
+  state.bullets.forEach(b=>{ o+=`<option value="${b.id}" ${b.id===sel?"selected":""}>${esc(b.name||"(unnamed bullet)")}</option>`; });
+  return o;
+}
+function musicOptions(sel){
+  let o='<option value="">— keep current music —</option>';
+  SONGS.forEach(s=>{ o+=`<option value="${s.id}" ${s.id===sel?"selected":""}>${s.icon} ${esc(s.name)}</option>`; });
+  return o;
+}
+function exprOptions(sel){
+  let o='<option value="">— use character default —</option>';
+  EXPRESSIONS.forEach(x=>{ o+=`<option value="${x}" ${x===sel?"selected":""}>${x}</option>`; });
+  return o;
+}
+function bgOptions(sel){
+  let o='<option value="">— keep current background —</option>';
+  BACKGROUNDS.forEach(b=>{ o+=`<option value="${b.id}" ${b.id===sel?"selected":""}>${esc(b.name)}</option>`; });
+  return o;
+}
+function fxOptions(sel){
+  let o='<option value="">— keep current effect —</option>';
+  EFFECTS.forEach(f=>{ o+=`<option value="${f.id}" ${f.id===sel?"selected":""}>${esc(f.name)}</option>`; });
+  return o;
+}
+
+/* ---- MUSIC EDITOR ---- */
+function renderSongs(){
+  const el=$("#songList"); if(!el) return; el.innerHTML="";
+  SONGS.filter(s=>s.id!=="none").forEach(s=>{
+    const d=document.createElement("div"); d.className="song-card";
+    d.innerHTML=`
+      <div class="song-swatch" style="background:${s.color}">${s.icon}</div>
+      <div class="song-meta"><div class="sn">${esc(s.name)}</div><div class="sd">${esc(s.desc)} · ${s.bpm} BPM</div></div>
+      <button class="btn cyan sm" data-preview="${s.id}">▶ Preview</button>
+      <button class="btn ghost sm" data-stop>■ Stop</button>`;
+    d.querySelector("[data-preview]").addEventListener("click",()=>previewSong(s.id));
+    d.querySelector("[data-stop]").addEventListener("click",stopMusic);
+    el.appendChild(d);
+  });
+}
+
+function renderScript(){
+  const el=$("#scriptList"); el.innerHTML="";
+  if(!state.script.length){ el.innerHTML='<div class="empty">No segments yet. Add a dialogue beat or a nonstop debate to begin.</div>'; }
+  state.script.forEach((seg,i)=>{
+    const det=document.createElement("details"); det.className="seg"; det.open = seg._open!==false;
+    det.addEventListener("toggle",()=>{ seg._open=det.open; });
+    if(seg.type==="dialogue"){
+      det.innerHTML=`
+        <summary>💬 Dialogue <span class="seg-badge">${esc(charName(seg.speaker))}</span>
+          <div class="reorder">
+            <button class="btn sm ghost" data-up>▲</button>
+            <button class="btn sm ghost" data-down>▼</button>
+            <button class="del" data-del>✕</button>
+          </div>
+        </summary>
+        <div class="seg-body">
+          <div class="card-row">
+            <div class="field"><label>Speaker</label><select data-f="speaker">${charOptions(seg.speaker)}</select></div>
+            <div class="field small"><label>😐 Expression</label><select data-f="expr">${exprOptions(seg.expr)}</select></div>
+            <div class="field"><label>🎵 Music</label><select class="music-select" data-f="music">${musicOptions(seg.music)}</select></div>
+          </div>
+          <div class="card-row">
+            <div class="field"><label>🎬 Background</label><select data-f="bg">${bgOptions(seg.bg)}</select></div>
+            <div class="field"><label>✨ Effect</label><select data-f="fx">${fxOptions(seg.fx)}</select></div>
+          </div>
+          <div class="field"><label>Line</label><textarea data-f="text" placeholder="What does this character say?">${esc(seg.text)}</textarea></div>
+        </div>`;
+    } else if(seg.type==="showdown"){
+      let choiceHTML="";
+      (seg.choices||[]).forEach((ch,ci)=>{
+        choiceHTML+=`
+          <div class="card" data-choice="${ci}" style="background:#0e050b">
+            <div class="card-row">
+              <div class="field"><label>Truth Bullet Choice</label><select data-cf="bullet">${bulletOptions(ch.bullet)}</select></div>
+              <div style="align-self:flex-end;margin-bottom:10px"><button class="del" data-cdel>✕</button></div>
+            </div>
+          </div>`;
+      });
+      det.innerHTML=`
+        <summary>🎯 Pick a Bullet <span class="seg-badge">${(seg.choices||[]).length} choices</span>
+          <div class="reorder">
+            <button class="btn sm ghost" data-up>▲</button>
+            <button class="btn sm ghost" data-down>▼</button>
+            <button class="del" data-del>✕</button>
+          </div>
+        </summary>
+        <div class="seg-body">
+          <div class="card-row">
+            <div class="field"><label>Asking Character</label><select data-f="speaker">${charOptions(seg.speaker)}</select></div>
+            <div class="field small"><label>😐 Expression</label><select data-f="expr">${exprOptions(seg.expr)}</select></div>
+            <div class="field"><label>🎵 Music</label><select class="music-select" data-f="music">${musicOptions(seg.music)}</select></div>
+          </div>
+          <div class="card-row">
+            <div class="field"><label>🎬 Background</label><select data-f="bg">${bgOptions(seg.bg)}</select></div>
+            <div class="field"><label>✨ Effect</label><select data-f="fx">${fxOptions(seg.fx)}</select></div>
+          </div>
+          <div class="field"><label>The Question</label><textarea data-f="question" placeholder="Which piece of evidence proves the door was locked from outside?">${esc(seg.question||"")}</textarea></div>
+          <div class="help">The player picks one truth bullet to answer. Add the choices that appear (including wrong ones), then set which single bullet is the correct answer below.</div>
+          <div data-choices>${choiceHTML || '<div class="empty">No choices yet.</div>'}</div>
+          <div class="add-bar"><button class="btn cyan sm" data-addchoice>+ Add Choice</button></div>
+          <div class="card-row" style="margin-top:12px">
+            <div class="field"><label>✅ Correct Answer</label><select data-f="answer">${bulletOptions(seg.answer)}</select></div>
+          </div>
+          <div class="field"><label>Correct response line</label><textarea data-f="correctLine" placeholder="Exactly! That's the proof we needed.">${esc(seg.correctLine||"")}</textarea></div>
+          <div class="field"><label>Wrong response line</label><textarea data-f="wrongLine" placeholder="No... that doesn't add up. Think again!">${esc(seg.wrongLine||"")}</textarea></div>
+        </div>`;
+    } else if(seg.type==="rebuttal"){
+      let rebHTML="";
+      (seg.statements||[]).forEach((s,si)=>{
+        rebHTML+=`
+          <div class="card" data-rstmt="${si}" style="background:#0e050b">
+            <div class="card-row">
+              <label style="display:flex;align-items:center;gap:6px;margin:0;color:var(--paper);text-transform:none;font-size:12px">
+                <input type="checkbox" data-rf="flawed" ${s.flawed?"checked":""}> This is the FLAWED point (counter it to win)
+              </label>
+              <div style="margin-left:auto"><button class="del" data-rdel>✕</button></div>
+            </div>
+            <div class="field"><label>Opponent's attack line</label>
+              <textarea data-rf="text" placeholder="You claim I was there, but the door was locked from the inside!">${esc(s.text)}</textarea></div>
+            ${s.flawed?`
+              <div class="card-row">
+                <div class="field"><label>🔸 Counter with this bullet</label><select data-rf="answerBullet">${bulletOptions(s.answerBullet)}</select></div>
+              </div>
+              <div class="field"><label>Your counter line (on success)</label>
+                <textarea data-rf="counterLine" placeholder="Wrong! The lock was broken — anyone could've slipped out!">${esc(s.counterLine||"")}</textarea></div>
+            `:`<div class="mini">Not flawed — this attack just advances. Only the flawed point can be countered.</div>`}
+          </div>`;
+      });
+      det.innerHTML=`
+        <summary>⚔️ Rebuttal Showdown <span class="seg-badge">${esc(charName(seg.speaker))} · ${(seg.statements||[]).length} attacks</span>
+          <div class="reorder">
+            <button class="btn sm ghost" data-up>▲</button>
+            <button class="btn sm ghost" data-down>▼</button>
+            <button class="del" data-del>✕</button>
+          </div>
+        </summary>
+        <div class="seg-body">
+          <div class="card-row">
+            <div class="field"><label>Opponent</label><select data-f="speaker">${charOptions(seg.speaker)}</select></div>
+            <div class="field small"><label>😐 Expression</label><select data-f="expr">${exprOptions(seg.expr)}</select></div>
+            <div class="field"><label>🎵 Music</label><select class="music-select" data-f="music">${musicOptions(seg.music)}</select></div>
+          </div>
+          <div class="card-row">
+            <div class="field"><label>🎬 Background</label><select data-f="bg">${bgOptions(seg.bg)}</select></div>
+            <div class="field"><label>✨ Effect</label><select data-f="fx">${fxOptions(seg.fx)}</select></div>
+          </div>
+          <div class="field"><label>Opening taunt (the challenge line)</label>
+            <input type="text" data-f="openLine" value="${esc(seg.openLine||"")}" placeholder="You overlooked something crucial. Bow down to me!"></div>
+          <div class="help">A 1v1 clash. The opponent throws a series of attacks on your reasoning. Advance through them, then <b>counter the flawed one</b> by presenting the correct truth bullet. Mark exactly one attack as the flawed point and choose the bullet that shatters it.</div>
+          <div data-rstmts>${rebHTML || '<div class="empty">No attacks yet.</div>'}</div>
+          <div class="add-bar"><button class="btn cyan sm" data-addrstmt>+ Add Attack</button></div>
+          <div class="field" style="margin-top:12px"><label>Victory line (after the counter lands)</label>
+            <textarea data-f="winLine" placeholder="Checkmate. Your whole argument just fell apart!">${esc(seg.winLine||"")}</textarea></div>
+        </div>`;
+    } else if(seg.type==="closing"){
+      const evs=seg.events||[];
+      let trueIdx=0;
+      let evHTML="";
+      evs.forEach((e,ei)=>{
+        const orderBadge = e.false ? `<div class="evt-false-badge">FALSE</div>` : `<div class="evt-order-badge">${(evs.slice(0,ei+1).filter(x=>!x.false).length)}</div>`;
+        evHTML+=`
+          <div class="evt-edit" data-evt="${ei}">
+            ${orderBadge}
+            <input type="text" data-ef="text" value="${esc(e.text)}" placeholder="Describe what happened...">
+            <label style="display:flex;align-items:center;gap:6px;margin:0;color:var(--paper);text-transform:none;font-size:12px">
+              <input type="checkbox" data-ef="false" ${e.false?"checked":""}> False event (a trap)
+            </label>
+            <div style="display:flex;gap:4px">
+              <button class="btn sm ghost" data-eup>▲</button>
+              <button class="btn sm ghost" data-edown>▼</button>
+              <button class="del" data-edel>✕</button>
+            </div>
+          </div>`;
+      });
+      det.innerHTML=`
+        <summary>🧩 Closing Argument <span class="seg-badge">${evs.filter(e=>!e.false).length} true / ${evs.filter(e=>e.false).length} false</span>
+          <div class="reorder">
+            <button class="btn sm ghost" data-up>▲</button>
+            <button class="btn sm ghost" data-down>▼</button>
+            <button class="del" data-del>✕</button>
+          </div>
+        </summary>
+        <div class="seg-body">
+          <div class="card-row">
+            <div class="field"><label>Narrating Character</label><select data-f="speaker">${charOptions(seg.speaker)}</select></div>
+            <div class="field small"><label>😐 Expression</label><select data-f="expr">${exprOptions(seg.expr)}</select></div>
+            <div class="field"><label>🎵 Music</label><select class="music-select" data-f="music">${musicOptions(seg.music)}</select></div>
+          </div>
+          <div class="card-row">
+            <div class="field"><label>🎬 Background</label><select data-f="bg">${bgOptions(seg.bg)}</select></div>
+            <div class="field"><label>✨ Effect</label><select data-f="fx">${fxOptions(seg.fx)}</select></div>
+          </div>
+          <div class="field"><label>Setup prompt</label><input type="text" data-f="prompt" value="${esc(seg.prompt||"")}" placeholder="Let me lay out exactly what happened that night..."></div>
+          <div class="help">The player must drag the <b>true events into the correct order</b> (top = first). The order is set by the sequence of true events below — reorder the whole list with ▲▼ inside each row via the arrows, or just arrange them top-to-bottom. Mark any event <b>False</b> to make it a decoy the player must leave out. False events are shuffled into the pool but must NOT be placed.</div>
+          <div data-events>${evHTML || '<div class="empty">No events yet.</div>'}</div>
+          <div class="add-bar">
+            <button class="btn cyan sm" data-addevt>+ True Event</button>
+            <button class="btn pink sm" data-addfalse>+ False Event</button>
+          </div>
+          <div class="field" style="margin-top:12px"><label>Success line (when the sequence is correct)</label>
+            <textarea data-f="successLine" placeholder="And that completes the picture. There's no other way it could have happened!">${esc(seg.successLine||"")}</textarea></div>
+        </div>`;
+    } else {
+      let stmtHTML="";
+      seg.statements.forEach((s,si)=>{
+        stmtHTML+=`
+          <div class="card" data-stmt="${si}" style="background:#0e050b">
+            <div class="debate-line">
+              <div><label>Speaker</label><select data-sf="speaker">${charOptions(s.speaker)}</select>
+                <label style="margin-top:6px">Expression</label><select data-sf="expr">${exprOptions(s.expr)}</select></div>
+              <div>
+                <label>Statement <span class="mini" style="display:inline">wrap the weak point in [brackets]</span></label>
+                <textarea data-sf="text" placeholder="I was in [the library] all night!">${esc(s.text)}</textarea>
+              </div>
+              <div>
+                <label>Refuted by</label><select data-sf="answerBullet">${bulletOptions(s.answerBullet)}</select>
+                <div class="mini">Leave blank if this statement has no contradiction.</div>
+              </div>
+              <div style="align-self:flex-start;padding-top:20px"><button class="del" data-sdel>✕</button></div>
+            </div>
+          </div>`;
+      });
+      det.innerHTML=`
+        <summary>🔥 Nonstop Debate <span class="seg-badge">${seg.statements.length} statements</span>
+          <div class="reorder">
+            <button class="btn sm ghost" data-up>▲</button>
+            <button class="btn sm ghost" data-down>▼</button>
+            <button class="del" data-del>✕</button>
+          </div>
+        </summary>
+        <div class="seg-body">
+          <div class="card-row">
+            <div class="field"><label>Debate Prompt (what is the player trying to figure out?)</label>
+              <input type="text" data-f="prompt" value="${esc(seg.prompt)}" placeholder="Who could have locked the door?"></div>
+            <div class="field"><label>🎵 Music</label><select class="music-select" data-f="music">${musicOptions(seg.music)}</select></div>
+          </div>
+          <div class="card-row">
+            <div class="field"><label>🎬 Background</label><select data-f="bg">${bgOptions(seg.bg)}</select></div>
+            <div class="field"><label>✨ Effect</label><select data-f="fx">${fxOptions(seg.fx)}</select></div>
+          </div>
+          <div class="help">Each statement below scrolls past the player. Wrap the contradictory phrase in <b>[square brackets]</b> to make it a glowing weak point, then choose the truth bullet that refutes it. The player must shoot the right bullet at the right weak point.</div>
+          <div data-stmts>${stmtHTML || '<div class="empty">No statements yet.</div>'}</div>
+          <div class="add-bar"><button class="btn cyan sm" data-addstmt>+ Add Statement</button></div>
+          <div class="field" style="margin-top:12px"><label>Break line (said when the correct bullet lands)</label>
+            <textarea data-f="breakLine" placeholder="That's your contradiction! You couldn't have been there!">${esc(seg.breakLine||"")}</textarea></div>
+        </div>`;
+    }
+    // wiring
+    det.querySelectorAll("[data-f]").forEach(inp=>{
+      inp.addEventListener("input",()=>{ seg[inp.dataset.f]=inp.value; save(); if(inp.dataset.f==="speaker" && seg.type==="dialogue"){ const b=det.querySelector("summary .seg-badge"); if(b) b.textContent=charName(inp.value);} });
+    });
+    det.querySelectorAll("[data-sf]").forEach(inp=>{
+      inp.addEventListener("input",()=>{
+        const stmtEl=inp.closest("[data-stmt]"); const si=+stmtEl.dataset.stmt;
+        seg.statements[si][inp.dataset.sf]=inp.value; save();
+      });
+    });
+    det.querySelectorAll("[data-cf]").forEach(inp=>{
+      inp.addEventListener("input",()=>{
+        const ci=+inp.closest("[data-choice]").dataset.choice;
+        seg.choices[ci][inp.dataset.cf]=inp.value; save();
+      });
+    });
+    const addC=det.querySelector("[data-addchoice]");
+    if(addC) addC.addEventListener("click",e=>{e.preventDefault(); seg.choices=seg.choices||[]; seg.choices.push({bullet:""}); renderScript(); save();});
+    det.querySelectorAll("[data-cdel]").forEach(btn=>{
+      btn.addEventListener("click",e=>{e.preventDefault(); const ci=+btn.closest("[data-choice]").dataset.choice; seg.choices.splice(ci,1); renderScript(); save();});
+    });
+    // ---- rebuttal showdown attack wiring ----
+    det.querySelectorAll("[data-rf]").forEach(inp=>{
+      const handler=()=>{
+        const ri=+inp.closest("[data-rstmt]").dataset.rstmt;
+        if(inp.dataset.rf==="flawed"){ seg.statements[ri].flawed=inp.checked; renderScript(); }
+        else seg.statements[ri][inp.dataset.rf]=inp.value;
+        save();
+      };
+      inp.addEventListener(inp.type==="checkbox"?"change":"input",handler);
+    });
+    const addR=det.querySelector("[data-addrstmt]");
+    if(addR) addR.addEventListener("click",e=>{e.preventDefault(); seg.statements=seg.statements||[]; seg.statements.push({id:uid(),text:"",flawed:false,answerBullet:"",counterLine:""}); renderScript(); save();});
+    det.querySelectorAll("[data-rdel]").forEach(btn=>{
+      btn.addEventListener("click",e=>{e.preventDefault(); const ri=+btn.closest("[data-rstmt]").dataset.rstmt; seg.statements.splice(ri,1); renderScript(); save();});
+    });
+    // ---- closing argument event wiring ----
+    det.querySelectorAll("[data-ef]").forEach(inp=>{
+      const handler=()=>{
+        const ei=+inp.closest("[data-evt]").dataset.evt;
+        if(inp.dataset.ef==="false"){ seg.events[ei].false=inp.checked; renderScript(); }
+        else seg.events[ei][inp.dataset.ef]=inp.value;
+        save();
+      };
+      inp.addEventListener(inp.type==="checkbox"?"change":"input",handler);
+    });
+    const addE=det.querySelector("[data-addevt]");
+    if(addE) addE.addEventListener("click",e=>{e.preventDefault(); seg.events=seg.events||[]; seg.events.push({id:uid(),text:"",false:false}); renderScript(); save();});
+    const addF=det.querySelector("[data-addfalse]");
+    if(addF) addF.addEventListener("click",e=>{e.preventDefault(); seg.events=seg.events||[]; seg.events.push({id:uid(),text:"",false:true}); renderScript(); save();});
+    det.querySelectorAll("[data-edel]").forEach(btn=>{
+      btn.addEventListener("click",e=>{e.preventDefault(); const ei=+btn.closest("[data-evt]").dataset.evt; seg.events.splice(ei,1); renderScript(); save();});
+    });
+    det.querySelectorAll("[data-eup]").forEach(btn=>{
+      btn.addEventListener("click",e=>{e.preventDefault(); const ei=+btn.closest("[data-evt]").dataset.evt; if(ei>0){[seg.events[ei-1],seg.events[ei]]=[seg.events[ei],seg.events[ei-1]]; renderScript(); save();}});
+    });
+    det.querySelectorAll("[data-edown]").forEach(btn=>{
+      btn.addEventListener("click",e=>{e.preventDefault(); const ei=+btn.closest("[data-evt]").dataset.evt; if(ei<seg.events.length-1){[seg.events[ei+1],seg.events[ei]]=[seg.events[ei],seg.events[ei+1]]; renderScript(); save();}});
+    });
+    const up=det.querySelector("[data-up]"), down=det.querySelector("[data-down]"), del=det.querySelector("[data-del]");
+    up.addEventListener("click",e=>{e.preventDefault(); if(i>0){[state.script[i-1],state.script[i]]=[state.script[i],state.script[i-1]]; renderScript(); save();}});
+    down.addEventListener("click",e=>{e.preventDefault(); if(i<state.script.length-1){[state.script[i+1],state.script[i]]=[state.script[i],state.script[i+1]]; renderScript(); save();}});
+    del.addEventListener("click",e=>{e.preventDefault(); state.script.splice(i,1); renderScript(); renderCounts(); save();});
+    const addS=det.querySelector("[data-addstmt]");
+    if(addS) addS.addEventListener("click",e=>{e.preventDefault(); seg.statements.push({id:uid(),speaker:"",text:"",answerBullet:""}); renderScript(); save();});
+    det.querySelectorAll("[data-sdel]").forEach(btn=>{
+      btn.addEventListener("click",e=>{e.preventDefault(); const si=+btn.closest("[data-stmt]").dataset.stmt; seg.statements.splice(si,1); renderScript(); save();});
+    });
+    el.appendChild(det);
+  });
+  renderCounts();
+}
+
+function refreshCharDropdowns(){
+  // culprit dropdown
+  const sel=$("#tCulprit");
+  let o='<option value="">— choose culprit —</option>';
+  state.characters.forEach(c=>{ o+=`<option value="${c.id}" ${c.id===state.info.culprit?"selected":""}>${esc(c.name||"(unnamed)")}</option>`; });
+  sel.innerHTML=o;
+}
+
+function renderSettings(){
+  $("#tTitle").value=state.info.title||"";
+  $("#tIntro").value=state.info.intro||"";
+  $("#tEnding").value=state.info.ending||"";
+  // background / effect selects
+  $("#tBg").innerHTML=BACKGROUNDS.map(b=>`<option value="${b.id}" ${b.id===(state.info.bg||"courtroom")?"selected":""}>${esc(b.name)}</option>`).join("");
+  $("#tFx").innerHTML=EFFECTS.map(f=>`<option value="${f.id}" ${f.id===(state.info.fx||"none")?"selected":""}>${esc(f.name)}</option>`).join("");
+  refreshCharDropdowns();
+}
+
+/* ---- INVESTIGATION PREVIEW EDITOR ---- */
+function renderPreview(){
+  if(!state.info.previewEvents) state.info.previewEvents=[];
+  $("#pvOn").checked = state.info.previewOn!==false;
+  $("#pvText").value = state.info.previewText||"";
+  const el=$("#pvEventList"); el.innerHTML="";
+  if(!state.info.previewEvents.length){ el.innerHTML='<div class="empty">No findings yet. Add what the player discovered during the investigation.</div>'; }
+  state.info.previewEvents.forEach((ev,i)=>{
+    const d=document.createElement("div"); d.className="evt-edit"; d.style.gridTemplateColumns="40px 1fr 110px";
+    d.innerHTML=`
+      <div class="evt-order-badge">${i+1}</div>
+      <input type="text" data-pv value="${esc(ev)}" placeholder="What was discovered...">
+      <div style="display:flex;gap:4px">
+        <button class="btn sm ghost" data-pvup>▲</button>
+        <button class="btn sm ghost" data-pvdown>▼</button>
+        <button class="del" data-pvdel>✕</button>
+      </div>`;
+    d.querySelector("[data-pv]").addEventListener("input",e=>{ state.info.previewEvents[i]=e.target.value; save(); });
+    d.querySelector("[data-pvdel]").addEventListener("click",()=>{ state.info.previewEvents.splice(i,1); renderPreview(); save(); });
+    d.querySelector("[data-pvup]").addEventListener("click",()=>{ if(i>0){[state.info.previewEvents[i-1],state.info.previewEvents[i]]=[state.info.previewEvents[i],state.info.previewEvents[i-1]]; renderPreview(); save();}});
+    d.querySelector("[data-pvdown]").addEventListener("click",()=>{ if(i<state.info.previewEvents.length-1){[state.info.previewEvents[i+1],state.info.previewEvents[i]]=[state.info.previewEvents[i],state.info.previewEvents[i+1]]; renderPreview(); save();}});
+    el.appendChild(d);
+  });
+}
+$("#pvOn").addEventListener("change",e=>{ state.info.previewOn=e.target.checked; save(); });
+$("#pvText").addEventListener("input",e=>{ state.info.previewText=e.target.value; save(); });
+$("#addPvEvent").addEventListener("click",()=>{ state.info.previewEvents=state.info.previewEvents||[]; state.info.previewEvents.push(""); renderPreview(); save(); });
+$("#tBg").addEventListener("change",e=>{ state.info.bg=e.target.value; save(); });
+$("#tFx").addEventListener("change",e=>{ state.info.fx=e.target.value; save(); });
+
+function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+/* ---------- add handlers ---------- */
+$("#addChar").addEventListener("click",()=>{
+  const color=AVATARS[state.characters.length%AVATARS.length];
+  state.characters.push({id:uid(),name:"",title:"",initials:"",color});
+  renderChars(); refreshCharDropdowns(); save();
+});
+$("#addBullet").addEventListener("click",()=>{
+  state.bullets.push({id:uid(),name:"",desc:""}); renderBullets(); save();
+});
+$("#addDialogue").addEventListener("click",()=>{
+  state.script.push({type:"dialogue",id:uid(),speaker:"",text:"",_open:true}); renderScript(); save();
+});
+$("#addDebate").addEventListener("click",()=>{
+  state.script.push({type:"debate",id:uid(),prompt:"",breakLine:"",music:"",statements:[{id:uid(),speaker:"",text:"",answerBullet:""}],_open:true}); renderScript(); save();
+});
+$("#addShowdown").addEventListener("click",()=>{
+  state.script.push({type:"showdown",id:uid(),speaker:"",question:"",music:"",answer:"",correctLine:"",wrongLine:"",choices:[{bullet:""},{bullet:""}],_open:true}); renderScript(); save();
+});
+$("#addRebuttal").addEventListener("click",()=>{
+  state.script.push({type:"rebuttal",id:uid(),speaker:"",expr:"",music:"",bg:"",fx:"",openLine:"",winLine:"",_open:true,
+    statements:[{id:uid(),text:"",flawed:false,answerBullet:"",counterLine:""},{id:uid(),text:"",flawed:true,answerBullet:"",counterLine:""}]}); renderScript(); save();
+});
+$("#addClosing").addEventListener("click",()=>{
+  state.script.push({type:"closing",id:uid(),speaker:"",prompt:"",music:"",successLine:"",_open:true,
+    events:[{id:uid(),text:"",false:false},{id:uid(),text:"",false:false},{id:uid(),text:"",false:false}]}); renderScript(); save();
+});
+
+/* settings inputs */
+["title","intro","ending"].forEach(f=>{
+  const map={title:"#tTitle",intro:"#tIntro",ending:"#tEnding"};
+  document.addEventListener("input",e=>{ if(e.target.matches(map[f])){ state.info[f]=e.target.value; save(); } });
+});
+$("#tCulprit").addEventListener("change",e=>{ state.info.culprit=e.target.value; save(); });
+
+/* nav tabs */
+$$(".nav-item").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    $$(".nav-item").forEach(b=>b.classList.remove("active")); btn.classList.add("active");
+    const t=btn.dataset.tab;
+    $$(".tab").forEach(p=>p.classList.toggle("hidden",p.dataset.tab!==t));
+  });
+});
+
+/* ============================================================
+   SAVE / LOAD / SHARE
+============================================================ */
+const libModal=$("#libModal");
+function openLib(tab){
+  renderSavedList();
+  if(tab) switchMTab(tab);
+  libModal.classList.add("show");
+}
+function closeLib(){ libModal.classList.remove("show"); }
+$("#btnLibrary").addEventListener("click",()=>openLib());
+$("#libClose").addEventListener("click",closeLib);
+libModal.addEventListener("click",e=>{ if(e.target===libModal) closeLib(); });
+
+function switchMTab(tab){
+  $$(".mtab").forEach(b=>b.classList.toggle("on",b.dataset.mtab===tab));
+  $$(".mpane").forEach(p=>p.classList.toggle("on",p.dataset.mpane===tab));
+}
+$$(".mtab").forEach(b=>b.addEventListener("click",()=>switchMTab(b.dataset.mtab)));
+
+/* --- named library (localStorage) --- */
+function renderSavedList(){
+  const lib=loadLibrary();
+  const el=$("#savedList"); el.innerHTML="";
+  if(!lib.length){ el.innerHTML='<div class="empty">No saved trials yet. Name one above and hit Save.</div>'; return; }
+  lib.slice().reverse().forEach(entry=>{
+    const segs=(entry.data.script||[]).length, chars=(entry.data.characters||[]).length;
+    const d=document.createElement("div"); d.className="save-row";
+    d.innerHTML=`
+      <div class="si">
+        <div class="st">${esc(entry.name)}</div>
+        <div class="sm">${chars} character${chars!==1?"s":""} · ${segs} segment${segs!==1?"s":""} · saved ${new Date(entry.ts).toLocaleString()}</div>
+      </div>
+      <div class="save-actions">
+        <button class="btn lime sm" data-load>Load</button>
+        <button class="btn ghost sm" data-share>Share</button>
+        <button class="del" data-del>✕</button>
+      </div>`;
+    d.querySelector("[data-load]").addEventListener("click",()=>{
+      if(confirm(`Load "${entry.name}"? This replaces the trial you're currently editing.`)){
+        state=Object.assign(blankState(),JSON.parse(JSON.stringify(entry.data)));
+        renderAll(); save(); closeLib(); toast(`Loaded "${entry.name}"`);
+      }
+    });
+    d.querySelector("[data-share]").addEventListener("click",()=>{
+      switchMTab("share"); $("#shareBox").value=toShareCode(entry.data); toast("Share code generated");
+    });
+    d.querySelector("[data-del]").addEventListener("click",()=>{
+      if(confirm(`Delete "${entry.name}"? This can't be undone.`)){
+        const l=loadLibrary().filter(x=>x.id!==entry.id); saveLibrary(l); renderSavedList();
+      }
+    });
+    el.appendChild(d);
+  });
+}
+$("#doSave").addEventListener("click",()=>{
+  let name=$("#saveName").value.trim() || state.info.title || "Untitled Trial";
+  const lib=loadLibrary();
+  const existing=lib.find(x=>x.name.toLowerCase()===name.toLowerCase());
+  const data=JSON.parse(JSON.stringify(state));
+  if(existing){
+    if(!confirm(`A trial named "${name}" already exists. Overwrite it?`)) return;
+    existing.data=data; existing.ts=Date.now();
+  } else {
+    lib.push({id:uid(),name,data,ts:Date.now()});
+  }
+  saveLibrary(lib); $("#saveName").value=""; renderSavedList(); toast(`Saved "${name}"`);
+});
+
+/* --- share codes --- */
+$("#genCode").addEventListener("click",()=>{
+  $("#shareBox").value=toShareCode(state); toast("Share code generated");
+});
+$("#copyCode").addEventListener("click",async()=>{
+  const code=$("#shareBox").value.trim() || toShareCode(state);
+  $("#shareBox").value=code;
+  await copyText(code); toast("Code copied to clipboard");
+});
+$("#copyLink").addEventListener("click",async()=>{
+  const code=$("#shareBox").value.trim() || toShareCode(state);
+  $("#shareBox").value=code;
+  const link=location.origin+location.pathname+"#trial="+code;
+  await copyText(link); toast("Share link copied");
+});
+$("#loadCode").addEventListener("click",()=>{
+  const code=$("#shareBox").value.trim();
+  if(!code){ toast("Paste a share code first"); return; }
+  const obj=fromShareCode(code.includes("#trial=")?code.split("#trial=")[1]:code);
+  if(!obj || !obj.info){ toast("That code couldn't be read"); return; }
+  if(confirm("Load this shared trial? It replaces the trial you're currently editing.")){
+    state=Object.assign(blankState(),obj); renderAll(); save(); closeLib(); toast("Shared trial loaded!");
+  }
+});
+async function copyText(t){
+  try{ await navigator.clipboard.writeText(t); }
+  catch(e){ const ta=$("#shareBox"); ta.focus(); ta.select(); try{document.execCommand("copy");}catch(_){} }
+}
+
+/* ============================================================
+   IMPORT / EXPORT / SAMPLE
+============================================================ */
+$("#btnExport").addEventListener("click",()=>{
+  const clean=JSON.parse(JSON.stringify(state));
+  const blob=new Blob([JSON.stringify(clean,null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download=(state.info.title||"class-trial").replace(/[^a-z0-9]+/gi,"-").toLowerCase()+".json";
+  a.click(); toast("Exported trial file");
+});
+$("#btnImport").addEventListener("click",()=>{
+  const inp=document.createElement("input"); inp.type="file"; inp.accept="application/json";
+  inp.onchange=()=>{ const f=inp.files[0]; if(!f)return; const r=new FileReader();
+    r.onload=()=>{ try{ state=Object.assign(blankState(),JSON.parse(r.result)); renderAll(); save(); closeLib(); toast("Trial imported!"); }catch(e){ toast("Couldn't read that file"); } };
+    r.readAsText(f); };
+  inp.click();
+});
+$("#btnSample").addEventListener("click",()=>{ if(confirm("Load the sample trial? This replaces your current one.")){ state=sampleTrial(); renderAll(); save(); toast("Sample loaded"); } });
+
+/* ============================================================
+   PLAY MODE
+============================================================ */
+const play=$("#play"), stage=$("#stageInner"), flash=$("#flash"), flashText=$("#flashText");
+let run=null;
+
+/* ============================================================
+   AUDIO ENGINE (Tone.js) — plays pre-made synthesized songs
+============================================================ */
+let audio={ synth:null, bass:null, pad:null, kick:null, hat:null, parts:[], started:false, muted:false, current:null };
+
+async function ensureAudio(){
+  if(audio.started) return;
+  try{ await Tone.start(); }catch(e){}
+  audio.synth=new Tone.Synth({volume:-11,envelope:{attack:.01,decay:.15,sustain:.25,release:.25}}).toDestination();
+  audio.bass=new Tone.Synth({volume:-14,oscillator:{type:"triangle"},envelope:{attack:.02,decay:.3,sustain:.2,release:.4}}).toDestination();
+  audio.pad=new Tone.PolySynth(Tone.Synth,{volume:-24,oscillator:{type:"sine"},envelope:{attack:.4,decay:.4,sustain:.6,release:1.2}}).toDestination();
+  audio.kick=new Tone.MembraneSynth({volume:-8,octaves:5,envelope:{attack:.001,decay:.24,sustain:0}}).toDestination();
+  audio.hat=new Tone.NoiseSynth({volume:-30,noise:{type:"white"},envelope:{attack:.001,decay:.04,sustain:0}}).toDestination();
+  audio.started=true;
+}
+
+function playSong(id){
+  const song=songById(id);
+  if(!song || song.id==="none"){ stopMusic(); return; }
+  if(audio.current===id && audio.parts.length){ return; } // already playing
+  ensureAudio().then(()=>{
+    clearParts();
+    audio.current=id;
+    Tone.Transport.bpm.value=song.bpm;
+    audio.synth.oscillator.type=song.wave;
+
+    // ---- melody: schedule sequential events by their own durations ----
+    let t=0;
+    const melEvents=song.melody.map(ev=>{
+      const at=t; t+=Tone.Time(ev.d).toSeconds();
+      return {time:at, note:ev.n, dur:ev.d};
+    });
+    const songLen=t; // full melody length in seconds -> loop the whole thing
+    const melPart=new Tone.Part((time,e)=>{
+      if(audio.muted || e.note==null) return;
+      audio.synth.triggerAttackRelease(e.note,e.dur,time);
+    },melEvents.map(e=>[e.time,e]));
+    melPart.loop=true; melPart.loopEnd=songLen; melPart.start(0);
+    audio.parts.push(melPart);
+
+    // ---- chords + bass: one chord/bass note per bar, cycling sections ----
+    const barSec=Tone.Time("1m").toSeconds();
+    const bars=Math.max(1,Math.round(songLen/barSec));
+    const chordEvents=[];
+    for(let b=0;b<bars;b++){
+      const ch=song.chords[b%song.chords.length];
+      const rootN=song.bass[b%song.bass.length];
+      chordEvents.push([b*barSec,{ch,root:rootN}]);
+    }
+    const harmPart=new Tone.Part((time,e)=>{
+      if(audio.muted) return;
+      audio.pad.triggerAttackRelease(e.ch,"1m",time);
+      audio.bass.triggerAttackRelease(e.root,"2n",time);
+      audio.bass.triggerAttackRelease(e.root,"8n",time+barSec/2);
+    },chordEvents);
+    harmPart.loop=true; harmPart.loopEnd=bars*barSec; harmPart.start(0);
+    audio.parts.push(harmPart);
+
+    // ---- drums (optional): steady kick + offbeat hats ----
+    if(song.drums){
+      const beat=Tone.Time("4n").toSeconds();
+      const beats=Math.max(1,Math.round(songLen/beat));
+      const drumEvents=[];
+      for(let i=0;i<beats;i++){
+        drumEvents.push([i*beat,{kick:(i%2===0), hat:true}]);
+      }
+      const drumPart=new Tone.Part((time,e)=>{
+        if(audio.muted) return;
+        if(e.kick) audio.kick.triggerAttackRelease("C1","8n",time);
+        audio.hat.triggerAttackRelease("16n",time+beat/2);
+      },drumEvents);
+      drumPart.loop=true; drumPart.loopEnd=beats*beat; drumPart.start(0);
+      audio.parts.push(drumPart);
+    }
+
+    Tone.Transport.start();
+    updateNowPlaying(song);
+  });
+}
+function clearParts(){ audio.parts.forEach(p=>{ try{p.stop();p.dispose();}catch(e){} }); audio.parts=[]; }
+function stopMusic(){ clearParts(); audio.current=null; try{Tone.Transport.stop();Tone.Transport.position=0;}catch(e){} updateNowPlaying(null); }
+function previewSong(id){ playSong(id); }
+
+function updateNowPlaying(song){
+  const np=$("#nowPlaying");
+  if(!song || audio.muted){ np.classList.add("hidden"); return; }
+  np.classList.remove("hidden"); $("#npName").textContent=song.name;
+  np.style.borderColor=song.color; np.querySelectorAll(".eq span").forEach(s=>s.style.background=song.color);
+}
+$("#muteBtn").addEventListener("click",()=>{
+  audio.muted=!audio.muted;
+  $("#muteBtn").textContent=audio.muted?"🔇 Music Off":"🔊 Music On";
+  if(audio.muted){ $("#nowPlaying").classList.add("hidden"); }
+  else if(audio.current){ updateNowPlaying(songById(audio.current)); }
+});
+
+
+$("#btnPlay").addEventListener("click",startTrial);
+$("#btnExit").addEventListener("click",exitTrial);
+
+function startTrial(){
+  const err=validate();
+  if(err){ toast(err); return; }
+  play.classList.add("show");
+  // build a flat step list
+  run={ steps:buildSteps(), idx:0, selectedBullet:null, curBg:null, curFx:null };
+  applyStage(state.info.bg||"courtroom", state.info.fx||"none");
+  buildProgressDots();
+  showStep();
+}
+function exitTrial(){ play.classList.remove("show"); $("#bulletTray").classList.remove("up"); stopMusic(); }
+
+function validate(){
+  if(!state.characters.length) return "Add at least one character first.";
+  if(!state.script.length) return "Add at least one script segment first.";
+  return null;
+}
+
+function buildSteps(){
+  const steps=[{kind:"intro"}];
+  if(state.info.previewOn!==false && ((state.info.previewEvents||[]).some(e=>e&&e.trim()) || state.bullets.length || (state.info.previewText||"").trim())){
+    steps.push({kind:"preview"});
+  }
+  state.script.forEach(seg=>{
+    const base={seg, music:seg.music, bg:seg.bg, fx:seg.fx};
+    if(seg.type==="dialogue") steps.push({kind:"dialogue",...base});
+    else if(seg.type==="showdown") steps.push({kind:"showdown",...base});
+    else if(seg.type==="closing") steps.push({kind:"closing",...base});
+    else if(seg.type==="rebuttal") steps.push({kind:"rebuttal",...base});
+    else steps.push({kind:"debate",...base});
+  });
+  steps.push({kind:"verdict"});
+  return steps;
+}
+
+/* apply background + effect for the current step (carry forward if blank) */
+function applyStage(bg,fx){
+  if(bg){
+    const b=bgById(bg)||BACKGROUNDS[0];
+    $("#playBg").className=b.cls;
+    play.classList.toggle("light-bg", !!b.light);
+    run.curBg=bg;
+  }
+  if(fx){
+    const f=fxById(fx)||EFFECTS[0];
+    const box=$("#playFx");
+    box.className=f.cls;
+    box.innerHTML="";
+    if(fx==="embers"){ for(let i=0;i<24;i++){ const e=document.createElement("div"); e.className="ember";
+      e.style.left=Math.random()*100+"%"; e.style.animationDuration=(4+Math.random()*5)+"s"; e.style.animationDelay=(-Math.random()*6)+"s";
+      box.appendChild(e); } }
+    run.curFx=fx;
+  }
+}
+
+function buildProgressDots(){
+  const el=$("#progressDots"); el.innerHTML="";
+  run.steps.forEach((s,i)=>{
+    const d=document.createElement("div"); d.className="pdot"; d.dataset.i=i; el.appendChild(d);
+  });
+  updateDots();
+}
+function updateDots(){
+  $$("#progressDots .pdot").forEach((d,i)=>{
+    d.classList.toggle("done",i<run.idx);
+    d.classList.toggle("cur",i===run.idx);
+  });
+}
+
+function speakerPlate(char, expr){
+  if(!char) return "";
+  const sprite=char.sprite||"🙂";
+  const useExpr=expr||char.expr||"normal";
+  const fx=EXPR_FX[useExpr]||"";
+  return `<div class="speaker-plate with-sprite">
+    <div class="big-sprite" style="background:${char.color}"><span style="${fx}">${sprite}</span></div>
+    <div><div class="speaker-name" style="color:${char.color}">${esc(char.name)}</div>
+    <div class="speaker-title">${esc(char.title)||"&nbsp;"}</div></div>
+  </div>`;
+}
+
+function showStep(){
+  const step=run.steps[run.idx];
+  updateDots();
+  $("#trayToggle").classList.add("hidden");
+  $("#bulletTray").classList.remove("up");
+  // music: only change if this step explicitly sets a track (blank = carry current)
+  if(step.music){ playSong(step.music); }
+  // background / effect: apply if set on this step (blank = carry current)
+  if(step.bg || step.fx){ applyStage(step.bg, step.fx); }
+  if(step.kind==="intro") return renderIntro();
+  if(step.kind==="preview") return renderPreviewStep();
+  if(step.kind==="dialogue") return renderDialogue(step.seg);
+  if(step.kind==="debate") return renderDebate(step.seg);
+  if(step.kind==="showdown") return renderShowdown(step.seg);
+  if(step.kind==="rebuttal") return renderRebuttal(step.seg);
+  if(step.kind==="closing") return renderClosing(step.seg);
+  if(step.kind==="verdict") return renderVerdict();
+}
+
+function nextStep(){ if(run.idx<run.steps.length-1){ run.idx++; showStep(); } }
+
+function renderIntro(){
+  $("#phaseTag").textContent="Case File";
+  stage.innerHTML=`<div class="center-msg">
+    <h2>${esc(state.info.title||"Class Trial")}</h2>
+    <p>${esc(state.info.intro||"The class trial is about to begin. Uncover the truth!")}</p>
+    <button class="btn pink" style="font-size:16px;padding:12px 24px" id="beginBtn">Begin the Trial ▶</button>
+  </div>`;
+  $("#beginBtn").addEventListener("click",()=>{ ensureAudio().then(nextStep); });
+}
+
+function renderPreviewStep(){
+  $("#phaseTag").textContent="Investigation";
+  const events=(state.info.previewEvents||[]).filter(e=>e&&e.trim());
+  const findings = events.length ? `
+    <h3>🔍 WHAT WE FOUND</h3>
+    ${events.map((e,i)=>`<div class="finding"><span class="fn">${i+1}</span> ${esc(e)}</div>`).join("")}` : "";
+  const bullets = state.bullets.length ? `
+    <h3>🔸 TRUTH BULLETS COLLECTED</h3>
+    <div class="brief-bullets">${state.bullets.map(b=>`<div class="brief-bullet"><div class="bn">🔸 ${esc(b.name||"Bullet")}</div><div class="bd">${esc(b.desc)}</div></div>`).join("")}</div>` : "";
+  stage.innerHTML=`<div class="briefing">
+    <h2>Investigation Report</h2>
+    ${state.info.previewText?`<div class="lead">${esc(state.info.previewText)}</div>`:""}
+    ${findings}
+    ${bullets}
+    <div style="text-align:center;margin-top:22px">
+      <button class="btn pink" style="font-size:16px;padding:12px 24px" id="briefBtn">Enter the Trial ▶</button>
+    </div>
+  </div>`;
+  $("#briefBtn").addEventListener("click",nextStep);
+}
+
+function renderDialogue(seg){
+  $("#phaseTag").textContent="Dialogue";
+  const char=charById(seg.speaker);
+  stage.innerHTML=`
+    ${speakerPlate(char, seg.expr)}
+    <div class="dialogue-box">${esc(seg.text)||"…"}<span class="cue">▼ click to continue</span></div>`;
+  $(".dialogue-box").addEventListener("click",nextStep);
+}
+
+/* ---- NONSTOP DEBATE ---- */
+function renderDebate(seg){
+  $("#phaseTag").textContent="Nonstop Debate";
+  run.debate={seg, si:0, solved:false};
+  $("#trayToggle").classList.remove("hidden");
+  renderTrayBullets();
+  showStatement();
+}
+function showStatement(){
+  const {seg,si}=run.debate;
+  const s=seg.statements[si];
+  const char=charById(s.speaker);
+  // parse [weak point]
+  let html=esc(s.text).replace(/\[([^\]]+)\]/g,(m,p1)=>`<span class="weakpoint" data-weak="1">${p1}</span>`);
+  const hasWeak=/\[[^\]]+\]/.test(s.text);
+  stage.innerHTML=`
+    ${speakerPlate(char, s.expr)}
+    <div class="statement-box" id="stmtBox">${html||"…"}</div>
+    <div class="debate-controls">
+      <button class="btn ghost" id="prevStmt" ${si===0?"disabled style=opacity:.4":""}>◀ Prev</button>
+      <span class="stmt-counter">Statement ${si+1} / ${seg.statements.length}</span>
+      <button class="btn cyan" id="nextStmt">Next ▶</button>
+      <button class="btn gold" id="openTray">🔸 Present Bullet</button>
+    </div>
+    <div class="mini" style="margin-top:10px;text-align:center">${esc(seg.prompt||"")}</div>`;
+  // weak point click (need a selected bullet)
+  $$(".weakpoint").forEach(w=>{
+    w.addEventListener("click",()=>{
+      if(!run.selectedBullet){ toast("Pick a truth bullet from the tray first!"); $("#bulletTray").classList.add("up"); return; }
+      resolveShot(s);
+    });
+  });
+  $("#prevStmt").addEventListener("click",()=>{ if(run.debate.si>0){run.debate.si--; showStatement();} });
+  $("#nextStmt").addEventListener("click",()=>{ run.debate.si=(run.debate.si+1)%seg.statements.length; showStatement(); });
+  $("#openTray").addEventListener("click",()=>{ $("#bulletTray").classList.toggle("up"); });
+}
+function renderTrayBullets(){
+  const el=$("#trayBullets"); el.innerHTML="";
+  if(!state.bullets.length){ el.innerHTML='<div class="mini">No truth bullets defined. (You can still click Next to skip.)</div>'; return; }
+  state.bullets.forEach(b=>{
+    const d=document.createElement("div"); d.className="bullet"; d.dataset.id=b.id;
+    d.innerHTML=`<div class="bname">🔸 ${esc(b.name||"Bullet")}</div><div class="bdesc">${esc(b.desc)}</div>`;
+    d.addEventListener("click",()=>{
+      run.selectedBullet = run.selectedBullet===b.id ? null : b.id;
+      $$("#trayBullets .bullet").forEach(x=>x.classList.toggle("selected",x.dataset.id===run.selectedBullet));
+      if(run.selectedBullet) toast("Now click the glowing weak point!");
+    });
+    el.appendChild(d);
+  });
+}
+function resolveShot(stmt){
+  const correctBullet = stmt.answerBullet;
+  if(run.selectedBullet===correctBullet && correctBullet){
+    doFlash("correct","BREAK!");
+    const seg=run.debate.seg;
+    setTimeout(()=>{
+      run.selectedBullet=null;
+      $("#bulletTray").classList.remove("up");
+      // show break line then advance
+      stage.innerHTML=`<div class="center-msg">
+        <h2 style="color:var(--lime)">CONTRADICTION!</h2>
+        <p>${esc(seg.breakLine||"That settles it — the contradiction is exposed!")}</p>
+        <button class="btn lime" style="font-size:16px;padding:12px 24px" id="contBtn">Continue ▶</button>
+      </div>`;
+      $("#contBtn").addEventListener("click",nextStep);
+    },850);
+  } else {
+    doFlash("wrong","MISS!");
+    // small penalty flavor, stay on statement
+  }
+}
+function doFlash(kind,text){
+  flash.className="flash "+kind; flashText.textContent=text;
+  flash.classList.remove("hidden");
+  setTimeout(()=>flash.classList.add("hidden"),800);
+}
+
+$("#trayToggle").addEventListener("click",()=>$("#bulletTray").classList.toggle("up"));
+
+/* ---- REBUTTAL SHOWDOWN (1v1: opponent attacks, counter the flaw) ---- */
+function renderRebuttal(seg){
+  $("#phaseTag").textContent="Rebuttal Showdown";
+  const opp=charById(seg.speaker);
+  const stmts=(seg.statements||[]).filter(s=>s.text.trim());
+  // opening taunt
+  stage.innerHTML=`<div class="center-msg">
+    ${speakerPlate(opp, seg.expr||"smug")}
+    <div class="reb-banner">Rebuttal Showdown!</div>
+    <div class="attack-box" style="border-color:var(--hot)">${esc(seg.openLine||"You overlooked something. Let's see you counter THIS!")}</div>
+    <button class="btn hot" style="font-size:16px;padding:12px 24px;margin-top:18px" id="rebStart">Face the Challenge ⚔️</button>
+  </div>`;
+  $("#rebStart").addEventListener("click",()=>{
+    if(!stmts.length){ nextStep(); return; }
+    run.reb={seg, opp, stmts, si:0, hp:stmts.length}; run.selectedBullet=null;
+    $("#trayToggle").classList.remove("hidden");
+    renderTrayBullets();
+    rebStatement();
+  });
+}
+function rebStatement(){
+  const {seg,opp,stmts,si,hp}=run.reb;
+  const s=stmts[si];
+  const isFlawed=!!s.flawed;
+  stage.innerHTML=`
+    ${speakerPlate(opp, isFlawed?"smug":"angry")}
+    <div class="hp-bar"><div class="hp-fill" style="width:${(hp/stmts.length)*100}%"></div></div>
+    <div class="hp-label">Your resolve: ${hp}/${stmts.length}</div>
+    <div class="attack-box ${isFlawed?"flawed":""}" id="atkBox">${esc(s.text)||"…"}</div>
+    <div class="debate-controls">
+      <button class="btn ghost" id="rebPrev" ${si===0?"disabled style=opacity:.4":""}>◀ Back</button>
+      <span class="stmt-counter">Attack ${si+1} / ${stmts.length}</span>
+      <button class="btn cyan" id="rebNext">Next ▶</button>
+      <button class="btn gold" id="rebPresent">🔸 Present Bullet</button>
+    </div>
+    <div class="mini" style="margin-top:10px;text-align:center">Find the flaw in their logic, then counter it with the right truth bullet.</div>`;
+  $("#atkBox").addEventListener("click",()=>{
+    if(!isFlawed){ toast("Their logic holds here... keep looking."); return; }
+    if(!run.selectedBullet){ toast("Pick a truth bullet from the tray first!"); $("#bulletTray").classList.add("up"); return; }
+    rebResolve(s);
+  });
+  $("#rebPrev").addEventListener("click",()=>{ if(run.reb.si>0){run.reb.si--; rebStatement();} });
+  $("#rebNext").addEventListener("click",()=>{ run.reb.si=(run.reb.si+1)%stmts.length; rebStatement(); });
+  $("#rebPresent").addEventListener("click",()=>{
+    if(!isFlawed){ doFlash("wrong","MISS!"); toast("That statement isn't the flaw!"); return; }
+    if(!run.selectedBullet){ $("#bulletTray").classList.add("up"); toast("Pick a truth bullet first!"); return; }
+    rebResolve(s);
+  });
+}
+function rebResolve(s){
+  const {seg,opp}=run.reb;
+  if(run.selectedBullet===s.answerBullet && s.answerBullet){
+    doFlash("correct","COUNTER!");
+    setTimeout(()=>{
+      run.selectedBullet=null; $("#bulletTray").classList.remove("up"); $("#trayToggle").classList.add("hidden");
+      stage.innerHTML=`<div class="center-msg">
+        ${speakerPlate(opp,"broken")}
+        <div class="reb-banner" style="color:var(--lime)">BREAK!</div>
+        <div class="attack-box" style="border-color:var(--lime)">${esc(s.counterLine||seg.winLine||"That's your mistake — and it just cost you everything!")}</div>
+        <button class="btn lime" style="font-size:16px;padding:12px 24px;margin-top:18px" id="rebWin">Continue ▶</button>
+      </div>`;
+      $("#rebWin").addEventListener("click",nextStep);
+    },850);
+  } else {
+    doFlash("wrong","WRONG BULLET!");
+    run.reb.hp=Math.max(0,run.reb.hp-1);
+    toast("That's not the right evidence to counter this!");
+    if(run.reb.hp<=0){ setTimeout(rebGameOver,850); }
+  }
+}
+function rebGameOver(){
+  const {opp}=run.reb;
+  $("#trayToggle").classList.add("hidden"); $("#bulletTray").classList.remove("up");
+  stage.innerHTML=`<div class="center-msg">
+    ${speakerPlate(opp,"smug")}
+    <div class="reb-banner">SILENCED!</div>
+    <div class="attack-box">Your resolve shattered. But the truth won't stay buried — try again!</div>
+    <button class="btn hot" style="font-size:16px;padding:12px 24px;margin-top:18px" id="rebRetry">↺ Retry Showdown</button>
+  </div>`;
+  $("#rebRetry").addEventListener("click",()=>{ run.reb.hp=run.reb.stmts.length; run.reb.si=0; run.selectedBullet=null; $("#trayToggle").classList.remove("hidden"); renderTrayBullets(); rebStatement(); });
+}
+
+/* ---- PICK A BULLET (simple pick-a-bullet minigame) ---- */
+function renderShowdown(seg){
+  $("#phaseTag").textContent="Pick a Bullet";
+  const char=charById(seg.speaker);
+  const choices=(seg.choices||[]).filter(c=>c.bullet);
+  let grid="";
+  if(!choices.length){
+    grid=`<div class="empty" style="color:#fff">No answer choices defined for this showdown. <button class="btn cyan sm" id="skipShow">Skip ▶</button></div>`;
+  } else {
+    grid=`<div class="choice-grid">`+choices.map((c,i)=>{
+      const b=state.bullets.find(x=>x.id===c.bullet);
+      return `<button class="choice" data-bullet="${c.bullet}"><div class="cn">🔸 ${esc(b?b.name:"Bullet")}</div><div class="cd">${esc(b?b.desc:"")}</div></button>`;
+    }).join("")+`</div>`;
+  }
+  stage.innerHTML=`
+    ${speakerPlate(char, seg.expr)}
+    <div class="showdown-q">${esc(seg.question)||"Which is the answer?"}</div>
+    ${grid}
+    <div class="mini" style="margin-top:14px;text-align:center">Pick the truth bullet that answers the question.</div>`;
+  const skip=$("#skipShow"); if(skip){ skip.addEventListener("click",nextStep); return; }
+  $$(".choice").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const picked=btn.dataset.bullet;
+      const correct = picked===seg.answer && seg.answer;
+      $$(".choice").forEach(b=>b.style.pointerEvents="none");
+      if(correct){
+        btn.classList.add("right"); doFlash("correct","CORRECT!");
+        setTimeout(()=>{
+          stage.innerHTML=`<div class="center-msg">
+            ${speakerPlate(char,"smug")}
+            <h2 style="color:var(--lime)">SPOT ON!</h2>
+            <p>${esc(seg.correctLine||"That's the answer!")}</p>
+            <button class="btn lime" style="font-size:16px;padding:12px 24px" id="contBtn">Continue ▶</button>
+          </div>`;
+          $("#contBtn").addEventListener("click",nextStep);
+        },850);
+      } else {
+        btn.classList.add("wrong"); doFlash("wrong","WRONG!");
+        setTimeout(()=>{
+          stage.innerHTML=`<div class="center-msg">
+            ${speakerPlate(char,"angry")}
+            <h2 style="color:var(--hot)">NOT QUITE!</h2>
+            <p>${esc(seg.wrongLine||"That's not it. Look at the evidence again!")}</p>
+            <button class="btn pink" style="font-size:16px;padding:12px 24px" id="retryBtn">↺ Try Again</button>
+          </div>`;
+          $("#retryBtn").addEventListener("click",()=>renderShowdown(seg));
+        },850);
+      }
+    });
+  });
+}
+
+/* ---- CLOSING ARGUMENT (order events, avoid false ones) ---- */
+function renderClosing(seg){
+  $("#phaseTag").textContent="Closing Argument";
+  const char=charById(seg.speaker);
+  const events=(seg.events||[]).filter(e=>e.text.trim());
+  const trueEvents=events.filter(e=>!e.false);   // in author order = correct sequence
+  if(!trueEvents.length){
+    stage.innerHTML=`<div class="center-msg">${speakerPlate(char,seg.expr)}
+      <h2 style="color:var(--gold)">Closing Argument</h2>
+      <p>No events defined for this closing argument.</p>
+      <button class="btn cyan" id="skipClose">Skip ▶</button></div>`;
+    $("#skipClose").addEventListener("click",nextStep); return;
+  }
+  const targetLen=trueEvents.length;
+  // pool = all events shuffled
+  let pool=shuffle(events.slice());
+  let placed=[]; // array of event objects in chosen order
+
+  function draw(){
+    stage.innerHTML=`
+      ${speakerPlate(char, seg.expr)}
+      <div class="closing-comic">${esc(seg.prompt||"Let me lay out exactly what happened...")}</div>
+      <div class="closing-wrap">
+        <div class="closing-col">
+          <h3>🗂️ Available Events</h3>
+          <div class="pool" id="poolBox"></div>
+          <div class="evt-hint">Click an event to slot it into your sequence. Some are false — leave those out!</div>
+        </div>
+        <div class="closing-col">
+          <h3>🧩 Your Sequence (top = first)</h3>
+          <div class="slots" id="slotBox"></div>
+          <div class="evt-hint">Click a placed event to send it back. Fill exactly ${targetLen} slot${targetLen>1?"s":""}.</div>
+        </div>
+      </div>
+      <div class="debate-controls">
+        <button class="btn gold" id="submitClose">⚖️ Make the Argument</button>
+      </div>`;
+    const poolBox=$("#poolBox"), slotBox=$("#slotBox");
+    pool.forEach(e=>{
+      const d=document.createElement("div"); d.className="evt"; d.textContent=e.text;
+      d.addEventListener("click",()=>{
+        if(placed.length>=targetLen){ toast(`You can only place ${targetLen}.`); return; }
+        placed.push(e); pool=pool.filter(x=>x!==e); draw();
+      });
+      poolBox.appendChild(d);
+    });
+    if(!placed.length){ slotBox.innerHTML='<div class="slot-empty">Click events on the left to build the sequence…</div>'; }
+    placed.forEach((e,i)=>{
+      const d=document.createElement("div"); d.className="evt";
+      d.innerHTML=`<span class="num">${i+1}</span> ${esc(e.text)}`;
+      d.addEventListener("click",()=>{ placed=placed.filter(x=>x!==e); pool.push(e); pool=shuffle(pool); draw(); });
+      slotBox.appendChild(d);
+    });
+    $("#submitClose").addEventListener("click",()=>evaluate());
+  }
+
+  function evaluate(){
+    if(placed.length!==targetLen){ toast(`Place exactly ${targetLen} event${targetLen>1?"s":""} first.`); return; }
+    const usedFalse = placed.some(e=>e.false);
+    const rightOrder = placed.every((e,i)=>!e.false && e===trueEvents[i]);
+    if(rightOrder && !usedFalse){
+      doFlash("correct","COMPLETE!");
+      setTimeout(()=>{
+        stage.innerHTML=`<div class="center-msg">
+          ${speakerPlate(char,"smug")}
+          <h2 style="color:var(--lime)">THAT'S THE WHOLE TRUTH!</h2>
+          <p>${esc(seg.successLine||"And that completes the picture. There's no other way it could have happened!")}</p>
+          <button class="btn lime" style="font-size:16px;padding:12px 24px" id="contClose">Continue ▶</button>
+        </div>`;
+        $("#contClose").addEventListener("click",nextStep);
+      },850);
+    } else {
+      doFlash("wrong","WRONG!");
+      // highlight mistakes then let them retry
+      setTimeout(()=>{
+        const slotBox=$("#slotBox");
+        if(slotBox){
+          $$("#slotBox .evt").forEach((node,i)=>{
+            const e=placed[i];
+            node.classList.add(!e.false && e===trueEvents[i] ? "correct-evt" : "wrong-evt");
+          });
+        }
+        toast(usedFalse ? "One of those events is false — remove it!" : "Right events, wrong order. Try again!");
+      },820);
+    }
+  }
+  draw();
+}
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+function renderVerdict(){
+  $("#phaseTag").textContent="Verdict";
+  const culprit=charById(state.info.culprit);
+  stage.innerHTML=`<div class="center-msg">
+    ${culprit?`<div style="margin-bottom:16px">${speakerPlate(culprit)}</div>`:""}
+    <h2 style="color:var(--gold)">CASE CLOSED</h2>
+    ${culprit?`<p style="font-size:20px">The blackened was <b style="color:${culprit.color}">${esc(culprit.name)}</b>!</p>`:""}
+    <p>${esc(state.info.ending||"The truth has been revealed. Class trial complete!")}</p>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <button class="btn pink" style="font-size:16px;padding:12px 24px" id="replayBtn">↺ Replay</button>
+      <button class="btn ghost" style="font-size:16px;padding:12px 24px" id="editBtn">✎ Back to Editor</button>
+    </div>
+  </div>`;
+  $("#replayBtn").addEventListener("click",()=>{ run.idx=0; run.selectedBullet=null; showStep(); });
+  $("#editBtn").addEventListener("click",exitTrial);
+}
+
+/* ============================================================
+   TOAST
+============================================================ */
+let toastTimer=null;
+function toast(msg){
+  let t=document.querySelector(".toast"); if(t)t.remove();
+  t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t);
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.remove(),2200);
+}
+
+/* ============================================================
+   SAMPLE TRIAL
+============================================================ */
+function sampleTrial(){
+  const c1=uid(),c2=uid(),c3=uid(),c4=uid();
+  const b1=uid(),b2=uid(),b3=uid();
+  return {
+    info:{
+      title:"The A/V Room Murder",
+      intro:"The body of Kaito, the Ultimate Astronaut, was found in the locked A/V room this morning. The killer claims they were nowhere near the scene. But every lie leaves a crack — let's find the truth!",
+      culprit:c3,
+      ending:"With the alibi shattered and the projector remote in hand, there's no more room to run. The blackened has been exposed, and the truth of the A/V room is finally clear.",
+      bg:"courtroom", fx:"speedlines",
+      previewOn:true,
+      previewText:"We only had a few hours to investigate before the trial. Here's everything we managed to piece together at the scene.",
+      previewEvents:[
+        "Kaito's body was found in the A/V room, which was locked from the inside.",
+        "The Monokuma File lists the cause of death as blunt trauma, around 11 PM.",
+        "A broken projector remote was found beneath the body, its clock frozen at 11:02.",
+        "A single batting glove was jammed into the door's lock mechanism.",
+        "Leon insists he spent the whole night alone in the dorms."
+      ]
+    },
+    characters:[
+      {id:c1,name:"Makoto",title:"Ultimate Lucky Student",initials:"MK",color:"#00e5ff",sprite:"🙂",expr:"normal"},
+      {id:c2,name:"Kyoko",title:"Ultimate Detective",initials:"KY",color:"#7b2ff7",sprite:"🕵️",expr:"normal"},
+      {id:c3,name:"Leon",title:"Ultimate Baseball Star",initials:"LE",color:"#ff3d7f",sprite:"😏",expr:"smug"},
+      {id:c4,name:"Monokuma",title:"Headmaster",initials:"MO",color:"#ffd23f",sprite:"😈",expr:"normal"}
+    ],
+    bullets:[
+      {id:b1,name:"Monokuma File #1",desc:"Cause of death: blunt trauma. Time of death: around 11 PM."},
+      {id:b2,name:"Broken Projector Remote",desc:"Found under the victim. Its clock display was frozen at 11:02 PM."},
+      {id:b3,name:"Leon's Batting Glove",desc:"A single glove found jammed in the A/V room door lock."}
+    ],
+    script:[
+      {type:"dialogue",id:uid(),speaker:c4,expr:"smug",music:"tension",text:"Puhuhu! Welcome to your class trial! One of you is the blackened. Vote right and only the killer is punished. Vote wrong... and everyone else takes the fall!"},
+      {type:"dialogue",id:uid(),speaker:c1,expr:"shocked",music:"despair",text:"The A/V room was locked from the inside. So how did the killer even get out?"},
+      {type:"debate",id:uid(),prompt:"Where was Leon at the time of the murder?",music:"debate",breakLine:"Your glove was stuck in that lock! You WERE at the A/V room — that's your contradiction!",
+        statements:[
+          {id:uid(),speaker:c3,text:"There's no way it was me. I was [in the dorms all night]!",answerBullet:b3},
+          {id:uid(),speaker:c2,text:"The Monokuma File says death occurred around 11 PM.",answerBullet:""},
+          {id:uid(),speaker:c3,text:"So what? I never even [touched that door].",answerBullet:b3}
+        ]},
+      {type:"dialogue",id:uid(),speaker:c2,music:"tension",bg:"crimson",fx:"vignette",text:"Then explain the remote. Its clock froze at 11:02 — the exact moment of the struggle."},
+      {type:"showdown",id:uid(),speaker:c2,music:"debate",question:"Makoto — which piece of evidence proves exactly WHEN the attack happened?",
+        answer:b2,correctLine:"Right. The frozen clock pins it to 11:02 — the moment of the struggle.",wrongLine:"No... that doesn't tell us the time. Focus on what stopped at 11:02.",
+        choices:[{bullet:b1},{bullet:b2},{bullet:b3}]},
+      {type:"debate",id:uid(),prompt:"What proves the time of the attack?",music:"reveal",bg:"neon",fx:"pulse",breakLine:"The frozen remote clock pins the murder to 11:02 — right when you claimed to be asleep!",
+        statements:[
+          {id:uid(),speaker:c3,expr:"angry",text:"You can't prove [when it happened]!",answerBullet:b2},
+          {id:uid(),speaker:c1,expr:"normal",text:"Kyoko, is there anything that recorded the exact time?",answerBullet:""}
+        ]},
+      {type:"rebuttal",id:uid(),speaker:c3,expr:"smug",music:"debate",bg:"blood",fx:"speedlines",
+        openLine:"Heh. You think you've got me? My alibi is airtight. Go ahead — try to break it!",
+        winLine:"The glove in the lock proves you were right there. Your alibi is DESTROYED!",
+        statements:[
+          {id:uid(),text:"The Monokuma File just says 'around 11 PM' — that's way too vague to pin on me.",flawed:false,answerBullet:"",counterLine:""},
+          {id:uid(),text:"I was asleep in the dorms, and nothing places me at that locked door!",flawed:true,answerBullet:b3,counterLine:"Wrong! Your batting glove was jammed in that very lock — you WERE at the door!"},
+          {id:uid(),text:"Even the remote clock could've been knocked over by anyone.",flawed:false,answerBullet:"",counterLine:""}
+        ]},
+      {type:"closing",id:uid(),speaker:c1,expr:"normal",music:"reveal",bg:"void",fx:"embers",prompt:"Let me lay out exactly what happened that night, step by step.",
+        successLine:"That's the whole sequence. From the argument to the frozen clock — it all points to one person.",
+        events:[
+          {id:uid(),text:"Leon argues with Kaito in the A/V room around 11 PM.",false:false},
+          {id:uid(),text:"In the struggle, the projector remote is knocked loose and freezes at 11:02.",false:false},
+          {id:uid(),text:"Leon flees, but his batting glove jams in the door lock.",false:false},
+          {id:uid(),text:"Kyoko was seen leaving the library at midnight.",false:true},
+          {id:uid(),text:"The body is discovered the next morning, room locked.",false:false}
+        ]},
+      {type:"dialogue",id:uid(),speaker:c3,expr:"broken",music:"verdict",text:"...Tch. Fine. Yeah. It was me. He wouldn't stop bragging about space. I just... snapped."}
+    ]
+  };
+}
+
+/* ============================================================
+   BOOT
+============================================================ */
+function renderAll(){ renderChars(); renderBullets(); renderScript(); renderSongs(); renderSettings(); renderPreview(); renderCounts(); }
+
+(function boot(){
+  // shared trial via URL hash (#trial=CODE) takes priority
+  const m=location.hash.match(/#trial=(.+)$/);
+  if(m){
+    const obj=fromShareCode(m[1]);
+    if(obj && obj.info){
+      state=Object.assign(blankState(),obj);
+      renderAll(); save();
+      try{ history.replaceState(null,"",location.pathname); }catch(e){}
+      setTimeout(()=>toast("Loaded a shared trial! Saved to this browser."),300);
+      return;
+    }
+  }
+  const loaded=load();
+  state = loaded || sampleTrial();
+  renderAll();
+})();
+</script>
+</body>
+</html>
