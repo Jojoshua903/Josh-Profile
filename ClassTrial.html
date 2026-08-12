@@ -164,10 +164,6 @@ input[type=color]{width:44px;height:38px;padding:2px;background:#0e050b;border:2
   padding:12px 18px;z-index:20}
 .exit-btn{background:var(--ink);color:#fff;border:2px solid var(--hot);border-radius:8px;padding:8px 12px;font-weight:bold;font-size:13px}
 .phase-tag{background:var(--gold);color:var(--ink);border-radius:20px;padding:5px 14px;font-weight:bold;font-size:12px;text-transform:uppercase;letter-spacing:1px}
-.progress-dots{display:flex;gap:6px;margin-left:auto}
-.pdot{width:12px;height:12px;border-radius:50%;background:rgba(255,255,255,.2);border:1px solid #fff}
-.pdot.done{background:var(--lime)}
-.pdot.cur{background:var(--pink);box-shadow:0 0 8px var(--pink)}
 
 /* stage */
 .stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:70px 20px 20px;z-index:10;overflow-y:auto}
@@ -222,6 +218,27 @@ input[type=color]{width:44px;height:38px;padding:2px;background:#0e050b;border:2
 @keyframes slam{0%{transform:scale(2.5) rotate(-8deg);opacity:0}60%{transform:scale(.9) rotate(2deg);opacity:1}100%{transform:scale(1) rotate(-4deg);opacity:1}}
 .flash.correct .flash-text{color:var(--lime)}
 .flash.wrong .flash-text{color:var(--hot)}
+
+/* ---------- cut-in animation ---------- */
+.cutin{position:absolute;inset:0;z-index:45;pointer-events:none;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.cutin.hidden{display:none}
+.cutin-streaks{position:absolute;inset:0;background:repeating-linear-gradient(115deg,rgba(255,255,255,.10) 0 6px,transparent 6px 26px);
+  animation:cutinStreak .5s linear infinite}
+@keyframes cutinStreak{to{background-position:120px 0}}
+.cutin.player{background:radial-gradient(circle at 30% 50%,rgba(0,229,255,.35),rgba(6,2,10,.85))}
+.cutin.opp{background:radial-gradient(circle at 70% 50%,rgba(255,0,102,.35),rgba(6,2,10,.85))}
+.cutin-sprite{position:absolute;bottom:-4%;font-size:min(46vh,320px);line-height:1;filter:drop-shadow(6px 6px 0 rgba(0,0,0,.6));
+  animation:cutinSprite .45s cubic-bezier(.2,1.5,.4,1) both}
+.cutin-sprite img{height:min(58vh,460px);width:auto;object-fit:contain;filter:drop-shadow(6px 6px 0 rgba(0,0,0,.6))}
+.cutin.player .cutin-sprite{left:2%;transform-origin:bottom left}
+.cutin.opp .cutin-sprite{right:2%;transform-origin:bottom right}
+@keyframes cutinSprite{0%{opacity:0;transform:translateY(30%) scale(.6)}100%{opacity:1;transform:translateY(0) scale(1)}}
+.cutin-bubble{position:relative;font-family:Impact,sans-serif;text-transform:uppercase;
+  font-size:min(11vw,96px);color:#fff;text-shadow:5px 5px 0 var(--ink),-2px -2px 0 var(--ink);
+  padding:10px 26px;border:5px solid #fff;border-radius:16px;background:rgba(10,4,12,.55);
+  transform:rotate(-4deg);animation:slam .4s cubic-bezier(.2,1.6,.4,1) both;max-width:80%;text-align:center}
+.cutin.player .cutin-bubble{color:var(--cyan);margin-left:14%}
+.cutin.opp .cutin-bubble{color:var(--hot);margin-right:14%}
 
 .speedlines{position:absolute;inset:0;background:repeating-conic-gradient(from 0deg at 50% 50%,rgba(255,255,255,.08) 0deg 3deg,transparent 3deg 8deg);
   animation:spin 8s linear infinite;pointer-events:none;opacity:.5}
@@ -381,6 +398,33 @@ details.seg[open] summary{border-bottom:2px dashed #4a2338;margin-bottom:12px}
 
 /* ---------- in-trial reference button + panel ---------- */
 .ref-btn{background:var(--ink);color:#fff;border:2px solid var(--cyan);border-radius:8px;padding:7px 11px;font-weight:bold;font-size:12px;margin-left:6px}
+.step-counter{font-size:12px;color:#e7b8cf;font-weight:bold;background:rgba(0,0,0,.3);border-radius:20px;padding:3px 10px}
+.dev-tag{font-family:Impact,sans-serif;font-size:11px;letter-spacing:1px;color:var(--ink);background:var(--lime);border-radius:4px;padding:2px 6px}
+.devnav.hidden{display:none !important}
+
+/* ---------- seating editor ---------- */
+.seat-row{display:flex;align-items:center;gap:10px;background:var(--gray);border:2px solid var(--ink);border-radius:10px;padding:8px 12px;margin-bottom:8px;box-shadow:2px 2px 0 rgba(0,0,0,.35)}
+.seat-row .seatnum{font-family:Impact,sans-serif;background:var(--ink);color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:13px;flex:0 0 26px}
+.seat-row .seatav{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;border:2px solid #fff;flex:0 0 34px}
+.seat-row .seatnm{font-weight:bold;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.seat-ring{position:relative;width:100%;height:300px;margin-top:8px}
+.seat-ring .ring-seat{position:absolute;transform:translate(-50%,-50%);text-align:center;width:64px}
+.seat-ring .ring-av{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;border:3px solid #fff;margin:0 auto;box-shadow:2px 2px 0 rgba(0,0,0,.4)}
+.seat-ring .ring-nm{font-size:10px;color:var(--paper);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.seat-ring .ring-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:26px;opacity:.5}
+
+/* ---------- in-play neighbor strip + camera pan ---------- */
+.neighbor-strip{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:5}
+.neighbor{position:absolute;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;
+  filter:brightness(.6) saturate(.75);opacity:.9}
+.neighbor.n-left{left:clamp(8px,3vw,48px)}
+.neighbor.n-right{right:clamp(8px,3vw,48px)}
+.neighbor .nav-face{width:clamp(56px,7vw,84px);height:clamp(56px,7vw,84px);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:clamp(30px,4vw,44px);border:3px solid rgba(255,255,255,.5);box-shadow:3px 4px 8px rgba(0,0,0,.5)}
+.neighbor .nav-face img{width:100%;height:100%;object-fit:contain}
+.neighbor .nav-nm{font-size:11px;color:#e7b8cf;margin-top:4px;max-width:96px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+.neighbor.center-seat{filter:none}
+.camera-pan{animation:cameraPan 9s ease-in-out infinite alternate}
+@keyframes cameraPan{0%{transform:translateX(-4%) scale(1.02) rotate(-1deg)}100%{transform:translateX(4%) scale(1.05) rotate(1deg)}}
 .ref-panel{position:absolute;inset:0;z-index:60;background:rgba(6,2,6,.82);display:none;align-items:center;justify-content:center;padding:24px}
 .ref-panel.show{display:flex}
 .ref-inner{background:var(--panel);border:4px solid var(--cyan);border-radius:16px;box-shadow:8px 8px 0 rgba(0,0,0,.6);width:100%;max-width:680px;max-height:86vh;display:flex;flex-direction:column;overflow:hidden}
@@ -417,6 +461,17 @@ details.seg[open] summary{border-bottom:2px dashed #4a2338;margin-bottom:12px}
 .bf-chip{display:inline-flex;align-items:center;gap:6px;background:#0e050b;border:2px solid #4a2338;border-radius:20px;
   padding:5px 12px;font-size:12px;color:var(--paper);text-transform:none;font-weight:bold;cursor:pointer;margin:0}
 .bf-chip input{margin:0}
+
+/* ---------- character preset roster ---------- */
+.preset-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.preset-card{display:flex;align-items:center;gap:10px;background:var(--gray);border:2px solid var(--ink);border-radius:10px;
+  padding:9px 11px;box-shadow:2px 2px 0 rgba(0,0,0,.4);cursor:pointer;text-align:left;transition:transform .1s}
+.preset-card:hover{transform:translate(-1px,-1px);border-color:var(--cyan)}
+.preset-card .pav{width:38px;height:38px;flex:0 0 38px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:20px;border:2px solid #fff}
+.preset-card .pn{font-family:Impact,sans-serif;font-size:14px;line-height:1.1}
+.preset-card .pt{font-size:11px;color:#c98db0;font-family:"Trebuchet MS",sans-serif}
+.preset-card.added{opacity:.5}
+.preset-cast-actions{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 14px}
 </style>
 </head>
 <body>
@@ -440,6 +495,7 @@ details.seg[open] summary{border-bottom:2px dashed #4a2338;margin-bottom:12px}
       <button class="nav-item" data-tab="bullets">🔸 Truth Bullets <span class="nav-count" id="bCount">0</span></button>
       <button class="nav-item" data-tab="script">💬 Trial Script <span class="nav-count" id="sCount">0</span></button>
       <button class="nav-item" data-tab="music">🎵 Music</button>
+      <button class="nav-item" data-tab="seats">🪑 Seating</button>
       <button class="nav-item" data-tab="preview">📋 Investigation</button>
       <button class="nav-item" data-tab="settings">⚙️ Trial Info</button>
       <div style="margin-top:16px;border-top:2px dashed #4a2338;padding-top:12px">
@@ -455,7 +511,8 @@ details.seg[open] summary{border-bottom:2px dashed #4a2338;margin-bottom:12px}
           <div class="desc">Your cast of Ultimates. Give each a name, talent, color, and initials for their avatar plate.</div>
         </div>
         <div id="charList"></div>
-        <div class="add-bar"><button class="btn lime" id="addChar">+ Add Character</button></div>
+        <div class="add-bar"><button class="btn lime" id="addChar">+ Add Character</button>
+          <button class="btn cyan" id="addPreset">⭐ Add from Preset</button></div>
       </div>
 
       <!-- TRUTH BULLETS -->
@@ -482,6 +539,10 @@ details.seg[open] summary{border-bottom:2px dashed #4a2338;margin-bottom:12px}
           <button class="btn gold" id="addClosing">+ Closing Argument</button>
           <button class="btn cyan" id="addHangman">+ Hangman's Gambit</button>
         </div>
+        <div class="add-bar" style="margin-bottom:16px">
+          <button class="btn ghost sm" id="collapseAll">▾ Collapse All</button>
+          <button class="btn ghost sm" id="expandAll">▸ Expand All</button>
+        </div>
         <div id="scriptList"></div>
       </div>
 
@@ -494,6 +555,22 @@ details.seg[open] summary{border-bottom:2px dashed #4a2338;margin-bottom:12px}
         <div id="songList"></div>
         <div class="card" style="border-color:var(--purple)">
           <div class="mini" style="margin-bottom:8px">🎧 Assign songs per segment in the <b>Trial Script</b> tab — each dialogue, debate, and showdown has a "Music" dropdown. Whatever is playing carries forward until the next segment sets a new track.</div>
+        </div>
+      </div>
+
+      <!-- SEATING -->
+      <div class="panel tab hidden" data-tab="seats">
+        <div class="panel-head">
+          <h2>🪑 Courtroom Seating</h2>
+          <div class="desc">Arrange your cast around the trial circle. During play, when someone speaks you'll see the students seated on either side of them, and the camera pans across the ring during Nonstop Debates.</div>
+        </div>
+        <div class="card">
+          <div class="mini" style="margin-bottom:8px">Order = clockwise around the circle. The first and last seats are neighbors (it's a ring). Reorder with the arrows.</div>
+          <div id="seatList"></div>
+        </div>
+        <div class="card" style="border-color:var(--cyan)">
+          <label>Preview</label>
+          <div id="seatRing" class="seat-ring"></div>
         </div>
       </div>
 
@@ -556,6 +633,30 @@ details.seg[open] summary{border-bottom:2px dashed #4a2338;margin-bottom:12px}
               <input type="number" id="tLives" min="1" max="8" value="3"></div>
           </div>
         </div>
+        <div class="card" style="border-color:var(--lime)">
+          <label>🎨 Presentation</label>
+          <div class="mini" style="margin-bottom:8px">Personalize how the trial reads and feels.</div>
+          <div class="card-row">
+            <div class="field small"><label>Accent color</label>
+              <input type="color" id="tAccent" value="#00e5ff"></div>
+            <div class="field small"><label>&nbsp;</label>
+              <button class="btn ghost sm" id="tAccentReset">Reset accent</button></div>
+            <div class="field"><label>Dialogue text speed</label>
+              <select id="tTextSpeed">
+                <option value="0">Instant (no typing)</option>
+                <option value="18">Fast</option>
+                <option value="32" selected>Normal</option>
+                <option value="55">Slow</option>
+              </select></div>
+          </div>
+        </div>
+        <div class="card" style="border-color:var(--gold)">
+          <label>🛠️ Dev Mode</label>
+          <div class="mini" style="margin-bottom:8px">Shows a segment counter and skip/back arrows in the trial HUD, so you can jump around while testing. Turn it off for a clean play experience.</div>
+          <label style="display:flex;align-items:center;gap:8px;text-transform:none;color:var(--paper);font-size:14px;font-weight:normal">
+            <input type="checkbox" id="tDevMode"> Enable in-trial segment navigation (dev mode)
+          </label>
+        </div>
       </div>
     </div>
   </div>
@@ -569,8 +670,13 @@ details.seg[open] summary{border-bottom:2px dashed #4a2338;margin-bottom:12px}
     <button class="exit-btn" id="btnExit">✕ Exit Trial</button>
     <span class="phase-tag" id="phaseTag">Intro</span>
     <span class="lives-hud hidden" id="livesHud"></span>
-    <div class="progress-dots" id="progressDots"></div>
-    <button class="ref-btn" id="btnRef">📋 Case Notes</button>
+    <span class="devnav hidden" id="devNav" style="margin-left:auto;display:flex;align-items:center;gap:6px">
+      <span class="dev-tag">DEV</span>
+      <span class="step-counter" id="stepCounter"></span>
+      <button class="ref-btn" id="btnStepPrev" title="Previous segment">◀</button>
+      <button class="ref-btn" id="btnStepNext" title="Skip segment">▶</button>
+    </span>
+    <button class="ref-btn" id="btnRef" style="margin-left:6px">📋 Case Notes</button>
     <button class="mute-btn" id="muteBtn" style="margin-left:6px">🔊 Music On</button>
   </div>
   <div class="now-playing hidden" id="nowPlaying"><span class="eq"><span></span><span></span><span></span></span> <span id="npName"></span></div>
@@ -584,6 +690,13 @@ details.seg[open] summary{border-bottom:2px dashed #4a2338;margin-bottom:12px}
 
   <div class="flash hidden" id="flash"><div class="flash-text" id="flashText"></div></div>
 
+  <!-- cut-in animation overlay -->
+  <div class="cutin hidden" id="cutin">
+    <div class="cutin-streaks"></div>
+    <div class="cutin-sprite" id="cutinSprite"></div>
+    <div class="cutin-bubble" id="cutinBubble"></div>
+  </div>
+
   <!-- in-trial reference panel (case notes) -->
   <div class="ref-panel" id="refPanel">
     <div class="ref-inner">
@@ -595,6 +708,23 @@ details.seg[open] summary{border-bottom:2px dashed #4a2338;margin-bottom:12px}
     </div>
   </div>
 </div>
+
+<!-- ================= CHARACTER PRESET MODAL ================= -->
+<div class="modal-overlay" id="presetModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>⭐ Character Presets</h2>
+      <button class="modal-close" id="presetClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-tabs" id="presetTabs"></div>
+      <div class="modal-note">Click any student to add them to your cast (name, talent, color, and an emoji sprite are filled in). Add as many as you like.</div>
+      <div id="presetList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= TRIAL COLLECTION MODAL (removed) ================= -->
 
 <!-- ================= SAVE / LOAD / SHARE MODAL ================= -->
 <div class="modal-overlay" id="libModal">
@@ -730,16 +860,107 @@ const SONGS = [
     bass:["D2","D2","Bb1","A1"],
     melody:seq("D4:8n D4:8n F4:8n A4:8n D5:4n A4:8n F4:8n D4:8n F4:8n A4:8n D5:8n F5:4n r:8n "+
                "Bb4:8n D5:8n F5:8n Bb5:4n A5:8n F5:8n A4:8n C#5:8n E5:8n A5:4n G5:8n E5:8n "+
-               "D5:8n F5:8n A5:8n D6:4n A5:8n F5:8n D5:2n r:4n")}
+               "D5:8n F5:8n A5:8n D6:4n A5:8n F5:8n D5:2n r:4n")},
+  {id:"deduction", name:"Cool Deduction", icon:"🧠", desc:"Laid-back detective groove for calm reasoning.",
+    color:"#4deeea", bpm:104, wave:"triangle", drums:true,
+    chords:[["D3","F3","A3"],["G2","Bb2","D3"],["C3","E3","G3"],["A2","C3","E3"]],
+    bass:["D2","G1","C2","A1"],
+    melody:seq("A4:8n r:8n D5:8n F5:8n E5:8n D5:8n A4:4n r:8n C5:8n D5:8n F5:8n G5:4n F5:8n E5:8n "+
+               "G4:8n r:8n C5:8n E5:8n D5:8n C5:8n G4:4n r:8n E5:8n D5:8n C5:8n E5:4n D5:8n C5:8n "+
+               "F4:8n A4:8n C5:8n E5:4n D5:8n C5:8n A4:8n r:8n E5:8n D5:8n A4:2n r:4n")},
+  {id:"pursuit", name:"Relentless Pursuit", icon:"🏃", desc:"Long, propulsive chase for building momentum.",
+    color:"#f038ff", bpm:144, wave:"square", drums:true,
+    chords:[["A2","C3","E3"],["F2","A2","C3"],["G2","B2","D3"],["E2","G2","B2"],["A2","C3","E3"],["D3","F3","A3"],["E3","G3","B3"],["E3","G3","B3"]],
+    bass:["A1","F1","G1","E1","A1","D2","E2","E2"],
+    melody:seq("A4:8n C5:8n E5:8n A5:8n G5:8n E5:8n C5:8n E5:8n F4:8n A4:8n C5:8n F5:8n E5:8n C5:8n A4:8n C5:8n "+
+               "G4:8n B4:8n D5:8n G5:8n F5:8n D5:8n B4:8n D5:8n E4:8n G4:8n B4:8n E5:8n D5:8n B4:8n G4:8n B4:8n "+
+               "A4:8n C5:8n E5:8n A5:8n C6:8n A5:8n E5:8n C5:8n D5:8n F5:8n A5:8n D6:8n C6:8n A5:8n F5:8n A5:8n "+
+               "E5:8n G5:8n B5:8n E6:8n D6:8n B5:8n G5:8n B5:8n E5:16n F#5:16n G5:16n A5:16n B5:8n G5:8n E5:4n r:4n")},
+  {id:"sorrow", name:"Quiet Sorrow", icon:"🌧️", desc:"Gentle, melancholy piece for reflection and loss.",
+    color:"#8aa6d8", bpm:68, wave:"sine", drums:false,
+    chords:[["E3","G3","B3"],["C3","E3","G3"],["A2","C3","E3"],["B2","D3","F#3"],["E3","G3","B3"],["A2","C3","E3"],["B2","D3","F#3"],["E3","G3","B3"]],
+    bass:["E2","C2","A1","B1","E2","A1","B1","E2"],
+    melody:seq("B4:4n r:8n E5:8n G5:4n F#5:8n E5:8n B4:2n r:4n "+
+               "C5:4n r:8n E5:8n G5:4n E5:8n C5:8n A4:2n r:4n "+
+               "E5:4n D5:8n B4:8n C5:4n B4:8n A4:8n B4:2n r:4n "+
+               "G4:8n A4:8n B4:4n E5:8n D5:8n B4:2n r:2n")},
+  {id:"resolve", name:"Final Resolve", icon:"✨", desc:"Long, triumphant build for the closing argument.",
+    color:"#ffd23f", bpm:112, wave:"triangle", drums:true,
+    chords:[["F2","A2","C3"],["C3","E3","G3"],["D3","F3","A3"],["Bb2","D3","F3"],["F2","A2","C3"],["G2","B2","D3"],["C3","E3","G3"],["C3","E3","G3"]],
+    bass:["F1","C2","D2","Bb1","F1","G1","C2","C2"],
+    melody:seq("C5:8n F5:8n A5:8n C6:4n A5:8n F5:8n G5:8n C5:8n E5:8n G5:4n r:8n E5:8n "+
+               "F5:8n A5:8n D6:8n F6:4n E6:8n D6:8n Bb5:8n D6:8n F6:8n Bb6:4n A6:8n F6:8n "+
+               "C6:8n A5:8n F5:8n G5:8n B5:8n D6:8n C6:4n G5:8n E5:8n C5:8n E5:8n G5:8n "+
+               "C6:8n E6:8n G6:8n C7:4n B6:8n G6:8n C6:2n r:4n")}
 ];
 function songById(id){ return SONGS.find(s=>s.id===id); }
+
+/* Character presets: roster of students by name + Ultimate talent.
+   Each entry is just a name, talent, initials, color and a fitting emoji sprite. */
+const PRESET_CASTS = [
+  { id:"dr1", label:"DR: THH", students:[
+    {name:"Makoto Naegi", title:"Ultimate Lucky Student", sprite:"🍀", color:"#8ad3ff"},
+    {name:"Kyoko Kirigiri", title:"Ultimate Detective", sprite:"🕵️", color:"#a98fd6"},
+    {name:"Byakuya Togami", title:"Ultimate Affluent Progeny", sprite:"🤑", color:"#3f5fb0"},
+    {name:"Aoi Asahina", title:"Ultimate Swimming Pro", sprite:"🏊", color:"#ff8a3d"},
+    {name:"Toko Fukawa", title:"Ultimate Writing Prodigy", sprite:"📓", color:"#6b4a6b"},
+    {name:"Sakura Ogami", title:"Ultimate Martial Artist", sprite:"💪", color:"#d8b28a"},
+    {name:"Celestia Ludenberg", title:"Ultimate Gambler", sprite:"🎴", color:"#c0324a"},
+    {name:"Kiyotaka Ishimaru", title:"Ultimate Moral Compass", sprite:"📢", color:"#e0d05a"},
+    {name:"Mondo Owada", title:"Ultimate Biker Gang Leader", sprite:"🏍️", color:"#c8892f"},
+    {name:"Leon Kuwata", title:"Ultimate Baseball Star", sprite:"⚾", color:"#ff5470"},
+    {name:"Hifumi Yamada", title:"Ultimate Fanfic Creator", sprite:"📚", color:"#9a6b3f"},
+    {name:"Sayaka Maizono", title:"Ultimate Pop Sensation", sprite:"🎤", color:"#5ad1e0"},
+    {name:"Junko Enoshima", title:"Ultimate Fashionista", sprite:"👛", color:"#ff3d7f"},
+    {name:"Mukuro Ikusaba", title:"Ultimate Soldier", sprite:"🔪", color:"#7a8a99"},
+    {name:"Chihiro Fujisaki", title:"Ultimate Programmer", sprite:"💻", color:"#8fd08a"},
+    {name:"Yasuhiro Hagakure", title:"Ultimate Clairvoyant", sprite:"🔮", color:"#7a5a3f"}
+  ]},
+  { id:"dr2", label:"DR2: GD", students:[
+    {name:"Hajime Hinata", title:"Ultimate ???", sprite:"🌿", color:"#5aa06a"},
+    {name:"Nagito Komaeda", title:"Ultimate Lucky Student", sprite:"🍀", color:"#cfd8dc"},
+    {name:"Chiaki Nanami", title:"Ultimate Gamer", sprite:"🎮", color:"#f0a6d0"},
+    {name:"Sonia Nevermind", title:"Ultimate Princess", sprite:"👑", color:"#f0d84a"},
+    {name:"Gundham Tanaka", title:"Ultimate Breeder", sprite:"🐹", color:"#5a4a6b"},
+    {name:"Kazuichi Souda", title:"Ultimate Mechanic", sprite:"🔧", color:"#ff6b35"},
+    {name:"Fuyuhiko Kuzuryu", title:"Ultimate Yakuza", sprite:"🔫", color:"#c8a23f"},
+    {name:"Peko Pekoyama", title:"Ultimate Swordswoman", sprite:"⚔️", color:"#9aa6b0"},
+    {name:"Akane Owari", title:"Ultimate Gymnast", sprite:"🤸", color:"#e08a3f"},
+    {name:"Nekomaru Nidai", title:"Ultimate Team Manager", sprite:"📣", color:"#8a99a6"},
+    {name:"Ibuki Mioda", title:"Ultimate Musician", sprite:"🎸", color:"#ff5aa0"},
+    {name:"Hiyoko Saionji", title:"Ultimate Traditional Dancer", sprite:"🌸", color:"#ffb0c8"},
+    {name:"Mahiru Koizumi", title:"Ultimate Photographer", sprite:"📷", color:"#e05a5a"},
+    {name:"Mikan Tsumiki", title:"Ultimate Nurse", sprite:"🩹", color:"#c88aa6"},
+    {name:"Teruteru Hanamura", title:"Ultimate Cook", sprite:"🍳", color:"#b06b3f"},
+    {name:"Byakuya Twogami", title:"Ultimate Imposter", sprite:"🎭", color:"#3f5fb0"}
+  ]},
+  { id:"v3", label:"DRV3: KH", students:[
+    {name:"Kaede Akamatsu", title:"Ultimate Pianist", sprite:"🎹", color:"#f0c84a"},
+    {name:"Shuichi Saihara", title:"Ultimate Detective", sprite:"🎩", color:"#5a6b99"},
+    {name:"Kaito Momota", title:"Ultimate Astronaut", sprite:"🚀", color:"#7b5fd6"},
+    {name:"Maki Harukawa", title:"Ultimate Child Caregiver", sprite:"🧷", color:"#c0324a"},
+    {name:"Kokichi Ouma", title:"Ultimate Supreme Leader", sprite:"😈", color:"#7a4a99"},
+    {name:"Rantaro Amami", title:"Ultimate ???", sprite:"🌊", color:"#5aa08a"},
+    {name:"Miu Iruma", title:"Ultimate Inventor", sprite:"🔩", color:"#ff8ad0"},
+    {name:"Kiibo", title:"Ultimate Robot", sprite:"🤖", color:"#b0c8d8"},
+    {name:"Korekiyo Shinguji", title:"Ultimate Anthropologist", sprite:"🧵", color:"#4a4a5a"},
+    {name:"Himiko Yumeno", title:"Ultimate Magician", sprite:"🪄", color:"#e05a5a"},
+    {name:"Tenko Chabashira", title:"Ultimate Aikido Master", sprite:"🥋", color:"#5ad1a0"},
+    {name:"Angie Yonaga", title:"Ultimate Artist", sprite:"🎨", color:"#f0d05a"},
+    {name:"Tsumugi Shirogane", title:"Ultimate Cosplayer", sprite:"🧵", color:"#8aa6d8"},
+    {name:"Gonta Gokuhara", title:"Ultimate Entomologist", sprite:"🐛", color:"#6b8a3f"},
+    {name:"Ryoma Hoshi", title:"Ultimate Tennis Pro", sprite:"🎾", color:"#5a6b6b"},
+    {name:"Kirumi Tojo", title:"Ultimate Maid", sprite:"🧹", color:"#7a7a8a"}
+  ]}
+];
 
 let state = null;
 
 function blankState(){
   return {
     info:{title:"Untitled Class Trial", intro:"", culprit:"", ending:"",
-      bg:"courtroom", fx:"speedlines", lives:3,
+      bg:"courtroom", fx:"speedlines", lives:3, accent:"", textSpeed:32,
+      devMode:false, seats:[],
       previewOn:true, previewEvents:[], previewText:""},
     characters:[],
     bullets:[],
@@ -788,6 +1009,20 @@ const $$ = s=>Array.from(document.querySelectorAll(s));
 function charName(id){ const c=state.characters.find(c=>c.id===id); return c?c.name:"(unknown)"; }
 function charById(id){ return state.characters.find(c=>c.id===id); }
 
+/* ---- seating ---- */
+// effective ring order: stored seats (filtered to existing chars) + any chars missing, appended
+function seatOrder(){
+  const ids=state.characters.map(c=>c.id);
+  const stored=(state.info.seats||[]).filter(id=>ids.includes(id));
+  const missing=ids.filter(id=>!stored.includes(id));
+  return stored.concat(missing);
+}
+function neighborsOf(id){
+  const order=seatOrder(); const n=order.length; const i=order.indexOf(id);
+  if(i<0||n<2) return {left:null,right:null};
+  return { left:charById(order[(i-1+n)%n]), right:charById(order[(i+1)%n]) };
+}
+
 function renderCounts(){
   $("#cCount").textContent=state.characters.length;
   $("#bCount").textContent=state.bullets.length;
@@ -831,6 +1066,19 @@ function renderChars(){
           <div class="expr-row" data-exprrow>
             ${EXPRESSIONS.map(x=>`<button class="expr-opt ${x===c.expr?'sel':''}" data-expr="${x}">${x}</button>`).join("")}
           </div>
+          <label style="margin-top:10px">🔊 Voice</label>
+          <div class="mini" style="margin-bottom:6px">A short synth blip plays as this character's dialogue types. Set a waveform and pitch to give them a distinct voice.</div>
+          <div class="card-row" data-voicerow>
+            <div class="field small"><label>Tone</label>
+              <select data-voice="wave">${VOICE_WAVES.map(w=>`<option value="${w}" ${(c.voice&&c.voice.wave||"square")===w?"selected":""}>${w}</option>`).join("")}</select></div>
+            <div class="field"><label>Pitch (low → high)</label>
+              <input type="range" min="0" max="9" value="${c.voice&&c.voice.pitch!=null?c.voice.pitch:4}" data-voice="pitch" style="width:100%"></div>
+            <div class="field small" style="align-self:flex-end">
+              <button class="btn cyan sm" data-voicetest>▶ Test</button></div>
+            <div class="field small" style="align-self:flex-end">
+              <label style="display:flex;align-items:center;gap:6px;text-transform:none;color:var(--paper);font-size:12px;font-weight:normal;margin:0">
+                <input type="checkbox" data-voice="off" ${c.voice&&c.voice.off?"checked":""}> Silent</label></div>
+          </div>
         </div>
       </div>`;
     const preview=d.querySelector(".sprite-face");
@@ -859,8 +1107,15 @@ function renderChars(){
       btn.addEventListener("click",()=>{ c.expr=btn.dataset.expr;
         d.querySelectorAll("[data-expr]").forEach(b=>b.classList.toggle("sel",b===btn)); save(); });
     });
+    d.querySelectorAll("[data-voice]").forEach(inp=>{
+      const evt=inp.type==="checkbox"?"change":"input";
+      inp.addEventListener(evt,()=>{ c.voice=c.voice||{}; const k=inp.dataset.voice;
+        c.voice[k]= inp.type==="checkbox"?inp.checked : (k==="pitch"?parseInt(inp.value,10):inp.value); save(); });
+    });
+    const vtest=d.querySelector("[data-voicetest]");
+    if(vtest) vtest.addEventListener("click",()=>{ ensureAudio().then(()=>{ let n=0; const iv=setInterval(()=>{ blip(c); if(++n>=6) clearInterval(iv); },70); }); });
     d.querySelector("[data-del]").addEventListener("click",()=>{
-      state.characters.splice(i,1); cleanupCharRefs(c.id); renderChars(); renderScript(); renderCounts(); refreshCharDropdowns(); save();
+      state.characters.splice(i,1); cleanupCharRefs(c.id); if(state.info.seats) state.info.seats=state.info.seats.filter(id=>id!==c.id); renderChars(); renderScript(); renderCounts(); refreshCharDropdowns(); renderSeats(); save();
     });
     el.appendChild(d);
   });
@@ -889,11 +1144,15 @@ function renderBullets(){
             <div style="align-self:flex-end;margin-bottom:10px"><button class="del" data-del>Delete</button></div>
           </div>
           <div class="field"><label>Description</label><textarea data-f="desc" placeholder="The cause of death was...">${esc(b.desc)}</textarea></div>
+          <label style="display:flex;align-items:center;gap:8px;text-transform:none;color:var(--paper);font-size:13px;font-weight:normal;margin-top:4px">
+            <input type="checkbox" data-collectible ${b.collectible?"checked":""}> Collected during the trial (hidden until a segment grants it)
+          </label>
         </div>
       </div>`;
     d.querySelectorAll("[data-f]").forEach(inp=>{
       inp.addEventListener("input",()=>{ b[inp.dataset.f]=inp.value; save(); });
     });
+    d.querySelector("[data-collectible]").addEventListener("change",e=>{ b.collectible=e.target.checked; save(); renderScript(); });
     d.querySelector("[data-del]").addEventListener("click",()=>{
       state.bullets.splice(i,1); cleanupBulletRefs(b.id); renderBullets(); renderScript(); renderCounts(); save();
     });
@@ -916,6 +1175,12 @@ function charOptions(sel){
 function bulletOptions(sel){
   let o='<option value="">— no correct bullet —</option>';
   state.bullets.forEach(b=>{ o+=`<option value="${b.id}" ${b.id===sel?"selected":""}>${esc(b.name||"(unnamed bullet)")}</option>`; });
+  return o;
+}
+function grantBulletOptions(sel){
+  const coll=state.bullets.filter(b=>b.collectible);
+  let o='<option value="">— none —</option>';
+  coll.forEach(b=>{ o+=`<option value="${b.id}" ${b.id===sel?"selected":""}>🔸 ${esc(b.name||"(unnamed bullet)")}</option>`; });
   return o;
 }
 function musicOptions(sel){
@@ -964,6 +1229,14 @@ function renderSongs(){
   });
 }
 
+function cloneSegment(seg){
+  const c=JSON.parse(JSON.stringify(seg));
+  c.id=uid(); c._open=true;
+  if(Array.isArray(c.statements)) c.statements.forEach(s=>s.id=uid());
+  if(Array.isArray(c.events)) c.events.forEach(e=>e.id=uid());
+  return c;
+}
+
 function renderScript(){
   const el=$("#scriptList"); el.innerHTML="";
   if(!state.script.length){ el.innerHTML='<div class="empty">No segments yet. Add a dialogue beat or a nonstop debate to begin.</div>'; }
@@ -976,6 +1249,7 @@ function renderScript(){
           <div class="reorder">
             <button class="btn sm ghost" data-up>▲</button>
             <button class="btn sm ghost" data-down>▼</button>
+            <button class="btn sm ghost" data-dup title="Duplicate">⧉</button>
             <button class="del" data-del>✕</button>
           </div>
         </summary>
@@ -990,6 +1264,9 @@ function renderScript(){
             <div class="field"><label>✨ Effect</label><select data-f="fx">${fxOptions(seg.fx)}</select></div>
           </div>
           <div class="field"><label>Line</label><textarea data-f="text" placeholder="What does this character say?">${esc(seg.text)}</textarea></div>
+          <div class="field"><label>🔸 Grants collectible truth bullet (revealed on this line)</label>
+            <select data-f="grantBullet">${grantBulletOptions(seg.grantBullet)}</select>
+            <div class="mini">Mark a bullet as "collected during the trial" in the Truth Bullets tab, then hand it to the player here.</div></div>
         </div>`;
     } else if(seg.type==="showdown"){
       let choiceHTML="";
@@ -1007,6 +1284,7 @@ function renderScript(){
           <div class="reorder">
             <button class="btn sm ghost" data-up>▲</button>
             <button class="btn sm ghost" data-down>▼</button>
+            <button class="btn sm ghost" data-dup title="Duplicate">⧉</button>
             <button class="del" data-del>✕</button>
           </div>
         </summary>
@@ -1057,6 +1335,7 @@ function renderScript(){
           <div class="reorder">
             <button class="btn sm ghost" data-up>▲</button>
             <button class="btn sm ghost" data-down>▼</button>
+            <button class="btn sm ghost" data-dup title="Duplicate">⧉</button>
             <button class="del" data-del>✕</button>
           </div>
         </summary>
@@ -1072,6 +1351,21 @@ function renderScript(){
           </div>
           <div class="field"><label>Opening taunt (the challenge line)</label>
             <input type="text" data-f="openLine" value="${esc(seg.openLine||"")}" placeholder="You overlooked something crucial. Bow down to me!"></div>
+          <div class="card" style="background:#0e050b;border-color:var(--hot)">
+            <label>💥 Cut-in Animations</label>
+            <div class="mini" style="margin-bottom:8px">Full-screen speech-bubble slams with a character's sprite. The opponent's fires when the showdown starts; the player's fires when you land the winning counter.</div>
+            <label style="display:flex;align-items:center;gap:6px;text-transform:none;color:var(--paper);font-size:12px;font-weight:normal">
+              <input type="checkbox" data-f="cutinOpp" ${seg.cutinOpp!==false?"checked":""}> Opponent cut-in on start
+            </label>
+            <input type="text" data-f="cutinOppText" value="${esc(seg.cutinOppText||"")}" placeholder="OBJECTION!" style="margin:6px 0 12px">
+            <label style="display:flex;align-items:center;gap:6px;text-transform:none;color:var(--paper);font-size:12px;font-weight:normal">
+              <input type="checkbox" data-f="cutinPlayer" ${seg.cutinPlayer!==false?"checked":""}> Player cut-in on winning counter
+            </label>
+            <div class="card-row" style="margin-top:6px">
+              <div class="field"><label>Player shout</label><input type="text" data-f="cutinPlayerText" value="${esc(seg.cutinPlayerText||"")}" placeholder="GOTCHA!"></div>
+              <div class="field"><label>Player cut-in sprite</label><select data-f="cutinPlayerChar">${charOptions(seg.cutinPlayerChar)}</select></div>
+            </div>
+          </div>
           <div class="help">A 1v1 clash. The opponent throws a series of attacks on your reasoning. Advance through them, then <b>counter the flawed one</b> by presenting the correct truth bullet. Mark exactly one attack as the flawed point and choose the bullet that shatters it.</div>
           <div data-rstmts>${rebHTML || '<div class="empty">No attacks yet.</div>'}</div>
           <div class="add-bar"><button class="btn cyan sm" data-addrstmt>+ Add Attack</button></div>
@@ -1105,6 +1399,7 @@ function renderScript(){
           <div class="reorder">
             <button class="btn sm ghost" data-up>▲</button>
             <button class="btn sm ghost" data-down>▼</button>
+            <button class="btn sm ghost" data-dup title="Duplicate">⧉</button>
             <button class="del" data-del>✕</button>
           </div>
         </summary>
@@ -1134,6 +1429,7 @@ function renderScript(){
           <div class="reorder">
             <button class="btn sm ghost" data-up>▲</button>
             <button class="btn sm ghost" data-down>▼</button>
+            <button class="btn sm ghost" data-dup title="Duplicate">⧉</button>
             <button class="del" data-del>✕</button>
           </div>
         </summary>
@@ -1184,6 +1480,7 @@ function renderScript(){
           <div class="reorder">
             <button class="btn sm ghost" data-up>▲</button>
             <button class="btn sm ghost" data-down>▼</button>
+            <button class="btn sm ghost" data-dup title="Duplicate">⧉</button>
             <button class="del" data-del>✕</button>
           </div>
         </summary>
@@ -1208,7 +1505,8 @@ function renderScript(){
     }
     // wiring
     det.querySelectorAll("[data-f]").forEach(inp=>{
-      inp.addEventListener("input",()=>{ seg[inp.dataset.f]=inp.value; save(); if(inp.dataset.f==="speaker" && seg.type==="dialogue"){ const b=det.querySelector("summary .seg-badge"); if(b) b.textContent=charName(inp.value);} });
+      const evt=inp.type==="checkbox"?"change":"input";
+      inp.addEventListener(evt,()=>{ seg[inp.dataset.f]= inp.type==="checkbox"?inp.checked : inp.value; save(); if(inp.dataset.f==="speaker" && seg.type==="dialogue"){ const b=det.querySelector("summary .seg-badge"); if(b) b.textContent=charName(inp.value);} });
     });
     det.querySelectorAll("[data-bf]").forEach(cb=>{
       cb.addEventListener("change",()=>{
@@ -1274,10 +1572,11 @@ function renderScript(){
     det.querySelectorAll("[data-edown]").forEach(btn=>{
       btn.addEventListener("click",e=>{e.preventDefault(); const ei=+btn.closest("[data-evt]").dataset.evt; if(ei<seg.events.length-1){[seg.events[ei+1],seg.events[ei]]=[seg.events[ei],seg.events[ei+1]]; renderScript(); save();}});
     });
-    const up=det.querySelector("[data-up]"), down=det.querySelector("[data-down]"), del=det.querySelector("[data-del]");
+    const up=det.querySelector("[data-up]"), down=det.querySelector("[data-down]"), del=det.querySelector("[data-del]"), dup=det.querySelector("[data-dup]");
     up.addEventListener("click",e=>{e.preventDefault(); if(i>0){[state.script[i-1],state.script[i]]=[state.script[i],state.script[i-1]]; renderScript(); save();}});
     down.addEventListener("click",e=>{e.preventDefault(); if(i<state.script.length-1){[state.script[i+1],state.script[i]]=[state.script[i],state.script[i+1]]; renderScript(); save();}});
     del.addEventListener("click",e=>{e.preventDefault(); state.script.splice(i,1); renderScript(); renderCounts(); save();});
+    if(dup) dup.addEventListener("click",e=>{e.preventDefault(); state.script.splice(i+1,0,cloneSegment(seg)); renderScript(); renderCounts(); save(); toast("Segment duplicated");});
     const addS=det.querySelector("[data-addstmt]");
     if(addS) addS.addEventListener("click",e=>{e.preventDefault(); seg.statements.push({id:uid(),speaker:"",text:"",answerBullet:""}); renderScript(); save();});
     det.querySelectorAll("[data-sdel]").forEach(btn=>{
@@ -1301,15 +1600,70 @@ function renderSettings(){
   $("#tIntro").value=state.info.intro||"";
   $("#tEnding").value=state.info.ending||"";
   $("#tLives").value=state.info.lives||3;
+  $("#tAccent").value=state.info.accent||"#00e5ff";
+  $("#tTextSpeed").value=String(state.info.textSpeed!=null?state.info.textSpeed:32);
+  $("#tDevMode").checked=!!state.info.devMode;
+  applyAccent();
   // background / effect selects
   $("#tBg").innerHTML=BACKGROUNDS.map(b=>`<option value="${b.id}" ${b.id===(state.info.bg||"courtroom")?"selected":""}>${esc(b.name)}</option>`).join("");
   $("#tFx").innerHTML=EFFECTS.map(f=>`<option value="${f.id}" ${f.id===(state.info.fx||"none")?"selected":""}>${esc(f.name)}</option>`).join("");
   refreshCharDropdowns();
 }
+$("#tDevMode").addEventListener("change",e=>{ state.info.devMode=e.target.checked; save(); });
 $("#tLives").addEventListener("input",e=>{
   let v=parseInt(e.target.value,10); if(isNaN(v)) v=3; v=Math.max(1,Math.min(8,v));
   state.info.lives=v; save();
 });
+// accent theme: overrides the --cyan accent variable across the whole app
+function applyAccent(){
+  const a=state.info.accent;
+  if(a){ document.documentElement.style.setProperty("--cyan",a); }
+  else { document.documentElement.style.removeProperty("--cyan"); }
+}
+$("#tAccent").addEventListener("input",e=>{ state.info.accent=e.target.value; applyAccent(); save(); });
+$("#tAccentReset").addEventListener("click",()=>{ state.info.accent=""; $("#tAccent").value="#00e5ff"; applyAccent(); save(); toast("Accent reset"); });
+$("#tTextSpeed").addEventListener("change",e=>{ state.info.textSpeed=parseInt(e.target.value,10)||0; save(); });
+
+/* ---- SEATING EDITOR ---- */
+function faceHTML(c,size){
+  const s=size||34;
+  if(c.customSprite) return `<div class="seatav" style="background:transparent;border:none;width:${s}px;height:${s}px"><img src="${c.customSprite}" style="width:${s}px;height:${s}px;object-fit:contain"></div>`;
+  return `<div class="seatav" style="background:${c.color};width:${s}px;height:${s}px">${c.sprite||"🙂"}</div>`;
+}
+function renderSeats(){
+  const listEl=$("#seatList"); if(!listEl) return;
+  const order=seatOrder();
+  // keep stored seats normalized so reordering is stable
+  state.info.seats=order.slice();
+  if(!order.length){ listEl.innerHTML='<div class="empty">Add characters first — they\'ll appear here to seat around the circle.</div>'; $("#seatRing").innerHTML=""; return; }
+  listEl.innerHTML="";
+  order.forEach((id,idx)=>{
+    const c=charById(id); if(!c) return;
+    const d=document.createElement("div"); d.className="seat-row";
+    d.innerHTML=`
+      <div class="seatnum">${idx+1}</div>
+      ${faceHTML(c,34)}
+      <div class="seatnm">${esc(c.name||"(unnamed)")}</div>
+      <div style="display:flex;gap:4px">
+        <button class="btn sm ghost" data-sup>▲</button>
+        <button class="btn sm ghost" data-sdown>▼</button>
+      </div>`;
+    d.querySelector("[data-sup]").addEventListener("click",()=>{ if(idx>0){[state.info.seats[idx-1],state.info.seats[idx]]=[state.info.seats[idx],state.info.seats[idx-1]]; renderSeats(); save();}});
+    d.querySelector("[data-sdown]").addEventListener("click",()=>{ if(idx<order.length-1){[state.info.seats[idx+1],state.info.seats[idx]]=[state.info.seats[idx],state.info.seats[idx+1]]; renderSeats(); save();}});
+    listEl.appendChild(d);
+  });
+  // ring preview
+  const ring=$("#seatRing"); ring.innerHTML='<div class="ring-center">⚖️</div>';
+  const n=order.length, cx=50, cy=50, r=38;
+  order.forEach((id,idx)=>{
+    const c=charById(id); if(!c) return;
+    const ang=(idx/n)*2*Math.PI - Math.PI/2;
+    const x=cx+Math.cos(ang)*r, y=cy+Math.sin(ang)*r;
+    const seat=document.createElement("div"); seat.className="ring-seat"; seat.style.left=x+"%"; seat.style.top=y+"%";
+    seat.innerHTML=`<div class="ring-av" style="background:${c.customSprite?'transparent':c.color};${c.customSprite?'border:none':''}">${c.customSprite?`<img src="${c.customSprite}" style="width:44px;height:44px;object-fit:contain">`:(c.sprite||"🙂")}</div><div class="ring-nm">${esc((c.name||"").split(" ")[0])}</div>`;
+    ring.appendChild(seat);
+  });
+}
 
 /* ---- INVESTIGATION PREVIEW EDITOR ---- */
 function renderPreview(){
@@ -1347,8 +1701,50 @@ function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").repla
 $("#addChar").addEventListener("click",()=>{
   const color=AVATARS[state.characters.length%AVATARS.length];
   state.characters.push({id:uid(),name:"",title:"",initials:"",color});
-  renderChars(); refreshCharDropdowns(); save();
+  renderChars(); refreshCharDropdowns(); renderSeats(); save();
 });
+
+/* ---- character presets ---- */
+function presetInitials(name){ return name.split(/\s+/).map(w=>w[0]).join("").slice(0,3).toUpperCase(); }
+let presetActiveCast=PRESET_CASTS[0].id;
+function openPresets(){ renderPresetTabs(); renderPresetList(); $("#presetModal").classList.add("show"); }
+function renderPresetTabs(){
+  $("#presetTabs").innerHTML=PRESET_CASTS.map(c=>`<button class="mtab ${c.id===presetActiveCast?"on":""}" data-pcast="${c.id}">${esc(c.label)}</button>`).join("");
+  $$("#presetTabs .mtab").forEach(b=>b.addEventListener("click",()=>{ presetActiveCast=b.dataset.pcast; renderPresetTabs(); renderPresetList(); }));
+}
+function renderPresetList(){
+  const cast=PRESET_CASTS.find(c=>c.id===presetActiveCast);
+  const have=new Set(state.characters.map(c=>(c.name||"").toLowerCase()));
+  const cards=cast.students.map(s=>{
+    const added=have.has(s.name.toLowerCase());
+    return `<button class="preset-card ${added?"added":""}" data-pname="${esc(s.name)}">
+      <span class="pav" style="background:${s.color}">${s.sprite}</span>
+      <span><span class="pn">${esc(s.name)}</span><br><span class="pt">${esc(s.title)}</span></span>
+    </button>`;
+  }).join("");
+  $("#presetList").innerHTML=`
+    <div class="preset-cast-actions">
+      <button class="btn lime sm" id="presetAddAll">➕ Add whole cast</button>
+    </div>
+    <div class="preset-grid">${cards}</div>`;
+  $$("#presetList .preset-card").forEach(card=>{
+    card.addEventListener("click",()=>{
+      const s=cast.students.find(x=>x.name===card.dataset.pname); if(!s) return;
+      addPresetStudent(s); renderPresetList();
+    });
+  });
+  $("#presetAddAll").addEventListener("click",()=>{
+    cast.students.forEach(s=>{ if(!state.characters.some(c=>(c.name||"").toLowerCase()===s.name.toLowerCase())) addPresetStudent(s); });
+    renderChars(); refreshCharDropdowns(); save(); renderPresetList(); toast(`Added the ${cast.label} cast`);
+  });
+}
+function addPresetStudent(s){
+  state.characters.push({id:uid(),name:s.name,title:s.title,initials:presetInitials(s.name),color:s.color,sprite:s.sprite,expr:"normal"});
+  renderChars(); refreshCharDropdowns(); renderSeats(); save(); toast(`Added ${s.name}`);
+}
+$("#addPreset").addEventListener("click",openPresets);
+$("#presetClose").addEventListener("click",()=>$("#presetModal").classList.remove("show"));
+$("#presetModal").addEventListener("click",e=>{ if(e.target===$("#presetModal")) $("#presetModal").classList.remove("show"); });
 $("#addBullet").addEventListener("click",()=>{
   state.bullets.push({id:uid(),name:"",desc:""}); renderBullets(); save();
 });
@@ -1373,6 +1769,8 @@ $("#addHangman").addEventListener("click",()=>{
   state.script.push({type:"hangman",id:uid(),speaker:"",expr:"",music:"",bg:"",fx:"",
     word:"",hint:"",successLine:"",extraLetters:3,_open:true}); renderScript(); save();
 });
+$("#collapseAll").addEventListener("click",()=>{ state.script.forEach(s=>s._open=false); renderScript(); save(); });
+$("#expandAll").addEventListener("click",()=>{ state.script.forEach(s=>s._open=true); renderScript(); save(); });
 
 /* settings inputs */
 ["title","intro","ending"].forEach(f=>{
@@ -1516,7 +1914,7 @@ let run=null;
 /* ============================================================
    AUDIO ENGINE (Tone.js) — plays pre-made synthesized songs
 ============================================================ */
-let audio={ synth:null, bass:null, pad:null, kick:null, hat:null, parts:[], started:false, muted:false, current:null };
+let audio={ synth:null, bass:null, pad:null, kick:null, hat:null, voice:null, parts:[], started:false, muted:false, current:null };
 
 async function ensureAudio(){
   if(audio.started) return;
@@ -1526,7 +1924,26 @@ async function ensureAudio(){
   audio.pad=new Tone.PolySynth(Tone.Synth,{volume:-24,oscillator:{type:"sine"},envelope:{attack:.4,decay:.4,sustain:.6,release:1.2}}).toDestination();
   audio.kick=new Tone.MembraneSynth({volume:-8,octaves:5,envelope:{attack:.001,decay:.24,sustain:0}}).toDestination();
   audio.hat=new Tone.NoiseSynth({volume:-30,noise:{type:"white"},envelope:{attack:.001,decay:.04,sustain:0}}).toDestination();
+  audio.voice=new Tone.Synth({volume:-16,oscillator:{type:"square"},envelope:{attack:.001,decay:.05,sustain:0,release:.03}}).toDestination();
   audio.started=true;
+}
+
+/* voice "blip": a short beep pitched by a character's voice settings. */
+const VOICE_WAVES=["square","triangle","sine","sawtooth"];
+const VOICE_NOTES=["C3","E3","G3","A3","C4","E4","G4","A4","C5","E5"];
+function blip(char, forceNote){
+  if(!audio.started || !audio.voice || audio.muted) return;
+  const v=(char&&char.voice)||{};
+  if(v.off) return;
+  audio.voice.oscillator.type=v.wave||"square";
+  audio.voice.volume.value = v.silent?-60:-16;
+  let note=forceNote;
+  if(!note){
+    const base=(v.pitch!=null)?v.pitch:4; // index into VOICE_NOTES
+    const jitter=Math.floor(Math.random()*2); // tiny variation for a "chattery" feel
+    note=VOICE_NOTES[Math.max(0,Math.min(VOICE_NOTES.length-1, base+jitter))];
+  }
+  try{ audio.voice.triggerAttackRelease(note,0.03); }catch(e){}
 }
 
 function playSong(id){
@@ -1618,14 +2035,63 @@ function startTrial(){
   if(err){ toast(err); return; }
   play.classList.add("show");
   const maxLives=Math.max(1,Math.min(8,state.info.lives||3));
+  // collected: bullets available from the start (non-collectible), plus any picked up during play
+  const startBullets=new Set(state.bullets.filter(b=>!b.collectible).map(b=>b.id));
   // build a flat step list
-  run={ steps:buildSteps(), idx:0, selectedBullet:null, curBg:null, curFx:null, maxLives, lives:maxLives, gameOver:false };
+  run={ steps:buildSteps(), idx:0, selectedBullet:null, curBg:null, curFx:null, maxLives, lives:maxLives, gameOver:false, collected:startBullets };
   applyStage(state.info.bg||"courtroom", state.info.fx||"none");
   renderLives();
-  buildProgressDots();
+  $("#devNav").classList.toggle("hidden", !state.info.devMode);
   showStep();
 }
 function exitTrial(){ play.classList.remove("show"); $("#bulletTray").classList.remove("up"); $("#refPanel").classList.remove("show"); stopMusic(); }
+
+/* ---- keyboard controls (active only during play) ---- */
+document.addEventListener("keydown",e=>{
+  if(!play.classList.contains("show")) return;
+  if(/^(INPUT|TEXTAREA|SELECT)$/.test((e.target.tagName||""))) return;
+  const k=e.key;
+  // Esc closes the reference panel, else exits
+  if(k==="Escape"){ if($("#refPanel").classList.contains("show")) $("#refPanel").classList.remove("show"); else exitTrial(); return; }
+  if(k==="c"||k==="C"){ e.preventDefault(); renderRefPanel(); $("#refPanel").classList.toggle("show"); return; }
+  if(k==="m"||k==="M"){ e.preventDefault(); $("#muteBtn").click(); return; }
+  // dev nav
+  if(state.info.devMode){
+    if(k==="["){ e.preventDefault(); prevStep(); return; }
+    if(k==="]"){ e.preventDefault(); skipStep(); return; }
+  }
+  const click=sel=>{ const el=$(sel); if(el){ el.click(); return true; } return false; };
+  // advance: Space / Enter
+  if(k===" "||k==="Enter"){
+    e.preventDefault();
+    if(click("#beginBtn")) return;
+    if(click("#briefBtn")) return;
+    if(click("#contBtn")) return;
+    if(click("#contClose")) return;
+    if(click("#hangCont")) return;
+    if(click("#rebWin")) return;
+    if(click("#rebStart")) return;
+    const box=$(".dialogue-box"); if(box){ box.click(); return; }
+    // debate/rebuttal: Enter presents the selected bullet
+    if(click("#openTray")||click("#rebPresent")) return;
+    if(click("#submitClose")||click("#hangSubmit")) return;
+    return;
+  }
+  // bullet tray selection with number keys (debate/rebuttal)
+  if(/^[1-9]$/.test(k)){
+    const trayUp=$("#bulletTray").classList.contains("up");
+    const bullets=$$("#trayBullets .bullet");
+    const choices=$$(".choice");
+    if(bullets.length && (trayUp || $("#openTray")||$("#rebPresent"))){ const b=bullets[+k-1]; if(b){ e.preventDefault(); b.click(); } return; }
+    if(choices.length){ const c=choices[+k-1]; if(c){ e.preventDefault(); c.click(); } return; }
+    return;
+  }
+  // debate statement nav with arrows
+  if(k==="ArrowRight"){ if(click("#nextStmt")||click("#rebNext")){ e.preventDefault(); } return; }
+  if(k==="ArrowLeft"){ if(click("#prevStmt")||click("#rebPrev")){ e.preventDefault(); } return; }
+  // toggle tray with 'b'
+  if(k==="b"||k==="B"){ const t=$("#trayToggle"); if(t && !t.classList.contains("hidden")){ e.preventDefault(); $("#bulletTray").classList.toggle("up"); } return; }
+});
 
 /* ---- lives ---- */
 function renderLives(){
@@ -1707,20 +2173,6 @@ function applyStage(bg,fx){
   }
 }
 
-function buildProgressDots(){
-  const el=$("#progressDots"); el.innerHTML="";
-  run.steps.forEach((s,i)=>{
-    const d=document.createElement("div"); d.className="pdot"; d.dataset.i=i; el.appendChild(d);
-  });
-  updateDots();
-}
-function updateDots(){
-  $$("#progressDots .pdot").forEach((d,i)=>{
-    d.classList.toggle("done",i<run.idx);
-    d.classList.toggle("cur",i===run.idx);
-  });
-}
-
 function speakerPlate(char, expr){
   if(!char) return "";
   const useExpr=expr||char.expr||"normal";
@@ -1734,12 +2186,25 @@ function speakerPlate(char, expr){
     <div class="speaker-title">${esc(char.title)||"&nbsp;"}</div></div>
   </div>`;
 }
+// neighbors seated on either side of the speaker, pinned to the screen edges
+function neighborStripHTML(char){
+  if(!char || state.characters.length<3) return "";
+  const {left,right}=neighborsOf(char.id);
+  const face=(c,side)=>{
+    if(!c) return "";
+    const inner=c.customSprite?`<img src="${c.customSprite}">`:(c.sprite||"🙂");
+    return `<div class="neighbor n-${side}"><div class="nav-face" style="background:${c.customSprite?'transparent':c.color};${c.customSprite?'border-color:rgba(255,255,255,.4)':''}">${inner}</div><div class="nav-nm">${esc((c.name||"").split(" ")[0])}</div></div>`;
+  };
+  if(!left && !right) return "";
+  return `<div class="neighbor-strip">${face(left,"left")}${face(right,"right")}</div>`;
+}
 
 function showStep(){
   const step=run.steps[run.idx];
-  updateDots();
   $("#trayToggle").classList.add("hidden");
   $("#bulletTray").classList.remove("up");
+  $("#playBg").classList.remove("camera-pan");
+  updateStepCounter();
   // music: only change if this step explicitly sets a track (blank = carry current)
   if(step.music){ playSong(step.music); }
   // background / effect: apply if set on this step (blank = carry current)
@@ -1754,8 +2219,16 @@ function showStep(){
   if(step.kind==="closing") return renderClosing(step.seg);
   if(step.kind==="verdict") return renderVerdict();
 }
+function updateStepCounter(){
+  const c=$("#stepCounter"); if(!c||!run) return;
+  c.textContent=`${run.idx+1} / ${run.steps.length}`;
+}
 
 function nextStep(){ if(run.idx<run.steps.length-1){ run.idx++; showStep(); } }
+function prevStep(){ if(run && run.idx>0){ run.idx--; run.selectedBullet=null; showStep(); } }
+function skipStep(){ if(run && run.idx<run.steps.length-1){ run.idx++; run.selectedBullet=null; showStep(); } }
+$("#btnStepPrev").addEventListener("click",prevStep);
+$("#btnStepNext").addEventListener("click",skipStep);
 
 function renderIntro(){
   $("#phaseTag").textContent="Case File";
@@ -1773,9 +2246,11 @@ function renderPreviewStep(){
   const findings = events.length ? `
     <h3>🔍 WHAT WE FOUND</h3>
     ${events.map((e,i)=>`<div class="finding"><span class="fn">${i+1}</span> ${esc(e)}</div>`).join("")}` : "";
-  const bullets = state.bullets.length ? `
-    <h3>🔸 TRUTH BULLETS COLLECTED</h3>
-    <div class="brief-bullets">${state.bullets.map(b=>`<div class="brief-bullet"><div class="bn">🔸 ${esc(b.name||"Bullet")}</div><div class="bd">${esc(b.desc)}</div></div>`).join("")}</div>` : "";
+  const startBullets=state.bullets.filter(b=>!b.collectible);
+  const collCount=state.bullets.filter(b=>b.collectible).length;
+  const bullets = startBullets.length ? `
+    <h3>🔸 TRUTH BULLETS COLLECTED${collCount?` <span class="mini" style="color:#c98db0">(${collCount} more to uncover during the trial)</span>`:""}</h3>
+    <div class="brief-bullets">${startBullets.map(b=>`<div class="brief-bullet"><div class="bn">🔸 ${esc(b.name||"Bullet")}</div><div class="bd">${esc(b.desc)}</div></div>`).join("")}</div>` : "";
   stage.innerHTML=`<div class="briefing">
     <h2>Investigation Report</h2>
     ${state.info.previewText?`<div class="lead">${esc(state.info.previewText)}</div>`:""}
@@ -1791,10 +2266,27 @@ function renderPreviewStep(){
 function renderDialogue(seg){
   $("#phaseTag").textContent="Dialogue";
   const char=charById(seg.speaker);
+  const full=esc(seg.text)||"…";
+  // grant a collectible truth bullet on this beat
+  if(seg.grantBullet && run.collected && !run.collected.has(seg.grantBullet)){
+    const b=state.bullets.find(x=>x.id===seg.grantBullet);
+    if(b){ run.collected.add(seg.grantBullet); setTimeout(()=>toast(`🔸 Truth Bullet obtained: ${b.name||"New evidence"}`),250); }
+  }
   stage.innerHTML=`
+    ${neighborStripHTML(char)}
     ${speakerPlate(char, seg.expr)}
-    <div class="dialogue-box">${esc(seg.text)||"…"}<span class="cue">▼ click to continue</span></div>`;
-  $(".dialogue-box").addEventListener("click",nextStep);
+    <div class="dialogue-box"><span class="dtext"></span><span class="cue">▼ click to continue</span></div>`;
+  const box=$(".dialogue-box"), textEl=box.querySelector(".dtext");
+  const speed=state.info.textSpeed!=null?state.info.textSpeed:32;
+  let done=false, timer=null;
+  function finish(){ done=true; if(timer){clearInterval(timer);timer=null;} textEl.innerHTML=full; }
+  if(speed<=0){ finish(); }
+  else {
+    // type raw text char-by-char (full is escaped HTML; type plain then set once done to keep entities intact)
+    const plain=seg.text||"…"; let i=0; textEl.textContent="";
+    timer=setInterval(()=>{ const ch=plain[i]; textEl.textContent=plain.slice(0,++i); if(ch && /\S/.test(ch) && i%2===0){ blip(char); } if(i>=plain.length){ finish(); } },speed);
+  }
+  box.addEventListener("click",()=>{ if(!done){ finish(); } else { nextStep(); } });
 }
 
 /* ---- NONSTOP DEBATE ---- */
@@ -1803,6 +2295,7 @@ function renderDebate(seg){
   run.debate={seg, si:0, solved:false};
   run.trayBullets=trayBulletsFor(seg);
   $("#trayToggle").classList.remove("hidden");
+  $("#playBg").classList.add("camera-pan");
   renderTrayBullets();
   showStatement();
 }
@@ -1814,6 +2307,7 @@ function showStatement(){
   let html=esc(s.text).replace(/\[([^\]]+)\]/g,(m,p1)=>`<span class="weakpoint" data-weak="1">${p1}</span>`);
   const hasWeak=/\[[^\]]+\]/.test(s.text);
   stage.innerHTML=`
+    ${neighborStripHTML(char)}
     ${speakerPlate(char, s.expr)}
     <div class="statement-box" id="stmtBox">${html||"…"}</div>
     <div class="debate-controls">
@@ -1836,7 +2330,10 @@ function showStatement(){
 }
 function trayBulletsFor(seg){
   const filter=seg && seg.bulletFilter && seg.bulletFilter.length ? seg.bulletFilter : null;
-  return filter ? state.bullets.filter(b=>filter.includes(b.id)) : state.bullets;
+  let list = filter ? state.bullets.filter(b=>filter.includes(b.id)) : state.bullets;
+  // only show bullets the player currently holds (collected set)
+  if(run && run.collected){ list=list.filter(b=>run.collected.has(b.id)); }
+  return list;
 }
 function renderTrayBullets(){
   const el=$("#trayBullets"); el.innerHTML="";
@@ -1881,6 +2378,18 @@ function doFlash(kind,text){
   flash.classList.remove("hidden");
   setTimeout(()=>flash.classList.add("hidden"),800);
 }
+// cut-in animation: side = "player" | "opp", char = character for the sprite, text = shout
+function playCutin(side, char, text, cb){
+  const el=$("#cutin");
+  const spriteEl=$("#cutinSprite"), bubbleEl=$("#cutinBubble");
+  spriteEl.innerHTML = char ? (char.customSprite?`<img src="${char.customSprite}">`:`<span>${char.sprite||"🙂"}</span>`) : "";
+  bubbleEl.textContent = text || (side==="player"?"OBJECTION!":"TAKE THAT!");
+  el.className="cutin "+side;
+  el.classList.remove("hidden");
+  // sting on the character's voice (or a default) for punch
+  try{ blip(char, side==="opp"?"G4":"C5"); }catch(e){}
+  setTimeout(()=>{ el.classList.add("hidden"); if(cb) cb(); }, 1150);
+}
 
 $("#trayToggle").addEventListener("click",()=>$("#bulletTray").classList.toggle("up"));
 
@@ -1891,9 +2400,13 @@ function renderRefPanel(){
     <h3>🔍 INVESTIGATION FINDINGS</h3>
     ${events.map((e,i)=>`<div class="finding"><span class="fn">${i+1}</span> ${esc(e)}</div>`).join("")}` : "";
   const brief = (state.info.previewText||"").trim() ? `<div class="lead" style="text-align:left;margin-bottom:14px">${esc(state.info.previewText)}</div>` : "";
-  const bullets = state.bullets.length ? `
-    <h3>🔸 TRUTH BULLETS</h3>
-    <div class="brief-bullets">${state.bullets.map(b=>`<div class="brief-bullet"><div class="bn">🔸 ${esc(b.name||"Bullet")}</div><div class="bd">${esc(b.desc)}</div></div>`).join("")}</div>` : '<div class="mini">No truth bullets in this trial.</div>';
+  // during play, only show bullets the player has actually collected
+  const shown = (run && run.collected) ? state.bullets.filter(b=>run.collected.has(b.id)) : state.bullets;
+  const pending = (run && run.collected) ? state.bullets.filter(b=>!run.collected.has(b.id)).length : 0;
+  const bullets = shown.length ? `
+    <h3>🔸 TRUTH BULLETS ${pending?`<span class="mini" style="color:#c98db0">(${pending} still to uncover)</span>`:""}</h3>
+    <div class="brief-bullets">${shown.map(b=>`<div class="brief-bullet"><div class="bn">🔸 ${esc(b.name||"Bullet")}</div><div class="bd">${esc(b.desc)}</div></div>`).join("")}</div>`
+    : '<div class="mini">No truth bullets collected yet.</div>';
   $("#refBody").innerHTML = brief + findings + bullets;
 }
 $("#btnRef").addEventListener("click",()=>{ renderRefPanel(); $("#refPanel").classList.add("show"); });
@@ -1905,21 +2418,26 @@ function renderRebuttal(seg){
   $("#phaseTag").textContent="Rebuttal Showdown";
   const opp=charById(seg.speaker);
   const stmts=(seg.statements||[]).filter(s=>s.text.trim());
-  // opening taunt
-  stage.innerHTML=`<div class="center-msg">
-    ${speakerPlate(opp, seg.expr||"smug")}
-    <div class="reb-banner">Rebuttal Showdown!</div>
-    <div class="attack-box" style="border-color:var(--hot)">${esc(seg.openLine||"You overlooked something. Let's see you counter THIS!")}</div>
-    <button class="btn hot" style="font-size:16px;padding:12px 24px;margin-top:18px" id="rebStart">Face the Challenge ⚔️</button>
-  </div>`;
-  $("#rebStart").addEventListener("click",()=>{
-    if(!stmts.length){ nextStep(); return; }
-    run.reb={seg, opp, stmts, si:0}; run.selectedBullet=null;
-    run.trayBullets=trayBulletsFor(seg);
-    $("#trayToggle").classList.remove("hidden");
-    renderTrayBullets();
-    rebStatement();
-  });
+  const drawTaunt=()=>{
+    stage.innerHTML=`<div class="center-msg">
+      ${speakerPlate(opp, seg.expr||"smug")}
+      <div class="reb-banner">Rebuttal Showdown!</div>
+      <div class="attack-box" style="border-color:var(--hot)">${esc(seg.openLine||"You overlooked something. Let's see you counter THIS!")}</div>
+      <button class="btn hot" style="font-size:16px;padding:12px 24px;margin-top:18px" id="rebStart">Face the Challenge ⚔️</button>
+    </div>`;
+    $("#rebStart").addEventListener("click",()=>{
+      if(!stmts.length){ nextStep(); return; }
+      run.reb={seg, opp, stmts, si:0}; run.selectedBullet=null;
+      run.trayBullets=trayBulletsFor(seg);
+      $("#trayToggle").classList.remove("hidden");
+      renderTrayBullets();
+      rebStatement();
+    });
+  };
+  // opponent cut-in, then the taunt screen
+  if(seg.cutinOpp!==false){
+    playCutin("opp", opp, seg.cutinOppText||"OBJECTION!", drawTaunt);
+  } else { drawTaunt(); }
 }
 function rebStatement(){
   const {seg,opp,stmts,si}=run.reb;
@@ -1951,8 +2469,7 @@ function rebStatement(){
 function rebResolve(s){
   const {seg,opp}=run.reb;
   if(run.selectedBullet===s.answerBullet && s.answerBullet){
-    doFlash("correct","COUNTER!");
-    setTimeout(()=>{
+    const showBreak=()=>{
       run.selectedBullet=null; $("#bulletTray").classList.remove("up"); $("#trayToggle").classList.add("hidden");
       stage.innerHTML=`<div class="center-msg">
         ${speakerPlate(opp,"broken")}
@@ -1961,7 +2478,12 @@ function rebResolve(s){
         <button class="btn lime" style="font-size:16px;padding:12px 24px;margin-top:18px" id="rebWin">Continue ▶</button>
       </div>`;
       $("#rebWin").addEventListener("click",nextStep);
-    },850);
+    };
+    // player cut-in on the winning counter, then the break screen
+    if(seg.cutinPlayer!==false){
+      const pc=charById(seg.cutinPlayerChar)||null;
+      playCutin("player", pc, seg.cutinPlayerText||"GOTCHA!", showBreak);
+    } else { doFlash("correct","COUNTER!"); setTimeout(showBreak,850); }
   } else {
     doFlash("wrong","WRONG BULLET!");
     run.selectedBullet=null;
@@ -2230,6 +2752,7 @@ function renderVerdict(){
   $("#editBtn").addEventListener("click",exitTrial);
 }
 
+
 /* ============================================================
    TOAST
 ============================================================ */
@@ -2320,7 +2843,7 @@ function sampleTrial(){
 /* ============================================================
    BOOT
 ============================================================ */
-function renderAll(){ renderChars(); renderBullets(); renderScript(); renderSongs(); renderSettings(); renderPreview(); renderCounts(); }
+function renderAll(){ renderChars(); renderBullets(); renderScript(); renderSongs(); renderSettings(); renderPreview(); renderSeats(); renderCounts(); }
 
 (function boot(){
   // shared trial via URL hash (#trial=CODE) takes priority
