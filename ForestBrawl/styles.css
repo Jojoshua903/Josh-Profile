@@ -1,0 +1,968 @@
+  :root{
+    --bark:#3b2a1a; --bark2:#4a3620; --leaf:#3f7d3a; --leaf2:#2f5f2b;
+    --moss:#6fae4f; --gold:#f4c430; --gold2:#e0a800; --cream:#f3ead6;
+    --shadow:rgba(0,0,0,.35); --danger:#e04b3a; --sky:#8fd3a8;
+    --nathan:#4a90e2; --daniel:#c65cff; --yassin:#ff7043;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:"Trebuchet MS","Verdana",sans-serif;
+    background:radial-gradient(circle at 50% 30%,#2f5f2b,#1c3a1a 70%,#12250f);
+    color:var(--cream);
+    display:flex; align-items:center; justify-content:center;
+    min-height:100vh; overflow:hidden; user-select:none;
+    padding-bottom:52px;
+  }
+  #wrap{position:relative; width:min(96vw,960px); aspect-ratio:4/3; }
+  #bgScene{
+    position:absolute; inset:0; width:100%; height:100%; border-radius:18px;
+    z-index:9; pointer-events:none; display:block;
+    box-shadow:0 24px 60px rgba(0,0,0,.55), inset 0 0 0 4px rgba(0,0,0,.25);
+  }
+  #bgScene.hidden{ display:none; }
+  /* the painted scene replaces the title screen's old canopy/vines/floor decor */
+  #titleScreen .canopy, #titleScreen .vine, #titleScreen .forestFloor{ display:none; }
+  #bgScene .sunRays{ transform-box:fill-box; transform-origin:center; animation:sunSpin 70s linear infinite; }
+  @keyframes sunSpin{ from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
+  #bgScene .cloud{ animation:cloudDrift 26s ease-in-out infinite alternate; }
+  #bgScene .cloud2{ animation:cloudDrift 34s ease-in-out infinite alternate-reverse; }
+  @keyframes cloudDrift{ from{transform:translateX(0);} to{transform:translateX(34px);} }
+  canvas{
+    width:100%; height:100%; display:block; border-radius:18px;
+    box-shadow:0 24px 60px rgba(0,0,0,.55), inset 0 0 0 4px rgba(0,0,0,.25);
+    background:#274a20;
+  }
+
+  /* ---------- Overlays ---------- */
+  .screen{
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center;
+    border-radius:18px; padding:24px; overflow:hidden;
+    /* translucent scrim so the painted forest scene (#bgScene) reads through, while text stays legible */
+    background:
+      radial-gradient(120% 90% at 50% 42%, rgba(20,40,14,.18), rgba(12,28,8,.5) 100%),
+      linear-gradient(rgba(16,34,12,.22), rgba(10,22,6,.42));
+    z-index:10;
+  }
+  /* (tree-line now lives in the painted #bgScene) */
+  .screen::before{ content:none; }
+  /* soft entry transition — animate the CONTENT only, so the dark scrim stays at full opacity
+     (animating the whole .screen faded its background and let the bright bg flash through) */
+  .screen:not(.hidden) > *:not(.forestDecor){ animation:screenIn .28s ease-out both; }
+  @keyframes screenIn{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:translateY(0); } }
+  /* drifting fireflies + dust motes */
+  .screen::after{
+    content:""; position:absolute; inset:0; pointer-events:none; opacity:.7;
+    background-image:
+      radial-gradient(2px 2px at 15% 30%, rgba(244,196,48,.9), transparent),
+      radial-gradient(2px 2px at 70% 20%, rgba(255,230,120,.8), transparent),
+      radial-gradient(1.5px 1.5px at 40% 60%, rgba(244,196,48,.7), transparent),
+      radial-gradient(2px 2px at 85% 55%, rgba(255,230,120,.75), transparent),
+      radial-gradient(1.5px 1.5px at 25% 75%, rgba(244,196,48,.7), transparent),
+      radial-gradient(2px 2px at 60% 80%, rgba(255,230,120,.7), transparent),
+      radial-gradient(1px 1px at 8% 50%, rgba(220,255,200,.6), transparent),
+      radial-gradient(1px 1px at 52% 12%, rgba(220,255,200,.5), transparent),
+      radial-gradient(1.5px 1.5px at 90% 78%, rgba(200,240,150,.5), transparent),
+      radial-gradient(1px 1px at 33% 44%, rgba(220,255,200,.5), transparent);
+    animation:fireflies 6s ease-in-out infinite alternate;
+  }
+  @keyframes fireflies{ from{transform:translateY(0); opacity:.45;} to{transform:translateY(-14px); opacity:.85;} }
+  /* ambient forest decor layer dropped into each screen (behind content) */
+  .forestDecor{ position:absolute; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
+  .forestDecor .hangVine{
+    position:absolute; top:-4px; width:3px; border-radius:2px; transform-origin:top;
+    background:linear-gradient(rgba(63,125,58,.85),rgba(47,95,43,.35));
+    animation:vineSway 5s ease-in-out infinite alternate;
+  }
+  .forestDecor .hangVine::after{  /* a leaf at the tip */
+    content:""; position:absolute; bottom:-6px; left:-4px; width:11px; height:14px; border-radius:0 80% 0 80%;
+    background:radial-gradient(circle at 40% 30%, #6fae4f, #3f7d3a); transform:rotate(20deg);
+  }
+  @keyframes vineSway{ from{transform:rotate(-3deg);} to{transform:rotate(3deg);} }
+  /* slow-falling leaves */
+  .forestDecor .leaf{
+    position:absolute; width:12px; height:12px; border-radius:0 80% 0 80%; opacity:.55;
+    background:radial-gradient(circle at 35% 30%, #7cbf58, #43772f);
+    animation:leafFall linear infinite;
+  }
+  @keyframes leafFall{
+    0%{ transform:translateY(-30px) rotate(0deg); opacity:0; }
+    10%{ opacity:.55; }
+    100%{ transform:translateY(560px) rotate(320deg); opacity:0; }
+  }
+  .screen > *{position:relative; z-index:1;}   /* keep content above the decor layers */
+  .screen.hidden{display:none;}
+  .hidden{display:none !important;}   /* generic hide (used by buttons like next-round/shop) */
+  #selectScreen{justify-content:flex-start; padding-top:20px;}
+  h1{
+    font-size:clamp(38px,7vw,76px); letter-spacing:2px; line-height:.95;
+    color:var(--gold); text-shadow:0 4px 0 var(--bark),0 8px 18px rgba(0,0,0,.6);
+    margin-bottom:6px; transform:rotate(-2deg);
+  }
+  h1 .sub{display:block; font-size:.32em; letter-spacing:6px; color:var(--cream); transform:rotate(2deg); margin-top:8px;}
+  .tag{color:var(--sky); font-size:14px; margin-bottom:16px; max-width:520px;}
+
+  /* title logo crest: a carved wooden emblem framing the wordmark */
+  .logoCrest{
+    position:relative; margin-bottom:18px; padding:18px 46px 22px;
+    background:
+      radial-gradient(120% 90% at 50% 0%, rgba(255,220,120,.18), transparent 60%),
+      linear-gradient(#5a4024,#3a2814);
+    border:3px solid #7a5a2e; border-radius:22px;
+    box-shadow:0 12px 30px rgba(0,0,0,.5), inset 0 2px 0 rgba(255,220,150,.25), inset 0 0 40px rgba(0,0,0,.4);
+    animation:crestBob 4s ease-in-out infinite alternate;
+  }
+  .logoCrest::before{ /* wood grain lines */
+    content:""; position:absolute; inset:6px; border-radius:16px; pointer-events:none; opacity:.15;
+    background:repeating-linear-gradient(92deg, rgba(0,0,0,.4) 0 1px, transparent 1px 9px);
+  }
+  .logoCrest h1{ margin:0; }
+  @keyframes crestBob{ from{transform:translateY(0) rotate(-1deg);} to{transform:translateY(-6px) rotate(1deg);} }
+  .crestLeaf{ position:absolute; font-size:34px; top:-14px; filter:drop-shadow(0 3px 4px rgba(0,0,0,.5)); }
+  .crestLeafL{ left:-6px; transform:rotate(-30deg); }
+  .crestLeafR{ right:-6px; transform:rotate(30deg) scaleX(-1); }
+
+  /* ---------- Win / lose end screen ---------- */
+  #overTitle{ animation:overPop .5s cubic-bezier(.2,1.5,.4,1) both; }
+  @keyframes overPop{ 0%{transform:scale(.4) rotate(-6deg); opacity:0;} 60%{transform:scale(1.12) rotate(-2deg);} 100%{transform:scale(1) rotate(-2deg); opacity:1;} }
+  /* 🥚 build-400 Konami easter egg: falling pastel confetti + a popping message */
+  @keyframes fbFall{ 0%{opacity:0; transform:translateY(-30px) rotate(0deg);} 10%{opacity:1;} 100%{opacity:0; transform:translateY(720px) rotate(540deg);} }
+  @keyframes fbPop{ 0%{transform:scale(.4) rotate(3deg); opacity:0;} 60%{transform:scale(1.1) rotate(-2deg); opacity:1;} 100%{transform:scale(1) rotate(-3deg); opacity:1;} }
+  /* a result badge ribbon + tinted glow behind the outcome, set via #overScreen[data-result] */
+  #overScreen[data-result="win"]{ box-shadow:none; }
+  #overScreen[data-result="win"] #overTitle{ color:#8fe6a0; text-shadow:0 5px 0 #1c3a1a,0 0 34px rgba(120,240,140,.6); }
+  #overScreen[data-result="lose"] #overTitle{ color:#ff7a6a; text-shadow:0 5px 0 #3a0f0f,0 0 30px rgba(255,90,70,.5); }
+  #overScreen::before{  /* soft outcome-colored glow bloom behind everything */
+    content:""; position:absolute; inset:0; pointer-events:none; z-index:0; opacity:.5;
+    background:radial-gradient(60% 45% at 50% 34%, var(--overGlow,transparent), transparent 70%);
+  }
+  #overScreen[data-result="win"]{ --overGlow:rgba(120,240,140,.35); }
+  #overScreen[data-result="lose"]{ --overGlow:rgba(255,90,70,.28); }
+  /* reward summary: a tidy framed panel of stacked reward rows (replaces the loose gold text blob) */
+  #rewardLine{
+    color:var(--gold); margin:4px 0 18px; min-height:20px; position:relative; z-index:1;
+    display:inline-block; max-width:440px; line-height:1.85; font-size:14px;
+  }
+  #rewardLine:not(:empty){
+    background:linear-gradient(rgba(59,42,26,.5),rgba(40,28,16,.5));
+    border:1px solid rgba(246,196,69,.28); border-radius:14px;
+    padding:12px 22px; box-shadow:inset 0 0 22px rgba(0,0,0,.32);
+  }
+  #rewardLine span{ display:inline-block; }
+
+  .btn{
+    font-family:inherit; font-weight:bold; cursor:pointer; border:none; position:relative; overflow:hidden;
+    background:linear-gradient(#f4c430,#e0a800); color:#3b2a1a;
+    padding:14px 30px; border-radius:14px; font-size:19px; letter-spacing:1px;
+    box-shadow:0 6px 0 #a97c00,0 10px 20px rgba(0,0,0,.4);
+    transition:transform .08s, box-shadow .08s, filter .1s;
+  }
+  /* glossy sheen sweep across gold buttons */
+  .btn::after{
+    content:""; position:absolute; inset:0; pointer-events:none; border-radius:inherit;
+    background:linear-gradient(105deg, transparent 30%, rgba(255,255,255,.35) 46%, transparent 60%);
+    transform:translateX(-120%); transition:transform .5s ease;
+  }
+  .btn:hover::after{ transform:translateX(120%); }
+  .btn:hover{transform:translateY(-2px); filter:brightness(1.05);}
+  .btn:active{transform:translateY(4px); box-shadow:0 2px 0 #a97c00;}
+  .btn.small{padding:9px 18px; font-size:15px;}
+  /* mode buttons: rich cards — icon+title+description header on top, themed accent strip beneath */
+  .btn.mode{
+    display:flex; flex-direction:column; align-items:stretch; gap:0; padding:0; overflow:hidden;
+    width:206px; min-width:206px; border-radius:14px; text-align:left;
+    background:linear-gradient(#fff3d0,#f6d98a);
+    border-top:3px solid var(--acc,#e69a00);
+    box-shadow:0 4px 0 #a05f00, 0 8px 14px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.5);
+  }
+  .btn.mode .mHead{ display:flex; align-items:center; gap:9px; padding:8px 12px; }
+  .btn.mode .mIcon{
+    font-size:19px; line-height:1; width:32px; height:32px; flex:0 0 32px;
+    display:flex; align-items:center; justify-content:center; border-radius:9px;
+    background:var(--acc,#e69a00); box-shadow:inset 0 2px 0 rgba(255,255,255,.35), 0 2px 4px rgba(0,0,0,.25);
+  }
+  .btn.mode .mText{ display:flex; flex-direction:column; gap:0; min-width:0; }
+  .btn.mode .mTitle{ font-size:14px; font-weight:bold; letter-spacing:.3px; color:#3b2a1a; line-height:1.15; }
+  .btn.mode .mSub{ font-size:10px; font-weight:600; letter-spacing:.2px; color:rgba(59,42,26,.7); text-transform:none; line-height:1.2; }
+  /* themed accent strip: a small canvas painted with a per-mode motif in the accent color */
+  .btn.mode .mStrip{ display:block; width:100%; height:16px; }
+  .btn.mode:active{ box-shadow:0 2px 0 #a05f00, inset 0 1px 0 rgba(255,255,255,.4); }
+  /* secondary buttons: carved dark-wood/green, for menu + back actions */
+  .btn.secondary{
+    background:linear-gradient(#3f7d3a,#2b5626); color:var(--cream);
+    box-shadow:0 5px 0 #1c3a1a, 0 8px 16px rgba(0,0,0,.4), inset 0 1px 0 rgba(150,220,140,.3);
+    border:1px solid rgba(150,220,140,.25);
+  }
+  .btn.secondary:active{ box-shadow:0 2px 0 #1c3a1a, inset 0 1px 0 rgba(150,220,140,.25); }
+
+  /* ---------- Reusable carved panel / parchment card ---------- */
+  .uiPanel{
+    background:linear-gradient(rgba(30,54,24,.92),rgba(18,37,15,.95));
+    border:1px solid rgba(246,196,69,.28); border-radius:16px;
+    box-shadow:0 10px 30px rgba(0,0,0,.4), inset 0 0 0 1px rgba(0,0,0,.3), inset 0 1px 0 rgba(150,220,140,.15);
+    padding:16px 18px; position:relative;
+  }
+  .uiPanel::before{  /* gilded corner ticks */
+    content:""; position:absolute; inset:6px; border-radius:12px; pointer-events:none;
+    background:
+      linear-gradient(var(--gold),var(--gold)) 0 0/14px 2px no-repeat,
+      linear-gradient(var(--gold),var(--gold)) 0 0/2px 14px no-repeat,
+      linear-gradient(var(--gold),var(--gold)) 100% 0/14px 2px no-repeat,
+      linear-gradient(var(--gold),var(--gold)) 100% 0/2px 14px no-repeat,
+      linear-gradient(var(--gold),var(--gold)) 0 100%/14px 2px no-repeat,
+      linear-gradient(var(--gold),var(--gold)) 0 100%/2px 14px no-repeat,
+      linear-gradient(var(--gold),var(--gold)) 100% 100%/14px 2px no-repeat,
+      linear-gradient(var(--gold),var(--gold)) 100% 100%/2px 14px no-repeat;
+    opacity:.5;
+  }
+  /* decorative flourish rule under section headings */
+  .flourish{ display:flex; align-items:center; justify-content:center; gap:10px; margin:2px 0 14px; opacity:.8; }
+  .flourish::before, .flourish::after{ content:""; height:2px; width:48px; background:linear-gradient(90deg,transparent,var(--gold)); border-radius:2px; }
+  .flourish::after{ transform:scaleX(-1); }
+  .flourish span{ color:var(--gold); font-size:13px; letter-spacing:3px; }
+
+  /* ---------- Title screen: richer forest-canopy atmosphere ---------- */
+  /* hanging vines + lanterns across the top, drawn as their own layer */
+  #titleScreen .canopy{
+    position:absolute; top:0; left:0; right:0; height:46%; pointer-events:none; z-index:1;
+    background:
+      radial-gradient(140px 90px at 12% -30%, rgba(20,44,17,.95), transparent 70%),
+      radial-gradient(180px 110px at 34% -34%, rgba(26,54,22,.9), transparent 70%),
+      radial-gradient(160px 100px at 58% -32%, rgba(20,44,17,.95), transparent 70%),
+      radial-gradient(200px 120px at 82% -36%, rgba(26,54,22,.9), transparent 70%);
+  }
+  #titleScreen .vine{position:absolute; top:0; width:3px; z-index:1; pointer-events:none;
+    background:linear-gradient(rgba(63,125,58,.9),rgba(47,95,43,.5)); border-radius:2px; transform-origin:top;}
+  #titleScreen .lantern{
+    position:absolute; top:0; z-index:1; width:22px; pointer-events:none;
+    display:flex; flex-direction:column; align-items:center;
+    animation:sway 4s ease-in-out infinite alternate;
+  }
+  #titleScreen .lantern .cord{width:2px; background:rgba(90,66,38,.8);}
+  #titleScreen .lantern .glow{
+    width:20px; height:26px; border-radius:8px 8px 10px 10px;
+    background:radial-gradient(circle at 50% 40%, #ffe6a0, #f4a83a 70%, #c9761a);
+    box-shadow:0 0 18px 4px rgba(255,190,80,.55); border:1.5px solid #6b4a1a;
+  }
+  @keyframes sway{ from{transform:rotate(-4deg);} to{transform:rotate(4deg);} }
+  /* mushrooms + a carved sign along the bottom foreground */
+  #titleScreen .forestFloor{
+    position:absolute; left:0; right:0; bottom:0; height:20%; z-index:1; pointer-events:none;
+    background:
+      radial-gradient(10px 6px at 14% 88%, #d0533a 60%, transparent 62%),
+      radial-gradient(7px 5px at 16% 92%, #e0644a 60%, transparent 62%),
+      radial-gradient(12px 7px at 86% 86%, #d0533a 60%, transparent 62%),
+      radial-gradient(8px 5px at 89% 91%, #e0644a 60%, transparent 62%),
+      radial-gradient(9px 6px at 50% 95%, #caa24a 60%, transparent 62%);
+  }
+  #titleScreen h1{ animation:titleGlow 3.5s ease-in-out infinite alternate; }
+  @keyframes titleGlow{ from{text-shadow:0 4px 0 var(--bark),0 8px 18px rgba(0,0,0,.6);} to{text-shadow:0 4px 0 var(--bark),0 8px 26px rgba(244,196,48,.55);} }
+  .tag{color:var(--sky); font-size:14px; margin-bottom:16px; max-width:520px;}
+  /* wooden plate behind the tagline for a crafted look */
+  #titleScreen .tag{
+    background:linear-gradient(rgba(59,42,26,.55),rgba(40,28,16,.55));
+    border:1px solid rgba(111,174,79,.3); border-radius:12px; padding:10px 18px;
+    box-shadow:inset 0 0 20px rgba(0,0,0,.3);
+  }
+  /* grouped home-screen menu */
+  .menuGroup{ margin-top:14px; width:100%; max-width:640px; }
+  .menuLabel{
+    font-size:12px; font-weight:bold; letter-spacing:4px; color:var(--gold); opacity:.9; margin-bottom:12px;
+    text-transform:uppercase; position:relative; text-shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+  .menuLabel::before, .menuLabel::after{
+    content:""; position:absolute; top:50%; width:26%; height:1px;
+    background:linear-gradient(90deg,transparent,rgba(246,196,69,.55));
+  }
+  .menuLabel::before{ left:0; }
+  .menuLabel::after{ right:0; transform:scaleX(-1); }
+  .menuRow{ display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
+  /* MORE MODES: a fixed 3-wide × 2-tall grid instead of a ragged wrap */
+  .menuRow.grid3{ display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; justify-content:center; max-width:660px; margin:0 auto; }
+  .menuRow.grid3 .btn.mode{ width:auto; min-width:0; }
+
+  /* ---------- Character select (list + preview) ---------- */
+  #selectLayout{
+    display:flex; gap:20px; width:100%; max-width:820px; height:min(60vh,460px);
+    align-items:stretch;
+  }
+  #brawlerList{
+    flex:0 0 240px; overflow-y:auto; padding:4px 8px 4px 4px;
+    display:flex; flex-direction:column; gap:8px;
+    scrollbar-width:thin; scrollbar-color:var(--gold) transparent;
+  }
+  /* character-select sort/filter toolbar */
+  #selectTools{
+    display:flex; gap:16px; align-items:center; justify-content:center; flex-wrap:wrap;
+    width:100%; max-width:820px; margin-bottom:12px; padding:10px 14px;
+    background:linear-gradient(rgba(30,54,24,.55),rgba(18,37,15,.6)); border:1px solid rgba(246,196,69,.2);
+    border-radius:14px; box-shadow:inset 0 1px 0 rgba(150,220,140,.12);
+  }
+  .selFilters{ display:flex; gap:6px; flex-wrap:wrap; }
+  .selChip{
+    font-family:inherit; font-size:12px; font-weight:bold; cursor:pointer;
+    color:var(--cream); background:rgba(18,37,15,.6); border:1px solid rgba(246,196,69,.35);
+    border-radius:20px; padding:5px 12px; letter-spacing:.3px;
+  }
+  .selChip:hover{ background:rgba(40,70,30,.8); }
+  .selChip.on{ background:var(--gold); color:#2a1e08; border-color:var(--gold); }
+  .selSort{ font-size:12px; letter-spacing:1px; color:var(--cream); opacity:.85; display:flex; align-items:center; gap:6px; }
+  .selSort select{
+    font-family:inherit; font-size:12px; font-weight:bold; color:var(--cream); letter-spacing:.3px;
+    background:rgba(18,37,15,.6); border:1px solid rgba(246,196,69,.35); border-radius:20px; padding:5px 12px; cursor:pointer;
+  }
+  .selSort select:hover{ background:rgba(40,70,30,.8); }
+  .selSort select option{ background:#16250f; color:var(--cream); }
+  #brawlerList::-webkit-scrollbar{width:8px;}
+  #brawlerList::-webkit-scrollbar-thumb{background:var(--gold); border-radius:4px;}
+  #brawlerList::-webkit-scrollbar-track{background:rgba(0,0,0,.2);}
+  .brow{
+    display:flex; align-items:center; gap:10px; cursor:pointer; text-align:left;
+    background:linear-gradient(rgba(243,234,214,.94),rgba(231,217,184,.94)); color:#3b2a1a;
+    border:3px solid transparent; border-radius:12px; padding:7px 10px;
+    box-shadow:0 4px 12px rgba(0,0,0,.3); transition:transform .08s, border-color .1s;
+  }
+  .brow:hover{transform:translateX(4px);}
+  .brow.sel{border-color:var(--gold); box-shadow:0 4px 16px rgba(244,196,48,.4);}
+  .brow canvas{width:44px; height:44px; border-radius:50%; flex:0 0 44px;
+    background:radial-gradient(circle at 50% 35%,#37603a,#1d3a1c); box-shadow:inset 0 -3px 6px rgba(0,0,0,.3);}
+  .brow .bn{font-size:15px; font-weight:bold; line-height:1.1;}
+  .brow .br{font-size:10px; letter-spacing:1.5px; text-transform:uppercase; opacity:.6;}
+  .brow.locked{filter:grayscale(.7) brightness(.72); cursor:not-allowed;}
+  .brow .lockTag{margin-left:auto; font-size:10px; font-weight:bold; color:#7a3b12; white-space:nowrap;}
+  /* right preview panel */
+  #brawlerPreview{
+    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+    background:
+      radial-gradient(circle at 50% 20%, rgba(255,220,120,.10), transparent 55%),
+      radial-gradient(circle at 50% 25%, rgba(255,255,255,.08), rgba(0,0,0,.28));
+    border:2px solid rgba(244,196,48,.35); border-radius:18px; padding:18px;
+    box-shadow:inset 0 0 40px rgba(0,0,0,.35), inset 0 2px 0 rgba(255,230,150,.25), 0 12px 30px rgba(0,0,0,.4);
+    overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--gold) transparent;
+  }
+  #brawlerPreview::-webkit-scrollbar{width:8px;}
+  #brawlerPreview::-webkit-scrollbar-thumb{background:var(--gold); border-radius:4px;}
+  #brawlerPreview::-webkit-scrollbar-track{background:rgba(0,0,0,.2);}
+  /* when nothing is picked yet, keep the hint vertically centered */
+  #brawlerPreview:has(#previewCard.hidden){justify-content:center;}
+  #previewEmpty{opacity:.5; font-size:16px; letter-spacing:1px;}
+  #previewCard{display:flex; flex-direction:column; align-items:center; width:100%; max-width:300px; flex:0 0 auto;}
+  #previewCard.hidden{display:none;}
+  #previewArt{width:128px; height:128px; margin-bottom:2px;
+    filter:drop-shadow(0 8px 14px rgba(0,0,0,.5));}
+  #previewName{font-size:24px; font-weight:bold; color:var(--gold); text-shadow:0 3px 0 var(--bark);}
+  #previewRole{font-size:12px; letter-spacing:3px; text-transform:uppercase; opacity:.7; margin-bottom:12px;}
+  .pvStat{display:flex; align-items:center; gap:10px; width:100%; margin-bottom:7px;}
+  .pvLbl{font-size:11px; letter-spacing:1px; text-transform:uppercase; opacity:.75; width:52px; text-align:right;}
+  .pvBar{flex:1; height:12px; border-radius:7px; background:rgba(0,0,0,.4); overflow:hidden; box-shadow:inset 0 1px 3px rgba(0,0,0,.5);}
+  .pvBar>i{display:block; height:100%; border-radius:7px;}
+  #pvHp{background:linear-gradient(90deg,#7ee06b,#3f7d3a);}
+  #pvDps{background:linear-gradient(90deg,#ffb066,#e0552f);}
+  #pvSpd{background:linear-gradient(90deg,#8fd8ff,#2e6fb0);}
+  .pvMove{font-size:12.5px; line-height:1.4; width:100%; margin-top:8px;
+    background:rgba(18,37,15,.35); border-radius:8px; padding:7px 10px;}
+  .pvMove b{display:block; font-size:12px; letter-spacing:.5px; margin-bottom:2px; color:var(--cream);}
+  .pvMove .super{color:var(--gold);}
+  #previewCard .btn{margin-top:14px;}
+
+
+  /* ---------- Trophy Road (vertical trail) ---------- */
+  #roadTrack{
+    display:flex; flex-direction:column; align-items:stretch; gap:0;
+    width:100%; max-width:420px; max-height:58vh; overflow-y:auto;
+    padding:16px 18px; border-radius:16px;
+    background:linear-gradient(rgba(30,54,24,.5),rgba(18,37,15,.55)); border:1px solid rgba(246,196,69,.2);
+    box-shadow:inset 0 1px 0 rgba(150,220,140,.12);
+    scrollbar-width:thin; scrollbar-color:var(--gold) transparent;
+  }
+  #roadTrack::-webkit-scrollbar{width:8px;}
+  #roadTrack::-webkit-scrollbar-thumb{background:var(--gold); border-radius:4px;}
+  .node{
+    display:flex; flex-direction:row; align-items:center; gap:14px; position:relative;
+    padding:8px 4px; width:100%; text-align:left;
+  }
+  /* the vertical connecting trail runs through the dot column */
+  .node .bar{
+    position:absolute; left:33px; top:-8px; width:5px; height:22px; transform:translateX(-50%);
+    background:rgba(255,255,255,.14); border-radius:3px; box-shadow:inset 0 1px 2px rgba(0,0,0,.4);
+  }
+  .node.done .bar{ background:linear-gradient(#f4c430,#e0a800); box-shadow:0 0 8px rgba(244,196,48,.5); }
+  .node:first-child .bar{ display:none; }
+  .node .dot{
+    width:56px; height:56px; flex:0 0 56px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:26px; border:3px solid rgba(255,255,255,.25); background:rgba(18,37,15,.5);
+    box-shadow:0 4px 10px rgba(0,0,0,.35); transition:transform .1s; z-index:1;
+  }
+  .node:hover .dot{ transform:scale(1.08); }
+  .node.done .dot{border-color:var(--gold); background:linear-gradient(#f4c430,#e0a800); color:#3b2a1a;
+    box-shadow:0 4px 10px rgba(0,0,0,.35), 0 0 16px rgba(244,196,48,.6);}
+  .node.next .dot{border-color:var(--sky); animation:pulse 1.2s infinite;}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(143,211,168,.5);}50%{box-shadow:0 0 0 8px rgba(143,211,168,0);}}
+  .node .info{ display:flex; flex-direction:column; gap:2px; flex:1; min-width:0; }
+  .node .lab{font-size:14px; font-weight:bold; color:var(--cream);}
+  .node .cost{font-size:11px; color:var(--gold); opacity:.85;}
+  .node.done .cost{ color:#8fd3a8; }
+  .skinChip{
+    font-family:inherit; cursor:pointer; border:2px solid rgba(255,255,255,.2);
+    background:rgba(18,37,15,.55); color:var(--cream); border-radius:10px;
+    padding:6px 10px; font-size:12px; display:flex; align-items:center; gap:6px;
+  }
+  .skinChip .sw{width:12px; height:12px; border-radius:50%; background:var(--sc); box-shadow:inset 0 -2px 3px rgba(0,0,0,.3);}
+  .skinChip:hover{border-color:rgba(244,196,48,.5);}
+  .skinChip.on{border-color:var(--gold); background:rgba(244,196,48,.18);}
+
+  /* ---------- Quests ---------- */
+  .questRow{display:flex; align-items:center; gap:12px; text-align:left; position:relative; overflow:hidden;
+    background:linear-gradient(rgba(34,52,28,.94),rgba(18,30,15,.94)); color:var(--cream);
+    border:1px solid rgba(143,211,168,.3); border-radius:14px; padding:12px 14px 12px 18px;
+    box-shadow:0 6px 18px rgba(0,0,0,.4), inset 0 1px 0 rgba(150,220,140,.18);
+    transition:transform .1s, box-shadow .1s;}
+  .questRow::before{ content:""; position:absolute; left:0; top:0; bottom:0; width:5px; background:var(--moss); }
+  .questRow:hover{ transform:translateX(3px); box-shadow:0 8px 22px rgba(0,0,0,.45), inset 0 1px 0 rgba(150,220,140,.18); }
+  .questRow.qeasy{border-color:rgba(143,211,168,.5);} .questRow.qeasy::before{ background:#8fd3a8; }
+  .questRow.qmed{border-color:rgba(244,196,48,.5);} .questRow.qmed::before{ background:var(--gold); }
+  .questRow.qhard{border-color:rgba(224,75,58,.6);} .questRow.qhard::before{ background:var(--danger); }
+  .questRow.qmega{border-color:rgba(214,150,255,.7); background:linear-gradient(90deg,rgba(90,40,130,.55),rgba(40,20,60,.35)); box-shadow:0 0 18px rgba(180,110,255,.35);} .questRow.qmega::before{ background:linear-gradient(180deg,#e6b3ff,#8a3fe0); width:6px; }
+  .questRow.qmega .qtext{ color:#f0d6ff; } .questRow.qmega .qrew{ color:#e6b3ff; max-width:150px; }
+  .questRow .qico{font-size:24px; flex:0 0 30px; text-align:center;}
+  .questRow .qmid{flex:1;}
+  .questRow .qtext{font-size:14px; font-weight:bold; margin-bottom:5px;}
+  .questRow .qbar{height:9px; border-radius:6px; background:rgba(0,0,0,.4); overflow:hidden;}
+  .questRow .qbar>i{display:block; height:100%; background:linear-gradient(90deg,#7ee06b,#3f7d3a); border-radius:6px;}
+  .questRow .qrew{flex:0 0 auto; font-size:12px; color:#ffcf6b; font-weight:bold; text-align:right; max-width:120px;}
+  .questRow .qprog{font-size:11px; opacity:.7; margin-top:3px;}
+
+  /* ---------- Brawler Codex ---------- */
+  .cxCard{display:flex; flex-direction:column; gap:8px; text-align:left; padding:12px;
+    border-radius:14px; background:linear-gradient(rgba(34,52,28,.7),rgba(12,26,12,.72));
+    border:1px solid rgba(246,196,69,.22);
+    box-shadow:0 6px 16px rgba(0,0,0,.35), inset 0 1px 0 rgba(150,220,140,.16);
+    transition:transform .1s, box-shadow .1s;}
+  .cxCard:hover{ transform:translateY(-2px); box-shadow:0 10px 22px rgba(0,0,0,.4), inset 0 1px 0 rgba(150,220,140,.16); }
+  .cxCard.cxLocked{opacity:.5; filter:grayscale(.6);}
+  .cxHead{display:flex; align-items:center; gap:10px;}
+  .cxHead canvas{width:56px; height:56px; flex:0 0 56px;}
+  .cxName{font-size:16px; font-weight:bold; line-height:1.1;}
+  .cxRole{font-size:11px; opacity:.75; letter-spacing:1px;}
+  .cxTier{margin-left:auto; font-size:11px; font-weight:bold; white-space:nowrap;}
+  .cxBlurb{font-size:12px; opacity:.82; line-height:1.35;}
+  .cxMove{font-size:11px; line-height:1.3;}
+  .cxMove b{color:#cfe8bf;}
+  .cxMove .super{color:#ffcf6b;}
+  .cxWL{font-size:11px; opacity:.8; margin-top:2px;}
+  .cxProg{font-size:11px; opacity:.85; display:flex; align-items:center; gap:8px;}
+  .cxProgBar{flex:1; height:7px; border-radius:5px; background:rgba(0,0,0,.4); overflow:hidden;}
+  .cxProgBar>i{display:block; height:100%; border-radius:5px;}
+  .cxLoreWrap{display:flex; flex-direction:column; gap:5px; margin-top:2px;}
+  .cxLore{font-size:11.5px; line-height:1.35; display:flex; gap:7px; align-items:flex-start;}
+  .cxLore .cxLoreIco{flex:0 0 auto;}
+  .cxLore.locked{opacity:.4;}
+
+  /* ---------- Stats ---------- */
+  .stTile{min-width:120px; padding:14px 18px; border-radius:14px; text-align:center;
+    background:linear-gradient(rgba(30,54,24,.7),rgba(12,26,12,.72)); border:1px solid rgba(246,196,69,.28);
+    box-shadow:0 6px 16px rgba(0,0,0,.35), inset 0 1px 0 rgba(150,220,140,.18);}
+  .stTile .stNum{font-size:30px; font-weight:bold; color:var(--gold); text-shadow:0 2px 6px rgba(0,0,0,.5);}
+  .stTile .stLbl{font-size:11px; letter-spacing:1px; opacity:.75; margin-top:4px;}
+  .stRow{display:flex; align-items:center; gap:10px; text-align:left; padding:8px 12px;
+    border-radius:10px; background:rgba(12,26,12,.5); margin-bottom:8px;}
+  .stRow canvas{width:40px; height:40px; flex:0 0 40px;}
+  .stRow .srName{font-weight:bold; font-size:13px;}
+  .stRow .srMeta{font-size:11px; opacity:.75;}
+  .stRow .srWr{margin-left:auto; text-align:right; font-size:12px;}
+  .stRow .srWr b{color:#7ee06b;}
+
+  /* ---------- Character-select customization (skins + emotes) ---------- */
+  #pvCustom{width:100%; margin:8px 0 4px;}
+  .pvCustomBlock{margin-bottom:8px;}
+  .pvCustomBlock .pvcLbl{font-size:10px; letter-spacing:2px; opacity:.6; margin-bottom:5px; text-align:left;}
+  .pvcChips{display:flex; gap:6px; flex-wrap:wrap;}
+  .pvcChip{display:inline-flex; align-items:center; gap:6px; font-size:11px; padding:4px 9px;
+    border-radius:20px; border:1px solid rgba(255,255,255,.15); background:rgba(0,0,0,.28);
+    color:#eaf3e0; cursor:pointer; transition:transform .08s, border-color .12s;}
+  .pvcChip:hover{transform:translateY(-1px);}
+  .pvcChip.on{border-color:var(--gold); box-shadow:0 0 0 1px var(--gold);}
+  .pvcChip .sw{width:11px; height:11px; border-radius:50%; display:inline-block;}
+  .pvcEmpty{font-size:11px; opacity:.45; font-style:italic;}
+
+  /* ---------- Siren Sanctuary: an underwater grotto ---------- */
+  #sanctuaryScreen{
+    /* tall content (mythics + upgrades) can exceed the viewport — scroll instead of clipping the BACK button */
+    justify-content:flex-start; overflow-y:auto; padding-top:28px; padding-bottom:28px;
+    background:
+      radial-gradient(120% 90% at 50% -10%, rgba(60,150,180,.35), transparent 55%),
+      linear-gradient(180deg, #0a2a3a 0%, #06202e 55%, #04141d 100%);
+  }
+  #sanctuaryScreen h1{color:#aef0ff; text-shadow:0 3px 0 #0a3444, 0 0 18px rgba(120,220,255,.4);}
+  #sanctuaryScreen .bubbles{position:absolute; inset:0; overflow:hidden; pointer-events:none;}
+  #sanctuaryScreen .bubbles i{position:absolute; bottom:-30px; width:14px; height:14px; border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, rgba(255,255,255,.8), rgba(150,220,255,.15));
+    animation:rise linear infinite;}
+  #sanctuaryScreen .bubbles i:nth-child(1){left:12%; animation-duration:9s; }
+  #sanctuaryScreen .bubbles i:nth-child(2){left:28%; width:9px;height:9px; animation-duration:7s; animation-delay:-2s;}
+  #sanctuaryScreen .bubbles i:nth-child(3){left:47%; width:18px;height:18px; animation-duration:11s; animation-delay:-4s;}
+  #sanctuaryScreen .bubbles i:nth-child(4){left:63%; width:7px;height:7px; animation-duration:6s; animation-delay:-1s;}
+  #sanctuaryScreen .bubbles i:nth-child(5){left:78%; width:12px;height:12px; animation-duration:8.5s; animation-delay:-3s;}
+  #sanctuaryScreen .bubbles i:nth-child(6){left:90%; width:15px;height:15px; animation-duration:10s; animation-delay:-5s;}
+  @keyframes rise{ to{ transform:translateY(-102vh) translateX(20px); opacity:0; } }
+  .snCard{display:flex; align-items:center; gap:10px; text-align:left; padding:11px; position:relative;
+    border-radius:14px; background:rgba(10,40,55,.7); border:1px solid rgba(120,210,240,.22);}
+  .snCard.owned{border-color:#5fd6c0; box-shadow:0 0 0 1px #5fd6c0 inset;}
+  .snCard.snLocked{opacity:.45; filter:grayscale(.5);}
+  .snCard canvas{width:46px; height:46px; flex:0 0 46px;}
+  .snName{font-size:13px; font-weight:bold; color:#dffaff;}
+  .snUp{font-size:12px; color:#8fe6ff; font-weight:bold;}
+  /* Skin Gallery */
+  .glCell{position:relative; width:96px; cursor:pointer; border-radius:12px; padding:6px 4px 8px; background:rgba(20,26,32,.7);
+    border:1px solid rgba(255,255,255,.1); transition:transform .12s, box-shadow .12s;}
+  .glCell:hover{transform:translateY(-3px); box-shadow:0 8px 20px rgba(0,0,0,.45);}
+  .glCell canvas{width:80px; height:80px;}
+  .glCell .glName{font-size:10px; font-weight:bold; margin-top:2px; line-height:1.15;}
+  .glCell .glChar{font-size:9px; opacity:.6;}
+  .glCell .glDot{position:absolute; top:5px; right:6px; width:9px; height:9px; border-radius:50%; box-shadow:0 0 6px currentColor;}
+  .glCell.glLocked{cursor:default; background:rgba(16,20,24,.6); border-style:dashed; border-color:rgba(255,255,255,.14);}
+  .glCell.glLocked:hover{transform:none; box-shadow:none;}
+  .glCell .glQ{width:80px; height:80px; display:flex; align-items:center; justify-content:center; font-size:34px; font-weight:bold; color:rgba(180,190,200,.35);}
+  /* Market hub: shop stalls */
+  .mktRow{display:flex; gap:18px; justify-content:center; flex-wrap:wrap; width:100%; max-width:720px;}
+  .mktStall{width:200px; cursor:pointer; border-radius:16px; padding:18px 14px; background:rgba(20,26,32,.75);
+    border:1px solid rgba(255,255,255,.12); transition:transform .12s, box-shadow .12s, border-color .12s; text-align:center;}
+  .mktStall:hover{transform:translateY(-4px); box-shadow:0 10px 26px rgba(0,0,0,.5); border-color:rgba(255,255,255,.3);}
+  .mktStall .mktIcon{font-size:44px; line-height:1;}
+  .mktStall .mktName{font-size:16px; font-weight:bold; margin-top:8px;}
+  .mktStall .mktDesc{font-size:11px; opacity:.65; margin-top:4px; line-height:1.3;}
+  .mktStall .mktCur{font-size:13px; font-weight:bold; margin-top:8px;}
+  .glFilt{font-size:12px; font-weight:bold; padding:6px 14px; border-radius:20px; cursor:pointer;
+    background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); color:#dfe6ef;}
+  .glFilt.on{background:#f4c430; color:#1a1a1a; border-color:#f4c430;}
+  .snDesc{font-size:11px; opacity:.8; line-height:1.3;}
+  .snBuy{margin-left:auto; flex:0 0 auto; font-size:12px; font-weight:bold; padding:6px 12px; border-radius:20px;
+    border:1px solid #5fd6c0; background:rgba(95,214,192,.14); color:#aef0ff; cursor:pointer; white-space:nowrap;}
+  .snBuy:hover{background:rgba(95,214,192,.28);}
+  .snBuy:disabled{opacity:.4; cursor:not-allowed;}
+  .snBuy.have{border-color:#5fd6c0; background:#2e6f63; color:#dffaff; cursor:default;}
+  /* siren NPC + her speech bubble */
+  #sirenBox{display:flex; align-items:center; gap:14px; justify-content:center;}
+  #sirenArt{filter:drop-shadow(0 6px 14px rgba(0,0,0,.5));}
+  #sirenBubble{max-width:340px; text-align:left; font-size:13px; line-height:1.4; color:#dffaff;
+    background:rgba(10,45,60,.85); border:1px solid rgba(120,220,255,.3); border-radius:14px;
+    padding:10px 14px; position:relative;}
+  #sirenBubble::before{content:''; position:absolute; left:-9px; top:50%; transform:translateY(-50%);
+    border:8px solid transparent; border-right-color:rgba(120,220,255,.3);}
+  /* upgrade cards become vertical tiles in the rotating offer */
+  #sanctuaryGrid .snCard{flex-direction:column; text-align:center; width:200px; align-items:center; gap:8px;}
+  #sanctuaryGrid .snCard canvas{width:60px; height:60px; flex:0 0 60px;}
+  #sanctuaryGrid .snCard .snBuy{margin-left:0; margin-top:4px;}
+  /* mythic section header + card accent in the sanctuary */
+  .snMythHdr{ flex-basis:100%; text-align:center; margin:6px 0 2px; }
+  .snMythHdr span{ color:#e79cff; font-size:14px; letter-spacing:3px; font-weight:bold; text-shadow:0 0 12px rgba(210,110,255,.5); }
+  .snMythHdr small{ display:block; opacity:.7; font-size:11px; margin-top:2px; }
+  #sanctuaryGrid .snCard.snMyth{ border-color:rgba(231,156,255,.5); box-shadow:0 0 18px -6px #c26cff, inset 0 0 22px rgba(90,50,140,.2); }
+  #sanctuaryGrid .snCard.snMyth .snBuy{ border-color:#e79cff; color:#f0d6ff; }
+  .snEmpty{width:200px; display:flex; align-items:center; justify-content:center; text-align:center;
+    padding:20px; border-radius:14px; border:1px dashed rgba(120,210,240,.3); color:#8fe6ff; opacity:.6; font-size:12px; font-style:italic;}
+
+  /* ---------- Silverdome Shop: a spooky midnight carnival ---------- */
+  /* override the green forest overlay with a haunted purple/teal palette */
+  #shopScreen{
+    background:
+      radial-gradient(120% 90% at 50% -20%, rgba(120,60,160,.4), transparent 55%),
+      radial-gradient(circle at 50% 30%, rgba(38,22,54,.99), rgba(10,6,18,.99));
+  }
+  /* replace the tree-line with a jagged haunted skyline + swirling mist */
+  #shopScreen::before{
+    background:
+      radial-gradient(70px 110px at 10% 100%, #0a0612 60%, transparent 62%),
+      radial-gradient(50px 150px at 22% 100%, #140a22 60%, transparent 62%),
+      radial-gradient(90px 130px at 38% 100%, #0a0612 60%, transparent 62%),
+      radial-gradient(60px 170px at 52% 100%, #160c26 60%, transparent 62%),
+      radial-gradient(80px 120px at 68% 100%, #0a0612 60%, transparent 62%),
+      radial-gradient(55px 150px at 82% 100%, #140a22 60%, transparent 62%),
+      radial-gradient(70px 110px at 94% 100%, #0a0612 60%, transparent 62%),
+      linear-gradient(transparent, rgba(6,4,12,.7));
+    opacity:.95;
+  }
+  /* faint drifting spirits instead of warm fireflies */
+  #shopScreen::after{
+    background-image:
+      radial-gradient(2px 2px at 18% 28%, rgba(160,220,210,.7), transparent),
+      radial-gradient(2px 2px at 74% 22%, rgba(190,150,240,.6), transparent),
+      radial-gradient(1.5px 1.5px at 42% 62%, rgba(160,220,210,.55), transparent),
+      radial-gradient(2px 2px at 86% 58%, rgba(190,150,240,.6), transparent),
+      radial-gradient(1.5px 1.5px at 28% 78%, rgba(160,220,210,.5), transparent);
+    animation:spirits 7s ease-in-out infinite alternate;
+  }
+  @keyframes spirits{ from{transform:translateY(0); opacity:.35;} to{transform:translateY(-18px); opacity:.7;} }
+  #shopScreen h1{ color:#cbb6ec; text-shadow:0 0 18px rgba(150,90,200,.7),0 4px 0 #1a0f2a; }
+  /* cobweb corners */
+  .cobweb{position:absolute; width:80px; height:80px; opacity:.3; pointer-events:none; z-index:1;
+    background:radial-gradient(circle at 0 0, transparent 68%, rgba(210,210,230,.5) 69%, transparent 71%),
+      conic-gradient(from 0deg at 0 0, rgba(210,210,230,.35) 0 2deg, transparent 2deg 22deg,
+        rgba(210,210,230,.35) 22deg 24deg, transparent 24deg 44deg,
+        rgba(210,210,230,.35) 44deg 46deg, transparent 46deg 66deg,
+        rgba(210,210,230,.35) 66deg 68deg, transparent 68deg 90deg);}
+  .cobweb.tl{top:6px; left:6px;}
+  .cobweb.tr{top:6px; right:6px; transform:scaleX(-1);}
+
+  #shopKeeper{display:flex; align-items:center; gap:12px; margin:2px 0 6px;}
+  #shopKidArt{background:radial-gradient(circle at 50% 35%, rgba(60,40,90,.6), rgba(10,6,18,.6)); border-radius:14px; box-shadow:0 0 22px rgba(120,70,180,.4);}
+  #shopBubble{
+    position:relative; max-width:340px; text-align:left; background:rgba(20,12,32,.92); color:#e6dcf5;
+    border-radius:12px; padding:8px 12px; font-size:13px; font-style:italic;
+    border:1px solid rgba(180,140,230,.45); box-shadow:0 0 16px rgba(120,70,180,.3);
+  }
+  /* Toybox vendor (warm playful) */
+  #toyboxKeeper{display:flex; align-items:center; gap:14px; justify-content:center; margin:2px 0 6px;}
+  #toyMakerArt{background:radial-gradient(circle at 50% 35%, rgba(255,180,90,.35), rgba(60,30,10,.5)); border-radius:14px; box-shadow:0 0 22px rgba(255,160,60,.35);}
+  #toyboxBubble{position:relative; max-width:340px; text-align:left; background:rgba(48,26,10,.92); color:#ffe6c2;
+    border-radius:12px; padding:8px 12px; font-size:13px; font-style:italic;
+    border:1px solid rgba(255,180,90,.45); box-shadow:0 0 16px rgba(255,150,50,.25);}
+  #toyboxBubble::before{content:''; position:absolute; left:-9px; top:50%; transform:translateY(-50%);
+    border:6px solid transparent; border-right-color:rgba(48,26,10,.92);}
+  /* Nature vendor (green forest) */
+  #natureKeeper{display:flex; align-items:center; gap:14px; justify-content:center; margin:2px 0 6px;}
+  #forestArt{background:radial-gradient(circle at 50% 35%, rgba(120,200,110,.35), rgba(20,50,20,.55)); border-radius:14px; box-shadow:0 0 22px rgba(90,180,80,.4);}
+  #natureBubble{position:relative; max-width:340px; text-align:left; background:rgba(18,38,20,.92); color:#daf5cf;
+    border-radius:12px; padding:8px 12px; font-size:13px; font-style:italic;
+    border:1px solid rgba(120,200,110,.45); box-shadow:0 0 16px rgba(90,180,80,.28);}
+  #natureBubble::before{content:''; position:absolute; left:-9px; top:50%; transform:translateY(-50%);
+    border:6px solid transparent; border-right-color:rgba(18,38,20,.92);}
+  #tokenLine{color:#dfe6ef; font-size:17px; margin:4px 0 12px; letter-spacing:1px;
+    text-shadow:0 0 10px rgba(200,210,230,.5);}
+  #casinoBox{
+    max-width:500px; margin:2px auto 0; padding:12px 16px; border-radius:14px;
+    background:rgba(24,14,38,.7); border:1px solid rgba(190,150,240,.35);
+    box-shadow:inset 0 0 30px rgba(80,40,120,.35), 0 0 20px rgba(0,0,0,.4);
+  }
+  #casinoControls{display:flex; gap:12px; align-items:center; justify-content:center; flex-wrap:wrap;}
+  #casinoControls input, #casinoControls select{
+    font-family:inherit; background:rgba(0,0,0,.45); color:#e6dcf5;
+    border:1px solid rgba(190,150,240,.4); border-radius:6px; padding:3px 5px; margin-left:4px;
+  }
+  /* shop item cards (3 at a time) */
+  #shopOffers{display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin-top:12px;}
+  .shopCard{
+    width:150px; padding:12px 10px; border-radius:16px; cursor:pointer;
+    background:linear-gradient(rgba(30,18,48,.95),rgba(16,9,28,.95));
+    border:2px solid rgba(190,150,240,.4); position:relative;
+    box-shadow:0 6px 20px rgba(0,0,0,.5), inset 0 0 22px rgba(90,50,140,.25);
+    transition:transform .1s, box-shadow .1s, border-color .1s; text-align:center;
+  }
+  .shopCard:hover{transform:translateY(-4px); border-color:#cbb6ec; box-shadow:0 10px 26px rgba(120,70,180,.5), inset 0 0 26px rgba(120,70,160,.35);}
+  .shopCard canvas{width:76px; height:76px; filter:drop-shadow(0 4px 10px rgba(0,0,0,.6));}
+  .shopCard .stype{font-size:9px; letter-spacing:2px; text-transform:uppercase; opacity:.6; margin-bottom:2px;}
+  .shopCard .sname{font-size:13px; font-weight:bold; color:#e6dcf5; line-height:1.15; min-height:32px; display:flex; align-items:center; justify-content:center;}
+  .shopCard .scost{margin-top:8px; font-weight:bold; color:#ffcf6b; font-size:15px;}
+  .shopCard.owned{opacity:.5; cursor:default;}
+  .shopCard.owned:hover{transform:none; border-color:rgba(190,150,240,.4);}
+  .shopCard .ribbon{position:absolute; top:8px; right:-6px; font-size:9px; font-weight:bold;
+    background:#8f5ad0; color:#fff; padding:2px 8px; border-radius:4px; box-shadow:0 2px 6px rgba(0,0,0,.4);}
+  #shopRefresh{margin-top:6px; font-size:11px; opacity:.6; cursor:pointer; text-decoration:underline;}
+  #shopScreen .btn{
+    background:linear-gradient(#8f5ad0,#5f2fa0); color:#f3ead6;
+    box-shadow:0 6px 0 #3a1a68,0 10px 20px rgba(0,0,0,.5);
+  }
+  #shopScreen .btn:active{box-shadow:0 2px 0 #3a1a68;}
+
+  /* ---------- Skin info peek + card info button ---------- */
+  .iBtn{
+    position:absolute; top:6px; right:6px; z-index:3; width:22px; height:22px; border-radius:50%;
+    border:1px solid rgba(255,255,255,.5); background:rgba(0,0,0,.5); color:#fff;
+    font-family:inherit; font-weight:bold; font-size:13px; line-height:1; cursor:pointer; padding:0;
+  }
+  .iBtn:hover{ background:var(--gold); color:#2a1e08; border-color:var(--gold); }
+  #skinPeek{ position:absolute; inset:0; z-index:20; display:flex; align-items:center; justify-content:center;
+    background:rgba(6,10,16,.82); backdrop-filter:blur(3px); }
+  #skinPeek.hidden{ display:none; }
+  #skinPeekCard{ position:relative; display:flex; flex-direction:column; align-items:center; gap:6px;
+    padding:22px 30px; border-radius:20px; background:linear-gradient(rgba(30,54,24,.96),rgba(18,37,15,.98));
+    border:2px solid var(--gold); box-shadow:0 20px 50px rgba(0,0,0,.6), inset 0 0 30px rgba(0,0,0,.4); }
+  #skinPeekClose{ position:absolute; top:8px; right:10px; background:none; border:none; color:var(--cream);
+    font-size:20px; cursor:pointer; opacity:.7; }
+  #skinPeekClose:hover{ opacity:1; }
+  #skinPeekTier{ font-size:12px; letter-spacing:4px; color:var(--gold); }
+  #skinPeekName{ font-size:26px; font-weight:bold; color:var(--cream); }
+  #skinPeekChar{ font-size:13px; opacity:.75; }
+  #skinPeekEmote{ margin-top:8px; font-size:13px; color:#9fd6ff; font-style:italic; max-width:260px; text-align:center; }
+
+  /* ---------- Skin reveal ---------- */
+  #revealRarity{color:var(--gold); text-shadow:0 0 12px currentColor; opacity:0; animation:revFade .5s .1s forwards; letter-spacing:5px;}
+  #revealStage{ position:relative; width:260px; height:260px; display:flex; align-items:center; justify-content:center; }
+  /* radiant burst of rays behind the card */
+  #revealRays{
+    position:absolute; width:440px; height:440px; border-radius:50%; pointer-events:none;
+    background:conic-gradient(from 0deg, rgba(255,220,120,.5) 0 6deg, transparent 6deg 22deg);
+    -webkit-mask:radial-gradient(circle, transparent 78px, #000 82px);
+            mask:radial-gradient(circle, transparent 78px, #000 82px);
+    opacity:0; animation:revRaysIn .5s .15s forwards, revRaysSpin 14s linear infinite;
+  }
+  @keyframes revRaysIn{ to{opacity:.55;} }
+  @keyframes revRaysSpin{ to{transform:rotate(360deg);} }
+  #revealScreen.common #revealRays{ background:conic-gradient(from 0deg, rgba(160,220,255,.45) 0 6deg, transparent 6deg 22deg); }
+  #revealCard{
+    position:relative; width:220px; height:220px; border-radius:20px;
+    display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(circle at 50% 40%, rgba(255,255,255,.16), rgba(0,0,0,.28));
+    border:3px solid var(--gold); box-shadow:0 0 50px -4px var(--gold), inset 0 0 30px rgba(0,0,0,.4);
+    transform:scale(.2) rotate(-14deg); opacity:0; animation:revPop .6s cubic-bezier(.2,1.5,.45,1) forwards;
+    overflow:hidden; z-index:1;
+  }
+  #revealCard::before{
+    content:""; position:absolute; top:-60%; left:-30%; width:60%; height:220%;
+    background:linear-gradient(115deg, transparent, rgba(255,255,255,.6), transparent);
+    transform:rotate(8deg); animation:revShine 1.6s .5s ease-in-out infinite;
+  }
+  #revealArt{position:relative; z-index:1;}
+  /* sparks that shoot outward from the card on reveal */
+  #revealSparks{ position:absolute; inset:0; pointer-events:none; z-index:2; }
+  #revealSparks i{
+    position:absolute; top:50%; left:50%; width:8px; height:8px; margin:-4px; border-radius:50%;
+    background:radial-gradient(circle, #fff, var(--gold)); opacity:0;
+    animation:revSpark .7s var(--d,0s) ease-out forwards;
+  }
+  #revealScreen.common #revealSparks i{ background:radial-gradient(circle, #fff, var(--sky)); }
+  @keyframes revSpark{
+    0%{ opacity:0; transform:rotate(var(--a)) translateX(20px) scale(.4); }
+    30%{ opacity:1; }
+    100%{ opacity:0; transform:rotate(var(--a)) translateX(150px) scale(1); }
+  }
+  #revealName, #revealChar{opacity:0; animation:revFade .5s .55s forwards;}
+  @keyframes revPop{0%{transform:scale(.2) rotate(-14deg);opacity:0;}55%{transform:scale(1.12) rotate(3deg);opacity:1;}100%{transform:scale(1) rotate(0);opacity:1;}}
+  @keyframes revFade{to{opacity:1;}}
+  @keyframes revShine{0%{left:-40%;}55%,100%{left:130%;}}
+  #revealScreen.common #revealRarity{color:var(--sky);}
+  #revealScreen.common #revealCard{border-color:var(--sky); box-shadow:0 0 40px -6px var(--sky), inset 0 0 30px rgba(0,0,0,.4);}
+  /* silverdome tier: cool silver treatment */
+  #revealScreen.silver #revealRarity{ color:#dfe6ef; }
+  #revealScreen.silver #revealRays{ background:conic-gradient(from 0deg, rgba(223,230,239,.5) 0 6deg, transparent 6deg 22deg); }
+  #revealScreen.silver #revealCard{ border-color:#dfe6ef; box-shadow:0 0 50px -4px #dfe6ef, inset 0 0 30px rgba(0,0,0,.4); }
+  #revealScreen.silver #revealSparks i{ background:radial-gradient(circle, #fff, #cfd6e2); }
+  #revealScreen.silver #revealName{ color:#eef2f7; }
+  /* mythic tier: prismatic, the rarest treatment */
+  #revealScreen.mythic #revealRarity{ color:#ffd6ff; text-shadow:0 0 14px #d66cff, 0 0 24px #6cc6ff; }
+  #revealScreen.mythic #revealRays{
+    background:conic-gradient(from 0deg, #ff6cc4 0 4deg, transparent 4deg 14deg, #6cc6ff 14deg 18deg, transparent 18deg 30deg);
+    opacity:0; animation:revRaysIn .5s .15s forwards, revRaysSpin 9s linear infinite;
+  }
+  #revealScreen.mythic #revealCard{
+    border-color:#e79cff;
+    box-shadow:0 0 60px -2px #c26cff, 0 0 40px -6px #6cc6ff, inset 0 0 30px rgba(0,0,0,.4);
+  }
+  #revealScreen.mythic #revealSparks i{ background:radial-gradient(circle, #fff, #e79cff); }
+  #revealScreen.mythic #revealName{ color:#ffe0ff; text-shadow:0 0 12px rgba(210,110,255,.6); }
+
+  /* ---------- Reveal SUSPENSE phase: a face-down mystery card shakes + charges up, then flips to the skin ---------- */
+  #revealCardBack{
+    position:absolute; width:220px; height:220px; border-radius:20px; z-index:3;
+    display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(circle at 50% 38%, #3a2f5e, #1a1330 70%, #0e0a1e);
+    border:3px solid var(--gold); box-shadow:0 0 40px -6px var(--gold), inset 0 0 30px rgba(0,0,0,.5);
+    font-size:96px; color:var(--gold); text-shadow:0 0 18px currentColor; font-weight:bold;
+    opacity:0; pointer-events:none;
+  }
+  #revealCardBack::before{
+    content:""; position:absolute; top:-60%; left:-30%; width:60%; height:220%;
+    background:linear-gradient(115deg, transparent, rgba(255,255,255,.5), transparent);
+    transform:rotate(8deg); animation:revShine 1.1s ease-in-out infinite;
+  }
+  /* while suspense is on: show the shaking back, hide the final card/rays/sparks/labels */
+  #revealScreen.suspense #revealCardBack{ opacity:1; animation:revBackCharge 1.8s ease-in forwards; }
+  #revealScreen.suspense #revealCard, #revealScreen.suspense #revealRays,
+  #revealScreen.suspense #revealSparks, #revealScreen.suspense #revealName,
+  #revealScreen.suspense #revealChar, #revealScreen.suspense #revealRarity{ animation:none !important; opacity:0 !important; }
+  #revealScreen.suspense #revealEquip, #revealScreen.suspense #revealLater{ opacity:0; pointer-events:none; }
+  #revealEquip, #revealLater{ transition:opacity .3s; }
+  /* the back charges up: shakes harder + swells, then snaps small right before the flip */
+  @keyframes revBackCharge{
+    0%{ transform:scale(.4) rotate(-8deg); opacity:0; }
+    10%{ transform:scale(1) rotate(0); opacity:1; }
+    20%{ transform:scale(1.01) rotate(-1.5deg); }
+    28%{ transform:scale(1.02) rotate(1.5deg); }
+    36%{ transform:scale(1.02) rotate(-2deg); }
+    44%{ transform:scale(1.03) rotate(2.2deg); }
+    52%{ transform:scale(1.03) rotate(-2.6deg); }
+    60%{ transform:scale(1.04) rotate(3deg); }
+    68%{ transform:scale(1.05) rotate(-3.4deg); }
+    76%{ transform:scale(1.06) rotate(3.8deg); }
+    84%{ transform:scale(1.07) rotate(-4.4deg); }
+    92%{ transform:scale(1.16) rotate(0deg); }        /* swell right before the pop */
+    100%{ transform:scale(.05) rotate(0deg); opacity:0; }  /* snap away -> the real card pops in */
+  }
+  #revealScreen.mythic #revealCardBack{ border-color:#e79cff; color:#ffd6ff; box-shadow:0 0 50px -2px #c26cff, inset 0 0 30px rgba(0,0,0,.5); }
+  #revealScreen.silver #revealCardBack{ border-color:#dfe6ef; color:#eef2f7; box-shadow:0 0 44px -4px #dfe6ef, inset 0 0 30px rgba(0,0,0,.5); }
+  #revealScreen.common #revealCardBack{ border-color:var(--sky); color:var(--sky); box-shadow:0 0 40px -6px var(--sky), inset 0 0 30px rgba(0,0,0,.5); }
+
+  /* ---------- Skin Pack roulette ---------- */
+  #packScreen{ background:radial-gradient(120% 90% at 50% 30%, #2a1444, #120720 70%, #08040f 100%); }
+  #packReel{ position:relative; width:min(92vw,540px); height:150px; overflow:hidden; border-radius:14px;
+    border:2px solid rgba(210,140,255,.5); box-shadow:0 0 40px -8px #a06aff, inset 0 0 30px rgba(0,0,0,.5);
+    background:rgba(10,6,20,.6); -webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent); mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent); }
+  #packStrip{ display:flex; gap:12px; position:absolute; top:15px; left:0; will-change:transform; }
+  #packStrip .pcell{ width:120px; height:120px; flex:0 0 120px; border-radius:12px; background:rgba(255,255,255,.05);
+    border:1px solid rgba(210,140,255,.3); display:flex; align-items:center; justify-content:center; }
+  #packStrip .pcell canvas{ width:104px; height:104px; }
+  #packMarker{ position:absolute; top:0; bottom:0; left:50%; width:3px; transform:translateX(-50%);
+    background:linear-gradient(#ffd6ff,#a06aff); box-shadow:0 0 12px #d66cff; border-radius:2px; }
+  #packMarker::before,#packMarker::after{ content:""; position:absolute; left:50%; transform:translateX(-50%);
+    border:7px solid transparent; }
+  #packMarker::before{ top:-2px; border-top-color:#ffd6ff; }
+  #packMarker::after{ bottom:-2px; border-bottom-color:#ffd6ff; }
+
+  /* ---------- HUD ---------- */
+  #hud{
+    position:absolute; top:14px; left:14px; right:14px; z-index:5;
+    display:flex; justify-content:space-between; align-items:flex-start;
+    pointer-events:none; font-weight:bold;
+  }
+  .panel{
+    background:rgba(18,37,15,.5); border:1.5px solid rgba(244,196,48,.35);
+    border-radius:12px; padding:7px 11px; min-width:150px;
+    backdrop-filter:blur(3px);
+  }
+  .panel .name{font-size:12px; letter-spacing:1.5px; opacity:.8; margin-bottom:5px;}
+  .bar{height:12px; border-radius:8px; background:rgba(0,0,0,.45); overflow:hidden; margin-bottom:6px; position:relative;}
+  .bar>i{display:block; height:100%; width:100%; transition:width .12s;}
+  .hp>i{background:linear-gradient(90deg,#7ee06b,#3f7d3a);}
+  .sp>i{background:linear-gradient(90deg,#ffe36b,#f4c430); width:0%;}
+  .bar .lbl{position:absolute; inset:0; font-size:9px; text-align:center; line-height:12px; color:#fff; text-shadow:0 1px 1px #000; letter-spacing:1px;}
+  #centerHud{position:absolute; top:12px; left:50%; transform:translateX(-50%); z-index:5; text-align:center; pointer-events:none; display:flex; flex-direction:column; align-items:center; gap:3px;}
+  /* status pill (storm / ember state) — compact, subtle, its own shape */
+  #timer{
+    font-size:12.5px; font-weight:bold; letter-spacing:1px; color:var(--gold);
+    background:rgba(18,37,15,.55); border:1px solid rgba(244,196,48,.3);
+    padding:3px 12px; border-radius:20px; backdrop-filter:blur(3px);
+  }
+  /* score readout — plainer text so it reads differently from the status pill */
+  #scoreLine{font-size:11px; color:var(--cream); opacity:.7; letter-spacing:.5px;}
+
+  #controls{
+    position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+    z-index:5; font-size:12px; color:var(--cream); opacity:.75; text-align:center;
+    background:rgba(18,37,15,.5); padding:6px 14px; border-radius:10px; pointer-events:none;
+  }
+  #controls b{color:var(--gold);}
+  kbd{background:#f3ead6; color:#3b2a1a; border-radius:5px; padding:1px 6px; font-family:inherit; font-weight:bold; box-shadow:0 2px 0 #a97c00; font-size:11px;}
+
+  #practiceBar{
+    position:absolute; top:12px; left:50%; transform:translateX(-50%);
+    z-index:6; display:flex; gap:8px;
+  }
+  #practiceBar button{
+    font-family:inherit; font-size:12px; font-weight:bold; color:var(--cream);
+    background:rgba(18,37,15,.82); border:1px solid rgba(246,196,69,.5); border-radius:9px;
+    padding:7px 12px; cursor:pointer; letter-spacing:.5px;
+  }
+  #practiceBar button:hover{ background:rgba(40,70,30,.92); border-color:var(--gold); }
+  #practiceBar button.on{ background:var(--gold); color:#2a1e08; border-color:var(--gold); }
+
+  #tutorialPrompt{
+    position:absolute; top:64px; left:50%; transform:translateX(-50%);
+    z-index:7; display:flex; align-items:center; gap:12px; max-width:min(90vw,620px);
+    background:rgba(12,26,12,.92); border:2px solid rgba(143,211,255,.7); border-radius:14px;
+    padding:12px 18px; box-shadow:0 6px 22px rgba(0,0,0,.55); animation:tutPulse 2.2s ease-in-out infinite;
+  }
+  #tutorialPrompt #tutText{ font-family:inherit; font-size:15px; font-weight:bold; color:var(--cream); letter-spacing:.4px; line-height:1.35; text-align:left; }
+  #tutorialPrompt #tutSkip{
+    font-family:inherit; font-size:11px; font-weight:bold; color:var(--cream); white-space:nowrap;
+    background:rgba(18,37,15,.9); border:1px solid rgba(246,196,69,.5); border-radius:8px; padding:6px 10px; cursor:pointer;
+  }
+  #tutorialPrompt #tutSkip:hover{ background:rgba(40,70,30,.95); border-color:var(--gold); }
+  @keyframes tutPulse{ 0%,100%{ border-color:rgba(143,211,255,.55); } 50%{ border-color:rgba(143,211,255,1); } }
+
+  #banner{
+    position:absolute; top:38%; left:50%; transform:translate(-50%,-50%) scale(.4);
+    z-index:8; font-size:clamp(40px,9vw,90px); font-weight:bold;
+    letter-spacing:3px; opacity:0; pointer-events:none;
+    color:var(--gold);
+    -webkit-text-stroke:2px rgba(40,26,8,.85);
+    text-shadow:0 5px 0 var(--bark), 0 10px 24px rgba(0,0,0,.7), 0 0 26px rgba(244,196,48,.5);
+    transition:opacity .25s;
+  }
+  #banner.show{ opacity:1; animation:bannerPop .45s cubic-bezier(.2,1.4,.4,1) both; }
+  @keyframes bannerPop{
+    0%{ transform:translate(-50%,-50%) scale(.3) rotate(-8deg); }
+    60%{ transform:translate(-50%,-50%) scale(1.12) rotate(-3deg); }
+    100%{ transform:translate(-50%,-50%) scale(1) rotate(-3deg); }
+  }
+  /* color variants for different callouts */
+  #banner[data-kind="win"]{ color:#8fe6a0; text-shadow:0 5px 0 #1c3a1a,0 10px 24px rgba(0,0,0,.7),0 0 30px rgba(120,240,140,.6); }
+  #banner[data-kind="lose"]{ color:#ff7a6a; text-shadow:0 5px 0 #3a0f0f,0 10px 24px rgba(0,0,0,.7),0 0 30px rgba(255,90,70,.55); }
+  #banner[data-kind="ko"]{ color:#ffd23a; -webkit-text-stroke:3px rgba(60,20,8,.9); text-shadow:0 5px 0 #5a1e08,0 10px 24px rgba(0,0,0,.75),0 0 30px rgba(255,140,60,.6); }
+  #banner[data-kind="pearl"]{ color:#8fe6ff; text-shadow:0 5px 0 #0a2a34,0 10px 24px rgba(0,0,0,.7),0 0 30px rgba(120,220,255,.6); }
+  #banner[data-kind="super"]{ color:#ffe36b; -webkit-text-stroke:2px rgba(80,40,8,.85); text-shadow:0 4px 0 #6a3a08,0 10px 24px rgba(0,0,0,.7),0 0 34px rgba(255,210,90,.7); }
+  #banner[data-kind="map"]{ color:#eafcff; font-size:clamp(28px,6vw,58px); -webkit-text-stroke:1px rgba(20,40,20,.7); text-shadow:0 4px 0 #1c3a1a,0 8px 20px rgba(0,0,0,.6); }
+  #muteBtn{
+    position:absolute; top:12px; right:12px; z-index:9; width:38px; height:38px;
+    border:none; border-radius:10px; cursor:pointer; font-size:18px;
+    background:rgba(18,37,15,.6); color:#fff; border:1px solid rgba(244,196,48,.4);
+    backdrop-filter:blur(3px);
+  }
+  #muteBtn:hover{background:rgba(18,37,15,.85);}
+  #optionsBtn{
+    position:absolute; top:12px; right:58px; z-index:9; width:38px; height:38px;
+    border:none; border-radius:10px; cursor:pointer; font-size:18px;
+    background:rgba(18,37,15,.6); color:#fff; border:1px solid rgba(244,196,48,.4);
+    backdrop-filter:blur(3px);
+  }
+  #optionsBtn:hover{background:rgba(18,37,15,.85);}
+  /* ---------- Touch controls ---------- */
+  #touchUI{ position:absolute; inset:0; z-index:8; pointer-events:none; }
+  #touchUI.hidden{display:none;}
+  .tstick{
+    position:absolute; bottom:6%; left:4%; width:26%; max-width:150px; aspect-ratio:1/1;
+    border-radius:50%; background:rgba(255,255,255,.08);
+    border:2px solid rgba(255,255,255,.22); pointer-events:auto; touch-action:none;
+  }
+  .tnub{
+    position:absolute; left:50%; top:50%; width:42%; height:42%;
+    transform:translate(-50%,-50%); border-radius:50%;
+    background:rgba(244,196,48,.55); border:2px solid rgba(255,255,255,.5);
+  }
+  #touchAttack, #touchSuper{
+    position:absolute; right:4%; width:18%; max-width:96px; aspect-ratio:1/1;
+    border-radius:50%; pointer-events:auto; touch-action:none; cursor:pointer;
+    color:#fff; font-weight:bold; font-size:clamp(10px,2.2vw,14px); letter-spacing:1px;
+  }
+  #touchAttack{ bottom:7%; border:2px solid rgba(255,150,90,.8); background:rgba(224,90,58,.55); }
+  #touchAttack:active{ background:rgba(255,120,80,.85); }
+  #touchSuper{ bottom:calc(7% + 22%); border:2px solid rgba(244,196,48,.7); background:rgba(140,60,180,.55); }
+  #touchSuper:active{ background:rgba(180,90,230,.85); }
+  #touchEmote{
+    position:absolute; left:4%; bottom:calc(7% + 30%); width:13%; max-width:64px; aspect-ratio:1/1;
+    border-radius:50%; pointer-events:auto; touch-action:none; cursor:pointer;
+    color:#fff; font-weight:bold; font-size:clamp(14px,3vw,20px);
+    border:2px solid rgba(159,214,255,.8); background:rgba(46,111,196,.5);
+  }
+  #touchEmote:active{ background:rgba(90,160,240,.85); }
+  /* ---------- Phone layout: shrink chrome; rotate to landscape when held upright ---------- */
+  body.touch{ padding-bottom:0; overflow:hidden; }
+  body.touch #wrap{ width:100vw; height:100dvh; aspect-ratio:auto; }
+  body.touch canvas{ border-radius:0; box-shadow:none; }
+  body.touch .screen{ border-radius:0; }
+  body.touch #hud{ top:6px; left:6px; right:6px; }
+  body.touch .panel{ min-width:0; padding:5px 8px; border-width:1px; }
+  body.touch .panel .name{ font-size:11px; margin-bottom:3px; }
+  body.touch #enemyList{ font-size:10px !important; line-height:1.35 !important; }
+  body.touch #centerHud{ top:6px; }
+  body.touch #timer{ font-size:13px; }
+  body.touch #scoreLine{ font-size:11px; }
+  body.touch #controls{ display:none; }   /* keyboard hint is useless on touch */
+  body.touch #muteBtn, body.touch #optionsBtn{ width:32px; height:32px; font-size:15px; top:6px; }
+  body.touch #optionsBtn{ right:44px; }
+  body.touch #muteBtn{ right:6px; }
+  /* held upright (portrait): rotate the whole frame 90° clockwise so the game plays in landscape.
+     Keep the arena at 4:3 (letterboxed) so nothing stretches. After rotation the usable area is
+     [viewport height] wide by [viewport width] tall, so fit a 4:3 box inside that and center it. */
+  @media (orientation: portrait){
+    body.touch{ background:#0a1408; }
+    body.touch #wrap{
+      position:fixed; top:50%; left:50%;
+      /* after a 90° turn: on-screen width = wrap HEIGHT (≤100vw), on-screen height = wrap WIDTH (≤100dvh) */
+      width:min(100dvh, 133.333vw);   /* the long (4) side, shown vertically after rotation */
+      height:min(75dvh, 100vw);       /* the short (3) side, shown horizontally after rotation */
+      transform-origin:center center; transform:translate(-50%,-50%) rotate(90deg);
+    }
+  }
+  .fade-in{animation:fadein .4s ease;}
+  @keyframes fadein{from{opacity:0; transform:translateY(12px);} to{opacity:1; transform:none;}}
