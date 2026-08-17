@@ -288,7 +288,7 @@
     align-items:stretch;
   }
   #brawlerList{
-    flex:0 0 240px; overflow-y:auto; padding:4px 8px 4px 4px;
+    flex:0 0 240px; overflow-y:auto; padding:4px 16px 4px 4px;   /* extra right pad so the favorite star clears the scrollbar */
     display:flex; flex-direction:column; gap:8px;
     scrollbar-width:thin; scrollbar-color:var(--gold) transparent;
   }
@@ -328,9 +328,27 @@
   .brow canvas{width:44px; height:44px; border-radius:50%; flex:0 0 44px;
     background:radial-gradient(circle at 50% 35%,#37603a,#1d3a1c); box-shadow:inset 0 -3px 6px rgba(0,0,0,.3);}
   .brow .bn{font-size:15px; font-weight:bold; line-height:1.1;}
+  /* NEW badge on a just-unlocked, not-yet-viewed brawler */
+  .brow .newBadge{ display:inline-block; margin-left:6px; vertical-align:middle;
+    font-size:9px; font-weight:bold; letter-spacing:1px; color:#1a2a10;
+    background:linear-gradient(#ffe36b,#f4c430); padding:1px 5px; border-radius:6px;
+    box-shadow:0 1px 3px rgba(0,0,0,.4); animation:newPulse 1.2s ease-in-out infinite; }
+  @keyframes newPulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.12); } }
   .brow .br{font-size:10px; letter-spacing:1.5px; text-transform:uppercase; opacity:.6;}
   .brow.locked{filter:grayscale(.7) brightness(.72); cursor:not-allowed;}
   .brow .lockTag{margin-left:auto; font-size:10px; font-weight:bold; color:#7a3b12; white-space:nowrap;}
+  /* favorite star toggle on each owned brawler row */
+  .brow .favBtn{ margin-left:8px; flex:0 0 auto; cursor:pointer;
+    width:30px; height:30px; border-radius:50%;
+    background:rgba(20,14,8,.55); border:1.5px solid rgba(0,0,0,.5);
+    font-size:18px; line-height:1; padding:0; color:rgba(255,255,255,.72);
+    display:flex; align-items:center; justify-content:center;
+    text-shadow:0 1px 2px rgba(0,0,0,.9);
+    transition:transform .1s, color .1s, background .1s, border-color .1s; }
+  .brow .favBtn:hover{ transform:scale(1.15); color:#ffe36b; border-color:rgba(244,196,48,.6); }
+  .brow .favBtn.on{ color:#ffd83a; background:rgba(40,26,6,.75); border-color:var(--gold,#f4c430);
+    text-shadow:0 0 6px rgba(244,196,48,.9), 0 1px 2px rgba(0,0,0,.9); }
+  .brow .lockTag ~ .favBtn{ margin-left:8px; }
   /* right preview panel */
   #brawlerPreview{
     flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
@@ -485,6 +503,11 @@
   .pvcChip.on{border-color:var(--gold); box-shadow:0 0 0 1px var(--gold);}
   .pvcChip .sw{width:11px; height:11px; border-radius:50%; display:inline-block;}
   .pvcEmpty{font-size:11px; opacity:.45; font-style:italic;}
+  .pvNameInput{width:100%; box-sizing:border-box; font-size:13px; padding:6px 10px; border-radius:8px;
+    border:1px solid rgba(255,255,255,.15); background:rgba(0,0,0,.28); color:#eaf3e0; outline:none;
+    font-family:inherit; letter-spacing:1px; transition:border-color .12s;}
+  .pvNameInput:focus{border-color:var(--gold); box-shadow:0 0 0 1px var(--gold);}
+  .pvNameInput::placeholder{color:rgba(234,243,224,.35);}
 
   /* ---------- Siren Sanctuary: an underwater grotto ---------- */
   #sanctuaryScreen{
@@ -751,6 +774,18 @@
   }
   #revealScreen.mythic #revealSparks i{ background:radial-gradient(circle, #fff, #e79cff); }
   #revealScreen.mythic #revealName{ color:#ffe0ff; text-shadow:0 0 12px rgba(210,110,255,.6); }
+  /* Ascended (pack-unlock brawlers, e.g. Druk): a radiant GOLD reveal instead of the mythic purple */
+  #revealScreen.ascended #revealRarity{ color:#fff2c0; text-shadow:0 0 14px #ffcf3a, 0 0 24px #ffa62a; }
+  #revealScreen.ascended #revealRays{
+    background:conic-gradient(from 0deg, #ffd23a 0 4deg, transparent 4deg 14deg, #ffe89a 14deg 18deg, transparent 18deg 30deg);
+    opacity:0; animation:revRaysIn .5s .15s forwards, revRaysSpin 9s linear infinite;
+  }
+  #revealScreen.ascended #revealCard{
+    border-color:#ffd76a;
+    box-shadow:0 0 60px -2px #ffc02a, 0 0 40px -6px #ffe89a, inset 0 0 30px rgba(0,0,0,.4);
+  }
+  #revealScreen.ascended #revealSparks i{ background:radial-gradient(circle, #fff, #ffe08a); }
+  #revealScreen.ascended #revealName{ color:#fff6d6; text-shadow:0 0 12px rgba(255,200,60,.65); }
 
   /* ---------- Reveal SUSPENSE phase: a face-down mystery card shakes + charges up, then flips to the skin ---------- */
   #revealCardBack{
@@ -790,6 +825,7 @@
     100%{ transform:scale(.05) rotate(0deg); opacity:0; }  /* snap away -> the real card pops in */
   }
   #revealScreen.mythic #revealCardBack{ border-color:#e79cff; color:#ffd6ff; box-shadow:0 0 50px -2px #c26cff, inset 0 0 30px rgba(0,0,0,.5); }
+  #revealScreen.ascended #revealCardBack{ border-color:#ffd76a; color:#fff2c0; box-shadow:0 0 50px -2px #ffc02a, inset 0 0 30px rgba(0,0,0,.5); }
   #revealScreen.silver #revealCardBack{ border-color:#dfe6ef; color:#eef2f7; box-shadow:0 0 44px -4px #dfe6ef, inset 0 0 30px rgba(0,0,0,.5); }
   #revealScreen.common #revealCardBack{ border-color:var(--sky); color:var(--sky); box-shadow:0 0 40px -6px var(--sky), inset 0 0 30px rgba(0,0,0,.5); }
 
@@ -948,6 +984,17 @@
   body.touch #timer{ font-size:13px; }
   body.touch #scoreLine{ font-size:11px; }
   body.touch #controls{ display:none; }   /* keyboard hint is useless on touch */
+  /* Character-select on phone: the preview now holds skins + emotes + titles, which overflows the cramped
+     rotated frame. Let the whole select screen scroll as one column, stack the list above the preview,
+     and shrink the chrome so the ENTER button is always reachable. */
+  body.touch #selectScreen{ overflow-y:auto; -webkit-overflow-scrolling:touch; padding-top:10px; padding-bottom:20px; justify-content:flex-start; }
+  body.touch #selectScreen h1{ font-size:22px; margin-bottom:8px; }
+  body.touch #selectTools{ margin-bottom:8px; padding:6px 10px; }
+  body.touch #selectLayout{ flex-direction:column; height:auto; gap:12px; }
+  body.touch #brawlerList{ flex:0 0 auto; max-height:34vh; }
+  body.touch #brawlerPreview{ overflow-y:visible; max-height:none; }
+  body.touch #previewArt{ width:88px; height:88px; }
+  body.touch .pvcChips{ gap:5px; }
   body.touch #muteBtn, body.touch #optionsBtn{ width:32px; height:32px; font-size:15px; top:6px; }
   body.touch #optionsBtn{ right:44px; }
   body.touch #muteBtn{ right:6px; }
@@ -966,3 +1013,70 @@
   }
   .fade-in{animation:fadein .4s ease;}
   @keyframes fadein{from{opacity:0; transform:translateY(12px);} to{opacity:1; transform:none;}}
+
+  /* ---------- Home hub: brawler tile + mode tile + Play ---------- */
+  .hub{ display:flex; gap:18px; align-items:stretch; justify-content:center; margin:6px 0 4px; flex-wrap:wrap; position:relative; z-index:1; }
+  .hubTile{ cursor:pointer; border:none; font-family:inherit; color:var(--cream);
+    background:linear-gradient(#4a3620,#3b2a1a); border-radius:18px; position:relative; overflow:hidden;
+    box-shadow:0 6px 0 #1c130a, 0 12px 26px rgba(0,0,0,.5); border-top:3px solid rgba(255,255,255,.12);
+    transition:transform .1s, box-shadow .1s, filter .1s; }
+  .hubTile:hover{ transform:translateY(-2px); filter:brightness(1.08); }
+  .hubTile:active{ transform:translateY(3px); box-shadow:0 3px 0 #1c130a, 0 6px 14px rgba(0,0,0,.5); }
+  .hubTileHint{ font-size:10px; letter-spacing:1.5px; opacity:.5; text-transform:uppercase; }
+  /* big animated brawler portrait — matches the select-screen preview framing */
+  .hubBrawler{ width:210px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; padding:14px 14px 12px; }
+  .hubBrawler canvas{ width:150px; height:150px; image-rendering:auto; filter:drop-shadow(0 8px 14px rgba(0,0,0,.5)); }
+  .hubTileFoot{ display:flex; flex-direction:column; align-items:center; gap:2px; margin-top:6px; }
+  .hubTileName{ font-weight:bold; font-size:20px; color:var(--gold); letter-spacing:.5px; }
+  .hubRight{ display:flex; flex-direction:column; gap:14px; justify-content:center; min-width:260px; }
+  /* mode tile shows the current pick */
+  .hubMode{ display:flex; align-items:center; gap:14px; padding:16px 20px; text-align:left; border-top-color:var(--acc,#e0533a); }
+  .hubMode::before{ content:""; position:absolute; left:0; top:0; bottom:0; width:6px; background:var(--acc,#e0533a); }
+  .hubModeIcon{ font-size:34px; line-height:1; }
+  .hubModeText{ display:flex; flex-direction:column; gap:2px; flex:1; }
+  .hubModeTitle{ font-weight:bold; font-size:20px; color:var(--cream); }
+  .hubModeSub{ font-size:12px; opacity:.7; }
+  .hubMode .hubTileHint{ position:absolute; right:14px; bottom:8px; }
+  /* the big Play button */
+  .btn.hubPlay{ font-size:26px; padding:20px 30px; letter-spacing:2px;
+    background:linear-gradient(#6fd24f,#3fa02f); color:#10240a; box-shadow:0 6px 0 #256b18, 0 12px 24px rgba(0,0,0,.45); }
+  .btn.hubPlay:active{ box-shadow:0 2px 0 #256b18; }
+
+  /* ---------- Mode picker overlay ---------- */
+  .modalWrap{ position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center;
+    background:rgba(10,8,4,.66); backdrop-filter:blur(3px); animation:fadein .2s ease; }
+  .modalCard{ width:min(560px,92vw); max-height:86vh; overflow:auto; background:linear-gradient(#2c2013,#241a10);
+    border-radius:18px; border-top:3px solid var(--gold); box-shadow:0 20px 60px rgba(0,0,0,.6); padding:18px; }
+  .modalHead{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;
+    color:var(--gold); font-weight:bold; letter-spacing:2px; font-size:15px; }
+  .modeList{ display:flex; flex-direction:column; gap:10px; }
+  .modeItem{ cursor:pointer; border:none; font-family:inherit; color:var(--cream); text-align:left;
+    display:flex; align-items:center; gap:14px; padding:14px 16px; border-radius:14px; position:relative; overflow:hidden;
+    background:linear-gradient(#4a3620,#3b2a1a); border-left:6px solid var(--acc,#e0533a);
+    box-shadow:0 3px 0 #1c130a; transition:transform .08s, filter .1s; }
+  .modeItem:hover{ transform:translateX(3px); filter:brightness(1.1); }
+  .modeItem.sel{ outline:2px solid var(--gold); }
+  .modeItem .mi-ic{ font-size:30px; line-height:1; width:40px; text-align:center; }
+  .modeItem .mi-tx{ display:flex; flex-direction:column; gap:2px; flex:1; }
+  .modeItem .mi-ti{ font-weight:bold; font-size:18px; }
+  .modeItem .mi-su{ font-size:12px; opacity:.7; }
+  .modeItem.locked{ cursor:not-allowed; filter:grayscale(.7) brightness(.7); }
+  .modeItem.locked:hover{ transform:none; }
+  .modeItem .mi-lock{ font-size:12px; color:var(--gold); font-weight:bold; white-space:nowrap; }
+
+  /* ---------- Character-select: reskin to match the warm brown panel look of the hub/mode-picker ---------- */
+  #selectScreen #selectTools{
+    background:linear-gradient(#2c2013,#241a10); border:1px solid rgba(246,196,69,.25);
+    border-top:3px solid var(--gold); box-shadow:0 6px 18px rgba(0,0,0,.4);
+  }
+  #selectScreen .selChip{ background:rgba(59,42,26,.7); border-color:rgba(246,196,69,.35); }
+  #selectScreen .selChip:hover{ background:rgba(74,54,32,.9); }
+  #selectScreen .selChip.on{ background:var(--gold); color:#2a1e08; }
+  #selectScreen .selSort select{ background:rgba(59,42,26,.7); border-color:rgba(246,196,69,.35); }
+  #selectScreen .selSort select:hover{ background:rgba(74,54,32,.9); }
+  #selectScreen #brawlerPreview{
+    background:
+      radial-gradient(circle at 50% 18%, rgba(255,220,120,.12), transparent 55%),
+      linear-gradient(#2c2013,#241a10);
+    border:2px solid rgba(246,196,69,.3); border-top:3px solid var(--gold);
+  }

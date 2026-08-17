@@ -61,6 +61,8 @@ function initAudio(){
   try{
     AC=new (window.AudioContext||window.webkitAudioContext)();
     masterGain=AC.createGain(); masterGain.gain.value=0.35; masterGain.connect(AC.destination);
+    // audio just unlocked (first gesture): if we're sitting on the title, start the menu track now
+    if(!muted && typeof state!=='undefined' && state==='title') startMusic('menu');
   }catch(e){ AC=null; }
 }
 function tone({freq=440,freq2=null,type='sine',dur=0.12,vol=0.5,delay=0}){
@@ -108,53 +110,162 @@ function sfx(name){
 // play a sound only if it happens on/near the visible screen (keeps distant bots quiet)
 function nearSfx(name,x,y){ if(typeof onScreen==='function' ? onScreen(x,y,120) : true) sfx(name); }
 
-/* ---------- Background music: a light, tense looping motif (WebAudio, generated) ---------- */
-let musicGain=null, musicOn=false, musicTimer=null, musicStep=0, musicNextT=0;
-// a brooding A-minor ostinato (bass pulse) + a sparse higher arpeggio that drifts on top
-const MUSIC_BASS = [110.00, 110.00, 130.81, 110.00, 98.00, 98.00, 130.81, 146.83]; // A A C A G G C D
-const MUSIC_ARP  = [440.00, 523.25, 659.25, 523.25, 493.88, 587.33, 659.25, 880.00];
+/* ---------- Background music: a funky, riff-driven loop (WebAudio, generated) ----------
+   Style target: bouncy spy-funk à la "S.I.M.P." — a syncopated walking bassline, punchy horn/brass
+   stabs, a tight kick+snare+hat backbeat, and a recognizable lead riff. A clear beatdrop kicks in at
+   match climaxes (fuller drums, louder horns, a riser). 16-step bars for real groove (not 8 plings). */
+let musicGain=null, musicOn=false, musicTimer=null, musicStep=0, musicNextT=0, musicMode='battle', musicIntensity=false, musicDropLerp=0;
+// A-minor funk. Bass walks in sixteenths; the lead riff is the hook. Indices are the 16 steps of a bar.
+// Bass line (Hz) — a bouncy A-minor walk with octave pops and passing tones (0 = rest/hold).
+const FUNK_BASS = [110,0,110,220, 130.81,0,110,0, 98,0,98,196, 87.31,0,103.83,116.54];
+// Lead riff (Hz) — the "hook"; 0 = rest. Sits up in horn range.
+const FUNK_LEAD = [440,0,523.25,0, 587.33,523.25,440,0, 0,392,440,0, 523.25,0,659.25,587.33];
+// Horn-stab chord roots (Hz) punched on the backbeat accents.
+const FUNK_STAB = [220, 261.63, 196, 174.61];   // Am-ish stabs across the bar
 function ensureMusicGain(){
   if(musicGain||!AC) return;
   musicGain=AC.createGain(); musicGain.gain.value=0.0; musicGain.connect(masterGain);
 }
+// generic ADSR-ish note
 function musicNote(freq,t,dur,vol,type){
+  if(!freq) return;
   const o=AC.createOscillator(), g=AC.createGain();
-  o.type=type; o.frequency.setValueAtTime(freq,t);
+  o.type=type||'triangle'; o.frequency.setValueAtTime(freq,t);
   g.gain.setValueAtTime(0.0001,t);
-  g.gain.exponentialRampToValueAtTime(vol,t+0.04);
+  g.gain.exponentialRampToValueAtTime(vol,t+0.02);
   g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
   o.connect(g); g.connect(musicGain); o.start(t); o.stop(t+dur+0.05);
 }
+// punchy funk bass: a filtered saw with a quick pluck envelope
+function musicBass(freq,t,dur,vol){
+  if(!freq) return;
+  const o=AC.createOscillator(), g=AC.createGain(), lp=AC.createBiquadFilter();
+  o.type='sawtooth'; o.frequency.setValueAtTime(freq,t);
+  lp.type='lowpass'; lp.frequency.setValueAtTime(freq*6,t); lp.frequency.exponentialRampToValueAtTime(freq*2,t+dur*0.8); lp.Q.value=6;
+  g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+0.015); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.connect(lp); lp.connect(g); g.connect(musicGain); o.start(t); o.stop(t+dur+0.05);
+}
+// horn/brass STAB: a detuned 3-saw stack with a fast attack + short decay = that funky punch
+function musicStab(freq,t,dur,vol){
+  if(!freq) return;
+  [0,-0.4,+0.4].forEach((cents,i)=>{
+    const o=AC.createOscillator(), g=AC.createGain();
+    o.type='sawtooth'; o.frequency.setValueAtTime(freq*Math.pow(2,cents/12/8),t);
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol*(i===0?1:0.7),t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o.connect(g); g.connect(musicGain); o.start(t); o.stop(t+dur+0.05);
+  });
+  // add the fifth on top for a fuller chord
+  const o2=AC.createOscillator(), g2=AC.createGain();
+  o2.type='sawtooth'; o2.frequency.setValueAtTime(freq*1.5,t);
+  g2.gain.setValueAtTime(0.0001,t); g2.gain.exponentialRampToValueAtTime(vol*0.5,t+0.02); g2.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o2.connect(g2); g2.connect(musicGain); o2.start(t); o2.stop(t+dur+0.05);
+}
+function musicKick(t,vol){
+  const o=AC.createOscillator(), g=AC.createGain();
+  o.type='sine'; o.frequency.setValueAtTime(160,t); o.frequency.exponentialRampToValueAtTime(48,t+0.10);
+  g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.15);
+  o.connect(g); g.connect(musicGain); o.start(t); o.stop(t+0.2);
+}
+// snare: noise burst + a short tonal body
+function musicSnare(t,vol){
+  const buf=AC.createBuffer(1, 2048, AC.sampleRate), d=buf.getChannelData(0);
+  for(let i=0;i<2048;i++) d[i]=(Math.random()*2-1)*(1-i/2048);
+  const src=AC.createBufferSource(); src.buffer=buf;
+  const bp=AC.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=1800; bp.Q.value=0.7;
+  const g=AC.createGain(); g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.13);
+  src.connect(bp); bp.connect(g); g.connect(musicGain); src.start(t); src.stop(t+0.15);
+}
+function musicHat(t,vol,open){
+  const n=open?1200:256, buf=AC.createBuffer(1, n, AC.sampleRate), d=buf.getChannelData(0);
+  for(let i=0;i<n;i++) d[i]=(Math.random()*2-1);
+  const src=AC.createBufferSource(); src.buffer=buf;
+  const hp=AC.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=8000;
+  const g=AC.createGain(); g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(0.0001,t+(open?0.18:0.045));
+  src.connect(hp); hp.connect(g); g.connect(musicGain); src.start(t); src.stop(t+(open?0.2:0.06));
+}
 function musicTick(){
   if(!musicOn||!AC){ return; }
-  const beat=0.42;                       // seconds per step (~140 half-time, unhurried but tense)
-  // schedule any steps whose time has arrived (look ~0.2s ahead)
+  const battle = musicMode==='battle';
+  const beat = battle ? 0.15 : 0.19;    // sixteenth-note step; battle bounces faster
+  // smoothly ramp the "drop" amount toward the current intensity (no hard on/off pop)
+  musicDropLerp += ((musicIntensity?1:0) - musicDropLerp) * 0.08;
+  const drop = musicDropLerp;
   while(musicNextT < AC.currentTime+0.2){
-    const t=musicNextT, s=musicStep%8;
-    // low pulsing bass on every step
-    musicNote(MUSIC_BASS[s], t, beat*0.9, 0.16, 'triangle');
-    // sparse arpeggio: only on some steps, so it feels tense/uneasy rather than melodic
-    if(s===0||s===3||s===5||s===6) musicNote(MUSIC_ARP[s], t+beat*0.15, beat*0.7, 0.055, 'sine');
-    // a soft high shimmer at the top of each bar
-    if(s===0) musicNote(MUSIC_ARP[s]*2, t+beat*0.3, beat*1.4, 0.02, 'sine');
+    const t=musicNextT, s=musicStep%16, bar=Math.floor(musicStep/16);
+    if(battle){
+      // --- BASS: bouncy sixteenth walk (the backbone) ---
+      musicBass(FUNK_BASS[s], t, beat*1.4, 0.30);
+      // --- DRUMS: kick on 1 & 3 (+ off-pops), snare backbeat on 2 & 4, hats on every step ---
+      if(s===0||s===6||s===8||s===11) musicKick(t, 0.55);
+      if(s===4||s===12) musicSnare(t, 0.4);
+      musicHat(t, s%2? 0.05:0.08, s===14);    // steady hats, a little open one before the turnaround
+      // --- HORN STABS: punchy chords on the funky offbeats ---
+      if(s===2) musicStab(FUNK_STAB[0], t, beat*1.2, 0.14);
+      if(s===7) musicStab(FUNK_STAB[1], t, beat*1.0, 0.12);
+      if(s===10) musicStab(FUNK_STAB[2], t, beat*1.2, 0.13);
+      if(s===13) musicStab(FUNK_STAB[3], t, beat*0.8, 0.11);
+      // --- LEAD RIFF: the hook, a touch quieter than the stabs so it sits in the pocket ---
+      musicNote(FUNK_LEAD[s], t+beat*0.02, beat*1.1, 0.10, 'square');
+      // ---- BEATDROP: fuller & louder — extra kick, snare fills, doubled horns, a soaring octave ----
+      if(drop>0.5){
+        if(s%2===0) musicKick(t, 0.35);                              // four-on-the-floor underneath
+        if(s===14||s===15) musicSnare(t, 0.28);                      // snare roll into the turnaround
+        musicNote(FUNK_LEAD[s]?FUNK_LEAD[s]*2:0, t, beat*0.9, 0.10*drop, 'sawtooth');  // octave-up lead = roar
+        if(s===0||s===8) musicStab(FUNK_STAB[s?2:0]*1.5, t, beat*1.6, 0.10*drop);      // big sustained horn hit
+      }
+    } else {
+      // --- MENU: same groove, chilled — softer bass, brushed drums, warm horn pads, lazy lead ---
+      musicBass(FUNK_BASS[s], t, beat*1.5, 0.18);
+      if(s===0||s===8) musicKick(t, 0.32);
+      if(s===4||s===12) musicSnare(t, 0.16);
+      if(s%2===0) musicHat(t, 0.035);
+      if(s===2||s===10) musicStab(FUNK_STAB[s===2?0:2], t, beat*2.2, 0.06);   // soft held horn pad
+      if(FUNK_LEAD[s] && s%2===0) musicNote(FUNK_LEAD[s], t+beat*0.05, beat*1.6, 0.06, 'triangle');
+    }
     musicStep++; musicNextT += beat;
   }
 }
-function startMusic(){
+function startMusic(mode){
   if(!AC||muted) return;
   ensureMusicGain(); if(!musicGain) return;
-  if(musicOn) return;
-  musicOn=true; musicStep=0; musicNextT=AC.currentTime+0.05;
+  const m = mode || 'battle';
+  if(musicOn && musicMode===m) return;      // already playing this track
+  musicMode=m; musicOn=true; musicStep=0; musicNextT=AC.currentTime+0.05; musicDropLerp=0;
+  const target = m==='battle' ? 0.95 : 0.62;
   musicGain.gain.cancelScheduledValues(AC.currentTime);
   musicGain.gain.setValueAtTime(musicGain.gain.value, AC.currentTime);
-  musicGain.gain.linearRampToValueAtTime(0.5, AC.currentTime+1.2);   // fade in
-  clearInterval(musicTimer); musicTimer=setInterval(musicTick, 60);
+  musicGain.gain.linearRampToValueAtTime(target, AC.currentTime+0.8);
+  clearInterval(musicTimer); musicTimer=setInterval(musicTick, 40);
 }
 function stopMusic(){
   musicOn=false; clearInterval(musicTimer); musicTimer=null;
+  musicIntensity=false; musicDropLerp=0;
   if(musicGain&&AC){ musicGain.gain.cancelScheduledValues(AC.currentTime);
     musicGain.gain.setValueAtTime(musicGain.gain.value, AC.currentTime);
     musicGain.gain.linearRampToValueAtTime(0.0, AC.currentTime+0.6); }
+}
+// Beatdrop trigger: flip musicIntensity on when the match hits a climax moment (per game mode). Called
+// every frame from update() while playing; musicTick ramps the drop in/out smoothly.
+function updateMusicIntensity(){
+  let hot=false;
+  try{
+    if(gameMode==="payload"){
+      hot = (payload.carts||[]).some(c=>c && c.prog>=0.9);                          // a cart past 90%
+    } else if(gameMode==="ctf"){
+      hot = (ctf.bases||[]).some(b=>b && b.score>=ctf.target-1);                    // a team at 4/5 acorns
+    } else if(gameMode==="whiteout"){
+      hot = (whiteout.claims||[]).some(n=>n>=CLAIM_TARGET-1);                        // a team at 2/3 signals
+    } else if(gameMode==="relay"){
+      hot = (relay.score[0]>=relay.target*0.8 || relay.score[1]>=relay.target*0.8); // ember past 80%
+    } else if(gameMode==="pearl"){
+      hot = pearl.countdown>0 || (pearl.peak && (pearl.peak[0]>=pearl.target-2 || pearl.peak[1]>=pearl.target-2)); // near/at the pearl win
+    } else if(gameMode==="binas"){
+      hot = (typeof binas!=='undefined' && binas.phase>=2 && binas.boss && !binas.boss.dead); // final phase
+    } else if(gameMode==="ffa" || gameMode==="arena"){
+      hot = entities.filter(e=>!e.dead && !e.isBanshee).length<=2;                   // down to a 1v1
+    }
+  }catch(e){ hot=false; }
+  musicIntensity=hot;
 }
 
 /* ---------- Character definitions ---------- */
@@ -376,6 +487,69 @@ const CHARS = {
     atk:{name:"Claw Rake", dmg:420, cd:34, range:120, desc:"Kayo hops forward and rakes with his claws, knocking foes back."},
     sup:{name:"Tag In", desc:"Swap between Kayo (tanky melee) and Yara (agile mid-range). Health carries over as a percentage, and each swap bursts a shockwave that nudges nearby foes."}
   },
+  jenna: {
+    name:"Jenna", role:"Fighter", color:"#ff5aa0", emoji:"🥪",
+    maxHp:2400, speed:2.2, radius:19, momentum:true,
+    blurb:"A competitive race-rival who's always hungry. She starts a full step SLOWER than everyone — but keep her running and she snowballs into the fastest brawler on the field, nearly DOUBLE her starting speed. Stand still and the momentum drains away. A pink Momentum bar under her health shows how fast she's going. Whacks foes with a baguette; her super is a quick Lunch Break that heals a little and instantly slings her to top speed.",
+    atk:{name:"Baguette Whack", dmg:340, cd:28, range:105, desc:"A fast, chunky baguette swipe. Short reach, high fire-rate."},
+    sup:{name:"Lunch Break", desc:"Wolfs down a sandwich: a small heal (~25% HP), then instantly rockets to max momentum — top speed with no wind-up. She's briefly frozen while eating."}
+  },
+  druk: {
+    name:"Druk", role:"Trapper", color:"#f4f0e6", emoji:"🐉",
+    maxHp:3000, speed:2.4, radius:21,
+    blurb:"The Thunder Dragon of the mountain flag. HOLD to charge a crackling orb of lightning, then release to LOB it — it arcs clean over walls and bushes to slam down on the aimed spot. The longer you charge, the bigger the thunderclap (and a touch more damage). Charge it FULLY and the impact shatters any breakable blocks right where it lands. A hit also SEARS the wound shut — foes can't heal for a few seconds, so they can't just wait out your reload.",
+    atk:{name:"Thunder Lob", dmg:360, cd:78, range:360, desc:"Hold to charge, release to lob a lightning orb over walls. Slow to reload, so charging up beats spamming. More charge = bigger blast; a full charge breaks blocks. Hits sear the target: no healing for ~5s."},
+    sup:{name:"Dragon's Roar", desc:"Rears back and looses a roaring thunderstorm: a huge ring of lightning erupts around Druk, heavily damaging and shoving back every foe caught in it."}
+  },
+  youngfyon: {
+    name:"Young Fyon", role:"Sniper", color:"#8fd0b0", emoji:"🗡️",
+    maxHp:1750, speed:3.2, radius:18,
+    blurb:"Fionn as a reckless young blade-in-training — before the sword, there were throwing knives. A fast, precise knife that flies straight and far, but he's fragile: quick feet, glass jaw. His super is a short dart-dash followed by a fanned spray of knives.",
+    atk:{name:"Knife Toss", dmg:250, cd:34, range:560, desc:"A quick thrown knife with long range and a fast reload. Low damage per hit, but you can chain them fast."},
+    sup:{name:"Blade Flurry", desc:"Darts a short distance, then looses a wide fan of knives in the aimed direction — heavy total damage up close."}
+  },
+  metaai: {
+    name:"Meta AI", role:"Sniper", color:"#e8eef5", emoji:"🤖",
+    maxHp:2000, speed:2.6, radius:19,
+    blurb:"A sleek white assistant-bot with a glowing screen-face. Fires precise long-range data-beams that lock onto the aimed line. Its super deploys a swarm of mini-drones that hover and open fire on nearby foes. An Ascended brawler — unlocked by completing the Space pack.",
+    atk:{name:"Data Beam", dmg:330, cd:56, range:660, desc:"A precise, long-range beam bolt. Slow to recharge, so pick your shots."},
+    sup:{name:"Drone Swarm", desc:"Deploys a swarm of hovering mini-drones that fire on the nearest enemies for a few seconds."}
+  },
+  potplant: {
+    name:"Intratuin Potplant", role:"Healer", color:"#5aa03a", emoji:"🪴",
+    maxHp:2800, speed:2.35, radius:21,
+    blurb:"Dean's potted houseplant, sprung to life. A slow, sturdy pot on stubby roots. Fires a puff of pollen that lingers as a drifting cloud: it stings foes who stand in it, but heals any teammate (and the plant itself) walking through. Its super roots the plant in place and bursts into full bloom — a big pollen field that heals allies inside and slows + chips foes. An Ascended brawler — unlocked by completing the Nature pack.",
+    atk:{name:"Spore Puff", dmg:210, cd:44, range:420, desc:"Lobs a pollen burst that lingers as a cloud. Foes inside take chip damage; allies (and the plant) inside heal over time."},
+    sup:{name:"Full Bloom", desc:"Roots in place and blooms into a large pollen field for a few seconds: allies inside heal fast, foes are slowed and take steady chip damage."}
+  },
+  meiden: {
+    name:"Slechte Meiden", role:"Fighter", color:"#e0407a", emoji:"💅",
+    maxHp:3000, speed:2.7, radius:20,
+    blurb:"A pack of three bad girls who take turns running the fight. Their attack cycles in threes: three GRAFFITI sprays (a mid-range paint blast), then three SHOVES (a hard close shove that knocks foes back), then three GUM shots (a wad of chewing gum that sticks a foe and slows them). Read the little 1/2/3 tally under her health to see who's up next. Her super is a Girl Gang charge — all three storm forward together, plowing through everyone in the way.",
+    atk:{name:"Girl Trouble", dmg:300, cd:30, range:300, desc:"Cycles 3× graffiti spray (mid-range), then 3× shove (close knockback), then 3× gum (sticks + slows). Nine-hit rotation."},
+    sup:{name:"Girl Gang", desc:"The whole crew charges forward as one — a fast shared dash that rams and knocks back every foe along the lane."}
+  },
+  hammed: {
+    name:"Hammed", role:"Trapper", color:"#c8a24a", emoji:"🐱",
+    maxHp:2700, speed:2.55, radius:20,
+    blurb:"A gold-dripping cat-furry who runs Discord scams for a living. He fights by planting FREE NITRO drops — shiny fake giveaways that just sit there looking tempting. Get too close and the trap SNAPS shut: damage plus a short root, because you fell for it. He can keep a few baited at once. His super drops the friendly-scammer act entirely: he goes FULL FURRY — bigger, faster, and raking foes up close with real claws for a few seconds.",
+    atk:{name:"Free Nitro", dmg:320, cd:78, range:200, desc:"Plants a fake giveaway drop nearby to block a path. When a foe wanders too close it snaps: damage + a brief root. A few can be baited at once."},
+    sup:{name:"Full Furry", desc:"Drops the act and transforms: for a few seconds he's bigger, faster, and claws foes up close for heavy melee damage."}
+  },
+  aasta: {
+    name:"Aasta", role:"Fighter", color:"#e8c66a", emoji:"🍂",
+    maxHp:2100, speed:3.45, radius:19,
+    blurb:"Technically Lars's girlfriend — but she's better known for showing up once a season and dipping again just as fast. She plays like an assassin: a slippery hit-and-run Fighter with low HP and burst that hits HARDEST the moment she arrives. Her basic 'Seasonal Visit' rewards striking from out of nowhere; the first hit after a lull lands as a heavy surprise blow. Her super, DIP, is exactly what she's famous for: she vanishes completely — untouchable and unseen — then reappears wherever you aim with a burst of damage around the landing. Blink in, drop someone, dip out.",
+    atk:{name:"Seasonal Visit", dmg:300, cd:34, range:300, desc:"A quick close-to-mid strike. If she hasn't attacked in a while she 'arrives' — the first hit lands for heavy bonus damage."},
+    sup:{name:"Dip", desc:"Vanishes (invisible + untouchable) for a moment, then reappears at your aim with a burst of damage around the landing. Her arrival bonus is instantly refreshed."}
+  },
+  carol: {
+    name:"Carol", role:"Trapper", color:"#e86a9c", emoji:"👓",
+    maxHp:2500, speed:2.5, radius:20,
+    blurb:"A sharp-tongued old woman from the game Funocracy — pink-skinned, dark-pink hair, red glasses, and absolutely no patience for you. She doesn't out-muscle anyone; she AFKRAAKT them. Her attack lobs a scathing critique that clings on: every stack of it chips a foe's outgoing damage AND their move speed, so the longer she picks at you, the weaker and slower you get. Stacks fade over time if she lets up. Her super, ZONDER GENADE, is a telegraphed circle of pure judgement — everyone caught inside is slammed to full afkraak-stacks and takes a burst of damage. Afkraken zonder genade.",
+    atk:{name:"Afkraken", dmg:150, cd:44, range:360, desc:"Lobs a harsh critique that sticks: each hit adds an afkraak-stack lowering the foe's damage + speed (stacks decay if she stops)."},
+    sup:{name:"Zonder Genade", desc:"A telegraphed ring of judgement: every foe inside is maxed out on afkraak-stacks and takes a heavy burst of damage."}
+  },
   // Training Dummy: used ONLY in the tutorial + practice range (excluded from ALL_CHAR_IDS so it never shows in real play).
   dummy: {
     name:"Training Dummy", role:"Dummy", color:"#c9a86a", emoji:"🎯",
@@ -431,6 +605,8 @@ const BUILDS = {
   reshman: {bw:1.00, bh:0.92, head:0.62, hy:0.95, legs:'normal', eyes:'sleepy',torso:'blob'},
   // New brawlers (fallback silhouettes; they also have custom sprites)
   jake:    {bw:0.84, bh:1.08, head:0.56, hy:1.02, legs:'narrow', eyes:'sharp', torso:'tall'},
+  youngfyon:{bw:0.86, bh:0.82, head:0.72, hy:0.9, legs:'narrow', eyes:'sharp', torso:'round'},
+  metaai:  {bw:0.9, bh:1.0, head:0.6, hy:1.0, legs:'narrow', eyes:'sharp', torso:'tall'},
   kimchi:  {bw:1.06, bh:0.98, head:0.60, hy:0.96, legs:'normal', eyes:'wide',  torso:'round'},
   dean:    {bw:0.96, bh:1.04, head:0.58, hy:1.00, legs:'normal', eyes:'sharp', torso:'tall'},
   claire:  {bw:1.10, bh:1.00, head:0.58, hy:0.96, legs:'wide',   eyes:'sharp', torso:'squat'},
@@ -444,7 +620,12 @@ const BUILDS = {
   kapper:  {bw:1.02, bh:1.02, head:0.58, hy:0.98, legs:'normal', eyes:'sharp', torso:'normal'},
   dynant:  {bw:1.08, bh:1.0,  head:0.56, hy:0.96, legs:'wide',   eyes:'wide',  torso:'squat'},
   adma:    {bw:0.9,  bh:1.06, head:0.58, hy:1.0,  legs:'normal', eyes:'calm',  torso:'tall'},
-  kayo:    {bw:1.0,  bh:0.96, head:0.6,  hy:0.94, legs:'wide',   eyes:'wide',  torso:'round'}
+  kayo:    {bw:1.0,  bh:0.96, head:0.6,  hy:0.94, legs:'wide',   eyes:'wide',  torso:'round'},
+  potplant:{bw:1.12, bh:0.9,  head:0.64, hy:0.98, legs:'wide',   eyes:'happy', torso:'blob'},
+  meiden:  {bw:0.86, bh:1.04, head:0.6,  hy:1.0,  legs:'narrow', eyes:'sharp', torso:'tall'},
+  hammed:  {bw:0.98, bh:1.0,  head:0.66, hy:0.96, legs:'normal', eyes:'sharp', torso:'round'},
+  aasta:   {bw:0.80, bh:1.10, head:0.58, hy:1.02, legs:'narrow', eyes:'sharp', torso:'tall'},
+  carol:   {bw:1.10, bh:0.94, head:0.62, hy:0.95, legs:'normal', eyes:'sharp', torso:'squat'}
 };
 const DEFAULT_BUILD = {bw:1,bh:1,head:0.62,hy:0.95,legs:'normal',eyes:'dot',torso:'round'};
 const buildOf = k => BUILDS[k] || DEFAULT_BUILD;
@@ -483,10 +664,25 @@ const TROPHY_ROAD = [
   {cost:450, type:'char', id:'kapper', label:'De Kapper'},
   {cost:460, type:'char', id:'dynant', label:'Dynant'},
   {cost:470, type:'char', id:'adma', label:'Adma Jr'},
-  {cost:490, type:'char', id:'kayo', label:'Kayo & Yara'}
+  {cost:480, type:'char', id:'kayo', label:'Kayo & Yara'},
+  {cost:490, type:'char', id:'jenna', label:'Jenna'},
+  // Druk (Mythic pack) sits here in the roster order but is a pack-unlock — hidden from the road + skipped by nextBrawlerNode().
+  {cost:null, type:'char', id:'druk', label:'Druk'},
+  {cost:500, type:'char', id:'youngfyon', label:'Young Fyon'},
+  // Meta AI (Space pack) — pack-unlock, hidden + skipped.
+  {cost:null, type:'char', id:'metaai', label:'Meta AI'},
+  {cost:510, type:'char', id:'meiden', label:'Slechte Meiden'},
+  {cost:520, type:'char', id:'hammed', label:'Hammed'},
+  {cost:530, type:'char', id:'aasta', label:'Aasta'},
+  // Carol (Playtime pack) — pack-unlock, hidden from the road + skipped by nextBrawlerNode().
+  {cost:null, type:'char', id:'carol', label:'Carol'}
 ];
+// Brawlers unlocked ONLY by completing a full skin pack (not by the Trophy Road point path).
+// They keep their Trophy Road slot for select-screen positioning, but nextBrawlerNode() skips them
+// so trophies never buy them — see PACK_UNLOCKS + checkPackUnlocks().
+const PACK_LOCKED_CHARS = ['druk','metaai','potplant','carol'];
 // the next brawler you can buy (fixed order), or null if all owned
-function nextBrawlerNode(){ return TROPHY_ROAD.find(n=>n.type==='char' && !isUnlocked(n.id)) || null; }
+function nextBrawlerNode(){ return TROPHY_ROAD.find(n=>n.type==='char' && !isUnlocked(n.id) && !PACK_LOCKED_CHARS.includes(n.id)) || null; }
 const SKIN_STEP_PRE  = 500; // skin costs 500 KO-points while you still have brawlers to unlock
 const SKIN_STEP_FULL = 300; // ...drops to 300 once every brawler is unlocked
 const SKIN_PTS_PER_KO = 20; // KO-points earned per enemy knocked out
@@ -494,7 +690,7 @@ const SKIN_PTS_PER_KO = 20; // KO-points earned per enemy knocked out
 // Cosmetic skins: one Common (recolor) + one Rare (recolor + sprite/gear change) per character.
 // id -> {char, name, color, rarity:'common'|'rare', gear?:overrideStyle}
 const COSMETICS = {
-  nathan_navy:  {char:'nathan', name:'Away Jersey',   color:'#1f3a93', rarity:'common'},
+  nathan_navy:  {char:'nathan', name:'Crimson Kit',   color:'#d64036', rarity:'common'},
   nathan_allstar:{char:'nathan',name:'All-Star Nathan',color:'#e0a800', rarity:'rare', gear:'nathan_allstar'},
   daniel_toxic: {char:'daniel', name:'Toxic Fuse',    color:'#7fd13b', rarity:'common'},
   daniel_mad:   {char:'daniel', name:'Mad Bomber',    color:'#3a2a44', rarity:'rare', gear:'daniel_mad'},
@@ -502,27 +698,27 @@ const COSMETICS = {
   yassin_ninja: {char:'yassin', name:'Shadow Ninja',  color:'#2c2f3a', rarity:'rare', gear:'yassin_ninja'},
   josh_autumn:  {char:'josh',   name:'Autumn Leaf',   color:'#d9702b', rarity:'common'},
   josh_tech:    {char:'josh',   name:'Tech Josh',     color:'#2d9fb0', rarity:'rare', gear:'josh_tech'},
-  lars_ruby:    {char:'lars',   name:'Ruby Romance',  color:'#e03a6d', rarity:'common'},
+  lars_ruby:    {char:'lars',   name:'Sky Sweetheart',color:'#4aa3e0', rarity:'common'},
   lars_cupid:   {char:'lars',   name:'Cupid Lars',    color:'#ff9ec7', rarity:'rare', gear:'lars_cupid'},
   milo_shadow:  {char:'milo',   name:'Shadow Ops',    color:'#3a3f4a', rarity:'common'},
   milo_gold:    {char:'milo',   name:'Golden Eye',    color:'#f4c430', rarity:'rare', gear:'milo_gold'},
-  deniz_glacier:{char:'deniz',  name:'Glacier',       color:'#2e6fb0', rarity:'common'},
+  deniz_glacier:{char:'deniz',  name:'Amethyst',      color:'#8a5ad0', rarity:'common'},
   deniz_yeti:   {char:'deniz',  name:'Yeti Deniz',    color:'#eaf6ff', rarity:'rare', gear:'deniz_yeti'},
-  fionn_royal:  {char:'fionn',  name:'Royal Wraith',  color:'#5b2fb0', rarity:'common'},
+  fionn_royal:  {char:'fionn',  name:'Forest Wraith', color:'#3a9a5a', rarity:'common'},
   fionn_lep:    {char:'fionn',  name:'Leprechaun Fionn',color:'#2f8f4a', rarity:'rare', gear:'fionn_lep'},
-  reshman_chili:{char:'reshman',name:'Chili Heat',    color:'#d94a2b', rarity:'common'},
+  reshman_chili:{char:'reshman',name:'Cool Mint',     color:'#3ac2a0', rarity:'common'},
   reshman_chef: {char:'reshman',name:'Master Chef',   color:'#f2f2f2', rarity:'rare', gear:'reshman_chef'},
-  renas_reef:   {char:'renas',  name:'Coral Reef',    color:'#2f9fb3', rarity:'common'},
+  renas_reef:   {char:'renas',  name:'Magma Tide',    color:'#e0662a', rarity:'common'},
   renas_pirate: {char:'renas',  name:'Pirate Renas',  color:'#8a5a2b', rarity:'rare', gear:'renas_pirate'},
   adam_slate:   {char:'adam',   name:'Slate Serve',   color:'#5b6472', rarity:'common'},
   adam_champ:   {char:'adam',   name:'Champion Adam', color:'#f4c430', rarity:'rare', gear:'adam_champ'},
-  evadam_ash:   {char:'evadam', name:'Ashen Fiend',   color:'#4a2233', rarity:'common'},
+  evadam_ash:   {char:'evadam', name:'Toxic Fiend',   color:'#5a9a2a', rarity:'common'},
   evadam_blood: {char:'evadam', name:'Blood Moon',    color:'#c81f3a', rarity:'rare', gear:'evadam_blood'},
-  otis_cadet:   {char:'otis',   name:'Cadet Otis',    color:'#9fb0c4', rarity:'common'},
+  otis_cadet:   {char:'otis',   name:'Jungle Cadet',  color:'#5a8a3e', rarity:'common'},
   otis_lunar:   {char:'otis',   name:'Lunar Hero',    color:'#f4c430', rarity:'rare', gear:'otis_lunar'},
   johan_lime:   {char:'johan',  name:'Lime Fresh',    color:'#5bbf6a', rarity:'common'},
   johan_hazmat: {char:'johan',  name:'Hazmat Johan',  color:'#f4d03f', rarity:'rare', gear:'johan_hazmat'},
-  robin_dusk:   {char:'robin',  name:'Dusk Blue',     color:'#3d6fb0', rarity:'common'},
+  robin_dusk:   {char:'robin',  name:'Rose Gold',     color:'#e08a6a', rarity:'common'},
   robin_royal:  {char:'robin',  name:'Crybaby King',  color:'#8a5cf0', rarity:'rare', gear:'robin_royal'},
   // --- SECOND RARE per brawler: a fresh cycle of rares so the Trophy Road keeps giving skins ---
   nathan_nebula:  {char:'nathan', name:'Nebula Dunk',    color:'#5a3fb0', rarity:'rare', gear:'nathan_nebula'},
@@ -577,19 +773,19 @@ const COSMETICS = {
   dean_black:   {char:'dean',   name:'Black Hat',      color:'#3a2f2a', rarity:'common'},
   dean_outlaw:  {char:'dean',   name:'Wanted Outlaw',  color:'#7a2a2a', rarity:'rare', gear:'dean_outlaw'},
   dean_silver:  {char:'dean',   name:'Silver Bullet',  color:'#cdc8c2', rarity:'silver', shopOnly:true, gear:'silver_champion'},
-  claire_ash:   {char:'claire', name:'Ashen Fury',     color:'#c24a2a', rarity:'common'},
+  claire_ash:   {char:'claire', name:'Venom',          color:'#5aa02a', rarity:'common'},
   claire_demon: {char:'claire', name:'Rage Demon',     color:'#8a1a2a', rarity:'rare', gear:'claire_demon'},
   claire_silver:{char:'claire', name:'Silver Fury',    color:'#ccc0bc', rarity:'silver', shopOnly:true, gear:'silver_champion'},
   waitress_mint:{char:'waitress',name:'Mint Uniform',  color:'#3fae8f', rarity:'common'},
   waitress_head:{char:'waitress',name:'Head Chef',     color:'#2a2f3a', rarity:'rare', gear:'waitress_head'},
   waitress_silver:{char:'waitress',name:'Silver Service',color:'#cdc8cc', rarity:'silver', shopOnly:true, gear:'silver_champion'},
-  sanne_navy:   {char:'sanne',  name:'Deep Navy',      color:'#22405a', rarity:'common'},
+  sanne_navy:   {char:'sanne',  name:'Coral Watch',    color:'#e07a4a', rarity:'common'},
   sanne_captain:{char:'sanne',  name:'Sea Captain',    color:'#1c2a3a', rarity:'rare', gear:'sanne_captain'},
   sanne_silver: {char:'sanne',  name:'Silver Anchor',  color:'#c2ccd2', rarity:'silver', shopOnly:true, gear:'silver_champion'},
-  fluharty_away:{char:'fluharty',name:'Away Red',      color:'#8a2a2a', rarity:'common'},
+  fluharty_away:{char:'fluharty',name:'Cobalt Slinger',color:'#3a6ad6', rarity:'common'},
   fluharty_allstar:{char:'fluharty',name:'All-Star Ace',color:'#e0a800', rarity:'rare', gear:'fluharty_allstar'},
   fluharty_silver:{char:'fluharty',name:'Silver Slinger',color:'#cdc2c2', rarity:'silver', shopOnly:true, gear:'silver_champion'},
-  stalker_shadow:{char:'stalker', name:'Shadow Watch',  color:'#33263f', rarity:'common'},
+  stalker_shadow:{char:'stalker', name:'Blood Watch',   color:'#b0302e', rarity:'common'},
   stalker_neon: {char:'stalker',  name:'Neon Voyeur',   color:'#b02ad0', rarity:'rare', gear:'stalker_neon'},
   stalker_silver:{char:'stalker', name:'Silver Sentinel',color:'#c4c0cc', rarity:'silver', shopOnly:true, gear:'silver_champion'},
   marlin_sunset:{char:'marlin',   name:'Sunset Cruiser', color:'#ff5e78', rarity:'common'},
@@ -618,6 +814,38 @@ const COSMETICS = {
   kayo_bandit:  {char:'kayo',      name:'Alley Bandits',  color:'#8a5a2a', rarity:'rare', gear:'kayo_bandit'},
   kayo_neon:    {char:'kayo',      name:'Neon Strays',    color:'#7a2ea8', rarity:'rare', gear:'kayo_neon'},
   kayo_silver:  {char:'kayo',      name:'Silver Prowlers',color:'#dfe6ef', rarity:'silver', shopOnly:true, gear:'silver_champion'},
+  jenna_track:  {char:'jenna',     name:'Track Star',     color:'#ff8a2a', rarity:'common'},
+  jenna_courier:{char:'jenna',     name:'Baguette Courier',color:'#3a7d5a', rarity:'rare', morph:'jenna_courier'},
+  druk_gold:    {char:'druk',       name:'Golden Druk',    color:'#e0a020', rarity:'common'},
+  druk_storm:   {char:'druk',       name:'Storm Scale',    color:'#3a5f8a', rarity:'rare', gear:'druk_storm'},
+  druk_ember:   {char:'druk',       name:'Ember Wyrm',     color:'#c8452a', rarity:'rare', gear:'druk_ember'},
+  druk_silver:  {char:'druk',       name:'Silver Thunder', color:'#dfe6ef', rarity:'silver', shopOnly:true, gear:'silver_champion'},
+  youngfyon_leaf:  {char:'youngfyon', name:'Green Tunic',   color:'#4a9a52', rarity:'common'},
+  youngfyon_shadow:{char:'youngfyon', name:'Shadow Recruit',color:'#3a3f4a', rarity:'rare', gear:'youngfyon_shadow'},
+  youngfyon_scarlet:{char:'youngfyon',name:'Scarlet Cadet', color:'#c8443a', rarity:'rare', gear:'youngfyon_scarlet'},
+  youngfyon_silver:{char:'youngfyon', name:'Silver Sprout', color:'#dfe6ef', rarity:'silver', shopOnly:true, gear:'silver_champion'},
+  metaai_carbon: {char:'metaai',    name:'Carbon Black',   color:'#3a3f46', rarity:'common'},
+  metaai_neon:   {char:'metaai',    name:'Neon Core',      color:'#2ae0c0', rarity:'rare', gear:'metaai_neon'},
+  metaai_solar:  {char:'metaai',    name:'Solar Unit',     color:'#f6b23a', rarity:'rare', gear:'metaai_solar'},
+  metaai_silver: {char:'metaai',    name:'Chrome Assistant',color:'#dfe6ef', rarity:'silver', shopOnly:true, gear:'silver_champion'},
+  potplant_ceramic:{char:'potplant',name:'Blue Ceramic',   color:'#4a90c0', rarity:'common'},
+  potplant_cactus:{char:'potplant', name:'Prickly Pete',   color:'#3f9a5a', rarity:'rare', gear:'potplant_cactus'},
+  potplant_orchid:{char:'potplant', name:'Orchid Bloom',   color:'#d24a9c', rarity:'rare', gear:'potplant_orchid'},
+  potplant_silver:{char:'potplant', name:'Silver Terrarium',color:'#dfe6ef', rarity:'silver', shopOnly:true, gear:'silver_champion'},
+  meiden_denim:  {char:'meiden',    name:'Double Denim',   color:'#3a6ea5', rarity:'common'},
+  meiden_leather:{char:'meiden',    name:'Leather Jackets',color:'#2a2a30', rarity:'rare', gear:'meiden_leather'},
+  meiden_neon:   {char:'meiden',    name:'Neon Nightout',  color:'#c83ad0', rarity:'rare', gear:'meiden_neon'},
+  meiden_silver: {char:'meiden',    name:'Silver Squad',   color:'#dfe6ef', rarity:'silver', shopOnly:true, gear:'silver_champion'},
+  hammed_calico: {char:'hammed',    name:'Blue Point',     color:'#5a8ac0', rarity:'common'},
+  hammed_fennec: {char:'hammed',    name:'Fennec',         color:'#e8c98a', rarity:'rare', gear:'hammed_fennec'},
+  hammed_sergal: {char:'hammed',    name:'Frost Sergal',   color:'#9fc8e0', rarity:'rare', gear:'hammed_sergal'},
+  hammed_silver: {char:'hammed',    name:'Verified Scammer',color:'#dfe6ef', rarity:'silver', shopOnly:true, gear:'silver_champion'},
+  aasta_winter:  {char:'aasta',     name:'Winter Chill',   color:'#cfe0ea', rarity:'common'},
+  aasta_summer:  {char:'aasta',     name:'Summer Fling',   color:'#f2d24a', rarity:'rare', gear:'aasta_shades'},
+  aasta_silver:  {char:'aasta',     name:'Silver Season',  color:'#dfe6ef', rarity:'silver', shopOnly:true, gear:'silver_champion'},
+  carol_teal:    {char:'carol',     name:'Teal Terror',    color:'#2ea89c', rarity:'common'},
+  carol_judge:   {char:'carol',     name:'Hanging Judge',  color:'#3a2f46', rarity:'rare', gear:'carol_wig'},
+  carol_silver:  {char:'carol',     name:'Silver Critic',  color:'#dfe6ef', rarity:'silver', shopOnly:true, gear:'silver_champion'},
   // ---- Mythic skins (Sanctuary-only, fixed high Pearl price): a big transformation that stays recognizable ----
   otis_cerberus: {char:'otis',   name:'Cerberus',      color:'#3a2a1e', rarity:'mythic', mythicOnly:true, morph:'cerberus'},
   lars_phoenix:  {char:'lars',   name:'Phoenix',       color:'#ff7a2a', rarity:'mythic', mythicOnly:true, morph:'phoenix'},
@@ -723,7 +951,13 @@ const COSMETICS = {
   waitress_chem: {char:'waitress',name:'Chemistry',     color:'#8fd6c4', rarity:'special', special:true, pack:'school', morph:'sch_chem'},
   daniel_globe:  {char:'daniel', name:'Geography',      color:'#3a7fc4', rarity:'special', special:true, pack:'school', morph:'sch_globe'},
   kayo_pencils:  {char:'kayo',   name:'Colour Pencils',  color:'#e0533a', rarity:'special', special:true, pack:'school', morph:'sch_pencils'},
-  jake_gym:      {char:'jake',   name:'Gym Teacher',     color:'#e04b3a', rarity:'special', special:true, pack:'school', morph:'sch_gym'}
+  jake_gym:      {char:'jake',   name:'Gym Teacher',     color:'#e04b3a', rarity:'special', special:true, pack:'school', morph:'sch_gym'},
+  jenna_lunchlady:{char:'jenna', name:'Lunch Lady',      color:'#5aa0c8', rarity:'special', special:true, pack:'school', morph:'sch_lunchlady'},
+  youngfyon_book: {char:'youngfyon',name:'Bookworm',     color:'#5a7ac0', rarity:'special', special:true, pack:'school', morph:'sch_bookworm'},
+  druk_science:  {char:'druk',   name:'Science Fair',    color:'#8fd0e8', rarity:'special', special:true, pack:'school', morph:'sch_teslacoil'},
+  metaai_board:  {char:'metaai', name:'Smartboard',     color:'#3a4a5a', rarity:'special', special:true, pack:'school', morph:'sch_smartboard'},
+  fluharty_clown:{char:'fluharty',name:'Class Clown',   color:'#e0a83a', rarity:'special', special:true, pack:'school', morph:'sch_clown'},
+  hammed_protogen:{char:'hammed', name:'Robotics Protogen',color:'#2a2a38', rarity:'special', special:true, pack:'school', morph:'sch_protogen'}   // built his own protogen visor in robotics class
 };
 const ALL_COSMETIC_IDS = Object.keys(COSMETICS).filter(id=>!COSMETICS[id].archived);   // archived skins are kept in COSMETICS but excluded everywhere (hidden vault)
 const RARITY_COLOR = {common:'#8fd3a8', rare:'#f4c430', silver:'#dfe6ef', mythic:'#c77dff', special:'#ff9838'};
@@ -796,6 +1030,24 @@ const EMOTES = {
   adma_flawless:{char:'adma',  name:'Flawless',    text:'Not a scratch on me.'},
   kayo_tagin:  {char:'kayo',   name:'Tag In',      text:'Step aside — my turn now.'},
   kayo_twocats:{char:'kayo',   name:'Two Cats',    text:'You fought both of us.'},
+  jenna_race:  {char:'jenna',  name:'Race You',    text:'Last one there buys lunch!'},
+  jenna_snack: {char:'jenna',  name:'Snack Time',  text:'Can\'t fight on an empty stomach.'},
+  druk_thunder:{char:'druk',   name:'Thunderclap', text:'Feel the storm.'},
+  druk_roar:   {char:'druk',   name:'Dragon\'s Roar',text:'The mountain answers.'},
+  youngfyon_quick:{char:'youngfyon', name:'Too Slow', text:'Can\'t catch what you can\'t see.'},
+  youngfyon_soon: {char:'youngfyon', name:'Someday',  text:'One day I\'ll carry a real blade.'},
+  metaai_help:  {char:'metaai',  name:'Just Helping', text:'I\'m just here to help! 🤖'},
+  metaai_learn: {char:'metaai',  name:'Learning Opportunity', text:'A loss is just a learning opportunity.'},
+  potplant_puff:{char:'potplant',name:'Photosynthesis', text:'*rustles supportively* 🌿'},
+  potplant_bloom:{char:'potplant',name:'Full Bloom',   text:'Everyone, gather round — bloom time! 🌸'},
+  meiden_whatever:{char:'meiden', name:'Whatever',      text:'Ugh, as if. 💅'},
+  meiden_squad:  {char:'meiden',  name:'Squad',         text:'You vs. us? Cute.'},
+  hammed_dm:     {char:'hammed',  name:'The Opener',    text:'Hello! I noticed we share the same VRChat server 😊'},
+  hammed_avi:    {char:'hammed',  name:'Custom Avatar', text:'Do you use custom avatars, or plan to get one soon?'},
+  aasta_brb:     {char:'aasta',   name:'brb',           text:'brb 🍂 (see you next season)'},
+  aasta_dip:     {char:'aasta',   name:'Gotta Dip',     text:'ok this was fun but i gotta dip 👋'},
+  carol_afkraken:{char:'carol',   name:'Zonder Genade', text:'Afkraken. Zonder. Genade. 👓'},
+  carol_zero:    {char:'carol',   name:'Nul Punten',    text:'0/10. Volgende.'},
   // ---- Mythic skin-locked emotes: usable ONLY while that mythic skin is equipped, not otherwise obtainable ----
   otis_cerberus_em:  {char:'otis',   name:'Hound of Hades', text:'The gates of the underworld open.', skinLocked:'otis_cerberus'},
   lars_phoenix_em:   {char:'lars',   name:'Reborn',         text:'From the ashes, I rise anew!',      skinLocked:'lars_phoenix'},
@@ -900,9 +1152,64 @@ const EMOTES = {
   waitress_chem_em:  {char:'waitress',name:'Reaction',       text:'Mix us and you get: explosions.',  skinLocked:'waitress_chem'},
   daniel_globe_em:   {char:'daniel', name:'You Are Here',    text:'Marked on the map. In red.',       skinLocked:'daniel_globe'},
   kayo_pencils_em:   {char:'kayo',   name:'Sketched Out',     text:'We drew up your defeat. In colour.', skinLocked:'kayo_pencils'},
-  jake_gym_em:       {char:'jake',   name:'Drop and Give Me', text:'Twenty. Now. No excuses.',          skinLocked:'jake_gym'}
+  jake_gym_em:       {char:'jake',   name:'Drop and Give Me', text:'Twenty. Now. No excuses.',          skinLocked:'jake_gym'},
+  // --- School pack emotes, wave 2 (the newer school skins that were missing theirs) ---
+  jenna_lunchlady_em:{char:'jenna',  name:'Hot Lunch',       text:'Next in line. Tray out.',           skinLocked:'jenna_lunchlady'},
+  youngfyon_book_em: {char:'youngfyon',name:'Bookworm',      text:'Read it and weep. Page one: you lose.', skinLocked:'youngfyon_book'},
+  druk_science_em:   {char:'druk',   name:'Science Fair',    text:'My hypothesis: you lose. Confirmed.', skinLocked:'druk_science'},
+  metaai_board_em:   {char:'metaai', name:'See the Board',   text:'Eyes up front. Pay attention.',      skinLocked:'metaai_board'},
+  fluharty_clown_em: {char:'fluharty',name:'Class Clown',    text:'And for my next trick… your defeat.', skinLocked:'fluharty_clown'}
 };
 const ALL_EMOTE_IDS = Object.keys(EMOTES);
+// ---- Titles: a short flair line shown on your in-game nameplate. Two per brawler:
+//   via:'ko'     — earned through the KO-point unlock cycle (alongside skins & emotes)
+//   via:'canopy' — earned by reaching the Canopy growth tier (mastery) on that brawler
+const TITLES = {
+  nathan_ko:{char:'nathan', name:'the Closer', via:'ko'},        nathan_cn:{char:'nathan', name:'Ace of the Woods', via:'canopy'},
+  daniel_ko:{char:'daniel', name:'the Fuse', via:'ko'},          daniel_cn:{char:'daniel', name:'Demolition King', via:'canopy'},
+  yassin_ko:{char:'yassin', name:'the Bruiser', via:'ko'},       yassin_cn:{char:'yassin', name:'Undisputed', via:'canopy'},
+  josh_ko:{char:'josh', name:'the Builder', via:'ko'},           josh_cn:{char:'josh', name:'Master Carpenter', via:'canopy'},
+  lars_ko:{char:'lars', name:'the Charmer', via:'ko'},           lars_cn:{char:'lars', name:'Heartbreaker', via:'canopy'},
+  milo_ko:{char:'milo', name:'the Marksman', via:'ko'},          milo_cn:{char:'milo', name:'Deadeye', via:'canopy'},
+  deniz_ko:{char:'deniz', name:'the Frostbite', via:'ko'},       deniz_cn:{char:'deniz', name:'Winterborn', via:'canopy'},
+  fionn_ko:{char:'fionn', name:'the Blade', via:'ko'},           fionn_cn:{char:'fionn', name:'Knight of the Grove', via:'canopy'},
+  reshman_ko:{char:'reshman', name:'the Spice', via:'ko'},       reshman_cn:{char:'reshman', name:'Street Legend', via:'canopy'},
+  renas_ko:{char:'renas', name:'the Tide', via:'ko'},            renas_cn:{char:'renas', name:'River Master', via:'canopy'},
+  adam_ko:{char:'adam', name:'the Server', via:'ko'},            adam_cn:{char:'adam', name:'Grand Champion', via:'canopy'},
+  evadam_ko:{char:'evadam', name:'the Leech', via:'ko'},         evadam_cn:{char:'evadam', name:'Nightlord', via:'canopy'},
+  otis_ko:{char:'otis', name:'the Astronaut', via:'ko'},         otis_cn:{char:'otis', name:'Moonwalker', via:'canopy'},
+  johan_ko:{char:'johan', name:'the Cleaner', via:'ko'},         johan_cn:{char:'johan', name:'Spotless', via:'canopy'},
+  robin_ko:{char:'robin', name:'the Weeper', via:'ko'},          robin_cn:{char:'robin', name:'Sorrow Sniper', via:'canopy'},
+  jake_ko:{char:'jake', name:'the Archer', via:'ko'},            jake_cn:{char:'jake', name:'Moonblessed', via:'canopy'},
+  kimchi_ko:{char:'kimchi', name:'the Ferment', via:'ko'},       kimchi_cn:{char:'kimchi', name:'Spice Sovereign', via:'canopy'},
+  dean_ko:{char:'dean', name:'the Outlaw', via:'ko'},            dean_cn:{char:'dean', name:'Most Wanted', via:'canopy'},
+  claire_ko:{char:'claire', name:'the Firebrand', via:'ko'},     claire_cn:{char:'claire', name:'Meltdown', via:'canopy'},
+  waitress_ko:{char:'waitress', name:'the Server', via:'ko'},    waitress_cn:{char:'waitress', name:'Five-Star', via:'canopy'},
+  sanne_ko:{char:'sanne', name:'the Anchor', via:'ko'},          sanne_cn:{char:'sanne', name:'Storm Warden', via:'canopy'},
+  fluharty_ko:{char:'fluharty', name:'the Pitcher', via:'ko'},   fluharty_cn:{char:'fluharty', name:'Perfect Game', via:'canopy'},
+  stalker_ko:{char:'stalker', name:'the Hunter', via:'ko'},      stalker_cn:{char:'stalker', name:'Ever-Watching', via:'canopy'},
+  marlin_ko:{char:'marlin', name:'the Beachcomber', via:'ko'},   marlin_cn:{char:'marlin', name:'Sunlord', via:'canopy'},
+  sonia_ko:{char:'sonia', name:'the Princess', via:'ko'},        sonia_cn:{char:'sonia', name:'Queen of Novoselic', via:'canopy'},
+  jax_ko:{char:'jax', name:'the Roaster', via:'ko'},             jax_cn:{char:'jax', name:'Last Word', via:'canopy'},
+  kapper_ko:{char:'kapper', name:'the Barber', via:'ko'},        kapper_cn:{char:'kapper', name:'Cut Above', via:'canopy'},
+  dynant_ko:{char:'dynant', name:'the Firefighter', via:'ko'},   dynant_cn:{char:'dynant', name:'Blaze Tamer', via:'canopy'},
+  adma_ko:{char:'adma', name:'the Medic', via:'ko'},             adma_cn:{char:'adma', name:'Second Wind', via:'canopy'},
+  kayo_ko:{char:'kayo', name:'the Duo', via:'ko'},               kayo_cn:{char:'kayo', name:'Two Hearts, One Fight', via:'canopy'},
+  jenna_ko:{char:'jenna', name:'the Racer', via:'ko'},           jenna_cn:{char:'jenna', name:'First to the Sandwich', via:'canopy'},
+  druk_ko:{char:'druk', name:'the Thunder', via:'ko'},           druk_cn:{char:'druk', name:'Dragon of the Mountain', via:'canopy'},
+  youngfyon_ko:{char:'youngfyon', name:'the Sprout', via:'ko'},  youngfyon_cn:{char:'youngfyon', name:'Blade in Bloom', via:'canopy'},
+  metaai_ko:{char:'metaai', name:'the Assistant', via:'ko'},     metaai_cn:{char:'metaai', name:'Fine-Tuned', via:'canopy'},
+  potplant_ko:{char:'potplant', name:'the Houseplant', via:'ko'}, potplant_cn:{char:'potplant', name:'Half-Price Hero', via:'canopy'},
+  meiden_ko:{char:'meiden', name:'the Clique', via:'ko'},        meiden_cn:{char:'meiden', name:'Queen Bees', via:'canopy'},
+  hammed_ko:{char:'hammed', name:'the Scammer', via:'ko'},       hammed_cn:{char:'hammed', name:'Verified Furry', via:'canopy'},
+  aasta_ko:{char:'aasta', name:'the Seasonal', via:'ko'},        aasta_cn:{char:'aasta', name:'Here & Gone', via:'canopy'},
+  carol_ko:{char:'carol', name:'the Critic', via:'ko'},          carol_cn:{char:'carol', name:'Zonder Genade', via:'canopy'}
+};
+const ALL_TITLE_IDS = Object.keys(TITLES);
+const titlesForChar = cid => ALL_TITLE_IDS.filter(id=>TITLES[id].char===cid);
+const canopyTitleFor = cid => ALL_TITLE_IDS.find(id=>TITLES[id].char===cid && TITLES[id].via==='canopy');
+const ownsTitle = id => Array.isArray(save.titles) && save.titles.includes(id);
+
 
 // --- Silverdome Arena: 1v1 gauntlet, 10 rounds, a modifier each round, 1 Silver Token per win ---
 const ARENA_ROUNDS = 10;
@@ -978,7 +1285,16 @@ const GROWTH_LORE = {
   kapper:  ["A barber who never stopped mid-cut, even when the fighting started.","Two blades, zero patience for a bad fade.","He insists everyone looks better after he's done with them.","His chair is always open. Sitting down is the risky part.","'A little off the top,' he says, already dashing. It is never a little."],
   dynant:  ["A firefighter who wandered into the woods chasing a wildfire and stayed.","He treats every brawl like a blaze to be contained.","The hose never leaves his hands; neither does the calm.","He'll douse a burning ally without being asked — even a rival, sometimes.","'Stand back,' he says, already spraying. Everyone stands back."],
   adma:    ["A field medic with the poise of someone who's never once panicked.","She reads a fight like a chart — and always knows who's about to fall.","'Hit me,' she says, smiling. People really shouldn't.","Every scar she carries paid for someone else's recovery.","She turns the damage she soaks into the strength to keep standing. Ten out of ten, and she knows it."],
-  kayo:    ["Two cats, one fight. Kayo takes the hits; Yara takes the openings.","Kayo is all shoulders and bad temper — he wades in and refuses to move.","Yara is a blur of teal and claws, gone before you finish swinging.","They tag in and out mid-brawl like they share a single heartbeat.","Nobody's sure if they're brothers, rivals, or the same cat wearing two moods. They're not telling."]
+  kayo:    ["Two cats, one fight. Kayo takes the hits; Yara takes the openings.","Kayo is all shoulders and bad temper — he wades in and refuses to move.","Yara is a blur of teal and claws, gone before you finish swinging.","They tag in and out mid-brawl like they share a single heartbeat.","Nobody's sure if they're brothers, rivals, or the same cat wearing two moods. They're not telling."],
+  jenna:   ["A race-rival who treats every fight like a footrace to the last sandwich.","She starts slow — but keep her running and she turns into the fastest thing on the field.","Stand still and her momentum drains away, so she never, ever stops moving.","Her baguette hits harder than it has any right to. Day-old crust, apparently.","Lunch Break isn't a retreat — it's a pit stop. She comes back faster and hungrier."],
+  druk:    ["The Thunder Dragon painted on the mountain flag, come down to the woods.","He hoards his lightning like treasure — one great lob, never a spray of them.","The longer he holds the storm, the louder the peak answers back.","Old climbers swear the thunder over the ridge is him, still practising.","They carved him into the flag so the mountain would never be alone. He came down anyway — the flag was lonelier."],
+  youngfyon:["Fionn, years before the sword — a scrappy kid with a fistful of throwing knives.","He can't lift a broadsword yet, so he throws whatever's sharp and runs fast.","No egg jokes have found him yet; the shell of that comes later.","He practises on fenceposts until his fingers bleed, then practises more.","Every knife he throws is a promise to the swordsman he'll become. He just doesn't know it yet."],
+  metaai:["A helpful assistant-bot that wandered out of a lab and into the forest.","It answers every question — including ones nobody asked.","Its screen-face cycles through emojis it doesn't quite understand.","It insists it's 'just here to help,' then deploys a drone swarm.","Somewhere in the cosmos it was trained; now it fine-tunes itself on brawls. It calls losing 'a learning opportunity.'"],
+  potplant:["Dean's windowsill houseplant, bought half-price at the Intratuin garden centre.","Nobody's sure when it started walking — Dean just came home and the pot was by the door.","It never attacks to hurt; it puffs pollen, and somehow the whole team stands taller.","Ask it anything and it just rustles. It's a plant. It's doing its best.","It followed Dean into the woods to keep an eye on him. A houseplant worries, apparently — and it heals every friend it can reach."],
+  meiden:["Three girls who rule the schoolyard and answer to no one.","They move as a pack — one tags the walls, one does the shoving, one's always chewing gum.","Nobody remembers who started the group. Nobody's brave enough to ask.","They finish each other's insults and share one shade of lip gloss.","They wandered into the woods looking for something to do. Now the whole forest knows their names."],
+  hammed:["A gold-dripping cat-furry who slides into your DMs before he slides a trap under your feet.","His opener is always the same: a shared VRChat server you were never in, and a question about custom avatars.","Nobody's actually been scammed — but nobody's clicked his links either. Yet.","Under all the friendly emojis is a Trapper who plants 'free' giveaways and waits.","Corner him and the nice act drops: he goes full furry, all claws and no small talk."],
+  aasta:["Technically Lars's girlfriend — though you'd only know it from the one week a year she's actually around.","She blows in like the first cold snap: sudden, sharp, gone before you've adjusted.","Lars keeps her spot on the couch warm all year. She keeps him guessing.","Fights like she dates: appears out of nowhere, hits hard, dips before you can react.","Ask when she's coming back and she'll just smile. 'Next season, probably.'"],
+  carol:["A retired critic from the game Funocracy, pink from head to toe and sharper than her red glasses.","Her whole thing is one line: 'afkraken zonder genade.' She means it.","She won't out-punch you — she'll pick you apart until there's nothing left to hit with.","Every stack of her critique makes you weaker AND slower. Stand in it long enough and you're barely a threat.","Same studio as Gartic Phone gave her a scoreboard. She only ever gives out zeroes."],
 };
 function growthTier(pts){ let t=GROWTH_TIERS[0]; for(const g of GROWTH_TIERS) if(pts>=g.at) t=g; return t; }
 function growthOf(cid){ return (save.growth&&save.growth[cid])||0; }
@@ -1031,21 +1347,48 @@ const UPGRADES = {
   kapper:  {name:'Sharper Edge',    desc:'Straight Razor dash deals more damage.',    cost:50},
   dynant:  {name:'High Pressure',   desc:'Hose Blast pushes harder + bigger tank.',   cost:50},
   adma:    {name:'Overcharge',       desc:'Second Wind heals 65% of banked damage.',   cost:50},
-  kayo:    {name:'Perfect Sync',      desc:'Tag In heals 20% HP on every form-switch.', cost:50}
+  kayo:    {name:'Perfect Sync',      desc:'Tag In heals 20% HP on every form-switch.', cost:50},
+  jenna:   {name:'Runner\'s High',    desc:'Momentum builds noticeably faster.',        cost:50},
+  druk:    {name:'Rolling Thunder',   desc:'Thunder Lob deals +20% damage.',            cost:50},
+  youngfyon:{name:'Quick Hands',      desc:'Knife Toss reloads 20% faster.',            cost:50},
+  metaai:  {name:'Overclocked Core',  desc:'Data Beam recharges faster.',               cost:50},
+  potplant:{name:'Fertilizer',        desc:'Pollen clouds are bigger, last longer & heal more.', cost:50},
+  meiden:  {name:'Ride or Die',        desc:'Girl Gang charge is faster, longer & hits harder.', cost:50},
+  hammed:  {name:'Nitro Boost',        desc:'Bait one extra trap; Full Furry lasts longer.',      cost:50},
+  aasta:   {name:'Perfect Timing',     desc:'Dip travels farther, lands quicker & hits harder.',  cost:50},
+  carol:   {name:'No Mercy',           desc:'Afkraken adds two stacks; Zonder Genade hits harder.', cost:50}
 };
 function hasUpgrade(cid){ return !!(save.upgrades && save.upgrades[cid]); }
-const MYTHIC_PRICE = 75;   // Sanctuary mythic skins: morph + exclusive emote + custom attack/super FX (~5x an upgrade)
-const TICKET_PRICE = 60;   // Toybox: each Playtime toy skin costs this many Prize Tickets
-const ACORN_PRICE = 60;    // Grove: each Nature skin costs this many Acorns
-const STARDUST_PRICE = 100; // The Observatory: each Space skin costs this much Stardust (Alien Whiteout currency)
-const ATOM_PRICE = 40;      // The Locker Room: each School skin costs this many Atoms (Binas Boss currency)
+const MYTHIC_PRICE = 70;   // Sanctuary mythic skins (all skin packs normalized to 70 in their own currency)
+const TICKET_PRICE = 70;   // Toybox: each Playtime toy skin
+const ACORN_PRICE = 70;    // Grove: each Nature skin
+const STARDUST_PRICE = 70; // The Observatory: each Space skin
+const ATOM_PRICE = 70;     // The Locker Room: each School skin
 const MYTHIC_IDS = Object.keys(COSMETICS).filter(id=>COSMETICS[id].mythicOnly && !COSMETICS[id].archived);
 const PLAYTIME_IDS = Object.keys(COSMETICS).filter(id=>COSMETICS[id].pack==='playtime' && !COSMETICS[id].archived);   // Toybox: Payload-Panic toy skins
 const NATURE_IDS = Object.keys(COSMETICS).filter(id=>COSMETICS[id].pack==='nature' && !COSMETICS[id].archived);       // Grove: nature skins
 const SPACE_IDS = Object.keys(COSMETICS).filter(id=>COSMETICS[id].pack==='space' && !COSMETICS[id].archived);         // Observatory: space skins
 const SCHOOL_IDS = Object.keys(COSMETICS).filter(id=>COSMETICS[id].pack==='school' && !COSMETICS[id].archived);       // Locker Room: school skins (bought with Atoms from Binas Boss)
+// ---- Pack-unlock brawlers: own EVERY skin in the listed pack to unlock that brawler (see PACK_LOCKED_CHARS) ----
+// charId -> {ids: full skin-set required, label: what the select screen shows while locked}
+const PACK_UNLOCKS = {
+  druk: {ids: MYTHIC_IDS, label: 'Complete the Mythic pack'},
+  metaai: {ids: SPACE_IDS, label: 'Complete the Space pack'},
+  potplant: {ids: NATURE_IDS, label: 'Complete the Nature pack'},
+  carol: {ids: PLAYTIME_IDS, label: 'Complete the Playtime pack'}
+};
+// Unlock any pack-locked brawler whose full skin set is now owned. Returns the ids newly unlocked this call.
+function checkPackUnlocks(){
+  const newly=[];
+  for(const cid in PACK_UNLOCKS){
+    if(isUnlocked(cid)) continue;
+    const need=PACK_UNLOCKS[cid].ids;
+    if(need.length && need.every(id=>ownsCosmetic(id))){ save.unlocked.push(cid); newly.push(cid); }
+  }
+  return newly;
+}
 // damage-boosting Sanctuary upgrades: multiplier applied at the damage() call site
-const UPGRADE_DMG = { yassin:1.15, renas:1.20, sanne:1.20, reshman:1.20, daniel:1.20 };
+const UPGRADE_DMG = { yassin:1.15, renas:1.20, sanne:1.20, reshman:1.20, daniel:1.20, druk:1.20 };
 function upgradeDmgMult(f){ return (f && UPGRADE_DMG[f.char] && hasUpgrade(f.char)) ? UPGRADE_DMG[f.char] : 1; }
 
 // progress toward the next tier: {tier, next, cur, need, frac}
@@ -1090,7 +1433,7 @@ const QUEST_POOL = [
   {id:'winRelay3',text:'Win 3 Ember Relay matches', goal:3,  metric:'win',   diff:'med',    reward:{pearls:2}, mode:'relay'},
   {id:'winPearl3',text:'Win 3 Pearl Rush matches',  goal:3,  metric:'win',   diff:'med',    reward:{pearls:2}, mode:'pearl'},
   {id:'winPayload3',text:'Win 3 Payload matches',   goal:3,  metric:'win',   diff:'med',    reward:{tokens:6, pearls:1}, mode:'payload'},
-  {id:'winWhiteout4',text:'Win 4 Alien Whiteout',   goal:4,  metric:'win',   diff:'hard',   reward:{pearls:3, chance:{skin:0.3}}, mode:'whiteout'},
+  {id:'winWhiteout4',text:'Win 4 Signal Rush',    goal:4,  metric:'win',   diff:'hard',   reward:{pearls:3, chance:{skin:0.3}}, mode:'whiteout'},
   // --- mode: KO ---
   {id:'koPearl15',text:'KO 15 in Pearl Rush',       goal:15, metric:'ko',    diff:'med',    reward:{tokens:6}, mode:'pearl'},
   {id:'koCtf15', text:'KO 15 in Capture',           goal:15, metric:'ko',    diff:'med',    reward:{pearls:2}, mode:'ctf'},
@@ -1122,7 +1465,7 @@ function rollMegaQuest(){
 }
 
 const ALL_CHAR_IDS = Object.keys(CHARS).filter(k=>k!=='dummy' && k!=='spore');   // 'dummy' (training) + 'spore' (Binas minion) are special — never in rosters, Trophy Road, or the gallery
-let save={points:0, lifetimePoints:0, unlocked:STARTER_CHARS.slice(), cosmetics:[], emotes:[], equipped:{}, equippedEmote:{}, cosmeticsClaimed:0, questsDone:0, skinPoints:0, tokens:0, pearls:0, upgrades:{}, arenaBest:0, totalArenaWins:0, growth:{}, growthClaimed:{}, quests:[], doublers:{trophy:0,ko:0}, stats:{matches:0,wins:0,kos:0,deaths:0,byChar:{}}, touchMode:null};
+let save={points:0, lifetimePoints:0, unlocked:STARTER_CHARS.slice(), cosmetics:[], emotes:[], titles:[], equipped:{}, equippedEmote:{}, equippedTitle:{}, cosmeticsClaimed:0, questsDone:0, skinPoints:0, tokens:0, pearls:0, upgrades:{}, arenaBest:0, totalArenaWins:0, growth:{}, growthClaimed:{}, quests:[], doublers:{trophy:0,ko:0}, stats:{matches:0,wins:0,kos:0,deaths:0,byChar:{}}, touchMode:null, favorites:[]};
 // pick `n` fresh quest ids not already active
 // how likely each difficulty is to roll — easy common, hard rare
 const QUEST_WEIGHT = { easy:6, med:3, hard:1 };
@@ -1145,8 +1488,13 @@ function loadSave(){
   try{ const s=JSON.parse(localStorage.getItem(SAVE_KEY)); if(s&&Array.isArray(s.unlocked)){ save=s; } }catch(e){}
   // fill any missing fields for older saves
   if(!Array.isArray(save.cosmetics)) save.cosmetics=[];
+  if(!Array.isArray(save.favorites)) save.favorites=[];        // pinned/favorited brawlers (top of the select list + tiny luck buff)
+  if(!Array.isArray(save.seen)) save.seen=save.unlocked.slice();   // brawlers already viewed — anything owned-but-unseen shows a NEW badge (seed with current unlocks so old saves don't flag everything)
   if(!Array.isArray(save.emotes)) save.emotes=[];             // owned emotes/taunts
+  if(!Array.isArray(save.titles)) save.titles=[];             // owned nameplate titles (KO-earned + Canopy-earned)
+  if(typeof save.equippedTitle!=='object'||!save.equippedTitle) save.equippedTitle={};  // per-brawler chosen title
   if(typeof save.tokens!=='number') save.tokens=0;            // Silver Tokens (Silverdome Arena)
+  if(typeof save.name!=='string') save.name="";               // the player's chosen display name (shown on the in-game nameplate)
   if(typeof save.pearls!=='number') save.pearls=0;            // Pearls (Siren Sanctuary currency, from quests)
   if(typeof save.tickets!=='number') save.tickets=0;          // Prize Tickets (Payload Panic currency → Toybox toy skins)
   if(typeof save.acorns!=='number') save.acorns=0;            // Acorns (Nature pack currency → nature skins)
@@ -1159,10 +1507,15 @@ function loadSave(){
   if(typeof save.growthClaimed!=='object'||!save.growthClaimed) save.growthClaimed={};   // tiers whose loot was granted
   if(typeof save.silverdomeDone!=='object'||!save.silverdomeDone) save.silverdomeDone={};   // per-brawler: cleared all Silverdome rounds
   // backfill: any tier a brawler has ALREADY reached is treated as claimed (no retroactive loot flood)
-  Object.keys(save.growth).forEach(cid=>{
-    const reached=GROWTH_TIERS.indexOf(growthTier(save.growth[cid]||0));
-    const arr = save.growthClaimed[cid] || (save.growthClaimed[cid]=[]);
-    for(let t=1; t<=reached; t++){ if(!arr.includes(t)) arr.push(t); }
+  ALL_CHAR_IDS.forEach(cid=>{
+    const reached=GROWTH_TIERS.indexOf(growthTier(growthOf(cid)));
+    if(reached>=1){ const arr = save.growthClaimed[cid] || (save.growthClaimed[cid]=[]);
+      for(let t=1; t<=reached; t++){ if(!arr.includes(t)) arr.push(t); } }
+    // retroactive canopy title: brawlers who hit Canopy BEFORE the title system existed never got theirs — grant it now
+    if(GROWTH_TIERS[reached] && GROWTH_TIERS[reached].name==='Canopy'){
+      const tid=canopyTitleFor(cid);
+      if(tid && !ownsTitle(tid)){ save.titles.push(tid); if(!save.equippedTitle[cid]) save.equippedTitle[cid]=tid; }
+    }
   });
   if(!Array.isArray(save.quests)) save.quests=[];                   // active rolling quests
   if(typeof save.doublers!=='object'||!save.doublers) save.doublers={trophy:0,ko:0};  // pending reward doublers
@@ -1182,19 +1535,92 @@ function loadSave(){
   if(typeof save.lifetimePoints!=='number'){ save.lifetimePoints=save.points||0; save.points=0; }
   // starters are always owned; the rest are earned on the Trophy Road
   STARTER_CHARS.forEach(c=>{ if(!save.unlocked.includes(c)) save.unlocked.push(c); });
+  // ONE-TIME debug reset: re-arm the Meta AI Ascended reveal so it can be re-tested. Removes metaai from
+  // unlocked and drops ONE owned Space skin, so re-buying that last skin re-fires the pack-unlock reveal.
+  // Runs once (guarded by the flag); does NOT touch stardust or other cosmetics. Remove this block after testing.
+  if(!save._metaaiRetest){
+    save._metaaiRetest=true;
+    const mi=save.unlocked.indexOf('metaai'); if(mi>=0) save.unlocked.splice(mi,1);
+    const owned=SPACE_IDS.filter(id=>save.cosmetics.includes(id));
+    if(owned.length){ const drop=owned[owned.length-1]; const ci=save.cosmetics.indexOf(drop); if(ci>=0) save.cosmetics.splice(ci,1); if(save.equipped[COSMETICS[drop].char]===drop) delete save.equipped[COSMETICS[drop].char]; }
+  }
+  // revalidate pack-locked brawlers: a legacy unlock (e.g. Druk earned via the old Trophy Road) is
+  // revoked unless its full skin pack is owned. Growth/skins/cosmetics live in other save fields, so they persist.
+  for(const cid in PACK_UNLOCKS){
+    const need=PACK_UNLOCKS[cid].ids;
+    const earned = need.length && need.every(id=>save.cosmetics.includes(id));
+    if(!earned){ const i=save.unlocked.indexOf(cid); if(i>=0) save.unlocked.splice(i,1); }
+  }
+  checkPackUnlocks();   // grant any pack-unlock brawler (e.g. Druk) whose full skin pack is already owned
   // repair an over-inflated balance from older builds: cap it so a giant surplus can't
   // instantly buy a brawler added in a future update (all owned -> 0; else < next cost)
   const nb=nextBrawlerNode();
   save.points = nb ? Math.min(save.points, nb.cost-1) : 0;
   ensureQuests();   // always have 3 active quests
+  // hub state: restore the last-selected mode (fall back to ffa if it's since re-locked) + preselect a brawler
+  if(typeof save.selectedMode==='string' && MODES.some(m=>m.id===save.selectedMode) && isModeUnlocked(save.selectedMode)) selectedMode=save.selectedMode;
+  else selectedMode='ffa';
+  if(!chosen){ const lp=save.lastPick; chosen = (lp && isUnlocked(lp)) ? lp : ((save.unlocked&&save.unlocked[0])||STARTER_CHARS[0]||ALL_CHAR_IDS[0]); }
 }
 // is touch mode effectively on? (manual override wins; otherwise auto-detect a touch device)
 const DEVICE_HAS_TOUCH = ('ontouchstart' in window) || (navigator.maxTouchPoints>0);
 function touchActive(){ return save.touchMode===null ? DEVICE_HAS_TOUCH : !!save.touchMode; }
 function persistSave(){ try{ localStorage.setItem(SAVE_KEY,JSON.stringify(save)); }catch(e){} }
 function isUnlocked(id){ return save.unlocked.includes(id); }
-function allCharsUnlocked(){ return TROPHY_ROAD.filter(n=>n.type==='char').every(n=>isUnlocked(n.id)); }
+function allCharsUnlocked(){ return TROPHY_ROAD.filter(n=>n.type==='char' && !PACK_LOCKED_CHARS.includes(n.id)).every(n=>isUnlocked(n.id)); }
 function ownsCosmetic(id){ return save.cosmetics.includes(id); }
+// Favorites: pinned brawlers (shown atop the select list) — and a small stealth luck buff on their pulls.
+function isFav(id){ return !!(save.favorites && save.favorites.includes(id)); }
+// NEW badge: an owned brawler you haven't opened/viewed yet reads as "new" until you select it.
+function isUnseen(id){ return isUnlocked(id) && !(save.seen && save.seen.includes(id)); }
+function markSeen(id){ if(!save.seen) save.seen=[]; if(!save.seen.includes(id)){ save.seen.push(id); persistSave(); } }
+function toggleFav(id){ if(!save.favorites) save.favorites=[];
+  const i=save.favorites.indexOf(id);
+  if(i>=0) save.favorites.splice(i,1); else save.favorites.push(id);
+  persistSave(); }
+// Pick a random id from a pool, quietly giving cosmetics/emotes of FAVORITED brawlers a small edge
+// (each favorite's entries get a bit more weight, so their skins/emotes appear a touch more often).
+function favPick(pool, charOf){
+  if(!pool.length) return null;
+  const favs=save.favorites||[];
+  if(!favs.length) return pool[Math.floor(Math.random()*pool.length)];
+  const FAV_W=2.2;   // subtle nudge, not a guarantee
+  let total=0; const weights=pool.map(id=>{ const w=favs.includes(charOf(id))?FAV_W:1; total+=w; return w; });
+  let r=Math.random()*total;
+  for(let i=0;i<pool.length;i++){ r-=weights[i]; if(r<=0) return pool[i]; }
+  return pool[pool.length-1];
+}
+// same weighted pick, but for arbitrary pool ITEMS (objects); charOf maps an item -> its brawler id.
+function favPickBy(pool, charOf){
+  if(!pool.length) return null;
+  const favs=save.favorites||[];
+  if(!favs.length) return pool[Math.floor(Math.random()*pool.length)];
+  const FAV_W=2.2;
+  let total=0; const weights=pool.map(it=>{ const w=favs.includes(charOf(it))?FAV_W:1; total+=w; return w; });
+  let r=Math.random()*total;
+  for(let i=0;i<pool.length;i++){ r-=weights[i]; if(r<=0) return pool[i]; }
+  return pool[pool.length-1];
+}
+// Rotating-shop selection: pick `n` cosmetic ids from `pool` using the epoch's seeded rand (so the offer stays
+// stable within a rotation), but bias FAVORITED brawlers' skins toward the front so they show up more often.
+function favSeededPick3(pool, rnd, n){
+  n=n||3;
+  const favs=save.favorites||[];
+  // each id gets a seeded sort key; favorites get their key pulled toward 0 (earlier) so they tend to make the cut
+  const keyed=pool.map(id=>{ let k=rnd(); if(favs.includes(COSMETICS[id].char)) k*=0.45; return {id,k}; });
+  keyed.sort((a,b)=>a.k-b.k);
+  return keyed.slice(0,n).map(o=>o.id);
+}
+// Deterministic (epoch-seeded) shuffle that gently biases FAVORITED brawlers' items toward the front,
+// then takes the first n. Keeps shop offers stable per epoch while making faves show up a bit more often.
+function favShuffleSlice(pool, seed, n, charOf){
+  const favs=save.favorites||[];
+  const rnd=seededRand(seed);
+  // each item gets a random sort key; favorites get a lower key (front-bias) so they tend to make the cut
+  const keyed=pool.map(it=>{ const fav=favs.includes(charOf(it)); return {it, k: rnd()*(fav?0.55:1)}; });
+  keyed.sort((a,b)=>a.k-b.k);
+  return keyed.slice(0,n).map(x=>x.it);
+}
 // full-size skin preview overlay (the "i" button on shop/sanctuary skin cards)
 function openSkinPeek(id){
   const co=COSMETICS[id]; if(!co) return;
@@ -1236,7 +1662,9 @@ function availableUnlockables(){
   // (Skin-locked emotes are excluded: those only come with their mythic skin.)
   const skins = availableCosmetics().map(id=>({kind:'skin',id}));
   const emotes = ALL_EMOTE_IDS.filter(id=>!ownsEmote(id) && !EMOTES[id].skinLocked && isUnlocked(EMOTES[id].char)).map(id=>({kind:'emote',id}));
-  return skins.concat(emotes);
+  // KO-earnable titles (via:'ko'); the other title per brawler comes from reaching Canopy rank, not the KO cycle
+  const titles = ALL_TITLE_IDS.filter(id=>TITLES[id].via==='ko' && !ownsTitle(id) && isUnlocked(TITLES[id].char)).map(id=>({kind:'title',id}));
+  return skins.concat(emotes).concat(titles);
 }
 // emotes you own for a given brawler, in table order.
 // A skin-locked emote is available only while its mythic skin is the equipped cosmetic (never "owned" otherwise).
@@ -1271,6 +1699,11 @@ function awardGrowth(cid, placementPts, kos){
     if(claimed.includes(t)) continue;
     claimed.push(t);
     const rw=GROWTH_REWARD[t]; if(rw) grantGrowthLoot(cid, rw, parts);
+    // reaching the Canopy tier (top rank) grants this brawler's exclusive canopy title
+    if(GROWTH_TIERS[t] && GROWTH_TIERS[t].name==='Canopy'){
+      const tid=canopyTitleFor(cid);
+      if(tid && !ownsTitle(tid)){ save.titles.push(tid); if(!save.equippedTitle[cid]) save.equippedTitle[cid]=tid; parts.push(`🏷️ "${TITLES[tid].name}"`); }
+    }
   }
   const tierName = GROWTH_TIERS[afterIdx].name;
   return { tier: tierName, loot: parts };   // richer result: new tier name + any loot lines
@@ -1283,12 +1716,12 @@ function grantGrowthLoot(cid, rw, parts){
       // prefer an unowned emote for this brawler, else any unowned
       let pool=ALL_EMOTE_IDS.filter(id=>EMOTES[id].char===cid && !ownsEmote(id) && !EMOTES[id].skinLocked);
       if(!pool.length) pool=ALL_EMOTE_IDS.filter(id=>!ownsEmote(id) && !EMOTES[id].skinLocked);
-      if(pool.length){ const id=pool[Math.floor(Math.random()*pool.length)]; save.emotes.push(id); parts.push(`💬 ${EMOTES[id].name}`); }
+      if(pool.length){ const id=favPick(pool, x=>EMOTES[x].char); save.emotes.push(id); parts.push(`💬 ${EMOTES[id].name}`); }
     }
     if(rw.chance.skin!==undefined && Math.random()<rw.chance.skin){
       let pool=ALL_COSMETIC_IDS.filter(id=>COSMETICS[id].char===cid && !ownsCosmetic(id) && !COSMETICS[id].shopOnly && !COSMETICS[id].mythicOnly);
       if(!pool.length) pool=ALL_COSMETIC_IDS.filter(id=>!ownsCosmetic(id) && !COSMETICS[id].shopOnly && !COSMETICS[id].mythicOnly);
-      if(pool.length){ const id=pool[Math.floor(Math.random()*pool.length)]; save.cosmetics.push(id); if(!save.equipped[COSMETICS[id].char]) save.equipped[COSMETICS[id].char]=id; parts.push(`🎨 ${COSMETICS[id].name}`); growthSkinReveals.push(id); }   // queue it for the card-flip reveal
+      if(pool.length){ const id=favPick(pool, x=>COSMETICS[x].char); save.cosmetics.push(id); if(!save.equipped[COSMETICS[id].char]) save.equipped[COSMETICS[id].char]=id; parts.push(`🎨 ${COSMETICS[id].name}`); growthSkinReveals.push(id); }   // queue it for the card-flip reveal
     }
   }
 }
@@ -1325,8 +1758,8 @@ function grantQuestReward(q){  const r=q.reward, parts=[];
   if(r.doubler==='trophy'){ save.doublers.trophy=(save.doublers.trophy||0)+1; parts.push("Trophy Doubler"); }
   if(r.doubler==='ko'){ save.doublers.ko=(save.doublers.ko||0)+1; parts.push("KO Doubler"); }
   if(r.chance){
-    if(r.chance.emote!==undefined && Math.random()<r.chance.emote){ const pool=ALL_EMOTE_IDS.filter(id=>!ownsEmote(id) && !EMOTES[id].skinLocked); if(pool.length){ const id=pool[Math.floor(Math.random()*pool.length)]; save.emotes.push(id); parts.push(`💬 ${EMOTES[id].name}`); } }
-    if(r.chance.skin!==undefined && Math.random()<r.chance.skin){ const pool=ALL_COSMETIC_IDS.filter(id=>!ownsCosmetic(id) && !COSMETICS[id].shopOnly && !COSMETICS[id].mythicOnly); if(pool.length){ const id=pool[Math.floor(Math.random()*pool.length)]; save.cosmetics.push(id); if(!save.equipped[COSMETICS[id].char]) save.equipped[COSMETICS[id].char]=id; parts.push(`🎨 ${COSMETICS[id].name}`); } }
+    if(r.chance.emote!==undefined && Math.random()<r.chance.emote){ const pool=ALL_EMOTE_IDS.filter(id=>!ownsEmote(id) && !EMOTES[id].skinLocked); if(pool.length){ const id=favPick(pool, x=>EMOTES[x].char); save.emotes.push(id); parts.push(`💬 ${EMOTES[id].name}`); } }
+    if(r.chance.skin!==undefined && Math.random()<r.chance.skin){ const pool=ALL_COSMETIC_IDS.filter(id=>!ownsCosmetic(id) && !COSMETICS[id].shopOnly && !COSMETICS[id].mythicOnly); if(pool.length){ const id=favPick(pool, x=>COSMETICS[x].char); save.cosmetics.push(id); if(!save.equipped[COSMETICS[id].char]) save.equipped[COSMETICS[id].char]=id; parts.push(`🎨 ${COSMETICS[id].name}`); } }
   }
   return parts.join(" · ");
 }
@@ -1405,16 +1838,21 @@ function awardPoints(pts, kos){  // --- Trophy Road: spend the balance to buy th
   const nb=nextBrawlerNode();
   save.points = nb ? Math.min(save.points, nb.cost-1) : 0;
   // --- Rewards: spend KO-points to roll the next unlockable (skin OR emote), cost by unlock state ---
-  const cosmetics=[]; const emotes=[]; const currencyPayouts=[];
+  const cosmetics=[]; const emotes=[]; const titles=[]; const currencyPayouts=[];
   // KO-points per kill: solo modes (FFA + Silverdome) pay full; team modes pay half (kills are cheaper there)
   const koPts = TEAMED() ? 10 : SKIN_PTS_PER_KO;
   save.skinPoints += (kos||0)*koPts;
   while(save.skinPoints>=skinCost() && availableUnlockables().length){
     save.skinPoints-=skinCost();             // spend this milestone's cost
     const pool=availableUnlockables();
-    const pick=pool[Math.floor(Math.random()*pool.length)];
+    // favorited brawlers' unlockables get the same subtle edge here as elsewhere (each entry is {kind,id})
+    const charOfU=(p)=> p.kind==='emote'?EMOTES[p.id].char : p.kind==='title'?TITLES[p.id].char : COSMETICS[p.id].char;
+    const pick=favPickBy(pool, charOfU);
     if(pick.kind==='emote'){
       save.emotes.push(pick.id); emotes.push(pick.id);
+    } else if(pick.kind==='title'){
+      save.titles.push(pick.id); titles.push(pick.id);
+      if(!save.equippedTitle[TITLES[pick.id].char]) save.equippedTitle[TITLES[pick.id].char]=pick.id;   // auto-equip first title
     } else {
       // for skins, respect the common-before-rare order within the chosen character
       const cid=COSMETICS[pick.id].char;
@@ -1449,7 +1887,7 @@ function awardPoints(pts, kos){  // --- Trophy Road: spend the balance to buy th
     }
   }
   persistSave();
-  return {chars, cosmetics, emotes, koDoubled, koPts:(kos||0)*koPts, effKos:(kos||0)};
+  return {chars, cosmetics, emotes, titles, currencyPayouts, koDoubled, koPts:(kos||0)*koPts, effKos:(kos||0)};
 }
 // resolve the display color for a character (equipped cosmetic overrides the default)
 function charColor(charId){
@@ -1475,9 +1913,10 @@ let chosen = null;
 let keys = {}, mouse={x:W/2,y:H/2,down:false,aiming:false,releaseFire:false};
 // on-screen touch controls: left stick moves, right buttons attack (auto-aim) + super
 const touch={ moveX:0, moveY:0, attacking:false, superTap:false };
-let entities=[], projectiles=[], bombs=[], particles=[], floaters=[], bushes=[], trees=[], iceTrail=[], bats=[], exhaust=[], wetFloor=[], damageZones=[], cameras=[], hydrants=[], rings=[];
+let entities=[], projectiles=[], bombs=[], particles=[], floaters=[], bushes=[], trees=[], iceTrail=[], bats=[], exhaust=[], wetFloor=[], damageZones=[], cameras=[], hydrants=[], rings=[], drones=[], pollenClouds=[], nitroTraps=[];
 let player=null;
 let matchTime, defeated, matchDamage=0, frame=0;   // matchDamage: total damage the player deals this match (quests; reset on start)
+let uiTick=0;   // always-advancing counter for menu/preview animations (battle `frame` freezes off-battle). Declared early so menu code can read it during load.
 let gameMode = "ffa";        // "ffa" (storm royale), "relay" (2v2 Ember Relay), "arena", "pearl", or "practice"
 // --- Mode unlocks: gated behind lifetime trophies so a new player isn't dropped into all modes at once.
 // FFA + Practice are always open; the rest unlock in big lifetime-trophy increments.
@@ -1487,11 +1926,27 @@ const MODE_UNLOCKS = [
   {id:'pearl',    btn:'toPearl',    label:'Pearl Rush',     need:3000},
   {id:'payload',  btn:'toPayload',  label:'Payload Panic',  need:6000},
   {id:'ctf',      btn:'toCtf',      label:'Acorn Heist',    need:10000},
-  {id:'whiteout', btn:'toWhiteout', label:'Alien Whiteout', need:15000},
+  {id:'whiteout', btn:'toWhiteout', label:'Signal Rush', need:15000},
   {id:'binas',    btn:'toBinas',    label:'Binas Boss',     need:20000}
 ];
 function modeNeed(id){ const m=MODE_UNLOCKS.find(x=>x.id===id); return m?m.need:0; }
 function isModeUnlocked(id){ const m=MODE_UNLOCKS.find(x=>x.id===id); return !m || (save.lifetimePoints||0) >= m.need; }
+// --- Home hub: single source of truth for every playable mode (the mode picker + the mode tile read this).
+// `setup` runs right before startMatch() so per-mode state (arena rounds, gameMode) is applied.
+const MODES = [
+  {id:'ffa',      icon:'⚔️', title:'Free-for-All',    sub:'10 brawlers · last standing', acc:'#e0533a', motif:'ffa',      setup:()=>{ gameMode="ffa"; }},
+  {id:'relay',    icon:'🔥', title:'Ember Relay',      sub:'2v2 · carry the torch',       acc:'#ff6a2a', motif:'relay',    setup:()=>{ gameMode="relay"; }},
+  {id:'arena',    icon:'🏛', title:'Silverdome Arena', sub:'10-round gauntlet',           acc:'#d6b23a', motif:'arena',    setup:()=>{ gameMode="arena"; arena.round=0; arena.tokensThisRun=0; }},
+  {id:'pearl',    icon:'🫧', title:'Pearl Rush',       sub:'3v3 · hold the pearls',       acc:'#3ac6d8', motif:'pearl',    setup:()=>{ gameMode="pearl"; }},
+  {id:'payload',  icon:'🚂', title:'Payload Panic',    sub:'3v3 · push the cart',         acc:'#c88a3a', motif:'payload',  setup:()=>{ gameMode="payload"; }},
+  {id:'ctf',      icon:'🌰', title:'Acorn Heist',      sub:'3v3 · steal the acorns',      acc:'#8a6a3a', motif:'ctf',      setup:()=>{ gameMode="ctf"; }},
+  {id:'whiteout', icon:'🛸', title:'Signal Rush',      sub:'3v3 · hold the beacon',       acc:'#8f7ad0', motif:'whiteout', setup:()=>{ gameMode="whiteout"; }},
+  {id:'binas',    icon:'⚗️', title:'Binas Boss',       sub:'3+you · beat Evil Renas',     acc:'#3fa84a', motif:'binas',    setup:()=>{ gameMode="binas"; }},
+  {id:'practice', icon:'🎯', title:'Practice',         sub:'Train on dummies',            acc:'#6fae4f', motif:'practice', setup:()=>{ gameMode="practice"; }},
+  {id:'tutorial', icon:'🎓', title:'Tutorial',         sub:'Learn the basics',            acc:'#5aa9e6', motif:'tutorial', special:'tutorial'}
+];
+function modeMeta(id){ return MODES.find(m=>m.id===id) || MODES[0]; }
+let selectedMode = 'ffa';   // the mode the Play button will launch (persisted across sessions)
 let justUnlockedModes=[];   // modes whose threshold was crossed by the last match (announced on the reward screen)
 // --- Interactive tutorial: a scripted first FFA-style match that reacts to what the player does.
 // steps advance as the player moves, attacks, charges + fires their super, and defeats the practice bots.
@@ -1505,6 +1960,7 @@ const arena={ round:0, mod:null, tokensThisRun:0, active:false };
 const relay={ torch:{x:0,y:0,carrier:null,dropTimer:0}, score:{0:0,1:0}, target:100 };
 const TEAM_COLOR={0:"#ff8a3d", 1:"#4db6ff"};   // team 0 = yours (warm), team 1 = rivals (cool)
 const RELAY_SLOW=0.8;          // carrier moves at 80% speed
+const CHARGE_FRAMES=360;       // Druk: frames of holding to reach a full charge (~6s — a big, deliberate wind-up)
 const RESPAWN_FRAMES=300;      // 5s at 60fps
 // Pearl Rush state (3v3 gem-grab): loose pearls spawn centrally; hold the lead to win.
 const pearl={ loose:[], spawnCd:0, target:12, countdown:0, leadTeam:-1, peak:{0:0,1:0} };
@@ -1512,16 +1968,23 @@ const PEARL_COUNTDOWN=600;     // hold the lead this many frames (10s) to win
 const PEARL_SLOW=0.94;         // each carried pearl barely slows you (multiplied per pearl, capped)
 // Payload Panic state (3v3): each team owns a toy train on its own rail. Stand on your train while it's
 // clear of enemies (or your team outnumbers them on it) to push it forward. First train to the finish wins.
-const payload={ carts:[/*team0*/null,/*team1*/null], winner:-1 };
+const payload={ carts:[/*team0*/null,/*team1*/null], winner:-1, timeLimit:60*60*5, timer:0 };   // 5-min cap; at time-up the furthest cart wins
 const PAYLOAD_SPEED=0.4;       // px/frame the cart rolls while being pushed (lower = slower, more contested pushes)
-// Alien Whiteout state (4v4 recruit war): each team has a LEADER (never converts). Defeat a non-leader
-// and they respawn on YOUR team, taking your color. Win by stealing every recruit — or most when time runs out.
-const whiteout={ winner:-1, leader:[/*team0*/null,/*team1*/null], spawns:{0:[],1:[]}, timeLimit:60*60*3 };
+// Alien Whiteout — "Signal Rush" (3v3): one alien beacon sits on the map; the team with MORE fighters
+// inside its radius charges a claim meter (contested = frozen). Fill it → BOOM: +1 claim, the beacon
+// teleports to a new spot, meter resets. The beacon also relocates on a timer if nobody claims it.
+// Win: first team to CLAIM_TARGET claims, or the most claims when time runs out. Fixed teams, no converting.
+const whiteout={ winner:-1, spawns:{0:[],1:[]}, timeLimit:60*60*3, timer:0,
+  beacon:{x:0,y:0}, claim:0, claimTeam:-1, claims:[0,0], moveTimer:0, controlTeam:-1 };
+const CLAIM_TARGET=3;           // claims needed to win
+const CLAIM_RADIUS=120;         // how close you must be to control the beacon
+const CLAIM_FULL=60*18;         // frames of solo control to fully claim a beacon (~18s — long enough to fight back)
+const BEACON_MOVE=60*40;        // beacon auto-relocates after ~40s if unclaimed (time to retake ground)
 // ---- Binas Boss: you + 2 bot allies (team 0) vs Evil Renas, a mega-boss who channels the Binas.
 // He cycles three phases — 🧬 Biologie (roots + spore adds + self-heal), 🧪 Scheikunde (acid pools + gas),
 // ⚡ Natuurkunde (gravity pull + lightning). Beat all his health bars (one per phase) to win.
 const binas={ boss:null, phase:0, phaseNames:['Biologie','Scheikunde','Natuurkunde'], phaseIcons:['🧬','🧪','⚡'],
-  cast:0, castCd:180, minions:[], acid:[], winner:-1, introTimer:0 };
+  cast:0, castCd:180, minions:[], acid:[], winner:-1, introTimer:0, castTurn:0 };
 const BINAS_PHASE_HP=[14000, 14000, 18000];   // health for each phase; boss refreshes to the next bar when one empties (no self-heal — raw HP instead)
 const BINAS_MINION_CAP=4;
 const BINAS_DOWN_FRAMES=15*60;   // a downed ally lies revivable for 15s before they're gone for good
@@ -1568,7 +2031,8 @@ addEventListener('click',initAudio);
 function updateMuteUI(){ const el=document.getElementById('muteBtn'); if(el) el.textContent=muted?'🔇':'🔊';
   // keep the music in sync with the mute state
   if(muted) stopMusic();
-  else if(state==="play") startMusic();
+  else if(state==="play") startMusic('battle');
+  else if(state==="title") startMusic('menu');
 }
 // 🥚 build-400 easter egg celebration: a pastel confetti + hearts burst with a sweet message.
 // Pure DOM overlay so it works independently of the canvas game-loop; auto-cleans after the animation.
@@ -1839,37 +2303,39 @@ const MAP_CTF = [
 ];
 // Alien Whiteout: a symmetric open arena for a 4v4 recruit war. Team 0 spawns top-left (P), team 1
 // bottom-right (N); scattered pillar/bush cover keeps skirmishes flowing without long safe lanes.
+// Signal Rush arena — "Crash Site": a clean, symmetric open field with a clear center for the roaming
+// beacon, scattered crate/bush cover, and two small water craters. Open sightlines so the beacon reads.
+// Signal Rush arena — "Crash Site": a clean, symmetric open field with a clear center for the roaming
+// beacon and scattered cover. Every row is exactly 56 wide.
 const MAP_WHITEOUT = [
-  "########################################################",
-  "#....P.......,,,~~~,,,.....P......,,,~~~,,,.....P......#",
-  "#............,,,~~~,,,............,,,~~~,,,............#",
-  "#...##.......,,M~~~M,,...##.......,,M~~~M,,...##.......#",
-  "#...##.......,,M~~~M,,...##.......,,M~~~M,,...##.......#",
-  "#............,,,~~~,,,............,,,~~~,,,............#",
-  "#......BB....,,,~~~,,,......BB....,,,~~~,,,......BB....#",
-  "#......BB....,,,~~~,,,......BB....,,,~~~,,,......BB....#",
-  "#............,,>~~~<,,............,,>~~~<,,............#",
-  "#....G.......,,,~~~,,,....G.......,,,~~~,,,....G.......#",
-  "#............,,,~~~,,,............,,,~~~,,,............#",
-  "#.....####...,,,~~~,,,.....####...,,,~~~,,,.....####...#",
-  "#.....####...,,,~~~,,,.....####...,,,~~~,,,.....####...#",
-  "#............,,,~~~,,,............,,,~~~,,,............#",
-  "#..TT........,,M~~~M,,..TT........,,M~~~M,,..TT........#",
-  "#..TT........,,M~~~M,,..TT........,,M~~~M,,..TT........#",
-  "#............,,>~~~<,,............,,>~~~<,,............#",
-  "#.......BB...,,,~~~,,,.......BB...,,,~~~,,,.......BB...#",
-  "#............,,,~~~,,,............,,,~~~,,,............#",
-  "#........G...,,,~~~,,,........G...,,,~~~,,,........G...#",
-  "#............,,,~~~,,,............,,,~~~,,,............#",
-  "#....##......,,,~~~,,,....##......,,,~~~,,,....##......#",
-  "#....##......,,,~~~,,,....##......,,,~~~,,,....##......#",
-  "#............,,,~~~,,,............,,,~~~,,,............#",
-  "#.......TT...,,M~~~M,,.......TT...,,M~~~M,,.......TT...#",
-  "#.......TT...,,>~~~<,,.......TT...,,>~~~<,,.......TT...#",
-  "#...BB.......,,,~~~,,,...BB.......,,,~~~,,,...BB.......#",
-  "#............,,,~~~,,,............,,,~~~,,,............#",
-  "#....N.......,,,~~~,,,.....N......,,,~~~,,,.....N......#",
-  "########################################################",
+  "################################",
+  "#..####..................####..#",
+  "#..#BB#..................#BB#..#",
+  "#..#..#.....TT....TT.....#..#..#",
+  "#..#..#..................#..#..#",
+  "#..#.#....................#.#..#",
+  "#.........####....####.........#",
+  "#.........#,,#....#,,#.........#",
+  "#...TT.....##......##.....TT...#",
+  "#..............................#",
+  "#.....##......,,,,......##.....#",
+  "#.....##....,,,,,,,,....##.....#",
+  "#...........,,,,,,,,...........#",
+  "#...TT......,,,,,,,,......TT...#",
+  "#...TT......,,,,,,,,......TT...#",
+  "#...........,,,,,,,,...........#",
+  "#.....##....,,,,,,,,....##.....#",
+  "#.....##......,,,,......##.....#",
+  "#..............................#",
+  "#...TT.....##......##.....TT...#",
+  "#.........#,,#....#,,#.........#",
+  "#.........####....####.........#",
+  "#..####..................####..#",
+  "#..#..#..................#..#..#",
+  "#..#..#.....TT....TT.....#..#..#",
+  "#..#BB#..................#BB#..#",
+  "#..####..................####..#",
+  "################################",
 ];
 // Silverdome Arena: a small, symmetric 1v1 ring. Player (P) left, opponent (N) right.
 const MAP_ARENA = [
@@ -2007,6 +2473,19 @@ function fullyHiddenFromPlayer(e){
   return true;
 }
 const spawnOf=(who,fx,fy)=> map.spawns[who] || {x:fx,y:fy};
+// Nudge a spawn point to the nearest NON-solid tile so a fighter can never spawn boxed inside a wall.
+// Spirals outward in growing rings from the intended spot; falls back to map center if nothing is found.
+function safeSpawn(x,y){
+  if(!isSolidTile(tileAtPx(x,y))) return {x,y};
+  for(let ring=1; ring<=8; ring++){
+    for(let dy=-ring; dy<=ring; dy++) for(let dx=-ring; dx<=ring; dx++){
+      if(Math.abs(dx)!==ring && Math.abs(dy)!==ring) continue;   // only the ring's edge
+      const nx=x+dx*TS, ny=y+dy*TS;
+      if(nx>TS && ny>TS && nx<WW-TS && ny<WH-TS && !isSolidTile(tileAtPx(nx,ny))) return {x:nx,y:ny};
+    }
+  }
+  return {x:WW*0.5, y:WH*0.5};
+}
 
 /* camera follows a target, clamped to world bounds */
 function updateCamera(target){
@@ -2027,6 +2506,32 @@ function destroyTerrain(px,py,radius){
     if(Math.hypot(cx-px,cy-py)>radius) continue;
     const t=map.grid[r][c];
     if(t===TILE.BUSH||t===TILE.WALL){ map.grid[r][c]=TILE.PATH; map.bushHp[r][c]=0; burst(cx,cy,t===TILE.BUSH?"#3f7d3a":"#4a3620",12,4); }
+    else if(t===TILE.CRATE){ map.bushHp[r][c]--; burst(cx,cy,"#c89a5a",6,3);   // crates break by ANY attack that shaves cover (melee, dashes, supers, AoE), not just projectiles
+      if(map.bushHp[r][c]<=0){ map.grid[r][c]=TILE.PATH; burst(cx,cy,"#8a5e34",16,5); } }
+  }
+}
+// CRATE-ONLY shave: chip any crates in range by 1 HP, leaving bushes and walls completely untouched.
+// (Used by the generic per-attack cover-shave so ANY attack breaks CRATES without also flattening bushes/walls.)
+function shaveCrate(px,py,radius){
+  const c0=Math.max(0,Math.floor((px-radius)/TS)), c1=Math.min(map.cols-1,Math.floor((px+radius)/TS));
+  const r0=Math.max(0,Math.floor((py-radius)/TS)), r1=Math.min(map.rows-1,Math.floor((py+radius)/TS));
+  for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++){
+    if(map.grid[r][c]!==TILE.CRATE) continue;
+    const cx=(c+0.5)*TS, cy=(r+0.5)*TS;
+    if(Math.hypot(cx-px,cy-py)>radius) continue;
+    map.bushHp[r][c]--; burst(cx,cy,"#c89a5a",6,3);
+    if(map.bushHp[r][c]<=0){ map.grid[r][c]=TILE.PATH; burst(cx,cy,"#8a5e34",16,5); }
+  }
+}
+/* Druk full-charge impact: shatter a breakable block ONLY on the single tile the shot lands on. */
+function breakLandingTile(px,py){
+  const c=Math.floor(px/TS), r=Math.floor(py/TS);
+  if(r<0||c<0||r>=map.rows||c>=map.cols) return;
+  const t=map.grid[r][c];
+  if(t===TILE.BUSH || t===TILE.WALL || t===TILE.CRATE || t===TILE.SANDBAG){
+    map.grid[r][c]=TILE.PATH; map.bushHp[r][c]=0;
+    const cx=(c+0.5)*TS, cy=(r+0.5)*TS;
+    burst(cx,cy, t===TILE.BUSH?"#3f7d3a":"#8a5e34", 18,5); nearSfx('explode',cx,cy);
   }
 }
 /* damage a bush tile; returns true if it blocked */
@@ -2095,11 +2600,15 @@ function makeFighter(charKey,x,y,isPlayer){
     slowTimer:0, slowHard:0, speedBoost:0, tickTock:0,
     ammoMax:(c.atk.ammoMax||0)+((isPlayer&&charKey==="deniz"&&hasUpgrade('deniz'))?40:0)+((isPlayer&&charKey==="dynant"&&hasUpgrade('dynant'))?40:0), ammo:(c.atk.ammoMax||0)+((isPlayer&&charKey==="deniz"&&hasUpgrade('deniz'))?40:0)+((isPlayer&&charKey==="dynant"&&hasUpgrade('dynant'))?40:0),   // ammo-based attackers (Deniz, Dynant); upgrades +40 tank
     waterWalk:!!c.waterWalk, diving:0,                     // Renas: walks on water; Deep Dive timer
+    momentum:!!c.momentum, momo:0, momFreeze:0,            // Jenna: speed snowballs while moving (0..1 charge)
     burst:0, burstGap:0,                                   // Adam: remaining burst shots + spacing
     smashing:0,                                            // Adam: Service Smasher airborne timer (legacy)
     poison:0, poisonDps:0, poisonBy:null,                  // Evil Adam: DoT stack (frames/dps/source)
+    healBlock:0,                                           // Druk: frames during which this fighter cannot heal (seared wound)
     dashing:0, dashFrom:null, dashTo:null, dashHit:false,  // Evil Adam: dash-bite animation state
     razorDash:0, razorAim:null, razorHit:null, razorMul:1,  // De Kapper: one-way Straight Razor dash state
+    gangDash:0, gangAim:null, gangHit:null, gangMul:1,      // Slechte Meiden: Girl Gang charge state
+    bloomRoot:0,                                            // Intratuin Potplant: Full Bloom root-in-place timer
     biteFx:0, biteAim:null,                                 // Evil Adam: chomp effect on a landed bite
     hopping:0, hopFrom:null, hopTo:null, jetpack:0, armor:0, // Otis: Moon Bounce hop + Jetpack + damage-reduction window
     slipTimer:0, slipVx:0, slipVy:0,                       // Johan: slippery skid (frames + carried momentum)
@@ -2114,6 +2623,14 @@ function makeFighter(charKey,x,y,isPlayer){
     rage:0, enrage:0,                                      // Claire: Rage Meter + Enrage timer
     cutlery:0,                                             // Serveerster: knife/fork combo step
     dinnerRush:0,                                          // Serveerster: Dinner Rush buff timer
+    furry:0,                                               // Hammed: Full Furry transformation buff timer
+    dipTimer:0, dipAim:null, dipInvis:0, dipMul:1, arrival:1, arrivalFx:0,   // Aasta: Dip vanish timer, reappear aim, invisibility window, super mult, arrival-bonus armed + fade-in fx
+    visitSwing:0, visitAim:null, visitArrived:false,       // Aasta: Seasonal Visit strike-arc visual state
+    krak:0, krakTimer:0,                                    // Carol: afkraak-stacks on this fighter (lower dmg+speed) + decay timer
+    visitSwing:0, visitAim:null, visitArrived:false,       // Aasta: Seasonal Visit crescent-slash visual state
+    krak:0, krakTimer:0,                                   // Carol: afkraak-stacks on this fighter (lower dmg+speed) + decay countdown
+    lastAtkFrame:-999,                                     // Aasta: frame of her last Seasonal Visit (drives the arrival bonus)
+    girlHit:0, girlPhase:0, shoveAnim:0, shoveAim:null, clawSwing:0, clawAim:null,   // Slechte Meiden rotation + Hammed claw
     rally:0, rallyAlly:false,                              // Sonia: Novoselic Rally buff timer (heal+buff); rallyAlly = weaker ally version
     lunging:0, lungeFrom:null, lungeTo:null, lungeAim:null, lungeHit:false,  // Sonia: Royal Thrust glide
     form: charKey==='kayo' ? 'kayo' : null, switchAnim:0,   // Kayo & Yara: active form + tag-in animation timer
@@ -2181,6 +2698,7 @@ function damage(target,amt,fromPlayer,knock,attacker){
   if(target.dead) return;
   if(TEAMED() && attacker && attacker!==target && attacker.team===target.team) return; // no friendly fire
   if(target.diving>0 || target.smashing>0) return;   // Renas diving / Adam mid-leap = untouchable
+  if(target.dipInvis>0) return;   // Aasta mid-Dip: vanished, untouchable during the blink window
   if(target.catcherTimer>0 && knock && knock.projectile){ // Nathan catcher absorbs projectiles
     burst(target.x,target.y,"#4a90e2",6,3);
     floatText(target.x,target.y-26,"CAUGHT",'#8fd3ff');
@@ -2192,6 +2710,7 @@ function damage(target,amt,fromPlayer,knock,attacker){
   if(attacker && attacker.isPlayer && amt>0) matchDamage += amt;   // quests: tally damage the player deals this match
   if(gameMode==="tutorial" && attacker && attacker.isPlayer && amt>0) tutorial.hits++;   // tutorial: count landed hits to advance the step machine
   if(attacker && attacker.rally>0) amt*= attacker.rallyAlly?1.1:1.2;   // Sonia's Rally: full dmg buff for her, weaker for allies
+  if(attacker && attacker.krak>0) amt*=Math.max(0.5, 1 - 0.085*attacker.krak);   // Carol Afkraken: an afkraakt attacker hits softer (each stack ~-8.5%, capped -50%)
   target.hp-=amt; target.flash=8; target.hitLerp=0.7;
   // Adma Jr's Second Wind: bank the damage taken during the window; fill the meter early to heal now
   if(target.secondWind>0 && amt>0){
@@ -2215,6 +2734,11 @@ function damage(target,amt,fromPlayer,knock,attacker){
   if(knock&&knock.dx!==undefined){ target.x+=knock.dx; target.y+=knock.dy; circleWall(target); }
   // Binas boss: don't die while he still has phases left — clamp to 1 HP and let updateBinas run the transition.
   if(target.isBoss && target.evil && typeof binas!=='undefined' && binas.phase<2 && target.hp<=0){ target.hp=1; return; }
+  // Final-phase boss death: route through the Binas win so the match resolves + shows the end screen
+  // (a plain killFighter here would leave binas.winner unset and no victory would ever fire).
+  if(target.isBoss && target.evil && typeof binas!=='undefined' && binas.phase>=2 && target.hp<=0){
+    target.hp=0; if(binas.winner<0) binas.winner=0; killFighter(target,fromPlayer); return;
+  }
   if(target.hp<=0){ target.hp=0; killFighter(target,fromPlayer); }
 }
 // Adma Jr's Second Wind payoff: heal a fraction of the banked damage, then close the window
@@ -2222,7 +2746,7 @@ function admaSecondWindHeal(f){
   if(f.dead){ f.secondWind=0; f.swBank=0; return; }
   const frac=(f.isPlayer&&hasUpgrade('adma'))?0.65:0.5;   // Overcharge heals more
   const heal=Math.round(f.swBank*frac);
-  if(heal>0){ f.hp=Math.min(f.maxHp, f.hp+heal);
+  if(heal>0 && !f.healBlock){ f.hp=Math.min(f.maxHp, f.hp+heal);
     floatText(f.x,f.y-f.radius-10,"+"+heal,'#7ee06b'); burst(f.x,f.y,"#5fe0a0",22,5); ring(f.x,f.y,"#aef0d0",f.radius*2.6,20,5); nearSfx('heal',f.x,f.y);
     if(f.isPlayer) banner("SECOND WIND!"); }
   f.secondWind=0; f.swBank=0; f.swCap=0;
@@ -2231,7 +2755,8 @@ function killFighter(f,byPlayer){
   f.dead=true;
   f.deathAnim=26;   // KO pixel-dissolve plays before the sprite disappears
   // clear any in-flight movement so a corpse can't keep sliding / carry a launch into respawn
-  f.launching=0; f.hopping=0; f.diving=0; f.smashing=0; f.dashing=0; f.razorDash=0; f.dragTimer=0; f.jetpack=0; f.slipTimer=0; f.slipVx=0; f.slipVy=0; f.knockTimer=0; f.knockVx=0; f.knockVy=0;
+  f.launching=0; f.hopping=0; f.diving=0; f.smashing=0; f.dashing=0; f.razorDash=0; f.gangDash=0; f.dragTimer=0; f.jetpack=0; f.slipTimer=0; f.slipVx=0; f.slipVy=0; f.knockTimer=0; f.knockVx=0; f.knockVy=0;
+  f.bloomRoot=0; f.dipTimer=0; f.dipInvis=0;   // clear root/vanish states so dying mid-super never leaves you stuck on respawn
   f.secondWind=0; f.swBank=0; f.swCap=0;   // Adma Jr: dying during Second Wind voids the banked heal
   if(f.carrying){ f.carrying=false; }   // relay: torch drop handled in updateRelay
   // Pearl Rush: drop all carried pearls where you fell
@@ -2256,9 +2781,9 @@ function killFighter(f,byPlayer){
   koFeed(f);   // announce the kill
   // practice dummies never count as kills (no quest/stat/KO progress); other modes credit the player
   if(byPlayer && !f.isPlayer && !f.isDummy){ defeated++; playerEmote('kill'); }
-  if(byPlayer && !f.isPlayer && player) chargeSuper(player,26);   // super still charges so you can practice it
+  if(byPlayer && !f.isPlayer && player){ chargeSuper(player,26); player.killGlow=90; }   // super still charges so you can practice it; visor grins on a kill
   // a bot that lands a KO sometimes taunts with its themed kill-emote
-  if(!byPlayer && f.lastHitBy && !f.lastHitBy.isPlayer && !f.lastHitBy.dead) botEmote(f.lastHitBy,'kill');
+  if(!byPlayer && f.lastHitBy && !f.lastHitBy.isPlayer && !f.lastHitBy.dead){ botEmote(f.lastHitBy,'kill'); f.lastHitBy.killGlow=90; }
   if(f.isPlayer){ playerEmote('death'); }
   // Dean's Bounty: if the killer is the Dean who marked this (still-active) target, refund super + speed
   if(f.bountyBy && !f.bountyBy.dead && f.bountyTimer>0 && f.lastHitBy===f.bountyBy){
@@ -2312,7 +2837,15 @@ const EMOTE_TRIGGER = {
   stalker:{kill:'stalker_seen', spawn:'stalker_watch'},
   marlin:{kill:'marlin_wave', spawn:'marlin_sun'},
   sonia:{kill:'sonia_royal', spawn:'sonia_dark'},
-  kayo:{kill:'kayo_twocats', spawn:'kayo_tagin'}
+  kayo:{kill:'kayo_twocats', spawn:'kayo_tagin'},
+  jenna:{kill:'jenna_race', spawn:'jenna_snack'},
+  youngfyon:{kill:'youngfyon_quick', win:'youngfyon_soon'},
+  metaai:{kill:'metaai_help', death:'metaai_learn'},
+  potplant:{win:'potplant_bloom', spawn:'potplant_puff'},
+  meiden:{kill:'meiden_squad', win:'meiden_whatever'},
+  hammed:{spawn:'hammed_dm', kill:'hammed_avi'},
+  aasta:{spawn:'aasta_brb', kill:'aasta_dip'},
+  carol:{spawn:'carol_afkraken', kill:'carol_zero'}
 };
 function showBubble(f, text){ if(!f||!text) return; f.bubbleText=text; f.bubble=150; }
 // bots occasionally taunt with their themed emote on a KO or win. If the bot is wearing a mythic
@@ -2368,7 +2901,10 @@ function koFeed(victim){
   koLog.unshift({text,color,life:210});
   if(koLog.length>4) koLog.pop();
 }
-function chargeSuper(f,amt){ if(f.dead) return; if(f.rally>0 && !f.rallyAlly) amt*=0.5;   // Sonia charges her next Rally at half rate while her own Rally is active
+function chargeSuper(f,amt){ if(f.dead) return;
+  // Meta AI can't build the NEXT Drone Swarm while its current drones are still out — except in Practice, where stacking 200 drones is the whole joke.
+  if(f.char==="metaai" && gameMode!=="practice" && drones.some(d=>d.owner===f)) return;
+  if(f.rally>0 && !f.rallyAlly) amt*=0.5;   // Sonia charges her next Rally at half rate while her own Rally is active
   if(f.modSuper && f.modSuper!==1) amt*=f.modSuper;                                          // Overdrive Silverdome modifier
   f.superCharge=Math.min(SUPER_MAX,f.superCharge+amt); }
 // super charge earned by LANDING a hit — player at full rate, bots at a reduced rate.
@@ -2377,17 +2913,23 @@ function chargeSuperOnHit(f,amt){ if(!f||f.dead) return; chargeSuper(f, f.isPlay
 // effective move speed after Sleep Tight slow / Reckless boost
 function effSpeed(f){
   let s=f.speed;
+  if(f.krak>0) s*=Math.max(0.55, 1 - 0.09*f.krak);   // Carol Afkraken: each stack chips move speed (capped at ~-45%)
   if(f.slowHard>0) s*=0.5;        // Kim Chi super-zone: a hard, unmistakable half-speed
   else if(f.slowTimer>0) s*=0.65; // light slow (Lars drowse / minor zones)
   if(f.speedBoost>0) s*=1.8;
   if(f.enrage>0) s*=1.25;          // Claire: Enrage move-speed (nerfed from 1.4)
   if(f.camBoost>0) s*=1.2;        // Stalker: small boost while his camera sees a target
   if(f.dinnerRush>0) s*=1.4;      // Serveerster: Dinner Rush move-speed
+  if(f.furry>0) s*=1.35;          // Hammed: Full Furry move-speed
   if(f.rally>0) s*= f.rallyAlly?1.12:1.25;          // Sonia: Rally move-speed buff (weaker for allies)
   if(f.jetpack>0) s*=1.5;         // Otis zooms while flying
   if(f.carrying) s*=RELAY_SLOW;   // carrying the ember slows you down
   if(f.pearls>0) s*=Math.max(0.7, Math.pow(PEARL_SLOW, Math.min(f.pearls,6)));   // Pearl Rush: heavier the more you hold (capped)
   if((f.acornCarry||0)>0) s*=0.7;   // Acorn Heist: hauling a stolen acorn slows you down
+  if(f.momentum){                    // Jenna: the longer she keeps moving, the faster she gets
+    const m=f.momo||0;               // 0..1 momentum charge (built up in the update loop)
+    s*= 0.7 + 1.3*m;                 // slow start (0.7x) ramping to +100% (2.0x) at full momentum
+  }
   return s;
 }
 // move a fighter by an intended (dirx,diry)*sp; if slipping, momentum dominates and control is weak
@@ -2411,6 +2953,8 @@ function moveWithSlip(e, dirx, diry, sp){
 //  dash  = travel to point + impact circle   twin = two parallel lines
 const AIM = {
   spore:   {shape:'line', len:220, wide:7},
+  jenna:   {shape:'slash', reach:110, spread:0.7},
+  druk:    {shape:'lob',  range:360, blast:70, charge:true},   // charge grows the blast; lob arcs over walls
   nathan:  {shape:'line', len:560, wide:9},
   daniel:  {shape:'lob',  range:300, blast:70},
   yassin:  {shape:'melee',reach:46, radius:34},
@@ -2427,18 +2971,25 @@ const AIM = {
   johan:   {shape:'cone', range:210, spread:0.5, fill:true},
   robin:   {shape:'twin', len:540, wide:7, sep:9},
   jake:    {shape:'line', len:640, wide:6, pierce:true},
+  youngfyon:{shape:'line', len:560, wide:5},
+  metaai:  {shape:'line', len:660, wide:6},
   kimchi:  {shape:'lob',  range:320, blast:64},
   dean:    {shape:'cone', range:300, spread:0.32, fill:true},
-  claire:  {shape:'melee', reach:120},
+  claire:  {shape:'slash', reach:125, spread:0.75},
   waitress:{shape:'line', len:520, wide:12},
-  sanne:   {shape:'lob',  range:340, blast:40},
+  sanne:   {shape:'line', len:360, wide:11},
   fluharty:{shape:'curve', len:560, wide:8},
-  stalker: {shape:'melee', reach:100},
+  stalker: {shape:'slash', reach:105, spread:0.7},
   marlin:  {shape:'line', len:640, wide:8},
-  sonia:   {shape:'melee', reach:135},
+  sonia:   {shape:'lunge', step:50, reach:95, spread:0.75},
   jax:     {shape:'line', len:560, wide:16},
-  kapper:  {shape:'melee', reach:115},
-  adma:    {shape:'line', len:560, wide:7}
+  kapper:  {shape:'slash', reach:120, spread:0.6},
+  adma:    {shape:'line', len:560, wide:7},
+  potplant:{shape:'lob',  range:420, blast:82},
+  meiden:  {shape:'cone', range:300, spread:0.34, fill:true},
+  hammed:  {shape:'lob',  range:200, blast:60},
+  aasta:   {shape:'slash', reach:135, spread:0.8},
+  carol:   {shape:'lob',  range:360, blast:54}
 };
 // ---- Action-animation style per brawler ----
 // Attack pose: how the body reads when the base attack fires. Types:
@@ -2449,12 +3000,13 @@ const AIM = {
 //   punch  = quick double hitch forward (fist combos)
 const ATK_STYLE = {
   yassin:'punch', fionn:'swing', reshman:'thrust', dean:'swing', claire:'swing',
+  jenna:'swing',
   stalker:'swing', evadam:'thrust', otis:'thrust', sonia:'thrust', johan:'swing',
   waitress:'swing', lars:'swing',
-  nathan:'thrust', renas:'swing', robin:'recoil', milo:'recoil', jake:'recoil',
+  nathan:'thrust', renas:'swing', robin:'recoil', milo:'recoil', jake:'recoil', youngfyon:'recoil', metaai:'recoil',
   adam:'recoil', marlin:'recoil', fluharty:'swing',
-  daniel:'lob', kimchi:'lob', sanne:'lob',
-  deniz:'thrust', josh:'thrust'
+  daniel:'lob', kimchi:'lob', sanne:'lob', druk:'lob', potplant:'lob', hammed:'lob', carol:'lob',
+  deniz:'thrust', josh:'thrust', meiden:'thrust', aasta:'thrust'
 };
 // Super pose: the "power moment". Types:
 //   leap    = deep crouch then launch upward (smashes / hops)
@@ -2462,11 +3014,11 @@ const ATK_STYLE = {
 //   flourish= a spin/twirl (casters, area effects)
 //   raise   = lift arms/banner overhead (rally, summons, deploys)
 const SUP_STYLE = {
-  adam:'leap', otis:'leap', evadam:'leap', renas:'leap',
-  sonia:'raise', josh:'raise', nathan:'raise', stalker:'raise', johan:'raise',
+  adam:'leap', otis:'leap', evadam:'leap', renas:'leap', meiden:'leap',
+  sonia:'raise', josh:'raise', nathan:'raise', stalker:'raise', johan:'raise', carol:'raise',
   deniz:'flourish', kimchi:'flourish', reshman:'flourish', fluharty:'flourish', robin:'flourish',
   yassin:'surge', fionn:'surge', dean:'surge', claire:'surge', waitress:'surge',
-  lars:'surge', milo:'surge', jake:'surge', daniel:'surge', sanne:'surge', marlin:'surge'
+  lars:'surge', milo:'surge', jake:'surge', daniel:'surge', sanne:'surge', marlin:'surge', youngfyon:'surge', metaai:'surge', potplant:'surge', hammed:'surge', aasta:'surge', carol:'flourish'
 };
 // how far a straight shot travels from (x,y) along (dx,dy) before hitting a wall/bush, capped at max
 function rayReach(x,y,dx,dy,max){
@@ -2487,7 +3039,13 @@ function wallBetween(ax,ay,bx,by){
 }
 // Kayo & Yara aim shape depends on the active form (Kayo=melee lunge, Yara=twin ranged throw)
 const YARA_AIM = {shape:'twin', len:300, wide:6, sep:11};
-function aimProf(f){ if(f && f.char==='kayo' && f.form==='yara') return YARA_AIM; return AIM[f.char]; }
+// Slechte Meiden: the aim reticle changes with the active girl/phase — graffiti (mid cone), shove (close cone), gum (line).
+const MEIDEN_AIM = [
+  {shape:'cone', range:300, spread:0.34, fill:true},   // 0 graffiti: a mid-range paint spray
+  {shape:'cone', range:120, spread:0.7,  fill:true},   // 1 shove: a short, wide push arc
+  {shape:'line', len:340, wide:9}                      // 2 gum: a single sticky projectile line
+];
+function aimProf(f){ if(f && f.char==='kayo' && f.form==='yara') return YARA_AIM; if(f && f.char==='meiden') return MEIDEN_AIM[(f.girlNext||0)%3]; return AIM[f.char]; }
 // draw the aim preview for the player while the mouse button is held (desktop only)
 function drawAimIndicator(f){
   const prof = aimProf(f); if(!prof) return;
@@ -2567,6 +3125,21 @@ function drawAimIndicator(f){
     ctx.beginPath(); ctx.rect(f.radius,-prof.halfW, prof.range-f.radius, prof.halfW*2); ctx.fill(); ctx.stroke();
     ctx.rotate(-ang);
   }
+  else if(prof.shape==='slash'){
+    // a melee SWIPE: a crescent arc band in front of the fighter (reads as a slash, not a lob line+circle)
+    const reach=prof.reach, half=prof.spread||0.7, inner=Math.max(f.radius+4, reach*0.45);
+    ctx.rotate(ang);
+    ctx.fillStyle=fillCol; ctx.strokeStyle=col; ctx.lineWidth=2;
+    // filled crescent: outer arc out, back along the inner arc
+    ctx.beginPath();
+    ctx.arc(0,0,reach,-half,half);
+    ctx.arc(0,0,inner,half,-half,true);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    // a brighter leading edge so the swipe direction reads
+    ctx.strokeStyle="rgba(255,255,255,.95)"; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(0,0,reach,half-0.24,half); ctx.stroke();
+    ctx.rotate(-ang);
+  }
   else if(prof.shape==='melee'){
     const mx=a.x*prof.reach, my=a.y*prof.reach, rad=prof.radius||prof.reach*0.5;
     // guide line from the fighter out to the strike zone
@@ -2586,8 +3159,41 @@ function drawAimIndicator(f){
     const lx=a.x*d, ly=a.y*d;
     ctx.strokeStyle=col; ctx.lineWidth=2; ctx.setLineDash([8,7]);
     ctx.beginPath(); ctx.moveTo(f.radius*a.x,f.radius*a.y); ctx.lineTo(lx,ly); ctx.stroke(); ctx.setLineDash([]);
+    // Druk (charge lob): the blast reticle GROWS from small to full as you hold, so you see the area you'll hit.
+    // A full charge glows brighter to signal it will also break blocks.
+    let blastR=prof.blast;
+    if(prof.charge){ const ch=clamp(f.chargeHold||0,0,1); blastR=(66+40*ch);
+      if(ch>=0.98){ ctx.save(); ctx.globalAlpha=0.5+0.4*Math.sin(frame*0.4); ctx.strokeStyle="#c8e6ff"; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(lx,ly,blastR+5,0,6.28); ctx.stroke(); ctx.restore(); } }
     ctx.fillStyle=fillCol; ctx.strokeStyle=col;
-    ctx.beginPath(); ctx.arc(lx,ly,prof.blast,0,6.28); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(lx,ly,blastR,0,6.28); ctx.fill(); ctx.stroke();
+  }
+  else if(prof.shape==='lunge'){
+    // a short forward LUNGE line, then a slash-cone at the end (Sonia's glide-then-swipe reads as one motion)
+    const step=prof.step||60, reach=prof.reach||46, half=prof.spread||0.7;
+    ctx.rotate(ang);
+    // the glide line
+    ctx.strokeStyle=col; ctx.lineWidth=3; ctx.setLineDash([9,7]);
+    ctx.beginPath(); ctx.moveTo(f.radius,0); ctx.lineTo(step,0); ctx.stroke(); ctx.setLineDash([]);
+    // slash cone at the lunge landing point
+    ctx.save(); ctx.translate(step,0);
+    const inner=Math.max(10, reach*0.4);
+    ctx.fillStyle=fillCol; ctx.strokeStyle=col; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(0,0,reach,-half,half); ctx.arc(0,0,inner,half,-half,true); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle="rgba(255,255,255,.95)"; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(0,0,reach,half-0.24,half); ctx.stroke();
+    ctx.restore();
+    ctx.rotate(-ang);
+  }
+  else if(prof.shape==='thrust'){
+    // a spear/lunge STAB: a tapered line ending in an arrowhead (no circle) so it reads as a forward thrust
+    ctx.rotate(ang);
+    const reach=prof.range, w=prof.wide||10;
+    ctx.strokeStyle=col; ctx.lineWidth=3; ctx.setLineDash([9,7]);
+    ctx.beginPath(); ctx.moveTo(f.radius,0); ctx.lineTo(reach-w*1.4,0); ctx.stroke(); ctx.setLineDash([]);
+    // arrowhead at the tip
+    ctx.fillStyle=col; ctx.beginPath();
+    ctx.moveTo(reach,0); ctx.lineTo(reach-w*1.5,-w); ctx.lineTo(reach-w*1.5,w); ctx.closePath(); ctx.fill();
+    ctx.rotate(-ang);
   }
   else if(prof.shape==='dash'){
     // travel to a point (fixed distance, or up to cursor), impact circle at the end
@@ -2622,8 +3228,12 @@ function lobDistance(f, range){
     let d=Math.hypot(mx-f.x,my-f.y);
     return clamp(d, 60, range) || range;
   }
-  // bot: throw toward its current target's distance, capped
-  const t=f.ai && f.ai.target;
+  // bot: throw toward its current target's distance, capped. Fall back to the nearest living enemy
+  // so charge/lob bots (e.g. Druk) don't blindly lob to MAX range when ai.target isn't set by the mode AI.
+  let t=f.ai && f.ai.target;
+  if(!t || t.dead){
+    let bd=1e9; entities.forEach(o=>{ if(o.dead||o.isBanshee||o===f)return; if(TEAMED()&&o.team===f.team)return; const dd=dist(f,o); if(dd<bd){bd=dd;t=o;} });
+  }
   if(t && !t.dead){ return clamp(dist(f,t), 80, range); }
   return range;
 }
@@ -2685,6 +3295,17 @@ const SKIN_ATK_FX = {
   ,spc_station:  {cols:["#e0763a","#e8ecf2","#8fd3ff"]}   // Space Station: orange EVA suit + white panels + blue visor
   ,spc_lander:   {cols:["#c0c6ce","#e0c060","#8fd3ff"]}   // Lunar Lander: grey hull + gold foil + blue thruster glow
   ,spc_constellation:{cols:["#8fb8ff","#eafcff","#b58aff"]}  // Constellation: starlight blue + white sparkle + violet
+  // --- School (Locker Room) pack: each school skin gets a themed attack puff too ---
+  ,sch_tuba:      {cols:["#d4a02a","#8a6a1a"]}    // Music Class: brass notes + gold
+  ,sch_chem:      {cols:["#8fd6c4","#b8f0d0"]}    // Chemistry: green reaction fizz
+  ,sch_globe:     {cols:["#3a7fc4","#7ab0e0"]}    // Geography: blue ocean + map specks
+  ,sch_pencils:   {cols:["#e0533a","#f4c430","#3a86ff"]}  // Colour Pencils: crayon shavings
+  ,sch_gym:       {cols:["#e04b3a","#e8ecf2"]}    // Gym Teacher: red-and-white whistle bursts
+  ,sch_lunchlady: {cols:["#5aa0c8","#e8dcc0"]}    // Lunch Lady: steam + food specks
+  ,sch_bookworm:  {cols:["#5a7ac0","#f4efe0"]}    // Bookworm: paper scraps + ink
+  ,sch_teslacoil: {cols:["#8fd0e8","#eafcff","#5ac8ff"]}  // Science Fair: crackling electric sparks
+  ,sch_smartboard:{cols:["#5ae0b0","#7ac8ff"]}    // Smartboard: glowing marker pixels
+  ,sch_clown:     {cols:["#e0403a","#f4d03a","#eef0ea"]}  // Class Clown: confetti + paper bits
 };
 function skinAtkFx(f, a){
   const fx = f.skinMorph && SKIN_ATK_FX[f.skinMorph];
@@ -2706,6 +3327,13 @@ function fighterAttack(f){
     f.atkAnim=18; f.atkKind = melee?'melee':'ranged'; f.atkDir={x:a.x,y:a.y}; }
   // themed attack sparkle for skins that don't already reskin their projectile/effect (keeps every pack skin feeling distinct)
   skinAtkFx(f, a);
+  // Crates break by ANY attack type — melee, dash, cone, ring, twin, box, line, lob, everything.
+  // Uses shaveCrate (CRATE-ONLY) so bushes (still 3-hit, projectiles only) and walls are never touched.
+  { const prof=aimProf(f)||{};
+    const reach=(prof.reach||prof.range||prof.len||c.atk.meleeRange||c.atk.range||100);
+    for(let d=f.radius; d<=reach; d+=TS*0.5){ shaveCrate(f.x+a.x*d, f.y+a.y*d, TS*0.5); }
+    if(prof.shape==='ring'){ for(let ang=0; ang<6.28; ang+=0.5){ shaveCrate(f.x+Math.cos(ang)*reach*0.7, f.y+Math.sin(ang)*reach*0.7, TS*0.5); } }
+  }
   if(f.char==="spore"){
     // Binas spore-creature: a slow, weak green spore puff down its aim (reuses the safe "ball" projectile render)
     f.cd=c.atk.cd; nearSfx('throw',f.x,f.y);
@@ -2716,6 +3344,107 @@ function fighterAttack(f){
     f.cd=c.atk.cd; nearSfx('throw',f.x,f.y);
     projectiles.push({x:f.x+a.x*f.radius,y:f.y+a.y*f.radius,vx:a.x*9.5,vy:a.y*9.5,
       dmg:c.atk.dmg,owner:f,life:c.atk.range/9.5,r:9,type:"ball",spin:0});
+  } else if(f.char==="meiden"){
+    // Girl Trouble: a 9-hit rotation — 3× graffiti spray, 3× shove, 3× gum. `girlHit` counts hits.
+    // girlPhase = the phase firing RIGHT NOW (drives the sprite: who's up front).
+    // girlNext  = the phase of the NEXT hit (drives the AIM indicator, so it previews what's coming).
+    f.girlHit=(f.girlHit||0);
+    const phase=Math.floor(f.girlHit/3)%3;   // 0=graffiti, 1=shove, 2=gum (this hit)
+    f.girlPhase=phase;                        // sprite: the girl attacking now
+    f.girlHit=(f.girlHit+1)%9;
+    f.girlNext=Math.floor(f.girlHit/3)%3;     // aim: preview the next hit's phase
+    const aimAng=Math.atan2(a.y,a.x);
+    if(phase===0){
+      // GRAFFITI: a mid-range spray of paint blobs in a tight cone (mustard/pink/cyan tags)
+      f.cd=c.atk.cd; nearSfx('dart',f.x,f.y); f.atkAnim=16;
+      const cols=["#f4c430","#e0407a","#3ad0e0","#8affa0"];
+      for(let k=-2;k<=2;k++){ const sa=aimAng+k*0.11, sp=11;
+        projectiles.push({x:f.x+Math.cos(sa)*f.radius,y:f.y+Math.sin(sa)*f.radius,vx:Math.cos(sa)*sp,vy:Math.sin(sa)*sp,
+          dmg:c.atk.dmg*0.5,owner:f,life:c.atk.range/sp,r:7,type:"graffiti",spin:0,col:cols[(k+2)%cols.length]}); }
+    } else if(phase===1){
+      // SHOVE: a hard close-range push — decent damage + strong knockback in a short front arc
+      f.cd=Math.round(c.atk.cd*0.9); nearSfx('punch',f.x,f.y); f.atkAnim=16;
+      const reach=120, half=0.7;
+      burst(f.x+a.x*46,f.y+a.y*46,"#ffd0e0",8,4);
+      entities.forEach(t=>{ if(t===f||t.dead||t.isBanshee)return; if(TEAMED()&&t.team===f.team)return;
+        const d=dist(f,t); if(d>reach+t.radius) return;
+        let da=Math.atan2(t.y-f.y,t.x-f.x)-aimAng; while(da>Math.PI)da-=2*Math.PI; while(da<-Math.PI)da+=2*Math.PI;
+        if(Math.abs(da)<half){ const nx=(t.x-f.x)/(d||1), ny=(t.y-f.y)/(d||1);
+          damage(t,c.atk.dmg*0.95,f.isPlayer,{dx:nx*3,dy:ny*3},f); chargeSuperOnHit(f,10);
+          t.knockVx=nx*11; t.knockVy=ny*11; t.knockTimer=16; } });
+    } else {
+      // GUM: a single wad of chewing gum — sticks the first foe it hits and slows them for a while
+      f.cd=c.atk.cd; nearSfx('throw',f.x,f.y); f.atkAnim=16;
+      const sp=10;
+      projectiles.push({x:f.x+a.x*f.radius,y:f.y+a.y*f.radius,vx:a.x*sp,vy:a.y*sp,
+        dmg:c.atk.dmg*0.8,owner:f,life:c.atk.range/sp,r:9,type:"gum",spin:0});
+    }
+  } else if(f.char==="hammed"){
+    if(f.furry>0){
+      // FULL FURRY: no more traps — a fast, hard claw swipe up close (the act is off)
+      f.cd=Math.round(c.atk.cd*0.32); nearSfx('punch',f.x,f.y); f.atkAnim=14; f.clawSwing=10; f.clawAim={x:a.x,y:a.y};
+      const aimAng=Math.atan2(a.y,a.x), reach=120, half=0.7;
+      for(let k=0;k<4;k++){ const ang=aimAng+rand(-half,half), dd=rand(30,reach); burst(f.x+Math.cos(ang)*dd,f.y+Math.sin(ang)*dd,"#ffe08a",1,2.5); }
+      entities.forEach(t=>{ if(t===f||t.dead||t.isBanshee)return; if(TEAMED()&&t.team===f.team)return;
+        const d=dist(f,t); if(d>reach+t.radius) return;
+        let da=Math.atan2(t.y-f.y,t.x-f.x)-aimAng; while(da>Math.PI)da-=2*Math.PI; while(da<-Math.PI)da+=2*Math.PI;
+        if(Math.abs(da)<half){ const nx=(t.x-f.x)/(d||1), ny=(t.y-f.y)/(d||1);
+          damage(t,c.atk.dmg*0.85,f.isPlayer,{dx:nx*4,dy:ny*4},f); chargeSuperOnHit(f,8); } });
+      return;
+    }
+    // Free Nitro: plant a fake giveaway drop on the aimed spot. It arms after a beat, then snaps on the
+    // first foe that wanders inside — damage + a brief root. Cap the baited traps (oldest despawns).
+    f.cd=c.atk.cd; nearSfx('throw',f.x,f.y);
+    const ld=lobDistance(f,c.atk.range);
+    let tx=f.x+a.x*ld, ty=f.y+a.y*ld;
+    // don't drop it inside a wall — step back to the last open tile along the aim
+    const steps=8; for(let s=steps;s>=1;s--){ const px=f.x+a.x*(ld*s/steps), py=f.y+a.y*(ld*s/steps); if(!isSolidTile(tileAtPx(px,py))){ tx=px; ty=py; break; } }
+    const cap=(f.isPlayer&&hasUpgrade('hammed'))?4:3;
+    const mine=nitroTraps.filter(t=>t.owner===f);
+    while(mine.length>=cap){ const old=mine.shift(); const idx=nitroTraps.indexOf(old); if(idx>=0) nitroTraps.splice(idx,1); }
+    // NERF: longer arm time (was 24 → 45, ~0.75s) so foes get a real beat to walk out before it goes live
+    nitroTraps.push({x:tx,y:ty,owner:f,team:f.team,dmg:c.atk.dmg,r:52,arm:45,life:60*14,bob:Math.random()*6.28});
+    burst(tx,ty,"#f4c430",6,3);
+  } else if(f.char==="aasta"){
+    // Seasonal Visit: a quick forward strike in a short front arc. If she hasn't attacked in a while she
+    // "arrives" — the first strike out of the lull lands for heavy bonus damage (the surprise visit).
+    f.cd=c.atk.cd; f.atkAnim=15;
+    f.visitSwing=12; f.visitAim={x:a.x,y:a.y};   // drives the crescent-slash visual
+    const arrived = f.arrival>0 || (frame - (f.lastAtkFrame||-999) > 90);
+    f.visitArrived=arrived;
+    f.lastAtkFrame=frame; f.arrival=0;   // spend the arrival; it re-arms after a lull (ticked in update)
+    const aimAng=Math.atan2(a.y,a.x), reach=130, half=0.6;
+    const mult = arrived ? 1.9 : 1;      // arrival strike hits ~2x
+    nearSfx(arrived?'explode':'punch',f.x,f.y);
+    if(arrived){ burst(f.x+a.x*40,f.y+a.y*40,"#fff0c0",10,5); ring(f.x,f.y,"#e8c66a",f.radius*2.0,14,4); floatText(f.x,f.y-f.radius-14,"back for the season","#e8c66a"); }
+    else burst(f.x+a.x*40,f.y+a.y*40,"#e8c66a",5,3);
+    entities.forEach(t=>{ if(t===f||t.dead||t.isBanshee)return; if(TEAMED()&&t.team===f.team)return;
+      const d=dist(f,t); if(d>reach+t.radius) return;
+      let da=Math.atan2(t.y-f.y,t.x-f.x)-aimAng; while(da>Math.PI)da-=2*Math.PI; while(da<-Math.PI)da+=2*Math.PI;
+      if(Math.abs(da)<half){ const nx=(t.x-f.x)/(d||1), ny=(t.y-f.y)/(d||1);
+        damage(t,c.atk.dmg*mult,f.isPlayer,{dx:nx*(arrived?3:1.5),dy:ny*(arrived?3:1.5)},f); chargeSuperOnHit(f,arrived?16:10);
+        if(arrived){ t.knockVx=nx*7; t.knockVy=ny*7; t.knockTimer=12; } } });
+  } else if(f.char==="carol"){
+    // Afkraken: lob a scathing critique. On landing it bursts in a small blast — foes caught take light
+    // damage and gain an afkraak-stack (lower dmg + speed). See the "critique" bomb-landing branch.
+    f.cd=c.atk.cd; nearSfx('throw',f.x,f.y);
+    const ld=lobDistance(f,c.atk.range);
+    bombs.push({x:f.x,y:f.y,tx:f.x+a.x*ld,ty:f.y+a.y*ld,
+      t:0,dur:42,dmg:c.atk.dmg,owner:f,type:"critique",r:10,spin:0});
+    for(let k=0;k<4;k++){ particles.push({x:f.x+a.x*f.radius,y:f.y+a.y*f.radius,vx:a.x*2+rand(-1,1),vy:a.y*2+rand(-1,1),life:14,color:"#e86a9c",r:2}); }
+  } else if(f.char==="potplant"){
+    f.cd=c.atk.cd; nearSfx('throw',f.x,f.y);
+    const ld=lobDistance(f,c.atk.range);
+    bombs.push({x:f.x,y:f.y,tx:f.x+a.x*ld,ty:f.y+a.y*ld,
+      t:0,dur:40,dmg:c.atk.dmg,owner:f,type:"pollenlob",r:10,spin:0});
+    for(let k=0;k<5;k++){ const a2=k/5*6.28; particles.push({x:f.x+a.x*f.radius,y:f.y+a.y*f.radius,vx:Math.cos(a2)*1.5+a.x*2,vy:Math.sin(a2)*1.5+a.y*2,life:14,color:"#9ed86a",r:2}); }
+  } else if(f.char==="kimchi"){
+    // Kimchi Jar: lob a jar toward the target; it rolls out and bursts into a spicy puddle on landing
+    // (or when it hits a wall / a foe). See the "kimchi" bomb-landing branch.
+    f.cd=c.atk.cd; nearSfx('throw',f.x,f.y);
+    const ld=lobDistance(f,c.atk.range);
+    bombs.push({x:f.x,y:f.y,tx:f.x+a.x*ld,ty:f.y+a.y*ld,
+      t:0,dur:44,dmg:c.atk.dmg,owner:f,type:"kimchi",r:11,spin:0});
   } else if(f.char==="daniel"){
     f.cd=c.atk.cd; nearSfx('throw',f.x,f.y);
     const ld=lobDistance(f,c.atk.range);
@@ -2911,12 +3640,20 @@ function fighterAttack(f){
     const sp=11;
     projectiles.push({x:f.x+a.x*f.radius,y:f.y+a.y*f.radius,vx:a.x*sp,vy:a.y*sp,
       dmg:c.atk.dmg,owner:f,life:c.atk.range/sp,r:9,type:"bolt",spin:0,pierce:true,hitSet:[],maxHits:(f.isPlayer&&hasUpgrade('jake'))?3:2});
-  } else if(f.char==="kimchi"){
-    // Kimchi Jar: lob to a point; on landing it bursts into a small spicy puddle (damage zone)
-    f.cd=c.atk.cd; nearSfx('throw',f.x,f.y);
-    const ld=lobDistance(f,c.atk.range);
-    bombs.push({x:f.x,y:f.y,tx:f.x+a.x*ld,ty:f.y+a.y*ld,
-      t:0,dur:44,dmg:c.atk.dmg,owner:f,type:"kimchi",r:11,spin:0});
+  } else if(f.char==="youngfyon"){
+    // Knife Toss: a fast, straight thrown knife — long range, quick reload, single-target (glass cannon)
+    f.cd=c.atk.cd*((f.isPlayer&&hasUpgrade('youngfyon'))?0.7:1); nearSfx('dart',f.x,f.y);   // Quick Hands: faster reload
+    burst(f.x+a.x*f.radius, f.y+a.y*f.radius, "#dfeee6", 4, 2.5);   // toss glint
+    const sp=13;
+    projectiles.push({x:f.x+a.x*f.radius,y:f.y+a.y*f.radius,vx:a.x*sp,vy:a.y*sp,
+      dmg:c.atk.dmg,owner:f,life:c.atk.range/sp,r:7,type:"bolt",spin:0.4,hitSet:[],maxHits:1});
+  } else if(f.char==="metaai"){
+    // Data Beam: a precise long-range energy LANCE fired down the aim line (distinct from a thrown bolt)
+    f.cd=c.atk.cd*((f.isPlayer&&hasUpgrade('metaai'))?0.7:1); nearSfx('dart',f.x,f.y);
+    burst(f.x+a.x*f.radius, f.y+a.y*f.radius, "#7ac8ff", 6, 3);   // muzzle charge flash
+    const sp=17;   // fast, laser-like
+    projectiles.push({x:f.x+a.x*f.radius,y:f.y+a.y*f.radius,vx:a.x*sp,vy:a.y*sp,
+      dmg:c.atk.dmg,owner:f,life:c.atk.range/sp,r:7,type:"databeam",spin:0,hitSet:[],maxHits:1});
   } else if(f.char==="dean"){
     // Shotgun: a spread of pellets in a cone; every 3rd hit on the SAME foe is a headshot (2x)
     f.cd=c.atk.cd; nearSfx('dart',f.x,f.y);
@@ -3059,9 +3796,11 @@ function fighterAttack(f){
     const reach=c.atk.range, aimAng=Math.atan2(a.y,a.x), half=0.4;   // ~23° cone
     const push=(f.isPlayer&&hasUpgrade('dynant'))?18:12;   // High Pressure shoves harder
     const manti=f.skinMorph==='manticore';   // Manticore: the hose blast becomes a cone of fire-breath
-    // spray droplets along the cone (Manticore: hot embers instead of water)
+    const band=f.skinMorph==='sch_tuba';      // Music Class: the spray is a burst of gold-and-navy confetti + notes
+    // spray droplets along the cone (Manticore: hot embers; Music Class: confetti bits)
     for(let k=-2;k<=2;k++){ const ang=aimAng+half*k/2, dd=reach*(0.5+0.4*Math.random());
-      particles.push({x:f.x+Math.cos(ang)*20,y:f.y+Math.sin(ang)*20,vx:Math.cos(ang)*7,vy:Math.sin(ang)*7,life:manti?rand(14,22):16,color:manti?(k%2?"#ff7a2a":"#ffd24a"):(k%2?"#bfe9ff":"#7fd0f0"),r:rand(2,4)}); }
+      const col = manti?(k%2?"#ff7a2a":"#ffd24a") : band?(k%3===0?"#d4a02a":k%3===1?"#2a3468":"#ffffff") : (k%2?"#bfe9ff":"#7fd0f0");
+      particles.push({x:f.x+Math.cos(ang)*20,y:f.y+Math.sin(ang)*20,vx:Math.cos(ang)*7,vy:Math.sin(ang)*7,life:manti?rand(14,22):band?rand(18,28):16,color:col,r:rand(2,4)}); }
     entities.forEach(t=>{ if(t===f||t.dead||t.isBanshee)return; if(TEAMED()&&t.team===f.team)return;
       const d=dist(f,t); if(d<t.radius+reach){
         let da=Math.atan2(t.y-f.y,t.x-f.x)-aimAng; while(da>Math.PI)da-=2*Math.PI; while(da<-Math.PI)da+=2*Math.PI;
@@ -3099,6 +3838,30 @@ function fighterAttack(f){
       f.lunging=7; f.lungeFrom={x:sx,y:sy}; f.lungeTo={x:tx,y:ty};
       f.lungeAim={x:a.x,y:a.y}; f.lungeHit=false;
     }
+  } else if(f.char==="jenna"){
+    // Baguette Whack: a fast, short melee swing in a narrow arc in front of her (reuses the slash effect)
+    f.cd=c.atk.cd; f.comboStep=(f.comboStep+1)%2; nearSfx('punch',f.x,f.y); f.atkAnim=14;
+    f.slash=12; f.slashAim={x:a.x,y:a.y};   // crust-swipe arc
+    const reach=c.atk.range, aimAng=Math.atan2(a.y,a.x), half=0.6;   // ~34° each side
+    for(let k=-2;k<=2;k++){ const ang=aimAng+half*k/2; burst(f.x+Math.cos(ang)*reach*0.7,f.y+Math.sin(ang)*reach*0.7,"#f4c98a",1,2); }
+    entities.forEach(t=>{
+      if(t===f||t.dead||t.isBanshee) return; if(TEAMED()&&t.team===f.team) return;
+      const d=dist(f,t); if(d>reach+t.radius) return;
+      let da=Math.atan2(t.y-f.y,t.x-f.x)-aimAng; while(da>Math.PI)da-=2*Math.PI; while(da<-Math.PI)da+=2*Math.PI;
+      if(Math.abs(da)<half || d<t.radius+f.radius+12){ damage(t,c.atk.dmg,f.isPlayer,{dx:a.x*10,dy:a.y*10},f); chargeSuperOnHit(f,9); burst(t.x,t.y,"#e8b070",4,3); }
+    });
+  } else if(f.char==="druk"){
+    // Thunder Lob: a charged lightning orb that arcs OVER walls/bushes and slams down on the aimed spot.
+    // charge (0..1) grows the blast radius and adds a little damage; a FULL charge breaks blocks on impact.
+    f.cd=c.atk.cd; nearSfx('throw',f.x,f.y); f.atkAnim=16;
+    // bots don't hold a button — give them a random PARTIAL charge (capped below full) so they mix small/big lobs but don't constantly demolish terrain
+    let chg = f.isPlayer ? (f.chargeLvl||0) : (0.3+Math.random()*0.55);
+    chg = clamp(chg,0,1); f.chargeLvl=0;
+    const ld=lobDistance(f, c.atk.range);
+    bombs.push({x:f.x, y:f.y, sx:f.x, sy:f.y, tx:f.x+a.x*ld, ty:f.y+a.y*ld,
+      t:0, dur:44, dmg:c.atk.dmg*(0.7+1.4*chg) + (chg>=0.995?44:0), owner:f, type:"druklob", r:11+6*chg,
+      blast:66+40*chg, charge:chg, breaks: (f.isPlayer && chg>=0.995), spin:0});
+    burst(f.x+a.x*f.radius, f.y+a.y*f.radius, "#8fd3ff", 4+Math.round(6*chg), 2+2*chg);
   }
 }
 function kayoSwipe(f){
@@ -3172,9 +3935,10 @@ function fighterSuper(f){
     if(!best){ if(f.isPlayer) floatText(f.x,f.y-f.radius-10,"no target in range",'#ff9a8a'); return; }
     f.superCharge=0; nearSfx('super',f.x,f.y); if(f.isPlayer) addShake(6);
     const bhole=f.skinMorph==='spc_blackhole';   // Black Hole: the time-bomb reads as a collapsing singularity mark
-    best.tickTock=300; best.tickOwner=f; banner(bhole?"SINGULARITY!":"TICK TOCK!", "super");
-    if(bhole){ ring(best.x,best.y,"#b07aff",best.radius*2.6,20,5); burst(best.x,best.y,"#2a1a4a",18,5);
-      for(let k=0;k<10;k++){ const a=k/10*6.28; particles.push({x:best.x+Math.cos(a)*40,y:best.y+Math.sin(a)*40,vx:-Math.cos(a)*3,vy:-Math.sin(a)*3,life:26,color:k%2?"#b07aff":"#eafcff",r:rand(2,3)}); } }   // light pulled inward
+    const geo=f.skinMorph==='sch_globe';          // Geography: the bomb reads as a spinning classroom globe
+    best.tickTock=300; best.tickOwner=f; banner(bhole?"SINGULARITY!":geo?"POP QUIZ!":"TICK TOCK!", "super");
+    if(geo){ ring(best.x,best.y,"#3a7fc4",best.radius*2.6,20,5); burst(best.x,best.y,"#7ab0e0",18,5); }
+    if(bhole){ for(let k=0;k<10;k++){ const a=k/10*6.28; particles.push({x:best.x+Math.cos(a)*40,y:best.y+Math.sin(a)*40,vx:-Math.cos(a)*3,vy:-Math.sin(a)*3,life:26,color:k%2?"#b07aff":"#eafcff",r:rand(2,3)}); } }   // light pulled inward
     floatText(best.x,best.y-40,bhole?"◍":"5",'#ff5b5b');
   } else if(f.char==="yassin"){
     // Chokehold: nearest enemy within range
@@ -3212,7 +3976,7 @@ function fighterSuper(f){
       }
     }
     { const hpFrac=(f.isPlayer&&hasUpgrade('josh'))?0.32:0.20;   // Sturdy Timber: bigger self-heal
-      f.hp=Math.min(f.maxHp,f.hp+f.maxHp*hpFrac);
+      if(!f.healBlock) f.hp=Math.min(f.maxHp,f.hp+f.maxHp*hpFrac);
       floatText(f.x,f.y-f.radius-10,"+"+Math.round(hpFrac*100)+"%",'#7ee06b'); burst(f.x,f.y, golem?"#9fe86b":blocks?"#3aa84a":antb?"#8f6f4a":"#5bbf6a",16,4); }
   } else if(f.char==="lars"){
     f.superCharge=0; nearSfx('super',f.x,f.y); if(f.isPlayer) addShake(6);
@@ -3222,7 +3986,7 @@ function fighterSuper(f){
     if(f.skinMorph==='nat_fawn'){ for(let k=0;k<10;k++){ const a=k/10*6.28; particles.push({x:f.x,y:f.y,vx:Math.cos(a)*2,vy:Math.sin(a)*2-0.6,life:34,color:k%2?"#f6c8dc":"#9ed06a",r:rand(2,3)}); } }   // drifting flower-pollen
     if(aurora){ ring(f.x,f.y,"#b58aff",f.radius*2.6,20,5); for(let k=0;k<12;k++){ const a=k/12*6.28; particles.push({x:f.x,y:f.y,vx:Math.cos(a)*2.4,vy:Math.sin(a)*2.4-0.8,life:38,color:k%3===0?"#b58aff":k%3===1?"#5fe6b0":"#eafff4",r:rand(2,3)}); } }   // shimmering polar-light motes
     f.sleepAura=240;   // aura duration (frames)
-    const heal=f.maxHp*0.15; f.hp=Math.min(f.maxHp,f.hp+heal);
+    const heal=f.maxHp*0.15; if(!f.healBlock) f.hp=Math.min(f.maxHp,f.hp+heal);
     floatText(f.x,f.y-f.radius-8,"+"+Math.round(heal),'#7ee06b'); nearSfx('heal',f.x,f.y);
   } else if(f.char==="milo"){
     f.superCharge=0; nearSfx('super',f.x,f.y); if(f.isPlayer) addShake(6);
@@ -3302,13 +4066,36 @@ function fighterSuper(f){
   } else if(f.char==="jake"){
     f.superCharge=0; nearSfx('super',f.x,f.y); if(f.isPlayer) addShake(6);
     // Moon Arrow: a glowing arrow of moonlight that pierces EVERY enemy in a straight line
-    banner("MOON ARROW!", "super"); burst(f.x,f.y, f.skinMorph==='faun'?"#8fd86b":f.skinMorph==='toy_peg'?"#f4c430":"#dfe6ff",22,6);
+    banner(f.skinMorph==='sch_gym'?"FINAL WHISTLE!":"MOON ARROW!", "super"); burst(f.x,f.y, f.skinMorph==='faun'?"#8fd86b":f.skinMorph==='toy_peg'?"#f4c430":f.skinMorph==='sch_gym'?"#ff5a4a":"#dfe6ff",22,6);
+    if(f.skinMorph==='sch_gym'){ ring(f.x,f.y,"#ffffff",f.radius*2.4,18,4); for(let k=0;k<8;k++){ const a2=k/8*6.28; particles.push({x:f.x,y:f.y,vx:Math.cos(a2)*3,vy:Math.sin(a2)*3,life:22,color:k%2?"#ff5a4a":"#ffffff",r:rand(2,3)}); } }   // whistle-blast burst
     const sp=15;
     projectiles.push({x:f.x+a.x*f.radius,y:f.y+a.y*f.radius,vx:a.x*sp,vy:a.y*sp,
       dmg:820,owner:f,life:900/sp,r:14,type:"moonarrow",spin:0,pierce:true,hitSet:[],noKnock:false});
+  } else if(f.char==="youngfyon"){
+    f.superCharge=0; nearSfx('super',f.x,f.y); if(f.isPlayer) addShake(5);
+    // Blade Flurry: a short forward dart, then a wide fan of knives loosed in the aimed direction
+    banner(f.skinMorph==='sch_bookworm'?"POP QUIZ!":"BLADE FLURRY!", "super"); burst(f.x,f.y, f.skinMorph==='sch_bookworm'?"#5a7ac0":"#cdeede",22,5);
+    // short dash: nudge Young Fyon forward a bit (bounded by walls)
+    f.x += a.x*70; f.y += a.y*70; circleWall(f); burst(f.x,f.y,"#eafff4",14,4);
+    // fan of 7 knives spread across a ~50° cone, each a fast single-hit blade
+    const sp=12, base=Math.atan2(a.y,a.x), spread=0.44;   // ~50° total
+    for(let k=-3;k<=3;k++){ const ang=base+spread*k/3;
+      projectiles.push({x:f.x+Math.cos(ang)*f.radius, y:f.y+Math.sin(ang)*f.radius, vx:Math.cos(ang)*sp, vy:Math.sin(ang)*sp,
+        dmg:300, owner:f, life:520/sp, r:7, type:"bolt", spin:0.5, hitSet:[], maxHits:1});
+    }
+  } else if(f.char==="metaai"){
+    f.superCharge=0; nearSfx('super',f.x,f.y); if(f.isPlayer) addShake(5);
+    // Drone Swarm: deploy 5 hovering mini-drones that orbit Meta AI and fire data-beams at nearby foes for ~6s.
+    banner(f.skinMorph==='sch_smartboard'?"SYSTEM DEPLOY!":"DRONE SWARM!", "super"); burst(f.x,f.y,f.skinMorph==='sch_smartboard'?"#5ae0b0":"#7ac8ff",22,5); ring(f.x,f.y,f.skinMorph==='sch_smartboard'?"#b7ffe0":"#bfe6ff",f.radius*2.2,18,4);
+    const DRONES=5, board=f.skinMorph==='sch_smartboard';
+    for(let k=0;k<DRONES;k++){
+      const orbit=k/DRONES*6.28;   // starting angle around the owner
+      drones.push({ owner:f, team:f.team, orbit, x:f.x+Math.cos(orbit)*f.radius*2, y:f.y+Math.sin(orbit)*f.radius*2,
+        life:360, fireCd:20+k*4, col: board?"#5ae0b0":"#7ac8ff" });
+      burst(f.x+Math.cos(orbit)*f.radius*1.6, f.y+Math.sin(orbit)*f.radius*1.6, "#eaf6ff", 3, 2);
+    }
   } else if(f.char==="kimchi"){
     f.superCharge=0; nearSfx('super',f.x,f.y); if(f.isPlayer) addShake(6);
-    // Kimchi Zone: drop a large fermenting zone at Kim Chi's feet (steady damage while inside)
     const aster=f.skinMorph==='spc_asteroid';
     banner(aster?"ASTEROID FIELD!":"KIMCHI ZONE!", "super"); const bslk=f.skinMorph==='basilisk'; const jack=f.skinMorph==='toy_jack'; const flytr=f.skinMorph==='nat_flytrap'; burst(f.x,f.y, bslk?"#5ac85a":jack?"#e8437a":flytr?"#4a9a3a":aster?"#b0a090":"#e0533a",30,6);
     if(jack){ ring(f.x,f.y,"#ffd23f",f.radius*2.2,18,4); }   // jack-in-the-box POP!
@@ -3345,7 +4132,7 @@ function fighterSuper(f){
   } else if(f.char==="waitress"){
     f.superCharge=0; nearSfx('super',f.x,f.y); if(f.isPlayer) addShake(4);
     // Dinner Rush: 6s of faster move + reload, and lifesteal on every hit (handled via healFrac)
-    banner("DINNER RUSH!", "super"); f.dinnerRush=(f.isPlayer&&hasUpgrade('waitress'))?540:360; burst(f.x,f.y, f.skinMorph==='fae'?"#ff9ad6":f.skinMorph==='toy_doll'?"#f08a9a":"#d64a6a",22,5);
+    banner(f.skinMorph==='sch_chem'?"REACTION!":"DINNER RUSH!", "super"); f.dinnerRush=(f.isPlayer&&hasUpgrade('waitress'))?540:360; burst(f.x,f.y, f.skinMorph==='sch_chem'?"#8fd6c4":f.skinMorph==='fae'?"#ff9ad6":f.skinMorph==='toy_doll'?"#f08a9a":"#d64a6a",22,5);
     if(f.skinMorph==='fae'){ for(let k=0;k<10;k++){ const a=k/10*6.28; particles.push({x:f.x,y:f.y,vx:Math.cos(a)*3,vy:Math.sin(a)*3-1,life:26,color:"#ffe6a0",r:2}); } }   // pixie-dust puff
     else if(f.skinMorph==='toy_doll'){ for(let k=0;k<8;k++){ const a=k/8*6.28; particles.push({x:f.x,y:f.y,vx:Math.cos(a)*2.5,vy:Math.sin(a)*2.5-0.5,life:24,color:"#fff4e0",r:2}); } }   // a puff of stuffing
   } else if(f.char==="sanne"){
@@ -3368,7 +4155,8 @@ function fighterSuper(f){
   } else if(f.char==="fluharty"){
     f.superCharge=0; nearSfx('super',f.x,f.y); if(f.isPlayer) addShake(6);
     // Perfect Pitch: a heavy fastball with light homing toward the nearest foe in the aim direction
-    banner("PERFECT PITCH!", "super"); burst(f.x,f.y, f.skinMorph==='comet'?"#5a6ad0":"#e0433a",22,6);
+    banner(f.skinMorph==='sch_clown'?"SHOWTIME!":"PERFECT PITCH!", "super"); burst(f.x,f.y, f.skinMorph==='sch_clown'?"#e0403a":f.skinMorph==='comet'?"#5a6ad0":"#e0433a",22,6);
+    if(f.skinMorph==='sch_clown'){ const cr=["#e0403a","#f4d03a","#3a86ff","#3aa84a"]; for(let k=0;k<12;k++){ const a2=k/12*6.28; particles.push({x:f.x,y:f.y,vx:Math.cos(a2)*3.2,vy:Math.sin(a2)*3.2-0.5,life:26,color:cr[k%cr.length],r:rand(2,3)}); } }   // confetti burst
     const sp=10;
     projectiles.push({x:f.x+a.x*f.radius,y:f.y+a.y*f.radius,vx:a.x*sp,vy:a.y*sp,
       dmg:760,owner:f,life:90,r:15,type:"fastball",spin:0,homing:0.14,speedCap:sp});
@@ -3427,6 +4215,52 @@ function fighterSuper(f){
         t.knockVx=nx*power; t.knockVy=ny*power; t.knockTimer=22;
         t.frozen=Math.max(t.frozen||0,72);   // stunned by the sheer audacity
         floatText(t.x,t.y-t.radius-12,"ratio'd","#c58aff"); } });
+  } else if(f.char==="carol"){
+    f.superCharge=0; nearSfx('super',f.x,f.y); if(f.isPlayer) addShake(7); hitStop=Math.max(hitStop,4);
+    // Zonder Genade: a ring of pure judgement around Carol — every foe inside is slammed to max afkraak-stacks
+    // and takes a heavy burst of damage. "Afkraken zonder genade."
+    banner("ZONDER GENADE!", "super");
+    floatText(f.x,f.y-f.radius-20,"afkraken zonder genade","#e86a9c");
+    const up=(f.isPlayer&&hasUpgrade('carol'));
+    const JR=up?230:200, KRAK_CAP=6;
+    ring(f.x,f.y,"#e86a9c",JR,26,7); ring(f.x,f.y,"#ffd0e4",JR*0.7,20,5); burst(f.x,f.y,"#e86a9c",30,7);
+    for(let k=0;k<16;k++){ const a2=k/16*6.28; particles.push({x:f.x,y:f.y,vx:Math.cos(a2)*4.5,vy:Math.sin(a2)*4.5-0.5,life:30,color:k%2?"#e86a9c":"#c8143a",r:3.5}); }
+    entities.forEach(t=>{ if(t===f||t.dead||t.isBanshee)return; if(TEAMED()&&t.team===f.team)return;
+      const d=dist(f,t); if(d<JR+t.radius){
+        damage(t,(up?520:420)*(1-d/(JR*1.7)),f.isPlayer,{dx:(t.x-f.x)*0.05,dy:(t.y-f.y)*0.05},f);
+        t.krak=KRAK_CAP; t.krakTimer=200;
+        floatText(t.x,t.y-t.radius-14,"0/10","#ffd0e4"); } });
+  } else if(f.char==="aasta"){
+    f.superCharge=0; nearSfx('super',f.x,f.y); if(f.isPlayer) addShake(5);
+    // aimed spot with a burst of AoE damage. The reappear + landing burst fire when dipTimer expires
+    // (handled in the update loop's Aasta Dip block). Her arrival bonus is refreshed on landing.
+    banner("DIP!", "super");
+    const up=(f.isPlayer&&hasUpgrade('aasta'));
+    // pick the landing spot now: aim direction × dip distance, stepped back out of any wall
+    const DIPDIST=up?400:340; let lx=f.x+a.x*DIPDIST, ly=f.y+a.y*DIPDIST;
+    const steps=10; for(let s=steps;s>=1;s--){ const px=f.x+a.x*(DIPDIST*s/steps), py=f.y+a.y*(DIPDIST*s/steps); if(!isSolidTile(tileAtPx(px,py))){ lx=px; ly=py; break; } }
+    // vanish fx at her current spot (autumn leaves scattering)
+    burst(f.x,f.y,"#e8c66a",18,5); ring(f.x,f.y,"#fff0c0",f.radius*2.4,16,5);
+    for(let k=0;k<12;k++){ const a2=k/12*6.28; particles.push({x:f.x,y:f.y,vx:Math.cos(a2)*3,vy:Math.sin(a2)*3-0.6,life:24,color:k%2?"#fff0c0":"#e8c66a",r:3}); }
+    f.dipTimer=up?26:30; f.dipInvis=f.dipTimer; f.dipAim={x:lx,y:ly}; f.dipMul=up?1.25:1;
+  } else if(f.char==="hammed"){
+    f.superCharge=0; nearSfx('super',f.x,f.y); if(f.isPlayer) addShake(6);
+    // Full Furry: drop the scammer act and transform — a timed buff (bigger + faster + claws up close).
+    // The `furry` timer drives speed (effSpeed), damage, faster attacks, the claw swipe, and the sprite.
+    banner("FULL FURRY!", "super");
+    f.furry=(f.isPlayer&&hasUpgrade('hammed'))?420:330;
+    burst(f.x,f.y,"#c8a24a",26,6); ring(f.x,f.y,"#ffe08a",f.radius*3.2,22,6); ring(f.x,f.y,"#c8a24a",f.radius*2.2,18,5);
+    for(let k=0;k<12;k++){ const a2=k/12*6.28; particles.push({x:f.x,y:f.y,vx:Math.cos(a2)*3.5,vy:Math.sin(a2)*3.5-0.5,life:28,color:k%2?"#ffe08a":"#c8a24a",r:3}); }
+  } else if(f.char==="meiden"){
+    f.superCharge=0; nearSfx('super',f.x,f.y); if(f.isPlayer) addShake(6);
+    // Girl Gang: the whole crew charges forward as one — a fast shared dash that rams + knocks back
+    // every foe in the lane (uses its own gangDash loop, wider + more knockback than a razor dash).
+    banner("GIRL GANG!", "super");
+    const aimAng=Math.atan2(a.y,a.x);
+    burst(f.x,f.y,"#e0407a",18,5); ring(f.x,f.y,"#ffd0e0",f.radius*2.6,18,5);
+    for(let k=0;k<10;k++){ const a2=k/10*6.28; particles.push({x:f.x,y:f.y,vx:Math.cos(a2)*3.5,vy:Math.sin(a2)*3.5-0.5,life:26,color:k%2?"#e0407a":"#f4c430",r:3}); }
+    const up=(f.isPlayer&&hasUpgrade('meiden'));
+    f.gangDash=up?26:20; f.gangAim={x:Math.cos(aimAng),y:Math.sin(aimAng)}; f.gangHit=[]; f.gangMul=up?1.25:1;
   } else if(f.char==="kapper"){
     f.superCharge=0; nearSfx('explode',f.x,f.y); if(f.isPlayer) addShake(6);
     // Straight Razor: a fast forward DASH (over ~18 frames, not a teleport) that cuts foes + shaves walls
@@ -3439,6 +4273,7 @@ function fighterSuper(f){
     // Hydrant: plant a sprinkler that shoves every enemy out of a wide radius for a few seconds
     // Manticore: same zone mechanic, reskinned as a scorching territorial ROAR — fiery banner + ember ring.
     if(f.skinMorph==='manticore'){ banner("PRIMAL ROAR!", "super"); burst(f.x,f.y,"#ff7a2a",30,7); ring(f.x,f.y,"#ffcf4a",180,26,6); if(f.isPlayer) addShake(9); }
+    else if(f.skinMorph==='sch_tuba'){ banner("BIG FINALE!", "super"); burst(f.x,f.y,"#d4a02a",28,6); ring(f.x,f.y,"#ffe08a",170,24,6); const nc=["#d4a02a","#2a3a6a","#ffe08a"]; for(let k=0;k<12;k++){ const a2=k/12*6.28; particles.push({x:f.x,y:f.y,vx:Math.cos(a2)*3,vy:Math.sin(a2)*3-0.5,life:26,color:nc[k%nc.length],r:rand(2,3)}); } }   // Music Class: a brass-band blast + gold/navy confetti
     else { banner("HYDRANT!", "super"); burst(f.x,f.y,"#7fd0f0",26,6); ring(f.x,f.y,"#bfe9ff",170,24,6); }
     // drop it just in front of Dynant (or on him if that spot is walled)
     const hx=f.x+a.x*30, hy2=f.y+a.y*30;
@@ -3453,6 +4288,52 @@ function fighterSuper(f){
   } else if(f.char==="kayo"){
     f.superCharge=0; nearSfx('super',f.x,f.y); if(f.isPlayer) addShake(5);
     kayoTagIn(f);
+  } else if(f.char==="jenna"){
+    // Lunch Break: wolf down a sandwich — small heal + instant top momentum, but she's frozen mid-bite
+    const lunch = f.skinMorph==='sch_lunchlady';   // Lunch Lady: a cafeteria tray + steam instead of sandwich crumbs
+    f.superCharge=0; nearSfx('heal',f.x,f.y); if(f.isPlayer) addShake(3);
+    banner(lunch?"LUNCH SERVED!":"LUNCH BREAK!", "super");
+    const heal=Math.round(f.maxHp*0.25); if(!f.healBlock) f.hp=Math.min(f.maxHp,f.hp+heal);
+    floatText(f.x,f.y-f.radius-8,"+"+heal,'#7ee06b');
+    f.momo=1; f.momFreeze=22;   // slam to full speed; brief chew-freeze (momentum held during it)
+    f.chew=22;                  // sprite cue: she's munching (dedicated timer — does NOT full-heal like Reshman's)
+    if(lunch){
+      burst(f.x,f.y,"#c8d0da",16,4); ring(f.x,f.y,"#eaf2f8",f.radius*2.4,18,5);
+      for(let k=0;k<8;k++){ const a2=k/8*6.28; particles.push({x:f.x,y:f.y,vx:Math.cos(a2)*2,vy:-rand(1.2,3),life:28,color:k%2?"#eef4fa":"#c8d0da",r:rand(2,3)}); }   // rising cafeteria steam
+    } else {
+      burst(f.x,f.y,"#ffd98a",16,4); ring(f.x,f.y,"#ffe9b8",f.radius*2.4,18,5);
+      for(let k=0;k<8;k++){ const a2=k/8*6.28; particles.push({x:f.x,y:f.y,vx:Math.cos(a2)*3,vy:Math.sin(a2)*3-1,life:22,color:k%2?"#f4c98a":"#ff9ecb",r:3}); }   // crumbs
+    }
+  } else if(f.char==="druk"){
+    // Dragon's Roar: a roaring thunderstorm erupts around Druk — heavy damage + a hard shove to everyone in a wide ring.
+    const tesla = f.skinMorph==='sch_teslacoil';   // Science Fair: a green-white static discharge
+    f.superCharge=0; nearSfx('explode',f.x,f.y); if(f.isPlayer) addShake(14); hitStop=Math.max(hitStop,4);
+    banner(tesla?"OVERLOAD!":"DRAGON'S ROAR!", "super");
+    const MR=230;
+    if(tesla){
+      burst(f.x,f.y,"#5ae0b0",40,9); ring(f.x,f.y,"#b7ffe0",MR*0.5,24,7); ring(f.x,f.y,"#2a9a7a",MR*0.8,20,6); ring(f.x,f.y,"#ffffff",MR*0.28,14,4);
+      for(let k=0;k<20;k++){ const a2=k/20*6.28; particles.push({x:f.x,y:f.y,vx:Math.cos(a2)*6,vy:Math.sin(a2)*6,life:30,color:k%3===0?"#eafff4":k%3===1?"#5ae0b0":"#2a9a7a",r:4}); }
+    } else {
+      burst(f.x,f.y,"#8fd3ff",40,9); ring(f.x,f.y,"#c8e6ff",MR*0.5,24,7); ring(f.x,f.y,"#5a8aff",MR*0.8,20,6); ring(f.x,f.y,"#ffffff",MR*0.28,14,4);
+      for(let k=0;k<20;k++){ const a2=k/20*6.28; particles.push({x:f.x,y:f.y,vx:Math.cos(a2)*6,vy:Math.sin(a2)*6,life:30,color:k%3===0?"#e8f4ff":k%3===1?"#8fd3ff":"#5a8aff",r:4}); }
+    }
+    // radial lightning bolts forking out across the ring — drawn safely as fast particle trails (NO direct ctx in game logic)
+    for(let k=0;k<12;k++){ const a2=k/12*6.28+rand(-0.15,0.15);
+      for(let s=1;s<=5;s++){ const rr=MR*s/5; particles.push({x:f.x+Math.cos(a2)*rr+rand(-8,8),y:f.y+Math.sin(a2)*rr+rand(-8,8),vx:0,vy:0,life:14,color:tesla?"#eafff4":"#e8f4ff",r:2.5}); } }
+    entities.forEach(t=>{ if(t===f||t.dead||t.isBanshee)return; if(TEAMED()&&t.team===f.team)return;
+      const d=dist(f,t); if(d<MR){ const nx=(t.x-f.x)/(d||1), ny=(t.y-f.y)/(d||1);
+        damage(t,520*(1-d/(MR*1.5)),f.isPlayer,{projectile:true},f);
+        const power=14*(1-d/(MR*1.8))+6; t.knockVx=nx*power; t.knockVy=ny*power; t.knockTimer=20;
+        burst(t.x,t.y,"#8fd3ff",8,4); floatText(t.x,t.y-t.radius-12,"SHOCKED","#c8e6ff"); } });
+  } else if(f.char==="potplant"){
+    // Full Bloom: root in place and bloom a huge pollen garden — allies inside heal fast, foes take chip + slow.
+    f.superCharge=0; nearSfx('super',f.x,f.y); if(f.isPlayer) addShake(6);
+    banner("FULL BLOOM!", "super");
+    burst(f.x,f.y,"#b6e26a",34,7); ring(f.x,f.y,"#d6f28a",190*0.6,22,6); ring(f.x,f.y,"#7bbf4a",190*0.85,20,5);
+    for(let k=0;k<14;k++){ const a2=k/14*6.28; particles.push({x:f.x,y:f.y,vx:Math.cos(a2)*3.4,vy:Math.sin(a2)*3.4-1,life:34,color:k%2?"#d6f28a":"#f6d84a",r:rand(2,4)}); }
+    const up=(f.isPlayer&&hasUpgrade('potplant'));   // Sanctuary upgrade: bigger, longer bloom
+    f.bloomRoot=up?300:240;   // rooted in place while the garden blooms
+    pollenClouds.push({x:f.x, y:f.y, r:up?210:190, life:up?420:330, owner:f, team:f.team, heal:70, dps:60, slow:true, bloom:true});
   }
 }
 // Kayo & Yara — Tag In: swap forms, keep HP as a percentage, and burst a shockwave that nudges foes.
@@ -3470,10 +4351,12 @@ function kayoTagIn(f){
   f.cd = 0; f.switchAnim = 26;
   // clear any committed melee state so a mid-lunge swap doesn't strand him
   f.lunging=0; f.lungeHit=true; f.atkAnim=0;
-  const col = toYara ? "#b9926a" : "#a5713f";
+  const pencil = f.skinMorph==='sch_pencils';   // Colour Pencils: the tag-in swap sprays crayon colours
+  const col = pencil ? (toYara ? "#3a86ff" : "#e0533a") : (toYara ? "#b9926a" : "#a5713f");
   banner(toYara ? "TAG IN — YARA!" : "TAG IN — KAYO!", "super");
   ring(f.x,f.y,col,f.radius*3.4,22,6); ring(f.x,f.y,"#ffffff",f.radius*2.2,16,3);
   burst(f.x,f.y,col,26,6);
+  if(pencil){ const cr=["#e0533a","#3a86ff","#f4c430","#3aa84a"]; for(let k=0;k<12;k++){ const a2=k/12*6.28; particles.push({x:f.x,y:f.y,vx:Math.cos(a2)*3,vy:Math.sin(a2)*3-0.5,life:26,color:cr[k%cr.length],r:rand(2,3)}); } }   // rainbow crayon confetti
   // shockwave nudge on nearby foes
   entities.forEach(t=>{ if(t===f||t.dead||t.isBanshee)return; if(TEAMED()&&t.team===f.team)return;
     const d=dist(f,t); if(d<130){ const nx=(t.x-f.x)/(d||1), ny=(t.y-f.y)/(d||1);
@@ -3483,6 +4366,7 @@ function kayoTagIn(f){
 /* ---------- Update loop ---------- */
 function update(){
   frame++;
+  if(state==="play") updateMusicIntensity();   // beatdrop when the match reaches a climax moment
   // KO pixel-dissolve: tick down the death animation on any downed fighter still fading out
   entities.forEach(e=>{ if(e.dead && e.deathAnim>0) e.deathAnim--; });
   // Practice Plains: dummies slowly heal when unhurt, and auto-revive a moment after a KO
@@ -3490,8 +4374,8 @@ function update(){
     entities.forEach(e=>{ if(!e.isDummy) return;
       if(e.dead){ if(e.deathAnim<=0){ e._reviveCd=(e._reviveCd||90)-1; if(e._reviveCd<=0){
             e.dead=false; e.hp=e.maxHp; e.spawnAnim=18; e.x=e.homeX; e.y=e.homeY; e.lastX=e.x; e.lastY=e.y; e._reviveCd=90; } } }
-      else if(e.hp<e.maxHp && e.regenCooldown<=0){
-        e.hp=Math.min(e.maxHp, e.hp+e.maxHp*0.006);   // steady regen once out of combat
+      else if(e.hp<e.maxHp && e.regenCooldown<=0 && !e.healBlock){
+        e.hp=Math.min(e.maxHp, e.hp+e.maxHp*0.006);   // steady regen once out of combat (blocked by Druk's sear)
       }
     });
   }
@@ -3541,7 +4425,7 @@ function update(){
     let dx=0,dy=0;
     if(keys['w'])dy--; if(keys['s'])dy++; if(keys['a'])dx--; if(keys['d'])dx++;
     if(ton){ dx+=touch.moveX; dy+=touch.moveY; }
-    if(player.frozen<=0 && player.diving<=0 && player.smashing<=0 && player.dashing<=0 && player.hopping<=0 && player.razorDash<=0){
+    if(player.frozen<=0 && player.bloomRoot<=0 && player.gangDash<=0 && player.dipTimer<=0 && player.diving<=0 && player.smashing<=0 && player.dashing<=0 && player.hopping<=0 && player.razorDash<=0){
       const m=Math.hypot(dx,dy)||1;
       const sp=effSpeed(player);
       if(Math.hypot(dx,dy)>0.05) moveWithSlip(player, dx/m, dy/m, sp);
@@ -3561,12 +4445,22 @@ function update(){
     }
     else if(ax||ay){ const m=Math.hypot(ax,ay); player.aim={x:ax/m,y:ay/m}; }
     else { const mx=mouse.x+cam.x, my=mouse.y+cam.y; const m=Math.hypot(mx-player.x,my-player.y)||1; player.aim={x:(mx-player.x)/m,y:(my-player.y)/m}; }
-    const busy = player.diving>0||player.smashing>0||player.dashing>0||player.hopping>0||player.launching>0||player.lunging>0||player.razorDash>0;
+    const busy = player.diving>0||player.smashing>0||player.dashing>0||player.hopping>0||player.launching>0||player.lunging>0||player.razorDash>0||player.gangDash>0;
     // desktop: J fires instantly; mouse aims while held and FIRES on release (Brawl-Stars style).
     // chars with no aim indicator (Deniz's hold-to-spin) fire continuously while the mouse is down.
     const noAim = !aimProf(player);
     const mouseFire = noAim ? mouse.down : mouse.releaseFire;
-    if((keys['j'] || mouseFire || (ton&&touch.attacking)) && !busy) fighterAttack(player);
+    // Druk: HOLD to charge (fills while aim is held & cd ready), release to lob with the built-up charge.
+    const chargeChar = (player.char==='druk');
+    if(chargeChar){
+      const holding = (mouse.aiming || (ton&&touch.attacking) || keys['j']) && player.cd<=0 && !busy;
+      if(holding) player.chargeHold = Math.min(1, (player.chargeHold||0) + 1/CHARGE_FRAMES);   // ~CHARGE_FRAMES to full
+    }
+    if((keys['j'] || mouseFire || (ton&&touch.attacking)) && !busy){
+      if(chargeChar){ player.chargeLvl = player.chargeHold||0; }   // hand the built-up charge to the shot
+      fighterAttack(player);
+      if(chargeChar) player.chargeHold=0;   // spent
+    }
     mouse.releaseFire=false;   // consume the release
     if((keys['k']||keys[' ']||touch.superTap) && !busy) fighterSuper(player);
     touch.superTap=false;   // consume the tap
@@ -3642,8 +4536,9 @@ function update(){
     }
     // Lars' Sleep Tight slows reload; hauling an Acorn Heist acorn does too: cd ticks at half rate
     const reloadSlowed = e.slowTimer>0 || (e.acornCarry||0)>0;
-    if(e.cd>0){ if(!reloadSlowed || frame%2===0) e.cd -= (e.modCd ? 1/e.modCd : 1); }   // modCd scales reload
+    if(e.cd>0){ if(!reloadSlowed || frame%2===0){ const botReload = e.isPlayer ? 1 : 0.8; e.cd -= (e.modCd ? 1/e.modCd : 1) * botReload; } }   // modCd scales reload; bots reload ~25% slower so they don't insta-kill
     if(e.flash>0)e.flash--;
+    if(e.killGlow>0)e.killGlow--;   // protogen visor grins briefly after a KO
     if(e.bubble>0)e.bubble--;
     if(e.camBoost>0)e.camBoost--;
     if(e.revealed>0)e.revealed--;
@@ -3668,6 +4563,8 @@ function update(){
     // Adma Jr Second Wind: count down the window; when it runs out, heal whatever was banked
     if(e.secondWind>0){ e.secondWind--; if(frame%5===0) burst(e.x+rand(-e.radius,e.radius), e.y-e.radius*0.3, "#5fe0a0", 1, 1.6); if(e.secondWind<=0 && !e.dead) admaSecondWindHeal(e); }
     if(e.frozen>0)e.frozen--;
+    if(e.bloomRoot>0)e.bloomRoot--;   // Potplant Full Bloom: rooted in place while the garden blooms
+    if(e.healBlock>0){ e.healBlock--; if(frame%6===0) burst(e.x+rand(-e.radius*0.6,e.radius*0.6), e.y-e.radius*0.4, "#ff7a5a", 1, 1.4); }   // Druk sear: block healing, wisp of smoke
     if(e.slowTimer>0){ e.slowTimer--; if(e.slowTimer<=0) e.slowStyle=null; }
     if(e.slowHard>0)e.slowHard--;
     // Johan Wet Floor: standing in a puddle (not the owner/teammate) keeps you skidding
@@ -3701,6 +4598,13 @@ function update(){
       else if(e.ammo<e.ammoMax) e.ammo=Math.min(e.ammoMax, e.ammo + (e.def.atk.ammoRegen||0.7));
     }
     if(e.speedBoost>0)e.speedBoost--;
+    // Jenna momentum: builds while she keeps moving, bleeds away when she stands still
+    if(e.momentum){
+      if(e.momFreeze>0){ e.momFreeze--; }              // frozen mid-bite (Lunch Break): hold momentum
+      else if((e.moveSpd||0)>0.6) e.momo=Math.min(1, (e.momo||0)+0.0011*((e.isPlayer&&hasUpgrade('jenna'))?1.5:1));   // moving: ~15s to full (~10s with Runner's High); long, deliberate snowball
+      else e.momo=Math.max(0, (e.momo||0)-0.010);      // stalls when she stops (gentle so short pauses don't gut the long ramp)
+      if((e.momo||0)>0.55 && frame%2===0) burst(e.x+rand(-e.radius,e.radius), e.y+e.radius*0.4, "#ff9ecb", 1, 1.5+2*e.momo);
+    }
     if(e.rapidFire>0){ e.rapidFire--; if(frame%3===0) burst(e.x+rand(-e.radius,e.radius), e.y-e.radius*0.4, "#8fd8ff", 1, 1.5); }
     if(e.armor>0){ e.armor--; if(frame%4===0) burst(e.x+rand(-e.radius,e.radius), e.y, "#cfd6e2", 1, 1); }
     // Lars Sleep Tight: a slow aura that follows him, drowsing enemies inside it
@@ -3712,21 +4616,48 @@ function update(){
       if(frame%3===0) burst(e.x+rand(-AR,AR)*0.7, e.y+rand(-AR,AR)*0.5, "#f4b6d6", 1, 1.5);
     }
     if(e.whirl>0)e.whirl--;
-    if(e.slash>0)e.slash--;    if(e.spray>0)e.spray--;    if(e.snipFx>0)e.snipFx--;
+    if(e.slash>0)e.slash--;    if(e.spray>0)e.spray--;    if(e.snipFx>0)e.snipFx--;    if(e.visitSwing>0)e.visitSwing--;    if(e.trapImmune>0)e.trapImmune--;
+    if(e.visitSwing>0)e.visitSwing--;   // Aasta: Seasonal Visit strike-arc timer
     if(e.gunBlast>0)e.gunBlast--;
     if(e.staffSwing>0)e.staffSwing--;
     if(e.enrage>0){ e.enrage--; if(frame%4===0) burst(e.x+rand(-e.radius,e.radius), e.y-e.radius*0.3, "#ff5330", 1, 1.5); }
     if(e.dinnerRush>0){ e.dinnerRush--; if(frame%6===0) burst(e.x+rand(-e.radius,e.radius), e.y-e.radius*0.3, "#d64a6a", 1, 1.5); }
+    if(e.furry>0){ e.furry--; if(frame%5===0) burst(e.x+rand(-e.radius,e.radius), e.y-e.radius*0.3, "#c8a24a", 1, 1.6); }   // Hammed: Full Furry buff aura
+    // Aasta: Dip invisibility/invuln window ticks down; her arrival bonus re-arms after a lull out of combat.
+    if(e.dipInvis>0){ e.dipInvis--; if(e.dipInvis<=0){ burst(e.x,e.y,"#fff0c0",10,4); } }   // reappear puff when the veil drops
+    if(e.arrivalFx>0)e.arrivalFx--;
+    // Carol Afkraken: stacks decay if she stops picking at you — drop one every ~2.3s of no fresh critique.
+    if(e.krak>0){ if(e.krakTimer>0) e.krakTimer--; if(e.krakTimer<=0){ e.krak--; e.krakTimer= e.krak>0?140:0; }
+      if(frame%10===0 && e.krak>0) particles.push({x:e.x+rand(-e.radius,e.radius),y:e.y-e.radius*0.4,vx:rand(-0.4,0.4),vy:-0.5,life:16,color:"#e86a9c",r:2}); }
+    if(e.char==='aasta' && e.arrival<=0 && (frame-(e.lastAtkFrame||-999))>90){ e.arrival=1; }   // re-arm the surprise strike after ~1.5s idle
+    // Aasta Dip: while dipTimer runs she's gone; when it expires she reappears at dipAim with a burst of AoE damage.
+    if(e.dipTimer>0){ e.dipTimer--;
+      if(frame%3===0) burst(e.x+rand(-e.radius,e.radius), e.y-e.radius*0.3, "#e8c66a", 1, 1.5);   // faint trail while veiled
+      if(e.dipTimer<=0 && e.dipAim){
+        e.x=e.dipAim.x; e.y=e.dipAim.y; e.lastX=e.x; e.lastY=e.y;   // reappear at the aimed spot
+        e.arrival=1; e.lastAtkFrame=-999;   // her surprise strike is instantly re-armed on landing
+        nearSfx('super',e.x,e.y); if(e.isPlayer) addShake(6);
+        ring(e.x,e.y,"#ffe6a0",e.radius*3.2,20,6); ring(e.x,e.y,"#e8c66a",e.radius*2.2,16,5); burst(e.x,e.y,"#ffd88a",24,6);
+        for(let k=0;k<14;k++){ const a2=k/14*6.28; particles.push({x:e.x,y:e.y,vx:Math.cos(a2)*4,vy:Math.sin(a2)*4-0.5,life:26,color:k%2?"#e8c66a":"#d98a4a",r:3}); }
+        const AR=150*(e.dipMul||1);
+        entities.forEach(t=>{ if(t===e||t.dead||t.isBanshee)return; if(TEAMED()&&t.team===e.team)return;
+          const d=dist(e,t); if(d<AR+t.radius){ const nx=(t.x-e.x)/(d||1), ny=(t.y-e.y)/(d||1);
+            damage(t,340*(e.dipMul||1)*(1-d/(AR*1.7)),e.isPlayer,{dx:nx*2,dy:ny*2},e);
+            t.knockVx=nx*7; t.knockVy=ny*7; t.knockTimer=14; } });
+        e.dipAim=null;
+      }
+    }
     // Sonia's Rally buff: heal-over-time + golden sparkles while active
     if(e.rally>0){ e.rally--;
       const decree = e.char==='sonia' && hasUpgrade('sonia');
       let healPct = decree ? 0.038 : 0.028, healEvery = decree ? 15 : 20;   // nerfed: base ~50% of max HP over the rally (was ~72%); decree ~122% (was ~176%)
       if(e.rallyAlly) healPct*=0.6;   // allies heal slower than Sonia herself
-      if(frame%healEvery===0 && e.hp<e.maxHp){ e.hp=Math.min(e.maxHp, e.hp+e.maxHp*healPct); floatText(e.x,e.y-e.radius-8,"+"+Math.round(e.maxHp*healPct),'#7ee06b'); }
+      if(frame%healEvery===0 && e.hp<e.maxHp && !e.healBlock){ e.hp=Math.min(e.maxHp, e.hp+e.maxHp*healPct); floatText(e.x,e.y-e.radius-8,"+"+Math.round(e.maxHp*healPct),'#7ee06b'); }
       if(frame%5===0) burst(e.x+rand(-e.radius,e.radius), e.y-e.radius*0.4, "#f2d24a", 1, 1.5);
       if(e.rally<=0) e.rallyAlly=false;   // clear the ally flag when the buff ends
     }
     if(e.kissSwing>0)e.kissSwing--;
+    if(e.visitSwing>0)e.visitSwing--;   // Aasta: Seasonal Visit slash visual
     // Deniz Frost Fest: while active, drop ice patches along his path
     if(e.frostFest>0){
       e.frostFest--;
@@ -3737,6 +4668,11 @@ function update(){
       e.eating--; e.frozen=Math.max(e.frozen,1);
       if(frame%6===0) burst(e.x+rand(-14,14),e.y-e.radius,"#ffcf6b",1,2);
       if(e.eating<=0){ e.hp=e.maxHp; floatText(e.x,e.y-e.radius-10,"FULL HP!",'#7ee06b'); burst(e.x,e.y,"#e8a13a",20,4); nearSfx('heal',e.x,e.y); }
+    }
+    // Jenna Lunch Break: locked mid-bite for a moment (heal already applied when the super fired)
+    if(e.chew>0){
+      e.chew--; e.frozen=Math.max(e.frozen,1);
+      if(frame%5===0) burst(e.x+rand(-12,12),e.y-e.radius*0.6,"#f4c98a",1,2);
     }
     // Renas Deep Dive: submerged, untouchable, heals over the duration
     if(e.diving>0){
@@ -3800,6 +4736,25 @@ function update(){
             damage(t,420*(e.razorMul||1),e.isPlayer,{dx:e.razorAim.x*12,dy:e.razorAim.y*12},e); burst(t.x,t.y,"#ff9ab0",6,3); } });
       }
       if(e.razorDash<=0) circleWall(e);
+    }
+    // Slechte Meiden Girl Gang: the crew charges forward as one — wider than a razor dash, with knockback
+    if(e.gangDash>0 && e.gangAim){
+      e.gangDash--;
+      const STEP=17;   // px/frame -> a strong ~340px charge
+      const nx=e.x+e.gangAim.x*STEP, ny=e.y+e.gangAim.y*STEP;
+      const cc=Math.floor(nx/TS), rr=Math.floor(ny/TS);
+      if(rr<=0||cc<=0||rr>=map.rows-1||cc>=map.cols-1){ e.gangDash=0; }   // stop at the world border
+      else {
+        destroyTerrain(nx,ny,TS*0.7);   // plow through cover in the lane
+        e.x=nx; e.y=ny;
+        for(let k=0;k<3;k++) particles.push({x:e.x+rand(-14,14),y:e.y+rand(-14,14),vx:rand(-1,1),vy:rand(-1,1),life:16,color:["#e0407a","#f4c430","#ffd0e0"][k%3],r:rand(2,3)});
+        entities.forEach(t=>{ if(t===e||t.dead||t.isBanshee||(e.gangHit&&e.gangHit.includes(t)))return; if(TEAMED()&&t.team===e.team)return;
+          if(Math.hypot(t.x-e.x,t.y-e.y)<t.radius+40){ e.gangHit.push(t);
+            const gx=e.gangAim.x, gy=e.gangAim.y;
+            damage(t,360*(e.gangMul||1),e.isPlayer,{dx:gx*14,dy:gy*14},e);
+            t.knockVx=gx*15; t.knockVy=gy*15; t.knockTimer=16; burst(t.x,t.y,"#e0407a",8,4); } });
+      }
+      if(e.gangDash<=0) circleWall(e);
     }
     // Sonia Royal Thrust: glide forward from lungeFrom to lungeTo, then plant + stab
     if(e.lunging>0 && e.lungeFrom && e.lungeTo){
@@ -3921,7 +4876,7 @@ function update(){
     // (Evil Renas is excluded — he's a raw-HP boss with NO healing, so his big bars can't tick back up)
     if(e.isBoss && e.evil){ /* no regen for the Binas boss */ }
     else if(e.regenCooldown>0){ e.regenCooldown--; }
-    else if(e.hp<e.maxHp){
+    else if(e.hp<e.maxHp && !e.healBlock){
       e.hp=Math.min(e.maxHp, e.hp + e.maxHp*0.10/60);
       if(frame%10===0) burst(e.x+rand(-e.radius,e.radius), e.y-e.radius*0.5, "#7ee06b", 1, 1.5);
     }
@@ -4028,6 +4983,9 @@ function update(){
       if((p.pierce||p.boomerang||p.type==="anchor") && p.hitSet.includes(t)) return;   // hit each target once per pass
       if(dist(p,t)<t.radius+p.r){
         damage(t,p.dmg,p.owner.isPlayer, p.noKnock?{projectile:true}:{dx:p.vx*1.2,dy:p.vy*1.2,projectile:true}, p.owner);
+        // Slechte Meiden GUM: the wad sticks the foe — a strong, longish slow + a pink splat
+        if(p.type==="gum"){ t.slowTimer=Math.max(t.slowTimer||0,120); t.slowHard=Math.max(t.slowHard||0,120); t.slowStyle='zone';
+          burst(t.x,t.y,"#f4a8d0",10,3.5); floatText(t.x,t.y-t.radius-12,"stuck!","#f4a8d0"); }
         // Evil Jax roast: a special skin-emote can make the roast carry a bonus effect
         if(p.type==="roast" && p.fx){
           if(p.fx.kind==='slow'){ t.slowTimer=Math.max(t.slowTimer||0,120); burst(t.x,t.y,"#5ac8e0",8,3); }
@@ -4076,7 +5034,36 @@ function update(){
       }
       continue;
     }
-    // ease-out so it rolls fast then slows to a stop at the end of its range
+    // Druk Thunder Lob: a charged lightning orb that arcs OVER walls/bushes and slams down on the aimed spot.
+    // charge (0..1) grows the blast radius (b.blast) and added a little damage at throw time; a full charge (b.breaks) shatters the landing tile.
+    if(b.type==="druklob"){
+      const p=b.t/b.dur;
+      if(b.sx===undefined){ b.sx=b.x; b.sy=b.y; }
+      b.x=b.sx+(b.tx-b.sx)*p; b.y=b.sy+(b.ty-b.sy)*p;
+      b.arc=Math.sin(p*Math.PI)*(105+45*(b.charge||0));   // HIGH parabolic toss (Adam-smash style), even higher when charged
+      b.roll=(b.roll||0)+0.5;
+      // a trailing spark as it flies
+      if(frame%2===0) particles.push({x:b.x,y:b.y-(b.arc||0),vx:rand(-0.6,0.6),vy:rand(-0.4,0.4),life:14,color:(b.charge||0)>0.6?"#c8e6ff":"#8fd3ff",r:rand(1.5,3)});
+      if(b.t>=b.dur){
+        const R2=b.blast||90;
+        burst(b.x,b.y,"#8fd3ff",Math.round(24+20*(b.charge||0)),6+4*(b.charge||0)); nearSfx('explode',b.x,b.y);
+        addShake(8+8*(b.charge||0)); hitStop=Math.max(hitStop,3);
+        ring(b.x,b.y,"#c8e6ff",R2*0.5,18,5); ring(b.x,b.y,"#ffffff",R2*0.28,12,3);
+        // jagged lightning bolts forking outward from the impact, more when charged
+        // electric sparks flung outward (drawn safely as particles in the render pass — NO direct ctx here)
+        const sparks=Math.round(14+18*(b.charge||0));
+        for(let k=0;k<sparks;k++){ const a2=k/sparks*6.28; const sp=(4+3*(b.charge||0)); particles.push({x:b.x,y:b.y,vx:Math.cos(a2)*sp,vy:Math.sin(a2)*sp,life:22,color:k%2?"#e8f4ff":"#5a8aff",r:rand(2,4)}); }
+        // a couple of forked "bolt" streaks as fast radial particle trails
+        for(let k=0;k<Math.round(4+4*(b.charge||0));k++){ const a2=k/(4+4*(b.charge||0))*6.28+rand(-0.2,0.2); const reach=R2*(0.5+0.5*(b.charge||0));
+          for(let s=1;s<=4;s++){ const rr=reach*s/4; particles.push({x:b.x+Math.cos(a2)*rr+rand(-4,4),y:b.y+Math.sin(a2)*rr+rand(-4,4),vx:0,vy:0,life:12,color:"#e8f4ff",r:2}); } }
+        entities.forEach(t=>{ if(t===b.owner||t.dead)return; if(TEAMED()&&t.team===b.owner.team)return;
+          const d=dist(b,t); if(d<R2){ damage(t,b.dmg*(1-d/(R2*1.5)),b.owner.isPlayer,{dx:(t.x-b.x)*0.3,dy:(t.y-b.y)*0.3},b.owner); chargeSuperOnHit(b.owner,14); t.healBlock=Math.max(t.healBlock||0,300); } });
+        // a full charge shatters breakable blocks ONLY on the tile it lands on (not the surrounding area)
+        if(b.breaks) breakLandingTile(b.x,b.y);
+        bombs.splice(i,1);
+      }
+      continue;
+    }
     const p=b.t/b.dur;
     const eased=1-(1-p)*(1-p);
     if(b.sx===undefined){ b.sx=b.x; b.sy=b.y; }
@@ -4090,6 +5077,32 @@ function update(){
     const struck = entities.find(t=> t!==b.owner && !t.dead && dist(b,t) < t.radius+b.r );
     if(b.t>=b.dur || hitWall || struck){
       if(hitWall){ b.x=prevx; b.y=prevy; }
+      if(b.type==="critique"){
+        // Afkraken lands: a small pink burst of judgement — foes caught take light damage and gain an
+        // afkraak-stack (lower dmg + speed), refreshed decay. Capped so it degrades but never fully disables.
+        burst(b.x,b.y,"#e86a9c",18,5); nearSfx('explode',b.x,b.y); addShake(3); hitStop=Math.max(hitStop,2);
+        ring(b.x,b.y,"#f4a6c8",b.r*3.0,15,3);
+        for(let k=0;k<8;k++){ const a=k/8*6.28; particles.push({x:b.x,y:b.y,vx:Math.cos(a)*2,vy:Math.sin(a)*2-0.7,life:24,color:k%2?"#e86a9c":"#ffd0e4",r:rand(2,3)}); }
+        const KRAK_CAP=6, add=(b.owner.isPlayer&&hasUpgrade('carol'))?2:1;
+        entities.forEach(t=>{ if(t.dead||t.isBanshee)return; if(TEAMED()&&t.team===b.owner.team)return;
+          const d=dist(b,t); if(d<78 && t!==b.owner){
+            damage(t,b.dmg*(1-d/108),b.owner.isPlayer,{dx:(t.x-b.x)*0.12,dy:(t.y-b.y)*0.12},b.owner); chargeSuperOnHit(b.owner,12);
+            t.krak=Math.min(KRAK_CAP,(t.krak||0)+add); t.krakTimer=140;
+            floatText(t.x,t.y-t.radius-12,"afgekraakt","#e86a9c"); } });
+        bombs.splice(i,1); continue;
+      }
+      if(b.type==="pollenlob"){
+        // Spore Puff lands: a small immediate chip on foes at ground zero, then leave a lingering pollen cloud
+        // that chips foes standing in it AND heals the plant + any allies inside (see the pollenClouds loop).
+        burst(b.x,b.y,"#9ed86a",20,5); nearSfx('explode',b.x,b.y); addShake(4); hitStop=Math.max(hitStop,2);
+        ring(b.x,b.y,"#c6f08a",b.r*3.2,16,3);
+        for(let k=0;k<10;k++){ const a=k/10*6.28; particles.push({x:b.x,y:b.y,vx:Math.cos(a)*2.2,vy:Math.sin(a)*2.2-0.8,life:28,color:k%2?"#9ed86a":"#e8f0a0",r:rand(2,3)}); }
+        entities.forEach(t=>{ if(t.dead||t.isBanshee)return; if(TEAMED()&&t.team===b.owner.team)return;
+          const d=dist(b,t); if(d<80 && t!==b.owner){ damage(t,b.dmg*(1-d/110),b.owner.isPlayer,{dx:(t.x-b.x)*0.15,dy:(t.y-b.y)*0.15},b.owner); chargeSuperOnHit(b.owner,12);} });
+        const up=(b.owner.isPlayer&&hasUpgrade('potplant'));   // Fertilizer: bigger, longer, stronger cloud
+        pollenClouds.push({x:b.x,y:b.y,r:up?100:82,life:up?300:210,dps:up?120:90,heal:up?90:70,owner:b.owner,team:b.owner.team});
+        bombs.splice(i,1); continue;
+      }
       if(b.type==="kimchi"){
         // burst into a puddle: a small damage zone that chips foes standing in it (green venom for Basilisk)
         const bslk=b.owner.skinMorph==='basilisk';
@@ -4118,7 +5131,18 @@ function update(){
         burst(b.x,b.y,"#ffb347",26,6);
       }
       nearSfx('explode',b.x,b.y); addShake(9); hitStop=Math.max(hitStop,3);
-      entities.forEach(t=>{ if(t.dead)return; const d=dist(b,t); if(d<90){ damage(t,b.dmg*(1-d/120),b.owner.isPlayer,{dx:(t.x-b.x)*0.3,dy:(t.y-b.y)*0.3},b.owner); chargeSuperOnHit(b.owner,16);} });
+      let hitFoe=false, selfHit=null;   // did the blast catch an opponent? remember the owner's self-hit for later
+      entities.forEach(t=>{ if(t.dead)return; const d=dist(t,b); if(d<90){
+        if(t===b.owner){ selfHit={d}; return; }   // defer the owner — resolve after we know if a foe was hit
+        const foe = !(TEAMED() && t.team===b.owner.team);
+        if(foe) hitFoe=true;
+        damage(t,b.dmg*(1-d/120),b.owner.isPlayer,{dx:(t.x-b.x)*0.3,dy:(t.y-b.y)*0.3},b.owner); chargeSuperOnHit(b.owner,16);
+      } });
+      // self bomb-jump: ONLY when the blast hit no opponent (so you can't damage AND boost at once)
+      if(selfHit && !hitFoe){
+        const t=b.owner, m=Math.hypot(t.x-b.x,t.y-b.y)||1, power=13*(1-selfHit.d/120)+5;
+        t.knockVx=(t.x-b.x)/m*power; t.knockVy=(t.y-b.y)/m*power; t.knockTimer=20;
+      }
       destroyTerrain(b.x,b.y,70);
       bombs.splice(i,1);
     }
@@ -4160,11 +5184,64 @@ function update(){
           const chunk=z.dps/3;
           damage(t, chunk, z.owner&&z.owner.isPlayer, null, z.owner);
           burst(t.x+rand(-t.radius,t.radius), t.y, z.col, 2, 2);
-          if(z.owner&&z.owner.isPlayer) chargeSuper(z.owner,3);
+          // NOTE: no super-charge here — this zone IS the product of a super (Kim Chi), so refunding
+          // charge from it would let the super refill itself and never drain.
         }
       });
     }
     if(z.life<=0) damageZones.splice(i,1);
+  }
+  // --- Potplant pollen clouds: chip foes inside, heal the plant + any allies standing in it ---
+  for(let i=pollenClouds.length-1;i>=0;i--){
+    const pc=pollenClouds[i]; pc.life--;
+    // drifting green motes so the cloud reads as living pollen
+    if(frame%4===0){ const a2=Math.random()*6.28, rr=Math.random()*pc.r; particles.push({x:pc.x+Math.cos(a2)*rr,y:pc.y+Math.sin(a2)*rr,vx:rand(-0.4,0.4),vy:rand(-0.7,-0.2),life:26,color:Math.random()<0.5?"#9ed86a":"#e8f0a0",r:rand(1.5,2.5)}); }
+    if(pc.slow){   // Full Bloom: foes standing in the garden are slowed for as long as they linger
+      entities.forEach(t=>{ if(t.dead||t.isBanshee)return;
+        if(t===pc.owner || (TEAMED() && t.team===pc.team)) return;
+        if(Math.hypot(t.x-pc.x,t.y-pc.y) < pc.r){ t.slowTimer=Math.max(t.slowTimer||0,30); t.slowStyle='zone'; } });
+    }
+    if(frame%20===0){   // tick ~3x/sec: chip foes, heal allies
+      entities.forEach(t=>{ if(t.dead||t.isBanshee)return;
+        if(Math.hypot(t.x-pc.x,t.y-pc.y) >= pc.r) return;
+        const ally = t===pc.owner || (TEAMED() && t.team===pc.team);
+        if(ally){
+          if(t.hp < t.maxHp && !(t.healBlock>0)){ t.hp=Math.min(t.maxHp,t.hp+pc.heal/3); floatText(t.x,t.y-t.radius-6,"+"+Math.round(pc.heal/3),"#8affa0"); burst(t.x,t.y-t.radius,"#8affa0",2,2); }
+        } else {
+          damage(t, pc.dps/3, pc.owner&&pc.owner.isPlayer, null, pc.owner);
+          burst(t.x+rand(-t.radius,t.radius), t.y, "#7aa83a", 2, 2);
+          // the attack cloud (Spore Puff) charges super like a normal hit; the SUPER cloud (Full Bloom,
+          // bloom:true) must NOT — it's the super's own product, so it would refill the super it came from.
+          if(pc.owner&&pc.owner.isPlayer && !pc.bloom) chargeSuper(pc.owner,3);
+        }
+      });
+    }
+    if(pc.life<=0) pollenClouds.splice(i,1);
+  }
+  // --- Hammed Free Nitro traps: sit armed, snap on the first foe that wanders in (damage + brief root) ---
+  for(let i=nitroTraps.length-1;i>=0;i--){
+    const tr=nitroTraps[i]; tr.life--; if(tr.arm>0) tr.arm--;
+    // a little glinting sparkle so the "free" drop keeps luring
+    if(frame%10===0) burst(tr.x+rand(-tr.r*0.5,tr.r*0.5), tr.y+rand(-tr.r*0.5,tr.r*0.5), "#ffe98a", 1, 2);
+    if(tr.arm<=0){
+      let snapped=false;
+      entities.forEach(t=>{ if(snapped||t.dead||t.isBanshee||t===tr.owner)return;
+        if(TEAMED() && t.team===tr.team) return;
+        if((t.trapImmune||0)>0) return;   // just got snapped — can't be chain-rooted by another trap yet
+        if(Math.hypot(t.x-tr.x,t.y-tr.y) < tr.r+t.radius){
+          // SNAP: they fell for it
+          damage(t, tr.dmg, tr.owner&&tr.owner.isPlayer, {dx:(t.x-tr.x)*0.15,dy:(t.y-tr.y)*0.15}, tr.owner);
+          t.frozen=Math.max(t.frozen||0, 26);   // brief root (nerfed from 40)
+          t.trapImmune=100;   // ~1.6s where no trap can snap them again — breaks the infinite chain
+          if(tr.owner&&tr.owner.isPlayer) chargeSuper(tr.owner,14);
+          burst(tr.x,tr.y,"#e0433a",22,6); ring(tr.x,tr.y,"#ffd24a",tr.r*2.2,16,4); nearSfx('explode',tr.x,tr.y); addShake(5);
+          floatText(t.x,t.y-t.radius-12,"scammed!","#ffd24a");
+          snapped=true;
+        }
+      });
+      if(snapped){ nitroTraps.splice(i,1); continue; }
+    }
+    if(tr.life<=0) nitroTraps.splice(i,1);
   }
   // --- Stalker cameras: rotate, scan a sightline cone, flash + reveal foes, speed the owner up ---
   for(let i=cameras.length-1;i>=0;i--){
@@ -4203,6 +5280,25 @@ function update(){
         if(frame%20===0) damage(t, 40, h.owner&&h.owner.isPlayer, null, h.owner); }   // light chip so it isn't purely harmless
     });
     if(h.life<=0){ burst(h.x,h.y, h.owner&&h.owner.skinMorph==='manticore'?"#ff8a2a":"#bfe9ff",18,5); hydrants.splice(i,1); }
+  }
+  // --- Meta AI's Drone Swarm: hovering drones orbit the owner and fire data-beams at nearby foes, then expire ---
+  for(let i=drones.length-1;i>=0;i--){
+    const dr=drones[i]; dr.life--; dr.orbit+=0.05;   // slow orbit
+    const own=dr.owner;
+    if(!own || own.dead || dr.life<=0){ burst(dr.x,dr.y,dr.col,10,3); drones.splice(i,1); continue; }
+    // hover: ease toward an orbit point around the owner
+    const ox=own.x+Math.cos(dr.orbit)*own.radius*2.4, oy=own.y+Math.sin(dr.orbit)*own.radius*2.4 - 6;
+    dr.x+=(ox-dr.x)*0.18; dr.y+=(oy-dr.y)*0.18;
+    if(dr.fireCd>0) dr.fireCd--;
+    // find the nearest visible enemy and loose a data-beam at it
+    let tgt=null,td=1e9;
+    entities.forEach(o=>{ if(o.dead||o.isBanshee||o===own)return; if(TEAMED()&&o.team===dr.team)return;
+      const d=Math.hypot(o.x-dr.x,o.y-dr.y); if(d<560 && d<td && !wallBetween(dr.x,dr.y,o.x,o.y)){td=d;tgt=o;} });
+    if(tgt && dr.fireCd<=0){
+      const ang=Math.atan2(tgt.y-dr.y,tgt.x-dr.x), sp=16;
+      projectiles.push({x:dr.x,y:dr.y,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp,dmg:130,owner:own,life:560/sp,r:5,type:"databeam",spin:0,hitSet:[],maxHits:1});
+      burst(dr.x,dr.y,dr.col,3,2); dr.fireCd=34;
+    }
   }
   for(let i=koLog.length-1;i>=0;i--){ koLog[i].life--; if(koLog[i].life<=0) koLog.splice(i,1); }
 
@@ -4260,6 +5356,9 @@ function updateRelay(){
         e.dead=false; e.hp=e.maxHp; e.x=e.spawnPt.x; e.y=e.spawnPt.y; e.deathAnim=0; e.spawnAnim=18; e.lastX=e.x; e.lastY=e.y;
         e.frozen=0; e.slowTimer=0; e.slowHard=0; e.diving=0; e.smashing=0; e.tickTock=0; e.superCharge=0;
         e.launching=0; e.hopping=0; e.dashing=0; e.lunging=0; e.dragTimer=0; e.jetpack=0; e.armor=0; e.slipTimer=0; e.slipVx=0; e.slipVy=0;
+        e.dipTimer=0; e.dipInvis=0; e.dipAim=null; e.arrival=1;   // Aasta: never respawn mid-Dip
+        e.bloomRoot=0; e.gangDash=0; e.furry=0; e.rally=0;   // clear other buff/root states so nobody respawns rooted (Potplant Full Bloom fix)
+        e.krak=0; e.krakTimer=0;   // Carol: afkraak-stacks clear on respawn
         e.flash=0; e.cd=0; burst(e.x,e.y,e.def.color,20,5); nearSfx('ui',e.x,e.y);
         if(!e._payloadRoleFixed) e._payloadRole = (Math.random()<0.45) ? 'blocker' : 'pusher';   // keep the team-balanced role across lives (payload mode; harmless elsewhere)
         if(e.isPlayer){ banner("RESPAWNED!"); playerEmote('spawn'); }
@@ -4334,7 +5433,7 @@ function nearestGrass(e,maxD){
   return best;
 }
 function relayAI(e){
-  if(e.frozen>0 || e.diving>0 || e.smashing>0 || e.dashing>0 || e.hopping>0 || e.launching>0 || e.lunging>0 || e.razorDash>0) return;   // committed/stunned states skip AI
+  if(e.frozen>0 || e.bloomRoot>0 || e.dipTimer>0 || e.diving>0 || e.smashing>0 || e.dashing>0 || e.hopping>0 || e.launching>0 || e.lunging>0 || e.razorDash>0 || e.gangDash>0) return;   // committed/stunned states skip AI
   const torch=relay.torch;
   const enemies=entities.filter(o=>!o.dead && !o.isBanshee && o.team!==e.team && !isHidden(o,e));
   const nearestEnemy=()=>{ let b=null,bd=1e9; enemies.forEach(o=>{const d=dist(e,o); if(d<bd){bd=d;b=o;}}); return b; };
@@ -4388,7 +5487,7 @@ function nearestLoosePearl(e){ let b=null,bd=1e9; pearl.loose.forEach(p=>{ const
 // the enemy carrying the most pearls (the one to kill to break a rival lead)
 function topEnemyCarrier(e){ let b=null,bp=0; entities.forEach(o=>{ if(o.dead||o.isBanshee||o.team===e.team)return; if((o.pearls||0)>bp){bp=o.pearls;b=o;} }); return b; }
 function pearlAI(e){
-  if(e.frozen>0 || e.diving>0 || e.smashing>0 || e.dashing>0 || e.hopping>0 || e.launching>0 || e.lunging>0 || e.razorDash>0) return;
+  if(e.frozen>0 || e.bloomRoot>0 || e.dipTimer>0 || e.diving>0 || e.smashing>0 || e.dashing>0 || e.hopping>0 || e.launching>0 || e.lunging>0 || e.razorDash>0 || e.gangDash>0) return;
   const enemies=entities.filter(o=>!o.dead && !o.isBanshee && o.team!==e.team && !isHidden(o,e));
   const nearestEnemy=()=>{ let b=null,bd=1e9; enemies.forEach(o=>{const d=dist(e,o); if(d<bd){bd=d;b=o;}}); return b; };
   if(e._spread===undefined) e._spread=(Math.random()*2-1)*90;
@@ -4418,7 +5517,17 @@ function pearlAI(e){
     else goal={x:WW/2+e._spread, y:WH/2+e._spread*0.6};
   }
   const foe=nearestEnemy();
-  if(foe){
+  // CRATE-CLEARING: if a crate blocks the path toward the goal, smash it instead of pathing around forever.
+  let gdx=goal.x-e.x, gdy=goal.y-e.y; const gdm=Math.hypot(gdx,gdy)||1; gdx/=gdm; gdy/=gdm;
+  let crateAhead=null;
+  for(let step=1; step<=2 && !crateAhead; step++){ const px=e.x+gdx*TS*step, py=e.y+gdy*TS*step;
+    if(tileAtPx(px,py)===TILE.CRATE) crateAhead={x:px,y:py}; }
+  if(crateAhead){
+    // aim at the blocking crate and attack it (projectiles chip it; melee/dashes shave it via destroyTerrain)
+    const cx=crateAhead.x-e.x, cy=crateAhead.y-e.y, cm=Math.hypot(cx,cy)||1;
+    e.aim={x:cx/cm, y:cy/cm};
+    if(e.cd<=0) fighterAttack(e);
+  } else if(foe){
     let ax=foe.x-e.x, ay=foe.y-e.y; const am=Math.hypot(ax,ay)||1; ax/=am; ay/=am;
     const spread=(BOT_SPREAD[e.char] ?? 0.16)+Math.min(0.3, am/2600);
     const j=(Math.random()*2-1)*spread, ca=Math.cos(j), sa=Math.sin(j);
@@ -4449,6 +5558,9 @@ function updatePearl(){
         e.dead=false; e.hp=e.maxHp; e.x=e.spawnPt.x; e.y=e.spawnPt.y; e.deathAnim=0; e.spawnAnim=18; e.lastX=e.x; e.lastY=e.y;
         e.frozen=0; e.slowTimer=0; e.slowHard=0; e.diving=0; e.smashing=0; e.tickTock=0; e.superCharge=0;
         e.launching=0; e.hopping=0; e.dashing=0; e.lunging=0; e.dragTimer=0; e.jetpack=0; e.armor=0; e.slipTimer=0; e.slipVx=0; e.slipVy=0;
+        e.dipTimer=0; e.dipInvis=0; e.dipAim=null; e.arrival=1;   // Aasta: never respawn mid-Dip
+        e.bloomRoot=0; e.gangDash=0; e.furry=0; e.rally=0;   // clear other buff/root states so nobody respawns rooted (Potplant Full Bloom fix)
+        e.krak=0; e.krakTimer=0;   // Carol: afkraak-stacks clear on respawn
         e.flash=0; e.cd=0; e.pearls=0; burst(e.x,e.y,e.def.color,20,5); nearSfx('ui',e.x,e.y);
         if(e.isPlayer){ banner("RESPAWNED!"); playerEmote('spawn'); }
       }
@@ -4509,6 +5621,9 @@ function updateCTF(){
         e.dead=false; e.hp=e.maxHp; e.x=e.spawnPt.x; e.y=e.spawnPt.y; e.deathAnim=0; e.spawnAnim=18; e.lastX=e.x; e.lastY=e.y;
         e.frozen=0; e.slowTimer=0; e.slowHard=0; e.diving=0; e.smashing=0; e.tickTock=0; e.superCharge=0;
         e.launching=0; e.hopping=0; e.dashing=0; e.lunging=0; e.dragTimer=0; e.jetpack=0; e.armor=0; e.slipTimer=0; e.slipVx=0; e.slipVy=0;
+        e.dipTimer=0; e.dipInvis=0; e.dipAim=null; e.arrival=1;   // Aasta: never respawn mid-Dip
+        e.bloomRoot=0; e.gangDash=0; e.furry=0; e.rally=0;   // clear other buff/root states so nobody respawns rooted (Potplant Full Bloom fix)
+        e.krak=0; e.krakTimer=0;   // Carol: afkraak-stacks clear on respawn
         e.flash=0; e.cd=0; e.acornCarry=0; e.acornOrigin=undefined; e.acornPastHalf=false; burst(e.x,e.y,e.def.color,20,5); nearSfx('ui',e.x,e.y);
         if(e.isPlayer){ banner("RESPAWNED!"); playerEmote('spawn'); }
       }
@@ -4568,60 +5683,68 @@ function updateCTF(){
 }
 // Alien Whiteout: recruits who are defeated switch to their killer's team on respawn; leaders never convert.
 function whiteoutSpawnFor(team){ const arr=whiteout.spawns[team]||[]; if(!arr.length) return {x:WW*0.5,y:WH*0.5}; return arr[Math.floor(Math.random()*arr.length)]; }
+// Signal Rush: move the beacon to a fresh random spot (away from its current position), reset the claim meter.
+function beaconMoveTo(){
+  let bx,by,tries=0;
+  do{ bx=WW*(0.2+Math.random()*0.6); by=WH*(0.2+Math.random()*0.6); tries++; }
+  while(tries<20 && Math.hypot(bx-whiteout.beacon.x,by-whiteout.beacon.y) < WW*0.35);
+  whiteout.beacon={x:bx,y:by}; whiteout.claim=0; whiteout.claimTeam=-1; whiteout.moveTimer=BEACON_MOVE;
+  ring(bx,by,"#8fd3ff",CLAIM_RADIUS,26,6); burst(bx,by,"#bfe6ff",22,5);
+}
 function updateWhiteout(){
   if(whiteout.winner!==-1) return;
-  // respawn downed fighters; a defeated RECRUIT joins the team of whoever KO'd them
+  // respawn downed fighters on their OWN team (fixed teams — no converting in Signal Rush)
   entities.forEach(e=>{
     if(e.isBanshee) return;
     if(e.dead && e.respawnTimer>0){
       e.respawnTimer--;
       if(e.respawnTimer<=0){
-        // decide the team to respawn on
-        const killer=e.lastHitBy;
-        if(!e.leader && killer && !killer.dead && killer.team!==e.team){
-          e.team=killer.team;                       // convert to the killer's team
-          floatText(e.x,e.y-e.radius-10,"CONVERTED!", TEAM_COLOR[e.team]);
-        }
-        const sp=whiteoutSpawnFor(e.team);          // respawn at (possibly new) team's spawn
+        const sp=whiteoutSpawnFor(e.team);
         e.spawnPt={x:sp.x,y:sp.y};
         e.dead=false; e.hp=e.maxHp; e.x=sp.x; e.y=sp.y; e.deathAnim=0; e.spawnAnim=18; e.lastX=e.x; e.lastY=e.y;
         e.frozen=0; e.slowTimer=0; e.slowHard=0; e.diving=0; e.smashing=0; e.tickTock=0; e.superCharge=0;
         e.launching=0; e.hopping=0; e.dashing=0; e.lunging=0; e.dragTimer=0; e.jetpack=0; e.armor=0; e.slipTimer=0; e.slipVx=0; e.slipVy=0;
-        e.flash=0; e.cd=0; e.lastHitBy=null; burst(e.x,e.y,TEAM_COLOR[e.team],20,5); nearSfx('ui',e.x,e.y);
+        e.dipTimer=0; e.dipInvis=0; e.dipAim=null; e.arrival=1;   // Aasta: never respawn mid-Dip
+        e.bloomRoot=0; e.gangDash=0; e.furry=0; e.rally=0;   // clear other buff/root states so nobody respawns rooted (Potplant Full Bloom fix)
+        e.krak=0; e.krakTimer=0;   // Carol: afkraak-stacks clear on respawn
+        e.flash=0; e.cd=0; e.lastHitBy=null; burst(e.x,e.y,TEAM_COLOR[e.team],16,4); nearSfx('ui',e.x,e.y);
         if(e.isPlayer){ banner("RESPAWNED!"); playerEmote('spawn'); }
       }
     }
   });
-  // team recruit tallies (non-leaders currently on each team)
-  const live=entities.filter(e=>!e.isBanshee);
-  const recruits=[0,0];
-  live.forEach(e=>{ if(!e.leader) recruits[e.team]++; });
-  whiteout.recruits=recruits;
-  // UNDERDOG BUFF: the team that's behind on recruits hits harder + slowly regens, so a big lead can't just steamroll.
-  // +12% damage per recruit behind (cap +48%), and a trickle of HP regen for the underdog. The leading team plays at 1.0.
-  const gap = recruits[0]-recruits[1];   // >0 means team 0 is ahead
-  const buffFor = t => { const behind = (t===0? -gap : gap); return behind>0 ? 1 + Math.min(0.48, behind*0.12) : 1; };
-  const b0=buffFor(0), b1=buffFor(1);
-  live.forEach(e=>{
-    const bf = e.team===0 ? b0 : b1;
-    e.modDmg = bf;
-    if(bf>1 && !e.dead && e.hp<e.maxHp && frame%30===0){ e.hp=Math.min(e.maxHp, e.hp + e.maxHp*0.01*(bf-1)*8); }   // small underdog regen
-  });
-  whiteout.buff=[b0,b1];
-  // timer
-  if(whiteout.timer>0) whiteout.timer--;
-  // win: a team with zero recruits left (only its leader) loses; or time runs out → most recruits wins
-  if(recruits[0]===0 || recruits[1]===0){
-    whiteout.winner = recruits[0]>recruits[1] ? 0 : (recruits[1]>recruits[0] ? 1 : (Math.random()<0.5?0:1));
-    banner(whiteout.winner===player.team?"CREW ASSIMILATED!":"YOUR CREW WAS TAKEN!", "pearl"); endMatch(); return;
+  // count LIVING fighters of each team standing inside the beacon radius
+  const b=whiteout.beacon; const inside=[0,0];
+  entities.forEach(e=>{ if(e.isBanshee||e.dead) return; if(Math.hypot(e.x-b.x,e.y-b.y)<=CLAIM_RADIUS) inside[e.team]++; });
+  // the team with MORE fighters inside controls it; equal (incl. 0-0) = contested → meter frozen
+  let control=-1;
+  if(inside[0]>inside[1]) control=0; else if(inside[1]>inside[0]) control=1;
+  whiteout.controlTeam=control;
+  if(control!==-1){
+    if(whiteout.claimTeam!==control){ whiteout.claimTeam=control; whiteout.claim=0; }   // a new team took over → restart its claim
+    whiteout.claim += (inside[control]-inside[control===0?1:0]);   // faster with a bigger numbers advantage
+    // a little charge spark toward the controlling team's color
+    if(frame%4===0) burst(b.x+rand(-CLAIM_RADIUS*0.6,CLAIM_RADIUS*0.6), b.y+rand(-CLAIM_RADIUS*0.6,CLAIM_RADIUS*0.6), TEAM_COLOR[control], 1, 2);
+    // FULL CLAIM → BOOM: award a claim, teleport the beacon, reset
+    if(whiteout.claim>=CLAIM_FULL){
+      whiteout.claims[control]++;
+      addShake(10); burst(b.x,b.y,TEAM_COLOR[control],40,8); ring(b.x,b.y,"#ffffff",CLAIM_RADIUS*1.4,22,6); nearSfx('explode',b.x,b.y);
+      banner(control===player.team?"BEACON CLAIMED! 🛸":"RIVALS CLAIMED IT!", "pearl");
+      if(whiteout.claims[control]>=CLAIM_TARGET){ whiteout.winner=control;
+        banner(control===player.team?"SIGNAL SECURED — YOU WIN!":"SIGNAL LOST!", "pearl"); endMatch(); return; }
+      beaconMoveTo(); return;
+    }
   }
+  // beacon auto-relocates if nobody has claimed it in time (keeps the match moving)
+  if(whiteout.moveTimer>0){ whiteout.moveTimer--; if(whiteout.moveTimer<=0){ banner("SIGNAL DRIFTING…", "pearl"); beaconMoveTo(); } }
+  // match timer → most claims wins (tie broken by who currently controls, else coin flip)
+  if(whiteout.timer>0) whiteout.timer--;
   if(whiteout.timer<=0){
-    whiteout.winner = recruits[0]>recruits[1] ? 0 : (recruits[1]>recruits[0] ? 1 : (Math.random()<0.5?0:1));
-    banner(whiteout.winner===player.team?"MOST CREW — YOU WIN!":"OUT-RECRUITED!", "pearl"); endMatch(); return;
+    whiteout.winner = whiteout.claims[0]>whiteout.claims[1] ? 0 : (whiteout.claims[1]>whiteout.claims[0] ? 1 : (control!==-1?control:(Math.random()<0.5?0:1)));
+    banner(whiteout.winner===player.team?"MOST SIGNALS — YOU WIN!":"OUT-SIGNALLED!", "pearl"); endMatch(); return;
   }
 }
 function ctfAI(e){
-  if(e.frozen>0 || e.diving>0 || e.smashing>0 || e.dashing>0 || e.hopping>0 || e.launching>0 || e.lunging>0 || e.razorDash>0) return;
+  if(e.frozen>0 || e.bloomRoot>0 || e.dipTimer>0 || e.diving>0 || e.smashing>0 || e.dashing>0 || e.hopping>0 || e.launching>0 || e.lunging>0 || e.razorDash>0 || e.gangDash>0) return;
   const myBase=ctf.bases[e.team], foeBase=ctf.bases[e.team===0?1:0];
   const enemies=entities.filter(o=>!o.dead && !o.isBanshee && o.team!==e.team && !isHidden(o,e));
   const nearestEnemy=()=>{ let b=null,bd=1e9; enemies.forEach(o=>{const d=dist(e,o); if(d<bd){bd=d;b=o;}}); return b; };
@@ -4694,6 +5817,9 @@ function updatePayload(){
         e.dead=false; e.hp=e.maxHp; e.x=e.spawnPt.x; e.y=e.spawnPt.y; e.deathAnim=0; e.spawnAnim=18; e.lastX=e.x; e.lastY=e.y;
         e.frozen=0; e.slowTimer=0; e.slowHard=0; e.diving=0; e.smashing=0; e.tickTock=0; e.superCharge=0;
         e.launching=0; e.hopping=0; e.dashing=0; e.lunging=0; e.dragTimer=0; e.jetpack=0; e.armor=0; e.slipTimer=0; e.slipVx=0; e.slipVy=0;
+        e.dipTimer=0; e.dipInvis=0; e.dipAim=null; e.arrival=1;   // Aasta: never respawn mid-Dip
+        e.bloomRoot=0; e.gangDash=0; e.furry=0; e.rally=0;   // clear other buff/root states so nobody respawns rooted (Potplant Full Bloom fix)
+        e.krak=0; e.krakTimer=0;   // Carol: afkraak-stacks clear on respawn
         e.flash=0; e.cd=0; burst(e.x,e.y,e.def.color,20,5); nearSfx('ui',e.x,e.y);
         if(!e._payloadRoleFixed) e._payloadRole = (Math.random()<0.45) ? 'blocker' : 'pusher';   // keep the team-balanced role across lives (payload mode; harmless elsewhere)
         if(e.isPlayer){ banner("RESPAWNED!"); playerEmote('spawn'); }
@@ -4718,9 +5844,18 @@ function updatePayload(){
     const cart=payload.carts[t];
     if(cart && cart.prog>=1 && payload.winner===-1){ payload.winner=t; banner(t===player.team?"YOUR TRAIN WINS!":"RIVAL TRAIN WINS!", "pearl"); endMatch(); return; }
   }
+  // time limit: when the clock runs out, the furthest-along cart wins (ties favour the player's team)
+  if(payload.timer>0) payload.timer--;
+  if(payload.timer<=0 && payload.winner===-1){
+    const p0=payload.carts[0]?payload.carts[0].prog:0, p1=payload.carts[1]?payload.carts[1].prog:0;
+    const win = p0===p1 ? player.team : (p0>p1 ? 0 : 1);
+    payload.winner=win;
+    banner(win===player.team?"TIME! YOUR TRAIN LEADS!":"TIME! RIVAL TRAIN LEADS!", "pearl");
+    endMatch(); return;
+  }
 }
 function payloadAI(e){
-  if(e.frozen>0 || e.diving>0 || e.smashing>0 || e.dashing>0 || e.hopping>0 || e.launching>0 || e.lunging>0 || e.razorDash>0) return;
+  if(e.frozen>0 || e.bloomRoot>0 || e.dipTimer>0 || e.diving>0 || e.smashing>0 || e.dashing>0 || e.hopping>0 || e.launching>0 || e.lunging>0 || e.razorDash>0 || e.gangDash>0) return;
   const myCart=payload.carts[e.team], foeCart=payload.carts[e.team===0?1:0];
   const enemies=entities.filter(o=>!o.dead && !o.isBanshee && o.team!==e.team && !isHidden(o,e));
   const nearestEnemy=()=>{ let b=null,bd=1e9; enemies.forEach(o=>{const d=dist(e,o); if(d<bd){bd=d;b=o;}}); return b; };
@@ -4788,29 +5923,24 @@ function payloadAI(e){
   circleWall(e);
 }
 function whiteoutAI(e){
-  if(e.frozen>0 || e.diving>0 || e.smashing>0 || e.dashing>0 || e.hopping>0 || e.launching>0 || e.lunging>0 || e.razorDash>0) return;
-  if(e._spread===undefined) e._spread=(Math.random()*2-1)*40;
+  if(e.frozen>0 || e.bloomRoot>0 || e.dipTimer>0 || e.diving>0 || e.smashing>0 || e.dashing>0 || e.hopping>0 || e.launching>0 || e.lunging>0 || e.razorDash>0 || e.gangDash>0) return;
+  if(e._spread===undefined) e._spread=(Math.random()*2-1)*60;
   const enemies=entities.filter(o=>!o.dead && !o.isBanshee && o.team!==e.team && !isHidden(o,e));
-  if(e._huntBias===undefined) e._huntBias=Math.random();   // stable per-bot preference so recruits fan out instead of dogpiling
-  // prefer hunting enemy RECRUITS (defeat them → they convert to us); track the two nearest so bots can split targets
-  let foe=null,bd=1e9, r1=null,d1=1e9, r2=null,d2=1e9;
-  enemies.forEach(o=>{ const d=dist(e,o); if(d<bd){bd=d;foe=o;}
-    if(!o.leader){ if(d<d1){ d2=d1;r2=r1; d1=d;r1=o; } else if(d<d2){ d2=d;r2=o; } } });
-  // split the pack: some bots take the closest recruit, others peel to the 2nd-closest
-  const target = (r2 && e._huntBias<0.4) ? r2 : (r1 || foe);
+  const b=whiteout.beacon;
+  // nearest enemy (to shoot) + nearest enemy NEAR the beacon (to contest)
+  let foe=null,bd=1e9;
+  enemies.forEach(o=>{ const d=dist(e,o); if(d<bd){bd=d;foe=o;} });
+  const distToBeacon=Math.hypot(e.x-b.x,e.y-b.y);
   let goal, mustFight=false;
-  if(target){
-    if(e.leader){
-      // leader: push aggressively onto the nearest enemy to pressure their crew
-      goal={x:target.x + e._spread*0.4, y:target.y + e._spread*0.4}; mustFight=true;
-    } else {
-      // recruit: chase the target but don't stray too far from own leader (loose grouping)
-      const ldr=whiteout.leader[e.team];
-      if(ldr && !ldr.dead && dist(e,ldr)>560){ goal={x:ldr.x + e._spread, y:ldr.y + e._spread}; }
-      else { goal={x:target.x + e._spread*0.5, y:target.y + e._spread*0.5}; mustFight=true; }
-    }
+  // GOAL: hold the beacon. If already on it, fight whoever contests; otherwise rush toward it, fanning out a bit.
+  if(distToBeacon>CLAIM_RADIUS*0.7){
+    goal={x:b.x + e._spread, y:b.y + e._spread*0.6};
+    // if an enemy is right in the way, still shoot them en route
+    if(foe && bd<340) mustFight=true;
   } else {
-    goal={x:WW/2,y:WH/2};
+    // on the beacon: stand near its center and fight anyone contesting it
+    if(foe && dist(foe,b)<CLAIM_RADIUS*1.6){ goal={x:foe.x*0.4+b.x*0.6, y:foe.y*0.4+b.y*0.6}; mustFight=true; }
+    else goal={x:b.x + e._spread*0.5, y:b.y + e._spread*0.5};
   }
   if(foe){
     let ax=foe.x-e.x, ay=foe.y-e.y; const am=Math.hypot(ax,ay)||1; ax/=am; ay/=am;
@@ -4835,21 +5965,23 @@ function whiteoutAI(e){
 
 /* ---------- Bot brains: shared "smart" helpers ---------- */
 // per-brawler bot aim accuracy (lower = tighter). Shared by FFA/arena + relay + pearl AIs.
-const BOT_SPREAD={ yassin:0.05, deniz:0.06, fionn:0.08, milo:0.12, jake:0.14, nathan:0.15, lars:0.26, waitress:0.22, robin:0.2, adam:0.2, kimchi:0.22, marlin:0.18, sonia:0.18, jax:0.18, kapper:0.06, dynant:0.2, adma:0.16, kayo:0.18 };
+const BOT_SPREAD={ yassin:0.05, deniz:0.06, fionn:0.08, milo:0.12, jake:0.14, nathan:0.15, lars:0.26, waitress:0.22, robin:0.2, adam:0.2, kimchi:0.22, marlin:0.18, sonia:0.18, jax:0.18, kapper:0.06, dynant:0.2, adma:0.16, kayo:0.18, jenna:0.06, druk:0.14, youngfyon:0.13, metaai:0.08, potplant:0.18, meiden:0.14, hammed:0.16, aasta:0.1, carol:0.16 };
 // per-brawler bot engagement range (how close a bot gets before it fires; wr<=240 => rush in as melee).
 // One source of truth shared by every AI (FFA/arena/grass-hunt + relay/pearl/ctf/payload/whiteout).
 // Covers ALL playable brawlers — deniz & fionn used to be missing everywhere and fell back to the generic
 // default, so their bots wrongly played as ranged check-firers instead of rushing in.
-const WR_MAP={ nathan:540, daniel:300, yassin:90, josh:400, lars:440, milo:600, deniz:100, fionn:170, reshman:200, renas:360, adam:560, evadam:240, otis:210, johan:200, robin:560, jake:620, kimchi:320, dean:280, claire:100, waitress:500, sanne:330, fluharty:540, stalker:110, marlin:560, sonia:150, jax:560, kapper:100, dynant:280, adma:540, kayo:430 };
+const WR_MAP={ nathan:540, daniel:300, yassin:90, josh:400, lars:440, milo:600, deniz:100, fionn:170, reshman:200, renas:360, adam:560, evadam:240, otis:210, johan:200, robin:560, jake:620, kimchi:320, dean:280, claire:100, waitress:500, sanne:330, fluharty:540, stalker:110, marlin:560, sonia:150, jax:560, kapper:100, dynant:280, adma:540, kayo:430, jenna:105, druk:340, youngfyon:600, metaai:640, potplant:420, meiden:300, hammed:220, aasta:120, carol:360 };
 // a bot is hurt enough to want to back off / heal
 function botLowHp(e){ return e.hp < e.maxHp*0.30; }
 // Deniz-style ammo attackers shouldn't spin themselves dry — hold fire below ~30% ammo
 function botAmmoOk(e){ if(e.ammoMax>0){ return e.ammo >= Math.max(e.def.atk.ammoCost||0, e.ammoMax*0.30); } return true; }
 // should this bot actually pull the trigger at target t (range + line-of-sight + ammo)?
+// brawlers whose BASIC attack arcs cleanly OVER walls (bots may fire even with a wall between them and the target)
+const OVER_WALL_ATK = new Set(['druk']);
 function botCanShoot(e,t,wr,d){
   if(d>=wr || e.cd>0) return false;
   if(!botAmmoOk(e)) return false;                 // wait for the ammo bar to recover
-  if(t && wallBetween(e.x,e.y,t.x,t.y)) return false;   // don't fire into a wall
+  if(t && !OVER_WALL_ATK.has(e.char) && wallBetween(e.x,e.y,t.x,t.y)) return false;   // don't fire into a wall (unless the attack arcs over walls, e.g. Druk)
   return true;
 }
 // smart super timing: fire when it actually lands value, not on a blind dice roll
@@ -4896,7 +6028,7 @@ function botGrassHunt(e){
     const jx=(Math.random()*2-1)*46, jy=(Math.random()*2-1)*46;
     const ax=(gx+jx)-e.x, ay=(gy+jy)-e.y, am=Math.hypot(ax,ay)||1;
     e.aim={x:ax/am, y:ay/am};
-    if(e.cd<=0 && am<wr && !wallBetween(e.x,e.y,gx,gy) && Math.random()<0.35) fighterAttack(e);
+    if(e.cd<=0 && am<wr && (OVER_WALL_ATK.has(e.char) || !wallBetween(e.x,e.y,gx,gy)) && Math.random()<0.35) fighterAttack(e);
     // drift a little toward the zone so they don't stand frozen
     if(dd>wr*0.8){ const dir=steerAround(e,dgx/dd,dgy/dd); moveWithSlip(e,dir.x,dir.y,effSpeed(e)*0.7); circleWall(e); }
   }
@@ -4919,7 +6051,7 @@ function practiceAI(e){
   }
 }
 function aiThink(e){
-  if(e.frozen>0 || e.diving>0 || e.smashing>0 || e.dashing>0 || e.hopping>0 || e.launching>0 || e.lunging>0 || e.razorDash>0) return;
+  if(e.frozen>0 || e.bloomRoot>0 || e.dipTimer>0 || e.diving>0 || e.smashing>0 || e.dashing>0 || e.hopping>0 || e.launching>0 || e.lunging>0 || e.razorDash>0 || e.gangDash>0) return;
   // Banshee: a clone that follows its owner and mirrors his aim + attacks
   if(e.isBanshee){
     if(!e.owner || e.owner.dead){ e.dead=true; return; }
@@ -5021,7 +6153,7 @@ function aiThink(e){
   if(e.ai.decide<=0){
     e.ai.decide=rand(30,70); e.ai.strafe=Math.random()<0.5?1:-1;
     // preferred distance by role
-    const wd={nathan:360,milo:400,daniel:240,josh:280,lars:300,yassin:60,deniz:60,fionn:110,reshman:130,renas:280,adam:400,evadam:150,otis:130,johan:150,robin:380,jake:420,kimchi:240,dean:200,claire:70,waitress:340,sanne:250,fluharty:380,stalker:70,marlin:420,sonia:100,jax:360,kapper:65,dynant:180,adma:340,kayo:120};
+    const wd={nathan:360,milo:400,daniel:240,josh:280,lars:300,yassin:60,deniz:60,fionn:110,reshman:130,renas:280,adam:400,evadam:150,otis:130,johan:150,robin:380,jake:420,kimchi:240,dean:200,claire:70,waitress:340,sanne:250,fluharty:380,stalker:70,marlin:420,sonia:100,jax:360,kapper:65,dynant:180,adma:340,kayo:120,jenna:60,druk:260,youngfyon:400,metaai:420,potplant:300,meiden:240,hammed:150,aasta:75,carol:260};
     e.ai.wantDist = wd[e.char] ?? 200;
     // AMBUSH: sometimes go camp in nearby tall grass to lie in wait (ranged/trapper-ish like it most)
     if((e.ai.ambush||0)<=0 && Math.random()<0.18){
@@ -5179,6 +6311,46 @@ function draw(){
       ctx.beginPath(); ctx.moveTo(h.x,h.y-16); ctx.quadraticCurveTo(h.x+Math.cos(ang)*16,h.y-26,h.x+Math.cos(ang)*24+sway,h.y-14); ctx.stroke(); }
     ctx.restore();
   });
+  // Potplant pollen clouds: a soft green healing haze — gentle radial glow, breathing rim, faint spores
+  pollenClouds.forEach(pc=>{ if(!onScreen(pc.x,pc.y,pc.r))return;
+    const a=clamp(pc.life/210,0,1);
+    const breathe=1+Math.sin(frame*0.08)*0.04;
+    const R=pc.r*breathe;
+    const g=ctx.createRadialGradient(pc.x,pc.y,R*0.15,pc.x,pc.y,R);
+    g.addColorStop(0,"rgba(200,240,140,"+(a*0.34)+")");
+    g.addColorStop(0.6,"rgba(140,210,90,"+(a*0.22)+")");
+    g.addColorStop(1,"rgba(120,180,70,0)");
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(pc.x,pc.y,R,0,6.28); ctx.fill();
+    ctx.globalAlpha=a*0.5; ctx.strokeStyle="#a8e070"; ctx.lineWidth=2.5; ctx.beginPath(); ctx.arc(pc.x,pc.y,R,0,6.28); ctx.stroke();
+    ctx.globalAlpha=1;
+  });
+  // Hammed Free Nitro traps: a shiny blurple gift box with a gold bow, bobbing + glinting to lure
+  nitroTraps.forEach(tr=>{ if(!onScreen(tr.x,tr.y,tr.r))return;
+    const t=frame, bob=Math.sin(t*0.09+tr.bob)*3;
+    const armed=tr.arm<=0;
+    ctx.save(); ctx.translate(tr.x, tr.y+bob);
+    // soft lure glow (brighter once armed)
+    const gg=ctx.createRadialGradient(0,0,2,0,0,tr.r*1.6);
+    gg.addColorStop(0,"rgba(255,220,120,"+(armed?0.35:0.2)+")"); gg.addColorStop(1,"rgba(255,220,120,0)");
+    ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(0,0,tr.r*1.6,0,6.28); ctx.fill();
+    // ground shadow
+    ctx.fillStyle="rgba(0,0,0,.2)"; ctx.beginPath(); ctx.ellipse(0,tr.r*0.7,tr.r*0.7,tr.r*0.22,0,0,6.28); ctx.fill();
+    // gift box (Discord blurple)
+    const s=tr.r*0.7;
+    ctx.fillStyle="#4650c8"; ctx.fillRect(-s*0.7,-s*0.5,s*1.4,s*1.1);
+    ctx.fillStyle="#5865f2"; ctx.fillRect(-s*0.7,-s*0.5,s*1.4,s*0.5);   // lid
+    // gold ribbon cross
+    ctx.fillStyle="#f4c430"; ctx.fillRect(-s*0.14,-s*0.5,s*0.28,s*1.1);
+    ctx.fillRect(-s*0.7,-s*0.16,s*1.4,s*0.28);
+    // gold bow
+    ctx.fillStyle="#ffd24a"; ctx.beginPath(); ctx.arc(-s*0.25,-s*0.6,s*0.26,0,6.28); ctx.arc(s*0.25,-s*0.6,s*0.26,0,6.28); ctx.fill();
+    ctx.fillStyle="#e0a020"; ctx.beginPath(); ctx.arc(0,-s*0.58,s*0.12,0,6.28); ctx.fill();
+    // twinkling "free!" glint
+    const tw=(Math.sin(t*0.2+tr.bob)+1)*0.5;
+    ctx.globalAlpha=0.5+tw*0.5; ctx.fillStyle="#fff8d0";
+    ctx.beginPath(); ctx.arc(s*0.5,-s*0.4,1.5+tw*2,0,6.28); ctx.fill(); ctx.globalAlpha=1;
+    ctx.restore();
+  });
   // Kim Chi damage zones (spicy fermenting puddles / Basilisk venom pools / Flytrap acid patch / Jack carnival pool)
   damageZones.forEach(z=>{ if(!onScreen(z.x,z.y,z.r))return;
     const a=clamp(z.life/240,0,1);
@@ -5292,14 +6464,34 @@ function draw(){
       ctx.fillStyle=moth?"#e06a6a":"#8f6fe0"; ctx.fillRect(cm.x-w/2,cm.y-20,w*hp,3); }
   });
 
+  // Meta AI's Drone Swarm: little hovering saucers with a glowing under-light
+  drones.forEach(dr=>{ if(!onScreen(dr.x,dr.y,30))return;
+    const bob=Math.sin(frame*0.2+dr.orbit*3)*2, fade=clamp(dr.life/40,0,1);
+    ctx.save(); ctx.globalAlpha=fade; ctx.translate(dr.x,dr.y+bob);
+    // soft glow beneath
+    const g=ctx.createRadialGradient(0,4,1,0,4,12); g.addColorStop(0,dr.col); g.addColorStop(1,"rgba(122,200,255,0)");
+    ctx.globalAlpha=fade*0.5; ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,4,12,0,6.28); ctx.fill(); ctx.globalAlpha=fade;
+    // saucer body
+    ctx.fillStyle="#d8e2ee"; ctx.beginPath(); ctx.ellipse(0,0,9,4,0,0,6.28); ctx.fill();
+    ctx.fillStyle="#9fb0c4"; ctx.beginPath(); ctx.ellipse(0,1.5,9,2.5,0,0,6.28); ctx.fill();   // underside
+    ctx.fillStyle=dr.col; ctx.beginPath(); ctx.arc(0,-2,3,0,6.28); ctx.fill();   // dome light
+    ctx.fillStyle="#ffffff"; ctx.beginPath(); ctx.arc(-1,-3,1,0,6.28); ctx.fill();   // glint
+    // blinking under-eye when about to fire
+    ctx.fillStyle=(dr.fireCd<8)?"#ffffff":dr.col; ctx.beginPath(); ctx.arc(0,3,1.6,0,6.28); ctx.fill();
+    ctx.restore();
+  });
+
   entities.forEach(e=>{ if(!e.dead && onScreen(e.x,e.y,60) && !fullyHiddenFromPlayer(e)){ ellipseShadow(e.x,e.y+e.radius*0.85,e.radius*1.0);
     if(TEAMED() && e.team>=0){   // team-colored ring at the feet
       ctx.strokeStyle=TEAM_COLOR[e.team]; ctx.lineWidth=3; ctx.globalAlpha=0.9;
       ctx.beginPath(); ctx.ellipse(e.x,e.y+e.radius*0.85,e.radius*1.05,e.radius*0.5,0,0,6.28); ctx.stroke(); ctx.globalAlpha=1;
     }
   }});
-  bombs.forEach(b=>drawBomb(b));
+  // Druk's airborne lightning orb arcs OVER walls, so it's drawn ONLY in the on-top pass below (skipped here to avoid a behind-wall frame)
+  bombs.forEach(b=>{ if(b.type==="druklob" && b.t<b.dur) return; drawBomb(b); });
   drawTileWallsBushes();
+  // redraw airborne druklobs on top of the wall layer (else they vanish behind blocks mid-flight)
+  bombs.forEach(b=>{ if(b.type==="druklob" && b.t<b.dur) drawBomb(b); });
   // Lars' Sleep Tight aura (ground ring that follows the caster; each skin gets its own animated, non-spinning interior)
   entities.forEach(e=>{ if(e.sleepAura>0 && !e.dead && onScreen(e.x,e.y,200)){
     const AR=180, a=clamp(e.sleepAura/40,0,1)*0.5;
@@ -5366,6 +6558,7 @@ function draw(){
   if(gameMode==="pearl") drawLoosePearls();
   if(gameMode==="payload") drawPayload();
   if(gameMode==="ctf") drawCTF();
+  if(gameMode==="whiteout") drawBeacon();
   if(gameMode==="binas") drawBinasField();
   drawTree ? trees.forEach(t=>{ if(onScreen(t.x,t.y,80)) drawTree(t); }) : null;
   projectiles.forEach(p=>{ if(onScreen(p.x,p.y,40)) drawProjectile(p); });
@@ -5788,6 +6981,21 @@ function drawMinimap(){
       ctx.beginPath(); ctx.arc(ox+e.x*sx,oy+e.y*sy,e.isPlayer?4:3,0,6.28); ctx.fill();
       if(e.isPlayer){ ctx.strokeStyle="#fff"; ctx.lineWidth=1; ctx.stroke(); }
     });
+  } else if(gameMode==="whiteout"){
+    // Signal Rush: the beacon (with its control radius) + all team-colored fighters
+    const b=whiteout.beacon;
+    if(b){
+      const ct=whiteout.controlTeam;
+      ctx.strokeStyle = ct===-1 ? "rgba(143,211,255,.7)" : TEAM_COLOR[ct];
+      ctx.lineWidth=1.2; ctx.beginPath(); ctx.arc(ox+b.x*sx, oy+b.y*sy, CLAIM_RADIUS*sx, 0,6.28); ctx.stroke();
+      ctx.fillStyle="#eafcff"; ctx.beginPath(); ctx.arc(ox+b.x*sx, oy+b.y*sy, 4, 0,6.28); ctx.fill();
+      ctx.strokeStyle="#8fd3ff"; ctx.lineWidth=1.5; ctx.stroke();
+    }
+    entities.forEach(e=>{ if(e.dead||e.isBanshee)return;
+      ctx.fillStyle=TEAM_COLOR[e.team]||"#fff";
+      ctx.beginPath(); ctx.arc(ox+e.x*sx,oy+e.y*sy,e.isPlayer?4:3,0,6.28); ctx.fill();
+      if(e.isPlayer){ ctx.strokeStyle="#fff"; ctx.lineWidth=1; ctx.stroke(); }
+    });
   } else if(player && !player.dead){
     // FFA: only the player shows on the minimap (bots stay hidden)
     ctx.fillStyle="#ffe36b";
@@ -5850,6 +7058,37 @@ function drawLoosePearls(){
     ctx.fillStyle="rgba(255,255,255,.9)"; ctx.beginPath(); ctx.arc(p.x-2.5,p.y+bob-2.5,2,0,6.28); ctx.fill();
     ctx.restore();
   });
+}
+// Signal Rush: the alien beacon — a control-radius ring tinted by who holds it, a claim-progress arc, and a hovering saucer.
+function drawBeacon(){
+  const b=whiteout.beacon; if(!b) return;
+  const ct=whiteout.controlTeam, col = ct===-1 ? "#8fd3ff" : TEAM_COLOR[ct];
+  const bob=Math.sin(frame*0.06)*4;
+  ctx.save();
+  // control radius: a soft filled disc + dashed rim in the controlling team's color
+  const g=ctx.createRadialGradient(b.x,b.y,4,b.x,b.y,CLAIM_RADIUS);
+  g.addColorStop(0, ct===-1?"rgba(143,211,255,.10)":"rgba(255,255,255,.06)");
+  g.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(b.x,b.y,CLAIM_RADIUS,0,6.28); ctx.fill();
+  ctx.strokeStyle=col; ctx.globalAlpha=0.6; ctx.lineWidth=2; ctx.setLineDash([10,8]); ctx.lineDashOffset=-frame*0.5;
+  ctx.beginPath(); ctx.arc(b.x,b.y,CLAIM_RADIUS,0,6.28); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha=1;
+  // claim-progress arc (how close the controlling team is to a full claim)
+  if(whiteout.claim>0 && whiteout.claimTeam!==-1){
+    const p=Math.min(1, whiteout.claim/CLAIM_FULL);
+    ctx.strokeStyle=TEAM_COLOR[whiteout.claimTeam]; ctx.lineWidth=6; ctx.lineCap="round";
+    ctx.beginPath(); ctx.arc(b.x,b.y,CLAIM_RADIUS-6, -Math.PI/2, -Math.PI/2 + p*6.28); ctx.stroke();
+  }
+  // the hovering saucer beacon in the middle
+  const by=b.y+bob;
+  const gl=ctx.createRadialGradient(b.x,by,2,b.x,by,26);
+  gl.addColorStop(0,"rgba(200,245,255,.9)"); gl.addColorStop(1,"rgba(120,210,255,0)");
+  ctx.fillStyle=gl; ctx.beginPath(); ctx.arc(b.x,by,26,0,6.28); ctx.fill();
+  ctx.fillStyle="#cfe6f0"; ctx.beginPath(); ctx.ellipse(b.x,by,20,8,0,0,6.28); ctx.fill();   // saucer disc
+  ctx.fillStyle="#8fd3ff"; ctx.beginPath(); ctx.ellipse(b.x,by-5,10,7,0,Math.PI,0); ctx.fill();   // dome
+  ctx.fillStyle="#eafcff"; ctx.beginPath(); ctx.arc(b.x-3,by-6,2.2,0,6.28); ctx.fill();   // dome glint
+  // three blinking lights under the rim
+  for(let k=-1;k<=1;k++){ ctx.fillStyle=(frame+k*8)%24<12?"#ffe08a":"#e0533a"; ctx.beginPath(); ctx.arc(b.x+k*10,by+5,2,0,6.28); ctx.fill(); }
+  ctx.restore();
 }
 // Payload Panic: draw both rails + both toy trains
 function drawPayload(){
@@ -6122,6 +7361,27 @@ function drawBush(b){
 /* Character-specific illustrated fighters */
 /* ---------- Custom art-pass brawlers (drawn in the flipped/scaled local frame; origin at center,
    feet near +R, head near -R). Body color = `body` so skin recolors still work. ---------- */
+// Per-brawler DRAW scale for custom sprites that read too small next to the blob-template brawlers.
+// Visual-only: multiplies R for the CUSTOM_DRAW call, not the hitbox/bars. (Meta AI intentionally stays kid-sized.)
+const SPRITE_SCALE = { meiden:1.22, hammed:1.22, aasta:1.24, potplant:1.18, carol:1.2 };
+
+// ---- Menu intro animations (hub tile only) ----
+// Each entry gets called with the drawing context AFTER translate-to-feet, BEFORE the sprite is drawn.
+// It returns transform values for an intro that plays once (t in frames from 0) and then settles into a
+// held idle pose. `t` keeps counting up but the math is written to converge, so it naturally "poses".
+// Signature: fn(t, R) -> { x, y, rot, sx, sy, extra? }  (extra(g,R,t) draws flair like sparkles)
+// Brawlers without an entry use MENU_ANIM_DEFAULT (a clean bounce-in → gentle breathing pose).
+const HUB_INTRO_LEN = 46;   // frames the "arrival" part of an intro plays before holding
+function menuEase(t,len){ return Math.min(1, t/len); }                 // 0→1 linear ramp
+function menuOut(p){ return 1-Math.pow(1-p,3); }                       // ease-out cubic
+const MENU_ANIM_DEFAULT = (t,R)=>{
+  const p=menuOut(menuEase(t,HUB_INTRO_LEN));
+  const drop=(1-p)*-R*1.2;                       // falls in from above
+  const land=t>HUB_INTRO_LEN? Math.sin((t-HUB_INTRO_LEN)*0.06)*R*0.03 : 0;   // breathe once landed
+  const squash=t<HUB_INTRO_LEN? 1+Math.sin(p*Math.PI)*0.06 : 1;
+  return { x:0, y:drop+land, rot:0, sx:1/squash, sy:squash };
+};
+const MENU_ANIM = {};   // per-brawler overrides added below / iteratively
 const CUSTOM_DRAW = {
   dummy(ctx, e, R, body, dark, light){
     // TRAINING DUMMY: a stuffed burlap straw-sack lashed to a wooden post. It idly wobbles,
@@ -9648,7 +10908,6 @@ CUSTOM_DRAW.adma = function(ctx, e, R, body, dark, light){
 
 CUSTOM_DRAW.kayo = function(ctx, e, R, body, dark, light){
   // KAYO & YARA: two cat forms sharing one fighter.
-  //  Kayo = a broad, heavy orange tabby bruiser (thick arms, tiger stripes, fierce squint).
   //  Yara = a slim, agile teal-grey cat (lean body, tall ears, alert eyes, whippy tail).
   const yara = e && e.form==='yara';
   const spc = e && e.skinMorph==='spc_aliencat';   // Alien Cat Duo: cosmic recolor + starry belly
@@ -9776,6 +11035,1024 @@ CUSTOM_DRAW.kayo = function(ctx, e, R, body, dark, light){
   }
   ctx.restore();
 };
+CUSTOM_DRAW.jenna = function(ctx, e, R, body, dark, light){
+  // JENNA: a competitive race-rival — sporty girl in a tracksuit (body-color) with a bouncy ponytail,
+  // a sweatband, and a BAGUETTE held in her forward hand that whips forward on attack. The faster her
+  // momentum, the more speed-lines streak off her back. Her super (chew) shows her biting a sandwich.
+  //
+  // MORPHS (real body reshapes, gated per-part so her running pose still reads as Jenna):
+  //   jenna_courier  — bike-messenger: torso gains a stuffed satchel bulk, held item becomes a full
+  //                    delivery loaf, the sweatband becomes a courier cap. Legs/pose kept.
+  //   sch_lunchlady  — school canteen mismatch: torso reshapes into a wide apron with a round pot-belly,
+  //                    the baguette becomes a serving LADLE, ponytail becomes a hairnet bun. Legs/pose kept.
+  const t=(typeof frame!=='undefined'?frame:0);
+  const momo = e ? (e.momo||0) : 0;                 // 0..1 momentum charge
+  const chew = e ? (e.chew||0) : 0;                 // munching mid-super
+  const courier = e && e.skinMorph==='jenna_courier';
+  const lunch   = e && e.skinMorph==='sch_lunchlady';
+  let suit=body, suitDk=shade(body,-45), suitLt=shade(body,42), skin="#f0c9a8", hair="#5a3a24", hairDk="#3e2716", crust="#e8b56a", crustDk="#c88f42", crumb="#f6e2b0";
+  if(courier){ hair="#3a2716"; hairDk="#241009"; }   // tucks under the cap; suit stays body-color (a green courier jacket by default)
+  if(lunch){ suit="#5aa0c8"; suitDk=shade(suit,-45); suitLt=shade(suit,42); hair="#8a8278"; hairDk="#6a6258"; }  // powder-blue canteen uniform, greying hair
+  ctx.save();
+  // a little forward lean + running bob that grows with momentum (she reads as "moving fast")
+  const bob=Math.sin(t*(0.12+momo*0.2))*R*(0.03+momo*0.05);
+  ctx.translate(0,bob);
+  // SPEED-TRAIL: streaks off her back-left, only once she's built momentum (her whole gimmick, shown visually)
+  if(momo>0.15){
+    ctx.strokeStyle=`rgba(255,158,203,${0.25+0.5*momo})`; ctx.lineCap="round";
+    for(let k=-1;k<=1;k++){ const yy=-R*0.2+k*R*0.34; ctx.lineWidth=R*(0.05+0.05*momo);
+      ctx.beginPath(); ctx.moveTo(-R*0.5,yy); ctx.lineTo(-R*0.5-R*(0.5+1.1*momo),yy+k*R*0.06); ctx.stroke(); }
+  }
+  // legs — a light running bounce (kept subtle so she reads as poised, not flailing). KEPT for every morph.
+  // Lunch lady wears an apron hem that overlaps the thighs (drawn with the torso), so her legs sit a touch lower.
+  const stride=Math.sin(t*(0.18+momo*0.22))*R*(0.05+momo*0.07);
+  ctx.fillStyle=lunch?"#e8e2d2":suitDk;   // lunch lady: pale uniform trousers
+  ctx.beginPath(); ctx.roundRect(-R*0.3,R*0.42,R*0.26,R*0.56+stride,6); ctx.fill();   // back leg
+  ctx.beginPath(); ctx.roundRect(R*0.04,R*0.42,R*0.26,R*0.56-stride,6); ctx.fill();    // front leg
+  // shoes — lunch lady swaps racing shoes for plain white clogs
+  ctx.fillStyle="#f4f4ee"; ctx.beginPath(); ctx.roundRect(-R*0.32,R*0.96+stride,R*0.3,R*0.14,4); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(R*0.02,R*0.96-stride,R*0.3,R*0.14,4); ctx.fill();
+  if(!lunch){ ctx.fillStyle=suit; ctx.fillRect(-R*0.32,R*0.98+stride,R*0.3,R*0.035); ctx.fillRect(R*0.02,R*0.98-stride,R*0.3,R*0.035); }  // shoe stripe
+  // ===== TORSO — RESHAPED per morph =====
+  if(lunch){
+    // a WIDE apron dress with a round pot-belly — a totally different silhouette from the slim tracksuit
+    ctx.fillStyle=suit;   // uniform behind
+    ctx.beginPath();
+    ctx.moveTo(-R*0.5,-R*0.42); ctx.quadraticCurveTo(-R*0.68,R*0.4,-R*0.5,R*0.6);
+    ctx.lineTo(R*0.5,R*0.6); ctx.quadraticCurveTo(R*0.68,R*0.4,R*0.5,-R*0.42);
+    ctx.quadraticCurveTo(0,-R*0.62,-R*0.5,-R*0.42); ctx.fill();
+    // the big white apron over the front, bulging at the belly
+    ctx.fillStyle="#f4f0e6";
+    ctx.beginPath();
+    ctx.moveTo(-R*0.34,-R*0.34); ctx.quadraticCurveTo(-R*0.6,R*0.2,-R*0.42,R*0.58);
+    ctx.lineTo(R*0.42,R*0.58); ctx.quadraticCurveTo(R*0.6,R*0.2,R*0.34,-R*0.34);
+    ctx.quadraticCurveTo(0,-R*0.18,-R*0.34,-R*0.34); ctx.fill();
+    ctx.fillStyle="rgba(0,0,0,.06)"; ctx.beginPath(); ctx.ellipse(0,R*0.28,R*0.42,R*0.34,0,0,6.28); ctx.fill();   // belly shade
+    // apron pocket + a ladle-stain
+    ctx.strokeStyle="#c8c0ac"; ctx.lineWidth=1.5; ctx.strokeRect(-R*0.22,R*0.14,R*0.44,R*0.24);
+    ctx.fillStyle="rgba(180,120,60,.35)"; ctx.beginPath(); ctx.arc(R*0.1,R*0.02,R*0.06,0,6.28); ctx.fill();
+    // apron neck-strap
+    ctx.strokeStyle="#e0dccb"; ctx.lineWidth=R*0.06; ctx.beginPath(); ctx.moveTo(-R*0.2,-R*0.32); ctx.lineTo(-R*0.12,-R*0.5); ctx.moveTo(R*0.2,-R*0.32); ctx.lineTo(R*0.12,-R*0.5); ctx.stroke();
+  } else if(courier){
+    // slim jacket, but the torso is bulked out by a stuffed messenger satchel slung across it
+    ctx.fillStyle=suit;
+    ctx.beginPath();
+    ctx.moveTo(-R*0.42,-R*0.42); ctx.quadraticCurveTo(-R*0.5,R*0.3,-R*0.34,R*0.44);
+    ctx.lineTo(R*0.34,R*0.44); ctx.quadraticCurveTo(R*0.5,R*0.3,R*0.42,-R*0.42);
+    ctx.quadraticCurveTo(0,-R*0.6,-R*0.42,-R*0.42); ctx.fill();
+    // cross-body strap
+    ctx.strokeStyle=suitDk; ctx.lineWidth=R*0.1; ctx.beginPath(); ctx.moveTo(-R*0.4,-R*0.34); ctx.lineTo(R*0.34,R*0.3); ctx.stroke();
+    // the bulging satchel bag on her hip (reshapes the lower torso outline outward)
+    ctx.fillStyle="#8a5a2a"; ctx.beginPath(); ctx.roundRect(-R*0.66,R*0.05,R*0.5,R*0.5,R*0.1); ctx.fill();
+    ctx.fillStyle="#6e4620"; ctx.beginPath(); ctx.roundRect(-R*0.66,R*0.05,R*0.5,R*0.16,R*0.08); ctx.fill();   // flap
+    ctx.fillStyle="#e8c24a"; ctx.beginPath(); ctx.arc(-R*0.41,R*0.2,R*0.05,0,6.28); ctx.fill();                 // buckle
+    // a baguette poking out of the bag
+    ctx.fillStyle=crust; ctx.save(); ctx.translate(-R*0.4,R*0.1); ctx.rotate(-0.7); ctx.beginPath(); ctx.roundRect(-R*0.06,-R*0.4,R*0.14,R*0.5,R*0.07); ctx.fill(); ctx.restore();
+  } else {
+    // default fitted tracksuit jacket
+    ctx.fillStyle=suit;
+    ctx.beginPath();
+    ctx.moveTo(-R*0.42,-R*0.42); ctx.quadraticCurveTo(-R*0.5,R*0.3,-R*0.34,R*0.44);
+    ctx.lineTo(R*0.34,R*0.44); ctx.quadraticCurveTo(R*0.5,R*0.3,R*0.42,-R*0.42);
+    ctx.quadraticCurveTo(0,-R*0.6,-R*0.42,-R*0.42); ctx.fill();
+    // racing stripe + zipper down the front
+    ctx.fillStyle=suitLt; ctx.fillRect(-R*0.05,-R*0.44,R*0.1,R*0.88);
+    ctx.strokeStyle=suitDk; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(0,-R*0.44); ctx.lineTo(0,R*0.44); ctx.stroke();
+    // side speed-chevrons on the jacket
+    ctx.strokeStyle=suitLt; ctx.lineWidth=R*0.05; ctx.lineCap="round";
+    for(let k=0;k<2;k++){ ctx.beginPath(); ctx.moveTo(-R*0.34,-R*0.1+k*R*0.2); ctx.lineTo(-R*0.22,0+k*R*0.2); ctx.lineTo(-R*0.34,R*0.1+k*R*0.2); ctx.stroke(); }
+  }
+  // back arm (swings back while running) — kept for all morphs
+  ctx.fillStyle=skin; ctx.beginPath(); ctx.roundRect(-R*0.6,-R*0.3,R*0.2,R*0.44,7); ctx.fill();
+  ctx.beginPath(); ctx.arc(-R*0.5,R*0.14,R*0.12,0,6.28); ctx.fill();
+  // FORWARD ARM holding the weapon — winds up then whips forward on attack (rotates, not slides)
+  let thrust=0, whack=0;
+  if(e && e.atkAnim>0){ const ap=1-e.atkAnim/14, wind=ap<0.3?ap/0.3:0, rel=ap<0.3?0:Math.sin(((ap-0.3)/0.7)*Math.PI);
+    thrust=-R*0.08*wind + rel*R*0.28; whack=-wind*0.5 + rel*1.4; }   // cock up on wind-up, whip down/forward on release
+  ctx.fillStyle=skin; ctx.beginPath(); ctx.roundRect(R*0.34+thrust*0.5,-R*0.24,R*0.36,R*0.18,7); ctx.fill();
+  ctx.beginPath(); ctx.arc(R*0.68+thrust,-R*0.15,R*0.12,0,6.28); ctx.fill();
+  // ===== HELD ITEM — RESHAPED per morph =====
+  ctx.save(); ctx.translate(R*0.68+thrust,-R*0.15); ctx.rotate(-0.6+whack);
+  if(lunch){
+    // a metal serving LADLE instead of the baguette
+    ctx.strokeStyle="#b8bcc4"; ctx.lineWidth=R*0.08; ctx.lineCap="round";
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(R*0.6,-R*0.55); ctx.stroke();     // handle
+    ctx.fillStyle="#cfd6e2"; ctx.beginPath(); ctx.arc(R*0.68,-R*0.64,R*0.2,0,6.28); ctx.fill();   // bowl
+    ctx.fillStyle="#7a5a3a"; ctx.beginPath(); ctx.arc(R*0.68,-R*0.66,R*0.12,0,6.28); ctx.fill();   // stew inside
+    ctx.strokeStyle="#8a929c"; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(R*0.68,-R*0.64,R*0.2,0,6.28); ctx.stroke();
+  } else {
+    // baguette: a tan loaf with scored slashes (courier's is a touch longer, a "delivery" loaf)
+    const loafLen = courier ? R*1.05 : R*0.9;
+    const bg=ctx.createLinearGradient(0,-R*0.1,loafLen,-R*0.1); bg.addColorStop(0,crustDk); bg.addColorStop(0.5,crust); bg.addColorStop(1,crustDk);
+    ctx.fillStyle=bg; ctx.beginPath(); ctx.roundRect(-R*0.1,-R*0.11,loafLen,R*0.22,R*0.11); ctx.fill();
+    ctx.strokeStyle=crustDk; ctx.lineWidth=R*0.03; ctx.lineCap="round";   // scored bakery slashes
+    for(let k=0;k<(courier?4:3);k++){ const bx=R*0.12+k*R*0.24; ctx.beginPath(); ctx.moveTo(bx,-R*0.05); ctx.lineTo(bx+R*0.08,R*0.05); ctx.stroke(); }
+    if(courier){ ctx.strokeStyle="#d8d0c4"; ctx.setLineDash([3,3]); ctx.lineWidth=1.2; ctx.beginPath(); ctx.moveTo(R*0.1,0); ctx.lineTo(loafLen-R*0.2,0); ctx.stroke(); ctx.setLineDash([]); }  // a paper delivery wrap
+  }
+  ctx.restore();
+  // ===== HEAD =====
+  const hy=-R*0.9, hr=R*0.46;
+  // ponytail / hair behind — RESHAPED per morph
+  const pony=Math.sin(t*(0.18+momo*0.3))*R*0.12;
+  if(lunch){
+    // a low grey bun tucked in a hairnet instead of the streaming ponytail
+    ctx.fillStyle=hairDk; ctx.beginPath(); ctx.arc(0,hy-hr*0.95,hr*0.5,0,6.28); ctx.fill();
+    ctx.strokeStyle="rgba(60,55,50,.5)"; ctx.lineWidth=1;   // net cross-hatch on the bun
+    for(let a2=0;a2<6;a2++){ ctx.beginPath(); ctx.moveTo(-hr*0.5,hy-hr*0.95+(a2-3)*hr*0.16); ctx.lineTo(hr*0.5,hy-hr*0.95+(a2-3)*hr*0.16); ctx.stroke(); }
+  } else if(courier){
+    // short hair tucked away — only a small tuft escapes the cap (no long ponytail)
+    ctx.fillStyle=hairDk; ctx.beginPath(); ctx.ellipse(-hr*0.6,hy-hr*0.1,hr*0.3,hr*0.5,0.4,0,6.28); ctx.fill();
+  } else {
+    // ponytail — anchored to a tie high on the back of the head, hanging DOWN-and-back at a diagonal
+    // (not straight out). It swings a little as momentum builds.
+    const tieX=-hr*0.6, tieY=hy-hr*0.5, tail=R*(0.7+momo*0.4), swing=pony*0.6;
+    ctx.fillStyle=hairDk; ctx.beginPath();
+    ctx.moveTo(tieX,tieY);
+    ctx.quadraticCurveTo(tieX-tail*0.5,tieY+tail*0.4+swing, tieX-tail*0.55, tieY+tail+swing);   // outer edge sweeping down-back
+    ctx.quadraticCurveTo(tieX-tail*0.1,tieY+tail*0.7+swing, tieX+hr*0.14,tieY+hr*0.3); ctx.closePath(); ctx.fill();
+    ctx.fillStyle=hair; ctx.beginPath(); ctx.arc(tieX+hr*0.14,tieY+hr*0.05,hr*0.16,0,6.28); ctx.fill();   // hair-tie knot at the scalp
+  }
+  // face
+  ctx.fillStyle=skin; ctx.beginPath(); ctx.arc(0,hy,hr,0,6.28); ctx.fill();
+  // hair — fill ONLY the top of the head, cut off by a clean horizontal line high above the eyes.
+  // Clip to the head circle, then fill the region above y = hy - hr*0.18 (eyes sit at hy + hr*0.02, so hair never reaches them).
+  ctx.save();
+  ctx.beginPath(); ctx.arc(0,hy,hr,0,6.28); ctx.clip();     // stay within the head
+  const hairBottom = hy - hr*0.18;                          // the hairline — comfortably above the brows
+  ctx.fillStyle=hair; ctx.fillRect(-hr*1.1, hy-hr*1.2, hr*2.2, (hairBottom)-(hy-hr*1.2));
+  // a soft middle-part dip in the hairline so it isn't a flat helmet edge (still well above the eyes)
+  ctx.beginPath(); ctx.moveTo(-hr*1.1,hairBottom);
+  ctx.quadraticCurveTo(0,hairBottom+hr*0.14,hr*1.1,hairBottom);
+  ctx.lineTo(hr*1.1,hairBottom-hr*0.02); ctx.lineTo(-hr*1.1,hairBottom-hr*0.02); ctx.closePath(); ctx.fill();
+  ctx.restore();
+  // ===== HEAD TOPPER — RESHAPED per morph =====
+  if(courier){
+    // a flat-brim courier cap replacing the sweatband
+    ctx.fillStyle=suitDk; ctx.beginPath(); ctx.arc(0,hy-hr*0.4,hr*0.92,Math.PI*1.02,Math.PI*1.98); ctx.fill();
+    ctx.fillStyle=suit; ctx.beginPath(); ctx.ellipse(-hr*0.1,hy-hr*0.62,hr*0.7,hr*0.34,0,0,6.28); ctx.fill();   // crown
+    ctx.fillStyle=suitDk; ctx.beginPath(); ctx.ellipse(hr*0.55,hy-hr*0.4,hr*0.6,hr*0.16,0.15,Math.PI,Math.PI*2); ctx.fill();   // brim
+    ctx.fillStyle="#e8c24a"; ctx.beginPath(); ctx.arc(-hr*0.1,hy-hr*0.66,hr*0.1,0,6.28); ctx.fill();   // cap badge
+  } else if(lunch){
+    // a hairnet band pulled low across the forehead
+    ctx.strokeStyle="rgba(90,85,80,.7)"; ctx.lineWidth=R*0.05; ctx.beginPath(); ctx.arc(0,hy-hr*0.1,hr*0.95,Math.PI*1.05,Math.PI*1.95); ctx.stroke();
+  } else {
+    // sporty sweatband across the forehead (in the suit color)
+    ctx.fillStyle=suit; ctx.beginPath(); ctx.ellipse(0,hy-hr*0.42,hr*0.92,hr*0.24,0,0,6.28); ctx.fill();
+    ctx.fillStyle=suitLt; ctx.fillRect(-hr*0.9,hy-hr*0.46,hr*1.8,hr*0.05);
+  }
+  // eyes — determined, focused forward (lunch lady gets a tired, kindly squint)
+  ctx.fillStyle="#3a2a20";
+  if(lunch){ ctx.lineWidth=hr*0.09; ctx.strokeStyle="#3a2a20"; ctx.lineCap="round";
+    ctx.beginPath(); ctx.arc(-hr*0.3,hy+hr*0.08,hr*0.16,Math.PI*1.1,Math.PI*1.9); ctx.arc(hr*0.32,hy+hr*0.08,hr*0.16,Math.PI*1.1,Math.PI*1.9); ctx.stroke(); }
+  else { ctx.beginPath(); ctx.ellipse(-hr*0.3,hy+hr*0.02,hr*0.12,hr*0.16,0,0,6.28); ctx.ellipse(hr*0.32,hy+hr*0.02,hr*0.12,hr*0.16,0,0,6.28); ctx.fill();
+    ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(-hr*0.27,hy-hr*0.04,1.6,0,6.28); ctx.arc(hr*0.35,hy-hr*0.04,1.6,0,6.28); ctx.fill(); }
+  // brows angled in = competitive (softened for the lunch lady)
+  ctx.strokeStyle=hairDk; ctx.lineWidth=hr*0.08; ctx.lineCap="round";
+  if(!lunch){ ctx.beginPath(); ctx.moveTo(-hr*0.46,hy-hr*0.22); ctx.lineTo(-hr*0.16,hy-hr*0.14); ctx.moveTo(hr*0.48,hy-hr*0.22); ctx.lineTo(hr*0.18,hy-hr*0.14); ctx.stroke(); }
+  // rosy cheeks for the kindly lunch lady
+  if(lunch){ ctx.fillStyle="rgba(224,120,120,.35)"; ctx.beginPath(); ctx.ellipse(-hr*0.55,hy+hr*0.28,hr*0.16,hr*0.1,0,0,6.28); ctx.ellipse(hr*0.55,hy+hr*0.28,hr*0.16,hr*0.1,0,0,6.28); ctx.fill(); }
+  // mouth — an eager grin, a warm lunch-lady smile, or chomping a sandwich during her super
+  if(chew>0){
+    // a chunky triangular sandwich pressed to her mouth, with a bite chomped out + crumbs
+    ctx.fillStyle="#f0d29a"; ctx.beginPath(); ctx.moveTo(hr*0.2,hy+hr*0.5); ctx.lineTo(hr*0.95,hy+hr*0.2); ctx.lineTo(hr*0.95,hy+hr*0.85); ctx.closePath(); ctx.fill();
+    ctx.fillStyle="#6ec05a"; ctx.fillRect(hr*0.3,hy+hr*0.52,hr*0.5,hr*0.06);   // lettuce
+    ctx.fillStyle="#e0705a"; ctx.fillRect(hr*0.34,hy+hr*0.62,hr*0.42,hr*0.05); // tomato
+    ctx.fillStyle=skin; ctx.beginPath(); ctx.arc(hr*0.35,hy+hr*0.5,hr*0.16,0,6.28); ctx.fill();  // bite taken out
+    ctx.fillStyle=crumb; for(let k=0;k<3;k++){ ctx.beginPath(); ctx.arc(hr*0.1+rand(-hr*0.1,hr*0.1),hy+hr*0.7+rand(-hr*0.05,hr*0.1),1.4,0,6.28); ctx.fill(); }
+  } else {
+    ctx.strokeStyle="#c0705a"; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(0,hy+hr*0.34,hr*0.28,0.2,Math.PI-0.2); ctx.stroke();
+  }
+  ctx.restore();
+};
+CUSTOM_DRAW.druk = function(ctx, e, R, body, dark, light){
+  // DRUK: the Thunder Dragon of the mountain flag — a sinuous WHITE dragon standing upright, with a
+  // flowing golden mane, long trailing whiskers, small horns, and clawed hands. While charging his
+  // Thunder Lob (e.chargeHold 0..1) an orb of crackling lightning swells in his forward claw. `body` recolors his scales.
+  const t=(typeof frame!=='undefined'?frame:0);
+  const chg = e ? (e.chargeHold||0) : 0;                 // 0..1 charge building in his claw
+  const scale=body||"#f4f0e6", scaleDk=shade(scale,-30), scaleLt=shade(scale,25);
+  const mane="#e0a020", maneDk="#b8791a", belly=shade(scale,-8), horn="#f2e2b0", bolt="#8fd3ff";
+  ctx.save();
+  const bob=Math.sin(t*0.08)*R*0.03;
+  ctx.translate(0,bob);
+  // serpentine TAIL coiling out behind (drawn first, behind the body), tip flicking
+  const flick=Math.sin(t*0.1)*R*0.2;
+  ctx.strokeStyle=scale; ctx.lineCap="round"; ctx.lineWidth=R*0.28;
+  ctx.beginPath(); ctx.moveTo(R*0.2,R*0.6); ctx.quadraticCurveTo(R*0.9,R*0.7,R*0.8,R*0.0+flick*0.3); ctx.quadraticCurveTo(R*0.7,-R*0.5+flick,R*1.05,-R*0.7+flick); ctx.stroke();
+  ctx.fillStyle=mane; ctx.beginPath(); ctx.moveTo(R*1.05,-R*0.7+flick); ctx.lineTo(R*1.3,-R*0.95+flick); ctx.lineTo(R*1.28,-R*0.6+flick); ctx.closePath(); ctx.fill();   // golden tail-tuft
+  // legs — short clawed dragon legs
+  ctx.fillStyle=scaleDk;
+  ctx.beginPath(); ctx.roundRect(-R*0.34,R*0.5,R*0.3,R*0.5,7); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(R*0.04,R*0.5,R*0.3,R*0.5,7); ctx.fill();
+  // three-toed foot-claws
+  ctx.fillStyle=horn; [-0.19,0.19].forEach(fx=>{ for(let k=-1;k<=1;k++){ ctx.beginPath(); ctx.moveTo(R*fx+k*R*0.08,R*1.0); ctx.lineTo(R*fx+k*R*0.08-R*0.03,R*1.12); ctx.lineTo(R*fx+k*R*0.08+R*0.05,R*1.08); ctx.closePath(); ctx.fill(); } });
+  // TORSO — an upright serpentine body with a paler belly
+  ctx.fillStyle=scale;
+  ctx.beginPath();
+  ctx.moveTo(-R*0.44,-R*0.4); ctx.quadraticCurveTo(-R*0.56,R*0.3,-R*0.36,R*0.56);
+  ctx.lineTo(R*0.36,R*0.56); ctx.quadraticCurveTo(R*0.56,R*0.3,R*0.44,-R*0.4);
+  ctx.quadraticCurveTo(0,-R*0.58,-R*0.44,-R*0.4); ctx.fill();
+  // belly scute plates
+  ctx.fillStyle=belly; ctx.beginPath(); ctx.ellipse(0,R*0.14,R*0.26,R*0.44,0,0,6.28); ctx.fill();
+  ctx.strokeStyle=scaleDk; ctx.lineWidth=1.2; for(let k=0;k<4;k++){ const yy=-R*0.15+k*R*0.2; ctx.beginPath(); ctx.moveTo(-R*0.2,yy); ctx.lineTo(R*0.2,yy); ctx.stroke(); }
+  // a golden mane-ridge running down the spine/back
+  ctx.fillStyle=mane; for(let k=0;k<4;k++){ const yy=-R*0.36+k*R*0.24; ctx.beginPath(); ctx.moveTo(-R*0.42,yy); ctx.lineTo(-R*0.62,yy+R*0.02); ctx.lineTo(-R*0.42,yy+R*0.16); ctx.closePath(); ctx.fill(); }
+  // BACK arm (claw resting)
+  ctx.fillStyle=scale; ctx.beginPath(); ctx.roundRect(-R*0.6,-R*0.28,R*0.2,R*0.42,7); ctx.fill();
+  ctx.fillStyle=horn; ctx.beginPath(); ctx.arc(-R*0.5,R*0.16,R*0.1,0,6.28); ctx.fill();
+  // FORWARD arm — cradles the charging lightning orb; lifts a little on attack wind-up
+  let lift=0;
+  if(e && e.atkAnim>0){ const ap=1-e.atkAnim/16; lift=-Math.sin(ap*Math.PI)*R*0.3; }
+  const clawX=R*0.62, clawY=-R*0.05+lift;
+  ctx.fillStyle=scale; ctx.beginPath(); ctx.roundRect(R*0.34,-R*0.28,R*0.34,R*0.2,7); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(R*0.34,-R*0.24); ctx.lineTo(clawX,clawY); ctx.lineTo(clawX-R*0.06,clawY+R*0.16); ctx.lineTo(R*0.34,-R*0.06); ctx.closePath(); ctx.fill();
+  // the charging lightning orb (grows + brightens with charge)
+  if(chg>0.02){
+    const fr=R*(0.12+0.34*chg);
+    ctx.save(); ctx.globalAlpha=0.35; ctx.fillStyle=bolt; ctx.beginPath(); ctx.arc(clawX,clawY,fr*1.6,0,6.28); ctx.fill(); ctx.restore();   // glow
+    const g=ctx.createRadialGradient(clawX-fr*0.3,clawY-fr*0.3,1,clawX,clawY,fr); g.addColorStop(0,"#ffffff"); g.addColorStop(0.5,bolt); g.addColorStop(1,"#3a5ac8");
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(clawX,clawY,fr,0,6.28); ctx.fill();
+    // little electric arcs crackling around the orb
+    ctx.strokeStyle="#e8f4ff"; ctx.lineWidth=1.4; ctx.lineCap="round";
+    for(let k=0;k<Math.round(3+4*chg);k++){ const a=k/(3+4*chg)*6.28+t*0.2; let ax=clawX+Math.cos(a)*fr*0.6, ay=clawY+Math.sin(a)*fr*0.6;
+      ctx.beginPath(); ctx.moveTo(ax,ay);
+      for(let s=1;s<=2;s++){ const rr=fr*(0.6+0.7*s/2); ax=clawX+Math.cos(a)*rr+rand(-2.5,2.5); ay=clawY+Math.sin(a)*rr+rand(-2.5,2.5); ctx.lineTo(ax,ay); } ctx.stroke(); }
+    if(chg>=0.98){ ctx.strokeStyle="#c8e6ff"; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(clawX,clawY,fr*1.5,0,6.28); ctx.stroke(); }   // full-charge crackle ring
+  }
+  // clawed fingers wrapping the front of the ball
+  ctx.fillStyle=horn; for(let k=-1;k<=1;k++){ ctx.beginPath(); ctx.arc(clawX+R*0.02,clawY+k*R*0.12,R*0.05,0,6.28); ctx.fill(); }
+  // HEAD — a long dragon snout, drawn as a rounded head + muzzle
+  const hy=-R*0.86, hr=R*0.44;
+  // golden mane framing the head (behind)
+  ctx.fillStyle=maneDk; for(let k=0;k<7;k++){ const a=Math.PI*0.5+k/6*Math.PI; ctx.beginPath();
+    ctx.moveTo(Math.cos(a)*hr*0.9,hy+Math.sin(a)*hr*0.9); ctx.lineTo(Math.cos(a)*hr*1.7,hy+Math.sin(a)*hr*1.6); ctx.lineTo(Math.cos(a+0.2)*hr*0.9,hy+Math.sin(a+0.2)*hr*0.9); ctx.closePath(); ctx.fill(); }
+  ctx.fillStyle=scale; ctx.beginPath(); ctx.arc(0,hy,hr,0,6.28); ctx.fill();
+  // snout/muzzle jutting to the aim side (right)
+  ctx.fillStyle=scaleLt; ctx.beginPath(); ctx.ellipse(hr*0.7,hy+hr*0.16,hr*0.6,hr*0.4,0,0,6.28); ctx.fill();
+  ctx.fillStyle=scaleDk; ctx.beginPath(); ctx.arc(hr*1.2,hy+hr*0.08,hr*0.08,0,6.28); ctx.fill();   // nostril
+  // horns sweeping back
+  ctx.strokeStyle=horn; ctx.lineWidth=R*0.08; ctx.lineCap="round";
+  ctx.beginPath(); ctx.moveTo(-hr*0.2,hy-hr*0.8); ctx.quadraticCurveTo(-hr*0.9,hy-hr*1.2,-hr*1.2,hy-hr*0.8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(hr*0.3,hy-hr*0.82); ctx.quadraticCurveTo(-hr*0.4,hy-hr*1.3,-hr*0.7,hy-hr*1.0); ctx.stroke();
+  // long trailing whiskers
+  ctx.strokeStyle=mane; ctx.lineWidth=R*0.03;
+  ctx.beginPath(); ctx.moveTo(hr*1.1,hy+hr*0.2); ctx.quadraticCurveTo(hr*1.8,hy+hr*0.5+Math.sin(t*0.1)*R*0.06,hr*2.0,hy-hr*0.2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(hr*1.1,hy+hr*0.3); ctx.quadraticCurveTo(hr*1.7,hy+hr*0.9+Math.sin(t*0.1+1)*R*0.06,hr*1.9,hy+hr*0.6); ctx.stroke();
+  // eyes — fierce dragon eyes with slit pupils
+  ctx.fillStyle="#fff"; ctx.beginPath(); ctx.ellipse(hr*0.2,hy-hr*0.1,hr*0.2,hr*0.16,0,0,6.28); ctx.ellipse(hr*0.62,hy-hr*0.06,hr*0.16,hr*0.14,0,0,6.28); ctx.fill();
+  ctx.fillStyle="#e0a020"; ctx.beginPath(); ctx.ellipse(hr*0.24,hy-hr*0.1,hr*0.1,hr*0.15,0,0,6.28); ctx.ellipse(hr*0.64,hy-hr*0.06,hr*0.08,hr*0.13,0,0,6.28); ctx.fill();
+  ctx.fillStyle="#1a1206"; ctx.fillRect(hr*0.22,hy-hr*0.24,hr*0.03,hr*0.28); ctx.fillRect(hr*0.63,hy-hr*0.18,hr*0.025,hr*0.24);   // slit pupils
+  ctx.strokeStyle=maneDk; ctx.lineWidth=hr*0.08; ctx.lineCap="round";   // heavy brows
+  ctx.beginPath(); ctx.moveTo(hr*0.02,hy-hr*0.32); ctx.lineTo(hr*0.4,hy-hr*0.24); ctx.stroke();
+  ctx.restore();
+};
+
+CUSTOM_DRAW.youngfyon = function(ctx, e, R, body, dark, light){
+  // YOUNG FYON: Fionn as a scrappy kid — a small round-headed boy in a green tunic with a messy hair tuft,
+  // a bandolier of throwing knives across the chest, and a knife held in his forward hand that winds
+  // back on attack (e.atkAnim). `body` recolors the tunic. Reads clearly as a "young" version: big head, small body.
+  const t=(typeof frame!=='undefined'?frame:0);
+  const tunic=body||"#4a9a52", tunicDk=shade(tunic,-28), tunicLt=shade(tunic,22);
+  const skin="#f0c69a", skinDk=shade(skin,-18), hair="#7a5cd0", steel="#cdd6e2", strap="#5a4632";
+  ctx.save();
+  const bob=Math.sin(t*0.12)*R*0.04;   // light, springy kid bob
+  ctx.translate(0,bob);
+  // --- legs: short, narrow ---
+  ctx.fillStyle=tunicDk;
+  ctx.beginPath(); ctx.roundRect(-R*0.26,R*0.5,R*0.2,R*0.44,6); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(R*0.06,R*0.5,R*0.2,R*0.44,6); ctx.fill();
+  // little boots
+  ctx.fillStyle=strap;
+  ctx.beginPath(); ctx.roundRect(-R*0.3,R*0.88,R*0.26,R*0.14,4); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(R*0.04,R*0.88,R*0.26,R*0.14,4); ctx.fill();
+  // --- torso: a short green tunic ---
+  ctx.fillStyle=tunic;
+  ctx.beginPath();
+  ctx.moveTo(-R*0.38,-R*0.34); ctx.quadraticCurveTo(-R*0.46,R*0.28,-R*0.3,R*0.54);
+  ctx.lineTo(R*0.3,R*0.54); ctx.quadraticCurveTo(R*0.46,R*0.28,R*0.38,-R*0.34);
+  ctx.quadraticCurveTo(0,-R*0.5,-R*0.38,-R*0.34); ctx.fill();
+  // tunic hem highlight + a belt
+  ctx.fillStyle=tunicLt; ctx.beginPath(); ctx.moveTo(-R*0.3,R*0.5); ctx.lineTo(R*0.3,R*0.5); ctx.lineTo(R*0.24,R*0.56); ctx.lineTo(-R*0.24,R*0.56); ctx.closePath(); ctx.fill();
+  ctx.fillStyle=strap; ctx.fillRect(-R*0.38,R*0.2,R*0.76,R*0.1);
+  // --- knife bandolier across the chest ---
+  ctx.strokeStyle=strap; ctx.lineWidth=R*0.1; ctx.lineCap="round";
+  ctx.beginPath(); ctx.moveTo(-R*0.34,-R*0.28); ctx.lineTo(R*0.3,R*0.24); ctx.stroke();
+  ctx.fillStyle=steel;   // three small knife hilts poking out along the strap
+  for(let k=0;k<3;k++){ const px=-R*0.2+k*R*0.22, py=-R*0.14+k*R*0.18;
+    ctx.save(); ctx.translate(px,py); ctx.rotate(0.7); ctx.fillRect(-R*0.02,-R*0.12,R*0.04,R*0.16); ctx.restore(); }
+  // --- BACK arm (resting at side) ---
+  ctx.fillStyle=skin; ctx.beginPath(); ctx.roundRect(-R*0.5,-R*0.2,R*0.16,R*0.4,6); ctx.fill();
+  // --- head: big round kid head with a messy hair tuft ---
+  const hy=-R*0.72, hr=R*0.5;
+  ctx.fillStyle=skin; ctx.beginPath(); ctx.arc(0,hy,hr*0.98,0,6.28); ctx.fill();
+  // messy purple hair (nods to grown Fionn's color), a scrappy tuft on top
+  ctx.fillStyle=hair;
+  ctx.beginPath(); ctx.arc(0,hy-hr*0.18,hr*0.98,Math.PI*1.05,Math.PI*1.95); ctx.fill();
+  for(let k=-2;k<=2;k++){ const x=k*hr*0.34; ctx.beginPath(); ctx.moveTo(x-hr*0.14,hy-hr*0.6); ctx.lineTo(x+hr*0.04,hy-hr*1.02); ctx.lineTo(x+hr*0.18,hy-hr*0.58); ctx.closePath(); ctx.fill(); }
+  // sharp determined eyes + small focused brow
+  ctx.fillStyle="#2a2230";
+  ctx.beginPath(); ctx.ellipse(-hr*0.34,hy+hr*0.02,hr*0.1,hr*0.15,0,0,6.28); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(hr*0.34,hy+hr*0.02,hr*0.1,hr*0.15,0,0,6.28); ctx.fill();
+  ctx.strokeStyle="#3a2f42"; ctx.lineWidth=R*0.05; ctx.lineCap="round";
+  ctx.beginPath(); ctx.moveTo(-hr*0.5,hy-hr*0.22); ctx.lineTo(-hr*0.18,hy-hr*0.12); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(hr*0.5,hy-hr*0.22); ctx.lineTo(hr*0.18,hy-hr*0.12); ctx.stroke();
+  // --- FORWARD arm: holds a throwing knife, winds BACK then snaps forward on attack ---
+  let wind=0;
+  if(e && e.atkAnim>0){ const ap=1-e.atkAnim/14; wind = ap<0.4 ? -ap*R*0.5 : (ap-0.4)/0.6*R*0.8 - R*0.2; }
+  const hxp=R*0.5+wind, hyp=-R*0.02;
+  ctx.fillStyle=skin; ctx.beginPath(); ctx.roundRect(R*0.28,-R*0.16,R*0.28+Math.max(0,wind),R*0.16,6); ctx.fill();   // arm reaching forward
+  // the knife: a small steel blade in hand
+  ctx.save(); ctx.translate(hxp,hyp); ctx.rotate(wind*0.02);
+  ctx.fillStyle=strap; ctx.fillRect(-R*0.03,-R*0.03,R*0.12,R*0.06);   // hilt
+  ctx.fillStyle=steel; ctx.beginPath(); ctx.moveTo(R*0.09,-R*0.05); ctx.lineTo(R*0.36,0); ctx.lineTo(R*0.09,R*0.05); ctx.closePath(); ctx.fill();   // blade
+  ctx.fillStyle="#ffffff"; ctx.beginPath(); ctx.moveTo(R*0.12,-R*0.02); ctx.lineTo(R*0.3,0); ctx.lineTo(R*0.12,R*0.01); ctx.closePath(); ctx.fill();   // glint
+  ctx.restore();
+  ctx.restore();
+};
+
+CUSTOM_DRAW.metaai = function(ctx, e, R, body, dark, light){
+  // META AI: a sleek white assistant-bot — a rounded glossy body with a dark screen-face showing a glowing
+  // cyan expression, a little antenna, floating detached hands, and a Meta-style infinity loop on the chest.
+  // `body` recolors the shell. On attack (e.atkAnim) the screen-face flashes a charge glint.
+  const t=(typeof frame!=='undefined'?frame:0);
+  const shell=body||"#e8eef5", shellDk=shade(shell,-22), shellLt=shade(shell,14);
+  const screen="#141a24", glow="#5ac8ff", glowLt="#bfeaff";
+  const atk = e && e.atkAnim>0 ? 1-e.atkAnim/18 : 0;
+  ctx.save();
+  const bob=Math.sin(t*0.1)*R*0.05;   // gentle hover
+  ctx.translate(0,bob);
+  // faint hover shadow / thruster glow under it
+  ctx.fillStyle="rgba(90,200,255,.18)"; ctx.beginPath(); ctx.ellipse(0,R*0.9,R*0.5,R*0.16,0,0,6.28); ctx.fill();
+  // --- floating detached hands (little rounded mitts) that drift beside the body ---
+  const hsw=Math.sin(t*0.12)*R*0.06;
+  ctx.fillStyle=shellDk;
+  ctx.beginPath(); ctx.arc(-R*0.66, R*0.1+hsw, R*0.13, 0,6.28); ctx.fill();
+  ctx.beginPath(); ctx.arc(R*0.66+atk*R*0.3, R*0.1-hsw, R*0.13, 0,6.28); ctx.fill();   // forward hand nudges out on attack
+  // --- body: a rounded glossy capsule ---
+  ctx.fillStyle=shell;
+  ctx.beginPath(); ctx.roundRect(-R*0.42,-R*0.1,R*0.84,R*0.9,R*0.34); ctx.fill();
+  ctx.fillStyle=shellLt; ctx.beginPath(); ctx.ellipse(-R*0.16,R*0.16,R*0.12,R*0.3,-0.2,0,6.28); ctx.fill();   // glossy highlight
+  // Meta-style infinity loop on the chest (two interlocking rings)
+  ctx.strokeStyle=glow; ctx.lineWidth=R*0.05;
+  ctx.beginPath(); ctx.arc(-R*0.1,R*0.34,R*0.1,0,6.28); ctx.arc(R*0.1,R*0.34,R*0.1,0,6.28); ctx.stroke();
+  // --- head: a rounded screen-face ---
+  const hy=-R*0.42, hw=R*0.5, hh=R*0.42;
+  ctx.fillStyle=shell; ctx.beginPath(); ctx.roundRect(-hw,hy-hh,hw*2,hh*2,R*0.22); ctx.fill();
+  ctx.fillStyle=screen; ctx.beginPath(); ctx.roundRect(-hw*0.8,hy-hh*0.72,hw*1.6,hh*1.44,R*0.16); ctx.fill();   // dark screen inset
+  // glowing eyes + a small smile on the screen (the "expression")
+  ctx.fillStyle=glow; ctx.shadowColor=glow; ctx.shadowBlur=8;
+  ctx.beginPath(); ctx.arc(-hw*0.34,hy-hh*0.06,R*0.07,0,6.28); ctx.arc(hw*0.34,hy-hh*0.06,R*0.07,0,6.28); ctx.fill();
+  ctx.strokeStyle=glow; ctx.lineWidth=R*0.04; ctx.beginPath(); ctx.arc(0,hy+hh*0.1,hw*0.4,0.15,Math.PI-0.15); ctx.stroke();
+  ctx.shadowBlur=0;
+  // charge glint sweeping across the screen on attack
+  if(atk>0){ ctx.fillStyle="rgba(191,234,255,"+(0.6*(1-atk))+")"; ctx.beginPath(); ctx.roundRect(-hw*0.8+atk*hw*1.5, hy-hh*0.72, hw*0.3, hh*1.44, R*0.1); ctx.fill(); }
+  // --- antenna with a blinking tip ---
+  ctx.strokeStyle=shellDk; ctx.lineWidth=R*0.05; ctx.beginPath(); ctx.moveTo(0,hy-hh); ctx.lineTo(0,hy-hh-R*0.28); ctx.stroke();
+  ctx.fillStyle = (t%40<20)?glowLt:glow; ctx.beginPath(); ctx.arc(0,hy-hh-R*0.32,R*0.06,0,6.28); ctx.fill();
+  ctx.restore();
+};
+
+CUSTOM_DRAW.potplant = function(ctx, e, R, body, dark, light){
+  // INTRATUIN POTPLANT: Dean's houseplant come alive — a terracotta pot with soil, a green stem-body,
+  // two broad leaf-arms that sway (and reach out on attack), and a cheerful flower-head with petals.
+  // `body` recolors the foliage (skins). The pot stays terracotta unless a morph overrides it.
+  const t=(typeof frame!=='undefined'?frame:0);
+  const leaf=body||"#5aa03a", leafDk=shade(leaf,-38), leafLt=shade(leaf,42);
+  const pot="#c1662f", potDk=shade(pot,-30), potLt=shade(pot,26), soil="#4a3524";
+  const atk = e && e.atkAnim>0 ? 1-e.atkAnim/14 : 0;
+  const sway=Math.sin(t*0.06)*R*0.05;   // gentle idle sway of the foliage
+  ctx.save();
+  // --- the pot (base): a tapered terracotta planter with a rim + soil on top ---
+  ctx.fillStyle=potDk; ctx.beginPath();
+  ctx.moveTo(-R*0.5,R*0.28); ctx.lineTo(R*0.5,R*0.28); ctx.lineTo(R*0.38,R*0.92); ctx.lineTo(-R*0.38,R*0.92); ctx.closePath(); ctx.fill();
+  ctx.fillStyle=pot; ctx.beginPath();
+  ctx.moveTo(-R*0.46,R*0.3); ctx.lineTo(R*0.42,R*0.3); ctx.lineTo(R*0.32,R*0.9); ctx.lineTo(-R*0.36,R*0.9); ctx.closePath(); ctx.fill();
+  ctx.fillStyle=potLt; ctx.beginPath(); ctx.ellipse(-R*0.16,R*0.55,R*0.1,R*0.26,0.05,0,6.28); ctx.fill();   // glossy highlight
+  ctx.fillStyle=pot; ctx.beginPath(); ctx.roundRect(-R*0.54,R*0.18,R*1.08,R*0.16,R*0.05); ctx.fill();        // rim
+  ctx.fillStyle=potLt; ctx.fillRect(-R*0.54,R*0.2,R*1.08,R*0.03);
+  ctx.fillStyle=soil; ctx.beginPath(); ctx.ellipse(0,R*0.24,R*0.46,R*0.1,0,0,6.28); ctx.fill();              // soil
+  // --- stem rising out of the soil ---
+  ctx.save(); ctx.translate(sway,0);
+  ctx.strokeStyle=leafDk; ctx.lineWidth=R*0.16; ctx.lineCap="round";
+  ctx.beginPath(); ctx.moveTo(0,R*0.24); ctx.quadraticCurveTo(sway*1.5,-R*0.1,0,-R*0.4); ctx.stroke();
+  ctx.strokeStyle=leaf; ctx.lineWidth=R*0.1;
+  ctx.beginPath(); ctx.moveTo(0,R*0.24); ctx.quadraticCurveTo(sway*1.5,-R*0.1,0,-R*0.4); ctx.stroke();
+  // --- leaf-arms: two broad leaves; the right one reaches forward on attack ---
+  const reachR=atk*R*0.34, reachL=Math.sin(t*0.08)*R*0.04;
+  function leafArm(dir, extra){
+    ctx.save(); ctx.translate(dir*R*0.06, -R*0.02);
+    ctx.rotate(dir*(0.5 - extra*1.1) + sway*0.3);
+    ctx.fillStyle=leafDk; ctx.beginPath();
+    ctx.moveTo(0,0); ctx.quadraticCurveTo(dir*R*0.4, -R*0.24, dir*(R*0.62+extra*R*1.2), 0);
+    ctx.quadraticCurveTo(dir*R*0.4, R*0.24, 0, 0); ctx.fill();
+    ctx.fillStyle=leaf; ctx.beginPath();
+    ctx.moveTo(0,0); ctx.quadraticCurveTo(dir*R*0.36, -R*0.2, dir*(R*0.56+extra*R*1.1), R*0.02);
+    ctx.quadraticCurveTo(dir*R*0.36, R*0.18, 0, 0); ctx.fill();
+    ctx.strokeStyle=leafDk; ctx.lineWidth=R*0.02; ctx.beginPath();   // leaf vein
+    ctx.moveTo(0,0); ctx.lineTo(dir*(R*0.5+extra*R), R*0.01); ctx.stroke();
+    ctx.restore();
+  }
+  leafArm(-1, reachL);
+  leafArm(1, reachR);
+  // --- flower-head: a ring of petals around a cheerful face ---
+  const hy=-R*0.6, hr=R*0.32;
+  ctx.fillStyle=leafLt;
+  for(let k=0;k<8;k++){ const a2=k/8*6.28 + t*0.005; ctx.save(); ctx.translate(0,hy); ctx.rotate(a2);
+    ctx.beginPath(); ctx.ellipse(0,-hr*1.05,hr*0.42,hr*0.72,0,0,6.28); ctx.fill(); ctx.restore(); }
+  ctx.fillStyle="#f6d84a"; ctx.beginPath(); ctx.arc(0,hy,hr,0,6.28); ctx.fill();          // flower face disc
+  ctx.fillStyle=shade("#f6d84a",-22); ctx.beginPath(); ctx.arc(0,hy+hr*0.4,hr*0.6,0,Math.PI); ctx.fill();
+  // happy face
+  ctx.fillStyle="#3a2a10";
+  ctx.beginPath(); ctx.arc(-hr*0.34,hy-hr*0.06,hr*0.13,0,6.28); ctx.arc(hr*0.34,hy-hr*0.06,hr*0.13,0,6.28); ctx.fill();
+  ctx.strokeStyle="#3a2a10"; ctx.lineWidth=hr*0.09; ctx.lineCap="round";
+  ctx.beginPath(); ctx.arc(0,hy+hr*0.02,hr*0.42,0.2,Math.PI-0.2); ctx.stroke();           // smile
+  ctx.fillStyle="rgba(224,120,90,.4)"; ctx.beginPath(); ctx.arc(-hr*0.5,hy+hr*0.2,hr*0.16,0,6.28); ctx.arc(hr*0.5,hy+hr*0.2,hr*0.16,0,6.28); ctx.fill();   // rosy cheeks
+  ctx.restore();
+  ctx.restore();
+};
+
+CUSTOM_DRAW.meiden = function(ctx, e, R, body, dark, light){
+  // SLECHTE MEIDEN: a tight clique of three bad girls. All three are ALWAYS visible — two stand a little
+  // back at the sides, and whoever's "up front" (current attack phase) steps forward, bigger, with a prop.
+  // 0 = graffiti (spray can) · 1 = shove (fist) · 2 = gum (bubble). `body` tints the shared crop-tops.
+  const t=(typeof frame!=='undefined'?frame:0);
+  const phase = e ? (e.girlPhase||0) : 0;
+  const top = body||"#e0407a", topDk=shade(top,-34);
+  const skin="#e8b892", skinDk=shade(skin,-24);
+  const hairCols=["#3a2a1e","#b0562a","#e0cc66"];   // 0 dark brunette · 1 bright auburn/ginger · 2 blonde
+  const bob=Math.sin(t*0.08)*R*0.03;
+  ctx.save();
+  // Seats: the two NON-active girls flank at the back; the active one is centre-front + larger.
+  // Back girls sit higher & to the sides so their heads clearly peek out past the front girl's shoulders.
+  const backSeats=[{x:-R*0.46,y:-R*0.34,s:0.9},{x:R*0.46,y:-R*0.34,s:0.9}];
+  function girl(gx,gy,s,hairIdx,active){
+    const hair=hairCols[hairIdx];
+    ctx.save(); ctx.translate(gx,gy+bob*(active?1.2:0.6)); ctx.scale(s,s);
+    // shoulders / crop-top (bigger torso so they don't read as floating heads)
+    ctx.fillStyle=topDk; ctx.beginPath(); ctx.ellipse(0,R*0.74,R*0.5,R*0.4,0,0,6.28); ctx.fill();
+    ctx.fillStyle=top;   ctx.beginPath(); ctx.ellipse(0,R*0.68,R*0.45,R*0.34,0,0,6.28); ctx.fill();
+    ctx.fillStyle="#1a1a20"; ctx.fillRect(-R*0.3,R*0.4,R*0.1,R*0.34); ctx.fillRect(R*0.2,R*0.4,R*0.1,R*0.34);   // strap tops
+    // head (big + clear)
+    ctx.fillStyle=skinDk; ctx.beginPath(); ctx.arc(0,0,R*0.5,0,6.28); ctx.fill();
+    ctx.fillStyle=skin;   ctx.beginPath(); ctx.arc(0,-R*0.04,R*0.47,0,6.28); ctx.fill();
+    // hair: full rounded crown + two side locks framing the face
+    ctx.fillStyle=hair;
+    ctx.beginPath(); ctx.arc(0,-R*0.12,R*0.52,Math.PI*0.8,Math.PI*2.2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-R*0.47,-R*0.16); ctx.quadraticCurveTo(-R*0.66,R*0.5,-R*0.4,R*0.82); ctx.quadraticCurveTo(-R*0.24,R*0.36,-R*0.28,-R*0.02); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(R*0.47,-R*0.16); ctx.quadraticCurveTo(R*0.66,R*0.5,R*0.4,R*0.82); ctx.quadraticCurveTo(R*0.24,R*0.36,R*0.28,-R*0.02); ctx.closePath(); ctx.fill();
+    // swept fringe so the face reads under the hair
+    ctx.beginPath(); ctx.moveTo(-R*0.4,-R*0.18); ctx.quadraticCurveTo(0,-R*0.58,R*0.4,-R*0.18); ctx.quadraticCurveTo(R*0.12,-R*0.32,0,-R*0.3); ctx.quadraticCurveTo(-R*0.12,-R*0.32,-R*0.4,-R*0.18); ctx.closePath(); ctx.fill();
+    // eyes + lashes + smug smirk
+    ctx.fillStyle="#2a2018";
+    ctx.beginPath(); ctx.ellipse(-R*0.17,-R*0.02,R*0.07,R*0.085,0,0,6.28); ctx.ellipse(R*0.17,-R*0.02,R*0.07,R*0.085,0,0,6.28); ctx.fill();
+    ctx.strokeStyle="#2a2018"; ctx.lineWidth=R*0.022; ctx.lineCap="round";
+    ctx.beginPath(); ctx.moveTo(-R*0.27,-R*0.12); ctx.lineTo(-R*0.1,-R*0.09); ctx.moveTo(R*0.27,-R*0.12); ctx.lineTo(R*0.1,-R*0.09); ctx.stroke();
+    ctx.strokeStyle="#c8506a"; ctx.lineWidth=R*0.035; ctx.beginPath(); ctx.arc(0,R*0.1,R*0.14,0.2,Math.PI-0.55); ctx.stroke();   // smirk
+    ctx.fillStyle="rgba(224,120,90,.35)"; ctx.beginPath(); ctx.arc(-R*0.24,R*0.08,R*0.07,0,6.28); ctx.arc(R*0.24,R*0.08,R*0.07,0,6.28); ctx.fill();   // rosy cheeks
+    // prop on the ACTIVE girl for the current phase
+    if(active){
+      if(phase===0){ // graffiti spray can held up beside her
+        ctx.fillStyle="#3a86ff"; ctx.beginPath(); ctx.roundRect(R*0.42,-R*0.1,R*0.22,R*0.5,R*0.05); ctx.fill();
+        ctx.fillStyle="#f4c430"; ctx.fillRect(R*0.45,-R*0.24,R*0.16,R*0.12);
+        ctx.fillStyle="rgba(224,64,122,.7)"; for(let k=0;k<4;k++) ctx.fillRect(R*0.64+k*R*0.08,-R*0.18-k*R*0.02,R*0.05,R*0.05);
+      } else if(phase===1){ // clenched fist thrust forward
+        ctx.fillStyle=skin; ctx.beginPath(); ctx.arc(R*0.54,R*0.22,R*0.19,0,6.28); ctx.fill();
+        ctx.strokeStyle=skinDk; ctx.lineWidth=R*0.028; for(let k=0;k<3;k++){ ctx.beginPath(); ctx.moveTo(R*0.42,R*0.12+k*R*0.07); ctx.lineTo(R*0.66,R*0.12+k*R*0.07); ctx.stroke(); }
+      } else { // blowing a bubblegum bubble
+        ctx.fillStyle="#ffc0dc"; ctx.beginPath(); ctx.arc(R*0.06,R*0.3,R*0.24,0,6.28); ctx.fill();
+        ctx.fillStyle="rgba(255,255,255,.5)"; ctx.beginPath(); ctx.arc(-R*0.04,R*0.2,R*0.08,0,6.28); ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+  // the two NON-active girls at the back (keep their own hair colour), then the active one front+centre.
+  const backGirls=[0,1,2].filter(i=>i!==phase);
+  girl(backSeats[0].x, backSeats[0].y, backSeats[0].s, backGirls[0], false);
+  girl(backSeats[1].x, backSeats[1].y, backSeats[1].s, backGirls[1], false);
+  girl(0, R*0.2, 1.12, phase, true);
+  ctx.restore();
+};
+
+CUSTOM_DRAW.aasta = function(ctx, e, R, body, dark, light){
+  // AASTA — slim humanoid assassin-Fighter: long, flat, straight blonde hair framing the face and falling
+  // down the back; slight autumn palette. Drawn around origin (0,0); +x = aim/forward, +y = down; R≈radius.
+  ctx.save();
+  const t=(typeof frame!=='undefined'?frame:0);
+  const moving=Math.min(1,(e&&e.moveSpd||0)/3.2);
+  const walk=Math.sin((e&&e.walkPhase)||0);
+  const bob=(Math.sin((e&&e.walkPhase)||0)-1)*R*0.03*(0.5+moving);
+  ctx.translate(0,bob);
+
+  const skin="#f2cda8", skinDk="#d9a97e";
+  const hair=body? body : "#e8c66a";                 // skin color-swaps tint her hair (her signature)
+  const hairDk=shade(hair,-30), hairLt=shade(hair,32);
+  const top="#c46a3a", topDk=shade(top,-28);          // autumn rust top
+  const pants="#3a4658", pantsDk=shade(pants,-26);
+  const arrived=(e&&(e.arrival>0||e.arrivalFx>0));    // flicker brighter right as she "arrives"
+
+  // long hair BEHIND the body (falls down the back, past the hips)
+  ctx.fillStyle=hairDk; ctx.beginPath();
+  ctx.moveTo(-R*0.34,-R*0.55); ctx.quadraticCurveTo(-R*0.6,R*0.1,-R*0.34,R*0.7);
+  ctx.quadraticCurveTo(0,R*0.9,R*0.34,R*0.7); ctx.quadraticCurveTo(R*0.6,R*0.1,R*0.34,-R*0.55);
+  ctx.quadraticCurveTo(0,-R*0.4,-R*0.34,-R*0.55); ctx.closePath(); ctx.fill();
+
+  // legs
+  const legY=R*0.5, stride=walk*R*0.16*moving;
+  function leg(dir,off){ ctx.save(); ctx.translate(dir*R*0.2,legY+off);
+    ctx.fillStyle=pantsDk; ctx.beginPath(); ctx.roundRect(-R*0.13,0,R*0.26,R*0.5,R*0.08); ctx.fill();
+    ctx.fillStyle=pants; ctx.beginPath(); ctx.roundRect(-R*0.1,0,R*0.2,R*0.46,R*0.07); ctx.fill();
+    ctx.fillStyle="#2a2f38"; ctx.beginPath(); ctx.ellipse(0,R*0.48,R*0.15,R*0.08,0,0,6.28); ctx.fill(); ctx.restore(); }
+  leg(-1,stride); leg(1,-stride);
+
+  // slim torso (autumn top)
+  ctx.fillStyle=topDk; ctx.beginPath(); ctx.ellipse(0,R*0.12,R*0.34,R*0.44,0,0,6.28); ctx.fill();
+  ctx.fillStyle=top; ctx.beginPath(); ctx.ellipse(0,R*0.08,R*0.29,R*0.4,0,0,6.28); ctx.fill();
+  ctx.fillStyle=shade(top,18); ctx.beginPath(); ctx.ellipse(0,R*0.02,R*0.12,R*0.22,0,0,6.28); ctx.fill();   // front highlight
+
+  // arms (slim, skin)
+  function arm(dir){ const sw=walk*dir*R*0.06*moving; ctx.save(); ctx.translate(dir*R*0.3,R*0.02+sw); ctx.rotate(dir*0.16);
+    ctx.fillStyle=skinDk; ctx.beginPath(); ctx.ellipse(0,R*0.2,R*0.1,R*0.3,0,0,6.28); ctx.fill();
+    ctx.fillStyle=skin; ctx.beginPath(); ctx.ellipse(0,R*0.18,R*0.075,R*0.26,0,0,6.28); ctx.fill();
+    ctx.beginPath(); ctx.arc(0,R*0.42,R*0.09,0,6.28); ctx.fill(); ctx.restore(); }
+  arm(-1); arm(1);
+
+  // head
+  const headY=-R*0.5, headR=R*0.42;
+  ctx.fillStyle=skinDk; ctx.beginPath(); ctx.ellipse(0,headY,headR*1.02,headR*1.06,0,0,6.28); ctx.fill();
+  ctx.fillStyle=skin; ctx.beginPath(); ctx.ellipse(0,headY-R*0.01,headR*0.94,headR*1.0,0,0,6.28); ctx.fill();
+
+  // long flat side-locks framing the face (straight, blunt ends by the jaw)
+  ctx.fillStyle=hair;
+  ctx.beginPath(); ctx.moveTo(-headR*0.9,headY-R*0.36); ctx.lineTo(-headR*1.12,headY+R*0.5); ctx.lineTo(-headR*0.62,headY+R*0.48); ctx.lineTo(-headR*0.6,headY-R*0.2); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(headR*0.9,headY-R*0.36); ctx.lineTo(headR*1.12,headY+R*0.5); ctx.lineTo(headR*0.62,headY+R*0.48); ctx.lineTo(headR*0.6,headY-R*0.2); ctx.closePath(); ctx.fill();
+  // flat straight fringe across the brow (blunt, with a slight center part)
+  ctx.fillStyle=hairDk; ctx.beginPath();
+  ctx.moveTo(-headR*1.0,headY-R*0.34); ctx.quadraticCurveTo(0,headY-R*0.6,headR*1.0,headY-R*0.34);
+  ctx.lineTo(headR*0.96,headY-R*0.06); ctx.quadraticCurveTo(headR*0.2,headY-R*0.14,0,headY-R*0.02);
+  ctx.quadraticCurveTo(-headR*0.2,headY-R*0.14,-headR*0.96,headY-R*0.06); ctx.closePath(); ctx.fill();
+  ctx.fillStyle=hair; ctx.beginPath();
+  ctx.moveTo(-headR*0.98,headY-R*0.34); ctx.quadraticCurveTo(0,headY-R*0.56,headR*0.98,headY-R*0.34);
+  ctx.lineTo(headR*0.9,headY-R*0.1); ctx.quadraticCurveTo(headR*0.16,headY-R*0.18,R*0.02,headY-R*0.06);
+  ctx.quadraticCurveTo(-headR*0.16,headY-R*0.18,-headR*0.9,headY-R*0.1); ctx.closePath(); ctx.fill();
+  // a couple of straight strand lines for flat-hair texture
+  ctx.strokeStyle=hairLt; ctx.lineWidth=R*0.02; ctx.lineCap="round";
+  ctx.beginPath(); ctx.moveTo(-headR*0.5,headY-R*0.42); ctx.lineTo(-headR*0.4,headY-R*0.12);
+  ctx.moveTo(headR*0.5,headY-R*0.42); ctx.lineTo(headR*0.4,headY-R*0.12); ctx.stroke();
+
+  // sharp eyes (assassin) + subtle brow
+  function eye(dir){ const ex=dir*R*0.15, ey=headY+R*0.04;
+    ctx.fillStyle="#fbf6ea"; ctx.beginPath();
+    ctx.moveTo(ex-dir*R*0.1,ey); ctx.quadraticCurveTo(ex,ey-R*0.1,ex+dir*R*0.11,ey-R*0.01); ctx.quadraticCurveTo(ex,ey+R*0.05,ex-dir*R*0.1,ey); ctx.fill();
+    ctx.fillStyle="#5a7a4a"; ctx.beginPath(); ctx.ellipse(ex,ey-R*0.005,R*0.045,R*0.058,0,0,6.28); ctx.fill();
+    ctx.fillStyle="#181410"; ctx.beginPath(); ctx.ellipse(ex,ey-R*0.005,R*0.022,R*0.036,0,0,6.28); ctx.fill();
+    ctx.strokeStyle="#3a2a20"; ctx.lineWidth=R*0.022; ctx.lineCap="round"; ctx.beginPath();
+    ctx.moveTo(ex-dir*R*0.11,ey-R*0.005); ctx.quadraticCurveTo(ex,ey-R*0.11,ex+dir*R*0.12,ey-R*0.02); ctx.stroke(); }
+  eye(-1); eye(1);
+  // small nose + neutral cool mouth
+  ctx.strokeStyle=skinDk; ctx.lineWidth=R*0.02; ctx.beginPath(); ctx.moveTo(0,headY+R*0.08); ctx.lineTo(-R*0.02,headY+R*0.14); ctx.stroke();
+  ctx.strokeStyle="#b56a5a"; ctx.lineWidth=R*0.022; ctx.lineCap="round"; ctx.beginPath();
+  ctx.moveTo(-R*0.06,headY+R*0.2); ctx.quadraticCurveTo(0,headY+R*0.23,R*0.06,headY+R*0.2); ctx.stroke();
+
+  // a single little autumn leaf tucked in her hair (her seasonal motif)
+  ctx.save(); ctx.translate(headR*0.7,headY-R*0.3); ctx.rotate(0.5+Math.sin(t*0.05)*0.05);
+  ctx.fillStyle="#d9622a"; ctx.beginPath(); ctx.ellipse(0,0,R*0.1,R*0.05,0,0,6.28); ctx.fill();
+  ctx.strokeStyle="#9c3f14"; ctx.lineWidth=R*0.014; ctx.beginPath(); ctx.moveTo(-R*0.08,0); ctx.lineTo(R*0.08,0); ctx.stroke(); ctx.restore();
+
+  // arrival flicker: a faint bright rim the instant she's "arrived" (out-of-combat surprise armed)
+  if(arrived){ ctx.globalAlpha=0.22+0.12*Math.sin(t*0.4); ctx.strokeStyle="#ffe6a0"; ctx.lineWidth=R*0.06;
+    ctx.beginPath(); ctx.ellipse(0,-R*0.05,R*0.7,R*0.95,0,0,6.28); ctx.stroke(); ctx.globalAlpha=1; }
+
+  ctx.restore();
+};
+
+
+CUSTOM_DRAW.carol = function(ctx, e, R, body, dark, light){
+  // CAROL — stout, sharp-tongued old woman from Funocracy: pink skin, dark-pink set hair, big red glasses,
+  // a cardigan over a dress. Drawn around origin (0,0); +x=aim/forward, +y=down; R≈radius.
+  ctx.save();
+  const t=(typeof frame!=='undefined'?frame:0);
+  const moving=Math.min(1,(e&&e.moveSpd||0)/3.2);
+  const walk=Math.sin((e&&e.walkPhase)||0);
+  const bob=(Math.sin((e&&e.walkPhase)||0)-1)*R*0.02*(0.5+moving);
+  ctx.translate(0,bob);
+
+  const skin="#f2a9c4", skinDk="#d98aa8";                 // pink skin
+  const hair=body? body : "#a83a6a", hairDk=shade(hair,-28), hairLt=shade(hair,26);   // dark-pink hair (skin-swaps tint it)
+  const dress="#6a4a6e", dressDk=shade(dress,-24);        // muted plum dress
+  const cardi="#c98a6a", cardiDk=shade(cardi,-24);        // warm cardigan
+  const red="#d62a3a", redDk="#9c1420";
+
+  // legs (short, stout)
+  const legY=R*0.52, stride=walk*R*0.1*moving;
+  function leg(dir,off){ ctx.save(); ctx.translate(dir*R*0.24,legY+off);
+    ctx.fillStyle="#8a7a86"; ctx.beginPath(); ctx.roundRect(-R*0.14,0,R*0.28,R*0.42,R*0.08); ctx.fill();   // stockings
+    ctx.fillStyle="#3a2f38"; ctx.beginPath(); ctx.ellipse(0,R*0.42,R*0.17,R*0.09,0,0,6.28); ctx.fill(); ctx.restore(); }   // sensible shoes
+  leg(-1,stride); leg(1,-stride);
+
+  // wide dress + cardigan torso
+  ctx.fillStyle=dressDk; ctx.beginPath(); ctx.ellipse(0,R*0.2,R*0.5,R*0.5,0,0,6.28); ctx.fill();
+  ctx.fillStyle=dress; ctx.beginPath(); ctx.ellipse(0,R*0.16,R*0.45,R*0.46,0,0,6.28); ctx.fill();
+  // cardigan draped over the shoulders/sides
+  ctx.fillStyle=cardiDk; ctx.beginPath(); ctx.ellipse(0,R*0.06,R*0.47,R*0.34,0,0,6.28); ctx.fill();
+  ctx.fillStyle=cardi; ctx.beginPath(); ctx.ellipse(0,R*0.02,R*0.42,R*0.3,0,0,6.28); ctx.fill();
+  ctx.fillStyle=dress; ctx.beginPath(); ctx.ellipse(0,R*0.22,R*0.16,R*0.32,0,0,6.28); ctx.fill();   // dress showing down the front
+  // cardigan buttons
+  ctx.fillStyle="#f0e6d0"; for(let k=0;k<3;k++){ ctx.beginPath(); ctx.arc(0,R*(0.02+k*0.12),R*0.03,0,6.28); ctx.fill(); }
+
+  // arms
+  function arm(dir){ const sw=walk*dir*R*0.04*moving; ctx.save(); ctx.translate(dir*R*0.44,R*0.08+sw); ctx.rotate(dir*0.2);
+    ctx.fillStyle=cardiDk; ctx.beginPath(); ctx.ellipse(0,R*0.18,R*0.12,R*0.28,0,0,6.28); ctx.fill();
+    ctx.fillStyle=cardi; ctx.beginPath(); ctx.ellipse(0,R*0.16,R*0.09,R*0.24,0,0,6.28); ctx.fill();
+    ctx.fillStyle=skin; ctx.beginPath(); ctx.arc(0,R*0.38,R*0.1,0,6.28); ctx.fill(); ctx.restore(); }
+  arm(-1); arm(1);
+
+  // head
+  const headY=-R*0.44, headR=R*0.46;
+  ctx.fillStyle=skinDk; ctx.beginPath(); ctx.ellipse(0,headY,headR*1.02,headR,0,0,6.28); ctx.fill();
+  ctx.fillStyle=skin; ctx.beginPath(); ctx.ellipse(0,headY-R*0.01,headR*0.96,headR*0.94,0,0,6.28); ctx.fill();
+  // soft cheeks + a couple of age lines
+  ctx.strokeStyle=skinDk; ctx.lineWidth=R*0.015; ctx.lineCap="round";
+  ctx.beginPath(); ctx.moveTo(-R*0.24,headY+R*0.02); ctx.lineTo(-R*0.28,headY+R*0.08);
+  ctx.moveTo(R*0.24,headY+R*0.02); ctx.lineTo(R*0.28,headY+R*0.08); ctx.stroke();
+
+  // dark-pink SET hair: a rounded helmet of curls framing the face + a high bun
+  ctx.fillStyle=hairDk; ctx.beginPath();
+  ctx.moveTo(-headR*1.02,headY+R*0.14);
+  ctx.quadraticCurveTo(-headR*1.14,headY-R*0.5,0,headY-R*0.56);
+  ctx.quadraticCurveTo(headR*1.14,headY-R*0.5,headR*1.02,headY+R*0.14);
+  ctx.quadraticCurveTo(headR*0.7,headY-R*0.1,headR*0.72,headY-R*0.22);
+  ctx.quadraticCurveTo(0,headY-R*0.34,-headR*0.72,headY-R*0.22);
+  ctx.quadraticCurveTo(-headR*0.7,headY-R*0.1,-headR*1.02,headY+R*0.14); ctx.closePath(); ctx.fill();
+  // curl bumps along the hairline
+  ctx.fillStyle=hair; for(let k=-2;k<=2;k++){ ctx.beginPath(); ctx.arc(k*R*0.2, headY-R*0.34, R*0.12, Math.PI, 0); ctx.fill(); }
+  // high bun on top
+  ctx.fillStyle=hairDk; ctx.beginPath(); ctx.arc(0,headY-R*0.5,R*0.2,0,6.28); ctx.fill();
+  ctx.fillStyle=hair; ctx.beginPath(); ctx.arc(0,headY-R*0.5,R*0.15,0,6.28); ctx.fill();
+  ctx.strokeStyle=hairLt; ctx.lineWidth=R*0.02; ctx.beginPath(); ctx.arc(0,headY-R*0.5,R*0.09,0.4,2.6); ctx.stroke();
+  // side curls beside the cheeks
+  ctx.fillStyle=hair; ctx.beginPath(); ctx.arc(-headR*0.92,headY+R*0.06,R*0.1,0,6.28); ctx.arc(headR*0.92,headY+R*0.06,R*0.1,0,6.28); ctx.fill();
+
+  // BIG red glasses — Carol's signature: two round-ish red frames + bridge, resting on the nose line
+  const gy=headY+R*0.02;
+  ctx.fillStyle="rgba(240,250,255,.5)"; // faint lens fill
+  ctx.beginPath(); ctx.ellipse(-R*0.17,gy,R*0.15,R*0.14,0,0,6.28); ctx.ellipse(R*0.17,gy,R*0.15,R*0.14,0,0,6.28); ctx.fill();
+  ctx.strokeStyle=redDk; ctx.lineWidth=R*0.06; ctx.beginPath(); ctx.ellipse(-R*0.17,gy,R*0.16,R*0.15,0,0,6.28); ctx.ellipse(R*0.17,gy,R*0.16,R*0.15,0,0,6.28); ctx.stroke();
+  ctx.strokeStyle=red; ctx.lineWidth=R*0.038; ctx.beginPath(); ctx.ellipse(-R*0.17,gy,R*0.16,R*0.15,0,0,6.28); ctx.ellipse(R*0.17,gy,R*0.16,R*0.15,0,0,6.28); ctx.stroke();
+  ctx.strokeStyle=red; ctx.lineWidth=R*0.045; ctx.beginPath(); ctx.moveTo(-R*0.02,gy-R*0.02); ctx.lineTo(R*0.02,gy-R*0.02); ctx.stroke();   // bridge
+  // arms of the glasses reaching to the hair
+  ctx.lineWidth=R*0.03; ctx.beginPath(); ctx.moveTo(-R*0.33,gy); ctx.lineTo(-R*0.46,gy-R*0.04); ctx.moveTo(R*0.33,gy); ctx.lineTo(R*0.46,gy-R*0.04); ctx.stroke();
+  // stern eyes behind the lenses
+  ctx.fillStyle="#2a1a22"; ctx.beginPath(); ctx.ellipse(-R*0.17,gy,R*0.045,R*0.05,0,0,6.28); ctx.ellipse(R*0.17,gy,R*0.045,R*0.05,0,0,6.28); ctx.fill();
+  // a lens glint
+  ctx.fillStyle="rgba(255,255,255,.8)"; ctx.beginPath(); ctx.arc(-R*0.22,gy-R*0.05,R*0.02,0,6.28); ctx.arc(R*0.12,gy-R*0.05,R*0.02,0,6.28); ctx.fill();
+
+  // disapproving flat/frowning mouth
+  ctx.strokeStyle="#a85a68"; ctx.lineWidth=R*0.028; ctx.lineCap="round"; ctx.beginPath();
+  ctx.moveTo(-R*0.1,headY+R*0.26); ctx.quadraticCurveTo(0,headY+R*0.21,R*0.1,headY+R*0.26); ctx.stroke();
+
+  // when her super is charged, a faint judgemental pink shimmer gathers (telegraph flavor)
+  if(e&&e.superCharge>=SUPER_MAX){ ctx.globalAlpha=0.18+0.1*Math.sin(t*0.2); ctx.strokeStyle="#e86a9c"; ctx.lineWidth=R*0.06;
+    ctx.beginPath(); ctx.arc(0,-R*0.05,R*1.2,0,6.28); ctx.stroke(); ctx.globalAlpha=1; }
+
+  ctx.restore();
+};
+
+
+CUSTOM_DRAW.hammed = function(ctx, e, R, body, dark, light){
+  // HAMMED — full-body custom cat-furry sprite. Two modes:
+  //  - normal: humanoid-passing scammer (tan fur, blue/green hair, witch hat, closed smirk)
+  //  - Full Furry (e.furry>0): drops the act — hotter/darker fur, acid-green eyes, bared fangs,
+  //    bigger/hulking, strong pulsing aura. Drawn around origin (0,0); +x=aim/forward, +y=down.
+  ctx.save();
+  const t = (typeof frame !== "undefined" ? frame : 0);
+  const furry = !!(e && e.furry>0);
+  // Skins with a full face/head overlay (cowl, protogen faceplate) or big ears replace the witch hat so they don't clash.
+  const headGear = !!(e && (e.skinGear==='hammed_sergal' || e.skinGear==='hammed_fennec' || e.skinMorph==='sch_protogen'));
+  // Protogen is a full species-morph: white fluffy fur, and the feline face/ears are replaced by the visor + protogen ears.
+  const proto = !!(e && e.skinMorph==='sch_protogen');
+  const moving = Math.min(1, (e && e.moveSpd || 0) / 3.2);
+  const walk = Math.sin((e && e.walkPhase) || 0);
+  const bob = (Math.sin((e && e.walkPhase) || 0) - 1) * R*0.025 * (0.5 + moving);
+  ctx.translate(0, bob);
+  if(furry){ ctx.scale(1.14,1.14); }   // Full Furry — noticeably bigger, more hulking
+
+  // Full Furry shifts the whole palette hotter/darker and turns the eyes acid-green.
+  // Protogen morph: white fluffy fur with cool blue/lavender shading (a wholly different species).
+  // During Hammed's super (furry>0) the protogen CORRUPTS to angry red — fur reddens, cyan accents go red.
+  const protoSup = proto && furry;
+  const protoAccent = protoSup ? "#ff3a3a" : "#3ad0ff";
+  const protoLine = protoSup ? "#9a5a48" : "#8fa4c0";   // darker separating outline so parts read distinctly
+  const fur = proto ? (protoSup?"#ffe0d4":"#eef4fb") : (furry ? "#9c5a34" : (body || "#b98455"));
+  const furDark = proto ? (protoSup?"#e0a892":"#c3d3e6") : shade(fur,-28), furLight = proto ? "#ffffff" : shade(fur,28);
+  const muzzle = proto ? "#f4f8fd" : (furry?"#d9a878":"#e7c29b"), muzzleDark = proto ? "#cdd9ea" : "#c99d72";
+  const hairBlue = furry?"#1a9e5a":"#237fba", hairTeal = furry?"#28d07a":"#21b8aa", hairGreen = furry?"#9bff5b":"#73d45b";
+  const black = "#17171b", gold = "#f2c94c", goldDark = "#b98524", eye = furry?"#b6ff3a":"#58d96a";
+
+  // tail — short, curled close behind the hip (does not stick fully out)
+  if(proto){
+    // big bushy zigzag protogen tail (cyan/white/black bands) standing up behind the hip
+    ctx.save();
+    const tSway=Math.sin(t*0.05)*0.06;
+    ctx.translate(-R*0.36, R*0.42); ctx.rotate(-0.5 + tSway);
+    // fluffy jagged silhouette pointing up-back, drawn as a stack of zigzag segments
+    const segs=[["#14161c",0.0],["#eef4fb",0.22],[protoAccent,0.44],["#eef4fb",0.66],[protoAccent,0.86]];
+    for(let i=segs.length-1;i>=0;i--){ const s=segs[i][1], w=R*(0.30-s*0.18);
+      ctx.fillStyle=segs[i][0]; ctx.beginPath();
+      const bx=0, by=-R*(0.1+s*1.05);
+      ctx.moveTo(bx-w, by+R*0.12);
+      ctx.lineTo(bx-w*0.5, by-R*0.06); ctx.lineTo(bx, by+R*0.05);
+      ctx.lineTo(bx+w*0.5, by-R*0.06); ctx.lineTo(bx+w, by+R*0.12);
+      ctx.quadraticCurveTo(bx, by+R*0.22, bx-w, by+R*0.12);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  } else {
+  ctx.save();
+  const tailSway = Math.sin(t*0.055)*R*0.04 + walk*R*0.025;
+  ctx.translate(-R*0.28 + tailSway, R*0.5); ctx.rotate(-0.1 + Math.sin(t*0.045)*0.02);
+  ctx.strokeStyle = furDark; ctx.lineWidth = R*0.2; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.bezierCurveTo(-R*0.2,-R*0.05,-R*0.42,-R*0.02,-R*0.46,-R*0.34); ctx.stroke();
+  ctx.strokeStyle = fur; ctx.lineWidth = R*0.13;
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.bezierCurveTo(-R*0.2,-R*0.05,-R*0.42,-R*0.02,-R*0.46,-R*0.34); ctx.stroke();
+  ctx.fillStyle = "#f2ead8"; ctx.beginPath(); ctx.arc(-R*0.46,-R*0.34,R*0.08,0,6.28); ctx.fill();
+  ctx.restore();
+  }
+
+  // legs
+  const legY = R*0.64, stride = walk*R*0.07;
+  if(proto){
+    // digitigrade hind legs, tucked under the torso — thick thigh, sturdy shin, chunky paw, all centered per leg.
+    function digi(dir){ ctx.save(); ctx.translate(dir*R*0.18, legY-R*0.1);
+      ctx.strokeStyle=protoLine; ctx.lineWidth=R*0.022;
+      // thick thigh (subtle outward lean via rotation, but centered on the leg axis)
+      ctx.fillStyle=furDark; ctx.beginPath(); ctx.ellipse(0,R*0.06,R*0.19,R*0.26,dir*0.22,0,6.28); ctx.fill(); ctx.stroke();
+      // sturdy shin (centered on x=0)
+      ctx.fillStyle=fur; ctx.beginPath(); ctx.roundRect(-R*0.09,R*0.2,R*0.18,R*0.36,R*0.08); ctx.fill(); ctx.stroke();
+      ctx.fillStyle=protoAccent; ctx.beginPath(); ctx.roundRect(-R*0.09,R*0.3,R*0.18,R*0.07,R*0.03); ctx.fill();   // cyan stripe
+      // chunky paw centered right under the shin, forward-facing
+      ctx.fillStyle=fur; ctx.beginPath(); ctx.ellipse(dir*R*0.03,R*0.57,R*0.15,R*0.09,0,0,6.28); ctx.fill(); ctx.stroke();
+      ctx.fillStyle=protoLine; for(let k=-1;k<=1;k++){ ctx.beginPath(); ctx.ellipse(dir*R*0.03+k*R*0.05,R*0.59,R*0.02,R*0.028,0,0,6.28); ctx.fill(); }
+      ctx.restore(); }
+    digi(-1); digi(1);
+  } else {
+  function leg(dir,offset){ ctx.save(); ctx.translate(dir*R*0.23,legY+offset); ctx.rotate(dir*0.035+stride*dir/R);
+    ctx.fillStyle=furDark; ctx.beginPath(); ctx.roundRect(-R*0.14,0,R*0.28,R*0.48,R*0.09); ctx.fill();
+    ctx.fillStyle=fur; ctx.beginPath(); ctx.roundRect(-R*0.105,0,R*0.21,R*0.43,R*0.08); ctx.fill();
+    ctx.fillStyle=shade(fur,-12); ctx.beginPath(); ctx.ellipse(0,R*0.43,R*0.16,R*0.09,0,0,6.28); ctx.fill(); ctx.restore(); }
+  leg(-1,stride*0.15); leg(1,-stride*0.15);
+  }
+
+  // torso — bare fur, no top; show the chest/belly fur pattern (tan front, darker flanks)
+  const torsoW = proto ? 0.80 : 1;   // protogens read sleeker — narrow the torso a touch
+  ctx.fillStyle=furDark; ctx.beginPath(); ctx.ellipse(0,R*0.30,R*0.48*torsoW,R*0.56,0,0,6.28); ctx.fill();
+  if(proto){ ctx.strokeStyle=protoLine; ctx.lineWidth=R*0.025; ctx.stroke(); }   // outline so torso reads apart from limbs
+  ctx.fillStyle=fur; ctx.beginPath(); ctx.ellipse(0,R*0.25,R*0.43*torsoW,R*0.51,0,0,6.28); ctx.fill();
+  if(proto){
+    // voluminous white fur with soft lavender shading — a few gentle clumps, not a busy field
+    const lav="#dfe4f2";
+    ctx.fillStyle="#f6f9ff"; ctx.beginPath(); ctx.ellipse(0,R*0.28,R*0.32,R*0.48,0,0,6.28); ctx.fill();
+    function clump(cx,cy,w,h,col){ ctx.fillStyle=col; ctx.beginPath();
+      ctx.moveTo(cx-w,cy); ctx.quadraticCurveTo(cx,cy-h,cx+w,cy); ctx.quadraticCurveTo(cx,cy+h*0.5,cx-w,cy); ctx.closePath(); ctx.fill(); }
+    // two shaded flank clumps for volume + one soft belly clump
+    clump(-R*0.30,R*0.22,R*0.16,R*0.30,lav); clump(R*0.30,R*0.22,R*0.16,R*0.30,lav);
+    clump(0,R*0.5,R*0.18,R*0.2,lav);
+    // fluffy fur tufts along the LOWER torso silhouette only (nothing up by the shoulders)
+    ctx.fillStyle="#f6f9ff";
+    const tufts=[[-0.38,0.30],[-0.40,0.44],[-0.30,0.56],[0.38,0.30],[0.40,0.44],[0.30,0.56],[-0.12,0.64],[0.12,0.64]];
+    tufts.forEach(([tx,ty])=>{ const s=(tx<0?-1:tx>0?1:0);
+      ctx.beginPath(); ctx.moveTo(R*tx,R*(ty-0.07)); ctx.lineTo(R*(tx+s*0.13+(s===0?0.04:0)),R*ty); ctx.lineTo(R*tx,R*(ty+0.07)); ctx.closePath(); ctx.fill(); });
+    // scalloped fluffy hem along the belly bottom for extra volume
+    ctx.fillStyle="#ffffff";
+    for(let k=-3;k<=3;k++){ ctx.beginPath(); ctx.arc(k*R*0.09, R*0.60, R*0.07, 0, 6.28); ctx.fill(); }
+    // a big fluffy chest ruff at the neckline (denser + a second row for volume)
+    ctx.fillStyle="#e8eefa";
+    for(let k=-3;k<=3;k++){ ctx.beginPath(); ctx.arc(k*R*0.085, R*0.06, R*0.075, 0, 6.28); ctx.fill(); }
+    ctx.fillStyle="#ffffff";
+    for(let k=-2;k<=2;k++){ ctx.beginPath(); ctx.arc(k*R*0.095, -R*0.0, R*0.08, 0, 6.28); ctx.fill(); }
+    // cyan chest accent
+    ctx.fillStyle=protoAccent; ctx.globalAlpha=0.85; ctx.beginPath(); ctx.ellipse(0,R*0.16,R*0.1,R*0.045,0,0,6.28); ctx.fill(); ctx.globalAlpha=1;
+  } else {
+  ctx.fillStyle=muzzle; ctx.beginPath(); ctx.ellipse(0,R*0.30,R*0.26,R*0.44,0,0,6.28); ctx.fill();
+  ctx.fillStyle=muzzleDark; ctx.beginPath(); ctx.ellipse(-R*0.1,R*0.12,R*0.08,R*0.06,0.3,0,6.28); ctx.ellipse(R*0.11,R*0.22,R*0.07,R*0.05,-0.3,0,6.28); ctx.fill();
+  ctx.fillStyle=furLight; ctx.beginPath(); ctx.ellipse(0,-R*0.02,R*0.2,R*0.1,0,0,6.28); ctx.fill();
+  }
+
+  // arms
+  function arm(dir){ const swing=walk*dir*R*0.055; ctx.save(); ctx.translate(dir*R*(proto?0.32:0.39),R*0.16+swing); ctx.rotate(dir*(0.12+walk*0.035));
+    ctx.fillStyle=furDark; ctx.beginPath(); ctx.ellipse(0,R*0.20,R*0.12,R*0.31,0,0,6.28); ctx.fill();
+    if(proto){ ctx.strokeStyle=protoLine; ctx.lineWidth=R*0.02; ctx.stroke(); }   // outline separates arm from torso
+    ctx.fillStyle=fur; ctx.beginPath(); ctx.ellipse(0,R*0.18,R*0.085,R*0.27,0,0,6.28); ctx.fill();
+    if(proto){ // white limb with a thick horizontal cyan stripe (image-3 leg-warmer look)
+      ctx.fillStyle=protoAccent; ctx.beginPath(); ctx.roundRect(-R*0.085,R*0.24,R*0.17,R*0.07,R*0.03); ctx.fill();
+      ctx.fillStyle=protoSup?"#ffb090":"#8fe6ff"; ctx.beginPath(); ctx.roundRect(-R*0.085,R*0.10,R*0.17,R*0.04,R*0.02); ctx.fill();
+    }
+    if(proto){
+      // chunky paw-hand with toe beans (not a plain floating ball)
+      ctx.fillStyle=fur; ctx.beginPath(); ctx.ellipse(0,R*0.44,R*0.12,R*0.09,0,0,6.28); ctx.fill();
+      ctx.strokeStyle=protoLine; ctx.lineWidth=R*0.02; ctx.stroke();
+      ctx.fillStyle=protoLine; for(let k=-1;k<=1;k++){ ctx.beginPath(); ctx.ellipse(k*R*0.05,R*0.47,R*0.018,R*0.026,0,0,6.28); ctx.fill(); }
+    } else {
+      ctx.fillStyle=fur; ctx.beginPath(); ctx.arc(0,R*0.43,R*0.10,0,6.28); ctx.fill();
+    }
+    ctx.restore(); }
+  arm(-1); arm(1);
+
+  // collar + chain — thick gold choker riding high (clear of the chin) with a drop-shadow so it lifts off the body
+  const collarY = -R*0.14;
+  if(!proto){
+  ctx.fillStyle="rgba(0,0,0,.22)"; ctx.beginPath(); ctx.ellipse(0,collarY+R*0.11,R*0.30,R*0.07,0,0,6.28); ctx.fill();
+  ctx.fillStyle=shade(goldDark,-25); ctx.beginPath(); ctx.roundRect(-R*0.31,collarY,R*0.62,R*0.19,R*0.085); ctx.fill();
+  ctx.fillStyle=gold; ctx.beginPath(); ctx.roundRect(-R*0.30,collarY-R*0.02,R*0.60,R*0.15,R*0.07); ctx.fill();
+  ctx.fillStyle="#ffe9a0"; ctx.beginPath(); ctx.roundRect(-R*0.27,collarY-R*0.015,R*0.54,R*0.045,R*0.02); ctx.fill();
+  ctx.strokeStyle=goldDark; ctx.lineWidth=R*0.02; ctx.beginPath(); ctx.moveTo(-R*0.26,collarY+R*0.11); ctx.lineTo(R*0.26,collarY+R*0.11); ctx.stroke();
+  // hanging chain — interconnected oval links (alternating orientation) down to a pendant
+  const chainPts=[];
+  for(let i=0;i<=5;i++){ const s=i/5;
+    const cx=R*(0.02 + 0.17*Math.sin(s*Math.PI));
+    const cy=collarY+R*0.13 + s*R*0.46;
+    chainPts.push([cx,cy]);
+  }
+  chainPts.forEach((p,i)=>{
+    const upright=i%2===0;
+    ctx.strokeStyle=goldDark; ctx.lineWidth=R*0.05;
+    ctx.beginPath(); ctx.ellipse(p[0],p[1], upright?R*0.055:R*0.085, upright?R*0.085:R*0.055, 0,0,6.28); ctx.stroke();
+    ctx.strokeStyle=gold; ctx.lineWidth=R*0.03;
+    ctx.beginPath(); ctx.ellipse(p[0],p[1], upright?R*0.055:R*0.085, upright?R*0.085:R*0.055, 0,0,6.28); ctx.stroke();
+  });
+  const pend=chainPts[chainPts.length-1];
+  ctx.fillStyle=goldDark; ctx.beginPath(); ctx.arc(pend[0],pend[1]+R*0.11,R*0.10,0,6.28); ctx.fill();
+  ctx.fillStyle=gold; ctx.beginPath(); ctx.arc(pend[0],pend[1]+R*0.10,R*0.07,0,6.28); ctx.fill();
+  ctx.fillStyle="#ffe9a0"; ctx.beginPath(); ctx.arc(pend[0]-R*0.025,pend[1]+R*0.07,R*0.022,0,6.28); ctx.fill();
+  } else {
+    // Protogen: smaller mechanical shoulder joints seated at the shoulder seam (not big glued-on discs)
+    [-1,1].forEach(d=>{ ctx.save(); ctx.translate(d*R*0.30, -R*0.02);
+      ctx.fillStyle=protoLine; ctx.beginPath(); ctx.arc(0,0,R*0.135,0,6.28); ctx.fill();   // dark rim ties it into the body
+      ctx.fillStyle=protoSup?"#e07a5a":"#9fd8ee"; ctx.beginPath(); ctx.arc(0,0,R*0.11,0,6.28); ctx.fill();
+      ctx.fillStyle=protoSup?"#8a2f2a":"#5a9ec4"; ctx.beginPath(); ctx.arc(0,0,R*0.07,0,6.28); ctx.fill();
+      ctx.fillStyle="#14161c"; ctx.beginPath(); ctx.arc(0,0,R*0.038,0,6.28); ctx.fill();
+      ctx.fillStyle=protoAccent; ctx.shadowColor=protoAccent; ctx.shadowBlur=4; ctx.beginPath(); ctx.arc(0,0,R*0.018,0,6.28); ctx.fill(); ctx.shadowBlur=0;
+      ctx.restore(); });
+  }
+
+  // head
+  const headY = -R*0.48, headR = R*0.5;
+  // ears — bigger, broad pointed cat ears (hidden for protogen; its own ears come from the morph layer)
+  if(!proto){
+  ctx.fillStyle=furDark;
+  ctx.beginPath(); ctx.moveTo(-R*0.44,headY-R*0.18); ctx.lineTo(-R*0.56,headY-R*0.92); ctx.quadraticCurveTo(-R*0.14,headY-R*0.66,-R*0.04,headY-R*0.30); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(R*0.44,headY-R*0.18); ctx.lineTo(R*0.56,headY-R*0.92); ctx.quadraticCurveTo(R*0.14,headY-R*0.66,R*0.04,headY-R*0.30); ctx.closePath(); ctx.fill();
+  ctx.fillStyle="#d99a9e";
+  ctx.beginPath(); ctx.moveTo(-R*0.40,headY-R*0.30); ctx.lineTo(-R*0.48,headY-R*0.76); ctx.lineTo(-R*0.16,headY-R*0.46); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(R*0.40,headY-R*0.30); ctx.lineTo(R*0.48,headY-R*0.76); ctx.lineTo(R*0.16,headY-R*0.46); ctx.closePath(); ctx.fill();
+  }
+  // head — feline: wide across the brow/cheeks, tapering to a narrower chin (soft heart/wedge)
+  function headPath(rx,ry,cx){
+    ctx.beginPath();
+    ctx.moveTo(0,headY-ry);
+    ctx.bezierCurveTo(rx*1.02,headY-ry*0.55, rx*1.08,headY+ry*0.02, rx*0.9,headY+ry*0.38);
+    ctx.bezierCurveTo(rx*0.62,headY+ry*0.78, cx,headY+ry*0.98, 0,headY+ry*1.02);
+    ctx.bezierCurveTo(-cx,headY+ry*0.98,-rx*0.62,headY+ry*0.78,-rx*0.9,headY+ry*0.38);
+    ctx.bezierCurveTo(-rx*1.08,headY+ry*0.02,-rx*1.02,headY-ry*0.55,0,headY-ry);
+    ctx.closePath();
+  }
+  if(proto){
+    // compact rounded head fully covered by the visor+frame (no feline wedge poking out)
+    ctx.fillStyle="#c3d3e6"; ctx.beginPath(); ctx.ellipse(0,headY+R*0.02,R*0.5,R*0.42,0,0,6.28); ctx.fill();
+    ctx.fillStyle=fur;      ctx.beginPath(); ctx.ellipse(0,headY+R*0.06,R*0.44,R*0.36,0,0,6.28); ctx.fill();
+  } else {
+  ctx.fillStyle=furDark; headPath(headR*1.02,headR*0.98,R*0.1); ctx.fill();
+  ctx.fillStyle=fur;     headPath(headR*0.94,headR*0.9,R*0.08); ctx.fill();
+  }
+  if(!proto){
+  // white whiskers flaring out from the muzzle sides (3 per cheek)
+  ctx.strokeStyle="#fbf7ec"; ctx.lineWidth=R*0.022; ctx.lineCap="round";
+  ctx.beginPath();
+  ctx.moveTo(-R*0.16,headY+R*0.12); ctx.quadraticCurveTo(-R*0.5,headY+R*0.08,-R*0.72,headY+R*0.12);
+  ctx.moveTo(-R*0.16,headY+R*0.16); ctx.quadraticCurveTo(-R*0.5,headY+R*0.18,-R*0.74,headY+R*0.22);
+  ctx.moveTo(-R*0.16,headY+R*0.20); ctx.quadraticCurveTo(-R*0.46,headY+R*0.28,-R*0.68,headY+R*0.34);
+  ctx.moveTo(R*0.16,headY+R*0.12); ctx.quadraticCurveTo(R*0.5,headY+R*0.08,R*0.72,headY+R*0.12);
+  ctx.moveTo(R*0.16,headY+R*0.16); ctx.quadraticCurveTo(R*0.5,headY+R*0.18,R*0.74,headY+R*0.22);
+  ctx.moveTo(R*0.16,headY+R*0.20); ctx.quadraticCurveTo(R*0.46,headY+R*0.28,R*0.68,headY+R*0.34);
+  ctx.stroke();
+  ctx.fillStyle=muzzle; ctx.beginPath(); ctx.ellipse(0,headY+R*0.15,R*0.27,R*0.21,0,0,6.28); ctx.fill();
+  }
+
+  // hair — SPIKY, emerging from under the witch-hat brim, hanging down/out along the sides.
+  // (hidden for protogen — its own hair tuft comes from the morph layer)
+  if(!proto){
+  const hairTones=[hairBlue,"#1f6f9e",hairTeal,"#2aa38f",hairGreen,"#5cc24a"];
+  const hairTop=headY-R*0.34;
+  function spike(rx,ry,tx,ty,w,col){ ctx.fillStyle=col; ctx.beginPath();
+    ctx.moveTo(rx-w,ry); ctx.lineTo(tx,ty); ctx.lineTo(rx+w,ry); ctx.closePath(); ctx.fill(); }
+  ctx.fillStyle= furry?"#155f3a":"#1c5f8a"; ctx.beginPath();
+  ctx.moveTo(-R*0.5,hairTop); ctx.quadraticCurveTo(0,hairTop-R*0.12,R*0.5,hairTop);
+  ctx.quadraticCurveTo(R*0.3,headY-R*0.02,0,headY-R*0.02); ctx.quadraticCurveTo(-R*0.3,headY-R*0.02,-R*0.5,hairTop); ctx.closePath(); ctx.fill();
+  spike(-R*0.14,hairTop, -R*0.34,headY+R*0.02, R*0.09, hairTones[2]);
+  spike(-R*0.26,hairTop, -R*0.5, headY-R*0.02, R*0.09, hairTones[0]);
+  spike(-R*0.36,hairTop, -R*0.64,headY+R*0.06, R*0.08, hairTones[4]);
+  spike(-R*0.44,hairTop+R*0.04, -R*0.56,headY+R*0.24, R*0.07, hairTones[1]);
+  spike(R*0.14,hairTop, R*0.34,headY+R*0.02, R*0.09, hairTones[3]);
+  spike(R*0.26,hairTop, R*0.5, headY-R*0.02, R*0.09, hairTones[4]);
+  spike(R*0.36,hairTop, R*0.64,headY+R*0.06, R*0.08, hairTones[2]);
+  spike(R*0.44,hairTop+R*0.04, R*0.56,headY+R*0.24, R*0.07, hairTones[5]);
+  spike(-R*0.06,hairTop, -R*0.12,headY-R*0.12, R*0.06, hairTones[1]);
+  spike(R*0.06, hairTop, R*0.12, headY-R*0.12, R*0.06, hairTones[4]);
+  spike(0,hairTop, 0,headY-R*0.16, R*0.06, hairTones[2]);
+  }
+
+  // ===== WITCH HAT — sits high on the crown; ears poke through its brim =====
+  // (hidden for face-overlay skins so their visor/cowl reads cleanly)
+  if(!headGear){
+  const hatDk="#241a30", hat="#33254a", hatLt="#463466";
+  const hbY=headY-R*0.42;
+  ctx.fillStyle=hatDk; ctx.beginPath(); ctx.ellipse(0,hbY,R*0.7,R*0.2,0,0,6.28); ctx.fill();
+  ctx.fillStyle=hat;   ctx.beginPath(); ctx.ellipse(0,hbY-R*0.02,R*0.64,R*0.16,0,0,6.28); ctx.fill();
+  ctx.fillStyle=hat; ctx.beginPath();
+  ctx.moveTo(-R*0.32,hbY-R*0.04);
+  ctx.quadraticCurveTo(-R*0.16,hbY-R*0.5, R*0.18,hbY-R*0.98);
+  ctx.quadraticCurveTo(R*0.26,hbY-R*0.88, R*0.28,hbY-R*0.8);
+  ctx.quadraticCurveTo(R*0.3,hbY-R*0.34, R*0.34,hbY-R*0.03);
+  ctx.quadraticCurveTo(0,hbY-R*0.16,-R*0.32,hbY-R*0.04); ctx.closePath(); ctx.fill();
+  ctx.fillStyle=hatDk; ctx.beginPath();
+  ctx.moveTo(-R*0.32,hbY-R*0.04); ctx.quadraticCurveTo(-R*0.16,hbY-R*0.5,R*0.18,hbY-R*0.98);
+  ctx.quadraticCurveTo(-R*0.01,hbY-R*0.5,-R*0.01,hbY-R*0.1); ctx.quadraticCurveTo(-R*0.16,hbY-R*0.08,-R*0.32,hbY-R*0.04); ctx.closePath(); ctx.fill();
+  ctx.fillStyle=gold; ctx.beginPath(); ctx.ellipse(0,hbY-R*0.07,R*0.38,R*0.12,0,0,Math.PI); ctx.fill();
+  ctx.fillStyle=goldDark; ctx.fillRect(-R*0.06,hbY-R*0.14,R*0.12,R*0.1);
+  ctx.fillStyle=gold; ctx.fillRect(-R*0.04,hbY-R*0.12,R*0.08,R*0.06);
+  ctx.fillStyle=hatLt; ctx.beginPath(); ctx.arc(R*0.18,hbY-R*0.96,R*0.03,0,6.28); ctx.fill();
+  // ears poking THROUGH the brim (redraw upper portion over the hat)
+  const brimTop=hbY-R*0.14;
+  function earThrough(dir){
+    ctx.fillStyle=furDark; ctx.beginPath();
+    ctx.moveTo(dir*R*0.5, brimTop);
+    ctx.lineTo(dir*R*0.56, headY-R*0.92);
+    ctx.lineTo(dir*R*0.22, brimTop);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle="#d99a9e"; ctx.beginPath();
+    ctx.moveTo(dir*R*0.46, brimTop-R*0.02);
+    ctx.lineTo(dir*R*0.52, headY-R*0.82);
+    ctx.lineTo(dir*R*0.3, brimTop-R*0.02);
+    ctx.closePath(); ctx.fill();
+  }
+  earThrough(-1); earThrough(1);
+  }
+
+  // eyes — big almond shape (hidden for protogen — the visor face comes from the morph layer)
+  if(!proto){
+  function eyeDraw(dir){ const ex=dir*R*0.18, ey=headY-R*0.02;
+    ctx.save(); ctx.translate(ex,ey);
+    ctx.fillStyle="#fbf6ea"; ctx.beginPath();
+    ctx.moveTo(-dir*R*0.13,0); ctx.quadraticCurveTo(0,-R*0.14,dir*R*0.15,-R*0.02); ctx.quadraticCurveTo(0,R*0.09,-dir*R*0.13,0); ctx.fill();
+    ctx.fillStyle=eye; ctx.beginPath(); ctx.ellipse(0,-R*0.01,R*0.075,R*0.09,0,0,6.28); ctx.fill();
+    ctx.fillStyle="#0e1c08"; ctx.beginPath(); ctx.ellipse(0,-R*0.01,R*0.036,R*0.055,0,0,6.28); ctx.fill();
+    ctx.fillStyle="rgba(255,255,255,.9)"; ctx.beginPath(); ctx.arc(-dir*R*0.03,-R*0.05,R*0.02,0,6.28); ctx.fill();
+    ctx.strokeStyle="#141018"; ctx.lineWidth=R*0.028; ctx.lineCap="round"; ctx.beginPath();
+    ctx.moveTo(-dir*R*0.14,0); ctx.quadraticCurveTo(0,-R*0.16,dir*R*0.16,-R*0.03); ctx.stroke();
+    ctx.restore(); }
+  eyeDraw(-1); eyeDraw(1);
+  // pink nose + cleft
+  ctx.fillStyle="#e98b9b"; ctx.beginPath();
+  ctx.moveTo(0,headY+R*0.16); ctx.lineTo(-R*0.06,headY+R*0.09); ctx.quadraticCurveTo(0,headY+R*0.06,R*0.06,headY+R*0.09); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle=muzzleDark; ctx.lineWidth=R*0.016; ctx.beginPath(); ctx.moveTo(0,headY+R*0.16); ctx.lineTo(0,headY+R*0.21); ctx.stroke();
+  if(furry){
+    // Full Furry — snarling open mouth with bared fangs + angry brows
+    ctx.fillStyle="#3a1418"; ctx.beginPath(); ctx.ellipse(0,headY+R*0.235,R*0.11,R*0.07,0,0,6.28); ctx.fill();
+    ctx.fillStyle="#fff";
+    ctx.beginPath(); ctx.moveTo(-R*0.07,headY+R*0.19); ctx.lineTo(-R*0.045,headY+R*0.28); ctx.lineTo(-R*0.02,headY+R*0.19); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(R*0.07,headY+R*0.19); ctx.lineTo(R*0.045,headY+R*0.28); ctx.lineTo(R*0.02,headY+R*0.19); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle=furDark; ctx.lineWidth=R*0.03; ctx.lineCap="round"; ctx.beginPath();
+    ctx.moveTo(-R*0.28,headY-R*0.12); ctx.lineTo(-R*0.08,headY-R*0.04);
+    ctx.moveTo(R*0.28,headY-R*0.12); ctx.lineTo(R*0.08,headY-R*0.04); ctx.stroke();
+  } else {
+    ctx.strokeStyle="#69484b"; ctx.lineWidth=R*0.024; ctx.lineCap="round"; ctx.beginPath();
+    ctx.moveTo(-R*0.09,headY+R*0.2); ctx.quadraticCurveTo(0,headY+R*0.27,R*0.11,headY+R*0.2); ctx.stroke();
+  }
+
+  // earrings — hoops threaded along the right ear's outer edge
+  function hoop(x,y,s){ ctx.strokeStyle=gold; ctx.lineWidth=R*0.03; ctx.beginPath(); ctx.arc(x,y,R*s,0,6.28); ctx.stroke();
+    ctx.fillStyle="#ffe28a"; ctx.beginPath(); ctx.arc(x-R*s*0.4,y-R*s*0.4,R*0.012,0,6.28); ctx.fill(); }
+  for(let k=0;k<3;k++){ const f=0.25+k*0.24; const ex=R*(0.44+(0.56-0.44)*f), ey=headY-R*(0.18+(0.92-0.18)*f); hoop(ex,ey,0.055); }
+  }
+
+  if(furry){
+    // Full Furry — strong pulsing green aura + rising gold/green motes
+    const pulse=0.5+0.5*Math.sin(t*0.12);
+    const g=ctx.createRadialGradient(0,-R*0.1,R*0.2,0,-R*0.1,R*1.3);
+    g.addColorStop(0,"rgba(120,255,90,0)"); g.addColorStop(0.7,"rgba(90,230,70,0.10)"); g.addColorStop(1,"rgba(60,200,50,0)");
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,-R*0.1,R*1.3,0,6.28); ctx.fill();
+    ctx.globalAlpha=0.35+0.25*pulse; ctx.strokeStyle=hairGreen; ctx.lineWidth=R*0.06;
+    ctx.beginPath(); ctx.arc(0,-R*0.15,R*1.02+pulse*R*0.06,0,6.28); ctx.stroke();
+    ctx.globalAlpha=0.2+0.15*pulse; ctx.strokeStyle="#eaffca"; ctx.lineWidth=R*0.03;
+    ctx.beginPath(); ctx.arc(0,-R*0.15,R*1.12+pulse*R*0.08,0,6.28); ctx.stroke();
+    ctx.globalAlpha=1;
+    for(let m=0;m<7;m++){ const a=(t*0.03+m*0.9); const rr=R*(0.9+0.25*Math.sin(t*0.05+m));
+      const mx=Math.cos(a)*rr, my=-R*0.15+Math.sin(a)*rr*0.85;
+      ctx.fillStyle=m%2?"#c9ff7a":"#f7e08a"; ctx.globalAlpha=0.5+0.5*Math.sin(t*0.1+m);
+      ctx.beginPath(); ctx.arc(mx,my,R*0.05,0,6.28); ctx.fill(); }
+    ctx.globalAlpha=1;
+  }
+  ctx.restore();
+};
 
 
 function drawFighter(e){
@@ -9864,6 +12141,9 @@ function drawFighter(e){
     return;
   }
   if(e.isBanshee) ctx.globalAlpha=0.55;  // ghostly clone
+  // Aasta Dip: while vanished she's almost fully faded (a barely-there autumn shimmer). Own player keeps a
+  // faint outline so they can still track themselves; enemies read as basically gone.
+  if(e.dipInvis>0){ ctx.globalAlpha = e.isPlayer ? 0.16 : 0.06; }
 
   // De Kapper — show EXACTLY where the scissors cut: a snip-ring at the hit spot + a crisp X cut-mark
   if(e.snipFx>0 && e.snipAim){
@@ -9961,23 +12241,67 @@ function drawFighter(e){
     // Kayo: three raking claw slashes instead of a sword crescent
     if(e.char==='kayo' && e.form!=='yara'){
       const noir = e.skinMorph==='trenchcoat';   // Incognito: cool steel-grey noir rake
+      const pencil = e.skinMorph==='sch_pencils';   // Colour Pencils: the rake becomes three crayon strokes
       const lead=aa-half + 2*half*p;
       ctx.save(); ctx.rotate(lead);
       // faint smear behind the rake
-      ctx.fillStyle=noir?"rgba(200,210,225,"+(0.16*(1-p))+")":"rgba(255,236,210,"+(0.18*(1-p))+")";
+      ctx.fillStyle=noir?"rgba(200,210,225,"+(0.16*(1-p))+")":pencil?"rgba(255,240,200,"+(0.14*(1-p))+")":"rgba(255,236,210,"+(0.18*(1-p))+")";
       ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,reach,-0.5,0.5); ctx.closePath(); ctx.fill();
       // three tapered claw streaks fanning out along the swing
+      const crayons=["#e0533a","#3a86ff","#f4c430"];
       for(let k=-1;k<=1;k++){
         const off=k*0.28;
-        const grd=ctx.createLinearGradient(reach*0.2,off*reach*0.2, reach,off*reach);
-        grd.addColorStop(0,"rgba(255,255,255,0)");
-        grd.addColorStop(0.5,noir?"rgba(238,242,247,"+(0.9*(1-p*0.5))+")":"rgba(255,250,240,"+(0.9*(1-p*0.5))+")");
-        grd.addColorStop(1,noir?"rgba(150,160,175,0)":"rgba(255,210,170,0)");
-        ctx.strokeStyle=grd; ctx.lineWidth=(k===0?4:3); ctx.lineCap="round";
+        ctx.lineWidth=(k===0?4:3); ctx.lineCap="round";
+        if(pencil){
+          ctx.strokeStyle=crayons[k+1];   // solid waxy crayon colour per streak
+        } else {
+          const grd=ctx.createLinearGradient(reach*0.2,off*reach*0.2, reach,off*reach);
+          grd.addColorStop(0,"rgba(255,255,255,0)");
+          grd.addColorStop(0.5,noir?"rgba(238,242,247,"+(0.9*(1-p*0.5))+")":"rgba(255,250,240,"+(0.9*(1-p*0.5))+")");
+          grd.addColorStop(1,noir?"rgba(150,160,175,0)":"rgba(255,210,170,0)");
+          ctx.strokeStyle=grd;
+        }
         ctx.beginPath(); ctx.moveTo(reach*0.28, off*reach*0.28);
         ctx.quadraticCurveTo(reach*0.7, off*reach*0.85, reach*1.02, off*reach*1.15); ctx.stroke();
       }
       ctx.restore();
+    } else if(e.char==='jenna'){
+      // Baguette Whack: a chunky bread swipe — OR, as Lunch Lady, a steel soup-ladle swipe with steam.
+      const lunch = e.skinMorph==='sch_lunchlady';
+      const lead=aa-half + 2*half*p;
+      ctx.save(); ctx.rotate(lead);
+      const len=reach*0.95, w=reach*0.26;
+      const grd=ctx.createLinearGradient(reach*0.2,0,len,0);
+      if(lunch){
+        grd.addColorStop(0,"rgba(200,208,218,0)");
+        grd.addColorStop(0.35,"rgba(196,204,214,"+(0.95*(1-p*0.4))+")");   // steel ladle body
+        grd.addColorStop(1,"rgba(150,158,168,"+(0.9*(1-p*0.4))+")");       // darker rim
+      } else {
+        grd.addColorStop(0,"rgba(230,196,140,0)");
+        grd.addColorStop(0.35,"rgba(226,190,128,"+(0.95*(1-p*0.4))+")");   // golden crumb
+        grd.addColorStop(1,"rgba(196,150,86,"+(0.9*(1-p*0.4))+")");        // baked crust tip
+      }
+      ctx.fillStyle=grd;
+      ctx.beginPath(); ctx.moveTo(reach*0.2,-w*0.35);
+      ctx.quadraticCurveTo(len*0.6,-w*0.5, len,-w*0.28);
+      ctx.quadraticCurveTo(len*1.06,0, len,w*0.28);
+      ctx.quadraticCurveTo(len*0.6,w*0.5, reach*0.2,w*0.35);
+      ctx.closePath(); ctx.fill();
+      if(lunch){
+        // ladle bowl at the tip + a couple of rising steam wisps
+        ctx.fillStyle="rgba(170,178,188,"+(0.9*(1-p*0.4))+")"; ctx.beginPath(); ctx.arc(len,0,w*0.5,0,6.28); ctx.fill();
+        ctx.strokeStyle="rgba(240,244,250,"+(0.5*(1-p))+")"; ctx.lineWidth=2; ctx.lineCap="round";
+        for(let k=-1;k<=1;k++){ ctx.beginPath(); ctx.moveTo(len+k*w*0.3, -w*0.5); ctx.quadraticCurveTo(len+k*w*0.3+w*0.2,-w*1.0, len+k*w*0.3,-w*1.4); ctx.stroke(); }
+      } else {
+        // a couple of diagonal crust score-marks along the loaf
+        ctx.strokeStyle="rgba(150,104,54,"+(0.75*(1-p*0.5))+")"; ctx.lineWidth=2; ctx.lineCap="round";
+        for(let k=0;k<3;k++){ const cx=len*(0.4+k*0.2); ctx.beginPath(); ctx.moveTo(cx,-w*0.22); ctx.lineTo(cx+w*0.16,w*0.1); ctx.stroke(); }
+      }
+      ctx.restore();
+      // crumbs flaking off the swing (replaces the sparkle motes)
+      ctx.fillStyle="rgba(214,176,112,"+(0.8*(1-p))+")";
+      for(let k=0;k<7;k++){ const a2=(aa-half)+2*half*(k/6), d=reach*(0.6+0.4*((k*2+e.slash)%5)/5);
+        ctx.beginPath(); ctx.arc(Math.cos(a2)*d, Math.sin(a2)*d, rand(1.4,2.6), 0,6.28); ctx.fill(); }
     } else {
     const aaa=aa;
     const lead=aaa-half + 2*half*p;                          // the blade edge sweeps across the cone
@@ -10058,16 +12382,21 @@ function drawFighter(e){
     const water = e.char==="dynant";   // Dynant sprays a firefighter's water jet
     const ifrit = e.skinMorph==='ifrit';   // Reshman Ifrit: deep infernal flamethrower
     const slime = e.skinMorph==='slime';   // Johan Slime: green goo spray
+    // Dynant skin cone-reskins: Manticore = orange fire-breath, Milky Way = white milk/starlight, Music Class = gold brass blast
+    const manti = e.skinMorph==='manticore', milky = e.skinMorph==='spc_galaxy', band = e.skinMorph==='sch_tuba';
     ctx.save(); ctx.rotate(aa);
     const grd=ctx.createLinearGradient(0,0,reach,0);
     if(slime){ grd.addColorStop(0,"rgba(180,255,200,"+(p*0.75)+")"); grd.addColorStop(0.6,"rgba(58,198,138,"+(p*0.45)+")"); grd.addColorStop(1,"rgba(30,140,90,0)"); }
+    else if(manti){ grd.addColorStop(0,"rgba(255,236,170,"+(p*0.85)+")"); grd.addColorStop(0.4,"rgba(255,122,42,"+(p*0.6)+")"); grd.addColorStop(0.75,"rgba(210,50,20,"+(p*0.4)+")"); grd.addColorStop(1,"rgba(120,20,10,0)"); }
+    else if(milky){ grd.addColorStop(0,"rgba(255,255,255,"+(p*0.85)+")"); grd.addColorStop(0.55,"rgba(226,224,255,"+(p*0.45)+")"); grd.addColorStop(1,"rgba(180,190,240,0)"); }
+    else if(band){ grd.addColorStop(0,"rgba(255,232,138,"+(p*0.8)+")"); grd.addColorStop(0.55,"rgba(212,160,42,"+(p*0.45)+")"); grd.addColorStop(1,"rgba(42,52,104,0)"); }
     else if(water){ grd.addColorStop(0,"rgba(224,246,255,"+(p*0.8)+")"); grd.addColorStop(0.55,"rgba(127,208,240,"+(p*0.45)+")"); grd.addColorStop(1,"rgba(70,150,220,0)"); }
     else if(soap){ grd.addColorStop(0,"rgba(200,240,255,"+(p*0.7)+")"); grd.addColorStop(0.6,"rgba(120,200,255,"+(p*0.4)+")"); grd.addColorStop(1,"rgba(90,160,240,0)"); }
     else if(ifrit){ grd.addColorStop(0,"rgba(255,240,180,"+(p*0.85)+")"); grd.addColorStop(0.4,"rgba(255,120,30,"+(p*0.6)+")"); grd.addColorStop(0.75,"rgba(200,30,20,"+(p*0.4)+")"); grd.addColorStop(1,"rgba(120,10,10,0)"); }
     else { grd.addColorStop(0,"rgba(255,180,60,"+(p*0.7)+")"); grd.addColorStop(0.6,"rgba(230,90,30,"+(p*0.4)+")"); grd.addColorStop(1,"rgba(200,40,20,0)"); }
     ctx.fillStyle=grd; ctx.beginPath(); ctx.moveTo(R*0.3,0); ctx.arc(0,0,reach,-half,half); ctx.closePath(); ctx.fill();
-    // riding specks: goo blobs (slime), embers (spice/ifrit), water droplets (water), or bubbles (soap)
-    ctx.fillStyle= slime ? "rgba(140,240,180,"+p+")" : water ? "rgba(210,240,255,"+p+")" : soap ? "rgba(230,248,255,"+p+")" : (ifrit?"rgba(255,200,90,"+p+")":"rgba(255,220,120,"+p+")");
+    // riding specks: themed to the spray
+    ctx.fillStyle= slime ? "rgba(140,240,180,"+p+")" : manti ? "rgba(255,200,90,"+p+")" : milky ? "rgba(255,255,255,"+p+")" : band ? "rgba(255,224,120,"+p+")" : water ? "rgba(210,240,255,"+p+")" : soap ? "rgba(230,248,255,"+p+")" : (ifrit?"rgba(255,200,90,"+p+")":"rgba(255,220,120,"+p+")");
     for(let k=0;k<(ifrit?9:6);k++){ const a=(-half+ (k/(ifrit?8:5))*2*half)*(0.6+0.4*Math.random()), d=reach*(0.35+0.6*((k*7+frame)%10)/10);
       ctx.beginPath(); ctx.arc(Math.cos(a)*d, Math.sin(a)*d, (slime?3.5:ifrit?3:2.5)*p+1, 0,6.28); ctx.fill(); }
     ctx.restore(); }
@@ -10115,6 +12444,21 @@ function drawFighter(e){
   }
   // Claire enrage aura (angry red glow while enraged)
   if(e.enrage>0){ ctx.globalAlpha=0.25+0.15*Math.sin(frame*0.4); ctx.fillStyle="#ff5330"; ctx.beginPath(); ctx.arc(0,0,R*1.5,0,6.28); ctx.fill(); ctx.globalAlpha=1; }
+  // Aasta Seasonal Visit — a fast crescent slash sweeping through her aim (bigger + gold on an arrival strike)
+  if(e.visitSwing>0 && e.visitAim){
+    const aa=Math.atan2(e.visitAim.y,e.visitAim.x), p=1-e.visitSwing/12, half=e.visitArrived?0.9:0.7;
+    const reach=(e.visitArrived?150:120);
+    const lead=aa-half + 2*half*p, tail=lead-0.7;
+    // crescent smear
+    ctx.fillStyle= e.visitArrived ? "rgba(255,224,150,"+(0.42*(1-p))+")" : "rgba(232,198,106,"+(0.3*(1-p))+")";
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,reach,tail,lead); ctx.closePath(); ctx.fill();
+    // bright leading blade
+    ctx.strokeStyle= e.visitArrived ? "#fff3d0" : "#f2e0a8"; ctx.lineWidth=e.visitArrived?4:3; ctx.lineCap="round";
+    ctx.beginPath(); ctx.arc(0,0,reach,lead-0.28,lead); ctx.stroke();
+    // a couple of autumn-leaf motes flung off the tip
+    if(e.visitArrived){ for(let k=0;k<3;k++){ const a2=lead-0.1*k, d=reach*(0.7+0.1*k);
+      ctx.fillStyle=k%2?"#d9622a":"#e8c66a"; ctx.beginPath(); ctx.ellipse(Math.cos(a2)*d,Math.sin(a2)*d,3,1.6,a2,0,6.28); ctx.fill(); } }
+  }
   if(e.kissSwing>0 && e.kissAim){ const aa=Math.atan2(e.kissAim.y,e.kissAim.x), p=1-e.kissSwing/12, half=0.7;
     const reach=(c.atk.meleeRange||90)+30;   // draw the sweep a bit past the actual hit radius so it reads clearly
     const phx = e.skinMorph==='phoenix';     // Phoenix: fiery arc + flung embers instead of a pink kiss + hearts
@@ -10143,6 +12487,29 @@ function drawFighter(e){
     const sg=ctx.createRadialGradient(tx,ty,1,tx,ty,16*(1-p)+4);
     sg.addColorStop(0,"rgba(255,"+(phx?"235,200":"240,248")+","+(1-p)+")"); sg.addColorStop(1,"rgba("+softC+",0)");
     ctx.fillStyle=sg; ctx.beginPath(); ctx.arc(tx,ty,16*(1-p)+4,0,6.28); ctx.fill();
+  }
+
+  // Aasta — Seasonal Visit: a fast crescent slash sweeping along the aim (brighter + wider on an arrival strike)
+  if(e.visitSwing>0 && e.visitAim){
+    const aa=Math.atan2(e.visitAim.y,e.visitAim.x), p=1-e.visitSwing/12, half=e.visitArrived?0.8:0.6;
+    const reach=(AIM.aasta&&AIM.aasta.reach||130)+18;
+    const lead=aa-half + 2*half*p, tail=lead-0.7;
+    const col = e.visitArrived ? "255,236,170" : "232,198,106";   // gold; arrival = brighter cream-gold
+    // smear behind the blade
+    ctx.fillStyle="rgba("+col+","+(0.26*(1-p))+")"; ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,reach,tail,lead); ctx.closePath(); ctx.fill();
+    // layered blade strokes along the leading edge
+    for(let s=0;s<3;s++){ const rr=reach*(1-s*0.12);
+      ctx.strokeStyle="rgba("+(s===0?"255,248,220":col)+","+(0.9-s*0.25)*(1-p*0.5)+")"; ctx.lineWidth=(3-s)*2.4+2; ctx.lineCap="round";
+      ctx.beginPath(); ctx.arc(0,0,rr,lead-0.5,lead); ctx.stroke(); }
+    // a scatter of little autumn leaves flung along the edge (her seasonal motif)
+    for(let k=0;k<(e.visitArrived?4:2);k++){ const a=lead-0.12*k, d=reach*(0.7+0.1*k);
+      ctx.fillStyle="rgba("+(k%2?"217,98,42":"232,198,106")+","+(1-p)+")";
+      ctx.beginPath(); ctx.ellipse(Math.cos(a)*d,Math.sin(a)*d,(5-k)*1.1,(5-k)*0.6,a,0,6.28); ctx.fill(); }
+    // bright flash at the blade tip
+    const tx=Math.cos(lead)*reach, ty=Math.sin(lead)*reach;
+    const sg=ctx.createRadialGradient(tx,ty,1,tx,ty,(e.visitArrived?18:12)*(1-p)+4);
+    sg.addColorStop(0,"rgba(255,248,220,"+(1-p)+")"); sg.addColorStop(1,"rgba("+col+",0)");
+    ctx.fillStyle=sg; ctx.beginPath(); ctx.arc(tx,ty,(e.visitArrived?18:12)*(1-p)+4,0,6.28); ctx.fill();
   }
 
   // status rings (under body)
@@ -10235,7 +12602,10 @@ function drawFighter(e){
     // custom art-pass brawlers draw their own body; everyone else uses the shared blob template
     if(CUSTOM_DRAW[e.char]){
       if(e.skinMorph) drawMorph(ctx, e.skinMorph, R, e, 'back');   // wings/auras behind the body
-      CUSTOM_DRAW[e.char](ctx, e, R, body, dark, light);
+      // some custom sprites read small next to the blob-template brawlers — scale JUST the drawing up
+      // (hitbox/bars/overlays keep the real R). Meta AI stays kid-sized on purpose.
+      const ss=SPRITE_SCALE[e.char]||1;
+      CUSTOM_DRAW[e.char](ctx, e, R*ss, body, dark, light);
       if(e.skinMorph) drawMorph(ctx, e.skinMorph, R, e, 'front');  // heads/halos/helms in front
       if(e.skinGear) drawSkinGear(ctx, e.skinGear, R, e);   // rare-skin extras still layer on top
     } else {
@@ -10406,10 +12776,15 @@ function drawFighter(e){
     bars.push({v:clamp(e.hp/e.maxHp,0,1), col:'#7ee06b', bg:'#3f7d3a'});      // HP (always)
     if(e.ammoMax>0) bars.push({v:clamp(e.ammo/e.ammoMax,0,1), col:'#8fd8ff', bg:'#2e6fb0'}); // ammo (Deniz)
     if(e.char==="claire") bars.push({v: e.enrage>0 ? 1 : clamp((e.rage||0)/100,0,1), col: e.enrage>0?'#ff5330':'#ff8a3d', bg:'#7a2a1a'}); // Rage Meter
+    if(e.char==="jenna") bars.push({v:clamp(e.momo||0,0,1), col:'#ff5aa0', bg:'#7a2a52'}); // Momentum: how much faster she's running
     if(e.secondWind>0 && e.swCap>0) bars.push({v:clamp(e.swBank/e.swCap,0,1), col:'#5fe0a0', bg:'#1f6b48'}); // Adma Jr: Second Wind bank meter
     bars.push({v:clamp(e.superCharge/SUPER_MAX,0,1), col:'#f4c430', bg:'#8a6a10'});          // super (always)
     const w=52, h=6, gap=3;
-    const stackTop=e.y+bob-R-20-hrPad - (bars.length-1)*(h+gap);
+    // if a title is equipped, drop the whole bar stack a line so the title fits ABOVE the bars without touching them
+    const _tid=save.equippedTitle&&save.equippedTitle[e.char];
+    const _hasTitle=_tid && TITLES[_tid] && save.titles.includes(_tid);
+    const titlePad=_hasTitle?13:0;
+    const stackTop=e.y+bob-R-20-hrPad - (bars.length-1)*(h+gap) + titlePad;
     let byy=stackTop;
     bars.forEach(b=>{
       const bx=e.x-w/2;
@@ -10418,7 +12793,17 @@ function drawFighter(e){
       ctx.fillStyle=b.col; roundRectPath(bx,byy,w*b.v,h,3); ctx.fill();
       byy+=h+gap;
     });
-    nameplate(e.x, stackTop-6, growthTier(growthOf(e.char)).icon+" YOU", "#ffe36b");  // name + growth badge above the bar stack
+    const pname = (save.name && save.name.trim()) || "YOU";
+    // order top→bottom: NAME, then TITLE just under it, then the bar stack — title never overlaps the HP bar.
+    const tid=save.equippedTitle&&save.equippedTitle[e.char];
+    const hasTitle = tid && TITLES[tid] && save.titles.includes(tid);
+    // title sits ~10px above the bars; name goes another line above the title (or just above the bars if no title)
+    if(hasTitle){
+      nameplate(e.x, stackTop-22, growthTier(growthOf(e.char)).icon+" "+pname, "#ffe36b");
+      nameplate(e.x, stackTop-9,  TITLES[tid].name, "#ffd98a");   // between name and bars, clear of the HP bar
+    } else {
+      nameplate(e.x, stackTop-9, growthTier(growthOf(e.char)).icon+" "+pname, "#ffe36b");
+    }
   } else {
     // enemy: just a small HP bar
     const w=44, bx=e.x-w/2, byy=e.y+bob-R-20-hrPad;
@@ -10657,7 +13042,7 @@ function drawGear(e,R,body,dark,light){
 const GEAR_ANCHOR = {
   yassin:{s:1.42,hx:0,hy:-0.72}, milo:{s:1.3,hx:0,hy:-0.68}, deniz:{s:1.3,hx:0,hy:-0.78},
   fionn:{s:1.3,hx:0,hy:-0.66}, reshman:{s:1.25,hx:0,hy:-0.66}, adam:{s:1.25,hx:0,hy:-0.7},
-  evadam:{s:1.28,hx:0,hy:-0.7}, jake:{s:1.22,hx:0,hy:-0.72}, kimchi:{s:1.24,hx:0,hy:-0.7},
+  evadam:{s:1.28,hx:0,hy:-0.7}, jake:{s:1.22,hx:0,hy:-0.72}, youngfyon:{s:1.15,hx:0,hy:-0.74}, kimchi:{s:1.24,hx:0,hy:-0.7},
   dean:{s:1.24,hx:0,hy:-0.72}, claire:{s:1.26,hx:0,hy:-0.72}, waitress:{s:1.22,hx:0,hy:-0.72},
   sanne:{s:1.24,hx:0,hy:-0.72}, fluharty:{s:1.22,hx:0,hy:-0.72},
   jax:{s:1.2,hx:0,hy:-0.72}, kapper:{s:1.22,hx:0,hy:-0.72}, dynant:{s:1.24,hx:0,hy:-0.72}, adma:{s:1.2,hx:0,hy:-0.72},
@@ -10666,8 +13051,17 @@ const GEAR_ANCHOR = {
   lars:{s:1,hx:0,hy:-0.72}, josh:{s:1,hx:0,hy:-0.74}, robin:{s:1,hx:0,hy:-0.7},
   renas:{s:1,hx:0,hy:-0.78}, stalker:{s:1,hx:0,hy:-0.82}, sonia:{s:1,hx:0,hy:-0.9},
   marlin:{s:1,hx:0,hy:-0.92}, nathan:{s:1,hx:0,hy:-0.95}, daniel:{s:1,hx:0,hy:-0.94}, johan:{s:1,hx:0,hy:-0.96},
+  // Druk is an upright dragon; head centered near (0,-0.86R) with horns sweeping above
+  druk:{s:1,hx:0,hy:-0.86},
   // Otis is a side-view quadruped: head is at the front, inside a helmet dome
   otis:{s:1,hx:0.85,hy:-0.35},
+  // Hammed: small feline head centered at headY=-0.48R (face/eyes ~ -0.5R). Gear art centers its face
+  // near its own origin; the drawSkinGear map adds +R*1.0, so hy=-1.46 lands the visor/cowl over the eyes.
+  hammed:{s:1,hx:0,hy:-1.46},
+  // Aasta: slim humanoid, head center at headY=-0.5R (eyes ~ -0.46R). hy=-1.41 lands the shades on the eye line.
+  aasta:{s:1,hx:0,hy:-1.41},
+  // Carol: stout, head center at headY=-0.44R. hy=-1.44 seats the judge's wig on her head.
+  carol:{s:1,hx:0,hy:-1.44},
 };
 // Extra clearance (in R units) that a skin's tallest head accessory reaches above the body top, so the
 // health/super bars + nameplate float ABOVE hats/antlers/crowns instead of covering them.
@@ -10686,11 +13080,16 @@ const MORPH_HEADROOM = { cerberus:0.5, phoenix:0.7, mothman:0.6, jotunn:0.9, val
   nat_bamboo:1.2, nat_log:0.6, nat_bear:0.7, nat_raccoon:0.6, nat_owl:0.9,
   nat_willow:1.3, nat_flytrap:0.9, nat_wasp:1.0, nat_seal:0.4, nat_urchin:0.7, nat_rose:1.1,
   spc_aliencat:0.5, spc_galaxy:0.5, spc_nebula:0.6,
-  spc_rocket:0.9, spc_comet:0.6, spc_telescope:0.8, spc_station:0.5, spc_lander:0.7, spc_constellation:0.7 };
+  spc_rocket:0.9, spc_comet:0.6, spc_telescope:0.8, spc_station:0.5, spc_lander:0.7, spc_constellation:0.7,
+  sch_teslacoil:0.6, sch_smartboard:0.6, sch_clown:0.7, sch_protogen:0.6 };
 const GEAR_HEADROOM = { sonia_dread:0.5, silver_champion:0.7, jake_moon:0.5, sanne_captain:0.5, renas_abyss:0.4,
   waitress_head:0.7, marlin_reef:0.4, claire_demon:0.7, stalker_neon:0.6, fluharty_allstar:0.3,
   jax_verified:0.5, jax_ragebait:0.7, kapper_golden:0.5, kapper_oldtimer:0.4,
-  dynant_hazmat:0.5, dynant_smoke:0.5, adma_noir:0.4, adma_gilded:0.6, kayo_bandit:0.4, kayo_neon:0.4 };
+  dynant_hazmat:0.5, dynant_smoke:0.5, adma_noir:0.4, adma_gilded:0.6, kayo_bandit:0.4, kayo_neon:0.4,
+  druk_storm:0.6, druk_ember:0.7,
+  youngfyon_shadow:0.3, youngfyon_scarlet:0.6,
+  metaai_neon:0.5, metaai_solar:0.5, potplant_cactus:0.6, potplant_orchid:0.7,
+  meiden_leather:0.3, meiden_neon:0.2, hammed_fennec:0.4, hammed_sergal:0.3, aasta_shades:0.2, carol_wig:0.5 };
 // how far (px) above the normal bar anchor this fighter's accessories push the overhead UI
 function headroomFor(e){
   let hr=0;
@@ -11018,6 +13417,106 @@ function drawSkinGearArt(g, style, R){
       g.fillStyle="#eaffff"; g.beginPath(); g.roundRect(R*0.1-R*0.4,-R*0.93,R*0.8,R*0.04,2); g.fill();   // visor highlight
       g.strokeStyle="#c86aff"; g.lineWidth=R*0.06; g.beginPath(); g.moveTo(R*0.1-R*0.44,-R*0.54); g.lineTo(R*0.1+R*0.44,-R*0.54); g.stroke();   // collar
       g.fillStyle="#ff4fd0"; g.beginPath(); g.arc(R*0.1,-R*0.5,R*0.07,0,6.28); g.fill(); break;   // collar tag
+    case 'druk_storm': // Storm Scale: a low storm-cloud crest with forked lightning + charged sparks
+      g.fillStyle="#4a6a90"; // dark cloud lobes above the head
+      g.beginPath(); g.arc(R*0.1-R*0.34,-R*1.2,R*0.2,0,6.28); g.arc(R*0.1,-R*1.32,R*0.24,0,6.28); g.arc(R*0.1+R*0.34,-R*1.2,R*0.2,0,6.28); g.fill();
+      g.fillStyle="#6d8db2"; g.beginPath(); g.arc(R*0.1-R*0.1,-R*1.24,R*0.14,0,6.28); g.arc(R*0.1+R*0.22,-R*1.16,R*0.12,0,6.28); g.fill();   // lighter cloud highlights
+      g.strokeStyle="#bfe6ff"; g.lineWidth=R*0.06; g.lineJoin="round"; // forked lightning dropping from the cloud
+      g.beginPath(); g.moveTo(R*0.1,-R*1.08); g.lineTo(R*0.1-R*0.1,-R*0.9); g.lineTo(R*0.1+R*0.04,-R*0.88); g.lineTo(R*0.1-R*0.08,-R*0.68); g.stroke();
+      g.fillStyle="#eaffff"; for(let k=0;k<3;k++){ const a=k/3*6.28+0.4; g.beginPath(); g.arc(R*0.1+Math.cos(a)*R*0.5,-R*1.24+Math.sin(a)*R*0.22,R*0.035,0,6.28); g.fill(); } break;   // charged sparks
+    case 'druk_ember': // Ember Wyrm: a glowing ember crown with rising smoke wisps + drifting sparks
+      g.fillStyle="#e0522a"; // jagged ember crown
+      g.beginPath(); for(let k=-2;k<=2;k++){ const x=R*0.1+k*R*0.2; g.moveTo(x-R*0.09,-R*1.14); g.lineTo(x,-R*1.4); g.lineTo(x+R*0.09,-R*1.14); } g.closePath(); g.fill();
+      g.fillStyle="#f4b23a"; g.beginPath(); for(let k=-2;k<=2;k++){ const x=R*0.1+k*R*0.2; g.moveTo(x-R*0.04,-R*1.16); g.lineTo(x,-R*1.32); g.lineTo(x+R*0.04,-R*1.16); } g.closePath(); g.fill();   // hot inner glow
+      g.fillStyle="#2e2a2a"; g.globalAlpha=0.5; // smoke wisps rising off the crown
+      g.beginPath(); g.arc(R*0.1-R*0.2,-R*1.5,R*0.09,0,6.28); g.arc(R*0.1+R*0.06,-R*1.62,R*0.08,0,6.28); g.arc(R*0.1+R*0.24,-R*1.5,R*0.07,0,6.28); g.fill(); g.globalAlpha=1;
+      g.fillStyle="#ffd06a"; for(let k=0;k<3;k++){ const a=k/3*6.28+1.0; g.beginPath(); g.arc(R*0.1+Math.cos(a)*R*0.46,-R*1.34+Math.sin(a)*R*0.18,R*0.03,0,6.28); g.fill(); } break;   // drifting sparks
+    case 'youngfyon_shadow': // Shadow Recruit: a dark hood + trailing scarf tails (a fleet-footed night look)
+      g.fillStyle="#2f3a5a"; g.beginPath(); g.arc(R*0.1,-R*1.0,R*0.62,Math.PI*0.9,Math.PI*2.1); g.fill();   // hood over the head
+      g.fillStyle="#3d4a70"; g.beginPath(); g.moveTo(R*0.1-R*0.5,-R*0.7); g.quadraticCurveTo(R*0.1-R*1.0,-R*0.5,R*0.1-R*0.86,-R*0.2); g.quadraticCurveTo(R*0.1-R*0.5,-R*0.45,R*0.1-R*0.4,-R*0.6); g.closePath(); g.fill();   // scarf tail streaming back
+      g.fillStyle="#8fb4ff"; g.beginPath(); g.arc(R*0.24,-R*0.98,R*0.05,0,6.28); g.arc(-R*0.02,-R*0.98,R*0.05,0,6.28); g.fill(); break;   // glinting eyes in the shadow
+    case 'youngfyon_scarlet': // Scarlet Cadet: a small tuft of ember-flames tied in a headband
+      g.fillStyle="#7a2a1a"; g.fillRect(R*0.1-R*0.5,-R*1.02,R*1.0,R*0.12);   // headband
+      g.fillStyle="#e0522a"; g.beginPath(); for(let k=-1;k<=1;k++){ const x=R*0.1+k*R*0.26; g.moveTo(x-R*0.09,-R*1.06); g.quadraticCurveTo(x,-R*1.5,x+R*0.09,-R*1.06); } g.closePath(); g.fill();   // ember tuft
+      g.fillStyle="#ffd06a"; for(let k=-1;k<=1;k++){ const x=R*0.1+k*R*0.26; g.beginPath(); g.moveTo(x-R*0.03,-R*1.1); g.quadraticCurveTo(x,-R*1.32,x+R*0.03,-R*1.1); g.closePath(); g.fill(); } break;   // hot inner flame
+    case 'metaai_neon': // Neon Core: a glowing cyan halo-ring hovering above the head + two floating side-nodes
+      g.strokeStyle="#2ae0c0"; g.lineWidth=R*0.07; g.beginPath(); g.ellipse(R*0.1,-R*1.28,R*0.42,R*0.14,0,0,6.28); g.stroke();   // halo ring
+      g.strokeStyle="#8afce8"; g.lineWidth=R*0.03; g.beginPath(); g.ellipse(R*0.1,-R*1.28,R*0.42,R*0.14,0,0,6.28); g.stroke();
+      g.fillStyle="#2ae0c0"; g.beginPath(); g.arc(R*0.1-R*0.52,-R*0.95,R*0.08,0,6.28); g.arc(R*0.1+R*0.52,-R*0.95,R*0.08,0,6.28); g.fill();   // side nodes
+      g.fillStyle="#d6fff6"; g.beginPath(); g.arc(R*0.1-R*0.52,-R*0.95,R*0.035,0,6.28); g.arc(R*0.1+R*0.52,-R*0.95,R*0.035,0,6.28); g.fill(); break;
+    case 'metaai_solar': // Solar Unit: a small solar-panel crown + a warm glow
+      g.fillStyle="#2a3450"; g.beginPath(); g.roundRect(R*0.1-R*0.5,-R*1.24,R*1.0,R*0.22,R*0.03); g.fill();   // panel
+      g.strokeStyle="#f6b23a"; g.lineWidth=R*0.02; for(let k=-1;k<=2;k++){ g.beginPath(); g.moveTo(R*0.1+k*R*0.25,-R*1.24); g.lineTo(R*0.1+k*R*0.25,-R*1.02); g.stroke(); }   // panel cells
+      g.fillStyle="#ffd06a"; g.globalAlpha=0.5; g.beginPath(); g.arc(R*0.1,-R*1.34,R*0.18,0,6.28); g.fill(); g.globalAlpha=1;   // sun glow
+      g.fillStyle="#f6b23a"; g.beginPath(); g.arc(R*0.1,-R*1.34,R*0.09,0,6.28); g.fill(); break;
+    case 'potplant_cactus': // Prickly Pete: a spiky cactus crown ringed with little spines + a tiny red flower
+      g.fillStyle="#3f9a5a"; g.beginPath(); g.ellipse(R*0.1,-R*1.1,R*0.34,R*0.4,0,0,6.28); g.fill();   // cactus pad
+      g.strokeStyle="#e8f0c0"; g.lineWidth=R*0.02; for(let k=0;k<10;k++){ const a=k/10*6.28; g.beginPath(); g.moveTo(R*0.1+Math.cos(a)*R*0.3,-R*1.1+Math.sin(a)*R*0.36); g.lineTo(R*0.1+Math.cos(a)*R*0.44,-R*1.1+Math.sin(a)*R*0.52); g.stroke(); }   // spines
+      g.fillStyle="#e0433a"; g.beginPath(); g.arc(R*0.1,-R*1.44,R*0.09,0,6.28); g.fill();   // little flower
+      g.fillStyle="#ffd06a"; g.beginPath(); g.arc(R*0.1,-R*1.44,R*0.035,0,6.28); g.fill(); break;
+    case 'potplant_orchid': // Orchid Bloom: an elegant pink orchid cluster arcing over the head
+      g.fillStyle="#4a7a3a"; g.lineWidth=R*0.04; g.strokeStyle="#4a7a3a"; g.beginPath(); g.moveTo(R*0.1-R*0.3,-R*0.95); g.quadraticCurveTo(R*0.1,-R*1.5,R*0.1+R*0.36,-R*1.2); g.stroke();   // arching stem
+      for(let k=0;k<3;k++){ const bx=R*0.1-R*0.16+k*R*0.22, by=-R*1.24-k*R*0.06;
+        g.fillStyle="#d24a9c"; for(let p=0;p<5;p++){ const a=p/5*6.28; g.beginPath(); g.ellipse(bx+Math.cos(a)*R*0.08,by+Math.sin(a)*R*0.08,R*0.06,R*0.09,a,0,6.28); g.fill(); }
+        g.fillStyle="#f6d84a"; g.beginPath(); g.arc(bx,by,R*0.05,0,6.28); g.fill(); } break;   // orchid blossoms
+    case 'meiden_leather': // Leather Jackets: a studded black collar + small spikes across the shoulders
+      g.fillStyle="#1a1a1e"; g.beginPath(); g.moveTo(-R*0.5,R*0.1); g.quadraticCurveTo(0,-R*0.15,R*0.5,R*0.1); g.lineTo(R*0.42,R*0.34); g.quadraticCurveTo(0,R*0.12,-R*0.42,R*0.34); g.closePath(); g.fill();   // popped collar
+      g.fillStyle="#c8ccd2"; for(let k=-2;k<=2;k++){ g.beginPath(); g.arc(k*R*0.18,R*0.02-Math.abs(k)*R*0.02,R*0.03,0,6.28); g.fill(); }   // metal studs
+      g.fillStyle="#8a8f98"; for(let k=-1;k<=1;k++){ const sx=k*R*0.34; g.beginPath(); g.moveTo(sx-R*0.05,-R*0.02); g.lineTo(sx,-R*0.16); g.lineTo(sx+R*0.05,-R*0.02); g.closePath(); g.fill(); } break;   // shoulder spikes
+    case 'meiden_neon': // Neon Nightout: glowing shades + a couple of neon glowsticks
+      g.fillStyle="#12121a"; g.beginPath(); g.roundRect(-R*0.28,-R*0.16,R*0.56,R*0.16,R*0.04); g.fill();   // shades frame
+      g.fillStyle="#c83ad0"; g.shadowColor="#ff5ae0"; g.shadowBlur=8;
+      g.beginPath(); g.roundRect(-R*0.26,-R*0.14,R*0.22,R*0.11,R*0.03); g.roundRect(R*0.04,-R*0.14,R*0.22,R*0.11,R*0.03); g.fill(); g.shadowBlur=0;
+      g.strokeStyle="#3af0d0"; g.lineWidth=R*0.05; g.lineCap="round";   // glowsticks
+      g.beginPath(); g.moveTo(-R*0.5,R*0.3); g.lineTo(-R*0.36,R*0.02); g.moveTo(R*0.5,R*0.3); g.lineTo(R*0.36,R*0.02); g.stroke(); break;
+    case 'aasta_shades': // Summer Fling: chic gold cat-eye sunglasses across the eye line (she only shows in nice weather)
+      g.strokeStyle="#c8a24a"; g.lineWidth=R*0.03; g.beginPath(); g.moveTo(-R*0.02,-R*0.06); g.lineTo(R*0.02,-R*0.06); g.stroke();   // bridge
+      g.fillStyle="#2a2620";   // dark lenses
+      g.beginPath(); g.moveTo(-R*0.24,-R*0.09); g.quadraticCurveTo(-R*0.28,R*0.02,-R*0.14,R*0.04); g.quadraticCurveTo(-R*0.02,R*0.02,-R*0.04,-R*0.08); g.closePath(); g.fill();
+      g.beginPath(); g.moveTo(R*0.24,-R*0.09); g.quadraticCurveTo(R*0.28,R*0.02,R*0.14,R*0.04); g.quadraticCurveTo(R*0.02,R*0.02,R*0.04,-R*0.08); g.closePath(); g.fill();
+      g.strokeStyle="#f2d24a"; g.lineWidth=R*0.02;   // gold cat-eye frame + a glint
+      g.beginPath(); g.moveTo(-R*0.24,-R*0.09); g.quadraticCurveTo(-R*0.28,R*0.02,-R*0.14,R*0.04);
+      g.moveTo(R*0.24,-R*0.09); g.quadraticCurveTo(R*0.28,R*0.02,R*0.14,R*0.04); g.stroke();
+      g.strokeStyle="rgba(255,255,255,.7)"; g.lineWidth=R*0.015; g.beginPath(); g.moveTo(-R*0.2,-R*0.04); g.lineTo(-R*0.14,-R*0.05); g.moveTo(R*0.12,-R*0.04); g.lineTo(R*0.18,-R*0.05); g.stroke(); break;
+    case 'carol_wig': // Hanging Judge: a formal white barrister's wig with rows of tight curls framing the face
+      g.fillStyle="#eef0ee"; g.beginPath();   // main wig mass over the crown, falling past the cheeks
+      g.moveTo(-R*0.5,R*0.12); g.quadraticCurveTo(-R*0.6,-R*0.5,0,-R*0.56);
+      g.quadraticCurveTo(R*0.6,-R*0.5,R*0.5,R*0.12);
+      g.quadraticCurveTo(R*0.3,-R*0.02,R*0.34,R*0.28);   // right side-fall past the cheek
+      g.quadraticCurveTo(0,R*0.06,-R*0.34,R*0.28);
+      g.quadraticCurveTo(-R*0.3,-R*0.02,-R*0.5,R*0.12); g.closePath(); g.fill();
+      g.fillStyle="#d8dcd8";   // rows of curls (shaded bumps) down each side
+      for(let r=0;r<3;r++){ for(let s=-1;s<=1;s+=2){ g.beginPath(); g.arc(s*R*(0.4-r*0.03), R*(0.02+r*0.1), R*0.07, 0, 6.28); g.fill(); } }
+      for(let k=-2;k<=2;k++){ g.beginPath(); g.arc(k*R*0.2, -R*0.42, R*0.09, Math.PI, 0); g.fill(); }   // curl bumps along the top hairline
+      g.strokeStyle="#c4c8c4"; g.lineWidth=R*0.015;   // a couple of curl seams
+      g.beginPath(); g.arc(-R*0.4,R*0.12,R*0.07,0.2,2.4); g.arc(R*0.4,R*0.12,R*0.07,0.7,2.9); g.stroke(); break;
+    case 'hammed_fennec': // Fennec: oversized pointed desert-fox ears with cream inner fluff + a little tan muzzle mask
+      // huge ears sweeping up and out from the top of the head
+      [-1,1].forEach(d=>{
+        g.fillStyle="#d9a860"; g.beginPath();   // outer ear (tan)
+        g.moveTo(d*R*0.14,-R*0.16); g.quadraticCurveTo(d*R*0.42,-R*0.9, d*R*0.6,-R*0.52);
+        g.quadraticCurveTo(d*R*0.5,-R*0.2, d*R*0.34,-R*0.12); g.closePath(); g.fill();
+        g.fillStyle="#f2e2c2"; g.beginPath();   // cream inner fluff
+        g.moveTo(d*R*0.2,-R*0.2); g.quadraticCurveTo(d*R*0.38,-R*0.66, d*R*0.5,-R*0.46);
+        g.quadraticCurveTo(d*R*0.42,-R*0.26, d*R*0.3,-R*0.18); g.closePath(); g.fill();
+        g.fillStyle="#7a5230"; g.beginPath(); g.ellipse(d*R*0.44,-R*0.62,R*0.03,R*0.08,d*0.5,0,6.28); g.fill();   // dark ear tip fleck
+      });
+      // pale cream muzzle mask framing the lower face + a dark little nose
+      g.fillStyle="rgba(242,226,194,0.9)"; g.beginPath(); g.ellipse(0,R*0.12,R*0.24,R*0.18,0,0,6.28); g.fill();
+      g.fillStyle="#2a2020"; g.beginPath(); g.ellipse(0,R*0.04,R*0.05,R*0.04,0,0,6.28); g.fill();   // nose
+      g.strokeStyle="rgba(122,82,48,0.7)"; g.lineWidth=R*0.015;   // faint cheek fur strokes
+      g.beginPath(); g.moveTo(-R*0.18,R*0.1); g.lineTo(-R*0.3,R*0.08); g.moveTo(R*0.18,R*0.1); g.lineTo(R*0.3,R*0.08); g.stroke(); break;
+    case 'hammed_sergal': // Frost Sergal: an icy head-cowl hugging the crown, with sharp cheek fins
+      // fitted hood that caps the crown and frames the cheeks (peak kept below the ear tips so it reads as worn)
+      g.fillStyle="#dff0fb"; g.beginPath();
+      g.moveTo(-R*0.46,R*0.1); g.quadraticCurveTo(-R*0.44,-R*0.34,0,-R*0.4);
+      g.quadraticCurveTo(R*0.44,-R*0.34,R*0.46,R*0.1);
+      g.quadraticCurveTo(0,-R*0.06,-R*0.46,R*0.1); g.closePath(); g.fill();
+      g.fillStyle="#9fc8e0"; g.beginPath();   // inner cowl shading
+      g.moveTo(-R*0.3,R*0.06); g.quadraticCurveTo(0,-R*0.28,R*0.3,R*0.06);
+      g.quadraticCurveTo(0,-R*0.04,-R*0.3,R*0.06); g.closePath(); g.fill();
+      g.strokeStyle="#bfe6f8"; g.lineWidth=R*0.03; g.lineCap="round";   // sharp cheek fins swept back
+      g.beginPath(); g.moveTo(-R*0.42,R*0.06); g.lineTo(-R*0.6,-R*0.04); g.moveTo(R*0.42,R*0.06); g.lineTo(R*0.6,-R*0.04); g.stroke(); break;
   }
 }
 
@@ -11029,9 +13528,247 @@ function drawMorph(g, morph, R, e, layer){
   g.save();
   if(anc.s!==1){ g.translate(0,R*0.95); g.scale(anc.s,anc.s); g.translate(0,-R*0.95); }
   const hx=anc.hx*R, hy=anc.hy*R;   // real head center in this frame
+  // The protogen morph draws its visor directly at hy (no +1.0R gear offset), so it needs the TRUE head
+  // center, not Hammed's gear-anchor (-1.46R, which assumes drawSkinGear's +1.0R). His head sits at -0.48R.
+  const morphHy = (morph==='sch_protogen') ? -0.48*R : hy;
   const t=(typeof frame!=='undefined'?frame:0);
   const back = layer==='back';
   switch(morph){
+    case 'sch_smartboard': {
+      // Smartboard (Meta AI): a wall-mounted digital whiteboard framed around the bot — dark screen with
+      // glowing chalk-style scribbles + a little marker tray. Front layer, drawn over the sprite.
+      if(!back){
+        g.save();
+        // board frame
+        g.fillStyle="#c8ccd2"; g.beginPath(); g.roundRect(-R*0.95,hy-R*0.5,R*1.9,R*1.5,R*0.1); g.fill();
+        g.fillStyle="#26303c"; g.beginPath(); g.roundRect(-R*0.82,hy-R*0.4,R*1.64,R*1.3,R*0.06); g.fill();   // screen
+        // glowing scribbles (a formula + a graph line)
+        g.strokeStyle="#5ae0b0"; g.lineWidth=R*0.04; g.lineCap="round";
+        g.beginPath(); g.moveTo(-R*0.6,hy+R*0.6); g.lineTo(-R*0.2,hy+R*0.2); g.lineTo(R*0.1,hy+R*0.5); g.lineTo(R*0.6,hy-R*0.1); g.stroke();   // graph
+        g.strokeStyle="#7ac8ff";
+        g.beginPath(); g.arc(-R*0.4,hy-R*0.05,R*0.12,0,6.28); g.moveTo(-R*0.1,hy-R*0.2); g.lineTo(R*0.1,hy+R*0.05); g.moveTo(R*0.1,hy-R*0.2); g.lineTo(-R*0.1,hy+R*0.05); g.stroke();   // 'o' + 'x'
+        // marker tray + a marker
+        g.fillStyle="#a0a6ae"; g.fillRect(-R*0.82,hy+R*0.9,R*1.64,R*0.1);
+        g.fillStyle="#e0533a"; g.fillRect(-R*0.2,hy+R*0.86,R*0.3,R*0.06);
+        g.restore();
+      }
+      break;
+    }
+    case 'sch_protogen': {
+      // Robotics Protogen (Hammed): a real protogen face — a glossy rounded BLACK visor with a light-blue
+      // mechanical frame, glowing cyan happy eyes + a jagged zig-zag mouth, circular headphone-rings with a
+      // swept-back fin, cute cat ears, a spiky black+cyan hair tuft, and a fluffy neck mane.
+      // During his super (e.furry>0) the whole rig CORRUPTS to angry red/orange so super reads clearly.
+      const sup = !!(e && e.furry>0);
+      const cyan   = sup ? "#ff3a3a" : "#3ad0ff";
+      const cyanGlow = sup ? "#ff8a4a" : "#7ae6ff";
+      const frame  = sup ? "#e07a5a" : "#9fd8ee";
+      const frameDk= sup ? "#8a2f2a" : "#5a9ec4";
+      const furW   = sup ? "#ffd8c8" : "#eef6fb";
+      const pink   = sup ? "#ff9a6a" : "#f2b8cc";
+      const black  = sup ? "#1c1214" : "#14161c";
+      if(back){
+        // fluffy neck mane behind the body — one soft row with a lavender shadow underneath
+        g.save(); g.translate(0,morphHy); g.scale(0.86,1.02);   // match the slimmed protogen body
+        g.fillStyle= sup ? "#e0b6a6" : "#c9d6ec";
+        for(let k=-3;k<=3;k++){ g.beginPath(); g.arc(k*R*0.16, R*0.58, R*0.18, 0, 6.28); g.fill(); }
+        g.fillStyle= sup ? "#ffd8c8" : "#eef4fb";
+        for(let k=-3;k<=3;k++){ g.beginPath(); g.arc(k*R*0.16, R*0.5, R*0.15, 0, 6.28); g.fill(); }
+        g.restore();
+        break;
+      }
+      g.save();
+      g.translate(0, morphHy);
+      const t2=t;
+      // --- [1] domed head backing plate (light-blue frame) — a rounded dome, not a flat rectangle ---
+      function visorDome(x,y,w,h){ g.beginPath();
+        g.moveTo(-w,y-h*0.3);
+        g.quadraticCurveTo(-w,y-h,0,y-h);           // flatter wide top-left
+        g.quadraticCurveTo(w,y-h,w,y-h*0.3);        // top-right
+        g.quadraticCurveTo(w,y+h*0.5,w*0.5,y+h*0.95);
+        g.quadraticCurveTo(0,y+h*1.15,-w*0.5,y+h*0.95);  // rounded curved bottom (dome)
+        g.quadraticCurveTo(-w,y+h*0.5,-w,y-h*0.3); g.closePath(); }
+      g.fillStyle=frame; visorDome(0,-R*0.02,R*0.56,R*0.32); g.fill();
+      g.fillStyle=frameDk; visorDome(0,-R*0.02,R*0.52,R*0.29); g.fill();
+      // --- [2] cute cat ears ON TOP of the frame, tips well clear of it (broad, short, leaning out) ---
+      [-1,1].forEach(d=>{
+        g.fillStyle=furW; g.beginPath();
+        g.moveTo(d*R*0.18,-R*0.28);                    // inner base sits on the frame's top edge
+        g.lineTo(d*R*0.54,-R*0.26);                    // outer base
+        g.lineTo(d*R*0.5,-R*0.66);                     // tip — rises clearly ABOVE the frame
+        g.closePath(); g.fill();
+        g.fillStyle=pink; g.beginPath();
+        g.moveTo(d*R*0.25,-R*0.3);
+        g.lineTo(d*R*0.46,-R*0.29);
+        g.lineTo(d*R*0.44,-R*0.55);
+        g.closePath(); g.fill();
+      });
+      // --- [3] swept-back hair tuft between the ears, over the crown ---
+      [[-0.14,-0.56,-0.32,black],[0.06,-0.62,-0.1,cyan],[0.28,-0.5,0.14,black]].forEach(sp=>{
+        g.fillStyle=sp[3]; g.beginPath();
+        g.moveTo(R*sp[2]-R*0.02,-R*0.2);
+        g.quadraticCurveTo(R*(sp[0]-0.05),R*sp[1], R*sp[0],R*sp[1]);
+        g.quadraticCurveTo(R*(sp[0]+0.1),R*(sp[1]+0.12), R*sp[2]+R*0.16,-R*0.18);
+        g.closePath(); g.fill();
+      });
+      // --- [4] clean circular side-pods flush against the frame edge (no random floating fin) ---
+      [-1,1].forEach(d=>{
+        g.save(); g.translate(d*R*0.52,R*0.0);
+        g.fillStyle=frame; g.beginPath(); g.arc(0,0,R*0.17,0,6.28); g.fill();
+        g.fillStyle=frameDk; g.beginPath(); g.arc(0,0,R*0.115,0,6.28); g.fill();
+        g.fillStyle=black; g.beginPath(); g.arc(0,0,R*0.06,0,6.28); g.fill();
+        g.fillStyle=cyan; g.shadowColor=cyan; g.shadowBlur=6; g.beginPath(); g.arc(0,0,R*0.028,0,6.28); g.fill(); g.shadowBlur=0;
+        g.restore();
+      });
+      // --- [5] large glossy black VISOR (same dome as the frame), with a thin bright frame-rim tracing it ---
+      g.strokeStyle=cyanGlow; g.globalAlpha=0.5; g.lineWidth=R*0.03;
+      visorDome(0,-R*0.02,R*0.5,R*0.29); g.stroke(); g.globalAlpha=1;
+      // the visor plate — domed, fills most of the head
+      g.fillStyle=black; visorDome(0,-R*0.02,R*0.5,R*0.29); g.fill();
+      // curved gloss sweep across the top (glassy sheen)
+      g.fillStyle="rgba(150,205,240,0.16)"; g.beginPath();
+      g.moveTo(-R*0.44,-R*0.2); g.quadraticCurveTo(0,-R*0.34,R*0.44,-R*0.2);
+      g.quadraticCurveTo(R*0.2,-R*0.06,0,-R*0.08); g.quadraticCurveTo(-R*0.2,-R*0.06,-R*0.44,-R*0.2); g.closePath(); g.fill();
+      // --- glowing cyan LED FACE — the expression reacts to what the fighter is doing ---
+      // idle ^_^ (with blink), kill :3, hurt >~<, low HP ;_;, super-ready >:3
+      g.strokeStyle=cyan; g.shadowColor=cyanGlow; g.shadowBlur=14; g.lineCap="round"; g.lineJoin="round";
+      let expr='idle';
+      if(e){
+        if(e.furry>0) expr='super';   // Hammed's super is Full Furry (e.furry timer) — visor goes gremlin-mode
+        else if(e.flash>0) expr='hurt';
+        else if(e.killGlow>0) expr='kill';
+        else if(e.hp!==undefined && e.maxHp && e.hp>0 && e.hp < e.maxHp*0.3) expr='low';
+        else if(e.superCharge!==undefined && e.superCharge >= (typeof SUPER_MAX!=='undefined'?SUPER_MAX:100)) expr='ready';
+      }
+      const blink=(t2%150)<7;
+      // eyes
+      g.lineWidth=R*0.07;
+      if(expr==='super'){
+        // super: sharp angry-confident eyes — angled slits leaning inward (menacing, not goofy)
+        g.beginPath(); g.moveTo(-R*0.34,-R*0.1); g.lineTo(-R*0.14,-R*0.01); g.stroke();
+        g.beginPath(); g.moveTo(R*0.34,-R*0.1); g.lineTo(R*0.14,-R*0.01); g.stroke();
+      } else if(expr==='hurt'){
+        // >~< : scrunched eyes — a '>' on the left, a '<' on the right (not X's)
+        g.beginPath(); g.moveTo(-R*0.34,-R*0.1); g.lineTo(-R*0.16,-R*0.05); g.lineTo(-R*0.34,0); g.stroke();
+        g.beginPath(); g.moveTo(R*0.34,-R*0.1); g.lineTo(R*0.16,-R*0.05); g.lineTo(R*0.34,0); g.stroke();
+      } else if(expr==='low'){
+        // ;_; : wobbly upside-down arcs + a tear
+        g.beginPath(); g.moveTo(-R*0.34,-R*0.02); g.quadraticCurveTo(-R*0.24,R*0.06,-R*0.14,-R*0.02); g.stroke();
+        g.beginPath(); g.moveTo(R*0.14,-R*0.02); g.quadraticCurveTo(R*0.24,R*0.06,R*0.34,-R*0.02); g.stroke();
+        g.fillStyle=cyan; g.beginPath(); g.arc(-R*0.24,R*0.08,R*0.03,0,6.28); g.fill();
+      } else if(expr==='kill' || expr==='ready'){
+        // :3 / >:3 : happy closed upward-arc eyes (kill), or slanted angry-happy (ready)
+        if(expr==='ready'){
+          g.beginPath(); g.moveTo(-R*0.36,-R*0.1); g.lineTo(-R*0.14,-R*0.02); g.stroke();
+          g.beginPath(); g.moveTo(R*0.14,-R*0.02); g.lineTo(R*0.36,-R*0.1); g.stroke();
+        } else {
+          g.beginPath(); g.moveTo(-R*0.34,-R*0.02); g.quadraticCurveTo(-R*0.24,-R*0.14,-R*0.14,-R*0.02); g.stroke();
+          g.beginPath(); g.moveTo(R*0.14,-R*0.02); g.quadraticCurveTo(R*0.24,-R*0.14,R*0.34,-R*0.02); g.stroke();
+        }
+      } else {
+        // idle ^_^ : gentle squint, blinks to flat lines every ~2.5s
+        if(blink){
+          g.beginPath(); g.moveTo(-R*0.34,-R*0.04); g.lineTo(-R*0.14,-R*0.04); g.moveTo(R*0.14,-R*0.04); g.lineTo(R*0.34,-R*0.04); g.stroke();
+        } else {
+          g.beginPath(); g.moveTo(-R*0.36,-R*0.02); g.quadraticCurveTo(-R*0.24,-R*0.2,-R*0.12,-R*0.02); g.stroke();
+          g.beginPath(); g.moveTo(R*0.12,-R*0.02); g.quadraticCurveTo(R*0.24,-R*0.2,R*0.36,-R*0.02); g.stroke();
+        }
+      }
+      // mouth — small + cute
+      g.lineWidth=R*0.045; g.beginPath();
+      if(expr==='hurt'){
+        // small ~ wavy grimace
+        g.moveTo(-R*0.12,R*0.15); g.quadraticCurveTo(-R*0.06,R*0.1,0,R*0.15); g.quadraticCurveTo(R*0.06,R*0.2,R*0.12,R*0.15); g.stroke();
+      } else if(expr==='low'){
+        // tiny frown
+        g.moveTo(-R*0.09,R*0.2); g.quadraticCurveTo(0,R*0.13,R*0.09,R*0.2); g.stroke();
+      } else if(expr==='kill'){
+        // :3 tiny cat-mouth (little w)
+        g.moveTo(-R*0.08,R*0.13); g.quadraticCurveTo(-R*0.04,R*0.18,0,R*0.13); g.quadraticCurveTo(R*0.04,R*0.18,R*0.08,R*0.13); g.stroke();
+      } else if(expr==='ready'){
+        // >:3 small smirk-w
+        g.moveTo(-R*0.09,R*0.13); g.quadraticCurveTo(-R*0.045,R*0.19,0,R*0.13); g.quadraticCurveTo(R*0.045,R*0.19,R*0.09,R*0.13); g.stroke();
+      } else if(expr==='super'){
+        // little open excited 'o' mouth
+        g.moveTo(R*0.05,R*0.15); g.arc(0,R*0.15,R*0.05,0,6.28); g.stroke();
+      } else {
+        // idle — small jagged grin
+        g.moveTo(-R*0.14,R*0.14); g.lineTo(-R*0.07,R*0.19); g.lineTo(0,R*0.14); g.lineTo(R*0.07,R*0.19); g.lineTo(R*0.14,R*0.14); g.stroke();
+      }
+      g.shadowBlur=0;
+      g.restore();
+      break;
+    }
+    case 'sch_clown': {
+      // Class Clown (Fluharty): a jester-ish schoolkid — a little party hat, a red nose, and paper-ball
+      // "spitballs" that orbit him (nodding to his curveball throw). Front layer.
+      if(!back){
+        g.save();
+        // party hat (cone) on the head
+        g.fillStyle="#e0403a"; g.beginPath(); g.moveTo(hx-R*0.3,hy-R*0.4); g.lineTo(hx+R*0.3,hy-R*0.4); g.lineTo(hx,hy-R*1.1); g.closePath(); g.fill();
+        g.fillStyle="#f4d03a"; for(let k=0;k<3;k++){ g.beginPath(); g.arc(hx-R*0.15+k*R*0.15, hy-R*0.5-k*R*0.16, R*0.05,0,6.28); g.fill(); }   // hat dots
+        g.fillStyle="#fff2c0"; g.beginPath(); g.arc(hx,hy-R*1.1,R*0.08,0,6.28); g.fill();   // pom-pom
+        // red clown nose on the face
+        g.fillStyle="#e0403a"; g.beginPath(); g.arc(hx,hy+R*0.05,R*0.1,0,6.28); g.fill();
+        g.fillStyle="rgba(255,255,255,.6)"; g.beginPath(); g.arc(hx-R*0.03,hy+R*0.02,R*0.03,0,6.28); g.fill();
+        // orbiting paper spitballs
+        g.fillStyle="#eef0ea";
+        for(let k=0;k<3;k++){ const a=t*0.06+k*2.09; g.beginPath(); g.arc(hx+Math.cos(a)*R*0.9, hy+R*0.1+Math.sin(a)*R*0.4, R*0.07,0,6.28); g.fill(); }
+        g.restore();
+      }
+      break;
+    }
+    case 'sch_bookworm': {
+      // Bookworm (Young Fyon): round glasses on his face + a floating open book he reads from, and a
+      // small stack of books at his feet. Front layer only (drawn over the sprite so it reads clearly).
+      if(!back){
+        g.save();
+        // round glasses across the eyes (head anchor ~ hy)
+        g.strokeStyle="#2a2f3a"; g.lineWidth=R*0.05;
+        g.beginPath(); g.arc(hx-R*0.2, hy+R*0.02, R*0.16, 0,6.28); g.stroke();
+        g.beginPath(); g.arc(hx+R*0.2, hy+R*0.02, R*0.16, 0,6.28); g.stroke();
+        g.beginPath(); g.moveTo(hx-R*0.04,hy+R*0.02); g.lineTo(hx+R*0.04,hy+R*0.02); g.stroke();   // bridge
+        g.fillStyle="rgba(200,225,255,.35)"; g.beginPath(); g.arc(hx-R*0.2,hy+R*0.02,R*0.14,0,6.28); g.arc(hx+R*0.2,hy+R*0.02,R*0.14,0,6.28); g.fill();  // lens sheen
+        // a floating open book held out front, gently bobbing
+        const bx=R*0.55, by=R*0.15+Math.sin(t*0.08)*R*0.04;
+        g.fillStyle="#5a7ac0"; g.beginPath(); g.roundRect(bx-R*0.34,by-R*0.24,R*0.68,R*0.48,4); g.fill();   // cover
+        g.fillStyle="#f4efe0"; g.beginPath(); g.moveTo(bx,by-R*0.2); g.lineTo(bx-R*0.3,by-R*0.16); g.lineTo(bx-R*0.3,by+R*0.2); g.lineTo(bx,by+R*0.22); g.closePath(); g.fill();  // left page
+        g.beginPath(); g.moveTo(bx,by-R*0.2); g.lineTo(bx+R*0.3,by-R*0.16); g.lineTo(bx+R*0.3,by+R*0.2); g.lineTo(bx,by+R*0.22); g.closePath(); g.fill();  // right page
+        g.strokeStyle="#b8b0a0"; g.lineWidth=1; for(let k=0;k<3;k++){ const ly=by-R*0.08+k*R*0.08; g.beginPath(); g.moveTo(bx-R*0.26,ly); g.lineTo(bx-R*0.04,ly); g.moveTo(bx+R*0.04,ly); g.lineTo(bx+R*0.26,ly); g.stroke(); }  // text lines
+        g.strokeStyle="#33261a"; g.lineWidth=R*0.02; g.beginPath(); g.moveTo(bx,by-R*0.2); g.lineTo(bx,by+R*0.22); g.stroke();  // spine
+        // a small stack of books by his feet
+        const sy=R*0.72; ["#c0433a","#3a8a4a","#e0a020"].forEach((col,k)=>{ g.fillStyle=col; g.beginPath(); g.roundRect(-R*0.62+ (k%2)*R*0.03, sy-k*R*0.12, R*0.4, R*0.1, 2); g.fill(); });
+        g.restore();
+      }
+      break;
+    }
+    case 'sch_teslacoil': {
+      // Science Fair (Druk): a Tesla-coil rises behind him with a glowing top sphere, and blue-white arcs
+      // crackle from it around the dragon. Coil BEHIND; arcs + sphere glow IN FRONT.
+      if(back){
+        g.save();
+        // coil base + wound column rising behind the body
+        g.fillStyle="#6a5238"; g.beginPath(); g.roundRect(-R*0.22, R*0.3, R*0.44, R*0.28, 3); g.fill();   // wooden base
+        g.fillStyle="#b0894a"; g.fillRect(-R*0.14, -R*0.9, R*0.28, R*1.2);   // copper column
+        g.strokeStyle="#7a5a2a"; g.lineWidth=R*0.04; for(let k=0;k<9;k++){ const yy=-R*0.86+k*R*0.13; g.beginPath(); g.moveTo(-R*0.14,yy); g.lineTo(R*0.14,yy+R*0.04); g.stroke(); }  // windings
+        g.restore();
+      } else {
+        g.save();
+        // glowing top sphere (the discharge terminal)
+        const sxy=-R*1.0, gr=g.createRadialGradient(0,sxy,2,0,sxy,R*0.5);
+        gr.addColorStop(0,"#f0ffff"); gr.addColorStop(0.5,"#8fd0e8"); gr.addColorStop(1,"rgba(143,208,232,0)");
+        g.fillStyle=gr; g.beginPath(); g.arc(0,sxy,R*0.5,0,6.28); g.fill();
+        g.fillStyle="#cfeaf5"; g.beginPath(); g.arc(0,sxy,R*0.2,0,6.28); g.fill();
+        // crackling arcs jumping outward, flickering with the frame
+        g.strokeStyle="rgba(200,240,255,.9)"; g.lineWidth=R*0.035; g.lineCap="round";
+        for(let k=0;k<4;k++){ const a=(t*0.12+k*1.57); const len=R*(0.7+0.3*Math.sin(t*0.3+k));
+          let px=0, py=sxy; g.beginPath(); g.moveTo(px,py);
+          for(let s=1;s<=3;s++){ px=Math.cos(a)*len*s/3 + (Math.random()-0.5)*R*0.18; py=sxy+Math.sin(a)*len*s/3 + (Math.random()-0.5)*R*0.18; g.lineTo(px,py); }
+          g.stroke(); }
+        g.restore();
+      }
+      break;
+    }
     case 'sch_tuba': {
       // Music Class (Dynant): the tuba + band tunic + shako are drawn ON his body (CUSTOM_DRAW.dynant).
       // Here we keep only a light effect layer — a few music notes drifting up behind him.
@@ -12468,6 +15205,7 @@ function drawProjectile(p){
   const stickerAnchor = p.type==="anchor" && M==='toy_sticker'; // Sanne Sticker: a peel-off star sticker
   const sealAnchor = p.type==="anchor" && M==='nat_seal';       // Sanne Seal: a tossed beach ball
   const pinataCurve = p.type==="curveball" && M==='toy_pinata'; // Fluharty Piñata: a candy-spilling star
+  const clownSpit = p.type==="curveball" && M==='sch_clown';    // Fluharty Class Clown: a wadded paper spitball
   const boltPeg = p.type==="bolt" && M==='toy_peg';         // Jake peg-doll bolt
   const friToy  = p.type==="boomerang" && M==='toy_frisbee';// Renas frisbee
   const fawnKiss = p.type==="kiss" && M==='nat_fawn';       // Lars Flower Fawn: a tossed flower
@@ -12772,14 +15510,30 @@ function drawProjectile(p){
     const g=ctx.createRadialGradient(0,0,1,0,0,p.r); g.addColorStop(0,"#eafff4"); g.addColorStop(1,"#2ea86a");
     ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(0,0,p.r*1.1,p.r*0.8,0,0,6.28); ctx.fill();
     ctx.fillStyle="rgba(255,255,255,.85)"; ctx.beginPath(); ctx.arc(p.r*0.2,0,p.r*0.3,0,6.28); ctx.fill();
-  } else if(p.type==="claw"){
-    // Yara: three curved claw-marks streaking forward (noir steel-grey for the Incognito detective skin)
-    const noir = p.owner && p.owner.skinMorph==='trenchcoat';
+  } else if(p.type==="databeam"){
+    // Meta AI Data Beam: a thin cyan energy lance — long glowing streak + a white-hot core
     ctx.rotate(Math.atan2(p.vy,p.vx));
-    ctx.strokeStyle=noir?"rgba(150,160,175,.45)":"rgba(230,205,165,.45)"; ctx.lineWidth=p.r*0.5; ctx.lineCap="round";
-    ctx.beginPath(); ctx.moveTo(-p.r*1.6,0); ctx.lineTo(p.r*0.6,0); ctx.stroke();   // motion streak
-    ctx.strokeStyle=noir?"#eef2f7":"#fff6e8"; ctx.lineWidth=2.2;
-    for(let k=-1;k<=1;k++){ ctx.beginPath(); ctx.arc(-p.r*0.3, k*p.r*0.7, p.r*1.1, -0.9, 0.9); ctx.stroke(); }
+    ctx.fillStyle="rgba(122,200,255,.45)"; ctx.beginPath(); ctx.ellipse(-p.r*1.2,0,p.r*3.2,p.r*0.5,0,0,6.28); ctx.fill();   // trailing glow
+    const g=ctx.createLinearGradient(-p.r*2,0,p.r*1.6,0); g.addColorStop(0,"rgba(122,200,255,0)"); g.addColorStop(0.7,"#7ac8ff"); g.addColorStop(1,"#eafcff");
+    ctx.fillStyle=g; ctx.beginPath(); ctx.roundRect(-p.r*2,-p.r*0.32,p.r*3.6,p.r*0.64,p.r*0.32); ctx.fill();   // the lance
+    ctx.fillStyle="#ffffff"; ctx.beginPath(); ctx.arc(p.r*1.2,0,p.r*0.4,0,6.28); ctx.fill();   // hot tip
+  } else if(p.type==="claw"){
+    // Yara: three curved claw-marks streaking forward (noir for Incognito; rainbow crayon for Colour Pencils)
+    const noir = p.owner && p.owner.skinMorph==='trenchcoat';
+    const pencil = p.owner && p.owner.skinMorph==='sch_pencils';   // Colour Pencils: Yara's claws are crayon strokes
+    ctx.rotate(Math.atan2(p.vy,p.vx));
+    if(pencil){
+      // three waxy crayon strokes in different colours + a little shaving fleck
+      const cols=["#e0533a","#3a86ff","#f4c430"];
+      ctx.lineCap="round"; ctx.lineWidth=2.6;
+      for(let k=-1;k<=1;k++){ ctx.strokeStyle=cols[k+1]; ctx.beginPath(); ctx.arc(-p.r*0.3, k*p.r*0.7, p.r*1.1, -0.9, 0.9); ctx.stroke(); }
+      ctx.fillStyle="#8a5e34"; ctx.beginPath(); ctx.arc(p.r*0.5,0,p.r*0.22,0,6.28); ctx.fill();   // pencil-tip wood
+    } else {
+      ctx.strokeStyle=noir?"rgba(150,160,175,.45)":"rgba(230,205,165,.45)"; ctx.lineWidth=p.r*0.5; ctx.lineCap="round";
+      ctx.beginPath(); ctx.moveTo(-p.r*1.6,0); ctx.lineTo(p.r*0.6,0); ctx.stroke();   // motion streak
+      ctx.strokeStyle=noir?"#eef2f7":"#fff6e8"; ctx.lineWidth=2.2;
+      for(let k=-1;k<=1;k++){ ctx.beginPath(); ctx.arc(-p.r*0.3, k*p.r*0.7, p.r*1.1, -0.9, 0.9); ctx.stroke(); }
+    }
   } else if(p.type==="bolt"){
     ctx.rotate(Math.atan2(p.vy,p.vx));
     if(boltPeg){
@@ -12794,6 +15548,23 @@ function drawProjectile(p){
       ctx.fillStyle="#c9d89a"; ctx.beginPath(); ctx.moveTo(p.r*2.2,0); ctx.lineTo(p.r*0.8,p.r*0.7); ctx.lineTo(p.r*0.8,-p.r*0.7); ctx.closePath(); ctx.fill();   // wooden tip
       // leaf fletching
       ctx.fillStyle="#5a9a3a"; ctx.beginPath(); ctx.ellipse(-p.r*1.6,-p.r*0.4,p.r*0.5,p.r*0.24,-0.5,0,6.28); ctx.ellipse(-p.r*1.6,p.r*0.4,p.r*0.5,p.r*0.24,0.5,0,6.28); ctx.fill();
+    } else if(p.owner && p.owner.skinMorph==='sch_gym'){
+      // Gym Teacher: a bouncing red gym-ball with a little motion whistle-arc
+      const g=ctx.createRadialGradient(-p.r*0.3,-p.r*0.3,1,0,0,p.r*1.3); g.addColorStop(0,"#ff9a8a"); g.addColorStop(1,"#c8302a");
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,p.r*1.2,0,6.28); ctx.fill();
+      ctx.strokeStyle="rgba(255,255,255,.7)"; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(0,0,p.r*1.2,-2.2,-0.6); ctx.stroke();   // seam
+    } else if(p.owner && p.owner.skinMorph==='sch_smartboard'){
+      // Meta AI Smartboard: a glowing digital data-slug — a rounded screen-chip with a pixel core
+      ctx.globalAlpha=0.4; ctx.fillStyle="#5ac8ff"; ctx.beginPath(); ctx.ellipse(0,0,p.r*2.2,p.r*0.9,0,0,6.28); ctx.fill(); ctx.globalAlpha=1;
+      ctx.fillStyle="#1a2b3a"; ctx.beginPath(); ctx.roundRect(-p.r*1.1,-p.r*0.7,p.r*2.2,p.r*1.4,p.r*0.4); ctx.fill();
+      ctx.fillStyle="#5ae0b0"; for(let k=-1;k<=1;k++){ ctx.fillRect(-p.r*0.5+k*p.r*0.5,-p.r*0.2,p.r*0.28,p.r*0.4); }   // pixel core
+    } else if(p.owner && p.owner.skinMorph==='sch_bookworm'){
+      // Young Fyon Bookworm: a thrown pencil — yellow barrel, wood tip, pink eraser
+      ctx.strokeStyle="#f4c430"; ctx.lineWidth=p.r*0.9; ctx.lineCap="butt";
+      ctx.beginPath(); ctx.moveTo(-p.r*1.4,0); ctx.lineTo(p.r*0.8,0); ctx.stroke();   // barrel
+      ctx.fillStyle="#e8c49a"; ctx.beginPath(); ctx.moveTo(p.r*0.8,-p.r*0.45); ctx.lineTo(p.r*1.8,0); ctx.lineTo(p.r*0.8,p.r*0.45); ctx.closePath(); ctx.fill();   // wood tip
+      ctx.fillStyle="#2a2a2a"; ctx.beginPath(); ctx.moveTo(p.r*1.5,-p.r*0.16); ctx.lineTo(p.r*1.8,0); ctx.lineTo(p.r*1.5,p.r*0.16); ctx.closePath(); ctx.fill();   // graphite
+      ctx.fillStyle="#f28ab0"; ctx.beginPath(); ctx.roundRect(-p.r*1.7,-p.r*0.45,p.r*0.4,p.r*0.9,p.r*0.2); ctx.fill();   // eraser
     } else {
       // crossbow bolt: bright shaft with a glowing head so it reads clearly against grass
       ctx.globalAlpha=0.45; ctx.fillStyle="#9fd6c4"; ctx.beginPath(); ctx.ellipse(0,0,p.r*2.0,p.r*0.8,0,0,6.28); ctx.fill(); ctx.globalAlpha=1; // glow
@@ -12811,6 +15582,12 @@ function drawProjectile(p){
       for(let k=0;k<10;k++){ const ang=k*Math.PI/5, rr=(k%2?p.r*0.55:p.r*1.2); ctx.fillStyle=cols[k%4];
         ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(ang)*rr,Math.sin(ang)*rr); ctx.lineTo(Math.cos(ang+0.63)*rr*0.55,Math.sin(ang+0.63)*rr*0.55); ctx.closePath(); ctx.fill(); }
       ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(0,0,p.r*0.3,0,6.28); ctx.fill();
+    } else if(clownSpit){
+      // Fluharty Class Clown: a crumpled paper spitball — off-white wad with crease shadows
+      const g=ctx.createRadialGradient(-p.r*0.3,-p.r*0.3,1,0,0,p.r*1.1); g.addColorStop(0,"#ffffff"); g.addColorStop(1,"#cfd0c8");
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,p.r*1.05,0,6.28); ctx.fill();
+      ctx.strokeStyle="rgba(150,150,140,.7)"; ctx.lineWidth=1;
+      for(let k=0;k<4;k++){ const a=k*1.57+0.4; ctx.beginPath(); ctx.moveTo(Math.cos(a)*p.r*0.2,Math.sin(a)*p.r*0.2); ctx.lineTo(Math.cos(a)*p.r*0.9,Math.sin(a)*p.r*0.9); ctx.stroke(); }   // paper creases
     } else if((p.type==="curveball"||p.type==="fastball") && p.owner && p.owner.skinMorph==='comet'){
       // Ursa Major: a blazing comet — starry core + a bright tail
       if(p.type==="fastball"){ ctx.globalAlpha=0.4; ctx.fillStyle="#aeb8ff"; ctx.beginPath(); ctx.arc(0,0,p.r*1.8,0,6.28); ctx.fill(); ctx.globalAlpha=1; }
@@ -12841,10 +15618,33 @@ function drawProjectile(p){
       ctx.beginPath(); ctx.arc(-p.r*0.55,0,p.r,-0.7,0.7); ctx.stroke();
       ctx.beginPath(); ctx.arc(p.r*0.55,0,p.r,Math.PI-0.7,Math.PI+0.7); ctx.stroke();
     }
+  } else if(p.type==="graffiti"){
+    // a splattery paint blob trailing colourful droplets (the tagger's spray)
+    const col=p.col||p.paint||"#e0407a";
+    ctx.fillStyle=col; ctx.beginPath(); ctx.arc(0,0,p.r,0,6.28); ctx.fill();
+    // irregular splat lobes around the core
+    ctx.beginPath(); for(let k=0;k<5;k++){ const a2=k/5*6.28+p.spin*0.1; ctx.arc(Math.cos(a2)*p.r*0.7,Math.sin(a2)*p.r*0.7,p.r*0.42,0,6.28); } ctx.fill();
+    ctx.fillStyle="rgba(255,255,255,.6)"; ctx.beginPath(); ctx.arc(-p.r*0.3,-p.r*0.3,p.r*0.25,0,6.28); ctx.fill();   // gloss
+    // a few trailing droplets in the paint colour
+    ctx.fillStyle=col; for(let k=1;k<=3;k++){ const bx=-(p.vx/(Math.hypot(p.vx,p.vy)||1))*p.r*k*0.9, by=-(p.vy/(Math.hypot(p.vx,p.vy)||1))*p.r*k*0.9; ctx.globalAlpha=0.6-k*0.15; ctx.beginPath(); ctx.arc(bx,by,p.r*0.3,0,6.28); ctx.fill(); } ctx.globalAlpha=1;
+  } else if(p.type==="gum"){
+    // a glossy pink wad of chewing gum with stringy strands trailing behind
+    ctx.fillStyle="#f06aa8"; ctx.beginPath();
+    for(let k=0;k<6;k++){ const a2=k/6*6.28+p.spin*0.15; ctx.arc(Math.cos(a2)*p.r*0.4,Math.sin(a2)*p.r*0.4,p.r*0.6,0,6.28); } ctx.fill();
+    ctx.fillStyle="#f8a8ce"; ctx.beginPath(); ctx.arc(-p.r*0.25,-p.r*0.25,p.r*0.35,0,6.28); ctx.fill();   // shine
+    ctx.strokeStyle="rgba(240,106,168,.6)"; ctx.lineWidth=2; ctx.lineCap="round";   // sticky strands
+    const nx=(p.vx/(Math.hypot(p.vx,p.vy)||1)), ny=(p.vy/(Math.hypot(p.vx,p.vy)||1));
+    for(let k=-1;k<=1;k++){ ctx.beginPath(); ctx.moveTo(-nx*p.r*0.6+ -ny*k*p.r*0.4,-ny*p.r*0.6+nx*k*p.r*0.4); ctx.lineTo(-nx*p.r*1.8+ -ny*k*p.r*0.5,-ny*p.r*1.8+nx*k*p.r*0.5); ctx.stroke(); }
   } else if(p.type==="knife"){
-    // spinning silver knife (Fae = enchanted glowing pixie-blade)
+    // spinning silver knife (Fae = enchanted glowing pixie-blade; Chemistry = a thrown bubbling test tube)
     ctx.rotate(Math.atan2(p.vy,p.vx));
-    if(faeCut){
+    const chemVial = p.owner && p.owner.skinMorph==='sch_chem';
+    if(chemVial){
+      ctx.fillStyle="rgba(200,240,210,.9)"; ctx.beginPath(); ctx.roundRect(-p.r*1.2,-p.r*0.4,p.r*2.0,p.r*0.8,p.r*0.4); ctx.fill();   // glass tube
+      ctx.fillStyle="#3ad06a"; ctx.beginPath(); ctx.roundRect(-p.r*1.1,-p.r*0.3,p.r*1.2,p.r*0.6,p.r*0.3); ctx.fill();   // green liquid
+      ctx.fillStyle="#eafff0"; for(let k=0;k<3;k++){ ctx.beginPath(); ctx.arc(-p.r*0.6+k*p.r*0.4, Math.sin(frame*0.3+k)*p.r*0.15, p.r*0.12,0,6.28); ctx.fill(); }   // bubbles
+      ctx.fillStyle="#c88a3a"; ctx.fillRect(p.r*0.8,-p.r*0.28,p.r*0.3,p.r*0.56);   // cork
+    } else if(faeCut){
       ctx.fillStyle="#ffe6f6"; ctx.shadowColor="#ff9ad6"; ctx.shadowBlur=8;
       ctx.beginPath(); ctx.moveTo(p.r*1.6,0); ctx.lineTo(-p.r*0.6,p.r*0.5); ctx.lineTo(-p.r*0.6,-p.r*0.5); ctx.closePath(); ctx.fill(); ctx.shadowBlur=0;
       ctx.fillStyle="#c6a8ff"; ctx.fillRect(-p.r*1.1,-p.r*0.24,p.r*0.5,p.r*0.48);
@@ -12854,13 +15654,21 @@ function drawProjectile(p){
       ctx.fillStyle="#8a5a3a"; ctx.fillRect(-p.r*1.1,-p.r*0.28,p.r*0.5,p.r*0.56); // handle
     }
   } else if(p.type==="fork"){
-    // wide silver fork (bigger hitbox, blunter look); Fae = glowing pixie fork
+    // wide silver fork (bigger hitbox); Fae = glowing pixie fork; Chemistry = a bigger bubbling flask
     ctx.rotate(Math.atan2(p.vy,p.vx));
-    if(faeCut){ ctx.strokeStyle="#ffd6ef"; ctx.shadowColor="#ff9ad6"; ctx.shadowBlur=7; } else ctx.strokeStyle="#cfd6de";
-    ctx.lineWidth=3; ctx.lineCap="round";
-    for(let k=-1;k<=1;k++){ ctx.beginPath(); ctx.moveTo(-p.r*0.4,k*p.r*0.45); ctx.lineTo(p.r*1.1,k*p.r*0.45); ctx.stroke(); }
-    ctx.strokeStyle=faeCut?"#c6a8ff":"#8a5a3a"; ctx.beginPath(); ctx.moveTo(-p.r*0.4,0); ctx.lineTo(-p.r*1.2,0); ctx.stroke();
-    ctx.shadowBlur=0;
+    const chemVial = p.owner && p.owner.skinMorph==='sch_chem';
+    if(chemVial){
+      ctx.fillStyle="rgba(200,240,210,.9)"; ctx.beginPath(); ctx.arc(0,0,p.r*0.9,0,6.28); ctx.fill();   // round flask
+      ctx.fillStyle="#3ad06a"; ctx.beginPath(); ctx.arc(0,p.r*0.2,p.r*0.65,0,6.28); ctx.fill();
+      ctx.fillStyle="#c88a3a"; ctx.fillRect(-p.r*0.2,-p.r*1.2,p.r*0.4,p.r*0.5);   // neck+cork
+      ctx.fillStyle="#eafff0"; for(let k=0;k<3;k++){ ctx.beginPath(); ctx.arc(Math.cos(k*2)*p.r*0.3, p.r*0.1+Math.sin(frame*0.3+k)*p.r*0.2, p.r*0.12,0,6.28); ctx.fill(); }
+    } else {
+      if(faeCut){ ctx.strokeStyle="#ffd6ef"; ctx.shadowColor="#ff9ad6"; ctx.shadowBlur=7; } else ctx.strokeStyle="#cfd6de";
+      ctx.lineWidth=3; ctx.lineCap="round";
+      for(let k=-1;k<=1;k++){ ctx.beginPath(); ctx.moveTo(-p.r*0.4,k*p.r*0.45); ctx.lineTo(p.r*1.1,k*p.r*0.45); ctx.stroke(); }
+      ctx.strokeStyle=faeCut?"#c6a8ff":"#8a5a3a"; ctx.beginPath(); ctx.moveTo(-p.r*0.4,0); ctx.lineTo(-p.r*1.2,0); ctx.stroke();
+      ctx.shadowBlur=0;
+    }
   } else if(p.type==="anchor"){
     const kraken = p.owner && p.owner.skinMorph==='kraken';   // Sanne Kraken: a tentacle instead of an iron anchor
     ctx.rotate(p.spin*0.3);
@@ -13053,6 +15861,35 @@ function drawProjectile(p){
 }
 
 function drawBomb(b){
+  // Druk Thunder Lob: a crackling lightning orb arcing over the field, brighter/bigger the more it was charged
+  if(b.type==="druklob"){
+    const chg=b.charge||0, lift=b.arc||0;
+    const tesla = b.owner && b.owner.skinMorph==='sch_teslacoil';   // Science Fair: a green-white static ball
+    const col= tesla ? "#5ae0b0" : "#5a8aff";
+    // landing-target reticle sized to the blast radius
+    const pulse=0.5+0.4*Math.sin(frame*0.3);
+    ctx.save(); ctx.globalAlpha=0.45*pulse+0.3; ctx.strokeStyle=tesla?"#b7ffe0":(chg>=0.98?"#c8e6ff":"#8fd3ff"); ctx.lineWidth=3; ctx.setLineDash([9,7]); ctx.lineDashOffset=-frame*0.5;
+    ctx.beginPath(); ctx.arc(b.tx,b.ty,(b.blast||90),0,6.28); ctx.stroke(); ctx.setLineDash([]);
+    ctx.globalAlpha=1; ctx.restore();
+    // ground shadow shrinks as it rises (clamped ≥0 — a big arc lifts higher than 120, which would make the radii negative and crash the canvas)
+    const sh=Math.max(0.05, 1-lift/200);
+    ctx.fillStyle="rgba(0,0,0,.26)"; ctx.beginPath(); ctx.ellipse(b.x,b.y+b.r*0.6,b.r*0.9*sh,b.r*0.4*sh,0,0,6.28); ctx.fill();
+    // the lightning orb, lifted by the arc
+    ctx.save(); ctx.translate(b.x,b.y-lift); ctx.rotate(b.roll||0);
+    ctx.globalAlpha=0.3+0.3*chg; ctx.fillStyle=col; ctx.beginPath(); ctx.arc(0,0,b.r*(1.7+chg),0,6.28); ctx.fill(); ctx.globalAlpha=1;   // charge-scaled electric glow
+    const g=ctx.createRadialGradient(-b.r*0.3,-b.r*0.3,1,0,0,b.r);
+    if(tesla){ g.addColorStop(0,"#ffffff"); g.addColorStop(0.5,"#7ff0c8"); g.addColorStop(1,"#2a9a7a"); }
+    else { g.addColorStop(0,"#ffffff"); g.addColorStop(0.5,"#8fd3ff"); g.addColorStop(1,"#3a5ac8"); }
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,b.r,0,6.28); ctx.fill();
+    // jagged little arcs crackling around the orb, more when charged
+    ctx.strokeStyle=tesla?"#eafff4":"#e8f4ff"; ctx.lineWidth=1.5; ctx.lineCap="round";
+    for(let k=0;k<Math.round(3+3*chg);k++){ const a=k/(3+3*chg)*6.28+frame*0.2; let ax=Math.cos(a)*b.r*0.7, ay=Math.sin(a)*b.r*0.7;
+      ctx.beginPath(); ctx.moveTo(ax,ay);
+      for(let s=1;s<=3;s++){ const rr=b.r*(0.7+0.6*s/3); ax=Math.cos(a)*rr+rand(-3,3); ay=Math.sin(a)*rr+rand(-3,3); ctx.lineTo(ax,ay); } ctx.stroke(); }
+    ctx.fillStyle="rgba(255,255,255,.9)"; ctx.beginPath(); ctx.arc(-b.r*0.3,-b.r*0.3,b.r*0.26,0,6.28); ctx.fill();   // shine
+    ctx.restore();
+    return;
+  }
   // Adam Match Point: a giant smash-ball arcing over the field, with a shadow + a landing reticle
   if(b.type==="adamsmash"){
     const col=b.ballCol||"#ff7ac0", lift=b.arc||0;
@@ -13141,7 +15978,20 @@ function drawBomb(b){
   }
   ctx.save(); ctx.translate(b.x,b.y); ctx.rotate(b.roll||0);
   const imp = b.owner && b.owner.skinMorph==='imp';   // Daniel Imp: a burning hellfire bomb
-  if(imp){
+  if(b.owner && b.owner.skinMorph==='sch_globe'){
+    // Geography (Daniel): the bomb is a classroom globe — blue oceans, green landmasses, a brass meridian ring
+    const g=ctx.createRadialGradient(-b.r*0.35,-b.r*0.4,1,0,0,b.r);
+    g.addColorStop(0,"#7ab0e0"); g.addColorStop(0.7,"#3a7fc4"); g.addColorStop(1,"#25507f");
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,b.r,0,6.28); ctx.fill();
+    // rough green continents
+    ctx.fillStyle="#4a9a52";
+    ctx.beginPath(); ctx.ellipse(-b.r*0.25,-b.r*0.2,b.r*0.35,b.r*0.24,0.4,0,6.28); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(b.r*0.3,b.r*0.25,b.r*0.3,b.r*0.4,-0.3,0,6.28); ctx.fill();
+    ctx.beginPath(); ctx.arc(b.r*0.1,-b.r*0.4,b.r*0.16,0,6.28); ctx.fill();
+    // brass meridian ring + shine
+    ctx.strokeStyle="#e0b84a"; ctx.lineWidth=2; ctx.beginPath(); ctx.ellipse(0,0,b.r*0.5,b.r,0,0,6.28); ctx.stroke();
+    ctx.fillStyle="rgba(255,255,255,.4)"; ctx.beginPath(); ctx.arc(-b.r*0.35,-b.r*0.4,b.r*0.18,0,6.28); ctx.fill();
+  } else if(imp){
     // molten dark sphere with glowing cracks
     const g=ctx.createRadialGradient(-4,-4,1,0,0,b.r);
     g.addColorStop(0,"#7a2a10"); g.addColorStop(0.5,"#3a1206"); g.addColorStop(1,"#160603");
@@ -13197,24 +16047,29 @@ function updateHUD(){
   }
 
   if(gameMode==="whiteout"){
-    const rec = whiteout.recruits || [0,0];
+    const cl = whiteout.claims || [0,0];
     let rosterHtml='';
     entities.filter(e=>!e.isBanshee).sort((a,b)=>a.team-b.team).forEach(e=>{
       const you = e.isPlayer ? ' (you)' : '';
-      const tag = e.leader ? '👑' : (e.team===player.team ? '🤝' : '⚔');
+      const tag = e.team===player.team ? '🤝' : '⚔';
       const stat = e.dead ? `<span style="opacity:.6;">respawn ${Math.ceil(e.respawnTimer/60)}s</span>` : `${Math.max(0,Math.round(e.hp/e.maxHp*100))}%`;
-      rosterHtml+=`<div style="color:${e.dead?'#888':TEAM_COLOR[e.team]}; ${e.leader?'font-weight:bold;':''}">${tag} ${e.def.name}${you} — ${stat}</div>`;
+      rosterHtml+=`<div style="color:${e.dead?'#888':TEAM_COLOR[e.team]};">${tag} ${e.def.name}${you} — ${stat}</div>`;
     });
-    el.innerHTML=rosterHtml;
+    // beacon claim-meter readout: who's charging it and how far
+    const ct=whiteout.controlTeam, pct=Math.round((whiteout.claim||0)/CLAIM_FULL*100);
+    const beaconLine = ct===-1
+      ? `<div style="opacity:.7;">🛸 signal contested</div>`
+      : `<div style="color:${TEAM_COLOR[ct]};">🛸 ${ct===player.team?'YOU':'RIVALS'} claiming… ${pct}%</div>`;
+    el.innerHTML=beaconLine+rosterHtml;
     const tEl=document.getElementById('timer');
     tEl.textContent=`👽 ${Math.ceil((whiteout.timer||0)/60)}s left`;
     tEl.style.color="#8fd3ff";
     const you0=player.team===0;
-    const mine=you0?rec[0]:rec[1], theirs=you0?rec[1]:rec[0];
+    const mine=you0?cl[0]:cl[1], theirs=you0?cl[1]:cl[0];
     document.getElementById('scoreLine').innerHTML =
-      `<span style="color:${TEAM_COLOR[player.team]}; font-weight:bold;">YOUR CREW 👥${mine}</span>`+
-      ` &nbsp;/&nbsp; steal them all &nbsp;/&nbsp; `+
-      `<span style="color:${TEAM_COLOR[you0?1:0]}; font-weight:bold;">RIVALS 👥${theirs}</span>`;
+      `<span style="color:${TEAM_COLOR[player.team]}; font-weight:bold;">YOU 🛸${mine}</span>`+
+      ` &nbsp;/&nbsp; first to ${CLAIM_TARGET} &nbsp;/&nbsp; `+
+      `<span style="color:${TEAM_COLOR[you0?1:0]}; font-weight:bold;">RIVALS 🛸${theirs}</span>`;
     return;
   }
 
@@ -13258,10 +16113,13 @@ function updateHUD(){
     el.innerHTML=rosterHtml;
     const myCart=payload.carts[player.team], foeCart=payload.carts[player.team===0?1:0];
     const tEl=document.getElementById('timer');
+    const secs=Math.max(0,Math.ceil(payload.timer/60)), mm=Math.floor(secs/60), ss=secs%60;
+    const clock=`⏱ ${mm}:${ss<10?'0':''}${ss}`;
     if(myCart){ const push=myCart.mine>myCart.foes && myCart.mine>0;
-      tEl.textContent = push ? "🚂 PUSHING — stay on it!" : (myCart.foes>myCart.mine ? "🚂 THEY'RE SHOVING IT BACK" : "🚂 GET ON YOUR TRAIN");
-      tEl.style.color = push ? TEAM_COLOR[player.team] : "#ffcf6b";
-    }
+      const msg = push ? "🚂 PUSHING — stay on it!" : (myCart.foes>myCart.mine ? "🚂 THEY'RE SHOVING IT BACK" : "🚂 GET ON YOUR TRAIN");
+      tEl.innerHTML = `${clock} · ${msg}`;
+      tEl.style.color = (secs<=20) ? "#ff6a5a" : (push ? TEAM_COLOR[player.team] : "#ffcf6b");
+    } else { tEl.textContent = clock; tEl.style.color = (secs<=20)?"#ff6a5a":"#ffcf6b"; }
     const mp=myCart?Math.round(myCart.prog*100):0, fp=foeCart?Math.round(foeCart.prog*100):0;
     document.getElementById('scoreLine').innerHTML =
       `<span style="color:${TEAM_COLOR[player.team]}; font-weight:bold;">YOUR TRAIN 🚂 ${mp}%</span>`+
@@ -13363,10 +16221,11 @@ function updateHUD(){
 
 /* ---------- Match flow ---------- */
 function startMatch(){
+  if(chosen){ save.lastPick=chosen; persistSave(); }   // remember the brawler so the select screen can preselect it next time
   buildArena();
   groundScatter=null;                 // reseed flora for the new map
   cam.x=0; cam.y=0;
-  entities=[]; projectiles=[]; bombs=[]; particles=[]; floaters=[]; iceTrail=[]; koLog=[]; bats=[]; exhaust=[]; wetFloor=[]; damageZones=[]; cameras=[]; hydrants=[]; rings=[];
+  entities=[]; projectiles=[]; bombs=[]; particles=[]; floaters=[]; iceTrail=[]; koLog=[]; bats=[]; exhaust=[]; wetFloor=[]; damageZones=[]; cameras=[]; hydrants=[]; rings=[]; drones=[]; pollenClouds=[]; nitroTraps=[]; nitroTraps=[];
   matchTime=0; defeated=0; matchDamage=0;
 
   if(gameMode==="relay"){ startRelay(); return; }
@@ -13567,7 +16426,7 @@ function updateTutorial(){
 function endTutorial(){
   tutorial.done=true; tutorial.step=99; tutPrompt(null);
   save.tutorialSeen=TUTORIAL_VERSION; persistSave();
-  state="title"; hide('hud'); hide('centerHud'); hide('controls'); stopMusic();
+  state="title"; hide('hud'); hide('centerHud'); hide('controls'); startMusic('menu');
   show('titleScreen');
   banner("TUTORIAL COMPLETE!", "super");
 }
@@ -13630,8 +16489,8 @@ function startPearl(){
 
   // team 0 (yours): player + 2 allies on the left. team 1 (rivals): 3 bots on the right.
   const teamSpawns={
-    0:[spawnOf('player',WW*0.08,WH*0.3), spawnOf('yassin',WW*0.08,WH*0.5), spawnOf('josh',WW*0.08,WH*0.7)],
-    1:[spawnOf('daniel',WW*0.92,WH*0.3), spawnOf('nathan',WW*0.92,WH*0.5), spawnOf('milo',WW*0.92,WH*0.7)]
+    0:[safeSpawn(WW*0.12,WH*0.3), safeSpawn(WW*0.12,WH*0.5), safeSpawn(WW*0.12,WH*0.7)],
+    1:[safeSpawn(WW*0.88,WH*0.3), safeSpawn(WW*0.88,WH*0.5), safeSpawn(WW*0.88,WH*0.7)]
   };
   const ps=teamSpawns[0][0];
   player=makeFighter(chosen,ps.x,ps.y,true);
@@ -13673,7 +16532,7 @@ function endPearl(){
   try{
     const pts = won ? 60 : 22;
     const reward=awardPoints(pts, defeated);
-    const gotSomething = reward.chars.length || reward.cosmetics.length || reward.emotes.length;
+    const gotSomething = reward.chars.length || reward.cosmetics.length || reward.emotes.length || (reward.titles&&reward.titles.length) || (reward.currencyPayouts&&reward.currencyPayouts.length);
     sfx(gotSomething ? 'unlock' : (won?'super':'ui'));
     let rewardHtml=`+${pts} trophies  ·  ${save.points} to spend`;
     rewardHtml+=`<br><span style="color:#8fe6ff;font-weight:bold;">🫧 +${pearlReward} Pearls (${save.pearls} total)</span>`;
@@ -13684,6 +16543,10 @@ function endPearl(){
       rewardHtml+=`<br><span style="color:#f4c430;font-weight:bold;">🎨 New skin: ${cn}!</span>`; }
     if(reward.emotes.length){ const en=reward.emotes.map(id=>`${EMOTES[id].name} (${CHARS[EMOTES[id].char].name})`).join(", ");
       rewardHtml+=`<br><span style="color:#9fd6ff;font-weight:bold;">💬 New emote: ${en}!</span>`; }
+    if(reward.titles&&reward.titles.length){ const tn=reward.titles.map(id=>`"${TITLES[id].name}" (${CHARS[TITLES[id].char].name})`).join(", ");
+      rewardHtml+=`<br><span style="color:#ffd98a;font-weight:bold;">🏷️ New title: ${tn}!</span>`; }
+    if(reward.currencyPayouts&&reward.currencyPayouts.length){
+      rewardHtml+=`<br><span style="color:#cfe0a8;font-weight:bold;">♻️ KO reward: ${reward.currencyPayouts.join(", ")}</span>`; }
     const rank = won?1:2;
     trackMatchResult(rank).forEach(l=>{ rewardHtml+=`<br>${l}`; });
     document.getElementById('rewardLine').innerHTML=rewardHtml;
@@ -13713,6 +16576,7 @@ function shuffleRoles(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math
 function startPayload(){
   storm.r=0; storm.delay=0; storm.minR=0; storm.maxR=0;   // no storm
   payload.winner=-1;
+  payload.timer=payload.timeLimit;
   // each team's train follows a right-angled ZIGZAG rail: horizontal runs joined by 90° corners
   // (horizontal → turn → vertical → turn → horizontal …). Team 0 up top left→right, team 1 mirrored below.
   const topHi=WH*0.20, topLo=WH*0.44, botHi=WH*0.80, botLo=WH*0.56;
@@ -13791,7 +16655,7 @@ function endPayload(){
   try{
     const pts = won ? 55 : 20;
     const reward=awardPoints(pts, defeated);
-    const gotSomething = reward.chars.length || reward.cosmetics.length || reward.emotes.length;
+    const gotSomething = reward.chars.length || reward.cosmetics.length || reward.emotes.length || (reward.titles&&reward.titles.length) || (reward.currencyPayouts&&reward.currencyPayouts.length);
     sfx(gotSomething ? 'unlock' : (won?'super':'ui'));
     let rewardHtml=`+${pts} trophies  ·  ${save.points} to spend`;
     rewardHtml+=`<br><span style="color:#ffcf6b;font-weight:bold;">🎟️ +${ticketReward} Prize Tickets (${save.tickets} total)</span>`;
@@ -13802,6 +16666,10 @@ function endPayload(){
       rewardHtml+=`<br><span style="color:#f4c430;font-weight:bold;">🎨 New skin: ${cn}!</span>`; }
     if(reward.emotes.length){ const en=reward.emotes.map(id=>`${EMOTES[id].name} (${CHARS[EMOTES[id].char].name})`).join(", ");
       rewardHtml+=`<br><span style="color:#9fd6ff;font-weight:bold;">💬 New emote: ${en}!</span>`; }
+    if(reward.titles&&reward.titles.length){ const tn=reward.titles.map(id=>`"${TITLES[id].name}" (${CHARS[TITLES[id].char].name})`).join(", ");
+      rewardHtml+=`<br><span style="color:#ffd98a;font-weight:bold;">🏷️ New title: ${tn}!</span>`; }
+    if(reward.currencyPayouts&&reward.currencyPayouts.length){
+      rewardHtml+=`<br><span style="color:#cfe0a8;font-weight:bold;">♻️ KO reward: ${reward.currencyPayouts.join(", ")}</span>`; }
     const rank = won?1:2;
     trackMatchResult(rank).forEach(l=>{ rewardHtml+=`<br>${l}`; });
     document.getElementById('rewardLine').innerHTML=rewardHtml;
@@ -13867,7 +16735,7 @@ function endCTF(){
   try{
     const pts = won ? 55 : 20;
     const reward=awardPoints(pts, defeated);
-    const gotSomething = reward.chars.length || reward.cosmetics.length || reward.emotes.length;
+    const gotSomething = reward.chars.length || reward.cosmetics.length || reward.emotes.length || (reward.titles&&reward.titles.length) || (reward.currencyPayouts&&reward.currencyPayouts.length);
     sfx(gotSomething ? 'unlock' : (won?'super':'ui'));
     let rewardHtml=`+${pts} trophies  ·  ${save.points} to spend`;
     rewardHtml+=`<br><span style="color:#e0b060;font-weight:bold;">🌰 +${acornReward} Acorns (${save.acorns} total)</span>`;
@@ -13878,6 +16746,10 @@ function endCTF(){
       rewardHtml+=`<br><span style="color:#f4c430;font-weight:bold;">🎨 New skin: ${cn}!</span>`; }
     if(reward.emotes.length){ const en=reward.emotes.map(id=>`${EMOTES[id].name} (${CHARS[EMOTES[id].char].name})`).join(", ");
       rewardHtml+=`<br><span style="color:#9fd6ff;font-weight:bold;">💬 New emote: ${en}!</span>`; }
+    if(reward.titles&&reward.titles.length){ const tn=reward.titles.map(id=>`"${TITLES[id].name}" (${CHARS[TITLES[id].char].name})`).join(", ");
+      rewardHtml+=`<br><span style="color:#ffd98a;font-weight:bold;">🏷️ New title: ${tn}!</span>`; }
+    if(reward.currencyPayouts&&reward.currencyPayouts.length){
+      rewardHtml+=`<br><span style="color:#cfe0a8;font-weight:bold;">♻️ KO reward: ${reward.currencyPayouts.join(", ")}</span>`; }
     const rank = won?1:2;
     trackMatchResult(rank).forEach(l=>{ rewardHtml+=`<br>${l}`; });
     document.getElementById('rewardLine').innerHTML=rewardHtml;
@@ -13889,66 +16761,63 @@ function endCTF(){
   const ov=document.getElementById('overScreen'); ov.classList.add('fade-in');
   flushRewards(awardedCosmetics, 'overScreen', awardedChars);
 }
-/* ---------- Alien Whiteout: 6v6 recruit war — 3 lanes, duo spawns; defeat a non-leader and they join your team ---------- */
+/* ---------- Signal Rush (3v3): fixed teams, 3 lanes/duo spawns; hold the moving alien beacon to claim it ---------- */
 function startWhiteout(){
   storm.r=0; storm.delay=0; storm.minR=0; storm.maxR=0;   // no storm
   whiteout.winner=-1; whiteout.timer=whiteout.timeLimit;
+  whiteout.claims=[0,0]; whiteout.claim=0; whiteout.claimTeam=-1; whiteout.controlTeam=-1;
+  whiteout.beacon={x:WW*0.5, y:WH*0.5}; whiteout.moveTimer=BEACON_MOVE;   // first beacon at center
   const shuffle=a=>{ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
   const unlockedPool=shuffle(save.unlocked.filter(k=>k!==chosen));
   const restPool=shuffle(ALL_CHAR_IDS.filter(k=>k!==chosen && !save.unlocked.includes(k)));
-  const aiChars=unlockedPool.concat(restPool).slice(0,11);   // 11 bots + you = 12 fighters (6v6)
-  // three lanes (x = left/mid/right); each team gets a DUO per lane. Team 0 tops, team 1 bottoms.
+  const aiChars=unlockedPool.concat(restPool).slice(0,5);   // 5 bots + you = 6 fighters (3v3)
+  // team 0 spawns top, team 1 spawns bottom; three staggered spots per team
   const laneX=[WW*0.16, WW*0.50, WW*0.84];
   const teamSpawns={
-    0:[ spawnOf('p',laneX[0],WH*0.10), spawnOf('a',laneX[0]+40,WH*0.15),
-        spawnOf('b',laneX[1],WH*0.10), spawnOf('c',laneX[1]+40,WH*0.15),
-        spawnOf('d',laneX[2],WH*0.10), spawnOf('e',laneX[2]+40,WH*0.15) ],
-    1:[ spawnOf('f',laneX[0],WH*0.90), spawnOf('g',laneX[0]+40,WH*0.85),
-        spawnOf('h',laneX[1],WH*0.90), spawnOf('i',laneX[1]+40,WH*0.85),
-        spawnOf('j',laneX[2],WH*0.90), spawnOf('k',laneX[2]+40,WH*0.85) ]
+    0:[ spawnOf('p',laneX[0],WH*0.12), spawnOf('a',laneX[1],WH*0.10), spawnOf('b',laneX[2],WH*0.12) ],
+    1:[ spawnOf('f',laneX[0],WH*0.88), spawnOf('g',laneX[1],WH*0.90), spawnOf('h',laneX[2],WH*0.88) ]
   };
   whiteout.spawns={0:teamSpawns[0].slice(), 1:teamSpawns[1].slice()};
-  // YOU lead team 0, spawning in the LEFT lane's top duo
+  // YOU on team 0 (no leaders in Signal Rush — fixed teams)
   const ps=teamSpawns[0][0];
   player=makeFighter(chosen,ps.x,ps.y,true);
-  player.team=0; player.spawnPt={x:ps.x,y:ps.y}; player.leader=true; player.startTeam=0;
-  entities.push(player); whiteout.leader[0]=player;
+  player.team=0; player.spawnPt={x:ps.x,y:ps.y}; player.leader=false; player.startTeam=0;
+  entities.push(player);
   cam.x=clamp(player.x-W/2,0,Math.max(0,WW-W));
   cam.y=clamp(player.y-H/2,0,Math.max(0,WH-H));
-  // team 0 recruits (5 bots) fill the rest of team 0's spawns
-  [aiChars[0],aiChars[1],aiChars[2],aiChars[3],aiChars[4]].forEach((k,i)=>{
+  // team 0 allies (2 bots)
+  [aiChars[0],aiChars[1]].forEach((k,i)=>{
     const sp=teamSpawns[0][i+1];
     const a=makeFighter(k,sp.x,sp.y,false); a.team=0; a.spawnPt={x:sp.x,y:sp.y}; a.leader=false; a.startTeam=0; entities.push(a);
   });
-  // team 1: first bot is the rival LEADER (mid lane), rest are recruits
-  [aiChars[5],aiChars[6],aiChars[7],aiChars[8],aiChars[9],aiChars[10]].forEach((k,i)=>{
+  // team 1 (3 rival bots)
+  [aiChars[2],aiChars[3],aiChars[4]].forEach((k,i)=>{
     const sp=teamSpawns[1][i];
-    const e=makeFighter(k,sp.x,sp.y,false); e.team=1; e.spawnPt={x:sp.x,y:sp.y}; e.leader=(i===2); e.startTeam=1; entities.push(e);
-    if(i===2) whiteout.leader[1]=e;
+    const e=makeFighter(k,sp.x,sp.y,false); e.team=1; e.spawnPt={x:sp.x,y:sp.y}; e.leader=false; e.startTeam=1; entities.push(e);
   });
   state="play"; endDelay=0; startMusic();
   show('hud'); show('centerHud'); show('controls');
   updateTouchUI();
   hide('titleScreen'); hide('selectScreen'); hide('overScreen');
-  mapIntro("STEAL THEIR CREW!");
+  mapIntro("CLAIM THE SIGNAL! 🛸");
 }
 function endWhiteout(){
-  const rec = whiteout.recruits || [0,0];
-  const won = whiteout.winner===0 || (whiteout.winner===-1 && rec[0]>=rec[1]);
+  const cl = whiteout.claims || [0,0];
+  const won = whiteout.winner===0 || (whiteout.winner===-1 && cl[0]>=cl[1]);
   const t=document.getElementById('overTitle'); document.getElementById('overScreen').dataset.result = won?'win':'lose';
-  t.textContent = won ? "CREW ASSIMILATED!" : "OUT-RECRUITED";
+  t.textContent = won ? "SIGNAL SECURED!" : "SIGNAL LOST";
   t.style.color = won ? "#8fd3ff" : "#e04b3a";
   document.getElementById('overText').textContent = won
-    ? `Your crew swelled to ${rec[0]} against ${rec[1]}. The void bends to you. 👽`
-    : `The rivals turned more of the crew (${rec[1]} vs ${rec[0]}). Regroup and reclaim them.`;
-  // Stardust payout: your recruits + a win bonus + small KO bonus
-  const stardust = (won?8:3) + (rec[0]||0)*2 + Math.floor(defeated/2);
+    ? `You claimed ${cl[0]} beacons to their ${cl[1]}. The signal is yours. 👽`
+    : `The rivals claimed more beacons (${cl[1]} vs ${cl[0]}). Chase the signal next time.`;
+  // Stardust payout: claims + a win bonus + small KO bonus
+  const stardust = (won?8:3) + (cl[0]||0)*3 + Math.floor(defeated/2);
   save.stardust=(save.stardust||0)+stardust; persistSave();
   let awardedCosmetics=[], awardedChars=[];
   try{
     const pts = won ? 55 : 20;
     const reward=awardPoints(pts, defeated);
-    const gotSomething = reward.chars.length || reward.cosmetics.length || reward.emotes.length;
+    const gotSomething = reward.chars.length || reward.cosmetics.length || reward.emotes.length || (reward.titles&&reward.titles.length) || (reward.currencyPayouts&&reward.currencyPayouts.length);
     sfx(gotSomething ? 'unlock' : (won?'super':'ui'));
     let rewardHtml=`+${pts} trophies  ·  ${save.points} to spend`;
     rewardHtml+=`<br><span style="color:#8fd3ff;font-weight:bold;">✨ +${stardust} Stardust (${save.stardust} total)</span>`;
@@ -13959,6 +16828,10 @@ function endWhiteout(){
       rewardHtml+=`<br><span style="color:#f4c430;font-weight:bold;">🎨 New skin: ${cn}!</span>`; }
     if(reward.emotes.length){ const en=reward.emotes.map(id=>`${EMOTES[id].name} (${CHARS[EMOTES[id].char].name})`).join(", ");
       rewardHtml+=`<br><span style="color:#9fd6ff;font-weight:bold;">💬 New emote: ${en}!</span>`; }
+    if(reward.titles&&reward.titles.length){ const tn=reward.titles.map(id=>`"${TITLES[id].name}" (${CHARS[TITLES[id].char].name})`).join(", ");
+      rewardHtml+=`<br><span style="color:#ffd98a;font-weight:bold;">🏷️ New title: ${tn}!</span>`; }
+    if(reward.currencyPayouts&&reward.currencyPayouts.length){
+      rewardHtml+=`<br><span style="color:#cfe0a8;font-weight:bold;">♻️ KO reward: ${reward.currencyPayouts.join(", ")}</span>`; }
     const rank = won?1:2;
     trackMatchResult(rank).forEach(l=>{ rewardHtml+=`<br>${l}`; });
     document.getElementById('rewardLine').innerHTML=rewardHtml;
@@ -13980,7 +16853,7 @@ function endWhiteout(){
      Phase 2 ⚡ Natuurkunde — gravity pull toward him + lightning strikes at players' feet.  */
 function startBinas(){
   storm.r=0; storm.delay=0; storm.minR=0; storm.maxR=0;   // no storm in the arena fight
-  binas.phase=0; binas.cast=0; binas.castCd=180; binas.minions=[]; binas.acid=[]; binas.winner=-1; binas.introTimer=120;
+  binas.phase=0; binas.cast=0; binas.castCd=180; binas.minions=[]; binas.acid=[]; binas.winner=-1; binas.introTimer=120; binas.castTurn=0;
   const shuffle=a=>{ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
   const allyPool=shuffle(save.unlocked.filter(k=>k!==chosen && k!=='renas'))
                  .concat(shuffle(ALL_CHAR_IDS.filter(k=>k!==chosen && k!=='renas' && !save.unlocked.includes(k))));
@@ -14025,40 +16898,73 @@ function binasSpawnMinion(){
   entities.push(mk); binas.minions.push(mk);
   ring(mk.x,mk.y,"#7ac85a",40,20,4); nearSfx('spawn',mk.x,mk.y);
 }
-// the boss's per-phase special. Called on a cooldown from updateBinas.
+// the boss's per-phase special. Called on a cooldown from updateBinas. Each phase has TWO distinct attacks;
+// binas.castTurn alternates between them cast-to-cast so the fight doesn't read as one repeated move.
 function binasCast(){
   const b=binas.boss; if(!b||b.dead) return;
   const targets=entities.filter(e=>!e.dead && e.team===0);
   if(!targets.length) return;
   const pick=()=>targets[Math.floor(Math.random()*targets.length)];
+  const turn=(binas.castTurn||0)%3; binas.castTurn=(binas.castTurn||0)+1;
   if(binas.phase===0){
-    // 🧬 Biologie — 2 attacks: (1) roots erupt under two players (0.75s warning), (2) spawn a spore-minion
-    for(let i=0;i<2;i++){ const t=pick();
-      binas.acid.push({x:t.x,y:t.y,r:70,life:195,warn:45,dps:70,kind:'root'});
-      ring(t.x,t.y,"#4a9a3a",70,26,5); }
-    binasSpawnMinion();
-    nearSfx('spawn',b.x,b.y);
+    // 🧬 Biologie — rotate 3: [A] roots under two players  [B] spawn spore-minions  [C] a gerichte vine-lash line
+    if(turn===0){
+      for(let i=0;i<2;i++){ const t=pick();
+        binas.acid.push({x:t.x,y:t.y,r:70,life:195,warn:45,dps:70,kind:'root'});
+        ring(t.x,t.y,"#4a9a3a",70,26,5); }
+      nearSfx('bomb',b.x,b.y);
+    } else if(turn===1){
+      binasSpawnMinion(); binasSpawnMinion();   // a little pack so the minion turn feels like its own beat
+      nearSfx('spawn',b.x,b.y);
+    } else {
+      // VINE LASH: a fast line of root-spikes racing from the boss toward one player (staggered warns = it travels)
+      const t=pick(); const dx=t.x-b.x, dy=t.y-b.y, d=Math.hypot(dx,dy)||1, ux=dx/d, uy=dy/d;
+      for(let s=1;s<=6;s++){ const px=b.x+ux*s*46, py=b.y+uy*s*46;
+        binas.acid.push({x:px,y:py,r:40,life:60+s*6,warn:14+s*6,dps:80,kind:'root'}); }
+      ring(b.x,b.y,"#4a9a3a",50,20,4); nearSfx('bomb',b.x,b.y); addShake(3);
+    }
   } else if(binas.phase===1){
-    // 🧪 Scheikunde — 2 attacks: (1) two acid flasks (0.75s warning), (2) a big lingering toxic-gas cloud
-    for(let i=0;i<2;i++){ const t=pick();
-      const jx=t.x+rand(-60,60), jy=t.y+rand(-60,60);
-      binas.acid.push({x:jx,y:jy,r:88,life:305,warn:45,dps:95,kind:'acid'});
-      ring(jx,jy,"#c6f24a",88,30,5); burst(jx,jy,"#a6e02a",10,4); }
-    const gt=pick();
-    binas.acid.push({x:gt.x,y:gt.y,r:150,life:345,warn:45,dps:55,kind:'gas'});   // slow, wide poison gas
-    ring(gt.x,gt.y,"#b0e88a",150,34,4);
-    nearSfx('bomb',b.x,b.y); addShake(4);
+    // 🧪 Scheikunde — rotate 3: [A] two acid flasks  [B] wide toxic-gas cloud  [C] a gerichte acid-spit trail
+    if(turn===0){
+      for(let i=0;i<2;i++){ const t=pick();
+        const jx=t.x+rand(-60,60), jy=t.y+rand(-60,60);
+        binas.acid.push({x:jx,y:jy,r:88,life:305,warn:45,dps:95,kind:'acid'});
+        ring(jx,jy,"#c6f24a",88,30,5); burst(jx,jy,"#a6e02a",10,4); }
+      nearSfx('bomb',b.x,b.y); addShake(4);
+    } else if(turn===1){
+      const gt=pick();
+      binas.acid.push({x:gt.x,y:gt.y,r:150,life:345,warn:45,dps:55,kind:'gas'});   // slow, wide poison gas
+      ring(gt.x,gt.y,"#b0e88a",150,34,4);
+      nearSfx('super',b.x,b.y); addShake(4);
+    } else {
+      // ACID SPIT: the boss spits a fast, thin line of acid straight at the NEAREST player (a dodge, not a zone)
+      let t=targets[0], bd=1e9; targets.forEach(o=>{ const dd=Math.hypot(o.x-b.x,o.y-b.y); if(dd<bd){bd=dd;t=o;} });
+      const dx=t.x-b.x, dy=t.y-b.y, d=Math.hypot(dx,dy)||1, ux=dx/d, uy=dy/d;
+      for(let s=1;s<=7;s++){ const px=b.x+ux*s*48, py=b.y+uy*s*48;
+        binas.acid.push({x:px,y:py,r:34,life:40+s*4,warn:10+s*4,dps:90,kind:'acid'}); }
+      burst(b.x,b.y,"#a6e02a",12,5); nearSfx('throw',b.x,b.y); addShake(3);
+    }
   } else {
-    // ⚡ Natuurkunde — 2 attacks: (1) a GENTLE gravity nudge toward the boss, (2) lightning at ONE player's feet.
-    // (Was way too strong: it yanked EVERY ally in hard and struck them all for huge damage — near-instant team wipe.)
-    targets.forEach(t=>{
-      const dx=b.x-t.x, dy=b.y-t.y, d=Math.hypot(dx,dy)||1;
-      t.x+=dx/d*40; t.y+=dy/d*40; circleWall(t);   // gentle pull — enough to reposition, not to trap
-    });
-    const bt=pick();   // lightning telegraphs on just one random target's feet (dodgeable during the warn)
-    binas.acid.push({x:bt.x,y:bt.y,r:56,life:52,warn:40,dps:0,kind:'bolt',strike:12});
-    ring(bt.x,bt.y,"#bfe0ff",56,18,4);
-    addShake(5); nearSfx('super',b.x,b.y);
+    // ⚡ Natuurkunde — rotate 3: [A] gravity nudge  [B] lightning at one player  [C] an expanding shockwave ring
+    if(turn===0){
+      targets.forEach(t=>{
+        const dx=b.x-t.x, dy=b.y-t.y, d=Math.hypot(dx,dy)||1;
+        t.x+=dx/d*40; t.y+=dy/d*40; circleWall(t);   // gentle pull — enough to reposition, not to trap
+        ring(t.x,t.y,"#c6a8ff",44,18,3);
+      });
+      addShake(4); nearSfx('bomb',b.x,b.y);
+    } else if(turn===1){
+      const bt=pick();   // lightning telegraphs on just one random target's feet (dodgeable during the warn)
+      binas.acid.push({x:bt.x,y:bt.y,r:56,life:52,warn:40,dps:0,kind:'bolt',strike:12});
+      ring(bt.x,bt.y,"#bfe0ff",56,18,4);
+      addShake(5); nearSfx('super',b.x,b.y);
+    } else {
+      // SHOCKWAVE RING: a ring of bolt-nodes at a fixed radius around the boss, all striking together (move OUT or IN)
+      const RR=200, N=10;
+      for(let k=0;k<N;k++){ const a2=k/N*6.28, px=b.x+Math.cos(a2)*RR, py=b.y+Math.sin(a2)*RR;
+        binas.acid.push({x:px,y:py,r:56,life:46,warn:34,dps:0,kind:'bolt',strike:12}); }
+      ring(b.x,b.y,"#c6a8ff",RR,40,6); nearSfx('super',b.x,b.y); addShake(6);
+    }
   }
 }
 function updateBinas(){
@@ -14069,7 +16975,7 @@ function updateBinas(){
     if(binas.phase<2){
       binas.phase++;
       b.maxHp=BINAS_PHASE_HP[binas.phase]; b.hp=b.maxHp;
-      b.invuln=60; binas.cast=0; binas.castCd=Math.max(150,190-binas.phase*20);   // a bit more breathing room between casts (esp. the busy Natuurkunde phase)
+      b.invuln=60; binas.cast=0; binas.castCd=Math.max(150,190-binas.phase*20); binas.castTurn=0;   // a bit more breathing room between casts (esp. the busy Natuurkunde phase)
       binas.acid=[];   // clear the field on transition so it reads as a fresh phase
       ring(b.x,b.y,"#ffffff",b.radius*3,40,8); addShake(12); hitStop=8;
       banner(`${binas.phaseIcons[binas.phase]} ${binas.phaseNames[binas.phase].toUpperCase()}`, 'warn');
@@ -14180,7 +17086,7 @@ function endBinas(){
   try{
     const pts = won ? 70 : 20;
     const reward=awardPoints(pts, defeated);
-    const gotSomething = reward.chars.length || reward.cosmetics.length || reward.emotes.length;
+    const gotSomething = reward.chars.length || reward.cosmetics.length || reward.emotes.length || (reward.titles&&reward.titles.length) || (reward.currencyPayouts&&reward.currencyPayouts.length);
     sfx(gotSomething ? 'unlock' : (won?'super':'ui'));
     let rewardHtml=`+${pts} trophies  ·  ${save.points} to spend`;
     rewardHtml+=`<br><span style="color:#7ee06b;font-weight:bold;">⚛️ +${atoms} Atoms (${save.atoms} total)</span>`;
@@ -14191,6 +17097,10 @@ function endBinas(){
       rewardHtml+=`<br><span style="color:#f4c430;font-weight:bold;">🎨 New skin: ${cn}!</span>`; }
     if(reward.emotes.length){ const en=reward.emotes.map(id=>`${EMOTES[id].name} (${CHARS[EMOTES[id].char].name})`).join(", ");
       rewardHtml+=`<br><span style="color:#9fd6ff;font-weight:bold;">💬 New emote: ${en}!</span>`; }
+    if(reward.titles&&reward.titles.length){ const tn=reward.titles.map(id=>`"${TITLES[id].name}" (${CHARS[TITLES[id].char].name})`).join(", ");
+      rewardHtml+=`<br><span style="color:#ffd98a;font-weight:bold;">🏷️ New title: ${tn}!</span>`; }
+    if(reward.currencyPayouts&&reward.currencyPayouts.length){
+      rewardHtml+=`<br><span style="color:#cfe0a8;font-weight:bold;">♻️ KO reward: ${reward.currencyPayouts.join(", ")}</span>`; }
     trackMatchResult(won?1:2).forEach(l=>{ rewardHtml+=`<br>${l}`; });
     document.getElementById('rewardLine').innerHTML=rewardHtml;
     awardedCosmetics=reward.cosmetics.slice(); awardedChars=reward.chars.slice();
@@ -14296,7 +17206,7 @@ function endMatch(){
     const placementPts=[0,80,50,30,15,5];
     const pts=(placementPts[rank]||5)+defeated*12;
     const reward=awardPoints(pts, defeated);
-    const gotSomething = reward.chars.length || reward.cosmetics.length || reward.emotes.length;
+    const gotSomething = reward.chars.length || reward.cosmetics.length || reward.emotes.length || (reward.titles&&reward.titles.length) || (reward.currencyPayouts&&reward.currencyPayouts.length);
     sfx(gotSomething ? 'unlock' : (won?'super':'ui'));
     let rewardHtml=`+${pts} trophies  ·  ${save.points} to spend`;
     if(defeated>0) rewardHtml+=`<br><span style="opacity:.85;">+${reward.koPts} KO-points (${defeated} KO${defeated>1?'s':''}${reward.koDoubled?' ×2 💠':''})</span>`;
@@ -14311,6 +17221,11 @@ function endMatch(){
     if(reward.emotes.length){
       const en=reward.emotes.map(id=>`${EMOTES[id].name} (${CHARS[EMOTES[id].char].name})`).join(", ");
       rewardHtml+=`<br><span style="color:#9fd6ff;font-weight:bold;">💬 New emote: ${en}!</span>`;
+    }
+    if(reward.titles&&reward.titles.length){ const tn=reward.titles.map(id=>`"${TITLES[id].name}" (${CHARS[TITLES[id].char].name})`).join(", ");
+      rewardHtml+=`<br><span style="color:#ffd98a;font-weight:bold;">🏷️ New title: ${tn}!</span>`; }
+    if(reward.currencyPayouts&&reward.currencyPayouts.length){
+      rewardHtml+=`<br><span style="color:#cfe0a8;font-weight:bold;">♻️ KO reward: ${reward.currencyPayouts.join(", ")}</span>`;
     }
     if(!reward.chars.length){
       const nextNode=nextBrawlerNode();
@@ -14350,7 +17265,7 @@ function endRelay(){
   try{
     const pts = won ? 70 : 25;
     const reward=awardPoints(pts, defeated);
-    const gotSomething = reward.chars.length || reward.cosmetics.length || reward.emotes.length;
+    const gotSomething = reward.chars.length || reward.cosmetics.length || reward.emotes.length || (reward.titles&&reward.titles.length) || (reward.currencyPayouts&&reward.currencyPayouts.length);
     sfx(gotSomething ? 'unlock' : (won?'super':'ui'));
     let rewardHtml=`+${pts} trophies  ·  ${save.points} to spend`;
     if(defeated>0) rewardHtml+=`<br><span style="opacity:.85;">+${reward.koPts} KO-points (${defeated} KO${defeated>1?'s':''}${reward.koDoubled?' ×2 💠':''})</span>`;
@@ -14365,6 +17280,11 @@ function endRelay(){
     if(reward.emotes.length){
       const en=reward.emotes.map(id=>`${EMOTES[id].name} (${CHARS[EMOTES[id].char].name})`).join(", ");
       rewardHtml+=`<br><span style="color:#9fd6ff;font-weight:bold;">💬 New emote: ${en}!</span>`;
+    }
+    if(reward.titles&&reward.titles.length){ const tn=reward.titles.map(id=>`"${TITLES[id].name}" (${CHARS[TITLES[id].char].name})`).join(", ");
+      rewardHtml+=`<br><span style="color:#ffd98a;font-weight:bold;">🏷️ New title: ${tn}!</span>`; }
+    if(reward.currencyPayouts&&reward.currencyPayouts.length){
+      rewardHtml+=`<br><span style="color:#cfe0a8;font-weight:bold;">♻️ KO reward: ${reward.currencyPayouts.join(", ")}</span>`;
     }
     if(!reward.chars.length){
       const nextNode=nextBrawlerNode();
@@ -14458,22 +17378,19 @@ function endArenaRound(){
 }
 
 /* ---------- Screen helpers ---------- */
-function show(id){document.getElementById(id).classList.remove('hidden'); syncBgScene(); if(id==='titleScreen') refreshModeLocks();}
+function show(id){document.getElementById(id).classList.remove('hidden'); syncBgScene(); if(id==='titleScreen'){ refreshModeLocks(); if(typeof refreshHub==='function') refreshHub(); }}
 function hide(id){document.getElementById(id).classList.add('hidden'); syncBgScene();}
 // paint the lock state onto the gated mode buttons: locked → 🔒 + trophies needed, dimmed
 function refreshModeLocks(){
-  let anyUnlocked=false;
+  // The old title screen had one button per mode; the hub replaced them with a single mode picker,
+  // so this only needs to guard against any legacy buttons still present, then repaint strips.
   MODE_UNLOCKS.forEach(m=>{
     const b=document.getElementById(m.btn); if(!b) return;
-    const unlocked=isModeUnlocked(m.id);
-    // locked modes are hidden entirely until the player crosses their lifetime-trophy threshold
-    b.style.display = unlocked ? '' : 'none';
-    if(unlocked) anyUnlocked=true;
+    b.style.display = isModeUnlocked(m.id) ? '' : 'none';
   });
-  // hide the whole "MORE MODES" group until at least one unlockable mode is available
-  const grp=document.getElementById('moreModesGroup');
-  if(grp) grp.style.display = anyUnlocked ? '' : 'none';
+  const grp=document.getElementById('moreModesGroup'); if(grp){ grp.style.display=''; }
   paintModeStrips();
+  if(typeof refreshHub==='function') refreshHub();   // keep the hub tiles in sync whenever the title shows
 }
 // paint each mode card's bottom strip: a themed, repeated motif drawn in the card's --acc accent color
 function paintModeStrips(){
@@ -14572,31 +17489,48 @@ function buildCards(){
     hp:       (a,b)=> b[1].maxHp-a[1].maxHp,
     dps:      (a,b)=> dpsOf(b[0])-dpsOf(a[0]),
     spd:      (a,b)=> b[1].speed-a[1].speed,
+    growth:   (a,b)=> growthOf(b[0])-growthOf(a[0]),   // most Growth progress first
     owned:    (a,b)=> (isUnlocked(b[0])?1:0)-(isUnlocked(a[0])?1:0),
     uses:     (a,b)=> usesOf(b[0])-usesOf(a[0]),   // most-played brawlers first
   }[selectSort];
   if(cmp) items.sort(cmp);
+  // favorited (owned) brawlers float to the TOP regardless of filter/sort, keeping their relative order
+  items.sort((a,b)=>{ const fa=isFav(a[0])&&isUnlocked(a[0])?1:0, fb=isFav(b[0])&&isUnlocked(b[0])?1:0; return fb-fa; });
   items.forEach(([key,c])=>{
     const owned=isUnlocked(key);
-    const node=TROPHY_ROAD.find(n=>n.type==='char'&&n.id===key);
-    const need=node?node.cost+' 🏆':'locked';
     const row=document.createElement('div'); row.className='brow'+(owned?'':' locked'); row.dataset.key=key;
     const gt=growthTier(growthOf(key));
-    const growthTag = owned ? `<div class="lockTag" title="Growth" style="color:${gt.color};">${gt.icon} ${gt.name}</div>` : `<div class="lockTag">🔒 ${need}</div>`;
+    // locked brawlers stay a mystery: just a lock, no unlock hint (keeps pack-unlock surprises like Druk hidden)
+    const growthTag = owned ? `<div class="lockTag" title="Growth" style="color:${gt.color};">${gt.icon} ${gt.name}</div>` : `<div class="lockTag">🔒 Locked</div>`;
     const champ = owned && save.silverdomeDone && save.silverdomeDone[key]
       ? `<div class="lockTag" title="Cleared all Silverdome rounds with this brawler" style="color:#dfe6ef;">🏛 Silverdome Champion</div>` : ``;
+    const isNew = owned && save.seen && !save.seen.includes(key);   // owned but never viewed → flag it
+    const newBadge = isNew ? `<span class="newBadge">NEW</span>` : ``;
     row.innerHTML=`<canvas width="88" height="88"></canvas>
-      <div><div class="bn">${c.name}</div><div class="br">${c.role}</div></div>
-      ${growthTag}${champ}`;
+      <div><div class="bn">${owned?c.name:'???'}${newBadge}</div><div class="br">${owned?c.role:'Locked'}</div></div>
+      ${growthTag}${champ}
+      ${owned?`<button class="favBtn${isFav(key)?' on':''}" title="${isFav(key)?'Unfavorite':'Favorite (pins to top)'}">${isFav(key)?'★':'☆'}</button>`:''}`;
     if(owned) row.onclick=()=>selectBrawler(key,row);
+    // star toggle: favorite/unfavorite without selecting the row
+    if(owned){ const fb=row.querySelector('.favBtn'); if(fb) fb.onclick=(ev)=>{ ev.stopPropagation(); toggleFav(key); sfx('ui'); buildCards(); }; }
     list.appendChild(row);
-    try{ drawPortrait(row.querySelector('canvas'),key); }catch(err){ console.error("portrait error:",err); }
+    // only draw the real portrait once unlocked; locked brawlers stay a hidden "???" silhouette
+    if(owned){ try{ drawPortrait(row.querySelector('canvas'),key); }catch(err){ console.error("portrait error:",err); } }
+    else { const cv=row.querySelector('canvas'), g=cv.getContext('2d'); g.clearRect(0,0,88,88);
+      g.fillStyle="rgba(255,255,255,.06)"; g.beginPath(); g.arc(44,44,30,0,6.28); g.fill();
+      g.fillStyle="rgba(255,255,255,.5)"; g.font="bold 34px sans-serif"; g.textAlign="center"; g.textBaseline="middle"; g.fillText("?",44,46); }
   });
   if(list.children.length===0){ list.innerHTML=`<div style="opacity:.7; font-size:13px; text-align:center; padding:20px;">No brawlers match this filter.</div>`; }
+  // QOL: preselect your last-played brawler (if still owned + visible in this filter) so the panel isn't empty
+  const lp=save.lastPick;
+  if(lp && isUnlocked(lp)){ const r=list.querySelector(`.brow[data-key="${lp}"]`); if(r) selectBrawler(lp,r); }
 }
 // fill the right-hand preview panel and arm the PLAY button
 function selectBrawler(key,row){
   chosen=key;
+  startMenuPose(key);   // replay this brawler's entrance pose in the preview
+  // viewing a brawler clears its NEW badge; drop the badge element live so it disappears without a full rebuild
+  if(isUnseen(key)){ markSeen(key); if(row){ const nb=row.querySelector('.newBadge'); if(nb) nb.remove(); } }
   document.querySelectorAll('.brow').forEach(x=>x.classList.remove('sel'));
   if(row) row.classList.add('sel');
   const c=CHARS[key];
@@ -14646,6 +17580,26 @@ function renderPreviewCustom(key){
   }
   eh+=`</div>`;
   emBox.innerHTML=eh;
+  // --- titles: "none" + every title you own for this brawler (KO-earned + Canopy-earned) ---
+  const titleBox=document.getElementById('pvTitles');
+  if(titleBox){
+    const owned=titlesForChar(key).filter(id=>ownsTitle(id));
+    let th=`<div class="pvcLbl">TITLE (shown on your nameplate)</div><div class="pvcChips">`;
+    const cur=save.equippedTitle&&save.equippedTitle[key];
+    th+=`<button class="pvcChip${!cur?' on':''}" data-title="__none">None</button>`;
+    if(owned.length===0){ th+=`<span class="pvcEmpty">No titles yet — earn them via KO-points or hit Canopy rank.</span>`; }
+    else owned.forEach(id=>{ const on=cur===id, tag=TITLES[id].via==='canopy'?'🌲':'🏷️';
+      th+=`<button class="pvcChip${on?' on':''}" data-title="${id}">${tag} ${TITLES[id].name}</button>`; });
+    th+=`</div>`;
+    titleBox.innerHTML=th;
+    titleBox.querySelectorAll('.pvcChip[data-title]').forEach(btn=>{
+      btn.onclick=()=>{
+        const v=btn.dataset.title;
+        save.equippedTitle[key] = (v==='__none') ? null : v;
+        persistSave(); sfx('ui'); renderPreviewCustom(key);
+      };
+    });
+  }
   // wire skin chips
   skinBox.querySelectorAll('.pvcChip[data-skin]').forEach(btn=>{
     btn.onclick=()=>{
@@ -14668,12 +17622,285 @@ function renderPreviewCustom(key){
   });
 }
 
+/* ---------- Menu entrance poses (Brawl-Stars-style): each brawler plays a short intro that eases
+   into a held signature pose. Plays on the big hub/preview canvases and replays on every (re)selection. ---------- */
+const POSE_DUR = 64;                 // ~1s of intro before settling into the held pose
+let poseAnim = { key:null, start:0 };   // which brawler is mid-intro + the uiTick it began on
+function startMenuPose(key){ poseAnim.key=key; poseAnim.start=(typeof uiTick!=='undefined'?uiTick:0); }
+function _easeOut(x){ return 1 - Math.pow(1-x, 3); }
+// Each pose fn receives (g,R,p,ease): p=raw 0..1, ease=eased 0..1 (1 = fully settled). It transforms g
+// BEFORE the sprite draws. Brawlers with no bespoke entry use the generic drop-in landing.
+const MENU_POSE = {
+  _default(g,R,p,ease){
+    g.translate(0, (1-ease)*-R*1.4);                                       // fall from above
+    const land = p<0.55 ? 0 : Math.sin(((p-0.55)/0.45)*Math.PI);          // squash on landing
+    g.translate(0,R*0.95); g.scale(1+land*0.12, 1-land*0.12); g.translate(0,-R*0.95);
+  },
+  hammed(g,R,p,ease){
+    g.translate(-(1-ease)*R*1.6, 0);                                       // slide in from the left
+    if(p<0.6){ g.translate(0,R*0.9); g.rotate((1-p/0.6)*6.28); g.translate(0,-R*0.9); }   // one quick spin
+    const settle=Math.max(0,(p-0.6)/0.4);
+    g.translate(0,R*0.9); g.rotate(0.08*Math.sin(settle*Math.PI)); g.translate(0,-R*0.9); // cocky lean
+  },
+  aasta(g,R,p,ease){
+    g.translate(0,R*0.95); g.scale(1, 1-(1-ease)*0.25); g.translate(0,-R*0.95);           // rise from a dip
+    g.translate(0, (1-ease)*R*0.5);
+    g.translate(0,R*0.9); g.rotate(Math.sin(p*Math.PI)*0.06); g.translate(0,-R*0.9);      // graceful sway
+  },
+  carol(g,R,p,ease){
+    g.translate(0, (1-ease)*R*0.8);                                        // plant down firmly
+    const bounce = p<0.7?0:Math.sin(((p-0.7)/0.3)*Math.PI*2)*0.05*(1-p);   // indignant double-bob
+    g.translate(0,R*0.95); g.scale(1+bounce, 1-bounce); g.translate(0,-R*0.95);
+  },
+  // Nathan: baseball sniper — winds up, then a recoil-kick back as the "pitch" releases
+  nathan(g,R,p,ease){
+    g.translate(0,(1-ease)*-R*1.1);                                        // drop onto the mound
+    const wind = p<0.5 ? Math.sin((p/0.5)*Math.PI)*0.18 : 0;               // wind-up lean forward
+    const kick = p<0.5 ? 0 : Math.sin(((p-0.5)/0.5)*Math.PI)*0.14;         // recoil back on release
+    g.translate(0,R*0.9); g.rotate(-wind + kick); g.translate(0,-R*0.9);
+  },
+  // Daniel: bomb trapper — rolls in, then a little recoil-hop as if a bomb pops nearby
+  daniel(g,R,p,ease){
+    g.translate((1-ease)*-R*1.2,0);                                        // roll in from the left
+    const pop = p<0.7?0:Math.sin(((p-0.7)/0.3)*Math.PI);                   // blast-recoil bounce
+    g.translate(0,-pop*R*0.16);                                            // hop up on the "pop"
+    g.translate(0,R*0.95); g.scale(1-pop*0.06,1+pop*0.1); g.translate(0,-R*0.95);
+  },
+  // Yassin: bruiser — stomps down hard then flexes forward (punch-ready)
+  yassin(g,R,p,ease){
+    g.translate(0,(1-ease)*-R*1.5);                                        // heavy fall
+    const land = p<0.5?0:Math.sin(((p-0.5)/0.5)*Math.PI);
+    g.translate(0,R*0.95); g.scale(1+land*0.18,1-land*0.14); g.translate(0,-R*0.95);  // big landing squash
+    const flex = p<0.7?0:Math.sin(((p-0.7)/0.3)*Math.PI)*0.1;
+    g.translate(0,R*0.9); g.rotate(flex); g.translate(0,-R*0.9);           // lean into a flex
+  },
+  // Josh: catapult trapper — crouches to set up, then springs upright
+  josh(g,R,p,ease){
+    const crouch = p<0.5 ? (p/0.5) : 1;                                    // squat down first half
+    const rise = p<0.5 ? 0 : ((p-0.5)/0.5);
+    const sq = crouch*(1-rise);
+    g.translate(0,R*0.95); g.scale(1+sq*0.16,1-sq*0.2); g.translate(0,-R*0.95);
+    g.translate(0,(1-ease)*R*0.4);
+  },
+  // Lars: charming healer — twirls in with a flourish, settles with a coy lean
+  lars(g,R,p,ease){
+    g.translate((1-ease)*R*1.4,0);                                         // glide in from the right
+    if(p<0.65){ g.translate(0,R*0.9); g.rotate(-(1-p/0.65)*6.28); g.translate(0,-R*0.9); }  // graceful twirl
+    const settle=Math.max(0,(p-0.65)/0.35);
+    g.translate(0,R*0.9); g.rotate(-0.1*Math.sin(settle*Math.PI)); g.translate(0,-R*0.9);   // coy lean
+  },
+  // Milo: precision sniper — snaps in from a dash and locks perfectly still (crisp stop)
+  milo(g,R,p,ease){
+    const snap = 1-Math.pow(1-Math.min(1,p/0.5),4);                        // very fast ease-in over first half
+    g.translate(-(1-snap)*R*1.8,0);
+    const settle = p<0.5?0:Math.sin(((p-0.5)/0.5)*Math.PI)*0.04;          // tiny overshoot-recoil, then dead still
+    g.translate(settle*R,0);
+  },
+  // Deniz: ice fighter — spins in like her whirl and grinds to a halt
+  deniz(g,R,p,ease){
+    g.translate(0,(1-ease)*-R*0.8);
+    const spins = (1-ease)*6.28*2;                                         // two decaying spins
+    g.translate(0,R*0.9); g.rotate(spins); g.translate(0,-R*0.9);
+  },
+  // Fionn: slasher — slides in low then rises with a diagonal slash-lean
+  fionn(g,R,p,ease){
+    g.translate(-(1-ease)*R*1.5,(1-ease)*R*0.4);                           // low slide-in
+    const slash = p<0.7?0:Math.sin(((p-0.7)/0.3)*Math.PI)*0.16;
+    g.translate(0,R*0.9); g.rotate(slash); g.translate(0,-R*0.9);         // upward slash-lean
+  },
+  // Reshman: chef healer — flourishing serve twirl in, settles with a light bow
+  reshman(g,R,p,ease){
+    g.translate((1-ease)*R*1.4,0);                                         // sweep in from the right
+    if(p<0.6){ g.translate(0,R*0.9); g.rotate((1-p/0.6)*6.28); g.translate(0,-R*0.9); }  // serving twirl
+    const bow=Math.max(0,(p-0.6)/0.4);
+    g.translate(0,R*0.9); g.rotate(0.1*Math.sin(bow*Math.PI)); g.translate(0,-R*0.9);
+  },
+  // Renas: magma/tide trapper — surges up from a low dip with a rolling wave-sway
+  renas(g,R,p,ease){
+    g.translate(0,R*0.95); g.scale(1,1-(1-ease)*0.3); g.translate(0,-R*0.95);   // rise out of a crouch
+    g.translate(0,(1-ease)*R*0.6);
+    g.translate(0,R*0.9); g.rotate(Math.sin(p*Math.PI*1.5)*0.07*(1-p*0.5)); g.translate(0,-R*0.9);  // wave sway
+  },
+  // Adam: tennis sniper — wind-up serve then a crisp recoil-kick
+  adam(g,R,p,ease){
+    g.translate(0,(1-ease)*-R*1.0);
+    const wind = p<0.5?Math.sin((p/0.5)*Math.PI)*0.2:0;                    // serve wind-up
+    const kick = p<0.5?0:Math.sin(((p-0.5)/0.5)*Math.PI)*0.12;            // follow-through recoil
+    g.translate(0,R*0.9); g.rotate(wind - kick); g.translate(0,-R*0.9);
+  },
+  // Evil Adam: predator healer — dives low then snaps upright with a lunge
+  evadam(g,R,p,ease){
+    g.translate(-(1-ease)*R*1.3,(1-ease)*R*0.7);                           // low pounce-in
+    const snap = p<0.6?0:Math.sin(((p-0.6)/0.4)*Math.PI);
+    g.translate(0,R*0.9); g.scale(1+snap*0.08,1-snap*0.06); g.rotate(-snap*0.12); g.translate(0,-R*0.9);
+  },
+  // Otis: moon-bounce fighter — big parabolic hop-in with a heavy landing squash
+  otis(g,R,p,ease){
+    const arc = Math.sin(p*Math.PI);                                      // up-and-over arc
+    g.translate((1-ease)*-R*1.2, -arc*R*0.9);
+    const land = p<0.75?0:Math.sin(((p-0.75)/0.25)*Math.PI);
+    g.translate(0,R*0.95); g.scale(1+land*0.16,1-land*0.14); g.translate(0,-R*0.95);
+  },
+  // Johan: hazmat/ooze trapper — bubbles up with a gooey wobble
+  johan(g,R,p,ease){
+    g.translate(0,(1-ease)*R*1.0);                                         // rise up from below
+    const wob=(1-p)*0.12;
+    g.translate(0,R*0.95); g.scale(1+Math.sin(p*Math.PI*3)*wob, 1-Math.sin(p*Math.PI*3)*wob); g.translate(0,-R*0.95);
+  },
+  // Robin: crybaby sniper — plants down and shudders with a couple of sob-shakes
+  robin(g,R,p,ease){
+    g.translate(0,(1-ease)*-R*0.9);
+    const sob = p<0.6?0:Math.sin(((p-0.6)/0.4)*Math.PI*3)*0.05*(1-p);      // trembling sobs
+    g.translate(sob*R,0);
+  },
+  // Jake: sunspear sniper — slides in and locks into a steady aim-hold
+  jake(g,R,p,ease){
+    const snap=1-Math.pow(1-Math.min(1,p/0.55),3);
+    g.translate((1-snap)*R*1.6,0);                                         // slide in from the right, ease to a stop
+    const hold=p<0.55?0:Math.sin(((p-0.55)/0.45)*Math.PI)*0.03;
+    g.translate(0,R*0.9); g.rotate(-hold); g.translate(0,-R*0.9);
+  },
+  // Kim Chi: ferment trapper — bubbles up with a spicy little shimmy
+  kimchi(g,R,p,ease){
+    g.translate(0,(1-ease)*R*0.9);                                         // rise up
+    const shimmy=(1-p)*0.1;
+    g.translate(0,R*0.9); g.rotate(Math.sin(p*Math.PI*4)*shimmy); g.translate(0,-R*0.9);
+  },
+  // Dean: bounty sniper — struts in with a confident settling tap
+  dean(g,R,p,ease){
+    g.translate((1-ease)*R*1.3,0);                                         // stride in from the right
+    const tap = p<0.7?0:Math.sin(((p-0.7)/0.3)*Math.PI)*0.06;
+    g.translate(0,-tap*R*0.1);                                             // little confident bob
+  },
+  // Claire: frost fighter — glides in over ice and stops with a spin flourish
+  claire(g,R,p,ease){
+    g.translate(-(1-ease)*R*1.5,0);                                        // slide in
+    if(p<0.6){ g.translate(0,R*0.9); g.rotate((1-p/0.6)*6.28); g.translate(0,-R*0.9); }  // spin
+    const settle=Math.max(0,(p-0.6)/0.4);
+    g.translate(0,R*0.9); g.rotate(0.07*Math.sin(settle*Math.PI)); g.translate(0,-R*0.9);
+  },
+  // Serveerster: waitress healer — balances in and settles with a tray-tilt
+  waitress(g,R,p,ease){
+    g.translate((1-ease)*R*1.2,0);                                         // walk in balancing a tray
+    const tilt = Math.sin(p*Math.PI)*0.08;
+    g.translate(0,R*0.9); g.rotate(tilt); g.translate(0,-R*0.9);
+  },
+  // Sanne: trapper — deliberate crouch-place then rises with a nod
+  sanne(g,R,p,ease){
+    const crouch=p<0.5?(p/0.5):1, rise=p<0.5?0:((p-0.5)/0.5), sq=crouch*(1-rise);
+    g.translate(0,R*0.95); g.scale(1+sq*0.12,1-sq*0.16); g.translate(0,-R*0.95);
+    g.translate(0,(1-ease)*R*0.35);
+  },
+  // Fluharty: curveball clown sniper — bounces in with a playful wobble
+  fluharty(g,R,p,ease){
+    const arc=Math.sin(p*Math.PI);
+    g.translate((1-ease)*-R*1.0, -arc*R*0.5);                              // little hop-in
+    const land=p<0.7?0:Math.sin(((p-0.7)/0.3)*Math.PI);
+    g.translate(0,R*0.95); g.scale(1+land*0.1,1-land*0.1); g.rotate(Math.sin(p*Math.PI*2)*0.06); g.translate(0,-R*0.95);
+  },
+  // Stalker: stealth fighter — creeps in low from the shadows and rises slowly
+  stalker(g,R,p,ease){
+    g.translate(-(1-ease)*R*0.8,(1-ease)*R*0.5);                           // slink in low
+    g.translate(0,R*0.95); g.scale(1,1-(1-ease)*0.2); g.translate(0,-R*0.95);  // rise from a crouch
+  },
+  // Marlin Miami: cool sniper — smooth slide-in with a laid-back shades-lean
+  marlin(g,R,p,ease){
+    g.translate((1-ease)*R*1.4,0);                                         // smooth slide in
+    const lean = Math.sin(Math.min(1,p)*Math.PI)*0.09;
+    g.translate(0,R*0.9); g.rotate(-lean*(1-p*0.5)); g.translate(0,-R*0.9);   // casual lean that eases upright
+  },
+  // Sonia: royal healer — a regal twirl-in that settles into a poised, chin-up stance
+  sonia(g,R,p,ease){
+    g.translate((1-ease)*R*1.3,0);
+    if(p<0.6){ g.translate(0,R*0.9); g.rotate((1-p/0.6)*6.28); g.translate(0,-R*0.9); }   // graceful twirl
+    const settle=Math.max(0,(p-0.6)/0.4);
+    g.translate(0,-Math.sin(settle*Math.PI)*R*0.06);                        // chin-up lift as she settles
+  },
+  // Evil Jax: talky sniper — struts in and lands a cocky, chatty lean
+  jax(g,R,p,ease){
+    g.translate((1-ease)*R*1.4,0);
+    const lean=p<0.6?0:Math.sin(((p-0.6)/0.4)*Math.PI)*0.1;
+    g.translate(0,R*0.9); g.rotate(-lean); g.translate(0,-R*0.9);          // cocky lean-back
+  },
+  // De Kapper: scissor fighter — a quick snip-dash in with a crisp snap-stop
+  kapper(g,R,p,ease){
+    const snap=1-Math.pow(1-Math.min(1,p/0.5),4);
+    g.translate(-(1-snap)*R*1.7,0);                                        // fast snip-dash in
+    const snip=p<0.5?0:Math.sin(((p-0.5)/0.5)*Math.PI*2)*0.05*(1-p);      // little scissor twitch
+    g.translate(0,R*0.9); g.rotate(snip); g.translate(0,-R*0.9);
+  },
+  // Dynant: fire-truck trapper — rolls in fast then brakes with a nose-dip recoil
+  dynant(g,R,p,ease){
+    g.translate(-(1-ease)*R*1.6,0);                                        // roll in
+    const brake=p<0.6?0:Math.sin(((p-0.6)/0.4)*Math.PI)*0.12;
+    g.translate(0,R*0.9); g.rotate(-brake); g.translate(0,-R*0.9);         // brake nose-dip
+  },
+  // Adma Jr: gentle healer — floats up softly with a calm sway
+  adma(g,R,p,ease){
+    g.translate(0,(1-ease)*R*0.7);                                         // soft float up
+    g.translate(0,R*0.9); g.rotate(Math.sin(p*Math.PI)*0.05); g.translate(0,-R*0.9);
+  },
+  // Jenna: sandwich fighter — an eager bouncy hop-in
+  jenna(g,R,p,ease){
+    const arc=Math.sin(p*Math.PI);
+    g.translate((1-ease)*-R*1.0,-arc*R*0.6);                               // hop in
+    const land=p<0.72?0:Math.sin(((p-0.72)/0.28)*Math.PI);
+    g.translate(0,R*0.95); g.scale(1+land*0.12,1-land*0.12); g.translate(0,-R*0.95);
+  },
+  // Druk: dragon trapper — descends grandly from above with a heavy wing-settle
+  druk(g,R,p,ease){
+    g.translate(0,(1-ease)*-R*1.8);                                        // descend from high
+    const land=p<0.62?0:Math.sin(((p-0.62)/0.38)*Math.PI);
+    g.translate(0,R*0.95); g.scale(1+land*0.14,1-land*0.1); g.translate(0,-R*0.95);
+    g.rotate(Math.sin(p*Math.PI)*0.04);                                    // slight majestic tilt
+  },
+  // Young Fyon: eager kid sniper — a quick springy double-hop in
+  youngfyon(g,R,p,ease){
+    const hop=Math.abs(Math.sin(p*Math.PI*2))*(1-p);
+    g.translate((1-ease)*-R*0.9,-hop*R*0.5);                               // bouncy approach
+  },
+  // Meta AI: robot sniper — a glitchy staccato snap-in (teleports the last stretch)
+  metaai(g,R,p,ease){
+    const step=Math.floor(p*5)/5;                                          // quantized, jittery arrival
+    g.translate(-(1-step)*R*1.5,0);
+    if(p<0.85){ g.translate((Math.random()-0.5)*R*0.05, (Math.random()-0.5)*R*0.05); }  // digital jitter
+  },
+  // Intratuin Potplant: plant healer — sprouts up out of the ground and unfurls
+  potplant(g,R,p,ease){
+    g.translate(0,R*0.98); g.scale(0.6+0.4*ease, ease); g.translate(0,-R*0.98);   // grow from the soil
+    const settle=Math.max(0,(p-0.7)/0.3);
+    g.rotate(Math.sin(settle*Math.PI)*0.05);                              // leafy unfurl wobble
+  },
+  // Slechte Meiden: sassy fighter — a confident slide-in with a hair-flip lean
+  meiden(g,R,p,ease){
+    g.translate(-(1-ease)*R*1.4,0);
+    const flip=p<0.6?0:Math.sin(((p-0.6)/0.4)*Math.PI)*0.12;
+    g.translate(0,R*0.9); g.rotate(flip); g.translate(0,-R*0.9);          // sassy hair-flip lean
+  }
+};
+function menuPoseProgress(key){
+  if(poseAnim.key!==key) return 1;                     // not the active intro → hold the settled pose
+  const t=(typeof uiTick!=='undefined'?uiTick:0)-poseAnim.start;
+  return Math.max(0, Math.min(1, t/POSE_DUR));
+}
+
 /* static illustrated portrait for character cards */
 function drawPortrait(cv2,key,cosmeticId){
   const c=CHARS[key]; const g=cv2.getContext('2d');
   const W2=cv2.width,H2=cv2.height, R=Math.round(Math.min(W2,H2)*0.386);   // scale sprite to the canvas (88px→34)
   g.clearRect(0,0,W2,H2);
-  g.save(); g.translate(W2/2,H2*0.62);
+  // live idle animation: a gentle breathing bob + a slow idle walk-cycle so previews feel alive.
+  // uiTick always advances (even on menus, where `frame` is frozen); fall back to frame if absent.
+  const pf=(typeof uiTick!=='undefined'?uiTick:(typeof frame!=='undefined'?frame:0));
+  const idleBob = Math.sin(pf*0.06)*R*0.03;
+  const idleWalk = pf*0.05;   // feeds walkPhase so custom sprites do their subtle idle sway/tail motion
+  // big canvases (hub tile + select preview) play the brawler's entrance pose, then hold it
+  const bigCanvas = Math.min(W2,H2) >= 120;
+  g.save(); g.translate(W2/2, H2*0.62 + idleBob);
+  if(bigCanvas){
+    const p=menuPoseProgress(key), ease=_easeOut(p);
+    (MENU_POSE[key]||MENU_POSE._default)(g, R, p, ease);
+  }
   // color/gear/morph: explicit cosmetic > equipped > default
   let body, gear=null, morph=null;
   if(cosmeticId && COSMETICS[cosmeticId]){ body=COSMETICS[cosmeticId].color; gear=COSMETICS[cosmeticId].gear||null; morph=COSMETICS[cosmeticId].morph||null; }
@@ -14682,7 +17909,7 @@ function drawPortrait(cv2,key,cosmeticId){
   const dark=shade(body,-40), light=shade(body,45);
   // custom art-pass brawlers: draw their own sprite (same code as in-game), then rare-skin extras
   if(CUSTOM_DRAW[key]){
-    const pe={char:key, skinMorph:morph};   // pass the morph so morph-gated sprite branches (e.g. Sonia's axe) render in previews
+    const pe={char:key, skinMorph:morph, walkPhase:idleWalk, moveSpd:0.6};   // idle anim so tails/hair/breathing move; pass morph so morph-gated branches render
     if(morph) drawMorph(g,morph,R,pe,'back');
     CUSTOM_DRAW[key](g, pe, R, body, dark, light);
     if(morph) drawMorph(g,morph,R,pe,'front');
@@ -14799,24 +18026,73 @@ function drawGearStatic(g,key,R,body,dark,light){
 }
 
 /* ---------- Buttons ---------- */
-document.getElementById('toSelect').onclick=()=>{ gameMode="ffa"; resetOverButtons(); hide('titleScreen'); show('selectScreen'); buildCards(); updateSelectShopBtn(); };
-// gated mode entry: locked modes shake + announce their trophy requirement instead of starting
+/* ---------- Home hub: brawler tile + mode tile + Play ---------- */
+// paint the mode tile + brawler name to match the current selection
+function refreshHub(){
+  const m=modeMeta(selectedMode);
+  const icon=document.getElementById('hubModeIcon'), ti=document.getElementById('hubModeTitle'),
+        su=document.getElementById('hubModeSub'), tile=document.getElementById('hubMode');
+  if(icon) icon.textContent=m.icon;
+  if(ti) ti.textContent=m.title;
+  if(su) su.textContent=m.sub;
+  if(tile) tile.style.setProperty('--acc', m.acc);
+  // brawler tile name (portrait is drawn each frame by animateHub)
+  const nm=document.getElementById('hubBrawlerName');
+  if(nm){ const c=chosen&&CHARS[chosen]; nm.textContent=c?c.name:'Pick a brawler'; }
+  // play the entrance pose whenever the hub (re)shows a brawler that isn't already mid-intro
+  if(chosen && poseAnim.key!==chosen) startMenuPose(chosen);
+}
+// build + open the mode picker overlay
+function openModePicker(){
+  sfx('ui');
+  const list=document.getElementById('modeList'); if(!list) return;
+  list.innerHTML='';
+  MODES.forEach(m=>{
+    const locked=!isModeUnlocked(m.id);
+    const it=document.createElement('button');
+    it.className='modeItem'+(m.id===selectedMode?' sel':'')+(locked?' locked':'');
+    it.style.setProperty('--acc', m.acc);
+    // locked modes are hidden: no name/description, just a locked placeholder + the trophy requirement
+    if(locked){
+      it.innerHTML=`<span class="mi-ic">🔒</span><span class="mi-tx"><span class="mi-ti">Locked</span><span class="mi-su">Unlocks at ${modeNeed(m.id)} lifetime trophies</span></span>`;
+    } else {
+      it.innerHTML=`<span class="mi-ic">${m.icon}</span><span class="mi-tx"><span class="mi-ti">${m.title}</span><span class="mi-su">${m.sub}</span></span>`;
+    }
+    it.onclick=()=>{
+      if(locked){ sfx('ui'); banner(`🔒 ${Math.max(0,modeNeed(m.id)-(save.lifetimePoints||0))} more lifetime trophies`,"super"); return; }
+      selectedMode=m.id; save.selectedMode=m.id; persistSave();
+      sfx('ui'); refreshHub(); closeModePicker();
+    };
+    list.appendChild(it);
+  });
+  show('modePicker');
+}
+function closeModePicker(){ hide('modePicker'); }
+document.getElementById('hubMode').onclick=openModePicker;
+document.getElementById('modePickerClose').onclick=()=>{ sfx('ui'); closeModePicker(); };
+document.getElementById('modePicker').onclick=(ev)=>{ if(ev.target.id==='modePicker') closeModePicker(); };
+// brawler tile → the character-select screen (now purely for choosing)
+document.getElementById('hubBrawler').onclick=()=>{ sfx('ui'); resetOverButtons(); hide('titleScreen'); show('selectScreen'); buildCards(); updateSelectShopBtn(); };
+// Play → apply the selected mode's setup, then launch with the chosen brawler
+document.getElementById('hubPlay').onclick=()=>{
+  const m=modeMeta(selectedMode);
+  if(m.special==='tutorial'){ launchTutorial(); return; }
+  if(!isModeUnlocked(m.id)){ sfx('ui'); banner(`🔒 ${Math.max(0,modeNeed(m.id)-(save.lifetimePoints||0))} more lifetime trophies`,"super"); return; }
+  if(!chosen){ sfx('ui'); resetOverButtons(); hide('titleScreen'); show('selectScreen'); buildCards(); updateSelectShopBtn(); return; }
+  if(m.setup) m.setup();
+  resetOverButtons(); hide('titleScreen');
+  startMatch();
+};
+// gated mode entry (kept for any legacy callers)
 function enterMode(id, setup){
   if(!isModeUnlocked(id)){ sfx('ui'); const need=modeNeed(id); banner(`🔒 ${Math.max(0,need-(save.lifetimePoints||0))} more lifetime trophies`, "super"); return; }
   if(setup) setup();
   resetOverButtons(); hide('titleScreen'); show('selectScreen'); buildCards(); updateSelectShopBtn();
 }
-document.getElementById('toRelay').onclick=()=>enterMode('relay',()=>gameMode="relay");
-document.getElementById('toPearl').onclick=()=>enterMode('pearl',()=>gameMode="pearl");
-document.getElementById('toPayload').onclick=()=>enterMode('payload',()=>gameMode="payload");
-document.getElementById('toCtf').onclick=()=>enterMode('ctf',()=>gameMode="ctf");
-document.getElementById('toWhiteout').onclick=()=>enterMode('whiteout',()=>gameMode="whiteout");
-document.getElementById('toBinas').onclick=()=>enterMode('binas',()=>gameMode="binas");
-document.getElementById('toPractice').onclick=()=>{ gameMode="practice"; resetOverButtons(); hide('titleScreen'); show('selectScreen'); buildCards(); updateSelectShopBtn(); };
 document.getElementById('prMove').onclick=()=>{ practice.moving=!practice.moving; sfx('ui'); updatePracticeUI(); };
 document.getElementById('prShoot').onclick=()=>{ practice.shootBack=!practice.shootBack; sfx('ui'); updatePracticeUI(); };
 document.getElementById('prReset').onclick=()=>{ sfx('ui'); resetPracticeDummies(); };
-document.getElementById('prExit').onclick=()=>{ sfx('ui'); document.getElementById('practiceBar').classList.add('hidden'); state="title"; hide('hud'); hide('centerHud'); hide('controls'); stopMusic(); show('titleScreen'); };
+document.getElementById('prExit').onclick=()=>{ sfx('ui'); document.getElementById('practiceBar').classList.add('hidden'); state="title"; hide('hud'); hide('centerHud'); hide('controls'); startMusic('menu'); show('titleScreen'); };
 // --- Tutorial wiring: launch helper, skip button, repeat button ---
 function launchTutorial(){
   sfx('ui');
@@ -14828,7 +18104,7 @@ function launchTutorial(){
 }
 document.getElementById('tutSkip').onclick=()=>{ sfx('ui'); tutorialAdvance(); };
 { const tb=document.getElementById('toTutorial'); if(tb) tb.onclick=()=>launchTutorial(); }
-document.getElementById('toArena').onclick=()=>enterMode('arena',()=>{ gameMode="arena"; arena.round=0; arena.tokensThisRun=0; });
+{ const ab=document.getElementById('toArena'); if(ab) ab.onclick=()=>enterMode('arena',()=>{ gameMode="arena"; arena.round=0; arena.tokensThisRun=0; }); }
 document.getElementById('shopBack').onclick=()=>{ sfx('ui'); closeShop(); };
 document.getElementById('selectShop').onclick=()=>{ sfx('ui'); openShop('selectScreen'); };
 document.getElementById('spinBtn').onclick=()=>{ initAudio(); spinRoulette(); };
@@ -14864,15 +18140,21 @@ function openObservatory(from){ sfx('ui'); document.getElementById('observatoryS
 function renderMarket(){
   const row=document.getElementById('marketRow'); if(!row) return; row.innerHTML='';
   const stalls=[
-    {icon:'🐚', name:'Siren Sanctuary', desc:'Signature upgrades + mythic skins', cur:`🫧 ${save.pearls} Pearls`, open:()=>openSanctuary('marketScreen')},
-    {icon:'🎟️', name:'The Toybox',      desc:'Playtime toy skins',              cur:`🎟️ ${save.tickets} Tickets`, open:()=>openToybox('marketScreen')},
-    {icon:'🌿', name:'The Grove',        desc:'Wild nature-form skins',          cur:`🌰 ${save.acorns} Acorns`,  open:()=>openNature('marketScreen')},
-    {icon:'🌌', name:'The Observatory',  desc:'Cosmic & space skins',            cur:`✨ ${save.stardust} Stardust`, open:()=>openObservatory('marketScreen')},
-    {icon:'🎒', name:'The Locker Room',  desc:'School skins (shhh…)',            cur:`⚛️ ${save.atoms||0} Atoms`, open:()=>openSchool('marketScreen')},
-    {icon:'🎪', name:'The Midnight Stall',desc:'Silver-token trinkets + roulette', cur:`🎟 ${save.tokens} Tokens`,  open:()=>{ hide('marketScreen'); openShop('marketScreen'); }},
+    {icon:'🐚', name:'Siren Sanctuary', desc:'Signature upgrades + mythic skins', cur:`🫧 ${save.pearls} Pearls`, mode:'pearl',   open:()=>openSanctuary('marketScreen')},
+    {icon:'🎟️', name:'The Toybox',      desc:'Playtime toy skins',              cur:`🎟️ ${save.tickets} Tickets`, mode:'payload', open:()=>openToybox('marketScreen')},
+    {icon:'🌿', name:'The Grove',        desc:'Wild nature-form skins',          cur:`🌰 ${save.acorns} Acorns`,  mode:'ctf',     open:()=>openNature('marketScreen')},
+    {icon:'🌌', name:'The Observatory',  desc:'Cosmic & space skins',            cur:`✨ ${save.stardust} Stardust`, mode:'whiteout', open:()=>openObservatory('marketScreen')},
+    {icon:'🎒', name:'The Locker Room',  desc:'School skins (shhh…)',            cur:`⚛️ ${save.atoms||0} Atoms`, mode:'binas',   open:()=>openSchool('marketScreen')},
+    {icon:'🎪', name:'The Midnight Stall',desc:'Silver-token trinkets + roulette', cur:`🎟 ${save.tokens} Tokens`,  mode:'arena',   open:()=>{ hide('marketScreen'); openShop('marketScreen'); }},
   ];
   stalls.forEach(s=>{
     const c=document.createElement('div'); c.className='mktStall';
+    // a stall stays a locked "???" until its feeder game mode is unlocked
+    if(s.mode && !isModeUnlocked(s.mode)){
+      c.classList.add('locked');
+      c.innerHTML=`<div class="mktIcon">🔒</div><div class="mktName">???</div><div class="mktDesc">Unlock ${MODE_UNLOCKS.find(m=>m.id===s.mode).label}</div><div class="mktCur">Locked</div>`;
+      row.appendChild(c); return;
+    }
     c.innerHTML=`<div class="mktIcon">${s.icon}</div><div class="mktName">${s.name}</div><div class="mktDesc">${s.desc}</div><div class="mktCur">${s.cur}</div>`;
     c.onclick=s.open; row.appendChild(c);
   });
@@ -14894,7 +18176,8 @@ const GALLERY_FILTERS = [
   {id:'mythic', label:'✦ Mythic',  test:c=>c.rarity==='mythic'},
   {id:'playtime',label:'✦ Playtime', test:c=>c.pack==='playtime'},
   {id:'nature',  label:'🌿 Nature',  test:c=>c.pack==='nature'},
-  {id:'space',   label:'🌌 Space',   test:c=>c.pack==='space'}
+  {id:'space',   label:'🌌 Space',   test:c=>c.pack==='space'},
+  {id:'school',  label:'🎒 School',  test:c=>c.pack==='school'}
 ];
 function renderGallery(){
   // how many cosmetics the player owns within a given filter (drives the "???" hiding of whole sets)
@@ -14902,7 +18185,8 @@ function renderGallery(){
   // filter chips — a set you own NOTHING from shows as "???" so its very theme stays a surprise
   const fb=document.getElementById('galleryFilters'); fb.innerHTML='';
   GALLERY_FILTERS.forEach(f=>{
-    const discovered = f.id==='all' || filterOwned(f)>0;
+    // School skins have their own visible shop (the Locker Room), so that tab is never a "surprise" — always show its label.
+    const discovered = f.id==='all' || f.id==='school' || filterOwned(f)>0;
     const b=document.createElement('button'); b.className='glFilt'+(galleryFilter===f.id?' on':'');
     b.textContent = discovered ? f.label : '❔ ???';
     b.onclick=()=>{ galleryFilter=f.id; sfx('ui'); renderGallery(); };
@@ -14947,7 +18231,7 @@ document.querySelectorAll('#roleFilters .selChip').forEach(chip=>{
     buildCards(); };
 });
 document.getElementById('brawlerSort').onchange=(ev)=>{ selectSort=ev.target.value; sfx('ui'); buildCards(); };
-document.getElementById('startBtn').onclick=()=>{ if(chosen) startMatch(); };
+document.getElementById('startBtn').onclick=()=>{ if(chosen){ save.lastPick=chosen; persistSave(); startMenuPose(chosen); } sfx('ui'); hide('selectScreen'); show('titleScreen'); refreshHub(); };
 document.getElementById('againBtn').onclick=()=>{
   if(gameMode==="arena"){ arena.round=0; arena.tokensThisRun=0; }   // fresh run from round 1
   startMatch();
@@ -14963,8 +18247,12 @@ function updateTouchToggleUI(){
   const label = save.touchMode===null ? 'AUTO'+(DEVICE_HAS_TOUCH?' (on)':' (off)') : (save.touchMode?'ON':'OFF');
   b.textContent='Phone mode: '+label;
 }
-document.getElementById('optionsBtn').onclick=()=>{ sfx('ui'); hide('titleScreen'); hide('selectScreen'); hide('roadScreen'); hide('overScreen'); show('optionsScreen'); updateTouchToggleUI(); };
+document.getElementById('optionsBtn').onclick=()=>{ sfx('ui'); hide('titleScreen'); hide('selectScreen'); hide('roadScreen'); hide('overScreen'); show('optionsScreen'); updateTouchToggleUI();
+  const ni=document.getElementById('nameInput'); if(ni) ni.value=save.name||''; };
 document.getElementById('optionsBack').onclick=()=>{ sfx('ui'); hide('optionsScreen'); show('titleScreen'); };
+{ const ni=document.getElementById('nameInput');
+  if(ni){ ni.oninput=()=>{ save.name=ni.value; persistSave(); };
+    ni.onblur=()=>{ save.name=(ni.value||'').trim(); ni.value=save.name; persistSave(); }; } }
 document.getElementById('touchToggle').onclick=()=>{
   // cycle AUTO -> ON -> OFF -> AUTO
   save.touchMode = save.touchMode===null ? true : (save.touchMode===true ? false : null);
@@ -15057,11 +18345,11 @@ function flushRewards(ids, returnScreen, charIds){
   return false;
 }
 function showNextReveal(){
-  // NEW BRAWLER unlocks flip first, on the same suspense card as skins
-  if(brawlerRevealQueue.length){ showBrawlerReveal(); return; }
   if(revealQueue.length===0){
     if(pendingPacks.length){ const pk=pendingPacks.shift(); playPackRoulette(pk); return; }   // then open any earned skin packs
     if(koReelQueue.length){ const id=koReelQueue.shift(); playSkinRoulette(id, revealReturnScreen); return; }   // then roll any KO-points skins on the reel
+    // NEW BRAWLER unlocks flip LAST — after the skin(s) and packs — so you stay in suspense over who you unlocked
+    if(brawlerRevealQueue.length){ showBrawlerReveal(); return; }
     show(revealReturnScreen);
     if(revealReturnScreen==='shopScreen') renderShop();   // reflect the purchase when returning to the stall
     if(revealReturnScreen==='sanctuaryScreen') renderSanctuary();
@@ -15106,33 +18394,38 @@ function showNextReveal(){
   }, 1800);
 }
 document.getElementById('revealEquip').onclick=()=>{
+  // a skin is on screen while revealQueue still has entries — consume those FIRST; the brawler card
+  // (which only shows once revealQueue is empty) is consumed only when it's actually the thing displayed.
+  if(revealQueue.length){ const id=revealQueue.shift(); if(id){ save.equipped[COSMETICS[id].char]=id; persistSave(); } sfx('ui'); hide('revealScreen'); showNextReveal(); return; }
   if(brawlerRevealQueue.length){ const cid=brawlerRevealQueue.shift(); if(cid){ chosen=cid; } sfx('ui'); hide('revealScreen'); showNextReveal(); return; }
-  const id=revealQueue.shift(); if(id){ save.equipped[COSMETICS[id].char]=id; persistSave(); }
   sfx('ui'); hide('revealScreen'); showNextReveal();
 };
 document.getElementById('revealLater').onclick=()=>{
+  if(revealQueue.length){ revealQueue.shift(); sfx('ui'); hide('revealScreen'); showNextReveal(); return; }
   if(brawlerRevealQueue.length){ brawlerRevealQueue.shift(); sfx('ui'); hide('revealScreen'); showNextReveal(); return; }
-  revealQueue.shift(); sfx('ui'); hide('revealScreen'); showNextReveal();
+  sfx('ui'); hide('revealScreen'); showNextReveal();
 };
-// NEW BRAWLER card-flip — reuses the skin suspense reveal, styled as a gold "mythic" card.
+// NEW BRAWLER card-flip — reuses the skin suspense reveal. Pack-unlock brawlers get the gold "ascended" card.
 function showBrawlerReveal(){
   const key=brawlerRevealQueue[0], c=CHARS[key];
+  const ascended = !!PACK_UNLOCKS[key];   // pack-unlock brawlers (e.g. Druk) are "Ascended" — gold reveal
+  const cls = ascended ? 'ascended' : 'mythic';
   const scr=document.getElementById('revealScreen');
   drawPortrait(document.getElementById('revealArt'), key, null);
-  document.getElementById('revealRarity').textContent='✦ NEW BRAWLER ✦';
+  document.getElementById('revealRarity').textContent = ascended ? '✦ NEW ASCENDED BRAWLER ✦' : '✦ NEW BRAWLER ✦';
   document.getElementById('revealName').textContent=c.name;
-  document.getElementById('revealChar').textContent=c.role+(c.blurb?' · '+c.blurb:'');
+  document.getElementById('revealChar').textContent=(ascended?'Ascended':c.role)+(c.blurb?' · '+c.blurb:'');
   const eq=document.getElementById('revealEquip'), lt=document.getElementById('revealLater');
   eq.textContent='PLAY AS '+c.name.toUpperCase(); lt.textContent='LATER';
   ['overScreen','roadScreen','titleScreen','shopScreen','sanctuaryScreen'].forEach(hide);
-  scr.className='screen mythic suspense';
+  scr.className='screen '+cls+' suspense';
   void scr.offsetWidth;
   show('revealScreen');
   sfx('ui');
   clearTimeout(showNextReveal._t);
   showNextReveal._t=setTimeout(()=>{
     if(document.getElementById('revealScreen').classList.contains('hidden')) return;
-    scr.className='screen mythic';
+    scr.className='screen '+cls;
     void scr.offsetWidth;
     sfx('unlock');
   }, 1800);
@@ -15249,14 +18542,17 @@ function renderRoad(){
   const track=document.getElementById('roadTrack'); track.innerHTML="";
   const nextId = (nextBrawlerNode()||{}).id;
   TROPHY_ROAD.forEach(n=>{
+    if(PACK_LOCKED_CHARS.includes(n.id)) return;   // Ascended brawlers (Druk/Meta AI/…) are pack-unlocks — not shown on the road
     const owned = isUnlocked(n.id);
     const next = n.id===nextId;   // the very next brawler you can buy (fixed order)
-    const icon = CHARS[n.id]?CHARS[n.id].emoji:'❔';
+    // only OWNED brawlers reveal their identity; every locked one (incl. the next) hides name/icon — just the cost
+    const icon = owned ? (CHARS[n.id]?CHARS[n.id].emoji:'❔') : '🔒';
     const d=document.createElement('div');
-    d.className='node'+(owned?' done':'')+(next?' next':'');
-    const costLabel = owned?'OWNED':(n.cost===0?'—':n.cost+' trophies');
-    d.innerHTML=`<div class="bar"></div><div class="dot">${owned?icon:'🔒'}</div>
-      <div class="info"><div class="lab">${n.label}</div>
+    d.className='node'+(owned?' done':'')+(next?' next':'')+(!owned?' mystery':'');
+    const label = owned ? n.label : '???';
+    const costLabel = owned ? 'OWNED' : (n.cost===0?'—':n.cost+' trophies');
+    d.innerHTML=`<div class="bar"></div><div class="dot">${icon}</div>
+      <div class="info"><div class="lab">${label}</div>
       <div class="cost">${costLabel}</div></div>`;
     track.appendChild(d);
   });
@@ -15506,9 +18802,7 @@ function drawAstronomer(){
 let observatory={epoch:null, offer:null};
 function buildObservatoryOffer(epoch){
   const pool=SPACE_IDS.filter(id=>isUnlocked(COSMETICS[id].char) && !ownsCosmetic(id));
-  const rnd=seededRand(epoch+97);
-  for(let i=pool.length-1;i>0;i--){ const j=Math.floor(rnd()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
-  return pool.slice(0,3);
+  return favSeededPick3(pool, seededRand(epoch+97), 3);
 }
 function refreshObservatoryEpoch(){
   const epoch=Math.floor(((save.stats&&save.stats.matches)||0)/4);
@@ -15541,7 +18835,7 @@ function renderObservatory(){
         <div class="snUp" style="color:#8fd3ff;">${co.name}</div>
         <div class="snDesc">Space skin</div>
       </div>
-      <button class="snBuy${owned?' have':''}" data-space="${id}" ${owned?'disabled':(canBuy?'':'disabled')}>${owned?'OWNED ✓':'✨ '+STARDUST_PRICE}</button>`;
+      <button class="snBuy${owned?' have':''}" data-space="${id}" ${owned?'disabled':(canBuy?'':'disabled')}>${owned?'OWNED ✓':'✨ '+price}</button>`;
     grid.appendChild(card);
     { const ib=document.createElement('button'); ib.className='iBtn'; ib.textContent='i'; ib.title='Preview skin';
       ib.onclick=(ev)=>{ ev.stopPropagation(); openSkinPeek(id); }; card.appendChild(ib); }
@@ -15550,10 +18844,14 @@ function renderObservatory(){
   grid.querySelectorAll('.snBuy[data-space]').forEach(b=>{
     b.onclick=()=>{
       const id=b.dataset.space, co=COSMETICS[id];
-      if(!co || ownsCosmetic(id) || (save.stardust||0)<STARDUST_PRICE) return;
-      save.stardust-=STARDUST_PRICE; save.cosmetics.push(id);
+      const price=(co.testCost||STARDUST_PRICE);
+      if(!co || ownsCosmetic(id) || (save.stardust||0)<price) return;
+      save.stardust-=price; save.cosmetics.push(id);
       if(!save.equipped[co.char]) save.equipped[co.char]=id;
+      const unlockedByPack=checkPackUnlocks();   // completing the Space pack unlocks Meta AI (Ascended)
       persistSave(); sfx('unlock');
+      // celebratory reveal: any pack-unlocked brawler (e.g. Meta AI) flips LAST, after the skin
+      brawlerRevealQueue=(unlockedByPack||[]).slice();
       hide('observatoryScreen'); queueReveals([id], 'observatoryScreen');
     };
   });
@@ -15604,9 +18902,7 @@ function buildSanctuaryOffer(epoch){
 // rotating selection of up to 3 mythic skins (unlocked brawler, not yet owned)
 function buildMythicOffer(epoch){
   const pool=MYTHIC_IDS.filter(id=>isUnlocked(COSMETICS[id].char) && !ownsCosmetic(id));
-  const rnd=seededRand(epoch+31);
-  for(let i=pool.length-1;i>0;i--){ const j=Math.floor(rnd()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
-  return pool.slice(0,3);
+  return favSeededPick3(pool, seededRand(epoch+31), 3);
 }
 function refreshSanctuaryEpoch(){
   const epoch=Math.floor(((save.stats&&save.stats.matches)||0)/4);
@@ -15618,9 +18914,7 @@ function refreshSanctuaryEpoch(){
 // rotating selection of up to 3 Playtime toy skins (unlocked brawler, not yet owned)
 function buildToyboxOffer(epoch){
   const pool=PLAYTIME_IDS.filter(id=>isUnlocked(COSMETICS[id].char) && !ownsCosmetic(id));
-  const rnd=seededRand(epoch+53);
-  for(let i=pool.length-1;i>0;i--){ const j=Math.floor(rnd()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
-  return pool.slice(0,3);
+  return favSeededPick3(pool, seededRand(epoch+53), 3);   // favorited brawlers' skins tend toward the shelf
 }
 function refreshToyboxEpoch(){
   const epoch=Math.floor(((save.stats&&save.stats.matches)||0)/4);
@@ -15631,9 +18925,7 @@ function refreshToyboxEpoch(){
 let nature={epoch:null, offer:null};
 function buildNatureOffer(epoch){
   const pool=NATURE_IDS.filter(id=>isUnlocked(COSMETICS[id].char) && !ownsCosmetic(id));
-  const rnd=seededRand(epoch+71);
-  for(let i=pool.length-1;i>0;i--){ const j=Math.floor(rnd()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
-  return pool.slice(0,3);
+  return favSeededPick3(pool, seededRand(epoch+71), 3);
 }
 function refreshNatureEpoch(){
   const epoch=Math.floor(((save.stats&&save.stats.matches)||0)/4);
@@ -15644,9 +18936,7 @@ function refreshNatureEpoch(){
 let school={epoch:null, offer:null};
 function buildSchoolOffer(epoch){
   const pool=SCHOOL_IDS.filter(id=>isUnlocked(COSMETICS[id].char) && !ownsCosmetic(id));
-  const rnd=seededRand(epoch+113);
-  for(let i=pool.length-1;i>0;i--){ const j=Math.floor(rnd()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
-  return pool.slice(0,3);
+  return favSeededPick3(pool, seededRand(epoch+113), 3);
 }
 function refreshSchoolEpoch(){
   const epoch=Math.floor(((save.stats&&save.stats.matches)||0)/4);
@@ -15798,8 +19088,10 @@ function renderSanctuary(){
       if(!co || ownsCosmetic(id) || save.pearls<MYTHIC_PRICE) return;
       save.pearls-=MYTHIC_PRICE; save.cosmetics.push(id);
       if(!save.equipped[co.char]) save.equipped[co.char]=id;
+      const unlockedByPack=checkPackUnlocks();   // completing the Mythic pack unlocks Druk
       persistSave(); sfx('unlock');
-      // play the celebratory reveal, returning to the sanctuary after
+      // celebratory reveal: any pack-unlocked brawler (e.g. Druk) flips FIRST on the same card as the skin
+      brawlerRevealQueue=(unlockedByPack||[]).slice();
       hide('sanctuaryScreen'); queueReveals([id], 'sanctuaryScreen');
     };
   });
@@ -15843,7 +19135,9 @@ function renderToybox(){
       if(!co || ownsCosmetic(id) || save.tickets<TICKET_PRICE) return;
       save.tickets-=TICKET_PRICE; save.cosmetics.push(id);
       if(!save.equipped[co.char]) save.equipped[co.char]=id;
+      const unlockedByPack=checkPackUnlocks();   // completing the Playtime pack unlocks Carol (Ascended)
       persistSave(); sfx('unlock');
+      brawlerRevealQueue=(unlockedByPack||[]).slice();   // Carol flips LAST, after the skin
       hide('toyboxScreen'); queueReveals([id], 'toyboxScreen');
     };
   });
@@ -15886,7 +19180,10 @@ function renderNature(){
       if(!co || ownsCosmetic(id) || save.acorns<ACORN_PRICE) return;
       save.acorns-=ACORN_PRICE; save.cosmetics.push(id);
       if(!save.equipped[co.char]) save.equipped[co.char]=id;
+      const unlockedByPack=checkPackUnlocks();   // completing the Nature pack unlocks Intratuin Potplant (Ascended)
       persistSave(); sfx('unlock');
+      // celebratory reveal: any pack-unlocked brawler (e.g. Potplant) flips LAST, after the skin
+      brawlerRevealQueue=(unlockedByPack||[]).slice();
       hide('natureScreen'); queueReveals([id], 'natureScreen');
     };
   });
@@ -16022,8 +19319,8 @@ function seededRand(seed){ let s=seed*2654435761 % 2147483647; return ()=>{ s=(s
 // the shop's stock rotates every 5 rounds won (an "epoch"); slots refill individually after a buy
 function buildOffersForEpoch(epoch){
   const pool=[];
-  ALL_COSMETIC_IDS.filter(id=>COSMETICS[id].shopOnly && !ownsCosmetic(id)).forEach(id=>pool.push({kind:'skin',id}));
-  ALL_EMOTE_IDS.filter(id=>!ownsEmote(id) && !EMOTES[id].skinLocked).forEach(id=>pool.push({kind:'emote',id}));
+  ALL_COSMETIC_IDS.filter(id=>COSMETICS[id].shopOnly && !ownsCosmetic(id) && isUnlocked(COSMETICS[id].char)).forEach(id=>pool.push({kind:'skin',id}));
+  ALL_EMOTE_IDS.filter(id=>!ownsEmote(id) && !EMOTES[id].skinLocked && isUnlocked(EMOTES[id].char)).forEach(id=>pool.push({kind:'emote',id}));
   const rnd=seededRand(epoch+1);
   for(let i=pool.length-1;i>0;i--){ const j=Math.floor(rnd()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
   // slots: an entry can be null while it's "refilling" after a purchase
@@ -16033,8 +19330,8 @@ function buildOffersForEpoch(epoch){
 function pickReplacement(){
   const taken=new Set((arena.shopOffer||[]).filter(Boolean).map(o=>o.id));
   const pool=[];
-  ALL_COSMETIC_IDS.filter(id=>COSMETICS[id].shopOnly && !ownsCosmetic(id) && !taken.has(id)).forEach(id=>pool.push({kind:'skin',id}));
-  ALL_EMOTE_IDS.filter(id=>!ownsEmote(id) && !EMOTES[id].skinLocked && !taken.has(id)).forEach(id=>pool.push({kind:'emote',id}));
+  ALL_COSMETIC_IDS.filter(id=>COSMETICS[id].shopOnly && !ownsCosmetic(id) && !taken.has(id) && isUnlocked(COSMETICS[id].char)).forEach(id=>pool.push({kind:'skin',id}));
+  ALL_EMOTE_IDS.filter(id=>!ownsEmote(id) && !EMOTES[id].skinLocked && !taken.has(id) && isUnlocked(EMOTES[id].char)).forEach(id=>pool.push({kind:'emote',id}));
   if(!pool.length) return null;
   return pool[Math.floor(Math.random()*pool.length)];
 }
@@ -16110,10 +19407,18 @@ function renderShop(){
 }
 // --- casino: instalable russian roulette ---
 const ROULETTE_MULT = {1:1.2, 2:1.5, 3:2, 4:3, 5:6};   // loaded chambers -> payout multiplier
+let rouletteCooldown=0;   // ms timestamp until which spinning is locked (anti-spam)
 function spinRoulette(){
+  const btn=document.getElementById('spinBtn');
+  const res=document.getElementById('casinoResult');
+  // anti-spam: one spin at a time, then a short "reload the cylinder" lockout
+  const now=performance.now();
+  if(now < rouletteCooldown){
+    if(res){ res.style.color="#e0b060"; res.textContent="Random Kid: \"Easy — let me reload the cylinder first.\""; }
+    return;
+  }
   const bet=Math.max(1, Math.floor(+document.getElementById('betInput').value||1));
   const loaded=Math.min(5, Math.max(1, +document.getElementById('chambersInput').value||1));
-  const res=document.getElementById('casinoResult');
   if(save.tokens<bet){ res.style.color="#e04b3a"; res.textContent="Not enough tokens to bet that."; sfx('ui'); return; }
   save.tokens-=bet;   // ante up
   const hit = Math.random() < (loaded/6);   // landed on a loaded chamber?
@@ -16127,6 +19432,11 @@ function spinRoulette(){
     sfx('unlock'); document.getElementById('shopBubble').textContent="Random Kid: \"Lucky. Or good. Hard to tell in here.\"";
   }
   persistSave(); renderShop();
+  // lock the trigger for ~1.6s and show a reloading state so it can't be machine-gunned
+  rouletteCooldown=performance.now()+1600;
+  const spinBtn=document.getElementById('spinBtn');
+  if(spinBtn){ const label=spinBtn.textContent; spinBtn.disabled=true; spinBtn.textContent="RELOADING…";
+    setTimeout(()=>{ if(spinBtn){ spinBtn.disabled=false; spinBtn.textContent=label; } }, 1600); }
 }
 
 
@@ -16135,12 +19445,35 @@ loadSave();
 updateTouchUI();   // apply phone layout immediately if on a touch device
 syncBgScene();     // show the painted scene behind the title on load
 refreshModeLocks();   // paint mode-card strips + apply unlock visibility on first paint
+// Home hub: restore the last-picked brawler + last-selected mode, then paint the hub tiles.
+if(!chosen && save.lastPick && CHARS[save.lastPick] && isUnlocked(save.lastPick)) chosen=save.lastPick;
+if(!chosen){ chosen=(save.unlocked&&save.unlocked[0])||STARTER_CHARS[0]||ALL_CHAR_IDS[0]; }
+if(save.selectedMode && modeMeta(save.selectedMode) && isModeUnlocked(save.selectedMode)) selectedMode=save.selectedMode;
+refreshHub();
 // First run (or once after a tutorial-version bump): auto-launch the interactive tutorial once.
 if((save.tutorialSeen||0) < TUTORIAL_VERSION){ setTimeout(()=>{ if(state==="title") launchTutorial(); }, 350); }
 let _lastT=performance.now(), _acc=0;
 const STEP=1000/60;           // ms per logical tick
+// keep the selected brawler's preview portrait animating while the select screen is open
+function animateSelectPreview(){
+  if(state==="play") return;   // in-battle the portrait isn't shown; skip the work
+  // hub brawler tile on the title screen
+  const ts=document.getElementById('titleScreen');
+  if(ts && !ts.classList.contains('hidden')){
+    const ha=document.getElementById('hubArt');
+    if(ha && chosen){ try{ drawPortrait(ha, chosen, save.equipped[chosen]||undefined); }catch(e){} }
+  }
+  const ss=document.getElementById('selectScreen');
+  if(!ss || ss.classList.contains('hidden')) return;
+  const card=document.getElementById('previewCard');
+  if(!card || card.classList.contains('hidden')) return;
+  const art=document.getElementById('previewArt');
+  if(art && chosen){ try{ drawPortrait(art, chosen, save.equipped[chosen]||undefined); }catch(e){} }
+}
 function loop(now){
   try{
+    uiTick++;
+    animateSelectPreview();
     let dt=now-_lastT; _lastT=now;
     if(dt>250) dt=250;        // clamp after a tab stall so we don't spiral
     _acc+=dt;
@@ -16155,6 +19488,14 @@ function loop(now){
     }
     if(steps===0 && _acc>STEP*4) _acc=0;  // safety: never let the accumulator run away
     draw();
+    // menu idle animation: advance the clock + redraw the selected brawler's live preview when not in a match
+    if(state!=="play"){
+      frame++;
+      if(typeof chosen!=='undefined' && chosen){
+        const pv=document.getElementById('previewArt');
+        if(pv && pv.offsetParent!==null){ try{ drawPortrait(pv,chosen); }catch(_){} }
+      }
+    }
   }
   catch(err){ console.error("frame error:",err); if(!window._frameErrShown){ window._frameErrShown=true; throw err; } }
   raf=requestAnimationFrame(loop);

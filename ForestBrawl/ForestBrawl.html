@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Forest Brawl</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="960" height="720"></canvas>
+
+  <!-- Shared painted background scene (moonlit forest), shown behind all menu screens -->
+  <svg id="bgScene" viewBox="0 0 960 720" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+      <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#7ec8e8"/>
+        <stop offset="0.5" stop-color="#a8dcc0"/>
+        <stop offset="1" stop-color="#d8eca8"/>
+      </linearGradient>
+      <radialGradient id="sunGlow" cx="0.5" cy="0.5" r="0.5">
+        <stop offset="0" stop-color="#fff7c0" stop-opacity="0.95"/>
+        <stop offset="0.45" stop-color="#ffe680" stop-opacity="0.4"/>
+        <stop offset="1" stop-color="#ffe680" stop-opacity="0"/>
+      </radialGradient>
+      <radialGradient id="sunBody" cx="0.5" cy="0.5" r="0.5">
+        <stop offset="0" stop-color="#fffce0"/><stop offset="0.7" stop-color="#ffe25a"/><stop offset="1" stop-color="#ffc93c"/>
+      </radialGradient>
+      <linearGradient id="hillA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6fbf4a"/><stop offset="1" stop-color="#4e9c34"/></linearGradient>
+      <linearGradient id="hillB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5aa83c"/><stop offset="1" stop-color="#3d8228"/></linearGradient>
+      <linearGradient id="groundG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4e9c34"/><stop offset="1" stop-color="#356e22"/></linearGradient>
+    </defs>
+
+    <!-- bright sky -->
+    <rect width="960" height="720" fill="url(#sky)"/>
+
+    <!-- sun with glow + rays, upper-left -->
+    <circle cx="180" cy="150" r="170" fill="url(#sunGlow)"/>
+    <g stroke="#ffe680" stroke-width="7" stroke-linecap="round" opacity="0.55" class="sunRays">
+      <line x1="180" y1="40" x2="180" y2="10"/><line x1="290" y1="60" x2="312" y2="38"/>
+      <line x1="70" y1="60" x2="48" y2="38"/><line x1="330" y1="150" x2="362" y2="150"/>
+      <line x1="30" y1="150" x2="-2" y2="150"/><line x1="290" y1="240" x2="312" y2="262"/>
+      <line x1="70" y1="240" x2="48" y2="262"/>
+    </g>
+    <circle cx="180" cy="150" r="62" fill="url(#sunBody)"/>
+
+    <!-- fluffy clouds -->
+    <g fill="#ffffff" opacity="0.92">
+      <g class="cloud"><ellipse cx="560" cy="110" rx="46" ry="26"/><ellipse cx="600" cy="120" rx="40" ry="22"/><ellipse cx="520" cy="122" rx="34" ry="20"/></g>
+      <g class="cloud2"><ellipse cx="800" cy="80" rx="40" ry="22"/><ellipse cx="836" cy="90" rx="32" ry="18"/><ellipse cx="770" cy="92" rx="28" ry="16"/></g>
+    </g>
+
+    <!-- rolling green hills -->
+    <path d="M0 470 Q 240 380 480 460 T 960 440 L960 720 L0 720 Z" fill="url(#hillA)"/>
+    <path d="M0 540 Q 300 470 620 530 T 960 510 L960 720 L0 720 Z" fill="url(#hillB)"/>
+    <!-- foreground grassy ground -->
+    <path d="M0 600 Q 200 560 480 600 T 960 590 L960 720 L0 720 Z" fill="url(#groundG)"/>
+
+    <!-- winding dirt path -->
+    <path d="M430 720 Q 470 640 440 600 Q 410 560 470 520 L520 520 Q 470 570 500 610 Q 530 660 500 720 Z" fill="#c8a260"/>
+    <path d="M430 720 Q 470 640 440 600 Q 410 560 470 520 L520 520 Q 470 570 500 610 Q 530 660 500 720 Z" fill="#b8925010" stroke="#a8824a" stroke-width="2" opacity="0.5"/>
+
+    <!-- a group helper: layered leafy trees with brown trunks + highlights -->
+    <!-- back row (smaller, lighter) -->
+    <g class="treeRow">
+      <g transform="translate(90,470) scale(0.8)">
+        <rect x="-10" y="0" width="20" height="90" rx="6" fill="#7a5230"/>
+        <circle cx="0" cy="-10" r="52" fill="#4e9c34"/><circle cx="-34" cy="12" r="38" fill="#5aa83c"/><circle cx="34" cy="12" r="38" fill="#5aa83c"/>
+        <circle cx="0" cy="-20" r="34" fill="#6fbf4a"/>
+        <circle cx="-14" cy="-28" r="14" fill="#8ad25f" opacity="0.8"/>
+      </g>
+      <g transform="translate(670,455) scale(0.9)">
+        <rect x="-11" y="0" width="22" height="100" rx="6" fill="#6e4a2a"/>
+        <circle cx="0" cy="-12" r="58" fill="#4e9c34"/><circle cx="-38" cy="14" r="42" fill="#5aa83c"/><circle cx="38" cy="14" r="42" fill="#5aa83c"/>
+        <circle cx="0" cy="-22" r="38" fill="#6fbf4a"/>
+        <circle cx="-16" cy="-32" r="16" fill="#8ad25f" opacity="0.8"/>
+      </g>
+    </g>
+
+    <!-- big framing trees on the sides -->
+    <g transform="translate(30,360)">
+      <rect x="-20" y="0" width="40" height="360" rx="10" fill="#6e4a2a"/>
+      <rect x="-20" y="0" width="14" height="360" fill="#7a5230" opacity="0.7"/>
+      <circle cx="0" cy="-20" r="120" fill="#4e9c34"/>
+      <circle cx="-78" cy="30" r="80" fill="#5aa83c"/><circle cx="78" cy="30" r="80" fill="#5aa83c"/>
+      <circle cx="0" cy="-46" r="78" fill="#6fbf4a"/>
+      <circle cx="-40" cy="-56" r="30" fill="#8ad25f" opacity="0.85"/>
+    </g>
+    <g transform="translate(930,340)">
+      <rect x="-22" y="0" width="44" height="380" rx="10" fill="#6e4a2a"/>
+      <rect x="8" y="0" width="14" height="380" fill="#5c3d22" opacity="0.6"/>
+      <circle cx="0" cy="-24" r="130" fill="#4e9c34"/>
+      <circle cx="-84" cy="28" r="86" fill="#5aa83c"/><circle cx="84" cy="28" r="86" fill="#5aa83c"/>
+      <circle cx="0" cy="-52" r="84" fill="#6fbf4a"/>
+      <circle cx="46" cy="-62" r="32" fill="#8ad25f" opacity="0.85"/>
+    </g>
+
+    <!-- bushes + flowers dotting the foreground -->
+    <g>
+      <g transform="translate(300,640)"><circle cx="0" cy="0" r="34" fill="#3d8228"/><circle cx="-26" cy="8" r="24" fill="#4e9c34"/><circle cx="26" cy="8" r="24" fill="#4e9c34"/><circle cx="0" cy="-10" r="20" fill="#6fbf4a"/></g>
+      <g transform="translate(640,660)"><circle cx="0" cy="0" r="30" fill="#3d8228"/><circle cx="-22" cy="6" r="20" fill="#4e9c34"/><circle cx="22" cy="6" r="20" fill="#4e9c34"/></g>
+    </g>
+    <g class="flowers">
+      <g transform="translate(230,690)"><circle cx="0" cy="0" r="7" fill="#ff5a8a"/><circle cx="0" cy="0" r="3" fill="#ffe25a"/></g>
+      <g transform="translate(255,700)"><circle cx="0" cy="0" r="6" fill="#ffd23a"/><circle cx="0" cy="0" r="2.5" fill="#c8632a"/></g>
+      <g transform="translate(720,700)"><circle cx="0" cy="0" r="7" fill="#a06cff"/><circle cx="0" cy="0" r="3" fill="#ffe25a"/></g>
+      <g transform="translate(760,688)"><circle cx="0" cy="0" r="6" fill="#ff5a8a"/><circle cx="0" cy="0" r="2.5" fill="#ffe25a"/></g>
+      <g transform="translate(500,700)"><circle cx="0" cy="0" r="6" fill="#ffffff"/><circle cx="0" cy="0" r="2.5" fill="#ffd23a"/></g>
+    </g>
+
+    <!-- leafy canopy border along the very top -->
+    <g fill="#3d8228">
+      <path d="M0 0 H960 V54 Q912 92 864 52 Q816 96 768 54 Q720 96 672 52 Q624 96 576 54 Q528 96 480 52 Q432 96 384 54 Q336 96 288 52 Q240 96 192 54 Q144 92 96 52 Q48 90 0 56 Z"/>
+    </g>
+    <g fill="#4e9c34" opacity="0.9">
+      <path d="M0 0 H960 V40 Q912 70 864 40 Q816 72 768 40 Q720 72 672 40 Q624 72 576 40 Q528 72 480 40 Q432 72 384 40 Q336 72 288 40 Q240 72 192 40 Q144 68 96 40 Q48 66 0 42 Z"/>
+    </g>
+  </svg>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div class="panel" id="pHud">
+      <div class="name" id="pName">—</div>
+    </div>
+    <div class="panel" style="text-align:right; min-width:150px;">
+      <div class="name">RIVALS</div>
+      <div id="enemyList" style="font-size:12px; line-height:1.6;"></div>
+    </div>
+  </div>
+  <div id="centerHud" class="hidden">
+    <div id="timer">2:00</div>
+    <div id="scoreLine">Defeated 0</div>
+  </div>
+  <div id="controls" class="hidden">
+    <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move &nbsp; <b>Aim</b> arrow keys / mouse &nbsp;
+    <kbd>J</kbd> attack &nbsp; <kbd>K</kbd>/<kbd>Space</kbd> <b>SUPER</b> &nbsp; <kbd>E</kbd> emote &nbsp; <kbd>M</kbd> mute &nbsp; · &nbsp; minimap bottom-right
+  </div>
+  <div id="banner"></div>
+  <div id="practiceBar" class="hidden">
+    <button id="prMove">Dummies: Still</button>
+    <button id="prShoot">Return fire: Off</button>
+    <button id="prReset">Reset dummies</button>
+    <button id="prExit">Exit</button>
+  </div>
+  <div id="tutorialPrompt" class="hidden"><span id="tutText"></span><button id="tutSkip">Skip ▶</button></div>
+  <button id="muteBtn" title="Mute (M)">🔊</button>
+  <button id="optionsBtn" title="Options">⚙</button>
+
+  <!-- Touch controls (shown only during play on touch devices) -->
+  <div id="touchUI" class="hidden">
+    <div id="moveStick" class="tstick"><div class="tnub"></div></div>
+    <button id="touchEmote" class="tbtn">💬</button>
+    <button id="touchAttack" class="tbtn">FIRE</button>
+    <button id="touchSuper" class="tbtn">SUPER</button>
+  </div>
+
+  <!-- Options -->
+  <div class="screen hidden" id="optionsScreen">
+    <h1 style="font-size:clamp(28px,5vw,48px);">OPTIONS</h1>
+    <div style="display:flex; flex-direction:column; gap:18px; align-items:center; margin:10px 0 24px;">
+      <div style="display:flex; flex-direction:column; gap:6px; align-items:center;">
+        <label for="nameInput" class="menuLabel" style="margin:0;">YOUR NAME</label>
+        <input id="nameInput" type="text" maxlength="16" placeholder="YOU" autocomplete="off"
+          style="font-family:inherit; font-size:16px; text-align:center; padding:8px 14px; border-radius:12px; border:2px solid #6fae4f; background:rgba(0,0,0,.35); color:#fff; width:220px;">
+        <div class="tag" style="max-width:420px; margin:0;">Shown on your in-game nameplate, above any title you've equipped.</div>
+      </div>
+      <button class="btn" id="touchToggle">Phone mode: AUTO</button>
+      <div class="tag" style="max-width:420px; margin:0;">Phone mode shows on-screen sticks: left to move, right to aim &amp; fire, plus a SUPER button. AUTO turns it on for touch devices.</div>
+    </div>
+    <button class="btn small secondary" id="optionsBack">BACK</button>
+  </div>
+
+  <!-- Title -->
+  <div class="screen" id="titleScreen">
+    <div class="canopy"></div>
+    <div class="vine" style="left:20%; height:70px; transform:rotate(6deg);"></div>
+    <div class="vine" style="left:46%; height:52px; transform:rotate(-5deg);"></div>
+    <div class="vine" style="left:78%; height:82px; transform:rotate(4deg);"></div>
+    <div class="lantern" style="left:14%; animation-delay:-1.2s;"><div class="cord" style="height:44px;"></div><div class="glow"></div></div>
+    <div class="lantern" style="left:66%; animation-delay:-2.6s;"><div class="cord" style="height:62px;"></div><div class="glow"></div></div>
+    <div class="lantern" style="left:88%; animation-delay:-0.4s;"><div class="cord" style="height:34px;"></div><div class="glow"></div></div>
+    <div class="forestFloor"></div>
+    <div class="logoCrest">
+      <span class="crestLeaf crestLeafL">🍃</span>
+      <span class="crestLeaf crestLeafR">🍃</span>
+      <h1>FOREST<span class="sub">BRAWL</span></h1>
+    </div>
+    <div class="hub">
+      <button class="hubTile hubBrawler" id="hubBrawler" title="Change brawler">
+        <canvas id="hubArt" width="180" height="180"></canvas>
+        <div class="hubTileFoot"><span class="hubTileName" id="hubBrawlerName">—</span><span class="hubTileHint">tap to change</span></div>
+      </button>
+      <div class="hubRight">
+        <button class="hubTile hubMode" id="hubMode" title="Change mode">
+          <span class="hubModeIcon" id="hubModeIcon">⚔️</span>
+          <span class="hubModeText"><span class="hubModeTitle" id="hubModeTitle">Free-for-All</span><span class="hubModeSub" id="hubModeSub">10 brawlers · last standing</span></span>
+          <span class="hubTileHint">tap to change</span>
+        </button>
+        <button class="btn hubPlay" id="hubPlay">▶ PLAY</button>
+      </div>
+    </div>
+    <div class="menuGroup">
+      <button class="btn small secondary" id="progressToggle" aria-expanded="false">☰ PROGRESS &amp; EXTRAS ▾</button>
+      <div class="menuRow hidden" id="progressPanel" style="margin-top:12px;">
+        <button class="btn small secondary" id="toRoad">🏆 TROPHY ROAD</button>
+        <button class="btn small secondary" id="toQuests">📜 QUESTS</button>
+        <button class="btn small secondary" id="toCodex">🌿 GROWTH</button>
+        <button class="btn small secondary" id="toStats">📊 STATS</button>
+        <button class="btn small secondary" id="toMarket">🎪 MARKET</button>
+        <button class="btn small secondary" id="toGallery">🖼️ SKIN GALLERY</button>
+      </div>
+    </div>
+    <div style="margin-top:16px; font-size:10px; letter-spacing:1.5px; opacity:.4;">BUILD v480 · Elke brawler heeft nu een eigen menu-entree. Laatste groep toegevoegd: Sonia, Evil Jax, De Kapper, Dynant, Adma Jr, Jenna, Druk, Young Fyon, Meta AI, Intratuin Potplant en Slechte Meiden.</div>
+
+  </div>
+
+  <!-- Mode picker overlay -->
+  <div class="modalWrap hidden" id="modePicker">
+    <div class="modalCard">
+      <div class="modalHead"><span>SELECT A MODE</span><button class="btn small secondary" id="modePickerClose">✕</button></div>
+      <div class="modeList" id="modeList"></div>
+    </div>
+  </div>
+
+  <!-- Character select -->
+  <div class="screen hidden" id="selectScreen">
+    <h1 style="font-size:clamp(26px,4.5vw,46px); margin-bottom:14px;">CHOOSE YOUR BRAWLER</h1>
+    <div id="selectTools">
+      <div class="selFilters" id="roleFilters">
+        <button class="selChip on" data-role="all">All</button>
+        <button class="selChip" data-role="Fighter">⚔ Fighter</button>
+        <button class="selChip" data-role="Sniper">🎯 Sniper</button>
+        <button class="selChip" data-role="Healer">✚ Healer</button>
+        <button class="selChip" data-role="Trapper">🕸 Trapper</button>
+      </div>
+      <label class="selSort">Sort
+        <select id="brawlerSort">
+          <option value="default">Default</option>
+          <option value="name">Name A–Z</option>
+          <option value="hp">Health</option>
+          <option value="dps">Damage</option>
+          <option value="spd">Speed</option>
+          <option value="growth">Growth progress</option>
+          <option value="uses">Most played</option>
+          <option value="owned">Unlocked first</option>
+        </select>
+      </label>
+    </div>
+    <div id="selectLayout">
+      <div id="brawlerList"></div>
+      <div id="brawlerPreview">
+        <div id="previewEmpty">← Pick a brawler</div>
+        <div id="previewCard" class="hidden">
+          <canvas id="previewArt" width="180" height="180"></canvas>
+          <div id="previewName">—</div>
+          <div id="previewRole">—</div>
+          <div id="pvSkins" class="pvCustomBlock"></div>
+          <div class="pvStat"><span class="pvLbl">Health</span><div class="pvBar"><i id="pvHp"></i></div></div>
+          <div class="pvStat"><span class="pvLbl">Damage</span><div class="pvBar"><i id="pvDps"></i></div></div>
+          <div class="pvStat"><span class="pvLbl">Speed</span><div class="pvBar"><i id="pvSpd"></i></div></div>
+          <div class="pvMove"><b>⚔ <span id="pvAtkName">—</span></b><span id="pvAtkDesc">—</span></div>
+          <div class="pvMove"><b>★ <span id="pvSupName" class="super">—</span></b><span id="pvSupDesc">—</span></div>
+          <div id="pvCustom">
+            <div id="pvEmotes" class="pvCustomBlock"></div>
+            <div id="pvTitles" class="pvCustomBlock"></div>
+          </div>
+          <button class="btn" id="startBtn">✓ SELECT →</button>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:14px; display:flex; gap:10px; justify-content:center;">
+      <button class="btn small secondary" id="selectBack">BACK</button>
+      <button class="btn small hidden" id="selectShop">🎪 SHOP</button>
+    </div>
+  </div>
+
+  <!-- Trophy Road -->
+  <div class="screen hidden" id="roadScreen">
+    <h1 style="font-size:clamp(28px,5vw,48px);">TROPHY ROAD</h1>
+    <div class="flourish"><span>❧</span></div>
+    <div id="pointsLine" style="color:var(--gold); font-size:18px; margin-bottom:16px;">0 points</div>
+    <div id="roadTrack"></div>
+    <button class="btn small secondary" id="roadBack" style="margin-top:20px;">BACK</button>
+  </div>
+
+  <!-- Quests -->
+  <div class="screen hidden" id="questScreen">
+    <h1 style="font-size:clamp(28px,5vw,48px);">QUESTS</h1>
+    <div class="flourish"><span>❧</span></div>
+    <div style="opacity:.7; font-size:13px; margin-bottom:6px;">Three quests at a time. Finish one and a fresh quest takes its place.</div>
+    <div id="doublerLine" style="color:#ffcf6b; font-size:14px; margin-bottom:14px; min-height:18px;"></div>
+    <div id="megaCounter" style="width:100%; max-width:520px; margin-bottom:14px; background:linear-gradient(90deg,rgba(90,40,130,.35),rgba(40,20,60,.25)); border:1px solid rgba(214,150,255,.45); border-radius:12px; padding:9px 14px; box-sizing:border-box;">
+      <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#e6b3ff; font-weight:bold; margin-bottom:6px;"><span id="megaCounterText">MEGA-QUEST in 10 quests</span><span>✦</span></div>
+      <div style="height:8px; border-radius:6px; background:rgba(0,0,0,.4); overflow:hidden;"><i id="megaCounterBar" style="display:block; height:100%; width:0%; background:linear-gradient(90deg,#e6b3ff,#8a3fe0); border-radius:6px;"></i></div>
+    </div>
+    <div id="questList" style="width:100%; max-width:520px; display:flex; flex-direction:column; gap:12px;"></div>
+    <button class="btn small secondary" id="questBack" style="margin-top:20px;">BACK</button>
+  </div>
+
+  <!-- Brawler Codex -->
+  <div class="screen hidden" id="codexScreen">
+    <h1 style="font-size:clamp(28px,5vw,48px);">GROWTH</h1>
+    <div class="flourish"><span>🌿</span></div>
+    <div style="opacity:.7; font-size:13px; margin-bottom:14px;">Grow each brawler by placing well in matches. Every tier drops loot — and reveals another piece of their story.</div>
+    <div id="codexGrid" style="width:100%; max-width:900px; display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; max-height:64vh; overflow-y:auto; padding:4px;"></div>
+    <button class="btn small secondary" id="codexBack" style="margin-top:20px;">BACK</button>
+  </div>
+
+  <!-- Stats -->
+  <div class="screen hidden" id="statsScreen">
+    <h1 style="font-size:clamp(28px,5vw,48px);">YOUR STATS</h1>
+    <div class="flourish"><span>📊</span></div>
+    <div id="statsTiles" style="display:flex; gap:14px; flex-wrap:wrap; justify-content:center; margin-bottom:18px;"></div>
+    <div id="statsChar" style="width:100%; max-width:560px; max-height:44vh; overflow-y:auto;"></div>
+    <button class="btn small secondary" id="statsBack" style="margin-top:20px;">BACK</button>
+  </div>
+
+  <!-- Market hub: one place with the shop stalls (Sanctuary / Toybox / Midnight Stall) -->
+  <div class="screen hidden" id="marketScreen">
+    <h1 style="font-size:clamp(28px,5vw,48px);">🎪 THE MARKET</h1>
+    <div style="opacity:.7; font-size:13px; margin:6px 0 18px; max-width:560px;">Every stall in one place. Spend what you've earned — each vendor takes a different coin.</div>
+    <div class="mktRow" id="marketRow"></div>
+    <button class="btn small secondary" id="marketBack" style="margin-top:22px;">BACK</button>
+  </div>
+
+  <!-- Siren Sanctuary: spend Pearls on a rotating select of signature upgrades -->
+  <div class="screen hidden" id="sanctuaryScreen">
+    <div class="bubbles"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <h1 style="font-size:clamp(28px,5vw,48px);">SIREN SANCTUARY</h1>
+    <div id="pearlLine" style="color:#8fe6ff; font-size:16px; margin-bottom:10px;">🫧 0 Pearls</div>
+    <div id="sanctuaryReset" style="color:#7fc8dd; font-size:12px; letter-spacing:1px; margin-bottom:8px; opacity:.85;">🌊 New tide in 4 matches</div>
+    <div id="sirenBox">
+      <canvas id="sirenArt" width="120" height="120"></canvas>
+      <div id="sirenBubble">…</div>
+    </div>
+    <div style="opacity:.7; font-size:13px; margin:10px 0 12px; max-width:560px;">Maria Miami offers only what the tide brings in. Spend Pearls on today's secrets — the currents will carry in new ones.</div>
+    <div id="sanctuaryGrid" style="width:100%; max-width:720px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;"></div>
+    <button class="btn small secondary" id="sanctuaryBack" style="margin-top:20px;">BACK</button>
+  </div>
+
+  <!-- Toybox: spend Prize Tickets (from Payload Panic) on Playtime toy skins -->
+  <div class="screen hidden" id="toyboxScreen">
+    <h1 style="font-size:clamp(28px,5vw,48px);">🎟️ THE TOYBOX</h1>
+    <div id="ticketLine" style="color:#ffcf6b; font-size:16px; margin-bottom:6px;">🎟️ 0 Prize Tickets</div>
+    <div id="toyboxReset" style="color:#e0b060; font-size:12px; letter-spacing:1px; margin-bottom:10px; opacity:.85;">🔄 New toys in 4 matches</div>
+    <div id="toyboxKeeper">
+      <canvas id="toyMakerArt" width="120" height="120"></canvas>
+      <div id="toyboxBubble">…</div>
+    </div>
+    <div style="opacity:.7; font-size:13px; margin:10px 0 12px; max-width:560px;">Old Tinker keeps three toys on the shelf at a time — the stock rotates as you play. Trade your Prize Tickets before they're gone.</div>
+    <div id="toyboxGrid" style="width:100%; max-width:760px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;"></div>
+    <button class="btn small secondary" id="toyboxBack" style="margin-top:20px;">BACK</button>
+  </div>
+
+  <!-- Nature Grove: spend Acorns on a rotating select of nature-pack skins -->
+  <div class="screen hidden" id="natureScreen">
+    <h1 style="font-size:clamp(28px,5vw,48px);">🌿 THE GROVE</h1>
+    <div id="acornLine" style="color:#a8e88a; font-size:16px; margin-bottom:6px;">🌰 0 Acorns</div>
+    <div id="natureReset" style="color:#8ac878; font-size:12px; letter-spacing:1px; margin-bottom:10px; opacity:.85;">🍃 New growth in 4 matches</div>
+    <div id="natureKeeper">
+      <canvas id="forestArt" width="120" height="120"></canvas>
+      <div id="natureBubble">…</div>
+    </div>
+    <div style="opacity:.7; font-size:13px; margin:10px 0 12px; max-width:560px;">The Grovekeeper trades in wild forms. Spend your Acorns on the shapes the forest offers today — they change with the seasons.</div>
+    <div id="natureGrid" style="width:100%; max-width:760px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;"></div>
+    <button class="btn small secondary" id="natureBack" style="margin-top:20px;">BACK</button>
+  </div>
+
+  <!-- The Locker Room: the Quiet Kid's under-the-table shop. Spend Atoms on school-pack skins -->
+  <div class="screen hidden" id="schoolScreen">
+    <h1 style="font-size:clamp(28px,5vw,48px);">🎒 THE LOCKER ROOM</h1>
+    <div id="atomLine" style="color:#9ec8ff; font-size:16px; margin-bottom:6px;">⚛️ 0 Atoms</div>
+    <div id="schoolReset" style="color:#7fa8d8; font-size:12px; letter-spacing:1px; margin-bottom:10px; opacity:.85;">🔔 New stock in 4 matches</div>
+    <div id="schoolKeeper" style="display:flex; align-items:center; gap:14px; justify-content:center; margin:2px 0 6px;">
+      <canvas id="quietKidArt" width="120" height="120"></canvas>
+      <div id="schoolBubble" style="position:relative; max-width:340px; text-align:left; background:rgba(24,30,40,.92); color:#dfe6f5; border-radius:12px; padding:10px 14px; font-size:13px; font-style:italic; line-height:1.35; border:1px solid rgba(140,170,220,.4);">…</div>
+    </div>
+    <div style="opacity:.7; font-size:13px; margin:10px 0 12px; max-width:560px;">The Quiet Kid deals school looks out of his locker — no questions, Atoms only. The stock shuffles as you play, so grab it before it's gone. 🤫</div>
+    <div id="schoolGrid" style="width:100%; max-width:760px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;"></div>
+    <button class="btn small secondary" id="schoolBack" style="margin-top:20px;">BACK</button>
+  </div>
+
+  <!-- The Observatory: spend Stardust on a rotating select of Space skins -->
+  <div class="screen hidden" id="observatoryScreen">
+    <h1 style="font-size:clamp(28px,5vw,48px);">🔭 THE OBSERVATORY</h1>
+    <div id="stardustLine" style="color:#8fd3ff; font-size:16px; margin-bottom:6px;">✨ 0 Stardust</div>
+    <div id="observatoryReset" style="color:#7ab6e0; font-size:12px; letter-spacing:1px; margin-bottom:10px; opacity:.85;">🌌 New sightings in 4 matches</div>
+    <div id="observatoryKeeper" style="display:flex; align-items:center; gap:14px; justify-content:center; margin:2px 0 6px;">
+      <canvas id="astronomerArt" width="120" height="120"></canvas>
+      <div id="observatoryBubble" style="position:relative; max-width:340px; text-align:left; background:rgba(14,20,44,.92); color:#cfe4ff; border-radius:12px; padding:10px 14px; font-size:13px; line-height:1.35;">…</div>
+    </div>
+    <div style="opacity:.7; font-size:13px; margin:10px 0 12px; max-width:560px;">The Stargazer charts the sky each night. Spend your Stardust on the forms the cosmos reveals — they drift on with the constellations.</div>
+    <div id="observatoryGrid" style="width:100%; max-width:760px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;"></div>
+    <button class="btn small secondary" id="observatoryBack" style="margin-top:20px;">BACK</button>
+  </div>
+
+  <!-- Skin Gallery: browse & inspect every skin in the game (view-only) -->
+  <div class="screen hidden" id="galleryScreen">
+    <h1 style="font-size:clamp(28px,5vw,48px);">SKIN GALLERY</h1>
+    <div style="opacity:.7; font-size:13px; margin-bottom:12px; max-width:560px;">Every skin in Forest Brawl. Tap any to inspect it up close — sprite, rarity and exclusive emote. View-only; earn them in-game.</div>
+    <div id="galleryFilters" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-bottom:14px;"></div>
+    <div id="galleryGrid" style="width:100%; max-width:820px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap; max-height:60vh; overflow-y:auto; padding:4px;"></div>
+    <button class="btn small secondary" id="galleryBack" style="margin-top:18px;">BACK</button>
+  </div>
+
+  <!-- Silverdome Shop (the "Random Kid" & his casino) -->
+  <div class="screen hidden" id="shopScreen">
+    <div class="cobweb tl"></div>
+    <div class="cobweb tr"></div>
+    <h1 style="font-size:clamp(22px,4vw,38px);">THE MIDNIGHT STALL</h1>
+    <div id="shopKeeper">
+      <canvas id="shopKidArt" width="120" height="120"></canvas>
+      <div id="shopBubble">…</div>
+    </div>
+    <div id="tokenLine">🎟 0 Silver Tokens</div>
+
+    <!-- Casino -->
+    <div id="casinoBox">
+      <div style="font-weight:bold; letter-spacing:1px; color:#cbb6ec;">🎰 RUSSIAN ROULETTE</div>
+      <div style="font-size:12px; opacity:.7; margin:4px 0 8px;">Load the chambers, then spin. Survive to multiply your bet — an empty click means you keep it, a loaded one takes it.</div>
+      <div id="casinoControls">
+        <label style="font-size:13px;">Bet <input id="betInput" type="number" min="1" value="1" style="width:52px;"></label>
+        <label style="font-size:13px;">Loaded
+          <select id="chambersInput">
+            <option value="1">1 / 6 · ×1.2</option>
+            <option value="2">2 / 6 · ×1.5</option>
+            <option value="3">3 / 6 · ×2</option>
+            <option value="4">4 / 6 · ×3</option>
+            <option value="5">5 / 6 · ×6</option>
+          </select>
+        </label>
+        <button class="btn small" id="spinBtn">SPIN 🔫</button>
+      </div>
+      <div id="casinoResult" style="min-height:20px; margin-top:8px; font-weight:bold;"></div>
+    </div>
+
+    <div id="shopOffers"></div>
+    <div id="shopRefresh" style="cursor:default; text-decoration:none;">the stall restocks every 5 rounds won</div>
+    <button class="btn small secondary" id="shopBack" style="margin-top:14px;">BACK</button>
+  </div>
+
+  <!-- Skin reveal -->
+  <div class="screen hidden" id="revealScreen">
+    <div id="revealRarity" style="font-size:15px; letter-spacing:5px; text-transform:uppercase; margin-bottom:10px;">RARE SKIN</div>
+    <div id="revealStage">
+      <div id="revealRays"></div>
+      <div id="revealCardBack">?</div>
+      <div id="revealCard">
+        <canvas id="revealArt" width="200" height="200"></canvas>
+      </div>
+      <div id="revealSparks">
+        <i style="--a:20deg;--d:0s"></i><i style="--a:70deg;--d:.1s"></i><i style="--a:130deg;--d:.05s"></i>
+        <i style="--a:200deg;--d:.15s"></i><i style="--a:250deg;--d:.08s"></i><i style="--a:300deg;--d:.12s"></i>
+        <i style="--a:340deg;--d:.18s"></i><i style="--a:100deg;--d:.22s"></i>
+      </div>
+    </div>
+    <div id="revealName" style="font-size:clamp(24px,4vw,38px); color:var(--gold); margin-top:14px;">Skin Name</div>
+    <div id="revealChar" style="font-size:14px; opacity:.8; margin-bottom:22px;">for Character</div>
+    <div style="display:flex; gap:14px;">
+      <button class="btn" id="revealEquip">EQUIP</button>
+      <button class="btn small secondary" id="revealLater">LATER</button>
+    </div>
+  </div>
+
+  <!-- Game over -->
+  <div class="screen hidden" id="packScreen">
+    <div id="packTitle" style="font-size:clamp(20px,4vw,34px); letter-spacing:3px; color:#ffd6ff; text-shadow:0 0 14px #d66cff,0 0 24px #6cc6ff; margin-bottom:6px;">✦ MYTHIC MASTERS ✦</div>
+    <div id="packSub" style="font-size:13px; opacity:.8; margin-bottom:20px; letter-spacing:2px;">Opening your skin pack…</div>
+    <div id="packReel">
+      <div id="packStrip"></div>
+      <div id="packMarker"></div>
+    </div>
+    <div id="packResult" style="font-size:clamp(22px,4vw,34px); color:#ffe0ff; margin-top:18px; min-height:1.2em; text-shadow:0 0 12px rgba(210,110,255,.6);"></div>
+    <div id="packResultChar" style="font-size:14px; opacity:.8; margin-bottom:18px; min-height:1.1em;"></div>
+    <div id="packBtns" style="display:flex; gap:14px; opacity:0; transition:opacity .3s;">
+      <button class="btn" id="packEquip">EQUIP</button>
+      <button class="btn small secondary" id="packLater">LATER</button>
+    </div>
+  </div>
+
+  <!-- Game over -->
+  <div class="screen hidden" id="overScreen">
+    <h1 id="overTitle">MATCH OVER</h1>
+    <p class="tag" id="overText"></p>
+    <div id="rewardLine"></div>
+    <div style="display:flex; gap:14px; flex-wrap:wrap; justify-content:center;">
+      <button class="btn hidden" id="nextRoundBtn">NEXT ROUND →</button>
+      <button class="btn" id="againBtn">PLAY AGAIN</button>
+      <button class="btn small hidden" id="shopFromOver">🎪 SHOP</button>
+      <button class="btn small secondary" id="menuBtn">BACK TO MENU</button>
+    </div>
+  </div>
+
+  <!-- Skin info peek: full-size preview of a skin before buying -->
+  <div id="skinPeek" class="hidden">
+    <div id="skinPeekCard">
+      <button id="skinPeekClose">✕</button>
+      <div id="skinPeekTier">MYTHIC SKIN</div>
+      <canvas id="skinPeekArt" width="220" height="220"></canvas>
+      <div id="skinPeekName">Skin Name</div>
+      <div id="skinPeekChar">for Character</div>
+      <div id="skinPeekEmote"></div>
+    </div>
+  </div>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>
