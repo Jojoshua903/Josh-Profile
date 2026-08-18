@@ -433,6 +433,7 @@ const defaultSave = () => ({
   memorial: 0,           // names spoken at the Shrine (permanent tiny party buff)
   salvageSince: 0,       // timestamp of last Salvage Crane free dig
   nextRunPerks: [],      // Info Broker intel applied at the start of the next run only
+  missions: {},          // missionId -> true once the reward station is unlocked
   soundOn: true
 });
 let META = load();
@@ -2000,7 +2001,7 @@ function syncScrap(){
 const screens=["titleScreen","hubScreen","mapScreen","combatScreen","eventScreen"];
 function show(id){
   screens.forEach(s=>document.getElementById(s).classList.toggle("active", s===id));
-  if(id==="hubScreen"){ hub.room="main"; hub.stations=hub.rooms.main||hub.stations; collectTankOnEnter(); resizeHub(); centerPlayerIfNeeded(); startHubLoop(); showHubHint(); Music.play(META.bunkerTrack||"bunker"); } else { stopHubLoop(); }
+  if(id==="hubScreen"){ hub.room="main"; hub.stations=visibleStations(hub.rooms.main)||hub.stations; collectTankOnEnter(); resizeHub(); centerPlayerIfNeeded(); startHubLoop(); showHubHint(); Music.play(META.bunkerTrack||"bunker"); } else { stopHubLoop(); }
   if(id==="titleScreen"){ Music.play("bunker"); startTitleLoop(); } else { stopTitleLoop(); }
   if(id==="mapScreen"){ drawMap(); }
 }
@@ -2097,6 +2098,57 @@ function toast(msg){
   clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2200);
 }
 
+/* ===================== MESSAGE BOARD MISSIONS =====================
+   Six bunker features start locked. A Message Board in Headquarters posts a
+   special mission for each; complete its objective (tracked from normal play)
+   and claim it at the board to permanently unlock that station. */
+const MISSIONS = {
+  renas:{ station:"Renas", icon:"📡", color:"#e2703a",
+    title:"The Kid's Signal",
+    brief:"A scratchy transmission keeps hijacking the bunker comms — someone young, rerouting our own antenna to talk to us. Josh recognizes the voice. Complete a run and light a beacon; the signal says he'll only come out once he sees it burn.",
+    goal:"Light a beacon (win 1 run).",
+    progress:()=>Math.min(1,(META.wins||0)), target:1, cur:()=>Math.min(1,(META.wins||0)),
+    reveal:"The transmission cuts to a grin: \"Knew you could do it. Coming down to the Pond — I've got GEAR to show you.\" Renas is now in the Pond." },
+  guiseppe:{ station:"Guiseppe", icon:"🍎", color:"#d64a3f",
+    title:"The Talking Fruit",
+    brief:"Scouts swear something in the Pond spoke to them — politely, and about apples. Nobody believes it. Go catch a fish and take a proper look at the water; whatever's down there seems to like anglers.",
+    goal:"Catch a fish (1).",
+    progress:()=>Math.min(1,(META.fishCaught||0)), target:1, cur:()=>Math.min(1,(META.fishCaught||0)),
+    reveal:"Sure enough, a large, glossy apple has taken up residence by the water, blinking hello. Guiseppe is now in the Pond." },
+  garden:{ station:"Garden Plot", icon:"🌱", color:"#8fce7a",
+    title:"Green Shoots",
+    brief:"An old planter box in the Pond still has living soil — rare as gold now. It needs a stake of resources to get going. Bring in a decent haul of scrap and the quartermaster will let you break ground.",
+    goal:"Earn 100 scrap in total.",
+    progress:()=>Math.min(1,(META.stats.scrapEarned||0)/100), target:100, cur:()=>Math.min(100,META.stats.scrapEarned||0),
+    reveal:"Ground broken, seeds in. The Garden Plot in the Pond is ready to grow." },
+  crane:{ station:"Salvage Crane", icon:"🏗️", color:"#d0863a",
+    title:"Heap Rights",
+    brief:"The market's scrap heap is a fortune waiting to be dug, but the crane's been claimed by wasteland scavengers. Thin their numbers out on your runs and they'll clear off the machine.",
+    goal:"Defeat 20 enemies total.",
+    progress:()=>Math.min(1,(META.stats.kills||0)/20), target:20, cur:()=>Math.min(20,META.stats.kills||0),
+    reveal:"The scavengers scatter. The Salvage Crane in the Market is yours to operate." },
+  shrine:{ station:"Shrine of Names", icon:"🕯️", color:"#c8b06a",
+    title:"The Unremembered",
+    brief:"Out in the ash you keep finding the marks of people no one is left to mourn. The bunker wants a place to keep their names. Bear witness to enough of their stories and we'll raise the cairn.",
+    goal:"Resolve 3 story events.",
+    progress:()=>Math.min(1,(META.stats.eventsResolved||0)/3), target:3, cur:()=>Math.min(3,META.stats.eventsResolved||0),
+    reveal:"Stones stacked, candles lit. The Shrine of Names stands in the Market." },
+  broker:{ station:"Info Broker", icon:"👁️", color:"#5aa2c8",
+    title:"Eyes in the Dark",
+    brief:"A information-dealer has been watching the market, deciding if we're worth their time. Prove the bunker is a serious operation — do enough honest business at the stalls — and they'll set up a table.",
+    goal:"Buy 3 things from bunker traders.",
+    progress:()=>Math.min(1,(META.stats.shopBuys||0)/3), target:3, cur:()=>Math.min(3,META.stats.shopBuys||0),
+    reveal:"A lamp flickers on at the market's edge. \"You'll do,\" the Info Broker murmurs. Their table is open." },
+};
+function missionDone(id){ return !!(META.missions && META.missions[id]); }
+function missionComplete(id){ const m=MISSIONS[id]; return m ? m.progress()>=1 : false; }
+// count of missions whose objective is done but not yet claimed (drives the board's "!" marker)
+function missionsClaimable(){ let n=0; for(const id in MISSIONS){ if(!missionDone(id) && missionComplete(id)) n++; } return n; }
+function claimMission(id){
+  if(missionDone(id) || !missionComplete(id)) return false;
+  META.missions=META.missions||{}; META.missions[id]=true; save();
+  return true;
+}
 /* ===================== HUB (top-down canvas) ===================== */
 const hub = {
   canvas:null, ctx:null, raf:null, keys:{},
@@ -2111,19 +2163,20 @@ function initHub(){
   window.addEventListener('resize', resizeHub);
   // Three rooms: Headquarters (hub), Market, and the Pond. Doors connect them.
   hub.rooms.main=[
-    {id:"deploy",   x:0.50, y:0.24, label:"Deploy Terminal", color:"#e2703a", draw:drawDeploy,   action:openDeploy},
-    {id:"barracks", x:0.20, y:0.46, label:"Barracks",         color:"#5aa2c8", draw:drawBarracks, action:openBarracks},
-    {id:"codex",    x:0.50, y:0.54, label:"Field Journal",     color:"#6fae5a", draw:drawDesk,     action:openCodex},
-    {id:"jukebox",  x:0.80, y:0.46, label:"Jukebox",           color:"#9a6fc4", draw:drawJukebox,  action:openJukebox},
+    {id:"deploy",   x:0.50, y:0.22, label:"Deploy Terminal", color:"#e2703a", draw:drawDeploy,   action:openDeploy},
+    {id:"board",    x:0.50, y:0.52, label:"Message Board",    color:"#c8a24a", draw:drawBoard,    action:openBoard},
+    {id:"barracks", x:0.18, y:0.44, label:"Barracks",         color:"#5aa2c8", draw:drawBarracks, action:openBarracks},
+    {id:"codex",    x:0.32, y:0.66, label:"Field Journal",     color:"#6fae5a", draw:drawDesk,     action:openCodex},
+    {id:"jukebox",  x:0.82, y:0.44, label:"Jukebox",           color:"#9a6fc4", draw:drawJukebox,  action:openJukebox},
     {id:"doorMarket",x:0.12, y:0.86, label:"Market →",         color:"#e8b84b", draw:drawDoor,     action:()=>gotoRoom("market","main"), to:"market"},
     {id:"doorPond", x:0.88, y:0.86, label:"Pond →",            color:"#5aa2c8", draw:drawDoor,     action:()=>gotoRoom("pond","main"), to:"pond"},
   ];
   hub.rooms.market=[
     {id:"workshop", x:0.26, y:0.32, label:"Workshop",          color:"#e8b84b", draw:drawWorkshop, action:openWorkshop},
     {id:"shop",     x:0.54, y:0.30, label:"Trading Post",      color:"#c88ae2", draw:drawTradingPost, action:openBunkerShop},
-    {id:"shrine",   x:0.80, y:0.34, label:"Shrine of Names",   color:"#c8b06a", draw:drawShrine,    action:openShrine},
-    {id:"broker",   x:0.22, y:0.62, label:"Info Broker",       color:"#5aa2c8", draw:drawBroker,    action:openBroker},
-    {id:"crane",    x:0.50, y:0.58, label:"Salvage Crane",     color:"#d0863a", draw:drawCrane,     action:openCrane},
+    {id:"shrine",   x:0.80, y:0.34, label:"Shrine of Names",   color:"#c8b06a", draw:drawShrine,    action:openShrine, unlock:"shrine"},
+    {id:"broker",   x:0.22, y:0.62, label:"Info Broker",       color:"#5aa2c8", draw:drawBroker,    action:openBroker, unlock:"broker"},
+    {id:"crane",    x:0.50, y:0.58, label:"Salvage Crane",     color:"#d0863a", draw:drawCrane,     action:openCrane, unlock:"crane"},
     {id:"vendor",   x:0.82, y:0.68, label:"Rotating Stall",    color:"#6fae5a", draw:drawVendorStall, action:openVendor},
     {id:"doorHQ",   x:0.50, y:0.86, label:"← Headquarters",    color:"#e2703a", draw:drawDoor,     action:()=>gotoRoom("main","market"), to:"main"},
   ];
@@ -2131,13 +2184,13 @@ function initHub(){
     {id:"fishing",  x:0.28, y:0.28, label:"Fishing Spot",      color:"#5aa2c8", draw:drawFishingSpot, action:openFishing},
     {id:"tank",     x:0.64, y:0.28, label:"Fish Tank",         color:"#6fae5a", draw:drawFishTank,   action:openFishTank},
     {id:"mystery",  x:0.86, y:0.56, label:"The Stranger",      color:"#c89aec", draw:drawMysteryMan, action:openSkillTree},
-    {id:"garden",   x:0.50, y:0.54, label:"Garden Plot",       color:"#8fce7a", draw:drawGarden,     action:openGarden},
+    {id:"garden",   x:0.50, y:0.54, label:"Garden Plot",       color:"#8fce7a", draw:drawGarden,     action:openGarden, unlock:"garden"},
     {id:"training", x:0.30, y:0.62, label:"Training Dummy",    color:"#d64a3f", draw:drawDummy,      action:openTraining},
-    {id:"renas",    x:0.14, y:0.56, label:"Renas",             color:"#e2703a", draw:drawRenas,      action:()=>openNpc("renas")},
-    {id:"guiseppe", x:0.70, y:0.70, label:"Guiseppe",          color:"#d64a3f", draw:drawGuiseppe,   action:()=>openNpc("guiseppe")},
+    {id:"renas",    x:0.14, y:0.56, label:"Renas",             color:"#e2703a", draw:drawRenas,      action:()=>openNpc("renas"), unlock:"renas"},
+    {id:"guiseppe", x:0.70, y:0.70, label:"Guiseppe",          color:"#d64a3f", draw:drawGuiseppe,   action:()=>openNpc("guiseppe"), unlock:"guiseppe"},
     {id:"doorHQ",   x:0.50, y:0.88, label:"← Headquarters",    color:"#e2703a", draw:drawDoor,       action:()=>gotoRoom("main","pond"), to:"main"},
   ];
-  hub.stations=hub.rooms.main;
+  hub.stations=visibleStations(hub.rooms.main);
   document.addEventListener('keydown', e=>{
     if(!document.getElementById('hubScreen').classList.contains('active')) return;
     // ignore input while a panel or minigame overlay is open
@@ -2149,9 +2202,11 @@ function initHub(){
   document.addEventListener('keyup', e=>{ hub.keys[e.key.toLowerCase()]=false; });
 }
 const ROOM_NAMES={ main:"HEADQUARTERS", market:"THE MARKET", pond:"THE POND" };
+// stations whose unlock mission isn't done yet are hidden until earned at the board
+function visibleStations(list){ return (list||[]).filter(s=> !s.unlock || missionDone(s.unlock) ); }
 function gotoRoom(room, from){
   hub.room=room;
-  hub.stations=hub.rooms[room];
+  hub.stations=visibleStations(hub.rooms[room]);
   // place the player at the door that leads back to where they came from
   const p=hub.player;
   const backDoor=hub.stations.find(s=>s.to===from);
@@ -2330,6 +2385,29 @@ function drawHub(){
 
 /* ---------- bunker furniture (drawn relative to station center) ---------- */
 function glowIf(c,near,color){ if(near){ c.shadowColor=color; c.shadowBlur=14; } }
+// Message Board: a cork notice board with pinned mission papers
+function drawBoard(c,near,color){
+  const t=Date.now();
+  glowIf(c,near,color);
+  // frame + cork
+  c.fillStyle="#5a4632"; roundRect(c,-30,-30,60,48,4); c.fill();
+  c.fillStyle="#8a6a44"; roundRect(c,-26,-26,52,40,3); c.fill();
+  c.shadowBlur=0;
+  // pinned papers at slight angles
+  const papers=[[-14,-14,-0.12,"#efe6d2"],[8,-16,0.10,"#e6dcc4"],[-4,2,-0.05,"#f2ead8"],[16,0,0.14,"#e9dfca"]];
+  papers.forEach((p,i)=>{ c.save(); c.translate(p[0],p[1]); c.rotate(p[2]);
+    c.fillStyle=p[3]; roundRect(c,-9,-7,18,14,2); c.fill();
+    c.strokeStyle="rgba(90,70,50,.5)"; c.lineWidth=.7; for(let l=0;l<3;l++){ c.beginPath(); c.moveTo(-6,-3+l*3); c.lineTo(6,-3+l*3); c.stroke(); }
+    c.fillStyle="#c0392b"; scircle(c,0,-7,1.4); // pin
+    c.restore();
+  });
+  // header plate
+  c.fillStyle="#3a2c1c"; roundRect(c,-24,-30,48,8,2); c.fill();
+  c.fillStyle=near?"#ffe0a0":"#d8b46a"; c.font="bold 6px "+cssvar('--f-body'); c.textAlign="center"; c.fillText("MISSIONS", 0,-25);
+  // pulsing "!" when a mission is ready to claim
+  if(missionsClaimable()>0){ c.fillStyle="#e8b84b"; c.font="bold 18px serif"; c.textAlign="center"; c.fillText("!",0,-40+Math.sin(t/300)*2); }
+  else if(near){ c.fillStyle=color; c.font="13px serif"; c.textAlign="center"; c.fillText("📋",0,-38); }
+}
 // Deploy Terminal: a lit computer console with a hatch/airlock behind
 function drawDeploy(c,near,color){
   glowIf(c,near,color);
@@ -2684,6 +2762,49 @@ function openPanel(title, html){
   document.getElementById('overlay').classList.add('active');
 }
 function closePanel(){ document.getElementById('overlay').classList.remove('active'); }
+
+/* ---------- Headquarters: Message Board (special missions that unlock stations) ---------- */
+function openBoard(){
+  const ids=Object.keys(MISSIONS);
+  const openCount=ids.filter(id=>!missionDone(id)).length;
+  const rows=ids.map(id=>{
+    const m=MISSIONS[id];
+    const done=missionDone(id);
+    const ready=!done && missionComplete(id);
+    const cur=m.cur?m.cur():Math.round(m.progress()*(m.target||1));
+    const pct=Math.round(Math.min(1,m.progress())*100);
+    const bar=`<div class="bar" style="height:7px;margin-top:6px"><i style="display:block;height:100%;width:${pct}%;border-radius:5px;background:${done?'#6fae5a':(ready?'#e8b84b':'linear-gradient(90deg,#e8b84b,#e2703a)')}"></i></div>`;
+    const rightBtn = done
+      ? '<span class="pill" style="color:var(--green)">UNLOCKED ✓</span>'
+      : ready
+        ? `<button class="btn rust" style="font-size:12px;padding:8px 12px" data-claim="${id}">Claim &amp; Unlock</button>`
+        : `<span class="pill" style="color:var(--muted)">${cur} / ${m.target}</span>`;
+    return `<div class="shopitem" style="align-items:flex-start;${done?'opacity:.72':(ready?'border-color:#e8b84b':'')}">
+      <div class="si">
+        <div class="sn">${m.icon} ${m.title} <span class="muted small" style="text-transform:none">— unlocks ${m.station}</span></div>
+        <div class="sd" style="margin-top:3px">${done? m.reveal : m.brief}</div>
+        <div class="muted small" style="margin-top:5px"><b>Objective:</b> ${m.goal}</div>
+        ${done?'':bar}
+      </div>
+      <div style="margin-left:10px;white-space:nowrap">${rightBtn}</div>
+    </div>`;
+  }).join("");
+  openPanel("Message Board", `
+    <p class="muted small" style="line-height:1.6">A battered cork board by the bunker's heart, layered with notes, pleas, and rumors. Each posting points to something the bunker could gain — a lost friend, a working machine, a place to grieve. Do what the ash asks, then come back to <b>claim</b> your reward here. <span style="color:var(--gold)">${openCount} posting${openCount===1?'':'s'} still open.</span></p>
+    <div style="margin-top:10px">${rows}</div>
+  `);
+  document.querySelectorAll('[data-claim]').forEach(b=>b.addEventListener('click',()=>{
+    const id=b.dataset.claim; const m=MISSIONS[id];
+    if(claimMission(id)){
+      SFX.play("unlock");
+      // if we're standing in HQ, the newly-unlocked station lives in another room;
+      // refresh the current room's visible stations just in case.
+      hub.stations=visibleStations(hub.rooms[hub.room]);
+      achToast({icon:m.icon, name:`${m.station} unlocked`, desc:m.title+" complete."});
+      openBoard();
+    } else toast("That mission isn't ready yet.");
+  }));
+}
 
 let pendingParty=[];
 function openDeploy(){
@@ -4936,21 +5057,25 @@ function showHowto(){
     <h3 class="sec">The Bunker (three rooms)</h3>
     <p class="muted small" style="line-height:1.6">
       Walk around with <b>WASD</b> or <b>arrow keys</b> and press <b>E</b> or <b>Space</b> at a station. Doors connect three rooms:<br>
-      <b>🏛 Headquarters</b> — 🖥️ Deploy Terminal (start a run), 🛏️ Barracks (your survivors), 📖 Field Journal, and the 🎵 Jukebox.<br>
-      <b>🏪 The Market</b> — 🔧 Workshop (permanent stat upgrades), 🛒 Trading Post (provisions &amp; permanent relics), a 🛒 <b>Rotating Stall</b> (a traveling merchant who changes after every run, each with their own goods, personality, and lore), plus three curiosities: a 🏗️ <b>Salvage Crane</b> (dig the scrap heap for a random haul), an 🕯️ <b>Shrine of Names</b> (honor the fallen for a small permanent party bonus), and an 👁️ <b>Info Broker</b> (buy intel that eases your next run). Consumables you buy are stashed for your next deployment.<br>
+      <b>🏛 Headquarters</b> — 🖥️ Deploy Terminal (start a run), 📋 <b>Message Board</b> (special missions — see below), 🛏️ Barracks (your survivors), 📖 Field Journal, and the 🎵 Jukebox.<br>
+      <b>🏪 The Market</b> — 🔧 Workshop (permanent stat upgrades), 🛒 Trading Post (provisions &amp; permanent relics), a 🛒 <b>Rotating Stall</b> (a traveling merchant who changes after every run, each with their own goods, personality, and lore), plus three curiosities you unlock via the board: a 🏗️ <b>Salvage Crane</b> (dig the scrap heap for a random haul), an 🕯️ <b>Shrine of Names</b> (honor the fallen for a small permanent party bonus), and an 👁️ <b>Info Broker</b> (buy intel that eases your next run). Consumables you buy are stashed for your next deployment.<br>
       <b>🌊 The Pond</b> — see below.
+    </p>
+    <h3 class="sec">The Message Board</h3>
+    <p class="muted small" style="line-height:1.6">
+      Several bunker features start <b>locked</b>. The 📋 <b>Message Board</b> in Headquarters posts a special mission for each. You complete these just by playing — winning a run, catching a fish, defeating enemies, resolving events, doing business at the traders — then return to the board and <b>Claim</b> the reward to permanently unlock that station. A gold <b>!</b> on the board means a mission is ready to claim. The board gates: <b>Renas</b> &amp; <b>Guiseppe</b> and the <b>Garden Plot</b> (Pond), and the <b>Salvage Crane</b>, <b>Shrine of Names</b> &amp; <b>Info Broker</b> (Market).
     </p>
     <h3 class="sec">The Pond Room</h3>
     <p class="muted small" style="line-height:1.6">
       🎣 <b>Fishing Spot</b> — cast, wait for a bite, then click fast to hook a fish. Rarer fish are worth more.<br>
       🐠 <b>Fish Tank</b> — holds <b>one fish at a time</b>, quietly earning scrap around the clock even while you're
       away (banked up to 8 hours). Catching a new fish <b>replaces</b> the current one, so keep the rare keepers.<br>
-      🌱 <b>Garden Plot</b> — plant scrap and it grows into a bigger crop over ~20 minutes (up to 2× when fully ripe). Harvest anytime; one crop at a time.<br>
+      🌱 <b>Garden Plot</b> — <i>(unlocked via the Message Board)</i> plant scrap and it grows into a bigger crop over ~20 minutes (up to 2× when fully ripe). Harvest anytime; one crop at a time.<br>
       🥊 <b>Training Dummy</b> — a reflex drill; hit the targets to earn scrap.<br>
       ✦ <b>The Stranger</b> — a hooded figure who teaches your survivors. Spend <b>Insight</b> on a per-survivor
       skill tree of passive upgrades and brand-new skills. Earn Insight by beating biome bosses (+1), rescuing
       survivors (+1), and lighting the final beacon (+3). Everything you learn applies on every future run.<br>
-      💬 <b>Renas &amp; Guiseppe</b> — two bunker friends to chat with. <b>Renas</b> is Josh's tech-obsessed little
+      💬 <b>Renas &amp; Guiseppe</b> — <i>(each unlocked via the Message Board)</i> two bunker friends to chat with. <b>Renas</b> is Josh's tech-obsessed little
       brother; <b>Guiseppe</b> is a sentient apple. Talk to them for stories and small side quests — finish a
       quest and they'll gift you a permanent perk. Choose <b>Talk a while</b> for extra dialogue that grows as you
       progress. A gold <b>!</b> above them means they have something for you.
