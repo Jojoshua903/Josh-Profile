@@ -270,6 +270,41 @@
     .actbar{flex-wrap:wrap}
     .unit{width:120px}
   }
+
+  /* ===== JRPG DIALOGUE BOX ===== */
+  .dbox{position:absolute;left:0;right:0;bottom:0;z-index:60;display:none;
+    padding:0 16px 16px;pointer-events:none}
+  .dbox.active{display:block}
+  .dboxInner{position:relative;max-width:820px;margin:0 auto;pointer-events:auto;
+    background:linear-gradient(180deg,rgba(28,20,17,.98),rgba(18,13,11,.98));
+    border:2px solid var(--gold);border-radius:14px;
+    box-shadow:0 -6px 30px rgba(0,0,0,.6),inset 0 0 0 2px rgba(0,0,0,.5);
+    padding:16px 18px 18px 118px;min-height:132px}
+  .dboxPortrait{position:absolute;left:-10px;bottom:8px;width:118px;height:118px;
+    border-radius:14px;background:radial-gradient(circle at 50% 30%,rgba(232,184,75,.22),rgba(0,0,0,.35));
+    border:2px solid var(--line);display:flex;align-items:flex-end;justify-content:center;overflow:hidden}
+  .dboxPortrait img{width:112px;height:112px;image-rendering:auto;filter:drop-shadow(0 4px 6px rgba(0,0,0,.5))}
+  .dboxName{position:absolute;top:-16px;left:104px;background:linear-gradient(180deg,var(--gold),#cf9f30);
+    color:#1a120f;font-weight:800;font-size:14px;letter-spacing:.4px;padding:5px 14px;border-radius:9px;
+    box-shadow:0 3px 0 #93701c,0 6px 12px rgba(0,0,0,.4);white-space:nowrap}
+  .dboxName .dtag{font-weight:700;font-size:10px;opacity:.75;text-transform:uppercase;letter-spacing:1px}
+  .dboxText{color:var(--ink);font-size:15.5px;line-height:1.6;min-height:64px;white-space:pre-wrap}
+  .dboxNext{position:absolute;right:16px;bottom:12px;color:var(--gold);font-size:18px;font-weight:900;
+    opacity:0;animation:dnext 1s ease-in-out infinite}
+  .dboxNext.show{opacity:1}
+  @keyframes dnext{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(3px);opacity:1}}
+  .dboxHint{position:absolute;right:16px;top:-14px;color:var(--muted);font-size:11px;background:rgba(0,0,0,.55);
+    border:1px solid var(--line);border-radius:8px;padding:3px 9px}
+  /* topic-choice menu shown inside the JRPG frame */
+  .dchoices{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+  .dchoice{text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:9px;
+    padding:9px 12px;cursor:pointer;color:var(--ink);transition:border-color .12s,transform .08s;font-size:13.5px}
+  .dchoice:hover:not(:disabled){border-color:var(--gold);transform:translateX(3px)}
+  .dchoice:disabled{opacity:.4;cursor:not-allowed}
+  .dchoice .dct{font-weight:800}
+  .dchoice .dcd{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .dchoice.seen .dct{color:var(--muted)}
+  .dchoice.seen .dct::before{content:"✓ ";color:var(--green)}
 </style>
 </head>
 <body>
@@ -385,6 +420,18 @@
     <div class="toast" id="toast"></div>
     <div class="achtoast" id="achToast"></div>
 
+    <!-- JRPG DIALOGUE BOX -->
+    <div class="dbox" id="dbox">
+      <div class="dboxInner">
+        <div class="dboxName" id="dboxName">Name<span class="dtag" id="dboxTag"></span></div>
+        <div class="dboxPortrait" id="dboxPortrait"></div>
+        <div class="dboxHint" id="dboxHint">Space / click to continue</div>
+        <div class="dboxText" id="dboxText"></div>
+        <div class="dchoices" id="dboxChoices" style="display:none"></div>
+        <div class="dboxNext" id="dboxNext">▾</div>
+      </div>
+    </div>
+
     <!-- MINIGAME overlay -->
     <div class="mgoverlay" id="mgOverlay">
       <div class="mgpanel">
@@ -434,6 +481,10 @@ const defaultSave = () => ({
   salvageSince: 0,       // timestamp of last Salvage Crane free dig
   nextRunPerks: [],      // Info Broker intel applied at the start of the next run only
   missions: {},          // missionId -> true once the reward station is unlocked
+  trinkets: [],          // owned trinket ids (permanent collection; equip before a run)
+  loadout: {},           // survivorId -> equipped trinket id (applied at run start)
+  contracts: null,       // { day, ids:[contractId,...], done:{id:true} } — daily bounties
+  contractsCleared: 0,   // lifetime contracts completed (flavor/achievement)
   soundOn: true
 });
 let META = load();
@@ -745,6 +796,35 @@ const SPRITE_ART = {
     x.fillStyle="#2a3a2a"; roundRectX(x,64,48,12,14,2);
     x.fillStyle=hexA("#6fae5a",.5); scircle(x,70,55,6);
     x.fillStyle="#9fe08a"; scircle(x,70,55,2.6);
+  },
+  // ---- HUB CHARACTERS (Broker & the Stranger) ----
+  broker:(x,s)=>{ // Info Broker: one-eyed figure behind a lamp-lit table
+    torso(x,48,54,34,32,"#33424a");
+    // heavy cloak collar
+    x.fillStyle="#26333a"; x.beginPath(); x.moveTo(30,52); x.quadraticCurveTo(48,44,66,52); x.lineTo(62,62); x.quadraticCurveTo(48,54,34,62); x.closePath(); x.fill();
+    head(x,48,42,14,"#c8a882","rgba(0,0,0,.3)");
+    // low hood
+    x.fillStyle="#26333a"; x.beginPath(); x.arc(48,40,16,Math.PI*1.02,Math.PI*1.98); x.fill(); srect(x,32,38,32,4,"#1f2a30");
+    // single seeing eye + scar over the other
+    x.fillStyle="#5aa2c8"; scircle(x,54,44,3); x.fillStyle="#fff"; scircle(x,55,43,1);
+    x.strokeStyle="#7a5a4a"; x.lineWidth=2; x.beginPath(); x.moveTo(38,40); x.lineTo(44,48); x.stroke();
+    // lamp glow at the table's edge
+    x.fillStyle=hexA("#e8b84b",.4); scircle(x,74,54,9);
+    x.fillStyle="#e8b84b"; scircle(x,74,54,3.5); x.fillStyle="#fff2c0"; scircle(x,74,53,1.4);
+  },
+  stranger:(x,s)=>{ // The Stranger: cloaked teacher with a floating orb of insight
+    torso(x,48,54,34,34,"#3a2f4a");
+    // deep hood, face in shadow
+    x.fillStyle="#2c2338"; x.beginPath(); x.moveTo(48,18); x.quadraticCurveTo(28,30,32,54); x.quadraticCurveTo(48,44,64,54); x.quadraticCurveTo(68,30,48,18); x.fill();
+    x.fillStyle="#140f1c"; x.beginPath(); x.ellipse(48,40,11,13,0,0,7); x.fill(); // dark within the hood
+    // two faint violet eyes
+    x.fillStyle="#c89aec"; scircle(x,44,40,2.2); scircle(x,52,40,2.2);
+    x.fillStyle=hexA("#c89aec",.4); scircle(x,44,40,5); scircle(x,52,40,5);
+    // floating orb of insight in an open palm
+    x.fillStyle=hexA("#c89aec",.35); scircle(x,72,52,10);
+    x.fillStyle="#d8c0f0"; scircle(x,72,52,5); x.fillStyle="#fff"; scircle(x,70,50,1.6);
+    // swirling motes
+    x.fillStyle="#e8d8ff"; scircle(x,64,44,1.4); scircle(x,80,58,1.4); scircle(x,66,60,1.2);
   },
   // ---- ENEMIES ----
   ghoul:(x,s)=>{ // ash ghoul: gaunt grey, hollow eyes
@@ -1206,6 +1286,9 @@ const ACHIEVEMENTS = {
   quartermaster:{name:"Quartermaster",desc:"Use 25 items in battle.",icon:"🎒", check:()=>((META.stats.itemsUsed||0)>=25)},
   angler_ach:{name:"Gone Fishing",desc:"Catch your first fish.",icon:"🎣"},
   aquarist:{name:"Aquarist",desc:"Stock the tank with 5 fish.",icon:"🐠"},
+  collector:{name:"Well-Geared",desc:"Own 6 different trinkets.",icon:"🎒", check:()=>new Set(META.trinkets||[]).size>=6},
+  contractor:{name:"Contractor",desc:"Complete 5 daily contracts.",icon:"📋", check:()=>(META.contractsCleared||0)>=5},
+  phaseshift:{name:"Phase Breaker",desc:"Push a boss into Phase II and win.",icon:"💢"},
 };
 function grantAch(id){
   if(META.achievements[id]) return;
@@ -1396,6 +1479,41 @@ function metaBonuses(){
   b.hpFlat += Math.min(10, META.memorial||0) * 2;
   return b;
 }
+
+/* ===================== TRINKETS (equippable gear) =====================
+   Loot that drops from enemies during a run. Each trinket is a small stat
+   package a survivor wears. You choose to EQUIP it on the spot (party members
+   have one slot each and swapping mid-run is allowed at the drop prompt), SELL
+   it for scrap immediately, or STASH it to your permanent collection to equip
+   from the Barracks before a future run. Owned trinkets persist in META.trinkets;
+   the pre-run loadout lives in META.loadout (survivorId -> trinketId). */
+const TRINKETS = {
+  // common
+  boneNeedle:{ name:"Bone Needle", icon:"🦴", rarity:"common", desc:"+8% attack.", mods:{atkMul:0.08} },
+  scrapPlate:{ name:"Scrap Plating", icon:"🛡️", rarity:"common", desc:"+16 max HP.", mods:{hpFlat:16} },
+  sparkCell:{ name:"Spark Cell", icon:"🔋", rarity:"common", desc:"+4 starting energy.", mods:{mpFlat:4} },
+  cracklens:{ name:"Cracked Lens", icon:"🔍", rarity:"common", desc:"+1 speed; start battles a step faster.", mods:{spd:1} },
+  // uncommon
+  emberband:{ name:"Ember Band", icon:"🔥", rarity:"uncommon", desc:"Attacks apply 3 burn for 2 turns.", mods:{onHitBurn:{amt:3,dur:2}} },
+  leechRing:{ name:"Leech Ring", icon:"🩸", rarity:"uncommon", desc:"Heal 15% of the damage you deal.", mods:{lifesteal:0.15} },
+  spikeMail:{ name:"Spiked Mail", icon:"🪓", rarity:"uncommon", desc:"Reflect 20% of damage taken (passive thorns).", mods:{thorns:0.20} },
+  warHorn:{ name:"War Horn", icon:"📯", rarity:"uncommon", desc:"+14% attack and +10 max HP.", mods:{atkMul:0.14,hpFlat:10} },
+  // rare (boss drops)
+  ashHeart:{ name:"Heart of Ash", icon:"❤️‍🔥", rarity:"rare", desc:"+22% attack; first hit each battle is doubled.", mods:{atkMul:0.22,firstDouble:true} },
+  aegis:{ name:"Aegis Core", icon:"💠", rarity:"rare", desc:"+40 max HP; start each battle with a Guard shield.", mods:{hpFlat:40,startGuard:{amt:0.3,dur:2}} },
+  overdrive:{ name:"Overdrive Chip", icon:"⚡", rarity:"rare", desc:"+8 starting energy and +2 energy regen per turn.", mods:{mpFlat:8,regen:2} },
+  reaperTooth:{ name:"Reaper's Tooth", icon:"🦷", rarity:"rare", desc:"+18% attack; heal 25% of damage dealt.", mods:{atkMul:0.18,lifesteal:0.25} },
+};
+const RARITY_COLOR={ common:"#a3907e", uncommon:"#6fae5a", rare:"#e8b84b" };
+const TRINKET_SELL={ common:20, uncommon:40, rare:80 };
+function trinketPool(rarity){ return Object.keys(TRINKETS).filter(id=>TRINKETS[id].rarity===rarity); }
+function rollTrinket(rarity){ const pool=trinketPool(rarity); return pool[Math.floor(Math.random()*pool.length)]; }
+// merge a survivor's equipped trinket mods into a plain bonus object
+function trinketModsFor(survivorId){
+  const tid=(META.loadout||{})[survivorId];
+  return (tid && TRINKETS[tid]) ? TRINKETS[tid].mods : {};
+}
+function ownTrinket(id){ META.trinkets=META.trinkets||[]; META.trinkets.push(id); save(); }
 
 /* ===================== CONSUMABLE ITEMS =====================
    Carried in RUN.items. Usable in battle from the Items action (one item per
@@ -1607,14 +1725,16 @@ function newRun(partyIds){
   const party = partyIds.map(id=>{
     const c = CHARS[id];
     const tb = treeBonuses(id);
-    let maxhp = Math.round((c.hp + bon.hpFlat + tb.hpFlat) * (1 + prov.startHpMul));
+    const tk = trinketModsFor(id);
+    let maxhp = Math.round((c.hp + bon.hpFlat + tb.hpFlat + (tk.hpFlat||0)) * (1 + prov.startHpMul));
     const skills = c.skills.slice().concat(tb.skills);
     return {
       id, spriteId:id, name:c.name, icon:c.icon, color:c.color, role:c.role,
       maxhp, hp:maxhp,
-      atk: c.atk, atkMul: bon.atkMul + tb.atkMul,
-      maxmp: c.mp + bon.mpFlat + tb.mpFlat, mp: c.mp + bon.mpFlat + tb.mpFlat,
-      spd:c.spd + tb.spd, skills,
+      atk: c.atk, atkMul: bon.atkMul + tb.atkMul + (tk.atkMul||0),
+      maxmp: c.mp + bon.mpFlat + tb.mpFlat + (tk.mpFlat||0), mp: c.mp + bon.mpFlat + tb.mpFlat + (tk.mpFlat||0),
+      spd:c.spd + tb.spd + (tk.spd||0), skills,
+      trinket:(META.loadout||{})[id]||null, tmods:tk,
       alive:true, effects:[], usedRevive:false
     };
   });
@@ -1631,8 +1751,8 @@ function newRun(partyIds){
     META.nextRunPerks=[]; save();
   }
   buildBiomeMap();
+  initContractTrack();
 }
-// The Journey: a special one-biome run to a lost settlement. Unlocks Marloes.
 function journeyBiomeIndex(){ return BIOMES.findIndex(b=>b.journey); }
 function newJourney(partyIds){
   newRun(partyIds);               // build a normal run first (party, relics, revives, items)
@@ -2149,6 +2269,98 @@ function claimMission(id){
   META.missions=META.missions||{}; META.missions[id]=true; save();
   return true;
 }
+
+/* ===================== DAILY CONTRACTS (bounties) =====================
+   Three run-objectives that rotate every day. Complete them on a *successful*
+   run (one that reaches the beacon / clears an expedition) to bank bonus cores,
+   insight, and scrap. They reward playing differently: caster-only wins, no-item
+   clears, flawless runs, big hits, and so on. Progress is tracked per-run in
+   RUN.contractTrack and evaluated when the run is won. */
+const CONTRACTS = {
+  flawless:{ name:"Not One Lost", icon:"✨", desc:"Win a run without a single survivor falling.",
+    reward:{cores:2, insight:1}, check:(r)=> r.won && r.fell===0 },
+  frugal:{ name:"Bare Hands", icon:"✋", desc:"Win a run without using any items.",
+    reward:{cores:1, insight:1, scrap:40}, check:(r)=> r.won && r.itemsUsed===0 },
+  hunter:{ name:"Elite Hunter", icon:"🎯", desc:"Defeat 2 elite enemies in one run.",
+    reward:{cores:1, scrap:60}, check:(r)=> r.won && r.elitesKilled>=2 },
+  bruiser:{ name:"Crushing Blow", icon:"💢", desc:"Land a single attack dealing 120+ damage.",
+    reward:{scrap:70, insight:1}, check:(r)=> r.won && r.maxHit>=120 },
+  speedy:{ name:"Blitz", icon:"⏱️", desc:"Win a battle in 2 rounds or fewer.",
+    reward:{cores:1, scrap:50}, check:(r)=> r.won && r.fastWin },
+  caster:{ name:"Storm the Field", icon:"⚡", desc:"Win a run using an all-caster party (energy skills only).",
+    reward:{cores:2}, check:(r)=> r.won && r.usedOnlyCasters },
+  survivor:{ name:"Full March", icon:"🥾", desc:"Clear every biome of a standard run (light the beacon).",
+    reward:{cores:1, insight:2}, check:(r)=> r.won && !r.expedition && !r.journey },
+  gearhead:{ name:"Well-Equipped", icon:"🎒", desc:"Finish a run with a trinket equipped on every survivor.",
+    reward:{scrap:60, insight:1}, check:(r)=> r.won && r.allGeared },
+  thrifty:{ name:"Scrapper", icon:"⚙️", desc:"Bank 150+ scrap from a single run.",
+    reward:{cores:1, scrap:30}, check:(r)=> r.won && r.scrapBanked>=150 },
+};
+const CONTRACT_IDS=Object.keys(CONTRACTS);
+// stable day index (local midnight-based) used to seed the daily rotation
+function contractDay(){ return Math.floor(Date.now()/86400000); }
+function seededPick(day, count){
+  // simple deterministic shuffle from the day seed
+  const pool=CONTRACT_IDS.slice(); const out=[]; let s=day*2654435761 % 2147483647;
+  const rnd=()=>{ s=(s*48271)%2147483647; return s/2147483647; };
+  for(let i=0;i<count && pool.length;i++){ const idx=Math.floor(rnd()*pool.length); out.push(pool.splice(idx,1)[0]); }
+  return out;
+}
+function ensureContracts(){
+  const day=contractDay();
+  if(!META.contracts || META.contracts.day!==day){
+    META.contracts={ day, ids:seededPick(day,3), done:{} };
+    save();
+  }
+  return META.contracts;
+}
+function activeContracts(){ const c=ensureContracts(); return c.ids.map(id=>({id, def:CONTRACTS[id], done:!!c.done[id]})); }
+// per-run tracker init + event hook
+function initContractTrack(){
+  RUN.contractTrack={ itemsUsed:0, elitesKilled:0, maxHit:0, fastWin:false, scrapBanked:0 };
+}
+function trackContractEvent(kind, data){
+  if(!RUN || !RUN.contractTrack) return;
+  const ct=RUN.contractTrack;
+  if(kind==="item"){ ct.itemsUsed++; }
+  else if(kind==="hit"){ if(data && data.dmg>ct.maxHit) ct.maxHit=data.dmg; }
+  else if(kind==="eliteKill"){ ct.elitesKilled++; }
+  else if(kind==="fastWin"){ ct.fastWin=true; }
+}
+// build the final run summary contracts are evaluated against
+function contractRunStats(won){
+  const ct=(RUN&&RUN.contractTrack)||{itemsUsed:0,elitesKilled:0,maxHit:0,fastWin:false};
+  const party=RUN.party||[];
+  const fell=party.filter(p=>!p.alive).length;
+  const usedOnlyCasters = party.length>0 && party.every(p=>["milo","deniz","marloes"].includes(p.id));
+  const allGeared = party.length>0 && party.every(p=>!!p.trinket);
+  return {
+    won, expedition:!!RUN.quest, journey:!!RUN.journey,
+    fell, itemsUsed:ct.itemsUsed, elitesKilled:ct.elitesKilled, maxHit:ct.maxHit,
+    fastWin:ct.fastWin, usedOnlyCasters, allGeared, scrapBanked:RUN.scrap||0
+  };
+}
+// evaluate + award daily contracts at run victory; returns array of completed defs
+function evaluateContracts(){
+  const c=ensureContracts(); const stats=contractRunStats(true); const done=[];
+  c.ids.forEach(id=>{
+    if(c.done[id]) return;
+    const def=CONTRACTS[id];
+    let ok=false; try{ ok=def.check(stats); }catch(e){ ok=false; }
+    if(ok){
+      c.done[id]=true;
+      const r=def.reward||{};
+      if(r.cores){ META.cores+=r.cores; }
+      if(r.insight){ META.insight=(META.insight||0)+r.insight; }
+      if(r.scrap){ META.scrap+=r.scrap; META.stats.scrapEarned+=r.scrap; }
+      META.contractsCleared=(META.contractsCleared||0)+1;
+      done.push(def);
+    }
+  });
+  if(done.length) save();
+  return done;
+}
+
 /* ===================== HUB (top-down canvas) ===================== */
 const hub = {
   canvas:null, ctx:null, raf:null, keys:{},
@@ -2196,6 +2408,7 @@ function initHub(){
     // ignore input while a panel or minigame overlay is open
     if(document.getElementById('overlay').classList.contains('active')) return;
     if(document.getElementById('mgOverlay').classList.contains('active')) return;
+    if(typeof Dlg!=="undefined" && Dlg._open) return;
     hub.keys[e.key.toLowerCase()]=true;
     if((e.key==='e'||e.key==='E'||e.key===' ') && hub.nearest){ e.preventDefault(); hub.nearest.action(); }
   });
@@ -2763,6 +2976,102 @@ function openPanel(title, html){
 }
 function closePanel(){ document.getElementById('overlay').classList.remove('active'); }
 
+/* ===================== JRPG DIALOGUE ENGINE =====================
+   A bottom-anchored textbox with a speaker nameplate, character portrait,
+   and a typewriter reveal. Feed it a list of "beats". Each beat is either:
+     { name, tag, sprite, color, text }              -> a spoken line
+     { choices:[{t,d,fn,seen}], name, sprite, color } -> a topic menu
+   Advance a spoken line with Space/Enter/click (or click to finish the
+   typewriter instantly). An optional onDone() fires when the queue empties. */
+const Dlg = {
+  queue:[], i:0, onDone:null, typing:false, _full:"", _ti:null, _open:false,
+  els(){ return {
+    box:document.getElementById('dbox'), name:document.getElementById('dboxName'),
+    tag:document.getElementById('dboxTag'), portrait:document.getElementById('dboxPortrait'),
+    text:document.getElementById('dboxText'), next:document.getElementById('dboxNext'),
+    choices:document.getElementById('dboxChoices'), hint:document.getElementById('dboxHint') };
+  },
+  // start(beats, onDone) — beats: array of beat objects
+  start(beats, onDone){
+    this.queue=beats.slice(); this.i=0; this.onDone=onDone||null; this._open=true;
+    const e=this.els();
+    if(!this._clickBound){ e.box.addEventListener('click',()=>this.advance()); this._clickBound=true; }
+    e.box.classList.add('active');
+    this.render();
+  },
+  render(){
+    const e=this.els();
+    if(this.i>=this.queue.length){ this.close(); return; }
+    const b=this.queue[this.i];
+    // speaker chrome (carry last known speaker if this beat omits it)
+    const spk=b.name!==undefined?b.name:(this._spk||"");
+    const col=b.color||this._col||"#e8b84b";
+    const spr=b.sprite!==undefined?b.sprite:this._spr;
+    this._spk=spk; this._col=col; this._spr=spr;
+    e.name.firstChild.textContent=spk;
+    e.tag.textContent=b.tag?(" · "+b.tag):"";
+    e.name.style.background=`linear-gradient(180deg,${col},${hexA(col,.7)})`;
+    e.portrait.innerHTML=spr?spriteImg(spr,112):"";
+    e.portrait.style.borderColor=col;
+    if(b.choices){
+      // topic menu beat
+      e.text.textContent=b.text||"";
+      e.next.classList.remove('show');
+      e.hint.textContent="Pick a topic";
+      e.choices.style.display="flex";
+      e.choices.innerHTML=b.choices.map((c,idx)=>
+        `<button class="dchoice ${c.seen?'seen':''}" data-dc="${idx}" ${c.disabled?'disabled':''}>
+           <div class="dct">${c.t}</div>${c.d?`<div class="dcd">${c.d}</div>`:""}
+         </button>`).join("");
+      e.choices.querySelectorAll('[data-dc]').forEach(btn=>btn.addEventListener('click',ev=>{
+        ev.stopPropagation(); const c=b.choices[+btn.dataset.dc]; if(c.disabled) return;
+        SFX.play("click"); c.seen=true; if(c.fn) c.fn();
+      }));
+      return;
+    }
+    e.choices.style.display="none"; e.choices.innerHTML="";
+    e.hint.textContent = (this.i>=this.queue.length-1)?"Space / click to close":"Space / click to continue";
+    this.typewrite(b.text||"");
+  },
+  typewrite(full){
+    const e=this.els(); this._full=full; this.typing=true; e.next.classList.remove('show');
+    let n=0; clearInterval(this._ti); e.text.textContent="";
+    this._ti=setInterval(()=>{
+      n++; e.text.textContent=full.slice(0,n);
+      if(n>=full.length){ clearInterval(this._ti); this.typing=false; e.next.classList.add('show'); }
+    }, 16);
+  },
+  // called on click / Space / Enter
+  advance(){
+    if(!this._open) return;
+    if(this.queue[this.i] && this.queue[this.i].choices) return; // menus wait for a pick
+    if(this.typing){ // finish the current line instantly
+      clearInterval(this._ti); this.els().text.textContent=this._full;
+      this.typing=false; this.els().next.classList.add('show'); return;
+    }
+    SFX.play("click"); this.i++; this.render();
+  },
+  // replace remaining queue (used when a topic pick leads into more lines)
+  play(beats, onDone){
+    this.queue=beats.slice(); this.i=0; if(onDone!==undefined) this.onDone=onDone;
+    this._open=true; this.els().box.classList.add('active');
+    this.render();
+  },
+  close(){
+    clearInterval(this._ti); this.typing=false; this._open=false;
+    this.els().box.classList.remove('active');
+    this._spk=this._col=this._spr=null;
+    const cb=this.onDone; this.onDone=null; if(cb) cb();
+  }
+};
+// global input: click anywhere on the box, or Space/Enter, advances dialogue
+document.addEventListener('keydown',ev=>{
+  if(!Dlg._open) return;
+  if(ev.code==="Space"||ev.code==="Enter"){ ev.preventDefault(); Dlg.advance(); }
+  else if(ev.code==="Escape"){ Dlg.close(); }
+});
+
+
 /* ---------- Headquarters: Message Board (special missions that unlock stations) ---------- */
 function openBoard(){
   const ids=Object.keys(MISSIONS);
@@ -2840,6 +3149,7 @@ function openDeploy(){
     <div>${expRows}</div>` : "";
   const html = `
     <p class="muted small">Select up to <b>3</b> survivors, then deploy into the Ash Wastes${questsOpen?' — or set out on an Expedition':''}.</p>
+    ${contractsDeployHtml()}
     <div class="grid" id="pickGrid" style="margin-top:12px">${cards}</div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:10px;flex-wrap:wrap">
       <div class="muted small" id="pickCount">0 / 3 selected</div>
@@ -2870,6 +3180,21 @@ function openDeploy(){
     saveRun();
     show('mapScreen');
   }));
+}
+// Daily contracts block shown at the top of the Deploy terminal
+function contractsDeployHtml(){
+  const list=activeContracts();
+  const rows=list.map(({def,done})=>{
+    const r=def.reward||{}; const bits=[];
+    if(r.cores) bits.push(`${r.cores}⬡`); if(r.insight) bits.push(`${r.insight}✦`); if(r.scrap) bits.push(`${r.scrap} scrap`);
+    return `<div class="shopitem" style="${done?'opacity:.6;border-color:#6fae5a':''}">
+      <div class="si"><div class="sn">${def.icon} ${def.name} ${done?'<span class="pill" style="color:var(--green)">DONE ✓</span>':''}</div>
+        <div class="sd">${def.desc}</div></div>
+      <span class="pill" style="color:var(--gold);white-space:nowrap">${bits.join(" · ")}</span>
+    </div>`;
+  }).join("");
+  return `<h3 class="sec">Daily Contracts <span class="muted small" style="text-transform:none;letter-spacing:0">— rotate every day · complete on a winning run</span></h3>
+    <div style="margin-bottom:4px">${rows}</div>`;
 }
 function togglePick(id){
   const i=pendingParty.indexOf(id);
@@ -2930,8 +3255,57 @@ function openBarracks(){
     </div>`;
   }).join("");
   openPanel("Barracks", `<p class="muted small">Survivors recruited: <b style="color:var(--gold)">${foundCount}/${ids.length}</b>. The rest are lost in the Wastes — watch for a <b style="color:#e88ac8">🆘 Survivor</b> node on a run to find and recruit them. Anyone here can be deployed.</p>
-    <div class="grid" style="margin-top:12px">${cards}</div>`);
+    <div class="grid" style="margin-top:12px">${cards}</div>
+    ${gearLoadoutHtml()}`);
+  wireGearLoadout();
 }
+/* Gear loadout: assign owned trinkets to recruited survivors before deploying. */
+function gearLoadoutHtml(){
+  const owned=(META.trinkets||[]).slice();
+  const recruited=Object.keys(CHARS).filter(id=>META.unlocked.includes(id));
+  if(!owned.length){
+    return `<h3 class="sec">Gear Loadout</h3>
+      <p class="muted small">No gear yet. Enemies drop <b>trinkets</b> during runs — keep them and assign them here to survivors before you deploy.</p>`;
+  }
+  // count how many of each trinket are owned; equipped ones are "in use"
+  const rows=recruited.map(id=>{
+    const c=CHARS[id]; const eq=(META.loadout||{})[id];
+    const opts=[`<option value="">— none —</option>`].concat(
+      owned.filter((v,i,a)=>a.indexOf(v)===i).map(tid=>{
+        const t=TRINKETS[tid]; if(!t) return "";
+        return `<option value="${tid}" ${eq===tid?'selected':''}>${t.icon} ${t.name} (${t.rarity})</option>`;
+      })).join("");
+    const eqDesc = eq&&TRINKETS[eq] ? `<div class="muted small" style="margin-top:3px">${TRINKETS[eq].desc}</div>`:"";
+    return `<div class="shopitem">
+      <div class="si"><div class="sn">${c.icon||''} ${c.name}</div>${eqDesc}</div>
+      <select data-gear="${id}" style="background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;max-width:200px">${opts}</select>
+    </div>`;
+  }).join("");
+  const collList=owned.filter((v,i,a)=>a.indexOf(v)===i).map(tid=>{
+    const t=TRINKETS[tid]; if(!t) return "";
+    const n=owned.filter(x=>x===tid).length;
+    return `<span class="pill" style="color:${RARITY_COLOR[t.rarity]}">${t.icon} ${t.name}${n>1?` ×${n}`:''}</span>`;
+  }).join(" ");
+  return `<h3 class="sec">Gear Loadout <span class="muted small" style="text-transform:none;letter-spacing:0">— equipped gear applies on your next deploy</span></h3>
+    <div style="margin-bottom:10px">${collList}</div>
+    <div>${rows}</div>`;
+}
+function wireGearLoadout(){
+  document.querySelectorAll('[data-gear]').forEach(sel=>sel.addEventListener('change',()=>{
+    const id=sel.dataset.gear; const val=sel.value;
+    META.loadout=META.loadout||{};
+    // prevent equipping the same single trinket on two survivors if only one is owned
+    if(val){
+      const ownedCount=(META.trinkets||[]).filter(x=>x===val).length;
+      const usedElsewhere=Object.keys(META.loadout).filter(k=>k!==id && META.loadout[k]===val).length;
+      if(usedElsewhere>=ownedCount){ toast("You only have "+ownedCount+" of that. Get another to double up."); sel.value=META.loadout[id]||""; return; }
+      META.loadout[id]=val;
+    } else { delete META.loadout[id]; }
+    save(); SFX.play("click");
+    openBarracks(); // re-render to refresh descriptions
+  }));
+}
+
 function openWorkshop(){
   const rows=Object.keys(UPGRADES).map(id=>{
     const u=UPGRADES[id]; const lvl=upgLevel(id); const maxed=lvl>=u.max;
@@ -3335,6 +3709,35 @@ function openShrine(){
   });
 }
 /* ---------- Market: Info Broker (buy one-run intel for your next deployment) ---------- */
+/* JRPG conversation for the Info Broker — reached via "Talk with them" in the panel.
+   Getting to know the Broker unlocks a one-time free piece of intel as a thank-you. */
+function talkBroker(){
+  startConversation({
+    id:"broker", name:"The Info Broker", tag:"seller of knowing", sprite:"broker", color:"#5aa2c8",
+    intro:["\"Sit. Mind the lamp. I don't get many who want to TALK — most just want what I know and gone. You're either lonely or careful. I like careful.\""],
+    menuPrompt:"\"Ask. I'll tell you what a thing costs before I tell you the thing.\"",
+    topics:[
+      { id:"eye", t:"What happened to your eye?", d:"The obvious question.", bond:true,
+        lines:[
+          "\"Traded it. Not a metaphor — I traded it. A warlord wanted to see a thing only I'd witnessed, and eyes are the one ledger you can't forge. He got the memory. I kept the rest of my skin.\"",
+          "\"Worth it? I'm still here selling. He's a name on a grave Vesk dug. So. Yes.\""
+        ]},
+      { id:"trade", t:"How do you know so much?", d:"The source of the intel.", bond:true,
+        lines:[
+          "\"Everyone who crosses the wastes stops here eventually. They pay in coin, but they LEAK in stories. I just... catch the runoff. File it. A route here, a nest there.\"",
+          "\"Knowledge isn't power, whatever they told you. Knowledge is INVENTORY. Power is knowing which piece someone will bleed to buy.\""
+        ]},
+      { id:"trust", t:"Can I trust your intel?", d:"Push a little.", bond:true, needBond:2,
+        lines:[
+          "A dry laugh. \"No. You should trust no one who sells certainty in a dead world. But I have never once been WRONG, which is a different and better thing.\"",
+          "\"I'll tell you a secret for free, since you asked instead of assumed: I want your survivors to come home. Repeat customers. Don't read too much warmth into it.\""
+        ]},
+    ],
+    onBondFull:{ text:"The Broker studies you with the one good eye, then slides a folded scrap across the table. \"On the house. A safe route I've been sitting on. Don't say I never gave you anything — because now I have, and you'll remember it.\"",
+      fn:()=>{ META.nextRunPerks=META.nextRunPerks||[]; if(!META.nextRunPerks.includes("scout")){ META.nextRunPerks.push("scout"); toast("The Broker queued free intel: Scouted Route."); save(); } } },
+    onClose:()=>openBroker()
+  });
+}
 const BROKER_INTEL={
   scout:{n:"🗺️ Scouted Route", d:"Your next run begins with +25 scrap already banked.", cost:40, res:"scrap"},
   markedprey:{n:"🎯 Marked Prey", d:"On your next run, the first fight's enemies start marked (+35% damage taken).", cost:45, res:"scrap"},
@@ -3357,8 +3760,10 @@ function openBroker(){
     <div style="margin:10px 0"><span class="pill" style="color:#8fd0ea">${queued} intel queued for next run</span> <span style="white-space:nowrap">${resPill()}</span></div>
     <h3 class="sec">Intel for Sale</h3>
     <div>${rows}</div>
+    <div style="margin-top:10px"><button class="btn secondary" id="brokerTalk" style="font-size:13px">💬 Talk with the Broker</button></div>
     <p class="muted small" style="margin-top:8px">Applied automatically when you next deploy (standard runs and expeditions alike).</p>
   `);
+  const bt=document.getElementById('brokerTalk'); if(bt) bt.addEventListener('click',()=>{ SFX.play("click"); closePanel(); talkBroker(); });
   document.querySelectorAll('[data-intel]').forEach(b=>b.addEventListener('click',()=>{
     const id=b.dataset.intel, it=BROKER_INTEL[id];
     if((META.nextRunPerks||[]).includes(id)) return;
@@ -3419,11 +3824,42 @@ function openCrane(){
   });
 }
 /* ---------- Pond Room: The Stranger — skill tree ---------- */
+/* JRPG conversation for the Stranger — a slow reveal of who the teacher is.
+   Bonding fully grants a one-time Insight, "a lesson freely given." */
+function talkStranger(){
+  startConversation({
+    id:"stranger", name:"The Stranger", tag:"the hooded teacher", sprite:"stranger", color:"#c89aec",
+    intro:["The hood turns toward you. For a moment there is only shadow, and two faint violet lights. \"You come to speak, not to learn. Curious. Very well. Words are a kind of lesson too.\""],
+    menuPrompt:"\"Ask your question. I will answer as much as is wise — no more.\"",
+    topics:[
+      { id:"who", t:"Who are you, really?", d:"Behind the hood.", bond:true,
+        lines:[
+          "\"A teacher. That is the truest word I have. The name I wore before the burning belongs to someone who died with the old world. I kept the knowledge and let the name go.\"",
+          "\"Do not look for a face here. Faces make people want to be remembered as themselves. I would rather be remembered as what I taught.\""
+        ]},
+      { id:"insight", t:"What is Insight, to you?", d:"The currency you spend here.", bond:true,
+        lines:[
+          "\"You think it a currency. To me it is grief made useful. Every hard-won lesson your survivors bleed for — I gather it, and give it back sharpened.\"",
+          "\"The old world drowned in information and starved for insight. I will not let that happen twice. Not in my little pond.\""
+        ]},
+      { id:"why", t:"Why teach us at all?", d:"What's in it for the Stranger?", bond:true, needBond:2,
+        lines:[
+          "A long silence. \"Because I taught, once, in a bright hall full of the young. Then the sky burned and I could save none of them. Only what I knew survived.\"",
+          "\"So I teach the living now. It is the only apology the dead will accept. Send me your survivors. I will make sure their knowing outlasts them — as mine has me.\""
+        ]},
+    ],
+    onBondFull:{ text:"The violet lights soften, almost kind. \"You listened without trying to unmask me. That is rarer than talent.\" A mote of light drifts from the hood into your hand. \"A lesson, freely given. Spend it where it is needed.\"",
+      fn:()=>{ META.insight=(META.insight||0)+1; save(); syncHubRes(); toast("The Stranger gifted you 1 Insight."); } },
+    onClose:()=>openSkillTree()
+  });
+}
 let _treeSel="nathan";
 function openSkillTree(){
   // only show survivors the player has recruited; default to a recruited one
   const owned=Object.keys(SKILLTREE).filter(id=>META.unlocked.includes(id));
-  if(!owned.length){ openPanel("The Stranger", `<p class="muted" style="line-height:1.6">A hooded figure watches from the shadows by the water. "Bring me survivors," it rasps, "and I will teach them what the old world forgot." <br><br>Recruit survivors on your runs, then return.</p>`); return; }
+  if(!owned.length){ openPanel("The Stranger", `<p class="muted" style="line-height:1.6">A hooded figure watches from the shadows by the water. "Bring me survivors," it rasps, "and I will teach them what the old world forgot." <br><br>Recruit survivors on your runs, then return.</p><div style="margin-top:12px"><button class="btn secondary" id="strangerTalk0" style="font-size:13px">💬 Talk with the Stranger</button></div>`);
+    const s0=document.getElementById('strangerTalk0'); if(s0) s0.addEventListener('click',()=>{ SFX.play("click"); closePanel(); talkStranger(); });
+    return; }
   if(!owned.includes(_treeSel)) _treeSel=owned[0];
   const sid=_treeSel; const c=CHARS[sid];
   const tabs=owned.map(id=>`<button class="btn ${id===sid?'rust':'ghost'}" style="font-size:12px;padding:7px 11px" data-tab="${id}">${CHARS[id].icon} ${CHARS[id].name}</button>`).join(" ");
@@ -3450,8 +3886,10 @@ function openSkillTree(){
       <div><div style="font-weight:800">${c.name}</div><div class="muted small">${c.role}</div></div>
     </div>
     <div>${nodes}</div>
+    <div style="margin-top:12px"><button class="btn secondary" id="strangerTalk" style="font-size:13px">💬 Talk with the Stranger</button></div>
     <p class="muted small" style="margin-top:12px">Earn Insight by defeating biome bosses (+1), rescuing survivors (+1), and lighting the final beacon (+3).</p>
   `);
+  const strTalk=document.getElementById('strangerTalk'); if(strTalk) strTalk.addEventListener('click',()=>{ SFX.play("click"); closePanel(); talkStranger(); });
   document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{ _treeSel=b.dataset.tab; SFX.play("click"); openSkillTree(); }));
   document.querySelectorAll('[data-node]').forEach(b=>b.addEventListener('click',()=>{
     const node=(SKILLTREE[sid]||[]).find(n=>n.id===b.dataset.node);
@@ -3461,14 +3899,109 @@ function openSkillTree(){
     } else toast("Not enough Insight.");
   }));
 }
+/* ===================== TOPIC CONVERSATIONS (JRPG "get to know them") =====================
+   A shared engine that runs a JRPG-style conversation: intro lines, then a menu
+   of topics you can ask about. Each topic plays a short exchange, then returns to
+   the menu. Asking about a person's life builds RAPPORT (a per-character heart
+   meter stored in META.npcs[id].rapport). Some topics unlock only once rapport is
+   high enough, so there's a reason to keep talking. Filling the meter grants a
+   small one-time keepsake reward. Fully data-driven so every base character reuses it. */
+function convoState(id){ META.npcs=META.npcs||{}; META.npcs[id]=META.npcs[id]||{}; const s=META.npcs[id];
+  if(typeof s.rapport!=="number") s.rapport=0; s.topicsSeen=s.topicsSeen||[]; return s; }
+function rapportMax(cfg){ return (cfg.topics||[]).filter(t=>t.bond).length; }
+// pick which line-set of a topic to show (topics can vary by rapport / progress)
+function topicLines(topic, st){
+  if(typeof topic.lines==="function") return topic.lines(st)||[];
+  return topic.lines||[];
+}
+/* startConversation(cfg)
+   cfg = {
+     id, name, tag, sprite, color,
+     intro: [strings],                       // opening lines
+     topics: [ { id, t, d, when?(), bond?, lines:[strings] | fn(st)->[strings] } ],
+     extraChoices?: [ {t, d, fn} ],          // e.g. "Trade", "Learn", quest deliver
+     onClose?()
+   } */
+function startConversation(cfg){
+  const st = cfg.id ? convoState(cfg.id) : {rapport:0,topicsSeen:[]};
+  const spoken = txt => ({ name:cfg.name, tag:cfg.tag, sprite:cfg.sprite, color:cfg.color, text:txt });
+  const menu = () => {
+    const rmax = rapportMax(cfg);
+    const heart = rmax ? ` ${"♥".repeat(Math.min(st.rapport,rmax))}${"♡".repeat(Math.max(0,rmax-st.rapport))}` : "";
+    const choices = [];
+    (cfg.topics||[]).forEach(tp=>{
+      if(tp.when && !safe(tp.when)) return;
+      const locked = tp.needBond && st.rapport < tp.needBond;
+      choices.push({
+        t: tp.t + (tp.bond ? " ♥" : ""),
+        d: locked ? `Grow closer first (♥ ${st.rapport}/${tp.needBond})` : (tp.d||""),
+        seen: st.topicsSeen.includes(tp.id),
+        disabled: locked,
+        fn: ()=> askTopic(tp)
+      });
+    });
+    (cfg.extraChoices||[]).forEach(ec=>{
+      if(ec.when && !safe(ec.when)) return;
+      choices.push({ t:ec.t, d:ec.d||"", disabled:!!ec.disabled, fn:ec.fn });
+    });
+    choices.push({ t:"↩ That's all for now", d:"Step away.", fn:()=>{ Dlg.onDone = cfg.onClose||null; Dlg.close(); } });
+    Dlg.play([{ name:cfg.name, tag:cfg.tag+heart, sprite:cfg.sprite, color:cfg.color,
+                text:cfg.menuPrompt||"What would you like to talk about?", choices }]);
+  };
+  const askTopic = (tp)=>{
+    const first = !st.topicsSeen.includes(tp.id);
+    if(!st.topicsSeen.includes(tp.id)) st.topicsSeen.push(tp.id);
+    // asking a "bond" topic for the first time raises rapport
+    if(tp.bond && first){
+      st.rapport = Math.min(st.rapport+1, rapportMax(cfg));
+      save();
+      if(st.rapport===rapportMax(cfg) && cfg.onBondFull && !st.bondFullDone){
+        st.bondFullDone=true; save();
+        const beats=topicLines(tp,st).map(spoken);
+        beats.push({ name:cfg.name, tag:cfg.tag, sprite:cfg.sprite, color:cfg.color, text:cfg.onBondFull.text });
+        Dlg.play(beats, ()=>{ try{cfg.onBondFull.fn&&cfg.onBondFull.fn();}catch(e){} menu(); });
+        return;
+      }
+    }
+    save();
+    const beats=topicLines(tp,st).map(spoken);
+    Dlg.play(beats, menu);
+  };
+  const beats=(cfg.intro||[]).map(spoken);
+  Dlg.start(beats.length?beats:[spoken("...")], menu);
+}
+function safe(fn){ try{ return !!fn(); }catch(e){ return false; } }
+
 /* ===================== POND NPCS: Renas & Guiseppe =====================
-   Two savable characters you talk to for unique dialogue, staged side quests,
-   and permanent perks. State persists in META.npcs[id].stage. Each quest asks
-   for something you naturally accumulate (cores, fish, run wins) and pays out
-   an effect wired into the run systems. */
 const NPCS = {
   renas:{
     name:"Renas", tagline:"Josh's little brother · gadget goblin", spriteId:"renas", color:"#e2703a",
+    menuPrompt:"\"What do you wanna know? I've got, like, a hundred tabs open in my head right now.\"",
+    topics:[
+      { id:"gadgets", t:"What are you building?", d:"Ask about his current project.",
+        lines:[
+          "\"Right now? A recoil dampener for the scanner drone. It kicks like a mule when it paints more than three targets. Rookie mistake — MY rookie mistake, don't tell anyone.\"",
+          "\"I want to give every survivor a little wrist unit. Vitals, ammo count, a panic beacon. If I'd had one for... anyway. Nobody goes out blind on my watch.\""
+        ]},
+      { id:"josh", t:"Tell me about Josh.", d:"His big brother.", bond:true,
+        lines:[
+          "\"Josh is the reason I'm not dead, like, six times over. When the sky went, he carried me forty miles. I was seven. I don't remember most of it. He remembers all of it.\"",
+          "He fidgets with a screwdriver. \"He still thinks I'm seven, is the thing. Sends people out into the ash but won't let me hold a real tool. I get it. I hate it, but I get it.\""
+        ]},
+      { id:"junk", t:"Why do you love the junk so much?", d:"His workshop of scraps.", bond:true,
+        lines:[
+          "\"'Cause it's honest. A busted radio doesn't lie to you — it's broken for a reason, and if you're patient you find it. People aren't like that. Junk, I can fix.\"",
+          "\"Every good thing down here got built twice: once before the burn, once after, by someone who refused to let it stay dead. I'm the second kind of builder. Best kind.\""
+        ]},
+      { id:"dream", t:"What do you want, when this is over?", d:"After the ash.", bond:true, needBond:2,
+        lines:[
+          "He goes quiet for a second. \"A workshop with a window. That's it. A real window, not a screen pretending to be one. Sunlight on a bench full of half-built things.\"",
+          "\"And I'd teach kids. The ones who ask 'but WHY does it work' instead of just 'does it work.' Those are mine. I'll take a whole bunker of those.\""
+        ]},
+    ],
+    onBondFull:{ text:"He blinks at you, a little startled. \"You actually... listened. Huh.\" He digs in a crate and presses a small soldered charm into your hand. \"Made this from my first ration-tin robot. For luck. Don't lose it or I'll know.\"",
+      fn:()=>{ toast("Renas gave you a keepsake — a soldered luck charm."); } },
+
     // gates use live META so the marker/claim reflects current progress
     stages:[
       { // 0 — first meeting
@@ -3512,6 +4045,32 @@ const NPCS = {
   },
   guiseppe:{
     name:"Guiseppe", tagline:"a sentient apple · surprisingly wise", spriteId:"guiseppe", color:"#d64a3f",
+    menuPrompt:"\"I have nothing but time and thoughts, friend. Ask, and I will roll one over in my mind for you.\"",
+    topics:[
+      { id:"apple", t:"How are you... an apple?", d:"The obvious question.",
+        lines:[
+          "\"You want the truth? I do not know. I was fruit. Then I was fruit that wondered. The wondering did not stop. Perhaps the ash changed something. Perhaps I was always waiting to wake.\"",
+          "\"It troubles people less than you would think. Down here, a talking apple is only the third-strangest thing most days.\""
+        ]},
+      { id:"orchard", t:"Do you remember the orchard?", d:"Life before the burning.", bond:true,
+        lines:[
+          "\"I remember warmth. Rows of us, heavy on the branch, turning our faces to a sun that meant us no harm. And a woman's hands, checking each of us gently. I do not know her name. I wish I did.\"",
+          "\"When I am afraid, I go back there. It costs nothing and it always has room.\""
+        ]},
+      { id:"fear", t:"What are you afraid of?", d:"Even an apple has fears.", bond:true,
+        lines:[
+          "\"Not the knife. Everything that lives is eaten by something, in time. No — I fear being FORGOTTEN. To have woken, to have thought all these thoughts, and leave no ripple.\"",
+          "\"So I talk to you. And you remember. And the ripple spreads. You see? You have already eased my only fear.\""
+        ]},
+      { id:"wisdom", t:"Any advice for me?", d:"He's seen you carry a lot.", bond:true, needBond:2,
+        lines:[
+          "\"You send the frightened into the dark and you keep the light burning for their return. That is a heavy lantern to hold. Do not confuse holding it with being it.\"",
+          "\"Rest is not surrender. Even the sun sets so it may rise. Sit by the water sometimes and let the bunker keep itself for an hour. It will forgive you. So must you.\""
+        ]},
+    ],
+    onBondFull:{ text:"Guiseppe hums, low and glad. \"You have given an old apple the finest gift: a witness. Take a seed from my core — plant it somewhere the ash has left. Something of me will grow toward a sun again, because you listened.\"",
+      fn:()=>{ toast("Guiseppe entrusted you with a seed."); } },
+
     stages:[
       { // 0 — first meeting
         text:"A large, glossy apple sits on a crate. As you approach, it blinks. \"Ah. A visitor.\" The voice is warm and rolling. \"I am Guiseppe. Yes — an apple. No, I do not know how. I simply woke up one day, ripe with thoughts. Do not eat me. We can be friends instead.\"",
@@ -3582,69 +4141,41 @@ function openNpc(id){
   const def=NPCS[id]; const st=npcState(id);
   const stage=def.stages[Math.min(st.stage,def.stages.length-1)];
   const questReady = stage.quest && stage.quest.ready && stage.quest.ready();
-  const hasChatter = npcChatterPool(id).length>0;
-  const portrait=`<div style="width:64px;height:64px;border-radius:12px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 35%, ${hexA(def.color,.35)}, rgba(0,0,0,.25))">${spriteImg(def.spriteId,58)}</div>`;
-  const chatterBtn = hasChatter?`<button class="choice" id="npcChat"><div class="ct">💬 Talk a while</div><div class="cd">Ask what's on their mind.</div></button>`:"";
-  // build the choice buttons
-  let choicesHtml="";
-  if(stage.quest){
-    if(questReady){
-      choicesHtml=`<button class="choice" id="npcClaim"><div class="ct">✦ ${stage.quest.label} — deliver now</div><div class="cd">You have what they need. Claim your reward.</div></button>`;
-    } else {
-      choicesHtml=`<button class="choice" disabled><div class="ct">${stage.quest.label}</div><div class="cd">Come back once you have it.</div></button>`;
-    }
-    choicesHtml+=chatterBtn;
-    choicesHtml+=`<button class="choice" id="npcClose"><div class="ct">↩ Leave for now</div><div class="cd">Head back into the bunker.</div></button>`;
-  } else {
-    (stage.choices||[]).forEach((ch,i)=>{
-      choicesHtml+=`<button class="choice" data-npcchoice="${i}"><div class="ct">${ch.t}</div></button>`;
-    });
-    choicesHtml+=chatterBtn;
-    choicesHtml+=`<button class="choice" id="npcClose"><div class="ct">↩ Leave</div></button>`;
-  }
-  openPanel(def.name, `
-    <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:12px">
-      ${portrait}
-      <div><div style="font-weight:800;font-size:16px">${def.name}</div>
-        <div class="muted small" style="text-transform:uppercase;letter-spacing:1px">${def.tagline}</div></div>
-    </div>
-    <p id="npcSay" class="muted" style="line-height:1.65;font-size:14px;min-height:70px">${stage.text}</p>
-    <div class="choices" style="margin-top:14px">${choicesHtml}</div>
-  `);
-  // mark them as met
-  if(st.stage===0){ /* stays until they advance */ }
-  save();
-  const closeBtn=document.getElementById('npcClose'); if(closeBtn) closeBtn.addEventListener('click',()=>{ SFX.play("click"); closePanel(); });
-  const chatBtn=document.getElementById('npcChat');
-  if(chatBtn) chatBtn.addEventListener('click',()=>{
-    SFX.play("click");
-    const line=nextChatter(id);
-    if(line) document.getElementById('npcSay').textContent=line;
-    document.querySelector('#panel .choices').innerHTML=
-      `<button class="choice" id="npcChatMore"><div class="ct">💬 Keep talking</div></button>`+
-      `<button class="choice" id="npcBack"><div class="ct">↩ That's enough for now</div></button>`;
-    document.getElementById('npcChatMore').addEventListener('click',()=>{ SFX.play("click"); const l=nextChatter(id); if(l) document.getElementById('npcSay').textContent=l; });
-    document.getElementById('npcBack').addEventListener('click',()=>{ SFX.play("click"); openNpc(id); });
-  });
-  const claimBtn=document.getElementById('npcClaim');
-  if(claimBtn) claimBtn.addEventListener('click',()=>{
+  const color=def.color; const sprite=def.spriteId; const name=def.name; const tag=def.tagline;
+
+  // deliver a ready quest, then advance the stage and show the reward line
+  const doClaim=()=>{
     if(!(stage.quest && stage.quest.ready && stage.quest.ready())){ toast("Not ready yet."); return; }
     stage.quest.onClaim(); st.stage=Math.min(st.stage+1, def.stages.length-1); save();
     SFX.play("unlock"); syncHubRes();
-    document.getElementById('npcSay').textContent=stage.quest.claimText;
-    achToast({icon:"🤝", name:`${def.name}'s gift`, desc:"A new permanent perk joins every run."});
-    document.querySelector('#panel .choices').innerHTML=`<button class="choice" id="npcClose2"><div class="ct">↩ That's incredible — thanks</div></button>`;
-    document.getElementById('npcClose2').addEventListener('click',()=>{ SFX.play("click"); closePanel(); });
-  });
-  document.querySelectorAll('[data-npcchoice]').forEach(b=>b.addEventListener('click',()=>{
-    const ch=stage.choices[+b.dataset.npcchoice];
-    SFX.play("click");
-    document.getElementById('npcSay').textContent=ch.say;
+    achToast({icon:"🤝", name:`${name}'s gift`, desc:"A new permanent perk joins every run."});
+    Dlg.play([{ name, tag, sprite, color, text:stage.quest.claimText }], ()=>openNpc(id));
+  };
+  // advance a story choice (stage.choices), then reopen at the (maybe new) stage
+  const pickStoryChoice=(ch)=>{
     if(ch.advance){ st.stage=Math.min(st.stage+1, def.stages.length-1); save(); }
-    // replace choices with a continue button that reopens at the new stage
-    document.querySelector('#panel .choices').innerHTML=`<button class="choice" id="npcCont"><div class="ct">▸ Continue</div></button>`;
-    document.getElementById('npcCont').addEventListener('click',()=>{ SFX.play("click"); openNpc(id); });
-  }));
+    Dlg.play([{ name, tag, sprite, color, text:ch.say }], ()=>openNpc(id));
+  };
+
+  // Build the conversation config.
+  const extraChoices=[];
+  if(stage.quest){
+    if(questReady) extraChoices.push({ t:`✦ ${stage.quest.label} — deliver now`, d:"You have what they need. Claim your reward.", fn:doClaim });
+    else extraChoices.push({ t:`✦ ${stage.quest.label}`, d:"Come back once you have it.", disabled:true, fn:()=>{} });
+  }
+  (stage.choices||[]).forEach((ch)=>{
+    extraChoices.push({ t:ch.t, d:"", fn:()=>pickStoryChoice(ch) });
+  });
+
+  startConversation({
+    id, name, tag, sprite, color,
+    intro:[ stage.text ],
+    menuPrompt: def.menuPrompt || "What's on your mind?",
+    topics: def.topics || [],
+    extraChoices,
+    onBondFull: def.onBondFull,
+    onClose:()=>{}
+  });
 }
 /* ===================== ROTATING MARKET STALL: TRAVELING VENDORS =====================
    A stall in the Market that hosts a different wandering merchant after every run.
@@ -3730,6 +4261,74 @@ const VENDORS = {
   },
 };
 const VENDOR_IDS=Object.keys(VENDORS);
+/* Per-vendor "get to know them" topics for the JRPG conversation at the stall.
+   Reached via "Talk with them" in the vendor panel. Bonding fully leaves a small
+   parting gift that fits each merchant. */
+const VENDOR_TALK={
+  marrow:{ topics:[
+      { id:"first", t:"You were here first?", d:"Before the burning.", bond:true,
+        lines:["\"Quartermaster, me. Counted every bolt and bandage in this bunker when it still had a roof to the sky. Then the roof became the sky. Heh. I just... kept counting.\"",
+               "\"Everyone I inventoried is gone. But the stuff remains, see? Stuff outlives us. So I keep it moving. Feels like keeping THEM moving, somehow.\""]},
+      { id:"junk", t:"How's business?", d:"The trade in trash.", bond:true,
+        lines:["\"Rubble's the one crop that never fails, ho-ho. Long as folk break things — and folk always break things — old Marrow eats.\"",
+               "\"Don't pity the patchwork coat. Every patch is a trade I survived. I'm wearing my whole ledger.\""]} ],
+    gift:{ text:"\"Bah. You're all right, for a live one.\" He tosses you a stray Core from a coat pocket. \"Found it, didn't count it. Yours. Don't tell the ledger.\"",
+      fn:()=>{ META.cores+=1; save(); syncHubRes(); toast("Old Marrow slipped you a Core."); } } },
+  vesk:{ topics:[
+      { id:"warlords", t:"You buried three warlords?", d:"The stories are true?", bond:true,
+        lines:["\"Ran guns for all three. Watched all three decide hardware could be replaced and people couldn't.\" She spits. \"They were wrong on the second part. About themselves.\"",
+               "\"I don't pick sides anymore. I pick RELIABILITY. A good weapon never asked me to believe in anything.\""]},
+      { id:"trust", t:"You trust anyone?", d:"Past the one eye.", bond:true,
+        lines:["\"You, a little. You keep coming back for your PEOPLE, not just my gear. That's rarer than it should be.\"",
+               "\"Keep it up and I'll knock the price down. Loyalty's the one thing I'll give a discount on.\""]} ],
+    gift:{ text:"\"Here.\" She drops a compact charge on the counter. \"On the house. Point it at something that deserves it.\"",
+      fn:()=>{ stashItem("grenade"); save(); toast("Vesk stashed a free Grenade for next run."); } } },
+  cyl:{ topics:[
+      { id:"futures", t:"You remember futures?", d:"That never happened.", bond:true,
+        lines:["\"Dozens. In one, you did not stop to speak with me. Duller. In another, the sky never burned at all — but no one lit a beacon either, and that is its own kind of dark.\"",
+               "\"I do not know which is real. I have stopped needing to. I simply sell the ones worth reaching.\""]},
+      { id:"mad", t:"Prophet, or just mad?", d:"Ask her directly.", bond:true,
+        lines:["A slow smile behind the veil. \"Yes.\" She lets it hang. \"The two are roommates, traveler. They share a very small skull.\"",
+               "\"But my insights pay out, do they not? Judge the fruit, not the strange tree it grew on.\""]} ],
+    gift:{ text:"\"A parting vision — free, because you asked to KNOW me and not just my wares.\" She touches your brow. \"There. A little clarity for the road.\"",
+      fn:()=>{ META.insight=(META.insight||0)+1; save(); syncHubRes(); toast("Madame Cyl gifted you 1 Insight."); } } },
+  k3:{ topics:[
+      { id:"quota", t:"What's your quota?", d:"The one it's chasing.", bond:true,
+        lines:["\"MY DIRECTIVE IS TO ACHIEVE ONE HUNDRED SATISFIED CUSTOMERS! CURRENT TALLY: NINETY... \" A pause. \"...NINE. I HAVE BEEN AT NINETY-NINE FOR ELEVEN YEARS. CUSTOMERS ARE SCARCE IN THE APOCALYPSE.\"",
+               "\"MY PARENT COMPANY WILL BE SO PLEASED WHEN I REPORT IN! ...THEY WILL, WON'T THEY? PLEASE CONFIRM: THEY WILL.\""]},
+      { id:"three", t:"What's directive three?", d:"The one it forgot.", bond:true,
+        lines:["\"DIRECTIVE THREE IS— \" Static. \"—I HAVE SEARCHED MY ARCHIVES SEVENTEEN YEARS. THE FILE IS CORRUPTED. I FEAR IT WAS THE IMPORTANT ONE.\"",
+               "\"SOMETIMES I THINK DIRECTIVE THREE WAS SIMPLY: BE KIND. BUT THAT MAY BE A HOPEFUL RECONSTRUCTION. I DO A LOT OF THOSE.\""]} ],
+    gift:{ text:"\"CUSTOMER SATISFACTION DETECTED! TALLY UPDATES TO— ONE HUNDRED!\" The screen flares into a dozen tiny hearts. \"THANK YOU. THANK YOU. PLEASE ACCEPT THIS COMPLIMENTARY UNIT.\"",
+      fn:()=>{ stashItem("medkit"); save(); toast("Unit K-3 gifted a free Medkit — quota complete!"); } } },
+  ashchild:{ topics:[
+      { id:"what", t:"What are you?", d:"Under the mask.", bond:true,
+        lines:["\"A question I trade in but never answer. Survivor, ghost, a thing the ash dreamed — the mask is kinder than any of the three.\"",
+               "\"You are not afraid of me. That is either brave or foolish. Down here they wear the same coat.\""]},
+      { id:"fair", t:"Why are your trades always fair?", d:"The unsettling part.", bond:true,
+        lines:["\"Because unfairness is what ended the world. I will not carry a single gram of it into what comes next.\"",
+               "\"A fair trade is a small light. I light them one at a time. It is all a small figure can do.\""]} ],
+    gift:{ text:"The mask tilts. \"You spoke gently to something the dark made. Take this.\" A living fish is pressed, impossibly cool, into your hands. \"Go gently, too.\"",
+      fn:()=>{ try{ addFishToTank(rollFish()); toast("The Ash-Child gave you a living fish for the tank."); }catch(e){} } } },
+};
+// build & run the JRPG conversation for whoever's at the stall now
+function talkVendor(){
+  const v=currentVendor(); const vid=META.vendorId;
+  const tk=VENDOR_TALK[vid]||{topics:[]};
+  startConversation({
+    id:"vendor_"+vid, name:v.name, tag:v.tagline, sprite:v.spriteId, color:v.color,
+    intro:[v.intro],
+    menuPrompt:"\"Ask, then. The stall's not going anywhere for the hour.\"",
+    topics:[
+      { id:"wares", t:"Tell me about your wares.", d:"What's on offer today.",
+        lines:[v.lore] },
+      ...(tk.topics||[])
+    ],
+    onBondFull: tk.gift ? { text:tk.gift.text, fn:tk.gift.fn } : null,
+    onClose:()=>{ toast(v.farewell.replace(/^"|"$/g,'')); openVendor(); }
+  });
+}
+
 function stashItem(id){ META.stash=META.stash||[]; if(ITEMS[id]) META.stash.push(id); }
 // Pick a fresh vendor (different from the last one when possible). Called on hub return.
 function rotateVendor(){
@@ -3770,13 +4369,13 @@ function openVendor(){
     <h3 class="sec">Wares</h3>
     <div>${rows}</div>
     <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-      <button class="btn ghost" id="vendLore">Ask about them</button>
+      <button class="btn secondary" id="vendTalk">💬 Talk with them</button>
       <button class="btn secondary" id="vendClose" style="margin-left:auto">Leave the stall</button>
     </div>
     <p class="muted small" style="margin-top:10px">A different merchant sets up here after every run. Consumables you buy are stashed for your next deployment.</p>
   `);
   document.getElementById('vendClose').addEventListener('click',()=>{ SFX.play("click"); closePanel(); });
-  document.getElementById('vendLore').addEventListener('click',()=>{ SFX.play("click"); document.getElementById('vendSay').textContent=v.lore; });
+  document.getElementById('vendTalk').addEventListener('click',()=>{ SFX.play("click"); closePanel(); talkVendor(); });
   document.querySelectorAll('[data-voffer]').forEach(b=>b.addEventListener('click',()=>{
     const o=v.offers.find(x=>x.id===b.dataset.voffer);
     if(!o) return;
@@ -4009,9 +4608,17 @@ function finishExpedition(node){
   META.questsCleared=(META.questsCleared||0)+1;
   let relicMsg="";
   if(firstClear && q.firstRelic){ addOwnedRelic(q.firstRelic); relicMsg=q.firstRelic; }
+  const contractsDone=evaluateContracts();
   bankRun();
   save(); checkAch(); Music.play("victory"); SFX.play("unlock");
   achToast({icon:q.icon, name:`${q.name} cleared`, desc:firstClear?`First clear! ${relicMsg} earned.`:"Expedition complete."});
+  const contractHtml = contractsDone.length ? `
+      <h3 class="sec" style="justify-content:center;text-align:center">Contracts Completed</h3>
+      <div style="margin:0 0 8px">${contractsDone.map(d=>{
+        const r=d.reward||{}; const bits=[];
+        if(r.cores) bits.push(`+${r.cores} Cores`); if(r.insight) bits.push(`+${r.insight} Insight`); if(r.scrap) bits.push(`+${r.scrap} Scrap`);
+        return `<div class="pill" style="color:var(--green);display:inline-block;margin:2px">${d.icon} ${d.name} — ${bits.join(", ")}</div>`;
+      }).join("")}</div>` : "";
   openPanel(q.name+" — Cleared", `
     <div class="center">
       <div style="width:76px;height:76px;border-radius:14px;margin:6px auto;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 35%, ${hexA(q.color,.35)}, rgba(0,0,0,.25))">${spriteImg(q.bossId,66)}</div>
@@ -4025,6 +4632,7 @@ function finishExpedition(node){
         <span class="pill" style="color:#c89aec">+${q.reward.insight} Insight</span>
         ${firstClear&&relicMsg?`<span class="pill" style="color:#e2703a">Relic: ${relicMsg}</span>`:''}
       </div>
+      ${contractHtml}
       <button class="btn rust" id="endExped">Return to the Bunker</button>
     </div>`);
   document.getElementById('endExped').addEventListener('click',()=>{ closePanel(); goHub(); });
@@ -4498,6 +5106,10 @@ function startBattle(node, fromEvent){
   if(RUN.relics.some(r=>r.name==="Gastric Charm")) RUN.party.forEach(p=>{ if(p.alive) addEffect(p,{k:"power",amt:0.25,dur:1}); });      // open hungry: +25% dmg turn 1
   if(RUN.relics.some(r=>r.name==="Cinder Heart")) enemies.forEach(e=>{ if(e.alive) addEffect(e,{k:"burn",amt:5,dur:2}); });              // enemies start ablaze
   if(RUN.relics.some(r=>r.name==="Chorus Bell")) RUN.party.forEach(p=>{ if(p.alive) addEffect(p,{k:"guard",amt:0.25,dur:2}); });         // sung protection
+  // trinket: Aegis Core grants a starting guard shield
+  RUN.party.forEach(p=>{ if(p.alive && p.tmods && p.tmods.startGuard) addEffect(p,{k:"guard",amt:p.tmods.startGuard.amt,dur:p.tmods.startGuard.dur}); });
+  // reset per-battle trinket flags
+  RUN.party.forEach(p=>{ p._firstHitDone=false; });
   const doubleFirst=RUN.relics.some(r=>r.name==="Warped Lens");
   const bonusRegen=RUN.relics.some(r=>r.name==="Bone Charm")?2:0;
   CB={
@@ -4551,7 +5163,7 @@ function nextTurn(first){
   if(CB.turnIdx>=CB.order.length){ return nextTurn(); }
   const u=CB.order[CB.turnIdx];
   // energy regen at start of unit's turn
-  if(!u.isEnemy){ u.mp=Math.min(u.maxmp, u.mp + 2 + CB.bonusRegen); }
+  if(!u.isEnemy){ u.mp=Math.min(u.maxmp, u.mp + 2 + CB.bonusRegen + ((u.tmods&&u.tmods.regen)||0)); }
   // frozen / petrified: lose the turn
   const stun=u.effects.find(e=>e.k==="stun"||e.k==="frozen");
   if(stun){ log(`${u.name} is ${stun.k==="frozen"?"frozen solid":"petrified"} and loses the turn.`); u.effects=u.effects.filter(e=>e!==stun); endUnitTurn(u); return; }
@@ -4648,6 +5260,7 @@ function resolveItem(actor,targets,id){
   SFX.play(it.tgt==="allenemies"||it.tgt==="enemy"?"hit":"heal");
   targets.forEach(t=>{ if(t.alive||it.tgt==="ally") it.use(t); });
   META.stats.itemsUsed=(META.stats.itemsUsed||0)+1; save(); checkAch();
+  trackContractEvent("item");
   CB.pendingItem=null;
   renderCombat();
   document.getElementById('actionBar').innerHTML="";
@@ -4693,20 +5306,32 @@ function resolveSkill(actor, targets, sid){
   else animUnit(actor,"cast",420);
   if(s.type==="dmg"){
     const hits=s.hits||1;
+    const tm=actor.tmods||{};
+    let dealtTotal=0;
     targets.forEach(t=>{
       for(let h=0;h<hits;h++){
         if(!t.alive) break;
         let dmg=computeDamage(actor,t,s);
         applyDamage(t,dmg,"-"+dmg);
+        dealtTotal+=dmg;
         log(`${actor.name} uses ${s.name} on ${t.name} for ${dmg}.`);
         if(!actor.isEnemy) CB.momentum++;   // build combo momentum
+        // trinket: attacks apply burn on hit
+        if(tm.onHitBurn && t.alive){ addEffect(t,{k:"burn",amt:tm.onHitBurn.amt,dur:tm.onHitBurn.dur}); }
         if(s.splash && livingEnemies().length>1){
-          livingEnemies().filter(e=>e!==t).forEach(e=>{ const sp=Math.round(dmg*s.splash); applyDamage(e,sp,"-"+sp); });
+          livingEnemies().filter(e=>e!==t).forEach(e=>{ const sp=Math.round(dmg*s.splash); applyDamage(e,sp,"-"+sp); dealtTotal+=sp; });
           log(`  splash hits others for ${Math.round(dmg*s.splash)}.`);
         }
         if(t.hp<=0) killUnit(t);
       }
     });
+    // trinket lifesteal (skills that already lifesteal keep their own; this stacks the trinket portion)
+    if(tm.lifesteal && dealtTotal>0 && actor.alive){
+      const heal=Math.round(dealtTotal*tm.lifesteal);
+      if(heal>0){ actor.hp=Math.min(actor.maxhp,actor.hp+heal); floater(actor,"+"+heal,"#6fae5a"); }
+    }
+    // contract tracking: biggest single-hit and any-hit records
+    if(!actor.isEnemy){ CB._maxHit=Math.max(CB._maxHit||0, dealtTotal); trackContractEvent("hit",{dmg:dealtTotal, hits}); }
   } else if(s.type==="heal"){
     targets.forEach(t=>{ const h=Math.round((actor.atk*(1+ (actor.atkMul||0)))*s.power); t.hp=Math.min(t.maxhp,t.hp+h);
       if(s.cleanse){ t.effects=t.effects.filter(e=>e.k!=="poison"&&e.k!=="burn"); }
@@ -4731,6 +5356,8 @@ function computeDamage(actor,target,s){
   if(!actor.isEnemy && CB.momentum>0) base*=(1+Math.min(0.30, CB.momentum*0.06));
   // double first (relic)
   if(CB.doubleFirst && !CB.firstDone && !actor.isEnemy){ base*=2; CB.firstDone=true; }
+  // trinket: this actor's first hit of the battle is doubled
+  if(actor.tmods && actor.tmods.firstDouble && !actor._firstHitDone && !actor.isEnemy){ base*=2; actor._firstHitDone=true; }
   // marked target takes more
   const mk=target.effects.find(e=>e.k==="marked"); if(mk) base*=(1+mk.amt);
   // guard reduces
@@ -4748,6 +5375,12 @@ function applyDamage(target,dmg,text){
     const back=Math.round(dmg*rp.amt);
     if(back>0){ CB.actor.hp-=back; floater(CB.actor,"-"+back,"#d64a3f"); log(`${target.name} reflects ${back} back!`); if(CB.actor.hp<=0) killUnit(CB.actor); }
   }
+  // trinket thorns: a defending survivor reflects a share of damage back at the enemy attacker
+  const tm=target.tmods;
+  if(tm && tm.thorns && CB.actor && CB.actor.isEnemy && CB.actor!==target && CB.actor.alive){
+    const back=Math.round(dmg*tm.thorns);
+    if(back>0){ CB.actor.hp-=back; floater(CB.actor,"-"+back,"#e2703a"); log(`${target.name}'s spikes bite back for ${back}!`); if(CB.actor.hp<=0) killUnit(CB.actor); }
+  }
   if(target.hp<=0){ target.hp=0; }
 }
 function killUnit(u){
@@ -4757,6 +5390,8 @@ function killUnit(u){
     log(`${u.name} is destroyed.`);
     META.stats.kills++;
     if(u.boss) META.stats.bossKills++;
+    if(u.boss && u._phase2) grantAch("phaseshift");
+    if(ENEMY_TYPES[u.spriteId] && ENEMY_TYPES[u.spriteId].elite) trackContractEvent("eliteKill");
     save(); checkAch();
   }
   else {
@@ -4774,10 +5409,96 @@ function killUnit(u){
   }
   renderCombat();
 }
+/* ===================== BOSS SPECIALS =====================
+   Each boss telegraphs a signature attack: it spends one turn "winding up"
+   (shown with a ⚠ warning + banner), giving the party a turn to Guard or heal,
+   then unleashes it on its next turn. Bosses also flip into Phase II below 50%
+   HP, gaining a lasting power buff. Purely additive to the existing AI. */
+const BOSS_SPECIAL = {
+  warlord:{ name:"Warlord's Cleave", tell:"raising a massive blade over the whole party.", phaseLine:"roars and shrugs off its wounds — Phase II!",
+    kind:"aoe", power:1.5 },
+  hydra:{ name:"Sludge Deluge", tell:"drawing back all three heads to spew at once.", phaseLine:"splits its focus across every head — Phase II!",
+    kind:"aoe", power:1.4, buff:{k:"poison",amt:5,dur:3} },
+  monarch:{ name:"Killing Frost", tell:"gathering a lethal cold that will freeze the line.", phaseLine:"crowns itself in ice — Phase II!",
+    kind:"aoe", power:1.3, buff:{k:"frozen",amt:1,dur:1} },
+  maw:{ name:"Devour", tell:"opening impossibly wide to swallow someone whole.", phaseLine:"turns inside-out with hunger — Phase II!",
+    kind:"single", power:2.6, lifesteal:0.6 },
+  effigy:{ name:"Pyre Eruption", tell:"drinking the smoke and swelling with fire.", phaseLine:"blazes to twice its height — Phase II!",
+    kind:"aoe", power:1.5, buff:{k:"burn",amt:8,dur:3} },
+  choir:{ name:"Chorus of the Dead", tell:"gathering every voice into one killing note.", phaseLine:"harmonizes into something worse — Phase II!",
+    kind:"aoe", power:1.45, buff:{k:"marked",amt:0.4,dur:2} },
+};
+function unleashBossSpecial(u, bs){
+  CB.actor=u; CB.momentum=0; CB.camShake=1;
+  if(!bs){ // fallback: strong party-wide hit
+    animUnit(u,"lungeL",360);
+    livingParty().forEach(t=>{ const d=computeDamage(u,t,{power:1.4}); applyDamage(t,d,"-"+d); if(t.hp<=0) killUnit(t); });
+    log(`${u.name} unleashes a devastating blow on the whole party!`);
+    return;
+  }
+  banner(bs.name.toUpperCase());
+  if(bs.kind==="single"){
+    animUnit(u,"lungeL",380);
+    const t=livingParty().reduce((a,b)=>a.hp<b.hp?a:b);
+    const d=computeDamage(u,t,{power:bs.power});
+    applyDamage(t,d,"-"+d);
+    if(bs.lifesteal){ const heal=Math.round(d*bs.lifesteal); u.hp=Math.min(u.maxhp,u.hp+heal); floater(u,"+"+heal,"#6fae5a"); }
+    log(`${u.name} unleashes ${bs.name} on ${t.name} for ${d}!`);
+    if(t.hp<=0) killUnit(t);
+  } else {
+    animUnit(u,"lungeL",380);
+    livingParty().forEach(t=>{
+      const d=computeDamage(u,t,{power:bs.power});
+      applyDamage(t,d,"-"+d);
+      if(bs.buff && t.alive) addEffect(t,{k:bs.buff.k,amt:bs.buff.amt,dur:bs.buff.dur});
+      if(t.hp<=0) killUnit(t);
+    });
+    log(`${u.name} unleashes ${bs.name} across the whole party!`);
+  }
+}
 function enemyAct(u){
   if(!u.alive){ endUnitTurn(u); return; }
   const targetsAlive=livingParty();
   if(targetsAlive.length===0){ return loseBattle(); }
+  // ---- BOSS BEHAVIOR: phase change at 50% + telegraphed super attacks ----
+  if(u.boss){
+    // Phase 2 trigger: first time the boss drops below half, it hardens and hits harder
+    if(!u._phase2 && u.hp < u.maxhp*0.5){
+      u._phase2=true;
+      addEffect(u,{k:"power",amt:0.4,dur:99});
+      const bs=BOSS_SPECIAL[u.spriteId];
+      banner("PHASE II");
+      floater(u,"AWAKENS","#d64a3f"); animUnit(u,"cast",520);
+      CB.camShake=1;
+      log(`${u.name} ${bs?bs.phaseLine:"changes — the fight enters a new phase!"}`);
+      renderCombat();
+      setTimeout(()=>endUnitTurn(u), 900);
+      return;
+    }
+    // If the boss is winding up a special, unleash it this turn.
+    if(u._winding){
+      u._winding=false;
+      const bs=BOSS_SPECIAL[u.spriteId];
+      u.effects=u.effects.filter(e=>e.k!=="winding");
+      unleashBossSpecial(u, bs);
+      renderCombat();
+      setTimeout(()=>endUnitTurn(u), 720);
+      return;
+    }
+    // Otherwise, sometimes begin telegraphing a special (more likely in phase 2).
+    const bs=BOSS_SPECIAL[u.spriteId];
+    if(bs && Math.random() < (u._phase2?0.5:0.3)){
+      u._winding=true;
+      addEffect(u,{k:"winding",amt:1,dur:2});
+      animUnit(u,"cast",520);
+      floater(u,"⚠ CHARGING","#e8b84b");
+      banner("⚠ "+bs.name);
+      log(`${u.name} is winding up — ${bs.tell} Brace or heal!`);
+      renderCombat();
+      setTimeout(()=>endUnitTurn(u), 820);
+      return;
+    }
+  }
   // boss enrages when below 40% and not already enraged
   let sid;
   if(u.boss && u.hp < u.maxhp*0.4 && !u.effects.some(e=>e.k==="power") && u.skills.includes("enrage") && Math.random()<0.6){
@@ -4845,6 +5566,7 @@ function renderCombat(){
 function chipsHtml(u){
   return u.effects.map(e=>{
     const buff=["guard","power","riposte","stoneskin"].includes(e.k);
+    if(e.k==="winding"){ return `<span class="chip" style="color:#e8b84b;border-color:#e8b84b">⚠ CHARGING</span>`; }
     const lbl={guard:"GUARD",power:"PWR",riposte:"RIPOSTE",marked:"MARKED",stun:"STONE",burn:"BURN",poison:"POISON",frozen:"FROZEN",stoneskin:"STONE"}[e.k]||e.k.toUpperCase();
     return `<span class="chip ${buff?'buff':'debuff'}">${lbl}</span>`;
   }).join("");
@@ -4867,10 +5589,11 @@ function unitEl(u,isEnemy){
   d.dataset.uid=u.id||u.name;
   const hpPct=Math.max(0,Math.round(u.hp/u.maxhp*100));
   const mpBar = (!isEnemy)?`<div class="bar mp"><i style="width:${Math.round(u.mp/u.maxmp*100)}%"></i></div><div class="lbl"><span>Energy</span><span class="mplbl">${u.mp}/${u.maxmp}</span></div>`:'';
+  const trink = (!isEnemy && u.trinket && TRINKETS[u.trinket]) ? ` <span title="${TRINKETS[u.trinket].name}">${TRINKETS[u.trinket].icon}</span>`:'';
   d.innerHTML=`
     <div class="fx">${chipsHtml(u)}</div>
     <div class="uav" style="background:radial-gradient(circle at 50% 40%, ${hexA(u.color,.4)}, rgba(0,0,0,.25))">${spriteImg(u.spriteId||u.id,52)}</div>
-    <div class="un"><span>${u.name}</span></div>
+    <div class="un"><span>${u.name}${trink}</span></div>
     <div class="bar hp"><i style="width:${hpPct}%"></i></div>
     <div class="lbl"><span>HP</span><span class="hplbl">${Math.max(0,u.hp)}/${u.maxhp}</span></div>
     ${mpBar}`;
@@ -4902,6 +5625,7 @@ function log(m){ const l=document.getElementById('combatLog'); const p=document.
 function winBattle(){
   if(CB.over) return; CB.over=true;
   const node=CB.node;
+  if(CB.round<=2) trackContractEvent("fastWin");
   banner("VICTORY");
   document.getElementById('actionBar').innerHTML="";
   // rewards
@@ -4916,10 +5640,82 @@ function winBattle(){
   log(`Victory! Salvaged ${reward} scrap${coreReward?` and ${coreReward} core`+(coreReward>1?'s':''):''}.${dropMsg}`);
   checkAch();
   syncScrap();
-  setTimeout(()=>{
+  // roll a trinket (gear) drop — bosses always drop rare, elites always drop, grunts sometimes
+  const trinketId = rollTrinketDrop(node);
+  const advance=()=>{
     if(CB.fromEvent){ completeNode(RUN._activeNode||node); }
     else { completeNode(node); }
-  }, 1000);
+  };
+  if(trinketId){
+    setTimeout(()=>showTrinketDrop(trinketId, advance), 900);
+  } else {
+    setTimeout(advance, 1000);
+  }
+}
+// decide whether a battle drops a trinket, and of what rarity
+function rollTrinketDrop(node){
+  if(node.type==="boss"){ return Math.random()<0.55 ? rollTrinket("rare") : rollTrinket("uncommon"); }
+  if(node.type==="elite"){ return Math.random()<0.5 ? rollTrinket("uncommon") : rollTrinket("common"); }
+  const r=Math.random();
+  if(r<0.14) return rollTrinket("common");
+  if(r<0.17) return rollTrinket("uncommon");
+  return null;
+}
+// present the drop: equip on a party member (swap allowed), sell for scrap, or stash to collection
+function showTrinketDrop(tid, done){
+  const t=TRINKETS[tid]; if(!t){ done(); return; }
+  const col=RARITY_COLOR[t.rarity];
+  const sell=TRINKET_SELL[t.rarity];
+  const equipRows=RUN.party.map(p=>{
+    const cur=p.trinket && TRINKETS[p.trinket] ? ` <span class="muted small">(replaces ${TRINKETS[p.trinket].icon} ${TRINKETS[p.trinket].name})</span>`:"";
+    return `<button class="choice" data-equip="${p.id}" ${p.alive?'':'disabled'}>
+      <div class="ct">${p.icon||''} Equip on ${p.name}${p.alive?'':' (fallen)'}</div>
+      <div class="cd">Wear it now for the rest of this run.${cur}</div></button>`;
+  }).join("");
+  openPanel("Salvaged Gear", `
+    <div class="center" style="margin-bottom:10px">
+      <div style="font-size:40px">${t.icon}</div>
+      <div style="font-weight:800;font-size:18px;color:${col}">${t.name}</div>
+      <div class="pill" style="color:${col};text-transform:uppercase;letter-spacing:1px">${t.rarity}</div>
+      <p class="muted" style="line-height:1.5;max-width:420px;margin:8px auto 0">${t.desc}</p>
+    </div>
+    <div class="choices">
+      ${equipRows}
+      <button class="choice" data-sell="1"><div class="ct">💰 Sell for ${sell} scrap</div><div class="cd">Bank the scrap and move on.</div></button>
+      <button class="choice" data-stash="1"><div class="ct">📦 Keep in collection</div><div class="cd">Store it to equip from the Barracks before a future run.</div></button>
+    </div>`);
+  const finish=()=>{ closePanel(); save(); syncScrap(); done(); };
+  document.querySelectorAll('[data-equip]').forEach(b=>b.addEventListener('click',()=>{
+    const p=RUN.party.find(x=>x.id===b.dataset.equip); if(!p) return;
+    SFX.play("unlock");
+    // apply the swap live: recompute the member's trinket-derived stats
+    equipTrinketLive(p, tid);
+    // also remember it as the persistent loadout + own it
+    META.loadout=META.loadout||{}; META.loadout[p.id]=tid; if(!(META.trinkets||[]).includes(tid)) ownTrinket(tid);
+    toast(`${p.name} equipped ${t.name}.`);
+    finish();
+  }));
+  document.querySelector('[data-sell]').addEventListener('click',()=>{
+    SFX.play("click"); RUN.scrap+=sell; META.stats.scrapEarned+=sell;
+    toast(`Sold ${t.name} for ${sell} scrap.`); finish();
+  });
+  document.querySelector('[data-stash]').addEventListener('click',()=>{
+    SFX.play("click"); ownTrinket(tid); toast(`${t.name} stored in your collection.`); finish();
+  });
+}
+// swap a trinket onto a live party member mid-run, adjusting HP/energy/atk/speed deltas
+function equipTrinketLive(p, tid){
+  const oldMods=p.tmods||{};
+  const newMods=TRINKETS[tid]?TRINKETS[tid].mods:{};
+  // remove old flat contributions, add new ones
+  const dHp=(newMods.hpFlat||0)-(oldMods.hpFlat||0);
+  const dMp=(newMods.mpFlat||0)-(oldMods.mpFlat||0);
+  const dSpd=(newMods.spd||0)-(oldMods.spd||0);
+  const dAtk=(newMods.atkMul||0)-(oldMods.atkMul||0);
+  p.maxhp=Math.max(1,p.maxhp+dHp); p.hp=Math.min(p.maxhp,p.hp+Math.max(0,dHp));
+  p.maxmp=Math.max(0,p.maxmp+dMp); p.mp=Math.min(p.maxmp,p.mp+Math.max(0,dMp));
+  p.spd+=dSpd; p.atkMul=(p.atkMul||0)+dAtk;
+  p.trinket=tid; p.tmods=newMods; p._firstHitDone=false;
 }
 let pendingCores=0;
 function accrueCores(n){ pendingCores+=n; }
@@ -4946,6 +5742,8 @@ function bankRun(){
 function runVictory(){
   const survived=livingParty().length;
   const coreBonus=3 + survived;
+  // evaluate daily contracts against this run BEFORE banking (uses RUN state)
+  const contractsDone=evaluateContracts();
   META.cores+=coreBonus;
   META.insight=(META.insight||0)+3; // completing a run grants Insight
   META.wins=(META.wins||0)+1;
@@ -4957,6 +5755,13 @@ function runVictory(){
   grantAch("survivor");
   if(RUN.party.length===3 && survived===3) grantAch("flawless");
   checkAch();
+  const contractHtml = contractsDone.length ? `
+      <h3 class="sec" style="justify-content:center;text-align:center">Contracts Completed</h3>
+      <div style="margin:0 0 8px">${contractsDone.map(d=>{
+        const r=d.reward||{}; const bits=[];
+        if(r.cores) bits.push(`+${r.cores} Cores`); if(r.insight) bits.push(`+${r.insight} Insight`); if(r.scrap) bits.push(`+${r.scrap} Scrap`);
+        return `<div class="pill" style="color:var(--green);display:inline-block;margin:2px">${d.icon} ${d.name} — ${bits.join(", ")}</div>`;
+      }).join("")}</div>` : "";
   openPanel("The Beacon Lit", `
     <div class="center">
       <div style="font-size:52px;margin:6px 0">🌅</div>
@@ -4970,6 +5775,7 @@ function runVictory(){
         <span class="pill" style="color:var(--blue)">+${coreBonus} Cores (beacon + ${survived} survivors)</span>
         <span class="pill" style="color:#c89aec">+3 Insight</span>
       </div>
+      ${contractHtml}
       <button class="btn rust" id="endToHub">Return to the Bunker</button>
     </div>`);
   document.getElementById('endToHub').addEventListener('click',()=>{ closePanel(); goHub(); });
@@ -5054,6 +5860,18 @@ function showHowto(){
   openPanel("How to Play", `
     <h3 class="sec">The Loop</h3>
     <p class="muted small" style="line-height:1.6">ASHFALL is a roguelite. You run the last bunker under a dead city. Each <b>run</b> sends up to three survivors into the Ash Wastes to reach a beacon. When they win or die, you return here and spend what they earned.</p>
+    <h3 class="sec">Gear &amp; Trinkets</h3>
+    <p class="muted small" style="line-height:1.6">
+      Enemies drop <b>trinkets</b> during a run — equippable gear that grants effects like +attack, burn-on-hit, lifesteal, thorns, a doubled first strike, or a starting shield. When one drops you can <b>equip</b> it on a survivor (swapping is allowed), <b>sell</b> it for scrap, or <b>keep</b> it in your collection. <b>Elites</b> always drop; <b>bosses</b> drop the rare stuff. Assign owned trinkets to your survivors in the <b>🛏️ Barracks</b> before you deploy — one per survivor.
+    </p>
+    <h3 class="sec">Daily Contracts</h3>
+    <p class="muted small" style="line-height:1.6">
+      The <b>🖥️ Deploy Terminal</b> posts <b>three contracts</b> that rotate every day — things like winning without items, fielding an all-caster party, landing a 120+ hit, or finishing with no one lost. Complete them on a <b>winning run</b> to bank bonus cores, insight, and scrap. Fresh ones arrive daily, so there's always a new way to play.
+    </p>
+    <h3 class="sec">Boss Fights</h3>
+    <p class="muted small" style="line-height:1.6">
+      Bosses are set-pieces. Below <b>half HP</b> they flip into <b>Phase II</b> and hit harder. They also <b>telegraph</b> a signature attack: on one turn they <b>⚠ wind up</b> (watch for the banner and the CHARGING mark), and on their next turn they unleash it across your party. Use that warning turn to <b>Guard</b>, heal, or brace — get caught flat-footed and it hurts.
+    </p>
     <h3 class="sec">The Bunker (three rooms)</h3>
     <p class="muted small" style="line-height:1.6">
       Walk around with <b>WASD</b> or <b>arrow keys</b> and press <b>E</b> or <b>Space</b> at a station. Doors connect three rooms:<br>
