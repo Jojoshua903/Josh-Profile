@@ -371,6 +371,10 @@
         <span><i class="dot" style="background:var(--green)"></i>Event</span>
         <span><i class="dot" style="background:var(--blue)"></i>Shop</span>
         <span><i class="dot" style="background:var(--ink)"></i>Rest</span>
+        <span><i class="dot" style="background:#e8b84b"></i>💎 Cache</span>
+        <span><i class="dot" style="background:#5ad0e0"></i>⛲ Spring</span>
+        <span><i class="dot" style="background:#c89aec"></i>🎲 Gamble</span>
+        <span><i class="dot" style="background:#e2703a"></i>⚡ Ambush</span>
         <span><i class="dot" style="background:#e88ac8"></i>Survivor</span>
         <span><i class="dot" style="background:var(--purple)"></i>Boss</span>
       </div>
@@ -485,6 +489,11 @@ const defaultSave = () => ({
   loadout: {},           // survivorId -> equipped trinket id (applied at run start)
   contracts: null,       // { day, ids:[contractId,...], done:{id:true} } — daily bounties
   contractsCleared: 0,   // lifetime contracts completed (flavor/achievement)
+  furniture: {},         // furniture id -> count owned (bought in markets / found on runs)
+  placed: [],            // decorations placed in Headquarters: [{id,x,y}] (x,y normalized 0..1)
+  materials: {},         // forest material id -> count gathered
+  forestGather: {},      // gathering-node id -> timestamp of last harvest (cooldowns)
+  bestEndless: 0,        // deepest endless depth cleared (post-beacon infinite mode)
   soundOn: true
 });
 let META = load();
@@ -724,6 +733,35 @@ const SPRITE_ART = {
     x.fillStyle="#fff"; scircle(x,40,48,5); scircle(x,56,48,5);
     x.fillStyle="#1a120f"; scircle(x,41,49,2.4); scircle(x,57,49,2.4);
     x.strokeStyle="#7a1a12"; x.lineWidth=2; x.beginPath(); x.arc(48,56,7,0.15,Math.PI-0.15); x.stroke();
+  },
+  bram:(x,s)=>{ // Bram the forest hermit: mossy-green coat, leaf-strewn grey beard, staff
+    torso(x,48,54,36,32,"#4a6a3a");
+    x.fillStyle="#3a5a2c"; srect(x,33,52,30,6,"#3a5a2c"); // coat fold
+    head(x,48,42,15,"#c8a882","rgba(0,0,0,.3)");
+    // long grey beard with a leaf caught in it
+    x.fillStyle="#b8b0a4"; x.beginPath(); x.moveTo(35,44); x.quadraticCurveTo(48,76,61,44); x.quadraticCurveTo(48,58,35,44); x.fill();
+    x.fillStyle="#6fae5a"; x.beginPath(); x.ellipse(52,60,4,2.5,-0.5,0,7); x.fill();
+    // hood/hair
+    x.fillStyle="#3a5a2c"; x.beginPath(); x.arc(48,38,15,Math.PI,0); x.fill(); srect(x,33,36,30,4,"#2c4620");
+    x.fillStyle="#2a2018"; scircle(x,42,42,2.4); scircle(x,54,42,2.4);
+    // whittling knife + stick
+    x.strokeStyle="#8a6a3a"; x.lineWidth=3; x.beginPath(); x.moveTo(70,58); x.lineTo(74,40); x.stroke();
+    x.fillStyle="#c9c2b6"; x.beginPath(); x.moveTo(74,40); x.lineTo(78,34); x.lineTo(76,42); x.fill();
+  },
+  thistle:(x,s)=>{ // Thistle the forest spirit: small drifting flower-child, petal hair, glow
+    x.fillStyle=hexA("#c86fe2",.25); scircle(x,48,46,26); // aura
+    // little body
+    x.fillStyle="#6fae5a"; roundRectX(x,40,48,16,22,7);
+    // petal hair (a ring of violet petals)
+    x.fillStyle="#c86fe2"; for(let i=0;i<7;i++){ const a=i/7*Math.PI*2; x.beginPath(); x.ellipse(48+Math.cos(a)*13,38+Math.sin(a)*11,5,3,a,0,7); x.fill(); }
+    // face
+    x.fillStyle="#e8d8f2"; scircle(x,48,40,10);
+    x.fillStyle="#3a2030"; scircle(x,44,40,1.8); scircle(x,52,40,1.8);
+    x.strokeStyle="#a05a8a"; x.lineWidth=1.2; x.beginPath(); x.arc(48,43,3,0.15,Math.PI-0.15); x.stroke();
+    // glowing core
+    x.fillStyle="#f0e0ff"; scircle(x,48,56,3); x.fillStyle=hexA("#c86fe2",.4); scircle(x,48,56,7);
+    // drifting motes
+    x.fillStyle="#e8d8ff"; scircle(x,30,34,1.4); scircle(x,66,40,1.4); scircle(x,60,60,1.2);
   },
   // ---- TRAVELING VENDORS ----
   vend_scrap:(x,s)=>{ // Old Marrow: hunched junk-hoarder in a patchwork coat
@@ -1515,6 +1553,172 @@ function trinketModsFor(survivorId){
 }
 function ownTrinket(id){ META.trinkets=META.trinkets||[]; META.trinkets.push(id); save(); }
 
+/* ===================== FURNITURE / DECORATIONS =====================
+   Cosmetic decor for Headquarters. Each piece can be BOUGHT at the market
+   (Trading Post + traveling stall) or FOUND on runs as a salvage drop, then
+   PLACED freely around the bunker's home room. Owned counts live in
+   META.furniture (id -> qty); placements live in META.placed ([{id,x,y}]).
+   Each piece draws its own little sprite relative to its placed center. */
+const FURNITURE = {
+  rug:{ name:"Woven Rug", icon:"🟫", rarity:"common", cost:35,
+    desc:"A patched rug that warms the concrete floor.",
+    draw:(c)=>{ c.fillStyle="#7a3f2c"; roundRect(c,-30,-16,60,32,6); c.fill();
+      c.fillStyle="#9a5638"; roundRect(c,-24,-11,48,22,4); c.fill();
+      c.strokeStyle="#e8b84b"; c.lineWidth=1.5; c.strokeRect(-20,-8,40,16);
+      c.fillStyle="#c8552b"; for(let i=-2;i<=2;i++) scircle(c,i*9,0,2); } },
+  lamp:{ name:"Floor Lamp", icon:"💡", rarity:"common", cost:45,
+    desc:"A salvaged lamp that pools warm light.",
+    draw:(c,near)=>{ c.strokeStyle="#5a4a3a"; c.lineWidth=3; c.beginPath(); c.moveTo(0,18); c.lineTo(0,-14); c.stroke();
+      c.fillStyle="#2a2018"; ellipse(c,0,20,10,4); c.fill();
+      c.fillStyle="#e8b84b"; c.beginPath(); c.moveTo(-12,-14); c.lineTo(12,-14); c.lineTo(7,-28); c.lineTo(-7,-28); c.closePath(); c.fill();
+      c.fillStyle=hexA("#fff2b0",.35); scircle(c,0,-20,14); } },
+  plant:{ name:"Potted Fern", icon:"🪴", rarity:"common", cost:40,
+    desc:"Green, alive, and stubborn about it.",
+    draw:(c)=>{ c.fillStyle="#8a5a34"; c.beginPath(); c.moveTo(-12,20); c.lineTo(12,20); c.lineTo(9,4); c.lineTo(-9,4); c.closePath(); c.fill();
+      c.strokeStyle="#6fae5a"; c.lineWidth=2;
+      for(let i=-2;i<=2;i++){ c.beginPath(); c.moveTo(0,4); c.quadraticCurveTo(i*10,-14,i*14,-24); c.stroke(); }
+      c.fillStyle="#8fce7a"; for(let i=-2;i<=2;i++) c.beginPath(),c.ellipse(i*14,-24,4,3,i*0.3,0,7),c.fill(); } },
+  crate:{ name:"Supply Crate", icon:"📦", rarity:"common", cost:30,
+    desc:"Stackable, sturdy, faintly reassuring.",
+    draw:(c)=>{ c.fillStyle="#7a5a38"; roundRect(c,-18,-16,36,32,3); c.fill();
+      c.strokeStyle="#4a3420"; c.lineWidth=2; c.strokeRect(-18,-16,36,32);
+      c.beginPath(); c.moveTo(-18,-16); c.lineTo(18,16); c.moveTo(18,-16); c.lineTo(-18,16); c.stroke();
+      c.fillStyle="#e8b84b"; c.font="9px "+cssvar('--f-body'); c.textAlign="center"; c.fillText("★",0,3); } },
+  banner:{ name:"Bunker Banner", icon:"🚩", rarity:"uncommon", cost:70,
+    desc:"A hand-stitched standard for the last light.",
+    draw:(c)=>{ c.strokeStyle="#5a4632"; c.lineWidth=3; c.beginPath(); c.moveTo(-14,20); c.lineTo(-14,-26); c.stroke();
+      c.fillStyle="#c8552b"; c.beginPath(); c.moveTo(-14,-24); c.lineTo(18,-20); c.lineTo(10,-10); c.lineTo(18,0); c.lineTo(-14,-4); c.closePath(); c.fill();
+      c.fillStyle="#e8b84b"; scircle(c,-2,-12,4); } },
+  shelf:{ name:"Salvage Shelf", icon:"🗄️", rarity:"uncommon", cost:80,
+    desc:"Odds, ends, and a few things that still work.",
+    draw:(c)=>{ c.fillStyle="#4a3a2c"; roundRect(c,-22,-22,44,42,3); c.fill();
+      c.fillStyle="#2f2620"; c.fillRect(-22,-6,44,3); c.fillRect(-22,8,44,3);
+      c.fillStyle="#5aa2c8"; scircle(c,-12,-14,3); c.fillStyle="#e8b84b"; scircle(c,4,-14,3);
+      c.fillStyle="#6fae5a"; roundRect(c,-14,-2,10,8,1); c.fill(); c.fillStyle="#d64a3f"; roundRect(c,2,-2,10,8,1); c.fill();
+      c.fillStyle="#c9c2b6"; roundRect(c,-10,10,20,7,1); c.fill(); } },
+  arcade:{ name:"Arcade Cabinet", icon:"🕹️", rarity:"uncommon", cost:95,
+    desc:"Still boots. Still eats your scrap.",
+    draw:(c,near)=>{ c.fillStyle="#3a2c40"; roundRect(c,-16,-26,32,46,4); c.fill();
+      c.fillStyle=hexA("#5aa2c8", near?0.9:0.6); roundRect(c,-12,-22,24,16,3); c.fill();
+      c.fillStyle="#c89aec"; for(let i=0;i<3;i++) scircle(c,-6+i*6,-14,2);
+      c.fillStyle="#e8b84b"; scircle(c,-6,-2,2.5); c.fillStyle="#d64a3f"; scircle(c,6,-2,2.5);
+      c.fillStyle="#241a2a"; c.fillRect(-14,14,28,6); } },
+  aquariumDecor:{ name:"Coral Statue", icon:"🪸", rarity:"rare", cost:150,
+    desc:"A bleached coral form, oddly beautiful now.",
+    draw:(c)=>{ c.fillStyle="#c86f7a"; c.beginPath(); c.moveTo(0,20); c.lineTo(-6,0); c.lineTo(-14,-8); c.moveTo(0,20); c.lineTo(6,-2); c.lineTo(12,-12); c.moveTo(0,20); c.lineTo(0,-18); c.lineWidth=5; c.strokeStyle="#c86f7a"; c.stroke();
+      c.fillStyle="#e2909a"; scircle(c,-14,-8,3); scircle(c,12,-12,3); scircle(c,0,-18,3.5); } },
+  statue:{ name:"Beacon Statue", icon:"🗿", rarity:"rare", cost:180,
+    desc:"A carved figure lifting a light to the dark.",
+    draw:(c,near)=>{ c.fillStyle="#6a6458"; c.beginPath(); c.moveTo(-12,20); c.lineTo(-8,-14); c.lineTo(8,-14); c.lineTo(12,20); c.closePath(); c.fill();
+      c.fillStyle="#7a7468"; scircle(c,0,-20,7);
+      c.strokeStyle="#5a544a"; c.lineWidth=3; c.beginPath(); c.moveTo(6,-16); c.lineTo(14,-26); c.stroke();
+      c.fillStyle=hexA("#e8b84b", near?0.9:0.7); scircle(c,15,-28,4); c.fillStyle=hexA("#e8b84b",.3); scircle(c,15,-28,9); } },
+  aquarium:{ name:"Wall Aquarium", icon:"🐟", rarity:"rare", cost:160,
+    desc:"A glowing tank of drifting light and water.",
+    draw:(c)=>{ c.fillStyle="#123038"; roundRect(c,-24,-18,48,34,4); c.fill();
+      const wg=c.createLinearGradient(0,-18,0,16); wg.addColorStop(0,"#1f5568"); wg.addColorStop(1,"#123845");
+      c.fillStyle=wg; roundRect(c,-21,-15,42,28,3); c.fill();
+      const t=Date.now()/600, fx=Math.sin(t)*12;
+      c.fillStyle="#e8b84b"; c.beginPath(); c.ellipse(fx,-2,5,3,0,0,7); c.fill();
+      c.fillStyle="rgba(200,235,245,.4)"; for(let i=0;i<3;i++){ const by=12-((t*10+i*8)%26); scircle(c,-12+i*4,by,1.4); }
+      c.strokeStyle="#3a5a64"; c.lineWidth=2; roundRect(c,-24,-18,48,34,4); c.stroke(); } },
+  // ---- CRAFT-ONLY pieces (built at the Forest's Woodworker's Bench from materials) ----
+  logstool:{ name:"Log Stool", icon:"🪵", rarity:"common", craftOnly:true,
+    desc:"A stump seat, sanded smooth. Smells of the woods.",
+    draw:(c)=>{ c.fillStyle="#7a5a34"; roundRect(c,-14,-6,28,20,4); c.fill();
+      c.fillStyle="#9a6b3a"; ellipse(c,0,-6,14,5); c.fill();
+      c.strokeStyle="#6a4a24"; c.lineWidth=1; for(let i=0;i<3;i++){ c.beginPath(); c.arc(0,-6,4+i*3,0,7); c.stroke(); }
+      c.fillStyle="#5a4020"; c.fillRect(-12,12,4,6); c.fillRect(8,12,4,6); } },
+  branchArch:{ name:"Branch Arch", icon:"🌿", rarity:"uncommon", craftOnly:true,
+    desc:"A woven arch of living branches over the doorway.",
+    draw:(c)=>{ c.strokeStyle="#6a4a2a"; c.lineWidth=4; c.beginPath(); c.moveTo(-22,20); c.quadraticCurveTo(-22,-26,0,-28); c.quadraticCurveTo(22,-26,22,20); c.stroke();
+      c.fillStyle="#6fae5a"; for(let i=-3;i<=3;i++){ const a=i/3*Math.PI*0.5; const x=Math.sin(a)*22, y=-28+Math.cos(a)*-6+Math.abs(i)*3; c.beginPath(); c.ellipse(x,y-6,5,3,a,0,7); c.fill(); }
+      c.fillStyle="#8fce7a"; scircle(c,-10,-24,3); scircle(c,12,-22,3); scircle(c,0,-28,3); } },
+  antlerChand:{ name:"Antler Chandelier", icon:"🕯️", rarity:"rare", craftOnly:true,
+    desc:"Shed antlers and resin candles, hung to glow.",
+    draw:(c,near)=>{ c.strokeStyle="#3a2c1c"; c.lineWidth=2; c.beginPath(); c.moveTo(0,-30); c.lineTo(0,-16); c.stroke();
+      c.strokeStyle="#d8cfb8"; c.lineWidth=3;
+      c.beginPath(); c.moveTo(-18,-8); c.quadraticCurveTo(-20,-16,-12,-18); c.moveTo(18,-8); c.quadraticCurveTo(20,-16,12,-18); c.moveTo(-12,-18); c.quadraticCurveTo(0,-22,12,-18); c.stroke();
+      [[-16,-8],[0,-12],[16,-8]].forEach((p,i)=>{ c.fillStyle="#e8dfce"; c.fillRect(p[0]-1.5,p[1]-6,3,6);
+        const fl=0.7+0.3*Math.sin(Date.now()/180+i*2); c.fillStyle=hexA("#f4c04a", near?1:fl); scircle(c,p[0],p[1]-8,2.2); }); } },
+};
+const FURNITURE_IDS=Object.keys(FURNITURE);
+// pieces you can buy at the market or find on runs (craft-only pieces are excluded)
+const FURNITURE_SHOP_IDS=FURNITURE_IDS.filter(id=>!FURNITURE[id].craftOnly);
+const FURNITURE_RARITY_COLOR={ common:"#a3907e", uncommon:"#6fae5a", rare:"#e8b84b" };
+function furnCount(id){ return (META.furniture&&META.furniture[id])||0; }
+function furnPlacedCount(id){ return (META.placed||[]).filter(p=>p.id===id).length; }
+function furnAvailable(id){ return furnCount(id)-furnPlacedCount(id); } // owned but not yet placed
+function ownFurniture(id){ META.furniture=META.furniture||{}; META.furniture[id]=(META.furniture[id]||0)+1; save(); }
+// weighted furniture drop for run rewards (rarer pieces are less likely; craft-only excluded)
+function rollFurnitureDrop(){
+  const weights={common:60,uncommon:30,rare:10};
+  const pool=FURNITURE_SHOP_IDS;
+  const total=pool.reduce((s,id)=>s+weights[FURNITURE[id].rarity],0);
+  let r=Math.random()*total;
+  for(const id of pool){ r-=weights[FURNITURE[id].rarity]; if(r<=0) return id; }
+  return pool[0];
+}
+
+/* ===================== FOREST: MATERIALS + CRAFTING =====================
+   A wooded area outside the bunker. Gathering nodes yield MATERIALS on a
+   real-time cooldown; a Woodworker's Bench spends those materials on RECIPES
+   that craft new (craft-only) furniture. Two forest NPCs give lore. */
+const MATERIALS = {
+  wood:   { name:"Greenwood",   icon:"🪵", color:"#9a6b3a", desc:"Living timber, rare and prized." },
+  fiber:  { name:"Plant Fiber", icon:"🌾", color:"#b7a86a", desc:"Tough stems for cord and weave." },
+  resin:  { name:"Amber Resin", icon:"🟠", color:"#e8b84b", desc:"Sticky sap that hardens like glass." },
+  stone:  { name:"River Stone", icon:"🪨", color:"#8a8478", desc:"Smooth, heavy, good for a base." },
+  antler: { name:"Shed Antler", icon:"🦌", color:"#d8cfb8", desc:"Left by something large and shy." },
+  bloom:  { name:"Ashbloom",    icon:"🌸", color:"#c86fe2", desc:"A flower that only grows in the fallout." },
+};
+const MATERIAL_IDS=Object.keys(MATERIALS);
+function matCount(id){ return (META.materials&&META.materials[id])||0; }
+function addMaterial(id,n){ META.materials=META.materials||{}; META.materials[id]=(META.materials[id]||0)+(n||1); }
+// Gathering nodes: each yields from a weighted table, on its own cooldown.
+const FOREST_COOLDOWN_MS=8*60000;   // 8 minutes between free gathers at a node
+const GATHER_NODES = {
+  grove:   { name:"Old Growth",      yields:[["wood",2],["fiber",1],["resin",1]] },
+  thicket: { name:"Bramble Thicket", yields:[["fiber",2],["bloom",1],["resin",1]] },
+  boulders:{ name:"Mossy Boulders",  yields:[["stone",2],["antler",1],["wood",1]] },
+};
+function gatherReady(id){ return Date.now()-((META.forestGather&&META.forestGather[id])||0) >= FOREST_COOLDOWN_MS; }
+function gatherWaitMins(id){ return Math.max(0, Math.ceil((FOREST_COOLDOWN_MS-(Date.now()-((META.forestGather&&META.forestGather[id])||0)))/60000)); }
+// harvest a node: roll 2-3 material pulls from its weighted yield table
+function gatherNode(id){
+  const node=GATHER_NODES[id]; if(!node) return {};
+  const table=node.yields; const total=table.reduce((s,y)=>s+y[1],0);
+  const pulls=2+Math.floor(Math.random()*2);   // 2-3 stacks
+  const got={};
+  for(let i=0;i<pulls;i++){
+    let r=Math.random()*total;
+    for(const y of table){ r-=y[1]; if(r<=0){ const amt=1+Math.floor(Math.random()*2); addMaterial(y[0],amt); got[y[0]]=(got[y[0]]||0)+amt; break; } }
+  }
+  META.forestGather=META.forestGather||{}; META.forestGather[id]=Date.now();
+  save();
+  return got;   // { materialId: amount }
+}
+// Recipes: consume materials -> craft a furniture piece.
+const RECIPES = {
+  logstool:   { furn:"logstool",   cost:{wood:3, fiber:1} },
+  branchArch: { furn:"branchArch", cost:{wood:2, fiber:3, bloom:1} },
+  antlerChand:{ furn:"antlerChand",cost:{antler:2, resin:2, wood:1} },
+  plant:      { furn:"plant",      cost:{fiber:2, bloom:1} },
+  rug:        { furn:"rug",        cost:{fiber:3, resin:1} },
+};
+const RECIPE_IDS=Object.keys(RECIPES);
+function canCraft(rid){
+  const r=RECIPES[rid]; if(!r) return false;
+  return Object.keys(r.cost).every(m=>matCount(m)>=r.cost[m]);
+}
+function doCraft(rid){
+  const r=RECIPES[rid]; if(!r || !canCraft(rid)) return false;
+  Object.keys(r.cost).forEach(m=>{ META.materials[m]-=r.cost[m]; });
+  ownFurniture(r.furn);
+  save();
+  return true;
+}
+
 /* ===================== CONSUMABLE ITEMS =====================
    Carried in RUN.items. Usable in battle from the Items action (one item per
    turn, does not consume the actor's attack unless it targets an enemy). */
@@ -1772,6 +1976,19 @@ function newExpedition(questId, partyIds){
   RUN.biomeIdx=0;
   buildBiomeMap();
 }
+// Endless: an unending descent. Cycles the three standard biomes forever, scaling
+// harder each loop. Each biome boss cleared banks a checkpoint of cores + insight;
+// the run only ends when the party falls or the player abandons from the map.
+function newEndless(partyIds){
+  newRun(partyIds);
+  RUN.endless=true;
+  RUN.loop=1;                     // how many biomes cleared so far (drives scaling)
+  RUN.endlessBonus=0;             // extra depth added to every encounter this run
+  RUN.biomeCount=Infinity;        // never "final"
+  RUN.biomeOrder=[0,1,2];         // wastes -> marsh -> frost, then repeats
+  RUN.biomeIdx=0;
+  buildBiomeMap();
+}
 function startingItems(){
   const items=[];
   const kit=provLevel('startKit');
@@ -1788,8 +2005,8 @@ function startingItems(){
 const BIOME_LAYERS = 6;   // layers in one biome page (bottom start -> top boss)
 const LAYERS = BIOME_LAYERS; // kept for any legacy references (single-page bounds)
 // absolute "depth" used for enemy scaling: earlier biomes are easier
-function runDepth(layer){ return RUN.biomeIdx*BIOME_LAYERS + layer; }
-function biomeForLayer(){ return BIOMES[ RUN.biomeOrder[RUN.biomeIdx] ]; }
+function runDepth(layer){ return RUN.biomeIdx*BIOME_LAYERS + layer + (RUN.endlessBonus||0); }
+function biomeForLayer(){ return BIOMES[ RUN.biomeOrder[ RUN.biomeIdx % RUN.biomeOrder.length ] ]; }
 function curBiome(){ return biomeForLayer(); }
 function buildBiomeMap(){
   const L=BIOME_LAYERS;
@@ -1817,11 +2034,15 @@ function buildBiomeMap(){
       else {
         const r=Math.random();
         if(l===1){ type = r<0.68?"battle":"event"; }
-        else if(r<0.36) type="battle";
-        else if(r<0.54) type="elite";
-        else if(r<0.73) type="event";
-        else if(r<0.88) type="shop";
-        else type="rest";
+        else if(r<0.30) type="battle";
+        else if(r<0.46) type="elite";
+        else if(r<0.60) type="event";
+        else if(r<0.72) type="shop";
+        else if(r<0.80) type="rest";
+        else if(r<0.87) type="treasure";
+        else if(r<0.93) type="fountain";
+        else if(r<0.975) type="gamble";
+        else type="ambush";
       }
       layer.push({type, layer:l, idx:i, done:false, avail:false, edges:[]});
     }
@@ -1829,7 +2050,7 @@ function buildBiomeMap(){
   }
   // Rescue node: up to one per biome page, only for survivors that can be found here.
   // (Never on the Journey — its reward is Marloes at the settlement.)
-  const biomeId = (BIOMES[RUN.biomeOrder[RUN.biomeIdx]]||{}).id;
+  const biomeId = (BIOMES[RUN.biomeOrder[RUN.biomeIdx % RUN.biomeOrder.length]]||{}).id;
   const lost = journey ? [] : Object.keys(CHARS).filter(id=>{
     if(META.unlocked.includes(id)) return false;
     const fb=CHARS[id].foundBiome;        // undefined = findable in any biome
@@ -1884,6 +2105,7 @@ function saveRun(){
     curLayer:RUN.curLayer, relics:RUN.relics, reviveAvail:RUN.reviveAvail,
     items:RUN.items, biomeCount:RUN.biomeCount, biomeOrder:RUN.biomeOrder,
     biomeIdx:RUN.biomeIdx, rescuePlaced:RUN.rescuePlaced, journey:!!RUN.journey, quest:RUN.quest||null, brokerMark:!!RUN.brokerMark,
+    endless:!!RUN.endless, loop:RUN.loop||0, endlessBonus:RUN.endlessBonus||0,
     atNode: RUN.atNode? {layer:RUN.atNode.layer, idx:RUN.atNode.idx} : null
   };
   try{ localStorage.setItem(RUN_SAVE_KEY, JSON.stringify(snap)); }catch(e){}
@@ -1903,6 +2125,7 @@ function loadRun(){
   try{ snap=JSON.parse(localStorage.getItem(RUN_SAVE_KEY)); }catch(e){}
   if(!snap || !snap.party || !snap.mapNodes){ return false; }
   RUN=snap;
+  if(RUN.endless){ RUN.biomeCount=Infinity; }   // Infinity doesn't survive JSON; restore it
   // re-link atNode to the real node object inside mapNodes
   if(snap.atNode && RUN.mapNodes[snap.atNode.layer]){
     RUN.atNode=RUN.mapNodes[snap.atNode.layer][snap.atNode.idx]||null;
@@ -2021,6 +2244,11 @@ function encounterFor(node){
     list.push(makeEnemy(bi.elites[Math.floor(Math.random()*bi.elites.length)],depth+1));
     if(Math.random()<0.5) list.push(makeEnemy(bi.grunts[Math.floor(Math.random()*bi.grunts.length)],depth));
     if(bi.expedition && Math.random()<0.5) list.push(makeEnemy(bi.grunts[Math.floor(Math.random()*bi.grunts.length)],depth));
+  } else if(node.type==="ambush"){
+    // a surprise elite that comes with backup — tougher, but pays a bonus on the win screen
+    list.push(makeEnemy(bi.elites[Math.floor(Math.random()*bi.elites.length)],depth+2));
+    list.push(makeEnemy(bi.grunts[Math.floor(Math.random()*bi.grunts.length)],depth+1));
+    if(Math.random()<0.6) list.push(makeEnemy(bi.grunts[Math.floor(Math.random()*bi.grunts.length)],depth));
   } else {
     const n=(bi.expedition?3:2)+Math.floor(Math.random()*2);
     for(let i=0;i<n;i++) list.push(makeEnemy(bi.grunts[Math.floor(Math.random()*bi.grunts.length)],depth));
@@ -2379,8 +2607,10 @@ function initHub(){
     {id:"board",    x:0.50, y:0.52, label:"Message Board",    color:"#c8a24a", draw:drawBoard,    action:openBoard},
     {id:"barracks", x:0.18, y:0.44, label:"Barracks",         color:"#5aa2c8", draw:drawBarracks, action:openBarracks},
     {id:"codex",    x:0.32, y:0.66, label:"Field Journal",     color:"#6fae5a", draw:drawDesk,     action:openCodex},
+    {id:"decorate", x:0.68, y:0.66, label:"Decorator",          color:"#c88ae2", draw:drawDecorator, action:openDecorator},
     {id:"jukebox",  x:0.82, y:0.44, label:"Jukebox",           color:"#9a6fc4", draw:drawJukebox,  action:openJukebox},
     {id:"doorMarket",x:0.12, y:0.86, label:"Market →",         color:"#e8b84b", draw:drawDoor,     action:()=>gotoRoom("market","main"), to:"market"},
+    {id:"doorForest",x:0.50, y:0.86, label:"Forest →",         color:"#6fae5a", draw:drawDoor,     action:()=>gotoRoom("forest","main"), to:"forest"},
     {id:"doorPond", x:0.88, y:0.86, label:"Pond →",            color:"#5aa2c8", draw:drawDoor,     action:()=>gotoRoom("pond","main"), to:"pond"},
   ];
   hub.rooms.market=[
@@ -2402,22 +2632,37 @@ function initHub(){
     {id:"guiseppe", x:0.70, y:0.70, label:"Guiseppe",          color:"#d64a3f", draw:drawGuiseppe,   action:()=>openNpc("guiseppe"), unlock:"guiseppe"},
     {id:"doorHQ",   x:0.50, y:0.88, label:"← Headquarters",    color:"#e2703a", draw:drawDoor,       action:()=>gotoRoom("main","pond"), to:"main"},
   ];
+  hub.rooms.forest=[
+    {id:"grove",    x:0.22, y:0.30, label:"Old Growth",        color:"#6fae5a", draw:drawGrove,        action:()=>openGather("grove")},
+    {id:"thicket",  x:0.50, y:0.26, label:"Bramble Thicket",   color:"#8fce7a", draw:drawThicket,      action:()=>openGather("thicket")},
+    {id:"boulders", x:0.78, y:0.30, label:"Mossy Boulders",    color:"#8a8478", draw:drawBoulders,     action:()=>openGather("boulders")},
+    {id:"bench",    x:0.50, y:0.56, label:"Woodworker's Bench",color:"#9a6b3a", draw:drawCraftBench,   action:openCrafting},
+    {id:"bram",     x:0.20, y:0.62, label:"Bram",              color:"#6fae5a", draw:drawBram,         action:()=>openNpc("bram")},
+    {id:"thistle",  x:0.80, y:0.60, label:"Thistle",           color:"#c86fe2", draw:drawThistle,      action:()=>openNpc("thistle")},
+    {id:"doorHQ",   x:0.50, y:0.88, label:"← Headquarters",    color:"#e2703a", draw:drawDoor,         action:()=>gotoRoom("main","forest"), to:"main"},
+  ];
   hub.stations=visibleStations(hub.rooms.main);
+  // furniture placement: track cursor + place/remove on click while in decorate mode
+  hub.canvas.addEventListener('mousemove', decorPointerMove);
+  hub.canvas.addEventListener('click', decorClick);
   document.addEventListener('keydown', e=>{
     if(!document.getElementById('hubScreen').classList.contains('active')) return;
     // ignore input while a panel or minigame overlay is open
     if(document.getElementById('overlay').classList.contains('active')) return;
     if(document.getElementById('mgOverlay').classList.contains('active')) return;
     if(typeof Dlg!=="undefined" && Dlg._open) return;
+    // while placing furniture: Escape / E / Space stops placement instead of interacting
+    if(Decor.mode){ if(e.key==='Escape'||e.key==='e'||e.key==='E'||e.key===' '){ e.preventDefault(); stopPlacing(); toast("Done placing."); } hub.keys[e.key.toLowerCase()]=true; return; }
     hub.keys[e.key.toLowerCase()]=true;
     if((e.key==='e'||e.key==='E'||e.key===' ') && hub.nearest){ e.preventDefault(); hub.nearest.action(); }
   });
   document.addEventListener('keyup', e=>{ hub.keys[e.key.toLowerCase()]=false; });
 }
-const ROOM_NAMES={ main:"HEADQUARTERS", market:"THE MARKET", pond:"THE POND" };
+const ROOM_NAMES={ main:"HEADQUARTERS", market:"THE MARKET", pond:"THE POND", forest:"THE FOREST" };
 // stations whose unlock mission isn't done yet are hidden until earned at the board
 function visibleStations(list){ return (list||[]).filter(s=> !s.unlock || missionDone(s.unlock) ); }
 function gotoRoom(room, from){
+  if(typeof Decor!=="undefined") stopPlacing();
   hub.room=room;
   hub.stations=visibleStations(hub.rooms[room]);
   // place the player at the door that leads back to where they came from
@@ -2487,6 +2732,7 @@ function drawHub(){
     main:  {floorA:"#211a16",floorB:"#1c1712",wall:"#4a3a2c",trim:"#e2703a",accent:"#e2703a"},
     market:{floorA:"#241d15",floorB:"#1e1810",wall:"#5a4630",trim:"#e8b84b",accent:"#e8b84b"},
     pond:  {floorA:"#12202a",floorB:"#16262f",wall:"#2a4650",trim:"#5aa2c8",accent:"#7ab6d6"},
+    forest:{floorA:"#1a2617",floorB:"#141f12",wall:"#2f4a2a",trim:"#6fae5a",accent:"#8fce7a"},
   }[room]||{};
   const pond = room==="pond";
   // floor with a soft vignette
@@ -2558,7 +2804,33 @@ function drawHub(){
       const sway=Math.sin(now/600+i)*4; c.beginPath(); c.moveTo(rx,ry); c.quadraticCurveTo(rx+sway,ry-14,rx+sway*1.6,ry-24); c.stroke(); }
     // stones scattered near the water
     c.fillStyle="#3a4650"; [[px-prx-10,py+pry+8],[px+prx+8,py+pry-4],[px-20,py+pry+18]].forEach(p=>{ c.beginPath(); c.ellipse(p[0],p[1],10,6,0,0,7); c.fill(); });
+  } else if(room==="forest"){
+    // dappled light on the forest floor
+    c.save();
+    for(let i=0;i<14;i++){ const gx=((i*89)%(w-60))+30, gy=((i*53)%(h-120))+70;
+      c.globalAlpha=0.05+0.03*Math.sin(now/900+i); c.fillStyle="#8fce7a";
+      c.beginPath(); c.ellipse(gx,gy,26,16,0,0,7); c.fill(); }
+    c.restore();
+    // background tree canopy along the top wall
+    for(let i=0;i<Math.ceil(w/70)+1;i++){ const tx=i*70+10;
+      c.fillStyle="#24391f"; c.beginPath(); c.arc(tx,54,30,Math.PI,0); c.fill();
+      c.fillStyle="#2f4a2a"; c.beginPath(); c.arc(tx,50,22,Math.PI,0); c.fill(); }
+    // a few tall trunks framing the sides
+    [[40,"#3a2c1c"],[w-40,"#3a2c1c"]].forEach(([tx,col])=>{
+      c.fillStyle=col; c.fillRect(tx-7,44,14,h-74);
+      c.fillStyle=hexA("#6fae5a",.5); c.beginPath(); c.arc(tx,70,34,0,7); c.fill();
+      c.fillStyle=hexA("#8fce7a",.35); c.beginPath(); c.arc(tx,120,30,0,7); c.fill();
+    });
+    // drifting motes / pollen
+    for(let i=0;i<18;i++){ const mx=(i*137+now*0.02)%w, my=(i*71+now*0.05)%(h-100)+60;
+      c.fillStyle="rgba(200,235,180,"+(0.12+0.1*Math.sin(now/500+i))+")"; c.beginPath(); c.arc(mx,my,1.6,0,7); c.fill(); }
+    // a little brook curling across the lower third
+    c.strokeStyle=hexA("#5aa2c8",.5); c.lineWidth=10; c.lineCap="round";
+    c.beginPath(); c.moveTo(20,h*0.78); c.bezierCurveTo(w*0.35,h*0.72,w*0.6,h*0.86,w-20,h*0.8); c.stroke();
+    c.strokeStyle=hexA("#bfe6f5",.3); c.lineWidth=3; c.stroke();
   }
+  // placed furniture / decorations (Headquarters only) — drawn on the floor beneath stations
+  if(room==="main"){ drawPlacedFurniture(c,w,h); }
   // room title plate
   c.fillStyle="rgba(0,0,0,.4)"; roundRect(c,w/2-70,48,140,20,10); c.fill();
   c.fillStyle=PAL.accent; c.font="bold 12px "+cssvar('--f-body'); c.textAlign="center"; c.textBaseline="middle";
@@ -2594,6 +2866,196 @@ function drawHub(){
   const bob = p._moving ? Math.sin(Date.now()/90)*2 : 0;
   const sp=sprite('nathan');
   c.drawImage(sp.canvas, p.x-22, p.y-30+bob, 44, 44);
+}
+
+/* ===================== FURNITURE PLACEMENT (Headquarters decor) =====================
+   Decor.mode holds the furniture id being placed (or null). While placing, a
+   ghost preview follows the cursor and a click on the HQ floor drops it. */
+const Decor = { mode:null, hoverX:null, hoverY:null };
+// draw every placed decoration on the HQ floor, plus a ghost preview while placing
+function drawPlacedFurniture(c,w,h){
+  const now=Date.now();
+  (META.placed||[]).forEach((d,i)=>{
+    const f=FURNITURE[d.id]; if(!f) return;
+    const sx=d.x*w, sy=d.y*h;
+    // soft floor shadow
+    c.fillStyle="rgba(0,0,0,.28)"; c.beginPath(); ellipse(c,sx,sy+18,26,8); c.fill();
+    c.save(); c.translate(sx,sy);
+    try{ f.draw(c,false,f===undefined?"#fff":FURNITURE_RARITY_COLOR[f.rarity]); }catch(e){}
+    c.restore();
+    // small remove target when in placement mode
+    if(Decor.mode){
+      c.fillStyle="rgba(214,74,63,.85)"; scircle(c,sx+20,sy-20,7);
+      c.fillStyle="#fff"; c.font="bold 11px "+cssvar('--f-body'); c.textAlign="center"; c.textBaseline="middle"; c.fillText("×",sx+20,sy-19);
+    }
+  });
+  // ghost preview of the piece being placed
+  if(Decor.mode && Decor.hoverX!=null){
+    const f=FURNITURE[Decor.mode]; if(f){
+      c.save(); c.globalAlpha=0.55; c.translate(Decor.hoverX,Decor.hoverY);
+      try{ f.draw(c,true,FURNITURE_RARITY_COLOR[f.rarity]); }catch(e){}
+      c.restore();
+      c.strokeStyle=hexA("#c89aec",.8); c.setLineDash([4,4]); c.lineWidth=1.5;
+      c.beginPath(); ellipse(c,Decor.hoverX,Decor.hoverY+18,26,8); c.stroke(); c.setLineDash([]);
+    }
+  }
+}
+// begin placing a specific furniture id; the hub canvas handles the click to drop it
+function startPlacing(id){
+  if(furnAvailable(id)<=0){ toast("None of that piece left to place."); return; }
+  Decor.mode=id; closePanel();
+  toast("Click anywhere in Headquarters to place it. Click a red × to remove a piece.");
+}
+function stopPlacing(){ Decor.mode=null; Decor.hoverX=Decor.hoverY=null; }
+// hub canvas pointer handlers for placement (wired once in initHub)
+function decorPointerMove(e){
+  if(!Decor.mode) return;
+  const r=hub.canvas.getBoundingClientRect();
+  Decor.hoverX=e.clientX-r.left; Decor.hoverY=e.clientY-r.top;
+}
+function decorClick(e){
+  if(hub.room!=="main") return;
+  const r=hub.canvas.getBoundingClientRect();
+  const x=e.clientX-r.left, y=e.clientY-r.top;
+  // clicking a red × removes the nearest placed piece under it
+  if(Decor.mode){
+    const placed=META.placed||[];
+    for(let i=0;i<placed.length;i++){
+      const sx=placed[i].x*hub.w, sy=placed[i].y*hub.h;
+      if(Math.hypot(x-(sx+20),y-(sy-20))<12){
+        placed.splice(i,1); save(); SFX.play("click"); toast("Removed."); return;
+      }
+    }
+    // otherwise place the current piece here (keep it inside the walls)
+    if(furnAvailable(Decor.mode)<=0){ toast("None of that piece left."); stopPlacing(); return; }
+    const nx=Math.min(0.92,Math.max(0.08, x/hub.w));
+    const ny=Math.min(0.90,Math.max(0.16, y/hub.h));
+    META.placed=META.placed||[]; META.placed.push({id:Decor.mode, x:nx, y:ny});
+    save(); SFX.play("unlock");
+    const remaining=furnAvailable(Decor.mode);
+    toast(`${FURNITURE[Decor.mode].name} placed.${remaining>0?` ${remaining} more to place.`:""}`);
+    if(remaining<=0) stopPlacing();   // ran out — leave placement mode
+  }
+}
+
+/* ---------- Headquarters: Decorator (buy/find furniture, place it in the bunker) ---------- */
+function openDecorator(){
+  stopPlacing();
+  const ids=FURNITURE_IDS;
+  const ownedIds=ids.filter(id=>furnCount(id)>0);
+  // inventory rows — pieces you own; place or remove-all
+  const invRows = ownedIds.length ? ownedIds.map(id=>{
+    const f=FURNITURE[id]; const have=furnCount(id); const placed=furnPlacedCount(id); const free=furnAvailable(id);
+    const col=FURNITURE_RARITY_COLOR[f.rarity];
+    return `<div class="shopitem">
+      <div class="si"><div class="sn">${f.icon} ${f.name} <span class="pill" style="color:${col};text-transform:uppercase;letter-spacing:1px">${f.rarity}</span></div>
+        <div class="sd">${f.desc} <span class="muted">· owned ${have} · placed ${placed}</span></div></div>
+      <div style="display:flex;gap:6px;white-space:nowrap">
+        <button class="btn ${free>0?'rust':'secondary'}" style="font-size:12px;padding:8px 12px" ${free>0?'':'disabled'} data-place="${id}">Place</button>
+        ${placed>0?`<button class="btn secondary" style="font-size:12px;padding:8px 12px" data-clearone="${id}">Remove</button>`:''}
+      </div>
+    </div>`;
+  }).join("") : '<p class="muted small">You don\'t own any furniture yet. Buy pieces at the market\'s Trading Post and Rotating Stall, or find them as salvage on runs.</p>';
+  // catalog of everything, marking what you own
+  const catRows=ids.map(id=>{
+    const f=FURNITURE[id]; const col=FURNITURE_RARITY_COLOR[f.rarity];
+    return `<span class="pill" style="color:${col}">${f.icon} ${f.name}${furnCount(id)>0?` ×${furnCount(id)}`:''}</span>`;
+  }).join(" ");
+  const totalPlaced=(META.placed||[]).length;
+  openPanel("Decorator", `
+    <p class="muted small" style="line-height:1.6">Make the bunker feel like home. <b>Buy</b> furniture at the market, <b>find</b> it as salvage on runs, then <b>place</b> it anywhere in Headquarters. Placement is free — move things as often as you like.</p>
+    <div style="margin:10px 0"><span class="pill" style="color:#c89aec">${totalPlaced} piece${totalPlaced===1?'':'s'} placed</span></div>
+    <h3 class="sec">Your Furniture</h3>
+    <div>${invRows}</div>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+      ${totalPlaced>0?`<button class="btn secondary" id="decClearAll" style="font-size:13px">Clear all placements</button>`:''}
+      <button class="btn secondary" id="decGoMarket" style="font-size:13px;margin-left:auto">🛒 Buy at the Market</button>
+    </div>
+    <h3 class="sec">Collection</h3>
+    <div>${catRows}</div>
+  `);
+  document.querySelectorAll('[data-place]').forEach(b=>b.addEventListener('click',()=>{ SFX.play("click"); startPlacing(b.dataset.place); }));
+  document.querySelectorAll('[data-clearone]').forEach(b=>b.addEventListener('click',()=>{
+    const id=b.dataset.clearone;
+    // remove the most-recently placed instance of this piece
+    for(let i=(META.placed||[]).length-1;i>=0;i--){ if(META.placed[i].id===id){ META.placed.splice(i,1); break; } }
+    save(); SFX.play("click"); openDecorator();
+  }));
+  const ca=document.getElementById('decClearAll');
+  if(ca) ca.addEventListener('click',()=>{ META.placed=[]; save(); SFX.play("click"); toast("Cleared the floor."); openDecorator(); });
+  const gm=document.getElementById('decGoMarket');
+  if(gm) gm.addEventListener('click',()=>{ SFX.play("click"); closePanel(); gotoRoom("market","main"); });
+}
+
+/* ---------- Forest: material inventory pill strip ---------- */
+function materialsStrip(){
+  const owned=MATERIAL_IDS.filter(id=>matCount(id)>0);
+  if(!owned.length) return '<span class="muted small">No materials gathered yet. Harvest the forest clearings.</span>';
+  return owned.map(id=>{ const m=MATERIALS[id]; return `<span class="pill" style="color:${m.color}">${m.icon} ${m.name} ×${matCount(id)}</span>`; }).join(" ");
+}
+/* ---------- Forest: a gathering node (harvest materials on a cooldown) ---------- */
+function openGather(id){
+  const node=GATHER_NODES[id]; if(!node) return;
+  const ready=gatherReady(id);
+  const yieldStr=node.yields.map(y=>`${MATERIALS[y[0]].icon} ${MATERIALS[y[0]].name}`).join(", ");
+  openPanel(node.name, `
+    <p class="muted small" style="line-height:1.6">A quiet clearing in the forest. Harvest it for raw materials — mostly <b>${yieldStr}</b>. The land needs time to recover, so each spot can be gathered once every ${FOREST_COOLDOWN_MS/60000} minutes.</p>
+    <div id="gatherSay" class="center muted small" style="min-height:30px;margin:10px 0"></div>
+    <h3 class="sec">Your Materials</h3>
+    <div style="margin-bottom:12px">${materialsStrip()}</div>
+    <div style="text-align:center">
+      <button class="btn ${ready?'rust':'secondary'}" ${ready?'':'disabled'} id="gatherBtn">${ready?'Gather materials':`Recovering — ready in ${gatherWaitMins(id)}m`}</button>
+    </div>
+    <p class="muted small" style="margin-top:12px">Take materials to the <b>🔨 Woodworker's Bench</b> to craft furniture for your bunker.</p>
+  `);
+  const b=document.getElementById('gatherBtn');
+  if(b) b.addEventListener('click',()=>{
+    if(!gatherReady(id)){ toast("This clearing needs time to recover."); return; }
+    const got=gatherNode(id);
+    SFX.play("unlock"); syncHubRes();
+    const parts=Object.keys(got).map(mid=>`${MATERIALS[mid].icon} ${got[mid]} ${MATERIALS[mid].name}`);
+    const msg = parts.length?`Gathered ${parts.join(", ")}.`:"The clearing gave nothing this time.";
+    const keep=msg; openGather(id);
+    const say=document.getElementById('gatherSay'); if(say) say.textContent=keep;
+    achToast({icon:"🧺", name:"Materials gathered", desc:parts.join(", ")||"—"});
+  });
+}
+/* ---------- Forest: Woodworker's Bench (craft furniture from materials) ---------- */
+function openCrafting(){
+  const rows=RECIPE_IDS.map(rid=>{
+    const r=RECIPES[rid]; const f=FURNITURE[r.furn]; const col=FURNITURE_RARITY_COLOR[f.rarity];
+    const costStr=Object.keys(r.cost).map(m=>{
+      const have=matCount(m), need=r.cost[m], ok=have>=need;
+      return `<span class="pill" style="color:${ok?MATERIALS[m].color:'#d64a3f'}">${MATERIALS[m].icon} ${need} ${MATERIALS[m].name}${ok?'':` (${have}/${need})`}</span>`;
+    }).join(" ");
+    const ok=canCraft(rid);
+    const owned=furnCount(r.furn);
+    return `<div class="shopitem" style="align-items:flex-start">
+      <div class="si">
+        <div class="sn">${f.icon} ${f.name} <span class="pill" style="color:${col};text-transform:uppercase;letter-spacing:1px">${f.rarity}</span>${f.craftOnly?' <span class="pill" style="color:#8fce7a">CRAFT-ONLY</span>':''}${owned?` <span class="muted small">owned ×${owned}</span>`:''}</div>
+        <div class="sd">${f.desc}</div>
+        <div style="margin-top:6px">${costStr}</div>
+      </div>
+      <button class="btn ${ok?'rust':'secondary'}" style="font-size:13px;padding:9px 14px" ${ok?'':'disabled'} data-craft="${rid}">Craft</button>
+    </div>`;
+  }).join("");
+  openPanel("Woodworker's Bench", `
+    <p class="muted small" style="line-height:1.6">A sturdy bench under the trees. Spend the materials you've gathered in the forest to <b>craft furniture</b> — then place it in Headquarters at the Decorator. Some pieces can <i>only</i> be built here.</p>
+    <h3 class="sec">Your Materials</h3>
+    <div style="margin-bottom:6px">${materialsStrip()}</div>
+    <h3 class="sec">Recipes</h3>
+    <div>${rows}</div>
+    <p class="muted small" style="margin-top:10px">Low on a material? Gather more at the <b>Old Growth</b>, <b>Bramble Thicket</b>, and <b>Mossy Boulders</b>.</p>
+  `);
+  document.querySelectorAll('[data-craft]').forEach(b=>b.addEventListener('click',()=>{
+    const rid=b.dataset.craft; const f=FURNITURE[RECIPES[rid].furn];
+    if(doCraft(rid)){
+      SFX.play("unlock"); syncHubRes(); checkAch();
+      achToast({icon:f.icon, name:"Crafted: "+f.name, desc:"Place it at the Decorator in Headquarters."});
+      toast(`Crafted ${f.name}.`);
+      openCrafting();
+    } else toast("Not enough materials.");
+  }));
 }
 
 /* ---------- bunker furniture (drawn relative to station center) ---------- */
@@ -2716,6 +3178,23 @@ function drawDesk(c,near,color){
   c.strokeStyle="#3a332c"; c.lineWidth=3; c.beginPath(); c.moveTo(20,-2); c.lineTo(20,-16); c.lineTo(12,-22); c.stroke();
   c.fillStyle=near?"#fff2b0":color; c.beginPath(); c.moveTo(6,-24); c.lineTo(18,-24); c.lineTo(14,-18); c.lineTo(10,-18); c.closePath(); c.fill();
   if(near){ c.fillStyle=hexA("#fff2b0",.25); c.beginPath(); c.moveTo(12,-18); c.lineTo(2,2); c.lineTo(22,2); c.closePath(); c.fill(); }
+}
+// Decorator: a little workbench of furniture props (pot, frame, lamp knob)
+function drawDecorator(c,near,color){
+  glowIf(c,near,color);
+  c.fillStyle="#4a3f34"; roundRect(c,-30,0,60,20,3); c.fill();       // bench top
+  c.shadowBlur=0;
+  c.fillStyle="#2f2820"; c.fillRect(-26,18,6,10); c.fillRect(20,18,6,10);
+  // a framed picture leaning on the bench
+  c.fillStyle="#5a4632"; roundRect(c,-26,-24,22,20,2); c.fill();
+  c.fillStyle=hexA(color,.6); c.fillRect(-23,-21,16,14);
+  c.strokeStyle="#e8b84b"; c.lineWidth=1; c.beginPath(); c.moveTo(-23,-10); c.lineTo(-15,-18); c.lineTo(-7,-12); c.stroke();
+  // a little potted plant
+  c.fillStyle="#8a5a34"; c.beginPath(); c.moveTo(6,-4); c.lineTo(20,-4); c.lineTo(18,-14); c.lineTo(8,-14); c.closePath(); c.fill();
+  c.strokeStyle="#6fae5a"; c.lineWidth=2; for(let i=-1;i<=1;i++){ c.beginPath(); c.moveTo(13,-14); c.quadraticCurveTo(13+i*8,-24,13+i*10,-30); c.stroke(); }
+  // paint bucket
+  c.fillStyle="#5aa2c8"; roundRect(c,-4,-2,10,8,1); c.fill();
+  if(near){ c.fillStyle=color; c.font="14px serif"; c.textAlign="center"; c.fillText("🛋️",0,-34); }
 }
 // Training Room: a punching dummy on a stand
 function drawDummy(c,near,color){
@@ -2856,6 +3335,87 @@ function drawGuiseppe(c,near,color){
   c.shadowBlur=0;
   if(npcMarker("guiseppe")){ c.fillStyle="#e8b84b"; c.font="bold 18px serif"; c.textAlign="center"; c.fillText("!",0,-36+Math.sin(t/300)*2); }
   else if(near){ c.fillStyle="#6fae5a"; c.font="14px serif"; c.textAlign="center"; c.fillText("💬",0,-36); }
+}
+// Forest: Old Growth — a tall broad tree you can gather greenwood from
+function drawGrove(c,near,color){
+  const t=Date.now();
+  glowIf(c,near,color);
+  c.fillStyle="#3a2c1c"; c.fillRect(-7,-6,14,30);           // trunk
+  c.shadowBlur=0;
+  c.fillStyle="#2f4a2a"; scircle(c,0,-18,24);               // canopy
+  c.fillStyle="#3a5a2c"; scircle(c,-14,-12,14); scircle(c,14,-12,14);
+  c.fillStyle=hexA("#8fce7a",.5); scircle(c,-6,-24,7); scircle(c,8,-20,6);
+  c.strokeStyle="#4a3420"; c.lineWidth=2; c.beginPath(); c.moveTo(0,-2); c.lineTo(-10,-10); c.moveTo(0,-6); c.lineTo(10,-14); c.stroke();
+  if(gatherReady("grove")){ c.fillStyle="#e8b84b"; c.font="11px serif"; c.textAlign="center"; c.fillText("✦",18,-22); }
+  if(near){ c.fillStyle=color; c.font="14px serif"; c.textAlign="center"; c.fillText("🪓",0,-42); }
+}
+// Forest: Bramble Thicket — a tangle of vines with a violet bloom
+function drawThicket(c,near,color){
+  const t=Date.now();
+  glowIf(c,near,color);
+  c.strokeStyle="#3a5a2c"; c.lineWidth=3;
+  for(let i=-2;i<=2;i++){ const sway=Math.sin(t/700+i)*3; c.beginPath(); c.moveTo(i*9,22); c.quadraticCurveTo(i*9+sway,0,i*9+sway*1.5,-16); c.stroke(); }
+  c.shadowBlur=0;
+  c.fillStyle="#6fae5a"; for(let i=-2;i<=2;i++){ c.beginPath(); c.ellipse(i*9,-4,5,3,i*0.4,0,7); c.fill(); }
+  c.fillStyle="#c86fe2"; scircle(c,4,-16,4); c.fillStyle="#e2b0f2"; scircle(c,4,-16,2);   // ashbloom
+  c.fillStyle="#8fce7a"; scircle(c,-10,-8,3);
+  if(gatherReady("thicket")){ c.fillStyle="#e8b84b"; c.font="11px serif"; c.textAlign="center"; c.fillText("✦",16,-18); }
+  if(near){ c.fillStyle=color; c.font="14px serif"; c.textAlign="center"; c.fillText("🌿",0,-34); }
+}
+// Forest: Mossy Boulders — a pile of stones with an antler resting on top
+function drawBoulders(c,near,color){
+  glowIf(c,near,color);
+  c.fillStyle="#6a655a"; c.beginPath(); c.ellipse(-8,10,18,14,0,0,7); c.fill();
+  c.fillStyle="#7a7468"; c.beginPath(); c.ellipse(12,6,15,12,0,0,7); c.fill();
+  c.fillStyle="#5a544a"; c.beginPath(); c.ellipse(2,-6,12,10,0,0,7); c.fill();
+  c.shadowBlur=0;
+  // moss patches
+  c.fillStyle=hexA("#6fae5a",.6); scircle(c,-14,4,4); scircle(c,16,2,4); scircle(c,0,-12,3);
+  // shed antler resting on top
+  c.strokeStyle="#d8cfb8"; c.lineWidth=2; c.beginPath(); c.moveTo(0,-14); c.quadraticCurveTo(-6,-24,-2,-30); c.moveTo(-3,-20); c.lineTo(-9,-24); c.moveTo(-2,-24); c.lineTo(-8,-30); c.stroke();
+  if(gatherReady("boulders")){ c.fillStyle="#e8b84b"; c.font="11px serif"; c.textAlign="center"; c.fillText("✦",18,-14); }
+  if(near){ c.fillStyle=color; c.font="14px serif"; c.textAlign="center"; c.fillText("⛏️",0,-34); }
+}
+// Forest: Woodworker's Bench — a rustic crafting table with tools + a half-built stool
+function drawCraftBench(c,near,color){
+  glowIf(c,near,color);
+  c.fillStyle="#6a4a2c"; roundRect(c,-32,-2,64,18,3); c.fill();      // bench top
+  c.shadowBlur=0;
+  c.fillStyle="#4a3420"; c.fillRect(-28,14,6,12); c.fillRect(22,14,6,12);
+  // half-built log stool on the bench
+  c.fillStyle="#9a6b3a"; roundRect(c,-22,-14,18,14,3); c.fill();
+  c.strokeStyle="#6a4a24"; c.lineWidth=1; c.beginPath(); c.arc(-13,-7,3,0,7); c.stroke();
+  // a saw + chisel
+  c.strokeStyle="#b9b1a4"; c.lineWidth=2; c.beginPath(); c.moveTo(2,-2); c.lineTo(24,-14); c.stroke();
+  c.strokeStyle="#8a8078"; c.lineWidth=1; for(let i=0;i<6;i++){ c.beginPath(); c.moveTo(6+i*3,-4-i*1.6); c.lineTo(7+i*3,-2-i*1.6); c.stroke(); }
+  c.fillStyle="#8a6a3a"; c.fillRect(10,-6,3,8);
+  // wood shavings
+  c.strokeStyle=hexA("#d8b46a",.7); c.lineWidth=1.4; c.beginPath(); c.arc(-2,2,3,0,Math.PI); c.arc(6,3,2,0,Math.PI); c.stroke();
+  if(near){ c.fillStyle=color; c.font="14px serif"; c.textAlign="center"; c.fillText("🔨",0,-24); }
+}
+// Forest: Bram — the hermit, sitting on a stump whittling
+function drawBram(c,near,color){
+  const t=Date.now();
+  c.fillStyle="#4a3420"; roundRect(c,-16,10,32,16,3); c.fill();   // stump seat
+  c.strokeStyle="#3a2c1c"; c.lineWidth=1; c.beginPath(); c.arc(0,10,6,0,7); c.stroke();
+  glowIf(c,near,color);
+  const bob=Math.sin(t/800)*1.2;
+  const sp=sprite('bram');
+  c.drawImage(sp.canvas, -22, -34+bob, 44, 44);
+  c.shadowBlur=0;
+  if(npcMarker("bram")){ c.fillStyle="#e8b84b"; c.font="bold 18px serif"; c.textAlign="center"; c.fillText("!",0,-40+Math.sin(t/300)*2); }
+  else if(near){ c.fillStyle=color; c.font="14px serif"; c.textAlign="center"; c.fillText("💬",0,-40); }
+}
+// Forest: Thistle — a small drifting forest spirit
+function drawThistle(c,near,color){
+  const t=Date.now();
+  glowIf(c,near,color);
+  const bob=Math.sin(t/430)*4;   // spirits float
+  const sp=sprite('thistle');
+  c.drawImage(sp.canvas, -22, -30+bob, 44, 44);
+  c.shadowBlur=0;
+  if(npcMarker("thistle")){ c.fillStyle="#e8b84b"; c.font="bold 18px serif"; c.textAlign="center"; c.fillText("!",0,-34+Math.sin(t/300)*2); }
+  else if(near){ c.fillStyle="#c86fe2"; c.font="14px serif"; c.textAlign="center"; c.fillText("💬",0,-34); }
 }
 // Rotating Stall: a striped market tent with the current traveling vendor behind it
 function drawVendorStall(c,near,color){
@@ -3125,6 +3685,12 @@ function openDeploy(){
   // Build the expedition list: the Journey (if not done) + the three combat quests.
   let expRows="";
   if(questsOpen){
+    // Endless mode — an unending descent, unlocked by the first beacon
+    expRows+=`<div class="shopitem" style="border-color:#c89aec">
+      <div class="si"><div class="sn">♾️ Endless Descent <span class="pill" style="color:#c89aec">INFINITE</span></div>
+        <div class="sd">Never-ending run through ever-harder biomes. Each boss you fell banks cores, insight &amp; scrap, then the ash goes deeper. No final beacon — only how far you dare. Abandon from the map to keep everything banked.${(META.bestEndless||0)>0?` <b>Best depth: ${META.bestEndless}</b>.`:''}</div></div>
+      <button class="btn secondary expBtn" disabled style="border:1px solid #c89aec" data-exp="__endless">Descend</button>
+    </div>`;
     if(journeyOpen){
       expRows+=`<div class="shopitem" style="border-color:#b7a86a">
         <div class="si"><div class="sn">🌿 The Long Road <span class="pill" style="color:#b7a86a">STORY</span></div>
@@ -3176,6 +3742,7 @@ function openDeploy(){
     closePanel();
     META.totalRuns++; save();
     if(which==="__journey"){ newJourney(pendingParty); toast("You set out on the Long Road…"); }
+    else if(which==="__endless"){ newEndless(pendingParty); toast("Endless Descent begun. Go as deep as you dare."); }
     else { newExpedition(which, pendingParty); const q=QUESTS[which]; toast("Expedition begun: "+q.name+"."); }
     saveRun();
     show('mapScreen');
@@ -3359,6 +3926,15 @@ function openBunkerShop(){
           ${r.cost} Cores</button>`}
     </div>`;
   }).join("");
+  const furnRows=FURNITURE_SHOP_IDS.map(id=>{
+    const f=FURNITURE[id]; const col=FURNITURE_RARITY_COLOR[f.rarity];
+    const canAfford=META.scrap>=f.cost; const owned=furnCount(id);
+    return `<div class="shopitem">
+      <div class="si"><div class="sn">${f.icon} ${f.name} <span class="pill" style="color:${col};text-transform:uppercase;letter-spacing:1px">${f.rarity}</span>${owned?` <span class="muted small">owned ×${owned}</span>`:''}</div>
+        <div class="sd">${f.desc}</div></div>
+      <button class="btn ${canAfford?'rust':'secondary'}" style="font-size:13px;padding:9px 14px" ${canAfford?'':'disabled'} data-furn="${id}">${f.cost} Scrap</button>
+    </div>`;
+  }).join("");
   openPanel("Trading Post", `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <p class="muted small" style="margin:0;max-width:70%">A grizzled trader runs a stall in the bunker. Buy provisions that stock every run, and relics you'll own forever.</p>
@@ -3367,9 +3943,21 @@ function openBunkerShop(){
     <h3 class="sec">Provisions</h3>
     <div>${provRows}</div>
     <h3 class="sec">Permanent Relics <span class="muted small" style="text-transform:none;letter-spacing:0">(cores)</span></h3>
-    <div>${relicRows}</div>`);
+    <div>${relicRows}</div>
+    <h3 class="sec">Furnishings <span class="muted small" style="text-transform:none;letter-spacing:0">— decorate Headquarters at the Decorator</span></h3>
+    <div>${furnRows}</div>`);
   document.querySelectorAll('[data-prov]').forEach(b=>b.addEventListener('click',()=>buyProvision(b.dataset.prov)));
   document.querySelectorAll('[data-relic]').forEach(b=>b.addEventListener('click',()=>buyRelicStore(+b.dataset.relic)));
+  document.querySelectorAll('[data-furn]').forEach(b=>b.addEventListener('click',()=>buyFurniture(b.dataset.furn)));
+}
+function buyFurniture(id){
+  const f=FURNITURE[id]; if(!f) return;
+  if(META.scrap<f.cost){ toast("Not enough Scrap."); return; }
+  META.scrap-=f.cost; ownFurniture(id);
+  META.stats.shopBuys++; save();
+  SFX.play("unlock"); checkAch();
+  toast(`Bought ${f.name}. Place it at the Decorator in Headquarters.`);
+  syncHubRes(); openBunkerShop();
 }
 function buyProvision(id){
   const p=PROVISIONS[id]; const lvl=provLevel(id); if(lvl>=p.max) return;
@@ -3423,6 +4011,7 @@ function openCodex(){
       <span>Deepest reach <b>${["The Wastes","Rust Marsh","Frostreach"][Math.min(2,Math.floor((META.bestDepth||0)/BIOME_LAYERS))]}</b></span>
       <span>Enemies felled <b>${META.stats.kills}</b></span>
       <span>Survivors recruited <b>${META.unlocked.length}/${Object.keys(CHARS).length}</b></span>
+      ${(META.bestEndless||0)>0?`<span>Deepest Endless <b>Depth ${META.bestEndless}</b></span>`:''}
     </div>
     <h3 class="sec">Active Permanent Bonuses</h3>
     <div>
@@ -3972,7 +4561,7 @@ function startConversation(cfg){
 }
 function safe(fn){ try{ return !!fn(); }catch(e){ return false; } }
 
-/* ===================== POND NPCS: Renas & Guiseppe =====================
+/* ===================== POND NPCS: Renas & Guiseppe ===================== */
 const NPCS = {
   renas:{
     name:"Renas", tagline:"Josh's little brother · gadget goblin", spriteId:"renas", color:"#e2703a",
@@ -4110,6 +4699,92 @@ const NPCS = {
         say:"\"You found the old woman's settlement. I felt something shift when you returned — grief, and gratitude, twined together. Some places are meant to be witnessed, not saved. You did right by them.\"" },
     ]
   },
+  bram:{
+    name:"Bram", tagline:"the forest hermit · keeper of the old woods", spriteId:"bram", color:"#6fae5a",
+    menuPrompt:"\"The trees don't hurry, and neither do I. Sit. Ask what you like.\"",
+    topics:[
+      { id:"forest", t:"How is this forest still alive?", d:"Everything else burned.",
+        lines:[
+          "\"Luck, and a ridge that took the worst of the sky for us. The ash fell thin here. The old roots held. Green is stubborn — more stubborn than fire, if you give it long enough.\"",
+          "\"I've watched it come back one leaf at a time for seventeen years. It doesn't forgive the world. It just... keeps growing anyway. There's a lesson in that, if you want one.\""
+        ]},
+      { id:"hermit", t:"Why live out here alone?", d:"Away from the bunker.", bond:true,
+        lines:[
+          "\"I wasn't always alone. There was a town, once, under these boughs. I'm what's left of it. Someone had to stay and tend the graves the roots grew through.\"",
+          "\"Alone isn't the same as lonely. I have the trees, the deer, the little spirit that thinks I can't see it. And now, sometimes, you.\""
+        ]},
+      { id:"materials", t:"What can these woods give?", d:"Gathering out here.", bond:true,
+        lines:[
+          "\"Greenwood that still has sap in it. Fiber for cord. Resin the old pines weep. Take what you need — but take gently, and never the last of anything. The forest keeps a ledger.\"",
+          "\"Build something with it. A chair, a lamp, a home worth coming back to. Wood remembers the hands that shaped it. Make it something kind.\""
+        ]},
+      { id:"deer", t:"What leaves the antlers?", d:"Something large out here.", bond:true, needBond:2,
+        lines:[
+          "\"A great stag. Grey as ash, quiet as snow. It sheds its crown by the mossy boulders each season and lets me find it. I think it knows I won't hunt it.\"",
+          "\"Some nights I swear it stands at the treeline and watches the bunker's lights with me. Two old things, keeping a vigil over the living. I hope it outlasts me.\""
+        ]},
+    ],
+    onBondFull:{ text:"Bram presses a bundle into your hands — cord, resin, a curl of greenwood. \"For the building. You listen like someone who means to stay. The woods notice that. So do I.\"",
+      fn:()=>{ addMaterial("wood",3); addMaterial("resin",2); addMaterial("fiber",2); save(); syncHubRes&&syncHubRes(); toast("Bram gifted you materials for crafting."); } },
+    stages:[
+      { text:"An old man in a moss-green coat sits on a stump, whittling. He doesn't startle. \"Ah. The one from the bunker with the lights. I wondered when you'd walk this far. I'm Bram. These woods and I have an understanding — you're welcome in them, so long as you're gentle.\"",
+        choices:[
+          {t:"How are you still out here?",say:"\"Roots run deeper than fire, friend. So do some people. Stay a while — the trees like a new listener.\"",advance:true},
+          {t:"I came to gather.",say:"\"Then gather well. The woods give freely to those who don't grab. Wander the clearings — you'll find what you need.\"",advance:true},
+        ] },
+      { text:"\"Back again. Good. The forest was quieter for your absence — or maybe I was.\" He nods to the treeline. \"Take what you need from the clearings. Build something worth the wood.\"",
+        choices:[ {t:"Always, Bram.",say:"\"Mm. Off you go, then. The greenwood won't cut itself — though God knows it tries.\"",advance:false} ] },
+    ],
+    chatter:[
+      { when:()=>true, say:"\"You hear that? No engines, no gunfire. Just wind in the leaves. I forget, sometimes, that most of your world doesn't sound like this anymore.\"" },
+      { when:()=>true, say:"\"Every tool you carry was a tree, once, or a stone, or a beast. Out here that's easy to remember. In there, behind your walls, I think people forget.\"" },
+      { when:()=>Object.keys(META.materials||{}).length>=3, say:"\"You've a good eye for gathering. Balanced — a little of this, a little of that. Greedy hands strip a forest bare. Yours don't. I've been watching.\"" },
+      { when:()=>Object.values(META.furniture||{}).reduce((a,b)=>a+b,0)>=3, say:"\"I hear you've been furnishing that bunker of yours. Good. A place you decorate is a place you've decided to live, not just survive. The trees approve.\"" },
+    ]
+  },
+  thistle:{
+    name:"Thistle", tagline:"a forest spirit · small and old", spriteId:"thistle", color:"#c86fe2",
+    menuPrompt:"\"You see me. Most don't. Since you do — ask, ask. I so rarely get to answer.\"",
+    topics:[
+      { id:"what", t:"What are you?", d:"You're not quite a person.",
+        lines:[
+          "\"A little bit of the forest that woke up and stayed awake. When the sky burned, so much died at once that some of it... clumped together into me. I am the woods, remembering itself.\"",
+          "\"Bram pretends not to see me. It is our game. He leaves out resin; I leave the deer where he can find their antlers. We do not speak of it. That is the whole friendship.\""
+        ]},
+      { id:"bloom", t:"Tell me about the Ashbloom.", d:"That strange flower.", bond:true,
+        lines:[
+          "\"Cruel and lovely, that one. It drinks the poison the sky left and turns it violet. Only grows where the ash lies thickest — beauty rooted in ruin. Rather like all of you, down in your bunker.\"",
+          "\"Pick it kindly and it seeds twice as thick next season. Rip it up and it sulks for years. The forest rewards a soft hand. Remember that, builder.\""
+        ]},
+      { id:"lore", t:"What was here before?", d:"Before the burning.", bond:true,
+        lines:[
+          "\"Children. So many children — a summer camp, tents in the clearings, laughter in the canopy. I remember the shape of their joy even now. It soaked into the soil. It is why the green came back here first.\"",
+          "\"Grief makes poor fertilizer. Joy makes forests. That is the secret no one believes until they have watched a world end and begin again.\""
+        ]},
+      { id:"future", t:"Will the world recover?", d:"Ask the oldest thing here.", bond:true, needBond:2,
+        lines:[
+          "\"It already is. Not for you — you are too brief to see it. But the forest measures time in rings, and the rings are widening again. Give it a thousand years. The ash will be a thin grey line in the stone, and nothing more.\"",
+          "\"Your part is not to see the end of the healing. Your part is to keep one light burning through the night of it, so that something is here to enjoy the morning. You are doing your part. Rest easy in that.\""
+        ]},
+    ],
+    onBondFull:{ text:"Thistle spins once, delighted, and shakes loose a shower of petals. \"A witness! A real one! Here — the rarest thing I grow. Plant it, build with it, remember me by it.\" A cluster of ashblooms drifts into your pack.",
+      fn:()=>{ addMaterial("bloom",3); addMaterial("fiber",1); save(); syncHubRes&&syncHubRes(); toast("Thistle gifted you Ashblooms."); } },
+    stages:[
+      { text:"Something violet flickers between the trunks — then resolves into a small, drifting shape, half flower and half child, with petals for hair. \"Oh! You STOPPED. You can see me!\" It circles you, thrilled. \"I am Thistle. I am very old and very small and almost never noticed. This is the best day I have had in a decade.\"",
+        choices:[
+          {t:"You're... a spirit?",say:"\"A little one! The forest's own daydream. Do not be afraid — I could not hurt a beetle, and would not want to.\"",advance:true},
+          {t:"Hello, Thistle.",say:"\"Hello, hello, HELLO! Manners! From a bunker person! Bram will never believe me.\"",advance:true},
+        ] },
+      { text:"\"You came back to see ME. Not the wood, not the flowers — me.\" Thistle glows a happier shade of violet. \"Ask me anything. I have seventeen years of no one to tell it to.\"",
+        choices:[ {t:"Just visiting, Thistle.",say:"\"Visiting is a kind of watering, you know. I will be a little more real tomorrow because you came today.\"",advance:false} ] },
+    ],
+    chatter:[
+      { when:()=>true, say:"\"Bram thinks I do not know he leaves the resin out for me on purpose. I let him think it. Everyone needs a small kindness they believe is a secret.\"" },
+      { when:()=>true, say:"\"You smell of iron and old smoke — the bunker. But under it, lately, a little of the woods. You are letting us in. Good. Trade the grey for the green, one breath at a time.\"" },
+      { when:()=>matCount("bloom")>=1, say:"\"You carry an Ashbloom! Be gentle with it. It is braver than it looks — it chose to grow in the worst place in the world, just to be beautiful there. Honor that.\"" },
+      { when:()=>(META.wins||0)>=1, say:"\"Your beacon — I saw it, even from under the canopy. A little green light of your own, held up against all that dark. We are not so different, your bunker and my forest. Both stubborn. Both still here.\"" },
+    ]
+  },
 };
 function npcState(id){ META.npcs=META.npcs||{}; META.npcs[id]=META.npcs[id]||{stage:0}; if(typeof META.npcs[id].stage!=="number") META.npcs[id].stage=0; return META.npcs[id]; }
 // marker true when there's something new to see: never met, or a quest is claimable
@@ -4195,6 +4870,8 @@ const VENDORS = {
        fn:()=>{ META.cores+=1; }},
       {id:"cache", n:"📦 Mystery Cache", d:"A random consumable, stashed for your next run.", res:"scrap", cost:22, repeat:true,
        fn:()=>{ stashItem(randItem()); }},
+      {id:"decor", n:"🛋️ A Bit of Home", d:"A random piece of furniture for the Decorator.", res:"scrap", cost:40, repeat:true,
+       fn:()=>{ const fid=rollFurnitureDrop(); ownFurniture(fid); toast(`Marrow dug up a ${FURNITURE[fid].name}.`); }},
       {id:"lens", n:"🔮 Warped Lens (relic)", d:"Permanent: first attack each battle deals double.", res:"cores", cost:5, once:true,
        fn:()=>{ addOwnedRelic("Warped Lens"); }},
     ]
@@ -4430,7 +5107,7 @@ function drawMap(){
 
   const nodes=RUN.mapNodes;
   map.nodePos=[];
-  const colors={battle:"#d64a3f",elite:"#e8b84b",event:"#6fae5a",shop:"#5aa2c8",rest:"#f3e9dc",boss:"#9a6fc4",rescue:"#e88ac8",settlement:"#b7a86a"};
+  const colors={battle:"#d64a3f",elite:"#e8b84b",event:"#6fae5a",shop:"#5aa2c8",rest:"#f3e9dc",boss:"#9a6fc4",rescue:"#e88ac8",settlement:"#b7a86a",treasure:"#e8b84b",fountain:"#5ad0e0",gamble:"#c89aec",ambush:"#e2703a"};
   // positions: layer 0 bottom, boss top. jitter x a little per node for organic feel.
   for(let l=0;l<BIOME_LAYERS;l++){
     const layer=nodes[l];
@@ -4490,6 +5167,7 @@ function drawMap(){
   let sub;
   if(RUN.journey){ sub="A one-way road. Reach the settlement at the top."; }
   else if(RUN.quest){ const q=QUESTS[RUN.quest]; sub=`Expedition · slay ${ENEMY_TYPES[q.bossId].name} at the top.`; }
+  else if(RUN.endless){ sub=`♾️ Endless · Depth ${RUN.loop||1} · defeat the ${ENEMY_TYPES[bi.boss].name} to descend deeper. Abandon anytime to bank your haul.`; }
   else { sub=`Biome ${RUN.biomeIdx+1} of ${RUN.biomeCount} · defeat the ${ENEMY_TYPES[bi.boss].name} at the top to press on.`; }
   document.getElementById('mapSub').textContent=sub;
   syncScrap();
@@ -4506,8 +5184,8 @@ function nodeScreenPos(node){
   for(const row of map.nodePos) for(const p of row) if(p.node===node) return p;
   return null;
 }
-function nodeIcon(t){ return {battle:"⚔️",elite:"💀",event:"❓",shop:"🛒",rest:"🔥",boss:"👑",rescue:"🆘",settlement:"🏘️"}[t]||"•"; }
-function nodeLabel(t){ return {battle:"Battle",elite:"Elite",event:"Event",shop:"Shop",rest:"Rest",boss:"BEACON",rescue:"Survivor",settlement:"SETTLEMENT"}[t]||""; }
+function nodeIcon(t){ return {battle:"⚔️",elite:"💀",event:"❓",shop:"🛒",rest:"🔥",boss:"👑",rescue:"🆘",settlement:"🏘️",treasure:"💎",fountain:"⛲",gamble:"🎲",ambush:"⚡"}[t]||"•"; }
+function nodeLabel(t){ return {battle:"Battle",elite:"Elite",event:"Event",shop:"Shop",rest:"Rest",boss:"BEACON",rescue:"Survivor",settlement:"SETTLEMENT",treasure:"Cache",fountain:"Spring",gamble:"Gamble",ambush:"Ambush"}[t]||""; }
 function onMapClick(e){
   const r=map.canvas.getBoundingClientRect();
   const x=e.clientX-r.left, y=e.clientY-r.top;
@@ -4524,11 +5202,85 @@ function onMapClick(e){
 function enterNode(node){
   RUN._activeNode=node;
   if(node.type==="battle"||node.type==="elite"||node.type==="boss"){ startBattle(node,false); }
+  else if(node.type==="ambush"){ startBattle(node,false); }
   else if(node.type==="event"){ startEvent(node); }
   else if(node.type==="shop"){ openShop(node); }
   else if(node.type==="rest"){ openRest(node); }
   else if(node.type==="rescue"){ startRescue(node); }
   else if(node.type==="settlement"){ startSettlement(node); }
+  else if(node.type==="treasure"){ openTreasure(node); }
+  else if(node.type==="fountain"){ openFountain(node); }
+  else if(node.type==="gamble"){ openGamble(node); }
+}
+/* ---------- New map nodes: Cache, Spring, Gamble ---------- */
+// 💎 Cache: a guaranteed haul — scrap + a consumable, sometimes a trinket. No fight.
+function openTreasure(node){
+  const scrapAmt=30+Math.floor(Math.random()*36);   // 30–65
+  const it=randItem();
+  document.getElementById('evLoc').textContent="A Hidden Cache";
+  document.getElementById('evTitle').textContent="💎 Sealed Stash";
+  document.getElementById('evText').textContent="Half-buried under rubble, a supply locker somehow went untouched — sealed tight, seams still intact. Whoever stowed it never came back for it. Their loss is your haul.";
+  const cc=document.getElementById('evChoices'); cc.innerHTML="";
+  const b=document.createElement('button'); b.className="choice";
+  b.innerHTML=`<div class="ct">Crack it open</div><div class="cd">+${scrapAmt} scrap, a ${ITEMS[it].name}, and maybe more.</div>`;
+  b.addEventListener('click',()=>{
+    SFX.play("unlock");
+    addScrap(scrapAmt); RUN.items.push(it);
+    let extra="";
+    if(Math.random()<0.4){ const tid=rollTrinket(Math.random()<0.25?"rare":"uncommon"); showTrinketDrop(tid, ()=>{ toast(`Cache: +${scrapAmt} scrap and a ${ITEMS[it].name}.`); completeNode(node); }); return; }
+    toast(`Cache cracked: +${scrapAmt} scrap and a ${ITEMS[it].name}.${extra}`);
+    setTimeout(()=>completeNode(node),300);
+  });
+  cc.appendChild(b);
+  show('eventScreen');
+}
+// ⛲ Spring: a clean-water shrine that fully restores the party (HP + energy) and cleanses.
+function openFountain(node){
+  document.getElementById('evLoc').textContent="An Untainted Spring";
+  document.getElementById('evTitle').textContent="⛲ Clear Water";
+  document.getElementById('evText').textContent="Impossibly, the water here runs clear and cold — no ash, no rust, no rot. The party kneels and drinks deep. Old aches ease. Poison flushes clean. For a moment the world feels survivable again.";
+  const cc=document.getElementById('evChoices'); cc.innerHTML="";
+  const drink=document.createElement('button'); drink.className="choice";
+  drink.innerHTML=`<div class="ct">Drink and rest</div><div class="cd">Fully heal the party, restore all energy, cleanse poison & burn.</div>`;
+  drink.addEventListener('click',()=>{
+    SFX.play("heal");
+    RUN.party.forEach(p=>{ if(p.alive){ p.hp=p.maxhp; p.mp=p.maxmp; p.effects=(p.effects||[]).filter(e=>e.k!=="poison"&&e.k!=="burn"); } });
+    toast("The spring restores the whole party.");
+    setTimeout(()=>completeNode(node),300);
+  });
+  const bottle=document.createElement('button'); bottle.className="choice";
+  bottle.innerHTML=`<div class="ct">Bottle some for the road</div><div class="cd">Heal 40% now and take a Medkit with you.</div>`;
+  bottle.addEventListener('click',()=>{
+    SFX.play("heal"); healParty(0.4); RUN.items.push("medkit");
+    toast("Bottled clean water — party heals and gains a Medkit.");
+    setTimeout(()=>completeNode(node),300);
+  });
+  cc.appendChild(drink); cc.appendChild(bottle);
+  show('eventScreen');
+}
+// 🎲 Gamble: Ashfall Roulette — risk scrap for a shot at a big score, a relic, or a fight.
+function openGamble(node){
+  document.getElementById('evLoc').textContent="Ashfall Roulette";
+  document.getElementById('evTitle').textContent="🎲 A Wanderer's Wager";
+  document.getElementById('evText').textContent="A grinning drifter spins a rusted revolver's cylinder on an upturned crate. \"One chamber's a prize, one's a bust, one's... trouble. Ante up or walk on. The ash loves a gambler.\"";
+  const cc=document.getElementById('evChoices'); cc.innerHTML="";
+  const ante=25;
+  const bet=document.createElement('button'); bet.className="choice"; if(RUN.scrap<ante) bet.disabled=true;
+  bet.innerHTML=`<div class="ct">Ante ${ante} scrap and spin</div><div class="cd">${RUN.scrap<ante?'Not enough scrap.':'Big win, a relic, or a fight. Your luck.'}</div>`;
+  bet.addEventListener('click',()=>{
+    if(RUN.scrap<ante) return;
+    RUN.scrap-=ante; syncScrap(); SFX.play("click");
+    const r=Math.random();
+    if(r<0.45){ const win=ante*2+40+Math.floor(Math.random()*40); addScrap(win); toast(`Jackpot! +${win} scrap.`); setTimeout(()=>completeNode(node),300); }
+    else if(r<0.70){ grantRelic(); setTimeout(()=>completeNode(node),300); }
+    else if(r<0.88){ const it=randItem(); RUN.items.push(it); addScrap(15); toast(`A consolation: a ${ITEMS[it].name} and +15 scrap.`); setTimeout(()=>completeNode(node),300); }
+    else { toast("The chamber wasn't empty — an ambush!"); startBattle({type:"battle",layer:RUN.curLayer}, true); }
+  });
+  const walk=document.createElement('button'); walk.className="choice";
+  walk.innerHTML=`<div class="ct">Keep your scrap and walk on</div><div class="cd">No risk, no reward.</div>`;
+  walk.addEventListener('click',()=>{ SFX.play("click"); toast("You leave the drifter to his game."); setTimeout(()=>completeNode(node),200); });
+  cc.appendChild(bet); cc.appendChild(walk);
+  show('eventScreen');
 }
 // The Journey's end: the lost settlement of Vessel's Rest. Pure narrative; recruits Marloes.
 function startSettlement(node){
@@ -4977,6 +5729,7 @@ function completeNode(node){
   // Beating a biome boss = clear this page; move to the next biome or win the run.
   if(node.type==="boss"){
     if(RUN.quest){ finishExpedition(node); return; }              // expedition boss = quest complete
+    if(RUN.endless){ endlessAdvance(node); return; }              // endless never "wins" — it deepens
     if(RUN.biomeIdx>=RUN.biomeCount-1){ runVictory(); return; } // final beacon
     RUN.biomeIdx++;
     if(RUN.biomeIdx===1) grantAch("spelunker");
@@ -4992,6 +5745,41 @@ function completeNode(node){
   Music.play(curBiome().track);
   saveRun();
   show('mapScreen');
+}
+// Endless: a boss falls — bank a checkpoint, scale up, and drop into the next biome forever.
+function endlessAdvance(node){
+  RUN.loop=(RUN.loop||1)+1;
+  RUN.endlessBonus=(RUN.endlessBonus||0)+2;    // each biome makes the next tougher
+  // checkpoint reward (banked immediately so nothing is lost if the party later falls)
+  const coreReward=2, insightReward=1, scrapReward=50+RUN.loop*10;
+  META.cores+=coreReward; META.insight=(META.insight||0)+insightReward;
+  META.scrap+=scrapReward; META.stats.scrapEarned+=scrapReward;
+  META.wins=(META.wins||0)+0;                  // endless doesn't count as a beacon win
+  META.bestEndless=Math.max(META.bestEndless||0, RUN.loop-1);
+  save(); checkAch();
+  RUN.biomeIdx++;
+  buildBiomeMap();
+  const b=curBiome();
+  Music.play("victory");
+  SFX.play("unlock");
+  achToast({icon:"♾️", name:`Depth ${RUN.loop-1} cleared`, desc:`+${scrapReward} scrap · +${coreReward} cores · +${insightReward} insight`});
+  openPanel("Deeper Into the Ash", `
+    <div class="center">
+      <div style="font-size:48px;margin:6px 0">♾️</div>
+      <h3 class="sec" style="border:none;justify-content:center;text-align:center">Depth ${RUN.loop-1} cleared.</h3>
+      <p class="muted" style="line-height:1.6;max-width:460px;margin:0 auto 14px">
+        The boss falls, but the ash goes deeper still. Your haul is banked — safe now, whatever comes.
+        The way down opens into <b>${b.name}</b>, and everything here is stronger than what you just beat.
+      </p>
+      <div style="margin:14px 0">
+        <span class="pill" style="color:var(--gold)">+${scrapReward} Scrap banked</span>
+        <span class="pill" style="color:var(--blue)">+${coreReward} Cores</span>
+        <span class="pill" style="color:#c89aec">+${insightReward} Insight</span>
+      </div>
+      <p class="muted small" style="max-width:460px;margin:0 auto 14px">You can push on, or <b>retreat</b> from the map (Abandon) any time to keep everything you've banked. There is no final beacon down here — only how deep you dare.</p>
+      <button class="btn rust" id="endlessGo">Descend into ${b.name}</button>
+    </div>`);
+  document.getElementById('endlessGo').addEventListener('click',()=>{ closePanel(); saveRun(); show('mapScreen'); toast(`Depth ${RUN.loop} · ${b.name}.`); });
 }
 
 /* ===================== EVENTS ===================== */
@@ -5121,7 +5909,7 @@ function startBattle(node, fromEvent){
   };
   const bi=curBiome();
   const bossName=ENEMY_TYPES[bi.boss]?ENEMY_TYPES[bi.boss].name:"Boss";
-  document.getElementById('cbLoc').textContent = node.type==="boss"? ("BOSS — "+bossName) : node.type==="elite"?("Elite · "+bi.name):("Skirmish · "+bi.name);
+  document.getElementById('cbLoc').textContent = node.type==="boss"? ("BOSS — "+bossName) : node.type==="ambush"?("⚡ Ambush · "+bi.name) : node.type==="elite"?("Elite · "+bi.name):("Skirmish · "+bi.name);
   const cs=document.getElementById('combatScreen');
   cs.style.background=`linear-gradient(180deg,${bi.combatBg[0]},${bi.combatBg[1]})`;
   Music.play(node.type==="boss"?"boss":bi.track);
@@ -5629,13 +6417,22 @@ function winBattle(){
   banner("VICTORY");
   document.getElementById('actionBar').innerHTML="";
   // rewards
-  let reward = (node.type==="boss"?40:node.type==="elite"?45:25) + Math.floor(Math.random()*15);
-  let coreReward = node.type==="boss"?2 : node.type==="elite"?1 : 0;
+  let reward = (node.type==="boss"?40:node.type==="elite"?45:node.type==="ambush"?55:25) + Math.floor(Math.random()*15);
+  let coreReward = node.type==="boss"?2 : node.type==="elite"?1 : node.type==="ambush"?1 : 0;
   RUN.scrap+=reward; META.stats.scrapEarned+=reward; if(coreReward) accrueCores(coreReward);
   // item drops + insight for bosses
   let dropMsg="";
   if(node.type==="boss"){ const it=randItem(); RUN.items.push(it); dropMsg=` The boss dropped a ${ITEMS[it].name}!`; META.insight=(META.insight||0)+1; dropMsg+=" (+1 Insight)"; }
+  else if(node.type==="ambush"){ const it=randItem(); RUN.items.push(it); dropMsg=` Ambushers dropped a ${ITEMS[it].name}.`; }
   else if(Math.random()<0.28){ const it=randItem(); RUN.items.push(it); dropMsg=` Found a ${ITEMS[it].name}.`; }
+  // furniture salvage: bosses always turn up a piece; elites/ambushes often; grunts occasionally
+  const furnChance = node.type==="boss"?1 : (node.type==="elite"||node.type==="ambush")?0.35 : 0.14;
+  if(Math.random()<furnChance){
+    const fid=rollFurnitureDrop(); ownFurniture(fid);
+    const f=FURNITURE[fid];
+    dropMsg += ` Salvaged furniture: ${f.icon} ${f.name} — place it at the Decorator.`;
+    achToast({icon:f.icon, name:"Furniture found: "+f.name, desc:"Decorate Headquarters with it back home."});
+  }
   save();
   log(`Victory! Salvaged ${reward} scrap${coreReward?` and ${coreReward} core`+(coreReward>1?'s':''):''}.${dropMsg}`);
   checkAch();
@@ -5655,7 +6452,7 @@ function winBattle(){
 // decide whether a battle drops a trinket, and of what rarity
 function rollTrinketDrop(node){
   if(node.type==="boss"){ return Math.random()<0.55 ? rollTrinket("rare") : rollTrinket("uncommon"); }
-  if(node.type==="elite"){ return Math.random()<0.5 ? rollTrinket("uncommon") : rollTrinket("common"); }
+  if(node.type==="elite"||node.type==="ambush"){ return Math.random()<0.5 ? rollTrinket("uncommon") : rollTrinket("common"); }
   const r=Math.random();
   if(r<0.14) return rollTrinket("common");
   if(r<0.17) return rollTrinket("uncommon");
@@ -5875,9 +6672,18 @@ function showHowto(){
     <h3 class="sec">The Bunker (three rooms)</h3>
     <p class="muted small" style="line-height:1.6">
       Walk around with <b>WASD</b> or <b>arrow keys</b> and press <b>E</b> or <b>Space</b> at a station. Doors connect three rooms:<br>
-      <b>🏛 Headquarters</b> — 🖥️ Deploy Terminal (start a run), 📋 <b>Message Board</b> (special missions — see below), 🛏️ Barracks (your survivors), 📖 Field Journal, and the 🎵 Jukebox.<br>
-      <b>🏪 The Market</b> — 🔧 Workshop (permanent stat upgrades), 🛒 Trading Post (provisions &amp; permanent relics), a 🛒 <b>Rotating Stall</b> (a traveling merchant who changes after every run, each with their own goods, personality, and lore), plus three curiosities you unlock via the board: a 🏗️ <b>Salvage Crane</b> (dig the scrap heap for a random haul), an 🕯️ <b>Shrine of Names</b> (honor the fallen for a small permanent party bonus), and an 👁️ <b>Info Broker</b> (buy intel that eases your next run). Consumables you buy are stashed for your next deployment.<br>
+      <b>🏛 Headquarters</b> — 🖥️ Deploy Terminal (start a run), 📋 <b>Message Board</b> (special missions — see below), 🛏️ Barracks (your survivors), 📖 Field Journal, a 🛋️ <b>Decorator</b> (place furniture around the bunker), and the 🎵 Jukebox.<br>
+      <b>🏪 The Market</b> — 🔧 Workshop (permanent stat upgrades), 🛒 Trading Post (provisions, permanent relics &amp; <b>furnishings</b>), a 🛒 <b>Rotating Stall</b> (a traveling merchant who changes after every run, each with their own goods, personality, and lore), plus three curiosities you unlock via the board: a 🏗️ <b>Salvage Crane</b> (dig the scrap heap for a random haul), an 🕯️ <b>Shrine of Names</b> (honor the fallen for a small permanent party bonus), and an 👁️ <b>Info Broker</b> (buy intel that eases your next run). Consumables you buy are stashed for your next deployment.<br>
+      <b>🌲 The Forest</b> — see below.<br>
       <b>🌊 The Pond</b> — see below.
+    </p>
+    <h3 class="sec">The Forest &amp; Crafting</h3>
+    <p class="muted small" style="line-height:1.6">
+      Step out the bunker's <b>🌲 Forest</b> door into a living wood that survived the burning. Harvest the three clearings — <b>🪓 Old Growth</b>, <b>🌿 Bramble Thicket</b>, and <b>⛏️ Mossy Boulders</b> — for <b>materials</b> (greenwood, plant fiber, amber resin, river stone, shed antler, and rare ashblooms). Each clearing recharges over time, so make the rounds. Take your haul to the <b>🔨 Woodworker's Bench</b> and spend materials on <b>recipes</b> to craft furniture — including pieces you can <i>only</i> get by crafting — then place them at the Decorator. Two forest-dwellers keep you company: <b>🌳 Bram</b>, an old hermit who tends the woods, and <b>🌸 Thistle</b>, a small forest spirit. Talk to them for lore; grow close and each leaves you a gift of materials.
+    </p>
+    <h3 class="sec">Decorating the Bunker</h3>
+    <p class="muted small" style="line-height:1.6">
+      Furniture comes from three places: <b>bought</b> at the Market (Trading Post &amp; the Rotating Stall), <b>found</b> as salvage on runs, or <b>crafted</b> from forest materials at the Woodworker's Bench. Take any owned piece to the 🛋️ <b>Decorator</b> in Headquarters, then click anywhere on the floor to place it (click a red × to remove one). Placement is free — rearrange as often as you like. Everything you own and place is saved.
     </p>
     <h3 class="sec">The Message Board</h3>
     <p class="muted small" style="line-height:1.6">
@@ -5902,7 +6708,8 @@ function showHowto(){
     <p class="muted small" style="line-height:1.6">
       Once you've <b>lit the final beacon</b> at least once, an <b>Expeditions</b> list appears at the Deploy Terminal. Pick your party, then choose one:<br>
       🌿 <b>The Long Road</b> — a story journey to a lost settlement; recruit <b>Marloes, the Last Elder</b> (one time).<br>
-      🕳️ <b>The Gullet</b>, 🔥 <b>The Pyre Fields</b>, and 🩶 <b>The Weeping Vault</b> — single-biome quests with <b>stronger enemies and unique bosses</b> (The Devouring Maw, The Ash Effigy, The Hollow Choir). Each pays scrap, cores and insight, and your <b>first clear</b> of each grants a permanent relic. They stay <b>repeatable</b> afterward for the rewards.
+      🕳️ <b>The Gullet</b>, 🔥 <b>The Pyre Fields</b>, and 🩶 <b>The Weeping Vault</b> — single-biome quests with <b>stronger enemies and unique bosses</b> (The Devouring Maw, The Ash Effigy, The Hollow Choir). Each pays scrap, cores and insight, and your <b>first clear</b> of each grants a permanent relic. They stay <b>repeatable</b> afterward for the rewards.<br>
+      ♾️ <b>Endless Descent</b> — a run with no end. It cycles the three biomes forever, each loop harder than the last. Every biome boss you fell <b>banks</b> a checkpoint of cores, insight and scrap right away, then the ash goes deeper. There's no final beacon — just how far you can push before the party falls. <b>Abandon</b> from the map anytime to retreat and keep everything you've banked. Your deepest depth is recorded in the Field Journal.
     </p>
     <h3 class="sec">Finding Survivors</h3>
     <p class="muted small" style="line-height:1.6">
@@ -5922,7 +6729,10 @@ function showHowto(){
     <p class="muted small" style="line-height:1.6">
       Every run generates a fresh branching map from bottom to top. You start at the base; each node connects to
       one or two nodes above it by a path. Click any <b>glowing node the path leads to</b>: <b>⚔️ battles</b>, <b>💀 elites</b>,
-      <b>❓ events</b>, <b>🛒 shops</b>, <b>🔥 campfires</b>, and rare <b>🆘 survivors</b>. Your route is one-way upward —
+      <b>❓ events</b>, <b>🛒 shops</b>, <b>🔥 campfires</b>, and rare <b>🆘 survivors</b> — plus special nodes:
+      <b>💎 Caches</b> (a free haul of scrap, an item, sometimes gear), <b>⛲ Springs</b> (fully heal and cleanse the party),
+      <b>🎲 Gambles</b> (ante scrap for a shot at a jackpot or a relic — but a bad spin means a fight), and
+      <b>⚡ Ambushes</b> (a tougher surprise fight that pays out extra scrap and loot). Your route is one-way upward —
       choose carefully. Beat the <b>👑 boss</b> of each biome to press on.
     </p>
     <h3 class="sec">Saving &amp; Continuing</h3>
