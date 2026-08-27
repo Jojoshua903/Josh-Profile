@@ -183,17 +183,70 @@ input[type=color]{width:44px;height:38px;padding:2px;background:#0e050b;border:2
 .dialogue-box .cue{position:absolute;bottom:10px;right:16px;font-size:13px;color:var(--cyan);animation:blink 1s infinite}
 @keyframes blink{50%{opacity:.2}}
 
-/* nonstop debate statement highlighting */
-.statement-box{background:rgba(10,4,10,.9);border:3px solid #fff;border-radius:14px;padding:30px;
-  font-size:26px;line-height:1.6;min-height:150px;display:flex;align-items:center;justify-content:center;text-align:center;
-  box-shadow:0 0 30px rgba(255,61,127,.35)}
-.weakpoint{color:var(--gold);border-bottom:4px solid var(--gold);cursor:pointer;padding:2px 6px;border-radius:4px;
-  animation:shimmer 1.4s infinite;font-weight:bold}
-@keyframes shimmer{0%,100%{text-shadow:0 0 4px var(--gold)}50%{text-shadow:0 0 16px var(--gold),0 0 28px var(--gold)}}
-.weakpoint:hover{background:rgba(255,210,63,.2)}
+/* ---------- NONSTOP DEBATE: floating statement field ---------- */
+/* the whole play screen becomes an arena; statements drift across it on JS-driven paths */
+.debate-field{position:fixed;inset:0;z-index:10;overflow:hidden}
+.debate-field .df-prompt{position:absolute;top:54px;left:50%;transform:translateX(-50%);z-index:12;
+  background:rgba(10,4,10,.72);border:2px solid var(--cyan);border-radius:22px;padding:7px 18px;
+  font-family:"Trebuchet MS",sans-serif;font-size:14px;color:#e7f9ff;max-width:90vw;text-align:center;box-shadow:0 0 18px rgba(0,229,255,.25)}
+.debate-field.reb .df-prompt{border-color:var(--hot);color:#ffe1ea;box-shadow:0 0 18px rgba(255,0,102,.3)}
+.debate-hint{position:absolute;bottom:70px;left:50%;transform:translateX(-50%);z-index:12;
+  font-size:12px;color:#e7b8cf;font-family:"Trebuchet MS",sans-serif;background:rgba(10,4,10,.6);
+  border-radius:20px;padding:5px 14px;text-align:center;max-width:92vw}
+
+/* an individual floating statement/attack card */
+.floater{position:absolute;left:0;top:0;will-change:transform;
+  max-width:min(560px,72vw);padding:16px 22px;border-radius:14px;
+  background:rgba(10,4,10,.9);border:3px solid #fff;color:var(--paper);
+  font-size:clamp(16px,2.4vw,24px);line-height:1.45;font-weight:bold;text-align:center;
+  box-shadow:0 0 26px rgba(255,61,127,.32);cursor:default;
+  transition:box-shadow .2s, border-color .2s}
+.floater.speaker-tag{}
+.floater .fl-who{display:block;font-family:Impact,sans-serif;font-size:12px;letter-spacing:1px;
+  text-transform:uppercase;margin-bottom:5px;opacity:.9}
+.floater.reb-card{border-color:var(--hot);box-shadow:0 0 26px rgba(255,0,102,.4)}
+.floater.reb-card.flaw{border-color:var(--gold);box-shadow:0 0 40px rgba(255,210,63,.7);cursor:pointer}
+.floater.reb-card.flaw:hover{filter:brightness(1.1)}
+/* the ⚡ badge on a rebuttal's flawed attack, so the player knows to strike the whole card */
+.reb-flaw-badge{display:block;font-family:Impact,sans-serif;font-size:12px;letter-spacing:1px;
+  color:var(--ink);background:var(--gold);border-radius:20px;padding:2px 12px;margin:0 auto 8px;width:max-content;
+  animation:shimmer 1.1s infinite}
+.floater.hit{animation:flFall .7s ease-in forwards;pointer-events:none}
+@keyframes flFall{to{opacity:0;transform:translate(var(--fx,0),160%) rotate(24deg) scale(.7)}}
+.floater.entering{animation:flEnter .55s cubic-bezier(.16,1,.3,1) both}
+@keyframes flEnter{0%{opacity:0}100%{opacity:1}}
+
+/* the shootable weak point — glows and pulses while it floats past */
+.weakpoint{color:var(--gold);border-bottom:4px solid var(--gold);cursor:pointer;padding:2px 6px;border-radius:5px;
+  animation:shimmer 1.2s infinite;font-weight:bold;display:inline-block}
+@keyframes shimmer{0%,100%{text-shadow:0 0 4px var(--gold);background:rgba(255,210,63,0)}50%{text-shadow:0 0 16px var(--gold),0 0 30px var(--gold);background:rgba(255,210,63,.18)}}
+.weakpoint:hover{background:rgba(255,210,63,.32);transform:scale(1.06)}
+.reb-card.flaw .weak-marker{color:var(--gold)}
+
+/* crosshair reticle that follows the pointer once a bullet is armed */
+.debate-field.armed{cursor:none}
+.reticle{position:absolute;z-index:20;width:46px;height:46px;margin:-23px 0 0 -23px;pointer-events:none;
+  border:3px solid var(--cyan);border-radius:50%;box-shadow:0 0 12px var(--cyan),inset 0 0 8px rgba(0,229,255,.5);
+  display:none}
+.debate-field.reb.armed .reticle{border-color:var(--gold);box-shadow:0 0 12px var(--gold),inset 0 0 8px rgba(255,210,63,.5)}
+.reticle::before,.reticle::after{content:"";position:absolute;background:var(--cyan)}
+.reticle::before{left:50%;top:-10px;width:2px;height:66px;margin-left:-1px}
+.reticle::after{top:50%;left:-10px;height:2px;width:66px;margin-top:-1px}
+.debate-field.reb.armed .reticle::before,.debate-field.reb.armed .reticle::after{background:var(--gold)}
+.debate-field.armed .reticle{display:block}
+
+/* armed truth-bullet name that rides just under the reticle */
+.armed-label{position:absolute;z-index:20;transform:translate(-50%,34px);white-space:nowrap;
+  background:linear-gradient(160deg,#ffe27a,#ff9f1c);color:var(--ink);border:3px solid var(--ink);
+  border-radius:10px;padding:5px 12px;font-family:Impact,sans-serif;font-size:13px;box-shadow:3px 3px 0 rgba(0,0,0,.5);display:none;pointer-events:none}
+.debate-field.armed .armed-label{display:block}
 
 .debate-controls{display:flex;gap:12px;justify-content:center;align-items:center;margin-top:22px;flex-wrap:wrap}
 .stmt-counter{font-size:13px;color:#c98db0}
+/* keep the legacy box style around for the taunt/break screens */
+.statement-box{background:rgba(10,4,10,.9);border:3px solid #fff;border-radius:14px;padding:30px;
+  font-size:26px;line-height:1.6;min-height:120px;display:flex;align-items:center;justify-content:center;text-align:center;
+  box-shadow:0 0 30px rgba(255,61,127,.35)}
 
 /* truth bullet tray */
 .bullet-tray{position:absolute;bottom:0;left:0;right:0;background:rgba(10,4,10,.92);border-top:3px solid var(--gold);
@@ -913,35 +966,60 @@ const EXPR_FX = {
 ============================================================ */
 const AV_BODIES = [
   {id:"uniform",  name:"School Uniform"},
+  {id:"blazer",   name:"Blazer"},
+  {id:"sailor",   name:"Sailor Uniform"},
   {id:"hoodie",   name:"Hoodie"},
+  {id:"jacket",   name:"Biker Jacket"},
   {id:"suit",     name:"Sharp Suit"},
+  {id:"vest",     name:"Vest & Tie"},
   {id:"dress",    name:"Dress"},
+  {id:"gothic",   name:"Gothic Lolita"},
+  {id:"kimono",   name:"Kimono"},
   {id:"tank",     name:"Athletic Tank"},
+  {id:"overalls", name:"Overalls"},
+  {id:"apron",    name:"Apron"},
   {id:"cloak",    name:"Cloak"},
+  {id:"robe",     name:"Long Robe"},
   {id:"labcoat",  name:"Lab Coat"},
   {id:"armor",    name:"Armor"}
 ];
 const AV_HAIR = [
-  {id:"short",   name:"Short"},
-  {id:"messy",   name:"Messy"},
-  {id:"long",    name:"Long"},
-  {id:"ponytail",name:"Ponytail"},
-  {id:"twintail",name:"Twin Tails"},
-  {id:"buzz",    name:"Buzzcut"},
-  {id:"bun",     name:"Top Bun"},
-  {id:"bald",    name:"Bald / Hat only"},
-  {id:"afro",    name:"Afro"},
-  {id:"spiky",   name:"Spiky"}
+  {id:"short",    name:"Short"},
+  {id:"messy",    name:"Messy"},
+  {id:"bob",      name:"Bob Cut"},
+  {id:"long",     name:"Long"},
+  {id:"wavy",     name:"Long Wavy"},
+  {id:"hime",     name:"Hime Cut"},
+  {id:"ponytail", name:"Ponytail"},
+  {id:"twintail", name:"Twin Tails"},
+  {id:"pigtails", name:"Low Pigtails"},
+  {id:"braid",    name:"Side Braid"},
+  {id:"buzz",     name:"Buzzcut"},
+  {id:"bun",      name:"Top Bun"},
+  {id:"pompadour",name:"Pompadour"},
+  {id:"undercut", name:"Undercut"},
+  {id:"bald",     name:"Bald / Hat only"},
+  {id:"afro",     name:"Afro"},
+  {id:"curly",    name:"Curly"},
+  {id:"spiky",    name:"Spiky"}
 ];
 const AV_ACC = [
   {id:"none",     name:"None"},
   {id:"glasses",  name:"Glasses"},
   {id:"shades",   name:"Sunglasses"},
+  {id:"monocle",  name:"Monocle"},
+  {id:"eyepatch", name:"Eyepatch"},
+  {id:"tie",      name:"Necktie"},
   {id:"bowtie",   name:"Bow Tie"},
   {id:"scarf",    name:"Scarf"},
   {id:"cap",      name:"Cap"},
+  {id:"beanie",   name:"Beanie"},
+  {id:"crown",    name:"Tiara"},
+  {id:"flower",   name:"Hair Flower"},
+  {id:"ahoge",    name:"Cowlick (Ahoge)"},
   {id:"headphones",name:"Headphones"},
   {id:"earrings", name:"Earrings"},
+  {id:"bandage",  name:"Face Bandage"},
   {id:"mask",     name:"Face Mask"}
 ];
 const AV_SKINS   = ["#ffe0bd","#f1c27d","#e0ac69","#c68642","#8d5524","#5c3a21","#ffd9c0","#d1a3ff"];
@@ -1040,6 +1118,23 @@ function hairParts(style, col, uid){
       front:`<path d="M20 44 Q22 12 50 12 Q78 12 80 44 Q72 28 60 30 Q56 22 50 22 Q44 22 40 30 Q28 30 20 44 Z" fill="${grad}"/>${hl}`};
     case "bun": return {back:"", front:`<circle cx="50" cy="10" r="10" fill="${grad}"/><path d="M22 42 Q24 16 50 16 Q76 16 78 42 Q70 30 60 30 Q56 24 50 24 Q44 24 40 30 Q30 30 22 42 Z" fill="${grad}"/>`};
     case "afro": return {back:`<circle cx="50" cy="34" r="40" fill="${grad}"/>`, front:`<path d="M22 46 Q26 30 40 32 Q50 26 60 32 Q74 30 78 46 Q66 38 50 38 Q34 38 22 46 Z" fill="${dk}"/>`};
+    case "bob": return {back:`<path d="M18 40 Q18 72 26 78 L74 78 Q82 72 82 40 Q82 8 50 8 Q18 8 18 40 Z" fill="${dk}"/>`,
+      front:`<path d="M18 46 Q20 12 50 12 Q80 12 82 46 Q72 26 58 30 Q54 20 50 20 Q46 20 42 30 Q28 26 18 46 Z" fill="${grad}"/>${hl}`};
+    case "wavy": return {back:`<path d="M14 40 Q12 92 24 102 Q30 88 26 74 Q34 96 40 100 Q40 82 36 70 Q46 96 50 98 Q54 96 64 70 Q60 82 60 100 Q66 96 74 74 Q70 88 76 102 Q88 92 86 40 Q86 6 50 6 Q14 6 14 40 Z" fill="${dk}"/>`,
+      front:`<path d="M18 46 Q20 10 50 10 Q80 10 82 46 Q72 26 58 30 Q54 20 50 20 Q46 20 42 30 Q28 26 18 46 Z" fill="${grad}"/>${hl}`};
+    case "hime": return {back:`<path d="M16 40 Q16 92 28 98 L72 98 Q84 92 84 40 Q84 6 50 6 Q16 6 16 40 Z" fill="${dk}"/>`,
+      front:`<path d="M18 40 Q18 12 50 12 Q82 12 82 40 L82 30 Q70 26 66 34 L66 22 Q58 20 54 30 L54 20 Q50 18 46 20 L46 30 Q42 20 34 22 L34 34 Q30 26 18 30 Z" fill="${grad}"/>
+        <rect x="18" y="34" width="14" height="30" fill="${grad}"/><rect x="68" y="34" width="14" height="30" fill="${grad}"/>${hl}`};
+    case "pigtails": return {back:`<path d="M20 44 Q2 58 10 84 Q12 94 20 90 Q14 68 30 52 Z" fill="${dk}"/><path d="M80 44 Q98 58 90 84 Q88 94 80 90 Q86 68 70 52 Z" fill="${dk}"/>`,
+      front:`<path d="M20 44 Q22 12 50 12 Q78 12 80 44 Q72 28 60 30 Q56 22 50 22 Q44 22 40 30 Q28 30 20 44 Z" fill="${grad}"/>${hl}`};
+    case "braid": return {back:`<path d="M70 30 Q92 46 84 74 L88 88 L80 92 L82 78 Q66 54 60 38 Z" fill="${dk}"/>
+        <path d="M80 60 L88 64 M79 70 L87 76 M80 82 L86 88" stroke="${shade(col,-0.5)}" stroke-width="1.6"/>`,
+      front:`<path d="M20 44 Q22 12 50 12 Q78 12 80 44 Q72 28 60 30 Q56 22 50 22 Q44 22 40 30 Q28 30 20 44 Z" fill="${grad}"/>${hl}`};
+    case "pompadour": return {back:"", front:`<path d="M22 44 Q18 6 42 6 Q52 -2 64 8 Q84 12 80 40 Q74 26 60 28 Q56 18 48 22 Q40 14 34 26 Q26 26 22 44 Z" fill="${grad}"/>${hl}`};
+    case "undercut": return {back:"", front:`<path d="M24 42 Q26 14 50 14 Q78 14 80 30 Q82 20 60 16 Q40 14 34 30 L28 30 Q26 36 24 42 Z" fill="${grad}"/>
+        <path d="M24 42 Q24 34 28 30 L34 30 Q30 36 30 44 Z" fill="${shade(col,-0.5)}"/>${hl}`};
+    case "curly": return {back:`<circle cx="30" cy="30" r="12" fill="${dk}"/><circle cx="50" cy="24" r="13" fill="${dk}"/><circle cx="70" cy="30" r="12" fill="${dk}"/><circle cx="24" cy="46" r="9" fill="${dk}"/><circle cx="76" cy="46" r="9" fill="${dk}"/>`,
+      front:`<circle cx="34" cy="26" r="9" fill="${grad}"/><circle cx="50" cy="20" r="10" fill="${grad}"/><circle cx="66" cy="26" r="9" fill="${grad}"/><path d="M22 44 Q26 30 40 34 Q50 28 60 34 Q74 30 78 44 Q66 36 50 36 Q34 36 22 44 Z" fill="${grad}"/>${hl}`};
     default: return {back:"", front:`<path d="M20 44 Q22 12 50 12 Q78 12 80 44 Q72 30 60 30 Q56 22 50 22 Q44 22 40 30 Q28 30 20 44 Z" fill="${grad}"/>${hl}`};
   }
 }
@@ -1071,6 +1166,50 @@ function bodyParts(style, col, skin, uid){
       <path d="M20 120 Q50 108 80 120" stroke="${lt}" stroke-width="4" fill="none"/>
       <path d="M20 134 Q50 124 80 134" stroke="${dk}" stroke-width="3" fill="none"/>
       <circle cx="50" cy="115" r="4.5" fill="${lt}"/>`;
+    case "blazer": return `${neck}<path d="M18 150 Q18 112 34 106 Q42 102 50 102 Q58 102 66 106 Q82 112 82 150 Z" fill="${grad}"/>
+      <path d="M40 104 L30 150 L44 150 L50 116 L56 150 L70 150 L60 104 Z" fill="#f2f2f4"/>
+      <path d="M40 104 L50 118 L44 130 Z" fill="${dk}"/><path d="M60 104 L50 118 L56 130 Z" fill="${dk}"/>
+      <path d="M46 108 L50 120 L54 108 Z" fill="${col}"/><rect x="47" y="118" width="6" height="24" rx="2" fill="${col}"/>`;
+    case "sailor": return `${neck}<path d="M18 150 Q18 112 34 106 Q42 102 50 102 Q58 102 66 106 Q82 112 82 150 Z" fill="${grad}"/>
+      <path d="M34 106 L50 128 L66 106 L74 116 L58 150 L42 150 L26 116 Z" fill="#f4f6fb"/>
+      <path d="M40 106 L50 122 L60 106 L56 106 L50 116 L44 106 Z" fill="${dk}"/>
+      <path d="M44 122 Q50 118 56 122 L54 132 L46 132 Z" fill="${col}"/>
+      <path d="M46 122 L50 138 L54 122" stroke="${dk}" stroke-width="2.4" fill="none"/>`;
+    case "jacket": return `${neck}<path d="M18 150 Q18 112 34 106 Q42 102 50 102 Q58 102 66 106 Q82 112 82 150 Z" fill="${grad}"/>
+      <path d="M40 104 L34 150 L48 150 L50 110 Z" fill="${dk}"/>
+      <path d="M60 104 L66 150 L52 150 L50 110 Z" fill="${lt}"/>
+      <rect x="48" y="112" width="4" height="32" rx="2" fill="${shade(col,-0.5)}"/>
+      <path d="M30 116 L26 128" stroke="${lt}" stroke-width="3" stroke-linecap="round"/>
+      <path d="M70 116 L74 128" stroke="${dk}" stroke-width="3" stroke-linecap="round"/>`;
+    case "vest": return `${neck}<path d="M18 150 Q18 112 34 106 Q42 102 50 102 Q58 102 66 106 Q82 112 82 150 Z" fill="#ececee"/>
+      <path d="M40 104 Q50 118 60 104 L62 150 L38 150 Z" fill="${dk}"/>
+      <path d="M46 105 L50 120 L54 105 Z" fill="#3a2f24"/>
+      <rect x="49" y="116" width="2.4" height="28" fill="${shade(col,-0.4)}"/>
+      <circle cx="50" cy="124" r="1.4" fill="${lt}"/><circle cx="50" cy="132" r="1.4" fill="${lt}"/>`;
+    case "gothic": return `${neck}<path d="M30 106 Q50 98 70 106 L86 150 L14 150 Z" fill="${grad}"/>
+      <path d="M30 150 Q50 140 70 150 L70 150 Z" fill="${dk}"/>
+      <path d="M40 108 Q50 118 60 108 L58 128 Q50 134 42 128 Z" fill="#f4eef2"/>
+      <path d="M42 130 Q50 136 58 130 L58 138 Q50 142 42 138 Z" fill="${lt}"/>
+      <rect x="14" y="146" width="72" height="4" fill="#f4eef2"/>`;
+    case "kimono": return `${neck}<path d="M22 150 Q22 110 34 106 Q42 102 50 102 Q58 102 66 106 Q78 110 78 150 Z" fill="${grad}"/>
+      <path d="M50 104 L34 150 L50 150 Z" fill="${lt}"/>
+      <path d="M50 104 L66 150 L50 150 Z" fill="${dk}"/>
+      <rect x="30" y="128" width="40" height="12" fill="${shade(col,-0.45)}"/>
+      <rect x="46" y="128" width="8" height="12" fill="${lt}"/>`;
+    case "overalls": return `${neck}<path d="M18 150 Q18 112 34 106 Q42 102 50 102 Q58 102 66 106 Q82 112 82 150 Z" fill="${shade(skin,-0.04)}"/>
+      <path d="M30 120 Q50 116 70 120 L70 150 L30 150 Z" fill="${grad}"/>
+      <rect x="34" y="106" width="6" height="20" rx="2" fill="${grad}"/><rect x="60" y="106" width="6" height="20" rx="2" fill="${grad}"/>
+      <rect x="42" y="124" width="16" height="12" rx="2" fill="${dk}"/>
+      <circle cx="37" cy="123" r="2" fill="${lt}"/><circle cx="63" cy="123" r="2" fill="${lt}"/>`;
+    case "apron": return `${neck}<path d="M18 150 Q18 112 34 106 Q42 102 50 102 Q58 102 66 106 Q82 112 82 150 Z" fill="${grad}"/>
+      <path d="M40 106 L38 150 L62 150 L60 106 Q50 112 40 106 Z" fill="#f6f6f6"/>
+      <path d="M42 108 L44 102 M58 108 L56 102" stroke="#f6f6f6" stroke-width="3" stroke-linecap="round"/>
+      <rect x="38" y="126" width="24" height="2.6" fill="${dk}"/>
+      <rect x="44" y="132" width="12" height="10" rx="1.5" fill="#eaeaea"/>`;
+    case "robe": return `${neck}<path d="M16 150 Q18 108 50 100 Q82 108 84 150 Z" fill="${grad}"/>
+      <path d="M50 100 L50 150" stroke="${dk}" stroke-width="2" opacity=".5"/>
+      <path d="M28 150 Q50 140 72 150" stroke="${dk}" stroke-width="3" fill="none"/>
+      <path d="M40 104 Q50 116 60 104 L58 124 Q50 130 42 124 Z" fill="${dk}"/>`;
     default: // uniform
       return `${neck}<path d="M18 150 Q18 112 34 106 Q42 102 50 102 Q58 102 66 106 Q82 112 82 150 Z" fill="${grad}"/>
       <path d="M38 104 Q50 120 62 104 L60 130 Q50 136 40 130 Z" fill="#f6f6f6"/>
@@ -1078,8 +1217,9 @@ function bodyParts(style, col, skin, uid){
   }
 }
 
-/* ---- ACCESSORY (drawn over the face/head) ---- */
-function accParts(acc){
+/* ---- ACCESSORY (drawn over the face/head). hairCol lets hair-colored bits (ahoge) match. ---- */
+function accParts(acc, hairCol){
+  const hc=hairCol||"#2b2b2b";
   switch(acc){
     case "glasses": return `<circle cx="38" cy="46" r="8" fill="none" stroke="#20140f" stroke-width="2"/><circle cx="62" cy="46" r="8" fill="none" stroke="#20140f" stroke-width="2"/><line x1="46" y1="46" x2="54" y2="46" stroke="#20140f" stroke-width="2"/>`;
     case "shades": return `<rect x="30" y="40" width="16" height="11" rx="3" fill="#141414"/><rect x="54" y="40" width="16" height="11" rx="3" fill="#141414"/><line x1="46" y1="43" x2="54" y2="43" stroke="#141414" stroke-width="2"/>`;
@@ -1089,6 +1229,14 @@ function accParts(acc){
     case "headphones": return `<path d="M22 44 Q22 12 50 12 Q78 12 78 44" stroke="#222" stroke-width="4" fill="none"/><rect x="16" y="40" width="10" height="16" rx="4" fill="#e05a5a"/><rect x="74" y="40" width="10" height="16" rx="4" fill="#e05a5a"/>`;
     case "earrings": return `<circle cx="22" cy="60" r="3" fill="#ffd23f"/><circle cx="78" cy="60" r="3" fill="#ffd23f"/>`;
     case "mask": return `<path d="M30 54 Q50 50 70 54 L68 72 Q50 80 32 72 Z" fill="#f0f0f0" stroke="#cfcfcf" stroke-width="1.5"/><path d="M30 58 L20 52 M70 58 L80 52" stroke="#cfcfcf" stroke-width="2"/>`;
+    case "monocle": return `<circle cx="62" cy="46" r="8.5" fill="rgba(200,235,255,.25)" stroke="#d8b23f" stroke-width="2"/><path d="M62 55 Q60 66 54 74" stroke="#d8b23f" stroke-width="1.4" fill="none"/>`;
+    case "eyepatch": return `<path d="M30 40 L46 40 L44 54 L32 54 Z" fill="#1a1a1a"/><path d="M30 41 L14 34 M46 41 L70 36" stroke="#1a1a1a" stroke-width="2"/>`;
+    case "tie": return `<path d="M46 104 L50 110 L54 104 L52 102 L48 102 Z" fill="#2a3550"/><path d="M47 110 L50 132 L53 110 Z" fill="#3a5088"/><path d="M48.5 116 L51.5 116 L51 124 L49 124 Z" fill="#2a3550" opacity=".5"/>`;
+    case "beanie": return `<path d="M20 34 Q20 8 50 8 Q80 8 80 34 Q80 26 50 24 Q20 26 20 34 Z" fill="#7a5aa8"/><rect x="18" y="32" width="64" height="8" rx="4" fill="#5a3f88"/><circle cx="50" cy="8" r="4" fill="#c9b3ee"/>`;
+    case "crown": return `<path d="M30 20 L36 8 L44 18 L50 4 L56 18 L64 8 L70 20 Q50 14 30 20 Z" fill="#ffd23f" stroke="#d8a71f" stroke-width="1"/><circle cx="50" cy="10" r="2" fill="#ff5aa0"/><circle cx="37" cy="13" r="1.6" fill="#5ad1e0"/><circle cx="63" cy="13" r="1.6" fill="#5ad1e0"/><rect x="30" y="19" width="40" height="4" rx="2" fill="#e8bf30"/>`;
+    case "flower": return `<g transform="translate(30 22)"><circle r="3.4" fill="#ffd23f"/><circle cx="0" cy="-6" r="3.4" fill="#ff5aa0"/><circle cx="6" cy="-2" r="3.4" fill="#ff5aa0"/><circle cx="4" cy="5" r="3.4" fill="#ff5aa0"/><circle cx="-4" cy="5" r="3.4" fill="#ff5aa0"/><circle cx="-6" cy="-2" r="3.4" fill="#ff5aa0"/></g>`;
+    case "ahoge": return `<path d="M50 13 Q53 2 61 0 Q55 5 55 11 Q52 12 50 14 Z" fill="${hc}"/>`;
+    case "bandage": return `<rect x="54" y="40" width="16" height="5" rx="1" transform="rotate(18 62 42)" fill="#f6efe6" stroke="#d9cdbc" stroke-width="0.8"/><rect x="55" y="45" width="14" height="4" rx="1" transform="rotate(18 62 47)" fill="#efe6d8" stroke="#d9cdbc" stroke-width="0.8"/><path d="M30 66 L44 70" stroke="#f6efe6" stroke-width="4" stroke-linecap="round"/>`;
     default: return "";
   }
 }
@@ -1128,7 +1276,7 @@ function buildAvatarSVG(c, expr){
     </g>
     <g class="av-face">${faceParts(useExpr)}</g>
     <g class="av-hairfront">${hair.front}</g>
-    <g class="av-acc">${accParts(acc)}</g>
+    <g class="av-acc">${accParts(acc, a.hairColor)}</g>
   </svg>`;
 }
 
@@ -1260,58 +1408,58 @@ function songById(id){ return SONGS.find(s=>s.id===id); }
    Each entry is just a name, talent, initials, color and a fitting emoji sprite. */
 const PRESET_CASTS = [
   { id:"dr1", label:"DR: THH", students:[
-    {name:"Makoto Naegi", title:"Ultimate Lucky Student", sprite:"🍀", color:"#8ad3ff"},
-    {name:"Kyoko Kirigiri", title:"Ultimate Detective", sprite:"🕵️", color:"#a98fd6"},
-    {name:"Byakuya Togami", title:"Ultimate Affluent Progeny", sprite:"🤑", color:"#3f5fb0"},
-    {name:"Aoi Asahina", title:"Ultimate Swimming Pro", sprite:"🏊", color:"#ff8a3d"},
-    {name:"Toko Fukawa", title:"Ultimate Writing Prodigy", sprite:"📓", color:"#6b4a6b"},
-    {name:"Sakura Ogami", title:"Ultimate Martial Artist", sprite:"💪", color:"#d8b28a"},
-    {name:"Celestia Ludenberg", title:"Ultimate Gambler", sprite:"🎴", color:"#c0324a"},
-    {name:"Kiyotaka Ishimaru", title:"Ultimate Moral Compass", sprite:"📢", color:"#e0d05a"},
-    {name:"Mondo Owada", title:"Ultimate Biker Gang Leader", sprite:"🏍️", color:"#c8892f"},
-    {name:"Leon Kuwata", title:"Ultimate Baseball Star", sprite:"⚾", color:"#ff5470"},
-    {name:"Hifumi Yamada", title:"Ultimate Fanfic Creator", sprite:"📚", color:"#9a6b3f"},
-    {name:"Sayaka Maizono", title:"Ultimate Pop Sensation", sprite:"🎤", color:"#5ad1e0"},
-    {name:"Junko Enoshima", title:"Ultimate Fashionista", sprite:"👛", color:"#ff3d7f"},
-    {name:"Mukuro Ikusaba", title:"Ultimate Soldier", sprite:"🔪", color:"#7a8a99"},
-    {name:"Chihiro Fujisaki", title:"Ultimate Programmer", sprite:"💻", color:"#8fd08a"},
-    {name:"Yasuhiro Hagakure", title:"Ultimate Clairvoyant", sprite:"🔮", color:"#7a5a3f"}
+    {name:"Makoto Naegi", title:"Ultimate Lucky Student", sprite:"🍀", color:"#8ad3ff", av:{body:"blazer",hair:"messy",hairColor:"#5a3a1a",skin:"#ffe0bd",acc:"ahoge"}},
+    {name:"Kyoko Kirigiri", title:"Ultimate Detective", sprite:"🕵️", color:"#a98fd6", av:{body:"jacket",hair:"long",hairColor:"#7b2ff7",skin:"#ffe0bd",acc:"tie"}},
+    {name:"Byakuya Togami", title:"Ultimate Affluent Progeny", sprite:"🤑", color:"#3f5fb0", av:{body:"suit",hair:"short",hairColor:"#c9a227",skin:"#ffe0bd",acc:"glasses"}},
+    {name:"Aoi Asahina", title:"Ultimate Swimming Pro", sprite:"🏊", color:"#ff8a3d", av:{body:"tank",hair:"ponytail",hairColor:"#5a3a1a",skin:"#e0ac69",acc:"none"}},
+    {name:"Toko Fukawa", title:"Ultimate Writing Prodigy", sprite:"📓", color:"#6b4a6b", av:{body:"sailor",hair:"braid",hairColor:"#5a3a1a",skin:"#f1c27d",acc:"none"}},
+    {name:"Sakura Ogami", title:"Ultimate Martial Artist", sprite:"💪", color:"#d8b28a", av:{body:"uniform",hair:"long",hairColor:"#f5f5f5",skin:"#e0ac69",acc:"none"}},
+    {name:"Celestia Ludenberg", title:"Ultimate Gambler", sprite:"🎴", color:"#c0324a", av:{body:"gothic",hair:"twintail",hairColor:"#2b2b2b",skin:"#ffe0bd",acc:"none"}},
+    {name:"Kiyotaka Ishimaru", title:"Ultimate Moral Compass", sprite:"📢", color:"#e0d05a", av:{body:"uniform",hair:"pompadour",hairColor:"#2b2b2b",skin:"#f1c27d",acc:"none"}},
+    {name:"Mondo Owada", title:"Ultimate Biker Gang Leader", sprite:"🏍️", color:"#c8892f", av:{body:"jacket",hair:"pompadour",hairColor:"#8a5a2b",skin:"#e0ac69",acc:"none"}},
+    {name:"Leon Kuwata", title:"Ultimate Baseball Star", sprite:"⚾", color:"#ff5470", av:{body:"jacket",hair:"spiky",hairColor:"#d94f4f",skin:"#e0ac69",acc:"cap"}},
+    {name:"Hifumi Yamada", title:"Ultimate Fanfic Creator", sprite:"📚", color:"#9a6b3f", av:{body:"uniform",hair:"bob",hairColor:"#2b2b2b",skin:"#f1c27d",acc:"glasses"}},
+    {name:"Sayaka Maizono", title:"Ultimate Pop Sensation", sprite:"🎤", color:"#5ad1e0", av:{body:"sailor",hair:"wavy",hairColor:"#3f6fd6",skin:"#ffe0bd",acc:"none"}},
+    {name:"Junko Enoshima", title:"Ultimate Fashionista", sprite:"👛", color:"#ff3d7f", av:{body:"blazer",hair:"pigtails",hairColor:"#c9a227",skin:"#ffe0bd",acc:"none"}},
+    {name:"Mukuro Ikusaba", title:"Ultimate Soldier", sprite:"🔪", color:"#7a8a99", av:{body:"jacket",hair:"short",hairColor:"#2b2b2b",skin:"#f1c27d",acc:"none"}},
+    {name:"Chihiro Fujisaki", title:"Ultimate Programmer", sprite:"💻", color:"#8fd08a", av:{body:"sailor",hair:"bob",hairColor:"#c9a227",skin:"#ffe0bd",acc:"none"}},
+    {name:"Yasuhiro Hagakure", title:"Ultimate Clairvoyant", sprite:"🔮", color:"#7a5a3f", av:{body:"uniform",hair:"afro",hairColor:"#5a3a1a",skin:"#c68642",acc:"none"}}
   ]},
   { id:"dr2", label:"DR2: GD", students:[
-    {name:"Hajime Hinata", title:"Ultimate ???", sprite:"🌿", color:"#5aa06a"},
-    {name:"Nagito Komaeda", title:"Ultimate Lucky Student", sprite:"🍀", color:"#cfd8dc"},
-    {name:"Chiaki Nanami", title:"Ultimate Gamer", sprite:"🎮", color:"#f0a6d0"},
-    {name:"Sonia Nevermind", title:"Ultimate Princess", sprite:"👑", color:"#f0d84a"},
-    {name:"Gundham Tanaka", title:"Ultimate Breeder", sprite:"🐹", color:"#5a4a6b"},
-    {name:"Kazuichi Souda", title:"Ultimate Mechanic", sprite:"🔧", color:"#ff6b35"},
-    {name:"Fuyuhiko Kuzuryu", title:"Ultimate Yakuza", sprite:"🔫", color:"#c8a23f"},
-    {name:"Peko Pekoyama", title:"Ultimate Swordswoman", sprite:"⚔️", color:"#9aa6b0"},
-    {name:"Akane Owari", title:"Ultimate Gymnast", sprite:"🤸", color:"#e08a3f"},
-    {name:"Nekomaru Nidai", title:"Ultimate Team Manager", sprite:"📣", color:"#8a99a6"},
-    {name:"Ibuki Mioda", title:"Ultimate Musician", sprite:"🎸", color:"#ff5aa0"},
-    {name:"Hiyoko Saionji", title:"Ultimate Traditional Dancer", sprite:"🌸", color:"#ffb0c8"},
-    {name:"Mahiru Koizumi", title:"Ultimate Photographer", sprite:"📷", color:"#e05a5a"},
-    {name:"Mikan Tsumiki", title:"Ultimate Nurse", sprite:"🩹", color:"#c88aa6"},
-    {name:"Teruteru Hanamura", title:"Ultimate Cook", sprite:"🍳", color:"#b06b3f"},
-    {name:"Byakuya Twogami", title:"Ultimate Imposter", sprite:"🎭", color:"#3f5fb0"}
+    {name:"Hajime Hinata", title:"Ultimate ???", sprite:"🌿", color:"#5aa06a", av:{body:"jacket",hair:"spiky",hairColor:"#5a3a1a",skin:"#e0ac69",acc:"tie"}},
+    {name:"Nagito Komaeda", title:"Ultimate Lucky Student", sprite:"🍀", color:"#cfd8dc", av:{body:"jacket",hair:"messy",hairColor:"#f5f5f5",skin:"#ffe0bd",acc:"none"}},
+    {name:"Chiaki Nanami", title:"Ultimate Gamer", sprite:"🎮", color:"#f0a6d0", av:{body:"hoodie",hair:"bob",hairColor:"#e05aa0",skin:"#ffe0bd",acc:"ahoge"}},
+    {name:"Sonia Nevermind", title:"Ultimate Princess", sprite:"👑", color:"#f0d84a", av:{body:"dress",hair:"long",hairColor:"#c9a227",skin:"#ffe0bd",acc:"crown"}},
+    {name:"Gundham Tanaka", title:"Ultimate Breeder", sprite:"🐹", color:"#5a4a6b", av:{body:"cloak",hair:"spiky",hairColor:"#2b2b2b",skin:"#f1c27d",acc:"scarf"}},
+    {name:"Kazuichi Souda", title:"Ultimate Mechanic", sprite:"🔧", color:"#ff6b35", av:{body:"overalls",hair:"undercut",hairColor:"#ff6b35",skin:"#e0ac69",acc:"beanie"}},
+    {name:"Fuyuhiko Kuzuryu", title:"Ultimate Yakuza", sprite:"🔫", color:"#c8a23f", av:{body:"suit",hair:"buzz",hairColor:"#c9a227",skin:"#f1c27d",acc:"none"}},
+    {name:"Peko Pekoyama", title:"Ultimate Swordswoman", sprite:"⚔️", color:"#9aa6b0", av:{body:"kimono",hair:"braid",hairColor:"#9aa6b0",skin:"#f1c27d",acc:"glasses"}},
+    {name:"Akane Owari", title:"Ultimate Gymnast", sprite:"🤸", color:"#e08a3f", av:{body:"tank",hair:"wavy",hairColor:"#5a3a1a",skin:"#c68642",acc:"none"}},
+    {name:"Nekomaru Nidai", title:"Ultimate Team Manager", sprite:"📣", color:"#8a99a6", av:{body:"tank",hair:"spiky",hairColor:"#2b2b2b",skin:"#c68642",acc:"none"}},
+    {name:"Ibuki Mioda", title:"Ultimate Musician", sprite:"🎸", color:"#ff5aa0", av:{body:"jacket",hair:"twintail",hairColor:"#ff5aa0",skin:"#ffe0bd",acc:"none"}},
+    {name:"Hiyoko Saionji", title:"Ultimate Traditional Dancer", sprite:"🌸", color:"#ffb0c8", av:{body:"kimono",hair:"pigtails",hairColor:"#c9a227",skin:"#ffe0bd",acc:"flower"}},
+    {name:"Mahiru Koizumi", title:"Ultimate Photographer", sprite:"📷", color:"#e05a5a", av:{body:"blazer",hair:"bob",hairColor:"#d94f4f",skin:"#ffe0bd",acc:"none"}},
+    {name:"Mikan Tsumiki", title:"Ultimate Nurse", sprite:"🩹", color:"#c88aa6", av:{body:"apron",hair:"long",hairColor:"#7b2ff7",skin:"#ffe0bd",acc:"bandage"}},
+    {name:"Teruteru Hanamura", title:"Ultimate Cook", sprite:"🍳", color:"#b06b3f", av:{body:"apron",hair:"pompadour",hairColor:"#8a5a2b",skin:"#e0ac69",acc:"none"}},
+    {name:"Byakuya Twogami", title:"Ultimate Imposter", sprite:"🎭", color:"#3f5fb0", av:{body:"suit",hair:"short",hairColor:"#c9a227",skin:"#f1c27d",acc:"glasses"}}
   ]},
   { id:"v3", label:"DRV3: KH", students:[
-    {name:"Kaede Akamatsu", title:"Ultimate Pianist", sprite:"🎹", color:"#f0c84a"},
-    {name:"Shuichi Saihara", title:"Ultimate Detective", sprite:"🎩", color:"#5a6b99"},
-    {name:"Kaito Momota", title:"Ultimate Astronaut", sprite:"🚀", color:"#7b5fd6"},
-    {name:"Maki Harukawa", title:"Ultimate Child Caregiver", sprite:"🧷", color:"#c0324a"},
-    {name:"Kokichi Ouma", title:"Ultimate Supreme Leader", sprite:"😈", color:"#7a4a99"},
-    {name:"Rantaro Amami", title:"Ultimate ???", sprite:"🌊", color:"#5aa08a"},
-    {name:"Miu Iruma", title:"Ultimate Inventor", sprite:"🔩", color:"#ff8ad0"},
-    {name:"Kiibo", title:"Ultimate Robot", sprite:"🤖", color:"#b0c8d8"},
-    {name:"Korekiyo Shinguji", title:"Ultimate Anthropologist", sprite:"🧵", color:"#4a4a5a"},
-    {name:"Himiko Yumeno", title:"Ultimate Magician", sprite:"🪄", color:"#e05a5a"},
-    {name:"Tenko Chabashira", title:"Ultimate Aikido Master", sprite:"🥋", color:"#5ad1a0"},
-    {name:"Angie Yonaga", title:"Ultimate Artist", sprite:"🎨", color:"#f0d05a"},
-    {name:"Tsumugi Shirogane", title:"Ultimate Cosplayer", sprite:"🧵", color:"#8aa6d8"},
-    {name:"Gonta Gokuhara", title:"Ultimate Entomologist", sprite:"🐛", color:"#6b8a3f"},
-    {name:"Ryoma Hoshi", title:"Ultimate Tennis Pro", sprite:"🎾", color:"#5a6b6b"},
-    {name:"Kirumi Tojo", title:"Ultimate Maid", sprite:"🧹", color:"#7a7a8a"}
+    {name:"Kaede Akamatsu", title:"Ultimate Pianist", sprite:"🎹", color:"#f0c84a", av:{body:"vest",hair:"long",hairColor:"#c9a227",skin:"#ffe0bd",acc:"none"}},
+    {name:"Shuichi Saihara", title:"Ultimate Detective", sprite:"🎩", color:"#5a6b99", av:{body:"blazer",hair:"short",hairColor:"#2b2b2b",skin:"#ffe0bd",acc:"cap"}},
+    {name:"Kaito Momota", title:"Ultimate Astronaut", sprite:"🚀", color:"#7b5fd6", av:{body:"jacket",hair:"spiky",hairColor:"#7b2ff7",skin:"#e0ac69",acc:"none"}},
+    {name:"Maki Harukawa", title:"Ultimate Child Caregiver", sprite:"🧷", color:"#c0324a", av:{body:"blazer",hair:"pigtails",hairColor:"#2b2b2b",skin:"#f1c27d",acc:"none"}},
+    {name:"Kokichi Ouma", title:"Ultimate Supreme Leader", sprite:"😈", color:"#7a4a99", av:{body:"jacket",hair:"messy",hairColor:"#7b2ff7",skin:"#ffe0bd",acc:"none"}},
+    {name:"Rantaro Amami", title:"Ultimate ???", sprite:"🌊", color:"#5aa08a", av:{body:"blazer",hair:"short",hairColor:"#00c2a8",skin:"#e0ac69",acc:"earrings"}},
+    {name:"Miu Iruma", title:"Ultimate Inventor", sprite:"🔩", color:"#ff8ad0", av:{body:"labcoat",hair:"wavy",hairColor:"#c9a227",skin:"#ffe0bd",acc:"none"}},
+    {name:"Kiibo", title:"Ultimate Robot", sprite:"🤖", color:"#b0c8d8", av:{body:"armor",hair:"buzz",hairColor:"#9aa6b0",skin:"#ffd9c0",acc:"none"}},
+    {name:"Korekiyo Shinguji", title:"Ultimate Anthropologist", sprite:"🧵", color:"#4a4a5a", av:{body:"robe",hair:"long",hairColor:"#2b2b2b",skin:"#f1c27d",acc:"mask"}},
+    {name:"Himiko Yumeno", title:"Ultimate Magician", sprite:"🪄", color:"#e05a5a", av:{body:"cloak",hair:"messy",hairColor:"#d94f4f",skin:"#ffe0bd",acc:"none"}},
+    {name:"Tenko Chabashira", title:"Ultimate Aikido Master", sprite:"🥋", color:"#5ad1a0", av:{body:"kimono",hair:"pigtails",hairColor:"#5a3a1a",skin:"#f1c27d",acc:"none"}},
+    {name:"Angie Yonaga", title:"Ultimate Artist", sprite:"🎨", color:"#f0d05a", av:{body:"dress",hair:"bob",hairColor:"#f5f5f5",skin:"#c68642",acc:"none"}},
+    {name:"Tsumugi Shirogane", title:"Ultimate Cosplayer", sprite:"🧵", color:"#8aa6d8", av:{body:"sailor",hair:"long",hairColor:"#3f6fd6",skin:"#ffe0bd",acc:"glasses"}},
+    {name:"Gonta Gokuhara", title:"Ultimate Entomologist", sprite:"🐛", color:"#6b8a3f", av:{body:"suit",hair:"long",hairColor:"#5a3a1a",skin:"#c68642",acc:"glasses"}},
+    {name:"Ryoma Hoshi", title:"Ultimate Tennis Pro", sprite:"🎾", color:"#5a6b6b", av:{body:"jacket",hair:"buzz",hairColor:"#2b2b2b",skin:"#e0ac69",acc:"none"}},
+    {name:"Kirumi Tojo", title:"Ultimate Maid", sprite:"🧹", color:"#7a7a8a", av:{body:"apron",hair:"bob",hairColor:"#2b2b2b",skin:"#ffe0bd",acc:"none"}}
   ]}
 ];
 
@@ -1685,6 +1833,21 @@ function bulletFilterUI(seg){
   return `<div class="bf-hint mini">Leave all unchecked to show every truth bullet. Check some to show only those during this minigame.</div>
     <div class="bf-list">${boxes}</div>`;
 }
+/* motion controls for how statements/attacks move across the screen during play */
+function motionUI(seg){
+  const mo=seg.motion||{};
+  const opt=(list,cur,def)=>list.map(o=>`<option value="${o.id}" ${o.id===(cur||def)?"selected":""}>${esc(o.name)}</option>`).join("");
+  return `<div class="card" style="border-color:var(--cyan);margin-top:12px">
+    <label>🎞️ Statement Motion</label>
+    <div class="mini" style="margin-bottom:8px">Control how the floating statements move as they sweep across the screen during play.</div>
+    <div class="card-row">
+      <div class="field small"><label>Speed</label><select data-mo="speed">${opt(MOTION_SPEEDS,mo.speed,"normal")}</select></div>
+      <div class="field small"><label>Direction</label><select data-mo="dir">${opt(MOTION_DIRS,mo.dir,"rtl")}</select></div>
+      <div class="field small"><label>Wave / Bob</label><select data-mo="wave">${opt(MOTION_WAVES,mo.wave,"gentle")}</select></div>
+      <div class="field small"><label>Tilt</label><select data-mo="tilt">${opt(MOTION_TILTS,mo.tilt,"slight")}</select></div>
+    </div>
+  </div>`;
+}
 
 /* ---- MUSIC EDITOR ---- */
 function renderSongs(){
@@ -1839,11 +2002,12 @@ function renderScript(){
               <div class="field"><label>Player cut-in sprite</label><select data-f="cutinPlayerChar">${charOptions(seg.cutinPlayerChar)}</select></div>
             </div>
           </div>
-          <div class="help">A 1v1 clash. The opponent throws a series of attacks on your reasoning. Advance through them, then <b>counter the flawed one</b> by presenting the correct truth bullet. Mark exactly one attack as the flawed point and choose the bullet that shatters it.</div>
+          <div class="help">A 1v1 clash. The opponent's attacks sweep across the screen one at a time. Arm a truth bullet, then <b>click the flawed attack card</b> (it glows gold with a ⚡ badge) to shatter it. Mark exactly one attack as the flawed point and choose the bullet that breaks it. No need for brackets here — the whole flawed card is the target.</div>
           <div data-rstmts>${rebHTML || '<div class="empty">No attacks yet.</div>'}</div>
           <div class="add-bar"><button class="btn cyan sm" data-addrstmt>+ Add Attack</button></div>
           <label style="margin-top:12px">🔸 Truth Bullets shown in this showdown</label>
           ${bulletFilterUI(seg)}
+          ${motionUI(seg)}
           <div class="field" style="margin-top:12px"><label>Victory line (after the counter lands)</label>
             <textarea data-f="winLine" placeholder="Checkmate. Your whole argument just fell apart!">${esc(seg.winLine||"")}</textarea></div>
         </div>`;
@@ -1972,6 +2136,7 @@ function renderScript(){
           <div class="add-bar"><button class="btn cyan sm" data-addstmt>+ Add Statement</button></div>
           <label style="margin-top:12px">🔸 Truth Bullets shown in this debate</label>
           ${bulletFilterUI(seg)}
+          ${motionUI(seg)}
           <div class="field" style="margin-top:12px"><label>Break line (said when the correct bullet lands)</label>
             <textarea data-f="breakLine" placeholder="That's your contradiction! You couldn't have been there!">${esc(seg.breakLine||"")}</textarea></div>
         </div>`;
@@ -1989,6 +2154,9 @@ function renderScript(){
         else seg.bulletFilter=seg.bulletFilter.filter(x=>x!==id);
         save();
       });
+    });
+    det.querySelectorAll("[data-mo]").forEach(sel=>{
+      sel.addEventListener("change",()=>{ seg.motion=seg.motion||{}; seg.motion[sel.dataset.mo]=sel.value; save(); });
     });
     det.querySelectorAll("[data-sf]").forEach(inp=>{
       inp.addEventListener("input",()=>{
@@ -2426,7 +2594,14 @@ function renderPresetList(){
   });
 }
 function addPresetStudent(s){
-  state.characters.push({id:uid(),name:s.name,title:s.title,initials:presetInitials(s.name),color:s.color,sprite:s.sprite,expr:"normal",spriteMode:"emoji",avatar:avatarDefaults(state.characters.length)});
+  // presets ship with a hand-picked custom body; fall back to emoji if none is defined
+  const hasBody = !!s.av;
+  state.characters.push({
+    id:uid(), name:s.name, title:s.title, initials:presetInitials(s.name), color:s.color,
+    sprite:s.sprite, expr:"normal",
+    spriteMode: hasBody ? "builder" : "emoji",
+    avatar: hasBody ? Object.assign({acc:"none"}, s.av) : avatarDefaults(state.characters.length)
+  });
   renderChars(); refreshCharDropdowns(); renderSeats(); save(); toast(`Added ${s.name}`);
 }
 $("#addPreset").addEventListener("click",openPresets);
@@ -2731,7 +2906,7 @@ function startTrial(){
   $("#devNav").classList.toggle("hidden", !state.info.devMode);
   showStep();
 }
-function exitTrial(){ stopInvestigation(); play.classList.remove("show"); $("#bulletTray").classList.remove("up"); $("#refPanel").classList.remove("show"); stopMusic(); }
+function exitTrial(){ stopDebateEngine(); stopInvestigation(); play.classList.remove("show"); $("#bulletTray").classList.remove("up"); $("#refPanel").classList.remove("show"); stopMusic(); }
 
 /* ---- keyboard controls (active only during play) ---- */
 document.addEventListener("keydown",e=>{
@@ -2777,23 +2952,17 @@ document.addEventListener("keydown",e=>{
     if(click("#rebWin")) return;
     if(click("#rebStart")) return;
     const box=$(".dialogue-box"); if(box){ box.click(); return; }
-    // debate/rebuttal: Enter presents the selected bullet
-    if(click("#openTray")||click("#rebPresent")) return;
     if(click("#submitClose")||click("#hangSubmit")) return;
     return;
   }
-  // bullet tray selection with number keys (debate/rebuttal)
+  // bullet tray selection with number keys — arms a truth bullet during a debate/showdown
   if(/^[1-9]$/.test(k)){
-    const trayUp=$("#bulletTray").classList.contains("up");
     const bullets=$$("#trayBullets .bullet");
     const choices=$$(".choice");
-    if(bullets.length && (trayUp || $("#openTray")||$("#rebPresent"))){ const b=bullets[+k-1]; if(b){ e.preventDefault(); b.click(); } return; }
+    if(bullets.length && (run && run.debate)){ const b=bullets[+k-1]; if(b){ e.preventDefault(); b.click(); } return; }
     if(choices.length){ const c=choices[+k-1]; if(c){ e.preventDefault(); c.click(); } return; }
     return;
   }
-  // debate statement nav with arrows
-  if(k==="ArrowRight"){ if(click("#nextStmt")||click("#rebNext")){ e.preventDefault(); } return; }
-  if(k==="ArrowLeft"){ if(click("#prevStmt")||click("#rebPrev")){ e.preventDefault(); } return; }
   // toggle tray with 'b'
   if(k==="b"||k==="B"){ const t=$("#trayToggle"); if(t && !t.classList.contains("hidden")){ e.preventDefault(); $("#bulletTray").classList.toggle("up"); } return; }
 });
@@ -2825,6 +2994,7 @@ function loseLife(){
   return true;
 }
 function gameOver(){
+  stopDebateEngine();
   $("#trayToggle").classList.add("hidden"); $("#bulletTray").classList.remove("up");
   playSong("verdict");
   stage.innerHTML=`<div class="center-msg gameover">
@@ -2927,6 +3097,7 @@ function neighborStripHTML(char){
 
 function showStep(){
   stopInvestigation();
+  stopDebateEngine(); // tear down any running floating-statement field before we leave it
   const step=run.steps[run.idx];
   $("#trayToggle").classList.add("hidden");
   $("#bulletTray").classList.remove("up");
@@ -3331,44 +3502,257 @@ function renderDialogue(seg){
   box.addEventListener("click",()=>{ if(!done){ finish(); } else { nextStep(); } });
 }
 
-/* ---- NONSTOP DEBATE ---- */
+/* ============================================================
+   NONSTOP DEBATE — floating statement field
+   Every statement is a card that drifts across the stage on its
+   own path (rAF-driven). Arm a truth bullet, then click a glowing
+   weak point mid-flight to break the contradiction.
+============================================================ */
+function stopDebateEngine(){
+  if(run && run.debate){
+    if(run.debate.raf) cancelAnimationFrame(run.debate.raf);
+    if(run.debate.onMove) $("#play").removeEventListener("mousemove",run.debate.onMove);
+    run.debate=null;
+  }
+}
 function renderDebate(seg){
   $("#phaseTag").textContent="Nonstop Debate";
-  run.debate={seg, si:0, solved:false};
+  const stmts=(seg.statements||[]).filter(s=>(s.text||"").trim());
   run.trayBullets=trayBulletsFor(seg);
   $("#trayToggle").classList.remove("hidden");
   $("#playBg").classList.add("camera-pan");
   renderTrayBullets();
-  showStatement();
+  if(!stmts.length){ nextStep(); return; }
+  buildFloatField(seg, stmts, "debate");
 }
-function showStatement(){
-  const {seg,si}=run.debate;
-  const s=seg.statements[si];
-  const char=charById(s.speaker);
-  // parse [weak point]
-  let html=esc(s.text).replace(/\[([^\]]+)\]/g,(m,p1)=>`<span class="weakpoint" data-weak="1">${p1}</span>`);
-  const hasWeak=/\[[^\]]+\]/.test(s.text);
+/* ---- statement-motion settings (authored per debate/rebuttal segment) ---- */
+const MOTION_SPEEDS=[
+  {id:"slow",  name:"Slow",       px:150},
+  {id:"normal",name:"Normal",     px:220},
+  {id:"fast",  name:"Fast",       px:320},
+  {id:"blitz", name:"Blitz",      px:460}
+];
+const MOTION_DIRS=[
+  {id:"rtl", name:"Right → Left"},
+  {id:"ltr", name:"Left → Right"},
+  {id:"alt", name:"Alternating"}
+];
+const MOTION_WAVES=[
+  {id:"none",  name:"Straight",   amp:0},
+  {id:"gentle",name:"Gentle bob", amp:16},
+  {id:"wavy",  name:"Wavy",       amp:36},
+  {id:"wild",  name:"Wild",       amp:64}
+];
+const MOTION_TILTS=[
+  {id:"none",   name:"Upright",  deg:0},
+  {id:"slight", name:"Slight",   deg:4},
+  {id:"tilty",  name:"Tilted",   deg:10}
+];
+function motionSpeedPx(id){ const o=MOTION_SPEEDS.find(x=>x.id===id); return o?o.px:220; }
+function motionWaveAmp(id){ const o=MOTION_WAVES.find(x=>x.id===id); return o?o.amp:16; }
+function motionTiltDeg(id){ const o=MOTION_TILTS.find(x=>x.id===id); return o?o.deg:4; }
+// turn the stored {speedId,dir,waveId,tiltId} into concrete numbers the engine uses
+function normalizeMotion(mo){
+  mo=mo||{};
+  return {
+    speed: motionSpeedPx(mo.speed||"normal"),
+    dir:   (mo.dir||"rtl"),
+    wave:  motionWaveAmp(mo.wave||"gentle"),
+    tilt:  motionTiltDeg(mo.tilt||"slight")
+  };
+}
+/* shared floating-field builder used by both debate and rebuttal.
+   Statements appear ONE AT A TIME: a card enters from the right, drifts
+   across the arena, and only when it has fully left the far side does the
+   next statement in order slide in. After the last it loops to the first. */
+function buildFloatField(seg, stmts, mode){
+  const isReb = mode==="reb";
+  const opp = isReb ? charById(seg.speaker) : null;
+  const promptText = isReb
+    ? (seg.openLine||"Counter the flaw in my logic — if you can!")
+    : (seg.prompt||"Find the contradiction!");
+  const hintText = isReb
+    ? "One attack at a time — arm a bullet, then strike the glowing ⚡ weak point before it passes."
+    : "Statements sweep past one by one. Arm a truth bullet, then click a glowing weak point as it drifts by.";
   stage.innerHTML=`
-    ${neighborStripHTML(char)}
-    ${speakerPlate(char, s.expr)}
-    <div class="statement-box" id="stmtBox">${html||"…"}</div>
-    <div class="debate-controls">
-      <button class="btn ghost" id="prevStmt" ${si===0?"disabled style=opacity:.4":""}>◀ Prev</button>
-      <span class="stmt-counter">Statement ${si+1} / ${seg.statements.length}</span>
-      <button class="btn cyan" id="nextStmt">Next ▶</button>
-      <button class="btn gold" id="openTray">🔸 Present Bullet</button>
-    </div>
-    <div class="mini" style="margin-top:10px;text-align:center">${esc(seg.prompt||"")}</div>`;
-  // weak point click (need a selected bullet)
-  $$(".weakpoint").forEach(w=>{
-    w.addEventListener("click",()=>{
-      if(!run.selectedBullet){ toast("Pick a truth bullet from the tray first!"); $("#bulletTray").classList.add("up"); return; }
-      resolveShot(s);
-    });
+    <div class="debate-field ${isReb?'reb':''}" id="debateField">
+      <div class="df-prompt">${isReb?"⚔️ ":""}${esc(promptText)}</div>
+      <div class="reticle" id="reticle"></div>
+      <div class="armed-label" id="armedLabel"></div>
+      <div class="debate-hint" id="debateHint">${esc(hintText)}</div>
+    </div>`;
+  const field=$("#debateField");
+  const fieldRect=()=>field.getBoundingClientRect();
+
+  // motion settings authored per segment (with sensible defaults)
+  const motion=normalizeMotion(seg.motion);
+
+  run.debate={ seg, stmts, mode, opp, isReb, idx:0, active:null, raf:null, motion,
+    last:performance.now(), onMove:null, resolving:false };
+
+  // reticle follows the pointer; the field only shows it when a bullet is armed
+  const reticle=$("#reticle"), armedLabel=$("#armedLabel");
+  const onMove=(e)=>{
+    const r=fieldRect();
+    const x=e.clientX-r.left, y=e.clientY-r.top;
+    reticle.style.left=x+"px"; reticle.style.top=y+"px";
+    armedLabel.style.left=x+"px"; armedLabel.style.top=y+"px";
+  };
+  run.debate.onMove=onMove;
+  $("#play").addEventListener("mousemove",onMove);
+
+  // clicking a target (event-delegated so it survives re-layout every frame).
+  // Debate: the target is a [weak point] span. Rebuttal: the whole attack card is the target.
+  field.addEventListener("click",(e)=>{
+    const fl=run.debate.active; if(!fl) return;
+    let wp=null;
+    if(isReb){
+      const host=e.target.closest(".floater");
+      if(!host || host!==fl.el) return;       // only the current attack card counts
+      wp=fl.el;
+    } else {
+      wp=e.target.closest(".weakpoint");
+      if(!wp) return;
+      const host=wp.closest(".floater");
+      if(!host || host!==fl.el) return;
+    }
+    if(!run.selectedBullet){
+      toast("Arm a truth bullet from the tray first!");
+      $("#bulletTray").classList.add("up");
+      return;
+    }
+    fireAtFloater(fl, wp);
   });
-  $("#prevStmt").addEventListener("click",()=>{ if(run.debate.si>0){run.debate.si--; showStatement();} });
-  $("#nextStmt").addEventListener("click",()=>{ run.debate.si=(run.debate.si+1)%seg.statements.length; showStatement(); });
-  $("#openTray").addEventListener("click",()=>{ $("#bulletTray").classList.toggle("up"); });
+
+  reflectArmedState();
+  spawnNextStatement();  // slide in the first statement
+  startFloatLoop();
+}
+/* build + launch the next statement card */
+function spawnNextStatement(){
+  const D=run.debate; if(!D) return;
+  const field=$("#debateField"); if(!field) return;
+  const s=D.stmts[D.idx];
+  const m=D.motion;
+  const rect=field.getBoundingClientRect();
+  const W=rect.width||window.innerWidth, H=rect.height||window.innerHeight;
+  const el=document.createElement("div");
+  el.className="floater entering"+(D.isReb?" reb-card"+(s.flawed?" flaw":""):"");
+  const who = D.isReb ? (D.opp?D.opp.name:"") : (charById(s.speaker)?charById(s.speaker).name:"");
+  let body = esc(s.text).replace(/\[([^\]]+)\]/g,(m,p1)=>`<span class="weakpoint" data-weak="1">${p1}</span>`);
+  // in rebuttal the whole flawed card is the target — badge it so the player knows to strike it
+  if(D.isReb && s.flawed){ body=`<span class="reb-flaw-badge">⚡ WEAK POINT</span>`+body; }
+  el.innerHTML=`${who?`<span class="fl-who">${esc(who)}</span>`:""}<span class="fl-body">${body||"…"}</span>`;
+  field.appendChild(el);
+  const ew=el.offsetWidth||280, eh=el.offsetHeight||90;
+  // direction: which way this card travels (alternate flips each spawn)
+  let goLeft;
+  if(m.dir==="ltr") goLeft=false;
+  else if(m.dir==="alt") goLeft=(D.idx%2===0);
+  else goLeft=true; // "rtl" default
+  const spd=(m.speed||220)/1000;             // px per ms
+  const jitter=1+(Math.random()*0.2-0.1);     // ±10% so it doesn't feel robotic
+  const active={
+    el, stmt:s, w:ew, h:eh,
+    x: goLeft ? (W+20) : (-ew-20),
+    y: Math.max(20, (H-eh)/2 + (Math.random()*2-1)*Math.min(120,(H-eh)/3)),
+    vx: (goLeft?-1:1)*spd*jitter,
+    goLeft,
+    rot: (Math.random()*2-1)*(m.tilt||0),
+    vr: (Math.random()*2-1)*(m.tilt||0)*0.004,
+    bobA: (m.wave!=null?m.wave:16), bobT: Math.random()*Math.PI*2,
+    bobS: 0.0011+Math.random()*0.0008,
+    baseY: 0
+  };
+  active.baseY=active.y;
+  D.active=active;
+}
+/* the animation heartbeat: slide the current card; when it leaves, bring the next */
+function startFloatLoop(){
+  const D=run.debate; if(!D) return;
+  const field=$("#debateField"); if(!field) return;
+  const step=(now)=>{
+    if(!run || !run.debate || run.debate!==D){ return; }
+    const dt=Math.min(48, now-D.last); D.last=now;
+    const r=field.getBoundingClientRect();
+    const W=r.width;
+    const paused = $("#bulletTray").classList.contains("up") || D.resolving;
+    const f=D.active;
+    if(f && !f.dead){
+      if(!paused){
+        f.x += f.vx*dt;
+        f.bobT += f.bobS*dt;
+        f.rot += f.vr*dt;
+        // once the card has fully slid off its exit edge, advance to the next statement
+        const gone = f.goLeft ? (f.x < -f.w-20) : (f.x > W+20);
+        if(gone){
+          f.el.remove();
+          D.active=null;
+          D.idx=(D.idx+1)%D.stmts.length;   // loop the debate
+          spawnNextStatement();
+          D.raf=requestAnimationFrame(step);
+          return;
+        }
+      }
+      const bob=Math.sin(f.bobT)*f.bobA;
+      f.el.style.transform=`translate(${f.x.toFixed(1)}px, ${(f.baseY+bob).toFixed(1)}px) rotate(${f.rot.toFixed(2)}deg)`;
+    }
+    D.raf=requestAnimationFrame(step);
+  };
+  D.raf=requestAnimationFrame(step);
+}
+/* show/hide the reticle + armed-bullet name depending on selection */
+function reflectArmedState(){
+  const field=$("#debateField"); if(!field||!run.debate) return;
+  const armed=!!run.selectedBullet;
+  field.classList.toggle("armed", armed);
+  if(armed){
+    const b=state.bullets.find(x=>x.id===run.selectedBullet);
+    const lbl=$("#armedLabel"); if(lbl) lbl.textContent="🔸 "+((b&&b.name)||"Bullet");
+  }
+}
+/* the shot: correct bullet on the right statement wins; anything else is a miss */
+function fireAtFloater(fl, wp){
+  const D=run.debate; if(!D || D.resolving) return;
+  const s=fl.stmt;
+  const mode=D.mode;
+  // in rebuttal, only the flawed attack can be countered
+  if(mode==="reb" && !s.flawed){
+    doFlash("wrong","MISS!"); toast("Their logic holds there — find the real flaw!");
+    return;
+  }
+  const correct = run.selectedBullet===s.answerBullet && s.answerBullet;
+  if(correct){
+    D.resolving=true;
+    fl.dead=true;
+    // fling the shattered statement off-screen
+    fl.el.style.setProperty("--fx", (fl.vx>=0?"40%":"-40%"));
+    fl.el.classList.add("hit");
+    doFlash("correct", mode==="reb"?"COUNTER!":"BREAK!");
+    if(mode==="reb") rebResolveWin(s); else debateResolveWin(s);
+  } else {
+    doFlash("wrong","MISS!");
+    run.selectedBullet=null;
+    $$("#trayBullets .bullet").forEach(x=>x.classList.remove("selected"));
+    reflectArmedState();
+    toast(mode==="reb"?"That's not the evidence to break this!":"That bullet doesn't refute this. Try another!");
+    loseLife(); // keeps floating either way (if fatal, gameOver overrides the screen)
+  }
+}
+function debateResolveWin(s){
+  const seg=run.debate.seg;
+  setTimeout(()=>{
+    stopDebateEngine();
+    run.selectedBullet=null;
+    $("#bulletTray").classList.remove("up");
+    $("#trayToggle").classList.add("hidden");
+    stage.innerHTML=`<div class="center-msg">
+      <h2 style="color:var(--lime)">CONTRADICTION!</h2>
+      <p>${esc(seg.breakLine||"That settles it — the contradiction is exposed!")}</p>
+      <button class="btn lime" style="font-size:16px;padding:12px 24px" id="contBtn">Continue ▶</button>
+    </div>`;
+    $("#contBtn").addEventListener("click",nextStep);
+  },900);
 }
 function trayBulletsFor(seg){
   const filter=seg && seg.bulletFilter && seg.bulletFilter.length ? seg.bulletFilter : null;
@@ -3380,40 +3764,18 @@ function trayBulletsFor(seg){
 function renderTrayBullets(){
   const el=$("#trayBullets"); el.innerHTML="";
   const bullets=run.trayBullets||state.bullets;
-  if(!bullets.length){ el.innerHTML='<div class="mini">No truth bullets available here. (You can still click Next to skip.)</div>'; return; }
+  if(!bullets.length){ el.innerHTML='<div class="mini">No truth bullets available here.</div>'; return; }
   bullets.forEach(b=>{
     const d=document.createElement("div"); d.className="bullet"; d.dataset.id=b.id;
     d.innerHTML=`<div class="bname">🔸 ${esc(b.name||"Bullet")}</div><div class="bdesc">${esc(b.desc)}</div>`;
     d.addEventListener("click",()=>{
       run.selectedBullet = run.selectedBullet===b.id ? null : b.id;
       $$("#trayBullets .bullet").forEach(x=>x.classList.toggle("selected",x.dataset.id===run.selectedBullet));
-      if(run.selectedBullet) toast("Now click the glowing weak point!");
+      if(run.selectedBullet){ toast("Bullet armed — now strike a glowing weak point!"); $("#bulletTray").classList.remove("up"); }
+      reflectArmedState();
     });
     el.appendChild(d);
   });
-}
-function resolveShot(stmt){
-  const correctBullet = stmt.answerBullet;
-  if(run.selectedBullet===correctBullet && correctBullet){
-    doFlash("correct","BREAK!");
-    const seg=run.debate.seg;
-    setTimeout(()=>{
-      run.selectedBullet=null;
-      $("#bulletTray").classList.remove("up");
-      // show break line then advance
-      stage.innerHTML=`<div class="center-msg">
-        <h2 style="color:var(--lime)">CONTRADICTION!</h2>
-        <p>${esc(seg.breakLine||"That settles it — the contradiction is exposed!")}</p>
-        <button class="btn lime" style="font-size:16px;padding:12px 24px" id="contBtn">Continue ▶</button>
-      </div>`;
-      $("#contBtn").addEventListener("click",nextStep);
-    },850);
-  } else {
-    doFlash("wrong","MISS!");
-    run.selectedBullet=null;
-    $$("#trayBullets .bullet").forEach(x=>x.classList.remove("selected"));
-    loseLife();
-  }
 }
 function doFlash(kind,text){
   flash.className="flash "+kind; flashText.textContent=text;
@@ -3438,7 +3800,7 @@ function playCutin(side, char, text, cb){
   setTimeout(()=>{ el.classList.add("hidden"); if(cb) cb(); }, 1150);
 }
 
-$("#trayToggle").addEventListener("click",()=>$("#bulletTray").classList.toggle("up"));
+$("#trayToggle").addEventListener("click",()=>{ $("#bulletTray").classList.toggle("up"); });
 
 /* ---- in-trial reference panel (case notes) ---- */
 function renderRefPanel(){
@@ -3460,25 +3822,30 @@ $("#btnRef").addEventListener("click",()=>{ renderRefPanel(); $("#refPanel").cla
 $("#refClose").addEventListener("click",()=>$("#refPanel").classList.remove("show"));
 $("#refPanel").addEventListener("click",e=>{ if(e.target===$("#refPanel")) $("#refPanel").classList.remove("show"); });
 
-/* ---- REBUTTAL SHOWDOWN (1v1: opponent attacks, counter the flaw) ---- */
+/* ============================================================
+   REBUTTAL SHOWDOWN — 1v1 clash on the floating field
+   The opponent's attacks orbit the stage. Arm a bullet and strike
+   the flawed one (the ⚡ card) to shatter their argument.
+============================================================ */
 function renderRebuttal(seg){
   $("#phaseTag").textContent="Rebuttal Showdown";
   const opp=charById(seg.speaker);
-  const stmts=(seg.statements||[]).filter(s=>s.text.trim());
+  const stmts=(seg.statements||[]).filter(s=>(s.text||"").trim());
   const drawTaunt=()=>{
     stage.innerHTML=`<div class="center-msg">
       ${speakerPlate(opp, seg.expr||"smug")}
       <div class="reb-banner">Rebuttal Showdown!</div>
-      <div class="attack-box" style="border-color:var(--hot)">${esc(seg.openLine||"You overlooked something. Let's see you counter THIS!")}</div>
+      <div class="statement-box" style="border-color:var(--hot)">${esc(seg.openLine||"You overlooked something. Let's see you counter THIS!")}</div>
       <button class="btn hot" style="font-size:16px;padding:12px 24px;margin-top:18px" id="rebStart">Face the Challenge ⚔️</button>
     </div>`;
     $("#rebStart").addEventListener("click",()=>{
       if(!stmts.length){ nextStep(); return; }
-      run.reb={seg, opp, stmts, si:0}; run.selectedBullet=null;
+      run.selectedBullet=null;
       run.trayBullets=trayBulletsFor(seg);
       $("#trayToggle").classList.remove("hidden");
+      $("#playBg").classList.add("camera-pan");
       renderTrayBullets();
-      rebStatement();
+      buildFloatField(seg, stmts, "reb"); // reuse the floating engine, red-themed
     });
   };
   // opponent cut-in, then the taunt screen
@@ -3486,58 +3853,25 @@ function renderRebuttal(seg){
     playCutin("opp", opp, seg.cutinOppText||"OBJECTION!", drawTaunt);
   } else { drawTaunt(); }
 }
-function rebStatement(){
-  const {seg,opp,stmts,si}=run.reb;
-  const s=stmts[si];
-  const isFlawed=!!s.flawed;
-  stage.innerHTML=`
-    ${speakerPlate(opp, isFlawed?"smug":"angry")}
-    <div class="attack-box ${isFlawed?"flawed":""}" id="atkBox">${esc(s.text)||"…"}</div>
-    <div class="debate-controls">
-      <button class="btn ghost" id="rebPrev" ${si===0?"disabled style=opacity:.4":""}>◀ Back</button>
-      <span class="stmt-counter">Attack ${si+1} / ${stmts.length}</span>
-      <button class="btn cyan" id="rebNext">Next ▶</button>
-      <button class="btn gold" id="rebPresent">🔸 Present Bullet</button>
-    </div>
-    <div class="mini" style="margin-top:10px;text-align:center">Find the flaw in their logic, then counter it with the right truth bullet.</div>`;
-  $("#atkBox").addEventListener("click",()=>{
-    if(!isFlawed){ toast("Their logic holds here... keep looking."); return; }
-    if(!run.selectedBullet){ toast("Pick a truth bullet from the tray first!"); $("#bulletTray").classList.add("up"); return; }
-    rebResolve(s);
-  });
-  $("#rebPrev").addEventListener("click",()=>{ if(run.reb.si>0){run.reb.si--; rebStatement();} });
-  $("#rebNext").addEventListener("click",()=>{ run.reb.si=(run.reb.si+1)%stmts.length; rebStatement(); });
-  $("#rebPresent").addEventListener("click",()=>{
-    if(!isFlawed){ doFlash("wrong","MISS!"); toast("That statement isn't the flaw!"); return; }
-    if(!run.selectedBullet){ $("#bulletTray").classList.add("up"); toast("Pick a truth bullet first!"); return; }
-    rebResolve(s);
-  });
-}
-function rebResolve(s){
-  const {seg,opp}=run.reb;
-  if(run.selectedBullet===s.answerBullet && s.answerBullet){
-    const showBreak=()=>{
-      run.selectedBullet=null; $("#bulletTray").classList.remove("up"); $("#trayToggle").classList.add("hidden");
-      stage.innerHTML=`<div class="center-msg">
-        ${speakerPlate(opp,"broken")}
-        <div class="reb-banner" style="color:var(--lime)">BREAK!</div>
-        <div class="attack-box" style="border-color:var(--lime)">${esc(s.counterLine||seg.winLine||"That's your mistake — and it just cost you everything!")}</div>
-        <button class="btn lime" style="font-size:16px;padding:12px 24px;margin-top:18px" id="rebWin">Continue ▶</button>
-      </div>`;
-      $("#rebWin").addEventListener("click",nextStep);
-    };
-    // player cut-in on the winning counter, then the break screen
-    if(seg.cutinPlayer!==false){
-      const pc=charById(seg.cutinPlayerChar)||null;
-      playCutin("player", pc, seg.cutinPlayerText||"GOTCHA!", showBreak);
-    } else { doFlash("correct","COUNTER!"); setTimeout(showBreak,850); }
-  } else {
-    doFlash("wrong","WRONG BULLET!");
-    run.selectedBullet=null;
-    $$("#trayBullets .bullet").forEach(x=>x.classList.remove("selected"));
-    toast("That's not the right evidence to counter this!");
-    loseLife();
-  }
+function rebResolveWin(s){
+  const D=run.debate; const seg=D.seg;
+  const opp=charById(seg.speaker);
+  const showBreak=()=>{
+    stopDebateEngine();
+    run.selectedBullet=null; $("#bulletTray").classList.remove("up"); $("#trayToggle").classList.add("hidden");
+    stage.innerHTML=`<div class="center-msg">
+      ${speakerPlate(opp,"broken")}
+      <div class="reb-banner" style="color:var(--lime)">BREAK!</div>
+      <div class="statement-box" style="border-color:var(--lime)">${esc(s.counterLine||seg.winLine||"That's your mistake — and it just cost you everything!")}</div>
+      <button class="btn lime" style="font-size:16px;padding:12px 24px;margin-top:18px" id="rebWin">Continue ▶</button>
+    </div>`;
+    $("#rebWin").addEventListener("click",nextStep);
+  };
+  // player cut-in on the winning counter, then the break screen
+  if(seg.cutinPlayer!==false){
+    const pc=charById(seg.cutinPlayerChar)||null;
+    setTimeout(()=>playCutin("player", pc, seg.cutinPlayerText||"GOTCHA!", showBreak),450);
+  } else { setTimeout(showBreak,900); }
 }
 
 /* ---- HANGMAN'S GAMBIT (spell the answer from scrambled letters) ---- */
