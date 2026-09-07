@@ -41,7 +41,7 @@
   }
   header.topbar{flex:none;}
   /* menu screens fit inside the stage; scroll internally instead of clipping */
-  #setupScreen.active,#shopScreen.active{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;}
+  #setupScreen.active,#shopScreen.active,#courseScreen.active{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;}
   header.topbar{
     display:flex;align-items:center;justify-content:space-between;
     padding:10px 18px;border-bottom:2px solid var(--line);
@@ -73,15 +73,10 @@
   #setupScreen{padding:0;}
   .menu{
     display:grid;grid-template-columns:300px minmax(0,1fr);
-    grid-template-areas:"hero picker" "course course" "items items";gap:0;
+    grid-template-areas:"hero picker" "items items";gap:0;
   }
   .hero{grid-area:hero;}
   .picker{grid-area:picker;}
-  .course-full{
-    grid-area:course;
-    border-top:2px solid var(--line);
-    padding:12px 20px 14px;
-  }
   /* --- items legend --- */
   .items-full{
     grid-area:items;
@@ -91,6 +86,9 @@
   .item-legend{
     display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;
   }
+  .items-full .panel-head{display:flex;align-items:center;gap:9px;}
+  .items-toggle{margin-left:auto;font-size:11px;padding:6px 12px;}
+  .item-legend.collapsed{display:none;}
   .ileg{
     display:flex;align-items:flex-start;gap:9px;
     background:var(--panel-2);border:2px solid var(--line);border-radius:12px;
@@ -103,6 +101,54 @@
   }
   .ileg .txt b{display:block;font-size:12px;font-weight:800;letter-spacing:.3px;}
   .ileg .txt span{display:block;color:var(--muted);font-size:10.5px;line-height:1.3;margin-top:1px;}
+
+  /* ============ COURSE / MODE SELECT ============ */
+  #courseScreen{padding:0;}
+  .course-select{padding:16px 20px 8px;}
+  .cs-head{
+    display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+    background:linear-gradient(90deg,rgba(255,77,109,.16),rgba(255,210,63,.10));
+    border:2px solid var(--line);border-radius:16px;padding:12px 16px;margin-bottom:14px;
+  }
+  .cs-headline{flex:1;min-width:160px;}
+  .cs-title{font-size:22px;font-weight:800;letter-spacing:1px;}
+  .cs-sub{color:var(--muted);font-size:12px;margin-top:2px;}
+  .cs-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .mode-toggle{display:flex;gap:6px;background:#0d1130;border:2px solid var(--line);border-radius:12px;padding:4px;}
+  .mode-btn{
+    border:none;cursor:pointer;font-family:inherit;font-weight:800;font-size:12px;letter-spacing:.5px;
+    padding:8px 12px;border-radius:9px;color:var(--muted);background:transparent;transition:color .12s,background .12s;
+  }
+  .mode-btn:hover{color:var(--ink);}
+  .mode-btn.active{color:#fff;background:var(--accent);box-shadow:0 3px 0 #b8324c;}
+
+  .cup-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;}
+  .cup{
+    background:var(--panel-2);border:2px solid var(--line);border-radius:16px;overflow:hidden;
+    transition:border-color .12s,box-shadow .12s;
+  }
+  .cup.selected{border-color:#fff;box-shadow:0 0 0 3px var(--accent-2);}
+  .cup-head{
+    display:flex;align-items:center;gap:10px;padding:10px 14px;
+    background:linear-gradient(90deg,var(--cup-a,#2a2f66),transparent);
+    border-bottom:2px solid var(--line);cursor:pointer;
+  }
+  .cup-emoji{font-size:22px;}
+  .cup-name{font-weight:800;font-size:15px;letter-spacing:.5px;flex:1;}
+  .cup-go{font-size:10px;font-weight:800;letter-spacing:1px;color:var(--accent-2);text-transform:uppercase;display:none;}
+  .cup.cupmode .cup-go{display:block;}
+  .cup-tracks{display:flex;gap:8px;padding:12px 14px;}
+  .cup.cupmode .cup-tracks{pointer-events:none;opacity:.85;}
+  .ctrack{
+    flex:1;min-width:0;background:#0d1130;border:2px solid var(--line);border-radius:12px;
+    padding:6px;cursor:pointer;transition:transform .1s,border-color .12s,box-shadow .12s;
+  }
+  .ctrack:hover{transform:translateY(-2px);border-color:var(--accent-2);}
+  .ctrack.selected{border-color:#fff;box-shadow:0 0 0 2px var(--accent);}
+  .ctrack canvas{width:100%;height:auto;aspect-ratio:120/92;border-radius:8px;display:block;border:1px solid rgba(255,255,255,.1);}
+  .ctrack .cn{display:block;font-size:11px;font-weight:800;margin-top:5px;line-height:1.15;}
+  .ctrack .ch{display:block;font-size:9px;color:var(--accent-2);font-weight:700;margin-top:2px;line-height:1.15;}
+  @media (max-width:560px){ .cup-list{grid-template-columns:1fr;} }
   /* --- hero preview --- */
   .hero{
     position:relative;overflow:hidden;
@@ -158,7 +204,7 @@
 
   /* character grid of tiles */
   .tile-grid.chars{
-    display:grid;grid-template-columns:repeat(10,1fr);gap:8px;
+    display:grid;grid-template-columns:repeat(7,1fr);gap:8px;
   }
   .ctile{
     position:relative;aspect-ratio:1/1;border-radius:12px;cursor:pointer;
@@ -499,7 +545,7 @@
   .ach-toast b{color:var(--accent-2);}
   .footer-note{padding:14px 22px;border-top:2px solid var(--line);color:var(--muted);font-size:11px;}
   @media (max-width:760px){
-    .menu{grid-template-columns:1fr;grid-template-areas:"hero" "picker" "course" "items";}
+    .menu{grid-template-columns:1fr;grid-template-areas:"hero" "picker" "items";}
     .hero{border-right:none;border-bottom:2px solid var(--line);flex-direction:row;gap:16px;text-align:left;align-items:center;padding:18px;}
     .hero-face{font-size:64px;margin:0;}
     .hero-badge{display:none;}
@@ -549,29 +595,7 @@
         </div>
 
         <div class="panel settings-panel">
-          <div class="panel-head"><span class="step">4</span> Race setup</div>
           <div class="settings-row">
-            <label class="pill-select">Mode
-              <select id="modeSelect">
-                <option value="gp" selected>Grand Prix</option>
-                <option value="cup">Cup (4 races)</option>
-                <option value="trial">Time Trial</option>
-              </select>
-            </label>
-            <label class="pill-select">Laps
-              <select id="lapSelect">
-                <option value="2">2</option>
-                <option value="3" selected>3</option>
-                <option value="5">5</option>
-              </select>
-            </label>
-            <label class="pill-select" id="cpuField">CPU
-              <select id="diffSelect">
-                <option value="0.82">Rookie</option>
-                <option value="0.9" selected>Pro</option>
-                <option value="0.98">Ace</option>
-              </select>
-            </label>
             <button class="btn ghost small" id="timesBtnMenu">🏁 Stats &amp; Times</button>
             <div class="controls-mini">
               <kbd>W A S D</kbd>/<kbd>&larr;&uarr;&darr;&rarr;</kbd> drive &nbsp;
@@ -581,19 +605,12 @@
         </div>
       </div>
 
-      <!-- FULL WIDTH: course selection across the bottom -->
-      <div class="panel course-full">
-        <div class="panel-head"><span class="step">3</span> Course</div>
-        <div class="track-carousel">
-          <button class="tc-arrow left" id="trackPrev" aria-label="Previous">&#8249;</button>
-          <div id="trackList" class="track-strip"></div>
-          <button class="tc-arrow right" id="trackNext" aria-label="Next">&#8250;</button>
-        </div>
-      </div>
-
       <!-- FULL WIDTH: item guide -->
       <div class="panel items-full">
-        <div class="panel-head"><span class="step">?</span> Items &amp; what they do</div>
+        <div class="panel-head">
+          <span class="step">?</span> Items &amp; what they do
+          <button class="btn ghost small items-toggle" id="itemToggle" aria-expanded="true">Hide ▲</button>
+        </div>
         <div id="itemLegend" class="item-legend"></div>
       </div>
     </div>
@@ -603,7 +620,41 @@
       <span id="pickHint" class="hint"></span>
       <div class="startbar-btns">
         <button id="shopOpenBtn" class="btn ghost">🪙 Shop</button>
-        <button id="startBtn" class="btn primary big">Start race &#9654;</button>
+        <button id="toCourseBtn" class="btn primary big">Next &middot; Choose course &#9654;</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ COURSE / MODE SELECT SCREEN ============ -->
+  <section id="courseScreen" class="screen">
+    <div class="course-select">
+      <div class="cs-head">
+        <button class="btn ghost small" id="courseBack">&larr; Garage</button>
+        <div class="cs-headline">
+          <div class="cs-title">Choose your race</div>
+          <div class="cs-sub" id="csRacerLine">Pick a mode, then a cup or course.</div>
+        </div>
+        <div class="cs-controls">
+          <div class="mode-toggle" id="modeToggle">
+            <button class="mode-btn active" data-mode="gp">🏁 Single Race</button>
+            <button class="mode-btn" data-mode="cup">🏆 Cup Race</button>
+            <button class="mode-btn" data-mode="trial">⏱ Time Trial</button>
+          </div>
+          <label class="pill-select" id="cpuField">CPU
+            <select id="diffSelect">
+              <option value="0.82">Rookie</option>
+              <option value="0.9" selected>Pro</option>
+              <option value="0.98">Ace</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div id="cupList" class="cup-list"></div>
+    </div>
+    <div class="startbar">
+      <span id="courseHint" class="hint"></span>
+      <div class="startbar-btns">
+        <button id="startBtn" class="btn primary big" disabled>Start race &#9654;</button>
       </div>
     </div>
   </section>
@@ -752,6 +803,12 @@ const Music = (function(){
       pad:'triangle', lead:'sine', bass:'sine', perc:'soft' },
     circle:{ tempo:118, root:'C', scale:'major', prog:[0,3,4,0], mood:'sunny cruise',
       pad:'triangle', lead:'triangle', bass:'sine', perc:'light' },
+    temple:{ tempo:104, root:'E', scale:'dorian', prog:[0,3,5,4], mood:'ancient jungle',
+      pad:'triangle', lead:'square', bass:'sawtooth', perc:'toms' },
+    aurora:{ tempo:84, root:'A', scale:'lydian', prog:[0,5,4,5], mood:'icy ambient',
+      pad:'sine', lead:'triangle', bass:'sine', perc:'sparse' },
+    starlight:{ tempo:134, root:'D', scale:'mixolydian', prog:[0,4,5,3], mood:'cosmic synthwave',
+      pad:'sawtooth', lead:'sawtooth', bass:'square', perc:'four' },
   };
 
   let started=false, nodes=null, loopId=null, muted=false, currentId=null;
@@ -967,6 +1024,14 @@ const CHARACTERS = [
     speed:5, accel:5, grip:5, handling:5, taunt:'Game, set, match!' },
   { id:'reshman',name:'Reshman', role:'A mysterious black blob', emoji:'🫧', color:'#2b2b3a',
     speed:5, accel:5, grip:5, handling:5, taunt:'...blorp.' },
+  { id:'niek',   name:'Niek',    role:'Boy Scout',           emoji:'🏕️', color:'#4a8c3f',
+    speed:5, accel:5, grip:4, handling:6, taunt:'Always prepared!' },
+  { id:'maik',   name:'Maik',    role:'Store Employee',      emoji:'🛒', color:'#e8952b',
+    speed:4, accel:5, grip:7, handling:4, taunt:'Clean-up on aisle one!' },
+  { id:'kayo',   name:'Kayo & Yara', role:'Two Cats',        emoji:'🐈', color:'#d98cc4',
+    speed:6, accel:6, grip:3, handling:5, taunt:'Meow!' },
+  { id:'marloes',name:'Marloes', role:'Old Woman',           emoji:'👵', color:'#b48ac9',
+    speed:3, accel:3, grip:8, handling:6, taunt:'Back in my day!' },
   { id:'shark',  name:'Shark',   role:'Apex Predator',        emoji:'🦈', color:'#1e90ff',
     speed:10, accel:10, grip:10, handling:10, taunt:'Chum time!' },
 ];
@@ -1026,6 +1091,26 @@ const VEHICLES = {
     { id:'shadowflux', name:'Shadow Flux',   emoji:'🌑', blurb:'Melts into top speed', flavor:'Dissolves into the dark and reappears already at full tilt.', shape:'wedge',  color:'#26263a', dspeed:3, daccel:1, dgrip:-1,dhandling:0, passive:'rocket' },
     { id:'darkmatter', name:'Dark Matter',   emoji:'⚫', blurb:'Gravity-locked grip',  flavor:'Impossibly heavy where it counts — gravity itself pins it down.', shape:'blob',   color:'#151522', dspeed:0, daccel:1, dgrip:3, dhandling:1, passive:'crusher' },
   ],
+  niek:[
+    { id:'trailblazer',name:'Trailblazer',  emoji:'🏕️', blurb:'All-terrain scout',    flavor:'A rugged little rover that shrugs off any surface it meets.', shape:'buggy',  color:'#4a8c3f', dspeed:0, daccel:1, dgrip:1, dhandling:2, passive:'nimble' },
+    { id:'campfire',   name:'Campfire Cruiser',emoji:'🔥', blurb:'Slow-burn top end', flavor:'Builds heat down the straights and roars past the pack.', shape:'muscle', color:'#e07b2b', dspeed:3, daccel:1, dgrip:-1,dhandling:-1, passive:'rocket' },
+    { id:'canoe',      name:'River Canoe',   emoji:'🛶', blurb:'Glides through corners',flavor:'Carves smooth arcs like paddling downstream.', shape:'arrow',  color:'#3f7fa5', dspeed:0, daccel:2, dgrip:1, dhandling:2, passive:'drift' },
+  ],
+  maik:[
+    { id:'trolley',    name:'Shop Trolley',  emoji:'🛒', blurb:'Steady & grippy',      flavor:'Four squeaky wheels that never lose their grip on the floor.', shape:'sedan',  color:'#e8952b', dspeed:0, daccel:1, dgrip:2, dhandling:0, passive:'crusher' },
+    { id:'forklift',   name:'Forklift',      emoji:'🏗️', blurb:'Heavy hauler',         flavor:'Bulky and unstoppable — it simply plows through everything.', shape:'muscle', color:'#c9781f', dspeed:2, daccel:1, dgrip:1, dhandling:-1, passive:'crusher' },
+    { id:'pricegun',   name:'Price Gun GT',  emoji:'🏷️', blurb:'Snappy checkout speed',flavor:'Beeps once and blasts off the line before you can blink.', shape:'wedge',  color:'#b8641a', dspeed:1, daccel:3, dgrip:-1,dhandling:0, passive:'rocket' },
+  ],
+  kayo:[
+    { id:'yarnball',   name:'Yarn Roller',   emoji:'🧶', blurb:'Playful & nimble',      flavor:'Bounces and darts like a kitten chasing a rolling ball.', shape:'blob',   color:'#d98cc4', dspeed:0, daccel:2, dgrip:0, dhandling:2, passive:'nimble' },
+    { id:'scratchpost',name:'Scratch Rocket',emoji:'🐾', blurb:'Claws in for grip',    flavor:'Digs its claws into the tarmac and refuses to slide.', shape:'buggy',  color:'#c46fa8', dspeed:0, daccel:1, dgrip:3, dhandling:1, passive:'ice' },
+    { id:'laserchase', name:'Laser Chaser',  emoji:'🔴', blurb:'Explosive pounce',     flavor:'Locks onto the red dot and rockets after it at full speed.', shape:'wedge',  color:'#b25a95', dspeed:3, daccel:1, dgrip:-1,dhandling:0, passive:'rocket' },
+  ],
+  marloes:[
+    { id:'wheelchair', name:'Turbo Scooter', emoji:'🦽', blurb:'Unshakable & planted', flavor:'Puts along at first, then refuses to be knocked off its line.', shape:'sedan',  color:'#b48ac9', dspeed:0, daccel:0, dgrip:2, dhandling:2, passive:'crusher' },
+    { id:'knitmobile', name:'Knit-Mobile',   emoji:'🧵', blurb:'Cozy cornering',       flavor:'Wraps around every bend as neatly as a finished scarf.', shape:'buggy',  color:'#9c6fc4', dspeed:0, daccel:2, dgrip:1, dhandling:1, passive:'drift' },
+    { id:'teacart',    name:'Tea Cart',      emoji:'🫖', blurb:'Surprising top speed',  flavor:'Do not be fooled — this old kettle absolutely flies.', shape:'muscle', color:'#8a5aa5', dspeed:3, daccel:1, dgrip:0, dhandling:-1, passive:'rocket' },
+  ],
   shark:[
     { id:'apexfin',    name:'Apex Fin',      emoji:'🦈', blurb:'Flawless all-rounder',  flavor:'A perfectly-tuned predator with no weakness on any surface.', shape:'wedge',  color:'#1e90ff', dspeed:0, daccel:0, dgrip:0, dhandling:0, passive:'drift' },
     { id:'megalodon',  name:'Megalodon',     emoji:'🌊', blurb:'Deep-water top speed', flavor:'A monstrous hull that surges forward like a tidal wall.', shape:'muscle', color:'#0f6fd6', dspeed:0, daccel:0, dgrip:0, dhandling:0, passive:'rocket' },
@@ -1074,7 +1159,7 @@ function makeCarStats(c){
    Coins earned from races unlock the 4 locked characters and every
    character's 2nd & 3rd vehicles. Progress persists in localStorage.
 */
-const LOCKED_CHARS = ['lars','fionn','chemmy','reshman'];   // must be bought
+const LOCKED_CHARS = ['lars','fionn','chemmy','reshman','niek','maik','kayo','marloes'];   // must be bought
 // Secret racers aren't sold in the shop — they unlock via achievements.
 const SECRET_CHARS = ['shark'];
 const CHAR_PRICE = 400, VEH_PRICE = 150;
@@ -1373,7 +1458,7 @@ const TRACKS = [
       {x:4400,y:3500},{x:4800,y:4000},{x:3600,y:3800},{x:2700,y:4000},
       {x:1800,y:3600},{x:1400,y:2700},{x:2000,y:2000},{x:1000,y:1600}
     ],
-    hazard:{ type:'conveyor', count:6, label:'Currents — shoved backward' }
+    hazard:{ type:'conveyor', count:6, label:'Currents — slow you down' }
   },
   {
     id:'cafe', name:'Café Crawl', desc:'A cozy dash through a bustling coffee house',
@@ -1401,6 +1486,49 @@ const TRACKS = [
     ],
     // A calm beginner loop with nothing to trip you up.
     hazard:null
+  },
+  {
+    id:'temple', name:'Jungle Temple', desc:'Overgrown ruins with rolling temple stones',
+    width:6000, height:4000, road:170, laps:3,
+    grass:'#2f6b3a', grassDark:'#245530', tarmac:'#8a7a5c', kerb:'#c9b072',
+    sky:'#12281a',
+    path:[
+      {x:700,y:950},{x:1600,y:600},{x:2600,y:800},{x:3300,y:500},
+      {x:4300,y:700},{x:5100,y:1250},{x:5300,y:2150},{x:4600,y:2650},
+      {x:5000,y:3350},{x:4100,y:3650},{x:3200,y:3200},{x:2600,y:3650},
+      {x:1700,y:3400},{x:1250,y:2600},{x:1850,y:2000},{x:900,y:1600}
+    ],
+    // Jungle Temple's hazard: rolling temple stones (heavy hits).
+    hazard:{ type:'boulder', count:6, label:'Temple stones — heavy hits' }
+  },
+  {
+    id:'aurora', name:'Aurora Bay', desc:'Frozen northern coast under the lights',
+    width:5800, height:3900, road:200, laps:3,
+    grass:'#3a5f7a', grassDark:'#2c4a60', tarmac:'#cfe6f2', kerb:'#6fd0ff',
+    sky:'#101f36', slick:0.93,
+    path:[
+      {x:800,y:900},{x:1900,y:600},{x:3000,y:850},{x:4000,y:600},
+      {x:4900,y:1150},{x:5100,y:2050},{x:4500,y:2750},{x:4800,y:3400},
+      {x:3900,y:3500},{x:3050,y:2950},{x:2450,y:3400},{x:1550,y:3150},
+      {x:1150,y:2450},{x:1650,y:1850},{x:900,y:1500}
+    ],
+    // Aurora Bay's hazard: black-ice patches that kill your steering.
+    hazard:{ type:'ice', count:6, label:'Black ice — no grip' }
+  },
+  {
+    id:'starlight', name:'Starlight Speedway', desc:'A cosmic night circuit lit by star gates',
+    width:6200, height:4100, road:160, laps:3,
+    grass:'#241a4a', grassDark:'#1c1440', tarmac:'#3b3663', kerb:'#ffd23f',
+    sky:'#0c0824',
+    path:[
+      {x:700,y:900},{x:1700,y:650},{x:2600,y:950},{x:2400,y:1700},
+      {x:3300,y:1850},{x:3900,y:1250},{x:4800,y:1000},{x:5500,y:1500},
+      {x:5600,y:2400},{x:4900,y:2800},{x:5300,y:3500},{x:4400,y:3700},
+      {x:3500,y:3300},{x:3000,y:3700},{x:2100,y:3600},{x:1600,y:3000},
+      {x:2000,y:2300},{x:1200,y:2000},{x:800,y:1500}
+    ],
+    // Starlight's hazard: star gates that jolt and slow you.
+    hazard:{ type:'gate', count:7, label:'Star gates — cosmic jolt' }
   }
 ];
 
@@ -1412,21 +1540,24 @@ const state = {
   laps: 3,
   difficulty: 0.9,
   mode: 'gp',
+  selectedCup: null,
 };
 
 /* ---------------------- CUP MODE ----------------------
-   A 4-race series on random courses. The field (player + CPU line-up) is
-   fixed across all races; points accrue by finishing place; a podium shows
-   the champion at the end.
+   A themed 3-race series. The field (player + CPU line-up) is fixed across all
+   races; points accrue by finishing place; a podium shows the champion.
 */
 const CUP_POINTS = [15,12,10,8,7,6];   // by finishing place (1st..6th)
 const Cup = {
   active:false, races:[], idx:0, points:{}, field:null,
-  start(){
-    // pick 4 distinct random tracks
-    const ids = TRACKS.map(t=>t.id);
-    for(let i=ids.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [ids[i],ids[j]]=[ids[j],ids[i]]; }
-    this.races = ids.slice(0,4);
+  start(trackIds){
+    // race the given cup's courses in order (falls back to 3 random if none given)
+    if(trackIds && trackIds.length){ this.races = trackIds.slice(); }
+    else {
+      const ids = TRACKS.map(t=>t.id);
+      for(let i=ids.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [ids[i],ids[j]]=[ids[j],ids[i]]; }
+      this.races = ids.slice(0,3);
+    }
     this.idx = 0; this.points = {}; this.active = true; this.field = null;  // built on first race
   },
   currentTrack(){ return TRACKS.find(t=>t.id===this.races[this.idx]); },
@@ -1435,9 +1566,7 @@ const Cup = {
 
 /* ---------------------- SETUP UI (MK8-style) ---------------------- */
 const charGrid = document.getElementById('charGrid');
-const trackList = document.getElementById('trackList');
 const vehicleRow = document.getElementById('vehicleRow');
-const startBtn = document.getElementById('startBtn');
 const pickHint = document.getElementById('pickHint');
 let shopVehItems = [];    // {c,v} pairs for the shop vehicle carousel
 let vehShopIndex = 0;
@@ -1557,19 +1686,106 @@ function selectVehicle(v){
 }
 renderVehicles();
 
-TRACKS.forEach((t,i)=>{
-  const el = document.createElement('div');
-  el.className='track'+(i===0?' selected':'');
-  el.dataset.id=t.id;
-  el.innerHTML = `
-    <canvas class="thumb" width="120" height="92"></canvas>
-    <div class="meta"><b>${t.name}</b><span>${t.desc}</span>
-      <span class="hazard-tag">${t.hazard? '⚠ '+t.hazard.label : '✓ No hazards'}</span></div>`;
-  el.addEventListener('click',()=>selectTrack(t));
-  trackList.appendChild(el);
-  drawThumb(el.querySelector('canvas'), t);
-});
-state.track = TRACKS[0];
+/* ---- COURSES grouped into 5 themed cups of 3 ---- */
+const CUPS = [
+  { id:'starter',  name:'Rookie Cup',   emoji:'🌱', color:'#2e7d4f', tracks:['circle','sunset','coral'] },
+  { id:'nature',   name:'Wildland Cup', emoji:'🏞️', color:'#4e8f3a', tracks:['canyon','desert','windmill'] },
+  { id:'frost',    name:'Frostfire Cup',emoji:'🔥', color:'#c0502b', tracks:['glacier','volcano','thunderpeak'] },
+  { id:'city',     name:'Neon Cup',     emoji:'🌆', color:'#7a4dff', tracks:['neon','circuit','mirror'] },
+  { id:'chaos',    name:'Chaos Cup',    emoji:'🌀', color:'#2b6f8f', tracks:['magnet','rapids','cafe'] },
+  { id:'cosmos',   name:'Cosmos Cup',   emoji:'✨', color:'#7a4dff', tracks:['temple','aurora','starlight'] },
+];
+const trackById = id => TRACKS.find(t=>t.id===id);
+
+/* Build the cup/course grid. Behavior depends on state.mode:
+   - gp (Single) / trial: click an individual track to select it.
+   - cup: click a cup header to select the whole 3-race series. */
+function buildCups(){
+  const wrap=document.getElementById('cupList');
+  if(!wrap) return;
+  wrap.innerHTML='';
+  CUPS.forEach(cup=>{
+    const el=document.createElement('div');
+    el.className='cup';
+    el.dataset.cup=cup.id;
+    el.style.setProperty('--cup-a', darken(cup.color,0.25));
+    el.innerHTML=`
+      <div class="cup-head">
+        <span class="cup-emoji">${cup.emoji}</span>
+        <span class="cup-name">${cup.name}</span>
+        <span class="cup-go">Select ▶</span>
+      </div>
+      <div class="cup-tracks"></div>`;
+    const tw=el.querySelector('.cup-tracks');
+    cup.tracks.forEach(tid=>{
+      const t=trackById(tid); if(!t) return;
+      const tc=document.createElement('div');
+      tc.className='ctrack'; tc.dataset.track=tid;
+      tc.innerHTML=`<canvas width="120" height="92"></canvas>
+        <span class="cn">${t.name}</span>
+        <span class="ch">${t.hazard? '⚠ '+t.hazard.label : '✓ No hazards'}</span>`;
+      tc.addEventListener('click',(e)=>{
+        if(state.mode==='cup') return;    // in cup mode the whole cup is chosen via the header
+        e.stopPropagation();
+        selectTrack(t);
+      });
+      tw.appendChild(tc);
+      drawThumb(tc.querySelector('canvas'), t);
+    });
+    el.querySelector('.cup-head').addEventListener('click',()=>{
+      if(state.mode==='cup') selectCup(cup);
+    });
+    wrap.appendChild(el);
+  });
+  refreshCupModeUI();
+}
+
+function refreshCupModeUI(){
+  const cupMode = state.mode==='cup';
+  document.querySelectorAll('.cup').forEach(el=> el.classList.toggle('cupmode', cupMode));
+}
+
+function selectTrack(t){
+  state.mode = (state.mode==='cup')? 'gp' : state.mode;   // safety
+  state.selectedCup = null;
+  state.track = t;
+  document.querySelectorAll('.ctrack').forEach(x=>x.classList.toggle('selected', x.dataset.track===t.id));
+  document.querySelectorAll('.cup').forEach(x=>x.classList.remove('selected'));
+  refreshCourseHint();
+}
+
+function selectCup(cup){
+  state.selectedCup = cup;
+  state.track = trackById(cup.tracks[0]);
+  document.querySelectorAll('.cup').forEach(x=>x.classList.toggle('selected', x.dataset.cup===cup.id));
+  document.querySelectorAll('.ctrack').forEach(x=>x.classList.remove('selected'));
+  refreshCourseHint();
+}
+
+function setMode(mode){
+  state.mode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.toggle('active', b.dataset.mode===mode));
+  // clear selection when switching families so the Start button state is honest
+  state.selectedCup=null; state.track=null;
+  document.querySelectorAll('.ctrack,.cup').forEach(x=>x.classList.remove('selected'));
+  refreshCupModeUI();
+  refreshCourseHint();
+}
+
+function refreshCourseHint(){
+  const hint=document.getElementById('courseHint');
+  const startBtn=document.getElementById('startBtn');
+  const modeLabel = state.mode==='cup'?'Cup Race' : state.mode==='trial'?'Time Trial':'Single Race';
+  startBtn.innerHTML = state.mode==='trial'?'Time Trial ⏱' : state.mode==='cup'?'Start Cup 🏆':'Start race ▶';
+  if(state.mode==='cup'){
+    if(state.selectedCup){ startBtn.disabled=false; hint.textContent=`${modeLabel} · ${state.selectedCup.name} (3 races)`; }
+    else { startBtn.disabled=true; hint.textContent='Pick a cup to race all three of its courses.'; }
+  } else {
+    if(state.track){ startBtn.disabled=false; hint.textContent=`${modeLabel} · ${state.track.name}`; }
+    else { startBtn.disabled=true; hint.textContent='Pick a course.'; }
+  }
+}
+
 
 /* Item guide shown in the garage, grouped by rarity. Descriptions mirror the
    in-race effects. Odds shift with race position (leaders get more commons;
@@ -1589,32 +1805,49 @@ const ITEM_GUIDE = [
   { emoji:'🌀', name:'Warp',          rarity:'legendary', desc:'Teleport a chunk up the track.' },
   { emoji:'🕳️', name:'Black Hole',   rarity:'legendary', desc:'Deploys a gravity well that pulls racers in.' },
   { emoji:'☄️', name:'Meteor',       rarity:'legendary', desc:'Calls a strike down on the leader.' },
-  { emoji:'🦈', name:'Signature Items', rarity:'signature', desc:'Each character can draw their own: Chain Lightning, Ice Wall, Mega Bomb, Drone Strike, Rock Barrier, Ricochet Ball, Chomp Dash.' },
+  { emoji:'⚡', name:'Chain Lightning', rarity:'signature', who:'Milo',          desc:'Zaps up to three racers ahead in a chain.' },
+  { emoji:'🧊', name:'Ice Wall',      rarity:'signature', who:'Deniz',          desc:'Drops a wall behind that spins & ices chasers.' },
+  { emoji:'💣', name:'Mega Bomb',     rarity:'signature', who:'Daniel',         desc:'Thrown forward; explodes in a wide blast.' },
+  { emoji:'🚁', name:'Drone Strike',  rarity:'signature', who:'Josh',           desc:'Delayed strike drops on the leader.' },
+  { emoji:'🪨', name:'Rock Barrier',  rarity:'signature', who:'Lars',           desc:'Fans three rocks out behind you.' },
+  { emoji:'🎾', name:'Ricochet Ball', rarity:'signature', who:'Chemmy',         desc:'A fast shell with extra bounce.' },
+  { emoji:'🦈', name:'Chomp Dash',    rarity:'signature', who:'Shark',          desc:'Lunge forward and chomp anyone ahead.' },
+  { emoji:'🔥', name:'Campfire',      rarity:'signature', who:'Niek',           desc:'Leaves a fire behind that spins chasers.' },
+  { emoji:'🛒', name:'Trolley Toss',  rarity:'signature', who:'Maik',           desc:'Flings a shopping trolley forward.' },
+  { emoji:'🐾', name:'Cat Pounce',    rarity:'signature', who:'Kayo & Yara',    desc:'A quick pounce that chomps racers just ahead.' },
+  { emoji:'🧶', name:'Knit Trap',     rarity:'signature', who:'Marloes',        desc:'Drops tangled yarn that snarls chasers.' },
 ];
 function buildItemLegend(){
   const wrap=document.getElementById('itemLegend');
   if(!wrap) return;
   wrap.innerHTML = ITEM_GUIDE.map(it=>{
     const rc = RARITY_COLOR[it.rarity]||'#888';
+    const who = it.who ? ` · ${it.who}` : '';
     return `<div class="ileg">
       <div class="ic" style="box-shadow:inset 0 0 0 2px ${rc}88">${it.emoji}</div>
-      <div class="txt"><b>${it.name} <span style="color:${rc};font-size:9px;text-transform:uppercase;letter-spacing:.5px">${it.rarity}</span></b><span>${it.desc}</span></div>
+      <div class="txt"><b>${it.name} <span style="color:${rc};font-size:9px;text-transform:uppercase;letter-spacing:.5px">${it.rarity}${who}</span></b><span>${it.desc}</span></div>
     </div>`;
   }).join('');
 }
 buildItemLegend();
 
+/* Collapse / expand the whole item guide with one button. */
+(function(){
+  const btn=document.getElementById('itemToggle'), legend=document.getElementById('itemLegend');
+  if(!btn||!legend) return;
+  btn.addEventListener('click',()=>{
+    const collapsed = legend.classList.toggle('collapsed');
+    btn.setAttribute('aria-expanded', String(!collapsed));
+    btn.textContent = collapsed ? 'Show ▼' : 'Hide ▲';
+  });
+})();
+
 /* Character signature items shown in the garage hero panel (display only). */
 const CHAR_SIGNATURE = {
   milo:'⚡ Chain Lightning', deniz:'🧊 Ice Wall', daniel:'💣 Mega Bomb', josh:'🚁 Drone Strike',
   lars:'🪨 Rock Barrier', chemmy:'🎾 Ricochet Ball', shark:'🦈 Chomp Dash',
+  niek:'🔥 Campfire', maik:'🛒 Trolley Toss', kayo:'🐾 Cat Pounce', marloes:'🧶 Knit Trap',
 };
-
-function selectTrack(t){
-  document.querySelectorAll('.track').forEach(x=>x.classList.toggle('selected', x.dataset.id===t.id));
-  state.track = t;
-  refreshHint();
-}
 
 function drawThumb(cv, t){
   const g = cv.getContext('2d');
@@ -1645,13 +1878,16 @@ function drawThumb(cv, t){
 }
 
 function refreshHint(){
-  if(!state.char){ pickHint.textContent='Pick a racer to start.'; startBtn.disabled=true; return; }
-  startBtn.disabled=false;
-  pickHint.textContent = `${state.char.name} · ${state.vehicle.name} on ${state.track.name}`;
+  const toBtn=document.getElementById('toCourseBtn');
+  if(!state.char){ pickHint.textContent='Pick a racer to continue.'; if(toBtn) toBtn.disabled=true; return; }
+  if(toBtn) toBtn.disabled=false;
+  pickHint.textContent = `${state.char.name} · ${state.vehicle.name}`;
 }
 selectChar(CHARACTERS[0]);   // start with a highlighted default racer
 renderHero();
 refreshHint();
+buildCups();                 // build the course/mode select screen
+refreshCourseHint();
 Achv.check();                // catch up secret unlocks (e.g. Shark) on load
 refreshLocks();
 refreshCoins();
@@ -1670,30 +1906,40 @@ buildShop();
   window.addEventListener('keydown', startMenuMusic);
 })();
 
-document.getElementById('lapSelect').addEventListener('change',e=>state.laps=+e.target.value);
 document.getElementById('diffSelect').addEventListener('change',e=>state.difficulty=+e.target.value);
-document.getElementById('modeSelect').addEventListener('change',e=>{
-  state.mode=e.target.value;
-  const trial = state.mode==='trial';
-  document.getElementById('cpuField').style.display = trial? 'none':'';
-  startBtn.innerHTML = trial? 'Time Trial ⏱' : (state.mode==='cup'? 'Start Cup 🏆' : 'Start race ▶');
+
+// mode toggle buttons on the course-select screen
+document.querySelectorAll('.mode-btn').forEach(btn=>{
+  btn.addEventListener('click',()=> setMode(btn.dataset.mode));
 });
 
-startBtn.addEventListener('click',()=>{
+// setup → course select
+document.getElementById('toCourseBtn').addEventListener('click',()=>{
   if(!state.char) return;
-  state.laps = +document.getElementById('lapSelect').value;
+  showScreen('courseScreen');
+  document.getElementById('csRacerLine').textContent =
+    `${state.char.name} · ${state.vehicle.name} — pick a mode, then a course.`;
+});
+document.getElementById('courseBack').addEventListener('click',()=>showScreen('setupScreen'));
+
+// start the chosen race from the course screen
+document.getElementById('startBtn').addEventListener('click',()=>{
+  if(!state.char) return;
+  state.laps = 3;   // fixed lap count (laps selector removed)
   state.difficulty = +document.getElementById('diffSelect').value;
-  state.mode = document.getElementById('modeSelect').value;
   if(state.mode==='cup'){
-    Cup.start();                       // pick 4 random tracks + reset points
-    state.track = Cup.currentTrack();  // first cup track
+    if(!state.selectedCup) return;
+    Cup.start(state.selectedCup.tracks);   // run this cup's 3 courses
+    state.track = Cup.currentTrack();
+  } else {
+    if(!state.track) return;
   }
   showScreen('raceScreen');
   Game.start(state);
-  Music.play(state.track.id);   // start this course's theme
+  Music.play(state.track.id);
 });
 document.getElementById('quitBtn').addEventListener('click',()=>{
-  Game.stop(); Cup.active=false; Cup.field=null; showScreen('setupScreen'); Music.play('menu');
+  Game.stop(); Cup.active=false; Cup.field=null; showScreen('courseScreen'); Music.play('menu');
 });
 function syncMuteButtons(){
   const muted = Music.isMuted();
@@ -1724,12 +1970,6 @@ document.getElementById('shopBack').addEventListener('click',()=>showScreen('set
 document.getElementById('shopOpenBtn').addEventListener('click',()=>showScreen('shopScreen'));
 document.getElementById('vehPrev').addEventListener('click',()=>{ vehShopIndex--; updateVehCarousel(); });
 document.getElementById('vehNext').addEventListener('click',()=>{ vehShopIndex++; updateVehCarousel(); });
-(function(){
-  const strip=document.getElementById('trackList');
-  const step=()=>Math.max(180, strip.clientWidth*0.6);
-  document.getElementById('trackPrev').addEventListener('click',()=>strip.scrollBy({left:-step(),behavior:'smooth'}));
-  document.getElementById('trackNext').addEventListener('click',()=>strip.scrollBy({left:step(),behavior:'smooth'}));
-})();
 
 /* ---- personal bests viewer ---- */
 function openTimes(){
@@ -2025,6 +2265,10 @@ const Game = (function(){
     rockbarrier:{ emoji:'🪨', name:'Rock Barrier',  color:'#8d9db6', throw:false,     rarity:'rare', sig:true },
     ricochet:   { emoji:'🎾', name:'Ricochet Ball', color:'#3ddc97', throw:'forward', rarity:'rare', sig:true },
     chompdash:  { emoji:'🦈', name:'Chomp Dash',    color:'#1e90ff', throw:false,     rarity:'rare', sig:true },
+    campfire:   { emoji:'🔥', name:'Campfire',      color:'#ff7a1a', throw:false,     rarity:'rare', sig:true },
+    trolleytoss:{ emoji:'🛒', name:'Trolley Toss',  color:'#e8952b', throw:'forward', rarity:'rare', sig:true },
+    catpounce:  { emoji:'🐾', name:'Cat Pounce',    color:'#d98cc4', throw:false,     rarity:'rare', sig:true },
+    knittrap:   { emoji:'🧶', name:'Knit Trap',     color:'#b48ac9', throw:false,     rarity:'rare', sig:true },
   };
   const ITEM_IDS = Object.keys(ITEMS);
 
@@ -2039,6 +2283,7 @@ const Game = (function(){
   const SIGNATURE = {
     milo:'chainlightning', deniz:'icewall', daniel:'megabomb', josh:'dronestrike',
     lars:'rockbarrier', chemmy:'ricochet', shark:'chompdash',
+    niek:'campfire', maik:'trolleytoss', kayo:'catpounce', marloes:'knittrap',
   };
 
   const keys = {};
@@ -2294,6 +2539,9 @@ const Game = (function(){
     rapids:      { props:['reed','reed','palm','rock'],        c:'#3f8f6a', ambient:['cloud'] },
     cafe:        { props:['table','table','cup','plant','plant'], c:'#8a5a34', ambient:[] },
     circle:      { props:['tree','tree','plant'],             c:'#2e7d43', ambient:['cloud'] },
+    temple:      { props:['palm','palm','rock','crystal'],     c:'#2f6b3a', ambient:['cloud'] },
+    aurora:      { props:['crystal','crystal','pine','rock'],  c:'#bfe9ff', ambient:['star','star'] },
+    starlight:   { props:['crystal','building','pylon'],       c:'#c9b6ff', ambient:['star','star','star'] },
   };
 
   /* Scatter themed props across the off-track area. Props are placed on a
@@ -2369,6 +2617,10 @@ const Game = (function(){
     chemmy:{ overtake:["Ace!"], hit:["Out of bounds!"], last:["Down a set, not out."], first:["Match point, me."], nearfinish:["Serving for the win!"], drift:["Cross-court slide!"], win:["Game, set, match!"] },
     reshman:{ overtake:["…blorp."], hit:["…splat?"], last:["…sinking…"], first:["…ascended."], nearfinish:["…so close…"], drift:["…ooze…"], win:["…blorp. (victorious)"] },
     shark:{ overtake:["Chum time!"], hit:["Bite me!"], last:["Circling back…"], first:["Apex predator."], nearfinish:["Blood in the water!"], drift:["Tail slide!"], win:["Feeding frenzy!"] },
+    niek:{ overtake:["On your left, scout's honor!"], hit:["Trail's blocked!"], last:["Lost the path…"], first:["Always prepared!"], nearfinish:["Base camp in sight!"], drift:["Blazing the trail!"], win:["Merit badge earned!"] },
+    maik:{ overtake:["Coming through, restock!"], hit:["Clean-up on aisle me!"], last:["Out of stock…"], first:["Front of the queue."], nearfinish:["Checkout's open!"], drift:["Trolley slide!"], win:["Everything must go!"] },
+    kayo:{ overtake:["Meow, too slow!"], hit:["Hiss!"], last:["Nine lives left…"], first:["Cat's out front."], nearfinish:["Pouncing the line!"], drift:["Claws out!"], win:["Purrfect!"] },
+    marloes:{ overtake:["Excuse me, dear."], hit:["In my day this wouldn't fly!"], last:["Slow and steady…"], first:["Wisdom wins."], nearfinish:["Nearly tea time!"], drift:["Careful now!"], win:["Back in my day I always won!"] },
   };
   // situations we only want to fire once per race per racer
   function showVoice(r, event){
@@ -2722,6 +2974,25 @@ const Game = (function(){
         const ox=Math.cos(r.angle+Math.PI/2)*k*22, oy=Math.sin(r.angle+Math.PI/2)*k*22;
         drops.push({type:'rock', owner:r, x:r.x-Math.cos(r.angle)*34+ox, y:r.y-Math.sin(r.angle)*34+oy, life:11});
       }
+    } else if(id==='campfire'){
+      // Niek: a lingering fire behind you that spins whoever touches it
+      drops.push({type:'campfire', owner:r, x:r.x-Math.cos(r.angle)*34, y:r.y-Math.sin(r.angle)*34, life:8});
+    } else if(id==='knittrap'){
+      // Marloes: a tangle of yarn dropped behind that snarls chasers
+      drops.push({type:'knittrap', owner:r, x:r.x-Math.cos(r.angle)*32, y:r.y-Math.sin(r.angle)*32, life:11});
+    } else if(id==='catpounce'){
+      // Kayo & Yara: a forward pounce that chomps anyone just ahead
+      r.boostT=Math.max(r.boostT,0.7);
+      racers.forEach(v=>{
+        if(v===r||v.finished) return;
+        const dx=v.x-r.x, dy=v.y-r.y;
+        const fwd=Math.cos(r.angle)*dx+Math.sin(r.angle)*dy;
+        if(fwd>0 && Math.hypot(dx,dy)<66){
+          const landed=tryHit(v, ()=>{ v.spinT=Math.max(v.spinT,1.0); v.speed*=0.45; spawnParticles(v.x,v.y,'#d98cc4',12); });
+          if(landed && r.isPlayer) Achv.event('hits');
+        }
+      });
+      showTaunt(r);
     } else if(id==='bolt'){
       const victim = aheadOf();
       if(victim){
@@ -2834,26 +3105,31 @@ const Game = (function(){
       if(pd._recent>0) pd._recent-=dt;
     });
 
-    // ground drops: oil, bananas, ice walls, rock barriers (persist until hit)
+    // ground drops: oil, bananas, ice walls, rock barriers, campfire, yarn (persist until hit)
     drops.forEach(dp=>{
       dp.life-=dt;
+      const persist = (dp.type==='rock'||dp.type==='icewall'||dp.type==='campfire'||dp.type==='knittrap');
       const radius = (dp.type==='rock'||dp.type==='icewall')?26:22;
       racers.forEach(r=>{
         if(r.finished || r.spinT>0) return;
         if(Math.hypot(r.x-dp.x, r.y-dp.y) < radius){
-          if(dp.type!=='icewall' && dp.type!=='rock') dp.life = Math.min(dp.life, 0);   // oil/banana consumed; walls/rocks persist a bit
+          if(!persist) dp.life = Math.min(dp.life, 0);   // oil/banana consumed; walls/rocks/fire/yarn persist a bit
           const landed = tryHit(r, ()=>{
             if(dp.type==='rock'){
               r.speed*=0.35; const a=Math.atan2(r.y-dp.y,r.x-dp.x)||0; r.vx+=Math.cos(a)*3; r.vy+=Math.sin(a)*3;
               spawnParticles(r.x,r.y,'#9a7b53',10);
             } else if(dp.type==='icewall'){
               r.spinT=Math.max(r.spinT,0.9); r.slipT=Math.max(r.slipT,0.5); spawnParticles(r.x,r.y,'#9be7ff',10);
+            } else if(dp.type==='campfire'){
+              r.spinT=Math.max(r.spinT,0.8); r.speed*=0.5; spawnParticles(r.x,r.y,'#ff7a1a',10);
+            } else if(dp.type==='knittrap'){
+              r.spinT=Math.max(r.spinT,0.7); r.slipT=Math.max(r.slipT,0.6); spawnParticles(r.x,r.y,'#b48ac9',10);
             } else {
               r.spinT=Math.max(r.spinT, dp.type==='banana'?0.9:1.0);
               spawnParticles(r.x,r.y, dp.type==='banana'?'#e0b400':'#333', 8);
             }
           });
-          if(landed){ if(dp.type==='rock'||dp.type==='icewall') r.hzImmune=1.0; if(dp.owner && dp.owner!==r){ showTaunt(dp.owner); if(dp.owner.isPlayer) Achv.event('hits'); } }
+          if(landed){ if(persist) r.hzImmune=1.0; if(dp.owner && dp.owner!==r){ showTaunt(dp.owner); if(dp.owner.isPlayer) Achv.event('hits'); } }
         }
       });
     });
@@ -3008,13 +3284,14 @@ const Game = (function(){
             if(Math.random()<0.25) spawnParticles(r.x,r.y,'#ff3b6b',2);
           }
         } else if(hz.type==='conveyor' && hit<track.road*0.55){
-          // BACKWARD CURRENT: push against travel direction + scrub speed.
-          if(r.shield){ /* shielded cars power through */ }
+          // BACKWARD CURRENT: a gentle drag against travel — you still push
+          // through, just slower. Never a full stop.
+          if(r.shield){ /* shielded cars power through untouched */ }
           else {
             const fwx=Math.cos(hz.heading), fwy=Math.sin(hz.heading);
-            const shove = 3.5*60*dt;
+            const shove = 1.1*60*dt;
             r.x -= fwx*shove; r.y -= fwy*shove;
-            r.speed *= (1 - 1.2*dt);
+            r.speed *= (1 - 0.35*dt);
             if(Math.random()<0.3) spawnParticles(r.x,r.y,'#7ff0ff',2);
           }
         } else if(hz.type==='blackhole' && hit<220){
@@ -3113,10 +3390,10 @@ const Game = (function(){
     if(r.item){
       const straight = turnSharp < 0.3;
       const id = r.item;
-      const selfNow = ['boost','megaboost','coin','teleport','chompdash'];       // fire on a straight ASAP
+      const selfNow = ['boost','megaboost','coin','teleport','chompdash','catpounce'];       // fire on a straight ASAP
       const targeted = ['bolt','chainlightning','dronestrike','meteor','blackhole']; // fire on straights, chance
-      const fwdThrow = ['greenshell','redshell','snowball','ricochet','megabomb'];
-      const rearDrop = ['oil','banana','icewall','rockbarrier'];
+      const fwdThrow = ['greenshell','redshell','snowball','ricochet','megabomb','trolleytoss'];
+      const rearDrop = ['oil','banana','icewall','rockbarrier','campfire','knittrap'];
       if(selfNow.includes(id) && straight) useItem(r);
       else if(targeted.includes(id) && straight && Math.random()<0.12) useItem(r);
       else if(fwdThrow.includes(id) && straight && Math.random()<0.10) useItem(r);
@@ -3565,6 +3842,18 @@ const Game = (function(){
         ctx.beginPath(); ctx.moveTo(-15,7); ctx.lineTo(-7,-11); ctx.lineTo(7,-12); ctx.lineTo(15,2); ctx.lineTo(9,10); ctx.closePath(); ctx.fill();
         ctx.fillStyle='rgba(255,255,255,.14)';
         ctx.beginPath(); ctx.moveTo(-7,-11); ctx.lineTo(7,-12); ctx.lineTo(0,-2); ctx.closePath(); ctx.fill();
+      } else if(dp.type==='campfire'){
+        const t=performance.now()/500;
+        ctx.fillStyle='#5a3a1c';
+        ctx.fillRect(-12,7,24,4);
+        ctx.fillStyle=`rgba(255,${120+80*Math.abs(Math.sin(t))|0},20,.95)`;
+        ctx.beginPath(); ctx.moveTo(0,-14); ctx.quadraticCurveTo(11,-2,6,8); ctx.lineTo(-6,8); ctx.quadraticCurveTo(-11,-2,0,-14); ctx.fill();
+        ctx.fillStyle='rgba(255,230,120,.9)';
+        ctx.beginPath(); ctx.moveTo(0,-6); ctx.quadraticCurveTo(5,0,2,7); ctx.lineTo(-2,7); ctx.quadraticCurveTo(-5,0,0,-6); ctx.fill();
+      } else if(dp.type==='knittrap'){
+        ctx.fillStyle='#b48ac9'; ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=1.5;
+        ctx.beginPath(); ctx.arc(0,0,12,0,Math.PI*2); ctx.fill();
+        for(let k=0;k<3;k++){ ctx.beginPath(); ctx.arc(0,0,4+k*3, k, k+Math.PI*1.5); ctx.stroke(); }
       } else {
         ctx.fillStyle='rgba(20,20,25,.85)';
         ctx.beginPath(); ctx.ellipse(0,0,18,13,0,0,Math.PI*2); ctx.fill();
@@ -3983,6 +4272,51 @@ const Game = (function(){
         eyes(3.5,-1,1.6);
         ctx.fillStyle='#fff'; // toothy grin
         ctx.beginPath(); ctx.moveTo(-5,4); ctx.lineTo(5,4); ctx.lineTo(3,7); ctx.lineTo(1.5,4.5); ctx.lineTo(0,7); ctx.lineTo(-1.5,4.5); ctx.lineTo(-3,7); ctx.closePath(); ctx.fill();
+        break;
+      case 'niek': // Boy Scout — campaign hat + neckerchief
+        faceBase('#f1c9a5');
+        ctx.fillStyle='#4a8c3f'; // wide-brim scout hat
+        ctx.fillRect(-12,-6,24,2.6);
+        ctx.beginPath(); ctx.moveTo(-7,-6); ctx.lineTo(0,-15); ctx.lineTo(7,-6); ctx.closePath(); ctx.fill();
+        ctx.fillStyle='#3a6e30'; ctx.fillRect(-7,-8,14,2); // hat band
+        ctx.fillStyle='#ffd23f'; ctx.beginPath(); ctx.arc(0,-10,1.4,0,Math.PI*2); ctx.fill(); // merit badge
+        ctx.fillStyle='#e0552b'; // neckerchief knot
+        ctx.beginPath(); ctx.moveTo(-4,9); ctx.lineTo(4,9); ctx.lineTo(0,13); ctx.closePath(); ctx.fill();
+        eyes(3,1,1.5); smile(6,3.5);
+        break;
+      case 'maik': // Store Employee — cap + name badge
+        faceBase('#e9be97');
+        ctx.fillStyle='#e8952b'; // work cap dome
+        ctx.beginPath(); ctx.arc(0,-2,11,Math.PI,0); ctx.fill();
+        ctx.fillStyle='#c9781f'; ctx.fillRect(-13,-3,20,3); // cap peak (left)
+        ctx.fillStyle='#fff'; ctx.fillRect(-5,-6,10,3); // white front panel
+        ctx.fillStyle='#e8952b'; ctx.fillRect(-4.5,-5.5,9,2); // logo stripe
+        ctx.fillStyle='#fff'; ctx.fillRect(6,5,6,4); // name tag
+        ctx.strokeStyle='#e8952b'; ctx.lineWidth=0.8; ctx.strokeRect(6,5,6,4);
+        eyes(3,1,1.5); smile(6,3.5);
+        break;
+      case 'kayo': // Kayo & Yara — two cats: paired ears + whiskers
+        faceBase('#f6d7a6');
+        ctx.fillStyle='#d98cc4'; // left cat ears
+        ctx.beginPath(); ctx.moveTo(-9,-8); ctx.lineTo(-11,-15); ctx.lineTo(-5,-11); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(-3,-10); ctx.lineTo(-4,-16); ctx.lineTo(1,-12); ctx.closePath(); ctx.fill();
+        ctx.fillStyle='#b25a95'; // right cat (Yara) ears, darker
+        ctx.beginPath(); ctx.moveTo(3,-10); ctx.lineTo(4,-16); ctx.lineTo(9,-11); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(9,-8); ctx.lineTo(11,-15); ctx.lineTo(5,-11); ctx.closePath(); ctx.fill();
+        eyes(4,0,1.6);
+        ctx.fillStyle='#c46fa8'; ctx.beginPath(); ctx.moveTo(-1,3); ctx.lineTo(1,3); ctx.lineTo(0,4.5); ctx.closePath(); ctx.fill(); // nose
+        ctx.strokeStyle='rgba(0,0,0,.4)'; ctx.lineWidth=0.8; // whiskers
+        ctx.beginPath(); ctx.moveTo(-2,4); ctx.lineTo(-9,3); ctx.moveTo(-2,5); ctx.lineTo(-9,6); ctx.moveTo(2,4); ctx.lineTo(9,3); ctx.moveTo(2,5); ctx.lineTo(9,6); ctx.stroke();
+        break;
+      case 'marloes': // Old Woman — grey bun + spectacles + shawl
+        faceBase('#ecc5a6');
+        ctx.fillStyle='#d7d2cf'; // grey hair sides + bun
+        ctx.beginPath(); ctx.arc(0,-4,11,Math.PI,0); ctx.fill();
+        ctx.beginPath(); ctx.arc(0,-13,4,0,Math.PI*2); ctx.fill(); // top bun
+        ctx.strokeStyle='#4a4a55'; ctx.lineWidth=1.1; // round spectacles
+        ctx.beginPath(); ctx.arc(-3.5,0,2.6,0,Math.PI*2); ctx.arc(3.5,0,2.6,0,Math.PI*2); ctx.moveTo(-0.9,0); ctx.lineTo(0.9,0); ctx.stroke();
+        ctx.strokeStyle='#b0a08f'; ctx.lineWidth=1; // gentle wrinkle
+        ctx.beginPath(); ctx.arc(0,7,4,0.2*Math.PI,0.8*Math.PI); ctx.stroke();
         break;
       default:
         faceBase('#f1c9a5'); eyes(); smile();
