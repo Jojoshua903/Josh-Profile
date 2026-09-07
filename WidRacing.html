@@ -137,11 +137,17 @@
   .cup-name{font-weight:800;font-size:15px;letter-spacing:.5px;flex:1;}
   .cup-go{font-size:10px;font-weight:800;letter-spacing:1px;color:var(--accent-2);text-transform:uppercase;display:none;}
   .cup.cupmode .cup-go{display:block;}
+  .cup-medal{font-size:16px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5));}
   .cup-tracks{display:flex;gap:8px;padding:12px 14px;}
   .cup.cupmode .cup-tracks{pointer-events:none;opacity:.85;}
   .ctrack{
+    position:relative;
     flex:1;min-width:0;background:#0d1130;border:2px solid var(--line);border-radius:12px;
     padding:6px;cursor:pointer;transition:transform .1s,border-color .12s,box-shadow .12s;
+  }
+  .ctrack-medal{
+    position:absolute;top:9px;right:9px;z-index:2;font-size:15px;line-height:1;
+    filter:drop-shadow(0 1px 2px rgba(0,0,0,.6));
   }
   .ctrack:hover{transform:translateY(-2px);border-color:var(--accent-2);}
   .ctrack.selected{border-color:#fff;box-shadow:0 0 0 2px var(--accent);}
@@ -1209,6 +1215,8 @@ const Save = (function(){
     getFlag(k){ return !!(data.flags && data.flags[k]); },
     winsByTrack(){ return (data.stats && data.stats.winTrack) || {}; },
     recordWinTrack(id){ data.stats=data.stats||{}; data.stats.winTrack=data.stats.winTrack||{}; data.stats.winTrack[id]=1; save(); },
+    winsByCup(){ return (data.stats && data.stats.winCup) || {}; },
+    recordWinCup(id){ data.stats=data.stats||{}; data.stats.winCup=data.stats.winCup||{}; data.stats.winCup[id]=1; save(); },
     achUnlocked(id){ return !!(data.ach && data.ach[id]); },
     unlockAch(id){ data.ach=data.ach||{}; if(!data.ach[id]){ data.ach[id]=1; save(); return true; } return false; },
   };
@@ -1709,10 +1717,12 @@ function buildCups(){
     el.className='cup';
     el.dataset.cup=cup.id;
     el.style.setProperty('--cup-a', darken(cup.color,0.25));
+    const cupWon = !!Save.winsByCup()[cup.id];
     el.innerHTML=`
       <div class="cup-head">
         <span class="cup-emoji">${cup.emoji}</span>
         <span class="cup-name">${cup.name}</span>
+        ${cupWon? '<span class="cup-medal" title="Cup won">🏆</span>' : ''}
         <span class="cup-go">Select ▶</span>
       </div>
       <div class="cup-tracks"></div>`;
@@ -1721,7 +1731,9 @@ function buildCups(){
       const t=trackById(tid); if(!t) return;
       const tc=document.createElement('div');
       tc.className='ctrack'; tc.dataset.track=tid;
+      const trackWon = !!Save.winsByTrack()[tid];
       tc.innerHTML=`<canvas width="120" height="92"></canvas>
+        ${trackWon? '<span class="ctrack-medal" title="Course won">🏅</span>' : ''}
         <span class="cn">${t.name}</span>
         <span class="ch">${t.hazard? '⚠ '+t.hazard.label : '✓ No hazards'}</span>`;
       tc.addEventListener('click',(e)=>{
@@ -1738,6 +1750,9 @@ function buildCups(){
     wrap.appendChild(el);
   });
   refreshCupModeUI();
+  // re-apply the current selection highlight after a rebuild
+  if(state.selectedCup) document.querySelectorAll('.cup').forEach(x=>x.classList.toggle('selected', x.dataset.cup===state.selectedCup.id));
+  else if(state.track) document.querySelectorAll('.ctrack').forEach(x=>x.classList.toggle('selected', x.dataset.track===state.track.id));
 }
 
 function refreshCupModeUI(){
@@ -1916,6 +1931,7 @@ document.querySelectorAll('.mode-btn').forEach(btn=>{
 // setup → course select
 document.getElementById('toCourseBtn').addEventListener('click',()=>{
   if(!state.char) return;
+  buildCups();   // rebuild so newly-earned course/cup medals show
   showScreen('courseScreen');
   document.getElementById('csRacerLine').textContent =
     `${state.char.name} · ${state.vehicle.name} — pick a mode, then a course.`;
@@ -1939,7 +1955,7 @@ document.getElementById('startBtn').addEventListener('click',()=>{
   Music.play(state.track.id);
 });
 document.getElementById('quitBtn').addEventListener('click',()=>{
-  Game.stop(); Cup.active=false; Cup.field=null; showScreen('courseScreen'); Music.play('menu');
+  Game.stop(); Cup.active=false; Cup.field=null; buildCups(); showScreen('courseScreen'); Music.play('menu');
 });
 function syncMuteButtons(){
   const muted = Music.isMuted();
@@ -1978,7 +1994,7 @@ function openTimes(){
     const bl=Save.bestLap(t.id), bt=Save.bestTrial(t.id);
     return `<div class="times-row">
       <canvas class="tr-thumb" width="120" height="92" data-track="${t.id}"></canvas>
-      <div class="tr-name">${t.name}<span>${t.hazard? '⚠ '+t.hazard.label : '✓ No hazards'}</span></div>
+      <div class="tr-name">${t.name} ${Save.winsByTrack()[t.id]?'🏅':''}<span>${t.hazard? '⚠ '+t.hazard.label : '✓ No hazards'}</span></div>
       <div class="tr-times">
         <div>Best lap: ${bl?'<b>'+fmtTimeMenu(bl)+'</b>':'<span class="none">--</span>'}</div>
         <div>Trial: ${bt?'<b>'+fmtTimeMenu(bt)+'</b>':'<span class="none">--</span>'}</div>
@@ -4568,7 +4584,7 @@ const Game = (function(){
         const finalOrder = Object.entries(Cup.points).sort((a,b)=>b[1]-a[1]);
         const champ = finalOrder[0][0];
         const youChamp = champ===player.def.name;
-        if(youChamp) Achv.flag('cupWin');
+        if(youChamp){ Achv.flag('cupWin'); if(state.selectedCup) Save.recordWinCup(state.selectedCup.id); }
         const bonus = youChamp? 200 : 80;
         Save.addCoins(bonus + raceCoins); refreshCoins();
         const podium = finalOrder.map(([name,pts],i)=>{
