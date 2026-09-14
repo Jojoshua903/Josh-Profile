@@ -1062,7 +1062,10 @@ const _fieldImg={};
 function fieldSprite(name){
   if(!name) return null;
   if(name in _fieldImg) return _fieldImg[name];
-  const im=new Image(); im.src=(typeof IMG!=='undefined'&&IMG[name])||(monSlug(name)+'.png');
+  const bare=(typeof IMG!=='undefined'&&IMG[name])||(monSlug(name)+'.png');
+  const im=new Image();
+  im.onerror=function(){ im.onerror=null; im.src=bare; };   // val terug naar root als images/ ontbreekt
+  im.src='images/'+bare;
   _fieldImg[name]=im; return im;
 }
 function drawNpc(ctx,n,px,py,time){

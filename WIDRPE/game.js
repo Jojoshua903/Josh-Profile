@@ -435,9 +435,10 @@ function spriteURL(mon){
 }
 function monImg(mon,fill){
   const w=fill||'100%';
-  const file=IMG[mon.n]||(monSlug(mon.n)+'.png');
+  const bare=IMG[mon.n]||(monSlug(mon.n)+'.png');
   const fb=spriteURL(mon);
-  return `<img src="${file}" alt="${mon.n}" onerror="this.onerror=null;this.src='${fb}';this.style.imageRendering='pixelated'" style="width:${w};height:${w};object-fit:contain">`;
+  // probeer images/ → dan root → dan pixel-fallback (werkt met beide mapstructuren)
+  return `<img src="images/${bare}" alt="${mon.n}" onerror="this.onerror=function(){this.onerror=null;this.src='${fb}';this.style.imageRendering='pixelated'};this.src='${bare}'" style="width:${w};height:${w};object-fit:contain">`;
 }
 
 /* ============ STATE ============ */
