@@ -1,0 +1,2674 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Out of Bounce</title>
+<style>
+  :root{
+    --pink:#ff6fb0; --mint:#4fd6a8; --sky:#5fb8ff; --yellow:#ffcf3d;
+    --purple:#a97bff; --coral:#ff7a59; --ink:#2b2250; --cream:#fff7ef;
+    --font:"Arial Rounded MT Bold","Trebuchet MS","Segoe UI",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;overflow:hidden;font-family:var(--font);color:var(--ink);background:#8ad7ff;}
+  #c{position:fixed;inset:0;display:block;}
+
+  .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;z-index:10;}
+  .overlay:not(.show){display:none;}
+  .card{width:min(640px,94vw);max-height:90vh;overflow:auto;position:relative;
+    background:linear-gradient(180deg,#fffdfb 0%,#fff1f6 100%);
+    border:5px solid var(--ink);border-radius:34px;
+    box-shadow:0 16px 0 rgba(43,34,80,.16),0 36px 72px rgba(43,34,80,.34);
+    padding:30px 30px 32px;text-align:center;}
+  .logo{font-size:clamp(44px,8vw,74px);line-height:.9;color:#fff;
+    -webkit-text-stroke:4px var(--ink);paint-order:stroke fill;text-shadow:0 7px 0 var(--ink);margin:6px 0 2px;}
+  .logo .b1{color:var(--pink);}.logo .b2{color:var(--sky);}.logo .b3{color:var(--mint);font-size:.5em;}
+  .tag{font-size:13px;letter-spacing:3px;text-transform:uppercase;opacity:.6;margin-bottom:18px;}
+  .block-title{font-size:12px;letter-spacing:3px;text-transform:uppercase;opacity:.55;margin:18px 0 11px;
+    display:flex;align-items:center;gap:10px;justify-content:center;}
+  .block-title::before,.block-title::after{content:"";height:2px;width:32px;background:rgba(43,34,80,.22);border-radius:2px;}
+  .beans{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+  .bean-pick{width:54px;height:62px;border-radius:46% 46% 42% 42%;border:4px solid var(--ink);
+    cursor:pointer;position:relative;transition:transform .12s ease;box-shadow:0 5px 0 rgba(43,34,80,.25);}
+  .bean-pick:hover{transform:translateY(-4px);}
+  .bean-pick.sel{outline:4px solid var(--yellow);outline-offset:3px;transform:translateY(-4px) scale(1.05);}
+  .bean-pick::before,.bean-pick::after{content:"";position:absolute;top:30%;width:10px;height:13px;background:#fff;border-radius:50%;border:2px solid var(--ink);}
+  .bean-pick::before{left:22%;}.bean-pick::after{right:22%;}
+  .maps{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:11px;margin:2px 0 4px;}
+  .map-card{text-align:left;cursor:pointer;position:relative;overflow:hidden;background:#fff;border:3px solid var(--ink);border-radius:18px;padding:12px 13px 12px 18px;box-shadow:0 5px 0 rgba(43,34,80,.14);transition:transform .14s ease,box-shadow .14s ease;}
+  .map-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:8px;background:linear-gradient(var(--pink),var(--purple));}
+  .map-card:hover{transform:translateY(-4px);box-shadow:0 9px 0 rgba(43,34,80,.14);}
+  .map-card.sel{outline:4px solid var(--yellow);outline-offset:2px;}
+  .map-card .mc-name{font-size:17px;}
+  .map-card .mc-author{font-size:12px;opacity:.65;margin-top:2px;}
+  .map-card .mc-best{font-size:11px;opacity:.8;margin-top:7px;}
+  .map-card .mc-goal{font-size:10px;opacity:.55;margin-top:3px;letter-spacing:.3px;}
+  .map-card .mc-dot{display:inline-block;width:12px;height:12px;border-radius:50%;border:2px solid var(--ink);vertical-align:middle;margin-right:5px;}
+  .tabs{display:flex;gap:8px;justify-content:center;margin:4px auto 20px;flex-wrap:wrap;}
+  .tab{font-family:var(--font);font-size:14px;cursor:pointer;border:3px solid var(--ink);border-radius:13px;padding:9px 18px;background:#fff;color:var(--ink);box-shadow:0 4px 0 var(--ink);transition:transform .1s ease,box-shadow .1s ease,background .15s ease;}
+  .tab:hover{transform:translateY(-2px);box-shadow:0 6px 0 var(--ink);}
+  .tab.sel{background:linear-gradient(180deg,#ffe272,#ffcf3d);transform:translateY(3px);box-shadow:0 1px 0 var(--ink);}
+  .pane:not(.show){display:none;}
+  .medal-sum{display:flex;gap:18px;justify-content:center;font-size:20px;margin:2px 0 16px;}
+  .medal-list{text-align:left;max-width:400px;margin:0 auto;}
+  .medal-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 13px;border:3px solid var(--ink);border-radius:12px;margin-bottom:6px;background:#fff;font-size:14px;}
+  .medal-row .mr-medal{font-size:18px;margin-right:4px;}
+  .btn[disabled]{opacity:.5;cursor:not-allowed;filter:grayscale(.4);}
+  .btn[disabled]:active{transform:none;box-shadow:0 6px 0 var(--ink);}
+  .rush-art{font-size:64px;margin:18px 0 6px;filter:drop-shadow(0 5px 0 rgba(43,34,80,.25));}
+  .rush-copy{font-size:15px;opacity:.75;line-height:1.7;margin:4px 0 2px;}
+  .diff-row{display:flex;gap:8px;justify-content:center;margin:10px 0 14px;}
+  .diff{font-family:var(--font);font-size:14px;cursor:pointer;border:4px solid var(--ink);border-radius:12px;padding:8px 16px;background:#fff;color:var(--ink);box-shadow:0 4px 0 rgba(43,34,80,.2);transition:transform .1s ease;}
+  .diff:hover{transform:translateY(-2px);}
+  .diff.sel{background:var(--yellow);}
+  .shop-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .coin-badge{background:var(--yellow);border:3px solid var(--ink);border-radius:999px;padding:4px 15px;font-size:16px;font-weight:800;box-shadow:0 3px 0 rgba(43,34,80,.2);}
+  .shop-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .shop-col-title{font-size:12px;letter-spacing:2px;text-transform:uppercase;opacity:.6;margin-bottom:8px;}
+  .shop-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .skin-card{cursor:pointer;background:#fff;border:3px solid var(--ink);border-radius:14px;padding:9px 6px;box-shadow:0 4px 0 rgba(43,34,80,.14);transition:transform .12s ease,box-shadow .12s ease;}
+  .skin-card:hover{transform:translateY(-3px);box-shadow:0 7px 0 rgba(43,34,80,.14);}
+  .skin-card.equipped{outline:4px solid var(--mint);outline-offset:2px;}
+  .skin-card.locked{opacity:.55;}
+  .skin-card .sk-ico{font-size:30px;line-height:1;}
+  .skin-card .sk-name{font-size:12px;margin-top:3px;}
+  .skin-card .sk-price{font-size:12px;font-weight:800;margin-top:4px;opacity:.85;}
+  .skin-card.owned .sk-price{color:#2fae82;}
+  .skin-card.equipped .sk-price{color:#2fae82;}
+  #tourHud{position:fixed;top:14px;right:14px;width:210px;max-height:72vh;overflow:hidden;background:rgba(28,22,54,.78);border:3px solid rgba(255,255,255,.25);border-radius:14px;padding:10px 12px;color:#fff;font-family:var(--font);z-index:40;}
+  #tourHudHead{font-size:13px;line-height:1.4;margin-bottom:8px;opacity:.95;}
+  #tourHudList{display:flex;flex-direction:column;gap:3px;}
+  .trow{display:flex;align-items:center;gap:6px;font-size:11px;padding:2px 5px;border-radius:7px;}
+  .trow.me{background:rgba(255,207,61,.28);font-weight:700;}
+  .trow.out{opacity:.4;text-decoration:line-through;}
+  .trow .tnm{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .trow .tbar{width:46px;height:6px;border-radius:3px;background:rgba(255,255,255,.18);overflow:hidden;}
+  .trow .tbar>i{display:block;height:100%;background:#4fd6a8;}
+  #tourOvList .tor{display:flex;justify-content:space-between;gap:10px;font-size:14px;padding:6px 12px;border:3px solid var(--ink);border-radius:11px;margin-bottom:5px;background:#fff;}
+  #tourOvList .tor.me{background:var(--yellow);font-weight:800;}
+  #tourOvList .tor.out{opacity:.5;}
+  .btn{font-family:var(--font);font-size:21px;cursor:pointer;border:4px solid var(--ink);border-radius:18px;
+    padding:14px 32px;margin:6px;color:var(--ink);
+    background:linear-gradient(180deg,#ffe272,#ffcf3d);
+    box-shadow:0 6px 0 var(--ink);transition:transform .08s ease,box-shadow .08s ease;}
+  .btn:active{transform:translateY(5px);box-shadow:0 1px 0 var(--ink);}
+  .btn.go{background:linear-gradient(180deg,#78f0c6,#4fd6a8);}.btn.alt{background:linear-gradient(180deg,#fff,#eef2f7);}
+  .play-row{margin-top:24px;display:flex;justify-content:center;flex-wrap:wrap;}
+  .hint{margin-top:16px;font-size:13px;opacity:.68;line-height:1.7;}
+  .hint kbd{background:#fff;border:2px solid var(--ink);border-radius:6px;padding:1px 7px;font-family:var(--font);font-size:12px;box-shadow:0 2px 0 rgba(43,34,80,.25);}
+  .win-time{font-size:clamp(40px,9vw,70px);color:var(--purple);-webkit-text-stroke:3px var(--ink);paint-order:stroke fill;text-shadow:0 5px 0 var(--ink);margin:6px 0;}
+  .win-sub{font-size:16px;opacity:.8;}
+  .pb{display:inline-block;margin-top:8px;background:var(--yellow);border:3px solid var(--ink);border-radius:999px;padding:4px 14px;font-size:14px;}
+  .win-list{margin:16px auto 0;max-width:280px;text-align:left;}
+  .win-list .wl-title{font-size:12px;letter-spacing:2px;text-transform:uppercase;opacity:.6;margin-bottom:6px;text-align:center;}
+  .win-list .wl-row{display:flex;justify-content:space-between;align-items:center;padding:5px 12px;border:3px solid var(--ink);border-radius:10px;margin-bottom:5px;background:#fff;font-size:15px;}
+  .win-list .wl-row.cur{background:var(--mint);}
+  .win-list .wl-row .wl-rank{opacity:.6;font-size:13px;margin-right:8px;}
+  .win-medal{margin:4px 0 10px;text-align:center;}
+  .win-medal .wm-big{font-size:24px;font-weight:800;}
+  .win-medal .wm-coins{display:inline-block;background:var(--yellow);border:3px solid var(--ink);border-radius:999px;padding:3px 13px;font-size:14px;font-weight:800;margin-bottom:8px;}
+  .win-medal .wm-big.wm-none{font-size:15px;font-weight:700;opacity:.7;}
+  .win-medal .wm-next{font-size:12px;opacity:.65;margin-top:3px;}
+
+  #hud{position:fixed;top:0;left:0;right:0;z-index:5;padding:16px 20px;pointer-events:none;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;}
+  #hud.hidden{display:none;}
+  .hud-pill{background:rgba(255,247,239,.92);border:3px solid var(--ink);border-radius:14px;padding:8px 14px;box-shadow:0 4px 0 rgba(43,34,80,.2);}
+  #timer{font-size:26px;min-width:120px;text-align:center;}
+  #progwrap{width:min(42vw,420px);height:16px;background:rgba(255,247,239,.92);border:3px solid var(--ink);border-radius:999px;overflow:hidden;margin-top:6px;}
+  #prog{height:100%;width:0%;background:linear-gradient(90deg,var(--mint),var(--sky));border-radius:999px;transition:width .12s linear;}
+  .esc-hint{position:fixed;bottom:64px;left:50%;transform:translateX(-50%);z-index:5;background:rgba(255,247,239,.9);border:3px solid var(--ink);border-radius:12px;padding:6px 14px;font-size:12px;opacity:.85;pointer-events:none;}
+  .esc-hint.hidden{display:none;}
+  #confetti{position:fixed;inset:0;z-index:9;pointer-events:none;overflow:hidden;}
+  .conf{position:absolute;width:12px;height:8px;border-radius:2px;animation:fall linear forwards;}
+  @keyframes fall{to{transform:translateY(110vh) rotate(720deg);}}
+  #countdown{position:fixed;inset:0;z-index:11;display:none;align-items:center;justify-content:center;pointer-events:none;}
+  #countdown span{font-weight:900;color:#fff;text-shadow:0 6px 0 var(--ink),0 0 30px rgba(0,0,0,.5);animation:cdpop .55s ease-out;}
+  #countdown.cd-num span{font-size:min(40vh,320px);}
+  #countdown.cd-go span{font-size:min(28vh,240px);color:#ffe14d;}
+  @keyframes cdpop{0%{transform:scale(2.4);opacity:0;}35%{transform:scale(1);opacity:1;}100%{transform:scale(1);opacity:1;}}
+
+  /* --- menu-sfeer --- */
+  #menu::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 38%,rgba(43,34,80,0) 30%,rgba(43,34,80,.42) 100%);
+    animation:bgpulse 7s ease-in-out infinite;}
+  @keyframes bgpulse{0%,100%{opacity:.85;}50%{opacity:1;}}
+  #menu .card{animation:cardIn .5s cubic-bezier(.2,1.3,.4,1) both;}
+  @keyframes cardIn{0%{transform:translateY(26px) scale(.92);opacity:0;}100%{transform:translateY(0) scale(1);opacity:1;}}
+  .logo{animation:logoBob 3.2s ease-in-out infinite;}
+  @keyframes logoBob{0%,100%{transform:translateY(0) rotate(-1deg);}50%{transform:translateY(-7px) rotate(1deg);}}
+  .btn{position:relative;overflow:hidden;}
+  .btn::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;
+    background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-20deg);transition:left .5s ease;}
+  .btn:hover::after{left:120%;}
+  .btn:hover{transform:translateY(-2px);}
+  .tab,.diff{position:relative;transition:transform .1s ease,box-shadow .15s ease,background .15s ease;}
+  .diff.sel{box-shadow:0 4px 0 rgba(43,34,80,.2),0 0 0 3px rgba(255,207,61,.5),0 0 18px rgba(255,207,61,.6);}
+  .map-card:hover{box-shadow:0 8px 0 rgba(43,34,80,.16);}
+  .bean-pick:hover{transform:translateY(-5px) rotate(-3deg);}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="confetti"></div>
+<div id="countdown"><span></span></div>
+
+<div id="hud" class="hidden">
+  <div class="hud-pill" id="timer">0.00</div>
+  <div class="hud-pill" id="bossBar" style="display:none">META AI&nbsp; <span id="bossHearts"></span></div>
+  <div style="text-align:right" id="hudRight">
+    <div class="hud-pill" id="hudMap" style="font-size:14px;opacity:.85">Course</div>
+    <div id="progwrap"><div id="prog"></div></div>
+  </div>
+</div>
+<div class="esc-hint hidden" id="escHint"><kbd>R</kbd> opnieuw &nbsp;·&nbsp; <kbd>Esc</kbd> menu</div>
+<div id="tourHud" style="display:none"><div id="tourHudHead"></div><div id="tourHudList"></div></div>
+
+<div class="overlay show" id="menu">
+  <div class="card">
+    <div class="logo"><span class="b1">OUT OF</span> <span class="b2">BOUNCE</span></div>
+    <div class="tag">de hindernisbaan van de vriendengroep</div>
+    <div class="tabs">
+      <div class="tab sel" id="tabTrials">Time Trials</div>
+      <div class="tab" id="tabMedals">Medailles</div>
+      <div class="tab" id="tabRush">Boss Rush</div>
+      <div class="tab" id="tabTour">Toernooi</div>
+      <div class="tab" id="tabShop">Skins</div>
+    </div>
+    <div class="pane show" id="paneTrials">
+      <div class="block-title">Kies je bean</div>
+      <div class="beans" id="beanPicker"></div>
+      <div class="block-title">Kies een level</div>
+      <div class="maps" id="mapPicker"></div>
+      <div class="play-row"><button class="btn go" id="playBtn">Spelen ▶</button></div>
+    </div>
+    <div class="pane" id="paneMedals">
+      <div class="block-title">Jouw medailles</div>
+      <div class="medal-sum" id="medalSum"></div>
+      <div class="medal-list" id="medalList"></div>
+    </div>
+    <div class="pane" id="paneRush">
+      <div class="block-title">Boss Rush</div>
+      <div class="rush-art">🤖</div>
+      <p class="rush-copy">Versla de bazen van de vriendengroep.<br>Ontwijk hun aanvallen en sla terug!</p>
+      <div class="maps" id="bossPicker"></div>
+      <div class="play-row"><button class="btn go" id="rushBtn">Start ▶</button></div>
+    </div>
+    <div class="pane" id="paneTour">
+      <div class="block-title">Toernooi</div>
+      <p class="rush-copy">15 beans, 3 rondes. Ronde 1 &amp; 2 zijn races op een willekeurige map — kom bij de snelste helft over de finish of je valt af. Ronde 3 is <b>last one standing</b>!</p>
+      <div class="diff-row" id="diffRow">
+        <div class="diff" data-d="makkelijk">Makkelijk</div>
+        <div class="diff sel" data-d="normaal">Normaal</div>
+        <div class="diff" data-d="moeilijk">Moeilijk</div>
+      </div>
+      <div class="play-row"><button class="btn go" id="tourStartBtn">Start toernooi ▶</button></div>
+    </div>
+    <div class="pane" id="paneShop">
+      <div class="shop-head"><span class="block-title" style="margin:0">Skin-shop</span><span class="coin-badge" id="coinBadge">🪙 0</span></div>
+      <div class="shop-cols">
+        <div><div class="shop-col-title">Bovenkant</div><div class="shop-grid" id="shopTop"></div></div>
+        <div><div class="shop-col-title">Onderkant</div><div class="shop-grid" id="shopBottom"></div></div>
+      </div>
+      <p class="rush-copy">Combineer een boven- en onderhelft naar keuze. Verdien 🪙 door levels te finishen — meer voor medailles en toernooien.</p>
+    </div>
+    <div class="hint">
+      <kbd>W</kbd> vooruit &nbsp;·&nbsp; <kbd>S</kbd> achteruit &nbsp;·&nbsp;
+      <b>beweeg de muis</b> om te sturen (klik om te vergrendelen, <kbd>Esc</kbd> los)<br>
+      <kbd>Space</kbd> springen &nbsp;·&nbsp; nog een keer in de lucht = <b>duik</b> naar voren<br>
+      Ontwijk de draaiende balken, blijf op de baan. Val je eraf? Terug naar je laatste checkpoint.
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="win">
+  <div class="card">
+    <div class="logo" style="font-size:clamp(34px,6vw,52px)">👑 FINISH!</div>
+    <div class="win-sub">Jouw tijd</div>
+    <div class="win-time" id="winTime">0.00</div>
+    <div class="pb" id="winPb"></div>
+    <div class="win-medal" id="winMedal"></div>
+    <div class="win-list" id="winList"></div>
+    <div class="play-row">
+      <button class="btn go" id="againBtn">Opnieuw ↺</button>
+      <button class="btn alt" id="menuBtn">Menu</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="tourOverlay">
+  <div class="card">
+    <div class="logo" id="tourOvTitle" style="font-size:clamp(28px,5vw,44px)">Ronde</div>
+    <div class="win-sub" id="tourOvSub"></div>
+    <div class="win-list" id="tourOvList"></div>
+    <div class="play-row">
+      <button class="btn go" id="tourContBtn">Verder ▶</button>
+      <button class="btn alt" id="tourMenuBtn">Menu</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
+
+/* ============================================================
+   BEAN DASH 3D — Fall Guys-stijl base
+   De baan staat in buildCourse(). Posities zijn wereld-units:
+   +Z = vooruit, grond-oppervlak op y = 0. Een nieuw "level van
+   een vriend" = een nieuwe buildCourse-variant met andere pads,
+   sweepers en kleuren.
+   ============================================================ */
+
+const BEAN_COLORS = [0xff6fb0, 0x4fd6a8, 0x5fb8ff, 0xffcf3d, 0xa97bff, 0xff7a59];
+const PLAT_COLORS = [0xd7f3ff, 0xffe3b0, 0xd9ffe8, 0xffd9ec, 0xe6dcff];
+
+// physics
+const R = 0.55, PH = 1.5;              // speler-radius + hoogte (voeten->hoofd)
+const GRAV = 34, JUMP_V = 13, MOVE = 8, ACCEL = 60, FRIC = 50, AIR = 24, ROT = 2.7;
+const DIVE = 14;
+const FIXED = 1/120;
+
+/* ---------- three setup ---------- */
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x9ad8ff);
+scene.fog = new THREE.Fog(0x9ad8ff, 60, 150);
+
+const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 700);
+
+// zacht omgevingslicht + warme key-light met zachte schaduw + koele fill + warme rim
+const hemi = new THREE.HemisphereLight(0xffffff, 0x9fd4b0, 1.15); scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff2db, 2.0);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.near = 1; sun.shadow.camera.far = 72;
+sun.shadow.camera.left = -24; sun.shadow.camera.right = 24;
+sun.shadow.camera.top = 24; sun.shadow.camera.bottom = -24;
+sun.shadow.bias = -0.0004; sun.shadow.radius = 5; sun.shadow.normalBias = 0.02;
+scene.add(sun); scene.add(sun.target);
+const fill = new THREE.DirectionalLight(0xbcd4ff, 0.5); fill.position.set(-14,10,12); scene.add(fill);
+const rim = new THREE.DirectionalLight(0xffdca8, 0.7); rim.position.set(-10,8,-16); scene.add(rim);
+
+// luchtkoepel: zenit boven -> felle horizon in het midden -> grondwaas onderin
+function makeSkyTexture(botHex, topHex){
+  const c=document.createElement('canvas'); c.width=4; c.height=512;
+  const cx=c.getContext('2d'); const g=cx.createLinearGradient(0,0,0,512);
+  const zenith=new THREE.Color('#'+topHex), horizon=new THREE.Color('#'+botHex);
+  const hiSky=zenith.clone().lerp(horizon,0.5);
+  const hzBright=horizon.clone().lerp(new THREE.Color(0xffffff),0.35);     // lichte gloed op de horizon
+  const ground=horizon.clone().multiplyScalar(0.52).offsetHSL(0,-0.08,0);  // gedempte grondwaas
+  const groundLo=ground.clone().multiplyScalar(0.8);
+  g.addColorStop(0.00,'#'+zenith.getHexString());
+  g.addColorStop(0.34,'#'+hiSky.getHexString());
+  g.addColorStop(0.49,'#'+hzBright.getHexString());
+  g.addColorStop(0.52,'#'+horizon.getHexString());
+  g.addColorStop(0.72,'#'+ground.getHexString());
+  g.addColorStop(1.00,'#'+groundLo.getHexString());
+  cx.fillStyle=g; cx.fillRect(0,0,4,512);
+  const tex=new THREE.CanvasTexture(c); tex.colorSpace=THREE.SRGBColorSpace; return tex;
+}
+// zachte ronde gloed (radiale alpha) voor zon / lichtvlekken
+function makeGlowTexture(){
+  const S=128, c=document.createElement('canvas'); c.width=c.height=S; const x=c.getContext('2d');
+  const g=x.createRadialGradient(S/2,S/2,0,S/2,S/2,S/2);
+  g.addColorStop(0,'rgba(255,255,255,1)'); g.addColorStop(0.3,'rgba(255,248,224,0.75)');
+  g.addColorStop(0.7,'rgba(255,236,180,0.18)'); g.addColorStop(1,'rgba(255,236,180,0)');
+  x.fillStyle=g; x.fillRect(0,0,S,S);
+  const tex=new THREE.CanvasTexture(c); tex.colorSpace=THREE.SRGBColorSpace; return tex;
+}
+const glowTex = makeGlowTexture();
+const skyDome = new THREE.Mesh(new THREE.SphereGeometry(340,32,16),
+  new THREE.MeshBasicMaterial({ side:THREE.BackSide, fog:false, depthWrite:false, map:makeSkyTexture('d8f3ff','6fb6ff') }));
+scene.add(skyDome);
+
+// zon: felle kern + grote additieve gloed, hoog in de lucht (volgt de speler-richting)
+const sunSprite = new THREE.Group(); sunSprite.renderOrder=-1;
+const sunCore = new THREE.Mesh(new THREE.CircleGeometry(14,40),
+  new THREE.MeshBasicMaterial({ color:0xfff6e0, fog:false, transparent:true, opacity:0.95, depthWrite:false }));
+const sunGlow = new THREE.Mesh(new THREE.PlaneGeometry(150,150),
+  new THREE.MeshBasicMaterial({ map:glowTex, fog:false, transparent:true, opacity:0.85, depthWrite:false, blending:THREE.AdditiveBlending }));
+sunSprite.add(sunGlow); sunSprite.add(sunCore); scene.add(sunSprite);
+
+// zee / water
+const sea = new THREE.Mesh(new THREE.PlaneGeometry(700,700),
+  new THREE.MeshStandardMaterial({ color:0x6fc7ff, transparent:true, opacity:0.55, roughness:0.4, metalness:0.15 }));
+sea.rotation.x = -Math.PI/2; sea.position.y = -12; scene.add(sea);
+
+// pluizige wolken in twee ringen (langzame drift)
+const cloudGroup = new THREE.Group(); scene.add(cloudGroup);
+const cloudMat = new THREE.MeshStandardMaterial({ color:0xffffff, roughness:1, transparent:true, opacity:0.96 });
+const cloudMatSoft = new THREE.MeshStandardMaterial({ color:0xeaf3ff, roughness:1, transparent:true, opacity:0.6 });
+for (let i=0;i<40;i++){
+  const g = new THREE.Group(), puffs=5+((Math.random()*4)|0);
+  for (let j=0;j<puffs;j++){
+    const s = new THREE.Mesh(new THREE.SphereGeometry(2.2+Math.random()*3.2,12,10), Math.random()<0.3?cloudMatSoft:cloudMat);
+    s.position.set((Math.random()-0.5)*10,(Math.random()-0.5)*1.8,(Math.random()-0.5)*6);
+    s.scale.y=0.6+Math.random()*0.3; g.add(s);
+  }
+  const ang=Math.random()*Math.PI*2, far=Math.random()<0.5, rad=(far?110:40)+Math.random()*90;
+  g.position.set(Math.cos(ang)*rad, 14+Math.random()*30, Math.sin(ang)*rad);
+  g.scale.setScalar((far?1.6:0.9)+Math.random()*1.3); cloudGroup.add(g);
+}
+
+// landingsstof
+const dustGeo = new THREE.SphereGeometry(0.5,8,8);
+let dustParticles=[], pendingPuffs=[];
+
+/* ============================================================
+   course
+   ============================================================ */
+let solids = [], sweepers = [], checkpoints = [], ramps = [], rollers = [], bouncePads = [], pendulums = [], finishSolid = null, PATH = [];
+let courseGroup = null, spawn = {x:0,y:2,z:0};
+let curMap = null, curPalette = PLAT_COLORS, curMatOpts = {roughness:0.85, metalness:0}, curDeathY = -14, curGrav = GRAV;
+let stormActive=false, stormY=-10, stormSpeed=0.8, stormMesh=null, finishBeacon=null;
+
+// voortgang: horizontaal langs het pad, of verticaal (spiraal) op basis van hoogte
+function progressOf(x,z,y){
+  if (curMap && curMap.vertical) return Math.max(0,Math.min(1, y/curMap.topY));
+  return pathProgress(x,z);
+}
+
+const platMat = (i)=> new THREE.MeshStandardMaterial({ color:curPalette[i%curPalette.length], roughness:curMatOpts.roughness, metalness:curMatOpts.metalness });
+
+// ---- procedurele texturen (canvas; geen externe plaatjes nodig) ----
+const texCache={};
+function tnoise(x,w,h,n,a){ for(let i=0;i<n;i++){ x.fillStyle='rgba(0,0,0,'+(Math.random()*a).toFixed(3)+')'; x.fillRect(Math.random()*w,Math.random()*h,2,2);} }
+function makeFloorTexture(style){
+  const S=256, c=document.createElement('canvas'); c.width=c.height=S; const x=c.getContext('2d');
+  if (style==='grass'){
+    x.fillStyle='#5fa84a'; x.fillRect(0,0,S,S);
+    for(let i=0;i<S;i+=16){ x.fillStyle=((i/16)%2)?'#67b150':'#58a044'; x.fillRect(0,i,S,16); }
+    for(let i=0;i<1400;i++){ x.fillStyle=Math.random()<0.5?'rgba(255,255,255,.05)':'rgba(0,55,0,.12)'; x.fillRect(Math.random()*S,Math.random()*S,2,3); }
+    // kleine bloemetjes
+    for(let i=0;i<34;i++){ const fx=Math.random()*S, fy=Math.random()*S, pc=['#ffffff','#ffd94d','#ff8ac4','#bb8aff'][(Math.random()*4)|0];
+      x.fillStyle=pc; for(const o of [[0,-3],[0,3],[-3,0],[3,0]]){ x.beginPath(); x.arc(fx+o[0],fy+o[1],1.7,0,7); x.fill(); }
+      x.fillStyle='#ffcf3d'; x.beginPath(); x.arc(fx,fy,1.6,0,7); x.fill(); }
+  } else if (style==='ice'){
+    x.fillStyle='#c3e8ff'; x.fillRect(0,0,S,S);
+    x.strokeStyle='rgba(255,255,255,.7)'; x.lineWidth=2;
+    for(let i=0;i<16;i++){ x.beginPath(); let px=Math.random()*S,py=Math.random()*S; x.moveTo(px,py); for(let j=0;j<4;j++){px+=(Math.random()-0.5)*70;py+=(Math.random()-0.5)*70;x.lineTo(px,py);} x.stroke(); }
+    for(let i=0;i<220;i++){ x.fillStyle='rgba(255,255,255,.6)'; x.fillRect(Math.random()*S,Math.random()*S,2,2); }
+  } else if (style==='stone'){
+    x.fillStyle='#aeb4c6'; x.fillRect(0,0,S,S);
+    x.strokeStyle='#878ea4'; x.lineWidth=3; const bh=32;
+    for(let r=0;r<S/bh;r++){ const off=(r%2)*32; x.beginPath(); x.moveTo(0,r*bh); x.lineTo(S,r*bh); x.stroke();
+      for(let bxp=-off;bxp<=S;bxp+=64){ x.beginPath(); x.moveTo(bxp,r*bh); x.lineTo(bxp,r*bh+bh); x.stroke(); } }
+    tnoise(x,S,S,1600,0.16);
+  } else if (style==='metal'){
+    x.fillStyle='#5c6274'; x.fillRect(0,0,S,S);
+    x.strokeStyle='#464c5e'; x.lineWidth=4;
+    for(let i=0;i<=S;i+=64){ x.beginPath();x.moveTo(i,0);x.lineTo(i,S);x.stroke(); x.beginPath();x.moveTo(0,i);x.lineTo(S,i);x.stroke(); }
+    x.fillStyle='#3c4150';
+    for(let a=0;a<S;a+=64)for(let b=0;b<S;b+=64){ for(const o of [[10,10],[54,10],[10,54],[54,54]]){ x.beginPath(); x.arc(a+o[0],b+o[1],3,0,7); x.fill(); } }
+    tnoise(x,S,S,800,0.1);
+  } else if (style==='finish'){ const t=32;
+    for(let r=0;r<S/t;r++)for(let k=0;k<S/t;k++){ x.fillStyle=((r+k)%2)?'#2b2250':'#ffffff'; x.fillRect(k*t,r*t,t,t); }
+  } else { // candy-tegels
+    x.fillStyle='#fdeff6'; x.fillRect(0,0,S,S); const t=32;
+    for(let r=0;r<S/t;r++)for(let k=0;k<S/t;k++){ x.fillStyle=((r+k)%2)?'#ffe0ec':'#e5f1ff';
+      const px=k*t,py=r*t; x.beginPath(); if(x.roundRect)x.roundRect(px+2,py+2,t-4,t-4,6); else x.rect(px+2,py+2,t-4,t-4); x.fill();
+      x.fillStyle='rgba(255,255,255,.4)'; x.beginPath(); if(x.roundRect)x.roundRect(px+5,py+4,t-16,5,3); else x.rect(px+5,py+4,t-16,5); x.fill(); }
+  }
+  const tex=new THREE.CanvasTexture(c); tex.colorSpace=THREE.SRGBColorSpace; tex.wrapS=tex.wrapT=THREE.RepeatWrapping; tex.anisotropy=4; return tex;
+}
+function floorTex(style){ return texCache[style] || (texCache[style]=makeFloorTexture(style)); }
+function makeStripeTexture(){
+  const S=64, c=document.createElement('canvas'); c.width=c.height=S; const x=c.getContext('2d');
+  x.fillStyle='#ff5a3c'; x.fillRect(0,0,S,S); x.fillStyle='#2b2250';
+  for(let i=-S;i<S*2;i+=24){ x.beginPath(); x.moveTo(i,0); x.lineTo(i+12,0); x.lineTo(i+12-S,S); x.lineTo(i-S,S); x.closePath(); x.fill(); }
+  const tex=new THREE.CanvasTexture(c); tex.colorSpace=THREE.SRGBColorSpace; tex.wrapS=tex.wrapT=THREE.RepeatWrapping; return tex;
+}
+const stripeBase = makeStripeTexture();
+let curFloorTex = floorTex('candy');
+
+// getextureerd vloer-materiaal; tegelgrootte ~4 units
+function floorMat(w, d){
+  const tx = curFloorTex.clone(); tx.needsUpdate=true;
+  tx.wrapS=tx.wrapT=THREE.RepeatWrapping;
+  tx.repeat.set(Math.max(1,Math.abs(w)/4), Math.max(1,Math.abs(d)/4));
+  return new THREE.MeshStandardMaterial({ map:tx, roughness:curMatOpts.roughness, metalness:curMatOpts.metalness });
+}
+// gekleurd rand-frame bovenop (laat de getextureerde vloer vrij)
+function rimMat(color, glow){
+  return new THREE.MeshStandardMaterial({ color, roughness:.38, metalness:.18, emissive:color, emissiveIntensity:glow?0.4:0.12 });
+}
+function addRim(cx,cz,w,d,topY,color,glow){
+  const t=0.5, hgt=0.26, y=topY+0.09, m=rimMat(color,glow);
+  const bx=(zz)=>{ const e=new THREE.Mesh(new THREE.BoxGeometry(w,hgt,t), m); e.position.set(cx,y,zz); e.receiveShadow=true; e.castShadow=true; courseGroup.add(e); };
+  const bz=(xx)=>{ const e=new THREE.Mesh(new THREE.BoxGeometry(t,hgt,d), m); e.position.set(xx,y,cz); e.receiveShadow=true; e.castShadow=true; courseGroup.add(e); };
+  bx(cz-d/2+t/2); bx(cz+d/2-t/2); bz(cx-w/2+t/2); bz(cx+w/2-t/2);
+}
+// finish-plateau: geblokte vloer + gouden lichtbaken + zwevende draaiende ring
+function finishPad(cx,cz,w,d,topY,h,colIdx){
+  const s=addPad(cx,cz,w,d,topY,h,colIdx);
+  const tx=floorTex('finish').clone(); tx.needsUpdate=true; tx.wrapS=tx.wrapT=THREE.RepeatWrapping;
+  tx.repeat.set(Math.max(2,w/2.4), Math.max(2,d/2.4));
+  s.mesh.material = new THREE.MeshStandardMaterial({ map:tx, roughness:.55 });
+  const beacon=new THREE.Mesh(new THREE.CylinderGeometry(1.4,2.4,26,20,1,true),
+    new THREE.MeshBasicMaterial({ color:0xffe27a, transparent:true, opacity:0.26, blending:THREE.AdditiveBlending, side:THREE.DoubleSide, depthWrite:false }));
+  beacon.position.set(cx, topY+13, cz); courseGroup.add(beacon);
+  const star=new THREE.Mesh(new THREE.TorusGeometry(1.2,0.36,12,28),
+    new THREE.MeshStandardMaterial({ color:0xffcf3d, emissive:0x8a6300, emissiveIntensity:0.9, roughness:.4 }));
+  star.position.set(cx, topY+3.4, cz); courseGroup.add(star);
+  finishBeacon={ star, beacon, y0:topY+3.4 };
+  return s;
+}
+// vaste muur. orient 'z' = loopt langs z (dun in x) bij x=pos; 'x' = loopt langs x (dun in z) bij z=pos
+function addWall(pos, a, b, H, orient='z', color){
+  const len=b-a, mid=(a+b)/2, th=1.0, bottom=-1.4, hh=H-bottom;
+  const sx = orient==='z'? th : len, sz = orient==='z'? len : th;
+  const cx = orient==='z'? pos : mid, cz = orient==='z'? mid : pos;
+  const mesh=new THREE.Mesh(new THREE.BoxGeometry(sx,hh,sz),
+    new THREE.MeshStandardMaterial({ color:color||0x5a6070, roughness:.8, metalness:.3 }));
+  mesh.position.set(cx, bottom+hh/2, cz); mesh.castShadow=true; mesh.receiveShadow=true; courseGroup.add(mesh);
+  const s={ mesh, edge:mesh, half:{x:sx/2,y:hh/2,z:sz/2}, h:hh, mover:null, cx, cz, topY:H,
+            min:{x:0,y:0,z:0},max:{x:0,y:0,z:0},_dx:0,_dy:0,_dz:0 };
+  updateSolidBounds(s); solids.push(s);
+}
+function pistonMat(){
+  const tx=stripeBase.clone(); tx.needsUpdate=true; tx.wrapS=tx.wrapT=THREE.RepeatWrapping; tx.repeat.set(3,1.3);
+  return new THREE.MeshStandardMaterial({ map:tx, roughness:.5, metalness:.35 });
+}
+// zuiger die uit een muur slaat; axis 'x' of 'z', dir +/-1. Geen horizontale carry -> niet op blijven staan.
+function addPiston(wall, along, reach, speed, phase, axis='x', dir=1){
+  const plen=reach+3, pdep=3.6, h=1.4, topY=h;
+  const sx = axis==='x'? plen : pdep, sz = axis==='x'? pdep : plen;
+  const mesh=new THREE.Mesh(new THREE.BoxGeometry(sx,h,sz), pistonMat());
+  mesh.castShadow=true; mesh.receiveShadow=true; courseGroup.add(mesh);
+  // gevaren-baan op de grond (toont waar + hoe ver de zuiger slaat)
+  const mSx = axis==='x'? reach : pdep, mSz = axis==='x'? pdep : reach;
+  const mcx = axis==='x'? wall + dir*reach/2 : along;
+  const mcz = axis==='x'? along : wall + dir*reach/2;
+  const mark=new THREE.Mesh(new THREE.BoxGeometry(mSx,0.06,mSz),
+    new THREE.MeshStandardMaterial({ color:0xffa23d, emissive:0x7a4500, emissiveIntensity:0.5, transparent:true, opacity:0.4, roughness:.7 }));
+  mark.position.set(mcx, 0.06, mcz); mark.receiveShadow=true; courseGroup.add(mark);
+  // socket/opening in de muur
+  const sSx = axis==='x'? 0.6 : pdep+0.6, sSz = axis==='x'? pdep+0.6 : 0.6;
+  const scx = axis==='x'? wall + dir*0.3 : along;
+  const scz = axis==='x'? along : wall + dir*0.3;
+  const sock=new THREE.Mesh(new THREE.BoxGeometry(sSx, h+0.6, sSz),
+    new THREE.MeshStandardMaterial({ color:0x14181f, roughness:.95 }));
+  sock.position.set(scx, (h+0.6)/2 - 0.2, scz); courseGroup.add(sock);
+  const from = wall + dir*(-plen/2 + 0.3);   // ingetrokken (in de muur)
+  const to   = wall + dir*(reach - plen/2);  // uitgeschoven
+  const cx = axis==='x'? from : along, cz = axis==='x'? along : from;
+  const s={ mesh, edge:mesh, half:{x:sx/2,y:h/2,z:sz/2}, h,
+            mover:{axis, from, to, speed, phase, wave:'slam'},
+            cx, cz, topY, min:{x:0,y:0,z:0},max:{x:0,y:0,z:0},_dx:0,_dy:0,_dz:0 };
+  updateSolidBounds(s); solids.push(s);
+}
+// springpaneel: lanceert omhoog + boost in de richting die je op gaat; pulseert aan/uit (timing)
+function addBouncePad(x0,z0,y0, vh, vy, period, phase, aimx, aimz){
+  const grp=new THREE.Group(); grp.position.set(x0,y0,z0); courseGroup.add(grp);
+  // donkere basis + veertjes -> trampoline
+  const base=new THREE.Mesh(new THREE.CylinderGeometry(2.5,2.7,0.4,22),
+    new THREE.MeshStandardMaterial({ color:0x2b2250, roughness:.6, metalness:.3 }));
+  base.position.y=0.0; base.receiveShadow=true; grp.add(base);
+  const springMat=new THREE.MeshStandardMaterial({ color:0xbfc4d6, roughness:.35, metalness:.7 });
+  for(let i=0;i<6;i++){ const a=i/6*Math.PI*2; const sp=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,0.5,8), springMat);
+    sp.position.set(Math.cos(a)*2.0, 0.3, Math.sin(a)*2.0); grp.add(sp); }
+  const padMat=new THREE.MeshStandardMaterial({ color:0xffe14d, emissive:0xffe14d, emissiveIntensity:0.9, roughness:.3, metalness:.1 });
+  const pad=new THREE.Mesh(new THREE.CylinderGeometry(2.1,2.2,0.4,24), padMat);
+  pad.position.y=0.5; pad.castShadow=true; grp.add(pad);
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(2.15,0.18,12,28),
+    new THREE.MeshStandardMaterial({ color:0x2b2250, roughness:.5 }));
+  ring.rotation.x=Math.PI/2; ring.position.y=0.62; grp.add(ring);
+  const arrow=new THREE.Mesh(new THREE.ConeGeometry(0.6,1.3,16),
+    new THREE.MeshStandardMaterial({ color:0xffffff, emissive:0x9a8a00, emissiveIntensity:0.5 }));
+  const dir=new THREE.Vector3(aimx||0, 2.4, aimz||0).normalize();   // omhoog + lean naar volgende platform
+  arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir);
+  arrow.position.set(dir.x*0.6, 1.6, dir.z*0.6); grp.add(arrow);
+  bouncePads.push({ x0,z0,y0, vh, vy, period, phase, w:4.6, d:4.6, pad, padMat, arrow, squish:0 });
+}
+function padActive(bp){ return ((performance.now()/1000/bp.period + bp.phase)%1) < 0.6; }
+
+function addPad(cx, cz, w, d, topY=0, h=1.2, colIdx=0, mover=null, sinkCfg=null){
+  const box = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), floorMat(w,d));
+  box.receiveShadow = true; box.castShadow = true;
+  // speciale platformen krijgen een eigen accent-rand: bewegend=amber, zinkend=lelie-groen
+  const special = mover ? 0xffa23d : sinkCfg ? 0x6ad66a : null;
+  const rimCol = special!=null ? special : BEAN_COLORS[(colIdx+1)%BEAN_COLORS.length];
+  let mesh;
+  const grouped = mover || sinkCfg;                    // beweegt/zinkt -> rand moet mee
+  if (grouped){
+    // box + rand in één group, zodat het hele platform (incl. rand) MEE beweegt
+    mesh = new THREE.Group();
+    mesh.add(box);                                   // box lokaal gecentreerd op (0,0,0)
+    const t=0.5, hgt=0.26, ly=h/2+0.09, rm=rimMat(rimCol, true);
+    const addLocal=(gx,gz,sx,sz)=>{ const e=new THREE.Mesh(new THREE.BoxGeometry(sx,hgt,sz),rm); e.position.set(gx,ly,gz); e.receiveShadow=true; e.castShadow=true; mesh.add(e); };
+    addLocal(0, -d/2+t/2, w, t); addLocal(0, d/2-t/2, w, t);
+    addLocal(-w/2+t/2, 0, t, d); addLocal(w/2-t/2, 0, t, d);
+    mesh.position.set(cx, topY-h/2, cz);
+    courseGroup.add(mesh);
+  } else {
+    mesh = box;
+    mesh.position.set(cx, topY-h/2, cz);
+    courseGroup.add(mesh);
+    addRim(cx, cz, w, d, topY, rimCol, false);         // vaste rand voor stilstaande platforms
+  }
+  const s = { mesh, edge:mesh, half:{x:w/2,y:h/2,z:d/2}, h, mover,
+              min:{x:0,y:0,z:0}, max:{x:0,y:0,z:0}, _dx:0,_dy:0,_dz:0 };
+  if (mover){ mover.base={x:cx,y:topY,z:cz}; mover.cx=cx; mover.cz=cz; mover.topY=topY; }
+  if (sinkCfg){ s.sink={ base:topY, depth:sinkCfg.depth??3.5, rate:sinkCfg.rate??2.8, rise:sinkCfg.rise??6 }; }
+  s.cx=cx; s.cz=cz; s.topY=topY;
+  updateSolidBounds(s);
+  solids.push(s);
+  return s;
+}
+
+function updateSolidBounds(s){
+  s.min.x=s.cx-s.half.x; s.max.x=s.cx+s.half.x;
+  s.min.z=s.cz-s.half.z; s.max.z=s.cz+s.half.z;
+  s.max.y=s.topY; s.min.y=s.topY-s.h;
+}
+
+function addSweeper(x, y, z, len, speed, thick=0.55, baseY=0){
+  const barY = baseY + y;                 // absolute hoogte van de arm
+  // staande kolom (van baseY tot de arm) — metalen paal met waarschuwingsband
+  const col = new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.68,y,20),
+    new THREE.MeshStandardMaterial({ color:0x6a6f86, roughness:.4, metalness:.7 }));
+  col.position.set(x, baseY + y/2, z); col.castShadow=true; col.receiveShadow=true;
+  courseGroup.add(col);
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.56,0.56,0.5,20),
+    new THREE.MeshStandardMaterial({ color:0xff3860, emissive:0xff3860, emissiveIntensity:.6, roughness:.5 }));
+  band.position.set(x, baseY+y-0.6, z); courseGroup.add(band);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(1.0,1.2,0.4,22),
+    new THREE.MeshStandardMaterial({ color:0x2b2250, roughness:.5, metalness:.4 }));
+  base.position.set(x, baseY+0.18, z); base.receiveShadow=true; base.castShadow=true; courseGroup.add(base);
+  const boltRing = new THREE.Mesh(new THREE.TorusGeometry(0.86,0.08,8,24),
+    new THREE.MeshStandardMaterial({ color:0x9aa0b4, roughness:.3, metalness:.85 }));
+  boltRing.rotation.x=Math.PI/2; boltRing.position.set(x, baseY+0.38, z); courseGroup.add(boltRing);
+  // draaiende rode arm
+  const g = new THREE.Group(); g.position.set(x, barY, z);
+  // laserstraal: felle kern + additieve gloed-schil + gloeiende punt
+  const core = new THREE.Mesh(new THREE.CylinderGeometry(thick*0.3, thick*0.3, len, 12),
+    new THREE.MeshStandardMaterial({ color:0xff3860, emissive:0xff3860, emissiveIntensity:1.8, roughness:.3 }));
+  core.rotation.z = Math.PI/2; core.position.x = len/2; g.add(core);
+  const glow = new THREE.Mesh(new THREE.CylinderGeometry(thick*0.85, thick*0.85, len, 12),
+    new THREE.MeshBasicMaterial({ color:0xff6b8a, transparent:true, opacity:0.3, blending:THREE.AdditiveBlending, depthWrite:false }));
+  glow.rotation.z = Math.PI/2; glow.position.x = len/2; g.add(glow);
+  const tip = new THREE.Mesh(new THREE.SphereGeometry(thick*0.6,12,12),
+    new THREE.MeshStandardMaterial({ color:0xffd0da, emissive:0xff3860, emissiveIntensity:1.5 }));
+  tip.position.x = len; g.add(tip);
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(thick, thick, thick*1.4, 16),
+    new THREE.MeshStandardMaterial({ color:0x2b2250, metalness:.6, roughness:.4 }));
+  g.add(hub);
+  courseGroup.add(g);
+  sweepers.push({ g, x, y:barY, z, len, speed, thick, core, glow });   // y = absolute arm-hoogte
+  // SOLIDE kolom-collision in het midden (van baseY tot net onder de arm)
+  const h=y+0.1;
+  const s={ half:{x:0.75,y:h/2,z:0.75}, h, mover:null, cx:x, cz:z, topY:barY+0.1,
+            min:{x:0,y:0,z:0}, max:{x:0,y:0,z:0}, _dx:0,_dy:0,_dz:0, mesh:col, edge:col };
+  updateSolidBounds(s); solids.push(s);
+}
+
+function addCheckpoint(x, z, dir, baseY=0){
+  // gloeiende poort met lichtgordijn + vlaggetjes; wordt groen zodra je 'm haalt
+  const span = 5.5, grp = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color:0xff6fb0, emissive:0xff2f7a, emissiveIntensity:.5, roughness:.4, metalness:.2 });
+  const postGeo = new THREE.CylinderGeometry(0.3,0.44,4.6,16);
+  const p1 = new THREE.Mesh(postGeo, mat), p2 = new THREE.Mesh(postGeo, mat);
+  const capGeo = new THREE.SphereGeometry(0.4,14,12);
+  const c1 = new THREE.Mesh(capGeo, mat), c2 = new THREE.Mesh(capGeo, mat);
+  const barGeo = dir==='x' ? new THREE.BoxGeometry(span*2+0.9,0.55,0.55)
+                           : new THREE.BoxGeometry(0.55,0.55,span*2+0.9);
+  const bar = new THREE.Mesh(barGeo, mat);
+  const curtainMat = new THREE.MeshBasicMaterial({ color:0xff6fb0, transparent:true, opacity:0.16, side:THREE.DoubleSide, blending:THREE.AdditiveBlending, depthWrite:false });
+  const curtain = new THREE.Mesh(new THREE.PlaneGeometry(span*2,4.2), curtainMat);
+  const flagMat = new THREE.MeshStandardMaterial({ color:0xffcf3d, roughness:.6, side:THREE.DoubleSide });
+  if (dir==='x'){ p1.position.set(-span,2.3,0); p2.position.set(span,2.3,0); curtain.position.set(0,2.3,0); }
+  else          { p1.position.set(0,2.3,-span); p2.position.set(0,2.3,span); curtain.rotation.y=Math.PI/2; curtain.position.set(0,2.3,0); }
+  c1.position.set(p1.position.x,4.7,p1.position.z); c2.position.set(p2.position.x,4.7,p2.position.z);
+  bar.position.y = 4.5;
+  for (const p of [p1,p2]){ const f=new THREE.Mesh(new THREE.PlaneGeometry(1.2,0.8),flagMat);
+    f.position.set(p.position.x+(dir==='x'?0.75:0),5.0,p.position.z+(dir==='x'?0:0.75)); if(dir!=='x')f.rotation.y=Math.PI/2; grp.add(f); }
+  [p1,p2,bar,c1,c2].forEach(m=>m.castShadow=true);
+  grp.add(p1,p2,c1,c2,bar,curtain); grp.position.set(x,baseY,z);
+  courseGroup.add(grp);
+  checkpoints.push({ x, z, baseY, mat, curtainMat, active:false, prog:progressOf(x,z,baseY) });
+}
+
+// hellende vloer, axis 'z' (hoogte varieert met z) of 'x' (met x); r={x0,x1,z0,z1,y0,y1,axis}
+function addRamp(r, colIdx=0){
+  const axis=r.axis||'z';
+  const dy=r.y1-r.y0;
+  const run = axis==='x' ? (r.x1-r.x0) : (r.z1-r.z0);
+  const w   = axis==='x' ? (r.z1-r.z0) : (r.x1-r.x0);
+  const len=Math.hypot(run,dy), ang=Math.atan2(dy,run);
+  const geo = axis==='x' ? new THREE.BoxGeometry(len,0.6,w) : new THREE.BoxGeometry(w,0.6,len);
+  const mesh=new THREE.Mesh(geo, floorMat(w, len));
+  const cx=(r.x0+r.x1)/2, cy=(r.y0+r.y1)/2, cz=(r.z0+r.z1)/2;
+  if (axis==='x'){ mesh.rotation.z = ang;  mesh.position.set(cx - 0.3*Math.sin(ang), cy-0.3*Math.cos(ang), cz); }
+  else           { mesh.rotation.x = -ang; mesh.position.set(cx, cy-0.3*Math.cos(ang), cz + 0.3*Math.sin(ang)); }
+  mesh.receiveShadow=true; mesh.castShadow=true; courseGroup.add(mesh);
+  ramps.push({ x0:r.x0, x1:r.x1, z0:r.z0, z1:r.z1, y0:r.y0, y1:r.y1, axis });
+  return r;
+}
+
+// rollende honkbal uit een kanon (A). 'active' = deel van de cyclus dat de bal onderweg is;
+// de rest wacht 'ie onzichtbaar in het kanon -> duidelijke gaten om van lane te wisselen.
+function makeBaseballTexture(){
+  const S=128, c=document.createElement('canvas'); c.width=c.height=S; const x=c.getContext('2d');
+  x.fillStyle='#f6f3ea'; x.fillRect(0,0,S,S);
+  x.strokeStyle='#d23b3b'; x.lineWidth=3; x.lineCap='round';
+  for (const cxp of [S*0.26, S*0.74]){ const bend=cxp<S/2?-15:15;
+    x.beginPath(); for(let yy=0;yy<=S;yy+=6){ const off=Math.sin(yy/S*Math.PI)*bend; if(yy===0)x.moveTo(cxp+off,yy); else x.lineTo(cxp+off,yy); } x.stroke();
+    x.lineWidth=2;
+    for(let yy=7;yy<S;yy+=11){ const off=Math.sin(yy/S*Math.PI)*bend; x.beginPath(); x.moveTo(cxp+off-6,yy-3); x.lineTo(cxp+off+6,yy+3); x.moveTo(cxp+off-6,yy+3); x.lineTo(cxp+off+6,yy-3); x.stroke(); }
+    x.lineWidth=3;
+  }
+  const tex=new THREE.CanvasTexture(c); tex.colorSpace=THREE.SRGBColorSpace; return tex;
+}
+const baseballTex = makeBaseballTexture();
+function addRoller(ax,ay,az, bx,by,bz, rad, speed, phase, active=0.55){
+  const dx=bx-ax, dy=by-ay, dz=bz-az, L=Math.hypot(dx,dy,dz)||1;
+  const ux=dx/L, uy=dy/L, uz=dz/L, dir=new THREE.Vector3(ux,uy,uz);
+  const g=new THREE.Group();
+  const ball=new THREE.Mesh(new THREE.SphereGeometry(rad,20,20),
+    new THREE.MeshStandardMaterial({ map:baseballTex, roughness:.55 }));
+  ball.castShadow=true; g.add(ball);
+  courseGroup.add(g);
+  // --- kanon, met de monding OFFSET weg van de looplijn (naar achteren langs de rolrichting + omhoog) ---
+  const backOff=rad*1.7, upOff=rad*1.2;
+  const mouth=new THREE.Vector3(ax, ay+rad, az).addScaledVector(dir, -backOff); mouth.y+=upOff;
+  const barrelLen=rad*3.0, barrelR=rad*1.25;
+  const barrel=new THREE.Mesh(new THREE.CylinderGeometry(barrelR,barrelR*1.12,barrelLen,24),
+    new THREE.MeshStandardMaterial({ color:0x3a3550, roughness:.4, metalness:.7 }));
+  barrel.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir);
+  barrel.position.copy(mouth).addScaledVector(dir, -barrelLen*0.5);
+  barrel.castShadow=true; courseGroup.add(barrel);
+  // dichte achterkant
+  const cap=new THREE.Mesh(new THREE.SphereGeometry(barrelR*1.05,16,12),
+    new THREE.MeshStandardMaterial({ color:0x2b2250, roughness:.5, metalness:.5 }));
+  cap.position.copy(mouth).addScaledVector(dir, -barrelLen); courseGroup.add(cap);
+  // waarschuwingsband + gouden mondring
+  const band=new THREE.Mesh(new THREE.CylinderGeometry(barrelR*1.08,barrelR*1.08,0.32,24),
+    new THREE.MeshStandardMaterial({ color:0xff3860, emissive:0xff3860, emissiveIntensity:.4, roughness:.5 }));
+  band.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir);
+  band.position.copy(mouth).addScaledVector(dir, -barrelLen*0.5); courseGroup.add(band);
+  const muzzle=new THREE.Mesh(new THREE.TorusGeometry(barrelR*1.08,0.13,12,26),
+    new THREE.MeshStandardMaterial({ color:0xffcf3d, emissive:0x7a5a00, emissiveIntensity:.45, roughness:.4, metalness:.5 }));
+  muzzle.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1), dir);
+  muzzle.position.copy(mouth); courseGroup.add(muzzle);
+  // muzzle-flash bij het afvuren
+  const flash=new THREE.Mesh(new THREE.SphereGeometry(barrelR*1.3,14,12),
+    new THREE.MeshBasicMaterial({ color:0xfff2b0, transparent:true, opacity:0, blending:THREE.AdditiveBlending, depthWrite:false }));
+  flash.position.copy(mouth).addScaledVector(dir, rad*0.5); courseGroup.add(flash);
+  rollers.push({ ax,ay,az,bx,by,bz, rad, speed, phase, active, tx:ux, tz:uz, g, ball, flash, mouth:mouth.clone() });
+}
+function rollerPos(rl, now){
+  const c=(now*rl.speed + rl.phase) % 1;
+  if (c > rl.active) return { hidden:true };            // wacht in de buis
+  const p=c/rl.active;                                   // 0 (buis) -> 1 (einde)
+  return { x:rl.ax+(rl.bx-rl.ax)*p, y:rl.ay+(rl.by-rl.ay)*p+rl.rad, z:rl.az+(rl.bz-rl.az)*p, p, hidden:false };
+}
+
+// voortgang langs de (bochtige) centerlijn: 0..1
+function pathProgress(px, pz){
+  let acc=0, best=0, bestD=Infinity;
+  for (let i=0;i<PATH.length-1;i++){
+    const a=PATH[i], b=PATH[i+1];
+    const dx=b.x-a.x, dz=b.z-a.z, L2=dx*dx+dz*dz, L=Math.sqrt(L2);
+    let t=L2?((px-a.x)*dx+(pz-a.z)*dz)/L2:0; t=Math.max(0,Math.min(1,t));
+    const cx=a.x+dx*t, cz=a.z+dz*t, d=Math.hypot(px-cx,pz-cz);
+    if (d<bestD){ bestD=d; best=acc+L*t; }
+    acc+=L;
+  }
+  return acc?Math.max(0,Math.min(1,best/acc)):0;
+}
+
+function applyTheme(map){
+  const t=map.theme;
+  scene.background.setHex(t.sky);
+  scene.fog.color.setHex(t.sky); scene.fog.near=t.fog[0]; scene.fog.far=t.fog[1];
+  // gradient-lucht uit de map-kleur
+  const base=new THREE.Color(t.sky);
+  const topC=base.clone().multiplyScalar(0.70), botC=base.clone().lerp(new THREE.Color(0xffffff),0.22);
+  if (skyDome.material.map) skyDome.material.map.dispose();
+  skyDome.material.map = makeSkyTexture(botC.getHexString(), topC.getHexString());
+  sea.material.color.setHex(t.sea); sea.position.y=t.seaY; sea.material.opacity=t.seaOpacity;
+  curFloorTex = floorTex(t.floor || 'candy');
+  curPalette = t.palette || PLAT_COLORS;
+  curMatOpts = map.ice ? {roughness:0.22, metalness:0.12} : {roughness:0.85, metalness:0};
+  curDeathY = t.deathY;
+  curGrav = GRAV * (map.gravity || 1);
+  // zon: warme kleur, maar uit/zwak bij storm (bewolkt) en koeler in de ruimte
+  const space = (map.gravity && map.gravity<0.6);
+  sunSprite.visible = !map.storm;
+  sunCore.material.color.setHex(space?0xeaf0ff:0xfff6e0);
+  sunGlow.material.opacity = space?0.5:0.85;
+  renderer.toneMappingExposure = map.storm?0.95:1.15;
+}
+
+function buildCourse(){
+  solids=[]; sweepers=[]; checkpoints=[]; ramps=[]; rollers=[]; bouncePads=[]; pendulums=[]; finishSolid=null; finishBeacon=null;
+  if (courseGroup) scene.remove(courseGroup);
+  courseGroup = new THREE.Group(); scene.add(courseGroup);
+  curMap = MAPS[selectedMap];
+  applyTheme(curMap);
+  curMap.build();
+  // stijgende storm (alleen bij maps die 'm aan hebben)
+  stormActive = !!curMap.storm;
+  if (stormActive){
+    stormY = -4; stormSpeed = curMap.stormSpeed || 1.0;
+    stormMesh = new THREE.Group();
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(500,500),
+      new THREE.MeshStandardMaterial({ color:0x242838, transparent:true, opacity:0.85, roughness:1 }));
+    plane.rotation.x = -Math.PI/2; stormMesh.add(plane);
+    const puffMat = new THREE.MeshStandardMaterial({ color:0x3a4058, roughness:1, transparent:true, opacity:0.92 });
+    for (let i=0;i<48;i++){
+      const pf=new THREE.Mesh(new THREE.SphereGeometry(3+Math.random()*3.5,10,10), puffMat);
+      const ang=Math.random()*Math.PI*2, rr=3+Math.random()*34;
+      pf.position.set(Math.cos(ang)*rr, Math.random()*2, Math.sin(ang)*rr);
+      pf.scale.y=0.5; stormMesh.add(pf);
+    }
+    stormMesh.position.y = stormY; courseGroup.add(stormMesh);
+  } else stormMesh=null;
+}
+
+/* ---------- map 0: De Opwarmer (S-vorm met sweepers) ---------- */
+function buildWarmup(){
+  PATH = [ {x:0,z:0}, {x:0,z:54}, {x:42,z:54}, {x:42,z:104} ];
+  addPad(0,    21.2, 12,   54.4, 0.000, 1.4, 0);
+  addPad(15,   53.8, 42.8, 12.4, 0.004, 1.4, 2);
+  addPad(41.8, 76,   12.4, 56.8, 0.008, 1.4, 1);
+  finishSolid = finishPad(41.8, 109.8, 12.4, 12.4, 0.012, 1.4, 3);
+  addSweeper(0,  0.95, 18, 6, 1.6);
+  addSweeper(0,  0.95, 36, 6, -2.0);
+  addSweeper(8,  0.95, 54, 6, 2.0);
+  addSweeper(24, 0.95, 54, 6, -1.6);
+  addSweeper(42, 0.95, 66, 6, 1.8);
+  addSweeper(42, 0.95, 90, 6, -2.2);
+  addCheckpoint(0, 42, 'x'); addCheckpoint(16, 54, 'z'); addCheckpoint(42, 78, 'x');
+  spawn = { x:0, y:2.0, z:0 };
+}
+
+/* ---------- map 1: Nathan — Honkbalheuvel (klim, bocht, dwars-gauntlet, klim) ---------- */
+function buildBaseball(){
+  PATH = [ {x:0,z:0}, {x:0,z:42}, {x:42,z:42}, {x:42,z:82} ];
+  addPad(0, 3, 16, 12, 0, 1.4, 1);                   // start  z[-3,9]
+  const r1 = addRamp({x0:-8,x1:8,z0:9,z1:34,y0:0,y1:8}, 2);   // klim 1
+  addPad(0, 42, 18, 18, 8, 1.4, 0);                  // bocht-plateau z[33,51] (checkpoint)
+  addPad(16, 42, 16, 12, 8, 1.4, 2);                 // gauntlet-brug (+x)
+  addPad(32, 42, 16, 12, 8, 1.4, 2);
+  addPad(42, 42, 16, 16, 8, 1.4, 0);                 // bocht 2 (checkpoint)
+  const r2 = addRamp({x0:34,x1:50,z0:50,z1:72,y0:8,y1:16}, 2); // klim 2
+  finishSolid = finishPad(42, 80, 18, 16, 16, 1.4, 3);  // top z[72,88]
+
+  // klim 1: ballen met flink uitgesmeerde timing + wachttijd -> altijd een vrije lane
+  addRoller(-5,8,34, -5,0,9, 1.6, 0.22, 0.00, 0.5);
+  addRoller(-1.5,8,34, -1.5,0,9, 1.6, 0.22, 0.25, 0.5);
+  addRoller(1.5,8,34, 1.5,0,9, 1.6, 0.22, 0.5, 0.5);
+  addRoller(5,8,34, 5,0,9, 1.6, 0.22, 0.75, 0.5);
+  // gauntlet: ballen rollen DWARS over je +x-pad, ruim verspreid
+  addRoller(12,8,49, 12,8,37, 1.3, 0.26, 0.0, 0.55);
+  addRoller(20,8,37, 20,8,49, 1.3, 0.26, 0.5, 0.55);
+  addRoller(28,8,49, 28,8,37, 1.3, 0.26, 0.25, 0.55);
+  addRoller(36,8,37, 36,8,49, 1.3, 0.26, 0.75, 0.55);
+  // klim 2
+  addRoller(38,16,72, 38,8,50, 1.5, 0.22, 0.0, 0.5);
+  addRoller(42,16,72, 42,8,50, 1.5, 0.22, 0.33, 0.5);
+  addRoller(46,16,72, 46,8,50, 1.5, 0.22, 0.66, 0.5);
+
+  addCheckpoint(0, 42, 'x', 8); addCheckpoint(42, 42, 'z', 8); addCheckpoint(42, 74, 'x', 16);
+  spawn = { x:0, y:2.0, z:0 };
+}
+
+/* ---------- map 2: Deniz — IJsmeer (helemaal ijs, lang, met bochten waar je doorschiet) ---------- */
+function buildIce(){
+  PATH = [ {x:0,z:0}, {x:0,z:46}, {x:44,z:46}, {x:44,z:92} ];
+  addPad(0, 4,  14, 12, 0,1.4, 0);                   // start z[-2,10]
+  addPad(0, 20, 12, 12, 0,1.4, 1);                   // gat 4 -> springen op glad ijs
+  addPad(0, 34, 12, 12, 0,1.4, 2);
+  addPad(0, 46, 16, 16, 0,1.4, 0);                   // bocht 1 (checkpoint) -> hier schiet je door!
+  addPad(16, 46, 16, 12, 0,1.4, 1);                  // been 2 (+x)
+  addPad(32, 46, 16, 12, 0,1.4, 2);
+  addPad(44, 46, 16, 16, 0,1.4, 0);                  // bocht 2 (checkpoint)
+  addPad(44, 62, 12, 12, 0,1.4, 1);                  // been 3 (+z)
+  addPad(44, 76, 12, 12, 0,1.4, 2);
+  finishSolid = finishPad(44, 92, 16, 16, 0,1.4, 3);
+  addSweeper(24, 0.95, 46, 6, 2.0);                  // één sweeper terwijl je over glad ijs glijdt
+  addCheckpoint(0, 46, 'x'); addCheckpoint(44, 46, 'z'); addCheckpoint(44, 76, 'x');
+  spawn = { x:0, y:2.0, z:0 };
+}
+
+/* ---------- map 3: Milo — Spiraaltoren (ren omhoog voor de stijgende storm uit) ---------- */
+function buildSpiral(){
+  const r=12, pw=6, dyLeg=4, loops=3;
+  const corners=[[-r,-r],[r,-r],[r,r],[-r,r]];   // 4 hoeken, tegen de klok in
+  // decoratieve centrale toren
+  const tower=new THREE.Mesh(new THREE.CylinderGeometry(3,3.6, loops*4*dyLeg+6, 20),
+    new THREE.MeshStandardMaterial({ color:0x6a7196, roughness:.8 }));
+  tower.position.set(0,(loops*4*dyLeg)/2,0); tower.castShadow=true; tower.receiveShadow=true; courseGroup.add(tower);
+
+  let y=0;
+  const pts=[{x:corners[0][0], z:corners[0][1], y}];
+  addPad(corners[0][0], corners[0][1], pw, pw, y, 1.2, 0);   // startplateau
+  for (let i=0;i<loops*4;i++){
+    const a=corners[i%4], b=corners[(i+1)%4], y0=y, y1=y+dyLeg;
+    if (a[0]!==b[0]){                                         // been langs x
+      const x0=Math.min(a[0],b[0])+pw/2, x1=Math.max(a[0],b[0])-pw/2, aMin=a[0]<b[0];
+      const yAtX0=aMin?y0:y1, yAtX1=aMin?y1:y0;
+      addRamp({ x0, x1, z0:a[1]-pw/2, z1:a[1]+pw/2, y0:yAtX0, y1:yAtX1, axis:'x' }, (i%4)+1);
+      if (i%2===1){                                           // bal rolt deze helling áf, naar jou toe
+        const hiX=yAtX0>yAtX1?x0:x1, loX=yAtX0>yAtX1?x1:x0;
+        addRoller(hiX, Math.max(yAtX0,yAtX1), a[1], loX, Math.min(yAtX0,yAtX1), a[1], 1.0, 0.3, i*0.17, 0.6);
+      }
+    } else {                                                 // been langs z
+      const z0=Math.min(a[1],b[1])+pw/2, z1=Math.max(a[1],b[1])-pw/2, aMin=a[1]<b[1];
+      const yAtZ0=aMin?y0:y1, yAtZ1=aMin?y1:y0;
+      addRamp({ x0:a[0]-pw/2, x1:a[0]+pw/2, z0, z1, y0:yAtZ0, y1:yAtZ1, axis:'z' }, (i%4)+1);
+      if (i%2===1){
+        const hiZ=yAtZ0>yAtZ1?z0:z1, loZ=yAtZ0>yAtZ1?z1:z0;
+        addRoller(a[0], Math.max(yAtZ0,yAtZ1), hiZ, a[0], Math.min(yAtZ0,yAtZ1), loZ, 1.0, 0.3, i*0.17, 0.6);
+      }
+    }
+    y=y1;
+    addPad(b[0], b[1], pw, pw, y, 1.2, i%4);                 // hoekplateau op nieuwe hoogte
+    if (i%4===0) addSweeper(b[0], 0.9, b[1], 2.6, 1.9, 0.5, y);  // draaiende balk op het plateau
+    pts.push({x:b[0], z:b[1], y});
+  }
+  finishSolid = finishPad(pts[pts.length-1].x, pts[pts.length-1].z, pw+3, pw+3, y+0.01, 1.2, 3);
+  // checkpoint-poort bij het begin van elke nieuwe lus
+  addCheckpoint(pts[4].x, pts[4].z, 'x', pts[4].y);
+  addCheckpoint(pts[8].x, pts[8].z, 'z', pts[8].y);
+  PATH = pts.map(p=>({x:p.x,z:p.z}));
+  spawn = { x:corners[0][0], y:2.0, z:corners[0][1] };
+}
+
+/* ---------- map 4: Yassin — Zuigerpoort (L-baan, zuigers slaan je van het pad) ---------- */
+function buildPush(){
+  PATH = [ {x:0,z:0}, {x:0,z:50}, {x:50,z:52} ];
+  addPad(0, 24.5, 12, 55, 0,    1.4, 0);   // been A: x[-6,6]  z[-3,52]
+  addPad(19, 52,  50, 12, 0.01, 1.4, 2);   // been B: x[-6,44] z[46,58]
+  addWall(-6.5, -3, 52, 5, 'z');           // buitenmuur been A (links); +x = open ravijn
+  addWall(58.5, 6, 46, 5, 'x');            // buitenmuur been B (achter); -z = open ravijn
+  // been A: zuigers uit links, slaan naar +x (richting ravijn)
+  addPiston(-6.5, 10, 11, 0.9, 0.0, 'x', 1);
+  addPiston(-6.5, 22, 13, 1.1, 0.4, 'x', 1);
+  addPiston(-6.5, 34, 10, 1.0, 0.7, 'x', 1);
+  addPiston(-6.5, 44, 13, 0.95,0.2, 'x', 1);
+  addSweeper(3, 0.95, 28, 4, 1.8);         // laser-variatie op been A
+  // been B: zuigers uit achter (z=58.5), slaan naar -z (richting ravijn)
+  addPiston(58.5, 14, 11, 1.0, 0.1, 'z', -1);
+  addPiston(58.5, 26, 13, 1.1, 0.6, 'z', -1);
+  addPiston(58.5, 38, 11, 0.95,0.35,'z', -1);
+  addSweeper(30, 0.95, 52, 4, -1.8);       // laser-variatie op been B
+  addCheckpoint(0, 30, 'x'); addCheckpoint(30, 52, 'z', 0.01);
+  finishSolid = finishPad(50, 52, 12, 12, 0.03, 1.4, 3);
+  spawn = { x:3, y:2.0, z:0 };
+}
+
+/* ---------- map 5: Reshman — Trampolinepark (3 diamanten: zigzag + op/neer) ---------- */
+function buildBounce(){
+  // 7 punten vormen 3 aaneengeschakelde diamanten (zigzag links/rechts, hoogte op en neer)
+  const pts=[ {x:0,z:0,y:0},{x:10,z:13,y:5},{x:0,z:26,y:2},{x:-10,z:39,y:6},
+              {x:0,z:52,y:3},{x:10,z:65,y:7},{x:0,z:78,y:4} ];
+  PATH = pts.map(p=>({x:p.x,z:p.z}));
+  for (let i=0;i<pts.length;i++){
+    const p=pts[i];
+    if (i===pts.length-1) finishSolid=finishPad(p.x,p.z,13,13,p.y,1.4,3);
+    else addPad(p.x,p.z,12,12,p.y,1.4,i%3);
+  }
+  // springpaneel op elk platform (behalve finish): omhoog + boost in jouw richting, pulserende timing
+  for (let i=0;i<pts.length-1;i++){
+    const a=pts[i], b=pts[i+1], dx=b.x-a.x, dz=b.z-a.z, L=Math.hypot(dx,dz)||1;
+    addBouncePad(a.x+dx/L*3.2, a.z+dz/L*3.2, a.y, 14, 20, 2.0, i*0.33, dx/L, dz/L);
+  }
+  addCheckpoint(pts[2].x, pts[2].z, 'x', pts[2].y);
+  addCheckpoint(pts[4].x, pts[4].z, 'x', pts[4].y);
+  spawn = { x:0, y:2.0, z:0 };
+}
+
+/* ---------- helper: ronde "pet" als platform (brim = loopvlak, kroon = decor) ---------- */
+function addCap(cx, cz, topY, colHex, mover=null, crown=true){
+  const h=1.3, r=4.5;
+  const grp=new THREE.Group();
+  const brimMat=new THREE.MeshStandardMaterial({ color:colHex, roughness:.7 });
+  const brim=new THREE.Mesh(new THREE.CylinderGeometry(r,r*0.96,h,30), brimMat);
+  brim.castShadow=true; brim.receiveShadow=true; grp.add(brim);
+  if (crown){
+    const dome=new THREE.Mesh(new THREE.SphereGeometry(2.6,22,16,0,Math.PI*2,0,Math.PI/2), brimMat);
+    dome.position.y=h/2; dome.scale.y=0.55; dome.castShadow=true; grp.add(dome);
+    const btn=new THREE.Mesh(new THREE.SphereGeometry(0.38,12,12),
+      new THREE.MeshStandardMaterial({ color:0x2b2250 }));
+    btn.position.y=h/2+1.5; grp.add(btn);
+    // klep steekt aan één kant uit
+    const visor=new THREE.Mesh(new THREE.CylinderGeometry(r*0.72,r*0.72,0.35,24,1,false,0,Math.PI),
+      new THREE.MeshStandardMaterial({ color:colHex, roughness:.7 }));
+    visor.position.set(0,h/2-0.1,r*0.5); grp.add(visor);
+  }
+  grp.position.set(cx, topY-h/2, cz); courseGroup.add(grp);
+  const s={ mesh:grp, edge:grp, half:{x:r*0.74,y:h/2,z:r*0.74}, h, mover,
+            cx, cz, topY, min:{x:0,y:0,z:0},max:{x:0,y:0,z:0},_dx:0,_dy:0,_dz:0 };
+  if (mover){ mover.base={x:cx,y:topY,z:cz}; mover.cx=cx; mover.cz=cz; mover.topY=topY; }
+  updateSolidBounds(s); solids.push(s);
+  return s;
+}
+
+/* ---------- helper: decoratieve gestreepte "kous" + strik (geen collision) ---------- */
+function addSock(x, z, baseY, h=7, c1=0xff8ac4, c2=0xffffff){
+  const mat=new THREE.MeshStandardMaterial({ color:c1, roughness:.75 });
+  const leg=new THREE.Mesh(new THREE.CylinderGeometry(0.9,0.75,h,18), mat);
+  leg.position.set(x, baseY+h/2, z); leg.castShadow=true; courseGroup.add(leg);
+  // witte strepen als ringen
+  const ringMat=new THREE.MeshStandardMaterial({ color:c2, roughness:.7 });
+  for (let i=1;i<=4;i++){
+    const ring=new THREE.Mesh(new THREE.CylinderGeometry(0.94,0.94,0.5,18), ringMat);
+    ring.position.set(x, baseY + h*(i/5), z); courseGroup.add(ring);
+  }
+  // strikje bovenop
+  const bowMat=new THREE.MeshStandardMaterial({ color:c1, emissive:c1, emissiveIntensity:0.25, roughness:.6 });
+  for (const sx of [-1,1]){
+    const lobe=new THREE.Mesh(new THREE.ConeGeometry(0.7,1.2,14), bowMat);
+    lobe.rotation.z=sx*Math.PI/2; lobe.position.set(x+sx*0.7, baseY+h+0.3, z); courseGroup.add(lobe);
+  }
+  const knot=new THREE.Mesh(new THREE.SphereGeometry(0.42,12,12), bowMat);
+  knot.position.set(x, baseY+h+0.3, z); courseGroup.add(knot);
+}
+
+/* ---------- helper: slingerende "parel" die over de baan zwaait (knockback) ---------- */
+function addPendulum(x, z, baseY, len=5, amp=0.95, speed=1.7, phase=0, axis='x'){
+  const pivotY = baseY + len + 0.5;
+  // ophangbalk boven de baan
+  const beam=new THREE.Mesh(new THREE.BoxGeometry(axis==='x'?2.4:0.5,0.5,axis==='x'?0.5:2.4),
+    new THREE.MeshStandardMaterial({ color:0x4a4066, roughness:.6, metalness:.4 }));
+  beam.position.set(x, pivotY+0.3, z); beam.castShadow=true; courseGroup.add(beam);
+  const pivot=new THREE.Mesh(new THREE.SphereGeometry(0.34,14,12),
+    new THREE.MeshStandardMaterial({ color:0x2b2250, metalness:.7, roughness:.35 }));
+  pivot.position.set(x, pivotY, z); courseGroup.add(pivot);
+  // arm draait om het pivot-punt
+  const arm=new THREE.Group(); arm.position.set(x, pivotY, z); courseGroup.add(arm);
+  // ketting: donkere metalen staaf + schakels
+  const chainMat=new THREE.MeshStandardMaterial({ color:0x9aa0b4, roughness:.3, metalness:.85 });
+  const rod=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,len,10), chainMat);
+  rod.position.y=-len/2; arm.add(rod);
+  for(let i=1;i<=4;i++){ const link=new THREE.Mesh(new THREE.TorusGeometry(0.14,0.05,8,14), chainMat);
+    link.position.y=-len*i/5; link.rotation.x=i%2?0:Math.PI/2; arm.add(link); }
+  // spiked wrecking ball
+  const r=1.3;
+  const bob=new THREE.Mesh(new THREE.SphereGeometry(r,24,18),
+    new THREE.MeshStandardMaterial({ color:0x3a3550, emissive:0x662033, emissiveIntensity:0.35, roughness:.35, metalness:.7 }));
+  bob.position.y=-len; bob.castShadow=true; arm.add(bob);
+  const spikeMat=new THREE.MeshStandardMaterial({ color:0xcfd4e4, roughness:.3, metalness:.85 });
+  for(let i=0;i<10;i++){ const a=i/10*Math.PI*2, tilt=(i%2?1:-1)*0.6;
+    const sp=new THREE.Mesh(new THREE.ConeGeometry(0.22,0.6,10), spikeMat);
+    const dx=Math.cos(a), dz=Math.sin(a);
+    sp.position.set(dx*r, -len+Math.sin(tilt)*r*0.5, dz*r);
+    sp.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), new THREE.Vector3(dx,Math.sin(tilt),dz).normalize()); arm.add(sp); }
+  pendulums.push({ arm, x, z, pivotY, len, amp, speed, phase, axis, r });
+}
+
+
+function buildSkate(){
+  PATH = [ {x:0,z:0}, {x:0,z:86} ];
+  addPad(0, 4, 14, 12, 0, 1.4, 0);                               // start z[-2,10]
+  addRamp({ x0:-5, x1:5, z0:10, z1:22, y0:0, y1:5 }, 2);         // quarter-pipe omhoog
+  addPad(0, 45, 12, 48, 5, 1.4, 1);                              // doorlopende baan z[21,69]
+  // schuivende blokken heen en weer over de baan -> ontwijk naar de open kant of spring eroverheen
+  addPad(0, 30, 5, 5, 6.6, 1.6, 2, { axis:'x', from:-3, to:3,  speed:1.0,  phase:0.0,  carry:true });
+  addPad(0, 44, 5, 5, 6.6, 1.6, 4, { axis:'x', from:3,  to:-3, speed:1.1,  phase:0.5,  carry:true });
+  addPad(0, 58, 5, 5, 6.6, 1.6, 2, { axis:'x', from:-3, to:3,  speed:0.9,  phase:0.25, carry:true });
+  addRamp({ x0:-5, x1:5, z0:69, z1:80, y0:5, y1:9 }, 2);         // opgang naar finish
+  finishSolid = finishPad(0, 86, 14, 12, 9, 1.4, 3);            // finish z[80,92]
+  addSweeper(0, 0.95, 37, 5, 2.0,  0.55, 5);
+  addSweeper(0, 0.95, 51, 5, -2.2, 0.55, 5);
+  addCheckpoint(0, 24, 'x', 5);
+  addCheckpoint(0, 66, 'x', 5);
+  spawn = { x:0, y:2.0, z:0 };
+}
+
+/* ---------- map 7: Milo — Pettenberg (vlotte pet-parade + ferry-pet over het water) ---------- */
+function buildCaps(){
+  const cols=[0xff5a7a,0x4fb0ff,0xffcf3d,0x6ad66a,0xff8ac4,0xa97bff,0x49c7a8,0xff9a3d];
+  PATH=[{x:0,z:0},{x:0,z:28},{x:0,z:58},{x:0,z:95}];
+  // stevige startgrond
+  addPad(0, 0, 13, 11, 0, 1.4, 0);
+  // trio brede petten recht vooruit, zachte stijging — ruime sprongen
+  addCap(0,  11,   0.4, cols[0]);
+  addCap(3,  19.5, 0.9, cols[1]);
+  addCap(-3, 28,   1.4, cols[2]);
+  addCheckpoint(-3, 28, 'x', 1.4);
+  // FERRY-pet: één grote pet die je over het water vooruit vaart
+  addCap(0, 34, 1.4, cols[3], { axis:'z', from:34, to:52, speed:0.6, phase:0, carry:true });
+  // stabiel plateau met één ronddraaiende klep als gimmick
+  addPad(0, 58, 14, 11, 1.4, 1.4, 4);
+  addSweeper(0, 1.0, 58, 5.6, 1.8, 0.55, 1.4);
+  addCheckpoint(0, 58, 'x', 1.4);
+  // zachte afdaling naar de finish
+  addCap(0,  68,   1.2, cols[6]);
+  addCap(3,  76.5, 0.8, cols[5]);
+  addCap(-3, 85,   0.5, cols[7]);
+  finishSolid = finishPad(0, 95, 14, 11, 0.3, 1.4, 3);
+  spawn = { x:0, y:2.0, z:0 };
+}
+
+/* ---------- map 8: Lars — Catwalk (smalle precisie-baan, roze, strik-lasers) ---------- */
+function buildCatwalk(){
+  // bochtige modeshow-loopbrug (L-vorm): eerst vooruit, dan naar rechts
+  PATH = [ {x:0,z:0}, {x:0,z:38}, {x:37,z:38} ];
+  addPad(0, 2, 10, 9, 0, 1.4, 3);                   // podium z[-2.5,6.5]
+  addPad(0, 20, 7, 30, 0, 1.4, 0);                  // smalle loopbrug z[5,35]
+  addPad(0, 38, 10, 10, 0, 1.4, 3);                 // hoekstuk z[33,43], x[-5,5]
+  addPad(18, 38, 30, 7, 0, 1.4, 0);                 // loopbrug naar rechts x[3,33], z[34.5,41.5]
+  finishSolid = finishPad(37, 38, 10, 9, 0, 1.4, 2);// eind-podium x[32,42]
+  // signatuur: grote zwaaiende parels die over de loopbrug slingeren -> timing + ontwijken
+  addPendulum(0, 13, 0, 5, 0.95, 1.7, 0.0, 'x');
+  addPendulum(0, 27, 0, 5, 0.95, 1.9, Math.PI, 'x'); // tegengestelde fase = ritme
+  addPendulum(12, 38, 0, 5, 0.9, 1.8, 0.6, 'z');
+  addPendulum(24, 38, 0, 5, 0.9, 2.0, 2.4, 'z');
+  // decoratieve gestreepte kousen + strikjes langs de baan
+  addSock(-5, 8, 0, 7); addSock(5, 24, 0, 6, 0x8ac4ff); addSock(-5, 33, 0, 8, 0xd0a0ff);
+  addSock(8, 44, 0, 7, 0x8ac4ff); addSock(28, 33, 0, 6);
+  addCheckpoint(0, 20, 'x');
+  addCheckpoint(18, 38, 'z');
+  spawn = { x:0, y:2.0, z:0 };
+}
+
+/* ---------- map 9: Otis — Ruimte (lage zwaartekracht, zwevende asteroïden) ---------- */
+function buildSpace(){
+  const P=[
+    {x:0,z:3,y:0,w:12,d:12}, {x:0,z:14,y:0,w:9,d:8}, {x:5,z:25,y:2,w:9,d:8},
+    {x:-5,z:36,y:1,w:9,d:8}, {x:4,z:47,y:3,w:9,d:8},
+    {x:0,z:58,y:2,w:14,d:12},
+    {x:-5,z:69,y:4,w:9,d:8}, {x:5,z:80,y:5,w:9,d:8}, {x:-4,z:91,y:6,w:9,d:8},
+    {x:0,z:102,y:8,w:14,d:12},
+    {x:5,z:113,y:10,w:9,d:8}, {x:-4,z:123,y:11,w:9,d:8},
+    {x:0,z:134,y:12,w:14,d:12}
+  ];
+  PATH = P.map(p=>({x:p.x,z:p.z}));
+  P.forEach((p,i)=>{
+    if (i===P.length-1) finishSolid=finishPad(p.x,p.z,p.w,p.d,p.y,1.4,3);
+    else addPad(p.x,p.z,p.w,p.d,p.y,1.4,i%5);
+  });
+  // satelliet-lasers (korte armen op kleine rotsen, langere op de grote rustplekken)
+  addSweeper(P[3].x, 0.95, P[3].z, 2.8, 2.0,  0.5,  P[3].y);
+  addSweeper(P[5].x, 0.95, P[5].z, 4.5, -1.6, 0.55, P[5].y);
+  addSweeper(P[7].x, 0.95, P[7].z, 2.8, 2.2,  0.5,  P[7].y);
+  addSweeper(P[9].x, 0.95, P[9].z, 4.5, -1.8, 0.55, P[9].y);
+  // checkpoints aan de rand van de grote rotsen (weg van de sweeper-pilaar)
+  addCheckpoint(P[5].x, P[5].z-5, 'x', P[5].y);
+  addCheckpoint(P[9].x, P[9].z-5, 'x', P[9].y);
+  // --- sterrenveld ---
+  const N=700, arr=new Float32Array(N*3);
+  for (let i=0;i<N;i++){
+    const r=120+Math.random()*170, th=Math.random()*Math.PI*2, ph=Math.acos(2*Math.random()-1);
+    arr[i*3]=r*Math.sin(ph)*Math.cos(th);
+    arr[i*3+1]=Math.abs(r*Math.cos(ph))*0.75+8;
+    arr[i*3+2]=r*Math.sin(ph)*Math.sin(th)+65;
+  }
+  const starGeo=new THREE.BufferGeometry();
+  starGeo.setAttribute('position', new THREE.BufferAttribute(arr,3));
+  courseGroup.add(new THREE.Points(starGeo,
+    new THREE.PointsMaterial({ color:0xffffff, size:1.2, sizeAttenuation:true, fog:false, depthWrite:false })));
+  // --- planeten (decor) ---
+  const planet=(px,py,pz,rad,col,emis)=>{
+    const m=new THREE.Mesh(new THREE.SphereGeometry(rad,30,22),
+      new THREE.MeshStandardMaterial({ color:col, emissive:emis, emissiveIntensity:0.3, roughness:.95 }));
+    m.position.set(px,py,pz); courseGroup.add(m); return m;
+  };
+  planet(-78, 46, 36, 16, 0xb06bff, 0x3a1a6a);
+  planet(85, 70, 118, 24, 0x4fb0ff, 0x12304a);
+  const ringed=planet(60, -14, 190, 30, 0xff9a5a, 0x5a2a10);
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(46,4,2,48),
+    new THREE.MeshStandardMaterial({ color:0xffd9a0, emissive:0x6a4a20, emissiveIntensity:0.3, roughness:.8 }));
+  ring.rotation.x=Math.PI/2.3; ringed.add(ring); ring.position.set(0,0,0); ring.scale.set(1,1,0.5);
+  spawn = { x:0, y:2.0, z:3 };
+}
+
+/* ---------- tuin-decor (geen collision) ---------- */
+function addCarrot(x,z,baseY){
+  const body=new THREE.Mesh(new THREE.ConeGeometry(0.7,2.6,14),
+    new THREE.MeshStandardMaterial({ color:0xff8a3d, roughness:.7 }));
+  body.rotation.x=Math.PI; body.position.set(x, baseY+1.3, z); body.castShadow=true; courseGroup.add(body);
+  for (let i=0;i<5;i++){
+    const lf=new THREE.Mesh(new THREE.ConeGeometry(0.16,1.3,8),
+      new THREE.MeshStandardMaterial({ color:0x4caf50, roughness:.7 }));
+    lf.position.set(x+Math.cos(i/5*6.28)*0.28, baseY+3.1, z+Math.sin(i/5*6.28)*0.28);
+    lf.rotation.z=(Math.random()-0.5)*0.5; courseGroup.add(lf);
+  }
+}
+function addFlower(x,z,baseY,col){
+  const stem=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,1.4,8),
+    new THREE.MeshStandardMaterial({ color:0x4caf50 }));
+  stem.position.set(x,baseY+0.7,z); courseGroup.add(stem);
+  const cen=new THREE.Mesh(new THREE.SphereGeometry(0.22,10,10),
+    new THREE.MeshStandardMaterial({ color:0xffe14d })); cen.position.set(x,baseY+1.5,z); courseGroup.add(cen);
+  for (let i=0;i<6;i++){
+    const p=new THREE.Mesh(new THREE.SphereGeometry(0.18,8,8),
+      new THREE.MeshStandardMaterial({ color:col||0xff6fb0, roughness:.6 }));
+    p.position.set(x+Math.cos(i/6*6.28)*0.32, baseY+1.5, z+Math.sin(i/6*6.28)*0.32); p.scale.set(1,0.6,1); courseGroup.add(p);
+  }
+}
+function addLeek(x,z,baseY){   // "prei"
+  const wh=new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.5,2.4,12),
+    new THREE.MeshStandardMaterial({ color:0xf2f3e6, roughness:.7 })); wh.position.set(x,baseY+1.2,z); wh.castShadow=true; courseGroup.add(wh);
+  const gr=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.42,2.6,12),
+    new THREE.MeshStandardMaterial({ color:0x5aa02c, roughness:.7 })); gr.position.set(x,baseY+3.4,z); gr.castShadow=true; courseGroup.add(gr);
+  for (let i=0;i<4;i++){
+    const lf=new THREE.Mesh(new THREE.ConeGeometry(0.14,1.3,8),
+      new THREE.MeshStandardMaterial({ color:0x4c8f22 })); lf.position.set(x+Math.cos(i/4*6.28)*0.2, baseY+4.9, z+Math.sin(i/4*6.28)*0.2);
+    lf.rotation.z=(Math.random()-0.5)*0.4; courseGroup.add(lf);
+  }
+}
+
+/* ---------- map 10: Prei — Moestuin (zinkende leliebladen: blijf hoppen!) ---------- */
+function buildGarden(){
+  const P=[
+    {x:0,z:2,w:10,d:9,s:0}, {x:0,z:11,w:7,d:7,s:1}, {x:3,z:20,w:7,d:7,s:1},
+    {x:-3,z:29,w:7,d:7,s:1}, {x:0,z:39,w:10,d:9,s:0},
+    {x:3,z:48,w:7,d:7,s:1}, {x:-3,z:57,w:7,d:7,s:1}, {x:3,z:66,w:7,d:7,s:1},
+    {x:0,z:76,w:10,d:9,s:0}, {x:-3,z:85,w:7,d:7,s:1}, {x:3,z:94,w:7,d:7,s:1},
+    {x:0,z:104,w:11,d:10,s:0}
+  ];
+  PATH = P.map(p=>({x:p.x,z:p.z}));
+  P.forEach((p,i)=>{
+    if (i===P.length-1) finishSolid=finishPad(p.x,p.z,p.w,p.d,0,1.2,3);
+    else addPad(p.x,p.z,p.w,p.d,0,1.2, p.s?2:0, null, p.s? {depth:3.5,rate:2.8,rise:6} : null);
+  });
+  addCheckpoint(P[4].x, P[4].z, 'x', 0);
+  addCheckpoint(P[8].x, P[8].z, 'x', 0);
+  // decor op de vaste rustbladen
+  addCarrot(-4,2,0); addCarrot(4,39,0); addCarrot(-4,76,0);
+  addLeek(4.5,2,0); addLeek(-4.5,39,0); addLeek(4.5,104,0); addLeek(-4.5,104,0);
+  addFlower(4,2,0,0xff6fb0); addFlower(-4,39,0,0xffffff); addFlower(4,76,0,0x9a6bff); addFlower(-4,76,0,0xff6fb0);
+  spawn = { x:0, y:2.0, z:2 };
+}
+
+/* ============================================================
+   BOSS RUSH — boss 1: Meta AI
+   ============================================================ */
+let selectedBoss=0;
+function resetArena(theme){
+  solids=[]; sweepers=[]; checkpoints=[]; ramps=[]; rollers=[]; bouncePads=[]; pendulums=[]; projectiles=[]; finishSolid=null; finishBeacon=null;
+  if (courseGroup) scene.remove(courseGroup);
+  courseGroup = new THREE.Group(); scene.add(courseGroup);
+  stormActive=false; stormMesh=null;
+  curMap = { spawnYaw:Math.PI/2, theme };
+  applyTheme(curMap);
+}
+// dobberende "minion"-pilaar met een kop-platform om op te klimmen (à la Hisstocrat)
+function minion(x,z,baseY,amp,speed,phase){
+  const h=baseY+9;
+  const pil=new THREE.Mesh(new THREE.CylinderGeometry(2.4,2.9,h,16),
+    new THREE.MeshStandardMaterial({ color:0x3fb0a0, metalness:.3, roughness:.6 }));
+  pil.position.set(x, baseY-h/2, z); pil.castShadow=true; courseGroup.add(pil);
+  return addPad(x,z,7,7, baseY, 1.4, 2, { axis:'y', from:baseY-amp, to:baseY+amp, speed, phase });
+}
+function buildMetaAI(){
+  resetArena({ sky:0x241f36, fog:[70,240], sea:0x14121f, seaY:-9, seaOpacity:0.85, deathY:-7, floor:'metal',
+               palette:[0x8a93a8,0x9aa0b6,0x7e869c,0x8a93a8,0x9aa0b6] });
+  curMap.spawnYaw = 0;
+  const RZ=44, HY=14;
+  boss={ hp:3, maxHp:3, phase:0, iframe:0, flashT:0, defeated:false, RZ, segs:[],
+         atkT:1.2, charging:false, chargeT:0, spiralT:0, spiralAng:0,
+         antenna:{x:0,y:HY+2.2,z:RZ,r:1.9} };
+  // --- gesegmenteerd, levend lichaam (golft/zwaait als een slang) ---
+  const segN=6, segH=HY/segN;
+  for (let i=0;i<segN;i++){
+    const t=i/(segN-1), rad=6 - t*2.4;
+    const seg=new THREE.Mesh(new THREE.SphereGeometry(rad,20,16),
+      new THREE.MeshStandardMaterial({ color:i%2?0x6f7793:0x818ba8, metalness:.55, roughness:.45 }));
+    seg.scale.y=0.82; seg.position.set(0, segH*0.5 + i*segH, RZ); seg.castShadow=true;
+    courseGroup.add(seg); boss.segs.push({ mesh:seg, i });
+  }
+  // --- kop (dobbert op/neer + zwaait) met antenne-zwakke-plek ---
+  boss.headSolid = addPad(0, RZ, 16, 13, HY, 1.4, 2, { axis:'y', from:HY-1.2, to:HY+1.2, speed:1.0, phase:0 });
+  const hg=new THREE.Group(); hg.position.set(0,HY,RZ); courseGroup.add(hg); boss.orbGroup=hg;
+  const headSphere=new THREE.Mesh(new THREE.SphereGeometry(3.5,24,18),
+    new THREE.MeshStandardMaterial({ color:0x8089a6, metalness:.5, roughness:.45 }));
+  headSphere.scale.y=0.9; headSphere.position.y=-3.0; headSphere.castShadow=true; hg.add(headSphere);
+  const eyeMat=new THREE.MeshStandardMaterial({ color:0xff3860, emissive:0xff3860, emissiveIntensity:1.6 });
+  boss.eyeMat=eyeMat;
+  for (const ex of [-1.5,1.5]){ const eye=new THREE.Mesh(new THREE.SphereGeometry(0.7,14,14), eyeMat);
+    eye.position.set(ex,-2.2,-3.0); hg.add(eye); }
+  const mouth=new THREE.Mesh(new THREE.BoxGeometry(3,0.6,0.5),
+    new THREE.MeshStandardMaterial({ color:0x14161d })); mouth.position.set(0,-3.4,-3.0); hg.add(mouth); boss.mouth=mouth;
+  const crown=new THREE.Mesh(new THREE.CylinderGeometry(1.6,2.1,1.0,7),
+    new THREE.MeshStandardMaterial({ color:0xffd23d, emissive:0x6a4a00, emissiveIntensity:0.4, metalness:.5, roughness:.4 }));
+  crown.position.y=0.6; hg.add(crown);
+  const rod=new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.22,1.6,10),
+    new THREE.MeshStandardMaterial({ color:0xcfd4e4, metalness:.5 })); rod.position.y=1.5; hg.add(rod);
+  const orb=new THREE.Mesh(new THREE.SphereGeometry(1.7,22,18),
+    new THREE.MeshStandardMaterial({ color:0xffe27a, emissive:0xffcf3d, emissiveIntensity:1.1, roughness:.3 }));
+  orb.position.y=2.2; orb.castShadow=true; hg.add(orb); boss.orbMesh=orb;
+  const ar=new THREE.Mesh(new THREE.TorusGeometry(2.5,0.15,8,28),
+    new THREE.MeshBasicMaterial({ color:0xffe27a, transparent:true, opacity:0.5, blending:THREE.AdditiveBlending, depthWrite:false }));
+  ar.rotation.x=Math.PI/2; ar.position.y=2.2; hg.add(ar); boss.orbRing=ar;
+  // --- arena: solide route (grond + ramp + richel); de 3 dobberende pilaren zijn de gimmick naar de kop ---
+  addPad(0,  3, 18, 10, 0, 1.4, 0);             // start
+  addPad(0, 15, 22, 12, 0, 1.4, 1);             // brede grond-arena (ontwijk-vloer) z[9,21]
+  addPad(-12, 15, 8, 12, 0, 1.4, 3);            // extra ontwijk-ruimte links
+  addPad( 12, 15, 8, 12, 0, 1.4, 3);            // extra ontwijk-ruimte rechts
+  addRamp({ x0:-5, x1:5, z0:20, z1:33, y0:0, y1:10, axis:'z' }, 2);   // ramp omhoog vóór de boss
+  addPad(0, 35, 12, 6, 10, 1.4, 2);             // solide richel bovenaan de ramp z[32,38]
+  // GIMMICK: 3 dobberende pilaren om op de kop te komen (timing)
+  minion(-4, 34, 11,   1.5, 1.1,  0.0);
+  minion( 4, 35, 12.5, 1.5, 1.15, 1.3);
+  minion( 0, 36, 13.5, 1.2, 1.0,  0.6);         // laatste -> hop op de kop
+  // sfeer: een paar decoratieve dobber-slangen op afstand
+  for (const d of [[-22,16,4],[23,22,5],[-10,56,9]]){
+    const h=d[2]+10, pil=new THREE.Mesh(new THREE.CylinderGeometry(1.6,2.0,h,14),
+      new THREE.MeshStandardMaterial({ color:0x3fb0a0, metalness:.3, roughness:.6 }));
+    pil.position.set(d[0], d[2]-h/2, d[1]); courseGroup.add(pil);
+    const cap=new THREE.Mesh(new THREE.SphereGeometry(1.9,16,12),
+      new THREE.MeshStandardMaterial({ color:0x7fe3c8, roughness:.5 }));
+    cap.position.set(d[0], d[2], d[1]); courseGroup.add(cap);
+  }
+  spawn={ x:0, y:2.0, z:3 };
+}
+function spawnProj(x,y,z, vx,vy,vz, r, col){
+  const m=new THREE.Mesh(new THREE.SphereGeometry(r,14,12),
+    new THREE.MeshStandardMaterial({ color:col, emissive:col, emissiveIntensity:1.3, roughness:.3 }));
+  m.position.set(x,y,z); courseGroup.add(m);
+  m.add(new THREE.Mesh(new THREE.SphereGeometry(r*1.7,12,10),
+    new THREE.MeshBasicMaterial({ color:col, transparent:true, opacity:0.28, blending:THREE.AdditiveBlending, depthWrite:false })));
+  projectiles.push({ x,y,z, vx,vy,vz, r, life:6, mesh:m, dead:false });
+}
+function fireAimed(speed){
+  const g=boss.orbGroup.position, sx=g.x, sy=g.y-2, sz=boss.RZ-3;
+  let dx=player.x-sx, dy=(player.y+0.7)-sy, dz=player.z-sz; const L=Math.hypot(dx,dy,dz)||1;
+  spawnProj(sx,sy,sz, dx/L*speed, dy/L*speed, dz/L*speed, 0.8, 0xff3860);
+}
+function fireFan(n, speed, gap){                // waaier vanuit de kop naar het slagveld (-z), met één gat
+  const g=boss.orbGroup.position, sy=g.y-2, sz=boss.RZ-3;
+  for (let i=0;i<n;i++){
+    if (i===gap) continue;
+    const ang=(i-(n-1)/2)*0.26;
+    spawnProj(g.x,sy,sz, Math.sin(ang)*speed, 0, -Math.cos(ang)*speed, 0.65, 0xff5a3d);
+  }
+}
+function fireSpiralShot(ang, speed){            // draaiende regen vanaf de antenne-top
+  const g=boss.orbGroup.position;
+  spawnProj(g.x,g.y+2,boss.RZ, Math.cos(ang)*speed, -1.8, Math.sin(ang)*speed, 0.6, 0xffa23d);
+}
+function clearProjectiles(){ for (const p of projectiles) courseGroup.remove(p.mesh); projectiles=[]; }
+function hitBoss(){
+  boss.hp--; boss.phase++; boss.iframe=1.6; boss.flashT=0.6;
+  boss.charging=false; boss.atkT=1.4; clearProjectiles();
+  if (boss.hp<=0){ boss.defeated=true; winBoss(); return; }
+  player.x=spawn.x; player.y=spawn.y; player.z=spawn.z;
+  player.vx=player.vy=player.vz=0; player.onGround=false; player.standing=null; player.diveT=0; player.bounceT=0;
+  spawnConfetti();
+}
+function bossStep(dt, now){
+  if (!boss) return;
+  boss.iframe-=dt; boss.flashT-=dt;
+  if (boss.defeated) return;
+  // kop + antenne volgen de dobberende schotel
+  if (boss.headSolid){ const ty=boss.headSolid.topY; if (boss.orbGroup) boss.orbGroup.position.y=ty; boss.antenna.y=ty+2.2; }
+  // --- aanvalspatronen per fase (duidelijk verschillend, robot staat vóór je) ---
+  boss.atkT-=dt;
+  if (boss.phase===0){
+    // FASE 1: gerichte schoten, ogen laden eerst op
+    if (boss.charging){ boss.chargeT-=dt; if (boss.chargeT<=0){ boss.charging=false; fireAimed(13); boss.atkT=1.1; } }
+    else if (boss.atkT<=0){ boss.charging=true; boss.chargeT=0.7; }
+  } else if (boss.phase===1){
+    // FASE 2: waaier van kogels over het slagveld met één veilige baan
+    if (boss.charging){ boss.chargeT-=dt; if (boss.chargeT<=0){ boss.charging=false; fireFan(7, 12, 1+((Math.random()*5)|0)); boss.atkT=1.7; } }
+    else if (boss.atkT<=0){ boss.charging=true; boss.chargeT=0.65; }
+  } else {
+    // FASE 3: draaiende spiraal-regen vanaf de top (continu ritme)
+    boss.spiralT-=dt;
+    if (boss.spiralT<=0){ boss.spiralT=0.17; boss.spiralAng+=0.5; fireSpiralShot(boss.spiralAng, 10); fireSpiralShot(boss.spiralAng+Math.PI, 10); }
+  }
+  // --- projectielen bewegen + raken ---
+  for (const p of projectiles){
+    p.x+=p.vx*dt; p.y+=p.vy*dt; p.z+=p.vz*dt; p.life-=dt; p.mesh.position.set(p.x,p.y,p.z);
+    const dx=player.x-p.x, dy=(player.y+PH/2)-p.y, dz=player.z-p.z;
+    if (dx*dx+dy*dy+dz*dz < (p.r+R)*(p.r+R) && player.stun<=0){
+      const al=Math.hypot(dx,dz)||1;
+      player.vx=dx/al*15; player.vz=dz/al*15; player.vy=8; player.onGround=false; player.stun=0.5; p.dead=true;
+    }
+    if (p.y<-6 || Math.hypot(p.x, p.z-boss.RZ)>70) p.dead=true;
+  }
+  for (let i=projectiles.length-1;i>=0;i--){ const p=projectiles[i]; if (p.dead||p.life<=0){ courseGroup.remove(p.mesh); projectiles.splice(i,1); } }
+  // --- antenne-dive = schade ---
+  if (boss.iframe<=0 && player.diveT>0){
+    const a=boss.antenna, dx=player.x-a.x, dy=(player.y+PH/2)-a.y, dz=player.z-a.z;
+    if (dx*dx+dy*dy+dz*dz < (a.r+R+0.8)*(a.r+R+0.8)) hitBoss();
+  }
+}
+function bossVisuals(dt, now){
+  if (!boss) return;
+  // levend lichaam: segmenten golven zijwaarts, kop zwaait zacht mee
+  const n=boss.segs.length;
+  for (const s of boss.segs){ const f=s.i/(n-1);
+    s.mesh.position.x = Math.sin(now*2.2 + s.i*0.7)*f*1.3;
+    s.mesh.rotation.z = -Math.cos(now*2.2 + s.i*0.7)*0.09*f;
+  }
+  if (boss.orbGroup){ boss.orbGroup.position.x = Math.sin(now*2.2 + (n-1)*0.7)*0.6; boss.antenna.x = boss.orbGroup.position.x; }
+  if (boss.mouth) boss.mouth.scale.y = boss.charging ? 2.6 : 1;      // bek open bij opladen
+  const el=document.getElementById('bossHearts');
+  if (el) el.textContent='❤️'.repeat(Math.max(0,boss.hp))+'🖤'.repeat(Math.max(0,boss.maxHp-boss.hp));
+  if (boss.orbMesh){ boss.orbMesh.scale.setScalar(1+Math.sin(now*4)*0.12);
+    boss.orbMesh.material.emissiveIntensity = boss.iframe>0 ? 0.25 : 1.0+Math.sin(now*6)*0.4; }
+  if (boss.orbRing) boss.orbRing.rotation.z += dt*1.6;
+  if (boss.eyeMat) boss.eyeMat.emissiveIntensity = boss.charging ? 3.0+Math.sin(now*30)*1.6 : 1.6;
+  // schade-flits over alle segmenten
+  const fl = boss.flashT>0;
+  for (const s of boss.segs){ s.mesh.material.emissive.setHex(fl?0xff3860:0x000000); s.mesh.material.emissiveIntensity = fl?0.7:0; }
+}
+const BOSSES = [ { name:'Meta AI', author:'Boss 1 · robot', accent:'#ff3860', build:buildMetaAI } ];
+function startBoss(idx){
+  bossMode=true; tourMode=false; losMode=false;
+  document.getElementById('tourHud').style.display='none';
+  document.getElementById('bossBar').style.display='';
+  document.getElementById('hudRight').style.display='none';
+  buildBean(selectedBean);
+  BOSSES[idx].build();
+  resetLevel();
+  state='play'; startStamp=performance.now();
+  document.getElementById('menu').classList.remove('show');
+  document.getElementById('win').classList.remove('show');
+  document.getElementById('hud').classList.remove('hidden');
+  document.getElementById('escHint').classList.remove('hidden');
+  if (canvas.requestPointerLock) canvas.requestPointerLock();
+}
+function winBoss(){
+  state='win';
+  if (document.exitPointerLock) document.exitPointerLock();
+  const t=+(timeMs/1000).toFixed(2), key='beandash3d_boss'+selectedBoss+'_best';
+  const prev=localStorage.getItem(key), pb=(prev==null || t<+prev), best=pb?t:+prev;
+  localStorage.setItem(key, best);
+  document.getElementById('winTime').textContent=t.toFixed(2)+'s';
+  document.getElementById('winPb').textContent=pb?'🎉 Nieuwe besttijd!':'Record: '+(+best).toFixed(2)+'s';
+  document.getElementById('winMedal').innerHTML='<div class="wm-big">🤖 '+BOSSES[selectedBoss].name+' verslagen!</div>';
+  document.getElementById('winList').innerHTML='';
+  document.getElementById('hud').classList.add('hidden');
+  document.getElementById('escHint').classList.add('hidden');
+  document.getElementById('win').classList.add('show');
+  spawnConfetti();
+}
+function buildBossPicker(){
+  const el=document.getElementById('bossPicker'); if(!el) return; el.innerHTML='';
+  BOSSES.forEach((b,i)=>{
+    const best=localStorage.getItem('beandash3d_boss'+i+'_best');
+    const card=document.createElement('div'); card.className='map-card'+(i===selectedBoss?' sel':'');
+    card.innerHTML=`<div class="mc-name"><span class="mc-dot" style="background:${b.accent}"></span>${b.name}</div>`+
+      `<div class="mc-author">${b.author}</div>`+
+      `<div class="mc-best">${best!=null?'🏆 '+(+best).toFixed(2)+'s':'nog niet verslagen'}</div>`;
+    card.onclick=()=>{ selectedBoss=i; buildBossPicker(); };
+    el.appendChild(card);
+  });
+}
+
+/* ============================================================
+   TOERNOOI — 15 beans, 3 rondes (2 races + last one standing)
+   ============================================================ */
+const BOT_NAMES = ['Nathan','Deniz','Milo','Yassin','Reshman','Josh','Otis','Prei','Lars','Sem','Finn','Luuk','Daan','Bram','Tess','Noa','Jade','Kai','Mees','Guus'];
+// bots lopen een snelheid (units/sec) langs de baan en remmen af op obstakels — tijd volgt uit de map
+// spd = loopsnelheid, stumble = struikelkans/sec, caution = hoe weinig ze afremmen (hoger = beter)
+const DIFF = {
+  makkelijk:{ spdLo:4.4, spdHi:6.0, stumble:0.55, caution:0.45, dash:false, losLo:5,  losHi:15 },
+  normaal:  { spdLo:5.6, spdHi:7.2, stumble:0.28, caution:0.70, dash:false, losLo:9,  losHi:24 },
+  moeilijk: { spdLo:6.6, spdHi:8.4, stumble:0.10, caution:0.88, dash:true, dashBoost:2.2, losLo:16, losHi:40 },
+};
+function pathLength(){ let L=0; for(let i=0;i<PATH.length-1;i++) L+=Math.hypot(PATH[i+1].x-PATH[i].x, PATH[i+1].z-PATH[i].z); return L||1; }
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function tourPlayer(){ return tour.contestants.find(c=>c.isPlayer); }
+function aliveList(){ return tour.contestants.filter(c=>!c.out); }
+
+function startTournament(diff){
+  const names=shuffle(BOT_NAMES.slice()).slice(0,14);
+  const contestants=[{ name:'Jij', isPlayer:true, out:false, place:null, skill:1 }];
+  names.forEach((nm,i)=>contestants.push({ name:nm, isPlayer:false, out:false, place:null, skill:Math.random(),
+    color:new THREE.Color().setHSL((i/14+0.03)%1, 0.62, 0.58).getHex(), _i:i*1.7, mesh:null }));
+  tour={ diff, round:0, contestants, qualifyK:0, mapIdx:0, elapsed:0, playerTime:null, placeNext:0, lastList:[], finished:false };
+  tourMode=true; losMode=false;
+  nextRound();
+}
+function nextRound(){
+  tour.round++; tour.elapsed=0; tour.playerTime=null;
+  const d=DIFF[tour.diff];
+  if (tour.round<=2){
+    tour.qualifyK = tour.round===1 ? 10 : 5;
+    tour.mapIdx = (Math.random()*MAPS.length)|0;
+    tour.pathLen = null;                 // wordt bij de eerste stap uit de nieuwe baan berekend
+    for (const c of aliveList()){
+      c.roundPlace=null; c.progress=0; c.finished=false;
+      if (c.isPlayer) continue;
+      c.bd=0; c.finishTime=null; c.bslow=0;        // baan-afstand + struikel-timer resetten
+      c.bspeed = d.spdLo + c.skill*(d.spdHi-d.spdLo) + (Math.random()-0.5)*0.6;
+    }
+    selectedMap=tour.mapIdx; losMode=false;
+    beginTourPlay(false);
+  } else {
+    startLOS();
+  }
+}
+function beginTourPlay(isLOS){
+  buildBean(selectedBean);
+  if (isLOS) buildLOS(); else buildCourse();
+  resetLevel();
+  spawnBotMeshes();
+  state='play'; startStamp=performance.now(); tour.elapsed=0;
+  tourCountdown=3.0; tourGo=0;             // 3-2-1-GO voor de start
+  document.getElementById('menu').classList.remove('show');
+  document.getElementById('win').classList.remove('show');
+  document.getElementById('tourOverlay').classList.remove('show');
+  document.getElementById('hud').classList.remove('hidden');
+  document.getElementById('escHint').classList.remove('hidden');
+  document.getElementById('hudRight').style.display='none';
+  document.getElementById('bossBar').style.display='none';
+  document.getElementById('tourHud').style.display='';
+  if (canvas.requestPointerLock) canvas.requestPointerLock();
+}
+/* ---- zichtbare bot-beans op de map ---- */
+function makeBotBean(col){
+  const g=new THREE.Group();
+  const dark=new THREE.Color(col).multiplyScalar(0.68).getHex();
+  const light=new THREE.Color(col).lerp(new THREE.Color(0xffffff),0.5).getHex();
+  const body=new THREE.Mesh(new THREE.CapsuleGeometry(R,0.6,10,20),
+    new THREE.MeshPhysicalMaterial({ color:col, roughness:.32, clearcoat:.7, clearcoatRoughness:.4 }));
+  body.position.y=R+0.3; body.castShadow=true; g.add(body);
+  const belly=new THREE.Mesh(new THREE.SphereGeometry(0.42,16,16), new THREE.MeshStandardMaterial({ color:light, roughness:.55 }));
+  belly.scale.set(0.86,1.15,0.5); belly.position.set(0,R+0.26,R*0.72); g.add(belly);
+  // kuifje
+  const stalk=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.07,0.3,6), new THREE.MeshStandardMaterial({color:dark,roughness:.6}));
+  stalk.position.set(0,R+1.1,0); g.add(stalk);
+  const leaf=new THREE.Mesh(new THREE.SphereGeometry(0.16,10,10), new THREE.MeshStandardMaterial({color:0x6ad66a,roughness:.5}));
+  leaf.scale.set(1,0.42,0.7); leaf.position.set(0.12,R+1.26,0); leaf.rotation.z=-0.6; g.add(leaf);
+  const white=new THREE.MeshStandardMaterial({ color:0xffffff });
+  const inkMat=new THREE.MeshStandardMaterial({ color:0x2b2250 });
+  for (const dx of [-0.2,0.2]){
+    const e=new THREE.Mesh(new THREE.SphereGeometry(0.15,10,10), white); e.position.set(dx,R+0.56,R-0.02); g.add(e);
+    const p=new THREE.Mesh(new THREE.SphereGeometry(0.08,8,8), inkMat); p.position.set(dx,R+0.57,R+0.1); g.add(p);
+  }
+  // voetjes + armpjes met handjes (matchen de speler)
+  const limbMat=new THREE.MeshStandardMaterial({ color:dark, roughness:.5 });
+  const mittMat=new THREE.MeshStandardMaterial({ color:light, roughness:.5 });
+  for (const dx of [-0.24,0.24]){
+    const foot=new THREE.Mesh(new THREE.CapsuleGeometry(0.16,0.14,5,8), limbMat);
+    foot.rotation.z=Math.PI/2; foot.position.set(dx,0.16,0.1); foot.castShadow=true; g.add(foot);
+    const arm=new THREE.Mesh(new THREE.CapsuleGeometry(0.09,0.24,5,8), limbMat); arm.position.set(dx*2.5,R+0.4,0); g.add(arm);
+    const mitt=new THREE.Mesh(new THREE.SphereGeometry(0.11,8,8), mittMat); mitt.position.set(dx*2.5,R+0.24,0); g.add(mitt);
+  }
+  courseGroup.add(g); return g;
+}
+function spawnBotMeshes(){
+  for (const c of tour.contestants){
+    if (c.isPlayer || c.out){ c.mesh=null; continue; }
+    c.mesh=makeBotBean(c.color);
+    c.lane=(Math.random()-0.5)*5.2;              // eigen rijbaan (zijwaarts)
+    c.lanePh=Math.random()*6.28; c.laneSp=0.8+Math.random()*0.9;
+    c.weave=0.5+Math.random()*1.1;               // hoeveel ze slingeren
+    c.jy=0; c.jv=0; c.hitCd=0; c.pOff=0; c.spin=0; c.baseY=0; c.idleHopT=Math.random()*1.5;
+    c.sinkOff=0; c.dead=false; c.dashCd=1.5+Math.random()*3; c.dashT=0; c.respawnT=0;
+    if (losMode){ const r=3+Math.random()*6, a=Math.random()*6.28; c.wx=Math.cos(a)*r; c.wz=Math.sin(a)*r; c.wt=0; }
+    else { const sp=pathPoint(0); c.wx=sp.x+(Math.random()-0.5)*18; c.wz=sp.z+(Math.random()-0.5)*18; c.wt=0; }
+    c.mesh.position.set(c.wx, 0, c.wz);
+  }
+}
+// positie langs de centerlijn op fractie t (0..1)
+function pathPoint(t){
+  if (!PATH || PATH.length===0) return { x:spawn.x, z:spawn.z };
+  if (PATH.length===1) return { x:PATH[0].x, z:PATH[0].z };
+  let total=0; const seg=[];
+  for (let i=0;i<PATH.length-1;i++){ const L=Math.hypot(PATH[i+1].x-PATH[i].x, PATH[i+1].z-PATH[i].z); seg.push(L); total+=L; }
+  let d=Math.max(0,Math.min(1,t))*total;
+  for (let i=0;i<seg.length;i++){ if (d<=seg[i] || i===seg.length-1){ const a=PATH[i],b=PATH[i+1],f=seg[i]?d/seg[i]:0; return { x:a.x+(b.x-a.x)*f, z:a.z+(b.z-a.z)*f }; } d-=seg[i]; }
+  const L=PATH[PATH.length-1]; return { x:L.x, z:L.z };
+}
+// bovenkant + platform van het dichtstbijzijnde oppervlak op (x,z); y=-Infinity = gat
+function groundInfoAt(x,z){
+  let top=-Infinity, sol=null;
+  for (const s of solids){
+    if (x>s.min.x && x<s.max.x && z>s.min.z && z<s.max.z && s.max.y>top){ top=s.max.y; sol=s; }
+  }
+  for (const r of ramps){
+    const xlo=Math.min(r.x0,r.x1),xhi=Math.max(r.x0,r.x1),zlo=Math.min(r.z0,r.z1),zhi=Math.max(r.z0,r.z1);
+    if (x>xlo&&x<xhi&&z>zlo&&z<zhi){ const f=r.axis==='x'?(x-r.x0)/(r.x1-r.x0):(z-r.z0)/(r.z1-r.z0); const sy=r.y0+(r.y1-r.y0)*Math.max(0,Math.min(1,f)); if (sy>top){ top=sy; sol=null; } }
+  }
+  return { y:top, solid:sol };
+}
+function groundYAt(x,z){ return groundInfoAt(x,z).y; }
+function respawnBot(c, penalty){
+  if (c.respawnT>0) return;
+  c.respawnT=0.9;                       // kort weg (plons/rook), dan terug op de baan
+  c.bd=Math.max(0, (c.bd||0) - (penalty||6));   // val wat terug langs de baan, maar blijf meedoen
+  c.jy=0; c.jv=0; c.pOff=0; c.spin=0; c.sinkOff=0;
+  if (c.mesh) c.mesh.visible=false;
+}
+function tourBotsVisual(dt, now){
+  if (!tour || !tour.contestants) return;
+  for (const c of tour.contestants){
+    if (c.isPlayer || !c.mesh) continue;
+    const m=c.mesh;
+    if (c.out){ m.visible=false; continue; }
+    if (c.respawnT>0){ c.respawnT-=dt; m.visible=false; continue; }   // respawn-pauze
+    m.visible=true;
+    if (losMode){
+      c.wt-=dt;
+      if (c.wt<=0){ c.wt=0.8+Math.random()*1.0; const r=2+Math.random()*8, a=Math.random()*6.28; c.wx=Math.cos(a)*r; c.wz=Math.sin(a)*r; }
+      const tx=c.wx-m.position.x, tz=c.wz-m.position.z, k=Math.min(1,dt*1.4);
+      m.position.x += tx*k; m.position.z += tz*k;
+      // springen over een naderende balk
+      c.jv -= 26*dt; c.jy += c.jv*dt; if (c.jy<=0){ c.jy=0; c.jv=0; }
+      if (c.jy<=0.03){
+        const bdp=Math.hypot(m.position.x,m.position.z), bang=Math.atan2(m.position.z,m.position.x);
+        for (const b of losBeams){
+          let d=((bang-b.angle+Math.PI*3)%(Math.PI*2))-Math.PI;
+          if (bdp<b.reach && bdp>1.6 && Math.abs(d)<0.35){ c.jv=11; break; }
+        }
+      }
+      m.position.y=0+c.jy+Math.abs(Math.sin(now*7+c._i))*0.12;
+      if (tx||tz) m.rotation.y=Math.atan2(tx,tz);
+      continue;
+    }
+    // ---- hop-physica ----
+    c.jv -= 26*dt; c.jy += c.jv*dt; if (c.jy<=0){ c.jy=0; c.jv=0; }
+    c.pOff += (0-c.pOff)*Math.min(1,dt*2.2);     // terugstoot herstelt
+    c.hitCd=Math.max(0,c.hitCd-dt);
+    if (c.spin>0) c.spin=Math.max(0,c.spin-dt*7);
+    const grounded=c.jy<=0.03;
+    const vert=!!(curMap && curMap.vertical);
+
+    const t=Math.max(0,Math.min(1,(c.progress||0)+c.pOff+Math.sin(now*0.9+c._i)*0.006));
+    const pp=pathPoint(t), pp2=pathPoint(Math.min(1,t+0.02));
+    let hx=pp2.x-pp.x, hz=pp2.z-pp.z; const hl=Math.hypot(hx,hz)||1; hx/=hl; hz/=hl;
+    const perpx=-hz, perpz=hx;                   // haaks op looprichting
+    const off=c.lane + Math.sin(now*c.laneSp+c.lanePh)*c.weave;
+    let bx=pp.x+perpx*off, bz=pp.z+perpz*off;
+
+    // grondhoogte + platform
+    let gy, gs=null;
+    if (vert){
+      gy=t*(curMap.topY||40);
+      if (stormActive && gy < stormY+0.6) gy = stormY+0.6;   // rook telt als vloer: bots blijven er net boven
+    }
+    else {
+      let gi=groundInfoAt(bx,bz);
+      if (gi.y<=-50){ bx=pp.x; bz=pp.z; gi=groundInfoAt(bx,bz); }   // offset in gat -> terug naar midden
+      gy=gi.y; gs=gi.solid;
+      if (gy<=-50) gy=c.baseY;
+    }
+    c.baseY=gy;
+    // leliebladen: de bot zakt zelf cosmetisch weg (duwt het gedeelde blad NIET omlaag) en hopt eruit
+    if (gs && gs.sink){ c.sinkOff=Math.min(1.7, c.sinkOff+dt*2.2); if (c.sinkOff>1.1 && grounded) c.jv=8.5; }
+    else c.sinkOff=Math.max(0, c.sinkOff-dt*4);
+
+    // in het water gevallen -> respawnen (niet permanent dood)
+    if (gy < curDeathY){ respawnBot(c, 2.0); continue; }
+
+    // ---- reacties op obstakels ----
+    if (grounded && !vert){
+      const fx=bx+hx*2.6, fz=bz+hz*2.6;          // gat vooruit -> springen
+      if (groundInfoAt(fx,fz).y<=-50) c.jv=10.5;
+      for (const bp of bouncePads){              // springpaneel -> lancering
+        if (Math.abs(bx-bp.x0)<bp.w*0.5 && Math.abs(bz-bp.z0)<bp.d*0.5 && padActive(bp)){ c.jv=17; break; }
+      }
+    }
+    for (const rl of rollers){                   // rollende bal -> ontwijken of geraakt
+      const q=rollerPos(rl, now); if (q.hidden) continue;
+      if (Math.hypot(bx-q.x, bz-q.z) < rl.rad+0.9 && Math.abs(gy+c.jy-q.y) < rl.rad+1.3 && c.hitCd<=0){
+        if (grounded && Math.random()<0.6){ c.jv=12; }                 // ontwijkt met sprong
+        else { c.pOff-=0.03; c.jv=7; c.spin=5; c.hitCd=0.9; }           // geraakt: terugstoot + tuimel (geen dood)
+      }
+    }
+    c.idleHopT-=dt;                              // af en toe een hopje voor leven
+    if (grounded && c.idleHopT<=0){ c.idleHopT=1.1+Math.random()*1.8; if (Math.random()<0.5) c.jv=5.5; }
+
+    const bob = grounded ? Math.abs(Math.sin(now*(7+c._i*0.2)+c._i))*0.13 : 0;
+    m.position.set(bx, gy - c.sinkOff + c.jy + bob, bz);
+    if (c.spin>0) m.rotation.y += c.spin*dt*6;
+    else if (hx||hz) m.rotation.y=Math.atan2(hx,hz);
+    const sq=1+Math.max(-0.14,Math.min(0.3,c.jv*0.02));   // squash/stretch bij sprong
+    m.scale.set(1/Math.sqrt(sq), sq, 1/Math.sqrt(sq));
+    if (c.dashT>0){ const k=c.dashT/0.42; m.scale.set(1-0.28*k, 1-0.16*k, 1+0.7*k); }   // lunge-rek vooruit
+  }
+}
+function tourRaceStep(dt){
+  tour.elapsed+=dt;
+  if (tour.pathLen==null) tour.pathLen=pathLength();
+  const d=DIFF[tour.diff], L=tour.pathLen, K=tour.qualifyK;
+  const obMult=0.30+0.55*d.caution, gapMult=0.25+0.45*d.caution;    // hoe hard ze afremmen
+  let finishedCnt=0;
+  for (const c of aliveList()){
+    if (c.isPlayer){ c.progress=Math.max(c.progress||0, progressOf(player.x,player.z,player.y)); continue; }
+    if (c.finishTime!=null){ c.progress=1; finishedCnt++; continue; }   // al binnen
+    const t=c.bd/L, pp=pathPoint(t);
+    let mult=1;
+    // gat op/vlak voor de huidige positie -> afremmen om te springen
+    const g=groundInfoAt(pp.x,pp.z);
+    const ah=pathPoint(Math.min(1,(c.bd+2.4)/L)), ga=groundInfoAt(ah.x,ah.z);
+    if (g.y<=-50 || ga.y<=-50) mult*=gapMult;
+    if (g.solid && g.solid.mover) mult*=0.5;                   // bewegend platform/ferry -> wachten op de rit
+    // in de buurt van een draaiende balk of slinger -> voorzichtig
+    let haz=false;
+    for (const sw of sweepers){ if (Math.hypot(pp.x-sw.x,pp.z-sw.z)<sw.len*0.85){ haz=true; break; } }
+    if (!haz) for (const pd of pendulums){ if (Math.hypot(pp.x-pd.x,pp.z-pd.z)<4.5){ haz=true; break; } }
+    if (haz) mult*=obMult;
+    // af en toe struikelen
+    if (c.bslow>0) c.bslow-=dt;
+    else if (Math.random()<d.stumble*dt) c.bslow=0.35+Math.random()*0.5;
+    if (c.bslow>0) mult*=0.32;
+    // jump-dash (alleen moeilijk): korte boost + hopje -> ze gaan echt sneller
+    if (c.dashT>0) c.dashT-=dt;
+    if (d.dash){
+      c.dashCd-=dt;
+      if (c.dashCd<=0 && c.bslow<=0){ c.dashT=0.45; c.dashCd=1.6+Math.random()*2.0; c.jv=7; }
+      if (c.dashT>0) mult*=(d.dashBoost||2.0);
+    }
+    c.bd += c.bspeed*mult*dt;
+    if (c.bd>=L){ c.bd=L; c.finishTime=tour.elapsed; c.progress=1; finishedCnt++; }
+    else c.progress=c.bd/L;
+  }
+  if (tour.playerTime==null && finishedCnt>=K){ tour.playerTime=Infinity; resolveRace(); }
+}
+function tourPlayerFinished(){ if (tour.playerTime!=null) return; tour.playerTime=tour.elapsed; resolveRace(); }
+function resolveRace(){
+  const list=aliveList(), BIG=1e7;
+  for (const c of list){
+    const fin = c.isPlayer ? (tour.playerTime!=null && tour.playerTime!==Infinity) : (c.finishTime!=null);
+    const ftime = c.isPlayer ? tour.playerTime : c.finishTime;
+    c._t = fin ? ftime : (BIG - (c.progress||0)*1000);        // finishers op tijd, rest op voortgang
+  }
+  list.sort((a,b)=>a._t-b._t);
+  const K=tour.qualifyK;
+  list.forEach((c,i)=>{ c.roundPlace=i+1; if (i>=K) c.out=true; });
+  tour.lastList=list.slice();
+  showRoundResult();
+}
+/* ---- last one standing (ronde 3) ---- */
+function startLOS(){
+  const d=DIFF[tour.diff], surv=aliveList();
+  tour.placeNext=surv.length;
+  for (const c of surv){ c.place=null; if (!c.isPlayer) c.surviveTime=d.losLo + c.skill*(d.losHi-d.losLo) + (Math.random()-0.5)*4; }
+  losMode=true; tourMode=true; tour.tileT=2.5;
+  beginTourPlay(true);
+}
+function losEliminate(c){ if (c.out) return; c.out=true; c.place=tour.placeNext; tour.placeNext--; }
+function losStep(dt){
+  const live = !(tourMode && tourCountdown>0);     // tijdens aftelling: balken draaien, maar geen hits
+  if (live) tour.elapsed+=dt;
+  const TAU=Math.PI*2, wrap=a=>{ a=(a+Math.PI)%TAU; if(a<0)a+=TAU; return a-Math.PI; };
+  const ramp = 1 + Math.max(0, tour.elapsed-3)*0.05;   // balken worden gaandeweg sneller
+  const dp=Math.hypot(player.x, player.z), pang=Math.atan2(player.z, player.x);
+  for (const b of losBeams){
+    const spd=b.base*ramp;
+    b.angle=(b.angle + b.dir*spd*dt) % TAU;
+    b.group.rotation.y = -b.angle;
+    // botsing: binnen de sector én de balk-hoogte overlapt je lijf (laag=springen, hoog=juist niet)
+    if (live && player.stun<=0 && dp>1.5 && dp < b.reach+R){
+      const half = (b.half+R)/Math.max(dp,1) + Math.abs(spd)*dt;
+      const barLo=b.hTop-0.62, barHi=b.hTop+0.05, feet=player.y, head=player.y+PH;
+      if (Math.abs(wrap(pang-b.angle)) < half && head>barLo && feet<barHi){
+        const nx=player.x/dp, nz=player.z/dp;      // naar buiten + met de draairichting mee
+        player.vx = nx*23 - nz*b.dir*7;
+        player.vz = nz*23 + nx*b.dir*7;
+        player.vy = 8; player.onGround=false; player.standing=null; player.stun=0.7;
+      }
+    }
+  }
+  if (!live) return;
+  // vloer-tegels verdwijnen gaandeweg (steeds sneller)
+  tour.tileT=(tour.tileT==null?2.5:tour.tileT)-dt;
+  if (tour.tileT<=0){
+    tour.tileT=Math.max(0.3, 1.3 - tour.elapsed*0.02);
+    const avail=tiles.filter(T=>T.state==='solid');
+    if (avail.length>8){ const T=avail[(Math.random()*avail.length)|0]; T.state='fall'; T.t=0; }
+  }
+  for (const T of tiles){
+    if (T.state==='fall'){ T.t+=dt; T.solid.mesh.position.y-=dt*4; T.solid.mesh.rotation.z+=dt*1.5;
+      if (T.t>0.45){ T.state='gone'; T.solid.mesh.visible=false; T.solid.max.y=-9999; T.solid.min.y=-9999; } }
+  }
+  for (const c of aliveList()){ if (!c.isPlayer && tour.elapsed>=c.surviveTime) losEliminate(c); }
+  if (player.y<curDeathY){ losEliminate(tourPlayer()); showLOSResult(); return; }
+  if (!aliveList().some(c=>!c.isPlayer)){ const p=tourPlayer(); p.place=1; p.out=true; showLOSResult(); return; }
+}
+/* ---- overlays ---- */
+function torRow(c, right){ return `<div class="tor${c.isPlayer?' me':''}${c.out?' out':''}"><span>${c.roundPlace||c.place||'·'} · ${c.name}</span><span>${right||''}</span></div>`; }
+function showRoundResult(){
+  state='round';
+  if (document.exitPointerLock) document.exitPointerLock();
+  document.getElementById('hud').classList.add('hidden');
+  document.getElementById('escHint').classList.add('hidden');
+  document.getElementById('tourHud').style.display='none';
+  const p=tourPlayer(), qual=!p.out;
+  if (qual) awardCoins(35);
+  document.getElementById('tourOvTitle').textContent = qual ? `Ronde ${tour.round} gehaald!` : 'Afgevallen 💀';
+  document.getElementById('tourOvSub').textContent = (qual
+    ? `Je werd ${p.roundPlace}e — de top ${tour.qualifyK} gaat door`
+    : `Je werd ${p.roundPlace}e — alleen de top ${tour.qualifyK} ging door`) + (qual?' · 🪙 +35':'');
+  document.getElementById('tourOvList').innerHTML = tour.lastList.map(c=>torRow(c, c.out?'uit':'door')).join('');
+  document.getElementById('tourContBtn').textContent = !qual ? 'Opnieuw ▶' : (tour.round>=2 ? 'Finale ▶' : 'Volgende ronde ▶');
+  document.getElementById('tourOverlay').classList.add('show');
+}
+function showLOSResult(){
+  state='round'; losMode=false;
+  if (document.exitPointerLock) document.exitPointerLock();
+  document.getElementById('hud').classList.add('hidden');
+  document.getElementById('escHint').classList.add('hidden');
+  document.getElementById('tourHud').style.display='none';
+  const p=tourPlayer(), won=p.place===1;
+  if (!won){   // nog levende bots overleefden jou -> plaats ze vóór je op overlevingstijd
+    const rem=tour.contestants.filter(c=>!c.place).sort((a,b)=>b.surviveTime-a.surviveTime);
+    let pl=1; for (const c of rem){ c.out=true; c.place=pl++; }
+  }
+  document.getElementById('tourOvTitle').textContent = won ? '👑 TOERNOOI GEWONNEN!' : `${p.place}e plek`;
+  const losReward = won?200 : p.place<=3?90:40;
+  awardCoins(losReward);
+  document.getElementById('tourOvSub').textContent = (won ? 'Last one standing — jij!' : 'Je viel af in de finale.') + ` · 🪙 +${losReward}`;
+  const list=tour.contestants.filter(c=>c.place).sort((a,b)=>a.place-b.place);
+  document.getElementById('tourOvList').innerHTML = list.map(c=>torRow(c, c.place+'e')).join('');
+  document.getElementById('tourContBtn').textContent='Nog een keer ▶';
+  document.getElementById('tourOverlay').classList.add('show');
+  tour.finished=true; if (won) spawnConfetti();
+}
+function tourContinue(){
+  const p=tourPlayer();
+  if (tour.finished || p.out){ startTournament(tour.diff); return; }
+  nextRound();
+}
+function tourUpdateHud(){
+  const head=document.getElementById('tourHudHead'), listEl=document.getElementById('tourHudList');
+  if (losMode){
+    head.innerHTML=`<b>Ronde 3 — Last One Standing</b><br>Spring de lage balk, duik onder de hoge! · nog ${aliveList().length} · ${tour.elapsed.toFixed(0)}s`;
+    listEl.innerHTML=tour.contestants.map(c=>`<div class="trow${c.isPlayer?' me':''}${c.out?' out':''}"><span class="tnm">${c.name}</span><span>${c.out?(c.place+'e'):'❤️'}</span></div>`).join('');
+  } else {
+    head.innerHTML=`<b>Ronde ${tour.round} — ${MAPS[tour.mapIdx].name}</b><br>Top ${tour.qualifyK} haalt het`;
+    const cs=tour.contestants.slice().sort((a,b)=>(b.progress||0)-(a.progress||0));
+    listEl.innerHTML=cs.map(c=>`<div class="trow${c.isPlayer?' me':''}${c.out?' out':''}"><span class="tnm">${c.name}</span><span class="tbar"><i style="width:${Math.round((c.progress||0)*100)}%"></i></span></div>`).join('');
+  }
+}
+function buildBeam(len, thick, hTop, speed, dir, colHex, ang0){
+  const g=new THREE.Group();
+  const mat=new THREE.MeshStandardMaterial({ color:colHex, roughness:.45, emissive:colHex, emissiveIntensity:0.18 });
+  const bar=new THREE.Mesh(new THREE.BoxGeometry(len, thick, thick), mat);
+  bar.position.set(len/2+1.2, hTop-thick/2, 0);   // steekt vanaf de spil naar buiten (+x)
+  bar.castShadow=true; g.add(bar);
+  const cap=new THREE.Mesh(new THREE.SphereGeometry(thick*0.75,14,14), mat);
+  cap.position.set(len+1.2, hTop-thick/2, 0); cap.castShadow=true; g.add(cap);
+  courseGroup.add(g);
+  const beam={ group:g, reach:len+1.2, half:thick/2, hTop, speed, base:speed, dir, angle:ang0 };
+  losBeams.push(beam); return beam;
+}
+function buildLOS(){
+  resetArena({ sky:0x241b3a, fog:[50,190], sea:0x120a24, seaY:-16, seaOpacity:0.9, deathY:-9, floor:'metal', palette:PLAT_COLORS });
+  curMap.spawnYaw=0; tiles=[]; losBeams=[];
+  // vloer als tegels — verdwijnen gaandeweg
+  const N=7, ts=3.0, span=3.15, o=-(N-1)/2*span;
+  for (let i=0;i<N;i++) for (let j=0;j<N;j++){
+    const cx=o+i*span, cz=o+j*span;
+    const box=new THREE.Mesh(new THREE.BoxGeometry(ts,1.6,ts), floorMat(ts,ts));
+    box.position.set(cx,-0.8,cz); box.receiveShadow=true; box.castShadow=true; courseGroup.add(box);
+    const s={ mesh:box, edge:box, half:{x:ts/2,y:0.8,z:ts/2}, h:1.6, cx, cz, topY:0, min:{x:0,y:0,z:0}, max:{x:0,y:0,z:0}, _dx:0,_dy:0,_dz:0 };
+    updateSolidBounds(s); solids.push(s);
+    tiles.push({ solid:s, state:'solid', t:0 });
+  }
+  // centrale spil
+  const hub=new THREE.Mesh(new THREE.CylinderGeometry(1.3,1.7,6.5,22),
+    new THREE.MeshStandardMaterial({ color:0x3a2f66, roughness:.6, emissive:0x241b3a, emissiveIntensity:0.3 }));
+  hub.position.y=3.2; hub.castShadow=true; courseGroup.add(hub);
+  // lage balk (eroverheen SPRINGEN) + hoge balk (juist NIET springen, blijf staan)
+  buildBeam(15, 1.1, 1.0, 1.05, +1, 0xff5a7a, 0);
+  buildBeam(15, 1.1, 2.5, 0.80, -1, 0x4fb0ff, Math.PI);
+  PATH=[]; spawn={ x:0, y:2.0, z:6 };
+}
+
+
+const MAPS = [
+  { name:'De Opwarmer', author:'demo', accent:'#ff6fb0', build:buildWarmup, medals:{g:12,s:15,b:19},   theme:{ sky:0x9ad8ff, fog:[55,130], sea:0x6fc7ff, seaY:-12, seaOpacity:0.55, deathY:-14, floor:'candy', palette:PLAT_COLORS } },
+  { name:'Honkbalheuvel', author:'Nathan', accent:'#e8a24a', build:buildBaseball, medals:{g:10,s:13,b:16},
+    theme:{ sky:0xbfe8ff, fog:[60,165], sea:0x66b366, seaY:-6, seaOpacity:1.0, deathY:-16, floor:'grass',
+            palette:[0xe8d2a0,0xd9b382,0xcf9b63,0xe8d2a0,0xd9b382] } },
+  { name:'IJsmeer', author:'Deniz', accent:'#7fe3ff', build:buildIce, ice:true, medals:{g:10,s:13,b:16},
+    theme:{ sky:0xd6f4ff, fog:[45,120], sea:0x3aa0d8, seaY:-3, seaOpacity:0.7, deathY:-5, floor:'ice',
+            palette:[0xcfeeff,0xa9dcff,0xe8f8ff,0xbfe6ff,0xd6f4ff] } },
+  { name:'Spiraaltoren', author:'Milo', accent:'#9aa6d6', build:buildSpiral, vertical:true, topY:48, medals:{g:24,s:30,b:38},
+    storm:true, stormSpeed:1.7, spawnYaw:Math.PI/2,
+    theme:{ sky:0x868fb0, fog:[40,120], sea:0x343a52, seaY:-10, seaOpacity:0.85, deathY:-12, floor:'stone',
+            palette:[0xc4c9db,0xd9dcec,0xb0b7cf,0xc4c9db,0xd9dcec] } },
+  { name:'Zuigerpoort', author:'Yassin', accent:'#ffa23d', build:buildPush, medals:{g:8.5,s:11,b:14},
+    theme:{ sky:0x7f8aa0, fog:[55,140], sea:0x2f3545, seaY:-11, seaOpacity:0.85, deathY:-15, floor:'metal',
+            palette:[0x8891a6,0x9aa2b6,0x7e8699,0x8891a6,0x9aa2b6] } },
+  { name:'Trampolinepark', author:'Reshman', accent:'#b06bff', build:buildBounce, spawnYaw:Math.atan2(10,13), medals:{g:5.5,s:7.5,b:10},
+    theme:{ sky:0xd9c2ff, fog:[60,150], sea:0x8a6fd8, seaY:-14, seaOpacity:0.5, deathY:-16, floor:'candy',
+            palette:[0xffe3f2,0xe3e0ff,0xe9ffe6,0xffe9d6,0xf0e0ff] } },
+  { name:'Skatepark', author:'Josh', accent:'#ff7a3d', build:buildSkate, medals:{g:18,s:24,b:32},
+    theme:{ sky:0xffcf9a, fog:[55,150], sea:0x4a4e5c, seaY:-13, seaOpacity:0.85, deathY:-15, floor:'stone',
+            palette:[0xd8d8e0,0xf0c89a,0xc8c8d4,0xffe3b0,0xbfc2cf] } },
+  { name:'Pettenberg', author:'Milo', accent:'#49c7a8', build:buildCaps, medals:{g:15,s:20,b:28},
+    theme:{ sky:0xcdeadf, fog:[50,150], sea:0x4fc0a8, seaY:-16, seaOpacity:0.55, deathY:-18, floor:'candy',
+            palette:[0xffe3f2,0xd9fff0,0xe3f0ff,0xfff0d6,0xe9ffe6] } },
+  { name:'Catwalk', author:'Lars', accent:'#ff7ac2', build:buildCatwalk, medals:{g:14,s:18,b:24},
+    theme:{ sky:0xffd9f0, fog:[55,150], sea:0xf2a0d8, seaY:-14, seaOpacity:0.5, deathY:-16, floor:'candy',
+            palette:[0xffd9ec,0xffffff,0xd0e8ff,0xffc2e4,0xf0d9ff] } },
+  { name:'Ruimtestation', author:'Otis', accent:'#7f6bff', build:buildSpace, gravity:0.45, medals:{g:14.5,s:19,b:25},
+    theme:{ sky:0x0b0a1f, fog:[70,230], sea:0x2a1a5a, seaY:-38, seaOpacity:0.22, deathY:-26, floor:'stone',
+            palette:[0x9aa0c0,0x8088b0,0xb0b6d6,0x7a82a8,0xc0c6e0] } },
+  { name:'Moestuin', author:'Prei', accent:'#5aa02c', build:buildGarden, medals:{g:16,s:21,b:28},
+    theme:{ sky:0x9fe0ff, fog:[55,150], sea:0x4fa36b, seaY:-0.6, seaOpacity:0.8, deathY:-3, floor:'grass',
+            palette:[0x8fd46b,0xc8a06a,0xa6dc7a,0xd6b483,0xbfe88a] } },
+];
+
+/* ============================================================
+   speler (bean)
+   ============================================================ */
+let beanGroup=null, beanInner=null, beanBody=null, beanFeet=[], beanArms=[], beanEyes=[], beanBlink=2;
+// ---- munten + skins (combineerbare boven- en onderhelft) ----
+if (localStorage.getItem('oob_coins')===null) localStorage.setItem('oob_coins','60');
+function getCoins(){ return +(localStorage.getItem('oob_coins')||0); }
+function setCoins(n){ localStorage.setItem('oob_coins', String(Math.max(0,Math.floor(n)))); }
+function ownedSet(){ try{ return new Set(JSON.parse(localStorage.getItem('oob_owned')||'[]')); }catch(e){ return new Set(); } }
+function saveOwned(s){ localStorage.setItem('oob_owned', JSON.stringify([...s])); }
+let equippedTop = localStorage.getItem('oob_top')||'none';
+let equippedBottom = localStorage.getItem('oob_bottom')||'none';
+const SKINS_TOP = [
+  { id:'none', name:'Standaard', price:0, icon:'🙂', build:null },
+  { id:'turtle', name:'Schildpad', price:120, icon:'🐢', build:(g)=>{
+      const sh=new THREE.Mesh(new THREE.SphereGeometry(0.74,20,16,0,Math.PI*2,0,Math.PI*0.6),
+        new THREE.MeshStandardMaterial({color:0x3f9b4f, roughness:.5})); sh.scale.set(1,0.9,1.12); sh.position.set(0,R+0.5,-0.12); sh.castShadow=true; g.add(sh);
+      const rim=new THREE.Mesh(new THREE.TorusGeometry(0.72,0.1,8,22), new THREE.MeshStandardMaterial({color:0xd9b36b,roughness:.6}));
+      rim.rotation.x=Math.PI/2; rim.position.set(0,R+0.42,-0.12); g.add(rim); } },
+  { id:'ninja', name:'Ninja-kap', price:150, icon:'🥷', build:(g)=>{
+      const hood=new THREE.Mesh(new THREE.SphereGeometry(R+0.12,18,14,0,Math.PI*2,0,Math.PI*0.5),
+        new THREE.MeshStandardMaterial({color:0x24262e, roughness:.7})); hood.position.set(0,R+0.72,0); g.add(hood);
+      const band=new THREE.Mesh(new THREE.BoxGeometry(1.35,0.2,0.12), new THREE.MeshStandardMaterial({color:0xd23b3b,roughness:.6}));
+      band.position.set(0,R+0.82,R-0.05); g.add(band);
+      const tail=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.1,0.7), new THREE.MeshStandardMaterial({color:0xd23b3b}));
+      tail.position.set(-0.5,R+0.8,-0.35); tail.rotation.y=0.5; g.add(tail); } },
+  { id:'dog', name:'Hondje', price:140, icon:'🐶', build:(g)=>{
+      const em=new THREE.MeshStandardMaterial({color:0x9c6b43, roughness:.7});
+      for(const dx of [-1,1]){ const ear=new THREE.Mesh(new THREE.CapsuleGeometry(0.16,0.42,6,10), em);
+        ear.position.set(dx*(R+0.02),R+0.6,0); ear.rotation.z=dx*0.55; ear.castShadow=true; g.add(ear); }
+      const snout=new THREE.Mesh(new THREE.SphereGeometry(0.2,12,12), em); snout.scale.set(1,0.8,1.1); snout.position.set(0,R+0.34,R+0.14); g.add(snout);
+      const nose=new THREE.Mesh(new THREE.SphereGeometry(0.08,10,10), new THREE.MeshStandardMaterial({color:0x201a2e})); nose.position.set(0,R+0.4,R+0.32); g.add(nose); } },
+  { id:'crown', name:'Kroon', price:300, icon:'👑', build:(g)=>{
+      const cm=new THREE.MeshStandardMaterial({color:0xffcf3d, metalness:.6, roughness:.3, emissive:0x6a4e00, emissiveIntensity:.3});
+      const band=new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.4,0.26,16,1,true), cm); band.position.set(0,R+1.02,0); g.add(band);
+      for(let i=0;i<5;i++){ const a=i/5*Math.PI*2; const sp=new THREE.Mesh(new THREE.ConeGeometry(0.1,0.26,8), cm);
+        sp.position.set(Math.cos(a)*0.4,R+1.22,Math.sin(a)*0.4); g.add(sp); } } },
+  { id:'cowboy', name:'Cowboy', price:180, icon:'🤠', build:(g)=>{
+      const hm=new THREE.MeshStandardMaterial({color:0x8a5a2b, roughness:.7});
+      const brim=new THREE.Mesh(new THREE.CylinderGeometry(0.82,0.82,0.08,22), hm); brim.position.set(0,R+0.9,0); brim.scale.z=1.2; brim.castShadow=true; g.add(brim);
+      const crown=new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.46,0.5,16), hm); crown.position.set(0,R+1.13,0); g.add(crown);
+      const bb=new THREE.Mesh(new THREE.CylinderGeometry(0.47,0.47,0.13,16), new THREE.MeshStandardMaterial({color:0x3a2a1a})); bb.position.set(0,R+0.98,0); g.add(bb); } },
+];
+const SKINS_BOTTOM = [
+  { id:'none', name:'Standaard', price:0, icon:'👟', build:null },
+  { id:'banana', name:'Bananenschil', price:130, icon:'🍌', build:(g)=>{
+      const ym=new THREE.MeshStandardMaterial({color:0xffe14d, roughness:.5});
+      for(let i=0;i<5;i++){ const a=i/5*Math.PI*2; const peel=new THREE.Mesh(new THREE.CapsuleGeometry(0.14,0.66,6,10), ym);
+        peel.position.set(Math.cos(a)*0.42,0.55,Math.sin(a)*0.42); peel.rotation.x=Math.cos(a)*0.35; peel.rotation.z=-Math.sin(a)*0.35; g.add(peel); } } },
+  { id:'rocket', name:'Raketlaarzen', price:220, icon:'🚀', build:(g)=>{
+      const bm=new THREE.MeshStandardMaterial({color:0xd23b3b, metalness:.4, roughness:.4});
+      const fm=new THREE.MeshBasicMaterial({color:0xffa23d});
+      for(const dx of [-0.24,0.24]){ const boot=new THREE.Mesh(new THREE.CylinderGeometry(0.19,0.24,0.45,14), bm); boot.position.set(dx,0.24,0.08); boot.castShadow=true; g.add(boot);
+        const flame=new THREE.Mesh(new THREE.ConeGeometry(0.14,0.34,10), fm); flame.rotation.x=Math.PI; flame.position.set(dx,-0.02,0.08); g.add(flame); } } },
+  { id:'flippers', name:'Zwemvliezen', price:110, icon:'🐸', build:(g)=>{
+      const fm=new THREE.MeshStandardMaterial({color:0x4fb0ff, roughness:.5});
+      for(const dx of [-0.24,0.24]){ const fl=new THREE.Mesh(new THREE.BoxGeometry(0.32,0.09,0.72), fm); fl.position.set(dx,0.08,0.32); fl.castShadow=true; g.add(fl); } } },
+  { id:'skates', name:'Schaatsen', price:160, icon:'⛸️', build:(g)=>{
+      const bm=new THREE.MeshStandardMaterial({color:0xffffff, roughness:.4});
+      const blm=new THREE.MeshStandardMaterial({color:0xbfc4d6, metalness:.85, roughness:.2});
+      for(const dx of [-0.24,0.24]){ const boot=new THREE.Mesh(new THREE.BoxGeometry(0.26,0.3,0.5), bm); boot.position.set(dx,0.24,0.08); boot.castShadow=true; g.add(boot);
+        const bl=new THREE.Mesh(new THREE.BoxGeometry(0.05,0.12,0.64), blm); bl.position.set(dx,0.03,0.1); g.add(bl); } } },
+];
+function awardCoins(n){ setCoins(getCoins()+n); }
+function buildBean(colorIdx){
+  if (beanGroup) scene.remove(beanGroup);
+  beanGroup = new THREE.Group();
+  beanInner = new THREE.Group();           // kantelt voorover bij de duik
+  beanGroup.add(beanInner);
+  const col = BEAN_COLORS[colorIdx];
+  const darkCol = new THREE.Color(col).multiplyScalar(0.68).getHex();
+  const lightCol = new THREE.Color(col).lerp(new THREE.Color(0xffffff),0.5).getHex();
+  // lijf
+  beanBody = new THREE.Mesh(new THREE.CapsuleGeometry(R, 0.6, 14, 28),
+    new THREE.MeshPhysicalMaterial({ color:col, roughness:.3, clearcoat:.85, clearcoatRoughness:.35, sheen:0.6, sheenColor:new THREE.Color(0xffffff) }));
+  beanBody.position.y = R + 0.3; beanBody.castShadow = true;
+  beanInner.add(beanBody);
+  // lichte buik-ovaal tegen de voorkant (breekt de "blob")
+  const belly = new THREE.Mesh(new THREE.SphereGeometry(0.42,20,20), new THREE.MeshStandardMaterial({ color:lightCol, roughness:.55 }));
+  belly.scale.set(0.86,1.15,0.5); belly.position.set(0, R+0.26, R*0.72); beanInner.add(belly);
+  // kuifje bovenop (stengel + blaadje) -> uniek silhouet
+  const stalk = new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.07,0.34,8), new THREE.MeshStandardMaterial({ color:darkCol, roughness:.6 }));
+  stalk.position.set(0, R+1.12, 0); beanInner.add(stalk);
+  const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.17,12,12), new THREE.MeshStandardMaterial({ color:0x6ad66a, roughness:.5 }));
+  leaf.scale.set(1,0.42,0.7); leaf.position.set(0.13, R+1.3, 0); leaf.rotation.z=-0.6; beanInner.add(leaf);
+  // glansvlek
+  const shine = new THREE.Mesh(new THREE.SphereGeometry(0.12,10,10), new THREE.MeshBasicMaterial({ color:0xffffff, transparent:true, opacity:0.45 }));
+  shine.position.set(-0.24, R+0.95, 0.24); beanInner.add(shine);
+  // oogjes + pupillen + glinster + wenkbrauwen
+  const white = new THREE.MeshStandardMaterial({ color:0xffffff, roughness:.3 });
+  const ink = new THREE.MeshStandardMaterial({ color:0x2b2250 });
+  const sparkMat = new THREE.MeshBasicMaterial({ color:0xffffff });
+  beanEyes=[];
+  for (const dx of [-0.2,0.2]){
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.16,16,16), white);
+    eye.position.set(dx, R+0.56, R-0.02); beanInner.add(eye); beanEyes.push(eye);
+    const pup = new THREE.Mesh(new THREE.SphereGeometry(0.085,12,12), ink);
+    pup.position.set(dx, R+0.57, R+0.1); beanInner.add(pup);
+    const spark = new THREE.Mesh(new THREE.SphereGeometry(0.032,8,8), sparkMat);
+    spark.position.set(dx+0.04, R+0.63, R+0.14); beanInner.add(spark);
+    const brow = new THREE.Mesh(new THREE.BoxGeometry(0.2,0.05,0.06), ink);
+    brow.position.set(dx, R+0.8, R+0.01); brow.rotation.z = dx<0?0.22:-0.22; beanInner.add(brow);
+  }
+  // glimlach (stukje torus)
+  const mouth = new THREE.Mesh(new THREE.TorusGeometry(0.12,0.028,8,20,Math.PI), ink);
+  mouth.position.set(0, R+0.36, R+0.02); mouth.rotation.z=Math.PI; beanInner.add(mouth);
+  // blosjes
+  const cheekMat = new THREE.MeshStandardMaterial({ color:0xff9ec4, roughness:.6 });
+  for (const dx of [-0.34,0.34]){
+    const ch = new THREE.Mesh(new THREE.SphereGeometry(0.1,10,10), cheekMat);
+    ch.position.set(dx, R+0.42, R-0.06); ch.scale.set(1,0.7,0.5); beanInner.add(ch);
+  }
+  // voetjes (schoen + witte zool) + armpjes (met handje), pivot vanaf de schouder
+  const limbMat = new THREE.MeshStandardMaterial({ color:darkCol, roughness:.5 });
+  const mittMat = new THREE.MeshStandardMaterial({ color:lightCol, roughness:.5 });
+  const soleMat = new THREE.MeshStandardMaterial({ color:0xffffff, roughness:.6 });
+  beanFeet=[]; beanArms=[];
+  for (const dx of [-0.24,0.24]){
+    const foot = new THREE.Group();
+    const shoe = new THREE.Mesh(new THREE.CapsuleGeometry(0.17,0.16,6,10), limbMat); shoe.rotation.z=Math.PI/2; shoe.castShadow=true; foot.add(shoe);
+    const sole = new THREE.Mesh(new THREE.BoxGeometry(0.36,0.07,0.3), soleMat); sole.position.y=-0.12; foot.add(sole);
+    foot.position.set(dx,0.17,0.12); beanInner.add(foot); beanFeet.push(foot);
+    const arm = new THREE.Group();
+    const limb = new THREE.Mesh(new THREE.CapsuleGeometry(0.1,0.26,6,10), limbMat); limb.position.y=-0.14; limb.castShadow=true; arm.add(limb);
+    const mitt = new THREE.Mesh(new THREE.SphereGeometry(0.13,10,10), mittMat); mitt.position.y=-0.3; arm.add(mitt);
+    arm.position.set(dx*2.5, R+0.5, 0); beanInner.add(arm); beanArms.push(arm);
+  }
+  // uitgeruste skins (boven + onder) toepassen
+  const td=SKINS_TOP.find(s=>s.id===equippedTop); if (td&&td.build) td.build(beanInner, col);
+  const bd=SKINS_BOTTOM.find(s=>s.id===equippedBottom); if (bd&&bd.build) bd.build(beanInner, col);
+  scene.add(beanGroup);
+}
+
+const player = { x:0,y:2,z:0, vx:0,vy:0,vz:0, onGround:false, standing:null,
+                 stun:0, dived:false, diveT:0, bounceT:0, respawnT:0, yaw:0, modelYaw:0, anim:0, checkpoint:{x:0,y:2,z:0} };
+let camYaw = 0, camPitch = 0.32, prevJump = false;
+
+/* ---------- muis: pointer-lock om rond te kijken (drag als fallback) ---------- */
+let locked=false, dragging=false, lastMX=0, lastMY=0;
+const SENS=0.0026, DRAGSENS=0.006;
+document.addEventListener('pointerlockchange', ()=>{ locked = (document.pointerLockElement===canvas); });
+canvas.addEventListener('mousedown', e=>{
+  if(state!=='play') return;
+  if(!locked && canvas.requestPointerLock) canvas.requestPointerLock();
+  dragging=true; lastMX=e.clientX; lastMY=e.clientY;
+});
+addEventListener('mouseup', ()=>{ dragging=false; });
+addEventListener('mousemove', e=>{
+  if(locked){
+    camYaw  -= e.movementX*SENS;
+    camPitch = Math.max(-0.2, Math.min(0.95, camPitch + e.movementY*SENS));
+  } else if(dragging){
+    camYaw  -= (e.clientX-lastMX)*DRAGSENS;
+    camPitch = Math.max(-0.1, Math.min(0.95, camPitch + (e.clientY-lastMY)*DRAGSENS));
+    lastMX=e.clientX; lastMY=e.clientY;
+  }
+});
+
+/* ---------- input ---------- */
+const keys = {};
+addEventListener('keydown', e=>{
+  if ([' ','ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) e.preventDefault();
+  keys[e.key.toLowerCase()] = true; keys[e.key] = true;
+  if (state==='play'){ if (e.key==='r'||e.key==='R'){ if (bossMode) startBoss(selectedBoss); else if (!losMode) resetLevel(); } if (e.key==='Escape') toMenu(); }
+});
+addEventListener('keyup', e=>{ keys[e.key.toLowerCase()]=false; keys[e.key]=false; });
+
+/* ============================================================
+   state / flow
+   ============================================================ */
+let state='menu', selectedBean=0, selectedMap=0, timeMs=0, startStamp=0;
+let tourCountdown=0, tourGo=0;
+let bossMode=false, boss=null, projectiles=[], bossList=[];
+let tourMode=false, losMode=false, tour=null, tiles=[], losBeams=[], selectedDiff='normaal';
+
+function resetLevel(){
+  player.x=spawn.x; player.y=spawn.y; player.z=spawn.z;
+  player.vx=player.vy=player.vz=0; player.onGround=false; player.standing=null; player.stun=0;
+  const yaw0 = (curMap && curMap.spawnYaw) || 0;
+  player.yaw=0; player.modelYaw=yaw0; player.dived=false; player.diveT=0; player.bounceT=0; player.respawnT=0; player.checkpoint={...spawn};
+  checkpoints.forEach(c=>{ c.active=false; c.mat.color.setHex(0xff6fb0); c.mat.emissive.setHex(0x661133); if(c.curtainMat) c.curtainMat.color.setHex(0xff6fb0); });
+  if (stormActive) stormY=-4;
+  camYaw=yaw0; timeMs=0; startStamp=performance.now();
+}
+function startGame(){
+  bossMode=false; tourMode=false; losMode=false;
+  document.getElementById('bossBar').style.display='none';
+  document.getElementById('tourHud').style.display='none';
+  document.getElementById('hudRight').style.display='';
+  buildBean(selectedBean); buildCourse(); resetLevel();
+  state='play'; startStamp=performance.now();
+  document.getElementById('menu').classList.remove('show');
+  document.getElementById('win').classList.remove('show');
+  document.getElementById('hud').classList.remove('hidden');
+  document.getElementById('escHint').classList.remove('hidden');
+  if (canvas.requestPointerLock) canvas.requestPointerLock();
+}
+function toMenu(){
+  state='menu';
+  bossMode=false; tourMode=false; losMode=false;
+  if (document.exitPointerLock) document.exitPointerLock();
+  document.getElementById('hud').classList.add('hidden');
+  document.getElementById('escHint').classList.add('hidden');
+  document.getElementById('tourHud').style.display='none';
+  document.getElementById('tourOverlay').classList.remove('show');
+  document.getElementById('hudRight').style.display='';
+  document.getElementById('win').classList.remove('show');
+  document.getElementById('menu').classList.add('show');
+  buildMapPicker();
+  showTab('trials');
+}
+function loadTimes(i){ try{ return JSON.parse(localStorage.getItem('beandash3d_times_'+i)||'[]'); }catch(e){ return []; } }
+const MEDAL_EMOJI={gold:'🥇',silver:'🥈',bronze:'🥉'};
+const MEDAL_LABEL={gold:'Goud',silver:'Zilver',bronze:'Brons'};
+function medalFor(i,t){
+  if(t==null) return null;
+  const m=MAPS[i]&&MAPS[i].medals; if(!m) return null;
+  if(t<m.g) return 'gold'; if(t<m.s) return 'silver'; if(t<m.b) return 'bronze';
+  return null;
+}
+function saveTime(i,t){
+  const a=loadTimes(i); a.push(+t.toFixed(2)); a.sort((x,y)=>x-y);
+  const top=a.slice(0,10); localStorage.setItem('beandash3d_times_'+i, JSON.stringify(top)); return top;
+}
+function winLevel(){
+  state='win';
+  if (document.exitPointerLock) document.exitPointerLock();
+  const t=+(timeMs/1000).toFixed(2);
+  const prev=loadTimes(selectedMap);
+  const prevBest=prev.length?prev[0]:null;
+  const times=saveTime(selectedMap,t);
+  const pb = prevBest===null || t<prevBest;
+  document.getElementById('winTime').textContent=t.toFixed(2)+'s';
+  document.getElementById('winPb').textContent=pb?'🎉 Nieuw record!':'Record: '+times[0].toFixed(2)+'s';
+  // medaille voor deze run
+  const med=medalFor(selectedMap,t), mm=MAPS[selectedMap].medals;
+  // munten verdienen (meer voor een betere medaille, bonus bij een nieuw record)
+  const reward = 12 + (med==='gold'?40:med==='silver'?25:med==='bronze'?15:0) + (pb?10:0);
+  awardCoins(reward);
+  let medHtml='';
+  medHtml+=`<div class="wm-coins">🪙 +${reward} munten &nbsp;·&nbsp; totaal ${getCoins()}</div>`;
+  if(med) medHtml+=`<div class="wm-big">${MEDAL_EMOJI[med]} ${MEDAL_LABEL[med]} medaille!</div>`;
+  else    medHtml+=`<div class="wm-big wm-none">Geen medaille — ga voor 🥉 &lt; ${mm.b}s</div>`;
+  if(med!=='gold'){
+    const nx = med==='silver' ? {e:'🥇',n:'goud',v:mm.g}
+             : med==='bronze' ? {e:'🥈',n:'zilver',v:mm.s}
+             : {e:'🥉',n:'brons',v:mm.b};
+    medHtml+=`<div class="wm-next">nog ${(t-nx.v).toFixed(2)}s sneller voor ${nx.e} ${nx.n} (&lt; ${nx.v}s)</div>`;
+  }
+  document.getElementById('winMedal').innerHTML=medHtml;
+  // opgeslagen tijdenlijst (top 5), huidige run gemarkeerd
+  let used=false;
+  const rows=times.slice(0,5).map((x,idx)=>{
+    const cur=(!used && x===t) ? (used=true,' cur') : '';
+    return `<div class="wl-row${cur}"><span><span class="wl-rank">${idx+1}.</span>${x.toFixed(2)}s</span>${cur?'<span>← nu</span>':''}</div>`;
+  }).join('');
+  document.getElementById('winList').innerHTML='<div class="wl-title">Opgeslagen tijden</div>'+rows;
+  document.getElementById('hud').classList.add('hidden');
+  document.getElementById('escHint').classList.add('hidden');
+  document.getElementById('win').classList.add('show');
+  spawnConfetti();
+}
+// val/water -> korte respawn-pauze i.p.v. instant terug
+function startRespawn(){
+  if (player.respawnT>0) return;
+  player.respawnT=1.1;
+  player.x=player.checkpoint.x; player.y=player.checkpoint.y; player.z=player.checkpoint.z;
+  player.vx=player.vy=player.vz=0; player.onGround=true; player.standing=null; player.stun=0;
+  if (stormActive) stormY = player.checkpoint.y - 7;   // storm zakt terug onder je checkpoint
+}
+function respawn(){
+  player.x=player.checkpoint.x; player.y=player.checkpoint.y; player.z=player.checkpoint.z;
+  player.vx=player.vy=player.vz=0; player.stun=0; player.onGround=false; player.standing=null;
+  if (stormActive) stormY = player.checkpoint.y - 7;
+}
+
+/* ============================================================
+   physics
+   ============================================================ */
+function step(dt){
+  const now = performance.now()/1000;
+  const jumpHeld = !!(keys[' ']||keys['arrowup']);
+  const jumpEdge = jumpHeld && !prevJump;
+
+  // toernooi-aftelling: speler bevroren, klok op 0, baan draait alvast
+  const frozen = tourMode && tourCountdown>0;
+  if (frozen){ tourCountdown-=dt; startStamp=performance.now(); player.vx=0; player.vz=0; if (tourCountdown<=0) tourGo=0.8; }
+  else if (tourGo>0) tourGo=Math.max(0,tourGo-dt);
+
+  // movers (y = op/neer, x/z = schuift horizontaal; 'slam' = snel uit/in met rustvenster)
+  for (const s of solids){
+    if (!s.mover) continue;
+    const m=s.mover; let o;
+    if (m.wave==='slam'){ const c=(now*m.speed+m.phase)%1;
+      o = c<0.5?0 : c<0.62?(c-0.5)/0.12 : c<0.8?1 : c<0.92?1-(c-0.8)/0.12 : 0; }
+    else o=(Math.sin(now*m.speed+m.phase)+1)/2;
+    const val = (m.from!==undefined? m.from+(m.to-m.from)*o : m.lo+(m.hi-m.lo)*o);
+    const oldX=s.cx, oldZ=s.cz, oldY=s.topY;
+    if (m.axis==='x'){ s.cx=val; s._dx=s.cx-oldX; s._dy=0; s._dz=0; }
+    else if (m.axis==='z'){ s.cz=val; s._dz=s.cz-oldZ; s._dy=0; s._dx=0; }
+    else { s.topY=val; s._dy=s.topY-oldY; s._dx=0; s._dz=0; }
+    updateSolidBounds(s);
+    s.mesh.position.set(s.cx, s.topY-s.h/2, s.cz);
+  }
+  // zinkende leliebladen: zakken terwijl je erop staat, komen omhoog als je weg bent (blijf hoppen!)
+  for (const s of solids){
+    if (!s.sink) continue;
+    const stood = (player.onGround && player.standing===s);
+    const target = stood ? s.sink.base - s.sink.depth : s.sink.base;
+    const spd = (stood ? s.sink.rate : s.sink.rise) * dt;
+    const old = s.topY;
+    if (s.topY < target) s.topY = Math.min(target, s.topY+spd);
+    else if (s.topY > target) s.topY = Math.max(target, s.topY-spd);
+    s._dy = s.topY - old; s._dx=0; s._dz=0;
+    updateSolidBounds(s);
+    s.mesh.position.set(s.cx, s.topY-s.h/2, s.cz);
+  }
+  // meebewegen (verticaal altijd bij bewegende/zinkende platforms; horizontaal alleen met carry)
+  if (player.onGround && player.standing && (player.standing.mover || player.standing.sink)){
+    player.y += player.standing._dy || 0;
+    if (player.standing.mover && player.standing.mover.carry){ player.x += player.standing._dx; player.z += player.standing._dz; }
+  }
+
+  // respawn-pauze: speler kort bevroren op het checkpoint; races lopen door (echte tijdstraf)
+  if (player.respawnT>0){
+    player.respawnT-=dt;
+    player.x=player.checkpoint.x; player.y=player.checkpoint.y; player.z=player.checkpoint.z;
+    player.vx=player.vy=player.vz=0; player.onGround=true; player.standing=null; player.stun=0;
+    prevJump=jumpHeld;
+    if (!frozen && tourMode && !losMode){ tourRaceStep(dt); if (state!=='play') return; }
+    return;
+  }
+
+  // camera draai je met de muis (zie pointermove) — geen toetsen meer
+
+  // bewegingsrichting t.o.v. camera
+  const diving = player.diveT>0, launched = player.bounceT>0;
+  const canControl = player.stun<=0 && !diving && !frozen;        // tijdens lancering mag je bijsturen
+  const f={x:Math.sin(camYaw), z:Math.cos(camYaw)};
+  let wx=0, wz=0;
+  if (canControl){
+    if (keys['w']) {wx+=f.x; wz+=f.z;}
+    if (keys['s']) {wx-=f.x; wz-=f.z;}
+  }
+  const onIce = !!(curMap && curMap.ice);
+  const wl=Math.hypot(wx,wz);
+  const accel = player.onGround ? (onIce?ACCEL*0.3:ACCEL) : AIR;
+  if (wl>0){
+    wx/=wl; wz/=wl;
+    player.vx += wx*accel*dt; player.vz += wz*accel*dt;
+    const sp=Math.hypot(player.vx,player.vz), cap=launched?16:MOVE;
+    if (sp>cap){ player.vx=player.vx/sp*cap; player.vz=player.vz/sp*cap; }
+    player.modelYaw = Math.atan2(wx,wz);
+  } else if (player.onGround){
+    const sp=Math.hypot(player.vx,player.vz), f2=(onIce?FRIC*0.05:FRIC)*dt;
+    if (sp>f2){ player.vx-=player.vx/sp*f2; player.vz-=player.vz/sp*f2; } else { player.vx=0; player.vz=0; }
+  }
+
+  // springen + duiken
+  if (canControl && jumpEdge){
+    if (player.onGround){
+      player.vy=JUMP_V; player.onGround=false; player.standing=null;
+    } else if (!player.dived){
+      const dx=Math.sin(player.modelYaw), dz=Math.cos(player.modelYaw);
+      player.vx=dx*DIVE; player.vz=dz*DIVE; player.vy=2.5;
+      player.dived=true; player.diveT=0.55;
+    }
+  }
+  if (!launched && !jumpHeld && player.vy>0) player.vy*=0.86;
+
+  // zwaartekracht
+  player.vy -= curGrav*dt; if (player.vy<-45) player.vy=-45;
+
+  // --- horizontale integratie + resolve (cilinder vs box footprint) ---
+  player.x += player.vx*dt; player.z += player.vz*dt;
+  for (const s of solids){
+    const feet=player.y, head=player.y+PH;
+    if (feet < s.max.y-0.08 && head > s.min.y+0.08){   // echte zij-overlap, niet "erbovenop"
+      const cxp=Math.max(s.min.x,Math.min(player.x,s.max.x));
+      const czp=Math.max(s.min.z,Math.min(player.z,s.max.z));
+      let dx=player.x-cxp, dz=player.z-czp, d2=dx*dx+dz*dz;
+      if (d2 < R*R){
+        if (d2>1e-6){ const d=Math.sqrt(d2); player.x+=dx/d*(R-d); player.z+=dz/d*(R-d); if(dx*player.vx<0)player.vx=0; if(dz*player.vz<0)player.vz=0; }
+        else { // midden in box: duw naar dichtstbijzijnde zijkant
+          const pxl=player.x-s.min.x, pxr=s.max.x-player.x, pzl=player.z-s.min.z, pzr=s.max.z-player.z;
+          const mn=Math.min(pxl,pxr,pzl,pzr);
+          if (mn===pxl) player.x=s.min.x-R; else if(mn===pxr) player.x=s.max.x+R;
+          else if (mn===pzl) player.z=s.min.z-R; else player.z=s.max.z+R;
+        }
+      }
+    }
+  }
+
+  // --- verticale integratie + resolve ---
+  player.y += player.vy*dt;
+  player.onGround=false; let bestTop=-Infinity, bestSolid=null;
+  for (const s of solids){
+    if (player.x>s.min.x && player.x<s.max.x && player.z>s.min.z && player.z<s.max.z){
+      if (player.vy<=0 && player.y<=s.max.y+0.02 && player.y>s.max.y-0.7){
+        if (s.max.y>bestTop){ bestTop=s.max.y; bestSolid=s; }
+      } else if (player.vy>0 && player.y+PH>s.min.y && player.y<s.min.y){
+        player.y=s.min.y-PH; player.vy=0;
+      }
+    }
+  }
+  if (bestSolid){ const iv=player.vy; player.y=bestTop; player.vy=0; player.onGround=true; player.standing=bestSolid; player.dived=false; player.diveT=0; if(iv<-8) pendingPuffs.push({x:player.x,y:bestTop,z:player.z}); }
+
+  // --- hellingen (schuine vloer): landen op het schuine oppervlak ---
+  for (const r of ramps){
+    if (player.x>r.x0 && player.x<r.x1 && player.z>r.z0 && player.z<r.z1){
+      const t = r.axis==='x' ? (player.x-r.x0)/(r.x1-r.x0) : (player.z-r.z0)/(r.z1-r.z0);
+      const sy=r.y0+(r.y1-r.y0)*t;
+      if (player.vy<=0 && player.y<=sy+0.35 && player.y>sy-1.4 && sy>bestTop){
+        const iv=player.vy;
+        bestTop=sy; player.y=sy; player.vy=0; player.onGround=true; player.standing=r;
+        player.dived=false; player.diveT=0;
+        if(iv<-8) pendingPuffs.push({x:player.x,y:sy,z:player.z});
+      }
+    }
+  }
+
+  // --- springpanelen: omhoog + boost in jouw looprichting (alleen als 'ie geladen is) ---
+  for (const bp of bouncePads){
+    if (player.bounceT<=0 && padActive(bp)
+        && Math.abs(player.x-bp.x0)<bp.w/2 && Math.abs(player.z-bp.z0)<bp.d/2
+        && player.y<=bp.y0+0.5 && player.y>bp.y0-0.9){
+      const sp=Math.hypot(player.vx,player.vz);
+      let dx,dz;
+      if (sp>1.2){ dx=player.vx/sp; dz=player.vz/sp; }          // jouw bewegingsrichting
+      else { dx=Math.sin(player.modelYaw); dz=Math.cos(player.modelYaw); }  // anders je kijkrichting
+      player.vx=dx*bp.vh; player.vz=dz*bp.vh; player.vy=bp.vy;
+      player.onGround=false; player.standing=null; player.bounceT=1.1; bp.squish=1;
+    }
+  }
+
+  // --- sweepers ---
+  const pcx=player.x, pcz=player.z, bodyLo=player.y, bodyHi=player.y+PH;
+  for (const sw of sweepers){
+    if (bodyHi < sw.y-sw.thick || bodyLo > sw.y+sw.thick) continue;
+    const a=now*sw.speed;
+    const dirx=Math.cos(a), dirz=Math.sin(a);
+    const relx=pcx-sw.x, relz=pcz-sw.z;
+    const along=relx*dirx+relz*dirz;
+    const perp=relx*(-dirz)+relz*(dirx);
+    if (along>sw.thick*1.3 && along<sw.len+R && Math.abs(perp)<sw.thick/2+R && player.stun<=0){
+      const sgn=Math.sign(sw.speed)||1;
+      const kx=(-dirz)*sgn, kz=(dirx)*sgn;
+      const rl=Math.hypot(relx,relz)||1;
+      player.vx=kx*15 + relx/rl*4;
+      player.vz=kz*15 + relz/rl*4;
+      player.vy=7; player.onGround=false; player.stun=0.4;
+    }
+  }
+
+  // --- slingers (zwaaiende parels) ---
+  for (const pd of pendulums){
+    const ang=pd.amp*Math.sin(now*pd.speed+pd.phase);
+    const along=pd.len*Math.sin(ang), drop=pd.len*Math.cos(ang);
+    const bx = pd.axis==='x' ? pd.x+along : pd.x;
+    const bz = pd.axis==='z' ? pd.z+along : pd.z;
+    const by = pd.pivotY - drop;
+    const dx=player.x-bx, dy=(player.y+PH/2)-by, dz=player.z-bz;
+    if (dx*dx+dy*dy+dz*dz < (pd.r+R)*(pd.r+R) && player.stun<=0){
+      const al=Math.hypot(dx,dz)||1;
+      player.vx=dx/al*15; player.vz=dz/al*15; player.vy=7;
+      player.onGround=false; player.stun=0.4;
+    }
+  }
+  for (const rl of rollers){
+    const q = rollerPos(rl, now);
+    if (q.hidden || q.p<0.1 || q.p>0.9) continue;    // in de buis of net eruit -> geen hit
+    const dx=player.x-q.x, dy=(player.y+PH/2)-q.y, dz=player.z-q.z;
+    if (dx*dx+dy*dy+dz*dz < (rl.rad+R)*(rl.rad+R) && player.stun<=0){
+      const al=Math.hypot(dx,dz)||1;              // in de rolrichting + weg van de bal gemept
+      player.vx = rl.tx*11 + dx/al*8;
+      player.vz = rl.tz*11 + dz/al*8;
+      player.vy = 5; player.onGround=false; player.stun=0.4;
+    }
+  }
+
+  // stijgende storm: haalt 'ie je in, dan terug naar de laatste checkpoint
+  if (stormActive){
+    stormY += stormSpeed*dt;
+    if (player.y < stormY) startRespawn();
+  }
+
+  // dood (van de baan / in het water) — in LOS = afvallen (afgehandeld in losStep)
+  if (player.y<curDeathY && !losMode) startRespawn();
+
+  // checkpoints
+  const pp = progressOf(player.x, player.z, player.y);
+  for (const c of checkpoints){
+    if (!c.active && pp > c.prog){
+      c.active=true; player.checkpoint={x:c.x,y:(c.baseY||0)+2.2,z:c.z};
+      c.mat.color.setHex(0x4fd6a8); c.mat.emissive.setHex(0x114433); if(c.curtainMat) c.curtainMat.color.setHex(0x4fd6a8);
+    }
+  }
+
+  // boss-gevecht
+  if (bossMode){ bossStep(dt, now); if (state!=='play') return; }
+
+  // toernooi (races) / last one standing
+  if (!frozen && tourMode && !losMode){ tourRaceStep(dt); if (state!=='play') return; }
+  if (losMode){ losStep(dt); if (state!=='play') return; }
+
+  // finish
+  if (finishSolid && player.standing===finishSolid){ if (tourMode) tourPlayerFinished(); else winLevel(); return; }
+
+  if (player.stun>0) player.stun-=dt;
+  if (player.diveT>0) player.diveT-=dt;
+  if (player.bounceT>0) player.bounceT-=dt;
+  prevJump = jumpHeld;
+  player.anim += dt*(1+Math.hypot(player.vx,player.vz));
+  timeMs = performance.now()-startStamp;
+}
+
+/* ============================================================
+   render helpers
+   ============================================================ */
+function updateVisuals(dt){
+  // sweeper rotatie
+  const now=performance.now()/1000;
+  cloudGroup.rotation.y += dt*0.004;          // trage wolkendrift
+  if (bossMode) bossVisuals(dt, now);
+  if (tourMode) tourBotsVisual(dt, now);
+  for (const sw of sweepers){
+    sw.g.rotation.y = -now*sw.speed;   // local +x -> wereld (cos a, 0, sin a), gelijk aan physics
+    if (sw.core){ const p=1.4+Math.sin(now*8+sw.x)*0.5; sw.core.material.emissiveIntensity=p; sw.glow.material.opacity=0.22+Math.sin(now*8+sw.x)*0.1; }
+  }
+  // slingers zwaaien
+  for (const pd of pendulums){
+    const ang=pd.amp*Math.sin(now*pd.speed+pd.phase);
+    if (pd.axis==='x') pd.arm.rotation.z=ang; else pd.arm.rotation.x=-ang;
+  }
+  // finish-baken: ring draait + dobbert
+  if (finishBeacon){
+    finishBeacon.star.rotation.y += dt*1.6; finishBeacon.star.rotation.x += dt*0.4;
+    finishBeacon.star.position.y = finishBeacon.y0 + Math.sin(now*2)*0.3;
+    finishBeacon.beacon.rotation.y += dt*0.3;
+  }
+  // rollende honkballen (wachten in de buis, groeien eruit)
+  for (const rl of rollers){
+    const q = rollerPos(rl, now);
+    if (rl.flash) rl.flash.material.opacity = (!q.hidden && q.p<0.16) ? 0.85*(1-q.p/0.16) : 0;
+    if (q.hidden){ rl.ball.scale.setScalar(0.0001); continue; }
+    // begin van de worp: kom uit de kanonmond en interpoleer naar de baan
+    let px=q.x, py=q.y, pz=q.z;
+    if (rl.mouth && q.p<0.18){ const k=q.p/0.18; px=rl.mouth.x+(q.x-rl.mouth.x)*k; py=rl.mouth.y+(q.y-rl.mouth.y)*k; pz=rl.mouth.z+(q.z-rl.mouth.z)*k; }
+    rl.g.position.set(px, py, pz);
+    const s = Math.max(0.0001, Math.min(1, q.p/0.06, (1-q.p)/0.1));
+    rl.ball.scale.setScalar(s);
+    rl.ball.rotation.x -= dt*rl.speed*22;   // rolt
+  }
+  // springpanelen: pulseren aan/uit (laden) + squish bij afzet
+  for (const bp of bouncePads){
+    if (bp.squish>0) bp.squish-=dt*3.5;
+    const q=Math.max(0,bp.squish), act=padActive(bp);
+    bp.padMat.emissiveIntensity = act ? (0.75+Math.sin(now*6)*0.25) : 0.05;
+    bp.padMat.color.setHex(act ? 0xffe14d : 0x7c7a52);
+    bp.pad.position.y = (act ? 0.55 : 0.4);
+    bp.pad.scale.y = 1 - q*0.6; bp.pad.scale.x = bp.pad.scale.z = 1 + q*0.25;
+    bp.arrow.visible = act;
+  }
+  // bean plaatsen
+  if (beanGroup){
+    beanGroup.position.set(player.x, player.y, player.z);
+    // model naar bewegingsrichting draaien (smooth)
+    let dy=player.modelYaw-beanGroup.rotation.y;
+    while(dy>Math.PI)dy-=2*Math.PI; while(dy<-Math.PI)dy+=2*Math.PI;
+    beanGroup.rotation.y += dy*Math.min(1,dt*12);
+    if (player.respawnT>0){
+      // respawn: laatste 0.5s valt 'ie van bovenaf weer in en popt op
+      const rt=player.respawnT, vis=rt<=0.5, k=vis?1-rt/0.5:0;
+      if (vis){ beanGroup.scale.setScalar(Math.min(1,k*1.3)); beanGroup.position.y = player.y + (1-k)*6; }
+      else beanGroup.scale.setScalar(0.0001);
+      beanInner.rotation.x += (0-beanInner.rotation.x)*Math.min(1,dt*14);
+    } else {
+      beanGroup.scale.setScalar(1);
+      // voorover duiken (kop vooruit) tijdens de duik
+      const tilt = player.diveT>0 ? 1.35 : 0;
+      beanInner.rotation.x += (tilt-beanInner.rotation.x)*Math.min(1,dt*14);
+      // squash & stretch + loop-wiebel
+      const stretch = Math.max(-1,Math.min(1,player.vy/12));
+      const run = player.onGround?Math.abs(Math.sin(player.anim*2))*0.08:0;
+      beanBody.scale.set(1-stretch*0.12-run, 1+stretch*0.16+run, 1-stretch*0.12-run);
+      // voetjes/armpjes: loop-cyclus op de grond, omhoog in de lucht
+      if (beanFeet.length){
+        const moving = player.onGround && (Math.abs(player.vx)+Math.abs(player.vz))>0.6;
+        const sw = moving?Math.sin(player.anim*2):0;
+        if (player.onGround){
+          beanFeet[0].position.set(-0.24, 0.17+Math.max(0,sw)*0.14, 0.12+sw*0.22);
+          beanFeet[1].position.set( 0.24, 0.17+Math.max(0,-sw)*0.14, 0.12-sw*0.22);
+          beanArms[0].rotation.x = -sw*0.9; beanArms[1].rotation.x = sw*0.9;
+        } else {
+          beanFeet[0].position.set(-0.24,0.1,0.12); beanFeet[1].position.set(0.24,0.1,0.12);
+          beanArms[0].rotation.x = beanArms[1].rotation.x = -1.5;   // armpjes omhoog bij springen
+        }
+      }
+      // knipperen
+      beanBlink -= dt; if (beanBlink<=0) beanBlink=2+Math.random()*3.2;
+      const es = beanBlink<0.14 ? (0.15+0.85*Math.abs(beanBlink-0.07)/0.07) : 1;
+      if (beanEyes.length){ beanEyes[0].scale.y=es; beanEyes[1].scale.y=es; }
+    }
+  }
+  // camera volgt (met pitch via muis)
+  const camF={x:Math.sin(camYaw),z:Math.cos(camYaw)};
+  const horiz=9*Math.cos(camPitch);
+  const desired=new THREE.Vector3(
+    player.x - camF.x*horiz,
+    player.y + 2.6 + 9*Math.sin(camPitch),
+    player.z - camF.z*horiz
+  );
+  camera.position.lerp(desired, Math.min(1,dt*8));
+  camera.lookAt(player.x, player.y+1, player.z);
+  // zon volgt speler (scherpe schaduwen)
+  sun.position.set(player.x+12, 24, player.z-8);
+  sun.target.position.set(player.x, 0, player.z);
+  // zon-sprite hoog in de lucht in dezelfde richting, altijd naar de camera gericht
+  sunSprite.position.set(player.x+132, player.y+250, player.z-96);
+  sunSprite.lookAt(camera.position);
+  // storm-wolkenbank volgt in hoogte + mist trekt dicht als 'ie dichtbij komt
+  if (stormMesh){
+    stormMesh.position.set(player.x, stormY, player.z);
+    stormMesh.rotation.y += dt*0.08;
+    const d = player.y - stormY;
+    scene.fog.near = 12;
+    scene.fog.far = 45 + Math.max(0, Math.min(80, d*4));
+  }
+  // landingsstof: nieuwe puffs uit de wachtrij + bestaande updaten
+  while (pendingPuffs.length){
+    const p=pendingPuffs.pop();
+    for (let i=0;i<7;i++){
+      const m=new THREE.Mesh(dustGeo, new THREE.MeshBasicMaterial({ color:0xffffff, transparent:true, opacity:0.8 }));
+      m.position.set(p.x, p.y+0.2, p.z);
+      const a=Math.random()*Math.PI*2, sp=2+Math.random()*3;
+      scene.add(m);
+      dustParticles.push({ m, vx:Math.cos(a)*sp, vz:Math.sin(a)*sp, vy:1+Math.random()*2, life:0.5, max:0.5 });
+    }
+  }
+  for (let i=dustParticles.length-1;i>=0;i--){
+    const d=dustParticles[i]; d.life-=dt;
+    d.m.position.x+=d.vx*dt; d.m.position.z+=d.vz*dt; d.m.position.y+=d.vy*dt; d.vy-=5*dt;
+    const t=Math.max(0,d.life/d.max);
+    d.m.scale.setScalar(0.3+(1-t)*0.9); d.m.material.opacity=t*0.8;
+    if (d.life<=0){ scene.remove(d.m); d.m.material.dispose(); dustParticles.splice(i,1); }
+  }
+}
+
+function updateHud(){
+  document.getElementById('timer').textContent=(timeMs/1000).toFixed(2);
+  const p=progressOf(player.x,player.z,player.y);
+  document.getElementById('prog').style.width=(p*100).toFixed(1)+'%';
+  if (tourMode) tourUpdateHud();
+}
+
+/* ---------- confetti (DOM) ---------- */
+function spawnConfetti(){
+  const box=document.getElementById('confetti'); box.innerHTML='';
+  const cols=['#ff6fb0','#4fd6a8','#5fb8ff','#ffcf3d','#a97bff','#ff7a59'];
+  for(let i=0;i<90;i++){
+    const d=document.createElement('div'); d.className='conf';
+    d.style.left=Math.random()*100+'vw'; d.style.top=(-10-Math.random()*20)+'vh';
+    d.style.background=cols[i%cols.length];
+    d.style.animationDuration=(2+Math.random()*2.5)+'s';
+    d.style.animationDelay=(Math.random()*0.8)+'s';
+    box.appendChild(d);
+  }
+  setTimeout(()=>{ if(state!=='win') box.innerHTML=''; },5000);
+}
+
+/* ============================================================
+   loop
+   ============================================================ */
+let last=performance.now(), acc=0;
+function frame(ts){
+  let dt=(ts-last)/1000; last=ts; dt=Math.min(dt,0.05);
+  if (state==='play'){
+    acc+=dt;
+    while(acc>=FIXED){ step(FIXED); acc-=FIXED; if(state!=='play')break; }
+    updateHud();
+  }
+  updateVisuals(dt);
+  updateCountdownUI();
+  renderer.render(scene,camera);
+  requestAnimationFrame(frame);
+}
+function updateCountdownUI(){
+  const el=document.getElementById('countdown'); if(!el) return;
+  if (tourMode && tourCountdown>0){
+    const n=Math.max(1,Math.ceil(tourCountdown));
+    if (el.dataset.v!==('n'+n)){ el.dataset.v='n'+n; el.className='cd-num'; el.firstElementChild.textContent=n;
+      el.style.display='flex'; el.firstElementChild.style.animation='none'; void el.offsetWidth; el.firstElementChild.style.animation=''; }
+  } else if (tourMode && tourGo>0){
+    if (el.dataset.v!=='go'){ el.dataset.v='go'; el.className='cd-go'; el.firstElementChild.textContent='GO!';
+      el.style.display='flex'; el.firstElementChild.style.animation='none'; void el.offsetWidth; el.firstElementChild.style.animation=''; }
+  } else { el.style.display='none'; el.dataset.v=''; }
+}
+
+/* ---------- resize ---------- */
+function resize(){
+  renderer.setSize(innerWidth,innerHeight);
+  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+}
+addEventListener('resize',resize); resize();
+
+/* ============================================================
+   menu UI
+   ============================================================ */
+function buildBeanPicker(){
+  const el=document.getElementById('beanPicker'); el.innerHTML='';
+  BEAN_COLORS.forEach((c,i)=>{
+    const b=document.createElement('div');
+    b.className='bean-pick'+(i===selectedBean?' sel':'');
+    b.style.background='#'+c.toString(16).padStart(6,'0');
+    b.onclick=()=>{ selectedBean=i; buildBeanPicker(); buildBean(selectedBean); };
+    el.appendChild(b);
+  });
+}
+function buildMapPicker(){
+  const el=document.getElementById('mapPicker'); el.innerHTML='';
+  MAPS.forEach((m,i)=>{
+    const times=loadTimes(i); const best=times.length?times[0]:null;
+    const med=medalFor(i,best);
+    const card=document.createElement('div');
+    card.className='map-card'+(i===selectedMap?' sel':'');
+    card.innerHTML=`<div class="mc-name"><span class="mc-dot" style="background:${m.accent}"></span>${m.name}</div>`+
+      `<div class="mc-author">level van: ${m.author}</div>`+
+      `<div class="mc-best">${best!=null?(med?MEDAL_EMOJI[med]+' ':'🏆 ')+best.toFixed(2)+'s · '+times.length+' run'+(times.length>1?'s':''):'nog geen tijden'}</div>`+
+      `<div class="mc-goal">🥇&lt;${m.medals.g}s · 🥈&lt;${m.medals.s}s · 🥉&lt;${m.medals.b}s</div>`;
+    card.onclick=()=>{ selectedMap=i; buildMapPicker(); previewMap(); };
+    el.appendChild(card);
+  });
+}
+function buildMedals(){
+  let g=0,s=0,b=0;
+  const rows=MAPS.map((m,i)=>{
+    const t=loadTimes(i), best=t.length?t[0]:null, med=medalFor(i,best);
+    if (med==='gold') g++; else if (med==='silver') s++; else if (med==='bronze') b++;
+    const badge = med?MEDAL_EMOJI[med]:'—';
+    const bt = best!=null ? best.toFixed(2)+'s' : '—';
+    return `<div class="medal-row"><span><span class="mr-medal">${badge}</span>${m.name} <span style="opacity:.55">· ${m.author}</span></span><span>${bt}</span></div>`;
+  }).join('');
+  document.getElementById('medalSum').innerHTML=`🥇 ${g} &nbsp; 🥈 ${s} &nbsp; 🥉 ${b}`;
+  document.getElementById('medalList').innerHTML=rows;
+}
+function showTab(name){
+  const panes={trials:'paneTrials', medals:'paneMedals', rush:'paneRush', tour:'paneTour', shop:'paneShop'};
+  const tabs ={trials:'tabTrials',  medals:'tabMedals',  rush:'tabRush',  tour:'tabTour', shop:'tabShop'};
+  for (const k in panes){
+    document.getElementById(panes[k]).classList.toggle('show', k===name);
+    document.getElementById(tabs[k]).classList.toggle('sel', k===name);
+  }
+  if (name==='medals') buildMedals();
+  if (name==='rush') buildBossPicker();
+  if (name==='shop') buildShop();
+}
+function buildShop(){
+  document.getElementById('coinBadge').textContent='🪙 '+getCoins();
+  const owned=ownedSet(), coins=getCoins();
+  const render=(list, elId, equippedId, isTop)=>{
+    document.getElementById(elId).innerHTML=list.map(def=>{
+      const have = def.price===0 || owned.has(def.id);
+      const eq = def.id===equippedId;
+      const label = eq ? 'Gedragen ✓' : have ? 'Draag' : '🪙 '+def.price;
+      const locked = !have && coins<def.price;
+      return `<div class="skin-card${eq?' equipped':''}${have?' owned':''}${locked?' locked':''}" data-top="${isTop?1:0}" data-id="${def.id}">
+        <div class="sk-ico">${def.icon}</div><div class="sk-name">${def.name}</div><div class="sk-price">${label}</div></div>`;
+    }).join('');
+  };
+  render(SKINS_TOP,'shopTop',equippedTop,true);
+  render(SKINS_BOTTOM,'shopBottom',equippedBottom,false);
+  document.querySelectorAll('#paneShop .skin-card').forEach(card=>{
+    card.onclick=()=>skinClick(card.dataset.top==='1', card.dataset.id);
+  });
+}
+function skinClick(isTop, id){
+  const list=isTop?SKINS_TOP:SKINS_BOTTOM;
+  const def=list.find(s=>s.id===id); if(!def) return;
+  const owned=ownedSet();
+  const have = def.price===0 || owned.has(id);
+  if (!have){
+    if (getCoins()<def.price) return;              // te weinig munten
+    setCoins(getCoins()-def.price); owned.add(id); saveOwned(owned);
+  }
+  if (isTop){ equippedTop=id; localStorage.setItem('oob_top',id); }
+  else { equippedBottom=id; localStorage.setItem('oob_bottom',id); }
+  buildBean(selectedBean);   // preview direct bijwerken
+  buildShop();
+}
+function previewMap(){
+  buildCourse();
+  player.x=spawn.x; player.y=spawn.y; player.z=spawn.z;
+  camera.position.set(spawn.x,6,spawn.z-10); camera.lookAt(spawn.x,1,spawn.z+2);
+}
+
+document.getElementById('playBtn').onclick=startGame;
+document.getElementById('againBtn').onclick=()=>{ if (bossMode) startBoss(selectedBoss); else startGame(); };
+document.getElementById('menuBtn').onclick=toMenu;
+document.getElementById('rushBtn').onclick=()=>startBoss(selectedBoss);
+document.getElementById('tabTrials').onclick=()=>showTab('trials');
+document.getElementById('tabMedals').onclick=()=>showTab('medals');
+document.getElementById('tabRush').onclick=()=>showTab('rush');
+document.getElementById('tabTour').onclick=()=>showTab('tour');
+document.getElementById('tabShop').onclick=()=>showTab('shop');
+document.querySelectorAll('#diffRow .diff').forEach(el=>{
+  el.onclick=()=>{ selectedDiff=el.dataset.d;
+    document.querySelectorAll('#diffRow .diff').forEach(x=>x.classList.toggle('sel', x===el)); };
+});
+document.getElementById('tourStartBtn').onclick=()=>startTournament(selectedDiff);
+document.getElementById('tourContBtn').onclick=tourContinue;
+document.getElementById('tourMenuBtn').onclick=toMenu;
+
+// eenmalig: oude tijden van Trampolinepark (map 5) wissen — die map is herbouwd
+if (!localStorage.getItem('beandash3d_clr_tramp1')){ localStorage.removeItem('beandash3d_times_5'); localStorage.setItem('beandash3d_clr_tramp1','1'); }
+
+buildBeanPicker(); buildMapPicker();
+buildBean(selectedBean); previewMap();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
