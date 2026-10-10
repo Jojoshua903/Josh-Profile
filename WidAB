@@ -657,4 +657,121 @@ function mvBtn(id,mv,pp,maxpp){ const el=document.createElement('button'); el.cl
   const out = pp<=0 && id!=='struggle'; el.disabled=out||S.busy;
   const info = mv.cat==='status' ? ({protect:'GUARD 🛡️',heal:'HEAL ✨',atkup:'ATK ↑',boost:'BOOST ⬆️'}[mv.eff]||'STATUS') : ('PWR '+mv.pow);
   el.innerHTML=`<div class="mvn">${mv.name}</div><div class="mvsub"><span class="mvtype">${TYPE[mv.type].e} ${TYPE[mv.type].name}</span><span>${info} · PP ${pp}/${maxpp||mv.pp||'-'}</span></div><div class="mvdesc">${mv.desc||''}</div>`;
-  el.onclick=()=>{ if(!el.disabled) doMove(id,m
+    el.onclick=()=>{ if(!el.disabled) doMove(id,mv); }; return el; }
+
+async function doMove(id,mv){ if(S.busy)return; S.busy=true; buildMoves();
+  const me=S.players[S.turn], foe=S.players[1-S.turn];
+  if(id!=='struggle' && me.pp[id]!==undefined) me.pp[id]--;
+  playDance(me,mv.dance,1000);
+  if(mv.cat==='status'){ await resolveStatus(me,foe,mv); }
+  else { await resolveDamage(me,foe,mv,id); }
+  renderHUD(); if(checkKO())return; await wait(260); endTurn();
+}
+async function resolveStatus(me,foe,mv){
+  if(mv.eff==='protect'){ const ok = !me.lastProtect || Math.random()<0.5; me.lastProtect=true;
+    if(ok){ me.protect=true; speak(me,'tpose'); blog(`<b>${me.name}</b> T-Poses — bracing for the next hit.`); } else blog(`<b>${me.name}</b> tried to guard but it failed!`);
+    auraBurst(me.idx,'#4aa3f2'); await wait(640); return; }
+  me.lastProtect=false;
+  if(mv.eff==='heal'){ const h=Math.round(me.maxHP*0.4); me.hp=clamp(me.hp+h,0,me.maxHP); speak(me,'macarena'); auraBurst(me.idx,'#5fd05f'); floatNum(me.idx,'+'+h,'#2aa84a'); blog(`<b>${me.name}</b> does the Macarena and heals ${h} aura. ✨`); await wait(680); return; }
+  if(mv.eff==='atkup'){ me.atkStage=clamp(me.atkStage+1,-3,3); speak(me,'default'); auraBurst(me.idx,'#ff7a1a'); blog(`<b>${me.name}</b> hits the Default Dance — ATK rose! (↑${me.atkStage})`); await wait(640); return; }
+  if(mv.eff==='boost'){ me.boost=1.5; speak(me,'whip'); auraBurst(me.idx,'#ff7a1a'); blog(`<b>${me.name}</b> whips & nae-naes — next hit is boosted! ⬆️`); await wait(620); return; }
+}
+async function resolveDamage(me,foe,mv,id){
+  me.lastProtect=false;
+  fxLunge(me.idx); await wait(230);
+  if(Math.random()>mv.acc){ speak(me,'miss'); floatNum(foe.idx,'MISS','#7a86a0'); blog(`<b>${me.name}</b>'s ${mv.name} whiffed! 💀`); return; }
+  const atkStat=me.c.atk*(1+0.4*me.atkStage);
+  const defStat=foe.c.def*(1+0.4*(foe.defStage||0));
+  const tm=typeMult(mv.type,foe.type), stab=(mv.type===me.type?1.25:1);
+  const crit=Math.random()<0.12?1.6:1; const boost=me.boost>0?me.boost:1; if(me.boost>0)me.boost=0;
+  let dmg=Math.round(mv.pow*(atkStat/defStat)*tm*stab*crit*boost*rnd(0.85,1)*0.62);
+  let blocked=false;
+  if(foe.protect){ foe.protect=false; dmg=0; blocked=true; }
+  if(!blocked){ foe.hp=clamp(foe.hp-dmg,0,foe.maxHP); me.dealt+=dmg; }
+  speak(me, crit>1?'crit':(tm>1?'se':mv.dance));
+  const col=TYPE[mv.type].c;
+  if(blocked){ floatNum(foe.idx,'BLOCK','#4aa3f2'); blog(`<b>${foe.name}</b> guarded ${me.name}'s ${mv.name}! 🧍`); }
+  else { fxHit(foe.idx); camShake(crit>1||mv.sig?0.5:0.3); floatNum(foe.idx,'-'+dmg,crit>1?'#ffcc29':col,crit>1||mv.sig); hitBurst(foe.idx,crit>1||mv.sig,col); await wait(300);
+    let note=''; if(tm>1)note=` <span class="se">Super effective!</span>`; else if(tm<1)note=` <span class="nv">Not very effective…</span>`;
+    blog(`<b>${me.name}</b> uses ${mv.name}${mv.sig?' 💥':''} — ${dmg}${crit>1?` <span class="cr">CRIT!</span>`:''}.${note}`); }
+  if(!blocked && mv.eff==='loweratk'){ foe.atkStage=clamp(foe.atkStage-1,-3,3); blog(`${foe.name}'s ATK fell! ↓`); }
+  if(!blocked && mv.eff==='lowerdef'){ foe.defStage=clamp((foe.defStage||0)-1,-3,3); blog(`${foe.name}'s DEF fell! ↓`); }
+  if(!blocked && mv.eff==='healself'){ const h=Math.round(dmg*0.5); me.hp=clamp(me.hp+h,0,me.maxHP); floatNum(me.idx,'+'+h,'#2aa84a'); blog(`${me.name} drained ${h} aura back!`); }
+}
+function endTurn(){ S.turn=1-S.turn; S.busy=false; renderHUD(); beginTurn(); }
+
+function cpuTurn(){ if(S.screen!=='battle')return; const me=S.players[S.turn], foe=S.players[1-S.turn];
+  const avail=me.c.moves.filter(id=>me.pp[id]>0);
+  const dmgMoves=avail.filter(id=>MOVE[id].cat==='dance');
+  const score=id=>{ const m=MOVE[id]; return m.pow*typeMult(m.type,foe.type)*(m.type===me.type?1.25:1); };
+  let choice=null;
+  const hpf=me.hp/me.maxHP;
+  const healId=avail.find(id=>MOVE[id].eff==='heal'), upId=avail.find(id=>MOVE[id].eff==='atkup'), boostId=avail.find(id=>MOVE[id].eff==='boost'), protId=avail.find(id=>MOVE[id].eff==='protect');
+  if(dmgMoves.length){ const best=dmgMoves.reduce((a,b)=>score(b)>score(a)?b:a); const approx=MOVE[best].pow*typeMult(MOVE[best].type,foe.type)*(MOVE[best].type===me.type?1.25:1)*(me.c.atk/foe.c.def)*0.62;
+    if(approx>=foe.hp) choice=best; }
+  if(!choice && hpf<0.3 && healId && Math.random()<0.6) choice=healId;
+  if(!choice && boostId && me.boost===0 && Math.random()<0.22) choice=boostId;
+  if(!choice && upId && me.atkStage<1 && Math.random()<0.25) choice=upId;
+  if(!choice && foe.boost>0 && protId && !me.lastProtect && Math.random()<0.4) choice=protId;
+  if(!choice && dmgMoves.length){ const best=dmgMoves.reduce((a,b)=>score(b)>score(a)?b:a); choice = Math.random()<0.72?best:pick(dmgMoves); }
+  if(!choice) choice = avail.length?pick(avail):'struggle';
+  doMove(choice, choice==='struggle'?{name:'Struggle',type:'aura',cat:'dance',pow:45,acc:1,dance:'floss'}:MOVE[choice]);
+}
+
+function checkKO(){ const dead=S.players.find(p=>p.hp<=0); if(!dead)return false; S.busy=true; setTimeout(()=>onKO(1-dead.idx,dead.idx),700); return true; }
+function onKO(winIdx,loseIdx){ const win=S.players[winIdx], lose=S.players[loseIdx];
+  playDance(win,'ultimate',99999); playDance(lose,'twerk',99999); fxKO(loseIdx); blog(`💥 <b>${lose.name}</b> got mogged!`);
+  if(S.format==='survival'){ if(winIdx===0){ S.streak++; S.survivalIdx++;
+      if(S.survivalIdx>=S.survivalPool.length) return finalResult(S.players[0],S.players[1],'survived');
+      toast('Mogged! Streak '+S.streak+' 🔥'); setTimeout(nextSurvivalRound,1400);
+    } else finalResult(S.players[1],S.players[0],'survival-fail'); return; }
+  if(S.format==='bo3'){ S.series.w[winIdx]++; updateSeriesPill();
+    if(S.series.w[winIdx]>=S.series.needed) return finalResult(win,lose,'bo3');
+    toast(`Round to ${win.name} (${S.series.w[0]}–${S.series.w[1]})`); S.series.round++; setTimeout(nextRound,1500); return; }
+  finalResult(win,lose,S.format);
+}
+function resetFighter(p,hp){ p.hp=hp; p.atkStage=0; p.defStage=0; p.protect=false; p.lastProtect=false; p.boost=0; p.dealt=0;
+  p.pp=Object.fromEntries(p.c.moves.map(id=>[id,MOVE[id].pp])); p.anim={dance:'idle',t0:performance.now(),dur:Infinity}; }
+function nextRound(){ S.players.forEach(p=>resetFighter(p,p.maxHP)); fxReset(0); fxReset(1);
+  S.turn=S.players[0].c.spe>=S.players[1].c.spe?0:1; S.busy=false; renderHUD(); updateSeriesPill(); flashRound('ROUND '+S.series.round); setTimeout(beginTurn,900); }
+function nextSurvivalRound(){ const foe=makePlayer(S.survivalPool[S.survivalIdx],1,true);
+  const me=S.players[0]; resetFighter(me,clamp(me.hp+Math.round(me.maxHP*0.4),0,me.maxHP));
+  S.players[1]=foe; buildRig(foe.c,1); fxReset(0); fxReset(1); S.turn=me.c.spe>=foe.c.spe?0:1; S.busy=false;
+  renderHUD(); updateSeriesPill(); flashRound('FOE '+(S.survivalIdx+1)+' · '+foe.name); setTimeout(beginTurn,900); }
+function flashRound(t){ const el=$('seriesPill'); toast(t); if(el){el.style.display='inline-block';el.textContent=t;} setTimeout(updateSeriesPill,1400); }
+function finalResult(win,lose,kind){ playDance(win,'ultimate',99999); playDance(lose,'twerk',99999);
+  const pw=!win.isCPU; $('resName').textContent=win.name; $('crown').textContent=win.isCPU?'🤖':'👑';
+  let kick='Aura Champion', score='', coinMsg='';
+  if(kind==='survived'){ kick='YOU SURVIVED THE GAUNTLET'; score=`BEAT ALL <b>${S.survivalPool.length}</b> FOES`; }
+  else if(kind==='survival-fail'){ kick='Run Over'; score=`STREAK <b>${S.streak}</b> FOE${S.streak===1?'':'S'} BEATEN`; }
+  else if(kind==='bo3'){ kick=win.isCPU?'The CPU took the set':'Series Champion'; score=`SET WON <b>${S.series.w[0]}–${S.series.w[1]}</b>`; }
+  else { kick=win.isCPU?'The CPU mogged you':'Aura Champion'; score=`AURA LEFT <b>${Math.round(clamp(win.hp/win.maxHP,0,1)*100)}%</b> · DEALT <b>${win.dealt}</b>`; }
+  $('resKick').textContent=kick; $('resScore').innerHTML=score;
+  if(S.mode==='cpu'){ let earn=0;
+    if(kind==='survived')earn=S.streak*90+200; else if(kind==='survival-fail')earn=S.streak*90; else if(kind==='bo3')earn=pw?220:60; else earn=pw?120:40;
+    if(earn>0){ SAVE.coins+=earn; persist(); coinMsg=`+${earn} 🪙 Aura Coins`; } }
+  $('resCoins').textContent=coinMsg;
+  $('resSub').textContent=pick([`${lose.name} caught the biggest L. Absolute cinema. 🎬`,`${win.name} said "wat in de aura" and left no crumbs.`,`GG. ${lose.name} has officially fallen off. 📉`,`${win.name} secured the rizz, the aura, and the W.`]);
+  confetti(); show('result');
+}
+window.rematch=()=>{ const a=S.players[0].c, c0=S.players[0].isCPU; S.players[0]=makePlayer(a,0,c0);
+  if(S.format==='survival'){ const pool=shuffle(CHARS.filter(x=>x.id!==a.id)); S.survivalPool=pool; S.survivalIdx=0; S.streak=0; S.players[1]=makePlayer(pool[0],1,true); }
+  else { const b=S.players[1].c, c1=S.players[1].isCPU; S.players[1]=makePlayer(b,1,c1); }
+  startSeries(); };
+window.backToTitle=backToTitle;
+
+window.openShop=openShop;
+document.addEventListener('click',e=>{ const el=e.target.closest('[data-act]'); if(!el)return;
+  const a=el.dataset.act;
+  if(a==='fmt') window.setFormat(el.dataset.fmt);
+  else if(a==='mode') window.chooseMode(el.dataset.val);
+  else if(a==='survival') window.startSurvival();
+  else if(a==='shop') window.openShop();
+  else if(a==='chart') window.openChart();
+  else if(a==='back') window.backToTitle();
+  else if(a==='rematch') window.rematch();
+});
+init3d(); refreshCoins(); setFormat('classic');
+</script>
+</body>
+</html>
