@@ -1,4 +1,5 @@
 import { V3 } from './core.js';
+import * as sfx from './sfx.js';
 
 // Cutscenes: a list of steps. Each step can move the camera, run animation code, and show a line
 // of dialogue (with an optional Byte translation underneath, for when Otis is barking).
@@ -37,6 +38,7 @@ function next() {
   if (s.say) {
     dWho.textContent = s.say.who; cs.text = s.say.text; cs.sub = s.say.sub || ''; cs.shown = 0;
     dText.innerHTML = ''; dEl.classList.add('show');
+    if (s.say.who === 'OTIS') sfx.bark(); else sfx.blip();
   } else dEl.classList.remove('show');
 }
 

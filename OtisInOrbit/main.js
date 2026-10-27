@@ -13,6 +13,7 @@ import { S, LOOK, initUI, setAbility, setCookies, setPrompt } from './ui.js';
 import { cs, updateCutscene } from './cutscene.js';
 import { updateBubbles } from './bubbles.js';
 import { setupStory } from './story.js';
+import * as sfx from './sfx.js';
 
 const josh = buildJosh();
 const drone = buildDrone();
@@ -99,7 +100,7 @@ drone.g.position.copy(D.pos);
 function breakCrate(b, silent = false) {
   boxes.splice(boxes.indexOf(b), 1);
   scene.remove(b.mesh);
-  if (!silent) puff(b.pos.clone(), 14, 0xa07040, 5, 3);
+  if (!silent) { puff(b.pos.clone(), 14, 0xa07040, 5, 3); if (b.wall) sfx.smash(); else sfx.crate(); }
   if (b.rare) addCookie(b.pos.x, b.pos.y + 0.7, b.pos.z, b.rareName || 'Krat in het steegje');
   else for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2; addCookie(b.pos.x + Math.cos(a) * 0.9, b.pos.y + 0.3, b.pos.z + Math.sin(a) * 0.9, '', `${b.id}-${i}`); }
   if (!save.crates.includes(b.id)) { save.crates.push(b.id); persist(); }
@@ -107,10 +108,11 @@ function breakCrate(b, silent = false) {
 
 function onLand(fall, wasPound) {
   if (wasPound) {
+    sfx.poundLand();
     puff(P.pos.clone().add(V3(0, 0.1, 0)), 16, 0xffffff, 7, 0.4);
     if (P.ground.crate && !P.ground.wall) breakCrate(P.ground);
     squash(0.45);
-  } else squash(Math.min(0.35, -fall * 0.014));
+  } else { squash(Math.min(0.35, -fall * 0.014)); if (fall < -12) sfx.land(); }
   if (P.jumping && !P.long) P.chainT = 0.22;
   if (P.chain === 3) P.chain = 0;
   P.jumping = P.airJump = P.long = P.cut = false;
@@ -139,7 +141,7 @@ function updateHP(dt) {
 const bossApi = {
   intro() {
     const t = document.getElementById('title');
-    t.querySelector('.t').textContent = BOSS_INFO.name;
+    t.querySelector('.t').textContent = BOSS_INFO.name; sfx.wake();
     t.querySelector('.s').textContent = BOSS_INFO.sub;
     t.style.opacity = 1; setTimeout(() => (t.style.opacity = 0), 2800);
     life.hp = 3; setTimeout(setHP, 50);
@@ -147,7 +149,7 @@ const bossApi = {
   },
   damage(from) {
     if (life.inv > 0) return;
-    life.hp--; life.inv = 1.6; life.calm = 0; shakeT = 0.25;
+    life.hp--; life.inv = 1.6; life.calm = 0; shakeT = 0.25; sfx.hurt();
     const d = P.pos.clone().sub(from).setY(0);
     if (d.lengthSq() < 0.01) d.set(0, 0, 1);
     d.setLength(9);
@@ -156,13 +158,13 @@ const bossApi = {
     if (life.hp <= 0) respawn(bossActive() ? BOSS_INFO.fail : 'Au! Terug naar je laatste checkpoint');
     setHP();
   },
-  bounce(vy) { P.vel.y = vy; P.grounded = false; P.jumping = true; P.cut = true; P.airJump = false; P.pound = 0; },
+  bounce(vy) { sfx.stomp(); P.vel.y = vy; P.grounded = false; P.jumping = true; P.cut = true; P.airJump = false; P.pound = 0; },
   shake(s) { shakeT = Math.max(shakeT, s); },
   win(pos) {
     setHP(); hpEl.classList.remove('show');
     addCookie(pos.x, BOSS_INFO.cookieY, pos.z, BOSS_INFO.cookie);
     if (BOSS_INFO.lightBack) lightBack = 0.0001;
-    save.boss = true; persist();
+    save.boss = true; persist(); sfx.fanfare();
     const t = document.getElementById('title');
     t.querySelector('.t').textContent = BOSS_INFO.winTitle;
     t.querySelector('.s').textContent = BOSS_INFO.winSub;
@@ -238,7 +240,7 @@ function updatePlayer(dt, t) {
     const lj = haas ? 19 : 14;
     v.x = Math.sin(P.facing) * lj; v.z = Math.cos(P.facing) * lj;
     v.y = S.jump * 0.7; P.long = true; P.chain = 0; P.cut = true;
-    puff(P.pos.clone().add(V3(0, 0.3, 0)), 8, 0xffd166, 2.5, 0.3);
+    puff(P.pos.clone().add(V3(0, 0.3, 0)), 8, 0xffd166, 2.5, 0.3); sfx.longJump();
   };
 
   if (P.pound === 1) {
@@ -262,6 +264,7 @@ function updatePlayer(dt, t) {
           P.chain = P.chainT > 0 && hs > 3 ? Math.min(P.chain + 1, 3) : 1;
           v.y = S.jump * [1, 1.18, 1.45][P.chain - 1] * abMult;
           if (P.chain === 3) P.flip = 0.0001;
+          sfx.jump(P.chain);
         }
         P.buffer = 0; P.coyote = 0; P.grounded = false; P.jumping = true; P.cut = P.long;
         // jumping off something that moves (the mine cart) keeps its speed
@@ -270,7 +273,7 @@ function updatePlayer(dt, t) {
         squash(-0.2);
       } else if (jumpP && !P.grounded && !P.airJump) {
         v.y = S.jump * 0.85; P.airJump = true; P.buffer = 0; P.jumping = true; P.cut = false; P.long = false;
-        D.boost = 0.28;
+        D.boost = 0.28; sfx.airJump();
         puff(P.pos.clone(), 10, 0x5ef2e0, 3, 0.2);
         squash(-0.2);
       }
@@ -278,7 +281,7 @@ function updatePlayer(dt, t) {
       if (crouchP && !P.grounded) {
         // Shift right after takeoff turns the jump into a long jump instead of a ground pound
         if (P.jumping && P.airT < 0.16 && !P.long && P.chain <= 1 && !P.airJump && hs > 1.5) longJump();
-        else if (P.coyote <= 0) { P.pound = 1; P.poundT = 0.2; P.long = false; v.set(0, 0, 0); }
+        else if (P.coyote <= 0) { P.pound = 1; P.poundT = 0.2; P.long = false; v.set(0, 0, 0); sfx.pound(); }
       }
     }
     v.y -= S.gravity * (v.y < 0 ? 1.6 : 1) * dt;
@@ -356,13 +359,13 @@ function updatePlayer(dt, t) {
   }
 
   // drone scanning / dropping
-  if (dropP && P.ability) { P.ability = null; setAbility(null); toast('Eigenschap losgelaten'); save.ability = null; persist(); }
+  if (dropP && P.ability) { P.ability = null; setAbility(null); toast('Eigenschap losgelaten'); sfx.drop(); save.ability = null; persist(); }
   const near = nearestScannable();
   if (scanP) {
     if (D.state !== 'follow') {}
     else if (!near) toast('Niks om te scannen in de buurt');
     else if (P.ability === near.ability) toast(`${LOOK.droneName || 'Drone'} heeft ${AB[near.ability].label} al`);
-    else { D.state = 'go'; D.t = 0; D.scan = near; }
+    else { D.state = 'go'; D.t = 0; D.scan = near; sfx.scanStart(); }
   }
   ring.visible = !!near && D.state === 'follow' && P.ability !== near.ability && !dialog.active;
   if (ring.visible) {
@@ -414,7 +417,7 @@ function updateDrone(dt, t) {
       save.ability = P.ability; persist();
       const info = AB[P.ability];
       setAbility(P.ability, info);
-      toast(`${LOOK.droneName || 'Drone'} kopieerde: ${info.label}!`);
+      sfx.copy(); toast(`${LOOK.droneName || 'Drone'} kopieerde: ${info.label}!`);
       puff(D.pos.clone(), 10, info.hex, 2.5, 1);
       D.state = 'return';
     }
@@ -514,11 +517,11 @@ function updateWorld(dt, t) {
     if (c.g.position.distanceTo(head) < (c.rare ? 1.3 : 1.0)) {
       c.got = true; scene.remove(c.g);
       if (c.rare) {
-        rareCount++;
+        rareCount++; sfx.cosmic();
         puff(c.g.position.clone(), 16, 0xffd166, 4, 2);
         showBanner(rareCount === RARE_TOTAL ? `${c.name} · alle kosmische koekjes van ${document.title.replace(/^De /, "de ")}! 🐶🚀` : c.name);
       } else {
-        coinCount++;
+        coinCount++; sfx.coin();
         puff(c.g.position.clone(), 4, 0xffd166, 1.5, 1);
       }
       setCookies(coinCount, rareCount, RARE_TOTAL);
@@ -579,7 +582,7 @@ const nearRocket = () => Math.hypot(P.pos.x - TRAVEL.pos.x, P.pos.z - TRAVEL.pos
 function startLaunch() {
   launch.on = true; launch.t = 0;
   launch.pos = rocket.position.clone(); launch.rot = rocket.rotation.clone();
-  josh.root.visible = false; drone.g.visible = false;
+  josh.root.visible = false; drone.g.visible = false; sfx.launch();
   persist();
   toast(`Otis start de motor… op naar ${TRAVEL.name}!`);
 }
@@ -693,11 +696,12 @@ function frame() {
   updateBoss(dt, time, P, P.prevY, bossApi);
   if (!cs.active) enemies.update(dt, time, P, P.prevY, enemyApi, life.inv > 0);
   updateHP(dt);
+  sfx.music(bossActive() ? 'boss' : PLANET);
   // checkpoints: touching a new one also heals you
   if (P.grounded && !bossActive()) {
     const before = checkpoint.toArray().join();
     for (const c of CHECKPOINTS) if (c.test(P.pos, checkpoint)) checkpoint.copy(c.pos);
-    if (checkpoint.toArray().join() !== before) { save.cp = checkpoint.toArray(); persist(); life.hp = 3; setHP(); }
+    if (checkpoint.toArray().join() !== before) { save.cp = checkpoint.toArray(); persist(); life.hp = 3; setHP(); sfx.checkpoint(); }
   }
   updateLightBack(dt);
   updateLaunch(dt);

@@ -1,4 +1,5 @@
 import { THREE, clamp } from './core.js';
+import * as sfx from './sfx.js';
 
 // Passive dialogue: speech bubbles above characters, no button needed.
 // A character speaks when you walk up to them (or past them). They won't repeat themselves
@@ -18,6 +19,9 @@ export function addSpeaker(obj, { y = 2, lines = [], radius = 6, linger = 14, co
   const s = { obj, y, lines, radius, linger, cooldown, cond, el, show: 0, idx: -1, lastSet: null, inside: false, since: 99, quiet: 0 };
   s.say = (text, dur) => {
     el.innerHTML = text;
+    // a little voice: Otis barks, goats bleat, everyone else gets a soft blip
+    const plain = text.replace(/<[^>]+>/g, '');
+    if (/^Woef/.test(plain)) sfx.bark(); else if (/^M[èe]+h/i.test(plain)) sfx.bleat(); else if (/^\*krijs/.test(plain)) sfx.squeak(); else sfx.blip();
     s.show = dur ?? clamp(1.8 + text.replace(/<[^>]+>/g, '').length * 0.05, 2.2, 5.5);
     s.since = 0;
   };
