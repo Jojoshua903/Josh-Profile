@@ -1,6 +1,6 @@
-import { THREE, scene, toon, addOutline, V3, label } from './core.js';
-import { addCookie, line, circle } from './cookies.js';
-import { groundAt, kindAt, riverZ, PAL, SUMMIT, PLATEAU_H } from './berg-terrain.js';
+import { THREE, scene, toon, addOutline, V3, label } from './core.js?v=muis1';
+import { addCookie, line, circle } from './cookies.js?v=muis1';
+import { groundAt, kindAt, riverZ, PAL, SUMMIT, PLATEAU_H } from './berg-terrain.js?v=muis1';
 
 // ---------- bright mountain day (the opposite of the Mistmaan) ----------
 scene.fog = new THREE.FogExp2(0xdbe9f7, 0.0055);

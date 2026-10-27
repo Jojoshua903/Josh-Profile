@@ -1,4 +1,4 @@
-import { THREE, scene, toon, addOutline } from './core.js';
+import { THREE, scene, toon, addOutline } from './core.js?v=muis1';
 
 // Gewone koekjes = munten. Kosmische koekjes = de "moons": één ontwerp, elk een eigen naam.
 export const cookies = [];

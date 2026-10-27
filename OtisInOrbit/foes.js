@@ -1,5 +1,5 @@
-import { THREE, scene, toon, addOutline, V3, damp, puff } from './core.js';
-import { addCookie } from './cookies.js';
+import { THREE, scene, toon, addOutline, V3, damp, puff } from './core.js?v=muis1';
+import { addCookie } from './cookies.js?v=muis1';
 
 // Ordinary enemies, shared by every planet. Each planet makes its own set and spawns its own kinds.
 //   kruiper  – blob that wanders, and chases you once it spots you. Stomp it.

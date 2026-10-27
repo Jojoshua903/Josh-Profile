@@ -1,11 +1,11 @@
-import { scene, sun } from './core.js';
-import { endCutscene } from './cutscene.js';
+import { scene, sun } from './core.js?v=muis1';
+import { endCutscene } from './cutscene.js?v=muis1';
 
 // All planets live in one page. Travelling detaches the current planet's objects from the scene
 // (so its state is kept exactly as you left it) and attaches or first-loads the next one.
 const PAGES = {
-  mistmaan: { module: './main.js', title: 'De Mistmaan', sub: 'Terug bij de crash…', bg: '' },
-  berg: { module: './berg-main.js', title: 'De Bergwereld', sub: 'Helemaal naar de top…', bg: 'linear-gradient(180deg,#6fb6f2 0%,#a9d6fa 45%,#e2f0fb 80%,#f7f2e6 100%)' },
+  mistmaan: { module: './main.js?v=muis1', title: 'De Mistmaan', sub: 'Terug bij de crash…', bg: '' },
+  berg: { module: './berg-main.js?v=muis1', title: 'De Bergwereld', sub: 'Helemaal naar de top…', bg: 'linear-gradient(180deg,#6fb6f2 0%,#a9d6fa 45%,#e2f0fb 80%,#f7f2e6 100%)' },
 };
 const planets = {};
 const stash = {};

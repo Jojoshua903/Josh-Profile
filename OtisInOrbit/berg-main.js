@@ -1,19 +1,19 @@
-import { THREE, canvas, renderer, scene, camera, sun, V3, clamp, damp, approach, puff, updateParticles, toast } from './core.js';
-import { buildJosh, buildDrone } from './josh.js';
-import { boxes, movers, lamps, dust, rocket, syncBox, ARENA_ENTRY, ARENA_POS, winOn, winOff, fogMat, crates, SPAWN as WORLD_SPAWN, CHECKPOINTS, TRAVEL, PLANET } from './berg-world.js';
+import { THREE, canvas, renderer, scene, camera, sun, V3, clamp, damp, approach, puff, updateParticles, toast } from './core.js?v=muis1';
+import { buildJosh, buildDrone } from './josh.js?v=muis1';
+import { boxes, movers, lamps, dust, rocket, syncBox, ARENA_ENTRY, ARENA_POS, winOn, winOff, fogMat, crates, SPAWN as WORLD_SPAWN, CHECKPOINTS, TRAVEL, PLANET } from './berg-world.js?v=muis1';
 const { save, gotSet, persist, wipe } = getSave(PLANET);
-import { boss, updateBoss, resetBoss, bossActive, setBossDead, BOSS_INFO } from './berg-boss.js';
-import { enemies } from './berg-enemies.js';
-import { getSave } from './save.js';
-import { registerPlanet, activePlanet, travel, resumePlanet } from './planets.js';
-import { groundAt } from './berg-terrain.js';
-import { addCookie, cookies as newCookies } from './cookies.js';
-import { scannables, updateNPCs, talk, dialog, nearMilo, PENDING_RARE, npcEvents, restoreNPCs, miloTalked, guideDone, npcPrompt } from './berg-npc.js';
-import { S, LOOK, initUI, setAbility, setCookies, setPrompt } from './ui.js';
-import { cs, updateCutscene } from './cutscene.js';
-import { updateBubbles } from './bubbles.js';
-import { setupStory } from './berg-story.js';
-import * as sfx from './sfx.js';
+import { boss, updateBoss, resetBoss, bossActive, setBossDead, BOSS_INFO } from './berg-boss.js?v=muis1';
+import { enemies } from './berg-enemies.js?v=muis1';
+import { getSave } from './save.js?v=muis1';
+import { registerPlanet, activePlanet, travel, resumePlanet } from './planets.js?v=muis1';
+import { groundAt } from './berg-terrain.js?v=muis1';
+import { addCookie, cookies as newCookies } from './cookies.js?v=muis1';
+import { scannables, updateNPCs, talk, dialog, nearMilo, PENDING_RARE, npcEvents, restoreNPCs, miloTalked, guideDone, npcPrompt } from './berg-npc.js?v=muis1';
+import { S, LOOK, initUI, setAbility, setCookies, setPrompt } from './ui.js?v=muis1';
+import { cs, updateCutscene } from './cutscene.js?v=muis1';
+import { updateBubbles } from './bubbles.js?v=muis1';
+import { setupStory } from './berg-story.js?v=muis1';
+import * as sfx from './sfx.js?v=muis1';
 
 const josh = buildJosh();
 const drone = buildDrone();
@@ -69,15 +69,22 @@ function readPad() {
 
 // ---------- camera ----------
 const cam = { yaw: 0, pitch: 0.32, target: V3(SPAWN.x, SPAWN.y + 1.3, SPAWN.z) };
-let drag = null;
-canvas.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY }; canvas.setPointerCapture(e.pointerId); canvas.focus(); });
-canvas.addEventListener('pointermove', (e) => {
-  if (!drag) return;
-  cam.yaw -= (e.clientX - drag.x) * 0.006;
-  cam.pitch = clamp(cam.pitch + (e.clientY - drag.y) * 0.005, -0.15, 1.25);
-  drag = { x: e.clientX, y: e.clientY }; lastDrag = time;
+// Mouse look: just move the mouse, no dragging. Clicking once locks the cursor to the game (Esc releases it).
+canvas.addEventListener('pointerdown', () => {
+  canvas.focus();
+  if (document.pointerLockElement !== canvas && canvas.requestPointerLock) {
+    try { const r = canvas.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (e) {}
+  }
 });
-canvas.addEventListener('pointerup', () => (drag = null));
+addEventListener('mousemove', (e) => {
+  if (activePlanet() !== PLANET || cs.active) return;
+  if (document.pointerLockElement !== canvas && e.target !== canvas) return;
+  const dx = e.movementX || 0, dy = e.movementY || 0;
+  if (!dx && !dy) return;
+  cam.yaw -= dx * 0.004;
+  cam.pitch = clamp(cam.pitch + dy * 0.0035, -0.15, 1.25);
+  lastDrag = time;
+});
 canvas.addEventListener('wheel', (e) => { e.preventDefault(); S.cam = clamp(S.cam + e.deltaY * 0.01, 4, 18); }, { passive: false });
 
 // ---------- helpers ----------
@@ -196,17 +203,22 @@ function updateLightBack(dt) {
 // ---------- player update ----------
 function updatePlayer(dt, t) {
   const pad = readPad();
-  let ix = (keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0) - (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0);
-  let iy = (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0) - (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0);
+  // walking is WASD only; the arrow keys (and J/L) turn the camera
+  let ix = (keys.has('KeyD') ? 1 : 0) - (keys.has('KeyA') ? 1 : 0);
+  let iy = (keys.has('KeyW') ? 1 : 0) - (keys.has('KeyS') ? 1 : 0);
   if (pad) {
     if (Math.abs(pad.lx) > 0.15) ix = pad.lx;
     if (Math.abs(pad.ly) > 0.15) iy = -pad.ly;
     if (Math.abs(pad.rx) > 0.15) { cam.yaw -= pad.rx * 2.6 * dt; lastDrag = time; }
     if (Math.abs(pad.ry) > 0.15) cam.pitch = clamp(cam.pitch + pad.ry * 1.8 * dt, -0.15, 1.25);
   }
-  if (keys.has("KeyJ") || keys.has("KeyL")) lastDrag = time;
-  if (keys.has("KeyJ")) cam.yaw += 2.2 * dt;
-  if (keys.has('KeyL')) cam.yaw -= 2.2 * dt;
+  const turnL = keys.has('KeyJ') || keys.has('ArrowLeft'), turnR = keys.has('KeyL') || keys.has('ArrowRight');
+  const tiltU = keys.has('ArrowUp'), tiltD = keys.has('ArrowDown');
+  if (turnL || turnR || tiltU || tiltD) lastDrag = time;
+  if (turnL) cam.yaw += 2.2 * dt;
+  if (turnR) cam.yaw -= 2.2 * dt;
+  if (tiltU) cam.pitch = clamp(cam.pitch + 1.4 * dt, -0.15, 1.25);
+  if (tiltD) cam.pitch = clamp(cam.pitch - 1.4 * dt, -0.15, 1.25);
   const len = Math.hypot(ix, iy);
   if (len > 1) { ix /= len; iy /= len; }
   if (dialog.active || launch.on || cs.active) { ix = 0; iy = 0; }

@@ -1,5 +1,5 @@
-import { THREE, clamp } from './core.js';
-import * as sfx from './sfx.js';
+import { THREE, clamp } from './core.js?v=muis1';
+import * as sfx from './sfx.js?v=muis1';
 
 // Passive dialogue: speech bubbles above characters, no button needed.
 // A character speaks when you walk up to them (or past them). They won't repeat themselves

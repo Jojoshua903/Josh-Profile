@@ -1,6 +1,6 @@
-import { enemySet } from './foes.js';
-import { groundAt, pathX, RAVINE_Z } from './terrain.js';
-import { boxes } from './world.js';
+import { enemySet } from './foes.js?v=muis1';
+import { groundAt, pathX, RAVINE_Z } from './terrain.js?v=muis1';
+import { boxes } from './world.js?v=muis1';
 
 // Mistkruipers in the mist and the town, and bats that hang over the ravine and the cliff top.
 export const enemies = enemySet({ groundAt, boxes });

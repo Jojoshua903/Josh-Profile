@@ -1,4 +1,4 @@
-import { toast } from './core.js';
+import { toast } from './core.js?v=muis1';
 
 // All sound is synthesised on the fly with Web Audio: no sound files needed.
 // Browsers only allow audio after a key press or click, so everything starts on the first input.

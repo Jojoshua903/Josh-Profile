@@ -1,5 +1,5 @@
-import { THREE, scene, toon, addOutline, V3, damp, puff } from './core.js';
-import { ARENA } from './terrain.js';
+import { THREE, scene, toon, addOutline, V3, damp, puff } from './core.js?v=muis1';
+import { ARENA } from './terrain.js?v=muis1';
 
 // De Lichtvreter: a big gloomy cloud that swallowed the moon's light (and Otis' battery).
 // Loop: float & spit mist balls → rise → slam down (shockwave) → dazed with the battery showing

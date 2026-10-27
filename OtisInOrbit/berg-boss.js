@@ -1,6 +1,6 @@
-import { THREE, scene, toon, addOutline, V3, damp, puff } from './core.js';
-import { SUMMIT } from './berg-terrain.js';
-import { boxes, syncBox } from './berg-world.js';
+import { THREE, scene, toon, addOutline, V3, damp, puff } from './core.js?v=muis1';
+import { SUMMIT } from './berg-terrain.js?v=muis1';
+import { boxes, syncBox } from './berg-world.js?v=muis1';
 
 // De Lawinereus: a giant of rock and snow sleeping on the summit, who wants the top for himself.
 // He doesn't shoot or slam like the Lichtvreter. Instead:
