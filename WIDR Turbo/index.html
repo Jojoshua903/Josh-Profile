@@ -530,6 +530,13 @@ setInterval(() => LIC.sync(), 4000);
   label.btn{display:inline-block}
   .licmsg{font-size:13px;margin-left:auto}
   .licmsg.err{color:#d62828}
+  .licmodal{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;background:#1d1a2f88;padding:16px}
+  .licmodal.hidden{display:none}
+  .licmodal .card{width:min(620px,100%);display:flex;flex-direction:column;gap:10px;text-align:left}
+  .licmodal h2{font-size:26px}
+  .licmodal textarea{width:100%;height:220px;resize:vertical;font:12px/1.4 ui-monospace,Menlo,monospace;border:3px solid var(--ink);border-radius:12px;padding:10px;background:#fff;color:var(--ink)}
+  .lmbtns{display:flex;gap:8px;flex-wrap:wrap}
+  .licmodal .licmsg{margin:0;min-height:1.2em}
   @media (max-width:900px){.licgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
   @media (max-width:600px){.licgrid{grid-template-columns:minmax(0,1fr)}}
   @media print{.menu,#wipe{display:none}}
@@ -685,7 +692,17 @@ setInterval(() => LIC.sync(), 4000);
       <div class="licbar">
         <div class="licnew"><input id="licName" maxlength="24" placeholder="New driver name"><button class="btn small" id="licAdd">＋ New license</button></div>
         <label class="btn small alt" id="licImportBtn">⬆ Import .json<input type="file" id="licFile" accept=".json,application/json" hidden></label>
+        <button class="btn small alt" id="licPasteBtn">📋 Paste save code</button>
         <span class="licmsg" id="licMsg"></span>
+      </div>
+    </div>
+    <div class="licmodal hidden" id="licModal">
+      <div class="card">
+        <h2 id="lmTitle"></h2>
+        <p class="fine" id="lmSub"></p>
+        <textarea id="lmText" spellcheck="false"></textarea>
+        <div class="lmbtns" id="lmBtns"></div>
+        <p class="licmsg" id="lmMsg"></p>
       </div>
     </div>
   </section>
@@ -2540,6 +2557,43 @@ function download(name, obj){
   a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
+// Downloads are often blocked inside embedded pages, so exports/imports also work as copy-paste text.
+const lmEl = $('licModal'); document.body.appendChild(lmEl);   // out of the animated menu so it can cover the whole screen
+function lmMsg(t, err = false){ $('lmMsg').textContent = t; $('lmMsg').classList.toggle('err', err); }
+function lmButton(label, cls, fn){ const b = document.createElement('button'); b.className = 'btn small ' + cls; b.textContent = label; b.onclick = fn; $('lmBtns').appendChild(b); }
+function closeLm(){ lmEl.classList.add('hidden'); }
+function openExport(l, safe){
+  const text = JSON.stringify(LIC.exportOf(l.id), null, 2), ta = $('lmText');
+  $('lmTitle').textContent = `⬇ Export ${l.name}'s license`;
+  $('lmSub').innerHTML = 'This is your whole save as text. Copy it and paste it somewhere safe, like a note or a text file named <b>.json</b>. Use <b>📋 Paste save code</b> to load it again.';
+  ta.value = text; ta.readOnly = true; $('lmBtns').innerHTML = ''; lmMsg('');
+  lmButton('📋 Copy', '', async () => {
+    ta.focus(); ta.select();
+    let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; } catch (e) { try { ok = document.execCommand('copy'); } catch (e2) {} }
+    lmMsg(ok ? '✔ Copied! Paste it anywhere to keep it safe.' : 'Copying is blocked here. The text is selected, so press ⌘C (or Ctrl+C).', !ok);
+  });
+  lmButton('⬇ Try download', 'alt', () => { download(`widr-turbo-license-${safe}.json`, LIC.exportOf(l.id)); lmMsg('If no file shows up in your Downloads, downloads are blocked here. Use Copy instead.'); });
+  lmButton('Close', 'ghost', closeLm);
+  lmEl.classList.remove('hidden'); setTimeout(() => { ta.focus(); ta.select(); }, 30);
+}
+function openPaste(){
+  const ta = $('lmText');
+  $('lmTitle').textContent = '📋 Paste a save code';
+  $('lmSub').textContent = 'Paste the text you copied when you exported a license (or the contents of a .json license file).';
+  ta.value = ''; ta.readOnly = false; $('lmBtns').innerHTML = ''; lmMsg('');
+  lmButton('⬆ Import', '', () => {
+    try { const l = LIC.importFrom(JSON.parse(ta.value.trim())); blip.ok(); closeLm(); renderLicenses(); licMsg(`⬆ Imported ${l.name}'s license. Press ▶ Use to drive with it.`); }
+    catch (err) { lmMsg(err.message.includes('WIDR') ? err.message : 'That doesn’t look like a WIDR Turbo save code. Paste the whole thing, from { to }.', true); }
+  });
+  lmButton('Cancel', 'ghost', closeLm);
+  lmEl.classList.remove('hidden'); setTimeout(() => ta.focus(), 30);
+}
+$('licPasteBtn').onclick = () => { blip.ok(); openPaste(); };
+// typing in the box shouldn't drive the menu (or the kart)
+$('lmText').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Escape') closeLm(); });
+lmEl.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Escape') closeLm(); });
+lmEl.addEventListener('click', e => { if (e.target === lmEl) closeLm(); });
 function renderLicenses(){
   LIC.sync();
   const grid = $('licgrid'); grid.innerHTML = '';
@@ -2574,7 +2628,7 @@ function renderLicenses(){
     d.querySelector('.exp').addEventListener('click', e => {
       e.stopPropagation();
       const safe = l.name.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'driver';
-      download(`widr-turbo-license-${safe}.json`, LIC.exportOf(l.id)); licMsg(`⬇ Exported ${l.name}'s license.`);
+      openExport(l, safe);
     });
     d.querySelector('.ren').addEventListener('click', e => {
       e.stopPropagation();
