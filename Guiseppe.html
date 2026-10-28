@@ -171,6 +171,9 @@
   .slotcard .acts button { font-family: var(--display); font-weight: 700; font-size: 13px; border: 2px solid var(--ink); border-radius: 10px; padding: 6px 10px; cursor: pointer; background: var(--sun); }
   .slotcard .acts button.del { background: #fff; }
   .slotcard.empty { border-style: dashed; }
+  .shop-card .slotcard .acts button.poor { background: #fff; opacity: .6; }
+  .shop-card .slotcard .acts button:disabled { background: #e8f6e0; cursor: default; }
+  .shop-card .slots-list { max-height: 60vh; overflow-y: auto; padding: 2px 6px 6px 2px; }
   .settings, .dev-grid { display: flex; flex-direction: column; gap: 10px; text-align: left; font-weight: 600; font-size: 14px; margin-bottom: 6px; }
   .settings label, .dev-grid label { display: grid; grid-template-columns: 1fr 150px 36px; align-items: center; gap: 8px; }
   .settings label.tog, .dev-grid label.tog { grid-template-columns: 1fr auto; }
@@ -260,6 +263,7 @@
   .bed-presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
   .bed-presets button { font-family: var(--display); font-weight: 700; font-size: 13px; color: var(--ink); background: #fffaf0; border: 3px solid var(--ink); border-radius: 12px; padding: 6px 4px; cursor: pointer; box-shadow: 2px 2px 0 var(--ink); }
   .bed-presets button:hover { background: #ffe9c9; }
+  .bed-presets button.on { background: var(--sun); box-shadow: 3px 3px 0 var(--ink); }
   .bed-note { font-size: 12px; line-height: 1.4; color: #6a5f7a; min-height: 2.8em; margin-bottom: 10px; }
   .bed-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
   .mbtn.ghost { background: transparent; box-shadow: none; }
@@ -286,6 +290,7 @@
   <div><kbd>Shift</kbd> run · <kbd>F</kbd> in air: ground pound</div>
   <div id="glideKey" class="hidden">Hold <kbd>Space</kbd> while falling: glide</div>
   <div>Stomp enemies · not the spiky red ones</div>
+  <div><kbd>E</kbd> pick up rocks &amp; snowballs · <kbd>Q</kbd> throw</div>
   <div><kbd>E</kbd> talk · <kbd>I</kbd> inventory</div>
   <div><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> or mouse: camera · click to lock cursor · scroll zoom</div>
   <div><kbd>M</kbd> map · <kbd>B</kbd> music · <kbd>H</kbd> hide this</div>
@@ -330,15 +335,24 @@
     <div class="journal" id="journalList"></div>
   </div>
 </div>
+<div class="inv" id="shopMenu">
+  <div class="inv-card shop-card">
+    <div class="inv-head">
+      <div><small id="shopPlace">Borgo Biscotto</small><h2 id="shopName">Shop</h2></div>
+      <div class="inv-close"><kbd>E</kbd> / <kbd>Esc</kbd> close</div>
+    </div>
+    <div class="inv-label">Your wallet · 🪙 <span id="shopWallet">0</span> coins</div>
+    <div class="slots-list" id="shopList"></div>
+  </div>
+</div>
 <div class="inv" id="bedMenu">
   <div class="inv-card bed-card">
     <div class="inv-head">
-      <div><small>Casa Guiseppe</small><h2>Guiseppe's Bed</h2></div>
+      <div><small id="bedPlace">Casa Guiseppe</small><h2 id="bedTitle">Guiseppe's Bed</h2></div>
       <div class="inv-close"><kbd>Esc</kbd> cancel</div>
     </div>
-    <div class="inv-label">Sleep until...</div>
+    <div class="inv-label" id="bedAsk">Sleep until...</div>
     <div class="bed-time"><span id="bedIco">☀️</span><b id="bedClock">09:00</b><small id="bedPhase">Morning</small></div>
-    <input type="range" id="bedSlider" min="0" max="23.75" step="0.25" value="9">
     <div class="bed-presets" id="bedPresets"></div>
     <div class="bed-note" id="bedNote"></div>
     <div class="bed-actions"><button class="mbtn" id="bedSleep">💤 Sleep</button><button class="mbtn ghost" id="bedCancel">Cancel</button></div>
@@ -422,6 +436,7 @@
         <span><kbd>Shift</kbd></span><span>Run</span>
         <span><kbd>Space</kbd></span><span>Jump · again in mid-air to flip</span>
         <span><kbd>F</kbd></span><span>Ground pound (in mid-air)</span>
+        <span><kbd>Q</kbd></span><span>Throw a rock or snowball (pick one up with <kbd>E</kbd>)</span>
         <span><kbd>E</kbd></span><span>Talk · use doors · play games</span>
         <span><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd></span><span>Camera · or move the mouse (click to lock the cursor)</span>
         <span><kbd>I</kbd> / <kbd>M</kbd></span><span>Inventory / Map</span>
@@ -432,7 +447,7 @@
     </div>
     <div class="menu-screen" id="scrCredits">
       <div class="menu-title">Credits</div>
-      <p class="credits">Starring <b>Guiseppe</b>, with <b>Gianmarco</b>, <b>Goonseppe</b>, <b>Nonna Pomodoro</b>, <b>Signor Formaggio</b>, <b>Bruno</b>, <b>Lino</b>, <b>Capitana Sardina</b>, <b>Goonposter</b>, <b>Coni</b>, <b>Zia Piuma</b> and <b>Mamma Pinguina</b>.<br><br>Villainy by <b>King Grumbleclaw</b>.<br><br>Built in Dia with Three.js and Tone.js.</p>
+      <p class="credits">Starring <b>Guiseppe</b>, with <b>Gianmarco</b>, <b>Goonseppe</b>, <b>Nonna Pomodoro</b>, <b>Signor Formaggio</b>, <b>Bruno</b>, <b>Lino</b>, <b>Capitana Sardina</b>, <b>Goonposter</b>, <b>Coni</b>, <b>Zia Piuma</b>, <b>Mamma Pinguina</b> and <b>Signor Tiramisù</b>.<br><br>Villainy by <b>King Grumbleclaw</b>.<br><br>Built in Dia with Three.js and Tone.js.</p>
       <button class="mbtn small" data-back>← Back</button>
     </div>
     <div class="menu-screen" id="scrDev">
@@ -777,6 +792,8 @@ const signCanvas = document.createElement('canvas'); signCanvas.width = 512; sig
 const archSign = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.9, 0.2), [M.coral, M.coral, M.coral, M.coral,
   new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(signCanvas) }), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(signCanvas) })]);
 archSign.position.set(0, 3.5, -46); archSign.rotation.y = Math.PI; scene.add(archSign);
+// the sign is solid: you can bump your head on it, or stand on top of it
+solids.push({ type: 'box', cx: 0, cz: -46, hx: 2.6, hz: 0.18, top: 3.95, bottom: 3.05 });
 // fountain in the piazza
 addCyl(TOWN.x, TOWN.z, 2.2, 1.0, 0.7, M.stone, { seg: 24 });
 const fWater = new THREE.Mesh(new THREE.CircleGeometry(1.9, 24), new THREE.MeshBasicMaterial({ color: 0x5fd4e6 }));
@@ -1375,7 +1392,9 @@ tiers.forEach(([r, top, c], i) => {
 });
 // ice pillars around the arena rim (the boss crashes into them when he charges)
 for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2 + 0.31; addCyl(VX + Math.cos(a) * 11.2, VZ + Math.sin(a) * 11.2, 0.55, SUMMIT_Y + 2.4, 2.4, iceMat, { seg: 6, noEnemyBlock: true }); const tip = new THREE.Mesh(new THREE.ConeGeometry(0.55, 0.8, 6), iceMat); tip.position.set(VX + Math.cos(a) * 11.2, SUMMIT_Y + 2.8, VZ + Math.sin(a) * 11.2); scene.add(tip); }
-{ const cherry = shadowed(new THREE.Mesh(new THREE.SphereGeometry(1.6, 16, 12), toon(0xe8323f))); cherry.position.set(VX + 4, SUMMIT_Y + 1.2, VZ + 9.2); scene.add(cherry); }
+{ const cherry = shadowed(new THREE.Mesh(new THREE.SphereGeometry(1.6, 16, 12), toon(0xe8323f))); cherry.position.set(VX + 4, SUMMIT_Y + 1.2, VZ + 9.2); scene.add(cherry);
+  // solid: three stacked rings follow the curve so you can climb onto it and stand on top
+  [[1.5, 1.75], [1.15, 2.3], [0.7, 2.75]].forEach(([r, h]) => solids.push({ type: 'cyl', x: VX + 4, z: VZ + 9.2, r, top: SUMMIT_Y + h, bottom: SUMMIT_Y - 0.4, noEnemyBlock: true })); }
 // one step at each tier, spiralling round the mountain
 [[27, 0, 1.75], [23.5, 3.5, 5.5], [19.5, 7.5, 9.5], [16.5, 11.5, 13.25], [13.5, 15, 16.75]].forEach(([rad, base, top], i) => {
   const ang = Math.PI / 2 + 0.7 + i * 1.1;
@@ -2058,7 +2077,62 @@ const flakeGame = {
 };
 addGameStand(flakeGame, KX, KZ + 12, 0x9fe8ff, makeFlake(0.8), 'Skating Rink', 2);
 
+// --- Glide courses: jump off the launch pad and glide through every ring before you touch down ---
+// they need Zia Piuma's glider; the first clear pays out coins
+const glideCourses = [];
+function addGlideCourse(id, name, island, x, z, path, reward) {
+  const y = groundBelow(x, z, 999);
+  // launch pad: a painted circle and a striped windsock
+  const pad = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.25, 32), new THREE.MeshBasicMaterial({ color: 0x9fe8ff, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false }));
+  pad.rotation.x = -Math.PI / 2; pad.position.set(x, y + 0.06, z); scene.add(pad);
+  const pole = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.2, 6), M.wood)); pole.position.set(x + 1.4, y + 1.1, z); scene.add(pole);
+  const sock = new THREE.Group(); sock.position.set(x + 1.4, y + 2.05, z); scene.add(sock);
+  [0xff6b5a, 0xffffff, 0xff6b5a].forEach((c, i) => { const s = new THREE.Mesh(new THREE.CylinderGeometry(0.2 - i * 0.04, 0.16 - i * 0.04, 0.3, 10, 1, true), toon(c, { side: THREE.DoubleSide })); s.rotation.z = Math.PI / 2; s.position.x = 0.15 + i * 0.3; sock.add(s); });
+  const rings = path.map(() => { const m = new THREE.Mesh(new THREE.TorusGeometry(2.0, 0.14, 8, 32), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.4 })); m.visible = false; scene.add(m); return m; });
+  const course = {
+    id, name, island, unit: '🪂', time: 20, goal: rings.length, mapIcon: '🪂', sock, pad, rings,
+    get won() { return !!(sq.glides || {})[id]; },
+    set won(v) { (sq.glides = sq.glides || {})[id] = v; },
+    needs() { if (sq.glider) return true; toast('You need a glider for this course! Zia Piuma in the Cloud Garden has one.'); return false; },
+    start() {
+      this.i = 0; this.air = false;
+      // each ring sits on the glide path; heights are listed with the path
+      rings.forEach((m, i) => { const [px, py, pz] = path[i]; m.position.set(px, py, pz); m.visible = true; m.material.color.set(0xffffff); m.material.opacity = 0.35; });
+      rings.forEach((m, i) => m.lookAt(i + 1 < rings.length ? rings[i + 1].position : new THREE.Vector3(path[i][0] * 2 - path[i - 1][0], path[i][1], path[i][2] * 2 - path[i - 1][2])));
+      this.highlight(); toast('Jump off the pad and hold Space to glide!');
+    },
+    highlight() { const m = rings[this.i]; if (m) { m.material.color.set(0xffc93c); m.material.opacity = 0.95; } },
+    update() {
+      if (!state.grounded) this.air = true;
+      else if (this.air) return -1; // touched down before the last ring
+      const m = rings[this.i];
+      if (m) {
+        m.scale.setScalar(1 + Math.sin(t * 7) * 0.06);
+        if (m.position.distanceTo(playerCenter()) < 2.4) {
+          m.visible = false; burst(m.position.clone(), 0xffc93c, 16, 3, 2);
+          blip(523 * Math.pow(1.06, this.i * 2), 1046 * Math.pow(1.06, this.i * 2), 0.12, 'triangle', 0.09);
+          this.i++; this.highlight();
+        }
+      }
+      return this.i;
+    },
+    failMsg: 'Touched down! Back to the launch pad to try again',
+    end() { rings.forEach(m => m.visible = false); },
+    reward() { coinCount += reward; updateCoins(); toast(`${name} cleared! +${reward} coins`); [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => blip(f, f, 0.15, 'triangle', 0.1), i * 100)); },
+  };
+  doors.push({ kind: 'game', game: course, pos: new THREE.Vector3(x, y, z) });
+  glideCourses.push(course);
+  return course;
+}
+// Driftwood Cove: off the highest cloud in the Cloud Garden, down over the island to the beach
+addGlideCourse('cloud', 'Cloud Garden Glide', 1, 9, -21.5,
+  [[8, 15.6, -15], [6, 13.6, -8], [3, 11.6, -1], [-2, 9.4, 6], [-4, 7.4, 13], [0, 5.6, 19], [6, 3.6, 24]], 30);
+// Isola Gelato: off Sundae Ledge, ride the warm air over the Cocoa Hot Springs, then out over the meadow
+addGlideCourse('cocoa', 'Cocoa Updraft Glide', 2, IX - 14, IZ - 113,
+  [[IX - 22, 14, IZ - 111], [IX - 32, 11.3, IZ - 110], [IX - 44, 8, IZ - 110], [IX - 50, 14.5, IZ - 112], [IX - 54, 12.6, IZ - 100], [IX - 50, 10, IZ - 90], [IX - 42, 7, IZ - 82], [IX - 34, 4, IZ - 74]], 40);
+
 function startGame(g) {
+  if (!activeGame && g.needs && !g.needs()) return;
   if (activeGame) return;
   activeGame = g; g.left = g.time; g.start();
   $('gName').textContent = g.name + (g.won ? ' · just for fun' : '');
@@ -2071,6 +2145,7 @@ function updateGame(dt) {
   if (!g) return;
   if (state.dead) { finishGame(false, 'Ouch! Try again'); return; }
   const prog = g.update(dt);
+  if (prog < 0) { finishGame(false, g.failMsg || 'Try again'); return; }
   g.left -= dt;
   $('gProg').textContent = `${g.unit} ${prog} / ${g.goal}`;
   $('gTime').textContent = `⏱ ${Math.max(0, g.left).toFixed(1)}`;
@@ -2084,7 +2159,7 @@ function finishGame(ok, msg) {
   activeGame = null; g.end();
   $('gamebar').classList.remove('show'); setMusicTempo(islandTempo());
   if (ok) {
-    if (!g.won) { g.won = true; collectShell(g.shell); }
+    if (!g.won) { g.won = true; if (g.reward) g.reward(); else collectShell(g.shell); }
     else { toast(`${g.name}: cleared again!`); [523, 659, 784].forEach((f, i) => setTimeout(() => blip(f, f, 0.15, 'triangle', 0.1), i * 100)); }
   } else { toast(msg); blip(300, 120, 0.4, 'sawtooth', 0.07); }
 }
@@ -2300,7 +2375,7 @@ const say = l => l; // lines may be strings or functions evaluated when spoken
 let brunoDone = false, maxHearts = 3;
 const CANNOLO_PRICE = 40;
 // every heart upgrade adds one on top of the base three, whichever order they come in
-function heartUpgrades() { return 3 + (brunoDone ? 1 : 0) + (sq.fishDone ? 1 : 0); }
+function heartUpgrades() { return 3 + (brunoDone ? 1 : 0) + (sq.fishDone ? 1 : 0) + ((sq.shop || {})['bottega:vigor'] ? 1 : 0); }
 npcs.push(
   {
     name: 'Nonna Pomodoro', role: "Guiseppe's nonna · tomato", icon: '🍅', color: '#ffd0c8', group: nonna,
@@ -2642,6 +2717,7 @@ const roadNpcs = [];
   addCyl(IX - 27, IZ - 32, 0.7, 0.5, 0.5, snowShade, { seg: 10 });
   const jIce = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.55, 16, 12), icy)); jIce.scale.set(1, 1.2, 1); jIce.position.set(IX - 27, 1.15, IZ - 32); scene.add(jIce);
   const leafI = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.25, 6), icy); leafI.position.set(IX - 27, 1.85, IZ - 32); scene.add(leafI);
+  solids.push({ type: 'cyl', x: IX - 20.5, z: IZ - 31, r: 0.55, top: 1.72, bottom: 0.5 }, { type: 'cyl', x: IX - 27, z: IZ - 32, r: 0.5, top: 1.85, bottom: 0.5 });
 }
 { // Nonno Ghiacciolo: an old popsicle, fishing through a hole in the ice
   const [g, b] = npcShell();
@@ -2762,6 +2838,39 @@ const roadNpcs = [];
 npcs.push(...roadNpcs);
 roadNpcs.forEach(initNpc);
 
+// Signor Tiramisù: a retired pastry chef in Gelato Village, layer upon layer of sponge and cream
+const tira = new THREE.Group();
+{
+  const sponge = toon(0xc98b4f), cream = toon(0xfff1de), cocoa = toon(0x5a3a22);
+  [[0.1, 0.22, sponge], [0.32, 0.18, cream], [0.52, 0.22, sponge], [0.74, 0.18, cream], [0.94, 0.22, sponge], [1.14, 0.18, cream]].forEach(([y, h, mat]) => {
+    const l = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.95, h, 0.95), mat)); l.position.y = y + h / 2; tira.add(l);
+  });
+  const top = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.97, 0.06, 0.97), cocoa)); top.position.y = 1.35; tira.add(top);
+  const bean = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), toon(0x3a2416)); bean.scale.set(1, 0.6, 1.4); bean.position.set(0.15, 1.42, 0.05); tira.add(bean);
+  const face = new THREE.Group(); face.position.set(0, 0, 0.48); tira.add(face);
+  addEyes(face, 0.98, 0.01, 0.18, 0.1, true); smileOn(face, 0.62, 0.02, 0.1);
+  // a proud grey moustache
+  [-1, 1].forEach(sd => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 6), toon(0xd8d2c8)); m.scale.set(1.5, 0.55, 0.6); m.position.set(sd * 0.12, 0.77, 0.04); m.rotation.z = sd * -0.3; face.add(m); });
+}
+const tiraNpc = {
+  name: 'Signor Tiramisù', role: 'retired pastry chef · tiramisù', icon: '☕', color: '#f1dcc0', group: tira,
+  pos: new THREE.Vector3(IX - 10, groundBelow(IX - 10, IZ + 17, 999), IZ + 17), voice: 170, wave: 'triangle', talked: false, ri: 0, top: 1.5, promptY: 2.3, bobY: 1,
+  first: [
+    "Ah, a visitor! Signor Tiramisù, retired pastry chef. Layer by layer, I have seen everything on this island.",
+    "Tiramisù means 'pick me up'. Which is also what I shout after I slip on the ice.",
+    "Tired? There's a campfire in Marshmallow Meadow. Rest there and wake at whatever hour you like. Toasted marshmallows not included. Fine. Included.",
+  ],
+  repeat: [
+    "At midnight, every coin on the island quietly rolls back to where it was. Nobody knows why. I suspect the penguins.",
+    "Pino at the Emporium sells a Lucky Lure. Nonno Ghiacciolo would weep with joy. He weeps a lot, to be fair.",
+    "You can throw snowballs at the rolling snowballs. They hate that. It's very poetic.",
+    "The warm air over the Cocoa Hot Springs lifts a glider right up. I saw a seagull do it once. Showing off.",
+    say(() => isNight() ? "Can't sleep. Too much espresso in my layers. Occupational hazard." : "In my day I made a tiramisù so tall it needed its own weather. Then it rained cocoa for a week."),
+  ],
+};
+npcs.push(tiraNpc);
+initNpc(tiraNpc);
+
 // ---------- Isola Gelato side quests ----------
 const npcNamed = name => npcs.find(n => n.name === name);
 const sideQuestShell = (name, area, pos) => {
@@ -2840,6 +2949,10 @@ const masterpiece = new THREE.Group();
   const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.9, 6), icy); arm.position.set(0.7, 1.9, 0); arm.rotation.z = -0.6; masterpiece.add(arm);
   const little = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.16, 0.4, 10), icy); little.position.set(1.05, 2.45, 0); masterpiece.add(little);
   masterpiece.position.set(IX - 23.5, 0, IZ - 34); masterpiece.visible = false; scene.add(masterpiece);
+  // solid only once Granita has carved it
+  const mx = IX - 23.5, mz = IZ - 34;
+  [{ x: mx, r: 1.0, top: 0.6, bottom: -0.5 }, { x: mx, r: 0.75, top: 2.15, bottom: 0.6 }, { x: mx + 1.05, r: 0.22, top: 2.65, bottom: 2.25 }]
+    .forEach(o => solids.push({ type: 'cyl', z: mz, ...o, get disabled() { return !masterpiece.visible; } }));
 }
 // Nonno Ghiacciolo: sixty winters without a fish
 {
@@ -2869,7 +2982,7 @@ function resetSideQuests() {
 }
 
 // ---------- costumes, Casa Guiseppe (with the closet), fishing and errands between the islands ----------
-function extrasDefault() { return { costumes: ['none'], wearing: 'none', catches: 0, fishLog: {}, sinceLegend: 0, gelatoStage: 0, postcardStage: 0, chests: [], returnHint: false, hour: 9, glider: false }; }
+function extrasDefault() { return { costumes: ['none'], wearing: 'none', catches: 0, fishLog: {}, sinceLegend: 0, gelatoStage: 0, postcardStage: 0, chests: [], returnHint: false, hour: 9, glider: false, glides: {}, throwTip: false, shop: {}, lure: 0 }; }
 Object.assign(sq, extrasDefault());
 const COSTUMES = [
   { id: 'none', name: 'Just Guiseppe', icon: '🌱', how: 'The classic look' },
@@ -2887,6 +3000,7 @@ const costumeMeshes = {};
 function buildCostume(id) {
   const g = new THREE.Group();
   const add = (geo, mat, x = 0, y = 0, z = 0) => { const m = shadowed(new THREE.Mesh(geo, mat)); m.position.set(x, y, z); g.add(m); return m; };
+  if (shopCostume(id, add)) return g;
   if (id === 'chef') {
     add(new THREE.CylinderGeometry(0.34, 0.34, 0.2, 18), M.white, 0, 0.12, 0);
     [[0, 0.42, 0, 0.32], [-0.18, 0.36, 0.08, 0.2], [0.18, 0.36, 0.08, 0.2], [0, 0.36, -0.18, 0.22]].forEach(([x, y, z, r]) => add(new THREE.SphereGeometry(r, 12, 10), M.white, x, y, z));
@@ -2927,7 +3041,7 @@ function wearCostume(id) {
   sq.wearing = id;
   if (id !== 'none' && !costumeMeshes[id]) { costumeMeshes[id] = buildCostume(id); costumeRoot.add(costumeMeshes[id]); }
   for (const k in costumeMeshes) costumeMeshes[k].visible = k === id;
-  const bare = id === 'none' || id === 'claw' || id === 'frost';
+  const bare = id === 'none' || id === 'claw' || id === 'frost' || id === 'earmuffs';
   sprout.visible = leafL.visible = bare;
 }
 function unlockCostume(id) {
@@ -2979,7 +3093,7 @@ const displayShells = [];
   const frame = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 0.06), M.sun); frame.position.set(ox - 1, 3.2, oz - 4.95); scene.add(frame);
   const pic = new THREE.Mesh(new THREE.CircleGeometry(0.3, 16), toon(0xe8323f)); pic.position.set(ox - 1, 3.2, oz - 4.91); scene.add(pic);
 }
-let closetOpen = false, bedOpen = false;
+let closetOpen = false, bedOpen = false, shopOpen = false, shopAt = null;
 function renderCloset() {
   $('costumeCount').textContent = `${sq.costumes.length} / ${COSTUMES.length}`;
   $('costumeSlots').innerHTML = COSTUMES.map(c => {
@@ -3013,27 +3127,43 @@ const BED_PRESETS = [['🌅 Dawn', 6], ['☀️ Morning', 9], ['🌞 Noon', 12],
 $('bedPresets').innerHTML = BED_PRESETS.map(([l, h]) => `<button data-h="${h}">${l}<br><small>${fmtHour(h)}</small></button>`).join('');
 let bedFrom = 9;
 function bedPreview(h) {
-  sq.hour = ((h % 24) + 24) % 24; $('bedSlider').value = sq.hour;
+  sq.hour = ((h % 24) + 24) % 24;
+  // only the set times can be picked; the chosen one is highlighted
+  [...$('bedPresets').children].forEach(b => b.classList.toggle('on', +b.dataset.h === sq.hour));
   $('bedClock').textContent = fmtHour(sq.hour); $('bedIco').textContent = phaseIcon(sq.hour); $('bedPhase').textContent = dayPhase(sq.hour);
   $('bedNote').textContent = isNight()
     ? 'At night most folks are asleep, crabs and penguins doze, bats come out to hunt, and the night music plays. The Golden Gelato Carp bites more often too.'
     : 'By day the shops are open and everyone is awake. Bats doze in the shade.';
 }
-function toggleBed(open, sleep = false) {
-  if (open) { bedFrom = sq.hour; bedOpen = true; for (const k in keys) keys[k] = false; bedPreview(Math.round(sq.hour * 4) / 4); blip(392, 330, 0.15, 'sine', 0.07); }
+// the bed in Casa Guiseppe and the campfire on Isola Gelato open the same menu
+const REST_SPOTS = {
+  bed: { place: 'Casa Guiseppe', title: "Guiseppe's Bed", ask: 'Sleep until...', button: '💤 Sleep', done: h => `💤 You slept until ${fmtHour(h)}. All hearts restored!` },
+  fire: { place: 'Marshmallow Meadow', title: 'Campfire', ask: 'Rest by the fire until...', button: '🔥 Rest', done: h => `🔥 You dozed by the campfire until ${fmtHour(h)}. All hearts restored!` },
+};
+let restSpot = REST_SPOTS.bed;
+function toggleBed(open, sleep = false, spot = 'bed') {
+  if (open) {
+    restSpot = REST_SPOTS[spot] || REST_SPOTS.bed;
+    $('bedPlace').textContent = restSpot.place; $('bedTitle').textContent = restSpot.title; $('bedAsk').textContent = restSpot.ask; $('bedSleep').textContent = restSpot.button;
+    bedFrom = sq.hour; bedOpen = true; for (const k in keys) keys[k] = false;
+    // start on the next set time after now (midnight counts as 24:00)
+    const next = BED_PRESETS.map(([, h]) => h).sort((a, b) => (a || 24) - (b || 24)).find(h => (h || 24) > sq.hour) ?? BED_PRESETS[0][1];
+    bedPreview(next); blip(392, 330, 0.15, 'sine', 0.07);
+  }
   else {
     bedOpen = false;
     if (!sleep) sq.hour = bedFrom;
     else {
       // a nap: fade out, wake up rested at the chosen time
       const h = sq.hour; sq.hour = bedFrom; $('fade').classList.add('on'); blip(330, 220, 0.6, 'sine', 0.08);
-      setTimeout(() => { sq.hour = h; dayAnnounce = isNight() ? 'night' : 'day'; hearts = maxHearts; updateHearts(true); $('fade').classList.remove('on'); toast(`💤 You slept until ${fmtHour(h)}. All hearts restored!`); saveGame(true); }, 700);
+      // sleeping through midnight brings the coins back too
+      const pastMidnight = h <= bedFrom;
+      setTimeout(() => { sq.hour = h; if (pastMidnight) midnightCoins(); dayAnnounce = isNight() ? 'night' : 'day'; hearts = maxHearts; updateHearts(true); $('fade').classList.remove('on'); toast(restSpot.done(h)); saveGame(true); }, 700);
     }
     setTimeout(lockPointer, 0);
   }
   $('bedMenu').classList.toggle('open', open);
 }
-$('bedSlider').oninput = e => bedPreview(+e.target.value);
 $('bedPresets').onclick = e => { const b = e.target.closest('[data-h]'); if (b) { bedPreview(+b.dataset.h); blip(660, 660, 0.05, 'triangle', 0.05); } };
 $('bedSleep').onclick = () => toggleBed(false, true);
 $('bedCancel').onclick = () => toggleBed(false);
@@ -3120,7 +3250,9 @@ function recast(msg) {
 function pickFish() {
   if (sq.sinceLegend >= 12) return FISH[4]; // a little luck for patient anglers
   // the Golden Gelato Carp bites far more often under the moon
-  const wt = f => f.legend && isNight() ? f.w * 3 : f.w;
+  const lucky = (sq.lure || 0) > 0;
+  if (lucky) sq.lure--;
+  const wt = f => f.legend ? f.w * (isNight() ? 3 : 1) * (lucky ? 4 : 1) : f.w;
   let r = Math.random() * FISH.reduce((a, f) => a + wt(f), 0);
   for (const f of FISH) { r -= wt(f); if (r <= 0) return f; }
   return FISH[0];
@@ -3314,7 +3446,10 @@ function updateSky() {
   return { dark, ang };
 }
 function updateDayNight(dt) {
-  if (running && !cut && !invOpen && !mapOpen && !closetOpen && !bedOpen && !pauseOpen) sq.hour = (sq.hour + dt / HOUR_SECONDS) % 24;
+  if (running && !cut && !invOpen && !mapOpen && !closetOpen && !shopOpen && !bedOpen && !pauseOpen) {
+    const before = sq.hour; sq.hour = (sq.hour + dt / HOUR_SECONDS) % 24;
+    if (sq.hour < before) midnightCoins();
+  }
   const { dark, ang } = updateSky();
   const p = state.pos;
   sun.position.set(p.x + Math.cos(ang) * 38, p.y + 14 + Math.sin(ang) * 32, p.z + 18);
@@ -3659,6 +3794,127 @@ const enemies = enemyDefs.map(([type, x, y, z, r, speed], i) => {
     island: x > 500 || ['penguin', 'snowball', 'bat', 'snowman'].includes(type) ? 2 : 1 };
 });
 
+// ---------- shops: one market stall on each island ----------
+// costumes, a Golden Shell (100 coins, one per shop) and a few useful extras, paid for from your coin wallet
+COSTUMES.push(
+  { id: 'boater', name: 'Gondolier Boater', icon: '👒', how: "Buy at Granchietto's Bottega in Borgo Biscotto" },
+  { id: 'beret', name: 'Painter\'s Beret', icon: '🎨', how: "Buy at Granchietto's Bottega in Borgo Biscotto" },
+  { id: 'sailor', name: 'Sailor Cap', icon: '⚓', how: "Buy at Granchietto's Bottega in Borgo Biscotto" },
+  { id: 'earmuffs', name: 'Fluffy Earmuffs', icon: '🎧', how: "Buy at Pino's Emporium in Gelato Village" },
+  { id: 'waffle', name: 'Waffle Cone Hat', icon: '🍦', how: "Buy at Pino's Emporium in Gelato Village" },
+  { id: 'tophat', name: 'Snowman Top Hat', icon: '🎩', how: "Buy at Pino's Emporium in Gelato Village" },
+);
+// the shop costumes' meshes, built the same way as the others
+function shopCostume(id, add) {
+  if (id === 'boater') {
+    add(new THREE.CylinderGeometry(0.56, 0.56, 0.04, 22), toon(0xf2d27a), 0, 0.12, 0);
+    add(new THREE.CylinderGeometry(0.32, 0.34, 0.24, 18), toon(0xf2d27a), 0, 0.25, 0);
+    add(new THREE.CylinderGeometry(0.345, 0.345, 0.07, 18), toon(0x1f3f8a), 0, 0.18, 0);
+  } else if (id === 'beret') {
+    add(new THREE.SphereGeometry(0.44, 16, 8), toon(0xe8323f), 0.06, 0.12, -0.02).scale.set(1, 0.32, 1);
+    add(new THREE.CylinderGeometry(0.03, 0.05, 0.12, 6), toon(0xe8323f), 0.06, 0.3, -0.02);
+  } else if (id === 'sailor') {
+    add(new THREE.CylinderGeometry(0.36, 0.3, 0.2, 18), M.white, 0, 0.14, 0);
+    add(new THREE.TorusGeometry(0.31, 0.04, 6, 20), toon(0x1f3f8a), 0, 0.06, 0).rotation.x = Math.PI / 2;
+    add(new THREE.SphereGeometry(0.06, 8, 6), toon(0xe8323f), 0, 0.27, 0);
+  } else if (id === 'earmuffs') {
+    add(new THREE.TorusGeometry(0.5, 0.04, 6, 20, Math.PI), toon(0x8a5cf6), 0, -0.02, 0).rotation.z = 0;
+    [-1, 1].forEach(s => add(new THREE.SphereGeometry(0.17, 12, 10), toon(0xffb3c6), s * 0.52, -0.06, 0));
+  } else if (id === 'waffle') {
+    add(new THREE.ConeGeometry(0.34, 0.75, 14), toon(0xd9a35a), 0, 0.4, 0).rotation.x = Math.PI;
+    add(new THREE.SphereGeometry(0.36, 14, 10), toon(0xfff1de), 0, 0.82, 0);
+    add(new THREE.SphereGeometry(0.07, 8, 8), toon(0xe8323f), 0, 1.15, 0);
+  } else if (id === 'tophat') {
+    add(new THREE.CylinderGeometry(0.46, 0.46, 0.04, 20), M.ink, 0, 0.1, 0);
+    add(new THREE.CylinderGeometry(0.28, 0.28, 0.5, 18), M.ink, 0, 0.36, 0);
+    add(new THREE.CylinderGeometry(0.285, 0.285, 0.08, 18), toon(0xe8323f), 0, 0.17, 0);
+  } else return false;
+  return true;
+};
+const SHOPS = [
+  { id: 'bottega', island: 1, name: "Granchietto's Bottega", place: 'Borgo Biscotto', x: 15, z: -68, face: -Math.PI / 2, color: 0xff6b5a,
+    shell: { name: 'Bottega Bargain', area: 'Borgo Biscotto', island: 1, pos: null, mesh: null, taken: false },
+    extras: [
+      { id: 'espresso', ico: '☕', name: 'Espresso', desc: 'Refills all your hearts', price: 5, refill: true },
+      { id: 'boater', costume: true, price: 40 }, { id: 'beret', costume: true, price: 60 }, { id: 'sailor', costume: true, price: 80 },
+      { id: 'vigor', ico: '🍪', name: 'Biscotto of Vigor', desc: '+1 max heart, for good', price: 150, once: true },
+    ] },
+  { id: 'emporium', island: 2, name: "Pino's Emporium", place: 'Gelato Village', x: IX + 11, z: IZ + 16, face: -Math.PI / 2, color: 0x1fb5c9,
+    shell: { name: 'Emporium Treasure', area: 'Gelato Village', island: 2, pos: null, mesh: null, taken: false },
+    extras: [
+      { id: 'cocoa', ico: '☕', name: 'Hot Cocoa', desc: 'Refills all your hearts', price: 5, refill: true },
+      { id: 'earmuffs', costume: true, price: 50 }, { id: 'waffle', costume: true, price: 70 }, { id: 'tophat', costume: true, price: 90 },
+      { id: 'lure', ico: '🪝', name: 'Lucky Lure', desc: 'The Golden Gelato Carp bites 4× as often for your next 5 catches', price: 30 },
+    ] },
+];
+SHOPS.forEach(s => shells.push(s.shell));
+// a little market stall with a striped awning and the shopkeeper behind the counter
+SHOPS.forEach(s => {
+  const y = groundBelow(s.x, s.z, 999), g = new THREE.Group(); g.position.set(s.x, y, s.z); g.rotation.y = s.face; scene.add(g);
+  const counter = shadowed(new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.0, 1.0), M.wood)); counter.position.set(0, 0.5, 0); g.add(counter);
+  const top = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.1, 1.2), M.cream); top.position.set(0, 1.05, 0); g.add(top);
+  [-1.5, 1.5].forEach(px => { const p = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 2.8, 8), M.woodDark)); p.position.set(px, 1.4, -0.8); g.add(p); });
+  for (let i = 0; i < 6; i++) { const st = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.08, 2.0), toon(i % 2 ? 0xffffff : s.color))); st.position.set(-1.5 + 0.6 * i, 2.9, -0.2); st.rotation.x = 0.28; g.add(st); }
+  const sign = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.42, 0.06), M.sun); sign.position.set(0, 3.35, -0.75); g.add(sign);
+  // goods on the counter: a coin-coloured sphere, a hat and a jar
+  const goods = [[-1, 0x9fe8ff], [0, 0xffc93c], [1, 0xff8fa3]];
+  goods.forEach(([gx, c]) => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), toon(c, { emissive: c, emissiveIntensity: 0.15 })); m.position.set(gx * 0.9, 1.25, 0.1); g.add(m); });
+  // shopkeeper: a crab merchant on Driftwood Cove, a penguin on Isola Gelato
+  const keeper = s.island === 1 ? makeCrab(toon(0xff9f5a), toon(0xd9643a)) : makePenguin();
+  keeper.position.set(0, 0, -0.85); keeper.scale.setScalar(s.island === 1 ? 1.05 : 1.1); g.add(keeper); s.keeper = keeper;
+  const front = new THREE.Vector3(Math.sin(s.face), 0, Math.cos(s.face)), right = new THREE.Vector3(front.z, 0, -front.x);
+  // the counter is solid (two boxes, so the awning posts don't snag you)
+  const cpos = new THREE.Vector3(s.x, y, s.z);
+  solids.push({ type: 'box', cx: cpos.x, cz: cpos.z, hx: Math.abs(right.x) * 1.6 + Math.abs(front.x) * 0.5, hz: Math.abs(right.z) * 1.6 + Math.abs(front.z) * 0.5, top: y + 1.1, bottom: y - 1 });
+  // the striped awning is solid and bouncy, like the market stalls in Borgo Biscotto
+  const ac = cpos.clone().addScaledVector(front, -0.2);
+  solids.push({ type: 'box', cx: ac.x, cz: ac.z, hx: Math.abs(right.x) * 1.8 + Math.abs(front.x) * 1.0, hz: Math.abs(right.z) * 1.8 + Math.abs(front.z) * 1.0, top: y + 3.2, bottom: y + 2.6,
+    bounce: true, bouncePower: 17, onBounce: () => burst(new THREE.Vector3(ac.x, y + 3.3, ac.z), s.color, 10, 3, 2) });
+  s.pos = cpos.clone().addScaledVector(front, 1.3);
+  doors.push({ kind: 'shop', label: `Shop · ${s.name}`, pos: s.pos, game: s, use: () => toggleShop(true, s) });
+  s.mapIcon = '🛒';
+});
+const shopKey = (s, it) => `${s.id}:${it.id}`;
+function shopItems(s) {
+  const list = s.extras.map(it => {
+    if (it.costume) { const c = COSTUMES.find(x => x.id === it.id); return { ...it, ico: c.icon, name: c.name, desc: 'Costume · wear it at your closet in Casa Guiseppe', owned: sq.costumes.includes(it.id) }; }
+    return { ...it, owned: it.once && !!(sq.shop || {})[shopKey(s, it)] };
+  });
+  list.splice(4, 0, { id: 'shell', ico: '🐚', name: 'Golden Shell', desc: `${s.shell.name} · one per shop`, price: 100, owned: s.shell.taken });
+  return list;
+}
+function toggleShop(open, s = shopAt) {
+  shopOpen = open; shopAt = s;
+  if (open) { for (const k in keys) keys[k] = false; renderShop(); blip(523, 784, 0.15, 'triangle', 0.07); }
+  $('shopMenu').classList.toggle('open', open);
+  if (!open) setTimeout(lockPointer, 0);
+}
+function renderShop() {
+  const s = shopAt; if (!s) return;
+  $('shopPlace').textContent = s.place; $('shopName').textContent = s.name; $('shopWallet').textContent = `${coinCount}`;
+  $('shopList').innerHTML = shopItems(s).map(it => {
+    const full = it.refill && hearts >= maxHearts, cant = coinCount < it.price;
+    const btn = it.owned ? `<button disabled>Owned ✓</button>` : full ? `<button disabled>Hearts full</button>` : `<button data-buy="${it.id}" ${cant ? 'class="poor"' : ''}>🪙 ${it.price}</button>`;
+    const extra = it.id === 'lure' && sq.lure ? ` · ${sq.lure} lucky catches left` : '';
+    return `<div class="slotcard ${it.owned ? 'empty' : ''}"><b>${it.ico} ${it.name}</b><div class="meta">${it.desc}${extra}</div><div class="acts">${btn}</div></div>`;
+  }).join('');
+}
+function buyItem(id) {
+  const s = shopAt, it = shopItems(s).find(x => x.id === id);
+  if (!it || it.owned) return;
+  if (coinCount < it.price) { toast(`Not enough coins! You need ${it.price - coinCount} more.`); blip(200, 120, 0.2, 'square', 0.06); return; }
+  coinCount -= it.price; updateCoins();
+  if (it.id === 'shell') collectShell(s.shell);
+  else if (it.costume) unlockCostume(it.id);
+  else if (it.refill) { hearts = maxHearts; updateHearts(); toast(`${it.name}! All hearts restored.`); }
+  else if (it.id === 'vigor') { (sq.shop = sq.shop || {})[shopKey(s, it)] = true; maxHearts = heartUpgrades(); hearts = maxHearts; updateHearts(true); toast(`Biscotto of Vigor! Max hearts: ${maxHearts}`); }
+  else if (it.id === 'lure') { sq.lure = (sq.lure || 0) + 5; toast('Lucky Lure! The Golden Gelato Carp will bite much more often.'); }
+  [659, 880, 1175].forEach((f, i) => setTimeout(() => blip(f, f, 0.1, 'triangle', 0.08), i * 70));
+  autosave(); renderShop();
+}
+$('shopList').onclick = e => { const b = e.target.closest('[data-buy]'); if (b) buyItem(b.dataset.buy); };
+$('shopMenu').onclick = e => { if (e.target.id === 'shopMenu') toggleShop(false); };
+
 // ---------- boss: King Grumbleclaw ----------
 const bossGroup = makeCrab(toon(0xb8325a), toon(0x7a1c3c));
 const crown = new THREE.Group(); crown.position.set(0, 0.86, 0.05);
@@ -3917,6 +4173,10 @@ addEventListener('keydown', e => {
     else if (e.code === "ArrowRight" || e.code === "KeyD") bedPreview(sq.hour + 0.25);
     return;
   }
+  if (shopOpen) {
+    if (!e.repeat && (e.code === 'Escape' || e.code === 'KeyE')) { toggleShop(false); e._handled = true; }
+    return;
+  }
   if (closetOpen) {
     if (!e.repeat && (e.code === 'Escape' || e.code === 'KeyE')) { toggleCloset(false); e._handled = true; }
     return;
@@ -3932,7 +4192,8 @@ addEventListener('keydown', e => {
   if (e.repeat) return;
   if (e.code === 'Space') state.buffer = 0.12;
   if (e.code === 'KeyF') state.poundReq = true;
-  if (e.code === 'KeyE' && winLock <= 0) { if (nearNpc) openDialog(nearNpc); else if (nearDoor) useDoor(nearDoor); }
+  if (e.code === 'KeyE' && winLock <= 0) { if (nearNpc) openDialog(nearNpc); else if (nearDoor) useDoor(nearDoor); else if (held) throwHeld(); }
+  if (e.code === 'KeyQ' && winLock <= 0 && !e.repeat) throwHeld();
   if (e.code === 'KeyB') toggleMusic();
 });
 addEventListener('keyup', e => keys[e.code] = false);
@@ -3946,7 +4207,7 @@ renderer.domElement.addEventListener('pointerdown', e => {
 });
 // cursor lock: while playing, the cursor is hidden and held in the middle so the mouse turns the camera freely
 const pointerLocked = () => document.pointerLockElement === renderer.domElement;
-const wantLock = () => settings.mouseLook && running && !invOpen && !mapOpen && !closetOpen && !bedOpen && !pauseOpen && !cut;
+const wantLock = () => settings.mouseLook && running && !invOpen && !mapOpen && !closetOpen && !shopOpen && !bedOpen && !pauseOpen && !cut;
 function lockPointer() {
   if (!wantLock() || pointerLocked() || !renderer.domElement.requestPointerLock) return;
   try { const r = renderer.domElement.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (_) {}
@@ -3954,7 +4215,7 @@ function lockPointer() {
 function unlockPointer() { if (pointerLocked()) document.exitPointerLock(); }
 document.addEventListener('pointerlockchange', () => {
   // Esc (or leaving the window) releases the lock: treat that like pausing
-  if (!pointerLocked() && running && !invOpen && !mapOpen && !closetOpen && !bedOpen && !pauseOpen && !dlg && !cut) openPause();
+  if (!pointerLocked() && running && !invOpen && !mapOpen && !closetOpen && !shopOpen && !bedOpen && !pauseOpen && !dlg && !cut) openPause();
 });
 setInterval(() => {
   if (pointerLocked() && !wantLock()) unlockPointer();
@@ -4021,6 +4282,18 @@ function updateCoins() {
   $('coins').textContent = `${coinCount}`;
   showPop(`${coinCount}`);
 }
+// ---------- midnight: the coins come back ----------
+// every coin you've picked up returns at midnight, but the area you're standing in only refills once you leave it,
+// so coins never pop into existence in front of you
+function midnightCoins() {
+  let n = 0;
+  for (const c of coins) {
+    if (c.userData.area === undefined) c.userData.area = areaOf(c.position.x, c.position.z, c.position.y);
+    if (c.userData.taken && !c.userData.pending) { c.userData.pending = true; n++; }
+  }
+  if (n) toast('🌙 Midnight! Collected coins are back. The ones here return once you leave this area.');
+}
+function respawnCoin(c) { c.userData.taken = false; c.userData.pending = false; c.visible = true; c.scale.setScalar(1); }
 let popTimer;
 function showPop(text) {
   if (!running) return;
@@ -4082,7 +4355,11 @@ function journalEntries() {
       sq.fishDone ? 'Nonno finally saw a fish. +1 heart from his lucky scarf!' : sq.fish ? 'Bring the Golden Fish to Nonno Ghiacciolo.' : 'Find the Golden Fish frozen inside the Snow Fortress.'),
     q(2, '🐣', 'Lost chicks', 'Mamma Pinguina', met('Mamma Pinguina') || chicksFound() > 0, chickDone,
       chickDone ? 'All five chicks are home.' : `Find Mamma Pinguina's lost chicks: ${chicksFound()} / 5.`),
-    q(2, '🪂', "Zia's glider", 'Zia Piuma · Cloud Garden', met('Zia Piuma') || sq.glider, sq.glider,
+    q(1, '🪂', 'Cloud Garden Glide', 'Launch pad · top of the Cloud Garden', sq.glider, glideCourses[0].won,
+      glideCourses[0].won ? 'Cleared! +30 coins.' : 'Jump off the highest cloud and glide through all 7 rings before you land.'),
+    q(2, '🪂', 'Cocoa Updraft Glide', 'Launch pad · Sundae Ledge', sq.glider && visitedI2, glideCourses[1].won,
+      glideCourses[1].won ? 'Cleared! +40 coins.' : 'Glide off Sundae Ledge and ride the warm air over the Cocoa Hot Springs through all 8 rings.'),
+    q(1, '🪂', "Zia's glider", 'Zia Piuma · Cloud Garden', met('Zia Piuma') || sq.glider, sq.glider,
       sq.glider ? 'Hold Space while falling to glide.' : 'Zia Piuma has something for you in the Cloud Garden.'),
     ...(isle2Games.length ? [q(2, '❄️', isle2Games.length === 1 ? isle2Games[0].name : 'Gelato game stands', isle2Games.length === 1 ? isle2Games[0].shell.area : 'Isola Gelato', visitedI2, isle2Games.every(g => g.won),
       isle2Games.length === 1 ? (isle2Games[0].won ? 'Won! The Golden Shell is yours.' : 'Win this game stand for a Golden Shell.') : `Win the game stands on Isola Gelato: ${isle2Games.filter(g => g.won).length} / ${isle2Games.length} won.`)] : []),
@@ -4145,6 +4422,8 @@ function renderInventory() {
     `<div class="slot got"><div><span class="ico">${(COSTUMES.find(c => c.id === sq.wearing) || COSTUMES[0]).icon}</span>Costumes<br>${sq.costumes.length} / ${COSTUMES.length}</div></div>`,
     chicksFound() && !chickDone ? `<div class="slot got"><div><span class="ico">🐣</span>Lost chicks<br>${chicksFound()} / 5 · to Mamma</div></div>` : null,
     sq.glider ? `<div class="slot got"><div><span class="ico">🪂</span>Glider<br>hold Space to glide</div></div>` : null,
+    sq.lure ? `<div class="slot got"><div><span class="ico">🪝</span>Lucky Lure<br>${sq.lure} lucky catches</div></div>` : null,
+    (sq.shop || {})['bottega:vigor'] ? `<div class="slot got used"><div><span class="ico">🍪</span>Biscotto of Vigor<br>+1 heart ✓</div></div>` : null,
   ];
   const got = items.filter(Boolean);
   while (got.length % 6) got.push('<div class="slot"><div>empty</div></div>');
@@ -4247,7 +4526,7 @@ function drawWorld(g, size, cx, cz, s, big, pp) {
   // game stands
   if (big) {
     g.font = '22px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    for (const gm of games) {
+    for (const gm of [...games, ...glideCourses, ...SHOPS]) {
       const d = doors.find(dd => dd.game === gm); g.fillText(gm.mapIcon, X(d.pos.x), Y(d.pos.z));
       g.font = '700 13px "Avenir Next", sans-serif'; g.fillStyle = '#2b2140'; g.fillText(gm.name + (gm.won ? ' ✓' : ''), X(d.pos.x), Y(d.pos.z) + 20); g.font = '22px sans-serif';
     }
@@ -4405,6 +4684,7 @@ function respawn() {
   else state.pos.copy(state.checkpoint);
   state.vel.set(0, 0, 0);
   state.dead = false; player.visible = true; state.grounded = false;
+  dropHeld();
   if (hearts <= 0) { hearts = maxHearts; updateHearts(); state.checkpoint.copy(state.pos); }
   invuln = 1.0;
 }
@@ -4566,7 +4846,7 @@ function step(dt) {
   // coins
   const center = new THREE.Vector3(p.x, p.y + 0.6, p.z);
   for (const c of coins) {
-    if (c.userData.taken) continue;
+    if (c.userData.taken) { if (c.userData.pending && c.userData.area !== currentArea) respawnCoin(c); continue; }
     if (c.position.distanceTo(center) < 1.0) {
       c.userData.taken = true; c.visible = false; coinCount++; updateCoins();
       burst(c.position.clone(), 0xffc93c, 12, 3, 2);
@@ -4623,6 +4903,156 @@ function stompEnemy(e) {
     blip(300, 600, 0.15, 'square', 0.1); toast('It\'s angry now!');
   } else kill(e);
 }
+// ---------- throwables: small rocks on Driftwood Cove, snowballs on Isola Gelato ----------
+// walk up and press E to pick one up, then E or Q to throw it; it bonks any enemy, even the spiky ones
+const THROW_KINDS = {
+  rock: { name: 'rock', mat: M.stone, burst: 0x9a9184, geo: new THREE.DodecahedronGeometry(0.22, 0) },
+  snow: { name: 'snowball', mat: M.white, burst: 0xffffff, geo: new THREE.SphereGeometry(0.24, 10, 8) },
+};
+const pickups = [];
+// nudges a spot outward until nothing solid is standing on it
+function freeSpot(x, z) {
+  for (let r = 0; r < 4; r += 0.6) for (let a = 0; a < 6.28; a += r ? 0.8 : 7) {
+    const px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r, y = groundBelow(px, pz, 999);
+    if (y < -0.5) continue;
+    if (!solids.some(s => !s.disabled && inFootprint(s, px, pz, 0.35) && s.top > y + 0.25 && s.bottom < y + 1.2)) return [px, y, pz];
+  }
+  return null;
+}
+function addPickup(kind, x, z) {
+  const at = freeSpot(x, z); if (!at) return;
+  const k = THROW_KINDS[kind], g = new THREE.Group();
+  // a little pile of three, so it reads as "grab me" rather than scenery
+  [[0, 0.16, 0, 1], [0.22, 0.1, 0.12, 0.7], [-0.18, 0.09, 0.16, 0.6]].forEach(([dx, dy, dz, s], i) => {
+    const m = shadowed(new THREE.Mesh(k.geo, k.mat)); m.position.set(dx, dy, dz); m.scale.setScalar(s); m.rotation.set(i, i * 2, 0); g.add(m);
+  });
+  g.position.set(...at); scene.add(g);
+  const p = { kind, group: g, pos: new THREE.Vector3(...at), away: 0 };
+  p.door = { kind: 'pickup', label: `Pick up ${k.name}`, pos: p.pos, use: () => pickUp(p) };
+  doors.push(p.door); pickups.push(p);
+}
+// Driftwood Cove: next to the bigger boulders, along the paths, on Pebble Isle and in town
+[[20.6, 11.6], [-18.6, -5.2], [-5.9, 9.9], [20.6, -9.2], [-19.6, 12.4], [-2, 4], [-3, -8], [10, -12], [-12, 18], [52, -3], [59, 5], [-5, -58], [7, -63], [-36, 6], [5, 46]]
+  .forEach(([x, z]) => addPickup('rock', x, z));
+// Isola Gelato: a snowball pile by every patrol on the ground, and one at the dock
+{
+  const used = [];
+  [[IX + 6, IZ + 24], ...enemyDefs.filter(([type, x]) => x > 500 && !enemyTypes[type].fly && type !== 'snowman').map(([, x, , z]) => [x + 2.5, z - 2.5]),
+   [FX - 8, FZ + 10], [FX + 8, FZ + 10]]
+    .forEach(([x, z]) => { if (used.some(([ux, uz]) => Math.hypot(ux - x, uz - z) < 7)) return; used.push([x, z]); addPickup('snow', x, z); });
+}
+let held = null;
+// animation timers: a quick crouch when you grab one, and a wind-up + overhead throw
+const THROW_TIME = 0.38, THROW_RELEASE = 0.2, PICK_TIME = 0.28;
+let throwAnim = 0, pickAnim = 0, throwKind = null, throwTarget = null;
+const heldMeshes = {};
+for (const k in THROW_KINDS) { const m = shadowed(new THREE.Mesh(THROW_KINDS[k].geo, THROW_KINDS[k].mat)); m.scale.setScalar(1.15); m.position.set(0, 0.6, 0.6); m.visible = false; heldMeshes[k] = m; }
+function pickUp(p) {
+  if (held || p.away > 0 || throwAnim > 0) return;
+  held = p.kind; p.away = 7; p.group.visible = false; p.door.hidden = true; pickAnim = PICK_TIME;
+  for (const k in heldMeshes) { if (!heldMeshes[k].parent) player.add(heldMeshes[k]); heldMeshes[k].visible = k === held; }
+  blip(380, 620, 0.1, 'triangle', 0.07);
+  if (!sq.throwTip) { sq.throwTip = true; toast(`Got a ${THROW_KINDS[held].name}! Press E or Q to throw it`); }
+}
+function dropHeld() { held = null; throwAnim = 0; throwKind = null; for (const k in heldMeshes) heldMeshes[k].visible = false; }
+const thrown = [];
+// gentle aim help: lock onto the closest enemy roughly in front of you
+function aimTarget() {
+  const fx = Math.sin(state.facing), fz = Math.cos(state.facing);
+  let best = null, bs = 1e9;
+  for (const e of enemies) {
+    if (!e.alive || e.island !== (currentIsland || 1)) continue;
+    const dx = e.pos.x - state.pos.x, dz = e.pos.z - state.pos.z, d = Math.hypot(dx, dz);
+    if (d > 16 || d < 0.3 || Math.abs(e.pos.y - state.pos.y) > (e.def.fly ? 11 : 6)) continue;
+    const dot = (dx * fx + dz * fz) / d;
+    if (dot < 0.82) continue;
+    if (d * (2 - dot) < bs) { bs = d * (2 - dot); best = e; }
+  }
+  return best;
+}
+// pressing throw starts the wind-up; the rock leaves his hand partway through the swing
+function throwHeld() {
+  if (!held || state.dead || throwAnim > 0) return;
+  throwTarget = aimTarget(); throwKind = held; throwAnim = THROW_TIME;
+  if (throwTarget) state.facing = Math.atan2(throwTarget.pos.x - state.pos.x, throwTarget.pos.z - state.pos.z);
+  blip(240, 320, 0.08, 'sine', 0.04);
+}
+function releaseThrow() {
+  const kind = throwKind, best = throwTarget && throwTarget.alive ? throwTarget : null;
+  held = null; throwKind = null; for (const k in heldMeshes) heldMeshes[k].visible = false;
+  const fx = Math.sin(state.facing), fz = Math.cos(state.facing);
+  // it leaves from wherever his hands are at the moment of release
+  const hm = heldMeshes[kind], from = hm.parent ? hm.getWorldPosition(new THREE.Vector3()) : state.pos.clone().add(new THREE.Vector3(fx * 0.4, 1.6, fz * 0.4));
+  let v;
+  if (best) {
+    const to = best.pos.clone().add(new THREE.Vector3(0, 0.5 * best.def.h * (best.size / best.def.size), 0));
+    const T = THREE.MathUtils.clamp(from.distanceTo(to) / 18, 0.2, 0.9);
+    v = new THREE.Vector3((to.x - from.x) / T, (to.y - from.y + 0.5 * 18 * T * T) / T, (to.z - from.z) / T);
+  } else v = new THREE.Vector3(fx * 16 + state.vel.x * 0.3, 5, fz * 16 + state.vel.z * 0.3);
+  const m = shadowed(new THREE.Mesh(THROW_KINDS[kind].geo, THROW_KINDS[kind].mat)); m.scale.setScalar(1.3); m.position.copy(from); scene.add(m);
+  thrown.push({ m, v, kind, life: 2.5, target: best });
+  blip(520, 240, 0.12, 'triangle', 0.07);
+}
+// one hit from a thrown rock counts like a stomp (Chonkcrabs still need two)
+function hitEnemy(e) {
+  if (--e.hp > 0) {
+    e.size = 1.35; e.group.scale.setScalar(e.size); e.angry = true;
+    burst(e.pos.clone().add(new THREE.Vector3(0, 1, 0)), 0x2fb59a, 10, 3, 2);
+    blip(300, 600, 0.15, 'square', 0.1); toast('It\'s angry now!');
+  } else kill(e);
+}
+function updateThrowables(dt) {
+  if (pickAnim > 0) pickAnim -= dt;
+  if (throwAnim > 0) { const before = throwAnim; throwAnim -= dt; if (throwKind && before > THROW_TIME - THROW_RELEASE && throwAnim <= THROW_TIME - THROW_RELEASE) releaseThrow(); if (throwAnim < 0) throwAnim = 0; }
+  for (const p of pickups) if (p.away > 0 && (p.away -= dt) <= 0) { p.group.visible = true; p.door.hidden = false; burst(p.pos.clone().add(new THREE.Vector3(0, 0.3, 0)), THROW_KINDS[p.kind].burst, 5, 1.5, 1); }
+  for (let i = thrown.length - 1; i >= 0; i--) {
+    const s = thrown[i], pp = s.m.position;
+    // a locked-on throw curves after its target, so enemies that keep walking still get bonked
+    if (s.target && s.target.alive) {
+      const hs = Math.hypot(s.v.x, s.v.z), dx = s.target.pos.x - pp.x, dz = s.target.pos.z - pp.z, dd = Math.hypot(dx, dz) || 1;
+      const k = Math.min(1, dt * 10); s.v.x += (dx / dd * hs - s.v.x) * k; s.v.z += (dz / dd * hs - s.v.z) * k;
+    }
+    s.v.y -= 18 * dt; pp.addScaledVector(s.v, dt); s.m.rotation.x += dt * 12; s.life -= dt;
+    let gone = s.life <= 0, hitE = null;
+    for (const e of enemies) {
+      if (!e.alive) continue;
+      const h = e.def.h * (e.size / e.def.size);
+      if (Math.hypot(pp.x - e.pos.x, pp.z - e.pos.z) < 0.5 * e.size + 0.4 && pp.y > e.pos.y - 0.3 && pp.y < e.pos.y + h + 0.3) { hitE = e; break; }
+    }
+    if (hitE) { hitEnemy(hitE); gone = true; }
+    else if (s.v.y < 0 && pp.y < groundBelow(pp.x, pp.z, pp.y + 0.3) + 0.1) gone = true;
+    else if (solids.some(o => !o.disabled && pp.y < o.top - 0.1 && pp.y > o.bottom && inFootprint(o, pp.x, pp.z, 0.1))) gone = true;
+    if (gone) { burst(pp.clone(), THROW_KINDS[s.kind].burst, 8, 3, 2); blip(200, 90, 0.08, 'square', 0.05); scene.remove(s.m); thrown.splice(i, 1); }
+  }
+}
+
+// ---------- campfire in Marshmallow Meadow: rest here to set the time, just like Guiseppe's bed ----------
+const campfire = (() => {
+  const at = freeSpot(IX - 7, IZ - 37) || [IX - 7, groundBelow(IX - 7, IZ - 37, 999), IZ - 37];
+  const [x, y, z] = at, g = new THREE.Group(); g.position.set(x, y, z); scene.add(g);
+  // ring of stones, crossed logs and a flickering fire
+  for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2, st = shadowed(new THREE.Mesh(new THREE.DodecahedronGeometry(0.2, 0), M.stone)); st.position.set(Math.cos(a) * 0.72, 0.12, Math.sin(a) * 0.72); st.rotation.set(i, i * 2, 0); g.add(st); }
+  [0, Math.PI / 2, Math.PI / 4].forEach(r => { const l = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.09, 1.1, 7), M.woodDark)); l.rotation.set(Math.PI / 2, 0, 0); l.rotation.y = r; l.position.y = 0.14; const w = new THREE.Group(); w.rotation.y = r; w.add(l); l.rotation.set(Math.PI / 2, 0, 0); g.add(w); });
+  const flames = [[0xff6b2b, 0.34, 0.85, 0], [0xffa62b, 0.24, 0.65, 0.4], [0xfff27a, 0.14, 0.42, 0.8]].map(([c, r, h, ph]) => {
+    const f = new THREE.Mesh(new THREE.ConeGeometry(r, h, 8), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.92 })); f.position.y = 0.2 + h / 2; f.userData = { h, ph }; g.add(f); return f;
+  });
+  const glow = new THREE.Mesh(new THREE.SphereGeometry(1.4, 14, 10), new THREE.MeshBasicMaterial({ color: 0xffa62b, transparent: true, opacity: 0.12, depthWrite: false })); glow.position.y = 0.6; g.add(glow);
+  // two log benches and a marshmallow on a stick
+  [[1.7, 0], [-1.7, Math.PI]].forEach(([dx, r]) => { const b = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 1.5, 9), M.wood)); b.rotation.z = Math.PI / 2; b.rotation.y = Math.PI / 2; b.position.set(dx, 0.22, 0); g.add(b); });
+  const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.1, 5), M.woodDark); stick.position.set(1.1, 0.55, 0.2); stick.rotation.z = 1.0; g.add(stick);
+  const mallow = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.14, 10), toon(0xfff6e3)); mallow.position.set(0.66, 0.85, 0.2); mallow.rotation.z = 1.0; g.add(mallow);
+  solids.push({ type: 'cyl', x, z, r: 0.85, top: y + 0.55, bottom: y - 1 });
+  [1.7, -1.7].forEach(dx => solids.push({ type: 'box', cx: x + dx, cz: z, hx: 0.22, hz: 0.75, top: y + 0.44, bottom: y - 1 }));
+  const pos = new THREE.Vector3(x, y, z + 1.6);
+  doors.push({ kind: 'use', label: 'Rest by the campfire · set the time', pos, use: () => toggleBed(true, false, 'fire') });
+  return { group: g, flames, glow, pos: new THREE.Vector3(x, y, z) };
+})();
+function updateCampfire() {
+  if (currentIsland !== 2) return;
+  campfire.flames.forEach(f => { const s = 1 + Math.sin(t * 13 + f.userData.ph * 7) * 0.12 + Math.sin(t * 29 + f.userData.ph) * 0.06; f.scale.set(1 - (s - 1) * 0.5, s, 1 - (s - 1) * 0.5); f.position.y = 0.2 + f.userData.h * s / 2; f.rotation.y = t * 2 + f.userData.ph; });
+  campfire.glow.material.opacity = 0.1 + Math.sin(t * 11) * 0.03 + (isNight() ? 0.08 : 0);
+  if (Math.random() < 0.08) burst(campfire.pos.clone().add(new THREE.Vector3(0, 1.1, 0)), 0xffa62b, 1, 1.2, 1.5);
+}
 function hurt(from) {
   // returns whether the hit landed; while invincible after a hit nothing can hurt Guiseppe
   if (invuln > 0 || state.dead || devMode.god) return false;
@@ -4640,6 +5070,8 @@ function hurt(from) {
 function updateEnemies(dt) {
   const p = state.pos;
   updateSnowShots(dt);
+  updateThrowables(dt);
+  updateCampfire();
   for (const e of enemies) {
     if (!e.alive) {
       if (e.zzz) e.zzz.visible = false;
@@ -4729,7 +5161,7 @@ function updateNpcs(dt) {
     let bd = 1.4;
     for (const d of doors) {
       const dd = Math.hypot(state.pos.x - d.pos.x, state.pos.z - d.pos.z);
-      if (d.kind === 'game' && activeGame) continue;
+      if ((d.kind === 'game' && activeGame) || d.hidden || (d.kind === 'pickup' && held)) continue;
       if (dd < bd && Math.abs(state.pos.y - d.pos.y) < 1.5) { bd = dd; nearDoor = d; }
     }
   }
@@ -5542,7 +5974,7 @@ function animate() {
   t += dt;
 
   if (running) {
-    const paused = invOpen || mapOpen || closetOpen || bedOpen;
+    const paused = invOpen || mapOpen || closetOpen || shopOpen || bedOpen;
     if (!won && !paused) { elapsed += dt; $('timer').textContent = fmt(elapsed); }
     if (winLock > 0) winLock -= dt;
     const sub = 2;
@@ -5609,21 +6041,45 @@ function animate() {
   if (victory) { posY += Math.abs(Math.sin(t * 9)) * 0.6; rotY = t * 9; }
   body.position.y = posY;
   body.rotation.set(rotX, rotY, rotZ);
+  // lean back for the wind-up, forward on the release; dip down when grabbing
+  if (throwAnim > 0) { const k2 = 1 - throwAnim / THROW_TIME, sw = THROW_RELEASE / THROW_TIME; body.rotation.x += k2 < sw * 0.6 ? -0.3 * k2 / (sw * 0.6) : -0.3 + 0.6 * Math.min(1, (k2 - sw * 0.6) / (sw * 0.7)) * (1 - Math.max(0, k2 - sw) / (1 - sw) * 0.7); }
+  else if (pickAnim > 0) { const k3 = 1 - pickAnim / PICK_TIME; body.rotation.x += Math.sin(k3 * Math.PI) * 0.5; body.position.y -= Math.sin(k3 * Math.PI) * 0.15; }
   body.scale.set((1 - sq * 0.5) * sx, (1.05 + sq + breath) * sy, (1 - sq * 0.5) * sx);
   // arms
   gArms.forEach(a => {
     const sd = a.userData.armSide;
     let ax = 0, az = sd * 0.35;
-    if (victory) { az = sd * (2.6 + Math.sin(t * 14 + sd) * 0.3); }
+    // throwing (two hands): swing it up and back over his head, then hurl it forward
+    if (throwAnim > 0) { const k2 = 1 - throwAnim / THROW_TIME, sw = THROW_RELEASE / THROW_TIME, a1 = sw * 0.6;
+      ax = k2 < a1 ? -1.3 - 2.0 * k2 / a1 : -3.3 + 2.4 * Math.min(1, (k2 - a1) / (sw * 0.9)); az = -sd * 0.35; }
+    // grabbing: reach down in front of his feet
+    else if (pickAnim > 0) { ax = -0.75; az = -sd * 0.3; }
+    // carrying: both arms out in front, hugging it to his chest
+    else if (held) { ax = -1.5 + (s.grounded && hs > 0.3 ? Math.sin(s.walkT * 2) * 0.06 : 0); az = -sd * 0.42; }
+    else if (victory) { az = sd * (2.6 + Math.sin(t * 14 + sd) * 0.3); }
     else if (s.pound > 0) { ax = -1.3; az = sd * 0.15; }
     else if (!s.grounded && s.vel.y > 1) { az = sd * 2.3; ax = -0.3; }
     else if (!s.grounded && s.vel.y < -5) { az = sd * (1.5 + Math.sin(t * 28 + sd * 2) * 0.5); }
     else if (s.grounded && hs > 0.3) { ax = Math.sin(s.walkT + (sd > 0 ? Math.PI : 0)) * (s.sprinting ? 1.1 : 0.75) * k; az = sd * (s.sprinting ? 0.6 : 0.35); }
     else if (dlg && sd > 0) { ax = -0.8 + Math.sin(t * 5) * 0.4; az = sd * 0.6; }
     else { az = sd * (0.35 + Math.sin(t * 2.4) * 0.05); if (look && sd < 0) ax = -0.3; }
-    a.rotation.x = THREE.MathUtils.damp(a.rotation.x, ax, 18, dt);
-    a.rotation.z = THREE.MathUtils.damp(a.rotation.z, az, 18, dt);
+    const armK = throwAnim > 0 ? 40 : 18;
+    a.rotation.x = THREE.MathUtils.damp(a.rotation.x, ax, armK, dt);
+    a.rotation.z = THREE.MathUtils.damp(a.rotation.z, az, armK, dt);
+    // the arms stretch a little to reach around whatever he's carrying (the glove stays round)
+    const reach = held ? 1.85 : 1;
+    a.scale.y = THREE.MathUtils.damp(a.scale.y, reach, 14, dt); a.children[1].scale.y = 1 / a.scale.y;
   });
+  // the carried rock sits between his gloves, just beyond them along his arms, so it is always in his hands
+  if (held) {
+    player.updateMatrixWorld(true);
+    const g0 = gArms[0].children[1].getWorldPosition(new THREE.Vector3()), g1 = gArms[1].children[1].getWorldPosition(new THREE.Vector3());
+    const s0 = gArms[0].getWorldPosition(new THREE.Vector3()), s1 = gArms[1].getWorldPosition(new THREE.Vector3());
+    const hands = g0.add(g1).multiplyScalar(0.5), shoulders = s0.add(s1).multiplyScalar(0.5);
+    const along = hands.clone().sub(shoulders).normalize();
+    const at = hands.addScaledVector(along, 0.24);
+    for (const k in heldMeshes) if (heldMeshes[k].visible) heldMeshes[k].position.copy(player.worldToLocal(at.clone()));
+  }
   // feet
   gFeet.forEach(f => {
     const sd = f.userData.side;
@@ -5632,7 +6088,7 @@ function animate() {
     f.position.y = s.grounded ? -0.5 + Math.max(0, -Math.cos(s.walkT + (sd > 0 ? 0 : Math.PI))) * 0.08 * k : (s.flipT > 0 || s.pound > 0 ? -0.38 : -0.46 + sd * Math.sin(t * 20) * 0.03 * (s.vel.y < -5 ? 1 : 0));
   });
   // invincibility after a hit only runs out while the game is actually playing
-  const playing = running && !dlg && !cut && !invOpen && !mapOpen && !closetOpen && !bedOpen;
+  const playing = running && !dlg && !cut && !invOpen && !mapOpen && !closetOpen && !shopOpen && !bedOpen;
   if (invuln > 0) { if (playing) invuln -= dt; body.visible = invuln <= 0 || Math.floor(invuln * 14) % 2 === 0; } else body.visible = true;
 
   const gy = groundBelow(s.pos.x, s.pos.z, s.pos.y);
@@ -5733,7 +6189,7 @@ cam.target.set(SPAWN.x, 1.4, SPAWN.z);
 animate();
 
 function resetGame() {
-  coins.forEach(c => { c.userData.taken = false; c.visible = true; });
+  coins.forEach(c => { c.userData.taken = false; c.userData.pending = false; c.visible = true; });
   coinCount = 0; falls = 0; elapsed = 0; won = false; flagHeight = 1.0;
   brunoDone = false; maxHearts = 3;
   hearts = 3; bonks = 0; invuln = 0; updateHearts();
@@ -5782,7 +6238,7 @@ function snapshot() {
     v: 1, savedAt: Date.now(),
     island: currentIsland, area: currentArea,
     pos: [state.pos.x, state.pos.y, state.pos.z], facing: state.facing,
-    hearts, maxHearts, wallet: coinCount, coins: coins.map(c => c.userData.taken ? 1 : 0), shells: shells.map(s => s.taken ? 1 : 0),
+    hearts, maxHearts, wallet: coinCount, coins: coins.map(c => c.userData.taken ? (c.userData.pending ? 2 : 1) : 0), shells: shells.map(s => s.taken ? 1 : 0),
     pencilState, brunoDone, hasReefKey, sealOpen: !!sealSolid.disabled, bossDefeated: boss.defeated, won, hasChart,
     visitedI2, jmKidnapped, jmRescued, keysFound, keys: fireKeys.map(k => k.taken ? 1 : 0), gateOpen: !!fireGateSolid.disabled,
     chicks: chicks.map(c => c.found ? 1 : 0), chickDone,
@@ -5797,7 +6253,7 @@ function snapshot() {
 function applySnapshot(d) {
   resetGame();
   hearts = d.hearts; maxHearts = d.maxHearts; brunoDone = d.brunoDone; updateHearts();
-  coins.forEach((c, i) => { c.userData.taken = !!d.coins[i]; c.visible = !c.userData.taken; });
+  coins.forEach((c, i) => { c.userData.taken = !!d.coins[i]; c.userData.pending = d.coins[i] === 2; c.visible = !c.userData.taken; if (c.userData.pending) c.userData.area = areaOf(c.position.x, c.position.z, c.position.y); });
   coinCount = d.wallet ?? coins.filter(c => c.userData.taken).length;
   shells.forEach((s, i) => { s.taken = !!d.shells[i]; if (s.mesh) s.mesh.visible = !s.taken; });
   shellCount = shells.filter(s => s.taken).length;
@@ -5969,7 +6425,7 @@ $('pQuit').onclick = () => { running = true; saveGame(); openMainMenu(); };
 addEventListener('keydown', e => {
   if ((e.code !== 'Escape' && e.code !== 'KeyP') || e._handled || e.repeat) return;
   if (pauseOpen) { if (performance.now() - pauseAt > 300) closePause(); return; }
-  if (running && !mapOpen && !invOpen && !closetOpen && !bedOpen && !dlg && !cut) openPause();
+  if (running && !mapOpen && !invOpen && !closetOpen && !shopOpen && !bedOpen && !dlg && !cut) openPause();
 });
 
 // win screen buttons
