@@ -2278,6 +2278,171 @@ const updraftSteam = updrafts3.map(u => {
 addBox(FAC.ox - 71.5, 20.25, RFZ + 5, 4, 0.5, 4, rust);
 { const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.35, 10, 8), toon(0xffd08a, { emissive: 0xff9a2b })); lamp.position.set(FAC.ox - 73, 21.2, RFZ + 6.4); scene.add(lamp); }
 island3ExtraShells.push({ name: 'Lamp Ledge', area: 'The Rafters', pos: [FAC.ox - 71.5, 21.9, RFZ + 5] });
+// ===== more outdoor detail on Isola Inchiostro =====
+// the quay edge: steel bollards all the way round, with a life ring every so often (none in front of the pier)
+for (let i = 0; i < 64; i++) {
+  const a = i / 64 * Math.PI * 2; if (Math.abs(a - Math.PI / 2) < 0.22) continue;
+  const x = I3X + Math.cos(a) * (R3 - 2.2), z = CZ3 + Math.sin(a) * (R3 - 2.2);
+  if (Math.abs(x - BLD.x) < BLD.w / 2 + 1 && Math.abs(z - BLD.z) < BLD.d / 2 + 1) continue;
+  const b = addCyl(x, z, 0.22, 0.65, 0.65, M.ink, { seg: 10 });
+  const capB = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.22, 0.12, 10), M.ink); capB.position.y = 0.33; b.mesh.add(capB);
+  if (i % 8 === 4) {
+    const post = addCyl(x - Math.cos(a) * 0.9, z - Math.sin(a) * 0.9, 0.06, 1.6, 1.6, M.woodDark, { seg: 6 });
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.38, 0.11, 8, 18), toon(0xff6b2b)); ring.position.set(post.x, 1.1, post.z); ring.rotation.y = -a; scene.add(ring);
+    for (let k = 0; k < 4; k++) { const band = new THREE.Mesh(new THREE.TorusGeometry(0.38, 0.115, 8, 3, 0.35), M.white); band.position.copy(ring.position); band.rotation.set(0, -a, k * Math.PI / 2); scene.add(band); }
+  }
+}
+// rocks and old tyres along the gravel shore
+for (let i = 0; i < 46; i++) {
+  const a = i * 2.39, r = R3 + 1.2 + (i % 3) * 0.9, x = I3X + Math.cos(a) * r, z = CZ3 + Math.sin(a) * r;
+  if (Math.abs(a % (Math.PI * 2) - Math.PI / 2) < 0.2) continue;
+  if (i % 5 === 0) { const ty = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.22, 8, 16), toon(0x2b2b33)); ty.rotation.x = Math.PI / 2 - 0.3; ty.position.set(x, -0.05, z); scene.add(ty); continue; }
+  const rk = shadowed(new THREE.Mesh(new THREE.DodecahedronGeometry(0.5 + (i % 4) * 0.25, 0), toon(i % 2 ? 0x8e8799 : 0x6f6a7d))); rk.position.set(x, -0.1, z); rk.rotation.set(i, i * 2, 0); scene.add(rk);
+}
+// power poles with drooping wires from the dock up to the factory
+{ const poles = [[I3X - 5, I3Z + 6], [I3X - 10, I3Z - 10], [I3X - 5.5, I3Z - 34], [I3X - 9, I3Z - 49]].map(([x, z]) => {
+    addCyl(x, z, 0.16, 7, 7, M.woodDark, { seg: 8 });
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.16, 0.16), M.woodDark); arm.position.set(x, 6.6, z); scene.add(arm);
+    [-0.9, 0.9].forEach(o => { const ins = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.2, 6), toon(0x9fe8ff)); ins.position.set(x + o, 6.8, z); scene.add(ins); });
+    return new THREE.Vector3(x, 6.85, z);
+  });
+  const wireMat = new THREE.LineBasicMaterial({ color: 0x2b2140 });
+  for (let i = 0; i < poles.length - 1; i++) [-0.9, 0.9].forEach(o => {
+    const a = poles[i].clone().add(new THREE.Vector3(o, 0, 0)), b = poles[i + 1].clone().add(new THREE.Vector3(o, 0, 0)), pts = [];
+    for (let k = 0; k <= 12; k++) { const f = k / 12, p = a.clone().lerp(b, f); p.y -= Math.sin(f * Math.PI) * 0.9; pts.push(p); }
+    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), wireMat));
+  });
+  // and a couple of pigeons dozing on the wires' poles
+  poles.slice(1, 3).forEach(p => { const pg = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6), toon(0x9d95ad)); pg.scale.set(0.8, 0.8, 1.2); pg.position.set(p.x + 0.4, 6.95, p.z); scene.add(pg); });
+}
+// the big ink pipeline: out of the factory's east side, down to a pump house by the dock (you can walk along the top)
+{ const PX = BLD.x + 50, P_Y = 1.0, pipeMat = toon(0x7a5cb0), bandMat = steelDark;
+  const run = (x1, z1, x2, z2) => {
+    const len = Math.hypot(x2 - x1, z2 - z1), alongZ = x1 === x2;
+    addBox((x1 + x2) / 2, P_Y, (z1 + z2) / 2, alongZ ? 1.2 : len, 1.2, alongZ ? len : 1.2, pipeMat);
+    for (let d = 2; d < len; d += 6) {
+      const x = x1 + (x2 - x1) * d / len, z = z1 + (z2 - z1) * d / len;
+      const band = new THREE.Mesh(new THREE.BoxGeometry(alongZ ? 1.32 : 0.3, 1.32, alongZ ? 0.3 : 1.32), bandMat); band.position.set(x, P_Y, z); scene.add(band);
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.3, P_Y - 0.6, 0.9), bandMat); leg.position.set(x, (P_Y - 0.6) / 2, z); if (!alongZ) leg.rotation.y = Math.PI / 2; scene.add(leg);
+    }
+    mapHouses.push([(x1 + x2) / 2, (z1 + z2) / 2, alongZ ? 1.2 : len, alongZ ? len : 1.2, '#7a5cb0']);
+  };
+  run(PX, BLD.z + BLD.d / 2 + 2, PX, I3Z - 6); run(PX, I3Z - 6, I3X + 27, I3Z - 6);
+  // where it comes out of the wall, and a valve wheel to look at
+  addBox(PX, P_Y + 0.5, BLD.z + BLD.d / 2 + 1, 2, 2.2, 2, steel); // the outlet, just clear of the fire escape
+  const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.07, 6, 16), M.coral); wheel.position.set(PX - 0.7, P_Y + 0.2, I3Z - 26); wheel.rotation.y = Math.PI / 2; scene.add(wheel);
+  // the pump house at the dock end
+  const ph = addBox(I3X + 24, 1.5, I3Z - 6, 4, 3, 3.4, toon(0xb35a4a));
+  const roofP = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.3, 4), M.ink); roofP.position.y = 1.65; ph.mesh.add(roofP);
+  const doorP = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.8, 1.0), M.woodDark); doorP.position.set(-2.03, -0.6, 0); ph.mesh.add(doorP);
+  const sg = textBoard('PUMP HOUSE', 3, '#2b2140'); sg.position.set(I3X + 24, 2.4, I3Z - 4.25); scene.add(sg);
+  mapHouses.push([I3X + 24, I3Z - 6, 4, 3.4, '#b35a4a']);
+  coin3(PX, P_Y + 1.6, I3Z - 40); coin3(PX, P_Y + 1.6, I3Z - 20); coin3(I3X + 36, P_Y + 1.6, I3Z - 6); coin3(I3X + 24, 4, I3Z - 6);
+}
+// Piazza Grigia: the founder's statue (a giant fountain pen, nib up) and benches round the edge
+{ addCyl(HUB3.x, HUB3.z, 1.3, 1.0, 1.0, concreteDark, { seg: 8 });
+  const pen = addCyl(HUB3.x, HUB3.z, 0.45, 4.6, 3.6, toon(0x1f2a5a), { seg: 12 });
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.47, 0.47, 0.3, 12), toon(0xffc93c)); band.position.y = 1.2; pen.mesh.add(band);
+  const nib = new THREE.Mesh(new THREE.ConeGeometry(0.45, 1.1, 4), toon(0xffd34d, { emissive: 0x4a3400 })); nib.position.set(HUB3.x, 5.15, HUB3.z); nib.rotation.y = Math.PI / 4; scene.add(nib);
+  const plaque = textBoard('OUR FOUNDER', 2, '#2b2140'); plaque.position.set(HUB3.x, 0.6, HUB3.z + 1.32); scene.add(plaque);
+  [[0, 7], [-7.2, -1.5], [7.2, -1.5]].forEach(([dx, dz]) => {
+    const rot = Math.atan2(-dx, -dz), x = HUB3.x + dx, z = HUB3.z + dz;
+    const seat = addBox(x, 0.45, z, 2.0, 0.12, 0.6, M.wood); seat.mesh.rotation.y = rot;
+    const back = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.5, 0.1), M.wood); back.position.set(0, 0.3, -0.28); seat.mesh.add(back);
+  });
+  coin3(HUB3.x, 6.4, HUB3.z); }
+// traffic cones, warning signs and a manhole or two along the roads
+[[I3X + 7.5, I3Z - 25], [I3X + 12.5, I3Z - 25], [I3X + 13, I3Z - 31], [I3X + 7, I3Z - 31], [BLD.x - 3, BLD.z + BLD.d / 2 + 6], [BLD.x + 3, BLD.z + BLD.d / 2 + 6]].forEach(([x, z]) => {
+  const cone = shadowed(new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.75, 10), toon(0xff6b2b))); cone.position.set(x, 0.37, z); scene.add(cone);
+  const stripe = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.12, 10), M.white); stripe.position.set(x, 0.42, z); scene.add(stripe);
+});
+[['⚠ HOT STEAM', I3X + 15, I3Z - 24], ['⚠ HYPNO-INK', BLD.x - 12, BLD.z + BLD.d / 2 + 3], ['NO CRABS', DX + 6, DZ - 2]].forEach(([txt, x, z]) => {
+  addCyl(x, z, 0.06, 1.9, 1.9, M.ink, { seg: 6 });
+  const s = textBoard(txt, 1.8, '#ffc93c'); s.position.set(x, 1.7, z + 0.05); scene.add(s);
+});
+[[I3X, I3Z - 2], [I3X + 0.5, I3Z - 40], [I3X - 18, I3Z - 22]].forEach(([x, z]) => {
+  const mh = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.04, 18), steelDark); mh.position.set(x, 0.02, z); scene.add(mh);
+  for (let k = -1; k <= 1; k++) { const g = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.02, 0.08), M.ink); g.position.set(x, 0.045, z + k * 0.25); scene.add(g); }
+});
+// oily stains on the asphalt (just stains: they don't hurt)
+[[I3X + 3, I3Z + 2, 1.2], [I3X - 6, I3Z - 36, 0.9], [I3X + 20, I3Z - 40, 1.4], [BYX + 10, BYZ + 6, 1.0]].forEach(([x, z, r]) => {
+  const st = new THREE.Mesh(new THREE.CircleGeometry(r, 14), new THREE.MeshBasicMaterial({ color: 0x3a3448, transparent: true, opacity: 0.5, depthWrite: false })); st.rotation.x = -Math.PI / 2; st.position.set(x, 0.018, z); st.scale.set(1.4, 1, 1); scene.add(st);
+});
+// the Inkworks walls: ink dripping down the front, loading bays on the west side, and a forklift left parked
+for (let k = 0; k < 9; k++) {
+  const x = BLD.x - 40 + k * 10 + (k % 2) * 3, len = 2 + (k % 3) * 1.6;
+  const drip = new THREE.Mesh(new THREE.BoxGeometry(0.35, len, 0.06), inkMat); drip.position.set(x, BLD.h - 0.6 - len / 2, BLD.z + BLD.d / 2 + 0.07); scene.add(drip);
+  const blob = new THREE.Mesh(new THREE.SphereGeometry(0.24, 8, 6), inkMat); blob.position.set(x, BLD.h - 0.6 - len, BLD.z + BLD.d / 2 + 0.1); scene.add(blob);
+}
+[BLD.z - 8, BLD.z + 10].forEach((z, k) => {
+  const wx = BLD.x - BLD.w / 2;
+  const sh = new THREE.Mesh(new THREE.BoxGeometry(0.15, 3.8, 4.2), steelDark); sh.position.set(wx - 0.06, 2.9, z); scene.add(sh);
+  for (let s = 0; s < 6; s++) { const sl = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.06, 4.22), steel); sl.position.set(wx - 0.08, 1.3 + s * 0.6, z); scene.add(sl); }
+  const num = textBoard(`BAY ${k + 1}`, 2, '#ffc93c'); num.position.set(wx - 0.1, 5.3, z); num.rotation.y = -Math.PI / 2; scene.add(num);
+  addBox(wx - 2.5, 0.5, z, 5, 1.0, 5, concreteDark);
+  [-2, 2].forEach(o => { const bumper = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.6, 0.5), M.ink); bumper.position.set(wx - 5.1, 0.6, z + o); scene.add(bumper); });
+  mapHouses.push([wx - 2.5, z, 5, 5, '#9d95ad']);
+});
+{ const fx = BLD.x - BLD.w / 2 - 9, fz = BLD.z + 1;
+  const fl = addBox(fx, 0.7, fz, 1.6, 1.0, 2.4, hazardMat);
+  const cabF = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.4, 1.2), toon(0xffc93c)); cabF.position.set(0, 1.0, -0.4); fl.mesh.add(cabF);
+  const roofF = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.1, 1.4), M.ink); roofF.position.set(0, 1.8, -0.4); fl.mesh.add(roofF);
+  [[-0.5, 1.5], [0.5, 1.5]].forEach(([o, z]) => { const fork = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.08, 1.4), steelDark); fork.position.set(o, -0.4, z); fl.mesh.add(fork); });
+  [-0.85, 0.85].forEach(o => [-0.8, 0.7].forEach(z => { const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.25, 12), M.ink); wh.rotation.z = Math.PI / 2; wh.position.set(o, -0.3, z); fl.mesh.add(wh); }));
+  const pal = addBox(fx, 0.15, fz + 3.4, 1.4, 0.3, 1.4, M.wood); const box = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.0, 1.2), toon(0xc08a5a)); box.position.y = 0.65; pal.mesh.add(box); pal.top = 1.3;
+  coin3(fx, 3.2, fz - 0.4); }
+// clutter on the roof: air-con units with spinning fans and a radio antenna
+const acFans = [[BLD.x - 15, BLD.z - 20], [BLD.x + 5, BLD.z - 21], [BLD.x - 30, BLD.z + 17], [BLD.x - 4, BLD.z + 18]].map(([x, z]) => {
+  addBox(x, BLD.h + 0.8, z, 3, 1.6, 2, toon(0xc9c2d6));
+  const fan = new THREE.Group(); fan.position.set(x, BLD.h + 1.65, z); scene.add(fan);
+  [0, Math.PI / 2].forEach(r => { const bl = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.04, 0.2), M.ink); bl.rotation.y = r; fan.add(bl); });
+  return fan;
+});
+{ const ax = BLD.x + 12, az = BLD.z + 19;
+  addCyl(ax, az, 0.12, BLD.h + 7, 7, steelDark, { seg: 8 });
+  [2, 4, 6].forEach((h, k) => { const bar = new THREE.Mesh(new THREE.BoxGeometry(2.2 - k * 0.5, 0.06, 0.06), steelDark); bar.position.set(ax, BLD.h + h, az); scene.add(bar); });
+  const blink = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6), toon(0xff3b4f, { emissive: 0xff2040 })); blink.position.set(ax, BLD.h + 7.2, az); scene.add(blink); blink.userData.blink = true; acFans.push(blink); }
+// the junkyard behind the factory: heaps of broken machinery to scramble over
+{ const JX = I3X, JZ = BLD.z - BLD.d / 2 - 9;
+  [[-14, 0, 3, 2.2, 3], [-11, -2, 2, 3.8, 2], [-6, 1, 3.5, 1.4, 2.5], [-2, -1, 2.4, 3, 2.4], [3, 0.5, 3, 4.8, 2.2], [7, -1.5, 2.6, 2.4, 3], [11, 0.5, 2, 6.2, 2], [15, -0.5, 3, 3.4, 2.4]].forEach(([dx, dz, w, h, d], i) => {
+    const b = addBox(JX + dx, h / 2, JZ + dz, w, h, d, toon([0x8f9bb0, 0xc0643a, 0x5f6a80, 0x9d95ad][i % 4])); b.mesh.rotation.y = (i % 3 - 1) * 0.08;
+    if (i % 2) { const g = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.15, 6, 12), steel); g.position.set(0, h / 2 + 0.1, 0); g.rotation.x = Math.PI / 2; b.mesh.add(g); }
+  });
+  const gearBig = new THREE.Mesh(new THREE.TorusGeometry(1.4, 0.35, 6, 10), rust); gearBig.position.set(JX + 11, 7.6, JZ + 0.5); gearBig.rotation.set(1.2, 0.3, 0); scene.add(gearBig);
+  coin3(JX + 3, 6, JZ + 0.5); coin3(JX + 11, 7.4, JZ + 0.5); coin3(JX - 11, 5, JZ - 2);
+  mapHouses.push([JX, JZ, 34, 4, '#8f9bb0']);
+  island3Regions.push({ name: 'Junkyard', test: (x, y, z) => Math.abs(x - JX) < 19 && Math.abs(z - JZ) < 6 }); }
+// Stub Grove (south-west): a little forest of giant pencil stubs, worn down to different heights. Hop from top to top
+const SGX = I3X - 50, SGZ = I3Z - 2;
+[[0, 0, 1.4], [3, 2.5, 2.4], [5.5, -0.5, 3.4], [3, -3.5, 4.4], [-0.5, -5.5, 5.4], [-4, -3, 6.4], [-5.5, 1, 1.8], [-3, 4.5, 2.8], [1.5, 6, 1.2]].forEach(([dx, dz, h], i) => {
+  const c = [0xffc93c, 0xff8fb1, 0x1fb5c9, 0x7ed957, 0x8a5cf6][i % 5], x = SGX + dx, z = SGZ + dz;
+  const s = addCyl(x, z, 1.0, h, h, toon(c), { seg: 6 });
+  const top = new THREE.Mesh(new THREE.CylinderGeometry(0.96, 0.96, 0.04, 6), toon(0xf0c890)); top.position.y = h / 2 + 0.01; s.mesh.add(top);
+  const lead = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.05, 10), M.ink); lead.position.y = h / 2 + 0.03; s.mesh.add(lead);
+  if (h > 2) coin3(x, h + 1, z);
+  mapDiscsExtra.push([x, z, 1, '#' + c.toString(16).padStart(6, '0')]);
+});
+const tallestStub = { name: 'Tallest Stub', area: 'Stub Grove', pos: [SGX - 4, 7.8, SGZ - 3] }; // (its shell is added at the very end, so older saves line up)
+island3Regions.push({ name: 'Stub Grove', test: (x, y, z) => Math.hypot(x - SGX, z - SGZ) < 9 });
+// the harbourmaster's hut (south-east), with lobster pots stacked outside
+{ const HHX = I3X + 40, HHZ = I3Z + 8;
+  const hut = addBox(HHX, 1.4, HHZ, 4, 2.8, 3.4, toon(0x1f6f8b));
+  const roofH = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.3, 4), M.coral); roofH.position.y = 1.55; hut.mesh.add(roofH);
+  const winH = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.8, 0.05), toon(0xfff1a8, { emissive: 0x6a5a20 })); winH.position.set(0, 0.2, 1.73); hut.mesh.add(winH);
+  const sgH = textBoard('HARBOURMASTER', 3.4, '#2b2140'); sgH.position.set(HHX, 3.3, HHZ + 1.75); scene.add(sgH);
+  // a weathervane on the roof
+  const vane = new THREE.Group(); vane.position.set(HHX, 3.4, HHZ); scene.add(vane);
+  const vp = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.2, 5), M.ink); vp.position.y = 0.6; vane.add(vp);
+  const arrow = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.6, 4), M.ink); arrow.rotation.z = -Math.PI / 2; arrow.position.set(0.3, 1.1, 0); vane.add(arrow);
+  acFans.push(vane); vane.userData.vane = true;
+  [[2.6, -1, 0], [2.6, 0.2, 0], [2.6, -0.4, 0.9]].forEach(([dx, dz, y]) => { const pot = addBox(HHX + dx, y + 0.45, HHZ + dz, 1, 0.9, 1, toon(0x8a6a4a)); const net = new THREE.Mesh(new THREE.BoxGeometry(1.02, 0.92, 1.02), new THREE.MeshBasicMaterial({ color: 0x2b2140, wireframe: true })); pot.mesh.add(net); });
+  mapHouses.push([HHX, HHZ, 4, 3.4, '#1f6f8b']);
+  coin3(HHX, 4, HHZ); }
+// a haze of purple smog drifting high over the factory
+const smog3 = [...Array(9).keys()].map(i => {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(9 + (i % 3) * 4, 12, 8), new THREE.MeshBasicMaterial({ color: 0xa07aff, transparent: true, opacity: 0.12, depthWrite: false }));
+  m.scale.y = 0.35; m.userData = { a: i / 9 * Math.PI * 2, r: 18 + (i % 4) * 9, y: 38 + (i % 3) * 6 }; scene.add(m); return m;
+});
 island3Regions.push({ name: 'Isola Inchiostro', test: (x, y, z) => Math.hypot(x - I3X, z - CZ3) < R3 + 6 });
 // hypnotized office supplies: Eraser Grunts (stomp), Thumbtacks (spiky, don't stomp) and flying Paperclip Drones (stomp)
 roomEnemyDefs.push(
@@ -2986,7 +3151,7 @@ const say = l => l; // lines may be strings or functions evaluated when spoken
 let brunoDone = false, maxHearts = 3;
 const CANNOLO_PRICE = 40;
 // every heart upgrade adds one on top of the base three, whichever order they come in
-function heartUpgrades() { return 3 + (brunoDone ? 1 : 0) + (sq.fishDone ? 1 : 0) + ((sq.shop || {})['bottega:vigor'] ? 1 : 0); }
+function heartUpgrades() { return 3 + (brunoDone ? 1 : 0) + (sq.fishDone ? 1 : 0) + ((sq.shop || {})['bottega:vigor'] ? 1 : 0) + (sq.teaStage === 2 ? 1 : 0); }
 npcs.push(
   {
     name: 'Nonna Pomodoro', role: "Guiseppe's nonna · tomato", icon: '🍅', color: '#ffd0c8', group: nonna,
@@ -3250,7 +3415,7 @@ function updateChicks(dt, p) {
       ch.mesh.position.y = ch.home.y + Math.abs(Math.sin(t * 5 + i)) * 0.25;
       ch.mesh.rotation.y += dt * 1.5;
       if (ch.mesh.position.distanceTo(c) < 1.3) {
-        ch.found = true; ch.mesh.visible = false;
+        ch.found = true; saveSoon(); ch.mesh.visible = false;
         burst(ch.mesh.position.clone().add(new THREE.Vector3(0, 0.5, 0)), 0xffffff, 12, 3, 2);
         [880, 1175].forEach((f, k) => setTimeout(() => blip(f, f * 1.1, 0.1, 'triangle', 0.08), k * 90));
         toast(chicksFound() >= 5 ? 'All 5 chicks! Back to Mamma Pinguina!' : `Found a lost chick! (${chicksFound()}/5)`); showPop(`🐣 ${chicksFound()} / 5`);
@@ -3607,160 +3772,8 @@ const isle3Npcs = [];
     ],
   });
 }
-// ---------- Lampo Lumaca: the fastest snail in the sea. He waits at a starting line on every island and races you to a finish flag ----------
-function makeLampo() {
-  const [g, b] = npcShell();
-  const skin = toon(0xb6e35a), shellM = toon(0xff8f2b);
-  const foot = shadowed(new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 1.1, 6, 12), skin)); foot.rotation.x = Math.PI / 2; foot.scale.y = 1; foot.position.set(0, 0.3, 0.1); b.add(foot);
-  const neck = shadowed(new THREE.Mesh(new THREE.CapsuleGeometry(0.24, 0.5, 6, 12), skin)); neck.position.set(0, 0.8, 0.62); neck.rotation.x = 0.25; b.add(neck);
-  const shell = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.62, 18, 14), shellM)); shell.position.set(0, 0.95, -0.25); shell.scale.set(0.75, 1, 1); b.add(shell);
-  const swirl = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.06, 6, 20), toon(0xffc93c)); swirl.rotation.y = Math.PI / 2; swirl.position.set(0.47, 0.95, -0.25); b.add(swirl);
-  const swirl2 = swirl.clone(); swirl2.position.x = -0.47; b.add(swirl2);
-  // a lightning bolt painted on his shell, and a little exhaust pipe for show
-  const bolt = new THREE.Shape(); bolt.moveTo(0, 0.3); bolt.lineTo(-0.12, 0); bolt.lineTo(0.02, 0.02); bolt.lineTo(-0.06, -0.3); bolt.lineTo(0.14, 0.06); bolt.lineTo(0, 0.04); bolt.closePath();
-  [-1, 1].forEach(sd => { const bm = new THREE.Mesh(new THREE.ShapeGeometry(bolt), toon(0xfff27a, { emissive: 0x6b5a00, side: THREE.DoubleSide })); bm.position.set(sd * 0.5, 0.95, -0.25); bm.rotation.y = sd * Math.PI / 2; b.add(bm); });
-  const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.4, 8), M.ink); pipe.rotation.x = Math.PI / 2; pipe.position.set(0.2, 0.6, -0.9); b.add(pipe);
-  const face = new THREE.Group(); face.position.set(0, 1.08, 0.82); b.add(face);
-  smileOn(face, -0.08, 0.04, 0.08);
-  // eye stalks with racing goggles on them
-  [-1, 1].forEach(sd => {
-    const st = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.38, 6), skin); st.position.set(sd * 0.12, 1.35, 0.7); st.rotation.z = -sd * 0.25; b.add(st);
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), M.white); eye.position.set(sd * 0.17, 1.55, 0.72); b.add(eye);
-    const pu = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), M.ink); pu.position.set(0, 0, 0.07); eye.add(pu);
-    const gog = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.025, 6, 14), toon(0xff3b4f)); gog.position.set(0, 0, 0.05); eye.add(gog);
-  });
-  // a red scarf that streams behind him
-  const scarf = new THREE.Mesh(new THREE.TorusGeometry(0.25, 0.06, 6, 14), toon(0xff3b4f)); scarf.rotation.x = Math.PI / 2 + 0.25; scarf.position.set(0, 0.9, 0.6); b.add(scarf);
-  const tail = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.03, 0.6), toon(0xff3b4f)); tail.position.set(0.12, 0.9, 0.2); b.add(tail);
-  g.userData.tail = tail;
-  return g;
-}
-// a checkered finish arch for each race (only shown while you're racing)
-function finishArch(x, z, rot) {
-  const y = groundBelow(x, z, 99), g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = rot; scene.add(g);
-  [-2, 2].forEach(sd => { const p = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 3.2, 8), M.white)); p.position.set(sd, 1.6, 0); g.add(p); });
-  const cv = document.createElement('canvas'); cv.width = 128; cv.height = 32; const c = cv.getContext('2d');
-  for (let i = 0; i < 16; i++) for (let j = 0; j < 4; j++) { c.fillStyle = (i + j) % 2 ? '#2b2140' : '#ffffff'; c.fillRect(i * 8, j * 8, 8, 8); }
-  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
-  const banner = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 0.9), new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide })); banner.position.y = 3.0; g.add(banner);
-  const line = new THREE.Mesh(new THREE.PlaneGeometry(4, 0.5), new THREE.MeshBasicMaterial({ map: tex })); line.rotation.x = -Math.PI / 2; line.position.y = 0.03; g.add(line);
-  g.visible = false; return g;
-}
-const RACE_PRIZE = { 1: 40, 2: 60, 3: 80 };
-const lampos = [];
-const races = [
-  // Driftwood Cove: from the pier up the east side of the cove, over the north bridge, then a lap of Borgo Biscotto round the bakery to the fountain
-  { island: 1, name: 'Bridge Dash', speed: 8.2, start: [4, 31], path: [[15, 25], [24, 12], [24, -4], [16, -20], [6, -30], [0, -34], [0, -46], [0, -55],
-    [-4.5, -60], [-4.5, -72], [-3.5, -80], [4, -80], [5, -68], [4.5, -62]] },
-  // Isola Gelato: from Gelato Village, up to the plaza, across the skating rink (slippery!), past the Snow Fortress gate and on to the foot of Sundae Peak
-  { island: 2, name: 'Rink Rush', speed: 9.0, start: [IX + 2, IZ - 3], path: [[HUBX + 3, HUBZ - 2], [KX - 2, KZ + 13], [KX, KZ + 4], [KX + 1, KZ - 6], [KX, KZ - 12], [FX - 6, FZ + 16], [FX - 7, FZ + 8], [VX + 28, VZ + 8]] },
-  // Isola Inchiostro: from the dock, through the piazza, round the loading lot, along the front of the Inkworks, through the Barrel Yard and out to the Survivor Camp
-  { island: 3, name: 'Ink Sprint', speed: 9.6, start: [DX + 1.5, DZ - 4], path: [[HUB3.x + 1.5, HUB3.z + 9], [HUB3.x + 10, HUB3.z + 8], [LTX - 6, LTZ + 6], [LTX - 8, LTZ - 8],
-    [BLD.x + 18, BLD.z + BLD.d / 2 + 9], [BLD.x - 8, BLD.z + BLD.d / 2 + 9], [BYX + 8, BYZ - 6], [BYX + 6, BYZ + 1], [BYX + 3, BYZ + 6.5], [BYX - 6, BYZ + 7], [BYX - 9.5, BYZ + 1], [CMX + 10, CMZ + 2.5]] },
-].map((r, ri) => {
-  const pts = [r.start, ...r.path].map(([x, z]) => new THREE.Vector3(x, 0, z)), last = pts[pts.length - 1], prev = pts[pts.length - 2];
-  const arch = finishArch(last.x, last.z, Math.atan2(last.x - prev.x, last.z - prev.z));
-  // rings along Lampo's route: one at every turn, plus extra ones on the long straights, and the last one under the finish arch.
-  // You have to go through them in order, so you race the same course he does
-  const ringSpots = [];
-  for (let i = 1; i < pts.length; i++) {
-    const a = pts[i - 1], b = pts[i], n = Math.max(1, Math.ceil(a.distanceTo(b) / 13));
-    for (let k = 1; k <= n; k++) ringSpots.push(new THREE.Vector3(a.x + (b.x - a.x) * k / n, 0, a.z + (b.z - a.z) * k / n));
-  }
-  const raceRings = ringSpots.map((sp, i) => {
-    sp.y = groundBelow(sp.x, sp.z, 3) + 1.5; // (only look a little way up, so a lamp post or roof never lifts a ring into the air)
-    const m = new THREE.Mesh(new THREE.TorusGeometry(1.7, 0.13, 8, 30), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35 }));
-    m.position.copy(sp); const nx = ringSpots[i + 1] || sp.clone().add(sp.clone().sub(ringSpots[i - 1] || pts[0]));
-    m.lookAt(nx.x, sp.y, nx.z); m.visible = false; scene.add(m); return m;
-  });
-  const race = {
-    ...r, pts, arch, unit: '⭕', goal: raceRings.length, time: 120, mapIcon: '🐌', countdown: true,
-    get won() { return !!(sq.races || {})[r.island]; },
-    set won(v) { (sq.races = sq.races || {})[r.island] = v; },
-    start() {
-      // line up next to Lampo; the race starts after a 3-2-1
-      this.cd = 3.2; this.seg = 0; this.lp = pts[0].clone(); this.lp.y = groundBelow(this.lp.x, this.lp.z, 99); this.lastBeep = 4;
-      state.pos.set(pts[0].x + 1.4, groundBelow(pts[0].x + 1.4, pts[0].z, 99), pts[0].z); state.vel.set(0, 0, 0);
-      state.facing = Math.atan2(pts[1].x - pts[0].x, pts[1].z - pts[0].z); cam.yaw = state.facing + Math.PI;
-      this.ri = 0; raceRings.forEach(m => { m.visible = true; m.material.color.set(0xffffff); m.material.opacity = 0.35; }); this.highlight();
-      arch.visible = true; toast(`🐌 ${r.name}! Follow the rings and beat Lampo to the finish flag. Hold Shift to sprint!`);
-    },
-    highlight() {
-      // the next ring glows gold, the one after it is a fainter hint of where to head
-      raceRings.forEach((m, i) => { if (i === this.ri) { m.material.color.set(0xffc93c); m.material.opacity = 0.95; } else if (i === this.ri + 1) { m.material.color.set(0xffe9a8); m.material.opacity = 0.5; } });
-    },
-    update(dt) {
-      const n = this.lampo;
-      if (this.cd > 0) {
-        this.cd -= dt; this.left += dt; // the clock waits for GO
-        state.pos.x = pts[0].x + 1.4; state.pos.z = pts[0].z; state.vel.x = state.vel.z = 0;
-        const k = Math.ceil(this.cd);
-        if (k !== this.lastBeep && k <= 3) { this.lastBeep = k; if (k > 0) { toast(`${k}...`); blip(440, 440, 0.15, 'square', 0.08); } }
-        if (this.cd <= 0) { toast('GO!'); blip(880, 880, 0.3, 'square', 0.1); }
-        return 0;
-      }
-      // Lampo zooms along his route, hopping up and down whatever's underfoot
-      let step = this.speed * dt;
-      while (step > 0 && this.seg < pts.length - 1) {
-        const to = pts[this.seg + 1], dx = to.x - this.lp.x, dz = to.z - this.lp.z, d = Math.hypot(dx, dz);
-        if (d <= step) { this.lp.x = to.x; this.lp.z = to.z; this.seg++; step -= d; }
-        else { this.lp.x += dx / d * step; this.lp.z += dz / d * step; step = 0; }
-      }
-      const gy = groundBelow(this.lp.x, this.lp.z, this.lp.y + 1.3);
-      this.lp.y = gy > this.lp.y ? gy : Math.max(gy, this.lp.y - dt * 14);
-      const nxt = pts[Math.min(this.seg + 1, pts.length - 1)];
-      moveNpc(n, this.lp.x, this.lp.y, this.lp.z);
-      n.group.rotation.y = Math.atan2(nxt.x - this.lp.x, nxt.z - this.lp.z);
-      n.group.children[0].position.y = Math.abs(Math.sin(t * 18)) * 0.15;
-      n.group.userData.tail.rotation.y = Math.sin(t * 20) * 0.3;
-      if (Math.random() < 0.5) burst(this.lp.clone().add(new THREE.Vector3(0, 0.4, 0)), 0xfff6e3, 1, 1, 0.5);
-      // through the next ring (in order; skipping one means it never counts)
-      const ring = raceRings[this.ri];
-      if (ring) {
-        ring.scale.setScalar(1 + Math.sin(t * 7) * 0.06);
-        if (!state.dead && ring.position.distanceTo(playerCenter()) < 2.3) {
-          ring.visible = false; burst(ring.position.clone(), 0xffc93c, 14, 3, 2);
-          blip(523 * Math.pow(1.04, this.ri * 2), 1046 * Math.pow(1.04, this.ri * 2), 0.1, "triangle", 0.08);
-          this.ri++; this.highlight();
-          if (this.ri >= raceRings.length) return this.ri;
-        }
-      }
-      if (this.seg >= pts.length - 1) return -1;
-      return this.ri;
-    },
-    failMsg: '🐌 Lampo got there first! Talk to him to try again',
-    end() { arch.visible = false; raceRings.forEach(m => { m.visible = false; m.scale.setScalar(1); }); const n = this.lampo; moveNpc(n, n.home.x, n.home.y, n.home.z); n.group.rotation.y = n.homeRot; n.group.children[0].position.y = 0; },
-    reward() {
-      coinCount += RACE_PRIZE[r.island]; updateCoins(); toast(`🏁 You beat Lampo! +${RACE_PRIZE[r.island]} coins`);
-      [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => blip(f, f, 0.15, 'triangle', 0.1), i * 100));
-      if ([1, 2, 3].every(k => sq.races[k])) setTimeout(() => unlockCostume('racer'), 1800);
-    },
-  };
-  // Lampo himself, waiting just beside the starting line
-  const p0 = pts[0], hy = groundBelow(p0.x - 1.4, p0.z, 99), homeRot = Math.atan2(pts[1].x - p0.x, pts[1].z - p0.z);
-  const n = {
-    name: 'Lampo Lumaca', role: 'the fastest snail in the sea', icon: '🐌', color: '#e8f8c8', group: makeLampo(),
-    pos: new THREE.Vector3(p0.x - 1.4, hy, p0.z), voice: 620, wave: 'square', talked: false, ri: 0, top: 1.7, promptY: 2.4, bobY: 1, homeRot,
-    first: [
-      "Vroom vroom! Lampo Lumaca, the fastest snail in the sea. Yes, a snail. Yes, fast. I've heard all the jokes.",
-      "I travel by ship, like you. I race on every island. Three islands, three races, and nobody has ever beaten me on all of them.",
-      "Beat me to the finish flag and I'll pay you. Beat me everywhere and I'll give you my spare racing helmet!",
-    ],
-    onFirst: () => { lampos.forEach(o => { o.talked = true; }); },
-    repeat: [
-      say(() => race.won ? `You beat me at the ${r.name}! I demand a rematch. Just talk to me any time.` : `The ${r.name}. Shall we? Just say the word.`),
-      "My secret? Clean shell, light breakfast, and never, ever look behind me.",
-      say(() => `Races won against me: ${[1, 2, 3].filter(k => (sq.races || {})[k]).length} of 3.`),
-    ],
-    quests: [{ ready: () => n.talked && !activeGame, lines: [say(() => race.won ? `Rematch at the ${r.name}? This time I've polished my shell. Ready... set...` : `The ${r.name}, to that checkered flag! Ready... set...`)],
-      done: () => startGame(race) }],
-  };
-  race.lampo = n; lampos.push(n); isle3Npcs.push(n);
-  return race;
-});
 npcs.push(...isle3Npcs);
 isle3Npcs.forEach(initNpc);
-lampos.forEach(n => { n.group.rotation.y = n.homeRot; });
 // Rina's errand: five golden gears to mend the dock crane
 const gearItems = gearSpots.map(pos => {
   const g = new THREE.Group(), mat = toon(0xffc93c, { emissive: 0x6b4a00 });
@@ -3779,6 +3792,113 @@ const gearItems = gearSpots.map(pos => {
 
 // ---------- Isola Gelato side quests ----------
 const npcNamed = name => npcs.find(n => n.name === name);
+// ---------- Isola Inchiostro side quests ----------
+// Quest 1, Lost campers: four crayon kids ran off and hid when the hum started. Find them and they run home to Nonna Colla's camp
+const CRAYON_COLS = [0xff3b4f, 0x1fb5c9, 0x7ed957, 0xffc93c];
+function makeCrayonKid(c) {
+  const g = new THREE.Group();
+  const bodyC = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.8, 8), toon(c))); bodyC.position.y = 0.4; g.add(bodyC);
+  const wrap = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.21, 0.35, 8, 1, true), toon(0xfff6e3)); wrap.position.y = 0.38; g.add(wrap);
+  const tipC = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.3, 8), toon(c)); tipC.position.y = 0.95; g.add(tipC);
+  const face = new THREE.Group(); face.position.set(0, 0.62, 0.18); g.add(face); addEyes(face, 0, 0, 0.08, 0.06); smileOn(face, -0.09, 0.01, 0.05);
+  scene.add(g); return g;
+}
+const camperSpots = [
+  { where: 'up on the barrel pile in the Barrel Yard', pos: new THREE.Vector3(BYX, 5.4, BYZ + 0.8) },
+  { where: 'out on the arm of the dock crane', pos: new THREE.Vector3(CRX + 4, 17.0, CRZ) },
+  { where: 'behind the sofa in the Inkworks Break Room', pos: new THREE.Vector3(BRX - 5, 0, BRZ + 5.8) },
+  { where: 'on the rim of the giant magnifying glass in Quality Control', pos: new THREE.Vector3(QCX + 6, 3.8, QCZ - 2) },
+];
+const campers = camperSpots.map((s, i) => {
+  // each kid has a hiding spot, and a seat by the campfire once they're found
+  const hide = makeCrayonKid(CRAYON_COLS[i]); hide.position.copy(s.pos);
+  const a = 0.6 + i * 1.2, home = makeCrayonKid(CRAYON_COLS[i]); home.position.set(CMX + Math.cos(a) * 2.6, 0, CMZ + Math.sin(a) * 2.6); home.rotation.y = Math.atan2(-Math.cos(a), -Math.sin(a));
+  return { ...s, hide, home, ph: i };
+});
+const campersFound = () => campers.filter((c, i) => sq.campers.includes(i)).length;
+{
+  const nonna = npcNamed('Nonna Colla');
+  nonna.quests = [
+    { ready: () => nonna.talked && !sq.campDone && campersFound() >= 4,
+      lines: ["All four of my little crayons, home safe! Look at them, warming their tips by the fire.", "I don't have much, but take this. I found it in the sand the day we set up camp. It's been waiting for someone brave."],
+      done: () => { sq.campDone = true; coinCount += 30; updateCoins(); collectShell(campShell); } },
+  ];
+  nonna.repeat.unshift(say(() => sq.campDone ? "The kids won't stop drawing you. You're mostly mustache, in the pictures." :
+    `My four crayon grandkids ran off and hid when the hum started. ${campersFound() ? `${campersFound()} are home. ` : ''}Still missing: ${campers.filter((c, i) => !sq.campers.includes(i)).map(c => c.where).join('; ')}.`));
+}
+// Quest 2, Runaway paper planes: Aeroplanino's flock blew away in the factory draughts and got stuck in high places
+const planeSpots = [
+  { where: 'the Inkworks roof', pos: new THREE.Vector3(BLD.x - 28, BLD.h + 0.6, BLD.z + 12) },
+  { where: 'the Ink Bottle walkway', pos: new THREE.Vector3(IBX, IB_Y + 0.6, IBZ + 4) },
+  { where: 'the Packing Hall balcony', pos: new THREE.Vector3(PHX + 21, 12.6, PHZ + 3) },
+  { where: 'the top of the container stack at the dock', pos: new THREE.Vector3(DX + 18, 8.4, DZ) },
+  { where: 'the far end of the Rafters', pos: new THREE.Vector3(FAC.ox + 70, RFY + 0.6, RFZ + 1) },
+];
+const strayPlanes = planeSpots.map(s => {
+  const g = new THREE.Group(), paper = toon(0xfffaf0, { side: THREE.DoubleSide });
+  [-1, 1].forEach(sd => { const w = new THREE.Shape(); w.moveTo(0, 0.5); w.lineTo(sd * 0.45, -0.35); w.lineTo(0, -0.25); w.closePath(); const m = new THREE.Mesh(new THREE.ShapeGeometry(w), paper); m.rotation.x = Math.PI / 2; g.add(m); });
+  const halo = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.04, 6, 18), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 })); halo.rotation.x = Math.PI / 2; g.add(halo);
+  g.position.copy(s.pos); scene.add(g); return { ...s, g };
+});
+{
+  const aero = npcNamed('Aeroplanino');
+  aero.quests.unshift(
+    { ready: () => aero.talked && sq.planeStage === 0,
+      lines: ["Ah, before you go! A terrible draught came through the Inkworks and my five little cousins blew right out of my hands.", "They're paper planes, so they land somewhere high and silly. Bring them home and I'll paint you a sail nobody can buy!"],
+      done: () => { sq.planeStage = 1; toast('📄 Find Aeroplanino\'s 5 runaway paper planes!'); } },
+    { ready: () => sq.planeStage === 1 && sq.planesGot.length >= planeSpots.length,
+      lines: ["My cousins! All five! Crumpled, but home.", "As promised: the Paper Airplane sail, painted just for you. Ruled lines, a proper fold, and absolutely not for sale."],
+      done: () => { sq.planeStage = 2; if (!sq.skins.includes('paper')) sq.skins.push('paper'); sq.gliderSkin = 'paper'; applyGliderSkin(); coinCount += 40; updateCoins(); toast('📄 New glide skin: Paper Airplane! +40 coins'); [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => blip(f, f, 0.14, 'triangle', 0.1), i * 90)); } },
+  );
+}
+// Quest 3, The tea round: Zio Bullone's thermos goes to everyone who's been working too hard
+const TEA_STOPS = ['Rina Righello', 'Nonna Colla', 'Graffetta'];
+{
+  const zio = npcNamed('Zio Bullone');
+  zio.quests = [
+    { ready: () => zio.talked && sq.teaStage === 0 && visitedI3,
+      lines: ["Tea break! Except nobody's taking one. Take this thermos round, would you?", "One cup for Rina at the dock, one for Nonna Colla at the camp, and one for poor Graffetta on the Conveyor Hall floor. Hypnotized or not, everyone needs tea."],
+      done: () => { sq.teaStage = 1; toast('☕ Deliver tea to Rina, Nonna Colla and Graffetta!'); } },
+    { ready: () => sq.teaStage === 1 && sq.teaDelivered.length >= TEA_STOPS.length,
+      lines: ["All three cups delivered? Then you've earned the last one. My special. Iron Tea.", "*clank* There. Stronger than a new washer. You'll feel it in your hearts."],
+      done: () => { sq.teaStage = 2; maxHearts = heartUpgrades(); hearts = maxHearts; updateHearts(true); toast(`☕ Bullone's Iron Tea! Max hearts: ${maxHearts}`); [523, 784, 1047].forEach((f, i) => setTimeout(() => blip(f, f, 0.15, 'triangle', 0.1), i * 110)); } },
+  ];
+  const teaLines = {
+    'Rina Righello': ["Tea? On shift? ...Oh, go on then. Measure twice, sip once.", "Ahh. Tell Zio his tea is still the strongest on the island."],
+    'Nonna Colla': ["Zio's tea! He always remembers I take it with honey.", "Mmm. That's stuck me back together nicely."],
+    'Graffetta': ["Obey the... Snort... obey the... *sniff* ...is that chamomile?", "*slurp* ...For a moment there, I remembered my name. Graffetta! It's Graffetta! ...Obey the Snort."],
+  };
+  TEA_STOPS.forEach(name => {
+    const n = npcNamed(name); n.quests = n.quests || [];
+    n.quests.unshift({ ready: () => sq.teaStage === 1 && !sq.teaDelivered.includes(name), lines: teaLines[name],
+      done: () => { sq.teaDelivered.push(name); toast(`☕ Tea delivered! (${sq.teaDelivered.length}/3)`); blip(660, 880, 0.12, 'sine', 0.08); } });
+  });
+}
+// the quest pieces sitting about the island: show the ones still to find, and pick them up when you touch them
+function updateSideQuests3(dt, p) {
+  const c = new THREE.Vector3(p.x, p.y + 0.6, p.z);
+  campers.forEach((k, i) => {
+    const found = sq.campers.includes(i);
+    k.hide.visible = visitedI3 && !found; k.home.visible = found;
+    if (k.hide.visible) {
+      k.hide.position.y = k.pos.y + Math.abs(Math.sin(t * 3 + k.ph)) * 0.12; k.hide.rotation.y = Math.sin(t * 0.8 + k.ph) * 1.2;
+      if (!state.dead && k.hide.position.distanceTo(c) < 1.3) {
+        sq.campers.push(i); saveSoon(); burst(k.pos.clone().add(new THREE.Vector3(0, 0.8, 0)), CRAYON_COLS[i], 18, 3, 3);
+        [660, 880].forEach((f, j) => setTimeout(() => blip(f, f, 0.1, 'triangle', 0.08), j * 90));
+        const n = campersFound(); toast(n >= 4 ? 'Found all 4 crayon kids! They\'ve run home to Nonna Colla.' : `Found a crayon kid! They ran home to camp. (${n}/4)`); showPop(`🖍️ ${n} / 4`); autosave();
+      }
+    } else if (found) k.home.position.y = Math.abs(Math.sin(t * 2 + k.ph)) * 0.06;
+  });
+  strayPlanes.forEach((pl, i) => {
+    pl.g.visible = sq.planeStage === 1 && !sq.planesGot.includes(i);
+    if (!pl.g.visible) return;
+    pl.g.rotation.y += dt * 1.2; pl.g.position.y = pl.pos.y + Math.sin(t * 2.4 + i) * 0.15;
+    if (!state.dead && pl.g.position.distanceTo(c) < 1.4) {
+      sq.planesGot.push(i); burst(pl.pos.clone(), 0xffffff, 16, 3, 2); blip(880, 1320, 0.12, 'triangle', 0.08);
+      const n = sq.planesGot.length; toast(n >= planeSpots.length ? 'All 5 paper planes! Take them back to Aeroplanino.' : `Paper plane! (${n}/5)`); showPop(`📄 ${n} / 5`); autosave();
+    }
+  });
+}
 const sideQuestShell = (name, area, pos) => {
   const sh = { name, area, island: 2, pos: pos ? [pos.x, pos.y, pos.z] : null, mesh: null, taken: false };
   if (pos) { sh.mesh = makeShell(shells.length); sh.mesh.position.copy(pos); }
@@ -3810,7 +3930,7 @@ function updateQuestItems(p) {
   const c = new THREE.Vector3(p.x, p.y + 0.6, p.z);
   for (const q of questItems) {
     if (q.found || q.mesh.position.distanceTo(c) > 1.3) continue;
-    q.found = true; q.mesh.visible = false; burst(q.pos.clone(), q.kind === 'fish' ? 0xffc93c : 0x9fe8ff, 18, 4, 3);
+    q.found = true; saveSoon(); q.mesh.visible = false; burst(q.pos.clone(), q.kind === 'fish' ? 0xffc93c : 0x9fe8ff, 18, 4, 3);
     [784, 1047, 1319].forEach((f, i) => setTimeout(() => blip(f, f, 0.12, 'triangle', 0.08), i * 80));
     if (q.kind === 'fish') { sq.fish = true; toast('A Golden Fish! Nonno Ghiacciolo would love this.'); }
     else { sq.chunks++; toast(sq.chunks >= 4 ? 'All 4 crystal ice chunks! Take them to Granita.' : `Crystal ice! (${sq.chunks}/4)`); showPop(`🧊 ${sq.chunks} / 4`); }
@@ -3888,7 +4008,7 @@ function resetSideQuests() {
 }
 
 // ---------- costumes, Casa Guiseppe (with the closet), fishing and errands between the islands ----------
-function extrasDefault() { return { costumes: ['none'], wearing: 'none', catches: 0, fishLog: {}, sinceLegend: 0, gelatoStage: 0, postcardStage: 0, chests: [], returnHint: false, hour: 9, glider: false, glides: {}, throwTip: false, shop: {}, lure: 0, gearsGot: [], craneFixed: false, skins: ["classic"], gliderSkin: "classic", sailTarget: 0, races: {} }; }
+function extrasDefault() { return { costumes: ['none'], wearing: 'none', catches: 0, fishLog: {}, sinceLegend: 0, gelatoStage: 0, postcardStage: 0, chests: [], returnHint: false, hour: 9, glider: false, glides: {}, throwTip: false, shop: {}, lure: 0, gearsGot: [], craneFixed: false, skins: ["classic"], gliderSkin: "classic", sailTarget: 0, campers: [], campDone: false, planeStage: 0, planesGot: [], teaStage: 0, teaDelivered: [], day: 0, jointMet: [], guiColor: "classic", sailTint: "classic", jointTarget: "gui", riddleDay: -1, riddleWonDay: -9, riddleStreak: 0 }; }
 Object.assign(sq, extrasDefault());
 const COSTUMES = [
   { id: 'none', name: 'Just Guiseppe', icon: '🌱', how: 'The classic look' },
@@ -3904,7 +4024,6 @@ const COSTUMES = [
   { id: 'hardhat', name: 'Hard Hat', icon: '👷', how: 'Left on top of a locker in the Inkworks Break Room' },
   { id: 'origami', name: 'Origami Crown', icon: '📄', how: 'Waiting at the far east end of the Pencil Line girder' },
   { id: 'stub', name: "Snortstick's Stub", icon: '✏️', how: 'Defeat Snortstick on top of the Ink Reactor' },
-  { id: 'racer', name: "Lampo's Racing Helmet", icon: '🏁', how: 'Beat Lampo Lumaca in all three races' },
 ];
 const costumeRoot = new THREE.Group(); costumeRoot.position.y = 0.42; body.add(costumeRoot);
 const costumeMeshes = {};
@@ -3966,12 +4085,6 @@ function buildCostume(id) {
     add(new THREE.CylinderGeometry(0.21, 0.21, 0.06, 6), steel, 0, 0.0, 0);
     add(new THREE.ConeGeometry(0.2, 0.3, 6), toon(0xf0c890), 0, 0.43, 0);
     add(new THREE.ConeGeometry(0.07, 0.11, 6), M.ink, 0, 0.6, 0);
-  } else if (id === 'racer') {
-    add(new THREE.SphereGeometry(0.45, 18, 12, 0, Math.PI * 2, 0, Math.PI / 1.8), toon(0xff3b4f), 0, -0.05, 0);
-    add(new THREE.BoxGeometry(0.12, 0.02, 0.9), M.white, 0, 0.4, 0).scale.y = 1;
-    const visor = add(new THREE.SphereGeometry(0.46, 16, 8, -0.9, 1.8, Math.PI / 2.6, 0.5), toon(0x2b2140, { side: THREE.DoubleSide }), 0, -0.05, 0.01); visor.rotation.y = 0;
-    const boltH = new THREE.Shape(); boltH.moveTo(0, 0.12); boltH.lineTo(-0.05, 0); boltH.lineTo(0.01, 0.01); boltH.lineTo(-0.03, -0.12); boltH.lineTo(0.06, 0.03); boltH.lineTo(0, 0.02); boltH.closePath();
-    [-1, 1].forEach(sd => { const bm = add(new THREE.ShapeGeometry(boltH), toon(0xfff27a, { side: THREE.DoubleSide }), sd * 0.44, 0.12, 0); bm.rotation.y = sd * Math.PI / 2; });
   }
   return g;
 }
@@ -3984,6 +4097,7 @@ function wearCostume(id) {
   sprout.visible = leafL.visible = bare;
 }
 function unlockCostume(id) {
+  saveSoon();
   if (sq.costumes.includes(id)) return;
   sq.costumes.push(id);
   const c = COSTUMES.find(x => x.id === id);
@@ -4258,11 +4372,13 @@ const displayAll = () => displayShells.forEach(d => { const sh = shells[d.i]; if
 function applyExtras() {
   if (chickDone) unlockCostumeQuiet('penguin');
   if (duke.defeated) unlockCostumeQuiet('frost');
+  sq.costumes = sq.costumes.filter(id => COSTUMES.some(c => c.id === id)); // drops costumes that no longer exist (Lampo's helmet)
   if (snort.defeated) unlockCostumeQuiet('stub');
   if (pumps.every(p => p.off)) unlockCostumeQuiet('goggles');
   wearCostume(sq.wearing);
   costumeChests.forEach(c => { c.mesh.visible = (c.need ? c.need() : visitedI2) && !sq.chests.includes(c.id); });
-  applyGlider();
+  if (!Array.isArray(sq.jointMet)) sq.jointMet = [];
+  applyGlider(); applyGuiColour();
 }
 function unlockCostumeQuiet(id) { if (!sq.costumes.includes(id)) sq.costumes.push(id); }
 function updateExtras(dt, p) {
@@ -4496,6 +4612,7 @@ const GLIDER_SKINS = [
   { id: 'blueprint', name: 'Blueprint', ico: '📐', sail: 0x1f5fb5, stripe: 0xffffff, price: 80, desc: 'Grid paper and measurements, pencil included' },
   { id: 'sunset', name: 'Sunset', ico: '🌇', sail: 0xffc93c, stripe: 0xff6b5a, price: 80, desc: 'A sunset fade with ribbons streaming from the wingtips' },
   { id: 'golden', name: 'Golden Glider', ico: '✨', sail: 0xffd34d, stripe: 0xfff6e3, price: 150, desc: 'Gem-studded gold that sparkles as you fly', glow: 0x6b4a00 },
+  { id: 'paper', name: 'Paper Airplane', ico: '📄', sail: 0xfffaf0, stripe: 0x1f5fb5, price: 0, reward: true, desc: 'Ruled notebook paper with a folded crease. Not for sale: a thank-you from Aeroplanino' },
 ];
 // the sail's pattern is painted on a canvas; the sail shape spans x -1.6..1.6 and y -0.5..1.1, so the texture is stretched to fit
 const hex = c => '#' + c.toString(16).padStart(6, '0');
@@ -4510,6 +4627,7 @@ function paintSail(sk) {
   if (sk.id === 'sardine') { for (let y = 0; y < 128; y += 12) for (let x = (y / 12) % 2 ? 8 : 0; x < 256; x += 16) { g.strokeStyle = '#d8eef8'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 8, 0, Math.PI); g.stroke(); } g.fillStyle = '#1f6f8b'; g.fillRect(0, 100, 256, 28); }
   if (sk.id === 'blueprint') { g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 1; for (let x = 0; x < 256; x += 16) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, 128); g.stroke(); } for (let y = 0; y < 128; y += 16) { g.beginPath(); g.moveTo(0, y); g.lineTo(256, y); g.stroke(); }
     g.strokeStyle = '#ffffff'; g.lineWidth = 2; g.strokeRect(70, 50, 116, 40); g.beginPath(); g.arc(128, 70, 14, 0, Math.PI * 2); g.stroke(); g.font = 'bold 14px monospace'; g.fillStyle = '#fff'; g.fillText('3.2 m', 104, 108); }
+  if (sk.id === 'paper') { g.strokeStyle = '#9fc4e8'; g.lineWidth = 2; for (let y = 10; y < 128; y += 12) { g.beginPath(); g.moveTo(0, y); g.lineTo(256, y); g.stroke(); } g.strokeStyle = '#ff8fa3'; g.beginPath(); g.moveTo(40, 0); g.lineTo(40, 128); g.stroke(); g.strokeStyle = 'rgba(43,33,64,.25)'; g.beginPath(); g.moveTo(128, 0); g.lineTo(128, 128); g.stroke(); }
   if (sk.id === 'sunset') { const gr = g.createLinearGradient(0, 0, 0, 128); gr.addColorStop(0, '#ff8fb1'); gr.addColorStop(0.5, '#ff9a2b'); gr.addColorStop(1, '#ffd34d'); g.fillStyle = gr; g.fillRect(0, 0, 256, 128); dot(128, 128, 30, '#fff1a8'); }
   if (sk.id === 'golden') { const gr = g.createLinearGradient(0, 0, 256, 128); gr.addColorStop(0, '#ffe57a'); gr.addColorStop(0.5, '#ffc93c'); gr.addColorStop(1, '#ffe57a'); g.fillStyle = gr; g.fillRect(0, 0, 256, 128);
     g.fillStyle = '#fffbe0'; for (let i = 0; i < 14; i++) { const x = (i * 67) % 256, y = (i * 41) % 128; g.beginPath(); for (let k = 0; k < 8; k++) { const r = k % 2 ? 2 : 7, a = k * Math.PI / 4; g.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); } g.fill(); } }
@@ -4541,12 +4659,15 @@ const gliderExtras = {};
   [-1, 1].forEach(sd => { const r = add('sunset', new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.015, 1.4), toon(sd < 0 ? 0xff8fb1 : 0xff9a2b))); r.position.set(sd * 1.55, 0, -1.15); r.userData.ribbon = sd; });
   // Golden Glider: gems along the front edges
   for (let k = 1; k <= 3; k++) [-1, 1].forEach(sd => { const gm = add('golden', new THREE.Mesh(new THREE.OctahedronGeometry(0.07, 0), toon(0xff6b9a, { emissive: 0x6a1030 }))); gm.position.set(sd * 1.6 * k / 4, 0.04, 1.1 - 1.6 * k / 4); });
+  // Paper Airplane: a folded keel running down the middle, like a real paper plane
+  { const keel = new THREE.Shape(); keel.moveTo(1.1, 0); keel.lineTo(-0.3, 0); keel.lineTo(-0.15, -0.28); keel.closePath();
+    const k = add('paper', new THREE.Mesh(new THREE.ShapeGeometry(keel), toon(0xe8eef8, { side: THREE.DoubleSide }))); k.rotation.y = -Math.PI / 2; k.position.y = -0.01; }
   Object.values(gliderExtras).forEach(g => { g.visible = false; gliderMesh.add(g); });
 }
 const sailTex = {};
 function applyGliderSkin() {
   const sk = GLIDER_SKINS.find(k => k.id === sq.gliderSkin) || GLIDER_SKINS[0], { sail, stripe } = gliderMesh.userData;
-  sail.material.map = sailTex[sk.id] = sailTex[sk.id] || paintSail(sk); sail.material.color.set(0xffffff); sail.material.emissive.set(sk.glow || 0x000000); sail.material.needsUpdate = true;
+  sail.material.map = sailTex[sk.id] = sailTex[sk.id] || paintSail(sk); sail.material.color.set(sq.sailTint && sq.sailTint !== 'classic' ? tagColour(sq.sailTint).hex : 0xffffff); sail.material.emissive.set(sk.glow || 0x000000); sail.material.needsUpdate = true;
   stripe.visible = false;
   for (const id in gliderExtras) gliderExtras[id].visible = id === sk.id;
 }
@@ -5017,6 +5138,224 @@ addGlideCourse('ink', 'Inkworks Roof Glide', 3, BLD.x + 36, BLD.z + 19,
   [[I3X + 34, 18.6, I3Z - 53], [I3X + 30, 15.8, I3Z - 45], [I3X + 24, 13, I3Z - 38], [I3X + 17, 10, I3Z - 32], [I3X + 10, 14.5, I3Z - 28],
    [I3X + 1, 12.6, I3Z - 24], [I3X - 9, 9.4, I3Z - 21], [I3X - 18, 6.6, I3Z - 20], [I3X - 26, 4, I3Z - 18]], 50);
 glideCourses[glideCourses.length - 1].time = 24;
+// side quest rewards (kept last so older saves keep their shells)
+const campShell = { name: 'Camp Reunion', area: 'Survivor Camp', island: 3, pos: null, mesh: null, taken: false };
+shells.push(campShell);
+{ const mesh = makeShell(shells.length); mesh.position.set(...tallestStub.pos); shells.push({ ...tallestStub, island: 3, mesh, taken: false }); }
+// ---------- Joint: a travelling marker cap who tags things in colour and sets a riddle every day ----------
+// he follows the clock round the islands: mornings in Borgo Biscotto, afternoons in Gelato Village, evenings and nights in Piazza Grigia
+const JOINT_STOPS = [
+  { isle: 1, from: 6, to: 12, place: 'Borgo Biscotto', x: TOWN.x + 4.5, z: TOWN.z + 3.5, splat: 0xe8323f },
+  { isle: 2, from: 12, to: 18, place: 'Gelato Village', x: HUBX - 4, z: HUBZ + 4, splat: 0x3fa9f5 },
+  { isle: 3, from: 18, to: 6, place: 'Piazza Grigia', x: HUB3.x - 2, z: HUB3.z + 6.5, splat: 0x8a4fd9 },
+];
+const jointStop = (h = sq.hour) => JOINT_STOPS.find(s => s.from < s.to ? h >= s.from && h < s.to : h >= s.from || h < s.to);
+const jointWhere = () => JOINT_STOPS.map(s => `${s.place} ${fmtHour(s.from)}–${fmtHour(s.to)}`).join(', ');
+// each colour unlocks once you've met Joint on its island; Classic Green is always free
+const TAG_COLOURS = [
+  { id: 'classic', ico: '🟩', name: 'Classic Green', hex: 0x2fb36a, isle: 0 },
+  { id: 'red', ico: '🟥', name: 'Tomato Red', hex: 0xe8323f, isle: 1 },
+  { id: 'orange', ico: '🟧', name: 'Sunset Orange', hex: 0xff8f2b, isle: 1 },
+  { id: 'yellow', ico: '🟨', name: 'Lemon Yellow', hex: 0xffd23c, isle: 2 },
+  { id: 'blue', ico: '🟦', name: 'Glacier Blue', hex: 0x3fa9f5, isle: 2 },
+  { id: 'purple', ico: '🟪', name: 'Ink Purple', hex: 0x8a4fd9, isle: 3 },
+  { id: 'pink', ico: '🩷', name: 'Highlighter Pink', hex: 0xff5fb0, isle: 3 },
+];
+const TAG_PRICE = 10;
+const tagColour = id => TAG_COLOURS.find(c => c.id === id) || TAG_COLOURS[0];
+function applyGuiColour() { guiGreen.color.set(tagColour(sq.guiColor).hex); }
+// riddles cycle with the in-game day; `right` is the index of the correct answer
+const RIDDLES = [
+  { q: "I have keys but open no doors. I have space but no room. You can enter, but you can't go inside.", a: ['A piano', 'A keyboard', 'A treasure chest'], right: 1 },
+  { q: 'The more you take, the more you leave behind.', a: ['Footsteps', 'Coins', 'Gelato'], right: 0 },
+  { q: "I'm full of holes, but I still hold water.", a: ['A colander', 'A bucket', 'A sponge'], right: 2 },
+  { q: 'What has a neck but no head?', a: ['A bottle', 'A snowman', 'A crab'], right: 0 },
+  { q: "I'm always running but I never get tired. I have a mouth but I never eat.", a: ['A clock', 'A river', 'A seagull'], right: 1 },
+  { q: 'What gets wetter the more it dries?', a: ['A towel', 'Ink', 'The sea'], right: 0 },
+  { q: 'What can you catch but never throw?', a: ['A snowball', 'A fish', 'A cold'], right: 2 },
+  { q: "I have hands, but I can't clap.", a: ['A glove', 'A clock', 'A crab'], right: 1 },
+  { q: 'What goes up but never comes down?', a: ['A glider', 'Your age', 'A balloon'], right: 1 },
+  { q: 'The more of me there is, the less you see.', a: ['Darkness', 'Snow', 'Steam'], right: 0 },
+  { q: "What has one eye but can't see?", a: ['A pirate', 'A needle', 'A paper plane'], right: 1 },
+  { q: 'What has words but never speaks?', a: ['A parrot', 'A book', 'A seagull'], right: 1 },
+];
+const todaysRiddle = () => RIDDLES[((sq.day || 0) * 7 + 3) % RIDDLES.length];
+// a streak only counts while you keep coming back: miss a day and it shows as zero
+const riddleStreakNow = () => sq.riddleWonDay >= sq.day - 1 ? sq.riddleStreak : 0;
+const riddleShell = { name: 'Riddle Streak', area: "Joint's riddles", island: 1, pos: null, mesh: null, taken: false };
+shells.push(riddleShell);
+// the cap himself: a chunky marker cap with a pocket clip, and a stripe that keeps changing colour
+const jointTag = toon(0xff5fb0);
+const jointNpc = (() => {
+  const [g, b] = npcShell(), capMat = toon(0x2a2a3a);
+  const cap = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.46, 1.2, 18), capMat)); cap.position.y = 0.6; b.add(cap);
+  const dome = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.42, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), capMat)); dome.position.y = 1.2; b.add(dome);
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.47, 0.475, 0.22, 18, 1, true), jointTag); band.position.y = 0.18; b.add(band);
+  const nub = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.08, 10), jointTag); nub.position.y = 1.6; b.add(nub);
+  // the pocket clip runs down his back
+  const silver = toon(0xc8ccd6, { emissive: 0x22242a });
+  const clip = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.95, 0.06), silver); clip.position.set(0, 0.95, -0.5); b.add(clip);
+  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), silver); knob.position.set(0, 0.5, -0.52); b.add(knob);
+  const face = new THREE.Group(); face.position.set(0, 0.85, 0.43); b.add(face);
+  addEyes(face, 0, 0, 0.15, 0.09, true); smileOn(face, -0.15, 0.02, 0.08);
+  // a little tag scribbled on his own side
+  const doodle = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.025, 4, 10, Math.PI * 1.5), jointTag); doodle.position.set(0.4, 0.5, 0.2); doodle.rotation.y = 1.1; b.add(doodle);
+  // a stubby marker of his own in one hand
+  const marker = new THREE.Group(); marker.position.set(0.55, 0.55, 0.12); marker.rotation.z = -0.5; b.add(marker);
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.42, 8), M.white); marker.add(shaft);
+  const nib = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.12, 8), jointTag); nib.position.y = 0.27; marker.add(nib);
+  return g;
+})();
+// a splash of paint marks each of his spots, so you know where to wait for him
+JOINT_STOPS.forEach(s => {
+  s.y = groundBelow(s.x, s.z, 999);
+  const mat = toon(s.splat, { polygonOffset: true, polygonOffsetFactor: -2 });
+  const splat = new THREE.Mesh(new THREE.CircleGeometry(1.2, 18), mat); splat.rotation.x = -Math.PI / 2; splat.position.set(s.x, s.y + 0.03, s.z); scene.add(splat);
+  for (let k = 0; k < 6; k++) { const a = k * 1.9, r = 1.5 + (k % 3) * 0.3, d = new THREE.Mesh(new THREE.CircleGeometry(0.12 + (k % 2) * 0.08, 8), mat); d.rotation.x = -Math.PI / 2; d.position.set(s.x + Math.cos(a) * r, s.y + 0.03, s.z + Math.sin(a) * r); scene.add(d); }
+});
+// a timetable board next to each of his spots: all three stops, which one is this one, and where he is right now
+const jointBoards = JOINT_STOPS.map(s => {
+  const x = s.x - 2.3, z = s.z + 1.4, y = groundBelow(x, z, 999);
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 224;
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+  const face = new THREE.MeshBasicMaterial({ map: tex });
+  const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = 0.35; scene.add(g);
+  const post = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 1.5, 8), M.woodDark)); post.position.y = 0.75; g.add(post);
+  const board = shadowed(new THREE.Mesh(new THREE.BoxGeometry(1.7, 1.5, 0.08), [M.woodDark, M.woodDark, M.woodDark, M.woodDark, face, face])); board.position.y = 1.95; g.add(board);
+  // a marker-cap topper, so it reads as Joint's from a distance
+  const topper = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.18, 0.4, 12), toon(0x2a2a3a)); topper.position.y = 2.9; g.add(topper);
+  const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.06, 8), jointTag); tip.position.y = 3.13; g.add(tip);
+  solids.push({ type: 'cyl', x, z, r: 0.2, top: y + 2.7, bottom: y });
+  return { stop: s, cv, tex };
+});
+function drawJointBoards() {
+  const now = jointStop(), hex = c => '#' + c.toString(16).padStart(6, '0');
+  jointBoards.forEach(({ stop, cv, tex }) => {
+    const g = cv.getContext('2d');
+    g.fillStyle = '#fff6e3'; g.fillRect(0, 0, 256, 224);
+    g.fillStyle = '#2a2a3a'; g.fillRect(0, 0, 256, 44);
+    g.fillStyle = '#ff5fb0'; g.font = 'bold 26px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText("JOINT'S ROUNDS", 128, 24);
+    JOINT_STOPS.forEach((s, i) => {
+      const yy = 70 + i * 42, here = s === stop;
+      if (here) { g.fillStyle = '#ffe28a'; g.fillRect(6, yy - 19, 244, 38); }
+      g.fillStyle = hex(s.splat); g.beginPath(); g.arc(22, yy, 9, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#2b2140'; g.textAlign = 'left'; g.font = `${here ? 'bold ' : ''}17px system-ui, sans-serif`;
+      g.fillText(`${fmtHour(s.from)}–${fmtHour(s.to)}`, 38, yy - 7);
+      g.font = `${here ? 'bold ' : ''}15px system-ui, sans-serif`;
+      g.fillText(s.place + (here ? '  ★ HERE' : ''), 38, yy + 10);
+    });
+    g.fillStyle = now === stop ? '#2fb36a' : '#7a6a8a'; g.fillRect(0, 194, 256, 30);
+    g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.font = 'bold 16px system-ui, sans-serif';
+    g.fillText(now === stop ? "He's here now! Say hi" : `Now in ${now.place}`, 128, 210);
+    tex.needsUpdate = true;
+  });
+}
+const JOINT_HI = [
+  "Yo, Guiseppe! Fresh colours, fresh riddle. What'll it be?",
+  "Marker caps don't sleep, we just click shut for a bit. What's up?",
+  "Every island's a blank page if you squint. Want a tag?",
+  "Don't tell Snortstick, but I once tagged one of his chimneys pink. Nobody noticed. Everything's grey, so pink just looks like a mistake.",
+  "I'm only here till the clock says otherwise. Quick, pick something!",
+];
+const jointBy = { name: 'Joint', role: 'travelling tagger · marker cap', icon: '🖊️', color: '#ffd6ec', group: jointNpc,
+  pos: new THREE.Vector3(JOINT_STOPS[0].x, JOINT_STOPS[0].y, JOINT_STOPS[0].z), voice: 470, wave: 'square', talked: false, ri: 0, top: 1.7, promptY: 2.4, bobY: 1 };
+jointBy.first = [
+  "Whoa, a customer! Name's Joint. I'm a marker cap.",
+  "Lost my marker years ago. Long story. It involves a seagull. Now I hop between the islands and tag stuff with the ink I've got left.",
+  `I follow the clock: ${jointWhere()}. Ink dries better at night, so I end up in the Inkworks.`,
+  "I can tag you, or your glider sail, in any colour I've got on me. I find new colours on every island. And there's a riddle a day, if you're clever.",
+];
+jointBy.repeat = [say(() => JOINT_HI[jointBy.ri++ % JOINT_HI.length])];
+// talking to him always ends with his menu
+jointBy.quests = [{ ready: () => true, get lines() { return jointBy.talked ? [JOINT_HI[jointBy.ri++ % JOINT_HI.length]] : jointBy.first; }, done: () => { jointMeet(); jointPage('main', "Joint's Colours"); toggleShop(true, jointShop); } }];
+npcs.push(jointBy); initNpc(jointBy);
+let jointAt = null;
+function jointMeet() {
+  const s = jointStop(); if (!s || sq.jointMet.includes(s.isle)) return;
+  sq.jointMet.push(s.isle);
+  const fresh = TAG_COLOURS.filter(c => c.isle === s.isle).map(c => `${c.ico} ${c.name}`);
+  toast(`🎨 Joint found new colours on ${ISLE_NAMES[s.isle]}: ${fresh.join(', ')}!`); autosave();
+}
+// the menu reuses the shop window, flipping between three pages
+const jointShop = { id: 'joint', place: 'Joint · travelling tagger', name: "Joint's Colours", mode: 'main' };
+const jointPage = (mode, name) => { jointShop.mode = mode; jointShop.name = name; };
+jointShop.custom = () => {
+  const back = { id: 'back', ico: '↩️', name: 'Back', desc: 'Back to Joint', label: 'Back' };
+  if (jointShop.mode === 'tag') {
+    const onGui = sq.jointTarget !== 'sail', cur = onGui ? sq.guiColor : sq.sailTint;
+    return [
+      { id: 'target', ico: onGui ? '🧍' : '🪂', name: `Tagging: ${onGui ? 'Guiseppe' : 'Glider sail'}`, desc: onGui ? 'Switch to colour your glider sail instead' : 'Switch to colour Guiseppe instead',
+        label: sq.glider || !onGui ? 'Switch' : 'No glider yet', locked: !sq.glider && onGui },
+      ...TAG_COLOURS.map(c => {
+        const open = !c.isle || sq.jointMet.includes(c.isle), using = cur === c.id, free = c.id === 'classic';
+        return { id: 'col:' + c.id, ico: c.ico, name: c.name, price: free ? 0 : TAG_PRICE,
+          desc: !open ? `Meet Joint on ${isleVisited(c.isle) ? ISLE_NAMES[c.isle] : 'another island'} to unlock` : free ? (onGui ? 'Your natural colour. Washing off is free' : 'Plain white sail. Washing off is free') : `${TAG_PRICE} coins a tag`,
+          locked: !open || using, label: using ? 'Using ✓' : !open ? '🔒 Locked' : free ? 'Wash off' : `🪙 ${TAG_PRICE}` };
+      }),
+      back,
+    ];
+  }
+  if (jointShop.mode === 'riddle') {
+    const r = todaysRiddle();
+    return [
+      { id: 'q', header: true, ico: '❓', name: r.q, desc: `Streak: ${riddleStreakNow()} day${riddleStreakNow() === 1 ? '' : 's'}. One guess per day.` },
+      ...r.a.map((a, i) => ({ id: 'ans:' + i, ico: 'ABC'[i], name: a, desc: '', label: 'This one!' })),
+      back,
+    ];
+  }
+  const s = jointStop(), solved = sq.riddleDay === sq.day;
+  return [
+    { id: 'where', header: true, ico: '🖊️', name: `In ${s.place} until ${fmtHour(s.to)}`, desc: `Joint's rounds: ${jointWhere()}.` },
+    { id: 'tag', ico: '🎨', name: 'Colour tagging', desc: `Paint Guiseppe or the glider sail. ${TAG_COLOURS.filter(c => !c.isle || sq.jointMet.includes(c.isle)).length} / ${TAG_COLOURS.length} colours found`, label: 'Choose' },
+    { id: 'riddle', ico: '❓', name: "Today's riddle", desc: solved ? `Already had a go today. New riddle after midnight. Streak: ${riddleStreakNow()}` : `Answer right for coins. Streak: ${riddleStreakNow()}${riddleShell.taken ? '' : ' · 3 in a row wins a Golden Shell'}`,
+      label: solved ? 'Come back tomorrow' : 'Hear it', locked: solved },
+  ];
+};
+jointShop.pick = it => {
+  if (it.id === 'tag') return jointPage('tag', 'Colour Tagging');
+  if (it.id === 'riddle') return jointPage('riddle', "Joint's Riddle");
+  if (it.id === 'back') return jointPage('main', "Joint's Colours");
+  if (it.id === 'target') { sq.jointTarget = sq.jointTarget === 'sail' ? 'gui' : 'sail'; blip(660, 660, 0.06, 'triangle', 0.05); return; }
+  if (it.id.startsWith('col:')) {
+    const c = tagColour(it.id.slice(4)), onGui = sq.jointTarget !== 'sail';
+    if (coinCount < it.price) { toast(`Not enough coins! You need ${it.price - coinCount} more.`); blip(200, 120, 0.2, 'square', 0.06); return; }
+    coinCount -= it.price; updateCoins();
+    if (onGui) { sq.guiColor = c.id; applyGuiColour(); } else { sq.sailTint = c.id; applyGliderSkin(); }
+    burst(state.pos.clone().add(new THREE.Vector3(0, 1, 0)), c.hex, 18, 4, 3);
+    [523, 784, 659].forEach((f, i) => setTimeout(() => blip(f, f * 1.2, 0.08, 'square', 0.05), i * 60)); // pssht pssht
+    toast(c.id === 'classic' ? (onGui ? 'Washed off! Back to classic green.' : 'Washed off! A plain white sail again.') : `${c.ico} Tagged! ${onGui ? 'Guiseppe' : 'Your glider sail'} is now ${c.name}.`);
+    autosave(); return;
+  }
+  if (it.id.startsWith('ans:')) {
+    const r = todaysRiddle(), i = +it.id.slice(4);
+    sq.riddleDay = sq.day;
+    if (i === r.right) {
+      sq.riddleStreak = sq.riddleWonDay === sq.day - 1 ? sq.riddleStreak + 1 : 1; sq.riddleWonDay = sq.day;
+      const prize = 10 + 5 * Math.min(sq.riddleStreak, 6);
+      coinCount += prize; updateCoins();
+      toast(`🎉 "${r.a[r.right]}! Nailed it." +${prize} coins · streak ${sq.riddleStreak}`);
+      [523, 659, 784, 1047].forEach((f, k) => setTimeout(() => blip(f, f, 0.12, 'triangle', 0.09), k * 80));
+      if (sq.riddleStreak >= 3 && !riddleShell.taken) collectShell(riddleShell);
+    } else {
+      sq.riddleStreak = 0;
+      toast(`😆 Joint cackles: "Nope! It's ${r.a[r.right].toLowerCase()}. New riddle tomorrow!"`);
+      blip(300, 150, 0.25, 'square', 0.06);
+    }
+    jointPage('main', "Joint's Colours"); autosave();
+  }
+};
+// he hops to the next island when the clock says so, with a splat of ink where he was and where he lands
+function updateJoint() {
+  const s = jointStop();
+  if (s !== jointAt) {
+    if (jointAt) burst(jointBy.pos.clone().add(new THREE.Vector3(0, 1, 0)), 0x2a2a3a, 14, 3, 2);
+    jointAt = s; moveNpc(jointBy, s.x, s.y, s.z); drawJointBoards();
+    burst(jointBy.pos.clone().add(new THREE.Vector3(0, 1, 0)), s.splat, 14, 3, 2);
+    if (shopOpen && shopAt === jointShop) toggleShop(false);
+  }
+  jointTag.color.setHSL((t * 0.08) % 1, 0.85, 0.6);
+}
 // a little market stall with a striped awning and the shopkeeper behind the counter
 SHOPS.forEach(s => {
   const y = groundBelow(s.x, s.z, 999), g = new THREE.Group(); g.position.set(s.x, y, s.z); g.rotation.y = s.face; scene.add(g);
@@ -5045,6 +5384,7 @@ SHOPS.forEach(s => {
 });
 const shopKey = (s, it) => `${s.id}:${it.id}`;
 function shopItems(s) {
+  if (s.custom) return s.custom(); // menus like Joint's build their own list
   if (s.skins) return GLIDER_SKINS.map(k => ({ ...k, skin: true, id: 'skin:' + k.id, skinId: k.id, owned: false, have: sq.skins.includes(k.id), using: sq.gliderSkin === k.id,
     desc: k.desc + (sq.glider ? '' : " · you'll need Zia Piuma's glider to fly it") }));
   const list = s.extras.map(it => {
@@ -5067,14 +5407,17 @@ function renderShop() {
     const full = it.refill && hearts >= maxHearts, cant = coinCount < it.price;
     let btn = it.owned ? `<button disabled>Owned ✓</button>` : full ? `<button disabled>Hearts full</button>` : `<button data-buy="${it.id}" ${cant ? 'class="poor"' : ''}>🪙 ${it.price}</button>`;
     // glide skins you own can be switched between for free
-    if (it.skin) btn = it.using ? `<button disabled>Using ✓</button>` : it.have ? `<button data-buy="${it.id}">Use</button>` : btn;
+    if (it.skin) btn = it.using ? `<button disabled>Using ✓</button>` : it.have ? `<button data-buy="${it.id}">Use</button>` : it.reward ? `<button disabled>🔒 Errand reward</button>` : btn;
+    if (it.label) btn = it.locked ? `<button disabled>${it.label}</button>` : `<button data-buy="${it.id}" ${cant && it.price ? 'class="poor"' : ''}>${it.label}</button>`;
+    if (it.header) return `<div class="slotcard empty"><b>${it.ico} ${it.name}</b><div class="meta">${it.desc}</div></div>`;
     const extra = it.id === 'lure' && sq.lure ? ` · ${sq.lure} lucky catches left` : '';
     return `<div class="slotcard ${it.owned || it.using ? 'empty' : ''}"><b>${it.ico} ${it.name}</b><div class="meta">${it.desc}${extra}</div><div class="acts">${btn}</div></div>`;
   }).join('');
 }
 function buyItem(id) {
   const s = shopAt, it = shopItems(s).find(x => x.id === id);
-  if (!it || it.owned) return;
+  if (!it || it.owned || it.locked || it.header || (it.reward && !it.have)) return;
+  if (s.custom) { s.pick(it); renderShop(); return; }
   if (it.skin && it.have) { sq.gliderSkin = it.skinId; applyGliderSkin(); toast(`${it.ico} ${it.name} fitted to your glider!`); blip(660, 990, 0.12, 'triangle', 0.08); autosave(); renderShop(); return; }
   if (coinCount < it.price) { toast(`Not enough coins! You need ${it.price - coinCount} more.`); blip(200, 120, 0.2, 'square', 0.06); return; }
   coinCount -= it.price; updateCoins();
@@ -5461,6 +5804,7 @@ function updateCoins() {
 // every coin you've picked up returns at midnight, but the area you're standing in only refills once you leave it,
 // so coins never pop into existence in front of you
 function midnightCoins() {
+  sq.day = (sq.day || 0) + 1; // a new in-game day (Joint's riddle changes)
   let n = 0;
   for (const c of coins) {
     if (c.userData.area === undefined) c.userData.area = areaOf(c.position.x, c.position.z, c.position.y);
@@ -5547,6 +5891,14 @@ function journalEntries() {
       pumps.every(p => p.off) ? 'All three pumps are off. The barrier round the Ink Reactor is down.' : `Pumps still running: ${pumps.filter(p => !p.off).map(p => p.where).join(', ')}.`),
     q(3, '⚙️', 'Crane gears', 'Rina Righello · Inkworks Dock', met('Rina Righello') || sq.gearsGot.length > 0, sq.craneFixed,
       sq.craneFixed ? 'The crane is mended. Ride the hook up to the arm!' : sq.gearsGot.length >= 5 ? 'All 5 golden gears found. Take them to Rina.' : `Find the crane's golden gears: ${sq.gearsGot.length} / 5.`),
+    q(3, '🖍️', 'Lost campers', 'Nonna Colla · Survivor Camp', met('Nonna Colla') || sq.campers.length > 0, sq.campDone,
+      sq.campDone ? 'All four crayon kids are home. Nonna gave you a Golden Shell.' : campersFound() >= 4 ? 'All four found! Tell Nonna Colla.' : `Find Nonna's hiding crayon grandkids: ${campersFound()} / 4.`),
+    q(3, '📄', 'Runaway paper planes', 'Aeroplanino · Piazza Grigia', sq.planeStage > 0, sq.planeStage === 2,
+      sq.planeStage === 2 ? 'Paper Airplane glide skin unlocked!' : sq.planesGot.length >= 5 ? 'All 5 found. Take them back to Aeroplanino.' : `Find the stray paper planes stuck up high: ${sq.planesGot.length} / 5. Left: ${planeSpots.filter((s, i) => !sq.planesGot.includes(i)).map(s => s.where).join(', ')}.`),
+    q(3, '☕', 'The tea round', 'Zio Bullone · Piazza Grigia', sq.teaStage > 0, sq.teaStage === 2,
+      sq.teaStage === 2 ? 'Iron Tea! +1 max heart.' : sq.teaDelivered.length >= 3 ? 'Every cup delivered. Back to Zio Bullone!' : `Take tea to ${TEA_STOPS.filter(n => !sq.teaDelivered.includes(n)).join(', ')}.`),
+    q(1, '🖊️', "Joint's riddle streak", 'Joint · travels with the clock', met('Joint'), riddleShell.taken,
+      (riddleShell.taken ? `Streak shell won! Current streak: ${riddleStreakNow()}. ` : `Solve Joint's daily riddle 3 days in a row: streak ${Math.min(riddleStreakNow(), 3)} / 3. `) + `Find him: ${jointWhere()}.`),
   ];
 }
 function renderJournal() {
@@ -5658,7 +6010,7 @@ const areaLabels = [
   ['Borgo Biscotto', 0, -83], ['Cloud Garden', -6, -37], ['Claw Reef', ARENA.x, ARENA.z - 14], ['Candy Cane Forest', RX, RZ + 18], ['Frozen Lake', LX, LZ + 17], ['Sundae Peak', VX, VZ - 29], ['Snow Fort', FX, FZ - 10], ['Gelato Village', IX, IZ + 20], ['Marshmallow Meadow', MX, MZ - 17], ['Waffle Cliffs', WX, WZ - 15], ['Cocoa Hot Springs', HX, HZ - 14], ['Skating Rink', KX, KZ - 12], ['Penguin Rookery', PKX, PKZ + 8], ['Isola Gelato', IX, IZ + 46],
 ];
 function areaOf(x, z, y = 0) { const r = regions.find(r => r.test(x, y, z)); return r ? r.name : null; }
-areaLabels.push(['Inkworks Dock', DX, DZ + 20], ['Piazza Grigia', HUB3.x, HUB3.z + 11], ['Barrel Yard', BYX, BYZ - 9], ['The Inkworks', BLD.x, BLD.z], ['Isola Inchiostro', I3X + 40, I3Z + 30], ['Survivor Camp', CMX, CMZ + 15],
+areaLabels.push(['Inkworks Dock', DX, DZ + 20], ['Piazza Grigia', HUB3.x, HUB3.z + 11], ['Barrel Yard', BYX, BYZ - 9], ['The Inkworks', BLD.x, BLD.z], ['Isola Inchiostro', I3X + 40, I3Z + 30], ['Survivor Camp', CMX, CMZ + 15], ['Stub Grove', SGX, SGZ + 10], ['Junkyard', I3X, BLD.z - BLD.d / 2 - 2],
   // the factory floor plan (shown on the map while you're inside)
   ['Shift Lobby', LBX, LBZ + 3], ['Conveyor Hall', CYX, CYZ + 18], ['Ink Vat Hall', VTX, VTZ + 17], ['Packing Hall', PHX, PHZ - 13], ['Boiler Stacks', SSX, SSZ + 15],
   ['Ink Reactor', TWX, TWZ + 2], ['Sharpener Pit', SPX, SPZ + 18], ['The Rafters', FAC.ox, RFZ - 3], ['Pencil Line', FAC.ox - 40, PLZ - 2], ['Break Room', BRX, BRZ + 5], ['Quality Control', QCX, QCZ + 5]);
@@ -6453,6 +6805,7 @@ function advanceDialog() {
   if (!dlg.asleep) npc.talked = true;
   dlg = null; $('dialog').classList.remove('open');
   if (onEnd) onEnd();
+  saveSoon(true); // a chat can hand over keys, start quests or finish them
 }
 
 // ---------- music: a little tarantella ----------
@@ -6698,7 +7051,7 @@ function collectShell(sh) {
   sh.taken = true; shellCount++;
   if (sh.mesh) { burst(sh.mesh.position.clone(), 0xffd34d, 24, 5, 4); sh.mesh.visible = false; }
   else burst(state.pos.clone().add(new THREE.Vector3(0, 1.5, 0)), 0xffd34d, 24, 5, 4);
-  shellHead(sh.island);
+  shellHead(sh.island); saveSoon();
   showPop(`🐚 ${shellText(sh.island)}`);
   toast(`Golden Shell! ${sh.name} · ${shellDesignName(shells.indexOf(sh))}`);
   [784, 988, 1175, 1568].forEach((f, i) => setTimeout(() => blip(f, f, 0.16, 'triangle', 0.1), i * 90));
@@ -7166,14 +7519,14 @@ function updateIsland2(dt, p) {
     k.taken = true; k.mesh.visible = false; keysFound++;
     burst(k.mesh.position.clone(), 0x9fe8ff, 24, 5, 4);
     [659, 880, 1175, 1568].forEach((f, i) => setTimeout(() => blip(f, f, 0.14, 'triangle', 0.1), i * 80));
-    toast(keysFound >= 3 ? 'All 3 Frost Keys! To the summit!' : `Frost Key! (${keysFound}/3)`); showPop(`❄️ ${keysFound} / 3`);
+    saveSoon(); toast(keysFound >= 3 ? 'All 3 Frost Keys! To the summit!' : `Frost Key! (${keysFound}/3)`); showPop(`❄️ ${keysFound} / 3`);
   }
   // the frost gate around the summit
   const dv = Math.hypot(p.x - VX, p.z - VZ);
   gateMsgT -= dt;
   if (!fireGateSolid.disabled && dv < 15 && p.y > SUMMIT_Y - 4.5) {
     if (keysFound >= 3) {
-      fireGateSolid.disabled = true; camShake = 0.35; toast('The Frost Gate opens!');
+      fireGateSolid.disabled = true; saveSoon(); camShake = 0.35; toast('The Frost Gate opens!');
       burst(new THREE.Vector3(VX, SUMMIT_Y + 1.5, VZ), 0x9fe8ff, 60, 9, 4);
       [392, 523, 659, 784].forEach((f, i) => setTimeout(() => blip(f, f, 0.18, 'triangle', 0.1), i * 110));
     } else if (gateMsgT <= 0) { gateMsgT = 4; toast(`The Frost Gate needs 3 Frost Keys (${keysFound}/3)`); }
@@ -7351,17 +7704,27 @@ function clearDoodles() {
 }
 function resetSnort() {
   snort.hp = snort.maxHp; snort.state = snort.defeated ? 'gone' : 'sleep'; snort.t = 0; snort.cycle = 0; snort.away = 0;
-  snort.pos.copy(SNORT_HOME); snort.face = 0; snort.waves.forEach(w => scene.remove(w.mesh)); snort.waves = [];
+  snort.pos.copy(SNORT_HOME); snort.face = 0; snort.waves.forEach(dropWave); snort.waves = [];
   for (let i = snowShots.length - 1; i >= 0; i--) if (snowShots[i].ink) { scene.remove(snowShots[i].m); if (snowShots[i].mark) scene.remove(snowShots[i].mark); snowShots.splice(i, 1); }
   snortGroup.visible = !snort.defeated; snortGroup.scale.setScalar(SNORT_SIZE); snortGroup.rotation.set(0, 0, 0); snortGroup.position.copy(SNORT_HOME);
   snortStars.visible = false; snortLane.visible = false; clearDoodles();
   if (currentIsland === 3) { $('bossbar').classList.remove('show'); setMusicTempo(islandTempo()); }
 }
+// each snort wave is a glowing ink wall about as tall as the jump you need, with a bright rim and an ink stain on the floor
+const waveWallGeo = new THREE.CylinderGeometry(1, 1, 0.55, 72, 1, true), waveRimGeo = new THREE.TorusGeometry(1, 0.05, 6, 72), waveFloorGeo = new THREE.RingGeometry(0.8, 1, 72);
 function snortWave(at) {
-  const m = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 64), new THREE.MeshBasicMaterial({ color: 0xa07aff, transparent: true, opacity: 0.85, side: THREE.DoubleSide }));
-  m.rotation.x = -Math.PI / 2; m.position.set(at.x, ROOF_Y + 0.06, at.z); scene.add(m);
+  const m = new THREE.Group(); m.position.set(at.x, ROOF_Y + 0.02, at.z);
+  const glow = { transparent: true, depthWrite: false, side: THREE.DoubleSide };
+  const wall = new THREE.Mesh(waveWallGeo, new THREE.MeshBasicMaterial({ color: 0xff4fd8, opacity: 0.6, ...glow })); wall.position.y = 0.28; m.add(wall);
+  const rim = new THREE.Mesh(waveRimGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, opacity: 1, ...glow })); rim.rotation.x = -Math.PI / 2; rim.position.y = 0.56; m.add(rim);
+  const floor = new THREE.Mesh(waveFloorGeo, new THREE.MeshBasicMaterial({ color: 0x7a2cff, opacity: 0.9, ...glow })); floor.rotation.x = -Math.PI / 2; floor.position.y = 0.04; m.add(floor);
+  m.userData.mats = [wall.material, rim.material, floor.material];
+  scene.add(m); camShake = Math.max(camShake, 0.15);
+  burst(new THREE.Vector3(at.x, ROOF_Y + 0.4, at.z), 0xff4fd8, 16, 5, 2);
+  blip(160, 70, 0.3, 'sawtooth', 0.08);
   snort.waves.push({ mesh: m, r: 1, x: at.x, z: at.z });
 }
+function dropWave(w) { scene.remove(w.mesh); w.mesh.userData.mats.forEach(m => m.dispose()); }
 // a blob of Hypno-Ink lobbed at the roof; the red mark shows where it lands
 function snortLob(to) {
   const from = snort.pos.clone().add(new THREE.Vector3(0, 5.5, 0)), aim = new THREE.Vector3(to.x, ROOF_Y + 0.2, to.z);
@@ -7482,10 +7845,12 @@ function updateSnort(dt, p, dv) {
   [-1, 1].forEach(sd => { const arm = snortGroup.userData['arm' + sd]; arm.rotation.x = s.state === 'charge' ? -1.2 : Math.sin(t * 8 + sd) * 0.5; });
   // snort waves roll outward: jump them
   for (let i = s.waves.length - 1; i >= 0; i--) {
-    const w = s.waves[i]; w.r += dt * 8.5; w.mesh.scale.setScalar(w.r); w.mesh.material.opacity = 0.85 * (1 - w.r / 13);
+    const w = s.waves[i]; w.r += dt * 8.5; w.mesh.scale.set(w.r, 1, w.r);
+    const fade = 1 - Math.max(0, w.r - 9) / 4, pulse = 0.8 + Math.sin(t * 24) * 0.2; // full strength until the last stretch, flickering so it catches the eye
+    w.mesh.userData.mats[0].opacity = 0.6 * fade * pulse; w.mesh.userData.mats[1].opacity = fade; w.mesh.userData.mats[2].opacity = 0.9 * fade;
     const pd = Math.hypot(p.x - w.x, p.z - w.z);
     if (!state.dead && Math.abs(pd - w.r) < 0.55 && p.y < ROOF_Y + 0.55) { if (hurt(new THREE.Vector3(w.x, 0, w.z))) hypnotize(2); }
-    if (w.r > 13) { scene.remove(w.mesh); s.waves.splice(i, 1); }
+    if (w.r > 13) { dropWave(w); s.waves.splice(i, 1); }
   }
   // Doodles waddle after you; stomp them to rub them out
   for (let i = s.doodles.length - 1; i >= 0; i--) {
@@ -7514,7 +7879,7 @@ function updateSnort(dt, p, dv) {
   }
 }
 function snortDefeated() {
-  snort.state = 'dead'; snort.waves.forEach(w => scene.remove(w.mesh)); snort.waves = []; snortLane.visible = false; snortStars.visible = false;
+  snort.state = 'dead'; snort.waves.forEach(dropWave); snort.waves = []; snortLane.visible = false; snortStars.visible = false;
   snort.doodles.forEach(d => burst(d.g.position.clone().add(new THREE.Vector3(0, 1, 0)), 0x2b2140, 12, 3, 2)); clearDoodles();
   for (let i = snowShots.length - 1; i >= 0; i--) if (snowShots[i].ink) { scene.remove(snowShots[i].m); if (snowShots[i].mark) scene.remove(snowShots[i].mark); snowShots.splice(i, 1); }
   $('bossbar').classList.remove('show'); setMusicTempo(islandTempo()); hypnoT = 0;
@@ -7552,6 +7917,7 @@ function showIsland3Clear() {
 let wasInFactory = false;
 function updateIsland3(dt, p) {
   if (currentIsland !== 3) return;
+  updateSideQuests3(dt, p); updateJoint();
   // stepping in or out of the Inkworks switches between the island tune and the factory tune
   const inF = inFactory();
   if (inF !== wasInFactory) { wasInFactory = inF; if (!fastMusic()) setMusicTempo(islandTempo()); }
@@ -7572,7 +7938,7 @@ function updateIsland3(dt, p) {
   const c = new THREE.Vector3(p.x, p.y + 0.6, p.z);
   gearItems.forEach((g, i) => {
     if (sq.gearsGot.includes(i) || g.mesh.position.distanceTo(c) > 1.3) return;
-    sq.gearsGot.push(i); g.mesh.visible = false; burst(g.pos.clone(), 0xffc93c, 18, 4, 3);
+    sq.gearsGot.push(i); saveSoon(); g.mesh.visible = false; burst(g.pos.clone(), 0xffc93c, 18, 4, 3);
     [784, 1047, 1319].forEach((f, k) => setTimeout(() => blip(f, f, 0.12, 'triangle', 0.08), k * 80));
     const n = sq.gearsGot.length; toast(n >= gearItems.length ? 'All 5 golden gears! Take them to Rina at the dock.' : `Golden gear! (${n}/${gearItems.length})`); showPop(`⚙️ ${n} / ${gearItems.length}`);
   });
@@ -7583,6 +7949,9 @@ function animateIsland3(dt) {
   belts.forEach(b => { b.tex.offset.y += b.vz * dt / 2; });
   sharpPencil.rotation.y += dt * 0.8; sharpCrank.rotation.x += dt * 1.6;
   routePosts.forEach(w => { if (w.userData.spin > 0) { w.userData.spin -= dt; w.rotation.z += dt * 10 * w.userData.spin; } });
+  // roof fans spin, the antenna blinks, the weathervane swings, and the smog drifts round the island
+  acFans.forEach((f, i) => { if (f.userData.blink) f.visible = Math.floor(t * 1.5) % 2 === 0; else if (f.userData.vane) f.rotation.y = Math.sin(t * 0.3) * 1.2 + Math.sin(t * 1.7) * 0.15; else f.rotation.y += dt * (6 + i); });
+  if (currentIsland === 3) smog3.forEach((m, i) => { const u = m.userData, a = u.a + t * 0.02 * (i % 2 ? 1 : -1); m.position.set(I3X + Math.cos(a) * u.r, u.y + Math.sin(t * 0.2 + i) * 1.5, CZ3 + Math.sin(a) * u.r); });
   // the survivors' campfire flickers, and the steam updraft swirls
   campFire3.flames.forEach(f => { const k = 1 + Math.sin(t * 13 + f.userData.ph * 7) * 0.12 + Math.sin(t * 29 + f.userData.ph) * 0.06; f.scale.set(1 - (k - 1) * 0.5, k, 1 - (k - 1) * 0.5); f.position.y = 0.2 + f.userData.h * k / 2; f.rotation.y = t * 2 + f.userData.ph; });
   updraftSteam.forEach((c, i) => { c.rotation.y = t * 1.5; c.material.opacity = 0.09 + Math.sin(t * 3 + i) * 0.03; });
@@ -7738,7 +8107,7 @@ function animate() {
     if (keys.ArrowRight) cam.yaw -= dt * 2.2 * settings.camSpeed;
     if (keys.ArrowUp) cam.pitch = THREE.MathUtils.clamp(cam.pitch + dt * 1.2 * settings.camSpeed * (settings.invertY ? -1 : 1), 0.05, 1.25);
     if (keys.ArrowDown) cam.pitch = THREE.MathUtils.clamp(cam.pitch - dt * 1.2 * settings.camSpeed * (settings.invertY ? -1 : 1), 0.05, 1.25);
-    updateNpcs(dt);
+    updateNpcs(dt); updateAutosave(dt);
     if (cut) updateCutscene(dt);
   } else {
     cam.yaw += dt * 0.15;
@@ -7985,6 +8354,9 @@ function resetGame() {
 const SLOTS = 3, slotKey = i => `guiseppe-save-${i}`;
 let currentSlot = null;
 function readSlot(i) { try { return JSON.parse(store.get(slotKey(i)) || 'null'); } catch (e) { return null; } }
+// shells and checkpoints are also saved by name, so adding new ones later never shifts what an old save remembers
+const shellId = s => `${s.island}:${s.area}:${s.name}`;
+const cpNamed = nm => checkpoints.find(c => c.name === nm) || null;
 function snapshot() {
   const ix = currentIsland === 2;
   return {
@@ -8001,22 +8373,29 @@ function snapshot() {
     cpIsl: [checkpoints.indexOf(cpByIsland[1]), checkpoints.indexOf(cpByIsland[2]), checkpoints.indexOf(cpByIsland[3])],
     i3: { visited: visitedI3, pumps: pumps.map(p => p.off ? 1 : 0), gate: !!inkGateSolid.disabled, snort: snort.defeated, intro: snort.introSeen },
     areas: [...areasSeen], talked: npcs.map(n => [n.name, n.talked, n.ri]),
+    shellIds: shells.filter(s => s.taken).map(shellId), cpIds: checkpoints.filter(c => c.active).map(c => c.name),
+    activeCpName: activeCp ? activeCp.name : null, cpIslNames: [1, 2, 3].map(n => cpByIsland[n] ? cpByIsland[n].name : null),
     elapsed, falls, bonks, inside: !!roomAt(state.pos) && !ix && roomAt(state.pos) !== FAC,
   };
 }
 function applySnapshot(d) {
   resetGame();
   hearts = d.hearts; maxHearts = d.maxHearts; brunoDone = d.brunoDone; updateHearts();
-  coins.forEach((c, i) => { c.userData.taken = !!d.coins[i]; c.userData.pending = d.coins[i] === 2; c.visible = !c.userData.taken; if (c.userData.pending) c.userData.area = areaOf(c.position.x, c.position.z, c.position.y); });
+  const dc = d.coins || [];
+  coins.forEach((c, i) => { c.userData.taken = !!dc[i]; c.userData.pending = dc[i] === 2; c.visible = !c.userData.taken; if (c.userData.pending) c.userData.area = areaOf(c.position.x, c.position.z, c.position.y); });
   coinCount = d.wallet ?? coins.filter(c => c.userData.taken).length;
-  shells.forEach((s, i) => { s.taken = !!d.shells[i]; if (s.mesh) s.mesh.visible = !s.taken; });
+  const ids = d.shellIds ? [...d.shellIds] : null;
+  shells.forEach((s, i) => {
+    if (ids) { const k = ids.indexOf(shellId(s)); s.taken = k >= 0; if (k >= 0) ids.splice(k, 1); } else s.taken = !!(d.shells || [])[i];
+    if (s.mesh) s.mesh.visible = !s.taken;
+  });
   shellCount = shells.filter(s => s.taken).length;
   pencilState = d.pencilState;
   if (pencilState === 'carried') pencil.visible = false;
   if (pencilState === 'returned') { pencil.visible = true; pencil.position.set(-11.5, 1.3, -16.1); pencil.rotation.set(0.5, 0, 0); }
   hasReefKey = d.hasReefKey;
   if (d.sealOpen) { sealSolid.disabled = true; sealDome.visible = false; sealRunes.visible = false; }
-  games.forEach((g, i) => g.won = !!d.games[i]);
+  games.forEach((g, i) => g.won = !!(d.games || [])[i] || g.shell.taken);
   // after the boss: the ship, the captain and the chart
   if (d.bossDefeated) {
     boss.defeated = true; resetBoss(); won = true; hasChart = d.hasChart;
@@ -8027,7 +8406,8 @@ function applySnapshot(d) {
   // island 2 story
   visitedI2 = d.visitedI2; jmKidnapped = d.jmKidnapped; jmRescued = d.jmRescued; keysFound = d.keysFound;
   shellHead(d.island || 1);
-  fireKeys.forEach((k, i) => { k.taken = !!d.keys[i]; k.mesh.visible = !k.taken; });
+  fireKeys.forEach((k, i) => { k.taken = !!(d.keys || [])[i]; k.mesh.visible = !k.taken; });
+  keysFound = fireKeys.filter(k => k.taken).length; // count what was actually picked up, so the gate always agrees with the keys
   if (d.gateOpen) { fireGateSolid.disabled = true; fireGate.scale.y = 0.01; fireGateMat.opacity = 0; }
   if (visitedI2) goonNpc.talked = true;
   duke.defeated = !!d.dukeDefeated || !!d.jmRescued; resetDuke();
@@ -8044,13 +8424,13 @@ function applySnapshot(d) {
   } else if (d.bossDefeated) moveNpc(jmNpc, 6.9 + ox, 0.05, 36.6 + oz);
   if (jmRescued) { jmNpc.repeat = jmRescuedLines; copter.visible = false; }
   // checkpoints, areas, people, stats
-  checkpoints.forEach((c, i) => { c.active = !!d.cps[i]; c.banner.material = c.active ? cpOn : cpOff; c.ring.material.opacity = 0; });
+  checkpoints.forEach((c, i) => { c.active = d.cpIds ? d.cpIds.includes(c.name) : !!(d.cps || [])[i]; c.banner.material = c.active ? cpOn : cpOff; c.ring.material.opacity = 0; });
   activeCp = null;
-  activateCheckpoint(checkpoints[d.activeCp] || checkpoints[0], true);
-  cpByIsland[1] = checkpoints[d.cpIsl[0]] || null; cpByIsland[2] = checkpoints[d.cpIsl[1]] || null; cpByIsland[3] = checkpoints[d.cpIsl[2]] || null;
-  areasSeen.clear(); d.areas.forEach(a => areasSeen.add(a));
+  activateCheckpoint((d.activeCpName && cpNamed(d.activeCpName)) || checkpoints[d.activeCp] || checkpoints[0], true);
+  [1, 2, 3].forEach(n => { cpByIsland[n] = d.cpIslNames ? cpNamed(d.cpIslNames[n - 1]) : checkpoints[(d.cpIsl || [])[n - 1]] || null; });
+  areasSeen.clear(); (d.areas || ['Driftwood Cove']).forEach(a => areasSeen.add(a));
   // older saves still use his old name
-  d.talked.forEach(([name, talked, ri]) => { if (name === 'Jean' + '-Marco') name = 'Gianmarco'; npcs.filter(x => x.name === name).forEach(n => { n.talked = talked; n.ri = ri; }); });
+  (d.talked || []).forEach(([name, talked, ri]) => { if (name === 'Jean' + '-Marco') name = 'Gianmarco'; npcs.filter(x => x.name === name).forEach(n => { n.talked = talked; n.ri = ri; }); });
   elapsed = d.elapsed; falls = d.falls; bonks = d.bonks;
   // put Guiseppe back where he was (indoors saves resume at the checkpoint, to keep the camera simple)
   const p = d.inside ? activeCp.pos.clone().add(new THREE.Vector3(0.9, 0, 0.9)) : new THREE.Vector3(...d.pos);
@@ -8066,6 +8446,20 @@ function saveGame(quiet = false) {
   return true;
 }
 function autosave() { if (settings.autosave && running) saveGame(true); }
+// progress (keys, shells, gears, quest steps) saves as soon as Guiseppe is safely back on the ground,
+// there's a quiet save every half minute, and one more when the tab is closed or hidden
+let saveDue = false, saveClock = 0;
+const saveSoon = (quietly = false) => { saveDue = quietly && saveDue !== 'loud' ? 'quiet' : 'loud'; };
+const canQuietSave = () => settings.autosave && currentSlot !== null && !cut && !state.dead;
+function quietSave() { if (canQuietSave()) store.set(slotKey(currentSlot), JSON.stringify(snapshot())); }
+function updateAutosave(dt) {
+  saveClock += dt;
+  const steady = state.grounded && !dlg && !activeGame;
+  if (saveDue && steady && !state.dead && !cut) { const loud = saveDue === 'loud'; saveDue = false; saveClock = 0; if (loud) autosave(); else quietSave(); }
+  else if (saveClock > 30 && steady) { saveClock = 0; quietSave(); }
+}
+addEventListener('pagehide', () => { if (running || pauseOpen) quietSave(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && (running || pauseOpen)) quietSave(); });
 
 // ---------- settings ----------
 function saveSettings() { store.set('guiseppe-settings', JSON.stringify(settings)); }
@@ -8245,7 +8639,7 @@ function devPreset(name) {
     if (name === 'i3') { d.pos = [I1_ARRIVE.x, I1_ARRIVE.y, I1_ARRIVE.z]; d.facing = Math.PI; }
     else {
       d.i3 = { visited: true, pumps: pumps.map(() => 1), gate: true, snort: false, intro: false };
-      d.areas.push('Isola Inchiostro', 'Inkworks Dock', 'Piazza Grigia', 'The Inkworks', 'Shift Lobby', 'Conveyor Hall', 'Ink Vat Hall', 'Boiler Stacks', 'Ink Reactor', 'Packing Hall', 'Sharpener Pit', 'The Rafters', 'Survivor Camp', 'Inkworks Roof', 'Pencil Line', 'Break Room', 'Quality Control');
+      d.areas.push('Isola Inchiostro', 'Inkworks Dock', 'Piazza Grigia', 'The Inkworks', 'Shift Lobby', 'Conveyor Hall', 'Ink Vat Hall', 'Boiler Stacks', 'Ink Reactor', 'Packing Hall', 'Sharpener Pit', 'The Rafters', 'Survivor Camp', 'Stub Grove', 'Junkyard', 'Inkworks Roof', 'Pencil Line', 'Break Room', 'Quality Control');
       d.talked = d.talked.map(([n, tk, ri]) => [n, n === 'Rina Righello' ? true : tk, ri]);
       place('Reactor Steps', 3);
     }
