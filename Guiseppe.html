@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Island One: Driftwood Cove</title>
+<title>The Guiseppe Game</title>
 <style>
   :root {
     --cream: #fff6e3;
@@ -85,6 +85,22 @@
   .shell-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .isle-arrow { font: inherit; font-size: 13px; line-height: 1; padding: 6px 10px; border-radius: 10px; border: 2px solid rgba(43,33,64,.2); background: rgba(255,255,255,.6); color: inherit; cursor: pointer; }
   .isle-arrow:hover { background: #ffc93c; border-color: #2b2140; }
+  .inv-dots { display: flex; justify-content: center; gap: 6px; margin: -2px 0 10px; }
+  .inv-dots i { width: 8px; height: 8px; border-radius: 50%; background: rgba(43,33,64,.18); }
+  .inv-dots i.on { background: var(--ink); }
+  .journal { display: none; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+  .journal.show { display: flex; }
+  .jq { display: grid; grid-template-columns: 34px 1fr auto; gap: 2px 10px; align-items: center; background: #fff; border: 3px solid var(--ink); border-radius: 14px; padding: 8px 12px; box-shadow: 3px 3px 0 var(--ink); }
+  .jq .ico { grid-row: 1 / span 2; font-size: 24px; text-align: center; }
+  .jq b { font-family: var(--display); font-size: 15px; }
+  .jq .who { font-size: 11px; opacity: .65; }
+  .jq .step { grid-column: 2 / span 2; font-size: 12px; line-height: 1.3; }
+  .jq .tag { font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; padding: 3px 7px; border-radius: 8px; background: #ffc93c; border: 2px solid var(--ink); }
+  .jq.done { background: #e8f6e0; }
+  .jq.done .tag { background: #7ed957; }
+  .jq.unknown { border-style: dashed; border-color: #c9bda3; box-shadow: none; background: #fffaf0; color: #a0957f; }
+  .jq.unknown .tag { background: transparent; border-color: #c9bda3; }
+  .jq-isle { font-family: var(--display); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; opacity: .7; margin-top: 4px; }
   .lock-hint { position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%); padding: 8px 16px; border-radius: 999px; background: rgba(43,33,64,.78); color: #fff6e3; font-family: var(--display); font-weight: 700; font-size: 14px; letter-spacing: .03em; pointer-events: none; opacity: 0; transition: opacity .25s; z-index: 6; }
   .lock-hint.show { opacity: 1; }
   .closet-card { width: min(680px, 94vw); max-height: 90vh; overflow-y: auto; }
@@ -231,13 +247,31 @@
   .objective .obj-sub { font-size: 11px; line-height: 1.3; color: #6a5f7a; margin-top: 2px; overflow-wrap: anywhere; }
   .objective .obj-sub:empty { display: none; }
   body.cine .objective, body.noobjective .objective { opacity: 0 !important; }
+
+  /* clock chip and the bed */
+  .clock-chip { gap: 6px; font-size: 15px; font-variant-numeric: tabular-nums; }
+  #glideKey.hidden { display: none; }
+  .bed-card { width: min(460px, 92vw); text-align: center; }
+  .bed-time { display: flex; align-items: baseline; justify-content: center; gap: 10px; margin: 4px 0 10px; }
+  .bed-time span { font-size: 30px; }
+  .bed-time b { font-family: var(--display); font-size: clamp(34px, 9vw, 48px); font-variant-numeric: tabular-nums; }
+  .bed-time small { font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--coral); font-weight: 800; }
+  #bedSlider { width: 100%; accent-color: var(--coral); margin-bottom: 12px; }
+  .bed-presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
+  .bed-presets button { font-family: var(--display); font-weight: 700; font-size: 13px; color: var(--ink); background: #fffaf0; border: 3px solid var(--ink); border-radius: 12px; padding: 6px 4px; cursor: pointer; box-shadow: 2px 2px 0 var(--ink); }
+  .bed-presets button:hover { background: #ffe9c9; }
+  .bed-note { font-size: 12px; line-height: 1.4; color: #6a5f7a; min-height: 2.8em; margin-bottom: 10px; }
+  .bed-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .mbtn.ghost { background: transparent; box-shadow: none; }
   @media print { .keys, .overlay, .dialog, .prompt, .inv, .hud-right { display: none; } }
 </style>
-<script src="https://artifactcdn.diabrowser.engineering/ajax/libs/tone/Tone.min.js"></script>
+<!-- crossorigin lets the error box show the real message if the music library ever fails, instead of a bare "Script error." -->
+<script crossorigin="anonymous" src="https://artifactcdn.diabrowser.engineering/ajax/libs/tone/Tone.min.js"></script>
 </head>
 <body>
 <div class="hud">
   <div class="chip" id="heartChip"><span>Guiseppe</span><span class="hearts" id="hearts"></span></div>
+  <div class="chip clock-chip" id="clockChip"><span id="clockIco">☀️</span><span id="clockText">09:00</span></div>
   <div class="chip pop" id="coinPop"><div class="coin-ico"></div><span id="coinPopText">0</span></div>
 </div>
 <div class="objective" id="objective"><small>Objective</small><div class="obj-main" id="objMain"></div><div class="obj-sub" id="objSub"></div></div>
@@ -250,6 +284,7 @@
   <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move</div>
   <div><kbd>Space</kbd> jump · tap again to flip</div>
   <div><kbd>Shift</kbd> run · <kbd>F</kbd> in air: ground pound</div>
+  <div id="glideKey" class="hidden">Hold <kbd>Space</kbd> while falling: glide</div>
   <div>Stomp enemies · not the spiky red ones</div>
   <div><kbd>E</kbd> talk · <kbd>I</kbd> inventory</div>
   <div><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> or mouse: camera · click to lock cursor · scroll zoom</div>
@@ -283,15 +318,30 @@
       <div class="inv-close"><kbd>I</kbd> close</div>
     </div>
     <div class="inv-stats">
-      <div class="stat"><b id="coins">0 / 0</b><small>Coins</small></div>
+      <div class="stat"><b id="coins">0</b><small>Coins</small></div>
       <div class="stat"><b id="timer">0:00</b><small>Time</small></div>
       <div class="stat"><b id="invBonks">0</b><small>Bonks</small></div>
       <div class="stat"><b id="areasSeen">1 / 6</b><small>Areas found</small></div>
     </div>
-    <div class="inv-label shell-head"><button class="isle-arrow" id="shellPrev" aria-label="Previous island">◀</button><span>Golden Shells · <span id="shellIsle">Driftwood Cove</span> · <span id="shells">0 / 12</span></span><button class="isle-arrow" id="shellNext" aria-label="Next island">▶</button></div>
+    <!-- four pages: shells on island 1, shells on island 2, key items, side quest journal -->
+    <div class="inv-label shell-head"><button class="isle-arrow" id="shellPrev" aria-label="Previous page">◀</button><span id="invPageTitle">Golden Shells · Driftwood Cove · 0 / 12</span><button class="isle-arrow" id="shellNext" aria-label="Next page">▶</button></div>
+    <div class="inv-dots" id="invDots"></div>
     <div class="slots" id="shellSlots"></div>
-    <div class="inv-label">Key items</div>
-    <div class="slots" id="itemSlots"></div>
+    <div class="journal" id="journalList"></div>
+  </div>
+</div>
+<div class="inv" id="bedMenu">
+  <div class="inv-card bed-card">
+    <div class="inv-head">
+      <div><small>Casa Guiseppe</small><h2>Guiseppe's Bed</h2></div>
+      <div class="inv-close"><kbd>Esc</kbd> cancel</div>
+    </div>
+    <div class="inv-label">Sleep until...</div>
+    <div class="bed-time"><span id="bedIco">☀️</span><b id="bedClock">09:00</b><small id="bedPhase">Morning</small></div>
+    <input type="range" id="bedSlider" min="0" max="23.75" step="0.25" value="9">
+    <div class="bed-presets" id="bedPresets"></div>
+    <div class="bed-note" id="bedNote"></div>
+    <div class="bed-actions"><button class="mbtn" id="bedSleep">💤 Sleep</button><button class="mbtn ghost" id="bedCancel">Cancel</button></div>
   </div>
 </div>
 <div class="inv" id="closet">
@@ -335,7 +385,7 @@
 <div class="menu" id="mainMenu">
   <div class="menu-card">
     <div class="eyebrow" id="logoEyebrow">The Biscotto Isles</div>
-    <h1 class="logo" id="logo">Guiseppe &amp; the<br><em>Grumblecrabs</em></h1>
+    <h1 class="logo" id="logo">The Guiseppe<br><em>Game</em></h1>
     <div class="menu-screen" id="scrMain">
       <button class="mbtn primary" id="mContinue">Continue</button>
       <button class="mbtn" id="mPlay">Play</button>
@@ -382,7 +432,7 @@
     </div>
     <div class="menu-screen" id="scrCredits">
       <div class="menu-title">Credits</div>
-      <p class="credits">Starring <b>Guiseppe</b>, with <b>Gianmarco</b>, <b>Goonseppe</b>, <b>Nonna Pomodoro</b>, <b>Signor Formaggio</b>, <b>Bruno</b>, <b>Lino</b>, <b>Capitana Sardina</b>, <b>Goonposter</b>, <b>Coni</b> and <b>Mamma Pinguina</b>.<br><br>Villainy by <b>King Grumbleclaw</b>.<br><br>Built in Dia with Three.js and Tone.js.</p>
+      <p class="credits">Starring <b>Guiseppe</b>, with <b>Gianmarco</b>, <b>Goonseppe</b>, <b>Nonna Pomodoro</b>, <b>Signor Formaggio</b>, <b>Bruno</b>, <b>Lino</b>, <b>Capitana Sardina</b>, <b>Goonposter</b>, <b>Coni</b>, <b>Zia Piuma</b> and <b>Mamma Pinguina</b>.<br><br>Villainy by <b>King Grumbleclaw</b>.<br><br>Built in Dia with Three.js and Tone.js.</p>
       <button class="mbtn small" data-back>← Back</button>
     </div>
     <div class="menu-screen" id="scrDev">
@@ -477,7 +527,8 @@ scene.fog = new THREE.Fog(0xbfe9f5, 90, 230);
 
 const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 400);
 
-scene.add(new THREE.HemisphereLight(0xfff4d6, 0x5aa0b0, 1.3));
+const hemi = new THREE.HemisphereLight(0xfff4d6, 0x5aa0b0, 1.3);
+scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xffffff, 2.2);
 sun.position.set(25, 40, 18);
 sun.castShadow = true;
@@ -877,18 +928,19 @@ function tree(x, z, s = 1) {
     c.position.set(x, y * s, z); c.rotation.y = i; scene.add(c);
   });
 }
-[[-14, 7], [-18, 1], [16, -6], [-5, 17], [14, 14], [-11, 14, 0.8], [18, 4, 0.9], [6, -18, 1.1], [-1, -19, 0.8], [49, -18, 0.7],
- [24, -2, 1.1], [-24, -14, 1], [20, 22, 1], [-22, 18, 0.9], [2, -26, 1], [26, -18, 0.9], [-6, 25, 0.9]].forEach(t => tree(...t));
+// kept a little sparse so the middle of the island stays open to run around in
+[[-14, 7], [-18, 1], [16, -6], [14, 14], [6, -18, 1.1], [49, -18, 0.7],
+ [-24, -14, 1], [20, 22, 1], [2, -26, 1], [26, -18, 0.9], [-6, 25, 0.9]].forEach(t => tree(...t));
 
 // rocks + flowers (decor)
 const rockGeo = new THREE.DodecahedronGeometry(1, 0);
-[[19, 10, .7], [-20, -6, .9], [9, 18, .5], [-7, 9, .4], [22, -10, .8], [-21, 11, .6], [26, 3, .6], [28, -14, 1.1], [-29, -10, 1.0], [14, -28, .9], [-14, 27, .8], [31, 12, .6]].forEach(([x, z, s]) => {
+[[19, 10, .7], [-20, -6, .9], [-7, 9, .4], [22, -10, .8], [-21, 11, .6], [28, -14, 1.1], [-29, -10, 1.0], [14, -28, .9]].forEach(([x, z, s]) => {
   const r = shadowed(new THREE.Mesh(rockGeo, M.stone));
   r.position.set(x, s * 0.3, z); r.scale.setScalar(s); r.rotation.set(x, z, s); scene.add(r);
   solids.push({ type: 'cyl', x, z, r: s * 0.85, top: s * 1.15, bottom: -1 });
 });
 const flowerColors = [0xffffff, 0xffc93c, 0xff8fa3, 0xb79cff];
-for (let i = 0; i < 170; i++) {
+for (let i = 0; i < 85; i++) {
   const a = Math.random() * Math.PI * 2, d = 3 + Math.random() * 26;
   const x = Math.cos(a) * d, z = Math.sin(a) * d;
   if (Math.hypot(x + 9, z + 4) < 7.5) continue;
@@ -2246,6 +2298,9 @@ const visor = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.04, 0.3), M.sea); viso
 
 const say = l => l; // lines may be strings or functions evaluated when spoken
 let brunoDone = false, maxHearts = 3;
+const CANNOLO_PRICE = 40;
+// every heart upgrade adds one on top of the base three, whichever order they come in
+function heartUpgrades() { return 3 + (brunoDone ? 1 : 0) + (sq.fishDone ? 1 : 0); }
 npcs.push(
   {
     name: 'Nonna Pomodoro', role: "Guiseppe's nonna · tomato", icon: '🍅', color: '#ffd0c8', group: nonna,
@@ -2282,20 +2337,20 @@ npcs.push(
     first: [
       "Buongiorno! Bruno, baker. Yes, I'm a baguette. No, it's not weird. You're a blob with a mustache.",
       "I'm baking my legendary Cannolo of Courage. One bite and you're tougher than a week-old crust.",
-      "Show me 40 coins and I'll give you one. I don't take them, I just like to see that you've been busy. I'm generous like that.",
+      "One cannolo costs 40 coins. Fresh ingredients aren't cheap, and neither am I. Well, I'm a little cheap. But not THAT cheap.",
     ],
     repeat: [
-      say(() => brunoDone ? "Come back hungry anytime!" : `You've got ${coinCount} coins. Come back with 40 and the cannolo is yours.`),
+      say(() => brunoDone ? "Come back hungry anytime!" : `You've got ${coinCount} coins. The Cannolo of Courage is ${CANNOLO_PRICE}. Come back when your pockets jingle.`),
       "The secret to good bread? Patience. And keeping Goonseppe away from it.",
     ],
-    questReady: () => !brunoDone && coinCount >= 40,
+    questReady: () => !brunoDone && coinCount >= CANNOLO_PRICE,
     questLines: [
-      "Forty coins! You really have been busy. Here, one Cannolo of Courage, fresh from the oven.",
+      "Forty coins, counted and bitten for authenticity. Here, one Cannolo of Courage, fresh from the oven.",
       "*crunch* ...You feel tougher already. That's an extra heart, my friend.",
     ],
     onQuest: () => {
-      brunoDone = true; maxHearts = 4; hearts = maxHearts; updateHearts(true);
-      toast('Extra heart!'); [523, 784, 1047].forEach((f, i) => setTimeout(() => blip(f, f, 0.15, 'triangle', 0.1), i * 100));
+      brunoDone = true; coinCount -= CANNOLO_PRICE; updateCoins(); maxHearts = heartUpgrades(); hearts = maxHearts; updateHearts(true);
+      toast(`Cannolo of Courage! -${CANNOLO_PRICE} coins · Max hearts: ${maxHearts}`); [523, 784, 1047].forEach((f, i) => setTimeout(() => blip(f, f, 0.15, 'triangle', 0.1), i * 100));
     },
   },
   {
@@ -2303,7 +2358,7 @@ npcs.push(
     pos: new THREE.Vector3(-5.5, 0.3, -49.5), voice: 1100, wave: 'square', talked: false, ri: 0, top: 1.4, promptY: 2.0, bobY: 1.2,
     first: [
       "Whoa, you're Guiseppe? THE Guiseppe? Can I get your autograph? Oh, I don't have a pencil. Goonseppe has the only pencil.",
-      "Press M for the big map. It shows everything! Even the coins you haven't grabbed yet. Super useful for completionists like me.",
+      "Press M for the big map. It shows everything! Even the coins you haven't grabbed yet. Coins spend on any island, so grab them all!",
       "The purple banners are checkpoints. Click one on the map to zoom straight there. I've touched all of them. Probably.",
     ],
     repeat: [
@@ -2311,7 +2366,7 @@ npcs.push(
       "Hold Shift to run! And press F in mid-air for a big ground pound. It even works on the King when he's dizzy!",
       "Those sandy stones on the way to Claw Reef crumble if you stand still. Keep hopping!",
       "The Cloud Garden keeps going past the big cloud. I saw it from the bell tower!",
-      "Bruno gives out cannoli if you've got lots of coins. Best day of my life was a cannolo day.",
+      "Bruno sells cannoli for 40 coins. I saved up for three weeks once. Best day of my life was a cannolo day.",
       "Pebble Isle has a sea stack you can climb from the flat rock. If you're brave. I'm not. I'm sour.",
     ],
   },
@@ -2793,7 +2848,7 @@ const masterpiece = new THREE.Group();
   nn.repeat.unshift(say(() => sq.fishDone ? "I still can't believe it. A FISH. My sister will never believe me. Good." : sq.fish ? "Is that... is that a fish in your hat?" : "A Golden Fish, inside the Snow Fortress. That's what the old stories say. Probably near something royal."));
   nn.quests = nn.quests || [];
   nn.quests.push({ ready: () => sq.fish && !sq.fishDone, lines: ["Is that... a FISH? A real, golden fish?! Sixty winters! SIXTY!", "Here, take my lucky scarf. Kept me warm through every one of those winters. You'll feel tougher already."],
-    done: () => { sq.fishDone = true; maxHearts++; hearts = maxHearts; updateHearts(true); toast(`Lucky scarf! Max hearts: ${maxHearts}`); [523, 784, 1047].forEach((f, i) => setTimeout(() => blip(f, f, 0.15, 'triangle', 0.1), i * 100)); } });
+    done: () => { sq.fishDone = true; maxHearts = heartUpgrades(); hearts = maxHearts; updateHearts(true); toast(`Lucky scarf! Max hearts: ${maxHearts}`); [523, 784, 1047].forEach((f, i) => setTimeout(() => blip(f, f, 0.15, 'triangle', 0.1), i * 100)); } });
 }
 // the twins: chase the Snow Fort snowmen off and they'll call a truce
 {
@@ -2814,7 +2869,7 @@ function resetSideQuests() {
 }
 
 // ---------- costumes, Casa Guiseppe (with the closet), fishing and errands between the islands ----------
-function extrasDefault() { return { costumes: ['none'], wearing: 'none', catches: 0, fishLog: {}, sinceLegend: 0, gelatoStage: 0, postcardStage: 0, chests: [], returnHint: false }; }
+function extrasDefault() { return { costumes: ['none'], wearing: 'none', catches: 0, fishLog: {}, sinceLegend: 0, gelatoStage: 0, postcardStage: 0, chests: [], returnHint: false, hour: 9, glider: false }; }
 Object.assign(sq, extrasDefault());
 const COSTUMES = [
   { id: 'none', name: 'Just Guiseppe', icon: '🌱', how: 'The classic look' },
@@ -2924,7 +2979,7 @@ const displayShells = [];
   const frame = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 0.06), M.sun); frame.position.set(ox - 1, 3.2, oz - 4.95); scene.add(frame);
   const pic = new THREE.Mesh(new THREE.CircleGeometry(0.3, 16), toon(0xe8323f)); pic.position.set(ox - 1, 3.2, oz - 4.91); scene.add(pic);
 }
-let closetOpen = false;
+let closetOpen = false, bedOpen = false;
 function renderCloset() {
   $('costumeCount').textContent = `${sq.costumes.length} / ${COSTUMES.length}`;
   $('costumeSlots').innerHTML = COSTUMES.map(c => {
@@ -2948,6 +3003,41 @@ $('costumeSlots').onclick = e => {
   wearCostume(b.dataset.cos); renderCloset(); burst(state.pos.clone().add(new THREE.Vector3(0, 1.4, 0)), 0xffc93c, 10, 2, 2); blip(660, 990, 0.12, 'triangle', 0.08);
 };
 $('closet').onclick = e => { if (e.target.id === 'closet') toggleCloset(false); };
+const isNight = (h = sq.hour) => h >= 20 || h < 5.5;
+const fmtHour = h => { const m = Math.round(((h % 24) + 24) % 24 * 60) % 1440; return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`; };
+const dayPhase = h => h < 5 ? 'Night' : h < 7 ? 'Dawn' : h < 11 ? 'Morning' : h < 14 ? 'Midday' : h < 17.5 ? 'Afternoon' : h < 20 ? 'Sunset' : 'Night';
+const phaseIcon = h => h < 5 || h >= 20.5 ? '🌙' : h < 7 ? '🌅' : h < 17.5 ? '☀️' : '🌇';
+// Guiseppe's bed: pick any time of day and sleep until then
+doors.push({ kind: 'use', label: 'Sleep · set the time', pos: new THREE.Vector3(HM.ox + 2.9, 0, HM.oz + 1.6), use: () => toggleBed(true) });
+const BED_PRESETS = [['🌅 Dawn', 6], ['☀️ Morning', 9], ['🌞 Noon', 12], ['🌇 Sunset', 18.5], ['🌙 Night', 22], ['✨ Midnight', 0]];
+$('bedPresets').innerHTML = BED_PRESETS.map(([l, h]) => `<button data-h="${h}">${l}<br><small>${fmtHour(h)}</small></button>`).join('');
+let bedFrom = 9;
+function bedPreview(h) {
+  sq.hour = ((h % 24) + 24) % 24; $('bedSlider').value = sq.hour;
+  $('bedClock').textContent = fmtHour(sq.hour); $('bedIco').textContent = phaseIcon(sq.hour); $('bedPhase').textContent = dayPhase(sq.hour);
+  $('bedNote').textContent = isNight()
+    ? 'At night most folks are asleep, crabs and penguins doze, bats come out to hunt, and the night music plays. The Golden Gelato Carp bites more often too.'
+    : 'By day the shops are open and everyone is awake. Bats doze in the shade.';
+}
+function toggleBed(open, sleep = false) {
+  if (open) { bedFrom = sq.hour; bedOpen = true; for (const k in keys) keys[k] = false; bedPreview(Math.round(sq.hour * 4) / 4); blip(392, 330, 0.15, 'sine', 0.07); }
+  else {
+    bedOpen = false;
+    if (!sleep) sq.hour = bedFrom;
+    else {
+      // a nap: fade out, wake up rested at the chosen time
+      const h = sq.hour; sq.hour = bedFrom; $('fade').classList.add('on'); blip(330, 220, 0.6, 'sine', 0.08);
+      setTimeout(() => { sq.hour = h; dayAnnounce = isNight() ? 'night' : 'day'; hearts = maxHearts; updateHearts(true); $('fade').classList.remove('on'); toast(`💤 You slept until ${fmtHour(h)}. All hearts restored!`); saveGame(true); }, 700);
+    }
+    setTimeout(lockPointer, 0);
+  }
+  $('bedMenu').classList.toggle('open', open);
+}
+$('bedSlider').oninput = e => bedPreview(+e.target.value);
+$('bedPresets').onclick = e => { const b = e.target.closest('[data-h]'); if (b) { bedPreview(+b.dataset.h); blip(660, 660, 0.05, 'triangle', 0.05); } };
+$('bedSleep').onclick = () => toggleBed(false, true);
+$('bedCancel').onclick = () => toggleBed(false);
+$('bedMenu').onclick = e => { if (e.target.id === 'bedMenu') toggleBed(false); };
 // costume chests on Driftwood Cove: they only appear once you've visited Isola Gelato
 const costumeChests = [
   { id: 'pirate', pos: new THREE.Vector3(WH.ox + 2.2, 3.2, WH.oz - 3.3) }, // up on the loft
@@ -3029,8 +3119,10 @@ function recast(msg) {
 }
 function pickFish() {
   if (sq.sinceLegend >= 12) return FISH[4]; // a little luck for patient anglers
-  let r = Math.random() * FISH.reduce((a, f) => a + f.w, 0);
-  for (const f of FISH) { r -= f.w; if (r <= 0) return f; }
+  // the Golden Gelato Carp bites far more often under the moon
+  const wt = f => f.legend && isNight() ? f.w * 3 : f.w;
+  let r = Math.random() * FISH.reduce((a, f) => a + wt(f), 0);
+  for (const f of FISH) { r -= wt(f); if (r <= 0) return f; }
   return FISH[0];
 }
 function handleFishKey(e) {
@@ -3092,6 +3184,7 @@ function applyExtras() {
   if (duke.defeated) unlockCostumeQuiet('frost');
   wearCostume(sq.wearing);
   costumeChests.forEach(c => { c.mesh.visible = visitedI2 && !sq.chests.includes(c.id); });
+  applyGlider();
 }
 function unlockCostumeQuiet(id) { if (!sq.costumes.includes(id)) sq.costumes.push(id); }
 function updateExtras(dt, p) {
@@ -3110,6 +3203,204 @@ function updateExtras(dt, p) {
     setTimeout(() => toast('Back on Driftwood Cove! Things have washed up since you left... and your closet is waiting at Casa Guiseppe.'), 1500);
   }
 }
+
+// ---------- day and night: one in-game hour per real minute ----------
+const HOUR_SECONDS = 60;
+// sky colour, sun strength, ambient strength, sun colour, ambient sky / ground colours
+const SKY_KEYS = [
+  [0, 0x141a3a, 0.4, 0.5, 0x9fb4ff, 0x6f7fd0, 0x2a3a6a],
+  [5, 0x262b58, 0.4, 0.55, 0x9fb4ff, 0x7584d0, 0x2f3e6c],
+  [6.5, 0xffb38a, 1.3, 0.95, 0xffc29a, 0xffd6b0, 0x6a7fa0],
+  [8.5, 0xbfe9f5, 2.2, 1.3, 0xffffff, 0xfff4d6, 0x5aa0b0],
+  [17, 0xbfe9f5, 2.2, 1.3, 0xffffff, 0xfff4d6, 0x5aa0b0],
+  [19, 0xff9a7a, 1.4, 1.0, 0xffa070, 0xffc4a0, 0x6a6f9a],
+  [20.5, 0x3a3570, 0.45, 0.6, 0xb0b8ff, 0x8088d8, 0x30406e],
+  [24, 0x141a3a, 0.4, 0.5, 0x9fb4ff, 0x6f7fd0, 0x2a3a6a],
+];
+const skyA = new THREE.Color(), skyB = new THREE.Color();
+const lerpHex = (a, b, k, out) => out.copy(skyA.set(a)).lerp(skyB.set(b), k);
+const skyStars = (() => {
+  const n = 500, pos = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    const u = Math.random() * Math.PI * 2, v = Math.random() * 0.9 + 0.08, r = 330;
+    pos[i * 3] = Math.cos(u) * Math.cos(v) * r; pos[i * 3 + 1] = Math.sin(v) * r; pos[i * 3 + 2] = Math.sin(u) * Math.cos(v) * r;
+  }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const p = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xfff6e3, size: 2.2, sizeAttenuation: false, transparent: true, opacity: 0, fog: false, depthWrite: false }));
+  p.renderOrder = -1; p.frustumCulled = false; scene.add(p); return p;
+})();
+const moonMesh = new THREE.Mesh(new THREE.SphereGeometry(9, 20, 14), new THREE.MeshBasicMaterial({ color: 0xfff3c4, fog: false, transparent: true, opacity: 0 }));
+scene.add(moonMesh);
+// glowing things that only come out at night
+function glowSprite(color, size) {
+  const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
+  const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.35, 'rgba(255,255,255,.5)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), color, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+  s.scale.setScalar(size); return s;
+}
+// the lighthouse lamp sweeps the sea after dark
+const beacon = new THREE.Group(); beacon.position.set(-16, 9.4, -14); scene.add(beacon);
+const beaconGlow = glowSprite(0xffe08a, 4); beacon.add(beaconGlow);
+const beamMat = new THREE.MeshBasicMaterial({ color: 0xfff1a8, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false });
+[0, Math.PI].forEach(a => { const bg = new THREE.CylinderGeometry(0.25, 3.2, 34, 12, 1, true); bg.translate(0, 17, 0); const b = new THREE.Mesh(bg, beamMat); b.rotation.set(0, a, Math.PI / 2 - 0.08); beacon.add(b); });
+// fireflies in Borgo Biscotto, the Cloud Garden path and the Candy Cane Forest
+const fireflySwarms = [[0, 1.5, -60, 9], [-8, 1.5, -30, 6], [RX, 1.5, RZ, 10], [MX, 1.5, MZ, 9]].map(([x, y, z, r]) => {
+  const n = 28, pos = new Float32Array(n * 3), seed = [];
+  for (let i = 0; i < n; i++) seed.push([Math.random() * r * 2 - r, Math.random() * 2.5, Math.random() * r * 2 - r, Math.random() * 6]);
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const pts = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xd8ff7a, size: 0.22, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+  pts.position.set(x, y, z); pts.frustumCulled = false; scene.add(pts);
+  return { pts, seed };
+});
+// the Aurora Gelatissima ripples over Isola Gelato at night
+const aurora = new THREE.Group(); aurora.position.set(IX, 75, IZ - 60); scene.add(aurora);
+{
+  const c = document.createElement('canvas'); c.width = 4; c.height = 64; const g = c.getContext('2d');
+  const gr = g.createLinearGradient(0, 0, 0, 64); gr.addColorStop(0, 'rgba(255,143,208,0)'); gr.addColorStop(0.45, 'rgba(158,227,200,.9)'); gr.addColorStop(1, 'rgba(110,200,255,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 4, 64);
+  const tex = new THREE.CanvasTexture(c);
+  for (let i = 0; i < 3; i++) {
+    const geo = new THREE.PlaneGeometry(220, 26, 40, 1);
+    const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false }));
+    m.position.set(0, i * 9, -40 + i * 30); m.rotation.y = 0.3 - i * 0.25; m.userData.base = geo.attributes.position.array.slice(); aurora.add(m);
+  }
+}
+// "Zzz" bubbles for sleeping NPCs and enemies
+const zzzMat = (() => {
+  const c = document.createElement('canvas'); c.width = 128; c.height = 64; const g = c.getContext('2d');
+  g.font = 'bold 40px sans-serif'; g.lineWidth = 6; g.strokeStyle = '#2b2140'; g.fillStyle = '#fff6e3';
+  [['z', 10, 54], ['z', 46, 40], ['Z', 80, 30]].forEach(([s, x, y]) => { g.strokeText(s, x, y); g.fillText(s, x, y); });
+  return new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false });
+})();
+function zzzFor(o, size) { if (!o.zzz) { o.zzz = new THREE.Sprite(zzzMat); o.zzz.scale.set(size * 2, size, 1); scene.add(o.zzz); } return o.zzz; }
+// who sleeps at night, and who has something different to say after dark
+const SLEEPERS = {
+  'Nonna Pomodoro': "Zzz... Guiseppe, is that you? Wear a jumper... it's cold out... zzz",
+  'Lino': "Zzz... no, YOU'RE a lemon... zzz",
+  'Coni': "*a sign on the counter says CHIUSO: closed till morning* ...Coni is snoring behind it.",
+  'Postino Wafer': "Zzz... delivery for... zzz... a very sleepy biscuit...",
+  'Scultore Granita': "Zzz... don't... move... zzz",
+  'Pistacchio': "Zzz... snowball fight... rematch... zzz",
+  'Fragola': "Zzz... I win... zzz",
+  'Gelatina': "Zzz... *wobble*... zzz",
+  'Mamma Pinguina': "Shh! The chicks are asleep. Come back in the morning, caro.",
+};
+const NIGHT_LINES = {
+  'Gianmarco': ["Guiseppe, look up! You can see every star from here. That one looks like a strawberry.", "I tried to stay up all night once. I fell asleep standing up."],
+  'Bruno': ["Bakers don't sleep! The dough rises at night, and so do I.", "Shh, the croissants are proofing. Tiptoe."],
+  'Signor Formaggio': ["The town hall is closed, but the mayor never sleeps! Mostly because of the snoring next door."],
+  'Capitana Sardina': ["Sailing by starlight is the best kind. Just ask, and we'll go."],
+  'Goonposter': ["Overtime, Guiseppe. Overtime. The timesheets don't fill themselves."],
+  'Goonseppe': ["Can't sleep. Too sharp. Too excited."],
+  'Nonno Ghiacciolo': ["Night fishing! The Golden Gelato Carp comes up when the moon is out. Mark my words."],
+  'Professor Sorbetto': ["The stars are out! There's the Great Scoop, and the Little Wafer next to it.", "On clear nights an aurora ripples over the island. I call it the Aurora Gelatissima."],
+  'Signora Cannella': ["Night shift! Nothing beats hot cinnamon cocoa under the stars."],
+  'Zia Piuma': ["Night gliding! Follow the lighthouse beam and you'll never get lost.", "Beautiful night for flying."],
+};
+let dayAnnounce = '';
+function updateSky() {
+  const h = sq.hour;
+  let i = 0; while (i < SKY_KEYS.length - 2 && h >= SKY_KEYS[i + 1][0]) i++;
+  const a = SKY_KEYS[i], b = SKY_KEYS[i + 1], k = THREE.MathUtils.clamp((h - a[0]) / (b[0] - a[0]), 0, 1);
+  lerpHex(a[1], b[1], k, scene.background); scene.fog.color.copy(scene.background);
+  sun.intensity = THREE.MathUtils.lerp(a[2], b[2], k); hemi.intensity = THREE.MathUtils.lerp(a[3], b[3], k);
+  lerpHex(a[4], b[4], k, sun.color); lerpHex(a[5], b[5], k, hemi.color); lerpHex(a[6], b[6], k, hemi.groundColor);
+  // how dark it is: 0 in the day, 1 deep in the night
+  const dark = h >= 19 ? Math.min(1, (h - 19) / 1.5) : h < 5 ? 1 : h < 6.5 ? 1 - (h - 5) / 1.5 : 0;
+  // the sun crosses the sky by day, the moon by night
+  const arc = isNight(h) ? ((h - 20 + 24) % 24) / 9.5 : (h - 5.5) / 14.5;
+  const ang = THREE.MathUtils.clamp(arc, 0, 1) * Math.PI;
+  return { dark, ang };
+}
+function updateDayNight(dt) {
+  if (running && !cut && !invOpen && !mapOpen && !closetOpen && !bedOpen && !pauseOpen) sq.hour = (sq.hour + dt / HOUR_SECONDS) % 24;
+  const { dark, ang } = updateSky();
+  const p = state.pos;
+  sun.position.set(p.x + Math.cos(ang) * 38, p.y + 14 + Math.sin(ang) * 32, p.z + 18);
+  skyStars.position.copy(camera.position); skyStars.material.opacity = dark * 0.9;
+  moonMesh.position.set(camera.position.x - Math.cos(ang) * 230, camera.position.y + 30 + Math.sin(ang) * 140, camera.position.z - 160);
+  moonMesh.material.opacity = dark; moonMesh.visible = dark > 0.02;
+  // night-only sights
+  beacon.rotation.y = t * 0.9; beaconGlow.material.opacity = dark * 0.9; beamMat.opacity = dark * 0.22; beacon.visible = dark > 0.02;
+  for (const f of fireflySwarms) {
+    f.pts.material.opacity = dark; f.pts.visible = dark > 0.02;
+    if (!f.pts.visible) continue;
+    const arr = f.pts.geometry.attributes.position.array;
+    f.seed.forEach(([x, y, z, ph], i) => { arr[i * 3] = x + Math.sin(t * 0.7 + ph) * 0.8; arr[i * 3 + 1] = y + Math.sin(t * 1.3 + ph * 2) * 0.5; arr[i * 3 + 2] = z + Math.cos(t * 0.6 + ph) * 0.8; });
+    f.pts.geometry.attributes.position.needsUpdate = true;
+  }
+  aurora.visible = dark > 0.3 && currentIsland === 2;
+  if (aurora.visible) aurora.children.forEach((m, i) => {
+    m.material.opacity = (dark - 0.3) * 0.7 * (0.75 + Math.sin(t * 0.5 + i) * 0.25);
+    const arr = m.geometry.attributes.position.array, base = m.userData.base;
+    for (let v = 0; v < arr.length; v += 3) arr[v + 2] = base[v + 2] + Math.sin(base[v] * 0.05 + t * 0.6 + i) * 8;
+    m.geometry.attributes.position.needsUpdate = true;
+  });
+  // sleepy NPCs lean over and snore
+  const night = isNight();
+  for (const n of npcs) {
+    const sleeping = night && SLEEPERS[n.name] && !n.hidden && !n.noTalk;
+    const z = n.zzz || (sleeping ? zzzFor(n, 0.8) : null);
+    if (z) { z.visible = !!sleeping && n.group.visible; z.position.set(n.pos.x + 0.4, n.pos.y + (n.top || 1.8) + 0.7 + Math.sin(t * 1.5) * 0.12, n.pos.z); }
+    if (SLEEPERS[n.name]) n.group.children[0].rotation.z = THREE.MathUtils.damp(n.group.children[0].rotation.z, sleeping ? 0.3 : 0, 4, dt);
+  }
+  // switch between the day and night tracks (fast boss and minigame music keeps its own tempo)
+  const mn = nightMusic();
+  if (mn !== musicIsNight) { musicIsNight = mn; if (!fastMusic()) setMusicTempo(islandTempo()); }
+  // HUD clock
+  const label = fmtHour(sq.hour), ico = phaseIcon(sq.hour);
+  if ($('clockText').textContent !== label) $('clockText').textContent = label;
+  if ($('clockIco').textContent !== ico) $('clockIco').textContent = ico;
+  // a gentle heads-up when night falls or the sun comes up
+  const ph = night ? 'night' : 'day';
+  if (running && !cut && dayAnnounce && dayAnnounce !== ph) toast(night ? '🌙 Night falls... some folks are asleep, others come out.' : '🌅 Good morning!');
+  dayAnnounce = ph;
+}
+
+// ---------- Zia Piuma's glider ----------
+{
+  const [g, b] = npcShell();
+  const bodyM = toon(0xf4f8ff);
+  const torso = shadowed(new THREE.Mesh(new THREE.CapsuleGeometry(0.42, 0.5, 6, 14), bodyM)); torso.position.y = 0.85; b.add(torso);
+  const head = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.34, 14, 12), bodyM)); head.position.y = 0.6; torso.add(head);
+  const beak = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.32, 8), toon(0xffa12b)); beak.rotation.x = Math.PI / 2; beak.position.set(0, -0.02, 0.38); head.add(beak);
+  addEyes(head, 0.12, 0.28, 0.12, 0.07);
+  [-1, 1].forEach(sd => { const w = shadowed(new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.55, 0.6), toon(0xb8c4d4))); w.position.set(sd * 0.45, 0.05, -0.05); w.rotation.z = sd * 0.25; torso.add(w); });
+  const cap = new THREE.Mesh(new THREE.SphereGeometry(0.35, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), toon(0x8a5a33)); cap.position.y = 0.06; head.add(cap);
+  const goggles = new THREE.Mesh(new THREE.TorusGeometry(0.33, 0.05, 6, 18), toon(0x9fe8ff, { emissive: 0x1a4a5a })); goggles.rotation.x = Math.PI / 2 - 0.3; goggles.position.y = 0.14; head.add(goggles);
+  const scarfZ = new THREE.Mesh(new THREE.TorusGeometry(0.33, 0.07, 6, 16), toon(0xe8323f)); scarfZ.rotation.x = Math.PI / 2; scarfZ.position.y = 0.32; torso.add(scarfZ);
+  // she nests on the clouds, next to the Cloud Garden checkpoint
+  const zx = -1.2, zz = -27.6;
+  npcs.push({
+    name: 'Zia Piuma', role: 'retired glider pilot · seagull', icon: '🪶', color: '#e8f4ff', group: g,
+    pos: new THREE.Vector3(zx, groundBelow(zx, zz, 16), zz), voice: 700, wave: "triangle", talked: false, ri: 0, top: 1.7, promptY: 2.5, bobY: 1,
+    first: [
+      "Ahoy, little mustache! Zia Piuma, best glider pilot Driftwood Cove ever saw. Retired, sadly.",
+      "Anyone who climbs all the way up to the Cloud Garden deserves a pair of wings. Here: my old glider!",
+      "Hold jump while you are falling and you will float like a gull. Warm air over the cocoa pools on Isola Gelato will carry you right up!",
+    ],
+    onFirst: () => { if (!sq.glider) { sq.glider = true; applyGlider(); [523, 659, 784, 1047, 1319].forEach((f, i) => setTimeout(() => blip(f, f, 0.14, "triangle", 0.1), i * 90)); toast("Got the Glider! Hold Space while falling to glide."); } },
+    repeat: [
+      "How is the glider? Jump off the clouds and hold Space. Best view on the island!",
+      "Long glides start high. The bell tower in Borgo Biscotto is a good launch spot.",
+      "On Isola Gelato, glide over the cocoa pools. The warm air lifts you like a balloon!",
+    ],
+  });
+  initNpc(npcs[npcs.length - 1]);
+}
+// the glider itself: a striped sail that opens above Guiseppe
+const gliderMesh = new THREE.Group();
+{
+  const shape = new THREE.Shape(); shape.moveTo(0, 1.1); shape.lineTo(1.6, -0.5); shape.lineTo(0, -0.2); shape.lineTo(-1.6, -0.5); shape.closePath();
+  const sail = new THREE.Mesh(new THREE.ShapeGeometry(shape), toon(0xff6b5a, { side: THREE.DoubleSide })); sail.rotation.x = Math.PI / 2; gliderMesh.add(sail);
+  const stripe = new THREE.Mesh(new THREE.ShapeGeometry((() => { const s = new THREE.Shape(); s.moveTo(0, 1.1); s.lineTo(0.35, 0.36); s.lineTo(0, 0.5); s.lineTo(-0.35, 0.36); s.closePath(); return s; })()), toon(0xfff6e3, { side: THREE.DoubleSide }));
+  stripe.rotation.x = Math.PI / 2; stripe.position.y = -0.01; gliderMesh.add(stripe);
+  const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.2, 6), M.woodDark); bar.rotation.z = Math.PI / 2; bar.position.set(0, -0.75, 0.1); gliderMesh.add(bar);
+  [-0.5, 0.5].forEach(x => { const s = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.8, 4), M.woodDark); s.position.set(x, -0.38, 0.05); s.rotation.z = -x * 0.5; gliderMesh.add(s); });
+  gliderMesh.position.y = 2.2; gliderMesh.visible = false; player.add(gliderMesh);
+}
+function applyGlider() { $('glideKey').classList.toggle('hidden', !sq.glider); }
 const jmNpc = npcs[0];
 const jmRepeatOriginal = jmNpc.repeat.slice();
 const jmRescuedLines = [
@@ -3619,6 +3910,13 @@ addEventListener('keydown', e => {
     else if (e.code === 'ArrowRight' || e.code === 'KeyD') switchShellIsle(1);
     return;
   }
+  if (bedOpen) {
+    if (!e.repeat && e.code === "Escape") { toggleBed(false); e._handled = true; }
+    else if (!e.repeat && e.code === "Enter") toggleBed(false, true);
+    else if (e.code === "ArrowLeft" || e.code === "KeyA") bedPreview(sq.hour - 0.25);
+    else if (e.code === "ArrowRight" || e.code === "KeyD") bedPreview(sq.hour + 0.25);
+    return;
+  }
   if (closetOpen) {
     if (!e.repeat && (e.code === 'Escape' || e.code === 'KeyE')) { toggleCloset(false); e._handled = true; }
     return;
@@ -3648,7 +3946,7 @@ renderer.domElement.addEventListener('pointerdown', e => {
 });
 // cursor lock: while playing, the cursor is hidden and held in the middle so the mouse turns the camera freely
 const pointerLocked = () => document.pointerLockElement === renderer.domElement;
-const wantLock = () => settings.mouseLook && running && !invOpen && !mapOpen && !closetOpen && !pauseOpen && !cut;
+const wantLock = () => settings.mouseLook && running && !invOpen && !mapOpen && !closetOpen && !bedOpen && !pauseOpen && !cut;
 function lockPointer() {
   if (!wantLock() || pointerLocked() || !renderer.domElement.requestPointerLock) return;
   try { const r = renderer.domElement.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (_) {}
@@ -3656,7 +3954,7 @@ function lockPointer() {
 function unlockPointer() { if (pointerLocked()) document.exitPointerLock(); }
 document.addEventListener('pointerlockchange', () => {
   // Esc (or leaving the window) releases the lock: treat that like pausing
-  if (!pointerLocked() && running && !invOpen && !mapOpen && !closetOpen && !pauseOpen && !dlg && !cut) openPause();
+  if (!pointerLocked() && running && !invOpen && !mapOpen && !closetOpen && !bedOpen && !pauseOpen && !dlg && !cut) openPause();
 });
 setInterval(() => {
   if (pointerLocked() && !wantLock()) unlockPointer();
@@ -3720,9 +4018,8 @@ const fmt = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2,
 const coinsOn = isl => coins.filter(c => c.userData.island === isl);
 const coinsGot = isl => coinsOn(isl).filter(c => c.userData.taken).length;
 function updateCoins() {
-  const isl = currentIsland || 1;
-  $('coins').textContent = `${coinsGot(isl)} / ${coinsOn(isl).length}`;
-  showPop(`${coinsGot(isl)} / ${coinsOn(isl).length}`);
+  $('coins').textContent = `${coinCount}`;
+  showPop(`${coinCount}`);
 }
 let popTimer;
 function showPop(text) {
@@ -3733,15 +4030,18 @@ function showPop(text) {
 }
 
 // ---------- inventory ----------
-let invOpen = false, shellIsle = 1;
+// the inventory flips through four pages with ◀ ▶ (or A/D, ←/→):
+// island 1 shells → island 2 shells → key items → side quest journal
+const INV_PAGES = ['shells1', 'shells2', 'items', 'journal'];
+let invOpen = false, invPage = 0, shellIsle = 1;
 const ISLE_NAMES = { 1: 'Driftwood Cove', 2: 'Isola Gelato' };
 function toggleInv(open) {
   invOpen = open;
-  if (open) { for (const k in keys) keys[k] = false; shellIsle = currentIsland || 1; renderInventory(); }
+  if (open) { for (const k in keys) keys[k] = false; invPage = (currentIsland || 1) - 1; renderInventory(); }
   $('inv').classList.toggle('open', open);
   if (!open) setTimeout(lockPointer, 0);
 }
-function switchShellIsle(d) { shellIsle = ((shellIsle - 1 + d + 2) % 2) + 1; blip(660, 660, 0.06, 'triangle', 0.05); renderInventory(); }
+function switchShellIsle(d) { invPage = (invPage + d + INV_PAGES.length) % INV_PAGES.length; blip(660, 660, 0.06, 'triangle', 0.05); renderInventory(); }
 $('shellPrev').onclick = () => switchShellIsle(-1);
 $('shellNext').onclick = () => switchShellIsle(1);
 function toggleKeys() { $('keysPanel').classList.toggle('hidden'); }
@@ -3750,21 +4050,80 @@ $('keysBtn').onclick = toggleKeys;
 $('inv').onclick = e => { if (e.target.id === 'inv') toggleInv(false); };
 // the island name and shell count above the shell grid always change together
 function shellHead(isl) {
-  shellIsle = isl;
+  shellIsle = isl; invPage = isl - 1;
   const known = isl === 1 || visitedI2;
-  $('shellIsle').textContent = known ? ISLE_NAMES[isl] : 'Unknown island';
-  $('shells').textContent = known ? shellText(isl) : '? / ?';
+  $('invPageTitle').textContent = `Golden Shells · ${known ? ISLE_NAMES[isl] : 'Unknown island'} · ${known ? shellText(isl) : '? / ?'}`;
+}
+// one entry per side quest: hidden as ??? until you've met whoever hands it out
+function journalEntries() {
+  const met = name => { const n = npcNamed(name); return !!(n && n.talked); };
+  const isle1Games = games.filter(g => g.shell.island === 1), isle2Games = games.filter(g => g.shell.island === 2);
+  const fort = fortSnowmen(), fortOut = fort.filter(e => !e.alive).length;
+  const left = ['Nonno Ghiacciolo', 'Professor Sorbetto', 'Gelatina'].filter(n => !sq.delivered.includes(n));
+  const q = (isle, ico, title, who, known, done, step) => ({ isle, ico, title, who, known: known || done, done, step });
+  return [
+    q(1, '✏️', "Goonseppe's pencil", 'Goonseppe', met('Goonseppe') || pencilState !== 'lost', pencilState === 'returned',
+      pencilState === 'returned' ? 'Returned. Goonseppe can sharpen again!' : pencilState === 'carried' ? 'Bring the pencil back to Goonseppe.' : 'Goonseppe lost his only pencil somewhere around Driftwood Cove.'),
+    q(1, '🥐', 'Cannolo of Courage', 'Bruno · Borgo Biscotto', met('Bruno'), brunoDone,
+      brunoDone ? 'Bought it. +1 heart!' : `Pay Bruno ${CANNOLO_PRICE} coins for an extra heart. You have ${coinCount}.`),
+    q(1, '🎪', "Nonna's game stands", 'Nonna Pomodoro', met('Nonna Pomodoro'), isle1Games.every(g => g.won),
+      `Win every game stand on Driftwood Cove for a Golden Shell each: ${isle1Games.filter(g => g.won).length} / ${isle1Games.length} won.`),
+    q(1, '🍨', 'A gelato for Bruno', 'Coni · Isola Gelato', sq.gelatoStage > 0, sq.gelatoStage === 2,
+      sq.gelatoStage === 2 ? 'Delivered! Bruno sent you a chef hat.' : 'Sail back to Borgo Biscotto and give Coni\'s Stracciatella Supreme to Bruno.'),
+    q(1, '💌', 'Pen pal postcard', 'Gelatina · Isola Gelato', sq.postcardStage > 0, sq.postcardStage === 2,
+      sq.postcardStage === 2 ? 'Delivered! Lino gave you a lemon costume.' : 'Bring Gelatina\'s postcard to Lino in Borgo Biscotto.'),
+    q(2, '✉️', 'Special delivery', 'Postino Wafer', met('Postino Wafer') || sq.postStage > 0, sq.postStage === 2,
+      sq.postStage === 2 ? 'All letters delivered.' : sq.postStage === 1 ? (left.length ? `Letters left for: ${left.join(', ')}.` : 'All delivered. Tell Postino Wafer!') : 'Postino Wafer needs a fast walker.'),
+    q(2, '🧊', "Granita's masterpiece", 'Scultore Granita', met('Scultore Granita') || sq.chunks > 0, sq.sculptDone,
+      sq.sculptDone ? 'The statue is finished. It\'s you!' : sq.chunks >= 4 ? 'All 4 crystal ice chunks found. Take them to Granita.' : `Find glowing blue crystal ice around the island: ${sq.chunks} / 4.`),
+    q(2, '⛄', 'Snowball truce', 'Pistacchio & Fragola', met('Pistacchio') || met('Fragola'), sq.twinsDone,
+      sq.twinsDone ? 'Truce! For now.' : fort.length && fortOut === fort.length ? 'Every fort snowman is out. Tell the twins!' : `Knock out the Snow Fort snowmen, even the ones inside: ${fortOut} / ${fort.length}.`),
+    q(2, '🐟', 'Sixty winters', 'Nonno Ghiacciolo', met('Nonno Ghiacciolo') || sq.fish, sq.fishDone,
+      sq.fishDone ? 'Nonno finally saw a fish. +1 heart from his lucky scarf!' : sq.fish ? 'Bring the Golden Fish to Nonno Ghiacciolo.' : 'Find the Golden Fish frozen inside the Snow Fortress.'),
+    q(2, '🐣', 'Lost chicks', 'Mamma Pinguina', met('Mamma Pinguina') || chicksFound() > 0, chickDone,
+      chickDone ? 'All five chicks are home.' : `Find Mamma Pinguina's lost chicks: ${chicksFound()} / 5.`),
+    q(2, '🪂', "Zia's glider", 'Zia Piuma · Cloud Garden', met('Zia Piuma') || sq.glider, sq.glider,
+      sq.glider ? 'Hold Space while falling to glide.' : 'Zia Piuma has something for you in the Cloud Garden.'),
+    ...(isle2Games.length ? [q(2, '❄️', isle2Games.length === 1 ? isle2Games[0].name : 'Gelato game stands', isle2Games.length === 1 ? isle2Games[0].shell.area : 'Isola Gelato', visitedI2, isle2Games.every(g => g.won),
+      isle2Games.length === 1 ? (isle2Games[0].won ? 'Won! The Golden Shell is yours.' : 'Win this game stand for a Golden Shell.') : `Win the game stands on Isola Gelato: ${isle2Games.filter(g => g.won).length} / ${isle2Games.length} won.`)] : []),
+  ];
+}
+function renderJournal() {
+  const list = journalEntries(), done = list.filter(e => e.done).length;
+  $('invPageTitle').textContent = `Side quest journal · ${done} / ${list.length} done`;
+  let html = '';
+  for (const isle of [1, 2]) {
+    const here = list.filter(e => e.isle === isle);
+    if (isle === 2 && !visitedI2 && !here.some(e => e.known)) { html += `<div class="jq-isle">Unknown island</div><div class="jq unknown"><span class="ico">❔</span><b>???</b><span class="tag">${here.length} quests</span><div class="step">Sail somewhere new to find more people who need help.</div></div>`; continue; }
+    html += `<div class="jq-isle">${ISLE_NAMES[isle]}</div>`;
+    // in progress first, then finished, then the ones you haven't found yet
+    const order = e => e.done ? 1 : e.known ? 0 : 2;
+    html += here.slice().sort((a, b) => order(a) - order(b)).map(e => e.known
+      ? `<div class="jq ${e.done ? 'done' : ''}"><span class="ico">${e.ico}</span><b>${e.title}</b><span class="tag">${e.done ? 'Done ✓' : 'Active'}</span><div class="step"><span class="who">${e.who} · </span>${e.step}</div></div>`
+      : `<div class="jq unknown"><span class="ico">❔</span><b>???</b><span class="tag">Not found</span><div class="step">Someone on ${ISLE_NAMES[isle]} might need a hand.</div></div>`).join('');
+  }
+  $('journalList').innerHTML = html;
 }
 function renderInventory() {
   const isl = currentIsland || 1;
-  $('coins').textContent = `${coinsGot(isl)} / ${coinsOn(isl).length}`;
+  $('coins').textContent = `${coinCount}`;
+  const page = INV_PAGES[invPage];
+  if (page === 'shells1' || page === 'shells2') shellIsle = page === 'shells1' ? 1 : 2;
   const list = shellsOn(shellIsle), known = shellIsle === 1 || visitedI2;
-  shellHead(shellIsle);
+  $('invDots').innerHTML = INV_PAGES.map((p, i) => `<i class="${i === invPage ? 'on' : ''}"></i>`).join('');
+  $('shellSlots').style.display = page === 'journal' ? 'none' : '';
+  $('journalList').classList.toggle('show', page === 'journal');
   $('invBonks').textContent = `${bonks}`;
   $('areasSeen').textContent = `${areasSeen.size} / ${regions.length}`;
-  $('shellSlots').innerHTML = list.map(s => s.taken
-    ? `<div class="slot got"><div><span class="ico" title="${shellDesignName(shells.indexOf(s))}">${shellIcon(shells.indexOf(s))}</span>${s.name}</div></div>`
-    : `<div class="slot"><div><span class="ico" style="opacity:.25;filter:grayscale(1)">${shellIcon(shells.indexOf(s))}</span>???<br>${known && areasSeen.has(s.area) ? s.area : 'Unknown area'}</div></div>`).join('');
+  if (page === 'journal') { renderJournal(); return; }
+  if (page === 'shells1' || page === 'shells2') {
+    shellHead(shellIsle);
+    $('shellSlots').innerHTML = list.map(s => s.taken
+      ? `<div class="slot got"><div><span class="ico" title="${shellDesignName(shells.indexOf(s))}">${shellIcon(shells.indexOf(s))}</span>${s.name}</div></div>`
+      : `<div class="slot"><div><span class="ico" style="opacity:.25;filter:grayscale(1)">${shellIcon(shells.indexOf(s))}</span>???<br>${known && areasSeen.has(s.area) ? s.area : 'Unknown area'}</div></div>`).join('');
+    return;
+  }
+  $('invPageTitle').textContent = 'Key items';
   const cpCount = checkpoints.filter(c => c.active).length;
   const items = [
     pencilState === 'lost' ? null
@@ -3785,9 +4144,11 @@ function renderInventory() {
     sq.catches ? `<div class="slot got"><div><span class="ico">🎣</span>Fish caught<br>${sq.catches} · ${FISH.filter(f => sq.fishLog[f.name]).length}/${FISH.length} kinds</div></div>` : null,
     `<div class="slot got"><div><span class="ico">${(COSTUMES.find(c => c.id === sq.wearing) || COSTUMES[0]).icon}</span>Costumes<br>${sq.costumes.length} / ${COSTUMES.length}</div></div>`,
     chicksFound() && !chickDone ? `<div class="slot got"><div><span class="ico">🐣</span>Lost chicks<br>${chicksFound()} / 5 · to Mamma</div></div>` : null,
+    sq.glider ? `<div class="slot got"><div><span class="ico">🪂</span>Glider<br>hold Space to glide</div></div>` : null,
   ];
-  while (items.length < 6) items.push(null);
-  $('itemSlots').innerHTML = items.map(i => i || `<div class="slot"><div>empty</div></div>`).join('');
+  const got = items.filter(Boolean);
+  while (got.length % 6) got.push('<div class="slot"><div>empty</div></div>');
+  $('shellSlots').innerHTML = got.join('');
 }
 
 // ---------- areas + minimap ----------
@@ -4109,9 +4470,9 @@ function step(dt) {
   if (ml > 0) { mx /= ml; mz /= ml; }
 
   const sprint = (keys.ShiftLeft || keys.ShiftRight) && ml > 0;
-  const topSpeed = SPEED * (sprint ? 1.45 : 1) * (s.grounded && s.ground && s.ground.ice ? 1.2 : 1);
+  const topSpeed = s.gliding ? SPEED * 1.5 : SPEED * (sprint ? 1.45 : 1) * (s.grounded && s.ground && s.ground.ice ? 1.2 : 1);
   const onIce = s.grounded && s.ground && s.ground.ice;
-  const accel = s.grounded ? (onIce ? 2.0 : 14) : 6; // ice is slippery
+  const accel = s.grounded ? (onIce ? 2.0 : 14) : s.gliding ? 4 : 6; // ice is slippery, gliding turns wide
   if (s.pound > 0) { s.vel.x = s.vel.z = 0; }
   else {
     s.vel.x = THREE.MathUtils.damp(s.vel.x, mx * topSpeed, accel, dt);
@@ -4159,6 +4520,15 @@ function step(dt) {
   const prevY = p.y, wasGrounded = s.grounded, impact = s.vel.y;
   s.vel.y -= G * dt;
   if (s.vel.y < -30) s.vel.y = -30;
+  // gliding: hold jump while falling once Zia Piuma has given you the glider
+  const glide = sq.glider && keys.Space && !s.grounded && (s.vel.y < 0 || s.gliding) && !(s.pound > 0) && !s.dead && winLock <= 0 && !fishing;
+  if (glide && !s.gliding) { blip(300, 520, 0.18, "sine", 0.06); burst(p.clone().add(new THREE.Vector3(0, 2.2, 0)), 0xffffff, 6, 2, 0.6); }
+  s.gliding = glide;
+  if (glide) {
+    s.vel.y = Math.max(s.vel.y, -2.6);
+    // warm air over the cocoa pools carries the glider up
+    if (currentIsland === 2 && p.y < 16 && cocoaPools.some(c => Math.hypot(p.x - c.x, p.z - c.z) < c.r + 0.8)) { s.vel.y = Math.min(s.vel.y + 75 * dt, 7); if (Math.random() < 0.3) burst(p.clone(), 0xfff6e3, 1, 1, 1); }
+  }
   p.y += s.vel.y * dt;
   s.grounded = false; s.ground = null;
   for (const sd of solids) {
@@ -4201,7 +4571,7 @@ function step(dt) {
       c.userData.taken = true; c.visible = false; coinCount++; updateCoins();
       burst(c.position.clone(), 0xffc93c, 12, 3, 2);
       blip(988, 988, 0.06, 'square', 0.06); setTimeout(() => blip(1319, 1319, 0.18, 'square', 0.06), 60);
-      if (coinsGot(c.userData.island) === coinsOn(c.userData.island).length) toast(`Every coin on ${ISLE_NAMES[c.userData.island]}!`);
+
     }
   }
 
@@ -4272,6 +4642,7 @@ function updateEnemies(dt) {
   updateSnowShots(dt);
   for (const e of enemies) {
     if (!e.alive) {
+      if (e.zzz) e.zzz.visible = false;
       if (e.dying > 0) {
         e.dying -= dt; e.group.scale.setScalar(Math.max(0.001, e.dying / 0.35) * e.size); e.group.rotation.y += dt * 25;
         if (e.dying <= 0) e.group.visible = false;
@@ -4279,16 +4650,22 @@ function updateEnemies(dt) {
       continue;
     }
     let tx, tz;
-    const chase = !state.dead && Math.hypot(p.x - e.pos.x, p.z - e.pos.z) < 7 && Math.abs(p.y - e.pos.y) < (e.def.fly ? 2.5 : 1.6);
+    // bats hunt at night and doze by day; everyone else dozes at night (snowmen keep watch)
+    const nightNow = isNight(), owl = e.type === 'bat';
+    const sleepy = e.type !== 'snowman' && !e.angry && (owl ? !nightNow : nightNow);
+    const prowl = owl && nightNow;
+    const sense = sleepy ? 2.6 : prowl ? 10 : 7;
+    if (e.type !== 'snowman') { const z = e.zzz || (sleepy ? zzzFor(e, 0.55) : null); if (z) { z.visible = sleepy; z.position.set(e.pos.x + 0.3, e.pos.y + e.def.h * (e.size / e.def.size) + 0.5 + Math.sin(t * 1.5 + e.ang) * 0.1, e.pos.z); } }
+    const chase = !state.dead && Math.hypot(p.x - e.pos.x, p.z - e.pos.z) < sense && Math.abs(p.y - e.pos.y) < (e.def.fly ? 2.5 : 1.6);
     if (chase) {
       const dx = p.x - e.home.x, dz = p.z - e.home.z, d = Math.hypot(dx, dz), k = d > e.r ? e.r / d : 1;
       tx = e.home.x + dx * k; tz = e.home.z + dz * k;
     } else {
-      e.ang += dt * e.speed / e.r * (e.dir || 1);
+      e.ang += dt * e.speed / e.r * (e.dir || 1) * (sleepy ? 0.3 : 1);
       tx = e.home.x + Math.cos(e.ang) * e.r; tz = e.home.z + Math.sin(e.ang) * e.r;
     }
     const mx = tx - e.pos.x, mz = tz - e.pos.z, ml = Math.hypot(mx, mz);
-    const stepLen = Math.min(ml, (chase ? e.def.chase * (e.angry ? 1.6 : 1) : 2.2) * dt);
+    const stepLen = Math.min(ml, (chase ? e.def.chase * (e.angry ? 1.6 : 1) * (sleepy ? 0.5 : prowl ? 1.35 : 1) : 2.2 * (sleepy ? 0.3 : 1)) * dt);
     if (ml > 0.02) {
       e.pos.x += mx / ml * stepLen; e.pos.z += mz / ml * stepLen;
       let d = Math.atan2(mx, mz) - e.face; d = Math.atan2(Math.sin(d), Math.cos(d));
@@ -4359,7 +4736,7 @@ function updateNpcs(dt) {
   const pr = $('prompt');
   const target = nearNpc || nearDoor;
   if (target && !dlg && !cut && winLock <= 0) {
-    pr.innerHTML = nearNpc ? '<kbd>E</kbd> Talk' : nearDoor.label ? `<kbd>E</kbd> ${nearDoor.label}` : nearDoor.kind === 'game' ? `<kbd>E</kbd> Play ${nearDoor.game.name}${nearDoor.game.won ? ' ✓' : ''}` : nearDoor.kind === 'enter' ? `<kbd>E</kbd> Enter ${nearDoor.room.name}` : '<kbd>E</kbd> Go outside';
+    pr.innerHTML = nearNpc ? (isNight() && SLEEPERS[nearNpc.name] ? '<kbd>E</kbd> 💤 Sleeping' : '<kbd>E</kbd> Talk') : nearDoor.label ? `<kbd>E</kbd> ${nearDoor.label}` : nearDoor.kind === 'game' ? `<kbd>E</kbd> Play ${nearDoor.game.name}${nearDoor.game.won ? ' ✓' : ''}` : nearDoor.kind === 'enter' ? `<kbd>E</kbd> Enter ${nearDoor.room.name}` : '<kbd>E</kbd> Go outside';
     projV.copy(target.pos).add(new THREE.Vector3(0, nearNpc ? nearNpc.promptY : 2.6, 0)).project(camera);
     pr.style.display = 'block';
     // keep the prompt fully on screen, even when its target is near an edge
@@ -4378,14 +4755,17 @@ function updateNpcs(dt) {
   }
 }
 function openDialog(n) {
+  let asleep = false; // a sleepy mumble doesn't count as meeting someone
   let lines, onEnd = null;
   const q = n.quests && n.quests.find(q => q.ready());
   if (q) { lines = q.lines; onEnd = q.done; }
   else if (n.questReady && n.questReady()) { lines = n.questLines; onEnd = n.onQuest; }
+  else if (isNight() && SLEEPERS[n.name] && !n.noTalk) { lines = [SLEEPERS[n.name]]; asleep = true; }
   else if (!n.talked) { lines = n.first; onEnd = n.onFirst; }
+  else if (isNight() && NIGHT_LINES[n.name] && Math.random() < 0.7) lines = [NIGHT_LINES[n.name][n.ri++ % NIGHT_LINES[n.name].length]];
   else lines = [n.repeat[n.ri++ % n.repeat.length]];
   lines = lines.map(l => typeof l === 'function' ? l() : l);
-  dlg = { npc: n, lines, onEnd, i: 0, chars: 0, typing: true };
+  dlg = { npc: n, lines, onEnd, i: 0, chars: 0, typing: true, asleep };
   for (const k in keys) keys[k] = false;
   $('portrait').textContent = n.icon; $('portrait').style.background = n.color;
   $('dname').innerHTML = `${n.name}<small>${n.role}</small>`;
@@ -4398,12 +4778,13 @@ function advanceDialog() {
   dlg.i++;
   if (dlg.i < dlg.lines.length) { dlg.chars = 0; dlg.typing = true; return; }
   const { npc, onEnd } = dlg;
-  npc.talked = true; dlg = null; $('dialog').classList.remove('open');
+  if (!dlg.asleep) npc.talked = true;
+  dlg = null; $('dialog').classList.remove('open');
   if (onEnd) onEnd();
 }
 
 // ---------- music: a little tarantella ----------
-let music = null, musicOn = true;
+let music = null, musicOn = true, musicIsNight = false;
 const A = ['A3', 'C4', 'E4'], Dm = ['A3', 'D4', 'F4'], E = ['G#3', 'B3', 'E4'], E7 = ['G#3', 'D4', 'E4'];
 const C = ['G3', 'C4', 'E4'], Gc = ['G3', 'B3', 'D4'], F = ['A3', 'C4', 'F4'];
 const bars = [
@@ -4444,7 +4825,38 @@ const bars2 = [
   [C72, 'C2', 'G2', ['G5', 'F5', 'E5', 'D5', 'E5', 'G5']],
   [F2c, 'F2', 'C3', ['F5', null, 'C5', null, 'F4', null]],
 ];
-const islandTempo = () => currentIsland === 2 ? 112 : 132;
+// night tracks: a slow barcarolle for Driftwood Cove and a music-box lullaby for Isola Gelato
+const nightBars1 = [
+  [A, 'A2', 'E2', ['E5', null, null, 'D5', 'C5', null]],
+  [F, 'F2', 'C3', ['C5', null, null, 'A4', null, null]],
+  [Dm, 'D2', 'A2', ['D5', null, 'E5', 'F5', null, 'E5']],
+  [E, 'E2', 'B2', ['E5', null, null, 'B4', null, null]],
+  [A, 'A2', 'E2', ['A5', null, null, 'G5', 'E5', null]],
+  [C, 'C2', 'G2', ['G5', null, 'E5', 'C5', null, null]],
+  [Dm, 'D2', 'A2', ['F5', null, 'D5', 'B4', null, 'G#4']],
+  [A, 'A2', 'E2', ['A4', null, null, null, null, null]],
+];
+const nightBars2 = [
+  [F2c, 'F2', 'C3', ['A5', null, null, 'G5', null, 'F5']],
+  [Bb2, 'Bb1', 'F2', ['F5', null, null, 'D5', null, null]],
+  [F2c, 'F2', 'C3', ['C5', null, 'F5', null, 'A5', null]],
+  [C72, 'C2', 'G2', ['G5', null, null, null, null, null]],
+  [Dm2, 'D2', 'A2', ['A5', null, null, 'F5', null, 'D5']],
+  [Gm2, 'G2', 'D2', ['Bb5', null, 'A5', 'G5', null, null]],
+  [C72, 'C2', 'G2', ['E5', null, 'G5', null, 'Bb4', null]],
+  [F2c, 'F2', 'C3', ['F5', null, null, null, null, null]],
+];
+// the night tracks play after dark, except during boss fights and minigames, which keep their fast music
+const fastMusic = () => !!activeGame || dukeActive() || !['sleep', 'gone'].includes(boss.state);
+const nightMusic = () => isNight() && !fastMusic();
+const islandTempo = () => nightMusic() ? (currentIsland === 2 ? 76 : 88) : currentIsland === 2 ? 112 : 132;
+// the music library can refuse a note (e.g. when a slow frame makes the music clock fall behind);
+// a refused note is just skipped instead of stopping the game with an error box
+let musicWarned = false;
+function musicSafe(fn) { try { fn(); } catch (e) { if (!musicWarned) { musicWarned = true; console.warn("music hiccup (skipped):", e); } } }
+const safeNote = fn => (time, i) => musicSafe(() => fn(time, i));
+const MUSIC_BASE_BPM = 120, musicSeqs = [];
+let musicBpm = MUSIC_BASE_BPM;
 async function startMusic() {
   const Tone = window.Tone;
   if (!Tone) return;
@@ -4456,41 +4868,67 @@ async function startMusic() {
   const bass = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.005, decay: 0.2, sustain: 0.1, release: 0.1 }, volume: -1 }).connect(out);
   const tamb = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.001, decay: 0.05, sustain: 0 }, volume: -24 }).connect(out);
   const steps = [...Array(bars.length * 6).keys()];
-  new Tone.Sequence((time, i) => {
-    if (currentIsland === 2) return;
+  musicSeqs.push(new Tone.Sequence(safeNote((time, i) => {
+    if (currentIsland === 2 || musicIsNight) return;
     const [chord, root, fifth, mel] = bars[Math.floor(i / 6)], s = i % 6;
     if (mel[s]) lead.triggerAttackRelease(mel[s], '16n', time);
     if (s === 0) bass.triggerAttackRelease(root, '8n', time);
     else if (s === 3) bass.triggerAttackRelease(fifth, '8n', time);
     else chords.triggerAttackRelease(chord, '32n', time);
     tamb.triggerAttackRelease(s % 3 === 0 ? '16n' : '32n', time);
-  }, steps, '8n').start(0);
+  }), steps, '8n').start(0));
   // the Gelato Waltz instruments
   const box = new Tone.FMSynth({ harmonicity: 3.01, modulationIndex: 8, oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.7, sustain: 0, release: 0.5 }, modulation: { type: 'sine' }, modulationEnvelope: { attack: 0.001, decay: 0.25, sustain: 0, release: 0.2 }, volume: -3 }).connect(out);
   const pads = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.01, decay: 0.3, sustain: 0.1, release: 0.3 }, volume: -12 }).connect(out);
   const pluck = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.002, decay: 0.35, sustain: 0, release: 0.2 }, volume: 1 }).connect(out);
   const bellsHp = new Tone.Filter(6500, 'highpass').connect(out);
   const sleigh = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.001, decay: 0.09, sustain: 0 }, volume: -18 }).connect(bellsHp);
-  new Tone.Sequence((time, i) => {
-    if (currentIsland !== 2) return;
+  musicSeqs.push(new Tone.Sequence(safeNote((time, i) => {
+    if (currentIsland !== 2 || musicIsNight) return;
     const [chord, root, fifth, mel] = bars2[Math.floor(i / 6)], s = i % 6;
     if (mel[s]) box.triggerAttackRelease(mel[s], '8n', time);
     if (s === 0) pluck.triggerAttackRelease(root, '4n', time);
     else if (s === 2 || s === 4) pads.triggerAttackRelease(chord, '8n', time);
     if (s === 3 && Math.floor(i / 6) % 2) pluck.triggerAttackRelease(fifth, '8n', time);
     if (s % 2 === 0 || Math.floor(i / 6) % 4 === 3) sleigh.triggerAttackRelease(s % 2 ? '32n' : '16n', time);
-  }, [...Array(bars2.length * 6).keys()], '8n').start(0);
+  }), [...Array(bars2.length * 6).keys()], '8n').start(0));
+  // night instruments: soft and a little echoey
+  // a soft echo built from a plain delay line (reverbs like Freeverb need extra audio modules the page can't load)
+  const hall = new Tone.FeedbackDelay({ delayTime: 0.28, feedback: 0.32, wet: 0.28 }).connect(out);
+  const flute = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.06, decay: 0.3, sustain: 0.5, release: 0.8 }, volume: -2 }).connect(hall);
+  const harp = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.003, decay: 0.6, sustain: 0, release: 0.6 }, volume: -12 }).connect(hall);
+  const softBass = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.02, decay: 0.6, sustain: 0.2, release: 0.6 }, volume: -2 }).connect(out);
+  const celesta = new Tone.FMSynth({ harmonicity: 4.01, modulationIndex: 4, oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 1.2, sustain: 0, release: 0.9 }, modulation: { type: 'sine' }, modulationEnvelope: { attack: 0.001, decay: 0.4, sustain: 0, release: 0.3 }, volume: -5 }).connect(hall);
+  const chime = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 1.5, sustain: 0, release: 1 }, volume: -20 }).connect(hall);
+  musicSeqs.push(new Tone.Sequence(safeNote((time, i) => {
+    if (!musicIsNight) return;
+    const isl2 = currentIsland === 2, bar = Math.floor(i / 6), s = i % 6;
+    const [chord, root, fifth, mel] = (isl2 ? nightBars2 : nightBars1)[bar];
+    if (mel[s]) (isl2 ? celesta : flute).triggerAttackRelease(mel[s], isl2 ? '4n' : '4n.', time);
+    // rolled chord, one note at a time
+    if (s < 3) harp.triggerAttackRelease(chord[s], '4n', time);
+    if (s === 0) softBass.triggerAttackRelease(root, '2n', time);
+    if (s === 3 && !isl2) softBass.triggerAttackRelease(fifth, '4n', time);
+    if (isl2 && s === 5 && bar % 2) chime.triggerAttackRelease(chord[2].replace(/\d/, d => +d + 2), '8n', time);
+  }), [...Array(nightBars1.length * 6).keys()], '8n').start(0));
   const tr = Tone.getTransport();
-  tr.bpm.value = islandTempo();
+  // the master tempo never changes (ramping it trips a bug inside the music library that crashes its clock);
+  // each tune speeds up or slows down by its own playback rate instead
+  tr.bpm.value = MUSIC_BASE_BPM;
+  musicIsNight = nightMusic(); applyTempo(islandTempo());
   tr.start();
   music = out;
 }
 function setMusicTempo(bpm) {
-  if (window.Tone && music) window.Tone.getTransport().bpm.rampTo(bpm, 1.5);
+  if (window.Tone && music) applyTempo(bpm);
+}
+function applyTempo(bpm) {
+  musicBpm = bpm;
+  musicSafe(() => musicSeqs.forEach(s => { s.playbackRate = bpm / MUSIC_BASE_BPM; }));
 }
 function toggleMusic() {
   musicOn = !musicOn;
-  if (music) music.mute = !musicOn;
+  if (music) musicSafe(() => { music.mute = !musicOn; });
   toast(musicOn ? 'Music on' : 'Music off');
 }
 
@@ -4692,7 +5130,7 @@ function showIslandClear() {
     $('winTitle').innerHTML = 'Gianmarco<br><em>rescued!</em>';
     $('winNoteText').textContent = "Isola Gelato is safe, but King Grumbleclaw's cousins are out there. Talk to Capitana Sardina to sail between the islands. To be continued...";
     $('stars').innerHTML = [0, 1, 2].map(i => `<span class="${i < 1 + (keysFound >= 3) + (shellsGot(2) >= shellsOn(2).length) ? '' : 'off'}">★</span>`).join('');
-    $('winCoins').textContent = `${coinsGot(2)}/${coinsOn(2).length}`;
+    $('winCoins').textContent = `${coinCount}`;
     $('winShells').textContent = shellText(2).replace(/ /g, '');
     $('winTime').textContent = fmt(elapsed);
     $('winFalls').textContent = falls;
@@ -4717,7 +5155,7 @@ for (let i = 0; i < 5; i++) { const st = new THREE.Mesh(new THREE.OctahedronGeom
 dukeStars.visible = false; scene.add(dukeStars);
 const dukeSpeaker = { name: 'Duca Gelido', role: "the King's frosty cousin", icon: '🧊', color: '#d8f3ff', voice: 110, wave: 'sawtooth' };
 const duke = { state: 'sleep', hp: 6, maxHp: 6, icicles: [], t: 0, pos: DUKE_HOME.clone(), dir: new THREE.Vector3(), face: 0, hops: 0, cycle: 0, away: 0, defeated: false, waves: [], hopFrom: new THREE.Vector3(), hopTo: new THREE.Vector3(), shots: 0 };
-const dukeActive = () => ['chase', 'windup', 'charge', 'hop', 'throw', 'dizzy', 'hurt'].includes(duke.state);
+const dukeActive = () => ['chase', 'windup', 'charge', 'hop', 'throw', 'icicles', 'dizzy', 'hurt'].includes(duke.state);
 function dukeHud() {
   document.querySelector('#bossbar .bb-name').textContent = '🧊 Duca Gelido';
   $('bossHint').textContent = 'Dodge his charges so he hits a pillar, jump the ice waves, run from the red icicle marks, and stomp him while he\'s dizzy!';
@@ -4727,8 +5165,16 @@ function resetDuke() {
   duke.hp = duke.maxHp; duke.state = duke.defeated ? 'gone' : 'sleep'; duke.t = 0; duke.cycle = 0; duke.away = 0;
   duke.pos.copy(DUKE_HOME); duke.waves.forEach(w => scene.remove(w.mesh)); duke.waves = [];
   duke.icicles.forEach(ic => { scene.remove(ic.mesh); scene.remove(ic.mark); }); duke.icicles = [];
-  dukeGroup.visible = false; dukeGroup.scale.setScalar(DUKE_SIZE); dukeGroup.rotation.set(0, 0, 0); dukeStars.visible = false; dukeLane.visible = false; dukeLandMark.visible = false; duke.hopping = false;
+  dukeGroup.visible = false; dukeGroup.scale.setScalar(DUKE_SIZE); dukeGroup.rotation.set(0, 0, 0); dukeStars.visible = false; clearDukeMarks();
   if (currentIsland === 2) { $('bossbar').classList.remove('show'); setMusicTempo(islandTempo()); }
+}
+function dukeGoHome() {
+  const d = duke; d.state = 'home'; d.t = 1.2; d.away = 0; d.hopping = false;
+  d.hopFrom.copy(d.pos); d.hopTo.copy(DUKE_HOME);
+  d.waves.forEach(w => scene.remove(w.mesh)); d.waves = [];
+  d.icicles.forEach(ic => { scene.remove(ic.mesh); scene.remove(ic.mark); }); d.icicles = [];
+  dukeStars.visible = false; clearDukeMarks(); dukeGroup.rotation.z = 0;
+  $('bossbar').classList.remove('show'); setMusicTempo(islandTempo());
 }
 function startDukeIntro() {
   if (duke.introSeen) { // a rematch skips the speech
@@ -4791,7 +5237,14 @@ function dukeIcicles(n) {
     duke.icicles.push({ x, z, mesh, mark, delay: 0.9 + k * 0.18, vy: 0 });
   }
 }
+// the landing ring and the Duke's snowball marks only exist mid-attack; this clears any that outlive it
+function clearDukeMarks() {
+  duke.hopping = false; dukeLandMark.visible = false; dukeLane.visible = false;
+  for (let i = snowShots.length - 1; i >= 0; i--) if (snowShots[i].mark) { scene.remove(snowShots[i].m); scene.remove(snowShots[i].mark); snowShots.splice(i, 1); }
+}
 function updateDuke(dt, p, dv) {
+  // the ring only shows while he is actually in the air
+  if (duke.state !== 'hop' || !duke.hopping) { duke.hopping = false; dukeLandMark.visible = false; }
   if (duke.defeated || !jmKidnapped || jmRescued) return;
   if (duke.state === 'sleep') {
     if (fireGateSolid.disabled && !cut && !state.dead && dv < ARENA2_R && p.y > SUMMIT_Y - 0.5) startDukeIntro();
@@ -4801,8 +5254,11 @@ function updateDuke(dt, p, dv) {
   const phase2 = duke.hp <= 3, d = duke;
   d.t -= dt;
   const toP = new THREE.Vector3(p.x - d.pos.x, 0, p.z - d.pos.z), hx = toP.length();
-  // walked away from the fight? it resets
-  if (d.state !== 'dead' && (dv > ARENA2_R + 2 || p.y < SUMMIT_Y - 2)) { d.away += dt; if (d.away > 3) { resetDuke(); toast('Duca Gelido waits on the summit...'); return; } } else d.away = 0;
+
+  // walked away from the fight? he hops back to his spot on the summit (no snapping), then waits
+  // a knockback, a fall or a long jump doesn't count: you have to really leave the peak for a while
+  const gone = !state.dead && (dv > ARENA2_R + 5 || p.y < SUMMIT_Y - 5);
+  if (dukeActive() && gone) { d.away += dt; if (d.away > 6) { dukeGoHome(); toast('Duca Gelido hops back to the summit...'); } } else d.away = 0;
   const clampArena = (v, r = 10.2) => { const ox = v.x - VX, oz = v.z - VZ, l = Math.hypot(ox, oz); if (l > r) { v.x = VX + ox / l * r; v.z = VZ + oz / l * r; return true; } return false; };
   const faceTo = (tx, tz, k = 6) => { let fd = Math.atan2(tx - d.pos.x, tz - d.pos.z) - d.face; fd = Math.atan2(Math.sin(fd), Math.cos(fd)); d.face += fd * Math.min(1, dt * k); };
   let yOff = 0;
@@ -4835,18 +5291,24 @@ function updateDuke(dt, p, dv) {
       burst(d.pos.clone().add(new THREE.Vector3(0, 2, 0)), 0xbfeaff, 30, 7, 4); blip(140, 50, 0.4, 'square', 0.12); toast('CRASH! He\'s dizzy!');
     }
   } else if (d.state === 'hop') {
-    if (d.t <= 0) {
-      if (d.hops-- <= 0) { d.state = 'dizzy'; d.t = phase2 ? 1.0 : 1.4; }
-      else { d.hopFrom.copy(d.pos); d.hopTo.set(p.x, SUMMIT_Y, p.z); clampArena(d.hopTo, 9.5); d.t = 0.85; d.hopping = true; }
-    }
+    // mid-air: finish the arc and land before anything else happens
+    // (the old order let the next timer drive the arc, which flung him backwards and then stunned him)
     if (d.hopping) {
-      const k = 1 - Math.max(0, d.t) / 0.85;
+      const k = THREE.MathUtils.clamp(1 - d.t / 0.85, 0, 1);
       d.pos.lerpVectors(d.hopFrom, d.hopTo, k); yOff = Math.sin(k * Math.PI) * 6;
       faceTo(d.hopTo.x, d.hopTo.z, 10);
       // the ring is where he lands: the same size as his body
       dukeLandMark.visible = true; dukeLandMark.position.set(d.hopTo.x, SUMMIT_Y + 0.08, d.hopTo.z);
       dukeLandMark.material.opacity = 0.25 + k * 0.5;
-      if (d.t <= 0) { d.hopping = false; dukeLandMark.visible = false; d.t = phase2 ? 0.3 : 0.4; dukeWave(d.pos); if (phase2) setTimeout(() => { if (dukeActive()) dukeWave(d.pos); }, 350); camShake = 0.3; burst(d.pos.clone().add(new THREE.Vector3(0, 0.3, 0)), 0xd8f3ff, 18, 6, 2); blip(90, 40, 0.3, 'square', 0.1); }
+      if (d.t <= 0) {
+        d.hopping = false; dukeLandMark.visible = false; d.t = phase2 ? 0.3 : 0.4; yOff = 0;
+        const at = d.pos.clone(); dukeWave(at); if (phase2) setTimeout(() => { if (dukeActive()) dukeWave(at); }, 350);
+        camShake = 0.3; burst(d.pos.clone().add(new THREE.Vector3(0, 0.3, 0)), 0xd8f3ff, 18, 6, 2); blip(90, 40, 0.3, 'square', 0.1);
+      }
+    } else if (d.t <= 0) {
+      // after the last hop he goes straight back to chasing (only crashing into a pillar makes him dizzy)
+      if (d.hops-- <= 0) { d.state = 'chase'; d.t = phase2 ? 1.2 : 1.6; }
+      else { d.hopFrom.copy(d.pos); d.hopTo.set(p.x, SUMMIT_Y, p.z); clampArena(d.hopTo, 9.5); d.t = 0.85; d.hopping = true; }
     }
   } else if (d.state === 'throw') {
     faceTo(p.x, p.z, 10);
@@ -4857,6 +5319,11 @@ function updateDuke(dt, p, dv) {
   } else if (d.state === 'dizzy') {
     dukeStars.visible = true; dukeStars.position.set(d.pos.x, d.pos.y + 3.6, d.pos.z); dukeStars.rotation.y += dt * 4;
     if (d.t <= 0) { d.state = 'chase'; d.t = phase2 ? 1.4 : 2.0; dukeStars.visible = false; }
+  } else if (d.state === 'home') {
+    // one big hop back to his spot, so he never pops there out of nowhere
+    const k = 1 - Math.max(0, d.t) / 1.2;
+    d.pos.lerpVectors(d.hopFrom, d.hopTo, k); yOff = Math.sin(k * Math.PI) * 7; faceTo(d.hopTo.x, d.hopTo.z, 8);
+    if (d.t <= 0) { resetDuke(); dukeGroup.visible = true; dukeGroup.position.copy(duke.pos); return; }
   } else if (d.state === 'hurt') {
     dukeGroup.rotation.z = Math.sin(t * 40) * 0.1;
     if (d.t <= 0) { dukeGroup.rotation.z = 0; if (d.hp <= 0) dukeDefeated(); else { d.state = 'chase'; d.t = 1.2; dukeWave(d.pos); toast(d.hp === 3 ? 'He\'s furious! Faster now!' : d.hp === 1 ? 'One more stomp!' : 'Again!'); } }
@@ -4884,7 +5351,7 @@ function updateDuke(dt, p, dv) {
     }
   }
   // touching him: stomp when he's dizzy, otherwise it hurts
-  if (state.dead || d.state === 'hurt' || d.state === 'dead') return;
+  if (state.dead || d.state === 'hurt' || d.state === 'dead' || d.state === 'home') return;
   const dy = p.y - (d.pos.y + yOff), reach = 2.3;
   if (d.state === 'dizzy' && ((hx < reach + 0.4 && dy > 1.2 && dy < 3.6 && state.vel.y < 0) || (state.poundLand > 0 && hx < reach + 1.2))) {
     d.hp--; d.state = 'hurt'; d.t = 0.8; dukeStars.visible = false; dukeHud();
@@ -4897,7 +5364,7 @@ function updateDuke(dt, p, dv) {
   }
 }
 function dukeDefeated() {
-  duke.state = 'dead'; duke.waves.forEach(w => scene.remove(w.mesh)); duke.waves = []; dukeLane.visible = false; dukeLandMark.visible = false;
+  duke.state = 'dead'; duke.waves.forEach(w => scene.remove(w.mesh)); duke.waves = []; clearDukeMarks();
   duke.icicles.forEach(ic => { scene.remove(ic.mesh); scene.remove(ic.mark); }); duke.icicles = [];
   $('bossbar').classList.remove('show'); setMusicTempo(islandTempo());
   burst(duke.pos.clone().add(new THREE.Vector3(0, 2, 0)), 0xd8f3ff, 60, 9, 6); camShake = 0.6;
@@ -5014,7 +5481,7 @@ function win() {
     const ratio = coinsGot(1) / coinsOn(1).length;
     const stars = 1 + (ratio >= 0.6) + (shellsGot(1) === shellsOn(1).length);
     $('stars').innerHTML = [0, 1, 2].map(i => `<span class="${i < stars ? '' : 'off'}">★</span>`).join('');
-    $('winCoins').textContent = `${coinsGot(1)}/${coinsOn(1).length}`;
+    $('winCoins').textContent = `${coinCount}`;
     $('winShells').textContent = shellText(1).replace(/ /g, '');
     $('winTime').textContent = fmt(elapsed);
     $('winFalls').textContent = falls;
@@ -5051,7 +5518,7 @@ function currentObjective() {
   }
   // side errands that are ready to hand in take the hint line
   if (pencilState === 'carried') sub = "Side: bring the pencil to Goonseppe";
-  else if (!brunoDone && coinCount >= 40 && i1) sub = 'Side: show Bruno your 40 coins';
+  else if (!brunoDone && coinCount >= CANNOLO_PRICE && i1) sub = `Side: buy Bruno's cannolo (${CANNOLO_PRICE} coins)`;
   return { main, sub };
 }
 let objT = 0, objLast = '';
@@ -5075,7 +5542,7 @@ function animate() {
   t += dt;
 
   if (running) {
-    const paused = invOpen || mapOpen || closetOpen;
+    const paused = invOpen || mapOpen || closetOpen || bedOpen;
     if (!won && !paused) { elapsed += dt; $('timer').textContent = fmt(elapsed); }
     if (winLock > 0) winLock -= dt;
     const sub = 2;
@@ -5103,7 +5570,7 @@ function animate() {
 
   // player visuals
   const s = state;
-  sun.position.set(s.pos.x + 25, s.pos.y + 40, s.pos.z + 18);
+  updateDayNight(dt);
   sun.target.position.copy(s.pos);
   drawMinimap();
   if (mapOpen && Math.floor(t * 4) !== Math.floor((t - dt) * 4)) drawBigMap();
@@ -5130,6 +5597,9 @@ function animate() {
     rotX = k * 0.15 + (s.sprinting ? 0.18 : 0);
     rotZ = Math.sin(s.walkT) * 0.06 * k;
   } else rotX = THREE.MathUtils.clamp(-s.vel.y * 0.012, -0.35, 0.3);
+  // the sail opens above him while gliding, leaning into turns
+  gliderMesh.visible = !!s.gliding && !s.grounded && !s.dead;
+  if (gliderMesh.visible) { rotX = 0.35; const lean = THREE.MathUtils.clamp((s.vel.x * Math.cos(s.facing) - s.vel.z * Math.sin(s.facing)) * -0.06, -0.4, 0.4); gliderMesh.rotation.set(0.12, 0, THREE.MathUtils.damp(gliderMesh.rotation.z, lean, 6, dt)); gliderMesh.position.y = 2.2 + Math.sin(t * 3) * 0.05; }
   if (s.flipT > 0) { s.flipT = Math.max(0, s.flipT - dt); rotX = -(1 - s.flipT / 0.45) * Math.PI * 2; }
   if (s.pound > 0) {
     if (s.poundHang > 0) rotX = (1 - s.poundHang / 0.2) * Math.PI * 2;
@@ -5162,7 +5632,7 @@ function animate() {
     f.position.y = s.grounded ? -0.5 + Math.max(0, -Math.cos(s.walkT + (sd > 0 ? 0 : Math.PI))) * 0.08 * k : (s.flipT > 0 || s.pound > 0 ? -0.38 : -0.46 + sd * Math.sin(t * 20) * 0.03 * (s.vel.y < -5 ? 1 : 0));
   });
   // invincibility after a hit only runs out while the game is actually playing
-  const playing = running && !dlg && !cut && !invOpen && !mapOpen && !closetOpen;
+  const playing = running && !dlg && !cut && !invOpen && !mapOpen && !closetOpen && !bedOpen;
   if (invuln > 0) { if (playing) invuln -= dt; body.visible = invuln <= 0 || Math.floor(invuln * 14) % 2 === 0; } else body.visible = true;
 
   const gy = groundBelow(s.pos.x, s.pos.z, s.pos.y);
@@ -5312,7 +5782,7 @@ function snapshot() {
     v: 1, savedAt: Date.now(),
     island: currentIsland, area: currentArea,
     pos: [state.pos.x, state.pos.y, state.pos.z], facing: state.facing,
-    hearts, maxHearts, coins: coins.map(c => c.userData.taken ? 1 : 0), shells: shells.map(s => s.taken ? 1 : 0),
+    hearts, maxHearts, wallet: coinCount, coins: coins.map(c => c.userData.taken ? 1 : 0), shells: shells.map(s => s.taken ? 1 : 0),
     pencilState, brunoDone, hasReefKey, sealOpen: !!sealSolid.disabled, bossDefeated: boss.defeated, won, hasChart,
     visitedI2, jmKidnapped, jmRescued, keysFound, keys: fireKeys.map(k => k.taken ? 1 : 0), gateOpen: !!fireGateSolid.disabled,
     chicks: chicks.map(c => c.found ? 1 : 0), chickDone,
@@ -5328,7 +5798,7 @@ function applySnapshot(d) {
   resetGame();
   hearts = d.hearts; maxHearts = d.maxHearts; brunoDone = d.brunoDone; updateHearts();
   coins.forEach((c, i) => { c.userData.taken = !!d.coins[i]; c.visible = !c.userData.taken; });
-  coinCount = coins.filter(c => c.userData.taken).length;
+  coinCount = d.wallet ?? coins.filter(c => c.userData.taken).length;
   shells.forEach((s, i) => { s.taken = !!d.shells[i]; if (s.mesh) s.mesh.visible = !s.taken; });
   shellCount = shells.filter(s => s.taken).length;
   pencilState = d.pencilState;
@@ -5355,6 +5825,7 @@ function applySnapshot(d) {
   if (d.qItems) questItems.forEach((q, i) => { q.found = !!d.qItems[i]; q.mesh.visible = !q.found; });
   if (d.chicks) { chicks.forEach((c, i) => { c.found = !!d.chicks[i]; c.mesh.visible = !c.found; }); if (d.chickDone) { chickDone = true; chicks.forEach(c => { c.mesh.visible = true; c.mesh.position.copy(c.nest); }); } }
   applyExtras();
+  maxHearts = Math.max(d.maxHearts || 3, heartUpgrades()); hearts = Math.min(Math.max(hearts, 1), maxHearts); updateHearts(); $("coins").textContent = `${coinCount}`;
   currentIsland = d.island; BIG.cx = d.island === 2 ? IX : 8; BIG.cz = d.island === 2 ? IZ - 56 : -5; BIG.s = 1040 / (d.island === 2 ? 196 : 168); setMusicTempo(islandTempo());
   const ox = d.island === 2 ? IX : 0, oz = d.island === 2 ? IZ : 0;
   moveNpc(captain, 2.4 + ox, 0.52, 42.4 + oz);
@@ -5388,7 +5859,7 @@ function autosave() { if (settings.autosave && running) saveGame(true); }
 
 // ---------- settings ----------
 function saveSettings() { store.set('guiseppe-settings', JSON.stringify(settings)); }
-function applyMusicVolume() { if (music) music.volume.value = settings.music <= 0 ? -Infinity : -13 + 20 * Math.log10(settings.music); }
+function applyMusicVolume() { if (music) musicSafe(() => { music.volume.value = settings.music <= 0 ? -Infinity : -13 + 20 * Math.log10(settings.music); }); }
 function applySettings() {
   applyMusicVolume();
   renderer.shadowMap.enabled = settings.shadows; sun.castShadow = settings.shadows;
@@ -5411,7 +5882,7 @@ applySettings();
 
 // ---------- menus ----------
 let menuReturn = 'main', pauseOpen = false, pauseAt = 0;
-function ensureAudio() { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); startMusic(); }
+function ensureAudio() { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); startMusic().catch(e => console.warn("music could not start:", e)); }
 function showScreen(id) {
   document.querySelectorAll('#mainMenu .menu-screen').forEach(s => s.classList.toggle('show', s.id === id));
   if (id === 'scrSlots') renderSlots();
@@ -5443,7 +5914,7 @@ function renderSlots() {
     if (d) {
       const isle = d.island === 2 ? 'Isola Gelato' : 'Driftwood Cove';
       card.innerHTML = `<b>Slot ${i + 1} · ${isle}</b><div class="acts"><button data-load="${i}">Load</button><button class="del" data-del="${i}">✕</button></div>
-        <div class="meta">${d.area} · 🐚 ${d.shells.filter(Boolean).length}/${d.shells.length} · 🪙 ${d.coins.filter(Boolean).length} · ⏱ ${fmt(d.elapsed)} · ${fmtDate(d.savedAt)}</div>`;
+        <div class="meta">${d.area} · 🐚 ${d.shells.filter(Boolean).length}/${d.shells.length} · 🪙 ${d.wallet ?? d.coins.filter(Boolean).length} · ⏱ ${fmt(d.elapsed)} · ${fmtDate(d.savedAt)}</div>`;
     } else {
       card.innerHTML = `<b>Slot ${i + 1} · empty</b><div class="acts"><button data-new="${i}">New game</button></div><div class="meta">Start a fresh adventure</div>`;
     }
@@ -5456,7 +5927,7 @@ function beginPlay(slot, snap, msg) {
   if (snap) applySnapshot(snap); else resetGame();
   if (devMode.on) applyDevToggles();
   $('mainMenu').classList.add('hidden');
-  running = true; lockPointer();
+  running = true; dayAnnounce = ""; lockPointer();
   saveGame(true);
   if (msg) toast(msg);
 }
@@ -5486,7 +5957,7 @@ function openPause() {
   for (const k in keys) keys[k] = false;
   toggleInv(false); toggleMap(false);
   $('pauseWhere').textContent = `${currentIsland === 2 ? 'Isola Gelato' : 'Driftwood Cove'} · ${currentArea}`;
-  $('pauseInfo').textContent = `Slot ${currentSlot + 1} · ⏱ ${fmt(elapsed)} · 🐚 ${shellCount}/${shells.length}`;
+  $('pauseInfo').textContent = `Slot ${currentSlot + 1} · ⏱ ${fmt(elapsed)} · 🐚 ${shellCount}/${shells.length} · ${phaseIcon(sq.hour)} ${fmtHour(sq.hour)}`;
   $('pauseMenu').classList.remove('hidden');
 }
 function closePause() { pauseOpen = false; $('pauseMenu').classList.add('hidden'); running = true; lockPointer(); }
@@ -5498,7 +5969,7 @@ $('pQuit').onclick = () => { running = true; saveGame(); openMainMenu(); };
 addEventListener('keydown', e => {
   if ((e.code !== 'Escape' && e.code !== 'KeyP') || e._handled || e.repeat) return;
   if (pauseOpen) { if (performance.now() - pauseAt > 300) closePause(); return; }
-  if (running && !mapOpen && !invOpen && !closetOpen && !dlg && !cut) openPause();
+  if (running && !mapOpen && !invOpen && !closetOpen && !bedOpen && !dlg && !cut) openPause();
 });
 
 // win screen buttons
