@@ -1885,7 +1885,7 @@ function stepRoulette(k, dt){
 const finish = k => { k.uses = (k.uses || 1) - 1; if (k.uses <= 0){ k.item = null; k.uses = 0; } else k.itemTimer = 0.6 + Math.random() * 1.2; };
 function greenShell(k){
   const m = new THREE.Mesh(shellG, new THREE.MeshLambertMaterial({color:0x3ccf6e})); m.castShadow = true;
-  projectile(k, {mesh:m, speed:82, lock:0, life:6, turn:1.4, radius:2.4});
+  projectile(k, {mesh:m, speed:82, lock:0, life:7, radius:2.4, straight:true, bounces:0});
 }
 function fakeBox(k){
   const m = new THREE.Mesh(boxG, fakeM); m.castShadow = true;
@@ -2174,15 +2174,54 @@ if ('ontouchstart' in window){
 
 // ---------- audio ----------
 let actx = null, engine = null, engineGain = null, muted = !!OPTS.mute;
+// Engine: a detuned saw pair + sub-octave square, with a rumble LFO, a filter that opens with throttle,
+// gear shifts (the pitch climbs through each gear and drops when it shifts up), a turbo whine for boosts,
+// and filtered noise for tyre squeal (drifting) and gravel (off-road). engineGain is the master for all of it.
 function initAudio(){
   if (actx) return;
   actx = new (window.AudioContext || window.webkitAudioContext)();
-  engine = actx.createOscillator(); engine.type = 'sawtooth';
-  const filt = actx.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = 600;
-  engineGain = actx.createGain(); engineGain.gain.value = 0;
-  engine.connect(filt).connect(engineGain).connect(actx.destination); engine.start();
+  const osc = (type, f) => { const o = actx.createOscillator(); o.type = type; o.frequency.value = f; o.start(); return o; };
+  const gain = v => { const g = actx.createGain(); g.gain.value = v; return g; };
+  engineGain = gain(0); engineGain.connect(actx.destination);
+  const filt = actx.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = 500; filt.Q.value = 3;
+  const body = gain(1); body.connect(filt).connect(engineGain);
+  const a = osc('sawtooth', 80), b = osc('sawtooth', 80), sub = osc('square', 40);
+  b.detune.value = 14; a.connect(gain(0.5)).connect(body); b.connect(gain(0.45)).connect(body); sub.connect(gain(0.35)).connect(body);
+  // putt-putt rumble: an LFO wobbling the body volume
+  const lfo = osc('sine', 18), lfoAmt = gain(0.35); lfo.connect(lfoAmt).connect(body.gain);
+  const whine = osc('sine', 600), whineG = gain(0); whine.connect(whineG).connect(engineGain);
+  const noiseBuf = actx.createBuffer(1, actx.sampleRate, actx.sampleRate), nd = noiseBuf.getChannelData(0);
+  for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+  const noise = () => { const s = actx.createBufferSource(); s.buffer = noiseBuf; s.loop = true; s.start(); return s; };
+  const sq = actx.createBiquadFilter(); sq.type = 'bandpass'; sq.frequency.value = 2200; sq.Q.value = 6;
+  const squealG = gain(0); noise().connect(sq).connect(squealG).connect(engineGain);
+  const gr = actx.createBiquadFilter(); gr.type = 'lowpass'; gr.frequency.value = 380;
+  const gravelG = gain(0); noise().connect(gr).connect(gravelG).connect(engineGain);
+  engine = {a, b, sub, lfo, filt, body, whine, whineG, squealG, gravelG, rpm:0, gear:0, shiftT:0};
 }
-function beep(freq, dur, type = 'square', vol = .12, slide = 0){
+// called every frame while racing
+function updateEngine(k, dt){
+  const e = engine, t = actx.currentTime, set = (p, v, tc = 0.05) => p.setTargetAtTime(v, t, tc);
+  const sp = THREE.MathUtils.clamp(Math.abs(k.speed) / (MAX * 1.45), 0, 1), throttle = keys.gas || (OPTS.auto && !keys.brake) ? 1 : 0;
+  // 5 gears: pitch rises inside a gear, then drops a bit when it shifts up
+  const g = Math.min(4, Math.floor(sp * 5)), frac = sp * 5 - g;
+  if (g > e.gear){ e.shiftT = 0.12; } e.gear = g;
+  if (e.shiftT > 0) e.shiftT -= dt;
+  const target = 0.18 + frac * 0.62 + g * 0.05 + (throttle ? 0.06 : 0) - (e.shiftT > 0 ? 0.12 : 0);
+  e.rpm += (target - e.rpm) * Math.min(1, dt * (e.shiftT > 0 ? 25 : 7));
+  const f = 48 + e.rpm * 120 + (k.boost > 0 ? 25 : 0) + (k.star > 0 ? 15 : 0);
+  set(e.a.frequency, f, 0.03); set(e.b.frequency, f, 0.03); set(e.sub.frequency, f / 2, 0.03);
+  set(e.lfo.frequency, 9 + e.rpm * 28, 0.05);
+  set(e.filt.frequency, 280 + e.rpm * 900 + throttle * 500 + (k.boost > 0 ? 900 : 0), 0.06);
+  set(e.body.gain, (0.55 + throttle * 0.35) * (e.shiftT > 0 ? 0.6 : 1), 0.04);
+  set(e.whine.frequency, 700 + e.rpm * 900, 0.05);
+  set(e.whineG.gain, k.boost > 0 || k.star > 0 ? 0.09 : 0, 0.08);
+  const off = Math.abs(k.pos.clone().sub(pts[k.idx]).dot(nors[k.idx])) > W / 2 + 1.5 && !k.air;
+  set(e.squealG.gain, k.drift && !k.air ? 0.05 + Math.min(0.08, k.driftCharge * 0.03) : 0, 0.05);
+  set(e.gravelG.gain, off && Math.abs(k.speed) > 3 ? 0.35 : 0, 0.08);
+  set(engineGain.gain, state === 'menu' || paused ? 0 : 0.045, 0.05);
+}
+function silenceEngine(){ if (!engineGain) return; const g = engineGain.gain; g.cancelScheduledValues(actx.currentTime); g.setValueAtTime(0, actx.currentTime); }function beep(freq, dur, type = 'square', vol = .12, slide = 0){
   if (!actx || muted) return;
   const o = actx.createOscillator(), g = actx.createGain(); o.type = type;
   o.frequency.setValueAtTime(freq, actx.currentTime);
@@ -2199,7 +2238,7 @@ function sfx(name, k){
 const muteBtn = document.getElementById('mute');
 function setMute(v){
   muted = v; OPTS.mute = v; saveOpts();
-  muteBtn.textContent = muted ? '🔇' : '🔊'; if (engineGain) engineGain.gain.value = 0;
+  muteBtn.textContent = muted ? '🔇' : '🔊'; silenceEngine();
   if (typeof pauseLabels === 'function') pauseLabels();
 }
 muteBtn.textContent = muted ? '🔇' : '🔊';
@@ -3078,10 +3117,25 @@ function collisions(dt){
     const s = shells[i]; s.life -= dt; s.age += dt;
     s.idx = nearestIdx(s.mesh.position, s.idx);
     let aim;
+    if (s.straight){
+      // green shells fly dead straight (they still ride over hills, ramps and loops) and bounce off walls
+      s.mesh.position.addScaledVector(s.vel, dt); s.mesh.position.y = s.y ?? 0.9;
+      const bi = nearestIdx(s.mesh.position, s.idx), lat = s.mesh.position.clone().sub(pts[bi]).dot(nors[bi]);
+      const lim = RAIL[bi] ? W/2 + 0.5 : W/2 + 13;
+      if (Math.abs(lat) > lim){
+        const nn = nors[bi].clone().multiplyScalar(Math.sign(lat));
+        s.mesh.position.addScaledVector(nn, lim - Math.abs(lat));
+        if (s.vel.dot(nn) > 0){ s.vel.addScaledVector(nn, -2 * s.vel.dot(nn)); s.bounces++;
+          burst(s.mesh.position, 0x3ccf6e, 2, 0.2);
+          if (player && player.pos.distanceTo(s.mesh.position) < 60) beep(1300, .05, 'triangle', .05, .8);
+          if (s.bounces > 5) s.life = 0; }
+      }
+    } else {
     if (s.target && s.target.ghost <= 0 && s.target.pos.distanceTo(s.mesh.position) < (s.lock ?? 40)) aim = s.target.pos.clone().sub(s.mesh.position).setY(0).normalize();
     else { const ti = (s.idx + 10) % N; aim = pts[ti].clone().sub(s.mesh.position).setY(0).normalize(); }
     s.vel.lerp(aim.multiplyScalar(s.speed ?? 72), Math.min(1, (s.turn ?? 4)*dt));
     s.mesh.position.addScaledVector(s.vel, dt); s.mesh.position.y = s.y ?? 0.9;
+    }
     if (s.roll) s.mesh.rotation.x += dt * 8; else if (s.tumble) s.mesh.rotation.x += dt * 14; else s.mesh.rotation.y += dt*20;
     if (!s.roll && !s.tumble && s.y > 2) s.mesh.rotation.y = Math.atan2(s.vel.x, s.vel.z);
     let gone = s.life <= 0;
@@ -3284,7 +3338,7 @@ function setPauseSel(i){ const b = pauseBtns(); pauseSel = (i + b.length) % b.le
 function pauseGame(){
   if (paused || (state !== 'race' && state !== 'countdown')) return;
   paused = true; Object.keys(keys).forEach(k => keys[k] = false);
-  if (engineGain) engineGain.gain.value = 0;
+  silenceEngine();
   $('pauseSub').textContent = gp ? `${CUPS[gp.cup].emoji} ${CUPS[gp.cup].name} · Race ${gp.race + 1} of ${CUPS[gp.cup].tracks.length} · ${MAP.name}` : `${MAP.emoji} ${MAP.name} · Lap ${Math.min(LAPS, Math.max(1, player.lap))} / ${LAPS}`;
   $('pause').classList.remove('hidden'); setPauseSel(0); beep(520, .12, 'square', .06, .6);
 }
@@ -3350,7 +3404,7 @@ function loop(now){
     particles.position.set(focus.x, 0, focus.z);
   }
 
-  if (state === 'menu'){
+  if (state === 'menu'){    if (engineGain && engineGain.gain.value > 0.001) silenceEngine();
     renderGarage(dt);
     if (screen === 'garage'){ renderer.render(scene, camera); return; }
     camera.up.set(0, 1, 0);
@@ -3427,7 +3481,7 @@ function loop(now){
   if (toastT > 0){ toastT -= dt; if (toastT <= 0) $('toast').style.opacity = 0; }
   drawMini(); updateSpecialHud();
 
-  if (engine && !muted){ engine.frequency.value = 60 + Math.abs(player.speed) * 4 + (player.boost > 0 ? 60 : 0); engineGain.gain.value = state === 'menu' ? 0 : 0.035; }
+  if (engine && !muted) updateEngine(player, dt);
   liftItems(); renderer.render(scene, camera); dropItems();
 }
 requestAnimationFrame(loop);
