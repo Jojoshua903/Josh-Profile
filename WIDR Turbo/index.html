@@ -9,7 +9,7 @@
 // Driving licenses: each license is a separate save. The game reads/writes the pgp-* keys;
 // the active license keeps a copy of them, and switching swaps the keys and reloads.
 window.LIC = (() => {
-  const KEYS = ['pgp-trophies', 'pgp-best', 'pgp-build', 'pgp-char', 'pgp-opts', 'pgp-story'];
+  const KEYS = ['pgp-trophies', 'pgp-best', 'pgp-build', 'pgp-char', 'pgp-opts', 'pgp-story', 'pgp-coins', 'pgp-shop'];
   const REG = 'wt-licenses';
   const ls = (() => { try { const t = '__t'; localStorage.setItem(t, 1); localStorage.removeItem(t); return localStorage; } catch (e) { return null; } })();
   const uid = () => 'L' + Math.random().toString(36).slice(2, 8).toUpperCase() + Date.now().toString(36).slice(-3).toUpperCase();
@@ -121,6 +121,65 @@ setInterval(() => LIC.sync(), 4000);
   .pbtn{font-family:var(--font);font-size:22px;text-align:left;background:#fff;color:var(--ink);border:4px solid var(--ink);border-radius:16px;padding:12px 20px;box-shadow:5px 5px 0 var(--ink);cursor:pointer;transform:skewX(-6deg);transition:transform .15s,background .15s}
   .pbtn.focus{background:var(--yellow);transform:skewX(-6deg) translateX(10px) scale(1.03)}
   .ptoggles{display:grid;gap:8px}
+  /* online ranking */
+  .onwrap{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;width:min(1180px,95vw);margin:0 auto;align-items:start}
+  .onpanel{background:var(--cream);border:5px solid var(--ink);border-radius:22px;box-shadow:8px 8px 0 var(--ink);padding:14px 16px;min-width:0;display:flex;flex-direction:column;gap:8px}
+  .onpanel:nth-child(1){transform:rotate(-1deg)} .onpanel:nth-child(3){transform:rotate(1deg)}
+  .onpanel h3{font-size:22px;display:flex;align-items:center;gap:8px}
+  .ondot{margin-left:auto;font-size:11px;text-transform:uppercase;letter-spacing:.08em;border:2px solid var(--ink);border-radius:20px;padding:1px 9px;background:#fff}
+  .ondot.on{background:#7dff9a}.ondot.on::before{content:'● ';color:#d62828;animation:wrongBlink 1s steps(2) infinite}
+  .ondot.off{background:#ffb3b3}
+  .onlist,.onfeed{list-style:none;display:grid;gap:5px;max-height:46vh;overflow-y:auto;padding:2px}
+  .onlist li{display:grid;grid-template-columns:30px 30px minmax(0,1fr) auto;gap:8px;align-items:center;background:#fff;border:2px solid var(--ink);border-radius:10px;padding:3px 8px;font-size:14px}
+  .onlist li b{text-align:center}
+  .onlist .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .onlist .r{font-variant-numeric:tabular-nums;font-size:13px}
+  .onlist li.me,.onfeed li.me{background:var(--yellow)}
+  .onface{width:28px;height:28px;border-radius:7px;border:2px solid var(--ink);flex:none}
+  .onfeed li{display:flex;gap:8px;align-items:center;background:#fff;border:2px solid var(--ink);border-radius:10px;padding:4px 8px;font-size:13px;line-height:1.3}
+  .onfeed li small{display:block;opacity:.6;font-size:11px}
+  .onfeed li.fresh{animation:feedIn .6s var(--ease);background:#e7fff0}
+  @keyframes feedIn{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
+  .onlist li.empty,.onfeed li.empty{display:block;text-align:center;opacity:.6;background:none;border-style:dashed}
+  #onTrack{font-family:var(--font);font-size:15px;border:3px solid var(--ink);border-radius:10px;padding:5px 8px;background:#fff;color:var(--ink)}
+  .onshare{font-size:13px;display:flex;gap:6px;align-items:center;cursor:pointer}
+  .onerr{font-size:12px;color:#d62828;min-height:1em}
+  .worldrank{text-align:center;font-size:20px;background:#e6f6ff;border:3px solid var(--ink);border-radius:12px;padding:4px 10px;margin-bottom:8px;animation:unlockPop .6s var(--ease)}
+  @media (max-width:900px){.onwrap{grid-template-columns:minmax(0,1fr)}.onpanel{transform:none!important}}
+  /* coins + shop */
+  #coinhud{top:206px;right:18px;font-size:20px;padding:3px 12px;transform:rotate(3deg);background:#fff3c4}
+  .coinsum{text-align:center;font-size:16px;margin:10px 0 0}
+  .coinsum small{opacity:.7}
+  .shopwrap{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(260px,1fr);gap:22px;width:min(1100px,94vw);margin:0 auto}
+  .shopmain{background:var(--cream);border:5px solid var(--ink);border-radius:24px;box-shadow:8px 8px 0 var(--ink);padding:14px 16px;min-width:0}
+  .shoptabs{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+  .shoptabs button{font-family:var(--font);font-size:16px;border:3px solid var(--ink);border-radius:12px;padding:6px 14px;background:#fff;cursor:pointer;box-shadow:3px 3px 0 var(--ink);color:var(--ink)}
+  .shoptabs button.on{background:var(--yellow);transform:translateY(-2px) rotate(-1deg)}
+  .wallet{margin-left:auto;font-size:22px;background:#fff3c4;border:3px solid var(--ink);border-radius:12px;padding:3px 14px;box-shadow:3px 3px 0 var(--ink)}
+  .shopchars{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px}
+  .schar{border:3px solid var(--ink);border-radius:10px;padding:0;background:none;cursor:pointer;width:42px;height:42px;overflow:hidden}
+  .schar img{width:100%;height:100%;display:block}
+  .schar.on{outline:3px solid var(--red);outline-offset:2px;transform:scale(1.1)}
+  .schar.locked img{filter:grayscale(1) opacity(.6)}
+  .shopgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;max-height:52vh;overflow-y:auto;padding:6px}
+  .sitem{border:3px solid var(--ink);border-radius:14px;background:#fff;padding:6px;text-align:center;cursor:pointer;box-shadow:3px 3px 0 var(--ink);transition:transform .2s var(--ease)}
+  .sitem img,.sitem .swatch,.sitem .disc{width:100%;aspect-ratio:1;border-radius:10px;border:3px solid var(--ink);display:grid;place-items:center;margin-bottom:4px}
+  .sitem .disc,.sbig .disc{background:radial-gradient(circle,#fff 0 12%,#1d1a2f 13% 16%,#3a3550 17% 60%,#1d1a2f 61%);font-size:32px}
+  .swatch span{width:46%;aspect-ratio:1;border-radius:50%;border:3px solid var(--ink);display:grid;place-items:center;font-size:20px}
+  .sitem b{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sitem small{display:block;font-size:12px}
+  .sitem.own{background:#eef9ff}
+  .sitem.eq{background:#7dff9a}
+  .sitem.focus{transform:translateY(-6px) rotate(-2deg) scale(1.05);outline:4px dashed var(--ink);outline-offset:3px;z-index:2}
+  .sitem.nope{animation:nope .35s}
+  .shopinfo{background:var(--cream);border:5px solid var(--ink);border-radius:24px;box-shadow:8px 8px 0 var(--ink);padding:16px 18px;transform:rotate(1.5deg);display:flex;flex-direction:column;gap:8px;align-self:start}
+  .sbig img,.sbig .swatch,.sbig .disc{width:150px;height:150px;margin:0 auto;border-radius:18px;border:4px solid var(--ink);display:grid;place-items:center}
+  .sbig .disc{font-size:56px;animation:rot 3s linear infinite}
+  .shopinfo h2{font-size:26px;text-align:center}
+  .shopinfo #shopBtn{font-size:20px}
+  .shopinfo #shopBtn:disabled{opacity:.55;cursor:not-allowed}
+  .srace{font-size:14px;display:flex;gap:6px;align-items:center;cursor:pointer}
+  @media (max-width:800px){.shopwrap{grid-template-columns:minmax(0,1fr)}.shopgrid{grid-template-columns:repeat(3,minmax(0,1fr))}.shopinfo{transform:none}}
   /* tutorial */
   #tut{top:14px;left:50%;transform:translateX(-50%) rotate(-1deg);width:min(560px,calc(100% - 340px));min-width:300px;padding:10px 18px 12px;display:none;text-align:left;background:#fff}
   #tut.on{display:block}
@@ -146,8 +205,8 @@ setInterval(() => LIC.sync(), 4000);
   .tutdone span{border:2px solid var(--ink);border-radius:9px;padding:2px 9px;background:#7dff9a;font-size:14px}
   @media (max-width:760px){#tut{width:calc(100% - 24px);top:150px}}
   /* story mode */
-  .screen .mlist{gap:10px}
-  .mlist .mbtn{font-size:26px;padding-top:10px;padding-bottom:10px}
+  .screen .mlist{gap:8px}
+  .mlist .mbtn{font-size:23px;padding-top:8px;padding-bottom:8px}
   .cupgrid.storygrid{grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
   .cup.chap{min-height:0;padding:28px 8px 10px;text-align:center}
   .cup.chap img{width:64px;height:64px;border-radius:14px;border:3px solid var(--ink);display:block;margin:0 auto}
@@ -333,6 +392,31 @@ setInterval(() => LIC.sync(), 4000);
   .checkers{position:absolute;left:0;right:0;height:26px;z-index:2;
     background:conic-gradient(#1d1a2f 25%,#fff 0 50%,#1d1a2f 0 75%,#fff 0) 0 0/26px 26px;animation:slide 1.2s linear infinite;transition:transform .5s var(--ease)}
   .checkers.top{top:0;border-bottom:4px solid var(--ink)}
+  /* menu skins from the shop */
+  .menu[data-skin=midnight]{--cream:#e9e6ff}
+  .menu[data-skin=midnight] .sunburst{background:repeating-conic-gradient(#2c2f72 0 9deg,#1f2256 9deg 18deg)}
+  .menu[data-skin=midnight] .checkers{background:conic-gradient(#1d1a2f 25%,#8a7cff 0 50%,#1d1a2f 0 75%,#8a7cff 0) 0 0/26px 26px}
+  .menu[data-skin=midnight]:not(.at-title) .vignette{background:linear-gradient(180deg,#14103acc 0,#14103a55 30%,#14103a55 70%,#14103acc 100%)}
+  .menu[data-skin=bubblegum]{--cream:#fff0f8}
+  .menu[data-skin=bubblegum] .sunburst{background:repeating-conic-gradient(#ff9ad0 0 9deg,#ff7cc0 9deg 18deg)}
+  .menu[data-skin=bubblegum] .checkers{background:conic-gradient(#ff4fa0 25%,#fff 0 50%,#ff4fa0 0 75%,#fff 0) 0 0/26px 26px}
+  .menu[data-skin=bubblegum]:not(.at-title) .vignette{background:linear-gradient(180deg,#ff7cc066 0,#0000 25%,#0000 70%,#ff4fa077 100%)}
+  .menu[data-skin=arcade]{--cream:#eaffef}
+  .menu[data-skin=arcade] .sunburst{background:repeating-conic-gradient(#1d1a2f 0 9deg,#173a22 9deg 18deg)}
+  .menu[data-skin=arcade] .checkers{background:conic-gradient(#1d1a2f 25%,#3cff7a 0 50%,#1d1a2f 0 75%,#3cff7a 0) 0 0/26px 26px}
+  .menu[data-skin=arcade]:not(.at-title) .vignette{background:repeating-linear-gradient(0deg,#0000 0 3px,#00000022 3px 4px),linear-gradient(180deg,#0a1a10aa 0,#0000 25%,#0000 70%,#0a1a10aa 100%)}
+  .menu[data-skin=lava]{--cream:#fff1e4}
+  .menu[data-skin=lava] .sunburst{background:repeating-conic-gradient(#ff6a1f 0 9deg,#e8331f 9deg 18deg)}
+  .menu[data-skin=lava] .checkers{background:conic-gradient(#1d1a2f 25%,#ff7a1f 0 50%,#1d1a2f 0 75%,#ff7a1f 0) 0 0/26px 26px}
+  .menu[data-skin=lava]:not(.at-title) .vignette{background:linear-gradient(180deg,#5a100088 0,#0000 25%,#0000 65%,#ff3b0088 100%)}
+  .menu[data-skin=ocean]{--cream:#eef9ff}
+  .menu[data-skin=ocean] .sunburst{background:repeating-conic-gradient(#4fc4ff 0 9deg,#2f9fe8 9deg 18deg)}
+  .menu[data-skin=ocean] .checkers{background:conic-gradient(#0b4a7a 25%,#fff 0 50%,#0b4a7a 0 75%,#fff 0) 0 0/26px 26px}
+  .menu[data-skin=ocean]:not(.at-title) .vignette{background:linear-gradient(180deg,#0b4a7a77 0,#0000 25%,#0000 70%,#2fc4e877 100%)}
+  .menu[data-skin=gold]{--cream:#fff6d4}
+  .menu[data-skin=gold] .sunburst{background:repeating-conic-gradient(#ffd23f 0 6deg,#e6a800 6deg 12deg,#fff1a8 12deg 14deg)}
+  .menu[data-skin=gold] .checkers{background:conic-gradient(#1d1a2f 25%,#ffc83a 0 50%,#1d1a2f 0 75%,#ffc83a 0) 0 0/26px 26px}
+  .menu[data-skin=gold] .mbtn,.menu[data-skin=gold] .card{box-shadow:6px 6px 0 #b07a00}
   .checkers.bottom{bottom:0;border-top:4px solid var(--ink);animation-direction:reverse;transform:translateY(100%)}
   .menu.at-title .checkers.bottom{transform:none}
   @keyframes slide{to{background-position:52px 0}}
@@ -585,6 +669,7 @@ setInterval(() => LIC.sync(), 4000);
 <div class="hud" id="toast"></div>
 <div class="hud sticker" id="intro"></div>
 <div class="hud sticker" id="wrong">↩ WRONG WAY</div>
+<div class="hud sticker" id="coinhud">🪙 0</div>
 <div class="hud sticker" id="tut"><div class="tuthead"><span id="tutStep"></span><span class="tutskip"><kbd>N</kbd> skip</span></div><h3 id="tutTitle"></h3><p id="tutText"></p><div class="tutdots" id="tutDots"></div><div class="tutok">✔ Nice!</div></div>
 <div class="hud sticker" id="rearview">👀 Looking back</div>
 <div class="sticker" id="mute">🔊</div>
@@ -614,7 +699,7 @@ setInterval(() => LIC.sync(), 4000);
     <div class="logo" id="logo">
       <div class="logo-top" id="logoTop"></div>
       <div class="logo-bot" id="logoBot"></div>
-      <div class="logo-ribbon">19 racers · 26 tracks · 7 cups</div>
+      <div class="logo-ribbon">19 racers · 34 tracks · 9 cups</div>
     </div>
     <div class="runway" id="runway"></div>
     <div class="press">Press <kbd>Enter</kbd> or click to start</div>
@@ -631,6 +716,8 @@ setInterval(() => LIC.sync(), 4000);
         <button class="mbtn nav" data-go="garage"   data-icon="🔧" data-desc="Build your kart. Choose the body, wheels and colors. Each part changes how it drives." style="--c:#3ccf6e">Garage</button>
         <button class="mbtn nav" data-go="trophies" data-icon="🏅" data-desc="Your trophies and your best times on every track." style="--c:#ffb02e">Trophy Room</button>
         <button class="mbtn nav" data-go="help"     data-icon="🎮" data-desc="Learn to race on a practice track with step-by-step lessons: drifting, items, jumps, walls, loops and gliders." style="--c:#8a5cff">Tutorial</button>
+        <button class="mbtn nav" data-go="online"   data-icon="🌍" data-desc="Live online ranking: the best drivers, world records on every track and races as they happen." style="--c:#2fc4e8">Online</button>
+        <button class="mbtn nav" data-go="shop"     data-icon="🛒" data-desc="Spend the coins you collect on the tracks: music packs, character skins and menu skins." style="--c:#ffb02e">Shop</button>
         <button class="mbtn nav" data-go="licenses" data-icon="🪪" data-desc="Driving licenses are separate saves. Switch player, make a new one, or export and import them as .json files." style="--c:#1fb5a6">Licenses</button>
       </nav>
       <aside class="mpanel" id="mpanel">
@@ -710,6 +797,43 @@ setInterval(() => LIC.sync(), 4000);
     </div>
   </section>
 
+  <!-- SHOP -->
+  <section class="screen" data-screen="shop">
+    <div class="shopwrap">
+      <div class="shopmain">
+        <div class="shoptabs" id="shopTabs">
+          <button data-tab="music">🎵 Music</button><button data-tab="skins">🎨 Character skins</button><button data-tab="menu">🖼️ Menu skins</button>
+          <span class="wallet">🪙 <b class="walletN">0</b></span>
+        </div>
+        <div class="shopchars" id="shopChars"></div>
+        <div class="shopgrid" id="shopGrid"></div>
+      </div>
+      <aside class="shopinfo" id="shopInfo"></aside>
+    </div>
+  </section>
+
+  <!-- ONLINE -->
+  <section class="screen" data-screen="online">
+    <div class="onwrap">
+      <div class="onpanel">
+        <h3>🏆 Drivers <span class="ondot" id="onDot">connecting…</span></h3>
+        <ol class="onlist" id="onDrivers"></ol>
+      </div>
+      <div class="onpanel">
+        <h3>⏱️ World records</h3>
+        <select id="onTrack"></select>
+        <ol class="onlist" id="onTimes"></ol>
+        <p class="fine" id="onMine"></p>
+      </div>
+      <div class="onpanel">
+        <h3>🔴 Live races</h3>
+        <ul class="onfeed" id="onFeed"></ul>
+        <label class="onshare"><input type="checkbox" id="onShare"> Share my results as <b id="onName"></b></label>
+        <p class="onerr" id="onErr"></p>
+      </div>
+    </div>
+  </section>
+
   <!-- LICENSES -->
   <section class="screen" data-screen="licenses">
     <div class="licwrap">
@@ -762,7 +886,7 @@ setInterval(() => LIC.sync(), 4000);
 
   <footer class="mfoot">
     <button class="btn ghost small" id="backBtn">◂ Back</button>
-    <span class="hints"><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> move · <kbd>Enter</kbd> select · <kbd>Esc</kbd> back</span>
+
   </footer>
 </div>
 <div id="wipe"><div></div></div>
@@ -1473,6 +1597,20 @@ function buildWorld(def){
 
   buildLoopMeshes(def);
 
+  // coins: short lines of 5 along the road, swinging from one side to the other
+  coins.forEach(c => world.remove(c.mesh)); coins.length = 0;
+  for (const f of [0.07, 0.24, 0.35, 0.53, 0.7, 0.9]){
+    let ci = Math.round(f * N) % N;
+    for (let s = 0; s < 60 && [-6, 0, 6, 14, 22].some(o => GP[(ci + o) % N] || GZ[(ci + o) % N] || JZ[(ci + o) % N] || LR[(ci + o) % N]); s++) ci = (ci + 5) % N;
+    const side = (Math.round(f * 100) % 3 - 1) * 0.28;
+    for (let j = 0; j < 5; j++){
+      const k = (ci + j * 4) % N, lat = (side + Math.sin(j / 4 * Math.PI) * (side ? -side : 0.25)) * W;
+      const m = new THREE.Mesh(coinG, coinM); m.castShadow = true;
+      m.position.copy(pts[k]).addScaledVector(nors[k], lat).setY(1.5); world.add(m);
+      coins.push({mesh:m, respawn:0});
+    }
+  }
+
   // beach maps sit on a sandy island in the sea
   const landR = def.water ? span*0.82 + 50 : 1000;
   if (def.terrain && !def.water){
@@ -1638,6 +1776,46 @@ try { const saved = JSON.parse(localStorage.getItem('pgp-build') || 'null'); if 
 if (!GLIDERS[myBuild.glider]) myBuild.glider = CHAR_GLIDER[ROSTER[playerChoice].id] || 'super';
 const buildOf = k => k.isPlayer ? myBuild : ROSTER[k.ri].build;
 
+// ---------- shop: wallet, owned items, what's equipped (saved per license) ----------
+let wallet = 0; try { wallet = Math.max(0, +localStorage.getItem('pgp-coins') || 0); } catch (e) {}
+const shop = {owned:[], music:'menu', musicRace:false, menu:'classic', skins:{}};
+try { Object.assign(shop, JSON.parse(localStorage.getItem('pgp-shop') || '{}')); } catch (e) {}
+function saveShop(){ try { localStorage.setItem('pgp-shop', JSON.stringify(shop)); localStorage.setItem('pgp-coins', String(wallet)); } catch (e) {} }
+function raceCoins(place){
+  if (tut) return 0;
+  const n = Math.round(([15, 12, 10, 8, 6, 5, 4, 3][place - 1] ?? 2) * (gp ? CUPS[gp.cup].speed : story ? 1.2 : 1));
+  addCoins(n); return n;
+}
+// new licenses start with a little pocket money
+if (!shop.welcome){ shop.welcome = true; wallet += 100; saveShop(); }
+function addCoins(n){ wallet += n; saveShop(); document.querySelectorAll('.walletN').forEach(e => e.textContent = wallet); }
+// character skins: a recolour of every material on the driver (whole:true also does the kart)
+const SKINS = {
+  gold:    {name:'Golden',      icon:'🥇', price:500, whole:true, fn:(c, e) => { c.lerp(new THREE.Color(0xffc83a), 0.78); e.set(0x6a4a00); }},
+  shadow:  {name:'Shadow',      icon:'🌑', price:250, fn:(c, e) => { c.lerp(new THREE.Color(0x1d1a2f), 0.8); e.set(0x3a1a6a); }},
+  neon:    {name:'Neon',        icon:'💡', price:300, fn:(c, e) => { const h = {}; c.getHSL(h); c.setHSL((h.h + 0.5) % 1, 1, 0.55); e.copy(c).multiplyScalar(0.55); }},
+  ice:     {name:'Frozen',      icon:'🧊', price:200, fn:(c, e) => { c.lerp(new THREE.Color(0xbfefff), 0.62); e.set(0x1a4a7a); }},
+  lava:    {name:'Lava',        icon:'🌋', price:250, fn:(c, e) => { c.lerp(new THREE.Color(0xff4a1a), 0.55); e.set(0x7a1a00); }},
+  candy:   {name:'Pastel',      icon:'🍬', price:150, fn:(c, e) => { const h = {}; c.getHSL(h); c.setHSL((h.h + 0.08) % 1, 0.75, 0.8); }},
+  mirror:  {name:'Mirror World',icon:'🪞', price:200, fn:(c, e) => { c.setRGB(1 - c.r, 1 - c.g, 1 - c.b); }},
+  rainbow: {name:'Rainbow',     icon:'🌈', price:400, whole:true, fn:(c, e, i) => { c.setHSL((i * 0.13) % 1, 0.9, 0.6); e.copy(c).multiplyScalar(0.25); }},
+};
+function applySkin(root, id){
+  const S = SKINS[id]; if (!S) return;
+  let i = 0; const done = new Map();
+  root.traverse(o => {
+    if (!o.isMesh || !o.material || !o.material.color) return;
+    if (o.material.transparent && o.material.opacity < 0.5) return;   // leave shadows / glass alone
+    if (!done.has(o.material)){
+      const m = o.material.clone(), e = new THREE.Color(0);
+      S.fn(m.color, e, i++); if (m.emissive) m.emissive.copy(e);
+      done.set(o.material, m);
+    }
+    o.material = done.get(o.material);
+  });
+}
+const skinOf = id => shop.skins[id] && shop.owned.includes('skin:' + id + ':' + shop.skins[id]) ? shop.skins[id] : null;
+
 // ---------- portraits: render each character once into an image ----------
 const PORTRAITS = (() => {
   const c = document.createElement('canvas'); c.width = c.height = 192;
@@ -1646,8 +1824,8 @@ const PORTRAITS = (() => {
   const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight(0xffffff, 0xd9b878, 1.8));
   const sun = new THREE.DirectionalLight(0xffffff, 2.2); sun.position.set(3, 5, 6); sc.add(sun);
   const cam = new THREE.PerspectiveCamera(30, 1, 0.1, 50);
-  const out = ROSTER.map(ch => {
-    const holder = new THREE.Group(); sc.add(holder); drawDriver(ch, holder);
+  const shot = (ch, skin) => {
+    const holder = new THREE.Group(); sc.add(holder); drawDriver(ch, holder); if (skin) applySkin(holder, skin);
     holder.rotation.y = -0.35; holder.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(holder), size = box.getSize(new THREE.Vector3()), ctr = box.getCenter(new THREE.Vector3());
     const span = Math.min(Math.max(size.y, size.x), 2.6);
@@ -1656,8 +1834,14 @@ const PORTRAITS = (() => {
     cam.lookAt(ctr);
     r.render(sc, cam); const url = c.toDataURL('image/png');
     sc.remove(holder); return url;
-  });
-  r.dispose(); r.forceContextLoss();
+  };
+  const out = ROSTER.map(ch => shot(ch, null));
+  // skin previews for the shop, made on demand and cached; PORTRAITS[i] shows the equipped skin
+  const cache = {};
+  out.base = out.slice();
+  out.skinned = (i, skin) => skin ? (cache[i + skin] ??= shot(ROSTER[i], skin)) : out.base[i];
+  out.refresh = i => { out[i] = out.skinned(i, skinOf(ROSTER[i].id)); };
+  ROSTER.forEach((ch, i) => { if (skinOf(ch.id)) out.refresh(i); });
   return out;
 })();
 
@@ -2044,6 +2228,7 @@ function buildKart(r, build = r.build, target = scene){
   const [sy, sz] = spec.seat, ds = spec.small ? 0.8 : 1;
   const drv = new THREE.Group(); drv.position.set(0, sy, sz); drv.scale.setScalar(ds); shell.add(drv);
   const anims = drawDriver(r, drv);
+  const skin = skinOf(r.id); if (skin && !SKINS[skin].whole) applySkin(drv, skin);
   add(new THREE.TorusGeometry(0.45, 0.08, 6, 14), dark, 0, 0.05, 0.85, drv).rotation.x = -0.9;
   // wheels
   const tyre = new THREE.MeshLambertMaterial({color:wt.color, flatShading:!!wt.seg});
@@ -2075,6 +2260,7 @@ function buildKart(r, build = r.build, target = scene){
   ice.position.y = 1.5; ice.visible = false; g.add(ice);
   const glider = buildGlider(build.glider || CHAR_GLIDER[r.id] || 'super', build, r);
   glider.position.set(0, 2.9 + lift + (spec.seat[0] - 1.5) * 0.6, -0.2); glider.scale.setScalar(0.01); glider.visible = false; body.add(glider);
+  if (skin && SKINS[skin].whole) applySkin(body, skin);
   target.add(g);
   return {group:g, body, wheels, wheelR:wt.r, sparks, sparkM, flame, paints, paintColor:build.paint, anims, shieldM, ice, drv, glider, gOpen:0};
 }
@@ -2117,7 +2303,8 @@ const boxTex = (() => {
   x.fillStyle = '#fff'; x.font = 'bold 90px Arial Rounded MT Bold, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('?', 64, 70);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 })();
-const boxes = [];
+const boxes = [], coins = [];
+const coinG = new THREE.CylinderGeometry(0.95, 0.95, 0.24, 18).rotateX(Math.PI / 2), coinM = new THREE.MeshLambertMaterial({color:0xffc83a, emissive:0x7a5200});
 const boxG = new THREE.BoxGeometry(2.4, 2.4, 2.4), boxM = new THREE.MeshLambertMaterial({map:boxTex, transparent:true, opacity:.92});
 const fakeM = new THREE.MeshLambertMaterial({map:boxTex, color:0xff8a8a, transparent:true, opacity:.92});
 const bananas = [];
@@ -2548,6 +2735,17 @@ const MUSIC_THEMES = {
   'Loop Cup':      {root:70, scale:'mixo',   bpm:146, prog:[0,3,6,3], lead:'square',   bass:'triangle', groove:'gallop',  drums:'pop',    arp:true},
   'Sky Cup':       {root:66, scale:'minor',  bpm:156, prog:[0,6,5,6], lead:'sawtooth', bass:'sawtooth', groove:'drive',   drums:'club',   pad:true, arp:true},
 };
+// music packs from the shop: a whole new style for the menu (and optionally every race)
+const MUSIC_PACKS = {
+  chip:   {name:'8-bit Hero',     icon:'👾', price:150, desc:'Bleepy arcade chiptune', root:72, scale:'major',  bpm:150, prog:[0,4,5,3], lead:'square',   bass:'square',   groove:'bounce',  drums:'pop',    arp:true, penta:true},
+  lofi:   {name:'Lo-fi Chill',    icon:'☕', price:200, desc:'Slow, jazzy and cosy',   root:57, scale:'dorian', bpm:84,  prog:[0,3,6,4], lead:'sine',     bass:'triangle', groove:'swing',   drums:'light',  pad:true, bell:true},
+  disco:  {name:'Disco Fever',    icon:'🪩', price:250, desc:'Four on the floor',      root:62, scale:'minor',  bpm:122, prog:[0,5,3,4], lead:'square',   bass:'sawtooth', groove:'offbeat', drums:'club',   arp:true, pad:true},
+  surf:   {name:'Surf Rock',      icon:'🏄', price:250, desc:'Twangy beach guitar',     root:64, scale:'mixo',   bpm:162, prog:[0,3,6,0], lead:'sawtooth', bass:'triangle', groove:'gallop',  drums:'rock'},
+  spooky: {name:'Spooky Mansion', icon:'👻', price:300, desc:'Creepy bells and organ',  root:57, scale:'hminor', bpm:98,  prog:[0,5,3,4], lead:'triangle', bass:'sine',     groove:'bounce',  drums:'light',  bell:true, pad:true},
+  metal:  {name:'Metal Mayhem',   icon:'🤘', price:350, desc:'Fast and very loud',      root:52, scale:'hminor', bpm:176, prog:[0,6,5,6], lead:'sawtooth', bass:'sawtooth', groove:'gallop',  drums:'rock'},
+  meta:   {name:'Meta AI Remix',  icon:'🤖', price:400, desc:'The villain’s own track', root:61, scale:'lydian', bpm:136, prog:[0,1,0,6], lead:'sawtooth', bass:'sawtooth', groove:'drive',   drums:'club',   arp:true},
+};
+let shopPreview = null;
 const DRUMS = { // 16 steps per bar
   pop:    {k:'x...x...x...x...', s:'....x.......x...', h:'..x...x...x...x.'},
   island: {k:'x.......x.......', s:'....x.......x..x', h:'x.xxx.xxx.xxx.xx'},
@@ -2562,7 +2760,8 @@ const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
 const cupOfTrack = name => CUPS.find(c => c.tracks.includes(name));
 function hashStr(str){ let h = 2166136261; for (const c of str) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return (h >>> 0) % 2147483646 + 1; }
 function makeSong(id){
-  const th = MUSIC_THEMES[id === 'menu' ? 'menu' : cupOfTrack(id)?.name] || MUSIC_THEMES['Acorn Cup'];
+  const pack = id.startsWith('pack:') ? id.slice(5).split('|')[0] : null;
+  const th = (pack && MUSIC_PACKS[pack]) || MUSIC_THEMES[id === 'menu' ? 'menu' : cupOfTrack(id)?.name] || MUSIC_THEMES['Acorn Cup'];
   let s = hashStr(id); const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647, pick = a => a[Math.floor(rnd() * a.length)];
   // each track turns the cup's progression its own way
   const rot = Math.floor(rnd() * 4), prog = th.prog.slice(rot).concat(th.prog.slice(0, rot));
@@ -2655,7 +2854,10 @@ const mus = {cur:null, song:null, next:0, step:0, bar:0};
 function musicTick(){
   if (!actx) return;
   initMusic();
-  const want = state === 'menu' ? 'menu' : state === 'race' ? MAP.name : null;
+  // shop: a hovered pack previews; an equipped pack plays in the menu (and in races if you ticked that box)
+  const own = shop.music && shop.music !== 'menu' && MUSIC_PACKS[shop.music] ? shop.music : null;
+  const want = shopPreview ? (shopPreview === '__classic' ? 'menu' : 'pack:' + shopPreview) : state === 'menu' ? (own ? 'pack:' + own : 'menu')
+    : state === 'race' ? (own && shop.musicRace ? `pack:${own}|${MAP.name}` : MAP.name) : null;
   if (want !== mus.cur){ mus.cur = want; mus.song = want ? makeSong(want) : null; mus.step = 0; mus.bar = 0; mus.next = actx.currentTime + 0.1; }
   const on = !muted && OPTS.music !== false && !paused && !!mus.song;
   musicBus.gain.setTargetAtTime(on ? 0.5 : (state === 'finished' ? musicBus.gain.value : 0), actx.currentTime, 0.08);
@@ -2757,7 +2959,7 @@ const LESSONS = [
    check:(k, s, dt) => (s.t = k.wasAnti && !LP[k.idx] ? (s.t || 0) + dt : 0) > 0.6},
   {icon:'🎢', title:'Loop-de-loop', text:'Here comes the loop! You keep your speed all the way round, so just hold <kbd>↑</kbd> and enjoy the ride.',
    check:(k, s) => { if (LP[k.idx]) s.in = true; return s.in && !LP[k.idx]; }},
-  {icon:'🪂', title:'Glider', text:'Drive up the blue-and-white ramp to fly over the gap. Steer in the air and hold <kbd>↓</kbd> to dive down faster.',
+  {icon:'🪂', title:'Glider', text:'Drive up the blue-and-white ramp to fly over the gap. While flying, hold <kbd>↑</kbd> to tip the nose down and dive (faster), or <kbd>↓</kbd> to tilt back and float longer. Steer with <kbd>←</kbd> <kbd>→</kbd>.',
    check:(k, s) => { if (k.glide) s.flew = true; return s.flew && !k.air; }},
   {icon:'⚡', title:'Special ability', text:() => `Every racer has a special. Yours is <b>${ROSTER[playerChoice].ability.icon} ${ROSTER[playerChoice].ability.name}</b>: ${ROSTER[playerChoice].ability.desc} Your meter is full, so press <kbd>E</kbd> to use it!`,
    start:k => { k.sp = 1; updateSpecialHud(); }, check:k => k.sp < 1},
@@ -2908,6 +3110,8 @@ const SCREENS = {
   garage:   {title:'Garage', sub:'Body · Tires · Paint · Trim · Glider'},
   trophies: {title:'Trophy Room', sub:'Your best results'},
   help:     {title:'Tutorial', sub:'Learn every move, step by step'},
+  shop:     {title:'Shop', sub:'Spend your coins'},
+  online:   {title:'Online', sub:'Live ranking from players everywhere'},
   licenses: {title:'Driving Licenses', sub:'Separate saves · export and import as .json'},
 };
 let screen = null, trail = [];
@@ -2937,8 +3141,191 @@ function go(name, isBack = false){
 }
 function back(){
   if (screen === 'title') return;
+  if (screen === 'shop') shopLeave();
+  if (screen === 'online') onlineLeave();
   blip.back(); go(trail.pop() || 'title', true);
 }
+// ---------- shop screen ----------
+const MENU_SKINS = {
+  classic:   {name:'Classic',     icon:'🌞', price:0,   desc:'The original sunny look', sw:['#ffd23f', '#ffbf1f', '#fff8e7']},
+  bubblegum: {name:'Bubblegum',   icon:'🍬', price:150, desc:'Pink and sweet',           sw:['#ff9ad0', '#ff4fa0', '#fff0f8']},
+  ocean:     {name:'Ocean',       icon:'🌊', price:150, desc:'Cool blue waves',          sw:['#4fc4ff', '#0b4a7a', '#eef9ff']},
+  lava:      {name:'Lava',        icon:'🌋', price:200, desc:'Red hot',                  sw:['#ff6a1f', '#e8331f', '#fff1e4']},
+  midnight:  {name:'Midnight',    icon:'🌙', price:250, desc:'Dark purple night mode',   sw:['#2c2f72', '#8a7cff', '#e9e6ff']},
+  arcade:    {name:'Retro Arcade',icon:'🕹️', price:300, desc:'Green on black, with scanlines', sw:['#1d1a2f', '#3cff7a', '#eaffef']},
+  gold:      {name:'Pure Gold',   icon:'👑', price:600, desc:'For champions only',       sw:['#ffd23f', '#e6a800', '#fff6d4']},
+};
+const applyMenuSkin = id => { menuEl.dataset.skin = MENU_SKINS[id] ? id : 'classic'; };
+applyMenuSkin(shop.menu);
+let shopTab = 'music', shopChar = playerChoice, shopSel = null;
+const owns = id => id.endsWith(':default') || id === 'music:menu' || id === 'menu:classic' || shop.owned.includes(id);
+function shopItems(){
+  if (shopTab === 'music') return [{id:'music:menu', key:'menu', name:'Classic', icon:'🎶', price:0, desc:'The normal menu tune, and each cup’s own race music'},
+    ...Object.entries(MUSIC_PACKS).map(([key, p]) => ({id:'music:' + key, key, ...p}))];
+  if (shopTab === 'menu') return Object.entries(MENU_SKINS).map(([key, s]) => ({id:'menu:' + key, key, ...s}));
+  const ch = ROSTER[shopChar];
+  return [{id:`skin:${ch.id}:default`, key:null, name:'Default', icon:'🙂', price:0, desc:`${ch.name}'s normal look`},
+    ...Object.entries(SKINS).map(([key, s]) => ({id:`skin:${ch.id}:${key}`, key, ...s, price:s.price * (ch.villain || ch.id === 'robin' ? 2 : 1),
+      desc:s.whole ? `${ch.name} and the whole kart` : `Recolours ${ch.name}`}))];
+}
+const equipped = it => shopTab === 'music' ? (shop.music || 'menu') === it.key : shopTab === 'menu' ? (shop.menu || 'classic') === it.key : (skinOf(ROSTER[shopChar].id) || null) === it.key;
+function shopThumb(it){
+  if (shopTab === 'skins') return `<img src="${PORTRAITS.skinned(shopChar, it.key)}" alt="" style="background:${hex(ROSTER[shopChar].color)}">`;
+  if (shopTab === 'menu') return `<div class="swatch" style="background:repeating-conic-gradient(${it.sw[0]} 0 15deg,${it.sw[1]} 15deg 30deg)"><span style="background:${it.sw[2]}">${it.icon}</span></div>`;
+  return `<div class="disc">${it.icon}</div>`;
+}
+function renderShop(){
+  document.querySelectorAll('.walletN').forEach(e => e.textContent = wallet);
+  [...$('shopTabs').querySelectorAll('button')].forEach(b => {
+    b.classList.toggle('on', b.dataset.tab === shopTab);
+    b.onclick = () => { if (shopTab === b.dataset.tab) return; shopLeave(); shopTab = b.dataset.tab; shopSel = null; blip.move(); renderShop(); setFocus(0, true); };
+  });
+  const chars = $('shopChars'); chars.innerHTML = ''; chars.style.display = shopTab === 'skins' ? 'flex' : 'none';
+  if (shopTab === 'skins') ROSTER.forEach((r, i) => {
+    const b = document.createElement('button'); b.className = 'schar' + (i === shopChar ? ' on' : '') + (isUnlocked(i) ? '' : ' locked'); b.title = r.name;
+    b.innerHTML = `<img src="${PORTRAITS[i]}" alt="" style="background:${hex(r.color)}">`;
+    b.onclick = () => { shopChar = i; shopSel = null; blip.move(); renderShop(); setFocus(0, true); };
+    chars.appendChild(b);
+  });
+  const grid = $('shopGrid'); grid.innerHTML = '';
+  shopItems().forEach((it, i) => {
+    const d = document.createElement('div'); d.className = 'sitem nav' + (equipped(it) ? ' eq' : '') + (owns(it.id) ? ' own' : '');
+    d.innerHTML = `${shopThumb(it)}<b>${it.icon} ${it.name}</b><small>${equipped(it) ? '✔ Equipped' : owns(it.id) ? 'Owned' : `🪙 ${it.price}`}</small>`;
+    hookNav(d, i, () => shopFocus(it), () => shopBuy(it, d));
+    grid.appendChild(d);
+  });
+  shopFocus(shopSel && shopItems().find(x => x.id === shopSel.id) || shopItems()[0]);
+}
+function shopFocus(it){
+  shopSel = it;
+  // try before you buy: hovering previews music and menu skins
+  if (shopTab === 'music'){ shopPreview = it.key === 'menu' ? null : it.key; if (it.key === 'menu' && shop.music !== 'menu') shopPreview = '__classic'; }
+  if (shopTab === 'menu') applyMenuSkin(it.key);
+  const own = owns(it.id), eq = equipped(it), short = it.price - wallet;
+  $('shopInfo').innerHTML = `<div class="sbig">${shopThumb(it)}</div><h2>${it.icon} ${it.name}</h2><p>${it.desc}</p>
+    ${shopTab === 'skins' && !isUnlocked(shopChar) ? `<p class="fine">🔒 ${ROSTER[shopChar].name} is still locked, but you can already buy their skins.</p>` : ''}
+    ${shopTab === 'music' ? `<p class="fine">🎧 You're hearing a preview right now.</p>` : shopTab === 'menu' ? `<p class="fine">👀 You're seeing a preview right now.</p>` : ''}
+    <button class="btn" id="shopBtn" ${eq || (!own && short > 0) ? 'disabled' : ''}>${eq ? '✔ Equipped' : own ? 'Equip' : short > 0 ? `Need ${short} more 🪙` : `Buy for 🪙 ${it.price}`}</button>
+    ${shopTab === 'music' ? `<label class="srace"><input type="checkbox" id="shopRace" ${shop.musicRace ? 'checked' : ''}> Also play my music pack in races</label>` : ''}
+    <p class="fine">🪙 You have <b class="walletN">${wallet}</b> coins. Collect coins on the tracks and earn more by finishing races, winning trophies and finishing story chapters.</p>`;
+  $('shopBtn').onclick = () => shopBuy(it, $('shopGrid').children[shopItems().findIndex(x => x.id === it.id)]);
+  $('shopRace')?.addEventListener('change', e => { shop.musicRace = e.target.checked; saveShop(); });
+}
+function shopBuy(it, card){
+  if (equipped(it)) return;
+  if (!owns(it.id)){
+    if (wallet < it.price){ blip.back(); card?.classList.remove('nope'); void card?.offsetWidth; card?.classList.add('nope'); return; }
+    wallet -= it.price; shop.owned.push(it.id);
+    [988, 1319, 1760].forEach((f, j) => setTimeout(() => beep(f, .1, 'square', .06), j * 80));
+    toast(`🛒 Bought ${it.name}!`);
+  } else blip.ok();
+  if (shopTab === 'music') shop.music = it.key;
+  else if (shopTab === 'menu') shop.menu = it.key;
+  else {
+    const id = ROSTER[shopChar].id; if (it.key) shop.skins[id] = it.key; else delete shop.skins[id];
+    PORTRAITS.refresh(shopChar); if (shopChar === playerChoice) refreshGarage();
+  }
+  saveShop(); const keep = it.id; renderShop();
+  const i = shopItems().findIndex(x => x.id === keep); setFocus(i, true);
+}
+// leaving the shop (or a tab): stop previews and put the equipped look back
+function shopLeave(){ shopPreview = null; applyMenuSkin(shop.menu); }
+
+// ---------- online ranking (Firebase Realtime Database over its REST + streaming API) ----------
+const FB = 'https://widf-2b62d-default-rtdb.europe-west1.firebasedatabase.app/widr';
+const fbKey = s => String(s).replace(/[.#$\[\]\/\s]+/g, '_');
+const sessionId = 'guest' + Math.random().toString(36).slice(2, 8);
+const me = () => { const l = LIC.active(); return {id: fbKey(l.id === 'local' ? sessionId : l.id), name: String(l.name).slice(0, 24)}; };
+let fbOK = null, fbErr = '';
+async function fb(path, opts = {}){
+  try {
+    const r = await fetch(`${FB}/${path}.json${opts.q || ''}`, {method:opts.method || 'GET', body:opts.body ? JSON.stringify(opts.body) : undefined});
+    if (!r.ok){ fbErr = r.status === 401 || r.status === 403 ? 'The database rules block this. Check the Rules tab in Firebase.' : `Firebase said ${r.status}.`; throw 0; }
+    fbOK = true; return await r.json();
+  } catch (e){
+    if (!fbErr) fbErr = 'Can’t reach Firebase from here. The preview page may block outside connections; it works once the game is hosted.';
+    fbOK = false; onlineStatus(); return null;
+  } finally { if (fbOK) fbErr = ''; }
+}
+const sharing = () => OPTS.online !== false;
+function onlinePlayer(){
+  if (!sharing()) return;
+  const m = me(), golds = Object.values(trophies).filter(v => v === 1).length;
+  fb(`players/${m.id}`, {method:'PUT', body:{name:m.name, golds, trophies:Object.keys(trophies).length, char:ROSTER[playerChoice].id, story:storyProg, t:{'.sv':'timestamp'}}});
+}
+// posts the result to the live feed and your time to the world records; resolves to your world rank on that track
+async function onlineRace(place, time){
+  if (!sharing() || tut) return null;
+  const m = me(), ch = ROSTER[playerChoice].id, key = fbKey(MAP.name);
+  onlinePlayer();
+  fb('feed', {method:'POST', body:{name:m.name, char:ch, track:MAP.name, place, time:time || 0, mode: gp ? CUPS[gp.cup].cc : story ? 'story' : 'single', ts:{'.sv':'timestamp'}}});
+  if (!time) return null;
+  const mine = await fb(`times/${key}/${m.id}`);
+  if (fbOK === false) return null;
+  if (!mine || time < mine.t) await fb(`times/${key}/${m.id}`, {method:'PUT', body:{t:+time.toFixed(3), name:m.name, char:ch}});
+  const all = await fb(`times/${key}`); if (!all) return null;
+  return Object.entries(all).sort((a, b) => a[1].t - b[1].t).findIndex(([id]) => id === m.id) + 1;
+}
+// online screen
+const ON = {streams:[], feed:{}, players:{}, track:null, poll:0};
+const charIdx = id => Math.max(0, ROSTER.findIndex(c => c.id === id));
+const face = id => `<img class="onface" src="${PORTRAITS[charIdx(id)]}" alt="" style="background:${hex(ROSTER[charIdx(id)].color)}">`;
+const ago = ts => { const s = Math.max(0, (Date.now() - ts) / 1000); return s < 60 ? 'just now' : s < 3600 ? `${Math.floor(s / 60)} min ago` : s < 86400 ? `${Math.floor(s / 3600)} h ago` : `${Math.floor(s / 86400)} d ago`; };
+function onlineStatus(){
+  const d = $('onDot'); if (!d) return;
+  d.className = 'ondot ' + (fbOK === false ? 'off' : fbOK ? 'on' : '');
+  d.textContent = fbOK === false ? 'offline' : fbOK ? 'live' : 'connecting…';
+  $('onErr').textContent = fbOK === false ? fbErr : '';
+}
+function stream(path, q, fn){
+  try {
+    const es = new EventSource(`${FB}/${path}.json${q || ''}`);
+    const onData = e => { try { const {path:p, data} = JSON.parse(e.data); fbOK = true; onlineStatus(); fn(p, data); } catch (err) {} };
+    es.addEventListener('put', onData); es.addEventListener('patch', onData);
+    es.onerror = () => { if (es.readyState === 2){ fbOK = false; if (!fbErr) fbErr = 'Lost the live connection to Firebase.'; onlineStatus(); } };
+    ON.streams.push(es);
+  } catch (e){ fbOK = false; onlineStatus(); }
+}
+// a stream sends the whole set at path "/", then single changes at "/<key>"
+const applyStream = (obj, p, data) => {
+  if (p === '/'){ for (const k in obj) delete obj[k]; Object.assign(obj, data || {}); return; }
+  const k = p.slice(1).split('/')[0];
+  if (data === null) delete obj[k]; else if (p.split('/').length > 2) obj[k] = {...obj[k], [p.split('/')[2]]: data}; else obj[k] = {...(obj[k] || {}), ...data};
+};
+function renderDrivers(){
+  const myId = me().id, list = Object.entries(ON.players).map(([id, v]) => ({id, ...v}))
+    .sort((a, b) => (b.golds - a.golds) || (b.trophies - a.trophies) || ((b.story || 0) - (a.story || 0))).slice(0, 25);
+  $('onDrivers').innerHTML = list.length ? list.map((p, i) => `<li class="${p.id === myId ? 'me' : ''}"><b>${i < 3 ? ['🥇','🥈','🥉'][i] : i + 1}</b>${face(p.char)}<span class="n">${esc(p.name)}${p.id === myId ? ' (you)' : ''}</span><span class="r">🥇${p.golds || 0} · 🏆${p.trophies || 0}</span></li>`).join('')
+    : '<li class="empty">No drivers yet. Win a trophy to be the first!</li>';
+}
+function renderFeed(){
+  const list = Object.values(ON.feed).filter(f => f && f.ts).sort((a, b) => b.ts - a.ts).slice(0, 15);
+  $('onFeed').innerHTML = list.length ? list.map((f, i) => `<li class="${i === 0 && Date.now() - f.ts < 30000 ? 'fresh' : ''}">${face(f.char)}<span><b>${esc(f.name)}</b> finished <b>${ord(f.place)}</b> on ${esc(f.track)}${f.time ? ` in ${fmt(f.time)}` : ''}<small>${f.mode === 'story' ? '📖 story' : f.mode === 'single' ? '🏁 single race' : '🏆 ' + esc(f.mode)} · ${ago(f.ts)}</small></span></li>`).join('')
+    : '<li class="empty">Nobody has raced yet. Go race!</li>';
+}
+async function renderTimes(){
+  const t = ON.track, data = await fb(`times/${fbKey(t)}`); if (ON.track !== t) return;
+  const myId = me().id, list = Object.entries(data || {}).sort((a, b) => a[1].t - b[1].t).slice(0, 10);
+  $('onTimes').innerHTML = list.length ? list.map(([id, v], i) => `<li class="${id === myId ? 'me' : ''}"><b>${i < 3 ? ['🥇','🥈','🥉'][i] : i + 1}</b>${face(v.char)}<span class="n">${esc(v.name)}</span><span class="r">${fmt(v.t)}</span></li>`).join('')
+    : `<li class="empty">No times on ${esc(t)} yet. Set the first world record!</li>`;
+  const mine = bests[t]; $('onMine').textContent = mine ? `Your best here: ${fmt(mine)}` : '';
+}
+function renderOnline(){
+  $('onName').textContent = me().name; $('onShare').checked = sharing();
+  $('onShare').onchange = e => { OPTS.online = e.target.checked; saveOpts(); if (sharing()) onlinePlayer(); };
+  const sel = $('onTrack'), open = TRACKS.filter(t => !t.hidden);
+  if (!sel.options.length) sel.innerHTML = open.map(t => `<option>${esc(t.name)}</option>`).join('');
+  ON.track = ON.track || (MAPS[mapChoice] && !MAPS[mapChoice].hidden ? MAPS[mapChoice].name : open[0].name); sel.value = ON.track;
+  sel.onchange = () => { ON.track = sel.value; renderTimes(); };
+  sel.onkeydown = e => e.stopPropagation();
+  onlineStatus(); onlineLeave();
+  onlinePlayer();
+  stream('players', '', (p, d) => { applyStream(ON.players, p, d); renderDrivers(); });
+  stream('feed', '?orderBy=%22%24key%22&limitToLast=15', (p, d) => { applyStream(ON.feed, p, d); renderFeed(); });
+  renderTimes(); renderDrivers(); renderFeed();
+  ON.poll = setInterval(() => { renderTimes(); renderFeed(); }, 15000);   // keeps "x min ago" fresh too
+}
+function onlineLeave(){ ON.streams.forEach(s => s.close()); ON.streams = []; clearInterval(ON.poll); }
 function navItems(){ return [...screenEl(screen).querySelectorAll('.nav')]; }
 function setFocus(i, silent = false){
   const items = navItems(); if (!items.length) return;
@@ -2991,6 +3378,8 @@ mainBtns.forEach((b, i) => hookNav(b, i, () => {
     tracks: `<span>🗺️ ${TRACKS.filter(t => !t.hidden).length} tracks</span><span>⏱️ ${Object.keys(bests).length} best times set</span>`,
     garage: `<span>${BODIES[myBuild.body].emoji} ${BODIES[myBuild.body].name}</span><span>🛞 ${WHEELS[myBuild.wheels].name}</span>`,
     trophies: `<span>🥇 ${golds} gold</span><span>🔓 ${unlockedSet().length} / ${ROSTER.length} racers</span>`,
+    online: `<span>🌍 ${sharing() ? 'Sharing as ' + esc(me().name) : 'Not sharing'}</span><span>🔴 Live</span>`,
+    shop: `<span>🪙 <b class="walletN">${wallet}</b> coins</span><span>🛒 ${shop.owned.length} bought</span>`,
     help: `<span>🎓 ${LESSONS.length} lessons</span><span>${OPTS.tut ? '✅ Completed' : '✨ Start here!'}</span>`,
     licenses: `<span>🪪 ${esc(LIC.active().name)}</span><span>${LIC.list().length} license${LIC.list().length === 1 ? "" : "s"}</span>`,
   })[b.dataset.go];
@@ -3239,6 +3628,8 @@ const ENTER = {
   },
   garage:   () => showPreview($('gstage')),
   help:     () => { renderLessons(); setFocus(0, true); },
+  shop:     () => { renderShop(); setFocus(0, true); },
+  online:   renderOnline,
   trophies: renderTrophies,
   licenses: () => { renderLicenses(); setFocus(Math.max(0, LIC.list().indexOf(LIC.active())), true); },
 };
@@ -3316,7 +3707,7 @@ function setupRace(){
   if (gp) showTrack(TRACKS.indexOf(byName(cup.tracks[gp.race])));
   MAX = 42 * (cup ? cup.speed : 1); ACC = 26 * (cup ? cup.speed : 1);
   const aiBase = cup ? cup.ai : 0.9;
-  boxes.forEach(b => { b.respawn = 0; b.mesh.visible = true; });
+  boxes.forEach(b => { b.respawn = 0; b.mesh.visible = true; }); coins.forEach(c => { c.respawn = 0; c.mesh.visible = true; });
   const field = gp ? gp.field : story ? [playerChoice, ...cup.rivals.map(rid).filter(i => i >= 0 && i !== playerChoice)].slice(0, FIELD_SIZE)
     : tut ? [playerChoice, ...TUT_SET.rivals.map(rid).filter(i => i !== playerChoice).slice(0, 2)] : pickField();
   // in a cup the grid is reverse standings, so the leader starts at the back
@@ -3328,7 +3719,7 @@ function setupRace(){
     const k = { ...r, ri, mesh:null, pos, heading:Math.atan2(tans[gi].x, tans[gi].z), speed:0, idx:gi, prog:gi - N,
       isPlayer: ri === playerChoice, item:null, boost:0, spin:0, star:0, drift:0, driftCharge:0, finished:false, finishRank:0,
       lap:0, aiOffset:(Math.random()-.5)*W*0.4, skill:aiBase + Math.random()*0.12, itemTimer:0, yawVis:0, bounce:0, lastLap:0,
-      sp:0, spWait:0, shove:new THREE.Vector3(), shield:0, frozen:0, ghost:0, ram:0, auto:0, confused:0, big:0, y:0, vy:0, air:false, airT:0, trick:false, q:null, glide:false, hold:0 };
+      sp:0, spWait:0, coins:0, shove:new THREE.Vector3(), shield:0, frozen:0, ghost:0, ram:0, auto:0, confused:0, big:0, y:0, vy:0, air:false, airT:0, trick:false, q:null, glide:false, hold:0 };
     k.moveH = k.heading;
     const b = ri === playerChoice ? myBuild : {...r.build, glider: CHAR_GLIDER[r.id] || 'super'};
     k.mesh = buildKart(r, b); k.st = statsFor(b, r);
@@ -3339,6 +3730,7 @@ function setupRace(){
   raceTime = 0; finishOrder = []; startPress = null; hudPlace = 0; contacts = new Set(); nastyAt = {}; lastDisrupt = -1e9; countdown = 3.999; state = 'countdown';
   updateItemHud(); updateSpecialHud(); $('big').style.display = 'block';
   if (tut) tutShow(true);
+  $('coinhud').textContent = '🪙 0';
   $('intro').innerHTML = tut ? `🎓 Tutorial<b>${MAP.name}</b><span class="goal">Follow the instructions at the top</span>`
     : story ? `📖 Chapter ${story.ch + 1}: ${cup.title}<b>${MAP.name}</b><span class="goal">🎯 ${goalText(cup.goal)}</span>`
     : gp ? `${cup.emoji} ${cup.name} · Race ${gp.race + 1} of ${cup.tracks.length}<b>${MAP.name}</b>` : `${MAP.emoji} Single race<b>${MAP.name}</b>`;
@@ -3384,6 +3776,8 @@ function stepKart(k, dt){
     // assists from the garage control panel
     if (OPTS.auto && !keys.brake) gas = 1;
     if (OPTS.adrift && Math.abs(steer) > 0 && k.speed > 26) drift = true;
+    // gliding (like MK8): ↑ tips the nose down to dive, ↓ pulls it up to float; the throttle stays on
+    if (k.glide){ k.pitchIn = (keys.gas ? 1 : 0) - (keys.brake ? 1 : 0); gas = 1; }
     if (OPTS.smart){
       const latS = k.pos.clone().sub(pts[k.idx]).dot(nors[k.idx]);
       if (Math.abs(latS) > W * 0.36) steer = THREE.MathUtils.clamp(steer + Math.sign(latS) * Math.min(1, (Math.abs(latS) - W * 0.36) / 4) * 0.9, -1, 1);
@@ -3529,14 +3923,23 @@ function stepKart(k, dt){
         if (JZ[pi] || JZ[k.idx]) k.vy += 4;
         if (GZ[pi] || GZ[k.idx] || GP[k.idx]){
           k.glide = true; k.vy = Math.max(k.vy, 4) + 6;
-          if (k.isPlayer){ toast('🪂 Glider!'); beep(440, .35, 'triangle', .08, 2.2); }
+          if (k.isPlayer){ toast('🪂 Glider! ↑ dive · ↓ float'); beep(440, .35, 'triangle', .08, 2.2); }
         }
         if (!k.isPlayer && k.vy > 6 && Math.random() < 0.6) k.trick = true;
       }
       k.airT += dt; k.y = yp; k.vy -= GRAV * dt;
-      if (k.glide){ if (k.isPlayer && keys.brake) k.vy -= 22 * dt; k.vy = Math.max(k.vy, keys.brake && k.isPlayer ? -16 : -6.5); }
+      if (k.glide){
+        // pitch: +1 nose down (sink fast, gain speed), -1 nose up (float longer, lose a little speed)
+        const pin = k.isPlayer ? (k.pitchIn || 0) : 0;
+        k.pitch = (k.pitch || 0) + (pin - (k.pitch || 0)) * Math.min(1, 4 * dt);
+        const p = k.pitch;
+        if (p > 0){ k.vy -= 20 * p * dt; k.speed = Math.min(MAX * 1.2, k.speed + 14 * p * dt); }
+        else { k.speed = Math.max(MAX * 0.65, k.speed + 7 * p * dt); }
+        k.vy = Math.max(k.vy, p > 0 ? -6.5 - 10 * p : -6.5 - 4 * p);   // nose up: sink as slowly as -2.5
+      }
     }
   }
+  if (!k.glide){ k.pitch = 0; k.pitchIn = 0; }
   if (gap && k.y < sf.pos.y - 9) respawn(k);
   if (sf.anti !== k.wasAnti){ k.wasAnti = sf.anti; if (k.isPlayer && sf.anti){ toast(LP[sf.i] ? '🎢 Loop-de-loop!' : '🌀 Anti-gravity!'); beep(500, .3, 'sine', .07, 2); } }
 
@@ -3546,11 +3949,11 @@ function stepKart(k, dt){
   let F = sf.T.clone().multiplyScalar(fa).addScaledVector(sf.D, fc).normalize(), Uv = sf.U;
   k.camF = F.clone(); k.camU = Uv.clone();
   k.wp = k.air ? new THREE.Vector3(sf.pos.x, k.y, sf.pos.z) : sf.pos.clone();
-  if (k.air){ F = F.multiplyScalar(Math.max(10, Math.abs(k.speed))).addScaledVector(UPV, k.vy * (k.glide ? 0.2 : 0.45)).normalize(); Uv = UPV; }
+  if (k.air){ F = F.multiplyScalar(Math.max(10, Math.abs(k.speed))).addScaledVector(UPV, k.vy * (k.glide ? 0.2 : 0.45) - (k.pitch || 0) * 0.5 * Math.max(10, Math.abs(k.speed))).normalize(); Uv = UPV; }
   // glider unfolds in the air and folds away on landing
   const gl = m.glider; m.gOpen += ((k.glide ? 1 : 0) - m.gOpen) * Math.min(1, (k.glide ? 7 : 10) * dt);
   gl.visible = m.gOpen > 0.02; gl.scale.setScalar(Math.max(0.01, m.gOpen));
-  if (gl.visible){ gl.rotation.z = -steer * 0.25 * m.gOpen; gl.rotation.x = -0.12 + Math.sin(raceTime * 3) * 0.04; gl.userData.anim?.(raceTime); }
+  if (gl.visible){ gl.rotation.z = -steer * 0.25 * m.gOpen; gl.rotation.x = -0.12 - (k.pitch || 0) * 0.3 + Math.sin(raceTime * 3) * 0.04; gl.userData.anim?.(raceTime); }
   m.group.position.copy(k.wp);
   k.yawVis += ((k.drift ? k.drift * 0.2 : 0) - k.yawVis) * Math.min(1, 5*dt);
   const qBase = basisQ(F, Uv);
@@ -3615,6 +4018,17 @@ function collisions(dt){
     }
   }
   contacts = touching;
+  // coins: only you collect them; each goes straight into your wallet and gives a tiny boost
+  for (const c of coins){
+    if (!c.mesh.visible){ c.respawn -= dt; if (c.respawn <= 0) c.mesh.visible = true; continue; }
+    c.mesh.rotation.y += dt * 3;
+    if (player && state === 'race' && !player.ghost && player.pos.distanceTo(c.mesh.position.clone().setY(0)) < 2.4 && (player.wp?.y ?? 0) < (P3[player.idx]?.y ?? 0) + 4){
+      c.mesh.visible = false; c.respawn = 14; player.coins++; addCoins(1);
+      player.boost = Math.max(player.boost, 0.12);
+      beep(1320, .06, 'square', .05); setTimeout(() => beep(1760, .09, 'square', .05), 60);
+      $('coinhud').textContent = `🪙 ${player.coins}`;
+    }
+  }
   // boxes
   for (const bx of boxes){
     if (!bx.mesh.visible){ bx.respawn -= dt; if (bx.respawn <= 0) bx.mesh.visible = true; continue; }
@@ -3706,7 +4120,7 @@ function endRace(){
     $('resBtns').innerHTML = '';
     if (story){
       const ch = STORY[story.ch], g = ch.goal, ok = storyGoalMet(g, all, place), rv = g.type === 'beat' ? rid(g.id) : -1;
-      if (ok && storyProg < story.ch + 1){ storyProg = story.ch + 1; try { localStorage.setItem('pgp-story', storyProg); } catch (e) {} }
+      if (ok && storyProg < story.ch + 1){ storyProg = story.ch + 1; try { localStorage.setItem('pgp-story', storyProg); } catch (e) {} addCoins(75); setTimeout(() => toast('🪙 +75 for a new chapter!'), 900); }
       $('resTitle').innerHTML = ok ? '✅ Chapter complete!' : '❌ Not this time';
       $('resSub').textContent = `📖 Chapter ${story.ch + 1}: ${ch.title} · 🎯 ${goalText(g)} · you finished ${ord(place)}`;
       $('resBody').innerHTML = `<div class="grid">${all.map((k, i) => `<div class="row single ${k.isPlayer ? 'me' : ''}"><b>${i+1}</b><span class="n">${dot(k)}${k.name}${k.isPlayer ? ' (you)' : k.ri === rv ? ' 🎯' : k.boss ? ' 👑' : ''}</span><span class="r">${k.finished ? fmt(k.finishTime) : '—'}</span></div>`).join('')}</div>`;
@@ -3732,6 +4146,9 @@ function endRace(){
       else button('See cup results 🏆', '', cupResults);
       button('Quit cup', 'ghost', openMenu);
     }
+    const prize = raceCoins(place);
+    if (!tut) onlineRace(place, player.finished ? player.finishTime : 0).then(r => { if (r && r <= 10 && state === 'finished') $('resBody').insertAdjacentHTML('afterbegin', `<p class="worldrank">🌍 #${r} in the world on ${esc(MAP.name)}!</p>`); });
+    $('resBody').insertAdjacentHTML('beforeend', `<p class="coinsum">🪙 +${player.coins + prize} coins <small>(${player.coins} collected + ${prize} for ${ord(place)} place)</small> · wallet <b class="walletN">${wallet}</b></p>`);
     const laps = player.laps || [];
     if (laps.length){ const b = Math.min(...laps); $('resBody').insertAdjacentHTML('beforeend', `<p class="laps">⏱️ Your laps: ${laps.map((t, i) => `<span class="${t === b ? 'best' : ''}">L${i+1} ${fmt(t)}</span>`).join('')}</p>`); }
     const fresh = newUnlocks();
@@ -3750,7 +4167,9 @@ function cupResults(){
   $('resBody').innerHTML = `<div class="trophy">${rank <= 3 ? ['🏆','🥈','🥉'][rank-1] : cup.emoji}</div>
     <div class="podium">${step(t[1], 120, 2)}${step(t[0], 160, 1)}${step(t[2], 90, 3)}</div>
     <div class="grid">${t.slice(3).map((r, i) => `<div class="row single ${r.me ? 'me' : ''}"><b>${i+4}</b><span class="n">${dot(r)}${r.name}${r.me ? ' (you)' : ''}</span><span class="r">${r.total} pts</span></div>`).join('')}</div>`;
-  $('resBody').insertAdjacentHTML('afterbegin', unlockBanner(newUnlocks()));
+  const cupPrize = [150, 90, 60][rank - 1] || 0; if (cupPrize) addCoins(cupPrize);
+  onlinePlayer();
+  $('resBody').insertAdjacentHTML('afterbegin', unlockBanner(newUnlocks()) + (cupPrize ? `<p class="coinsum">🪙 +${cupPrize} trophy bonus · wallet <b class="walletN">${wallet}</b></p>` : ''));
   $('resBtns').innerHTML = '';
   if (gp.cup < CUPS.length - 1){ const next = gp.cup + 1; button(`Next: ${CUPS[next].emoji} ${CUPS[next].name}`, '', () => { cupChoice = next; startCup(next); }); }
   button('Replay cup', 'alt', () => startCup(gp.cup));
@@ -3926,7 +4345,7 @@ function liftItems(){
     o.quaternion.premultiply(_qSurf.multiply(_qFlat));
   };
   bananas.forEach(b => lift(b.mesh)); shells.forEach(s => lift(s.mesh)); bombs.forEach(b => lift(b.m));
-  fx.forEach(f => lift(f.m)); boxes.forEach(b => { if (b.mesh.visible) lift(b.mesh); });
+  fx.forEach(f => lift(f.m)); boxes.forEach(b => { if (b.mesh.visible) lift(b.mesh); }); coins.forEach(c => { if (c.mesh.visible) lift(c.mesh); });
 }
 function dropItems(){ for (const [o, p, q] of _lifted){ o.position.copy(p); o.quaternion.copy(q); } }
 let last = performance.now(), lastBeep = 4;
