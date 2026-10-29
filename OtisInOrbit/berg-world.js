@@ -1,6 +1,6 @@
-import { THREE, scene, toon, addOutline, V3, label } from './core.js?v=muis1';
-import { addCookie, line, circle } from './cookies.js?v=muis1';
-import { groundAt, kindAt, riverZ, PAL, SUMMIT, PLATEAU_H } from './berg-terrain.js?v=muis1';
+import { THREE, scene, toon, addOutline, V3, label } from './core.js?v=sub1';
+import { addCookie, line, circle } from './cookies.js?v=sub1';
+import { groundAt, kindAt, riverZ, PAL, SUMMIT, PLATEAU_H } from './berg-terrain.js?v=sub1';
 
 // ---------- bright mountain day (the opposite of the Mistmaan) ----------
 scene.fog = new THREE.FogExp2(0xdbe9f7, 0.0055);
@@ -394,4 +394,7 @@ export const ARENA_ENTRY = SPAWN.clone();
 export const ARENA_POS = V3(0, -100, 0);
 export const CHECKPOINTS = FLAGS.map((f) => ({ test: (p) => Math.hypot(p.x - f.pos.x, p.z - f.pos.z) < 3 && Math.abs(p.y - f.pos.y) < 2, pos: f.pos }));
 export const PLANET = 'berg';
-export const TRAVEL = { pos: V3(5, 0, 45), need: 0, planet: 'mistmaan', target: '../index.html', name: 'de Mistmaan', label: 'Terug naar de Mistmaan' };
+export const TRAVEL = { pos: V3(5, 0, 45), dests: [
+  { need: 12, planet: 'bos', name: 'het Paddenstoelenbos', label: 'Opstijgen naar het Paddenstoelenbos' },
+  { need: 0, planet: 'mistmaan', name: 'de Mistmaan', label: 'Terug naar de Mistmaan' },
+] };

@@ -1,4 +1,4 @@
-import { THREE, scene, toon } from './core.js?v=muis1';
+import { THREE, scene, toon } from './core.js?v=sub1';
 
 // A guided open world: one big valley you can roam, the summit always in sight to the north,
 // and three different ways up (the forest + cliff scramble, the old mine, the east ridge).

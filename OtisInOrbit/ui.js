@@ -1,5 +1,5 @@
-import { canvas } from './core.js?v=muis1';
-import { LOOK_DEF, M } from './josh.js?v=muis1';
+import { canvas } from './core.js?v=sub1';
+import { LOOK_DEF, M } from './josh.js?v=sub1';
 
 export const FEEL_DEF = { speed: 7, jump: 12, gravity: 30, air: 0.45, cam: 9 };
 export const S = { ...FEEL_DEF };

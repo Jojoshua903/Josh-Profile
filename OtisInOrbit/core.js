@@ -3,9 +3,9 @@ export { THREE };
 
 export const canvas = document.getElementById('c');
 export const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = THREE.PCFShadowMap;     // (the soft kind costs a lot and looks the same in this cel-shaded style)
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 export const scene = new THREE.Scene();
@@ -23,7 +23,7 @@ resize();
 scene.add(new THREE.HemisphereLight(0xb4c0e0, 0x4a4458, 1.5));
 export const sun = new THREE.DirectionalLight(0xc9d6ff, 1.5);
 sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.mapSize.set(1024, 1024);
 Object.assign(sun.shadow.camera, { left: -26, right: 26, top: 26, bottom: -26, near: 1, far: 80 });
 sun.shadow.bias = -0.0006;
 scene.add(sun, sun.target);
@@ -69,12 +69,15 @@ export function label(text, x, y, z, w = 2.6) {
   return s;
 }
 
-// Particles
-const parts = [];
-const pGeo = new THREE.SphereGeometry(0.12, 8, 6);
+// Particles: a pool of little spheres that get reused (making new ones all the time made the game stutter)
+const parts = [], spare = [];
+const pGeo = new THREE.SphereGeometry(0.12, 6, 4);
+const MAX_PARTS = 350;
 export function puff(pos, n = 8, color = 0xffffff, spd = 2.5, up = 1.2) {
+  n = Math.min(n, MAX_PARTS - parts.length);
   for (let i = 0; i < n; i++) {
-    const m = new THREE.Mesh(pGeo, new THREE.MeshBasicMaterial({ color, transparent: true }));
+    const m = spare.pop() || new THREE.Mesh(pGeo, new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }));
+    m.material.color.setHex(color); m.material.opacity = 1; m.scale.setScalar(1);
     m.position.copy(pos);
     const a = (i / n) * Math.PI * 2 + Math.random() * 0.4;
     const s = spd * (0.6 + Math.random() * 0.6);
@@ -90,10 +93,9 @@ export function updateParticles(dt) {
     p.life -= dt;
     p.m.scale.setScalar(1 + (0.5 - p.life) * 2.2);
     p.m.material.opacity = Math.max(0, p.life * 2);
-    if (p.life <= 0) { scene.remove(p.m); p.m.material.dispose(); parts.splice(i, 1); }
+    if (p.life <= 0) { scene.remove(p.m); spare.push(p.m); parts[i] = parts[parts.length - 1]; parts.pop(); }
   }
 }
-
 // Toast
 const toastEl = document.getElementById('toast');
 let toastTimer;

@@ -1,11 +1,11 @@
-import { THREE, scene, toon, V3, puff, damp } from './core.js?v=muis1';
-import { buildOtis } from './otis.js?v=muis1';
-import { addSpeaker } from './bubbles.js?v=muis1';
-import { play, shot, pan } from './cutscene.js?v=muis1';
-import { groundAt, SUMMIT } from './berg-terrain.js?v=muis1';
-import { lamps, rocket, waterfall, FLAGS, CRUMBLE, boxes, syncBox } from './berg-world.js?v=muis1';
-import { boss } from './berg-boss.js?v=muis1';
-import { setShake } from './berg-npc.js?v=muis1';
+import { THREE, scene, toon, V3, puff, damp } from './core.js?v=sub1';
+import { buildOtis } from './otis.js?v=sub1';
+import { addSpeaker } from './bubbles.js?v=sub1';
+import { play, shot, pan } from './cutscene.js?v=sub1';
+import { groundAt, SUMMIT } from './berg-terrain.js?v=sub1';
+import { lamps, rocket, waterfall, FLAGS, CRUMBLE, boxes, syncBox } from './berg-world.js?v=sub1';
+import { boss } from './berg-boss.js?v=sub1';
+import { setShake } from './berg-npc.js?v=sub1';
 
 export function setupStory(ctx) {
   const { P, drone, save, persist } = ctx;
@@ -19,7 +19,7 @@ export function setupStory(ctx) {
   otis.place(OTIS_HOME.x, OTIS_HOME.z);
   addSpeaker(otis.root, {
     y: 1.7, radius: 5, linger: 12,
-    lines: ['Woef!', '*kijkt omhoog naar het paarse licht op de top*', `Woef woef.<small>${tr('Ik pas op de raket. En op het kampvuur.')}</small>`, '*probeert een vlinder te vangen*', `Woef?<small>${tr('Druk op E bij de raket om terug te vliegen.')}</small>`],
+    lines: ['Woef!', '*kijkt omhoog naar het paarse licht op de top*', `Woef woef.<small>${tr('Ik pas op de raket. En op het kampvuur.')}</small>`, '*probeert een vlinder te vangen*', `Woef?<small>${tr('Met 12 kosmische koekjes vliegen we verder. Ik ruik daar… paddenstoelen.')}</small>`],
   });
   let otisNear = false;
 

@@ -1,6 +1,6 @@
-import { THREE, scene, toon, addOutline, V3, damp, puff } from './core.js?v=muis1';
-import { SUMMIT } from './berg-terrain.js?v=muis1';
-import { boxes, syncBox } from './berg-world.js?v=muis1';
+import { THREE, scene, toon, addOutline, V3, damp, puff } from './core.js?v=sub1';
+import { SUMMIT } from './berg-terrain.js?v=sub1';
+import { boxes, syncBox } from './berg-world.js?v=sub1';
 
 // De Lawinereus: a giant of rock and snow sleeping on the summit, who wants the top for himself.
 // He doesn't shoot or slam like the Lichtvreter. Instead:
@@ -18,6 +18,7 @@ export const BOSS_INFO = {
   winTitle: 'De top is vrij!', winSub: 'De Lawinereus rolt de berg af. Mèèh!',
   fail: 'Au! De Lawinereus was te sterk. Nog een keer!',
   cookie: 'De Lawinereus verslagen', cookieY: C.y + 1.3, cookieAt: V3(C.x, C.y + 1.3, C.z),
+  arena: { x: C.x, y: C.y, z: C.z, r: SUMMIT.r },
 };
 export const boss = { state: 'sleep', t: 0, hits: 0, pos: C.clone(), dir: V3(0, 0, 1), step: 0, speed: 0 };
 
@@ -290,7 +291,7 @@ export function updateBoss(dt, t, P, prevY, api) {
 
   // ice spikes
   for (let i = spikes.length - 1; i >= 0; i--) {
-    const s = spikes[i];
+    const s = spikes[i]; if (!s) continue;       // getting hit can kill you, and dying clears these lists mid-loop
     s.t += dt;
     if (s.t < 0) continue;
     s.m.visible = true;
@@ -300,7 +301,7 @@ export function updateBoss(dt, t, P, prevY, api) {
   }
   // icicles
   for (let i = icicles.length - 1; i >= 0; i--) {
-    const s = icicles[i];
+    const s = icicles[i]; if (!s) continue;
     s.t += dt;
     if (s.t < 0) continue;
     const k = Math.min(1, s.t / 1.1);

@@ -1,5 +1,5 @@
-import { THREE, scene, toon, addOutline, V3, damp, puff } from './core.js?v=muis1';
-import { ARENA } from './terrain.js?v=muis1';
+import { THREE, scene, toon, addOutline, V3, damp, puff } from './core.js?v=sub1';
+import { ARENA } from './terrain.js?v=sub1';
 
 // De Lichtvreter: a big gloomy cloud that swallowed the moon's light (and Otis' battery).
 // Loop: float & spit mist balls → rise → slam down (shockwave) → dazed with the battery showing
@@ -12,6 +12,7 @@ export const BOSS_INFO = {
   winTitle: 'Het licht is terug!', winSub: 'Otis’ accu is gered. De Mistmaan schijnt weer.',
   fail: 'Au! De Lichtvreter was te sterk. Nog een keer!',
   cookie: 'De Lichtvreter verslagen', cookieY: 19.6, cookieAt: V3(ARENA.x, 19.6, ARENA.z), lightBack: true,
+  arena: { x: ARENA.x, y: ARENA.y, z: ARENA.z, r: ARENA.r + 0.6 },
 };
 export const boss = { state: 'sleep', t: 0, hits: 0, pos: V3(0, ARENA.y + 9, ARENA.z - 7), fireT: 2, slam: V3(), hitRing: false };
 
@@ -210,7 +211,7 @@ export function updateBoss(dt, t, P, prevY, api) {
   }
   // mist balls
   for (let i = balls.length - 1; i >= 0; i--) {
-    const m = balls[i];
+    const m = balls[i]; if (!m) continue;        // getting hit can kill you, and dying clears this list mid-loop
     if (m.home > 0) {
       m.home -= dt;
       const want = chest.clone().sub(m.m.position).normalize().multiplyScalar(m.speed);

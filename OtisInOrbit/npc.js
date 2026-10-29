@@ -1,7 +1,7 @@
-import { THREE, scene, toon, addOutline, V3, damp, puff } from './core.js?v=muis1';
-import { groundAt, pathX } from './terrain.js?v=muis1';
-import { addCookie } from './cookies.js?v=muis1';
-import { addSpeaker } from './bubbles.js?v=muis1';
+import { THREE, scene, toon, addOutline, V3, damp, puff } from './core.js?v=sub1';
+import { groundAt, pathX } from './terrain.js?v=sub1';
+import { addCookie } from './cookies.js?v=sub1';
+import { addSpeaker } from './bubbles.js?v=sub1';
 
 export const scannables = [];
 const ink = new THREE.MeshBasicMaterial({ color: 0x2b2440 });

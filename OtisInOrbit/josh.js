@@ -1,4 +1,4 @@
-import { THREE, scene, toon, addOutline } from './core.js?v=muis1';
+import { THREE, scene, toon, addOutline } from './core.js?v=sub1';
 
 export const LOOK_DEF = {
   hoodie: '#ff7a3d', pants: '#3a4a7a', hair: '#3b2a20', skin: '#f1c49b', shoes: '#f4f1ea', drone: '#14b8a6',

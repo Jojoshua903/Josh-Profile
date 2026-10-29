@@ -1,4 +1,4 @@
-import { THREE, scene, toon } from './core.js?v=muis1';
+import { THREE, scene, toon } from './core.js?v=sub1';
 
 // The moon is a heightmap of square columns, laid out as a journey along -z:
 // crash crater (z≈26) → mist path → town → cliff → summit with the telescope (z≈-90).

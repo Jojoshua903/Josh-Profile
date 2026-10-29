@@ -2,7 +2,7 @@
 const EMPTY = { got: [], crates: [], milo: false, guide: false, boss: false, ability: null, cp: null, coins: 0, rare: 0 };
 const cache = {};
 // bump a planet's version when its layout changes, so old saves don't point at cookies that moved
-const VERSION = { berg: 2 };
+const VERSION = { berg: 2, schroot: 2 };
 let wiped = false;
 
 export function getSave(planet = 'mistmaan') {
@@ -13,7 +13,7 @@ export function getSave(planet = 'mistmaan') {
   catch (e) { save = { ...EMPTY }; }
   const gotSet = new Set(save.got);
   const persist = () => {
-    if (wiped) return;            // after a reset nothing may write the old progress back
+    if (wiped) return;            // after a reset nothing may write progress
     save.got = [...gotSet];
     try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) {}
   };
