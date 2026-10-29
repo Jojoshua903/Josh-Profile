@@ -9,7 +9,7 @@
 // Driving licenses: each license is a separate save. The game reads/writes the pgp-* keys;
 // the active license keeps a copy of them, and switching swaps the keys and reloads.
 window.LIC = (() => {
-  const KEYS = ['pgp-trophies', 'pgp-best', 'pgp-build', 'pgp-char', 'pgp-opts', 'pgp-story', 'pgp-coins', 'pgp-shop'];
+  const KEYS = ['pgp-trophies', 'pgp-best', 'pgp-build', 'pgp-char', 'pgp-opts', 'pgp-story', 'pgp-coins', 'pgp-shop', 'pgp-builds'];
   const REG = 'wt-licenses';
   const ls = (() => { try { const t = '__t'; localStorage.setItem(t, 1); localStorage.removeItem(t); return localStorage; } catch (e) { return null; } })();
   const uid = () => 'L' + Math.random().toString(36).slice(2, 8).toUpperCase() + Date.now().toString(36).slice(-3).toUpperCase();
@@ -109,6 +109,10 @@ setInterval(() => LIC.sync(), 4000);
   #speed small{font-size:14px}
   #drift{bottom:140px;right:22px;width:150px;height:18px;padding:0;border-radius:10px;overflow:hidden}
   #driftfill{height:100%;width:0%;background:var(--blue);transition:background .15s}
+  #driftdir{bottom:166px;right:22px;width:150px;text-align:center;font-size:14px;padding:2px 0;display:none;background:#fff}
+  #driftdir.on{display:block;animation:dirPop .25s var(--ease)}
+  #driftdir.l{transform:rotate(-3deg)} #driftdir.r{transform:rotate(3deg)}
+  @keyframes dirPop{from{scale:.6;opacity:0}to{scale:1;opacity:1}}
   #mini{bottom:72px;left:18px;width:170px;height:170px;padding:0;border-radius:22px}
   #big{top:40%;left:50%;transform:translate(-50%,-50%);font-size:140px;color:var(--yellow);-webkit-text-stroke:6px var(--ink);text-shadow:8px 8px 0 var(--ink);display:none}
   #toast{top:60%;left:50%;transform:translate(-50%,-50%);font-size:30px;color:#fff;-webkit-text-stroke:2px var(--ink);text-shadow:3px 3px 0 var(--ink);opacity:0;transition:opacity .3s}
@@ -323,6 +327,10 @@ setInterval(() => LIC.sync(), 4000);
   .mk-who img{width:60px;height:60px;border-radius:14px;border:3px solid var(--ink)}
   .mk-who b{display:block;font-size:18px}
   .mk-who small{font-size:12px;opacity:.7}
+  .mk-who .arr{font:inherit;font-size:16px;width:34px;height:34px;flex:none;border:3px solid var(--ink);border-radius:10px;background:#fff;box-shadow:2px 2px 0 var(--ink);cursor:pointer}
+  .mk-who .arr:hover{background:var(--yellow)}
+  .mk-who > div{flex:1;min-width:0}
+  .mk-who.swap img{animation:unlockPop .4s var(--ease)}
   .mk-mid{display:flex;flex-direction:column;align-items:center;gap:12px;min-width:0}
   .mk-mid .gstage{width:100%;height:clamp(240px,40vh,380px);border-radius:26px;background:radial-gradient(ellipse at 50% 70%,#ffffff 0,#ffffffaa 35%,#ffffff00 70%)}
   .mk-ctrl{display:flex;gap:6px;background:#3a3a44;border-radius:16px;padding:6px;box-shadow:0 6px 0 #0003}
@@ -605,6 +613,57 @@ setInterval(() => LIC.sync(), 4000);
     .hints{display:none}.mtitle small{display:none}
   }
   body.in-menu .hud, body.in-menu #touch, body.in-menu #mute{display:none !important}
+  .screen[data-screen="duo"]{flex-direction:column}
+  .duowrap{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;width:min(1100px,100%);align-items:stretch}
+  .duocard{align-items:center;text-align:center}
+  .duocard .who{font-size:14px;background:var(--ink);color:var(--yellow);border-radius:9px;padding:3px 12px}
+  .duocard img{width:min(170px,80%);aspect-ratio:1;border-radius:18px;border:4px solid var(--ink);box-shadow:4px 4px 0 var(--ink)}
+  .duocard .big{font-size:96px;line-height:1.1}
+  .duocard .pick{display:flex;align-items:center;gap:10px;justify-content:center;width:100%}
+  .duocard .pick h2{flex:1}
+  .duocard .arr{font:inherit;font-size:20px;width:42px;height:42px;border:3px solid var(--ink);border-radius:12px;background:#fff;box-shadow:3px 3px 0 var(--ink);cursor:pointer;flex:none}
+  .duocard .arr:hover{background:var(--yellow)}
+  .duocard .keys{display:grid;grid-template-columns:auto auto;gap:4px 10px;font-size:13px;text-align:left;margin-top:auto}
+  .duocard .keys b{text-align:right}
+  .duofoot{display:flex;align-items:center;justify-content:space-between;gap:16px;width:min(1100px,100%);margin-top:18px}
+  .duofoot kbd{background:#fff;border:2px solid var(--ink);border-radius:6px;padding:0 6px;font:inherit;font-size:12px}
+  @media (max-width:900px){.duowrap{grid-template-columns:1fr 1fr}.duotrack{grid-column:1/-1;order:-1}}
+  /* 2 players: split screen. P1 HUD squeezed into the left half, P2 gets its own on the right */
+  #p2hud{inset:0 0 0 50%;display:none;z-index:5}
+  body.two #p2hud{display:block}
+  #p2hud::before{content:"";position:absolute;left:-3px;top:0;bottom:0;width:6px;background:var(--ink)}
+  #p2hud > *{position:absolute}
+  #p2pos{top:18px;right:18px;font-size:54px;line-height:1;padding:6px 18px;transform:rotate(4deg)}
+  #p2lap{top:96px;right:22px;font-size:20px;transform:rotate(-2deg)}
+  #p2box{top:18px;left:24px;width:90px;height:90px;padding:0;display:flex;align-items:center;justify-content:center;transform:rotate(-4deg);overflow:visible}
+  #p2box .slot{position:absolute;inset:6px;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle,#fff 0,#fff3c9 100%)}
+  #p2box.rolling{animation:rollbox .5s linear infinite}
+  #p2icon{font-size:50px;line-height:1}
+  #p2count{position:absolute;right:-12px;bottom:-12px;background:var(--red);color:#fff;border:3px solid var(--ink);border-radius:10px;padding:0 7px;font-size:16px;z-index:2}
+  #p2count:empty{display:none}
+  #p2sp{top:130px;left:24px;width:150px;display:flex;align-items:center;gap:8px;padding:6px 10px;transform:rotate(-2deg)}
+  #p2sp .spbar{flex:1;height:14px;border:3px solid var(--ink);border-radius:8px;overflow:hidden;background:#fff}
+  #p2spfill{height:100%;width:0;background:linear-gradient(90deg,#b388ff,#ff7ccf)}
+  #p2sp.ready{animation:ready .6s ease-in-out infinite alternate}
+  #p2sp.ready #p2spfill{background:linear-gradient(90deg,#ffd23f,#ff7a1f)}
+  #p2coin{top:180px;left:24px;font-size:18px;padding:3px 12px;background:#fff3c4}
+  #p2coin:empty{display:none}
+  #p2speed{bottom:72px;right:22px;font-size:34px;font-variant-numeric:tabular-nums;transform:rotate(3deg)}
+  #p2drift{bottom:140px;right:22px;width:150px;height:18px;padding:0;border-radius:10px;overflow:hidden}
+  #p2driftfill{height:100%;width:0%;background:var(--blue)}
+  #p2toast{top:60%;left:50%;transform:translate(-50%,-50%);font-size:26px;color:#fff;-webkit-text-stroke:2px var(--ink);text-shadow:3px 3px 0 var(--ink);opacity:0;transition:opacity .3s;white-space:nowrap}
+  #p2wrong{top:30%;left:50%;transform:translate(-50%,-50%) rotate(3deg);font-size:28px;padding:8px 22px;background:#ff3b3b;color:#fff;display:none}
+  #p2wrong.on{display:block;animation:wrongBlink .7s steps(2) infinite}
+  .ptag{font-size:13px;padding:2px 10px;background:var(--ink);color:var(--yellow);border-radius:8px;top:8px;left:50%;transform:translateX(-50%)}
+  body.two #itembox, body.two #special, body.two #coinhud, body.two #speed, body.two #drift, body.two #driftdir{right:calc(50% + 22px)}
+  body.two #itembox{width:90px;height:90px}
+  body.two #itemhint{display:none}
+  body.two #toast, body.two #wrong, body.two #rearview{left:25%}
+  body.two #ink{right:50%}
+  body.two #timer{top:auto;bottom:18px}
+  body.two #mini{width:130px;height:130px}
+  body.two #p1tag{display:block}
+  #p1tag{display:none;top:8px;left:25%}
   /* driving licenses */
   .whois{margin-top:14px;font-size:15px;background:var(--ink);color:#fff;border-radius:12px;padding:6px 14px;animation:fade .4s both 1.5s}
   .whois b{color:var(--yellow)}
@@ -663,6 +722,7 @@ setInterval(() => LIC.sync(), 4000);
 <div class="hud" id="metaspam"></div>
 <div class="hud" id="flash"></div>
 <div class="hud sticker" id="drift"><div id="driftfill"></div></div>
+<div class="hud sticker" id="driftdir" data-d="0"></div>
 <div class="hud sticker" id="speed">0 <small>km/h</small></div>
 <canvas class="hud sticker" id="mini" width="340" height="340"></canvas>
 <div class="hud" id="big">3</div>
@@ -672,6 +732,19 @@ setInterval(() => LIC.sync(), 4000);
 <div class="hud sticker" id="coinhud">🪙 0</div>
 <div class="hud sticker" id="tut"><div class="tuthead"><span id="tutStep"></span><span class="tutskip"><kbd>N</kbd> skip</span></div><h3 id="tutTitle"></h3><p id="tutText"></p><div class="tutdots" id="tutDots"></div><div class="tutok">✔ Nice!</div></div>
 <div class="hud sticker" id="rearview">👀 Looking back</div>
+<div class="hud ptag" id="p1tag">P1 · WASD</div>
+<div class="hud" id="p2hud">
+  <div class="ptag">P2 · ARROWS</div>
+  <div class="sticker" id="p2pos">1<sup>st</sup></div>
+  <div class="sticker" id="p2lap">P2 · LAP 1 / 3</div>
+  <div class="sticker" id="p2box"><div class="slot"><span id="p2icon"></span></div><span id="p2count"></span></div>
+  <div class="sticker" id="p2sp"><span id="p2spicon">⚾</span><div class="spbar"><div id="p2spfill"></div></div></div>
+  <div class="sticker" id="p2coin"></div>
+  <div class="sticker" id="p2drift"><div id="p2driftfill"></div></div>
+  <div class="sticker" id="p2speed">0 <small>km/h</small></div>
+  <div id="p2toast"></div>
+  <div class="sticker" id="p2wrong">↩ WRONG WAY</div>
+</div>
 <div class="sticker" id="mute">🔊</div>
 
 <div id="touch">
@@ -713,6 +786,7 @@ setInterval(() => LIC.sync(), 4000);
         <button class="mbtn nav" data-go="story"    data-icon="📖" data-desc="Nathan vs Meta AI. Ten chapters of races, rivals and a final boss. Play as Nathan, Josh, Lars and Milo." style="--c:#ff7ccf">Story Mode</button>
         <button class="mbtn nav" data-go="cups"     data-icon="🏆" data-desc="Race all the tracks in a cup. Score points in every race and finish top 3 to win a trophy." style="--c:#ff3b3b">Grand Prix</button>
         <button class="mbtn nav" data-go="tracks"   data-icon="🏁" data-desc="Pick any of the 34 tracks and do a single 3-lap race. Good for practice." style="--c:#2f7bff">Single Race</button>
+        <button class="mbtn nav" data-go="duo"      data-icon="👥" data-desc="Split screen on one keyboard. P1 drives with WASD, P2 with the arrow keys. Race each other and the bots." style="--c:#ff7a1f">2 Players</button>
         <button class="mbtn nav" data-go="garage"   data-icon="🔧" data-desc="Build your kart. Choose the body, wheels and colors. Each part changes how it drives." style="--c:#3ccf6e">Garage</button>
         <button class="mbtn nav" data-go="trophies" data-icon="🏅" data-desc="Your trophies and your best times on every track." style="--c:#ffb02e">Trophy Room</button>
         <button class="mbtn nav" data-go="help"     data-icon="🎮" data-desc="Learn to race on a practice track with step-by-step lessons: drifting, items, jumps, walls, loops and gliders." style="--c:#8a5cff">Tutorial</button>
@@ -751,6 +825,16 @@ setInterval(() => LIC.sync(), 4000);
       <div class="trackgrid" id="maps"></div>
       <aside class="cupinfo" id="trackinfo"></aside>
     </div>
+  </section>
+
+  <!-- 2 PLAYERS -->
+  <section class="screen" data-screen="duo">
+    <div class="duowrap">
+      <aside class="cupinfo duocard" id="duoP1"></aside>
+      <aside class="cupinfo duocard duotrack" id="duoMap"></aside>
+      <aside class="cupinfo duocard" id="duoP2"></aside>
+    </div>
+    <div class="duofoot"><p class="fine">P1: <kbd>A</kbd> <kbd>D</kbd> racer · P2: <kbd>←</kbd> <kbd>→</kbd> racer · <kbd>W</kbd> <kbd>S</kbd> or <kbd>↑</kbd> <kbd>↓</kbd> track</p><button class="btn go" id="duoGo">Start race! ▸</button></div>
   </section>
 
   <!-- RACER -->
@@ -1771,10 +1855,23 @@ function statsFor(build, ch = ROSTER[playerChoice]){
 }
 let playerChoice = 0;
 try { const id = localStorage.getItem('pgp-char'); const i = ROSTER.findIndex(c => c.id === id); if (i >= 0) playerChoice = i; } catch (e) {}
-let myBuild = {...ROSTER[playerChoice].build};
-try { const saved = JSON.parse(localStorage.getItem('pgp-build') || 'null'); if (saved && BODIES[saved.body] && WHEELS[saved.wheels]) myBuild = saved; } catch (e) {}
-if (!GLIDERS[myBuild.glider]) myBuild.glider = CHAR_GLIDER[ROSTER[playerChoice].id] || 'super';
-const buildOf = k => k.isPlayer ? myBuild : ROSTER[k.ri].build;
+// every racer keeps their own kart combo (pgp-builds: {charId: build}); myBuild is the one of the current racer
+const BUILDS = {}, DEF_BUILDS = {};
+try { Object.assign(BUILDS, JSON.parse(localStorage.getItem('pgp-builds') || '{}')); } catch (e) {}
+try {   // older saves had one kart for everyone: give it to the racer you were using
+  const saved = JSON.parse(localStorage.getItem('pgp-build') || 'null'), id = ROSTER[playerChoice].id;
+  if (saved && !localStorage.getItem('pgp-builds')){ BUILDS[id] = saved; localStorage.setItem('pgp-builds', JSON.stringify(BUILDS)); }
+} catch (e) {}
+const defaultBuild = i => ({...ROSTER[i].build, glider: CHAR_GLIDER[ROSTER[i].id] || 'super'});
+function buildFor(i){
+  const id = ROSTER[i].id, b = BUILDS[id];
+  if (!b || !BODIES[b.body] || !WHEELS[b.wheels]){ delete BUILDS[id]; return DEF_BUILDS[id] ||= defaultBuild(i); }
+  else if (!GLIDERS[b.glider]) b.glider = CHAR_GLIDER[id] || 'super';
+  return b;
+}
+const hasOwnBuild = i => !!BUILDS[ROSTER[i].id];
+let myBuild = buildFor(playerChoice);
+const buildOf = k => k.human ? buildFor(k.ri) : ROSTER[k.ri].build;
 
 // ---------- shop: wallet, owned items, what's equipped (saved per license) ----------
 let wallet = 0; try { wallet = Math.max(0, +localStorage.getItem('pgp-coins') || 0); } catch (e) {}
@@ -1859,6 +1956,7 @@ let gKart = null, previewOn = false;
 const gEl = id => document.getElementById(id);
 const statBars = st => STAT_KEYS.map(k => `<div class="stat"><span>${STAT_LABEL[k]}</span><div class="bar">${[1,2,3,4,5].map(i => `<i class="${i <= st[k] ? 'on' : ''} ${st[k] >= 5 ? 'hi' : ''}"></i>`).join('')}</div></div>`).join('');
 function refreshGarage(){
+  myBuild = buildFor(playerChoice);
   if (gKart) gScene.remove(gKart.group);
   const spin = gKart ? gKart.group.rotation.y : 0.6;
   gKart = buildKart(ROSTER[playerChoice], myBuild, gScene); gKart.group.rotation.y = spin;
@@ -1952,7 +2050,8 @@ function renderGarageUI(){
   markCol();
   const ch = ROSTER[playerChoice];
   gEl('gname').textContent = `${BODIES[myBuild.body].name} · ${WHEELS[myBuild.wheels].name}`;
-  gEl('mkwho').innerHTML = `<img src="${PORTRAITS[playerChoice]}" alt="" style="background:${hex(ch.color)}"><div><b>${ch.name}</b><small>${ch.title}</small></div>`;
+  gEl('mkwho').innerHTML = `<button class="arr" data-d="-1" title="Previous racer (Q)">◀</button><img src="${PORTRAITS[playerChoice]}" alt="" style="background:${hex(ch.color)}"><div><b>${ch.name}</b><small>${hasOwnBuild(playerChoice) ? '🔧 Own combo' : 'Default combo'}</small></div><button class="arr" data-d="1" title="Next racer (E)">▶</button>`;
+  gEl('mkwho').querySelectorAll('.arr').forEach(b => b.onclick = () => garageChar(+b.dataset.d));
   document.querySelectorAll('.mk-opt').forEach(b => b.classList.toggle('on', !!OPTS[b.dataset.opt]));
 }
 // green/red ghost bars show what a part would change before you pick it
@@ -1981,7 +2080,18 @@ function toggleOpt(o){
   OPTS[o] = !OPTS[o]; saveOpts();
   beep(OPTS[o] ? 880 : 440, .08, 'square', .06); renderGarageUI();
 }
-function saveBuild(){ try { localStorage.setItem('pgp-build', JSON.stringify(myBuild)); } catch (e) {} }
+function saveBuild(){
+  BUILDS[ROSTER[playerChoice].id] = myBuild;
+  try { localStorage.setItem('pgp-builds', JSON.stringify(BUILDS)); localStorage.setItem('pgp-build', JSON.stringify(myBuild)); } catch (e) {}
+}
+// flip through the unlocked racers in the garage; each one brings their own kart
+function garageChar(d){
+  const open = unlockedSet(); if (open.length < 2) return;
+  const i = open[(open.indexOf(playerChoice) + d + open.length) % open.length];
+  playerChoice = i; try { localStorage.setItem('pgp-char', ROSTER[i].id); } catch (e) {}
+  blip.move(); refreshGarage();
+  const w = gEl('mkwho'); w.classList.remove('swap'); void w.offsetWidth; w.classList.add('swap');
+}
 let onKartChange = () => {};
 function updateMyKart(){ onKartChange(); }
 function sizeGarage(){ const r = gCanvas.parentElement.getBoundingClientRect(); if (!r.width) return; gRenderer.setSize(r.width, r.height, false); gCam.aspect = r.width / Math.max(1, r.height); gCam.updateProjectionMatrix(); }
@@ -1991,7 +2101,7 @@ previewRO.observe(gEl('gstage')); previewRO.observe(gEl('pstage'));
 function showPreview(host){ host.prepend(gCanvas); previewOn = true; refreshGarage(); requestAnimationFrame(sizeGarage); }
 gEl('gRandom').onclick = () => {
   const pick = a => a[Math.floor(Math.random() * a.length)];
-  myBuild = {body:pick(Object.keys(BODIES)), wheels:pick(Object.keys(WHEELS)), paint:pick(PALETTE), accent:pick(PALETTE)};
+  Object.assign(myBuild, {body:pick(Object.keys(BODIES)), wheels:pick(Object.keys(WHEELS)), paint:pick(PALETTE), accent:pick(PALETTE)});
   saveBuild(); refreshGarage(); beep(660, .08, 'square', .06, 2);
 };
 function renderGarage(dt){
@@ -2616,7 +2726,7 @@ function useSpecial(k){
 }
 // AI waits a moment after charging, and saves close-range moves for when someone is near
 function aiSpecial(k, dt){
-  if (k.isPlayer || k.sp < 1 || state !== 'race' || tut) return;
+  if (k.human || k.sp < 1 || state !== 'race' || tut) return;
   if (!k.spWait) k.spWait = 0.6 + Math.random() * 3.5;
   k.spWait -= dt;
   if (k.spWait > 0) return;
@@ -2642,9 +2752,16 @@ function updateSpecialHud(){
 // ---------- input ----------
 const keys = {};
 const map = {ArrowUp:'gas', KeyW:'gas', ArrowDown:'brake', KeyS:'brake', ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right', ShiftLeft:'drift', ShiftRight:'drift', Space:'item', KeyX:'item', KeyE:'special', KeyQ:'special', KeyC:'back', KeyR:'reset'};
-addEventListener('keydown', e => { const k = map[e.code]; if (k){ e.preventDefault(); if (state !== 'menu' && player && !keys[k]){ if (k === 'drift' && player.air) player.trick = true; if (k === 'item') useItem(player); if (k === 'special') useSpecial(player); if (k === 'reset') manualReset(); } keys[k] = true; } });
+// 2 players: P1 drives with WASD, P2 with the arrow keys (each with their own item / special / drift keys)
+const keys2 = {};
+const DUO1 = {KeyW:'gas', KeyS:'brake', KeyA:'left', KeyD:'right', ShiftLeft:'drift', Space:'item', KeyQ:'item', KeyE:'special', KeyC:'back', KeyR:'reset'};
+const DUO2 = {ArrowUp:'gas', ArrowDown:'brake', ArrowLeft:'left', ArrowRight:'right', ShiftRight:'drift', Enter:'item', NumpadEnter:'item', Slash:'special', Period:'special', ControlRight:'back', Backspace:'reset'};
+const route = code => duo && state !== 'menu'
+  ? (DUO1[code] ? [DUO1[code], keys, player] : DUO2[code] ? [DUO2[code], keys2, player2] : null)
+  : map[code] ? [map[code], keys, player] : null;
+addEventListener('keydown', e => { const r = route(e.code); if (r){ const [k, ks, p] = r; e.preventDefault(); if (state !== 'menu' && p && !ks[k]){ if (k === 'drift' && p.air) p.trick = true; if (k === 'item') useItem(p); if (k === 'special') useSpecial(p); if (k === 'reset') manualReset(p); } ks[k] = true; } });
 addEventListener('keydown', e => { if (e.code === 'KeyM' && !e.target.closest?.('input')) setMute(!muted); });
-addEventListener('keyup', e => { const k = map[e.code]; if (k) keys[k] = false; });
+addEventListener('keyup', e => { const r = route(e.code); if (r) r[1][r[0]] = false; });
 if ('ontouchstart' in window){
   document.getElementById('touch').style.display = 'block';
   document.querySelectorAll('#touch button').forEach(b => {
@@ -2928,6 +3045,10 @@ function toast(msg){ $('toast').textContent = msg; $('toast').style.opacity = 1;
 
 // ---------- race state ----------
 let player = null, state = 'menu', countdown = 0, raceTime = 0, finishOrder = [], startPress = null;
+// 2-player mode: duo = {p1, p2, prev} while it's on; player2 is P2's kart
+let duo = null, player2 = null, startPress2 = null, toast2T = 0;
+function toast2(msg){ $('p2toast').textContent = msg; $('p2toast').style.opacity = 1; toast2T = 1.4; }
+const toastFor = (k, msg) => k.isP2 ? toast2(msg) : k.isPlayer ? toast(msg) : 0;
 const fwd = h => new THREE.Vector3(Math.sin(h), 0, Math.cos(h));
 const standings = () => [...karts].sort((a, b) => (b.finished ? 1e9 - b.finishRank : b.prog) - (a.finished ? 1e9 - a.finishRank : a.prog));
 
@@ -2942,7 +3063,7 @@ const LESSONS = [
    check:(k, s, dt) => (s.t = k.speed > 30 ? (s.t || 0) + dt : 0) > 1.2},
   {icon:'🟧', title:'Boost pads', text:'See the orange arrows on the road just ahead? Drive over them for a speed boost.',
    check:(k, s) => k.padT > s.start},
-  {icon:'🌀', title:'Drift', text:'In a bend, press <kbd>Shift</kbd> and steer <i>at the same time</i> to hop into a drift. Keep holding until the sparks turn <b style="color:#e0a800">yellow</b>, then let go for a boost.',
+  {icon:'🌀', title:'Drift', text:'Press <kbd>Shift</kbd> to hop, and hold <kbd>←</kbd> or <kbd>→</kbd> while you hop: that arrow picks the drift direction. Keep holding until the sparks turn <b style="color:#e0a800">yellow</b>, then let go for a boost.',
    check:(k, s) => {
      if (k.drift){ s.max = Math.max(s.max || 0, k.driftCharge); return false; }
      if (s.max > DRIFT_MINI) return true;
@@ -3106,6 +3227,7 @@ const SCREENS = {
   story:    {title:'Story Mode', sub:'Nathan vs Meta AI'},
   cups:     {title:'Grand Prix', sub:'Choose a cup'},
   tracks:   {title:'Single Race', sub:'Choose a track'},
+  duo:      {title:'2 Players', sub:'Split screen · WASD vs arrow keys'},
   racer:    {title:'Choose your racer', sub:'Then hit Let’s go!'},
   garage:   {title:'Garage', sub:'Body · Tires · Paint · Trim · Glider'},
   trophies: {title:'Trophy Room', sub:'Your best results'},
@@ -3375,6 +3497,7 @@ mainBtns.forEach((b, i) => hookNav(b, i, () => {
   $('mstat').innerHTML = ({
     story: `<span>📖 ${storyProg} / ${STORY.length} chapters</span><span>${storyProg >= STORY.length ? '🏆 Complete' : '🤖 Stop Meta AI'}</span>`,
     cups: `<span>🏆 ${won} / ${CUPS.length} trophies</span><span>50cc → 200cc</span>`,
+    duo: `<span>👥 Split screen</span><span>⌨️ WASD vs ←↑→↓</span>`,
     tracks: `<span>🗺️ ${TRACKS.filter(t => !t.hidden).length} tracks</span><span>⏱️ ${Object.keys(bests).length} best times set</span>`,
     garage: `<span>${BODIES[myBuild.body].emoji} ${BODIES[myBuild.body].name}</span><span>🛞 ${WHEELS[myBuild.wheels].name}</span>`,
     trophies: `<span>🥇 ${golds} gold</span><span>🔓 ${unlockedSet().length} / ${ROSTER.length} racers</span>`,
@@ -3420,6 +3543,54 @@ function trackInfo(i){
   $('trackGo').onclick = () => { blip.ok(); pickTrack(); };
 }
 function pickTrack(){ mode = 'single'; go('racer'); }
+
+// 2 players: each player flips through the unlocked racers (never the same one), both share the track pick
+let duoPick = null;
+const duoTracks = () => TRACKS.map((t, i) => i).filter(i => !TRACKS[i].hidden);
+function duoStep(who, d){
+  const open = unlockedSet(), other = duoPick[who === 'p1' ? 'p2' : 'p1'];
+  let i = open.indexOf(duoPick[who]);
+  do i = (i + d + open.length) % open.length; while (open[i] === other);
+  duoPick[who] = open[i]; blip.move(); renderDuo();
+}
+function duoTrack(d){
+  const list = duoTracks(), i = (list.indexOf(duoPick.map) + d + list.length) % list.length;
+  duoPick.map = list[i]; blip.move(); showTrack(list[i], true); renderDuo();
+}
+function renderDuo(){
+  const card = (who, el, tag, l, r, item, special, drift) => {
+    const i = duoPick[who], c = ROSTER[i];
+    $(el).innerHTML = `<span class="who">${tag}</span><img src="${PORTRAITS[i]}" alt="" style="background:${hex(c.color)}">
+      <div class="pick"><button class="arr" data-d="-1">◀</button><h2>${c.name}</h2><button class="arr" data-d="1">▶</button></div>
+      <div><span class="tag">${c.ability.icon} ${c.ability.name}</span></div>
+      <div class="keys"><b>${l} / ${r}</b><span>change racer</span><b>${tag === 'P1' ? 'W A S D' : '↑ ← ↓ →'}</b><span>drive</span><b>${drift}</b><span>drift</span><b>${item}</b><span>item</span><b>${special}</b><span>special</span></div>`;
+    $(el).querySelectorAll('.arr').forEach(b => b.onclick = () => duoStep(who, +b.dataset.d));
+  };
+  card('p1', 'duoP1', 'P1', 'A', 'D', 'Space / Q', 'E', 'Left Shift');
+  card('p2', 'duoP2', 'P2', '←', '→', 'Enter', '/ or .', 'Right Shift');
+  const m = MAPS[duoPick.map];
+  $('duoMap').innerHTML = `<span class="who">Track</span><div class="big">${m.emoji}</div>
+    <div class="pick"><button class="arr" data-d="-1">▲</button><h2>${m.name}</h2><button class="arr" data-d="1">▼</button></div>
+    <div><span class="tag">${m.tag}</span></div>
+    <p class="fine">${LAPS} laps · ${FIELD_SIZE} racers · both players vs the bots.<br>When one player finishes, the other has 30 seconds left.</p>`;
+  $('duoMap').querySelectorAll('.arr').forEach(b => b.onclick = () => duoTrack(+b.dataset.d));
+}
+function duoStart(){
+  blip.ok();
+  duo = {p1:duoPick.p1, p2:duoPick.p2, prev:playerChoice, endAt:0};
+  playerChoice = duoPick.p1; mapChoice = duoPick.map; mode = 'single'; launch();
+}
+$('duoGo').onclick = duoStart;
+addEventListener('keydown', e => {
+  if (state !== 'menu' || screen !== 'duo' || menuEl.classList.contains('hidden') || dlg) return;
+  const c = e.code, acts = {KeyA:['p1', -1], KeyD:['p1', 1], ArrowLeft:['p2', -1], ArrowRight:['p2', 1]};
+  if (c === 'Escape' || c === 'Backspace') return;   // the normal menu handler goes back
+  e.preventDefault(); e.stopImmediatePropagation();
+  if (acts[c]) duoStep(...acts[c]);
+  else if (c === 'KeyW' || c === 'ArrowUp') duoTrack(-1);
+  else if (c === 'KeyS' || c === 'ArrowDown') duoTrack(1);
+  else if (c === 'Enter' || c === 'NumpadEnter' || c === 'Space') duoStart();
+}, true);
 function renderMaps(){
   mapsEl.innerHTML = '';
   MAPS.forEach((m, i) => { if (m.hidden) return;
@@ -3622,6 +3793,12 @@ const ENTER = {
   story:    () => { renderStory(); setFocus(Math.min(storyChoice, storyProg, STORY.length - 1), true); },
   cups:     () => { renderCups(); setFocus(cupChoice, true); },
   tracks:   () => { renderMaps(); setFocus(mapChoice, true); },
+  duo:      () => {
+    const open = unlockedSet(), p1 = duoPick?.p1 ?? playerChoice;
+    const p2 = duoPick && duoPick.p2 !== p1 && open.includes(duoPick.p2) ? duoPick.p2 : open.find(i => i !== p1);
+    duoPick = {p1, p2, map: TRACKS[mapChoice]?.hidden ? 0 : mapChoice};
+    showTrack(duoPick.map, true); renderDuo();
+  },
   racer:    () => {
     if (mode === 'gp') showTrack(TRACKS.indexOf(byName(CUPS[cupChoice].tracks[0])));
     renderRacers(); showPreview($('pstage')); setFocus(playerChoice, true); racerInfo();
@@ -3653,6 +3830,8 @@ addEventListener('keydown', e => {
     if (c === 'Digit2') return toggleOpt('auto');
     if (c === 'Digit3') return toggleOpt('adrift');
     if (c === 'KeyR'){ gEl('gRandom').click(); return; }
+    if (c === 'KeyQ' || c === 'BracketLeft'){ garageChar(-1); return; }
+    if (c === 'KeyE' || c === 'BracketRight'){ garageChar(1); return; }
   }
   const items = navItems(), i = focusAt[screen] || 0, cols = items.length ? gridCols(items[0]) : 1;
   if (e.code === 'Escape' || e.code === 'Backspace'){ e.preventDefault(); back(); }
@@ -3687,6 +3866,7 @@ showTrack(0);
 function openMenu(){
   if (story){ playerChoice = story.prev; story = null; refreshGarage(); }
   if (tut){ mapChoice = tut.prevMap; tut = null; } $('tut').classList.remove('on');
+  if (duo){ playerChoice = duo.prev; duo = null; refreshGarage(); } player2 = null; document.body.classList.remove('two'); resize();
   clearRace(); gp = null; state = 'menu';
   $('results').classList.add('hidden'); $('intro').style.display = 'none'; menuEl.classList.remove('hidden');
   trail = ['title']; const cur = screen; screen = null;
@@ -3708,25 +3888,28 @@ function setupRace(){
   MAX = 42 * (cup ? cup.speed : 1); ACC = 26 * (cup ? cup.speed : 1);
   const aiBase = cup ? cup.ai : 0.9;
   boxes.forEach(b => { b.respawn = 0; b.mesh.visible = true; }); coins.forEach(c => { c.respawn = 0; c.mesh.visible = true; });
-  const field = gp ? gp.field : story ? [playerChoice, ...cup.rivals.map(rid).filter(i => i >= 0 && i !== playerChoice)].slice(0, FIELD_SIZE)
+  const field = duo ? duoField() : gp ? gp.field : story ? [playerChoice, ...cup.rivals.map(rid).filter(i => i >= 0 && i !== playerChoice)].slice(0, FIELD_SIZE)
     : tut ? [playerChoice, ...TUT_SET.rivals.map(rid).filter(i => i !== playerChoice).slice(0, 2)] : pickField();
   // in a cup the grid is reverse standings, so the leader starts at the back
-  let order = field.filter(i => i !== playerChoice); order.push(playerChoice);
+  let order = field.filter(i => i !== playerChoice && i !== duo?.p2); if (duo) order.push(duo.p2); order.push(playerChoice);
   if (gp && gp.race > 0) order = [...field].sort((a, b) => (gp.pts[a] - gp.pts[b]) || (a === playerChoice) - (b === playerChoice));
+  player2 = null; keys2.gas = false; startPress2 = null; if (duo) duo.endAt = 0;
   order.forEach((ri, slot) => {
     const r = ROSTER[ri], gi = (N - 12 - slot*8) % N, side = slot % 2 ? -5 : 5;
     const pos = pts[gi].clone().addScaledVector(nors[gi], side);
     const k = { ...r, ri, mesh:null, pos, heading:Math.atan2(tans[gi].x, tans[gi].z), speed:0, idx:gi, prog:gi - N,
-      isPlayer: ri === playerChoice, item:null, boost:0, spin:0, star:0, drift:0, driftCharge:0, finished:false, finishRank:0,
+      isPlayer: ri === playerChoice, isP2: !!duo && ri === duo.p2, item:null, boost:0, spin:0, star:0, drift:0, driftCharge:0, finished:false, finishRank:0,
       lap:0, aiOffset:(Math.random()-.5)*W*0.4, skill:aiBase + Math.random()*0.12, itemTimer:0, yawVis:0, bounce:0, lastLap:0,
       sp:0, spWait:0, coins:0, shove:new THREE.Vector3(), shield:0, frozen:0, ghost:0, ram:0, auto:0, confused:0, big:0, y:0, vy:0, air:false, airT:0, trick:false, q:null, glide:false, hold:0 };
-    k.moveH = k.heading;
-    const b = ri === playerChoice ? myBuild : {...r.build, glider: CHAR_GLIDER[r.id] || 'super'};
+    k.moveH = k.heading; k.human = k.isPlayer || k.isP2; k.inp = k.isP2 ? keys2 : keys;
+    const b = ri === playerChoice || (duo && ri === duo.p2) ? buildFor(ri) : {...r.build, glider: CHAR_GLIDER[r.id] || 'super'};
     k.mesh = buildKart(r, b); k.st = statsFor(b, r);
     // story boss: faster, smarter and uses its special far more often
     if (story && cup.boss === r.id){ k.boss = true; k.skill = 1.1; k.cd = (r.cd || 16) * 0.45; k.sp = 0.6; }
-    karts.push(k); if (k.isPlayer) player = k;
+    karts.push(k); if (k.isPlayer) player = k; if (k.isP2) player2 = k;
   });
+  document.body.classList.toggle('two', !!player2);
+  if (player2){ const w = player2.pos; cs2.pos.set(w.x, 30, w.z); cs2.look.copy(w); cs2.up.set(0, 1, 0); $('p2coin').textContent = ''; }
   raceTime = 0; finishOrder = []; startPress = null; hudPlace = 0; contacts = new Set(); nastyAt = {}; lastDisrupt = -1e9; countdown = 3.999; state = 'countdown';
   updateItemHud(); updateSpecialHud(); $('big').style.display = 'block';
   if (tut) tutShow(true);
@@ -3741,8 +3924,8 @@ function setupRace(){
 const _qa = new THREE.Quaternion(), _zAxis = new THREE.Vector3(0, 0, 1);
 // fell into a gap: a fishing line pulls you back to the road just before the ramp
 // R: put me back on the road (a few seconds' cooldown so it can't be spammed)
-function manualReset(){
-  const k = player; if (state !== 'race' || paused || !k || k.finished || k.glide || raceTime < (k.resetAt || 0)) return;
+function manualReset(k = player){
+  if (state !== 'race' || paused || !k || k.finished || k.glide || raceTime < (k.resetAt || 0)) return;
   k.resetAt = raceTime + 3; respawn(k);
 }
 function respawn(k){
@@ -3769,16 +3952,17 @@ let MAX = 42, ACC = 26;
 const DRIFT_MINI = 1.3, DRIFT_SUPER = 2.6;   // seconds-ish of drift charge for a mini / super boost
 function stepKart(k, dt){
   let gas = 0, steer = 0, drift = false;
-  if (k.isPlayer && !k.finished && !(k.auto > 0)){
-    gas = (keys.gas ? 1 : 0) - (keys.brake ? 1 : 0);
-    steer = (keys.left ? 1 : 0) - (keys.right ? 1 : 0);
-    drift = !!keys.drift;
-    // assists from the garage control panel
-    if (OPTS.auto && !keys.brake) gas = 1;
-    if (OPTS.adrift && Math.abs(steer) > 0 && k.speed > 26) drift = true;
+  const inp = k.inp || keys;
+  if (k.human && !k.finished && !(k.auto > 0)){
+    gas = (inp.gas ? 1 : 0) - (inp.brake ? 1 : 0);
+    steer = (inp.left ? 1 : 0) - (inp.right ? 1 : 0);
+    drift = !!inp.drift;
+    // assists from the garage control panel (P1 only; P2 drives without them)
+    if (OPTS.auto && k.isPlayer && !inp.brake) gas = 1;
+    if (OPTS.adrift && k.isPlayer && Math.abs(steer) > 0 && k.speed > 26) drift = true;
     // gliding (like MK8): ↑ tips the nose down to dive, ↓ pulls it up to float; the throttle stays on
-    if (k.glide){ k.pitchIn = (keys.gas ? 1 : 0) - (keys.brake ? 1 : 0); gas = 1; }
-    if (OPTS.smart){
+    if (k.glide){ k.pitchIn = (inp.gas ? 1 : 0) - (inp.brake ? 1 : 0); gas = 1; }
+    if (OPTS.smart && k.isPlayer){
       const latS = k.pos.clone().sub(pts[k.idx]).dot(nors[k.idx]);
       if (Math.abs(latS) > W * 0.36) steer = THREE.MathUtils.clamp(steer + Math.sign(latS) * Math.min(1, (Math.abs(latS) - W * 0.36) / 4) * 0.9, -1, 1);
     }
@@ -3800,19 +3984,21 @@ function stepKart(k, dt){
       if (ahead > 0 && ahead < 11 && Math.abs(lat) < 4.5 && k.speed > o.speed - 2) steer += (lat > 0 ? -1 : 1) * 0.55 * (1 - ahead / 11);
     }
     steer = THREE.MathUtils.clamp(steer, -1, 1);
-    if (!k.isPlayer && k.item){ k.itemTimer -= dt; if (k.itemTimer <= 0) useItem(k); }
+    if (!k.human && k.item){ k.itemTimer -= dt; if (k.itemTimer <= 0) useItem(k); }
   }
   stepRoulette(k, dt);
   if (k.goldT > 0){ k.goldT -= dt; if (k.goldT <= 0 && k.item === 'golden'){ k.item = null; if (k.isPlayer) updateItemHud(); } }
-  if (k.confused > 0){ k.confused -= dt; steer = k.isPlayer ? -steer : steer + Math.sin(raceTime * 7) * 0.9; }
-  if (k.inked > 0 && !k.isPlayer) steer += Math.sin(raceTime * 5 + k.ri) * 0.35;
-  if (state !== 'race') { gas = 0; steer = 0; }
-  else if (!k.finished){ k.sp = Math.min(1, k.sp + dt / ((k.cd || 16) * (k.isPlayer ? 1 : 1.7))); aiSpecial(k, dt); }
+  if (k.confused > 0){ k.confused -= dt; steer = k.human ? -steer : steer + Math.sin(raceTime * 7) * 0.9; }
+  if (k.inked > 0 && !k.human) steer += Math.sin(raceTime * 5 + k.ri) * 0.35;
+  if (state !== 'race') { gas = 0; steer = 0; drift = false; }
+  // nobody creeps forward on the grid before GO
+  if (state === 'countdown'){ k.speed = 0; k.shove.set(0, 0, 0); k.boost = 0; }
+  else if (!k.finished){ k.sp = Math.min(1, k.sp + dt / ((k.cd || 16) * (k.human ? 1 : 1.7))); aiSpecial(k, dt); }
   for (const t of ['shield', 'reflect', 'ghost', 'big', 'dance', 'small', 'inked', 'bullet']) if (k[t] > 0) k[t] -= dt;
 
   // rubber banding for AI
   let topMul = 1;
-  if (!k.isPlayer && player){ const gap = player.prog - k.prog; topMul = k.skill * THREE.MathUtils.clamp(1 + gap/900, 0.88, 1.12); }
+  if (!k.human && player){ const gap = (player2 && player2.prog > player.prog ? player2 : player).prog - k.prog; topMul = k.skill * THREE.MathUtils.clamp(1 + gap/900, 0.88, 1.12); }
 
   const lat = k.pos.clone().sub(pts[k.idx]).dot(nors[k.idx]);
   const off = Math.abs(lat) > W/2 + 1.5 && k.star <= 0 && k.ram <= 0 && !k.air;
@@ -3839,16 +4025,32 @@ function stepKart(k, dt){
   // loops keep you moving: nobody stalls upside down
   if (LP[k.idx]) k.speed = Math.max(k.speed, MAX * 0.85);
 
-  // drifting: like MK you hop first. A drift only starts if you're steering during the short hop
-  // after pressing drift, so just holding the button while turning is a normal turn.
+  // drifting, like MK8: Shift makes the kart hop. The arrow you hold (or press) during the hop picks the
+  // drift direction (← drifts left, → drifts right) and it stays locked that way until you let go of Shift.
+  // While drifting, ← / → only make the drift tighter or wider.
+  // Rivals use the same drift: they hop into it on sharp bends and let go once the boost is charged.
+  let aiBend = 0;
+  if (!k.human && state === 'race' && !k.finished){
+    aiBend = tans[k.idx].clone().cross(tans[(k.idx + 34) % N]).y;   // > 0 the road bends left
+    if (!k.drift) drift = Math.abs(aiBend) > 0.38 && k.speed > 28 && !k.air && Math.random() < dt * 3 * k.skill;
+    else drift = Math.abs(aiBend) > 0.08 && k.driftCharge < (k.aiRelease ??= DRIFT_MINI + 0.1 + Math.random() * (DRIFT_SUPER - DRIFT_MINI + 0.3) * k.skill);
+  }
   const pressed = drift && !k.prevDrift; k.prevDrift = drift;
-  if (pressed) k.hopT = 0.35; else if (k.hopT > 0) k.hopT -= dt;
-  const canDrift = k.isPlayer && drift && (k.hopT > 0 || OPTS.adrift) && Math.abs(steer) > 0.3 && k.speed > 22 && !off && !k.air;
-  if (canDrift && !k.drift) { k.drift = Math.sign(steer); k.bounce = 0.25; k.hopT = 0; }
+  if (k.human){
+    const L = !!inp.left, R = !!inp.right;
+    if (L && !k.prevL) k.lastKey = 1; if (R && !k.prevR) k.lastKey = -1;   // the most recent arrow wins
+    if (!L && !R) k.lastKey = 0; else if (L !== R) k.lastKey = L ? 1 : -1;
+    k.prevL = L; k.prevR = R;
+  }
+  if (pressed && !k.air){ k.hopT = 0.5; k.bounce = 0.3; }
+  else if (k.hopT > 0) k.hopT -= dt;
+  const dir = k.human ? (k.lastKey || 0) : Math.sign(aiBend);
+  const canDrift = drift && (k.hopT > 0 || (k.isPlayer && OPTS.adrift)) && dir !== 0 && k.speed > 22 && !off && !k.air;
+  if (canDrift && !k.drift){ k.drift = dir; k.hopT = 0; if (k.isPlayer) beep(dir > 0 ? 300 : 340, .08, 'square', .04, 1.4); }
   if (k.drift && (!drift || k.speed < 14 || off)){
     if (k.driftCharge > DRIFT_SUPER) { k.boost = Math.max(k.boost, 1.1); sfx('boost', k); if (k.isPlayer) toast('Super boost!'); }
     else if (k.driftCharge > DRIFT_MINI) { k.boost = Math.max(k.boost, 0.5); sfx('boost', k); }
-    k.drift = 0; k.driftCharge = 0;
+    k.drift = 0; k.driftCharge = 0; k.aiRelease = undefined;
   }
   const hm = 1 + (st.handling - 3) * 0.09;
   let turn = steer * 2.1 * hm;
@@ -3896,7 +4098,8 @@ function stepKart(k, dt){
     k.lap = lap;
     if (k.isPlayer && lap > 1){ k.laps = k.laps || []; k.laps.push(raceTime - (k.lapStart || 0)); k.lapStart = raceTime; }
     const split = k.isPlayer && k.laps?.length ? ` · ${fmt(k.laps[k.laps.length - 1])}${k.laps.length > 1 && k.laps[k.laps.length - 1] <= Math.min(...k.laps) ? ' 🔥' : ''}` : '';
-    if (k.lap > LAPS && !k.finished && !tut){ k.finished = true; finishOrder.push(k); k.finishRank = finishOrder.length; k.finishTime = raceTime; if (k.isPlayer) endRace(); }
+    if (k.lap > LAPS && !k.finished && !tut){ k.finished = true; finishOrder.push(k); k.finishRank = finishOrder.length; k.finishTime = raceTime; if (k.human) humanDone(k); }
+    else if (k.isP2 && k.lap === LAPS) toast2('FINAL LAP!');
     else if (k.isPlayer && k.lap > 1){ sfx('lap'); toast((k.lap === LAPS ? 'FINAL LAP!' : `Lap ${k.lap}`) + split); }
   }
   // wrong way, and getting rescued when stuck off the road
@@ -3905,7 +4108,7 @@ function stepKart(k, dt){
     k.wrongT = fa < -0.35 && k.speed > 4 ? (k.wrongT || 0) + dt : 0;
     const offLat = Math.abs(k.pos.clone().sub(pts[k.idx]).dot(nors[k.idx])) > W/2 + 4;
     k.stuckT = offLat && Math.abs(k.speed) < 5 && !k.air && !(k.hold > 0) ? (k.stuckT || 0) + dt : 0;
-    if (k.stuckT > (k.isPlayer ? 4 : 2.5)){ k.stuckT = 0; respawn(k); }
+    if (k.stuckT > (k.human ? 4 : 2.5)){ k.stuckT = 0; respawn(k); }
   }
 
   // height: follow the road over hills, fly off ramps and crests, stick to banked walls, glide over gaps
@@ -3925,12 +4128,13 @@ function stepKart(k, dt){
           k.glide = true; k.vy = Math.max(k.vy, 4) + 6;
           if (k.isPlayer){ toast('🪂 Glider! ↑ dive · ↓ float'); beep(440, .35, 'triangle', .08, 2.2); }
         }
-        if (!k.isPlayer && k.vy > 6 && Math.random() < 0.6) k.trick = true;
+        if (!k.human && k.vy > 6 && Math.random() < 0.6) k.trick = true;
       }
       k.airT += dt; k.y = yp; k.vy -= GRAV * dt;
       if (k.glide){
         // pitch: +1 nose down (sink fast, gain speed), -1 nose up (float longer, lose a little speed)
-        const pin = k.isPlayer ? (k.pitchIn || 0) : 0;
+        // rivals glide like you: float over the gap, then tip the nose down to land quickly once there's road below
+        const pin = k.human ? (k.pitchIn || 0) : GP[sf.i] ? -0.5 * k.skill : k.y - sf.pos.y > 2.5 ? 0.9 * k.skill : 0;
         k.pitch = (k.pitch || 0) + (pin - (k.pitch || 0)) * Math.min(1, 4 * dt);
         const p = k.pitch;
         if (p > 0){ k.vy -= 20 * p * dt; k.speed = Math.min(MAX * 1.2, k.speed + 14 * p * dt); }
@@ -4018,13 +4222,17 @@ function collisions(dt){
     }
   }
   contacts = touching;
-  // coins: only you collect them; each goes straight into your wallet and gives a tiny boost
+  // coins: everyone collects them (a tiny boost), but only yours go into your wallet
   for (const c of coins){
     if (!c.mesh.visible){ c.respawn -= dt; if (c.respawn <= 0) c.mesh.visible = true; continue; }
     c.mesh.rotation.y += dt * 3;
-    if (player && state === 'race' && !player.ghost && player.pos.distanceTo(c.mesh.position.clone().setY(0)) < 2.4 && (player.wp?.y ?? 0) < (P3[player.idx]?.y ?? 0) + 4){
-      c.mesh.visible = false; c.respawn = 14; player.coins++; addCoins(1);
-      player.boost = Math.max(player.boost, 0.12);
+    if (state !== 'race') continue;
+    const k = karts.find(o => !(o.ghost > 0) && o.pos.distanceTo(c.mesh.position.clone().setY(0)) < 2.4 && (o.wp?.y ?? 0) < (P3[o.idx]?.y ?? 0) + 4);
+    if (!k) continue;
+    c.mesh.visible = false; c.respawn = 14; k.coins++;
+    k.boost = Math.max(k.boost, 0.12);
+    if (k.isPlayer){
+      addCoins(1);
       beep(1320, .06, 'square', .05); setTimeout(() => beep(1760, .09, 'square', .05), 60);
       $('coinhud').textContent = `🪙 ${player.coins}`;
     }
@@ -4104,9 +4312,33 @@ function collisions(dt){
 // ---------- flow ----------
 const dot = k => `<img class="pt" src="${PORTRAITS[k.ri]}" alt="" style="background:${hex(k.color)}">`;
 function button(label, cls, fn){ const b = document.createElement('button'); b.className = 'btn ' + cls; b.textContent = label; b.onclick = fn; $('resBtns').appendChild(b); }
+// 2 players: the race ends once both have finished, or 30 s after the first one crosses the line
+function humanDone(k){
+  if (!player2) return endRace();
+  if (player.finished && player2.finished) return endRace();
+  duo.endAt = raceTime + 30;
+  toastFor(k, `🏁 Finished ${ord(k.finishRank)}!`); toastFor(k.isP2 ? player : player2, '⏱️ 30 seconds left!'); sfx('lap');
+}
+// the two humans + Meta AI + random rivals
+function duoField(){
+  const f = [duo.p1, duo.p2], meta = rid('meta');
+  if (meta >= 0 && !f.includes(meta)) f.push(meta);
+  return f.concat(ROSTER.map((c, i) => i).filter(i => !f.includes(i)).sort(() => Math.random() - 0.5)).slice(0, FIELD_SIZE);
+}
+function duoResults(all){
+  const a = all.indexOf(player), b = all.indexOf(player2), win = a < b ? 'P1' : 'P2', who = a < b ? player : player2;
+  $('resTitle').innerHTML = `🏆 ${win} wins!`;
+  $('resSub').textContent = `${MAP.emoji} ${MAP.name} · ${who.name} beat ${(a < b ? player2 : player).name} · P1 ${ord(a + 1)} · P2 ${ord(b + 1)}`;
+  $('resBody').innerHTML = `<div class="grid">${all.map((k, i) => `<div class="row single ${k.human ? 'me' : ''}"><b>${i+1}</b><span class="n">${dot(k)}${k.name}${k.isPlayer ? ' (P1)' : k.isP2 ? ' (P2)' : ''}</span><span class="r">${k.finished ? fmt(k.finishTime) : '—'}</span></div>`).join('')}</div>
+    <p class="coinsum">🪙 P1 collected ${player.coins} coin${player.coins === 1 ? '' : 's'} for the wallet · wallet <b class="walletN">${wallet}</b></p>`;
+  button('Rematch ↻', '', () => { $('results').classList.add('hidden'); setupRace(); });
+  button('Change racers', 'alt', () => { openMenu(); go('duo'); });
+  button('Menu', 'ghost', openMenu);
+  $('results').classList.remove('hidden');
+}
 function endRace(){
-  state = 'finished'; toast('FINISH!'); jingle(player.finishRank <= 3);
-  if (player.finishTime && (!bests[MAP.name] || player.finishTime < bests[MAP.name])){
+  state = 'finished'; toast('FINISH!'); jingle(player.finishRank <= 3 || !!player2);
+  if (!player2 && player.finishTime && (!bests[MAP.name] || player.finishTime < bests[MAP.name])){
     const had = !!bests[MAP.name]; bests[MAP.name] = player.finishTime;
     try { localStorage.setItem('pgp-best', JSON.stringify(bests)); } catch (e) {}
     if (had) setTimeout(() => toast('⏱️ New best time!'), 1300);
@@ -4118,6 +4350,7 @@ function endRace(){
     const all = [...finishOrder, ...rest];
     const place = all.indexOf(player) + 1;
     $('resBtns').innerHTML = '';
+    if (player2) return duoResults(all);
     if (story){
       const ch = STORY[story.ch], g = ch.goal, ok = storyGoalMet(g, all, place), rv = g.type === 'beat' ? rid(g.id) : -1;
       if (ok && storyProg < story.ch + 1){ storyProg = story.ch + 1; try { localStorage.setItem('pgp-story', storyProg); } catch (e) {} addCoins(75); setTimeout(() => toast('🪙 +75 for a new chapter!'), 900); }
@@ -4293,7 +4526,7 @@ const pauseBtns = () => [...document.querySelectorAll('#pause .pbtn')];
 function setPauseSel(i){ const b = pauseBtns(); pauseSel = (i + b.length) % b.length; b.forEach((x, j) => x.classList.toggle('focus', j === pauseSel)); }
 function pauseGame(){
   if (paused || (state !== 'race' && state !== 'countdown')) return;
-  paused = true; Object.keys(keys).forEach(k => keys[k] = false);
+  paused = true; Object.keys(keys).forEach(k => keys[k] = false); Object.keys(keys2).forEach(k => keys2[k] = false);
   silenceEngine();
   $('pauseSub').textContent = gp ? `${CUPS[gp.cup].emoji} ${CUPS[gp.cup].name} · Race ${gp.race + 1} of ${CUPS[gp.cup].tracks.length} · ${MAP.name}` : `${MAP.emoji} ${MAP.name} · Lap ${Math.min(LAPS, Math.max(1, player.lap))} / ${LAPS}`;
   $('pause').classList.remove('hidden'); setPauseSel(0); beep(520, .12, 'square', .06, .6);
@@ -4348,6 +4581,64 @@ function liftItems(){
   fx.forEach(f => lift(f.m)); boxes.forEach(b => { if (b.mesh.visible) lift(b.mesh); }); coins.forEach(c => { if (c.mesh.visible) lift(c.mesh); });
 }
 function dropItems(){ for (const [o, p, q] of _lifted){ o.position.copy(p); o.quaternion.copy(q); } }
+// chase camera for one kart; cs holds that camera's smoothed position / look / up
+const camera2 = new THREE.PerspectiveCamera(68, 1, 0.1, 1200);
+const cs1 = {pos:camPos, look:camLook, up:camUp, rear:false}, cs2 = {pos:new THREE.Vector3(), look:new THREE.Vector3(), up:new THREE.Vector3(0, 1, 0), rear:false};
+function camFollow(k, cam, cs, rearKey, dt){
+  const wp = k.wp || k.pos;
+  cs.up.lerp(k.air ? UPV : (k.camU || UPV), 1 - Math.pow(0.01, dt)).normalize();
+  const f = (k.camF || fwd(k.heading)).clone().applyAxisAngle(cs.up, k.yawVis * 0.25);
+  const behind = state === 'finished' ? -9 : 11 + Math.max(0, k.speed) * 0.04;
+  // hold C to look behind (snaps instantly, like a rear-view mirror)
+  const rear = !!rearKey && state === 'race';
+  const target = wp.clone().addScaledVector(f, rear ? 10 : -behind).addScaledVector(cs.up, 5.2 + (state === 'finished' ? 2 : 0));
+  const lookT = wp.clone().addScaledVector(f, rear ? -10 : 6).addScaledVector(cs.up, 1.6);
+  if (rear !== cs.rear){ cs.rear = rear; cs.pos.copy(target); cs.look.copy(lookT); if (cs === cs1) $('rearview').classList.toggle('on', rear); }
+  cs.pos.lerp(target, 1 - Math.pow(0.002, dt));
+  cam.position.copy(cs.pos); cam.up.copy(cs.up);
+  cs.look.lerp(lookT, 1 - Math.pow(0.0005, dt));
+  cam.lookAt(cs.look);
+  cam.fov += ((k.boost > 0 || k.star > 0 ? 82 : 68) - cam.fov) * Math.min(1, 4*dt);
+  cam.aspect = innerWidth / (player2 ? 2 : 1) / innerHeight; cam.updateProjectionMatrix();
+}
+// one full-screen view, or P1 left / P2 right
+function draw(){
+  liftItems();
+  if (player2){
+    const w = innerWidth, h = innerHeight, hw = Math.floor(w / 2);
+    renderer.setScissorTest(true);
+    renderer.setViewport(0, 0, hw, h); renderer.setScissor(0, 0, hw, h); renderer.render(scene, camera);
+    renderer.setViewport(hw, 0, w - hw, h); renderer.setScissor(hw, 0, w - hw, h); renderer.render(scene, camera2);
+    renderer.setScissorTest(false); renderer.setViewport(0, 0, w, h);
+  } else renderer.render(scene, camera);
+  dropItems();
+}
+// rocket start (like MK8): p is the countdown value when accelerate went down
+function rocketStart(k, p){
+  if (p != null && p > 2){ k.hold = 1.1; burst(k.wp || k.pos, 0x666677, 4, 0.6); toastFor(k, '💨 Too early! Engine stalled'); beep(110, .5, 'sawtooth', .07, 0.5); }
+  else if (p != null && p > 1){ const perfect = p > 1.35 && p < 1.85; k.boost = perfect ? 1.4 : 1.0; sfx('boost', k); toastFor(k, perfect ? '🚀 Perfect rocket start!' : '🚀 Rocket start!'); }
+  else if (p != null && p > 0.25){ k.boost = 0.35; toastFor(k, 'Good start'); }
+}
+// P2's HUD on the right half (P1 keeps the normal HUD, squeezed into the left half)
+let hud2Place = 0;
+function hud2(order, dt){
+  const p = player2, place = order.indexOf(p) + 1;
+  if (place !== hud2Place){ hud2Place = place; $('p2pos').innerHTML = `${place}<sup>${ord(place).slice(-2)}</sup>`; }
+  $('p2lap').textContent = `P2 · LAP ${Math.min(LAPS, Math.max(1, p.lap))} / ${LAPS}`;
+  const d = p.rolling > 0 ? null : p.item && ITEMDEF[p.item], ic = p.rolling > 0 ? '🎲' : d ? d.icon : '';
+  if ($('p2icon').textContent !== ic) $('p2icon').textContent = ic;
+  $('p2box').classList.toggle('rolling', p.rolling > 0);
+  $('p2count').textContent = d ? (p.goldT > 0 ? '∞' : p.uses > 1 ? '×' + p.uses : '') : '';
+  const f = Math.min(1, p.sp || 0);
+  $('p2spfill').style.width = (f * 100) + '%'; $('p2sp').classList.toggle('ready', f >= 1); $('p2spicon').textContent = p.ability.icon;
+  const dc = p.driftCharge;
+  $('p2driftfill').style.width = Math.min(100, dc / DRIFT_SUPER * 100) + '%';
+  $('p2driftfill').style.background = dc > DRIFT_SUPER ? '#ff7a1f' : dc > DRIFT_MINI ? '#ffd23f' : '#2f7bff';
+  $('p2speed').innerHTML = `${Math.round(Math.abs(p.speed) * 3.2)} <small>km/h</small>`;
+  $('p2coin').textContent = `🪙 ${p.coins}`;
+  $('p2wrong').classList.toggle('on', state === 'race' && (p.wrongT || 0) > 0.8);
+  if (toast2T > 0){ toast2T -= dt; if (toast2T <= 0) $('p2toast').style.opacity = 0; }
+}
 let last = performance.now(), lastBeep = 4;
 function loop(now){
   requestAnimationFrame(loop);
@@ -4386,20 +4677,27 @@ function loop(now){
     liftItems(); renderer.render(scene, camera); dropItems(); return;
   }
 
-  if (paused){ liftItems(); renderer.render(scene, camera); dropItems(); return; }
+  if (paused){ draw(); return; }
   if (state === 'countdown'){
     countdown -= dt;
     // rocket start (like MK8): note when accelerate goes down; letting go resets it
     if (keys.gas){ if (startPress == null){ startPress = countdown; beep(150, .25, 'sawtooth', .04, 1.5); } } else startPress = null;
+    if (player2){ if (keys2.gas){ if (startPress2 == null){ startPress2 = countdown; beep(170, .25, 'sawtooth', .04, 1.5); } } else startPress2 = null; }
     const n = Math.ceil(countdown);
     if (n !== lastBeep){ lastBeep = n; if (n > 0){ $('big').textContent = n; beep(440, .2); } }
     if (countdown <= 0){ state = 'race'; $('big').textContent = 'GO!'; beep(880, .5); lastBeep = 4; setTimeout(() => $('big').style.display = 'none', 800);
-      const p = keys.gas ? startPress : null; startPress = null;
-      if (p != null && p > 2){ player.hold = 1.1; burst(player.wp || player.pos, 0x666677, 4, 0.6); toast('💨 Too early! Engine stalled'); beep(110, .5, 'sawtooth', .07, 0.5); }
-      else if (p != null && p > 1){ const perfect = p > 1.35 && p < 1.85; player.boost = perfect ? 1.4 : 1.0; sfx('boost', player); toast(perfect ? '🚀 Perfect rocket start!' : '🚀 Rocket start!'); }
-      else if (p != null && p > 0.25) { player.boost = 0.35; toast('Good start'); }
-      // some rivals nail it too
-      karts.forEach(k => { if (!k.isPlayer && Math.random() < 0.45 * k.skill) k.boost = 0.8 + Math.random() * 0.5; });
+      rocketStart(player, keys.gas ? startPress : null); startPress = null;
+      if (player2){ rocketStart(player2, keys2.gas ? startPress2 : null); startPress2 = null; }
+      // rivals get the same start as you: some nail the rocket start, some stall, the rest react a moment late
+      karts.forEach(k => {
+        if (k.human) return;
+        const r = Math.random(), s = k.skill;
+        if (r < 0.25 * s) k.boost = 1.4;
+        else if (r < 0.5 * s) k.boost = 1.0;
+        else if (r < 0.62) k.boost = 0.35;
+        else if (r < 0.7){ k.hold = 1.1; burst(k.wp || k.pos, 0x666677, 4, 0.6); }
+        else k.hold = 0.15 + Math.random() * 0.35;
+      });
     }
   }
   if (state === 'race' || state === 'finished') raceTime += state === 'race' ? dt : 0;
@@ -4407,23 +4705,16 @@ function loop(now){
 
   karts.forEach(k => stepKart(k, dt));
   collisions(dt);
+  if (player2 && state === 'race' && duo.endAt && raceTime > duo.endAt) endRace();
 
-  // camera: rides behind the kart and rolls with banked walls
+  // camera: rides behind the kart and rolls with banked walls (two cameras side by side in 2-player mode)
   const k = player, wp = k.wp || k.pos;
-  camUp.lerp(k.air ? UPV : (k.camU || UPV), 1 - Math.pow(0.01, dt)).normalize();
-  const f = (k.camF || fwd(k.heading)).clone().applyAxisAngle(camUp, k.yawVis * 0.25);
-  const behind = state === 'finished' ? -9 : 11 + Math.max(0, k.speed) * 0.04;
-  // hold C to look behind (snaps instantly, like a rear-view mirror)
-  const rear = !!keys.back && state === 'race';
-  const target = wp.clone().addScaledVector(f, rear ? 10 : -behind).addScaledVector(camUp, 5.2 + (state === 'finished' ? 2 : 0));
-  const lookT = wp.clone().addScaledVector(f, rear ? -10 : 6).addScaledVector(camUp, 1.6);
-  if (rear !== camRear){ camRear = rear; camPos.copy(target); camLook.copy(lookT); $('rearview').classList.toggle('on', rear); }
-  camPos.lerp(target, 1 - Math.pow(0.002, dt));
-  camera.position.copy(camPos); camera.up.copy(camUp);
-  camLook.lerp(lookT, 1 - Math.pow(0.0005, dt));
-  camera.lookAt(camLook);
-  camera.fov += ((k.boost > 0 || k.star > 0 ? 82 : 68) - camera.fov) * Math.min(1, 4*dt); camera.updateProjectionMatrix();
-  sun.position.copy(wp).add(new THREE.Vector3(60, 120, 40)); sun.target.position.copy(wp);
+  camFollow(player, camera, cs1, keys.back, dt);
+  if (player2){
+    camFollow(player2, camera2, cs2, keys2.back, dt);
+    const mid = wp.clone().lerp(player2.wp || player2.pos, 0.5);
+    sun.position.copy(mid).add(new THREE.Vector3(60, 120, 40)); sun.target.position.copy(mid);
+  } else { sun.position.copy(wp).add(new THREE.Vector3(60, 120, 40)); sun.target.position.copy(wp); }
 
   // HUD
   const order = standings(); const place = order.indexOf(player) + 1;
@@ -4439,11 +4730,14 @@ function loop(now){
   const dc = player.driftCharge;
   $('driftfill').style.width = Math.min(100, dc / DRIFT_SUPER * 100) + '%';
   $('driftfill').style.background = dc > DRIFT_SUPER ? '#ff7a1f' : dc > DRIFT_MINI ? '#ffd23f' : '#2f7bff';
+  const dd = player.drift || 0, de = $('driftdir');
+  if (de.dataset.d !== String(dd)){ de.dataset.d = dd; de.textContent = dd > 0 ? '◀◀ DRIFT LEFT' : dd < 0 ? 'DRIFT RIGHT ▶▶' : ''; de.className = 'hud sticker' + (dd ? ' on ' + (dd > 0 ? 'l' : 'r') : ''); }
   if (toastT > 0){ toastT -= dt; if (toastT <= 0) $('toast').style.opacity = 0; }
   drawMini(); updateSpecialHud();
+  if (player2) hud2(order, dt);
 
   if (engine && !muted) updateEngine(player, dt);
-  liftItems(); renderer.render(scene, camera); dropItems();
+  draw();
 }
 requestAnimationFrame(loop);
 </script>
