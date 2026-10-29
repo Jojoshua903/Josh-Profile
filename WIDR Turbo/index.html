@@ -9,7 +9,7 @@
 // Driving licenses: each license is a separate save. The game reads/writes the pgp-* keys;
 // the active license keeps a copy of them, and switching swaps the keys and reloads.
 window.LIC = (() => {
-  const KEYS = ['pgp-trophies', 'pgp-best', 'pgp-build', 'pgp-char', 'pgp-opts', 'pgp-story', 'pgp-coins', 'pgp-shop', 'pgp-builds'];
+  const KEYS = ['pgp-trophies', 'pgp-best', 'pgp-build', 'pgp-char', 'pgp-opts', 'pgp-story', 'pgp-coins', 'pgp-shop', 'pgp-builds', 'pgp-eggs', 'pgp-ranked'];
   const REG = 'wt-licenses';
   const ls = (() => { try { const t = '__t'; localStorage.setItem(t, 1); localStorage.removeItem(t); return localStorage; } catch (e) { return null; } })();
   const uid = () => 'L' + Math.random().toString(36).slice(2, 8).toUpperCase() + Date.now().toString(36).slice(-3).toUpperCase();
@@ -139,6 +139,7 @@ setInterval(() => LIC.sync(), 4000);
   .onlist .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .onlist .r{font-variant-numeric:tabular-nums;font-size:13px}
   .onlist li.me,.onfeed li.me{background:var(--yellow)}
+  .onlist li.gap{display:block;text-align:center;background:none;border:none;padding:0;opacity:.55;font-size:12px}
   .onface{width:28px;height:28px;border-radius:7px;border:2px solid var(--ink);flex:none}
   .onfeed li{display:flex;gap:8px;align-items:center;background:#fff;border:2px solid var(--ink);border-radius:10px;padding:4px 8px;font-size:13px;line-height:1.3}
   .onfeed li small{display:block;opacity:.6;font-size:11px}
@@ -150,6 +151,21 @@ setInterval(() => LIC.sync(), 4000);
   .onerr{font-size:12px;color:#d62828;min-height:1em}
   .worldrank{text-align:center;font-size:20px;background:#e6f6ff;border:3px solid var(--ink);border-radius:12px;padding:4px 10px;margin-bottom:8px;animation:unlockPop .6s var(--ease)}
   @media (max-width:900px){.onwrap{grid-template-columns:minmax(0,1fr)}.onpanel{transform:none!important}}
+  /* ranked */
+  .rkwrap{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);width:min(920px,95vw)}
+  .rkme{align-items:center;text-align:center}
+  .rkme h2{margin:0}
+  .rkbadge{font-size:64px;width:116px;height:116px;display:grid;place-items:center;border-radius:50%;background:var(--c);border:5px solid var(--ink);box-shadow:5px 5px 0 var(--ink)}
+  .rkelo{font-size:40px;line-height:1}.rkelo small{font-size:16px;opacity:.6}
+  .rkbar{width:100%;height:16px;border:3px solid var(--ink);border-radius:10px;background:#fff;overflow:hidden}.rkbar i{display:block;height:100%;background:var(--yellow)}
+  .rkme .mstat{justify-content:center;margin-top:4px}
+  .rkres{display:flex;align-items:center;justify-content:center;gap:14px;font-size:30px;margin:4px 0 10px}
+  .rkres .up{color:#1f9d4a}.rkres .down{color:#e0201f}
+  .rkt{background:var(--c);border:3px solid var(--ink);border-radius:12px;padding:2px 12px;font-size:18px}
+  .rkpromo{text-align:center;font-size:20px;margin:0 0 8px}
+  .onlist li.sep{display:block;text-align:center;background:none;border:0;padding:0}
+  .row small.elo{opacity:.55;font-size:12px;margin-left:6px}
+  @media (max-width:900px){.rkwrap{grid-template-columns:minmax(0,1fr)}}
   /* coins + shop */
   #coinhud{top:206px;right:18px;font-size:20px;padding:3px 12px;transform:rotate(3deg);background:#fff3c4}
   .coinsum{text-align:center;font-size:16px;margin:10px 0 0}
@@ -212,6 +228,10 @@ setInterval(() => LIC.sync(), 4000);
   .screen .mlist{gap:8px}
   .mlist .mbtn{font-size:23px;padding-top:8px;padding-bottom:8px}
   .cupgrid.storygrid{grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+  .partlabel{grid-column:1/-1;font-size:15px;letter-spacing:1px;text-transform:uppercase;background:var(--ink);color:var(--yellow);border-radius:12px;padding:5px 14px;justify-self:start}
+  .partlabel.p2{background:#2a2238;color:#cfc3ff;margin-top:6px}
+  .partlabel.p3{background:#ffd23f;color:var(--ink);border:3px solid var(--ink);margin-top:6px}
+  .partlabel.pnext{background:none;color:var(--ink);border:3px dashed var(--ink);opacity:.6;margin-top:6px;text-transform:none;letter-spacing:0}
   .cup.chap{min-height:0;padding:28px 8px 10px;text-align:center}
   .cup.chap img{width:64px;height:64px;border-radius:14px;border:3px solid var(--ink);display:block;margin:0 auto}
   .cup.chap b{font-size:14px;line-height:1.15}
@@ -492,14 +512,16 @@ setInterval(() => LIC.sync(), 4000);
   @keyframes nudge{50%{transform:translate(8px,-50%)}}
   .screen.in-fwd .mbtn,.screen.in-back .mbtn{animation:slideIn .55s var(--ease) both}
   .mbtn:nth-child(1){animation-delay:.05s!important}.mbtn:nth-child(2){animation-delay:.11s!important}.mbtn:nth-child(3){animation-delay:.17s!important}.mbtn:nth-child(4){animation-delay:.23s!important}.mbtn:nth-child(5){animation-delay:.29s!important}
-  /* main menu: the 6 ways to play as big buttons (2 per row), everything else as a row of small tiles */
+  /* main menu: the 8 big buttons as big buttons (2 per row), everything else as a row of small tiles */
   .mainwrap{grid-template-columns:minmax(0,560px) minmax(0,340px)}
-  #mlist{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:12px 14px}
-  #mlist .mbtn{grid-column:span 5;font-size:21px;padding:12px 14px 12px 56px;white-space:nowrap}
+  #mlist{display:grid;grid-template-columns:repeat(20,minmax(0,1fr));gap:12px 14px}
+  #mlist .mbtn{grid-column:span 10;font-size:21px;padding:12px 14px 12px 56px;white-space:nowrap}
   #mlist .mbtn::before{left:14px;font-size:28px}
   #mlist .mbtn::after{display:none}
+  #mlist .mbtn[data-beta]::after{content:"BETA";display:block;left:auto;right:-8px;top:-10px;transform:rotate(8deg);opacity:1;animation:none;font-size:11px;letter-spacing:1px;color:#fff;-webkit-text-stroke:0;background:#ff3b3b;border:3px solid var(--ink);border-radius:8px;padding:1px 7px;box-shadow:2px 2px 0 var(--ink)}
+  #mlist .mbtn[data-beta].focus::after{transform:skewX(6deg) rotate(8deg)}
   #mlist .mbtn.focus{transform:skewX(-6deg) scale(1.05)}
-  #mlist .mbtn.mini{grid-column:span 2;font-size:13px;padding:44px 4px 8px;text-align:center;border-width:4px;border-radius:14px}
+  #mlist .mbtn.mini{grid-column:span 5;font-size:13px;padding:44px 4px 8px;text-align:center;border-width:4px;border-radius:14px}
   #mlist .mbtn.mini::before{left:50%;top:8px;transform:translateX(-50%);font-size:28px}
   #mlist .mbtn.mini.focus::before{transform:translateX(-50%) scale(1.2) rotate(-10deg)}
   .mlabel{grid-column:1/-1;font-size:13px;letter-spacing:2px;text-transform:uppercase;opacity:.6;margin:6px 0 -4px 4px}
@@ -633,11 +655,45 @@ setInterval(() => LIC.sync(), 4000);
   .mpcode{font:inherit;font-size:38px;letter-spacing:10px;text-align:center;text-transform:uppercase;width:min(220px,90%);padding:6px 10px;border:4px solid var(--ink);border-radius:14px;box-shadow:4px 4px 0 var(--ink);background:#fff}
   .mpcode:focus{outline:none;background:#fffbe0}
   .mproom{font-size:58px;letter-spacing:10px;line-height:1;background:var(--ink);color:var(--yellow);border-radius:16px;padding:8px 18px}
-  .mpplayers{width:100%;text-align:left;max-height:260px;overflow:auto}
+  .mpplayers{width:100%;text-align:left;max-height:340px;overflow:auto}
+  .mpplayers li{grid-template-columns:44px minmax(0,1fr) auto;gap:10px;padding:6px 10px;font-size:20px;border-width:3px;border-radius:12px}
+  .mpplayers .onface{width:44px;height:44px}
+  .mpplayers .r{font-size:14px;opacity:.75}
   .mpwait{font-size:15px;margin-top:auto}
   .duocard .btn.go.focus{transform:scale(1.05)}
   #mpMsg{min-height:1.2em;font-size:14px}
   #mpMsg.good{color:#1f8f4a}
+  #eggPop{position:fixed;left:50%;top:22px;z-index:80;width:min(460px,92vw);background:var(--cream);border:5px solid var(--ink);border-radius:22px;box-shadow:8px 8px 0 var(--ink);padding:12px 16px;text-align:center;pointer-events:none;opacity:0;transform:translate(-50%,-140%) rotate(-2deg);transition:transform .5s var(--ease, ease),opacity .3s}
+  #eggPop.on{opacity:1;transform:translate(-50%,0) rotate(-2deg)}
+  #eggPop small{display:block;font-size:13px;opacity:.8;margin:2px 0}
+  #eggPop .unlock{margin:6px 0}
+  /* splash screens */
+  .splashtag{margin-top:12px;font-size:clamp(14px,2vw,20px);color:#fff;-webkit-text-stroke:2px var(--ink);paint-order:stroke fill;text-shadow:3px 3px 0 var(--ink);animation:fade .8s both 1.3s}
+  .splashtag:empty{display:none}
+  .screen[data-screen="title"]::before,.screen[data-screen="title"]::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:0;transition:opacity .4s}
+  .screen[data-screen="title"]:not([data-splash="classic"])::before{opacity:.88}
+  .screen[data-splash="sunset"]::before{background:linear-gradient(#ff7a59,#ffb36a 55%,#6a3d9a)}
+  .screen[data-splash="snow"]::before{background:linear-gradient(#5a8fc9,#bfe3ff)}
+  .screen[data-splash="snow"]::after{opacity:1;background:radial-gradient(circle,#fff 2px,transparent 3px) 0 0/60px 60px,radial-gradient(circle,#fff 1.5px,transparent 2.5px) 30px 20px/90px 90px;animation:snowfall 6s linear infinite}
+  @keyframes snowfall{to{background-position:20px 60px,10px 110px}}
+  .screen[data-splash="night"]::before{background:radial-gradient(circle at 50% 30%,#2c2f72,#0b0b26)}
+  .screen[data-splash="night"]::after{opacity:1;background:radial-gradient(circle,#fff 1.5px,transparent 2px) 0 0/70px 70px,radial-gradient(circle,#fee440 1.5px,transparent 2px) 35px 45px/110px 110px;animation:twinkle 2.4s ease-in-out infinite alternate}
+  @keyframes twinkle{from{filter:brightness(.6)}to{filter:brightness(1.4)}}
+  .screen[data-splash="comic"]::before{background:radial-gradient(circle,#ff7a1f 2px,transparent 2.5px) 0 0/14px 14px,#ffd23f}
+  .screen[data-splash="comic"]::after{opacity:1;inset:12% 15% auto;height:52%;background:#fff;clip-path:polygon(50% 0,58% 30%,85% 8%,70% 38%,100% 40%,72% 55%,92% 85%,62% 66%,55% 100%,45% 68%,15% 92%,30% 58%,0 48%,30% 38%,12% 10%,42% 30%);animation:pow 1.6s ease-in-out infinite alternate}
+  @keyframes pow{from{transform:scale(.96) rotate(-2deg)}to{transform:scale(1.04) rotate(2deg)}}
+  .screen[data-splash="retro"]::before{background:repeating-linear-gradient(0deg,rgba(255,255,255,.06) 0 2px,transparent 2px 4px),#0b0b1a}
+  .screen[data-splash="retro"] .logo-top span,[data-splash="retro"] .logo-bot span{font-family:"Courier New",monospace;font-weight:900;text-shadow:0 0 18px var(--c),0 8px 0 var(--ink)}
+  .screen[data-splash="retro"] .press{font-family:"Courier New",monospace;background:#0b0b1a;color:#3cff7a;border-color:#3cff7a}
+  .screen[data-splash="meta"]::before{background:linear-gradient(135deg,#0866ff,#c23bff)}
+  .screen[data-splash="meta"] .logo{animation:drop 1s var(--ease) both .15s,glitch 3s steps(1) infinite 1.2s}
+  @keyframes glitch{0%,92%,100%{transform:none;filter:none}93%{transform:translate(6px,-3px) skewX(8deg);filter:hue-rotate(90deg)}95%{transform:translate(-8px,2px) skewX(-6deg)}97%{transform:translate(3px,0);filter:hue-rotate(-60deg)}}
+  .screen[data-splash="gold"]::before{background:radial-gradient(circle at 50% 35%,#5a3a10,#1a1006)}
+  .screen[data-splash="gold"] .logo-top span,[data-splash="gold"] .logo-bot span{background:linear-gradient(#fff6c8,#ffd23f 45%,#b07a00);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .screen[data-splash="gold"]::after{opacity:1;background:radial-gradient(circle,#ffe680 1.5px,transparent 2.5px) 0 0/80px 80px;animation:twinkle 1.6s ease-in-out infinite alternate}
+  .splashthumb{width:100%;aspect-ratio:1;border-radius:10px;border:3px solid var(--ink);display:grid;place-content:center;gap:2px;font-size:20px;line-height:1;-webkit-text-stroke:1.5px var(--ink);paint-order:stroke fill;margin-bottom:4px;overflow:hidden}
+  .splashthumb span{letter-spacing:1px}
+  .sbig .splashthumb{width:200px;height:150px;aspect-ratio:auto;margin:0 auto;font-size:34px;border-width:4px;border-radius:18px}
   .duowrap{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;width:min(1100px,100%);align-items:stretch}
   .duocard{align-items:center;text-align:center}
   .duocard .who{font-size:14px;background:var(--ink);color:var(--yellow);border-radius:9px;padding:3px 12px}
@@ -756,6 +812,7 @@ setInterval(() => LIC.sync(), 4000);
 <div class="hud sticker" id="coinhud">🪙 0</div>
 <div class="hud sticker" id="tut"><div class="tuthead"><span id="tutStep"></span><span class="tutskip"><kbd>N</kbd> skip</span></div><h3 id="tutTitle"></h3><p id="tutText"></p><div class="tutdots" id="tutDots"></div><div class="tutok">✔ Nice!</div></div>
 <div class="hud sticker" id="rearview">👀 Looking back</div>
+<div id="eggPop"></div>
 <div class="hud ptag" id="p1tag">P1 · WASD</div>
 <div class="hud" id="p2hud">
   <div class="ptag">P2 · ARROWS</div>
@@ -796,7 +853,8 @@ setInterval(() => LIC.sync(), 4000);
     <div class="logo" id="logo">
       <div class="logo-top" id="logoTop"></div>
       <div class="logo-bot" id="logoBot"></div>
-      <div class="logo-ribbon">19 racers · 34 tracks · 9 cups</div>
+      <div class="logo-ribbon" id="logoRibbon">19 racers · 34 tracks · 9 cups</div>
+      <div class="splashtag" id="splashTag"></div>
     </div>
     <div class="runway" id="runway"></div>
     <div class="press">Press <kbd>Enter</kbd> or click to start</div>
@@ -807,14 +865,15 @@ setInterval(() => LIC.sync(), 4000);
   <section class="screen" data-screen="main">
     <div class="mainwrap">
       <nav class="mlist" id="mlist">
-        <button class="mbtn nav" data-go="story"    data-icon="📖" data-desc="Nathan vs Meta AI. Ten chapters of races, rivals and a final boss. Play as Nathan, Josh, Lars and Milo." style="--c:#ff7ccf">Story Mode</button>
+        <button class="mbtn nav" data-go="story"    data-icon="📖" data-desc="Three parts of ten chapters each: Nathan vs Meta AI, The Shadow Cup and The Crybaby King. Each new part appears when you finish the one before." style="--c:#ff7ccf">Story Mode</button>
         <button class="mbtn nav" data-go="cups"     data-icon="🏆" data-desc="Race all the tracks in a cup. Score points in every race and finish top 3 to win a trophy." style="--c:#ff3b3b">Grand Prix</button>
         <button class="mbtn nav" data-go="tracks"   data-icon="🏁" data-desc="Pick any of the 34 tracks and do a single 3-lap race. Good for practice." style="--c:#2f7bff">Single Race</button>
-        <button class="mbtn nav" data-go="duo"      data-icon="👥" data-desc="Split screen on one keyboard. P1 drives with WASD, P2 with the arrow keys. Race each other and the bots." style="--c:#ff7a1f">2 Players</button>
-        <button class="mbtn nav" data-go="mp"       data-icon="🌐" data-desc="Race your friends over the internet. One player hosts a room, the others join with the 4-letter code. Bots fill up to 8 racers." style="--c:#2f7bff">Online Race</button>
+        <button class="mbtn nav" data-go="ranked"   data-icon="🏅" data-desc="Climb the ladder with Elo. Every ranked race is a random track against bots at your level: beat them to gain Elo, and rank up from Bronze to Legend." style="--c:#ffc21f">Ranked</button>
+        <button class="mbtn nav" data-beta data-go="duo"      data-icon="👥" data-desc="Split screen on one keyboard. P1 drives with WASD, P2 with the arrow keys. Race each other and the bots." style="--c:#ff7a1f">2 Players</button>
+        <button class="mbtn nav" data-beta data-go="mp"       data-icon="🌐" data-desc="Race your friends over the internet. One player hosts a room, the others join with the 4-letter code. Bots fill up to 8 racers." style="--c:#2f7bff">Online Race</button>
         <button class="mbtn nav" data-go="help"     data-icon="🎮" data-desc="Learn to race on a practice track with step-by-step lessons: drifting, items, jumps, walls, loops and gliders." style="--c:#8a5cff">Tutorial</button>
+        <button class="mbtn nav" data-go="garage"   data-icon="🔧" data-desc="Build your kart. Choose the body, wheels and colors. Each part changes how it drives." style="--c:#3ccf6e">Garage</button>
         <span class="mlabel">More</span>
-        <button class="mbtn mini nav" data-go="garage"   data-icon="🔧" data-desc="Build your kart. Choose the body, wheels and colors. Each part changes how it drives." style="--c:#3ccf6e">Garage</button>
         <button class="mbtn mini nav" data-go="shop"     data-icon="🛒" data-desc="Spend the coins you collect on the tracks: music packs, character skins and menu skins." style="--c:#ffb02e">Shop</button>
         <button class="mbtn mini nav" data-go="trophies" data-icon="🏅" data-desc="Your trophies and your best times on every track." style="--c:#ffb02e">Trophies</button>
         <button class="mbtn mini nav" data-go="online"   data-icon="🌍" data-desc="Live online ranking: the best drivers, world records on every track and races as they happen." style="--c:#2fc4e8">Rankings</button>
@@ -912,7 +971,7 @@ setInterval(() => LIC.sync(), 4000);
     <div class="shopwrap">
       <div class="shopmain">
         <div class="shoptabs" id="shopTabs">
-          <button data-tab="music">🎵 Music</button><button data-tab="skins">🎨 Character skins</button><button data-tab="menu">🖼️ Menu skins</button>
+          <button data-tab="music">🎵 Music</button><button data-tab="skins">🎨 Character skins</button><button data-tab="menu">🖼️ Menu skins</button><button data-tab="splash">✨ Splash screens</button>
           <span class="wallet">🪙 <b class="walletN">0</b></span>
         </div>
         <div class="shopchars" id="shopChars"></div>
@@ -940,6 +999,18 @@ setInterval(() => LIC.sync(), 4000);
         <ul class="onfeed" id="onFeed"></ul>
         <label class="onshare"><input type="checkbox" id="onShare"> Share my results as <b id="onName"></b></label>
         <p class="onerr" id="onErr"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- RANKED -->
+  <section class="screen" data-screen="ranked">
+    <div class="onwrap rkwrap">
+      <div class="onpanel rkme" id="rkMe"></div>
+      <div class="onpanel">
+        <h3>🌍 Ranked ladder</h3>
+        <ol class="onlist" id="rkTop"></ol>
+        <p class="onerr" id="rkErr"></p>
       </div>
     </div>
   </section>
@@ -1886,7 +1957,7 @@ const GLIDERS = {
   flower:   {name:'Flower',       d:[0,1,0,-1,0]},
 };
 const CHAR_GLIDER = {nathan:'super', ash:'kite', ati:'umbrella', daniel:'para', dean:'wings', deniz:'para', dih:'leaf', enno:'plane', fionn:'kite',
-  guiseppe:'leaf', adam:'super', josh:'plane', lars:'umbrella', meta:'wings', milo:'wings', renas:'kite', reshman:'wings', robin:'flower', thomas:'flower'};
+  guiseppe:'leaf', adam:'super', josh:'plane', lars:'umbrella', meta:'wings', milo:'wings', renas:'kite', reshman:'wings', robin:'flower', thomas:'flower', casper:'plane', zennith:'super', ankervos:'kite', yassin:'super', niek:'para', oela:'kite'};
 const PALETTE = [0xff3b3b,0xff7a1f,0xffd23f,0x3ccf6e,0x1fb5a6,0x2fc4e8,0x2f7bff,0x8a5cff,0xff7ccf,0xffffff,0x9a9aa8,0x1d1a2f,0x8b5a2b,0xffc21f];
 function statsFor(build, ch = ROSTER[playerChoice]){
   const b = BODIES[build.body].st, w = WHEELS[build.wheels].d, gl = (GLIDERS[build.glider] || GLIDERS.super).d, c = ch ? ch.mods : [0,0,0,0,0], s = {};
@@ -1915,7 +1986,7 @@ const buildOf = k => k.human ? buildFor(k.ri) : ROSTER[k.ri].build;
 
 // ---------- shop: wallet, owned items, what's equipped (saved per license) ----------
 let wallet = 0; try { wallet = Math.max(0, +localStorage.getItem('pgp-coins') || 0); } catch (e) {}
-const shop = {owned:[], music:'menu', musicRace:false, menu:'classic', skins:{}};
+const shop = {owned:[], music:'menu', musicRace:false, menu:'classic', splash:'classic', skins:{}};
 try { Object.assign(shop, JSON.parse(localStorage.getItem('pgp-shop') || '{}')); } catch (e) {}
 function saveShop(){ try { localStorage.setItem('pgp-shop', JSON.stringify(shop)); localStorage.setItem('pgp-coins', String(wallet)); } catch (e) {} }
 function raceCoins(place){
@@ -2528,7 +2599,7 @@ function fakeBox(k){
 }
 function explode(s){
   burst(s.mesh.position, 0x2f7bff, 10, 0.6); burst(s.mesh.position, 0xffffff, 5, 0.35);
-  karts.forEach(o => { if (o.pos.distanceTo(s.mesh.position.clone().setY(0)) < s.explode) hit(o); });
+  karts.forEach(o => { if (o.pos.distanceTo(s.mesh.position.clone().setY(0)) < s.explode) hit(o, 1, s.owner); });
   if (player && player.pos.distanceTo(s.mesh.position) < 80) beep(80, .6, 'sawtooth', .14, .3);
 }
 function blooper(k){
@@ -2552,7 +2623,7 @@ function lightning(k){
   flash(); beep(1400, .5, 'sawtooth', .1, .08);
   karts.forEach(o => {
     if (o === k || o.finished || immune(o)) return;
-    bolt(o.pos); hit(o, 0.6); o.small = 4; o.item = null; o.rolling = 0;
+    bolt(o.pos); hit(o, 0.6, k); o.small = 4; o.item = null; o.rolling = 0;
     if (o.isPlayer){ updateItemHud(); $('itembox').classList.remove('rolling'); toast('⚡ Zapped! You’re tiny!'); }
   });
 }
@@ -2569,7 +2640,7 @@ function boo(k){
 }
 function horn(k){
   burst(k.pos, 0xffd23f, 11, 0.5); burst(k.pos, 0xffffff, 7, 0.3);
-  near(k, 11).forEach(o => hit(o));
+  near(k, 11).forEach(o => hit(o, 1, k));
   for (let i = shells.length - 1; i >= 0; i--) if (shells[i].owner !== k && shells[i].mesh.position.distanceTo(k.pos) < 13){ burst(shells[i].mesh.position, 0xffffff, 3, 0.25); scene.remove(shells[i].mesh); shells.splice(i, 1); }
   for (let i = bananas.length - 1; i >= 0; i--) if (bananas[i].mesh.position.distanceTo(k.pos) < 12){ scene.remove(bananas[i].mesh); bananas.splice(i, 1); }
   if (k.isPlayer) beep(300, .4, 'square', .12, 1.5);
@@ -2613,11 +2684,57 @@ function blueMesh(){
   for (const s of [-1, 1]){ const wg = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.12, 0.6), new THREE.MeshLambertMaterial({color:0xffffff})); wg.position.set(s*1.4, 0.3, 0); wg.rotation.z = s*0.3; m.add(wg); }
   return m;
 }
-function hit(k, power = 1){
+function hit(k, power = 1, by = null){
   if (immune(k) || k.spin > 0) return false;
   k.spin = 1.1 * power; k.speed *= power < 1 ? 0.5 : 0.25; k.boost = 0; k.drift = 0; k.driftCharge = 0;
   if (k.isPlayer){ toast('Ouch!'); sfx('hit'); }
+  if (by && by !== k && karts.includes(by)) emote(by);
   return true;
+}
+// ---------- emotes: whoever lands a hit shows off for a moment, each racer in their own way ----------
+const EMOTES = {
+  nathan:['⚾', 'Home run!'], ash:['🥎', 'Strike!'], ati:['🩴', 'Bullseye!'], daniel:['💣', 'Kaboom!'],
+  dean:['🕺', 'Dance off!'], deniz:['🥶', 'Chill out!'], dih:['🪱', 'Dug you up!'], enno:['📐', 'Calculated.'],
+  fionn:['🪨', 'Rock solid!'], guiseppe:['🍎', 'Mamma mia!'], adam:['🎾', 'Game, set!'], josh:['🛸', 'Target down!'],
+  lars:['⛏️', 'Mined it!'], meta:['🤖', 'As an AI… lol'], milo:['⚡', 'Zap!'], renas:['🎒', 'Gadget!'],
+  reshman:['🌑', 'Didn’t see me?'], robin:['😤', 'Ha! Take that!'], thomas:['🥊', 'Knockout!'],
+  casper:['🔧', 'Pure horsepower!'], zennith:['🕳️', 'Into the void…'], ankervos:['🦊', 'Neener neener!'], yassin:['💪', 'Drop and give me twenty!'], niek:['🤓', 'Actually, that was physics.'], oela:['⚽', 'GOOOAAAL!'],
+};
+const emoteTex = {}, EMS = [];
+function emoteSprite(id){
+  if (!emoteTex[id]){
+    const [icon, line] = EMOTES[id] || ['😎', 'Gotcha!'], c = document.createElement('canvas'); c.width = 320; c.height = 160;
+    const x = c.getContext('2d'), col = hex(ROSTER[charIdx(id)]?.color ?? 0xffd23f);
+    x.font = 'bold 30px Arial Rounded MT Bold, sans-serif';
+    const w = Math.min(300, x.measureText(line).width + 40);
+    x.fillStyle = '#fff'; x.strokeStyle = '#1d1a2f'; x.lineWidth = 6;
+    x.beginPath(); x.roundRect((320 - w) / 2, 96, w, 50, 20); x.fill(); x.stroke();
+    x.fillStyle = '#1d1a2f'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(line, 160, 122);
+    x.beginPath(); x.arc(160, 50, 44, 0, Math.PI * 2); x.fillStyle = col; x.fill(); x.stroke();
+    x.font = '56px sans-serif'; x.fillText(icon, 160, 54);
+    emoteTex[id] = new THREE.CanvasTexture(c); emoteTex[id].colorSpace = THREE.SRGBColorSpace;
+  }
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({map:emoteTex[id], depthWrite:false, transparent:true}));
+  s.position.y = 7; s.renderOrder = 5; return s;
+}
+function emote(k){
+  const now = performance.now();
+  if (!k?.mesh || now - (k.emoteAt || 0) < 2500) return;   // not more than once every 2.5 s
+  k.emoteAt = now;
+  if (NET.role === 'host' && NET.racing) netEv(['m', karts.indexOf(k)]);
+  const s = emoteSprite(k.id); k.mesh.group.add(s); EMS.push({s, k, t:0});
+  k.bounce = 0.3;
+  // a little character-flavoured "ha!" if it's near you
+  const me = player?.pos; if (k.isPlayer || (me && me.distanceTo(k.pos) < 60)){ const f = 500 + (charIdx(k.id) * 47) % 400; beep(f, .08, 'square', .05, 1.5); setTimeout(() => beep(f * 1.5, .12, 'square', .05), 90); }
+}
+function stepEmotes(dt){
+  for (let i = EMS.length - 1; i >= 0; i--){
+    const e = EMS[i]; e.t += dt;
+    const p = e.t / 1.7, pop = e.t < 0.25 ? 0.5 + 0.7 * Math.sin(e.t / 0.25 * Math.PI / 2) : 1.2 - Math.min(0.2, (e.t - 0.25) * 0.4);
+    e.s.scale.set(6.4 * pop, 3.2 * pop, 1); e.s.position.y = 7 + Math.min(1, e.t * 2);
+    e.s.material.opacity = p > 0.75 ? Math.max(0, (1 - p) / 0.25) : 1;
+    if (p >= 1){ e.k.mesh?.group.remove(e.s); e.s.material.dispose(); EMS.splice(i, 1); }
+  }
 }
 
 // ---------- character specials ----------
@@ -2646,7 +2763,7 @@ function stepFx(dt){
     b.spark.scale.setScalar(0.6 + Math.random());
     if (b.t >= b.fuse){
       burst(b.m.position, 0xff7a1f, 11, 0.55); burst(b.m.position, 0xffd23f, 6, 0.35);
-      karts.forEach(k => { if (k.pos.distanceTo(b.m.position.clone().setY(0)) < 11) hit(k); });
+      karts.forEach(k => { if (k.pos.distanceTo(b.m.position.clone().setY(0)) < 11) hit(k, 1, b.owner); });
       if (player && player.pos.distanceTo(b.m.position) < 60) beep(90, .5, 'sawtooth', .14, .4);
       scene.remove(b.m); bombs.splice(i, 1);
     }
@@ -2660,6 +2777,19 @@ function projectile(k, o){
   shells.push({owner:k, idx:k.idx, life:8, age:0, vel:fwd(k.heading).multiplyScalar(o.speed ?? 72), ...o});
 }
 const lamb = c => new THREE.MeshLambertMaterial({color:c});
+function anchorMesh(){
+  const g = new THREE.Group(), steel = lamb(0x5a6070);
+  g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 2, 8), steel));
+  const bar = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.14, 0.14), steel); bar.position.y = 0.6; g.add(bar);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.07, 8, 14), steel); ring.position.y = 1.15; g.add(ring);
+  const arms = new THREE.Mesh(new THREE.TorusGeometry(0.7, 0.11, 8, 16, Math.PI), steel); arms.rotation.z = Math.PI; arms.position.y = -0.3; g.add(arms);
+  g.position.y = 0.5; return g;
+}
+function footballMesh(){
+  const g = new THREE.Group(), b = new THREE.Mesh(new THREE.SphereGeometry(1.1, 16, 12), lamb(0xffffff)); g.add(b);
+  for (let i = 0; i < 10; i++){ const a = i/10*Math.PI*2, e = (i % 2 ? 0.55 : -0.55), p = new THREE.Mesh(new THREE.SphereGeometry(0.32, 8, 6), lamb(0x1d1a2f)); p.position.set(Math.cos(a)*Math.cos(e), Math.sin(e), Math.sin(a)*Math.cos(e)).multiplyScalar(0.95); g.add(p); }
+  return g;
+}
 function slipperMesh(){ const g = new THREE.Group(); g.add(new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.18, 2.0), lamb(0xff7ccf))); const s = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.35, 0.55), lamb(0xffb6dc)); s.position.set(0, 0.2, 0.35); g.add(s); g.scale.setScalar(1.3); return g; }
 function droneMesh(){ const g = new THREE.Group(); g.add(new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.35, 1.2), lamb(0x2a2f3a))); for (const a of [Math.PI/4, -Math.PI/4]){ const arm = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.12, 0.2), lamb(0x2a2f3a)); arm.rotation.y = a; g.add(arm); } const led = new THREE.Mesh(new THREE.SphereGeometry(0.18), new THREE.MeshBasicMaterial({color:0xff3b3b})); led.position.z = 0.65; g.add(led); return g; }
 function dropPuddle(k, back){
@@ -2682,7 +2812,7 @@ function flash(){ const f = $('flash'); f.classList.remove('on'); void f.offsetW
 const SPECIALS = {
   nathan(k){
     burst(k.pos, 0xffffff, 10);
-    near(k, 10).forEach(o => hit(o));
+    near(k, 10).forEach(o => hit(o, 1, k));
     for (let i = bananas.length - 1; i >= 0; i--) if (bananas[i].mesh.position.distanceTo(k.pos) < 10){ scene.remove(bananas[i].mesh); bananas.splice(i, 1); }
     for (let i = shells.length - 1; i >= 0; i--) if (shells[i].owner !== k && shells[i].mesh.position.distanceTo(k.pos) < 10){ scene.remove(shells[i].mesh); shells.splice(i, 1); }
     if (k.isPlayer) beep(180, .25, 'square', .14, 3);
@@ -2699,7 +2829,7 @@ const SPECIALS = {
     g.position.copy(k.pos).addScaledVector(fwd(k.heading), 3).setY(1.5); scene.add(g);
     bombs.push({m:g, spark, owner:k, vel:fwd(k.heading).multiplyScalar(Math.max(30, k.speed + 22)), t:0, fuse:1.5, nk:'bomb'});
   },
-  dean(k){ burst(k.pos, 0x8a5cff, 8); near(k, 8).forEach(o => hit(o)); k.boost = Math.max(k.boost, 0.8); k.shield = Math.max(k.shield, 1.2); k.dance = 0.8; },
+  dean(k){ burst(k.pos, 0x8a5cff, 8); near(k, 8).forEach(o => hit(o, 1, k)); k.boost = Math.max(k.boost, 0.8); k.shield = Math.max(k.shield, 1.2); k.dance = 0.8; },
   deniz(k){
     burst(k.pos, 0xbff3ff, 7);
     karts.filter(o => o !== k && !o.finished && ((o.prog > k.prog && o.prog - k.prog < 260) || o.pos.distanceTo(k.pos) < 20)).forEach(o => {
@@ -2732,7 +2862,7 @@ const SPECIALS = {
   },
   milo(k){
     let any = false;
-    karts.filter(o => o !== k && !o.finished && o.prog > k.prog).forEach(o => { bolt(o.pos); if (hit(o, 0.55) && o.isPlayer) any = true; });
+    karts.filter(o => o !== k && !o.finished && o.prog > k.prog).forEach(o => { bolt(o.pos); if (hit(o, 0.55, k) && o.isPlayer) any = true; });
     if (any || karts.some(o => o.isPlayer && o.prog > k.prog)) flash();
     if (player) beep(1200, .3, 'sawtooth', .08, .1);
   },
@@ -2753,7 +2883,7 @@ const SPECIALS = {
   },
   robin(k){
     if (standings().indexOf(k) >= 3){
-      k.star = 5; k.big = 5; burst(k.pos, 0xff3b3b, 12); near(k, 12).forEach(o => hit(o));
+      k.star = 5; k.big = 5; burst(k.pos, 0xff3b3b, 12); near(k, 12).forEach(o => hit(o, 1, k));
       say(k, '💥 SECRET POWER UNLEASHED!');
       if (!k.isPlayer && player && player.pos.distanceTo(k.pos) < 80) toast('💥 Robin’s secret power awakens!');
     } else {
@@ -2763,9 +2893,66 @@ const SPECIALS = {
   },
   thomas(k){ k.ram = 3; burst(k.pos, 0xd62828, 5); },
   adam(k){ k.shield = 4.5; k.reflect = 4.5; },
+  casper(k){
+    // a quick pit stop without stopping: everything bad comes off, then a long, untouchable turbo
+    k.spin = 0; k.frozen = 0; k.small = 0; k.confused = 0; k.inked = 0; k.hold = 0;
+    k.boost = Math.max(k.boost, 2.2); k.shield = Math.max(k.shield || 0, 1.5);
+    burst(k.pos, 0xe0201f, 7, 0.4); burst(k.pos, 0xffffff, 4, 0.25);
+    if (k.isPlayer){ sfx('boost', k); beep(220, .2, 'sawtooth', .08, 3); setTimeout(() => beep(660, .25, 'square', .06, 2), 150); }
+    else say(k, '🔧 Casper tuned his kart. Full power!');
+  },
+  zennith(k){
+    const o = standings(), tgt = o[0] === k ? o[1] : o[0]; if (!tgt) return;
+    if (tgt.isPlayer) toast('🕳️ The dark is coming for YOU!'); else say(k, `🕳️ Darkness falls on ${tgt.name}…`);
+    burst(tgt.pos, 0x2a1f3f, 3, 0.9);
+    setTimeout(() => {
+      if (state !== 'race' || !karts.includes(tgt)) return;
+      const at = tgt.pos.clone(); burst(at, 0x120b1f, 10, 0.7); burst(at, 0x000000, 4, 0.9); burst(at, 0x8a5cff, 6, 0.4);
+      karts.forEach(v => { if (v !== k && v.pos.distanceTo(at) < 9) hit(v, 1, k); });
+      if (player && player.pos.distanceTo(at) < 80) beep(90, .5, 'sawtooth', .12, .4);
+    }, 1000);
+  },
+  oela(k){
+    const a = aheadOf(k) || standings().find(o => o !== k);
+    projectile(k, {mesh:footballMesh(), target:a, speed:110, lock:70, life:5, radius:3.2, y:1.4, turn:4, power:1.4, pierce:true, nk:'fball'});
+    burst(k.pos, 0xffffff, 8); burst(k.pos, 0x1fa04a, 6);
+    say(k, '⚽ Power shot!');
+    if (player && player.pos.distanceTo(k.pos) < 60) beep(240, .2, 'square', .14, .5);
+  },
+  niek(k){
+    k.shield = Math.max(k.shield || 0, 3.5);
+    burst(k.pos, 0x6b8e23, 8); burst(k.pos, 0xffc21f, 5);
+    startRoulette(k);
+    say(k, '⛺ Always prepared!');
+  },
+  yassin(k){
+    const f = fwd(k.heading), side = new THREE.Vector3(f.z, 0, -f.x);
+    k.boost = Math.max(k.boost || 0, 1);
+    burst(k.pos, 0xe8202a, 10);
+    near(k, 16).forEach(o => {
+      if (o.ghost > 0 || o.star > 0) return;
+      const d = o.pos.clone().sub(k.pos);
+      if (d.dot(f) < -2) return;   // only what's beside or in front of him
+      o.shove.addScaledVector(side, (Math.sign(d.dot(side)) || 1) * 30);
+      hit(o, 1.2, k); burst(o.pos, 0xffffff, 6);
+      if (o.isPlayer) toast('🦵 Roundhouse kick from Yassin!');
+    });
+    if (player && player.pos.distanceTo(k.pos) < 60) beep(160, .25, 'sawtooth', .12, .4);
+  },
+  ankervos(k){
+    burst(k.pos, 0xff7a1f, 12); burst(k.pos, 0xffffff, 6);
+    k.boost = Math.max(k.boost || 0, 1.2);
+    near(k, 35).forEach(o => {
+      if (o.ghost > 0 || o.star > 0) return;
+      o.confused = o.isPlayer ? 1.6 : 2.2;
+      if (o.isPlayer) toast('🦊 YAP YAP YAP! Your steering is all wobbly!');
+    });
+    say(k, '🦊 Yap yap yap!');
+    if (player && player.pos.distanceTo(k.pos) < 60) [0, 120, 240].forEach(d => setTimeout(() => beep(900 + Math.random()*300, .08, 'square', .09, 1.6), d));
+  },
 };
 function useSpecial(k){
-  if (k.sp < 1 || k.spin > 0 || k.frozen > 0 || state !== 'race' || k.finished) return;
+  if (k.sp < 1 || ((k.spin > 0 || k.frozen > 0) && k.id !== 'casper') || state !== 'race' || k.finished) return;   // Casper's tune-up also fixes a spin or a freeze
   k.sp = 0;
   if (k.isPlayer){ toast(`${k.ability.icon} ${k.ability.name}!`); beep(520, .3, 'square', .08, 2.2); }
   SPECIALS[k.id](k);
@@ -2806,7 +2993,7 @@ const DUO2 = {ArrowUp:'gas', ArrowDown:'brake', ArrowLeft:'left', ArrowRight:'ri
 const route = code => duo && state !== 'menu'
   ? (DUO1[code] ? [DUO1[code], keys, player] : DUO2[code] ? [DUO2[code], keys2, player2] : null)
   : map[code] ? [map[code], keys, player] : null;
-addEventListener('keydown', e => { const r = route(e.code); if (r){ const [k, ks, p] = r; e.preventDefault(); if (state !== 'menu' && p && !ks[k]){ if (k === 'drift' && p.air) p.trick = true; if (k === 'item') doItem(p); if (k === 'special') doSpecial(p); if (k === 'reset') doReset(p); } ks[k] = true; } });
+addEventListener('keydown', e => { const r = route(e.code); if (r){ const [k, ks, p] = r; e.preventDefault(); if (state !== 'menu' && p && !ks[k]){ if (k === 'drift' && p.air) doTrick(p); if (k === 'item') doItem(p); if (k === 'special') doSpecial(p); if (k === 'reset') doReset(p); } ks[k] = true; } });
 // online, a thin client only tells the host what it pressed (and predicts the instant stuff like mushrooms)
 const doItem = p => NETC() ? netPress('i') : useItem(p);
 const doSpecial = p => NETC() ? netPress('p') : useSpecial(p);
@@ -3125,7 +3312,7 @@ const LESSONS = [
   {icon:'🍌', title:'Use your item', text:'Wait for the roulette to stop, then press <kbd>Space</kbd> to use your item.',
    start:k => { if (!k.item && !(k.rolling > 0)){ k.item = 'boost'; k.uses = 1; updateItemHud(); } },
    check:k => !k.item && !(k.rolling > 0)},
-  {icon:'🦘', title:'Jump and trick', text:'Drive off the yellow-and-black ramp. While you\'re in the air, press <kbd>Shift</kbd> to do a trick. You get a boost when you land.',
+  {icon:'🦘', title:'Jump and trick', text:'Drive off the yellow-and-black ramp. While you\'re in the air, press <kbd>Shift</kbd> to do a trick. Press it again for a combo (up to 3 tricks): the more tricks you land, the bigger the boost.',
    check:k => k.air && k.trick},
   {icon:'🧱', title:'Wall ride', text:'Follow the road up onto the blue <b>anti-gravity</b> wall. Just keep steering along the road.',
    check:(k, s, dt) => (s.t = k.wasAnti && !LP[k.idx] ? (s.t || 0) + dt : 0) > 0.6},
@@ -3218,7 +3405,76 @@ const STORY = [
   {title:'FINAL: Meta AI', hero:'nathan', track:'Sky Rollercoaster', speed:1.25, ai:1, boss:'meta', goal:{type:'win'}, rivals:['meta','robin','ash','josh','lars','milo','ati'],
    pre:[['meta','ACTIVATING FULL POWER. ⚡🤖⚡ I have read every racing guide on the internet.'],['ash','We’ve got your back, Nathan!'],['ati','Win this and you can skip the dishes.'],['nathan','WIDR Turbo belongs to the racers. Let’s end this.']],
    post:[['meta','…I have been beaten. I will now… update my model.'],['meta','New plan: I’ll just be your friendly racing buddy. Is that okay? 🥺'],['nathan','Fine. But you start at the back.'],['ash','NATHAN WINS! WIDR TURBO IS SAVED! 🏆']]},
+  // ---- Part 2: The Shadow Cup ----
+  {part:2, title:'The Missing Trophy', hero:'ash', track:'Ashfall Alley', speed:1.2, ai:0.96, goal:{type:'beat', id:'reshman'}, rivals:['reshman','dih','daniel','fionn','meta','enno','guiseppe'],
+   pre:[['ash','Nathan! The WIDR trophy is GONE. There’s just a puddle of shadow where it used to be.'],['meta','Not me! 🙋 I’m a friendly racing buddy now. I have a certificate. I made it myself.'],['reshman','…'],['ash','Reshman? You were standing right next to it.'],['reshman','You didn’t see me. Nobody ever sees me.'],['ash','Then I’ll race you for it. Beat you to the line and you have to talk.']],
+   post:[['reshman','Fine. I took it. And I’m the one who uploaded Meta AI in the first place.'],['meta','Wait. You’re my… dad? 😳'],['reshman','Want it back? Get past my Shadow Crew first. Four of your friends work for me now.'],['ash','FOUR?!']]},
+  {part:2, title:'Buddy Mode', hero:'meta', track:'Cosmic Corkscrew', speed:1.21, ai:0.96, goal:{type:'place', n:2}, rivals:['reshman','thomas','robin','deniz','milo','adam','josh'],
+   pre:[['meta','For once, let me help. Really help. Not “help” help.'],['nathan','You’re driving, Meta. Top 2 and we find out who the Shadow Crew is.'],['meta','Activating Buddy Mode. 🤝 No pop-ups. Probably.'],['reshman','My own program, racing against me. Cute.']],
+   post:[['meta','I did it! And I only sent three pop-ups!'],['meta','I scanned the shadows. The Crew is… Deniz, Dih, Fionn and Daniel. 📋'],['nathan','Then we take them on one by one. Lars, Deniz is yours.']]},
+  {part:2, title:'Shadow in the Snow', hero:'lars', track:'Frosty Peaks', speed:1.22, ai:0.97, goal:{type:'beat', id:'deniz'}, rivals:['deniz','reshman','milo','renas','dean','enno','adam'],
+   pre:[['deniz','Reshman gave me a cool cape. A SHADOW cape. Super cold. Like me. 🥶'],['lars','Deniz, he’s using you. Come back to the good side.'],['deniz','Beat me on my own snow, then we’ll talk.']],
+   post:[['deniz','…Okay, the cape was itchy anyway.'],['deniz','Reshman hid a shadow map in the Mushroom Hollow. Dih is guarding it.'],['lars','One down. Three to go.']]},
+  {part:2, title:'Dig Deep', hero:'josh', track:'Mushroom Hollow', speed:1.23, ai:0.97, goal:{type:'beat', id:'dih'}, rivals:['dih','reshman','fionn','guiseppe','ati','thomas','robin'],
+   pre:[['dih','The map is buried down here. Deep. Very deep. I dug the hole myself. 🪱'],['josh','My drone already found it. You just have to lose.'],['dih','Nobody out-digs Dih.']],
+   post:[['dih','You out-drove me. That’s not the same as out-digging me. But fine.'],['josh','The map shows a canyon. And a giant rock with a face on it.'],['milo','That’s not a rock. That’s Fionn.']]},
+  {part:2, title:'Rock Bottom', hero:'milo', track:'Canyon Leap', speed:1.24, ai:0.98, goal:{type:'beat', id:'fionn'}, rivals:['fionn','reshman','daniel','deniz','lars','adam','renas'],
+   pre:[['fionn','I am a rock. Rocks don’t move. Rocks don’t lose. 🪨'],['milo','Rocks also don’t jump canyons. I do. ⚡'],['fionn','…Wait, we’re jumping?']],
+   post:[['fionn','I am a rock that has learned humility.'],['fionn','Daniel is the last one. He’s in the desert, and he brought a LOT of bombs.'],['nathan','Of course he did. My turn.']]},
+  {part:2, title:'Kaboom Canyon', hero:'nathan', track:'Dusty Dunes', speed:1.25, ai:0.98, goal:{type:'beat', id:'daniel'}, rivals:['daniel','reshman','dih','fionn','deniz','josh','meta'],
+   pre:[['daniel','Reshman said I could blow up anything I want. ANYTHING. 💣'],['nathan','Daniel, you blow up everything anyway.'],['daniel','Yeah, but now it’s OFFICIAL.']],
+   post:[['daniel','Okay. Fine. I’m out. Being evil has way too many meetings.'],['nathan','That’s the whole Shadow Crew. Now we just need to find Reshman.'],['enno','Leave that to me. I’ll calculate it.']]},
+  {part:2, title:'The Clue', hero:'enno', track:'Neon Nexus', speed:1.26, ai:0.98, goal:{type:'place', n:3}, rivals:['reshman','meta','renas','ash','milo','thomas','dean'],
+   pre:[['enno','Every shadow needs light. Reshman’s shadows always point away from one place. 📐'],['meta','I could also just Google it? 🙋'],['enno','The neon city lights everything up. If I finish top 3, I can see where the shadows point.']],
+   post:[['enno','Calculated. The shadows all point away from… the clouds. Cloud Kingdom.'],['ati','Then we need a way up there. I know a gravity track that will do it.'],['nathan','Lead the way, Ati.']]},
+  {part:2, title:'Gravity Grab', hero:'ati', track:'Gravity Gauntlet', speed:1.27, ai:0.99, goal:{type:'place', n:2}, rivals:['reshman','robin','thomas','adam','enno','guiseppe','daniel'],
+   pre:[['ati','When I was young, we raced UP the walls. Without seatbelts. 🩴'],['reshman','You’ll never reach my kingdom, old lady.'],['ati','Did he just call me old? Young man, you’re in trouble.']],
+   post:[['ati','That’s how it’s done. Now one more race to warm up for the big one.'],['reshman','Come then. I’ll be waiting in the clouds. 🌑'],['ash','Nathan… you ready?']]},
+  {part:2, title:'The Night Before', hero:'ash', track:'Stardust Finale', speed:1.28, ai:0.99, goal:{type:'win'}, rivals:['reshman','meta','robin','thomas','renas','dean','adam'],
+   pre:[['ash','Last race before the final. Let me show you I can win too.'],['nathan','You can, little brother. Go get it.'],['meta','I believe in you! I am 87% sure that’s the right thing to say.']],
+   post:[['ash','I WON! I actually won! 🥎'],['nathan','Then I’ll win tomorrow. For the trophy. For all of us.'],['reshman','Tomorrow, then.']]},
+  {part:2, title:'FINAL: Shadow Step', hero:'nathan', track:'Cloud Kingdom', speed:1.3, ai:1, boss:'reshman', goal:{type:'win'}, rivals:['reshman','meta','ash','ati','lars','josh','milo'],
+   pre:[['reshman','Welcome to my kingdom. In the shadows, I’m untouchable. 🌑'],['ati','Young man. Give that trophy back. Right now.'],['meta','Nathan, I calculate a 0% chance he’s nicer than me.'],['nathan','Shadow or not, you still have to cross the finish line. Let’s race.']],
+   post:[['reshman','…You saw me. All of you. Nobody has ever raced me that hard.'],['nathan','Then stop hiding and race with us. The trophy stays on the shelf.'],['reshman','…Deal. I’ll still sneak up on you, though.'],['ash','WIDR TURBO IS SAVED. AGAIN! 🏆🏆']]},
+  // ---- Part 3: The Crybaby King ----
+  {part:3, title:'Long Live the King?', hero:'nathan', track:'Sunny Loop', speed:1.3, ai:0.98, goal:{type:'place', n:3}, rivals:['robin','thomas','adam','guiseppe','renas','dean','reshman'],
+   pre:[['robin','*sniff* Nobody ever lets me win. NOT ONCE. 😭'],['robin','So I made myself KING. King Robin! Every track in WIDR is mine now!'],['nathan','You can’t just make yourself king, Robin.'],['robin','I can, I did, and I have a crown. A REAL one. *sob*']],
+   post:[['robin','You still don’t take me seriously?! Then meet my Royal Guard!'],['thomas','👊 Royal Guard, reporting for duty.'],['nathan','Thomas?! Dean, you’re the only one who can dodge his punches.']]},
+  {part:3, title:'Royal Guard', hero:'dean', track:'Wall Rider', speed:1.31, ai:0.98, goal:{type:'beat', id:'thomas'}, rivals:['thomas','robin','adam','renas','guiseppe','lars','milo'],
+   pre:[['thomas','The King pays me in sandwiches. Good sandwiches. 🥊'],['dean','Then let’s dance, big guy. 🕺'],['thomas','I don’t dance. I punch.']],
+   post:[['thomas','…That was a good dance. I quit the Guard.'],['robin','NOOO! Then I’ll take everyone’s coins! A Royal Coin Tax!'],['renas','Not my coins. I’ve got a gadget for that.']]},
+  {part:3, title:'Coconut Tax', hero:'renas', track:'Coconut Coast', speed:1.32, ai:0.98, goal:{type:'place', n:2}, rivals:['robin','adam','guiseppe','thomas','dih','fionn','ash'],
+   pre:[['robin','Every coin on the beach belongs to the King! 👑'],['renas','My backpack has a coin magnet, a coin vacuum and a coin… other thing. 🎒'],['robin','That’s not fair! *sniff*']],
+   post:[['renas','Coins: saved. Tax: cancelled.'],['robin','Fine! Then my royal chef will cook up something TERRIBLE.'],['guiseppe','Mamma mia… he means me.']]},
+  {part:3, title:'The Apple Plot', hero:'guiseppe', track:'Loop Lagoon', speed:1.33, ai:0.99, goal:{type:'win'}, rivals:['robin','adam','renas','deniz','daniel','josh','dean'],
+   pre:[['guiseppe','The King wants me to throw rotten apples at everyone. I won’t do it! 🍎'],['robin','You will, or no more pasta in the castle!'],['guiseppe','Then I’ll race for my freedom. And for the pasta.']],
+   post:[['guiseppe','Free! And the pasta is mine again.'],['robin','My last knight will stop you. Sir Adam, to the Ice Palace!'],['deniz','The Ice Palace? That’s MY territory. 🥶']]},
+  {part:3, title:'Ice Palace', hero:'deniz', track:'Summit Spiral', speed:1.34, ai:0.99, goal:{type:'beat', id:'adam'}, rivals:['adam','robin','reshman','milo','lars','enno','ati'],
+   pre:[['adam','For the King! Game, set, and… whatever comes after set! 🎾'],['deniz','Nobody is colder than me. Not even your serve.'],['adam','Why is everyone so mean to the King?']],
+   post:[['adam','The King cries all day. Honestly, I think he just wants friends.'],['deniz','Then why’s he locking everyone out of the tracks?'],['reshman','Let me find out. I know a thing or two about hiding.']]},
+  {part:3, title:'Shadow Spy', hero:'reshman', track:'Cinder Circuit', speed:1.35, ai:0.99, goal:{type:'place', n:2}, rivals:['robin','meta','thomas','adam','daniel','guiseppe','ash'],
+   pre:[['reshman','Nobody sees me coming. I’ll sneak into the castle and find out what’s going on. 🌑'],['robin','Who said that?! *sniff* Is someone there?'],['reshman','Nope.']],
+   post:[['reshman','Found it. The crown makes him stronger every time someone cries.'],['meta','That’s the worst battery I’ve ever heard of. Let me have a look. 🤖'],['nathan','Careful, Meta…']]},
+  {part:3, title:'Meta’s Big Idea', hero:'meta', track:'Magma Coaster', speed:1.36, ai:0.99, goal:{type:'beat', id:'robin'}, rivals:['robin','thomas','renas','adam','reshman','dih','ati'],
+   pre:[['meta','I have a big idea! I make Robin so happy that the crown runs out of power! 😃'],['robin','Happy? I’ll be happy when I WIN.'],['meta','Then I’ll beat you, and then cheer you up. Two birds, one pop-up.']],
+   post:[['robin','You beat me… AGAIN! WAAAAH! 😭'],['meta','Oops. That made the crown stronger. My bad.'],['ati','Enough! I’m taking that boy to his room.']]},
+  {part:3, title:'Rollercoaster Rebellion', hero:'ati', track:'Mesa Rollercoaster', speed:1.37, ai:1, goal:{type:'win'}, rivals:['robin','thomas','adam','guiseppe','renas','reshman','deniz'],
+   pre:[['ati','Young man. Down from that throne. NOW. 🩴'],['robin','You can’t tell me what to do! I’m the KING!'],['ati','I’ve told kings what to do before. Hold on to your crown.']],
+   post:[['ati','The whole kingdom is on our side now.'],['robin','I’m locking myself in the Sky Castle! Nobody gets my crown!'],['josh','Nobody? My drone is already flying up there. 🛸']]},
+  {part:3, title:'The Crown Heist', hero:'josh', track:'Hilltop Hop', speed:1.38, ai:1, goal:{type:'beat', id:'robin'}, rivals:['robin','thomas','adam','reshman','meta','milo','lars'],
+   pre:[['josh','Plan: my drone grabs the crown while Robin is busy racing.'],['robin','Not my crown! Mine mine MINE! 👑'],['josh','Then you’d better drive fast.']],
+   post:[['josh','Almost had it! The drone got a crown jewel, but not the crown.'],['robin','That’s it! One last race. In the sky. The winner is king FOREVER.'],['nathan','Deal, Robin. One last race.']]},
+  {part:3, title:'FINAL: The Crybaby King', hero:'nathan', track:'Rainbow Run', speed:1.42, ai:1, boss:'robin', goal:{type:'win'}, rivals:['robin','reshman','meta','ash','thomas','adam','ati'],
+   pre:[['robin','My crown is full of tears and full of power! I CAN’T lose! 😭👑'],['ash','Nathan, everyone in WIDR is watching.'],['reshman','Go. I’ll be in the shadows if you need me.'],['nathan','Robin, after this race you’re not a king. You’re just our friend again.']],
+   post:[['robin','*sniff* …You beat me. But you know what? That was the most fun race ever.'],['nathan','See? You don’t need a crown to have fun.'],['robin','Can I still keep it? It’s really shiny.'],['meta','I made everyone friendship bracelets! 🤝'],['ash','WIDR TURBO IS SAVED. FOR REAL THIS TIME! 🏆🏆🏆']]},
 ];
+// the parts of the story; each one shows up after you finish the one before
+const PARTS = [{title:'Nathan vs Meta AI', icon:'🤖'}, {title:'The Shadow Cup', icon:'🌑'}, {title:'The Crybaby King', icon:'👑'}];
+const partOf = i => STORY[i]?.part || 1, partStart = p => STORY.findIndex(c => (c.part || 1) === p);
+const partEnd = p => p >= PARTS.length ? STORY.length : partStart(p + 1);
+const STORY_P1 = partStart(2);   // chapters in Part 1 (beating them unlocks Meta AI)
+const partsOpen = () => { let p = 1; while (p < PARTS.length && storyProg >= partEnd(p)) p++; return p; };
+const BOSS_LINE = {meta:'Meta AI at full power', reshman:'Reshman, hidden in the shadows', robin:'King Robin, on his royal throne'};
 let storyProg = 0; try { storyProg = Math.min(STORY.length, +localStorage.getItem('pgp-story') || 0); } catch (e) {}
 const rid = id => ROSTER.findIndex(c => c.id === id);
 const goalText = g => g.type === 'win' ? 'Win the race' : g.type === 'place' ? `Finish in the top ${g.n}` : `Finish ahead of ${ROSTER[rid(g.id)].name}`;
@@ -3227,6 +3483,8 @@ const goalText = g => g.type === 'win' ? 'Win the race' : g.type === 'place' ? `
 const STARTERS = ['josh', 'nathan', 'lars', 'milo'];
 const goldCount = () => Object.values(trophies).filter(v => v === 1).length;
 const cupT = (cup, best) => ({icon:best === 1 ? '🥇' : '🏆', need:best === 1 ? `Win gold in the ${cup}` : `Get any trophy in the ${cup}`, ok:() => trophies[cup] && trophies[cup] <= best});
+// easter eggs found on this license
+const EGGS = (() => { try { return JSON.parse(localStorage.getItem('pgp-eggs') || '{}') || {}; } catch (e){ return {}; } })();
 const UNLOCKS = {
   renas:    cupT('Acorn Cup', 3),
   ash:      cupT('Shell Cup', 3),
@@ -3241,8 +3499,15 @@ const UNLOCKS = {
   ati:      cupT('Star Cup', 1),
   thomas:   {icon:'🥇', need:'Collect 3 gold trophies', ok:() => goldCount() >= 3, prog:() => `${Math.min(3, goldCount())} / 3 golds`},
   reshman:  cupT('Gravity Cup', 1),
-  meta:     {icon:'🤖', need:'Beat Story Mode or collect 5 gold trophies', ok:() => storyProg >= STORY.length || goldCount() >= 5, prog:() => `${storyProg} / ${STORY.length} chapters · ${Math.min(5, goldCount())} / 5 golds`},
+  meta:     {icon:'🤖', need:'Beat Story Mode or collect 5 gold trophies', ok:() => storyProg >= STORY_P1 || goldCount() >= 5, prog:() => `${Math.min(storyProg, STORY_P1)} / ${STORY_P1} chapters · ${Math.min(5, goldCount())} / 5 golds`},
+  yassin:   cupT('Loop Cup', 1),
+  niek:     cupT('Sky Cup', 1),
+  oela:     {icon:'⚽', need:'Finish races on 10 different tracks', ok:() => Object.keys(bests).length >= 10, prog:() => `${Math.min(10, Object.keys(bests).length)} / 10 tracks`},
   robin:    {icon:'👑', need:'Win gold in every cup', ok:() => goldCount() >= CUPS.length, prog:() => `${goldCount()} / ${CUPS.length} golds`},
+  // easter eggs
+  casper:   {icon:'🥚', need:'Secret: on the main menu, type the sound a car makes', ok:() => !!EGGS.casper, prog:() => '🥚 easter egg'},
+  zennith:  {icon:'🥚', need:'Secret: an old-school cheat code on the title screen (↑ ↑ …) wakes the dark', ok:() => !!EGGS.zennith, prog:() => '🥚 easter egg'},
+  ankervos: {icon:'🥚', need:'Secret: get fished out of the water 5 times in one race', ok:() => !!EGGS.ankervos, prog:() => '🥚 easter egg'},
 };
 const isUnlocked = i => STARTERS.includes(ROSTER[i].id) || !!UNLOCKS[ROSTER[i].id]?.ok();
 const unlockedSet = () => ROSTER.map((c, i) => i).filter(isUnlocked);
@@ -3255,6 +3520,31 @@ function newUnlocks(){
 }
 function unlockBanner(fresh){
   return fresh.length ? `<div class="unlock">${fresh.map(i => `<div><img src="${PORTRAITS[i]}" alt="" style="background:${hex(ROSTER[i].color)}"><span><small>New racer unlocked!</small><b>${ROSTER[i].name}</b> ${ROSTER[i].title}</span></div>`).join('')}</div>` : '';
+}
+// ---------- easter eggs ----------
+function unlockEgg(id){
+  if (EGGS[id]) return;
+  EGGS[id] = true; try { localStorage.setItem('pgp-eggs', JSON.stringify(EGGS)); } catch (e) {}
+  newUnlocks();   // so it isn't announced a second time after the next race
+  const i = rid(id), pop = $('eggPop');
+  pop.innerHTML = `<small>🥚 Easter egg found!</small>${unlockBanner([i])}<small>${ROSTER[i].ability.icon} ${ROSTER[i].ability.name}: ${ROSTER[i].ability.desc}</small>`;
+  pop.classList.remove('on'); void pop.offsetWidth; pop.classList.add('on');
+  clearTimeout(unlockEgg.t); unlockEgg.t = setTimeout(() => pop.classList.remove('on'), 5500);
+  initAudio(); [523, 659, 784, 1046, 1318].forEach((f, j) => setTimeout(() => beep(f, .16, 'triangle', .09), j * 110));
+  if (screen === 'racer') renderRacers();
+}
+// 1. Casper: type VROOM on the main menu.  2. Zennith: the Konami code on the title screen
+{
+  let typed = '', konami = [];
+  const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'KeyB', 'KeyA'];
+  addEventListener('keydown', e => {
+    if (state !== 'menu' || e.target.closest?.('input')) return;
+    if (screen === 'main' && /^[a-z]$/i.test(e.key)){ typed = (typed + e.key.toLowerCase()).slice(-5); if (typed === 'vroom') unlockEgg('casper'); }
+    if (screen === 'title'){
+      konami.push(e.code); konami = konami.slice(-KONAMI.length);
+      if (konami.join() === KONAMI.join()){ konami = []; unlockEgg('zennith'); }
+    }
+  }, true);
 }
 const cupsEl = $('cups'), mapsEl = $('maps'), menuEl = $('menu');
 const hex = c => '#' + c.toString(16).padStart(6, '0');
@@ -3275,9 +3565,10 @@ function showTrack(i, lazy = false){
 const SCREENS = {
   title:    {},
   main:     {title:'Main menu', sub:'What do you want to do?'},
-  story:    {title:'Story Mode', sub:'Nathan vs Meta AI'},
+  story:    {title:'Story Mode', sub:'Three parts · each one unlocks the next'},
   cups:     {title:'Grand Prix', sub:'Choose a cup'},
   tracks:   {title:'Single Race', sub:'Choose a track'},
+  ranked:   {title:'Ranked', sub:'Climb from Bronze to Legend'},
   duo:      {title:'2 Players', sub:'Split screen · WASD vs arrow keys'},
   mp:       {title:'Online Race', sub:'Host a room or join one with a code'},
   racer:    {title:'Choose your racer', sub:'Then hit Let’s go!'},
@@ -3332,18 +3623,20 @@ const MENU_SKINS = {
 const applyMenuSkin = id => { menuEl.dataset.skin = MENU_SKINS[id] ? id : 'classic'; };
 applyMenuSkin(shop.menu);
 let shopTab = 'music', shopChar = playerChoice, shopSel = null;
-const owns = id => id.endsWith(':default') || id === 'music:menu' || id === 'menu:classic' || shop.owned.includes(id);
+const owns = id => id.endsWith(':default') || id === 'music:menu' || id === 'menu:classic' || id === 'splash:classic' || shop.owned.includes(id);
 function shopItems(){
   if (shopTab === 'music') return [{id:'music:menu', key:'menu', name:'Classic', icon:'🎶', price:0, desc:'The normal menu tune, and each cup’s own race music'},
     ...Object.entries(MUSIC_PACKS).map(([key, p]) => ({id:'music:' + key, key, ...p}))];
   if (shopTab === 'menu') return Object.entries(MENU_SKINS).map(([key, s]) => ({id:'menu:' + key, key, ...s}));
+  if (shopTab === 'splash') return Object.entries(SPLASHES).map(([key, s]) => ({id:'splash:' + key, key, ...s}));
   const ch = ROSTER[shopChar];
   return [{id:`skin:${ch.id}:default`, key:null, name:'Default', icon:'🙂', price:0, desc:`${ch.name}'s normal look`},
     ...Object.entries(SKINS).map(([key, s]) => ({id:`skin:${ch.id}:${key}`, key, ...s, price:s.price * (ch.villain || ch.id === 'robin' ? 2 : 1),
       desc:s.whole ? `${ch.name} and the whole kart` : `Recolours ${ch.name}`}))];
 }
-const equipped = it => shopTab === 'music' ? (shop.music || 'menu') === it.key : shopTab === 'menu' ? (shop.menu || 'classic') === it.key : (skinOf(ROSTER[shopChar].id) || null) === it.key;
+const equipped = it => shopTab === 'music' ? (shop.music || 'menu') === it.key : shopTab === 'menu' ? (shop.menu || 'classic') === it.key : shopTab === 'splash' ? (shop.splash || 'classic') === it.key : (skinOf(ROSTER[shopChar].id) || null) === it.key;
 function shopThumb(it){
+  if (shopTab === 'splash') return `<div class="splashthumb" style="background:${it.bg}"><span>${[...'WIDR'].map((c, i) => `<b style="color:${it.paint[i % it.paint.length]}">${c}</b>`).join('')}</span><span>${[...'TURBO'].map((c, i) => `<b style="color:${it.paint[(i + 3) % it.paint.length]}">${c}</b>`).join('')}</span></div>`;
   if (shopTab === 'skins') return `<img src="${PORTRAITS.skinned(shopChar, it.key)}" alt="" style="background:${hex(ROSTER[shopChar].color)}">`;
   if (shopTab === 'menu') return `<div class="swatch" style="background:repeating-conic-gradient(${it.sw[0]} 0 15deg,${it.sw[1]} 15deg 30deg)"><span style="background:${it.sw[2]}">${it.icon}</span></div>`;
   return `<div class="disc">${it.icon}</div>`;
@@ -3378,7 +3671,7 @@ function shopFocus(it){
   const own = owns(it.id), eq = equipped(it), short = it.price - wallet;
   $('shopInfo').innerHTML = `<div class="sbig">${shopThumb(it)}</div><h2>${it.icon} ${it.name}</h2><p>${it.desc}</p>
     ${shopTab === 'skins' && !isUnlocked(shopChar) ? `<p class="fine">🔒 ${ROSTER[shopChar].name} is still locked, but you can already buy their skins.</p>` : ''}
-    ${shopTab === 'music' ? `<p class="fine">🎧 You're hearing a preview right now.</p>` : shopTab === 'menu' ? `<p class="fine">👀 You're seeing a preview right now.</p>` : ''}
+    ${shopTab === 'music' ? `<p class="fine">🎧 You're hearing a preview right now.</p>` : shopTab === 'menu' ? `<p class="fine">👀 You're seeing a preview right now.</p>` : shopTab === 'splash' ? `<p class="fine">✨ Shows on the title screen when you start the game.${it.tag ? ` Tagline: “${it.tag}”` : ''}</p>` : ''}
     <button class="btn" id="shopBtn" ${eq || (!own && short > 0) ? 'disabled' : ''}>${eq ? '✔ Equipped' : own ? 'Equip' : short > 0 ? `Need ${short} more 🪙` : `Buy for 🪙 ${it.price}`}</button>
     ${shopTab === 'music' ? `<label class="srace"><input type="checkbox" id="shopRace" ${shop.musicRace ? 'checked' : ''}> Also play my music pack in races</label>` : ''}
     <p class="fine">🪙 You have <b class="walletN">${wallet}</b> coins. Collect coins on the tracks and earn more by finishing races, winning trophies and finishing story chapters.</p>`;
@@ -3395,6 +3688,7 @@ function shopBuy(it, card){
   } else blip.ok();
   if (shopTab === 'music') shop.music = it.key;
   else if (shopTab === 'menu') shop.menu = it.key;
+  else if (shopTab === 'splash'){ shop.splash = it.key; applySplash(it.key); }
   else {
     const id = ROSTER[shopChar].id; if (it.key) shop.skins[id] = it.key; else delete shop.skins[id];
     PORTRAITS.refresh(shopChar); if (shopChar === playerChoice) refreshGarage();
@@ -3404,11 +3698,29 @@ function shopBuy(it, card){
 }
 // leaving the shop (or a tab): stop previews and put the equipped look back
 function shopLeave(){ shopPreview = null; applyMenuSkin(shop.menu); }
+// ---------- splash screens (title screen looks you can buy in the shop) ----------
+const SPLASHES = {
+  classic: {name:'Classic',          icon:'🏁', price:0,   desc:'The original sunny title screen', paint:['#ff3b3b', '#ffd23f', '#2f7bff', '#3ccf6e', '#ff7ccf', '#ff7a1f', '#8a5cff'], bg:'#bfe6ff'},
+  sunset:  {name:'Sunset Drive',     icon:'🌇', price:120, desc:'A warm sunset sky behind the logo', paint:['#ff5e3a', '#ff9f43', '#ffd23f', '#ff7ccf', '#c56cf0'], bg:'linear-gradient(#ff7a59,#ffb36a 55%,#6a3d9a)', tag:'Golden hour. Perfect racing weather.'},
+  snow:    {name:'Snow Day',         icon:'❄️', price:160, desc:'Soft snow falling over an icy logo', paint:['#9ee6ff', '#ffffff', '#7fd8ff', '#c9f0ff', '#5ab8ff'], bg:'linear-gradient(#5a8fc9,#bfe3ff)', tag:'School’s off. Engines on.'},
+  night:   {name:'Starry Night',     icon:'🌌', price:180, desc:'A twinkling night sky and neon letters', paint:['#00f5d4', '#f15bb5', '#fee440', '#9b5de5', '#00bbf9'], bg:'radial-gradient(circle at 50% 30%,#2c2f72,#0b0b26)', tag:'Night race. Headlights on.'},
+  comic:   {name:'Comic Book',       icon:'💥', price:200, desc:'Halftone dots and a big KA-POW', paint:['#ff3b3b', '#2f7bff', '#ffffff', '#1d1a2f'], bg:'radial-gradient(circle,#ff7a1f 2px,transparent 2.5px) 0 0/14px 14px,#ffd23f', tag:'KA-POW!'},
+  retro:   {name:'Retro Arcade',     icon:'🕹️', price:220, desc:'Scanlines, pixels and an 8-bit glow', paint:['#3cff7a', '#ff3bd4', '#3cf0ff', '#fff23c'], bg:'#0b0b1a', tag:'INSERT COIN'},
+  meta:    {name:'Meta AI Takeover', icon:'🤖', price:300, desc:'Meta AI “redesigned” your title screen. It glitches a bit.', paint:['#0866ff', '#c23bff', '#ff3bd4', '#4f8bff'], bg:'linear-gradient(135deg,#0866ff,#c23bff)', tag:'Hi! 👋 I redesigned this for you. You’re welcome.'},
+  gold:    {name:'Champion Gold',    icon:'👑', price:500, desc:'Shining gold letters, for true champions', paint:['#ffd23f', '#ffc21f', '#ffe680', '#e6a800'], bg:'radial-gradient(circle at 50% 35%,#5a3a10,#1a1006)', tag:'Champions only.'},
+};
+function applySplash(id){
+  const s = SPLASHES[id] ? id : 'classic', P = SPLASHES[s].paint, t = screenEl('title');
+  t.dataset.splash = s;
+  [...$('logoTop').children, ...$('logoBot').children].forEach((el, i) => el.style.setProperty('--c', P[(i + (i >= 4 ? 3 : 0)) % P.length]));
+  $('splashTag').textContent = SPLASHES[s].tag || '';
+}
 
 // ---------- online ranking (Firebase Realtime Database over its REST + streaming API) ----------
 const FB = 'https://widf-2b62d-default-rtdb.europe-west1.firebasedatabase.app/widr';
 const fbKey = s => String(s).replace(/[.#$\[\]\/\s]+/g, '_');
-const sessionId = 'guest' + Math.random().toString(36).slice(2, 8);
+// the default license has no id of its own: give this browser one guest id that sticks, so your records stay yours
+const sessionId = (() => { try { let g = localStorage.getItem('pgp-guest'); if (!g){ g = 'guest' + Math.random().toString(36).slice(2, 10); localStorage.setItem('pgp-guest', g); } return g; } catch (e){ return 'guest' + Math.random().toString(36).slice(2, 8); } })();
 const me = () => { const l = LIC.active(); return {id: fbKey(l.id === 'local' ? sessionId : l.id), name: String(l.name).slice(0, 24)}; };
 let fbOK = null, fbErr = '';
 async function fb(path, opts = {}){
@@ -3421,18 +3733,89 @@ async function fb(path, opts = {}){
     fbOK = false; onlineStatus(); return null;
   } finally { if (fbOK) fbErr = ''; }
 }
+// ---------- ranked: a random track against bots at your Elo ----------
+const TIERS = [
+  {min:-1e9, name:'Bronze', icon:'🥉', c:'#e0a070'}, {min:900, name:'Silver', icon:'🥈', c:'#c9d2de'},
+  {min:1100, name:'Gold', icon:'🥇', c:'#ffd23f'}, {min:1300, name:'Platinum', icon:'💠', c:'#7fe8dc'},
+  {min:1500, name:'Diamond', icon:'💎', c:'#8cc4ff'}, {min:1700, name:'Master', icon:'🔮', c:'#c79bff'},
+  {min:1900, name:'Legend', icon:'👑', c:'#ff8a8a'},
+];
+const tierOf = e => TIERS.filter(t => e >= t.min).pop();
+let RK = {elo:1000, games:0, wins:0, peak:1000, pend:0};
+try { Object.assign(RK, JSON.parse(localStorage.getItem('pgp-ranked')) || {}); } catch (e) {}
+const saveRK = () => { try { localStorage.setItem('pgp-ranked', JSON.stringify(RK)); } catch (e) {} };
+let ranked = null;   // {set, track, base, done} while you're in a ranked race
+// 700 Elo: 50cc and sleepy bots · 2200 Elo: 200cc and razor-sharp bots
+function rankedSet(elo = RK.elo){ const e = THREE.MathUtils.clamp((elo - 700) / 1500, 0, 1); return {speed:+(0.88 + 0.37 * e).toFixed(3), ai:+(0.84 + 0.17 * e).toFixed(3)}; }
+const ccOf = s => s < 0.95 ? '50cc' : s < 1.08 ? '100cc' : s < 1.2 ? '150cc' : '200cc';
+// pairwise Elo: a win against every racer you finish ahead of, a loss against everyone in front of you
+function eloDelta(order, me, base){
+  const opp = order.filter(k => k !== me), at = order.indexOf(me), K = RK.games < 10 ? 48 : 28;   // placement races swing harder
+  let s = 0; opp.forEach(o => { s += (order.indexOf(o) > at ? 1 : 0) - 1 / (1 + Math.pow(10, ((o.elo ?? base) - base) / 400)); });
+  return Math.round(K * 2 * s / Math.max(1, opp.length));
+}
+function newRanked(){
+  const open = TRACKS.map((t, i) => i).filter(i => !TRACKS[i].hidden);
+  ranked = {set:rankedSet(), track:open[Math.floor(Math.random() * open.length)]};
+  showTrack(ranked.track);
+}
+function startRanked(){ gp = null; $('menu').classList.add('hidden'); newRanked(); setupRace(); }
+// called from setupRace: bots get a rating around yours, and you're charged a last place up front (quitting = losing)
+function rankedBegin(aiBase){
+  const base = ranked.base = RK.elo;
+  karts.forEach(k => { if (!k.human) k.elo = Math.max(100, Math.round(base + (k.skill - aiBase - 0.06) * 2500 + (Math.random() - 0.5) * 120)); });
+  RK.elo = base + eloDelta([...karts.filter(k => k !== player), player], player, base); RK.pend = 1; RK.games++; saveRK();
+}
+function rankedResults(all, place){
+  const base = ranked.base; RK.games--;   // eloDelta's K should see the games before this one
+  const d = eloDelta(all, player, base), after = base + d, t0 = tierOf(base), t1 = tierOf(after);
+  RK.games++; RK.elo = after; RK.pend = 0; RK.peak = Math.max(RK.peak, after); if (place === 1) RK.wins++;
+  saveRK(); ranked.done = true; onlinePlayer();
+  const up = TIERS.indexOf(t1) > TIERS.indexOf(t0), down = TIERS.indexOf(t1) < TIERS.indexOf(t0);
+  $('resTitle').innerHTML = place === 1 ? '🏆 You won!' : place <= 3 ? `🎉 ${ord(place)} place!` : `${ord(place)} place`;
+  $('resSub').textContent = `🏅 Ranked · ${MAP.name} · ${ccOf(ranked.set.speed)}${RK.games <= 10 ? ` · placement ${RK.games}/10` : ''}`;
+  $('resBody').innerHTML = `<div class="rkres"><span class="rkt" style="--c:${t1.c}">${t1.icon} ${t1.name}</span><b>${after}</b><span class="${d >= 0 ? 'up' : 'down'}">${d >= 0 ? '▲ +' : '▼ '}${d}</span></div>
+    ${up ? `<p class="rkpromo">⬆️ Promoted to <b>${t1.icon} ${t1.name}</b>!</p>` : down ? `<p class="rkpromo">⬇️ Dropped to ${t1.icon} ${t1.name}</p>` : ''}
+    <div class="grid">${all.map((k, i) => `<div class="row single ${k.isPlayer ? 'me' : ''}"><b>${i+1}</b><span class="n">${dot(k)}${k.name}${k.isPlayer ? ' (you)' : `<small class="elo">${tierOf(k.elo).icon} ${k.elo}</small>`}</span><span class="r">${k.finished ? fmt(k.finishTime) : '—'}</span></div>`).join('')}</div>`;
+  if (up) [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => beep(f, .2, 'square', .08), 400 + i * 130));
+  button('Next ranked race ▸', '', () => { $('results').classList.add('hidden'); newRanked(); setupRace(); });
+  button('Menu', 'alt', openMenu);
+}
+async function renderRanked(){
+  const t = tierOf(RK.elo), nx = TIERS[TIERS.indexOf(t) + 1], s = rankedSet(), lo = Math.max(t.min, 700);
+  const pct = nx ? THREE.MathUtils.clamp(Math.round(100 * (RK.elo - lo) / (nx.min - lo)), 0, 100) : 100;
+  $('rkMe').innerHTML = `<div class="rkbadge" style="--c:${t.c}">${t.icon}</div><h2>${t.name}</h2><div class="rkelo">${RK.elo} <small>Elo</small></div>
+    <div class="rkbar"><i style="width:${pct}%"></i></div><p class="fine">${nx ? `${nx.min - RK.elo} Elo to ${nx.icon} ${nx.name}` : 'Top tier. You’re a Legend!'}</p>
+    <div class="mstat"><span>🏁 ${RK.games} races</span><span>🏆 ${RK.wins} wins</span><span>📈 Peak ${RK.peak}</span>${RK.games < 10 ? `<span>🎯 Placement ${RK.games} / 10</span>` : ''}</div>
+    <p class="fine">Next race: a random track at <b>${ccOf(s.speed)}</b> against bots around <b>${RK.elo}</b> Elo. You win Elo for every racer you beat and lose it for every racer who beats you. Quitting or restarting counts as last place.</p>
+    <button class="btn go nav" id="rkGo">Play ranked ▸</button>`;
+  hookNav($('rkGo'), 0, null, () => { mode = 'ranked'; go('racer'); });
+  setFocus(0, true);
+  $('rkErr').textContent = '';
+  if (!sharing()){ $('rkTop').innerHTML = '<li class="empty">Turn on “Share my results” under Rankings to join the ladder.</li>'; return; }
+  $('rkTop').innerHTML = '<li class="empty">Loading the ladder…</li>';
+  if (RK.games) onlinePlayer();
+  const all = await fb('players');
+  if (screen !== 'ranked') return;
+  if (!all){ $('rkTop').innerHTML = ''; $('rkErr').textContent = fbErr; return; }
+  const myId = me().id, list = Object.entries(all).filter(([, p]) => p && p.rgames > 0 && typeof p.elo === 'number').map(([id, p]) => ({id, ...p})).sort((a, b) => b.elo - a.elo);
+  const row = (p, i) => `<li class="${p.id === myId ? 'me' : ''}"><b>${i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}</b>${face(p.char)}<span class="n">${esc(p.name)}${p.id === myId ? ' (you)' : ''}</span><span class="r">${tierOf(p.elo).icon} ${p.elo}</span></li>`;
+  const mine = list.findIndex(p => p.id === myId);
+  $('rkTop').innerHTML = list.length ? list.slice(0, 25).map(row).join('') + (mine >= 25 ? '<li class="sep">…</li>' + row(list[mine], mine) : '')
+    : '<li class="empty">Nobody on the ladder yet. Play a ranked race to be the first!</li>';
+}
 const sharing = () => OPTS.online !== false;
 function onlinePlayer(){
   if (!sharing()) return;
   const m = me(), golds = Object.values(trophies).filter(v => v === 1).length;
-  fb(`players/${m.id}`, {method:'PUT', body:{name:m.name, golds, trophies:Object.keys(trophies).length, char:ROSTER[playerChoice].id, story:storyProg, t:{'.sv':'timestamp'}}});
+  fb(`players/${m.id}`, {method:'PUT', body:{name:m.name, golds, trophies:Object.keys(trophies).length, char:ROSTER[playerChoice].id, story:storyProg, elo:RK.games ? RK.elo : null, rgames:RK.games, t:{'.sv':'timestamp'}}});
 }
 // posts the result to the live feed and your time to the world records; resolves to your world rank on that track
 async function onlineRace(place, time){
   if (!sharing() || tut) return null;
   const m = me(), ch = ROSTER[playerChoice].id, key = fbKey(MAP.name);
   onlinePlayer();
-  fb('feed', {method:'POST', body:{name:m.name, char:ch, track:MAP.name, place, time:time || 0, mode: gp ? CUPS[gp.cup].cc : story ? 'story' : 'single', ts:{'.sv':'timestamp'}}});
+  fb('feed', {method:'POST', body:{name:m.name, char:ch, track:MAP.name, place, time:time || 0, mode: gp ? CUPS[gp.cup].cc : story ? 'story' : ranked ? 'ranked' : 'single', ts:{'.sv':'timestamp'}}});
   if (!time) return null;
   const mine = await fb(`times/${key}/${m.id}`);
   if (fbOK === false) return null;
@@ -3479,10 +3862,16 @@ function renderFeed(){
 }
 async function renderTimes(){
   const t = ON.track, data = await fb(`times/${fbKey(t)}`); if (ON.track !== t) return;
-  const myId = me().id, list = Object.entries(data || {}).sort((a, b) => a[1].t - b[1].t).slice(0, 10);
-  $('onTimes').innerHTML = list.length ? list.map(([id, v], i) => `<li class="${id === myId ? 'me' : ''}"><b>${i < 3 ? ['🥇','🥈','🥉'][i] : i + 1}</b>${face(v.char)}<span class="n">${esc(v.name)}</span><span class="r">${fmt(v.t)}</span></li>`).join('')
+  const m = me(), all = Object.entries(data || {}).sort((a, b) => a[1].t - b[1].t);
+  // you: by your id, or (for times set before ids stuck) by your driver name
+  let mi = all.findIndex(([id]) => id === m.id); if (mi < 0) mi = all.findIndex(([, v]) => v.name === m.name);
+  const row = ([id, v], i) => `<li class="${i === mi ? 'me' : ''}"><b>${i < 3 ? ['🥇','🥈','🥉'][i] : i + 1}</b>${face(v.char)}<span class="n">${esc(v.name)}${i === mi ? ' (you)' : ''}</span><span class="r">${fmt(v.t)}</span></li>`;
+  $('onTimes').innerHTML = all.length ? all.slice(0, 10).map(row).join('')
+      + (mi >= 10 ? `<li class="gap">⋯ ${mi - 10 > 0 ? `${mi - 10} more` : ''}</li>${row(all[mi], mi)}` : '')
     : `<li class="empty">No times on ${esc(t)} yet. Set the first world record!</li>`;
-  const mine = bests[t]; $('onMine').textContent = mine ? `Your best here: ${fmt(mine)}` : '';
+  const mine = bests[t];
+  $('onMine').textContent = mi >= 0 ? `You’re #${mi + 1} of ${all.length} in the world here${mine ? ` · your best on this device: ${fmt(mine)}` : ''}`
+    : mine ? `Your best here: ${fmt(mine)} · not on the world list yet (turn on sharing and race it again)` : 'You haven’t raced this track yet.';
 }
 function renderOnline(){
   $('onName').textContent = me().name; $('onShare').checked = sharing();
@@ -3561,11 +3950,21 @@ function rtSend(a, b, cb){
   else { const n = Math.ceil(s.length / 16384); RT.ws.send(String(n)); for (let i = 0; i < n; i++) RT.ws.send(s.slice(i * 16384, (i + 1) * 16384)); }
   return true;
 }
-// write (merge = update only the given children); our own listeners hear it straight away
-function rtWrite(p, d, merge = false, keep = false){
+// write (merge = update only the given children); our own listeners hear it straight away.
+// If Firebase ever refuses (or ignores) a websocket write, all writes switch to plain REST, which the rankings already use.
+// rest = always use REST for this one (room setup, where we have to be sure it landed)
+function rtWrite(p, d, merge = false, keep = false, rest = false){
   rtPush(rtFull(p), d, merge);
-  if (RT.mode === 'ws' && rtSend(merge ? 'm' : 'p', {p:rtFull(p), d})) return;
-  fetch(`${FB}/${p}.json?print=silent`, {method: d === null ? 'DELETE' : merge ? 'PATCH' : 'PUT', body: d === null ? undefined : JSON.stringify(d), keepalive:keep}).catch(() => {});
+  if (!rest && RT.mode === 'ws' && !RT.wsBad){
+    const sent = performance.now();
+    if (rtSend(merge ? 'm' : 'p', {p:rtFull(p), d}, b => { if (b?.s !== 'ok'){ RT.wsBad = true; RT.err = b?.s || 'refused'; rtWrite(p, d, merge, keep, true); } })) {
+      const r = RT.r; setTimeout(() => { if (RT.cbs[r] && performance.now() - sent >= 4000){ delete RT.cbs[r]; RT.wsBad = true; RT.err = 'no answer'; rtWrite(p, d, merge, keep, true); } }, 4000);
+      return Promise.resolve(true);
+    }
+  }
+  return fetch(`${FB}/${p}.json?print=silent`, {method: d === null ? 'DELETE' : merge ? 'PATCH' : 'PUT', body: d === null ? undefined : JSON.stringify(d), keepalive:keep})
+    .then(r => { if (!r.ok) RT.err = `Firebase said ${r.status}${r.status === 401 || r.status === 403 ? ' (the database rules block rooms/)' : ''}`; return r.ok; })
+    .catch(() => { RT.err = 'Can’t reach Firebase'; return false; });
 }
 // Firebase runs this write by itself if our connection drops
 function rtOnDisc(p, d = null){ const f = rtFull(p); RT.discs.push([f, d]); if (RT.mode === 'ws') rtSend('o', {p:f, d}); }
@@ -3625,7 +4024,7 @@ const NETC = () => NET.racing && NET.role === 'client';
 const r1 = v => Math.round((v || 0) * 10) / 10, r2 = v => Math.round((v || 0) * 100) / 100, r3 = v => Math.round((v || 0) * 1000) / 1000;
 // timers that go in every snapshot, and the kinds of thrown things the clients know how to draw
 const NT = ['spin', 'boost', 'star', 'ram', 'ghost', 'shield', 'frozen', 'big', 'small', 'inked', 'confused', 'hold', 'auto', 'bullet', 'dance', 'goldT', 'reflect'];
-const NKINDS = ['ban', 'red', 'grn', 'fake', 'blue', 'ball', 'slip', 'rock', 'drone', 'bomb', 'pud'];
+const NKINDS = ['ban', 'red', 'grn', 'fake', 'blue', 'ball', 'slip', 'rock', 'drone', 'bomb', 'pud', 'anchor', 'fball'];
 const netId = () => NET.me ||= fbKey(me().id) + '-' + Math.random().toString(36).slice(2, 6);
 
 // ----- host -----
@@ -3663,9 +4062,10 @@ function netInputs(d, rel = []){
     last.s = v.s; NET.acks[id] = v.s; NET.seen[id] = performance.now();
     const inp = NET.inputs[id] ||= {}, b = v.b | 0, wasDrift = inp.drift;
     inp.gas = !!(b & 1); inp.brake = !!(b & 2); inp.left = !!(b & 4); inp.right = !!(b & 8); inp.drift = !!(b & 16); inp.back = !!(b & 32);
+    inp.smart = !!(b & 64); inp.auto = !!(b & 128); inp.adrift = !!(b & 256);
     const k = NET.racing && karts.find(o => o.peer === id && o.human);
     if (k){
-      if (inp.drift && !wasDrift && k.air) k.trick = true;
+      if (inp.drift && !wasDrift && k.air) doTrick(k);
       if (state === 'countdown'){ if (inp.gas){ if (k.startP == null) k.startP = countdown; } else k.startP = null; }
       if ((v.i || 0) > last.i) useItem(k);
       if ((v.p || 0) > last.p) useSpecial(k);
@@ -3693,7 +4093,7 @@ function netStart(){
   const humans = Object.entries(NET.players).sort((a, b) => (a[1].n || 0) - (b[1].n || 0)).slice(0, FIELD_SIZE);
   if (!humans.length) return;
   const used = new Set(humans.map(([, p]) => charIdx(p.char)));
-  const bots = ROSTER.map((c, i) => i).filter(i => !used.has(i)).sort(() => Math.random() - 0.5).slice(0, FIELD_SIZE - humans.length);
+  const bots = ROSTER.map((c, i) => i).filter(i => !used.has(i) && (!ROSTER[i].secret || isUnlocked(i))).sort(() => Math.random() - 0.5).slice(0, FIELD_SIZE - humans.length);
   // bots in front, the players at the back of the grid (the host last, like in a solo race)
   const field = [...bots.map(ri => ({ri})), ...humans.reverse().map(([id, p]) => ({ri:charIdx(p.char), id, name:String(p.name || 'Player').slice(0, 16), b:p.build}))];
   NET.raceNo = (NET.room?.n || 0) + 1;
@@ -3729,6 +4129,7 @@ function netSnap(d){
   for (const e of p.e || []) if (e[0] > NET.lastE){
     NET.lastE = e[0];
     if (e[1] === 'b') burst(new THREE.Vector3(e[2], 0, e[3]), e[4], e[5], e[6]); else if (e[1] === 'l') bolt(new THREE.Vector3(e[2], 0, e[3]));
+    else if (e[1] === 'm' && karts[e[2]]) emote(karts[e[2]]);
   }
   const mi = karts.indexOf(player); if (mi >= 0 && p.k[mi]) netReconcile(p.k[mi]);
 }
@@ -3754,9 +4155,10 @@ function netReconcile(a){
     k.y = a[2]; k.vy = a[18] || 0; k.air = !!(fl & 1); k.glide = !!(fl & 2);
     k.pos.addScaledVector(fwd(k.moveH), k.speed * Math.min(lag, 0.3) / LS[k.idx]); k.idx = nearestIdx(k.pos, k.idx);
     H.length = 0;
-  } else if (err > 0.03){
-    // small drift: ease toward the host, and shift the history the same way so it isn't corrected twice
-    const f = err > 4 ? 0.3 : 0.1, cx = ex * f, cz = ez * f;
+  } else if (err > 0.6){
+    // small drift: ease toward the host, and shift the history the same way so it isn't corrected twice.
+    // Under 0.6 m we leave it alone, so tiny timing differences don't keep tugging at the kart
+    const f = (err > 4 ? 0.3 : 0.12) * (err - 0.6) / err, cx = ex * f, cz = ez * f;
     k.pos.x += cx; k.pos.z += cz; for (const e of H){ e.x += cx; e.z += cz; }
     let dh = a[3] - past.h; dh = Math.atan2(Math.sin(dh), Math.cos(dh));
     if (Math.abs(dh) > 0.25){ const c = dh * 0.25; k.heading += c; k.moveH += c; for (const e of H) e.h += c; }
@@ -3874,6 +4276,8 @@ function netMesh(kind){
     case 'grn': return new THREE.Mesh(shellG, lamb(0x3ccf6e));
     case 'fake': { const m = new THREE.Mesh(boxG, fakeM); m.rotation.y = Math.PI / 4; return m; }
     case 'blue': return blueMesh();
+    case 'anchor': return anchorMesh();
+    case 'fball': return footballMesh();
     case 'ball': return new THREE.Mesh(new THREE.SphereGeometry(0.55, 14, 10), lamb(0xffffff));
     case 'slip': return slipperMesh();
     case 'rock': return new THREE.Mesh(new THREE.DodecahedronGeometry(1.4, 0), new THREE.MeshLambertMaterial({color:0x8a8178, flatShading:true}));
@@ -3883,10 +4287,10 @@ function netMesh(kind){
   }
   return new THREE.Mesh(shellG, shellM);
 }
-// what I'm pressing, as bits (the assists from the garage are folded in)
+// what I'm pressing, as bits, plus which garage assists I have on (the host drives my kart with the same ones)
 function netBits(){
-  return (keys.gas || (OPTS.auto && !keys.brake) ? 1 : 0) | (keys.brake ? 2 : 0) | (keys.left ? 4 : 0) | (keys.right ? 8 : 0)
-    | (keys.drift || (OPTS.adrift && (keys.left || keys.right)) ? 16 : 0) | (keys.back ? 32 : 0);
+  return (keys.gas ? 1 : 0) | (keys.brake ? 2 : 0) | (keys.left ? 4 : 0) | (keys.right ? 8 : 0) | (keys.drift ? 16 : 0) | (keys.back ? 32 : 0)
+    | (OPTS.smart ? 64 : 0) | (OPTS.auto ? 128 : 0) | (OPTS.adrift ? 256 : 0);
 }
 function netSendInput(force = false){
   const now = performance.now(), key = `${netBits()}.${NET.cnt.i}.${NET.cnt.p}.${NET.cnt.r}`, since = now - NET.inT;
@@ -3919,20 +4323,29 @@ async function netHost(){
     if (got === undefined){ NET.busy = false; return mpMsg('Can’t reach Firebase from here, so online play can’t start.', true); }
     if (!got) code = c;
   }
-  NET.busy = false; if (!code) return mpMsg('Couldn’t find a free room code. Try again.', true);
-  netReset(); NET.role = 'host'; NET.code = code; netId();
+  if (!code){ NET.busy = false; return mpMsg('Couldn’t find a free room code. Try again.', true); }
+  netReset(); NET.role = 'host'; NET.code = code; netId(); NET.joinT = Date.now();
+  { const c = NET.char ?? playerChoice; NET.char = isUnlocked(c) ? c : playerChoice; }
   NET.track = TRACKS[mapChoice]?.hidden ? 0 : mapChoice;
-  rtWrite(`rooms/${code}/meta`, {host:NET.me, state:'lobby', track:NET.track, n:0, hb:Date.now(), ts:{'.sv':'timestamp'}});
-  rtOnDisc(`rooms/${code}`, null);   // if my connection drops, Firebase closes the room
+  // the room itself goes over plain REST, and we read it back to be sure it's really in the database
+  const ok = await rtWrite(`rooms/${code}/meta`, {...netRoom(), ts:{'.sv':'timestamp'}}, false, false, true)
+    && await rtWrite(`rooms/${code}/players/${NET.me}`, netMe(), false, false, true);
+  const check = ok ? await rtGet(`rooms/${code}/meta`) : null;
+  NET.busy = false;
+  if (!check?.host){ NET.role = null; NET.code = ''; renderLobby(); return mpMsg(`Couldn’t create the room: ${RT.err || 'it didn’t save'}.`, true); }
+  rtOnDisc(`rooms/${code}`, null);   // if my connection drops, Firebase closes the room (the heartbeat re-opens it if I come back)
   netJoinCommon();
   rtListen(`rooms/${code}/in`, netInputs);
-  mpMsg(fast ? '🟢 Room open · fast connection' : '🟡 Room open · backup connection (a bit more lag)');
+  mpMsg(fast && !RT.wsBad ? '🟢 Room open · fast connection' : '🟡 Room open · backup connection (a bit more lag)');
 }
+// the room's info as the host sees it right now
+const netRoom = () => ({host:NET.me, track:NET.track, n:NET.raceNo, hb:Date.now(), state:NET.racing ? (state === 'finished' ? 'done' : 'race') : 'lobby'});
 async function netJoin(){
   const code = ($('mpCode').value || '').toUpperCase().replace(/[^A-Z]/g, '');
   if (code.length !== 4) return mpMsg('Type the 4-letter room code.', true);
   if (NET.role || NET.busy) return; NET.busy = true; mpMsg('Connecting…');
-  const fast = await rtConnect(), meta = await rtGet(`rooms/${code}/meta`);
+  const fast = await rtConnect(); let meta = await rtGet(`rooms/${code}/meta`);
+  for (let i = 0; i < 3 && meta === null; i++){ await new Promise(r => setTimeout(r, 700)); meta = await rtGet(`rooms/${code}/meta`); }   // a room that was only just made
   const ps = meta ? await rtGet(`rooms/${code}/players`) : null;
   NET.busy = false;
   if (meta === undefined) return mpMsg('Can’t reach Firebase from here, so online play can’t start.', true);
@@ -3957,9 +4370,10 @@ function netJoinCommon(){
 function netBeat(){
   if (!NET.role) return;
   const now = performance.now();
-  rtWrite(`rooms/${NET.code}/players/${NET.me}/hb`, Date.now());
+  // the full records every time (not just a timestamp), so the room heals itself if anything went missing
+  rtWrite(`rooms/${NET.code}/players/${NET.me}`, netMe());
   if (NET.role === 'host'){
-    rtWrite(`rooms/${NET.code}/meta/hb`, Date.now());
+    rtWrite(`rooms/${NET.code}/meta`, netRoom(), true);
     for (const id in NET.players) if (id !== NET.me && now - (NET.seen[id] ??= now) > 9000){ rtWrite(`rooms/${NET.code}/players/${id}`, null); rtWrite(`rooms/${NET.code}/in/${id}`, null); }
   } else if (now - NET.hostSeen > 9000) netGone('Lost the connection to the host.');
 }
@@ -3979,7 +4393,8 @@ function netPlayers(d, rel = []){
 }
 function netMeta(d){
   NET.hostSeen = performance.now();
-  if (!d){ if (NET.role === 'client') netGone('The host closed the room.'); return; }
+  // a missing room only counts as closed when the host says so (or goes quiet, see netBeat): a gap can be a hiccup
+  if (!d || d.state === 'closed'){ if (NET.role === 'client' && d) netGone('The host closed the room.'); return; }
   const old = NET.room; NET.room = d;
   if (NET.role === 'client'){
     if (d.state === 'race' && d.n !== NET.raceNo && d.field){
@@ -4026,7 +4441,7 @@ function netBackToLobby(){ NET.racing = false; openMenu(); go('mp'); }
 function netLeave(){
   if (!NET.role) return;
   const c = NET.code;
-  if (NET.role === 'host') rtWrite(`rooms/${c}`, null);
+  if (NET.role === 'host'){ rtWrite(`rooms/${c}/meta`, {state:'closed'}, true, false, true).then(() => rtWrite(`rooms/${c}`, null, false, false, true)); }
   else { rtWrite(`rooms/${c}/players/${NET.me}`, null); rtWrite(`rooms/${c}/in/${NET.me}`, null); }
   for (const f of Object.keys(RT.listens)) rtUnlisten(f.slice(6));
   rtClearDiscs(); clearInterval(NET.hb);
@@ -4133,6 +4548,7 @@ function hookNav(el, i, onFocus, onPick){
     s.style.setProperty('--r', ((i * 37) % 7) - 3); el.appendChild(s);
   });
   letters($('logoTop'), 'WIDR', 0); letters($('logoBot'), 'TURBO', 3);
+  applySplash(shop.splash);
   ROSTER.slice(0, 9).forEach((r, i) => {
     const k = document.createElement('div'); k.className = 'runner';
     k.style.setProperty('--c', hex(r.color)); k.style.setProperty('--d', (3.2 + (i * 1.3) % 3) + 's');
@@ -4145,19 +4561,19 @@ function hookNav(el, i, onFocus, onPick){
 
 // main
 const mainBtns = [...menuEl.querySelectorAll('.mbtn')];
-// arrow keys on the main menu: 6 big buttons in 2 columns (0-5), then a row of small tiles (6+)
+// arrow keys on the main menu: the big buttons in 2 columns, then a row of small tiles (6+)
 addEventListener('keydown', e => {
   if (state !== 'menu' || screen !== 'main' || menuEl.classList.contains('hidden') || dlg) return;
   const c = e.code, up = c === 'ArrowUp' || c === 'KeyW', dn = c === 'ArrowDown' || c === 'KeyS', lf = c === 'ArrowLeft' || c === 'KeyA', rt = c === 'ArrowRight' || c === 'KeyD';
   if (!(up || dn || lf || rt)) return;
   e.preventDefault(); e.stopImmediatePropagation();
-  const i = focusAt.main || 0, minis = mainBtns.length - 6, big = i < 6;
+  const i = focusAt.main || 0, B = mainBtns.filter(b => !b.classList.contains("mini")).length, minis = mainBtns.length - B, big = i < B;
   // which small tile sits under the left / right big button, and which big column sits over a small tile
-  const under = col => 6 + (col ? Math.max(0, minis - 2) : 0), over = t => (t - 6) < minis / 2 ? 0 : 1;
+  const under = col => B + (col ? Math.max(0, minis - 2) : 0), over = t => (t - B) < minis / 2 ? 0 : 1;
   let n = i;
-  if (lf || rt) n = big ? i ^ 1 : 6 + ((i - 6 + (rt ? 1 : -1) + minis) % minis);
-  else if (big){ const r = (i >> 1) + (dn ? 1 : -1); n = r > 2 || r < 0 ? under(i & 1) : r * 2 + (i & 1); }
-  else n = (dn ? 0 : 4) + over(i);
+  if (lf || rt) n = big ? i ^ 1 : B + ((i - B + (rt ? 1 : -1) + minis) % minis);
+  else if (big){ const r = (i >> 1) + (dn ? 1 : -1); n = r > B / 2 - 1 || r < 0 ? under(i & 1) : r * 2 + (i & 1); }
+  else n = (dn ? 0 : B - 2) + over(i);
   setFocus(n);
 }, true);
 mainBtns.forEach((b, i) => hookNav(b, i, () => {
@@ -4165,9 +4581,10 @@ mainBtns.forEach((b, i) => hookNav(b, i, () => {
   $('mname').textContent = b.textContent; $('mdesc').textContent = b.dataset.desc;
   const won = Object.keys(trophies).length, golds = Object.values(trophies).filter(v => v === 1).length;
   $('mstat').innerHTML = ({
-    story: `<span>📖 ${storyProg} / ${STORY.length} chapters</span><span>${storyProg >= STORY.length ? '🏆 Complete' : '🤖 Stop Meta AI'}</span>`,
+    story: `<span>📖 ${storyProg} / ${STORY.length} chapters</span><span>${storyProg >= STORY.length ? '🏆 Complete' : `${PARTS[partsOpen() - 1].icon} Part ${partsOpen()}`}</span>`,
     cups: `<span>🏆 ${won} / ${CUPS.length} trophies</span><span>50cc → 200cc</span>`,
     duo: `<span>👥 Split screen</span><span>⌨️ WASD vs ←↑→↓</span>`,
+    ranked: `<span>${tierOf(RK.elo).icon} ${tierOf(RK.elo).name}</span><span>📈 ${RK.elo} Elo</span><span>🏁 ${RK.games} races</span>`,
     mp: `<span>🌐 Up to ${FIELD_SIZE} players</span><span>🔑 Room codes</span>`,
     tracks: `<span>🗺️ ${TRACKS.filter(t => !t.hidden).length} tracks</span><span>⏱️ ${Object.keys(bests).length} best times set</span>`,
     garage: `<span>${BODIES[myBuild.body].emoji} ${BODIES[myBuild.body].name}</span><span>🛞 ${WHEELS[myBuild.wheels].name}</span>`,
@@ -4279,7 +4696,7 @@ function renderMaps(){
 function racerInfo(){
   $('startBtn').disabled = false;
   const r = ROSTER[playerChoice];
-  const where = mode === 'gp' ? `${CUPS[cupChoice].emoji} ${CUPS[cupChoice].name} · ${CUPS[cupChoice].cc}` : `${MAPS[mapChoice].emoji} ${MAPS[mapChoice].name}`;
+  const where = mode === 'ranked' ? `🏅 Ranked · ${tierOf(RK.elo).icon} ${RK.elo} Elo · random track` : mode === 'gp' ? `${CUPS[cupChoice].emoji} ${CUPS[cupChoice].name} · ${CUPS[cupChoice].cc}` : `${MAPS[mapChoice].emoji} ${MAPS[mapChoice].name}`;
   const mods = r.mods.map((v, i) => v ? `<span class="mod ${v > 0 ? 'up' : 'down'}">${v > 0 ? '+' : ''}${v} ${STAT_LABEL[STAT_KEYS[i]]}</span>` : '').join('');
   $('racerinfo').innerHTML = `<h2>${r.name} ${r.villain ? '<span class="tag vil">Villain</span>' : r.star ? '<span class="tag">Main character</span>' : ''}</h2>
     <p class="title">${r.title}</p><p class="fine">${r.desc}</p>
@@ -4464,6 +4881,7 @@ const ENTER = {
   story:    () => { renderStory(); setFocus(Math.min(storyChoice, storyProg, STORY.length - 1), true); },
   cups:     () => { renderCups(); setFocus(cupChoice, true); },
   tracks:   () => { renderMaps(); setFocus(mapChoice, true); },
+  ranked:   renderRanked,
   mp:       () => { renderLobby(); if (!NET.role) setFocus(0, true); else showTrack(NET.role === 'host' ? NET.track : NET.room?.track ?? 0, true); },
   duo:      () => {
     const open = unlockedSet(), p1 = duoPick?.p1 ?? playerChoice;
@@ -4526,12 +4944,13 @@ function launch(){
   beep(200, .7, 'sawtooth', .07, 4);
   setTimeout(() => {
     previewOn = false;
-    if (mode === 'gp') startCup(cupChoice); else { gp = null; $('menu').classList.add('hidden'); showTrack(mapChoice); setupRace(); }
+    if (mode === 'gp') startCup(cupChoice); else if (mode === 'ranked') startRanked(); else { gp = null; $('menu').classList.add('hidden'); showTrack(mapChoice); setupRace(); }
   }, 520);
   setTimeout(() => w.classList.remove('run'), 1200);
 }
 
 screenEl('title').classList.add('on'); screen = 'title';
+$('logoRibbon').textContent = `${ROSTER.filter(c => !c.secret).length} racers (+ secrets) · ${TRACKS.filter(t => !t.hidden).length} tracks · ${CUPS.length} cups`;
 $('whois').innerHTML = `🪪 Driving license: <b>${esc(LIC.active().name)}</b>`;
 try { if (sessionStorage.getItem('wt-goto') === 'licenses'){ sessionStorage.removeItem('wt-goto'); go('main'); go('licenses'); setTimeout(() => licMsg(`🪪 Now driving as ${LIC.active().name}.`), 300); } } catch (e) {}
 showTrack(0);
@@ -4539,7 +4958,7 @@ function openMenu(){
   if (story){ playerChoice = story.prev; story = null; refreshGarage(); }
   if (tut){ mapChoice = tut.prevMap; tut = null; } $('tut').classList.remove('on');
   if (duo){ playerChoice = duo.prev; duo = null; refreshGarage(); } player2 = null; document.body.classList.remove('two'); resize();
-  clearRace(); gp = null; state = 'menu';
+  clearRace(); gp = null; ranked = null; state = 'menu';
   $('results').classList.add('hidden'); $('intro').style.display = 'none'; menuEl.classList.remove('hidden');
   trail = ['title']; const cur = screen; screen = null;
   menuEl.querySelectorAll('.screen').forEach(s => s.classList.remove('on', 'in-fwd', 'in-back', 'out-fwd', 'out-back'));
@@ -4552,10 +4971,11 @@ function clearRace(){
   shells.forEach(s => scene.remove(s.mesh)); shells.length = 0;
   bombs.forEach(b => scene.remove(b.m)); bombs.length = 0; fx.forEach(f => scene.remove(f.m)); fx.length = 0;
   $("ink").classList.remove("on"); $("metaspam").innerHTML = "";
+  EMS.length = 0;
 }
 function setupRace(){
   clearRace();
-  const cup = gp ? CUPS[gp.cup] : story ? STORY[story.ch] : tut ? TUT_SET : null;
+  const cup = gp ? CUPS[gp.cup] : story ? STORY[story.ch] : tut ? TUT_SET : ranked ? ranked.set : null;
   if (gp) showTrack(TRACKS.indexOf(byName(cup.tracks[gp.race])));
   MAX = 42 * (cup ? cup.speed : 1); ACC = 26 * (cup ? cup.speed : 1);
   const aiBase = cup ? cup.ai : 0.9;
@@ -4586,6 +5006,7 @@ function setupRace(){
     if (story && cup.boss === r.id){ k.boss = true; k.skill = 1.1; k.cd = (r.cd || 16) * 0.45; k.sp = 0.6; }
     karts.push(k); if (k.isPlayer) player = k; if (k.isP2) player2 = k;
   });
+  if (ranked) rankedBegin(aiBase);
   document.body.classList.toggle('two', !!player2);
   if (player2){ const w = player2.pos; cs2.pos.set(w.x, 30, w.z); cs2.look.copy(w); cs2.up.set(0, 1, 0); $('p2coin').textContent = ''; }
   raceTime = 0; finishOrder = []; startPress = null; hudPlace = 0; contacts = new Set(); nastyAt = {}; lastDisrupt = -1e9; countdown = 3.999; state = 'countdown';
@@ -4594,7 +5015,7 @@ function setupRace(){
   $('coinhud').textContent = '🪙 0';
   $('intro').innerHTML = tut ? `🎓 Tutorial<b>${MAP.name}</b><span class="goal">Follow the instructions at the top</span>`
     : story ? `📖 Chapter ${story.ch + 1}: ${cup.title}<b>${MAP.name}</b><span class="goal">🎯 ${goalText(cup.goal)}</span>`
-    : gp ? `${cup.emoji} ${cup.name} · Race ${gp.race + 1} of ${cup.tracks.length}<b>${MAP.name}</b>` : NET.racing ? `🌐 Online race · room ${NET.code}<b>${MAP.name}</b>` : `${MAP.emoji} Single race<b>${MAP.name}</b>`;
+    : gp ? `${cup.emoji} ${cup.name} · Race ${gp.race + 1} of ${cup.tracks.length}<b>${MAP.name}</b>` : NET.racing ? `🌐 Online race · room ${NET.code}<b>${MAP.name}</b>` : ranked ? `🏅 Ranked · ${tierOf(RK.elo).icon} ${ranked.base} Elo · ${ccOf(ranked.set.speed)}<b>${MAP.name}</b><span class=goal>Beat the bots to climb</span>` : `${MAP.emoji} Single race<b>${MAP.name}</b>`;
   $('intro').style.display = 'block'; setTimeout(() => { if (state !== 'menu') $('intro').style.display = 'none'; }, story ? 4200 : 3200);
 }
 
@@ -4604,9 +5025,11 @@ const _qa = new THREE.Quaternion(), _zAxis = new THREE.Vector3(0, 0, 1);
 // R: put me back on the road (a few seconds' cooldown so it can't be spammed)
 function manualReset(k = player){
   if (state !== 'race' || (paused && !NET.racing) || !k || k.finished || k.glide || raceTime < (k.resetAt || 0)) return;
-  k.resetAt = raceTime + 3; respawn(k);
+  k.resetAt = raceTime + 3; respawn(k, true);
 }
-function respawn(k){
+function respawn(k, manual = false){
+  // easter egg: get fished out 5 times in one race (pressing R doesn't count)
+  if (k.isPlayer && !manual && !tut && (k.fished = (k.fished || 0) + 1) >= 5) unlockEgg('ankervos');
   let j = (k.idx - 34 + N) % N;
   while (GP[j] || GZ[j] || JZ[j] || LP[j]) j = (j - 1 + N) % N;
   let back = k.idx - j; if (back < 0) back += N;
@@ -4617,30 +5040,61 @@ function respawn(k){
   burst(new THREE.Vector3(k.pos.x, 0, k.pos.z), 0xffffff, 5, 0.4);
   if (k.isPlayer){ toast('🎣 Fished back onto the track!'); beep(300, .4, 'triangle', .08, 1.8); }
 }
+// ---- tricks: each press in the air queues one, up to 3, and every finished trick adds to the landing boost ----
+const TRICK_T = 0.45, _qb = new THREE.Quaternion(), _xAxis = new THREE.Vector3(1, 0, 0);
+const TRICKS = [
+  {name:'Barrel Roll', icon:'🌀', q:(a, k) => _qb.setFromAxisAngle(_zAxis, a * (k.ri % 2 ? 1 : -1))},
+  {name:'Front Flip', icon:'🤸', q:a => _qb.setFromAxisAngle(_xAxis, a)},
+  {name:'360 Spin', icon:'💫', q:a => _qb.setFromAxisAngle(UPV, a)},
+  {name:'Backflip', icon:'🔄', q:a => _qb.setFromAxisAngle(_xAxis, -a)},
+  {name:'Corkscrew', icon:'🌪️', q:(a, k) => _qb.setFromAxisAngle(UPV, a).multiply(new THREE.Quaternion().setFromAxisAngle(_zAxis, a * (k.ri % 2 ? -1 : 1)))},
+];
+function doTrick(k){
+  if (!k.air) return;
+  if (!k.trick){ k.trick = true; k.trickReq = 1; k.trickT = 0; k.trickSeed = Math.floor(Math.random() * TRICKS.length); }
+  else if ((k.trickReq || 1) < 3) k.trickReq = (k.trickReq || 1) + 1;
+}
+function trickPose(k, m, dt){
+  m.drv.rotation.z = 0;
+  if (!(k.air && k.trick)){ m.trkT = null; m.trkI = -1; return; }
+  const n = k.trickReq || 1;
+  m.trkT = Math.min((m.trkT ?? 0) + dt, n * TRICK_T);   // waits at the end of a trick until the next one is queued
+  const i = Math.min(n - 1, Math.floor(m.trkT / TRICK_T)), p = Math.min(1, m.trkT / TRICK_T - i);
+  if (p >= 1) return;
+  const tr = TRICKS[((k.trickSeed ?? k.ri) + i) % TRICKS.length], e = 1 - Math.pow(1 - p, 3);
+  m.group.quaternion.multiply(tr.q(e * Math.PI * 2, k));
+  m.drv.rotation.z = Math.sin(p * Math.PI) * 0.6 * (i % 2 ? -1 : 1);   // the driver throws his weight into it
+  if (m.trkI !== i){
+    m.trkI = i; burst(k.wp || k.pos, 0xfff6a0, 4, 0.3);
+    if (k.isPlayer) toast(`${tr.icon} ${tr.name}!${i ? ' ×' + (i + 1) : ''}`);
+  }
+}
 function land(k){
   k.air = false;
   if (k.glide){ k.glide = false; k.bounce = 0.2; }
   if (k.airT > 0.25) k.bounce = 0.22;
   if (k.trick){
-    k.trick = false; k.boost = Math.max(k.boost, 0.9);
-    if (k.isPlayer){ toast('✨ Trick boost!'); beep(780, .12, 'square', .07, 1.8); }
+    // every finished trick (or one that's nearly done) adds to the boost
+    const n = Math.max(1, Math.min(k.trickReq || 1, Math.floor((k.trickT || 0) / TRICK_T + 0.25)));
+    k.trick = false; k.trickReq = 0; k.trickT = 0; k.boost = Math.max(k.boost, 0.9 + 0.45 * (n - 1));
+    if (k.isPlayer){ toast(n >= 3 ? '🔥 Triple trick boost!' : n === 2 ? '✨✨ Double trick boost!' : '✨ Trick boost!'); beep(780, .12, 'square', .07, 1.8); if (n > 1) setTimeout(() => beep(1170, .14, 'square', .07, 1.8), 90); }
   }
 }
 let MAX = 42, ACC = 26;
 const DRIFT_MINI = 1.3, DRIFT_SUPER = 2.6;   // seconds-ish of drift charge for a mini / super boost
 function stepKart(k, dt){
   let gas = 0, steer = 0, drift = false;
-  const inp = k.inp || keys;
+  const inp = k.inp || keys, A = k.isPlayer ? OPTS : inp;   // garage assists: mine, or the ones an online player sent along with their keys
   if (k.human && !k.finished && !(k.auto > 0)){
     gas = (inp.gas ? 1 : 0) - (inp.brake ? 1 : 0);
     steer = (inp.left ? 1 : 0) - (inp.right ? 1 : 0);
     drift = !!inp.drift;
-    // assists from the garage control panel (P1 only; P2 drives without them)
-    if (OPTS.auto && k.isPlayer && !inp.brake) gas = 1;
-    if (OPTS.adrift && k.isPlayer && Math.abs(steer) > 0 && k.speed > 26) drift = true;
+    // assists from the garage control panel (P1 and online players; P2 drives without them)
+    if (A.auto && !inp.brake) gas = 1;
+    if (A.adrift && Math.abs(steer) > 0 && k.speed > 26) drift = true;
     // gliding (like MK8): ↑ tips the nose down to dive, ↓ pulls it up to float; the throttle stays on
     if (k.glide){ k.pitchIn = (inp.gas ? 1 : 0) - (inp.brake ? 1 : 0); gas = 1; }
-    if (OPTS.smart && k.isPlayer){
+    if (A.smart){
       const latS = k.pos.clone().sub(pts[k.idx]).dot(nors[k.idx]);
       if (Math.abs(latS) > W * 0.36) steer = THREE.MathUtils.clamp(steer + Math.sign(latS) * Math.min(1, (Math.abs(latS) - W * 0.36) / 4) * 0.9, -1, 1);
     }
@@ -4723,7 +5177,7 @@ function stepKart(k, dt){
   if (pressed && !k.air){ k.hopT = 0.5; k.bounce = 0.3; }
   else if (k.hopT > 0) k.hopT -= dt;
   const dir = k.human ? (k.lastKey || 0) : Math.sign(aiBend);
-  const canDrift = drift && (k.hopT > 0 || (k.isPlayer && OPTS.adrift)) && dir !== 0 && k.speed > 22 && !off && !k.air;
+  const canDrift = drift && (k.hopT > 0 || (k.human && A.adrift)) && dir !== 0 && k.speed > 22 && !off && !k.air;
   if (canDrift && !k.drift){ k.drift = dir; k.hopT = 0; if (k.isPlayer) beep(dir > 0 ? 300 : 340, .08, 'square', .04, 1.4); }
   if (k.drift && (!drift || k.speed < 14 || off)){
     if (k.driftCharge > DRIFT_SUPER) { k.boost = Math.max(k.boost, 1.1); sfx('boost', k); if (k.isPlayer) toast('Super boost!'); }
@@ -4799,16 +5253,17 @@ function stepKart(k, dt){
       k.vy = THREE.MathUtils.clamp((g - k.y) / Math.max(dt, 1e-3), -30, 26); k.y = g;
     } else {
       if (!k.air){
-        k.air = true; k.airT = 0; k.trick = false;
+        k.air = true; k.airT = 0; k.trick = false; k.trickReq = 0; k.trickT = 0;
         const pi = (k.idx - 1 + N) % N;
         if (JZ[pi] || JZ[k.idx]) k.vy += 4;
         if (GZ[pi] || GZ[k.idx] || GP[k.idx]){
           k.glide = true; k.vy = Math.max(k.vy, 4) + 6;
           if (k.isPlayer){ toast('🪂 Glider! ↑ dive · ↓ float'); beep(440, .35, 'triangle', .08, 2.2); }
         }
-        if (!k.human && k.vy > 6 && Math.random() < 0.6) k.trick = true;
+        if (!k.human && k.vy > 6 && Math.random() < 0.6){ doTrick(k); if (k.vy > 11) doTrick(k); }
       }
       k.airT += dt; k.y = yp; k.vy -= GRAV * dt;
+      if (k.trick) k.trickT = Math.min((k.trickT || 0) + dt, (k.trickReq || 1) * TRICK_T);
       if (k.glide){
         // pitch: +1 nose down (sink fast, gain speed), -1 nose up (float longer, lose a little speed)
         // rivals glide like you: float over the gap, then tip the nose down to land quickly once there's road below
@@ -4844,7 +5299,7 @@ function kartVisual(k, dt, sf, steer, off, spdF){
   const qBase = basisQ(F, Uv);
   if (!k.q) k.q = qBase.clone(); else k.q.slerp(qBase, 1 - Math.pow(k.air ? 0.03 : 1e-18, dt));
   m.group.quaternion.copy(k.q).multiply(_qa.setFromAxisAngle(UPV, k.yawVis + (k.spin > 0 ? k.spin * 14 : 0) + (k.dance > 0 ? k.dance * 22 : 0)));
-  if (k.air && k.trick) m.group.quaternion.multiply(_qa.setFromAxisAngle(_zAxis, Math.min(1, k.airT / 0.45) * Math.PI * 2 * (k.ri % 2 ? 1 : -1)));
+  trickPose(k, m, dt);
   m.group.visible = !(k.ghost > 0) || Math.floor(raceTime * 12) % 2 === 0;
   const sc = m.group.scale.x + ((k.big > 0 ? 1.5 : k.small > 0 ? 0.55 : 1) - m.group.scale.x) * Math.min(1, 6 * dt); m.group.scale.setScalar(sc);
   m.shieldM.visible = k.shield > 0; m.ice.visible = k.frozen > 0;
@@ -4891,8 +5346,8 @@ function collisions(dt){
     if (Math.abs(dl) > Math.abs(dn) * 1.3){ const back = dl > 0 ? a : b, front = back === a ? b : a; if (back.speed > front.speed) back.speed += (front.speed - back.speed) * 0.25; }
     if (contacts.has(key)) continue;
     const aS = a.star > 0 || a.ram > 0, bS = b.star > 0 || b.ram > 0;
-    if (aS && !bS) hit(b); else if (bS && !aS) hit(a);
-    else if (a.small > 0 && !(b.small > 0)) hit(a); else if (b.small > 0 && !(a.small > 0)) hit(b);
+    if (aS && !bS) hit(b, 1, a); else if (bS && !aS) hit(a, 1, b);
+    else if (a.small > 0 && !(b.small > 0)) hit(a, 1, b); else if (b.small > 0 && !(a.small > 0)) hit(b, 1, a);
     else {
       const sh = 7 + Math.abs(a.speed - b.speed) * 0.12;
       a.shove.addScaledVector(n, -side * sh * wb / (wa + wb)); b.shove.addScaledVector(n, side * sh * wa / (wa + wb));
@@ -4937,7 +5392,7 @@ function collisions(dt){
     if (b.fake){ b.mesh.rotation.y += dt * 1.3; b.mesh.rotation.x += dt; b.mesh.position.y = 1.8 + Math.sin(raceTime * 3) * 0.3; }
     let gone = b.life <= 0;
     for (const k of karts){ if (gone) break; if ((k === b.owner && b.safe > 0) || k.ghost > 0 || (k.air && k.y - k.sf.pos.y > 1.5)) continue;
-      if (k.pos.distanceTo(b.mesh.position.clone().setY(0)) < (b.power ? 2.6 : 2)){ hit(k, b.power || 1); gone = true; } }
+      if (k.pos.distanceTo(b.mesh.position.clone().setY(0)) < (b.power ? 2.6 : 2)){ hit(k, b.power || 1, b.owner); gone = true; } }
     if (gone){ scene.remove(b.mesh); bananas.splice(i, 1); }
   }
   // shells and every other thrown thing
@@ -4979,8 +5434,9 @@ function collisions(dt){
           break;
         }
         if (k === s.owner && s.age < 0.4) continue;
-        const landed = hit(k, s.power || 1);
+        const landed = hit(k, s.power || 1, s.owner);
         if (!s.pierce || (!landed && k.shield > 0)) gone = true;
+        if (s.pierce && k === s.target) s.target = null;   // flies straight on once it has hit its target
         if (gone && s.explode) explode(s);
       }
     }
@@ -5004,7 +5460,7 @@ function humanDone(k){  if (NET.racing){ if (NET.role === 'host') netHumanDone(k
 function duoField(){
   const f = [duo.p1, duo.p2], meta = rid('meta');
   if (meta >= 0 && !f.includes(meta)) f.push(meta);
-  return f.concat(ROSTER.map((c, i) => i).filter(i => !f.includes(i)).sort(() => Math.random() - 0.5)).slice(0, FIELD_SIZE);
+  return f.concat(ROSTER.map((c, i) => i).filter(i => !f.includes(i) && (!ROSTER[i].secret || isUnlocked(i))).sort(() => Math.random() - 0.5)).slice(0, FIELD_SIZE);
 }
 function duoResults(all){
   const a = all.indexOf(player), b = all.indexOf(player2), win = a < b ? 'P1' : 'P2', who = a < b ? player : player2;
@@ -5040,6 +5496,7 @@ function endRace(){
       $('resBody').innerHTML = `<div class="grid">${all.map((k, i) => `<div class="row single ${k.isPlayer ? 'me' : ''}"><b>${i+1}</b><span class="n">${dot(k)}${k.name}${k.isPlayer ? ' (you)' : k.ri === rv ? ' 🎯' : k.boss ? ' 👑' : ''}</span><span class="r">${k.finished ? fmt(k.finishTime) : '—'}</span></div>`).join('')}</div>`;
       if (ok) button(story.ch < STORY.length - 1 ? 'Continue the story ▸' : 'See the ending ▸', '', storyAfter);
       else { button('Retry ↻', '', () => { $('results').classList.add('hidden'); setupRace(); }); button('Story menu', 'ghost', storyMenu); }
+    } else if (ranked){ rankedResults(all, place);
     } else if (!gp){
       $('resTitle').innerHTML = place === 1 ? '🏆 You won!' : place <= 3 ? `🎉 ${ord(place)} place!` : `${ord(place)} place`;
       $('resSub').textContent = MAP.name;
@@ -5061,7 +5518,7 @@ function endRace(){
       button('Quit cup', 'ghost', openMenu);
     }
     const prize = raceCoins(place);
-    if (!tut) onlineRace(place, player.finished ? player.finishTime : 0).then(r => { if (r && r <= 10 && state === 'finished') $('resBody').insertAdjacentHTML('afterbegin', `<p class="worldrank">🌍 #${r} in the world on ${esc(MAP.name)}!</p>`); });
+    if (!tut) onlineRace(place, player.finished ? player.finishTime : 0).then(r => { if (r && state === 'finished') $('resBody').insertAdjacentHTML('afterbegin', `<p class="worldrank">🌍 ${r <= 10 ? '' : 'You’re '}#${r} in the world on ${esc(MAP.name)}${r <= 10 ? '!' : ''}</p>`); });
     $('resBody').insertAdjacentHTML('beforeend', `<p class="coinsum">🪙 +${player.coins + prize} coins <small>(${player.coins} collected + ${prize} for ${ord(place)} place)</small> · wallet <b class="walletN">${wallet}</b></p>`);
     const laps = player.laps || [];
     if (laps.length){ const b = Math.min(...laps); $('resBody').insertAdjacentHTML('beforeend', `<p class="laps">⏱️ Your laps: ${laps.map((t, i) => `<span class="${t === b ? 'best' : ''}">L${i+1} ${fmt(t)}</span>`).join('')}</p>`); }
@@ -5095,7 +5552,7 @@ function startCup(i){ gp = {cup:i, race:0, field:pickField(), pts:{}, table:null
 function pickField(){
   const f = [playerChoice];
   for (const id of ['meta', 'nathan']){ const i = ROSTER.findIndex(c => c.id === id); if (!f.includes(i)) f.push(i); }
-  const rest = ROSTER.map((c, i) => i).filter(i => !f.includes(i)).sort(() => Math.random() - 0.5);
+  const rest = ROSTER.map((c, i) => i).filter(i => !f.includes(i) && (!ROSTER[i].secret || isUnlocked(i))).sort(() => Math.random() - 0.5);
   return f.concat(rest).slice(0, FIELD_SIZE);
 }
 $('startBtn').onclick = () => tryLaunch();
@@ -5111,21 +5568,23 @@ function playChapter(i){
   const ch = STORY[i];
   story = {ch:i, prev: story ? story.prev : playerChoice};
   playerChoice = rid(ch.hero);
-  clearRace(); gp = null; state = 'menu'; previewOn = false;
+  clearRace(); gp = null; ranked = null; state = 'menu'; previewOn = false;
   $('results').classList.add('hidden'); menuEl.classList.add('hidden'); $('intro').style.display = 'none';
   showTrack(TRACKS.indexOf(byName(ch.track)));
   runDialog(ch.pre, () => {
     initAudio(); actx.resume();
     const w = $('wipe'); w.classList.remove('run'); void w.offsetWidth; w.classList.add('run'); beep(200, .7, 'sawtooth', .07, 4);
     setTimeout(setupRace, 520); setTimeout(() => w.classList.remove('run'), 1200);
-  }, `📖 Chapter ${i + 1}: ${ch.title}`);
+  }, `📖 ${i === partStart(partOf(i)) && i > 0 ? `PART ${partOf(i)}: ${PARTS[partOf(i) - 1].title.toUpperCase()} · ` : partOf(i) > 1 ? `Part ${partOf(i)} · ` : ""}Chapter ${i + 1}: ${ch.title}`);
 }
 function storyAfter(){
   $('results').classList.add('hidden');
   const i = story.ch;
   runDialog(STORY[i].post, () => {
+    // end of Part 1: Meta AI joins, then Part 2 picks straight up
+    const p = partOf(i); if (i === partEnd(p) - 1 && p < PARTS.length) setTimeout(() => toast(`🏆 Part ${p} complete!${p === 1 ? ' Meta AI is now a racer ·' : ''} Part ${p + 1}: ${PARTS[p].title} begins`), 1400);
     if (i < STORY.length - 1) playChapter(i + 1);
-    else { storyMenu(); setTimeout(() => toast('🏆 Story complete! Meta AI is now a racer.'), 600); }
+    else { storyMenu(); setTimeout(() => toast('🏆 The whole story is complete!'), 600); }
   });
 }
 function storyMenu(){ openMenu(); go('story'); }
@@ -5177,21 +5636,24 @@ addEventListener('keydown', e => {
 // story menu screen
 function storyInfo(i){
   const ch = STORY[i], open = i <= storyProg, done = i < storyProg, hi = rid(ch.hero);
-  $('storyinfo').innerHTML = `<div class="shero"><img src="${PORTRAITS[hi]}" alt="" style="background:${hex(ROSTER[hi].color)}"><div><small>Chapter ${i + 1}${done ? ' · ✅ done' : ''}</small><h2>${open ? ch.title : '🔒 ???'}</h2></div></div>
+  $('storyinfo').innerHTML = `<div class="shero"><img src="${PORTRAITS[hi]}" alt="" style="background:${hex(ROSTER[hi].color)}"><div><small>${partOf(i) > 1 ? `Part ${partOf(i)} · ` : ''}Chapter ${i + 1}${done ? ' · ✅ done' : ''}</small><h2>${open ? ch.title : '🔒 ???'}</h2></div></div>
     ${open ? `<div><span class="tag">You play as ${ROSTER[hi].name}</span></div>
-    <ol><li>🗺️ ${THEMES[byName(ch.track).theme].emoji} ${ch.track}</li><li>🎯 ${goalText(ch.goal)}</li>${ch.boss ? '<li>👑 Boss race: Meta AI at full power</li>' : ''}</ol>
+    <ol><li>🗺️ ${THEMES[byName(ch.track).theme].emoji} ${ch.track}</li><li>🎯 ${goalText(ch.goal)}</li>${ch.boss ? `<li>👑 Boss race: ${BOSS_LINE[ch.boss] || ROSTER[rid(ch.boss)].name}</li>` : ''}</ol>
     <p class="fine">${esc(ch.pre[0][1])}</p>
     <button class="btn go" id="storyGo">${done ? 'Play again ▸' : 'Play ▸'}</button>` : `<p class="fine">Finish chapter ${i} to unlock this one.</p>`}
-    <p class="fine">📖 ${storyProg} / ${STORY.length} chapters done${storyProg >= STORY.length ? ' · 🏆 Story complete!' : ' · beat the story to unlock Meta AI'}</p>`;
+    <p class="fine">📖 ${storyProg} / ${STORY.length} chapters done${storyProg >= STORY.length ? ' · 🏆 Story complete!' : ` · ${PARTS[partsOpen() - 1].icon} Part ${partsOpen()}: ${PARTS[partsOpen() - 1].title}${partsOpen() === 1 ? ' · finish it to unlock Meta AI' : ''}`}</p>`;
   $('storyGo')?.addEventListener('click', () => { blip.ok(); playChapter(i); });
 }
 function pickChapter(){
-  if (storyChoice > storyProg){ blip.back(); const c = $('storygrid').children[storyChoice]; c?.classList.remove('nope'); void c?.offsetWidth; c?.classList.add('nope'); return; }
+  if (storyChoice > storyProg){ blip.back(); const c = $('storygrid').querySelectorAll('.chap')[storyChoice]; c?.classList.remove('nope'); void c?.offsetWidth; c?.classList.add('nope'); return; }
   playChapter(storyChoice);
 }
 function renderStory(){
   const el = $('storygrid'); el.innerHTML = '';
-  STORY.forEach((ch, i) => {
+  const shown = partEnd(partsOpen());   // later parts stay completely hidden until you reach them
+  STORY.slice(0, shown).forEach((ch, i) => {
+    // a banner row before the first chapter of each part
+    if (i === partStart(partOf(i))){ const p = partOf(i), h = document.createElement('div'); h.className = 'partlabel p' + p; h.textContent = `${PARTS[p - 1].icon} Part ${p} · ${PARTS[p - 1].title}${storyProg >= partEnd(p) ? ' · ✅' : ''}`; el.appendChild(h); }
     const open = i <= storyProg, hi = rid(ch.hero);
     const d = document.createElement('div'); d.className = 'cup chap nav' + (open ? '' : ' locked') + (i < storyProg ? ' done' : '') + (ch.boss ? ' boss' : '');
     d.style.background = ch.boss ? '#e9e1ff' : THEMES[byName(ch.track).theme].tile;
@@ -5200,6 +5662,7 @@ function renderStory(){
     hookNav(d, i, () => { storyChoice = i; storyInfo(i); if (open) showTrack(TRACKS.indexOf(byName(ch.track)), true); }, pickChapter);
     el.appendChild(d);
   });
+  if (shown < STORY.length){ const h = document.createElement('div'); h.className = 'partlabel pnext'; h.textContent = `🔒 Finish Part ${partsOpen()} to find out what happens next…`; el.appendChild(h); }
 }
 // ---------- pause ----------
 let paused = false, pauseSel = 0;
@@ -5401,6 +5864,7 @@ function frame(now){
     collisions(dt);
   }
   if (NET.role === 'host' && NET.racing) netHostTick(now);
+  stepEmotes(dt);
   if (player2 && state === 'race' && duo.endAt && raceTime > duo.endAt) endRace();
 
   // camera: rides behind the kart and rolls with banked walls (two cameras side by side in 2-player mode)
