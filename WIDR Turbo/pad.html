@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1d1a2f">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<title>WIDR Turbo · Phone controller</title>
+<style>
+  :root{--ink:#1d1a2f;--cream:#fff8e7;--yellow:#ffd23f;--red:#ff3b3b;--blue:#2f7bff;--green:#3ccf6e;--purple:#a45cff;--c:#ff3b3b;
+    --font:"Arial Rounded MT Bold","Avenir Next Rounded","Nunito",ui-rounded,"Trebuchet MS",sans-serif}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:#8fd3ff;font-family:var(--font);color:var(--ink);user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none;overscroll-behavior:none}
+  body{background:repeating-linear-gradient(45deg,#8fd3ff 0 40px,#a3dcff 40px 80px)}
+  .card{background:var(--cream);border:5px solid var(--ink);border-radius:24px;box-shadow:6px 6px 0 var(--ink)}
+  /* join screen */
+  #join{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:16px}
+  #join .card{width:min(420px,100%);padding:20px;display:flex;flex-direction:column;gap:12px;text-align:center}
+  #join h1{font-size:30px;line-height:1.05}
+  #join h1 small{display:block;font-size:15px;opacity:.7;margin-top:4px}
+  #join label{font-size:14px;text-align:left;opacity:.8}
+  #join input{font:inherit;font-size:26px;text-align:center;border:4px solid var(--ink);border-radius:14px;padding:8px;background:#fff;color:var(--ink);width:100%;user-select:text;-webkit-user-select:text;touch-action:auto}
+  #code{letter-spacing:10px;text-transform:uppercase;font-size:40px!important}
+  .go{font:inherit;font-size:24px;border:4px solid var(--ink);border-radius:16px;background:var(--yellow);box-shadow:0 5px 0 var(--ink);padding:10px;color:var(--ink);touch-action:manipulation}
+  .go:active{transform:translateY(4px);box-shadow:0 1px 0 var(--ink)}
+  #msg{min-height:20px;font-size:15px;color:#c0182b}
+  #msg.good{color:#1f8a43}
+  /* controller */
+  #pad{position:fixed;inset:0;display:none;grid-template-columns:minmax(0,1fr) minmax(150px,28vw) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);gap:10px;
+    padding:max(8px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left))}
+  #pad.on{display:grid}
+  .top{grid-column:1/-1;display:flex;align-items:center;gap:8px;min-height:34px}
+  .tag{background:var(--c);color:#fff;border:3px solid var(--ink);border-radius:12px;padding:3px 12px;font-size:18px;box-shadow:3px 3px 0 var(--ink);white-space:nowrap}
+  .top .sp{flex:1}
+  .mini{font:inherit;font-size:13px;border:3px solid var(--ink);border-radius:10px;background:#fff;padding:4px 8px;color:var(--ink);box-shadow:2px 2px 0 var(--ink);touch-action:manipulation}
+  .mini.on{background:var(--yellow)}
+  #link{box-shadow:none}#link.on{background:#a8f0c0}
+  #dot{width:14px;height:14px;border-radius:50%;border:3px solid var(--ink);background:#bbb;flex:none}
+  #dot.ok{background:var(--green)}#dot.bad{background:var(--red)}
+  .steer{display:grid;grid-template-columns:1fr 1fr;gap:10px;min-height:0}
+  .acts{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1.3fr 1fr;gap:10px;min-height:0}
+  .b{border:5px solid var(--ink);border-radius:22px;box-shadow:0 6px 0 var(--ink);font-size:24px;color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:0;transition:transform .05s}
+  .b small{font-size:12px;opacity:.75}
+  .b big{font-size:46px;line-height:1}
+  .b.down{transform:translateY(5px);box-shadow:0 1px 0 var(--ink);filter:brightness(.9)}
+  .b.l,.b.r{background:#fff}
+  .b.item{background:var(--yellow)}
+  .b.spec{background:#d8c2ff}
+  .b.spec.ready{background:linear-gradient(135deg,#ffd23f,#ff7a1f);animation:pulse 0.8s ease-in-out infinite}
+  @keyframes pulse{50%{filter:brightness(1.15)}}
+  .b.drift{grid-column:1/-1;background:#9cc8ff}
+  .b.gas{background:#a8f0c0}
+  .b.brake{background:#ffb3b3}
+  .b.gas.auto{opacity:.55}
+  .mid{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;min-height:0}
+  .info{width:100%;padding:10px;display:flex;flex-direction:column;gap:6px;align-items:center}
+  .info .big{font-size:52px;line-height:1}
+  .info .big sup{font-size:22px}
+  .info .line{font-size:16px}
+  .info .item{font-size:44px;height:50px;line-height:50px}
+  .bar{width:100%;height:14px;border:3px solid var(--ink);border-radius:8px;background:#fff;overflow:hidden}
+  .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#b388ff,#ff7ccf)}
+  .bar.ready i{background:linear-gradient(90deg,#ffd23f,#ff7a1f)}
+  .pick{display:flex;align-items:center;gap:6px;width:100%}
+  .pick .b{flex:none;width:52px;height:52px;font-size:22px;border-radius:14px;background:#fff}
+  .pick .name{flex:1;font-size:20px;line-height:1.1}
+  .swatch{width:46px;height:46px;border-radius:50%;border:4px solid var(--ink);background:var(--rc,#fff)}
+  .start{width:100%;height:56px;background:var(--yellow);font-size:20px}
+  .opts{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+  #rot{display:none;position:fixed;inset:0;z-index:9;background:rgba(29,26,47,.88);color:#fff;font-size:24px;align-items:center;justify-content:center;text-align:center;padding:30px;flex-direction:column;gap:10px}
+  #rot b{font-size:64px}
+  @media (orientation:portrait){ body.playing #rot{display:flex} }
+  .hide{display:none!important}
+</style>
+</head>
+<body>
+<div id="join">
+  <div class="card">
+    <h1>🏎️ WIDR Turbo<small>📱 Phone controller</small></h1>
+    <label for="code">Party code (on the TV)</label>
+    <input id="code" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD">
+    <label for="name">Your name</label>
+    <input id="name" maxlength="16" autocomplete="off" spellcheck="false" placeholder="Player">
+    <button class="go" id="joinBtn">Join the party ▸</button>
+    <p id="msg"></p>
+  </div>
+</div>
+
+<div id="pad">
+  <div class="top">
+    <span class="tag" id="who">P? · …</span><span id="dot"></span><span class="mini" id="link">☁️ Internet</span><span class="sp"></span>
+    <button class="mini" id="oAuto">⏩ Auto-gas</button><button class="mini" id="oSmart">🧭 Smart steer</button><button class="mini" id="oTilt">📐 Tilt</button>
+  </div>
+  <div class="steer">
+    <div class="b l" data-k="left"><big>◀</big><small>steer</small></div>
+    <div class="b r" data-k="right"><big>▶</big><small>steer</small></div>
+  </div>
+  <div class="mid">
+    <div class="card info" id="lobby">
+      <div class="line" id="lobbyLine">You’re in! Pick your racer:</div>
+      <div class="pick"><div class="b" data-k="prev">◀</div><div class="swatch" id="sw"></div><div class="name" id="rname">…</div><div class="b" data-k="next">▶</div></div>
+      <div class="b start" data-k="start">🏁 Start race</div>
+    </div>
+    <div class="card info hide" id="race">
+      <div class="big" id="place">–</div>
+      <div class="line" id="lap"></div>
+      <div class="item" id="item"></div>
+      <div class="bar" id="spbar"><i id="spfill"></i></div>
+      <div class="line"><span class="b mini" data-k="back" style="display:inline-flex;box-shadow:2px 2px 0 var(--ink)">👀 Look back</span> <span class="b mini" data-k="reset" style="display:inline-flex;box-shadow:2px 2px 0 var(--ink)">🎣 Reset</span></div>
+    </div>
+    <div class="card info hide" id="done">
+      <div class="big" id="dplace">🏁</div>
+      <div class="line">Race over! Look at the TV.</div>
+      <div class="b start" data-k="next2">▶ Next</div>
+    </div>
+  </div>
+  <div class="acts">
+    <div class="b item" data-k="item"><big>🎁</big><small>item</small></div>
+    <div class="b spec" data-k="special" id="specBtn"><big id="abIcon">⭐</big><small>special</small></div>
+    <div class="b drift" data-k="drift"><big>🌀</big><small>hold to drift · tap in the air for a trick</small></div>
+    <div class="b brake" data-k="brake"><big>🛑</big><small>brake</small></div>
+    <div class="b gas" data-k="gas" id="gasBtn"><big>⛽</big><small>gas</small></div>
+  </div>
+</div>
+<div id="rot"><b>🔄</b>Turn your phone sideways</div>
+<script>
+const FB = 'https://widf-2b62d-default-rtdb.europe-west1.firebasedatabase.app/widr';
+const NET = {role:null}, PAD = {code:''};   // what the shared connection code looks at to decide to reconnect
+const FB_HOST = 'widf-2b62d-default-rtdb.europe-west1.firebasedatabase.app', FB_NS = 'widf-2b62d-default-rtdb';
+const RT = {ws:null, ok:false, mode:null, host:FB_HOST, r:0, cbs:{}, listens:{}, discs:[], frames:0, buf:'', ka:0, wait:null, redirect:false};
+const rtFull = p => '/widr/' + p;
+function rtConnect(){
+  if (RT.ok) return Promise.resolve(true);
+  if (RT.wait) return RT.wait;
+  return RT.wait = new Promise(res => {
+    let done = false;
+    const fin = v => { if (done) return; done = true; RT.wait = null; if (!v) rtRest(); res(v); };
+    const open = () => {
+      let ws;
+      try { ws = new WebSocket(`wss://${RT.host}/.ws?v=5&ns=${FB_NS}`); } catch (e){ return fin(false); }
+      RT.ws = ws;
+      ws.onmessage = e => rtMsg(e.data, fin);
+      ws.onclose = () => {
+        if (RT.ws !== ws) return;
+        const was = RT.ok; RT.ok = false; RT.ws = null; clearInterval(RT.ka);
+        if (RT.redirect){ RT.redirect = false; return open(); }
+        fin(false);
+        // dropped mid-session: reconnect (listens and disconnect clean-ups are sent again on the handshake)
+        if (was && (NET.role || PAD.code)) setTimeout(() => { if ((NET.role || PAD.code) && !RT.ok) rtConnect(); }, 300);
+      };
+    };
+    open();
+    setTimeout(() => fin(RT.ok), 5000);
+  });
+}
+function rtMsg(raw, fin){
+  // big messages arrive as a frame count followed by that many pieces
+  if (RT.frames){ RT.buf += raw; if (--RT.frames > 0) return; raw = RT.buf; RT.buf = ''; }
+  else if (raw.length <= 6 && /^\d+$/.test(raw)){ RT.frames = +raw; RT.buf = ''; return; }
+  let m; try { m = JSON.parse(raw); } catch (e){ return; }
+  if (m.t === 'c'){
+    const c = m.d || {};
+    if (c.t === 'h'){
+      RT.ok = true; RT.mode = 'ws'; clearInterval(RT.ka);
+      RT.ka = setInterval(() => { if (RT.ws?.readyState === 1) RT.ws.send('0'); }, 40000);
+      for (const p in RT.listens){ const L = RT.listens[p]; L.es?.close(); L.es = null; rtSend('q', {p, h:''}, b => rtListenOk(p, b)); }
+      RT.discs.forEach(([p, d]) => rtSend('o', {p, d}));
+      fin(true);
+    } else if (c.t === 'r'){ RT.host = c.d; RT.redirect = true; RT.ws?.close(); }
+    return;
+  }
+  const d = m.d || {};
+  if (d.r != null){ const cb = RT.cbs[d.r]; delete RT.cbs[d.r]; cb?.(d.b); return; }
+  if ((d.a === 'd' || d.a === 'm') && d.b) rtPush('/' + String(d.b.p).replace(/^\/+/, ''), d.b.d, d.a === 'm');
+}
+function rtSend(a, b, cb){
+  if (!RT.ok || RT.ws?.readyState !== 1) return false;
+  const r = ++RT.r; if (cb) RT.cbs[r] = cb;
+  const s = JSON.stringify({t:'d', d:{r, a, b}});
+  if (s.length <= 16384) RT.ws.send(s);
+  else { const n = Math.ceil(s.length / 16384); RT.ws.send(String(n)); for (let i = 0; i < n; i++) RT.ws.send(s.slice(i * 16384, (i + 1) * 16384)); }
+  return true;
+}
+// write (merge = update only the given children); our own listeners hear it straight away.
+// If Firebase ever refuses (or ignores) a websocket write, all writes switch to plain REST, which the rankings already use.
+// rest = always use REST for this one (room setup, where we have to be sure it landed)
+function rtWrite(p, d, merge = false, keep = false, rest = false){
+  rtPush(rtFull(p), d, merge);
+  if (!rest && RT.mode === 'ws' && !RT.wsBad){
+    const sent = performance.now();
+    if (rtSend(merge ? 'm' : 'p', {p:rtFull(p), d}, b => { if (b?.s !== 'ok'){ RT.wsBad = true; RT.err = b?.s || 'refused'; rtWrite(p, d, merge, keep, true); } })) {
+      const r = RT.r; setTimeout(() => { if (RT.cbs[r] && performance.now() - sent >= 4000){ delete RT.cbs[r]; RT.wsBad = true; RT.err = 'no answer'; rtWrite(p, d, merge, keep, true); } }, 4000);
+      return Promise.resolve(true);
+    }
+  }
+  return fetch(`${FB}/${p}.json?print=silent`, {method: d === null ? 'DELETE' : merge ? 'PATCH' : 'PUT', body: d === null ? undefined : JSON.stringify(d), keepalive:keep})
+    .then(r => { if (!r.ok) RT.err = `Firebase said ${r.status}${r.status === 401 || r.status === 403 ? ' (the database rules block rooms/)' : ''}`; return r.ok; })
+    .catch(() => { RT.err = 'Can’t reach Firebase'; return false; });
+}
+// Firebase runs this write by itself if our connection drops
+function rtOnDisc(p, d = null){ const f = rtFull(p); RT.discs.push([f, d]); if (RT.mode === 'ws') rtSend('o', {p:f, d}); }
+function rtClearDiscs(){ if (RT.mode === 'ws') RT.discs.forEach(([p]) => rtSend('oc', {p})); RT.discs = []; }
+function rtListen(p, cb, once = false){
+  const f = rtFull(p); RT.listens[f] = {cb, data:undefined, es:null, rest:p, once};
+  if (RT.mode === 'ws' && rtSend('q', {p:f, h:''}, b => rtListenOk(f, b))) return;
+  rtEs(f);
+}
+function rtListenOk(f, b){
+  const L = RT.listens[f]; if (!L || !L.once) return;
+  if (b?.s !== 'ok') L.cb(undefined); else if (L.data === undefined){ L.data = null; L.cb(null, []); }
+}
+function rtEs(f){
+  const L = RT.listens[f]; if (!L || L.es) return;
+  try {
+    const es = L.es = new EventSource(`${FB}/${L.rest}.json`);
+    const on = e => { try { const {path, data} = JSON.parse(e.data); rtPush(f + (path === '/' ? '' : path), data, e.type === 'patch'); } catch (err) {} };
+    es.addEventListener('put', on); es.addEventListener('patch', on);
+  } catch (e) {}
+}
+function rtUnlisten(p){ const f = rtFull(p), L = RT.listens[f]; if (!L) return; L.es?.close(); delete RT.listens[f]; if (RT.mode === 'ws') rtSend('n', {p:f}); }
+function rtRest(){ RT.mode = 'rest'; for (const f in RT.listens) rtEs(f); }
+function setAt(o, parts, v){
+  if (!parts.length) return v ?? null;
+  const out = o && typeof o === 'object' ? {...o} : {};
+  const r = setAt(out[parts[0]], parts.slice(1), v);
+  if (r == null) delete out[parts[0]]; else out[parts[0]] = r;
+  return Object.keys(out).length ? out : null;
+}
+// apply a change at a path to every listen at or above it, then tell the listener (with the path below the listen)
+function rtPush(path, data, merge){
+  for (const f in RT.listens){
+    if (path !== f && !path.startsWith(f + '/')) continue;
+    const L = RT.listens[f], rel = path === f ? [] : path.slice(f.length + 1).split('/');
+    if (merge){ for (const k in data) L.data = setAt(L.data, rel.concat(k.split('/')), data[k]); }
+    else L.data = setAt(L.data, rel, data);
+    L.cb(L.data, rel);
+  }
+}
+function rtOnce(p){
+  return new Promise(res => {
+    const t = setTimeout(() => { rtUnlisten(p); res(undefined); }, 4500);
+    rtListen(p, d => { clearTimeout(t); rtUnlisten(p); res(d); }, true);
+  });
+}
+// one read: plain REST first, the open connection if REST is blocked. undefined = couldn't reach Firebase
+async function rtGet(p){
+  try { const r = await fetch(`${FB}/${p}.json`); if (r.ok) return await r.json(); } catch (e) {}
+  return rtOnce(p);
+}
+
+// ---------- the controller ----------
+const $ = id => document.getElementById(id);
+const P = {code:'', id:'', name:'', seq:0, cnt:{i:0, p:0, r:0}, held:{}, keyStr:'', sentT:0, hb:0, last:0, my:null, st:'', hits:0, tilt:0,
+  opts:{auto:true, smart:true, tilt:false}};
+try { Object.assign(P.opts, JSON.parse(localStorage.getItem('wt-pad-opts')) || {}); } catch (e) {}
+const buzz = ms => { try { navigator.vibrate?.(ms); } catch (e) {} };
+const TH = 9;   // degrees of tilt before it counts as steering
+function bits(){
+  const h = P.held, tl = P.opts.tilt && P.tilt < -TH, tr = P.opts.tilt && P.tilt > TH;
+  return (h.gas ? 1 : 0) | (h.brake ? 2 : 0) | (h.left || tl ? 4 : 0) | (h.right || tr ? 8 : 0) | (h.drift ? 16 : 0) | (h.back ? 32 : 0)
+    | (P.opts.smart ? 64 : 0) | (P.opts.auto ? 128 : 0) | (h.prev ? 512 : 0) | (h.next ? 1024 : 0) | (h.start ? 2048 : 0) | (h.next2 ? 4096 : 0);
+}
+// every change goes out the moment it happens: over the direct link if it's open (and to Firebase as a backup copy;
+// the TV ignores whichever copy arrives second). Steady state: 20 times a second direct, once a second via Firebase
+function send(force = false){
+  if (!P.id) return;
+  const now = performance.now(), b = bits(), key = `${b}.${P.cnt.i}.${P.cnt.p}.${P.cnt.r}`, changed = key !== P.keyStr, direct = P.dc?.readyState === 'open';
+  if (!force && !changed && now - P.sentT < (direct ? 50 : 150)) return;
+  P.keyStr = key; P.sentT = now;
+  const rec = {s:++P.seq, b, i:P.cnt.i, p:P.cnt.p, r:P.cnt.r};
+  if (direct){ try { P.dc.send(JSON.stringify(rec)); } catch (e) {} if (!force && !changed && now - P.fbT < 1000) return; }
+  P.fbT = now;
+  rtWrite(`rooms/${P.code}/in/${P.id}`, rec);
+}
+setInterval(() => send(), 16);
+// direct link to the TV (WebRTC). The offer rides along in my player record, the TV's answer comes back in the snap
+const RTC_CFG = {iceServers:[{urls:'stun:stun.l.google.com:19302'}]};
+const iceDone = pc => new Promise(res => {
+  if (pc.iceGatheringState === 'complete') return res();
+  const t = setTimeout(res, 2500);
+  pc.addEventListener('icegatheringstatechange', () => { if (pc.iceGatheringState === 'complete'){ clearTimeout(t); res(); } });
+});
+const playerRec = () => ({name:P.name, char:'', n:P.joined, hb:Date.now(), ...(P.offer ? {o:P.offer} : {})});
+async function rtcStart(){
+  if (typeof RTCPeerConnection === 'undefined' || !P.id) return;
+  rtcStop();
+  try {
+    const pc = P.pc = new RTCPeerConnection(RTC_CFG);
+    const dc = P.dc = pc.createDataChannel('in', {ordered:false, maxRetransmits:0});
+    dc.onopen = () => { linkLabel(); send(true); };
+    dc.onclose = () => linkLabel();
+    pc.onconnectionstatechange = () => { if (pc.connectionState === 'failed' && P.pc === pc){ linkLabel(); setTimeout(() => { if (P.pc === pc) rtcStart(); }, 3000); } };
+    await pc.setLocalDescription(await pc.createOffer());
+    await iceDone(pc);
+    if (P.pc !== pc) return;
+    const sdp = pc.localDescription.sdp; P.answered = false;
+    // plain REST for this one write: if the database rules don't allow the offer, we just stay on the Firebase route
+    if (await rtWrite(`rooms/${P.code}/players/${P.id}`, {...playerRec(), o:sdp}, false, false, true)) P.offer = sdp; else rtcStop();
+  } catch (e){ rtcStop(); }
+  linkLabel();
+}
+function rtcStop(){ try { P.pc?.close(); } catch (e) {} P.pc = null; P.dc = null; P.offer = null; P.answered = false; }
+function linkLabel(){ const on = P.dc?.readyState === 'open'; $('link').textContent = on ? '⚡ Direct' : '☁️ Internet'; $('link').classList.toggle('on', on); }
+function msg(t, good = false){ $('msg').textContent = t; $('msg').classList.toggle('good', good); }
+async function join(){
+  const code = ($('code').value || '').toUpperCase().replace(/[^A-Z]/g, ''), name = ($('name').value || '').trim().slice(0, 16) || 'Player';
+  if (code.length !== 4) return msg('Type the 4-letter code from the TV.');
+  try { localStorage.setItem('wt-pad-name', name); localStorage.setItem('wt-pad-code', code); } catch (e) {}
+  $('joinBtn').disabled = true; msg('Connecting…', true);
+  try { document.documentElement.requestFullscreen?.({navigationUI:'hide'}).catch(() => {}); } catch (e) {}
+  const fast = await rtConnect();
+  const meta = await rtGet(`rooms/${code}/meta`);
+  $('joinBtn').disabled = false;
+  if (meta === undefined) return msg('Can’t reach the game server. Check your internet.');
+  if (!meta) return msg(`There’s no party called ${code}. Check the code on the TV.`);
+  P.code = code; P.name = name; P.id = 'pad-' + Math.random().toString(36).slice(2, 9); NET.role = 'pad'; PAD.code = code;
+  rtOnDisc(`rooms/${code}/players/${P.id}`, null); rtOnDisc(`rooms/${code}/in/${P.id}`, null);
+  P.joined = Date.now(); P.fbT = 0;
+  rtWrite(`rooms/${code}/players/${P.id}`, playerRec());
+  clearInterval(P.hb); P.hb = setInterval(() => { rtWrite(`rooms/${code}/players/${P.id}`, playerRec()); checkAlive(); }, 2000);
+  rtListen(`rooms/${code}/snap`, onSnap);
+  rtListen(`rooms/${code}/meta`, d => { if (d) P.last = Date.now(); else if (P.code) gone('The party was closed on the TV.'); });
+  P.last = Date.now();
+  $('join').classList.add('hide'); $('pad').classList.add('on'); document.body.classList.add('playing');
+  $('dot').className = fast ? 'ok' : '';
+  wake(); send(true); renderOpts(); rtcStart();
+}
+function checkAlive(){ $('dot').className = RT.ok || RT.mode === 'rest' ? (Date.now() - P.last < 9000 ? 'ok' : 'bad') : 'bad'; }
+function gone(t){
+  rtcStop(); linkLabel(); P.code = ''; P.id = ''; NET.role = null; PAD.code = ''; clearInterval(P.hb);
+  $('pad').classList.remove('on'); $('join').classList.remove('hide'); document.body.classList.remove('playing'); msg(t);
+}
+let lock = null;
+async function wake(){ try { lock = await navigator.wakeLock?.request('screen'); } catch (e) {} }
+document.addEventListener('visibilitychange', () => { if (!document.hidden && P.id) wake(); });
+const ord = n => n + (n % 10 === 1 && n % 100 !== 11 ? 'st' : n % 10 === 2 && n % 100 !== 12 ? 'nd' : n % 10 === 3 && n % 100 !== 13 ? 'rd' : 'th');
+function onSnap(d){
+  if (!d || !d.d) return;
+  let s; try { s = JSON.parse(d.d); } catch (e){ return; }
+  P.last = Date.now();
+  if (s.rtc && s.rtc[P.id] && P.pc && P.offer && !P.answered){ P.answered = true; P.pc.setRemoteDescription({type:"answer", sdp:s.rtc[P.id]}).catch(() => { P.answered = false; }); }
+  const my = s.p && s.p[P.id];
+  $('lobby').classList.toggle('hide', !(s.st === 'lobby'));
+  $('race').classList.toggle('hide', !(s.st === 'race' || s.st === 'count'));
+  $('done').classList.toggle('hide', s.st !== 'done');
+  if (!my){
+    $('who').textContent = s.full ? 'Party full' : 'Waiting…'; $('who').style.setProperty('--c', '#888');
+    $('lobbyLine').textContent = s.full ? 'The party is full (4 players). You’ll get a spot when someone leaves.' : s.st === 'lobby' ? 'Joining…' : 'A race is on. You’re in from the next one!';
+    $('rname').textContent = '…'; return;
+  }
+  document.documentElement.style.setProperty('--c', my.pc);
+  $('who').textContent = `P${my.n} · ${my.c}`; $('who').style.setProperty('--c', my.pc);
+  $('lobbyLine').textContent = 'You’re in! Pick your racer:';
+  $('rname').textContent = my.c; $('sw').style.setProperty('--rc', my.col); $('abIcon').textContent = my.ab || '⭐';
+  if (s.st === 'race' || s.st === 'count'){
+    $('place').innerHTML = my.f ? `🏁 ${ord(my.f)}` : my.pl ? `${my.pl}<sup>${ord(my.pl).slice(-2)}</sup>` : '–';
+    $('lap').textContent = s.st === 'count' ? 'Get ready… hold gas at “2” for a rocket start!' : `Lap ${my.lap || 1} / 3`;
+    $('item').textContent = my.it || '';
+    $('spfill').style.width = (my.sp || 0) + '%'; $('spbar').classList.toggle('ready', my.sp >= 100); $('specBtn').classList.toggle('ready', my.sp >= 100);
+    if ((my.h || 0) > P.hits) buzz([90, 40, 90]);
+  }
+  if (s.st === 'done') $('dplace').textContent = my.f ? `🏁 ${ord(my.f)}` : '🏁';
+  P.hits = my.h || 0;
+}
+// buttons: hold for gas / brake / steering / drift, tap for item / special / reset
+const PRESS = {item:'i', special:'p', reset:'r'};
+document.querySelectorAll('[data-k]').forEach(el => {
+  const k = el.dataset.k;
+  const down = e => { e.preventDefault(); el.setPointerCapture?.(e.pointerId); if (P.held[k]) return; P.held[k] = true; el.classList.add('down'); buzz(PRESS[k] ? 25 : 12); if (PRESS[k]) P.cnt[PRESS[k]]++; send(true); };
+  const up = e => { if (!P.held[k]) return; P.held[k] = false; el.classList.remove('down'); send(true); };
+  el.addEventListener('pointerdown', down); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up); el.addEventListener('lostpointercapture', up);
+  el.addEventListener('contextmenu', e => e.preventDefault());
+});
+// tilt steering: hold the phone sideways like a steering wheel
+function onTilt(e){
+  const a = (screen.orientation && screen.orientation.angle) ?? window.orientation ?? 0;
+  P.tilt = a === 90 ? e.beta : (a === 270 || a === -90) ? -e.beta : e.gamma;
+  send();
+}
+async function setTilt(on){
+  if (on && typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission){
+    try { if (await DeviceOrientationEvent.requestPermission() !== 'granted') on = false; } catch (e){ on = false; }
+  }
+  P.opts.tilt = on; P.tilt = 0;
+  removeEventListener('deviceorientation', onTilt); if (on) addEventListener('deviceorientation', onTilt);
+  saveOpts(); renderOpts();
+}
+const saveOpts = () => { try { localStorage.setItem('wt-pad-opts', JSON.stringify(P.opts)); } catch (e) {} };
+function renderOpts(){
+  $('oAuto').classList.toggle('on', P.opts.auto); $('oSmart').classList.toggle('on', P.opts.smart); $('oTilt').classList.toggle('on', P.opts.tilt);
+  $('gasBtn').classList.toggle('auto', P.opts.auto); send(true);
+}
+$('oAuto').onclick = () => { P.opts.auto = !P.opts.auto; saveOpts(); renderOpts(); buzz(15); };
+$('oSmart').onclick = () => { P.opts.smart = !P.opts.smart; saveOpts(); renderOpts(); buzz(15); };
+$('oTilt').onclick = () => { setTilt(!P.opts.tilt); buzz(15); };
+if (P.opts.tilt) setTilt(true);
+$('joinBtn').onclick = join;
+$('code').addEventListener('keydown', e => { if (e.key === 'Enter') $('name').focus(); });
+$('name').addEventListener('keydown', e => { if (e.key === 'Enter') join(); });
+// prefill: ?c=ABCD from the link on the TV, and the last name you used
+{
+  const q = new URLSearchParams(location.search), c = (q.get('c') || q.get('code') || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+  let n = ''; try { n = localStorage.getItem('wt-pad-name') || ''; } catch (e) {}
+  $('code').value = c; $('name').value = n;
+  (c ? $('name') : $('code')).focus?.();
+}
+</script>
+</body>
+</html>
