@@ -390,6 +390,150 @@ export const CHARS = [
      [-1, 1].forEach(s => { limb(g, [s*0.75, 0.3, 0.2], [s*0.42, 0.18, 0.78], 0.12, M(0xffc48a)); mk(g, S(0.26, 12, 10), M(0xd62828), s*0.42, 0.2, 0.82); mk(g, C(0.18, 0.18, 0.12, 12), M(0xffffff), s*0.48, 0.15, 0.62, Math.PI/2); });
      return [];
    }},
+  {id:'yassin', name:'Yassin', title:'The Kickboxer', color:0xe8202a,
+   desc:'Nobody bets against his push-up count anymore. A kickboxer with a roundhouse kick that sends karts flying off the racing line.',
+   mods:[0,1,0,1,0], cd:14, ability:{name:'Roundhouse Kick', icon:'🦵', desc:'Lunges forward with a burst of speed and a spinning kick. Every racer just in front of him spins out and gets kicked hard to the side.'},
+   build:{body:'speedster', wheels:'standard', paint:0x1a1a1a, accent:0xe8202a},
+   draw(g){
+     person(g, {shirt:0x1a1a1a, skin:0xc98d5e, hair:0x1a120c, wide:1.28, mouth:'smirk', brows:'angry', browColor:0x1a120c, gloves:0xe8202a, lh:[-0.32, 0.55, 0.7], rh:[0.36, 0.35, 0.8]});
+     // short fade, red headband with flying tails
+     mk(g, HALF(0.62), M(0x1a120c), 0, 0.98, -0.02, -0.08);
+     mk(g, TOR(0.6, 0.06), M(0xe8202a), 0, 1.02, -0.02, Math.PI/2 - 0.08);
+     const tails = group(g, 0, 1.0, -0.6);
+     [-1, 1].forEach(s => mk(tails, BX(0.1, 0.06, 0.45), M(0xe8202a), s*0.08, 0, -0.18, 0, s*0.35, 0));
+     // big shoulders and arms out of the tank top, white glove cuffs
+     [-1, 1].forEach(s => mk(g, S(0.24, 12, 10), M(0xc98d5e), s*0.66, 0.42, 0.05));
+     mk(g, C(0.17, 0.17, 0.1, 12), M(0xffffff), -0.32, 0.55, 0.58, Math.PI/2);
+     mk(g, C(0.17, 0.17, 0.1, 12), M(0xffffff), 0.36, 0.35, 0.68, Math.PI/2);
+     // red trunks with a white waistband
+     mk(g, C(0.68, 0.68, 0.28, 16), M(0xe8202a), 0, -0.36, 0).scale.set(1.28, 1, 1);
+     mk(g, C(0.7, 0.7, 0.08, 16), M(0xffffff), 0, -0.2, 0).scale.set(1.28, 1, 1);
+     return [t => { tails.rotation.y = Math.sin(t*7)*0.3; tails.rotation.x = Math.sin(t*5)*0.15; }];
+   }},
+  {id:'niek', name:'Niek', title:'Nerd & Boy Scout', color:0x6b8e23,
+   desc:'A proud nerd and boy scout with every merit badge there is. He has read the manual of his kart twice, and his backpack has something for every situation.',
+   mods:[0,0,1,0,1], cd:16, ability:{name:'Be Prepared', icon:'⛺', desc:'Digs in his scout backpack: pulls out a shield for 3.5 seconds and a fresh item if his hands are empty.'},
+   build:{body:'buggy', wheels:'wood', paint:0x6b8e23, accent:0xffc21f},
+   draw(g){
+     person(g, {shirt:0xc8b273, hair:0xb5651d, mouth:'grin', brows:'flat', browColor:0x8a4a14});
+     // big round nerd glasses
+     [-1, 1].forEach(s => mk(g, TOR(0.15, 0.03, Math.PI*2, 16), BM(INK), s*0.2, 0.9, 0.58));
+     mk(g, BX(0.12, 0.03, 0.02), BM(INK), 0, 0.92, 0.6);
+     [-1, 1].forEach(s => mk(g, new THREE.CircleGeometry(0.13, 14), BM(0xbfeaff, {transparent:true, opacity:0.35}), s*0.2, 0.9, 0.6));
+     // wide-brim scout hat
+     mk(g, C(0.95, 0.95, 0.05, 22), M(0x8a6a3a), 0, 1.1, 0);
+     mk(g, C(0.42, 0.55, 0.4, 18), M(0x8a6a3a), 0, 1.3, 0);
+     mk(g, C(0.56, 0.56, 0.08, 18), M(0x4a3a1a), 0, 1.16, 0);
+     // green neckerchief with a woggle, sash full of merit badges
+     mk(g, new THREE.ConeGeometry(0.3, 0.45, 3), M(0x2f7a2f), 0, 0.26, 0.5, Math.PI);
+     mk(g, TOR(0.06, 0.025), M(0xffc21f), 0, 0.36, 0.56);
+     mk(g, BX(0.18, 1.05, 0.05), M(0x2f7a2f), 0.05, -0.05, 0.58, 0, 0, 0.6);
+     [0xff3b3b, 0x3c8dff, 0xffc21f, 0xffffff].forEach((c, i) => mk(g, C(0.06, 0.06, 0.03, 10), M(c), -0.24 + i*0.16, 0.22 - i*0.12, 0.62, Math.PI/2));
+     // the backpack, with a rolled-up sleeping mat and a flashlight
+     mk(g, BX(0.75, 0.75, 0.35), M(0x4a6b2a), 0, 0.15, -0.68);
+     mk(g, C(0.14, 0.14, 0.85, 12), M(0xff7a1f), 0, 0.6, -0.68, 0, 0, Math.PI/2);
+     const torch = mk(g, BX(0.08, 0.08, 0.08), BM(0xfff6a0), 0.3, -0.05, -0.88);
+     return [t => { torch.visible = (t % 2) > 0.3; }];
+   }},
+  {id:'oela', name:'Oela', title:'The Footballer', color:0x1fa04a,
+   desc:'A footballer from Africa with magic in his boots. He dribbles past karts like they are defenders, and when he shoots, the whole track ducks.',
+   mods:[1,1,0,-1,0], cd:30, ability:{name:'Power Shot', icon:'⚽', desc:'Kicks a huge football that curves after the racer ahead of him and smashes through everyone in its path. Very strong, but it takes a long time to recharge.'},
+   build:{body:'speedster', wheels:'slick', paint:0x1fa04a, accent:0xffc21f},
+   draw(g){
+     person(g, {shirt:0x1fa04a, skin:0x5a3420, hair:0x140c08, mouth:'grin', brows:'flat', browColor:0x140c08});
+     // short curly hair
+     for (let i = 0; i < 9; i++){ const a = i/9*Math.PI*2; mk(g, S(0.15, 8, 6), M(0x140c08), Math.cos(a)*0.34, 1.3 + (i % 2)*0.05, Math.sin(a)*0.3 - 0.08); }
+     mk(g, S(0.22, 10, 8), M(0x140c08), 0, 1.38, -0.05);
+     // jersey: yellow collar and sleeves, big number 10 on the front
+     mk(g, TOR(0.4, 0.05), M(0xffc21f), 0, 0.5, 0, Math.PI/2);
+     [-1, 1].forEach(s => mk(g, C(0.17, 0.17, 0.12, 10), M(0xffc21f), s*0.43, 0.27, 0.35, Math.PI/2 - 0.4));
+     const num = textSprite('10', {fg:'#ffc21f', size:0.45, font:96}); num.position.set(0, 0.08, 0.7); g.add(num);
+     // shorts
+     mk(g, C(0.68, 0.68, 0.22, 16), M(0xffffff), 0, -0.35, 0);
+     // the ball, always with him, spinning on one finger
+     const ball = mk(g, S(0.28, 14, 10), M(0xffffff), 0.45, 0.65, 0.85);
+     const patches = group(ball);
+     for (let i = 0; i < 6; i++){ const a = i/6*Math.PI*2, b = (i % 2 ? 0.5 : -0.5); mk(patches, S(0.09, 6, 4), M(INK), Math.cos(a)*0.25*Math.cos(b), Math.sin(b)*0.25, Math.sin(a)*0.25*Math.cos(b)); }
+     return [t => { ball.rotation.y = t*6; ball.position.y = 0.65 + Math.abs(Math.sin(t*4))*0.08; }];
+   }},
+  // ---- secret racers (unlocked by easter eggs) ----
+  {id:'casper', name:'Casper', title:'The Car Expert', color:0xe0201f, secret:true,
+   desc:'A real autokenner. He knows every engine, every tyre and every top speed by heart, and he can tune any kart in seconds.',
+   mods:[1,0,1,0,-1], cd:15, ability:{name:'Pro Tune-Up', icon:'🔧', desc:'Tunes his kart in the middle of the race: shakes off any spin, freeze or shrink, then blasts off with a long turbo boost while nothing can touch him.'},
+   build:{body:'speedster', wheels:'slick', paint:0xe0201f, accent:0xffffff},
+   draw(g){
+     person(g, {shirt:0x2a3a5a, hair:0x3a2414, mouth:'smirk', brows:'flat', browColor:0x3a2414, gloves:0x1d1a2f, rh:[0.55, 0.45, 0.75]});
+     // mechanic overalls: straps and a chest pocket
+     [-1, 1].forEach(s => mk(g, BX(0.12, 0.9, 0.05), M(0x4a6fa5), s*0.24, 0.05, 0.6));
+     mk(g, BX(0.36, 0.22, 0.05), M(0x4a6fa5), 0, -0.15, 0.62);
+     // cap on backwards and sunglasses
+     mk(g, HALF(0.64), M(0xe0201f), 0, 0.92, 0, -0.05);
+     mk(g, BX(0.62, 0.05, 0.42), M(0xe0201f), 0, 1.0, -0.62, -0.12);
+     mk(g, BX(0.64, 0.14, 0.04), BM(0x1d1a2f), 0, 0.93, 0.58);
+     [-1, 1].forEach(s => mk(g, BX(0.24, 0.12, 0.03), BM(0x3cf0ff, {transparent:true, opacity:0.5}), s*0.16, 0.93, 0.6));
+     // a wrench in his hand, a rag in his pocket
+     const wrench = group(g, 0.55, 0.45, 0.75, 0, 0, -0.5), steel = M(0xb0b8c8);
+     mk(wrench, BX(0.08, 0.7, 0.05), steel, 0, 0.3, 0);
+     mk(wrench, TOR(0.1, 0.04, Math.PI*1.4, 10), steel, 0, 0.7, 0, 0, 0, Math.PI*0.8);
+     mk(g, BX(0.14, 0.2, 0.04), M(0xff7a1f), -0.18, -0.2, 0.64, 0, 0, 0.3);
+     return [t => { wrench.rotation.z = -0.5 + Math.sin(t*4)*0.25; }];
+   }},
+  {id:'zennith', name:'Zennith', title:'The Living Dark', color:0x1a1030, secret:true,
+   desc:'A tall shadow being from the darkest corner of the sky. No face, just two glowing eyes. Where Zennith looks, the light goes out.',
+   mods:[1,0,0,0,-1], cd:20, ability:{name:'Void Fall', icon:'🕳️', desc:'Drops a pillar of pure darkness on the racer in 1st place (2nd if Zennith leads). A second later it crashes down and spins out everyone around them.'},
+   build:{body:'rocket', wheels:'slick', paint:0x1a1030, accent:0x8a5cff},
+   draw(g){
+     const dark = M(0x0c0814), body = group(g);
+     // a hooded, flowing cloak of shadow instead of a body
+     mk(body, new THREE.ConeGeometry(0.85, 1.9, 18, 1, true), M(0x120b1f, {side:THREE.DoubleSide}), 0, 0.35, 0);
+     mk(body, S(0.6, 18, 14), dark, 0, 1.05, 0);
+     // hood: open at the front (the gap faces +z) so the eyes glow out of the dark
+     const hood = mk(body, new THREE.SphereGeometry(0.74, 18, 14, Math.PI*0.8, Math.PI*1.4, 0, Math.PI*0.62), M(0x1a1030, {side:THREE.DoubleSide}), 0, 1.1, -0.04);
+     hood.rotation.x = -0.25;
+     const eyes = [-1, 1].map(s => mk(body, S(0.09, 10, 8), BM(0xb38cff), s*0.2, 1.08, 0.55));
+     [-1, 1].forEach(s => mk(body, S(0.16, 10, 8), M(0x8a5cff, {transparent:true, opacity:0.35, depthWrite:false}), s*0.2, 1.08, 0.53));
+     // shadowy arms that end in wisps
+     [-1, 1].forEach(s => { limb(body, [s*0.45, 0.6, 0.1], [s*0.38, 0.15, 0.8], 0.09, dark); mk(body, S(0.12, 8, 6), dark, s*0.38, 0.15, 0.8); });
+     // tiny stars swallowed inside the dark, and wisps drifting off the top
+     for (let i = 0; i < 6; i++) mk(body, S(0.03, 6, 4), BM(0xffffff), (Math.random() - 0.5)*0.9, 0.1 + Math.random()*0.8, 0.45 + Math.random()*0.15);
+     const wisps = group(g, 0, 1.5, 0), ws = [];
+     for (let i = 0; i < 5; i++) ws.push(mk(wisps, S(0.14 - i*0.02, 8, 6), M(0x2a1f3f, {transparent:true, opacity:0.75}), Math.cos(i*1.3)*0.35, 0, Math.sin(i*1.3)*0.35));
+     return [t => {
+       body.position.y = Math.sin(t*1.8)*0.08;
+       wisps.rotation.y = -t;
+       ws.forEach((w, i) => { const p = (t*0.35 + i*0.2) % 1; w.position.y = p*0.9; w.material.opacity = 0.75*(1 - p); });
+       const blink = (t % 4) > 3.85; eyes.forEach(e => e.scale.y = blink ? 0.15 : 1);
+     }];
+   }},
+  {id:'ankervos', name:'Anker Vos', title:'The Annoying Fox', color:0xff7a1f, secret:true,
+   desc:'Just a fox. A very, very annoying fox. He yaps, he cheats, he sticks his tongue out at you, and he never stops laughing.',
+   mods:[1,1,1,-1,0], cd:15, ability:{name:'Yap Yap Yap', icon:'📢', desc:'Yaps so loudly that everyone near him gets their steering scrambled for a moment, and he grabs a speed boost while they wobble.'},
+   build:{body:'speedster', wheels:'tiny', paint:0xff7a1f, accent:0xffffff},
+   draw(g){
+     const fur = M(0xff7a1f), white = M(0xffffff), black = M(INK);
+     person(g, {shirt:0xff7a1f, skin:0xff7a1f, mouth:'smirk', brows:'flat', browColor:0x8a3a00, ears:false});
+     // white chest and muzzle, black nose, tongue sticking out
+     mk(g, S(0.32, 12, 10), white, 0, 0.0, 0.42).scale.set(1, 1.3, 0.5);
+     mk(g, S(0.3, 12, 10), white, 0, 0.68, 0.42).scale.set(1, 0.75, 0.9);
+     mk(g, S(0.09, 8, 6), black, 0, 0.76, 0.7);
+     const tongue = mk(g, S(0.08, 8, 6), M(0xff5f86), 0.06, 0.55, 0.68); tongue.scale.set(1, 0.5, 1.4);
+     // big pointy ears with black tips
+     const ears = [-1, 1].map(s => {
+       const e = group(g, s*0.36, 1.3, -0.05, 0, 0, -s*0.3);
+       mk(e, new THREE.ConeGeometry(0.22, 0.55, 8), fur, 0, 0.2, 0);
+       mk(e, new THREE.ConeGeometry(0.09, 0.2, 8), black, 0, 0.42, 0);
+       return e;
+     });
+     // a huge bushy tail with a white tip
+     const tail = group(g, 0, -0.05, -0.55);
+     mk(tail, S(0.34, 12, 10), fur, 0, 0.15, -0.3).scale.set(0.8, 0.8, 1.5);
+     mk(tail, S(0.24, 10, 8), white, 0, 0.3, -0.78);
+     return [t => {
+       tail.rotation.y = Math.sin(t*6)*0.45;   // never stops wagging
+       ears.forEach((e, i) => e.rotation.x = Math.sin(t*5 + i)*0.15);
+       tongue.scale.z = 1.4 + Math.sin(t*8)*0.4;
+     }];
+   }},
 ];
 
 // Builds the character into `parent` and returns its per-frame animation callbacks.
