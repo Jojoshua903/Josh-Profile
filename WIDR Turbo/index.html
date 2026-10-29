@@ -121,6 +121,30 @@ setInterval(() => LIC.sync(), 4000);
   .pbtn{font-family:var(--font);font-size:22px;text-align:left;background:#fff;color:var(--ink);border:4px solid var(--ink);border-radius:16px;padding:12px 20px;box-shadow:5px 5px 0 var(--ink);cursor:pointer;transform:skewX(-6deg);transition:transform .15s,background .15s}
   .pbtn.focus{background:var(--yellow);transform:skewX(-6deg) translateX(10px) scale(1.03)}
   .ptoggles{display:grid;gap:8px}
+  /* tutorial */
+  #tut{top:14px;left:50%;transform:translateX(-50%) rotate(-1deg);width:min(560px,calc(100% - 340px));min-width:300px;padding:10px 18px 12px;display:none;text-align:left;background:#fff}
+  #tut.on{display:block}
+  #tut.pop{animation:tutPop .45s var(--ease)}
+  @keyframes tutPop{0%{transform:translateX(-50%) translateY(-30px) scale(.9);opacity:0}100%{transform:translateX(-50%) rotate(-1deg);opacity:1}}
+  .tuthead{display:flex;justify-content:space-between;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#8a5cff}
+  .tutskip{opacity:.6;text-transform:none;letter-spacing:0}
+  #tutTitle{font-size:24px;margin:2px 0 4px}
+  #tutText{font-size:16px;line-height:1.4}
+  .tutdots{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap}
+  .tutdots i{font-style:normal;font-size:13px;width:24px;height:24px;display:grid;place-items:center;border:2px solid var(--ink);border-radius:7px;opacity:.35;background:#fff}
+  .tutdots i.ok{opacity:1;background:#7dff9a}
+  .tutdots i.now{opacity:1;background:var(--yellow);transform:scale(1.15)}
+  .tutok{position:absolute;inset:0;display:none;place-items:center;font-size:40px;background:#7dff9aee;border-radius:inherit;color:var(--ink)}
+  #tut.done .tutok{display:grid;animation:tutPop .35s var(--ease)}
+  .tutintro{font-size:15px;line-height:1.45;margin-bottom:14px}
+  .btn.tutgo{font-size:24px;width:100%;margin-bottom:16px}
+  .lessons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .lesson{display:flex;align-items:center;gap:8px;border:3px solid var(--ink);border-radius:12px;padding:6px 10px;background:#fff;cursor:pointer;font-size:14px;box-shadow:3px 3px 0 var(--ink);transition:transform .2s var(--ease)}
+  .lesson span{font-size:20px}
+  .lesson.focus,.btn.tutgo.focus{transform:translateX(6px) scale(1.03);background:var(--yellow);outline:3px dashed var(--ink);outline-offset:3px}
+  .tutdone{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:10px}
+  .tutdone span{border:2px solid var(--ink);border-radius:9px;padding:2px 9px;background:#7dff9a;font-size:14px}
+  @media (max-width:760px){#tut{width:calc(100% - 24px);top:150px}}
   /* story mode */
   .screen .mlist{gap:10px}
   .mlist .mbtn{font-size:26px;padding-top:10px;padding-bottom:10px}
@@ -561,6 +585,7 @@ setInterval(() => LIC.sync(), 4000);
 <div class="hud" id="toast"></div>
 <div class="hud sticker" id="intro"></div>
 <div class="hud sticker" id="wrong">↩ WRONG WAY</div>
+<div class="hud sticker" id="tut"><div class="tuthead"><span id="tutStep"></span><span class="tutskip"><kbd>N</kbd> skip</span></div><h3 id="tutTitle"></h3><p id="tutText"></p><div class="tutdots" id="tutDots"></div><div class="tutok">✔ Nice!</div></div>
 <div class="hud sticker" id="rearview">👀 Looking back</div>
 <div class="sticker" id="mute">🔊</div>
 
@@ -605,7 +630,7 @@ setInterval(() => LIC.sync(), 4000);
         <button class="mbtn nav" data-go="tracks"   data-icon="🏁" data-desc="Pick any of the 34 tracks and do a single 3-lap race. Good for practice." style="--c:#2f7bff">Single Race</button>
         <button class="mbtn nav" data-go="garage"   data-icon="🔧" data-desc="Build your kart. Choose the body, wheels and colors. Each part changes how it drives." style="--c:#3ccf6e">Garage</button>
         <button class="mbtn nav" data-go="trophies" data-icon="🏅" data-desc="Your trophies and your best times on every track." style="--c:#ffb02e">Trophy Room</button>
-        <button class="mbtn nav" data-go="help"     data-icon="🎮" data-desc="Controls, drifting, items and tips for winning." style="--c:#8a5cff">How to Play</button>
+        <button class="mbtn nav" data-go="help"     data-icon="🎮" data-desc="Learn to race on a practice track with step-by-step lessons: drifting, items, jumps, walls, loops and gliders." style="--c:#8a5cff">Tutorial</button>
         <button class="mbtn nav" data-go="licenses" data-icon="🪪" data-desc="Driving licenses are separate saves. Switch player, make a new one, or export and import them as .json files." style="--c:#1fb5a6">Licenses</button>
       </nav>
       <aside class="mpanel" id="mpanel">
@@ -726,21 +751,11 @@ setInterval(() => LIC.sync(), 4000);
         </div>
       </div>
       <div>
-        <h3>Tips</h3>
-        <ul class="tips">
-          <li><b>Drift:</b> keep drifting until the sparks turn blue, then yellow, then orange. Let go for a speed boost.</li>
-          <li><b>Rocket start:</b> press and hold accelerate when the countdown shows <b>2</b> for a big boost at GO. Press on <b>3</b> and your engine stalls. Press on <b>1</b> for a small boost.</li>
-          <li><b>Jumps:</b> yellow-and-black ramps launch you into the air. Press <kbd>Shift</kbd> while flying to do a trick and get a boost when you land.</li>
-          <li><b>Gliders:</b> blue-and-white ramps on hilltops launch you over a gap in the road and your glider opens. Steer while you fly, hold <kbd>↓</kbd> to dive. Fall in and you get fished back out.</li>
-          <li><b>Walls:</b> blue anti-gravity sections tilt the road onto the walls. Bump other racers there for a speed boost.</li>
-          <li><b>Loops:</b> blue loop-de-loops take you upside down. You keep your speed all the way round, so just steer and enjoy the ride.</li>
-          <li><b>Boost pads:</b> drive over the orange arrows.</li>
-          <li><b>Ice:</b> your kart keeps sliding after you turn, so start turning early.</li>
-          <li><b>Items:</b> grab a ? box and the roulette spins. Racers further back get stronger items. Press <kbd>Space</kbd> to use (or to stop the roulette early).</li>
-          <li>🪙 small boost · 🍌 / 🍌×3 drop behind · ❓ fake box trap · 🐢 bounces straight ahead · 🐚 / 🐚×3 home in on the racer ahead · 📯 blasts everything around you, even Spiny Shells</li>
-          <li>🍄 / 🍄×3 boost · golden 🍄 unlimited boosts for 7s · 💣 bomb · 🦑 inks the screens of everyone ahead · 👻 turn invisible and steal an item · ⭐ invincible · ⚡ shrinks everyone else · 🚀 Bullet Bill drives for you · 🔵 Spiny Shell hunts down 1st place</li>
-          <li><b>Specials:</b> every racer has their own ability. The meter under your item fills over time (faster from ? boxes). When it glows, press <kbd>E</kbd>.</li>
-        </ul>
+        <h3>🎓 Tutorial</h3>
+        <p class="tutintro">Learn every move on the <b>Training Grounds</b>, a practice track with one of everything. Follow the instructions at the top of the screen, and each lesson ticks off as soon as you do it.</p>
+        <button class="btn nav tutgo" id="tutGo">▶ Start tutorial</button>
+        <div class="label">Or jump to a lesson</div>
+        <div class="lessons" id="lessons"></div>
       </div>
     </div>
   </section>
@@ -766,7 +781,7 @@ setInterval(() => LIC.sync(), 4000);
     <div class="pmenu">
       <button class="pbtn" id="pResume">▶ Resume</button>
       <button class="pbtn" id="pRestart">↻ Restart race</button>
-      <div class="ptoggles"><button class="pbtn small" id="pSound"></button><button class="pbtn small" id="pSmart"></button><button class="pbtn small" id="pAuto"></button></div>
+      <div class="ptoggles"><button class="pbtn small" id="pSound"></button><button class="pbtn small" id="pMusic"></button><button class="pbtn small" id="pSmart"></button><button class="pbtn small" id="pAuto"></button></div>
       <button class="pbtn" id="pQuit">⌂ Quit to menu</button>
     </div>
     <p class="fine">Esc or P to resume · ↑↓ and Enter to choose<br>In race: <kbd>C</kbd> look back · <kbd>R</kbd> back on track · <kbd>M</kbd> mute</p>
@@ -843,7 +858,7 @@ function gen(seed, R, amps, ex = 1, ez = 1, n = 22){
 }
 // hills: [where 0-1, height, width]   jumps: [where]   walls: [start, length, bank degrees]
 const TRACKS = [
-  {name:'Sunny Loop', glides:[[.72, 18]], loops:[.9], theme:'meadow', tag:'Classic circuit', scale:1.25, w:24, pads:[250,600], jumps:[.45],
+  {name:'Sunny Loop', glides:[[.72, 18]], loops:[.6], theme:'meadow', tag:'Classic circuit', scale:1.25, w:24, pads:[250,600], jumps:[.45],
    ctrl:[[0,0],[90,-5],[160,30],[185,100],[150,160],[80,150],[40,195],[-40,205],[-110,160],[-95,90],[-140,40],[-90,-25]]},
   {name:'Clover Curve', theme:'meadow', tag:'Wide sweepers', w:26, pads:[.3,.75], hills:[[.55, 8, .06]], ctrl:gen(11, 170, [[2,.22],[3,.12]], 1.2, 0.9)},
   {name:'Leafy Lane', theme:'forest', tag:'Shady S bends', w:23, pads:[.5], ctrl:gen(23, 160, [[3,.2],[4,.1]])},
@@ -882,6 +897,8 @@ const TRACKS = [
   {name:'Mesa Rollercoaster', glides:[[.4, 26],[.83, 22]], theme:'desert', tag:'Up, down, round', w:26, pads:[.05,.6], loops:[.18], hills:[[.62, 12, .05]], jumps:[.52], ctrl:gen(251, 210, [[2,.3],[4,.06]], 1.3, 0.85)},
   {name:'Neon Nexus', theme:'neon', tag:'Walls into loops', w:23, pads:[.08,.45], loops:[.35,.88], walls:[[.12,.14,80],[.55,.15,85]], jumps:[.75], hills:[[.25, 8, .04]], ctrl:gen(257, 200, [[3,.17],[2,.15]])},
   {name:'Sky Rollercoaster', glides:[[.5, 24]], theme:'rainbow', tag:'The ultimate ride', w:22, pads:[.04,.66], loops:[.2,.72], walls:[[.84,.1,85]], jumps:[.32,.6], ctrl:gen(263, 205, [[2,.2],[3,.13],[5,.05]])},
+  // tutorial only (hidden from Single Race): one of everything, in the order the lessons teach it
+  {name:'Training Grounds', hidden:true, theme:'meadow', tag:'Learn to race', w:28, pads:[.05,.09], jumps:[.3], walls:[[.45,.1,72]], loops:[.6], glides:[[.79, 16]], ctrl:gen(307, 185, [[2,.2],[3,.09]], 1.3, 0.9)},
 ];
 const byName = n => TRACKS.find(t => t.name === n);
 const CUPS = [
@@ -896,7 +913,68 @@ const CUPS = [
   {name:'Sky Cup', emoji:'☁️', cc:'200cc', speed:1.25, ai:1, tile:'#dfe9ff', tracks:['Summit Spiral','Mesa Rollercoaster','Neon Nexus','Sky Rollercoaster']},
 ];
 const POINTS = [15, 12, 10, 8, 6, 4, 2, 1];
-const MAPS = TRACKS.map(t => ({...THEMES[t.theme], ...t}));
+// ---------- per-track looks ----------
+// Tracks in a cup share a theme, so each one gets its own time of day / weather, a landmark,
+// a second kind of scenery and its own road and kerb colours.
+const TIMES = {
+  day:    {icon:'☀️'},
+  sunset: {icon:'🌇', sky:0xffa070, sun:0xffa860, sunI:1.8, hemiI:1.1, tint:0xffb888, amt:.22},
+  dawn:   {icon:'🌅', sky:0xffd3e6, sun:0xffd8c8, sunI:1.9, hemiI:1.3, tint:0xffe0f0, amt:.15},
+  dusk:   {icon:'🌆', sky:0x6b5aa8, sun:0xd0a8ff, sunI:1.1, hemiI:.95, tint:0x8a7cc8, amt:.32, lamps:true, stars:true},
+  night:  {icon:'🌙', sky:0x141a3c, sun:0x9ab0ff, sunI:.75, hemiI:.8, tint:0x4a5a9a, amt:.42, lamps:true, stars:true, fog:[130, 500]},
+  storm:  {icon:'⛈️', sky:0x77808f, sun:0xd0d8e8, sunI:1.1, hemiI:1.0, tint:0x8090a0, amt:.28, fog:[90, 380], flash:true},
+  autumn: {icon:'🍂', sky:0xffd9a8, sun:0xffd090, sunI:2.0, hemiI:1.25, tint:0xffb060, amt:.12},
+};
+// lm = landmark, props2 = extra scenery mixed in, fx = particles
+const LOOKS = {
+  'Sunny Loop':        {time:'day',    lm:'windmill'},
+  'Clover Curve':      {time:'sunset', lm:'ferris', fx:'petals', props2:'mushrooms', curb:[0x3ccf6e,0xffffff]},
+  'Leafy Lane':        {time:'autumn', lm:'castle', fx:'leaves', ground:0xb8b04a, hill:0xd08a3a, peak:0x9a4a22, curb:[0xff7a1f,0xffffff]},
+  'Mushroom Hollow':   {time:'night',  lm:'mushroom', fx:'fireflies', road:[0x4a3f5a,0x544866]},
+  'Palm Beach':        {time:'day',    lm:'lighthouse'},
+  'Coconut Coast':     {time:'sunset', lm:'ferris', curb:[0xff7ccf,0xffffff], road:[0x7a6f80,0x847a8a]},
+  'Dusty Dunes':       {time:'day',    lm:'pyramid', props2:'palms'},
+  'Mirage Mile':       {time:'dusk',   lm:'crystal', fx:'sparkles', curb:[0x8a5cff,0xffd23f]},
+  'Frosty Peaks':      {time:'day',    lm:'snowman'},
+  'Glacier Glide':     {time:'night',  lm:'crystal', curb:[0x00e5ff,0xffffff], road:[0x5a6a9a,0x6474a4]},
+  'Pine Pass':         {time:'storm',  lm:'castle', lmColor:0x9aa6b8, curb:[0xff3b3b,0xffffff]},
+  'Candy Canyon':      {time:'day',    lm:'castle', lmColor:0xff9ad0},
+  'Gumdrop Garden':    {time:'dawn',   lm:'ferris', props2:'mushrooms', curb:[0x3ccf6e,0xffe97a], road:[0x4fb0ff,0x5ab8ff]},
+  'Cocoa Curves':      {time:'dusk',   lm:'cake', road:[0x6a4430,0x744c38], curb:[0xffffff,0x8b5a2b]},
+  'Sprinkle Speedway': {time:'night',  lm:'cake', fx:'sparkles', road:[0xff4fa0,0xff62ac], curb:[0xffffff,0x2fc4e8]},
+  'Magma Mile':        {time:'sunset', lm:'pyramid', lmColor:0x3a2a30},
+  'Ashfall Alley':     {time:'storm',  lm:'castle', lmColor:0x4a3a40, fx:'ash', curb:[0xff3b3b,0x1d1a2f]},
+  'Cinder Circuit':    {time:'night',  lm:'rocket', road:[0x2a2830,0x34313a]},
+  'Rainbow Run':       {time:'day',    lm:'ferris'},
+  'Cosmic Corkscrew':  {time:'night',  lm:'rocket', fx:'sparkles'},
+  'Cloud Kingdom':     {time:'dawn',   lm:'castle', lmColor:0xffffff},
+  'Stardust Finale':   {time:'dusk',   lm:'crystal', fx:'sparkles'},
+  'Hilltop Hop':       {time:'sunset', lm:'windmill', props2:'pines'},
+  'Canyon Leap':       {time:'dusk',   lm:'crystal', curb:[0x2f7bff,0xffffff]},
+  'Wall Rider':        {time:'night',  lm:'ferris', curb:[0xff4fa0,0xffffff]},
+  'Gravity Gauntlet':  {time:'storm',  lm:'rocket', curb:[0xffd23f,0x1d1a2f]},
+  'Loop Lagoon':       {time:'sunset', lm:'lighthouse', curb:[0xff7a1f,0xffffff]},
+  'Jungle Twister':    {time:'storm',  lm:'pyramid', lmColor:0x7a8a5a, fx:'rain'},
+  'Lollipop Loops':    {time:'day',    lm:'ferris', props2:'puffs'},
+  'Magma Coaster':     {time:'night',  lm:'castle', lmColor:0x2e2226, road:[0x30202a,0x3a2832]},
+  'Summit Spiral':     {time:'dawn',   lm:'crystal', curb:[0xff7ccf,0xffffff]},
+  'Mesa Rollercoaster':{time:'sunset', lm:'windmill', props2:'palms'},
+  'Neon Nexus':        {time:'night',  lm:'ferris', curb:[0xff4fa0,0x00e5ff]},
+  'Sky Rollercoaster': {time:'dusk',   lm:'rocket', fx:'sparkles'},
+  'Training Grounds':  {time:'day',    lm:'castle', curb:[0xffd23f,0x2f7bff]},
+};
+function withLook(def){
+  const L = LOOKS[def.name] || {}, T = TIMES[L.time || 'day'];
+  const mix = c => T.tint ? new THREE.Color(c).lerp(new THREE.Color(T.tint), T.amt).getHex() : c;
+  const d = {...def, look:L, timeDef:T, tag:`${T.icon} ${def.tag}`};
+  for (const k of ['road', 'curb', 'ground', 'hill', 'peak', 'props2']) if (L[k] != null) d[k] = L[k];
+  if (L.fx) d.particles = L.fx;
+  if (T.sky) d.sky = new THREE.Color(T.sky).lerp(new THREE.Color(def.sky), 0.25).getHex();
+  d.ground = mix(d.ground); d.hemiGround = mix(d.hemiGround);
+  if (d.hill) d.hill = mix(d.hill);
+  return d;
+}
+const MAPS = TRACKS.map(t => withLook({...THEMES[t.theme], ...t}));
 
 let world = null, MAP = MAPS[0], pts, tans, nors, W, pads = [], particles = null, span = 300;
 const center = new THREE.Vector3();
@@ -911,25 +989,94 @@ const GAP_LEN = 0.035;
 // Loops: the flat layout keeps running straight while the 3D road curls up and over itself
 // (a stretched trochoid), sliding sideways on the way round so the entry and exit lanes pass each other.
 // LS holds how much longer the 3D road is than the flat one there, so karts keep a believable speed.
+// Loop shape (theta goes 0..2pi): forward = flat progress + R sin(theta), height = Rh (1 - cos(theta)),
+// and a sideways slide that is zero (with zero slope) at both ends so the road doesn't kink going in or out.
+const loopSide = (th, A) => -A * Math.sin(th) * (1 - Math.cos(th)) / 2;
+let LOOPS = [], LR = new Uint8Array(1);
 function buildLoops(def, H){
-  const LF = new Float32Array(N), LL = new Float32Array(N);
-  const R = def.loopR || 17, L2 = 2 * Math.PI * R * 0.6, A = W / 2 + 4;
+  const LF = new Float32Array(N), LL = new Float32Array(N); LOOPS = []; LR = new Uint8Array(N);
+  const R = def.loopR || 19, Rh = R * 1.15, L2 = 2 * Math.PI * R * 0.62, A = W + 9;
   for (const f of def.loops || []){
     let best = null;
     for (let s = -56; s <= 56; s += 2){
       const i0 = (Math.round(f * N) + s + N) % N; let len = 0, n = 0, bend = 0, clash = false;
       while (len < L2 && n < N / 4){ const i = (i0 + n) % N; bend += Math.abs(tans[i].clone().cross(tans[(i + 1) % N]).y); len += segL[i]; n++; }
-      for (let o = -14; o <= n + 14 && !clash; o++){ const i = (i0 + o + N) % N; clash = JZ[i] || GZ[i] || GP[i] || LP[i] || Math.abs(BK[i]) > 0.01 || cd0(i) < 16; }
+      // keep clear of other features, the start line and the starting grid behind it
+      for (let o = -14; o <= n + 14 && !clash; o++){ const i = (i0 + o + N) % N; clash = JZ[i] || GZ[i] || GP[i] || LR[i] || Math.abs(BK[i]) > 0.01 || i < 20 || i > N - 100; }
       if (!clash && (!best || bend < best.bend)) best = {i0, n, bend};
     }
     if (!best) continue;
     const cum = [0]; for (let o = 0; o < best.n; o++) cum.push(cum[o] + segL[(best.i0 + o) % N]);
+    const loop = {i0:best.i0, n:best.n, cum, R, Rh, A, base:[]};
     for (let o = 0; o <= best.n; o++){
       const i = (best.i0 + o) % N, th = 2 * Math.PI * cum[o] / cum[best.n];
-      LF[i] = R * Math.sin(th); H[i] += R * (1 - Math.cos(th)); LL[i] = -A * Math.sin(th); if (o > 0 && o < best.n) LP[i] = 1;
+      loop.base.push(H[i]);
+      LF[i] = R * Math.sin(th); H[i] += Rh * (1 - Math.cos(th)); LL[i] = loopSide(th, A); LR[i] = 1;
+      if (o > 0 && o < best.n) LP[i] = 1;
     }
+    LOOPS.push(loop);
   }
   return {LF, LL};
+}
+// a smooth (6x denser than the physics samples) frame along a loop, for drawing it
+function loopFrames(L, sub = 6){
+  const out = [];
+  for (let j = 0; j <= L.n * sub; j++){
+    const o = Math.min(L.n - 1, Math.floor(j / sub)), t = j / sub - o, k = (L.i0 + o) % N, k2 = (k + 1) % N;
+    const c = L.cum[o] + (L.cum[o + 1] - L.cum[o]) * t, th = 2 * Math.PI * c / L.cum[L.n];
+    const tan = tans[k].clone().lerp(tans[k2], t).normalize(), nor = nors[k].clone().lerp(nors[k2], t).normalize();
+    const P = pts[k].clone().lerp(pts[k2], t).addScaledVector(tan, L.R * Math.sin(th)).addScaledVector(nor, loopSide(th, L.A));
+    P.y = L.base[o] + (L.base[o + 1] - L.base[o]) * t + L.Rh * (1 - Math.cos(th));
+    out.push({P, nor});
+  }
+  out.forEach((f, j) => {
+    f.T = out[Math.min(out.length - 1, j + 1)].P.clone().sub(out[Math.max(0, j - 1)].P).normalize();
+    f.D = f.nor.clone().addScaledVector(f.T, -f.nor.dot(f.T)).normalize();
+    f.U = f.D.clone().cross(f.T).normalize();
+  });
+  return out;
+}
+// one band of a loop's cross-section: from (lateral a, up ua) to (lateral b, up ub)
+function loopBand(F, a, ua, b, ub, colorFn, mat){
+  const pos = [], col = [], idx = [];
+  F.forEach((f, j) => {
+    const p = f.P.clone().addScaledVector(f.D, a).addScaledVector(f.U, ua), q = f.P.clone().addScaledVector(f.D, b).addScaledVector(f.U, ub);
+    pos.push(p.x, p.y, p.z, q.x, q.y, q.z);
+    const c = colorFn(j); col.push(c.r, c.g, c.b, c.r, c.g, c.b);
+    if (j < F.length - 1){ const s = j * 2; idx.push(s, s + 1, s + 2, s + 1, s + 3, s + 2); }
+  });
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.setIndex(idx); g.computeVertexNormals();
+  const m = new THREE.Mesh(g, mat || new THREE.MeshLambertMaterial({vertexColors:true, side:THREE.DoubleSide}));
+  m.receiveShadow = true; m.castShadow = !mat; world.add(m); return m;
+}
+// draws each loop as a solid, smooth track piece: road, kerbs, tall side walls with neon trim, and an underside
+function buildLoopMeshes(def){
+  const hw = W / 2, ew = W / 2 + 2.5, wallH = 3.2, th = 1.6;
+  const rainbow = def.road === 'rainbow', hue = new THREE.Color();
+  const rA = new THREE.Color(rainbow ? 0xffffff : 0x2fc4e8), rB = new THREE.Color(rainbow ? 0xffffff : 0x4fd8ff), arrow = new THREE.Color(0xffffff);
+  const cA = new THREE.Color(def.curb[0]), cB = new THREE.Color(def.curb[1]);
+  const wall = new THREE.Color(def.skirt ?? 0xeef4ff), wallB = wall.clone().multiplyScalar(0.88), under = new THREE.Color(0x3a3f5c);
+  const neon = new THREE.MeshBasicMaterial({color: def.theme === 'neon' ? 0xff4fd8 : 0x00e5ff, side:THREE.DoubleSide});
+  for (const L of LOOPS){
+    const F = loopFrames(L), M = F.length;
+    // the road: stripes plus chevrons pointing the way round
+    loopBand(F, -hw, 0.02, hw, 0.02, j => rainbow ? hue.setHSL((j / M * 2) % 1, 0.85, 0.66) : (j % 18 < 3 ? arrow : Math.floor(j / 9) % 2 ? rA : rB));
+    loopBand(F, -ew, 0.06, -hw, 0.06, j => Math.floor(j / 6) % 2 ? cA : cB);
+    loopBand(F, hw, 0.06, ew, 0.06, j => Math.floor(j / 6) % 2 ? cA : cB);
+    for (const s of [-1, 1]){
+      loopBand(F, s * ew, -th, s * ew, wallH, j => Math.floor(j / 10) % 2 ? wall : wallB);          // side wall
+      loopBand(F, s * ew, wallH, s * (ew + 0.9), wallH, () => wall, neon);                            // glowing trim on top
+      loopBand(F, s * (ew + 0.9), wallH, s * (ew + 0.9), -th, () => wallB);                            // outer face
+    }
+    loopBand(F, -(ew + 0.9), -th, ew + 0.9, -th, () => under);                                        // underside
+    // two support legs under the entry and exit
+    for (const j of [Math.round(M * 0.1), Math.round(M * 0.9)]){
+      const f = F[j], h = f.P.y - th; if (h < 1) continue;
+      put(world, new THREE.CylinderGeometry(1.2, 1.6, h, 8), lam(0x9aa6b8), f.P.x, h / 2, f.P.z);
+    }
+  }
 }
 const cd0 = i => Math.min(i, N - i);
 function buildFrames(def){
@@ -992,7 +1139,7 @@ function strip(A, B, colorFn){
     const k = i % N, a = A(k), b = B(k);
     pos.push(a.x, a.y, a.z, b.x, b.y, b.z);
     const c = colorFn(i); col.push(c.r,c.g,c.b,c.r,c.g,c.b);
-    if (i < N && !GP[k]){ const q = i*2; idx.push(q, q+1, q+2, q+1, q+3, q+2); }
+    if (i < N && !GP[k] && !(LR[k] && LR[(k + 1) % N])){ const q = i*2; idx.push(q, q+1, q+2, q+1, q+3, q+2); }   // loops get their own mesh
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
@@ -1142,11 +1289,155 @@ const RINGS = {
   gumdrops: (rand) => { const m = new THREE.Mesh(new THREE.SphereGeometry(50+rand()*40, 16, 10, 0, Math.PI*2, 0, Math.PI/2), lam([0xff8fc8, 0xc6a8ff, 0x9ee6ff, 0xfff09a][Math.floor(rand()*4)], false)); m.scale.y = 1.2; return m; },
 };
 
+// weather / ambient particles (fall < 0 rises)
+const FX = {
+  snow:      {c:0xffffff, s:.5,  fall:9,   n:1500},
+  embers:    {c:0xff8a1f, s:.4,  fall:-4,  n:700},
+  rain:      {c:0xa8c8ff, s:.3,  fall:55,  n:2200, o:.7},
+  leaves:    {c:0xff9a3a, s:.8,  fall:3,   n:450},
+  petals:    {c:0xffb0d8, s:.7,  fall:2.5, n:500},
+  fireflies: {c:0xfff27a, s:.55, fall:-1,  n:350},
+  sparkles:  {c:0xfff6c0, s:.45, fall:-2,  n:500},
+  ash:       {c:0x8a8088, s:.5,  fall:4,   n:1200},
+};
+// big centrepiece for each track, built from simple shapes (around 30-50 units tall)
+const glow = c => new THREE.MeshBasicMaterial({color:c});
+const LANDMARKS = {
+  windmill(g, c, spin){
+    put(g, new THREE.CylinderGeometry(4, 6.5, 30, 8), lam(c ?? 0xfff3e0), 0, 15, 0);
+    put(g, new THREE.ConeGeometry(5.5, 7, 8), lam(0xff3b3b), 0, 33.5, 0);
+    const b = new THREE.Group(); b.position.set(0, 28, 5.2); g.add(b);
+    for (let i = 0; i < 4; i++){ const a = new THREE.Group(); a.rotation.z = i * Math.PI / 2; put(a, new THREE.BoxGeometry(2.6, 15, 0.4), lam(0xffffff), 0, 8, 0); b.add(a); }
+    put(b, new THREE.SphereGeometry(1.4, 8, 6), lam(0x8b5a2b), 0, 0, 0.3);
+    spin.push({o:b, ax:'z', v:0.8});
+  },
+  ferris(g, c, spin){
+    const wheel = new THREE.Group(); wheel.position.y = 24; g.add(wheel);
+    const frame = lam(c ?? 0xffffff), cols = [0xff3b3b, 0xffd23f, 0x3ccf6e, 0x2f7bff, 0xff7ccf, 0xff7a1f, 0x8a5cff, 0x2fc4e8];
+    for (const z of [-2, 2]){ const r = put(wheel, new THREE.TorusGeometry(18, 0.6, 6, 32), frame, 0, 0, z); r.castShadow = false; }
+    const cabins = [];
+    for (let i = 0; i < 8; i++){
+      const a = i / 8 * Math.PI * 2, s = new THREE.Mesh(new THREE.BoxGeometry(0.5, 18, 0.5), frame);
+      s.position.set(Math.cos(a) * 9, Math.sin(a) * 9, 0); s.rotation.z = a + Math.PI / 2; wheel.add(s);
+      const cab = put(wheel, new THREE.BoxGeometry(3.5, 3, 3.5), lam(cols[i]), Math.cos(a) * 18, Math.sin(a) * 18 - 2, 0); cabins.push(cab);
+    }
+    for (const s of [-1, 1]) for (const z of [-4, 4]){ const leg = put(g, new THREE.BoxGeometry(1, 27, 1), frame, s * 7, 12, z); leg.rotation.z = s * 0.28; }
+    spin.push({o:wheel, ax:'z', v:0.18, keep:cabins});
+  },
+  lighthouse(g, c, spin){
+    for (let i = 0; i < 6; i++) put(g, new THREE.CylinderGeometry(5 - i * 0.35, 5.3 - i * 0.35, 6, 12), lam(i % 2 ? 0xffffff : (c ?? 0xff3b3b)), 0, 3 + i * 6, 0);
+    put(g, new THREE.CylinderGeometry(2.8, 2.8, 4, 10), glow(0xfff27a), 0, 38, 0);
+    put(g, new THREE.ConeGeometry(3.6, 4, 10), lam(0x1d1a2f), 0, 42, 0);
+    const beam = new THREE.Mesh(new THREE.ConeGeometry(4, 40, 12, 1, true), new THREE.MeshBasicMaterial({color:0xfff6b0, transparent:true, opacity:.18, side:THREE.DoubleSide, depthWrite:false}));
+    beam.rotation.z = Math.PI / 2; beam.position.x = 20; const piv = new THREE.Group(); piv.position.y = 38; piv.add(beam); g.add(piv);
+    spin.push({o:piv, ax:'y', v:0.9});
+  },
+  castle(g, c){
+    const m = lam(c ?? 0xd8d0c8), roof = lam(0x2f7bff);
+    put(g, new THREE.BoxGeometry(30, 14, 30), m, 0, 7, 0);
+    for (const [x, z] of [[-15, -15], [15, -15], [-15, 15], [15, 15]]){ put(g, new THREE.CylinderGeometry(4, 4.5, 22, 10), m, x, 11, z); put(g, new THREE.ConeGeometry(5, 9, 10), roof, x, 26.5, z); }
+    put(g, new THREE.BoxGeometry(12, 30, 12), m, 0, 15, 0); put(g, new THREE.ConeGeometry(9, 14, 4), lam(0xff3b3b), 0, 37, 0).rotation.y = Math.PI / 4;
+    put(g, new THREE.BoxGeometry(6, 8, 0.6), lam(0x5a3a1a), 0, 4, 15.2);
+    put(g, new THREE.BoxGeometry(0.4, 6, 0.4), lam(0x1d1a2f), 0, 47, 0); put(g, new THREE.BoxGeometry(4, 2.4, 0.2), lam(0xffd23f), 2, 48.5, 0);
+  },
+  pyramid(g, c){
+    const p = put(g, new THREE.ConeGeometry(30, 32, 4), lam(c ?? 0xe8c070), 0, 16, 0); p.rotation.y = Math.PI / 4;
+    put(g, new THREE.ConeGeometry(4.2, 4.5, 4), glow(0xffd23f), 0, 30, 0).rotation.y = Math.PI / 4;
+    for (const s of [-1, 1]) put(g, new THREE.BoxGeometry(3, 14, 3), lam(c ?? 0xe8c070), s * 12, 7, 26);
+  },
+  snowman(g){
+    const w = lam(0xffffff);
+    put(g, new THREE.SphereGeometry(12, 14, 10), w, 0, 11, 0); put(g, new THREE.SphereGeometry(8.5, 14, 10), w, 0, 28, 0); put(g, new THREE.SphereGeometry(6, 14, 10), w, 0, 40, 0);
+    put(g, new THREE.ConeGeometry(1.2, 6, 8), lam(0xff7a1f), 0, 40, 8).rotation.x = Math.PI / 2;
+    for (const s of [-1, 1]) put(g, new THREE.SphereGeometry(0.8, 6, 6), lam(0x1d1a2f), s * 2.2, 42, 5.2);
+    put(g, new THREE.CylinderGeometry(4.5, 4.5, 6, 12), lam(0x1d1a2f), 0, 48, 0); put(g, new THREE.CylinderGeometry(7, 7, 0.8, 12), lam(0x1d1a2f), 0, 45.2, 0);
+    put(g, new THREE.TorusGeometry(6.2, 1.1, 6, 16), lam(0xff3b3b), 0, 34.5, 0).rotation.x = Math.PI / 2;
+  },
+  cake(g, c){
+    const t = [[16, 9, c ?? 0xffb6dc], [11.5, 8, 0xffffff], [7.5, 7, 0x8b5a2b]]; let y = 0;
+    for (const [r, h, col] of t){ put(g, new THREE.CylinderGeometry(r, r, h, 16), lam(col), 0, y + h / 2, 0); put(g, new THREE.TorusGeometry(r, 0.9, 6, 20), lam(0xffffff), 0, y + h, 0).rotation.x = Math.PI / 2; y += h; }
+    for (let i = 0; i < 5; i++){ const a = i / 5 * Math.PI * 2; put(g, new THREE.CylinderGeometry(0.5, 0.5, 4, 6), lam(0x2fc4e8), Math.cos(a) * 4.5, y + 2, Math.sin(a) * 4.5); put(g, new THREE.SphereGeometry(0.6, 6, 6), glow(0xffd23f), Math.cos(a) * 4.5, y + 4.4, Math.sin(a) * 4.5); }
+    put(g, new THREE.SphereGeometry(2.4, 10, 8), lam(0xff3b3b), 0, y + 2, 0);
+  },
+  mushroom(g, c){
+    put(g, new THREE.CylinderGeometry(4, 5.5, 22, 12), lam(0xfff3d6), 0, 11, 0);
+    put(g, new THREE.SphereGeometry(15, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), lam(c ?? 0xff3b3b), 0, 20, 0);
+    for (let i = 0; i < 9; i++){ const a = i / 9 * Math.PI * 2, r = i % 3 ? 10 : 4; put(g, new THREE.SphereGeometry(2, 8, 6), glow(0xffffff), Math.cos(a) * r, 20 + Math.sqrt(225 - r * r) - 0.6, Math.sin(a) * r); }
+    for (const s of [-1, 1]) put(g, new THREE.SphereGeometry(0.9, 6, 6), lam(0x1d1a2f), s * 1.8, 14, 5);
+  },
+  rocket(g, c){
+    put(g, new THREE.CylinderGeometry(8, 9, 2, 12), lam(0x9a9aa8), 0, 1, 0);
+    put(g, new THREE.CylinderGeometry(4.5, 4.5, 26, 14), lam(c ?? 0xffffff), 0, 16, 0);
+    put(g, new THREE.ConeGeometry(4.5, 10, 14), lam(0xff3b3b), 0, 34, 0);
+    put(g, new THREE.CylinderGeometry(2, 2, 0.6, 12), lam(0x2fc4e8), 0, 22, 4.4).rotation.x = Math.PI / 2;
+    for (let i = 0; i < 3; i++){ const f = new THREE.Group(); f.rotation.y = i / 3 * Math.PI * 2; put(f, new THREE.BoxGeometry(0.6, 9, 5), lam(0xff3b3b), 0, 6.5, 5.5); g.add(f); }
+    put(g, new THREE.ConeGeometry(3, 5, 10), glow(0xff9a1f), 0, 1.5, 0).rotation.x = Math.PI;
+  },
+  crystal(g, c){
+    const cols = [c ?? 0x8af0ff, 0xc99aff, 0xff9ae0];
+    [[0, 30, 0, 0], [7, 18, 3, .4], [-6, 20, -4, -.35], [3, 13, -8, .2], [-5, 12, 7, -.25]].forEach(([x, h, z, tilt], i) => {
+      const m = new THREE.MeshLambertMaterial({color:cols[i % 3], emissive:cols[i % 3], emissiveIntensity:.45, flatShading:true});
+      const o = put(g, new THREE.OctahedronGeometry(1, 0), m, x, h / 2, z); o.scale.set(h * 0.18, h * 0.55, h * 0.18); o.rotation.z = tilt;
+    });
+  },
+};
+function decorate(def, rand){
+  const T = def.timeDef || {}, L = def.look || {};
+  // landmark: in the infield if there's room, otherwise just outside the track
+  if (L.lm && LANDMARKS[L.lm]){
+    const spots = [[center.x, center.z]];
+    for (let i = 0; i < 16; i++){ const a = i / 16 * Math.PI * 2 + rand(), r = span * (0.15 + (i % 4) * 0.12); spots.push([center.x + Math.cos(a) * r, center.z + Math.sin(a) * r]); }
+    for (let i = 0; i < 12; i++){ const a = i / 12 * Math.PI * 2, r = span / 2 + 70; spots.push([center.x + Math.cos(a) * r, center.z + Math.sin(a) * r]); }
+    const spot = spots.find(([x, z]) => distToTrack(x, z) > W / 2 + 42 + P3[distToTrack.i].y * 1.2 && (!def.water || Math.hypot(x - center.x, z - center.z) < span * 0.82 + 30));
+    if (spot){
+      const g = new THREE.Group(); LANDMARKS[L.lm](g, L.lmColor, world.userData.spin);
+      g.position.set(spot[0], terrainH(spot[0], spot[1]) - 0.2, spot[1]);
+      g.rotation.y = Math.atan2(pts[0].x - spot[0], pts[0].z - spot[1]);   // face the start line
+      g.traverse(o => { if (o.isMesh) o.receiveShadow = true; }); world.add(g);
+    }
+  }
+  // street lamps at dusk and night
+  if (T.lamps){
+    const postM = lam(0x2a2833), bulbM = glow(0xfff1b0), postG = new THREE.CylinderGeometry(0.3, 0.4, 7, 6), bulbG = new THREE.SphereGeometry(0.9, 8, 6);
+    for (let i = 0; i < N; i += 32){
+      if (RAIL[i] || LP[i] || GP[i] || JZ[i]) continue;
+      const s = (i / 32) % 2 ? 1 : -1, p = pts[i].clone().addScaledVector(nors[i], s * (W / 2 + 5)); p.y = P3[i].y;
+      put(world, postG, postM, p.x, p.y + 3.5, p.z, false); put(world, bulbG, bulbM, p.x, p.y + 7.4, p.z, false);
+    }
+  }
+  if (T.stars){
+    const n = 700, a = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++){ const th = rand() * Math.PI * 2, ph = rand() * 1.2 + 0.08, r = 1300; a[i*3] = center.x + Math.cos(th) * Math.cos(ph) * r; a[i*3+1] = Math.sin(ph) * r; a[i*3+2] = center.z + Math.sin(th) * Math.cos(ph) * r; }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(a, 3));
+    world.add(new THREE.Points(g, new THREE.PointsMaterial({color:0xffffff, size:2.2, sizeAttenuation:false, fog:false})));
+    const moon = new THREE.Mesh(new THREE.SphereGeometry(40, 16, 12), new THREE.MeshBasicMaterial({color:0xfff6dc, fog:false}));
+    moon.position.set(center.x - 700, 520, center.z - 900); world.add(moon);
+  }
+}
+// spinning landmark parts and storm lightning flashes, every frame
+function animateWorld(dt){
+  if (!world) return;
+  for (const s of world.userData.spin || []){
+    s.o.rotation[s.ax] += s.v * dt;
+    if (s.keep) for (const c of s.keep) c.rotation.z = -s.o.rotation.z;   // ferris cabins stay upright
+  }
+  const T = MAP?.timeDef; if (!T) return;
+  const base = hemi.userData.base ?? 1.4;
+  if (T.flash && !paused && Math.random() < dt * 0.07){
+    hemi.intensity = base * 3.2;
+    if (state !== 'menu') setTimeout(() => beep(55, 1.2, 'sawtooth', .05, .5), 300 + Math.random() * 900);
+  }
+  hemi.intensity += (base - hemi.intensity) * Math.min(1, dt * 5);
+}
+
 function buildWorld(def){
   if (world) scene.remove(world);
   world = new THREE.Group(); scene.add(world); MAP = def; W = def.w;
-  scene.background = new THREE.Color(def.sky); scene.fog = new THREE.Fog(def.sky, 180, 560);
-  hemi.groundColor.set(def.hemiGround);
+  const T = def.timeDef || {};
+  scene.background = new THREE.Color(def.sky); scene.fog = new THREE.Fog(def.sky, ...(T.fog || [180, 560]));
+  hemi.groundColor.set(def.hemiGround); hemi.color.set(T.tint ? new THREE.Color(0xffffff).lerp(new THREE.Color(T.tint), 0.4) : 0xffffff);
+  hemi.intensity = hemi.userData.base = T.hemiI ?? 1.4;
+  sun.color.set(T.sun ?? 0xfff2d0); sun.intensity = T.sunI ?? 2.2;
 
   const sc = def.scale || 1;
   const ctrl = def.ctrl.map(([x, z]) => new THREE.Vector3(x*sc, 0, z*sc));
@@ -1174,11 +1465,13 @@ function buildWorld(def){
   for (const s of [-1, 1]){
     const lw = s * (W/2 + 2.5);
     strip(k => edge(k, lw, 0.04), k => {
-      const a = edge(k, lw, 0.04); if (!RAIL[k] || LP[k]) return a;
+      const a = edge(k, lw, 0.04); if (!RAIL[k] || LR[k]) return a;
       const out = Math.max(0, a.y) * 0.9; return new THREE.Vector3(a.x + nors[k].x * s * out, 0, a.z + nors[k].z * s * out);
     }, i => (Math.floor(i/8)%2 ? sk : skB));
     strip(k => edge(k, lw, 0), k => edge(k, lw, RAIL[k] ? 1.5 : 0), i => ANTI[i % N] ? (Math.floor(i/3)%2 ? neonA : neonB) : (Math.floor(i/5)%2 ? rlA : rlB));
   }
+
+  buildLoopMeshes(def);
 
   // beach maps sit on a sandy island in the sea
   const landR = def.water ? span*0.82 + 50 : 1000;
@@ -1248,7 +1541,7 @@ function buildWorld(def){
     const x = center.x + (rand()-.5)*2*reach, z = center.z + (rand()-.5)*2*reach;
     if (distToTrack(x, z) < W/2 + 10 + P3[distToTrack.i].y * 1.15 + Math.abs(BK[distToTrack.i]) * W) continue;
     if (def.water && Math.hypot(x - center.x, z - center.z) > landR - 8) continue;
-    const g = new THREE.Group(); PROPS[def.props](g, rand, placed);
+    const g = new THREE.Group(); PROPS[def.props2 && rand() < 0.35 ? def.props2 : def.props](g, rand, placed);
     g.position.set(x, terrainH(x, z) - 0.3, z); g.rotation.y = rand()*Math.PI*2; g.scale.setScalar(0.7 + rand()*0.9); world.add(g); placed++;
   }
   for (let i = 0; i < 18; i++){
@@ -1272,14 +1565,16 @@ function buildWorld(def){
       t.position.copy(pts[i]).addScaledVector(nors[i], (curv > 0 ? -1 : 1)*(W/2+9)).setY(0.5); t.castShadow = true; world.add(t);
     }
   }
+  world.userData.spin = [];
+  decorate(def, rand);
   particles = null;
   if (def.particles){
-    const embers = def.particles === 'embers', count = embers ? 700 : 1500;
+    const P = FX[def.particles] || FX.snow, count = P.n;
     const p = new Float32Array(count*3);
     for (let i = 0; i < count; i++){ p[i*3] = (Math.random()-.5)*160; p[i*3+1] = Math.random()*50; p[i*3+2] = (Math.random()-.5)*160; }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(p, 3));
-    particles = new THREE.Points(g, new THREE.PointsMaterial({color: embers ? 0xff8a1f : 0xffffff, size: embers ? 0.4 : 0.5}));
-    particles.userData.fall = embers ? -4 : 9; world.add(particles);
+    particles = new THREE.Points(g, new THREE.PointsMaterial({color:P.c, size:P.s, transparent:true, opacity:P.o ?? 1}));
+    particles.userData.fall = P.fall; world.add(particles);
   }
 
   // item boxes
@@ -1857,6 +2152,7 @@ function rollItem(k){
 const NASTY = {lightning:40, blue:30, ink:20, red3:12};
 let nastyAt = {};
 function startRoulette(k){
+  if (tut && !k.isPlayer) return;   // tutorial rivals stay friendly
   if (k.item || k.rolling > 0) return;
   k.rolling = k.rollTotal = k.isPlayer ? 2.1 : 1.6; k.rollTick = 0;
   if (k.isPlayer){ $('itembox').classList.add('rolling'); $('itembox').classList.remove('reveal'); }
@@ -2133,7 +2429,7 @@ function useSpecial(k){
 }
 // AI waits a moment after charging, and saves close-range moves for when someone is near
 function aiSpecial(k, dt){
-  if (k.isPlayer || k.sp < 1 || state !== 'race') return;
+  if (k.isPlayer || k.sp < 1 || state !== 'race' || tut) return;
   if (!k.spWait) k.spWait = 0.6 + Math.random() * 3.5;
   k.spWait -= dt;
   if (k.spWait > 0) return;
@@ -2235,6 +2531,146 @@ function sfx(name, k){
      shell:() => beep(600, .2, 'triangle', .12, .5), hit:() => beep(400, .5, 'square', .12, .2), box:() => beep(880, .12, 'triangle', .1, 1.5),
      lap:() => [660,880].forEach((f,i) => setTimeout(() => beep(f, .18, 'square', .1), i*120)) })[name]?.();
 }
+// ---------- music ----------
+// Every track has its own song, generated from a seed of its name. Tracks in the same cup share a theme:
+// key, scale, tempo, instruments, groove and chord progression, so a cup sounds like one album.
+const SCALES = {major:[0,2,4,5,7,9,11], minor:[0,2,3,5,7,8,10], dorian:[0,2,3,5,7,9,10], mixo:[0,2,4,5,7,9,10], hminor:[0,2,3,5,7,8,11], lydian:[0,2,4,6,7,9,11]};
+// prog = chord roots as scale degrees (0 = I)
+const MUSIC_THEMES = {
+  menu:            {root:60, scale:'major',  bpm:112, prog:[1,4,0,5], lead:'triangle', bass:'triangle', groove:'swing',   drums:'light',  pad:true},
+  'Acorn Cup':     {root:65, scale:'major',  bpm:132, prog:[0,4,5,3], lead:'square',   bass:'triangle', groove:'bounce',  drums:'pop',    penta:true},
+  'Shell Cup':     {root:67, scale:'mixo',   bpm:118, prog:[0,6,3,0], lead:'triangle', bass:'sine',     groove:'offbeat', drums:'island', bell:true},
+  'Snowflake Cup': {root:62, scale:'lydian', bpm:108, prog:[0,2,3,4], lead:'sine',     bass:'triangle', groove:'bounce',  drums:'sleigh', bell:true, pad:true},
+  'Sugar Cup':     {root:69, scale:'major',  bpm:142, prog:[0,5,1,4], lead:'square',   bass:'square',   groove:'bounce',  drums:'pop',    arp:true, penta:true},
+  'Ember Cup':     {root:64, scale:'hminor', bpm:152, prog:[0,5,6,0], lead:'sawtooth', bass:'sawtooth', groove:'gallop',  drums:'rock'},
+  'Star Cup':      {root:60, scale:'major',  bpm:128, prog:[5,3,0,4], lead:'sawtooth', bass:'triangle', groove:'drive',   drums:'rock',   pad:true, arp:true},
+  'Gravity Cup':   {root:59, scale:'dorian', bpm:138, prog:[0,5,2,6], lead:'sawtooth', bass:'sawtooth', groove:'drive',   drums:'club',   arp:true},
+  'Loop Cup':      {root:70, scale:'mixo',   bpm:146, prog:[0,3,6,3], lead:'square',   bass:'triangle', groove:'gallop',  drums:'pop',    arp:true},
+  'Sky Cup':       {root:66, scale:'minor',  bpm:156, prog:[0,6,5,6], lead:'sawtooth', bass:'sawtooth', groove:'drive',   drums:'club',   pad:true, arp:true},
+};
+const DRUMS = { // 16 steps per bar
+  pop:    {k:'x...x...x...x...', s:'....x.......x...', h:'..x...x...x...x.'},
+  island: {k:'x.......x.......', s:'....x.......x..x', h:'x.xxx.xxx.xxx.xx'},
+  sleigh: {k:'x.......x.......', s:'........x.......', h:'xxxxxxxxxxxxxxxx'},
+  rock:   {k:'x.x...x.x.x...x.', s:'....x.......x...', h:'x.x.x.x.x.x.x.x.'},
+  club:   {k:'x...x...x...x...', s:'....x.......x...', h:'..x...x...x...x.'},
+  light:  {k:'x.......x.......', s:'....x.......x...', h:'x.x.x.x.x.x.x.x.'},
+};
+const RHYTHMS = ['x...x...x.x.x...', 'x.x.x...x...x.x.', 'x..x..x.x...x...', 'x...x.x.x.x.x...', 'x.x...x.x.x.x...', 'x...x..xx...x...', 'x..x..x...x.x...', 'x.xxx...x...x.x.'];
+const ENDING = 'x...x.......x...';
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+const cupOfTrack = name => CUPS.find(c => c.tracks.includes(name));
+function hashStr(str){ let h = 2166136261; for (const c of str) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return (h >>> 0) % 2147483646 + 1; }
+function makeSong(id){
+  const th = MUSIC_THEMES[id === 'menu' ? 'menu' : cupOfTrack(id)?.name] || MUSIC_THEMES['Acorn Cup'];
+  let s = hashStr(id); const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647, pick = a => a[Math.floor(rnd() * a.length)];
+  // each track turns the cup's progression its own way
+  const rot = Math.floor(rnd() * 4), prog = th.prog.slice(rot).concat(th.prog.slice(0, rot));
+  if (rnd() < 0.5) prog[2] = pick([1, 2, 3, 5]);
+  const progB = rnd() < 0.5 ? prog.slice() : [prog[2], prog[3], prog[0], prog[1]];
+  const chords = [...prog, ...progB];
+  // melody: chord tones on the strong beats, stepwise moves in between; bars 4-5 answer bars 0-1
+  const mel = []; let cur = 7 + chords[0];
+  for (let b = 0; b < 8; b++){
+    if (b === 4 || b === 5){ mel.push(mel[b - 4].map(n => ({...n, deg: n.deg + (b === 5 && rnd() < 0.5 ? 2 : 0)}))); continue; }
+    const rh = b === 3 || b === 7 ? ENDING : pick(RHYTHMS), on = [...rh].map((c, i) => c === 'x' ? i : -1).filter(i => i >= 0), notes = [];
+    on.forEach((st, j) => {
+      const c = chords[b];
+      if (st % 8 === 0){ const tones = [c, c + 2, c + 4, c + 7, c + 9, c + 11]; cur = tones.reduce((a, t) => Math.abs(t - cur) < Math.abs(a - cur) ? t : a, tones[0]); }
+      else cur += pick([-2, -1, -1, 1, 1, 2, 0, 3]);
+      if (th.penta && [3, 6].includes(((cur % 7) + 7) % 7)) cur += 1;
+      cur = Math.max(4, Math.min(15, cur));
+      if (rnd() < 0.08 && st % 8) return;   // the odd rest
+      notes.push({step:st, deg:cur, len:Math.min(4, (on[j + 1] ?? 16) - st)});
+    });
+    mel.push(notes);
+  }
+  return {th, chords, mel, bpm: th.bpm * (0.96 + rnd() * 0.08)};
+}
+let musicBus = null, noiseBuf = null;
+function initMusic(){
+  if (musicBus) return;
+  const comp = actx.createDynamicsCompressor(); comp.connect(actx.destination);
+  musicBus = actx.createGain(); musicBus.gain.value = 0; musicBus.connect(comp);
+  noiseBuf = actx.createBuffer(1, actx.sampleRate, actx.sampleRate); const nd = noiseBuf.getChannelData(0);
+  for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+}
+function voice(t, freq, dur, type, vol, o = {}){
+  const osc = actx.createOscillator(), g = actx.createGain(); osc.type = type; osc.frequency.setValueAtTime(freq, t);
+  if (o.detune) osc.detune.value = o.detune;
+  let node = osc;
+  if (o.lp){ const f = actx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = o.lp; osc.connect(f); node = f; }
+  const a = o.a ?? 0.005, r = o.r ?? 0.08;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + a);
+  g.gain.setTargetAtTime(vol * (o.sus ?? 0.6), t + a, Math.max(0.01, dur * 0.3)); g.gain.setTargetAtTime(0, t + dur, r / 3);
+  node.connect(g).connect(musicBus); osc.start(t); osc.stop(t + dur + r + 0.05);
+}
+function drum(t, kind){
+  if (kind === 'k'){
+    const o = actx.createOscillator(), g = actx.createGain(); o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.12);
+    g.gain.setValueAtTime(0.55, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.18); o.connect(g).connect(musicBus); o.start(t); o.stop(t + 0.2); return;
+  }
+  const src = actx.createBufferSource(), f = actx.createBiquadFilter(), g = actx.createGain(), snare = kind === 's';
+  src.buffer = noiseBuf; f.type = 'highpass'; f.frequency.value = snare ? 1200 : 7000;
+  g.gain.setValueAtTime(snare ? 0.22 : 0.06, t); g.gain.exponentialRampToValueAtTime(0.001, t + (snare ? 0.14 : 0.04));
+  src.connect(f).connect(g).connect(musicBus); src.start(t, Math.random() * 0.5); src.stop(t + 0.16);
+  if (snare) voice(t, 190, 0.05, 'triangle', 0.12, {r:0.05});
+}
+function playStep(song, bar, st, t, sd){
+  const th = song.th, sc = SCALES[th.scale], b = bar % 8, c = song.chords[b], intro = bar < 2;
+  const note = deg => th.root + Math.floor(deg / 7) * 12 + sc[((deg % 7) + 7) % 7];
+  const dr = DRUMS[th.drums];
+  for (const k of ['k', 's', 'h']) if (dr[k][st] === 'x') drum(t, k);
+  if (b === 7 && st >= 12 && th.drums !== 'light') drum(t, 's');   // little fill before the loop
+  // bass
+  const bass = (deg, len = 2) => voice(t, mtof(note(deg) - 24), sd * len, th.bass, 0.2, {lp: 900, sus: 0.7});
+  const g = th.groove;
+  if (g === 'bounce'){ if (st === 0 || st === 8) bass(c, 3); else if (st === 4 || st === 12) bass(c + 4, 3); }
+  else if (g === 'offbeat'){ if (st === 0) bass(c, 2); else if (st % 4 === 2) bass(st === 10 ? c + 4 : c, 1.5); }
+  else if (g === 'gallop'){ if ([0, 3, 6, 8, 11, 14].includes(st)) bass(st % 2 ? c + 7 : c, 1.5); }
+  else if (g === 'drive'){ if (st % 2 === 0) bass(st === 14 ? c + 4 : c, 1.6); }
+  else if (g === 'swing'){ const walk = {0:0, 4:2, 8:4, 12:5}; if (walk[st] != null) bass(c + walk[st], 3.5); }
+  // pad chord and arpeggio
+  if (th.pad && st === 0) [0, 2, 4].forEach(o => voice(t, mtof(note(c + o) - 12), sd * 15, 'sine', 0.05, {a:0.15, sus:0.8, r:0.3}));
+  if (th.arp && !intro && st % 2 === 0) voice(t, mtof(note(c + [0, 2, 4, 7][(st / 2) % 4]) + 12), sd * 1.2, 'square', 0.035, {lp: 2400, r:0.04});
+  // lead
+  if (intro) return;
+  for (const n of song.mel[b]) if (n.step === st){
+    const f = mtof(note(n.deg)), len = sd * n.len * 0.9;
+    voice(t, f, len, th.lead, th.lead === 'sawtooth' ? 0.075 : th.lead === 'square' ? 0.07 : 0.12, {lp: th.lead === 'sawtooth' ? 2600 : undefined});
+    if (th.lead === 'sawtooth') voice(t, f, len, 'sawtooth', 0.05, {detune: 12, lp: 2000});
+    if (th.bell) voice(t, f * 2, len * 0.6, 'sine', 0.05, {sus: 0.2, r: 0.3});
+  }
+}
+// win / lose jingle when you cross the finish line
+function jingle(win){
+  if (!actx || muted || OPTS.music === false) return;
+  initMusic(); const t = actx.currentTime + 0.05;
+  musicBus.gain.cancelScheduledValues(actx.currentTime); musicBus.gain.setValueAtTime(0.5, actx.currentTime);
+  const seq = win ? [[72,0],[76,.12],[79,.24],[84,.36],[79,.6],[84,.72]] : [[67,0],[66,.2],[65,.4],[64,.62]];
+  seq.forEach(([m, dt], i) => { voice(t + dt, mtof(m), i === seq.length - 1 ? 0.7 : 0.16, 'square', 0.09); voice(t + dt, mtof(m - 12), 0.18, 'triangle', 0.1); });
+  if (win) [0, .36, .72].forEach(d => drum(t + d, 's'));
+}
+const mus = {cur:null, song:null, next:0, step:0, bar:0};
+function musicTick(){
+  if (!actx) return;
+  initMusic();
+  const want = state === 'menu' ? 'menu' : state === 'race' ? MAP.name : null;
+  if (want !== mus.cur){ mus.cur = want; mus.song = want ? makeSong(want) : null; mus.step = 0; mus.bar = 0; mus.next = actx.currentTime + 0.1; }
+  const on = !muted && OPTS.music !== false && !paused && !!mus.song;
+  musicBus.gain.setTargetAtTime(on ? 0.5 : (state === 'finished' ? musicBus.gain.value : 0), actx.currentTime, 0.08);
+  if (!on){ mus.next = Math.max(mus.next, actx.currentTime + 0.05); return; }
+  if (mus.next < actx.currentTime - 0.3) mus.next = actx.currentTime + 0.05;   // came back from a hidden tab
+  // final lap: the song speeds up, like in Mario Kart
+  const fast = state === 'race' && player && player.lap >= LAPS ? 1.1 : 1, sd = 60 / (mus.song.bpm * fast) / 4;
+  while (mus.next < actx.currentTime + 0.2){
+    const swing = mus.song.th.groove === 'swing' ? (mus.step % 2 ? 0.8 : 1.2) : 1;
+    playStep(mus.song, mus.bar, mus.step, mus.next, sd);
+    mus.next += sd * swing;
+    if (++mus.step === 16){ mus.step = 0; mus.bar++; }
+  }
+}
+
 const muteBtn = document.getElementById('mute');
 function setMute(v){
   muted = v; OPTS.mute = v; saveOpts();
@@ -2295,6 +2731,80 @@ const standings = () => [...karts].sort((a, b) => (b.finished ? 1e9 - b.finishRa
 
 // ---------- menu: screens ----------
 let story = null, storyChoice = 0;
+// ---------- tutorial ----------
+// One lesson at a time on the Training Grounds track. Each check runs every frame; s is the lesson's own scratch state.
+let tut = null;
+const TUT_SET = {speed:0.88, ai:0.55, rivals:['lars', 'milo', 'josh', 'nathan']};
+const LESSONS = [
+  {icon:'🏁', title:'Drive', text:'Hold <kbd>↑</kbd> or <kbd>W</kbd> to drive, and steer with <kbd>←</kbd> <kbd>→</kbd>. Get up to speed!',
+   check:(k, s, dt) => (s.t = k.speed > 30 ? (s.t || 0) + dt : 0) > 1.2},
+  {icon:'🟧', title:'Boost pads', text:'See the orange arrows on the road just ahead? Drive over them for a speed boost.',
+   check:(k, s) => k.padT > s.start},
+  {icon:'🌀', title:'Drift', text:'In a bend, press <kbd>Shift</kbd> and steer <i>at the same time</i> to hop into a drift. Keep holding until the sparks turn <b style="color:#e0a800">yellow</b>, then let go for a boost.',
+   check:(k, s) => {
+     if (k.drift){ s.max = Math.max(s.max || 0, k.driftCharge); return false; }
+     if (s.max > DRIFT_MINI) return true;
+     if (s.max > 0.15){ toast('Almost! Hold the drift until the sparks go yellow'); } s.max = 0; return false;
+   }},
+  {icon:'❓', title:'Item boxes', text:'Drive through one of the rainbow <b>?</b> boxes on the road to get an item.',
+   check:k => k.rolling > 0 || !!k.item},
+  {icon:'🍌', title:'Use your item', text:'Wait for the roulette to stop, then press <kbd>Space</kbd> to use your item.',
+   start:k => { if (!k.item && !(k.rolling > 0)){ k.item = 'boost'; k.uses = 1; updateItemHud(); } },
+   check:k => !k.item && !(k.rolling > 0)},
+  {icon:'🦘', title:'Jump and trick', text:'Drive off the yellow-and-black ramp. While you\'re in the air, press <kbd>Shift</kbd> to do a trick. You get a boost when you land.',
+   check:k => k.air && k.trick},
+  {icon:'🧱', title:'Wall ride', text:'Follow the road up onto the blue <b>anti-gravity</b> wall. Just keep steering along the road.',
+   check:(k, s, dt) => (s.t = k.wasAnti && !LP[k.idx] ? (s.t || 0) + dt : 0) > 0.6},
+  {icon:'🎢', title:'Loop-de-loop', text:'Here comes the loop! You keep your speed all the way round, so just hold <kbd>↑</kbd> and enjoy the ride.',
+   check:(k, s) => { if (LP[k.idx]) s.in = true; return s.in && !LP[k.idx]; }},
+  {icon:'🪂', title:'Glider', text:'Drive up the blue-and-white ramp to fly over the gap. Steer in the air and hold <kbd>↓</kbd> to dive down faster.',
+   check:(k, s) => { if (k.glide) s.flew = true; return s.flew && !k.air; }},
+  {icon:'⚡', title:'Special ability', text:() => `Every racer has a special. Yours is <b>${ROSTER[playerChoice].ability.icon} ${ROSTER[playerChoice].ability.name}</b>: ${ROSTER[playerChoice].ability.desc} Your meter is full, so press <kbd>E</kbd> to use it!`,
+   start:k => { k.sp = 1; updateSpecialHud(); }, check:k => k.sp < 1},
+  {icon:'🏆', title:'Finish line', text:'Last one! Drive across the finish line to finish the tutorial.',
+   start:(k, s) => { s.lap = k.lap; }, check:(k, s) => k.lap > s.lap},
+];
+function startTutorial(from = 0){
+  blip.ok(); initAudio(); actx.resume();
+  tut = {i:from, s:{}, wait:0, prevMap:tut ? tut.prevMap : mapChoice}; story = null; gp = null;
+  const w = $('wipe'); w.classList.remove('run'); void w.offsetWidth; w.classList.add('run'); beep(200, .7, 'sawtooth', .07, 4);
+  setTimeout(() => { previewOn = false; menuEl.classList.add('hidden'); showTrack(TRACKS.findIndex(t => t.name === 'Training Grounds')); setupRace(); }, 520);
+  setTimeout(() => w.classList.remove('run'), 1200);
+}
+function tutShow(fresh){
+  const L = LESSONS[tut.i], el = $('tut');
+  tut.s = {start:raceTime}; L.start?.(player, tut.s);
+  $('tutStep').textContent = `Lesson ${tut.i + 1} / ${LESSONS.length}`;
+  $('tutTitle').textContent = `${L.icon} ${L.title}`;
+  $('tutText').innerHTML = typeof L.text === 'function' ? L.text() : L.text;
+  $('tutDots').innerHTML = LESSONS.map((x, j) => `<i class="${j < tut.i ? 'ok' : j === tut.i ? 'now' : ''}">${x.icon}</i>`).join('');
+  el.classList.remove('done', 'pop'); void el.offsetWidth; el.classList.add('on', 'pop');
+  if (!fresh) beep(660, .1, 'square', .05, 1.3);
+}
+function tutTick(dt){
+  if (tut.wait > 0){ if ((tut.wait -= dt) <= 0){ if (++tut.i >= LESSONS.length) return tutFinish(); tutShow(); } return; }
+  if (!player || countdown > 0) return;
+  if (LESSONS[tut.i].check(player, tut.s, dt)){
+    tut.wait = 1.4; $('tut').classList.add('done');
+    [784, 988, 1175].forEach((f, j) => setTimeout(() => beep(f, .12, 'square', .06), j * 90));
+  }
+}
+function tutSkip(){ if (!tut || tut.wait > 0 || state !== 'race') return; tut.wait = 0.01; }
+function tutFinish(){
+  $('tut').classList.remove('on'); OPTS.tut = true; saveOpts();
+  state = 'finished'; player.finished = true; jingle(true);
+  $('resTitle').innerHTML = '🎓 Tutorial complete!';
+  $('resSub').textContent = 'You know all the moves. Time to race for real!';
+  $('resBody').innerHTML = `<div class="tutdone">${LESSONS.map(L => `<span>✅ ${L.icon} ${L.title}</span>`).join('')}</div>
+    <p class="fine">Tip: in a real race, press and hold <kbd>↑</kbd> when the countdown shows <b>2</b> for a rocket start. <kbd>C</kbd> looks behind you and <kbd>R</kbd> puts you back on the track.</p>`;
+  $('resBtns').innerHTML = '';
+  const btn = (t, c, fn) => { const b = document.createElement('button'); b.className = 'btn ' + c; b.textContent = t; b.onclick = () => { blip.ok(); fn(); }; $('resBtns').appendChild(b); };
+  btn('🏆 Start a Grand Prix', '', () => { openMenu(); go('cups'); });
+  btn('📖 Story Mode', 'alt', () => { openMenu(); go('story'); });
+  btn('Menu', 'ghost', openMenu);
+  setTimeout(() => $('results').classList.remove('hidden'), 900);
+}
+addEventListener('keydown', e => { if (e.code === 'KeyN' && tut && !paused) tutSkip(); });
 let mode = 'gp', cupChoice = Math.min(CUPS.length - 1, OPTS.cup | 0), mapChoice = Math.min(TRACKS.length - 1, OPTS.map | 0), gp = null;
 let trophies = {}, bests = {};
 try { trophies = JSON.parse(localStorage.getItem('pgp-trophies') || '{}'); } catch (e) {}
@@ -2397,7 +2907,7 @@ const SCREENS = {
   racer:    {title:'Choose your racer', sub:'Then hit Let’s go!'},
   garage:   {title:'Garage', sub:'Body · Tires · Paint · Trim · Glider'},
   trophies: {title:'Trophy Room', sub:'Your best results'},
-  help:     {title:'How to Play', sub:'Controls and tips'},
+  help:     {title:'Tutorial', sub:'Learn every move, step by step'},
   licenses: {title:'Driving Licenses', sub:'Separate saves · export and import as .json'},
 };
 let screen = null, trail = [];
@@ -2478,10 +2988,10 @@ mainBtns.forEach((b, i) => hookNav(b, i, () => {
   $('mstat').innerHTML = ({
     story: `<span>📖 ${storyProg} / ${STORY.length} chapters</span><span>${storyProg >= STORY.length ? '🏆 Complete' : '🤖 Stop Meta AI'}</span>`,
     cups: `<span>🏆 ${won} / ${CUPS.length} trophies</span><span>50cc → 200cc</span>`,
-    tracks: `<span>🗺️ ${TRACKS.length} tracks</span><span>⏱️ ${Object.keys(bests).length} best times set</span>`,
+    tracks: `<span>🗺️ ${TRACKS.filter(t => !t.hidden).length} tracks</span><span>⏱️ ${Object.keys(bests).length} best times set</span>`,
     garage: `<span>${BODIES[myBuild.body].emoji} ${BODIES[myBuild.body].name}</span><span>🛞 ${WHEELS[myBuild.wheels].name}</span>`,
     trophies: `<span>🥇 ${golds} gold</span><span>🔓 ${unlockedSet().length} / ${ROSTER.length} racers</span>`,
-    help: `<span>⌨️ Keyboard</span><span>📱 Touch</span>`,
+    help: `<span>🎓 ${LESSONS.length} lessons</span><span>${OPTS.tut ? '✅ Completed' : '✨ Start here!'}</span>`,
     licenses: `<span>🪪 ${esc(LIC.active().name)}</span><span>${LIC.list().length} license${LIC.list().length === 1 ? "" : "s"}</span>`,
   })[b.dataset.go];
 }, () => go(b.dataset.go)));
@@ -2523,7 +3033,7 @@ function trackInfo(i){
 function pickTrack(){ mode = 'single'; go('racer'); }
 function renderMaps(){
   mapsEl.innerHTML = '';
-  MAPS.forEach((m, i) => {
+  MAPS.forEach((m, i) => { if (m.hidden) return;
     const d = document.createElement('div'); d.className = 'map nav' + (i === mapChoice ? ' sel' : ''); d.style.background = m.tile;
     d.innerHTML = `<div class="e">${m.emoji}</div><b>${m.name}</b><small>${m.tag}</small>`;
     hookNav(d, i, () => {
@@ -2728,6 +3238,7 @@ const ENTER = {
     renderRacers(); showPreview($('pstage')); setFocus(playerChoice, true); racerInfo();
   },
   garage:   () => showPreview($('gstage')),
+  help:     () => { renderLessons(); setFocus(0, true); },
   trophies: renderTrophies,
   licenses: () => { renderLicenses(); setFocus(Math.max(0, LIC.list().indexOf(LIC.active())), true); },
 };
@@ -2784,6 +3295,7 @@ try { if (sessionStorage.getItem('wt-goto') === 'licenses'){ sessionStorage.remo
 showTrack(0);
 function openMenu(){
   if (story){ playerChoice = story.prev; story = null; refreshGarage(); }
+  if (tut){ mapChoice = tut.prevMap; tut = null; } $('tut').classList.remove('on');
   clearRace(); gp = null; state = 'menu';
   $('results').classList.add('hidden'); $('intro').style.display = 'none'; menuEl.classList.remove('hidden');
   trail = ['title']; const cur = screen; screen = null;
@@ -2800,12 +3312,13 @@ function clearRace(){
 }
 function setupRace(){
   clearRace();
-  const cup = gp ? CUPS[gp.cup] : story ? STORY[story.ch] : null;
+  const cup = gp ? CUPS[gp.cup] : story ? STORY[story.ch] : tut ? TUT_SET : null;
   if (gp) showTrack(TRACKS.indexOf(byName(cup.tracks[gp.race])));
   MAX = 42 * (cup ? cup.speed : 1); ACC = 26 * (cup ? cup.speed : 1);
   const aiBase = cup ? cup.ai : 0.9;
   boxes.forEach(b => { b.respawn = 0; b.mesh.visible = true; });
-  const field = gp ? gp.field : story ? [playerChoice, ...cup.rivals.map(rid).filter(i => i >= 0 && i !== playerChoice)].slice(0, FIELD_SIZE) : pickField();
+  const field = gp ? gp.field : story ? [playerChoice, ...cup.rivals.map(rid).filter(i => i >= 0 && i !== playerChoice)].slice(0, FIELD_SIZE)
+    : tut ? [playerChoice, ...TUT_SET.rivals.map(rid).filter(i => i !== playerChoice).slice(0, 2)] : pickField();
   // in a cup the grid is reverse standings, so the leader starts at the back
   let order = field.filter(i => i !== playerChoice); order.push(playerChoice);
   if (gp && gp.race > 0) order = [...field].sort((a, b) => (gp.pts[a] - gp.pts[b]) || (a === playerChoice) - (b === playerChoice));
@@ -2825,7 +3338,9 @@ function setupRace(){
   });
   raceTime = 0; finishOrder = []; startPress = null; hudPlace = 0; contacts = new Set(); nastyAt = {}; lastDisrupt = -1e9; countdown = 3.999; state = 'countdown';
   updateItemHud(); updateSpecialHud(); $('big').style.display = 'block';
-  $('intro').innerHTML = story ? `📖 Chapter ${story.ch + 1}: ${cup.title}<b>${MAP.name}</b><span class="goal">🎯 ${goalText(cup.goal)}</span>`
+  if (tut) tutShow(true);
+  $('intro').innerHTML = tut ? `🎓 Tutorial<b>${MAP.name}</b><span class="goal">Follow the instructions at the top</span>`
+    : story ? `📖 Chapter ${story.ch + 1}: ${cup.title}<b>${MAP.name}</b><span class="goal">🎯 ${goalText(cup.goal)}</span>`
     : gp ? `${cup.emoji} ${cup.name} · Race ${gp.race + 1} of ${cup.tracks.length}<b>${MAP.name}</b>` : `${MAP.emoji} Single race<b>${MAP.name}</b>`;
   $('intro').style.display = 'block'; setTimeout(() => { if (state !== 'menu') $('intro').style.display = 'none'; }, story ? 4200 : 3200);
 }
@@ -2859,6 +3374,7 @@ function land(k){
   }
 }
 let MAX = 42, ACC = 26;
+const DRIFT_MINI = 1.3, DRIFT_SUPER = 2.6;   // seconds-ish of drift charge for a mini / super boost
 function stepKart(k, dt){
   let gas = 0, steer = 0, drift = false;
   if (k.isPlayer && !k.finished && !(k.auto > 0)){
@@ -2929,17 +3445,24 @@ function stepKart(k, dt){
   // loops keep you moving: nobody stalls upside down
   if (LP[k.idx]) k.speed = Math.max(k.speed, MAX * 0.85);
 
-  // drifting
-  const canDrift = k.isPlayer && drift && Math.abs(steer) > 0.1 && k.speed > 18 && !off && !k.air;
-  if (canDrift && !k.drift) { k.drift = Math.sign(steer); k.bounce = 0.25; }
-  if (k.drift && (!drift || k.speed < 12)){
-    if (k.driftCharge > 2.2) { k.boost = Math.max(k.boost, 1.2); sfx('boost', k); if (k.isPlayer) toast('Super boost!'); }
-    else if (k.driftCharge > 1.0) { k.boost = Math.max(k.boost, 0.6); sfx('boost', k); }
+  // drifting: like MK you hop first. A drift only starts if you're steering during the short hop
+  // after pressing drift, so just holding the button while turning is a normal turn.
+  const pressed = drift && !k.prevDrift; k.prevDrift = drift;
+  if (pressed) k.hopT = 0.35; else if (k.hopT > 0) k.hopT -= dt;
+  const canDrift = k.isPlayer && drift && (k.hopT > 0 || OPTS.adrift) && Math.abs(steer) > 0.3 && k.speed > 22 && !off && !k.air;
+  if (canDrift && !k.drift) { k.drift = Math.sign(steer); k.bounce = 0.25; k.hopT = 0; }
+  if (k.drift && (!drift || k.speed < 14 || off)){
+    if (k.driftCharge > DRIFT_SUPER) { k.boost = Math.max(k.boost, 1.1); sfx('boost', k); if (k.isPlayer) toast('Super boost!'); }
+    else if (k.driftCharge > DRIFT_MINI) { k.boost = Math.max(k.boost, 0.5); sfx('boost', k); }
     k.drift = 0; k.driftCharge = 0;
   }
   const hm = 1 + (st.handling - 3) * 0.09;
   let turn = steer * 2.1 * hm;
-  if (k.drift){ turn = (k.drift * 1.25 + steer * 0.85) * 1.6 * hm; k.driftCharge += dt * (1 + Math.abs(steer) * 0.6); }
+  // a drift turns a bit tighter than normal when you steer into it, and goes wide when you counter-steer
+  if (k.drift){
+    turn = (k.drift * 0.95 + steer * 0.6) * 1.45 * hm;
+    k.driftCharge += dt * (0.55 + Math.max(0, steer * k.drift) * 0.6);
+  }
   const spdF = THREE.MathUtils.clamp(Math.abs(k.speed) / 16, 0, 1) * Math.sign(k.speed || 1);
   k.heading += turn * spdF * dt;
 
@@ -2947,7 +3470,8 @@ function stepKart(k, dt){
   let gd = k.heading - k.moveH; gd = Math.atan2(Math.sin(gd), Math.cos(gd));
   const grip = k.star > 0 || k.ram > 0 || k.auto > 0 ? 14 : k.perk === 'iceGrip' ? Math.max(MAP.grip, 12) : MAP.grip;
   k.moveH += gd * Math.min(1, grip * dt);
-  const moveDir = fwd(k.moveH + (k.drift ? -k.drift * 0.25 : 0));
+  // a drift slides you slightly outwards; eased in with the visual angle instead of snapping
+  const moveDir = fwd(k.moveH - (k.yawVis || 0) * 0.4);
   k.pos.addScaledVector(moveDir, k.speed * dt / LS[k.idx]);
   // shoves from bumps fade out quickly instead of teleporting the kart
   k.pos.addScaledVector(k.shove, dt); k.shove.multiplyScalar(Math.exp(-7 * dt));
@@ -2978,7 +3502,7 @@ function stepKart(k, dt){
     k.lap = lap;
     if (k.isPlayer && lap > 1){ k.laps = k.laps || []; k.laps.push(raceTime - (k.lapStart || 0)); k.lapStart = raceTime; }
     const split = k.isPlayer && k.laps?.length ? ` · ${fmt(k.laps[k.laps.length - 1])}${k.laps.length > 1 && k.laps[k.laps.length - 1] <= Math.min(...k.laps) ? ' 🔥' : ''}` : '';
-    if (k.lap > LAPS && !k.finished){ k.finished = true; finishOrder.push(k); k.finishRank = finishOrder.length; k.finishTime = raceTime; if (k.isPlayer) endRace(); }
+    if (k.lap > LAPS && !k.finished && !tut){ k.finished = true; finishOrder.push(k); k.finishRank = finishOrder.length; k.finishTime = raceTime; if (k.isPlayer) endRace(); }
     else if (k.isPlayer && k.lap > 1){ sfx('lap'); toast((k.lap === LAPS ? 'FINAL LAP!' : `Lap ${k.lap}`) + split); }
   }
   // wrong way, and getting rescued when stuck off the road
@@ -3028,7 +3552,7 @@ function stepKart(k, dt){
   gl.visible = m.gOpen > 0.02; gl.scale.setScalar(Math.max(0.01, m.gOpen));
   if (gl.visible){ gl.rotation.z = -steer * 0.25 * m.gOpen; gl.rotation.x = -0.12 + Math.sin(raceTime * 3) * 0.04; gl.userData.anim?.(raceTime); }
   m.group.position.copy(k.wp);
-  k.yawVis += ((k.drift ? k.drift * 0.45 : 0) - k.yawVis) * Math.min(1, 8*dt);
+  k.yawVis += ((k.drift ? k.drift * 0.2 : 0) - k.yawVis) * Math.min(1, 5*dt);
   const qBase = basisQ(F, Uv);
   if (!k.q) k.q = qBase.clone(); else k.q.slerp(qBase, 1 - Math.pow(k.air ? 0.03 : 1e-18, dt));
   m.group.quaternion.copy(k.q).multiply(_qa.setFromAxisAngle(UPV, k.yawVis + (k.spin > 0 ? k.spin * 14 : 0) + (k.dance > 0 ? k.dance * 22 : 0)));
@@ -3044,7 +3568,7 @@ function stepKart(k, dt){
   m.wheels.forEach((w, i) => { w.rotation.x += k.speed * dt / m.wheelR; if (i < 2) w.rotation.y = steer * 0.35; });
   const charge = k.driftCharge;
   m.sparks.forEach(s => { s.visible = !!k.drift && charge > 0.4; s.scale.setScalar(0.8 + Math.random()*0.6); });
-  m.sparkM.color.set(charge > 2.2 ? 0xff7a1f : charge > 1.0 ? 0xffd23f : 0x66aaff);
+  m.sparkM.color.set(charge > DRIFT_SUPER ? 0xff7a1f : charge > DRIFT_MINI ? 0xffd23f : 0x66aaff);
   m.flame.visible = k.boost > 0 || k.star > 0 || k.ram > 0 || k.auto > 0; m.flame.scale.set(1, 0.7 + Math.random()*0.6, 1);
   if (k.star > 0){ const h = (raceTime * 3) % 1; m.paints.forEach(p => p.color.setHSL(h, 1, 0.55)); }
   else m.paints.forEach(p => p.color.set(m.paintColor));
@@ -3057,6 +3581,7 @@ function collisions(dt){
     let di = k.idx - p.idx; if (di > N/2) di -= N; if (di < -N/2) di += N;
     if (Math.abs(di) <= 3 && Math.abs(k.pos.clone().sub(pts[k.idx]).dot(nors[k.idx]) - p.lat) < 4){
       if (k.boost < 0.5 && k.isPlayer) sfx('boost', k);
+      k.padT = raceTime;
       k.boost = Math.max(k.boost, 0.9);
     }
   }
@@ -3166,7 +3691,7 @@ function collisions(dt){
 const dot = k => `<img class="pt" src="${PORTRAITS[k.ri]}" alt="" style="background:${hex(k.color)}">`;
 function button(label, cls, fn){ const b = document.createElement('button'); b.className = 'btn ' + cls; b.textContent = label; b.onclick = fn; $('resBtns').appendChild(b); }
 function endRace(){
-  state = 'finished'; toast('FINISH!');
+  state = 'finished'; toast('FINISH!'); jingle(player.finishRank <= 3);
   if (player.finishTime && (!bests[MAP.name] || player.finishTime < bests[MAP.name])){
     const had = !!bests[MAP.name]; bests[MAP.name] = player.finishTime;
     try { localStorage.setItem('pgp-best', JSON.stringify(bests)); } catch (e) {}
@@ -3272,6 +3797,18 @@ function storyAfter(){
 }
 function storyMenu(){ openMenu(); go('story'); }
 
+// tutorial screen: start button + one card per lesson (all of them menu-navigable)
+function renderLessons(){
+  const el = $('lessons'); el.innerHTML = '';
+  if (!$('tutGo')._pick) hookNav($('tutGo'), 0, () => {}, () => startTutorial(0));
+  LESSONS.forEach((L, i) => {
+    const d = document.createElement('div'); d.className = 'lesson nav';
+    d.innerHTML = `<span>${L.icon}</span><b>${i + 1}. ${L.title}</b>`;
+    hookNav(d, i + 1, () => {}, () => startTutorial(i));
+    el.appendChild(d);
+  });
+}
+
 // dialogue boxes with a typewriter effect: click / Enter for the next line, Esc to skip the scene
 let dlg = null;
 function runDialog(lines, done, heading = ''){
@@ -3349,10 +3886,12 @@ $('pQuit').onclick = () => { paused = false; $('pause').classList.add('hidden');
 // quick settings without leaving the race
 function pauseLabels(){
   $('pSound').textContent = muted ? '🔇 Sound: off' : '🔊 Sound: on';
+  $('pMusic').textContent = OPTS.music === false ? '🎵 Music: off' : '🎵 Music: on';
   $('pSmart').textContent = `🧭 Smart steering: ${OPTS.smart ? 'on' : 'off'}`;
   $('pAuto').textContent = `⏩ Auto-accelerate: ${OPTS.auto ? 'on' : 'off'}`;
 }
 $('pSound').onclick = () => { setMute(!muted); beep(700, .08, 'square', .06); };
+$('pMusic').onclick = () => { OPTS.music = OPTS.music === false; saveOpts(); pauseLabels(); beep(700, .08, 'square', .06); };
 $('pSmart').onclick = () => { OPTS.smart = !OPTS.smart; saveOpts(); pauseLabels(); beep(OPTS.smart ? 880 : 440, .08, 'square', .06); };
 $('pAuto').onclick = () => { OPTS.auto = !OPTS.auto; saveOpts(); pauseLabels(); beep(OPTS.auto ? 880 : 440, .08, 'square', .06); };
 pauseLabels();
@@ -3394,8 +3933,10 @@ let last = performance.now(), lastBeep = 4;
 function loop(now){
   requestAnimationFrame(loop);
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  musicTick();
   document.body.classList.toggle("in-menu", state === "menu");
   padTex.offset.y = (padTex.offset.y + dt * 1.5) % 1;
+  animateWorld(dt);
   if (particles){
     const a = particles.geometry.attributes.position, p = a.array, fall = particles.userData.fall;
     for (let i = 1; i < p.length; i += 3){ p[i] -= dt * fall; if (p[i] < 0) p[i] += 50; else if (p[i] > 50) p[i] -= 50; }
@@ -3443,6 +3984,7 @@ function loop(now){
     }
   }
   if (state === 'race' || state === 'finished') raceTime += state === 'race' ? dt : 0;
+  if (tut && state === 'race' && !paused) tutTick(dt);
 
   karts.forEach(k => stepKart(k, dt));
   collisions(dt);
@@ -3450,7 +3992,7 @@ function loop(now){
   // camera: rides behind the kart and rolls with banked walls
   const k = player, wp = k.wp || k.pos;
   camUp.lerp(k.air ? UPV : (k.camU || UPV), 1 - Math.pow(0.01, dt)).normalize();
-  const f = (k.camF || fwd(k.heading)).clone().applyAxisAngle(camUp, k.yawVis * 0.4);
+  const f = (k.camF || fwd(k.heading)).clone().applyAxisAngle(camUp, k.yawVis * 0.25);
   const behind = state === 'finished' ? -9 : 11 + Math.max(0, k.speed) * 0.04;
   // hold C to look behind (snaps instantly, like a rear-view mirror)
   const rear = !!keys.back && state === 'race';
@@ -3472,12 +4014,12 @@ function loop(now){
     hudPlace = place; pe.innerHTML = `${place}<sup>${ord(place).slice(-2)}</sup>`;
   }
   $('wrong').classList.toggle('on', state === 'race' && (player.wrongT || 0) > 0.8);
-  $('lap').textContent = `LAP ${Math.min(LAPS, Math.max(1, player.lap))} / ${LAPS}`;
+  $('lap').textContent = tut ? `🎓 LESSON ${tut.i + 1} / ${LESSONS.length}` : `LAP ${Math.min(LAPS, Math.max(1, player.lap))} / ${LAPS}`;
   $('timer').textContent = fmt(raceTime);
   $('speed').innerHTML = `${Math.round(Math.abs(player.speed) * 3.2)} <small>km/h</small>`;
   const dc = player.driftCharge;
-  $('driftfill').style.width = Math.min(100, dc / 2.2 * 100) + '%';
-  $('driftfill').style.background = dc > 2.2 ? '#ff7a1f' : dc > 1.0 ? '#ffd23f' : '#2f7bff';
+  $('driftfill').style.width = Math.min(100, dc / DRIFT_SUPER * 100) + '%';
+  $('driftfill').style.background = dc > DRIFT_SUPER ? '#ff7a1f' : dc > DRIFT_MINI ? '#ffd23f' : '#2f7bff';
   if (toastT > 0){ toastT -= dt; if (toastT <= 0) $('toast').style.opacity = 0; }
   drawMini(); updateSpecialHud();
 
