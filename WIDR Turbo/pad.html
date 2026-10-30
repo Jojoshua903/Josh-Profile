@@ -376,6 +376,7 @@ document.querySelectorAll('[data-k]').forEach(el => {
 });
 // tilt steering: hold the phone sideways like a steering wheel
 function onTilt(e){
+  if (!P.opts.tilt){ P.tilt = 0; return; }
   const a = (screen.orientation && screen.orientation.angle) ?? window.orientation ?? 0;
   P.tilt = a === 90 ? e.beta : (a === 270 || a === -90) ? -e.beta : e.gamma;
   send();
@@ -385,23 +386,23 @@ async function setTilt(on){
     try { if (await DeviceOrientationEvent.requestPermission() !== 'granted') on = false; } catch (e){ on = false; }
   }
   P.opts.tilt = on; P.tilt = 0;
-  removeEventListener('deviceorientation', onTilt); if (on) addEventListener('deviceorientation', onTilt);
-  saveOpts(); renderOpts();
+  removeEventListener('deviceorientation', onTilt); if (on) addEventListener('deviceorientation', onTilt); else P.tilt = 0;
+  saveOpts(); renderOpts(); send(true);
 }
 const saveOpts = () => { try { localStorage.setItem('wt-pad-opts', JSON.stringify(P.opts)); } catch (e) {} };
 function renderOpts(){
   $('oAuto').classList.toggle('on', P.opts.auto); $('oSmart').classList.toggle('on', P.opts.smart); $('oTilt').classList.toggle('on', P.opts.tilt);
   $('gasBtn').classList.toggle('auto', P.opts.auto); send(true);
 }
-$('oAuto').onclick = () => { P.opts.auto = !P.opts.auto; saveOpts(); renderOpts(); buzz(15); };
-$('oSmart').onclick = () => { P.opts.smart = !P.opts.smart; saveOpts(); renderOpts(); buzz(15); };
-$('oTilt').onclick = () => { setTilt(!P.opts.tilt); buzz(15); };
+$('oAuto').onpointerup = () => { P.opts.auto = !P.opts.auto; saveOpts(); renderOpts(); buzz(15); };
+$('oSmart').onpointerup = () => { P.opts.smart = !P.opts.smart; saveOpts(); renderOpts(); buzz(15); };
+$('oTilt').onpointerup = () => { setTilt(!P.opts.tilt); buzz(15); };
 if (P.opts.tilt) setTilt(true);
 // iPhones ignore user-scalable=no: stop double-tap and pinch zoom by hand
 document.querySelectorAll('[data-k]').forEach(el => el.addEventListener('touchstart', e => { if (e.cancelable) e.preventDefault(); }, {passive:false}));
 ['gesturestart', 'gesturechange', 'dblclick'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), {passive:false}));
 let lastTouch = 0;
-document.addEventListener('touchend', e => { const n = Date.now(); if (n - lastTouch < 350 && e.target.tagName !== 'INPUT' && e.cancelable) e.preventDefault(); lastTouch = n; }, {passive:false});
+document.addEventListener('touchend', e => { const n = Date.now(); if (n - lastTouch < 350 && !e.target.closest('button, input, [data-k]') && e.cancelable) e.preventDefault(); lastTouch = n; }, {passive:false});
 $('joinBtn').onclick = join;
 $('code').addEventListener('keydown', e => { if (e.key === 'Enter') $('name').focus(); });
 $('name').addEventListener('keydown', e => { if (e.key === 'Enter') join(); });

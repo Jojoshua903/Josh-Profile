@@ -748,6 +748,12 @@ setInterval(() => LIC.sync(), 4000);
   .screen[data-screen="party"]{flex-direction:column}
   .partywrap{display:grid;grid-template-columns:270px minmax(0,1fr) 250px;gap:18px;width:min(1180px,96vw);align-items:start}
   .partyjoin{text-align:center;align-items:center}
+  .ptqr{position:relative;width:200px;height:200px;margin:6px 0 12px;padding:8px;border:5px solid var(--ink);border-radius:22px;background:#fff8e7;box-shadow:6px 6px 0 var(--ink);transform:rotate(-3deg);display:grid;place-items:center;font-size:40px;
+    background-image:repeating-conic-gradient(var(--ink) 0 25%,#fff 0 50%);background-size:16px 16px;background-clip:border-box}
+  .ptqr svg{border-radius:14px;box-shadow:0 0 0 3px var(--ink)}
+  .ptqr::after{content:"📱 SCAN ME";position:absolute;bottom:-16px;left:50%;transform:translateX(-50%) rotate(5deg);background:var(--yellow);border:3px solid var(--ink);border-radius:10px;padding:1px 10px;font-size:14px;white-space:nowrap;box-shadow:3px 3px 0 var(--ink)}
+  .ptqr:empty::after,.ptqr.wait::after{display:none}
+  .ptqr svg{width:100%;height:100%;display:block;background:#fff8e7}
   .pturl{font-size:17px;background:#fff;border:3px solid var(--ink);border-radius:12px;padding:6px 10px;word-break:break-all;user-select:text;-webkit-user-select:text}
   .ptkb{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
   .ptkb .btn.on{background:var(--yellow)}
@@ -980,11 +986,12 @@ setInterval(() => LIC.sync(), 4000);
   <section class="screen" data-screen="party">
     <div class="partywrap">
       <aside class="cupinfo partyjoin">
-        <span class="who">Join with your phone</span>
+        <span class="who">Scan to join with your phone</span>
+        <div class="ptqr" id="ptQr"></div>
         <div class="mproom" id="ptCode">----</div>
-        <p class="fine">On your phone, open</p>
+        <p class="fine">or open</p>
         <div class="pturl" id="ptUrl">connecting…</div>
-        <p class="fine">and type the code above. Your phone becomes the controller.</p>
+        <p class="fine">and type the code. Your phone becomes the controller.</p>
         <div class="ptkb"><button class="btn ghost small" id="ptWasd">⌨️ WASD player</button><button class="btn ghost small" id="ptArrows">⌨️ Arrows player</button></div>
         <p class="onerr" id="ptMsg"></p>
       </aside>
@@ -5006,6 +5013,82 @@ addEventListener('keydown', e => {
   else if (c === 'KeyS' || c === 'ArrowDown') duoTrack(1);
   else if (c === 'Enter' || c === 'NumpadEnter' || c === 'Space') duoStart();
 }, true);
+// ---------- a tiny QR code maker (byte mode, error level L, versions 1-5: enough for the join link) ----------
+function qrMatrix(text){
+  const data = [...new TextEncoder().encode(text)], mid = 12 + 8 * data.length <= 44 * 8;
+  const DC = mid ? [16, 28, 44] : [19, 34, 55, 80, 108], EC = mid ? [10, 16, 26] : [7, 10, 15, 20, 26], LV = mid ? 0 : 1;
+  let v = 1; while (v <= DC.length && 12 + 8 * data.length > DC[v - 1] * 8) v++;
+  if (v > DC.length) return null;
+  // bits: mode 0100, length, the bytes, terminator, then pad bytes
+  const bits = [], put = (x, n) => { for (let i = n - 1; i >= 0; i--) bits.push((x >>> i) & 1); };
+  put(4, 4); put(data.length, 8); data.forEach(b => put(b, 8));
+  const cap = DC[v - 1] * 8; put(0, Math.min(4, cap - bits.length)); while (bits.length % 8) bits.push(0);
+  const cw = []; for (let i = 0; i < bits.length; i += 8) cw.push(bits.slice(i, i + 8).reduce((a, b) => a * 2 + b, 0));
+  for (let p = 0; cw.length < DC[v - 1]; p++) cw.push(p % 2 ? 0x11 : 0xEC);
+  // Reed-Solomon error correction
+  const mul = (x, y) => { let z = 0; for (let i = 7; i >= 0; i--){ z = (z << 1) ^ ((z >>> 7) * 0x11d); z ^= ((y >>> i) & 1) * x; } return z; };
+  const deg = EC[v - 1], div = new Array(deg).fill(0); div[deg - 1] = 1;
+  for (let i = 0, root = 1; i < deg; i++){ for (let j = 0; j < deg; j++){ div[j] = mul(div[j], root); if (j + 1 < deg) div[j] ^= div[j + 1]; } root = mul(root, 2); }
+  const rem = new Array(deg).fill(0);
+  for (const b of cw){ const f = b ^ rem.shift(); rem.push(0); for (let i = 0; i < deg; i++) rem[i] ^= mul(div[i], f); }
+  const all = cw.concat(rem);
+  // the grid: finders, timing, alignment, then the data zig-zag
+  const S = 17 + 4 * v, M = [...Array(S)].map(() => new Array(S).fill(false)), F = [...Array(S)].map(() => new Array(S).fill(false));
+  const fn = (x, y, d) => { if (x >= 0 && y >= 0 && x < S && y < S){ M[y][x] = d; F[y][x] = true; } };
+  for (let i = 0; i < S; i++){ fn(6, i, i % 2 === 0); fn(i, 6, i % 2 === 0); }
+  [[3, 3], [S - 4, 3], [3, S - 4]].forEach(([cx, cy]) => { for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++){ const d = Math.max(Math.abs(dx), Math.abs(dy)); fn(cx + dx, cy + dy, d !== 2 && d !== 4); } });
+  if (v > 1){ const a = 4 * v + 10; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) fn(a + dx, a + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1); }
+  const fmt = mask => { const d = (LV << 3) | mask; let r = d; for (let i = 0; i < 10; i++) r = (r << 1) ^ ((r >>> 9) * 0x537); return ((d << 10) | r) ^ 0x5412; };
+  const drawFmt = mask => {
+    const b = fmt(mask), g = i => ((b >>> i) & 1) === 1;
+    for (let i = 0; i <= 5; i++) fn(8, i, g(i));
+    fn(8, 7, g(6)); fn(8, 8, g(7)); fn(7, 8, g(8));
+    for (let i = 9; i < 15; i++) fn(14 - i, 8, g(i));
+    for (let i = 0; i < 8; i++) fn(S - 1 - i, 8, g(i));
+    for (let i = 8; i < 15; i++) fn(8, S - 15 + i, g(i));
+    fn(8, S - 8, true);
+  };
+  drawFmt(0);
+  for (let right = S - 1, i = 0; right >= 1; right -= 2){
+    if (right === 6) right = 5;
+    for (let vert = 0; vert < S; vert++) for (let j = 0; j < 2; j++){
+      const x = right - j, up = ((right + 1) & 2) === 0, y = up ? S - 1 - vert : vert;
+      if (!F[y][x] && i < all.length * 8){ M[y][x] = ((all[i >>> 3] >>> (7 - (i & 7))) & 1) === 1; i++; }
+    }
+  }
+  const MASKS = [(x, y) => (x + y) % 2 === 0, (x, y) => y % 2 === 0, x => x % 3 === 0, (x, y) => (x + y) % 3 === 0,
+    (x, y) => (Math.floor(x / 3) + Math.floor(y / 2)) % 2 === 0, (x, y) => x * y % 2 + x * y % 3 === 0,
+    (x, y) => (x * y % 2 + x * y % 3) % 2 === 0, (x, y) => ((x + y) % 2 + x * y % 3) % 2 === 0];
+  const apply = m => { for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) if (!F[y][x] && MASKS[m](x, y)) M[y][x] = !M[y][x]; };
+  // pick the mask that's easiest to scan (runs, 2x2 blocks, dark/light balance)
+  const penalty = () => {
+    let p = 0, dark = 0;
+    for (let a = 0; a < 2; a++) for (let i = 0; i < S; i++){ let run = 1; for (let j = 1; j <= S; j++){ const c = j < S && (a ? M[j][i] : M[i][j]) === (a ? M[j - 1][i] : M[i][j - 1]); if (c) run++; else { if (run >= 5) p += run - 2; run = 1; } } }
+    for (let y = 0; y < S - 1; y++) for (let x = 0; x < S - 1; x++) if (M[y][x] === M[y][x + 1] && M[y][x] === M[y + 1][x] && M[y][x] === M[y + 1][x + 1]) p += 3;
+    M.forEach(r => r.forEach(c => dark += c));
+    return p + Math.floor(Math.abs(dark * 20 - S * S * 10) / (S * S)) * 10;
+  };
+  let best = 0, bp = Infinity;
+  for (let m = 0; m < 8; m++){ apply(m); drawFmt(m); const p = penalty(); if (p < bp){ bp = p; best = m; } apply(m); }
+  apply(best); drawFmt(best);
+  M.logo = mid;
+  return M;
+}
+// drawn in the game's style: round dots, chunky rounded corner markers in the player colours, and a kart in the middle
+function qrSvg(text){
+  const M = qrMatrix(text); if (!M) return '';
+  const S = M.length, q = 3, W2 = S + 2 * q, c0 = (S - 1) / 2;
+  const finder = (x, y) => (x < 7 && y < 7) || (x >= S - 7 && y < 7) || (x < 7 && y >= S - 7);
+  const lw = M.logo ? (S <= 21 ? 5 : 7) : 0, inLogo = (x, y) => lw && Math.abs(x - c0) <= lw / 2 && Math.abs(y - c0) <= lw / 2;
+  let dots = '';
+  M.forEach((r, y) => r.forEach((c, x) => { if (c && !finder(x, y) && !inLogo(x, y)) dots += `<circle cx="${x + q + 0.5}" cy="${y + q + 0.5}" r="0.44"/>`; }));
+  const eye = (x, y, col) => `<rect x="${x + q + 0.5}" y="${y + q + 0.5}" width="6" height="6" rx="1.8" fill="none" stroke="${col}" stroke-width="1"/>`
+    + `<rect x="${x + q + 2}" y="${y + q + 2}" width="3" height="3" rx="0.9" fill="#1d1a2f"/>`;
+  const logo = lw ? `<rect x="${c0 + q + 0.5 - lw / 2}" y="${c0 + q + 0.5 - lw / 2}" width="${lw}" height="${lw}" rx="1.4" fill="#ffd23f" stroke="#1d1a2f" stroke-width="0.45"/>`
+    + `<text x="${c0 + q + 0.5}" y="${c0 + q + 0.5}" font-size="${lw * 0.62}" text-anchor="middle" dominant-baseline="central">🏎️</text>` : '';
+  return `<svg viewBox="0 0 ${W2} ${W2}" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="#fff8e7"/>`
+    + `<g fill="#1d1a2f">${dots}</g>${eye(0, 0, PCOL[0])}${eye(S - 7, 0, PCOL[1])}${eye(0, S - 7, PCOL[2])}${logo}</svg>`;
+}
 // ---------- party: up to 4 players on one screen, phones (pad.html) or keyboard halves as controllers ----------
 // The TV opens a room in Firebase like an online host. Each phone writes its buttons to rooms/CODE/in/ID (same format as
 // an online player) and reads rooms/CODE/snap, where the TV puts what each phone should show (racer, place, item).
@@ -5172,6 +5255,8 @@ function renderParty(){
   if (screen !== 'party') return;
   $('ptCode').textContent = PAD.code || '----';
   $('ptUrl').textContent = PAD.code ? padUrl().replace(/^https?:\/\//, '') : (PAD.busy ? 'connecting…' : 'not connected');
+  const qurl = PAD.code ? padUrl() + '?c=' + PAD.code : '';
+  if ($('ptQr').dataset.u !== qurl){ $('ptQr').dataset.u = qurl; $('ptQr').innerHTML = qurl ? qrSvg(qurl) || '📱' : '⏳'; $('ptQr').classList.toggle('wait', !qurl); }
   $('ptWasd').classList.toggle('on', PAD.slots.some(s => s.kind === 'wasd'));
   $('ptArrows').classList.toggle('on', PAD.slots.some(s => s.kind === 'arrows'));
   const ctl = s => s.kind === 'wasd' ? '⌨️ W A S D · Shift drift · Space item · E special' : s.kind === 'arrows' ? '⌨️ Arrows · R-Shift drift · Enter item · / special' : `📱 ${esc(s.name || 'Phone')} · ${PAD.rtc[s.id]?.open ? '⚡ direct link' : '☁️ via internet'}`;
