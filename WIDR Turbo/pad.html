@@ -11,7 +11,8 @@
 <style>
   :root{--ink:#1d1a2f;--cream:#fff8e7;--yellow:#ffd23f;--red:#ff3b3b;--blue:#2f7bff;--green:#3ccf6e;--purple:#a45cff;--c:#ff3b3b;
     --font:"Arial Rounded MT Bold","Avenir Next Rounded","Nunito",ui-rounded,"Trebuchet MS",sans-serif}
-  *{box-sizing:border-box;margin:0;padding:0}
+  *{box-sizing:border-box;margin:0;padding:0;touch-action:none}
+  input{touch-action:manipulation}
   html,body{height:100%;overflow:hidden;background:#8fd3ff;font-family:var(--font);color:var(--ink);user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none;overscroll-behavior:none}
   body{background:repeating-linear-gradient(45deg,#8fd3ff 0 40px,#a3dcff 40px 80px)}
   .card{background:var(--cream);border:5px solid var(--ink);border-radius:24px;box-shadow:6px 6px 0 var(--ink)}
@@ -396,6 +397,11 @@ $('oAuto').onclick = () => { P.opts.auto = !P.opts.auto; saveOpts(); renderOpts(
 $('oSmart').onclick = () => { P.opts.smart = !P.opts.smart; saveOpts(); renderOpts(); buzz(15); };
 $('oTilt').onclick = () => { setTilt(!P.opts.tilt); buzz(15); };
 if (P.opts.tilt) setTilt(true);
+// iPhones ignore user-scalable=no: stop double-tap and pinch zoom by hand
+document.querySelectorAll('[data-k]').forEach(el => el.addEventListener('touchstart', e => { if (e.cancelable) e.preventDefault(); }, {passive:false}));
+['gesturestart', 'gesturechange', 'dblclick'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), {passive:false}));
+let lastTouch = 0;
+document.addEventListener('touchend', e => { const n = Date.now(); if (n - lastTouch < 350 && e.target.tagName !== 'INPUT' && e.cancelable) e.preventDefault(); lastTouch = n; }, {passive:false});
 $('joinBtn').onclick = join;
 $('code').addEventListener('keydown', e => { if (e.key === 'Enter') $('name').focus(); });
 $('name').addEventListener('keydown', e => { if (e.key === 'Enter') join(); });

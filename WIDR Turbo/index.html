@@ -52,6 +52,7 @@ setInterval(() => LIC.sync(), 4000);
     --font:"Arial Rounded MT Bold","Avenir Next Rounded","Nunito",ui-rounded,"Trebuchet MS",sans-serif;
   }
   *{box-sizing:border-box;margin:0;padding:0}
+  *{touch-action:manipulation}
   html,body{width:100%;height:100%;overflow:hidden;background:#8fd3ff;font-family:var(--font);color:var(--ink);user-select:none;-webkit-user-select:none;touch-action:none}
   canvas#game{display:block;width:100%;height:100%}
   .hud{position:fixed;pointer-events:none;z-index:5}
@@ -3319,6 +3320,8 @@ const doSpecial = p => NETC() ? netPress('p') : useSpecial(p);
 const doReset = p => { if (NETC()) netPress('r'); manualReset(p); };
 addEventListener('keydown', e => { if (e.code === 'KeyM' && !e.target.closest?.('input')) setMute(!muted); });
 addEventListener('keyup', e => { const r = route(e.code); if (r) r[1][r[0]] = false; });
+// iPhones ignore user-scalable=no: stop pinch and double-tap zoom by hand
+['gesturestart', 'gesturechange', 'dblclick'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), {passive:false}));
 if ('ontouchstart' in window){
   document.getElementById('touch').style.display = 'block';
   document.querySelectorAll('#touch button').forEach(b => {
