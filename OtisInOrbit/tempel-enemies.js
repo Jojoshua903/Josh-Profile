@@ -1,6 +1,6 @@
-import { enemySet } from './foes.js?v=sub1';
-import { groundAt } from './tempel-terrain.js?v=sub1';
-import { boxes } from './tempel-world.js?v=sub1';
+import { enemySet } from './foes.js';
+import { groundAt } from './tempel-terrain.js';
+import { boxes } from './tempel-world.js';
 
 // The temple is empty, nearly. Some moss crawlers on the square, and bats round the dark ravine.
 export const enemies = enemySet({ groundAt, boxes });

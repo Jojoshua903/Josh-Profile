@@ -1,15 +1,15 @@
-import { THREE, scene, toon, addOutline, V3, damp, puff, toast } from './core.js?v=sub1';
-import { addCookie } from './cookies.js?v=sub1';
-import { addSpeaker } from './bubbles.js?v=sub1';
-import { getSave } from './save.js?v=sub1';
-import { play, shot } from './cutscene.js?v=sub1';
-import { LOOK } from './ui.js?v=sub1';
-import { buildDrone } from './josh.js?v=sub1';
-import { buildOtis } from './otis.js?v=sub1';
-import * as sfx from './sfx.js?v=sub1';
-import { groundAt, HALL } from './tempel-terrain.js?v=sub1';
-import { OTIS_AT, BYTE_AT, LEDGE, HOUSE, FOUNTAIN, PUMP, setRocket, WRECK, rocket } from './tempel-world.js?v=sub1';
-import { TRIAL_RARE, restoreTrials, puz, LENS_AT, ANTENNA_AT, lensUp } from './tempel-trials.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, damp, puff, toast } from './core.js';
+import { addCookie } from './cookies.js';
+import { addSpeaker } from './bubbles.js';
+import { getSave } from './save.js';
+import { play, shot } from './cutscene.js';
+import { LOOK } from './ui.js';
+import { buildDrone } from './josh.js';
+import { buildOtis } from './otis.js';
+import * as sfx from './sfx.js';
+import { groundAt, HALL } from './tempel-terrain.js';
+import { OTIS_AT, BYTE_AT, LEDGE, HOUSE, FOUNTAIN, PUMP, setRocket, WRECK, rocket } from './tempel-world.js';
+import { TRIAL_RARE, restoreTrials, puz, LENS_AT, ANTENNA_AT, lensUp } from './tempel-trials.js';
 
 // After the crash: Otis is hurt, Byte is broken. Byte lost three parts (propeller, scan lens, antenna) and they
 // flew off into the temple; Otis needs a bandage, water and something soft to lie on. Bring Byte his propeller

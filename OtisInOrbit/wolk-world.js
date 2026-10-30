@@ -1,7 +1,7 @@
-import { THREE, scene, toon, addOutline, V3, label, puff } from './core.js?v=sub1';
-import { addCookie, line, circle } from './cookies.js?v=sub1';
-import { groundAt, ISLANDS, ARENA, VOID } from './wolk-terrain.js?v=sub1';
-import { boxes, movers, lamps, crates, anim, syncBox, solid, block, pillar, hr, gy, mesh, crate, sign, stairs } from './wolk-kit.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, label, puff } from './core.js';
+import { addCookie, line, circle } from './cookies.js';
+import { groundAt, ISLANDS, ARENA, VOID } from './wolk-terrain.js';
+import { boxes, movers, lamps, crates, anim, syncBox, solid, block, pillar, hr, gy, mesh, crate, sign, stairs } from './wolk-kit.js';
 export { boxes, movers, lamps, crates, anim, syncBox };
 
 export const winOn = new THREE.MeshBasicMaterial({ color: 0xffc46b });
@@ -445,6 +445,7 @@ export const rocket = new THREE.Group();
 export const TRAVEL = {
   pos: V3(7, 0, 46),
   dests: [
+    { need: 12, planet: 'woud', name: 'het Reuzenwoud', label: 'Naar het Reuzenwoud' },
     { need: 0, planet: 'regen', name: 'de Regenstad', label: 'Terug naar de Regenstad' },
     { need: 0, planet: 'feest', name: 'de Feestplaneet', label: 'Terug naar de Feestplaneet' },
     { need: 0, planet: 'tempel', name: 'de Vergeten Tempel', label: 'Terug naar de Vergeten Tempel' },

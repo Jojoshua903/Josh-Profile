@@ -1,6 +1,6 @@
-import { THREE, scene, toon, addOutline, V3, puff, toast } from './core.js?v=sub1';
-import * as sfx from './sfx.js?v=sub1';
-import { ARENA } from './wolk-terrain.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, puff, toast } from './core.js';
+import * as sfx from './sfx.js';
+import { ARENA } from './wolk-terrain.js';
 
 // Kapitein Knoop: a sky pirate. A big walrus with a knotted beard (that's why he's called Knoop) and a flying
 // ship with a balloon. He works for nobody: he says every island he can see is HIS, and he fires his cannons
@@ -252,7 +252,8 @@ export function updateBoss(dt, t, P, prevY, api) {
 
 function updateBalls(dt, t, p, api) {
   for (let i = balls.length - 1; i >= 0; i--) {
-    const b = balls[i]; b.t += dt;
+    const b = balls[i]; if (!b) continue;       // getting hit can kill you, and dying clears this list mid-loop
+    b.t += dt;
     b.fuse.material.color.setHex(Math.sin(t * 30) > 0 ? 0xffe14a : 0xff5a2a);
     if (b.state === 'fly') {
       const k = Math.min(1, b.t / 1.1);

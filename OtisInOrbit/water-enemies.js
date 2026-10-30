@@ -1,6 +1,6 @@
-import { enemySet } from './foes.js?v=sub1';
-import { groundAt } from './water-terrain.js?v=sub1';
-import { boxes } from './water-world.js?v=sub1';
+import { enemySet } from './foes.js';
+import { groundAt } from './water-terrain.js';
+import { boxes } from './water-world.js';
 
 // Beach crabs (small, and not in charge of anything) on the islands, a snowball-thrower on the lighthouse island,
 // and gulls round the palace and the bay. Nothing lives on the ice: it melts every morning.

@@ -1,6 +1,6 @@
-import { enemySet } from './foes.js?v=sub1';
-import { groundAt, PLATEAU_H } from './bos-terrain.js?v=sub1';
-import { boxes } from './bos-world.js?v=sub1';
+import { enemySet } from './foes.js';
+import { groundAt, PLATEAU_H } from './bos-terrain.js';
+import { boxes } from './bos-world.js';
 
 // Spore blowers guard the dorpje floor and the swamp islands, snails hop around the paths and the woekervlakte,
 // glow worms lurk under the islands and in the tunnels.

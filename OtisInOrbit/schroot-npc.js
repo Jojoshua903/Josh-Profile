@@ -1,13 +1,13 @@
-import { THREE, scene, toon, addOutline, V3, damp, puff, toast } from './core.js?v=sub1';
-import { addCookie } from './cookies.js?v=sub1';
-import { addSpeaker } from './bubbles.js?v=sub1';
-import { getSave } from './save.js?v=sub1';
-import { play, shot } from './cutscene.js?v=sub1';
-import { LOOK } from './ui.js?v=sub1';
-import * as sfx from './sfx.js?v=sub1';
-import { groundAt, PLATEAU_H } from './schroot-terrain.js?v=sub1';
-import { FIONN_AT, DISH_AT, DISH_MOUNT, TV_AT, KRAAN_MAG, VONKJE_AT } from './schroot-world.js?v=sub1';
-import { boss } from './schroot-boss.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, damp, puff, toast } from './core.js';
+import { addCookie } from './cookies.js';
+import { addSpeaker } from './bubbles.js';
+import { getSave } from './save.js';
+import { play, shot } from './cutscene.js';
+import { LOOK } from './ui.js';
+import * as sfx from './sfx.js';
+import { groundAt, PLATEAU_H } from './schroot-terrain.js';
+import { FIONN_AT, DISH_AT, DISH_MOUNT, TV_AT, KRAAN_MAG, VONKJE_AT } from './schroot-world.js';
+import { boss } from './schroot-boss.js';
 
 // Who lives on the Schroothoop: Fionn (shaped a bit like an egg, fixes everything, always a few years behind on
 // memes), little tin robots called Bliepjes who chat as you pass, and two things Byte can copy:

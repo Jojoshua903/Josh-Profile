@@ -1,4 +1,4 @@
-import { THREE, scene, toon } from './core.js?v=sub1';
+import { THREE, scene, toon } from './core.js';
 
 // De Wolkeneilanden: islands of cloud and grass floating high above nothing, each at its own height, scattered
 // where the wind left them. Between them: a rope bridge, stepping clouds, a cable car, a long plank stair, and

@@ -1,4 +1,4 @@
-import { THREE, scene, toon } from './core.js?v=sub1';
+import { THREE, scene, toon } from './core.js';
 
 // De Regenstad: a neon city at night where it never stops raining. Streets, one canal across the middle,
 // and rooftops at all sorts of heights. An elevated train runs a loop round the whole city (see world.js).

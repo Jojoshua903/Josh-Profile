@@ -1,6 +1,6 @@
-import { enemySet } from './foes.js?v=sub1';
-import { groundAt } from './zon-terrain.js?v=sub1';
-import { boxes } from './zon-world.js?v=sub1';
+import { enemySet } from './foes.js';
+import { groundAt } from './zon-terrain.js';
+import { boxes } from './zon-world.js';
 
 // Fire beetles scuttle over the rocks, a sand-thrower guards the Oostrots, and ember bats flap round the Noordrots.
 // Nothing lives on the rafts: they'd drift off with it.

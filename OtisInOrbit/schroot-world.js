@@ -1,7 +1,7 @@
-import { THREE, scene, toon, addOutline, V3, label } from './core.js?v=sub1';
-import { addCookie, line, circle } from './cookies.js?v=sub1';
-import { getSave } from './save.js?v=sub1';
-import { groundAt, ISLANDS, PLATEAU_H, ARENA, HEAPS, towards, CLIFF_R } from './schroot-terrain.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, label } from './core.js';
+import { addCookie, line, circle } from './cookies.js';
+import { getSave } from './save.js';
+import { groundAt, ISLANDS, PLATEAU_H, ARENA, HEAPS, towards, CLIFF_R } from './schroot-terrain.js';
 
 // ---------- a dusty orange evening over a mountain of junk ----------
 scene.fog = new THREE.FogExp2(0xd9945a, 0.0085);

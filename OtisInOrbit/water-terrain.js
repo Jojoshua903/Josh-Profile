@@ -1,4 +1,4 @@
-import { THREE, scene, toon } from './core.js?v=sub1';
+import { THREE, scene, toon } from './core.js';
 
 // De Waterplaneet: Deniz' ice palace melted (Kayo & Yara brought magma from the sun) and now there's only sea,
 // with a few islands. The planet turns: by day the sun warms it, the ice melts and the tide goes out; by night

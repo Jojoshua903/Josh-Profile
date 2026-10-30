@@ -1,14 +1,14 @@
-import { THREE, scene, toon, addOutline, V3, damp, puff, toast } from './core.js?v=sub1';
-import { addCookie } from './cookies.js?v=sub1';
-import { addSpeaker } from './bubbles.js?v=sub1';
-import { getSave } from './save.js?v=sub1';
-import { play, shot } from './cutscene.js?v=sub1';
-import { LOOK } from './ui.js?v=sub1';
-import * as sfx from './sfx.js?v=sub1';
-import { TOP, ARENA } from './water-terrain.js?v=sub1';
-import { DENIZ_AT, PINGO_AT, SPIRIT_AT, THRONE, SPIRE, showSpire, TOREN, cycle } from './water-world.js?v=sub1';
-import { boss, bossActive } from './water-boss.js?v=sub1';
-import { TRIAL_RARE, restoreTrials } from './water-trials.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, damp, puff, toast } from './core.js';
+import { addCookie } from './cookies.js';
+import { addSpeaker } from './bubbles.js';
+import { getSave } from './save.js';
+import { play, shot } from './cutscene.js';
+import { LOOK } from './ui.js';
+import * as sfx from './sfx.js';
+import { TOP, ARENA } from './water-terrain.js';
+import { DENIZ_AT, PINGO_AT, SPIRIT_AT, THRONE, SPIRE, showSpire, TOREN, cycle } from './water-world.js';
+import { boss, bossActive } from './water-boss.js';
+import { TRIAL_RARE, restoreTrials } from './water-trials.js';
 
 // Who lives on the Waterplaneet: Deniz, the Duke of Ice, sitting by what's left of his throne (very cool about
 // it, he says); a colony of penguins in the bay, with Pingo, whose cold you can copy (Vries); and a little ice

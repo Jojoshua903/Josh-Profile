@@ -1,11 +1,11 @@
-import { THREE, scene, toon, addOutline, V3, puff, toast } from './core.js?v=sub1';
-import { addCookie } from './cookies.js?v=sub1';
-import { addSpeaker } from './bubbles.js?v=sub1';
-import { getSave } from './save.js?v=sub1';
-import * as sfx from './sfx.js?v=sub1';
-import { groundAt, ISLANDS } from './wolk-terrain.js?v=sub1';
-import { PEN, NEST, SEED, BROM_HOME, BAD, HIGHEST, THERMALS, DOME, dome, breakDome } from './wolk-world.js?v=sub1';
-import { boxes, movers, solid, block } from './wolk-kit.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, puff, toast } from './core.js';
+import { addCookie } from './cookies.js';
+import { addSpeaker } from './bubbles.js';
+import { getSave } from './save.js';
+import * as sfx from './sfx.js';
+import { groundAt, ISLANDS } from './wolk-terrain.js';
+import { PEN, NEST, SEED, BROM_HOME, BAD, HIGHEST, THERMALS, DOME, dome, breakDome } from './wolk-world.js';
+import { boxes, movers, solid, block } from './wolk-kit.js';
 
 // The challenges behind the cosmic cookies on the Wolkeneilanden:
 //   wolkenschapen – three cloud sheep on the Schapenwei. Get them into the pen. Walking into them nudges them;

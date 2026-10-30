@@ -1,4 +1,4 @@
-import { THREE, scene, toon } from './core.js?v=sub1';
+import { THREE, scene, toon } from './core.js';
 
 // De Schroothoop: five heaps of junk sticking out of a sea of black oil (fall in and you're out). No middle,
 // no left-centre-right: the heaps are linked by bridges, and there's more than one way to get anywhere.

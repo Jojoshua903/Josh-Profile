@@ -1,13 +1,13 @@
-import { THREE, scene, toon, addOutline, V3, damp, puff, toast } from './core.js?v=sub1';
-import { addCookie } from './cookies.js?v=sub1';
-import { addSpeaker } from './bubbles.js?v=sub1';
-import { getSave } from './save.js?v=sub1';
-import { play, shot } from './cutscene.js?v=sub1';
-import { LOOK } from './ui.js?v=sub1';
-import * as sfx from './sfx.js?v=sub1';
-import { ADAM_AT, PLUIS_AT, MOT_HOME, BRIL_SPOT, raftAt } from './zon-world.js?v=sub1';
-import { boss } from './zon-boss.js?v=sub1';
-import { TRIAL_RARE, restoreTrials } from './zon-trials.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, damp, puff, toast } from './core.js';
+import { addCookie } from './cookies.js';
+import { addSpeaker } from './bubbles.js';
+import { getSave } from './save.js';
+import { play, shot } from './cutscene.js';
+import { LOOK } from './ui.js';
+import * as sfx from './sfx.js';
+import { ADAM_AT, PLUIS_AT, MOT_HOME, BRIL_SPOT, raftAt } from './zon-world.js';
+import { boss } from './zon-boss.js';
+import { TRIAL_RARE, restoreTrials } from './zon-trials.js';
 
 // Who lives on the Zon: Adam (smart, sunburnt, says random things that turn out to be hints), Opa Pluis
 // (the oldest chinchilla, too old to be hypnotised) and his grandchildren, who stand frozen with spiral eyes.

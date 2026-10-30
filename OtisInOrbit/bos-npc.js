@@ -1,12 +1,12 @@
-import { THREE, scene, toon, addOutline, V3, damp, puff, toast } from './core.js?v=sub1';
-import { addCookie } from './cookies.js?v=sub1';
-import { addSpeaker } from './bubbles.js?v=sub1';
-import { getSave } from './save.js?v=sub1';
-import { play, shot } from './cutscene.js?v=sub1';
-import { LOOK } from './ui.js?v=sub1';
-import { groundAt, PLATEAU_H } from './bos-terrain.js?v=sub1';
-import { HAT_AT, LICHTKEVER_AT, RUPS_AT } from './bos-world.js?v=sub1';
-import { boss } from './bos-boss.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, damp, puff, toast } from './core.js';
+import { addCookie } from './cookies.js';
+import { addSpeaker } from './bubbles.js';
+import { getSave } from './save.js';
+import { play, shot } from './cutscene.js';
+import { LOOK } from './ui.js';
+import { groundAt, PLATEAU_H } from './bos-terrain.js';
+import { HAT_AT, LICHTKEVER_AT, RUPS_AT } from './bos-world.js';
+import { boss } from './bos-boss.js';
 
 // Who lives in the Paddenstoelenbos: Lars (small, and his hat is gone), the zwammetjes who chat as you pass,
 // and three creatures Byte can copy: the Stuiterzwam, the Lichtkever and the Rupsrups.

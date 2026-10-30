@@ -1,7 +1,7 @@
-import { THREE, scene, toon, addOutline, V3, label } from './core.js?v=sub1';
-import { addCookie, line, circle } from './cookies.js?v=sub1';
-import { groundAt, CANAL, WATER_Y, TOWER, ARENA, ROBIN_ROOF } from './regen-terrain.js?v=sub1';
-import { boxes, movers, lamps, crates, anim, syncBox, solid, block, pillar, hr, gy, mesh, crate, sign, neon, stairs } from './regen-kit.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, label } from './core.js';
+import { addCookie, line, circle } from './cookies.js';
+import { groundAt, CANAL, WATER_Y, TOWER, ARENA, ROBIN_ROOF } from './regen-terrain.js';
+import { boxes, movers, lamps, crates, anim, syncBox, solid, block, pillar, hr, gy, mesh, crate, sign, neon, stairs } from './regen-kit.js';
 export { boxes, movers, lamps, crates, anim, syncBox };
 
 export const winOn = new THREE.MeshBasicMaterial({ color: 0xffc46b });

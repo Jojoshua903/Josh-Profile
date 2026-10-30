@@ -1,12 +1,12 @@
-import { THREE, scene, V3, puff, toast } from './core.js?v=sub1';
-import { buildOtis } from './otis.js?v=sub1';
-import { addSpeaker } from './bubbles.js?v=sub1';
-import { play, shot, pan } from './cutscene.js?v=sub1';
-import * as sfx from './sfx.js?v=sub1';
-import { groundAt, ARENA, WATER_Y, CANAL, ROBIN_ROOF } from './regen-terrain.js?v=sub1';
-import { rocket, FLAGS, updateWorld, ROBIN_AT, LIFT } from './regen-world.js?v=sub1';
-import { boss, crow, mega, sky, MEGA, SEAT, startSky, endSky, flyStep, flyCam } from './regen-boss.js?v=sub1';
-import { updateTrials, trialPound } from './regen-trials.js?v=sub1';
+import { THREE, scene, V3, puff, toast } from './core.js';
+import { buildOtis } from './otis.js';
+import { addSpeaker } from './bubbles.js';
+import { play, shot, pan } from './cutscene.js';
+import * as sfx from './sfx.js';
+import { groundAt, ARENA, WATER_Y, CANAL, ROBIN_ROOF } from './regen-terrain.js';
+import { rocket, FLAGS, updateWorld, ROBIN_AT, LIFT } from './regen-world.js';
+import { boss, crow, mega, sky, MEGA, SEAT, startSky, endSky, flyStep, flyCam } from './regen-boss.js';
+import { updateTrials, trialPound } from './regen-trials.js';
 
 export function setupStory(ctx) {
   const { P, drone, save, persist } = ctx;

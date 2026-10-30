@@ -1,7 +1,7 @@
-import { THREE, scene, toon, addOutline, V3, puff, toast } from './core.js?v=sub1';
-import * as sfx from './sfx.js?v=sub1';
-import { buildDrone } from './josh.js?v=sub1';
-import { ARENA } from './regen-terrain.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, puff, toast } from './core.js';
+import * as sfx from './sfx.js';
+import { buildDrone } from './josh.js';
+import { ARENA } from './regen-terrain.js';
 
 // Kraai Krijs: a giant crow who lives on top of the Kraaientoren. He works for nobody: he just steals
 // everything that shines. Kayo & Yara threw Robin's records over the city, and one of them landed in his nest.
@@ -331,14 +331,16 @@ function updateHazards(dt, t, api) {
   if (!sky.on) return;
   // feather bombs: they hang in the air and slowly sink
   for (let i = bombs.length - 1; i >= 0; i--) {
-    const b = bombs[i]; b.life -= dt;
+    const b = bombs[i]; if (!b) break;     // a hit that knocks you out clears every list halfway through
+    b.life -= dt;
     b.m.position.y -= dt * 0.8; b.m.rotation.x += dt * 2; b.m.rotation.y += dt * 3;
     if (b.m.position.distanceTo(me) < 2.4) { api.damage(b.m.position.clone()); b.life = 0; puff(b.m.position.clone(), 16, 0x9a3aff, 5, 1); sfx.pop(); }
     if (b.life <= 0) { scene.remove(b.m); bombs.splice(i, 1); }
   }
   // little crows: they chase Byte
   for (let i = minions.length - 1; i >= 0; i--) {
-    const m = minions[i]; m.life -= dt;
+    const m = minions[i]; if (!m) break;
+    m.life -= dt;
     const want = me.clone().sub(m.g.position).normalize().multiplyScalar(11);
     m.v.lerp(want, Math.min(1, dt * 1.4));
     m.g.position.addScaledVector(m.v, dt);
@@ -349,7 +351,8 @@ function updateHazards(dt, t, api) {
   }
   // lightning: a yellow column warns, then the bolt
   for (let i = bolts.length - 1; i >= 0; i--) {
-    const b = bolts[i]; b.t += dt;
+    const b = bolts[i]; if (!b) break;
+    b.t += dt;
     if (b.t < 0) continue;
     const WARN = 1.4;
     if (b.t < WARN) b.warn.material.opacity = 0.12 + Math.abs(Math.sin(b.t * 9)) * 0.25;

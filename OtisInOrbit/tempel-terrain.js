@@ -1,4 +1,4 @@
-import { THREE, scene, toon } from './core.js?v=sub1';
+import { THREE, scene, toon } from './core.js';
 
 // De Vergeten Tempel: an old temple complex in a walled-in valley, overgrown and long abandoned. Kayo & Yara's
 // defences shot the rocket down on the way to their base, and it came down here. No boss: the temple is the

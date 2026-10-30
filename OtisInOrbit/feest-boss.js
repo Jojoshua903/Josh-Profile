@@ -1,8 +1,8 @@
-import { THREE, scene, toon, addOutline, V3, damp, puff, toast } from './core.js?v=sub1';
-import * as sfx from './sfx.js?v=sub1';
-import { ARENA } from './feest-terrain.js?v=sub1';
-import { addSpeaker } from './bubbles.js?v=sub1';
-import { boxes } from './feest-world.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, damp, puff, toast } from './core.js';
+import * as sfx from './sfx.js';
+import { ARENA } from './feest-terrain.js';
+import { addSpeaker } from './bubbles.js';
+import { boxes } from './feest-world.js';
 
 // Mompel de Mopperende Mol: he lives under the Galmpodium and has hated the Galmfeest for a hundred years.
 // He doesn't work for anyone: he just wants it QUIET. When the music starts, he digs his way up.
@@ -339,7 +339,7 @@ export function updateBoss(dt, t, P, prevY, api) {
 
   // hush rings
   for (let i = rings.length - 1; i >= 0; i--) {
-    const r = rings[i];
+    const r = rings[i]; if (!r) continue;       // getting hit can kill you, and dying clears these lists mid-loop
     r.r += dt * 6.5 * sp; r.m.scale.set(r.r, 1, r.r);
     r.m.material.opacity = 0.95 * Math.min(1, (ARENA.r + 3 - r.r) / 3);
     const dr = Math.hypot(p.x - r.m.position.x, p.z - r.m.position.z);
@@ -348,7 +348,8 @@ export function updateBoss(dt, t, P, prevY, api) {
   }
   // clods: the mark first, then the clod falls
   for (let i = clods.length - 1; i >= 0; i--) {
-    const c = clods[i]; c.t += dt;
+    const c = clods[i]; if (!c) continue;
+    c.t += dt;
     if (c.t < 0) continue;
     const warn = 1.1 / sp;
     c.mk.fill.material.opacity = 0.2 + Math.min(1, c.t / warn) * 0.5;

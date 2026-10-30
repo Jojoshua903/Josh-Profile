@@ -1,16 +1,16 @@
-import { THREE, scene, V3, puff, toast } from './core.js?v=sub1';
-import { buildOtis } from './otis.js?v=sub1';
-import { addSpeaker } from './bubbles.js?v=sub1';
-import { play, shot, pan } from './cutscene.js?v=sub1';
-import * as sfx from './sfx.js?v=sub1';
-import { groundAt, ARENA } from './feest-terrain.js?v=sub1';
-import { rocket, FLAGS, updateWorld, BALLOON, NATHAN_AT, TUUT_AT, STAGE, HOLE, openHole, INST } from './feest-world.js?v=sub1';
-import { boss, galmHit, MOMPEL_PARTY } from './feest-boss.js?v=sub1';
-import { galmAt, takeBat } from './feest-npc.js?v=sub1';
-import { updateTrials, galmGong } from './feest-trials.js?v=sub1';
-import { enemies } from './feest-enemies.js?v=sub1';
-import { addCookie } from './cookies.js?v=sub1';
-import { getSave } from './save.js?v=sub1';
+import { THREE, scene, V3, puff, toast } from './core.js';
+import { buildOtis } from './otis.js';
+import { addSpeaker } from './bubbles.js';
+import { play, shot, pan } from './cutscene.js';
+import * as sfx from './sfx.js';
+import { groundAt, ARENA } from './feest-terrain.js';
+import { rocket, FLAGS, updateWorld, BALLOON, NATHAN_AT, TUUT_AT, STAGE, HOLE, openHole, INST } from './feest-world.js';
+import { boss, galmHit, MOMPEL_PARTY } from './feest-boss.js';
+import { galmAt, takeBat } from './feest-npc.js';
+import { updateTrials, galmGong } from './feest-trials.js';
+import { enemies } from './feest-enemies.js';
+import { addCookie } from './cookies.js';
+import { getSave } from './save.js';
 
 export function setupStory(ctx) {
   const { P, drone, save, persist } = ctx;

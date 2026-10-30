@@ -1,4 +1,4 @@
-import { THREE, scene, toon, addOutline, V3, damp, clamp } from './core.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, damp, clamp } from './core.js';
 
 // Otis: astronaut dog and pilot. He stays near the rocket, but reacts to everything around him.
 // Moods: idle (wag, sniff, scratch), bark, happy (hopping), shake (shaking off dust).

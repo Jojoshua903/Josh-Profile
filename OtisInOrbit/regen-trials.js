@@ -1,9 +1,9 @@
-import { THREE, scene, toon, addOutline, V3, puff, toast } from './core.js?v=sub1';
-import { addCookie, cookies } from './cookies.js?v=sub1';
-import { addSpeaker } from './bubbles.js?v=sub1';
-import { getSave } from './save.js?v=sub1';
-import * as sfx from './sfx.js?v=sub1';
-import { BOAT, train, TRAIN_Y } from './regen-world.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, puff, toast } from './core.js';
+import { addCookie, cookies } from './cookies.js';
+import { addSpeaker } from './bubbles.js';
+import { getSave } from './save.js';
+import * as sfx from './sfx.js';
+import { BOAT, train, TRAIN_Y } from './regen-world.js';
 
 // The challenges behind the cosmic cookies in the Regenstad:
 //   plassen   – six big puddles in the streets. Ground-pound them all (SPLASH!) within 30 seconds of the first.

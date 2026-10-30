@@ -1,14 +1,14 @@
-import { THREE, scene, toon, addOutline, V3, puff, damp, toast } from './core.js?v=sub1';
-import { buildOtis } from './otis.js?v=sub1';
-import { addSpeaker } from './bubbles.js?v=sub1';
-import { play, shot, pan } from './cutscene.js?v=sub1';
-import * as sfx from './sfx.js?v=sub1';
-import { groundAt, ARENA } from './water-terrain.js?v=sub1';
-import { rocket, FLAGS, anim, updateWorld, cycle, untilChange, addFloe, boxes, DENIZ_AT, TOREN } from './water-world.js?v=sub1';
-import { boss, frostHit } from './water-boss.js?v=sub1';
-import { setAbilityProbe } from './water-npc.js?v=sub1';
-import { updateTrials } from './water-trials.js?v=sub1';
-import { enemies } from './water-enemies.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, puff, damp, toast } from './core.js';
+import { buildOtis } from './otis.js';
+import { addSpeaker } from './bubbles.js';
+import { play, shot, pan } from './cutscene.js';
+import * as sfx from './sfx.js';
+import { groundAt, ARENA } from './water-terrain.js';
+import { rocket, FLAGS, anim, updateWorld, cycle, untilChange, addFloe, boxes, DENIZ_AT, TOREN } from './water-world.js';
+import { boss, frostHit } from './water-boss.js';
+import { setAbilityProbe } from './water-npc.js';
+import { updateTrials } from './water-trials.js';
+import { enemies } from './water-enemies.js';
 
 export function setupStory(ctx) {
   const { P, drone, save, persist } = ctx;

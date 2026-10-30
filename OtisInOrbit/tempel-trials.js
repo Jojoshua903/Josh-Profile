@@ -1,9 +1,9 @@
-import { THREE, scene, toon, addOutline, V3, puff, toast, damp, label } from './core.js?v=sub1';
-import { addCookie } from './cookies.js?v=sub1';
-import { getSave } from './save.js?v=sub1';
-import * as sfx from './sfx.js?v=sub1';
-import { block, pillar, movers, boxes, syncBox, STONE, GOLD, DARK, fountain, FOUNTAIN, PUMP, SYMBOLS, ORDER, SECRET, MURAL, secretTiles, LEDGE, HOURGLASS } from './tempel-world.js?v=sub1';
-import { HALL, ZIG } from './tempel-terrain.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, puff, toast, damp, label } from './core.js';
+import { addCookie } from './cookies.js';
+import { getSave } from './save.js';
+import * as sfx from './sfx.js';
+import { block, pillar, movers, boxes, syncBox, STONE, GOLD, DARK, fountain, FOUNTAIN, PUMP, SYMBOLS, ORDER, SECRET, MURAL, secretTiles, LEDGE, HOURGLASS } from './tempel-world.js';
+import { HALL, ZIG } from './tempel-terrain.js';
 
 // The temple's puzzles. Each one opens something: a part for Byte, something for Otis, or a cosmic cookie.
 //   Blokkenhof     – push stone blocks onto the plates (and a third one into the little alcove)

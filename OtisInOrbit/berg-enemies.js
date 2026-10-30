@@ -1,6 +1,6 @@
-import { enemySet } from './foes.js?v=sub1';
-import { groundAt } from './berg-terrain.js?v=sub1';
-import { boxes } from './berg-world.js?v=sub1';
+import { enemySet } from './foes.js';
+import { groundAt } from './berg-terrain.js';
+import { boxes } from './berg-world.js';
 
 // Rock beetles in the valley and on the plateau, snow imps that guard the climbs, ice bats in the mine and on the glacier.
 export const enemies = enemySet({ groundAt, boxes });

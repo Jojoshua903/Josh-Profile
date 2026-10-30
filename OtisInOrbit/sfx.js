@@ -1,4 +1,4 @@
-import { toast } from './core.js?v=sub1';
+import { toast } from './core.js';
 
 // All sound is synthesised on the fly with Web Audio: no sound files needed.
 // Browsers only allow audio after a key press or click, so everything starts on the first input.
@@ -116,6 +116,10 @@ const SONGS = {
   wolk: { bpm: 100, root: 349.23, chords: [[0, 4, 7], [-3, 0, 4], [-7, -3, 0], [-5, -1, 2]], arp: [0, 2, 3, 1, 2, 3, 0, 2], lead: 'triangle', pad: 'sine', bass: 'sine', arpVol: 0.05 },
   // Kapitein Knoop: a sky shanty, stompy and cheeky
   knoop: { bpm: 138, root: 220, chords: [[0, 3, 7], [-2, 2, 5], [0, 3, 7], [-5, -1, 2]], arp: [0, 1, 2, 1, 0, 2, 1, 3], lead: 'square', pad: 'triangle', bass: 'square', arpVol: 0.04 },
+  // het Reuzenwoud: warm, woody and curious, plucky like a kalimba between giant trees
+  woud: { bpm: 92, root: 246.94, chords: [[0, 4, 7], [-5, -1, 2], [-3, 0, 4], [2, 5, 9]], arp: [0, 1, 2, 1, 3, 2, 1, 2], lead: 'triangle', pad: 'sine', bass: 'triangle', arpVol: 0.06 },
+  // Bonk de Reuzenspecht: a tok-tok-tok building-site stomp
+  specht: { bpm: 140, root: 207.65, chords: [[0, 3, 7], [0, 3, 7], [-4, 0, 3], [-2, 2, 5]], arp: [0, 0, 1, 0, 2, 0, 1, 3], lead: 'square', pad: 'triangle', bass: 'square', arpVol: 0.04 },
   // any boss: fast and tense
   boss: { bpm: 148, root: 196, chords: [[0, 3, 7], [0, 3, 7], [-2, 1, 5], [1, 5, 8]], arp: [0, 2, 1, 2, 0, 2, 1, 3], lead: 'sawtooth', pad: 'sawtooth', bass: 'square', arpVol: 0.03 },
 };

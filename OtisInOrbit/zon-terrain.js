@@ -1,4 +1,4 @@
-import { THREE, scene, toon } from './core.js?v=sub1';
+import { THREE, scene, toon } from './core.js';
 
 // De Zon: there is no ground here, only magma. Pieces of cooled crust drift on it and slide past each other
 // (see world.js: the vlotten). Only a few things stand still: the landing rock with the rocket, three

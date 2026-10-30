@@ -1,7 +1,7 @@
-import { THREE, scene, toon, addOutline, V3, damp, puff, toast } from './core.js?v=sub1';
-import * as sfx from './sfx.js?v=sub1';
-import { ARENA, PLATEAU_H } from './schroot-terrain.js?v=sub1';
-import { CABLE } from './schroot-world.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, damp, puff, toast } from './core.js';
+import * as sfx from './sfx.js';
+import { ARENA, PLATEAU_H } from './schroot-terrain.js';
+import { CABLE } from './schroot-world.js';
 
 // De Schrootmech. Ratjetoe, a rat working for Kayo & Yara, hacks Byte and blows him up into a giant: Byte's own body
 // with gorilla arms and legs of scrap bolted on. Without Byte there's nothing to copy: Josh fights with what's lying around.

@@ -1,12 +1,12 @@
-import { THREE, scene, toon, addOutline, V3, damp, puff, toast } from './core.js?v=sub1';
-import { addCookie } from './cookies.js?v=sub1';
-import { addSpeaker } from './bubbles.js?v=sub1';
-import { getSave } from './save.js?v=sub1';
-import { groundAt, PLATEAU_H } from './berg-terrain.js?v=sub1';
-import { RACE_PATH, RACE_FLAG, KID_ROCK, BUTTON, boxes, syncBox } from './berg-world.js?v=sub1';
-import { play, shot, cs } from './cutscene.js?v=sub1';
-import { LOOK } from './ui.js?v=sub1';
-import { boss } from './berg-boss.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, damp, puff, toast } from './core.js';
+import { addCookie } from './cookies.js';
+import { addSpeaker } from './bubbles.js';
+import { getSave } from './save.js';
+import { groundAt, PLATEAU_H } from './berg-terrain.js';
+import { RACE_PATH, RACE_FLAG, KID_ROCK, BUTTON, boxes, syncBox } from './berg-world.js';
+import { play, shot, cs } from './cutscene.js';
+import { LOOK } from './ui.js';
+import { boss } from './berg-boss.js';
 
 // The mountain goats: they live here, chat when you walk by, and drop hints about what's hidden.
 // Three of them have a little challenge that ends in a cosmic cookie.

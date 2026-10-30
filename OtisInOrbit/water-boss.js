@@ -1,7 +1,7 @@
-import { THREE, scene, toon, addOutline, V3, damp, puff, toast } from './core.js?v=sub1';
-import * as sfx from './sfx.js?v=sub1';
-import { ARENA, TOP } from './water-terrain.js?v=sub1';
-import { boxes } from './water-world.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, damp, puff, toast } from './core.js';
+import * as sfx from './sfx.js';
+import { ARENA, TOP } from './water-terrain.js';
+import { boxes } from './water-world.js';
 
 // Kapitein Kraak: a hermit crab in a pirate hat, working for Kayo & Yara. His "shell" is the kettle of sun
 // magma they gave him: as long as it boils, the sea stays warm and Deniz' ice keeps melting.

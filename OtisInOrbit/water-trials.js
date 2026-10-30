@@ -1,10 +1,10 @@
-import { THREE, scene, toon, addOutline, V3, puff, toast } from './core.js?v=sub1';
-import { addCookie, cookies } from './cookies.js?v=sub1';
-import { addSpeaker } from './bubbles.js?v=sub1';
-import { getSave } from './save.js?v=sub1';
-import * as sfx from './sfx.js?v=sub1';
-import { WATER_HI, TOP, BEACH } from './water-terrain.js?v=sub1';
-import { cycle, PINGO_AT, bergCookiePos } from './water-world.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, puff, toast } from './core.js';
+import { addCookie, cookies } from './cookies.js';
+import { addSpeaker } from './bubbles.js';
+import { getSave } from './save.js';
+import * as sfx from './sfx.js';
+import { WATER_HI, TOP, BEACH } from './water-terrain.js';
+import { cycle, PINGO_AT, bergCookiePos } from './water-world.js';
 
 // The challenges behind the cosmic cookies on the Waterplaneet that aren't just "get up there":
 //   Pingo's visjes – eight fish frozen into the ice between the strand, the bay and the palace. Only at night.

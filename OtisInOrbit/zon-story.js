@@ -1,13 +1,13 @@
-import { THREE, scene, toon, addOutline, V3, puff, damp, toast } from './core.js?v=sub1';
-import { buildOtis } from './otis.js?v=sub1';
-import { addSpeaker } from './bubbles.js?v=sub1';
-import { play, shot, pan } from './cutscene.js?v=sub1';
-import * as sfx from './sfx.js?v=sub1';
-import { groundAt, ARENA, MAGMA_Y } from './zon-terrain.js?v=sub1';
-import { rocket, FLAGS, anim, updateRafts, RAFTS } from './zon-world.js?v=sub1';
-import { boss } from './zon-boss.js?v=sub1';
-import { setAbilityProbe, poundAt, wakeAll } from './zon-npc.js?v=sub1';
-import { updateTrials, trialPound } from './zon-trials.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, puff, damp, toast } from './core.js';
+import { buildOtis } from './otis.js';
+import { addSpeaker } from './bubbles.js';
+import { play, shot, pan } from './cutscene.js';
+import * as sfx from './sfx.js';
+import { groundAt, ARENA, MAGMA_Y } from './zon-terrain.js';
+import { rocket, FLAGS, anim, updateRafts, RAFTS } from './zon-world.js';
+import { boss } from './zon-boss.js';
+import { setAbilityProbe, poundAt, wakeAll } from './zon-npc.js';
+import { updateTrials, trialPound } from './zon-trials.js';
 
 export function setupStory(ctx) {
   const { P, drone, save, persist } = ctx;

@@ -1,11 +1,11 @@
-import { THREE, scene, V3, puff, damp } from './core.js?v=sub1';
-import { buildOtis } from './otis.js?v=sub1';
-import { addSpeaker } from './bubbles.js?v=sub1';
-import { play, shot, pan } from './cutscene.js?v=sub1';
-import { groundAt } from './terrain.js?v=sub1';
-import { lamps, rocket, chimneyHouse, ARENA_POS } from './world.js?v=sub1';
-import { boss } from './boss.js?v=sub1';
-import { setNpcLight, miloRoot, MILO_AT } from './npc.js?v=sub1';
+import { THREE, scene, V3, puff, damp } from './core.js';
+import { buildOtis } from './otis.js';
+import { addSpeaker } from './bubbles.js';
+import { play, shot, pan } from './cutscene.js';
+import { groundAt } from './terrain.js';
+import { lamps, rocket, chimneyHouse, ARENA_POS } from './world.js';
+import { boss } from './boss.js';
+import { setNpcLight, miloRoot, MILO_AT } from './npc.js';
 
 // Everything that makes the Mistmaan feel alive: Otis, the cutscenes, little ambient animations.
 export function setupStory(ctx) {

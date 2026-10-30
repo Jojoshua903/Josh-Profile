@@ -1,6 +1,6 @@
-import { THREE, scene, toon, V3, damp, puff, toast } from './core.js?v=sub1';
-import * as sfx from './sfx.js?v=sub1';
-import { ARENA, MAGMA_Y } from './zon-terrain.js?v=sub1';
+import { THREE, scene, toon, V3, damp, puff, toast } from './core.js';
+import * as sfx from './sfx.js';
+import { ARENA, MAGMA_Y } from './zon-terrain.js';
 
 // De Zonnevlam-slang. Kayo & Yara's pet: a long snake of plasma that lives in the magma round De Kroon.
 // Its spiral eyes and the purple gem on its head are what hypnotise the chinchillas.

@@ -1,6 +1,6 @@
-import { THREE, scene, toon, addOutline, V3, puff, toast, label } from './core.js?v=sub1';
-import { addCookie } from './cookies.js?v=sub1';
-import * as sfx from './sfx.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, puff, toast, label } from './core.js';
+import { addCookie } from './cookies.js';
+import * as sfx from './sfx.js';
 
 // Sub-areas: on every planet there's a door (a hatch, a cave, a pipe, a gong…) to a little level of its own,
 // floating far away in the sky. One challenge, one cosmic cookie at the end, then an exit back.
@@ -10,7 +10,7 @@ import * as sfx from './sfx.js?v=sub1';
 // Falling, or getting caught, puts you back at the start. No hearts lost.
 const SUBS = {
   mistmaan: { name: 'De Kratertrap', door: 'luik', type: 'parkour', flag: 0, seed: 3, mix: ['plat', 'move', 'plat', 'move', 'crumble'], n: 11, col: [0xb8c0d8, 0x8a90a8], hz: 0x9ad8ff },
-  berg: { name: 'De Ijsgrot', door: 'grot', type: 'race', flag: 2, seed: 11, mix: ['crumble', 'plat', 'crumble', 'move'], n: 12, col: [0xe8f4ff, 0x9ac8e8], hz: 0x9ad8ff },
+  berg: { name: 'De Brokkeltop', door: 'grot', type: 'race', flag: 2, seed: 11, mix: ['crumble', 'plat', 'crumble', 'move'], n: 12, col: [0xe8f4ff, 0x9ac8e8], hz: 0x9ad8ff },
   bos: { name: 'Het Sporentorentje', door: 'paddo', type: 'parkour', flag: 2, seed: 7, mix: ['bounce', 'plat', 'move', 'plat', 'spin'], n: 11, col: [0xff7ab6, 0x8a4a8a], hz: 0xb6e36b },
   schroot: { name: 'De Persmachine', door: 'buis', type: 'escape', flag: 2, seed: 5, mix: ['plat', 'spin', 'move', 'plat', 'crumble'], n: 14, col: [0xc8a070, 0x6a5a4a], hz: 0x8a8a9a, hzName: 'de pers' },
   zon: { name: 'De Lavaschacht', door: 'vent', type: 'escape', flag: 2, seed: 9, mix: ['plat', 'crumble', 'move', 'plat'], n: 14, col: [0xffc070, 0xc84a2a], hz: 0xff5a1a, hzName: 'de lava' },
@@ -19,6 +19,7 @@ const SUBS = {
   feest: { name: 'Het Trommelparcours', door: 'cadeau', type: 'parkour', flag: 2, seed: 19, mix: ['bounce', 'move', 'plat', 'spin', 'bounce'], n: 11, col: [0xffd166, 0xe0443a], hz: 0xff9ad8 },
   regen: { name: 'De Neonsprint', door: 'put', type: 'race', flag: 2, seed: 23, mix: ['move', 'plat', 'move', 'crumble'], n: 13, col: [0xff4ad8, 0x4ad8ff], hz: 0xff4ad8 },
   wolk: { name: 'De Stormtrap', door: 'wolk', type: 'escape', flag: 4, seed: 29, mix: ['plat', 'move', 'bounce', 'crumble', 'plat'], n: 14, col: [0xffffff, 0xb8c8ff], hz: 0x5a5a78, hzName: 'de storm' },
+  woud: { name: 'De Takkenrace', door: 'stronk', type: 'race', flag: 1, seed: 31, mix: ['plat', 'move', 'spin', 'crumble', 'bounce'], n: 13, col: [0x8ad86a, 0x6a4a2a], hz: 0xffd166 },
 };
 
 export const hasSub = (planet) => !!SUBS[planet];
@@ -128,6 +129,7 @@ export function setupSubs({ PLANET, boxes, movers, groundAt, CHECKPOINTS, P, hur
     else if (style === 'poort') { for (const s of [-1, 1]) mk(new THREE.BoxGeometry(0.5, 2.4, 0.5), toon(0xd8b080), 0.9 * s, 1.2, 0); mk(new THREE.BoxGeometry(2.6, 0.5, 0.7), toon(0xb89060), 0, 2.6, 0); mk(new THREE.PlaneGeometry(1.3, 2.2), glow, 0, 1.1, 0, 0); }
     else if (style === 'cadeau') { mk(new THREE.BoxGeometry(1.6, 1.4, 1.6), toon(0xe0443a), 0, 0.7, 0); mk(new THREE.BoxGeometry(1.65, 0.25, 0.3), toon(0xffd166), 0, 1.42, 0, 0); mk(new THREE.BoxGeometry(0.3, 0.25, 1.65), toon(0xffd166), 0, 1.42, 0, 0); mk(new THREE.TorusGeometry(0.3, 0.1, 6, 12), toon(0xffd166), 0, 1.65, 0, 0); }
     else if (style === 'wolk') { for (let k = 0; k < 5; k++) mk(new THREE.SphereGeometry(0.6 + (k % 2) * 0.2, 10, 8), toon(0xffffff), (k - 2) * 0.5, 1.6 + (k % 2) * 0.4, 0); for (const s of [-1, 1]) mk(new THREE.SphereGeometry(0.6, 10, 8), toon(0xffffff), 1.1 * s, 0.6, 0); mk(new THREE.PlaneGeometry(1.2, 1.6), glow, 0, 0.9, 0.05, 0); }
+    else if (style === 'stronk') { mk(new THREE.CylinderGeometry(1.3, 1.6, 2.4, 14), toon(0x7a5a3a), 0, 1.2, 0); mk(new THREE.CylinderGeometry(1.25, 1.25, 0.1, 14), toon(0xd8b080), 0, 2.42, 0, 0); mk(new THREE.PlaneGeometry(1, 1.5), glow, 0, 0.8, 1.42, 0); for (let k = 0; k < 4; k++) { const r = mk(new THREE.BoxGeometry(0.4, 0.3, 1.4), toon(0x6a4a2a), Math.sin(k * 1.6 + 0.8) * 1.6, 0.15, Math.cos(k * 1.6 + 0.8) * 1.6, 0); r.rotation.y = k * 1.6 + 0.8; } }
     if (!isExit) { const l = new THREE.PointLight(C.hz, 4, 6, 2); l.position.y = 1.6; g.add(l); }
     return g;
   }

@@ -1,6 +1,6 @@
-import { THREE, scene, toon, addOutline, V3 } from './core.js?v=sub1';
-import { groundAt, groundMin, pathX, ARENA, RAVINE_Z } from './terrain.js?v=sub1';
-import { addCookie, line, circle } from './cookies.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3 } from './core.js';
+import { groundAt, groundMin, pathX, ARENA, RAVINE_Z } from './terrain.js';
+import { addCookie, line, circle } from './cookies.js';
 
 export const boxes = [];
 export const movers = [];

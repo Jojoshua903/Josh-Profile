@@ -1,13 +1,13 @@
-import { THREE, scene, V3, puff, damp, toast } from './core.js?v=sub1';
-import { buildOtis } from './otis.js?v=sub1';
-import { addSpeaker } from './bubbles.js?v=sub1';
-import { addCookie } from './cookies.js?v=sub1';
-import { play, shot, pan } from './cutscene.js?v=sub1';
-import * as sfx from './sfx.js?v=sub1';
-import { groundAt, ARENA, PLATEAU_H } from './schroot-terrain.js?v=sub1';
-import { lamps, rocket, FLAGS, anim, POWER, FAN, PRESS, ROBOT, BROKEN_PART, SHED, SINKERS } from './schroot-world.js?v=sub1';
-import { boss } from './schroot-boss.js?v=sub1';
-import { setAbilityProbe, fionnPower } from './schroot-npc.js?v=sub1';
+import { THREE, scene, V3, puff, damp, toast } from './core.js';
+import { buildOtis } from './otis.js';
+import { addSpeaker } from './bubbles.js';
+import { addCookie } from './cookies.js';
+import { play, shot, pan } from './cutscene.js';
+import * as sfx from './sfx.js';
+import { groundAt, ARENA, PLATEAU_H } from './schroot-terrain.js';
+import { lamps, rocket, FLAGS, anim, POWER, FAN, PRESS, ROBOT, BROKEN_PART, SHED, SINKERS } from './schroot-world.js';
+import { boss } from './schroot-boss.js';
+import { setAbilityProbe, fionnPower } from './schroot-npc.js';
 
 export function setupStory(ctx) {
   const { P, drone, save, persist } = ctx;

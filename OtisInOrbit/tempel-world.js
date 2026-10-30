@@ -1,6 +1,6 @@
-import { THREE, scene, toon, addOutline, V3, label } from './core.js?v=sub1';
-import { addCookie, line, circle } from './cookies.js?v=sub1';
-import { groundAt, ZIG, HALL, PIT } from './tempel-terrain.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, label } from './core.js';
+import { addCookie, line, circle } from './cookies.js';
+import { groundAt, ZIG, HALL, PIT } from './tempel-terrain.js';
 
 export const boxes = [];
 export const movers = [];

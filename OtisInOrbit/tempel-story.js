@@ -1,10 +1,10 @@
-import { THREE, scene, V3, puff, damp, toast } from './core.js?v=sub1';
-import { play, shot, pan } from './cutscene.js?v=sub1';
-import * as sfx from './sfx.js?v=sub1';
-import { rocket, setRocket, updateWorld, FLAGS, TRAVEL, WRECK, BASE_AT, OTIS_AT, BYTE_AT, MURAL } from './tempel-world.js?v=sub1';
-import { ZIG } from './tempel-terrain.js?v=sub1';
-import { otis, setDrone, droneOff, noScan, noScanMsg, byteWhole, otisWell } from './tempel-npc.js?v=sub1';
-import { updateTrials } from './tempel-trials.js?v=sub1';
+import { THREE, scene, V3, puff, damp, toast } from './core.js';
+import { play, shot, pan } from './cutscene.js';
+import * as sfx from './sfx.js';
+import { rocket, setRocket, updateWorld, FLAGS, TRAVEL, WRECK, BASE_AT, OTIS_AT, BYTE_AT, MURAL } from './tempel-world.js';
+import { ZIG } from './tempel-terrain.js';
+import { otis, setDrone, droneOff, noScan, noScanMsg, byteWhole, otisWell } from './tempel-npc.js';
+import { updateTrials } from './tempel-trials.js';
 
 export function setupStory(ctx) {
   const { P, drone, save, persist } = ctx;

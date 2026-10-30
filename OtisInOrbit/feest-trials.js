@@ -1,10 +1,10 @@
-import { THREE, scene, toon, addOutline, V3, puff, toast } from './core.js?v=sub1';
-import { addCookie } from './cookies.js?v=sub1';
-import { addSpeaker } from './bubbles.js?v=sub1';
-import { getSave } from './save.js?v=sub1';
-import * as sfx from './sfx.js?v=sub1';
-import { groundAt } from './feest-terrain.js?v=sub1';
-import { GONGS, KEYS, KEY_NOTES, INST, onKey } from './feest-world.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, puff, toast } from './core.js';
+import { addCookie } from './cookies.js';
+import { addSpeaker } from './bubbles.js';
+import { getSave } from './save.js';
+import * as sfx from './sfx.js';
+import { groundAt } from './feest-terrain.js';
+import { GONGS, KEYS, KEY_NOTES, INST, onKey } from './feest-world.js';
 
 // The challenges behind the cosmic cookies on the Feestplaneet:
 //   gongs        – three gongs, far apart (village, drum field, organ woods). Hit them with Galm (F).

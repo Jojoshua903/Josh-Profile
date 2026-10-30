@@ -1,6 +1,6 @@
-import { THREE, scene, toon, addOutline, V3, label } from './core.js?v=sub1';
-import { addCookie, line, circle } from './cookies.js?v=sub1';
-import { groundAt, ISLES, ARENA, TOP, BEACH, WATER_LO, WATER_HI } from './water-terrain.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, label } from './core.js';
+import { addCookie, line, circle } from './cookies.js';
+import { groundAt, ISLES, ARENA, TOP, BEACH, WATER_LO, WATER_HI } from './water-terrain.js';
 
 export const boxes = [];
 export const movers = [];

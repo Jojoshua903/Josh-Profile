@@ -1,7 +1,7 @@
-import { THREE, scene, toon, addOutline, V3, label, damp } from './core.js?v=sub1';
-import { addCookie, line, circle } from './cookies.js?v=sub1';
-import * as sfx from './sfx.js?v=sub1';
-import { groundAt, PODIUM, CLIFF, ARENA } from './feest-terrain.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, label, damp } from './core.js';
+import { addCookie, line, circle } from './cookies.js';
+import * as sfx from './sfx.js';
+import { groundAt, PODIUM, CLIFF, ARENA } from './feest-terrain.js';
 
 export const boxes = [];
 export const movers = [];

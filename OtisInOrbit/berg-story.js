@@ -1,11 +1,11 @@
-import { THREE, scene, toon, V3, puff, damp } from './core.js?v=sub1';
-import { buildOtis } from './otis.js?v=sub1';
-import { addSpeaker } from './bubbles.js?v=sub1';
-import { play, shot, pan } from './cutscene.js?v=sub1';
-import { groundAt, SUMMIT } from './berg-terrain.js?v=sub1';
-import { lamps, rocket, waterfall, FLAGS, CRUMBLE, boxes, syncBox } from './berg-world.js?v=sub1';
-import { boss } from './berg-boss.js?v=sub1';
-import { setShake } from './berg-npc.js?v=sub1';
+import { THREE, scene, toon, V3, puff, damp } from './core.js';
+import { buildOtis } from './otis.js';
+import { addSpeaker } from './bubbles.js';
+import { play, shot, pan } from './cutscene.js';
+import { groundAt, SUMMIT } from './berg-terrain.js';
+import { lamps, rocket, waterfall, FLAGS, CRUMBLE, boxes, syncBox } from './berg-world.js';
+import { boss } from './berg-boss.js';
+import { setShake } from './berg-npc.js';
 
 export function setupStory(ctx) {
   const { P, drone, save, persist } = ctx;

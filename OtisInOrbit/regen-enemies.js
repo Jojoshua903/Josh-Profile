@@ -1,6 +1,6 @@
-import { enemySet } from './foes.js?v=sub1';
-import { groundAt } from './regen-terrain.js?v=sub1';
-import { boxes } from './regen-world.js?v=sub1';
+import { enemySet } from './foes.js';
+import { groundAt } from './regen-terrain.js';
+import { boxes } from './regen-world.js';
 
 // Night life: soggy rats in the streets, a pigeon-thrower on the hotel roof, and bats round the tall buildings.
 export const enemies = enemySet({ groundAt, boxes });

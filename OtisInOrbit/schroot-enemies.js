@@ -1,6 +1,6 @@
-import { enemySet } from './foes.js?v=sub1';
-import { groundAt } from './schroot-terrain.js?v=sub1';
-import { boxes } from './schroot-world.js?v=sub1';
+import { enemySet } from './foes.js';
+import { groundAt } from './schroot-terrain.js';
+import { boxes } from './schroot-world.js';
 
 // Tin-can robots patrol the heaps and shoot sparks, rusty crawlers scuttle around, scrap throwers sit on the
 // islands and heap edges, and rusty bats flap through the factory and round De Top.

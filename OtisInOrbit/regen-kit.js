@@ -1,5 +1,5 @@
-import { THREE, scene, toon, addOutline, V3, label } from './core.js?v=sub1';
-import { groundAt } from './regen-terrain.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, label } from './core.js';
+import { groundAt } from './regen-terrain.js';
 
 // Building helpers for the Regenstad, shared by world.js, npc.js and trials.js.
 export const boxes = [];

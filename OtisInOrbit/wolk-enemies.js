@@ -1,6 +1,6 @@
-import { enemySet } from './foes.js?v=sub1';
-import { groundAt } from './wolk-terrain.js?v=sub1';
-import { boxes } from './wolk-world.js?v=sub1';
+import { enemySet } from './foes.js';
+import { groundAt } from './wolk-terrain.js';
+import { boxes } from './wolk-world.js';
 
 // Not much lives up here: grumpy little puff-crawlers on the bigger islands, and gulls round the high rocks.
 export const enemies = enemySet({ groundAt, boxes });

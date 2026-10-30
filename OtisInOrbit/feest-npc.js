@@ -1,14 +1,14 @@
-import { THREE, scene, toon, addOutline, V3, damp, puff, toast } from './core.js?v=sub1';
-import { addCookie } from './cookies.js?v=sub1';
-import { addSpeaker } from './bubbles.js?v=sub1';
-import { getSave } from './save.js?v=sub1';
-import { play, shot } from './cutscene.js?v=sub1';
-import { LOOK } from './ui.js?v=sub1';
-import * as sfx from './sfx.js?v=sub1';
-import { groundAt } from './feest-terrain.js?v=sub1';
-import { INST, TUUT_AT, NATHAN_AT, PLATE, STICKS_AT, BELLOWS_AT, MOUTH_AT, STAGE, beatPhase } from './feest-world.js?v=sub1';
-import { boss } from './feest-boss.js?v=sub1';
-import { TRIAL_RARE, restoreTrials } from './feest-trials.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, damp, puff, toast } from './core.js';
+import { addCookie } from './cookies.js';
+import { addSpeaker } from './bubbles.js';
+import { getSave } from './save.js';
+import { play, shot } from './cutscene.js';
+import { LOOK } from './ui.js';
+import * as sfx from './sfx.js';
+import { groundAt } from './feest-terrain.js';
+import { INST, TUUT_AT, NATHAN_AT, PLATE, STICKS_AT, BELLOWS_AT, MOUTH_AT, STAGE, beatPhase } from './feest-world.js';
+import { boss } from './feest-boss.js';
+import { TRIAL_RARE, restoreTrials } from './feest-trials.js';
 
 // Who lives on the Feestplaneet: the Toeters (round, with a horn for a nose: copy one for Galm), their chief
 // Opper-Toeter Tuut, and Nathan, a baseball player who's allergic to dogs AND cats. Kayo & Yara came by

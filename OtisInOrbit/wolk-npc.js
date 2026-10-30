@@ -1,14 +1,14 @@
-import { THREE, scene, toon, addOutline, V3, puff, toast, label } from './core.js?v=sub1';
-import { addCookie } from './cookies.js?v=sub1';
-import { addSpeaker } from './bubbles.js?v=sub1';
-import { getSave } from './save.js?v=sub1';
-import { play, shot } from './cutscene.js?v=sub1';
-import { LOOK } from './ui.js?v=sub1';
-import * as sfx from './sfx.js?v=sub1';
-import { groundAt, ARENA, ISLANDS } from './wolk-terrain.js?v=sub1';
-import { boxes, WERKPLAATS, MILL_TOP, HIGH_CLOUD, OMA_AT, NEST, CANNON, CANNON_BACK } from './wolk-world.js?v=sub1';
-import { boss, KNOOP_DOCK, knoop } from './wolk-boss.js?v=sub1';
-import { TRIAL_RARE, restoreTrials } from './wolk-trials.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, puff, toast, label } from './core.js';
+import { addCookie } from './cookies.js';
+import { addSpeaker } from './bubbles.js';
+import { getSave } from './save.js';
+import { play, shot } from './cutscene.js';
+import { LOOK } from './ui.js';
+import * as sfx from './sfx.js';
+import { groundAt, ARENA, ISLANDS } from './wolk-terrain.js';
+import { boxes, WERKPLAATS, MILL_TOP, HIGH_CLOUD, OMA_AT, NEST, CANNON, CANNON_BACK } from './wolk-world.js';
+import { boss, KNOOP_DOCK, knoop } from './wolk-boss.js';
+import { TRIAL_RARE, restoreTrials } from './wolk-trials.js';
 
 // Who lives on the Wolkeneilanden: Raaf, an inventor (a boy, a human, and yes, he's really called Raaf).
 // Kayo & Yara's airship blew his workshop apart; his parts are scattered over the islands. Bring them back and

@@ -1,5 +1,5 @@
-import { V3 } from './core.js?v=sub1';
-import * as sfx from './sfx.js?v=sub1';
+import { V3 } from './core.js';
+import * as sfx from './sfx.js';
 
 // Cutscenes: a list of steps. Each step can move the camera, run animation code, and show a line
 // of dialogue (with an optional Byte translation underneath, for when Otis is barking).

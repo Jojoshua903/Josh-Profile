@@ -1,8 +1,8 @@
-import { THREE, scene, toon, addOutline, V3, damp, puff } from './core.js?v=sub1';
-import * as sfx from './sfx.js?v=sub1';
-import { getSave } from './save.js?v=sub1';
-import { ARENA, PLATEAU_H } from './bos-terrain.js?v=sub1';
-import { solid } from './bos-world.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, damp, puff } from './core.js';
+import * as sfx from './sfx.js';
+import { getSave } from './save.js';
+import { ARENA, PLATEAU_H } from './bos-terrain.js';
+import { solid } from './bos-world.js';
 
 // De Woekerzwam: a huge sick mushroom at the far edge of the forest. He stays rooted and attacks the whole arena:
 //   knollen  – he spits glowing spore bulbs that land around you and blow up after a few seconds.

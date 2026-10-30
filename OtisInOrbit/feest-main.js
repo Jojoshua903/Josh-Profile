@@ -1,21 +1,21 @@
-import { THREE, canvas, renderer, scene, camera, sun, V3, clamp, damp, approach, puff, updateParticles, toast } from './core.js?v=sub1';
-import { buildJosh, buildDrone } from './josh.js?v=sub1';
-import { boxes, movers, lamps, dust, rocket, syncBox, ARENA_ENTRY, ARENA_POS, winOn, winOff, fogMat, crates, SPAWN as WORLD_SPAWN, CHECKPOINTS, TRAVEL, PLANET } from './feest-world.js?v=sub1';
-import * as WORLD from './feest-world.js?v=sub1';
+import { THREE, canvas, renderer, scene, camera, sun, V3, clamp, damp, approach, puff, updateParticles, toast } from './core.js';
+import { buildJosh, buildDrone } from './josh.js';
+import { boxes, movers, lamps, dust, rocket, syncBox, ARENA_ENTRY, ARENA_POS, winOn, winOff, fogMat, crates, SPAWN as WORLD_SPAWN, CHECKPOINTS, TRAVEL, PLANET } from './feest-world.js';
+import * as WORLD from './feest-world.js';
 const { save, gotSet, persist, wipe } = getSave(PLANET);
-import { boss, updateBoss, resetBoss, bossActive, setBossDead, BOSS_INFO } from './feest-boss.js?v=sub1';
-import { enemies } from './feest-enemies.js?v=sub1';
-import { getSave } from './save.js?v=sub1';
-import { registerPlanet, activePlanet, travel, resumePlanet, pageInfo } from './planets.js?v=sub1';
-import { groundAt } from './feest-terrain.js?v=sub1';
-import { addCookie, cookies as newCookies } from './cookies.js?v=sub1';
-import { scannables, updateNPCs, talk, dialog, nearMilo, PENDING_RARE, npcEvents, restoreNPCs, miloTalked, guideDone, npcPrompt } from './feest-npc.js?v=sub1';
-import { S, LOOK, initUI, setAbility, setCookies, setPrompt } from './ui.js?v=sub1';
-import { cs, updateCutscene } from './cutscene.js?v=sub1';
-import { updateBubbles } from './bubbles.js?v=sub1';
-import { setupStory } from './feest-story.js?v=sub1';
-import { setupSubs, hasSub } from './subareas.js?v=sub1';
-import * as sfx from './sfx.js?v=sub1';
+import { boss, updateBoss, resetBoss, bossActive, setBossDead, BOSS_INFO } from './feest-boss.js';
+import { enemies } from './feest-enemies.js';
+import { getSave } from './save.js';
+import { registerPlanet, activePlanet, travel, resumePlanet, pageInfo } from './planets.js';
+import { groundAt } from './feest-terrain.js';
+import { addCookie, cookies as newCookies } from './cookies.js';
+import { scannables, updateNPCs, talk, dialog, nearMilo, PENDING_RARE, npcEvents, restoreNPCs, miloTalked, guideDone, npcPrompt } from './feest-npc.js';
+import { S, LOOK, initUI, setAbility, setCookies, setPrompt } from './ui.js';
+import { cs, updateCutscene } from './cutscene.js';
+import { updateBubbles } from './bubbles.js';
+import { setupStory } from './feest-story.js';
+import { setupSubs, hasSub } from './subareas.js';
+import * as sfx from './sfx.js';
 
 const josh = buildJosh();
 const drone = buildDrone();
@@ -36,6 +36,7 @@ const AB = {
   vries: { label: 'Vries', icon: '❄️', desc: 'Druk op F: bevries het water voor je tot een ijsschots', color: '#9ae8ff', hex: 0x9ae8ff },
   galm: { label: 'Galm', icon: '📯', desc: 'Druk op F: een geluidsgolf die gongs laat klinken en dingen wegblaast', color: '#ff9ad8', hex: 0xff9ad8 },
   neon: { label: 'Neon', icon: '💡', desc: 'Druk op F in de lucht: een flitsende dash naar voren', color: '#ff4ad8', hex: 0xff4ad8 },
+  grijp: { label: 'Grijp', icon: '🐿️', desc: 'Spring of loop tegen ruwe schors, klimop of een liaan: je klimt erop. W/S klimmen, A/D opzij, spatie = afzetten, Shift = loslaten', color: '#d8925a', hex: 0xd8925a },
   // the Combo mixes (Raaf builds the mixer into Byte on the Wolkeneilanden): hold one, scan the other
   wervel: { label: 'Wervelwind', icon: '🌪️', desc: 'Zweef + Galm. Druk op F: een wervelwind gooit je hoog de lucht in en blaast alles om je heen weg. Houd spatie om te zweven', color: '#c8b8ff', hex: 0xc8b8ff, mix: ['zweef', 'galm'] },
   regenboog: { label: 'Regenboog', icon: '🌈', desc: 'Gloei + Vries. Druk op F: een brug van regenboog-ijs voor je voeten, een paar seconden lang', color: '#ff9a6a', hex: 0xff9a6a, mix: ['gloei', 'vries'] },
@@ -211,7 +212,7 @@ function onLand(fall, wasPound) {
 }
 
 function respawn(msg = 'Oeps! Terug naar je laatste checkpoint') {
-  P.pos.copy(checkpoint); P.vel.set(0, 0, 0); P.pound = 0; P.long = false;
+  P.pos.copy(checkpoint); P.vel.set(0, 0, 0); P.pound = 0; P.long = false; P.climb = null;
   cam.target.set(checkpoint.x, checkpoint.y + 1.3, checkpoint.z);
   if (bossActive()) resetBoss();
   life.hp = 3; setHP();
@@ -244,6 +245,7 @@ const bossApi = {
     const d = P.pos.clone().sub(from).setY(0);
     if (d.lengthSq() < 0.01) d.set(0, 0, 1);
     d.setLength(9);
+    if (P.climb) letGo(0.6);
     P.vel.set(d.x, 9, d.z); P.pound = 0; P.long = false; P.grounded = false;
     puff(P.pos.clone().add(V3(0, 1, 0)), 8, 0xff8a8a, 3, 1);
     if (life.hp <= 0) respawn(bossActive() ? BOSS_INFO.fail : 'Au! Terug naar je laatste checkpoint');
@@ -432,6 +434,93 @@ function updateCombo(dt, t) {
 }
 const glider = () => P.ability === 'zweef' || P.ability === 'wervel';
 
+// ---------- Grijp: climbing rough bark, ivy and lianas ----------
+// A planet lists what you can climb (WORLD.CLIMBS): one side of a trunk { x, z, r, a, w, y0, y1, exit }.
+// r = the trunk's radius, a = which side (angle from +z towards +x) and w = how far round either way (π = all
+// round), y0–y1 = how high. exit 'in': at the top you climb onto the trunk; 'out': onto a ledge above you.
+// A liana is just a very thin trunk, all the way round, with no exit. Set .off to switch one off.
+const CLIMBS = WORLD.CLIMBS || [];
+const wrapA = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+let climbHint = 0;
+function findClimb(towards) {
+  for (const c of CLIMBS) {
+    if (c.off) continue;
+    const dx = P.pos.x - c.x, dz = P.pos.z - c.z, d = Math.hypot(dx, dz), lr = c.r + R + 0.05;
+    if (d > lr + 0.45 || d < c.r - 0.3) continue;
+    if (P.pos.y < c.y0 - 0.4 || P.pos.y > c.y1 - 0.3) continue;
+    const a = Math.atan2(dx, dz);
+    if (c.w < Math.PI && Math.abs(wrapA(a - c.a)) > c.w) continue;
+    if (towards && (P.wish.x * -dx + P.wish.z * -dz) / (d || 1) < 0.5) continue;
+    return { c, a };
+  }
+  return null;
+}
+function tryGrab(dt) {
+  climbHint -= dt;
+  if (P.climb || P.climbCd > 0 || P.pound || P.mag || P.long) return;
+  const f = findClimb(P.grounded);
+  if (!f) return;
+  if (P.ability !== 'grijp') {
+    if (climbHint <= 0) { climbHint = 15; toast(f.c.r < 0.6 ? 'Een liaan! Met Grijp kun je erin klimmen.' : 'Ruwe schors! Met Grijp (scan een eekhoorn) kun je hier tegenop klimmen.'); }
+    return;
+  }
+  P.climb = { c: f.c, a: f.a };
+  P.vel.set(0, 0, 0); P.grounded = false; P.jumping = P.long = false; P.pound = 0; P.airJump = P.airJump2 = P.wervelUsed = false;
+  sfx.click(); squash(0.15);
+}
+// let go: make sure Josh isn't left standing inside the trunk
+function letGo(cd) {
+  const c = P.climb.c; P.climb = null; P.climbCd = cd; P.coyote = 0; P.buffer = 0;
+  if (c.r < 0.6) return;
+  for (let k = 0; k < 12 && groundAt(P.pos.x, P.pos.z, R) > P.pos.y + 0.02; k++) {
+    const dx = P.pos.x - c.x, dz = P.pos.z - c.z, d = Math.hypot(dx, dz) || 1;
+    P.pos.x += (dx / d) * 0.2; P.pos.z += (dz / d) * 0.2;
+  }
+}
+function climbStep(dt, ix, iy, jumpP, crouchP, fx, fz) {
+  const C = P.climb, c = C.c, lr = c.r + R + 0.05, thin = c.r < 0.6;
+  if (c.off || P.ability !== 'grijp') { letGo(0.4); return; }
+  P.pos.y += iy * 4.2 * dt;
+  C.a += (ix * 3.4 * dt) / lr;
+  if (c.w < Math.PI) C.a = c.a + clamp(wrapA(C.a - c.a), -c.w, c.w);
+  const ox = Math.sin(C.a), oz = Math.cos(C.a);
+  P.pos.x = c.x + ox * lr; P.pos.z = c.z + oz * lr;
+  P.facing = C.a + Math.PI;
+  P.vel.set(0, 0, 0); P.grounded = false; P.airT = 0;
+  P.climbAnim = (P.climbAnim || 0) + (Math.abs(iy) + Math.abs(ix)) * dt * 9;
+  if (P.pos.y >= c.y1) {
+    if (c.exit) {
+      // over the top: onto the trunk, or onto the ledge above
+      const k = c.exit === 'in' ? c.r - 1.6 : lr + 0.9;
+      P.pos.set(c.x + ox * k, c.y1 + 0.05, c.z + oz * k);
+      P.climb = null; P.climbCd = 0.4; P.vel.set(0, -1, 0); squash(-0.2); sfx.jump(1);
+      return;
+    }
+    P.pos.y = c.y1;
+  }
+  if (P.pos.y < c.y0) { P.pos.y = c.y0; if (iy < 0) { letGo(0.6); return; } }
+  if (jumpP) {
+    // push off: away from the trunk (and a bit sideways if you steer), or from a liana the way the camera looks
+    const dir = thin ? V3(fx, 0, fz) : V3(ox, 0, oz);
+    if (!thin && Math.abs(ix) > 0.1) dir.add(V3(oz, 0, -ox).multiplyScalar(ix * 0.7));
+    dir.normalize();
+    letGo(0.35);
+    const sp = thin ? 8.5 : 7.5;
+    P.vel.set(dir.x * sp, S.jump * 0.95, dir.z * sp);
+    P.jumping = true; P.cut = false; P.facing = Math.atan2(dir.x, dir.z);
+    sfx.jump(1); puff(P.pos.clone().add(V3(0, 0.6, 0)), 6, 0xc8a070, 2, 0.5); squash(-0.2);
+    return;
+  }
+  if (crouchP) letGo(0.6);
+}
+function moveMovers(t) {
+  for (const m of movers) {
+    const np = m.fn ? m.fn(t) : m.base.clone().addScaledVector(m.axis, Math.sin(t * m.speed) * m.amp);
+    m.delta.subVectors(np, m.b.pos);
+    m.b.pos.copy(np); syncBox(m.b);
+  }
+}
+
 function updatePlayer(dt, t) {
   const pad = readPad();
   // walking is WASD only; the arrow keys (and J/L) turn the camera
@@ -475,6 +564,14 @@ function updatePlayer(dt, t) {
     story.fly(dt, { turn: ix, climb: iy, up: jumpH, down: crouchH, fire: fireH });
     return 0;
   }
+  // hanging on a trunk or a liana (Grijp)
+  P.climbCd = (P.climbCd || 0) - dt;
+  if (P.climb) {
+    climbStep(dt, ix, iy, jumpP, crouchP, fx, fz);
+    pressed.clear(); moveMovers(t);
+    setPrompt(P.climb ? '<kbd>W</kbd><kbd>S</kbd> klimmen · <kbd>A</kbd><kbd>D</kbd> opzij · <kbd>spatie</kbd> afzetten · <kbd>Shift</kbd> loslaten' : '');
+    return 0;
+  }
   if (fireP && P.fireCd <= 0 && comboFire()) P.fireCd = 0.3;
   else if (fireP && P.ability === 'vonk' && P.fireCd <= 0) { P.fireCd = 0.3; fireSpark(); }
   else if (fireP && P.fireCd <= 0 && story.fire && story.fire(P.ability)) P.fireCd = 0.35;   // a planet's own shot (Vries on the Waterplaneet)
@@ -483,7 +580,7 @@ function updatePlayer(dt, t) {
   if (interactP) {
     if (dialog.active || (P.grounded && nearMilo(P.pos))) talk();
     else if (P.grounded && subs.near(P.pos)) subs.enter();
-    else if (P.grounded && nearRocket() && !launch.on) { if (DESTS.length > 1) openMenu(); else tryLaunch(); }
+    else if (P.grounded && nearRocket() && !launch.on) { addVisited(); if (DESTS.length > 1) openMenu(); else tryLaunch(); }
     else scanP = true;
   }
   P.useP = scanP && hacked();          // during a hacking boss, E throws instead of scanning
@@ -576,11 +673,7 @@ function updatePlayer(dt, t) {
   }
 
   // moving platforms (carry the player along)
-  for (const m of movers) {
-    const np = m.fn ? m.fn(t) : m.base.clone().addScaledVector(m.axis, Math.sin(t * m.speed) * m.amp);
-    m.delta.subVectors(np, m.b.pos);
-    m.b.pos.copy(np); syncBox(m.b);
-  }
+  moveMovers(t);
   if (P.grounded && P.ground && P.ground.mover) P.pos.add(P.ground.mover.delta);
 
   // collisions, axis by axis, in substeps
@@ -647,6 +740,7 @@ function updatePlayer(dt, t) {
     }
     if (P.grounded) P.coyote = 0.2;   // going down a terrace step you're in the air for a moment: still counts as ground
   }
+  tryGrab(dt);
   if (P.pos.y < -20) respawn();
 
   // facing
@@ -773,7 +867,8 @@ function animate(dt, t, hs) {
   A.phase += hs * dt * 1.9;
   const sw = Math.sin(A.phase) * 0.95 * run;
   let L0 = 0, L1 = 0, A0x = 0, A1x = 0, Az = 0.12, lean = 0, bob = 0;
-  if (P.pound) { L0 = L1 = -1.3; Az = 2.5; }
+  if (P.climb) { const c = Math.sin(P.climbAnim || 0); L0 = -0.7 + c * 0.5; L1 = -0.7 - c * 0.5; A0x = -2.6 + c * 0.4; A1x = -2.6 - c * 0.4; Az = 0.25; lean = -0.1; }
+  else if (P.pound) { L0 = L1 = -1.3; Az = 2.5; }
   else if (P.long) { L0 = 0.5; L1 = 0.8; A0x = A1x = -2.8; Az = 0.2; lean = 1.15; }
   else if (P.floating && glider()) { L0 = 0.3; L1 = 0.5; A0x = A1x = 0; Az = 1.5; lean = 0.55; }   // arms out like wings
   else if (P.grounded) {
@@ -905,6 +1000,8 @@ function updateCamera(dt) {
     const d = Math.atan2(Math.sin(want - cam.yaw), Math.cos(want - cam.yaw));
     cam.yaw += d * damp(0.9 * Math.min(1, hs / S.speed), dt);
   }
+  // climbing: the camera swings round to look at the trunk from outside
+  if (P.climb && time - lastDrag > 1) cam.yaw += wrapA(P.climb.a - cam.yaw) * damp(2.5, dt);
 
   // pull the camera in front of walls instead of letting it sit inside the mountain
   const dir = V3(Math.sin(cam.yaw) * Math.cos(cam.pitch), Math.sin(cam.pitch), Math.cos(cam.yaw) * Math.cos(cam.pitch));
@@ -939,10 +1036,19 @@ if (!menuEl) {
     + 'background:#fff8ec;border:5px solid #2b2440;border-radius:24px;padding:18px 18px 12px;font:700 17px ui-rounded,"Avenir Next",system-ui,sans-serif;color:#2b2440;box-shadow:0 10px 0 rgba(43,36,64,.35)';
   document.body.appendChild(menuEl);
 }
-const destOk = (d) => rareCount >= d.need;
+// a planet you've already been to is always open, from every planet (not just the next one along)
+const visited = (p) => p === 'mistmaan' || (p !== PLANET && !!getSave(p).save.intro);
+const destOk = (d) => rareCount >= d.need || visited(d.planet);
+function addVisited() {
+  for (const p of ORDER) {
+    if (p === PLANET || DESTS.some((d) => d.planet === p) || !visited(p) || !pageInfo(p)) continue;
+    const name = pageInfo(p).title.replace(/^(De|Het) /, (m) => m.toLowerCase());
+    DESTS.push({ need: 0, planet: p, name, label: `Naar ${name}` });
+  }
+}
 // left to right in the order you travel them; each with a little planet to look at
-const ORDER = ['mistmaan', 'berg', 'bos', 'schroot', 'zon', 'water', 'tempel', 'feest', 'regen', 'wolk'];
-const ICON = { mistmaan: '🌙', berg: '⛰️', bos: '🍄', schroot: '⚙️', zon: '☀️', water: '🌊', tempel: '🏛️', feest: '🎉', regen: '🌧️', wolk: '☁️' };
+const ORDER = ['mistmaan', 'berg', 'bos', 'schroot', 'zon', 'water', 'tempel', 'feest', 'regen', 'wolk', 'woud'];
+const ICON = { mistmaan: '🌙', berg: '⛰️', bos: '🍄', schroot: '⚙️', zon: '☀️', water: '🌊', tempel: '🏛️', feest: '🎉', regen: '🌧️', wolk: '☁️', woud: '🌳' };
 const menuOrder = () => DESTS.map((d, i) => i).sort((a, b) => ORDER.indexOf(DESTS[a].planet) - ORDER.indexOf(DESTS[b].planet));
 function drawMenu() {
   const cards = menuOrder().map((i) => {
@@ -977,6 +1083,7 @@ function markMenu() {
 }
 function openMenu() {
   if (TRAVEL.locked && TRAVEL.locked()) { toast(TRAVEL.lockedMsg); return; }
+  addVisited();
   travelMenu.open = true;
   travelMenu.sel = DESTS.indexOf(dest()) >= 0 && destOk(dest()) ? destI : Math.max(0, DESTS.findIndex(destOk));
   if (document.pointerLockElement && document.exitPointerLock) document.exitPointerLock();
@@ -997,7 +1104,7 @@ function menuInput() {
 }
 function tryLaunch() {
   if (TRAVEL.locked && TRAVEL.locked()) { toast(TRAVEL.lockedMsg); return; }
-  if (rareCount < dest().need) {
+  if (!destOk(dest())) {
     toast(`Otis heeft nog ${dest().need - rareCount} kosmische koekjes nodig voor ${dest().name}`);
     return;
   }
@@ -1033,13 +1140,13 @@ function landHere() {
   if (launch.pos) { rocket.position.copy(launch.pos); rocket.rotation.copy(launch.rot); }
   ctx.hideJosh = false; drone.g.visible = true;
   P.pos.set(TRAVEL.pos.x - 2.5, groundAt(TRAVEL.pos.x - 2.5, TRAVEL.pos.z + 2.5, 0.4), TRAVEL.pos.z + 2.5);
-  P.vel.set(0, 0, 0); P.pound = 0; P.long = false;
+  P.vel.set(0, 0, 0); P.pound = 0; P.long = false; P.climb = null;
   ctx.resetCam();
 }
 registerPlanet(PLANET, {
   arrivesWithCutscene: !save.intro,
   activate() {
-    keys.clear(); pressed.clear(); clock.getDelta();
+    keys.clear(); pressed.clear(); clock.getDelta(); addVisited();
     landHere();
     if (story.landed) story.landed();
     setCookies(coinCount, rareCount, RARE_TOTAL);

@@ -1,10 +1,10 @@
-import { THREE, scene, toon, addOutline, V3, damp, puff, toast } from './core.js?v=sub1';
-import { addCookie } from './cookies.js?v=sub1';
-import { addSpeaker } from './bubbles.js?v=sub1';
-import { getSave } from './save.js?v=sub1';
-import * as sfx from './sfx.js?v=sub1';
-import { BOWLS, BIG_BOWL, GEYSERS, FOLDERS, FLICKER, RAFTS, raftAt, rcookie, ZUIL, syncBox } from './zon-world.js?v=sub1';
-import { MAGMA_Y } from './zon-terrain.js?v=sub1';
+import { THREE, scene, toon, addOutline, V3, damp, puff, toast } from './core.js';
+import { addCookie } from './cookies.js';
+import { addSpeaker } from './bubbles.js';
+import { getSave } from './save.js';
+import * as sfx from './sfx.js';
+import { BOWLS, BIG_BOWL, GEYSERS, FOLDERS, FLICKER, RAFTS, raftAt, rcookie, ZUIL, syncBox } from './zon-world.js';
+import { MAGMA_Y } from './zon-terrain.js';
 
 // The challenges behind the cosmic cookies on the Zon. Three of them make their cookie appear when you
 // finish (stofbaden, zonnebellen, Flits); the rest (geisers, vouwpanelen, flikkerkristallen) are just

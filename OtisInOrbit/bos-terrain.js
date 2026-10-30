@@ -1,4 +1,4 @@
-import { THREE, scene, toon } from './core.js?v=sub1';
+import { THREE, scene, toon } from './core.js';
 
 // Het Paddenstoelenbos is a journey, not a circle around a middle: you land at the southern edge,
 // and the Woekerzwam looms over the far northern edge. In between, areas that connect in several ways:

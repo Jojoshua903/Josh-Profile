@@ -1,6 +1,6 @@
-import { enemySet } from './foes.js?v=sub1';
-import { groundAt } from './feest-terrain.js?v=sub1';
-import { boxes } from './feest-world.js?v=sub1';
+import { enemySet } from './foes.js';
+import { groundAt } from './feest-terrain.js';
+import { boxes } from './feest-world.js';
 
 // Party crashers: confetti crawlers in the meadow and the drum field, a snowball-thrower (here: water balloons)
 // on the xylophone cliff, and a couple of balloon-bats round the organ woods.

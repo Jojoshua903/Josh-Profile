@@ -1,4 +1,4 @@
-import { THREE, scene, toon } from './core.js?v=sub1';
+import { THREE, scene, toon } from './core.js';
 
 // De Feestplaneet: the Toeters' festival meadow, the day before the Galmfeest. The whole place is made of
 // giant instruments lying in the grass. No ring of islands, no hub: everything sits where it fits.

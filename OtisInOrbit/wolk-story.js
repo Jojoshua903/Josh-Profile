@@ -1,13 +1,13 @@
-import { THREE, scene, V3, puff, toast } from './core.js?v=sub1';
-import { buildOtis } from './otis.js?v=sub1';
-import { addSpeaker } from './bubbles.js?v=sub1';
-import { play, shot, pan } from './cutscene.js?v=sub1';
-import * as sfx from './sfx.js?v=sub1';
-import { groundAt, ARENA, ISLANDS } from './wolk-terrain.js?v=sub1';
-import { rocket, FLAGS, updateWorld, WERKPLAATS, GATE, gate, openGate } from './wolk-world.js?v=sub1';
-import { boss, ship, knoop, blow as bossBlow, KNOOP_DOCK } from './wolk-boss.js?v=sub1';
-import { setCtx } from './wolk-npc.js?v=sub1';
-import { updateTrials, setTrialCtx, blowTrials, meteorTrials, poundTrials, bath } from './wolk-trials.js?v=sub1';
+import { THREE, scene, V3, puff, toast } from './core.js';
+import { buildOtis } from './otis.js';
+import { addSpeaker } from './bubbles.js';
+import { play, shot, pan } from './cutscene.js';
+import * as sfx from './sfx.js';
+import { groundAt, ARENA, ISLANDS } from './wolk-terrain.js';
+import { rocket, FLAGS, updateWorld, WERKPLAATS, GATE, gate, openGate } from './wolk-world.js';
+import { boss, ship, knoop, blow as bossBlow, KNOOP_DOCK } from './wolk-boss.js';
+import { setCtx } from './wolk-npc.js';
+import { updateTrials, setTrialCtx, blowTrials, meteorTrials, poundTrials, bath } from './wolk-trials.js';
 
 export function setupStory(ctx) {
   const { P, drone, save, persist } = ctx;
