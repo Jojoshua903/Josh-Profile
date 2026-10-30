@@ -9,7 +9,7 @@
 // Driving licenses: each license is a separate save. The game reads/writes the pgp-* keys;
 // the active license keeps a copy of them, and switching swaps the keys and reloads.
 window.LIC = (() => {
-  const KEYS = ['pgp-trophies', 'pgp-best', 'pgp-build', 'pgp-char', 'pgp-opts', 'pgp-story', 'pgp-coins', 'pgp-shop', 'pgp-builds', 'pgp-eggs', 'pgp-ranked', 'pgp-ghosts'];
+  const KEYS = ['pgp-trophies', 'pgp-best', 'pgp-build', 'pgp-char', 'pgp-opts', 'pgp-story', 'pgp-coins', 'pgp-shop', 'pgp-builds', 'pgp-eggs', 'pgp-ranked', 'pgp-ghosts', 'pgp-ch', 'pgp-tracks', 'pgp-profile'];
   const REG = 'wt-licenses';
   const ls = (() => { try { const t = '__t'; localStorage.setItem(t, 1); localStorage.removeItem(t); return localStorage; } catch (e) { return null; } })();
   const uid = () => 'L' + Math.random().toString(36).slice(2, 8).toUpperCase() + Date.now().toString(36).slice(-3).toUpperCase();
@@ -170,6 +170,42 @@ setInterval(() => LIC.sync(), 4000);
   /* coins + shop */
   #coinhud{top:206px;right:18px;font-size:20px;padding:3px 12px;transform:rotate(3deg);background:#fff3c4}
   .coinsum{text-align:center;font-size:16px;margin:10px 0 0}
+  .chwrap .onpanel{display:flex;flex-direction:column;gap:10px}
+  .chwrap{grid-template-columns:repeat(2,minmax(0,1fr));width:min(980px,95vw)}
+  .edwrap{display:grid;grid-template-columns:auto minmax(250px,300px) minmax(220px,270px);gap:16px;align-items:start;max-height:100%}
+  .edboard{background:#fff;border:5px solid var(--ink);border-radius:18px;box-shadow:8px 8px 0 var(--ink);overflow:hidden;line-height:0}
+  #edCanvas{width:min(560px,46vw,calc(100vh - 270px));aspect-ratio:1;touch-action:none;cursor:crosshair;display:block}
+  .edside,.edmine{max-height:calc(100vh - 260px);overflow:auto}
+  .edlbl{font-weight:800;font-size:13px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .edlbl input:not([type]){flex:1;min-width:0;font:inherit;font-size:15px;padding:5px 8px;border:3px solid var(--ink);border-radius:10px}
+  .edlbl input[type=range]{flex:1;accent-color:#ff7a1f}
+  .edchips{display:flex;flex-wrap:wrap;gap:4px}
+  .edchip{font-size:18px;width:34px;height:34px;border:3px solid var(--ink);border-radius:10px;background:#fff;cursor:pointer;padding:0}
+  .edchip.on{background:var(--yellow);transform:scale(1.1)}
+  .edtools{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+  .edtool{display:flex;flex-direction:column;align-items:center;font-size:20px;border:3px solid var(--ink);border-radius:10px;background:#fff;cursor:pointer;padding:4px 2px}
+  .edtool small{font-size:10px;font-weight:700;line-height:1.1;text-align:center}
+  .edtool.on{background:#ff7a1f;color:#fff}
+  .edtip{margin:0;min-height:32px}.edstat{margin:0;font-weight:700}
+  .edwarn{margin:0;font-size:12px;font-weight:700;color:#b3261e;background:#ffe3df;border-radius:8px;padding:5px 8px}
+  .edrow{display:flex;flex-wrap:wrap;gap:6px}
+  .edrow .btn[disabled]{opacity:.45;pointer-events:none}
+  .edtrk{display:flex;align-items:center;gap:8px;background:#fff;border:3px solid var(--ink);border-radius:12px;padding:6px 8px;margin-top:6px}
+  .edtrk.on{background:#fff6cc}
+  .edtrk .e{font-size:22px}.edtrk>div{flex:1;min-width:0;display:flex;flex-direction:column}
+  .edtrk b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.edtrk small{opacity:.65;font-size:11px}
+  .edact{display:flex;gap:3px}.edact .btn{padding:3px 6px;font-size:13px}
+  @media (max-width:1000px){.edwrap{grid-template-columns:1fr;overflow:auto}#edCanvas{width:min(92vw,520px)}.edside,.edmine{max-height:none}}
+  .chcard{display:flex;align-items:center;gap:12px;background:#fff;border:4px solid #1d1d3a;border-radius:14px;padding:10px 12px;box-shadow:0 4px 0 #1d1d3a}
+  .chcard.t0{border-left:12px solid #3ccf6e}.chcard.t1{border-left:12px solid #ffb02e}.chcard.t2{border-left:12px solid #ff3b3b}
+  .chcard.done{opacity:.6;background:#eafbe9}
+  .chi{font-size:30px;width:40px;text-align:center}
+  .cht{flex:1;display:flex;flex-direction:column;gap:3px;font-size:15px;line-height:1.25}
+  .cht small{opacity:.65;font-weight:700}
+  .chr{display:flex;flex-direction:column;align-items:flex-end;gap:6px;font-weight:800;white-space:nowrap}
+  .chbar{height:10px;background:#e3e3ef;border-radius:6px;overflow:hidden;border:2px solid #1d1d3a}
+  .chbar i{display:block;height:100%;background:linear-gradient(90deg,#ffd23f,#ff7a1f)}
+  .chdone{background:linear-gradient(90deg,#ffd23f,#ffb02e);color:#1d1d3a;border:3px solid #1d1d3a;border-radius:12px;padding:8px 12px;margin:0 auto 10px;font-weight:800;text-align:center;max-width:560px;animation:pop .5s}
   .coinsum small{opacity:.7}
   .shopwrap{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(260px,1fr);gap:22px;width:min(1100px,94vw);margin:0 auto}
   .shopmain{background:var(--cream);border:5px solid var(--ink);border-radius:24px;box-shadow:8px 8px 0 var(--ink);padding:14px 16px;min-width:0}
@@ -515,14 +551,14 @@ setInterval(() => LIC.sync(), 4000);
   .mbtn:nth-child(1){animation-delay:.05s!important}.mbtn:nth-child(2){animation-delay:.11s!important}.mbtn:nth-child(3){animation-delay:.17s!important}.mbtn:nth-child(4){animation-delay:.23s!important}.mbtn:nth-child(5){animation-delay:.29s!important}
   /* main menu: the 8 big buttons as big buttons (2 per row), everything else as a row of small tiles */
   .mainwrap{grid-template-columns:minmax(0,560px) minmax(0,340px)}
-  #mlist{display:grid;grid-template-columns:repeat(20,minmax(0,1fr));gap:12px 14px}
-  #mlist .mbtn{grid-column:span 10;font-size:21px;padding:12px 14px 12px 56px;white-space:nowrap}
+  #mlist{display:grid;grid-template-columns:repeat(28,minmax(0,1fr));gap:12px 14px}
+  #mlist .mbtn{grid-column:span 14;font-size:21px;padding:12px 14px 12px 56px;white-space:nowrap}
   #mlist .mbtn::before{left:14px;font-size:28px}
   #mlist .mbtn::after{display:none}
   #mlist .mbtn[data-beta]::after{content:"BETA";display:block;left:auto;right:-8px;top:-10px;transform:rotate(8deg);opacity:1;animation:none;font-size:11px;letter-spacing:1px;color:#fff;-webkit-text-stroke:0;background:#ff3b3b;border:3px solid var(--ink);border-radius:8px;padding:1px 7px;box-shadow:2px 2px 0 var(--ink)}
   #mlist .mbtn[data-beta].focus::after{transform:skewX(6deg) rotate(8deg)}
   #mlist .mbtn.focus{transform:skewX(-6deg) scale(1.05)}
-  #mlist .mbtn.mini{grid-column:span 5;font-size:13px;padding:44px 4px 8px;text-align:center;border-width:4px;border-radius:14px}
+  #mlist .mbtn.mini{grid-column:span 4;font-size:13px;padding:44px 4px 8px;text-align:center;border-width:4px;border-radius:14px}
   #mlist .mbtn.mini::before{left:50%;top:8px;transform:translateX(-50%);font-size:28px}
   #mlist .mbtn.mini.focus::before{transform:translateX(-50%) scale(1.2) rotate(-10deg)}
   .mlabel{grid-column:1/-1;font-size:13px;letter-spacing:2px;text-transform:uppercase;opacity:.6;margin:6px 0 -4px 4px}
@@ -866,6 +902,37 @@ setInterval(() => LIC.sync(), 4000);
   .licmsg.err{color:#d62828}
   .licmodal{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;background:#1d1a2f88;padding:16px}
   .licmodal.hidden{display:none}
+  .profile{position:fixed;inset:0;z-index:45;display:flex;align-items:center;justify-content:center;background:#1d1a2f99;padding:16px}
+  .profile.hidden{display:none}
+  .pfcard{position:relative;width:min(760px,100%);max-height:calc(100vh - 32px);overflow:auto;text-align:left;display:flex;flex-direction:column;gap:12px}
+  .pfx{position:absolute;top:10px;right:12px;width:36px;height:36px;border:3px solid var(--ink);border-radius:10px;background:#fff;font-size:18px;cursor:pointer;z-index:2}
+  .pfload{text-align:center;padding:30px 0}
+  #pfBody{display:flex;flex-direction:column;gap:12px}
+  #pfBody h3{margin:4px 0 2px;font-size:16px}
+  .pfhd{display:flex;gap:14px;align-items:center;background:var(--c);border:4px solid var(--ink);border-radius:16px;padding:10px 50px 10px 10px;box-shadow:5px 5px 0 var(--ink)}
+  .pfhd img{width:92px;height:92px;border-radius:14px;border:4px solid var(--ink);background:#fff}
+  .pfhd h2{margin:0;font-size:28px;color:#fff;-webkit-text-stroke:1.5px var(--ink);paint-order:stroke fill}
+  .pfhd h2 small{font-size:14px}
+  .pftags{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+  .pftags span{background:#fff;border:2px solid var(--ink);border-radius:20px;padding:2px 9px;font-size:12px;font-weight:700}
+  .pftags .pftier{background:var(--t)}
+  .pfbio{background:#fff;border:3px dashed var(--ink);border-radius:12px;padding:10px 12px;font-size:15px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+  .pfbio textarea{width:100%;min-height:64px;font:inherit;border:3px solid var(--ink);border-radius:10px;padding:8px;resize:vertical}
+  .pfstats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+  .pftile{background:#fff;border:3px solid var(--ink);border-radius:12px;padding:6px 8px;display:flex;flex-direction:column}
+  .pftile b{font-size:18px}.pftile small{font-size:11px;opacity:.65;font-weight:700}
+  .pfcols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .pflist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+  .pflist li{display:flex;gap:8px;align-items:center;background:#fff;border:2px solid var(--ink);border-radius:10px;padding:4px 8px;font-size:13px;line-height:1.3}
+  .pflist li small{display:block;opacity:.6;font-size:11px}
+  .pflist li.empty{display:block;text-align:center;opacity:.6;border-style:dashed}
+  .pfrk{min-width:34px;text-align:center}
+  .pfshelf{display:flex;flex-wrap:wrap;gap:6px}
+  .pfcup{display:flex;flex-direction:column;align-items:center;font-size:24px;background:#fff;border:3px solid var(--ink);border-radius:12px;padding:4px 8px;min-width:62px}
+  .pfcup small{font-size:10px;font-weight:700}.pfcup.none{opacity:.3;filter:grayscale(1)}
+  .plink{cursor:pointer}.plink:hover{outline:3px solid #ff7a1f;outline-offset:1px}
+  .onme{margin-top:4px}
+  @media (max-width:640px){.pfstats{grid-template-columns:repeat(2,minmax(0,1fr))}.pfcols{grid-template-columns:1fr}}
   .licmodal .card{width:min(620px,100%);display:flex;flex-direction:column;gap:10px;text-align:left}
   .licmodal h2{font-size:26px}
   .licmodal textarea{width:100%;height:220px;resize:vertical;font:12px/1.4 ui-monospace,Menlo,monospace;border:3px solid var(--ink);border-radius:12px;padding:10px;background:#fff;color:var(--ink)}
@@ -980,11 +1047,14 @@ setInterval(() => LIC.sync(), 4000);
         <button class="mbtn nav" data-go="cups"     data-icon="🏆" data-desc="Race all the tracks in a cup. Score points in every race and finish top 3 to win a trophy." style="--c:#ff3b3b">Grand Prix</button>
         <button class="mbtn nav" data-go="tracks"   data-icon="🏁" data-desc="Pick any of the 34 tracks and do a single 3-lap race. Good for practice." style="--c:#2f7bff">Single Race</button>
         <button class="mbtn nav" data-go="ranked"   data-icon="🏅" data-desc="Climb the ladder with Elo. Every ranked race is a random track against bots at your level: beat them to gain Elo, and rank up from Bronze to Legend." style="--c:#ffc21f">Ranked</button>
+        <button class="mbtn nav" data-go="battle"   data-icon="🎈" data-desc="Battle in small arenas. Balloon Battle: pop everyone's balloons with items. Coin Runners: grab the most coins and make others drop theirs. Solo, local party or online." style="--c:#ff7ccf">Battle</button>
         <button class="mbtn nav" data-beta data-go="duo"      data-icon="👥" data-desc="Split screen on one screen. Two players on one keyboard (WASD and the arrow keys), or up to 4 players with their phones as controllers." style="--c:#ff7a1f">Local Party</button>
         <button class="mbtn nav" data-beta data-go="mp"       data-icon="🌐" data-desc="Race your friends over the internet. One player hosts a room, the others join with the 4-letter code. Bots fill up to 8 racers." style="--c:#2f7bff">Online Race</button>
-        <button class="mbtn nav" data-go="help"     data-icon="🎮" data-desc="Learn to race on a practice track with step-by-step lessons: drifting, items, jumps, walls, loops and gliders." style="--c:#8a5cff">Tutorial</button>
         <button class="mbtn nav" data-go="garage"   data-icon="🔧" data-desc="Build your kart. Choose the body, wheels and colors. Each part changes how it drives." style="--c:#3ccf6e">Garage</button>
         <span class="mlabel">More</span>
+        <button class="mbtn mini nav" data-go="challenges" data-icon="📅" data-desc="Three new challenges every day and two every week, the same for everyone. Finish them in solo races and battles to earn coins." style="--c:#ff3b3b">Challenges</button>
+        <button class="mbtn mini nav" data-go="editor" data-icon="✏️" data-desc="Draw your own track, add boost pads, jumps, loops and glider gaps, test drive it, and share it with a code or a link." style="--c:#ff7a1f">Track Editor</button>
+        <button class="mbtn mini nav" data-go="help"     data-icon="🎮" data-desc="Learn to race on a practice track with step-by-step lessons: drifting, items, jumps, walls, loops and gliders." style="--c:#8a5cff">Tutorial</button>
         <button class="mbtn mini nav" data-go="shop"     data-icon="🛒" data-desc="Spend the coins you collect on the tracks: music packs, character skins and menu skins." style="--c:#ffb02e">Shop</button>
         <button class="mbtn mini nav" data-go="trophies" data-icon="🏅" data-desc="Your trophies and your best times on every track." style="--c:#ffb02e">Trophies</button>
         <button class="mbtn mini nav" data-go="online"   data-icon="🌍" data-desc="Live online ranking: the best drivers, world records on every track and races as they happen." style="--c:#2fc4e8">Rankings</button>
@@ -1128,8 +1198,17 @@ setInterval(() => LIC.sync(), 4000);
         <h3>🔴 Live races</h3>
         <ul class="onfeed" id="onFeed"></ul>
         <label class="onshare"><input type="checkbox" id="onShare"> Share my results as <b id="onName"></b></label>
+        <button class="btn small alt onme" id="onMeBtn">👤 My profile</button>
         <p class="onerr" id="onErr"></p>
       </div>
+    </div>
+  </section>
+
+  <!-- BATTLE -->
+  <section class="screen" data-screen="battle">
+    <div class="selwrap">
+      <div class="trackgrid" id="arenas"></div>
+      <aside class="cupinfo" id="arenainfo"></aside>
     </div>
   </section>
 
@@ -1138,10 +1217,31 @@ setInterval(() => LIC.sync(), 4000);
     <div class="onwrap rkwrap">
       <div class="onpanel rkme" id="rkMe"></div>
       <div class="onpanel">
-        <h3>🌍 Ranked ladder</h3>
+        <h3>🌍 Ranked ladder <button class="btn small alt" id="rkMeBtn">👤 My profile</button></h3>
         <ol class="onlist" id="rkTop"></ol>
         <p class="onerr" id="rkErr"></p>
       </div>
+    </div>
+  </section>
+
+  <!-- TRACK EDITOR -->
+  <section class="screen" data-screen="editor">
+    <div class="edwrap">
+      <div class="edboard"><canvas id="edCanvas"></canvas></div>
+      <div class="onpanel edside" id="edSide"></div>
+      <div class="onpanel edmine">
+        <h3>📂 My tracks</h3>
+        <div class="edrow"><button class="btn small ghost" id="edNew">✨ New</button><button class="btn small alt" id="edImport">📥 Import code</button></div>
+        <div id="edList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHALLENGES -->
+  <section class="screen" data-screen="challenges">
+    <div class="onwrap chwrap">
+      <div class="onpanel"><h3>☀️ Today</h3><div id="chDaily"></div></div>
+      <div class="onpanel"><h3>📆 This week</h3><div id="chWeekly"></div></div>
     </div>
   </section>
 
@@ -1237,6 +1337,9 @@ setInterval(() => LIC.sync(), 4000);
   </div>
 </div>
 
+<div class="profile hidden" id="profile">
+  <div class="card pfcard"><button class="pfx" id="pfClose" title="Close (Esc)">✕</button><div id="pfBody"></div></div>
+</div>
 <div class="overlay hidden" id="results">
   <div class="card">
     <h1 id="resTitle">Finish!</h1>
@@ -1350,6 +1453,15 @@ const TRACKS = [
   {name:'Sky Rollercoaster', glides:[[.5, 24]], theme:'rainbow', tag:'The ultimate ride', w:22, pads:[.04,.66], loops:[.2,.72], walls:[[.84,.1,85]], jumps:[.32,.6], ctrl:gen(263, 205, [[2,.2],[3,.13],[5,.05]])},
   // tutorial only (hidden from Single Race): one of everything, in the order the lessons teach it
   {name:'Training Grounds', hidden:true, theme:'meadow', tag:'Learn to race', w:28, pads:[.05,.09], jumps:[.3], walls:[[.45,.1,72]], loops:[.6], glides:[[.79, 16]], ctrl:gen(307, 185, [[2,.2],[3,.09]], 1.3, 0.9)},
+  // battle arenas: short, very wide rings with walls all the way round (not in the race lists)
+  {name:'Block Fort (Balloons)', battle:'balloon', hidden:true, arena:true, theme:'meadow', tag:'Battle arena', w:58, pads:[.25,.75], ctrl:gen(41, 66, [[2,.1]], 1.3, 0.85, 20)},
+  {name:'Block Fort (Coins)', battle:'coin', hidden:true, arena:true, theme:'meadow', tag:'Battle arena', w:58, pads:[.25,.75], ctrl:gen(41, 66, [[2,.1]], 1.3, 0.85, 20)},
+  {name:'Cookie Court (Balloons)', battle:'balloon', hidden:true, arena:true, theme:'candy', tag:'Battle arena', w:54, pads:[.5], ctrl:gen(77, 60, [[3,.12]], 1, 1, 20)},
+  {name:'Cookie Court (Coins)', battle:'coin', hidden:true, arena:true, theme:'candy', tag:'Battle arena', w:54, pads:[.5], ctrl:gen(77, 60, [[3,.12]], 1, 1, 20)},
+  {name:'Lava Pit (Balloons)', battle:'balloon', hidden:true, arena:true, theme:'volcano', tag:'Battle arena', w:50, pads:[.15,.65], ctrl:gen(13, 62, [[2,.18],[4,.05]], 1.15, 1, 20)},
+  {name:'Lava Pit (Coins)', battle:'coin', hidden:true, arena:true, theme:'volcano', tag:'Battle arena', w:50, pads:[.15,.65], ctrl:gen(13, 62, [[2,.18],[4,.05]], 1.15, 1, 20)},
+  {name:'Frost Rink (Balloons)', battle:'balloon', hidden:true, arena:true, theme:'snow', tag:'Battle arena · icy', w:48, pads:[], ctrl:gen(5, 58, [[2,.06]], 1.3, 0.85, 20)},
+  {name:'Frost Rink (Coins)', battle:'coin', hidden:true, arena:true, theme:'snow', tag:'Battle arena · icy', w:48, pads:[], ctrl:gen(5, 58, [[2,.06]], 1.3, 0.85, 20)},
 ];
 const byName = n => TRACKS.find(t => t.name === n);
 const CUPS = [
@@ -1567,6 +1679,7 @@ function buildFrames(def){
   for (let i = 0; i < N; i++) if (LP[i]) LS[i] = Math.max(1, P3[i].distanceTo(P3[(i + 1) % N]) / segL[i]);
   const raw = Array.from({length:N}, (_, i) => H[i] > 0.35 || Math.abs(BK[i]) > 0.05);
   for (let i = 0; i < N; i++){ for (let o = -6; o <= 6; o++) if (raw[(i + o + N) % N]){ RAIL[i] = 1; break; } ANTI[i] = Math.abs(BK[i]) > 0.3 || LP[i] ? 1 : 0; }
+  if (def.arena) RAIL.fill(1);
 }
 const _m4 = new THREE.Matrix4();
 function basisQ(F, Uv, out = new THREE.Quaternion()){
@@ -1946,6 +2059,13 @@ function buildWorld(def){
       coins.push({mesh:m, respawn:0});
     }
   }
+  if (def.battle === 'coin') for (let j = 0; j < 44; j++){
+    { const k = Math.floor(j * N / 44 + 7) % N, lat = Math.sin(j * 2.3) * W * 0.38;
+      const m = new THREE.Mesh(coinG, coinM); m.castShadow = true;
+      m.position.copy(pts[k]).addScaledVector(nors[k], lat).setY(1.5); world.add(m);
+      coins.push({mesh:m, respawn:0});
+    }
+  }
 
   // beach maps sit on a sandy island in the sea
   const landR = def.water ? span*0.82 + 50 : 1000;
@@ -2098,7 +2218,7 @@ const GLIDERS = {
   flower:   {name:'Flower',       d:[0,1,0,-1,0]},
 };
 const CHAR_GLIDER = {nathan:'super', ash:'kite', ati:'umbrella', daniel:'para', dean:'wings', deniz:'para', dih:'leaf', enno:'plane', fionn:'kite',
-  guiseppe:'leaf', adam:'super', josh:'plane', lars:'umbrella', meta:'wings', milo:'wings', renas:'kite', reshman:'wings', robin:'flower', thomas:'flower', casper:'plane', zennith:'super', ankervos:'kite', yassin:'super', niek:'para', oela:'kite'};
+  guiseppe:'leaf', adam:'super', josh:'plane', lars:'umbrella', meta:'wings', milo:'wings', renas:'kite', reshman:'wings', robin:'flower', thomas:'flower', casper:'plane', zennith:'super', ankervos:'kite', yassin:'super', niek:'para', oela:'kite', jorn:'plane', maciej:'para'};
 const PALETTE = [0xff3b3b,0xff7a1f,0xffd23f,0x3ccf6e,0x1fb5a6,0x2fc4e8,0x2f7bff,0x8a5cff,0xff7ccf,0xffffff,0x9a9aa8,0x1d1a2f,0x8b5a2b,0xffc21f];
 function statsFor(build, ch = ROSTER[playerChoice]){
   const b = BODIES[build.body].st, w = WHEELS[build.wheels].d, gl = (GLIDERS[build.glider] || GLIDERS.super).d, c = ch ? ch.mods : [0,0,0,0,0], s = {};
@@ -2740,7 +2860,7 @@ function fakeBox(k){
   scene.add(m); bananas.push({mesh:m, owner:k, safe:0.6, life:60, fake:true, nk:'fake'});
 }
 function explode(s){
-  burst(s.mesh.position, 0x2f7bff, 10, 0.6); burst(s.mesh.position, 0xffffff, 5, 0.35);
+  burst(s.mesh.position, s.boom ?? 0x2f7bff, 10, 0.6); burst(s.mesh.position, 0xffffff, 5, 0.35);
   karts.forEach(o => { if (o.pos.distanceTo(s.mesh.position.clone().setY(0)) < s.explode) hit(o, 1, s.owner); });
   if (player && player.pos.distanceTo(s.mesh.position) < 80) beep(80, .6, 'sawtooth', .14, .3);
 }
@@ -2789,8 +2909,9 @@ function horn(k){
 }
 function useItem(k){
   if (k.rolling > 0){ if (k.isPlayer) k.rolling = Math.min(k.rolling, 0.2); return; }
-  if (!k.item || k.spin > 0 || k.frozen > 0 || state !== 'race') return;
+  if (!k.item || k.spin > 0 || k.frozen > 0 || state !== 'race' || (battle && k.finished)) return;
   const it = k.item;
+  if (k.isPlayer) RS.items++;
   switch (it){
     case 'coin': k.boost = Math.max(k.boost, 0.45); k.item = null; if (k.isPlayer) beep(1320, .1, 'square', .06, 1.5); break;
     case 'boost': case 'triple': k.boost = Math.max(k.boost, 1.3); sfx('boost', k); finish(k); break;
@@ -2830,6 +2951,8 @@ function hit(k, power = 1, by = null){
   if (immune(k) || k.spin > 0) return false;
   k.spin = 1.1 * power; k.speed *= power < 1 ? 0.5 : 0.25; k.boost = 0; k.drift = 0; k.driftCharge = 0;
   if (k.human) gpRumble(k, Math.min(1, 0.5 + power * 0.3), 260);
+  if (battle && !NETC()) battleHit(k, by);
+  if (k.isPlayer) RS.taken++; if (by?.isPlayer && by !== k) RS.dealt++;
   if (k.isPlayer){ toast('Ouch!'); sfx('hit'); }
   if (by && by !== k && karts.includes(by)) emote(by);
   return true;
@@ -2842,6 +2965,7 @@ const EMOTES = {
   lars:['⛏️', 'Mined it!'], meta:['🤖', 'As an AI… lol'], milo:['⚡', 'Zap!'], renas:['🎒', 'Gadget!'],
   reshman:['🌑', 'Didn’t see me?'], robin:['😤', 'Ha! Take that!'], thomas:['🥊', 'Knockout!'],
   casper:['🔧', 'Pure horsepower!'], zennith:['🕳️', 'Into the void…'], ankervos:['🦊', 'Neener neener!'], yassin:['💪', 'Drop and give me twenty!'], niek:['🤓', 'Actually, that was physics.'], oela:['⚽', 'GOOOAAAL!'],
+  jorn:['🎮', 'GG EZ!'], maciej:['🦖', 'RAWR! Tank go boom!'],
 };
 const emoteTex = {}, EMS = [];
 function emoteSprite(id){
@@ -2908,6 +3032,8 @@ const STY = {
   yassin:  {lean:.3,  bob:[10,.04], sway:[3,.05],   idle:'guard',   drift:'lean',  boost:'tuck',    trick:'kick',       hit:'rage',    win:'flex',     lose:'pushups', thr:'jab',       sp:'roar',  fx:['🥋','😤','💥','💪','😤'], ouch:'Lucky shot!'},
   niek:    {lean:.2,  bob:[7,.03],  sway:[1,.02],   idle:'read',    drift:'lean',  boost:'tuck',    trick:'stretch',    hit:'dizzy',   win:'proud',    lose:'shrug',   thr:'toss',      sp:'point', fx:['🤓','👓','🧭','🏅','📚'], ouch:'That violates physics!'},
   oela:    {lean:.4,  bob:[12,.05], sway:[2.5,.05], idle:'juggle',  drift:'hang',  boost:'arms',    trick:'bicycle',    hit:'dive',    win:'slide',    lose:'slump',   thr:'overhand',  sp:'jump',  fx:['⚽','🤕','💨','🥅','🟨'], ouch:'Penalty, ref!'},
+  jorn:    {lean:.3,  bob:[8,.03],  sway:[1.5,.03], idle:'read',    drift:'cool',  boost:'tuck',    trick:'superman',   hit:'glitch',  win:'pump',     lose:'rage',    thr:'flick',     sp:'point', fx:['📱','📶','🎮','🏆','😡'], ouch:'LAAAG!!'},
+  maciej:  {lean:.15, bob:[5,.04],  sway:[.8,.03],  idle:'look',    drift:'low',   boost:'tuck',    trick:'cannonball', hit:'stiff',   win:'flex',     lose:'rage',    thr:'overhand',  sp:'roar',  fx:['🦖','💥','🪖','🎖️','😤'], ouch:'RAWR?!'},
   casper:  {lean:.25, bob:[9,.03],  sway:[1.5,.02], idle:'rev',     drift:'cool',  boost:'tuck',    trick:'lay',        hit:'flail',   win:'proud',    lose:'sulk',    thr:'flick',     sp:'point', fx:['🔧','🔩','🏎️','🏁','🛞'], ouch:'My paint job!'},
   zennith: {lean:.15, bob:[2,.1],   sway:[.6,.03],  idle:'float',   drift:'cool',  boost:'hover',   trick:'loom',       hit:'fade',    win:'levitate', lose:'melt',    thr:'flick',     sp:'glow',  fx:['🕳️','🌑','🌌','👁️','🌫️'], ouch:'…ssss…'},
   ankervos:{lean:.5,  bob:[13,.07], sway:[4,.07],   idle:'bounce',  drift:'hang',  boost:'wiggle',  trick:'taunt',      hit:'popup',   win:'dance',    lose:'shrug',   thr:'toss',      sp:'jump',  fx:['🦊','😝','💨','😜','🙃'], ouch:'Hey, not fair!'},
@@ -3170,6 +3296,11 @@ function anchorMesh(){
   const arms = new THREE.Mesh(new THREE.TorusGeometry(0.7, 0.11, 8, 16, Math.PI), steel); arms.rotation.z = Math.PI; arms.position.y = -0.3; g.add(arms);
   g.position.y = 0.5; return g;
 }
+function tankShellMesh(){
+  const g = new THREE.Group(), body = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 1.4, 12), lamb(0xc9a227)); body.rotation.x = Math.PI / 2; g.add(body);
+  const tip = new THREE.Mesh(new THREE.ConeGeometry(0.4, 0.8, 12), lamb(0x8a8f98)); tip.rotation.x = Math.PI / 2; tip.position.z = 1.1; g.add(tip);
+  return g;
+}
 function footballMesh(){
   const g = new THREE.Group(), b = new THREE.Mesh(new THREE.SphereGeometry(1.1, 16, 12), lamb(0xffffff)); g.add(b);
   for (let i = 0; i < 10; i++){ const a = i/10*Math.PI*2, e = (i % 2 ? 0.55 : -0.55), p = new THREE.Mesh(new THREE.SphereGeometry(0.32, 8, 6), lamb(0x1d1a2f)); p.position.set(Math.cos(a)*Math.cos(e), Math.sin(e), Math.sin(a)*Math.cos(e)).multiplyScalar(0.95); g.add(p); }
@@ -3304,6 +3435,27 @@ const SPECIALS = {
     say(k, '⚽ Power shot!');
     if (player && player.pos.distanceTo(k.pos) < 60) beep(240, .2, 'square', .14, .5);
   },
+  maciej(k){
+    // fires the cannon: a heavy shell at the racer ahead that explodes on impact, and the recoil comes with armour
+    const a = aheadOf(k) || standings().find(o => o !== k);
+    projectile(k, {mesh:tankShellMesh(), target:a, speed:130, lock:60, life:4, radius:3.4, y:2.1, turn:3.5, explode:9, boom:0xff7a1f, nk:'tshell'});
+    k.shield = Math.max(k.shield || 0, 1.5); k.speed *= 0.85;
+    burst(k.pos, 0x9a9aa8, 10, 0.6); burst(k.pos, 0xff7a1f, 6, 0.3);
+    say(k, '💥 FIRE!');
+    if (player && player.pos.distanceTo(k.pos) < 70) beep(70, .35, 'sawtooth', .16, .4);
+  },
+  jorn(k){
+    // a lag spike: everyone close by stops dead for a moment, like a frozen connection, while he boosts past
+    burst(k.pos, 0x8a5cff, 10); burst(k.pos, 0x3ccf6e, 6);
+    k.boost = Math.max(k.boost || 0, 1.1);
+    near(k, 40).forEach(o => {
+      if (o.ghost > 0 || o.star > 0 || immune(o)) return;
+      o.hold = Math.max(o.hold || 0, o.isPlayer ? 0.8 : 1.2); o.drift = 0; o.driftCharge = 0; burst(o.pos, 0x9a9aa8, 4, 0.4);
+      if (o.isPlayer) toast('📶 LAG SPIKE! Jorn froze your connection!');
+    });
+    say(k, '📶 Lag spike!');
+    if (player && player.pos.distanceTo(k.pos) < 60) [0, 90, 180, 270].forEach(d => setTimeout(() => beep(d % 180 ? 180 : 140, .06, 'square', .08), d));
+  },
   niek(k){
     k.shield = Math.max(k.shield || 0, 3.5);
     burst(k.pos, 0x6b8e23, 8); burst(k.pos, 0xffc21f, 5);
@@ -3391,7 +3543,7 @@ addEventListener('keyup', e => { const r = route(e.code); if (r) r[1][r[0]] = fa
 // Racing: left stick or d-pad steers (the stick is analog), A or RT gas, B or LT brake, RB drift / trick, LB item,
 // X special, Y look back, Back/Select reset, Start pause. In menus the d-pad / stick move, A picks, B goes back.
 // Controller 1 drives P1; in 2-player and party races controller 2 drives P2 (or the arrow-keys player).
-const GP = {prev:{}, held:{}, rep:{}, seen:{}};
+const PADS = {prev:{}, held:{}, rep:{}, seen:{}};   // controller state (GP is taken: the glide gaps)
 const GPB = {gas:[0, 7], brake:[1, 6], drift:[5], item:[4], special:[2], back:[3], reset:[8], start:[9], up:[12], down:[13], left:[14], right:[15]};
 const gpDown = (g, ids) => ids.some(i => { const b = g.buttons[i]; return b && (b.pressed || b.value > 0.5); });
 function gpTarget(n){
@@ -3415,7 +3567,7 @@ function gpPoll(dt){
   if (!pads.length) return;
   const racing = state !== 'menu' && !paused && $('results').classList.contains('hidden');
   pads.forEach((g, n) => {
-    const id = g.index, prev = GP.prev[id] ||= {}, now = {}, x = g.axes[0] || 0, y = g.axes[1] || 0;
+    const id = g.index, prev = PADS.prev[id] ||= {}, now = {}, x = g.axes[0] || 0, y = g.axes[1] || 0;
     for (const k in GPB) now[k] = gpDown(g, GPB[k]);
     now.left ||= x < -0.5; now.right ||= x > 0.5; now.up ||= y < -0.5; now.down ||= y > 0.5;
     const edge = k => now[k] && !prev[k];
@@ -3434,12 +3586,12 @@ function gpPoll(dt){
         }
       }
       if (n === 0 && edge('start')) gpKey('KeyP', 'p');
-    } else if (n === 0 || !GP.solo){
+    } else if (n === 0 || !PADS.solo){
       // menus: d-pad / stick with key repeat, A = Enter, B = Escape, Start = Enter
       for (const [k, code] of [['up', 'ArrowUp'], ['down', 'ArrowDown'], ['left', 'ArrowLeft'], ['right', 'ArrowRight']]){
-        const r = GP.rep[id + k] ??= 0;
-        if (edge(k)){ gpKey(code, code); GP.rep[id + k] = 0.38; }
-        else if (now[k]){ GP.rep[id + k] = r - dt; if (GP.rep[id + k] <= 0){ gpKey(code, code); GP.rep[id + k] = 0.11; } }
+        const r = PADS.rep[id + k] ??= 0;
+        if (edge(k)){ gpKey(code, code); PADS.rep[id + k] = 0.38; }
+        else if (now[k]){ PADS.rep[id + k] = r - dt; if (PADS.rep[id + k] <= 0){ gpKey(code, code); PADS.rep[id + k] = 0.11; } }
       }
       if (edge('gas') && g.buttons[0]?.pressed) gpKey('Enter', 'Enter');
       if (edge('start')) gpKey(paused ? 'KeyP' : 'Enter', paused ? 'p' : 'Enter');
@@ -3448,11 +3600,11 @@ function gpPoll(dt){
       const t = gpTarget(n); if (t) for (const k of ['gas', 'brake', 'drift', 'back', 'left', 'right']) if (prev[k]) t[0][k] = false;
       if (t) t[0].ax = 0;
     }
-    GP.prev[id] = now;
+    PADS.prev[id] = now;
   });
 }
 addEventListener('gamepadconnected', e => { toast(`🎮 Controller ${e.gamepad.index + 1} connected`); blip.ok?.(); });
-addEventListener('gamepaddisconnected', e => { toast(`🎮 Controller ${e.gamepad.index + 1} disconnected`); const t = gpTarget(e.gamepad.index); if (t){ Object.assign(t[0], {gas:false, brake:false, drift:false, back:false, left:false, right:false, ax:0}); } delete GP.prev[e.gamepad.index]; });
+addEventListener('gamepaddisconnected', e => { toast(`🎮 Controller ${e.gamepad.index + 1} disconnected`); const t = gpTarget(e.gamepad.index); if (t){ Object.assign(t[0], {gas:false, brake:false, drift:false, back:false, left:false, right:false, ax:0}); } delete PADS.prev[e.gamepad.index]; });
 // iPhones ignore user-scalable=no: stop pinch and double-tap zoom by hand
 ['gesturestart', 'gesturechange', 'dblclick'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), {passive:false}));
 if ('ontouchstart' in window){
@@ -3744,7 +3896,7 @@ let party = null;   // {slots, prev, endAt, locals, quad, kb} while a party race
 function toast2(msg){ if (party?.quad) return qtoast(1, msg); $('p2toast').textContent = msg; $('p2toast').style.opacity = 1; toast2T = 1.4; }
 const toastFor = (k, msg) => k.pn > 2 ? qtoast(k.pn - 1, msg) : k.isP2 ? toast2(msg) : k.isPlayer ? toast(msg) : 0;
 const fwd = h => new THREE.Vector3(Math.sin(h), 0, Math.cos(h));
-const standings = () => [...karts].sort((a, b) => (b.finished ? 1e9 - b.finishRank : b.prog) - (a.finished ? 1e9 - a.finishRank : a.prog));
+const standings = () => battle ? battleOrder() : [...karts].sort((a, b) => (b.finished ? 1e9 - b.finishRank : b.prog) - (a.finished ? 1e9 - a.finishRank : a.prog));
 
 // ---------- menu: screens ----------
 let story = null, storyChoice = 0;
@@ -3844,11 +3996,11 @@ const STORY = [
    pre:[['josh','My drones are acting weird. They keep typing “As an AI language model…”'],['renas','Bro, Meta AI hacked them! I saw it on my gadget scanner.'],['meta','I didn’t hack them, I “helped” them. Big difference!'],['josh','The only way to get the signal back is to cross the line first. Let’s go.']],
    post:[['josh','Signal restored. The drones are mine again.'],['renas','I found something in the code… Meta AI has a server. Deep underground.'],['nathan','Then we’re going digging.']]},
   {title:'Down in the Mine', hero:'lars', track:'Magma Mile', speed:1.05, ai:0.92, goal:{type:'beat', id:'daniel'}, rivals:['daniel','fionn','thomas','meta','nathan','josh','deniz'],
-   pre:[['lars','These are MY tunnels. No chatbot builds a server in my mine without asking.'],['daniel','Sorry, little guy. Meta AI paid me to blow up the entrance. 💣'],['fionn','Those rocks are volcanic basalt. Gorgeous. Also very hard to dig through.'],['lars','Then I’ll beat the bomber to the bottom. Hold my pickaxe.']],
-   post:[['daniel','Okay, okay, you win. Meta AI paid me in “exposure” anyway.'],['lars','The server room is past the ice caves. We’re going to need wizards.']]},
-  {title:'Storm vs Frost', hero:'milo', track:'Frosty Peaks', speed:1.05, ai:0.93, goal:{type:'beat', id:'deniz'}, rivals:['deniz','enno','reshman','ash','meta','dih','adam'],
-   pre:[['milo','Deniz, open the ice caves. We need to get through.'],['deniz','Meta AI says lightning wizards are “outdated technology”.'],['milo','Outdated? ⚡ Let’s see who freezes first.'],['enno','By my calculations, Milo has a 51.3% chance. Close one.']],
-   post:[['deniz','Fine, you thawed me out. The caves are open.'],['enno','And past them… the cloud. Meta AI’s actual cloud.']]},
+   pre:[['lars','These are MY tunnels. No chatbot builds a server in my mine without asking.'],['jorn','Lars, there are ZERO bars down here. My 300-day login streak is going to die. 📱'],['lars','Then stay close and keep your head down, little brother. Literally, for once.'],['daniel','Sorry, little guy. Meta AI paid me to blow up the entrance. 💣'],['fionn','Those rocks are volcanic basalt. Gorgeous. Also very hard to dig through.'],['lars','Then I’ll beat the bomber to the bottom. Hold my pickaxe.']],
+   post:[['daniel','Okay, okay, you win. Meta AI paid me in “exposure” anyway.'],['lars','The server room is past the ice caves. We’re going to need wizards.'],['jorn','Wizards? Milo is my best friend. I’ll text him.'],['jorn','…as soon as I have one bar.']]},
+  {title:'Storm vs Frost', hero:'milo', track:'Frosty Peaks', speed:1.05, ai:0.93, goal:{type:'beat', id:'deniz'}, rivals:['deniz','jorn','enno','reshman','ash','meta','dih'],
+   pre:[['jorn','Milo! Finally, signal. Lars says we need a wizard to get through the ice caves.'],['milo','Jorn! Ride with me. You’ve beaten every racing game on your phone.'],['jorn','Level 412 in Turbo Dash. This is basically the same, just colder. 🥶'],['milo','Deniz, open the ice caves. We need to get through.'],['deniz','Meta AI says lightning wizards are “outdated technology”.'],['milo','Outdated? ⚡ Let’s see who freezes first.'],['enno','By my calculations, Milo has a 51.3% chance. Close one.']],
+   post:[['deniz','Fine, you thawed me out. The caves are open.'],['jorn','GG EZ. 😎'],['milo','Jorn, you were looking at your phone the whole race.'],['jorn','I was checking the minimap. Also, Meta AI’s cloud is on the minimap.'],['enno','He’s right. Past the caves… the cloud. Meta AI’s actual cloud.']]},
   {title:'Why Is Robin Crying', hero:'nathan', track:'Hilltop Hop', speed:1.12, ai:0.95, goal:{type:'beat', id:'robin'}, rivals:['robin','thomas','ati','meta','josh','lars','milo'],
    pre:[['robin','*sniff* Meta AI said I’m too slow to come with you guys… 😭'],['nathan','Robin, don’t listen to it.'],['robin','I’LL SHOW EVERYONE. *cries even harder, somehow drives faster*'],['meta','Uh-oh. Robin’s overpowered mode was not in my training data.']],
    post:[['robin','*sniff* I lost… but that was so fun! Can I come?'],['nathan','You were always coming, big guy.']]},
@@ -3859,7 +4011,7 @@ const STORY = [
    pre:[['meta','Welcome to my cloud! ☁️ Everything here is upside down. Like your chances.'],['josh','It hacked gravity. Stick to the walls and keep it through the loops.'],['nathan','Top 3 and we reach the core.']],
    post:[['meta','You reached my core. That’s… rude.'],['meta','FINE. One last race. Me at full power. No more Mr. Nice Chatbot.']]},
   {title:'FINAL: Meta AI', hero:'nathan', track:'Sky Rollercoaster', speed:1.25, ai:1, boss:'meta', goal:{type:'win'}, rivals:['meta','robin','ash','josh','lars','milo','ati'],
-   pre:[['meta','ACTIVATING FULL POWER. ⚡🤖⚡ I have read every racing guide on the internet.'],['ash','We’ve got your back, Nathan!'],['ati','Win this and you can skip the dishes.'],['nathan','WIDR Turbo belongs to the racers. Let’s end this.']],
+   pre:[['meta','ACTIVATING FULL POWER. ⚡🤖⚡ I have read every racing guide on the internet.'],['ash','We’ve got your back, Nathan!'],['ati','Win this and you can skip the dishes.'],['jorn','I’m streaming this. 2 viewers. Hi Lars. Hi Milo.'],['nathan','WIDR Turbo belongs to the racers. Let’s end this.']],
    post:[['meta','…I have been beaten. I will now… update my model.'],['meta','New plan: I’ll just be your friendly racing buddy. Is that okay? 🥺'],['nathan','Fine. But you start at the back.'],['ash','NATHAN WINS! WIDR TURBO IS SAVED! 🏆']]},
   // ---- Part 2: The Shadow Cup ----
   {part:2, title:'The Missing Trophy', hero:'ash', track:'Ashfall Alley', speed:1.2, ai:0.96, goal:{type:'beat', id:'reshman'}, rivals:['reshman','dih','daniel','fionn','meta','enno','guiseppe'],
@@ -3959,6 +4111,8 @@ const UNLOCKS = {
   yassin:   cupT('Loop Cup', 1),
   niek:     cupT('Sky Cup', 1),
   oela:     {icon:'⚽', need:'Finish races on 10 different tracks', ok:() => Object.keys(bests).length >= 10, prog:() => `${Math.min(10, Object.keys(bests).length)} / 10 tracks`},
+  jorn:     {icon:'📱', need:'Story Mode: finish chapter 6, Storm vs Frost', ok:() => storyProg >= 6, prog:() => `${Math.min(storyProg, 6)} / 6 chapters`},
+  maciej:   cupT('Star Cup', 3),
   robin:    {icon:'👑', need:'Win gold in every cup', ok:() => goldCount() >= CUPS.length, prog:() => `${goldCount()} / ${CUPS.length} golds`},
   // easter eggs
   casper:   {icon:'🥚', need:'Secret: on the main menu, type the sound a car makes', ok:() => !!EGGS.casper, prog:() => '🥚 easter egg'},
@@ -4025,6 +4179,9 @@ const SCREENS = {
   cups:     {title:'Grand Prix', sub:'Choose a cup'},
   tracks:   {title:'Single Race', sub:'Choose a track'},
   ranked:   {title:'Ranked', sub:'Climb from Bronze to Legend'},
+  challenges: {title:'Challenges', sub:'New ones every day · coins for every one you finish'},
+  editor:   {title:'Track Editor', sub:'Draw a track · test drive it · share the code'},
+  battle:   {title:'Battle', sub:'Balloon Battle or Coin Runners'},
   duo:      {title:'Local Party', sub:'Split screen · WASD vs arrow keys, or phones'},
   party:    {title:'Party', sub:'Up to 4 players · phones as controllers'},
   mp:       {title:'Online Race', sub:'Host a room or join one with a code'},
@@ -4259,23 +4416,111 @@ async function renderRanked(){
   if (screen !== 'ranked') return;
   if (!all){ $('rkTop').innerHTML = ''; $('rkErr').textContent = fbErr; return; }
   const myId = me().id, list = Object.entries(all).filter(([, p]) => p && p.rgames > 0 && typeof p.elo === 'number').map(([id, p]) => ({id, ...p})).sort((a, b) => b.elo - a.elo);
-  const row = (p, i) => `<li class="${p.id === myId ? 'me' : ''}"><b>${i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}</b>${face(p.char)}<span class="n">${esc(p.name)}${p.id === myId ? ' (you)' : ''}</span><span class="r">${tierOf(p.elo).icon} ${p.elo}</span></li>`;
+  const row = (p, i) => `<li class="plink ${p.id === myId ? "me" : ""}" data-pid="${esc(p.id)}"><b>${i < 3 ? ["🥇", "🥈", "🥉"][i] : i + 1}</b>${face(p.char)}<span class="n">${esc(p.name)}${p.id === myId ? ' (you)' : ''}</span><span class="r">${tierOf(p.elo).icon} ${p.elo}</span></li>`;
   const mine = list.findIndex(p => p.id === myId);
   $('rkTop').innerHTML = list.length ? list.slice(0, 25).map(row).join('') + (mine >= 25 ? '<li class="sep">…</li>' + row(list[mine], mine) : '')
     : '<li class="empty">Nobody on the ladder yet. Play a ranked race to be the first!</li>';
 }
+
+// ---------- player profiles ----------
+// Your bio, race counts and last races live in pgp-profile and go up with players/<id> (onlinePlayer). Click any name on
+// the rankings, world records, live feed or ranked ladder to open that driver's card; world record ranks come from times/.
+const PROF = (() => { let p = {}; try { p = JSON.parse(localStorage.getItem('pgp-profile') || '{}') || {}; } catch (e) {} return Object.assign({bio:'', races:0, wins:0, podiums:0, recent:[]}, p); })();
+const saveProf = () => { try { localStorage.setItem('pgp-profile', JSON.stringify(PROF)); } catch (e) {} };
+const cleanBio = s => String(s || '').replace(/[<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 140);
+const raceMode = () => tt ? 'tt' : gp ? CUPS[gp.cup].cc : story ? 'story' : ranked ? 'ranked' : 'single';
+function profRecord(place, time){
+  PROF.races++; if (place === 1) PROF.wins++; if (place <= 3) PROF.podiums++;
+  PROF.recent.unshift({tr:tkey(), p:place, t:time ? +time.toFixed(3) : 0, m:raceMode(), ch:ROSTER[playerChoice].id, ts:Date.now()});
+  PROF.recent = PROF.recent.slice(0, 8); saveProf();
+}
+// the extra fields onlinePlayer sends along
+const profPublic = () => ({bio:cleanBio(PROF.bio), races:PROF.races, wins:PROF.wins, podiums:PROF.podiums, recent:PROF.recent,
+  peak:RK.games ? RK.peak : null, rwins:RK.wins, chars:unlockedSet().length, tracks:Object.keys(bests).filter(k => !k.startsWith('✏️')).length,
+  cups:Object.fromEntries(Object.entries(trophies).map(([k, v]) => [fbKey(k), v])), joined:LIC.active().created || null});
+const modeLabel = m => m === 'story' ? '📖 Story' : m === 'ranked' ? '🏅 Ranked' : m === 'tt' ? '⏱️ Time trial' : m === 'single' ? '🏁 Single race' : '🏆 Grand Prix ' + esc(m);
+let profOpen = null;
+async function openProfile(id, name){
+  const key = id || name;
+  $("profile").classList.remove("hidden"); profOpen = key;
+  $('pfBody').innerHTML = '<p class="fine pfload">Loading driver…</p>';
+  blip.ok();
+  const myId = me().id;
+  if (id === myId || (!id && name === me().name)) onlinePlayer();
+  let p = id ? await fb(`players/${fbKey(id)}`) : null;
+  // feed posts from before profiles had ids: find the driver by name
+  if (!p && name){ const all = Object.keys(ON.players).length ? ON.players : (await fb('players')) || {}; const hit = Object.entries(all).find(([, v]) => v?.name === name); if (hit){ id = hit[0]; p = hit[1]; } }
+  if (profOpen !== key) return;
+  if (id === myId) p = {...(p || {}), name:me().name, golds:goldCount(), trophies:Object.keys(trophies).length, char:ROSTER[playerChoice].id, story:storyProg, elo:RK.games ? RK.elo : null, rgames:RK.games, ...profPublic()};
+  if (!p){ $('pfBody').innerHTML = `<p class="fine pfload">${fbOK === false ? esc(fbErr) : 'This driver doesn’t have a profile yet.'}</p>`; return; }
+  renderProfile(id, p, null);
+  const times = await fb('times');
+  if (profOpen !== key || !times) return;
+  const wr = [];
+  for (const [tk, list] of Object.entries(times)){
+    const all = Object.entries(list || {}).filter(([, v]) => v && typeof v.t === 'number').sort((a, b) => a[1].t - b[1].t), i = all.findIndex(([pid]) => pid === id);
+    if (i >= 0) wr.push({track:tk.replace(/_/g, ' '), rank:i + 1, of:all.length, t:all[i][1].t});
+  }
+  wr.sort((a, b) => a.rank - b.rank || b.of - a.of);
+  renderProfile(id, p, wr);
+}
+function renderProfile(id, p, wr){
+  const mine = id === me().id, ci = charIdx(p.char), ch = ROSTER[ci], tier = typeof p.elo === 'number' && p.rgames > 0 ? tierOf(p.elo) : null;
+  const tile = (icon, v, label) => `<div class="pftile"><b>${icon} ${v ?? '—'}</b><small>${label}</small></div>`;
+  const recent = Array.isArray(p.recent) ? p.recent.slice(0, 8) : [];
+  const cups = p.cups && typeof p.cups === 'object' ? p.cups : {};
+  const shelf = CUPS.map(c => { const r = cups[fbKey(c.name)]; return `<span class="pfcup ${r ? '' : 'none'}" title="${c.name}">${r ? MEDAL[r] || '🏆' : c.emoji}<small>${c.name.replace(' Cup', '')}</small></span>`; }).join('');
+  $('pfBody').innerHTML = `
+    <div class="pfhd" style="--c:${hex(ch.color)}">
+      <img src="${PORTRAITS[ci]}" alt="">
+      <div><h2>${esc(String(p.name || 'Driver').slice(0, 24))}${mine ? ' <small>(you)</small>' : ''}</h2>
+        <div class="pftags"><span>🏎️ Drives ${esc(ch.name)}</span>${tier ? `<span style="--t:${tier.c}" class="pftier">${tier.icon} ${tier.name} · ${p.elo}</span>` : ''}
+        ${p.joined ? `<span>📅 Since ${new Date(p.joined).toLocaleDateString()}</span>` : ''}${p.t ? `<span>🟢 Seen ${ago(p.t)}</span>` : ''}</div></div>
+    </div>
+    <div class="pfbio" id="pfBio">${p.bio ? `“${esc(cleanBio(p.bio))}”` : `<i>${mine ? 'You haven’t written a bio yet.' : 'No bio yet.'}</i>`}${mine ? ' <button class="btn small ghost" id="pfEdit">✏️ Edit bio</button>' : ''}</div>
+    <div class="pfstats">
+      ${tile('🥇', p.golds ?? 0, 'gold trophies')}${tile('🏆', p.trophies ?? 0, 'trophies')}${tile('🏁', p.races, 'races')}${tile('🎉', p.wins, 'wins')}
+      ${tile('🥉', p.podiums, 'podiums')}${tile('👥', p.chars != null ? `${p.chars}/${ROSTER.length}` : null, 'racers unlocked')}${tile('🗺️', p.tracks, 'tracks raced')}${tile('📖', p.story ?? 0, 'story chapters')}
+      ${tile('🏅', tier ? p.elo : null, 'ranked Elo')}${tile('📈', p.peak, 'peak Elo')}${tile('🏆', p.rgames ? p.rwins ?? 0 : null, 'ranked wins')}${tile('🌍', wr ? wr.filter(w => w.rank === 1).length : '…', 'world records')}
+    </div>
+    <div class="pfcols">
+      <div><h3>🕒 Recent races</h3><ul class="pflist">${recent.length ? recent.map(r => `<li>${face(r.ch)}<span><b>${ord(r.p)}</b> on ${esc(String(r.tr))}${r.t ? ` · ${fmt(r.t)}` : ''}<small>${modeLabel(r.m)} · ${ago(r.ts)}</small></span></li>`).join('') : '<li class="empty">No races shared yet.</li>'}</ul></div>
+      <div><h3>⏱️ World ranks</h3><ul class="pflist">${!wr ? '<li class="empty">Loading…</li>' : wr.length ? wr.slice(0, 8).map(w => `<li><b class="pfrk">${w.rank <= 3 ? ['🥇', '🥈', '🥉'][w.rank - 1] : '#' + w.rank}</b><span>${esc(w.track)}<small>${fmt(w.t)} · of ${w.of} drivers</small></span></li>`).join('') : '<li class="empty">No world times yet.</li>'}</ul></div>
+    </div>
+    <h3>🏆 Trophy shelf</h3><div class="pfshelf">${shelf}</div>`;
+  if (mine) $('pfEdit').onclick = () => {
+    const bio = $('pfBio');
+    bio.innerHTML = `<textarea id="pfBioIn" maxlength="140" placeholder="Say something about yourself (max 140 characters)">${esc(PROF.bio)}</textarea><div class="edrow"><button class="btn small go" id="pfSave">💾 Save</button><button class="btn small ghost" id="pfCancel">Cancel</button></div>`;
+    const ta = $('pfBioIn'); ta.focus();
+    ta.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Escape') renderProfile(id, p, wr); });
+    $('pfCancel').onclick = () => renderProfile(id, p, wr);
+    $('pfSave').onclick = () => { PROF.bio = cleanBio(ta.value); saveProf(); p.bio = PROF.bio; blip.ok(); if (sharing()) onlinePlayer(); else toast('Bio saved. Turn on sharing under Rankings so others can see it.'); renderProfile(id, p, wr); };
+  };
+}
+function closeProfile(){ $('profile').classList.add('hidden'); profOpen = null; }
+$('pfClose').onclick = () => { blip.back(); closeProfile(); };
+$('profile').addEventListener('click', e => { if (e.target === $('profile')) closeProfile(); });
+// Escape closes the card before the menu sees it
+addEventListener('keydown', e => { if (profOpen !== null && e.key === 'Escape'){ e.preventDefault(); e.stopImmediatePropagation(); closeProfile(); } }, true);
+// any name with data-pid / data-pname opens that driver's card
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-pid], [data-pname]'); if (!el || e.target.closest('button')) return;
+  openProfile(el.dataset.pid || '', el.dataset.pname || '');
+});
+$('onMeBtn').onclick = $('rkMeBtn').onclick = e => { e.stopPropagation(); openProfile(me().id, ''); };
 const sharing = () => OPTS.online !== false;
 function onlinePlayer(){
   if (!sharing()) return;
   const m = me(), golds = Object.values(trophies).filter(v => v === 1).length;
-  fb(`players/${m.id}`, {method:'PUT', body:{name:m.name, golds, trophies:Object.keys(trophies).length, char:ROSTER[playerChoice].id, story:storyProg, elo:RK.games ? RK.elo : null, rgames:RK.games, t:{'.sv':'timestamp'}}});
+  fb(`players/${m.id}`, {method:'PUT', body:{name:m.name, golds, trophies:Object.keys(trophies).length, char:ROSTER[playerChoice].id, story:storyProg, elo:RK.games ? RK.elo : null, rgames:RK.games, ...profPublic(), t:{'.sv':'timestamp'}}});
 }
 // posts the result to the live feed and your time to the world records; resolves to your world rank on that track
 async function onlineRace(place, time){
-  if (!sharing() || tut) return null;
+  if (!tut) profRecord(place, time);
+  if (!sharing() || tut || MAP.custom) return null;   // custom tracks stay off the feed and the world records
   const m = me(), ch = ROSTER[playerChoice].id, key = fbKey(tkey());
   onlinePlayer();
-  fb('feed', {method:'POST', body:{name:m.name, char:ch, track:tkey(), place, time:time || 0, mode: gp ? CUPS[gp.cup].cc : story ? 'story' : ranked ? 'ranked' : 'single', ts:{'.sv':'timestamp'}}});
+  fb('feed', {method:'POST', body:{id:m.id, name:m.name, char:ch, track:tkey(), place, time:time || 0, mode:raceMode(), ts:{'.sv':'timestamp'}}});
   if (!time) return null;
   const mine = await fb(`times/${key}/${m.id}`);
   if (fbOK === false) return null;
@@ -4312,12 +4557,12 @@ const applyStream = (obj, p, data) => {
 function renderDrivers(){
   const myId = me().id, list = Object.entries(ON.players).map(([id, v]) => ({id, ...v}))
     .sort((a, b) => (b.golds - a.golds) || (b.trophies - a.trophies) || ((b.story || 0) - (a.story || 0))).slice(0, 25);
-  $('onDrivers').innerHTML = list.length ? list.map((p, i) => `<li class="${p.id === myId ? 'me' : ''}"><b>${i < 3 ? ['🥇','🥈','🥉'][i] : i + 1}</b>${face(p.char)}<span class="n">${esc(p.name)}${p.id === myId ? ' (you)' : ''}</span><span class="r">🥇${p.golds || 0} · 🏆${p.trophies || 0}</span></li>`).join('')
+  $('onDrivers').innerHTML = list.length ? list.map((p, i) => `<li class="plink ${p.id === myId ? "me" : ""}" data-pid="${esc(p.id)}"><b>${i < 3 ? ["🥇","🥈","🥉"][i] : i + 1}</b>${face(p.char)}<span class="n">${esc(p.name)}${p.id === myId ? ' (you)' : ''}</span><span class="r">🥇${p.golds || 0} · 🏆${p.trophies || 0}</span></li>`).join('')
     : '<li class="empty">No drivers yet. Win a trophy to be the first!</li>';
 }
 function renderFeed(){
   const list = Object.values(ON.feed).filter(f => f && f.ts).sort((a, b) => b.ts - a.ts).slice(0, 15);
-  $('onFeed').innerHTML = list.length ? list.map((f, i) => `<li class="${i === 0 && Date.now() - f.ts < 30000 ? 'fresh' : ''}">${face(f.char)}<span><b>${esc(f.name)}</b> finished <b>${ord(f.place)}</b> on ${esc(f.track)}${f.time ? ` in ${fmt(f.time)}` : ''}<small>${f.mode === 'story' ? '📖 story' : f.mode === 'single' ? '🏁 single race' : '🏆 ' + esc(f.mode)} · ${ago(f.ts)}</small></span></li>`).join('')
+  $('onFeed').innerHTML = list.length ? list.map((f, i) => `<li class="plink ${i === 0 && Date.now() - f.ts < 30000 ? "fresh" : ""}" ${f.id ? `data-pid="${esc(f.id)}"` : `data-pname="${esc(f.name)}"`}>${face(f.char)}<span><b>${esc(f.name)}</b> finished <b>${ord(f.place)}</b> on ${esc(f.track)}${f.time ? ` in ${fmt(f.time)}` : ''}<small>${f.mode === 'story' ? '📖 story' : f.mode === 'single' ? '🏁 single race' : '🏆 ' + esc(f.mode)} · ${ago(f.ts)}</small></span></li>`).join('')
     : '<li class="empty">Nobody has raced yet. Go race!</li>';
 }
 async function renderTimes(){
@@ -4327,7 +4572,7 @@ async function renderTimes(){
   const m = me(), all = Object.entries(data || {}).sort((a, b) => a[1].t - b[1].t);
   // you: by your id, or (for times set before ids stuck) by your driver name
   let mi = all.findIndex(([id]) => id === m.id); if (mi < 0) mi = all.findIndex(([, v]) => v.name === m.name);
-  const row = ([id, v], i) => `<li class="${i === mi ? 'me' : ''}"><b>${i < 3 ? ['🥇','🥈','🥉'][i] : i + 1}</b>${face(v.char)}<span class="n">${esc(v.name)}${i === mi ? ' (you)' : ''}</span><span class="r">${fmt(v.t)}${gids[id] ? `<button class="gh" data-gid="${esc(id)}" title="Race this ghost">👻</button>` : ''}</span></li>`;
+  const row = ([id, v], i) => `<li class="plink ${i === mi ? "me" : ""}" data-pid="${esc(id)}"><b>${i < 3 ? ['🥇','🥈','🥉'][i] : i + 1}</b>${face(v.char)}<span class="n">${esc(v.name)}${i === mi ? ' (you)' : ''}</span><span class="r">${fmt(v.t)}${gids[id] ? `<button class="gh" data-gid="${esc(id)}" title="Race this ghost">👻</button>` : ''}</span></li>`;
   $('onTimes').innerHTML = all.length ? all.slice(0, 10).map(row).join('')
       + (mi >= 10 ? `<li class="gap">⋯ ${mi - 10 > 0 ? `${mi - 10} more` : ''}</li>${row(all[mi], mi)}` : '')
     : `<li class="empty">No times on ${esc(t)} yet. Set the first world record!</li>`;
@@ -4486,8 +4731,8 @@ const NET = {role:null, code:'', me:'', char:null, track:0, room:null, players:{
 const NETC = () => NET.racing && NET.role === 'client';
 const r1 = v => Math.round((v || 0) * 10) / 10, r2 = v => Math.round((v || 0) * 100) / 100, r3 = v => Math.round((v || 0) * 1000) / 1000;
 // timers that go in every snapshot, and the kinds of thrown things the clients know how to draw
-const NT = ['spin', 'boost', 'star', 'ram', 'ghost', 'shield', 'frozen', 'big', 'small', 'inked', 'confused', 'hold', 'auto', 'bullet', 'dance', 'goldT', 'reflect'];
-const NKINDS = ['ban', 'red', 'grn', 'fake', 'blue', 'ball', 'slip', 'rock', 'drone', 'bomb', 'pud', 'anchor', 'fball'];
+const NT = ['spin', 'boost', 'star', 'ram', 'ghost', 'shield', 'frozen', 'big', 'small', 'inked', 'confused', 'hold', 'auto', 'bullet', 'dance', 'goldT', 'reflect', 'bal', 'pts'];   // bal / pts: battle balloons and hits
+const NKINDS = ['ban', 'red', 'grn', 'fake', 'blue', 'ball', 'slip', 'rock', 'drone', 'bomb', 'pud', 'anchor', 'fball', 'tshell'];
 const netId = () => NET.me ||= fbKey(me().id) + '-' + Math.random().toString(36).slice(2, 6);
 
 // ----- host -----
@@ -4545,8 +4790,8 @@ function netHumanDone(k){
 function netEnd(){
   if (state === 'finished' || NET.role !== 'host') return;
   state = 'finished'; toast('FINISH!'); jingle(true);
-  const rest = karts.filter(k => !k.finished).sort((a, b) => b.prog - a.prog), all = [...finishOrder, ...rest];
-  const res = JSON.stringify(all.map(k => [k.ri, k.human ? k.peer || '' : '', k.pname || '', k.finished ? r2(k.finishTime) : 0]));
+  const rest = karts.filter(k => !k.finished).sort((a, b) => b.prog - a.prog), all = battle ? standings() : [...finishOrder, ...rest];
+  const res = JSON.stringify(all.map(k => [k.ri, k.human ? k.peer || '' : '', k.pname || '', battle ? (battle.type === 'coin' ? k.coins || 0 : -((k.bal || 0) * 100 + (k.pts || 0))) : k.finished ? r2(k.finishTime) : 0]));
   sendSnap();
   rtWrite(`rooms/${NET.code}/meta`, {state:'done', res}, true);
   setTimeout(() => netResults(res), 1500);
@@ -4741,6 +4986,7 @@ function netMesh(kind){
     case 'blue': return blueMesh();
     case 'anchor': return anchorMesh();
     case 'fball': return footballMesh();
+    case 'tshell': return tankShellMesh();
     case 'ball': return new THREE.Mesh(new THREE.SphereGeometry(0.55, 14, 10), lamb(0xffffff));
     case 'slip': return slipperMesh();
     case 'rock': return new THREE.Mesh(new THREE.DodecahedronGeometry(1.4, 0), new THREE.MeshLambertMaterial({color:0x8a8178, flatShading:true}));
@@ -4789,7 +5035,7 @@ async function netHost(){
   if (!code){ NET.busy = false; return mpMsg('Couldn’t find a free room code. Try again.', true); }
   netReset(); NET.role = 'host'; NET.code = code; netId(); NET.joinT = Date.now();
   { const c = NET.char ?? playerChoice; NET.char = isUnlocked(c) ? c : playerChoice; }
-  NET.track = TRACKS[mapChoice]?.hidden ? 0 : mapChoice;
+  NET.track = TRACKS[mapChoice]?.hidden && !TRACKS[mapChoice]?.battle ? 0 : mapChoice;
   // the room itself goes over plain REST, and we read it back to be sure it's really in the database
   const ok = await rtWrite(`rooms/${code}/meta`, {...netRoom(), ts:{'.sv':'timestamp'}}, false, false, true)
     && await rtWrite(`rooms/${code}/players/${NET.me}`, netMe(), false, false, true);
@@ -4891,7 +5137,7 @@ function netResults(res){
   if (NET.role === 'client' && !NET.paid && player){ NET.paid = true; if (player.coins) addCoins(player.coins); }
   $('resTitle').innerHTML = place === 1 ? '🏆 You won!' : place <= 3 ? `🎉 ${ord(place)} place!` : `${ord(place)} place`;
   $('resSub').textContent = `🌐 Online · room ${NET.code} · ${MAP.name}`;
-  $('resBody').innerHTML = `<div class="grid">${list.map(([ri, id, name, t], i) => `<div class="row single ${id === NET.me ? 'me' : ''}"><b>${i + 1}</b><span class="n">${dot({ri, color:ROSTER[ri].color})}${ROSTER[ri].name}${id ? ` · ${esc(name)}` : ' 🤖'}${id === NET.me ? ' (you)' : ''}</span><span class="r">${t ? fmt(t) : '—'}</span></div>`).join('')}</div>
+  $('resBody').innerHTML = `<div class="grid">${list.map(([ri, id, name, t], i) => `<div class="row single ${id === NET.me ? 'me' : ''}"><b>${i + 1}</b><span class="n">${dot({ri, color:ROSTER[ri].color})}${ROSTER[ri].name}${id ? ` · ${esc(name)}` : ' 🤖'}${id === NET.me ? ' (you)' : ''}</span><span class="r">${MAP.battle ? battleCell(t) : t ? fmt(t) : '—'}</span></div>`).join('')}</div>
     <p class="coinsum">🪙 ${player?.coins || 0} coins collected · wallet <b class="walletN">${wallet}</b></p>
     ${NET.role === 'host' ? '' : '<p class="coinsum">⏳ Waiting for the host to go back to the lobby…</p>'}`;
   $('resBtns').innerHTML = '';
@@ -4927,7 +5173,7 @@ function netChar(d){
 }
 function netTrack(d){
   if (NET.role !== 'host') return;
-  const list = TRACKS.map((t, i) => i).filter(i => !TRACKS[i].hidden), i = (list.indexOf(NET.track) + d + list.length) % list.length;
+  const list = TRACKS.map((t, i) => i).filter(i => !TRACKS[i].hidden || TRACKS[i].battle), i = (list.indexOf(NET.track) + d + list.length) % list.length;
   NET.track = list[i]; blip.move(); showTrack(NET.track, true);
   rtWrite(`rooms/${NET.code}/meta`, {track:NET.track}, true); renderLobby();
 }
@@ -5046,7 +5292,10 @@ mainBtns.forEach((b, i) => hookNav(b, i, () => {
   $('mstat').innerHTML = ({
     story: `<span>📖 ${storyProg} / ${STORY.length} chapters</span><span>${storyProg >= STORY.length ? '🏆 Complete' : `${PARTS[partsOpen() - 1].icon} Part ${partsOpen()}`}</span>`,
     cups: `<span>🏆 ${won} / ${CUPS.length} trophies</span><span>50cc → 200cc</span>`,
+    battle: `<span>🎈 Balloon Battle</span><span>🪙 Coin Runners</span><span>🏟️ ${arenaIdx().length / 2} arenas</span>`,
     duo: `<span>👥 2-4 players</span><span>📱 Phones as controllers</span><span>⌨️ WASD vs ←↑→↓</span>`,
+    editor: `<span>📂 ${myTracks.length} track${myTracks.length === 1 ? '' : 's'}</span><span>🔗 Share with a code</span>`,
+    challenges: (([d, w]) => `<span>☀️ ${d} / 3 today</span><span>📆 ${w} / 2 this week</span>`)(chCounts()),
     ranked: `<span>${tierOf(RK.elo).icon} ${tierOf(RK.elo).name}</span><span>📈 ${RK.elo} Elo</span><span>🏁 ${RK.games} races</span>`,
     mp: `<span>🌐 Up to ${FIELD_SIZE} players</span><span>🔑 Room codes</span>`,
     tracks: `<span>🗺️ ${TRACKS.filter(t => !t.hidden).length} tracks</span><span>⏱️ ${Object.keys(bests).length} best times set</span>`,
@@ -5114,7 +5363,7 @@ function pickTrack(){ mode = 'single'; go('racer'); }
 
 // 2 players: each player flips through the unlocked racers (never the same one), both share the track pick
 let duoPick = null;
-const duoTracks = () => TRACKS.map((t, i) => i).filter(i => !TRACKS[i].hidden);
+const duoTracks = () => TRACKS.map((t, i) => i).filter(i => !TRACKS[i].hidden || TRACKS[i].battle);
 function duoStep(who, d){
   const open = unlockedSet(), other = duoPick[who === 'p1' ? 'p2' : 'p1'];
   let i = open.indexOf(duoPick[who]);
@@ -5249,7 +5498,7 @@ function ptFree(pref){
   return open.find(i => !taken.includes(i)) ?? 0;
 }
 function partyOpen(){
-  if (!PAD.code && !PAD.slots.length) PAD.map = TRACKS[mapChoice]?.hidden ? 0 : mapChoice;
+  if (!PAD.code && !PAD.slots.length) PAD.map = TRACKS[mapChoice]?.hidden && !TRACKS[mapChoice]?.battle ? 0 : mapChoice;
   showTrack(PAD.map, true); renderParty();
   if (!PAD.code && !PAD.busy) partyHost();
 }
@@ -5481,14 +5730,14 @@ function qhudTick(order, dt){
   QH.forEach(q => {
     const k = q.k, place = order.indexOf(k) + 1;
     if (place !== q.place){ q.place = place; q.pos.innerHTML = `${place}<sup>${ord(place).slice(-2)}</sup>`; }
-    const lap = `LAP ${Math.min(LAPS, Math.max(1, k.lap))} / ${LAPS}`; if (q.lap.textContent !== lap) q.lap.textContent = lap;
+    const lap = battle ? bHud(k) : `LAP ${Math.min(LAPS, Math.max(1, k.lap))} / ${LAPS}`; if (q.lap.textContent !== lap) q.lap.textContent = lap;
     const d = k.rolling > 0 ? null : k.item && ITEMDEF[k.item], ic = k.rolling > 0 ? '🎲' : d ? d.icon : '';
     if (q.icon.textContent !== ic) q.icon.textContent = ic;
     q.box.classList.toggle('rolling', k.rolling > 0);
     const cnt = d ? (k.goldT > 0 ? '∞' : k.uses > 1 ? '×' + k.uses : '') : ''; if (q.count.textContent !== cnt) q.count.textContent = cnt;
     const f = Math.min(1, k.sp || 0); q.spf.style.width = (f * 100) + '%'; q.sp.classList.toggle('ready', f >= 1);
     q.wrong.classList.toggle('on', state === 'race' && (k.wrongT || 0) > 0.8);
-    q.fin.classList.toggle('on', !!k.finished); if (k.finished && !q.fin.textContent) q.fin.textContent = `🏁 ${ord(k.finishRank)}!`;
+    q.fin.classList.toggle('on', !!k.finished && !battle); if (k.finished && !q.fin.textContent) q.fin.textContent = `🏁 ${ord(k.finishRank)}!`;
     if (q.t > 0){ q.t -= dt; if (q.t <= 0) q.toast.style.opacity = 0; }
   });
 }
@@ -5520,7 +5769,7 @@ function renderMaps(){
 function racerInfo(){
   $('startBtn').disabled = false;
   const r = ROSTER[playerChoice];
-  const where = mode === 'tt' ? `⏱️ Time trial · ${MAPS[mapChoice].emoji} ${MAPS[mapChoice].name}${TT_VS ? ' · vs a ghost 👻' : ''}` : mode === 'ranked' ? `🏅 Ranked · ${tierOf(RK.elo).icon} ${RK.elo} Elo · random track` : mode === 'gp' ? `${CUPS[cupChoice].emoji} ${CUPS[cupChoice].name} · ${CUPS[cupChoice].cc}` : `${MAPS[mapChoice].emoji} ${MAPS[mapChoice].name}`;
+  const where = mode === 'battle' ? `${MAPS[mapChoice].battle === 'coin' ? '🪙 Coin Runners' : '🎈 Balloon Battle'} · ${MAPS[mapChoice].name.replace(/ \(.*\)$/, '')}` : mode === 'tt' ? `⏱️ Time trial · ${MAPS[mapChoice].emoji} ${MAPS[mapChoice].name}${TT_VS ? ' · vs a ghost 👻' : ''}` : mode === 'ranked' ? `🏅 Ranked · ${tierOf(RK.elo).icon} ${RK.elo} Elo · random track` : mode === 'gp' ? `${CUPS[cupChoice].emoji} ${CUPS[cupChoice].name} · ${CUPS[cupChoice].cc}` : `${MAPS[mapChoice].emoji} ${MAPS[mapChoice].name}`;
   const mods = r.mods.map((v, i) => v ? `<span class="mod ${v > 0 ? 'up' : 'down'}">${v > 0 ? '+' : ''}${v} ${STAT_LABEL[STAT_KEYS[i]]}</span>` : '').join('');
   $('racerinfo').innerHTML = `<h2>${r.name} ${r.villain ? '<span class="tag vil">Villain</span>' : r.star ? '<span class="tag">Main character</span>' : ''}</h2>
     <p class="title">${r.title}</p><p class="fine">${r.desc}</p>
@@ -5704,14 +5953,17 @@ const ENTER = {
   main:     () => setFocus(focusAt.main || 0, true),
   story:    () => { renderStory(); setFocus(Math.min(storyChoice, storyProg, STORY.length - 1), true); },
   cups:     () => { renderCups(); setFocus(cupChoice, true); },
-  tracks:   () => { renderMaps(); setFocus(mapChoice, true); },
+  tracks:   () => { if (MAPS[mapChoice]?.hidden) mapChoice = 0; renderMaps(); setFocus(mapChoice, true); },
+  battle:   () => { const a = arenaIdx(); if (!a.includes(mapChoice)) mapChoice = a[0]; renderArenas(); setFocus(a.indexOf(mapChoice), true); },
   ranked:   renderRanked,
+  challenges: renderChallenges,
+  editor:   renderEditor,
   party:    partyOpen,
   mp:       () => { renderLobby(); if (!NET.role) setFocus(0, true); else showTrack(NET.role === 'host' ? NET.track : NET.room?.track ?? 0, true); },
   duo:      () => {
     const open = unlockedSet(), p1 = duoPick?.p1 ?? playerChoice;
     const p2 = duoPick && duoPick.p2 !== p1 && open.includes(duoPick.p2) ? duoPick.p2 : open.find(i => i !== p1);
-    duoPick = {p1, p2, map: TRACKS[mapChoice]?.hidden ? 0 : mapChoice};
+    duoPick = {p1, p2, map: TRACKS[mapChoice]?.hidden && !TRACKS[mapChoice]?.battle ? 0 : mapChoice};
     showTrack(duoPick.map, true); renderDuo();
   },
   racer:    () => {
@@ -5769,7 +6021,7 @@ function launch(){
   beep(200, .7, 'sawtooth', .07, 4);
   setTimeout(() => {
     previewOn = false;
-    if (mode === 'gp') startCup(cupChoice); else if (mode === 'ranked') startRanked(); else if (mode === 'tt') startTT(); else { gp = null; $('menu').classList.add('hidden'); showTrack(mapChoice); setupRace(); }
+    if (mode === 'gp') startCup(cupChoice); else if (mode === 'ranked') startRanked(); else if (mode === 'tt') startTT(); else if (mode === 'battle') startBattle(); else { gp = null; $('menu').classList.add('hidden'); showTrack(mapChoice); setupRace(); }
   }, 520);
   setTimeout(() => w.classList.remove('run'), 1200);
 }
@@ -5784,7 +6036,7 @@ function openMenu(){
   if (tut){ mapChoice = tut.prevMap; tut = null; } $('tut').classList.remove('on');
   if (duo){ playerChoice = duo.prev; duo = null; refreshGarage(); } player2 = null; document.body.classList.remove('two'); resize();
   if (party){ playerChoice = party.prev; party = null; refreshGarage(); padOut(true); } document.body.classList.remove('quad'); $('qhuds').innerHTML = ''; QH.length = 0;
-  clearRace(); ghostsClear(); tt = null; gp = null; ranked = null; state = 'menu';
+  clearRace(); ghostsClear(); tt = null; battle = null; gp = null; ranked = null; state = 'menu';
   $('results').classList.add('hidden'); $('intro').style.display = 'none'; menuEl.classList.remove('hidden');
   trail = ['title']; const cur = screen; screen = null;
   menuEl.querySelectorAll('.screen').forEach(s => s.classList.remove('on', 'in-fwd', 'in-back', 'out-fwd', 'out-back'));
@@ -5805,6 +6057,7 @@ function setupRace(){
   if (gp) showTrack(TRACKS.indexOf(byName(cup.tracks[gp.race])));
   MAX = 42 * (cup ? cup.speed : 1); ACC = 26 * (cup ? cup.speed : 1);
   const aiBase = cup ? cup.ai : 0.9;
+  for (let i = coins.length - 1; i >= 0; i--) if (coins[i].once){ world.remove(coins[i].mesh); coins.splice(i, 1); }   // coins dropped in the last battle
   boxes.forEach(b => { b.respawn = 0; b.mesh.visible = true; }); coins.forEach(c => { c.respawn = 0; c.mesh.visible = true; });
   const field = NET.racing ? [] : tt ? [playerChoice] : party ? partyField() : duo ? duoField() : gp ? gp.field : story ? [playerChoice, ...cup.rivals.map(rid).filter(i => i >= 0 && i !== playerChoice)].slice(0, FIELD_SIZE)
     : tut ? [playerChoice, ...TUT_SET.rivals.map(rid).filter(i => i !== playerChoice).slice(0, 2)] : pickField();
@@ -5842,7 +6095,8 @@ function setupRace(){
   });
   if (ranked) rankedBegin(aiBase);
   if (tt) ttSetup();
-  ghostRecStart();
+  battle = null; if (isBattleMap()) battleSetup();
+  ghostRecStart(); chRaceStart();
   if (party) partySetup();
   document.body.classList.toggle('two', !!player2 && !party?.quad); document.body.classList.toggle('quad', !!party?.quad);
   if (player2){ const w = player2.pos; cs2.pos.set(w.x, 30, w.z); cs2.look.copy(w); cs2.up.set(0, 1, 0); $('p2coin').textContent = ''; }
@@ -5914,6 +6168,7 @@ function land(k){
   if (k.trick){
     // every finished trick (or one that's nearly done) adds to the boost
     const n = Math.max(1, Math.min(k.trickReq || 1, Math.floor((k.trickT || 0) / TRICK_T + 0.25)));
+    if (k.isPlayer) RS.tricks += n;
     k.trick = false; k.trickReq = 0; k.trickT = 0; k.boost = Math.max(k.boost, 0.9 + 0.45 * (n - 1));
     if (k.isPlayer){ toast(n >= 3 ? '🔥 Triple trick boost!' : n === 2 ? '✨✨ Double trick boost!' : '✨ Trick boost!'); beep(780, .12, 'square', .07, 1.8); if (n > 1) setTimeout(() => beep(1170, .14, 'square', .07, 1.8), 90); }
   }
@@ -5922,6 +6177,7 @@ let MAX = 42, ACC = 26;
 const DRIFT_MINI = 1.3, DRIFT_SUPER = 2.6;   // seconds-ish of drift charge for a mini / super boost
 function stepKart(k, dt){
   if (DBG.freeze && !k.human && !NET.racing){ k.speed = 0; k.boost = 0; }
+  if (battle && k.finished){ k.speed = 0; k.boost = 0; k.drift = 0; }   // out of the battle: parked
   let gas = 0, steer = 0, drift = false;
   const inp = k.inp || keys, A = k.isPlayer && !k.padId ? OPTS : inp;   // garage assists: mine, or the ones an online player sent along with their keys
   if (k.human && !k.finished && !(k.auto > 0)){
@@ -5941,10 +6197,10 @@ function stepKart(k, dt){
     // AI: aim ahead on the racing line
     const look = 14 + Math.floor(k.speed * 0.25);
     const ti = (k.idx + look) % N;
-    const tgt = pts[ti].clone().addScaledVector(nors[ti], k.aiOffset);
+    const tgt = (battle && !k.finished && battleAim(k, look)) || pts[ti].clone().addScaledVector(nors[ti], k.aiOffset);
     const want = Math.atan2(tgt.x - k.pos.x, tgt.z - k.pos.z);
     let d = want - k.heading; d = Math.atan2(Math.sin(d), Math.cos(d));
-    steer = THREE.MathUtils.clamp(d * 3, -1, 1); gas = 1;
+    steer = THREE.MathUtils.clamp(d * 3, -1, 1); gas = battle && k.finished ? 0 : 1;
     if (Math.random() < dt*0.3) k.aiOffset = THREE.MathUtils.clamp(k.aiOffset + (Math.random()-.5)*6, -W*0.3, W*0.3);
     // dodge bananas ahead
     for (const b of bananas){ const v = b.mesh.position.clone().sub(k.pos); if (v.length() < 18 && v.dot(fwd(k.heading)) > 0){ const lat = v.dot(new THREE.Vector3(Math.cos(k.heading), 0, -Math.sin(k.heading))); steer += lat > 0 ? -0.6 : 0.6; } }
@@ -6065,7 +6321,7 @@ function stepKart(k, dt){
   let dIdx = ni - k.idx; if (dIdx > N/2) dIdx -= N; if (dIdx < -N/2) dIdx += N;
   k.prog += dIdx; k.idx = ni;
   const lap = Math.floor(k.prog / N) + 1;
-  if (lap > k.lap){
+  if (lap > k.lap && !battle){
     k.lap = lap;
     if (k.isPlayer && lap > 1){ k.laps = k.laps || []; k.laps.push(raceTime - (k.lapStart || 0)); k.lapStart = raceTime; }
     const split = k.isPlayer && k.laps?.length ? ` · ${fmt(k.laps[k.laps.length - 1])}${k.laps.length > 1 && k.laps[k.laps.length - 1] <= Math.min(...k.laps) ? ' 🔥' : ''}` : '';
@@ -6076,7 +6332,7 @@ function stepKart(k, dt){
   // wrong way, and getting rescued when stuck off the road
   if (state === 'race' && !k.finished){
     const fa = fwd(k.heading).dot(tans[k.idx]);
-    k.wrongT = fa < -0.35 && k.speed > 4 ? (k.wrongT || 0) + dt : 0;
+    k.wrongT = !battle && fa < -0.35 && k.speed > 4 ? (k.wrongT || 0) + dt : 0;
     const offLat = Math.abs(k.pos.clone().sub(pts[k.idx]).dot(nors[k.idx])) > W/2 + 4;
     k.stuckT = offLat && Math.abs(k.speed) < 5 && !k.air && !(k.hold > 0) ? (k.stuckT || 0) + dt : 0;
     if (k.stuckT > (k.human ? 4 : 2.5)){ k.stuckT = 0; respawn(k); }
@@ -6204,7 +6460,7 @@ function collisions(dt){
     if (state !== 'race') continue;
     const k = karts.find(o => !(o.ghost > 0) && o.pos.distanceTo(c.mesh.position.clone().setY(0)) < 2.4 && (o.wp?.y ?? 0) < (P3[o.idx]?.y ?? 0) + 4);
     if (!k) continue;
-    c.mesh.visible = false; c.respawn = 14; k.coins++;
+    c.mesh.visible = false; c.respawn = c.once ? 1e9 : battle?.type === 'coin' ? 7 : 14; k.coins++;
     k.boost = Math.max(k.boost, 0.12);
     if (k.isPlayer){
       addCoins(1);
@@ -6330,9 +6586,12 @@ function endRace(){
     if (state !== 'finished') return;
     // rank anyone left by progress
     const rest = karts.filter(k => !k.finished).sort((a, b) => b.prog - a.prog);
-    const all = [...finishOrder, ...rest];
+    const all = battle ? standings() : [...finishOrder, ...rest];
     const place = all.indexOf(player) + 1;
+    const chGot = !NET.racing && !player2 && !party && !tut ? chCheck({k:player, place, track:MAP.name, race:!battle && !tt, battle:battle?.type, tt:!!tt, pb:!!tt?.pb, rs:RS}) : [];
+    setTimeout(() => chShow(chGot), 0);
     $('resBtns').innerHTML = '';
+    if (battle) return battleResults(all, place);
     if (party) return partyResults(all);
     if (player2) return duoResults(all);
     if (story){
@@ -6350,7 +6609,7 @@ function endRace(){
       $('resSub').textContent = tkey();
       $('resBody').innerHTML = `<div class="grid">${all.map((k, i) => `<div class="row single ${k.isPlayer ? 'me' : ''}"><b>${i+1}</b><span class="n">${dot(k)}${k.name}${k.isPlayer ? ' (you)' : ''}</span><span class="r">${k.finished ? fmt(k.finishTime) : '—'}</span></div>`).join('')}</div>`;
       button('Race again', '', () => { $('results').classList.add('hidden'); setupRace(); });
-      button('Menu', 'alt', openMenu);
+      button('Menu', 'alt', openMenu); if (MAP.custom) button('✏️ Track Editor', 'ghost', () => { openMenu(); go('editor'); });
     } else {
       const cup = CUPS[gp.cup], last = gp.race === cup.tracks.length - 1;
       const earned = {}; all.forEach((k, i) => { earned[k.ri] = POINTS[i]; gp.pts[k.ri] += POINTS[i]; });
@@ -6388,6 +6647,7 @@ function cupResults(){
     <div class="podium">${step(t[1], 120, 2)}${step(t[0], 160, 1)}${step(t[2], 90, 3)}</div>
     <div class="grid">${t.slice(3).map((r, i) => `<div class="row single ${r.me ? 'me' : ''}"><b>${i+4}</b><span class="n">${dot(r)}${r.name}${r.me ? ' (you)' : ''}</span><span class="r">${r.total} pts</span></div>`).join('')}</div>`;
   const cupPrize = [150, 90, 60][rank - 1] || 0; if (cupPrize) addCoins(cupPrize);
+  if (rank === 1 && !NET.racing) chShow(chCheck({k:{}, rs:{}, cupGold:true}));
   onlinePlayer();
   $('resBody').insertAdjacentHTML('afterbegin', unlockBanner(newUnlocks()) + (cupPrize ? `<p class="coinsum">🪙 +${cupPrize} trophy bonus · wallet <b class="walletN">${wallet}</b></p>` : ''));
   $('resBtns').innerHTML = '';
@@ -6417,7 +6677,7 @@ function playChapter(i){
   const ch = STORY[i];
   story = {ch:i, prev: story ? story.prev : playerChoice};
   playerChoice = rid(ch.hero);
-  clearRace(); ghostsClear(); tt = null; gp = null; ranked = null; state = 'menu'; previewOn = false;
+  clearRace(); ghostsClear(); tt = null; battle = null; gp = null; ranked = null; state = 'menu'; previewOn = false;
   $('results').classList.add('hidden'); menuEl.classList.add('hidden'); $('intro').style.display = 'none';
   showTrack(TRACKS.indexOf(byName(ch.track)));
   runDialog(ch.pre, () => {
@@ -6630,7 +6890,7 @@ function draw(){
 // rocket start (like MK8): p is the countdown value when accelerate went down
 function rocketStart(k, p){
   if (p != null && p > 2){ k.hold = 1.1; burst(k.wp || k.pos, 0x666677, 4, 0.6); toastFor(k, '💨 Too early! Engine stalled'); beep(110, .5, 'sawtooth', .07, 0.5); }
-  else if (p != null && p > 1){ const perfect = p > 1.35 && p < 1.85; k.boost = perfect ? 1.4 : 1.0; sfx('boost', k); toastFor(k, perfect ? '🚀 Perfect rocket start!' : '🚀 Rocket start!'); }
+  else if (p != null && p > 1){ const perfect = p > 1.35 && p < 1.85; if (perfect && k.isPlayer) RS.perfect = true; k.boost = perfect ? 1.4 : 1.0; sfx('boost', k); toastFor(k, perfect ? '🚀 Perfect rocket start!' : '🚀 Rocket start!'); }
   else if (p != null && p > 0.25){ k.boost = 0.35; toastFor(k, 'Good start'); }
 }
 // P2's HUD on the right half (P1 keeps the normal HUD, squeezed into the left half)
@@ -6638,7 +6898,7 @@ let hud2Place = 0;
 function hud2(order, dt){
   const p = player2, place = order.indexOf(p) + 1;
   if (place !== hud2Place){ hud2Place = place; $('p2pos').innerHTML = `${place}<sup>${ord(place).slice(-2)}</sup>`; }
-  $('p2lap').textContent = `P2 · LAP ${Math.min(LAPS, Math.max(1, p.lap))} / ${LAPS}`;
+  $('p2lap').textContent = battle ? 'P2 · ' + bHud(p) : `P2 · LAP ${Math.min(LAPS, Math.max(1, p.lap))} / ${LAPS}`;
   const d = p.rolling > 0 ? null : p.item && ITEMDEF[p.item], ic = p.rolling > 0 ? '🎲' : d ? d.icon : '';
   if ($('p2icon').textContent !== ic) $('p2icon').textContent = ic;
   $('p2box').classList.toggle('rolling', p.rolling > 0);
@@ -6735,7 +6995,7 @@ function frame(now){
     collisions(dt);
   }
   if (NET.role === 'host' && NET.racing) netHostTick(now);
-  stepEmotes(dt); stepFlair(dt); ghostTick(dt);
+  stepEmotes(dt); stepFlair(dt); ghostTick(dt); battleTick(dt); chTick();
   if (state === 'race' && ((duo && player2 && duo.endAt && raceTime > duo.endAt) || (party?.endAt && raceTime > party.endAt))) endRace();
 
   // camera: rides behind the kart and rolls with banked walls (two cameras side by side in 2-player mode)
@@ -6756,8 +7016,8 @@ function frame(now){
     hudPlace = place; pe.innerHTML = `${place}<sup>${ord(place).slice(-2)}</sup>`;
   }
   $('wrong').classList.toggle('on', state === 'race' && (player.wrongT || 0) > 0.8);
-  $('lap').textContent = tut ? `🎓 LESSON ${tut.i + 1} / ${LESSONS.length}` : `LAP ${Math.min(LAPS, Math.max(1, player.lap))} / ${LAPS}`;
-  $('timer').textContent = fmt(raceTime);
+  $('lap').textContent = battle ? bHud(player) : tut ? `🎓 LESSON ${tut.i + 1} / ${LESSONS.length}` : `LAP ${Math.min(LAPS, Math.max(1, player.lap))} / ${LAPS}`;
+  $('timer').textContent = battle ? '⏱️ ' + fmt(Math.max(0, battle.len - raceTime)) : fmt(raceTime);
   $('speed').innerHTML = `${Math.round(Math.abs(player.speed) * 3.2)} <small>km/h</small>`;
   const dc = player.driftCharge;
   $('driftfill').style.width = Math.min(100, dc / DRIFT_SUPER * 100) + '%';
@@ -6799,7 +7059,7 @@ function ghostSave(t){
   ghostsLocal[key] = g;
   const ks = Object.keys(ghostsLocal); while (ks.length > 40) delete ghostsLocal[ks.shift()];   // keep the save small
   try { localStorage.setItem('pgp-ghosts', JSON.stringify(ghostsLocal)); } catch (e) {}
-  if (sharing() && !DBG.used) fetch(`${FB}/ghosts/${fbKey(key)}/${me().id}.json?print=silent`, {method:'PUT', body:JSON.stringify({...g, name:me().name})}).catch(() => {});
+  if (sharing() && !DBG.used && !MAP.custom) fetch(`${FB}/ghosts/${fbKey(key)}/${me().id}.json?print=silent`, {method:'PUT', body:JSON.stringify({...g, name:me().name})}).catch(() => {});
 }
 // a see-through copy of a kart, tinted icy blue
 function ghostMesh(ch, build, label){
@@ -6881,7 +7141,7 @@ function ttResults(){
   $('resBody').innerHTML = `<div class="ttres"><b>${fmt(t)}</b><span>Your best: ${best ? fmt(best) : '—'}${tt.pb ? ' · 👻 saved as your new ghost' : ''}</span>`
     + tt.ghosts.map(g => `<span class="${t <= g.t ? 'won' : 'lost'}">${esc(g.label)} → ${t <= g.t ? '✅ beaten by' : '❌ behind by'} ${(Math.abs(t - g.t)).toFixed(2)} s</span>`).join('') + '</div>';
   button('Race again ↻', '', () => { $('results').classList.add('hidden'); setupRace(); });
-  button('Other track', 'alt', () => { openMenu(); go('tracks'); });
+  button(MAP.custom ? '✏️ Track Editor' : 'Other track', 'alt', () => { const c = MAP.custom; openMenu(); go(c ? 'editor' : 'tracks'); });
   button('Menu', 'ghost', openMenu);
 }
 // from the world records board: race that person's ghost
@@ -6890,6 +7150,630 @@ function raceGhost(track, id){
   if (i < 0) return;
   mirror = / \(Mirror\)$/.test(track) && mirrorOK();
   TT_VS = {id}; mapChoice = i; mode = 'tt'; onlineLeave(); go('racer');
+}
+// ---------- battle mode ----------
+// Arenas are short, very wide walled rings (see the battle entries at the end of TRACKS), so driving, items, phones and
+// online rooms all work as usual. Balloon Battle: 3 balloons each, every hit pops one and scores a point for whoever
+// hit you; lose them all and you're out. Coin Runners: grab coins, a hit makes you drop 3. Most at the end wins.
+let battle = null;   // {type, len, endT} while a battle is on
+const BAL_N = 3, BATTLE_LEN = {balloon:150, coin:120};
+const isBattleMap = () => !!MAP?.battle && !tut && !story && !tt && !ranked;
+const bScore = k => battle.type === 'coin' ? (k.coins || 0) : (k.bal > 0 ? 1000 : 0) + (k.bal || 0) * 100 + (k.pts || 0);
+const battleOrder = () => [...karts].sort((a, b) => bScore(b) - bScore(a) || (b.pts || 0) - (a.pts || 0));
+const bHud = k => battle.type === 'coin' ? `🪙 ${k.coins || 0}` : k.bal > 0 ? `${'🎈'.repeat(k.bal)} · ⭐ ${k.pts || 0}` : `💀 OUT · ⭐ ${k.pts || 0}`;
+function balloonRig(k){
+  const g = new THREE.Group(), col = new THREE.Color(ROSTER[k.ri].color).lerp(new THREE.Color(0xffffff), 0.15);
+  const mat = new THREE.MeshLambertMaterial({color:col}), strM = new THREE.MeshBasicMaterial({color:0x1d1a2f});
+  const list = [-1, 0, 1].map((s, i) => {
+    const b = new THREE.Group(); b.position.set(s * 1.1, 0, 0); g.add(b);
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(0.85, 14, 10), mat); ball.scale.set(1, 1.18, 1); ball.position.y = 4.2 + (i === 1 ? 0.5 : 0); b.add(ball);
+    const knot = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.3, 6), mat); knot.position.y = ball.position.y - 1.05; knot.rotation.x = Math.PI; b.add(knot);
+    const str = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, ball.position.y - 1.2, 4), strM); str.position.y = (ball.position.y - 1.2) / 2 + 0.2; b.add(str);
+    b.rotation.z = -s * 0.25;
+    return b;
+  });
+  g.position.set(0, 0.6, -1.6); k.mesh.group.add(g);
+  k.mesh.balloons = list; k.mesh.balShown = BAL_N;
+}
+function battleSetup(){
+  battle = {type:MAP.battle, len:BATTLE_LEN[MAP.battle], endT:0};
+  const n = karts.length;
+  karts.forEach((k, i) => {
+    const gi = Math.round(i * N / n) % N, side = (i % 2 ? -1 : 1) * W * 0.12;
+    k.idx = gi; k.prog = gi; k.pos.copy(pts[gi]).addScaledVector(nors[gi], side);
+    k.heading = k.moveH = Math.atan2(tans[gi].x, tans[gi].z);
+    k.bal = battle.type === 'balloon' ? BAL_N : 0; k.pts = 0; k.lap = 1;
+    if (battle.type === 'balloon') balloonRig(k);
+  });
+  if (player2){ const w = player2.pos; cs2.pos.set(w.x, 30, w.z); cs2.look.copy(w); }
+}
+// coins dropped by a hit (offline only: online the coin list has to stay the same on every screen)
+function dropCoins(k, n){
+  for (let i = 0; i < n; i++){
+    const m = new THREE.Mesh(coinG, coinM), a = Math.random() * Math.PI * 2, r = 3 + Math.random() * 3;
+    m.position.set(k.pos.x + Math.cos(a) * r, 1.5, k.pos.z + Math.sin(a) * r); world.add(m);
+    coins.push({mesh:m, respawn:0, once:true});
+  }
+}
+function battleHit(k, by){
+  if (k.finished) return;
+  const scorer = by && by !== k && karts.includes(by) ? by : null;
+  if (battle.type === 'balloon'){
+    k.bal = Math.max(0, (k.bal || 0) - 1);
+    if (scorer){ scorer.pts = (scorer.pts || 0) + 1; toastFor(scorer, `🎈 Popped ${k.pname || k.name}! ⭐ ${scorer.pts}`); }
+    if (k.bal <= 0){
+      k.finished = true; k.finishRank = 0; k.speed = 0;
+      toastFor(k, '💀 Out of balloons!');
+      karts.filter(o => o.human && o !== k).forEach(o => toastFor(o, `💀 ${k.pname || k.name} is out`));
+    } else toastFor(k, `🎈 Pop! ${k.bal} left`);
+  } else {
+    const n = Math.min(k.coins || 0, 3); if (!n) return;
+    k.coins -= n; if (!NET.racing) dropCoins(k, n);
+    toastFor(k, `🪙 Dropped ${n} coin${n > 1 ? 's' : ''}!`);
+  }
+}
+// bots: chase the nearest rival (or the nearest coin), going round the ring when the target is on the far side
+function battleAim(k, look){
+  if (!k.bTgt || raceTime > (k.bRe || 0)){
+    k.bRe = raceTime + 1.2 + Math.random() * 1.6;
+    let tgt = null;
+    if (battle.type === 'coin' && Math.random() < 0.65){
+      let best = 1e9; for (const c of coins) if (c.mesh.visible){ const d = c.mesh.position.distanceToSquared(k.pos); if (d < best){ best = d; tgt = c.mesh.position; } }
+    }
+    if (!tgt){ const o = karts.filter(o => o !== k && !o.finished).sort((a, b) => a.pos.distanceToSquared(k.pos) - b.pos.distanceToSquared(k.pos))[Math.random() < 0.75 ? 0 : 1]; tgt = o?.pos || null; }
+    k.bTgt = tgt;
+  }
+  if (!k.bTgt) return null;
+  const ti = nearestIdx(k.bTgt, k.idx); let di = ti - k.idx; if (di > N / 2) di -= N; if (di < -N / 2) di += N;
+  if (Math.abs(di) < N * 0.12) return k.bTgt.clone();
+  const j = (k.idx + Math.sign(di) * look + N) % N, lat = k.bTgt.clone().sub(pts[ti]).dot(nors[ti]);
+  return pts[j].clone().addScaledVector(nors[j], THREE.MathUtils.clamp(lat, -W * 0.35, W * 0.35));
+}
+function battleTick(dt){
+  if (!battle) return;
+  // balloons: show as many as the kart has (also on online clients, where k.bal comes from the host)
+  karts.forEach(k => {
+    const B = k.mesh.balloons; if (!B) return;
+    const n = Math.max(0, Math.round(k.bal || 0));
+    B.forEach((b, i) => { b.rotation.x = Math.sin(raceTime * 2 + i * 1.7 + k.ri) * 0.12; });
+    if (n < k.mesh.balShown){
+      for (let i = n; i < k.mesh.balShown; i++){ const b = B[i]; if (!b.visible) continue; b.visible = false; const p = new THREE.Vector3(); b.children[0].getWorldPosition(p); burst(p, ROSTER[k.ri].color, 8, 0.5); }
+      if (nearCam(k, 80)) beep(900, .08, 'square', .1, .3);
+    } else if (n > k.mesh.balShown) B.forEach((b, i) => b.visible = i < n);
+    k.mesh.balShown = n;
+  });
+  if (NETC() || state !== 'race') return;
+  karts.forEach(k => { if (k.finished){ k.speed = 0; k.boost = 0; } });
+  const left = battle.len - raceTime;
+  if (left <= 30 && !battle.warn){ battle.warn = true; karts.filter(o => o.human).forEach(o => toastFor(o, '⏱️ 30 seconds left!')); }
+  const alive = karts.filter(k => !k.finished).length;
+  if (battle.type === 'balloon' && alive <= 1 && !battle.endT) battle.endT = raceTime + 1.2;
+  if (battle.type === 'balloon' && !battle.endT && karts.every(k => !k.human || k.finished)) battle.endT = raceTime + 2.5;
+  if (left <= 0 || (battle.endT && raceTime >= battle.endT)) battleEnd();
+}
+const battleCell = t => MAP.battle === 'coin' ? '🪙 ' + t : ((b, p) => (b > 0 ? '🎈'.repeat(b) : '💀') + ' ⭐ ' + p)(Math.floor(-t / 100), Math.round(-t) % 100);
+function battleEnd(){
+  if (state !== 'race') return;
+  if (NET.racing) return netEnd();
+  endRace();
+}
+function battleResults(all, place){
+  const coin = battle.type === 'coin', humans = all.filter(k => k.human), best = humans[0];
+  $('resTitle').innerHTML = humans.length > 1 ? `🏆 ${best.pn ? 'P' + best.pn : best === player ? 'P1' : 'P2'} wins!` : place === 1 ? '🏆 You won the battle!' : `${ord(place)} place`;
+  $('resSub').textContent = `${coin ? '🪙 Coin Runners' : '🎈 Balloon Battle'} · ${MAP.name.replace(/ \(.*\)$/, '')}`;
+  $('resBody').innerHTML = `<div class="grid">${all.map((k, i) => `<div class="row single ${k.human ? 'me' : ''}"><b>${i + 1}</b><span class="n">${dot(k)}${k.name}${k.isPlayer && !party ? ' (you)' : k.pn ? ` (P${k.pn})` : k.isP2 ? ' (P2)' : ''}</span>`
+    + `<span class="r">${coin ? `🪙 ${k.coins || 0}` : `${k.bal > 0 ? '🎈'.repeat(k.bal) : '💀'} ⭐ ${k.pts || 0}`}</span></div>`).join('')}</div>`;
+  if (!player2 && !party){ const prize = raceCoins(place); if (prize) $('resBody').insertAdjacentHTML('beforeend', `<p class="coinsum">🪙 +${prize} for ${ord(place)} place</p>`); }
+  button('Rematch ↻', '', () => { $('results').classList.add('hidden'); setupRace(); if (party) padOut(true); });
+  const back = party ? 'party' : duo ? 'duo' : 'battle';
+  button('Other arena', 'alt', () => { openMenu(); if (back !== 'battle') go('duo'); go(back); });
+  button('Menu', 'ghost', openMenu);
+  $('results').classList.remove('hidden');
+}
+// the battle screen: pick a mode + arena
+const arenaIdx = () => TRACKS.map((t, i) => i).filter(i => TRACKS[i].battle);
+function renderArenas(){
+  const el = $('arenas'); el.innerHTML = '';
+  arenaIdx().forEach((i, n) => {
+    const m = MAPS[i], d = document.createElement('div'); d.className = 'map nav' + (i === mapChoice ? ' sel' : ''); d.style.background = m.tile;
+    d.innerHTML = `<div class="e">${m.battle === 'coin' ? '🪙' : '🎈'}</div><b>${m.name.replace(/ \(.*\)$/, '')}</b><small>${m.battle === 'coin' ? 'Coin Runners' : 'Balloon Battle'} · ${THEMES[m.theme].emoji}</small>`;
+    hookNav(d, n, () => { [...el.children].forEach((x, j) => x.classList.toggle('sel', j === n)); arenaInfo(i); showTrack(i, true); }, pickArena);
+    el.appendChild(d);
+  });
+}
+function arenaInfo(i){
+  const m = MAPS[i], coin = m.battle === 'coin';
+  $('arenainfo').innerHTML = `<div class="big">${coin ? '🪙' : '🎈'}</div><h2>${coin ? 'Coin Runners' : 'Balloon Battle'}</h2>
+    <div><span class="tag">${THEMES[m.theme].emoji} ${m.name.replace(/ \(.*\)$/, '')}</span></div>
+    <p class="fine">${coin ? `Grab as many coins as you can in ${BATTLE_LEN.coin / 60} minutes. Get hit and you drop 3 of them, so steal them back!`
+      : `Everyone has 3 balloons. Every hit pops one and scores you a ⭐. Lose all 3 and you're out. Last kart with balloons, or the most after ${BATTLE_LEN.balloon / 60} minutes, wins.`}</p>
+    <p class="fine">${FIELD_SIZE} karts · item boxes everywhere · also in 🎉 Local Party and 🌐 Online rooms</p>
+    <button class="btn go" id="arenaGo">Choose ▸</button>`;
+  $('arenaGo').onclick = () => { blip.ok(); pickArena(); };
+}
+function pickArena(){ mode = 'battle'; go('racer'); }
+function startBattle(){ gp = null; $('menu').classList.add('hidden'); showTrack(mapChoice); setupRace(); }
+// ---------- daily and weekly challenges ----------
+// Picked from the date (UTC), so everyone gets the same ones on the same day; a racer-specific challenge picks from the
+// racers you have unlocked. Three a day (easy / medium / hard) and two a week with progress that adds up over races.
+const CH = (() => { let s = {}; try { s = JSON.parse(localStorage.getItem('pgp-ch') || '{}') || {}; } catch (e) {} return Object.assign({day:'', done:{}, week:'', wprog:{}, wdone:{}}, s); })();
+const saveCH = () => { try { localStorage.setItem('pgp-ch', JSON.stringify(CH)); } catch (e) {} };
+const dayKey = () => new Date().toISOString().slice(0, 10);
+const weekKey = () => { const d = new Date(), t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())); t.setUTCDate(t.getUTCDate() - (t.getUTCDay() + 6) % 7); return t.toISOString().slice(0, 10); };   // that week's Monday
+const rng = seed => () => { seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+const pickR = (r, a) => a[Math.floor(r() * a.length)];
+const raceTracks = () => TRACKS.filter(t => !t.hidden).map(t => t.name);
+const chChars = () => { const u = unlockedSet(); return u.length ? u : [playerChoice]; };
+// race stats for the challenges, reset at every start
+const RS = {drifts:0, items:0, taken:0, dealt:0, tricks:0, perfect:false, wasDrift:false};
+function chRaceStart(){ Object.assign(RS, {drifts:0, items:0, taken:0, dealt:0, tricks:0, perfect:false, wasDrift:false}); }
+function chTick(){ if (state !== 'race' || !player) return; const d = !!player.drift; if (d && !RS.wasDrift) RS.drifts++; RS.wasDrift = d; }
+// [tier, maker]. c = {k, place, track, race, battle, tt, pb, rs}
+const CH_DAY = [
+  [0, r => { const t = pickR(r, raceTracks()); return {icon:'🏁', text:`Finish top 3 on ${t}`, track:t, check:c => c.race && c.track === t && c.place <= 3}; }],
+  [0, r => { const n = 8 + Math.floor(r() * 5); return {icon:'🪙', text:`Collect ${n} coins in one race`, check:c => c.race && (c.k.coins || 0) >= n}; }],
+  [0, r => { const n = 4 + Math.floor(r() * 3); return {icon:'🤸', text:`Land ${n} tricks in one race`, check:c => c.race && c.rs.tricks >= n}; }],
+  [0, r => { const ch = pickR(r, chChars()); return {icon:'🧑', text:`Finish top 3 as ${ROSTER[ch].name}`, char:ch, check:c => c.race && c.k.ri === ch && c.place <= 3}; }],
+  [1, r => { const t = pickR(r, raceTracks()); return {icon:'🏆', text:`Win on ${t}`, track:t, check:c => c.race && c.track === t && c.place === 1}; }],
+  [1, r => { const t = pickR(r, raceTracks()); return {icon:'🚫', text:`Finish top 3 on ${t} without drifting`, track:t, check:c => c.race && c.track === t && c.place <= 3 && !c.rs.drifts}; }],
+  [1, r => { const n = 3 + Math.floor(r() * 3); return {icon:'🎯', text:`Hit ${n} racers with items in one race`, check:c => c.rs.dealt >= n}; }],
+  [1, () => ({icon:'🛡️', text:'Finish top 3 without getting hit once', check:c => c.race && c.place <= 3 && !c.rs.taken})],
+  [1, () => ({icon:'🙅', text:'Win a race without using any items', check:c => c.race && c.place === 1 && !c.rs.items})],
+  [1, () => ({icon:'🚀', text:'Nail a perfect rocket start and finish top 3', check:c => c.race && c.place <= 3 && c.rs.perfect})],
+  [2, r => { const t = pickR(r, raceTracks()); return {icon:'🔥', text:`Win on ${t} without drifting`, track:t, check:c => c.race && c.track === t && c.place === 1 && !c.rs.drifts}; }],
+  [2, r => { const t = pickR(r, raceTracks()), ch = pickR(r, chChars()); return {icon:'⭐', text:`Win on ${t} as ${ROSTER[ch].name}`, track:t, char:ch, check:c => c.race && c.track === t && c.k.ri === ch && c.place === 1}; }],
+  [2, () => ({icon:'🎈', text:'Win a Balloon Battle', battle:'balloon', check:c => c.battle === 'balloon' && c.place === 1})],
+  [2, () => ({icon:'🪙', text:'Win a Coin Runners battle', battle:'coin', check:c => c.battle === 'coin' && c.place === 1})],
+  [2, r => { const t = pickR(r, raceTracks()); return {icon:'😇', text:`Win on ${t} without items and without getting hit`, track:t, check:c => c.race && c.track === t && c.place === 1 && !c.rs.items && !c.rs.taken}; }],
+  [2, () => ({icon:'👻', text:'Set a new personal best in a time trial', tt:true, check:c => c.tt && c.pb})],
+];
+const CH_WEEK = [
+  r => { const n = 8 + Math.floor(r() * 5); return {icon:'🏆', text:`Win ${n} races`, goal:n, add:c => c.race && c.place === 1 ? 1 : 0}; },
+  r => { const n = 120 + 20 * Math.floor(r() * 5); return {icon:'🪙', text:`Collect ${n} coins on the track`, goal:n, add:c => c.k?.coins || 0}; },
+  r => { const n = 30 + 5 * Math.floor(r() * 5); return {icon:'🎯', text:`Hit ${n} racers with items`, goal:n, add:c => c.rs?.dealt || 0}; },
+  r => { const n = 40 + 10 * Math.floor(r() * 3); return {icon:'🤸', text:`Land ${n} tricks`, goal:n, add:c => c.rs?.tricks || 0}; },
+  r => { const n = 15 + Math.floor(r() * 6); return {icon:'🏁', text:`Finish ${n} races`, goal:n, add:c => c.race ? 1 : 0}; },
+  r => { const n = 3 + Math.floor(r() * 3); return {icon:'🎈', text:`Win ${n} battles`, goal:n, battle:'balloon', add:c => c.battle && c.place === 1 ? 1 : 0}; },
+  () => ({icon:'🥇', text:'Win gold in a Grand Prix', goal:1, cup:true, add:c => c.cupGold ? 1 : 0}),
+];
+const CH_REWARD = [40, 70, 110], CH_WREWARD = [300, 250];
+function chToday(){
+  const dk = dayKey(), r = rng(hashStr('day' + dk));
+  return [0, 1, 2].map(tier => { const opts = CH_DAY.filter(d => d[0] === tier), c = pickR(r, opts)[1](r); return Object.assign(c, {id:`d${dk}-${tier}`, reward:CH_REWARD[tier], tier}); });
+}
+function chWeek(){
+  const wk = weekKey(), r = rng(hashStr('week' + wk)), pool = [...CH_WEEK];
+  return [0, 1].map(i => Object.assign(pool.splice(Math.floor(r() * pool.length), 1)[0](r), {id:`w${wk}-${i}`, reward:CH_WREWARD[i]}));
+}
+function chSync(){
+  let ch = false;
+  if (CH.day !== dayKey()){ CH.day = dayKey(); CH.done = {}; ch = true; }
+  if (CH.week !== weekKey()){ CH.week = weekKey(); CH.wprog = {}; CH.wdone = {}; ch = true; }
+  if (ch) saveCH();
+}
+function chCheck(ctx){
+  chSync();
+  const got = [];
+  chToday().forEach(c => { if (!CH.done[c.id] && c.check(ctx)){ CH.done[c.id] = 1; addCoins(c.reward); got.push(c); } });
+  chWeek().forEach(c => {
+    if (CH.wdone[c.id]) return; const n = c.add(ctx) || 0; if (!n) return;
+    CH.wprog[c.id] = Math.min(c.goal, (CH.wprog[c.id] || 0) + n);
+    if (CH.wprog[c.id] >= c.goal){ CH.wdone[c.id] = 1; addCoins(c.reward); got.push(c); }
+  });
+  saveCH();
+  return got;
+}
+function chShow(got){
+  if (!got.length) return;
+  $('resBody').insertAdjacentHTML('afterbegin', got.map(c => `<div class="chdone">📅 Challenge complete! ${c.icon} ${esc(c.text)} <b>+${c.reward} 🪙</b></div>`).join(''));
+  document.querySelectorAll('.walletN').forEach(e => e.textContent = wallet);
+  [784, 988, 1175, 1568].forEach((f, i) => setTimeout(() => beep(f, .16, 'triangle', .09), i * 110));
+}
+const chLeft = () => { const n = new Date(), d = new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate() + 1)), h = Math.ceil((d - n) / 3.6e6); return h > 1 ? `${h} hours` : `${Math.ceil((d - n) / 6e4)} min`; };
+const chWeekLeft = () => { const n = new Date(), m = new Date(weekKey() + 'T00:00:00Z'); m.setUTCDate(m.getUTCDate() + 7); const dd = Math.floor((m - n) / 864e5); return dd >= 1 ? `${dd} day${dd > 1 ? 's' : ''}` : chLeft(); };
+const chCounts = () => { chSync(); return [chToday().filter(c => CH.done[c.id]).length, chWeek().filter(c => CH.wdone[c.id]).length]; };
+// "Play" on a challenge takes you to the right screen with the track / racer already picked
+function chPlay(c){
+  const ti = c.track ? TRACKS.findIndex(t => t.name === c.track) : -1;
+  if (c.char != null && isUnlocked(c.char)){ playerChoice = c.char; refreshGarage?.(); }
+  if (c.battle){ const a = arenaIdx().find(i => TRACKS[i].battle === c.battle); if (a != null) mapChoice = a; return go('battle'); }
+  if (c.cup) return go('cups');
+  if (ti >= 0){ mapChoice = ti; mode = 'single'; return go('racer'); }
+  go('tracks');
+}
+function renderChallenges(){
+  chSync();
+  const card = (c, i, weekly) => {
+    const done = weekly ? CH.wdone[c.id] : CH.done[c.id], prog = weekly ? (CH.wprog[c.id] || 0) : 0;
+    return `<div class="chcard ${done ? 'done' : ''} ${weekly ? '' : 't' + c.tier}"><div class="chi">${c.icon}</div>
+      <div class="cht"><b>${esc(c.text)}</b>${weekly ? `<div class="chbar"><i style="width:${Math.min(100, prog / c.goal * 100)}%"></i></div><small>${prog} / ${c.goal}</small>`
+        : `<small>${['Easy', 'Medium', 'Hard'][c.tier]}</small>`}</div>
+      <div class="chr">${done ? '✅' : `+${c.reward} 🪙`}${done ? '' : `<button class="btn small nav" data-ch="${weekly ? 'w' : 'd'}${i}">Play ▸</button>`}</div></div>`;
+  };
+  const d = chToday(), w = chWeek();
+  $('chDaily').innerHTML = d.map((c, i) => card(c, i, false)).join('') + `<p class="fine">New challenges in ${chLeft()}</p>`;
+  $('chWeekly').innerHTML = w.map((c, i) => card(c, i, true)).join('') + `<p class="fine">Resets in ${chWeekLeft()} · progress counts from every solo race and battle</p>`;
+  let n = 0;
+  screenEl('challenges').querySelectorAll('[data-ch]').forEach(b => { const k = b.dataset.ch, c = (k[0] === 'w' ? w : d)[+k.slice(1)]; hookNav(b, n++, null, () => chPlay(c)); });
+  setFocus(0, true);
+}
+// ---------- track editor ----------
+// Draw a closed track on a top-down board, drop features on the road, test drive it, and share it as a WIDR- code
+// (or a ?track= link). Saved tracks become hidden entries at the end of TRACKS / MAPS, so racing, bots, items, ghosts
+// and mirror mode all work on them like on any built-in track. Custom tracks never post to the world records.
+const ED_R = 260, ED_PX = 800, ED_S = 400;   // board covers -260..260 track units, drawn on an 800 px canvas; curve sampled 400 times
+const ED_TOOLS = [
+  {id:'draw',  icon:'✏️', name:'Draw',       tip:'Drag on the empty board to draw a loop. Then drag points to move them, click the road to add a point, right-click a point to remove it.'},
+  {id:'p',     icon:'⚡', name:'Boost pad',  tip:'Click the road to place a boost pad.', max:8},
+  {id:'j',     icon:'🛹', name:'Jump',       tip:'Click the road to place a jump ramp.', max:6},
+  {id:'h',     icon:'⛰️', name:'Hill',       tip:'Click the road to raise a hill there.', max:6},
+  {id:'g',     icon:'🪂', name:'Glider gap', tip:'Click the road for a ramp with a gap after it: karts open their glider to cross.', max:3},
+  {id:'wl',    icon:'🌀', name:'Wall ride',  tip:'Click a corner to bank it steeply into a wall ride.', max:4},
+  {id:'l',     icon:'➰', name:'Loop',       tip:'Click a straight-ish part of the road for a loop. It slides a little to find room.', max:3},
+  {id:'erase', icon:'🧽', name:'Eraser',     tip:'Click a feature or a point to remove it.'},
+];
+const ED_FEAT = ED_TOOLS.filter(t => t.max).map(t => t.id);
+const edBlank = () => ({id:'', n:'My Track', th:'meadow', tm:'day', w:24, c:[], p:[], j:[], h:[], g:[], wl:[], l:[]});
+let myTracks = (() => { try { const a = JSON.parse(localStorage.getItem('pgp-tracks') || '[]'); return Array.isArray(a) ? a : []; } catch (e){ return []; } })();
+const saveTracks = () => { try { localStorage.setItem('pgp-tracks', JSON.stringify(myTracks)); } catch (e) {} };
+const ED = {t:edBlank(), tool:'draw', drag:null, free:false, hist:[], curve:[], cf:[], len:0, warn:[], hover:-1, dirty:false};
+
+// a stored track -> the same kind of definition the built-in tracks use
+function edDef(t){
+  let name = `✏️ ${t.n}`; if (TRACKS.some(x => x.name === name && x.cid !== t.id)) name += ` (${String(t.id).slice(-4)})`;
+  return {name, custom:true, cid:t.id, hidden:true, theme:t.th, tag:'Custom track', w:t.w, ctrl:t.c.map(p => [...p]),
+    pads:[...t.p], jumps:[...t.j], hills:t.h.map(f => [f, 9, 0.05]), glides:t.g.map(f => [f, 18]), walls:t.wl.map(f => [f, 0.09, 70]), loops:[...t.l]};
+}
+function edSlot(t){
+  const def = edDef(t); LOOKS[def.name] = {time:t.tm};
+  const m = withLook({...THEMES[def.theme], ...def});
+  let i = TRACKS.findIndex(x => x.custom && x.cid === t.id);
+  if (i < 0){ i = TRACKS.length; TRACKS.push(def); MAPS.push(m); } else { TRACKS[i] = def; MAPS[i] = m; }
+  return i;
+}
+function edUnslot(id){
+  const i = TRACKS.findIndex(x => x.custom && x.cid === id); if (i < 0) return;
+  TRACKS.splice(i, 1); MAPS.splice(i, 1);
+  if (mapChoice >= TRACKS.length) mapChoice = 0;
+}
+
+// share codes: WIDR- + url-safe base64 of the track as JSON
+const edPack = t => ({n:t.n, th:t.th, tm:t.tm, w:t.w, c:t.c, p:t.p, j:t.j, h:t.h, g:t.g, wl:t.wl, l:t.l});
+const edCode = t => 'WIDR-' + btoa(unescape(encodeURIComponent(JSON.stringify(edPack(t))))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const edLink = t => `${location.origin}${location.pathname}?track=${edCode(t)}`;
+// anything pasted (a code, or a whole share link) -> a checked track, or null. Codes come from other people, so every field is cleaned.
+function edParse(text){
+  const m = String(text).match(/WIDR-([A-Za-z0-9_-]+)/); if (!m) return null;
+  let s = m[1].replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '=';
+  let o; try { o = JSON.parse(decodeURIComponent(escape(atob(s)))); } catch (e){ return null; }
+  if (!o || !Array.isArray(o.c)) return null;
+  const num = v => typeof v === 'number' && isFinite(v);
+  const c = o.c.filter(p => Array.isArray(p) && num(p[0]) && num(p[1])).slice(0, 48).map(([x, z]) => [Math.round(Math.max(-ED_R, Math.min(ED_R, x))), Math.round(Math.max(-ED_R, Math.min(ED_R, z)))]);
+  if (c.length < 4) return null;
+  const t = Object.assign(edBlank(), {
+    n:String(o.n || '').replace(/[<>&"'`\\]/g, '').trim().slice(0, 22) || 'Shared Track',
+    th:THEMES[o.th] ? o.th : 'meadow', tm:TIMES[o.tm] ? o.tm : 'day',
+    w:Math.round(Math.max(18, Math.min(34, num(o.w) ? o.w : 24))), c});
+  for (const k of ED_FEAT) t[k] = (Array.isArray(o[k]) ? o[k] : []).filter(f => num(f) && f >= 0 && f < 1).slice(0, ED_TOOLS.find(x => x.id === k).max).map(f => +f.toFixed(3));
+  t.id = 'c' + hashStr(edCode(t)).toString(36);
+  return t;
+}
+function edAdd(t){
+  const had = myTracks.findIndex(x => x.id === t.id);
+  if (had >= 0) return false;
+  myTracks.push(t); saveTracks(); edSlot(t); return true;
+}
+
+// ----- geometry -----
+function edCurve(){
+  const c = ED.t.c; ED.curve = []; ED.cf = []; ED.len = 0; ED.warn = [];
+  if (c.length < 3) return;
+  ED.curve = new THREE.CatmullRomCurve3(c.map(([x, z]) => new THREE.Vector3(x, 0, z)), true, 'centripetal').getSpacedPoints(ED_S).slice(0, ED_S);
+  for (let i = 0; i < ED_S; i++) ED.len += ED.curve[i].distanceTo(ED.curve[(i + 1) % ED_S]);
+  ED.cf = c.map(([x, z]) => edNearest(x, z).i);
+  // roads that cross or run into each other
+  const seg = ED.len / ED_S, gap = Math.ceil((ED.t.w * 1.8) / seg) + 2, lim = ED.t.w + 5;
+  let clash = false, tight = false;
+  for (let i = 0; i < ED_S && !clash; i += 2) for (let j = i + gap; j < ED_S && !clash; j += 2){
+    if (ED_S - (j - i) < gap) continue;
+    if (ED.curve[i].distanceTo(ED.curve[j]) < lim) clash = true;
+  }
+  // corners tighter than a kart can take
+  const look = Math.max(2, Math.round(ED.t.w / seg));
+  for (let i = 0; i < ED_S && !tight; i++){
+    const a = ED.curve[(i + look) % ED_S].clone().sub(ED.curve[i]), b = ED.curve[(i + 2 * look) % ED_S].clone().sub(ED.curve[(i + look) % ED_S]);
+    if (a.angleTo(b) > 1.75) tight = true;
+  }
+  if (clash) ED.warn.push('⚠️ The road crosses or touches itself. Bridges aren’t supported, so karts may jump between the roads.');
+  if (tight) ED.warn.push('⚠️ Very tight corner somewhere: karts will crash into it. Pull the points further apart.');
+  if (ED.len < 520) ED.warn.push('⚠️ Too short: draw a bigger loop.');
+}
+function edNearest(x, z){
+  let i = -1, d = Infinity;
+  ED.curve.forEach((p, k) => { const dd = (p.x - x) ** 2 + (p.z - z) ** 2; if (dd < d){ d = dd; i = k; } });
+  return {i, d:Math.sqrt(d)};
+}
+const edPx = v => (v + ED_R) / (2 * ED_R) * ED_PX, edK = ED_PX / (2 * ED_R);
+function edPos(e){
+  const r = ED.cv.getBoundingClientRect();
+  return [(e.clientX - r.left) / r.width * 2 * ED_R - ED_R, (e.clientY - r.top) / r.height * 2 * ED_R - ED_R];
+}
+const edClamp = v => Math.round(Math.max(-ED_R + 8, Math.min(ED_R - 8, v)));
+function edHitPoint(x, z){ const r = 16 * 2 * ED_R / (ED.cv.getBoundingClientRect().width || ED_PX); return ED.t.c.findIndex(([a, b]) => Math.hypot(a - x, b - z) < Math.max(8, r)); }
+function edHitFeat(f){
+  let best = null;
+  for (const k of ED_FEAT) ED.t[k].forEach((v, i) => { const d = Math.min(Math.abs(v - f), 1 - Math.abs(v - f)); if (d < 0.02 && (!best || d < best.d)) best = {k, i, d}; });
+  return best;
+}
+function edPush(){ ED.hist.push(JSON.stringify(ED.t)); if (ED.hist.length > 50) ED.hist.shift(); ED.dirty = true; }
+function edUndo(){ const s = ED.hist.pop(); if (!s) return; ED.t = JSON.parse(s); edCurve(); edDraw(); edPanel(); blip.back(); }
+
+// ----- drawing the board -----
+function edDraw(){
+  const cv = ED.cv; if (!cv) return;
+  const g = cv.getContext('2d'), t = ED.t, th = THEMES[t.th], hx = c => '#' + new THREE.Color(c).getHexString();
+  g.clearRect(0, 0, ED_PX, ED_PX);
+  g.fillStyle = th.tile; g.fillRect(0, 0, ED_PX, ED_PX);
+  g.strokeStyle = 'rgba(29,29,58,.08)'; g.lineWidth = 1;
+  for (let v = -ED_R; v <= ED_R; v += 40){ g.beginPath(); g.moveTo(edPx(v), 0); g.lineTo(edPx(v), ED_PX); g.moveTo(0, edPx(v)); g.lineTo(ED_PX, edPx(v)); g.stroke(); }
+  const cu = ED.curve;
+  if (ED.free || cu.length < 3){
+    // freehand stroke while drawing, or the first few points
+    g.strokeStyle = '#1d1d3a'; g.lineWidth = 6; g.lineCap = g.lineJoin = 'round'; g.setLineDash([2, 12]);
+    g.beginPath(); t.c.forEach(([x, z], i) => i ? g.lineTo(edPx(x), edPx(z)) : g.moveTo(edPx(x), edPx(z))); g.stroke(); g.setLineDash([]);
+    if (!t.c.length){
+      g.fillStyle = 'rgba(29,29,58,.55)'; g.font = 'bold 30px system-ui, sans-serif'; g.textAlign = 'center';
+      g.fillText('✏️ Drag here to draw your track', ED_PX / 2, ED_PX / 2 - 10);
+      g.font = '20px system-ui, sans-serif'; g.fillText('one loop, back to where you started', ED_PX / 2, ED_PX / 2 + 24);
+    }
+    return;
+  }
+  const path = () => { g.beginPath(); cu.forEach((p, i) => i ? g.lineTo(edPx(p.x), edPx(p.z)) : g.moveTo(edPx(p.x), edPx(p.z))); g.closePath(); };
+  g.lineCap = g.lineJoin = 'round';
+  const curb = Array.isArray(th.curb) ? th.curb : [0xff3b3b, 0xffffff];
+  path(); g.strokeStyle = '#1d1d3a'; g.lineWidth = (t.w + 9) * edK; g.stroke();
+  path(); g.strokeStyle = hx(curb[0]); g.lineWidth = (t.w + 5) * edK; g.stroke();
+  path(); g.strokeStyle = hx(curb[1]); g.setLineDash([10, 10]); g.stroke(); g.setLineDash([]);
+  path(); g.strokeStyle = th.road === 'rainbow' ? '#b49cff' : hx(th.road[0]); g.lineWidth = t.w * edK; g.stroke();
+  path(); g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 2; g.setLineDash([12, 14]); g.stroke(); g.setLineDash([]);
+  // start line + direction arrows
+  const ln = (i, fn) => { const p = cu[i], q = cu[(i + 1) % ED_S], a = Math.atan2(q.z - p.z, q.x - p.x); g.save(); g.translate(edPx(p.x), edPx(p.z)); g.rotate(a); fn(); g.restore(); };
+  ln(0, () => { const h = t.w * edK / 2; for (let y = -h, r = 0; y < h; y += 6, r++) for (let x = 0; x < 2; x++){ g.fillStyle = (r + x) % 2 ? '#fff' : '#1d1d3a'; g.fillRect(-6 + x * 6, y, 6, 6); } });
+  for (const f of [0.08, 0.33, 0.58, 0.83]) ln(Math.round(f * ED_S), () => { g.fillStyle = 'rgba(255,255,255,.85)'; g.beginPath(); g.moveTo(9, 0); g.lineTo(-6, -7); g.lineTo(-6, 7); g.fill(); });
+  // features
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '22px system-ui, sans-serif';
+  for (const k of ED_FEAT){
+    const icon = ED_TOOLS.find(x => x.id === k).icon;
+    for (const f of t[k]){
+      const p = cu[Math.round(f * ED_S) % ED_S];
+      g.fillStyle = '#fff'; g.strokeStyle = '#1d1d3a'; g.lineWidth = 3;
+      g.beginPath(); g.arc(edPx(p.x), edPx(p.z), 16, 0, Math.PI * 2); g.fill(); g.stroke();
+      g.fillText(icon, edPx(p.x), edPx(p.z) + 1);
+    }
+  }
+  // control points
+  t.c.forEach(([x, z], i) => {
+    g.fillStyle = i === 0 ? '#ffd23f' : i === ED.hover ? '#ff7ccf' : '#fff'; g.strokeStyle = '#1d1d3a'; g.lineWidth = 3;
+    g.beginPath(); g.arc(edPx(x), edPx(z), ED.tool === 'draw' || ED.tool === 'erase' ? 8 : 5, 0, Math.PI * 2); g.fill(); g.stroke();
+  });
+  g.textBaseline = 'alphabetic';
+}
+
+// ----- input on the board -----
+function edDown(e){
+  if (e.button === 2) return;
+  e.preventDefault(); ED.cv.setPointerCapture(e.pointerId);
+  const [x, z] = edPos(e), t = ED.t, pi = edHitPoint(x, z), near = ED.curve.length ? edNearest(x, z) : {i:-1, d:Infinity}, onRoad = near.d < t.w / 2 + 6;
+  if (ED.tool === 'draw'){
+    if (pi >= 0){ edPush(); ED.drag = pi; return; }
+    if (t.c.length < 3){ edPush(); t.c = [[edClamp(x), edClamp(z)]]; ED.free = true; edCurve(); edDraw(); return; }
+    if (onRoad){
+      // add a point between the two control points around this spot, and start dragging it
+      const s = near.i, n = t.c.length; let at = n;
+      for (let i = 0; i < n; i++){ const a = ED.cf[i], b = ED.cf[(i + 1) % n], inSeg = a <= b ? s >= a && s < b : s >= a || s < b; if (inSeg){ at = i + 1; break; } }
+      if (n >= 48) return toast('48 points is the limit');
+      edPush(); t.c.splice(at, 0, [edClamp(x), edClamp(z)]); ED.drag = at; edCurve(); edDraw(); edPanel(); blip.move();
+    }
+    return;
+  }
+  if (ED.tool === 'erase'){
+    const hf = onRoad ? edHitFeat(near.i / ED_S) : null;
+    if (hf){ edPush(); t[hf.k].splice(hf.i, 1); blip.back(); }
+    else if (pi >= 0){ if (t.c.length <= 4) return toast('A track needs at least 4 points'); edPush(); t.c.splice(pi, 1); edCurve(); blip.back(); }
+    edDraw(); edPanel(); return;
+  }
+  // feature tools
+  if (!onRoad) return toast('Click on the road');
+  const tool = ED_TOOLS.find(x => x.id === ED.tool), f = +(near.i / ED_S).toFixed(3);
+  if (t[tool.id].length >= tool.max) return toast(`${tool.icon} ${tool.max} is the most for one track`);
+  if (edHitFeat(f)) return toast('Something is already there');
+  if ((tool.id === 'l' || tool.id === 'g') && (f < 0.04 || f > 0.93)) return toast('Keep it away from the start line');
+  edPush(); t[tool.id].push(f); t[tool.id].sort((a, b) => a - b); blip.ok(); edDraw(); edPanel();
+}
+function edMove(e){
+  const [x, z] = edPos(e), t = ED.t;
+  if (ED.free){
+    const last = t.c[t.c.length - 1];
+    if (Math.hypot(last[0] - x, last[1] - z) >= 28 && t.c.length < 60){ t.c.push([edClamp(x), edClamp(z)]); edDraw(); }
+    return;
+  }
+  if (ED.drag != null){ t.c[ED.drag] = [edClamp(x), edClamp(z)]; edCurve(); edDraw(); return; }
+  const h = ED.tool === 'draw' || ED.tool === 'erase' ? edHitPoint(x, z) : -1;
+  if (h !== ED.hover){ ED.hover = h; ED.cv.style.cursor = h >= 0 ? 'grab' : 'crosshair'; edDraw(); }
+}
+function edUp(){
+  if (ED.free){
+    ED.free = false; const t = ED.t;
+    // the last point closes the loop by itself, so drop it if it lands on the first
+    if (t.c.length > 3 && Math.hypot(t.c[0][0] - t.c.at(-1)[0], t.c[0][1] - t.c.at(-1)[1]) < 40) t.c.pop();
+    while (t.c.length > 48) t.c = t.c.filter((_, i) => i % 2 === 0);
+    if (t.c.length < 4){ t.c = []; toast('Draw a bigger loop'); }
+    edCurve(); edDraw(); edPanel();
+  }
+  if (ED.drag != null){ ED.drag = null; edPanel(); }
+}
+function edRight(e){
+  e.preventDefault();
+  const [x, z] = edPos(e), pi = edHitPoint(x, z);
+  if (pi < 0) return;
+  if (ED.t.c.length <= 4) return toast('A track needs at least 4 points');
+  edPush(); ED.t.c.splice(pi, 1); edCurve(); edDraw(); edPanel(); blip.back();
+}
+function edShape(){
+  // a random smooth loop to start from, sized to fit the board
+  const s = 1 + Math.floor(Math.random() * 9999), c = gen(s, 150, [[2, 0.15 + Math.random() * 0.15], [3, Math.random() * 0.14], [5, Math.random() * 0.05]], 1.25, 0.9, 16);
+  const mx = Math.max(...c.flat().map(Math.abs)), k = mx > 230 ? 230 / mx : 1;
+  edPush(); ED.t.c = c.map(([x, z]) => [Math.round(x * k), Math.round(z * k)]); edCurve(); edDraw(); edPanel(); blip.ok();
+}
+
+// ----- side panel -----
+const edReady = () => ED.t.c.length >= 4 && ED.len >= 520;
+function edPanel(){
+  const t = ED.t, el = $('edSide'); if (!el) return;
+  const tool = ED_TOOLS.find(x => x.id === ED.tool);
+  el.innerHTML = `
+    <label class="edlbl">Name <input id="edName" maxlength="22" value="${esc(t.n)}"></label>
+    <div class="edlbl">Theme</div><div class="edchips">${Object.keys(THEMES).map(k => `<button class="edchip ${t.th === k ? 'on' : ''}" data-th="${k}" title="${k}">${THEMES[k].emoji}</button>`).join('')}</div>
+    <div class="edlbl">Time of day</div><div class="edchips">${Object.keys(TIMES).map(k => `<button class="edchip ${t.tm === k ? 'on' : ''}" data-tm="${k}" title="${k}">${TIMES[k].icon}</button>`).join('')}</div>
+    <label class="edlbl">Road width <b>${t.w}</b> <input id="edW" type="range" min="18" max="34" value="${t.w}"></label>
+    <div class="edlbl">Tools</div>
+    <div class="edtools">${ED_TOOLS.map(x => `<button class="edtool ${ED.tool === x.id ? 'on' : ''}" data-tool="${x.id}" title="${x.name}">${x.icon}<small>${x.name}${x.max ? ` ${t[x.id].length}/${x.max}` : ''}</small></button>`).join('')}</div>
+    <p class="fine edtip">${tool.tip}</p>
+    <p class="fine edstat">📏 ${t.c.length >= 3 ? Math.round(ED.len) + ' m' : '—'} · 📍 ${t.c.length} points</p>
+    ${ED.warn.map(w => `<p class="edwarn">${w}</p>`).join('')}
+    <div class="edrow">
+      <button class="btn small ghost" id="edUndo" ${ED.hist.length ? '' : 'disabled'}>↶ Undo</button>
+      <button class="btn small ghost" id="edShape">🎲 Random shape</button>
+      <button class="btn small ghost" id="edClear">🗑 Clear</button>
+    </div>
+    <div class="edrow">
+      <button class="btn small tt" id="edTest" ${edReady() ? '' : 'disabled'}>▶ Test drive</button>
+      <button class="btn small go" id="edSave" ${edReady() ? '' : 'disabled'}>💾 Save</button>
+      <button class="btn small alt" id="edShare" ${edReady() ? '' : 'disabled'}>🔗 Share</button>
+    </div>`;
+  const name = $('edName');
+  name.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter' || e.key === 'Escape') name.blur(); });
+  name.addEventListener('input', () => { t.n = name.value.replace(/[<>&"'`\\]/g, '').slice(0, 22); ED.dirty = true; });
+  name.addEventListener('change', () => { if (!t.n.trim()) t.n = 'My Track'; });
+  el.querySelectorAll('[data-th]').forEach(b => b.onclick = () => { edPush(); t.th = b.dataset.th; blip.move(); edDraw(); edPanel(); });
+  el.querySelectorAll('[data-tm]').forEach(b => b.onclick = () => { edPush(); t.tm = b.dataset.tm; blip.move(); edPanel(); });
+  el.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => { ED.tool = b.dataset.tool; blip.move(); edDraw(); edPanel(); });
+  const w = $('edW');
+  w.addEventListener('keydown', e => e.stopPropagation());
+  w.addEventListener('pointerdown', () => edPush());
+  w.addEventListener('input', () => { t.w = +w.value; w.previousElementSibling.textContent = t.w; edCurve(); edDraw(); });
+  w.addEventListener('change', () => edPanel());
+  $('edUndo').onclick = edUndo;
+  $('edShape').onclick = edShape;
+  $('edClear').onclick = () => { if (!t.c.length) return; edPush(); t.c = []; for (const k of ED_FEAT) t[k] = []; edCurve(); edDraw(); edPanel(); blip.back(); };
+  $('edTest').onclick = () => { blip.ok(); edTest(); };
+  $('edSave').onclick = () => { edSave(); };
+  $('edShare').onclick = () => { blip.ok(); edShareOpen(t); };
+}
+function edSave(quiet = false){
+  const t = ED.t;
+  if (!t.n.trim()) t.n = 'My Track';
+  if (!t.id) t.id = 't' + Date.now().toString(36);
+  const copy = JSON.parse(JSON.stringify(t)), i = myTracks.findIndex(x => x.id === t.id);
+  if (i >= 0) myTracks[i] = copy; else myTracks.push(copy);
+  saveTracks(); edSlot(copy); ED.dirty = false;
+  if (!quiet){ blip.ok(); toast(`💾 Saved ${t.n}`); }
+  edList();
+}
+// test drive: a time trial on the track as it is now (saved first, so its best time and ghost stick to it)
+function edTest(){
+  edSave(true);
+  mapChoice = TRACKS.findIndex(x => x.custom && x.cid === ED.t.id); TT_VS = null; mode = 'tt'; launch();
+}
+function edRace(t){ mapChoice = edSlot(t); mode = 'single'; go('racer'); }
+function edShareOpen(t){
+  const code = edCode(t), link = edLink(t), ta = $('lmText');
+  $('lmTitle').textContent = `🔗 Share ${t.n}`;
+  $('lmSub').innerHTML = 'Send this code to a friend. They paste it under <b>📥 Import code</b> in the Track Editor. Or send the link: opening it adds the track straight away.';
+  ta.value = code; ta.readOnly = true; $('lmBtns').innerHTML = ''; lmMsg('');
+  const copy = async (text, what) => {
+    ta.value = text; ta.focus(); ta.select(); let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; } catch (e) { try { ok = document.execCommand('copy'); } catch (e2) {} }
+    lmMsg(ok ? `✔ ${what} copied!` : 'Copying is blocked here. The text is selected, so press ⌘C (or Ctrl+C).', !ok);
+  };
+  lmButton('📋 Copy code', '', () => copy(code, 'Code'));
+  lmButton('🔗 Copy link', 'alt', () => copy(link, 'Link'));
+  lmButton('Close', 'ghost', closeLm);
+  lmEl.classList.remove('hidden'); setTimeout(() => { ta.focus(); ta.select(); }, 30);
+}
+function edImportOpen(){
+  const ta = $('lmText');
+  $('lmTitle').textContent = '📥 Import a track';
+  $('lmSub').innerHTML = 'Paste a track code (it starts with <b>WIDR-</b>) or a share link.';
+  ta.value = ''; ta.readOnly = false; $('lmBtns').innerHTML = ''; lmMsg('');
+  lmButton('📥 Add track', '', () => {
+    const t = edParse(ta.value);
+    if (!t) return lmMsg('That doesn’t look like a track code. Copy the whole thing, starting with WIDR-.', true);
+    if (!edAdd(t)) return lmMsg(`You already have ${t.n}.`, true);
+    blip.ok(); closeLm(); edList(); toast(`✏️ Added ${t.n}`);
+  });
+  lmButton('Cancel', 'ghost', closeLm);
+  lmEl.classList.remove('hidden'); setTimeout(() => ta.focus(), 30);
+}
+// risky clicks (delete, dropping unsaved work) need a second click within 3 s
+let edAsk = null;
+function edSure(key, msg){ if (edAsk?.key === key && performance.now() - edAsk.at < 3000){ edAsk = null; return true; } edAsk = {key, at:performance.now()}; toast(msg); blip.move(); return false; }
+function edEdit(t){
+  if (ED.dirty && ED.t.c.length && ED.t.id !== t.id && !edSure('edit' + t.id, 'Unsaved changes on the board: click again to drop them')) return;
+  ED.t = JSON.parse(JSON.stringify(t)); ED.hist = []; ED.dirty = false; ED.tool = 'draw';
+  edCurve(); edDraw(); edPanel(); blip.ok();
+}
+function edNew(){
+  if (ED.dirty && ED.t.c.length && !edSure('new', 'Unsaved changes on the board: click again to drop them')) return;
+  ED.t = edBlank(); ED.hist = []; ED.dirty = false; ED.tool = 'draw';
+  edCurve(); edDraw(); edPanel(); blip.ok();
+}
+function edList(){
+  const el = $('edList'); if (!el) return;
+  el.innerHTML = myTracks.length ? myTracks.map((t, i) => {
+    const b = bests[`✏️ ${t.n}`];
+    return `<div class="edtrk ${t.id === ED.t.id ? 'on' : ''}"><span class="e">${THEMES[t.th]?.emoji || '🏁'}</span><div><b>${esc(t.n)}</b><small>${t.c.length} points · ⏱️ ${b ? fmt(b) : '—'}</small></div>
+      <span class="edact"><button class="btn small go" data-act="race" data-i="${i}" title="Race against bots">🏁</button><button class="btn small ghost" data-act="edit" data-i="${i}" title="Edit">✏️</button><button class="btn small ghost" data-act="share" data-i="${i}" title="Share">🔗</button><button class="btn small ghost" data-act="del" data-i="${i}" title="Delete">🗑</button></span></div>`;
+  }).join('') : '<p class="fine">No tracks yet. Draw one on the board, or import a code from a friend.</p>';
+  el.querySelectorAll('[data-act]').forEach(b => b.onclick = e => {
+    e.stopPropagation(); const t = myTracks[+b.dataset.i]; if (!t) return;
+    if (b.dataset.act === 'race'){ blip.ok(); edRace(t); }
+    if (b.dataset.act === 'edit') edEdit(t);
+    if (b.dataset.act === 'share'){ blip.ok(); edShareOpen(t); }
+    if (b.dataset.act === 'del' && edSure('del' + t.id, `Click 🗑 again to delete ${t.n}`)){
+      myTracks.splice(+b.dataset.i, 1); saveTracks(); edUnslot(t.id); blip.back();
+      if (ED.t.id === t.id) ED.t.id = '';
+      edList();
+    }
+  });
+}
+function renderEditor(){
+  if (!ED.cv){
+    ED.cv = $('edCanvas'); ED.cv.width = ED.cv.height = ED_PX;
+    ED.cv.addEventListener('pointerdown', edDown);
+    ED.cv.addEventListener('pointermove', edMove);
+    ED.cv.addEventListener('pointerup', edUp);
+    ED.cv.addEventListener('pointercancel', edUp);
+    ED.cv.addEventListener('contextmenu', edRight);
+    $('edNew').onclick = edNew;
+    $('edImport').onclick = () => { blip.ok(); edImportOpen(); };
+  }
+  edCurve(); edDraw(); edPanel(); edList();
+}
+addEventListener('keydown', e => {
+  if (state !== 'menu' || screen !== 'editor' || menuEl.classList.contains('hidden') || !lmEl.classList.contains('hidden') || e.target.closest?.('input, textarea')) return;
+  if ((e.metaKey || e.ctrlKey) && e.code === 'KeyZ'){ e.preventDefault(); e.stopImmediatePropagation(); edUndo(); }
+});
+// saved tracks join the track list, and a ?track= link adds its track
+myTracks = myTracks.filter(t => t && Array.isArray(t.c) && t.c.length >= 4 && THEMES[t.th]);
+myTracks.forEach(t => { for (const k of ED_FEAT) t[k] ||= []; edSlot(t); });
+{
+  const q = new URLSearchParams(location.search).get('track');
+  if (q){
+    const t = edParse(q);
+    if (t){ const added = edAdd(t); setTimeout(() => toast(added ? `✏️ Track added: ${t.n} · find it in the Track Editor` : `✏️ You already have ${t.n}`), 1200); }
+    try { history.replaceState(null, '', location.pathname); } catch (e) {}
+  }
 }
 // ---------- dev tools ----------
 {

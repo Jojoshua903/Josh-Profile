@@ -456,6 +456,60 @@ export const CHARS = [
      for (let i = 0; i < 6; i++){ const a = i/6*Math.PI*2, b = (i % 2 ? 0.5 : -0.5); mk(patches, S(0.09, 6, 4), M(INK), Math.cos(a)*0.25*Math.cos(b), Math.sin(b)*0.25, Math.sin(a)*0.25*Math.cos(b)); }
      return [t => { ball.rotation.y = t*6; ball.position.y = 0.65 + Math.abs(Math.sin(t*4))*0.08; }];
    }},
+  {id:'jorn', name:'Jorn', title:'Mobile Gamer', color:0x8a5cff, scale:0.8,
+   desc:'Lars’s little brother and Milo’s best friend. Never looks up from his phone, but somehow still knows exactly where everyone is. Level 412 in every racing game on the app store.',
+   mods:[0,1,1,-1,0], cd:15, ability:{name:'Lag Spike', icon:'📶', desc:'Turns his phone into a lag machine. Every racer close by freezes for a moment like a bad connection, while Jorn speeds past.'},
+   build:{body:'buggy', wheels:'tiny', paint:0x8a5cff, accent:0x3ccf6e},
+   draw(g){
+     person(g, {shirt:0x8a5cff, hair:0x5a3416, mouth:'smirk', brows:'flat', browColor:0x5a3416, lh:[-0.15, 0.42, 0.78], rh:[0.15, 0.42, 0.78]});
+     // hoodie: hood down behind the head, white strings
+     mk(g, S(0.42, 12, 10), M(0x6c44d8), 0, 0.55, -0.48).scale.set(1.3, 0.8, 0.8);
+     [-1, 1].forEach(s => mk(g, C(0.025, 0.025, 0.3, 6), M(0xffffff), s*0.12, 0.3, 0.6));
+     // big gaming headphones with green lights
+     mk(g, TOR(0.66, 0.06, Math.PI, 16), M(INK), 0, 0.92, 0);
+     [-1, 1].forEach(s => { mk(g, C(0.2, 0.2, 0.14, 14), M(INK), s*0.64, 0.88, 0, 0, 0, Math.PI/2); mk(g, C(0.12, 0.12, 0.02, 12), BM(0x3ccf6e), s*0.72, 0.88, 0, 0, 0, Math.PI/2); });
+     // the phone, held in both hands, screen tilted up at his face, with a tiny game running on it
+     const ph = group(g, 0, 0.45, 0.82, 0.9, 0, 0);
+     mk(ph, BX(0.34, 0.52, 0.05), M(INK));
+     mk(ph, BX(0.28, 0.44, 0.01), BM(0x1a2a4a), 0, 0, -0.03);
+     const dot = mk(ph, BX(0.06, 0.06, 0.01), BM(0xffd23f), 0, 0, -0.04), dot2 = mk(ph, BX(0.05, 0.05, 0.01), BM(0xff3b5c), 0, 0.12, -0.04);
+     return [t => { dot.position.set(Math.sin(t*3)*0.1, Math.cos(t*2.3)*0.15, -0.04); dot2.position.x = Math.sin(t*1.7 + 2)*0.1; dot2.visible = (t*3 % 1) < 0.8; }];
+   }},
+  {id:'maciej', name:'Maciej', title:'The Tank Dino', color:0x556b2f,
+   desc:'A dinosaur who loves tanks and everything about World War II. He knows every tank ever built, reads history books for fun, and drives his kart like it has tracks and armour.',
+   mods:[0,-1,-1,2,1], cd:18, ability:{name:'Tank Shell', icon:'💥', desc:'Fires his kart’s cannon: a heavy shell flies at the racer ahead and explodes, spinning out everyone near the blast. The recoil comes with armour plating, so he can’t be hit for a moment.'},
+   build:{body:'monster', wheels:'standard', paint:0x556b2f, accent:0x8b7d5a},
+   draw(g){
+     const dino = M(0x4caf50), belly = M(0xc8e6a0);
+     // dino body with a pale belly
+     mk(g, C(0.58, 0.7, 1.0, 14), dino);
+     mk(g, S(0.45, 12, 10), belly, 0, 0.05, 0.32).scale.set(1, 1.1, 0.6);
+     // head with angry eyebrows and a long snout full of teeth
+     mk(g, S(0.6, 18, 14), dino, 0, 0.9, 0);
+     face(g, {mouth:'none', brows:'angry'}, 0.95, 0.6, 0.06);
+     mk(g, BX(0.62, 0.34, 0.6), dino, 0, 0.66, 0.55);
+     [-1, 1].forEach(s => mk(g, S(0.04, 6, 4), M(INK), s*0.12, 0.8, 0.85));
+     for (let i = 0; i < 5; i++) mk(g, new THREE.ConeGeometry(0.04, 0.1, 5), M(0xffffff), -0.22 + i*0.11, 0.46, 0.82, Math.PI);
+     // tiny T. rex arms on the wheel
+     [-1, 1].forEach(s => { limb(g, [s*0.5, 0.3, 0.2], [s*0.3, 0.2, 0.62], 0.1, dino); mk(g, S(0.1, 8, 6), dino, s*0.3, 0.2, 0.66); });
+     // spikes down the back, and a tail
+     for (let i = 0; i < 4; i++) mk(g, new THREE.ConeGeometry(0.12, 0.3, 6), M(0x2e7d32), 0, 1.3 - i*0.38, -0.5 - (i > 0 ? 0.12 : 0), -0.5);
+     const tail = mk(g, new THREE.ConeGeometry(0.32, 1.3, 10), dino, 0, -0.3, -1.0, -Math.PI/2 - 0.25);
+     // olive WW2 army helmet with a chin strap and a white star
+     mk(g, HALF(0.66), M(0x556b2f), 0, 1.12, -0.02);
+     mk(g, C(0.8, 0.8, 0.05, 22), M(0x4a5d28), 0, 1.12, -0.02);
+     mk(g, TOR(0.6, 0.025, Math.PI, 12), M(0x3a2a1a), 0, 1.0, 0.05, 0, 0, Math.PI);
+     const star = new THREE.Shape();
+     for (let i = 0; i < 10; i++){ const a = i/10*Math.PI*2 - Math.PI/2, r = i % 2 ? 0.06 : 0.14; i ? star.lineTo(Math.cos(a)*r, -Math.sin(a)*r) : star.moveTo(Math.cos(a)*r, -Math.sin(a)*r); }
+     mk(g, new THREE.ShapeGeometry(star), BM(0xffffff, {side:THREE.DoubleSide}), 0, 1.45, 0.58, -0.45);
+     // a tank turret bolted behind him, the cannon poking out past his shoulder
+     const tur = group(g, 0, 0.15, -0.95);
+     mk(tur, BX(0.95, 0.45, 0.8), M(0x556b2f));
+     mk(tur, C(0.3, 0.3, 0.12, 12), M(0x4a5d28), 0, 0.28, 0);
+     mk(tur, C(0.08, 0.08, 1.6, 10), M(0x3d4a22), 0.62, 0.05, 0.75, Math.PI/2);
+     mk(tur, C(0.11, 0.11, 0.16, 10), M(0x2a3318), 0.62, 0.05, 1.55, Math.PI/2);
+     return [t => { tur.rotation.y = Math.sin(t*0.7)*0.12; tail.rotation.y = Math.sin(t*3)*0.25; }];
+   }},
   // ---- secret racers (unlocked by easter eggs) ----
   {id:'casper', name:'Casper', title:'The Car Expert', color:0xe0201f, secret:true,
    desc:'A real autokenner. He knows every engine, every tyre and every top speed by heart, and he can tune any kart in seconds.',
