@@ -744,6 +744,19 @@ setInterval(() => LIC.sync(), 4000);
   body.two #timer{top:auto;bottom:18px}
   body.two #mini{width:130px;height:130px}
   body.two #p1tag{display:block}
+  /* dev tools */
+  #dbg{position:fixed;top:10px;right:10px;width:300px;max-height:calc(100vh - 20px);overflow:auto;z-index:60;background:rgba(29,26,47,.94);color:#e8e6ff;border:3px solid #8a5cff;border-radius:14px;padding:8px 10px;font:12px/1.35 ui-monospace,Menlo,Consolas,monospace;-webkit-text-stroke:0;text-shadow:none;user-select:text;-webkit-user-select:text}
+  #dbg.hidden{display:none}
+  #dbg .dbgh{display:flex;align-items:center;gap:6px;font-size:14px;margin-bottom:4px}#dbg .sp{flex:1}
+  #dbg pre{margin:4px 0 6px;white-space:pre-wrap;color:#b8f5c8;font:inherit}
+  #dbg details{border-top:1px solid #4a3f6a;padding:4px 0}#dbg summary{cursor:pointer;font-weight:bold;margin:2px 0}
+  #dbg .dbgrow{display:flex;gap:4px;align-items:center;margin:4px 0;flex-wrap:wrap}
+  #dbg .dbgrow label{min-width:34px}
+  #dbg button,#dbg select,#dbg input[type=number]{font:inherit;background:#3a3158;color:#fff;border:1px solid #8a5cff;border-radius:6px;padding:3px 6px;cursor:pointer}
+  #dbg button:hover{background:#5a4a8a}#dbg button.danger{border-color:#ff5c5c;color:#ffb3b3}
+  #dbg input[type=range]{flex:1}#dbg input[type=number]{width:80px}#dbg select{flex:1;min-width:0}
+  #dbg .dbgck{display:block;margin:3px 0;cursor:pointer}
+  #dbg .dbgfoot{opacity:.5;margin:6px 0 0}
   /* party: lobby */
   .screen[data-screen="party"]{flex-direction:column}
   .partywrap{display:grid;grid-template-columns:270px minmax(0,1fr) 250px;gap:18px;width:min(1180px,96vw);align-items:start}
@@ -886,6 +899,28 @@ setInterval(() => LIC.sync(), 4000);
   <div class="sticker" id="p2wrong">↩ WRONG WAY</div>
 </div>
 <div id="qhuds"></div>
+<div id="dbg" class="hidden">
+  <div class="dbgh"><b>🛠️ Dev tools</b><span class="sp"></span><button data-a="close" title="F2">✕</button></div>
+  <pre id="dbgStats"></pre>
+  <details open><summary>🏎️ Race</summary>
+    <div class="dbgrow"><label>Speed</label><input type="range" id="dbgTs" min="0" max="7" step="1" value="3"><span id="dbgTsV">1×</span></div>
+    <div class="dbgrow"><select id="dbgItem"></select><button data-a="item">Give item</button></div>
+    <div class="dbgrow"><button data-a="sp">⭐ Fill special</button><button data-a="boost">🔥 Boost</button><button data-a="star">🌟 Star</button></div>
+    <div class="dbgrow"><button data-a="last">🏁 Final lap</button><button data-a="fin">🏆 Finish now</button><button data-a="spin">💫 Spin me</button></div>
+    <div class="dbgrow"><button data-a="ahead">⏩ Jump ahead</button><button data-a="first">🥇 Jump to 1st</button></div>
+    <label class="dbgck"><input type="checkbox" id="dbgGod"> 🛡️ God mode (nothing hits you)</label>
+    <label class="dbgck"><input type="checkbox" id="dbgFreeze"> 🧊 Freeze the bots</label>
+    <label class="dbgck"><input type="checkbox" id="dbgWire"> 🕸️ Wireframe</label>
+  </details>
+  <details><summary>💾 Save data</summary>
+    <label class="dbgck"><input type="checkbox" id="dbgAll"> 🔓 All racers unlocked (this session)</label>
+    <div class="dbgrow"><button data-a="coins">🪙 +1000 coins</button><button data-a="story">📖 Open all story</button></div>
+    <div class="dbgrow"><button data-a="eggs">🥚 Unlock all eggs</button><button data-a="cups">🏆 Gold in every cup</button></div>
+    <div class="dbgrow"><label>Elo</label><input type="number" id="dbgElo" step="50" min="0" max="4000"><button data-a="elo">Set</button></div>
+    <div class="dbgrow"><button data-a="export">📋 Copy save</button><button data-a="wipe" class="danger">🗑️ Wipe save…</button></div>
+  </details>
+  <p class="dbgfoot">F2 or ` to open/close · cheats are off in online races</p>
+</div>
 <div class="sticker" id="mute">🔊</div>
 
 <div id="touch">
@@ -1221,6 +1256,8 @@ scene.add(sun, sun.target);
 
 // ---------- maps ----------
 const N = 800, LAPS = 3;
+// developer tools (F2 or ` to open, or ?debug in the address); the flags are only for this session
+const DBG = {on:false, ts:1, god:false, all:false, freeze:false, wire:false, fps:0};
 const THEMES = {
   meadow: {terrain:28, peak:0x3a8a3a, emoji:'🌳', tile:'#c4f0ae', sky:0x8fd3ff, ground:0x6ccf5a, hemiGround:0x5a9b3a, road:[0x5b5d6b,0x63657a], curb:[0xff3b3b,0xffffff], dash:0xfff3b0, arch:0x2f7bff, banner:'#ffd23f',
     grip:14, off:18, props:'trees', ring:'hills', hill:0x58b94a, tires:true, clouds:true},
@@ -2759,7 +2796,7 @@ function useItem(k){
   }
   if (k.isPlayer) updateItemHud();
 }
-const immune = k => k.star > 0 || k.ram > 0 || k.ghost > 0 || k.shield > 0;
+const immune = k => k.star > 0 || k.ram > 0 || k.ghost > 0 || k.shield > 0 || (DBG.god && k.human && !NET.racing);
 function blueMesh(){
   const m = new THREE.Group();
   m.add(new THREE.Mesh(new THREE.SphereGeometry(1.1, 14, 10), new THREE.MeshLambertMaterial({color:0x2f7bff})));
@@ -3839,7 +3876,7 @@ const UNLOCKS = {
   zennith:  {icon:'🥚', need:'Secret: an old-school cheat code on the title screen (↑ ↑ …) wakes the dark', ok:() => !!EGGS.zennith, prog:() => '🥚 easter egg'},
   ankervos: {icon:'🥚', need:'Secret: get fished out of the water 5 times in one race', ok:() => !!EGGS.ankervos, prog:() => '🥚 easter egg'},
 };
-const isUnlocked = i => STARTERS.includes(ROSTER[i].id) || !!UNLOCKS[ROSTER[i].id]?.ok();
+const isUnlocked = i => DBG.all || STARTERS.includes(ROSTER[i].id) || !!UNLOCKS[ROSTER[i].id]?.ok();
 const unlockedSet = () => ROSTER.map((c, i) => i).filter(isUnlocked);
 if (!isUnlocked(playerChoice)) playerChoice = ROSTER.findIndex(c => c.id === 'nathan');
 // call after saving progress: announces anyone who just became playable
@@ -5772,6 +5809,7 @@ function land(k){
 let MAX = 42, ACC = 26;
 const DRIFT_MINI = 1.3, DRIFT_SUPER = 2.6;   // seconds-ish of drift charge for a mini / super boost
 function stepKart(k, dt){
+  if (DBG.freeze && !k.human && !NET.racing){ k.speed = 0; k.boost = 0; }
   let gas = 0, steer = 0, drift = false;
   const inp = k.inp || keys, A = k.isPlayer && !k.padId ? OPTS : inp;   // garage assists: mine, or the ones an online player sent along with their keys
   if (k.human && !k.finished && !(k.auto > 0)){
@@ -6509,7 +6547,7 @@ function loop(now){
 // (browsers don't slow timers down in tabs that are playing sound, and the game always is)
 setInterval(() => { if (document.hidden && NET.role === 'host' && NET.racing) frame(performance.now()); }, 16);
 function frame(now){
-  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  const dt = Math.min(0.05, (now - last) / 1000) * DBG.ts; last = now; DBG.tick?.(now);
   musicTick();
   document.body.classList.toggle("in-menu", state === "menu");
   padTex.offset.y = (padTex.offset.y + dt * 1.5) % 1;
@@ -6618,6 +6656,68 @@ function frame(now){
 
   if (engine && !muted) updateEngine(player, dt);
   draw();
+}
+// ---------- dev tools ----------
+{
+  const TS = [0, 0.1, 0.25, 0.5, 1, 1.5, 2, 3], el = $('dbg'), me = () => player && karts.includes(player) ? player : null;
+  const live = () => state !== 'menu' && !NET.racing && me();   // race cheats only offline, in a race
+  let fT = performance.now(), fN = 0, statT = 0;
+  $('dbgItem').innerHTML = ITEM_IDS.map(id => `<option value="${id}">${ITEMDEF[id].icon} ${ITEMDEF[id].name}</option>`).join('');
+  $('dbgTs').value = TS.indexOf(1);
+  function dbgToggle(on = !DBG.on){ DBG.on = on; el.classList.toggle('hidden', !on); if (on){ $('dbgElo').value = RK.elo; stats(); } }
+  function stats(){
+    const k = me(), ri = renderer.info, mem = performance.memory;
+    const lines = [`FPS ${DBG.fps}  ·  ${ri.render.calls} draws  ·  ${(ri.render.triangles / 1000).toFixed(0)}k tris`,
+      `geo ${ri.memory.geometries}  tex ${ri.memory.textures}${mem ? `  ·  heap ${(mem.usedJSHeapSize / 1048576).toFixed(0)} MB` : ''}`,
+      `state ${state}${paused ? ' (paused)' : ''}  ·  screen ${screen}  ·  t ${raceTime.toFixed(1)}s`,
+      `mode ${mode}${gp ? ' gp' : ''}${story ? ' story' : ''}${ranked ? ' ranked' : ''}${party ? ` party×${party.slots.length}` : ''}${duo ? ' duo' : ''}  ·  karts ${karts.length}`];
+    if (typeof MAP !== 'undefined' && MAP) lines.push(`track ${MAP.name}`);
+    if (k) lines.push(`you ${k.name}  ·  ${ord(standings().indexOf(k) + 1)}  ·  lap ${k.lap}/${LAPS}`,
+      `spd ${k.speed.toFixed(1)}  idx ${k.idx}  prog ${k.prog}`, `pos ${k.pos.x.toFixed(0)}, ${(k.y || 0).toFixed(1)}, ${k.pos.z.toFixed(0)}  ${k.air ? '✈️ air' : ''}${k.drift ? ' 🌀' + k.drift : ''}`,
+      `item ${k.item || '–'}${k.uses > 1 ? '×' + k.uses : ''}  ·  special ${Math.round(Math.min(1, k.sp || 0) * 100)}%  ·  coins ${k.coins || 0}`);
+    if (NET.role) lines.push(`net ${NET.role} ${NET.code}  ·  ${RT.mode || '?'}  ·  rtt ${Math.round(NET.rtt * 1000)}ms  ·  delay ${Math.round(NET.delay * 1000)}ms`);
+    if (PAD.code) lines.push(`party ${PAD.code}  ·  phones ${Object.keys(PAD.pads).length}  ·  direct ${Object.values(PAD.rtc).filter(r => r.open).length}`);
+    lines.push(`wallet ${wallet}  ·  story ${storyProg}/${STORY.length}  ·  elo ${RK.elo}`);
+    $('dbgStats').textContent = lines.join('\n');
+  }
+  DBG.tick = now => {
+    fN++; if (now - fT >= 500){ DBG.fps = Math.round(fN * 1000 / (now - fT)); fN = 0; fT = now; }
+    if (DBG.on && now - statT > 250){ statT = now; stats(); }
+  };
+  const need = () => { if (live()) return true; toast(NET.racing ? '🛠️ Not in online races' : '🛠️ Start a race first'); return false; };
+  const A = {
+    close: () => dbgToggle(false),
+    item: () => { if (!need()) return; const k = me(), id = $('dbgItem').value; k.rolling = 0; k.item = id; k.uses = ITEMDEF[id].uses || 1; updateItemHud(); },
+    sp: () => { if (need()) me().sp = 1; },
+    boost: () => { if (need()) me().boost = Math.max(me().boost, 3); },
+    star: () => { if (need()){ me().star = 8; sfx('star', me()); } },
+    spin: () => { if (need()){ const g = DBG.god; DBG.god = false; hit(me(), 1); DBG.god = g; } },
+    last: () => { if (!need()) return; const k = me(); k.prog = (LAPS - 1) * N + k.idx; k.lap = LAPS; toast('🛠️ Final lap'); },
+    fin: () => { if (!need()) return; const k = me(); k.prog = LAPS * N + k.idx - 2; k.lap = LAPS; },
+    ahead: () => { if (!need()) return; const k = me(), i = (k.idx + 40) % N; k.prog += 40; k.idx = i; k.pos.copy(pts[i]); k.heading = Math.atan2(tans[i].x, tans[i].z); k.moveH = k.heading; k.speed = Math.max(k.speed, 20); },
+    first: () => { if (!need()) return; const k = me(), lead = standings()[0]; if (lead === k) return; const i = (lead.idx + 12) % N; k.prog = lead.prog + 12; k.idx = i; k.pos.copy(pts[i]); k.heading = Math.atan2(tans[i].x, tans[i].z); k.moveH = k.heading; },
+    coins: () => { addCoins(1000); toast('🪙 +1000'); },
+    story: () => { storyProg = STORY.length; try { localStorage.setItem('pgp-story', storyProg); } catch (e) {} toast('📖 All story chapters open'); if (screen === 'story') go('story'); },
+    eggs: () => { ROSTER.filter(c => c.secret).forEach(c => EGGS[c.id] = true); try { localStorage.setItem('pgp-eggs', JSON.stringify(EGGS)); } catch (e) {} toast('🥚 All secret racers unlocked'); },
+    cups: () => { CUPS.forEach(c => trophies[c.name] = 1); try { localStorage.setItem('pgp-trophies', JSON.stringify(trophies)); } catch (e) {} toast('🏆 Gold everywhere'); },
+    elo: () => { const v = Math.round(+$('dbgElo').value); if (!isFinite(v)) return; RK.elo = Math.max(0, v); RK.peak = Math.max(RK.peak, RK.elo); RK.pend = 0; saveRK(); toast(`🏅 Elo ${RK.elo}`); if (screen === 'ranked') renderRanked(); },
+    export: async () => { const o = {}; for (let i = 0; i < localStorage.length; i++){ const k = localStorage.key(i); if (/^(pgp|wt)-/.test(k)) o[k] = localStorage.getItem(k); }
+      try { await navigator.clipboard.writeText(JSON.stringify(o)); toast('📋 Save copied'); } catch (e){ console.log(o); toast('📋 Save written to the console'); } },
+    wipe: () => { if (!confirm('Wipe ALL save data (racers, coins, trophies, story, Elo)? This can’t be undone.')) return;
+      Object.keys(localStorage).filter(k => /^pgp-/.test(k)).forEach(k => localStorage.removeItem(k)); location.reload(); },
+  };
+  el.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (b) A[b.dataset.a]?.(); });
+  $('dbgTs').oninput = () => { DBG.ts = TS[+$('dbgTs').value]; $('dbgTsV').textContent = DBG.ts + '×'; };
+  $('dbgGod').onchange = e => DBG.god = e.target.checked;
+  $('dbgFreeze').onchange = e => DBG.freeze = e.target.checked;
+  $('dbgAll').onchange = e => { DBG.all = e.target.checked; refreshGarage?.(); if (screen === 'racer' || screen === 'garage') go(screen); };
+  $('dbgWire').onchange = e => { DBG.wire = e.target.checked; scene.traverse(o => { (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => { if (m && 'wireframe' in m) m.wireframe = DBG.wire; }); }); };
+  // keys inside the panel stay in the panel
+  el.addEventListener('keydown', e => e.stopPropagation());
+  addEventListener('keydown', e => {
+    if ((e.code === 'F2' || e.code === 'Backquote') && !e.target.closest?.('input:not(#dbg input), textarea')){ e.preventDefault(); e.stopImmediatePropagation(); dbgToggle(); }
+  }, true);
+  if (/[?&#]debug\b/.test(location.href)) dbgToggle(true);
 }
 requestAnimationFrame(loop);
 </script>
