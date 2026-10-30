@@ -9,7 +9,7 @@
 // Driving licenses: each license is a separate save. The game reads/writes the pgp-* keys;
 // the active license keeps a copy of them, and switching swaps the keys and reloads.
 window.LIC = (() => {
-  const KEYS = ['pgp-trophies', 'pgp-best', 'pgp-build', 'pgp-char', 'pgp-opts', 'pgp-story', 'pgp-coins', 'pgp-shop', 'pgp-builds', 'pgp-eggs', 'pgp-ranked'];
+  const KEYS = ['pgp-trophies', 'pgp-best', 'pgp-build', 'pgp-char', 'pgp-opts', 'pgp-story', 'pgp-coins', 'pgp-shop', 'pgp-builds', 'pgp-eggs', 'pgp-ranked', 'pgp-ghosts'];
   const REG = 'wt-licenses';
   const ls = (() => { try { const t = '__t'; localStorage.setItem(t, 1); localStorage.removeItem(t); return localStorage; } catch (e) { return null; } })();
   const uid = () => 'L' + Math.random().toString(36).slice(2, 8).toUpperCase() + Date.now().toString(36).slice(-3).toUpperCase();
@@ -744,6 +744,21 @@ setInterval(() => LIC.sync(), 4000);
   body.two #timer{top:auto;bottom:18px}
   body.two #mini{width:130px;height:130px}
   body.two #p1tag{display:block}
+  /* time trials */
+  #gdelta{top:64px;left:50%;transform:translateX(-50%) rotate(-2deg);font-size:20px;font-variant-numeric:tabular-nums;display:none;background:#ffd6d6;color:#b3001b}
+  #gdelta.ahead{background:#c8f7d4;color:#0f7a35}
+  body.two #gdelta, body.quad #gdelta{display:none!important}
+  .ttres{display:flex;flex-direction:column;align-items:center;gap:6px;margin:4px 0 10px}
+  .ttres b{font-size:44px;font-variant-numeric:tabular-nums}
+  .ttres span{font-size:15px}.ttres .won{color:#0f7a35}.ttres .lost{color:#b3001b}
+  .onlist .gh{font:inherit;font-size:12px;border:2px solid var(--ink);border-radius:8px;background:#e6f7ff;cursor:pointer;padding:0 6px;margin-left:6px}
+  .btn.tt{background:#bfe9ff}
+  /* mirror mode */
+  .btn.mir{font-size:16px;padding:6px 14px}
+  .btn.mir.on{background:linear-gradient(90deg,#bfe9ff,#fff,#bfe9ff);animation:mirshine 2.4s linear infinite;background-size:200% 100%}
+  @keyframes mirshine{to{background-position:-200% 0}}
+  .mirlock{opacity:.6}
+  .mirtag{display:block;font-size:14px;letter-spacing:3px;color:#2f7bff;margin-bottom:2px}
   /* dev tools */
   #dbg{position:fixed;top:10px;right:10px;width:300px;max-height:calc(100vh - 20px);overflow:auto;z-index:60;background:rgba(29,26,47,.94);color:#e8e6ff;border:3px solid #8a5cff;border-radius:14px;padding:8px 10px;font:12px/1.35 ui-monospace,Menlo,Consolas,monospace;-webkit-text-stroke:0;text-shadow:none;user-select:text;-webkit-user-select:text}
   #dbg.hidden{display:none}
@@ -867,6 +882,7 @@ setInterval(() => LIC.sync(), 4000);
 <div class="hud sticker" id="pos">1<sup>st</sup></div>
 <div class="hud sticker" id="lap">LAP 1 / 3</div>
 <div class="hud sticker" id="timer">0:00.00</div>
+<div class="hud sticker" id="gdelta"></div>
 <div class="hud sticker" id="itembox"><div class="slot"><span id="itemicon"></span></div><span id="itemcount"></span><span id="itemname"></span></div>
 <div class="hud" id="ink"></div>
 <div class="hud sticker" id="itemhint">SPACE item · E special</div>
@@ -1869,9 +1885,14 @@ function animateWorld(dt){
   hemi.intensity += (base - hemi.intensity) * Math.min(1, dt * 5);
 }
 
+// mirror mode (unlocked by gold in every cup): every track flipped left-to-right. Not in story, tutorial, ranked or online
+let mirror = false;   // restored from OPTS once the options are loaded
+const mirrorOK = () => goldCount() >= CUPS.length || DBG.all;
+const wantMir = () => mirror && mirrorOK() && !NET.racing && !story && !tut && !ranked;
+const tkey = () => MAP.name + (world?.userData.mir ? ' (Mirror)' : '');   // mirrored tracks keep their own best times and world records
 function buildWorld(def){
   if (world) scene.remove(world);
-  world = new THREE.Group(); scene.add(world); MAP = def; W = def.w;
+  world = new THREE.Group(); scene.add(world); MAP = def; W = def.w; world.userData.mir = wantMir();
   const T = def.timeDef || {};
   scene.background = new THREE.Color(def.sky); scene.fog = new THREE.Fog(def.sky, ...(T.fog || [180, 560]));
   hemi.groundColor.set(def.hemiGround); hemi.color.set(T.tint ? new THREE.Color(0xffffff).lerp(new THREE.Color(T.tint), 0.4) : 0xffffff);
@@ -1879,7 +1900,7 @@ function buildWorld(def){
   sun.color.set(T.sun ?? 0xfff2d0); sun.intensity = T.sunI ?? 2.2;
 
   const sc = def.scale || 1;
-  const ctrl = def.ctrl.map(([x, z]) => new THREE.Vector3(x*sc, 0, z*sc));
+  const mx = world.userData.mir ? -1 : 1, ctrl = def.ctrl.map(([x, z]) => new THREE.Vector3(x*sc*mx, 0, z*sc));
   pts = new THREE.CatmullRomCurve3(ctrl, true, 'centripetal').getSpacedPoints(N).slice(0, N);
   tans = pts.map((_, i) => pts[(i+1)%N].clone().sub(pts[(i-1+N)%N]).normalize());
   nors = tans.map(t => new THREE.Vector3(-t.z, 0, t.x));
@@ -2306,6 +2327,7 @@ function stepPart(d){
 }
 const OPTS = {smart:false, auto:false, adrift:false};
 try { Object.assign(OPTS, JSON.parse(localStorage.getItem('pgp-opts') || '{}')); } catch (e) {}
+mirror = !!OPTS.mirror;
 function saveOpts(){ try { localStorage.setItem('pgp-opts', JSON.stringify(OPTS)); } catch (e) {} }
 function toggleOpt(o){
   OPTS[o] = !OPTS[o]; saveOpts();
@@ -2807,6 +2829,7 @@ function blueMesh(){
 function hit(k, power = 1, by = null){
   if (immune(k) || k.spin > 0) return false;
   k.spin = 1.1 * power; k.speed *= power < 1 ? 0.5 : 0.25; k.boost = 0; k.drift = 0; k.driftCharge = 0;
+  if (k.human) gpRumble(k, Math.min(1, 0.5 + power * 0.3), 260);
   if (k.isPlayer){ toast('Ouch!'); sfx('hit'); }
   if (by && by !== k && karts.includes(by)) emote(by);
   return true;
@@ -3364,6 +3387,72 @@ const doSpecial = p => NETC() ? netPress('p') : useSpecial(p);
 const doReset = p => { if (NETC()) netPress('r'); manualReset(p); };
 addEventListener('keydown', e => { if (e.code === 'KeyM' && !e.target.closest?.('input')) setMute(!muted); });
 addEventListener('keyup', e => { const r = route(e.code); if (r) r[1][r[0]] = false; });
+// ---------- controllers (Gamepad API, standard layout: Xbox / PlayStation / Switch Pro) ----------
+// Racing: left stick or d-pad steers (the stick is analog), A or RT gas, B or LT brake, RB drift / trick, LB item,
+// X special, Y look back, Back/Select reset, Start pause. In menus the d-pad / stick move, A picks, B goes back.
+// Controller 1 drives P1; in 2-player and party races controller 2 drives P2 (or the arrow-keys player).
+const GP = {prev:{}, held:{}, rep:{}, seen:{}};
+const GPB = {gas:[0, 7], brake:[1, 6], drift:[5], item:[4], special:[2], back:[3], reset:[8], start:[9], up:[12], down:[13], left:[14], right:[15]};
+const gpDown = (g, ids) => ids.some(i => { const b = g.buttons[i]; return b && (b.pressed || b.value > 0.5); });
+function gpTarget(n){
+  if (n === 0) return party && state !== 'menu' ? [keys, party.kb.wasd] : [keys, player];
+  if (n === 1) return party && state !== 'menu' ? [keys2, party.kb.arrows] : duo && state !== 'menu' ? [keys2, player2] : null;
+  return null;
+}
+function gpKey(code, key){
+  const t = document.activeElement && document.activeElement !== document.body ? document.activeElement : document.body;
+  t.dispatchEvent(new KeyboardEvent('keydown', {code, key, bubbles:true, cancelable:true}));
+  t.dispatchEvent(new KeyboardEvent('keyup', {code, key, bubbles:true, cancelable:true}));
+}
+function gpRumble(k, strong = 0.7, ms = 220){
+  const n = k === player || k?.pn === 1 ? 0 : (k === player2 || k?.pn === 2) ? 1 : -1;
+  if (n < 0) return;
+  const g = [...(navigator.getGamepads?.() || [])].filter(Boolean)[n];
+  try { g?.vibrationActuator?.playEffect('dual-rumble', {duration:ms, strongMagnitude:strong, weakMagnitude:strong * 0.6}); } catch (e) {}
+}
+function gpPoll(dt){
+  const pads = [...(navigator.getGamepads?.() || [])].filter(g => g && g.connected);
+  if (!pads.length) return;
+  const racing = state !== 'menu' && !paused && $('results').classList.contains('hidden');
+  pads.forEach((g, n) => {
+    const id = g.index, prev = GP.prev[id] ||= {}, now = {}, x = g.axes[0] || 0, y = g.axes[1] || 0;
+    for (const k in GPB) now[k] = gpDown(g, GPB[k]);
+    now.left ||= x < -0.5; now.right ||= x > 0.5; now.up ||= y < -0.5; now.down ||= y > 0.5;
+    const edge = k => now[k] && !prev[k];
+    if (racing){
+      const t = gpTarget(n);
+      if (t){
+        const [ks, p] = t;
+        // held buttons: only write on change, so the keyboard keeps working next to the controller
+        for (const k of ['gas', 'brake', 'drift', 'back', 'left', 'right']) if (now[k] !== prev[k]) ks[k] = now[k];
+        ks.ax = NET.racing ? 0 : Math.abs(x) > 0.18 ? -Math.sign(x) * Math.min(1, (Math.abs(x) - 0.18) / 0.7) : 0;
+        if (p){
+          if (edge('drift') && p.air) doTrick(p);
+          if (edge('item')) doItem(p);
+          if (edge('special')) doSpecial(p);
+          if (edge('reset')) doReset(p);
+        }
+      }
+      if (n === 0 && edge('start')) gpKey('KeyP', 'p');
+    } else if (n === 0 || !GP.solo){
+      // menus: d-pad / stick with key repeat, A = Enter, B = Escape, Start = Enter
+      for (const [k, code] of [['up', 'ArrowUp'], ['down', 'ArrowDown'], ['left', 'ArrowLeft'], ['right', 'ArrowRight']]){
+        const r = GP.rep[id + k] ??= 0;
+        if (edge(k)){ gpKey(code, code); GP.rep[id + k] = 0.38; }
+        else if (now[k]){ GP.rep[id + k] = r - dt; if (GP.rep[id + k] <= 0){ gpKey(code, code); GP.rep[id + k] = 0.11; } }
+      }
+      if (edge('gas') && g.buttons[0]?.pressed) gpKey('Enter', 'Enter');
+      if (edge('start')) gpKey(paused ? 'KeyP' : 'Enter', paused ? 'p' : 'Enter');
+      if (edge('brake') && g.buttons[1]?.pressed) gpKey('Escape', 'Escape');
+      // let go of anything still held when the race ends
+      const t = gpTarget(n); if (t) for (const k of ['gas', 'brake', 'drift', 'back', 'left', 'right']) if (prev[k]) t[0][k] = false;
+      if (t) t[0].ax = 0;
+    }
+    GP.prev[id] = now;
+  });
+}
+addEventListener('gamepadconnected', e => { toast(`🎮 Controller ${e.gamepad.index + 1} connected`); blip.ok?.(); });
+addEventListener('gamepaddisconnected', e => { toast(`🎮 Controller ${e.gamepad.index + 1} disconnected`); const t = gpTarget(e.gamepad.index); if (t){ Object.assign(t[0], {gas:false, brake:false, drift:false, back:false, left:false, right:false, ax:0}); } delete GP.prev[e.gamepad.index]; });
 // iPhones ignore user-scalable=no: stop pinch and double-tap zoom by hand
 ['gesturestart', 'gesturechange', 'dblclick'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), {passive:false}));
 if ('ontouchstart' in window){
@@ -3925,7 +4014,7 @@ let trackTimer = 0;
 function showTrack(i, lazy = false){
   mapChoice = i;
   clearTimeout(trackTimer);
-  if (world && MAP === MAPS[i]) return;
+  if (world && MAP === MAPS[i] && world.userData.mir === wantMir()) return;
   if (lazy) trackTimer = setTimeout(() => buildWorld(MAPS[i]), 160); else buildWorld(MAPS[i]);
 }
 
@@ -4184,9 +4273,9 @@ function onlinePlayer(){
 // posts the result to the live feed and your time to the world records; resolves to your world rank on that track
 async function onlineRace(place, time){
   if (!sharing() || tut) return null;
-  const m = me(), ch = ROSTER[playerChoice].id, key = fbKey(MAP.name);
+  const m = me(), ch = ROSTER[playerChoice].id, key = fbKey(tkey());
   onlinePlayer();
-  fb('feed', {method:'POST', body:{name:m.name, char:ch, track:MAP.name, place, time:time || 0, mode: gp ? CUPS[gp.cup].cc : story ? 'story' : ranked ? 'ranked' : 'single', ts:{'.sv':'timestamp'}}});
+  fb('feed', {method:'POST', body:{name:m.name, char:ch, track:tkey(), place, time:time || 0, mode: gp ? CUPS[gp.cup].cc : story ? 'story' : ranked ? 'ranked' : 'single', ts:{'.sv':'timestamp'}}});
   if (!time) return null;
   const mine = await fb(`times/${key}/${m.id}`);
   if (fbOK === false) return null;
@@ -4233,13 +4322,16 @@ function renderFeed(){
 }
 async function renderTimes(){
   const t = ON.track, data = await fb(`times/${fbKey(t)}`); if (ON.track !== t) return;
+  let gids = {}; try { const r = await fetch(`${FB}/ghosts/${fbKey(t)}.json?shallow=true`); gids = (r.ok && await r.json()) || {}; } catch (e) {}
+  if (ON.track !== t) return;
   const m = me(), all = Object.entries(data || {}).sort((a, b) => a[1].t - b[1].t);
   // you: by your id, or (for times set before ids stuck) by your driver name
   let mi = all.findIndex(([id]) => id === m.id); if (mi < 0) mi = all.findIndex(([, v]) => v.name === m.name);
-  const row = ([id, v], i) => `<li class="${i === mi ? 'me' : ''}"><b>${i < 3 ? ['🥇','🥈','🥉'][i] : i + 1}</b>${face(v.char)}<span class="n">${esc(v.name)}${i === mi ? ' (you)' : ''}</span><span class="r">${fmt(v.t)}</span></li>`;
+  const row = ([id, v], i) => `<li class="${i === mi ? 'me' : ''}"><b>${i < 3 ? ['🥇','🥈','🥉'][i] : i + 1}</b>${face(v.char)}<span class="n">${esc(v.name)}${i === mi ? ' (you)' : ''}</span><span class="r">${fmt(v.t)}${gids[id] ? `<button class="gh" data-gid="${esc(id)}" title="Race this ghost">👻</button>` : ''}</span></li>`;
   $('onTimes').innerHTML = all.length ? all.slice(0, 10).map(row).join('')
       + (mi >= 10 ? `<li class="gap">⋯ ${mi - 10 > 0 ? `${mi - 10} more` : ''}</li>${row(all[mi], mi)}` : '')
     : `<li class="empty">No times on ${esc(t)} yet. Set the first world record!</li>`;
+  $('onTimes').querySelectorAll('[data-gid]').forEach(b => b.onclick = () => { blip.ok(); raceGhost(t, b.dataset.gid); });
   const mine = bests[t];
   $('onMine').textContent = mi >= 0 ? `You’re #${mi + 1} of ${all.length} in the world here${mine ? ` · your best on this device: ${fmt(mine)}` : ''}`
     : mine ? `Your best here: ${fmt(mine)} · not on the world list yet (turn on sharing and race it again)` : 'You haven’t raced this track yet.';
@@ -4968,14 +5060,29 @@ mainBtns.forEach((b, i) => hookNav(b, i, () => {
 }, () => go(b.dataset.go)));
 
 // cups
+// the mirror switch on the track and cup screens (F flips it), shown once mirror mode is unlocked
+const mirrorBtn = () => mirrorOK() ? `<button class="btn ${mirror ? 'mir on' : 'ghost mir'}" id="mirBtn">🪞 Mirror ${mirror ? 'ON' : 'off'} <kbd>F</kbd></button>`
+  : `<p class="fine mirlock">🔒 🪞 Mirror mode: win gold in every cup</p>`;
+function setMirror(on){
+  if (!mirrorOK()) return;
+  mirror = on; OPTS.mirror = on; saveOpts(); blip.ok();
+  if (screen === 'tracks'){ trackInfo(mapChoice); showTrack(mapChoice, true); }
+  if (screen === 'cups'){ cupInfo(cupChoice); showTrack(TRACKS.indexOf(byName(CUPS[cupChoice].tracks[0])), true); }
+}
+function hookMirror(){ const b = $('mirBtn'); if (b) b.onclick = () => setMirror(!mirror); }
+addEventListener('keydown', e => {
+  if (e.code !== 'KeyF' || state !== 'menu' || !['tracks', 'cups'].includes(screen) || e.target.closest?.('input')) return;
+  e.preventDefault(); setMirror(!mirror);
+});
 function cupInfo(i){
   const c = CUPS[i], t = trophies[c.name];
   $('cupinfo').innerHTML = `<div class="big">${c.emoji}</div><h2>${c.name}</h2>
     <div><span class="tag">${c.cc}</span> ${t ? `&nbsp;${MEDAL[t]} best finish: ${ord(t)}` : '&nbsp;No trophy yet'}</div>
     <ol>${c.tracks.map(n => `<li>${THEMES[byName(n).theme].emoji} ${n}</li>`).join('')}</ol>
     <p class="fine">${c.tracks.length} races · points 15 / 12 / 10 / 8 / 6 / 4 / 2 / 1 · finish top 3 overall for a trophy</p>
+    ${mirrorBtn()}
     <button class="btn go" id="cupGo">Choose ▸</button>`;
-  $('cupGo').onclick = () => { blip.ok(); pickCup(); };
+  $('cupGo').onclick = () => { blip.ok(); pickCup(); }; hookMirror();
 }
 function pickCup(){ mode = 'gp'; go('racer'); }
 function renderCups(){
@@ -4993,13 +5100,15 @@ function renderCups(){
 
 // tracks
 function trackInfo(i){
-  const m = MAPS[i], cup = CUPS.find(c => c.tracks.includes(m.name)), b = bests[m.name];
-  $('trackinfo').innerHTML = `<div class="big">${m.emoji}</div><h2>${m.name}</h2>
+  const m = MAPS[i], cup = CUPS.find(c => c.tracks.includes(m.name)), mir = mirror && mirrorOK(), b = bests[m.name + (mir ? ' (Mirror)' : '')];
+  $('trackinfo').innerHTML = `<div class="big">${m.emoji}</div><h2>${m.name}${mir ? ' 🪞' : ''}</h2>
     <div><span class="tag">${m.tag}</span></div>
     <p class="fine">Part of the ${cup.emoji} ${cup.name}<br>Road width ${m.w} · ${m.pads.length} boost pad${m.pads.length === 1 ? '' : 's'}${m.grip < 6 ? ' · icy' : ''}<br>${[m.hills && '⛰️ hills', m.jumps && '🛹 jumps', m.glides && '🪂 glider gap', m.walls && '🌀 wall ride', m.terrain && !m.water && '🏔️ 3D landscape'].filter(Boolean).join(' · ')}</p>
     <p>⏱️ Best time: <b>${b ? fmt(b) : '—'}</b></p>
-    <button class="btn go" id="trackGo">Choose ▸</button>`;
-  $('trackGo').onclick = () => { blip.ok(); pickTrack(); };
+    ${mirrorBtn()}
+    <div class="btnrow"><button class="btn tt" id="trackTT">⏱️ Time trial${ghostsLocal[m.name + (mir ? ' (Mirror)' : '')] ? ' 👻' : ''}</button><button class="btn go" id="trackGo">Race ▸</button></div>`;
+  $('trackGo').onclick = () => { blip.ok(); pickTrack(); }; hookMirror();
+  $('trackTT').onclick = () => { blip.ok(); TT_VS = null; mode = 'tt'; go('racer'); };
 }
 function pickTrack(){ mode = 'single'; go('racer'); }
 
@@ -5411,7 +5520,7 @@ function renderMaps(){
 function racerInfo(){
   $('startBtn').disabled = false;
   const r = ROSTER[playerChoice];
-  const where = mode === 'ranked' ? `🏅 Ranked · ${tierOf(RK.elo).icon} ${RK.elo} Elo · random track` : mode === 'gp' ? `${CUPS[cupChoice].emoji} ${CUPS[cupChoice].name} · ${CUPS[cupChoice].cc}` : `${MAPS[mapChoice].emoji} ${MAPS[mapChoice].name}`;
+  const where = mode === 'tt' ? `⏱️ Time trial · ${MAPS[mapChoice].emoji} ${MAPS[mapChoice].name}${TT_VS ? ' · vs a ghost 👻' : ''}` : mode === 'ranked' ? `🏅 Ranked · ${tierOf(RK.elo).icon} ${RK.elo} Elo · random track` : mode === 'gp' ? `${CUPS[cupChoice].emoji} ${CUPS[cupChoice].name} · ${CUPS[cupChoice].cc}` : `${MAPS[mapChoice].emoji} ${MAPS[mapChoice].name}`;
   const mods = r.mods.map((v, i) => v ? `<span class="mod ${v > 0 ? 'up' : 'down'}">${v > 0 ? '+' : ''}${v} ${STAT_LABEL[STAT_KEYS[i]]}</span>` : '').join('');
   $('racerinfo').innerHTML = `<h2>${r.name} ${r.villain ? '<span class="tag vil">Villain</span>' : r.star ? '<span class="tag">Main character</span>' : ''}</h2>
     <p class="title">${r.title}</p><p class="fine">${r.desc}</p>
@@ -5660,7 +5769,7 @@ function launch(){
   beep(200, .7, 'sawtooth', .07, 4);
   setTimeout(() => {
     previewOn = false;
-    if (mode === 'gp') startCup(cupChoice); else if (mode === 'ranked') startRanked(); else { gp = null; $('menu').classList.add('hidden'); showTrack(mapChoice); setupRace(); }
+    if (mode === 'gp') startCup(cupChoice); else if (mode === 'ranked') startRanked(); else if (mode === 'tt') startTT(); else { gp = null; $('menu').classList.add('hidden'); showTrack(mapChoice); setupRace(); }
   }, 520);
   setTimeout(() => w.classList.remove('run'), 1200);
 }
@@ -5675,7 +5784,7 @@ function openMenu(){
   if (tut){ mapChoice = tut.prevMap; tut = null; } $('tut').classList.remove('on');
   if (duo){ playerChoice = duo.prev; duo = null; refreshGarage(); } player2 = null; document.body.classList.remove('two'); resize();
   if (party){ playerChoice = party.prev; party = null; refreshGarage(); padOut(true); } document.body.classList.remove('quad'); $('qhuds').innerHTML = ''; QH.length = 0;
-  clearRace(); gp = null; ranked = null; state = 'menu';
+  clearRace(); ghostsClear(); tt = null; gp = null; ranked = null; state = 'menu';
   $('results').classList.add('hidden'); $('intro').style.display = 'none'; menuEl.classList.remove('hidden');
   trail = ['title']; const cur = screen; screen = null;
   menuEl.querySelectorAll('.screen').forEach(s => s.classList.remove('on', 'in-fwd', 'in-back', 'out-fwd', 'out-back'));
@@ -5697,7 +5806,7 @@ function setupRace(){
   MAX = 42 * (cup ? cup.speed : 1); ACC = 26 * (cup ? cup.speed : 1);
   const aiBase = cup ? cup.ai : 0.9;
   boxes.forEach(b => { b.respawn = 0; b.mesh.visible = true; }); coins.forEach(c => { c.respawn = 0; c.mesh.visible = true; });
-  const field = NET.racing ? [] : party ? partyField() : duo ? duoField() : gp ? gp.field : story ? [playerChoice, ...cup.rivals.map(rid).filter(i => i >= 0 && i !== playerChoice)].slice(0, FIELD_SIZE)
+  const field = NET.racing ? [] : tt ? [playerChoice] : party ? partyField() : duo ? duoField() : gp ? gp.field : story ? [playerChoice, ...cup.rivals.map(rid).filter(i => i >= 0 && i !== playerChoice)].slice(0, FIELD_SIZE)
     : tut ? [playerChoice, ...TUT_SET.rivals.map(rid).filter(i => i !== playerChoice).slice(0, 2)] : pickField();
   // in a cup the grid is reverse standings, so the leader starts at the back
   let order = field.filter(i => i !== playerChoice && i !== duo?.p2); if (duo) order.push(duo.p2); order.push(playerChoice);
@@ -5732,6 +5841,8 @@ function setupRace(){
     karts.push(k); if (k.isPlayer) player = k; if (k.isP2) player2 = k;
   });
   if (ranked) rankedBegin(aiBase);
+  if (tt) ttSetup();
+  ghostRecStart();
   if (party) partySetup();
   document.body.classList.toggle('two', !!player2 && !party?.quad); document.body.classList.toggle('quad', !!party?.quad);
   if (player2){ const w = player2.pos; cs2.pos.set(w.x, 30, w.z); cs2.look.copy(w); cs2.up.set(0, 1, 0); $('p2coin').textContent = ''; }
@@ -5741,7 +5852,8 @@ function setupRace(){
   $('coinhud').textContent = '🪙 0';
   $('intro').innerHTML = tut ? `🎓 Tutorial<b>${MAP.name}</b><span class="goal">Follow the instructions at the top</span>`
     : story ? `📖 Chapter ${story.ch + 1}: ${cup.title}<b>${MAP.name}</b><span class="goal">🎯 ${goalText(cup.goal)}</span>`
-    : gp ? `${cup.emoji} ${cup.name} · Race ${gp.race + 1} of ${cup.tracks.length}<b>${MAP.name}</b>` : NET.racing ? `🌐 Online race · room ${NET.code}<b>${MAP.name}</b>` : party ? `🎉 Party · ${party.slots.length} player${party.slots.length > 1 ? 's' : ''}<b>${MAP.name}</b>` : ranked ? `🏅 Ranked · ${tierOf(RK.elo).icon} ${ranked.base} Elo · ${ccOf(ranked.set.speed)}<b>${MAP.name}</b><span class=goal>Beat the bots to climb</span>` : `${MAP.emoji} Single race<b>${MAP.name}</b>`;
+    : gp ? `${cup.emoji} ${cup.name} · Race ${gp.race + 1} of ${cup.tracks.length}<b>${MAP.name}</b>` : NET.racing ? `🌐 Online race · room ${NET.code}<b>${MAP.name}</b>` : tt ? `⏱️ Time trial<b>${MAP.name}</b><span class="goal">${tt.ghosts.length ? 'Beat the ghost 👻' : 'Set a time · your ghost is saved'}</span>` : party ? `🎉 Party · ${party.slots.length} player${party.slots.length > 1 ? 's' : ''}<b>${MAP.name}</b>` : ranked ? `🏅 Ranked · ${tierOf(RK.elo).icon} ${ranked.base} Elo · ${ccOf(ranked.set.speed)}<b>${MAP.name}</b><span class=goal>Beat the bots to climb</span>` : `${MAP.emoji} Single race<b>${MAP.name}</b>`;
+  if (world?.userData.mir) $('intro').insertAdjacentHTML('afterbegin', '<span class="mirtag">🪞 MIRROR</span>');
   $('intro').style.display = 'block'; setTimeout(() => { if (state !== 'menu') $('intro').style.display = 'none'; }, story ? 4200 : 3200);
 }
 
@@ -5814,7 +5926,7 @@ function stepKart(k, dt){
   const inp = k.inp || keys, A = k.isPlayer && !k.padId ? OPTS : inp;   // garage assists: mine, or the ones an online player sent along with their keys
   if (k.human && !k.finished && !(k.auto > 0)){
     gas = (inp.gas ? 1 : 0) - (inp.brake ? 1 : 0);
-    steer = (inp.left ? 1 : 0) - (inp.right ? 1 : 0);
+    steer = inp.ax || ((inp.left ? 1 : 0) - (inp.right ? 1 : 0));   // a controller stick steers analog
     drift = !!inp.drift;
     // assists from the garage control panel (P1 and online players; P2 drives without them)
     if (A.auto && !inp.brake) gas = 1;
@@ -6208,8 +6320,9 @@ function duoResults(all){
 }
 function endRace(){
   state = 'finished'; toast('FINISH!'); jingle(player.finishRank <= 3 || !!player2);
-  if (!player2 && !party && player.finishTime && (!bests[MAP.name] || player.finishTime < bests[MAP.name])){
-    const had = !!bests[MAP.name]; bests[MAP.name] = player.finishTime;
+  if (!player2 && !party && player.finishTime && (!bests[tkey()] || player.finishTime < bests[tkey()])){
+    const had = !!bests[tkey()]; bests[tkey()] = player.finishTime;
+    ghostSave(player.finishTime); if (tt) tt.pb = true;
     try { localStorage.setItem('pgp-best', JSON.stringify(bests)); } catch (e) {}
     if (had) setTimeout(() => toast('⏱️ New best time!'), 1300);
   }
@@ -6230,10 +6343,11 @@ function endRace(){
       $('resBody').innerHTML = `<div class="grid">${all.map((k, i) => `<div class="row single ${k.isPlayer ? 'me' : ''}"><b>${i+1}</b><span class="n">${dot(k)}${k.name}${k.isPlayer ? ' (you)' : k.ri === rv ? ' 🎯' : k.boss ? ' 👑' : ''}</span><span class="r">${k.finished ? fmt(k.finishTime) : '—'}</span></div>`).join('')}</div>`;
       if (ok) button(story.ch < STORY.length - 1 ? 'Continue the story ▸' : 'See the ending ▸', '', storyAfter);
       else { button('Retry ↻', '', () => { $('results').classList.add('hidden'); setupRace(); }); button('Story menu', 'ghost', storyMenu); }
+    } else if (tt){ ttResults();
     } else if (ranked){ rankedResults(all, place);
     } else if (!gp){
       $('resTitle').innerHTML = place === 1 ? '🏆 You won!' : place <= 3 ? `🎉 ${ord(place)} place!` : `${ord(place)} place`;
-      $('resSub').textContent = MAP.name;
+      $('resSub').textContent = tkey();
       $('resBody').innerHTML = `<div class="grid">${all.map((k, i) => `<div class="row single ${k.isPlayer ? 'me' : ''}"><b>${i+1}</b><span class="n">${dot(k)}${k.name}${k.isPlayer ? ' (you)' : ''}</span><span class="r">${k.finished ? fmt(k.finishTime) : '—'}</span></div>`).join('')}</div>`;
       button('Race again', '', () => { $('results').classList.add('hidden'); setupRace(); });
       button('Menu', 'alt', openMenu);
@@ -6251,8 +6365,8 @@ function endRace(){
       else button('See cup results 🏆', '', cupResults);
       button('Quit cup', 'ghost', openMenu);
     }
-    const prize = raceCoins(place);
-    if (!tut) onlineRace(place, player.finished ? player.finishTime : 0).then(r => { if (r && state === 'finished') $('resBody').insertAdjacentHTML('afterbegin', `<p class="worldrank">🌍 ${r <= 10 ? '' : 'You’re '}#${r} in the world on ${esc(MAP.name)}${r <= 10 ? '!' : ''}</p>`); });
+    const prize = tt ? 0 : raceCoins(place);
+    if (!tut) onlineRace(place, player.finished ? player.finishTime : 0).then(r => { if (r && state === 'finished') $('resBody').insertAdjacentHTML('afterbegin', `<p class="worldrank">🌍 ${r <= 10 ? '' : 'You’re '}#${r} in the world on ${esc(tkey())}${r <= 10 ? '!' : ''}</p>`); });
     $('resBody').insertAdjacentHTML('beforeend', `<p class="coinsum">🪙 +${player.coins + prize} coins <small>(${player.coins} collected + ${prize} for ${ord(place)} place)</small> · wallet <b class="walletN">${wallet}</b></p>`);
     const laps = player.laps || [];
     if (laps.length){ const b = Math.min(...laps); $('resBody').insertAdjacentHTML('beforeend', `<p class="laps">⏱️ Your laps: ${laps.map((t, i) => `<span class="${t === b ? 'best' : ''}">L${i+1} ${fmt(t)}</span>`).join('')}</p>`); }
@@ -6265,6 +6379,7 @@ function cupResults(){
   const cup = CUPS[gp.cup], t = gp.table, rank = t.findIndex(r => r.me) + 1;
   if (rank <= 3 && (!trophies[cup.name] || rank < trophies[cup.name])){
     trophies[cup.name] = rank; try { localStorage.setItem('pgp-trophies', JSON.stringify(trophies)); } catch (e) {}
+    if (rank === 1 && goldCount() >= CUPS.length && !OPTS.mirrorNew){ OPTS.mirrorNew = 1; saveOpts(); setTimeout(() => { toast('🪞 MIRROR MODE UNLOCKED!'); [523, 784, 1046, 1568].forEach((f, i) => setTimeout(() => beep(f, .2, 'triangle', .08), i * 120)); }, 1800); }
   }
   $('resTitle').innerHTML = rank === 1 ? `${cup.name} champion!` : rank <= 3 ? `${ord(rank)} in the ${cup.name}` : `${ord(rank)} place overall`;
   $('resSub').textContent = rank <= 3 ? `You take home the ${['gold','silver','bronze'][rank-1]} trophy.` : 'No trophy this time. Finish top 3 to earn one.';
@@ -6302,7 +6417,7 @@ function playChapter(i){
   const ch = STORY[i];
   story = {ch:i, prev: story ? story.prev : playerChoice};
   playerChoice = rid(ch.hero);
-  clearRace(); gp = null; ranked = null; state = 'menu'; previewOn = false;
+  clearRace(); ghostsClear(); tt = null; gp = null; ranked = null; state = 'menu'; previewOn = false;
   $('results').classList.add('hidden'); menuEl.classList.add('hidden'); $('intro').style.display = 'none';
   showTrack(TRACKS.indexOf(byName(ch.track)));
   runDialog(ch.pre, () => {
@@ -6548,6 +6663,7 @@ function loop(now){
 setInterval(() => { if (document.hidden && NET.role === 'host' && NET.racing) frame(performance.now()); }, 16);
 function frame(now){
   const dt = Math.min(0.05, (now - last) / 1000) * DBG.ts; last = now; DBG.tick?.(now);
+  gpPoll(Math.min(0.05, dt / (DBG.ts || 1)));
   musicTick();
   document.body.classList.toggle("in-menu", state === "menu");
   padTex.offset.y = (padTex.offset.y + dt * 1.5) % 1;
@@ -6619,7 +6735,7 @@ function frame(now){
     collisions(dt);
   }
   if (NET.role === 'host' && NET.racing) netHostTick(now);
-  stepEmotes(dt); stepFlair(dt);
+  stepEmotes(dt); stepFlair(dt); ghostTick(dt);
   if (state === 'race' && ((duo && player2 && duo.endAt && raceTime > duo.endAt) || (party?.endAt && raceTime > party.endAt))) endRace();
 
   // camera: rides behind the kart and rolls with banked walls (two cameras side by side in 2-player mode)
@@ -6657,6 +6773,124 @@ function frame(now){
   if (engine && !muted) updateEngine(player, dt);
   draw();
 }
+// ---------- time trials and ghosts ----------
+// Every solo race records your kart 10 times a second (position, rotation, progress). A personal best keeps that run
+// as your ghost for the track, and (when sharing is on) uploads it to ghosts/<track>/<you> so others can race it.
+// A time trial is you alone on the track with three mushrooms, racing your own ghost and the world record holder's.
+let tt = null, TT_VS = null;   // tt = {ghosts, vs, pb} while a time trial is on; TT_VS = a ghost picked on the records board
+const GHOST_HZ = 10, GV = 8;   // samples a second; values per sample: x y z (x10), quaternion (x10000), progress
+const GH = {rec:null, n:0};
+const ghostsLocal = (() => { try { return JSON.parse(localStorage.getItem('pgp-ghosts') || '{}') || {}; } catch (e){ return {}; } })();
+const b64 = a => { const u = new Uint8Array(a.buffer, a.byteOffset, a.byteLength); let s = ''; for (let i = 0; i < u.length; i += 8192) s += String.fromCharCode(...u.subarray(i, i + 8192)); return btoa(s); };
+const unb64 = s => { const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return new Int16Array(u.buffer); };
+const i16 = v => Math.max(-32768, Math.min(32767, Math.round(v)));
+function ghostRecStart(){ DBG.used = false; GH.rec = !NET.racing && !player2 && !party && !tut && player ? [] : null; GH.n = 0; }
+function ghostRecord(){
+  if (!GH.rec || state !== 'race' || !player || player.finished) return;
+  const g = player.mesh.group, p = g.position, q = g.quaternion;
+  while (GH.n <= raceTime * GHOST_HZ){
+    GH.rec.push(i16(p.x * 10), i16(p.y * 10), i16(p.z * 10), i16(q.x * 1e4), i16(q.y * 1e4), i16(q.z * 1e4), i16(q.w * 1e4), i16(player.prog));
+    if (++GH.n > GHOST_HZ * 900){ GH.rec = null; return; }   // 15 minutes is not a lap time anymore
+  }
+}
+function ghostSave(t){
+  if (!GH.rec || GH.rec.length < GV * 20) return;
+  const key = tkey(), g = {t:+t.toFixed(3), ch:player.id, b:buildFor(player.ri), d:b64(Int16Array.from(GH.rec))};
+  ghostsLocal[key] = g;
+  const ks = Object.keys(ghostsLocal); while (ks.length > 40) delete ghostsLocal[ks.shift()];   // keep the save small
+  try { localStorage.setItem('pgp-ghosts', JSON.stringify(ghostsLocal)); } catch (e) {}
+  if (sharing() && !DBG.used) fetch(`${FB}/ghosts/${fbKey(key)}/${me().id}.json?print=silent`, {method:'PUT', body:JSON.stringify({...g, name:me().name})}).catch(() => {});
+}
+// a see-through copy of a kart, tinted icy blue
+function ghostMesh(ch, build, label){
+  const ri = charIdx(ch), r = ROSTER[ri], b = build && BODIES[build.body] && WHEELS[build.wheels] ? build : defaultBuild(ri);
+  const mesh = buildKart(r, b), mats = [], tint = new THREE.Color(0x9fe8ff);
+  mesh.group.traverse(o => {
+    if (!o.material) return; o.castShadow = false;
+    o.material = Array.isArray(o.material) ? o.material.map(m => m.clone()) : o.material.clone();
+    (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => { m.transparent = true; m.opacity = 0.4; m.depthWrite = false; m.color?.lerp(tint, 0.35); mats.push(m); });
+  });
+  [mesh.shieldM, mesh.ice, mesh.glider, mesh.flame, ...mesh.sparks].forEach(o => o && (o.visible = false));
+  mesh.group.add(nameTag(label));
+  return {mesh, mats};
+}
+const _gq = new THREE.Quaternion(), _gq2 = new THREE.Quaternion();
+function ghostPose(gh){
+  const d = gh.d, n = d.length / GV, f = Math.min(n - 1, raceTime * GHOST_HZ), i = Math.floor(f), a = f - i, o = i * GV, o2 = Math.min(n - 1, i + 1) * GV;
+  const g = gh.mesh.group, L = (k) => (d[o + k] + (d[o2 + k] - d[o + k]) * a) / 10;
+  g.position.set(L(0), L(1), L(2));
+  _gq.set(d[o + 3], d[o + 4], d[o + 5], d[o + 6]).normalize(); _gq2.set(d[o2 + 3], d[o2 + 4], d[o2 + 5], d[o2 + 6]).normalize();
+  g.quaternion.copy(_gq).slerp(_gq2, a);
+  gh.mesh.wheels.forEach(w => w.rotation.x += 0.4);
+  // fade when it's right on top of you, so it never blocks your view
+  const dist = player ? g.position.distanceTo(player.mesh.group.position) : 99, op = Math.min(0.42, 0.08 + dist * 0.025);
+  gh.mats.forEach(m => m.opacity = op);
+}
+function ghostsClear(){ tt?.ghosts.forEach(g => scene.remove(g.mesh.group)); if (tt) tt.ghosts = []; $('gdelta').style.display = 'none'; }
+function ttAddGhost(g, label){
+  try { const gh = ghostMesh(g.ch, g.b, label); gh.d = unb64(g.d); gh.t = g.t; gh.label = label; if (gh.d.length >= GV * 2) tt.ghosts.push(gh); else scene.remove(gh.mesh.group); } catch (e) {}
+}
+function startTT(){ gp = null; $('menu').classList.add('hidden'); showTrack(mapChoice); tt = {ghosts:[], vs:TT_VS, pb:false}; TT_VS = null; setupRace(); }
+// called from setupRace: no item boxes, three mushrooms, and the ghosts
+function ttSetup(){
+  ghostsClear(); tt.pb = false;
+  boxes.forEach(b => { b.mesh.visible = false; b.respawn = 1e9; });
+  player.item = 'triple'; player.uses = 3; updateItemHud();
+  const key = tkey(), mine = ghostsLocal[key];
+  if (mine) ttAddGhost(mine, `👻 Your best · ${fmt(mine.t)}`);
+  ttFetchWorld(key);
+}
+async function ttFetchWorld(key){
+  if (!sharing()) return;
+  const fk = fbKey(key), vs = tt.vs; let id = vs?.id;
+  try {
+    if (!id){
+      const r = await fetch(`${FB}/times/${fk}.json`), all = r.ok ? await r.json() : null; if (!all) return;
+      const top = Object.entries(all).sort((a, b) => a[1].t - b[1].t)[0]; if (!top) return; id = top[0];
+    }
+    if (id === me().id && ghostsLocal[key]) return;   // that's you: your own ghost is already out there
+    const r = await fetch(`${FB}/ghosts/${fk}/${id}.json`), g = r.ok ? await r.json() : null;
+    if (!g?.d || !tt || tkey() !== key || state === 'menu') return;
+    ttAddGhost(g, `👻 ${String(g.name || 'Record').slice(0, 16)} · ${fmt(g.t)}${vs?.id ? '' : ' 🌍'}`);
+    toast(`👻 ${vs?.id ? 'Racing' : 'World record:'} ${g.name}'s ghost`);
+  } catch (e) {}
+}
+// live gap to the first ghost: how much later (or earlier) than it you reached this point of the track
+let gdT = 0;
+function ttDelta(dt){
+  const el = $('gdelta'), gh = tt.ghosts[0];
+  if (!gh || !player || state !== 'race' || player.finished){ if (state !== 'finished') el.style.display = 'none'; return; }
+  if ((gdT -= dt) > 0) return; gdT = 0.2;
+  const d = gh.d, n = d.length / GV, p = player.prog;
+  let lo = 0, hi = n - 1; while (lo < hi){ const m = (lo + hi) >> 1; if (d[m * GV + 7] < p) lo = m + 1; else hi = m; }
+  if (d[lo * GV + 7] < p){ el.style.display = 'none'; return; }   // past the end of the ghost's run
+  const diff = raceTime - lo / GHOST_HZ;
+  el.style.display = 'block'; el.classList.toggle('ahead', diff <= 0);
+  el.textContent = `👻 ${diff <= 0 ? '−' : '+'}${Math.abs(diff).toFixed(2)}`;
+}
+function ghostTick(dt){
+  ghostRecord();
+  if (!tt) return;
+  tt.ghosts.forEach(ghostPose);
+  ttDelta(dt);
+}
+function ttResults(){
+  const t = player.finishTime, best = bests[tkey()];
+  $('resTitle').innerHTML = tt.pb ? '⏱️ New personal best!' : '⏱️ Time trial';
+  $('resSub').textContent = `${MAP.emoji} ${tkey()}`;
+  $('resBody').innerHTML = `<div class="ttres"><b>${fmt(t)}</b><span>Your best: ${best ? fmt(best) : '—'}${tt.pb ? ' · 👻 saved as your new ghost' : ''}</span>`
+    + tt.ghosts.map(g => `<span class="${t <= g.t ? 'won' : 'lost'}">${esc(g.label)} → ${t <= g.t ? '✅ beaten by' : '❌ behind by'} ${(Math.abs(t - g.t)).toFixed(2)} s</span>`).join('') + '</div>';
+  button('Race again ↻', '', () => { $('results').classList.add('hidden'); setupRace(); });
+  button('Other track', 'alt', () => { openMenu(); go('tracks'); });
+  button('Menu', 'ghost', openMenu);
+}
+// from the world records board: race that person's ghost
+function raceGhost(track, id){
+  const i = TRACKS.findIndex(x => x.name === track.replace(/ \(Mirror\)$/, ''));
+  if (i < 0) return;
+  mirror = / \(Mirror\)$/.test(track) && mirrorOK();
+  TT_VS = {id}; mapChoice = i; mode = 'tt'; onlineLeave(); go('racer');
+}
 // ---------- dev tools ----------
 {
   const TS = [0, 0.1, 0.25, 0.5, 1, 1.5, 2, 3], el = $('dbg'), me = () => player && karts.includes(player) ? player : null;
@@ -6684,7 +6918,7 @@ function frame(now){
     fN++; if (now - fT >= 500){ DBG.fps = Math.round(fN * 1000 / (now - fT)); fN = 0; fT = now; }
     if (DBG.on && now - statT > 250){ statT = now; stats(); }
   };
-  const need = () => { if (live()) return true; toast(NET.racing ? '🛠️ Not in online races' : '🛠️ Start a race first'); return false; };
+  const need = () => { if (live()){ GH.rec = null; DBG.used = true; return true; } toast(NET.racing ? '🛠️ Not in online races' : '🛠️ Start a race first'); return false; };
   const A = {
     close: () => dbgToggle(false),
     item: () => { if (!need()) return; const k = me(), id = $('dbgItem').value; k.rolling = 0; k.item = id; k.uses = ITEMDEF[id].uses || 1; updateItemHud(); },
