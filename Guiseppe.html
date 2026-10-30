@@ -4176,7 +4176,7 @@ function resetSideQuests() {
 }
 
 // ---------- costumes, Casa Guiseppe (with the closet), fishing and errands between the islands ----------
-function extrasDefault() { return { bond: 0, treats: 0, shoes: 0, digsDone: 0, derbyWon: false, derbyBest: 0, derbyGold: false, qdWon: false, qdBest: 0, dojoWon: false, dojoBest: 0, herdStage: 0, herdPen: [], koiFed: 0, koiGold: false, qmDone: false, boardTold: false, glideDash: false, galeTold: false, bullSkins: ["classic"], bullSkin: "classic", mimiTold: false, petSeen: [], petMode: "follow", petTold: false, twinClue: false, billyDone: false, kaniDone: false, billyIntro: false, kaniIntro: false, billyLead: false, kaniLead: false, billyTold: false, kaniTold: false, love: 0, loveWed: false, pianoPlayed: false, gongRung: false, costumes: ['none'], wearing: 'none', catches: 0, fishLog: {}, sinceLegend: 0, gelatoStage: 0, postcardStage: 0, chests: [], returnHint: false, hour: 9, glider: false, glides: {}, throwTip: false, shop: {}, lure: 0, gearsGot: [], craneFixed: false, skins: ["classic"], gliderSkin: "classic", sailTarget: 0, campers: [], campDone: false, planeStage: 0, planesGot: [], teaStage: 0, teaDelivered: [], day: 0, jointMet: [], guiColor: "classic", sailTint: "classic", jointTarget: "gui", riddleDay: -1, riddleWonDay: -9, riddleStreak: 0, pegs: {}, shellHints: [], poundTip: false, i4Paid: [], kingTake: 0, tixStage: 0, tixGot: [], animalStage: 0, animalsGot: [], hsRung: false, hsDone: false, digs: [], jobs: null, laserTimes: [], rideStamps: [], stampDone: false, fortuneDay: -1, looked: [], towerDay: -1, towerBest: null, ghosts: {}, bottlePages: 0, bottleDay: -1, isletChest: false, isletFound: false, bonusTold: false, bonusFound: false, bonusChest: false, bonusThanks: false, wxSet: {}, jukeOwned: [], jukeTrack: "", twinClue: false, rushDone: false, rushBest: null, wallTip: false, showStage: 0, showMid: false, magicStage: 0, rabbits: [], wireWon: false, drumWon: false, picStage: 0, ghostRode: false }; }
+function extrasDefault() { return { museoTier: 0, pearls: [], pearlsGiven: false, bond: 0, treats: 0, shoes: 0, digsDone: 0, derbyWon: false, derbyBest: 0, derbyGold: false, qdWon: false, qdBest: 0, dojoWon: false, dojoBest: 0, herdStage: 0, herdPen: [], koiFed: 0, koiGold: false, qmDone: false, boardTold: false, glideDash: false, galeTold: false, bullSkins: ["classic"], bullSkin: "classic", mimiTold: false, petSeen: [], petMode: "follow", petTold: false, twinClue: false, billyDone: false, kaniDone: false, billyIntro: false, kaniIntro: false, billyLead: false, kaniLead: false, billyTold: false, kaniTold: false, love: 0, loveWed: false, pianoPlayed: false, gongRung: false, costumes: ['none'], wearing: 'none', catches: 0, fishLog: {}, sinceLegend: 0, gelatoStage: 0, postcardStage: 0, chests: [], returnHint: false, hour: 9, glider: false, glides: {}, throwTip: false, shop: {}, lure: 0, gearsGot: [], craneFixed: false, skins: ["classic"], gliderSkin: "classic", sailTarget: 0, campers: [], campDone: false, planeStage: 0, planesGot: [], teaStage: 0, teaDelivered: [], day: 0, jointMet: [], guiColor: "classic", sailTint: "classic", jointTarget: "gui", riddleDay: -1, riddleWonDay: -9, riddleStreak: 0, pegs: {}, shellHints: [], poundTip: false, i4Paid: [], kingTake: 0, tixStage: 0, tixGot: [], animalStage: 0, animalsGot: [], hsRung: false, hsDone: false, digs: [], jobs: null, laserTimes: [], rideStamps: [], stampDone: false, fortuneDay: -1, looked: [], towerDay: -1, towerBest: null, ghosts: {}, bottlePages: 0, bottleDay: -1, isletChest: false, isletFound: false, bonusTold: false, bonusFound: false, bonusChest: false, bonusThanks: false, wxSet: {}, jukeOwned: [], jukeTrack: "", twinClue: false, rushDone: false, rushBest: null, wallTip: false, showStage: 0, showMid: false, magicStage: 0, rabbits: [], wireWon: false, drumWon: false, picStage: 0, ghostRode: false }; }
 Object.assign(sq, extrasDefault());
 const COSTUMES = [
   { id: 'none', name: 'Just Guiseppe', icon: '🌱', how: 'The classic look' },
@@ -4203,6 +4203,8 @@ function buildCostume(id) {
   if (id === 'tengallon') return buildTenGallon(g, add);
   if (id === 'hachimaki') return buildHachimaki(g, add);
   if (id === 'torohorns') return buildToroHorns(g, add);
+  if (id === 'pearl') return buildPearlDiadem(g, add);
+  if (id === 'curator') return buildCuratorHat(g, add);
   if (id === 'tophat') {
     add(new THREE.CylinderGeometry(0.44, 0.44, 0.04, 20), M.ink, 0, 0.1, 0);
     add(new THREE.CylinderGeometry(0.27, 0.29, 0.52, 18), M.ink, 0, 0.37, 0);
@@ -4307,7 +4309,7 @@ function wearCostume(id) {
   sq.wearing = id;
   if (id !== 'none' && !costumeMeshes[id]) { costumeMeshes[id] = buildCostume(id); costumeRoot.add(costumeMeshes[id]); }
   for (const k in costumeMeshes) costumeMeshes[k].visible = k === id;
-  const bare = ['none', 'claw', 'frost', 'earmuffs', 'goggles', 'origami', 'questmaster', 'hachimaki'].includes(id);
+  const bare = ['none', 'claw', 'frost', 'earmuffs', 'goggles', 'origami', 'questmaster', 'hachimaki', 'pearl'].includes(id);
   sprout.visible = leafL.visible = bare;
 }
 function unlockCostume(id) {
@@ -4938,7 +4940,7 @@ solids.push(
 const isleVisited = n => n === 1 || (n === 2 ? visitedI2 : n === 3 ? visitedI3 : n === 4 ? visitedI4 : n === 5 ? visitedI5 : false);
 const isleOrigin = n => n === 2 ? [IX, IZ] : n === 3 ? [I3X, I3Z] : n === 4 ? [I4X, I4Z] : n === 5 ? [I5X, I5Z] : [0, 0];
 // you can pick any island you've already been to, plus the next one on the chart
-const sailChoices = () => [1, 2, 3, 4, 5].filter(n => n !== currentIsland && (isleVisited(n) || n === storyIsland()));
+const sailChoices = () => [1, 2, 3, 4, 5].filter(n => (n !== currentIsland || onBonus) && (isleVisited(n) || n === storyIsland())); // (from the Conchiglia dock you can head back to the island you came from)
 const courseSet = () => sailChoices().includes(sq.sailTarget);
 function pickCourse() {
   const ch = sailChoices(); if (!ch.length) return;
@@ -4953,13 +4955,13 @@ routesShop.custom = () => {
   const ch = sailChoices(), set = courseSet() ? sq.sailTarget : 0;
   const rows = [{ id: 'top', header: true, ico: '🧭', name: set ? `Course set: ${ISLE_NAMES[set]}` : 'Pick a course', desc: set ? 'Talk to Capitana Sardina on the pier when you\'re ready to leave.' : 'Choose an island, then talk to Capitana Sardina to set sail.' }];
   [1, 2, 3, 4, 5].forEach(n => {
-    const here = n === currentIsland, open = ch.includes(n), seen = isleVisited(n), on = shellsOn(n), got = on.filter(s => s.taken).length;
+    const here = n === currentIsland && !onBonus, open = ch.includes(n), seen = isleVisited(n), on = shellsOn(n), got = on.filter(s => s.taken).length;
     const desc = (here ? `You are here · Golden Shells ${got} / ${on.length}` : !open ? 'Uncharted. Keep following the story to find it.' : seen ? `${ISLE_BLURB[n]} · Golden Shells ${got} / ${on.length}` : `${ISLE_BLURB[n]} · Not visited yet!`) + (open || here ? forecastNote(n) : '');
     rows.push({ id: 'isle' + n, ico: here ? '📍' : open ? (seen ? '🏝️' : '✨') : '❔', name: open || here ? ISLE_NAMES[n] : '???', desc, price: 0,
       locked: here || !open || set === n, label: here ? 'You are here' : !open ? '🔒 Uncharted' : set === n ? 'Course set ✓' : 'Set course' });
   });
   if ((sq.bottlePages || 0) >= 4) rows.push({ id: 'islet', ico: '🔦', name: 'Secret Islet', desc: "Bottiglia's little island, south of the sea lane. La Sardina takes you there straight away.", price: 0, label: 'Sail there now' });
-  rows.push(bonusOpen()
+  if (onBonus) rows.push({ id: 'bonus', ico: '📍', name: 'Isola Conchiglia', desc: 'You are here. Pick an island, then board La Sardina at the end of the dock.', price: 0, locked: true, label: 'You are here' }); else rows.push(bonusOpen()
     ? { id: 'bonus', ico: '🐚', name: 'Isola Conchiglia', desc: `Bonus island! Climb the Conch Spire, change the weather with Nuvolo, buy music from Gettone.${sq.bonusChest ? ' · Chest opened ✓' : ''}`, price: 0, label: 'Sail there now' }
     : { id: 'bonus', ico: '❔', name: '??? · Bonus island', desc: `Find ${Math.round(BONUS_PCT * 100)}% of all the Golden Shells to chart it · ${shellsTaken()} / ${bonusNeed()}`, price: 0, locked: true, label: '🔒 Uncharted' });
   return rows;
@@ -7729,7 +7731,7 @@ function journalEntries() {
     ...funJournal(q),
     ...rideJournal(q),
     ...worldJournal(q),
-    ...towerJournal(q), ...extraJournal(q), ...giostraJournal(q), ...twinJournal(q), ...(seaReady ? twinJobsJournal(q) : []), ...(seaReady ? toroJournal(q) : []),
+    ...towerJournal(q), ...extraJournal(q), ...giostraJournal(q), ...twinJournal(q), ...(seaReady ? twinJobsJournal(q) : []), ...(seaReady ? toroJournal(q) : []), ...(seaReady ? perlaJournal(q) : []),
   ].filter(e => e && typeof e === "object"); // (some quests only appear in some situations; skip the empty slots)
 }
 function renderInventory() {
@@ -15108,7 +15110,7 @@ function animate() {
   updateObjective(dt); updateHolds(dt); updateLamp(); updateCull(dt); perfWatch(); updatePet(dt);
   if (seaReady) { updateSeaLife(dt); updateRaffica(dt); updateBoardMarker(); boardHint(); } // (set at the very end of the script; the first frame runs before that)
   if (running && !invOpen && !mapOpen && !closetOpen && !boardOpen && !shopOpen && !bedOpen) { animateIsland4(dt); animateIsland5(dt); } // (runs during rides too, so the wheel and carousel turn while you sit on them)
-  if (seaReady && !invOpen && !mapOpen && !closetOpen && !boardOpen && !shopOpen && !bedOpen) { updateTwinJobs(dt); updateQuestMaster(dt); updateToro(dt); } // (Twin Isles odd jobs and the Quest Master check: after the koi have had their normal swim)
+  if (seaReady && !invOpen && !mapOpen && !closetOpen && !boardOpen && !shopOpen && !bedOpen) { updateTwinJobs(dt); updateQuestMaster(dt); updateToro(dt); updatePerla(dt); } // (Twin Isles odd jobs and the Quest Master check: after the koi have had their normal swim)
 
   // player visuals
   const s = state;
@@ -16981,6 +16983,245 @@ function toroReset() {
   if (derby.on) { derby.on = false; derbyArrow.visible = false; derbyGates.forEach(g => g.ring.material.opacity = 0); }
   clearMound(); Object.assign(toro, { dashT: 0, dashCd: 0, air: 0, digT: 0, sniffT: 40, rideD: 0 });
   toroHorns.forEach(h => { if (h.material === toroHornGold) h.material = toon(0xfff6e3); });
+}
+// ====================================================================================================
+// ISOLA CONCHIGLIA'S DOCK, and ISOLOTTO PERLA
+//   La Sardina ties up at a proper pier on Conchiglia's south beach now, with a routes post, so you can sail
+//   straight on to any island (instead of rowing back out).
+//   Isolotto Perla, off the north-east beach, is reached by hopping across a trail of giant clam shells. It's home to
+//   the Museo delle Conchiglie: Madreperla the oyster has a display case for every island, and every Golden Shell you
+//   find shows up in it. She rewards you at 25%, 50%, 75% and 100%. Six oysters round the islet hide Sea Pearls, too.
+// (kept at the very end of the script so the coins it adds don't shift anyone's saved coins)
+// ====================================================================================================
+const perlaCoins = [];
+// ---------- the pier on Conchiglia's south beach ----------
+const BDOCK = { x: BONUS.x, z: BONUS.z - 10 }; // (laid out like every other island's pier, from this origin)
+{
+  const pier = addBox(BDOCK.x + 6, -0.15, BDOCK.z + 38, 3, 0.4, 12, M.wood);
+  for (let i = 0; i < 12; i++) { const pl = new THREE.Mesh(new THREE.BoxGeometry(3.05, 0.06, 0.08), M.woodDark); pl.position.set(0, 0.2, -5.5 + i); pier.mesh.add(pl); }
+  [-1, 1].forEach(sd => [33, 37, 43].forEach(z => { const post = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 2.4, 6), M.woodDark)); post.position.set(BDOCK.x + 6 + sd * 1.55, -0.5, BDOCK.z + z); scene.add(post); }));
+  mapHouses.push([BDOCK.x + 6, BDOCK.z + 38, 3, 12, '#c98b4f']);
+  bonusShip.position.set(BDOCK.x + SHIP_DOCK.x, SHIP_DOCK.y, BDOCK.z + SHIP_DOCK.z);
+  solids.push(
+    { type: 'box', cx: BDOCK.x + 2.4, cz: BDOCK.z + 40.3, hx: 1.7, hz: 4.6, top: 0.52, bottom: -2, get disabled() { return !onBonus; } },
+    { type: 'box', cx: BDOCK.x + 2.4, cz: BDOCK.z + 37.4, hx: 1.25, hz: 1.25, top: 2.1, bottom: 0.5, get disabled() { return !onBonus; } },
+  );
+  { const j = bonusShip.getObjectByName('jukebox'); if (j) shipJukes.push(j); }
+  // a lantern at the end, and the routes post
+  const lp = BDOCK.x + 7.3, lz = BDOCK.z + 43.6;
+  addCyl(lp, lz, 0.07, 2.2, 2.2, M.woodDark, { seg: 6 });
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8), toon(0xffe28a, { emissive: 0x8a6a00 })); lamp.position.set(lp, 2.4, lz); scene.add(lamp);
+  const px = BDOCK.x + 7.0, pz = BDOCK.z + 40.5;
+  addCyl(px, pz, 0.07, 1.5, 1.6, M.woodDark, { seg: 6 });
+  const b = textBoard('⛵ ROUTES', 1.5, '#1f6f8b'); b.position.set(px - 0.1, 1.25, pz); b.rotation.y = Math.PI / 2; scene.add(b);
+  const wheel = new THREE.Group(); wheel.position.set(px, 1.75, pz); wheel.rotation.y = Math.PI / 2; scene.add(wheel);
+  wheel.add(new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.035, 6, 16), M.wood));
+  for (let k = 0; k < 4; k++) { const sp = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.035, 0.035), M.wood); sp.rotation.z = k * Math.PI / 4; wheel.add(sp); }
+  doors.push({ kind: 'use', pos: new THREE.Vector3(px - 0.6, 0.05, pz),
+    get label() { return courseSet() ? `Check the sea routes (course: ${ISLE_NAMES[sq.sailTarget]})` : 'Check the sea routes'; },
+    get hidden() { return !onBonus; }, use: () => { toggleShop(true, routesShop); wheel.userData.spin = 1; } });
+  routePosts.push(wheel);
+  doors.push({ kind: 'use', pos: new THREE.Vector3(BDOCK.x + 4.9, 0.05, BDOCK.z + 40.2),
+    get label() { return `⛵ Board La Sardina (to ${ISLE_NAMES[bonusSailTo()]})`; },
+    get hidden() { return !onBonus; }, use: () => sailTo(bonusSailTo()) });
+  doors.push({ kind: 'use', label: '🎶 Play the jukebox', pos: new THREE.Vector3(BDOCK.x + 2.9, 0.52, BDOCK.z + 39.2),
+    get hidden() { return !onBonus || !(sq.jukeOwned || []).length; }, use: () => jukeOpen(true) });
+  const sign = textBoard('⚓ MOLO CONCHIGLIA', 2.8, '#1f6f8b'); sign.position.set(BDOCK.x + 6, 1.7, BDOCK.z + 31.6); scene.add(sign);
+  addCyl(BDOCK.x + 6, BDOCK.z + 31.5, 0.07, 1.3, 1.4, M.woodDark, { seg: 6, noCollide: true });
+}
+// with a course set, she goes there; otherwise back to the island you came from
+const bonusSailTo = () => courseSet() ? sq.sailTarget : (bonusDest || currentIsland || 1);
+BONUS_LAND.set(BDOCK.x + 6, 0.05, BDOCK.z + 40);
+// the old "row back out" spot on the beach isn't needed any more
+{ const old = doors.find(d => d.label === '⛵ Row back out to La Sardina' && Math.abs(d.pos.x - BONUS.x) < 0.1 && Math.abs(d.pos.z - (BONUS.z + BONUS.r - 1.2)) < 0.1); if (old) Object.defineProperty(old, 'hidden', { get: () => true }); }
+paguroNpc.repeat[3] = "La Sardina ties up at the dock on the south beach now. Very posh. I had to move my towel.";
+
+// ---------- Isolotto Perla ----------
+const PERLA = { x: BONUS.x + 62, z: BONUS.z - 28, r: 11 };
+const MUSEO = { x: PERLA.x + 1, z: PERLA.z - 1, r: 6.2 };
+addCyl(PERLA.x, PERLA.z, PERLA.r, 0, 4, M.sand, { rTop: PERLA.r, rBottom: PERLA.r + 6, seg: 40 });
+addCyl(PERLA.x + 0.5, PERLA.z - 0.5, 8.4, 0.3, 0.3, M.grass, { seg: 32 });
+{ const f = new THREE.Mesh(new THREE.RingGeometry(PERLA.r + 1.4, PERLA.r + 2.6, 80), foam.material); f.rotation.x = -Math.PI / 2; f.position.set(PERLA.x, -1.05, PERLA.z); scene.add(f); }
+[[-8, 6, 1.6], [8, 6, 4.2], [-7, -7, 2.8]].forEach(([dx, dz, l]) => palm(PERLA.x + dx, PERLA.z + dz, l, 0));
+mapDiscsExtra.push([PERLA.x, PERLA.z, PERLA.r, '#f6dca0'], [PERLA.x + 0.5, PERLA.z - 0.5, 8.4, '#7ed957']);
+regions.unshift({ name: 'Museo delle Conchiglie', test: (x, y, z) => Math.hypot(x - MUSEO.x, z - MUSEO.z) < MUSEO.r + 0.5 && y < 6 });
+regions.unshift({ name: 'Isolotto Perla', test: (x, y, z) => Math.hypot(x - PERLA.x, z - PERLA.z) < PERLA.r + 5 });
+// the clam-shell stepping stones over from Conchiglia's north-east beach (the pearly one in the middle is bouncy)
+const PERLA_PADS = [];
+{
+  const sx = BONUS.x + 18, sz = BONUS.z - 14, ex = PERLA.x - 9.5, ez = PERLA.z + 4.5, n = 8;
+  const pink = toon(0xffc9c0), pearl = toon(0xfff6e8, { emissive: 0x3a3020 }), coral = toon(0xff8f7a);
+  for (let i = 1; i <= n; i++) {
+    const k = i / (n + 1), x = sx + (ex - sx) * k + Math.sin(i * 1.9) * 1.4, z = sz + (ez - sz) * k + Math.cos(i * 1.3) * 1.2, top = 0.5 + Math.sin(i * 0.9) * 0.35 + (i === 5 ? 0.6 : 0);
+    const bouncy = i === 4;
+    const st = addCyl(x, z, bouncy ? 1.25 : 1.35, top, 2.4, bouncy ? pearl : i % 2 ? pink : coral, { seg: 14, rBottom: 0.9, ...(bouncy ? { bounce: true, bouncePower: 14 } : {}) });
+    // scallop ridges on the top, so they read as shells
+    for (let r = 0; r < 6; r++) { const a = r / 6 * Math.PI * 2, rib = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.06, 1.1), bouncy ? pink : pearl); rib.position.set(x + Math.sin(a) * 0.6, top + 0.03, z + Math.cos(a) * 0.6); rib.rotation.y = a; scene.add(rib); }
+    PERLA_PADS.push(st); perlaCoins.push([x, top + 1.1, z]);
+  }
+  const sign = textBoard('🦪 ISOLOTTO PERLA →', 3.0, '#c0506a'); sign.position.set(sx - 1.2, 1.7, sz + 1.2); sign.rotation.y = -0.7; scene.add(sign);
+  addCyl(sx - 1.2, sz + 1.2, 0.07, 1.3, 1.4, M.woodDark, { seg: 6, noCollide: true });
+}
+// the Museo: a marble floor, eight columns and a great pearly half-shell for a roof
+const SHELL_CASES = [];
+{
+  const marble = toon(0xf6f1ea), marbleDark = toon(0xd9d0c4), M_ = MUSEO;
+  addCyl(M_.x, M_.z, M_.r, 0.6, 0.6, marbleDark, { seg: 40 });
+  addCyl(M_.x, M_.z, M_.r - 0.25, 0.62, 0.05, marble, { seg: 40, noCollide: true });
+  for (let k = 0; k < 8; k++) {
+    if (k === 2) continue; // (the doorway, facing the stepping stones)
+    const a = k / 8 * Math.PI * 2 + Math.PI / 8, x = M_.x + Math.sin(a) * (M_.r - 0.5), z = M_.z + Math.cos(a) * (M_.r - 0.5);
+    addCyl(x, z, 0.32, 5.2, 4.6, marble, { seg: 12 });
+    addCyl(x, z, 0.45, 5.4, 0.2, marbleDark, { seg: 12, noCollide: true });
+  }
+  // the roof: a big ribbed scallop dome, pink outside, pearl inside
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(M_.r + 0.3, 32, 12, 0, Math.PI * 2, 0, Math.PI / 2), toon(0xffc9c0, { side: THREE.DoubleSide }));
+  dome.scale.y = 0.45; dome.position.set(M_.x, 5.4, M_.z); scene.add(dome);
+  for (let k = 0; k < 16; k++) { const rib = new THREE.Mesh(new THREE.TorusGeometry(M_.r + 0.3, 0.09, 5, 20, Math.PI / 2), toon(0xff8f7a)); rib.scale.y = 0.45; rib.rotation.set(0, k / 16 * Math.PI * 2, Math.PI / 2); rib.position.set(M_.x, 5.4, M_.z); rib.rotation.order = 'YXZ'; scene.add(rib); }
+  const tip = new THREE.Mesh(new THREE.SphereGeometry(0.5, 14, 10), toon(0xfff6e8, { emissive: 0x4a4030 })); tip.position.set(M_.x, 5.4 + (M_.r + 0.3) * 0.45, M_.z); scene.add(tip);
+  const sign = bigSign('🐚 MUSEO DELLE CONCHIGLIE', 4.6, 0.6, '#c0506a'); sign.position.set(M_.x + Math.sin(Math.PI * 0.625) * (M_.r + 0.4), 4.7, M_.z + Math.cos(Math.PI * 0.625) * (M_.r + 0.4)); sign.rotation.y = Math.PI * 0.625; scene.add(sign);
+  mapHouses.push([M_.x, M_.z, M_.r * 1.6, M_.r * 1.6, '#ffc9c0', 'Museo']);
+  // five display cases in a ring, one per island: a wooden cabinet, a glass top and a little shell for every Golden Shell there
+  const glass = new THREE.MeshBasicMaterial({ color: 0xcfefff, transparent: true, opacity: 0.22, depthWrite: false });
+  const miniGeo = new THREE.SphereGeometry(0.1, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2);
+  for (let isl = 1; isl <= 5; isl++) {
+    const a = (isl - 1) / 5 * Math.PI * 2 - Math.PI * 0.15, cx = M_.x + Math.sin(a) * 3.7, cz = M_.z + Math.cos(a) * 3.7;
+    const g = new THREE.Group(); g.position.set(cx, 0.62, cz); g.rotation.y = a + Math.PI; scene.add(g);
+    const cab = shadowed(new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.9, 1.0), M.woodDark)); cab.position.y = 0.45; g.add(cab);
+    const felt = new THREE.Mesh(new THREE.BoxGeometry(2.25, 0.04, 0.86), toon(0x7a2b4a)); felt.position.y = 0.92; g.add(felt);
+    const top = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.36, 0.9), glass); top.position.y = 1.12; g.add(top);
+    solids.push({ type: 'box', cx, cz, hx: 1.05, hz: 1.05, top: 1.92, bottom: 0.62 });
+    const label = textBoard(ISLE_NAMES[isl], 2.1, '#8a5a33'); label.position.set(0, 1.62, 0.1); g.add(label);
+    const list = shells.filter(s => s.island === isl), cols = Math.ceil(list.length / 3), minis = [];
+    list.forEach((s, i) => {
+      const c = i % cols, r = Math.floor(i / cols), m = new THREE.Mesh(miniGeo, M.sun);
+      m.scale.set(1, 0.6, 1.25); m.position.set(-1.0 + (cols > 1 ? c * 2.0 / (cols - 1) : 1.0), 0.96, -0.3 + r * 0.3); g.add(m); minis.push([s, m]);
+    });
+    SHELL_CASES.push({ isl, g, label, minis });
+  }
+}
+const museoEmpty = toon(0xb9b0c4, { transparent: true, opacity: 0.35 });
+let museoT = 0;
+function refreshMuseo() { SHELL_CASES.forEach(c => c.minis.forEach(([s, m]) => { m.material = s.taken ? M.sun : museoEmpty; })); }
+const museoPct = () => shells.length ? shellsTaken() / shells.length : 0;
+// Madreperla, the curator: a big oyster with a pearl for a head, a monocle and a velvet bow
+const madre = (() => { const [g, b] = npcShell();
+  const shellMat = toon(0x9aa0b4), inner = toon(0xffe8f0, { emissive: 0x3a2030, side: THREE.DoubleSide });
+  const lower = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.62, 18, 10, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), shellMat)); lower.scale.y = 0.55; lower.position.y = 0.42; b.add(lower);
+  const upper = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.62, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), shellMat)); upper.scale.y = 0.5; upper.position.set(0, 0.48, -0.25); upper.rotation.x = -1.05; b.add(upper);
+  const lip = new THREE.Mesh(new THREE.CircleGeometry(0.58, 18), inner); lip.rotation.x = -Math.PI / 2; lip.position.y = 0.43; b.add(lip);
+  const pearl = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.36, 18, 14), toon(0xfff9f2, { emissive: 0x3a3530 }))); pearl.position.set(0, 0.85, 0.08); b.add(pearl);
+  const face = new THREE.Group(); face.position.set(0, 0.88, 0.42); b.add(face); addEyes(face, 0.04, 0, 0.11, 0.06); smileOn(face, -0.1, 0.02, 0.05);
+  const mono = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.015, 6, 14), M.sun); mono.position.set(0.11, 0.04, 0.04); face.add(mono);
+  const chain = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.3, 4), M.sun); chain.position.set(0.17, -0.1, 0.02); chain.rotation.z = 0.3; face.add(chain);
+  [-1, 1].forEach(sd => { const bow = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.18, 4), toon(0x7a2b4a)); bow.rotation.z = sd * Math.PI / 2; bow.position.set(sd * 0.12, 0.52, 0.48); b.add(bow); });
+  return g; })();
+const MUSEO_TIERS = [0.25, 0.5, 0.75, 1], MUSEO_PAY = [40, 80, 150, 300];
+const museoTier = () => sq.museoTier || 0;
+const museoNpc = { name: 'Madreperla', role: 'curator · Museo delle Conchiglie', icon: '🦪', color: '#ffe8f0', group: madre,
+  pos: new THREE.Vector3(MUSEO.x + 0.6, 0.62, MUSEO.z - 0.4), voice: 560, wave: 'sine', talked: false, ri: 0, top: 1.3, promptY: 1.9, bobY: 1,
+  first: ['Oh!'], repeat: ['Oh!'],
+  quests: [
+    { ready: () => !museoNpc.talked, get lines() { return [
+        "Oh! A visitor! Welcome, welcome, to the Museo delle Conchiglie! I'm Madreperla, the curator. And the cleaner. And the gift shop.",
+        "Every Golden Shell on the sea has a place in my cases, one case for each island. When someone finds a shell, its spot lights up. Don't ask me how. Museum magic.",
+        `You've found ${shellsTaken()} of ${shells.length}! Bring the collection up to a quarter, a half, three quarters and the whole lot, and I'll reward you each time.`,
+        "Oh, and the oysters round my islet have been hiding Sea Pearls from me. Six of them. If you find them all, I have something very special for you.",
+      ]; }, done: () => { refreshMuseo(); saveSoon(); } },
+    { ready: () => (sq.pearls || []).length >= PEARL_SPOTS.length && !sq.pearlsGiven, lines: [
+        "Six Sea Pearls! All of them! Oh, they're even prettier than I imagined. I'll string them up right here, in the middle of the museum.",
+        "And for you, a little something I've been saving: a diadem of mother-of-pearl. It's been waiting for a head with a mustache under it.",
+      ], done: () => { sq.pearlsGiven = true; coinCount += 100; updateCoins(); unlockCostume('pearl'); applyPearlStrand(); saveSoon(); setTimeout(() => toast('🦪 +100 coins, and the Pearl Diadem!'), 1400); } },
+    { ready: () => museoTier() < 4 && museoPct() >= MUSEO_TIERS[museoTier()] - 1e-9, get lines() { const k = museoTier(); return [
+        ["A QUARTER of the collection! The first case is practically glowing. Here, for your trouble.", "HALF! Half of every Golden Shell on the sea, right here in my museum! Visitors will come from miles around. Well, you will.", "Three quarters! I've had to polish the glass twice today. I'm so proud I could cry. I won't. Salt water. Bad for the cases.",
+         "Every. Single. Shell. The whole collection, complete! Do you know how long I've waited for this? Since I was a grain of sand!"][k],
+        k === 3 ? "This is the greatest museum on the sea, and it's thanks to you. Take my hat and monocle. You're the curator now. I'll still do the dusting." : `That's ${MUSEO_PAY[k]} coins from the museum fund. Keep looking!`]; },
+      done: () => { const k = museoTier(); sq.museoTier = k + 1; coinCount += MUSEO_PAY[k]; updateCoins(); saveSoon();
+        [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => blip(f, f, 0.14, 'triangle', 0.09), i * 90));
+        setTimeout(() => toast(`🐚 +${MUSEO_PAY[k]} coins from the Museo!`), 1200);
+        if (k === 3) { unlockCostume('curator'); museoStatue.visible = true; } } },
+    { ready: () => true, get lines() { const k = museoTier(), next = MUSEO_TIERS[k];
+      return [jobPick(["Please don't tap on the glass. The shells are napping.", "A school trip of sardines came yesterday. They wouldn't stop swimming in circles.", "Paguro says his shell should be in here. I said it's not golden. He said it's golden on the inside."]),
+        k >= 4 ? 'The collection is complete. Every case, every shell. Thank you, curator.' : `${shellsTaken()} of ${shells.length} shells so far. The next reward is at ${Math.round(next * 100)}%: ${Math.ceil(next * shells.length)} shells.`]; } },
+  ] };
+npcs.push(museoNpc); initNpc(museoNpc);
+// the golden shell statue that rises in the middle once the collection is complete, and the pearl strand
+const museoStatue = makeShell(0); museoStatue.scale.setScalar(1.6); museoStatue.position.set(MUSEO.x - 0.8, 2.4, MUSEO.z + 0.6); museoStatue.visible = false;
+const pearlStrand = new THREE.Group(); pearlStrand.visible = false; scene.add(pearlStrand);
+{ for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2, p = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10), toon(0xfff9f2, { emissive: 0x4a4540 })); p.position.set(Math.sin(a) * 0.8, Math.cos(a * 2) * 0.08, Math.cos(a) * 0.8); pearlStrand.add(p); }
+  const cord = new THREE.Mesh(new THREE.TorusGeometry(0.8, 0.015, 4, 30), M.sun); cord.rotation.x = Math.PI / 2; pearlStrand.add(cord); }
+pearlStrand.position.set(MUSEO.x, 4.4, MUSEO.z);
+function applyPearlStrand() { pearlStrand.visible = !!sq.pearlsGiven; museoStatue.visible = museoTier() >= 4; }
+// the six oysters: one on the stepping stones, one high on a coral stack, the rest round the islet
+const PEARL_SPOTS = [
+  [PERLA_PADS[6].x, PERLA_PADS[6].top, PERLA_PADS[6].z],
+  [PERLA.x + 9.2, 0.05, PERLA.z - 4.5], [PERLA.x - 3.5, 0.05, PERLA.z + 9.8], [PERLA.x + 7.6, 0.3, PERLA.z + 6.8],
+  [PERLA.x - 9, 0.05, PERLA.z - 4], [PERLA.x + 3, 6.2, PERLA.z - 15.5],
+];
+// a coral stack offshore to the north, with ledges up to the last oyster
+{ const S = { x: PERLA.x + 3, z: PERLA.z - 15.5 };
+  addCyl(S.x, S.z, 1.4, 6.2, 8, toon(0xff8f7a), { seg: 12, rBottom: 2.0 });
+  [[-2.6, 1.0, 1.4], [-1.6, 2.6, -2.0], [1.9, 4.2, -1.6]].forEach(([dx, top, dz]) => { addCyl(S.x + dx, S.z + dz, 0.95, top, 3, toon(0xffc9c0), { seg: 10, rBottom: 0.7 }); perlaCoins.push([S.x + dx, top + 1.1, S.z + dz]); });
+  addCyl(PERLA.x + 2.2, PERLA.z - 11.5, 0.9, 0.4, 2, toon(0xffc9c0), { seg: 10, rBottom: 0.7 }); }
+const oysters = PEARL_SPOTS.map(([x, y, z], i) => {
+  const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = i * 1.3; scene.add(g);
+  const sh = toon(0x8a8fa4);
+  const low = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 6, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), sh)); low.scale.y = 0.4; low.position.y = 0.15; g.add(low);
+  const lid = new THREE.Group(); lid.position.set(0, 0.16, -0.38); g.add(lid);
+  const top = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), sh)); top.scale.y = 0.35; top.position.z = 0.38; lid.add(top);
+  const pearl = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 8), toon(0xfff9f2, { emissive: 0x4a4540 })); pearl.position.y = 0.22; g.add(pearl);
+  return { g, lid, pearl, i };
+});
+oysters.forEach(o => doors.push({ kind: 'use', label: '🦪 Pry open the oyster', pos: o.g.position.clone(),
+  get hidden() { return !onBonus || (sq.pearls || []).includes(o.i); }, use: () => openOyster(o) }));
+function openOyster(o) {
+  sq.pearls = [...new Set([...(sq.pearls || []), o.i])]; saveSoon();
+  burst(o.g.position.clone().add(new THREE.Vector3(0, 0.5, 0)), 0xfff9f2, 16, 3, 3);
+  [988, 1319, 1568].forEach((f, i) => setTimeout(() => blip(f, f, 0.12, 'sine', 0.08), i * 90));
+  const n = sq.pearls.length;
+  toast(n >= PEARL_SPOTS.length ? '🦪 The sixth Sea Pearl! Take them all to Madreperla at the museum.' : `🦪 A Sea Pearl! (${n} / ${PEARL_SPOTS.length})`);
+}
+function applyOysters() { oysters.forEach(o => { const got = (sq.pearls || []).includes(o.i); o.lid.rotation.x = got ? -1.1 : 0; o.pearl.visible = !got; }); }
+// ---------- costumes ----------
+COSTUMES.push(
+  { id: 'pearl', name: 'Pearl Diadem', icon: '🦪', how: 'Find all six Sea Pearls on Isolotto Perla and give them to Madreperla' },
+  { id: 'curator', name: "Curator's Top Hat", icon: '🎩', how: 'Fill every case in the Museo delle Conchiglie: find every Golden Shell' },
+);
+function buildPearlDiadem(g, add) {
+  const nacre = toon(0xfff1f6, { emissive: 0x3a2a35 }), silver = toon(0xdfe6f0, { emissive: 0x20242a });
+  add(new THREE.TorusGeometry(0.4, 0.03, 6, 24), silver, 0, 0.02, 0).rotation.x = Math.PI / 2;
+  for (let k = -3; k <= 3; k++) { const a = k * 0.28, h = 0.16 - Math.abs(k) * 0.03; const sp = add(new THREE.ConeGeometry(0.035, h, 6), silver, Math.sin(a) * 0.4, 0.04 + h / 2, Math.cos(a) * 0.4); sp.rotation.x = 0.15;
+    add(new THREE.SphereGeometry(k === 0 ? 0.08 : 0.045, 10, 8), nacre, Math.sin(a) * 0.4, 0.06 + h, Math.cos(a) * 0.4); }
+  return g;
+}
+function buildCuratorHat(g, add) {
+  const silk = toon(0x2b2140);
+  add(new THREE.CylinderGeometry(0.52, 0.52, 0.05, 22), silk, 0, 0.08, 0);
+  add(new THREE.CylinderGeometry(0.3, 0.3, 0.62, 20), silk, 0, 0.4, 0);
+  add(new THREE.CylinderGeometry(0.305, 0.305, 0.1, 20), toon(0x7a2b4a), 0, 0.16, 0);
+  const s = makeShell(0); s.scale.setScalar(0.22); s.position.set(0, 0.2, 0.3); g.add(s);
+  add(new THREE.TorusGeometry(0.075, 0.015, 6, 14), M.sun, 0.14, -0.38, 0.47);
+  return g;
+}
+// ---------- quest board ----------
+function perlaJournal(q) {
+  const k = museoTier(), n = (sq.pearls || []).length;
+  return [
+    q(1, '🐚', 'The Shell Museum', 'Madreperla · Isolotto Perla, off Isola Conchiglia', museoNpc.talked, k >= 4,
+      k >= 4 ? "Every case is full! You're the curator now." : `Fill the museum's cases by finding Golden Shells: ${shellsTaken()} / ${shells.length}. Next reward at ${Math.round(MUSEO_TIERS[k] * 100)}%.`),
+    q(1, '🦪', 'Six Sea Pearls', 'Madreperla · the oysters round Isolotto Perla', museoNpc.talked || n > 0, !!sq.pearlsGiven,
+      sq.pearlsGiven ? 'All six strung up in the museum. You got the Pearl Diadem.' : n >= PEARL_SPOTS.length ? 'All six found! Take them to Madreperla.' : `Pry open the oysters round Isolotto Perla: ${n} / ${PEARL_SPOTS.length} pearls. One is on a clam, one is up a coral stack.`),
+  ];
+}
+perlaCoins.forEach(([x, y, z]) => {
+  const m = new THREE.Mesh(coinGeo, M.sun); m.position.set(x, y, z); m.castShadow = true;
+  m.userData = { baseY: y, phase: coins.length * 0.7, taken: false, island: 0 }; scene.add(m); coins.push(m);
+});
+function updatePerla(dt) {
+  if (!onBonus) return;
+  museoT -= dt; if (museoT <= 0) { museoT = 1; refreshMuseo(); applyOysters(); applyPearlStrand(); }
+  if (pearlStrand.visible) pearlStrand.rotation.y += dt * 0.4;
+  if (museoStatue.visible) museoStatue.rotation.y += dt * 0.8;
 }
 function resetTwinJobs() {
   if (qd.on) endQuickDraw(false, true);
