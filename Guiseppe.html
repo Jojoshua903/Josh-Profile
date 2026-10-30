@@ -340,7 +340,7 @@
 <div class="bigmap" id="bigmap">
   <div class="bigmap-card">
     <div class="inv-head">
-      <div><small>Nonna's chart</small><h2>The Biscotto Isles</h2></div>
+      <div><small id="bigmapSmall">Nonna's chart</small><h2 id="bigmapTitle">The Biscotto Isles</h2></div>
       <div class="inv-close"><kbd>M</kbd> close</div>
     </div>
     <canvas id="bigmapCanvas" width="1040" height="1040"></canvas>
@@ -7924,7 +7924,7 @@ const bigCanvas = $('bigmapCanvas'), bigCtx = bigCanvas.getContext('2d');
 const BIG = { cx: 8, cz: -5, s: 1040 / 168 };
 // inside the Inkworks the maps show the factory floor plan instead of the island
 const FAC_VIEW = { cx: FAC.ox, cz: FAC.oz, s: 1040 / 164 };
-const bigView = () => roomAt(state.pos) === FAC ? FAC_VIEW : BIG;
+const bigView = () => roomAt(state.pos) === FAC ? FAC_VIEW : (typeof secretMapKey === "function" && secretMapKey()) ? SECRET_MAPS[secretMapKey()] : BIG; // (the secret islands have charts of their own)
 function drawMinimap() {
   const rm = roomAt(state.pos), fac = rm === FAC, P = rm && !fac ? rm.outPos : state.pos;
   drawWorld(mapCtx, 200, P.x, P.z, fac ? 1.6 : 2.4, false, P);
@@ -7939,7 +7939,7 @@ function drawBigMap() { const rm = roomAt(state.pos), v = bigView(); drawWorld(b
 let mapOpen = false;
 function toggleMap(open) {
   mapOpen = open;
-  if (open) { for (const k in keys) keys[k] = false; toggleInv(false); drawBigMap(); }
+  if (open) { for (const k in keys) keys[k] = false; toggleInv(false); if (seaReady) mapTitle(); drawBigMap(); }
   $('bigmap').classList.toggle('open', open);
   if (!open) setTimeout(lockPointer, 0);
 }
@@ -11677,6 +11677,7 @@ function applyIsland5(d) {
 }
 function updateIsland5(dt, p) {
   if (currentIsland !== 5) return;
+  if (!sq.twinClue && bothSides5() && !cut && !dlg) twinClue(); // (in case you met both leaders some other way: the clue never used to fire then)
   updateDopp(dt, p); updateMinis5(dt, p); updateTwinExtras(dt, p);
 }
 COSTUMES.push({ id: 'doppio', name: "Doppiapinza's Two-Faced Hat", icon: '🤠', how: 'Beat Don Doppiapinza in the Duel Circle on Isole Gemelle' });
@@ -17222,6 +17223,32 @@ function updatePerla(dt) {
   museoT -= dt; if (museoT <= 0) { museoT = 1; refreshMuseo(); applyOysters(); applyPearlStrand(); }
   if (pearlStrand.visible) pearlStrand.rotation.y += dt * 0.4;
   if (museoStatue.visible) museoStatue.rotation.y += dt * 0.8;
+}
+// ====================================================================================================
+// MAPS FOR THE SECRET ISLANDS: open the map on Isola Conchiglia (with Isolotto Raffica and Isolotto Perla) or on
+// Bottiglia's Secret Islet and you get a chart of that island, instead of an empty bit of sea next to Driftwood Cove.
+// ====================================================================================================
+const SECRET_MAPS = {
+  bonus: { cx: BONUS.x - 2, cz: BONUS.z - 6, s: 1040 / 168, small: "Paguro's chart", title: 'Isola Conchiglia' },
+  islet: { cx: ISLET.x, cz: ISLET.z, s: 1040 / 46, small: "Bottiglia's chart", title: 'The Secret Islet' },
+};
+// the islands themselves (they never had map shapes, so the chart was just sea)
+mapDiscsExtra.push(
+  [BONUS.x, BONUS.z, BONUS.r + 2, '#f6dca0'], [BONUS.x, BONUS.z, BONUS.r - 4, '#f2cfa8'], [SPIRE.x, SPIRE.z, SPIRE.r + 0.6, '#ffb3c6'], [SPIRE.x, SPIRE.z, SPIRE.r - 1.5, '#ff8f7a'],
+  [ISLET.x, ISLET.z, ISLET.r + 1.5, '#f6dca0'], [ISLET.x - 2, ISLET.z - 3, 5, '#7ed957'],
+);
+PERLA_PADS.forEach(p => mapDiscsExtra.push([p.x, p.z, p.r, '#ffc9c0']));
+mapHouses.push([ISLET.x - 4, ISLET.z - 4, 3.8, 3.2, '#c9a46a']);
+regions.push({ name: 'Secret Islet', test: (x, y, z) => Math.hypot(x - ISLET.x, z - ISLET.z) < ISLET.r + 5 });
+regions.unshift({ name: 'Molo Conchiglia', test: (x, y, z) => Math.abs(x - (BDOCK.x + 5)) < 5 && z > BDOCK.z + 32 && z < BDOCK.z + 46 });
+areaLabels.push(['Isola Conchiglia', BONUS.x, BONUS.z + 15], ['Conch Spire', SPIRE.x, SPIRE.z - 9], ['Isolotto Raffica', RAF.x, RAF.z + 19],
+  ['Isolotto Perla', PERLA.x, PERLA.z + 17], ['Molo Conchiglia', BDOCK.x + 6, BDOCK.z + 49], ['Secret Islet', ISLET.x, ISLET.z + ISLET.r + 4]);
+const secretMapKey = () => !seaReady ? null : onBonus ? 'bonus' : onIslet ? 'islet' : null;
+// the title above the map follows wherever you are
+function mapTitle() {
+  const k = secretMapKey(), m = k && SECRET_MAPS[k];
+  $('bigmapSmall').textContent = m ? m.small : "Nonna's chart";
+  $('bigmapTitle').textContent = m ? m.title : 'The Biscotto Isles';
 }
 function resetTwinJobs() {
   if (qd.on) endQuickDraw(false, true);
