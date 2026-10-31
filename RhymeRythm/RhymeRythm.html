@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rhyme Rhythm</title>
+<style>
+:root{
+  --ink:#211c34; --paper:#fbf3e4; --paper2:#f3e6cf; --tomato:#ef4a36; --mustard:#f6b92b;
+  --teal:#1f9e8f; --sky:#8fd3f0; --pink:#f59ab5;
+  --display:"Futura","Avenir Next","Trebuchet MS",sans-serif;
+  --hand:"Marker Felt","Chalkboard SE","Comic Sans MS",cursive;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--paper);color:var(--ink);font-family:var(--display);overflow:hidden;
+  -webkit-user-select:none;user-select:none;touch-action:manipulation}
+body{background-image:radial-gradient(rgba(33,28,52,.09) 1.2px,transparent 1.3px);background-size:14px 14px}
+#stage{position:fixed;inset:0 0 56px 0;display:flex;align-items:center;justify-content:center}
+#cv{display:block;border:5px solid var(--ink);border-radius:22px;box-shadow:10px 10px 0 var(--ink);background:#fff}
+.ov{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;padding:24px}
+.ov.on{display:flex}
+.btn{font:800 20px var(--display);letter-spacing:.04em;text-transform:uppercase;color:var(--ink);background:var(--mustard);
+  border:4px solid var(--ink);border-radius:999px;padding:12px 28px;box-shadow:5px 5px 0 var(--ink);cursor:pointer;transition:transform .08s,box-shadow .08s}
+.btn:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 var(--ink)}
+.btn:active{transform:translate(3px,3px);box-shadow:2px 2px 0 var(--ink)}
+.btn.alt{background:#fff}.btn.red{background:var(--tomato);color:#fff}
+
+/* title */
+#title .logo{font:900 clamp(54px,10vw,128px)/.85 var(--display);text-align:center;letter-spacing:-.03em;
+  color:var(--tomato);-webkit-text-stroke:5px var(--ink);paint-order:stroke fill;text-shadow:8px 8px 0 var(--ink);transform:rotate(-4deg)}
+#title .logo span{display:block;color:var(--mustard);transform:translateX(.35em) rotate(3deg)}
+#title .sub{font:400 clamp(18px,2.4vw,26px) var(--hand);margin:26px 0 22px;background:#fff;border:3px solid var(--ink);padding:6px 18px;border-radius:12px;transform:rotate(1.5deg)}
+#title{justify-content:flex-start;padding-top:6vh}
+
+/* select */
+#select{background:rgba(251,243,228,.94);justify-content:flex-start;overflow:auto}
+#select h2{font:900 clamp(30px,4vw,48px) var(--display);margin:6px 0 4px;transform:rotate(-1.5deg)}
+#select .hint{font:18px var(--hand);opacity:.8;margin-bottom:18px}
+.ghead{grid-column:1/-1;font:900 22px var(--display);text-transform:uppercase;letter-spacing:.08em;border-bottom:4px solid var(--ink);padding:6px 0 4px;margin-top:6px}
+#grid,.cgrid{display:grid;grid-template-columns:repeat(4,minmax(0,200px));gap:22px;justify-content:center;width:100%}
+#multi{background:rgba(251,243,228,.95);justify-content:flex-start;overflow:auto}
+#multi h2{font:900 clamp(30px,4vw,48px) var(--display);margin:6px 0 4px;transform:rotate(-1.5deg)}
+#multi .hint{font:18px var(--hand);opacity:.8;margin-bottom:14px;text-align:center}
+.card{position:relative;aspect-ratio:1;border:4px solid var(--ink);border-radius:16px;box-shadow:6px 6px 0 var(--ink);
+  cursor:pointer;overflow:hidden;padding:14px;display:flex;flex-direction:column;justify-content:space-between;transition:transform .12s}
+.card:nth-child(odd){transform:rotate(-1.6deg)}.card:nth-child(even){transform:rotate(1.4deg)}
+.card:hover{transform:rotate(0) scale(1.05)}
+.card .no{font:900 54px/1 var(--display);color:#fff;-webkit-text-stroke:3px var(--ink);paint-order:stroke fill}
+.card .nm{font:800 20px/1.05 var(--display);background:#fff;border:3px solid var(--ink);border-radius:8px;padding:6px 8px}
+.card .who{font:15px var(--hand);margin-top:5px;display:block;font-weight:400}
+.card .stamp{position:absolute;top:12px;right:10px;font:900 13px var(--display);text-transform:uppercase;border:3px solid var(--ink);
+  border-radius:999px;padding:4px 9px;background:#fff;transform:rotate(10deg)}
+.card .disc{position:absolute;right:-40px;top:40px;width:120px;height:120px;border-radius:50%;
+  background:repeating-radial-gradient(var(--ink) 0 3px,#3a3354 3px 6px);border:4px solid var(--ink);opacity:.9}
+.card .disc::after{content:"";position:absolute;inset:40px;border-radius:50%;background:inherit;background:var(--c,#fff);border:3px solid var(--ink)}
+.foot{margin-top:22px;display:flex;gap:18px;align-items:center;font:16px var(--hand);flex-wrap:wrap;justify-content:center}
+.foot input{accent-color:var(--tomato)}
+
+/* intro + result */
+.sheet{background:#fff;border:5px solid var(--ink);border-radius:22px;box-shadow:10px 10px 0 var(--ink);padding:28px 34px;max-width:560px;text-align:center}
+.sheet .tag{display:inline-block;font:800 14px var(--display);letter-spacing:.12em;text-transform:uppercase;background:var(--ink);color:#fff;padding:5px 12px;border-radius:999px}
+.sheet h3{font:900 clamp(30px,4.4vw,46px)/1 var(--display);margin:14px 0 6px}
+.sheet .song{font:20px var(--hand);color:var(--tomato)}
+.sheet .how{font:500 18px/1.45 var(--display);margin:16px 0 20px;text-align:left;background:var(--paper);border:3px dashed var(--ink);border-radius:12px;padding:12px 16px}
+.sheet .how b{color:var(--tomato)}
+.sheet .go{font:17px var(--hand);opacity:.75;margin-top:12px}
+#rank{font:900 clamp(44px,7vw,72px)/1 var(--display);margin:12px 0;-webkit-text-stroke:4px var(--ink);paint-order:stroke fill;transform:rotate(-3deg)}
+#score{font:800 20px var(--display)}
+.maat{display:flex;gap:14px;align-items:center;text-align:left;margin:18px 0 22px;background:#fffbea;border:3px solid var(--ink);border-radius:14px;padding:12px 14px}
+.maat .halo{flex:0 0 56px;height:56px;border-radius:50%;background:radial-gradient(circle,#fff 30%,#ffe78a 60%,#f6b92b 100%);border:3px solid var(--ink);display:flex;align-items:center;justify-content:center;font-size:28px}
+.maat p{font:18px/1.35 var(--hand)}.maat small{display:block;font:700 12px var(--display);letter-spacing:.1em;text-transform:uppercase;opacity:.6;margin-bottom:3px}
+.row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+#quit{position:absolute;top:14px;left:14px;display:none;font-size:14px;padding:8px 16px}
+.btn.small{font-size:13px;padding:7px 14px;box-shadow:3px 3px 0 var(--ink)}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.card.locked{filter:grayscale(1) brightness(1.1);cursor:not-allowed}
+.card.locked .nm::after{content:"🔒 clear the song before";display:block;font:13px var(--hand);margin-top:4px}
+.card .medal{position:absolute;bottom:62px;right:12px;font-size:26px}
+#extras{background:rgba(251,243,228,.97);justify-content:flex-start;overflow:auto}
+#extras h2{font:900 clamp(30px,4vw,48px) var(--display);margin:6px 0 4px;transform:rotate(-1.5deg)}
+#extras .hint{font:18px var(--hand);opacity:.8;margin-bottom:14px}
+.xwrap{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;width:min(1100px,100%)}
+.xwrap section{background:#fff;border:4px solid var(--ink);border-radius:16px;box-shadow:6px 6px 0 var(--ink);padding:14px 16px;min-width:0}
+.xwrap section.wide{grid-column:1/-1}
+.xwrap h4{font:900 18px var(--display);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.mrow{display:flex;align-items:center;gap:8px;font:15px var(--display);padding:4px 0;border-bottom:2px dashed rgba(33,28,52,.15)}
+.mrow b{flex:1;font-weight:700}.mrow .ic{width:54px;text-align:right;font-size:18px}
+#album{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.acard{border:3px solid var(--ink);border-radius:12px;padding:8px;text-align:center;background:var(--paper)}
+.acard canvas{width:100%;aspect-ratio:1;display:block;border-radius:8px;background:#fff;border:2px solid var(--ink)}
+.acard h5{font:800 14px/1.1 var(--display);margin:6px 0 3px}.acard p{font:13px/1.3 var(--hand)}
+.acard.locked canvas{filter:brightness(0) opacity(.25)}
+.set{display:flex;gap:8px;align-items:center;font:15px var(--display);margin:8px 0}.set input[type=range]{flex:1;accent-color:var(--tomato)}
+.tiny{font:13px var(--hand);opacity:.7;margin:-4px 0 6px}
+.slink{display:block;width:100%;margin:6px 0;text-align:left}
+body.hc #cv{filter:contrast(1.35) saturate(1.25)}
+#danceUI{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);display:none;flex-direction:column;gap:6px;align-items:center;background:#fff;border:4px solid var(--ink);border-radius:16px;box-shadow:6px 6px 0 var(--ink);padding:8px 12px;max-width:calc(100% - 20px)}
+#dzTools{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.dzt.sel{background:var(--mustard);transform:translate(-1px,-1px)}
+.dzrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;font:700 14px var(--display)}
+.dzrow select{font:14px var(--display);border:3px solid var(--ink);border-radius:8px;padding:4px 6px}
+#maker{background:rgba(251,243,228,.97);justify-content:flex-start;overflow:auto}
+#maker h2{font:900 clamp(30px,4vw,48px) var(--display);margin:6px 0 4px;transform:rotate(-1.5deg)}
+#maker .hint{font:18px var(--hand);opacity:.8;margin-bottom:14px;text-align:center}
+.mkbar{display:flex;flex-wrap:wrap;gap:14px 20px;justify-content:center;font:700 14px var(--display);margin-bottom:12px}
+.mkbar label{display:flex;gap:6px;align-items:center}
+.mkbar input,.mkbar select,#mkCode{font:15px var(--display);border:3px solid var(--ink);border-radius:8px;padding:5px 8px;background:#fff}
+.mkbar input[type=range]{accent-color:var(--tomato);border:0;padding:0}
+#mkCode{width:100%;resize:vertical;font-size:12px}
+.mgridwrap{width:min(1100px,100%);overflow-x:auto;background:#fff;border:4px solid var(--ink);border-radius:14px;box-shadow:6px 6px 0 var(--ink);padding:8px}
+#mgrid{display:grid;gap:2px;width:max-content}
+.mlab{position:sticky;left:0;background:#fff;font:700 13px/1.1 var(--display);padding:4px 6px;display:flex;flex-direction:column;justify-content:center;z-index:1}
+.mlab span{display:inline-block;width:12px;height:12px;border:2px solid var(--ink);border-radius:50%;margin-bottom:2px}
+.mlab small{font:400 11px var(--hand);opacity:.7}
+.mhead{font:11px var(--display);text-align:center;height:18px;opacity:.6}.mhead.bar{opacity:1}
+.mcell{height:40px;border-radius:5px;background:var(--paper2);cursor:pointer;transition:transform .06s}
+.mcell.beat{background:#ecdcc0}.mcell.bar{box-shadow:inset 3px 0 0 var(--ink)}.mcell.intro{opacity:.55}
+.mcell:hover{transform:scale(1.15)}.mcell.on{border:2px solid var(--ink)}.mcell.occ{background:repeating-linear-gradient(45deg,#e6d6bb 0 4px,#fff 4px 8px)}
+.mkpanel{width:min(1100px,100%);background:#fff;border:4px solid var(--ink);border-radius:14px;box-shadow:6px 6px 0 var(--ink);padding:10px 14px;margin-bottom:14px}
+.mkpanel h4{font:900 16px var(--display);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.mkpanel .mkbar{justify-content:flex-start}
+.sgwrap{overflow-x:auto}.sgrow{display:flex;gap:3px;align-items:center;margin:2px 0}
+.sgrow span{flex:0 0 76px;font:700 12px var(--display)}
+.sgc{flex:0 0 28px;height:24px;border:2px solid var(--ink);border-radius:5px;background:var(--paper2);cursor:pointer;font:700 11px var(--display);padding:0}
+.sgc.beat{background:#ecdcc0}.sgc.on{background:var(--tomato);color:#fff}.sgc.bass.on{background:var(--teal)}.sgc.mel{height:18px}.sgc.mel.on{background:var(--mustard)}.sgc.bar{margin-left:8px}
+.mcell.bad{outline:3px solid var(--tomato);outline-offset:-3px;opacity:.6}
+.star{font:17px/1.35 var(--hand);margin:-8px 0 18px;text-align:left;padding:0 6px}
+.acard{cursor:pointer}.acard .more{display:none;text-align:left;font:12px/1.35 var(--display);margin-top:6px}
+.acard.open .more{display:block}.acard .more b{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;margin-top:4px;opacity:.6}
+body.hc .sheet .how,body.hc .card .nm{font-size:1.1em}
+@media (max-width:900px){.xwrap{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:900px){#grid,.cgrid{grid-template-columns:repeat(2,minmax(0,200px))}}
+@media print{#stage{position:static}.ov{position:static}}
+/* ---- menus ---- */
+#hub{justify-content:flex-start;padding:22px 24px 30px;overflow:auto;background:linear-gradient(rgba(251,243,228,.55),rgba(251,243,228,.9))}
+.hubtop{display:flex;align-items:center;justify-content:space-between;width:min(1040px,100%);margin-bottom:16px;gap:12px;flex-wrap:wrap}
+.minilogo{font:900 44px/.9 var(--display);color:var(--tomato);-webkit-text-stroke:3px var(--ink);paint-order:stroke fill;text-shadow:4px 4px 0 var(--ink);transform:rotate(-3deg)}
+.minilogo span{color:var(--mustard);margin-left:8px}
+.pill{font:800 14px var(--display);background:#fff;border:3px solid var(--ink);border-radius:999px;padding:6px 14px;box-shadow:3px 3px 0 var(--ink);white-space:nowrap}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;width:min(1040px,100%)}
+.tile{position:relative;text-align:left;background:var(--c);border:4px solid var(--ink);border-radius:20px;box-shadow:7px 7px 0 var(--ink);padding:16px 18px;min-height:150px;cursor:pointer;display:flex;flex-direction:column;justify-content:flex-end;gap:4px;overflow:hidden;transition:transform .1s,box-shadow .1s;font-family:var(--display);color:var(--ink)}
+.tile:hover{transform:translate(-3px,-3px) rotate(-.6deg);box-shadow:10px 10px 0 var(--ink)}
+.tile:active{transform:translate(3px,3px);box-shadow:3px 3px 0 var(--ink)}
+.tile i{position:absolute;top:12px;right:14px;font-style:normal;font-size:38px;filter:drop-shadow(2px 2px 0 rgba(33,28,52,.3))}
+.tile b{font:900 24px/1 var(--display);background:#fff;border:3px solid var(--ink);border-radius:10px;padding:5px 9px;align-self:flex-start}
+.tile small{font:15px/1.25 var(--hand);background:rgba(255,255,255,.8);border-radius:8px;padding:3px 7px;align-self:flex-start}
+.tile.big{grid-column:span 2;grid-row:span 2;min-height:318px}
+.tile.big b{font-size:40px}.tile.big i{font-size:64px}
+.faces{position:absolute;left:18px;top:18px;display:flex;gap:6px;flex-wrap:wrap;max-width:70%}
+.faces span{font:800 12px var(--display);background:#fff;border:2px solid var(--ink);border-radius:999px;padding:3px 9px}
+.scrhead{display:flex;align-items:center;gap:16px;width:min(1100px,100%);margin-bottom:10px}
+.scrhead h2{flex:1;margin:0!important;font:900 clamp(28px,4vw,44px) var(--display);transform:rotate(-1deg)}
+.tabs{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:6px 0 8px}
+.tab{font:800 15px var(--display);border:4px solid var(--ink);border-radius:14px 14px 4px 4px;padding:9px 16px;background:#fff;cursor:pointer;box-shadow:4px 4px 0 var(--ink)}
+.tab.sel{background:var(--mustard);transform:translateY(-3px)}.tab.lock{opacity:.5;cursor:not-allowed}
+.tab small{display:block;font:12px var(--hand);opacity:.8}
+.chblurb{font:18px/1.4 var(--hand);max-width:760px;text-align:center;margin:4px 0 18px;background:#fff;border:3px dashed var(--ink);border-radius:12px;padding:8px 16px}
+#albumOv{background:rgba(251,243,228,.96);justify-content:flex-start;overflow:auto}
+#albumOv .hint{font:18px var(--hand);opacity:.8;margin-bottom:12px}
+#album{display:flex;flex-direction:column;gap:18px;width:min(1100px,100%)}
+.agroup h4{font:900 18px var(--display);text-transform:uppercase;letter-spacing:.08em;border-bottom:4px solid var(--ink);padding-bottom:4px;margin-bottom:10px}
+.agrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px}
+#extras .scrhead,#maker .scrhead,#multi .scrhead{margin-top:4px}
+@media (max-width:900px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+
+  <div id="title" class="ov on">
+    <div class="logo">Rhyme<span>Rhythm</span></div>
+    <div class="sub">Joep, Cas &amp; Luur versus Toon de Demoon… en De Baas van Sinterklaas</div>
+    <button class="btn red" id="startBtn">Press start ♪</button>
+  </div>
+
+  <div id="hub" class="ov">
+    <div class="hubtop"><div class="minilogo">Rhyme<span>Rhythm</span></div><div class="pill" id="hubStats"></div></div>
+    <div class="tiles">
+      <button class="tile big" data-go="story" style="--c:#ef4a36"><i>📖</i><b>Het Verhaal</b><small id="tStory"></small><span class="faces" id="tFaces"></span></button>
+      <button class="tile" data-go="arcade" style="--c:#8fd3f0"><i>🕹️</i><b>Arcade</b><small>Bowling, klimmen, pannenkoeken &amp; de marathon</small></button>
+      <button class="tile" data-go="multi" style="--c:#4d7cf0"><i>👥</i><b>Multiplayer</b><small>Party games, versus &amp; co-op</small></button>
+      <button class="tile" data-go="dance" style="--c:#c77dff"><i>🕺</i><b>Dansvloer</b><small>Zet iedereen op de vloer</small></button>
+      <button class="tile" data-go="hang" style="--c:#7bc96f"><i>☺</i><b>Op de Stoep</b><small>De stoep &amp; de markt</small></button>
+      <button class="tile" data-go="album" style="--c:#f6b92b"><i>📒</i><b>Album</b><small id="tAlbum"></small></button>
+      <button class="tile" data-go="maker" style="--c:#f59ab5"><i>✎</i><b>Level Maker</b><small>Eigen levels, liedjes &amp; scènes</small></button>
+      <button class="tile" data-go="chal" style="--c:#ff9f6b"><i>🎯</i><b>Uitdagingen</b><small id="tChal"></small></button>
+      <button class="tile" data-go="extras" style="--c:#fff"><i>✦</i><b>Extras</b><small>Medailles, scènes &amp; instellingen</small></button>
+    </div>
+  </div>
+
+  <div id="select" class="ov">
+    <div class="scrhead"><button class="btn alt small" data-back>◂ Menu</button><h2>Het Verhaal</h2><span class="pill" id="medalCount"></span></div>
+    <div class="tabs" id="chTabs"></div>
+    <p class="chblurb" id="chBlurb"></p>
+    <div id="grid"></div>
+  </div>
+
+  <div id="maker" class="ov">
+    <div class="scrhead"><button class="btn alt small" data-back>◂ Menu</button><h2>Level Maker</h2><span class="pill">Levels · songs · scenes</span></div>
+    <div class="hint">Pick a game, click the grid to place cues, then test it. Each cue needs its warning beats before it.</div>
+    <div class="mkbar">
+      <label>Name <input id="mkName" maxlength="40"></label>
+      <label>Game <select id="mkGame"></select></label>
+      <label>Tempo <input type="range" id="mkBpm" min="70" max="170" step="2"> <span id="mkBpmV"></span></label>
+      <label>Length <select id="mkBars"><option value="4">4 bars</option><option value="8">8 bars</option><option value="12">12 bars</option><option value="16">16 bars</option></select></label>
+      <label>Music <select id="mkMusic"><option value="song">Game's song</option><option value="drums">Drums only</option><option value="custom">♪ Make my own song</option></select></label>
+    </div>
+    <div id="sceneBox" class="mkpanel" style="display:none"></div>
+    <div id="songBox" class="mkpanel" style="display:none"></div>
+    <div class="mgridwrap"><div id="mgrid"></div></div>
+    <div id="mkInfo" class="tiny" style="opacity:1;margin:8px 0"></div>
+    <div class="row">
+      <button class="btn red" id="mkTest">▸ Test</button>
+      <button class="btn" id="mkSave">Save</button>
+      <button class="btn alt" id="mkAuto">🎲 Auto-fill</button>
+      <button class="btn alt" id="mkClear">Clear</button>
+      <button class="btn alt" id="mkNew">New</button>
+      <button class="btn alt" id="mkBack">◂ Menu</button>
+    </div>
+    <div class="xwrap" style="margin-top:16px">
+      <section><h4>Share</h4><textarea id="mkCode" rows="3" placeholder="Paste a share code here"></textarea>
+        <div class="row" style="justify-content:flex-start;margin-top:8px"><button class="btn small" id="mkShare">Copy code</button><button class="btn alt small" id="mkLoad">Load code</button></div></section>
+      <section style="grid-column:span 2"><h4>My levels</h4><div id="mkList"></div></section>
+    </div>
+  </div>
+
+  <div id="multi" class="ov">
+    <div class="scrhead"><button class="btn alt small" data-back>◂ Menu</button><h2 id="brTitle">Multiplayer</h2><span class="pill" id="brPill"></span></div>
+    <div class="hint" id="brHint"></div>
+    <div class="cgrid" id="mpGrid"></div>
+  </div>
+
+  <div id="albumOv" class="ov">
+    <div class="scrhead"><button class="btn alt small" data-back>◂ Menu</button><h2>Album</h2><span class="pill" id="albumPill"></span></div>
+    <div class="hint">Tap a card to hear them talk and read their secrets.</div>
+    <div id="album"></div>
+  </div>
+
+  <div id="extras" class="ov">
+    <div class="scrhead"><button class="btn alt small" data-back>◂ Menu</button><h2>Extras</h2><span class="pill" id="exPill"></span></div>
+    <div class="xwrap">
+      <section><h4>Medals &amp; perfect runs</h4><div id="medals"></div></section>
+      <section><h4>Story scenes</h4><div id="storyList"></div></section>
+      <section><h4>Settings</h4>
+        <label class="set">Volume <input type="range" id="vol" min="0" max="100" step="5"> <span id="volv"></span></label>
+        <label class="set">Audio delay fix <input type="range" id="lat" min="-150" max="150" step="5"> <span id="latv"></span></label>
+        <p class="tiny">Slide right if you keep hitting late (Bluetooth headphones).</p>
+        <label class="set"><input type="checkbox" id="hc"> High-contrast mode</label>
+        <label class="set"><input type="checkbox" id="rings"> Help circles (show when to press, H to toggle)</label>
+        <button class="btn alt small" id="resetBtn">Reset progress</button>
+      </section>
+    </div>
+  </div>
+
+  <div id="intro" class="ov">
+    <div class="sheet">
+      <span class="tag" id="iNo">Level 1</span>
+      <h3 id="iTitle"></h3>
+      <div class="song" id="iSong"></div>
+      <div class="how" id="iHow"></div>
+      <div class="row">
+        <button class="btn alt" id="practiceBtn">Practice</button>
+        <button class="btn red" id="goBtn">Let's go!</button>
+        <button class="btn" id="perfectBtn">★ Perfect run</button>
+      </div>
+      <label class="set" style="justify-content:center"><input type="checkbox" id="iRings"> Help circles (show when to press)</label>
+      <div class="go">Spatie = play · P = practice · H = help circles on/off · Esc to leave mid-song</div>
+    </div>
+  </div>
+
+  <div id="result" class="ov">
+    <div class="sheet">
+      <span class="tag" id="rNo"></span>
+      <div id="rank"></div>
+      <div id="score"></div>
+      <div class="maat"><div class="halo">✦</div><div><small>Maat met Zinkfosfaat says</small><p id="rSay"></p></div></div>
+      <p id="rStar" class="star"></p>
+      <div class="row">
+        <button class="btn alt" id="retryBtn">Again</button>
+        <button class="btn alt" id="menuBtn">Menu</button>
+        <button class="btn red" id="nextBtn">Next ▸</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="danceUI">
+    <div id="dzTools"></div>
+    <div class="dzrow"><label>Music <select id="dzSong"></select></label>
+      <button class="btn small" id="dzPose">★ Pose! (Spatie)</button>
+      <button class="btn alt small" id="dzClear">Clear floor</button>
+      <button class="btn red small" id="dzBack">◂ Back</button></div>
+  </div>
+  <button class="btn alt" id="quit">✕ Quit</button>
+</div>
+<script src="engine.js"></script>
+<script src="levels_a.js"></script>
+<script src="levels_b.js"></script>
+<script src="levels_c.js"></script>
+<script src="levels_d.js"></script>
+<script src="duets.js"></script>
+<script src="arcade_a.js"></script>
+<script src="arcade_b.js"></script>
+<script src="remix.js"></script>
+<script src="story.js"></script>
+<script src="cast.js"></script>
+<script src="hangout.js"></script>
+<script src="dance.js"></script>
+<script src="songs2.js"></script>
+<script src="chars2.js"></script>
+<script src="songs3.js"></script>
+<script src="songs4.js"></script>
+<script src="hangout2.js"></script>
+<script src="mp.js"></script>
+<script src="maker.js"></script>
+<script src="songmaker.js"></script>
+<script src="extras.js"></script>
+<script src="megamix.js"></script>
+<script src="challenges.js"></script>
+<script src="main.js"></script>
+</body>
+</html>
