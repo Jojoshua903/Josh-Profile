@@ -320,12 +320,13 @@ function updateHazards(dt, t, api) {
   const me = sky.pos;
   // lasers
   for (let i = lasers.length - 1; i >= 0; i--) {
-    const l = lasers[i], q = l.m.position;
+    const l = lasers[i]; if (!l) break;      // the shot that ends a round clears every list, this one too
+    const q = l.m.position;
     q.addScaledVector(l.v, dt); l.life -= dt;
     let hit = l.life <= 0;
     if (!hit && boss.state === 'fight' && q.distanceTo(crow.position) < 2.6) { hit = true; hitCrow(api); }
-    for (let j = minions.length - 1; !hit && j >= 0; j--) if (q.distanceTo(minions[j].g.position) < 1.5) { hit = true; puff(minions[j].g.position.clone(), 12, 0x2a2a44, 4, 1); sfx.pop(); scene.remove(minions[j].g); minions.splice(j, 1); }
-    for (let j = bombs.length - 1; !hit && j >= 0; j--) if (q.distanceTo(bombs[j].m.position) < 1.4) { hit = true; puff(bombs[j].m.position.clone(), 12, 0x9a3aff, 4, 1); sfx.pop(); scene.remove(bombs[j].m); bombs.splice(j, 1); }
+    for (let j = minions.length - 1; !hit && j >= 0; j--) if (minions[j] && q.distanceTo(minions[j].g.position) < 1.5) { hit = true; puff(minions[j].g.position.clone(), 12, 0x2a2a44, 4, 1); sfx.pop(); scene.remove(minions[j].g); minions.splice(j, 1); }
+    for (let j = bombs.length - 1; !hit && j >= 0; j--) if (bombs[j] && q.distanceTo(bombs[j].m.position) < 1.4) { hit = true; puff(bombs[j].m.position.clone(), 12, 0x9a3aff, 4, 1); sfx.pop(); scene.remove(bombs[j].m); bombs.splice(j, 1); }
     if (hit) { if (l.life > 0) puff(q.clone(), 4, 0x5ef2e0, 2, 0.5); scene.remove(l.m); lasers.splice(i, 1); }
   }
   if (!sky.on) return;
