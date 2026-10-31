@@ -1885,10 +1885,15 @@ async function commit(a,writes){
     headers:{"Content-Type":"application/json",Authorization:"Bearer "+a.id},body:JSON.stringify({writes})});
   if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.error?.message||"write failed")}
 }
+/* keep Firebase's own error text, so the status message can explain it */
+async function fsError(r,where){
+  let msg="";try{const j=await r.json();msg=(Array.isArray(j)?j[0]:j)?.error?.message||""}catch(e){}
+  return new Error(`${r.status} ${msg||r.statusText||"error"} [${where}]`);
+}
 async function query(collection,orderField,limit){
   const r=await fetch(`${FS}:runQuery`,{method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({structuredQuery:{from:[{collectionId:collection}],orderBy:[{field:{fieldPath:orderField},direction:"DESCENDING"}],limit}})});
-  if(!r.ok)throw new Error("read failed");
+  if(!r.ok)throw await fsError(r,collection);
   return (await r.json()).filter(x=>x.document).map(x=>docOf(x.document));
 }
 const NOW={fieldPath:"seen",setToServerValue:"REQUEST_TIME"};
@@ -1921,7 +1926,11 @@ let netOk=null;
 /* turn Firebase errors into a plain explanation of what to fix */
 function netReason(err){
   const m=String(err?.message||err||"");
-  const tail=m?` (${m.slice(0,120)})`:"";
+  const tail=m?` (${m.slice(0,160)})`:"";
+  if(/requires an index|FAILED_PRECONDITION/i.test(m))return "Firebase needs an index for this. Open the link in the error below while signed in to Firebase, click Create index, and wait a few minutes."+tail;
+  if(/datastore mode/i.test(m))return "The database was made in Datastore mode. It needs Firestore Native mode: create a new database in Firestore Database and pick Native mode."+tail;
+  if(/does not exist|NOT_FOUND|^404/i.test(m))return "Firebase can't find the database. In Firestore Database, check there's a database called (default) in the widr64 project."+tail;
+  if(/has not been used|is disabled|SERVICE_DISABLED/i.test(m))return "The Firestore service is switched off for this project. Open Firestore Database in the Firebase console once (or enable the Cloud Firestore API in Google Cloud) and wait a few minutes."+tail;
   if(/ADMIN_ONLY_OPERATION|OPERATION_NOT_ALLOWED/i.test(m))return "Anonymous sign-in is switched off. In Firebase, go to Authentication → Sign-in method → Anonymous and turn it on."+tail;
   if(/PERMISSION_DENIED|insufficient permissions/i.test(m))return "Firebase said no. The security rules probably aren't published yet. Paste the full rules in Firestore → Rules and press Publish."+tail;
   if(/API key not valid|API_KEY_INVALID/i.test(m))return "The Firebase key isn't accepted. Check that the apiKey in the menu matches Project settings → Your apps."+tail;
@@ -2200,7 +2209,7 @@ let chatView="wall", dmWith=null, dmAll=[], lastMsgs=[], lastReacts=[], groupsAl
 async function queryWhere(col,field,val,a,limit=200,op="EQUAL"){
   const r=await fetch(`${FS}:runQuery`,{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+a.id},
     body:JSON.stringify({structuredQuery:{from:[{collectionId:col}],where:{fieldFilter:{field:{fieldPath:field},op,value:sv(val)}},limit}})});
-  if(!r.ok)throw new Error("read failed");
+  if(!r.ok)throw await fsError(r,col);
   return (await r.json()).filter(x=>x.document).map(x=>docOf(x.document));
 }
 const byAt=(x,y)=>(x.at||0)-(y.at||0);
@@ -2550,7 +2559,7 @@ async function loadComments(){
   try{
     const r=await fetch(`${FS}:runQuery`,{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({structuredQuery:{from:[{collectionId:"gcomments"}],where:{fieldFilter:{field:{fieldPath:"game"},op:"EQUAL",value:sv(gslug(rvGame.name))}},limit:100}})});
-    if(!r.ok)throw new Error("read failed");
+    if(!r.ok)throw await fsError(r,"gcomments");
     rvComments=(await r.json()).filter(x=>x.document).map(x=>docOf(x.document)).sort((a,b)=>(a.at||0)-(b.at||0));
     drawReviews();
   }catch(e){setNet(false,e)}
