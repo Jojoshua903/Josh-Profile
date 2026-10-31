@@ -1918,10 +1918,24 @@ setInterval(()=>{
 },60000);
 
 let netOk=null;
+/* turn Firebase errors into a plain explanation of what to fix */
+function netReason(err){
+  const m=String(err?.message||err||"");
+  const tail=m?` (${m.slice(0,120)})`:"";
+  if(/ADMIN_ONLY_OPERATION|OPERATION_NOT_ALLOWED/i.test(m))return "Anonymous sign-in is switched off. In Firebase, go to Authentication → Sign-in method → Anonymous and turn it on."+tail;
+  if(/PERMISSION_DENIED|insufficient permissions/i.test(m))return "Firebase said no. The security rules probably aren't published yet. Paste the full rules in Firestore → Rules and press Publish."+tail;
+  if(/API key not valid|API_KEY_INVALID/i.test(m))return "The Firebase key isn't accepted. Check that the apiKey in the menu matches Project settings → Your apps."+tail;
+  if(/referer|referrer|blocked/i.test(m))return "Your Firebase key only allows certain websites. Add joshibrahim.nl to the key's allowed websites in Google Cloud → Credentials."+tail;
+  if(/NOT_FOUND|does not exist|has not been used|disabled/i.test(m))return "The Firestore database can't be found. Make sure it was created in the widr64 project (Firestore Database → Create database)."+tail;
+  if(/Failed to fetch|NetworkError|Load failed|network/i.test(m))return location.hostname.endsWith("joshibrahim.nl")
+    ?"Can't reach Firebase. Check your internet connection, or turn off ad blockers for this site."+tail
+    :"Can't reach Firebase from here. This preview blocks online connections, so open the menu on joshibrahim.nl instead."+tail;
+  return "Can't reach the WIDR 64 servers right now. The chat refreshes on its own when it's back."+tail;
+}
 function setNet(ok,err){
   netOk=ok;
   $("onlineDot").className="net-dot "+(ok?"ok":"bad");
-  $("onStatus").textContent=ok?"":"Can't reach the WIDR 64 servers right now. Online works once the menu is on joshibrahim.nl, and the chat refreshes on its own when it's back.";
+  $("onStatus").textContent=ok?"":netReason(err);
   $("onStatus").hidden=ok;
   if(err)console.warn("WIDR 64 online:",err.message||err);
 }
