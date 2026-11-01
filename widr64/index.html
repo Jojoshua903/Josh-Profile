@@ -295,6 +295,15 @@ body[data-season="december"]{--glow:#eef6ff}
 .ge-row{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:12px}
 .ge-file{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px}
 .ge-error{color:var(--red);font-weight:700;min-height:1.2em;margin-top:10px}
+/* community games */
+.info .maker{display:flex;align-items:center;gap:8px;margin-top:8px;font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--ink-soft)}
+.info .maker .av{width:22px;height:22px}
+.info .maker b{color:var(--ink);letter-spacing:.04em}
+.info .maker .warn{color:var(--red);font-weight:700}
+.btn.fav.report{color:var(--ink-soft)}
+.btn.fav.report.on{background:var(--shell-2);color:var(--red);box-shadow:0 4px 0 var(--shell-3)}
+.cart .by{position:absolute;top:7px;left:7px;z-index:2;width:26px;height:26px;border-radius:50%;overflow:hidden;box-shadow:0 0 0 2px #fff}
+.cart .by svg{display:block;width:100%;height:100%}
 @media (max-width:700px){.ge-grid{grid-template-columns:1fr}.ge-left{display:grid;justify-items:center}}
 
 /* emotes */
@@ -727,7 +736,7 @@ body[data-season="december"] .season-sticker{--ss:#c8242b}
     <section class="shelf">
       <div class="shelf-title"><span id="shelfHello">SELECT A CARTRIDGE</span><span id="slot">SLOT 01</span></div>
       <div class="continue" id="continue" hidden><span class="cont-label">▶ CONTINUE</span><div class="cont-list" id="contList"></div></div>
-      <div class="tabs"><button class="tab on" data-f="all">ALL GAMES</button><button class="tab" data-f="fav">★ FAVORITES <b id="favCount">0</b></button><button class="tab" data-f="mine">🕹 MY GAMES <b id="mineCount">0</b></button></div>
+      <div class="tabs"><button class="tab on" data-f="all">ALL GAMES</button><button class="tab" data-f="fav">★ FAVORITES <b id="favCount">0</b></button><button class="tab" data-f="mine">🕹 MY GAMES <b id="mineCount">0</b></button><button class="tab" data-f="community">🌍 COMMUNITY <b id="cmCount">0</b></button></div>
       <div class="grid" id="grid"></div>
     </section>
 
@@ -738,6 +747,7 @@ body[data-season="december"] .season-sticker{--ss:#c8242b}
         <h2 id="title">Title</h2>
         <button type="button" class="rating-line" id="ratingLine" hidden></button>
         <div class="url" id="url"></div>
+        <div class="maker" id="makerLine" hidden></div>
         <p class="desc" id="desc"></p>
         <button type="button" class="news-line" id="newsLine" hidden></button>
         <div class="actions">
@@ -745,6 +755,7 @@ body[data-season="december"] .season-sticker{--ss:#c8242b}
           <button class="btn fav" id="favBtn" type="button">☆ Favorite</button>
           <button class="btn fav" id="editGame" type="button" hidden>✎ Edit</button>
           <button class="btn fav" id="rvBtn" type="button" hidden>💬 Reviews</button>
+          <button class="btn fav report" id="reportBtn" type="button" hidden title="Report this game">⚑ Report</button>
         </div>
       </div>
       <div class="controls">
@@ -857,6 +868,7 @@ body[data-season="december"] .season-sticker{--ss:#c8242b}
         </div>
         <label>COVER PICTURE (OPTIONAL)</label>
         <div class="ge-file"><input type="file" id="gFile" accept="image/*"><button type="button" class="btn ghost" id="gImgClear" hidden>Remove picture</button></div>
+        <label class="on-toggle"><input type="checkbox" id="gShare"> <span>🌍 Share with everyone</span><small>Puts this cartridge in the Community tab for every player. Needs an https:// link and "Show me online" turned on.</small></label>
       </div>
     </div>
     <p class="ge-error" id="geError"></p>
@@ -1403,10 +1415,22 @@ ${g.img?`<image href="${g.img}" width="200" height="200" preserveAspectRatio="xM
 const ADD=-1;
 const ADD_ART=`<svg class="art" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="200" fill="#c4beb2"/><g opacity=".25" fill="#fff">${Array.from({length:49},(_,i)=>`<circle cx="${(i%7)*32+4}" cy="${Math.floor(i/7)*32+4}" r="3"/>`).join("")}</g><circle cx="100" cy="100" r="46" fill="#fff" opacity=".5"/><path d="M100 72 v56 M72 100 h56" stroke="#26241f" stroke-width="10" stroke-linecap="round"/></svg>`;
 let LIB=[];
+/* community games: shared by players online, kept on this device and only downloaded again when something changes */
+const CKEY="widr64.community";
+var commAll=[], commReports=[], commSig=-1;
+try{const c=JSON.parse(localStorage.getItem(CKEY)||"null");if(c&&Array.isArray(c.list)){commAll=c.list;commReports=c.reps||[];commSig=c.sig||0}}catch(e){}
+const REPORT_LIMIT=3;
+const commReportsFor=id=>commReports.filter(r=>r.game===id).length;
 function buildLib(){
-  LIB=[...GAMES.map((g,i)=>({...g,key:g.name,no:"WIDR·64 · "+pad(i+1)})),
+  const myUid=me().auth?.uid;
+  LIB=[...GAMES.map((g,i)=>({...g,key:g.name,slug:gslug(g.name),no:"WIDR·64 · "+pad(i+1)})),
        ...(me().custom||[]).map((g,i)=>({key:"c:"+g.id,custom:true,cid:g.id,name:g.name,url:g.url,desc:g.desc||"",
-         genre:(g.genre||"My game").toUpperCase(),color:g.color,bg:g.color,art:customArt(g),no:"MY GAME · "+pad(i+1)}))];
+         genre:(g.genre||"My game").toUpperCase(),color:g.color,bg:g.color,art:customArt(g),no:"MY GAME · "+pad(i+1)})),
+       ...commAll.map(g=>({g,mine:!!myUid&&g.uid===myUid,reports:commReportsFor(g.id)}))
+         .filter(x=>x.mine||x.reports<REPORT_LIMIT)
+         .map(({g,mine,reports},i)=>({key:"u:"+g.id,community:true,gid:g.id,slug:"u_"+g.id,mine,reports,cid:g.cid,
+           name:g.name,url:g.url,desc:g.desc||"",genre:(g.genre||"Community").toUpperCase(),color:g.color,bg:g.color,art:customArt(g),
+           maker:g.maker,makerIcon:g.makerIcon,no:"COMMUNITY · "+pad(i+1)}))];
 }
 const cover=i=>i===ADD?`<div class="cover">${ADD_ART}</div>`:`<div class="cover" style="background:${LIB[i].bg}">${LIB[i].art}</div>`;
 
@@ -1420,27 +1444,33 @@ function toggleFav(){
   else{f.push(n);[784,1046].forEach((x,i)=>setTimeout(()=>beep(x,.08,"triangle",.06),i*60))}
   saveStore();render();
 }
-const TABS=["all","fav","mine"];
+const TABS=["all","fav","mine","community"];
 function setFilter(f){
   if(filter===f)return;
   filter=f;sel=0;beep(700,.05);render();
+  if(f==="community")loadCommunity();
 }
 
 /* --- render --- */
 /* sel indexes the visible cartridges (vis); vis maps back to LIB, and ADD is the "new cartridge" slot */
 function gameLink(a,gi){
-  if(gi===ADD){a.removeAttribute("href");a.onclick=e=>{e.preventDefault();openGameEditor(null)};return}
+  if(gi===ADD){a.removeAttribute("href");a.onclick=e=>{e.preventDefault();openGameEditor(null,filter==="community")};return}
   a.href=LIB[gi].url;a.target="_blank";a.rel="noopener";
   a.onclick=e=>{e.preventDefault();startGame(gi)};
 }
 function render(){
   buildLib();
-  const idx=LIB.map((_,i)=>i);
-  vis=filter==="all"?idx:filter==="fav"?idx.filter(isFav):[...idx.filter(i=>LIB[i].custom),ADD];
+  const idx=LIB.map((_,i)=>i), myCids=(me().custom||[]).map(g=>g.id);
+  /* your own shared games already show as your cartridges, so All Games doesn't list them twice */
+  vis=filter==="all"?idx.filter(i=>!(LIB[i].community&&LIB[i].mine&&myCids.includes(LIB[i].cid)))
+     :filter==="fav"?idx.filter(isFav)
+     :filter==="community"?[...idx.filter(i=>LIB[i].community),ADD]
+     :[...idx.filter(i=>LIB[i].custom),ADD];
   sel=Math.min(sel,Math.max(vis.length-1,0));
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on",t.dataset.f===filter));
   $("favCount").textContent=LIB.filter((_,i)=>isFav(i)).length;
   $("mineCount").textContent=(me().custom||[]).length;
+  $("cmCount").textContent=LIB.filter(c=>c.community).length;
   $("panel").classList.toggle("dim",!vis.length);
 
   const rec=me().recent.map(k=>LIB.findIndex(g=>g.key===k)).filter(i=>i>=0);
@@ -1457,15 +1487,17 @@ function render(){
     const b=document.createElement("a");gameLink(b,gi);
     b.className="cart"+(gi===ADD?" add":"")+(i===sel?" sel":"");b.style.animationDelay=(i*60)+"ms";
     if(gi===ADD){
-      b.setAttribute("aria-label","Make a new cartridge");
-      b.innerHTML=`<div class="body"><div class="plus">+<small>NEW CARTRIDGE</small></div></div>`;
+      const sub=filter==="community";
+      b.setAttribute("aria-label",sub?"Submit a game for everyone":"Make a new cartridge");
+      b.innerHTML=`<div class="body"><div class="plus">+<small>${sub?"SUBMIT A GAME":"NEW CARTRIDGE"}</small></div></div>`;
     }else{
       const c=LIB[gi];
       b.setAttribute("aria-label","Play "+c.name);
       b.innerHTML=`<div class="body"><div class="label">${cover(gi)}
         ${isFav(gi)?`<span class="star" title="Favorite">★</span>`:""}
         ${isNew(gi)?`<span class="ribbon">NEW</span>`:""}
-        ${!c.custom&&gameStats(c.name).n?`<span class="rate-badge">★ ${gameStats(c.name).avg.toFixed(1)}</span>`:""}
+        ${c.community?`<span class="by" title="Made by ${escA(c.maker||"a player")}">${iconSvg(c.makerIcon)}</span>`:""}
+        ${!c.custom&&gameStats(c.slug).n?`<span class="rate-badge">★ ${gameStats(c.slug).avg.toFixed(1)}</span>`:""}
         <div class="tag">${c.no}</div>
         </div><div class="ridges"></div></div>`;
     }
@@ -1478,8 +1510,8 @@ let shown=null;
 function update(){
   if(!vis.length)return;
   [...$("grid").children].forEach((el,i)=>el.classList.toggle("sel",i===sel));
-  const gi=vis[sel], add=gi===ADD, c=add?null:LIB[gi];
-  const label=add?"NEW":c.custom?"MY "+c.no.slice(-2):c.no.slice(-2);
+  const gi=vis[sel], add=gi===ADD, c=add?null:LIB[gi], sub=add&&filter==="community";
+  const label=add?"NEW":c.custom?"MY "+c.no.slice(-2):c.community?"COM "+c.no.slice(-2):c.no.slice(-2);
   $("slot").textContent="SLOT "+label;
   $("chan").textContent="CH "+label;
   const key=add?"add":c.key+c.art.length;
@@ -1487,19 +1519,24 @@ function update(){
     $("crtArt").innerHTML=cover(gi);shown=key;
     $("crt").classList.remove("flash");void $("crt").offsetWidth;$("crt").classList.add("flash");
   }
-  $("genre").textContent=add?"MY GAMES":c.genre;$("genre").style.background=add?"var(--ink-soft)":c.color;
-  $("title").textContent=add?"New cartridge":c.name;
-  $("url").textContent=add?"":decodeURI(c.url.replace(/^https?:\/\//,""));
-  $("desc").textContent=add?"Add any game website and design its cartridge. Your games are saved to your player only.":c.desc;
-  const rst=!add&&!c.custom?gameStats(c.name):null;
+  $("genre").textContent=sub?"COMMUNITY":add?"MY GAMES":c.genre;$("genre").style.background=add?"var(--ink-soft)":c.color;
+  $("title").textContent=sub?"Submit a game":add?"New cartridge":c.name;
+  let shownUrl="";if(!add){try{shownUrl=decodeURI(c.url.replace(/^https?:\/\//,""))}catch(e){shownUrl=c.url.replace(/^https?:\/\//,"")}}
+  $("url").textContent=shownUrl;
+  $("desc").textContent=sub?"Made a game? Share it with every WIDR 64 player. Design its cartridge and it shows up here for everyone.":add?"Add any game website and design its cartridge. Your games are saved to your player only.":c.desc;
+  $("makerLine").hidden=!(c&&c.community);
+  if(c&&c.community)$("makerLine").innerHTML=`<span class="av">${iconSvg(c.makerIcon)}</span>MADE BY <b>${escA(clean(c.maker||"Player"))}</b>${c.mine?" (YOU)":""}${c.mine&&c.reports>=REPORT_LIMIT?` · <span class="warn">HIDDEN: REPORTED BY ${c.reports} PLAYERS</span>`:""}`;
+  const rst=!add&&!c.custom?gameStats(c.slug):null;
   $("rvBtn").hidden=$("ratingLine").hidden=!rst;
   if(rst)$("ratingLine").innerHTML=rst.n?`${starRow(rst.avg)}<b>${rst.avg.toFixed(1)}</b><small>${rst.n} review${rst.n>1?"s":""} · see all</small>`:`${starRow(0)}<small>No reviews yet · be the first</small>`;
   const nh=!add&&isNew(gi)?newsHits[c.name]:null;
   $("newsLine").hidden=!nh;if(nh)$("newsLine").innerHTML=`<b>📰 NEW IN THE NEWS</b>${escA(nh.line)}`;
   gameLink($("play"),gi);
-  $("playLbl").textContent=add?"CREATE":"START";
+  $("playLbl").textContent=sub?"SUBMIT":add?"CREATE":"START";
   $("favBtn").hidden=add;
-  $("editGame").hidden=add||!c.custom;
+  $("editGame").hidden=add||!(c.custom||c.mine&&(me().custom||[]).some(g=>g.id===c.cid));
+  $("reportBtn").hidden=!(c&&c.community&&!c.mine);
+  if(c&&c.community&&!c.mine){const done=myReported(c.gid);$("reportBtn").textContent=done?"⚑ Reported":"⚑ Report";$("reportBtn").classList.toggle("on",done)}
   if(!add){$("favBtn").textContent=isFav(gi)?"★ Favorited":"☆ Favorite";$("favBtn").classList.toggle("on",isFav(gi))}
   $("grid").children[sel].scrollIntoView({block:"nearest",behavior:"smooth"});
 }
@@ -1507,9 +1544,16 @@ function update(){
 /* --- launching: slide the cartridge into the console; the game opens the moment it clicks in --- */
 let launching=false;
 function startGame(gi){
-  if(gi===ADD)return openGameEditor(null);
-  if(launching)return;launching=true;
+  if(gi===ADD)return openGameEditor(null,filter==="community");
+  if(launching)return;
   const c=LIB[gi], p=me();
+  /* community games open someone else's website, so ask once per game first */
+  if(c.community&&!c.mine&&!(store.cmOk||[]).includes(c.gid)){
+    let host=c.url;try{host=new URL(c.url).host}catch(e){}
+    if(!confirm(`"${c.name}" was made by ${c.maker||"a player"}, not by WIDR 64.\n\nIt opens ${host}, a website WIDR 64 doesn't check. Only play it if you trust it.\n\nOpen the game?`))return;
+    store.cmOk=[...(store.cmOk||[]),c.gid].slice(-200);saveStore();
+  }
+  launching=true;
   if(store.slots[store.active]){
     p.recent=[c.key,...p.recent.filter(n=>n!==c.key)].slice(0,3);
     p.playing=c.name.slice(0,28);p._playStamp=true;
@@ -1534,19 +1578,21 @@ $("insFallback").onclick=()=>setTimeout(closeInsert,200);
 $("insBack").onclick=closeInsert;
 function launch(){if(vis.length)startGame(vis[sel])}
 $("favBtn").onclick=toggleFav;
-$("editGame").onclick=()=>{const c=LIB[vis[sel]];if(c&&c.custom)openGameEditor(c.cid)};
+$("editGame").onclick=()=>{const c=LIB[vis[sel]];if(c&&(c.custom||c.mine))openGameEditor(c.cid)};
+$("reportBtn").onclick=()=>{const c=LIB[vis[sel]];if(c&&c.community&&!c.mine)reportGame(c)};
 document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>setFilter(t.dataset.f));
 
 /* --- cartridge maker: own games, saved on the current player --- */
 const CART_COLORS=["#e8402f","#f0761f","#f5b915","#1fa45b","#0fa3b1","#2463d6","#5b3fa8","#d6337f","#3b2414","#26241f"];
 let gDraft=null, gEditId=null;
-function openGameEditor(id){
+function openGameEditor(id,share){
   if(!store.slots[store.active]){openWho();return}
   const list=me().custom||(me().custom=[]);
   const cur=id?list.find(g=>g.id===id):null;
   gEditId=cur?cur.id:null;
   gDraft=cur?{...cur}:{name:"",url:"",desc:"",genre:"",color:CART_COLORS[list.length%CART_COLORS.length],pattern:"stripes",glyph:"🎮",img:""};
-  $("geTitle").textContent=cur?"Edit cartridge":"New cartridge";
+  $("geTitle").textContent=cur?"Edit cartridge":share?"Submit a game":"New cartridge";
+  $("gShare").checked=cur?!!cur.shared:!!share;
   $("geDelete").hidden=!cur;
   $("gName").value=gDraft.name;$("gUrl").value=gDraft.url;$("gDesc").value=gDraft.desc;$("gGenre").value=gDraft.genre;$("gGlyph").value=gDraft.glyph;
   $("gColors").innerHTML=CART_COLORS.map(c=>`<button type="button" class="sw-btn" data-c="${c}" style="background:${c}" aria-label="Colour ${c}"></button>`).join("");
@@ -1585,7 +1631,11 @@ $("geSave").onclick=()=>{
   if(!name){$("geError").textContent="Give your game a name.";$("gName").focus();return}
   if(!url){$("geError").textContent="Add the game's web address.";$("gUrl").focus();return}
   if(!/^https?:\/\//i.test(url))url="https://"+url;
-  const g={...gDraft,name,url,desc:(gDraft.desc||"").trim(),genre:(gDraft.genre||"").trim(),glyph:(gDraft.glyph||"").trim()||"🎮"};
+  const share=$("gShare").checked, wasShared=!!(gEditId&&me().custom.find(x=>x.id===gEditId)?.shared);
+  if(share&&!/^https:\/\//i.test(url)){$("geError").textContent="Shared games need a secure link that starts with https://";$("gUrl").focus();return}
+  if(share){try{new URL(url)}catch(e){$("geError").textContent="That web address doesn't look right.";$("gUrl").focus();return}}
+  if(share&&!me().online){$("geError").textContent="To share, turn on \"Show me online\" in your player editor first.";return}
+  const g={...gDraft,name,url,desc:(gDraft.desc||"").trim(),genre:(gDraft.genre||"").trim(),glyph:(gDraft.glyph||"").trim()||"🎮",shared:share};
   const list=me().custom;
   if(gEditId){list[list.findIndex(x=>x.id===gEditId)]=g}
   else{g.id=Date.now().toString(36);list.push(g)}
@@ -1593,12 +1643,14 @@ $("geSave").onclick=()=>{
     if(!gEditId)list.pop();
     $("geError").textContent="There's no room left to save this. Try a smaller picture or remove one.";return;
   }
+  if(share)shareGame(g);else if(wasShared)unshareGame(g.id,g.name);
   closeGameEditor();filter="mine";render();
   sel=vis.indexOf(LIB.findIndex(x=>x.key==="c:"+g.id));if(sel<0)sel=0;update();chord();
 };
 $("geDelete").onclick=()=>{
   const p=me(),key="c:"+gEditId;
-  if(!confirm(`Delete "${gDraft.name}" from your games?`))return;
+  if(!confirm(`Delete "${gDraft.name}" from your games?${gDraft.shared?" It will also be removed from the Community tab.":""}`))return;
+  if(p.custom.find(x=>x.id===gEditId)?.shared)unshareGame(gEditId,gDraft.name);
   p.custom=p.custom.filter(x=>x.id!==gEditId);
   p.favs=p.favs.filter(k=>k!==key);p.recent=p.recent.filter(k=>k!==key);
   saveStore();closeGameEditor();render();beep(200,.15,"sawtooth");
@@ -2080,7 +2132,8 @@ async function query(collection,orderField,limit){
 }
 const NOW={fieldPath:"seen",setToServerValue:"REQUEST_TIME"};
 function recentNames(p){
-  return (p.recent||[]).map(k=>k.startsWith("c:")?((p.custom||[]).find(g=>"c:"+g.id===k)||{}).name:k).filter(Boolean).slice(0,3);
+  return (p.recent||[]).map(k=>k.startsWith("c:")?((p.custom||[]).find(g=>"c:"+g.id===k)||{}).name
+    :k.startsWith("u:")?(commAll.find(g=>"u:"+g.id===k)||{}).name:k).filter(Boolean).slice(0,3);
 }
 async function publishProfile(p){
   if(!p||!p.online)return;
@@ -2764,12 +2817,12 @@ $("chatInput").oninput=()=>{$("chatCount").textContent=$("chatInput").value.leng
 setTimeout(()=>{const p=store.slots[store.active];if(p&&p.online)publishProfile(p)},1500);
 
 /* --- reviews + comments for the built-in games, shared online --- */
-const gslug=n=>n.toLowerCase().replace(/[^a-z0-9]/g,"");
+function gslug(n){return n.toLowerCase().replace(/[^a-z0-9]/g,"")}
 const GAME_IDS=GAMES.map(g=>gslug(g.name));
 let reviewsAll=[], rvGame=null, rvTab="reviews", rvStars=0, rvComments=[];
 const starRow=(n,cls="")=>`<span class="stars ${cls}">${[1,2,3,4,5].map(i=>`<i class="${i<=Math.round(n)?"on":""}">★</i>`).join("")}</span>`;
-function gameStats(name){
-  const rs=reviewsAll.filter(r=>r.game===gslug(name));
+function gameStats(slug){
+  const rs=reviewsAll.filter(r=>r.game===slug);
   return {n:rs.length,avg:rs.length?rs.reduce((s,r)=>s+(r.stars||0),0)/rs.length:0};
 }
 async function loadReviews(force){
@@ -2783,8 +2836,9 @@ async function loadReviews(force){
   }catch(e){if(store.rvCache?.list)reviewsAll=store.rvCache.list;onNetErr(e)}
 }
 setTimeout(()=>loadReviews(),2500);setInterval(()=>{if(!document.hidden)loadReviews()},20*60e3);
-function openReviews(gi){
-  const c=GAMES[gi];if(!c)return;
+/* c is a cartridge from the library: a built-in game or a community game */
+function openReviews(c){
+  if(!c||c.custom)return;
   rvGame=c;rvTab="reviews";
   $("rvCover").innerHTML=`<div class="cover" style="background:${c.bg}">${c.art}</div>`;
   $("rvTitle").textContent=c.name;
@@ -2793,10 +2847,10 @@ function openReviews(gi){
   loadReviews().then(drawReviews);loadComments();
 }
 const closeReviews=()=>{$("reviews").classList.remove("open");beep(300,.08)};
-const myReview=()=>{const uid=me().auth?.uid;return uid&&rvGame?reviewsAll.find(r=>r.id===gslug(rvGame.name)+"_"+uid):null};
+const myReview=()=>{const uid=me().auth?.uid;return uid&&rvGame?reviewsAll.find(r=>r.id===rvGame.slug+"_"+uid):null};
 function drawReviews(){
   if(!rvGame)return;
-  const st=gameStats(rvGame.name), p=store.slots[store.active], on=p&&p.online, mine=myReview();
+  const st=gameStats(rvGame.slug), p=store.slots[store.active], on=p&&p.online, mine=myReview();
   $("rvAvg").innerHTML=st.n?`${starRow(st.avg,"big")}<b>${st.avg.toFixed(1)}</b><small>${st.n} REVIEW${st.n>1?"S":""}</small>`:`<small>NO REVIEWS YET</small>`;
   document.querySelectorAll(".rv-tab").forEach(b=>b.classList.toggle("on",b.dataset.t===rvTab));
   $("rvRevCount").textContent=st.n;$("rvComCount").textContent=rvComments.length;
@@ -2813,7 +2867,7 @@ function drawReviews(){
   });
   /* everyone's reviews */
   const myUid=me().auth?.uid;
-  const list=reviewsAll.filter(r=>r.game===gslug(rvGame.name)).sort((a,b)=>(b.at||0)-(a.at||0));
+  const list=reviewsAll.filter(r=>r.game===rvGame.slug).sort((a,b)=>(b.at||0)-(a.at||0));
   $("rvList").innerHTML=list.length?list.map(r=>{const pl=lastPlayers.find(x=>x.id===r.uid);
     return `<div class="rv-item${r.uid===myUid?" mine":""}"><span class="av${animCls(r.icon,pl?.anim)}">${iconSvg(r.icon)}</span>
     <div class="mbody"><b>${escA(clean(r.name||"Player"))}</b>${starRow(r.stars)}<small>${ago(r.at)}</small>
@@ -2825,7 +2879,7 @@ async function saveReview(){
   const p=store.slots[store.active];if(!p||!p.online||!rvGame)return;
   if(!rvStars){$("rvNote").textContent="Pick 1 to 5 stars first.";return}
   try{
-    const a=await token(p),g=gslug(rvGame.name);
+    const a=await token(p),g=rvGame.slug;
     await publishProfile(p);
     await commit(a,[{update:{name:`${FS_DB}/documents/reviews/${g}_${a.uid}`,fields:{game:sv(g),uid:sv(a.uid),
       name:sv(p.name.slice(0,16)),icon:sv(p.icon),stars:{integerValue:String(rvStars)},text:sv(clean($("rvText").value.trim()).slice(0,300))}},
@@ -2843,7 +2897,7 @@ async function deleteReview(){
 const cSig={};
 async function loadComments(force){
   if(!rvGame)return;
-  const g=gslug(rvGame.name);
+  const g=rvGame.slug;
   try{
     const s=await getSig("meta/c_"+g);
     if(!force&&cSig[g]!==undefined&&s.at<=cSig[g])return;
@@ -2865,7 +2919,7 @@ function drawComments(){
     <p class="${onlyEmotes(m.text||"")?"big-emo":""}">${withEmotes(escA(clean(m.text||"")))}</p></div></div>`}).join("")
     :`<p class="on-empty">No comments yet. Start the conversation!</p>`;
   box.querySelectorAll(".del").forEach(b=>b.onclick=async()=>{
-    try{const a=await token(me());await fetch(`${FS}/gcomments/${b.dataset.id}`,{method:"DELETE",headers:{Authorization:"Bearer "+a.id}});await commit(a,[bump("meta/c_"+gslug(rvGame.name))]);loadComments(true)}catch(e){onNetErr(e)}
+    try{const a=await token(me());await fetch(`${FS}/gcomments/${b.dataset.id}`,{method:"DELETE",headers:{Authorization:"Bearer "+a.id}});await commit(a,[bump("meta/c_"+rvGame.slug)]);loadComments(true)}catch(e){onNetErr(e)}
   });
   if(atBottom||!box.dataset.g||box.dataset.g!==rvGame.name){box.scrollTop=box.scrollHeight;box.dataset.g=rvGame.name}
   $("rvcInput").disabled=$("rvcSend").disabled=!on;
@@ -2881,10 +2935,10 @@ async function sendComment(){
     await publishProfile(p);
     const a=await token(p),id=Date.now().toString(36)+Math.random().toString(36).slice(2,8);
     await commit(a,[
-      {update:{name:`${FS_DB}/documents/gcomments/${id}`,fields:{game:sv(gslug(rvGame.name)),uid:sv(a.uid),name:sv(p.name.slice(0,16)),icon:sv(p.icon),text:sv(clean(text))}},
+      {update:{name:`${FS_DB}/documents/gcomments/${id}`,fields:{game:sv(rvGame.slug),uid:sv(a.uid),name:sv(p.name.slice(0,16)),icon:sv(p.icon),text:sv(clean(text))}},
        currentDocument:{exists:false},updateTransforms:[{fieldPath:"at",setToServerValue:"REQUEST_TIME"}]},
       {transform:{document:`${FS_DB}/documents/players/${a.uid}`,fieldTransforms:[{fieldPath:"lastChat",setToServerValue:"REQUEST_TIME"},NOW]}},
-      bump("meta/c_"+gslug(rvGame.name))
+      bump("meta/c_"+rvGame.slug)
     ]);
     lastSend=Date.now();$("rvcInput").value="";$("rvcNote").textContent="";beep(990,.05,"triangle");
     loadComments(true);
@@ -2897,9 +2951,92 @@ $("rvcSend").onclick=sendComment;
 $("rvcInput").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();sendComment()}};
 $("rvClose").onclick=closeReviews;
 $("reviews").onclick=e=>{if(e.target.id==="reviews")closeReviews()};
-$("rvBtn").onclick=()=>{const c=LIB[vis[sel]];if(c&&!c.custom)openReviews(GAMES.findIndex(g=>g.name===c.name))};
+$("rvBtn").onclick=()=>{const c=LIB[vis[sel]];if(c&&!c.custom)openReviews(c)};
 $("ratingLine").onclick=$("rvBtn").onclick;
 setInterval(()=>{if($("reviews").classList.contains("open")&&rvTab==="comments")loadComments()},15000);
+
+/* --- community: games players share with everyone ---
+   Each game is one document (community/<uid>_<id>), and meta/community says when the list changed.
+   Reports are one document per player per game, so 3 reports means 3 different players. */
+const okColor=c=>/^#[0-9a-f]{3,8}$/i.test(c||"")?c:"#26241f";
+const okImg=s=>/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(s||"")?s:"";
+/* everything from the servers is checked before it goes near the page */
+function cleanComm(d){
+  if(!d||!d.id||!d.name||!/^https:\/\/[^\s"'<>]+$/i.test(d.url||""))return null;
+  try{new URL(d.url)}catch(e){return null}
+  return {id:d.id,uid:d.uid||"",cid:d.id.split("_").pop(),name:String(d.name).slice(0,28),url:d.url,
+    desc:String(d.desc||"").slice(0,220),genre:String(d.genre||"").slice(0,16),color:okColor(d.color),
+    pattern:Object.prototype.hasOwnProperty.call(PATTERNS,d.pattern)?d.pattern:"none",glyph:String(d.glyph||"🎮").slice(0,8),
+    img:okImg(d.img),maker:String(d.maker||"Player").slice(0,16),makerIcon:Object.prototype.hasOwnProperty.call(ICONS,d.makerIcon)?d.makerIcon:"guiseppe",at:d.at||0};
+}
+async function loadCommunity(force){
+  if(paused())return;
+  try{
+    const s=await getSig("meta/community");
+    if(!force&&commSig>=0&&s.at<=commSig&&!(s.del>commSig))return;
+    const [list,reps]=await Promise.all([
+      runQ({from:[{collectionId:"community"}],orderBy:ord("at"),limit:80}),
+      runQ({from:[{collectionId:"creports"}],limit:500}).catch(()=>commReports)]);
+    commAll=list.map(cleanComm).filter(Boolean);
+    commReports=reps.map(r=>({game:r.game,uid:r.uid}));
+    commSig=Math.max(s.at||0,s.del||0,1);
+    try{localStorage.setItem(CKEY,JSON.stringify({sig:commSig,list:commAll,reps:commReports}))}catch(e){}
+    render();
+  }catch(e){onNetErr(e)}
+}
+setTimeout(()=>loadCommunity(),3000);setInterval(()=>{if(!document.hidden)loadCommunity()},5*60e3);
+const myReported=gid=>{const uid=me().auth?.uid;return !!uid&&commReports.some(r=>r.game===gid&&r.uid===uid)};
+/* shared pictures are made smaller again, so the whole list stays quick to download */
+function shrinkImg(src,S){
+  return new Promise(res=>{
+    if(!src)return res("");
+    const im=new Image();
+    im.onload=()=>{const cv=document.createElement("canvas");cv.width=cv.height=S;
+      const k=Math.max(S/im.width,S/im.height),w=im.width*k,h=im.height*k;
+      cv.getContext("2d").drawImage(im,(S-w)/2,(S-h)/2,w,h);res(cv.toDataURL("image/jpeg",.75))};
+    im.onerror=()=>res("");im.src=src;
+  });
+}
+function cmToast(icon,html){toast(icon,html,"friend");const t=$("toasts").lastElementChild;if(t)t.onclick=()=>t.remove()}
+async function shareGame(g){
+  const p=store.slots[store.active];if(!p||!p.online)return;
+  try{
+    const a=await token(p), img=await shrinkImg(g.img,200);
+    await publishProfile(p);
+    await commit(a,[{update:{name:`${FS_DB}/documents/community/${a.uid}_${g.id}`,fields:{
+      uid:sv(a.uid),name:sv(g.name.slice(0,28)),url:sv(g.url.slice(0,300)),desc:sv((g.desc||"").slice(0,220)),
+      genre:sv((g.genre||"").slice(0,16)),color:sv(okColor(g.color)),pattern:sv(g.pattern||"none"),glyph:sv((g.glyph||"🎮").slice(0,8)),
+      img:sv(img),maker:sv(p.name.slice(0,16)),makerIcon:sv(p.icon)}},
+      updateTransforms:[{fieldPath:"at",setToServerValue:"REQUEST_TIME"}]},bump("meta/community")]);
+    cmToast(iconSvg(p.icon),`<b>${escA(g.name)}</b> is in the 🌍 Community tab for everyone now!`);
+    loadCommunity(true);
+  }catch(e){cmToast(iconSvg(p.icon),`Couldn't share <b>${escA(g.name)}</b>. ${escA(netReason(e))}`);onNetErr(e)}
+}
+async function unshareGame(id,name){
+  const p=store.slots[store.active];if(!p||!p.auth)return;
+  try{
+    const a=await token(p);
+    const r=await fetch(`${FS}/community/${a.uid}_${id}`,{method:"DELETE",headers:{Authorization:"Bearer "+a.id}});
+    if(!r.ok)throw await fsError(r,"community");
+    await commit(a,[bump("meta/community",true)]);
+    commAll=commAll.filter(g=>g.id!==a.uid+"_"+id);render();
+    cmToast(iconSvg(p.icon),`<b>${escA(name||"Your game")}</b> was taken out of the Community tab.`);
+  }catch(e){onNetErr(e)}
+}
+async function reportGame(c){
+  const p=store.slots[store.active];
+  if(myReported(c.gid))return cmToast(iconSvg(me().icon),"You already reported this game. Thanks!");
+  if(!p||!p.online)return cmToast(iconSvg(me().icon),"Go online in your player editor to report games.");
+  if(!confirm(`Report "${c.name}"?\n\nReport games that are broken, mean, scary, or not really games. When ${REPORT_LIMIT} players report a game, it's hidden for everyone.`))return;
+  try{
+    const a=await token(p);
+    await commit(a,[{update:{name:`${FS_DB}/documents/creports/${c.gid}_${a.uid}`,fields:{game:sv(c.gid),uid:sv(a.uid)}},
+      currentDocument:{exists:false},updateTransforms:[{fieldPath:"at",setToServerValue:"REQUEST_TIME"}]},bump("meta/community")]);
+    commReports.push({game:c.gid,uid:a.uid});render();beep(300,.1);
+    cmToast(iconSvg(p.icon),`Thanks, your report on <b>${escA(c.name)}</b> was sent.`);
+    loadCommunity(true);
+  }catch(e){onNetErr(e)}
+}
 
 /* --- news: the published Google Doc, shown in a News channel --- */
 const NEWS_URL="https://docs.google.com/document/d/e/2PACX-1vRXRBFltnDUYbf7mQxCWJW3tk-pQbdyZWLyGPx6fSpFBiQWiaVAUeu58ha4DCA8KUIX-_Mm601npoSg/pub";
@@ -2928,7 +3065,7 @@ var newsHits={};
 const hashStr=s=>{let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return String(h)};
 function newsSeenMap(){const p=store.slots[store.active];return p?(p.newsSeen=p.newsSeen||{}):(store.newsSeen=store.newsSeen||{})}
 function isNew(gi){
-  const c=LIB[gi];if(!c||c.custom)return false;
+  const c=LIB[gi];if(!c||c.custom||c.community)return false;
   const h=newsHits[c.name];return !!h&&newsSeenMap()[c.name]!==h.hash;
 }
 function markNewsSeen(name){
