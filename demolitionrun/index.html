@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Daniel · Demolition Run</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="hud" class="hidden">
+  <div id="objPanel">
+    <div class="tag">LEVEL 1 · IRONVEIL COMPOUND</div>
+    <ul id="objList"></ul>
+  </div>
+
+  <div id="timerWrap" class="hidden">
+    <div class="tlabel">DETONATION IN</div>
+    <div id="timer">1:30</div>
+  </div>
+  <div id="toasts"></div>
+
+  <div id="mmWrap"><canvas id="mm" width="168" height="147"></canvas><div class="mmlabel">N ↑</div></div>
+
+  <div id="xhair"><i></i><i></i><i></i><i></i></div>
+  <div id="hitmk"></div>
+
+  <div id="prompt" class="hidden">
+    <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" class="bg"/><circle id="ring" cx="22" cy="22" r="18" class="fg"/></svg>
+    <span id="promptText">Hold <kbd>E</kbd> to plant charge</span>
+  </div>
+
+  <div id="vitals">
+    <div class="name">DANIEL <span>DEMOLITIONS SPECIALIST</span></div>
+    <div class="bar"><div id="hpbar"></div></div>
+    <div id="hpnum">100</div>
+    <div class="bar armor"><div id="arbar"></div></div>
+    <div id="arnum">0</div>
+    <div id="stealth">HIDDEN</div>
+  </div>
+
+  <div id="arms">
+    <div class="ammo"><b id="ammo">15</b><span>/ <em id="reserve">60</em></span></div>
+    <div class="wname" id="wname">MK-9 SIDEARM</div>
+    <div class="wlist" id="wlist"></div>
+    <div class="chg"><span class="c4">C4</span> × <b id="chg">2</b> <small><kbd>Q</kbd> throw</small></div>
+    <div class="abil hidden" id="abil">BLINK <kbd>V</kbd></div>
+  </div>
+
+  <div id="boss" class="hidden"><div class="bname" id="bossName"></div><div class="bbar"><div id="bossbar"></div></div></div>
+  <div id="tdPrompt" class="hidden"><kbd>F</kbd> Silent takedown</div>
+
+  <div id="vign"></div>
+  <div id="glassVign"></div>
+  <div id="dmgdir"></div>
+  <div id="bellWarn" class="hidden"><b></b><span></span></div>
+</div>
+
+<!-- cinematic layer -->
+<div id="cine" class="hidden">
+  <div class="bar top"></div><div class="bar bot"></div>
+  <div id="cineCap"></div>
+  <button id="skip" class="ghost">Skip intro ▸▸</button>
+  <div id="wake" class="hidden">Click to get up</div>
+</div>
+<div id="fade"></div>
+
+<div id="comms">
+  <div class="face"></div>
+  <div class="body"><div class="who"></div><div class="role"></div><div class="txt"></div></div>
+</div>
+
+<div id="brief" class="overlay menu">
+  <div class="menuWrap">
+    <div class="menuLeft">
+      <div class="kicker">OPERATION FAULT LINE</div>
+      <h1>DANIEL</h1>
+      <div class="sub">Demolition Run</div>
+      <nav id="menuNav">
+        <button data-act="continue" id="mContinue">Continue <small id="contInfo"></small></button>
+        <button data-act="new" id="mNew">New Game <small id="newInfo"></small></button>
+        <button data-act="chapters">Chapters</button>
+        <button data-act="codex">Codex</button>
+        <button data-act="achievements">Achievements</button>
+        <button data-act="settings">Settings</button>
+        <button data-act="controls">Controls</button>
+        <button data-act="credits">Credits</button>
+      </nav>
+      <div class="menuFoot">Autosaves at every checkpoint · <kbd>↑</kbd><kbd>↓</kbd> <kbd>Enter</kbd> to navigate</div>
+    </div>
+
+    <div class="menuPanel card" id="menuPanel">
+      <section data-panel="story">
+        <div class="stamp">CLASSIFIED</div>
+        <div class="kicker">FIELD DOSSIER</div>
+        <h3 class="ph">The story so far</h3>
+        <p class="story">The Crimson Watch run the desert from Ironveil, a concrete fortress with one gate, a fuel depot big enough to light up the sky, and a habit of making people disappear.</p>
+        <p class="story">Daniel is the best demolitions specialist the resistance has ever had. Tonight he's flying in to blow the place open. His new handler is a voice on the radio who calls himself <b>Reshman</b>, says he's a ninja, and won't say who he works for.</p>
+        <p class="story"><b>It is not going to go to plan.</b></p>
+        <p class="tip">Red barrels explode. Gunfire draws guards. Crates are cover. Listen to Reshman, mostly.</p>
+      </section>
+
+      <section data-panel="chapters" class="hidden">
+        <div class="kicker">CHAPTER SELECT</div>
+        <h3 class="ph">Chapters</h3>
+        <div id="chapterList"></div>
+      </section>
+
+      <section data-panel="achievements" class="hidden">
+        <div class="kicker">ACHIEVEMENTS · <span id="achCount"></span></div>
+        <h3 class="ph">Achievements</h3>
+        <div id="achList"></div>
+      </section>
+
+      <section data-panel="settings" class="hidden">
+        <div class="kicker">SETTINGS · SAVED AUTOMATICALLY</div>
+        <h3 class="ph">Settings</h3>
+        <label class="set">Mouse sensitivity <output id="oSens"></output><input type="range" id="sSens" min="0.3" max="2.5" step="0.05"></label>
+        <label class="set">Master volume <output id="oVol"></output><input type="range" id="sVol" min="0" max="1" step="0.05"></label>
+        <label class="set">Field of view <output id="oFov"></output><input type="range" id="sFov" min="60" max="100" step="1"></label>
+        <label class="set chk"><input type="checkbox" id="sInvert"> Invert mouse Y</label>
+        <label class="set chk"><input type="checkbox" id="sShake"> Screen shake</label>
+        <button id="wipeBtn" class="ghost danger">Erase all save data</button>
+      </section>
+
+      <section data-panel="controls" class="hidden">
+        <div class="kicker">FIELD MANUAL</div>
+        <h3 class="ph">Controls</h3>
+        <dl class="controls">
+          <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt><dd>Move</dd>
+          <dt><kbd>Mouse</kbd></dt><dd>Look (arrow keys work too)</dd>
+          <dt><kbd>Click</kbd></dt><dd>Fire</dd>
+          <dt><kbd>Shift</kbd></dt><dd>Sprint</dd>
+          <dt><kbd>C</kbd></dt><dd>Crouch (sneak, harder to spot)</dd>
+          <dt><kbd>F</kbd></dt><dd>Silent takedown from behind</dd>
+          <dt><kbd>1</kbd><kbd>2</kbd></dt><dd>Pistol / shotgun (once found)</dd>
+          <dt><kbd>3</kbd></dt><dd>Sledgehammer: click to swing, hold to smash (breaks cracked walls)</dd>
+          <dt><kbd>V</kbd></dt><dd>Blink forward (once you have the ring)</dd>
+          <dt><kbd>Space</kbd></dt><dd>Jump</dd>
+          <dt><kbd>R</kbd></dt><dd>Reload</dd>
+          <dt><kbd>E</kbd> hold</dt><dd>Plant C4 on a target</dd>
+          <dt><kbd>Q</kbd></dt><dd>Throw sticky charge</dd>
+          <dt><kbd>Esc</kbd></dt><dd>Pause, save and quit</dd>
+        </dl>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div id="saveIcon" class="hidden"><i></i><span>SAVING</span></div>
+
+<div id="pause" class="overlay hidden">
+  <div class="card small">
+    <div class="kicker" id="pauseTag">OPERATION FAULT LINE</div>
+    <h2>Paused</h2>
+    <p id="pauseInfo">Daniel is holding position. Reshman is humming something.</p>
+    <button id="resume">RESUME ▸</button>
+    <div class="btnRow">
+      <button id="loadCp" class="ghost">Load last checkpoint</button>
+      <button id="restart2" class="ghost">Restart level</button>
+      <button id="codexBtn2" class="ghost">Codex</button>
+      <button id="quitMenu" class="ghost">Save &amp; quit to menu</button>
+    </div>
+  </div>
+</div>
+
+<div id="end" class="overlay hidden">
+  <div class="card small">
+    <div class="stamp" id="endStamp">MISSION COMPLETE</div>
+    <div id="rank"><b>S</b><span>RANK</span></div>
+    <div class="kicker">LEVEL 1 · IRONVEIL COMPOUND</div>
+    <h2 id="endTitle">Ironveil is rubble.</h2>
+    <p id="endText"></p>
+    <div id="stats"></div>
+    <button id="next" class="hidden">LEVEL 2 ▸</button><button id="retryCp" class="hidden">RETRY FROM CHECKPOINT ▸</button><button id="replay">REPLAY LEVEL 1 ▸</button>
+    <div class="btnRow"><button id="codexBtn3" class="ghost">Codex</button><button id="toMenu" class="ghost">Main menu</button></div>
+    <div class="next" id="nextNote">Level 2 is ready.</div>
+  </div>
+</div>
+
+<div id="memory" class="hidden">
+  <div class="kicker">A MEMORY, BURNED CLEAN</div>
+  <h3 id="memTitle"></h3>
+  <p id="memText"></p>
+</div>
+
+<div id="codex" class="overlay hidden">
+  <div class="card codexCard">
+    <div class="kicker">OPERATION FAULT LINE · RECOVERED FRAGMENTS</div>
+    <h2>Codex <small id="codexCount"></small></h2>
+    <div id="codexBody"></div>
+    <button id="codexClose">CLOSE ▸</button>
+  </div>
+</div>
+
+<div id="credits" class="hidden"><div id="crRoll"></div><div class="crHint">Click or press Esc to skip</div></div>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>
