@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WIDR 64 Main Menu</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<meta name="theme-color" content="#2463d6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="WIDR 64">
 <style>
 :root{
   --shell:#e6e2da; --shell-2:#d7d2c8; --shell-3:#c4beb2; --ink:#26241f; --ink-soft:#6d685e;
@@ -130,7 +136,53 @@ a.btn{text-decoration:none}
 .k-p{background:var(--green)}
 
 /* favorites */
-.tabs{display:flex;gap:8px;margin:-8px 0 22px}
+.tabs{display:flex;gap:8px;margin:-8px 0 22px;flex-wrap:wrap;align-items:center}
+/* search + view switch, on the right of the tabs */
+.tab-tools{margin-left:auto;display:flex;gap:8px;align-items:center}
+.search{display:flex;align-items:center;gap:6px;padding:0 8px 0 12px;height:33px;border-radius:999px;background:rgba(255,255,255,.7);box-shadow:inset 0 0 0 1px var(--shell-3);cursor:text}
+.search:focus-within{background:#fff;box-shadow:inset 0 0 0 2px var(--ink)}
+.search span{font-size:15px;color:var(--ink-soft)}
+.search input{width:130px;border:none;background:none;font:700 13px var(--display);color:var(--ink);outline:none}
+.search input::-webkit-search-cancel-button{cursor:pointer}
+.search kbd{font-family:var(--mono);font-size:10px;padding:1px 6px;border-radius:5px;background:var(--shell-2);color:var(--ink-soft)}
+.search:focus-within kbd{display:none}
+.grid-empty{grid-column:1/-1;font-family:var(--mono);font-size:12px;letter-spacing:.12em;color:var(--ink-soft);text-align:center;padding:50px 10px}
+/* shelf view: cartridges stand on wooden shelves, showing their spines */
+.grid.shelf-view{grid-template-columns:repeat(auto-fill,minmax(66px,1fr));gap:46px 0;padding:6px 6px 20px}
+.grid.shelf-view .cart{aspect-ratio:auto;height:250px;padding:0 4px}
+.grid.shelf-view .cart::before{content:"";position:absolute;left:0;right:0;bottom:-16px;height:16px;z-index:0;
+  background:linear-gradient(180deg,#b9824a,#8a5a32 70%,#5e3a1c);box-shadow:0 6px 10px -4px rgba(0,0,0,.35)}
+.grid.shelf-view .cart.sel::after{inset:-6px -2px -4px}
+.grid.shelf-view .cart .body.spine{left:4px;right:4px;clip-path:none;border-radius:7px 7px 3px 3px;padding:6px 5px 8px;display:flex;flex-direction:column;align-items:center;gap:8px;
+  background:linear-gradient(90deg,rgba(0,0,0,.22),transparent 18%,transparent 80%,rgba(0,0,0,.2)),var(--sc,#3f3d39);box-shadow:inset 0 0 0 2px rgba(255,255,255,.2),0 4px 0 -1px rgba(0,0,0,.35)}
+.spine .sp-cover{position:relative;width:100%;aspect-ratio:1;flex:none;border-radius:4px;overflow:hidden;box-shadow:0 0 0 2px rgba(255,255,255,.5)}
+.spine .sp-name{flex:1;min-height:0;writing-mode:vertical-rl;font-weight:900;font-size:16px;line-height:1;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.35);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spine .sp-no{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:#fff;background:rgba(0,0,0,.35);padding:2px 5px;border-radius:4px}
+.spine .sp-fav{position:absolute;top:-8px;right:-4px;font-style:normal;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:11px;color:#fff;background:var(--yellow);box-shadow:0 0 0 2px #fff}
+.spine.add{--sc:#c4beb2;justify-content:center}
+.spine.add .sp-name{flex:none;color:var(--ink);text-shadow:none}
+/* play time + status */
+.info .playtime{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--ink-soft);margin-top:8px}
+.info .playtime b{color:var(--ink)}
+.pv-status{font-size:13px;font-weight:700;color:var(--ink-soft);font-style:italic}
+.pv-status:empty{display:none}
+.pinfo .pstatus{display:block;font-size:13px;font-style:italic;color:var(--ink-soft);margin-top:3px;word-break:break-word}
+/* weekly recap */
+.recap-card{width:min(620px,94vw)}
+.rc-top{display:flex;align-items:center;gap:16px;padding:14px;border-radius:18px;background:#fff;box-shadow:inset 0 0 0 2px var(--shell-3)}
+.rc-top .dl-thumb{width:96px;height:96px}
+.rc-top small{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--ink-soft)}
+.rc-top h4{font-size:24px;font-weight:900;line-height:1.05;margin:4px 0}
+.rc-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:12px}
+.rc-stat{padding:12px;border-radius:14px;background:#fff;box-shadow:inset 0 0 0 1px var(--shell-3);text-align:center}
+.rc-stat b{display:block;font-size:26px;font-weight:900;line-height:1.1}
+.rc-stat small{font-family:var(--mono);font-size:9px;letter-spacing:.18em;color:var(--ink-soft)}
+.rc-list{margin-top:12px;display:grid;gap:6px}
+.rc-row{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700}
+.rc-row .thumb{position:relative;width:30px;height:30px;border-radius:7px;overflow:hidden;flex:none}
+.rc-row .bar{flex:1;height:8px;border-radius:999px;background:var(--shell-2);overflow:hidden}
+.rc-row .bar i{display:block;height:100%;background:var(--blue);border-radius:999px}
+.rc-row small{font-family:var(--mono);font-size:10px;color:var(--ink-soft);min-width:52px;text-align:right}
 .tab{font-family:var(--mono);font-size:11px;letter-spacing:.2em;font-weight:700;border:none;cursor:pointer;padding:8px 14px;border-radius:999px;
   background:rgba(255,255,255,.45);color:var(--ink-soft);box-shadow:inset 0 0 0 1px var(--shell-3)}
 .tab b{display:inline-block;min-width:18px;margin-left:4px;padding:1px 5px;border-radius:999px;background:var(--shell-3);color:var(--ink)}
@@ -192,6 +244,11 @@ a.btn{text-decoration:none}
 .sw-biscotto{background:linear-gradient(135deg,#f6d9b8 50%,#e8762f 50%)}
 .sw-orbit{background:linear-gradient(135deg,#d9d2f3 50%,#5b3fa8 50%)}
 .sw-pixel{background:linear-gradient(135deg,#cfe0b4 50%,#3e5a1e 50%)}
+.sw-frost{background:linear-gradient(135deg,#e4f2fb 50%,#2a8fd0 50%)}
+.sw-candy{background:linear-gradient(135deg,#fbdbe6 50%,#e2457f 50%)}
+.sw-volt{background:linear-gradient(135deg,#f6efc2 50%,#2463d6 50%)}
+.sw-army{background:linear-gradient(135deg,#e2dcc4 50%,#4d5a2c 50%)}
+.sw-detective{background:linear-gradient(135deg,#ece7da 50%,#3f7f2a 50%)}
 .btn.danger{background:#fff;color:var(--red);box-shadow:inset 0 0 0 2px var(--red);margin-right:auto}
 
 /* cartridge insert animation */
@@ -227,6 +284,16 @@ body[data-skin="orbit"]{background-image:radial-gradient(circle,#fff 1px,transpa
 body[data-skin="pixel"]{--shell:#d3e2b8;--shell-2:#bdd29c;--shell-3:#8fa86a;--ink:#1f2a12;--ink-soft:#4e6234;--shelf-a:#b2c98e;--shelf-b:#a0bb7c;--panel:#ecf4dc;--glow:#f4f9ea;--display:"Menlo","Monaco",monospace}
 body[data-skin="pixel"] :is(.shelf,.info,.card,.btn,.pill,.tab,.chip,.pslot,.screen,.crt,.skin-opt,.ic,.av){border-radius:4px!important}
 body[data-skin="pixel"] .cart .body{border-radius:4px}
+body[data-skin="frost"]{--shell:#dcecf6;--shell-2:#c7e0f0;--shell-3:#9cc4dd;--ink:#13304a;--ink-soft:#4f7390;--shelf-a:#c2dcee;--shelf-b:#afd0e6;--panel:#f2f9fd;--glow:#ffffff}
+body[data-skin="frost"]{background-image:radial-gradient(circle,#fff 1.4px,transparent 2px),radial-gradient(circle,rgba(255,255,255,.7) 1px,transparent 1.6px);background-size:38px 38px,23px 23px;background-position:0 0,11px 17px}
+body[data-skin="candy"]{--shell:#fbdbe6;--shell-2:#f6c6d7;--shell-3:#e79ab6;--ink:#4a1630;--ink-soft:#9a4a70;--shelf-a:#f6c2d4;--shelf-b:#f0abc4;--panel:#fff3f8;--glow:#fff9fb}
+body[data-skin="candy"]{background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.35) 0 18px,transparent 18px 36px)}
+body[data-skin="volt"]{--shell:#f6efc2;--shell-2:#efe39e;--shell-3:#d6c25c;--ink:#1c1c3a;--ink-soft:#5b5a84;--shelf-a:#ece08e;--shelf-b:#e3d474;--panel:#fffbe6;--glow:#fffdf0}
+body[data-skin="volt"]{background-image:linear-gradient(115deg,transparent 46%,rgba(36,99,214,.08) 46% 48%,transparent 48% 70%,rgba(36,99,214,.06) 70% 71%,transparent 71%)}
+body[data-skin="army"]{--shell:#e2dcc4;--shell-2:#d3caa8;--shell-3:#ae9f74;--ink:#262614;--ink-soft:#615e3c;--shelf-a:#cfc49f;--shelf-b:#bfb38a;--panel:#f5f1e3;--glow:#faf7ec;--display:"Arial Black","Helvetica Neue",sans-serif}
+body[data-skin="army"]{background-image:radial-gradient(ellipse 60px 34px at 20% 30%,rgba(107,122,58,.13),transparent 70%),radial-gradient(ellipse 50px 30px at 70% 70%,rgba(90,70,38,.12),transparent 70%);background-size:160px 120px}
+body[data-skin="detective"]{--shell:#e6e1d4;--shell-2:#d6cfbd;--shell-3:#b3a98f;--ink:#1d2a2a;--ink-soft:#5b6660;--shelf-a:#d2cab4;--shelf-b:#c4bb9f;--panel:#f7f4ec;--glow:#fcfaf4;--display:"Courier New","Menlo",monospace}
+body[data-skin="detective"]{background-image:linear-gradient(rgba(29,42,42,.05) 1px,transparent 1px);background-size:100% 26px}
 
 /* TV trailers: cover characters move only on the TV, cartridges stay still */
 .crt [class^="t-"],.crt [class*=" t-"]{transform-box:fill-box;transform-origin:50% 100%}
@@ -468,6 +535,14 @@ body[data-season="december"]{--glow:#eef6ff}
 .av.anim-lyla{animation:av-skip 1.2s ease-in-out infinite;transform-origin:50% 100%}
 .av.anim-daniel{animation:av-march .9s ease-in-out infinite;transform-origin:50% 100%}
 .av.anim-reshman{animation:av-ninja 2.6s ease-in-out infinite}
+.av.anim-julie{animation:av-sleuth 2.4s ease-in-out infinite}
+.av.anim-anna{animation:av-comms 1.6s ease-in-out infinite}
+.av.anim-isa{animation:av-frost 2.8s ease-in-out infinite}
+.av.anim-ratjetoe{animation:av-wrench 1.4s ease-in-out infinite;transform-origin:50% 90%}
+@keyframes av-sleuth{0%,100%{transform:translateX(0) rotate(0)}25%{transform:translateX(-8%) rotate(-6deg)}50%{transform:translateX(0) rotate(0) scale(1.06)}75%{transform:translateX(8%) rotate(6deg)}}
+@keyframes av-comms{0%,100%{transform:rotate(0);filter:none}20%{transform:rotate(-5deg)}40%{transform:rotate(4deg);filter:drop-shadow(0 0 4px #c8e04a)}60%{transform:rotate(0)}}
+@keyframes av-frost{0%,100%{transform:translateY(0);filter:none}50%{transform:translateY(-6%);filter:drop-shadow(0 0 6px #9fe0ff) brightness(1.08)}}
+@keyframes av-wrench{0%,100%{transform:rotate(0)}15%{transform:rotate(-10deg)}30%{transform:rotate(8deg)}45%{transform:rotate(-6deg)}60%{transform:rotate(0)}}
 @keyframes av-march{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-6%) rotate(3deg)}}
 @keyframes av-ninja{0%,60%,100%{transform:translateX(0) skewX(0);opacity:1}66%{transform:translateX(-14%) skewX(12deg);opacity:.2}74%{transform:translateX(14%) skewX(-12deg);opacity:.2}82%{transform:translateX(0) skewX(0);opacity:1}}
 @keyframes av-zap{0%,70%{transform:translate(0,0);filter:none}74%{transform:translate(2%,-2%);filter:brightness(1.6)}78%{transform:translate(-2%,1%);filter:brightness(1)}82%{transform:translate(1%,2%);filter:brightness(1.5)}86%{transform:translate(0,0);filter:none}}
@@ -509,6 +584,12 @@ body[data-skin="pixel"] .chat-log{background:linear-gradient(rgba(62,90,30,.08) 
 body[data-skin="orbit"] .msg p{background:#fff}
 body[data-skin="pixel"] .msg p{border-radius:2px!important;background:#fff}
 body[data-skin="biscotto"] .msg p{background:#fff}
+body[data-skin="frost"] .chat-log{background:radial-gradient(circle,rgba(42,143,208,.12) 1.2px,transparent 1.8px) 0 0/20px 20px,linear-gradient(180deg,#f6fbfe,#e6f3fb)}
+body[data-skin="candy"] .chat-log{background:repeating-linear-gradient(135deg,rgba(226,69,127,.05) 0 14px,transparent 14px 28px),#fff7fa}
+body[data-skin="volt"] .chat-log{background:linear-gradient(115deg,transparent 48%,rgba(36,99,214,.06) 48% 50%,transparent 50%) 0 0/60px 60px,#fffdf2}
+body[data-skin="army"] .chat-log{background:radial-gradient(ellipse 40px 24px at 30% 40%,rgba(107,122,58,.09),transparent 70%) 0 0/120px 90px,#faf7ec}
+body[data-skin="detective"] .chat-log{background:linear-gradient(rgba(29,42,42,.05) 1px,transparent 1px) 0 0/100% 24px,#fcfaf4}
+body:is([data-skin="frost"],[data-skin="candy"],[data-skin="volt"],[data-skin="army"],[data-skin="detective"]) .msg p{background:#fff}
 /* seen ticks */
 .tick{font-family:var(--display);font-size:11px;font-weight:900;color:var(--ink-soft);margin-left:6px;letter-spacing:-2px}
 .tick.read{color:var(--blue)}
@@ -785,6 +866,7 @@ body[data-season="december"] .season-sticker{--ss:#c8242b}
       <button class="pill pbtn news-btn" id="newsBtn" title="News (N)">📰 NEWS</button>
       <button class="pill pbtn news-btn" id="charsBtn" title="Characters (C)">👥 CHARACTERS</button>
       <button class="pill pbtn news-btn" id="dailyBtn" title="Daily (D)" style="position:relative">📅 DAILY<span class="on-badge" id="dailyDot" hidden></span></button>
+      <button class="pill pbtn news-btn" id="installBtn" title="Install WIDR 64 as an app" hidden>⬇ INSTALL</button>
       <button class="pill pbtn" id="ctrlBtn" title="Show / hide controls (H)">🎮</button>
       <button class="pill pbtn" id="musicBtn" title="Menu music on / off (B)">♫ ON</button>
       <button class="pill pbtn" id="soundBtn" title="Click sounds on / off (M)">♪ ON</button>
@@ -795,7 +877,7 @@ body[data-season="december"] .season-sticker{--ss:#c8242b}
     <section class="shelf">
       <div class="shelf-title"><span id="shelfHello">SELECT A CARTRIDGE</span><span id="slot">SLOT 01</span></div>
       <div class="continue" id="continue" hidden><span class="cont-label">▶ CONTINUE</span><div class="cont-list" id="contList"></div></div>
-      <div class="tabs"><button class="tab on" data-f="all">ALL GAMES</button><button class="tab" data-f="fav">★ FAVORITES <b id="favCount">0</b></button><button class="tab" data-f="mine">🕹 MY GAMES <b id="mineCount">0</b></button><button class="tab" data-f="community">🌍 COMMUNITY <b id="cmCount">0</b></button></div>
+      <div class="tabs"><button class="tab on" data-f="all">ALL GAMES</button><button class="tab" data-f="fav">★ FAVORITES <b id="favCount">0</b></button><button class="tab" data-f="mine">🕹 MY GAMES <b id="mineCount">0</b></button><button class="tab" data-f="community">🌍 COMMUNITY <b id="cmCount">0</b></button><div class="tab-tools"><label class="search" title="Search games (/)"><span>⌕</span><input id="search" type="search" maxlength="30" autocomplete="off" placeholder="Search games" aria-label="Search games"><kbd>/</kbd></label><button type="button" class="tab view-btn" id="viewBtn" title="Switch view (V)">▤ SHELF</button></div></div>
       <div class="grid" id="grid"></div>
     </section>
 
@@ -807,6 +889,7 @@ body[data-season="december"] .season-sticker{--ss:#c8242b}
         <button type="button" class="rating-line" id="ratingLine" hidden></button>
         <div class="url" id="url"></div>
         <div class="maker" id="makerLine" hidden></div>
+        <div class="playtime" id="playTime" hidden></div>
         <p class="desc" id="desc"></p>
         <button type="button" class="news-line" id="newsLine" hidden></button>
         <div class="actions">
@@ -830,6 +913,8 @@ body[data-season="december"] .season-sticker{--ss:#c8242b}
           <span><span class="key k-r">R</span>Reviews</span>
           <span><span class="key k-n">N</span>News</span>
           <span><span class="key k-d">D</span>Daily</span>
+          <span><span class="key k-pad">/</span>Search</span>
+          <span><span class="key k-pad">V</span>Shelf view</span>
           <span><span class="key k-c">C</span>Characters</span>
           <span><span class="key k-p">P</span>Players</span>
           <span><span class="key k-b">B</span>Music</span>
@@ -853,6 +938,7 @@ body[data-season="december"] .season-sticker{--ss:#c8242b}
         <div class="pf-preview" id="pvBox">
           <span class="av big" id="pvIcon"></span>
           <div class="pv-name" id="pvName">PLAYER 1</div>
+          <div class="pv-status" id="pvStatus"></div>
           <div class="pv-sub" id="pvSub"></div>
           <p class="pv-about" id="pvAbout"></p>
           <span class="pv-online" id="pvOnline"></span>
@@ -868,6 +954,8 @@ body[data-season="december"] .season-sticker{--ss:#c8242b}
         <section class="pf-pane on" data-p="me">
           <label for="uName">USERNAME</label>
           <input id="uName" maxlength="16" autocomplete="off" placeholder="Player 1">
+          <label for="uStatus">STATUS <small id="statusCount">0/40</small></label>
+          <input id="uStatus" maxlength="40" autocomplete="off" placeholder="What are you up to? Stuck in the lobby 🍐">
           <label for="uAbout">ABOUT ME <small id="aboutCount">0/150</small></label>
           <textarea id="uAbout" maxlength="150" rows="3" placeholder="Favorite game, best lap time, anything!"></textarea>
           <label class="on-toggle"><input type="checkbox" id="uOnline"> <span>🌐 Show me online</span><small>Everyone can see your name, icon, about me and recently played games</small></label>
@@ -1022,11 +1110,22 @@ body[data-season="december"] .season-sticker{--ss:#c8242b}
   <div class="chars-card daily-card">
     <div class="news-head">
       <div><span class="news-ch" style="background:var(--green)">DAILY</span><h3>Today on WIDR 64</h3><div class="dl-sub" id="dlSub"></div></div>
-      <div class="news-actions"><span class="dl-streak" id="dlStreak"></span><button type="button" class="btn" id="dlClose">✕ Close</button></div>
+      <div class="news-actions"><span class="dl-streak" id="dlStreak"></span><button type="button" class="btn ghost" id="dlRecap">📈 Weekly recap</button><button type="button" class="btn" id="dlClose">✕ Close</button></div>
     </div>
     <div class="dl-progress" id="dlProgress"></div>
     <div class="dl-grid" id="dlGrid"></div>
     <p class="news-foot" id="dlFoot">New dailies at midnight · Esc to close</p>
+  </div>
+</div>
+
+<div class="modal" id="recap">
+  <div class="card recap-card">
+    <div class="pf-head">
+      <h3 id="rcTitle">Your week on WIDR 64</h3>
+      <button type="button" class="pf-x" id="rcX" title="Close">✕</button>
+    </div>
+    <div id="rcBody"></div>
+    <div class="actions"><button type="button" class="btn" id="rcOk">Nice!</button></div>
   </div>
 </div>
 
@@ -1168,6 +1267,54 @@ const fighter=(shirt,hair,skin)=>
   px(-10,-22,20,22,"#111")+px(-8,-20,16,18,shirt)+px(8,-18,14,6,"#111")+px(8,-17,12,4,shirt)+px(20,-20,8,10,"#111")+px(21,-19,6,8,skin)+
   px(-9,0,8,14,"#111")+px(1,0,8,14,"#111")+px(-8,0,6,12,"#2b2f4a")+px(2,0,6,12,"#2b2f4a")+px(-10,12,10,4,"#111")+px(0,12,10,4,"#111");
 /* hand-drawn cartridge art for Who Wants to Be a Hundredaire?: a cheap game-show stage with a dented $100 coin */
+/* hand-drawn cartridge art for Codename Conference: Julie with her magnifying glass on a pear, and Anna on the comms screen */
+const CONF_ART=`<svg class="art" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+<defs><linearGradient id="cc-bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0f1d33"/><stop offset="1" stop-color="#23395e"/></linearGradient>
+<radialGradient id="cc-spot" cx=".5" cy="0" r="1"><stop offset="0" stop-color="#fff6c0" stop-opacity=".55"/><stop offset="1" stop-color="#fff6c0" stop-opacity="0"/></radialGradient>
+<linearGradient id="cc-pear" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d8ec5a"/><stop offset="1" stop-color="#8fbf2a"/></linearGradient></defs>
+<rect width="200" height="200" fill="url(#cc-bg)"/>
+<g stroke="#3a5480" stroke-width="1" opacity=".5">${Array.from({length:9},(_,i)=>`<path d="M0 ${70+i*14} H200"/>`).join("")}</g>
+<path d="M60 0 L140 0 L176 182 L24 182Z" fill="url(#cc-spot)"/>
+<g text-anchor="middle" font-family="Courier New,Menlo,monospace" font-weight="900" stroke="#0a1322" stroke-width="5" paint-order="stroke" stroke-linejoin="round">
+ <text x="100" y="28" font-size="22" fill="#fff" letter-spacing="3">CODENAME</text>
+ <text x="100" y="48" font-size="15" fill="#c8e04a" letter-spacing="2.5">CONFERENCE</text>
+</g>
+<g class="t-float" transform="translate(120 104)">
+ <path d="M0 -26 q2 -8 8 -10" stroke="#5a3a1a" stroke-width="3" fill="none" stroke-linecap="round"/>
+ <path d="M4 -32 q10 -6 14 2 q-8 4 -14 -2z" fill="#3fa34d" stroke="#0a1322" stroke-width="1.6"/>
+ <path d="M0 -24 q-9 0 -10 12 q-12 10 -10 24 q3 16 20 16 q17 0 20 -16 q2 -14 -10 -24 q-1 -12 -10 -12z" fill="url(#cc-pear)" stroke="#0a1322" stroke-width="2.5"/>
+ <path d="M-8 4 q-2 8 4 14" stroke="#fff" stroke-width="3" fill="none" opacity=".5" stroke-linecap="round"/>
+ <circle cx="-14" cy="-6" r="24" fill="#bfe3f5" fill-opacity=".22" stroke="#f5b915" stroke-width="5"/>
+ <path d="M3 11 L26 34" stroke="#5a3a1a" stroke-width="8" stroke-linecap="round" transform="translate(-14 -6) rotate(10)"/>
+</g>
+<g class="t-bob" transform="translate(52 142)">
+ <path d="M-16 40 L-12 2 L12 2 L16 40Z" fill="#c9a258" stroke="#0a1322" stroke-width="2.5" stroke-linejoin="round"/>
+ <path d="M-2 2 L0 26 L2 2" fill="none" stroke="#8a6a30" stroke-width="2"/><rect x="-12" y="18" width="24" height="4" fill="#8a6a30"/>
+ <path d="M-12 -8 q-4 14 -1 22 q4 -2 5 -10z M12 -8 q4 14 1 22 q-4 -2 -5 -10z" fill="#e0b25a" stroke="#0a1322" stroke-width="1.8"/>
+ <circle cy="-8" r="11" fill="#f6dcc0" stroke="#0a1322" stroke-width="2.5"/>
+ <path d="M-11 -11 q4 -6 11 -5 q7 -1 11 5 q-6 -3 -11 -2 q-5 -1 -11 2z" fill="#e0b25a"/>
+ <path d="M-18 -14 h36 M-11 -14 q0 -12 11 -12 q11 0 11 12z" fill="#7a5a34" stroke="#0a1322" stroke-width="2.4" stroke-linejoin="round"/>
+ <rect x="-11" y="-17" width="22" height="3" fill="#3a2a18"/>
+ <circle cx="-4" cy="-7" r="1.6" fill="#0a1322"/><circle cx="4" cy="-7" r="1.6" fill="#0a1322"/>
+ <path d="M-3 -1 q3 2 6 0" stroke="#0a1322" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+</g>
+<g transform="translate(150 152)">
+ <rect x="-28" y="-22" width="56" height="44" rx="6" fill="#0a1322" stroke="#c8e04a" stroke-width="2.5"/>
+ <rect x="-24" y="-18" width="48" height="36" rx="3" fill="#1f4d3a"/>
+ <g stroke="#c8e04a" stroke-width=".8" opacity=".3">${Array.from({length:6},(_,i)=>`<path d="M-24 ${-15+i*6} H24"/>`).join("")}</g>
+ <path d="M-14 18 q0 -12 14 -12 q14 0 14 12z" fill="#2463d6"/>
+ <path d="M-11 -2 q-3 12 -1 18 h4 v-16z M11 -2 q3 12 1 18 h-4 v-16z" fill="#6b4226"/>
+ <circle cy="-3" r="9" fill="#f3d2b0"/>
+ <path d="M-10 -3 q-1 -11 10 -11 q11 0 10 11 q-5 -6 -10 -6 q-5 0 -10 6z" fill="#6b4226"/>
+ <path d="M-11 -4 q0 -14 11 -14 q11 0 11 14" fill="none" stroke="#26241f" stroke-width="2"/>
+ <rect x="-13" y="-6" width="4" height="7" rx="2" fill="#26241f"/><path d="M-11 1 q2 6 8 5" stroke="#26241f" stroke-width="1.6" fill="none"/>
+ <circle cx="-3" cy="-2" r="1.2" fill="#0a1322"/><circle cx="3" cy="-2" r="1.2" fill="#0a1322"/>
+ <circle cx="20" cy="-14" r="2.2" fill="#e8402f" class="t-flick"/>
+</g>
+<rect y="182" width="200" height="18" fill="#0a1322"/>
+<text x="100" y="195" text-anchor="middle" font-family="Courier New,Menlo,monospace" font-weight="900" font-size="9" fill="#c8e04a" letter-spacing="3">▮▮ TOP SECRET ▮▮ CASE FILE 0.8 ▮▮</text>
+</svg>`;
+
 /* hand-drawn cartridge art for Demolition Run: Daniel and Reshman in front of an exploding base, with a classified file between them */
 const DEMO_ART=`<svg class="art" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
 <defs><linearGradient id="dr-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2b1a12"/><stop offset=".55" stop-color="#a8431c"/><stop offset="1" stop-color="#f0a33a"/></linearGradient>
@@ -1426,7 +1573,9 @@ const GAMES=[
   {name:"Watt Wizardry",url:"https://joshibrahim.nl/WattWizardry",art:WATT_ART,bg:"#140f3d",genre:"ADVENTURE",color:"#2463d6",
    desc:"This electric outcast is on a magical mission..."},
   {name:"Demolition Run",url:"https://joshibrahim.nl/demolitionrun",art:DEMO_ART,bg:"#2b1a12",genre:"SHOOTER",color:"#c8242b",
-   desc:"A strange army mission spirals into a deep conspiracy."}
+   desc:"A strange army mission spirals into a deep conspiracy."},
+  {name:"Codename Conference",url:"https://joshibrahim.nl/Codename_Conference",art:CONF_ART,bg:"#0f1d33",genre:"MYSTERY",color:"#3f7f2a",
+   desc:"Detective Julie is on the case, with Anna helping out on the comms."}
 ];
 const $=id=>document.getElementById(id);
 let sel=0;
@@ -1451,7 +1600,12 @@ const SKINS={
   classic:{label:"Classic",wave:"square",pitch:1,tempo:112,lead:"triangle"},
   biscotto:{label:"Biscotto",wave:"triangle",pitch:1.12,tempo:96,lead:"triangle"},
   orbit:{label:"Orbit",wave:"sine",pitch:1.25,tempo:78,lead:"sine"},
-  pixel:{label:"Pixel",wave:"square",pitch:.75,tempo:132,lead:"square"}
+  pixel:{label:"Pixel",wave:"square",pitch:.75,tempo:132,lead:"square"},
+  frost:{label:"Frost",wave:"sine",pitch:1.5,tempo:84,lead:"triangle"},
+  candy:{label:"Candy",wave:"triangle",pitch:1.33,tempo:120,lead:"sine"},
+  volt:{label:"Volt",wave:"sawtooth",pitch:1.06,tempo:140,lead:"square"},
+  army:{label:"Army",wave:"square",pitch:.67,tempo:100,lead:"triangle"},
+  detective:{label:"Detective",wave:"triangle",pitch:.89,tempo:72,lead:"sine"}
 };
 const skin=()=>SKINS[me().skin]||SKINS.classic;
 function applySkin(){
@@ -1591,8 +1745,13 @@ function render(){
      :filter==="fav"?idx.filter(isFav)
      :filter==="community"?[...idx.filter(i=>LIB[i].community),ADD]
      :[...idx.filter(i=>LIB[i].custom),ADD];
+  /* search looks through names, genres, descriptions and makers in the current tab */
+  const q=($("search").value||"").trim().toLowerCase();
+  if(q)vis=vis.filter(i=>i!==ADD&&[LIB[i].name,LIB[i].genre,LIB[i].desc,LIB[i].maker].some(t=>String(t||"").toLowerCase().includes(q)));
   sel=Math.min(sel,Math.max(vis.length-1,0));
-  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on",t.dataset.f===filter));
+  document.querySelectorAll(".tab[data-f]").forEach(t=>t.classList.toggle("on",t.dataset.f===filter));
+  const shelf=store.view==="shelf";
+  $("viewBtn").textContent=shelf?"▦ GRID":"▤ SHELF";
   $("favCount").textContent=LIB.filter((_,i)=>isFav(i)).length;
   $("mineCount").textContent=(me().custom||[]).length;
   $("cmCount").textContent=LIB.filter(c=>c.community).length;
@@ -1608,13 +1767,20 @@ function render(){
   });
 
   const g=$("grid");g.innerHTML="";
+  g.classList.toggle("shelf-view",shelf);
+  if(q&&!vis.length)g.innerHTML=`<p class="grid-empty">NO GAMES MATCH "${escA(q.toUpperCase())}"</p>`;
   vis.forEach((gi,i)=>{
     const b=document.createElement("a");gameLink(b,gi);
-    b.className="cart"+(gi===ADD?" add":"")+(i===sel?" sel":"");b.style.animationDelay=(i*60)+"ms";
+    b.className="cart"+(gi===ADD?" add":"")+(i===sel?" sel":"");b.style.animationDelay=(i*(shelf?30:60))+"ms";
     if(gi===ADD){
       const sub=filter==="community";
       b.setAttribute("aria-label",sub?"Submit a game for everyone":"Make a new cartridge");
-      b.innerHTML=`<div class="body"><div class="plus">+<small>${sub?"SUBMIT A GAME":"NEW CARTRIDGE"}</small></div></div>`;
+      b.innerHTML=shelf?`<div class="body spine add"><span class="sp-name">+ ${sub?"SUBMIT":"NEW"}</span></div>`
+        :`<div class="body"><div class="plus">+<small>${sub?"SUBMIT A GAME":"NEW CARTRIDGE"}</small></div></div>`;
+    }else if(shelf){
+      const c=LIB[gi];
+      b.setAttribute("aria-label","Play "+c.name);
+      b.innerHTML=`<div class="body spine" style="--sc:${c.color||"#3f3d39"}"><span class="sp-cover">${cover(gi)}</span><span class="sp-name">${escA(c.name)}</span><span class="sp-no">${c.no.slice(-2)}</span>${isFav(gi)?`<i class="sp-fav">★</i>`:""}</div>`;
     }else{
       const c=LIB[gi];
       b.setAttribute("aria-label","Play "+c.name);
@@ -1652,6 +1818,8 @@ function update(){
   $("makerLine").hidden=!(c&&c.community);
   if(c&&c.community)$("makerLine").innerHTML=`<span class="av">${iconSvg(c.makerIcon)}</span>MADE BY <b>${escA(clean(c.maker||"Player"))}</b>${c.mine?" (YOU)":""}${c.mine&&c.reports>=REPORT_LIMIT?` · <span class="warn">HIDDEN: REPORTED BY ${c.reports} PLAYERS</span>`:""}`;
   const rst=!add&&!c.custom?gameStats(c.slug):null;
+  const pt=add?0:(me().playTime||{})[c.key]||0;
+  $("playTime").hidden=!pt;if(pt)$("playTime").innerHTML=`⏱ <b>${fmtTime(pt)}</b> PLAYED`;
   $("rvBtn").hidden=$("ratingLine").hidden=!rst;
   if(rst)$("ratingLine").innerHTML=rst.n?`${starRow(rst.avg)}<b>${rst.avg.toFixed(1)}</b><small>${rst.n} review${rst.n>1?"s":""} · see all</small>`:`${starRow(0)}<small>No reviews yet · be the first</small>`;
   const nh=!add&&isNew(gi)?newsHits[c.name]:null;
@@ -1663,8 +1831,11 @@ function update(){
   $("reportBtn").hidden=!(c&&c.community&&!c.mine);
   if(c&&c.community&&!c.mine){const done=myReported(c.gid);$("reportBtn").textContent=done?"⚑ Reported":"⚑ Report";$("reportBtn").classList.toggle("on",done)}
   if(!add){$("favBtn").textContent=isFav(gi)?"★ Favorited":"☆ Favorite";$("favBtn").classList.toggle("on",isFav(gi))}
-  $("grid").children[sel].scrollIntoView({block:"nearest",behavior:"smooth"});
+  $("grid").children[sel]?.scrollIntoView({block:"nearest",behavior:"smooth"});
 }
+const fmtTime=ms=>{const m=Math.round(ms/6e4);return m<1?"<1M":m<60?m+"M":Math.floor(m/60)+"H "+(m%60?(m%60)+"M":"")};
+$("search").oninput=()=>{sel=0;render()};
+$("viewBtn").onclick=()=>{store.view=store.view==="shelf"?"grid":"shelf";saveStore();beep(700,.05);render()};
 
 /* --- launching: slide the cartridge into the console; the game opens the moment it clicks in --- */
 let launching=false;
@@ -1684,6 +1855,9 @@ function startGame(gi){
     /* games started from the menu can be reviewed */
     if(c.slug)p.played=[c.slug,...(p.played||[]).filter(s=>s!==c.slug)].slice(0,40);
     p.playing=c.name.slice(0,28);p._playStamp=true;
+    /* the play timer runs until the menu tab comes back into view */
+    p.timer={key:c.key,at:Date.now()};
+    const w=weekStats(p);w.plays[c.key]=(w.plays[c.key]||0)+1;
     if(p.online)setTimeout(()=>publishProfile(p),50);
     markNewsSeen(c.name);
     saveStore();
@@ -1707,7 +1881,7 @@ function launch(){if(vis.length)startGame(vis[sel])}
 $("favBtn").onclick=toggleFav;
 $("editGame").onclick=()=>{const c=LIB[vis[sel]];if(c&&(c.custom||c.mine))openGameEditor(c.cid)};
 $("reportBtn").onclick=()=>{const c=LIB[vis[sel]];if(c&&c.community&&!c.mine)reportGame(c)};
-document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>setFilter(t.dataset.f));
+document.querySelectorAll(".tab[data-f]").forEach(t=>t.onclick=()=>setFilter(t.dataset.f));
 
 /* --- cartridge maker: own games, saved on the current player --- */
 const CART_COLORS=["#e8402f","#f0761f","#f5b915","#1fa45b","#0fa3b1","#2463d6","#5b3fa8","#d6337f","#3b2414","#26241f"];
@@ -1875,6 +2049,20 @@ const ICON_GROUPS=[
       <circle cx="27" cy="36" r="2.2" fill="#140f3d"/><circle cx="37" cy="36" r="2.2" fill="#140f3d"/>
       <path d="M27 43 q5 4 10 0" stroke="#140f3d" stroke-width="2.2" fill="none" stroke-linecap="round"/>
       <path d="M52 40 l-3 6 h3 l-3 6" stroke="#ffe14d" stroke-width="2.2" fill="none" stroke-linejoin="round" stroke-linecap="round"/>`)],
+    isa:["Isa",ic("#dff4ff",`<g stroke="#1d2340" stroke-width="2.2" stroke-linejoin="round">
+      <path d="M8 66 q0 -18 24 -18 q24 0 24 18z" fill="#7cc8f0"/>
+      <path d="M26 48 l6 10 l6 -10" fill="#fff" stroke-width="1.8"/>
+      <path d="M17 30 q-5 16 -1 26 q6 -2 8 -12z M47 30 q5 16 1 26 q-6 -2 -8 -12z" fill="#f2f6fb"/>
+      <circle cx="32" cy="34" r="14" fill="#f6e4d6"/>
+      <path d="M18 32 q-1 -17 14 -17 q15 0 14 17 q-4 -7 -9 -8 q-3 5 -10 4 q-5 1 -9 4z" fill="#f2f6fb"/>
+      <path d="M20 18 l3 -8 l4 6 l5 -9 l5 9 l4 -6 l3 8z" fill="#9fe0ff"/>
+      </g>
+      <g stroke="#2a8fd0" stroke-width="1.6" stroke-linecap="round"><path d="M50 44 v12 M44 50 h12 M46 46 l8 8 M54 46 l-8 8"/></g>
+      <circle cx="32" cy="12" r="2.4" fill="#fff" stroke="#2a8fd0" stroke-width="1.2"/>
+      <circle cx="27" cy="35" r="2" fill="#1d6fa8"/><circle cx="37" cy="35" r="2" fill="#1d6fa8"/>
+      <circle cx="27.6" cy="34.3" r=".7" fill="#fff"/><circle cx="37.6" cy="34.3" r=".7" fill="#fff"/>
+      <path d="M28 42 q4 2.5 8 0" stroke="#1d2340" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <circle cx="22" cy="40" r="2.2" fill="#9fd4ff" opacity=".7"/><circle cx="42" cy="40" r="2.2" fill="#9fd4ff" opacity=".7"/>`)],
     lyla:["Lyra",ic("#9fe7ff",`<g stroke="#1d2340" stroke-width="2.2" stroke-linejoin="round">
       <path d="M8 66 q0 -18 24 -18 q24 0 24 18z" fill="#3e7a3a"/>
       <path d="M22 49 l10 8 l10 -8 l3 6 l-13 6 l-13 -6z" fill="#2f5e2c" stroke-width="1.8"/>
@@ -1891,6 +2079,34 @@ const ICON_GROUPS=[
       <circle cx="26.5" cy="35" r="1.8" fill="#1d2340"/><circle cx="37.5" cy="35" r="1.8" fill="#1d2340"/>
       <path d="M28 42 q4 2.5 8 0" stroke="#1d2340" stroke-width="2" fill="none" stroke-linecap="round"/>
       <path d="M38 40 l3 1" stroke="#7a5a3a" stroke-width="1.6" stroke-linecap="round" opacity=".6"/>`)]}},
+  {game:"Codename Conference",icons:{
+    julie:["Julie",ic("#c8e04a",`<g stroke="#1d2340" stroke-width="2.2" stroke-linejoin="round">
+      <path d="M8 66 q0 -18 24 -18 q24 0 24 18z" fill="#c9a258"/>
+      <path d="M24 48 l8 10 l8 -10 l4 4 l-12 12 l-12 -12z" fill="#b08a40" stroke-width="1.8"/>
+      <path d="M17 32 q-5 14 -1 22 q5 -2 7 -11z M47 32 q5 14 1 22 q-5 -2 -7 -11z" fill="#e0b25a"/>
+      <circle cx="32" cy="35" r="14" fill="#f6dcc0"/>
+      <path d="M18 32 q5 -8 14 -7 q9 -1 14 7 q-7 -3 -14 -2 q-7 -1 -14 2z" fill="#e0b25a" stroke-width="1.6"/>
+      <path d="M8 26 h48" stroke-width="2.6"/><path d="M8 26 h48 q-2 3 -8 3 h-32 q-6 0 -8 -3z" fill="#7a5a34"/>
+      <path d="M18 26 q0 -16 14 -16 q14 0 14 16z" fill="#7a5a34"/>
+      <rect x="18" y="21" width="28" height="4" fill="#3a2a18" stroke-width="1.6"/>
+      </g>
+      <g transform="translate(46 50)"><path d="M0 -8 q-5 0 -5 6 q-5 4 -4 10 q1 6 9 6 q8 0 9 -6 q1 -6 -4 -10 q0 -6 -5 -6z" fill="#b5d63a" stroke="#1d2340" stroke-width="1.8"/><path d="M0 -8 q1 -4 4 -5" stroke="#5a3a1a" stroke-width="1.8" fill="none"/></g>
+      <circle cx="27" cy="36" r="1.9" fill="#1d2340"/><circle cx="37" cy="36" r="1.9" fill="#1d2340"/>
+      <path d="M24 32 q3 -2 6 0" stroke="#1d2340" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+      <path d="M28 43 q4 2.5 8 -1" stroke="#1d2340" stroke-width="2" fill="none" stroke-linecap="round"/>`)],
+    anna:["Anna",ic("#1f4d3a",`<g stroke="#1d2340" stroke-width="2.2" stroke-linejoin="round">
+      <path d="M8 66 q0 -18 24 -18 q24 0 24 18z" fill="#2463d6"/>
+      <path d="M16 30 q-6 16 -2 26 q6 0 8 -10z M48 30 q6 16 2 26 q-6 0 -8 -10z" fill="#6b4226"/>
+      <circle cx="32" cy="34" r="14" fill="#f3d2b0"/>
+      <path d="M17 33 q-1 -18 15 -18 q16 0 15 18 q-6 -9 -15 -9 q-9 0 -15 9z" fill="#6b4226"/>
+      <path d="M15 34 q0 -24 17 -24 q17 0 17 24" fill="none" stroke="#26241f" stroke-width="3"/>
+      <rect x="11" y="30" width="7" height="12" rx="3" fill="#26241f"/><rect x="46" y="30" width="7" height="12" rx="3" fill="#26241f"/>
+      <path d="M14 42 q2 9 12 8" fill="none" stroke="#26241f" stroke-width="2.2"/>
+      </g>
+      <circle cx="27" cy="50" r="2.4" fill="#e8402f"/>
+      <circle cx="27" cy="35" r="1.9" fill="#1d2340"/><circle cx="37" cy="35" r="1.9" fill="#1d2340"/>
+      <path d="M28 42 q4 3 8 0" stroke="#1d2340" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <circle cx="22" cy="40" r="2.2" fill="#ff8fb8" opacity=".6"/><circle cx="42" cy="40" r="2.2" fill="#ff8fb8" opacity=".6"/>`)]}},
   {game:"Demolition Run",icons:{
     daniel:["Daniel",ic("#f0a33a",`<g stroke="#1d2340" stroke-width="2.4" stroke-linejoin="round">
       <path d="M8 66 q0 -18 24 -18 q24 0 24 18z" fill="#6b7a3a"/>
@@ -2024,7 +2240,7 @@ function drawWho(){
 function pickSlot(i){
   if(!store.slots[i])return openEditor(i);
   store.active=i;saveStore();
-  filter="all";sel=0;drawPlayer();render();closeWho();chord();restartMusic();drawDailyDot();
+  filter="all";sel=0;drawPlayer();render();closeWho();chord();restartMusic();drawDailyDot();checkRecap();
 }
 const esc=s=>String(s).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
 
@@ -2038,6 +2254,7 @@ function drawDraft(){
   $("pvName").textContent=draft.name||"Player "+(editSlot+1);
   $("pvSub").textContent=ICONS[draft.icon][0].toUpperCase()+" · "+ICON_GROUPS.find(g=>g.icons[draft.icon]).game.toUpperCase();
   $("pvAbout").innerHTML=withEmotes(escA(clean(draft.about||"")));
+  $("pvStatus").innerHTML=draft.status?"💬 "+withEmotes(escA(clean(draft.status))):"";$("statusCount").textContent=(draft.status||"").length+"/40";
   $("pvOnline").textContent=draft.online?"🌐 VISIBLE ONLINE":"PRIVATE · THIS DEVICE ONLY";
   $("pvOnline").classList.toggle("on",!!draft.online);
   $("aboutCount").textContent=(draft.about||"").length+"/150";
@@ -2062,7 +2279,7 @@ function openEditor(i){
   $("pfDelete").hidden=!cur;
   $("pfSave").textContent=cur?"Save":"Create & play";
   $("uName").value=draft.name;
-  $("uAbout").value=draft.about||"";$("uOnline").checked=!!draft.online;$("uAnim").checked=!!draft.anim;
+  $("uAbout").value=draft.about||"";$("uStatus").value=draft.status||"";$("uOnline").checked=!!draft.online;$("uAnim").checked=!!draft.anim;
   $("iconGrid").innerHTML=ICON_GROUPS.map(g=>`<div class="icon-group"><h4>${g.game.toUpperCase()}</h4><div class="icons">${
     Object.entries(g.icons).map(([k,[label,s]])=>`<button type="button" class="ic" data-k="${k}" title="${label}" aria-label="${label}">${s}</button>`).join("")}</div></div>`).join("");
   document.querySelectorAll(".ic").forEach(b=>b.onclick=()=>{draft.icon=b.dataset.k;drawDraft();beep(990,.04,"triangle")});
@@ -2082,13 +2299,15 @@ const closeEditor=()=>$("profile").classList.remove("open");
 $("uName").oninput=()=>{draft.name=$("uName").value;drawDraft()};
 $("uName").onkeydown=e=>{if(e.key==="Enter")$("pfSave").click()};
 $("uAbout").oninput=()=>{draft.about=$("uAbout").value;drawDraft()};
+$("uStatus").oninput=()=>{draft.status=$("uStatus").value;drawDraft()};
+$("uStatus").onkeydown=e=>{if(e.key==="Enter")$("pfSave").click()};
 $("uOnline").onchange=()=>{draft.online=$("uOnline").checked;drawDraft();beep(880,.04)};
 $("uAnim").onchange=()=>{draft.anim=$("uAnim").checked;drawDraft();beep(880,.04)};
 $("pfX").onclick=()=>{closeEditor();beep(300,.08)};
 $("pfSave").onclick=()=>{
   draft.name=(draft.name||"").trim()||"Player "+(editSlot+1);
   const prev=store.slots[editSlot], wasOnline=prev?.online, wasNew=!prev, skinChanged=prev?.skin!==draft.skin;
-  draft.about=$("uAbout").value.trim().slice(0,150);draft.online=$("uOnline").checked;draft.anim=$("uAnim").checked;
+  draft.about=$("uAbout").value.trim().slice(0,150);draft.status=$("uStatus").value.trim().slice(0,40);draft.online=$("uOnline").checked;draft.anim=$("uAnim").checked;
   store.slots[editSlot]=draft;
   try{saveStore()}catch(e){store.slots[editSlot]=prev;alert("Couldn't save: this browser's storage for the menu is full. Try removing a custom cartridge picture.");return}
   closeEditor();
@@ -2132,6 +2351,7 @@ document.addEventListener("keydown",e=>{
   if($("online").classList.contains("open")){if(e.key==="Escape")closeOnline();return}
   if($("news").classList.contains("open")){if(e.key==="Escape"||e.key.toLowerCase()==="n")closeNews();return}
   if($("daily").classList.contains("open")){if(e.key==="Escape")closeDaily();return}
+  if($("recap").classList.contains("open")){if(e.key==="Escape"||e.key==="Enter"){e.preventDefault();closeRecap()}return}
   if($("who").classList.contains("open")){
     if(e.key==="ArrowRight"||e.key==="ArrowLeft"){e.preventDefault();whoSel=(whoSel+(e.key==="ArrowRight"?1:3))%4;drawWho();beep(880,.03)}
     else if(e.key==="Enter"){e.preventDefault();pickSlot(whoSel)}
@@ -2139,6 +2359,13 @@ document.addEventListener("keydown",e=>{
     else if(e.key==="Escape"&&store.slots[store.active])closeWho();
     return;
   }
+  /* typing in the search box: Esc clears it, Enter or ↓ goes back to the cartridges */
+  if(e.target.id==="search"){
+    if(e.key==="Escape"){$("search").value="";$("search").blur();sel=0;render()}
+    else if(e.key==="Enter"||e.key==="ArrowDown"){e.preventDefault();$("search").blur()}
+    return;
+  }
+  if(e.key==="/"){e.preventDefault();$("search").focus();$("search").select();return}
   const n=vis.length,c=cols();let m=null;
   if(e.key==="ArrowRight")m=sel+1;else if(e.key==="ArrowLeft")m=sel-1;
   else if(e.key==="ArrowDown")m=sel+c;else if(e.key==="ArrowUp")m=sel-c;
@@ -2156,12 +2383,13 @@ document.addEventListener("keydown",e=>{
   else if(k==="n"){e.preventDefault();openNews()}
   else if(k==="c"){e.preventDefault();openChars()}
   else if(k==="d"){e.preventDefault();openDaily()}
+  else if(k==="v"){e.preventDefault();$("viewBtn").click()}
   else if(k==="h"){setControls(document.body.classList.contains("no-controls"));beep(700,.05)}
 });
 
 /* --- character index: portraits reuse the profile icon art; unknown designs get a mystery silhouette --- */
 const MYSTERY=c=>`<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><rect width="64" height="64" fill="${c}"/><g opacity=".25" fill="#fff">${Array.from({length:16},(_,i)=>`<circle cx="${(i%4)*18+5}" cy="${Math.floor(i/4)*18+5}" r="2"/>`).join("")}</g><circle cx="32" cy="28" r="13" fill="#1d2340" opacity=".75"/><rect x="16" y="42" width="32" height="26" rx="13" fill="#1d2340" opacity=".75"/><text x="32" y="34" text-anchor="middle" font-family="Futura,sans-serif" font-weight="900" font-size="18" fill="#fff">?</text></svg>`;
-const G={gu:"The Guiseppe Game",ot:"Otis in Orbit",rr:"RhymeRhythm",wt:"WIDR Turbo",wc:"WIDC Pixel",wh:"Who Wants to Be a Hundredaire?",ww:"Watt Wizardry",dr:"Demolition Run"};
+const G={gu:"The Guiseppe Game",ot:"Otis in Orbit",rr:"RhymeRhythm",wt:"WIDR Turbo",wc:"WIDC Pixel",wh:"Who Wants to Be a Hundredaire?",ww:"Watt Wizardry",dr:"Demolition Run",cc:"Codename Conference"};
 const CHARACTERS=[
   {name:"Guiseppe",role:"HERO",icon:"guiseppe",color:"#7cc242",games:[G.gu,G.wt,G.wc],
    desc:"A brave green apple and the star of The Guiseppe Game. From Casa Guiseppe in Borgo Biscotto, he sails across the Biscotto Isles to take on King Grumbleclaw and his villains. He can flip, long jump, ground pound, glide and ride his bull Toro Ferro."},
@@ -2202,7 +2430,15 @@ const CHARACTERS=[
   {name:"Daniel",role:"ARMY VET",icon:"daniel",color:"#6b7a3a",games:[G.dr,G.wt,G.wc],
    desc:"An army veteran whose strange mission in Demolition Run spirals into a deep conspiracy. Daniel also races in WIDR Turbo and fights in WIDC Pixel."},
   {name:"Reshman",role:"MYSTERIOUS NINJA",icon:"reshman",color:"#26232e",games:[G.dr,G.wt,G.wc],
-   desc:"A mysterious ninja caught up in the conspiracy of Demolition Run. Few know where Reshman came from. Reshman also races in WIDR Turbo and fights in WIDC Pixel."}
+   desc:"A mysterious ninja caught up in the conspiracy of Demolition Run. Few know where Reshman came from. Reshman also races in WIDR Turbo and fights in WIDC Pixel."},
+  {name:"Julie",role:"DETECTIVE",icon:"julie",color:"#8fbf2a",games:[G.cc,G.wc],
+   desc:"The main character of Codename Conference: a detective with a nose for clues and an obsession with pears. Julie also fights in WIDC Pixel."},
+  {name:"Anna",role:"COMMS",icon:"anna",color:"#6b4226",games:[G.cc,G.wc],
+   desc:"Julie's brown-haired friend, who helps out on the comms in Codename Conference. Anna also fights in WIDC Pixel."},
+  {name:"Isa",role:"ICE MAGICIAN",icon:"isa",color:"#2a8fd0",games:[G.ww,G.wc],
+   desc:"An ice magician and Milo's childhood friend in Watt Wizardry. Isa also fights in WIDC Pixel."},
+  {name:"Ratjetoe",role:"BOSS",icon:"ratjetoe",color:"#9a9aa6",games:[G.ot,G.cc],
+   desc:"A boss in Otis in Orbit: a rat in blue overalls who never goes anywhere without his wrench. Ratjetoe also turns up as a character you can meet in Codename Conference."}
 ];
 let charSel=0;
 const portrait=c=>c.icon&&ICONS[c.icon]?ICONS[c.icon][1]:MYSTERY(c.color);
@@ -2303,9 +2539,9 @@ async function publishProfile(p,retry){
     if(!p.sinceOk)tr.push({fieldPath:"since",setToServerValue:"REQUEST_TIME"});
     await commit(a,[{update:{name:`${FS_DB}/documents/players/${a.uid}`,fields:{
       name:sv(p.name.slice(0,16)),icon:sv(p.icon),about:sv((p.about||"").slice(0,150)),
-      recent:{arrayValue:{values:recentNames(p).map(sv)}},played:{arrayValue:{values:(p.played||[]).slice(0,40).map(sv)}},
+      recent:{arrayValue:{values:recentNames(p).map(sv)}},played:{arrayValue:{values:(p.played||[]).slice(0,40).map(sv)}},status:sv((p.status||"").slice(0,40)),
       playing:sv(p.playing||""),banner:sv(p.banner||"none"),anim:{booleanValue:!!p.anim}}},
-      updateMask:{fieldPaths:["name","icon","about","recent","played","playing","banner","anim"]},updateTransforms:tr}]);
+      updateMask:{fieldPaths:["name","icon","about","recent","played","status","playing","banner","anim"]},updateTransforms:tr}]);
     delete p._playStamp;
     if(!p.sinceOk){p.sinceOk=true;try{saveStore()}catch(e){}}
     setNet(true);
@@ -2477,6 +2713,7 @@ function drawPeople(list){
       <span class="av${animCls(p.icon,p.anim)}">${iconSvg(p.icon)}</span>
       <div class="pinfo"><b>${escA(clean(p.name||"Player"))}${isMe?" <i>YOU</i>":""}</b>
         <small>${status}</small>
+        ${p.status?`<span class="pstatus">💬 ${withEmotes(escA(clean(String(p.status).slice(0,40))))}</span>`:""}
         ${p.about?`<p>${withEmotes(escA(clean(p.about)))}</p>`:""}
         ${recent?`<div class="recent-games">${recent}</div>`:`<div class="recent-games none">No games played yet</div>`}
       </div>
@@ -2653,6 +2890,30 @@ const SOUND_PACKS={
     chat:[[440,.1,"sawtooth"]],reply:[[440,.08,"sawtooth"],[554,.12,"sawtooth",.1]],
     friend:[[440,.12,"sawtooth"],[440,.12,"sawtooth",.18],[659,.22,"sawtooth",.36]],
     react:[[880,.06,"sawtooth"]],dm:[[554,.1,"sawtooth"],[440,.14,"sawtooth",.12]]}},
+  sparkle:{label:"Magic sparkle",icon:"✨",n:{
+    chat:[[2093,.08,"sine"],[2637,.12,"sine",.06]],reply:[[1568,.08,"sine"],[2093,.08,"sine",.06],[2637,.16,"sine",.12]],
+    friend:[[1319,.1,"sine"],[1760,.1,"sine",.07],[2217,.1,"sine",.14],[2637,.1,"sine",.21],[3520,.25,"sine",.28]],
+    react:[[3136,.06,"sine"],[2637,.08,"sine",.05]],dm:[[2637,.1,"triangle"],[2093,.1,"triangle",.09],[2637,.18,"triangle",.18]]}},
+  spy:{label:"Spy radio",icon:"🕵️",n:{
+    chat:[[1200,.04,"square"],[1200,.04,"square",.08]],reply:[[900,.04,"square"],[1200,.04,"square",.07],[900,.04,"square",.14]],
+    friend:[[600,.05,"square"],[600,.05,"square",.1],[600,.05,"square",.2],[900,.15,"square",.3]],
+    react:[[1500,.03,"square"]],dm:[[700,.12,"square"],[700,.04,"square",.18],[700,.04,"square",.26]]}},
+  coin:{label:"Arcade coin",icon:"🪙",n:{
+    chat:[[988,.06,"square"],[1319,.18,"square",.06]],reply:[[988,.05,"square"],[1319,.05,"square",.05],[1976,.16,"square",.1]],
+    friend:[[1319,.06,"square"],[1568,.06,"square",.06],[2093,.06,"square",.12],[2637,.2,"square",.18]],
+    react:[[1976,.08,"square"]],dm:[[1319,.06,"square"],[988,.06,"square",.08],[1319,.14,"square",.16]]}},
+  piano:{label:"Soft piano",icon:"🎹",n:{
+    chat:[[523,.35,"triangle"]],reply:[[523,.3,"triangle"],[659,.4,"triangle",.14]],
+    friend:[[523,.3,"triangle"],[659,.3,"triangle",.14],[784,.3,"triangle",.28],[1046,.5,"triangle",.42]],
+    react:[[784,.25,"triangle"]],dm:[[659,.3,"triangle"],[523,.45,"triangle",.16]]}},
+  laser:{label:"Laser blaster",icon:"🔫",n:{
+    chat:[[1800,.05,"sawtooth"],[900,.08,"sawtooth",.04]],reply:[[2000,.05,"sawtooth"],[1000,.05,"sawtooth",.05],[2000,.08,"sawtooth",.1]],
+    friend:[[400,.06,"sawtooth"],[800,.06,"sawtooth",.06],[1600,.06,"sawtooth",.12],[3200,.12,"sawtooth",.18]],
+    react:[[2400,.04,"sawtooth"]],dm:[[1500,.06,"sawtooth"],[750,.12,"sawtooth",.07]]}},
+  frog:{label:"Froggy",icon:"🐸",n:{
+    chat:[[180,.08,"square"],[240,.06,"square",.07]],reply:[[160,.07,"square"],[220,.07,"square",.08],[300,.1,"square",.16]],
+    friend:[[150,.08,"square"],[200,.08,"square",.1],[150,.08,"square",.2],[260,.14,"square",.3]],
+    react:[[260,.06,"square"]],dm:[[200,.1,"square"],[150,.12,"square",.12]]}},
   silent:{label:"Silent",icon:"🔕",n:{}}
 };
 function playPack(pack,kind){
@@ -2672,7 +2933,18 @@ const BANNERS={
   rhyme:{label:"Rhyme stage",css:"repeating-linear-gradient(90deg,#ff4fa3 0 14px,#f5b915 14px 28px,#1fd1a5 28px 42px,#2463d6 42px 56px)"},
   combat:{label:"WIDC versus",css:"linear-gradient(110deg,#e8402f 0 50%,#2463d6 50%)"},
   gelato:{label:"Isola Gelato",css:"repeating-linear-gradient(135deg,#ffd0dc 0 12px,#c8f2d0 12px 24px,#fff1c9 24px 36px)"},
-  spooky:{label:"Spooky night",css:"radial-gradient(circle at 85% 50%,#f0882f 0 11px,transparent 12px),radial-gradient(circle,#fff 1px,transparent 1.6px) 0 0/18px 18px,linear-gradient(180deg,#3b2450,#7a3a9a)"}
+  spooky:{label:"Spooky night",css:"radial-gradient(circle at 85% 50%,#f0882f 0 11px,transparent 12px),radial-gradient(circle,#fff 1px,transparent 1.6px) 0 0/18px 18px,linear-gradient(180deg,#3b2450,#7a3a9a)"},
+  hundred:{label:"Hundredaire gold",css:"repeating-conic-gradient(from 0deg at 50% 120%,rgba(255,255,255,.18) 0 6deg,transparent 6deg 14deg),linear-gradient(180deg,#5b3fa8,#2a1f68)"},
+  storm:{label:"Watt storm",css:"linear-gradient(115deg,transparent 40%,#ffe14a 40% 43%,transparent 43% 52%,#ffe14a 52% 54%,transparent 54%),linear-gradient(180deg,#140f3d,#2463d6)"},
+  frost:{label:"Isa frost",css:"radial-gradient(circle,#fff 1.4px,transparent 2px) 0 0/16px 16px,radial-gradient(circle,#fff 1px,transparent 1.6px) 8px 8px/16px 16px,linear-gradient(180deg,#9fe0ff,#2a8fd0)"},
+  camo:{label:"Demolition camo",css:"radial-gradient(ellipse 22px 12px at 20% 40%,#4d5a2c 98%,transparent),radial-gradient(ellipse 18px 10px at 60% 70%,#3a2a18 98%,transparent),radial-gradient(ellipse 20px 11px at 85% 25%,#8a7a4a 98%,transparent),#6b7a3a"},
+  blast:{label:"Explosion",css:"radial-gradient(circle at 70% 100%,#fff6c0 0 10%,#ffb52e 22%,#e8402f 40%,transparent 60%),linear-gradient(180deg,#2b1a12,#a8431c)"},
+  dossier:{label:"Top secret",css:"repeating-linear-gradient(-45deg,#c8242b 0 10px,#0f1d33 10px 20px) 0 100%/100% 6px no-repeat,linear-gradient(180deg,#d8b56a,#c9a258)"},
+  pear:{label:"Pear orchard",css:"radial-gradient(circle,#b5d63a 6px,transparent 7px) 0 0/34px 30px,radial-gradient(circle,#8fbf2a 5px,transparent 6px) 17px 15px/34px 30px,linear-gradient(180deg,#f3f8d8,#d8ec9a)"},
+  neon:{label:"Neon arcade",css:"linear-gradient(90deg,rgba(255,79,163,.6) 1px,transparent 1px) 0 0/20px 20px,linear-gradient(rgba(31,209,165,.5) 1px,transparent 1px) 0 0/20px 20px,linear-gradient(180deg,#1a0b33,#3a1060)"},
+  rainbow:{label:"Rainbow road",css:"linear-gradient(90deg,#e8402f,#f5b915,#1fa45b,#1fb3a5,#2463d6,#9b4dd6,#ff4fa3)"},
+  sunset:{label:"Beach sunset",css:"radial-gradient(circle at 50% 100%,#fff4b8 0 14%,transparent 15%),linear-gradient(180deg,#ff6f91 0,#ffb36b 60%,#2a8fd0 60%,#1d6fa8)"},
+  matrix:{label:"Hacker code",css:"repeating-linear-gradient(90deg,rgba(68,255,120,.55) 0 2px,transparent 2px 9px) 0 0/100% 100%,repeating-linear-gradient(180deg,transparent 0 5px,rgba(0,0,0,.45) 5px 7px),#041a0c"}
 };
 const bannerCss=k=>(BANNERS[k]||BANNERS.none).css;
 
@@ -3288,7 +3560,10 @@ const QOTD=[
   "What's your go-to username, and where did it come from?",
   "What should the next WIDR game be about?",
   "Which planet should Otis visit next?",
-  "What's the most epic name for a racing kart?"
+  "What's the most epic name for a racing kart?",
+  "What case should Julie solve next?",
+  "If you had Isa's ice magic, what would you freeze first?",
+  "What would Ratjetoe build with his wrench?"
 ];
 const POLLS=[
   ["Who would win in a fight?",["Reshman","Milo","Grumbleclaw","Daniel"]],
@@ -3306,7 +3581,9 @@ const POLLS=[
   ["Where would you rather go?",["Space","A magic world","An army base","A game show"]],
   ["Best snack?",["Chips","Candy","Fruit","Pizza"]],
   ["Hardest WIDR game?",["WIDC Pixel","RhymeRhythm","WIDR Turbo","Demolition Run"]],
-  ["Most mysterious character?",["Reshman","Byte","Goonposter","Toon"]]
+  ["Most mysterious character?",["Reshman","Byte","Goonposter","Toon"]],
+  ["Best sidekick?",["Anna","Byte","Lyra","Ratjetoe"]],
+  ["Fire or ice?",["Milo's lightning","Isa's ice","Daniel's explosives","Julie's brain"]]
 ];
 /* a tiny seeded random, so every player gets the same dailies on the same day */
 const seeded=s=>()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
@@ -3346,7 +3623,7 @@ function dMark(k){
   d.done[k]=true;
   /* finishing every daily keeps the streak going */
   if(!d.claimed&&dNeeded().every(x=>d.done[x])){
-    d.claimed=true;d.streak=d.last===d.day-1?d.streak+1:1;d.last=d.day;d.best=Math.max(d.best||0,d.streak);
+    d.claimed=true;weekStats(me()).dailies++;d.streak=d.last===d.day-1?d.streak+1:1;d.last=d.day;d.best=Math.max(d.best||0,d.streak);
     setTimeout(()=>{[523,659,784,1046,1318].forEach((f,i)=>setTimeout(()=>beep(f,.12,"triangle",.07),i*80));
       toast(iconSvg(me().icon),`📅 All dailies done! <b>🔥 ${d.streak} day streak</b>`,"friend");const t=$("toasts").lastElementChild;if(t)t.onclick=()=>t.remove()},250);
   }
@@ -3480,6 +3757,95 @@ setInterval(()=>{
 },30000);
 setTimeout(()=>{drawDailyDot();if(dOnline())loadDaily()},3500);
 
+/* --- play timer: counts from starting a game until the menu tab is looked at again (capped at 4 hours a session) --- */
+const TIMER_CAP=4*36e5;
+function stopTimer(){
+  const p=store.slots[store.active];if(!p||!p.timer)return;
+  const {key,at,hid}=p.timer, ms=Date.now()-at;delete p.timer;
+  /* only counts if the menu was really in the background, so a blocked pop-up doesn't add time */
+  if(hid&&ms>=10e3&&ms<=TIMER_CAP*3){
+    const add=Math.min(ms,TIMER_CAP);
+    p.playTime=p.playTime||{};p.playTime[key]=(p.playTime[key]||0)+add;
+    const w=weekStats(p);w.time[key]=(w.time[key]||0)+add;
+  }
+  try{saveStore()}catch(e){}
+  render();
+}
+document.addEventListener("visibilitychange",()=>{
+  const p=store.slots[store.active];
+  if(document.hidden){if(p&&p.timer){p.timer.hid=true;try{saveStore()}catch(e){}}}
+  else stopTimer();
+});
+/* the menu was closed while a game was open: count it when it opens again */
+setTimeout(stopTimer,1200);
+
+/* --- weekly recap: each player's week runs Monday to Sunday --- */
+const weekNo=()=>Math.floor((dayNo()+3)/7);
+function weekStats(p){
+  const wk=weekNo();
+  if(!p.week||p.week.wk!==wk){
+    const old=p.week;
+    if(old&&(Object.keys(old.plays||{}).length||old.dailies))p.lastWeek=old;
+    p.week={wk,time:{},plays:{},dailies:0};
+  }
+  return p.week;
+}
+const weekRange=wk=>{const s=new Date((wk*7-3)*864e5),e=new Date((wk*7+3)*864e5),f=d=>d.toLocaleDateString([],{day:"numeric",month:"short",timeZone:"UTC"});return f(s)+" – "+f(e)};
+function openRecap(which){
+  const p=store.slots[store.active];if(!p)return openWho();
+  weekStats(p);
+  const last=which!=="now"&&!!p.lastWeek, w=last?p.lastWeek:p.week;
+  const keys=[...new Set([...Object.keys(w.time||{}),...Object.keys(w.plays||{})])];
+  const rows=keys.map(k=>({k,ms:(w.time||{})[k]||0,n:(w.plays||{})[k]||0,gi:LIB.findIndex(c=>c.key===k)}))
+    .filter(r=>r.gi>=0).sort((a,b)=>b.ms-a.ms||b.n-a.n);
+  const total=rows.reduce((s,r)=>s+r.ms,0), starts=rows.reduce((s,r)=>s+r.n,0), top=rows[0], max=Math.max(1,...rows.map(r=>r.ms||r.n));
+  const from=(w.wk*7-3)*864e5, to=from+7*864e5, uid=p.auth?.uid;
+  const fan=uid?reviewsAll.filter(r=>r.game.startsWith("u_"+uid+"_")&&(r.at||0)>=from&&(r.at||0)<to&&!rvRemoved(r.id)):[];
+  const streak=p.daily&&p.daily.last>=dayNo()-1?p.daily.streak:0;
+  $("rcTitle").textContent=last?"Your week on WIDR 64":"This week so far";
+  $("rcBody").innerHTML=`<p class="dl-sub" style="margin:-8px 0 12px">${weekRange(w.wk).toUpperCase()}</p>
+    ${top?`<div class="rc-top"><span class="dl-thumb">${cover(top.gi)}</span><div><small>MOST PLAYED</small><h4>${escA(LIB[top.gi].name)}</h4>
+      <small>${top.ms?fmtTime(top.ms)+" · ":""}${top.n} START${top.n!==1?"S":""}</small></div></div>`
+      :`<div class="rc-top"><div><small>MOST PLAYED</small><h4>Nothing yet</h4><small>START A GAME FROM THE MENU AND IT SHOWS UP HERE</small></div></div>`}
+    <div class="rc-stats">
+      <div class="rc-stat"><b>${total?fmtTime(total):"0M"}</b><small>TIME PLAYED</small></div>
+      <div class="rc-stat"><b>${starts}</b><small>GAMES STARTED</small></div>
+      <div class="rc-stat"><b>${rows.length}</b><small>DIFFERENT GAMES</small></div>
+      <div class="rc-stat"><b>${w.dailies||0}/7</b><small>DAILIES DONE</small></div>
+      <div class="rc-stat"><b>🔥 ${streak}</b><small>DAY STREAK</small></div>
+      ${fan.length?`<div class="rc-stat"><b>★ ${(fan.reduce((s,r)=>s+(r.stars||0),0)/fan.length).toFixed(1)}</b><small>${fan.length} NEW REVIEW${fan.length>1?"S":""} ON YOUR GAMES</small></div>`:""}
+    </div>
+    ${rows.length>1?`<div class="rc-list">${rows.slice(0,5).map(r=>`<div class="rc-row"><span class="thumb">${cover(r.gi)}</span>${escA(LIB[r.gi].name)}
+      <span class="bar"><i style="width:${Math.round((r.ms||r.n)/max*100)}%"></i></span><small>${r.ms?fmtTime(r.ms):r.n+"×"}</small></div>`).join("")}</div>`:""}
+    ${p.lastWeek?`<p style="margin-top:12px;text-align:center"><button type="button" class="btn ghost" id="rcSwap">${last?"See this week so far →":"← See last week"}</button></p>`:""}`;
+  if($("rcSwap"))$("rcSwap").onclick=()=>openRecap(last?"now":"last");
+  if(last){p.recapSeen=w.wk;try{saveStore()}catch(e){}}
+  $("recap").classList.add("open");beep(520,.08,"triangle");
+}
+const closeRecap=()=>{$("recap").classList.remove("open");beep(300,.08)};
+$("rcX").onclick=$("rcOk").onclick=closeRecap;
+$("recap").onclick=e=>{if(e.target.id==="recap")closeRecap()};
+$("dlRecap").onclick=()=>{closeDaily();openRecap()};
+/* the first time a player opens the menu in a new week, last week's recap pops up */
+function checkRecap(){
+  const p=store.slots[store.active];if(!p)return;
+  weekStats(p);
+  if(p.lastWeek&&p.lastWeek.wk===weekNo()-1&&p.recapSeen!==p.lastWeek.wk)setTimeout(()=>{
+    if(!document.querySelector(".modal.open,.who.open,.daily.open,.online.open"))openRecap("last")},900);
+}
+
+/* --- install as an app: browsers offer this once the menu is on joshibrahim.nl with its app files --- */
+let installEvt=null;
+addEventListener("beforeinstallprompt",e=>{e.preventDefault();installEvt=e;$("installBtn").hidden=false});
+$("installBtn").onclick=async()=>{
+  if(!installEvt)return;
+  installEvt.prompt();try{await installEvt.userChoice}catch(e){}
+  installEvt=null;$("installBtn").hidden=true;
+};
+addEventListener("appinstalled",()=>{$("installBtn").hidden=true;chord()});
+if("serviceWorker" in navigator&&location.protocol==="https:"&&!/dia-artifacts/.test(location.host))
+  navigator.serviceWorker.register("sw.js").catch(()=>{});
+
 /* --- news: the published Google Doc, shown in a News channel --- */
 const NEWS_URL="https://docs.google.com/document/d/e/2PACX-1vRXRBFltnDUYbf7mQxCWJW3tk-pQbdyZWLyGPx6fSpFBiQWiaVAUeu58ha4DCA8KUIX-_Mm601npoSg/pub";
 $("newsOpen").href=NEWS_URL;
@@ -3502,7 +3868,8 @@ const NEWS_ALIASES={
   "WIDC Pixel":["widc","wat in de combat","widcombat"],
   "Who Wants to Be a Hundredaire?":["hundredaire","wwtbah"],
   "Watt Wizardry":["watt wizardry","wattwizardry","watt"],
-  "Demolition Run":["demolition run","demolitionrun"]
+  "Demolition Run":["demolition run","demolitionrun"],
+  "Codename Conference":["codename conference","codenameconference","codename"]
 };
 var newsHits={};
 const hashStr=s=>{let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return String(h)};
