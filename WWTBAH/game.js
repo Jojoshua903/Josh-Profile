@@ -34,7 +34,7 @@ const store = {
   del(k){ try{ localStorage.removeItem(k); }catch(e){ delete mem[k]; } }
 };
 const $ = s => document.querySelector(s);
-const screen = $('#screen');
+const stage = $('#screen');
 const rnd = pickOne, shuffle = shuf, esc = escH;
 
 let S = null, cur = null, timerId = null, typeId = null;
@@ -62,7 +62,8 @@ const sfx = {
   tick(){ tone(900, .03, 'square', .05); },
   fanfare(){ [392, 523, 659, 784, 659, 784, 1046].forEach((f, i) => tone(f, .22, 'triangle', .15, i * .13)); },
   rimshot(){ tone(200, .08, 'square', .1); tone(1800, .15, 'triangle', .08, .12); },
-  ach(){ [880, 1175, 1568].forEach((f, i) => tone(f, .15, 'sine', .14, i * .08)); }
+  ach(){ [880, 1175, 1568].forEach((f, i) => tone(f, .15, 'sine', .14, i * .08)); },
+  applause(){ if(!meta.sound) return; for(let i = 0; i < 26; i++) tone(2000 + Math.random() * 3000, .03, 'square', .025, Math.random() * .9); }
 };
 
 /* ---------- helpers ---------- */
@@ -70,21 +71,22 @@ function toast(msg){ const t = $('#toast'); t.innerHTML = msg; t.classList.add('
 function saveMeta(){ store.set(META_KEY, meta); }
 function bestScore(){ const hs = store.get(HS_KEY, []); return hs.length ? hs[0].money : 0; }
 const humans = () => S.players.filter(p => p.human);
-const avatar = p => p.key ? AV[p.key] : drawAvatar(p.look || defaultLook(+p.id.slice(1) || 0));
-const roundOf = pos => S.rounds[Math.min(pos, S.rounds.length - 1)];
+const lookOf = p => p.key ? PRESETS[p.key] : (p.look || defaultLook(+p.id.slice(1) || 0));
+const avatar = p => drawAvatar(lookOf(p));
+const avatarBare = p => drawAvatar(lookOf(p), {bare: true});
+function setScene(name){ document.body.dataset.scene = name; }
 function updateTop(){
   const live = S ? Math.max(...humans().map(p => p.money)) : 0;
   $('#bestChip b').textContent = '$' + Math.max(bestScore(), live);
   $('#jokeChip b').textContent = meta.jokes;
   $('#soundBtn').textContent = meta.sound ? '🔊 Sound' : '🔇 Muted';
   ['#saveBtn', '#quitBtn', '#roundChip'].forEach(id => $(id).classList.toggle('hidden', !S));
-  if(S){ $('#roundChip b').textContent = `Q${Math.min(S.pos + 1, S.plan.length)}/${S.plan.length}`; }
+  if(S) $('#roundChip b').textContent = `Q${Math.min(S.pos + 1, S.plan.length)}/${S.plan.length}`;
 }
 function unlock(id){
   if(meta.ach[id]) return;
   meta.ach[id] = Date.now(); saveMeta();
-  const a = ACHIEVEMENTS.find(x => x.id === id);
-  const un = unlocksFor(id);
+  const a = ACHIEVEMENTS.find(x => x.id === id), un = unlocksFor(id);
   setTimeout(() => { sfx.ach(); toast(`${a.ic} Achievement unlocked: <b>${a.n}</b>${un.length ? `<br>🎁 New look: ${esc(un.join(', '))}` : ''}`); }, 600);
 }
 function countJoke(text){
@@ -97,9 +99,8 @@ function chemmySay(text, el = $('#hostText')){
   const host = el.closest('.host'), av = host && host.querySelector('.av');
   if(av) av.classList.add('talking');
   const stop = () => { clearInterval(typeId); if(av) av.classList.remove('talking'); };
-  // Reserve the full line's space up front so the layout below doesn't jump while typing
   el.innerHTML = '<span class="ghost"></span><span class="typed"></span>';
-  const ghost = el.firstChild, typed = el.lastChild; ghost.textContent = text;
+  const typed = el.lastChild; el.firstChild.textContent = text;
   let i = 0;
   typeId = setInterval(() => { i += 2; typed.textContent = text.slice(0, i); if(i >= text.length) stop(); }, 16);
   el.onclick = () => { stop(); typed.textContent = text; };
@@ -109,31 +110,49 @@ function saveGame(silent){
   S.savedAt = Date.now(); store.set(SAVE_KEY, S);
   if(!silent) toast("💾 Saved! Chemmy put your game in the trophy cabinet.");
 }
-function confetti(n = 80){
-  const cols = ['#E2412B', '#F2B230', '#1E8C84', '#F49AA8', '#24345C'];
+function confetti(n = 90){
+  const cols = ['#FF5A3C', '#FFD45C', '#2F4BFF', '#3DDBB4', '#FF8FB1', '#9B6BFF'];
   for(let i = 0; i < n; i++){
-    const c = document.createElement('div'); c.className = 'confetti';
-    c.style.left = Math.random() * 100 + 'vw'; c.style.background = rnd(cols);
-    c.style.animationDuration = (2 + Math.random() * 2.5) + 's'; c.style.animationDelay = Math.random() * .8 + 's';
-    document.body.appendChild(c); setTimeout(() => c.remove(), 5500);
+    const c = document.createElement('div'), s = Math.random();
+    c.className = 'confetti'; c.style.left = Math.random() * 100 + 'vw'; c.style.background = cols[i % cols.length];
+    c.style.borderRadius = s < .33 ? '50%' : '2px'; c.style.width = (s > .66 ? 14 : 9) + 'px'; c.style.height = (s > .66 ? 6 : 11) + 'px';
+    c.style.animationDuration = (2.2 + Math.random() * 2.5) + 's'; c.style.animationDelay = Math.random() * .8 + 's';
+    document.body.appendChild(c); setTimeout(() => c.remove(), 6000);
   }
 }
+function applause(on = true){ const a = $('#applause'); if(a) a.classList.toggle('lit', on); if(on){ sfx.applause(); document.body.classList.add('cheer'); setTimeout(() => { document.body.classList.remove('cheer'); if(a) a.classList.remove('lit'); }, 1800); } }
 function stopTimer(){ clearInterval(timerId); timerId = null; }
+
+/* ---------- studio pieces ---------- */
+// A row of contestants standing on stage behind lit plinths
+function lineup(list, opts = {}){
+  return `<div class="lineup ${opts.final ? 'final' : ''}">${list.map((p, i) => {
+    const acc = lookOf(p).shirt;
+    return `<div class="spot ${opts.final ? 'r' + Math.min(i + 1, 4) : ''}" style="--accent:${acc}">
+      ${opts.final && i === 0 ? '<div class="crownfx">👑</div>' : ''}
+      <div class="stand-av">${avatarBare(p)}</div>
+      <div class="plinth"><b>${esc(p.name)}</b>${opts.money === false ? '' : `<span class="led">$${p.money}</span>`}${opts.final ? `<em>${['1st', '2nd', '3rd'][i] || (i + 1) + 'th'}</em>` : ''}</div></div>`;
+  }).join('')}</div>`;
+}
+const castList = () => ['sichen', 'chemmy', 'fyon', 'jacques'].map(k => ({key: k, id: k, name: k[0].toUpperCase() + k.slice(1), money: 0}));
 
 /* ---------- title + setup ---------- */
 function titleScreen(){
-  S = null; cur = null; stopTimer(); updateTop();
+  S = null; cur = null; stopTimer(); setScene('title'); updateTop();
   const save = store.get(SAVE_KEY, null), hs = store.get(HS_KEY, []);
   const setup = Object.assign({n:1, names:['','','',''], ai:true, jacques:true, length:'standard', looks:[]}, store.get(SETUP_KEY, {}));
   setup.looks = [0,1,2,3].map(i => sanitizeLook((setup.looks || [])[i] || defaultLook(i)));
   const achCount = ACHIEVEMENTS.filter(a => meta.ach[a.id]).length;
-  screen.innerHTML = `
-    <div class="marquee">
-      <div class="hero-cast"><div class="hc hc-s">${AV.sichen}</div><div class="hc hc-c">${AV.chemmy}</div><div class="hc hc-f">${AV.fyon}</div><div class="hc hc-j">${AV.jacques}</div></div>
-      <div class="pre">Live from the Ping Pong Palace</div>
-      <h1><span class="h1a">Who wants to be a</span><span class="h1b">Hundred<em>$</em>aire</span><span class="h1q">?</span></h1>
-      <div class="tag">Up to 4 players · 7 kinds of question · ${Object.values(POOLS).reduce((a, p) => a + p.length, 0)} questions · up to $100 in real pretend money</div>
-    </div>
+  const total = Object.values(POOLS).reduce((a, p) => a + p.length, 0);
+  stage.innerHTML = `
+    <section class="hero">
+      <div class="neon"><span class="n1">Who wants to be a</span><span class="n2">Hundred<em>$</em>aire<i>?</i></span></div>
+      <div class="hero-stage">
+        <div class="hero-cast">${['sichen', 'fyon', 'chemmy', 'jacques'].map(k => `<div class="hc hc-${k}">${AVB(k)}<div class="tag-name">${k === 'chemmy' ? 'Chemmy · host' : k[0].toUpperCase() + k.slice(1)}</div></div>`).join('')}</div>
+        <div class="riser"></div>
+      </div>
+      <div class="hero-tag">Live from the Ping Pong Palace · up to 4 players · 7 kinds of question · ${total} questions · up to $100 in real pretend money</div>
+    </section>
     <div class="title-grid">
       <div class="card">
         <h2>Set up tonight's show</h2>
@@ -144,7 +163,7 @@ function titleScreen(){
         <div class="seg" id="segL">${Object.entries(LENGTHS).map(([k, L]) => `<button data-l="${k}" class="${setup.length === k ? 'on' : ''}">${L.label}<small>${L.blurb}</small></button>`).join('')}</div>
         <label class="toggle"><input type="checkbox" id="aiTog" ${setup.ai ? 'checked' : ''}><span></span>Include Sichen & Fyon as AI contestants</label>
         <label class="toggle"><input type="checkbox" id="jqTog" ${setup.jacques ? 'checked' : ''}><span></span>Include Jacques as an AI contestant</label>
-        <button class="bigbtn" id="newBtn">▶ Start the show</button>
+        <button class="bigbtn" id="newBtn">▶ Walk on stage</button>
         <button class="bigbtn ylw" id="contBtn" ${save ? '' : 'disabled'}>⟲ Continue saved game</button>
         <div class="savemeta">${save ? `${esc(save.players.filter(p => p.human).map(p => p.name).join(', '))} · Q${save.pos + 1} of ${save.plan.length} · saved ${new Date(save.savedAt).toLocaleString()}` : 'No saved game yet'}</div>
       </div>
@@ -160,11 +179,11 @@ function titleScreen(){
         ${hs.length ? `<table class="hs">${hs.map((h, i) => `<tr><td class="n">${i + 1}</td><td><b>${esc(h.name)}</b>${h.perfect ? ' 👑' : ''}<br><span class="tiny">${esc(h.mode || '')}${h.party ? ' · party' : ''} · ${new Date(h.date).toLocaleDateString()}</span></td><td class="r">$${h.money}</td></tr>`).join('')}</table>` : `<p class="empty">Nobody's made the board yet. Be the first!</p>`}
       </div>
     </div>
-    <div class="card" style="margin-top:20px">
+    <div class="card" style="margin-top:18px">
       <h2>Achievements <span class="tiny">${achCount}/${ACHIEVEMENTS.length} unlocked</span></h2>
       <div class="achs">${ACHIEVEMENTS.map(a => { const un = unlocksFor(a.id); return `<div class="ach ${meta.ach[a.id] ? 'got' : ''}" title="${esc(a.d)}"><span class="ic">${meta.ach[a.id] ? a.ic : '🔒'}</span><b>${a.n}</b><small>${a.d}</small>${un.length ? `<em class="unl">${meta.ach[a.id] ? '✨ Unlocked' : '🎁 Unlocks'}: ${esc(un.join(', '))}</em>` : ''}</div>`; }).join('')}</div>
     </div>
-    <div class="card how" style="margin-top:20px">
+    <div class="card" style="margin-top:18px">
       <h2>How to play</h2>
       <div class="howgrid">
         <div><b>🔤 Multiple choice & odd one out</b>Pick A–D (or press the key).</div>
@@ -182,22 +201,18 @@ function titleScreen(){
   const drawNames = () => {
     $('#nameBox').innerHTML = Array.from({length: st.n}, (_, i) =>
       `<div class="pname"><button class="mini-av" data-c="${i}" title="Customise your contestant">${drawAvatar(st.looks[i])}<span>🎨</span></button><input class="name" data-i="${i}" maxlength="16" placeholder="Player ${i + 1} name" value="${esc(st.names[i] || '')}"><button class="tbtn alt" data-c="${i}">Customise</button></div>`).join('');
-    document.querySelectorAll('#nameBox [data-c]').forEach(b => b.onclick = () => {
-      const i = +b.dataset.c;
-      openCreator(st.looks[i], (st.names[i] || '').trim() || `Player ${i + 1}`, L => { st.looks[i] = L; store.set(SETUP_KEY, st); drawNames(); sfx.ach(); });
-    });
     document.querySelectorAll('#nameBox input').forEach(inp => {
       inp.oninput = () => { st.names[+inp.dataset.i] = inp.value; };
       inp.onkeydown = e => { if(e.key === 'Enter') $('#newBtn').click(); };
     });
+    document.querySelectorAll('#nameBox [data-c]').forEach(b => b.onclick = () => {
+      const i = +b.dataset.c;
+      openCreator(st.looks[i], (st.names[i] || '').trim() || `Player ${i + 1}`, L => { st.looks[i] = L; store.set(SETUP_KEY, st); drawNames(); sfx.ach(); });
+    });
   };
   drawNames();
-  document.querySelectorAll('#segN button').forEach(b => b.onclick = () => {
-    st.n = +b.dataset.n; document.querySelectorAll('#segN button').forEach(x => x.classList.toggle('on', x === b)); drawNames(); sfx.tick();
-  });
-  document.querySelectorAll('#segL button').forEach(b => b.onclick = () => {
-    st.length = b.dataset.l; document.querySelectorAll('#segL button').forEach(x => x.classList.toggle('on', x === b)); sfx.tick();
-  });
+  document.querySelectorAll('#segN button').forEach(b => b.onclick = () => { st.n = +b.dataset.n; document.querySelectorAll('#segN button').forEach(x => x.classList.toggle('on', x === b)); drawNames(); sfx.tick(); });
+  document.querySelectorAll('#segL button').forEach(b => b.onclick = () => { st.length = b.dataset.l; document.querySelectorAll('#segL button').forEach(x => x.classList.toggle('on', x === b)); sfx.tick(); });
   $('#aiTog').onchange = e => { st.ai = e.target.checked; };
   $('#jqTog').onchange = e => { st.jacques = e.target.checked; };
   $('#newBtn').onclick = () => {
@@ -205,8 +220,9 @@ function titleScreen(){
     store.set(SETUP_KEY, st); newGame(st);
   };
   $('#contBtn').onclick = () => {
-    S = store.get(SAVE_KEY, null);
-    if(S){ sfx.ping(); toast(`Welcome back!`); resume(); }
+    const s = store.get(SAVE_KEY, null);
+    if(!s || !s.plan || !s.players){ toast("That save couldn't be read. Start a new show!"); return; }
+    S = s; sfx.ping(); toast('Welcome back!'); resume();
   };
 }
 
@@ -231,15 +247,13 @@ function buildValues(L){
   return vals;
 }
 function newGame(st){
-  const L = LENGTHS[st.length], {plan, rounds} = buildPlan(L);
+  const L = LENGTHS[st.length] || LENGTHS.standard, {plan, rounds} = buildPlan(L);
   const players = [];
-  for(let i = 0; i < st.n; i++){
-    players.push({id:'p' + i, name: (st.names[i] || '').trim() || (st.n === 1 ? 'Mystery Guest' : `Player ${i + 1}`), human:true, key:null, col: PLAYER_COLORS[i], look: (st.looks && st.looks[i]) || defaultLook(i)});
-  }
+  for(let i = 0; i < st.n; i++) players.push({id:'p' + i, name: (st.names[i] || '').trim() || (st.n === 1 ? 'Mystery Guest' : `Player ${i + 1}`), human:true, key:null, col: PLAYER_COLORS[i], look: (st.looks && st.looks[i]) || defaultLook(i)});
   if(st.ai){ players.push({id:'sichen', name:'Sichen', human:false, key:'sichen'}); players.push({id:'fyon', name:'Fyon', human:false, key:'fyon'}); }
   if(st.jacques) players.push({id:'jacques', name:'Jacques', human:false, key:'jacques'});
   players.forEach(p => Object.assign(p, {money:0, full:0, life:{smash:true, egg:true, time:true}, used:0, st:{trickR:0, trickN:0, emoji:0, orderFull:0, bull:0, egg:0}}));
-  S = {v:2, length: st.length, ai: st.ai, jq: !!st.jacques, players, plan, rounds, values: buildValues(L), pos:0, savedAt: Date.now()};
+  S = {v:3, length: st.length in LENGTHS ? st.length : 'standard', ai: !!st.ai, jq: !!st.jacques, players, plan, rounds, values: buildValues(L), pos:0, savedAt: Date.now()};
   saveGame(true); sfx.fanfare(); resume();
 }
 function resume(){
@@ -248,39 +262,36 @@ function resume(){
   if(S.pos === 0 || S.rounds[S.pos] !== S.rounds[S.pos - 1]) roundScreen(); else questionScreen();
 }
 
-/* ---------- round intro ---------- */
+/* ---------- round intro: the wide shot of the studio ---------- */
 function roundScreen(){
-  stopTimer();
+  stopTimer(); setScene('round');
   const ri = S.rounds[S.pos], R = ROUNDS[ri], L = LENGTHS[S.length];
   const order = L.rounds, num = order.indexOf(ri) + 1, val = S.values[S.pos];
-  const hs = humans(), names = hs.map(p => p.name);
+  const names = humans().map(p => p.name);
   const nameList = names.length === 1 ? names[0] : names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
   const intro = S.pos === 0
-    ? `Welcome, welcome, WELCOME to Who Wants To Be A Hundredaire! I'm Chemmy, three-time regional table tennis champion and full-time host. Tonight: ${nameList}${S.ai ? ', up against Sichen and Fyon' : ''}${S.jq ? (S.ai ? ', and the very tall Jacques. Sunglasses are under your seats' : ', up against the very tall Jacques. Sunglasses are under your seats') : ''}! ${S.plan.length} questions, and a perfect game wins the full one hundred dollars. ${ROUND_INTROS[ri]}`
+    ? `Welcome, welcome, WELCOME to Who Wants To Be A Hundredaire! I'm Chemmy, three-time regional table tennis champion and full-time host. Tonight: ${nameList}${S.ai ? ', up against Sichen and Fyon' : ''}${S.jq ? (S.ai ? ', and the very tall Jacques' : ', up against the very tall Jacques') : ''}! ${S.plan.length} questions, and a perfect game wins the full one hundred dollars. ${ROUND_INTROS[ri]}`
     : (Math.random() < .45 ? rnd(CHEMMY_STORIES) + ' Anyway! ' : '') + ROUND_INTROS[ri];
   const ad = S.pos > 0 && Math.random() < .5 ? rnd(ADS) : null;
-  screen.innerHTML = `
-    ${ad ? `<div class="ad"><div class="adtag">📺 A word from our sponsors</div><div class="adt">${ad.t}</div><p>${ad.b}</p><small>${ad.s}</small></div>` : ''}
-    <div class="card center">
-      <div class="lbl">Round ${num} of ${order.length}</div>
-      <div class="roundbig">${R.name}</div>
-      <div class="roundsub">${R.sub} · <b>$${val}</b>${ri === 8 ? '+' : ''} per question</div>
-      <div class="ladder">${order.map((x, i) => `<div class="rung ${i < num - 1 ? 'done' : i === num - 1 ? 'now' : ''}">${ROUNDS[x].name}</div>`).join('')}</div>
-      ${standings()}
-      <div class="host" style="text-align:left">${AV.chemmy}<div class="host-say"><span class="who">CHEMMY:</span><span id="hostText"></span></div></div>
-      ${S.pos === 0 && S.ai ? `<div class="host" style="text-align:left">${AV.sichen}<div class="host-say"><span class="who" style="color:var(--teal)">SICHEN:</span>${JOKE}</div></div>` : ''}
-      <button class="bigbtn red" id="goBtn" style="max-width:340px;margin:16px auto 0">Serve it up! ▶</button>
+  stage.innerHTML = `
+    <div class="wide">
+      <div class="bigscreen">
+        ${ad ? `<div class="ad"><div class="adtag">📺 A word from our sponsors</div><div class="adt">${ad.t}</div><p>${ad.b}</p><small>${ad.s}</small></div>` : ''}
+        <div class="lbl">Round ${num} of ${order.length}</div>
+        <div class="roundbig">${R.name}</div>
+        <div class="roundsub">${R.sub} · <b>$${val}</b>${ri === 8 ? '+' : ''} per question</div>
+        <div class="ladder">${order.map((x, i) => `<div class="rung ${i < num - 1 ? 'done' : i === num - 1 ? 'now' : ''}">${ROUNDS[x].name}</div>`).join('')}</div>
+      </div>
+      <div class="host centrehost"><div class="hostfig">${AVB('chemmy')}<div class="lectern"><span>CHEMMY</span></div></div>
+        <div class="host-say"><span class="who">CHEMMY</span><span id="hostText"></span></div></div>
+      ${lineup(S.players.slice().sort((a, b) => b.money - a.money))}
+      <button class="bigbtn red go" id="goBtn">Serve it up! ▶</button>
     </div>`;
   chemmySay(intro);
-  if(S.pos === 0 && S.ai) setTimeout(() => countJoke(JOKE), 400);
+  if(S.pos === 0 && S.ai) setTimeout(() => { toast(`🎤 Sichen: ${esc(JOKE)}`); countJoke(JOKE); }, 1600);
+  if(S.pos === 0) applause();
   $('#goBtn').onclick = () => { sfx.ping(); questionScreen(); };
-  $('#goBtn').focus();
-}
-function standings(final){
-  const list = S.players.slice().sort((a, b) => b.money - a.money);
-  const medals = ['🥇', '🥈', '🥉'];
-  return `<div class="stand" style="grid-template-columns:repeat(${Math.min(list.length, 3)},minmax(0,1fr))">${list.map((p, i) =>
-    `<div class="s ${i === 0 && p.money > 0 ? 'first' : ''}">${avatar(p)}<b>${esc(p.name)}</b><div class="m">$${p.money}</div>${final ? `<div class="medal">${medals[i] || '🎗️'}</div>` : ''}</div>`).join('')}</div>`;
+  $('#goBtn').focus({preventScroll: true});
 }
 
 /* ---------- top bar ---------- */
