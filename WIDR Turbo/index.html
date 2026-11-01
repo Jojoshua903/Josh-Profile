@@ -907,8 +907,20 @@ setInterval(() => LIC.sync(), 4000);
   .btn.mir.on{background:linear-gradient(90deg,#bfe9ff,#fff,#bfe9ff);animation:mirshine 2.4s linear infinite;background-size:200% 100%}
   @keyframes mirshine{to{background-position:-200% 0}}
   .mirlock{opacity:.6}
+  .ccrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:8px 0 4px}
+  .ccrow .cctog{font-weight:800;cursor:pointer;margin-right:4px}
+  .ccrow input[type=range]{flex:1;min-width:90px;accent-color:#ff7a1f;touch-action:none}
+  .ccrow .ccstep{padding:2px 10px;font-size:16px}
+  .ccrow #ccLbl{min-width:58px;text-align:right;font-size:17px}
+  .ccrow #ccLbl.off{opacity:.4}
+  .ccrow .ccnote{flex-basis:100%;margin:2px 0 0}
   .mirtag{display:block;font-size:14px;letter-spacing:3px;color:#2f7bff;margin-bottom:2px}
   /* dev tools */
+  body.freecam > :not(#game):not(#fcHud):not(#dbg):not(#toast):not(script){display:none!important}
+  #fcHud{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:59;display:flex;flex-direction:column;align-items:center;gap:2px;background:rgba(29,26,47,.82);color:#fff;padding:8px 16px;border-radius:12px;font:600 13px system-ui,sans-serif;pointer-events:none;text-align:center}
+  #fcHud.hidden{display:none}
+  #fcHud small{opacity:.7;font-weight:500}
+  body.freecam #game{cursor:crosshair}
   #dbg{position:fixed;top:10px;right:10px;width:300px;max-height:calc(100vh - 20px);overflow:auto;z-index:60;background:rgba(29,26,47,.94);color:#e8e6ff;border:3px solid #8a5cff;border-radius:14px;padding:8px 10px;font:12px/1.35 ui-monospace,Menlo,Consolas,monospace;-webkit-text-stroke:0;text-shadow:none;user-select:text;-webkit-user-select:text}
   #dbg.hidden{display:none}
   #dbg .dbgh{display:flex;align-items:center;gap:6px;font-size:14px;margin-bottom:4px}#dbg .sp{flex:1}
@@ -1109,6 +1121,11 @@ setInterval(() => LIC.sync(), 4000);
     <label class="dbgck"><input type="checkbox" id="dbgFreeze"> 🧊 Freeze the bots</label>
     <label class="dbgck"><input type="checkbox" id="dbgWire"> 🕸️ Wireframe</label>
   </details>
+  <details><summary>🗺️ Map viewer</summary>
+    <div class="dbgrow"><select id="dbgMap"></select></div>
+    <div class="dbgrow"><button data-a="fcam">🎥 Free cam</button><button data-a="fcamHere">🎥 Current track</button></div>
+    <p class="dbgfoot">From the menus, before a race. WASD fly · Q/E down/up · drag or click to look · Shift fast · scroll speed · R start line · M mirror · Esc exit</p>
+  </details>
   <details><summary>💾 Save data</summary>
     <label class="dbgck"><input type="checkbox" id="dbgAll"> 🔓 All racers unlocked (this session)</label>
     <div class="dbgrow"><button data-a="coins">🪙 +1000 coins</button><button data-a="story">📖 Open all story</button></div>
@@ -1118,6 +1135,7 @@ setInterval(() => LIC.sync(), 4000);
   </details>
   <p class="dbgfoot">F2 or ` to open/close · cheats are off in online races</p>
 </div>
+<div id="fcHud" class="hidden"><b id="fcName"></b><span id="fcInfo"></span><small>WASD fly · Q/E down/up · drag or click to look · Shift fast · scroll speed · R start line · Esc exit</small></div>
 <div class="sticker" id="mute">🔊</div>
 
 <div id="touch">
@@ -1150,7 +1168,7 @@ setInterval(() => LIC.sync(), 4000);
     <div class="logo" id="logo">
       <div class="logo-top" id="logoTop"></div>
       <div class="logo-bot" id="logoBot"></div>
-      <div class="logo-ribbon" id="logoRibbon">19 racers · 34 tracks · 9 cups</div>
+      <div class="logo-ribbon" id="logoRibbon">28 racers · 42 tracks · 11 cups</div>
       <div class="splashtag" id="splashTag"></div>
     </div>
     <div class="runway" id="runway"></div>
@@ -1165,7 +1183,7 @@ setInterval(() => LIC.sync(), 4000);
       <nav class="mlist" id="mlist">
         <button class="mbtn nav" data-go="story"    data-icon="📖" data-desc="Three parts of ten chapters each: Nathan vs Meta AI, The Shadow Cup and The Crybaby King. Each new part appears when you finish the one before." style="--c:#ff7ccf">Story Mode</button>
         <button class="mbtn nav" data-go="cups"     data-icon="🏆" data-desc="Race all the tracks in a cup. Score points in every race and finish top 3 to win a trophy." style="--c:#ff3b3b">Grand Prix</button>
-        <button class="mbtn nav" data-go="tracks"   data-icon="🏁" data-desc="Pick any of the 34 tracks and do a single 3-lap race. Good for practice." style="--c:#2f7bff">Single Race</button>
+        <button class="mbtn nav" data-go="tracks"   data-icon="🏁" data-desc="Pick any of the 42 tracks and do a single 3-lap race. Good for practice." style="--c:#2f7bff">Single Race</button>
         <button class="mbtn nav" data-go="ranked"   data-icon="🏅" data-desc="Climb the ladder with Elo. Every ranked race is a random track against bots at your level: beat them to gain Elo, and rank up from Bronze to Legend." style="--c:#ffc21f">Ranked</button>
         <button class="mbtn nav" data-go="battle"   data-icon="🎈" data-desc="Battle in small arenas. Balloon Battle: pop everyone's balloons with items. Coin Runners: grab the most coins and make others drop theirs. Solo, local party or online." style="--c:#ff7ccf">Battle</button>
         <button class="mbtn nav" data-beta data-go="duo"      data-icon="👥" data-desc="Split screen on one screen. Two players on one keyboard (WASD and the arrow keys), or up to 4 players with their phones as controllers." style="--c:#ff7a1f">Local Party</button>
@@ -1508,6 +1526,7 @@ scene.add(sun, sun.target);
 const N = 800, LAPS = 3;
 // developer tools (F2 or ` to open, or ?debug in the address); the flags are only for this session
 const DBG = {on:false, ts:1, god:false, all:false, freeze:false, wire:false, fps:0};
+const FC = {on:false};   // dev free cam (map viewer), driven from the dev tools
 const THEMES = {
   meadow: {terrain:28, peak:0x3a8a3a, emoji:'🌳', tile:'#c4f0ae', sky:0x8fd3ff, ground:0x6ccf5a, hemiGround:0x5a9b3a, road:[0x5b5d6b,0x63657a], curb:[0xff3b3b,0xffffff], dash:0xfff3b0, arch:0x2f7bff, banner:'#ffd23f',
     grip:14, off:18, props:'trees', ring:'hills', hill:0x58b94a, tires:true, clouds:true},
@@ -1529,6 +1548,10 @@ const THEMES = {
     grip:14, off:16, props:'pylons', ring:'towers', tires:false, clouds:true, skirt:0xc9d6e6},
   jungle: {terrain:40, peak:0x1f5a32, emoji:'🌴', tile:'#a8e6b4', sky:0xa6e8d8, ground:0x4cbf6a, hemiGround:0x2f7a45, road:[0x7a5a3a,0x856446], curb:[0xffd23f,0x2fae5a], dash:0xfff3b0, arch:0xff7a1f, banner:'#ffd23f',
     grip:13, off:17, props:'palms', ring:'hills', hill:0x2f9a4a, tires:false, clouds:true},
+  space: {emoji:'🪐', tile:'#c9c2ff', sky:0x0d0b2e, ground:0x241c52, hemiGround:0x3a2d7a, road:[0x2c2f4f,0x353a60], curb:[0xffd23f,0x8a5cff], dash:0x7ff0ff, arch:0x8a5cff, banner:'#7ff0ff',
+    grip:14, off:16, props:'pylons', ring:'planets', tires:false, clouds:false, skirt:0x4a4f86, particles:'sparkles'},
+  city: {emoji:'🏙️', tile:'#ffd6b0', sky:0x9fd0ff, ground:0x7fb85e, hemiGround:0x6a8a5a, road:[0x4a4d58,0x52555f], curb:[0xff3b3b,0xffffff], dash:0xffffff, arch:0xff7a1f, banner:'#ffffff',
+    grip:14, off:17, props:'city', ring:'skyline', tires:false, clouds:true},
 };
 // Star-shaped loops from a few sine harmonics, so generated tracks never cross themselves.
 function gen(seed, R, amps, ex = 1, ez = 1, n = 22){
@@ -1539,6 +1562,18 @@ function gen(seed, R, amps, ex = 1, ez = 1, n = 22){
     amps.forEach(([k, a], j) => r += a*Math.sin(k*t + ph[j]));
     r = Math.max(r, 0.5) * R; out.push([Math.cos(t)*r*ex, Math.sin(t)*r*ez]);
   }
+  return out;
+}
+// figure 8 (a lemniscate of Gerono), stretched by b and turned by rot: the two passes cross at right angles in the middle
+function fig8(a, b = 1, rot = 0, n = 20){
+  const out = [], c = Math.cos(rot), s = Math.sin(rot);
+  for (let i = 0; i < n; i++){ const t = i / n * Math.PI * 2, x = a * Math.cos(t), z = a * b * Math.sin(t) * Math.cos(t); out.push([x * c - z * s, x * s + z * c]); }
+  return out;
+}
+// trefoil knot seen from above: one road, three crossings
+function trefoil(sc, n = 27, rot = 0){
+  const out = [], c = Math.cos(rot), s = Math.sin(rot);
+  for (let i = 0; i < n; i++){ const t = i / n * Math.PI * 2, x = (Math.sin(t) + 2 * Math.sin(2 * t)) * sc, z = (Math.cos(t) - 2 * Math.cos(2 * t)) * sc; out.push([x * c - z * s, x * s + z * c]); }
   return out;
 }
 // hills: [where 0-1, height, width]   jumps: [where]   walls: [start, length, bank degrees]
@@ -1582,6 +1617,27 @@ const TRACKS = [
   {name:'Mesa Rollercoaster', glides:[[.4, 26],[.83, 22]], theme:'desert', tag:'Up, down, round', w:26, pads:[.05,.6], loops:[.18], hills:[[.62, 12, .05]], jumps:[.52], ctrl:gen(251, 210, [[2,.3],[4,.06]], 1.3, 0.85)},
   {name:'Neon Nexus', theme:'neon', tag:'Walls into loops', w:23, pads:[.08,.45], loops:[.35,.88], walls:[[.12,.14,80],[.55,.15,85]], jumps:[.75], hills:[[.25, 8, .04]], ctrl:gen(257, 200, [[3,.17],[2,.15]])},
   {name:'Sky Rollercoaster', glides:[[.5, 24]], theme:'rainbow', tag:'The ultimate ride', w:22, pads:[.04,.66], loops:[.2,.72], walls:[[.84,.1,85]], jumps:[.32,.6], ctrl:gen(263, 205, [[2,.2],[3,.13],[5,.05]])},
+  // space cup: tracks that cross over themselves (autoX turns every crossing into a bridge, xjump into a jump, xloop into a
+  // loop the other road drives through underneath)
+  {name:'Orbit Eight', theme:'space', tag:'Over the bridge, round the loop', w:24, autoX:true, loops:[.62], pads:[.12,.4,.88], ctrl:fig8(235, 1.15, 0.35)},
+  {name:'Nebula Knot', theme:'space', tag:'A knot of three bridges', w:23, autoX:true, pads:[.08,.42,.75], walls:[[.45,.1,75],[.78,.1,75]], ctrl:trefoil(58)},
+  {name:'Wormhole Way', theme:'space', tag:'Drive through the loop', w:24, autoX:true, xloop:[0], loops:[.62], glides:[[.9, 18]], pads:[.15,.45], ctrl:fig8(250, 1.5, -0.5)},
+  {name:'Event Horizon', theme:'space', tag:'Loop, jump and bridge', w:22, autoX:true, xloop:[0], xjump:[1], walls:[[.5,.09,80]], glides:[[.31, 18]], pads:[.05,.25,.6,.85], ctrl:trefoil(62, 27, 0.6)},
+  // holland cup: real Dutch towns, their landmarks where they really are along the way (see buildCity)
+  {name:'Zoetermeer Sweet Lake', theme:'city', tag:'SnowWorld, De Hoop and the RandstadRail', w:24, tram:true, city:{name:'Zoetermeer', style:'zoet'}, pads:[.07,.35,.62,.8],
+    canals:[[.5, 3.5, 14]], sights:[[.14, 1, 'snowworld'], [.16, -1, 'silverdome'], [.27, 0, 'balijbrug'], [.4, 1, 'watertoren'], [.53, 1, 'oudekerk'], [.56, -1, 'dehoop'], [.68, 1, 'noordaa'], [.84, 1, 'nvm'], [.92, 0, 'stadshart']],
+    ctrl:[[-260,120],[-120,135],[40,140],[180,130],[250,90],[265,20],[230,-40],[160,-60],[110,-110],[90,-170],[30,-200],[-60,-190],[-110,-140],[-150,-80],[-220,-70],[-275,-20],[-290,60]]},
+  {name:'Amsterdam Grachten', theme:'city', tag:'Hump bridges and the Rijksmuseum passage', w:22, city:{name:'Amsterdam', style:'ams'}, pads:[.1,.4,.66,.9],
+    canals:[[.07, 3.2, 14], [.2, 3.2, 14], [.33, 3.2, 14], [.46, 3.2, 14], [.7, 3.2, 14], [.86, 3.2, 14]], quays:[[.02, .52, -1], [.66, .93, -1]],
+    sights:[[.12, 1, 'westerkerk'], [.27, 1, 'centraal'], [.36, 1, 'nemo'], [.42, 1, 'magerebrug'], [.5, 1, 'gooyer'], [.78, 0, 'rijksmuseum']],
+    ctrl:[[-235,-86],[-241,65],[-161,191],[-22,249],[125,216],[227,106],[246,-43],[176,-71],[128,-23],[118,55],[65,113],[-11,130],[-84,100],[-126,34],[-122,-44],[-161,-101]]},
+  {name:'Rotterdam Maasbruggen', theme:'city', tag:'Over the Willemsbrug and the Erasmusbrug', w:24, city:{name:'Rotterdam', style:'rdam'}, pads:[.05,.3,.55,.82],
+    canals:[[[150, 0], 7, 80, 'willems'], [[-150, 0], 8, 84, 'erasmus']],
+    sights:[[.2, 1, 'kubus'], [.27, 1, 'markthal'], [.38, 1, 'rcentraal'], [.5, 1, 'euromast'], [.72, 1, 'derotterdam'], [.78, 1, 'hotelny'], [.9, 1, 'cranes']],
+    ctrl:[[150,-230],[155,-110],[150,0],[150,110],[165,220],[120,295],[40,300],[0,250],[-40,300],[-120,295],[-165,220],[-150,110],[-150,0],[-155,-110],[-150,-230],[-110,-300],[-30,-310],[30,-260],[110,-300]]},
+  {name:'Den Haag Scheveningen', theme:'city', tag:'From the Binnenhof to the pier', w:24, coast:true, city:{name:'Den Haag', style:'hague'}, pads:[.08,.33,.58,.83],
+    sights:[[.12, 1, 'madurodam'], [.27, 1, 'vredespaleis'], [.5, 1, 'ridderzaal'], [.68, 1, 'haagsetoren']],
+    ctrl:gen(331, 190, [[2,.12],[3,.1]], 1.45, 0.75)},
   // tutorial only (hidden from Single Race): one of everything, in the order the lessons teach it
   {name:'Training Grounds', hidden:true, theme:'meadow', tag:'Learn to race', w:28, pads:[.05,.09], jumps:[.3], walls:[[.45,.1,72]], loops:[.6], glides:[[.79, 16]], ctrl:gen(307, 185, [[2,.2],[3,.09]], 1.3, 0.9)},
   // battle arenas: short, very wide rings with walls all the way round (not in the race lists)
@@ -1605,6 +1661,8 @@ const CUPS = [
   {name:'Gravity Cup', emoji:'🌀', cc:'200cc', speed:1.22, ai:0.99, tile:'#cdf6ff', tracks:['Hilltop Hop','Canyon Leap','Wall Rider','Gravity Gauntlet']},
   {name:'Loop Cup', emoji:'🎢', cc:'150cc', speed:1.15, ai:0.97, tile:'#a8e6b4', tracks:['Loop Lagoon','Jungle Twister','Lollipop Loops','Magma Coaster']},
   {name:'Sky Cup', emoji:'☁️', cc:'200cc', speed:1.25, ai:1, tile:'#dfe9ff', tracks:['Summit Spiral','Mesa Rollercoaster','Neon Nexus','Sky Rollercoaster']},
+  {name:'Space Cup', emoji:'🪐', cc:'200cc', speed:1.25, ai:1, tile:'#c9c2ff', tracks:['Orbit Eight','Nebula Knot','Wormhole Way','Event Horizon']},
+  {name:'Holland Cup', emoji:'🌷', cc:'150cc', speed:1.15, ai:0.97, tile:'#ffd6b0', tracks:['Zoetermeer Sweet Lake','Amsterdam Grachten','Rotterdam Maasbruggen','Den Haag Scheveningen']},
 ];
 const POINTS = [15, 12, 10, 8, 6, 4, 2, 1];
 // ---------- per-track looks ----------
@@ -1656,6 +1714,14 @@ const LOOKS = {
   'Neon Nexus':        {time:'night',  lm:'ferris', curb:[0xff4fa0,0x00e5ff]},
   'Sky Rollercoaster': {time:'dusk',   lm:'rocket', fx:'sparkles'},
   'Training Grounds':  {time:'day',    lm:'castle', curb:[0xffd23f,0x2f7bff]},
+  'Orbit Eight':       {time:'night',  lm:'rocket', fx:'sparkles', curb:[0xffd23f,0x8a5cff]},
+  'Nebula Knot':       {time:'dusk',   lm:'crystal', fx:'sparkles', curb:[0xff4fd8,0x2ee6ff]},
+  'Wormhole Way':      {time:'night',  lm:'crystal', fx:'sparkles', curb:[0x3ccf6e,0xffffff]},
+  'Event Horizon':     {time:'night',  lm:'rocket', fx:'sparkles', curb:[0xff7a1f,0x1d1a2f]},
+  'Zoetermeer Sweet Lake': {time:'day',    curb:[0x2f7bff,0xffffff]},
+  'Amsterdam Grachten':    {time:'sunset', fx:'petals', curb:[0xe8202a,0xffffff], road:[0x6a5f5a,0x74685f]},
+  'Rotterdam Maasbruggen': {time:'dusk',   curb:[0x2fa84f,0xffffff]},
+  'Den Haag Scheveningen': {time:'day',    curb:[0xffd23f,0x2fa84f]},
 };
 function withLook(def){
   const L = LOOKS[def.name] || {}, T = TIMES[L.time || 'day'];
@@ -1687,32 +1753,66 @@ const GAP_LEN = 0.035;
 // between their walls. The slide is zero at the top and at both ends (with zero slope), so nothing kinks.
 // LS holds how much longer the 3D road is than the flat one there, so karts keep a believable speed.
 const loopSide = (th, A) => -A * Math.sin(th) * Math.sqrt(Math.max(0, 1 - Math.cos(th)));
+// where the flat layout crosses itself: [{a, b}] sample indices of the two passes, a < b, in track order
+let LOOPAT = [];
+function flatCrossings(){
+  const out = [], s = 2, gap = 90;
+  for (let i = 0; i < N; i += s){
+    const p1 = pts[i], p2 = pts[(i + s) % N];
+    for (let j = i + gap; j < N; j += s){
+      if (N - (j - i) < gap) continue;
+      const p3 = pts[j], p4 = pts[(j + s) % N];
+      const d = (p2.x - p1.x) * (p4.z - p3.z) - (p2.z - p1.z) * (p4.x - p3.x); if (Math.abs(d) < 1e-9) continue;
+      const u = ((p3.x - p1.x) * (p4.z - p3.z) - (p3.z - p1.z) * (p4.x - p3.x)) / d, v = ((p3.x - p1.x) * (p2.z - p1.z) - (p3.z - p1.z) * (p2.x - p1.x)) / d;
+      if (u < 0 || u >= 1 || v < 0 || v >= 1 || out.some(c => Math.abs(c.a - i) < 20 && Math.abs(c.b - j) < 20)) continue;
+      out.push({a:i, b:j});
+    }
+  }
+  return out;
+}
 let LOOPS = [], LR = new Uint8Array(1);
 function buildLoops(def, H){
   const LF = new Float32Array(N), LL = new Float32Array(N); LOOPS = []; LR = new Uint8Array(N);
-  const R = def.loopR || 24, Rh = R * 1.05, K = 3, L2 = K * R;
+  // a tall teardrop like a real coaster loop: 1.35x taller than it is long, so it's tighter over the top
+  const R0 = def.loopR || 30, K = 3;
   // where the climb and the descent cross (same height there), and how far each must slide sideways to clear the other
   let t1 = 1.2; for (let it = 0; it < 30; it++){ const g = K * t1 / Math.PI + 2 * Math.sin(t1) - K, dg = K / Math.PI + 2 * Math.cos(t1); t1 -= g / dg; }
-  const A = (W + 16) / (2 * Math.sin(t1) * Math.sqrt(1 - Math.cos(t1)));
-  for (const f of def.loops || []){
-    let best = null;
-    for (let s = -56; s <= 56; s += 2){
-      const i0 = (Math.round(f * N) + s + N) % N; let len = 0, n = 0, bend = 0, clash = false;
-      while (len < L2 && n < N / 4){ const i = (i0 + n) % N; bend += Math.abs(tans[i].clone().cross(tans[(i + 1) % N]).y); len += segL[i]; n++; }
-      // keep clear of other features, the start line and the starting grid behind it
-      for (let o = -14; o <= n + 14 && !clash; o++){ const i = (i0 + o + N) % N; clash = JZ[i] || GZ[i] || GP[i] || LR[i] || Math.abs(BK[i]) > 0.01 || i < 20 || i > N - 100; }
-      if (!clash && (!best || bend < best.bend)) best = {i0, n, bend};
-    }
-    if (!best) continue;
-    const cum = [0]; for (let o = 0; o < best.n; o++) cum.push(cum[o] + segL[(best.i0 + o) % N]);
-    const loop = {i0:best.i0, n:best.n, cum, R, Rh, A, base:[]};
-    for (let o = 0; o <= best.n; o++){
-      const i = (best.i0 + o) % N, th = 2 * Math.PI * cum[o] / cum[best.n];
+  const A = (W + 14) / (2 * Math.sin(t1) * Math.sqrt(1 - Math.cos(t1)));
+  // shape the road from sample i0 over n samples into a teardrop loop of radius R
+  function loopAt(i0, n, R){
+    const Rh = R * 1.35, cum = [0]; for (let o = 0; o < n; o++) cum.push(cum[o] + segL[(i0 + o) % N]);
+    const loop = {i0, n, cum, R, Rh, A, base:[]};
+    for (let o = 0; o <= n; o++){
+      const i = (i0 + o) % N, th = 2 * Math.PI * cum[o] / cum[n];
       loop.base.push(H[i]);
       LF[i] = R * Math.sin(th); H[i] += Rh * (1 - Math.cos(th)); LL[i] = loopSide(th, A); LR[i] = 1;
-      if (o > 0 && o < best.n) LP[i] = 1;
+      if (o > 0 && o < n) LP[i] = 1;
     }
     LOOPS.push(loop);
+  }
+  // a loop centred on a crossing: the other road passes underneath, through the middle of it
+  for (const c of LOOPAT){
+    const R = R0, L2 = K * R; let i0 = c, back = 0, n = 0, len = 0;
+    while (back < L2 / 2){ i0 = (i0 - 1 + N) % N; back += segL[i0]; }
+    while (len < L2 && n < N / 4){ len += segL[(i0 + n) % N]; n++; }
+    loopAt(i0, n, R);
+  }
+  for (const f of def.loops || []){
+    let best = null, R = R0;
+    // the biggest loop that fits on the straightest stretch nearby (a smaller one if a big one doesn't fit)
+    for (const Rt of [R0, R0 * 0.82, R0 * 0.68]){
+      const L2 = K * Rt;
+      for (let s = -56; s <= 56; s += 2){
+        const i0 = (Math.round(f * N) + s + N) % N; let len = 0, n = 0, bend = 0, clash = false;
+        while (len < L2 && n < N / 4){ const i = (i0 + n) % N; bend += Math.abs(tans[i].clone().cross(tans[(i + 1) % N]).y); len += segL[i]; n++; }
+        // keep clear of other features, the start line and the starting grid behind it
+        for (let o = -14; o <= n + 14 && !clash; o++){ const i = (i0 + o + N) % N; clash = JZ[i] || GZ[i] || GP[i] || LR[i] || BR[i] || Math.abs(BK[i]) > 0.01 || i < 20 || i > N - 100; }
+        if (!clash && (!best || bend < best.bend)) best = {i0, n, bend};
+      }
+      if (best){ R = Rt; break; }
+    }
+    if (!best) continue;
+    loopAt(best.i0, best.n, R);
   }
   return {LF, LL};
 }
@@ -1749,31 +1849,90 @@ function loopBand(F, a, ua, b, ub, colorFn, mat){
   const m = new THREE.Mesh(g, mat || new THREE.MeshLambertMaterial({vertexColors:true, side:THREE.DoubleSide}));
   m.receiveShadow = true; m.castShadow = !mat; world.add(m); return m;
 }
-// draws each loop as a solid, smooth track piece: road, kerbs, tall side walls with neon trim, and an underside
+// Loops are drawn in the Mario Kart 8 anti-gravity style: a thin floating deck (dark anti-grav panels, glowing edge lines,
+// chevrons pointing the way round, cyan "anti-gravity" strips at both ends), low glass rails on lit posts instead of solid
+// walls, a box-girder spine with ribs underneath, slim pillars down to the ground wherever no road runs below, and an
+// arch over the way in.
 function buildLoopMeshes(def){
-  const hw = W / 2, ew = W / 2 + 2.5, wallH = 3.2, th = 1.6;
+  const hw = W / 2, ew = W / 2 + 0.6, th = 0.9, railH = 1.3;
   const rainbow = def.road === 'rainbow', hue = new THREE.Color();
-  const rA = new THREE.Color(rainbow ? 0xffffff : 0x2fc4e8), rB = new THREE.Color(rainbow ? 0xffffff : 0x4fd8ff), arrow = new THREE.Color(0xffffff);
-  const cA = new THREE.Color(def.curb[0]), cB = new THREE.Color(def.curb[1]);
-  const wall = new THREE.Color(def.skirt ?? 0xeef4ff), wallB = wall.clone().multiplyScalar(0.88), under = new THREE.Color(0x3a3f5c);
-  const neon = new THREE.MeshBasicMaterial({color: def.theme === 'neon' ? 0xff4fd8 : 0x00e5ff, side:THREE.DoubleSide});
+  const glow = def.theme === 'neon' ? 0xff4fd8 : 0x2ee6ff, glowC = new THREE.Color(glow), white = new THREE.Color(0xffffff);
+  const panA = new THREE.Color(0x323a58), panB = new THREE.Color(0x3b4466), seam = new THREE.Color(0x232842);
+  const antiA = new THREE.Color(glow).lerp(white, 0.15), antiB = new THREE.Color(glow).multiplyScalar(0.55);
+  const deckSide = new THREE.Color(0xdfe6f2), under = new THREE.Color(0x2a2f45), spineC = new THREE.Color(0x454d6b);
+  const neon = new THREE.MeshBasicMaterial({color:glow, side:THREE.DoubleSide});
+  const glass = new THREE.MeshBasicMaterial({color:glow, transparent:true, opacity:0.22, side:THREE.DoubleSide, depthWrite:false});
+  const metal = new THREE.MeshLambertMaterial({color:0xc9d2e3}), dark = new THREE.MeshLambertMaterial({color:0x3a4160});
+  const q = new THREE.Quaternion(), mtx = new THREE.Matrix4(), one = new THREE.Vector3(1, 1, 1);
+  const place = (inst, n, P, Q) => inst.setMatrixAt(n, mtx.compose(P, Q, one));
   for (const L of LOOPS){
-    const F = loopFrames(L), M = F.length;
-    // the road: stripes plus chevrons pointing the way round
-    loopBand(F, -hw, 0.02, hw, 0.02, j => rainbow ? hue.setHSL((j / M * 2) % 1, 0.85, 0.66) : (j % 18 < 3 ? arrow : Math.floor(j / 9) % 2 ? rA : rB));
-    loopBand(F, -ew, 0.06, -hw, 0.06, j => Math.floor(j / 6) % 2 ? cA : cB);
-    loopBand(F, hw, 0.06, ew, 0.06, j => Math.floor(j / 6) % 2 ? cA : cB);
+    const F = loopFrames(L), M = F.length, ends = Math.round(M * 0.035);
+    // the deck: anti-grav panels with seams, chevrons (a V across the road every 36 frames) and cyan strips at the ends
+    const LANES = 8;
+    for (let b = 0; b < LANES; b++){
+      const a = -hw + (2 * hw) * b / LANES, c = -hw + (2 * hw) * (b + 1) / LANES, mid = Math.abs((a + c) / 2) / hw;
+      loopBand(F, a, 0.03, c, 0.03, j => {
+        if (j < ends || j > M - 1 - ends) return Math.floor(j / 2) % 2 ? antiA : antiB;
+        if (rainbow) return hue.setHSL((j / M * 2 + b * 0.02) % 1, 0.85, 0.66);
+        const ch = (j + Math.round(mid * 9)) % 36;
+        if (ch < 3) return ch === 1 ? white : glowC;
+        return j % 12 === 0 ? seam : Math.floor(j / 12) % 2 ? panA : panB;
+      });
+    }
+    // glowing edge lines just inside the rails, the deck's white sides and its underside
     for (const s of [-1, 1]){
-      loopBand(F, s * ew, -th, s * ew, wallH, j => Math.floor(j / 10) % 2 ? wall : wallB);          // side wall
-      loopBand(F, s * ew, wallH, s * (ew + 0.9), wallH, () => wall, neon);                            // glowing trim on top
-      loopBand(F, s * (ew + 0.9), wallH, s * (ew + 0.9), -th, () => wallB);                            // outer face
+      loopBand(F, s * (hw - 0.1), 0.06, s * (hw + 0.5), 0.06, () => glowC, neon);
+      loopBand(F, s * hw, 0.03, s * ew, 0.03, () => deckSide);
+      loopBand(F, s * ew, 0.03, s * ew, -th, () => deckSide);
     }
-    loopBand(F, -(ew + 0.9), -th, ew + 0.9, -th, () => under);                                        // underside
-    // two support legs under the entry and exit
-    for (const j of [Math.round(M * 0.1), Math.round(M * 0.9)]){
-      const f = F[j], h = f.P.y - th; if (h < 1) continue;
-      put(world, new THREE.CylinderGeometry(1.2, 1.6, h, 8), lam(0x9aa6b8), f.P.x, h / 2, f.P.z);
+    loopBand(F, -ew, -th, ew, -th, () => under);
+    // box-girder spine underneath, with a light line along its belly
+    for (const s of [-1, 1]) loopBand(F, s * 1.6, -th, s * 1.6, -th - 2.2, () => spineC);
+    loopBand(F, -1.6, -th - 2.2, 1.6, -th - 2.2, () => under);
+    loopBand(F, -0.35, -th - 2.25, 0.35, -th - 2.25, () => glowC, neon);
+    // glass rails: a see-through panel and a glowing top tube on each side
+    for (const s of [-1, 1]){
+      loopBand(F, s * ew, 0, s * ew, railH, () => glowC, glass);
+      loopBand(F, s * (ew - 0.18), railH, s * (ew + 0.18), railH, () => glowC, neon);
     }
+    // rail posts and girder ribs (instanced: there are hundreds)
+    const step = 6, cnt = Math.floor(M / step);
+    const posts = new THREE.InstancedMesh(new THREE.BoxGeometry(0.35, railH + th, 0.35), metal, cnt * 2);
+    const ribs = new THREE.InstancedMesh(new THREE.BoxGeometry(2 * ew - 1.2, 0.45, 0.5), dark, cnt);
+    const ribs2 = new THREE.InstancedMesh(new THREE.BoxGeometry(0.4, 2.4, 0.4), dark, cnt * 2);
+    for (let n = 0; n < cnt; n++){
+      const f = F[n * step]; basisQ(f.T, f.U, q);
+      for (const [i, s] of [[0, -1], [1, 1]]){
+        place(posts, n * 2 + i, f.P.clone().addScaledVector(f.D, s * ew).addScaledVector(f.U, (railH - th) / 2), q);
+        place(ribs2, n * 2 + i, f.P.clone().addScaledVector(f.D, s * (ew * 0.55)).addScaledVector(f.U, -th - 1.1), q.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), s * 0.75)));
+      }
+      place(ribs, n, f.P.clone().addScaledVector(f.U, -th - 0.25), q);
+    }
+    for (const m of [posts, ribs, ribs2]){ m.castShadow = true; m.instanceMatrix.needsUpdate = true; world.add(m); }
+    // pillars: down to the ground on the lower half, but never through a road
+    const clearBelow = (P, j0) => {
+      for (let j = 0; j < M; j += 3){ if (Math.abs(j - j0) < 12) continue; const g = F[j].P; if (g.y < P.y - 2 && Math.hypot(g.x - P.x, g.z - P.z) < ew + 2.5) return false; }
+      for (let i = 0; i < N; i += 3){ if (LR[i]) continue; if (Math.hypot(pts[i].x - P.x, pts[i].z - P.z) < W / 2 + 4) return false; }
+      return true;
+    };
+    let made = 0;
+    for (let j = Math.round(M * 0.06); j < M * 0.94 && made < 10; j += 9){
+      const f = F[j]; if (f.U.y < 0.35 || f.P.y < 4) continue;   // only under parts that face up
+      for (const s of [-1, 1]){
+        const top = f.P.clone().addScaledVector(f.D, s * (ew * 0.4)).addScaledVector(f.U, -th - 2.2);
+        if (top.y < 3 || !clearBelow(top, j)) continue;
+        put(world, new THREE.CylinderGeometry(0.55, 0.85, top.y, 10), metal, top.x, top.y / 2, top.z);
+        put(world, new THREE.CylinderGeometry(0.95, 0.95, 0.35, 12), neon, top.x, top.y - 0.4, top.z, false);
+        put(world, new THREE.CylinderGeometry(1.6, 1.9, 0.6, 12), dark, top.x, 0.3, top.z);
+        made++;
+      }
+    }
+    // entry arch with a glowing frame
+    const f0 = F[Math.round(ends * 0.5)]; basisQ(f0.T, f0.U, q);
+    const archH = 7.5, add = (geo, mat, lat, up) => { const m = new THREE.Mesh(geo, mat); m.position.copy(f0.P).addScaledVector(f0.D, lat).addScaledVector(f0.U, up); m.quaternion.copy(q); m.castShadow = mat !== neon; world.add(m); };
+    for (const s of [-1, 1]){ add(new THREE.BoxGeometry(1.1, archH, 1.1), metal, s * (ew + 0.8), archH / 2 - th); add(new THREE.BoxGeometry(0.3, archH - 1, 1.2), neon, s * (ew + 0.2), archH / 2 - th); }
+    add(new THREE.BoxGeometry(2 * ew + 2.7, 1.3, 1.3), metal, 0, archH - th);
+    add(new THREE.BoxGeometry(2 * ew + 1, 0.35, 1.4), neon, 0, archH - th - 0.75);
   }
 }
 const cd0 = i => Math.min(i, N - i);
@@ -1782,18 +1941,31 @@ function buildFrames(def){
   segL = pts.map((p, i) => Math.max(0.01, p.distanceTo(pts[(i + 1) % N])));
   const cd = (a, b) => { const d = Math.abs(a - b); return Math.min(d, N - d); };
   // a glide ramp sits on a hilltop, with a gap in the road straight after it
-  const hills = [...(def.hills || []), ...(def.glides || []).map(([f, h]) => [f + 0.012, h, 0.06])];
+  const hills = def.hills || [];   // (each glider ramp adds its own hilltop further down, once its spot is known)
   for (const [f, h, w] of hills){ const c = Math.round(f * N), wi = Math.max(4, w * N); for (let i = 0; i < N; i++) H[i] += h * Math.exp(-((cd(i, c) / wi) ** 2)); }
+  // city canals and rivers: the road humps over them on a bridge (BR gives girder edges and pillars, not an embankment)
+  { const seg = segL.reduce((a, b) => a + b, 0) / N;
+    for (const [at, h, w] of def.canals || []){ const c = canalIdx(at, def), wi = Math.max(6, w * 0.8 / seg); for (let i = 0; i < N; i++){ const e = h * Math.exp(-((cd(i, c) / wi) ** 2)); H[i] += e; if (e > 1.2) BR[i] = 1; } } }
   // bridges (custom tracks that cross themselves): the "over" pass rises 12 m around the crossing; a jump bridge also gets a
   // kicker just before it, so karts fly over the road below
   const avgSeg = segL.reduce((a, b) => a + b, 0) / N, kick = [];
-  for (const [f, jump] of def.bridges || []){
+  // built-in tracks that cross themselves (autoX): every crossing in the layout becomes a bridge, alternating which road goes
+  // over (so a knot really weaves), a jump (xjump), or a loop that the other road drives straight through underneath (xloop)
+  const bridges = [...(def.bridges || [])]; LOOPAT = [];
+  if (def.autoX) flatCrossings().forEach((c, n) => {
+    if ((def.xloop || []).includes(n)) LOOPAT.push(c.a);
+    else bridges.push([(n % 2 ? c.a : c.b) / N, (def.xjump || []).includes(n) ? 1 : 0]);
+  });
+  for (const [f, jump] of bridges){
     const c = Math.round(f * N) % N, wi = Math.max(14, Math.round(0.05 * N));
     for (let i = 0; i < N; i++){ const e = 12 * Math.exp(-((cd(i, c) / wi) ** 2)); H[i] += e; if (e > 2) BR[i] = 1; }
     if (jump) kick.push(((c - Math.max(5, Math.round(W * 0.9 / avgSeg))) + N) % N / N);
   }
+  // walls and glider gaps slide forward until they're clear of bridges and of loops that sit on a crossing
+  const busy = i => BR[i] || LOOPAT.some(c => cd(i, c) < 50);
+  const clearAt = (c, from, to) => { for (let s = 0; s < 150 && Array.from({length:to - from + 1}, (_, o) => (c + from + o + N) % N).some(busy); s++) c = (c + 4) % N; return c; };
   for (const [f, len, deg] of def.walls || []){
-    const c0 = Math.round(f * N), L = Math.max(12, Math.round(len * N));
+    const L = Math.max(12, Math.round(len * N)), c0 = clearAt(Math.round(f * N) % N, 0, L);
     let curv = 0; for (let o = 0; o < L; o += 4){ const i = (c0 + o) % N; curv += tans[i].clone().cross(tans[(i + 8) % N]).y; }
     const sgn = curv >= 0 ? 1 : -1;
     for (let o = 0; o <= L; o++){ const u = o / L; BK[(c0 + o) % N] = sgn * deg * Math.PI / 180 * smooth01(u / 0.25) * smooth01((1 - u) / 0.25); }
@@ -1804,8 +1976,9 @@ function buildFrames(def){
     const lip = Math.round(f * N) % N, L = 8;
     for (let o = 0; o <= L; o++){ const i = (lip - L + o + N) % N; H[i] += 4.5 * (o / L); JZ[i] = 1; }
   }
-  for (const [f] of def.glides || []){
-    const lip = Math.round(f * N) % N, L = 12, gl = Math.round(GAP_LEN * N);
+  for (const [f, gh] of def.glides || []){
+    const L = 12, gl = Math.round(GAP_LEN * N), lip = clearAt(Math.round(f * N) % N, -L - 4, gl + 6);
+    { const c = (lip + Math.round(0.012 * N)) % N, wi = 0.06 * N; for (let i = 0; i < N; i++) H[i] += gh * Math.exp(-((cd(i, c) / wi) ** 2)); }   // the glider ramp sits on a hilltop
     for (let o = 0; o <= L; o++){ const i = (lip - L + o + N) % N; H[i] += 6 * (o / L); GZ[i] = 1; }
     for (let o = 1; o <= gl; o++) GP[(lip + o) % N] = 1;
   }
@@ -2088,6 +2261,618 @@ const LANDMARKS = {
     });
   },
 };
+// ---------- city tracks (Holland Cup) ----------
+// Real places: def.city = {name, style}, sights = [[f, side, key]] (side 1 = outside the loop, -1 = inside, 0 = over the road),
+// canals = [[f or [x, z], height, width, bridge]] (the road humps over them), quays = [[f0, f1, side]] (a canal beside the road),
+// coast = the sea past the far +x end, tram = a RandstadRail tram circling the town
+let CITYW = [], CITYB = [];   // water areas and building footprints, so nothing else gets put on top of them
+function canalIdx(at, def){
+  if (!Array.isArray(at)) return Math.round(at * N) % N;
+  const sc = def.scale || 1, x = at[0] * sc * (world?.userData.mir ? -1 : 1), z = at[1] * sc;
+  let b = 0, bd = Infinity; for (let i = 0; i < N; i++){ const d = (pts[i].x - x) ** 2 + (pts[i].z - z) ** 2; if (d < bd){ bd = d; b = i; } } return b;
+}
+// which way "outside the loop" is: nors point left, which is inside for a counter-clockwise layout
+function loopOut(){ let a = 0; for (let i = 0; i < N; i += 4){ const p = pts[i], q = pts[(i + 4) % N]; a += p.x * q.z - q.x * p.z; } return a > 0 ? -1 : 1; }
+function cityWet(x, z, pad = 0){
+  for (const w of CITYW){
+    if (w.sea){ if ((x - w.x) * w.s > -pad) return true; continue; }
+    if (w.ring){ if (Math.abs(Math.hypot(x - w.x, z - w.z) - w.ring) < 5 + pad) return true; continue; }
+    const dx = x - w.x, dz = z - w.z, a = dx * w.ux + dz * w.uz, b = -dx * w.uz + dz * w.ux;
+    if (w.ell ? (a / (w.hl + pad)) ** 2 + (b / (w.hw + pad)) ** 2 < 1 : Math.abs(a) < w.hl + pad && Math.abs(b) < w.hw + pad) return true;
+  }
+  return false;
+}
+function cityBlocked(x, z, pad = 0, road = 0){
+  if (road && distToTrack(x, z) < road) return true;
+  if (cityWet(x, z, pad)) return true;
+  for (const b of CITYB){ const dx = x - b.x, dz = z - b.z; if (Math.abs(dx * b.c - dz * b.s) < b.hx + pad && Math.abs(dx * b.s + dz * b.c) < b.hz + pad) return true; }
+  return false;
+}
+// a footprint (half sizes hx along local x, hz along local z) at x, z turned by th, the way three.js turns a group
+const fpPts = (x, z, th, hx, hz) => { const c = Math.cos(th), s = Math.sin(th), o = []; for (const u of [-1, 0, 1]) for (const v of [-1, 0, 1]) o.push([x + u * hx * c + v * hz * s, z - u * hx * s + v * hz * c]); return o; };
+function addBlock(x, z, th, hx, hz){ CITYB.push({x, z, c:Math.cos(th), s:Math.sin(th), hx, hz}); }
+function beam(g, a, b, r, m){
+  const d = b.clone().sub(a), o = new THREE.Mesh(new THREE.CylinderGeometry(r, r, d.length(), 6), m);
+  o.position.copy(a).addScaledVector(d, 0.5); o.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize()); g.add(o); return o;
+}
+function signMat(text, bg, fg, w = 512, h = 128){
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d');
+  x.fillStyle = bg; x.fillRect(0, 0, w, h); x.fillStyle = fg; x.textAlign = 'center'; x.textBaseline = 'middle';
+  let s = h * 0.62; do { x.font = `900 ${s}px system-ui, sans-serif`; s -= 2; } while (x.measureText(text).width > w * 0.9 && s > 8);
+  x.fillText(text, w / 2, h / 2 + 2);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return new THREE.MeshBasicMaterial({map:t});
+}
+const signBoard = (g, text, bg, fg, w, h, x, y, z, ry = 0) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), signMat(text, bg, fg, 512, Math.round(512 * h / w))); m.position.set(x, y, z); m.rotation.y = ry; g.add(m); return m; };
+// a flat strip of water (or sand) in the world: length along (ux, uz)
+function waterRect(x, z, ux, uz, hl, hw, color = 0x3d8fb8, y = 0.06, reg = true){
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(hl * 2, hw * 2), new THREE.MeshLambertMaterial({color}));
+  m.rotation.x = -Math.PI / 2; m.rotation.z = Math.atan2(-uz, ux); m.position.set(x, y, z); m.receiveShadow = true; world.add(m);
+  if (reg) CITYW.push({x, z, ux, uz, hl, hw});
+  return m;
+}
+
+// house facades: one canvas per number of floors, tinted per building
+const FACADE = {};
+function facadeTex(floors, cols, glowing){
+  const key = floors + ':' + cols + ':' + glowing; if (FACADE[key]) return FACADE[key];
+  const c = document.createElement('canvas'); c.width = 16 * cols; c.height = 16 * floors; const x = c.getContext('2d');
+  x.fillStyle = glowing ? '#000' : '#fff'; x.fillRect(0, 0, c.width, c.height);
+  let s = floors * 31 + cols;
+  for (let f = 0; f < floors; f++) for (let k = 0; k < cols; k++){
+    s = (s * 16807) % 2147483647; const lit = s % 3 === 0;
+    if (glowing){ if (lit){ x.fillStyle = '#ffd98a'; x.fillRect(k * 16 + 4, f * 16 + 3, 8, 10); } continue; }
+    x.fillStyle = '#f4f4f4'; x.fillRect(k * 16 + 3, f * 16 + 2, 10, 12);
+    x.fillStyle = f === floors - 1 && k === 1 ? '#5a3a2a' : '#3b4656'; x.fillRect(k * 16 + 4, f * 16 + 3, 8, 10);
+  }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = THREE.NearestFilter;
+  return FACADE[key] = t;
+}
+// gable shapes for canal houses, 1 wide and 1 high, extruded 1 deep (scaled per house)
+const GABLES = {};
+function gableGeo(kind){
+  if (GABLES[kind]) return GABLES[kind];
+  const s = new THREE.Shape();
+  if (kind === 'step'){ s.moveTo(-.5, 0); [[-.5, .3], [-.34, .3], [-.34, .6], [-.18, .6], [-.18, .9], [.18, .9], [.18, .6], [.34, .6], [.34, .3], [.5, .3], [.5, 0]].forEach(p => s.lineTo(...p)); }
+  else if (kind === 'bell'){ s.moveTo(-.5, 0); s.quadraticCurveTo(-.5, .45, -.2, .55); s.lineTo(-.2, .85); s.quadraticCurveTo(0, 1.05, .2, .85); s.lineTo(.2, .55); s.quadraticCurveTo(.5, .45, .5, 0); }
+  else { s.moveTo(-.5, 0); s.lineTo(0, .7); s.lineTo(.5, 0); }
+  s.lineTo(-.5, 0);
+  const g = new THREE.ExtrudeGeometry(s, {depth:1, bevelEnabled:false}); g.translate(0, 0, -0.5);
+  return GABLES[kind] = g;
+}
+// what a street looks like in each city: [floors, cols, width, depth, roof, colours]
+const STREETS = {
+  zoet: [[2, 3, 14, 10, 'ridge', [0x9a4a32, 0x8a4535, 0xb0603e]], [3, 4, 18, 12, 'ridge', [0xa65a40, 0x7e3f2e]], [6, 6, 30, 12, 'flat', [0xe8e2d4, 0xd6cbb2, 0xc9ced6]], [9, 6, 26, 14, 'flat', [0xf0ece2, 0xbfc6cf]]],
+  ams:  [[5, 3, 7, 13, 'step', [0x6b3a2a, 0x5a2e24, 0x8a4a35]], [5, 3, 8, 13, 'bell', [0xe8dcc0, 0x4a3a32, 0x7a2e2a]], [4, 3, 7, 13, 'point', [0x5e6b5a, 0x6b3a2a, 0xd9cdb2]], [6, 3, 8, 14, 'bell', [0x4a2a22, 0x8a5a3a]]],
+  rdam: [[8, 6, 24, 18, 'flat', [0x8fa4b8, 0xb8c2cc, 0x6f8296]], [20, 6, 22, 22, 'flat', [0x5f7488, 0x9fb0c0, 0x40566e]], [5, 5, 20, 14, 'flat', [0xa65a40, 0xd8d0c0]], [28, 5, 20, 20, 'flat', [0x4a5e74, 0x7f93a8]]],
+  hague:[[4, 4, 14, 14, 'ridge', [0xf0e8d8, 0xe6dcc6, 0x9a4a32]], [3, 3, 9, 12, 'step', [0x8a4535, 0x9a4a32]], [5, 5, 20, 14, 'flat', [0xe8e2d4, 0xc9ced6]], [14, 5, 20, 18, 'flat', [0x8a9aac, 0xb8c2cc]]],
+};
+// rows of houses down both sides of the road, drawn as a handful of instanced meshes
+function cityStreets(def, glowing){
+  const S = STREETS[def.city.style] || STREETS.zoet, H = 3.4, slots = [];
+  let seed = 99 + def.name.length * 7; const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < N; i += 9) for (const s of [-1, 1]){
+    if (P3[i].y > 1 || BR[i] || i < 6 || i > N - 10) continue;
+    const t = S[Math.floor(rand() * S.length)], [fl, cols, w, d] = t, sec = loopOut() * s;
+    let off = W / 2 + 9 + d / 2, ok = false, x, z;
+    const th = Math.atan2(-s * nors[i].x, -s * nors[i].z);
+    for (let k = 0; k < 4 && !ok; k++, off += 10){
+      x = pts[i].x + nors[i].x * s * off; z = pts[i].z + nors[i].z * s * off;
+      ok = fpPts(x, z, th, w / 2, d / 2).every(([a, b]) => distToTrack(a, b) > W / 2 + 6 && !cityBlocked(a, b, 1));
+    }
+    if (!ok) continue;
+    addBlock(x, z, th, w / 2, d / 2);
+    slots.push({x, z, th, t, h:fl * H + 1, col:t[5][Math.floor(rand() * t[5].length)], sec});
+  }
+  const dummy = new THREE.Object3D(), C = new THREE.Color();
+  S.forEach(t => {
+    const list = slots.filter(o => o.t === t); if (!list.length) return;
+    const [fl, cols, w, d, roof] = t, mat = new THREE.MeshLambertMaterial({map:facadeTex(fl, cols, false)});
+    if (glowing){ mat.emissive = new THREE.Color(0xffffff); mat.emissiveMap = facadeTex(fl, cols, true); mat.emissiveIntensity = 0.9; }
+    const roofM = lam(roof === 'flat' ? 0x5a5f6a : 0x3a3438), n = list.length;
+    const body = new THREE.InstancedMesh(boxGeo1, mat, n), parts = [body];
+    const set = (m, i, x, y, z, sx, sy, sz, th, col) => { dummy.position.set(x, y, z); dummy.rotation.set(0, th, 0); dummy.scale.set(sx, sy, sz); dummy.updateMatrix(); m.setMatrixAt(i, dummy.matrix); if (col != null) m.setColorAt(i, C.set(col)); };
+    let top = null, front = null;
+    if (roof === 'flat') top = new THREE.InstancedMesh(boxGeo1, roofM, n);
+    else if (roof === 'ridge') top = new THREE.InstancedMesh(ridgeGeo('x'), roofM, n);
+    else { top = new THREE.InstancedMesh(ridgeGeo('z'), roofM, n); front = new THREE.InstancedMesh(gableGeo(roof), new THREE.MeshLambertMaterial({color:0xffffff}), n); }
+    list.forEach((o, i) => {
+      const fx = Math.sin(o.th), fz = Math.cos(o.th);
+      set(body, i, o.x, o.h / 2, o.z, w, o.h, d, o.th, o.col);
+      if (roof === 'flat') set(top, i, o.x, o.h + 0.4, o.z, w + 0.6, 0.8, d + 0.6, o.th);
+      else if (roof === 'ridge') set(top, i, o.x, o.h, o.z, w + 0.4, 4.5, d + 0.8, o.th);
+      else {   // a gable on the street side, the roof running back from it
+        set(front, i, o.x + fx * (d / 2 - 0.4), o.h, o.z + fz * (d / 2 - 0.4), w, w * 0.95, 0.8, o.th, o.col);
+        set(top, i, o.x - fx * 0.4, o.h, o.z - fz * 0.4, w - 0.2, w * 0.62, d - 0.8, o.th);
+      }
+    });
+    for (const m of [top, front]) if (m) parts.push(m);
+    for (const m of parts){ m.receiveShadow = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; world.add(m); }
+  });
+}
+const boxGeo1 = new THREE.BoxGeometry(1, 1, 1);
+// a triangular roof 1 wide, 1 high and 1 long, base on y = 0, ridge along x or z
+const RIDGE = {};
+function ridgeGeo(ax){
+  if (RIDGE[ax]) return RIDGE[ax];
+  const g = new THREE.CylinderGeometry(1, 1, 1, 3); g.rotateZ(Math.PI / 2); g.rotateX(-Math.PI / 2); g.translate(0, 0.5, 0); g.scale(1, 1 / 1.5, 1 / 1.732);
+  if (ax === 'z') g.rotateY(Math.PI / 2);
+  return RIDGE[ax] = g;
+}
+// build everything that makes a track a real town, before the trees go down (they keep out of whatever this puts down)
+function buildCity(def){
+  const T = def.timeDef || {}, glowing = !!T.lamps, OUT = loopOut(), C = def.city;
+  // pavement either side of the road
+  const pA = new THREE.Color(0xb9a496), pB = new THREE.Color(0xc6b3a4);
+  ribbon(W / 2 + 2.5, W / 2 + 7, 0.03, i => (Math.floor(i / 3) % 2 ? pA : pB));
+  ribbon(-W / 2 - 7, -W / 2 - 2.5, 0.03, i => (Math.floor(i / 3) % 2 ? pA : pB));
+  const brick = lam(0x8a4a35);
+  // canals and rivers under the road's hump bridges
+  for (const [at, , w, bridge] of def.canals || []){
+    const i = canalIdx(at, def), n = nors[i];
+    if (bridge) waterRect(pts[i].x, pts[i].z, n.x, n.z, 900, w / 2, 0x2f6f8f, 0.06 + CITYW.length * 0.002);
+    else for (const sd of [-1, 1]){   // each side runs out until it would reach another bit of road
+      let ext = W / 2 + 6; while (ext < W / 2 + 70 && distToTrack(pts[i].x + n.x * sd * (ext + 6), pts[i].z + n.z * sd * (ext + 6)) > W / 2 + 5) ext += 4;
+      const cx = pts[i].x + n.x * sd * ext / 2, cz = pts[i].z + n.z * sd * ext / 2;
+      waterRect(cx, cz, n.x, n.z, ext / 2, w / 2, 0x3d8fb8, 0.06 + CITYW.length * 0.002);
+      for (const s of [-1, 1]){   // low brick quay walls along both banks
+        const q = put(world, new THREE.BoxGeometry(ext, 0.7, 0.8), brick, cx + tans[i].x * s * w / 2, 0.35, cz + tans[i].z * s * w / 2, false);
+        q.rotation.y = -Math.atan2(n.z, n.x);
+      }
+    }
+    if (bridge && BRIDGES[bridge]){ const g = overGroup(i); BRIDGES[bridge](g, overCtx(g, i)); world.add(g); }
+    if (bridge) for (const k of [-1, 1]){   // a boat or two on the river
+      const bx = pts[i].x + n.x * k * (W / 2 + 60 + k * 30), bz = pts[i].z + n.z * k * (W / 2 + 60 + k * 30), b = new THREE.Group();
+      put(b, new THREE.BoxGeometry(26, 2.4, 7), lam(k > 0 ? 0xffffff : 0x1d3a6a), 0, 1, 0); put(b, new THREE.BoxGeometry(16, 2.6, 5.4), lam(k > 0 ? 0x2f7bff : 0xffffff), -1, 3.4, 0);
+      put(b, new THREE.BoxGeometry(15.6, 1, 5.6), glow(0x9fd8ff), -1, 3.6, 0, false);
+      b.position.set(bx, 0, bz); b.rotation.y = -Math.atan2(n.z, n.x); world.add(b);
+    }
+  }
+  // canals running beside the road (Amsterdam), with houseboats
+  for (const [f0, f1, side] of def.quays || []){
+    const s = side * OUT, a = W / 2 + 7.5, b = W / 2 + 19, i0 = Math.round(f0 * N), i1 = Math.round(f1 * N), pos = [], wall = [];
+    for (let i = i0; i <= i1; i++){
+      const k = i % N, p = pts[k], n = nors[k];
+      pos.push(p.x + n.x * s * a, 0.07, p.z + n.z * s * a, p.x + n.x * s * b, 0.07, p.z + n.z * s * b);
+      wall.push(p.x + n.x * s * a, 0, p.z + n.z * s * a, p.x + n.x * s * a, 0.7, p.z + n.z * s * a);
+      if (k % 3 === 0) CITYW.push({x:p.x + n.x * s * (a + b) / 2, z:p.z + n.z * s * (a + b) / 2, ux:tans[k].x, uz:tans[k].z, hl:4, hw:(b - a) / 2});
+      if (k % 23 === 0 && !BR[k]){
+        const h = new THREE.Group(), c = [0x3f7a4a, 0x2f5a8a, 0x8a3a2a, 0x5a4a3a][k % 4];
+        put(h, new THREE.BoxGeometry(14, 1.6, 4.4), lam(0x2a2833), 0, 0.6, 0); put(h, new THREE.BoxGeometry(11, 2.6, 4), lam(c), 0, 2.6, 0); put(h, new THREE.BoxGeometry(11.4, 0.4, 4.4), lam(0xf2efe6), 0, 4, 0);
+        h.position.set(p.x + n.x * s * (b - 4), 0, p.z + n.z * s * (b - 4)); h.rotation.y = Math.atan2(tans[k].x, tans[k].z) + Math.PI / 2; world.add(h);
+      }
+    }
+    const idx = []; for (let j = 0; j < i1 - i0; j++){ const q = j * 2; idx.push(q, q + 1, q + 2, q + 1, q + 3, q + 2); }
+    for (const [arr, m] of [[pos, new THREE.MeshLambertMaterial({color:0x3d8fb8, side:THREE.DoubleSide})], [wall, new THREE.MeshLambertMaterial({color:0x8a4a35, side:THREE.DoubleSide})]]){
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3)); g.setIndex(idx); g.computeVertexNormals(); world.add(new THREE.Mesh(g, m));
+    }
+  }
+  // the North Sea past the far end of the track, with a beach, beach clubs, the Kurhaus and the pier
+  if (def.coast){
+    const mir = world.userData.mir, sg = mir ? -1 : 1;
+    let ex = -Infinity; for (const p of pts) ex = Math.max(ex, p.x * sg);
+    const xb = (ex + W / 2 + 62) * sg, zc = pts[0].z;
+    put(world, new THREE.PlaneGeometry(80, 3000), lam(0xf1dca0), xb + sg * 40, 0.035, center.z, false).rotation.x = -Math.PI / 2;
+    put(world, new THREE.PlaneGeometry(1500, 3000), lam(0x3f86b0), xb + sg * 830, 0.045, center.z, false).rotation.x = -Math.PI / 2;
+    for (let k = 0; k < 7; k++) put(world, new THREE.PlaneGeometry(3, 3000), new THREE.MeshBasicMaterial({color:0xe8f6ff}), xb + sg * (82 + k * 9), 0.05, center.z, false).rotation.x = -Math.PI / 2;
+    CITYW.push({sea:true, x:xb - sg * 6, s:sg});
+    for (let k = -4; k <= 4; k++){ if (!k) continue; const b = new THREE.Group(); put(b, new THREE.BoxGeometry(10, 4, 14), lam([0xffffff, 0xffd23f, 0x2fc4e8, 0xff7a1f][(k + 4) % 4]), 0, 2, 0); put(b, new THREE.BoxGeometry(12, 0.6, 16), lam(0x6b4a2b), 0, 4.3, 0); b.position.set(xb + sg * 22, 0, zc + k * 46); world.add(b); }
+    const g = new THREE.Group(); g.position.set(xb - sg * 30, 0, zc); g.rotation.y = sg * Math.PI / 2; SIGHTS.kurhaus.fn(g, world.userData.spin); world.add(g); addBlock(g.position.x, zc, g.rotation.y, SIGHTS.kurhaus.fp[0], SIGHTS.kurhaus.fp[1]);
+    const p = new THREE.Group(); p.position.set(xb + sg * 30, 0, zc + 110); p.rotation.y = sg * Math.PI / 2; SIGHTS.pier.fn(p, world.userData.spin); world.add(p);
+  }
+  // the RandstadRail: a white and blue light-rail tram doing laps round the outside of town
+  if (def.tram){
+    let r = 0; for (const p of pts) r = Math.max(r, Math.hypot(p.x - center.x, p.z - center.z)); r += W / 2 + 44;
+    for (const dr of [-0.75, 0.75]){ const t = put(world, new THREE.TorusGeometry(r + dr, 0.12, 4, 160), lam(0x8a8f99), center.x, 0.12, center.z, false); t.rotation.x = Math.PI / 2; }
+    const ring = new THREE.Mesh(new THREE.RingGeometry(r - 2.4, r + 2.4, 160), lam(0x8a7a66)); ring.rotation.x = -Math.PI / 2; ring.position.set(center.x, 0.04, center.z); world.add(ring);
+    CITYW.push({x:center.x, z:center.z, ring:r});
+    const piv = new THREE.Group(); piv.position.set(center.x, 0, center.z); world.add(piv);
+    const white = lam(0xf4f6f8), blue = lam(0x1f5fbf), win = lam(0x22303f);
+    for (let c = 0; c < 3; c++){
+      const a = c * 11.5 / r, car = new THREE.Group();
+      put(car, new THREE.BoxGeometry(2.6, 3.2, 11), white, 0, 2.1, 0); put(car, new THREE.BoxGeometry(2.7, 0.9, 11.1), blue, 0, 1.1, 0); put(car, new THREE.BoxGeometry(2.72, 1.1, 10.4), win, 0, 2.7, 0);
+      if (c !== 1) put(car, new THREE.BoxGeometry(2.4, 1.6, 0.4), win, 0, 2.6, c ? -5.5 : 5.5);
+      put(car, new THREE.BoxGeometry(0.2, 1.2, 0.2), lam(0x333333), 0, 4.3, 0);
+      car.position.set(Math.cos(-a) * r, 0, Math.sin(-a) * r); car.rotation.y = a; piv.add(car);
+    }
+    world.userData.spin.push({o:piv, ax:'y', v:-13 / r});
+    // the overhead wire, on posts
+    for (let k = 0; k < 64; k++){ const a = k / 64 * Math.PI * 2; put(world, new THREE.CylinderGeometry(0.15, 0.15, 6, 5), lam(0x6a6f79), center.x + Math.cos(a) * (r + 3), 3, center.z + Math.sin(a) * (r + 3), false); }
+  }
+  // the blue place-name sign at the start, the way every Dutch town has one
+  { const i = 14, s = OUT, p = pts[i].clone().addScaledVector(nors[i], s * (W / 2 + 5)), g = new THREE.Group();
+    put(g, new THREE.BoxGeometry(9.4, 3.4, 0.3), lam(0xffffff), 0, 4.6, -0.05);
+    signBoard(g, C.name, '#1d4fa8', '#ffffff', 9, 3, 0, 4.6, 0.12);
+    for (const x of [-3.5, 3.5]) put(g, new THREE.CylinderGeometry(0.12, 0.12, 3, 6), lam(0x9aa0a8), x, 1.5, 0);
+    g.position.copy(p); g.position.y = 0; g.rotation.y = Math.atan2(-tans[i].x, -tans[i].z); world.add(g); }
+  // the sights: each one finds the nearest free spot to where it's asked for
+  for (const [f, side, key] of def.sights || []){
+    const S = SIGHTS[key]; if (!S) continue;
+    let i0 = Math.round(f * N) % N;
+    if (side === 0){ const g = overGroup(i0); S.fn(g, world.userData.spin, overCtx(g, i0)); world.add(g); addBlock(pts[i0].x, pts[i0].z, g.rotation.y, W / 2 + 14, S.hz || 12); continue; }
+    const [hx, hz] = S.fp; let done = false;
+    for (const sd of [side, -side]) for (const di of [0, 8, -8, 16, -16, 26, -26]) for (const extra of [0, 10, 24, 44]){
+      if (done) break;
+      const i = (i0 + di + N) % N, s = sd * OUT, off = W / 2 + 8 + hz + extra;
+      const x = pts[i].x + nors[i].x * s * off, z = pts[i].z + nors[i].z * s * off, th = Math.atan2(-s * nors[i].x, -s * nors[i].z);
+      if (!fpPts(x, z, th, hx, hz).every(([a, b]) => distToTrack(a, b) > W / 2 + 7 && !cityBlocked(a, b, 2) && !CITYW.some(w => w.ring && Math.abs(Math.hypot(a - w.x, b - w.z) - w.ring) < 8))) continue;
+      const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = th;
+      S.fn(g, world.userData.spin, {glowing}); g.traverse(o => { if (o.isMesh) o.receiveShadow = true; }); world.add(g);
+      addBlock(x, z, th, hx, hz); if (S.wet) CITYW.push({x, z, ux:Math.cos(th), uz:-Math.sin(th), hl:hx, hw:hz, ell:true});
+      done = true;
+    }
+  }
+  cityStreets(def, glowing);
+}
+// a group sitting on the road at sample i, local z running along the road and local x across it
+function overGroup(i){ const g = new THREE.Group(); g.position.copy(P3[i]); g.rotation.y = Math.atan2(tans[i].x, tans[i].z); return g; }
+function overCtx(g, i){
+  const inv = -g.rotation.y, Y = new THREE.Vector3(0, 1, 0);
+  return {W, at:(dj, lat = 0) => { const k = (i + dj + N) % N; return P3[k].clone().addScaledVector(D3[k], lat).sub(g.position).applyAxisAngle(Y, inv); }};
+}
+// a Dutch windmill: o = {body, round (else 8-sided), h, stage (gallery height or 0), cap, sail}
+function mill(g, spin, o){
+  const seg = o.round ? 16 : 8, h = o.h;
+  put(g, new THREE.CylinderGeometry(o.r * 0.62, o.r, h, seg), lam(o.body), 0, h / 2, 0);
+  put(g, new THREE.BoxGeometry(2, 3.4, 0.6), lam(0x3a5a3a), 0, 1.7, o.r * 0.98);
+  for (let k = 0; k < 3; k++){ const a = k * 2.1 + 0.6, y = h * (0.35 + k * 0.2), rr = o.r * (1 - (y / h) * 0.38); put(g, new THREE.BoxGeometry(1.1, 1.4, 0.3), lam(0x2a3a4a), Math.sin(a) * rr, y, Math.cos(a) * rr).rotation.y = a; }
+  if (o.stage){
+    const rr = o.r * (1 - (o.stage / h) * 0.38) + 3;
+    put(g, new THREE.CylinderGeometry(rr, rr, 0.5, 20), lam(0x5a4030), 0, o.stage, 0);
+    for (let k = 0; k < 20; k++){ const a = k / 20 * Math.PI * 2; put(g, new THREE.BoxGeometry(0.2, 1.4, 0.2), lam(0x5a4030), Math.cos(a) * rr, o.stage + 0.7, Math.sin(a) * rr, false); }
+    put(g, new THREE.TorusGeometry(rr, 0.1, 4, 24), lam(0x5a4030), 0, o.stage + 1.4, 0, false).rotation.x = Math.PI / 2;
+  }
+  const cap = put(g, new THREE.SphereGeometry(o.r * 0.7, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), lam(o.cap), 0, h, 0); cap.scale.set(1, 0.8, 1.25);
+  const b = new THREE.Group(); b.position.set(0, h + 0.8, o.r * 0.95); b.rotation.x = -0.12; g.add(b);
+  const L = o.sail;
+  for (let k = 0; k < 4; k++){
+    const a = new THREE.Group(); a.rotation.z = k * Math.PI / 2 + 0.3; b.add(a);
+    put(a, new THREE.BoxGeometry(0.5, L, 0.5), lam(0x3a2a1a), 0, L / 2, 0, false);
+    put(a, new THREE.BoxGeometry(L * 0.17, L * 0.8, 0.12), lam(o.sailC ?? 0xf2ede0), L * 0.1, L * 0.56, 0.2, false);
+    for (let j = 1; j < 6; j++) put(a, new THREE.BoxGeometry(L * 0.19, 0.12, 0.2), lam(0x3a2a1a), L * 0.1, L * (0.16 + j * 0.14), 0.28, false);
+  }
+  put(b, new THREE.SphereGeometry(0.8, 8, 6), lam(0x2a2a2a), 0, 0, 0.3);
+  spin.push({o:b, ax:'z', v:0.55});
+}
+const SIGHTS = {
+  // ---- Zoetermeer ----
+  // SnowWorld (1996): the long silver indoor ski hall beside the A12 that climbs from the ground to 72 m
+  snowworld:{fp:[84, 28], fn(g){
+    const s = new THREE.Shape(); s.moveTo(-80, 0); s.lineTo(80, 0); s.lineTo(80, 46); s.lineTo(72, 48); s.lineTo(-80, 7); s.lineTo(-80, 0);
+    const geo = new THREE.ExtrudeGeometry(s, {depth:52, bevelEnabled:false}); geo.translate(0, 0, -26);
+    put(g, geo, lam(0xc7ced8), 0, 0, 0);
+    // the white slope roof and a blue stripe along the top edge
+    const slope = Math.atan2(41, 152), len = Math.hypot(152, 41);
+    const roof = put(g, new THREE.BoxGeometry(len, 0.6, 50), lam(0xf4f8ff), -4, 27.6, 0, false); roof.rotation.z = slope;
+    const band = put(g, new THREE.BoxGeometry(len, 1.6, 0.4), lam(0x1f6fd0), -4, 25.4, 26.1, false); band.rotation.z = slope;
+    put(g, new THREE.BoxGeometry(20, 14, 0.4), lam(0x9fd8ff), 60, 7, 26.1, false);   // glass entrance
+    signBoard(g, 'SNOWWORLD', '#1f6fd0', '#ffffff', 34, 7, 56, 34, 26.3);
+    for (let k = 0; k < 9; k++) put(g, new THREE.BoxGeometry(0.5, 7 + k * 4.4, 0.5), lam(0x9aa4b0), -72 + k * 18, (7 + k * 4.4) / 2, 26.2, false);
+  }},
+  // Molen De Hoop (1897): a whitewashed round stone stage mill on the Eerste Stationsstraat
+  dehoop:{fp:[13, 13], fn(g, spin){ mill(g, spin, {body:0xf4f2ec, round:true, r:5.5, h:19, stage:7, cap:0x4a4f58, sail:12}); }},
+  // Watertoren De Tien Gemeenten (1927-28): 45 m of brick, 8 sides up to the concrete band at the tank, then 16
+  watertoren:{fp:[8, 8], fn(g){
+    const bk = lam(0x9a4a32), cc = lam(0xe6e0d2);
+    put(g, new THREE.CylinderGeometry(4.2, 4.8, 30, 8), bk, 0, 15, 0);
+    for (const y of [10, 20]) put(g, new THREE.CylinderGeometry(4.6, 4.6, 0.5, 8), cc, 0, y, 0, false);
+    put(g, new THREE.CylinderGeometry(5.6, 4.2, 2.4, 16), cc, 0, 31.2, 0);
+    put(g, new THREE.CylinderGeometry(5.6, 5.6, 6, 16), bk, 0, 35.4, 0);
+    for (let k = 0; k < 16; k++){ const a = k / 16 * Math.PI * 2; put(g, new THREE.BoxGeometry(0.9, 2.6, 0.2), lam(0x2a3a4a), Math.sin(a) * 5.65, 35.6, Math.cos(a) * 5.65, false).rotation.y = a; }
+    put(g, new THREE.CylinderGeometry(6.1, 6.1, 0.8, 16), cc, 0, 38.8, 0);
+    put(g, new THREE.SphereGeometry(4, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), lam(0x5f7f78), 0, 39.2, 0).scale.y = 0.7;
+    put(g, new THREE.BoxGeometry(2.4, 3.4, 0.4), lam(0x3a2a1a), 0, 1.7, 4.6);
+  }},
+  // Silverdome: the skating and events hall named after its silver roof
+  silverdome:{fp:[24, 24], fn(g){
+    put(g, new THREE.CylinderGeometry(22, 22, 5, 28), lam(0x8a95a6), 0, 2.5, 0);
+    put(g, new THREE.SphereGeometry(22, 28, 10, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshLambertMaterial({color:0xdfe4ec}), 0, 5, 0).scale.y = 0.45;
+    signBoard(g, 'SILVERDOME', '#2a2f3a', '#e6ecf5', 18, 3.2, 0, 3.2, 22.1);
+  }},
+  // the Oude Kerk on the Dorpsstraat: the old village church, its tower dating from 1642
+  oudekerk:{fp:[10, 18], fn(g){
+    const bk = lam(0xa45a40), roof = lam(0x3a3438);
+    put(g, new THREE.BoxGeometry(12, 9, 24), bk, 0, 4.5, -6);
+    const r = new THREE.Mesh(ridgeGeo('z'), roof); r.scale.set(13, 7, 25); r.position.set(0, 9, -6); g.add(r);
+    put(g, new THREE.BoxGeometry(7, 20, 7), bk, 0, 10, 8);
+    put(g, new THREE.ConeGeometry(5, 12, 4), roof, 0, 26, 8).rotation.y = Math.PI / 4;
+    put(g, new THREE.CylinderGeometry(1.2, 1.2, 0.3, 12), lam(0xffd23f), 0, 16, 11.6, false).rotation.x = Math.PI / 2;
+    put(g, new THREE.BoxGeometry(0.2, 3, 0.2), lam(0xffd23f), 0, 33.5, 8, false);
+  }},
+  // Noord Aa, the town's swimming and sailing lake with a sandy beach
+  noordaa:{fp:[62, 34], wet:true, fn(g){
+    const sand = new THREE.Mesh(new THREE.CircleGeometry(1, 40), lam(0xf1dca0)); sand.rotation.x = -Math.PI / 2; sand.scale.set(62, 34, 1); sand.position.y = 0.04; g.add(sand);
+    const lake = new THREE.Mesh(new THREE.CircleGeometry(1, 40), lam(0x3f8fc0)); lake.rotation.x = -Math.PI / 2; lake.scale.set(54, 26, 1); lake.position.set(0, 0.07, -3); g.add(lake);
+    for (const [x, z, c] of [[-20, -8, 0xff3b3b], [8, -14, 0xffd23f], [26, 0, 0x2f7bff]]){
+      put(g, new THREE.BoxGeometry(5, 0.8, 1.8), lam(0xffffff), x, 0.5, z);
+      const sail = new THREE.Mesh(new THREE.ConeGeometry(1.8, 6, 3), lam(c)); sail.position.set(x, 4, z); sail.scale.z = 0.15; g.add(sail);
+    }
+    for (const x of [-30, -10, 10, 30]){ put(g, new THREE.ConeGeometry(2.4, 1.2, 10), lam([0xff3b3b, 0xffffff][x > 0 ? 1 : 0]), x, 3, 26, false); put(g, new THREE.CylinderGeometry(0.1, 0.1, 3, 5), lam(0x999999), x, 1.5, 26, false); }
+  }},
+  // the Nationaal Videogame Museum in the Stadshart
+  nvm:{fp:[13, 10], fn(g){
+    put(g, new THREE.BoxGeometry(26, 14, 20), lam(0x24203a), 0, 7, 0);
+    signBoard(g, 'VIDEOGAME MUSEUM', '#24203a', '#7ff0ff', 24, 3, 0, 11, 10.05);
+    const px = [[0,1,0,0,0,0,0,1,0],[0,0,1,0,0,0,1,0,0],[0,1,1,1,1,1,1,1,0],[1,1,0,1,1,1,0,1,1],[1,1,1,1,1,1,1,1,1],[1,0,1,1,1,1,1,0,1],[1,0,1,0,0,0,1,0,1]], m = glow(0x7cff6b);
+    px.forEach((row, y) => row.forEach((v, x) => v && put(g, new THREE.BoxGeometry(0.8, 0.8, 0.3), m, (x - 4) * 0.85, 8 - y * 0.85, 10.1, false)));
+    put(g, new THREE.BoxGeometry(8, 4, 0.3), lam(0x9fd8ff), 0, 2, 10.1, false);
+  }},
+  // the Balijbrug (2005) over the A12: a white steel footbridge whose girder runs under the deck on one side and over it
+  // on the other, following the bending forces (a beam on three supports)
+  balijbrug:{hz:6, fn(g, spin, c){
+    const wh = lam(0xf2f4f6), dy = 11, a = -60, m = -(c.W / 2 + 7), b = 52;
+    put(g, new THREE.BoxGeometry(b - a, 0.8, 5), wh, (a + b) / 2, dy, 0);
+    for (const z of [-2.4, 2.4]) put(g, new THREE.BoxGeometry(b - a, 1.1, 0.12), lam(0xb8c2cc), (a + b) / 2, dy + 0.9, z, false);
+    const curve = x => x < m ? dy - 5 * Math.sin(Math.PI * (x - a) / (m - a)) : dy + 9 * Math.sin(Math.PI * (x - m) / (b - m));
+    for (const z of [-2.6, 2.6]) for (let k = 0; k < 24; k++){
+      const x0 = a + (b - a) * k / 24, x1 = a + (b - a) * (k + 1) / 24;
+      beam(g, new THREE.Vector3(x0, curve(x0), z), new THREE.Vector3(x1, curve(x1), z), 0.55, wh);
+      if (k % 2 === 0) beam(g, new THREE.Vector3(x0, curve(x0), z), new THREE.Vector3(x0, dy, z), 0.15, wh);
+    }
+    for (const x of [a, m, b]) put(g, new THREE.BoxGeometry(1.6, dy, 4), wh, x, dy / 2 - 0.5, 0);
+  }},
+  // the Stadshart: the shopping centre's glass roofs over the street
+  stadshart:{hz:26, fn(g, spin, c){
+    const R = c.W / 2 + 6, wh = lam(0xf2f4f6);
+    for (let k = 0; k < 7; k++){ const z = -24 + k * 8; put(g, new THREE.TorusGeometry(R, 0.35, 5, 18, Math.PI), wh, 0, 6, z, false); for (const s of [-1, 1]) put(g, new THREE.BoxGeometry(0.6, 6, 0.6), wh, s * R, 3, z, false); }
+    const glass = new THREE.Mesh(new THREE.CylinderGeometry(R, R, 48, 18, 1, true, -Math.PI / 2, Math.PI), new THREE.MeshLambertMaterial({color:0xbfeaff, transparent:true, opacity:0.28, side:THREE.DoubleSide, depthWrite:false}));
+    glass.rotation.x = -Math.PI / 2; glass.position.y = 6; g.add(glass);
+    signBoard(g, 'STADSHART', '#ffffff', '#1d4fa8', 16, 2.6, 0, 6 + R + 1.6, -24.4, Math.PI);
+  }},
+  // ---- Amsterdam ----
+  // Centraal Station (1889): long red-brick front with light stone bands, two towers in the middle, the arched train hall behind
+  centraal:{fp:[58, 24], fn(g){
+    const bk = lam(0x9a4232), st = lam(0xeee4cc), roof = lam(0x3a4048);
+    put(g, new THREE.BoxGeometry(110, 15, 18), bk, 0, 7.5, 4);
+    for (const y of [5, 10, 15]) put(g, new THREE.BoxGeometry(110.4, 0.6, 18.4), st, 0, y, 4, false);
+    const r = new THREE.Mesh(ridgeGeo('x'), roof); r.scale.set(110, 7, 18); r.position.set(0, 15, 4); g.add(r);
+    for (const x of [-8, 8]){
+      put(g, new THREE.BoxGeometry(8, 32, 8), bk, x, 16, 10);
+      put(g, new THREE.BoxGeometry(8.4, 0.6, 8.4), st, x, 24, 10, false);
+      put(g, new THREE.CylinderGeometry(2.4, 2.4, 0.3, 16), lam(0xffd86b), x, 27, 14.15, false).rotation.x = Math.PI / 2;
+      put(g, new THREE.ConeGeometry(5.6, 9, 4), roof, x, 36.5, 10).rotation.y = Math.PI / 4;
+    }
+    for (const x of [-50, 50]) put(g, new THREE.BoxGeometry(10, 20, 20), bk, x, 10, 4);
+    const hall = new THREE.Mesh(new THREE.CylinderGeometry(20, 20, 100, 20, 1, true, Math.PI, Math.PI), new THREE.MeshLambertMaterial({color:0x6f8296, side:THREE.DoubleSide}));
+    hall.rotation.z = -Math.PI / 2; hall.position.set(0, 0, -16); g.add(hall);
+  }},
+  // the Westerkerk (1631): Amsterdam's tallest church tower, topped with the blue and gold imperial crown
+  westerkerk:{fp:[12, 22], fn(g){
+    const bk = lam(0x9a4a35), st = lam(0xeee4cc);
+    put(g, new THREE.BoxGeometry(18, 14, 34), bk, 0, 7, -10);
+    const r = new THREE.Mesh(ridgeGeo('z'), lam(0x3a4048)); r.scale.set(19, 9, 35); r.position.set(0, 14, -10); g.add(r);
+    put(g, new THREE.BoxGeometry(9, 26, 9), bk, 0, 13, 12);
+    put(g, new THREE.BoxGeometry(9.4, 0.6, 9.4), st, 0, 26, 12, false);
+    put(g, new THREE.BoxGeometry(7, 9, 7), st, 0, 30.5, 12);
+    put(g, new THREE.CylinderGeometry(2.8, 3.2, 8, 8), st, 0, 39, 12);
+    put(g, new THREE.CylinderGeometry(2, 2.4, 5, 8), lam(0x8a6a3a), 0, 45.5, 12);
+    put(g, new THREE.SphereGeometry(1.8, 10, 8), lam(0x2f5bc8), 0, 49.6, 12);
+    for (let k = 0; k < 4; k++) put(g, new THREE.BoxGeometry(0.4, 2.4, 0.4), lam(0xffd23f), Math.cos(k * 1.57) * 1.4, 50.6, 12 + Math.sin(k * 1.57) * 1.4, false);
+    put(g, new THREE.SphereGeometry(0.7, 8, 6), lam(0xffd23f), 0, 52.2, 12);
+    put(g, new THREE.BoxGeometry(0.2, 3, 0.2), lam(0xffd23f), 0, 54, 12, false);
+  }},
+  // NEMO: the green ship-shaped science museum whose roof slopes up out of the street
+  nemo:{fp:[20, 26], fn(g){
+    const s = new THREE.Shape(); s.moveTo(-26, 0); s.lineTo(26, 0); s.lineTo(26, 6); s.lineTo(18, 26); s.lineTo(-26, 1); s.lineTo(-26, 0);
+    const geo = new THREE.ExtrudeGeometry(s, {depth:36, bevelEnabled:false}); geo.translate(0, 0, -18); geo.rotateY(Math.PI / 2);
+    put(g, geo, lam(0x3f9a7a), 0, 0, 0);
+    signBoard(g, 'NEMO', '#3f9a7a', '#ffffff', 10, 3, 0, 4, 18.5);
+  }},
+  // the Magere Brug over the Amstel: the white wooden double drawbridge
+  magerebrug:{fp:[46, 20], wet:false, fn(g){
+    const wh = lam(0xf6f4ee);
+    const w = new THREE.Mesh(new THREE.PlaneGeometry(92, 26), lam(0x3d8fb8)); w.rotation.x = -Math.PI / 2; w.position.y = 0.07; g.add(w);
+    for (const z of [-13, 13]) put(g, new THREE.BoxGeometry(92, 0.7, 0.8), lam(0x8a4a35), 0, 0.35, z, false);
+    put(g, new THREE.BoxGeometry(6, 0.8, 34), wh, 0, 2.6, 0);
+    for (const z of [-17, 17]) put(g, new THREE.BoxGeometry(6, 2.6, 2), wh, 0, 1.3, z);
+    for (const z of [-4, 4]){
+      for (const x of [-2.6, 2.6]) put(g, new THREE.BoxGeometry(0.6, 9, 0.6), wh, x, 7, z);
+      put(g, new THREE.BoxGeometry(6, 0.7, 0.7), wh, 0, 11.4, z);
+      for (const x of [-2.6, 2.6]){ const b = put(g, new THREE.BoxGeometry(0.4, 0.4, 14), wh, x, 11.8, z * 1.6); b.rotation.x = z > 0 ? 0.25 : -0.25; }
+    }
+    for (let k = 0; k < 10; k++) put(g, new THREE.SphereGeometry(0.25, 6, 4), glow(0xfff1b0), -2.6 + (k % 2) * 5.2, 3.5, -16 + Math.floor(k / 2) * 8, false);
+  }},
+  // De Gooyer: the 8-sided mill on a brick base next to the Brouwerij 't IJ
+  gooyer:{fp:[12, 12], fn(g, spin){
+    put(g, new THREE.CylinderGeometry(6.4, 7, 8, 8), lam(0x8a4a35), 0, 4, 0);
+    const m = new THREE.Group(); m.position.y = 8; g.add(m); mill(m, spin, {body:0x6b5a44, round:false, r:5.4, h:16, stage:0.4, cap:0x5a4a3a, sail:13});
+  }},
+  // the Rijksmuseum (1885): the road goes through the famous passage under the middle of it
+  rijksmuseum:{hz:16, fn(g, spin, c){
+    const bk = lam(0x9a4232), st = lam(0xeee4cc), roof = lam(0x3a4048), half = c.W / 2 + 4;
+    for (const s of [-1, 1]){
+      put(g, new THREE.BoxGeometry(34, 20, 30), bk, s * (half + 17), 10, 0);
+      put(g, new THREE.BoxGeometry(34.4, 0.6, 30.4), st, s * (half + 17), 8, 0, false);
+      const r = new THREE.Mesh(ridgeGeo('x'), roof); r.scale.set(34, 9, 30); r.position.set(s * (half + 17), 20, 0); g.add(r);
+      put(g, new THREE.BoxGeometry(9, 34, 9), bk, s * (half + 2), 17, 0);
+      put(g, new THREE.ConeGeometry(6.2, 14, 4), roof, s * (half + 2), 41, 0).rotation.y = Math.PI / 4;
+      put(g, new THREE.BoxGeometry(0.3, 4, 0.3), lam(0xffd23f), s * (half + 2), 50, 0, false);
+    }
+    put(g, new THREE.BoxGeometry(half * 2, 12, 30), bk, 0, 18, 0);   // over the passage
+    put(g, new THREE.BoxGeometry(half * 2 + 0.4, 0.6, 30.4), st, 0, 12.3, 0, false);
+    const r = new THREE.Mesh(ridgeGeo('x'), roof); r.scale.set(half * 2, 8, 30); r.position.set(0, 24, 0); g.add(r);
+    for (const z of [-15.1, 15.1]){ const a = put(g, new THREE.TorusGeometry(half - 0.5, 0.8, 5, 16, Math.PI), st, 0, 6, z, false); a.scale.y = 0.75; }
+    for (const z of [-15.2, 15.2]) put(g, new THREE.CylinderGeometry(2.4, 2.4, 0.3, 16), lam(0xffd86b), 0, 19, z, false).rotation.x = Math.PI / 2;
+  }},
+  // ---- Rotterdam ----
+  // the Kubuswoningen (1984, Piet Blom): yellow cube houses tipped onto one corner, on top of hexagonal pillars
+  kubus:{fp:[30, 10], fn(g){
+    const y = lam(0xf2c230), gr = lam(0xd8d4cc), cube = new THREE.BoxGeometry(7, 7, 7);
+    for (let k = 0; k < 6; k++){
+      const x = -25 + k * 10;
+      put(g, new THREE.CylinderGeometry(1.8, 1.8, 6, 6), gr, x, 3, 0);
+      const c = put(g, cube, k % 2 ? y : lam(0xf6f2e6), x, 6 + 6.06, 0); c.rotation.set(Math.PI / 4, 0, Math.atan(1 / Math.SQRT2)); c.rotation.order = 'ZXY';
+    }
+  }},
+  // the Markthal (2014): the horseshoe arch of flats over the market, its inside covered in a giant fruit and flower mural
+  markthal:{fp:[22, 28], fn(g){
+    const s = new THREE.Shape(); s.moveTo(-20, 0); s.lineTo(-20, 18); s.absarc(0, 18, 20, Math.PI, 0, true); s.lineTo(20, 0); s.lineTo(14, 0); s.lineTo(14, 18); s.absarc(0, 18, 14, 0, Math.PI, false); s.lineTo(-14, 0); s.lineTo(-20, 0);
+    const geo = new THREE.ExtrudeGeometry(s, {depth:52, bevelEnabled:false, curveSegments:16}); geo.translate(0, 0, -26);
+    put(g, geo, lam(0x9a9a96), 0, 0, 0);
+    const c = document.createElement('canvas'); c.width = 256; c.height = 128; const x = c.getContext('2d');
+    x.fillStyle = '#2a6fd0'; x.fillRect(0, 0, 256, 128);
+    let sd = 5; const r = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+    for (let k = 0; k < 90; k++){ x.fillStyle = ['#ff4f3a', '#ffd23f', '#3ccf6e', '#ff7ccf', '#ff9a1f', '#8a5cff', '#ffffff'][k % 7]; x.beginPath(); x.arc(r() * 256, r() * 128, 4 + r() * 10, 0, 7); x.fill(); }
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+    const inside = new THREE.Mesh(new THREE.CylinderGeometry(13.9, 13.9, 52, 20, 1, true, -Math.PI / 2, Math.PI), new THREE.MeshBasicMaterial({map:t, side:THREE.BackSide}));
+    inside.rotation.x = -Math.PI / 2; inside.position.y = 18; g.add(inside);
+    const glassM = new THREE.MeshLambertMaterial({color:0xbfeaff, transparent:true, opacity:0.3, depthWrite:false});
+    const gs = new THREE.Shape(); gs.moveTo(-14, 0); gs.lineTo(-14, 18); gs.absarc(0, 18, 14, Math.PI, 0, true); gs.lineTo(14, 0); gs.lineTo(-14, 0);
+    put(g, new THREE.ShapeGeometry(gs, 16), glassM, 0, 0, 26.05, false);
+    const t2 = t.clone(); t2.wrapS = t2.wrapT = THREE.RepeatWrapping; t2.repeat.set(1 / 28, 1 / 32); t2.offset.set(0.5, 0); t2.needsUpdate = true;
+    put(g, new THREE.ShapeGeometry(gs, 16), new THREE.MeshBasicMaterial({map:t2}), 0, 0, -25.9, false);
+  }},
+  // the Euromast (1960): concrete shaft, the round crow's nest at 96 m and the Space Tower on top (scaled down)
+  euromast:{fp:[10, 10], fn(g){
+    const cc = lam(0xd8d4cc);
+    put(g, new THREE.CylinderGeometry(3.6, 4.2, 54, 16), cc, 0, 27, 0);
+    put(g, new THREE.CylinderGeometry(9, 8, 5, 24), cc, 0, 55, 0);
+    put(g, new THREE.CylinderGeometry(9.05, 9.05, 2, 24), glow(0xbfeaff), 0, 55.4, 0, false);
+    put(g, new THREE.CylinderGeometry(1.6, 2, 38, 10), lam(0xeeeeee), 0, 76, 0);
+    put(g, new THREE.CylinderGeometry(2.6, 2.6, 2.2, 12), lam(0x2a3a4a), 0, 82, 0);
+    put(g, new THREE.CylinderGeometry(0.3, 0.3, 8, 5), lam(0xff3b3b), 0, 99, 0);
+    put(g, new THREE.SphereGeometry(0.6, 8, 6), glow(0xff3b3b), 0, 103, 0, false);
+  }},
+  // De Rotterdam (2013, Rem Koolhaas): three glass towers stacked in shifted blocks, the "vertical city"
+  derotterdam:{fp:[26, 14], fn(g){
+    const m = lam(0x7f93a8), d = lam(0x5f7488);
+    [[-16, 0], [0, -3], [16, 1]].forEach(([x, z], k) => {
+      put(g, new THREE.BoxGeometry(14, 44, 16), k % 2 ? d : m, x, 22, z);
+      put(g, new THREE.BoxGeometry(14, 40, 16), k % 2 ? m : d, x + (k - 1) * 2.5, 64, z + (k % 2 ? 3 : -2.5));
+    });
+  }},
+  // Hotel New York: the old Holland America Line head office on the Kop van Zuid, two towers with green copper tops
+  hotelny:{fp:[16, 10], fn(g){
+    const bk = lam(0xa4503a), cu = lam(0x5faf8f);
+    put(g, new THREE.BoxGeometry(30, 14, 18), bk, 0, 7, 0);
+    for (const x of [-9, 9]){ put(g, new THREE.BoxGeometry(6, 26, 6), bk, x, 13, 6); put(g, new THREE.SphereGeometry(3.6, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), cu, x, 26, 6); put(g, new THREE.CylinderGeometry(1.6, 1.6, 0.3, 14), lam(0xffffff), x, 22, 9.1, false).rotation.x = Math.PI / 2; }
+    signBoard(g, 'HOTEL NEW YORK', '#a4503a', '#ffffff', 16, 2, 0, 11.4, 9.05);
+  }},
+  // container cranes on the quay (Rotterdam is Europe's biggest port)
+  cranes:{fp:[30, 18], fn(g){
+    const cols = [0xff3b3b, 0x2f7bff, 0xffd23f, 0x3ccf6e, 0xff7a1f, 0xffffff];
+    for (let k = 0; k < 18; k++) put(g, new THREE.BoxGeometry(12, 2.6, 2.6), lam(cols[k % 6]), -18 + (k % 3) * 13, 1.3 + Math.floor(k / 9) * 2.6, -8 + (Math.floor(k / 3) % 3) * 3);
+    for (const x of [-12, 14]){ const b = lam(0x2f5bc8);
+      for (const [dx, dz] of [[-4, -6], [4, -6], [-4, 8], [4, 8]]) put(g, new THREE.BoxGeometry(1.2, 30, 1.2), b, x + dx, 15, dz);
+      put(g, new THREE.BoxGeometry(10, 2.4, 50), b, x, 31, 4); put(g, new THREE.BoxGeometry(6, 4, 6), lam(0xffffff), x, 28, 8); }
+  }},
+  // Rotterdam Centraal (2014): the steel roof that rises to a sharp point over the station square
+  rcentraal:{fp:[26, 18], fn(g){
+    const s = new THREE.Shape(); s.moveTo(-24, 0); s.lineTo(24, 0); s.lineTo(0, 26); s.lineTo(-24, 0);
+    const roof = new THREE.Mesh(new THREE.ExtrudeGeometry(s, {depth:1.2, bevelEnabled:false}), lam(0xb8c2cc));
+    roof.rotation.x = Math.PI / 2 - 0.22; roof.position.set(0, 9, -16); g.add(roof);
+    put(g, new THREE.BoxGeometry(46, 9, 24), new THREE.MeshLambertMaterial({color:0x9fd8ff, transparent:true, opacity:0.55}), 0, 4.5, -6);
+    signBoard(g, 'CENTRAAL STATION', '#b8c2cc', '#1d1a2f', 18, 2, 0, 7.6, 6.1);
+  }},
+  // ---- Den Haag ----
+  // the Binnenhof with the Ridderzaal (13th c.): the brick Gothic hall between two slim turrets, on the Hofvijver pond
+  ridderzaal:{fp:[34, 34], fn(g){
+    const bk = lam(0x9a4a35), st = lam(0xeee4cc), roof = lam(0x3a4048);
+    const pond = new THREE.Mesh(new THREE.PlaneGeometry(64, 26), lam(0x3d8fb8)); pond.rotation.x = -Math.PI / 2; pond.position.set(0, 0.07, 20); g.add(pond);
+    put(g, new THREE.CylinderGeometry(4, 4, 0.6, 14), lam(0x4fae4a), 14, 0.3, 20); put(g, new THREE.CylinderGeometry(0.4, 0.4, 5, 6), lam(0xeeeeee), -14, 2.5, 20, false);
+    for (const [x, z, w, d] of [[-24, -6, 16, 36], [24, -6, 16, 36], [0, -22, 64, 12]]){ put(g, new THREE.BoxGeometry(w, 13, d), lam(0xc9a080), x, 6.5, z); put(g, new THREE.BoxGeometry(w + 0.4, 0.5, d + 0.4), st, x, 13, z, false); }
+    put(g, new THREE.BoxGeometry(18, 14, 26), bk, 0, 7, -4);
+    const r = new THREE.Mesh(ridgeGeo('z'), roof); r.scale.set(19, 13, 27); r.position.set(0, 14, -4); g.add(r);
+    const gs = new THREE.Shape(); gs.moveTo(-9, 0); gs.lineTo(0, 13); gs.lineTo(9, 0); gs.lineTo(-9, 0);
+    put(g, new THREE.ExtrudeGeometry(gs, {depth:0.8, bevelEnabled:false}), bk, 0, 14, 9);
+    put(g, new THREE.CylinderGeometry(2.4, 2.4, 0.3, 16), lam(0x2a3a4a), 0, 18, 9.9, false).rotation.x = Math.PI / 2;
+    for (const x of [-10, 10]){ put(g, new THREE.CylinderGeometry(1.8, 1.8, 26, 8), bk, x, 13, 9.2); put(g, new THREE.ConeGeometry(2.2, 7, 8), roof, x, 29.5, 9.2); }
+  }},
+  // the Vredespaleis (1913): the Peace Palace, brick and pale stone with grey-green roofs and a tall clock tower
+  vredespaleis:{fp:[30, 16], fn(g){
+    const bk = lam(0xa4503a), st = lam(0xe6dcc0), roof = lam(0x4f6a66);
+    put(g, new THREE.BoxGeometry(54, 16, 22), bk, 0, 8, 0);
+    for (const y of [5.5, 11]) put(g, new THREE.BoxGeometry(54.4, 1, 22.4), st, 0, y, 0, false);
+    const r = new THREE.Mesh(ridgeGeo('x'), roof); r.scale.set(54, 10, 22); r.position.set(0, 16, 0); g.add(r);
+    put(g, new THREE.BoxGeometry(9, 40, 9), bk, -27, 20, 7);
+    put(g, new THREE.BoxGeometry(9.4, 1, 9.4), st, -27, 34, 7, false);
+    put(g, new THREE.CylinderGeometry(2, 2, 0.3, 14), lam(0xffd86b), -27, 36.5, 11.7, false).rotation.x = Math.PI / 2;
+    put(g, new THREE.ConeGeometry(6, 18, 4), roof, -27, 49, 7).rotation.y = Math.PI / 4;
+    put(g, new THREE.BoxGeometry(5, 4, 5), roof, 27, 18, 7);
+  }},
+  // Madurodam: the miniature Netherlands, with a little model of Zoetermeer's own water tower
+  madurodam:{fp:[24, 22], fn(g, spin){
+    put(g, new THREE.BoxGeometry(46, 0.3, 42), lam(0x5fbf5a), 0, 0.15, 0);
+    for (let k = 0; k < 12; k++){ const h = new THREE.Group(); h.position.set(-18 + (k % 6) * 6, 0.3, -12 + Math.floor(k / 6) * 6); h.scale.setScalar(0.22);
+      put(h, new THREE.BoxGeometry(8, 14, 10), lam([0x8a4a35, 0xe8dcc0, 0x6b3a2a, 0x4a3a32][k % 4]), 0, 7, 0); const gb = new THREE.Mesh(gableGeo(k % 2 ? 'step' : 'bell'), lam([0x8a4a35, 0xe8dcc0, 0x6b3a2a, 0x4a3a32][k % 4])); gb.scale.set(8, 7.5, 1); gb.position.set(0, 14, 5); h.add(gb); g.add(h); }
+    const m = new THREE.Group(); m.position.set(12, 0.3, -10); m.scale.setScalar(0.3); mill(m, spin, {body:0xf4f2ec, round:true, r:5.5, h:19, stage:7, cap:0x4a4f58, sail:12}); g.add(m);
+    const w = new THREE.Group(); w.position.set(14, 0.3, 8); w.scale.setScalar(0.22); SIGHTS.watertoren.fn(w); g.add(w);
+    for (let k = 0; k < 6; k++) put(g, new THREE.ConeGeometry(1.4, 3.6, 7), lam(0x2d7a55), -20 + k * 8, 1.8, 18);
+    signBoard(g, 'MADURODAM', '#ff7a1f', '#ffffff', 14, 3, 0, 3.6, 21.2);
+    for (const x of [-7.5, 7.5]) put(g, new THREE.BoxGeometry(0.4, 3.6, 0.4), lam(0x666666), x, 1.8, 21);
+  }},
+  // De Haagse Toren, "het Strijkijzer" (the iron): a slim wedge of a tower, 132 m (scaled down)
+  haagsetoren:{fp:[12, 12], fn(g){
+    put(g, new THREE.CylinderGeometry(11, 11, 76, 3), lam(0x5a6474), 0, 38, 0).rotation.y = Math.PI;
+    put(g, new THREE.CylinderGeometry(11.2, 11.2, 4, 3), glow(0x9fd8ff), 0, 74, 0, false).rotation.y = Math.PI;
+  }},
+  // the Kurhaus (1885) on the Scheveningen boulevard, cream with a big central dome, facing the sea
+  kurhaus:{fp:[38, 12], fn(g){
+    const cr = lam(0xf1e6cc), roof = lam(0x5a6474);
+    put(g, new THREE.BoxGeometry(74, 16, 20), cr, 0, 8, 0);
+    for (let k = 0; k < 18; k++) put(g, new THREE.BoxGeometry(2, 3, 0.2), lam(0x2a3a4a), -34 + k * 4, 10, 10.1, false);
+    put(g, new THREE.BoxGeometry(24, 22, 22), cr, 0, 11, 1);
+    put(g, new THREE.SphereGeometry(10, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), roof, 0, 22, 1).scale.y = 1.15;
+    put(g, new THREE.CylinderGeometry(0.6, 0.6, 5, 6), lam(0xffd23f), 0, 35, 1, false);
+    for (const x of [-35, 35]){ put(g, new THREE.BoxGeometry(8, 22, 8), cr, x, 11, 4); put(g, new THREE.SphereGeometry(4, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), roof, x, 22, 4); }
+    signBoard(g, 'KURHAUS', '#f1e6cc', '#3a2a1a', 14, 2.4, 0, 18, 12.1);
+  }},
+  // the Pier at Scheveningen, out over the sea on stilts, with the big wheel on it
+  pier:{fp:[10, 10], fn(g, spin){
+    const wh = lam(0xf2f4f6), len = 190;
+    put(g, new THREE.BoxGeometry(12, 1.2, len), wh, 0, 9, len / 2);
+    for (let z = 0; z <= len; z += 14) for (const x of [-5, 5]) put(g, new THREE.CylinderGeometry(0.6, 0.6, 9, 6), lam(0x8a95a6), x, 4.5, z, false);
+    for (const [z, r] of [[len, 18], [len - 60, 12]]){ put(g, new THREE.CylinderGeometry(r, r, 1.4, 20), wh, 0, 9, z); put(g, new THREE.CylinderGeometry(r * 0.5, r * 0.6, 8, 16), new THREE.MeshLambertMaterial({color:0xbfeaff, transparent:true, opacity:0.6}), 0, 13.6, z); put(g, new THREE.ConeGeometry(r * 0.5, 4, 16), wh, 0, 19.6, z); }
+    const f = new THREE.Group(); f.position.set(0, 9.6, 38); f.rotation.y = Math.PI / 2; f.scale.setScalar(1.25); LANDMARKS.ferris(f, 0xffffff, spin); g.add(f);
+  }},
+};
+// bridges that carry the road over a river (canals entry [at, height, width, key]); c.at(dj, lat) = a point on the road
+const BRIDGES = {
+  // the Erasmusbrug (1996), "de Zwaan": one white pylon, bent like a swan's neck, its cables fanned out over the main span
+  erasmus(g, c){
+    const wh = lam(0xf6f8fa), p = c.at(14), lat = c.W / 2 + 7, top = new THREE.Vector3(0, p.y + 40, p.z);
+    for (const s of [-1, 1]) beam(g, new THREE.Vector3(s * lat, p.y - 10, p.z), top, 1.4, wh);
+    beam(g, new THREE.Vector3(-lat, p.y - 1.6, p.z), new THREE.Vector3(lat, p.y - 1.6, p.z), 0.9, wh);
+    const kink = new THREE.Vector3(0, p.y + 62, p.z + 7), tip = new THREE.Vector3(0, p.y + 80, p.z + 16);
+    beam(g, top, kink, 1.2, wh); beam(g, kink, tip, 0.9, wh);
+    put(g, new THREE.SphereGeometry(0.8, 8, 6), glow(0xff3b3b), tip.x, tip.y + 0.8, tip.z, false);
+    for (const s of [-1, 1]){
+      for (let k = 0; k < 9; k++) beam(g, kink.clone().lerp(tip, k / 9), c.at(10 - k * 4, s * (c.W / 2 + 1)), 0.12, wh);
+      for (let k = 0; k < 4; k++) beam(g, kink.clone().lerp(tip, 0.3 + k * 0.2), c.at(22 + k * 4, s * (c.W / 2 + 1)), 0.18, wh);
+    }
+  },
+  // the Willemsbrug (1981): the red cable-stayed bridge downstream, two pairs of red pylons
+  willems(g, c){
+    const red = lam(0xe0302a), cab = lam(0xe6e6e6);
+    for (const dj of [-11, 11]){
+      const p = c.at(dj);
+      put(g, new THREE.BoxGeometry(c.W + 8, 1.6, 1.8), red, 0, p.y + 31, p.z);
+      for (const s of [-1, 1]){
+        const x = s * (c.W / 2 + 3);
+        put(g, new THREE.BoxGeometry(2, 41, 2.4), red, x, p.y + 11, p.z);
+        put(g, new THREE.SphereGeometry(0.6, 8, 6), glow(0xff3b3b), x, p.y + 32, p.z, false);
+        for (let k = 1; k <= 4; k++) for (const dir of [-1, 1]) beam(g, new THREE.Vector3(x, p.y + 30 - k * 2.5, p.z), c.at(dj + dir * k * 4, s * (c.W / 2 + 1)), 0.13, cab);
+      }
+    }
+  },
+};
+// town scenery further out: low blocks of houses and round street trees
+PROPS.city = function(g, rand, i){
+  if (i % 3 === 0){
+    const w = 10 + rand() * 10, h = 6 + rand() * 7;
+    put(g, new THREE.BoxGeometry(w, h, 9), new THREE.MeshLambertMaterial({map:facadeTex(2, 3, false), color:[0x9a4a32, 0xb0603e, 0xe8e2d4, 0x8a4535][i % 4]}), 0, h / 2, 0, false);
+    const r = new THREE.Mesh(ridgeGeo('x'), lam(0x3a3438)); r.scale.set(w + 0.4, 4, 9.6); r.position.y = h; g.add(r);
+    return;
+  }
+  put(g, new THREE.CylinderGeometry(0.5, 0.7, 4, 6), lam(0x6b4a2b), 0, 2, 0);
+  put(g, new THREE.IcosahedronGeometry(3.4, 1), lam([0x3f9a46, 0x4fae4a, 0x2f8a3e][i % 3]), 0, 6.4, 0).scale.y = 1.15;
+};
+// a skyline on the horizon
+RINGS.skyline = (rand, def) => {
+  const g = new THREE.Group(), tall = def.city?.style === 'rdam' ? 2 : 1;
+  for (let k = 0; k < 3; k++){ const w = 16 + rand() * 18, h = (20 + rand() * 45) * tall;
+    put(g, new THREE.BoxGeometry(w, h, w), lam([0x9aa6b8, 0x8a5a4a, 0xc9ced6, 0x6f8296][Math.floor(rand() * 4)]), (k - 1) * 30, h / 2, rand() * 20, false); }
+  return g;
+};
 function decorate(def, rand){
   const T = def.timeDef || {}, L = def.look || {};
   // landmark: in the infield if there's room, otherwise just outside the track
@@ -2139,7 +2924,9 @@ function animateWorld(dt){
 
 // mirror mode (unlocked by gold in every cup): every track flipped left-to-right. Not in story, tutorial, ranked or online
 let mirror = false;   // restored from OPTS once the options are loaded
-const mirrorOK = () => goldCount() >= CUPS.length || DBG.all;
+const CORE_CUPS = 9;   // the cups mirror mode and Robin ask for (newer cups like the Space Cup are a bonus on top)
+const coreGolds = () => CUPS.slice(0, CORE_CUPS).filter(c => trophies[c.name] === 1).length;
+const mirrorOK = () => coreGolds() >= CORE_CUPS || DBG.all;
 const wantMir = () => mirror && mirrorOK() && !NET.racing && !story && !tut && !ranked;
 const tkey = () => MAP.name + (world?.userData.mir ? ' (Mirror)' : '');   // mirrored tracks keep their own best times and world records
 function buildWorld(def){
@@ -2278,17 +3065,21 @@ function buildWorld(def){
   });
 
   // scenery
+  world.userData.spin = []; CITYW = []; CITYB = [];
+  if (def.city) buildCity(def);
   let seed = 7 + MAPS.indexOf(def)*101; const rand = () => (seed = (seed*16807) % 2147483647) / 2147483647;
   const reach = span/2 + 160;
   for (let placed = 0, tries = 0; placed < 240 && tries < 4000; tries++){
     const x = center.x + (rand()-.5)*2*reach, z = center.z + (rand()-.5)*2*reach;
     if (distToTrack(x, z) < W/2 + 10 + P3[distToTrack.i].y * 1.15 + Math.abs(BK[distToTrack.i]) * W) continue;
     if (def.water && Math.hypot(x - center.x, z - center.z) > landR - 8) continue;
+    if (def.city && cityBlocked(x, z, 3, W/2 + 30)) continue;
     const g = new THREE.Group(); PROPS[def.props2 && rand() < 0.35 ? def.props2 : def.props](g, rand, placed);
     g.position.set(x, terrainH(x, z) - 0.3, z); g.rotation.y = rand()*Math.PI*2; g.scale.setScalar(0.7 + rand()*0.9); world.add(g); placed++;
   }
   for (let i = 0; i < 18; i++){
     const a = i/18*Math.PI*2, r = Math.max(span/2 + 260, landR + 60) + rand()*80;
+    if (def.coast && cityWet(center.x + Math.cos(a)*r, center.z + Math.sin(a)*r, 60)) continue;
     const m = RINGS[def.ring](rand, def); m.position.x = center.x + Math.cos(a)*r; m.position.z = center.z + Math.sin(a)*r; m.position.y += terrainH(m.position.x, m.position.z) * 0.85; world.add(m);
   }
   if (def.clouds){
@@ -2308,7 +3099,7 @@ function buildWorld(def){
       t.position.copy(pts[i]).addScaledVector(nors[i], (curv > 0 ? -1 : 1)*(W/2+9)).setY(0.5); t.castShadow = true; world.add(t);
     }
   }
-  world.userData.spin = [];
+  world.userData.spin ||= [];
   decorate(def, rand);
   particles = null;
   if (def.particles){
@@ -2844,6 +3635,7 @@ function buildGlider(id, build, ch, withPlate = true){
   return g;
 }
 
+const hoverG = new THREE.CircleGeometry(1, 20), hoverM = new THREE.MeshBasicMaterial({color:0x2ee6ff, transparent:true, opacity:.75, side:THREE.DoubleSide, depthWrite:false, blending:THREE.AdditiveBlending});
 function buildKart(r, build = r.build, target = scene){
   const g = new THREE.Group(), body = new THREE.Group(), shell = new THREE.Group(); g.add(body); body.add(shell);
   const paint = new THREE.MeshLambertMaterial({color:build.paint});
@@ -2870,9 +3662,11 @@ function buildKart(r, build = r.build, target = scene){
   const hub = new THREE.BoxGeometry(wt.w + 0.06, wt.r*1.5, 0.12);
   const wheels = [];
   for (const [x, z, rear] of spec.wheels){
-    const s = rear ? 1.12 : 1, w = new THREE.Group();
+    const s = rear ? 1.12 : 1, w = new THREE.Group(); w.rotation.order = "ZYX";
     w.position.set(x + Math.sign(x)*(wt.w - 0.6)/2, wt.r*s, z); w.scale.setScalar(s); body.add(w);
     add(wG, tyre, 0, 0, 0, w); add(rG, rimM, 0, 0, 0, w); add(hub, rimM, 0, 0, 0, w).castShadow = false;
+    // anti-gravity: the wheel folds flat and this glowing disc ends up underneath it
+    const hg = new THREE.Mesh(hoverG, hoverM); hg.rotation.y = Math.PI / 2; hg.position.x = Math.sign(x) * (wt.w / 2 + 0.08); hg.scale.setScalar(wt.r * 1.25); hg.visible = false; w.add(hg); w.userData.glow = hg;
     wheels.push(w);
   }
   const rearZ = spec.wheels[2][1], rearX = Math.abs(spec.wheels[2][0]);
@@ -4263,7 +5057,7 @@ const UNLOCKS = {
   oela:     {icon:'⚽', need:'Finish races on 10 different tracks', ok:() => Object.keys(bests).length >= 10, prog:() => `${Math.min(10, Object.keys(bests).length)} / 10 tracks`},
   jorn:     {icon:'📱', need:'Story Mode: finish chapter 6, Storm vs Frost', ok:() => storyProg >= 6, prog:() => `${Math.min(storyProg, 6)} / 6 chapters`},
   maciej:   cupT('Star Cup', 3),
-  robin:    {icon:'👑', need:'Win gold in every cup', ok:() => goldCount() >= CUPS.length, prog:() => `${goldCount()} / ${CUPS.length} golds`},
+  robin:    {icon:'👑', need:'Win gold in the first 9 cups', ok:() => coreGolds() >= CORE_CUPS, prog:() => `${coreGolds()} / ${CORE_CUPS} golds`},
   // easter eggs
   casper:   {icon:'🥚', need:'Secret: on the main menu, type the sound a car makes', ok:() => !!EGGS.casper, prog:() => '🥚 easter egg'},
   zennith:  {icon:'🥚', need:'Secret: an old-school cheat code on the title screen (↑ ↑ …) wakes the dark', ok:() => !!EGGS.zennith, prog:() => '🥚 easter egg'},
@@ -4579,7 +5373,7 @@ async function renderRanked(){
 const PROF = (() => { let p = {}; try { p = JSON.parse(localStorage.getItem('pgp-profile') || '{}') || {}; } catch (e) {} return Object.assign({bio:'', races:0, wins:0, podiums:0, recent:[]}, p); })();
 const saveProf = () => { try { localStorage.setItem('pgp-profile', JSON.stringify(PROF)); } catch (e) {} };
 const cleanBio = s => String(s || '').replace(/[<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 140);
-const raceMode = () => tt ? 'tt' : gp ? cupOf().cc : story ? 'story' : ranked ? 'ranked' : 'single';
+const raceMode = () => tt ? 'tt' : ccOn() ? ccVal() + 'cc custom' : gp ? cupOf().cc : story ? 'story' : ranked ? 'ranked' : 'single';
 function profRecord(place, time){
   PROF.races++; if (place === 1) PROF.wins++; if (place <= 3) PROF.podiums++;
   PROF.recent.unshift({tr:tkey(), p:place, t:time ? +time.toFixed(3) : 0, m:raceMode(), ch:ROSTER[playerChoice].id, ts:Date.now()});
@@ -4672,7 +5466,7 @@ async function onlineRace(place, time){
   const m = me(), ch = ROSTER[playerChoice].id, key = fbKey(tkey());
   onlinePlayer();
   fb('feed', {method:'POST', body:{id:m.id, name:m.name, char:ch, track:tkey(), place, time:time || 0, mode:raceMode(), ts:{'.sv':'timestamp'}}});
-  if (!time) return null;
+  if (!time || ccOn()) return null;   // custom cc races stay off the world records
   const mine = await fb(`times/${key}/${m.id}`);
   if (fbOK === false) return null;
   if (!mine || time < mine.t) await fb(`times/${key}/${m.id}`, {method:'PUT', body:{t:+time.toFixed(3), name:m.name, char:ch}});
@@ -5461,9 +6255,32 @@ mainBtns.forEach((b, i) => hookNav(b, i, () => {
 }, () => go(b.dataset.go)));
 
 // cups
+// custom cc: any engine class from 50 to 300cc instead of the cup's own, and the bots get faster and smarter with it
+// (50cc = the Acorn Cup's speed and bots, 200cc = the Sky Cup's, past that faster than anything in the cups).
+// Just for fun: no trophies, best times, world records or challenges, and not in story, time trials, ranked or online
+const ccOn = () => !!OPTS.ccOn && !story && !tut && !tt && !ranked && !NET.racing;
+const ccVal = () => Math.max(50, Math.min(300, Math.round((OPTS.cc || 150) / 10) * 10));
+const ccSpeed = c => 0.76 + c * 0.00245;
+const ccAI = c => Math.min(1.1, 0.81 + c * 0.00095);
+const ccBots = c => c < 90 ? '😊 Easy' : c < 140 ? '🙂 Normal' : c < 190 ? '😤 Hard' : c < 250 ? '🔥 Expert' : '💀 Insane';
+const ccNote = () => OPTS.ccOn ? `Bots: <b>${ccBots(ccVal())}</b> · just for fun: no trophies, records or challenges` : 'Off: every cup races at its own cc';
+const ccCtl = () => `<div class="ccrow"><label class="cctog"><input type="checkbox" id="ccOn" ${OPTS.ccOn ? 'checked' : ''}> ⚙️ Custom cc</label>
+  <button class="btn ghost ccstep" data-d="-10" ${OPTS.ccOn ? '' : 'disabled'}>−</button><input type="range" id="ccVal" min="50" max="300" step="10" value="${ccVal()}" ${OPTS.ccOn ? '' : 'disabled'}><button class="btn ghost ccstep" data-d="10" ${OPTS.ccOn ? '' : 'disabled'}>+</button>
+  <b id="ccLbl" class="${OPTS.ccOn ? '' : 'off'}">${ccVal()}cc</b><p class="fine ccnote" id="ccNote">${ccNote()}</p></div>`;
+function hookCC(){
+  const on = $('ccOn'), r = $('ccVal'); if (!on) return;
+  const sync = () => {
+    r.value = ccVal(); r.disabled = !OPTS.ccOn; document.querySelectorAll('.ccstep').forEach(b => b.disabled = !OPTS.ccOn);
+    $('ccLbl').textContent = ccVal() + 'cc'; $('ccLbl').classList.toggle('off', !OPTS.ccOn); $('ccNote').innerHTML = ccNote();
+  };
+  on.onchange = () => { OPTS.ccOn = on.checked; saveOpts(); blip.ok(); sync(); };
+  r.oninput = () => { OPTS.cc = +r.value; sync(); };
+  r.onchange = () => { saveOpts(); blip.move(); };
+  document.querySelectorAll('.ccstep').forEach(b => b.onclick = () => { OPTS.cc = ccVal() + +b.dataset.d; saveOpts(); blip.move(); sync(); });
+}
 // the mirror switch on the track and cup screens (F flips it), shown once mirror mode is unlocked
 const mirrorBtn = () => mirrorOK() ? `<button class="btn ${mirror ? 'mir on' : 'ghost mir'}" id="mirBtn">🪞 Mirror ${mirror ? 'ON' : 'off'} <kbd>F</kbd></button>`
-  : `<p class="fine mirlock">🔒 🪞 Mirror mode: win gold in every cup</p>`;
+  : `<p class="fine mirlock">🔒 🪞 Mirror mode: win gold in the first 9 cups</p>`;
 function setMirror(on){
   if (!mirrorOK()) return;
   mirror = on; OPTS.mirror = on; saveOpts(); blip.ok();
@@ -5481,9 +6298,9 @@ function cupInfo(i){
     <div><span class="tag">${c.cc}</span> ${t ? `&nbsp;${MEDAL[t]} best finish: ${ord(t)}` : '&nbsp;No trophy yet'}</div>
     <ol>${c.tracks.map(n => `<li>${THEMES[byName(n).theme].emoji} ${n}</li>`).join('')}</ol>
     <p class="fine">${c.tracks.length} races · points 15 / 12 / 10 / 8 / 6 / 4 / 2 / 1 · finish top 3 overall for a trophy</p>
-    ${mirrorBtn()}
+    ${mirrorBtn()}${ccCtl()}
     <button class="btn go" id="cupGo">Choose ▸</button>`;
-  $('cupGo').onclick = () => { blip.ok(); pickCup(); }; hookMirror();
+  $('cupGo').onclick = () => { blip.ok(); pickCup(); }; hookMirror(); hookCC();
 }
 function pickCup(){ mode = 'gp'; go('racer'); }
 function renderCups(){
@@ -5504,11 +6321,11 @@ function trackInfo(i){
   const m = MAPS[i], cup = CUPS.find(c => c.tracks.includes(m.name)), mir = mirror && mirrorOK(), b = bests[m.name + (mir ? ' (Mirror)' : '')];
   $('trackinfo').innerHTML = `<div class="big">${m.emoji}</div><h2>${m.name}${mir ? ' 🪞' : ''}</h2>
     <div><span class="tag">${m.tag}</span></div>
-    <p class="fine">Part of the ${cup.emoji} ${cup.name}<br>Road width ${m.w} · ${m.pads.length} boost pad${m.pads.length === 1 ? '' : 's'}${m.grip < 6 ? ' · icy' : ''}<br>${[m.hills && '⛰️ hills', m.jumps && '🛹 jumps', m.glides && '🪂 glider gap', m.walls && '🌀 wall ride', m.terrain && !m.water && '🏔️ 3D landscape'].filter(Boolean).join(' · ')}</p>
+    <p class="fine">Part of the ${cup.emoji} ${cup.name}<br>Road width ${m.w} · ${m.pads.length} boost pad${m.pads.length === 1 ? '' : 's'}${m.grip < 6 ? ' · icy' : ''}<br>${[m.city && '🏙️ real city: ' + m.city.name, m.autoX && '🌉 crosses itself', (m.loops || m.xloop) && '🎢 loops', m.hills && '⛰️ hills', m.jumps && '🛹 jumps', m.glides && '🪂 glider gap', m.walls && '🌀 wall ride', m.terrain && !m.water && '🏔️ 3D landscape'].filter(Boolean).join(' · ')}</p>
     <p>⏱️ Best time: <b>${b ? fmt(b) : '—'}</b></p>
-    ${mirrorBtn()}
+    ${mirrorBtn()}${ccCtl()}
     <div class="btnrow"><button class="btn tt" id="trackTT">⏱️ Time trial${ghostsLocal[m.name + (mir ? ' (Mirror)' : '')] ? ' 👻' : ''}</button><button class="btn go" id="trackGo">Race ▸</button></div>`;
-  $('trackGo').onclick = () => { blip.ok(); pickTrack(); }; hookMirror();
+  $('trackGo').onclick = () => { blip.ok(); pickTrack(); }; hookMirror(); hookCC();
   $('trackTT').onclick = () => { blip.ok(); TT_VS = null; mode = 'tt'; go('racer'); };
 }
 function pickTrack(){ mode = 'single'; go('racer'); }
@@ -6210,7 +7027,8 @@ function setupRace(){
   const cup = gp ? cupOf() : story ? STORY[story.ch] : tut ? TUT_SET : ranked ? ranked.set : null;
   if (gp) showTrack(TRACKS.indexOf(byName(cup.tracks[gp.race])));
   MAX = 42 * (cup ? cup.speed : 1); ACC = 26 * (cup ? cup.speed : 1);
-  const aiBase = cup ? cup.ai : 0.9;
+  let aiBase = cup ? cup.ai : 0.9;
+  if (ccOn()){ const c = ccVal(); MAX = 42 * ccSpeed(c); ACC = 26 * ccSpeed(c); aiBase = ccAI(c); }
   for (let i = coins.length - 1; i >= 0; i--) if (coins[i].once){ world.remove(coins[i].mesh); coins.splice(i, 1); }   // coins dropped in the last battle
   boxes.forEach(b => { b.respawn = 0; b.mesh.visible = true; }); coins.forEach(c => { c.respawn = 0; c.mesh.visible = true; });
   const field = NET.racing ? [] : tt ? [playerChoice] : party ? partyField() : duo ? duoField() : gp ? gp.field : story ? [playerChoice, ...cup.rivals.map(rid).filter(i => i >= 0 && i !== playerChoice)].slice(0, FIELD_SIZE)
@@ -6560,7 +7378,13 @@ function kartVisual(k, dt, sf, steer, off, spdF){
   if (k.bounce > 0) k.bounce -= dt;
   m.body.position.y = k.bounce > 0 ? Math.sin((0.25 - k.bounce) / 0.25 * Math.PI) * 0.6 : (off ? Math.sin(raceTime*40) * 0.05 : 0);
   m.body.rotation.z = -steer * 0.06 * spdF;
-  m.wheels.forEach((w, i) => { w.rotation.x += k.speed * dt / m.wheelR; if (i < 2) w.rotation.y = steer * 0.35; });
+  // anti-gravity (loops, wall rides): wheels fold flat into glowing hover discs, like Mario Kart 8
+  m.hov = (m.hov || 0) + ((k.wasAnti && !k.air ? 1 : 0) - (m.hov || 0)) * Math.min(1, 7 * dt);
+  m.wheels.forEach((w, i) => {
+    w.rotation.x += k.speed * dt / m.wheelR * (1 - m.hov); if (i < 2) w.rotation.y = steer * 0.35 * (1 - m.hov);
+    w.rotation.z = -Math.sign(w.position.x) * Math.PI / 2 * m.hov;
+    const g = w.userData.glow; if (g){ g.visible = m.hov > 0.15; g.material.opacity = 0.45 + Math.sin(raceTime * 30 + i) * 0.2; }
+  });
   const charge = k.driftCharge;
   m.sparks.forEach(s => { s.visible = !!k.drift && charge > 0.4; s.scale.setScalar(0.8 + Math.random()*0.6); });
   m.sparkM.color.set(charge > DRIFT_SUPER ? 0xff7a1f : charge > DRIFT_MINI ? 0xffd23f : 0x66aaff);
@@ -6733,7 +7557,7 @@ function duoResults(all){
 }
 function endRace(){
   state = 'finished'; toast('FINISH!'); jingle(player.finishRank <= 3 || !!player2);
-  if (!player2 && !party && player.finishTime && (!bests[tkey()] || player.finishTime < bests[tkey()])){
+  if (!player2 && !party && !ccOn() && player.finishTime && (!bests[tkey()] || player.finishTime < bests[tkey()])){
     const had = !!bests[tkey()]; bests[tkey()] = player.finishTime;
     ghostSave(player.finishTime); if (tt) tt.pb = true;
     try { localStorage.setItem('pgp-best', JSON.stringify(bests)); } catch (e) {}
@@ -6745,7 +7569,7 @@ function endRace(){
     const rest = karts.filter(k => !k.finished).sort((a, b) => b.prog - a.prog);
     const all = battle ? standings() : [...finishOrder, ...rest];
     const place = all.indexOf(player) + 1;
-    const chGot = !NET.racing && !player2 && !party && !tut ? chCheck({k:player, place, track:MAP.name, race:!battle && !tt, battle:battle?.type, tt:!!tt, pb:!!tt?.pb, rs:RS}) : [];
+    const chGot = !NET.racing && !player2 && !party && !tut && !ccOn() ? chCheck({k:player, place, track:MAP.name, race:!battle && !tt, battle:battle?.type, tt:!!tt, pb:!!tt?.pb, rs:RS}) : [];
     setTimeout(() => chShow(chGot), 0);
     $('resBtns').innerHTML = '';
     if (battle) return battleResults(all, place);
@@ -6794,9 +7618,9 @@ function endRace(){
 function cupResults(){
   const cup = cupOf(), t = gp.table, rank = t.findIndex(r => r.me) + 1;
   if (cup.comm) commCupDone(rank, t[rank - 1].total);
-  else if (rank <= 3 && (!trophies[cup.name] || rank < trophies[cup.name])){
+  else if (!ccOn() && rank <= 3 && (!trophies[cup.name] || rank < trophies[cup.name])){
     trophies[cup.name] = rank; try { localStorage.setItem('pgp-trophies', JSON.stringify(trophies)); } catch (e) {}
-    if (rank === 1 && goldCount() >= CUPS.length && !OPTS.mirrorNew){ OPTS.mirrorNew = 1; saveOpts(); setTimeout(() => { toast('🪞 MIRROR MODE UNLOCKED!'); [523, 784, 1046, 1568].forEach((f, i) => setTimeout(() => beep(f, .2, 'triangle', .08), i * 120)); }, 1800); }
+    if (rank === 1 && coreGolds() >= CORE_CUPS && !OPTS.mirrorNew){ OPTS.mirrorNew = 1; saveOpts(); setTimeout(() => { toast('🪞 MIRROR MODE UNLOCKED!'); [523, 784, 1046, 1568].forEach((f, i) => setTimeout(() => beep(f, .2, 'triangle', .08), i * 120)); }, 1800); }
   }
   $('resTitle').innerHTML = rank === 1 ? `${cup.name} champion!` : rank <= 3 ? `${ord(rank)} in the ${cup.name}` : `${ord(rank)} place overall`;
   $('resSub').textContent = cup.comm ? (sharing() ? 'Your result is on this week’s Community Cup board.' : 'Turn on sharing under Rankings to get on the weekly board.') : rank <= 3 ? `You take home the ${['gold','silver','bronze'][rank-1]} trophy.` : 'No trophy this time. Finish top 3 to earn one.';
@@ -6805,7 +7629,7 @@ function cupResults(){
     <div class="podium">${step(t[1], 120, 2)}${step(t[0], 160, 1)}${step(t[2], 90, 3)}</div>
     <div class="grid">${t.slice(3).map((r, i) => `<div class="row single ${r.me ? 'me' : ''}"><b>${i+4}</b><span class="n">${dot(r)}${r.name}${r.me ? ' (you)' : ''}</span><span class="r">${r.total} pts</span></div>`).join('')}</div>`;
   const cupPrize = [150, 90, 60][rank - 1] || 0; if (cupPrize) addCoins(cupPrize);
-  if (rank === 1 && !NET.racing) chShow(chCheck({k:{}, rs:{}, cupGold:true}));
+  if (rank === 1 && !NET.racing && !ccOn()) chShow(chCheck({k:{}, rs:{}, cupGold:true}));
   onlinePlayer();
   $('resBody').insertAdjacentHTML('afterbegin', unlockBanner(newUnlocks()) + (cupPrize ? `<p class="coinsum">🪙 +${cupPrize} trophy bonus · wallet <b class="walletN">${wallet}</b></p>` : ''));
   $('resBtns').innerHTML = '';
@@ -7000,19 +7824,55 @@ const camera2 = new THREE.PerspectiveCamera(68, 1, 0.1, 1200);
 const QCAM = [0, 1].map(() => ({cam:new THREE.PerspectiveCamera(68, 1, 0.1, 1200), cs:{pos:new THREE.Vector3(), look:new THREE.Vector3(), up:new THREE.Vector3(0, 1, 0), rear:false}}));
 const ovCam = new THREE.PerspectiveCamera(55, 1, 1, 2000), ovLook = new THREE.Vector3();
 const cs1 = {pos:camPos, look:camLook, up:camUp, rear:false}, cs2 = {pos:new THREE.Vector3(), look:new THREE.Vector3(), up:new THREE.Vector3(0, 1, 0), rear:false};
+// a point on the road dist metres on from fractional sample s (negative = backwards), smoothly between samples
+function pathPoint(s, dist){
+  let left = Math.abs(dist); const fw = dist >= 0;
+  for (let n = 0; n < 200 && left > 1e-4; n++){
+    let a = Math.floor(s), f = s - a;
+    if (!fw && f < 1e-6){ a -= 1; f = 1; }
+    const A = ((a % N) + N) % N, L = P3[A].distanceTo(P3[(A + 1) % N]) || 0.01, room = (fw ? 1 - f : f) * L;
+    if (room < 1e-6){ s = fw ? a + 1 : a; continue; }
+    const take = Math.min(room, left); f += (fw ? 1 : -1) * take / L; left -= take; s = a + f;
+  }
+  s = ((s % N) + N) % N;
+  const A = Math.floor(s) % N, B = (A + 1) % N, f = s - Math.floor(s);
+  return {p:P3[A].clone().lerp(P3[B], f), d:D3[A].clone().lerp(D3[B], f).normalize(), u:U3[A].clone().lerp(U3[B], f).normalize()};
+}
+// where the kart is between its two nearest samples
+function kartS(k, wp){
+  for (const i of [k.idx, (k.idx - 1 + N) % N]){
+    const a = P3[i], b = P3[(i + 1) % N], ab = b.clone().sub(a), t = wp.clone().sub(a).dot(ab) / Math.max(1e-6, ab.lengthSq());
+    if (t >= 0 && t <= 1) return i + t;
+  }
+  return k.idx;
+}
 function camFollow(k, cam, cs, rearKey, dt){
   const wp = k.wp || k.pos;
-  cs.up.lerp(k.air ? UPV : (k.camU || UPV), 1 - Math.pow(0.01, dt)).normalize();
-  const f = (k.camF || fwd(k.heading)).clone().applyAxisAngle(cs.up, k.yawVis * 0.25);
-  const behind = state === 'finished' ? -9 : 11 + Math.max(0, k.speed) * 0.04;
-  // hold C to look behind (snaps instantly, like a rear-view mirror)
+  // in and around a loop a straight line behind the kart ends up outside the curve, under the deck: there the camera follows
+  // the road itself, smoothly between samples, and eases in and out of that (cs.lw) so nothing jumps or shakes
+  const inLoop = LR.length === N && !k.air && state !== 'finished' && (() => { for (let o = -6; o <= 40; o += 2) if (LR[(k.idx - o + N) % N]) return true; return false; })();
+  cs.lw = (cs.lw ?? 0) + ((inLoop ? 1 : 0) - (cs.lw ?? 0)) * Math.min(1, dt * 6);
+  const lw = cs.lw > 0.002 ? cs.lw : 0;
   const rear = !!rearKey && state === 'race';
+  const behind = state === 'finished' ? -9 : 11 + Math.max(0, k.speed) * 0.04;
+  let upWant = k.air ? UPV : (k.camU || UPV), road = null, ks = 0, lat = 0;
+  if (lw){ ks = kartS(k, wp); lat = k.sf?.lat ?? 0; road = pathPoint(ks, rear ? 10 : -behind); upWant = upWant.clone().lerp(road.u, lw).normalize(); }
+  cs.up.lerp(upWant, 1 - Math.pow(lw ? 1e-3 : 0.01, dt)).normalize();
+  const f = (k.camF || fwd(k.heading)).clone().applyAxisAngle(cs.up, k.yawVis * 0.25);
+  // hold C to look behind (snaps instantly, like a rear-view mirror)
   const target = wp.clone().addScaledVector(f, rear ? 10 : -behind).addScaledVector(cs.up, 5.2 + (state === 'finished' ? 2 : 0));
   const lookT = wp.clone().addScaledVector(f, rear ? -10 : 6).addScaledVector(cs.up, 1.6);
+  if (lw){
+    target.lerp(road.p.clone().addScaledVector(road.d, lat).addScaledVector(road.u, 5.2), lw);
+    const ahead = pathPoint(ks, rear ? -10 : 6);
+    lookT.lerp(ahead.p.clone().addScaledVector(ahead.d, lat).addScaledVector(ahead.u, 1.6), lw);
+  }
   if (rear !== cs.rear){ cs.rear = rear; cs.pos.copy(target); cs.look.copy(lookT); if (cs === cs1) $('rearview').classList.toggle('on', rear); }
-  cs.pos.lerp(target, 1 - Math.pow(0.002, dt));
+  cs.pos.lerp(target, 1 - Math.pow(lw ? 0.002 + (1e-4 - 0.002) * lw : 0.002, dt));
+  // never below the deck: keep at least 2 m on the road's side of the point the camera is following
+  if (lw > 0.5){ const h = cs.pos.clone().sub(road.p).dot(road.u); if (h < 2) cs.pos.addScaledVector(road.u, 2 - h); }
   cam.position.copy(cs.pos); cam.up.copy(cs.up);
-  cs.look.lerp(lookT, 1 - Math.pow(0.0005, dt));
+  cs.look.lerp(lookT, 1 - Math.pow(lw ? 0.0005 + (1e-5 - 0.0005) * lw : 0.0005, dt));
   cam.lookAt(cs.look);
   cam.fov += ((k.boost > 0 || k.star > 0 ? 82 : 68) - cam.fov) * Math.min(1, 4*dt);
   cam.aspect = party?.quad ? innerWidth / innerHeight : innerWidth / (player2 ? 2 : 1) / innerHeight; cam.updateProjectionMatrix();
@@ -7096,6 +7956,7 @@ function frame(now){
   }
 
   if (state === 'menu'){    if (engineGain && engineGain.gain.value > 0.001) silenceEngine();
+    if (FC.on){ FC.tick(dt / (DBG.ts || 1)); boxes.forEach(b => { b.mesh.rotation.y += dt; }); liftItems(); renderer.render(scene, camera); dropItems(); return; }
     renderGarage(dt);
     if (screen === 'garage'){ renderer.render(scene, camera); return; }
     camera.up.set(0, 1, 0);
@@ -8390,6 +9251,65 @@ addEventListener('gamepaddisconnected', () => { if (![...(navigator.getGamepads?
     wipe: () => { if (!confirm('Wipe ALL save data (racers, coins, trophies, story, Elo)? This can’t be undone.')) return;
       Object.keys(localStorage).filter(k => /^pgp-/.test(k)).forEach(k => localStorage.removeItem(k)); location.reload(); },
   };
+  // map viewer: fly a free camera round any track (hidden ones too) before a race. Only from the menus, so nothing
+  // in a race can be seen early or cheated with
+  $('dbgMap').innerHTML = TRACKS.map((t, i) => `<option value="${i}">${THEMES[t.theme]?.emoji || ''} ${t.name}${t.hidden ? ' (hidden)' : ''}</option>`).join('');
+  const fk = {}, fpos = new THREE.Vector3();
+  let yaw = 0, pitch = -0.25, fmul = 1, wasOpen = false, drag = null, hudT = 0;
+  function fcStart(){
+    const t = T3[0] || tans[0], p = (P3[0] || pts[0]).clone();
+    fpos.copy(p).addScaledVector(t, -34).add(new THREE.Vector3(0, 16, 0));
+    yaw = Math.atan2(-t.x, -t.z); pitch = -0.32;
+  }
+  function fcOpen(i){
+    if (state !== 'menu'){ toast('🛠️ Free cam works from the menus, before a race'); return; }
+    if (FC.on) fcClose();
+    if (i != null) showTrack(i);
+    wasOpen = DBG.on; dbgToggle(false);
+    FC.on = true; fcStart(); for (const k in fk) fk[k] = false;
+    document.body.classList.add('freecam'); $('fcHud').classList.remove('hidden'); $('fcName').textContent = '🎥 ' + MAP.name + (world.userData.mir ? ' 🪞' : '');
+  }
+  function fcClose(){
+    FC.on = false; document.body.classList.remove('freecam'); $('fcHud').classList.add('hidden');
+    if (document.pointerLockElement) document.exitPointerLock();
+    camPos.copy(camera.position); camera.rotation.set(0, 0, 0); camera.up.set(0, 1, 0);
+    if (wasOpen) dbgToggle(true);
+  }
+  FC.tick = dt => {
+    const sp = 40 * fmul * (fk.ShiftLeft || fk.ShiftRight ? 4 : 1) * dt;
+    const f = new THREE.Vector3(-Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch)), r = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+    if (fk.KeyW || fk.ArrowUp) fpos.addScaledVector(f, sp);
+    if (fk.KeyS || fk.ArrowDown) fpos.addScaledVector(f, -sp);
+    if (fk.KeyD || fk.ArrowRight) fpos.addScaledVector(r, sp);
+    if (fk.KeyA || fk.ArrowLeft) fpos.addScaledVector(r, -sp);
+    if (fk.KeyE || fk.Space) fpos.y += sp;
+    if (fk.KeyQ || fk.KeyC) fpos.y -= sp;
+    fpos.y = Math.max(0.6, fpos.y);
+    camera.position.copy(fpos); camera.up.set(0, 1, 0); camera.rotation.order = 'YXZ'; camera.rotation.set(pitch, yaw, 0);
+    if (camera.fov !== 68){ camera.fov = 68; camera.updateProjectionMatrix(); }
+    if ((hudT += dt) > 0.2){ hudT = 0; $('fcInfo').textContent = `x ${fpos.x.toFixed(0)}  y ${fpos.y.toFixed(1)}  z ${fpos.z.toFixed(0)} · speed ×${fmul.toFixed(2)} · ${DBG.fps} fps · ${renderer.info.render.calls} draws`; }
+  };
+  addEventListener('keydown', e => {
+    if (!FC.on || e.code === 'F2' || e.code === 'Backquote') return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    if (e.code === 'Escape'){ fcClose(); return; }
+    if (e.code === 'KeyR') fcStart();
+    if (e.code === 'KeyM' && mirrorOK()){ setMirror(!mirror); showTrack(mapChoice); fcOpen(); }
+    fk[e.code] = true;
+  }, true);
+  addEventListener('keyup', e => { if (FC.on){ fk[e.code] = false; e.stopImmediatePropagation(); } }, true);
+  addEventListener('blur', () => { for (const k in fk) fk[k] = false; });
+  const look = (dx, dy) => { yaw -= dx * 0.0032; pitch = THREE.MathUtils.clamp(pitch - dy * 0.0032, -1.5, 1.5); };
+  canvas.addEventListener('pointerdown', e => { if (!FC.on) return; drag = {x:e.clientX, y:e.clientY}; if (e.pointerType === 'mouse' && !document.pointerLockElement) canvas.requestPointerLock?.(); });
+  addEventListener('pointermove', e => {
+    if (!FC.on) return;
+    if (document.pointerLockElement === canvas) look(e.movementX, e.movementY);
+    else if (drag){ look(e.clientX - drag.x, e.clientY - drag.y); drag = {x:e.clientX, y:e.clientY}; }
+  });
+  addEventListener('pointerup', () => { drag = null; });
+  canvas.addEventListener('wheel', e => { if (!FC.on) return; e.preventDefault(); fmul = THREE.MathUtils.clamp(fmul * (e.deltaY > 0 ? 0.8 : 1.25), 0.1, 10); }, {passive:false});
+  A.fcam = () => fcOpen(+$('dbgMap').value);
+  A.fcamHere = () => fcOpen(null);
   el.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (b) A[b.dataset.a]?.(); });
   $('dbgTs').oninput = () => { DBG.ts = TS[+$('dbgTs').value]; $('dbgTsV').textContent = DBG.ts + '×'; };
   $('dbgGod').onchange = e => DBG.god = e.target.checked;
