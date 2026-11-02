@@ -1,0 +1,1633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WidR School: A Rankingland Story</title>
+<style>
+:root{
+  --ink:#2b2340; --paper:#fff8ee; --pink:#ff6f9f; --pink2:#ffd3e2; --mint:#7fd6c2;
+  --sun:#ffc94d; --sky:#8ec5ff; --line:#2b2340;
+  --display: "Chalkboard SE","Marker Felt","Comic Sans MS","Trebuchet MS",cursive;
+  --body: "Avenir Next","Gill Sans","Trebuchet MS",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#fbe7d6;font-family:var(--body);color:var(--ink);overflow:hidden}
+#game{position:fixed;inset:0;bottom:52px;display:flex;align-items:center;justify-content:center}
+#stage{position:relative;width:min(100vw,calc((100vh - 52px)*16/9));aspect-ratio:16/9;max-height:calc(100vh - 52px);overflow:hidden;border-radius:18px;box-shadow:0 0 0 4px var(--line),10px 10px 0 4px var(--line);background:#fff}
+#bg{position:absolute;inset:0;transition:opacity .5s}
+#bg svg{width:100%;height:100%;display:block}
+#cast{position:absolute;inset:0;pointer-events:none}
+.char{position:absolute;bottom:-4%;height:92%;aspect-ratio:3/5;transform:translateX(-50%);transition:left .45s cubic-bezier(.5,1.6,.4,1),filter .3s,opacity .4s}
+.char svg{width:100%;height:100%;display:block;filter:drop-shadow(4px 4px 0 rgba(43,35,64,.25))}
+.char.dim{filter:brightness(.82) saturate(.8)}
+.char.enter{animation:pop .45s cubic-bezier(.5,1.7,.4,1)}
+@keyframes pop{from{transform:translateX(-50%) translateY(14%);opacity:0}to{transform:translateX(-50%);opacity:1}}
+.char.talk svg{animation:bob .5s ease-in-out}
+@keyframes bob{50%{transform:translateY(-1.5%)}}
+
+#box{position:absolute;left:3%;right:3%;bottom:3%;min-height:27%;background:var(--paper);border:3px solid var(--line);border-radius:16px;padding:3.2% 3% 2.4%;box-shadow:6px 6px 0 var(--line);cursor:pointer;
+  background-image:repeating-linear-gradient(transparent 0 calc(1.6em - 1px),rgba(142,197,255,.35) calc(1.6em - 1px) 1.6em);}
+#box::before{content:"";position:absolute;left:5%;top:0;bottom:0;border-left:2px solid rgba(255,111,159,.35)}
+#name{position:absolute;top:-1.1em;left:4%;font-family:var(--display);font-size:clamp(14px,2.1vw,26px);padding:.15em .8em;border:3px solid var(--line);border-radius:12px;background:var(--pink);color:#fff;transform:rotate(-2deg);box-shadow:3px 3px 0 var(--line)}
+#name:empty{display:none}
+#text{font-size:clamp(13px,1.75vw,22px);line-height:1.6;min-height:3.2em;padding-left:3%}
+#text.narr{font-style:italic;color:#5c5175}
+#next{position:absolute;right:2.2%;bottom:6%;font-size:clamp(12px,1.6vw,20px);animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.2}}
+#choices{position:absolute;inset:0 0 34% 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2.2%;pointer-events:none}
+#choices button{pointer-events:auto;font-family:var(--body);font-weight:600;font-size:clamp(12px,1.6vw,20px);width:62%;padding:1.1% 2%;border:3px solid var(--line);border-radius:14px;background:#fff;color:var(--ink);box-shadow:4px 4px 0 var(--line);cursor:pointer;transition:transform .12s,background .12s;animation:pop2 .35s backwards}
+#choices button:nth-child(2){animation-delay:.06s}#choices button:nth-child(3){animation-delay:.12s}#choices button:nth-child(4){animation-delay:.18s}
+@keyframes pop2{from{transform:scale(.8);opacity:0}}
+#choices button:hover{background:var(--pink2);transform:translate(-2px,-2px) rotate(-.5deg)}
+#hud{position:absolute;top:2.5%;right:2%;display:flex;gap:8px;z-index:5}
+.hbtn{font-family:var(--display);font-size:clamp(11px,1.3vw,16px);background:#fff;border:3px solid var(--line);border-radius:10px;padding:.25em .7em;box-shadow:3px 3px 0 var(--line);cursor:pointer}
+#chapter{position:absolute;top:2.5%;left:2%;z-index:5;font-family:var(--display);font-size:clamp(11px,1.3vw,16px);background:var(--sun);border:3px solid var(--line);border-radius:10px;padding:.25em .8em;transform:rotate(-1.5deg);box-shadow:3px 3px 0 var(--line)}
+#chapter:empty{display:none}
+#journal{position:absolute;top:12%;right:2%;width:30%;background:var(--paper);border:3px solid var(--line);border-radius:14px;padding:2%;box-shadow:5px 5px 0 var(--line);z-index:6;display:none;font-size:clamp(11px,1.3vw,16px)}
+#journal h3{font-family:var(--display);margin:0 0 .5em}
+#journal .row{display:flex;justify-content:space-between;margin:.35em 0;align-items:center}
+#journal .hearts{letter-spacing:2px;color:var(--pink)}
+#journal small{display:block;margin-top:.6em;color:#7a6e8f}
+
+#fx{position:absolute;inset:0;pointer-events:none;z-index:4}
+.flash{animation:flash .6s}
+@keyframes flash{0%{background:rgba(255,255,255,.95)}100%{background:transparent}}
+.shake{animation:shake .5s}
+@keyframes shake{20%{transform:translateX(-1.5%)}40%{transform:translateX(1.5%)}60%{transform:translateX(-1%)}80%{transform:translateX(1%)}}
+.sparkle span{position:absolute;font-size:3vw;animation:spk 1.4s forwards}
+@keyframes spk{from{transform:scale(0) rotate(0);opacity:1}to{transform:scale(1.4) rotate(180deg) translateY(-40%);opacity:0}}
+.siren{animation:siren .5s 6 alternate}
+@keyframes siren{from{box-shadow:inset 0 0 12vw rgba(255,40,60,.55)}to{box-shadow:inset 0 0 12vw rgba(40,90,255,.55)}}
+
+/* title + ending cards */
+.card{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:4%;
+  background:radial-gradient(circle at 20% 20%,#ffe0ec 0 18%,transparent 19%),radial-gradient(circle at 85% 75%,#d9f3ec 0 22%,transparent 23%),radial-gradient(circle at 80% 15%,#fff1c4 0 10%,transparent 11%),var(--paper)}
+.card h1{font-family:var(--display);font-size:clamp(28px,6vw,78px);margin:0;line-height:1;color:var(--pink);text-shadow:4px 4px 0 var(--line);-webkit-text-stroke:2px var(--line);transform:rotate(-3deg)}
+.card h2{font-family:var(--display);font-size:clamp(14px,2.2vw,28px);margin:.6em 0 .2em}
+.card p{max-width:62%;font-size:clamp(12px,1.6vw,19px);line-height:1.55}
+.card .tag{font-family:var(--display);background:var(--mint);border:3px solid var(--line);border-radius:999px;padding:.2em 1em;font-size:clamp(11px,1.4vw,17px);box-shadow:3px 3px 0 var(--line);transform:rotate(2deg);margin-bottom:1em}
+.card input{font-family:var(--body);font-size:clamp(13px,1.7vw,20px);padding:.5em 1em;border:3px solid var(--line);border-radius:12px;text-align:center;width:min(320px,50%);margin:1em 0 .6em;box-shadow:3px 3px 0 var(--line)}
+.card .big{font-family:var(--display);font-size:clamp(14px,2vw,24px);background:var(--pink);color:#fff;border:3px solid var(--line);border-radius:14px;padding:.4em 1.6em;box-shadow:4px 4px 0 var(--line);cursor:pointer;margin:.3em}
+.card .big:hover{transform:translate(-2px,-2px)}
+.card .faces{display:flex;gap:1%;height:34%;margin-top:1.5%}
+.card .faces div{height:100%;aspect-ratio:3/5;overflow:hidden}
+.card .faces svg{width:100%;height:160%;}
+.card .sub{font-size:clamp(11px,1.3vw,15px);color:#7a6e8f}
+/* ranking board */
+#rankboard{position:absolute;inset:0;z-index:8;display:none;align-items:center;justify-content:center;background:rgba(43,35,64,.35);cursor:pointer}
+#rankboard .sheet{width:min(56%,620px);max-height:86%;overflow:auto;background:var(--paper);border:3px solid var(--line);border-radius:16px;box-shadow:8px 8px 0 var(--line);padding:2.2% 2.6%;transform:rotate(-1deg);animation:pop2 .35s}
+#rankboard h3{font-family:var(--display);margin:0;font-size:clamp(16px,2.4vw,30px);color:var(--pink);text-shadow:2px 2px 0 var(--line);-webkit-text-stroke:1px var(--line)}
+#rankboard .why{font-size:clamp(10px,1.2vw,14px);color:#7a6e8f;margin:.3em 0 .7em}
+#rankboard ol{list-style:none;margin:0;padding:0;font-size:clamp(11px,1.35vw,17px)}
+#rankboard li{display:grid;grid-template-columns:2.2em 1fr auto auto;gap:.6em;align-items:center;padding:.22em .5em;border-radius:8px}
+#rankboard li:nth-child(odd){background:rgba(142,197,255,.15)}
+#rankboard li.me{background:var(--sun);border:2px solid var(--line);font-weight:700;animation:me 1s ease-in-out 2}
+@keyframes me{50%{transform:scale(1.03)}}
+#rankboard li .n{font-family:var(--display)}
+#rankboard li .tier{font-size:.75em;padding:.05em .5em;border-radius:999px;border:2px solid var(--line)}
+.t1{background:var(--pink);color:#fff}.t2{background:var(--mint)}.t3{background:#fff}.t4{background:#ddd}
+#rankboard .delta{font-family:var(--display);font-size:clamp(13px,1.7vw,22px);margin-top:.5em}
+#rankboard .tap{font-size:clamp(10px,1.1vw,13px);color:#7a6e8f;text-align:right;margin-top:.4em}
+/* main menu */
+#menu{position:absolute;inset:0;z-index:12;display:none;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);
+  background:linear-gradient(90deg,rgba(255,248,238,0) 0 40%,rgba(255,248,238,.94) 58%)}
+#menu .hero{position:relative;overflow:hidden}
+#menu .logo{position:absolute;top:7%;left:6%;background:var(--paper);border:3px solid var(--line);border-radius:18px;box-shadow:6px 6px 0 var(--line);padding:2.4% 4% 2%;transform:rotate(-3deg);z-index:2;animation:drop .6s cubic-bezier(.5,1.6,.4,1)}
+@keyframes drop{from{transform:rotate(-3deg) translateY(-40%);opacity:0}}
+#menu .logo .k{font-family:var(--display);font-size:clamp(10px,1.2vw,15px);letter-spacing:.2em;text-transform:uppercase;color:#7a6e8f}
+#menu .logo h1{font-family:var(--display);font-size:clamp(30px,6.4vw,84px);margin:.05em 0 0;line-height:.95;color:var(--pink);text-shadow:4px 4px 0 var(--line);-webkit-text-stroke:2px var(--line)}
+#menu .logo .s{font-family:var(--display);font-size:clamp(11px,1.4vw,18px);margin-top:.35em}
+#menu .lineup{position:absolute;left:-2%;right:-8%;bottom:-10%;height:66%;display:flex;justify-content:center;align-items:flex-end}
+#menu .lineup div{height:100%;aspect-ratio:3/5;margin:0 -2.4%;transition:transform .25s;animation:rise .6s backwards;cursor:pointer}
+#menu .lineup div:nth-child(2){height:94%;animation-delay:.08s}#menu .lineup div:nth-child(3){animation-delay:.16s}#menu .lineup div:nth-child(4){height:94%;animation-delay:.24s}#menu .lineup div:nth-child(5){animation-delay:.32s}
+@keyframes rise{from{transform:translateY(30%);opacity:0}}
+#menu .lineup div:hover{transform:translateY(-5%)}
+#menu .lineup svg{width:100%;height:100%;filter:drop-shadow(4px 4px 0 rgba(43,35,64,.25))}
+#menu .side{display:flex;flex-direction:column;justify-content:center;gap:1.8%;padding:3% 8% 3% 6%}
+.mbtn{font-family:var(--display);font-size:clamp(13px,1.85vw,23px);text-align:left;color:var(--ink);background:#fff;border:3px solid var(--line);border-radius:14px;padding:.42em .85em;box-shadow:4px 4px 0 var(--line);cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:.6em;transition:transform .12s,box-shadow .12s;animation:pop2 .35s backwards}
+.mbtn small{font-family:var(--body);font-size:.58em;opacity:.7;font-weight:600}
+.mbtn.primary{background:var(--pink);color:#fff}
+.mbtn.mint{background:var(--mint)}
+.mbtn:hover{transform:translate(-3px,-3px) rotate(-.6deg);box-shadow:7px 7px 0 var(--line)}
+.mbtn[disabled]{opacity:.45;pointer-events:none}
+#menu .foot{font-size:clamp(10px,1.1vw,13px);color:#7a6e8f;margin-top:2%}
+#panel{position:absolute;inset:5% 5%;z-index:14;background:var(--paper);border:3px solid var(--line);border-radius:18px;box-shadow:8px 8px 0 var(--line);padding:2.6% 3.2%;overflow:auto;display:none;animation:pop2 .3s;font-size:clamp(11px,1.35vw,16px);line-height:1.5}
+#panel h2{font-family:var(--display);font-size:clamp(18px,2.8vw,36px);margin:0 0 .4em;color:var(--pink);text-shadow:2px 2px 0 var(--line);-webkit-text-stroke:1px var(--line)}
+#panel .x{position:sticky;top:0;float:right;font-family:var(--display);font-size:clamp(12px,1.4vw,17px);background:var(--sun);border:3px solid var(--line);border-radius:10px;padding:.2em .7em;box-shadow:3px 3px 0 var(--line);cursor:pointer}
+.profiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1.6%;clear:both}
+.prof{border:3px solid var(--line);border-radius:14px;background:#fff;overflow:hidden;box-shadow:3px 3px 0 var(--line);margin-bottom:6%}
+.prof .pic{height:clamp(80px,13vw,170px);overflow:hidden;border-bottom:3px solid var(--line)}
+.prof .pic svg{width:100%;height:auto;display:block;margin-top:-6%}
+.prof .inf{padding:.5em .7em .7em}
+.prof b{font-family:var(--display);font-size:1.2em}
+.prof .tg{display:inline-block;font-size:.72em;border:2px solid var(--line);border-radius:999px;padding:0 .55em;margin-left:.3em;vertical-align:middle}
+.prof p{margin:.3em 0 0;font-size:.88em}
+.ends{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2%;clear:both}
+.endc{border:3px solid var(--line);border-radius:14px;background:#fff;text-align:center;overflow:hidden;box-shadow:3px 3px 0 var(--line)}
+.endc .pic{height:clamp(70px,12vw,160px);overflow:hidden}
+.endc .pic svg{width:100%;height:auto;margin-top:-4%}
+.endc.lock .pic{filter:brightness(0) opacity(.25)}
+.endc .inf{padding:.4em .4em .6em;border-top:3px solid var(--line)}
+.endc b{font-family:var(--display);display:block}
+.rules li{margin:.35em 0}
+.seg{display:inline-flex;border:3px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:3px 3px 0 var(--line);margin:.3em 0 1em}
+.seg button{font-family:var(--display);font-size:1em;border:0;border-right:3px solid var(--line);background:#fff;padding:.3em .9em;cursor:pointer;color:var(--ink)}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--pink);color:#fff}
+.pbtn{font-family:var(--display);font-size:1.05em;background:var(--pink);color:#fff;border:3px solid var(--line);border-radius:12px;padding:.35em 1.1em;box-shadow:3px 3px 0 var(--line);cursor:pointer;margin:.2em .5em .2em 0}
+.pbtn.alt{background:var(--mint);color:var(--ink)}.pbtn.ghost{background:#fff;color:var(--ink)}
+#panel textarea{width:100%;height:9em;font-family:Menlo,monospace;font-size:.75em;border:3px solid var(--line);border-radius:10px;padding:.6em;margin-top:.6em;background:#fff}
+#panel .msg{font-weight:700;color:#2e9e5b;min-height:1.4em;margin:.3em 0}
+#panel input.nm{font-family:var(--body);font-size:1.3em;padding:.4em .8em;border:3px solid var(--line);border-radius:12px;box-shadow:3px 3px 0 var(--line);width:min(340px,70%);margin:.4em .6em .8em 0}
+#pause{position:absolute;inset:0;z-index:11;display:none;align-items:center;justify-content:center;background:rgba(43,35,64,.4)}
+#pause .sheet{background:var(--paper);border:3px solid var(--line);border-radius:18px;box-shadow:8px 8px 0 var(--line);padding:2.4% 3%;display:flex;flex-direction:column;gap:10px;min-width:30%;transform:rotate(-1deg);animation:pop2 .3s}
+#pause h3{font-family:var(--display);margin:0 0 .2em;font-size:clamp(18px,2.4vw,30px);color:var(--pink);-webkit-text-stroke:1px var(--line);text-shadow:2px 2px 0 var(--line)}
+@media print{#hud,#choices,#next{display:none}#game{position:static}html,body{overflow:visible}}
+</style>
+</head>
+<body>
+<div id="game">
+  <div id="stage">
+    <div id="bg"></div>
+    <div id="cast"></div>
+    <div id="fx"></div>
+    <div id="chapter"></div>
+    <div id="rankboard"></div>
+    <div id="hud"><button class="hbtn" id="rbtn">Ranking</button><button class="hbtn" id="jbtn">Notebook</button><button class="hbtn" id="tbtn">Menu</button></div>
+    <div id="pause"></div>
+    <div id="menu"></div>
+    <div id="panel"></div>
+    <div id="journal"></div>
+    <div id="choices"></div>
+    <div id="box"><div id="name"></div><div id="text"></div><div id="next">▼</div></div>
+  </div>
+</div>
+<script>
+// ---------- CHARACTER ART ----------
+const CHARS = {
+  natan:  {name:'Natan',  color:'#2c3e78', skin:'#f2c7a5', hair:'#5a3a22', hs:'curly',  eye:'#6b4a2b', top:'varsity', tc:'#2c3e78', tc2:'#f3ead6', fw:1, bw:1.05},
+  lars:   {name:'Lars',   color:'#3d8fe0', skin:'#f7dcc8', hair:'#8a5a34', hs:'curly',  eye:'#3d8fe0', top:'shirt',   tc:'#ffffff', tc2:'#dfe8f5', fw:.96, bw:.92},
+  adam:   {name:'Adam',   color:'#2f8f8a', skin:'#eac09c', hair:'#3b2a1e', hs:'neat',   eye:'#3fa85a', top:'zip',     tc:'#2f8f8a', tc2:'#e9f6f3', fw:1, bw:1},
+  fionn:  {name:'Fionn',  color:'#2e9e5b', skin:'#f8dfcf', hair:'#16131a', hs:'short',  eye:'#1c1418', top:'jersey',  tc:'#2e9e5b', tc2:'#ffffff', fw:1.13, bw:1.2, num:'9', braces:true},
+  milo:   {name:'Milo',   color:'#1d1a24', skin:'#fae6d8', hair:'#1d1a24', hs:'down',   eye:'#5b3a29', top:'coat',    tc:'#c49a6c', tc2:'#1f1c26', fw:1, bw:1, buds:true},
+  daniel: {name:'Daniel', color:'#d2343f', skin:'#c99a6e', hair:'#1b1612', hs:'short',  eye:'#3b2616', top:'jersey',  tc:'#d2343f', tc2:'#ffffff', fw:1, bw:1.05, num:'10'},
+  josh:   {name:'Josh',   color:'#f08a3c', skin:'#f4cdb0', hair:'#b98a4e', hs:'messy',  eye:'#6d8a9c', top:'hoodie',  tc:'#f08a3c', tc2:'#ffd9b8', fw:1, bw:1},
+  reshman:{name:'Reshman',color:'#b8860b', skin:'#6b4430', hair:'#15110e', hs:'fade',   eye:'#2e1d14', top:'jacket',  tc:'#e6b23a', tc2:'#2b2340', fw:1, bw:1.06, shades:true},
+  officer:{name:'Officer Pim',color:'#2a4d8f', skin:'#e8b996', hair:'#4a4a4a', hs:'short', eye:'#3a3a3a', top:'police', tc:'#2a4d8f', tc2:'#ffffff', fw:1.05, bw:1.12, cap:true},
+};
+const L='#2b2340';
+
+function curlRing(cx,cy,r,a0,a1,step,cr,fill){
+  let s='';
+  for(let a=a0;a<=a1;a+=step){const t=a*Math.PI/180;
+    s+=`<circle cx="${(cx+Math.cos(t)*r).toFixed(1)}" cy="${(cy+Math.sin(t)*r).toFixed(1)}" r="${cr}" fill="${fill}" stroke="${L}" stroke-width="3"/>`;}
+  return s;
+}
+function hairBack(c,form){
+  const h=c.hair, w=58*c.fw;
+  if(c.hs==='curly'){
+    let s=`<ellipse cx="150" cy="150" rx="${w+14}" ry="78" fill="${h}" stroke="${L}" stroke-width="3"/>`;
+    s+=curlRing(150,160,w+12,160,380,16,22,h);
+    if(form==='girl'){ for(let y=200;y<=330;y+=26){s+=`<circle cx="${150-w-12}" cy="${y}" r="24" fill="${h}" stroke="${L}" stroke-width="3"/><circle cx="${150+w+12}" cy="${y}" r="24" fill="${h}" stroke="${L}" stroke-width="3"/>`;}
+      s+=`<rect x="${150-w-30}" y="190" width="${2*w+60}" height="140" rx="40" fill="${h}"/>`;}
+    return s;
+  }
+  if(c.hs==='neat') return `<path d="M${150-w-6} 190 C${150-w-10} 90 ${150+w+10} 90 ${150+w+6} 190 Z" fill="${h}" stroke="${L}" stroke-width="3"/>`;
+  if(c.hs==='styled') return `<path d="M${150-w-4} 185 C${150-w-8} 100 ${150+w+8} 100 ${150+w+4} 185 Z" fill="${h}" stroke="${L}" stroke-width="3"/>`;
+  if(c.hs==='down') return `<path d="M${150-w-8} 205 C${150-w-14} 92 ${150+w+14} 92 ${150+w+8} 205 L${150+w-4} 205 L${150-w+4} 205Z" fill="${h}" stroke="${L}" stroke-width="3"/>`;
+  if(c.hs==='messy') return `<path d="M${150-w-8} 190 L${150-w-14} 130 L${150-w+6} 118 L${150-w+10} 88 L150 96 L${150+w-10} 82 L${150+w+4} 116 L${150+w+16} 130 L${150+w+8} 190 Z" fill="${h}" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>`;
+  return `<path d="M${150-w-3} 180 C${150-w-6} 98 ${150+w+6} 98 ${150+w+3} 180 Z" fill="${h}" stroke="${L}" stroke-width="3"/>`;
+}
+function hairFront(c,form){
+  const h=c.hair, w=58*c.fw;
+  if(c.hs==='down'){
+    // straight fringe falling down over the forehead, no side part
+    let tips='';
+    for(let i=8;i>=0;i--){const x=150-w-2+i*((2*w+4)/8); tips+=` L${x.toFixed(1)} ${i%2?168:156}`;}
+    return `<path d="M${150-w-4} 175 C${150-w-6} 104 ${150+w+6} 104 ${150+w+4} 175${tips} Z" fill="${h}" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>`
+      +`<path d="M${150-22} 116 L${150-26} 152 M150 112 L150 150 M${150+22} 116 L${150+26} 152" stroke="#3a3446" stroke-width="2.5" fill="none" stroke-linecap="round"/>`;
+  }
+  if(c.hs==='curly'){
+    let s='';
+    for(let i=0;i<6;i++){const x=150-w+14+i*((2*w-28)/5); s+=`<circle cx="${x.toFixed(1)}" cy="${118+(i%2)*8}" r="19" fill="${h}" stroke="${L}" stroke-width="3"/>`;}
+    s+=`<circle cx="${150-w+2}" cy="150" r="16" fill="${h}" stroke="${L}" stroke-width="3"/><circle cx="${150+w-2}" cy="150" r="16" fill="${h}" stroke="${L}" stroke-width="3"/>`;
+    return s;
+  }
+  if(c.hs==='neat') return `<path d="M${150-w-4} 160 C${150-w} 105 ${150+w} 100 ${150+w+4} 150 C${150+20} 128 ${150-20} 120 ${150-w-4} 160 Z" fill="${h}" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>`;
+  if(c.hs==='styled') return `<path d="M${150-w-2} 160 C${150-w} 100 ${150-10} 66 ${150+w+14} 92 C${150+w+6} 112 ${150+w+4} 140 ${150+w+2} 158 C${150+20} 120 ${150-20} 122 ${150-w-2} 160 Z" fill="${h}" stroke="${L}" stroke-width="3" stroke-linejoin="round"/><path d="M${150-10} 92 C150 100 160 110 168 124" stroke="#4a4458" stroke-width="3" fill="none"/>`;
+  if(c.hs==='messy') return `<path d="M${150-w} 155 L${150-w+12} 118 L${150-20} 136 L${150-6} 112 L${150+12} 134 L${150+28} 110 L${150+w-4} 128 L${150+w+2} 155 C${150+w-10} 120 ${150-w+10} 120 ${150-w} 155Z" fill="${h}" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>`;
+  if(c.hs==='fade') return `<path d="M${150-w+2} 150 C${150-w} 112 ${150+w} 112 ${150+w-2} 150 C${150+20} 130 ${150-20} 130 ${150-w+2} 150Z" fill="${h}" stroke="${L}" stroke-width="3"/>`;
+  return `<path d="M${150-w-1} 158 C${150-w+4} 110 ${150+w-4} 106 ${150+w+1} 158 C${150+30} 128 ${150-10} 140 ${150-w-1} 158Z" fill="${h}" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>`;
+}
+function body(c,form){
+  const k=c.bw, X=v=>(150+(v-150)*k).toFixed(1);
+  const sh=`M${X(30)} 520 C${X(34)} 360 ${X(80)} 312 150 306 C${X(220)} 312 ${X(266)} 360 ${X(270)} 520 Z`;
+  let s=`<rect x="130" y="228" width="40" height="${form==='girl'?70:62}" fill="${c.skin}" stroke="${L}" stroke-width="3"/>`;
+  s+=`<path d="${sh}" fill="${c.tc}" stroke="${L}" stroke-width="3"/>`;
+  switch(c.top){
+    case 'varsity':
+      s+=`<path d="M${X(30)} 520 C${X(34)} 360 ${X(70)} 318 ${X(96)} 312 L${X(84)} 520Z M${X(270)} 520 C${X(266)} 360 ${X(230)} 318 ${X(204)} 312 L${X(216)} 520Z" fill="${c.tc2}" stroke="${L}" stroke-width="3"/>`;
+      s+=`<path d="M122 306 L150 345 L178 306" fill="#fff" stroke="${L}" stroke-width="3"/><line x1="150" y1="345" x2="150" y2="520" stroke="${L}" stroke-width="3"/>`;
+      s+=`<text x="${X(112)}" y="415" font-family="Georgia" font-weight="bold" font-size="46" fill="${c.tc2}" stroke="${L}" stroke-width="2" text-anchor="middle">W</text>`;
+      break;
+    case 'shirt':
+      s+=`<path d="M118 304 L150 336 L134 350 Z M182 304 L150 336 L166 350 Z" fill="#fff" stroke="${L}" stroke-width="3" stroke-linejoin="round"/><line x1="150" y1="336" x2="150" y2="520" stroke="#c9d4e6" stroke-width="3"/>`;
+      for(let y=370;y<500;y+=40) s+=`<circle cx="156" cy="${y}" r="3.5" fill="#c9d4e6"/>`;
+      s+=`<path d="M${X(70)} 520 C${X(72)} 440 ${X(80)} 400 ${X(86)} 380" stroke="#dfe8f5" stroke-width="4" fill="none"/>`;
+      break;
+    case 'zip':
+      s+=`<path d="M128 306 L150 300 L172 306 L172 334 L150 340 L128 334Z" fill="${c.tc}" stroke="${L}" stroke-width="3"/><line x1="150" y1="320" x2="150" y2="520" stroke="${c.tc2}" stroke-width="4"/><rect x="146" y="344" width="8" height="14" rx="2" fill="#ddd" stroke="${L}" stroke-width="2"/>`;
+      s+=`<path d="M${X(60)} 400 L${X(240)} 400" stroke="${c.tc2}" stroke-width="6"/>`;
+      break;
+    case 'jersey':
+      s+=`<path d="M124 307 C136 330 164 330 176 307" fill="none" stroke="${c.tc2}" stroke-width="7"/>`;
+      s+=`<text x="150" y="450" font-family="Impact,Arial Black" font-size="${c.num.length>1?70:84}" fill="${c.tc2}" stroke="${L}" stroke-width="2.5" text-anchor="middle">${c.num}</text>`;
+      break;
+    case 'coat':
+      s+=`<path d="M128 302 L150 296 L172 302 L176 350 L150 356 L124 350Z" fill="${c.tc2}" stroke="${L}" stroke-width="3"/>`;
+      s+=`<path d="M124 306 L108 380 L150 520 L120 520 L${X(70)} 520 Z M176 306 L192 380 L150 520 L180 520 L${X(230)} 520Z" fill="${c.tc}" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>`;
+      s+=`<path d="M150 356 L150 520" stroke="${c.tc2}" stroke-width="40"/><path d="M116 330 L100 390 L126 372Z M184 330 L200 390 L174 372Z" fill="#a37d55" stroke="${L}" stroke-width="2.5"/>`;
+      break;
+    case 'hoodie':
+      s+=`<path d="M100 318 C110 290 190 290 200 318 C185 338 115 338 100 318Z" fill="${c.tc2}" stroke="${L}" stroke-width="3"/><line x1="138" y1="330" x2="134" y2="380" stroke="${L}" stroke-width="3"/><line x1="162" y1="330" x2="166" y2="380" stroke="${L}" stroke-width="3"/>`;
+      s+=`<path d="M100 440 L200 440 L190 500 L110 500Z" fill="none" stroke="${L}" stroke-width="3" opacity=".5"/>`;
+      break;
+    case 'jacket':
+      s+=`<path d="M126 306 L150 330 L174 306 L172 520 L128 520Z" fill="#fff" stroke="${L}" stroke-width="3"/><path d="M126 306 L112 360 L136 380 L150 330Z M174 306 L188 360 L164 380 L150 330Z" fill="${c.tc}" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>`;
+      s+=`<path d="M138 300 L162 300 L156 320 L144 320Z" fill="#c9a227" stroke="${L}" stroke-width="2"/>`;
+      break;
+    case 'police':
+      s+=`<path d="M124 307 L150 336 L176 307" fill="#fff" stroke="${L}" stroke-width="3"/><path d="M146 336 L154 336 L156 400 L150 410 L144 400Z" fill="#1a1a2e"/><path d="M190 370 L214 370 L214 398 L202 408 L190 398Z" fill="#ffd34d" stroke="${L}" stroke-width="2.5"/>`;
+      break;
+  }
+  return s;
+}
+function face(c,expr,form){
+  const w=58*c.fw, ex=30*c.fw;
+  let s=`<ellipse cx="${150-w+2}" cy="190" rx="10" ry="15" fill="${c.skin}" stroke="${L}" stroke-width="3"/><ellipse cx="${150+w-2}" cy="190" rx="10" ry="15" fill="${c.skin}" stroke="${L}" stroke-width="3"/>`;
+  s+=`<ellipse cx="150" cy="178" rx="${w}" ry="${c.fw>1.05?70:68}" fill="${c.skin}" stroke="${L}" stroke-width="3"/>`;
+  if(c.fw>1.05) s+=`<ellipse cx="${150-w+18}" cy="214" rx="12" ry="7" fill="#f2a58e" opacity=".35"/><ellipse cx="${150+w-18}" cy="214" rx="12" ry="7" fill="#f2a58e" opacity=".35"/>`;
+  const eyes=(dx)=>{
+    const x=150+dx, y=188;
+    if(expr==='grin'||expr==='happy') return `<path d="M${x-12} ${y+3} Q${x} ${y-12} ${x+12} ${y+3}" stroke="${L}" stroke-width="4" fill="none" stroke-linecap="round"/>`;
+    const big=expr==='surprised'?1.18:1;
+    let e=`<ellipse cx="${x}" cy="${y}" rx="${12*big}" ry="${15*big}" fill="#fff" stroke="${L}" stroke-width="3"/>`;
+    e+=`<circle cx="${x}" cy="${y+2}" r="${9.5*big}" fill="${c.eye}"/><circle cx="${x}" cy="${y+2}" r="${4.5*big}" fill="${L}"/><circle cx="${x+3.5}" cy="${y-3}" r="3" fill="#fff"/>`;
+    if(expr==='smirk'||expr==='angry') e+=`<path d="M${x-14} ${y-10} L${x+14} ${y-10} L${x+14} ${y-20} L${x-14} ${y-20}Z" fill="${c.skin}"/><line x1="${x-13}" y1="${y-9}" x2="${x+13}" y2="${y-9}" stroke="${L}" stroke-width="3"/>`;
+    if(form==='girl') e+=`<path d="M${x+(dx<0?-12:12)} ${y-8} l${dx<0?-7:7} -5" stroke="${L}" stroke-width="3" stroke-linecap="round"/>`;
+    if(c.shades) {}
+    return e;
+  };
+  s+=eyes(-ex)+eyes(ex);
+  // brows
+  const bc=c.hs==='curly'||c.hs==='short'?c.hair:L;
+  const brow=(dx,side)=>{const x=150+dx,y=164; let a=0;
+    if(expr==='angry') a=side*7; else if(expr==='sad'||expr==='shy') a=-side*6; else if(expr==='surprised') return `<path d="M${x-12} ${y-6} Q${x} ${y-14} ${x+12} ${y-6}" stroke="${bc}" stroke-width="5" fill="none" stroke-linecap="round"/>`;
+    return `<line x1="${x-12}" y1="${y+(side<0?-a:a)*0}${''}" x2="${x+12}" y2="${y}" stroke="${bc}" stroke-width="5" stroke-linecap="round" transform="rotate(${a} ${x} ${y})"/>`;};
+  s+=brow(-ex,-1)+brow(ex,1);
+  s+=`<path d="M148 204 Q152 212 146 214" stroke="${L}" stroke-width="2.5" fill="none" stroke-linecap="round"/>`;
+  const m={
+    neutral:`<path d="M138 232 Q150 236 162 232" stroke="${L}" stroke-width="3.5" fill="none" stroke-linecap="round"/>`,
+    smile:`<path d="M134 228 Q150 244 166 228" stroke="${L}" stroke-width="3.5" fill="none" stroke-linecap="round"/>`,
+    grin:`<path d="M132 226 Q150 254 168 226 Z" fill="#fff" stroke="${L}" stroke-width="3.5" stroke-linejoin="round"/><path d="M140 240 Q150 248 160 240" fill="#ff8fa8"/>`,
+    happy:`<path d="M134 228 Q150 246 166 228" stroke="${L}" stroke-width="3.5" fill="none" stroke-linecap="round"/>`,
+    blush:`<path d="M140 232 Q150 238 160 232" stroke="${L}" stroke-width="3.5" fill="none" stroke-linecap="round"/>`,
+    shy:`<path d="M142 234 Q150 230 158 234" stroke="${L}" stroke-width="3.5" fill="none" stroke-linecap="round"/>`,
+    sad:`<path d="M136 238 Q150 228 164 238" stroke="${L}" stroke-width="3.5" fill="none" stroke-linecap="round"/>`,
+    surprised:`<ellipse cx="150" cy="236" rx="9" ry="11" fill="#7a2d3c" stroke="${L}" stroke-width="3"/>`,
+    angry:`<path d="M136 238 Q150 228 164 238" stroke="${L}" stroke-width="4" fill="none" stroke-linecap="round"/>`,
+    smirk:`<path d="M138 234 Q154 236 166 224" stroke="${L}" stroke-width="3.5" fill="none" stroke-linecap="round"/>`,
+  };
+  if(c.braces && ['smile','grin','happy','angry','surprised','smirk'].includes(expr)){
+    // open mouth showing teeth with braces
+    s+=`<path d="M132 226 Q150 252 168 226 Z" fill="#fff" stroke="${L}" stroke-width="3.5" stroke-linejoin="round"/>`
+     +`<line x1="135" y1="231" x2="165" y2="231" stroke="#9aa3b5" stroke-width="2.5"/>`
+     +[139,145,151,157,162].map(x=>`<rect x="${x-2}" y="228.5" width="4.5" height="5" fill="#c7cedb" stroke="#7d869a" stroke-width="1"/>`).join('');
+  } else s+=m[expr]||m.neutral;
+  if(expr==='blush'||expr==='shy'||expr==='happy'){s+=`<g fill="#ff6f9f" opacity=".45"><ellipse cx="${150-ex-6}" cy="214" rx="15" ry="8"/><ellipse cx="${150+ex+6}" cy="214" rx="15" ry="8"/></g><g stroke="#ff6f9f" stroke-width="2" opacity=".7"><line x1="${150-ex-14}" y1="210" x2="${150-ex-18}" y2="218"/><line x1="${150-ex-4}" y1="210" x2="${150-ex-8}" y2="218"/><line x1="${150+ex+4}" y1="210" x2="${150+ex}" y2="218"/><line x1="${150+ex+14}" y1="210" x2="${150+ex+10}" y2="218"/></g>`;}
+  if(expr==='angry') s+=`<path d="M${150+w-10} 120 l10 -8 m-4 14 l12 -4 m-16 -6 l4 -12" stroke="#e8364f" stroke-width="4" stroke-linecap="round"/>`;
+  return s;
+}
+function extras(c){
+  const w=58*c.fw;let s='';
+  if(c.buds) s+=`<circle cx="${150-w-2}" cy="196" r="7" fill="#fff" stroke="${L}" stroke-width="2.5"/><path d="M${150-w-2} 203 C${150-w-6} 260 120 290 140 320" stroke="#fff" stroke-width="2.5" fill="none"/>`;
+  if(c.shades) s+=`<g transform="translate(0,-8)"><rect x="104" y="112" width="38" height="20" rx="8" fill="${L}"/><rect x="158" y="112" width="38" height="20" rx="8" fill="${L}"/><line x1="142" y1="120" x2="158" y2="120" stroke="${L}" stroke-width="4"/><line x1="110" y1="116" x2="120" y2="116" stroke="#fff" stroke-width="3" opacity=".6"/></g>`;
+  if(c.cap) s+=`<path d="M${150-w-6} 132 C${150-w} 70 ${150+w} 70 ${150+w+6} 132 Z" fill="#2a4d8f" stroke="${L}" stroke-width="3"/><path d="M${150-w-10} 132 L${150+w+16} 132 L${150+w+30} 144 L${150-w-6} 144Z" fill="#1a1a2e" stroke="${L}" stroke-width="3"/><path d="M142 96 L150 88 L158 96 L150 108Z" fill="#ffd34d" stroke="${L}" stroke-width="2"/>`;
+  return s;
+}
+function portrait(id,expr='neutral',form){
+  const c=CHARS[id];
+  return `<svg viewBox="0 0 300 500" xmlns="http://www.w3.org/2000/svg">${hairBack(c,form)}${body(c,form)}${face(c,expr,form)}${hairFront(c,form)}${extras(c)}</svg>`;
+}
+
+// ---------- BACKGROUNDS ----------
+const S=(inner,sky)=>`<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
+const st=`stroke="${L}" stroke-width="5" stroke-linejoin="round"`;
+function windowRow(y,h,n,x0,gap,w,tint){let s='';for(let i=0;i<n;i++){const x=x0+i*gap;s+=`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="10" fill="${tint}" ${st}/><line x1="${x+w/2}" y1="${y}" x2="${x+w/2}" y2="${y+h}" ${st}/><line x1="${x}" y1="${y+h/2}" x2="${x+w}" y2="${y+h/2}" ${st}/>`;}return s;}
+function catSvg(x,y,col,sc=1){return `<g transform="translate(${x},${y}) scale(${sc})"><ellipse cx="0" cy="0" rx="46" ry="30" fill="${col}" ${st}/><circle cx="38" cy="-30" r="26" fill="${col}" ${st}/><path d="M20 -48 L24 -72 L38 -54Z M46 -54 L58 -72 L60 -46Z" fill="${col}" ${st}/><circle cx="32" cy="-32" r="3.5" fill="${L}"/><circle cx="48" cy="-32" r="3.5" fill="${L}"/><path d="M-44 -6 C-80 -20 -70 -60 -54 -50" fill="none" stroke="${col}" stroke-width="12" stroke-linecap="round"/></g>`;}
+const BG={
+  gate:()=>S(`<rect width="1600" height="900" fill="#bfe3ff"/><circle cx="1360" cy="150" r="80" fill="#ffe38a" ${st}/>
+    <ellipse cx="300" cy="140" rx="120" ry="40" fill="#fff" opacity=".9"/><ellipse cx="900" cy="100" rx="150" ry="36" fill="#fff" opacity=".9"/>
+    <rect x="300" y="250" width="1000" height="460" fill="#f7cfa8" ${st}/><path d="M260 260 L800 120 L1340 260Z" fill="#e8706b" ${st}/>
+    ${windowRow(320,110,6,350,160,110,'#d9f0ff')}${windowRow(480,110,6,350,160,110,'#d9f0ff')}
+    <rect x="720" y="560" width="160" height="150" fill="#8c5a3c" ${st}/><rect x="650" y="200" width="300" height="70" rx="12" fill="#fff8ee" ${st}/>
+    <text x="800" y="248" font-family="Chalkboard SE,Marker Felt,cursive" font-size="44" text-anchor="middle" fill="${L}">WidR School</text>
+    <rect y="700" width="1600" height="200" fill="#9fdc8a" ${st}/><path d="M640 900 L720 710 L880 710 L960 900Z" fill="#e9dcc7" ${st}/>
+    <circle cx="160" cy="600" r="110" fill="#ff9fc2" ${st}/><rect x="145" y="640" width="30" height="80" fill="#8c5a3c" ${st}/><circle cx="1460" cy="590" r="120" fill="#ffb3cf" ${st}/><rect x="1445" y="640" width="30" height="80" fill="#8c5a3c" ${st}/>`),
+  classroom:()=>S(`<rect width="1600" height="900" fill="#fff1dc"/><rect y="650" width="1600" height="250" fill="#e2b98a" ${st}/>
+    <rect x="300" y="120" width="760" height="330" rx="10" fill="#3f6d5a" ${st}/><rect x="285" y="440" width="790" height="22" fill="#c99a6b" ${st}/>
+    <text x="340" y="200" font-family="Chalkboard SE,cursive" font-size="40" fill="#fff" opacity=".85">Welcome to 5vb VWO!</text>
+    <text x="340" y="270" font-family="Chalkboard SE,cursive" font-size="30" fill="#fff" opacity=".6">Rankingland History: Ch. 4</text>
+    ${windowRow(120,280,2,1150,200,160,'#cfeaff')}
+    <rect x="80" y="160" width="160" height="200" fill="#fff" ${st}/><circle cx="160" cy="240" r="50" fill="#ffd34d" ${st}/>
+    <g>${[200,600,1000,1400].map(x=>`<rect x="${x-130}" y="700" width="260" height="40" fill="#f7d39b" ${st}/><rect x="${x-110}" y="740" width="20" height="160" fill="#9c6b44"/><rect x="${x+90}" y="740" width="20" height="160" fill="#9c6b44"/>`).join('')}</g>`),
+  hallway:()=>S(`<rect width="1600" height="900" fill="#ffe6ee"/><rect y="680" width="1600" height="220" fill="#d7c7e8" ${st}/>
+    ${[100,350,600,850,1100,1350].map(x=>`<rect x="${x}" y="300" width="160" height="390" rx="8" fill="#8ec5ff" ${st}/><rect x="${x+20}" y="330" width="120" height="16" rx="4" fill="#5c8fd1"/><rect x="${x+20}" y="360" width="120" height="16" rx="4" fill="#5c8fd1"/><circle cx="${x+130}" cy="500" r="8" fill="${L}"/>`).join('')}
+    <rect x="0" y="60" width="1600" height="60" fill="#ffc94d" ${st}/><text x="800" y="104" font-family="Chalkboard SE,cursive" font-size="36" text-anchor="middle" fill="${L}">★ WidR Autumn Festival in 3 weeks! ★</text>`),
+  cafeteria:()=>S(`<rect width="1600" height="900" fill="#fff4c7"/><rect y="620" width="1600" height="280" fill="#f5b971" ${st}/>
+    <rect x="0" y="0" width="1600" height="90" fill="#ff6f9f"/><path d="${Array.from({length:17},(_,i)=>`M${i*100} 90 Q${i*100+50} 150 ${i*100+100} 90`).join(' ')}" fill="#ff6f9f" ${st}/>
+    <rect x="200" y="300" width="1200" height="200" rx="16" fill="#fff" ${st}/><text x="800" y="380" font-family="Chalkboard SE,cursive" font-size="48" text-anchor="middle" fill="${L}">TODAY: Stroopwafel Day</text>
+    <text x="800" y="450" font-family="Chalkboard SE,cursive" font-size="30" text-anchor="middle" fill="#7a6e8f">(again)</text>
+    ${[300,800,1300].map(x=>`<ellipse cx="${x}" cy="700" rx="200" ry="40" fill="#fff" ${st}/>`).join('')}`),
+  field:()=>S(`<rect width="1600" height="900" fill="#ffd9a8"/><circle cx="1300" cy="260" r="110" fill="#ff9f6b" ${st}/>
+    <rect y="520" width="1600" height="380" fill="#7fcf6e" ${st}/><path d="M400 900 L800 560 L1200 900Z" fill="#d9a066" ${st}/>
+    <path d="M760 720 L840 720 L840 760 L800 790 L760 760Z" fill="#fff" ${st}/>
+    <rect x="80" y="340" width="40" height="190" fill="#fff" ${st}/><rect x="40" y="320" width="300" height="160" fill="none" stroke="#fff" stroke-width="8"/>
+    <path d="M0 520 ${Array.from({length:20},(_,i)=>`L${i*85} ${500-(i%2)*14}`).join(' ')} L1600 520Z" fill="#5fb85a"/>`),
+  library:()=>S(`<rect width="1600" height="900" fill="#f3e3c8"/><rect y="700" width="1600" height="200" fill="#a8744a" ${st}/>
+    ${[60,460,860,1260].map(x=>`<rect x="${x}" y="100" width="300" height="600" fill="#8c5a3c" ${st}/>${[160,300,440,580].map(y=>`<rect x="${x}" y="${y}" width="300" height="12" fill="${L}"/>${Array.from({length:9},(_,i)=>`<rect x="${x+10+i*31}" y="${y-100+((i*7)%30)}" width="26" height="${100-((i*7)%30)}" fill="${['#ff6f9f','#7fd6c2','#ffc94d','#8ec5ff','#c9a0ff'][(i+y)%5]}" stroke="${L}" stroke-width="3"/>`).join('')}`).join('')}`).join('')}
+    <ellipse cx="800" cy="760" rx="380" ry="50" fill="#d39a64" ${st}/><circle cx="560" cy="700" r="40" fill="#ffe38a" opacity=".6"/>`),
+  catcafe:()=>S(`<rect width="1600" height="900" fill="#ffe8f0"/><rect y="640" width="1600" height="260" fill="#f7cba0" ${st}/>
+    <rect x="100" y="120" width="560" height="320" rx="20" fill="#d9f0ff" ${st}/><path d="M100 120 Q380 220 660 120" fill="#ff9fc2" ${st}/>
+    <rect x="900" y="150" width="520" height="90" rx="14" fill="#fff8ee" ${st}/><text x="1160" y="210" font-family="Chalkboard SE,cursive" font-size="44" text-anchor="middle" fill="${L}">Pawsome Café 🐾</text>
+    <rect x="980" y="420" width="300" height="40" fill="#e8a8c0" ${st}/><rect x="1000" y="460" width="40" height="190" fill="#c48aa0" ${st}/><rect x="1220" y="460" width="40" height="190" fill="#c48aa0" ${st}/>
+    ${catSvg(1120,390,'#ffb36b',.9)}${catSvg(260,720,'#fff',.9)}${catSvg(1400,720,'#6b6b7a',.9)}${catSvg(560,400,'#2b2340',.7)}`),
+  gym:()=>S(`<rect width="1600" height="900" fill="#e6f4ff"/><rect y="560" width="1600" height="340" fill="#f2c98c" ${st}/>
+    ${Array.from({length:8},(_,i)=>`<line x1="${i*220}" y1="560" x2="${i*220-120}" y2="900" stroke="#d9ac6c" stroke-width="4"/>`).join('')}
+    <rect x="460" y="560" width="680" height="30" fill="#2f8f8a" ${st}/><line x1="800" y1="540" x2="800" y2="590" stroke="${L}" stroke-width="6"/><rect x="560" y="590" width="20" height="160" fill="${L}"/><rect x="1020" y="590" width="20" height="160" fill="${L}"/>
+    <rect x="200" y="80" width="1200" height="40" fill="#ffc94d" ${st}/><text x="800" y="113" font-family="Chalkboard SE,cursive" font-size="30" text-anchor="middle" fill="${L}">WidR Table Tennis Club</text>
+    ${windowRow(160,200,5,220,250,180,'#fff')}<circle cx="900" cy="500" r="16" fill="#fff" ${st}/>`),
+  rooftop:()=>S(`<defs><linearGradient id="sun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9fc2"/><stop offset="1" stop-color="#ffd38a"/></linearGradient></defs><rect width="1600" height="900" fill="url(#sun)"/>
+    <circle cx="1200" cy="520" r="140" fill="#fff1a8" ${st}/>
+    ${[0,180,330,520,700,900,1060,1250,1420].map((x,i)=>`<rect x="${x}" y="${420+(i*53)%160}" width="160" height="500" fill="${['#c9a0ff','#8ec5ff','#b8a4e8'][i%3]}" ${st}/>`).join('')}
+    <rect y="680" width="1600" height="220" fill="#cfc3e0" ${st}/>${Array.from({length:17},(_,i)=>`<line x1="${i*100}" y1="560" x2="${i*100}" y2="680" ${st}/>`).join('')}<line x1="0" y1="580" x2="1600" y2="580" ${st}/>`),
+  rain:()=>S(`<rect width="1600" height="900" fill="#b9c6dd"/><rect y="640" width="1600" height="260" fill="#8c95a8" ${st}/>
+    <rect x="200" y="200" width="480" height="440" fill="#d7c7e8" ${st}/><rect x="920" y="160" width="520" height="480" fill="#c4d8ee" ${st}/>
+    <rect x="980" y="440" width="400" height="200" fill="#ffe38a" ${st}/><text x="1180" y="400" font-family="Chalkboard SE,cursive" font-size="40" text-anchor="middle" fill="${L}">Bus Stop</text>
+    ${Array.from({length:70},(_,i)=>`<line x1="${(i*137)%1600}" y1="${(i*89)%900}" x2="${(i*137)%1600-14}" y2="${(i*89)%900+40}" stroke="#fff" stroke-width="4" opacity=".7"/>`).join('')}`),
+  party:(nb)=>S(`<rect width="1600" height="900" fill="#fff0d1"/><rect y="660" width="1600" height="240" fill="#c99a6b" ${st}/>
+    <path d="M0 80 ${Array.from({length:9},(_,i)=>`Q${i*200+100} 180 ${i*200+200} 80`).join(' ')}" fill="none" ${st}/>
+    ${Array.from({length:16},(_,i)=>`<path d="M${i*100+30} ${100+Math.abs(Math.sin(i*.8))*50} l30 0 l-15 50Z" fill="${['#ff6f9f','#7fd6c2','#ffc94d','#8ec5ff'][i%4]}" stroke="${L}" stroke-width="3"/>`).join('')}
+    <rect x="160" y="300" width="460" height="300" rx="20" fill="#2b2340" ${st}/><rect x="180" y="320" width="420" height="260" rx="10" fill="#7fd6c2"/><text x="390" y="470" font-family="Impact,Arial Black" font-size="48" text-anchor="middle" fill="${L}">GOAL!!</text>
+    <rect x="900" y="480" width="560" height="180" rx="40" fill="#ff9fc2" ${st}/><rect x="880" y="420" width="600" height="80" rx="30" fill="#ffb3cf" ${st}/>
+    ${nb?'':`<text x="1180" y="300" font-family="Chalkboard SE,cursive" font-size="48" text-anchor="middle" fill="${L}">End-of-Term Party @ Fionn's</text>`}`),
+  night:()=>S(`<rect width="1600" height="900" fill="#3d3a6b"/>${Array.from({length:40},(_,i)=>`<circle cx="${(i*173)%1600}" cy="${(i*61)%400}" r="${2+i%3}" fill="#fff"/>`).join('')}
+    <circle cx="1300" cy="160" r="70" fill="#fff4c7" ${st}/><rect x="260" y="300" width="700" height="400" fill="#ffd3e2" ${st}/><path d="M220 310 L610 120 L1000 310Z" fill="#7a5c9e" ${st}/>
+    ${windowRow(380,140,3,320,220,150,'#ffe38a')}<rect y="700" width="1600" height="200" fill="#5c6e5a" ${st}/><rect x="0" y="760" width="1600" height="80" fill="#7a7a8a"/>
+    <rect x="1240" y="380" width="20" height="340" fill="${L}"/><circle cx="1250" cy="370" r="30" fill="#ffe38a" ${st}/>`),
+  sunset:()=>S(`<defs><linearGradient id="ss" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb3cf"/><stop offset=".6" stop-color="#ffd38a"/><stop offset="1" stop-color="#ffeec2"/></linearGradient></defs><rect width="1600" height="900" fill="url(#ss)"/>
+    <circle cx="800" cy="620" r="200" fill="#fff1a8" ${st}/><rect y="620" width="1600" height="280" fill="#8ec5ff" ${st}/>
+    ${Array.from({length:8},(_,i)=>`<path d="M${i*200+40} ${700+i%2*40} q40 -12 80 0" stroke="#fff" stroke-width="5" fill="none"/>`).join('')}
+    <rect y="800" width="1600" height="100" fill="#f7d39b" ${st}/>`),
+  living:()=>BG.party(true),
+  ice:()=>S(`<rect width="1600" height="900" fill="#dff1ff"/><path d="M0 380 L220 220 L420 360 L640 180 L900 380 L1120 230 L1380 360 L1600 240 L1600 520 L0 520Z" fill="#fff" ${st}/><rect y="520" width="1600" height="380" fill="#bfe6ff" ${st}/><ellipse cx="800" cy="720" rx="700" ry="150" fill="#e9f7ff" ${st}/><path d="M300 720 Q800 640 1300 720" stroke="#a9d6f5" stroke-width="6" fill="none"/><path d="M400 780 Q800 720 1200 790" stroke="#a9d6f5" stroke-width="6" fill="none"/>${Array.from({length:50},(_,i)=>`<circle cx="${(i*151)%1600}" cy="${(i*67)%880}" r="${3+i%4}" fill="#fff" stroke="#a9d6f5" stroke-width="2"/>`).join('')}<rect x="80" y="430" width="1440" height="20" fill="#ff6f9f" ${st}/>`),
+  black:()=>S(`<rect width="1600" height="900" fill="#2b2340"/>`),
+};
+// ---------- STORY PART 1: Chapters 1 & 2 ----------
+const SCENES={};
+
+SCENES.start=[
+  {bg:'gate', ch:'Chapter 1 · First Day', cast:[]},
+  {t:'Rankingland. A country where everything gets a score: bakeries, bus routes, even the weather.'},
+  {t:'And at the top of the school rankings is WidR School, where you, {P}, have just transferred into 5vb VWO.'},
+  {cast:[['reshman','smile']]},
+  {s:'reshman', t:'Yo. You must be {P}. I\'m Reshman, your official tour guide.'},
+  {s:'reshman', e:'smirk', t:'Unofficially? Coolest guy at WidR. That\'s not a ranking. That\'s just a fact.'},
+  {choice:[
+    {t:'"Is everything here really ranked?"', then:[
+      {s:'reshman', e:'grin', t:'Everything. The vending machine has a leaderboard. Fionn has held first place for two years. Don\'t tell him I told you.'}]},
+    {t:'"Nice sunglasses. It\'s cloudy, though."', then:[
+      {s:'reshman', e:'smirk', t:'The sun is always out when you\'re this cool. You\'ll learn.'}]},
+    {t:'"Lead the way, coolest guy."', then:[
+      {s:'reshman', e:'grin', t:'See, you get it already. We\'re gonna be friends.'}]},
+  ]},
+  {s:'reshman', e:'neutral', t:'Real talk though. WidR ranks people too. The WidR Ranking. Top of the list? Everyone wants to date you. Bottom? You have to work your way up.'},
+  {s:'reshman', e:'smirk', t:'New students start at the bottom. No offence. Here, look.'},
+  {rank:'The WidR Ranking: Week 1'},
+  {s:'reshman', e:'neutral', t:'Do cool stuff, help people, win things, and you climb. Rankings lock after Valentine\'s Day, so don\'t wait too long. And never get caught dating two people at once. People have dropped ten places for that.'},
+  {s:'reshman', e:'neutral', t:'Quick warning before we go in. Duck if anyone yells "HEADS UP."'},
+  {n:'???', t:'HEADS UP!!', fx:'shake'},
+  {t:'A baseball whistles past your ear and smacks into the school sign.'},
+  {cast:[['reshman','surprised'],['natan','surprised'],['daniel','grin']]},
+  {s:'natan', t:'Oh no. Oh no no no. Are you okay?! I was aiming for Daniel!'},
+  {s:'daniel', t:'He\'s been aiming for me since Year One. He has never hit me once. I\'m Daniel, by the way.'},
+  {s:'daniel', e:'smile', t:'Baseball in spring, football the rest of the year. Back home in Afghanistan I played football in the street every day until the sun went down. Natan\'s the reason I picked up a bat.'},
+  {s:'natan', e:'smile', t:'And I\'m Natan. Third base, WidR Rankers. Usually I throw better than that. Promise.'},
+  {t:'Natan is seventeen, with a mop of brown curls squashed under nothing, because he lost his cap again. He\'s smiling sheepishly.'},
+  {choice:[
+    {t:'Pick up the ball and toss it back to him. Nice and easy.', aff:{natan:1}, then:[
+      {s:'natan', e:'grin', t:'Ooh, nice wrist! You play? You should come to practice sometime. No pressure. Some pressure. Medium pressure.'}]},
+    {t:'"Next time aim for the sign. You\'ll hit Daniel for sure."', aff:{natan:1}, then:[
+      {s:'natan', e:'grin', t:'HA! Okay, I like you. That\'s mean, but I like you.'},
+      {s:'daniel', e:'smirk', t:'Rude. Accurate, but rude.'}]},
+    {t:'Ask Daniel which sport is better, baseball or football.', then:[
+      {s:'daniel', e:'grin', t:'Football. Obviously. But don\'t say that near Natan, he\'ll cry.'},
+      {s:'natan', e:'sad', t:'I would not cry. I would simply be quietly devastated.'}]},
+  ]},
+  {s:'reshman', e:'smirk', t:'Alright, alright. Class starts in two minutes. Come on, {P}.'},
+  {goto:'homeroom'}
+];
+
+SCENES.homeroom=[
+  {bg:'classroom', cast:[]},
+  {t:'Class 5vb VWO. The teacher, Meneer van der Meijs, waves you toward four empty seats. Somehow there are exactly four.'},
+  {n:'Meneer van der Meijs', t:'Sit wherever you like, {P}. Choose wisely. Seating charts are permanent until the next ranking cycle.'},
+  {t:'You look around.'},
+  {choice:[
+    {t:'The window seat, next to the boy with blue eyes and a cat hair on his sleeve.', aff:{lars:2}, goto:'seat_lars'},
+    {t:'Front row, next to the boy arranging two erasers very carefully.', aff:{adam:2}, goto:'seat_adam'},
+    {t:'The middle seat, where someone\'s bag is "just resting" on the chair.', aff:{fionn:2}, goto:'seat_fionn'},
+    {t:'Back row, next to the sharply dressed boy with earbuds in.', aff:{milo:2}, goto:'seat_milo'},
+  ]},
+];
+
+SCENES.seat_lars=[
+  {cast:[['lars','surprised']]},
+  {t:'As you sit down, the boy by the window looks up, then very quickly looks back down at his notebook.'},
+  {s:'lars', e:'neutral', t:'Hi. Lars. That seat gets the best light, so. Good choice. Scientifically.'},
+  {t:'He\'s sixteen, with light brown curls, a crisp white shirt, and very skinny jeans. His eyes are a startling blue.'},
+  {choice:[
+    {t:'"Is that cat hair on your sleeve?"', aff:{lars:1}, then:[
+      {s:'lars', e:'shy', t:'No.'},
+      {t:'It is definitely cat hair.'},
+      {s:'lars', e:'neutral', t:'...I like cats. A lot. I just can\'t, um. Touch them. Long story. Medical. Kind of. Sort of. Magical. Never mind.'}]},
+    {t:'"Scientifically? You measured the light?"', aff:{lars:1}, then:[
+      {s:'lars', e:'smirk', t:'I measure everything. That\'s how you stay ahead in Rankingland.'},
+      {t:'He says it smoothly, but his ears have gone slightly pink.'}]},
+  ]},
+  {eff:{flag:'sat_lars'}, goto:'roll_call'}
+];
+
+SCENES.seat_adam=[
+  {cast:[['adam','smile']]},
+  {s:'adam', t:'Oh, hey! Careful, don\'t knock them. This is Gianmarco, and this is Giuseppe.'},
+  {t:'He holds up a pink strawberry-scented eraser and a green apple-scented one, completely seriously.'},
+  {s:'adam', e:'grin', t:'Gianmarco handles pencil. Giuseppe handles the emotional damage. I\'m Adam.'},
+  {t:'Adam has bright green eyes and a sporty quarter-zip. He looks like he\'d be just as at home at a table tennis table as in a library.'},
+  {choice:[
+    {t:'"Nice to meet you, Gianmarco. And Giuseppe."', aff:{adam:2}, then:[
+      {s:'adam', e:'surprised', t:'You greeted them by name. Nobody greets them by name.'},
+      {s:'adam', e:'happy', t:'Giuseppe likes you. I can tell.'}]},
+    {t:'"You named your erasers?"', aff:{adam:1}, then:[
+      {s:'adam', e:'smirk', t:'You don\'t name yours? How do you even call for them in an emergency?'}]},
+  ]},
+  {goto:'roll_call'}
+];
+
+SCENES.seat_fionn=[
+  {cast:[['fionn','angry']]},
+  {s:'fionn', t:'Hey, that\'s my bag! I mean, it\'s fine. It wasn\'t saving a seat. It was just resting. Bags need rest too.'},
+  {t:'He scoops the bag up a little too quickly. Fionn has black hair, dark eyes and braces that flash when he talks. He is a little chubby (just a little, but you can tell) in a green football jersey.'},
+  {s:'fionn', e:'neutral', t:'Fionn. Don\'t get the wrong idea. I just don\'t like empty seats next to me. They\'re creepy.'},
+  {choice:[
+    {t:'"So you WERE saving it."', aff:{fionn:2}, then:[
+      {s:'fionn', e:'blush', t:'I was NOT! ...Okay, I saw your name on the transfer list and figured the new kid would need somewhere to sit. That\'s just logistics!'}]},
+    {t:'"Thanks, Fionn. Seriously."', aff:{fionn:1}, then:[
+      {s:'fionn', e:'blush', t:'D-don\'t thank me! Ugh. ...You\'re welcome.'}]},
+  ]},
+  {goto:'roll_call'}
+];
+
+SCENES.seat_milo=[
+  {cast:[['milo','neutral']]},
+  {t:'Low, rumbling cowbell music leaks from the boy\'s earbuds. He tugs one out.'},
+  {s:'milo', t:'Milo.'},
+  {t:'That\'s it. That\'s the introduction. He is very, very well dressed: camel coat, black turtleneck, hair perfectly in place.'},
+  {choice:[
+    {t:'"Is that phonk you\'re listening to?"', aff:{milo:2}, flag:'phonk_seen', then:[
+      {s:'milo', e:'surprised', t:'...You know phonk?'},
+      {s:'milo', e:'smirk', t:'Huh. Maybe you\'re not boring.'}]},
+    {t:'"Nice coat."', aff:{milo:1}, then:[
+      {s:'milo', e:'smirk', t:'I know.'}]},
+  ]},
+  {t:'The door opens and Daniel walks in late. Milo\'s gaze follows him all the way to his seat, then snaps back to the window.'},
+  {goto:'roll_call'}
+];
+
+SCENES.roll_call=[
+  {cast:[['josh','neutral']]},
+  {t:'Meneer van der Meijs starts roll call. The boy in the orange hoodie beside your row answers before his name is even finished.'},
+  {s:'josh', t:'Josh. Present. I\'ve also already finished the reading, made a summary and colour-coded it.'},
+  {s:'josh', e:'grin', t:'Speaking of colours, did you know flamingos are only pink because of shrimp, and also I think I left my lunch on the bus, and also can I show you my train timetable app later?'},
+  {t:'Josh is usually the calmest person in the room. Then his ADHD kicks in, and his brain picks five topics at once and talks about all of them.'},
+  {s:'josh', e:'smile', t:'Sorry. I\'m back. Welcome to 5vb, {P}.'},
+  {cast:[['natan','smile'],['lars','neutral'],['fionn','neutral']]},
+  {t:'Natan slides into the seat beside Lars, ruffling his curls as he passes.'},
+  {s:'natan', e:'grin', t:'Morning, Lars! Did you do the homework? Can I— no, wait, I did it myself this time. Look. Proud of me?'},
+  {s:'lars', e:'neutral', t:'Natan, that\'s last week\'s homework.'},
+  {s:'natan', e:'sad', t:'...Noooo.'},
+  {t:'Natan laughs it off, but he keeps glancing sideways at Lars for a long time after.'},
+  {if:G=>!G.flags.sat_lars && G.aff.lars<2 ? 'lars_moves' : null},
+  {goto:'lunch'}
+];
+
+SCENES.lars_moves=[
+  {cast:[['lars','neutral']]},
+  {t:'At break, Lars asks Meneer van der Meijs something. Then he picks up his bag and moves to the seat directly behind yours.'},
+  {s:'lars', t:'The window glare was affecting my grades. Purely academic decision.'},
+  {t:'You hadn\'t noticed any glare. It is very cloudy.', eff:{flag:'g_seat', aff:{lars:1}}},
+  {goto:'lunch'}
+];
+
+SCENES.lunch=[
+  {bg:'cafeteria', ch:'Chapter 2 · Finding Your People', cast:[]},
+  {t:'Lunch. Stroopwafel Day. The cafeteria is loud, and you have a tray and absolutely no plan.'},
+  {cast:[['reshman','smirk']]},
+  {s:'reshman', t:'Rule one of WidR: where you eat lunch decides who you become. Rule two: I made rule one up. Sit wherever.'},
+  {choice:[
+    {t:'The baseball table with Natan and Daniel.', aff:{natan:2}, then:[
+      {cast:[['natan','grin'],['daniel','smile']]},
+      {s:'natan', t:'{P}! Over here! Daniel, move your stuff.'},
+      {s:'daniel', e:'smirk', t:'He\'s been telling everyone about your "nice wrist."'},
+      {s:'natan', e:'blush', t:'In a baseball way!! It\'s a scouting observation!'},
+      {s:'natan', e:'smile', t:'Hey, uh, is Lars coming to lunch today? He always eats on the rooftop. Alone. Not that I check.'},
+      {t:'He definitely checks.'}]},
+    {t:'The quiet table where Adam and Josh are quizzing each other.', aff:{adam:2}, then:[
+      {cast:[['adam','smile'],['josh','smile']]},
+      {s:'adam', t:'Quick, {P}: capital of Rankingland\'s third-ranked province?'},
+      {s:'josh', t:'He\'s been doing this since Year One. It\'s Bovenstad, by the way.'},
+      {s:'adam', e:'grin', t:'Josh! It was {P}\'s question! Giuseppe, look away, there\'s been a crime.'},
+      {t:'Adam turns out to be surprisingly funny. He talks about yesterday\'s match like it was a thriller.'}]},
+    {t:'Fionn\'s table, where he is guarding a suspicious amount of stroopwafels.', aff:{fionn:2}, then:[
+      {cast:[['fionn','angry']]},
+      {s:'fionn', t:'These are MINE. ...You can have one. Fine. Two. Don\'t look at me like that, take three.'},
+      {s:'fionn', e:'smile', t:'Did you watch the match last night? The keeper was robbed. ROBBED! I wrote a three-page analysis.'},
+      {t:'He gets so animated talking about it that he forgets to be grumpy for a full ten minutes.'}]},
+    {t:'Follow the cowbell music. Milo\'s eating alone in the corner.', aff:{milo:1}, then:[
+      {cast:[['milo','neutral']]},
+      {s:'milo', t:'...You can sit. Don\'t talk during the drop.'},
+      {t:'You wait for the drop. The table actually vibrates.'},
+      {s:'milo', e:'smirk', t:'Okay. You passed.'},
+      {t:'Across the room, Daniel laughs at something. Milo turns his music up.'}]},
+  ]},
+  {goto:'clubfair'}
+];
+
+SCENES.clubfair=[
+  {bg:'hallway', cast:[['reshman','smile'],['josh','neutral']]},
+  {t:'After lunch, the hallway turns into the WidR Club Fair. Every club wants you. Every club has a ranking.'},
+  {s:'josh', t:'New students have to try one activity this week. I recommend the train club. We have zero members. It\'s very peaceful.'},
+  {s:'reshman', e:'smirk', t:'Pick something with people in it, {P}.'},
+  {choice:[
+    {t:'Baseball practice on the field.', goto:'club_natan'},
+    {t:'Volunteering at the Pawsome Cat Café.', goto:'club_lars'},
+    {t:'Table tennis club (study session afterwards).', goto:'club_adam'},
+    {t:'The "Sports Analysis Society" (watching matches with snacks).', goto:'club_fionn'},
+    {t:'The music club on the rooftop.', goto:'club_milo'},
+  ]},
+];
+
+SCENES.club_natan=[
+  {bg:'field', cast:[['natan','grin'],['daniel','smile']]},
+  {s:'natan', t:'YOU CAME! Okay, okay. Be cool, Natan. Welcome to practice.'},
+  {t:'He hands you a glove and shows you how to stand, how to watch the ball, and how to not get hit by Daniel\'s pitches.'},
+  {s:'daniel', e:'smirk', t:'I am a perfectly safe pitcher.'},
+  {fx:'shake', t:'The ball goes straight over everyone\'s heads.'},
+  {s:'natan', e:'smile', t:'See? Perfectly safe. For us. Not for the parking lot.'},
+  {t:'Later, sitting in the grass, Natan goes quiet and looks toward the empty stands.'},
+  {s:'natan', e:'sad', t:'Lars used to come watch. Back in Year One. He\'d sit up there reading and pretend he wasn\'t watching.'},
+  {choice:[
+    {t:'"You miss him being there."', aff:{natan:2}, flag:'natan_open', then:[
+      {s:'natan', e:'shy', t:'...Yeah. Is that weird? He\'s my best friend. That\'s all. Probably. I don\'t know.'},
+      {s:'natan', e:'smile', t:'Anyway! You\'re here now. That counts for a lot, {P}. Seriously.'}]},
+    {t:'"Well, I\'m watching now. Show me your best throw."', aff:{natan:2}, then:[
+      {s:'natan', e:'grin', t:'Oh, you asked for it.'},
+      {t:'It\'s a beautiful throw. It hits Daniel in the back.'},
+      {s:'daniel', e:'angry', t:'FIRST TIME IN THREE YEARS AND YOU DO IT NOW?!'},
+      {s:'natan', e:'happy', t:'You\'re my good luck charm, {P}!'}]},
+  ]},
+  {eff:{rep:3}, goto:'ch3'}
+];
+
+SCENES.club_lars=[
+  {bg:'catcafe', cast:[['lars','surprised']]},
+  {s:'lars', t:'{P}?! What are you doing here?'},
+  {t:'Lars is wearing a café apron over his white shirt. He\'s standing very, very far from every cat in the room.'},
+  {s:'lars', e:'neutral', t:'I mean. Hello. I\'ve volunteered here for two years. Coincidence. Total coincidence that I swapped to your shift. I mean, that you swapped to my shift.'},
+  {eff:{flag:'g_cafe'}},
+  {t:'He hands you a feather toy. Eleven cats immediately notice you.'},
+  {s:'lars', e:'smile', t:'That\'s Pannenkoek, that\'s Bitterbal, and the black one is Duchess. She\'s ranked number one in Rankingland\'s cutest cat list. She knows it.'},
+  {t:'He talks about each cat with so much love that you almost miss how he keeps his hands tucked behind his back.'},
+  {choice:[
+    {t:'"Why don\'t you ever pet them?"', aff:{lars:2}, then:[
+      {s:'lars', e:'shy', t:'It\'s... complicated. Something happens when I—'}]},
+    {t:'Put a cat in his arms as a surprise.', aff:{lars:1}, flag:'cat_prank', then:[
+      {s:'lars', e:'surprised', t:'WAIT, {P}, DON\'T—'}]},
+  ]},
+  {t:'Duchess leaps from the shelf, lands on Lars\'s shoulder, and rubs her face against his cheek.'},
+  {fx:'flash', t:'POOF.'},
+  {expr:{lars:['surprised','girl']}, fx:'sparkle', t:'Where Lars was standing, there\'s now a girl with the same blue eyes, the same curls (longer now), the same white shirt and skinny jeans.'},
+  {s:'lars', e:'blush', t:'...So. This is the complicated part.'},
+  {s:'lars', e:'neutral', t:'It happens when I touch cats. It wears off in an hour. Nobody knows except Natan. And now you.'},
+  {choice:[
+    {t:'"Your secret\'s safe with me. Want me to cover for you with the manager?"', aff:{lars:3}, flag:'lars_secret', then:[
+      {s:'lars', e:'shy', t:'...You\'d do that?'},
+      {t:'You spend the next hour telling the manager that "Lars\'s cousin" is filling in. The manager doesn\'t question it. Rankingland is like that.'},
+      {s:'lars', e:'smile', t:'Thank you, {P}. Genuinely.'}]},
+    {t:'"Honestly? It suits you."', aff:{lars:2}, flag:'lars_suits', then:[
+      {s:'lars', e:'surprised', t:'...'},
+      {s:'lars', e:'blush', t:'Don\'t say things like that so casually. I— I\'m analysing it. Analysing what you said. For science.'}]},
+  ]},
+  {expr:{lars:['neutral','']}, fx:'flash', t:'An hour later, the change wears off. Lars is back, scratching Duchess with one very careful glove.'},
+  {s:'lars', e:'smirk', t:'For the record, you didn\'t see anything. You hallucinated. Café lighting. Very common.'},
+  {eff:{rep:3}, goto:'ch3'}
+];
+
+SCENES.club_adam=[
+  {bg:'gym', cast:[['adam','grin']]},
+  {s:'adam', t:'You came to table tennis?! Okay, warm-up rule: if you miss, you have to say something nice about Gianmarco.'},
+  {t:'Adam is fast. Ridiculously fast. You miss eleven times in a row.'},
+  {s:'adam', e:'smirk', t:'Eleven compliments. Gianmarco has never felt so seen.'},
+  {t:'Afterwards, you study together in the library. He explains Rankingland\'s ranking maths so clearly that it actually makes sense.'},
+  {bg:'library'},
+  {s:'adam', e:'smile', t:'People think studying is boring. But it\'s like a match. You learn their moves, then you beat them.'},
+  {s:'adam', e:'sad', t:'My parents expect me to be top three this term. Sometimes I feel like Giuseppe is the only one who sees my mistakes and doesn\'t mind.'},
+  {choice:[
+    {t:'"You\'re more than your ranking, Adam."', aff:{adam:3}, flag:'adam_seen', then:[
+      {s:'adam', e:'shy', t:'...Say that again? No. Don\'t. I\'ll get emotional on Giuseppe.'},
+      {s:'adam', e:'smile', t:'Thanks, {P}. Really.'}]},
+    {t:'"Then let\'s get you to top three. I\'ll quiz you."', aff:{adam:2}, then:[
+      {s:'adam', e:'grin', t:'A study partner? A real one? Not just Josh, who reads ahead and spoils everything?'},
+      {t:'You quiz him until the librarian kicks you both out.'}]},
+  ]},
+  {eff:{rep:3}, goto:'ch3'}
+];
+
+SCENES.club_fionn=[
+  {bg:'living', cast:[['fionn','angry']]},
+  {t:'The "Sports Analysis Society" turns out to be Fionn, a TV in his living room, and a mountain of snacks.'},
+  {s:'fionn', t:'You\'re late. Not that I was waiting. The kickoff waited. Kickoffs are very patient.'},
+  {t:'During the match, Fionn shouts at the referee, explains offside three times, and quietly slides the best snacks toward you.'},
+  {s:'fionn', e:'smile', t:'When I like something, I go all in. Football. Sports. Pancakes. People. I don\'t do halfway.'},
+  {s:'fionn', e:'sad', t:'Some guys in Year One used to joke about me being "the chubby one." I pretended I didn\'t care.'},
+  {choice:[
+    {t:'"Honestly, you look great. And you\'re the best person to watch a match with."', aff:{fionn:3}, flag:'fionn_kind', then:[
+      {s:'fionn', e:'blush', t:'Sh-shut up! You can\'t just say that! ...Say it again so I can be annoyed properly.'}]},
+    {t:'"Those guys were idiots. Want me to rank them on the idiot list?"', aff:{fionn:2}, then:[
+      {s:'fionn', e:'grin', t:'HA! Number one: Jeroen. Number two: also Jeroen, he counts twice.'}]},
+  ]},
+  {t:'WidR scores. Fionn hugs you out of pure excitement, then lets go like you\'re on fire.'},
+  {s:'fionn', e:'angry', t:'That was a SPORTS hug! It doesn\'t count!'},
+  {eff:{rep:3}, goto:'ch3'}
+];
+
+SCENES.club_milo=[
+  {bg:'rooftop', cast:[['milo','neutral']]},
+  {t:'The "music club" is just Milo on the rooftop with a speaker and a lot of bass.'},
+  {s:'milo', t:'Members: one. Applications: closed.'},
+  {s:'milo', e:'smirk', t:'...You can audit.'},
+  {choice:[
+    {t:'"Play me your favourite track. Loud."', aff:{milo:2}, flag:'phonk', then:[
+      {s:'milo', e:'surprised', t:'Nobody asks for loud.'},
+      {fx:'shake', t:'The cowbell hits. Pigeons flee. Milo actually smiles.'},
+      {s:'milo', e:'smile', t:'Okay. Okay. You\'re alright, {P}.'}]},
+    {t:'"Can we turn it down a bit and just talk?"', aff:{milo:1}, then:[
+      {s:'milo', e:'neutral', t:'Talking is overrated. ...Fine. Five minutes.'}]},
+  ]},
+  {t:'From up here you can see the football pitch. Daniel is running drills alone. Milo watches him like it\'s the only thing worth looking at.'},
+  {choice:[
+    {t:'Say nothing. Some things aren\'t yours to point out.', aff:{milo:2}, flag:'milo_trust', then:[
+      {s:'milo', e:'shy', t:'...You saw that, didn\'t you. And you\'re not going to say anything.'},
+      {s:'milo', e:'neutral', t:'Thanks. That\'s rarer than good taste.'}]},
+    {t:'"You like Daniel, don\'t you?"', aff:{milo:-1}, flag:'milo_called', then:[
+      {s:'milo', e:'angry', t:'I like his footwork. That\'s it. Drop it.'},
+      {t:'He puts his earbuds back in. The conversation is over.'}]},
+  ]},
+  {eff:{rep:3}, goto:'ch3'}
+];
+// ---------- STORY PART 2: Chapters 3–8 ----------
+const topChar=G=>ROM.reduce((a,b)=>G.aff[b]>G.aff[a]?b:a,'lars');
+// Connection needed before someone says yes. Your WidR Ranking shifts it (see rankMod).
+const BASE={natan:9, lars:7, adam:9, fionn:8, milo:12};
+const need=k=>BASE[k]+rankMod();
+const miloGate=G=>G.flags.phonk && G.flags.milo_trust && !G.flags.milo_called && myRank()<=5;
+const canDate=(G,k)=>G.aff[k]>=need(k) && (k!=='milo' || miloGate(G));
+const avail=G=>ROM.filter(k=>!G.dating.includes(k) && !G.out.includes(k) && !(G.final && G.tried.includes(k)));
+const afterConf=G=>G.ret;
+function confessMenu(ret, noneText){
+  return G=>avail(G).map(k=>({t:CHARS[k].name, do:G=>{G.ret=ret; if(G.final) G.tried.push(k);}, goto:'conf_'+k}))
+    .concat(noneText?[{t:noneText, goto:ret}]:[]);
+}
+
+// ===== CHAPTER 3 =====
+SCENES.ch3=[
+  {bg:'classroom', ch:'Chapter 3 · The Festival Pitch', cast:[]},
+  {t:`Two weeks pass. You learn the vending machine rankings, Natan's three different laughs, and that Josh's train app is actually incredible.`},
+  {n:'Meneer van der Meijs', t:`5vb! The Autumn Festival is coming up. Each class runs one booth. Pitches, please. Then we vote.`},
+  {cast:[['natan','grin'],['adam','smile'],['fionn','neutral']]},
+  {s:'natan', t:`Batting cage! "Strike Out Your Stress." People hit balls, we rank their swings, everyone wins.`},
+  {s:'adam', t:`A quiz booth. "Beat the Brain." Beat me at trivia, win a prize. Gianmarco and Giuseppe will be judges.`},
+  {s:'fionn', e:'smile', t:`Food stall. Mini pancakes. I have a recipe. It's my grandma's. Don't make it weird.`},
+  {cast:[['milo','smirk'],['lars','neutral'],['josh','neutral']]},
+  {s:'milo', t:`Silent disco. Headphones. My playlist. You're welcome.`},
+  {s:'lars', t:`A fortune-telling booth. I'll predict people's rankings using statistics and a crystal ball I borrowed from my aunt.`},
+  {s:'josh', t:`I'll make the schedule for whatever wins. I already made five. Also, side note: do fortune tellers count as renewable energy, because they predict the future, which is technically—`},
+  {s:'josh', e:'smile', t:`...Ignore me. Vote!`},
+  {t:`Everyone looks at you. As the new student, you vote first.`},
+  {choice:[
+    {t:`Natan's batting cage.`, aff:{natan:2}, flag:'v_natan'},
+    {t:`Adam's quiz booth.`, aff:{adam:2}, flag:'v_adam'},
+    {t:`Fionn's pancake stall.`, aff:{fionn:2}, flag:'v_fionn'},
+    {t:`Milo's silent disco.`, aff:{milo:2}, flag:'v_milo', do:G=>{if(G.flags.phonk)G.aff.milo+=1;}},
+    {t:`Lars's fortune booth.`, aff:{lars:2}, flag:'v_lars'},
+  ]},
+  {t:`The votes come in. It's a tie between your pick and one other booth. Only Lars hasn't voted yet.`},
+  {cast:[['lars','neutral']]},
+  {s:'lars', t:`I vote for {P}'s choice. It's the statistically optimal booth.`, eff:{flag:'g_vote'}},
+  {s:'lars', e:'smirk', t:`Don't look at me like that. I ran the numbers.`},
+  {t:`You're fairly sure he didn't run any numbers. There's nothing on his desk except a doodle of a cat.`},
+  {t:`Word gets around that the new kid picked the winning booth.`, eff:{rep:8}},
+  {rank:'Autumn Rankings'},
+  {goto:'rain'}
+];
+
+SCENES.rain=[
+  {bg:'rain', ch:'', cast:[]},
+  {t:`After school, the sky opens. You forgot your umbrella. Of course you did.`},
+  {if:G=>'rain_'+topChar(G)}
+];
+SCENES.rain_natan=[
+  {cast:[['natan','grin']]},
+  {s:'natan', t:`{P}! Get under here!`},
+  {t:`He holds his varsity jacket over both your heads. It doesn't really work. You're both soaked and laughing.`},
+  {s:'natan', e:'neutral', t:`Can I ask you something? Hypothetically. If a friend liked someone, but was scared it'd ruin everything... should they say it?`},
+  {choice:[
+    {t:`"They should say it. Being scared is part of it."`, aff:{natan:2}, flag:'natan_brave', then:[
+      {s:'natan', e:'smile', t:`Yeah. Maybe. Thanks, {P}. You make things feel simpler.`}]},
+    {t:`"Maybe they should figure out who they really look for first."`, aff:{natan:2}, then:[
+      {s:'natan', e:'shy', t:`...Who they look for. Huh.`},
+      {t:`He looks at you for a long second, then at the rain.`}]},
+  ]},
+  {goto:'ch4'}
+];
+SCENES.rain_lars=[
+  {cast:[['lars','surprised']]},
+  {s:'lars', t:`Oh! {P}. What a coincidence. I happened to be at this exact bus stop at this exact time.`},
+  {t:`He opens one umbrella. Just one. Big enough for two, if you stand close.`},
+  {s:'lars', e:'neutral', t:`I only have the one. Forgot my second. Tragic.`, eff:{flag:'g_umbrella'}},
+  {t:`Later, when he opens his bag for his bus card, you spot a second umbrella inside. Folded. Brand new. Dry.`},
+  {choice:[
+    {t:`Say nothing. Just enjoy the walk.`, aff:{lars:2}, then:[
+      {s:'lars', e:'smile', t:`...This is nice. The rain, I mean. Rain is nice. Statistically.`}]},
+    {t:`"Lars, there's an umbrella in your bag."`, aff:{lars:2}, then:[
+      {s:'lars', e:'surprised', t:`That's a decoy. For decoy purposes.`},
+      {s:'lars', e:'blush', t:`Very advanced umbrella strategy. You wouldn't understand.`}]},
+  ]},
+  {goto:'ch4'}
+];
+SCENES.rain_adam=[
+  {cast:[['adam','smile']]},
+  {s:'adam', t:`Here, take my hood. Gianmarco's in a waterproof pocket, so my priorities are secured.`},
+  {t:`He talks about last night's table tennis final like it's an action film, sound effects included.`},
+  {s:'adam', e:'neutral', t:`Can I tell you something? I got my mid-term results today. Fourth in the year.`},
+  {choice:[
+    {t:`"Fourth in the whole year? That's amazing."`, aff:{adam:2}, then:[
+      {s:'adam', e:'shy', t:`...Nobody's said "amazing" about fourth before.`}]},
+    {t:`"Then we'll study together until it's third."`, aff:{adam:2}, then:[
+      {s:'adam', e:'grin', t:`Deal. Giuseppe is witness. It's legally binding.`}]},
+  ]},
+  {goto:'ch4'}
+];
+SCENES.rain_fionn=[
+  {cast:[['fionn','angry']]},
+  {s:'fionn', t:`You're soaking! Ugh. Here.`},
+  {t:`He throws his hoodie at your face. It's warm and smells like pancakes.`},
+  {s:'fionn', e:'blush', t:`It's too small for me anyway! Not because I care if you catch a cold! Colds are just... inefficient.`},
+  {choice:[
+    {t:`"Thanks, Fionn. You're really sweet, you know."`, aff:{fionn:2}, then:[
+      {s:'fionn', e:'angry', t:`I'M NOT SWEET! I'm savoury! Like a strong, savoury pancake!`}]},
+    {t:`Put it on. "I'm keeping this."`, aff:{fionn:2}, flag:'fionn_hoodie', then:[
+      {s:'fionn', e:'surprised', t:`You can't just KEEP it!`},
+      {s:'fionn', e:'shy', t:`...Fine. It looks better on you anyway. Shut up.`}]},
+  ]},
+  {goto:'ch4'}
+];
+SCENES.rain_milo=[
+  {cast:[['milo','neutral']]},
+  {t:`Milo is under the bus shelter. Without a word, he offers you one earbud.`},
+  {t:`It isn't phonk. It's slow and soft, piano under gentle rain.`},
+  {s:'milo', e:'shy', t:`I made it. Don't tell anyone. It ruins the image.`},
+  {if:G=>G.flags.milo_trust?'rain_milo2':null},
+  {s:'milo', e:'smirk', t:`Bus is here. See you, {P}.`, eff:{aff:{milo:1}}},
+  {goto:'ch4'}
+];
+SCENES.rain_milo2=[
+  {s:'milo', e:'sad', t:`You know who it's about. You're the only one who noticed and didn't make it a joke.`},
+  {s:'milo', t:`He's never going to look at me like that. I've known for a year.`},
+  {choice:[
+    {t:`"Maybe it's okay to look somewhere new."`, aff:{milo:3}, flag:'milo_hope', then:[
+      {s:'milo', e:'shy', t:`...Maybe.`},
+      {t:`He doesn't take the earbud back for the whole ride.`}]},
+    {t:`"You won't know unless you tell him."`, aff:{milo:1}, flag:'milo_push', then:[
+      {s:'milo', e:'neutral', t:`Maybe one day. When I'm braver.`}]},
+  ]},
+  {goto:'ch4'}
+];
+
+// ===== CHAPTER 4 =====
+SCENES.ch4=[
+  {bg:'hallway', ch:'Chapter 4 · Autumn Festival', cast:[['reshman','grin'],['josh','smile']]},
+  {t:`Festival day. WidR is covered in lanterns, flags and ranking boards for every stall.`},
+  {s:'josh', t:`Our booth is running perfectly. I scheduled you a free hour, {P}. Hour three. Use it wisely. Or chaotically. Both are valid.`},
+  {s:'reshman', e:'smirk', t:`Festivals are where rankings are made. Go be seen.`},
+  {t:`Who do you spend your free hour with?`},
+  {choice:[
+    {t:`Find Natan at the batting cage.`, goto:'fest_natan'},
+    {t:`Wander the stalls with Lars.`, goto:'fest_lars'},
+    {t:`Check on Adam. He looks panicked.`, goto:'fest_adam'},
+    {t:`Visit Fionn behind the pancake grill.`, goto:'fest_fionn'},
+    {t:`Go to the DJ booth with Milo.`, goto:'fest_milo'},
+  ]},
+];
+SCENES.fest_natan=[
+  {bg:'field', cast:[['natan','grin']]},
+  {s:'natan', t:`Okay, stance, eyes on the ball... now SWING!`},
+  {fx:'flash', t:`CRACK. The ball sails over the fence. Half the school sees it.`, eff:{rep:6}},
+  {s:'natan', e:'happy', t:`{P}!!! THAT'S A HOME RUN!`},
+  {t:`He lifts you clean off the ground, then sets you down, a little embarrassed.`},
+  {s:'natan', e:'shy', t:`I used to always look up at the rooftop to see if Lars was there. Today I forgot to look. I was busy watching you.`, eff:{aff:{natan:3}}},
+  {goto:'fireworks'}
+];
+SCENES.fest_lars=[
+  {bg:'hallway', cast:[['lars','smile']]},
+  {s:'lars', t:`I have exactly fifty-eight minutes until my booth shift. Not that I planned this.`},
+  {t:`You win him a stuffed cat at the ring toss. He holds it like it's made of glass. It's not a real cat, so nothing happens.`},
+  {s:'lars', e:'smirk', t:`Let me read your fortune. Free of charge.`},
+  {s:'lars', e:'neutral', t:`I see... a party. Soon. And someone there will tell you something important.`},
+  {s:'lars', e:'shy', t:`Probably. Statistically. The crystal ball is borrowed, so no refunds.`, eff:{aff:{lars:3}, rep:2, flag:'g_festival'}},
+  {goto:'fireworks'}
+];
+SCENES.fest_adam=[
+  {bg:'classroom', cast:[['adam','surprised']]},
+  {s:'adam', t:`{P}! Code red. Gianmarco is missing. I had him at the quiz booth and now he's GONE.`},
+  {t:`You search together. Under desks. In the recycling. Inside a suspicious pancake.`},
+  {cast:[['adam','sad'],['josh','surprised']]},
+  {s:'josh', t:`Oh. Is this him? He was in my hoodie pocket. I got distracted thinking about strawberries and— yeah. Sorry, Adam.`},
+  {cast:[['adam','happy']]},
+  {s:'adam', t:`GIANMARCO! Oh, buddy. You smell so strawberry.`},
+  {s:'adam', e:'smile', t:`Thank you, {P}. You didn't laugh. You just helped.`, eff:{aff:{adam:3}, rep:3}},
+  {goto:'fireworks'}
+];
+SCENES.fest_fionn=[
+  {bg:'cafeteria', cast:[['fionn','neutral']]},
+  {s:'fionn', t:`You came to my stall. Obviously. Everyone does. We're ranked number one.`},
+  {t:`He hands you a pancake. It's shaped like the first letter of your name.`, eff:{rep:3}},
+  {s:'fionn', e:'blush', t:`It's a random letter! The batter went that way! Pancakes have free will!`},
+  {choice:[
+    {t:`"It's perfect. Make me another one?"`, aff:{fionn:3}, then:[
+      {s:'fionn', e:'smile', t:`...Yeah. Okay. As many as you want.`}]},
+    {t:`"Fionn, I can tell you practised this."`, aff:{fionn:2}, then:[
+      {s:'fionn', e:'angry', t:`I did NOT practise for three nights!`},
+      {s:'fionn', e:'shy', t:`...Two nights.`}]},
+  ]},
+  {goto:'fireworks'}
+];
+SCENES.fest_milo=[
+  {bg:'rooftop', cast:[['milo','smirk']]},
+  {s:'milo', t:`Silent disco's on break. Want to press the button?`},
+  {t:`He lets you hit the drop. Forty people in headphones jump at once. Everyone wants to know who you are.`, eff:{rep:5}},
+  {s:'milo', e:'smile', t:`See? Phonk unites people.`, do:G=>{G.aff.milo+=G.flags.phonk?3:2;}},
+  {s:'milo', e:'neutral', t:`Daniel's down there. Usually I'd be watching him. Right now I'm kind of... not.`},
+  {goto:'fireworks'}
+];
+SCENES.fireworks=[
+  {bg:'night', ch:'', cast:[['natan','smile'],['lars','neutral'],['milo','neutral']]},
+  {t:`Nightfall. The whole class gathers on the field to watch the fireworks.`},
+  {t:`Natan stands next to Lars. Milo stands a careful one step away from Daniel.`},
+  {s:'lars', t:`The view is better over here. Objectively.`},
+  {t:`Lars steps away from Natan and ends up right beside you. Natan's smile fades just a little.`, eff:{flag:'g_firework'}},
+  {fx:'sparkle', t:`BOOM. The sky fills with gold.`},
+  {t:`Who do you stand closest to?`},
+  {choice:[
+    {t:`Natan.`, aff:{natan:2}, then:[{cast:[['natan','happy']]},{s:'natan',t:`Best festival ever. Seriously.`}]},
+    {t:`Lars, who's already beside you.`, aff:{lars:2}, then:[{cast:[['lars','shy']]},{s:'lars',t:`Pure coincidence. ...I'm glad, though.`}]},
+    {t:`Adam.`, aff:{adam:2}, then:[{cast:[['adam','smile']]},{s:'adam',t:`Gianmarco and Giuseppe are watching too. They say hi.`}]},
+    {t:`Fionn.`, aff:{fionn:2}, then:[{cast:[['fionn','blush']]},{s:'fionn',t:`You came over here? Fine. Stay. I mind a normal amount.`}]},
+    {t:`Milo.`, aff:{milo:2}, then:[{cast:[['milo','shy']]},{s:'milo',t:`...These would go hard with a bass drop.`}]},
+  ]},
+  {goto:'ch5'}
+];
+
+// ===== CHAPTER 5: Christmas party (first chance) =====
+SCENES.ch5=[
+  {bg:'party', ch:'Chapter 5 · The Christmas Party', cast:[['fionn','grin']]},
+  {t:`The last day before the Christmas break. Fionn throws a party, and somehow all of 5vb fits into his living room.`},
+  {s:'fionn', t:`Shoes off! Snacks on the left! Anyone who spills on the sofa gets ranked last in life!`},
+  {cast:[['reshman','smirk'],['josh','grin'],['daniel','smile']]},
+  {s:'reshman', t:`Look at you, {P}. One term in and people actually know your name.`, eff:{rep:5}},
+  {s:'josh', t:`I made a party playlist, a snack schedule and a mini train map of Fionn's house. The kitchen is the central station.`},
+  {s:'daniel', e:'smile', t:`Glad you transferred here, {P}. Things got more fun.`},
+  {rank:'Christmas Rankings'},
+  {bg:'night', cast:[]},
+  {t:`Later, you step out onto the porch for some air. There's someone you've been thinking about all term. Do you go and talk to them?`},
+  {choice:confessMenu('ch6', `Not yet. Go back in and enjoy the party.`)},
+];
+
+// ===== CHAPTER 6: Winter term, climbing the ranking =====
+SCENES.ch6=[
+  {bg:'hallway', ch:'Chapter 6 · Winter Term', cast:[['reshman','neutral']]},
+  {t:`January. The new term starts and fresh rankings go up in the hallway.`},
+  {rank:'New Year Rankings'},
+  {s:'reshman', t:G=>myRank()<=5?`Top five, {P}? Okay, I see you. Keep it up. Rankings lock on Valentine's Day.`:`Six weeks until Valentine's Day, {P}. Then the rankings lock. If you want to climb, now's the time.`},
+  {s:'reshman', e:'smirk', t:`Sign up for stuff. Get seen. Help people. That's how it works here.`},
+  {t:`You have time for two big things this term. What's the first?`},
+  {goto:'act_pick'}
+];
+const ACTS=[
+  {k:'rep', t:`Run for class representative.`},
+  {k:'play', t:`Audition for the school play.`},
+  {k:'tour', t:`Join the winter sports tournament.`},
+  {k:'tutor', t:`Tutor first-years with Josh.`},
+];
+SCENES.act_pick=[
+  {choice:G=>ACTS.filter(a=>!G.flags['act_'+a.k]).map(a=>({t:a.t, flag:'act_'+a.k, goto:'act_'+a.k}))}
+];
+const actDone=G=>{G.acts=(G.acts||0)+1; return G.acts>=2?'ice':'act_next';};
+SCENES.act_next=[{bg:'hallway', cast:[]},{t:`One more thing before Valentine's Day. What next?`},{goto:'act_pick'}];
+SCENES.act_rep=[
+  {bg:'classroom', cast:[['adam','grin']]},
+  {s:'adam', t:`You're running for class rep? I'm writing your speech. Non-negotiable. Giuseppe will remove any weak sentences.`},
+  {t:`The speech is short, funny and promises better vending machine rankings. 5vb votes you in by a landslide.`, eff:{rep:12, aff:{adam:2}}},
+  {s:'adam', e:'happy', t:`Class Representative {P}! I'm so proud. Gianmarco is weeping.`},
+  {goto:actDone}
+];
+SCENES.act_play=[
+  {bg:'gym', cast:[['lars','surprised'],['milo','smirk']]},
+  {t:`You get cast as the lead in the school play. Your co-lead, by "complete coincidence", is Lars.`, eff:{flag:'g_play'}},
+  {s:'lars', t:`I only auditioned because the drama club needed someone with stage presence. That's all.`},
+  {s:'milo', t:`I'm doing the soundtrack. There's a phonk remix of the sword fight. Don't argue.`},
+  {t:`Opening night is a hit. The whole school talks about the sword fight remix for weeks.`, eff:{rep:10, aff:{lars:2, milo:1}}, do:G=>{if(G.flags.phonk)G.aff.milo+=1;}},
+  {s:'lars', e:'shy', t:`You were really good. Objectively. I'm just stating data.`},
+  {goto:actDone}
+];
+SCENES.act_tour=[
+  {bg:'field', cast:[['natan','grin'],['daniel','smile'],['fionn','angry']]},
+  {t:`You join the winter sports tournament with Natan and Daniel. Fionn shows up with a giant sign that says "GO {P}" and then claims it says "GO TEAM."`},
+  {s:'fionn', t:`It's a team sign! Your name is just... part of the team!`},
+  {s:'natan', e:'happy', t:`Last inning, {P}! You've got this!`},
+  {fx:'flash', t:`You make the winning catch. WidR wins its first winter trophy in years.`, eff:{rep:10, aff:{natan:2, fionn:1}}},
+  {s:'daniel', e:'grin', t:`Okay, that was actually amazing. Football next?`},
+  {goto:actDone}
+];
+SCENES.act_tutor=[
+  {bg:'library', cast:[['josh','smile'],['adam','smile']]},
+  {s:'josh', t:`Rule one of tutoring: be patient. Rule two: if I start talking about trains, gently say "Josh."`},
+  {t:`The first-years love you. One of them draws a picture of you as a superhero. It gets pinned up in the hallway.`, eff:{rep:6, aff:{adam:1}}},
+  {s:'adam', t:`You're really good at explaining things. Like, better than me. Don't tell Giuseppe I said that.`},
+  {goto:actDone}
+];
+SCENES.ice=[
+  {bg:'ice', ch:'Chapter 6 · Winter Term', cast:[['fionn','surprised'],['josh','grin']]},
+  {t:`At the end of January, 5vb goes ice skating. Fionn falls over three times and blames the ice each time.`},
+  {s:'fionn', t:`The ice is RIGGED!`},
+  {s:'josh', t:`Fun fact: ice is slippery because of a thin layer of— oh, a duck. Hi, duck.`},
+  {cast:[]},
+  {t:G=>G.dating.length?`You skate a slow lap on your own. You're already dating ${CHARS[G.dating[0]].name}... but someone else is skating towards you, and you know they like you.`:`You skate a slow lap. Someone you've been thinking about is skating towards you.`},
+  {choice:confessMenu('ch7', `Skate back to your friends.`)},
+];
+
+// ===== CHAPTER 7: Valentine's Day =====
+SCENES.ch7=[
+  {bg:'hallway', ch:`Chapter 7 · Valentine's Day`, cast:[]},
+  {t:`February 14th. The hallway is full of paper hearts, and the final rankings get locked at the end of today.`},
+  {if:G=>G.dating.length>=2?'val_caught':G.dating.length===1?'val_one':'val_none'}
+];
+SCENES.val_caught=[
+  {cast:G=>[[G.dating[0],'smile'],[G.dating[1],'smile']]},
+  {t:G=>`At your locker, ${CHARS[G.dating[0]].name} and ${CHARS[G.dating[1]].name} arrive at exactly the same time. Both are holding chocolates. Both are holding them out to you.`},
+  {do:G=>{setExpr(G.dating[0],'surprised');setExpr(G.dating[1],'surprised');}, t:G=>`They look at each other. Then at the chocolates. Then at you.`},
+  {s:'P', t:`I can explain.`},
+  {do:G=>{setExpr(G.dating[0],'angry');setExpr(G.dating[1],'angry');}, fx:'shake', t:G=>`You can't. The whole hallway has gone silent. Someone is filming. ${CHARS[G.dating[0]].name} drops the chocolates on the floor.`},
+  {cast:[['josh','surprised'],['reshman','surprised']]},
+  {s:'josh', t:`Oh no. Oh no, this is going straight on the ranking.`},
+  {s:'reshman', e:'sad', t:`{P}... I literally warned you on day one.`},
+  {eff:{rep:-30, force:true}, do:G=>{G.out.push(...G.dating); G.dating=[]; G.flags.caught=true;}},
+  {rank:`Valentine's Day Scandal`},
+  {t:`By lunch, everyone at WidR knows. Neither of them will speak to you.`},
+  {goto:'val_lock'}
+];
+SCENES.val_one=[
+  {cast:G=>[[G.dating[0],'happy']]},
+  {t:G=>`${CHARS[G.dating[0]].name} is waiting at your locker with a small box of chocolates.`},
+  {if:G=>'val_'+G.dating[0]},
+];
+SCENES.val_natan=[{s:'natan', t:`I tried to make them baseball-shaped. They look like potatoes. Happy Valentine's Day, {P}.`, eff:{rep:4}},{goto:'val_lock'}];
+SCENES.val_lars=[{s:'lars', t:`These were the statistically best chocolates in Rankingland. I checked forty reviews. Happy Valentine's.`, eff:{rep:4}},{goto:'val_lock'}];
+SCENES.val_adam=[{s:'adam', t:`Strawberry and green apple. Gianmarco and Giuseppe picked the flavours. Happy Valentine's Day.`, eff:{rep:4}},{goto:'val_lock'}];
+SCENES.val_fionn=[{s:'fionn', e:'blush', t:`These were on SALE! It's not a big deal! ...I made the card myself. Don't read it in front of me.`, eff:{rep:4}},{goto:'val_lock'}];
+SCENES.val_milo=[{s:'milo', e:'shy', t:`No chocolates. I made you a track instead. It's on your phone. Don't play it in public.`, eff:{rep:4}},{goto:'val_lock'}];
+SCENES.val_none=[
+  {cast:[['josh','smile']]},
+  {t:G=>{const r=myRank(); return r<=3?`Your locker is overflowing with chocolates. Being near the top of the ranking has its perks.`:r<=6?`There's a handful of chocolates in your locker. Not bad for the new kid.`:r<=9?`There are two chocolates in your locker. One is slightly squashed.`:`There's one chocolate in your locker. It's from Josh.`;}},
+  {s:'josh', t:G=>myRank()>9?`It's a statistical courtesy. Everyone deserves one. Happy Valentine's Day, {P}.`:`Happy Valentine's Day, {P}! I gave everyone a chocolate. It's more efficient that way.`},
+  {t:`This is your last chance before the rankings lock. Is there someone you want to find today?`},
+  {choice:confessMenu('val_lock', `Not today.`)},
+];
+SCENES.val_lock=[
+  {bg:'hallway', cast:[['reshman','neutral']]},
+  {t:`At the end of the day, Meneer van der Meijs pins up the final rankings. Locked until next year.`},
+  {do:G=>{G.frozen=true;}},
+  {rank:'Final Rankings (Locked)'},
+  {s:'reshman', t:G=>myRank()<=6?`That's a solid spot, {P}. People notice you now.`:`It is what it is, {P}. The ranking's locked. Now it's about who actually knows you.`},
+  {goto:'ch8'}
+];
+
+// ===== CHAPTER 8: End-of-Year Ball (final chance) =====
+SCENES.ch8=[
+  {bg:'sunset', ch:'Chapter 8 · The End-of-Year Ball', cast:[['josh','happy'],['reshman','grin'],['daniel','smile']]},
+  {t:`June. The End-of-Year Ball is held on the school terrace at sunset. Fairy lights, a slightly bad DJ, and all of 5vb dressed up.`},
+  {s:'josh', t:`I timed the sunset. Peak golden hour is in four minutes. Plan accordingly.`},
+  {do:G=>{G.final=true;}},
+  {if:G=>G.dating.length===1?'ball_partner':'ball_menu'}
+];
+SCENES.ball_partner=[
+  {cast:G=>[[G.dating[0],'happy']]},
+  {t:G=>`${CHARS[G.dating[0]].name} finds you at the edge of the terrace, right on time for golden hour.`},
+  {if:G=>'end_'+G.dating[0]}
+];
+SCENES.ball_menu=[
+  {bg:'sunset', cast:[]},
+  {if:G=>avail(G).length?null:'repeat_year'},
+  {t:G=>G.tried.length?`The night isn't over yet. Is there someone else you want to talk to?`:`Tonight is the last chance this year. Who do you go and find?`},
+  {choice:confessMenu('ball_menu')},
+];
+SCENES.repeat_year=[
+  {bg:'gate', ch:'Another Year at WidR', cast:[['reshman','smile']]},
+  {t:`The ball ends. Summer comes and goes. Your story at WidR isn't finished yet.`},
+  {t:`September. 6 VWO begins. Same school, same faces, and a fresh ranking cycle.`},
+  {s:'reshman', t:`New year, new rankings, {P}. Everyone gets a second chance at WidR. Even you.`},
+  {do:G=>{G.out=[]; G.tried=[]; G.final=false; G.frozen=false; G.acts=0; ACTS.forEach(a=>delete G.flags['act_'+a.k]); G.rep=Math.max(G.rep,45);}},
+  {goto:'ch6'}
+];
+// ---------- STORY PART 3: Confessions, consequences and canon endings ----------
+// A "yes" before the ball means you start dating and the story carries on.
+// A "yes" at the ball (or the ball with your partner) finishes that person's canon storyline.
+const yesThen=k=>[
+  {if:G=>G.final?'end_'+k:null},
+  {do:G=>{G.dating.push(k);}, eff:{rep:6}},
+  {t:G=>G.dating.length>1?`You're now dating ${G.dating.map(d=>CHARS[d].name).join(' AND ')}. Nobody else knows... yet. Valentine's Day is coming.`:`You and ${CHARS[k].name} are officially together. The news reaches the WidR Ranking by Monday.`},
+  {goto:afterConf}
+];
+const outThen=k=>[{do:G=>{G.out.push(k);}},{goto:afterConf}];
+const lateLine=(G,txt)=>G.final?`It's too late now, {P}. The year's over. `+txt:txt;
+
+// ----- NATAN -----
+SCENES.conf_natan=[
+  {cast:[['natan','smile']]},
+  {s:'natan', t:`Hey, {P}! I was hoping you'd come over.`},
+  {if:G=>canDate(G,'natan')?null:'fail_natan'},
+  {s:'natan', e:'shy', t:`Can I say something? I've been weird about Lars for a long time. I always look for him.`},
+  {s:'natan', e:'neutral', t:`But lately... the person I look for in the stands is you. Every time. I didn't plan that.`},
+  {s:'natan', e:'blush', t:`{P}, will you go out with me?`},
+  {choice:[
+    {t:`"Yes. I'd really like that."`, then:[{cast:[['natan','happy']], fx:'sparkle'},{s:'natan', t:`YES?! Okay. Be cool, Natan. ...I'm not being cool. I don't care!`}], goto:'yes_natan'},
+    {t:`"I'm sorry, Natan. I don't feel the same."`, goto:'no_natan'},
+  ]},
+];
+SCENES.yes_natan=yesThen('natan');
+SCENES.no_natan=[
+  {cast:[['natan','sad']]},
+  {s:'natan', t:`...Yeah. Okay. That's fair. Thanks for being honest, {P}.`},
+  {t:`He sits for a while. Then something in his face changes, like a decision being made.`},
+  {s:'natan', e:'neutral', t:`You know what? Being scared is part of it, right? I'm going to stop being scared.`},
+  {cast:[['natan','shy'],['lars','surprised']]},
+  {t:`You watch Natan walk straight up to Lars and say something. Lars blinks. Then, slowly, he nods.`},
+  {t:`The next day, Natan and Lars sit together at lunch. Natan still waves at you every morning and calls you his good luck charm.`},
+  ...outThen('natan')
+];
+SCENES.fail_natan=[
+  {s:'P', t:`Natan... I think I like you. As more than a friend.`},
+  {cast:[['natan','surprised']]},
+  {s:'natan', e:'sad', t:G=>lateLine(G,`I think you're awesome. But I don't know you well enough yet to feel the same. And there's someone I've never stopped looking for.`)},
+  {t:G=>G.final?`It stings. But the night goes on.`:`It stings. But Natan is still Natan: the next morning he throws you a ball across the hallway like nothing happened. Maybe there's still time.`},
+  {goto:afterConf}
+];
+
+// ----- LARS -----
+SCENES.conf_lars=[
+  {cast:[['lars','surprised']]},
+  {t:`You find Lars on his own. A fluffy grey cat is sitting next to him, staring at him very intently.`},
+  {s:'lars', t:`{P}. Hi. I'm in a standoff with this cat. I'm winning.`},
+  {if:G=>canDate(G,'lars')?null:'fail_lars'},
+  {s:'lars', e:'neutral', t:`Actually, I need to tell you something. And this isn't a genius move. It's the opposite.`},
+  {s:'lars', e:'shy', t:`I've liked you since the first day you walked into 5vb. Everything was on purpose.`},
+  {if:G=>G.flags.g_seat?'lars_r1':'lars_r2'}
+];
+SCENES.lars_r1=[{s:'lars', e:'blush', t:`The "window glare." There was no glare. I just wanted to sit behind you.`},{goto:'lars_r2'}];
+SCENES.lars_r2=[{if:G=>G.flags.g_cafe?'lars_r2a':'lars_r3'}];
+SCENES.lars_r2a=[{s:'lars', e:'shy', t:`I swapped my café shift to be with you. I've never swapped a shift in two years.`},{goto:'lars_r3'}];
+SCENES.lars_r3=[
+  {s:'lars', e:'smirk', t:`The tie-breaking vote for the booth? I didn't run any numbers. I voted for whatever you voted for.`},
+  {if:G=>G.flags.g_umbrella?'lars_r3a':'lars_r4'}];
+SCENES.lars_r3a=[{s:'lars', e:'blush', t:`And yes. I had two umbrellas. I knew you saw it. I nearly died.`},{goto:'lars_r4'}];
+SCENES.lars_r4=[{if:G=>G.flags.g_play?'lars_r4a':'lars_r5'}];
+SCENES.lars_r4a=[{s:'lars', e:'shy', t:`The school play. I've never acted in my life. I saw your name on the audition list and signed up five minutes later.`},{goto:'lars_r5'}];
+SCENES.lars_r5=[
+  {s:'lars', e:'neutral', t:`Even at the fireworks. "The view is better over here." The view was you. That's embarrassingly poetic. I'm aware.`},
+  {s:'lars', e:'shy', t:`So. {P}. Will you go out with me? No strategy. Just asking.`},
+  {choice:[
+    {t:`"Yes. And I can't believe I never noticed."`, then:[{cast:[['lars','happy']], fx:'sparkle'},{s:'lars', t:`You didn't notice because I'm a genius. But I'm really, really glad you said yes.`}], goto:'yes_lars'},
+    {t:`"Lars... I'm sorry. I don't feel that way."`, goto:'no_lars'},
+  ]},
+];
+SCENES.yes_lars=yesThen('lars');
+SCENES.no_lars=[
+  {cast:[['lars','sad']]},
+  {s:'lars', t:`...Okay.`},
+  {s:'lars', e:'smirk', t:`Genius move: I'm going to pretend that didn't hurt, and then go and pet this cat.`},
+  {fx:'flash', expr:{lars:['sad','girl']}, t:`POOF.`},
+  {cast:[['lars','sad','girl'],['natan','neutral']]},
+  {t:`A few minutes later, Natan sits down next to Lars without a word and stays until the change wears off.`},
+  {t:`Lars is polite to you after that. Friendly, even. But the genius moves stop.`},
+  ...outThen('lars')
+];
+SCENES.fail_lars=[
+  {s:'P', t:`Lars, I like you. Maybe more than a friend.`},
+  {cast:[['lars','surprised']]},
+  {s:'lars', e:'neutral', t:`That's... a very interesting hypothesis.`},
+  {s:'lars', e:'smirk', t:G=>G.final?`But I need more data, and we've run out of school year. Bad timing. Statistically tragic.`:`I need more data before I can respond. Ask me again later. Bring evidence.`},
+  {t:`He says it smoothly. Then he looks at the cat for a long time and doesn't look at you at all.`},
+  {goto:afterConf}
+];
+
+// ----- ADAM -----
+SCENES.conf_adam=[
+  {cast:[['adam','smile']]},
+  {s:'adam', t:`Hey, {P}. I'm explaining the offside rule to Gianmarco. He keeps getting it wrong.`},
+  {if:G=>canDate(G,'adam')?null:'fail_adam'},
+  {s:'adam', e:'shy', t:`Actually, I have something for you.`},
+  {t:`He takes out a third eraser. It's peach-scented and still in its wrapper.`},
+  {s:'adam', e:'blush', t:`Gianmarco and Giuseppe held a vote. It was unanimous. This one is named {P}.`},
+  {s:'adam', t:`What I'm trying to say is: I like you. More than studying. More than table tennis. Will you go out with me?`},
+  {choice:[
+    {t:`"Yes. Tell Gianmarco and Giuseppe I said hi."`, then:[{cast:[['adam','happy']], fx:'sparkle'},{s:'adam', t:`They heard. They're thrilled. Everyone in this pencil case is thrilled.`}], goto:'yes_adam'},
+    {t:`"Adam, I'm sorry. I see you as a friend."`, goto:'no_adam'},
+  ]},
+];
+SCENES.yes_adam=yesThen('adam');
+SCENES.no_adam=[
+  {cast:[['adam','sad']]},
+  {s:'adam', t:`Oh. That's okay. Giuseppe's here for mistakes.`},
+  {s:'adam', e:'surprised', t:`Not that YOU'RE a mistake! I meant me. No, I'm not a mistake either. Nobody's a mistake. Okay.`},
+  {t:`Later you see him using Giuseppe to quietly rub out a tiny heart in the corner of his planner. He's still your study partner. The peach eraser stays in its wrapper.`},
+  ...outThen('adam')
+];
+SCENES.fail_adam=[
+  {s:'P', t:`Adam, I think I like you. As more than a study buddy.`},
+  {cast:[['adam','surprised']]},
+  {s:'adam', e:'shy', t:G=>lateLine(G,`That's really kind. But I don't think I know you well enough yet. I'd rather get it right than rush it. Like an exam.`)},
+  {goto:afterConf}
+];
+
+// ----- FIONN -----
+SCENES.conf_fionn=[
+  {cast:[['fionn','angry']]},
+  {s:'fionn', t:`Why are you over here?! Go enjoy yourself!`},
+  {if:G=>canDate(G,'fionn')?null:'fail_fionn'},
+  {s:'fionn', e:'blush', t:`...Unless you came to see me. Which would be stupid. Very stupid. Did you?`},
+  {s:'fionn', e:'angry', t:`Okay, fine! It's not like I like you or anything!`},
+  {s:'fionn', e:'shy', t:`...I do. I really, really do. When I like something I go all in, and I'm all in on you.`},
+  {s:'fionn', e:'blush', t:`So... go out with me. Please. Ugh, I said please. This is the worst.`},
+  {choice:[
+    {t:`"Yes, Fionn. Absolutely yes."`, then:[{cast:[['fionn','happy']], fx:'sparkle'},{s:'fionn', t:`R-really?! I mean. Obviously. Who wouldn't.`}], goto:'yes_fionn'},
+    {t:`"I'm sorry... I don't like you like that."`, goto:'no_fionn'},
+  ]},
+];
+SCENES.yes_fionn=yesThen('fionn');
+SCENES.no_fionn=[
+  {cast:[['fionn','surprised']]},
+  {s:'fionn', t:`...`},
+  {if:G=>G.ret==='ch6'?null:'no_fionn_pre'},
+  {goto:'no_fionn_chase'}
+];
+SCENES.no_fionn_pre=[
+  {s:'fionn', e:'angry', t:`Come to my house. Right now. We are TALKING about this. Properly.`},
+  {bg:'living', cast:[['fionn','angry']]},
+  {t:`Twenty minutes later you're in Fionn's living room. He has prepared a speech. On cue cards.`},
+  {goto:'no_fionn_chase'}
+];
+SCENES.no_fionn_chase=[
+  {fx:'shake', expr:{fionn:'angry'}, s:'fionn', t:`NO?! IN MY HOUSE?!`},
+  {t:`You run. Fionn chases you out of the front door, across the lawn and down the street, yelling at full volume.`},
+  {s:'fionn', t:`COME BACK HERE! I JUST WANT TO ARGUE ABOUT IT! I HAD CUE CARDS!`},
+  {bg:'night', fx:'siren', cast:[['officer','neutral'],['fionn','sad']]},
+  {n:'Officer Pim', t:`Young man. You're chasing someone down the street in your socks.`},
+  {s:'fionn', t:`I wasn't going to DO anything! I just had feelings! Loudly!`},
+  {n:'Officer Pim', t:`Mm-hm. In the car. I'm taking you home. Which is... three houses away.`},
+  {t:`Officer Pim lets him off with a warning and a tissue. By Monday it's WidR legend. Fionn insists it "didn't count," and still sends you pancake photos with no caption.`, eff:{rep:3}},
+  ...outThen('fionn')
+];
+SCENES.fail_fionn=[
+  {s:'P', t:`Fionn, I came over here because... I like you.`},
+  {cast:[['fionn','surprised']]},
+  {s:'fionn', e:'blush', t:`Y-you can't just SAY that! We barely hang out! I don't even know your favourite pancake topping!`},
+  {s:'fionn', e:'shy', t:G=>G.final?`...And now the year's over. Great timing, {P}. Really great.`:`...Ask me again when I know. Then I'll think about it.`},
+  {goto:afterConf}
+];
+
+// ----- MILO -----
+SCENES.conf_milo=[
+  {cast:[['milo','neutral']]},
+  {t:`Milo pulls out one earbud when he sees you coming.`},
+  {if:G=>canDate(G,'milo')?null:'fail_milo'},
+  {s:'milo', t:`I've spent a year looking at someone who's never going to look back.`},
+  {s:'milo', e:'shy', t:`Then you showed up. You asked for the music loud. You saw what I was hiding and didn't say a word.`},
+  {s:'milo', e:'neutral', t:`This is hard for me. I don't do soft. But I want to try. With you. Go out with me, {P}.`},
+  {choice:[
+    {t:`"Yes. Put it on the playlist."`, then:[{cast:[['milo','smile']], fx:'sparkle'},{s:'milo', t:`Yeah? ...Cool. Very cool. I'm being extremely cool right now.`}], goto:'yes_milo'},
+    {t:`"Milo... I think your heart's still with Daniel."`, goto:'no_milo'},
+  ]},
+];
+SCENES.yes_milo=yesThen('milo');
+SCENES.no_milo=[
+  {cast:[['milo','sad']]},
+  {s:'milo', t:`...Yeah. Figured you'd notice that too.`},
+  {t:`He stands up, fixes his coat, and walks straight over to Daniel.`},
+  {cast:[['milo','shy'],['daniel','surprised']]},
+  {s:'milo', t:`Daniel. I need to tell you something. I've liked you for a year.`},
+  {s:'daniel', e:'smile', t:`...Took you long enough. I've been waiting for you to take those earbuds out.`},
+  {cast:[['milo','happy'],['daniel','grin']]},
+  {t:`From then on, Daniel listens to phonk at football practice, very badly. Milo calls you "the only person with taste" and adds you to every playlist.`},
+  ...outThen('milo')
+];
+SCENES.fail_milo=[
+  {s:'P', t:`Milo, I like you. A lot.`},
+  {cast:[['milo','surprised']]},
+  {if:G=>myRank()>5?'fail_milo_rank':null},
+  {s:'milo', e:'neutral', t:G=>lateLine(G,`You're cool. I mean that. But my heart's been on that football pitch for a long time. You'd have to really get me. Nobody has yet.`)},
+  {goto:afterConf}
+];
+SCENES.fail_milo_rank=[
+  {s:'milo', e:'smirk', t:G=>G.frozen?`Rankings are locked, {P}. You're #${myRank()}. People like me don't date outside the top five at WidR. Harsh, but that's this school. It's too late now.`:`You're #${myRank()} on the ranking. People like me don't date outside the top five. Climb first. Then we'll talk.`},
+  {goto:afterConf}
+];
+
+// ===== CANON ENDINGS (only reached at the End-of-Year Ball) =====
+SCENES.end_natan=[
+  {cast:[['natan','happy']]},
+  {s:'natan', t:`I lost my cap again. Don't care. Dance with me?`},
+  {bg:'field', cast:[['natan','grin'],['lars','smile']]},
+  {t:`Next spring, at the first WidR Rankers game, you're in the stands next to Lars, who swears he only came to read.`},
+  {fx:'flash', t:`Natan hits a home run, then points right at you in front of the whole school.`},
+  {end:'Home Run', kind:'NATAN · CANON ENDING', sub:'You and Natan', text:`Natan spent every game looking for you in the stands and found you every time. Lars stayed his best friend, and he finally stopped wondering about the rooftop.`}
+];
+SCENES.end_lars=[
+  {cast:[['lars','shy']]},
+  {s:'lars', t:`There's one more thing. The changes have been lasting longer since I met you. Two hours. Three. Last week, a whole day.`},
+  {s:'lars', e:'neutral', t:`And every time, I didn't want it to wear off. I think it's been trying to tell me something.`},
+  {t:`A cat from the neighbour's garden wanders onto the terrace. Lars reaches out and picks it up. On purpose.`},
+  {fx:'flash', expr:{lars:['surprised','girl']}, t:`POOF.`},
+  {fx:'sparkle', expr:{lars:['smile','girl']}, do:G=>{G.flags.lars_girl=true;}, t:`This time the sparkles don't fade. An hour passes. Then another. It stays.`},
+  {s:'lars', e:'happy', t:`It's me. I think it's been me for a while. I just needed someone safe to become it around.`},
+  {s:'lars', e:'blush', t:`...Is this okay? Are we still okay?`},
+  {s:'P', t:`More than okay.`},
+  {end:`The Cat's Out of the Bag`, kind:'LARS · CANON ENDING', sub:'You and Lars', text:`Lars is still Lars, still in white shirts and skinny jeans, and she can finally hold every cat at Pawsome Café. Natan cried happy tears and called it "the best plot twist in WidR history." Her genius moves continue, but now they're all out in the open.`}
+];
+SCENES.end_adam=[
+  {cast:[['adam','grin']]},
+  {s:'adam', t:`Results came out this morning. Guess who's THIRD in the year? Gianmarco, Giuseppe and I owe it all to you.`},
+  {s:'adam', e:'happy', t:`Now dance with me before I start crying on Giuseppe.`},
+  {end:'Perfect Score', kind:'ADAM · CANON ENDING', sub:'You and Adam', text:`You still lose to him at table tennis every Friday. His pencil case now holds three erasers: Gianmarco, Giuseppe, and a peach one with your name on it. That one never gets used. It's too important.`}
+];
+SCENES.end_fionn=[
+  {cast:[['fionn','blush']]},
+  {s:'fionn', t:`Don't say anything about the suit. I've been working out. For ME. It has nothing to do with you.`},
+  {s:'fionn', e:'shy', t:`...It's for you. I've been jogging past your house at six every morning. I want to be the best version of me, and you make me want to try.`},
+  {bg:'gym', cast:[['fionn','grin']]},
+  {end:'Gym Buddies', kind:'FIONN · CANON ENDING', sub:'You and Fionn', text:`He works out every morning and still makes you pancakes every Sunday. He says the pancakes cancel out the workouts, and that's the point. You still have his hoodie. He's stopped asking for it back.`}
+];
+SCENES.end_milo=[
+  {cast:[['milo','smile']]},
+  {t:`Milo takes the DJ booth for one song. It starts as soft piano. Then the bass drops, and the whole terrace jumps.`},
+  {s:'milo', e:'smirk', t:`It's called "{P}." Obviously.`},
+  {end:'Bass Drop', kind:'MILO · CANON ENDING (RARE)', sub:'You and Milo', text:`You won over the hardest heart at WidR. Milo still listens to phonk every day, but now there's a soft piano playlist too, and it's only for you. He even says hi to Daniel now without it hurting.`}
+];
+// ---------- ENGINE ----------
+// Snapshot of this page's own HTML, taken before anything changes it, so the game can save a copy of itself.
+const SOURCE='<!DOCTYPE html>\n'+document.documentElement.outerHTML;
+const $=id=>document.getElementById(id);
+const ROM=['natan','lars','adam','fionn','milo'];
+// Everyone else on the WidR Ranking (fixed scores). The player moves; they don't.
+const NPC_RANK=[
+  ['Milo',90],['Reshman',87],['Natan',85],['Sanne',82],['Lars',79],['Daniel',77],
+  ['Adam',75],['Femke',71],['Fionn',68],['Josh',60],['Bram',52],['Jeroen',45]];
+const CANON=[['natan','Home Run'],['lars',"The Cat's Out of the Bag"],['adam','Perfect Score'],['fionn','Gym Buddies'],['milo','Bass Drop']];
+const SAVE_KEY='widr_save2', END_KEY='widr_endings2', SET_KEY='widr_settings';
+const SET=Object.assign({speed:'normal'},JSON.parse(localStorage.getItem(SET_KEY)||'{}'));
+const SPEEDS={slow:[1,32],normal:[2,18],fast:[4,12],instant:[9999,1]};
+let G, queue=[], typing=null, waiting=null, curBg='gate';
+
+function newGame(name){
+  G={P:name||'Robin', aff:{natan:0,lars:0,adam:0,fionn:0,milo:0}, flags:{}, ch:'',
+     rep:40, lastRank:13, dating:[], out:[], frozen:false, ret:null, tried:[]};
+  $('cast').innerHTML=''; hideMenu(); jump('start');
+}
+function jump(id){ if(!SCENES[id]){console.warn('missing scene',id);return;} save(id); queue=SCENES[id].slice(); step(); }
+const fmt=t=>t.replace(/\{P\}/g,G.P);
+
+// ----- save / continue -----
+function save(id){
+  if(!G) return;
+  const cast=[...$('cast').children].map(el=>[el.dataset.id,el.dataset.expr||'neutral',el.dataset.form||'']);
+  try{localStorage.setItem(SAVE_KEY,JSON.stringify({id,G,bg:curBg,cast,when:Date.now()}));}catch(e){}
+}
+const getSave=()=>{try{return JSON.parse(localStorage.getItem(SAVE_KEY));}catch(e){return null;}};
+function continueGame(){
+  const s=getSave(); if(!s) return;
+  G=s.G; hideMenu(); $('bg').innerHTML=BG[s.bg](); curBg=s.bg; $('chapter').textContent=G.ch||'';
+  $('cast').innerHTML=''; setCast(s.cast); jump(s.id);
+}
+
+// ----- ranking -----
+function rankList(){
+  return NPC_RANK.map(([n,s])=>({n,s})).concat([{n:G.P,s:G.rep,me:true}]).sort((a,b)=>b.s-a.s || (a.me?1:-1));
+}
+function myRank(){ return rankList().findIndex(r=>r.me)+1; }
+function tier(i){ return i<=3?['Top tier','t1']:i<=6?['Very popular','t2']:i<=9?['Known','t3']:['Unknown','t4']; }
+// Lower = easier for people to say yes. Being high on the ranking makes you "desirable".
+function rankMod(){ const r=myRank(); return r<=3?-3:r<=6?-2:r<=9?0:2; }
+let rbWait=null;
+function showRank(title,note){
+  const rb=$('rankboard'), list=rankList(), r=myRank(), d=G.lastRank-r;
+  const delta = d>0?`<span style="color:#2e9e5b">▲ Up ${d} place${d>1?'s':''}</span>` : d<0?`<span style="color:#e8364f">▼ Down ${-d} place${d<-1?'s':''}</span>`:'No change';
+  rb.innerHTML=`<div class="sheet"><h3>${title||'The WidR Ranking'}</h3>
+    <div class="why">Who the school thinks is the "best" catch. The higher you are, the more people want to date you. ${G.frozen?'<b>Final rankings are locked. No more climbing.</b>':'You can still climb.'}</div>
+    <ol>${list.map((x,i)=>{const [tn,tc]=tier(i+1);return `<li class="${x.me?'me':''}"><span class="n">#${i+1}</span><span>${x.me?x.n+' (you)':x.n}</span><span class="tier ${tc}">${tn}</span><span>${x.s}</span></li>`;}).join('')}</ol>
+    ${note!==false?`<div class="delta">You: #${r} · ${delta}</div>`:''}
+    <div class="tap">Click to close</div></div>`;
+  rb.style.display='flex'; if(note!==false) G.lastRank=r;
+}
+$('rankboard').onclick=e=>{ e.stopPropagation(); $('rankboard').style.display='none'; if(rbWait){const f=rbWait;rbWait=null;f();} };
+
+// ----- cast -----
+function setCast(list){
+  const pos={1:[50],2:[30,70],3:[19,50,81]}[list.length]||[];
+  const keep=new Set(list.map(x=>x[0]));
+  [...$('cast').children].forEach(el=>{if(!keep.has(el.dataset.id)) el.remove();});
+  list.forEach((x,i)=>{
+    const [id,expr='neutral',form]=x;
+    let el=$('cast').querySelector(`[data-id="${id}"]`);
+    if(!el){el=document.createElement('div');el.className='char enter';el.dataset.id=id;el.dataset.form='';$('cast').appendChild(el);}
+    el.style.left=pos[i]+'%';
+    if(x.length>2) el.dataset.form=form||'';
+    if(id==='lars' && G.flags.lars_girl && x.length<3) el.dataset.form='girl';
+    el.dataset.expr=expr; el.innerHTML=portrait(id,expr,el.dataset.form);
+  });
+}
+function setExpr(id,expr,form){
+  const el=$('cast').querySelector(`[data-id="${id}"]`); if(!el) return;
+  if(form!==undefined) el.dataset.form=form;
+  if(expr) el.dataset.expr=expr;
+  el.innerHTML=portrait(id,el.dataset.expr,el.dataset.form);
+}
+function applyEff(o){
+  if(o.aff) for(const k in o.aff) G.aff[k]+=o.aff[k];
+  if(o.flag) [].concat(o.flag).forEach(f=>G.flags[f]=true);
+  if(o.rep && (!G.frozen || o.force)) G.rep=Math.max(0,Math.min(99,G.rep+o.rep));
+}
+function fx(kind){
+  const f=$('fx'), stg=$('stage');
+  if(kind==='flash'){f.className='';void f.offsetWidth;f.className='flash';}
+  if(kind==='shake'){stg.classList.remove('shake');void stg.offsetWidth;stg.classList.add('shake');}
+  if(kind==='siren'){f.className='';void f.offsetWidth;f.className='siren';}
+  if(kind==='sparkle'){f.className='sparkle';f.innerHTML='';
+    for(let i=0;i<14;i++){const s=document.createElement('span');s.textContent=['✦','♥','✧','❀'][i%4];
+      s.style.left=(10+Math.random()*80)+'%';s.style.top=(10+Math.random()*60)+'%';s.style.color=['#ff6f9f','#ffc94d','#7fd6c2'][i%3];s.style.animationDelay=(i*.06)+'s';f.appendChild(s);}
+    setTimeout(()=>{f.innerHTML='';},2000);}
+}
+function step(){
+  while(queue.length){
+    const s=queue.shift();
+    if(s.bg){ curBg=s.bg; $('bg').innerHTML=BG[s.bg](); }
+    if(s.ch!==undefined){ G.ch=s.ch; $('chapter').textContent=s.ch; }
+    if(s.cast) setCast(typeof s.cast==='function'?s.cast(G):s.cast);
+    if(s.expr) for(const k in s.expr){ const v=[].concat(s.expr[k]); setExpr(k,v[0],v[1]); }
+    if(s.eff) applyEff(s.eff);
+    if(s.fx) fx(s.fx);
+    if(s.do) s.do(G);
+    if(s.rank){ rbWait=()=>step(); showRank(s.rank===true?null:s.rank); return; }
+    if(s.goto){ return jump(typeof s.goto==='function'?s.goto(G):s.goto); }
+    if(s.if){ const r=s.if(G); if(r) return jump(r); continue; }
+    if(s.end){ return ending(s); }
+    if(s.choice){ return showChoice(typeof s.choice==='function'?s.choice(G):s.choice); }
+    if(s.t!==undefined){ return say(s); }
+  }
+}
+function say(s){
+  let name='';
+  const txtRaw=typeof s.t==='function'?s.t(G):s.t;
+  if(s.s==='P') name=G.P;
+  else if(s.s && CHARS[s.s]) name=CHARS[s.s].name;
+  else if(s.n) name=s.n;
+  if(s.s && CHARS[s.s] && s.e) setExpr(s.s,s.e);
+  [...$('cast').children].forEach(el=>{
+    el.classList.toggle('dim', !!(s.s && s.s!=='P' && el.dataset.id!==s.s && CHARS[s.s]));
+    el.classList.remove('talk','enter');
+    if(el.dataset.id===s.s){void el.offsetWidth;el.classList.add('talk');}
+  });
+  $('name').textContent=name;
+  $('name').style.background= s.s==='P' ? '#ff6f9f' : (CHARS[s.s]?CHARS[s.s].color:'#7a6e8f');
+  const txt=fmt(txtRaw), el=$('text');
+  el.className = (!s.s && !s.n) ? 'narr' : '';
+  el.textContent=''; $('next').style.visibility='hidden';
+  const [per,ms]=SPEEDS[SET.speed]||SPEEDS.normal;
+  let i=0; clearInterval(typing);
+  typing=setInterval(()=>{ i+=per; el.textContent=txt.slice(0,i); if(i>=txt.length){clearInterval(typing);typing=null;$('next').style.visibility='visible';}},ms);
+  waiting=()=>{ if(typing){clearInterval(typing);typing=null;el.textContent=txt;$('next').style.visibility='visible';return;} waiting=null; step(); };
+}
+function showChoice(opts){
+  const box=$('choices'); box.innerHTML=''; waiting=null; $('next').style.visibility='hidden';
+  opts.filter(o=>!o.req||o.req(G)).forEach(o=>{
+    const b=document.createElement('button'); b.textContent=fmt(o.t);
+    b.onclick=e=>{ e.stopPropagation(); box.innerHTML=''; applyEff(o); if(o.do) o.do(G);
+      const extra=(o.then||[]).slice(); if(o.goto) extra.push({goto:o.goto});
+      queue=extra.concat(queue); step(); };
+    box.appendChild(b);
+  });
+}
+const overlayOpen=()=>['menu','panel','pause','rankboard'].some(id=>getComputedStyle($(id)).display!=='none');
+$('box').onclick=()=>{ if(waiting && !overlayOpen()) waiting(); };
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){ if($('panel').style.display==='block') return closePanel(); if(G && $('menu').style.display!=='grid') return togglePause(); }
+  if((e.key===' '||e.key==='Enter') && waiting && !overlayOpen() && document.activeElement.tagName!=='INPUT'){e.preventDefault();waiting();}
+});
+
+function ending(s){
+  localStorage.removeItem(SAVE_KEY);
+  const found=JSON.parse(localStorage.getItem(END_KEY)||'[]'); if(!found.includes(s.end)){found.push(s.end);localStorage.setItem(END_KEY,JSON.stringify(found));}
+  const c=document.createElement('div'); c.className='card';
+  c.innerHTML=`<div class="tag">${s.kind||'ENDING'}</div><h1>${s.end}</h1><h2>${fmt(s.sub||'')}</h2><p>${fmt(s.text||'')}</p>
+    <p class="sub">Final WidR Ranking: #${myRank()} of 13 · Storylines completed: ${found.filter(f=>CANON.some(c=>c[1]===f)).length}/5</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center"><button class="big" id="again">Back to menu</button></div>`;
+  $('stage').appendChild(c);
+  c.querySelector('#again').onclick=()=>{c.remove();title();};
+}
+function journal(){
+  const j=$('journal');
+  if(j.style.display==='block'){j.style.display='none';return;}
+  const rows=ROM.map(k=>{const v=Math.max(0,G?G.aff[k]:0), n=Math.min(5,Math.round(v/2.4));
+    const tag=G&&G.dating.includes(k)?' 💘':G&&G.out.includes(k)?' ✖':'';
+    return `<div class="row"><b style="color:${CHARS[k].color}">${CHARS[k].name}${tag}</b><span class="hearts">${'♥'.repeat(n)}${'♡'.repeat(5-n)}</span></div>`;}).join('');
+  j.innerHTML=`<h3>${G?G.P:'Your'}'s Notebook</h3>${rows}
+    <small>${G?`WidR Ranking: #${myRank()} of 13${G.dating.length>1?' · <b style="color:#e8364f">Dating '+G.dating.length+' people. Valentine\'s Day is coming…</b>':''}<br>`:''}Connections grow from time spent together, not from flirting.</small>`;
+  j.style.display='block';
+}
+$('jbtn').onclick=e=>{e.stopPropagation(); if(G) journal();};
+$('rbtn').onclick=e=>{e.stopPropagation(); if(G) showRank(null,false);};
+$('tbtn').onclick=e=>{e.stopPropagation(); togglePause();};
+
+// ----- pause menu -----
+function togglePause(){
+  const p=$('pause');
+  if(p.style.display==='flex'){p.style.display='none';return;}
+  p.innerHTML=`<div class="sheet"><h3>Paused</h3>
+    <button class="mbtn primary" data-a="resume">Resume <small>Esc</small></button>
+    <button class="mbtn" data-a="settings">Settings <small>Text speed</small></button>
+    <button class="mbtn" data-a="share">Share the game <small>Download or copy</small></button>
+    <button class="mbtn mint" data-a="quit">Save &amp; quit to menu <small>Progress is kept</small></button></div>`;
+  p.style.display='flex';
+  p.onclick=e=>{e.stopPropagation(); const a=e.target.closest('[data-a]'); if(!a){ if(e.target===p) p.style.display='none'; return;}
+    const k=a.dataset.a;
+    if(k==='resume') p.style.display='none';
+    if(k==='settings') openPanel('settings');
+    if(k==='share') openPanel('share');
+    if(k==='quit'){ p.style.display='none'; title(); }
+  };
+}
+
+// ----- main menu -----
+function hideMenu(){ $('menu').style.display='none'; closePanel(); $('hud').style.visibility='visible'; }
+function title(){
+  clearInterval(typing); waiting=null; queue=[];
+  G=null; $('choices').innerHTML=''; $('journal').style.display='none'; $('rankboard').style.display='none'; $('pause').style.display='none';
+  document.querySelectorAll('.card').forEach(c=>c.remove());
+  $('chapter').textContent=''; $('bg').innerHTML=BG.gate(); curBg='gate'; $('cast').innerHTML='';
+  $('name').textContent=''; $('text').textContent=''; $('hud').style.visibility='hidden';
+  const sv=getSave(), found=JSON.parse(localStorage.getItem(END_KEY)||'[]');
+  const done=CANON.filter(c=>found.includes(c[1])).length;
+  const m=$('menu');
+  m.innerHTML=`<div class="hero">
+      <div class="logo"><div class="k">A Rankingland Story</div><h1>WidR<br>School</h1><div class="s">5vb VWO · Five boys · One ranking</div></div>
+      <div class="lineup">${['fionn','lars','natan','adam','milo'].map(k=>`<div data-p="${k}" title="${CHARS[k].name}">${portrait(k,'smile')}</div>`).join('')}</div>
+    </div>
+    <div class="side">
+      ${sv?`<button class="mbtn primary" data-a="continue">Continue <small>${sv.G.P} · ${sv.G.ch||'Chapter 1'}</small></button>`:''}
+      <button class="mbtn ${sv?'':'primary'}" data-a="new">New Game <small>${sv?'Overwrites save':'Start your first day'}</small></button>
+      <button class="mbtn" data-a="chars">Characters <small>Meet 5vb</small></button>
+      <button class="mbtn" data-a="ends">Endings <small>${done}/5 found</small></button>
+      <button class="mbtn" data-a="how">How to Play</button>
+      <button class="mbtn" data-a="settings">Settings</button>
+      <button class="mbtn mint" data-a="share">Share the Game <small>Download / copy</small></button>
+      <div class="foot">Your progress saves automatically at every scene.</div>
+    </div>`;
+  m.style.display='grid';
+  m.onclick=e=>{ const p=e.target.closest('[data-p]'); if(p) return openPanel('chars',p.dataset.p);
+    const a=e.target.closest('[data-a]'); if(!a) return; const k=a.dataset.a;
+    if(k==='continue') return continueGame();
+    if(k==='new') return openPanel('new');
+    openPanel(k);
+  };
+}
+
+// ----- panels -----
+const PROFILES={
+  natan:['17','Third base for the WidR Rankers. Curly hair, three different laughs, and terrible aim, but only at Daniel.'],
+  lars:['16','Loves cats but can\'t touch them, for reasons. Always has a plan. White shirts, skinny jeans, sharp blue eyes.'],
+  adam:['16','Top of the class, and happiest at the table tennis table. Owner of Gianmarco (strawberry) and Giuseppe (green apple).'],
+  fionn:['16','Says he doesn\'t care. Cares about everything. Watches every match, makes the best pancakes in Rankingland.'],
+  milo:['17','Best-dressed boy at WidR. Phonk every single day. Very hard to impress. The hardest route in the game.'],
+  daniel:['17','Baseball in spring, football all year. From Afghanistan. Somehow always in the way of Natan\'s throws.'],
+  josh:['16','Calm, clever and organised, until his ADHD kicks in and he talks about five things at once.'],
+  reshman:['17','Your tour guide. Self-declared coolest guy at WidR, and he knows exactly how the ranking works.'],
+};
+function closePanel(){ $('panel').style.display='none'; }
+function openPanel(kind,focus){
+  const P=$('panel'); let h='<button class="x" data-a="close">Close ✕</button>';
+  if(kind==='new'){
+    h+=`<h2>New Game</h2><p>What's your name? Everyone at WidR will call you this.</p>
+      <input class="nm" id="nm" maxlength="16" placeholder="Your name" value="">
+      <div><button class="pbtn" data-a="start">Start the first day</button></div>
+      ${getSave()?'<p style="color:#e8364f">Starting a new game replaces your current save.</p>':''}`;
+  }
+  if(kind==='chars'){
+    h+=`<h2>Characters</h2><div class="profiles">${Object.keys(PROFILES).map(k=>{const [age,txt]=PROFILES[k], rom=ROM.includes(k);
+      return `<div class="prof" ${focus===k?'style="outline:4px solid #ff6f9f"':''}><div class="pic" style="background:${CHARS[k].color}22">${portrait(k,'smile')}</div>
+      <div class="inf"><b style="color:${CHARS[k].color}">${CHARS[k].name}</b><span class="tg" style="background:${rom?'#ffd3e2':'#eee'}">${rom?'Romance':'Friend'}</span><span class="tg">${age}</span><p>${txt}</p></div></div>`;}).join('')}</div>`;
+  }
+  if(kind==='ends'){
+    const found=JSON.parse(localStorage.getItem(END_KEY)||'[]');
+    h+=`<h2>Endings</h2><p>Each boy has one canon storyline. The game only ends when you finish one.</p>
+      <div class="ends">${CANON.map(([k,n])=>{const ok=found.includes(n);
+        return `<div class="endc ${ok?'':'lock'}"><div class="pic">${portrait(k,ok?'happy':'neutral')}</div><div class="inf"><b>${ok?n:'???'}</b><small>${ok?CHARS[k].name:'Not found yet'}</small></div></div>`;}).join('')}</div>`;
+  }
+  if(kind==='how'){
+    h+=`<h2>How to Play</h2><ul class="rules">
+      <li><b>Click or press Space</b> to continue dialogue. Press <b>Esc</b> to pause.</li>
+      <li><b>Connections:</b> nobody falls for you by accident. Spend time with someone, help them and listen, and your bond grows. Check it in the <b>Notebook</b>.</li>
+      <li><b>The WidR Ranking:</b> the school's list of "best catches." You start at the bottom. Big moments (festivals, the school play, tournaments) make you climb. The higher you are, the easier it is for someone to say yes.</li>
+      <li><b>The ranking locks on Valentine's Day.</b> Leave it too late and some people are out of reach.</li>
+      <li><b>Asking someone out:</b> you get a few chances during the year. If they say no, you weren't close enough yet, so try again later. If <i>you</i> say no, something happens, and the story carries on.</li>
+      <li><b>Dating two people at once?</b> Valentine's Day will find out. So will the ranking.</li>
+      <li>The game ends when you finish one of the five canon storylines at the End-of-Year Ball.</li></ul>`;
+  }
+  if(kind==='settings'){
+    h+=`<h2>Settings</h2><p><b>Text speed</b></p><div class="seg" id="spd">${Object.keys(SPEEDS).map(k=>`<button data-s="${k}" class="${SET.speed===k?'on':''}">${k[0].toUpperCase()+k.slice(1)}</button>`).join('')}</div>
+      <p><b>Progress</b></p><button class="pbtn ghost" data-a="wipe">Erase save &amp; endings</button><div class="msg" id="msg"></div>`;
+  }
+  if(kind==='share'){
+    h+=`<h2>Share the Game</h2>
+      <p>The whole game is one HTML file. Save it, then send it to anyone. They just double-click it to play, no internet needed.</p>
+      <button class="pbtn" data-a="dl">Download WidR_School.html</button>
+      <button class="pbtn alt" data-a="copy">Copy the game code</button>
+      <button class="pbtn ghost" data-a="show">Show the code</button>
+      <div class="msg" id="msg"></div>
+      <p><b>If the download doesn't start</b> (some previews block downloads):</p>
+      <ol><li>Click <b>Copy the game code</b>.</li>
+      <li>Open <b>TextEdit</b>, choose <b>Format › Make Plain Text</b>, and paste.</li>
+      <li>Save it as <b>WidR_School.html</b>. Double-click to play.</li></ol>
+      <p><b>Want a link?</b> Drag that file onto <b>app.netlify.com/drop</b>, or upload it to <b>itch.io</b> as an HTML game.</p>
+      <textarea id="code" readonly style="display:none"></textarea>`;
+  }
+  P.innerHTML=h; P.style.display='block'; P.scrollTop=0;
+  const msg=t=>{const m=P.querySelector('#msg'); if(m) m.textContent=t;};
+  if(kind==='new'){ const i=P.querySelector('#nm'); setTimeout(()=>i.focus(),50); i.onkeydown=e=>{if(e.key==='Enter') newGame(i.value.trim());}; }
+  P.onclick=e=>{ e.stopPropagation();
+    const sp=e.target.closest('[data-s]'); if(sp){ SET.speed=sp.dataset.s; localStorage.setItem(SET_KEY,JSON.stringify(SET)); P.querySelectorAll('#spd button').forEach(b=>b.classList.toggle('on',b===sp)); return; }
+    const a=e.target.closest('[data-a]'); if(!a) return; const k=a.dataset.a;
+    if(k==='close') return closePanel();
+    if(k==='start') return newGame(P.querySelector('#nm').value.trim());
+    if(k==='wipe'){ if(confirm('Erase your save and all endings found?')){ localStorage.removeItem(SAVE_KEY); localStorage.removeItem(END_KEY); msg('Erased.'); if(!G) setTimeout(title,400);} return; }
+    if(k==='dl'){
+      try{ const url=URL.createObjectURL(new Blob([SOURCE],{type:'text/html'}));
+        const l=document.createElement('a'); l.href=url; l.download='WidR_School.html'; document.body.appendChild(l); l.click(); l.remove();
+        setTimeout(()=>URL.revokeObjectURL(url),4000);
+        msg('Download started. If nothing appeared, this preview blocks downloads. Use "Copy the game code" instead.');
+      }catch(err){ msg('Downloads are blocked here. Use "Copy the game code" instead.'); }
+      return;
+    }
+    if(k==='show'||k==='copy'){
+      const ta=P.querySelector('#code'); ta.value=SOURCE; ta.style.display='block';
+      if(k==='show'){ ta.focus(); ta.select(); msg('Code shown below. Press Cmd+A then Cmd+C to copy it.'); return; }
+      const fallback=()=>{ ta.focus(); ta.select(); let ok=false; try{ok=document.execCommand('copy');}catch(e){}
+        msg(ok?'Copied! Now paste it into TextEdit (plain text) and save as WidR_School.html.':'Your browser blocked copying here. The code is selected below. Press Cmd+C.'); };
+      if(navigator.clipboard && navigator.clipboard.writeText)
+        navigator.clipboard.writeText(SOURCE).then(()=>msg('Copied! Now paste it into TextEdit (plain text) and save as WidR_School.html.'),fallback);
+      else fallback();
+    }
+  };
+}
+title();
+</script>
+</body>
+</html>
