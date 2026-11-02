@@ -2921,7 +2921,8 @@ const roadAt = (i, lat = 0, up = 0) => { i = ((Math.round(i) % N) + N) % N; retu
 const mirS = () => world?.userData.mir ? -1 : 1;   // sides flip with the track in mirror mode
 function buildGrinds(def){
   GRINDS = []; CLEAR = [];
-  for (const [f0, f1, side, arch = 3] of def.grinds || []){
+  const busy = extrasBusy(def); CUTS = findCuts(def, busy);
+  for (const [f0, f1, side, arch = 3] of [...(def.grinds || []), ...autoRails(def, busy)]){
     const i0 = Math.round(f0 * N) % N, i1 = Math.round(f1 * N) % N, span = fwdIdx(i0, i1);
     if (span < 8 || span > 75) continue;
     const s = side ? side * mirS() : Math.sign(tans[i1].clone().sub(tans[i0]).dot(nors[i0])) || 1;
@@ -2985,6 +2986,186 @@ function grindPlan(k){
   }
 }
 
+// ---- more ways round: shortcuts and extra rails, found on every race track ----
+// Shortcuts are side paths that leave the road on the inside of a hairpin and join it again after it. A plank path is as fast
+// as the road and just shorter; the big ones are rough dirt that slows you down like grass unless you boost through (a mushroom
+// shortcut, like in Mario Kart). Tracks without their own rails also get grind rails across their gentler bends.
+// Both are worked out from the layout, the same way on every device, so online races and ghosts all see the same ones.
+let CUTS = [];
+const CUT_BOOST = ['boost', 'triple', 'golden'];
+// stretches where nothing extra may go: loops, jumps, glider gaps, bridges, hills and walls, the start, and the hazards
+function extrasBusy(def){
+  const b = new Uint8Array(N), mark = (c, r) => { for (let o = -r; o <= r; o++) b[(((c + o) % N) + N) % N] = 1; };
+  for (let i = 0; i < N; i++) if (RAIL[i] || LR[i] || LP[i] || GP[i] || GZ[i] || JZ[i] || BR[i]) mark(i, 10);
+  mark(0, 40);
+  for (const [f0, f1] of def.grinds || []){ const a = Math.round(f0 * N), n = fwdIdx(a, Math.round(f1 * N)); for (let o = 0; o <= n; o += 4) mark(a + o, 26); }
+  for (const [f] of [...(def.haz || []), ...(def.drings || [])]) mark(Math.round(f * N), 30);
+  return b;
+}
+const bez = (A, C, B, t) => new THREE.Vector3((1 - t) ** 2 * A.x + 2 * (1 - t) * t * C.x + t * t * B.x, 0, (1 - t) ** 2 * A.z + 2 * (1 - t) * t * C.z + t * t * B.z);
+// how far the road turns from i over n points (> 0 left), and how much it wiggles on the way
+function turnOf(i, n){
+  let net = 0, abs = 0;
+  for (let o = 0; o < n; o += 4){ const a = tans[(i + o) % N], c = tans[(i + Math.min(n, o + 4)) % N], d = Math.asin(THREE.MathUtils.clamp(a.z * c.x - a.x * c.z, -1, 1)); net += d; abs += Math.abs(d); }
+  return {net, abs};
+}
+function findCuts(def, busy){
+  if (def.arena || def.battle || def.city || def.cuts === 0 || (def.hidden && !def.custom)) return [];
+  const bw = Math.max(9, Math.round(W * 0.42)), far = W / 2 + bw / 2 + 4, cand = [];
+  const landR = def.water ? span * 0.82 + 50 : Infinity;
+  for (let i0 = 0; i0 < N; i0 += 6){
+    if (busy[i0]) continue;
+    let Lp = 0, o = 0;
+    for (let n = 60; n <= 300; n += 10){
+      const i1 = (i0 + n) % N; let clear = true;
+      for (; o < n; o++){ if (busy[(i0 + o) % N]) clear = false; Lp += segL[(i0 + o) % N]; if (!clear) break; }
+      if (!clear || busy[i1]) break;   // a longer one would run into the same busy spot
+      const tn = turnOf(i0, n); if (Math.abs(tn.net) < 1.6 || tn.abs > Math.abs(tn.net) * 1.35) continue;
+      const s = tn.net > 0 ? -1 : 1, im = (i0 + Math.round(n / 2)) % N;
+      const A = pts[i0].clone().addScaledVector(nors[i0], s * (W / 2 - 2)), B = pts[i1].clone().addScaledVector(nors[i1], s * (W / 2 - 2));
+      const mid = A.clone().add(B).multiplyScalar(0.5), apex = pts[im].clone().addScaledVector(nors[im], s * (W / 2 + far));
+      const C = mid.lerp(apex, 0.2);
+      let Lc = 0; for (let k = 1; k <= 20; k++) Lc += bez(A, C, B, k / 20).distanceTo(bez(A, C, B, (k - 1) / 20));
+      if (Lc / Lp > 0.82 || Lp - Lc < 30) continue;
+      // the path must stay well away from every road, including this bend, except where it leaves and joins it
+      let ok = true;
+      for (let k = 2; k <= 22 && ok; k++){
+        const t = k / 24, p = bez(A, C, B, t);
+        if (Math.hypot(p.x - center.x, p.z - center.z) > landR - 20) ok = false;
+        for (let j = 0; j < N && ok; j += 3){
+          const d = Math.hypot(pts[j].x - p.x, pts[j].z - p.z), inWin = fwdIdx(i0 - 15, j) <= n + 30;
+          if (!inWin && d < W / 2 + bw / 2 + 10) ok = false;
+          else if (t > 0.25 && t < 0.75 && d < far) ok = false;
+        }
+      }
+      if (ok) cand.push({i0, i1, span:n, s, A, B, C, score:Lp - Lc, ratio:Lc / Lp, Lc});
+    }
+  }
+  cand.sort((a, b) => b.score - a.score);
+  const out = [], max = typeof def.cuts === 'number' ? def.cuts : 2;
+  for (const c of cand){
+    if (out.length >= max) break;
+    if (out.some(o => fwdIdx(o.i0 - 40, c.i0) < o.span + 80 || fwdIdx(c.i0 - 40, o.i0) < c.span + 80)) continue;
+    const M = Math.max(12, Math.ceil(c.Lc / 2.5) + 1), y0 = P3[c.i0].y, y1 = P3[c.i1].y;
+    const Q = Array.from({length:M}, (_, j) => bez(c.A, c.C, c.B, j / (M - 1)).setY(y0 + (y1 - y0) * j / (M - 1)));
+    const T = Q.map((_, j) => Q[Math.min(M - 1, j + 1)].clone().sub(Q[Math.max(0, j - 1)]).setY(0).normalize());
+    const R = T.map(t => new THREE.Vector3(-t.z, 0, t.x));
+    const cut = {id:out.length, i0:c.i0, i1:c.i1, span:c.span, s:c.s, bw, M, Q, T, R, dirt:c.ratio < 0.6};
+    out.push(cut);
+    for (let j = 0; j < M; j += 3) CLEAR.push({x:Q[j].x, z:Q[j].z, i:cutIdx(cut, j)});
+  }
+  return out;
+}
+// grind rails across the gentler bends of tracks that don't have rails of their own (buildGrinds checks each one again)
+function autoRails(def, busy){
+  if (def.arena || def.battle || def.city || def.rails === 0 || (def.hidden && !def.custom) || def.grinds?.length) return [];
+  const free = i => !busy[i] && !CUTS.some(c => fwdIdx(c.i0 - 20, i) < c.span + 40), cand = [];
+  for (let i0 = 0; i0 < N; i0 += 6){
+    for (let n = 44; n <= 72; n += 7){
+      let ok = true; for (let o = 0; o <= n && ok; o += 2) if (!free((i0 + o) % N)) ok = false;
+      if (!ok) break;
+      const tn = turnOf(i0, n); if (Math.abs(tn.net) < 0.4 || Math.abs(tn.net) > 1.1 || tn.abs > Math.abs(tn.net) * 1.3) continue;
+      cand.push({i0, n, score:Math.abs(tn.net) * n});
+    }
+  }
+  cand.sort((a, b) => b.score - a.score);
+  const out = [];
+  for (const c of cand){
+    if (out.length >= 2) break;
+    if (out.some(o => fwdIdx(o.i0 - 120, c.i0) < o.n + 240)) continue;
+    out.push(c);
+  }
+  return out.map(c => [c.i0 / N, ((c.i0 + c.n) % N) / N]);
+}
+const cutIdx = (c, j) => (c.i0 + Math.round(c.span * Math.max(0, Math.min(c.M - 1, j)) / (c.M - 1))) % N;
+function cutNear(c, p, a = 0, b = c.M - 1){
+  a = Math.max(0, a); b = Math.min(c.M - 1, b);
+  let bj = a, bd = Infinity;
+  for (let j = a; j <= b; j++){ const d = (c.Q[j].x - p.x) ** 2 + (c.Q[j].z - p.z) ** 2; if (d < bd){ bd = d; bj = j; } }
+  const v = new THREE.Vector3(p.x - c.Q[bj].x, 0, p.z - c.Q[bj].z);
+  return {j:bj, d:v.dot(c.R[bj]), along:v.dot(c.T[bj])};
+}
+// on a shortcut the path's own edges hold you in, and the road's walls don't; off it again at either end
+function cutStep(k){
+  if (k.cut){
+    const c = k.cut.c, q = cutNear(c, k.pos, k.cut.j - 8, k.cut.j + 8); k.cut.j = q.j;
+    if (q.j >= c.M - 2 || (q.j === 0 && q.along < -1)){ k.cut = null; return; }
+    if (Math.abs(q.d) > c.bw / 2){
+      const mouth = q.j < c.M * 0.22 || q.j > c.M * 0.78, mi = nearestIdx(k.pos, cutIdx(c, q.j));
+      if (mouth && Math.abs(k.pos.clone().sub(pts[mi]).dot(nors[mi])) < W / 2 + 12){ k.cut = null; return; }   // steered back onto the road
+      const sg = Math.sign(q.d), Rv = c.R[q.j], Tv = c.T[q.j], mv = fwd(k.moveH), into = mv.dot(Rv) * sg;
+      k.pos.addScaledVector(Rv, sg * c.bw / 2 - q.d);
+      if (into > 0){
+        let dd = Math.atan2(Tv.x, Tv.z) + (mv.dot(Tv) >= 0 ? 0 : Math.PI) - k.moveH; dd = Math.atan2(Math.sin(dd), Math.cos(dd));
+        k.moveH += dd * 0.7; k.heading += dd * 0.3; k.speed *= 1 - 0.3 * into * into;
+      }
+    }
+    return;
+  }
+  for (const c of CUTS){
+    if (fwdIdx(c.i0 - 10, k.idx) > c.span * 0.3 + 10) continue;
+    const q = cutNear(c, k.pos, 0, Math.floor(c.M * 0.3));
+    if (q.j < 1 || Math.abs(q.d) > c.bw / 2) continue;
+    if (Math.abs(k.pos.clone().sub(pts[k.idx]).dot(nors[k.idx])) < W / 2 - 1) continue;   // still on the road
+    k.cut = {c, j:q.j};
+    if (k.isPlayer && k.cutSeen !== c.id + ':' + k.lap){ k.cutSeen = c.id + ':' + k.lap; toast(c.dirt ? '🍄 Shortcut! Boost through the rough' : '🌿 Shortcut!'); }
+    return;
+  }
+}
+// the ground under a kart on a shortcut (the same shape surf() gives for the road)
+function cutSurf(k){
+  const c = k.cut.c, i = cutIdx(c, k.cut.j);
+  return {i, lat:0, T:tans[i].clone(), D:nors[i].clone(), U:UPV.clone(), pos:new THREE.Vector3(k.pos.x, c.Q[k.cut.j].y, k.pos.z), bank:0, anti:false};
+}
+// rivals take the shortcuts too: the plank ones more often the better they are, the rough ones only with a mushroom or a star
+function cutAim(k, look){
+  if (k.cut){
+    const c = k.cut.c;
+    if (c.dirt && !(k.boost > 0) && !(k.star > 0) && !(k.rolling > 0) && CUT_BOOST.includes(k.item)) useItem(k);
+    return c.Q[Math.min(c.M - 1, k.cut.j + Math.ceil(look * 0.5))];
+  }
+  for (const c of CUTS){
+    const a = fwdIdx(k.idx, c.i0), b = fwdIdx(c.i0, k.idx);
+    if (a > 45 && b > c.span * 0.25) continue;
+    const key = c.id + ':' + k.lap;
+    if (k.cutFor !== key){ k.cutFor = key; k.cutGo = c.dirt ? (CUT_BOOST.includes(k.item) || k.star > 0) && Math.random() < 0.4 + 0.5 * k.skill : Math.random() < 0.3 + 0.5 * k.skill; }
+    if (k.cutGo) return c.Q[Math.min(c.M - 1, Math.max(3, Math.round(c.M * 0.2)))];
+  }
+  return null;
+}
+// what the shortcuts look like: planks (or rough dirt) with posts or rocks along the edges, a sign where they leave the road,
+// and a line of coins on the plank ones
+function buildCutMeshes(def){
+  const th = def.theme;
+  for (const c of CUTS){
+    const [ca, cb] = c.dirt ? [0x8a6a45, 0x7a5c3a] : th === 'snow' ? [0xe6eef8, 0xcfdcec] : th === 'space' || th === 'neon' ? [0x3a3f6a, 0x4a5080]
+      : th === 'candy' ? [0xffb3d9, 0xfff0f8] : th === 'rainbow' ? [0xffe680, 0xffb3e0] : [0xb07a45, 0x9a6638];
+    const cA = new THREE.Color(ca), cB = new THREE.Color(cb), pos = [], col = [], idx = [], h = c.bw / 2;
+    for (let j = 0; j < c.M; j++){
+      const q = c.Q[j], r = c.R[j], y = q.y + 0.08, cc = Math.floor(j / (c.dirt ? 3 : 1)) % 2 ? cA : cB;
+      pos.push(q.x - r.x * h, y, q.z - r.z * h, q.x + r.x * h, y, q.z + r.z * h); col.push(cc.r, cc.g, cc.b, cc.r, cc.g, cc.b);
+      if (j < c.M - 1){ const o = j * 2; idx.push(o, o + 1, o + 2, o + 1, o + 3, o + 2); }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    g.setIndex(idx); g.computeVertexNormals();
+    const m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({vertexColors:true, side:THREE.DoubleSide})); m.receiveShadow = true; world.add(m);
+    const glowy = th === 'space' || th === 'neon', postG = new THREE.BoxGeometry(0.5, 1.4, 0.5), rockG = new THREE.DodecahedronGeometry(0.9, 0);
+    const postM = glowy ? glow(0x2ee6ff) : lam(th === 'candy' ? 0xff4fa0 : th === 'snow' ? 0xff3b3b : 0x6b4a2b), rockM = lam(0x8d8478);
+    for (let j = Math.round(c.M * 0.15); j <= c.M * 0.85; j += 4) for (const sd of [-1, 1]){
+      const p = c.Q[j].clone().addScaledVector(c.R[j], sd * (h + 0.6));
+      if (c.dirt) put(world, rockG, rockM, p.x, p.y + 0.4, p.z).rotation.y = j; else put(world, postG, postM, p.x, p.y + 0.7, p.z);
+    }
+    const j0 = Math.min(c.M - 1, 5), sp = c.Q[j0].clone().addScaledVector(c.R[j0], c.s * (h + 2.5)), T0 = tans[c.i0];
+    put(world, new THREE.CylinderGeometry(0.2, 0.2, 3.6, 6), lam(0x6b4a2b), sp.x, sp.y + 1.8, sp.z);
+    signBoard(world, c.dirt ? '🍄 SHORTCUT' : '➜ SHORTCUT', '#ffd23f', '#1d1a2f', 5, 1.4, sp.x, sp.y + 3.6, sp.z, Math.atan2(-T0.x, -T0.z));
+    if (!c.dirt) for (let n = 0; n < 5; n++){
+      const j = Math.round(c.M * (0.3 + n * 0.1)), cm = new THREE.Mesh(coinG, coinM); cm.castShadow = true;
+      cm.position.copy(c.Q[j]).setY(c.Q[j].y + 1.5); cm.userData.hint = cutIdx(c, j); world.add(cm);
+      coins.push({mesh:cm, respawn:0});
+    }
+  }
+}
 // ---- the hazards ----
 const stoneM = lam(0x8d97a8), stoneD = lam(0x6b7385), whiteM = lam(0xffffff), blackM = lam(0x1d1a2f);
 function faceBasis(g, i, flip = false){   // local x across the road, y up from it, z back towards the karts coming
@@ -3127,6 +3308,7 @@ const HZK = {
 };
 function buildFun(def){
   HZ = []; DRINGS = [];
+  buildCutMeshes(def);
   for (const r of GRINDS){
     // a yellow grind rail on posts, with a short ramp from the road up onto it and arrows to point the way
     const pts3 = []; for (let k = 0; k <= 30; k++) pts3.push(grindPos(r, k / 30));
@@ -5014,6 +5196,9 @@ const MUSIC_THEMES = {
   'Gravity Cup':   {root:59, scale:'dorian', bpm:138, prog:[0,5,2,6], lead:'sawtooth', bass:'sawtooth', groove:'drive',   drums:'club',   arp:true},
   'Loop Cup':      {root:70, scale:'mixo',   bpm:146, prog:[0,3,6,3], lead:'square',   bass:'triangle', groove:'gallop',  drums:'pop',    arp:true},
   'Sky Cup':       {root:66, scale:'minor',  bpm:156, prog:[0,6,5,6], lead:'sawtooth', bass:'sawtooth', groove:'drive',   drums:'club',   pad:true, arp:true},
+  'Space Cup':     {root:63, scale:'lydian', bpm:134, prog:[0,1,4,3], lead:'sine',     bass:'sawtooth', groove:'drive',   drums:'club',   pad:true, arp:true, bell:true},
+  'Holland Cup':   {root:67, scale:'major',  bpm:126, prog:[0,3,4,0], lead:'square',   bass:'triangle', groove:'bounce',  drums:'light',  bell:true, penta:true},   // a cheerful street organ (draaiorgel)
+  'Adventure Cup': {root:62, scale:'dorian', bpm:144, prog:[0,6,5,4], lead:'sawtooth', bass:'triangle', groove:'gallop',  drums:'rock',   pad:true},
 };
 // music packs from the shop: a whole new style for the menu (and optionally every race)
 const MUSIC_PACKS = {
@@ -5038,10 +5223,13 @@ const RHYTHMS = ['x...x...x.x.x...', 'x.x.x...x...x.x.', 'x..x..x.x...x...', 'x.
 const ENDING = 'x...x.......x...';
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
 const cupOfTrack = name => CUPS.find(c => c.tracks.includes(name));
+// tracks outside the cups (your own, community ones) sound like the cup that matches their theme
+const THEME_CUP = {meadow:'Acorn Cup', forest:'Acorn Cup', beach:'Shell Cup', desert:'Adventure Cup', snow:'Snowflake Cup', candy:'Sugar Cup', volcano:'Ember Cup', rainbow:'Star Cup', neon:'Gravity Cup', jungle:'Loop Cup', space:'Space Cup', city:'Holland Cup'};
+const songStyle = id => MUSIC_THEMES[cupOfTrack(id)?.name] || MUSIC_THEMES[THEME_CUP[MAPS.find(m => m.name === id)?.theme]] || MUSIC_THEMES['Acorn Cup'];
 function hashStr(str){ let h = 2166136261; for (const c of str) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return (h >>> 0) % 2147483646 + 1; }
 function makeSong(id){
   const pack = id.startsWith('pack:') ? id.slice(5).split('|')[0] : null;
-  const th = (pack && MUSIC_PACKS[pack]) || MUSIC_THEMES[id === 'menu' ? 'menu' : cupOfTrack(id)?.name] || MUSIC_THEMES['Acorn Cup'];
+  const th = (pack && MUSIC_PACKS[pack]) || (id === 'menu' ? MUSIC_THEMES.menu : songStyle(id));
   let s = hashStr(id); const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647, pick = a => a[Math.floor(rnd() * a.length)];
   // each track turns the cup's progression its own way
   const rot = Math.floor(rnd() * 4), prog = th.prog.slice(rot).concat(th.prog.slice(0, rot));
@@ -5177,6 +5365,9 @@ const mm = p => [25 + (p.x-minX)*mScale + (290-(maxX-minX)*mScale)/2, 25 + (p.z-
 function drawMini(){
   mini.clearRect(0, 0, 340, 340);
   mini.lineJoin = 'round'; mini.lineCap = 'round';
+  for (const c of CUTS) for (const [w, col] of [[14, '#1d1a2f'], [7, c.dirt ? '#c49a6a' : '#ffffff']]){
+    mini.strokeStyle = col; mini.lineWidth = w; mini.beginPath(); c.Q.forEach((p, j) => { const [x, y] = mm(p); j ? mini.lineTo(x, y) : mini.moveTo(x, y); }); mini.stroke();
+  }
   for (const [w, c] of [[22, '#1d1a2f'], [14, '#fff'], [8, trackStyle]]){
     mini.strokeStyle = c; mini.lineWidth = w; mini.beginPath();
     pts.forEach((p, i) => { const [x, y] = mm(p); i ? mini.lineTo(x, y) : mini.moveTo(x, y); }); mini.closePath(); mini.stroke();
@@ -7532,6 +7723,7 @@ function manualReset(k = player){
   k.resetAt = raceTime + 3; respawn(k, true);
 }
 function respawn(k, manual = false){
+  k.cut = null;
   k.grind = null;
   // easter egg: get fished out 5 times in one race (pressing R doesn't count)
   if (k.isPlayer && !manual && !tut && (k.fished = (k.fished || 0) + 1) >= 5) unlockEgg('ankervos');
@@ -7602,7 +7794,7 @@ function stepKart(k, dt){
     if (A.adrift && Math.abs(steer) > 0 && k.speed > 26) drift = true;
     // gliding (like MK8): ↑ tips the nose down to dive, ↓ pulls it up to float; the throttle stays on
     if (k.glide){ k.pitchIn = (inp.gas ? 1 : 0) - (inp.brake ? 1 : 0); gas = 1; }
-    if (A.smart){
+    if (A.smart && !k.cut){
       const latS = k.pos.clone().sub(pts[k.idx]).dot(nors[k.idx]);
       if (Math.abs(latS) > W * 0.36) steer = THREE.MathUtils.clamp(steer + Math.sign(latS) * Math.min(1, (Math.abs(latS) - W * 0.36) / 4) * 0.9, -1, 1);
     }
@@ -7610,7 +7802,7 @@ function stepKart(k, dt){
     // AI: aim ahead on the racing line
     const look = 14 + Math.floor(k.speed * 0.25);
     const ti = (k.idx + look) % N;
-    const tgt = (battle && !k.finished && battleAim(k, look)) || pts[ti].clone().addScaledVector(nors[ti], k.aiOffset);
+    const tgt = (battle && !k.finished && battleAim(k, look)) || (CUTS.length && !battle && cutAim(k, look)) || pts[ti].clone().addScaledVector(nors[ti], k.aiOffset);
     const want = Math.atan2(tgt.x - k.pos.x, tgt.z - k.pos.z);
     let d = want - k.heading; d = Math.atan2(Math.sin(d), Math.cos(d));
     steer = THREE.MathUtils.clamp(d * 3, -1, 1); gas = battle && k.finished ? 0 : 1;
@@ -7642,7 +7834,8 @@ function stepKart(k, dt){
   if (!k.human && player){ const gap = (leadH || player).prog - k.prog; topMul = k.skill * THREE.MathUtils.clamp(1 + gap/900, 0.88, 1.12); }
 
   const lat = k.pos.clone().sub(pts[k.idx]).dot(nors[k.idx]);
-  const off = Math.abs(lat) > W/2 + 1.5 && k.star <= 0 && k.ram <= 0 && !k.air && !k.grind;
+  // on a shortcut: plank paths are road, the rough ones count as grass
+  const off = k.cut ? !!k.cut.c.dirt && k.star <= 0 && k.ram <= 0 && !k.air : Math.abs(lat) > W/2 + 1.5 && k.star <= 0 && k.ram <= 0 && !k.air && !k.grind;
   const st = k.st, sm = v => 1 + (v - 3) * 0.035;
   const coinUp = battle ? 1 : 1 + COIN_UP * Math.min(COIN_MAX, k.cspd || 0);   // every coin (up to 10) adds 1% top speed, like MK8
   let top = (off ? MAP.off * MAX / 42 * (1 + (st.offroad - 3) * 0.13) : MAX * sm(st.speed)) * topMul * coinUp;
@@ -7714,13 +7907,14 @@ function stepKart(k, dt){
   if (k.grind) grindMove(k, dt, k.human ? pressed : k.grind.t > k.aiHopAt); else k.pos.addScaledVector(moveDir, k.speed * dt / LS[k.idx]);
   // shoves from bumps fade out quickly instead of teleporting the kart
   k.pos.addScaledVector(k.shove, dt); k.shove.multiplyScalar(Math.exp(-7 * dt));
+  if (k.grind) k.cut = null; else if (CUTS.length && !battle) cutStep(k);
 
   // walls (raised and banked sections have guard rails right at the road edge):
   // slide along them; only the part of your motion that goes into the wall is lost
-  const ni = nearestIdx(k.pos, k.grind ? (k.grind.r.i0 + Math.round(k.grind.r.span * Math.min(1, k.grind.t))) % N : k.idx);
+  const ni = k.cut ? cutIdx(k.cut.c, k.cut.j) : nearestIdx(k.pos, k.grind ? (k.grind.r.i0 + Math.round(k.grind.r.span * Math.min(1, k.grind.t))) % N : k.idx);
   const latN = k.pos.clone().sub(pts[ni]).dot(nors[ni]);
   const lim = RAIL[ni] ? W/2 + 1 : W/2 + 14;
-  if (Math.abs(latN) > lim && !k.grind){
+  if (Math.abs(latN) > lim && !k.grind && !k.cut){
     const sgn = Math.sign(latN), mv = fwd(k.moveH), into = mv.dot(nors[ni]) * sgn;
     k.pos.addScaledVector(nors[ni], sgn * lim - latN);
     if (into > 0){
@@ -7749,14 +7943,14 @@ function stepKart(k, dt){
   // wrong way, and getting rescued when stuck off the road
   if (state === 'race' && !k.finished){
     const fa = fwd(k.heading).dot(tans[k.idx]);
-    k.wrongT = !battle && !k.grind && fa < -0.35 && k.speed > 4 ? (k.wrongT || 0) + dt : 0;
+    k.wrongT = !battle && !k.grind && !k.cut && fa < -0.35 && k.speed > 4 ? (k.wrongT || 0) + dt : 0;
     const offLat = Math.abs(k.pos.clone().sub(pts[k.idx]).dot(nors[k.idx])) > W/2 + 4;
-    k.stuckT = offLat && Math.abs(k.speed) < 5 && !k.air && !(k.hold > 0) ? (k.stuckT || 0) + dt : 0;
+    k.stuckT = offLat && !k.cut && Math.abs(k.speed) < 5 && !k.air && !(k.hold > 0) ? (k.stuckT || 0) + dt : 0;
     if (k.stuckT > (k.human ? 4 : 2.5)){ k.stuckT = 0; respawn(k); }
   }
 
   // height: follow the road over hills, fly off ramps and crests, stick to banked walls, glide over gaps
-  const sf = surf(k.pos, k.idx), gap = !!GP[sf.i], g = gap ? -1e4 : sf.pos.y, GRAV = k.glide ? 10 : 40; k.sf = sf;
+  const sf = k.cut ? cutSurf(k) : surf(k.pos, k.idx), gap = !!GP[sf.i], g = gap ? -1e4 : sf.pos.y, GRAV = k.glide ? 10 : 40; k.sf = sf;
   if (k.grind){ if (Number.isFinite(k.grindY)) k.y = k.grindY; k.vy = 0; k.air = false; k.glide = false; }
   else if (!gap && (Math.abs(sf.bank) > 0.12 || LP[sf.i])){ if (k.air) land(k); k.y = g; k.vy = 0; }
   else {
@@ -8885,10 +9079,17 @@ const ED_TOOLS = [
   {id:'g',     icon:'🪂', name:'Glider gap', tip:'Click the road for a ramp with a gap after it: karts open their glider to cross.', max:3},
   {id:'wl',    icon:'🌀', name:'Wall ride',  tip:'Click a corner to bank it steeply into a wall ride.', max:4},
   {id:'l',     icon:'➰', name:'Loop',       tip:'Click a straight-ish part of the road for a loop. It slides a little to find room.', max:3},
+  {id:'r',     icon:'🛤️', name:'Rail',       tip:'Click the road where a grind rail should start. It runs along the edge for a stretch; jump onto it (or drive into it) to grind.', max:4},
+  {id:'tw',    icon:'🗿', name:'Thwomp',     tip:'Click the road for a Thwomp that slams down. Place a few in a row: they take turns on the left, right and middle.', max:6},
+  {id:'br',    icon:'🛢️', name:'Barrels',    tip:'Click the road where barrels should start rolling down towards the karts.', max:3},
+  {id:'cc',    icon:'⛓️', name:'Chain Chomp', tip:'Click the road for a Chain Chomp on a stake that lunges across it. They switch sides one after the other.', max:4},
+  {id:'pp',    icon:'🪴', name:'Piranha',    tip:'Click the road for a Piranha Plant in a pipe that bites out over the edge. They switch sides one after the other.', max:6},
+  {id:'fb',    icon:'🔥', name:'Fire bar',   tip:'Click the road for a spinning fire bar in the middle of it.', max:4},
+  {id:'dr',    icon:'💫', name:'Dash ring',  tip:'Click the road for a golden ring in the air: fly through it off a jump or glider for a boost.', max:6},
   {id:'erase', icon:'🧽', name:'Eraser',     tip:'Click a feature or a point to remove it.'},
 ];
 const ED_FEAT = ED_TOOLS.filter(t => t.max).map(t => t.id);
-const edBlank = () => ({id:'', n:'My Track', th:'meadow', tm:'day', w:24, c:[], p:[], j:[], h:[], g:[], wl:[], l:[], x:[]});
+const edBlank = () => ({id:'', n:'My Track', th:'meadow', tm:'day', w:24, c:[], x:[], ...Object.fromEntries(ED_FEAT.map(k => [k, []]))});
 let myTracks = (() => { try { const a = JSON.parse(localStorage.getItem('pgp-tracks') || '[]'); return Array.isArray(a) ? a : []; } catch (e){ return []; } })();
 const saveTracks = () => { try { localStorage.setItem('pgp-tracks', JSON.stringify(myTracks)); } catch (e) {} };
 const ED = {t:edBlank(), tool:"draw", drag:null, free:false, hist:[], curve:[], cf:[], cross:[], len:0, warn:[], hover:-1, dirty:false};
@@ -8897,7 +9098,10 @@ const ED = {t:edBlank(), tool:"draw", drag:null, free:false, hist:[], curve:[], 
 function edDef(t){
   let name = `✏️ ${t.n}`; if (TRACKS.some(x => x.name === name && x.cid !== t.id)) name += ` (${String(t.id).slice(-4)})`;
   return {name, custom:true, cid:t.id, hidden:true, theme:t.th, tag:'Custom track', w:t.w, ctrl:t.c.map(p => [...p]),
-    pads:[...t.p], jumps:[...t.j], hills:t.h.map(f => [f, 9, 0.05]), glides:t.g.map(f => [f, 18]), walls:t.wl.map(f => [f, 0.09, 70]), loops:[...t.l], bridges:(t.x || []).map(([f, j]) => [f, j])};
+    pads:[...t.p], jumps:[...t.j], hills:t.h.map(f => [f, 9, 0.05]), glides:t.g.map(f => [f, 18]), walls:t.wl.map(f => [f, 0.09, 70]), loops:[...t.l], bridges:(t.x || []).map(([f, j]) => [f, j]),
+    grinds:(t.r || []).map(f => [f, +((f + 0.07) % 1).toFixed(3)]), drings:(t.dr || []).map(f => [f, 5]),
+    haz:[...(t.tw || []).map((f, i) => [f, 'thwomp', [-0.5, 0.5, 0][i % 3]]), ...(t.br || []).map(f => [f, 'barrel', 0.1]), ...(t.cc || []).map((f, i) => [f, 'chomp', i % 2 ? -1 : 1]),
+      ...(t.pp || []).map((f, i) => [f, 'piranha', i % 2 ? -1 : 1]), ...(t.fb || []).map(f => [f, 'firebar', 0])]};
 }
 function edSlot(t){
   const def = edDef(t); LOOKS[def.name] = {time:t.tm};
@@ -8913,7 +9117,8 @@ function edUnslot(id){
 }
 
 // share codes: WIDR- + url-safe base64 of the track as JSON
-const edPack = t => ({n:t.n, th:t.th, tm:t.tm, w:t.w, c:t.c, p:t.p, j:t.j, h:t.h, g:t.g, wl:t.wl, l:t.l, ...(t.x?.length ? {x:t.x} : {})});
+// older codes stay the same: a feature list is only written when it has something in it (the first six always were)
+const edPack = t => ({n:t.n, th:t.th, tm:t.tm, w:t.w, c:t.c, ...Object.fromEntries(ED_FEAT.filter((k, i) => i < 6 || t[k]?.length).map(k => [k, t[k] || []])), ...(t.x?.length ? {x:t.x} : {})});
 const edCode = t => 'WIDR-' + btoa(unescape(encodeURIComponent(JSON.stringify(edPack(t))))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const edLink = t => `${location.origin}${location.pathname}?track=${edCode(t)}`;
 // anything pasted (a code, or a whole share link) -> a checked track, or null. Codes come from other people, so every field is cleaned.
@@ -9067,6 +9272,14 @@ function edDraw(){
   ln(0, () => { const h = t.w * edK / 2; for (let y = -h, r = 0; y < h; y += 6, r++) for (let x = 0; x < 2; x++){ g.fillStyle = (r + x) % 2 ? '#fff' : '#1d1d3a'; g.fillRect(-6 + x * 6, y, 6, 6); } });
   for (const f of [0.08, 0.33, 0.58, 0.83]) ln(Math.round(f * ED_S), () => { g.fillStyle = 'rgba(255,255,255,.85)'; g.beginPath(); g.moveTo(9, 0); g.lineTo(-6, -7); g.lineTo(-6, 7); g.fill(); });
   // features
+  // rails: a steel line along the stretch they cover
+  g.strokeStyle = '#8a93a6'; g.lineWidth = 5; g.setLineDash([10, 5]);
+  for (const f of t.r || []){
+    const a = Math.round(f * ED_S); g.beginPath();
+    for (let k = 0; k <= Math.round(0.07 * ED_S); k++){ const p = cu[(a + k) % ED_S]; k ? g.lineTo(edPx(p.x), edPx(p.z)) : g.moveTo(edPx(p.x), edPx(p.z)); }
+    g.stroke();
+  }
+  g.setLineDash([]);
   g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '22px system-ui, sans-serif';
   for (const k of ED_FEAT){
     const icon = ED_TOOLS.find(x => x.id === k).icon;
@@ -9115,7 +9328,7 @@ function edDown(e){
   const tool = ED_TOOLS.find(x => x.id === ED.tool), f = +(near.i / ED_S).toFixed(3);
   if (t[tool.id].length >= tool.max) return toast(`${tool.icon} ${tool.max} is the most for one track`);
   if (edHitFeat(f)) return toast('Something is already there');
-  if ((tool.id === 'l' || tool.id === 'g') && (f < 0.04 || f > 0.93)) return toast('Keep it away from the start line');
+  if (['l', 'g', 'r', 'tw', 'br', 'cc', 'pp', 'fb'].includes(tool.id) && (f < 0.04 || f > 0.93)) return toast('Keep it away from the start line');
   edPush(); t[tool.id].push(f); t[tool.id].sort((a, b) => a - b); blip.ok(); edDraw(); edPanel();
 }
 function edMove(e){
