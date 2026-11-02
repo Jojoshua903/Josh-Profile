@@ -137,6 +137,17 @@ button.ghost{background:var(--paper);font-size:13px;padding:6px 10px;margin-top:
 .stars{font-size:40px;color:var(--brass);letter-spacing:.1em;margin:4px 0 10px;text-shadow:2px 2px 0 var(--ink)}
 h1.title{font-size:clamp(42px,7vw,64px);line-height:1}
 h1.title small{display:block;font-size:.42em;font-style:normal;letter-spacing:.18em;text-transform:uppercase;font-family:"American Typewriter","Courier New",monospace;margin-bottom:4px}
+#think.npc{border-color:#d9472b;box-shadow:4px 4px 0 #d9472b}
+#think.npc b{color:#d9472b}
+/* ---------- conversations ---------- */
+#talk{position:fixed;left:0;right:0;bottom:64px;display:flex;justify-content:center;padding:0 16px;pointer-events:none}
+.talk-card{pointer-events:auto;width:min(680px,100%);background:var(--paper);border:3px solid var(--ink);box-shadow:6px 6px 0 var(--ink);padding:14px 18px}
+#talkWho{font-size:11px;letter-spacing:.14em;font-weight:bold;color:#d9472b;text-transform:uppercase}
+#talkText{font-size:17px;line-height:1.45;margin:6px 0 12px;min-height:50px}
+#talkBtns{display:flex;flex-wrap:wrap;gap:8px;max-height:34vh;overflow:auto;padding:2px 6px 6px 2px}
+#talkBtns button{font-size:14px;padding:7px 12px;box-shadow:3px 3px 0 var(--ink)}
+#talkBtns button.nb{background:var(--paper2)}
+#flash{position:fixed;inset:0;background:#fff;opacity:.85;pointer-events:none}
 </style>
 </head>
 <body>
@@ -178,7 +189,7 @@ h1.title small{display:block;font-size:.42em;font-style:normal;letter-spacing:.1
       <div><kbd>Q</kbd> peer gooien</div>
       <div><kbd>E</kbd> doorzoeken / gebruiken</div><div><kbd>T</kbd> walkie-talkie</div>
     </div>
-    <button id="go">Binnensluipen →</button> <button id="newGame" class="ghost hidden">Nieuw spel</button>
+    <button id="go">Binnensluipen →</button> <button id="jumpCh2" class="ghost">Hoofdstuk 2: Hotel Kasimir</button> <button id="newGame" class="ghost hidden">Nieuw spel</button>
     <p id="saveNote" class="muted">Je voortgang wordt automatisch opgeslagen.</p>
   </div>
 </div>
@@ -197,6 +208,14 @@ h1.title small{display:block;font-size:.42em;font-style:normal;letter-spacing:.1
   </div>
 </div>
 
+<div id="talk" class="hidden">
+  <div class="talk-card">
+    <div id="talkWho"></div>
+    <div id="talkText"></div>
+    <div id="talkBtns"></div>
+  </div>
+</div>
+
 <div id="keypad" class="overlay hidden">
   <div class="device kp">
     <div class="wt-head"><span>KLUIS · 4 CIJFERS</span><span>⌫ = wissen</span></div>
@@ -205,6 +224,7 @@ h1.title small{display:block;font-size:.42em;font-style:normal;letter-spacing:.1
   </div>
 </div>
 
+<div id="flash" class="hidden"></div>
 <div id="caught" class="hidden"><div id="caughtText">HENK HEEFT JE GEZIEN</div><small id="caughtSub">terug naar de tuindeur…</small></div>
 
 <div id="van" class="hidden">
@@ -230,7 +250,7 @@ h1.title small{display:block;font-size:.42em;font-style:normal;letter-spacing:.1
     <div class="kicker">CODENAME: CONFERENCE · EINDE</div>
     <h1 id="endTitle">Einde</h1>
     <div id="endBody"></div>
-    <button id="reAccuse">Beschuldig iemand anders</button> <button id="endNew" class="ghost">Nieuw spel</button>
+    <button id="toCh2">Hoofdstuk 2: Hotel Kasimir →</button> <button id="reAccuse" class="ghost">Beschuldig iemand anders</button> <button id="endNew" class="ghost">Nieuw spel</button>
   </div>
 </div>
 
@@ -298,6 +318,7 @@ function light(c, i, dist, x, y, z, decay = 2) {
 function solid(x, z, w, d, h) { world.colliders.push({ minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2, h }); }
 function blocked(x, z, r) {
   for (const c of world.colliders) {
+    if (c.noMove) continue;   // moving cover (the cart) hides you but never traps you
     const cx = clamp(x, c.minX, c.maxX), cz = clamp(z, c.minZ, c.maxZ);
     if ((x - cx) ** 2 + (z - cz) ** 2 < r * r) return true;
   }
@@ -452,6 +473,80 @@ const EVID = {
     anna: 'Julie, dat is geluksgeld. Leg het terug, straks brengt het óns ongeluk.' },
   lunch: { room: 4, name: 'Henks lunchtrommel', desc: 'Bij het hondenhok. Vier boterhammen met perenstroop.', value: 0,
     anna: 'Henk eet perenstroop. Dat verklaart veel, maar niet deze zaak.' },
+
+  // ===== HOOFDSTUK 2 · missie 1: de keuken van Hotel Kasimir =====
+  gastenlijst: { room: 6, name: 'Gastenlijst', desc: 'Op het bureau van de chef. Kamer 214: "Dhr. Corvus", drie nachten, betaald door de Ambassade van Valdoria. Opmerking: "GEEN peren. Allergie!"', value: 2,
+    anna: 'Corvus. Latijn voor raaf. Eerst een uil, nu een raaf. Iemand houdt van vogels.' },
+  afluister: { room: 6, name: 'Afgeluisterd gesprek', desc: 'De chef aan de telefoon, gehoord door het rooster: "Ja, meneer Corvus. De zaal om drie uur leeg, geen personeel. En de koffer komt via de etenslift naar boven."', value: 2,
+    anna: 'Een koffer die via de etenslift naar de conferentiezaal gaat. Waarom komt me dat bekend voor?' },
+  roomservicebon: { room: 6, name: 'Roomservicebon', desc: 'Aan de pin: "Kamer 214, 03:10. Champagne, twee glazen. Stoofpeer: ZONDER peer."', value: 1,
+    anna: 'Twee glazen om tien over drie. Corvus had vannacht bezoek. En een stoofpeer zonder peer is gewoon wijn.' },
+  koelkaart: { room: 6, name: 'Bevroren sleutelkaart', desc: 'In een ijsblok in de koelcel: een hotelpas van kamer 214.', value: 1,
+    anna: 'Iemand verstopt de pas van 214 waar niemand zoekt. Koud, maar slim.' },
+  ravenspeld: { room: 6, name: 'Ravenspeldje', desc: 'Van Ratjetoe. Een zilveren speldje in de vorm van een raaf, met een gebroken sluiting.', value: 1,
+    anna: 'Een zilveren raaf. Iemand is dit verloren, en Ratjetoe heeft het gevonden.' },
+  menukaart: { room: 6, name: 'Menukaart', desc: 'Conferentiediner: "Stoofpeer à la Valdoria". Alweer.', value: 0,
+    anna: 'Valdoria en peren. Het blijft een ding.' },
+  bestelbon: { room: 6, name: 'Bestelbon', desc: '500 kilo Conference-peren. Iemand schreef erbij: "Voor de conferentie, haha."', value: 0,
+    anna: 'Conference-peren voor een conferentie. Dit hotel heeft humor. Geen bewijs.' },
+  gedicht: { room: 6, name: 'Liefdesgedicht', desc: 'In de bureaula van de chef: "Aan mijn souschef, de room in mijn soep…"', value: 0,
+    anna: 'Iedereen in deze zaak is verliefd, behalve wij, Julie. Geen bewijs.' },
+  rooster: { room: 6, name: 'Personeelsrooster', desc: 'Vannacht: kelner Pim (roomservice), chef Bertrand, nachtportier Sanne.', value: 0,
+    anna: 'Handig om te weten wie er rondloopt. Maar geen bewijs.' },
+
+  // ===== HOOFDSTUK 2 · missie 1: de lobby van Hotel Kasimir (vooral verklaringen) =====
+  zSanne: { room: 7, name: 'Verklaring van de receptie', desc: 'Sanne: "De gast van 214 bestelde die nacht om 02:05 een taxi. Lange jas, zwarte hoed. Hij kwam pas na drieën terug."', value: 1,
+    anna: 'Een taxi om 02:05 en terug na drieën. Precies het tijdstip van de kelder. Interessant.' },
+  zPim: { room: 7, name: 'Verklaring van de kelner', desc: 'Pim: "Elke nacht breng ik champagne naar 214. Altijd twee glazen. En die meneer wil nooit peren."', value: 1,
+    anna: 'Twee glazen, elke nacht. Corvus is niet alleen. En geen peren… verdacht, in Valdoria.' },
+  zBarones: { room: 7, name: 'Roddel van de barones', desc: 'Barones Von Strudel: "Die peertjesdas! Die droeg meneer Varga op de openingsreceptie. Hij fluisterde met een man met een zilveren raaf op zijn revers."', value: 2,
+    anna: 'Varga en een man met een zilveren raaf. Samen, in dit hotel. Dit is goud, Julie.' },
+  zMo: { room: 7, name: 'Verklaring van de piccolo', desc: 'Mo: "Ik zag een rat met iets zilvers in z\'n bek de keuken in rennen! Een vogeltje of zo."', value: 0,
+    anna: 'Een rat met een zilveren vogeltje. Ratjetoe heeft weer gewinkeld.' },
+  zPluim: { room: 7, name: 'Lezing van de professor', desc: 'Prof. Pluim: "De raaf, mevrouw, is het slimste dier op aarde. Ze verstoppen glimmende dingen. Net als ratten."', value: 0,
+    anna: 'Een vogelprofessor op een vredesconferentie. Fascinerend. Geen bewijs.' },
+  programma: { room: 7, name: 'Conferentieprogramma', desc: 'Uit het rek bij de receptie. Dinsdag 03:00: zaal Zuid, "Besloten sessie. Geen personeel."', value: 1,
+    anna: 'Een besloten sessie om drie uur \'s nachts. Wie vergadert er nou om drie uur?' },
+  veer: { room: 7, name: 'Zilveren veertje', desc: 'Van Ratjetoe. Een klein zilveren veertje, afgebroken van een speldje.', value: 1,
+    anna: 'Een zilveren veer. Van een vogelspeldje, zo te zien.' },
+
+  // ===== HOOFDSTUK 2 · missie 3: verdieping 2, kamer 214 =====
+  vermomming: { room: 8, name: 'Vermomming', desc: 'In de kast van 214: een lange zwarte jas, een hoed met brede rand, en een plaksnor. Alles net een maatje te groot.', value: 2,
+    anna: 'Een plaksnor. Corvus is niet wie hij lijkt te zijn. Misschien niet eens een "hij".' },
+  glas: { room: 8, name: 'Champagneglas', desc: 'Op het tafeltje in 214. Lippenstift op de rand, kleur "kersenrood".', value: 1,
+    anna: 'Kersenrode lippenstift. Iemand heeft hier champagne gedronken, en het was geen snor.' },
+  brief214: { room: 8, name: 'Brief van V.', desc: 'Onder het kussen: "C., het tweede pakket ligt klaar. De peren zijn rijp. Zaal Zuid, drie uur. — V."', value: 2,
+    anna: 'V. aan C.: het tweede pakket. Varga werkt gewoon door, en Corvus koopt.' },
+  kofferlabel: { room: 8, name: 'Kofferlabel', desc: 'Aan een lege koffer op het rek: "Zaal Zuid · 03:00 · via de etenslift".', value: 1,
+    anna: 'De lege koffer wacht op een nieuwe vulling. Om drie uur, in Zaal Zuid.' },
+  oorbel: { room: 8, name: 'Kersjesoorbel', desc: 'Van Ratjetoe, uit de wasgoot. Een kersenrode oorbel in de vorm van een kersje.', value: 1,
+    anna: 'Een kersjesoorbel. Wie draagt er nou kersen aan haar oren? …Wacht. Ik ken iemand.' },
+  zRichel: { room: 8, name: 'Gesprek achter het raam', desc: 'Afgeluisterd op de richel, bij kamer 212: "Heb je de barones vannacht gezien? Ze verdwijnt elke nacht om twee uur. Ze zegt dat ze slaapwandelt."', value: 1,
+    anna: 'De barones die slaapwandelt. Om twee uur. Precies als Corvus de deur uit gaat.' },
+  minibar: { room: 8, name: 'Minibarrekening', desc: 'Kamer 214: veertien zakjes nootjes. Geen alcohol, geen peren.', value: 0,
+    anna: 'Veertien zakjes nootjes. Dat is een eekhoorn, geen spion.' },
+  toespraak: { room: 8, name: 'Toespraak', desc: 'In kamer 213, naast een snurkende delegatieleider: "Vrede door Peren: een pleidooi". Veertig pagina\'s.', value: 0,
+    anna: 'Veertig pagina\'s over peren. Daar wordt zelfs jij moe van, Julie.' },
+  badjas: { room: 8, name: 'Badjas', desc: 'Aan de deur van 214. Geborduurd: "Hotel Kasimir". Ruikt naar dure parfum.', value: 0,
+    anna: 'Dure parfum op een hotelbadjas. Geen bewijs, wel luxe.' },
+
+  // ===== HOOFDSTUK 2 · missie 4: de wasserij en Zaal Zuid =====
+  jurk: { room: 9, name: 'Avondjurk', desc: 'In een wasmand, label "Suite 301 · Von Strudel". Op de revers twee gaatjes, alsof er een speldje heeft gezeten. En een kersenrode vlek op de kraag.', value: 1,
+    anna: 'Een avondjurk van de barones met een kersenrode vlek. Morsen doen we allemaal.' },
+  tasje: { room: 9, name: 'Avondtasje', desc: 'Vergeten op een stoel vooraan. Monogram "VS". Erin: lippenstift "Kersenrood", en een zilveren raafspeldje met een gebroken sluiting… het veertje ontbreekt.', value: 2,
+    anna: 'Een raafspeldje zonder veertje, in een tasje met VS erop. VS… waar ken ik die letters van?' },
+  fotoBrug: { room: 9, name: 'Foto vanaf de lichtbrug', desc: 'De figuur in de lange jas neemt een koffer aan. Vanaf boven zie je wat er onder de hoed hangt: een kersjesoorbel.', value: 2,
+    anna: 'Een kersjesoorbel onder die hoed. Dat is geen snor-meneer, Julie.' },
+  zOverdracht: { room: 9, name: 'De overdracht', desc: 'Afgeluisterd vanaf de lichtbrug. Corvus, eerst met een hoge stem, dan ineens zwaar: "De raaf is tevreden. Zeg tegen V.: het derde pakket na de conferentie."', value: 2,
+    anna: 'Een stem die doet alsof hij zwaar is. En er komt nóg een pakket. Dit stopt niet vanzelf.' },
+  snor: { room: 9, name: 'Halve plaksnor', desc: 'Van Ratjetoe. Een plaksnor, voor de helft opgegeten.', value: 1,
+    anna: 'Ratjetoe eet plaksnorren. Dat verklaart waarom hij nooit honger heeft.' },
+  naamkaart: { room: 9, name: 'Naamkaartjes', desc: 'Op de tafel op het podium. Vooraan: Barones Von Strudel, Delegatie Lumeria. Achteraan: Prof. Pluim.', value: 0,
+    anna: 'Een tafelschikking. Diplomaten maken ruzie om minder.' },
+  dia: { room: 9, name: 'Dia\'s van de professor', desc: 'In de projector: "De uil en de raaf: rivalen van de nacht". Dia 47 is een uil met een monocle.', value: 0,
+    anna: 'Een uil met een monocle. Professor Pluim heeft een rijk innerlijk leven. Geen bewijs.' },
+  wasmiddel: { room: 9, name: 'Wasmiddel', desc: 'Een vat "Peerfris". Met extra perengeur.', value: 0,
+    anna: 'Dit hele land ruikt naar peren. Geen bewijs.' },
 };
 
 // Anna can only make a connection when BOTH pieces are in her dossier.
@@ -492,10 +587,53 @@ const LINKS = [
   { a: 'ticket', b: 'koffer', text: 'Om vier uur de overdracht, om zes uur het vliegtuig. Enkele reis. Varga vlucht na de levering!' },
   { a: 'ticket', b: 'telegram', text: 'Betaald, en dan weg. Nachtuil incasseert en vliegt zondag naar huis. Op naam van Varga.' },
   { a: 'lucifer', b: 'stroomlog', text: 'Volgens het stroomlog ging de kelderdeur om 03:02 wéér open, met pas #4. Dat was de onbekende die jij zag. Dezelfde pas als om 02:13!' },
+  // hoofdstuk 2 · keuken
+  { a: 'gastenlijst', b: 'hotelfactuur', text: 'Kamer 214, betaald door Valdoria. Precies de kamer van de factuur uit het kantoor van de ambassadeur! Corvus is de koper.' },
+  { a: 'gastenlijst', b: 'lucifer', text: 'Kamer 214! Het lucifersdoosje van de onbekende in de kelder. Die onbekende… dat was Corvus.' },
+  { a: 'gastenlijst', b: 'taxi', text: 'Een taxi vanaf Hotel Kasimir om 02:05, en Corvus slaapt in Hotel Kasimir. Hij kwam die nacht naar de ambassade.' },
+  { a: 'afluister', b: 'koffer', text: 'Weer een koffer, net als op kade 7. Corvus regelt gewoon een nieuwe levering. Midden op de conferentie.' },
+  { a: 'afluister', b: 'gastenlijst', text: 'Corvus regelt de lege zaal en de koffer via de chef. Hij is hier de baas, niet de chef.' },
+  { a: 'koelkaart', b: 'gastenlijst', text: 'De pas van 214, verstopt in het ijs. Iemand wil ongezien in de kamer van Corvus kunnen komen.' },
+  { a: 'ravenspeld', b: 'gastenlijst', text: 'Een raaf… Corvus! Wie dit speldje verloor, is onze man. Nu nog uitvinden wie het mist.' },
+  { a: 'roomservicebon', b: 'koelkaart', text: 'Twee glazen in 214, en een verstopte pas. Er is nog iemand die in die kamer komt.' },
+  { a: 'ravenspeld', b: 'das', text: 'Peertjes voor Varga, een raaf voor Corvus. Spionnen en hun accessoires. Ze kunnen het niet laten.' },
+  // hoofdstuk 2 · lobby
+  { a: 'zSanne', b: 'taxi', text: 'De taxi van 02:05 vanuit Hotel Kasimir! De gast van 214 is die nacht naar de ambassade gegaan.' },
+  { a: 'zSanne', b: 'lucifer', text: 'Lange jas, zwarte hoed, terug na drieën. Dat is de onbekende uit de kelder. Die logeert in 214.' },
+  { a: 'zBarones', b: 'das', text: 'De das van Varga, en daarnaast een man met een zilveren raaf. Varga\'s koper staat gewoon op de receptie te borrelen.' },
+  { a: 'zBarones', b: 'ravenspeld', text: 'Het ravenspeldje van Ratjetoe! Dat is van de man die met Varga fluisterde.' },
+  { a: 'zBarones', b: 'gastenlijst', text: 'Een man met een raaf, en een gast die Corvus heet. Corvus betekent raaf. Dat is dezelfde man.' },
+  { a: 'veer', b: 'ravenspeld', text: 'Het veertje past precies op het gebroken speldje! Ratjetoe heeft het in twee stukken gejat.' },
+  { a: 'zPim', b: 'roomservicebon', text: 'Twee glazen om tien over drie. Pim heeft gelijk: Corvus heeft elke nacht bezoek.' },
+  { a: 'programma', b: 'afluister', text: 'De lege zaal om drie uur, de koffer via de etenslift. Die "besloten sessie" ís de overdracht.' },
+  { a: 'programma', b: 'koffer', text: 'Weer een overdracht met een koffer. Nu op een vredesconferentie. Brutaal.' },
+  // hoofdstuk 2 · verdieping 2
+  { a: 'glas', b: 'peuk', text: 'Kersenrood! Precies dezelfde lippenstift als op de peuk in de kelder van de ambassade. De onbekende met de lange jas… droeg lippenstift.' },
+  { a: 'vermomming', b: 'zSanne', text: 'Lange jas, zwarte hoed, en een plaksnor. De "meneer" die Sanne zag, was een vermomming.' },
+  { a: 'vermomming', b: 'lucifer', text: 'De lange jas uit de kelder hangt gewoon in de kast van 214. Met een plaksnor erbij.' },
+  { a: 'oorbel', b: 'glas', text: 'Een kersjesoorbel en kersenrode lippenstift. Iemand houdt net zoveel van kersen als jij van peren.' },
+  { a: 'zRichel', b: 'zSanne', text: 'De barones verdwijnt elke nacht om twee uur, en om 02:05 gaat "de man van 214" met de taxi weg. Dat is geen toeval.' },
+  { a: 'zRichel', b: 'vermomming', text: 'Een vrouw die elke nacht "slaapwandelt", en een vermomming als man in 214… Ik denk dat ik weet wie Corvus is.' },
+  { a: 'brief214', b: 'das', text: 'V. schrijft aan C. Varga, de man met de peertjesdas. Hij werkt nog steeds voor Corvus.' },
+  { a: 'brief214', b: 'programma', text: 'Zaal Zuid, drie uur. De "besloten sessie" uit het programma is de overdracht van het tweede pakket.' },
+  { a: 'kofferlabel', b: 'afluister', text: 'De koffer via de etenslift naar Zaal Zuid. Precies wat de chef aan de telefoon zei.' },
+  { a: 'kofferlabel', b: 'koffer', text: 'Weer een lege koffer, net als op kade 7. Het is steeds dezelfde truc.' },
+  // hoofdstuk 2 · Zaal Zuid
+  { a: 'tasje', b: 'ravenspeld', text: 'Het raafspeldje uit de keuken hoort in dít tasje, met monogram VS. Von Strudel! De barones is Corvus!' },
+  { a: 'tasje', b: 'veer', text: 'Een raafspeldje zonder veertje, en Ratjetoe vond het veertje in de lobby. VS. Von Strudel. De barones is Corvus!' },
+  { a: 'tasje', b: 'glas', text: 'Kersenrood in het tasje, kersenrood op het glas in 214. De barones dronk die champagne.' },
+  { a: 'tasje', b: 'peuk', text: 'Dezelfde lippenstift als op de peuk in de kelder van de ambassade. De barones stond die nacht in die kelder.' },
+  { a: 'jurk', b: 'zRichel', text: 'De barones "slaapwandelt" elke nacht, en haar jurk ligt in de was met een kersenrode vlek. Slaapwandelen, ja hoor.' },
+  { a: 'jurk', b: 'ravenspeld', text: 'Twee gaatjes in de revers van de barones, precies de maat van het raafspeldje. Ze droeg het, en verloor het.' },
+  { a: 'fotoBrug', b: 'oorbel', text: 'Onder de hoed een kersjesoorbel. De andere had Ratjetoe al. Het is een paar.' },
+  { a: 'fotoBrug', b: 'vermomming', text: 'De jas en hoed uit de kast van 214, nu op de foto bij de overdracht. Corvus zit in die kleren.' },
+  { a: 'zOverdracht', b: 'brief214', text: 'Het tweede pakket, en nu al een derde. Varga en Corvus doen het steeds opnieuw.' },
+  { a: 'zOverdracht', b: 'zRichel', text: 'Een hoge stem die zwaar doet, en een barones die elke nacht verdwijnt. Ik denk dat we weten wie er onder die hoed zit.' },
+  { a: 'snor', b: 'vermomming', text: 'De plaksnor uit de kast van 214, en een halve in Ratjetoes nest. Corvus heeft er meer dan één.' },
 ];
 // ===================== rooms.js =====================
 
-function buildRoom(n) { return [null, buildLobby, buildKelder, buildKantoor, buildTuin][n](); }
+function buildRoom(n) { return { 1: buildLobby, 2: buildKelder, 3: buildKantoor, 4: buildTuin, 6: buildKeuken, 7: buildHotelLobby, 8: buildVerdieping, 9: buildZaal }[n](); }
 
 function lights(hemi, dirI, dirPos) {
   world.group.add(new THREE.HemisphereLight(hemi[0], hemi[1], hemi[2]));
@@ -1056,6 +1194,564 @@ function buildKade() {
   glow(2.2, 2.2, 0.1, 0xf4ecd8, -12, 9, -30);
   return { boat, police, red, blue, lr, lb, glints };
 }
+
+// =====================================================================
+// HOOFDSTUK 2 · MISSIE 1 · DE KEUKEN VAN HOTEL KASIMIR
+// =====================================================================
+// interior walls are lower than the outer ones and fade when they hide Julie
+function iwall(x1, z1, x2, z2, list, color = 0xe4e0d4) {
+  const w = Math.abs(x2 - x1) || 0.3, d = Math.abs(z2 - z1) || 0.3, x = (x1 + x2) / 2, z = (z1 + z2) / 2;
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, 2.4, d), new THREE.MeshToonMaterial({ color, transparent: true }));
+  m.position.set(x, 1.2, z); m.castShadow = true; m.receiveShadow = true; world.group.add(m);
+  const t = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.2, d + 0.02), new THREE.MeshToonMaterial({ color: 0x5f7a14, transparent: true }));
+  t.position.set(x, 0.1, z); world.group.add(t);
+  solid(x, z, w, d, 2.4); list.push({ m, t, c: world.colliders[world.colliders.length - 1] });
+}
+// the vent layer: walkable rectangles at ceiling height
+const DUCT_Y = 2.62;
+function ducts(rects, grates, clang) {
+  const meshes = [];
+  const mk = (w, h, d, c, x, y, z) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshToonMaterial({ color: c, transparent: true }));
+    m.position.set(x, y, z); m.receiveShadow = true; world.group.add(m); meshes.push(m); return m;
+  };
+  for (const r of rects) {
+    const w = r.maxX - r.minX, d = r.maxZ - r.minZ, x = (r.minX + r.maxX) / 2, z = (r.minZ + r.maxZ) / 2;
+    mk(w, 0.06, d, 0x3a3a46, x, DUCT_Y - 0.02, z); mk(w - 0.2, 0.07, d - 0.2, 0x9aa3ad, x, DUCT_Y, z);
+  }
+  if (clang) mk(clang.maxX - clang.minX - 0.2, 0.08, clang.maxZ - clang.minZ - 0.2, 0xa0603a, (clang.minX + clang.maxX) / 2, DUCT_Y + 0.01, (clang.minZ + clang.maxZ) / 2);
+  for (const g of grates) {
+    mk(0.9, 0.09, 0.9, 0x1d1a2b, g.x, DUCT_Y + 0.01, g.z);
+    for (const o of [-0.25, 0, 0.25]) mk(0.08, 0.1, 0.8, 0x6e7787, g.x + o, DUCT_Y + 0.02, g.z);
+  }
+  return meshes;
+}
+function ladder(x, z) {
+  box(0.06, DUCT_Y, 0.06, 0x8a8f99, x - 0.25, DUCT_Y / 2, z); box(0.06, DUCT_Y, 0.06, 0x8a8f99, x + 0.25, DUCT_Y / 2, z);
+  for (let y = 0.3; y < DUCT_Y; y += 0.4) box(0.5, 0.05, 0.05, 0x8a8f99, x, y, z);
+}
+function buildKeuken() {
+  checkerFloor(24, 16, '#d8d4c8', '#b9b4a6', 'rgba(0,0,0,.1)');
+  box(5.8, 0.02, 16, 0x6e6a62, -9, 0.012, 0);                    // loading dock concrete
+  box(5.8, 0.02, 7.8, 0x9fb4c8, 9, 0.013, -4);                   // cold room
+  box(5.8, 0.02, 7.8, 0x6b3b2a, 9, 0.013, 4);                    // chef's office
+  const WC = 0xe4e0d4, TR = 0x5f7a14;
+  wall(0, -8.25, 24.5, 0.5, 3.4, 'n', -7.6, WC, TR); wall(0, 8.25, 24.5, 0.5, 3.4, 's', 7.6, WC, TR);
+  wall(-12.25, 0, 0.5, 16.5, 3.4, 'w', -11.6, WC, TR); wall(12.25, 0, 0.5, 16.5, 3.4, 'e', 11.6, WC, TR);
+  const iw = [];
+  iwall(-6, -8, -6, 3.6, iw); iwall(-6, 5.6, -6, 8, iw);
+  iwall(6, -8, 6, -4.4, iw); iwall(6, -3.0, 6, 3.0, iw); iwall(6, 4.4, 6, 8, iw);
+  iwall(6.15, 0, 12, 0, iw);
+  // chef's office door (locked from the kitchen side)
+  solid(6, 3.7, 0.3, 1.4, 2.4); const doorCol = world.colliders[world.colliders.length - 1];
+  const door = new THREE.Group(); door.position.set(6, 0, 3.02); world.group.add(door);
+  box(0.12, 2.2, 1.34, 0x6b3b2a, 0, 1.1, 0.68, door, true); box(0.14, 0.3, 0.5, 0xf4ecd8, -0.02, 1.7, 0.68, door);
+  // cold room strip curtain
+  for (let i = 0; i < 6; i++) { const s = glow(0.04, 2.2, 0.2, 0xc8e4ff, 6, 1.1, -4.3 + i * 0.25); s.material.transparent = true; s.material.opacity = 0.35; }
+
+  // kitchen
+  box(5, 0.9, 1.4, 0x8a8f99, 0, 0.45, 0, undefined, true); box(5.1, 0.08, 1.5, 0xc8ccd0, 0, 0.94, 0);
+  for (const bx of [-1.8, -0.6, 0.6, 1.8]) glow(0.5, 0.03, 0.5, 0xd9472b, bx, 0.99, 0);
+  box(0.5, 0.4, 0.5, 0x3a3a46, -1.8, 1.2, 0); box(0.6, 0.3, 0.6, 0x9aa3ad, 0.6, 1.15, 0);
+  box(5.2, 0.4, 1.8, 0x9aa3ad, 0, 2.25, 0); solid(0, 0, 5.1, 1.5, 1.0);
+  box(2.5, 0.9, 1, 0xc8ccd0, -3, 0.45, 4, undefined, true); box(0.4, 0.2, 0.3, 0xd9472b, -3.6, 1.0, 4); box(0.3, 0.25, 0.3, 0x5a8a35, -2.6, 1.0, 4.1);
+  solid(-3, 4, 2.5, 1, 0.95);
+  box(0.9, 2.2, 3, 0x8a8f99, -4.5, 1.1, -2, undefined, true);
+  for (let i = 0; i < 6; i++) box(0.5, 0.35, 0.4, [0xc8ccd0, 0xd8b48a, 0xb08a5a][i % 3], -4.5, 0.5 + (i % 3) * 0.7, -3 + Math.floor(i / 3) * 1.8);
+  solid(-4.5, -2, 0.9, 3, 2.2);
+  box(5, 1.1, 0.9, 0xc8ccd0, 2.5, 0.55, -6.6, undefined, true); solid(2.5, -6.6, 5, 0.9, 1.1);
+  for (const lx of [0.8, 2.5, 4.2]) glow(0.6, 0.08, 0.3, 0xffa040, lx, 1.95, -6.6);
+  light(0xffa050, 8, 5, 2.5, 1.8, -6.4);
+  box(0.04, 0.4, 0.04, 0x1d1a2b, 1.0, 1.3, -6.5); box(0.2, 0.14, 0.02, 0xf4ecd8, 1.0, 1.35, -6.45);
+  box(0.3, 0.45, 0.12, 0xd9472b, 4.6, 1.5, -7.94);
+  box(3, 0.9, 1, 0xc8ccd0, 4.5, 0.45, 6.8, undefined, true); solid(4.5, 6.8, 3, 1, 1.0);
+  for (let i = 0; i < 4; i++) box(0.5, 0.06, 0.5, 0xf4ecd8, 3.6 + i * 0.2, 0.95 + i * 0.07, 6.8);
+  // dumbwaiter (exit)
+  box(1.3, 1.3, 0.2, 0x3a3a46, -3.5, 1.15, -7.95); box(1.05, 1.05, 0.06, 0x9aa3ad, -3.5, 1.15, -7.84);
+  box(0.6, 0.18, 0.03, 0xf4ecd8, -3.5, 1.95, -7.86);
+  const led = glow(0.1, 0.1, 0.04, 0xd9472b, -2.7, 1.5, -7.84);
+  light(0xf4f0e0, 9, 11, -1, 2.4, 3, 1.6); light(0xf4f0e0, 7, 9, 2, 2.4, -3.5, 1.6);
+
+  // loading dock
+  box(0.12, 1.4, 3.2, 0x8a8f99, -11.94, 2.65, 6); glow(0.04, 1.6, 3, 0xffb060, -11.98, 0.85, 6);
+  crate(-10.5, -6.6, 1.2, 1.2); crate(-8.2, -6.8, 1.4, 1.0); crate(-10.6, -4.6, 1.0, 1.0); crate(-7.4, 1.4, 1.2, 1.0);
+  box(1.0, 0.6, 0.7, 0x9b7a4a, -7.5, 0.3, 7.2, undefined, true); solid(-7.5, 7.2, 1.0, 0.7, 0.6);
+  for (const [ox, oz] of [[-0.25, -0.1], [0.05, 0.1], [0.3, -0.05]]) { const p = pearMesh(); p.position.set(-7.5 + ox, 0.75, 7.2 + oz); p.scale.setScalar(0.85); }
+  box(0.05, 0.7, 0.5, 0xf4ecd8, -11.97, 1.5, 2.5);
+  box(0.3, 0.35, 0.5, 0x0d0f1a, -11.95, 0.18, -2);
+  light(0xffa040, 10, 10, -9, 2.9, 3);
+  // cold room
+  box(0.8, 2.2, 5, 0x9aa3ad, 11.4, 1.1, -4.5, undefined, true);
+  for (let i = 0; i < 8; i++) box(0.5, 0.35, 0.5, [0xd9a0a0, 0xc8e4ff, 0xe4e0d4][i % 3], 11.3, 0.5 + (i % 3) * 0.7, -6.5 + Math.floor(i / 3) * 1.6);
+  solid(11.4, -4.5, 0.8, 5, 2.2);
+  crate(8, -7, 1.4, 1.0, 0x8aa0b4);
+  box(0.6, 0.6, 0.6, 0xc8e8ff, 10.5, 0.3, -6.5, undefined, true); box(0.3, 0.02, 0.2, 0xd9472b, 10.5, 0.35, -6.2); solid(10.5, -6.5, 0.6, 0.6, 0.6);
+  light(0x9fd0ff, 8, 8, 9, 2.4, -4, 1.6);
+  // chef's office
+  box(1.8, 0.95, 0.9, 0x4a2a20, 10, 0.48, 2.2, undefined, true); box(0.6, 0.04, 0.4, 0xf4ecd8, 10, 0.98, 2.3); solid(10, 2.2, 1.8, 0.9, 1.0);
+  box(0.3, 0.35, 0.3, 0x5f7a14, 9.4, 1.15, 2.0); light(0xffc070, 10, 6, 9.4, 1.5, 2.3);
+  box(1.0, 2.2, 0.8, 0x4a2a20, 7, 1.1, 7.3, undefined, true); solid(7, 7.3, 1.0, 0.8, 2.2);
+  box(0.06, 0.2, 0.2, 0xc79a3b, 11.95, 1.6, 6.2); box(0.04, 0.16, 0.08, 0xc79a3b, 11.9, 1.4, 6.2);
+  box(0.06, 0.8, 0.6, 0xf4ecd8, 11.95, 1.7, 4.2);
+
+  // ventilation network
+  const rects = [
+    { minX: -9.6, maxX: -8.4, minZ: -5.6, maxZ: 0.6 },
+    { minX: -9.6, maxX: 9.6, minZ: -5.6, maxZ: -4.4 },
+    { minX: 2.4, maxX: 3.6, minZ: -5.6, maxZ: 6.6 },
+    { minX: 2.4, maxX: 9.6, minZ: 5.4, maxZ: 6.6 },
+  ];
+  const nodes = [
+    { id: 'dock', x: -9, z: 0.1, floor: { x: -9, z: 0.95 }, name: 'het laadperron' },
+    { id: 'koel', x: 9, z: -5, floor: { x: 9, z: -4.1 }, name: 'de koelcel' },
+    { id: 'office', x: 9, z: 6, floor: { x: 9, z: 5.0 }, name: 'het kantoor van de chef' },
+  ];
+  const grates = [
+    ...nodes,
+    { id: 'phone', x: 2, z: -5, listen: true },
+    { id: 'island', x: 3, z: 0.2, peek: 'Van bovenaf zie ik zo de pannen op het fornuis. Die soep ruikt naar… peer?' },
+  ];
+  const clang = { minX: -2.4, maxX: 0.4, minZ: -5.6, maxZ: -4.4 };
+  const ductMeshes = ducts(rects, grates, clang);
+  ladder(-9, 0.6); ladder(9, -4.5); ladder(9, 5.4);
+  lights([0x9aa3c6, 0x3a3030, 0.85], 0.25, [-6, 12, -10]);
+
+  return {
+    id: 6, title: 'H2 · MISSIE 2 · DE KEUKEN', bg: 0x10141c, garble: true,
+    objective: 'Vind uit wie er in kamer 214 slaapt, en zoek een weg naar boven.',
+    start: { x: -9, z: 6.4, h: Math.PI },
+    signals: [{ x: -11.5, z: 6, max: 4, step: 3 }],
+    deadZones: [{ minX: 6.2, maxX: 12, minZ: -8, maxZ: -0.2 }],
+    deadHint: 'Hier binnen komt niks door. Het enige bereik is bij de laaddeur, waar je binnenkwam.',
+    guard: { model: 'chef', caught: 'DE CHEF HEEFT JE GEZIEN', start: { x: -3.2, z: -2, h: Math.PI / 2, wp: 1 },
+      waypoints: [[-3.2, -2], [3.5, -2], [2, -5.2, 8], [3.5, 2.2], [-3.2, 2.2]], phone: { x: 2, z: -5.2 } },
+    cams: [{ x: -5.6, z: -7.5, y: 2.3, mx: -5.75, mz: -7.7, h0: 0.8, sweep: 0.55, speed: 0.5, range: 7, half: 0.42 }],
+    vent: { z: -2, hideX: -12.8, peekX: -11.6, drop: 'ravenspeld', line: 'Een gat in de muur bij de kratten. Twee bekende oogjes… Ratjetoe! Ben je me helemaal hierheen gevolgd?' },
+    ventSpot: { x: -11.0, z: -2 },
+    bowl: { x: -7.5, z: 6.4, label: 'Pak een paar Conference-peren', empty: 'Bij de laaddeur staat een krat Conference-peren.' },
+    items: [
+      { id: 'rooster6', x: -11.1, z: 2.5, r: 1.0, label: 'Lees het personeelsrooster', ev: 'rooster' },
+      { id: 'pin6', x: 1.0, z: -5.75, r: 0.9, label: 'Bekijk de bonnetjes aan de pin', ev: 'roomservicebon' },
+      { id: 'menu6', x: 3.9, z: -5.75, r: 0.9, label: 'Lees de menukaart op de pass', ev: 'menukaart' },
+      { id: 'ijs6', x: 10.5, z: -5.6, r: 1.0, label: 'Bekijk het vreemde ijsblok', ev: 'koelkaart' },
+      { id: 'bestel6', x: 8, z: -6.1, r: 1.0, label: 'Lees de bestelbon op de kratten', ev: 'bestelbon' },
+      { id: 'gast6', x: 9.8, z: 3.15, r: 0.9, label: 'Lees de gastenlijst op het bureau', ev: 'gastenlijst' },
+      { id: 'la6', x: 11.2, z: 3.15, r: 0.8, label: 'Open de bureaula', ev: 'gedicht' },
+      { id: 'liftsleutel', x: 11.2, z: 6.2, r: 1.0, label: 'Pak de sleutel van de etenslift', key: true },
+      { id: 'etensbord6', x: -3.5, z: -6.9, r: 0.01, label: '', think: '' },
+    ].filter(i => i.label),
+    office: { door, doorCol, inside: { x: 6.7, z: 3.7 }, outside: { x: 5.3, z: 3.7 } },
+    vents: { rects, nodes, grates, clang, meshes: ductMeshes },
+    cart: { path: [[-9, 3, 4], [-7, 4.6], [-5, 4.6], [0, 5.6], [4.6, 5.6], [4.6, -4.6], [-3.2, -5.6, 4], [-3.2, 2.6], [-5.3, 2.6], [-5.3, 4.6], [-7, 4.6]] },
+    iwalls: iw,
+    exit: { x: -3.5, z: -6.9, r: 1.1 },
+    led,
+  };
+}
+
+// =====================================================================
+// HOOFDSTUK 2 · MISSIE 1 · DE LOBBY VAN HOTEL KASIMIR (openbaar)
+// =====================================================================
+function sofa(x, z, w, rot, c = 0x23324f) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = rot; world.group.add(g);
+  box(w, 0.45, 0.9, c, 0, 0.23, 0, g, true); box(w, 0.9, 0.22, c, 0, 0.45, -0.36, g);
+  box(0.2, 0.62, 0.9, c, -w / 2 + 0.1, 0.31, 0, g); box(0.2, 0.62, 0.9, c, w / 2 - 0.1, 0.31, 0, g);
+  const s = Math.abs(Math.sin(rot)) > 0.5; solid(x, z, s ? 0.95 : w, s ? w : 0.95, 0.9);
+}
+function buildHotelLobby() {
+  checkerFloor(24, 16, '#ece0c4', '#c9b78f', 'rgba(0,0,0,.08)');
+  box(9, 0.02, 6, 0x23324f, 0, 0.011, 0); box(8.4, 0.025, 5.4, 0x7a2533, 0, 0.012, 0); box(7.6, 0.03, 4.6, 0x23324f, 0, 0.013, 0);
+  box(2.4, 0.02, 7, 0x7a2533, 0, 0.012, 5);
+  const WL = 0x7a2533;
+  wall(0, -8.25, 24.5, 0.5, 4.0, 'n', -7.6, WL); wall(0, 8.25, 24.5, 0.5, 4.0, 's', 7.6, WL);
+  wall(-12.25, 0, 0.5, 16.5, 4.0, 'w', -11.6, WL); wall(12.25, 0, 0.5, 16.5, 4.0, 'e', 11.6, WL);
+  box(24, 0.15, 0.1, 0xc79a3b, 0, 2.4, -7.98); box(0.1, 0.15, 16, 0xc79a3b, -11.98, 2.4, 0); box(0.1, 0.15, 16, 0xc79a3b, 11.98, 2.4, 0);
+
+  // revolving door (south, entrance)
+  box(3.2, 3.2, 0.3, 0xc79a3b, 0, 1.6, 7.95); glow(2.6, 2.7, 0.04, 0x9fc4ff, 0, 1.4, 7.8);
+  for (const a of [0, Math.PI / 2]) { const g = new THREE.Group(); g.position.set(0, 0, 7.4); g.rotation.y = a + 0.4; world.group.add(g); box(2.2, 2.6, 0.06, 0xc8e4ff, 0, 1.3, 0, g); }
+  box(0.12, 2.8, 0.12, 0xc79a3b, 0, 1.4, 7.4); solid(0, 7.5, 2.4, 1.0, 2.6);
+  box(1.6, 0.5, 0.06, 0x1d1a2b, 0, 3.5, 7.95); glow(1.4, 0.3, 0.02, 0xf0d27a, 0, 3.5, 7.92);
+
+  // reception desk (north-west) + Conference pears + bell
+  box(5.2, 1.15, 1.2, 0x4a2a20, -7, 0.58, -5, undefined, true); box(5.4, 0.1, 1.4, 0xc79a3b, -7, 1.18, -5);
+  box(5.0, 0.8, 0.05, 0x6b3b2a, -7, 0.6, -4.38);
+  solid(-7, -5, 5.4, 1.4, 1.2);
+  box(0.6, 0.12, 0.6, 0xe4d8bd, -5.2, 1.3, -5);
+  for (const [ox, oz] of [[-0.15, -0.1], [0.15, -0.05], [0, 0.15]]) { const p = pearMesh(); p.position.set(-5.2 + ox, 1.45, -5 + oz); p.scale.setScalar(0.85); }
+  box(0.2, 0.1, 0.2, 0xc79a3b, -8.2, 1.28, -4.7);
+  box(4.6, 2.6, 0.2, 0x4a2a20, -7, 1.7, -7.9);
+  for (let i = 0; i < 12; i++) { box(0.3, 0.3, 0.08, 0x6b3b2a, -9.0 + (i % 6) * 0.8, 1.5 + Math.floor(i / 6) * 0.7, -7.78); glow(0.06, 0.12, 0.03, 0xc79a3b, -9.0 + (i % 6) * 0.8, 1.45 + Math.floor(i / 6) * 0.7, -7.73); }
+  light(0xffc070, 12, 8, -7, 2.2, -4.6);
+  // brochure rack
+  box(0.8, 1.4, 0.4, 0x4a2a20, -10.9, 0.7, -2.4, undefined, true);
+  for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) box(0.25, 0.32, 0.03, [0xf4ecd8, 0xd9472b, 0xa9c43f][i], -11.05 + j * 0.3, 0.5 + i * 0.4, -2.18);
+  solid(-10.9, -2.4, 0.8, 0.4, 1.4);
+
+  // lifts (north-east) behind a velvet rope
+  for (const lx of [4.8, 8.2]) {
+    box(2.2, 3.0, 0.2, 0xc79a3b, lx, 1.5, -7.95); box(0.95, 2.6, 0.1, 0x8a8f99, lx - 0.48, 1.3, -7.82); box(0.95, 2.6, 0.1, 0x8a8f99, lx + 0.48, 1.3, -7.82);
+    glow(0.5, 0.18, 0.03, 0xf0d27a, lx, 3.15, -7.82);
+  }
+  for (const rx of [3.6, 6.5, 9.4]) { box(0.12, 1.0, 0.12, 0xc79a3b, rx, 0.5, -5.6); box(0.3, 0.06, 0.3, 0xc79a3b, rx, 0.03, -5.6); }
+  box(5.8, 0.08, 0.08, 0x7a2533, 6.5, 0.85, -5.6);
+  solid(6.5, -5.6, 6.0, 0.3, 1.0);
+  box(0.9, 0.4, 0.05, 0x1d1a2b, 3.0, 2.2, -7.85); glow(0.8, 0.3, 0.02, 0xf4ecd8, 3.0, 2.2, -7.82);
+
+  // seating island
+  box(1.6, 0.42, 0.9, 0x4a2a20, 0, 0.21, 0, undefined, true); solid(0, 0, 1.6, 0.9, 0.5);
+  box(0.4, 0.04, 0.3, 0xf4ecd8, 0.3, 0.44, 0.1); box(0.15, 0.2, 0.15, 0xf4ecd8, -0.4, 0.52, -0.1);
+  sofa(0, -1.55, 3, 0); sofa(-2.5, 0.2, 2, Math.PI / 2, 0x7a2533);
+  sofa(2.55, 0.2, 1.1, -Math.PI / 2, 0x5f7a14);
+  // piano + plants + pillars
+  box(1.8, 1.0, 1.4, 0x1d1a2b, -8.5, 0.5, 4.5, undefined, true); box(1.8, 0.1, 0.5, 0xf4ecd8, -8.5, 1.02, 3.95); box(0.06, 1.4, 1.2, 0x1d1a2b, -9.4, 1.6, 4.6);
+  solid(-8.5, 4.5, 1.8, 1.4, 1.1); box(0.7, 0.5, 0.4, 0x1d1a2b, -8.5, 0.25, 3.2); solid(-8.5, 3.2, 0.7, 0.4, 0.5);
+  for (const [x, z] of [[-11, -7.2], [11, -7.2], [-11, 7.2], [11, 7.2], [-3, 7.2], [3, 7.2]]) plant(x, z);
+  for (const [px, pz] of [[-5, -2.5], [5, -2.5], [-5, 3.5], [5, 3.5]]) {
+    box(0.8, 4, 0.8, 0xece0c4, px, 2, pz); box(1.05, 0.3, 1.05, 0xc79a3b, px, 0.15, pz); box(1.05, 0.3, 1.05, 0xc79a3b, px, 3.85, pz);
+    solid(px, pz, 1.05, 1.05, 4);
+  }
+  // staff door (east) with a luggage trolley
+  box(0.2, 2.6, 1.6, 0x4a2a20, 11.95, 1.3, 4, undefined, true); box(0.05, 0.3, 1.0, 0xf4ecd8, 11.83, 2.2, 4);
+  const led = glow(0.04, 0.12, 0.12, 0xd9472b, 11.84, 1.4, 4.9);
+  box(1.2, 0.08, 0.8, 0xc79a3b, 9.4, 0.3, 6.2); box(0.08, 1.6, 0.08, 0xc79a3b, 8.85, 1.1, 6.2); box(0.08, 1.6, 0.08, 0xc79a3b, 9.95, 1.1, 6.2); box(1.2, 0.08, 0.08, 0xc79a3b, 9.4, 1.9, 6.2);
+  box(0.7, 0.5, 0.4, 0x7a5a3a, 9.3, 0.6, 6.2, undefined, true); box(0.5, 0.4, 0.3, 0x23324f, 9.5, 1.05, 6.1, undefined, true);
+  solid(9.4, 6.2, 1.3, 0.9, 1.9);
+  // Ratjetoe hole behind the piano
+  box(0.3, 0.35, 0.5, 0x0d0f1a, -11.95, 0.18, 2);
+  // chandeliers
+  for (const [cx, cz] of [[0, 0], [0, 5], [-7, -3], [7, -3]]) {
+    box(1.4, 0.15, 1.4, 0xc79a3b, cx, 3.6, cz); box(0.05, 0.4, 0.05, 0xc79a3b, cx, 3.85, cz);
+    for (const [ox, oz] of [[-0.5, -0.5], [0.5, -0.5], [-0.5, 0.5], [0.5, 0.5]]) glow(0.12, 0.18, 0.12, 0xffe2a8, cx + ox, 3.45, cz + oz);
+    light(0xffd090, 9, 11, cx, 3.2, cz, 1.6);
+  }
+  lights([0xc0b8d6, 0x4a3a2a, 1.1], 0.5, [-6, 14, 14]);
+
+  return {
+    id: 7, title: 'H2 · MISSIE 1 · DE LOBBY', bg: 0x141a29, public: true,
+    objective: 'Dit is een openbare lobby: praat met wie je wilt (E). Zoek uit wie er in kamer 214 slaapt, en hoe je voorbij de beveiliging komt.',
+    start: { x: 0, z: 6.2, h: Math.PI },
+    signals: [{ x: 0, z: 0, max: 4, step: 100 }],
+    deadHint: '',
+    guard: null, cams: [],
+    vent: { z: 2, hideX: -12.8, peekX: -11.6, drop: 'veer', line: 'Een gat achter de piano. Daar zit… Ratjetoe! Ben jij met het busje meegereden?!' },
+    ventSpot: { x: -10.9, z: 2 },
+    bowl: { x: -5.2, z: -3.9, label: 'Pak een Conference-peer van de balie', empty: 'Op de receptiebalie ligt een schaal Conference-peren. Gratis voor gasten.' },
+    items: [
+      { id: 'rek7', x: -10.9, z: -1.6, r: 1.0, label: 'Pak een folder uit het rek', ev: 'programma' },
+      { id: 'piano7', x: -8.5, z: 2.6, r: 0.9, label: 'Speel een noot op de piano', think: 'Pling. Een paar gasten kijken om. Oké, dat was niet heel undercover.' },
+    ],
+    // people: tx/tz is where you stand to talk to them
+    npcs: [
+      { id: 'sanne', look: 'sanne', name: 'Sanne, receptie', x: -7, z: -6.2, h: 0, tx: -7, tz: -3.8,
+        lines: ['Goedenavond, welkom in Hotel Kasimir! Kan ik u helpen?', 'Het is druk deze week, met de conferentie. Al die diplomaten! En niemand geeft fooi.', 'Kamer 214? Daar mag ik helaas niks over zeggen. Privacy, mevrouw.'],
+        shrug: 'Hm, dat ken ik niet. Sorry.',
+        show: {
+          taxi: { t: 'Dat is een taxibonnetje van ons! 02:05… die heb ik besteld. Voor de gast van 214. Lange jas, zwarte hoed. Hij kwam pas na drieën terug.', gives: 'zSanne' },
+          lucifer: { t: 'Onze lucifers, kamer 214. Die meneer rookt als een schoorsteen. Lange jas, zwarte hoed. Die nacht ging hij om 02:05 met de taxi weg.', gives: 'zSanne' },
+          hotelfactuur: { t: 'Ja, die factuur gaat naar de ambassade van Valdoria. Die betalen alles voor 214. Ruim, hoor.' },
+          brief: { t: '"Mijn kleine stoofpeer"?! Hihi. Sorry. Nee, die handtekening ken ik niet.' },
+        },
+        special: 'book' },
+      { id: 'pim', look: 'pim', name: 'Pim, kelner', x: 10.2, z: 2.6, h: -Math.PI / 2, tx: 8.9, tz: 2.6,
+        lines: ['Hè? Oh, sorry, oordopjes. Ik heb pauze. Vijf minuten, dan moet ik weer de keuken in.', 'De chef is een tiran. Als hij één peer op de vloer ziet, ontploft hij. Of hij eet hem op. Allebei, eigenlijk.', 'Ik rijd de hele nacht met die roomservicekar rond. Niemand kijkt ooit onder het kleed, haha.'],
+        shrug: 'Geen idee, ik breng alleen eten rond.',
+        show: {
+          hotelfactuur: { t: '214? Daar breng ik elke nacht champagne. Altijd twee glazen. En die meneer wil nooit, nóóit peren. Allergisch, zegt hij.', gives: 'zPim' },
+          lucifer: { t: 'Lucifers van 214. Die meneer geeft nooit fooi, maar ik breng hem wel elke nacht champagne. Twee glazen.', gives: 'zPim' },
+          das: { t: 'Wat een lelijke das. Sorry. Nee, nooit gezien.' },
+        },
+        special: 'apron' },
+      { id: 'barones', look: 'barones', name: 'Barones Von Strudel', x: 0.6, z: -1.5, h: 0, sit: true, tx: 0.6, tz: -0.6,
+        lines: ['Ach, een nieuw gezicht! Bent u ook van de conferentie, liefje?', 'Ik ken iedereen hier. En iedereen kent mij. Vraag maar raak.', 'Die vredesconferentie is zó saai. Ik kom alleen voor de stoofperen. En de roddels.'],
+        shrug: 'Hm, nee, dat zegt me niks, liefje.',
+        show: {
+          das: { t: 'Die peertjesdas! Die droeg meneer Varga op de openingsreceptie. Hij stond te fluisteren met een man met een zilveren raaf op zijn revers. Héél geheimzinnig!', gives: 'zBarones' },
+          gavefoto: { t: 'Dat is het personeel van Valdoria. Die met de peertjesdas is Varga. Op de receptie fluisterde hij met een man met een zilveren raaf op zijn revers.', gives: 'zBarones' },
+          ravenspeld: { t: 'Dat speldje! Dat droeg die man die met Varga stond te smoezen op de receptie. Ik vergeet nooit een accessoire.', gives: 'zBarones' },
+          brief: { t: 'Een liefdesbrief! Heerlijk. Van Mirela? Die arme schat is al maanden smoorverliefd op Varga. Iedereen weet het, behalve haar moeder.' },
+          manchet: { t: 'Zo\'n manchetknoop had Varga ook. Smaakvol is anders.' },
+        } },
+      { id: 'pluim', look: 'pluim', name: 'Professor Pluim', x: 2.6, z: 0.2, h: -Math.PI / 2, sit: true, tx: 3.6, tz: 1.0,
+        lines: ['Ssst. Ik lees. …Oh, goedenavond. Prof. Pluim, vogelkundige. Ik geef een lezing over trekvogels.', 'Wist u dat de raaf het slimste dier ter wereld is? Ze verstoppen glimmende dingen. Net als ratten.', 'Vogels kennen geen grenzen, mevrouw. Daarom ben ik hier, op een vredesconferentie.'],
+        shrug: 'Interessant. Is het een vogel? Nee? Dan weet ik het niet.',
+        show: {
+          ravenspeld: { t: 'Corvus corax! Een raaf. Prachtig zilverwerk. Ik heb er ook zo één… o nee, die van mij is een uil.', gives: 'zPluim' },
+          veer: { t: 'Geen echte veer. Zilver. Afgebroken van een speldje, zo te zien. Een raaf, als ik moet gokken.', gives: 'zPluim' },
+          mail: { t: 'Nachtuil! Strix aluco. Een stille jager. Waarom vraagt u dat?' },
+        } },
+      { id: 'mo', look: 'mo', name: 'Mo, piccolo', x: 10.9, z: 5.25, h: -Math.PI / 2, tx: 9.9, tz: 5.3,
+        lines: ['Hoi! Ik ben Mo. Ik draag koffers. En ik pas op deze deur. Alleen personeel, mevrouw!', 'Eergisteren zag ik een rat de keuken in rennen, met iets zilvers in zijn bek. Niemand gelooft me.', 'Als je bij het personeel hoort, mag je erdoor. Anders niet. Regels zijn regels.'],
+        shrug: 'Weet ik niet. Ik ben maar de piccolo.',
+        show: { veer: { t: 'Dat is het! Dat zilveren ding! Die rat had de rest ervan in zijn bek. Een vogeltje of zo.', gives: 'zMo' } },
+        blocksDoor: true },
+      { id: 'gerrit', look: 'gerrit', name: 'Gerrit, beveiliging', x: 6.5, z: -6.6, h: 0, tx: 6.5, tz: -4.9,
+        lines: ['Goedenavond. De liften zijn alleen voor gasten met een kamerpas.', 'Tijdens de conferentie zijn de verdiepingen extra beveiligd. Geen pas, geen lift.', 'Ik ben niet zo van het praten, mevrouw.'],
+        shrug: 'Daar ga ik niet over.',
+        show: {}, special: 'lift' },
+    ],
+    exit: { x: 11.2, z: 4.0, r: 1.2 },
+    led,
+  };
+}
+
+// =====================================================================
+// HOOFDSTUK 2 · MISSIE 3 · VERDIEPING 2 (beveiligd) + de vensterrichel
+// =====================================================================
+function hotelDoor(x, z, num, open = false) {
+  const g = new THREE.Group(); g.position.set(x - 0.7, 0, z); world.group.add(g);
+  box(1.4, 2.3, 0.12, 0x6b3b2a, 0.7, 1.15, 0, g, true);
+  box(0.36, 0.16, 0.03, 0xc79a3b, 0.7, 1.9, 0.08, g); box(0.36, 0.16, 0.03, 0xc79a3b, 0.7, 1.9, -0.08, g);
+  box(0.08, 0.08, 0.12, 0xc79a3b, 1.25, 1.1, 0, g);
+  solid(x, z, 1.4, 0.3, 2.3); const col = world.colliders[world.colliders.length - 1];
+  const d = { g, col, open: false, num };
+  if (open) { g.rotation.y = -1.4; world.colliders.splice(world.colliders.indexOf(col), 1); d.open = true; }
+  return d;
+}
+function bed(x, z, rot = 0) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = rot; world.group.add(g);
+  box(1.8, 0.5, 2.3, 0x4a2a20, 0, 0.25, 0, g, true); box(1.7, 0.18, 2.2, 0xf4ecd8, 0, 0.58, 0, g);
+  box(1.8, 0.9, 0.12, 0x4a2a20, 0, 0.6, -1.12, g); box(0.6, 0.14, 0.4, 0xffffff, -0.4, 0.72, -0.8, g); box(0.6, 0.14, 0.4, 0xffffff, 0.4, 0.72, -0.8, g);
+  box(1.72, 0.06, 1.3, 0x7a2533, 0, 0.7, 0.4, g);
+  const s = Math.abs(Math.sin(rot)) > 0.5; solid(x, z, s ? 2.3 : 1.8, s ? 1.8 : 2.3, 0.75);
+}
+function buildVerdieping() {
+  checkerFloor(24, 16, '#c9b78f', '#b8a67e', 'rgba(0,0,0,.06)');
+  box(19, 0.02, 3.6, 0x7a2533, 2.5, 0.012, 0); box(18.6, 0.025, 3.0, 0x9c3443, 2.5, 0.013, 0);
+  box(5, 0.02, 16, 0x8a8f99, -9.5, 0.012, 0);
+  const WL = 0x7a2533;
+  wall(0, -8.25, 24.5, 0.5, 3.4, 'n', -7.6, 0xe4d8bd); wall(0, 8.25, 24.5, 0.5, 3.4, 's', 7.6, WL);
+  wall(-12.25, 0, 0.5, 16.5, 3.4, 'w', -11.6, WL); wall(12.25, 0, 0.5, 16.5, 3.4, 'e', 11.6, WL);
+  const iw = [];
+  // pantry wall with doorway
+  iwall(-7, -8, -7, -0.9, iw); iwall(-7, 0.9, -7, 8, iw);
+  // corridor walls (doorways for 210, 214 and 213)
+  iwall(-7, -2, -4.7, -2, iw); iwall(-3.3, -2, 7.8, -2, iw); iwall(9.2, -2, 12, -2, iw);
+  iwall(-7, 2, 6.3, 2, iw); iwall(7.7, 2, 12, 2, iw);
+  iwall(-1, -8, -1, -2.15, iw); iwall(5, -8, 5, -2.15, iw); iwall(2.5, 2.15, 2.5, 8, iw);
+  // doors
+  const doors = {
+    d210: hotelDoor(-4, -2, 210, true), d212: hotelDoor(2, -2, 212), d214: hotelDoor(8.5, -2, 214),
+    d211: hotelDoor(-2, 2, 211), d213: hotelDoor(7, 2, 213, true),
+  };
+  box(0.25, 0.4, 0.08, 0x2b2b35, 9.5, 1.3, -1.82); const led = glow(0.08, 0.08, 0.03, 0xd9472b, 9.5, 1.42, -1.77);
+  box(0.6, 0.6, 0.06, 0xf4ecd8, 2, 1.9, -1.83); glow(0.4, 0.12, 0.02, 0xd9472b, 2, 1.95, -1.79);
+  // corridor dressing
+  for (const lx of [-4, 1, 6, 10.6]) { glow(0.2, 0.3, 0.06, 0xffe0a0, lx, 2.2, -1.82); light(0xffc070, 5, 6, lx, 2.0, -1.2); }
+  box(0.5, 0.8, 0.5, 0x4a2a20, 11.4, 0.4, 1.4); box(0.3, 0.6, 0.3, 0x3f6b2a, 11.4, 1.1, 1.4); solid(11.4, 1.4, 0.5, 0.5, 1.0);
+
+  // ---- service pantry (where the dumbwaiter arrives) ----
+  box(1.3, 1.3, 0.2, 0x3a3a46, -11.95, 1.15, 5, undefined, true); box(0.06, 1.05, 1.05, 0x9aa3ad, -11.84, 1.15, 5);
+  box(0.8, 2.2, 3, 0xe4e0d4, -11.5, 1.1, 1.2, undefined, true);
+  for (let i = 0; i < 6; i++) box(0.5, 0.25, 0.6, 0xf4ecd8, -11.4, 0.5 + (i % 3) * 0.7, 0.2 + Math.floor(i / 3) * 1.6);
+  solid(-11.5, 1.2, 0.8, 3, 2.2);
+  // laundry chute (exit)
+  box(1.0, 1.0, 0.2, 0x8a8f99, -11.95, 1.2, -5.5, undefined, true); box(0.06, 0.8, 0.8, 0x1d1a2b, -11.84, 1.2, -5.5);
+  box(0.6, 0.15, 0.03, 0xf4ecd8, -11.83, 1.9, -5.5);
+  box(1.2, 0.8, 0.7, 0x5a5f66, -9.5, 0.4, -7.3, undefined, true); box(1.1, 0.25, 0.6, 0xf4ecd8, -9.5, 0.9, -7.3); solid(-9.5, -7.3, 1.2, 0.7, 0.9);
+  box(0.9, 0.7, 0.9, 0x4a2a20, -8.2, 0.35, 6.6); solid(-8.2, 6.6, 0.9, 0.9, 0.8);
+  box(0.7, 0.14, 0.7, 0xe4d8bd, -8.2, 0.78, 6.6);
+  for (const [ox, oz] of [[-0.15, -0.1], [0.15, -0.05], [0, 0.15]]) { const p = pearMesh(); p.position.set(-8.2 + ox, 0.93, 6.6 + oz); p.scale.setScalar(0.85); }
+  box(0.3, 0.35, 0.5, 0x0d0f1a, -11.95, 0.18, -2.6);
+  light(0xf4f0e0, 7, 8, -9.5, 2.5, 0, 1.6);
+
+  // ---- 210: being cleaned, window open ----
+  bed(-4, -5.4, 0); box(0.8, 1.0, 0.6, 0x9aa3ad, -6.2, 0.5, -3.0); solid(-6.2, -3.0, 0.8, 0.6, 1.0);
+  box(0.06, 1.0, 0.6, 0xf4ecd8, -6.2, 1.2, -2.7);
+  // ---- 212: occupied, light on ----
+  bed(2, -5.4, 0); light(0xffc070, 7, 6, 2, 1.8, -5);
+  // ---- 214: Corvus ----
+  bed(10.2, -6.2, 0); light(0xffb070, 8, 6, 8, 1.9, -4.5);
+  box(1.0, 2.2, 0.7, 0x4a2a20, 11.5, 1.1, -3.4, undefined, true); solid(11.5, -3.4, 0.8, 1.0, 2.2);
+  box(0.9, 0.7, 0.9, 0x4a2a20, 7, 0.35, -5.4); solid(7, -5.4, 0.9, 0.9, 0.8);
+  box(0.06, 0.25, 0.06, 0xf4ecd8, 6.85, 0.82, -5.4); box(0.06, 0.25, 0.06, 0xf4ecd8, 7.1, 0.82, -5.3); box(0.16, 0.36, 0.16, 0x2f4a2a, 7.2, 0.88, -5.6);
+  box(1.0, 0.1, 0.6, 0xc79a3b, 6, 0.55, -3.0); box(0.9, 0.5, 0.5, 0x1d1a2b, 6, 0.85, -3.0, undefined, true); solid(6, -3.0, 1.0, 0.6, 1.1);
+  box(0.6, 0.6, 0.5, 0x3a3a46, 11.6, 0.3, -7.4); glow(0.4, 0.04, 0.02, 0xf4ecd8, 11.6, 0.55, -7.14); solid(11.6, -7.4, 0.6, 0.5, 0.7);
+  // ---- 211 (locked), 213: snoring delegate ----
+  bed(-4, 5.8, Math.PI); bed(10, 5.8, Math.PI);
+  box(1.0, 0.75, 0.6, 0x4a2a20, 5.5, 0.38, 7.4); box(0.5, 0.06, 0.35, 0xf4ecd8, 5.5, 0.78, 7.4); solid(5.5, 7.4, 1.0, 0.6, 0.8);
+  light(0xffd0a0, 3, 6, 9, 1.8, 5);
+
+  // ---- outside: windows + ledge ----
+  const winX = { w210: -4, w212: 2, w214: 8.5 };
+  for (const wx of Object.values(winX)) {
+    box(1.6, 1.7, 0.12, 0x1d1a2b, wx, 1.6, -8.02); glow(1.4, 1.5, 0.02, wx === 2 ? 0xffd890 : 0x23324f, wx, 1.6, -8.5);
+    box(1.6, 1.7, 0.12, 0x1d1a2b, wx, 1.6, -8.48); box(0.06, 1.5, 0.05, 0x1d1a2b, wx, 1.6, -8.55);
+  }
+  for (const wx of [-10, -8, 11]) glow(1.0, 1.2, 0.02, 0x23324f, wx, 1.6, -8.52);
+  box(19.5, 0.25, 1.1, 0xd8ccb0, 2.75, -0.12, -9.05, undefined, true);
+  box(19.5, 0.12, 0.1, 0xc79a3b, 2.75, 0.06, -9.55);
+  solid(2.75, -9.85, 20, 0.4, 3); solid(-7.3, -9.05, 0.4, 1.2, 3); solid(12.75, -9.05, 0.4, 1.2, 3);
+  const abyss = new THREE.Mesh(new THREE.PlaneGeometry(60, 30), new THREE.MeshBasicMaterial({ color: 0x0b1020 }));
+  abyss.rotation.x = -Math.PI / 2; abyss.position.set(0, -7, -22); world.group.add(abyss);
+  for (let i = 0; i < 26; i++) glow(0.2, 0.2, 0.2, i % 3 ? 0xffd890 : 0xf4ecd8, -20 + (i * 9.7) % 44, -6.8, -12 - (i * 5.3) % 16);
+  for (let i = 0; i < 6; i++) glow(0.6, 0.1, 1.4, 0xd9472b, -18 + i * 7, -6.85, -17 - (i % 2) * 4);
+  // pigeons
+  const pigeons = [];
+  for (const px of [-0.6, 5.2, 10.8]) {
+    const g = new THREE.Group(); g.position.set(px, 0.02, -9.1); world.group.add(g);
+    box(0.3, 0.22, 0.42, 0x8a8f99, 0, 0.16, 0, g, true); box(0.18, 0.18, 0.18, 0x6e7787, 0, 0.32, 0.16, g); box(0.06, 0.04, 0.08, 0xf0b429, 0, 0.3, 0.28, g);
+    pigeons.push({ g, x: px, z: -9.1, fled: 0 });
+  }
+  lights([0x9aa3c6, 0x3a3030, 0.85], 0.55, [-6, 14, -16]);
+
+  return {
+    id: 8, title: 'H2 · MISSIE 3 · VERDIEPING 2', bg: 0x0b1020,
+    objective: 'Kom ongezien in kamer 214, doorzoek hem, en verdwijn via de wasgoot in de linnenkamer.',
+    start: { x: -10.2, z: 5, h: Math.PI / 2 },
+    signals: [{ x: 2.75, z: -9.1, max: 4, step: 2.6 }],
+    deadHint: 'Binnen is het zwak. Bij de ramen is het beter, en buiten op de richel heb je alle bereik van de wereld.',
+    guard: { caught: 'HENK?! …HEEFT JE ALWEER GEZIEN', start: { x: 10.6, z: 0, h: -Math.PI / 2, wp: 0 },
+      waypoints: [[-5.5, 0, 2.5], [3, 0], [10.6, 0, 3], [3, 0]] },
+    cams: [{ x: 11.8, z: -1.2, y: 2.5, mx: 11.95, mz: -1.2, h0: -Math.PI / 2 + 0.15, sweep: 0.35, speed: 0.45, range: 8, half: 0.4 }],
+    vent: { z: -2.6, hideX: -12.8, peekX: -11.6, drop: 'oorbel', line: 'Een gat naast de wasgoot. Twee oogjes. Ratjetoe, je bent echt overal.' },
+    ventSpot: { x: -11.0, z: -2.6 },
+    bowl: { x: -8.2, z: 5.75, label: 'Pak een peer van de fruitmand', empty: 'In de linnenkamer staat een fruitmand voor de roomservice.' },
+    items: [
+      { id: 'kast8', x: 10.95, z: -3.4, r: 1.0, label: 'Doorzoek de kast', ev: 'vermomming' },
+      { id: 'glas8', x: 7.4, z: -4.6, r: 1.0, label: 'Bekijk de glazen', ev: 'glas' },
+      { id: 'kussen8', x: 10.2, z: -4.7, r: 1.0, label: 'Kijk onder het kussen', ev: 'brief214' },
+      { id: 'koffer8', x: 6, z: -3.9, r: 0.9, label: 'Bekijk de lege koffer', ev: 'kofferlabel' },
+      { id: 'mini8', x: 11.0, z: -7.0, r: 0.9, label: 'Open de minibar', ev: 'minibar' },
+      { id: 'badjas8', x: 9.4, z: -2.6, r: 0.8, label: 'Bekijk de badjas', ev: 'badjas' },
+      { id: 'toespraak8', x: 5.5, z: 6.7, r: 1.0, label: 'Lees de papieren op het bureau', ev: 'toespraak' },
+      { id: 'snurk8', x: 9.4, z: 3.8, r: 1.0, label: 'Kijk naar de slapende gast', think: 'Hij snurkt als een kettingzaag. Op zijn nachtkastje: een badge "Delegatie Lumeria". Die slaapt nog wel even.' },
+      { id: 'kar8', x: -6.2, z: -3.7, r: 0.9, label: 'Bekijk de schoonmaakkar', think: 'Het raam van 210 staat open, om te luchten. Daarbuiten loopt een richel langs de hele gevel.' },
+    ],
+    windows: [
+      { id: 'w210', in: { x: -4, z: -7.45 }, out: { x: -4, z: -9.05 }, label: 'Klim door het open raam' },
+      { id: 'w214', in: { x: 8.5, z: -7.45 }, out: { x: 8.5, z: -9.05 }, label: 'Duw het raam van 214 open', locked: false },
+    ],
+    listen: { x: 2, z: -9.05 },
+    watcher: { x: 2, z: -8.0, h: Math.PI, range: 3.6, half: 0.75 },
+    pigeons,
+    doors, cartDoor: 'd214',
+    insideDoor: { x: 8.5, z: -2.75, door: 'd214' },
+    cart: { path: [[-9.5, 2.6, 5], [-9.5, 0], [-5, 0], [8.5, 0, 1.5], [8.5, -1.3, 3], [8.5, -4.2, 6], [8.5, -1.3], [8.5, 0], [11, 0, 3], [-5, 0], [-9.5, 0]] },
+    iwalls: iw,
+    exit: { x: -11.0, z: -5.5, r: 1.1 },
+    led,
+  };
+}
+
+// =====================================================================
+// HOOFDSTUK 2 · MISSIE 4 · DE WASSERIJ EN ZAAL ZUID
+// =====================================================================
+function washer(x, z) {
+  box(1.2, 1.3, 1.0, 0xe4e0d4, x, 0.65, z, undefined, true);
+  box(0.7, 0.7, 0.05, 0x3a3a46, x, 0.7, z + 0.51); glow(0.5, 0.5, 0.02, 0x7fb0d0, x, 0.7, z + 0.54);
+  box(0.25, 0.08, 0.05, 0xd9472b, x + 0.35, 1.2, z + 0.51);
+  solid(x, z, 1.2, 1.0, 1.3);
+}
+function chairRow(x0, z, n) {
+  for (let i = 0; i < n; i++) {
+    const x = x0 + i * 0.9;
+    box(0.6, 0.08, 0.6, 0x7a2533, x, 0.45, z); box(0.6, 0.6, 0.08, 0x7a2533, x, 0.75, z + 0.28);
+    for (const [lx, lz] of [[-0.25, -0.25], [0.25, -0.25], [-0.25, 0.25], [0.25, 0.25]]) box(0.04, 0.45, 0.04, 0xc79a3b, x + lx, 0.22, z + lz);
+  }
+  solid(x0 + (n - 1) * 0.45, z, n * 0.9, 0.7, 0.9);
+}
+function buildZaal() {
+  checkerFloor(24, 16, '#d8d4c8', '#c4bfb2', 'rgba(0,0,0,.08)');
+  box(16, 0.02, 16, 0x5a2a3a, 4, 0.011, 0); box(15.4, 0.025, 15.4, 0x6a3040, 4, 0.012, 0);
+  const WL = 0x3a2030;
+  wall(0, -8.25, 24.5, 0.5, 4.2, 'n', -7.6, WL); wall(0, 8.25, 24.5, 0.5, 4.2, 's', 7.6, WL);
+  wall(-12.25, 0, 0.5, 16.5, 4.2, 'w', -11.6, 0xe4e0d4); wall(12.25, 0, 0.5, 16.5, 4.2, 'e', 11.6, WL);
+  const iw = [];
+  iwall(-4, -8, -4, 3.8, iw, 0xe4e0d4); iwall(-4, 5.4, -4, 8, iw, 0xe4e0d4);
+
+  // ---- laundry ----
+  box(1.6, 0.6, 1.6, 0xf4ecd8, -10.8, 0.3, -6.6, undefined, true); box(0.9, 0.3, 0.8, 0xc8e4ff, -10.6, 0.7, -6.4); box(0.7, 0.3, 0.7, 0xf0d27a, -11.1, 0.75, -6.9);
+  box(1.0, 1.0, 0.2, 0x8a8f99, -11.95, 2.0, -6.6); box(0.06, 0.8, 0.8, 0x1d1a2b, -11.84, 2.0, -6.6);
+  for (const wx of [-10.6, -9.2, -7.8, -6.4]) washer(wx, -7.4);
+  box(3.2, 0.9, 1.1, 0xc8ccd0, -8, 0.45, -1.5, undefined, true); box(0.6, 0.12, 0.5, 0xf4ecd8, -8.6, 0.96, -1.5); box(0.6, 0.12, 0.5, 0xd9472b, -7.6, 0.96, -1.4);
+  solid(-8, -1.5, 3.2, 1.1, 0.95);
+  for (const [bx, bz] of [[-10.6, 2.4], [-6.0, 6.8]]) {
+    box(1.1, 0.8, 0.8, 0x8a6a42, bx, 0.4, bz, undefined, true); box(1.0, 0.25, 0.7, 0xf4ecd8, bx, 0.85, bz); solid(bx, bz, 1.1, 0.8, 0.9);
+  }
+  box(0.8, 1.1, 0.8, 0x5f7a14, -11.3, 0.55, 6.6, undefined, true); solid(-11.3, 6.6, 0.8, 0.8, 1.1);
+  box(0.06, 0.2, 2.4, 0x8a8f99, -11.9, 2.4, 0);
+  for (const hz of [-1, 0, 1]) box(0.04, 0.8, 0.5, [0xf4ecd8, 0x7a2533, 0x23324f][hz + 1], -11.8, 1.9, hz * 0.7);
+  // steam presses: their clouds block sight when they hiss
+  const steam = [];
+  for (const [sx, sz] of [[-9.2, 0.8], [-6.6, -4.4]]) {
+    box(1.0, 1.0, 0.8, 0x6e7787, sx, 0.5, sz, undefined, true); solid(sx, sz, 1.0, 0.8, 1.0);
+    const cloud = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.4, 2.6), new THREE.MeshBasicMaterial({ color: 0xf4f4f4, transparent: true, opacity: 0, depthWrite: false }));
+    cloud.position.set(sx, 1.6, sz); world.group.add(cloud);
+    const col = { minX: sx - 1.3, maxX: sx + 1.3, minZ: sz - 1.3, maxZ: sz + 1.3, h: 0, noMove: true }; world.colliders.push(col);
+    steam.push({ cloud, col, t: Math.random() * 6 });
+  }
+  box(0.3, 0.35, 0.5, 0x0d0f1a, -11.95, 0.18, -3.6);
+  light(0xf4f0e0, 8, 9, -8, 2.8, -2, 1.6); light(0xf4f0e0, 6, 8, -8, 2.8, 5, 1.6);
+
+  // ---- Zaal Zuid ----
+  box(5.6, 0.5, 13, 0x4a2a20, 9.2, 0.25, 0, undefined, true); box(5.7, 0.06, 13.1, 0x6b3b2a, 9.2, 0.51, 0);
+  box(0.2, 3.6, 13, 0x7a2533, 11.95, 2.2, 0);
+  for (const cz of [-6, 6]) box(0.5, 3.8, 1.4, 0x7a2533, 6.8, 2.2, cz);
+  box(3.4, 0.8, 0.8, 0x4a2a20, 9.4, 0.9, -2.2, undefined, true); box(3.6, 0.06, 1.0, 0xf4ecd8, 9.4, 1.32, -2.2);
+  for (const nx of [8.4, 9.4, 10.4]) box(0.3, 0.16, 0.05, 0xf4ecd8, nx, 1.42, -1.8);
+  box(0.5, 1.2, 0.4, 0x6b3b2a, 8.4, 1.1, 2.4, undefined, true); box(0.05, 0.4, 0.05, 0x1d1a2b, 8.4, 1.9, 2.3);
+  // stage collisions: the edge counts as low cover, stairs at the sides
+  solid(6.65, -2.6, 0.3, 7.6, 0.6); solid(6.65, 4.6, 0.3, 2.6, 0.6);
+  solid(9.4, -2.2, 3.4, 0.8, 1.3); solid(8.4, 2.4, 0.5, 0.4, 1.3);
+  // dumbwaiter in the hall + side door (where the visitors come in)
+  box(0.2, 1.3, 1.3, 0x3a3a46, 11.95, 1.4, -5.2); box(0.06, 1.05, 1.05, 0x9aa3ad, 11.84, 1.4, -5.2);
+  box(0.2, 2.6, 1.6, 0x4a2a20, 11.95, 1.3, 6.9); box(0.05, 0.3, 1.0, 0x5f7a14, 11.83, 2.3, 6.9);
+  const led = glow(0.04, 0.12, 0.12, 0xd9472b, 11.84, 1.4, 5.9);
+  // seating
+  for (let r = 0; r < 4; r++) { chairRow(-2.2, -5.6 + r * 1.6, 4); chairRow(2.2, -5.6 + r * 1.6, 4); }
+  for (let r = 0; r < 2; r++) { chairRow(-2.2, 1.8 + r * 1.6, 4); chairRow(2.2, 1.8 + r * 1.6, 4); }
+  box(0.4, 0.2, 0.3, 0x7a2533, 2.2, 0.6, 1.8); box(0.12, 0.08, 0.03, 0xc79a3b, 2.2, 0.66, 1.66);
+  // projector
+  box(0.7, 0.9, 0.7, 0x3a3a46, 1.1, 0.45, 7.4); box(0.5, 0.3, 0.5, 0x1d1a2b, 1.1, 1.05, 7.4); glow(0.15, 0.15, 0.05, 0xf4ecd8, 1.1, 1.05, 7.12); solid(1.1, 7.4, 0.7, 0.7, 1.2);
+  // the catwalk (reuses the vent layer)
+  const rects = [
+    { minX: -3.4, maxX: -2.2, minZ: -1.6, maxZ: 6.6 },
+    { minX: -3.4, maxX: 9.6, minZ: -1.6, maxZ: -0.4 },
+    { minX: 8.4, maxX: 9.6, minZ: -6.2, maxZ: 5.4 },
+  ];
+  const nodes = [
+    { id: 'achter', x: -2.8, z: 6.1, floor: { x: -2.8, z: 7.1 }, name: 'achter de laatste rij' },
+    { id: 'coulisse', x: 9, z: 4.9, floor: { x: 10.6, z: 4.9 }, name: 'de coulissen' },
+  ];
+  const grates = [...nodes, { id: 'podium', x: 9, z: -1, photo: true }, { id: 'zaal', x: 2, z: -1, peek: 'Rijen rode stoelen. Vooraan ligt een tasje op een stoel. Iemand is gehaast vertrokken.' }];
+  const meshes = ducts(rects, grates, null);
+  for (let x = -3; x < 9.6; x += 1.2) { box(0.05, 0.6, 0.05, 0x3a3a46, x, DUCT_Y + 0.3, -1.6); box(0.05, 0.6, 0.05, 0x3a3a46, x, DUCT_Y + 0.3, -0.4); }
+  for (const sx of [4, 6.4]) { box(0.3, 0.35, 0.3, 0x1d1a2b, sx, DUCT_Y - 0.25, -1.75); glow(0.2, 0.05, 0.2, 0xffe0a0, sx, DUCT_Y - 0.44, -1.75); }
+  ladder(-2.8, 6.6); ladder(10.1, 4.9);
+  const spot = new THREE.SpotLight(0xffe0a0, 40, 12, 0.5, 0.4, 1.4); spot.position.set(9, 3.8, 4); spot.target.position.set(9, 0, 0); world.group.add(spot, spot.target);
+  const hallLights = [light(0xffd090, 8, 12, 2, 3.6, -3, 1.6), light(0xffd090, 8, 12, 2, 3.6, 4, 1.6), light(0xffd090, 6, 10, 9, 3.6, 0, 1.6)];
+  hallLights.forEach(l => l.userData.base = l.intensity);
+  lights([0xa0a8c8, 0x3a2a2a, 0.7], 0.3, [-6, 14, 12]);
+
+  return {
+    id: 9, title: 'H2 · MISSIE 4 · ZAAL ZUID', bg: 0x0d0f1a,
+    objective: 'Om 03:00 begint de "besloten sessie" in Zaal Zuid. Zorg dat je het ziet, zonder dat iemand jou ziet.',
+    start: { x: -10.6, z: -5.4, h: Math.PI / 2 },
+    signals: [{ x: -11.5, z: 0, max: 3, step: 4 }, { x: 4, z: -1, max: 2, step: 5 }],
+    deadHint: 'Dikke muren. In de wasserij is het beter.',
+    guard: { model: 'gerrit', caught: 'GERRIT VAN DE BEVEILIGING HEEFT JE GEZIEN', start: { x: 2, z: 0.8, h: Math.PI / 2, wp: 1 },
+      waypoints: [[-1.6, 0.8], [5.9, 0.8, 2], [5.9, 6.4], [-3.25, 6.4], [-3.25, 4.6], [-8, 4.6], [-8, 2.6, 2], [-3.25, 4.6], [-3.25, 6.4], [-1.6, 6.4]], leave: { x: 11.2, z: 6.9 } },
+    cams: [],
+    vent: { z: -3.6, hideX: -12.8, peekX: -11.6, drop: 'snor', line: 'Een gat achter de wasmanden. Ratjetoe kauwt op iets harigs. Is dat… een snor?' },
+    ventSpot: { x: -11.0, z: -3.6 },
+    bowl: { x: -7.6, z: -2.4, label: 'Pak een peer uit de personeelsfruitschaal', empty: 'Op de vouwtafel in de wasserij staat een fruitschaal.' },
+    items: [
+      { id: 'mand9', x: -10.6, z: 1.7, r: 1.0, label: 'Doorzoek de wasmand', ev: 'jurk' },
+      { id: 'wasm9', x: -11.3, z: 5.8, r: 1.0, label: 'Bekijk het vat wasmiddel', ev: 'wasmiddel' },
+      { id: 'tasje9', x: 2.2, z: 1.1, r: 0.9, label: 'Bekijk het tasje op de stoel', ev: 'tasje' },
+      { id: 'naam9', x: 9.4, z: -1.2, r: 0.9, label: 'Lees de naamkaartjes', ev: 'naamkaart' },
+      { id: 'dia9', x: 1.1, z: 6.6, r: 0.9, label: 'Bekijk de projector', ev: 'dia' },
+      { id: 'kleding9', x: -11.2, z: 0.4, r: 0.9, label: 'Bekijk de hangende kleding', think: 'Gestreken uniformen, en een rode jurk met kersjes op de mouwen. Mooi, maar niet mijn maat.' },
+    ],
+    vents: { rects, nodes, grates, clang: null, meshes, signal: true, catwalk: true },
+    steam, iwalls: iw,
+    meet: { door: { x: 11.2, z: 6.9 }, stage: { x: 9, z: 0.3 } },
+    hallLights,
+    exit: { x: 11.2, z: 6.9, r: 1.2 },
+    led,
+  };
+}
 // ===================== finale.js =====================
 
 let api;
@@ -1148,6 +1844,57 @@ function facts(k) {
   ].filter(Boolean);
 }
 
+// ---------- chapter 2: who is Corvus? ----------
+const ch2 = () => api.S.room === 10;
+// links that point at one specific person (the barones)
+const ID2 = [['tasje', 'ravenspeld'], ['tasje', 'veer'], ['jurk', 'ravenspeld'], ['jurk', 'zRichel'], ['zRichel', 'vermomming'], ['zOverdracht', 'zRichel'], ['tasje', 'glas'], ['tasje', 'peuk']];
+// links that prove Corvus actually buys our secrets
+const CRIME2 = [['zOverdracht', 'brief214'], ['brief214', 'das'], ['brief214', 'programma'], ['kofferlabel', 'afluister'], ['kofferlabel', 'koffer'], ['programma', 'afluister'], ['programma', 'koffer'], ['afluister', 'koffer'], ['afluister', 'gastenlijst'], ['zBarones', 'das'], ['gastenlijst', 'hotelfactuur'], ['gastenlijst', 'lucifer']];
+const anyPair = list => list.some(([a, b]) => pair(a, b));
+function knowledge2() {
+  return {
+    corvusId: anyPair(ID2),
+    crime: anyPair(CRIME2),
+    disguise: pair('vermomming', 'zSanne') || pair('vermomming', 'lucifer') || pair('fotoBrug', 'vermomming') || pair('snor', 'vermomming'),
+    lipstick: pair('glas', 'peuk') || pair('tasje', 'peuk') || pair('tasje', 'glas') || pair('oorbel', 'glas'),
+    kelder: pair('gastenlijst', 'lucifer') || pair('zSanne', 'lucifer') || pair('glas', 'peuk') || pair('tasje', 'peuk'),
+    room214: pair('gastenlijst', 'hotelfactuur') || pair('gastenlijst', 'taxi') || pair('zSanne', 'taxi'),
+    varga: pair('zBarones', 'das') || pair('brief214', 'das') || pair('ravenspeld', 'das'),
+    pin: pair('veer', 'ravenspeld') || pair('zBarones', 'ravenspeld') || pair('ravenspeld', 'gastenlijst'),
+    sleeps: pair('jurk', 'zRichel') || pair('zRichel', 'zSanne'),
+    third: pair('zOverdracht', 'brief214'),
+  };
+}
+function facts2(k) {
+  return [
+    k.room214 && 'Corvus slaapt in kamer 214, op kosten van de ambassade van Valdoria.',
+    k.kelder && 'Corvus was die nacht in de kelder van de ambassade.',
+    k.crime && 'Corvus koopt onze plattegronden. De overdracht was in Zaal Zuid.',
+    k.varga && 'Corvus werkt samen met Varga.',
+    k.disguise && 'Corvus vermomt zich: lange jas, hoed, plaksnor.',
+    k.lipstick && 'Onder die vermomming draagt Corvus kersenrode lippenstift.',
+    k.pin && 'Corvus draagt een zilveren raafspeldje. Het veertje is eraf.',
+    k.sleeps && 'De barones "slaapwandelt" precies op de uren dat Corvus op pad is.',
+    k.corvusId && 'Alles wijst naar één persoon: Barones Von Strudel.',
+    k.third && 'Er komt nog een derde pakket, na de conferentie.',
+  ].filter(Boolean);
+}
+const SUSPECTS2 = [
+  { id: 'barones', name: 'Barones Von Strudel', icon: '👒' }, { id: 'pluim', name: 'Professor Pluim', icon: '🦉' },
+  { id: 'sanne', name: 'Sanne, receptie', icon: '🛎️' }, { id: 'chef', name: 'Chef Bertrand', icon: '👨‍🍳' },
+  { id: 'varga', name: 'Attaché Varga', icon: '🎩' }, { id: 'henk2', name: 'Henk (alweer)', icon: '🍐' },
+];
+const chLinks = () => api.S.links.filter(l => ch2() ? l.room >= 6 : l.room <= 4);
+const curKnow = () => ch2() ? knowledge2() : knowledge();
+const curFacts = k => ch2() ? facts2(k) : facts(k);
+// the board shows this chapter's items, plus older ones that a link of this chapter uses
+function boardIds() {
+  const S = api.S;
+  if (!ch2()) return S.dossier.filter(id => EVID[id].room <= 4);
+  const used = new Set(chLinks().flatMap(l => [l.a, l.b]));
+  return S.dossier.filter(id => EVID[id].room >= 6 || used.has(id));
+}
+
 // ---------- the van: talk it through ----------
 const SUSPECTS = [
   { id: 'amb', name: 'De ambassadeur', icon: '🎣' }, { id: 'varga', name: 'Attaché Varga', icon: '🎩' },
@@ -1168,24 +1915,26 @@ function startVan(skipTalk = false) {
   renderBoard([]);
   $('vanChoices').innerHTML = '';
   if (skipTalk) return accusePhase();
-  const S = api.S, k = knowledge();
+  const S = api.S, k = curKnow(), L = chLinks(), ids = boardIds();
+  const opening = ch2()
+    ? [{ t: 'Julie! Daar ben je. Het slotbal van de conferentie begint over een uur. Daar gaat het derde pakket van hand tot hand, dat weet ik zeker.' }]
+    : [{ t: 'Julie! Je bent eruit. Ga zitten. Het is 03:24, we hebben nog een half uur tot kade 7.' }];
   lines = [
-    { t: 'Julie! Je bent eruit. Ga zitten. Het is 03:24, we hebben nog een half uur tot kade 7.' },
-    S.dossier.length
-      ? { t: `Laten we het op een rijtje zetten. Je hebt me ${S.dossier.length} dingen gestuurd. Ik heb ze allemaal op het bord geprikt.`, show: 'cards' }
+    ...opening,
+    ids.length
+      ? { t: `Laten we het op een rijtje zetten. Dit is wat je me ${ch2() ? 'in het hotel' : ''} gestuurd hebt, op het bord geprikt.`, show: 'cards' }
       : { t: 'Je hebt me… niks gestuurd. Helemaal niks. Ons bord is leeg, Julie.', show: 'cards' },
-    ...S.links.map(l => ({ t: LINKS.find(x => x.a === l.a && x.b === l.b).text, link: l })),
-    S.links.length ? { t: 'Dus. Wat weten we zeker?', show: 'facts' } : { t: 'Ik heb geen enkel verband kunnen leggen. We moeten gokken.', show: 'facts' },
-    ...facts(k).map(f => ({ t: f, fact: f })),
-    { t: 'Oké, detective. Jij was binnen, jij hebt het gezien. Wie is Nachtuil?', end: true },
+    ...L.map(l => ({ t: LINKS.find(x => x.a === l.a && x.b === l.b).text, link: l })),
+    L.length ? { t: 'Dus. Wat weten we zeker?', show: 'facts' } : { t: 'Ik heb geen enkel verband kunnen leggen. We moeten gokken.', show: 'facts' },
+    ...curFacts(k).map(f => ({ t: f, fact: f })),
+    { t: ch2() ? 'Oké, detective. Wie is Corvus?' : 'Oké, detective. Jij was binnen, jij hebt het gezien. Wie is Nachtuil?', end: true },
   ];
   li = 0; nextLine();
 }
 let shownLinks = [], shownFacts = [];
 function renderBoard(links, factsList = []) {
-  const S = api.S;
   shownLinks = links; shownFacts = factsList;
-  const cards = S.dossier.map((id, i) => `<div class="pin" id="pin-${id}" style="--r:${((i * 37) % 9) - 4}deg"><b>${EVID[id].name}</b><small>missie ${EVID[id].room}</small></div>`).join('');
+  const cards = boardIds().map((id, i) => `<div class="pin" id="pin-${id}" style="--r:${((i * 37) % 9) - 4}deg"><b>${EVID[id].name}</b><small>${EVID[id].room >= 6 ? 'hotel' : 'ambassade'}</small></div>`).join('');
   $('cork').innerHTML = `<svg id="strings"></svg><div class="pins">${cards || '<p class="empty">Leeg bord.</p>'}</div>${factsList.length ? `<div class="notes">${factsList.map(f => `<div class="note">${f}</div>`).join('')}</div>` : ''}`;
   requestAnimationFrame(drawStrings);
 }
@@ -1223,31 +1972,51 @@ $('vanNext').onclick = () => {
   li++; nextLine();
 };
 $('vanSkip').onclick = () => {
-  const S = api.S, k = knowledge();
-  renderBoard(S.links.slice(), facts(k)); li = lines.length - 1; nextLine();
+  renderBoard(chLinks(), curFacts(curKnow())); li = lines.length - 1; nextLine();
 };
 function accusePhase() {
-  const S = api.S, k = knowledge();
-  if (!$('cork').querySelector('.pin') && S.dossier.length) renderBoard(S.links.slice(), facts(k));
-  if (!shownLinks.length && S.links.length) renderBoard(S.links.slice(), facts(k));
+  const L = chLinks(), F = curFacts(curKnow());
+  if (!$('cork').querySelector('.pin') && boardIds().length) renderBoard(L, F);
+  if (!shownLinks.length && L.length) renderBoard(L, F);
   $('vanNext').classList.add('hidden'); $('vanSkip').classList.add('hidden');
-  typeLine('Oké, detective. Jij was binnen, jij hebt het gezien. Wie is Nachtuil?');
-  $('vanChoices').innerHTML = `<div class="qlbl">BESCHULDIG</div><div class="suspects">${SUSPECTS.map(s => `<button class="sus-btn" data-id="${s.id}"><span>${s.icon}</span>${s.name}</button>`).join('')}</div>`;
+  typeLine(ch2() ? 'Oké, detective. Jij was overal in dat hotel. Wie is Corvus?' : 'Oké, detective. Jij was binnen, jij hebt het gezien. Wie is Nachtuil?');
+  const list = ch2() ? SUSPECTS2 : SUSPECTS;
+  $('vanChoices').innerHTML = `<div class="qlbl">BESCHULDIG</div><div class="suspects">${list.map(s => `<button class="sus-btn" data-id="${s.id}"><span>${s.icon}</span>${s.name}</button>`).join('')}</div>`;
   $('vanChoices').querySelectorAll('.sus-btn').forEach(b => b.onclick = () => pickSuspect(b.dataset.id));
 }
 function pickSuspect(id) {
-  const k = knowledge();
-  if (id === 'bram' && k.bram) { typeLine('Bram? Die zat om 02:13 in de auto, Julie. Dat heb je zelf bewezen. Kies opnieuw.'); api.beep(200, 0.15); return; }
+  const k = curKnow();
+  if (!ch2() && id === 'bram' && k.bram) { typeLine('Bram? Die zat om 02:13 in de auto, Julie. Dat heb je zelf bewezen. Kies opnieuw.'); api.beep(200, 0.15); return; }
+  if (ch2() && id === 'varga') { typeLine('Varga is V., Julie. Hij schrijft brieven áán Corvus. We zoeken C. Kies opnieuw.'); api.beep(200, 0.15); return; }
   choice = { suspect: id };
-  const S = api.S;
-  const opts = S.links.map((l, i) => `<button class="proof-btn" data-i="${i}"><b>${EVID[l.a].name} + ${EVID[l.b].name}</b></button>`).join('');
-  typeLine(`${SUSPECTS.find(s => s.id === id).name}. Oké. Maar zonder bewijs gelooft niemand ons. Wat is je sterkste verband?`);
+  const L = chLinks();
+  const opts = L.map((l, i) => `<button class="proof-btn" data-i="${i}"><b>${EVID[l.a].name} + ${EVID[l.b].name}</b></button>`).join('');
+  typeLine(`${(ch2() ? SUSPECTS2 : SUSPECTS).find(s => s.id === id).name}. Oké. Maar zonder bewijs gelooft niemand ons. Wat is je sterkste verband?`);
   $('vanChoices').innerHTML = `<div class="qlbl">KIES JE BEWIJS</div><div class="proofs">${opts}<button class="proof-btn gut" data-i="-1"><b>Geen bewijs. Gewoon mijn gevoel.</b></button></div><button class="ghost back">← Toch iemand anders</button>`;
   $('vanChoices').querySelectorAll('.proof-btn').forEach(b => b.onclick = () => pickProof(Number(b.dataset.i)));
   $('vanChoices').querySelector('.back').onclick = accusePhase;
 }
+function pickProof2(i) {
+  const S = api.S, k = knowledge2(), l = chLinks()[i];
+  const idProof = l && ID2.some(([a, b]) => (l.a === a && l.b === b) || (l.a === b && l.b === a));
+  const ending = choice.suspect === 'barones' ? (idProof ? (k.crime ? 'perfect2' : 'arrest2') : 'immuniteit2') : choice.suspect + (choice.suspect === 'henk2' ? '' : '2');
+  S.ending2 = ending; S.accused2 = choice.suspect; api.save();
+  const react = {
+    perfect2: 'De barones. Het speldje, de lippenstift, de nachtelijke uitjes. En we kunnen bewijzen wat ze koopt. Trek je mooiste jurk aan, Julie. We gaan naar het bal.',
+    arrest2: 'Het is de barones, dat staat vast. Maar ik kan niet bewijzen dat ze iets koopt. Genoeg om haar mee te nemen, misschien niet om haar vast te houden. We gaan.',
+    immuniteit2: `De barones? Misschien. Maar ${l ? 'dit verband wijst niet naar háár' : 'zonder bewijs'}. Ze is van adel, Julie, ze heeft betere advocaten dan wij. We gaan toch.`,
+    pluim2: 'Professor Pluim? Hij weet alles van vogels, dat is waar. Raaf, uil… Oké. We gaan.',
+    sanne2: 'Sanne van de receptie? Ze weet wie er in 214 slaapt… Ik hoop dat je zeker bent.',
+    chef2: 'Chef Bertrand? Hij regelde de zaal en de etenslift. Misschien is hij meer dan een kok. We gaan.',
+    henk2: 'Henk. Alweer. Julie… weet je het zeker? …Oké. Ik zeg niks.',
+  }[ending];
+  typeLine(react);
+  $('vanChoices').innerHTML = `<button id="toKade">Naar het slotbal →</button>`;
+  $('toKade').onclick = () => startEnding2(ending);
+}
 function pickProof(i) {
-  const S = api.S, k = knowledge(), l = S.links[i];
+  if (ch2()) return pickProof2(i);
+  const S = api.S, k = knowledge(), l = chLinks()[i];
   const idProof = l && ID_LINKS.some(([a, b]) => (l.a === a && l.b === b) || (l.a === b && l.b === a));
   let ending;
   if (choice.suspect === 'varga') {
@@ -1402,6 +2171,13 @@ function startEnding(ending) {
 }
 
 const ENDINGS = {
+  perfect2: { title: 'De raaf in de kooi', sub: 'Je ontmaskerde Corvus, en je kon bewijzen wat ze kocht. Perfecte afloop van hoofdstuk 2.', stars: 3 },
+  arrest2: { title: 'Raaf op proef', sub: 'De barones is aangehouden. Maar zonder bewijs van de verkoop staat ze morgen misschien alweer buiten.', stars: 2 },
+  immuniteit2: { title: 'Adel verplicht', sub: 'Misschien had je de juiste persoon, maar je bewijs wees niet naar háár. De barones loopt gewoon de draaideur uit.', stars: 1 },
+  pluim2: { title: 'Verkeerde vogel', sub: 'Professor Pluim weet alles van raven, maar is er geen. De echte Corvus glipt naar buiten.', stars: 1 },
+  sanne2: { title: 'Geen fooi', sub: 'Sanne deed gewoon haar werk. Corvus nam de draaideur, met koffer en al.', stars: 1 },
+  chef2: { title: 'Te gaar', sub: 'De chef regelde de zaal voor geld, maar hij is niet Corvus. Die is al weg.', stars: 1 },
+  henk2: { title: 'Henk, alweer', sub: 'Henk is twee dagen in dienst en is al twee keer gearresteerd. Hij is nog steeds geen spion.', stars: 0 },
   perfect: { title: 'Nachtuil gevangen', sub: 'Je beschuldigde de juiste persoon, en je kon het bewijzen. Perfecte afloop.', stars: 3 },
   immuniteit: { title: 'De uil vliegt uit', sub: 'Je had misschien de juiste persoon, maar je bewijs wees niet duidelijk genoeg naar hem. Hij ontsnapt… voorlopig.', stars: 1 },
   arrest: { title: 'Een uil in een kooi', sub: 'Varga is gearresteerd! Maar zonder bewijs van wát hij verkocht, wordt hij alleen verhoord. De cel in? Nog niet.', stars: 2 },
@@ -1412,14 +2188,106 @@ const ENDINGS = {
 };
 function showEnding(ending) {
   $('cutscene').classList.add('hidden'); $('caption').classList.add('hidden');
-  const E = ENDINGS[ending], S = api.S;
+  const E = ENDINGS[ending], S = api.S, two = ending.endsWith('2');
   const found = Object.values(S.found).flat().length;
-  $('endStamp').textContent = ending === 'perfect' ? 'ZAAK GESLOTEN' : 'ZAAK OPEN';
+  const perfect = ending === 'perfect' || ending === 'perfect2';
+  $('endStamp').textContent = perfect ? 'ZAAK GESLOTEN' : 'ZAAK OPEN';
   $('endTitle').textContent = E.title;
+  const tip = ending === 'arrest' ? 'Je wist wíé het was. Voor de perfecte afloop moet Anna ook kunnen bewijzen wát Nachtuil deed. Denk aan geld, of aan wat er in die koffer zat.'
+    : ending === 'arrest2' ? 'Je wist wíé Corvus was. Voor de perfecte afloop moet Anna ook kunnen bewijzen dat Corvus onze geheimen koopt. Denk aan de overdracht, of aan Varga.'
+    : !perfect ? 'Tip: je kunt iemand anders beschuldigen. Maar voor de beste afloop moet Anna het ook kunnen bewijzen, en dat hangt af van wat je haar onderweg stuurde.'
+    : two ? 'Hoofdstuk 2 uitgespeeld! Er zijn nog zes andere eindes.' : 'Er zijn nog zes andere eindes. Durf je ze te zien?';
   $('endBody').innerHTML = `<p class="lead">${E.sub}</p><div class="stars">${'★'.repeat(E.stars)}${'☆'.repeat(3 - E.stars)}</div>
     <p>Je vond <b>${found}</b> stukken, stuurde Anna er <b>${S.dossier.length}</b>, en samen legden jullie <b>${S.links.length}</b> verbanden.</p>
-    ${ending === 'arrest' ? '<p class="muted">Je wist wíé het was. Voor de perfecte afloop moet Anna ook kunnen bewijzen wát Nachtuil deed. Denk aan geld, of aan wat er in die koffer zat.</p>' : ending !== 'perfect' ? '<p class="muted">Tip: je kunt iemand anders beschuldigen. Maar voor de beste afloop moet Anna het ook kunnen bewijzen, en dat hangt af van wat je haar onderweg stuurde.</p>' : '<p class="muted">Er zijn nog zes andere eindes. Durf je ze te zien?</p>'}`;
+    <p class="muted">${tip}</p>`;
+  const nb = $('toCh2');
+  if (two) { nb.disabled = true; nb.textContent = 'Hoofdstuk 3 · komt eraan'; }
+  else { nb.disabled = false; nb.textContent = 'Hoofdstuk 2: Hotel Kasimir →'; }
   $('ending').classList.remove('hidden');
+}
+
+// ---------- chapter 2 ending: the closing ball in the hotel lobby ----------
+function startEnding2(ending) {
+  if (!cast) makeCast();
+  finale.active = true; api.hideGameplay();
+  $('van').classList.add('hidden'); $('ending').classList.add('hidden'); $('hud').classList.add('hidden');
+  $('cutscene').classList.remove('hidden');
+  resetWorld(); buildRoom(7); scene.background.set(0x141a29); scene.fog = null;
+  hideCast();
+  const party = [0xff7aa0, 0xf0d27a, 0x7ad0ff].map((c, i) => { const l = new THREE.PointLight(c, 10, 10, 1.5); l.position.set(0, 2.6, 0); world.group.add(l); return l; });
+  const J = api.julie, H = api.henk, rat = api.rat, { anna, suitcase } = cast;
+  const bar = api.npcMesh('barones'), pluim = api.npcMesh('pluim'), sanne = api.npcMesh('sanne'), gerrit = api.npcMesh('gerrit'), chef = api.chef;
+  [J, H, bar, pluim, sanne, gerrit, chef].forEach(m => { m.g.visible = false; m.g.scale.y = 1; stand(m); });
+  rat.visible = false;
+  const B = RP(-3, 3, Math.PI * 0.8);
+  const setup = () => {
+    pose(bar, B.x, B.z, B.h); pose(pluim, 3.6, 1.0, -Math.PI / 2); pose(sanne, -7, -6.2, 0); pose(gerrit, 6.5, -6.6, 0);
+    pose(chef, -2, -3.4, Math.PI / 2); pose(H, 5, 4.4, -Math.PI / 2);
+  };
+  const carry = () => { suitcase.visible = true; suitcase.position.set(B.x + Math.cos(B.h) * 0.5, 0.55, B.z - Math.sin(B.h) * 0.5); suitcase.rotation.y = B.h; };
+  const toDoor = (dt) => { step(bar, B, 0, 5.4, 1.1, dt); carry(); };
+  const open = [{ t: 4.5, cam: [-9, 7, 12], camTo: [-6, 5, 9], look: [0, 1, 0], lookTo: [0, 1, 2], text: 'Hotel Kasimir · het slotbal van de conferentie · 23:40', start: setup }];
+  let list;
+  if (ending === 'perfect2' || ending === 'arrest2' || ending === 'immuniteit2') {
+    list = [...open,
+      { t: 5, cam: [3.5, 2.2, 8], camTo: [2.4, 2, 7.4], look: [-2, 1.2, 3], lookTo: [0, 1.2, 5], text: 'Midden in het feest loopt de barones naar de uitgang. Met een koffer.', tick: toDoor },
+      { t: 4.5, cam: [-1.6, 1.8, 3.2], look: [0.6, 1.5, 6], who: 'JULIE', text: 'Gaat u al weg, barones? Of moet ik zeggen… Corvus?',
+        start() { stand(bar); B.h = Math.PI * 0.5; bar.g.rotation.y = B.h; pose(J, 1.4, 6.0, -Math.PI / 2); stand(J); } },
+      { t: 4.5, cam: [2.6, 1.7, 4.4], look: [0, 1.6, 5.4], who: 'BARONES', text: 'Corvus? Liefje, wat een fantasie! Ik ben maar een oude roddeltante.' },
+    ];
+    if (ending === 'immuniteit2') list.push(
+      { t: 4.5, cam: [2.6, 1.7, 4.4], look: [0, 1.6, 5.4], who: 'BARONES', text: 'En heeft u bewijs, liefje? Nee? Dan wens ik u een fijne avond.' },
+      { t: 5.5, cam: [-2, 2.6, 2], camTo: [-1, 3, 1], look: [0, 1.4, 6.5], lookTo: [0, 1.6, 8], text: 'De barones draait door de draaideur naar buiten. Ze zwaait nog even, met een zilveren raaf op haar revers.',
+        tick(dt) { step(bar, B, 0, 7.8, 1.0, dt); carry(); } },
+      { t: 4, cam: [-0.5, 1.8, 3.6], look: [1.4, 1.6, 6.0], who: 'JULIE', text: 'Dit is nog niet voorbij, barones.', start() { bar.g.visible = false; suitcase.visible = false; } },
+    );
+    else list.push(
+      { t: 5.5, cam: [-1.6, 1.8, 3.2], look: [0.6, 1.5, 6], who: 'JULIE', text: 'Een roddeltante met kersenrode lippenstift, een plaksnor in haar kast, en een raafspeldje zonder veertje.' },
+      { t: 4.5, cam: [1.2, 0.9, 4.2], look: [0.3, 0.5, 5.3], text: 'Ratjetoe klimt op de koffer. In zijn bek: het zilveren veertje.',
+        start() { rat.visible = true; rat.position.set(suitcase.position.x, 0.82, suitcase.position.z); rat.rotation.y = Math.PI; } },
+      { t: 4.5, cam: [2.6, 1.7, 4.4], look: [0, 1.6, 5.4], who: 'BARONES', text: '(met een heel andere, zware stem) …Slim, detective. Heel slim.',
+        start() { pose(anna, -1.2, 6.4, Math.PI / 2); pose(gerrit, -0.6, 4.2, 0); stand(anna); stand(gerrit); } },
+    );
+    if (ending === 'perfect2') list.push(
+      { t: 5, cam: [-3, 1.9, 5.5], look: [-0.4, 1.5, 5.4], who: 'ANNA', text: 'Barones Von Strudel, u bent aangehouden. Dat derde pakket blijft gewoon in Valdoria.',
+        tick(dt, k) { bar.arms.forEach(a => a.rotation.x = -2.6 * k); } },
+      { t: 6, cam: [-4, 4, 9], camTo: [-8, 7, 13], look: [0, 1, 5], text: 'Corvus is gevangen. In de koffer zit, naast de plattegronden, een briefje. Met een zegel van een vogel die niemand kent.' },
+    );
+    else if (ending === 'arrest2') list.push(
+      { t: 4.5, cam: [-3, 1.9, 5.5], look: [-0.4, 1.5, 5.4], who: 'ANNA', text: 'U gaat mee voor verhoor, barones.' },
+      { t: 4.5, cam: [2.6, 1.7, 4.4], look: [0, 1.6, 5.4], who: 'BARONES', text: 'Mijn advocaten staan morgenvroeg voor de deur, liefje. Met croissants.' },
+      { t: 5.5, cam: [-4, 4, 9], camTo: [-8, 7, 13], look: [0, 1, 5], text: 'De barones wordt meegenomen. De koffer wordt geopend… en hij is leeg. Iemand anders heeft het pakket al.' },
+    );
+  } else {
+    const who = { pluim2: pluim, sanne2: sanne, chef2: chef, henk2: H }[ending];
+    const spot = { pluim2: [3.6, 1.0], sanne2: [-7, -6.2], chef2: [-2, -3.4], henk2: [5, 4.4] }[ending];
+    const lines = {
+      pluim2: ['Professor Pluim, u bent aangehouden!', 'Ik?! Ik ben vogelkundige! Ik kan niet eens een raaf van een kraai onderscheiden… o nee, wacht, dat kan ik wel.'],
+      sanne2: ['Sanne, u bent aangehouden!', 'Ik werk hier alleen! Ik krijg niet eens fooi!'],
+      chef2: ['Chef Bertrand, het spel is uit!', 'Ik regelde alleen de zaal! Ze betaalde goed. En ze at nooit peren, dat had me moeten opvallen!'],
+      henk2: ['Henk. Het spel is uit. Alweer.', 'ALWEER?! Ik werk hier pas twee dagen!'],
+    }[ending];
+    const jx = spot[0] + 1.4, jz = spot[1] + 1.2;
+    list = [...open,
+      { t: 4.5, cam: [jx + 3, 2.2, jz + 3], look: [spot[0], 1.4, spot[1]], text: 'Julie en Anna stappen dwars door het feest op hun verdachte af.',
+        start() { pose(J, jx, jz, Math.atan2(spot[0] - jx, spot[1] - jz)); pose(anna, jx + 0.8, jz + 0.6, Math.atan2(spot[0] - jx, spot[1] - jz)); } },
+      { t: 3.5, cam: [jx + 1.5, 1.8, jz + 2.6], look: [spot[0], 1.5, spot[1]], who: 'JULIE', text: lines[0] },
+      { t: 4.5, cam: [spot[0] + 1.6, 1.7, spot[1] + 1.8], look: [spot[0], 1.5, spot[1]], who: { pluim2: 'PROF. PLUIM', sanne2: 'SANNE', chef2: 'CHEF BERTRAND', henk2: 'HENK' }[ending], text: lines[1],
+        start() { who.arms.forEach(a => a.rotation.x = -2.6); } },
+      { t: 6, cam: [3, 2.4, 3], camTo: [2, 2.2, 5], look: [-1, 1.2, 4], lookTo: [0, 1.5, 7.5], text: 'Achter hen loopt de barones, heel rustig, met een koffer naar de draaideur. Ze tikt tegen haar hoed.',
+        tick(dt) { step(bar, B, 0, 7.8, 1.1, dt); carry(); } },
+      { t: 4, cam: [jx - 1.6, 1.8, jz + 2.4], look: [jx + 0.8, 1.6, jz + 0.6], who: 'ANNA', text: 'Julie… waarom loopt de barones met een koffer naar buiten?', start() { bar.g.visible = false; suitcase.visible = false; } },
+    ];
+    if (ending === 'henk2') list.splice(list.length - 1, 0, { t: 4, cam: [1.4, 1, 6], look: [0.4, 0.4, 7.2], text: 'Ratjetoe rent de barones achterna. Hij heeft één doel: die koffer.',
+      start() { rat.visible = true; rat.position.set(-1, 0.05, 5.6); rat.rotation.y = -Math.PI / 2 + 0.6; }, tick(dt) { rat.position.x += dt * 0.5; rat.position.z += dt * 0.4; } });
+  }
+  play(list, () => showEnding(ending));
+  finale.update = (dt) => {
+    updateCut(dt);
+    const t = performance.now() / 1000;
+    party.forEach((l, i) => l.position.set(Math.sin(t * 0.7 + i * 2.1) * 4, 2.6, Math.cos(t * 0.7 + i * 2.1) * 3));
+    pluim.g.rotation.y += Math.sin(t * 2) * 0.002;
+  };
 }
 $('reAccuse').onclick = () => startVan(true);
 // ===================== game.js =====================
@@ -1470,6 +2338,74 @@ const stranger = humanoid({
   }
 });
 stranger.g.visible = false;
+// hotel staff for chapter 2
+const chef = humanoid({
+  coat: 0xf4ecd8, legs: 0x3a3a46, skin: 0xe8b98f, wide: true,
+  extra(g, arms) {
+    box(0.78, 0.3, 0.56, 0xf4ecd8, 0, 0.9, 0.04, g);
+    box(0.6, 0.5, 0.06, 0xe4e0d4, 0, 0.75, 0.3, g);
+    for (const y of [1.0, 1.2, 1.4]) { box(0.05, 0.05, 0.02, 0x1d1a2b, -0.12, y, 0.27, g); box(0.05, 0.05, 0.02, 0x1d1a2b, 0.12, y, 0.27, g); }
+    const toque = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.22, 0.55, 10), new THREE.MeshToonMaterial({ color: 0xffffff })); toque.position.y = 2.25; g.add(toque);
+    box(0.36, 0.08, 0.05, 0x3a2a20, 0, 1.63, 0.21, g);
+    box(0.06, 0.06, 0.5, 0x8a8f99, 0, -0.7, 0.25, arms[1]);
+  }
+});
+chef.g.visible = false;
+const pim = humanoid({
+  coat: 0xf4ecd8, legs: 0x1d1a2b, skin: 0xd9a07a,
+  extra(g) {
+    box(0.2, 0.08, 0.04, 0xd9472b, 0, 1.52, 0.21, g);
+    box(0.46, 0.16, 0.44, 0x2a1a14, 0, 1.97, -0.02, g);
+    box(0.06, 0.08, 0.06, 0xa9c43f, -0.22, 1.78, 0, g); box(0.06, 0.08, 0.06, 0xa9c43f, 0.22, 1.78, 0, g);
+  }
+});
+pim.g.visible = false;
+// the room-service cart (lives in the scene so it survives room rebuilds)
+const cartG = new THREE.Group();
+box(1.2, 0.08, 0.8, 0xc8ccd0, 0, 0.95, 0, cartG, true);
+box(1.3, 0.78, 0.9, 0xf4ecd8, 0, 0.55, 0, cartG);
+box(1.32, 0.12, 0.92, 0xd9472b, 0, 0.2, 0, cartG);
+const cloche = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshToonMaterial({ color: 0xc8ccd0 }));
+cloche.position.set(0.25, 0.99, 0); cartG.add(cloche);
+box(0.12, 0.3, 0.12, 0x5f7a14, -0.3, 1.14, 0.1, cartG);
+box(0.06, 0.5, 0.06, 0x8a8f99, -0.66, 1.1, 0.35, cartG); box(0.06, 0.5, 0.06, 0x8a8f99, -0.66, 1.1, -0.35, cartG); box(0.06, 0.06, 0.76, 0x8a8f99, -0.66, 1.33, 0, cartG);
+cartG.visible = false; scene.add(cartG);
+// lobby guests, built once and reused
+const NPC_LOOKS = {
+  sanne: { coat: 0x23324f, legs: 0x1d1a2b, skin: 0xf0c9a0, extra(g) {
+    box(0.48, 0.24, 0.46, 0xf0d27a, 0, 1.94, -0.02, g); box(0.24, 0.24, 0.24, 0xf0d27a, 0, 1.9, -0.3, g);
+    box(0.16, 0.08, 0.02, 0xc79a3b, 0.16, 1.38, 0.2, g); box(0.5, 0.12, 0.42, 0xd9472b, 0, 1.52, 0, g);
+  } },
+  barones: { coat: 0x5a2a6a, legs: 0x5a2a6a, skin: 0xf6d6c0, extra(g) {
+    box(0.8, 0.7, 0.6, 0x5a2a6a, 0, 0.62, 0, g, true);
+    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.06, 12), new THREE.MeshToonMaterial({ color: 0xa9c43f })); brim.position.y = 2.02; g.add(brim);
+    const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 0.26, 10), new THREE.MeshToonMaterial({ color: 0xa9c43f })); crown.position.y = 2.16; g.add(crown);
+    box(0.06, 0.5, 0.06, 0xf4ecd8, 0.2, 2.4, -0.1, g); box(0.18, 0.18, 0.18, 0xd9472b, -0.2, 2.2, 0.25, g);
+    for (const x of [-0.12, 0, 0.12]) box(0.06, 0.06, 0.04, 0xf4ecd8, x, 1.5, 0.21, g);
+  } },
+  pluim: { coat: 0x8a6a42, legs: 0x5b4630, skin: 0xe8c09a, extra(g) {
+    box(0.46, 0.1, 0.44, 0xd8d8e0, 0, 1.98, -0.02, g); box(0.5, 0.14, 0.2, 0xd8d8e0, 0, 1.62, 0.18, g);
+    box(0.36, 0.08, 0.04, 0x1d1a2b, 0, 1.8, 0.22, g);
+    box(0.7, 0.5, 0.04, 0xf4ecd8, 0, 1.25, 0.45, g, true);
+  } },
+  mo: { coat: 0xd9472b, legs: 0x1d1a2b, skin: 0xb07a50, extra(g) {
+    for (const y of [1.0, 1.2, 1.4]) box(0.05, 0.05, 0.02, 0xc79a3b, 0, y, 0.2, g);
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.2, 10), new THREE.MeshToonMaterial({ color: 0xd9472b })); cap.position.y = 2.06; g.add(cap);
+    box(0.42, 0.04, 0.42, 0xc79a3b, 0, 2.0, 0, g);
+  } },
+  gerrit: { coat: 0x1d1a2b, legs: 0x1d1a2b, skin: 0xe8b98f, wide: true, extra(g) {
+    box(0.46, 0.08, 0.44, 0x3a3a46, 0, 1.97, -0.02, g); box(0.4, 0.08, 0.05, 0x1d1a2b, 0, 1.8, 0.21, g);
+    box(0.04, 0.2, 0.04, 0x8a8f99, 0.23, 1.68, 0.05, g); box(0.1, 0.1, 0.02, 0xc79a3b, 0.18, 1.35, 0.2, g);
+  } },
+};
+const npcMeshes = {};
+NPC_LOOKS.koerier = { coat: 0x5a5f66, legs: 0x3a3a46, skin: 0xd9a07a, extra(g, arms) {
+  box(0.48, 0.14, 0.48, 0x3a3a46, 0, 2.02, 0, g, true); box(0.48, 0.04, 0.22, 0x1d1a2b, 0, 1.96, 0.28, g);
+  box(0.36, 0.1, 0.04, 0x1d1a2b, 0, 1.8, 0.21, g);
+  const s = new THREE.Group(); s.position.set(0, -0.75, 0.2); arms[1].add(s);
+  box(0.6, 0.45, 0.2, 0x7a5a3a, 0, 0, 0, s, true); box(0.18, 0.06, 0.06, 0x1d1a2b, 0, 0.26, 0, s);
+} };
+const npcMesh = id => id === 'pim' ? pim : (npcMeshes[id] ||= humanoid(NPC_LOOKS[id]));
 // faint personal light so the dark basement stays playable
 const julieLight = new THREE.PointLight(0xc8d4ff, 0, 4.5, 2); julieLight.position.set(0, 1.6, 0.4); julie.g.add(julieLight);
 // Ratjetoe
@@ -1487,6 +2423,7 @@ const S = {
   room: 1, found: {}, sent: {}, dossier: [], links: [], done: [], ratDone: [], drop: null,
   pears: 3, keycard: false, power: false, tried: false, bowlUsed: false, eventDone: false, matchbox: false, roomDone: false,
   crouch: false, yaw: Math.PI, pitch: 0.9, dist: 9.5, running: false,
+  layer: 'floor', riding: false, talk: {},
 };
 const foundHere = () => (S.found[S.room] ||= []);
 const sentHere = () => (S.sent[S.room] ||= []);
@@ -1496,7 +2433,8 @@ const P = { x: 0, z: 0, h: 0, walk: 0, moving: false };
 const G = { x: 0, z: 0, h: 0, walk: 0, susp: 0 };
 const F = { phase: 'idle', x: 0, z: 0, h: 0, walk: 0, susp: 0, i: 0, wait: 0, t: 0, retry: 0, step: 0 };
 const R = { state: 'hidden', t: 6, x: 0, z: 0 };
-let room, inter = [], cams = [], dropMesh, pearsOut = [], roomTime = 0;
+const C = { x: 0, z: 0, h: 0, i: 0, wait: 0, col: null, pimWalk: 0 };
+let room, inter = [], cams = [], dropMesh, pearsOut = [], roomTime = 0, gm = henk, clangT = 0;
 
 function makeDrop(kind) {
   const g = new THREE.Group();
@@ -1509,8 +2447,38 @@ function setupRoom(n) {
   resetWorld(); room = buildRoom(n); scene.background.set(room.bg);
   pearsOut = []; roomTime = 0;
   Object.assign(P, { x: room.start.x, z: room.start.z, h: room.start.h, walk: 0 }); S.yaw = room.start.h; S.crouch = false;
-  henk.g.visible = !!room.guard;
+  S.layer = 'floor'; S.riding = false; julie.g.visible = true;
+  gm = room.guard?.model === 'chef' ? chef : room.guard?.model ? npcMesh(room.guard.model) : henk;
+  henk.g.visible = gm === henk && !!room.guard; chef.g.visible = gm === chef;
   if (room.guard) resetGuard();
+  // room-service cart
+  cartG.visible = pim.g.visible = !!room.cart;
+  if (room.cart) {
+    const [x, z] = room.cart.path[0];
+    Object.assign(C, { x, z, h: 0, i: 0, wait: 2 });
+    C.col = { minX: x - 0.65, maxX: x + 0.65, minZ: z - 0.65, maxZ: z + 0.65, h: 1.0, noMove: true }; world.colliders.push(C.col);
+  }
+  // chef's office door, opened from the inside
+  if (room.office && isDone('kantoordeur')) openOfficeDoor(true);
+  // floor 2: doors, the guest behind the window, pigeons
+  if (room.doors && isDone('deur214')) setDoor(room.doors.d214, true);
+  if (room.watcher) {
+    Object.assign(Wt, { state: 'idle', t: 6 + Math.random() * 4, susp: 0 });
+    Wt.cone = coneMesh(room.watcher.range, room.watcher.half, 0xf0d27a); Wt.cone.visible = false;
+    Wt.cone.position.set(room.watcher.x, 0.05, room.watcher.z); Wt.cone.rotation.y = room.watcher.h;
+    Wt.head = box(0.42, 0.42, 0.1, 0x1d1a2b, room.watcher.x, 1.85, -8.3); Wt.head.visible = false;
+    Wt.body = box(0.7, 0.6, 0.1, 0x1d1a2b, room.watcher.x, 1.3, -8.3); Wt.body.visible = false;
+  }
+  // hotel guests
+  Object.values(npcMeshes).forEach(m => m.g.visible = false);
+  for (const n of room.npcs || []) {
+    const m = npcMesh(n.look); m.g.visible = true; m.g.scale.y = 1;
+    m.g.position.set(n.x, n.sit ? -0.12 : 0, n.z); m.g.rotation.y = n.h;
+    m.legs.forEach(l => l.rotation.x = n.sit ? -1.45 : 0); m.arms.forEach(a => a.rotation.x = n.sit ? -0.4 : 0);
+    if (!n.sit) solid(n.x, n.z, 0.7, 0.7, 2.0);
+  }
+  if (room.guard && gm !== henk && gm !== chef) { gm.g.visible = true; gm.g.scale.y = 1; gm.legs.forEach(l => l.rotation.x = 0); }
+  if (room.meet) resetMeet();
   cams = room.cams.map(c => {
     const mesh = box(0.32, 0.28, 0.5, 0x3a3a46, c.mx, c.y, c.mz, undefined, true);
     box(0.08, 0.4, 0.08, 0x1d1a2b, c.mx, c.y + 0.3, c.mz);
@@ -1539,9 +2507,37 @@ function setupRoom(n) {
 function buildInter() {
   inter = room.items.map(it => it.think
     ? { ...it, repeat: true, act() { think(it.think); } }
+    : it.key
+    ? { ...it, act() { markDone(it.id); beep(880); beep(1175, 0.08); toast('Sleutel van de etenslift gepakt'); refreshObj(); hud(); save(); } }
     : { ...it,
     hideWhen: it.needs === 'matchbox' ? () => !S.matchbox : null,
     act() { markDone(it.id); if (it.id === 'lucif') room.matchbox.visible = false; addEvidence(it.ev); } });
+  if (room.vents) {
+    for (const n of room.vents.nodes) {
+      inter.push({ id: 'up-' + n.id, repeat: true, x: n.floor.x, z: n.floor.z, r: 1.0, label: 'Klim de ventilatie in', act() { enterVent(n); } });
+      inter.push({ id: 'down-' + n.id, repeat: true, layer: 'vent', x: n.x, z: n.z, r: 0.9, label: `Laat je zakken in ${n.name}`, act() { leaveVent(n); } });
+    }
+    for (const g of room.vents.grates) {
+      if (g.listen) inter.push({ id: 'luister6', layer: 'vent', repeat: true, x: g.x, z: g.z, r: 0.9, label: 'Luister door het rooster', act: eavesdrop });
+      if (g.photo) inter.push({ id: 'foto9', layer: 'vent', repeat: true, x: g.x, z: g.z, r: 1.0, label: 'Maak een foto van het podium', act: photoStage });
+      if (g.peek) inter.push({ id: 'peek-' + g.id, layer: 'vent', repeat: true, x: g.x, z: g.z, r: 0.9, label: 'Kijk door het rooster', act() { think(g.peek); } });
+    }
+  }
+  if (room.office) inter.push({ id: 'kantoordeur', x: room.office.inside.x, z: room.office.inside.z, r: 0.9, label: 'Doe de deur van binnenuit open',
+    act() { markDone('kantoordeur'); openOfficeDoor(); beep(300, 0.1); beep(500, 0.1); save(); think('Klik. Nu kan ik er gewoon in en uit lopen.'); } });
+  if (room.office) inter.push({ id: 'kantoordeur-dicht', repeat: true, x: room.office.outside.x, z: room.office.outside.z, r: 0.9, label: 'Deur: "PRIVÉ, CHEF"',
+    hideWhen: () => isDone('kantoordeur'), act() { think('Op slot. Natuurlijk. Er moet een andere weg naar binnen zijn.'); beep(160, 0.12); } });
+  if (room.cart) inter.push({ id: 'cart', repeat: true, get x() { return C.x; }, get z() { return C.z; }, r: 1.5, label: 'Verstop je onder de kar van Pim', act: rideCart });
+  for (const w of room.windows || []) {
+    inter.push({ id: 'in-' + w.id, repeat: true, x: w.in.x, z: w.in.z, r: 1.0, label: w.label, act() { climbOut(w); } });
+    inter.push({ id: 'out-' + w.id, repeat: true, x: w.out.x, z: w.out.z, r: 0.9, label: 'Klim naar binnen', act() { climbIn(w); } });
+  }
+  if (room.listen) inter.push({ id: 'richel8', repeat: true, x: room.listen.x, z: room.listen.z, r: 1.0, label: 'Luister bij het raam van 212', act: listenLedge });
+  if (room.insideDoor) inter.push({ id: 'deur214', x: room.insideDoor.x, z: room.insideDoor.z, r: 0.9, label: 'Doe de deur van binnenuit open',
+    act() { markDone('deur214'); setDoor(room.doors.d214, true); beep(300, 0.1); beep(500, 0.1); save(); think('Hotelsloten gaan van binnen altijd open. Nu kan ik er zo in en uit, maar de gang is wel van Henk…'); } });
+  if (room.doors) inter.push({ id: 'slot214', repeat: true, x: 8.5, z: -1.25, r: 0.9, label: 'Kamer 214', hideWhen: () => room.doors.d214.open,
+    act() { think('Op slot, met een pasjeslezer. Pim brengt hier elke nacht champagne… en het raam van 210 staat open.'); beep(160, 0.12); } });
+  for (const n of room.npcs || []) inter.push({ id: 'npc-' + n.id, repeat: true, x: n.tx, z: n.tz, r: 1.4, label: `Praat met ${n.name}`, act() { openTalk(n); } });
   if (room.jammer) inter.push({ id: 'jammer', x: room.jammer.x, z: room.jammer.z, r: 1.1, label: 'Zet het kastje met de antennes uit',
     act() {
       markDone('jammer'); room.jamLed.material.color.set(0x333333); room.jamLight.intensity = 0;
@@ -1575,8 +2571,332 @@ function buildInter() {
     } });
   const e = room.exit;
   inter.push({ id: 'exit' + room.id, repeat: true, x: e.x, z: e.z, r: e.r,
-    get label() { return room.id === 1 ? (S.keycard ? 'Pasje door de lezer halen' : 'Beveiligde deur') : room.id === 2 ? 'Druk op de liftknop' : room.id === 3 ? 'Ontsnap via het balkon' : 'Glip door de poort naar het busje'; },
-    act() { [null, lobbyExit, liftExit, balconyExit, gateExit][room.id](); } });
+    get label() { return { 1: S.keycard ? 'Pasje door de lezer halen' : 'Beveiligde deur', 2: 'Druk op de liftknop', 3: 'Ontsnap via het balkon', 4: 'Glip door de poort naar het busje', 6: 'Kruip in de etenslift', 7: 'Personeelsdeur: "PRIVÉ"', 8: 'Spring in de wasgoot', 9: isDone('sessie') ? 'Volg ze door de zijdeur' : 'Zijdeur: "BESLOTEN SESSIE"' }[room.id]; },
+    act() { ({ 1: lobbyExit, 2: liftExit, 3: balconyExit, 4: gateExit, 6: dumbwaiterExit, 7: staffDoorExit, 8: chuteExit, 9: sideDoorExit })[room.id](); } });
+}
+function staffDoorExit() {
+  if (!isDone('schort')) {
+    speech('Mo, piccolo', 'Ho ho, mevrouw! Alleen personeel. Zonder uniform kom je hier niet langs.'); beep(160, 0.12);
+    return;
+  }
+  if (!S.staffWarned) { S.staffWarned = true; speech('Mo, piccolo', 'Oh, je werkt hier! Ga maar, collega. (Nog een keer E om naar de keuken te gaan.)'); return; }
+  S.running = false; room.led.material.color.set(0xa9c43f); beep(500, 0.08); beep(700, 0.1); setTimeout(roomEnd, 700);
+}
+
+// ---------- conversations (lobby) ----------
+let talkNpc = null, talkTimer;
+const notebook = () => [...new Set(Object.values(S.found).flat())];
+function openTalk(n) {
+  S.running = false; document.exitPointerLock?.(); talkNpc = n;
+  const m = npcMesh(n.look);
+  if (!n.sit) m.g.rotation.y = Math.atan2(P.x - n.x, P.z - n.z);
+  P.h = Math.atan2(n.x - P.x, n.z - P.z); animate(julie, P, 1);
+  S.talk ||= {};
+  const i = S.talk[n.id] || 0; S.talk[n.id] = i + 1;
+  showTalk(n, n.lines[i % n.lines.length]);
+  $('talk').classList.remove('hidden');
+}
+function typeTalk(text) {
+  const el = $('talkText'); clearInterval(talkTimer); el.textContent = ''; let i = 0;
+  talkTimer = setInterval(() => { el.textContent = text.slice(0, ++i); if (i >= text.length) clearInterval(talkTimer); }, 16);
+  beep(380 + Math.random() * 160, 0.03, 'triangle', 0.03);
+}
+function showTalk(n, text) {
+  $('talkWho').textContent = n.name; typeTalk(text);
+  const btn = [`<button data-a="more">Praat verder</button>`];
+  if (n.special === 'book' && !isDone('boeking')) btn.push(`<button data-a="book">Een kamer boeken</button>`);
+  if (n.special === 'apron' && !isDone('schort')) btn.push(`<button data-a="apron">Kun je me de keuken in helpen?</button>`);
+  if (n.special === 'lift') btn.push(`<button data-a="lift">Mag ik naar boven?</button>`);
+  btn.push(`<button data-a="show" ${notebook().length ? '' : 'disabled title="Je notitieboekje is leeg"'}>Laat iets zien…</button>`);
+  btn.push(`<button data-a="bye" class="ghost">Tot ziens</button>`);
+  $('talkBtns').innerHTML = btn.join('');
+  $('talkBtns').querySelectorAll('button').forEach(b => b.onclick = () => talkAction(n, b.dataset.a));
+}
+function talkAction(n, a) {
+  if (a === 'bye') return closeTalk();
+  if (a === 'more') { const i = S.talk[n.id] || 0; S.talk[n.id] = i + 1; return showTalk(n, n.lines[i % n.lines.length]); }
+  if (a === 'show') return showNotebook(n);
+  if (a === 'book') {
+    markDone('boeking'); save(); hud(); refreshObj(); beep(880, 0.06); beep(1175, 0.08); toast('Kamerpas 312 gekregen');
+    return showTalk(n, 'Natuurlijk! Kamer 312, derde verdieping. Uw pas werkt alleen voor uw eigen verdieping, hoor. Prettig verblijf!');
+  }
+  if (a === 'apron') {
+    if ((S.talk.pim || 0) < 2) return showTalk(n, 'De keuken? Waarom zou jij de keuken in willen? …Vertel eerst eens wat meer over jezelf.');
+    markDone('schort'); save(); hud(); refreshObj(); beep(880, 0.06); beep(1175, 0.08); toast('Reserveschort van Pim gekregen');
+    return showTalk(n, 'Oh, jij bent die nieuwe hulp! De chef zocht iemand. Hier, mijn reserveschort. Ga door de personeelsdeur en dan achterom, via de laaddeur. Zeg niet dat ik je gestuurd heb.');
+  }
+  if (a === 'lift') {
+    if (!isDone('boeking')) return showTalk(n, 'Alleen met een kamerpas, mevrouw. Boek een kamer bij de receptie.');
+    showTalk(n, 'Kamer 312? Derde verdieping, alstublieft. De tweede is tijdens de conferentie alleen voor delegaties.');
+    if (!S.liftTold) { S.liftTold = true; setTimeout(() => think('Derde verdieping. Maar 214 ligt op de tweede, en daar komt mijn pas niet. Er moet een andere weg zijn. Via het personeel misschien?'), 2600); }
+  }
+}
+function showNotebook(n) {
+  $('talkText').textContent = 'Wat laat je zien?';
+  $('talkBtns').innerHTML = notebook().map(id => `<button class="nb" data-id="${id}">${EVID[id].name}</button>`).join('') + `<button data-a="back" class="ghost">← Terug</button>`;
+  $('talkBtns').querySelectorAll('button').forEach(b => b.onclick = () => b.dataset.a ? showTalk(n, '…') : reactTo(n, b.dataset.id));
+}
+function reactTo(n, id) {
+  const r = n.show?.[id];
+  if (!r) return showTalk(n, n.shrug);
+  showTalk(n, r.t);
+  if (r.gives && !notebook().includes(r.gives)) setTimeout(() => addEvidence(r.gives), 400);
+}
+function closeTalk() { $('talk').classList.add('hidden'); clearInterval(talkTimer); talkNpc = null; S.running = true; }
+$('talk').addEventListener('keydown', e => e.stopPropagation());
+addEventListener('keydown', e => { if (talkNpc && e.key === 'Escape') closeTalk(); });
+// ---------- Zaal Zuid: the 03:00 hand-over ----------
+const X = { phase: 'idle', t: 0, line: 0, heard: false };
+const meetClock = () => { const m = Math.min(60, 51 + Math.floor(roomTime / 10)); return m >= 60 ? '03:00' : `02:${String(m).padStart(2, '0')}`; };
+function resetMeet() {
+  const done = isDone('sessie');
+  Object.assign(X, { phase: done ? 'done' : 'idle', t: 0, line: 0, heard: false });
+  X.c = { x: 11.2, z: 6.9, h: Math.PI, walk: 0, susp: 0 };
+  X.k = { x: 11.2, z: 7.4, h: Math.PI, walk: 0, susp: 0 };
+  stranger.g.visible = false; lighter.intensity = 0; if (X.kMesh) X.kMesh.g.visible = false;
+  X.kMesh = npcMesh('koerier'); X.kMesh.g.visible = false;
+  if (!X.cCone || X.cCone.parent !== world.group) { X.cCone = coneMesh(6, 0.6, 0xb07cff); X.kCone = coneMesh(5.5, 0.6, 0xb07cff); }
+  X.cCone.visible = X.kCone.visible = false;
+  room.hallLights?.forEach(l => l.intensity = l.userData.base);
+}
+function walkStep(e, tx, tz, sp, dt) {
+  const dx = tx - e.x, dz = tz - e.z, d = Math.hypot(dx, dz);
+  if (d < 0.1) return true;
+  e.h += clamp(angDiff(Math.atan2(dx, dz), e.h), -5 * dt, 5 * dt);
+  const s = Math.min(d, sp * dt); e.x += dx / d * s; e.z += dz / d * s; e.walk += dt * sp * 2.6;
+  return false;
+}
+const MEET_LINES = [
+  ['De koerier', 'Het tweede pakket. Zoals beloofd. Van V.'],
+  ['Corvus', 'Eindelijk! …Ahem. (zwaar) Eindelijk.'],
+  ['Corvus', 'Zeg tegen V.: de raaf is tevreden. Het derde pakket na de conferentie.'],
+  ['De koerier', 'En de betaling?'],
+  ['Corvus', 'Al onderweg. Via de etenslift, natuurlijk. Ga nu. Snel.'],
+];
+function updateMeet(dt) {
+  if (!room.meet || X.phase === 'done') return;
+  if (X.phase === 'idle') {
+    if (Math.floor(roomTime) % 10 === 0) refreshObj();
+    if (roomTime >= 90) startMeet();
+    return;
+  }
+  X.t += dt;
+  const st = room.meet.stage;
+  const cSpot = { x: st.x - 0.4, z: st.z - 0.5 }, kSpot = { x: st.x + 0.2, z: st.z + 1.1 };
+  if (X.phase === 'enter') {
+    const a = walkStep(X.c, cSpot.x, cSpot.z, 1.5, dt), b = X.t > 1.2 && walkStep(X.k, kSpot.x, kSpot.z, 1.5, dt);
+    if (a && b) { X.phase = 'meet'; X.t = 0; X.c.h = Math.atan2(kSpot.x - cSpot.x, kSpot.z - cSpot.z); X.k.h = X.c.h + Math.PI; }
+  } else if (X.phase === 'meet') {
+    X.c.walk = X.k.walk = 0;
+    const i = Math.floor(X.t / 3.6);
+    if (i < MEET_LINES.length && i === X.line) {
+      speech(...MEET_LINES[i]); X.line++;
+      // you only catch the words if you're close enough and nobody knows you're there
+      if (i === 2 && Math.hypot(P.x - st.x, P.z - st.z) < (S.layer === 'vent' ? 5 : 3.5)) X.heard = true;
+    }
+    if (X.t > MEET_LINES.length * 3.6 + 1) {
+      X.phase = 'leave'; X.t = 0;
+      if (X.heard && !isDone('zOverdracht')) setTimeout(() => addEvidence('zOverdracht'), 600);
+    }
+  } else if (X.phase === 'leave') {
+    const a = walkStep(X.c, 11.2, 6.9, 1.8, dt), b = walkStep(X.k, 11.2, 7.3, 1.8, dt);
+    if (a && b) {
+      X.phase = 'done'; stranger.g.visible = false; X.kMesh.g.visible = false; X.cCone.visible = X.kCone.visible = false;
+      markDone('sessie'); room.led.material.color.set(0xa9c43f); refreshObj(); save();
+      room.hallLights.forEach(l => l.intensity = l.userData.base);
+      think(isDone('fotoBrug') ? 'Ik heb het. Een foto én hun gesprek. Nu achter ze aan, door de zijdeur.' : 'Weg zijn ze. Door de zijdeur. Ik moet ze volgen!');
+      setTimeout(() => say('Julie? Het is stil geworden. Wat zag je? Stuur me wat je hebt, en volg ze dan.'), 1500);
+      return;
+    }
+  }
+  animate(stranger, X.c, 1); animate(X.kMesh, X.k, 1);
+  if (X.phase === 'meet') X.kMesh.arms[1].rotation.x = X.t > 4 && X.t < 8 ? -1.2 : -0.3;
+  // both visitors watch the room
+  for (const [e, cone] of [[X.c, X.cCone], [X.k, X.kCone]]) {
+    const r = look(e, dt, 6, 0.6, 1.4);
+    if (!r.seen) e.susp = Math.max(0, e.susp - dt * 0.25);
+    paintCone(cone, e, r.range, 6, r.seen, 0xb07cff); cone.visible = true;
+    if (e.susp >= 1) return caught('figure');
+  }
+}
+function startMeet() {
+  X.phase = 'enter'; X.t = 0; refreshObj();
+  stranger.g.visible = true; X.kMesh.g.visible = true; X.kMesh.g.scale.y = 1;
+  room.hallLights.forEach(l => l.intensity = l.userData.base * 0.35);
+  beep(70, 0.15, 'triangle', 0.08); setTimeout(() => beep(70, 0.15, 'triangle', 0.08), 500);
+  if (room.guard && !G.gone) { G.leaving = true; speech('Gerrit', 'Drie uur. Geen personeel in Zaal Zuid, zeiden ze. Ik ga koffie halen.'); }
+  say('Julie! Het is drie uur. De zijdeur gaat open. Wees onzichtbaar.', { urgent: true });
+}
+function photoStage() {
+  if (X.phase !== 'meet' && X.phase !== 'enter') { think(isDone('fotoBrug') ? 'Die foto heb ik al.' : 'Een leeg podium. Nog even wachten tot ze er zijn.'); return; }
+  if (isDone('fotoBrug')) { think('Die foto heb ik al. Nu stil zijn.'); return; }
+  markDone('fotoBrug'); beep(1800, 0.03, 'square', 0.03); beep(1200, 0.05, 'square', 0.02);
+  const el = $('flash'); el.classList.remove('hidden'); setTimeout(() => el.classList.add('hidden'), 140);
+  addEvidence('fotoBrug');
+  setTimeout(() => think('Klik. Vanaf hier zie ik onder die hoed… een kersjesoorbel.'), 500);
+}
+function sideDoorExit() {
+  if (!isDone('sessie')) {
+    think(X.phase === 'idle' ? `Op de deur: "BESLOTEN SESSIE · 03:00". Het is nu ${meetClock()}. Ik wacht hier niet, ik zoek een plek om te kijken.` : 'Niet nu! Ze zijn er.');
+    return;
+  }
+  if (!S.sideWarned) { S.sideWarned = true; think('Als ik ze nu volg, kan ik hier niet meer terug. Alles naar Anna gestuurd? (Nog een keer E.)'); return; }
+  S.running = false; beep(600, 0.1); beep(900, 0.15); setTimeout(roomEnd, 700);
+}
+// steam presses: clouds that block sight for a few seconds
+function updateSteam(dt) {
+  for (const s of room.steam || []) {
+    s.t += dt; const on = (s.t % 8) < 3.5;
+    s.cloud.material.opacity += ((on ? 0.6 : 0) - s.cloud.material.opacity) * 0.1;
+    s.col.h = s.cloud.material.opacity > 0.3 ? 3 : 0;
+    if (on && (s.t % 8) < dt * 2) beep(2400, 0.2, 'sawtooth', 0.012);
+  }
+}
+function chuteExit() {
+  const searched = (S.found[8] || []).some(id => ['vermomming', 'glas', 'brief214', 'kofferlabel', 'minibar', 'badjas'].includes(id));
+  if (!S.chuteWarned) {
+    S.chuteWarned = true;
+    think(searched ? 'De wasgoot. Eenrichtingsverkeer naar beneden. Alles naar Anna gestuurd? (Nog een keer E om te springen.)'
+      : 'De wasgoot. Maar ik ben nog niet eens in 214 geweest! Als ik nu spring, kom ik niet meer terug. (Nog een keer E om toch te gaan.)');
+    return;
+  }
+  S.running = false; julie.g.visible = false; beep(500, 0.08); beep(300, 0.25, 'sawtooth', 0.05); beep(150, 0.3, 'triangle', 0.06);
+  setTimeout(roomEnd, 1100);
+}
+
+// ---------- floor 2: doors, windows and the ledge ----------
+const Wt = { state: 'idle', t: 8, susp: 0 };
+function setDoor(d, open) {
+  if (d.open === open) return;
+  const i = world.colliders.indexOf(d.col);
+  if (open) { if (i >= 0) world.colliders.splice(i, 1); d.g.rotation.y = -1.4; }
+  else {
+    // never close a door on top of Julie
+    const c = d.col, r = 0.4;
+    if (P.x > c.minX - r && P.x < c.maxX + r && P.z > c.minZ - r && P.z < c.maxZ + r) return;
+    world.colliders.push(d.col); d.g.rotation.y = 0;
+  }
+  d.open = open;
+}
+function climbOut(w) {
+  P.x = w.out.x; P.z = w.out.z; S.yaw = 0; S.crouch = true; beep(240, 0.06); beep(320, 0.08); hud(); lastBars = -1;
+  if (!S.ledgeTold) {
+    S.ledgeTold = true;
+    think('Buiten. Twee verdiepingen boven de straat. Niet naar beneden kijken. Bij verlichte ramen houd ik me laag.');
+    setTimeout(() => say('Julie! Ik hoor je kristalhelder! …Wacht, sta je nou BUITEN op de gevel?!', { garble: false }), 1800);
+  }
+}
+function climbIn(w) {
+  P.x = w.in.x; P.z = w.in.z; S.yaw = Math.PI; beep(320, 0.06); beep(240, 0.08); hud(); lastBars = -1;
+  if (w.id === 'w214' && !S.in214Told) { S.in214Told = true; think('Kamer 214. Champagne, twee glazen, en het ruikt naar dure parfum. Iemand woont hier op grote voet.'); }
+}
+function listenLedge() {
+  if (isDone('richel8')) { think('"…ze zegt dat ze slaapwandelt." Dat heb ik al.'); return; }
+  markDone('richel8');
+  speech('Stem in 212', 'Heb jij de barones vannacht gezien? Ze verdwijnt elke nacht om twee uur.');
+  setTimeout(() => speech('Andere stem', 'Ze zegt dat ze slaapwandelt. In haar avondjurk. Met een koffer, haha.'), 4000);
+  setTimeout(() => addEvidence('zRichel'), 8000);
+}
+const onLedge = () => P.z < -8.45;
+function updateLedge(dt) {
+  if (!room.watcher) return;
+  // pigeons scatter when you walk past them upright, and that makes the guest in 212 look out
+  for (const p of room.pigeons) {
+    if (p.fled > 0) { p.fled += dt; p.g.position.y += dt * 2.2; p.g.position.z -= dt * 3; p.g.rotation.y += dt * 6; if (p.fled > 2.5) p.g.visible = false; continue; }
+    p.g.rotation.y = Math.sin(performance.now() / 600 + p.x) * 0.5;
+    if (onLedge() && P.moving && !S.crouch && Math.hypot(P.x - p.x, P.z - p.z) < 1.8) {
+      p.fled = 0.01; beep(900, 0.05, 'square', 0.04); beep(700, 0.05, 'square', 0.04); beep(1100, 0.06, 'square', 0.04);
+      if (Wt.state === 'idle') { Wt.state = 'look'; Wt.t = 4.5; speech('Stem in 212', 'Wat was dat? Die duiven weer…'); }
+    }
+  }
+  const w = room.watcher;
+  Wt.t -= dt;
+  if (Wt.state === 'idle' && Wt.t <= 0) { Wt.state = 'look'; Wt.t = 3.5; }
+  else if (Wt.state === 'look' && Wt.t <= 0) { Wt.state = 'idle'; Wt.t = 8 + Math.random() * 6; }
+  const looking = Wt.state === 'look';
+  Wt.head.visible = Wt.body.visible = Wt.cone.visible = looking;
+  let seen = false;
+  if (looking && onLedge() && !S.crouch) {
+    const dx = P.x - w.x, dz = P.z - w.z, d = Math.hypot(dx, dz);
+    seen = d < w.range && Math.abs(angDiff(Math.atan2(dx, dz), w.h)) < w.half;
+  }
+  Wt.susp = seen ? Wt.susp + dt * 1.6 : Math.max(0, Wt.susp - dt * 0.4);
+  Wt.cone.material.color.set(Wt.susp > 0.35 ? 0xd9472b : seen ? 0xf0b429 : 0xf0d27a);
+  Wt.cone.material.opacity = seen ? 0.3 : 0.18;
+  if (Wt.susp >= 1) caught('watcher');
+}
+function dumbwaiterExit() {
+  if (!isDone('liftsleutel')) { think('Op slot. Er hangt een briefje: "Sleutel bij de chef. NIET AANKOMEN." Waar bewaart een chef zijn sleutels?'); beep(160, 0.12); return; }
+  if (!S.dumbWarned) { S.dumbWarned = true; think('Krap, maar ik pas erin. Als ik nu ga, kom ik niet terug in de keuken. Alles naar Anna gestuurd? (Nog een keer E.)'); return; }
+  S.running = false; room.led.material.color.set(0xa9c43f); julie.g.visible = false; beep(400, 0.2, 'sawtooth', 0.05); setTimeout(roomEnd, 1100);
+}
+
+// ---------- vents ----------
+function enterVent(n) {
+  S.layer = 'vent'; S.crouch = true; P.x = n.x; P.z = n.z; beep(260, 0.08); beep(200, 0.1);
+  refreshObj(); hud(); lastBars = -1;
+  if (!S.ventTold) { S.ventTold = true; think('In de ventilatie. Hier ziet niemand me, maar mijn walkie heeft geen bereik. En pas op voor roestige platen…'); }
+}
+function leaveVent(n) {
+  S.layer = 'floor'; P.x = n.floor.x; P.z = n.floor.z; beep(200, 0.08); beep(140, 0.12, 'triangle', 0.08);
+  refreshObj(); hud(); lastBars = -1;
+}
+const inVentRect = (x, z, r) => room.vents.rects.some(q => x >= q.minX + r && x <= q.maxX - r && z >= q.minZ + r && z <= q.maxZ - r);
+function ventMove(dx, dz) {
+  if (inVentRect(P.x + dx, P.z, 0.32)) P.x += dx;
+  if (inVentRect(P.x, P.z + dz, 0.32)) P.z += dz;
+}
+function eavesdrop() {
+  if (isDone('afluister')) { think('"…de koffer via de etenslift naar boven." Dat heb ik al.'); return; }
+  const ph = room.guard.phone;
+  const atPhone = Math.hypot(G.x - ph.x, G.z - ph.z) < 1.2 && G.state === 'patrol' && G.wait > 1.5;
+  if (!atPhone) { think('Alleen het gesis van pannen. De chef staat niet bij de telefoon.'); return; }
+  speech('Chef Bertrand', 'Ja, meneer Corvus… Natuurlijk. De zaal om drie uur leeg, geen personeel.');
+  setTimeout(() => speech('Chef Bertrand', 'En de koffer komt via de etenslift naar boven. Niemand die het merkt, ik zweer het.'), 4200);
+  setTimeout(() => { markDone('afluister'); addEvidence('afluister'); }, 8200);
+}
+function openOfficeDoor(instant) {
+  const o = room.office; o.door.rotation.y = -1.4;
+  const i = world.colliders.indexOf(o.doorCol); if (i >= 0) world.colliders.splice(i, 1);
+}
+
+// ---------- room-service cart ----------
+function rideCart() {
+  S.riding = true; S.crouch = false; julie.g.visible = false; beep(300, 0.06); beep(240, 0.08);
+  refreshObj(); hud();
+  if (!S.cartTold) { S.cartTold = true; think('Onder het tafelkleed. Pim heeft oordopjes in, die merkt hier niks van. E om eruit te springen.'); }
+}
+function hopOff() {
+  const right = [Math.cos(C.h), -Math.sin(C.h)];
+  for (const [ox, oz] of [[right[0], right[1]], [-right[0], -right[1]], [-Math.sin(C.h), -Math.cos(C.h)], [Math.sin(C.h), Math.cos(C.h)]]) {
+    const x = C.x + ox * 1.1, z = C.z + oz * 1.1;
+    if (!blocked(x, z, 0.35)) { P.x = x; P.z = z; S.riding = false; S.crouch = true; julie.g.visible = true; beep(240, 0.06); refreshObj(); hud(); return; }
+  }
+  think('Hier kan ik er niet uit, alles staat in de weg.');
+}
+function updateCart(dt) {
+  if (!room.cart) return;
+  const path = room.cart.path, wp = path[C.i];
+  if (C.wait > 0) C.wait -= dt;
+  else {
+    const dx = wp[0] - C.x, dz = wp[1] - C.z, d = Math.hypot(dx, dz);
+    if (d < 0.08) { C.wait = wp[2] || 0; C.i = (C.i + 1) % path.length; }
+    else {
+      C.h += clamp(angDiff(Math.atan2(dx, dz), C.h), -3 * dt, 3 * dt);
+      const s = Math.min(d, 1.5 * dt); C.x += dx / d * s; C.z += dz / d * s; C.pimWalk += dt * 4;
+    }
+  }
+  cartG.position.set(C.x, 0, C.z); cartG.rotation.y = C.h - Math.PI / 2;
+  // Pim's knock opens 214 for as long as the cart is in the doorway
+  if (room.cartDoor && !isDone('deur214')) {
+    const d = room.doors[room.cartDoor];
+    setDoor(d, Math.hypot(C.x - 8.5, C.z + 2) < 2.4);
+  }
+  C.col.minX = C.x - 0.65; C.col.maxX = C.x + 0.65; C.col.minZ = C.z - 0.65; C.col.maxZ = C.z + 0.65;
+  const px = C.x - Math.sin(C.h) * 1.05, pz = C.z - Math.cos(C.h) * 1.05;
+  animate(pim, { x: px, z: pz, h: C.h, walk: C.wait > 0 ? 0 : C.pimWalk }, 1);
+  pim.arms.forEach(a => a.rotation.x = -1.2);
+  if (S.riding) { P.x = C.x; P.z = C.z; P.h = C.h; }
 }
 function gateExit() {
   if (!S.gateWarned) { S.gateWarned = true; think('Daar staat het busje. Als ik nu ga, is de ambassade voorbij. Alles gestuurd wat Anna nodig heeft? (Nog een keer E om te gaan.)'); return; }
@@ -1645,6 +2965,26 @@ function objective() {
   }
   if (S.room === 3) return isDone('jammer') ? 'Doorzoek het kantoor. Je kunt ontsnappen via het balkon (rechtsachter).' : room.objective;
   if (S.room === 4) return room.objective;
+  if (S.room === 9) {
+    if (isDone('sessie')) return 'Ze zijn weg, door de zijdeur (rechtsonder). Stuur Anna wat je zag, en volg ze dan.';
+    if (X.phase !== 'idle') return 'Het is 03:00. Blijf onzichtbaar. Zie en hoor zoveel mogelijk.';
+    return `${meetClock()} · ${room.objective}`;
+  }
+  if (S.room === 8) {
+    if (S.riding) return 'Je zit onder de kar van Pim. E om eruit te springen.';
+    if (onLedge()) return 'Je staat op de richel. Houd je laag (C) bij verlichte ramen, en pas op voor de duiven.';
+    return (S.found[8] || []).length >= 3 ? 'Klaar in 214? Spring in de wasgoot in de linnenkamer (links) om te ontsnappen.' : room.objective;
+  }
+  if (S.room === 7) {
+    if (isDone('schort')) return 'Je hebt Pims schort. Ga door de personeelsdeur (rechts, bij Mo).';
+    if (isDone('boeking')) return 'Je pas werkt alleen op de derde verdieping. 214 is op de tweede. Zoek een andere weg naar boven.';
+    return room.objective;
+  }
+  if (S.room === 6) {
+    if (S.riding) return 'Je zit onder de kar van Pim. Druk op E om eruit te springen.';
+    if (S.layer === 'vent') return 'Je zit in de ventilatie. Luister of kijk door roosters (E), of laat je ergens zakken.';
+    return isDone('liftsleutel') ? 'Kruip in de etenslift (achter in de keuken, links) om naar boven te gaan.' : room.objective;
+  }
   if (!S.eventDone) return S.power ? 'Doorzoek de kelder. Ergens zoemt nu een lift.' : room.objective;
   return S.power ? 'Wie was dat?! Neem de lift naar boven als je klaar bent.' : 'Wie was dat?! Zoek een manier om hier weg te komen.';
 }
@@ -1655,7 +2995,9 @@ const keys = {};
 addEventListener('keydown', e => {
   const k = e.key.toLowerCase(); keys[k] = true;
   if (!S.running) { if (k === 't' && !walkieEl.classList.contains('hidden')) closeWalkie(); return; }
-  if (k === 'c') { S.crouch = !S.crouch; hud(); }
+  if (k === 'e' && S.riding) { hopOff(); return; }
+  if (S.riding) return;
+  if (k === 'c' && S.layer !== 'vent') { S.crouch = !S.crouch; hud(); }
   if (k === 'q') throwPear();
   if (k === 'e') useNearest();
   if (k === 't') openWalkie();
@@ -1718,8 +3060,9 @@ function nextRadio() {
   }, 22);
 }
 let thinkTimer;
-function think(text) {
-  const el = $('think'); el.innerHTML = `<b>Julie:</b> ${text}`; el.classList.remove('hidden');
+function speech(who, text) { think(text, who); }
+function think(text, who = 'Julie') {
+  const el = $('think'); el.innerHTML = `<b>${who}:</b> ${text}`; el.classList.toggle('npc', who !== 'Julie'); el.classList.remove('hidden');
   clearTimeout(thinkTimer); thinkTimer = setTimeout(() => el.classList.add('hidden'), 3500 + text.length * 35);
 }
 let toastUntil = 0;
@@ -1727,6 +3070,8 @@ function toast(t) { const p = $('prompt'); p.innerHTML = '✓ ' + t; p.classList
 
 function signal() {
   if (room.jammer && !isDone('jammer')) return 0;
+  if (S.layer === 'vent' && !room.vents?.signal) return 0;
+  if (room.deadZones?.some(d => P.x > d.minX && P.x < d.maxX && P.z > d.minZ && P.z < d.maxZ)) return 0;
   let best = 0;
   for (const s of room.signals) best = Math.max(best, s.max - Math.floor(Math.hypot(P.x - s.x, P.z - s.z) / s.step));
   return clamp(best, 0, 4);
@@ -1740,8 +3085,13 @@ function hud() {
   if (S.room === 1) { $('kcl').textContent = 'PASJE'; $('kc').textContent = S.keycard ? 'ROOD ✓' : '—'; }
   else if (S.room === 2) { $('kcl').textContent = 'LIFT'; $('kc').textContent = S.power ? 'STROOM ✓' : '—'; }
   else if (S.room === 3) { $('kcl').textContent = 'SIGNAAL'; $('kc').textContent = isDone('jammer') ? 'VRIJ ✓' : 'GESTOORD'; }
-  else { $('kcl').textContent = 'BUSJE'; $('kc').textContent = 'ACHTER DE POORT'; }
-  $('crouchTag').classList.toggle('hidden', !S.crouch);
+  else if (S.room === 4) { $('kcl').textContent = 'BUSJE'; $('kc').textContent = 'ACHTER DE POORT'; }
+  else if (S.room === 9) { $('kcl').textContent = 'KLOK'; $('kc').textContent = isDone('sessie') ? 'NA 03:00' : meetClock(); }
+  else if (S.room === 8) { $('kcl').textContent = 'KAMER 214'; $('kc').textContent = P.x > 5 && P.x < 12 && P.z < -2 && P.z > -8 ? 'BINNEN' : room.doors?.d214.open ? 'OPEN' : 'OP SLOT'; }
+  else if (S.room === 7) { $('kcl').textContent = 'TOEGANG'; $('kc').textContent = isDone('schort') ? 'SCHORT ✓' : isDone('boeking') ? 'PAS 312' : '—'; }
+  else { $('kcl').textContent = 'LIFTSLEUTEL'; $('kc').textContent = isDone('liftsleutel') ? '✓' : '—'; }
+  const tag = S.riding ? 'ONDER DE KAR · E = ERUIT' : S.layer === 'vent' ? 'IN DE VENTILATIE' : S.crouch ? 'GEHURKT · STIL' : '';
+  $('crouchTag').textContent = tag; $('crouchTag').classList.toggle('hidden', !tag);
 }
 function addEvidence(id) {
   foundHere().push(id); hud(); beep(990, 0.05); beep(1320, 0.08); save();
@@ -1752,7 +3102,7 @@ function addEvidence(id) {
 // ---------- save / load ----------
 const SAVE_KEY = 'dodezone.save.v2';
 let canSave = true;
-const SAVED_FIELDS = ['ending', 'accused', 'room', 'found', 'sent', 'dossier', 'links', 'done', 'ratDone', 'drop', 'pears', 'keycard', 'power', 'tried', 'bowlUsed', 'eventDone', 'matchbox', 'roomDone'];
+const SAVED_FIELDS = ['ending2', 'accused2', 'talk', 'chapter', 'ending', 'accused', 'room', 'found', 'sent', 'dossier', 'links', 'done', 'ratDone', 'drop', 'pears', 'keycard', 'power', 'tried', 'bowlUsed', 'eventDone', 'matchbox', 'roomDone'];
 function save() {
   if (!canSave) return;
   try {
@@ -1803,7 +3153,11 @@ $('wtHint').onclick = () => {
     else if (dropMesh.visible) h = 'Hij heeft iets laten vallen bij het rooster! Pak het, snel.';
     else h = 'Je hebt het pasje. Deur rechtsachter. Wacht tot Henk de andere kant op kijkt.';
   } else {
-    if (S.room === 4) h = foundHere().length < 2 ? 'Buiten heb je overal bereik. Kijk rond voor je gaat: auto\'s vertellen veel over hun eigenaar.' : !S.ratDone.includes(4) && !dropMesh.visible ? 'Ratjetoe is je hele nacht gevolgd. Hij woont nu vast in die heg.' : 'Wacht tot de zoeklichten wegdraaien, en ga dan naar de poort.';
+    if (S.room === 9) h = S.layer === 'vent' ? 'Vanaf de lichtbrug ziet niemand je. Boven het podium zit een rooster: daar kun je een foto maken.' : !isDone('sessie') ? 'Je wilt dicht bij het podium zijn zonder gezien te worden. Kijk omhoog: zie je die lichtbrug? De ladder staat achter de laatste rij.' : 'Volg ze door de zijdeur. Maar stuur me eerst wat je zag.';
+    else if (S.room === 8) h = (S.found[8] || []).length < 2 ? 'Twee wegen naar 214: Pim brengt er elke nacht champagne, en de gevel heeft een richel. Kies maar.' : 'De wasgoot in de linnenkamer is je uitgang. Eenrichtingsverkeer, dus stuur me eerst wat je hebt.';
+    else if (S.room === 7) h = notebook().length < 2 ? 'Mensen praten makkelijker als je ze iets laat zien wat ze herkennen. Je notitieboekje uit de ambassade is goud waard.' : !isDone('schort') ? 'De gasten kunnen niet zomaar naar de tweede verdieping. Maar het personeel komt overal. Misschien helpt iemand van hen je.' : 'Je hebt een schort. Door de personeelsdeur, dan zie je mij bij de laaddeur.';
+    else if (S.room === 6) h = S.layer === 'vent' ? 'Door de roosters kun je afluisteren. En een peer door een rooster laten vallen kan ook…' : !isDone('liftsleutel') ? (isDone('kantoordeur') || isDone('down-office') ? 'De chef bewaart zijn sleutels vast in zijn kantoor.' : 'Dat kantoor zit op slot. Maar dit hotel zit vol ventilatieschachten, en de ladder bij het laadperron gaat omhoog.') : 'Die camera bij de etenslift… Pim rijdt er met zijn kar vlak langs. Of gooi een peer.';
+    else if (S.room === 4) h = foundHere().length < 2 ? 'Buiten heb je overal bereik. Kijk rond voor je gaat: auto\'s vertellen veel over hun eigenaar.' : !S.ratDone.includes(4) && !dropMesh.visible ? 'Ratjetoe is je hele nacht gevolgd. Hij woont nu vast in die heg.' : 'Wacht tot de zoeklichten wegdraaien, en ga dan naar de poort.';
     else if (S.room === 3) h = !isDone('jammer') ? 'Iets… stoort… zoek… kastje met… antennes…'
       : !isDone('safe') ? 'Ambassadeurs vergeten altijd hun codes. Ze schrijven ze op, vlak bij waar ze werken.'
       : !S.ratDone.includes(3) && !dropMesh.visible ? 'Die typemachine mist iets. En ik hoorde gepiep in de muur.'
@@ -1820,7 +3174,7 @@ $('wtHint').onclick = () => {
 function nearest() {
   let best = null, bd = 1e9;
   for (const it of inter) {
-    if ((!it.repeat && isDone(it.id)) || it.hideWhen?.()) continue;
+    if ((!it.repeat && isDone(it.id)) || it.hideWhen?.() || (it.layer || 'floor') !== S.layer || S.riding) continue;
     const d = Math.hypot(P.x - it.x, P.z - it.z); if (d < it.r && d < bd) { bd = d; best = it; }
   }
   return best;
@@ -1828,6 +3182,16 @@ function nearest() {
 function useNearest() { nearest()?.act(); }
 function throwPear() {
   if (!S.pears) { say('Geen peren meer, Julie. ' + room.bowl.empty, { garble: false }); return; }
+  if (S.layer === 'vent') {
+    // in the vents you can only drop a pear straight through a grate
+    const g = room.vents.grates.find(g => Math.hypot(P.x - g.x, P.z - g.z) < 1.0);
+    if (!g) { think('Gooien in een schacht? Dan rolt hij alleen maar terug. Bij een rooster kan ik hem laten vallen.'); return; }
+    S.pears--; hud(); save();
+    const m = pearMesh(); m.position.set(g.x, DUCT_Y, g.z);
+    pearsOut.push({ m, sx: g.x, sz: g.z, tx: g.x, tz: g.z + 0.01, t: 0, landed: false, eaten: false, y0: DUCT_Y, drop: true });
+    think('Plop. Door het rooster naar beneden.');
+    return;
+  }
   S.pears--; hud(); save();
   const fx = Math.sin(P.h), fz = Math.cos(P.h);
   let tx = P.x, tz = P.z;
@@ -1851,19 +3215,32 @@ function onPearLand(p) {
 
 // ---------- update ----------
 function updatePlayer(dt) {
+  if (S.riding) { P.moving = false; return; }
   let ix = 0, iz = 0;
   if (keys.w || keys.arrowup) iz += 1; if (keys.s || keys.arrowdown) iz -= 1;
   if (keys.a) ix -= 1; if (keys.d) ix += 1;
   if (keys.arrowleft) S.yaw += 2 * dt; if (keys.arrowright) S.yaw -= 2 * dt;
   const fwd = [Math.sin(S.yaw), Math.cos(S.yaw)], right = [-Math.cos(S.yaw), Math.sin(S.yaw)];
   let mx = fwd[0] * iz + right[0] * ix, mz = fwd[1] * iz + right[1] * ix;
-  const len = Math.hypot(mx, mz), sp = S.crouch ? 2.0 : 4.0;
+  const vent = S.layer === 'vent';
+  const len = Math.hypot(mx, mz), sp = vent ? 2.3 : S.crouch ? 2.0 : 4.0;
   P.moving = len > 0;
   if (len > 0) {
-    mx /= len; mz /= len; move(P, mx * sp * dt, mz * sp * dt, 0.35);
+    mx /= len; mz /= len;
+    if (vent) ventMove(mx * sp * dt, mz * sp * dt); else move(P, mx * sp * dt, mz * sp * dt, 0.35);
     P.h += clamp(angDiff(Math.atan2(mx, mz), P.h), -12 * dt, 12 * dt); P.walk += dt * sp * 2.6;
   } else P.walk *= 0.85;
-  animate(julie, P, S.crouch ? 0.68 : 1);
+  animate(julie, P, vent ? 0.5 : S.crouch ? 0.68 : 1, vent ? DUCT_Y + 0.04 : 0);
+  // rusty vent plates clang and make the guard below come and look
+  clangT -= dt;
+  const k = room.vents?.clang;
+  if (vent && P.moving && k && P.x > k.minX && P.x < k.maxX && P.z > k.minZ && P.z < k.maxZ && clangT <= 0) {
+    clangT = 1.1; beep(1900, 0.05, 'square', 0.05); beep(1300, 0.09, 'triangle', 0.06);
+    if (room.guard && G.state !== 'eat' && Math.hypot(G.x - P.x, G.z - P.z) < 9) {
+      G.state = 'investigate'; G.last = { x: P.x, z: P.z + 0.9 }; G.susp = Math.max(G.susp, 0.3);
+      if (gm === chef) speech('Chef Bertrand', 'Wat rammelt daar in het plafond?!');
+    }
+  }
 }
 function animate(ch, e, sy, y = 0) {
   ch.g.position.set(e.x, y, e.z); ch.g.rotation.y = e.h; ch.g.scale.y += (sy - ch.g.scale.y) * 0.2;
@@ -1881,6 +3258,7 @@ function losClear(ax, az, bx, bz) {
 function look(w, dt, base, half, rate, bonus = 0, bump = true) {
   const dx = P.x - w.x, dz = P.z - w.z, dist = Math.hypot(dx, dz);
   const range = (S.crouch ? base * 0.6 : base) + bonus;
+  if (S.layer === 'vent' || S.riding) return { seen: false, dist: 99, range };
   const inCone = Math.abs(angDiff(Math.atan2(dx, dz), w.h)) < half;
   const seen = (dist < range && inCone && losClear(w.x, w.z, P.x, P.z)) || (bump && dist < 1.1);
   if (seen) w.susp += dt * rate * (S.crouch ? 0.6 : 1) * (1.8 - Math.min(dist, range) / range);
@@ -1895,9 +3273,9 @@ function paintCone(cone, w, range, base, seen, colors) {
 // ----- Henk -----
 function resetGuard() {
   const s = room.guard.start;
-  Object.assign(G, { x: s.x, z: s.z, h: s.h, wp: s.wp, dir: 1, state: 'patrol', wait: 0, susp: 0, stuck: 0, look: 0, lookBase: 0, last: null });
+  Object.assign(G, { x: s.x, z: s.z, h: s.h, wp: s.wp, dir: 1, state: 'patrol', wait: 0, susp: 0, stuck: 0, look: 0, lookBase: 0, last: null, leaving: false, gone: false });
   if (!G.cone || G.cone.parent !== world.group) G.cone = coneMesh(7.5, VIEW_HALF);
-  henk.arms[1].rotation.x = 0;
+  gm.arms[1].rotation.x = 0; gm.g.visible = true;
 }
 function goTo(tx, tz, sp, dt) {
   const dx = tx - G.x, dz = tz - G.z, d = Math.hypot(dx, dz);
@@ -1910,13 +3288,20 @@ function goTo(tx, tz, sp, dt) {
   return false;
 }
 function updateGuard(dt) {
+  if (G.gone) return;
+  if (G.leaving) {
+    // "geen personeel": the guard walks out before the secret session
+    const L = room.guard.leave;
+    if (goTo(L.x, L.z, 2.4, dt) || Math.hypot(G.x - L.x, G.z - L.z) < 0.8) { G.gone = true; gm.g.visible = false; G.cone.visible = false; G.susp = 0; return; }
+    animate(gm, G, 1); G.cone.visible = false; return;
+  }
   const WP = room.guard.waypoints;
   if (G.state === 'patrol') {
-    const [tx, tz] = WP[G.wp];
+    const [tx, tz, hold] = WP[G.wp];
     if (G.wait > 0) {
-      G.wait -= dt; G.look += dt; G.h = G.lookBase + Math.sin(G.look * 1.8) * 1.1;
+      G.wait -= dt; G.look += dt; G.h = G.lookBase + Math.sin(G.look * 1.8) * (hold ? 0.25 : 1.1);
       if (G.wait <= 0) { if (Math.random() < 0.25) G.dir *= -1; G.wp = (G.wp + G.dir + WP.length) % WP.length; }
-    } else if (goTo(tx, tz, 1.9, dt)) { G.wait = 0.8 + Math.random() * 1.8; G.look = 0; G.lookBase = G.h; }
+    } else if (goTo(tx, tz, 1.9, dt)) { G.wait = hold || 0.8 + Math.random() * 1.8; G.look = 0; G.lookBase = hold ? Math.PI : G.h; }
   } else if (G.state === 'hear') {
     G.h += clamp(angDiff(Math.atan2(G.last.x - G.x, G.last.z - G.z), G.h), -5 * dt, 5 * dt);
     G.wait -= dt; if (G.wait <= 0) { if (G.susp > 0.2) G.state = 'investigate'; else backToPatrol(); }
@@ -1926,12 +3311,15 @@ function updateGuard(dt) {
   } else if (G.state === 'distract') {
     const p = G.pear;
     if (goTo(p.tx, p.tz, 2.2, dt) || Math.hypot(p.tx - G.x, p.tz - G.z) < 0.8) {
-      if (!p.eaten && p.landed) { G.state = 'eat'; G.wait = 3.5; p.eaten = true; }
+      if (!p.eaten && p.landed) {
+        G.state = 'eat'; G.wait = 3.5; p.eaten = true;
+        if (gm === chef) speech('Chef Bertrand', ['Een Conference-peer! Op MIJN vloer?! …Mmm. Perfect rijp.', 'Wie gooit er hier met fruit? …Nou ja. Zonde om weg te gooien.', 'Weer een peer! Spookt het hier soms?'][Math.floor(Math.random() * 3)]);
+      }
       else { G.state = 'search'; G.wait = 2; }
     }
   } else if (G.state === 'eat') {
     G.wait -= dt; G.pear.m.scale.setScalar(Math.max(0.01, G.wait / 3.5));
-    henk.arms[1].rotation.x = -1.6 + Math.sin(G.wait * 8) * 0.3;
+    gm.arms[1].rotation.x = -1.6 + Math.sin(G.wait * 8) * 0.3;
     if (G.wait <= 0) { G.pear.m.removeFromParent(); backToPatrol(); }
   }
   let res = { seen: false, range: 7.5 };
@@ -1949,12 +3337,12 @@ function updateGuard(dt) {
     }
   }
   if (G.susp >= 1) return caught('guard');
-  if (G.state !== 'eat') animate(henk, G, 1); else { henk.g.position.set(G.x, 0, G.z); henk.g.rotation.y = G.h; }
+  if (G.state !== 'eat') animate(gm, G, 1); else { gm.g.position.set(G.x, 0, G.z); gm.g.rotation.y = G.h; }
   G.cone.visible = G.state !== 'eat'; paintCone(G.cone, G, res.range, 7.5, res.seen, 0xf0d27a);
 }
 function backToPatrol() {
   let bi = 0, bd = 1e9; room.guard.waypoints.forEach(([x, z], i) => { const d = Math.hypot(x - G.x, z - G.z); if (d < bd) { bd = d; bi = i; } });
-  G.state = 'patrol'; G.wp = bi; G.wait = 0; G.stuck = 0; henk.arms[1].rotation.x = 0;
+  G.state = 'patrol'; G.wp = bi; G.wait = 0; G.stuck = 0; gm.arms[1].rotation.x = 0;
 }
 
 // ----- security cameras -----
@@ -2071,17 +3459,31 @@ function updatePears(dt) {
   for (const p of pearsOut) {
     if (p.landed) continue;
     p.t = Math.min(1, p.t + dt / 0.6);
-    p.m.position.set(p.sx + (p.tx - p.sx) * p.t, 1.2 * (1 - p.t) + Math.sin(p.t * Math.PI) * 1.4 + 0.15, p.sz + (p.tz - p.sz) * p.t);
+    p.m.position.set(p.sx + (p.tx - p.sx) * p.t, p.drop ? (p.y0 * (1 - p.t * p.t) + 0.15) : 1.2 * (1 - p.t) + Math.sin(p.t * Math.PI) * 1.4 + 0.15, p.sz + (p.tz - p.sz) * p.t);
     p.m.rotation.z += dt * 10;
     if (p.t >= 1) { p.landed = true; p.m.rotation.z = 0.4; onPearLand(p); }
   }
 }
 function updateCamera() {
   const cp = Math.cos(S.pitch) * S.dist, fx = Math.sin(S.yaw), fz = Math.cos(S.yaw);
-  camera.position.set(P.x - fx * cp, Math.sin(S.pitch) * S.dist + 0.5, P.z - fz * cp);
-  camera.lookAt(P.x, 1.0, P.z);
+  const ty = S.layer === 'vent' ? DUCT_Y : 0;
+  camY += (ty - camY) * 0.15;
+  camera.position.set(P.x - fx * cp, Math.sin(S.pitch) * S.dist + 0.5 + camY, P.z - fz * cp);
+  camera.lookAt(P.x, 1.0 + camY, P.z);
   updateWalls();
+  // interior walls fade when they stand between the camera and Julie
+  if (room.iwalls) for (const w of room.iwalls) {
+    const hide = segHits(camera.position.x, camera.position.z, P.x, P.z, w.c) && S.layer === 'floor';
+    const op = hide ? 0.18 : 1; w.m.material.opacity += (op - w.m.material.opacity) * 0.2; w.t.material.opacity = w.m.material.opacity;
+    w.m.material.depthWrite = w.m.material.opacity > 0.9;
+  }
+  // ducts are see-through from the floor, solid when you're inside them
+  if (room.vents) {
+    const op = S.layer === 'vent' ? 1 : 0.28;
+    for (const m of room.vents.meshes) { m.material.opacity += (op - m.material.opacity) * 0.15; m.material.depthWrite = m.material.opacity > 0.9; }
+  }
 }
+let camY = 0;
 const v3 = new THREE.Vector3();
 function updateHUD() {
   const b = signal();
@@ -2110,20 +3512,25 @@ function updateHUD() {
 
 function caught(kind) {
   S.running = false; document.exitPointerLock?.();
-  $('caughtText').textContent = { guard: 'HENK HEEFT JE GEZIEN', cam: S.room === 4 ? 'HET ZOEKLICHT HEEFT JE GEVONDEN' : 'DE CAMERA HEEFT JE GEFILMD', figure: 'IEMAND HEEFT JE GEZIEN' }[kind];
-  $('caughtSub').textContent = ['', 'terug naar de tuindeur…', 'terug naar de trap…', 'terug naar de lift…', 'terug naar het balkon…'][S.room];
+  $('caughtText').textContent = { guard: room.guard?.caught || 'HENK HEEFT JE GEZIEN', cam: S.room === 4 ? 'HET ZOEKLICHT HEEFT JE GEVONDEN' : 'DE CAMERA HEEFT JE GEFILMD', figure: 'IEMAND HEEFT JE GEZIEN', watcher: 'DE GAST IN 212 HEEFT JE GEZIEN' }[kind];
+  if (kind === 'figure' && S.room === 9) $('caughtText').textContent = 'CORVUS HEEFT JE GEZIEN';
+  $('caughtSub').textContent = { 1: 'terug naar de tuindeur…', 2: 'terug naar de trap…', 3: 'terug naar de lift…', 4: 'terug naar het balkon…', 6: 'terug naar het laadperron…', 7: 'terug naar de draaideur…', 8: 'terug naar de linnenkamer…', 9: 'terug naar de wasserij…' }[S.room];
   $('caught').classList.remove('hidden'); beep(140, 0.5, 'sawtooth', 0.08);
   setTimeout(() => {
     $('caught').classList.add('hidden');
     Object.assign(P, { x: room.start.x, z: room.start.z, h: room.start.h }); S.yaw = room.start.h; S.crouch = false;
+    S.layer = 'floor'; S.riding = false; julie.g.visible = true;
     if (room.guard) resetGuard();
-    cams.forEach(c => c.susp = 0);
+    cams.forEach(c => c.susp = 0); Wt.susp = 0; Wt.state = 'idle'; Wt.t = 8;
+    if (S.room === 9 && !isDone('sessie')) { resetMeet(); roomTime = Math.min(roomTime, 60); }
     if (S.room === 2 && !S.eventDone) {
       Object.assign(F, { phase: 'idle', retry: 14, susp: 0, wait: 0 }); stranger.g.visible = false; F.cone.visible = false; lighter.intensity = 0;
       room.k3.rotation.y = 0;
     }
     hud(); S.running = true;
-    const line = S.room === 1
+    const line = S.room === 9 ? (kind === 'figure' ? 'Julie! Ze hebben je gezien, maar ik heb het brandalarm laten afgaan. Ze zijn gevlucht en komen zo terug. Nog één kans.' : 'Julie! Ik heb Gerrit weggestuurd met een valse melding. Nog een keer en het is voorbij.')
+      : S.room === 6 ? 'Julie! Ik heb de chef gebeld en gezegd dat zijn soufflé inzakt. Hij rende weg. Dat werkt maar één keer.'
+      : S.room === 1
       ? 'Julie! Ik heb Henk afgeleid met het alarm van z\'n auto, maar dat lukt me geen tweede keer. Hurk (C) achter de bank of het bureau.'
       : kind === 'figure' ? 'Julie?! Ik hoorde een deur slaan en toen niks. Wie het ook was, die is gevlucht. Blijf uit het zicht als die terugkomt.'
       : 'Julie! Ik heb de camerabeelden vanaf hier gewist, maar dat lukt me niet nog een keer.';
@@ -2142,15 +3549,19 @@ function roomEnd() {
   const links = S.links.length ? `<h3>Verbanden die Anna legde</h3>${S.links.map(l => `<div class="ev link"><div><b>${EVID[l.a].name} + ${EVID[l.b].name}</b><small>${linkTxt(l)}</small></div><span class="tag">${l.room === S.room ? 'NIEUW' : '🔗'}</span></div>`).join('')}` : '';
   const lost = foundHere().filter(id => !here.includes(id));
   const lostRows = lost.length ? `<h3>Alleen in je notitieboekje</h3><p class="muted">Dit heb je gezien, maar Anna weet er niks van.</p>${lost.map(id => `<div class="ev lost"><div><b>${EVID[id].name}</b></div></div>`).join('')}` : '';
-  $('winStamp').textContent = ['', 'LOBBY GEHAALD', 'KELDER GEHAALD', 'KANTOOR GEHAALD'][S.room];
-  $('winTitle').textContent = ['', 'Door de deur.', 'Omhoog.', 'Over de balkonrand.'][S.room];
+  $('winStamp').textContent = { 1: 'LOBBY GEHAALD', 2: 'KELDER GEHAALD', 3: 'KANTOOR GEHAALD', 6: 'KEUKEN GEHAALD', 7: 'LOBBY GEHAALD', 8: 'VERDIEPING 2 GEHAALD', 9: 'ZAAL ZUID GEHAALD' }[S.room];
+  $('winTitle').textContent = { 1: 'Door de deur.', 2: 'Omhoog.', 3: 'Over de balkonrand.', 6: 'Omhoog, tussen de borden.', 7: 'In schort, achterom.', 8: 'Glijbaan naar beneden.', 9: 'De raaf is gezien.' }[S.room];
   const board = S.room === 3 ? suspectBoard() : '';
   $('winBody').innerHTML = `<p>Je vond <b>${foundHere().length}</b> stukken en stuurde er <b>${here.length}</b> door${linksHere.length ? `, en Anna legde <b>${linksHere.length}</b> ${linksHere.length === 1 ? 'verband' : 'verbanden'}` : ''}. Score deze kamer: <b>${pts}</b>. ${rank}</p>${board}<h3>Wat Anna nu weet</h3>${dossier}${links}${lostRows}`;
-  $('winNext').innerHTML = ['', 'Volgende missie: <b>de kelder</b>.', 'Volgende missie: <b>het kantoor van de ambassadeur</b>.',
+  $('winNext').innerHTML = { 7: 'Volgende missie: <b>de keuken</b>. Personeelsterrein, en de chef houdt niet van pottenkijkers.', 6: 'Volgende missie: <b>verdieping 2, kamer 214</b>. Beveiligd terrein.', 8: 'Volgende missie: <b>de wasserij, en dan Zaal Zuid</b>. Om drie uur.', 9: 'Volgende: <b>de finale van hoofdstuk 2</b>. Anna wacht in het busje. Wie is Corvus?' }[S.room] || ['', 'Volgende missie: <b>de kelder</b>.', 'Volgende missie: <b>het kantoor van de ambassadeur</b>.',
     'Laatste missie: <b>de tuin</b>. Anna wacht in het busje achter de poort.'][S.room];
   const nb = $('next');
-  if (S.room < 4) { nb.disabled = false; nb.textContent = ['', 'Naar de kelder →', 'Naar het kantoor →', 'Naar buiten →'][S.room]; nb.onclick = () => goRoom(S.room + 1); }
-  else { nb.disabled = true; nb.textContent = 'Deel 2 · komt eraan'; }
+  if (S.room === 7) { nb.disabled = false; nb.textContent = 'Naar de keuken →'; nb.onclick = () => goRoom(6); }
+  else if (S.room === 6) { nb.disabled = false; nb.textContent = 'Naar verdieping 2 →'; nb.onclick = () => goRoom(8); }
+  else if (S.room === 8) { nb.disabled = false; nb.textContent = 'Naar Zaal Zuid →'; nb.onclick = () => goRoom(9); }
+  else if (S.room === 9) { nb.disabled = false; nb.textContent = 'Naar het busje →'; nb.onclick = () => { $('win').classList.add('hidden'); S.room = 10; S.roomDone = false; save(); startVan(); }; }
+  else if (S.room < 4) { nb.disabled = false; nb.textContent = ['', 'Naar de kelder →', 'Naar het kantoor →', 'Naar buiten →'][S.room]; nb.onclick = () => goRoom(S.room + 1); }
+  else { nb.disabled = true; nb.textContent = 'Missie 2 · komt eraan'; }
   $('win').classList.remove('hidden');
 }
 // what Anna can conclude depends only on the links she actually made
@@ -2185,6 +3596,33 @@ function goRoom(n) {
   intro();
 }
 function intro() {
+  if (S.room === 9) {
+    think('Plof. In een berg lakens. De wasserij. Het is 02:51.');
+    say('Julie! Over negen minuten begint de "besloten sessie" in Zaal Zuid, hiernaast. Je moet zien wie daar komt, maar niemand mag jou zien.', { garble: false });
+    say('Gerrit van de beveiliging loopt nog zijn ronde. Om drie uur moet al het personeel weg, dus dan vertrekt hij vanzelf. En die stoompersen… daar zie je niks doorheen.', { garble: false });
+    return;
+  }
+  if (S.room === 8) {
+    think('Uit de etenslift, tussen de tafellakens. Verdieping 2. Dit is beveiligd terrein.');
+    say('Julie, je bent boven. Binnen is je bereik zwak, en… is dat HENK in de gang?! Ze hebben hem ontslagen bij de ambassade, en nu werkt hij hier.', { garble: false });
+    say('Kamer 214 zit op slot. Pim brengt er elke nacht champagne. En de gevel heeft een richel, maar die is voor jou, niet voor mij.', { garble: false });
+    return;
+  }
+  if (S.room === 7) {
+    const caughtV = S.ending === 'perfect' || S.ending === 'arrest';
+    say(caughtV
+      ? 'Julie. Varga zit in een verhoorkamer en zegt maar één zin: "Vraag het de raaf." Verder niks. Dus we gaan het de raaf vragen.'
+      : 'Julie. Varga is gevlogen. Maar dat lucifersdoosje uit de kelder wees naar Hotel Kasimir, kamer 214. Daar begint het.', { garble: false });
+    say('Welkom bij Hotel Kasimir. Deze week is hier een vredesconferentie. Ergens tussen al die diplomaten zit de koper van onze plattegronden.', { garble: false });
+    say('Dit is een gewone lobby, Julie, je mag hier gewoon zijn. Praat met mensen en laat ze dingen uit je notitieboekje zien. Maar boven is het beveiligd: zonder de juiste pas kom je daar niet.', { garble: false });
+    return;
+  }
+  if (S.room === 6) {
+    think('Pims schort aan, haar onder mijn hoed. Ik ben nu officieel keukenhulp.');
+    say('Ik zie je bij de laaddeur. Binnen heb je geen bereik, Julie. De chef is een kreng: in een schort val je minder op, maar laat je niet betrappen terwijl je in zijn spullen zit.', { garble: false });
+    say('Pim rijdt zo rond met zijn roomservicekar. En dit hotel zit vol ventilatieschachten.', { garble: false });
+    return;
+  }
   if (S.room === 1) {
     say('Julie, je bent binnen. Henk loopt hier rond met z\'n zaklamp. Blijf uit dat licht, en hurk als je dichtbij komt, hij hoort je voetstappen.', { garble: false });
     say('Vier mensen hebben \'s nachts een sleutel: de ambassadeur, attaché Varga, secretaresse Mirela en chauffeur Bram. Eén van hen is onze mol. Ik kan maar 3 dingen per kamer ontvangen, dus stuur alleen wat écht iets bewijst.', { garble: false });
@@ -2201,13 +3639,22 @@ function intro() {
   }
 }
 initFinale({
-  S, save, beep, julie, henk, rat, stranger,
+  S, save, beep, julie, henk, rat, stranger, chef, npcMesh,
   hideGameplay() {
     S.running = false; document.exitPointerLock?.();
     henk.g.visible = false; stranger.g.visible = false; rat.visible = false; julieLight.intensity = 0;
+    chef.g.visible = false; pim.g.visible = false; cartG.visible = false; Object.values(npcMeshes).forEach(m => m.g.visible = false);
     ['hud', 'win', 'start', 'walkie', 'keypad'].forEach(id => $(id).classList.add('hidden'));
   },
 });
+// chapter 2 starts from the ending screen and keeps Anna's dossier
+function startChapter2() {
+  finale.active = false; scene.fog = null;
+  ['ending', 'cutscene', 'caption', 'van'].forEach(id => $(id).classList.add('hidden'));
+  S.pears = 3; S.chapter = 2; rat.visible = true;
+  goRoom(7);
+}
+$('toCh2').onclick = startChapter2;
 
 const sure = (btn) => () => { if (btn.dataset.sure) wipeSave(); else { btn.dataset.sure = 1; btn.textContent = 'Zeker? Klik nog eens om alles te wissen'; } };
 $('again').onclick = sure($('again'));
@@ -2216,9 +3663,9 @@ $('endNew').onclick = sure($('endNew'));
 
 const saved = loadSave();
 if (saved) for (const k of SAVED_FIELDS) if (k in saved) S[k] = saved[k];
-setupRoom(Math.min(S.room, 4));
+setupRoom(S.room === 5 ? 4 : S.room === 10 ? 9 : S.room);
 if (saved) {
-  $('go').textContent = S.room === 5 ? 'Terug naar het busje →' : S.roomDone ? 'Bekijk Anna\'s dossier →' : ['', 'Verder in de lobby →', 'Verder in de kelder →', 'Verder in het kantoor →', 'Verder in de tuin →'][S.room];
+  $('go').textContent = S.room === 5 || S.room === 10 ? 'Terug naar het busje →' : S.roomDone ? 'Bekijk Anna\'s dossier →' : { 1: 'Verder in de lobby →', 2: 'Verder in de kelder →', 3: 'Verder in het kantoor →', 4: 'Verder in de tuin →', 6: 'Verder in de keuken →', 7: 'Verder in de hotellobby →', 8: 'Verder op verdieping 2 →', 9: 'Verder in Zaal Zuid →' }[S.room];
   $('newGame').classList.remove('hidden');
 }
 if (!canSave) $('saveNote').textContent = 'Let op: deze browser staat opslaan hier niet toe, je voortgang blijft niet bewaard.';
@@ -2226,6 +3673,7 @@ $('go').onclick = () => {
   ac = new (window.AudioContext || window.webkitAudioContext)();
   $('start').classList.add('hidden');
   if (S.room === 5) { startVan(!!S.ending); return; }
+  if (S.room === 10) { startVan(!!S.ending2); return; }
   if (S.roomDone) { roomEnd(); return; }
   $('hud').classList.remove('hidden'); S.running = true; hud();
   canvas.requestPointerLock?.();
@@ -2243,7 +3691,11 @@ function loop() {
     updatePlayer(dt);
     if (room.guard && S.running) updateGuard(dt);
     if (S.running) updateCams(dt);
+    if (S.running) updateLedge(dt);
+    if (S.running) updateMeet(dt);
+    updateSteam(dt);
     if (S.running) updateFigure(dt);
+    updateCart(dt);
     updateRat(dt); updatePears(dt); updateHUD();
   }
   if (dropMesh) { dropMesh.rotation.y += dt * 2; if (dropMesh.visible) dropMesh.position.y = 0.12 + Math.sin(performance.now() / 300) * 0.05; }
@@ -2266,6 +3718,13 @@ function loop() {
 }
 animate(julie, P, 1);
 loop();
+// jump straight to chapter 2 from the start screen; without a chapter-1 ending Varga counts as escaped
+$('jumpCh2').onclick = () => {
+  ac ||= new (window.AudioContext || window.webkitAudioContext)();
+  if (!S.ending) S.ending = 'immuniteit';
+  $('start').classList.add('hidden'); startChapter2();
+};
+if (S.room >= 6) $('jumpCh2').classList.add('hidden');
 </script>
 </body>
 </html>
