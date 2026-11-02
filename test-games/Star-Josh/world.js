@@ -81,6 +81,7 @@ function groundTex(kind) {
     g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 2;
     for (let i = 0; i < 30; i++) { let x = Math.random() * 512, y = Math.random() * 512; g.beginPath(); g.moveTo(x, y); for (let s = 0; s < 4; s++) { x += rnd(-40, 40); y += rnd(-40, 40); g.lineTo(x, y); } g.stroke(); }
   } else {
+    g.fillStyle = '#efe8ff'; g.fillRect(0, 0, 512, 512);
     for (let i = 0; i < 90; i++) {
       const x = Math.random() * 512, y = Math.random() * 512, r = 20 + Math.random() * 60;
       const gr = g.createRadialGradient(x, y, 0, x, y, r);
@@ -133,7 +134,8 @@ export function setEnv(i) {
       const s = rnd(3, 16), m = new THREE.Mesh(new THREE.OctahedronGeometry(s, 0), MD.M(k % 3 ? 0xbdf2f5 : 0xd9c8ff, { metalness: 0.5, roughness: 0.15, emissive: 0x7fe0e6, emissiveIntensity: 0.15 }));
       m.scale.y = rnd(1.4, 2.6); m.position.set(side(30, 200), rnd(-20, 50), rnd(-760, 40)); add(m, 'rock');
     }
-  } else { c.position.set(rnd(-240, 240), rnd(-40, -26), rnd(-760, 40)); add(c, 'cloud'); }
+  } else {
+    for (let k = 0; k < 60; k++) { const c = MD.makeCloud(rnd(1.6, 3.4), 0xfbf8ff); c.position.set(rnd(-240, 240), rnd(-40, -26), rnd(-760, 40)); add(c, 'cloud'); }
     for (let k = 0; k < 14; k++) { const c = MD.makeCloud(rnd(1.5, 3)); c.position.set(side(40, 220), rnd(50, 100), rnd(-760, 40)); add(c, 'cloud'); }
   }
   const n = 180, pos = new Float32Array(n * 6);
