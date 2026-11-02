@@ -178,6 +178,8 @@ setInterval(() => LIC.sync(), 4000);
   @media (max-width:900px){.rkwrap{grid-template-columns:minmax(0,1fr)}}
   /* coins + shop */
   #coinhud{top:206px;right:18px;font-size:20px;padding:3px 12px;transform:rotate(3deg);background:#fff3c4}
+  #coinhud small{font-size:13px;opacity:.75}
+  #coinhud small.max{opacity:1;color:#e8590c}
   .coinsum{text-align:center;font-size:16px;margin:10px 0 0}
   .chwrap .onpanel{display:flex;flex-direction:column;gap:10px}
   .cmwrap{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);width:min(1040px,95vw)}
@@ -921,6 +923,11 @@ setInterval(() => LIC.sync(), 4000);
   #fcHud.hidden{display:none}
   #fcHud small{opacity:.7;font-weight:500}
   body.freecam #game{cursor:crosshair}
+  #glLost{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(29,26,47,.88);color:#fff;font:700 18px system-ui,sans-serif;text-align:center;padding:20px}
+  #glLost.hidden{display:none}
+  #glLost span{font-weight:500;font-size:14px;opacity:.8}
+  #glLost button{display:none}
+  #glLost.stuck button{display:block}
   #dbg{position:fixed;top:10px;right:10px;width:300px;max-height:calc(100vh - 20px);overflow:auto;z-index:60;background:rgba(29,26,47,.94);color:#e8e6ff;border:3px solid #8a5cff;border-radius:14px;padding:8px 10px;font:12px/1.35 ui-monospace,Menlo,Consolas,monospace;-webkit-text-stroke:0;text-shadow:none;user-select:text;-webkit-user-select:text}
   #dbg.hidden{display:none}
   #dbg .dbgh{display:flex;align-items:center;gap:6px;font-size:14px;margin-bottom:4px}#dbg .sp{flex:1}
@@ -1132,6 +1139,7 @@ setInterval(() => LIC.sync(), 4000);
     <div class="dbgrow"><button data-a="eggs">🥚 Unlock all eggs</button><button data-a="cups">🏆 Gold in every cup</button></div>
     <div class="dbgrow"><label>Elo</label><input type="number" id="dbgElo" step="50" min="0" max="4000"><button data-a="elo">Set</button></div>
     <div class="dbgrow"><button data-a="export">📋 Copy save</button><button data-a="wipe" class="danger">🗑️ Wipe save…</button></div>
+    <div class="dbgrow"><button data-a="rules">🔐 Copy database rules</button></div>
   </details>
   <p class="dbgfoot">F2 or ` to open/close · cheats are off in online races</p>
 </div>
@@ -2939,12 +2947,18 @@ function grindTry(k){
   const lat = k.pos.clone().sub(pts[k.idx]).dot(nors[k.idx]);
   for (const r of GRINDS){
     if (fwdIdx(r.i0 - 2, k.idx) > 5 || Math.abs(lat - r.lat0) > 2.9) continue;
-    k.grind = {r, t:0, T:0}; k.aiHopAt = 0.78 + Math.random() * 0.17; k.drift = 0; k.driftCharge = 0;
+    k.grind = {r, t:0, T:0}; k.grindY = grindPos(r, 0).y; k.aiHopAt = 0.78 + Math.random() * 0.17; k.drift = 0; k.driftCharge = 0;
     if (k.isPlayer){ beep(980, .08, 'square', .05, 1.3); toast('🛹 Grind! Hop to jump off'); }
     return;
   }
 }
+// knocked off a rail: drop down onto the road below with no boost
+function grindDrop(k){
+  k.grind = null; k.grindCD = 1.2; k.air = true; k.airT = 0; k.vy = 2; k.trick = false; k.glide = false;
+  if (k.spark) k.spark.visible = false;
+}
 function grindMove(k, dt, hop){
+  if (k.spin > 0 || k.frozen > 0 || k.hold > 0){ grindDrop(k); return; }
   const g = k.grind, r = g.r;
   k.speed = Math.max(k.speed, MAX * 0.97);
   g.t += k.speed * dt / r.len; g.T += dt; k.drift = 0; k.driftCharge = 0;
@@ -3232,8 +3246,57 @@ const coreGolds = () => CUPS.slice(0, CORE_CUPS).filter(c => trophies[c.name] ==
 const mirrorOK = () => coreGolds() >= CORE_CUPS || DBG.all;
 const wantMir = () => mirror && mirrorOK() && !NET.racing && !story && !tut && !ranked;
 const tkey = () => MAP.name + (world?.userData.mir ? ' (Mirror)' : '');   // mirrored tracks keep their own best times and world records
+// free the graphics memory of the track we're leaving: three.js keeps every shape, material and texture on the GPU until it's
+// told to let go, so without this each track you open stays in memory (phones run out and the screen goes black).
+// Things shared between tracks (item boxes, coins, hazards, house facades, roof shapes) stay.
+function disposeWorld(root){
+  const keep = new Set([padTex, boxTex, boxGeo1, coinG, coinM, boxG, boxM, fakeM, bananaG, bananaM, shellG, shellM, hoverG, hoverM,
+    stoneM, stoneD, whiteM, blackM, ...Object.values(GABLES), ...Object.values(RIDGE), ...Object.values(FACADE)]);
+  const done = new Set(), free = o => { if (o && !keep.has(o) && !done.has(o)){ done.add(o); o.dispose?.(); } };
+  root.traverse(o => {
+    if (o.geometry) free(o.geometry);
+    for (const m of o.material ? [].concat(o.material) : []){
+      if (keep.has(m)) continue;
+      for (const k of ['map', 'emissiveMap', 'alphaMap', 'normalMap', 'bumpMap']) if (m[k]?.isTexture) free(m[k]);
+      free(m);
+    }
+  });
+}
+// batch the scenery: every tree, house, post, rail and landmark part that never moves is merged into one mesh per colour and
+// per 160 m patch, so the graphics card gets a few hundred drawing jobs a frame instead of thousands (the main cost in races).
+// Anything that moves (spinning sails and wheels, the tram, hazards, dash rings, coins, item boxes) is left alone.
+function mergeStatic(root){
+  const dyn = new Set([particles, ...coins.map(c => c.mesh), ...boxes.map(b => b.mesh), ...DRINGS.map(r => r.g)]);
+  for (const s of root.userData.spin || []){ dyn.add(s.o); (s.keep || []).forEach(c => dyn.add(c)); }
+  for (const h of HZ) for (const o of [h.g, h.b, h.ball, h.head, h.stem, ...(h.links || []), ...(h.balls || []), ...(h.bs || []).map(b => b.o)]) if (o) dyn.add(o);
+  root.updateMatrixWorld(true);
+  const moving = o => { for (let p = o; p && p !== root; p = p.parent) if (dyn.has(p) || !p.visible) return true; return false; };
+  const buckets = new Map();
+  root.traverse(o => {
+    if (!o.isMesh || o.isInstancedMesh || Array.isArray(o.material)) return;
+    const m = o.material, g = o.geometry;
+    if (!(m.isMeshLambertMaterial || m.isMeshBasicMaterial) || m.map || m.emissiveMap || m.alphaMap || m.vertexColors || m.transparent) return;
+    if (!g.attributes.position || !g.attributes.normal || g.attributes.position.itemSize !== 3 || g.attributes.position.isInterleavedBufferAttribute) return;
+    if (moving(o)) return;
+    const e = o.matrixWorld.elements, cell = Math.floor(e[12] / 160) + ',' + Math.floor(e[14] / 160);
+    const key = [m.type, m.color.getHex(), m.emissive ? m.emissive.getHex() : 0, m.flatShading ? 1 : 0, m.side, o.castShadow ? 1 : 0, cell].join('|');
+    let b = buckets.get(key); if (!b) buckets.set(key, b = {m, list:[], shadow:o.castShadow});
+    b.list.push(o);
+  });
+  for (const b of buckets.values()){
+    if (b.list.length < 2) continue;
+    const geos = b.list.map(o => { const gg = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); gg.applyMatrix4(o.matrixWorld); return gg; });
+    const n = geos.reduce((a, gg) => a + gg.attributes.position.count, 0), pos = new Float32Array(n * 3), nor = new Float32Array(n * 3);
+    let off = 0;
+    for (const gg of geos){ pos.set(gg.attributes.position.array.subarray(0, gg.attributes.position.count * 3), off * 3); nor.set(gg.attributes.normal.array.subarray(0, gg.attributes.position.count * 3), off * 3); off += gg.attributes.position.count; gg.dispose(); }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+    const mesh = new THREE.Mesh(geo, b.m); mesh.castShadow = b.shadow; mesh.receiveShadow = true; mesh.matrixAutoUpdate = false;
+    for (const o of b.list) o.parent.remove(o);
+    root.add(mesh);
+  }
+}
 function buildWorld(def){
-  if (world) scene.remove(world);
+  if (world){ scene.remove(world); disposeWorld(world); }
   world = new THREE.Group(); scene.add(world); MAP = def; W = def.w; world.userData.mir = wantMir();
   const T = def.timeDef || {};
   scene.background = new THREE.Color(def.sky); scene.fog = new THREE.Fog(def.sky, ...(T.fog || [180, 560]));
@@ -3425,6 +3488,7 @@ function buildWorld(def){
       boxes.push({mesh:m, respawn:0});
     }
   }
+  mergeStatic(world);
   computeMini();
 }
 
@@ -4108,7 +4172,7 @@ function fakeBox(k){
 }
 function explode(s){
   burst(s.mesh.position, s.boom ?? 0x2f7bff, 10, 0.6); burst(s.mesh.position, 0xffffff, 5, 0.35);
-  karts.forEach(o => { if (o.pos.distanceTo(s.mesh.position.clone().setY(0)) < s.explode) hit(o, 1, s.owner); });
+  karts.forEach(o => { if (o.pos.distanceTo(s.mesh.position.clone().setY(0)) < s.explode && sameDeck(o, s.mesh)) hit(o, 1, s.owner); });
   if (player && player.pos.distanceTo(s.mesh.position) < 80) beep(80, .6, 'sawtooth', .14, .3);
 }
 function blooper(k){
@@ -4160,7 +4224,8 @@ function useItem(k){
   const it = k.item;
   if (k.isPlayer) RS.items++;
   switch (it){
-    case 'coin': k.boost = Math.max(k.boost, 0.45); k.item = null; if (k.isPlayer) beep(1320, .1, 'square', .06, 1.5); break;
+    case 'coin': k.boost = Math.max(k.boost, 0.45); k.item = null; k.coins = (k.coins || 0) + 2; if (!battle) k.cspd = Math.min(COIN_MAX, (k.cspd || 0) + 2);
+      if (k.isPlayer){ beep(1320, .1, 'square', .06, 1.5); addCoins(2); coinHud(); } break;
     case 'boost': case 'triple': k.boost = Math.max(k.boost, 1.3); sfx('boost', k); finish(k); break;
     case 'golden':
       if (!(k.goldT > 0)) k.goldT = 7.5;
@@ -4194,9 +4259,19 @@ function blueMesh(){
   for (const s of [-1, 1]){ const wg = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.12, 0.6), new THREE.MeshLambertMaterial({color:0xffffff})); wg.position.set(s*1.4, 0.3, 0); wg.rotation.z = s*0.3; m.add(wg); }
   return m;
 }
+// coins and top speed (like MK8): each coin you're holding, up to 10, makes you 1% faster; a hit knocks 3 off.
+// k.coins is everything you picked up this race (wallet, challenges, coin battles), k.cspd the ones counting for speed
+const COIN_MAX = 10, COIN_UP = 0.01;
+function coinHud(){
+  const k = player; if (!k) return;
+  const n = Math.min(COIN_MAX, k.cspd || 0);
+  $('coinhud').innerHTML = battle ? `🪙 ${k.coins || 0}` : `🪙 ${k.coins || 0} <small class="${n >= COIN_MAX ? 'max' : ''}">⚡+${n}%</small>`;
+}
 function hit(k, power = 1, by = null){
+  if (k.grind && !immune(k)) grindDrop(k);
   if (immune(k) || k.spin > 0) return false;
   k.spin = 1.1 * power; k.speed *= power < 1 ? 0.5 : 0.25; k.boost = 0; k.drift = 0; k.driftCharge = 0;
+  if (!battle && k.cspd > 0){ k.cspd = Math.max(0, k.cspd - 3); if (k.isPlayer) coinHud(); }   // like MK8: a hit costs you 3 coins of top speed
   if (k.human) gpRumble(k, Math.min(1, 0.5 + power * 0.3), 260);
   if (k.isPlayer) haptic(power < 1 ? 50 : 90);
   if (battle && !NETC()) battleHit(k, by);
@@ -4513,7 +4588,7 @@ function stepFx(dt){
     const f = fx[i]; f.t += dt; const p = Math.min(1, f.t / f.dur);
     if (f.bolt){ f.m.material.opacity = 0.95 * (1 - p); f.m.scale.x = f.m.scale.z = 0.6 + Math.random(); }
     else { f.m.scale.setScalar(f.r * (0.25 + 0.75 * (1 - Math.pow(1 - p, 3)))); f.m.material.opacity = 0.5 * (1 - p); }
-    if (p >= 1){ scene.remove(f.m); fx.splice(i, 1); }
+    if (p >= 1){ scene.remove(f.m); disposeWorld(f.m); fx.splice(i, 1); }
   }
   for (let i = bombs.length - 1; i >= 0; i--){
     const b = bombs[i]; b.t += dt;
@@ -4522,13 +4597,15 @@ function stepFx(dt){
     b.spark.scale.setScalar(0.6 + Math.random());
     if (b.t >= b.fuse){
       burst(b.m.position, 0xff7a1f, 11, 0.55); burst(b.m.position, 0xffd23f, 6, 0.35);
-      karts.forEach(k => { if (k.pos.distanceTo(b.m.position.clone().setY(0)) < 11) hit(k, 1, b.owner); });
+      karts.forEach(k => { if (k.pos.distanceTo(b.m.position.clone().setY(0)) < 11 && sameDeck(k, b.m)) hit(k, 1, b.owner); });
       if (player && player.pos.distanceTo(b.m.position) < 60) beep(90, .5, 'sawtooth', .14, .4);
       scene.remove(b.m); bombs.splice(i, 1);
     }
   }
 }
-const near = (k, r) => karts.filter(o => o !== k && !o.finished && o.pos.distanceTo(k.pos) < r);
+// karts on a bridge, a loop or in the air are out of reach of things happening on the road below (and the other way round)
+const sameLevel = (a, b) => Math.abs((a.wp?.y ?? a.y ?? 0) - (b.wp?.y ?? b.y ?? 0)) < 6;
+const near = (k, r) => karts.filter(o => o !== k && !o.finished && o.pos.distanceTo(k.pos) < r && sameLevel(o, k));
 const aheadOf = k => { const o = standings(), i = o.indexOf(k); return i > 0 ? o[i - 1] : null; };
 const say = (k, msg) => { if (k.isPlayer) setTimeout(() => toast(msg), 600); };
 // same deck: false when a kart drives under (or over) an item at a crossing
@@ -4674,7 +4751,7 @@ const SPECIALS = {
     setTimeout(() => {
       if (state !== 'race' || !karts.includes(tgt)) return;
       const at = tgt.pos.clone(); burst(at, 0x120b1f, 10, 0.7); burst(at, 0x000000, 4, 0.9); burst(at, 0x8a5cff, 6, 0.4);
-      karts.forEach(v => { if (v !== k && v.pos.distanceTo(at) < 9) hit(v, 1, k); });
+      karts.forEach(v => { if (v !== k && v.pos.distanceTo(at) < 9 && sameLevel(v, tgt)) hit(v, 1, k); });
       if (player && player.pos.distanceTo(at) < 80) beep(90, .5, 'sawtooth', .12, .4);
     }, 1000);
   },
@@ -5586,9 +5663,66 @@ const fbKey = s => String(s).replace(/[.#$\[\]\/\s]+/g, '_');
 const sessionId = (() => { try { let g = localStorage.getItem('pgp-guest'); if (!g){ g = 'guest' + Math.random().toString(36).slice(2, 10); localStorage.setItem('pgp-guest', g); } return g; } catch (e){ return 'guest' + Math.random().toString(36).slice(2, 8); } })();
 const me = () => { const l = LIC.active(); return {id: fbKey(l.id === 'local' ? sessionId : l.id), name: String(l.name).slice(0, 24)}; };
 let fbOK = null, fbErr = '';
+// ---- Firebase sign-in: every device signs in anonymously (no account, no email) and gets a secret user id. The database
+// rules check it, so only you can change your profile or post times, ghosts and tracks under your name.
+// FB_KEY is the project's Web API key (Firebase console → Project settings → General). It isn't a secret, every web app
+// ships it. Left empty, the game writes without signing in (only works with open rules).
+const FB_KEY = 'AIzaSyAjras7u8-rOwsAwTCNmwWs_vxDzwVfi1Q';   // project widf-2b62d
+const FBA = {tok:null, exp:0, uid:null, p:null};
+function fbAuth(){
+  if (!FB_KEY) return Promise.resolve(null);
+  if (FBA.tok && Date.now() < FBA.exp - 60000) return Promise.resolve(FBA.tok);
+  return FBA.p ||= (async () => {
+    const keep = (tok, uid, rt, sec) => { FBA.tok = tok; FBA.uid = uid; FBA.exp = Date.now() + (+sec || 3600) * 1000; try { localStorage.setItem('fbauth-widr', JSON.stringify({rt})); } catch (e) {} return tok; };
+    try {
+      let saved = null; try { saved = JSON.parse(localStorage.getItem('fbauth-widr') || 'null'); } catch (e) {}
+      if (saved?.rt){   // same device as last time: refresh the sign-in, keeping the same user id
+        const r = await fetch(`https://securetoken.googleapis.com/v1/token?key=${FB_KEY}`, {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'grant_type=refresh_token&refresh_token=' + encodeURIComponent(saved.rt)});
+        if (r.ok){ const j = await r.json(); return keep(j.id_token, j.user_id, j.refresh_token, j.expires_in); }
+      }
+      const r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FB_KEY}`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({returnSecureToken:true})});
+      if (!r.ok){ fbErr = 'Sign-in failed. Is Anonymous sign-in switched on in Firebase (Authentication → Sign-in method)?'; return null; }
+      const j = await r.json(); return keep(j.idToken, j.localId, j.refreshToken, j.expiresIn);
+    } catch (e){ return null; } finally { FBA.p = null; }
+  })();
+}
+// the shortest time anyone can really do a track in: its length over 3 laps at the fastest cup speed, always boosting with
+// 10 coins, with a quarter of the distance cut by shortcuts. Faster than that is a cheat (the database rules say the same)
+const MINT = {};
+function trackMinTime(def){
+  if (MINT[def.name]) return MINT[def.name];
+  const sc = def.scale || 1, c = new THREE.CatmullRomCurve3(def.ctrl.map(([x, z]) => new THREE.Vector3(x * sc, 0, z * sc)), true, 'centripetal');
+  return MINT[def.name] = Math.floor(LAPS * c.getLength() * 0.75 / (42 * 1.25 * 1.45 * 1.1) * 10) / 10;
+}
+// the database rules that go with this version of the game (dev tools → Copy database rules, paste in Firebase → Rules)
+function fbRules(){
+  const mine = id => `root.child('widr').child('players').child(${id}).child('uid').val() === auth.uid`, me = "newData.child('uid').val() === auth.uid";
+  const time = min => ({'$id':{'.write':`auth != null && ${mine('$id')}`,
+    '.validate':`newData.hasChildren(['t', 'uid']) && ${me} && newData.child('t').isNumber() && newData.child('t').val() >= ${min} && newData.child('t').val() <= 3600`}});
+  const times = {'.read':true};
+  for (const t of TRACKS.filter(t => !t.battle)) for (const k of [t.name, t.name + ' (Mirror)']) times[fbKey(k)] = time(trackMinTime(t));
+  times.$track = time(25);
+  return JSON.stringify({rules:{widr:{   // the game keeps everything under /widr (see FB)
+    players:{'.read':true, '$id':{'.write':"auth != null && (!data.exists() || !data.child('uid').exists() || data.child('uid').val() === auth.uid)",
+      '.validate':`${me} && newData.child('name').isString() && newData.child('name').val().length <= 24`}},
+    times,
+    feed:{'.read':true, '$e':{'.write':`auth != null && !data.exists() && ${me} && ${mine("newData.child('id').val()")}`}},
+    ghosts:{'.read':true, '$track':{'$id':{'.write':`auth != null && ${mine('$id')} && (!newData.exists() || ${me})`}}},
+    community:{'.read':true, '$pid':{
+      '.write':`auth != null && (data.exists() ? (data.child('uid').val() === auth.uid || ${mine("data.child('aid').val()")}) && (!newData.exists() || ${me}) : ${me} && newData.child('aid').val() !== null && ${mine("newData.child('aid').val()")})`,
+      likes:{'$id':{'.write':`auth != null && ${mine('$id')}`, '.validate':'newData.isBoolean()'}}}},
+    commcup:{'.read':true, '$week':{'$id':{'.write':`auth != null && ${mine('$id')} && (!newData.exists() || ${me})`}}},
+    rooms:{'.read':true, '.write':true}
+  }
+  }}, null, 2);
+}
 async function fb(path, opts = {}){
   try {
-    const r = await fetch(`${FB}/${path}.json${opts.q || ''}`, {method:opts.method || 'GET', body:opts.body ? JSON.stringify(opts.body) : undefined});
+    // writes go out signed in, stamped with your user id (the rules check it)
+    const tok = opts.method && opts.method !== "GET" ? await fbAuth() : null;
+    let body = opts.body; if (tok && body && typeof body === "object" && !Array.isArray(body)) body = {...body, uid:FBA.uid};
+    const q = (opts.q || "") + (tok ? (opts.q ? "&" : "?") + "auth=" + tok : "");
+    const r = await fetch(`${FB}/${path}.json${q}`, {method:opts.method || "GET", body:body != null ? JSON.stringify(body) : undefined});
     if (!r.ok){ fbErr = r.status === 401 || r.status === 403 ? 'The database rules block this. Check the Rules tab in Firebase.' : `Firebase said ${r.status}.`; throw 0; }
     fbOK = true; return await r.json();
   } catch (e){
@@ -5761,16 +5895,17 @@ const sharing = () => OPTS.online !== false;
 function onlinePlayer(){
   if (!sharing()) return;
   const m = me(), golds = Object.values(trophies).filter(v => v === 1).length;
-  fb(`players/${m.id}`, {method:'PUT', body:{name:m.name, golds, trophies:Object.keys(trophies).length, char:ROSTER[playerChoice].id, story:storyProg, elo:RK.games ? RK.elo : null, rgames:RK.games, ...profPublic(), t:{'.sv':'timestamp'}}});
+  return fb(`players/${m.id}`, {method:"PUT", body:{name:m.name, golds, trophies:Object.keys(trophies).length, char:ROSTER[playerChoice].id, story:storyProg, elo:RK.games ? RK.elo : null, rgames:RK.games, ...profPublic(), t:{'.sv':'timestamp'}}});
 }
 // posts the result to the live feed and your time to the world records; resolves to your world rank on that track
 async function onlineRace(place, time){
   if (!tut) profRecord(place, time);
   if (!sharing() || tut || MAP.custom) return null;   // custom tracks stay off the feed and the world records
   const m = me(), ch = ROSTER[playerChoice].id, key = fbKey(tkey());
-  onlinePlayer();
+  await onlinePlayer();   // your profile (with your sign-in id) has to be there before anything is posted under it
   fb('feed', {method:'POST', body:{id:m.id, name:m.name, char:ch, track:tkey(), place, time:time || 0, mode:raceMode(), ts:{'.sv':'timestamp'}}});
   if (!time || ccOn()) return null;   // custom cc races stay off the world records
+  if (time < trackMinTime(MAP)){ console.warn("time faster than possible, not posted", time, trackMinTime(MAP)); return null; }
   const mine = await fb(`times/${key}/${m.id}`);
   if (fbOK === false) return null;
   if (!mine || time < mine.t) await fb(`times/${key}/${m.id}`, {method:'PUT', body:{t:+time.toFixed(3), name:m.name, char:ch}});
@@ -5980,7 +6115,7 @@ const NET = {role:null, code:'', me:'', char:null, track:0, room:null, players:{
 const NETC = () => NET.racing && NET.role === 'client';
 const r1 = v => Math.round((v || 0) * 10) / 10, r2 = v => Math.round((v || 0) * 100) / 100, r3 = v => Math.round((v || 0) * 1000) / 1000;
 // timers that go in every snapshot, and the kinds of thrown things the clients know how to draw
-const NT = ['spin', 'boost', 'star', 'ram', 'ghost', 'shield', 'frozen', 'big', 'small', 'inked', 'confused', 'hold', 'auto', 'bullet', 'dance', 'goldT', 'reflect', 'bal', 'pts'];   // bal / pts: battle balloons and hits
+const NT = ['spin', 'boost', 'star', 'ram', 'ghost', 'shield', 'frozen', 'big', 'small', 'inked', 'confused', 'hold', 'auto', 'bullet', 'dance', 'goldT', 'reflect', 'bal', 'pts', 'cspd'];   // bal / pts: battle balloons and hits · cspd: coins counting towards top speed
 const NKINDS = ['ban', 'red', 'grn', 'fake', 'blue', 'ball', 'slip', 'rock', 'drone', 'bomb', 'pud', 'anchor', 'fball', 'tshell'];
 const netId = () => NET.me ||= fbKey(me().id) + '-' + Math.random().toString(36).slice(2, 6);
 
@@ -5988,7 +6123,7 @@ const netId = () => NET.me ||= fbKey(me().id) + '-' + Math.random().toString(36)
 // one kart: x z y heading moveH speed idx prog flags drift charge item uses rolling sp coins rank time vy pitch, then NT
 function kartOut(k){
   const a = [r2(k.pos.x), r2(k.pos.z), r2(k.y), r3(k.heading), r3(k.moveH), r1(k.speed), k.idx, k.prog,
-    (k.air ? 1 : 0) | (k.glide ? 2 : 0) | (k.trick ? 4 : 0) | (k.finished ? 8 : 0), k.drift || 0, r1(k.driftCharge),
+    (k.air ? 1 : 0) | (k.glide ? 2 : 0) | (k.trick ? 4 : 0) | (k.finished ? 8 : 0) | (k.grind ? 16 : 0), k.drift || 0, r1(k.driftCharge),
     k.item ? ITEM_IDS.indexOf(k.item) : -1, k.uses || 0, r1(k.rolling), r2(k.sp), k.coins || 0, k.finishRank || 0, r2(k.finishTime), r1(k.vy), r2(k.pitch),
     ...NT.map(t => r1(Math.max(0, k[t] || 0)))];
   while (a.length > 20 && !a[a.length - 1]) a.pop();   // most timers are 0: leave them off
@@ -6094,7 +6229,8 @@ function netSnap(d){
 function netReconcile(a){
   const k = player; if (k.puppet) return;
   const now = performance.now() / 1000, lag = NET.rtt, H = NET.hist, fl = a[8] | 0;
-  if ((a[15] || 0) !== k.coins){ k.coins = a[15] || 0; $('coinhud').textContent = `🪙 ${k.coins}`; }
+  const cs = a[20 + NT.indexOf("cspd")] || 0;
+  if ((a[15] || 0) !== k.coins || cs !== (k.cspd || 0)){ k.coins = a[15] || 0; k.cspd = cs; coinHud(); }
   k.sp = a[14] || 0;
   if (fl & 8){   // finished on the host: from now on my kart is drawn from the snapshots like everyone else
     k.finished = true; k.finishRank = a[16]; k.finishTime = a[17]; k.puppet = true;
@@ -6161,7 +6297,7 @@ function netClientTick(dt){
 function netPads(k){
   for (const p of pads){
     let di = k.idx - p.idx; if (di > N/2) di -= N; if (di < -N/2) di += N;
-    if (Math.abs(di) <= 3 && Math.abs(k.pos.clone().sub(pts[k.idx]).dot(nors[k.idx]) - p.lat) < 4){ if (k.boost < 0.5) sfx('boost', k); k.boost = Math.max(k.boost, 0.9); }
+    if (Math.abs(di) <= 3 && !k.air && !k.grind && Math.abs((k.wp?.y ?? k.y ?? 0) - P3[p.idx].y) < 3 && Math.abs(k.pos.clone().sub(pts[k.idx]).dot(nors[k.idx]) - p.lat) < 4){ if (k.boost < 0.5) sfx('boost', k); k.boost = Math.max(k.boost, 0.9); }
   }
 }
 // spinning boxes and coins; driving through one shows the pickup right away (the host confirms it)
@@ -6202,7 +6338,7 @@ function netPuppets(dt){
     const g = Math.hypot(b[0] - a[0], b[1] - a[1]) > 25 ? 1 : f, ph = k.heading;   // teleports don't slide
     k.pos.set(a[0] + (b[0] - a[0]) * g, 0, a[1] + (b[1] - a[1]) * g);
     k.heading = lerpA(a[3], b[3], g); k.moveH = lerpA(a[4], b[4], g); k.speed = a[5] + (b[5] - a[5]) * g; k.y = a[2] + (b[2] - a[2]) * g;
-    const fl = b[8] | 0; k.air = !!(fl & 1); k.glide = !!(fl & 2); k.trick = !!(fl & 4); k.finished = !!(fl & 8);
+    const fl = b[8] | 0; k.air = !!(fl & 1); k.glide = !!(fl & 2); k.trick = !!(fl & 4); k.finished = !!(fl & 8); k.railing = !!(fl & 16);
     k.drift = b[9] || 0; k.driftCharge = b[10] || 0; k.prog = b[7]; k.vy = b[18] || 0; k.pitch = b[19] || 0;
     k.coins = b[15] || 0; k.finishRank = b[16] || 0; k.finishTime = b[17] || 0;
     NT.forEach((t, j) => k[t] = b[20 + j] || 0);
@@ -7319,10 +7455,10 @@ function openMenu(){
 }
 
 function clearRace(){
-  karts.forEach(k => scene.remove(k.mesh.group)); karts.length = 0;
+  karts.forEach(k => { scene.remove(k.mesh.group); disposeWorld(k.mesh.group); }); karts.length = 0;   // kart models are rebuilt each race
   bananas.forEach(b => scene.remove(b.mesh)); bananas.length = 0;
   shells.forEach(s => scene.remove(s.mesh)); shells.length = 0;
-  bombs.forEach(b => scene.remove(b.m)); bombs.length = 0; fx.forEach(f => scene.remove(f.m)); fx.length = 0;
+  bombs.forEach(b => scene.remove(b.m)); bombs.length = 0; fx.forEach(f => { scene.remove(f.m); disposeWorld(f.m); }); fx.length = 0;
   $("ink").classList.remove("on"); $("metaspam").innerHTML = "";
   EMS.length = 0; clearFlair();
 }
@@ -7508,7 +7644,8 @@ function stepKart(k, dt){
   const lat = k.pos.clone().sub(pts[k.idx]).dot(nors[k.idx]);
   const off = Math.abs(lat) > W/2 + 1.5 && k.star <= 0 && k.ram <= 0 && !k.air && !k.grind;
   const st = k.st, sm = v => 1 + (v - 3) * 0.035;
-  let top = (off ? MAP.off * MAX / 42 * (1 + (st.offroad - 3) * 0.13) : MAX * sm(st.speed)) * topMul;
+  const coinUp = battle ? 1 : 1 + COIN_UP * Math.min(COIN_MAX, k.cspd || 0);   // every coin (up to 10) adds 1% top speed, like MK8
+  let top = (off ? MAP.off * MAX / 42 * (1 + (st.offroad - 3) * 0.13) : MAX * sm(st.speed)) * topMul * coinUp;
   if (k.boost > 0){ top = MAX * 1.45; k.boost -= dt; }
   if (k.star > 0){ top = MAX * 1.3; k.star -= dt; }
   if (k.ram > 0){ top = Math.max(top, MAX * 1.32); k.ram -= dt; }
@@ -7599,7 +7736,7 @@ function stepKart(k, dt){
   // progress
   let dIdx = ni - k.idx; if (dIdx > N/2) dIdx -= N; if (dIdx < -N/2) dIdx += N;
   k.prog += dIdx; k.idx = ni;
-  if (GRINDS.length && !k.grind && state === .race.) grindTry(k);
+  if (GRINDS.length && !k.grind && state === 'race') grindTry(k);
   const lap = Math.floor(k.prog / N) + 1;
   if (lap > k.lap && !battle){
     k.lap = lap;
@@ -7620,7 +7757,7 @@ function stepKart(k, dt){
 
   // height: follow the road over hills, fly off ramps and crests, stick to banked walls, glide over gaps
   const sf = surf(k.pos, k.idx), gap = !!GP[sf.i], g = gap ? -1e4 : sf.pos.y, GRAV = k.glide ? 10 : 40; k.sf = sf;
-  if (k.grind){ k.y = k.grindY; k.vy = 0; k.air = false; k.glide = false; }
+  if (k.grind){ if (Number.isFinite(k.grindY)) k.y = k.grindY; k.vy = 0; k.air = false; k.glide = false; }
   else if (!gap && (Math.abs(sf.bank) > 0.12 || LP[sf.i])){ if (k.air) land(k); k.y = g; k.vy = 0; }
   else {
     const yp = k.y + k.vy * dt - 0.5 * GRAV * dt * dt;
@@ -7659,6 +7796,9 @@ function stepKart(k, dt){
   if (gap && k.y < sf.pos.y - 9) respawn(k);
   if (sf.anti !== k.wasAnti){ k.wasAnti = sf.anti; if (k.isPlayer && sf.anti){ toast(LP[sf.i] ? '🎢 Loop-de-loop!' : '🌀 Anti-gravity!'); beep(500, .3, 'sine', .07, 2); } }
 
+  // the same safety net for the kart itself: a broken height falls back to the road, a broken position respawns
+  if (!Number.isFinite(k.y)) k.y = sf.pos.y;
+  if (!Number.isFinite(k.pos.x + k.pos.z)){ k.grind = null; respawn(k); return; }
   kartVisual(k, dt, sf, steer, off, spdF);
 }
 // visuals: orient the kart to the road surface (or its flight path). Online clients also use this to draw the other karts
@@ -7667,7 +7807,9 @@ function kartVisual(k, dt, sf, steer, off, spdF){
   const f2 = fwd(k.heading), fa = f2.x * tans[sf.i].x + f2.z * tans[sf.i].z, fc = f2.x * nors[sf.i].x + f2.z * nors[sf.i].z;
   let F = sf.T.clone().multiplyScalar(fa).addScaledVector(sf.D, fc).normalize(), Uv = sf.U;
   k.camF = F.clone(); k.camU = Uv.clone();
-  k.wp = k.air ? new THREE.Vector3(sf.pos.x, k.y, sf.pos.z) : sf.pos.clone();
+  const onRail = !!(k.grind || k.railing);   // grinding: drawn on the rail, sitting level on it, not on the road below
+  k.wp = onRail ? new THREE.Vector3(k.pos.x, k.y, k.pos.z) : k.air ? new THREE.Vector3(sf.pos.x, k.y, sf.pos.z) : sf.pos.clone();
+  if (onRail){ F = fwd(k.heading); Uv = UPV; k.camF = F.clone(); k.camU = UPV.clone(); }
   if (k.air){ F = F.multiplyScalar(Math.max(10, Math.abs(k.speed))).addScaledVector(UPV, k.vy * (k.glide ? 0.2 : 0.45) - (k.pitch || 0) * 0.5 * Math.max(10, Math.abs(k.speed))).normalize(); Uv = UPV; }
   // glider unfolds in the air and folds away on landing
   const gl = m.glider; m.gOpen += ((k.glide ? 1 : 0) - m.gOpen) * Math.min(1, (k.glide ? 7 : 10) * dt);
@@ -7707,7 +7849,7 @@ function collisions(dt){
   // boost pads
   for (const p of pads) for (const k of karts){
     let di = k.idx - p.idx; if (di > N/2) di -= N; if (di < -N/2) di += N;
-    if (Math.abs(di) <= 3 && Math.abs(k.pos.clone().sub(pts[k.idx]).dot(nors[k.idx]) - p.lat) < 4){
+    if (Math.abs(di) <= 3 && !k.air && !k.grind && Math.abs((k.wp?.y ?? k.y ?? 0) - P3[p.idx].y) < 3 && Math.abs(k.pos.clone().sub(pts[k.idx]).dot(nors[k.idx]) - p.lat) < 4){
       if (k.boost < 0.5 && k.isPlayer) sfx('boost', k);
       k.padT = raceTime;
       k.boost = Math.max(k.boost, 0.9);
@@ -7751,11 +7893,12 @@ function collisions(dt){
     const k = karts.find(o => !(o.ghost > 0) && o.pos.distanceTo(c.mesh.position.clone().setY(0)) < 2.4 && (o.wp?.y ?? 0) < (P3[o.idx]?.y ?? 0) + 4 && sameDeck(o, c.mesh));
     if (!k) continue;
     c.mesh.visible = false; c.respawn = c.once ? 1e9 : battle?.type === 'coin' ? 7 : 14; k.coins++;
+    if (!battle) k.cspd = Math.min(COIN_MAX, (k.cspd || 0) + 1);
     k.boost = Math.max(k.boost, 0.12);
     if (k.isPlayer){
       addCoins(1);
       beep(1320, .06, 'square', .05); setTimeout(() => beep(1760, .09, 'square', .05), 60);
-      $('coinhud').textContent = `🪙 ${player.coins}`;
+      coinHud();
     }
   }
   // boxes
@@ -8176,6 +8319,8 @@ function camFollow(k, cam, cs, rearKey, dt){
     const ahead = pathPoint(ks, rear ? -10 : 6);
     lookT.lerp(ahead.p.clone().addScaledVector(ahead.d, lat).addScaledVector(ahead.u, 1.6), lw);
   }
+  // a broken number (NaN) must never get stuck in the camera (that blanks the screen for good): start again from the kart
+  if (![cs.pos, cs.look, cs.up].every(v => Number.isFinite(v.x + v.y + v.z)) && Number.isFinite(target.x + target.y + target.z)){ cs.pos.copy(target); cs.look.copy(lookT); cs.up.copy(UPV); }
   if (rear !== cs.rear){ cs.rear = rear; cs.pos.copy(target); cs.look.copy(lookT); if (cs === cs1) $('rearview').classList.toggle('on', rear); }
   cs.pos.lerp(target, 1 - Math.pow(lw ? 0.002 + (1e-4 - 0.002) * lw : 0.002, dt));
   // never below the deck: keep at least 2 m on the road's side of the point the camera is following
@@ -8389,7 +8534,7 @@ function ghostSave(t){
   ghostsLocal[key] = g;
   const ks = Object.keys(ghostsLocal); while (ks.length > 40) delete ghostsLocal[ks.shift()];   // keep the save small
   try { localStorage.setItem('pgp-ghosts', JSON.stringify(ghostsLocal)); } catch (e) {}
-  if (sharing() && !DBG.used && !MAP.custom) fetch(`${FB}/ghosts/${fbKey(key)}/${me().id}.json?print=silent`, {method:'PUT', body:JSON.stringify({...g, name:me().name})}).catch(() => {});
+  if (sharing() && !DBG.used && !MAP.custom) fb(`ghosts/${fbKey(key)}/${me().id}`, {method:'PUT', body:{...g, name:me().name}});
 }
 // a see-through copy of a kart, tinted icy blue
 function ghostMesh(ch, build, label){
@@ -9195,6 +9340,7 @@ async function commPublish(t){
   }
   toast('🌍 Publishing…');
   const pid = commPid(t), had = !!t.pub;
+  if (FB_KEY) await onlinePlayer();
   const ok = await fb(`community/${pid}`, {method:'PATCH', body:{code:edCode(t), by:me().name, aid:me().id, ts:{'.sv':'timestamp'}}});
   if (!ok){
     const rules = /rules/i.test(fbErr);
@@ -9225,10 +9371,12 @@ async function commUnpublish(pid){
 async function commLike(e){
   if (e.mine) return toast('You can’t like your own track 😉');
   e.liked = !e.liked; e.likes += e.liked ? 1 : -1; commRender(); blip.move();
+  if (FB_KEY) await onlinePlayer();
   await fb(`community/${e.pid}/likes/${fbKey(me().id)}`, e.liked ? {method:'PUT', body:true} : {method:'DELETE'});
 }
 async function commCupDone(rank, pts){
   if (!sharing()) return;
+  if (FB_KEY) await onlinePlayer();
   const path = `commcup/${weekKey()}/${fbKey(me().id)}`, old = await fb(path);
   if (old && (old.rank < rank || (old.rank === rank && (old.pts || 0) >= pts))) return;
   fb(path, {method:'PUT', body:{name:me().name, rank, pts, char:ROSTER[playerChoice].id, ts:{'.sv':'timestamp'}}});
@@ -9383,6 +9531,28 @@ function gfxApply(){
   sun.castShadow = m === 'high' || (m === 'auto' && GFX.lvl < 2);
   if (typeof gRenderer !== 'undefined') gRenderer.setPixelRatio(Math.min(d, m === 'low' || IS_TOUCH ? 1.5 : 2));
   resize();
+}
+// ----- black screen recovery: if the browser takes the graphics away (low memory, the app was in the background a long
+// time, a driver hiccup) wait for them to come back, rebuild the track and step the quality down so it doesn't happen again
+{
+  const GL = {lost:0, timer:0}, box = document.createElement('div');
+  box.id = 'glLost'; box.className = 'hidden';
+  box.innerHTML = '<b>🎨 Graphics reset…</b><span>One moment, your race is paused.</span><button class="btn go" id="glReload">🔄 Reload the game</button>';
+  document.body.appendChild(box);
+  $('glReload').onclick = () => location.reload();   // everything worth keeping is already saved
+  canvas.addEventListener('webglcontextlost', e => {
+    e.preventDefault();   // tells the browser we want the graphics back
+    GL.lost++; box.classList.remove('hidden', 'stuck');
+    if (state === 'race' && !paused && !NET.racing) pauseGame();
+    clearTimeout(GL.timer); GL.timer = setTimeout(() => box.classList.add('stuck'), 5000);   // not back after 5 s: offer a reload
+  });
+  canvas.addEventListener('webglcontextrestored', () => {
+    clearTimeout(GL.timer); box.classList.add('hidden');
+    if ((OPTS.gfx || 'auto') === 'auto') GFX.lvl = Math.min(3, GFX.lvl + 1);
+    if (GL.lost >= 2 && OPTS.gfx !== 'low'){ OPTS.gfx = 'low'; saveOpts(); setTimeout(() => toast('🔋 Graphics set to Battery saver to keep the game stable'), 400); }
+    gfxApply();
+    if (state === 'menu' && MAP) buildWorld(MAP);   // in a race three.js uploads everything again by itself
+  });
 }
 function gfxTick(){
   if ((OPTS.gfx || 'auto') !== 'auto' || state !== 'race' || paused || document.hidden){ GFX.t0 = 0; return; }
@@ -9619,6 +9789,12 @@ addEventListener('gamepaddisconnected', () => { if (![...(navigator.getGamepads?
   addEventListener('pointerup', () => { drag = null; });
   canvas.addEventListener('wheel', e => { if (!FC.on) return; e.preventDefault(); fmul = THREE.MathUtils.clamp(fmul * (e.deltaY > 0 ? 0.8 : 1.25), 0.1, 10); }, {passive:false});
   A.fcam = () => fcOpen(+$('dbgMap').value);
+  // the Firebase rules for this version (every track gets its own fastest possible time)
+  A.rules = async () => {
+    const txt = fbRules();
+    try { await navigator.clipboard.writeText(txt); toast(FB_KEY ? "🔐 Rules copied: paste them in Firebase → Realtime Database → Rules" : "🔐 Rules copied, but set FB_KEY in the game first or it can’t write with them"); }
+    catch (e){ const w = open("", "_blank"); if (w){ w.document.title = "WIDR Turbo database rules"; const p = w.document.createElement("pre"); p.textContent = txt; w.document.body.appendChild(p); } else console.log(txt); }
+  };
   A.fcamHere = () => fcOpen(null);
   el.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (b) A[b.dataset.a]?.(); });
   $('dbgTs').oninput = () => { DBG.ts = TS[+$('dbgTs').value]; $('dbgTsV').textContent = DBG.ts + '×'; };
