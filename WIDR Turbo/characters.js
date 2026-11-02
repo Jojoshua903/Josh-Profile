@@ -363,7 +363,7 @@ export const CHARS = [
      for (let i = 0; i < 4; i++) ws.push(mk(wisps, S(0.13 - i*0.02, 8, 6), M(0x2a1f3f, {transparent:true, opacity:0.7}), Math.cos(i*1.6)*0.45, i*0.18, Math.sin(i*1.6)*0.45));
      return [t => { wisps.rotation.y = t*1.2; ws.forEach((w, i) => w.position.y = ((t*0.4 + i*0.25) % 1)*0.8); blob.scale.y = 0.9 + Math.sin(t*3)*0.04; }];
    }},
-  {id:'robin', name:'Robin', title:'Big Crybaby', color:0xb388ff, scale:1.22,
+  {id:'robin', name:'Robin', title:'Pokémon Master', color:0xb388ff, scale:1.22,
    desc:'A big, goofy kid who cries at everything. But push him too far and you’ll meet the most overpowered fighter on the track.',
    mods:[-1,-1,0,2,0], cd:15, ability:{name:'Tantrum', icon:'😭', desc:'In the top 3 he just cries, leaving slippery puddles behind. In 4th or worse his secret power awakens: huge, invincible and blasting everyone nearby.'},
    build:{body:'bathtub', wheels:'monster', paint:0xb388ff, accent:0xffffff},
