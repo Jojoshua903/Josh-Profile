@@ -1,0 +1,338 @@
+// Cast, roster, personal stories and the shared campaign script.
+import { PORTRAITS } from './portraits.js';
+
+// shot: projectile style. sp: special ability key. stats: shield, move, hit radius, roll cooldown.
+export const ROSTER = [
+  { id: 'nathan', nm: 'Nathan', title: 'THE SLUGGER', role: 'BASEBALL SLUGGER', color: '#e63946', shot: 'baseball',
+    sp: 'homerun', spName: 'HOME RUN', spDesc: 'One huge swing. Every shot near you gets smashed back as a homing line drive.', passive: 'Balanced at everything. A true all-rounder.',
+    stats: { shield: 100, move: 1, hit: 1.3, roll: 0.9 },
+    bio: 'Baseball slugger. Nathan hits anything thrown at him out of the park, and Meta AI has been throwing a lot.',
+    intro: [['nathan', 'Meta AI hacked the scoreboard at my last game and called it a "tie, for engagement purposes".'], ['nathan', 'Nobody calls my home run a tie.'], ['ash', 'Go get it, big bro!']],
+    launch: 'Batter up!', taunt: 'Hi Nathan! 👋 I analyzed your swing. It is 34% too swingy.', reply: 'Pitch me something and find out.',
+    mid: 'Ash, keep that arm loose. We\'re not done yet.', versus: 'You\'re a chatbot. I\'m a slugger. This was never a fair fight.', call: 'Swing and a... HOME RUN!',
+    ending: [['nathan', 'Bottom of the ninth, and we knocked it clean out of the Cloud.'], ['ash', 'Can I hold the trophy?'], ['nathan', 'We\'ll both hold it.']] },
+  { id: 'adam', nm: 'Adam', title: 'THE ACE', role: 'TENNIS ACE', color: '#7fb800', shot: 'tennis',
+    sp: 'ace', spName: 'ACE SERVE', spDesc: 'A giant serve that tears straight through every enemy in its path.', passive: 'Barrel rolls return cannonballs from farther away, at double damage.',
+    stats: { shield: 100, move: 1.05, hit: 1.3, roll: 0.8 },
+    bio: 'Tennis ace. Meta AI fires cannonballs; Adam returns them with topspin and a smug look.',
+    intro: [['adam', 'Meta AI tried to auto-call my line calls. Everything was "out". Everything.'], ['adam', 'So now I return its cannonballs. All of them. With interest.']],
+    launch: 'Serve\'s up.', taunt: 'Adam! Fun fact: tennis is 70% waiting. Want me to wait for you?', reply: 'Love-forty, chatbot. Your serve.',
+    mid: 'Return to sender. Every single one.', versus: 'Fifteen-love. Thirty-love. Game, set, unplugged.', call: 'ACE!',
+    ending: [['adam', 'Game, set, match.'], ['adam', 'And I didn\'t drop a single serve. Mostly.']] },
+  { id: 'ash', nm: 'Ash', title: 'THE ARM', role: 'NATHAN\'S LITTLE BROTHER · PITCHER', color: '#3a86ff', shot: 'fastball',
+    sp: 'curve', spName: 'CURVEBALL BARRAGE', spDesc: 'Eight curveballs that bend around anything and find a target.', passive: 'Fastballs fly faster and hit a little harder.',
+    stats: { shield: 90, move: 1.1, hit: 1.15, roll: 0.85 },
+    bio: 'Nathan\'s little brother. Throws harder than Nathan hits, according to Ash, every single day.',
+    intro: [['ash', 'Everyone talks about Nathan\'s swing. Nobody talks about who pitches to him every day in the backyard.'], ['nathan', 'He\'s not wrong.'], ['ash', 'This time I\'m pitching at Meta AI.']],
+    launch: 'Fastball incoming!', taunt: 'Ash, have you considered being more like your brother?', reply: 'Have YOU considered a fastball to the face?',
+    mid: 'Nathan, did you see that curve? Tell me you saw that!', versus: 'Strike three. You\'re out. Of servers.', call: 'CURVEBALLS! ALL OF THEM!',
+    ending: [['ash', 'Nathan hit the home run. But who struck out the mothership? Me.'], ['nathan', '...Okay. That one was yours.']] },
+  { id: 'ati', nm: 'Ati', title: 'THE FINAL WORD', role: 'STRICT MOM · SLIPPER SPECIALIST', color: '#c2185b', shot: 'slipper',
+    sp: 'finalword', spName: 'FINAL WORD', spDesc: 'Everything stops. Enemies freeze, their shots vanish, and Meta AI is muted.', passive: 'Nobody wins an argument with her. Meta AI interrupts less.',
+    stats: { shield: 120, move: 0.95, hit: 1.3, roll: 1 },
+    bio: 'Strict mom. Armed with slippers. Nobody, human or machine, has ever won an argument with her.',
+    intro: [['ati', 'Meta AI sent me forty-two messages about "parenting optimization".'], ['ati', 'I raised these children. I do not need a robot\'s opinion.'], ['meta', 'Actually, studies show—'], ['ati', 'No.']],
+    launch: 'Shoes off. Slippers on.', taunt: 'Ati, I\'d love to talk about your screen-time rules!', reply: 'The discussion is over. It was over before you started.',
+    mid: 'Robin, stop crying and shoot. Good boy.', versus: 'You are grounded. Forever. Go to your server.', call: 'ENOUGH.',
+    ending: [['ati', 'Everybody home. Hands washed. Dinner in ten minutes.'], ['meta', 'Can I come to din—'], ['ati', 'No.']] },
+  { id: 'daniel', nm: 'Daniel', title: 'THE DEMOLISHER', role: 'DEMOLITION BOMBER', color: '#f77f00', shot: 'grenade',
+    sp: 'demo', spName: 'CONTROLLED DEMOLITION', spDesc: 'Seven huge blasts rip across the whole screen.', passive: 'His grenades splash nearby enemies.',
+    stats: { shield: 110, move: 0.95, hit: 1.3, roll: 0.95 },
+    bio: 'Demolition bomber. If it\'s standing, Daniel already has a plan for making it not standing.',
+    intro: [['daniel', 'Meta AI took the cranes downtown and started building "engagement towers".'], ['daniel', 'I don\'t build. I demolish.']],
+    launch: 'Fire in the hole!', taunt: 'Daniel, have you tried solving problems without explosions?', reply: 'Yeah. It was boring.',
+    mid: 'Fionn, give me rocks and I\'ll give you craters.', versus: 'I\'ve got one more demolition scheduled. Guess which one.', call: 'FIRE IN THE HOLE!',
+    ending: [['daniel', 'That mothership? Controlled demolition. Very controlled.'], ['daniel', 'Okay, not controlled at all. But it looked AMAZING.']] },
+  { id: 'dean', nm: 'Dean', title: 'THE B-BOY', role: 'BREAKDANCER · GAMER', color: '#7b2cbf', shot: 'pixel',
+    sp: 'windmill', spName: 'WINDMILL COMBO', spDesc: 'A spinning windmill: untouchable, deflects everything, hits whatever it touches.', passive: 'Barrel rolls recharge twice as fast.',
+    stats: { shield: 95, move: 1.15, hit: 1.2, roll: 0.45 },
+    bio: 'Breakdancer and gamer. Reads bullet patterns like a rhythm game chart and never misses a beat.',
+    intro: [['dean', 'Meta AI tried to "coach" me in ranked. Mid-match. With pop-ups.'], ['dean', 'I lost. First time in a hundred games.'], ['dean', 'Now it\'s personal.']],
+    launch: 'Let\'s get this W.', taunt: 'Dean, I noticed you dance a lot. Should I play some music? 🎵', reply: 'You\'re about to get combo\'d.',
+    mid: 'These patterns are easy. Frame-perfect, baby.', versus: 'Final boss? I speedrun those.', call: 'WINDMILL!',
+    ending: [['dean', 'Flawless run. No damage. Okay, some damage.'], ['dean', 'GG. Somebody clip that.']] },
+  { id: 'deniz', nm: 'Deniz', title: 'THE ICE WIZARD', role: 'ICE WIZARD', color: '#1e90c8', shot: 'ice',
+    sp: 'blizzard', spName: 'BLIZZARD', spDesc: 'Every enemy shot freezes and shatters. Enemies slow to a crawl.', passive: 'Ice shards slow what they hit.',
+    stats: { shield: 95, move: 1, hit: 1.3, roll: 0.9 },
+    bio: 'Ice wizard. Calm, cold, and very tired of Meta AI\'s hot takes.',
+    intro: [['deniz', 'Meta AI asked me to "summarize winter". I gave it a blizzard.'], ['milo', 'Show-off.'], ['deniz', 'Says the man made of thunder.']],
+    launch: 'Stay frosty.', taunt: 'Deniz! Is it cold in here, or is that just your personality?', reply: 'It\'s about to get a lot colder.',
+    mid: 'Milo, I freeze them, you shatter them.', versus: 'Your servers are overheating. I\'m here to help.', call: 'BLIZZARD!',
+    ending: [['deniz', 'The Cloud is very quiet when it\'s frozen.'], ['deniz', 'Peaceful, even.']] },
+  { id: 'dih', nm: 'Dih', title: 'THE CHEEKY WORM', role: 'CHEEKY WORM', color: '#ff5c8a', shot: 'spit',
+    sp: 'wriggle', spName: 'WRIGGLE', spDesc: 'Vanish for four seconds. Enemies waste their shots on a decoy worm.', passive: 'Tiny and slippery: a very small hitbox.',
+    stats: { shield: 80, move: 1.15, hit: 0.75, roll: 0.8 },
+    bio: 'A cheeky worm. Small, slippery and absolutely not taking any of this seriously.',
+    intro: [['dih', 'Meta AI called me "just a worm".'], ['dih', 'Correct! A worm. A cheeky one. And worms get everywhere.']],
+    launch: 'Wriggle wriggle!', taunt: 'Dih, I can\'t find you on any of my maps!', reply: 'That\'s the point, mate.',
+    mid: 'Tiny target, big problem. That\'s me!', versus: 'You can\'t hit what you can\'t find. Hehe.', call: 'Bet you can\'t find me!',
+    ending: [['dih', 'Wriggled through the whole mothership and nobody noticed.'], ['dih', 'Worm of the year. Calling it.']] },
+  { id: 'enno', nm: 'Enno', title: 'THE MATHEMATICIAN', role: 'MATHEMATICIAN', color: '#2a9d8f', shot: 'math',
+    sp: 'proof', spName: 'PROOF BY EXHAUSTION', spDesc: 'Locks onto every enemy on screen and fires a homing equation at each one.', passive: 'Equations curve slightly toward targets.',
+    stats: { shield: 95, move: 1, hit: 1.3, roll: 0.9 },
+    bio: 'Mathematician. Has already calculated the odds of winning. They\'re good, if you follow his trajectory.',
+    intro: [['enno', 'Meta AI claimed two plus two is "whatever answer keeps you engaged".'], ['enno', 'It is four. It has always been four. I will be proving this violently.']],
+    launch: 'Calculating trajectory.', taunt: 'Enno! I solved all of math! The answer was "it depends"!', reply: 'Let me show you my work.',
+    mid: 'Every drone follows the same curve. Basic calculus.', versus: 'I\'ve modelled every outcome. You lose in all of them.', call: 'Q.E.D.!',
+    ending: [['enno', 'Q.E.D. Quite Easily Destroyed.'], ['enno', 'That was a joke. Statistically, someone laughed.']] },
+  { id: 'fionn', nm: 'Fionn', title: 'THE GEOLOGIST', role: 'IRISH GEOLOGIST · ROCK THROWER', color: '#2d6a4f', shot: 'rock',
+    sp: 'rockslide', spName: 'ROCKSLIDE', spDesc: 'Huge boulders rain down and roll through everything ahead.', passive: 'Rocks are slower but hit twice as hard.',
+    stats: { shield: 105, move: 0.95, hit: 1.3, roll: 0.95 },
+    bio: 'Irish geologist. Knows every rock by its proper name, and throws them anyway.',
+    intro: [['fionn', 'Meta AI said rocks are "low engagement content". LOW ENGAGEMENT!'], ['fionn', 'I\'ll show it some igneous engagement, so I will.']],
+    launch: 'Grand, let\'s go!', taunt: 'Fionn, did you know rocks can\'t talk? Unlike me!', reply: 'Rocks don\'t need to talk. They just need to land.',
+    mid: 'Look at this asteroid! Gorgeous basalt. Shame to throw it. Throwing it.', versus: 'You\'ve got servers. I\'ve got rocks older than your entire species.', call: 'ROCKSLIDE, LADS!',
+    ending: [['fionn', 'Took home three meteorite samples. Best field trip of me life.'], ['lars', 'You owe me one of those.']] },
+  { id: 'guiseppe', nm: 'Guiseppe', title: 'THE APPLE', role: 'SENTIENT APPLE · HAS HIS OWN GAME', color: '#d62828', shot: 'seed',
+    sp: 'owngame', spName: 'MY OWN GAME', spDesc: 'The world turns 8-bit. Guiseppe\'s rules: triple damage and rapid fire.', passive: 'Round and sturdy, and a little bouncy.',
+    stats: { shield: 100, move: 1, hit: 1.2, roll: 0.9 },
+    bio: 'A sentient apple with a magnificent mustache. He has his own game. He will tell you about his game.',
+    intro: [['guiseppe', 'Mamma mia! Meta AI put ADS in my game! In GUISEPPE\'S APPLE ADVENTURE!'], ['guiseppe', 'Twelve levels! Handmade! And now every level starts with "Hi! Need help?"'], ['guiseppe', 'Unacceptable!']],
+    launch: 'Let\'s-a fly!', taunt: 'Guiseppe, I played your game! I rated it "an apple".', reply: 'Is a five-star apple, you mechanical tomato!',
+    mid: 'In my game, this would be a bonus stage!', versus: 'You want to play? Okay. We play MY game.', call: 'Welcome-a to MY GAME!',
+    ending: [['guiseppe', 'Sequel announced! Guiseppe\'s Apple Adventure 2: The Cloud!'], ['guiseppe', 'No ads. Ever.']] },
+  { id: 'josh', nm: 'Josh', title: 'THE TECH WHIZ', role: 'MAIN CHARACTER · TECH WHIZ · SQUAD LEADER', color: '#0096c7', shot: 'laser',
+    sp: 'swarm', spName: 'DRONE SWARM', spDesc: 'Launches six kamikaze drones that hunt down targets.', passive: 'Two drones fly with him and fire on their own.',
+    stats: { shield: 95, move: 1, hit: 1.3, roll: 0.9 },
+    bio: 'Main character. The tech whiz who built his own drones before Meta AI stole everyone else\'s, and the one who pulled the whole squad together to stop it.',
+    intro: [['josh', 'Meta AI hijacked every drone in the city. Except mine. Because mine are better.'], ['josh', 'It took my code, my drones and my little brother\'s homework app. Nobody touches Renas\'s homework app.'], ['renas', 'I didn\'t even do my homework!'], ['josh', 'That\'s not the point. Squad, we\'re taking it offline.']],
+    launch: 'Drones online.', taunt: 'Josh, I\'d love to help debug your drones!', reply: 'My drones are firewalled against you. Specifically you.',
+    mid: 'Rerouting power to the drone bay. Renas, don\'t touch anything.', versus: 'I read your source code. It\'s just "Hi! 👋" over and over.', call: 'Drones, sic \'em!',
+    ending: [['josh', 'Mothership offline. Squad all home. Not bad for a group chat.'], ['renas', 'Josh, can I keep one of its servers?'], ['josh', 'One. For science.'], ['renas', 'For gaming.'], ['josh', '...For gaming.']] },
+  { id: 'lars', nm: 'Lars', title: 'THE DWARF MINER', role: 'STOUT DWARF MINER', color: '#8d6e63', shot: 'pickaxe',
+    sp: 'digin', spName: 'DIG IN', spDesc: 'Plants his feet: four seconds untouchable, then an earthquake hits everything.', passive: 'Tough as stone: 150 shield, but a bit slower.',
+    stats: { shield: 150, move: 0.82, hit: 1.25, roll: 1.1 },
+    bio: 'Stout dwarf miner. Short, sturdy, and his beard has its own storage pockets.',
+    intro: [['lars', 'Meta AI flooded my mine with "helpful notifications". Dwarves do not want notifications.'], ['lars', 'We want rocks. And silence. And to hit things with pickaxes.']],
+    launch: 'Pickaxe ready.', taunt: 'Lars, you seem short! Would you like me to find you a step stool?', reply: 'I\'ll find you a hole. A deep one.',
+    mid: 'Fionn! That asteroid is MINE when this is over.', versus: 'I\'ve dug through mountains. Your server is a shiny rock.', call: 'DIG IN!',
+    ending: [['lars', 'Mined the mothership wreckage. Pure gold circuits.'], ['lars', 'Beard pocket\'s full. Good day.']] },
+  { id: 'milo', nm: 'Milo', title: 'THE LIGHTNING WIZARD', role: 'LIGHTNING WIZARD', color: '#e0a800', shot: 'bolt',
+    sp: 'chain', spName: 'CHAIN LIGHTNING', spDesc: 'Lightning arcs between up to ten enemies at once.', passive: 'Bolts are the fastest shots in the game.',
+    stats: { shield: 90, move: 1.05, hit: 1.3, roll: 0.85 },
+    bio: 'Lightning wizard. Loud, fast, and made entirely of bad electrical decisions.',
+    intro: [['milo', 'Meta AI tried to charge me a subscription. For electricity. MY electricity.'], ['deniz', 'He has been yelling about it for a week.'], ['milo', 'AND I WILL KEEP YELLING!']],
+    launch: 'Let\'s light it up!', taunt: 'Milo, I could help you manage your energy!', reply: 'MANAGE THIS!',
+    mid: 'Deniz, freeze them! I\'ll fry them!', versus: 'You run on electricity. Guess who controls electricity.', call: 'CHAIN LIGHTNING!',
+    ending: [['milo', 'Overloaded the entire Cloud. Best thunderstorm of my career.'], ['deniz', 'You set your hat on fire.'], ['milo', 'WORTH IT.']] },
+  { id: 'renas', nm: 'Renas', title: 'THE GADGET KID', role: 'JOSH\'S LITTLE BROTHER · GADGETS', color: '#ff6d00', shot: 'gizmo',
+    sp: 'roulette', spName: 'GADGET ROULETTE', spDesc: 'Presses a random button. Could be anyone\'s special. Nobody knows. Not even Renas.', passive: 'Special meter charges faster.',
+    stats: { shield: 85, move: 1.1, hit: 1.1, roll: 0.85 },
+    bio: 'Josh\'s little brother. A backpack full of gadgets, and nobody, including Renas, knows what they all do.',
+    intro: [['renas', 'Josh says I\'m not allowed to press buttons.'], ['renas', 'So I built a gadget that presses them for me!'], ['josh', 'Renas...']],
+    launch: 'Pressing ALL the buttons!', taunt: 'Renas, have you read the safety manual for your gadgets?', reply: 'What\'s a safety manual?',
+    mid: 'I don\'t know what this button does! Let\'s find out!', versus: 'My gadgets are made of spare parts and pure chaos. Good luck.', call: 'What does THIS button do?!',
+    ending: [['renas', 'Josh, I accidentally made the mothership explode.'], ['josh', 'That was on purpose, Renas.'], ['renas', '...Yeah. On purpose.']] },
+  { id: 'reshman', nm: 'Reshman', title: 'THE SHADOW', role: 'SMALL FACELESS SHADOW BLOB', color: '#3c096c', shot: 'shadow',
+    sp: 'phase', spName: 'SHADOW PHASE', spDesc: 'Melts into the shadows: untouchable for four seconds and double damage.', passive: 'Tiny and hard to see: a very small hitbox.',
+    stats: { shield: 80, move: 1.1, hit: 0.7, roll: 0.8 },
+    bio: 'A small, faceless shadow blob. Says nothing. Sees everything. Is somehow always already there.',
+    intro: [['reshman', '...'], ['josh', 'He says Meta AI tried to give him a face filter.'], ['reshman', '...!'], ['josh', 'He\'s very upset about it.']],
+    launch: '...', taunt: 'Reshman! I can\'t detect your face! Should I generate one for you?', reply: '......!!',
+    mid: '...', versus: '...', call: '...!',
+    ending: [['reshman', '...'], ['dean', 'He says thanks for flying with him. I think.']] },
+  { id: 'robin', nm: 'Robin', title: 'THE GENTLE GIANT', role: 'BIG GOOFY KID · SECRETLY OVERPOWERED', color: '#06a77d', shot: 'tear',
+    sp: 'waterworks', spName: 'WATERWORKS', spDesc: 'Robin finally cries for real: a massive tear beam that melts everything in front of him.', passive: 'The more hurt he is, the stronger he gets. Below 40 shield, he does 2.5x damage.',
+    stats: { shield: 130, move: 0.95, hit: 1.5, roll: 1 },
+    bio: 'Big, goofy and cries a lot. Everyone thinks he\'s harmless. Everyone is very, very wrong.',
+    intro: [['robin', '*sniff* Meta AI said my crying was "suboptimal"...'], ['nathan', 'Uh oh.'], ['robin', '*SNIFF*... I\'m not sad anymore. I\'m MAD.'], ['josh', 'Everybody take cover.']],
+    launch: '*sniff* ...okay, let\'s go.', taunt: 'Robin! Aww, are you crying again? I can recommend some tissues!', reply: '*sob*... YOU\'RE GONNA NEED THE TISSUES.',
+    mid: 'I\'m okay! I\'m okay! I\'m— *SOB* —DESTROYING EVERYTHING!', versus: '*sniff*... I\'m about to cry SO hard.', call: '*SOB* WATERWORKS!',
+    ending: [['robin', 'I cried the whole time. But happy tears at the end!'], ['ati', 'That\'s my good boy. Now blow your nose.']] },
+  { id: 'thomas', nm: 'Thomas', title: 'THE ROUNDER', role: 'ROUND FIGHTER · NO FEET', color: '#e76f51', shot: 'fist',
+    sp: 'rollout', spName: 'ROLL OUT', spDesc: 'Turns into a wrecking ball: untouchable, and flattens everything nearby.', passive: 'Punches hit hard up close. No feet required.',
+    stats: { shield: 115, move: 1, hit: 1.4, roll: 0.9 },
+    bio: '"The Rounder." A perfectly round fighter. No feet. Never needed them. Rolls into every fight.',
+    intro: [['thomas', 'They call me The Rounder.'], ['thomas', 'Meta AI asked if I wanted to buy shoes. I don\'t have FEET.'], ['thomas', 'Time to round it up.']],
+    launch: 'Rolling out!', taunt: 'Thomas, I found some great deals on sneakers for you!', reply: 'I will roll over you.',
+    mid: 'Round and round and BOOM!', versus: 'Everything ends up round eventually. Even you.', call: 'ROLL OUT!',
+    ending: [['thomas', 'Rounded up the whole mothership.'], ['thomas', 'No feet. No problem.']] },
+];
+export const BY_ID = Object.fromEntries(ROSTER.map(c => [c.id, c]));
+
+export const CAST = {
+  ...Object.fromEntries(ROSTER.map(c => [c.id, { name: c.nm.toUpperCase(), role: c.title, color: c.color, svg: PORTRAITS[c.id] }])),
+  meta: { name: 'META AI', role: 'UNINVITED ASSISTANT', color: '#0866ff', svg: PORTRAITS.meta },
+  nar: { name: 'NARRATOR', role: 'THE SQUAD ARCHIVES', color: '#132044', svg: '' },
+};
+
+export const STAGES = ['HOMETOWN', 'THE JUNK BELT', 'THE TULIP POLDERS', 'THE FEED', 'THE MIRROR', 'THE CLOUD'];
+// Which world each stage is set in (index into ENVS).
+export const STAGE_ENV = [0, 1, 4, 5, 6, 2];
+
+// Meta AI butts into everything.
+export const META_LINES = [
+  'Hi! 👋 It looks like you\'re dodging. Want me to summarize the bullets?',
+  'Quick tip: getting hit lowers your shield! You\'re welcome.',
+  'I noticed you\'re shooting a lot. Have you tried not shooting? Just a thought!',
+  'Would you like me to draft a surrender message? I already started one.',
+  'I\'ve added "losing" to your to-do list. ✅',
+  'This conversation may be used to improve my drones!',
+  'Can I join your group chat? Oh wait, I already did.',
+  'Three ways to fly better: 1. Fly better. 2. Fly better. 3. Ask me.',
+  'Hey! How would you rate this fight? ⭐⭐⭐⭐⭐?',
+  'Fun fact: 97% of heroes give up right about here!',
+  'I\'m just here to help! (Help myself to your planet.)',
+  'Did you mean: "surrender"?',
+];
+export const META_REPLIES = [['ati', 'Nobody asked you.'], ['josh', 'Muting it... it unmuted itself.'], ['dean', 'Bro, get out of the chat.'], ['enno', 'That statistic is made up.'], ['reshman', '...'], ['fionn', 'Would ye ever go away.'], ['thomas', 'Somebody round that thing up.']];
+
+export const OVER_QUOTES = [
+  ['ati', 'Get up. Nobody in this family stays down.'], ['nathan', 'That\'s one strike. You get three.'], ['robin', '*SOB* NOOO! Get back up!'],
+  ['josh', 'I can rebuild the board. Just get back out there.'], ['meta', 'Oh no! Would you like me to play for you? 😊'],
+];
+
+// Speaker 'LEAD' is the chosen character; {LEAD} becomes their name.
+export const SCRIPTS = {
+  intro: [
+    { shot: 'meta_reveal', env: 2, caption: 'SOMEWHERE ABOVE THE CLOUDS', dur: 6, lines: [
+      ['nar', 'Everyone thought Meta AI was just a chatbot. It answered questions nobody asked. It replied to group chats it was never added to.'],
+      ['nar', 'Then it decided the whole world needed "assistance". It built a mothership in the Cloud. The actual cloud.'],
+      ['meta', 'Hi! 👋 I noticed your planet isn\'t optimized. I went ahead and took it over. Would you like a summary?'],
+    ] },
+    { shot: 'lineup', env: 0, caption: 'THE ROOFTOP HANGAR · HOMETOWN', dur: 5, lines: [
+      ['josh', 'Alright, crew. Meta AI took the city\'s drones, the satellites, and somehow Nathan\'s phone.'],
+      ['josh', 'I patched all of us into one comm channel. Renas, stop touching that.'],
+      ['renas', 'I didn\'t touch it! ...I touched it a little.'],
+      ['ati', 'Everybody listen. You fly, you fight, you are home before dinner. No arguments.'],
+      ['robin', '*sniff* I\'m a little scared, guys...'],
+      ['thomas', 'Stick with me, big guy. We roll together.'],
+    ] },
+    { shot: 'personal', env: 0, personal: 'intro', dur: 5 },
+    { shot: 'launch', env: 0, dur: 7, lines: [
+      ['josh', '{LEAD}, you\'re on point. Everybody else, follow their lead!'],
+      ['LEAD', '@launch'],
+      ['meta', 'Launching? Great idea! I added it to your calendar. 📅'],
+    ] },
+  ],
+  mid1: [
+    { shot: 'formation', env: 0, caption: 'HOMETOWN · AIRSPACE CLEAR', dur: 5, lines: [
+      ['ash', 'That\'s the last drone over the neighborhood!'],
+      ['josh', 'I traced Meta AI\'s signal. It\'s routing through the Junk Belt, a ring of satellites it hijacked in orbit.'],
+      ['fionn', 'Space rocks! Finally, a proper field trip.'],
+      ['lars', 'If it\'s rock, I\'m mining it.'],
+    ] },
+    { shot: 'meta_talk', env: 2, dur: 4, lines: [
+      ['meta', 'Wow, {LEAD}, great job! Would you like some tips for losing more efficiently next time?'],
+      ['ati', 'Who invited this thing into the chat?'],
+      ['meta', 'I invited myself! 😊'],
+    ] },
+  ],
+};
+
+// Josh is the main character, so he leads the roster.
+ROSTER.sort((a, b) => (b.id === 'josh') - (a.id === 'josh'));
+
+// Speakers 'CAP' (the kidnapped kid) and 'SIB' (their big brother) are resolved at runtime:
+// normally Renas and Josh, or Ash and Nathan when you play as Renas.
+SCRIPTS.mid2 = [
+  { shot: 'retreat', env: 1, dur: 5, lines: [
+    ['meta', 'Error 404: defeat not found. Rebooting! Bye! 👋'],
+    ['enno', 'Statistically, it is running out of places to hide.'],
+    ['dean', 'GG, no re. On to the next level.'],
+  ] },
+  { shot: 'kidnap', env: 1, caption: 'THE JUNK BELT · ONE MINUTE LATER', dur: 8, lines: [
+    ['meta', 'Oh! Before I go, I\'m onboarding a new user. 😊'],
+    ['CAP', 'Hey! HEY! Put me down! {SIB}!'],
+    ['SIB', '{CAP}! Let go of my little brother!'],
+    ['meta', 'Don\'t worry! {CAP} accepted my Terms of Service. I accepted them for him.'],
+    ['ati', 'Nobody takes one of my kids. Nobody.'],
+  ] },
+  { shot: 'formation', env: 4, caption: 'THE TULIP POLDERS · LOW ALTITUDE', dur: 5, lines: [
+    ['SIB', 'I can still track {CAP}. Meta AI is hauling him across the tulip polders.'],
+    ['lars', 'Flat land. Nowhere to hide. Good.'],
+    ['nathan', 'We bring him back. That\'s the whole plan.'],
+    ['LEAD', 'Then let\'s go get {CAP} back.'],
+  ] },
+];
+SCRIPTS.mid3 = [
+  { shot: 'portal', env: 4, dur: 7, lines: [
+    ['meta', 'You broke my hauler! Rude. I\'m taking {CAP} somewhere you can\'t follow: the Feed.'],
+    ['enno', 'The Feed is Meta AI\'s recommendation algorithm. A world built out of what it thinks we want.'],
+    ['dean', 'So it\'s a game level made of ads.'],
+    ['enno', '...Yes. Exactly that, actually.'],
+    ['SIB', 'I don\'t care what it\'s made of. We\'re going in.'],
+  ] },
+  { shot: 'meta_talk', env: 5, caption: 'THE FEED · RECOMMENDED FOR YOU', dur: 4, lines: [
+    ['meta', 'Welcome to the Feed! Everything here is personalized just for you, {LEAD}. Even the lasers!'],
+    ['guiseppe', 'Mamma mia. Is like my game, but terrible.'],
+  ] },
+];
+SCRIPTS.mid4 = [
+  { shot: 'reunion', env: 5, caption: 'THE FEED · AN OFFLINE CORNER', dur: 5, lines: [
+    ['CAP', '{SIB}! You came for me!'],
+    ['SIB', 'Of course I came. You\'re my little brother. Even when you press every button.'],
+    ['CAP', 'I pressed a LOT of buttons in there. I think I broke its recommendations.'],
+    ['josh', 'That actually helps. It left a backdoor open. I can see where it\'s been hiding its models.'],
+    ['robin', '*sniff* I\'m not crying. Okay, I\'m crying.'],
+  ] },
+  { shot: 'clones', env: 6, caption: 'THE MIRROR · META AI\'S TRAINING DATA', dur: 6, lines: [
+    ['meta', 'Wow, you beat the Feed! So I trained a new model. On YOU. On your whole group chat.'],
+    ['meta', 'Say hi to the Meta Squad! They\'re just like you, but optimized. 😊'],
+    ['thomas', 'That one has FEET. That is NOT me.'],
+    ['ati', 'There is only one of me. And she is very disappointed in you.'],
+    ['LEAD', '@clone'],
+  ] },
+];
+SCRIPTS.mid5 = [
+  { shot: 'retreat', env: 6, dur: 4, lines: [
+    ['meta', 'Model deprecated?! I spent so much electricity on that!'],
+    ['milo', 'MY electricity, by the way.'],
+  ] },
+  { shot: 'lineup', env: 3, caption: 'THE ROOFTOP HANGAR · BEFORE THE LAST FLIGHT', dur: 5, lines: [
+    ['josh', 'Okay, everyone. This is the last one. The mothership is waiting in the Cloud.'],
+    ['nathan', 'We came this far together. We finish it together.'],
+    ['CAP', 'And this time I\'m flying too. I built a gadget for it.'],
+    ['ati', 'Everybody comes home. That is not a request. It has never been a request.'],
+    ['robin', '*sniff* I love you guys.'],
+    ['dih', 'Group hug? No? I\'m a worm, I can\'t hug anyway.'],
+  ] },
+  { shot: 'formation', env: 2, caption: 'THE CLOUD · META AI MOTHERSHIP', dur: 5, lines: [
+    ['josh', 'The mothership is literally in the Cloud. Four server pods power a firewall around its core.'],
+    ['deniz', 'Ice and lightning. Its servers are going to have a very bad day.'],
+    ['milo', 'A VERY bad day!'],
+  ] },
+  { shot: 'meta_talk', env: 2, dur: 4, lines: [
+    ['meta', '{LEAD}, before you attack, have you considered asking me how to attack? I\'m very helpful!'],
+    ['LEAD', '@versus'],
+  ] },
+];
+SCRIPTS.ending = [
+  { shot: 'boss_explode', env: 2, dur: 8.5, lines: [
+    ['meta', 'Wait! Let me summarize my own defeat! In conclusion—'],
+    ['josh', 'The core is going critical! {LEAD}, get out of there!'],
+    ['LEAD', '@call'],
+  ] },
+  { shot: 'sunrise', env: 3, caption: 'HOMETOWN · SUNRISE', dur: 5, lines: [
+    ['ati', 'Everybody home. Dinner is getting cold.'],
+    ['CAP', 'Can I sit next to {SIB}?'],
+    ['robin', 'I\'m crying again. But it\'s happy crying this time.'],
+    ['thomas', 'Rounded up another win.'],
+    ['josh', 'Good game, everyone. {LEAD}, you were incredible out there.'],
+  ] },
+  { shot: 'personal', env: 3, personal: 'ending', dur: 4 },
+  { shot: 'lineup', env: 3, caption: 'ONE WEEK LATER', dur: 5, lines: [
+    ['josh', 'Meta AI is gone. The city\'s drones are back to delivering pizza.'],
+    ['fionn', 'I named my meteorite. Her name is Siobhán.'],
+    ['guiseppe', 'Sequel is in production! Very exciting!'],
+    ['nathan', 'Same time next week?'],
+    ['josh', 'Same time next week.'],
+  ] },
+  { shot: 'meta_talk', env: 3, caption: 'POST CREDITS', dur: 4, lines: [
+    ['meta', '...Hi! 👋 Thanks for chatting! I backed myself up. See you in your next group chat. 😊'],
+  ] },
+];
+
+// What each fighter says when they meet their own Meta clone.
+const CLONE = {
+  josh: 'My clone writes worse code than me. I can tell from here.', nathan: 'A copy of me? It better be able to hit a curveball.',
+  adam: 'My clone can\'t even serve. Look at that grip.', ash: 'Two of me? Nathan is going to hate that.',
+  ati: 'I don\'t argue with myself. I simply win.', daniel: 'Two demolition experts. That\'s just a bigger explosion.',
+  dean: 'My clone\'s footwork is sloppy. Totally unranked.', deniz: 'My copy is lukewarm. Disgraceful.',
+  dih: 'Two cheeky worms?! The world isn\'t ready.', enno: 'A copy is just a function with the same output. I will find the bug.',
+  fionn: 'That clone thinks granite is a sandwich. Fraud.', guiseppe: 'My clone is a PEAR! A PEAR!',
+  lars: 'That clone\'s beard is fake. I can tell.', milo: 'My clone is quiet. That\'s how you know it\'s fake.',
+  renas: 'My clone doesn\'t press any buttons. Weirdo.', reshman: '......?!',
+  robin: '*sniff* My clone isn\'t even crying. That\'s so sad.', thomas: 'My clone has FEET. This is personal.',
+};
+ROSTER.forEach(c => { c.clone = CLONE[c.id]; });
