@@ -17,6 +17,11 @@ export const UNLOCKS = {
   dih: { key: 'downs', goal: 5, text: 'Get shot down 5 times. He finds it hilarious.' },
   reshman: { key: 'hardClears', goal: 1, text: 'Clear any stage on Hard. He was watching. He always is.' },
   ati: { key: 'wins', goal: 1, text: 'Beat Meta AI. Then she has the final word.' },
+  yassin: { key: 'clear3', goal: 1, text: 'Clear Stage 3, the Tulip Polders. He\'ll karate-chop his way in.' },
+  niffo: { key: 'tokensFound', goal: 5, text: 'Find 5 hidden Meta tokens. Niffo only deals in rare curios.' },
+  femi: { key: 'runBest', goal: 1500, text: 'Fly 1,500 m in Obstacle Run. She only plays with fast people.' },
+  bastiaan: { key: 'clear4', goal: 1, text: 'Clear Stage 4, the Feed. Somebody has to grade the algorithm.' },
+  marloes: { key: 'evilAdam', goal: 1, text: 'Defeat Evil Adam in The Mirror before he flies off. He was guarding her crystals.' },
 };
 export const isUnlocked = (P, id) => STARTERS.includes(id) || (P.chars || []).includes(id);
 export function progressOf(P, id) {

@@ -339,6 +339,113 @@ const BUILD = {
     jet(r, 0xffbe0b, -0.95, 0.2, 0.4);
     Object.assign(r.userData, { arms: [], gloves: gl, ball, round: true }); return r;
   },
+  yassin() {
+    const r = humanoid({ skin: 0xc68642, shirt: 0xf8f9fa, pants: 0xf8f9fa, shoes: 0xc68642, hair: 'short', hairCol: 0x111111, longSleeve: true, face: { angry: true, brow: 0x111111 } });
+    const u = r.userData;
+    add(u.torso, B(0.1, 0.98, 0.53), 0xdee2e6, -0.1, 0, 0, 0, 0, 0.55); add(u.torso, B(0.1, 0.98, 0.53), 0xdee2e6, 0.1, 0, 0, 0, 0, -0.55);
+    add(u.torso, B(0.97, 0.12, 0.55), 0x111111, 0, -0.4, 0); add(u.torso, B(0.1, 0.36, 0.06), 0x111111, 0.18, -0.6, -0.28, 0, 0, 0.25);
+    add(u.head, T(0.46, 0.06, 6, 24), 0xe63946, 0, 0.14, 0, Math.PI / 2);
+    for (const sx of [-1, 1]) add(u.head, B(0.07, 0.45, 0.03), 0xe63946, sx * 0.08, -0.05, 0.5, 0.3, 0, sx * 0.25);
+    add(u.arms[0].userData.hand, B(0.55, 0.24, 0.26), 0xb5532c, 0, 0.12, -0.05);
+    u.arms[1].rotation.x = 1.3; u.rest = [0.15, 1.3];
+    hoverboard(r, 0xe63946); return r;
+  },
+  niffo() {
+    const r = humanoid({ skin: 0x8b5a2b, shirt: 0x2f5566, pants: 0x6b4423, shoes: 0x5a3a1e, hair: 'none', scale: 0.85, wide: 1.15, noFace: true });
+    const u = r.userData;
+    add(u.head, S(0.3, 12, 10), 0xf1dcb5, 0, -0.12, -0.3, 0, 0, 0, [1.2, 0.8, 0.8]);
+    add(u.head, S(0.08, 8, 6), 0x1b1b1b, 0, -0.02, -0.55);
+    for (const sx of [-1, 1]) {
+      add(u.head, S(0.07, 8, 6), 0x111111, sx * 0.17, 0.12, -0.4);
+      add(u.head, S(0.12, 8, 6), 0x6b4423, sx * 0.4, 0.2, 0.02, 0, 0, 0, [1, 1, 0.5]);
+      for (let k = 0; k < 2; k++) add(u.head, B(0.3, 0.012, 0.012), 0xfff6e4, sx * 0.32, -0.08 - k * 0.06, -0.48, 0, 0, sx * (0.1 - k * 0.15));
+    }
+    add(u.head, C(0.55, 0.62, 0.08, 18), 0xe9c46a, 0, 0.34, 0); add(u.head, C(0.36, 0.42, 0.26, 16), 0xe9c46a, 0, 0.5, 0);
+    add(u.body, K(0.22, 1.3, 8), 0x7a4a24, 0, 0.6, 0.6, -2.2);
+    add(u.torso, B(0.5, 0.45, 0.25), 0x8b5e34, 0.3, -0.15, 0.36); add(u.torso, B(0.06, 0.9, 0.04), 0x5a3a1e, 0, 0.1, 0.27, 0, 0, 0.6);
+    const rod = grp(u.arms[1].userData.hand, 0, 0, 0); rod.rotation.x = 0.5;
+    add(rod, C(0.03, 0.05, 2.2, 6), 0x6b4423, 0, 1.0, 0); add(rod, C(0.006, 0.006, 1.0, 3), 0xffffff, 0, 1.6, -0.25, 0.5);
+    add(u.arms[0].userData.hand, S(0.18, 10, 8), 0x9fd8ff, 0, -0.1, -0.05, 0, 0, 0, [0.5, 0.6, 1.4]);
+    u.arms[1].rotation.x = 0.5; u.rest = [0.15, 0.5];
+    hoverboard(r, 0x48cae4); return r;
+  },
+  femi() {
+    const r = humanoid({ skin: 0xe9b872, shirt: 0xff7b00, pants: 0x111111, shoes: 0xffffff, hair: 'none', scale: 0.9, noFace: true });
+    const u = r.userData;
+    add(u.head, S(0.26, 12, 10), 0xfff1dc, 0, -0.12, -0.32, 0, 0, 0, [1, 0.75, 1.1]);
+    add(u.head, S(0.07, 8, 6), 0x1b1b1b, 0, -0.06, -0.62);
+    for (const sx of [-1, 1]) {
+      add(u.head, S(0.08, 8, 6), 0x2b1d14, sx * 0.17, 0.1, -0.4); add(u.head, S(0.03, 6, 4), 0xffffff, sx * 0.15, 0.13, -0.47);
+      const ear = add(u.head, K(0.24, 0.95, 4), 0xe9b872, sx * 0.3, 0.7, 0, 0, 0, sx * -0.35, [1, 1, 0.4]);
+      add(ear, K(0.15, 0.7, 4), 0xffc8dd, 0, -0.05, -0.05, 0, 0, 0, [1, 1, 0.4]);
+    }
+    add(u.head, T(0.46, 0.05, 6, 24), 0xffffff, 0, 0.14, 0, Math.PI / 2);
+    const num = symbolSprite('23', '#ff7b00', 0.6); num.position.set(0, 0.05, 0.3); u.torso.add(num);
+    add(u.torso, B(0.94, 0.08, 0.52), 0xffffff, 0, 0.42, 0);
+    add(u.body, S(0.3, 10, 8), 0xe9b872, 0, 0.7, 0.75, 0.9, 0, 0, [0.8, 2, 0.8]); add(u.body, S(0.2, 8, 6), 0xfff1dc, 0, 0.3, 1.25);
+    const ball = add(u.arms[0].userData.hand, S(0.3, 14, 10), 0xff7b00, 0, -0.1, -0.05);
+    add(ball, T(0.3, 0.015, 4, 20), 0x1b1b1b, 0, 0, 0, Math.PI / 2); add(ball, T(0.3, 0.015, 4, 20), 0x1b1b1b);
+    u.ball = ball;
+    hoverboard(r, 0xff7b00); return r;
+  },
+  bastiaan() {
+    const r = humanoid({ skin: 0xffdbc4, shirt: 0x6b5b45, pants: 0x3d405b, shoes: 0x2b1d14, hair: 'short', hairCol: 0x9a8f80, longSleeve: true, scale: 1.05 });
+    const u = r.userData;
+    glasses(u.head, 0x3d2b1f);
+    add(u.head, B(0.3, 0.06, 0.06), 0x9a8f80, 0, -0.08, -0.45);
+    add(u.torso, B(0.34, 0.7, 0.02), 0xfff6e4, 0, 0.1, -0.26); add(u.torso, B(0.1, 0.55, 0.03), 0x9d0208, 0, 0.05, -0.27);
+    u.arms.forEach(a => add(a, B(0.27, 0.14, 0.29), 0x4a3f30, 0, -0.55, 0));
+    add(u.head, C(0.42, 0.42, 0.18, 16), 0x111111, 0, 0.38, 0); add(u.head, B(0.95, 0.05, 0.95), 0x111111, 0, 0.5, 0, 0, Math.PI / 4);
+    add(u.head, C(0.012, 0.012, 0.4, 3), 0xffd23f, 0.3, 0.32, 0.3); add(u.head, S(0.05, 6, 4), 0xffd23f, 0.3, 0.12, 0.3);
+    add(u.arms[0].userData.hand, B(0.45, 0.6, 0.12), 0x1d3557, 0, 0.05, -0.05);
+    add(u.arms[1].userData.hand, C(0.04, 0.04, 0.32, 6), 0xffffff, 0, 0.12, 0);
+    hoverboard(r, 0x6b5b45); return r;
+  },
+  marloes() {
+    const r = new THREE.Group(), body = grp(r, 0, 0, 0);
+    const fur = M(0xc9b8e8, { roughness: 0.4, metalness: 0.3 }), gem = glow(0xb388ff, 0.9), gold = M(0xffd23f, { metalness: 0.7, roughness: 0.3 });
+    add(body, S(0.6, 16, 12), fur, 0, 0, 0, 0, 0, 0, [0.8, 0.75, 1.4]);
+    add(body, C(0.16, 0.24, 0.8, 10), fur, 0, 0.45, -0.65, -0.6);
+    const head = grp(body, 0, 0.85, -0.95);
+    add(head, S(0.28, 14, 10), fur, 0, 0, 0, 0, 0, 0, [0.9, 0.9, 1.2]);
+    add(head, S(0.16, 10, 8), 0xe8defa, 0, -0.08, -0.28, 0, 0, 0, [1, 0.8, 1.2]);
+    add(head, S(0.05, 6, 4), 0x3d2064, 0, -0.04, -0.46);
+    add(head, new THREE.OctahedronGeometry(0.07, 0), gem, 0, 0.2, -0.2);
+    for (const sx of [-1, 1]) {
+      add(head, S(0.06, 8, 6), 0x1a1230, sx * 0.16, 0.06, -0.2);
+      add(head, S(0.1, 8, 6), fur, sx * 0.3, 0.16, 0.05, 0, 0, sx * -0.6, [0.5, 1.4, 0.4]);
+      add(head, new THREE.OctahedronGeometry(0.12, 0), gem, sx * 0.14, 0.4, 0.02, 0, 0, sx * -0.3, [0.6, 2.6, 0.6]);
+      add(head, new THREE.OctahedronGeometry(0.08, 0), gem, sx * 0.3, 0.55, 0.02, 0, 0, sx * -0.9, [0.6, 2.2, 0.6]);
+    }
+    for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      const leg = grp(body, x * 0.25, -0.3, z * 0.45);
+      add(leg, C(0.07, 0.06, 0.8, 6), fur, 0, -0.4, 0); add(leg, C(0.08, 0.09, 0.12, 6), gold, 0, -0.82, 0);
+    }
+    const gems = [0, 1, 2, 3].map(i => add(body, new THREE.OctahedronGeometry(0.1, 0), gem, 0, 0.45, -0.3 + i * 0.25, 0, 0, 0, [1, 1.6, 1]));
+    add(body, S(0.1, 8, 6), 0xffffff, 0, 0.15, 0.85);
+    magicDisc(r, 0xb388ff);
+    Object.assign(r.userData, { arms: [], bob: true, gems }); return r;
+  },
+  evil_adam() {
+    const r = humanoid({ skin: 0xb08a5a, shirt: 0x1b1b1b, pants: 0x3d0a0a, shoes: 0x111111, hair: 'messy', hairCol: 0x1b1b1b, face: { angry: true, eye: 0xff1f1f, brow: 0x111111 } });
+    const u = r.userData;
+    add(u.head, T(0.46, 0.06, 6, 24), 0x9d0208, 0, 0.2, 0, Math.PI / 2);
+    for (const sx of [-1, 1]) { add(u.head, K(0.08, 0.35, 6), 0x2b0000, sx * 0.25, 0.52, -0.05, 0, 0, sx * -0.4); add(u.head, S(0.05, 6, 4), glow(0xff1f1f), sx * 0.16, 0.06, -0.47); }
+    add(u.torso, B(0.94, 0.12, 0.52), 0x9d0208, 0, 0.35, 0);
+    u.wings = [-1, 1].map(sx => {
+      const w = grp(u.torso, sx * 0.3, 0.2, 0.3);
+      add(w, C(0.04, 0.04, 1.6, 4), 0x111111, sx * 0.75, 0.25, 0, 0, 0, sx * 1.2);
+      for (let i = 0; i < 3; i++) add(w, K(0.32, 1.3, 3), 0x3a0d22, sx * (0.45 + i * 0.4), -0.15 - i * 0.12 + 0.2, 0, 0, 0, sx * (2.0 - i * 0.3), [1, 1, 0.15]);
+      return w;
+    });
+    const rk = grp(u.arms[1].userData.hand, 0, 0, 0); rk.rotation.x = 0.3;
+    add(rk, C(0.05, 0.05, 0.55, 8), 0x1b1b1b, 0, 0.3, 0);
+    add(rk, T(0.33, 0.045, 6, 22), 0x9d0208, 0, 0.92, 0, 0, Math.PI / 2, 0, [1, 1.25, 1]);
+    add(rk, new THREE.CircleGeometry(0.31, 20), glow(0x3a0d22, 0.7), 0, 0.92, 0, 0, Math.PI / 2, 0, [1, 1.25, 1]);
+    add(u.arms[0].userData.hand, S(0.14), glow(0xff1f1f, 0.9), 0, -0.05, 0);
+    add(r, S(2.0, 14, 10), glow(0x9d0208, 0.08));
+    return r;
+  },
   meta() {
     const r = new THREE.Group();
     const geo = T(1.2, 0.34, 18, 64), col = [], c = new THREE.Color(), p = geo.attributes.position;
@@ -387,4 +494,7 @@ export function animateCharacter(r, t, dt, speed = 1) {
   if (u.gloves) u.gloves.forEach((g, i) => { g.position.y = Math.sin(t * 3 + i * 2) * 0.15; g.position.z = -0.3 - Math.max(0, u.throwT) * 0.8 * (i ? 1 : 0); });
   if (u.meta) { u.ring.rotation.z = t * 0.8; u.dots.forEach((d, i) => d.position.y = Math.max(0, Math.sin(t * 6 - i)) * 0.12); u.bub.position.y = 1.4 + Math.sin(t * 2) * 0.1; }
   if (u.disc) u.disc.rotation.y = t * 1.5;
+  if (u.wings) u.wings.forEach((w, i) => w.rotation.y = (i ? -1 : 1) * Math.sin(t * 7) * 0.45);
+  if (u.gems) u.gems.forEach((g, i) => { g.rotation.y = t * 2 + i; g.position.y = 0.45 + Math.sin(t * 3 + i) * 0.04; });
+  if (u.ball) u.ball.rotation.x = t * 5;
 }

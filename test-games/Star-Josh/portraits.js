@@ -63,4 +63,24 @@ export const PORTRAITS = {
     <path d="M32 44 L42 47 M60 44 L50 47" stroke="#132044" stroke-width="2.5"/><path d="M38 66 Q46 72 54 66" stroke="#132044" stroke-width="2.5" fill="none"/>
     <rect x="62" y="10" width="32" height="20" rx="8" fill="#fff" stroke="#0866ff" stroke-width="2"/><circle cx="70" cy="20" r="2.5" fill="#0866ff"/><circle cx="78" cy="20" r="2.5" fill="#0866ff"/><circle cx="86" cy="20" r="2.5" fill="#0866ff"/>`),
   nar: '',
+  yassin: human({ bg: '#ffe0d6', skin: '#c68642', shirt: '#f8f9fa', hairCol: '#111', mouth: 'grin', brows: angry, collar: '<path d="M38 76 L50 96 L62 76" stroke="#ced4da" stroke-width="4" fill="none"/>', extra: '<rect x="23" y="37" width="54" height="6" rx="3" fill="#e63946"/><path d="M76 40 L92 34 M76 42 L90 48" stroke="#e63946" stroke-width="4" stroke-linecap="round"/><rect x="68" y="80" width="28" height="12" fill="#b5532c" stroke="#7a3518" stroke-width="1.5"/><path d="M82 80 L82 92" stroke="#7a3518" stroke-width="1.5"/>' }),
+  niffo: W('#d6eef5', `<path d="M14 100 Q18 76 50 74 Q82 76 86 100Z" fill="#2f5566"/><path d="M76 100 L94 46" stroke="#6b4423" stroke-width="3"/>
+    <circle cx="25" cy="40" r="8" fill="#6b4423"/><circle cx="75" cy="40" r="8" fill="#6b4423"/>
+    <ellipse cx="50" cy="54" rx="28" ry="26" fill="#8b5a2b"/><ellipse cx="50" cy="64" rx="17" ry="12" fill="#f1dcb5"/>
+    ${eyes(50, 11)}<ellipse cx="50" cy="58" rx="5" ry="3.5" fill="#1b1b1b"/><path d="M45 66 Q50 70 55 66" stroke="#5a1e2a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    <path d="M36 62 L20 58 M36 65 L20 66 M64 62 L80 58 M64 65 L80 66" stroke="#fff6e4" stroke-width="1.4"/>
+    <path d="M18 38 Q50 28 82 38 L78 34 Q50 24 22 34Z" fill="#c9a24a"/><path d="M28 34 Q50 8 72 34Z" fill="#e9c46a"/>`),
+  femi: W('#ffe9d6', `<path d="M14 100 Q18 76 50 74 Q82 76 86 100Z" fill="#ff7b00"/><text x="50" y="96" text-anchor="middle" font-size="13" font-weight="900" fill="#fff" font-family="Futura,Trebuchet MS,sans-serif">23</text>
+    <path d="M28 42 L10 4 L46 30Z" fill="#e9b872"/><path d="M29 36 L17 12 L40 30Z" fill="#ffc8dd"/><path d="M72 42 L90 4 L54 30Z" fill="#e9b872"/><path d="M71 36 L83 12 L60 30Z" fill="#ffc8dd"/>
+    <ellipse cx="50" cy="54" rx="26" ry="24" fill="#e9b872"/><path d="M30 56 Q50 90 70 56 Q60 64 50 64 Q40 64 30 56Z" fill="#fff1dc"/>
+    <rect x="24" y="36" width="52" height="5" rx="2.5" fill="#fff"/>
+    ${eyes(50, 11, '#2b1d14', 4.5)}<ellipse cx="50" cy="65" rx="4" ry="3" fill="#1b1b1b"/><path d="M44 71 Q51 75 58 69" stroke="#5a1e2a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    <circle cx="86" cy="84" r="11" fill="#ff7b00"/><path d="M75 84 L97 84 M86 73 L86 95" stroke="#1b1b1b" stroke-width="1.5"/>`),
+  bastiaan: human({ bg: '#efe6d8', skin: '#ffdbc4', shirt: '#6b5b45', hairCol: '#9a8f80', mouth: 'flat', collar: '<path d="M40 76 L50 90 L60 76Z" fill="#fff6e4"/><path d="M48 80 L52 80 L54 98 L50 100 L46 98Z" fill="#9d0208"/>', extra: glassesSvg('#3d2b1f') + '<path d="M40 61 Q50 57 60 61 Q55 64 50 62 Q45 64 40 61Z" fill="#9a8f80"/><path d="M12 30 L50 18 L88 30 L50 42Z" fill="#111"/><rect x="34" y="30" width="32" height="9" fill="#111"/><path d="M80 30 L82 50" stroke="#ffd23f" stroke-width="2"/><circle cx="82" cy="52" r="3" fill="#ffd23f"/>' }),
+  marloes: W('#efe6ff', `<path d="M38 30 L30 8 L24 18 M31 12 L20 10" stroke="#b388ff" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M62 30 L70 8 L76 18 M69 12 L80 10" stroke="#b388ff" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <ellipse cx="23" cy="40" rx="11" ry="5" fill="#c9b8e8" transform="rotate(-25 23 40)"/><ellipse cx="77" cy="40" rx="11" ry="5" fill="#c9b8e8" transform="rotate(25 77 40)"/>
+    <path d="M14 100 Q20 78 50 76 Q80 78 86 100Z" fill="#c9b8e8"/><path d="M30 46 Q30 28 50 28 Q70 28 70 46 Q70 70 56 84 Q50 88 44 84 Q30 70 30 46Z" fill="#c9b8e8"/>
+    <path d="M40 70 Q50 92 60 70Z" fill="#e8defa"/>${eyes(52, 10, '#1a1230', 4.5)}<ellipse cx="50" cy="78" rx="4" ry="3" fill="#3d2064"/>
+    <path d="M50 33 L54 39 L50 45 L46 39Z" fill="#b388ff"/><path d="M28 92 L34 86 L40 92 L34 98Z M60 92 L66 86 L72 92 L66 98Z" fill="#b388ff"/>`),
+  evil_adam: human({ bg: '#2b0d1a', skin: '#b08a5a', shirt: '#1b1b1b', hair: 'messy', hairCol: '#1b1b1b', mouth: 'smirk', brows: angry, collar: '<path d="M30 72 Q6 52 2 18 Q14 32 20 28 Q22 42 30 46Z" fill="#4a0e2a"/><path d="M70 72 Q94 52 98 18 Q86 32 80 28 Q78 42 70 46Z" fill="#4a0e2a"/>', extra: '<rect x="24" y="36" width="52" height="6" rx="3" fill="#9d0208"/><path d="M32 30 L28 12 L40 26Z M68 30 L72 12 L60 26Z" fill="#2b0000"/><circle cx="39" cy="52" r="4" fill="#ff1f1f"/><circle cx="61" cy="52" r="4" fill="#ff1f1f"/>' }),
 };

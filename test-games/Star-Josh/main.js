@@ -5,6 +5,7 @@ import { makeCharacter, animateCharacter, symbolSprite } from './characters.js';
 import { CAST, SCRIPTS, STAGES, ROSTER, BY_ID, META_LINES, META_REPLIES, OVER_QUOTES, STAGE_ENV } from './story.js';
 import { PORTRAITS } from './portraits.js';
 import { isUnlocked, progressOf, checkUnlocks, UNLOCKS } from './unlocks.js';
+import { stageRank, betterRank, RANK_COLOR, MODIFIERS, modMul, SKINS, dailyChallenge, todayKey, TROPHIES, trophyProgress, checkTrophies, summary, TOKENS_PER_STAGE } from './replay.js';
 import { makeShots } from './shots.js';
 import { makeMoreShots, glitchify } from './shots2.js';
 import { Sound } from './audio.js';
@@ -18,7 +19,7 @@ const ease = t => t < 0 ? 0 : t > 1 ? 1 : t * t * (3 - 2 * t);
 const keys = {}; const k = c => keys[c] ? 1 : 0;
 const clock = new THREE.Clock();
 let mode = 'home', T = 0, backdrop = null, dmgV = 0;
-let PL = BY_ID.josh, selIdx = 0, pendingStage = null;
+let PL = BY_ID.josh, selIdx = 0, pendingStage = null, pendingMode = null;
 
 /* ---------- Comms ---------- */
 const comm = { el: $('comm'), q: [], cur: null, t: 0 };
@@ -103,7 +104,7 @@ function endCine() {
 const player = { g: null, power: 1 };
 function setPlayerModel(id) {
   if (player.g) scene.remove(player.g);
-  player.g = makeCharacter(id); player.g.visible = false; scene.add(player.g);
+  player.g = applySkin(makeCharacter(id), id); player.g.visible = false; scene.add(player.g);
 }
 const bounds = () => W.env.bounds;
 function resetPlayer() {
@@ -119,6 +120,8 @@ function dmgMul() {
   const f = player.fx; let m = 1;
   if (f.pixel > 0) m *= 3; if (f.phase > 0) m *= 2;
   if (PL.id === 'robin' && player.shield < 40) m *= 2.5;
+  if (PL.id === 'yassin') m *= 1.25;
+  if (hasMod('glass')) m *= 2;
   return m;
 }
 
@@ -163,7 +166,7 @@ function choose(i) {
   $('dname').textContent = open ? c.nm.toUpperCase() : '???'; $('dtitle').textContent = c.title; $('dtitle').style.background = open ? c.color : '#132044';
   $('drole').textContent = c.role; $('dbio').textContent = open ? c.bio : 'A mystery fighter. Complete the challenge below to recruit them to the squad.';
   $('dspn').textContent = open ? c.spName : '???'; $('dsp').textContent = open ? c.spDesc : 'Unlock this fighter to see their special.'; $('dpas').textContent = open ? c.passive : '???';
-  $('sts').style.width = (c.stats.shield / 150 * 100) + '%'; $('stv').style.width = (c.stats.move / 1.15 * 100) + '%'; $('stz').style.width = (c.stats.hit / 1.5 * 100) + '%';
+  $('sts').style.width = (c.stats.shield / 150 * 100) + '%'; $('stv').style.width = Math.min(100, c.stats.move / 1.3 * 100) + '%'; $('stz').style.width = (c.stats.hit / 1.5 * 100) + '%';
   const pr = progressOf(P, c.id);
   $('dlock').classList.toggle('hidden', open);
   if (!open && pr) {
@@ -173,7 +176,8 @@ function choose(i) {
   }
   $('go').textContent = open ? `FLY AS ${c.nm.toUpperCase()} ▸` : 'LOCKED';
   $('go').classList.toggle('disabled', !open);
-  cineGroup.clear(); selModel = makeCharacter(c.id); selModel.position.set(0, 20, 0); cineGroup.add(selModel);
+  cineGroup.clear(); selModel = applySkin(makeCharacter(c.id), c.id); selModel.position.set(0, 20, 0); cineGroup.add(selModel);
+  renderSkins(c, open);
   if (!open) selModel.traverse(o => { if (o.isMesh) { if (o.material.blending === THREE.AdditiveBlending) o.visible = false; else o.material = SILHOUETTE; } if (o.isSprite) o.visible = false; });
   explode(V3(0, 20, -1.2), 0.25, 'spark'); Sound.blip();
 }
@@ -203,7 +207,7 @@ function confirmPick() {
   $('select').classList.add('hidden'); cineGroup.clear(); selModel = null;
   $('chippf').innerHTML = PORTRAITS[PL.id]; $('chipname').textContent = PL.nm.toUpperCase(); $('chiptitle').textContent = PL.title;
   $('spname').textContent = PL.spName; P.lastHero = PL.id; persist();
-  if (pendingStage !== null) { Object.assign(G, { score: 0, hits: 0 }); player.power = 1; startStage(pendingStage); } else startGame();
+  if (pendingMode) startMode(pendingMode); else if (pendingStage !== null) { Object.assign(G, { score: 0, hits: 0 }); player.power = 1; startStage(pendingStage); } else startGame();
 }
 
 /* ---------- Flow ---------- */
@@ -214,8 +218,8 @@ function startGame() {
 function startStage(i) {
   ['over', 'end', 'home', 'pause', 'select'].forEach(id => $(id).classList.add('hidden'));
   clearActors(); setEnv(STAGE_ENV[i]);
-  Object.assign(G, { stage: i, t: 0, ei: 0, clearT: -1, outroT: -1, overT: -1, metaT: rnd(18, 26), metaMute: 0 });
-  G.ev = buildStage(i);
+  Object.assign(G, { mode: 'story', daily: null, hpMul: 1, mods: [], scoreMul: 1, dmgTaken: 0, spawned: 0, kills: 0, tokensGot: 0, stage: i, t: 0, ei: 0, clearT: -1, outroT: -1, overT: -1, metaT: rnd(18, 26), metaMute: 0 });
+  G.ev = buildStage(i); scheduleTokens(i);
   G.start = { score: G.score, hits: G.hits, power: player.power };
   resetPlayer(); mode = 'play'; comm.q = []; hideComm();
   $('hud').classList.remove('hidden');
@@ -230,16 +234,22 @@ function stageClear() {
   stat('clear' + (G.stage + 1)); if (S.difficulty === 'hard') stat('hardClears'); bestRun();
   P.unlocked = Math.max(P.unlocked, Math.min(STAGES.length, G.stage + 2)); P.lastStage = Math.min(STAGES.length - 1, G.stage + 1); P.lastHero = PL.id; P.best = Math.max(P.best, G.score); persist();
   G.bullets.forEach(b => actors.remove(b.m)); G.bullets = [];
-  card('STAGE CLEAR', STAGES[G.stage], `SCORE ${G.score} · HITS ${G.hits}`);
+  const rank = stageRank({ dmg: G.dmgTaken, kills: G.kills, spawned: G.spawned, tokens: G.tokensGot });
+  P.ranks = P.ranks || {}; const prevRank = P.ranks[G.stage]; P.ranks[G.stage] = prevRank ? betterRank(rank, prevRank) : rank;
+  if (G.dmgTaken <= 0) stat('flawless');
+  card('STAGE CLEAR', `RANK ${rank}`, `${STAGES[G.stage]} · SCORE ${G.score} · TOKENS ${G.tokensGot}/${TOKENS_PER_STAGE}${prevRank && rank !== prevRank && betterRank(rank, prevRank) === rank ? ' · NEW BEST RANK' : ''}`);
+  checkAll(); persist();
   Sound.music(null); Sound.pickup();
 }
 function gameOver() {
+  if (isArcade()) return showResults(false);
   mode = 'over'; $('hud').classList.add('hidden'); hideComm(); endPixel(); P.best = Math.max(P.best, G.score); persist();
   const [w, q] = pick(OVER_QUOTES.filter(o => o[0] !== PL.id));
   $('overquote').textContent = `"${q}" ${CAST[w].name}`; setTimeout(focusFirst, 0);
   $('over').classList.remove('hidden'); Sound.music('cine');
 }
 function retry() {
+  if (isArcade()) return startMode(G.mode);
   Object.assign(G, { score: G.start.score, hits: G.start.hits }); player.power = G.start.power;
   startStage(G.stage);
 }
@@ -249,6 +259,7 @@ function showEnd() {
   $('endwho').textContent = `HERO  ${PL.nm.toUpperCase()}, ${PL.title}`;
   $('endscore').textContent = `FINAL SCORE  ${String(G.score).padStart(6, '0')}`;
   $('endhits').textContent = `DRONES DOWNED  ${G.hits}`;
+  P.winners = P.winners || {}; P.winners[PL.id] = 1; grantSkin(PL.id, 'gold'); if (S.difficulty === 'hard') stat('hardWins');
   stat('wins'); P.clears++; P.best = Math.max(P.best, G.score); P.lastStage = 0; persist();
   $('endbest').textContent = `BEST EVER  ${String(P.best).padStart(6, '0')}`;
   $('end').classList.remove('hidden'); Sound.music('title'); setTimeout(focusFirst, 0);
@@ -259,12 +270,12 @@ const BGEO = new THREE.SphereGeometry(0.55, 10, 8), BHALO = new THREE.SphereGeom
 const BMAT = new THREE.MeshBasicMaterial({ color: 0xff2d6f }), BHMAT = MD.glow(0x7b5cff, 0.45), BFMAT = new THREE.MeshBasicMaterial({ color: 0x2f5bff });
 function addEnemy(o) {
   const e = Object.assign({ age: 0, hp: 1, r: 2.2, score: 100, hittable: true, fireCd: rnd(1, 2.5), p: V3(), boom: 1.2, slowT: 0 }, o);
-  if (o.kind !== 'rock') e.hp *= DIFF[S.difficulty].hp; e.maxhp = e.hp; if (e.m) actors.add(e.m); G.enemies.push(e); return e;
+  if (o.kind !== 'rock') e.hp *= DIFF[S.difficulty].hp * (G.hpMul || 1); if (COUNTED.includes(o.kind)) G.spawned = (G.spawned || 0) + 1; e.maxhp = e.hp; if (e.m) actors.add(e.m); G.enemies.push(e); return e;
 }
 const aimPoint = () => player.fx.invis > 0 && player.decoy ? player.decoy.position.clone() : ppos().add(V3(player.vx * 0.35, player.vy * 0.35, 0));
 function enemyShot(from, speed = 56, spread = 0, target) {
   if (!target && Math.random() > DIFF[S.difficulty].fire) return;
-  speed *= DIFF[S.difficulty].speed;
+  speed *= DIFF[S.difficulty].speed * (hasMod('turbo') ? 1.3 : 1);
   const d = (target || aimPoint()).sub(from).normalize();
   if (spread) d.applyAxisAngle(V3(0, 1, 0), spread).normalize();
   const m = new THREE.Mesh(BGEO, BMAT); m.add(new THREE.Mesh(BHALO, BHMAT)); m.position.copy(from); actors.add(m);
@@ -513,6 +524,8 @@ function buildStage(i) {
     at(8, () => { say('meta', 'I learned everything from your group chat. Everything.'); say('ati', 'Then you know you are in trouble.'); });
     for (let j = 0; j < 4; j++) at(11 + j * 0.6, () => cloneMinion('hold', -9 + j * 6, mid));
     at(16, () => spawnRing(-4, mid)); at(16.7, () => spawnRing(4, mid + 2));
+    at(17, () => { Sound.alarm(); say('evil_adam', 'Hello, Adam. Miss me?'); say(PL.id === 'adam' ? 'LEAD' : 'adam', 'Oh no. Not HIM. Meta AI dug my evil twin out of the training data.'); say('evil_adam', 'Meta AI gave me wings. I gave it my serve.'); });
+    at(19, () => spawnEvilAdam(true));
     row(19, 'cross', 5, 0.4, () => 0, j => mid - 3 + j * 1.5, { side: -1 });
     sayAt(22, 'thomas', 'That clone of me has FEET. I am FURIOUS.');
     for (let j = 0; j < 5; j++) at(24 + j * 0.5, () => cloneMinion('behind', -8 + j * 4, mid));
@@ -543,6 +556,7 @@ const SHOT = {
   math: { v: 250, d: 1.1, home: 2.5 }, rock: { v: 190, d: 2.2, spin: 'y' }, seed: { v: 300, d: 1 }, laser: { v: 340, d: 1 },
   pickaxe: { v: 220, d: 1.6, spin: 'x' }, bolt: { v: 440, d: 1.1 }, gizmo: { v: 270, d: 1.1, spin: 'y' }, shadow: { v: 280, d: 1.2 },
   tear: { v: 260, d: 0.9 }, fist: { v: 240, d: 1.9, life: 0.5 },
+  chop: { v: 280, d: 1.25 }, fish: { v: 260, d: 1.1, home: 1.5, spin: 'y' }, hoop: { v: 320, d: 1.1, home: 2.2 }, chalk: { v: 300, d: 1, spin: 'x' }, gem: { v: 280, d: 1.1, spin: 'y' },
 };
 function shotMesh(type) {
   const g = new THREE.Group(), A = (geo, mat, sc) => { const m = new THREE.Mesh(geo, mat); if (sc) m.scale.set(...sc); g.add(m); return m; };
@@ -565,6 +579,11 @@ function shotMesh(type) {
     case 'shadow': A(S(0.36), mat(0x10002b)); A(S(0.6), mat(0x9d4edd, 0.35)); break;
     case 'tear': A(S(0.3), mat(0x48cae4, 0.9), [0.8, 0.8, 1.4]); break;
     case 'fist': A(S(0.4), mat(0xd00000)); A(S(0.6), mat(0xffd23f, 0.25)); break;
+    case 'chop': A(gget('chop', () => new THREE.BoxGeometry(0.7, 0.12, 0.5)), mat(0xc68642)); A(gget('choph', () => new THREE.BoxGeometry(1.2, 0.3, 1.0)), mat(0xff4d4d, 0.35)); break;
+    case 'fish': { A(S(0.26), mat(0x9fd8ff), [0.6, 0.8, 1.6]); const t = A(gget('ftail', () => new THREE.ConeGeometry(0.22, 0.4, 4)), mat(0x48cae4)); t.position.z = 0.5; t.rotation.x = -Math.PI / 2; break; }
+    case 'hoop': A(S(0.34), mat(0xff7b00)); A(gget('seam2', () => new THREE.TorusGeometry(0.34, 0.025, 4, 16)), mat(0x1b1b1b)); break;
+    case 'chalk': A(gget('chk', () => new THREE.CylinderGeometry(0.07, 0.07, 0.5, 6)), mat(0xffffff)); A(S(0.3), mat(0xffffff, 0.25)); break;
+    case 'gem': A(gget('oct', () => new THREE.OctahedronGeometry(0.32, 0)), mat(0xb388ff, 0.95), [1, 1.5, 1]); A(S(0.5), mat(0xe0c3ff, 0.25)); break;
     default: A(S(0.3), mat(0xffffff));
   }
   return g;
@@ -674,8 +693,31 @@ const SPECIALS = {
     G.fxo.push({ m, life: 3.2, upd: () => { m.position.set(player.x, player.y + 0.6, -112); m.rotation.x = Math.PI / 2; m.scale.x = m.scale.z = 0.8 + Math.random() * 0.4; } });
   },
   rollout() { player.fx.roll = 2.6; },
+  brickbreak() { [-9, 0, 9].forEach((x, i) => later(i * 0.15, () => { addShot({ type: 'chop', pos: V3(x, player.y, -3), v: V3(0, 0, -170), dmg: 16, life: 2.6, scale: 7, pierce: true }); shake(0.5); })); },
+  bigcatch() {
+    const c = V3(player.x, player.y, -60);
+    const net = new THREE.Mesh(gget('net', () => new THREE.SphereGeometry(7, 12, 8)), new THREE.MeshBasicMaterial({ color: 0xfff6e4, wireframe: true, transparent: true })); net.position.copy(c); actors.add(net);
+    G.fxo.push({ m: net, life: 0.9, max: 0.9, upd: o => { const k = o.life / o.max; o.m.scale.setScalar(0.4 + k * 1.6); o.m.material.opacity = k; o.m.rotation.y += 0.1; } });
+    for (const e of visible()) { if (!['ace', 'gunship', 'core', 'pod'].includes(e.kind) && e.m) { e.m.position.lerp(c, 0.7); e.p.copy(e.m.position); } hitEnemy(e, 10); }
+    later(0.6, () => detonate(c, 14, 10));
+  },
+  buzzer() { homing('hoop', 6, 14); flash(0.2); },
+  popquiz() {
+    for (const e of visible()) {
+      const s = symbolSprite(e.hp <= 12 ? 'F' : 'D', '#e63946', 3); s.position.copy(e.p).add(V3(0, 3, 0)); actors.add(s);
+      G.fxo.push({ m: s, life: 1.2, upd: o => { o.m.position.y += 0.05; } });
+      hitEnemy(e, 12);
+    }
+    flash(0.3); shake(0.6);
+  },
+  prism() {
+    ringFx(ppos(), 0xb388ff, 18); player.inv = Math.max(player.inv, 1.5);
+    G.bullets.forEach(b => { if (!b.friendly && b.m.position.distanceTo(ppos()) < 20) { b.friendly = true; b.m.material = BFMAT; b.v = V3(0, 0, -140); b.dmg = 6; } });
+    homing('gem', 10, 8);
+  },
 };
 function useSpecial() {
+  if (G.mode === 'obstacle') { fxTag('NO SPECIALS IN OBSTACLE RUN'); return; }
   const p = player; if (!p.alive || p.sp < 100 || G.outroT > 0) return;
   p.sp = 0; stat('specials'); SPECIALS[PL.sp](); Sound.nova(); Sound.pickup();
   if (PL.sp !== 'roulette') fxTag(PL.spName + '!');
@@ -695,13 +737,13 @@ function hitEnemy(e, dmg) {
 }
 function killEnemy(e) {
   e.dead = true; explode(e.p.clone(), e.boom); Sound.boom(Math.min(e.boom, 3)); if (e.boom > 2) shake(e.boom * 0.3);
-  G.score += e.score; G.hits++; stat(e.kind === 'rock' ? 'rocks' : 'drones'); bestRun(); player.sp = Math.min(100, player.sp + (PL.id === 'renas' ? 7 : 4));
+  G.score += Math.round(e.score * comboHit() * (G.scoreMul || 1)); G.hits++; if (COUNTED.includes(e.kind)) G.kills = (G.kills || 0) + 1; stat(e.kind === 'rock' ? 'rocks' : 'drones'); bestRun(); player.sp = Math.min(100, player.sp + (PL.id === 'renas' ? 7 : PL.id === 'bastiaan' ? 8 : 4));
   if (e.m) actors.remove(e.m);
   e.onDeath && e.onDeath(e);
 }
 function damagePlayer(d) {
   const p = player; if (p.inv > 0 || !p.alive || untouchable()) return;
-  d *= DIFF[S.difficulty].dmg; p.shield -= d; p.inv = 1; Sound.hurt(); shake(0.7); dmgV = 0.9;
+  d *= DIFF[S.difficulty].dmg * (hasMod('glass') ? 2 : 1) * (PL.id === 'marloes' ? 0.7 : 1); G.dmgTaken = (G.dmgTaken || 0) + d; p.shield -= d; p.inv = 1; Sound.hurt(); shake(0.7); dmgV = 0.9;
   if (!p.lowWarned && p.shield < 35 && p.shield > 0) {
     p.lowWarned = true;
     if (PL.id === 'robin') say('robin', '*sniff*... ow... *SNIFF*... okay. NOW I\'M ANGRY.');
@@ -753,7 +795,7 @@ function updatePlayer(dt) {
     if (f.roll > 0) for (const e of G.enemies) if (e.hittable && !e.dead && e.p.z < 0 && e.p.z > -60 && Math.hypot(e.p.x - p.x, e.p.y - p.y) < 6) hitEnemy(e, 30 * dt);
     if (f.beam > 0) for (const e of G.enemies) if (e.hittable && !e.dead && e.p.z < 0 && Math.hypot(e.p.x - p.x, e.p.y - p.y) < 4.5 + e.r * 0.5) hitEnemy(e, 45 * dt);
   }
-  setScroll(65 * p.spd);
+  setScroll((G.mode === 'obstacle' ? G.runSpeed || 60 : 65) * p.spd);
   p.rollCd -= dt; p.inv -= dt;
   let ra = 0; if (p.rollT > 0) { p.rollT -= dt; ra = p.rollDir * Math.PI * 2 * ease(1 - p.rollT / 0.5); }
   const g = p.g; g.position.set(p.x, p.y, 0);
@@ -831,16 +873,18 @@ function updatePickups(dt) {
   const p = player;
   for (const it of G.pickups) {
     const m = it.m; m.position.z += W.scroll * dt;
-    if (it.kind === 'silver' || it.kind === 'gold') m.rotation.z += dt; else { m.rotation.y += dt * 3; m.rotation.x += dt; }
+    if (it.kind === 'silver' || it.kind === 'gold') m.rotation.z += dt; else if (it.kind === 'token') { m.rotation.y += dt * 4; m.position.y += Math.sin(T * 3) * 0.02; } else { m.rotation.y += dt * 3; m.rotation.x += dt; }
     if (m.position.z > 25) { it.gone = true; continue; }
+    if (PL.id === 'niffo' && p.alive && m.position.z > -70 && m.position.z < 2) { const k = Math.min(1, dt * 2.5); m.position.x += (p.x - m.position.x) * k; m.position.y += (p.y - m.position.y) * k; }
     if (p.alive && Math.abs(m.position.z) < 2.6 && Math.hypot(m.position.x - p.x, m.position.y - p.y) < 2.8) {
       it.gone = true; Sound.pickup(); explode(m.position.clone(), 0.4, 'spark');
-      if (it.kind === 'silver' || it.kind === 'gold') stat('rings');
-      if (it.kind === 'gold') stat('golds');
+      if (it.kind === 'silver' || it.kind === 'gold') { stat('rings'); if (G.mode === 'obstacle') { G.runRings++; G.bonus += it.kind === 'gold' ? 1000 : 250; fxTag(it.kind === 'gold' ? 'GOLD RING +1000' : 'RING +250'); } }
+      if (it.kind === 'gold') { stat('golds'); if (G.mode === 'score') { G.timeLeft += 5; fxTag('+5 SECONDS'); } }
       if (it.kind === 'silver') p.shield = Math.min(p.max, p.shield + 25);
       if (it.kind === 'gold') { p.shield = Math.min(p.max, p.shield + 45); G.score += 500; }
       if (it.kind === 'power') { p.power = Math.min(3, p.power + 1); fxTag(p.power === 2 ? 'DOUBLE SHOT!' : 'TRIPLE SHOT!'); }
       if (it.kind === 'special') { p.sp = 100; fxTag('SPECIAL READY!'); }
+      if (it.kind === 'token') collectToken(it);
       p.lowWarned = p.shield < 35;
     }
   }
@@ -854,7 +898,7 @@ function updateFx(dt) {
   if (fxTimer > 0 && (fxTimer -= dt) <= 0) $('fxtag').classList.add('hidden');
   // Meta AI butts in.
   if ((G.metaT -= dt) <= 0) {
-    G.metaT = rnd(22, 34) * (PL.id === 'ati' ? 1.7 : 1) * (META_FREQ[S.meta] || 1);
+    G.metaT = rnd(22, 34) * (PL.id === 'ati' ? 1.7 : 1) * (META_FREQ[S.meta] || 1) * (hasMod('chaos') ? 0.25 : 1);
     if (S.meta !== 'off' && G.metaMute <= 0 && !comm.q.length && G.outroT < 0 && player.alive) {
       say('meta', pick(META_LINES));
       if (Math.random() < 0.55) { const r = pick(META_REPLIES.filter(x => x[0] !== PL.id)); say(r[0], r[1]); }
@@ -902,8 +946,8 @@ function updateHUD() {
 function updatePlay(dt) {
   G.t += dt;
   while (G.ei < G.ev.length && G.ev[G.ei].t <= G.t) G.ev[G.ei++].fn();
-  updatePlayer(dt); updateShots(dt); updateBoss(dt); updateEnemies(dt); updateBullets(dt); updatePickups(dt); updateFx(dt);
-  if (G.clearT > 0 && G.t >= G.clearT) { G.clearT = -1; stageClear(); }
+  updatePlayer(dt); updateShots(dt); updateBoss(dt); updateEnemies(dt); updateBullets(dt); updatePickups(dt); updateFx(dt); if (isArcade()) updateDirector(dt);
+  if (G.clearT > 0 && G.t >= G.clearT) { G.clearT = -1; if (isArcade()) modeBossDown(); else stageClear(); }
   if (G.outroT > 0 && G.t >= G.outroT) { G.outroT = -1; const s = G.stage; playCine(['mid1', 'mid2', 'mid3', 'mid4', 'mid5', 'ending'][s], () => s < STAGES.length - 1 ? startStage(s + 1) : showEnd()); return; }
   if (G.overT > 0 && G.t >= G.overT) { G.overT = -1; gameOver(); }
   updateHUD();
@@ -911,7 +955,7 @@ function updatePlay(dt) {
 
 
 /* ---------- Menus ---------- */
-const SCREENS = ['home', 'settings', 'stages', 'howto', 'credits', 'pause'];
+const SCREENS = ['home', 'settings', 'stages', 'howto', 'credits', 'pause', 'modes', 'results', 'trophies'];
 let focusIdx = 0, settingsBack = null, resetArmed = false;
 function showScreen(id) { SCREENS.forEach(s => $(s).classList.toggle('hidden', s !== id)); if (id) focusFirst(); }
 function activeScreen() { for (const s of [...SCREENS, 'over', 'end']) if (!$(s).classList.contains('hidden')) return $(s); return null; }
@@ -947,7 +991,8 @@ function refreshHome() {
   if (can) $('contsub').textContent = `Stage ${P.lastStage + 1}, ${STAGES[P.lastStage]}, as ${BY_ID[P.lastHero].nm}`;
   $('stagesub').textContent = `${P.unlocked} of ${STAGES.length} stages unlocked`;
   $('storysub').textContent = `Pick a fighter and start from the beginning · ${unlockedCount()} / ${ROSTER.length} fighters unlocked`;
-  $('bestline').textContent = `BEST ${String(P.best).padStart(6, '0')}${P.clears ? ` · CLEARED ×${P.clears}` : ''}`;
+  const sm = summary(P); $('bestline').textContent = `BEST ${String(P.best).padStart(6, '0')} · 🏆 ${sm.trophies}/${TROPHIES.length} · 🪙 ${sm.tokens}/18`;
+  $('trophysub').textContent = `${sm.trophies} of ${TROPHIES.length} trophies · ${sm.sRanks} S ranks · ${sm.skins} skins`; refreshDaily();
 }
 function goHome() {
   cine = null; mode = 'home'; endPixel(); clearActors(); cineGroup.clear(); selModel = null;
@@ -966,7 +1011,7 @@ function continueGame() {
   Object.assign(G, { score: 0, hits: 0 }); player.power = 1; startStage(P.lastStage);
 }
 function toSelect(stage) {
-  pendingStage = stage; showScreen(null); openSelect();
+  pendingStage = stage; pendingMode = null; showScreen(null); openSelect();
   $('selmode').textContent = stage === null ? 'STORY MODE · FULL CAMPAIGN WITH CUTSCENES' : `STAGE SELECT · STARTING AT STAGE ${stage + 1}`;
 }
 const STAGE_INFO = [
@@ -978,7 +1023,7 @@ const STAGE_INFO = [
   ['THE CLOUD', 'The mothership above the clouds, and Meta AI\'s true form.', 'linear-gradient(#7790ff,#fdf3ff 66%,#e6dcff 66%)'],
 ];
 function openStages() {
-  $('stagecards').innerHTML = STAGE_INFO.map((s, i) => `<button class="scard${i >= P.unlocked ? ' locked' : ''}" data-i="${i}"><div class="art" style="background:${s[2]}"><b>${i + 1}</b></div><div class="txt"><h3>${s[0]}</h3><p>${i >= P.unlocked ? 'Clear the stage before this one to unlock it.' : s[1]}</p></div></button>`).join('');
+  $('stagecards').innerHTML = STAGE_INFO.map((s, i) => `<button class="scard${i >= P.unlocked ? ' locked' : ''}" data-i="${i}"><div class="art" style="background:${s[2]}"><b>${i + 1}</b></div><div class="txt"><h3>${s[0]}</h3>${stageBadges(i)}<p>${i >= P.unlocked ? 'Clear the stage before this one to unlock it.' : s[1]}</p></div></button>`).join('');
   $('stagecards').querySelectorAll('.scard').forEach(el => el.onclick = () => { if (+el.dataset.i < P.unlocked) toSelect(+el.dataset.i); });
   showScreen('stages');
 }
@@ -1049,7 +1094,7 @@ addEventListener('keydown', e => {
     const d = { ArrowLeft: -1, KeyA: -1, ArrowRight: 1, KeyD: 1, ArrowUp: -4, KeyW: -4, ArrowDown: 4, KeyS: 4 }[c];
     if (d) choose(selIdx + d);
     else if (c === 'Enter' || c === 'Space') confirmPick();
-    else if (c === 'Escape') { const st = pendingStage; goHome(); if (st !== null) openStages(); }
+    else if (c === 'Escape') { const st = pendingStage, pm = pendingMode; goHome(); if (pm) openModes(); else if (st !== null) openStages(); }
   }
   else if (mode === 'cine') { if (c === 'Escape') endCine(); else if (c === 'Enter' || c === 'Space') advance(); }
   else if (mode === 'play') {
@@ -1070,7 +1115,7 @@ addEventListener('keyup', e => {
 });
 addEventListener('blur', () => { for (const c in keys) keys[c] = false; if (mode === 'play') pauseGame(); });
 const on = (id, fn) => $(id).onclick = e => { e.currentTarget.blur(); Sound.init(); fn(); };
-on('m-continue', continueGame); on('m-story', () => toSelect(null)); on('m-stages', openStages);
+on('m-continue', continueGame); on('m-story', () => toSelect(null)); on('m-stages', openStages); on('m-modes', openModes); on('m-trophies', openTrophies); on('m-daily', startDaily);
 on('m-settings', () => openSettings(() => showScreen('home'))); on('m-howto', () => showScreen('howto')); on('m-credits', () => showScreen('credits'));
 on('go', confirmPick); on('skip', endCine);
 on('retry', retry); on('o-pick', () => toSelect(G.stage)); on('o-home', goHome);
@@ -1096,7 +1141,7 @@ function loop() {
   else if (mode === 'select') updateSelect(dt);
   else if ((mode === 'home' || mode === 'end') && backdrop) backdrop(T, dt);
   if (mode !== 'pause') { updateWorld(dt); updateParticles(dt, mode === 'play' ? W.scroll * 0.5 : 0); }
-  updateComm(dt); updateHomeBubble(dt); updateToasts(dt);
+  updateComm(dt); updateHomeBubble(dt); updateToasts(dt); updateModeHUD();
   dmgV = Math.max(0, dmgV - dt * 2); $('dmg').style.opacity = dmgV.toFixed(2);
   if (S.fps) { fpsN++; fpsT += dt; if (fpsT > 0.5) { $('fps').textContent = Math.round(fpsN / fpsT) + ' FPS'; fpsN = 0; fpsT = 0; } }
   Sound.tick(); renderFrame(mode === 'pause' ? 0 : dt);
@@ -1107,7 +1152,7 @@ const toastQ = []; let toastT = 0;
 function stat(key, n = 1) {
   P.stats[key] = (P.stats[key] || 0) + n;
   const fresh = checkUnlocks(P);
-  fresh.forEach(id => toastQ.push(id));
+  fresh.forEach(id => toastQ.push(id)); checkAll();
   if (fresh.length || key.startsWith('clear') || key === 'wins') persist();
 }
 let bestSaved = 0;
@@ -1120,10 +1165,11 @@ function updateToasts(dt) {
   const el = $('toast');
   if (toastT > 0) { if ((toastT -= dt) <= 0) el.classList.add('hidden'); return; }
   if (!toastQ.length) return;
-  const id = toastQ.shift(), c = BY_ID[id];
-  $('toastpf').innerHTML = PORTRAITS[id];
-  $('toastname').textContent = `${c.nm.toUpperCase()} · ${c.title}`;
-  $('toastwhy').textContent = UNLOCKS[id].text.split('.')[0] + '.';
+  const it = toastQ.shift(), tr = typeof it === 'string' ? null : it;
+  $('toastkick').textContent = tr ? tr.kick : 'NEW FIGHTER UNLOCKED';
+  $('toastpf').innerHTML = tr ? `<div class="temoji">${tr.icon}</div>` : PORTRAITS[it];
+  $('toastname').textContent = tr ? tr.title : `${BY_ID[it].nm.toUpperCase()} · ${BY_ID[it].title}`;
+  $('toastwhy').textContent = tr ? tr.why : UNLOCKS[it].text.split('.')[0] + '.';
   el.classList.remove('hidden'); el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
   toastT = 4.2; Sound.pickup(); persist();
   if (mode === 'select') { buildGrid(); choose(selIdx); }
@@ -1158,6 +1204,7 @@ function spawnDuelist(o = {}) {
       if (o.ads && (adCd -= dt) <= 0) { adCd = 6; for (let k = 0; k < 3; k++) adBlock(rnd(-14, 14), rnd(b[0], b[1]), m.position.z - 20); }
       if (o.summon && (e.sm = (e.sm ?? 7) - dt) <= 0) { e.sm = 8; o.summon(); }
       if (!taunted && e.hp < e.maxhp / 2) { taunted = true; (o.half || [['meta', 'Ouch! Would you like to submit feedback about that hit?'], [PL.id === 'ati' ? 'josh' : 'ati', 'Nobody asked you.']]).forEach(l => say(...l)); }
+      if (o.flee && a > o.flee && !e.gone) { e.gone = true; $('bossbar').classList.add('hidden'); Sound.music('stage'); (o.fled || []).forEach(l => say(...l)); }
     }
     e.p.copy(m.position);
   }, onDeath: e => {
@@ -1267,6 +1314,20 @@ function spawnCloneBoss() {
     death: [['meta', 'Model... deprecated... returning to the Cloud...'], ['ati', 'Good. Now go to your room.']] });
 }
 
+// Evil Adam: Adam's dark twin, dug out of Meta AI's training data. Mini-boss in The Mirror (he flees if you're slow), full boss in Boss Rush and Endless.
+function spawnEvilAdam(story) {
+  const foe = PL.id === 'adam' ? 'LEAD' : 'adam';
+  spawnDuelist({ name: 'EVIL ADAM', phase: 'SAME REFLEXES · NO MORALS', hp: story ? 60 : 85, r: 3.2, score: 7000, faceCam: true, jink: 30, speed: 26, burst: 3, fireGap: 1.4, rings: 4.2, flee: story ? 26 : 0,
+    make: () => { const c = makeCharacter('evil_adam'); c.scale.multiplyScalar(2.3); c.rotation.y = Math.PI; return c; },
+    half: [['evil_adam', 'You hit like the good Adam. Weak.'], [foe, 'The good Adam is RIGHT HERE.']],
+    fled: [['evil_adam', 'Bored now. I\'ll be back. With topspin.'], ['josh', 'He flew off. Forget him, keep moving!']],
+    onDeath: e => {
+      explode(e.p.clone(), 3); shake(1); stat('evilAdam'); G.score += 3000; fxTag('EVIL ADAM DEFEATED!');
+      say('evil_adam', 'Game... set... I\'ll be back...'); say(foe, 'Return to sender.');
+      if (story) Sound.music('stage'); else G.clearT = G.t + 4;
+    } });
+}
+
 // Stage 6 finale: after the mothership core breaks, Meta AI's true form appears.
 function spawnTrueForm() {
   if (G.overT > 0 || !player.alive) return;
@@ -1281,6 +1342,394 @@ function spawnTrueForm() {
       for (let i = 0; i < 8; i++) later(i * 0.18, () => { explode(e.p.clone().add(V3(rnd(-8, 8), rnd(-6, 6), rnd(-4, 4))), 4); shake(1); Sound.boom(2); });
       say('meta', 'Would you like... to rate... this... conversa—'); G.clearT = G.t + 3;
     } });
+}
+
+
+/* ---------- Game modes: Endless, Boss Rush, Score Attack ---------- */
+const MODES = {
+  endless: { name: 'ENDLESS', sub: 'Wave after wave, harder every time. A boss every 6 waves. How far can you get?', art: 'linear-gradient(135deg,#2f5bff,#9fd8ff)' },
+  bossrush: { name: 'BOSS RUSH', sub: 'Every boss in the game, back to back, against the clock. Shield only partly refills.', art: 'linear-gradient(135deg,#ff3d7f,#ffd23f)' },
+  score: { name: 'SCORE ATTACK', sub: 'Two minutes. Chain kills for up to ×8 combo. Gold rings add 5 seconds.', art: 'linear-gradient(135deg,#00b4d8,#c7f9e8)' },
+  obstacle: { name: 'OBSTACLE RUN', sub: 'Fly through walls, pillars, gates and spinning bars. It keeps getting faster. Hit anything and you\'re out.', art: 'linear-gradient(135deg,#ff5a1f,#ffd23f 55%,#2f5bff)' },
+};
+const isArcade = () => !!G.mode && G.mode !== 'story';
+const fmt = s => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+const RUSH = [
+  { name: 'META DELIVERY DRONE', env: 0, stage: 0, spawn: () => spawnGunship() },
+  { name: 'ASSISTANT MODE', env: 1, stage: 1, spawn: () => spawnAvatar() },
+  { name: 'META HAULER', env: 4, stage: 2, spawn: () => spawnHauler() },
+  { name: 'THE ALGORITHM', env: 5, stage: 3, spawn: () => spawnAvatar({ name: 'THE ALGORITHM', phase: 'RECOMMENDED FOR YOU', hp: 115, scale: 4.2, ads: true }) },
+  { name: 'EVIL ADAM', env: 6, stage: 4, spawn: () => spawnEvilAdam(false) },
+  { name: 'YOUR META CLONE', env: 6, stage: 4, spawn: () => spawnCloneBoss() },
+  { name: 'THE MOTHERSHIP + TRUE FORM', env: 2, stage: 5, spawn: () => spawnBoss() },
+];
+const ENDLESS_BOSSES = RUSH.slice(0, -1);
+
+function midY() { const b = bounds(); return (b[0] + b[1]) / 2; }
+const WAVES = [
+  () => { const m = midY(); for (let j = 0; j < 6; j++) later(j * 0.4, () => fighter('swoop', (j - 2.5) * 4, m + (j % 2 ? 2 : -2))); },
+  () => { const m = midY(), s = Math.random() < 0.5 ? 1 : -1; for (let j = 0; j < 5; j++) later(j * 0.4, () => fighter('cross', 0, m - 3 + j * 1.5, { side: s })); },
+  () => { const m = midY(); for (let j = 0; j < 4; j++) later(j * 0.4, () => fighter('behind', -9 + j * 6, m)); },
+  () => { const m = midY(); for (let j = 0; j < 5; j++) later(j * 0.45, () => fighter('dive', -8 + j * 4, m)); },
+  () => { const m = midY(); for (let j = 0; j < 4; j++) later(j * 0.5, () => fighter('hold', -9 + j * 6, m + (j % 2 ? 3 : -2))); },
+  () => { const b = bounds(); if (W.env.ground && (W.env.gy || 0) === 0) for (let j = 0; j < 5; j++) later(j * 0.8, () => turret((j % 2 ? 1 : -1) * rnd(3, 12))); else for (let j = 0; j < 8; j++) later(j * 0.5, () => asteroid(rnd(-15, 15), rnd(b[0], b[1]), rnd(1.4, 3.6))); },
+  () => { const b = bounds(); for (let j = 0; j < 6; j++) later(j * 0.6, () => adBlock(rnd(-14, 14), rnd(b[0], b[1]))); },
+  () => { const m = midY(); for (let j = 0; j < 5; j++) later(j * 0.5, () => cloneMinion('swoop', (j - 2) * 4, m + (j % 2 ? 2 : -2))); },
+];
+
+function openModes() {
+  P.modeBest = P.modeBest || {};
+  const best = { endless: b => b ? `Best: wave ${b.wave} · ${b.score.toLocaleString()} pts` : 'No run yet',
+    bossrush: b => b ? (b.cleared ? `Best time: ${fmt(b.time)} · ${b.score.toLocaleString()} pts` : `Best: ${b.bosses} / ${RUSH.length} bosses`) : 'No run yet',
+    obstacle: b => b ? `Best: ${Math.floor(b.dist).toLocaleString()} m · ${b.score.toLocaleString()} pts` : 'No run yet',
+    score: b => b ? `Best: ${b.score.toLocaleString()} pts · max combo ×${b.combo}` : 'No run yet' };
+  $('modecards').innerHTML = Object.entries(MODES).map(([k, m]) => `<button class="scard" data-m="${k}"><div class="art" style="background:${m.art}"><b>${m.name}</b></div><div class="txt"><p>${m.sub}</p><h3 class="mbest">${best[k](P.modeBest[k])}</h3></div></button>`).join('');
+  $('modecards').querySelectorAll('.scard').forEach(el => el.onclick = () => toSelectMode(el.dataset.m));
+  renderMods(); showScreen('modes');
+}
+function toSelectMode(m) {
+  pendingMode = m; pendingStage = null; showScreen(null); openSelect();
+  $('selmode').textContent = `${MODES[m].name} · NO CUTSCENES, JUST FIGHTING`;
+}
+function startMode(m) {
+  ['over', 'end', 'home', 'pause', 'select', 'results', 'modes'].forEach(id => $(id).classList.add('hidden'));
+  Object.assign(G, { score: 0, hits: 0 }); player.power = 1;
+  clearActors(); setEnv(m === 'bossrush' ? RUSH[0].env : 0);
+  Object.assign(G, { daily: null, mods: [...(pendingMods || [])], dmgTaken: 0, spawned: 0, kills: 0, tokensGot: 0, mode: m, stage: 0, t: 0, ev: [], ei: 0, clearT: -1, outroT: -1, overT: -1, metaT: rnd(18, 26), metaMute: 0,
+    hpMul: 1, wave: 0, waveT: 2.5, bossActive: false, bi: 0, rushT: 0, timeLeft: 120, combo: 0, maxCombo: 0, lastKill: -9, envRot: 0, done: false });
+  G.start = { score: 0, hits: 0, power: 1 };
+  G.scoreMul = modMul(G.mods); if (hasMod('chaos')) G.hpMul = 1.3;
+  resetPlayer(); if (hasMod('onehit') || m === 'obstacle') { player.max = 1; player.shield = 1; }
+  if (m === 'obstacle') Object.assign(G, { obs: [], obsT: 1.2, runSpeed: 60, dist: 0, bonus: 0, runRings: 0, gates: 0, nextZone: 600 });
+  mode = 'play'; comm.q = []; hideComm();
+  $('hud').classList.remove('hidden'); $('stagename').textContent = MODES[m].name;
+  card(MODES[m].name, m === 'bossrush' ? RUSH[0].name : m === 'score' ? '2:00 ON THE CLOCK' : m === 'obstacle' ? 'DON\'T HIT ANYTHING' : 'WAVE 1', `${PL.nm.toUpperCase()} · ${PL.title}`);
+  cam.position.set(0, player.y * 0.6 + 2.6, 14); G.look.set(0, player.y, -40);
+  Sound.music(m === 'bossrush' ? 'boss' : 'stage');
+  if (m !== 'obstacle') spawnWingmates();
+  if (m === 'bossrush') { G.bossActive = true; later(3, () => RUSH[0].spawn()); }
+}
+function comboHit() {
+  if (G.mode !== 'score') return 1;
+  G.combo = G.t - G.lastKill < 2.2 ? Math.min(8, G.combo + 1) : 1; G.lastKill = G.t;
+  G.maxCombo = Math.max(G.maxCombo, G.combo);
+  if (G.combo >= 3) fxTag(`COMBO ×${G.combo}`);
+  return G.combo;
+}
+function updateDirector(dt) {
+  if (G.mode === 'obstacle') return updateObstacles(dt);
+  if (G.done || !player.alive) return;
+  if (G.mode === 'score') {
+    if (G.t - G.lastKill > 2.2) G.combo = 0;
+    G.timeLeft -= dt;
+    if (G.timeLeft <= 0) { G.timeLeft = 0; G.done = true; player.inv = 99; card('TIME UP', String(G.score).padStart(6, '0')); later(2.5, () => showResults(true)); return; }
+  }
+  if (G.mode === 'bossrush') { if (!G.done) G.rushT += dt; return; }
+  if (G.bossActive || (G.waveT -= dt) > 0) return;
+  G.wave++;
+  const m = midY();
+  if (G.mode === 'endless') {
+    G.hpMul = 1 + G.wave * 0.05; G.stage = Math.min(5, G.envRot);
+    if (G.wave % 6 === 0) {
+      const bb = ENDLESS_BOSSES[(G.wave / 6 - 1) % ENDLESS_BOSSES.length];
+      G.bossActive = true; Sound.alarm(); card(`WAVE ${G.wave}`, bb.name); later(2, bb.spawn); return;
+    }
+    const n = 1 + Math.floor(G.wave / 4);
+    for (let k = 0; k < n; k++) later(k * 1.4, () => pick(WAVES)());
+    if (G.wave % 3 === 0) spawnRing(rnd(-8, 8), m, G.wave % 9 === 0);
+    if (G.wave % 4 === 0) spawnPickup(G.wave % 8 === 0 ? 'special' : 'power', V3(rnd(-6, 6), m, -330));
+    if (G.wave > 1) fxTag(`WAVE ${G.wave}`);
+    G.waveT = Math.max(3.5, 8 - G.wave * 0.2);
+  } else {
+    pick(WAVES)(); if (G.t > 30 && Math.random() < 0.6) later(1.2, () => pick(WAVES)());
+    if (G.wave % 4 === 0) spawnRing(rnd(-8, 8), m, Math.random() < 0.45);
+    if (G.wave % 7 === 0) spawnPickup(Math.random() < 0.5 ? 'special' : 'power', V3(rnd(-6, 6), m, -330));
+    G.waveT = G.t > 60 ? 2.2 : 3;
+  }
+}
+function modeBossDown() {
+  $('bossbar').classList.add('hidden'); G.bossE = null;
+  G.bullets.forEach(b => actors.remove(b.m)); G.bullets = [];
+  if (G.mode === 'endless') {
+    G.bossActive = false; G.score += 2000 * G.wave / 6;
+    player.shield = Math.min(player.max, player.shield + 30);
+    G.envRot++; setEnv(STAGE_ENV[G.envRot % STAGE_ENV.length]);
+    card(`WAVE ${G.wave} CLEAR`, 'BOSS DOWN', `+${(2000 * G.wave / 6).toLocaleString()} · NEW WORLD`);
+    Sound.music('stage'); Sound.pickup(); G.waveT = 4;
+  } else if (G.mode === 'bossrush') {
+    G.bi++;
+    if (G.bi >= RUSH.length) { G.done = true; player.inv = 99; card('BOSS RUSH', 'CLEARED', fmt(G.rushT)); later(3, () => showResults(true)); return; }
+    player.shield = Math.min(player.max, player.shield + 30);
+    card(`BOSS ${G.bi + 1} / ${RUSH.length}`, RUSH[G.bi].name, `TIME ${fmt(G.rushT)}`); Sound.pickup();
+    later(3.5, () => { const r = RUSH[G.bi]; setEnv(r.env); G.stage = r.stage; r.spawn(); });
+  }
+}
+function showResults(won) {
+  if (mode === 'results') return;
+  mode = 'results'; endPixel(); hideComm(); comm.q = []; $('hud').classList.add('hidden');
+  if (player.g) player.g.visible = false;
+  P.modeBest = P.modeBest || {}; P.best = Math.max(P.best, G.score);
+  const prev = P.modeBest[G.mode]; let rec = false, title, lines;
+  if (G.mode === 'endless') {
+    rec = !prev || G.wave > prev.wave || (G.wave === prev.wave && G.score > prev.score);
+    if (rec) P.modeBest.endless = { wave: G.wave, score: G.score };
+    title = 'SHIELD DOWN'; lines = [`WAVE REACHED  ${G.wave}`, `SCORE  ${G.score.toLocaleString()}`, `KILLS  ${G.hits}`];
+  } else if (G.mode === 'bossrush') {
+    const bosses = won ? RUSH.length : G.bi;
+    rec = !prev || (won && (!prev.cleared || G.rushT < prev.time)) || (!won && !prev.cleared && bosses > prev.bosses);
+    if (rec) P.modeBest.bossrush = { cleared: won, time: G.rushT, bosses, score: G.score };
+    title = won ? 'ALL BOSSES DOWN' : 'SHIELD DOWN'; lines = [`BOSSES BEATEN  ${bosses} / ${RUSH.length}`, `TIME  ${fmt(G.rushT)}`, `SCORE  ${G.score.toLocaleString()}`];
+  } else if (G.mode === 'obstacle') {
+    rec = !prev || G.dist > prev.dist;
+    if (rec) P.modeBest.obstacle = { dist: G.dist, score: G.score };
+    P.stats.runBest = Math.max(P.stats.runBest || 0, Math.floor(G.dist)); checkUnlocks(P).forEach(id => toastQ.push(id));
+    title = 'CRASHED!'; lines = [`DISTANCE  ${Math.floor(G.dist).toLocaleString()} m`, `GATES CLEARED  ${G.gates}`, `RINGS  ${G.runRings}`, `SCORE  ${G.score.toLocaleString()}`];
+  } else {
+    rec = !prev || G.score > prev.score;
+    if (rec) P.modeBest.score = { score: G.score, combo: G.maxCombo };
+    title = won ? 'TIME UP' : 'SHIELD DOWN'; lines = [`SCORE  ${G.score.toLocaleString()}`, `MAX COMBO  ×${G.maxCombo}`, `KILLS  ${G.hits}`];
+  }
+  persist();
+  $('reskicker').textContent = `${MODES[G.mode].name} · ${PL.nm.toUpperCase()}`;
+  $('restitle').textContent = title;
+  $('resstats').innerHTML = lines.map(l => `<div class="stat">${l}</div>`).join('');
+  $('resrec').classList.toggle('hidden', !rec);
+  showScreen('results'); Sound.music(won ? 'title' : 'cine');
+}
+function updateModeHUD() {
+  if (!isArcade() || mode !== 'play') return;
+  const t = G.mode === 'obstacle' ? `OBSTACLE RUN · ${Math.floor(G.dist || 0).toLocaleString()} m` : G.mode === 'endless' ? `ENDLESS · WAVE ${Math.max(1, G.wave)}` : G.mode === 'bossrush' ? `BOSS RUSH · ${Math.min(G.bi + 1, RUSH.length)}/${RUSH.length} · ${fmt(G.rushT)}` : `SCORE ATTACK · ${fmt(G.timeLeft)}${G.combo > 1 ? ` · COMBO ×${G.combo}` : ''}`;
+  if ($('stagename').textContent !== t) $('stagename').textContent = t;
+  $('stagename').classList.toggle('hurry', G.mode === 'score' && G.timeLeft < 15);
+}
+on('r-retry', () => G.daily ? startDaily() : startMode(G.mode)); on('r-pick', () => toSelectMode(G.mode));
+on('r-modes', () => { goHome(); openModes(); }); on('r-home', goHome);
+
+
+/* ---------- Replay value: tokens, ranks, skins, trophies, daily, modifiers ---------- */
+const COUNTED = ['fighter', 'turret', 'ad'];
+let pendingMods = [];
+const hasMod = k => (G.mods || []).includes(k);
+const checkAll = () => checkTrophies(P).forEach(t => toastQ.push({ kick: 'TROPHY UNLOCKED', icon: t[1], title: t[2], why: t[3] }));
+
+// Three hidden Meta tokens per story stage, tucked against the edges of the screen.
+const TOKEN_TIMES = [14, 31, 46];
+function scheduleTokens(i) {
+  const b = ENV_BOUNDS[i];
+  TOKEN_TIMES.forEach((t, k) => G.ev.push({ t, fn: () => {
+    const x = [-15, 15, -14, 14, 0, -15][(i + k) % 6], y = (i + k) % 2 ? b[1] - 0.5 : b[0] + 0.5;
+    spawnToken(i, k, x, y);
+  } }));
+  G.ev.sort((a, c) => a.t - c.t);
+}
+const TOKEN_GOLD = MD.M(0xffc93a, { metalness: 0.85, roughness: 0.2, emissive: 0x7a5200, emissiveIntensity: 0.5 });
+function spawnToken(stage, k, x, y) {
+  const had = ((P.tokens || {})[stage] || [])[k];
+  const g = new THREE.Group();
+  const coin = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.3, 0.28, 28), had ? MD.glow(0xffc93a, 0.35) : TOKEN_GOLD); coin.rotation.x = Math.PI / 2; g.add(coin);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.75, 0.16, 8, 24), had ? MD.glow(0x7b5cff, 0.35) : MD.M(0x0866ff, { emissive: 0x0866ff, emissiveIntensity: 0.6 })); ring.position.z = 0.16; g.add(ring);
+  g.add(new THREE.Mesh(new THREE.SphereGeometry(2.1, 14, 10), MD.glow(0xffd23f, had ? 0.08 : 0.2)));
+  g.position.set(x, y, -330); actors.add(g);
+  G.pickups.push({ m: g, kind: 'token', stage, k, ghost: had });
+  if (!had && (G.tokenHint = (G.tokenHint || 0) + 1) === 1) say('renas', 'Ooh, a Meta token! There are three hidden in every stage!');
+}
+function collectToken(it) {
+  G.tokensGot++; G.score += it.ghost ? 250 : 1500;
+  if (it.ghost) { fxTag('TOKEN (ALREADY FOUND) +250'); return; }
+  P.tokens = P.tokens || {}; const arr = P.tokens[it.stage] = P.tokens[it.stage] || [false, false, false];
+  arr[it.k] = true;
+  P.stats.tokensFound = Object.values(P.tokens).reduce((s, a) => s + a.filter(Boolean).length, 0); checkUnlocks(P).forEach(id => toastQ.push(id));
+  persist(); checkAll();
+  fxTag(`META TOKEN ${arr.filter(Boolean).length}/${TOKENS_PER_STAGE}`); Sound.alarm();
+}
+function stageBadges(i) {
+  const r = (P.ranks || {})[i], t = ((P.tokens || {})[i] || []);
+  const dots = Array.from({ length: TOKENS_PER_STAGE }, (_, k) => `<i class="${t[k] ? 'on' : ''}"></i>`).join('');
+  return `<div class="badges"><span class="rk" style="background:${r ? RANK_COLOR[r] : '#d9d9e3'}">${r || '–'}</span><span class="tk" title="Meta tokens">${dots}</span></div>`;
+}
+
+// Skins: gold for beating the story, glitch for clearing Boss Rush, per fighter.
+const GOLD_SKIN = new THREE.MeshStandardMaterial({ color: 0xffc93a, metalness: 0.85, roughness: 0.25, emissive: 0x6a4a00, emissiveIntensity: 0.3, flatShading: true });
+function applySkin(m, id) {
+  const k = (P.skinSel || {})[id];
+  if (k === 'gold') m.traverse(o => { if (o.isMesh && o.material.blending !== THREE.AdditiveBlending) o.material = GOLD_SKIN; });
+  if (k === 'glitch') glitchify(m);
+  return m;
+}
+const ownsSkin = (id, k) => k === 'classic' || ((P.skins || {})[id] || []).includes(k);
+function grantSkin(id, k) {
+  P.skins = P.skins || {}; const a = P.skins[id] = P.skins[id] || [];
+  if (a.includes(k)) return;
+  a.push(k); persist();
+  toastQ.push({ kick: 'NEW SKIN', icon: k === 'gold' ? '✨' : '👾', title: `${BY_ID[id].nm.toUpperCase()} · ${SKINS[k].name}`, why: 'Equip it on the character select screen.' });
+  checkAll();
+}
+function renderSkins(c, open) {
+  const box = $('dskins'); box.classList.toggle('hidden', !open); if (!open) return;
+  const sel = (P.skinSel || {})[c.id] || 'classic';
+  box.innerHTML = '<b>SKIN</b>' + Object.entries(SKINS).map(([k, s]) => {
+    const own = ownsSkin(c.id, k);
+    return `<button class="${sel === k ? 'on' : ''}${own ? '' : ' lockd'}" data-k="${k}" title="${own ? s.name : s.how}">${own ? '' : '🔒 '}${s.name}</button>`;
+  }).join('') + `<small>${ownsSkin(c.id, 'gold') && ownsSkin(c.id, 'glitch') ? 'All skins earned.' : Object.values(SKINS).filter((s, i) => !ownsSkin(c.id, Object.keys(SKINS)[i])).map(s => s.how).join(' · ')}</small>`;
+  box.querySelectorAll('button').forEach(btn => btn.onclick = e => {
+    e.stopPropagation(); const k = btn.dataset.k;
+    if (!ownsSkin(c.id, k)) { Sound.hurt(); return; }
+    P.skinSel = P.skinSel || {}; P.skinSel[c.id] = k; persist(); choose(selIdx);
+  });
+}
+
+// Trophy room.
+function openTrophies() {
+  const sm = summary(P);
+  $('trophysum').innerHTML = [['🏆', `${sm.trophies}/${TROPHIES.length}`, 'TROPHIES'], ['⭐', `${sm.sRanks}/6`, 'S RANKS'], ['🪙', `${sm.tokens}/18`, 'TOKENS'], ['✨', `${sm.skins}/${ROSTER.length * 2}`, 'SKINS']]
+    .map(([i, v, l]) => `<div><span>${i}</span><b>${v}</b><small>${l}</small></div>`).join('');
+  $('trophygrid').innerHTML = TROPHIES.map(t => {
+    const p = trophyProgress(P, t);
+    return `<div class="tro${p.done ? ' done' : ''}"><div class="ti">${p.done ? t[1] : '🔒'}</div><div><b>${t[2]}</b><p>${t[3]}</p>${p.done ? '' : `<div class="lockbar"><i style="width:${(p.v / p.g * 100).toFixed(0)}%"></i></div><small>${p.v.toLocaleString()} / ${p.g.toLocaleString()}</small>`}</div></div>`;
+  }).join('');
+  showScreen('trophies');
+}
+
+// Daily challenge: same fighter, mode and modifier for everyone today, including fighters you haven't unlocked.
+function refreshDaily() {
+  const d = dailyChallenge(ROSTER.map(c => c.id)), done = (P.daily || {}).date === d.key;
+  $('dailysub').textContent = `${MODES[d.mode].name} as ${BY_ID[d.hero].nm} · ${d.mods.map(k => MODIFIERS[k].name).join(', ')}${done ? ` · today's best ${P.daily.best.toLocaleString()}` : ''}${(P.daily || {}).streak > 1 ? ` · 🔥 ${P.daily.streak}-day streak` : ''}`;
+}
+function startDaily() {
+  const d = dailyChallenge(ROSTER.map(c => c.id));
+  showScreen(null); applyHero(BY_ID[d.hero]);
+  const keep = pendingMods; pendingMods = d.mods; startMode(d.mode); pendingMods = keep;
+  G.daily = d.key; $('stagename').textContent = 'DAILY CHALLENGE';
+  card('DAILY CHALLENGE', MODES[d.mode].name, `${BY_ID[d.hero].nm.toUpperCase()} · ${d.mods.map(k => MODIFIERS[k].name).join(', ')}`);
+}
+function recordDaily() {
+  const key = G.daily, D = P.daily = P.daily || { played: 0, streak: 0 };
+  if (D.date !== key) {
+    const y = new Date(); y.setDate(y.getDate() - 1);
+    const yk = `${y.getFullYear()}-${String(y.getMonth() + 1).padStart(2, '0')}-${String(y.getDate()).padStart(2, '0')}`;
+    D.streak = D.date === yk ? (D.streak || 0) + 1 : 1; D.played = (D.played || 0) + 1; D.date = key; D.best = 0;
+  }
+  D.best = Math.max(D.best || 0, G.score);
+}
+
+// Modifier chips on the Game Modes screen.
+function renderMods() {
+  $('modchips').innerHTML = '<b>MODIFIERS</b>' + Object.entries(MODIFIERS).map(([k, m]) => `<button class="${pendingMods.includes(k) ? 'on' : ''}" data-k="${k}" title="${m.desc}">${m.name} <em>×${m.mul}</em></button>`).join('') + `<small>Score ×${modMul(pendingMods).toFixed(1)}${pendingMods.length ? ' · ' + pendingMods.map(k => MODIFIERS[k].desc).join(' ') : ' · Stack modifiers for a bigger score multiplier.'}</small>`;
+  $('modchips').querySelectorAll('button').forEach(btn => btn.onclick = () => { const k = btn.dataset.k; pendingMods = pendingMods.includes(k) ? pendingMods.filter(x => x !== k) : [...pendingMods, k]; Sound.blip(); renderMods(); });
+}
+
+
+/* ---------- Obstacle Run ---------- */
+const OB_COLS = [[0xff5a1f, 0xfff6e4], [0x2f5bff, 0xffd23f], [0xff3d7f, 0xfff6e4], [0x2a9d8f, 0xffd23f]];
+const OB_DEPTH = 1.6, WALL_W = 60;
+function obPart(g, w, h, x, y, col, d = OB_DEPTH) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), MD.M(col, { emissive: col, emissiveIntensity: 0.18 }));
+  m.position.set(x, y, 0); m.userData.half = new THREE.Vector3(w / 2, h / 2, d / 2); g.add(m);
+  // Hazard stripe along the edge so obstacles read clearly against any sky.
+  const s = new THREE.Mesh(new THREE.BoxGeometry(w + 0.05, Math.min(0.5, h), d + 0.05), MD.M(0x132044)); s.position.set(x, y + h / 2 - 0.25, 0); g.add(s);
+  return m;
+}
+function gapWall(gw, gh, gx, gy, col) {
+  const g = new THREE.Group(), b = bounds(), top = b[1] + 6, bot = b[0] - 6;
+  const L = gx - gw / 2, Rr = gx + gw / 2, T = gy + gh / 2, Bm = gy - gh / 2;
+  obPart(g, L + WALL_W / 2, top - bot, (-WALL_W / 2 + L) / 2, (top + bot) / 2, col[0]);
+  obPart(g, WALL_W / 2 - Rr, top - bot, (Rr + WALL_W / 2) / 2, (top + bot) / 2, col[0]);
+  obPart(g, gw, top - T, gx, (top + T) / 2, col[0]);
+  obPart(g, gw, Bm - bot, gx, (Bm + bot) / 2, col[0]);
+  // Frame around the gap so you can see where to aim.
+  const fr = new THREE.Mesh(new THREE.TorusGeometry(Math.min(gw, gh) * 0.5, 0.12, 4, 4), MD.glow(col[1], 0.9)); fr.rotation.z = Math.PI / 4; fr.scale.set(gw / Math.min(gw, gh) * 1.41, gh / Math.min(gw, gh) * 1.41, 1); fr.position.set(gx, gy, 0.9); g.add(fr);
+  return g;
+}
+function spawnObstacle() {
+  const t = G.t, b = bounds(), mid = (b[0] + b[1]) / 2, col = OB_COLS[G.envRot % OB_COLS.length];
+  const gap = Math.max(5.2, 9.5 - t * 0.05), types = ['wall', 'wall', 'pillars'];
+  if (t > 18) types.push('bars');
+  if (t > 35) types.push('slider', 'slider');
+  if (t > 55) types.push('spinner');
+  if (t > 75) types.push('double');
+  const type = pick(types);
+  let g, o = { type, spin: 0, slide: 0 };
+  const gx = rnd(-12, 12), gy = rnd(b[0] + gap / 2, b[1] - gap / 2);
+  if (type === 'wall' || type === 'slider') {
+    g = gapWall(gap * 1.15, gap, gx, gy, col);
+    if (type === 'slider') { o.slide = rnd(5, 9) * (Math.random() < 0.5 ? -1 : 1); o.baseX = 0; o.ph = rnd(0, 6); }
+    o.gap = V3(gx, gy, 0);
+  } else if (type === 'pillars') {
+    g = new THREE.Group();
+    const slots = [-14, -7, 0, 7, 14], open = (Math.random() * slots.length) | 0;
+    slots.forEach((x, i) => { if (i !== open && Math.random() < 0.85) obPart(g, 3, b[1] - b[0] + 14, x + rnd(-1, 1), mid, col[0]); });
+    o.gap = V3(slots[open], mid, 0);
+  } else if (type === 'bars') {
+    g = new THREE.Group();
+    const y1 = rnd(b[0] + 1, mid - 1), y2 = y1 + gap + rnd(1, 4);
+    obPart(g, WALL_W, 1.8, 0, y1 - 0.9 - gap / 2, col[0]);
+    if (y2 < b[1] + 2) obPart(g, WALL_W, 1.8, 0, y2, col[0]);
+    o.gap = V3(0, y1 + (y2 - y1) / 2 - gap / 2, 0);
+  } else if (type === 'spinner') {
+    g = new THREE.Group(); const hub = new THREE.Group(); hub.position.set(0, mid, 0); g.add(hub);
+    obPart(hub, 44, 1.8, 0, 0, col[0]); obPart(hub, 1.8, 44, 0, 0, col[0]);
+    hub.add(new THREE.Mesh(new THREE.SphereGeometry(1.6, 14, 10), MD.M(col[1], { emissive: col[1], emissiveIntensity: 0.4 })));
+    o.hub = hub; o.spin = rnd(0.6, 1.1) * (Math.random() < 0.5 ? -1 : 1) * (1 + t / 200);
+  } else {
+    // Two walls close together with gaps in different places: a quick zig-zag.
+    g = new THREE.Group();
+    const g1 = gapWall(gap * 1.2, gap, -8, gy, col), g2 = gapWall(gap * 1.2, gap, 8, clamp(gy + rnd(-4, 4), b[0] + gap / 2, b[1] - gap / 2), col);
+    g2.position.z = -18; g.add(g1); g.add(g2); o.gap = V3(-8, gy, 0);
+  }
+  g.position.z = -340; actors.add(g); o.g = g;
+  // A ring in the gap rewards threading it cleanly.
+  if (o.gap && Math.random() < 0.55) { const gold = Math.random() < 0.15, r = MD.makeRing(gold); r.position.set(o.gap.x, o.gap.y, -340 + 4); actors.add(r); G.pickups.push({ m: r, kind: gold ? 'gold' : 'silver' }); }
+  G.obs.push(o);
+}
+const obTmp = V3();
+function obstacleHit(o, r) {
+  o.g.updateMatrixWorld(true);
+  const pp = V3(player.x, player.y, 0);
+  let hit = false;
+  o.g.traverse(m => {
+    if (hit || !m.isMesh || !m.userData.half) return;
+    obTmp.copy(pp); m.worldToLocal(obTmp); const h = m.userData.half;
+    if (Math.abs(obTmp.x) < h.x + r && Math.abs(obTmp.y) < h.y + r && Math.abs(obTmp.z) < h.z + r) hit = true;
+  });
+  return hit;
+}
+function crashPlayer() {
+  const p = player; if (!p.alive) return;
+  p.shield = 0; p.alive = false; p.g.visible = false;
+  explode(ppos(), 3.5); Sound.boom(3); Sound.hurt(); shake(2.2); flash(0.4); dmgV = 1;
+  G.overT = G.t + 2.2; stat('downs');
+  comm.q = []; say(pick(['josh', 'ati', 'robin', 'dean']), pick(['OOF. That wall came out of nowhere.', 'That\'s gonna leave a mark.', '*SOB* WHO PUT THAT THERE?!', 'Unlucky. Run it back.']));
+}
+function updateObstacles(dt) {
+  const turbo = hasMod('turbo') ? 1.25 : 1;
+  G.runSpeed = Math.min(160, 60 + G.t * 0.85) * turbo;
+  if (player.alive) {
+    G.dist += W.scroll * dt * 0.1;
+    G.score = Math.round((Math.floor(G.dist) * 10 + G.bonus) * (G.scoreMul || 1));
+  }
+  // New zone every 600 m: pause spawning, then switch world once the course is clear.
+  if (G.dist >= G.nextZone && !G.zonePending) { G.zonePending = true; fxTag('ZONE CLEAR · NEW WORLD AHEAD'); }
+  if (G.zonePending && !G.obs.length) {
+    G.zonePending = false; G.nextZone += 600; G.envRot++;
+    setEnv(STAGE_ENV[G.envRot % STAGE_ENV.length]); Sound.pickup(); flash(0.25);
+    card(`ZONE ${G.envRot + 1}`, STAGES[G.envRot % STAGES.length], `${Math.floor(G.dist)} m`);
+    G.obsT = 2;
+  }
+  if (!G.zonePending && player.alive && (G.obsT -= dt) <= 0) {
+    spawnObstacle();
+    G.obsT = Math.max(32, 75 - G.t * 0.35) / G.runSpeed * (1 + Math.random() * 0.4);
+  }
+  const r = PL.stats.hit * 0.62;
+  for (const o of G.obs) {
+    o.g.position.z += W.scroll * dt;
+    if (o.hub) o.hub.rotation.z += o.spin * dt;
+    if (o.slide) o.g.position.x = Math.sin(G.t * 1.3 + o.ph) * o.slide;
+    const z = o.g.position.z;
+    if (player.alive && z > -20 && z < (o.type === 'double' ? 21 : 3) && obstacleHit(o, r)) crashPlayer();
+    if (z > (o.type === 'double' ? 21 : 3) && !o.passed) { o.passed = true; G.gates++; G.bonus += 50; if (G.gates % 10 === 0) fxTag(`${G.gates} GATES!`); }
+    if (z > 40) o.gone = true;
+  }
+  G.obs = G.obs.filter(o => { if (o.gone) actors.remove(o.g); return !o.gone; });
 }
 
 /* ---------- Boot (after every declaration above is initialised) ---------- */
