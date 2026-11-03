@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>WidR Wrapped · Wat in de Ranking</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect x=%276%27 y=%277%27 width=%2754%27 height=%2754%27 rx=%2714%27 fill=%27%231B1A17%27/%3E%3Crect x=%273%27 y=%273%27 width=%2754%27 height=%2754%27 rx=%2714%27 fill=%27%23F4C430%27 stroke=%27%231B1A17%27 stroke-width=%274%27/%3E%3Ctext x=%2730%27 y=%2744%27 text-anchor=%27middle%27 font-family=%27Futura,Arial Black,sans-serif%27 font-weight=%27900%27 font-size=%2734%27 fill=%27%231B1A17%27%3EW%3C/text%3E%3Ccircle cx=%2749%27 cy=%2713%27 r=%276.5%27 fill=%27%23E4472C%27 stroke=%27%231B1A17%27 stroke-width=%273%27/%3E%3C/svg%3E">
+<meta name="theme-color" content="#F4C430">
 <style>
 :root{
   --paper:#F5EFE2; --paper2:#EDE4D0; --ink:#1B1A17; --ink2:#55514A; --muted:#8C867B;
@@ -202,6 +205,58 @@ nav a:hover,nav a.on{background:var(--yellow);color:var(--ink)}
 .wbox span{font-size:15px;color:#d8d1c2}
 .tape{position:absolute;width:150px;height:34px;background:rgba(244,196,48,.85);top:-8px;right:60px;transform:rotate(8deg)}
 
+/* updater */
+.upd{position:fixed;right:20px;bottom:20px;z-index:60;font-family:var(--display);font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:.04em;background:var(--yellow);color:var(--ink);border:2.5px solid var(--ink);border-radius:999px;padding:11px 18px;cursor:pointer;box-shadow:4px 4px 0 var(--ink);transition:transform .15s,box-shadow .15s}
+.upd:hover{transform:translate(-1px,-2px);box-shadow:5px 6px 0 var(--ink)}
+.upd:active{transform:translate(3px,3px);box-shadow:none}
+.upd-i{display:inline-block;transition:transform .5s}
+.upd:hover .upd-i,.upd.busy .upd-i{transform:rotate(360deg)}
+.upd.busy .upd-i{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.drop{position:fixed;inset:0;z-index:90;background:rgba(245,239,226,.92);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.drop.on{opacity:1;pointer-events:auto}
+.drop-box{border:4px dashed var(--ink);border-radius:32px;padding:60px 70px;text-align:center;background:#fff;box-shadow:10px 10px 0 var(--ink);transform:rotate(-1.5deg) scale(.95);transition:transform .3s cubic-bezier(.3,1.5,.5,1)}
+.drop.on .drop-box{transform:rotate(-1.5deg) scale(1)}
+.drop-box b{display:block;font-family:var(--display);font-weight:900;font-size:clamp(30px,5vw,54px);text-transform:uppercase;line-height:1}
+.drop-box span{font-family:var(--hand);font-size:20px;color:var(--blue)}
+.toast{position:fixed;left:50%;bottom:64px;transform:translate(-50%,20px);z-index:95;background:var(--ink);color:var(--paper);border-radius:16px;padding:14px 20px;font-size:15px;max-width:min(560px,calc(100vw - 40px));opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.toast.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.toast b{color:var(--yellow)}
+.toast.err b{color:#FF9B85}
+.toast .linkbtn{color:var(--yellow)}
+.chks{margin:8px 0;display:grid;gap:3px;font-family:var(--mono);font-size:12.5px}
+.cloud{position:fixed;right:200px;bottom:20px;z-index:60;width:46px;height:46px;border-radius:50%;border:2.5px solid var(--ink);background:#fff;font-size:20px;cursor:pointer;box-shadow:4px 4px 0 var(--ink);transition:transform .15s,box-shadow .15s;position:fixed}
+.cloud:hover{transform:translate(-1px,-2px);box-shadow:5px 6px 0 var(--ink)}
+.cloud.busy{animation:bob 1s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-4px)}}
+.cloud.synced:after,.cloud.off:after{content:"";position:absolute;right:-2px;top:-2px;width:13px;height:13px;border-radius:50%;border:2px solid var(--ink);background:#1E8F55}
+.cloud.off:after{background:#E4472C}
+.modal{position:fixed;inset:0;z-index:99;background:rgba(27,26,23,.45);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal.on{opacity:1;pointer-events:auto}
+.mbox{background:var(--paper);border:2.5px solid var(--ink);border-radius:24px;box-shadow:10px 10px 0 var(--ink);padding:26px 28px;width:min(520px,100%);max-height:calc(100vh - 40px);overflow:auto;transform:scale(.95);transition:transform .25s cubic-bezier(.3,1.5,.5,1)}
+.modal.on .mbox{transform:none}
+.mbox h3{font-family:var(--display);font-weight:900;font-size:30px;text-transform:uppercase;line-height:1;margin:6px 0 10px}
+.mbox p{font-size:15px;color:var(--ink2);margin-bottom:12px}
+.mbox p.ok{color:var(--green)}
+.mbox label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin:10px 0}
+.mbox label input:not([type=checkbox]),.mbox textarea{display:block;width:100%;margin-top:5px;font-family:var(--mono);font-size:14px;border:2px solid var(--ink);border-radius:12px;padding:10px 12px;background:#fff;text-transform:none;letter-spacing:0}
+.mbox textarea{font-size:11.5px;margin:10px 0;resize:vertical}
+.mbox label.cb{display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:12.5px}
+.mbox details{border:2px dashed var(--ink);border-radius:14px;padding:12px 14px;margin:14px 0}
+.mbox summary{font-family:var(--display);font-weight:800;text-transform:uppercase;font-size:13px;cursor:pointer}
+.mrow{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.btn.ghost{background:#fff}
+.mstat{font-family:var(--mono);font-size:12.5px;margin-top:12px}
+.mstat.n{color:#B93A22}.mstat.y{color:var(--green)}
+@media print{.cloud,.modal{display:none!important}}
+.chk.y{color:#9BE3B4}
+.chk.n{color:#FF9B85}
+.dataline{margin-top:22px;font-family:var(--mono);font-size:12px;color:var(--ink2);background:#fff;border:1.5px solid var(--ink);border-radius:12px;padding:9px 12px;display:inline-block;max-width:560px}
+.linkbtn{background:none;border:0;padding:0;font:inherit;color:var(--blue);text-decoration:underline;cursor:pointer}
+.flash{animation:flash 1.2s}
+@keyframes flash{0%{background:var(--yellow)}100%{}}
+@media print{.upd,.drop,.toast{display:none!important}}
+
 /* memes */
 .motm{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:24px;align-items:center;background:var(--yellow);border:2.5px solid var(--ink);border-radius:26px;padding:26px 30px;box-shadow:8px 8px 0 var(--ink);margin:34px 0 30px;position:relative;overflow:hidden}
 .motm b{font-family:var(--display);font-weight:900;font-size:clamp(70px,10vw,130px);line-height:.85;letter-spacing:-.04em;display:block;margin:6px 0 10px;animation:wob 3.5s ease-in-out infinite;transform-origin:left bottom}
@@ -232,6 +287,70 @@ nav a:hover,nav a.on{background:var(--yellow);color:var(--ink)}
 .mm-f b{color:var(--ink)}
 .meme-note{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-top:22px}
 .meme-empty{font-family:var(--hand);font-size:22px;padding:30px 0}
+/* poll archive */
+.pl-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:30px 0}
+@media(max-width:820px){.pl-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.pl-st{border:2px solid var(--ink);border-radius:16px;padding:14px 16px;background:#fff;box-shadow:4px 4px 0 var(--ink)}
+.pl-st b{display:block;font-family:var(--display);font-weight:900;font-size:30px;line-height:1.05}
+.pl-st span{font-size:14px;color:var(--ink2)}
+.pl-ctrl{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;margin-bottom:12px}
+.pl-right{display:flex;gap:10px;flex-wrap:wrap}
+#plSort,#plSearch{font-family:var(--display);font-size:14px;border:2px solid var(--ink);border-radius:999px;padding:9px 16px;background:#fff;box-shadow:3px 3px 0 var(--ink);outline:none}
+#plSearch{min-width:220px}
+.pl-count{font-family:var(--mono);font-size:12px;color:var(--ink2);margin:6px 0 18px}
+.pl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;align-items:start}
+.pl{background:#fff;border:2px solid var(--ink);border-radius:18px;padding:18px 18px 16px;box-shadow:5px 5px 0 var(--ink);opacity:0;transform:translateY(14px);transition:opacity .4s,transform .4s}
+.pl.show{opacity:1;transform:none}
+.pl-h{display:flex;justify-content:space-between;gap:10px;font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2);margin-bottom:6px}
+.pl-h b{color:var(--ink)}
+.pl-t{font-family:var(--display);font-weight:800;font-size:19px;line-height:1.2;margin-bottom:12px;word-break:break-word}
+.pl-o{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 10px;margin-bottom:5px;border-radius:9px;background:var(--paper2);overflow:hidden;font-size:14px}
+.pl-o i{position:absolute;left:0;top:0;bottom:0;width:0;background:#CFE0FF;transition:width .8s cubic-bezier(.2,.8,.2,1);z-index:0}
+.pl-o.win i{background:var(--yellow)}
+.pl-o span,.pl-o em{position:relative;z-index:1}
+.pl-o span{word-break:break-word}
+.pl-o em{font-style:normal;font-family:var(--mono);font-size:12px;white-space:nowrap}
+.pl-o.win span{font-weight:700}
+.pl-o.win span:before{content:"🏆 "}
+.pl-f{font-family:var(--mono);font-size:11px;color:var(--ink2);margin-top:8px}
+.pl-more{background:none;border:0;font-family:var(--mono);font-size:11px;text-decoration:underline;cursor:pointer;color:var(--blue);padding:0;margin-top:2px}
+@media print{.pl{opacity:1!important;transform:none!important}.pl-ctrl,#plMore{display:none}}
+
+/* who said it */
+.ws-modes{display:flex;flex-wrap:wrap;gap:10px;margin:28px 0 0}
+.ws-opts.ctx{grid-template-columns:minmax(0,1fr)}
+.ws-opts.ctx .ws-opt{font-family:var(--serif);font-weight:400;font-size:16px;text-transform:none;text-align:left;padding:13px 16px;line-height:1.4}
+.ws-story{font-size:16px;line-height:1.5;background:var(--paper);border:2px dashed var(--ink);border-radius:14px;padding:14px 16px;margin-top:4px}
+.ws-story b{font-family:var(--display);font-size:12px;text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:4px}
+.ws-q .ctx{font-family:var(--serif);font-size:14px;color:var(--ink2);margin:0 0 10px;border-left:3px solid var(--yellow);padding-left:10px}
+.ws-bar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:30px 0 22px}
+.ws-score{font-family:var(--display);font-weight:900;font-size:34px}
+.ws-streak{font-family:var(--hand);font-size:20px;color:var(--red);min-width:90px}
+.ws-prog{flex:1;min-width:140px;height:12px;border:2px solid var(--ink);border-radius:999px;background:#fff;overflow:hidden}
+.ws-prog i{display:block;height:100%;width:0;background:var(--blue);transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.ws-stage{perspective:1400px}
+.ws-card{position:relative;background:#fff;border:2.5px solid var(--ink);border-radius:28px;box-shadow:10px 10px 0 var(--ink);padding:44px 44px 34px;max-width:860px;margin:0 auto;transition:transform .55s cubic-bezier(.3,1.3,.5,1),opacity .35s;transform-origin:center bottom}
+.ws-card.out{opacity:0;transform:rotate(-6deg) translateY(30px) scale(.94)}
+.ws-card.ok{background:#E5F7EB}
+.ws-card.no{background:#FDE6E0}
+.ws-card.shake{animation:shk .4s}
+.ws-mark{position:absolute;left:24px;top:-14px;font-family:var(--serif);font-size:130px;line-height:1;color:var(--yellow);text-shadow:3px 3px 0 var(--ink)}
+.ws-card blockquote{font-family:var(--hand);font-size:clamp(24px,3.4vw,40px);line-height:1.25;margin:20px 0 14px;word-break:break-word}
+.ws-meta{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);margin-bottom:22px}
+.ws-opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media(max-width:560px){.ws-opts{grid-template-columns:minmax(0,1fr)}.ws-card{padding:40px 22px 26px}}
+.ws-opt{font-family:var(--display);font-weight:800;font-size:18px;text-transform:uppercase;border:2.5px solid var(--ink);background:var(--paper);border-radius:14px;padding:14px;cursor:pointer;box-shadow:4px 4px 0 var(--ink);transition:transform .15s,box-shadow .15s,background .15s}
+.ws-opt:hover:not(:disabled){background:var(--yellow);transform:translate(-1px,-2px);box-shadow:5px 6px 0 var(--ink)}
+.ws-opt:disabled{cursor:default;opacity:.45}
+.ws-opt.right{background:#1E8F55;color:#fff;opacity:1}
+.ws-opt.wrong{background:#E4472C;color:#fff;opacity:1}
+.ws-res{font-family:var(--hand);font-size:24px;min-height:34px;margin:18px 0 6px}
+.ws-wall{columns:3 260px;column-gap:22px;margin-top:10px}
+.ws-q{break-inside:avoid;background:#fff;border:2px solid var(--ink);border-radius:18px;padding:16px 18px;margin:0 0 22px;box-shadow:5px 5px 0 var(--ink);transform:rotate(var(--r))}
+.ws-q p{font-family:var(--hand);font-size:19px;line-height:1.3;margin-bottom:10px}
+.ws-q small{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2)}
+.ws-q small b{color:var(--ink)}
+@media print{.ws-stage,.ws-bar{display:none}.ws-wall{display:block!important}}
 @media print{.mm{opacity:1!important;transform:none!important}.meme-ctrl{display:none}}
 
 /* ghosts */
@@ -293,18 +412,26 @@ footer .hand{font-size:26px;color:var(--ink);display:block;margin-bottom:8px;let
 <body>
 <div class="tip" id="tip"></div>
 
+<button class="upd" id="updBtn" type="button" title="Load a new WhatsApp export of WidR"><span class="upd-i">⟳</span> New export</button>
+<button class="cloud" id="cloudBtn" type="button" title="Firestore sync settings" aria-label="Cloud sync settings">☁️</button>
+<div class="modal" id="mdl" role="dialog" aria-modal="true"><div class="mbox" id="mbox"></div></div>
+<input type="file" id="updFile" accept=".txt,.zip,text/plain,application/zip" hidden>
+<div class="drop" id="drop"><div class="drop-box"><b>Drop the new WidR export</b><span>the _chat.txt file, or the whole .zip from WhatsApp</span></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
 <nav>
-  <a href="#top">Start</a><a href="#timeline">Timeline</a><a href="#crew">The Crew</a><a href="#rank">Rankings</a><a href="#swear">Swear Jar</a><a href="#lore">Lore</a><a href="#memes">Memes</a><a href="#quiz">Quiz</a>
+  <a href="#top">Start</a><a href="#timeline">Timeline</a><a href="#crew">The Crew</a><a href="#rank">Rankings</a><a href="#swear">Swear Jar</a><a href="#lore">Lore</a><a href="#memes">Memes</a><a href="#quotes">Wie zei dit?</a><a href="#polls">Polls</a><a href="#quiz">Quiz</a>
 </nav>
 
 <!-- HERO -->
 <header class="hero" id="top">
   <div class="wrap hero-grid">
     <div>
-      <div class="kicker">12 Oct 2025 → 3 Nov 2026 · WhatsApp · 4V / 5VWO</div>
+      <div class="kicker" id="heroRange">12 Oct 2025 → 3 Nov 2026 · WhatsApp · 4V / 5VWO</div>
       <h1><span class="clip"><span class="w">WidR</span></span><span class="clip"><span class="w r" style="animation-delay:.15s">Wrap</span></span><span class="clip"><span class="w" style="animation-delay:.3s">ped.</span></span></h1>
       <div class="sub">"Wat in de Ranking": the group chat for ranking literally everything</div>
-      <p>387 days, 10 regulars, 2 ghosts, 1 AI and an unreasonable number of stickers. Every message in the chat export, counted, sorted and (obviously) ranked.</p>
+      <p id="heroP">387 days, 10 regulars, 2 ghosts, 1 AI and an unreasonable number of stickers. Every message in the chat export, counted, sorted and (obviously) ranked.</p>
+      <div class="dataline" id="dataLine">📦 Original export · data through 3 Nov 2026 · <button type="button" class="linkbtn" data-upd>drop in a new export</button> to update everything</div>
       <div class="scroll"><i></i>Scroll for the lore</div>
     </div>
     <div class="stickers">
@@ -325,7 +452,7 @@ footer .hand{font-size:26px;color:var(--ink);display:block;margin-bottom:8px;let
     <div class="rv">
       <div class="kicker">01 · The rise</div>
       <h2>Almost dead.<br>Then <em>unstoppable.</em></h2>
-      <p class="lede">The chat started strong, nearly flatlined over Christmas (137 messages in all of December), then came back in January and never slowed down. October 2026 is the biggest month ever, and November already has 1,518 messages after three days.</p>
+      <p class="lede" id="tlLede">The chat started strong, nearly flatlined over Christmas (137 messages in all of December), then came back in January and never slowed down. October 2026 is the biggest month ever, and November already has 1,518 messages after three days.</p>
     </div>
     <div class="two">
       <div class="card rv" id="monthsCard">
@@ -335,16 +462,16 @@ footer .hand{font-size:26px;color:var(--ink);display:block;margin-bottom:8px;let
         <div style="height:30px"></div>
       </div>
       <div class="facts rv">
-        <div class="fact"><b data-count="200">0</b><span>messages on an average day</span></div>
-        <div class="fact"><b>344 / 387</b><span>days with at least one message</span></div>
-        <div class="fact"><b>24 June</b><span>busiest day ever, with 1,514 messages (more on that below 👀)</span></div>
-        <div class="fact"><b>13,624</b><span>messages in October 2026, the record month</span></div>
+        <div class="fact" id="fAvg"><b data-count="200">0</b><span>messages on an average day</span></div>
+        <div class="fact" id="fActive"><b>344 / 387</b><span>days with at least one message</span></div>
+        <div class="fact" id="fBusy"><b>24 June</b><span>busiest day ever, with 1,514 messages (more on that below 👀)</span></div>
+        <div class="fact" id="fRecord"><b>13,624</b><span>messages in October 2026, the record month</span></div>
       </div>
     </div>
 
     <div class="card rv hours" style="margin-top:40px" id="hoursCard">
       <div class="chart-title">When WidR is awake</div>
-      <div class="chart-sub">All messages by hour of day. Peak is 21:00, and 2,354 messages were sent after midnight.</div>
+      <div class="chart-sub" id="hoursSub">All messages by hour of day. Peak is 21:00, and 2,354 messages were sent after midnight.</div>
       <div class="bars" id="hours" style="height:clamp(220px,32vh,320px)"></div>
       <div style="height:30px"></div>
     </div>
@@ -355,8 +482,8 @@ footer .hand{font-size:26px;color:var(--ink);display:block;margin-bottom:8px;let
 <section style="padding-top:60px">
   <div class="wrap rv" id="shareWrap">
     <div class="kicker">02 · Who's talking</div>
-    <h2>Three people write<br><em>73%</em> of everything.</h2>
-    <p class="lede">Lars, Adam and Nathaniel are the engine. Everyone else is the (very loud) audience.</p>
+    <h2 id="shareH">Three people write<br><em>73%</em> of everything.</h2>
+    <p class="lede" id="shareL">Lars, Adam and Nathaniel are the engine. Everyone else is the (very loud) audience.</p>
     <div class="stack" id="stack"></div>
     <div class="stack-legend" id="stackLegend"></div>
   </div>
@@ -379,7 +506,7 @@ footer .hand{font-size:26px;color:var(--ink);display:block;margin-bottom:8px;let
     </div>
     <div class="ghosts">
       <article class="ghost rv">
-        <div class="g-ratio"><div><b data-count="7">0</b><span>messages sent</span></div><div class="vs">vs</div><div><b data-count="281">0</b><span>times mentioned</span></div></div>
+        <div class="g-ratio"><div><b id="gD1" data-count="7">0</b><span>messages sent</span></div><div class="vs">vs</div><div><b id="gD2" data-count="281">0</b><span>times mentioned</span></div></div>
         <h3>Deniz <span>🫥</span></h3>
         <div class="role hand">The silent celebrity</div>
         <p>Added by Adam in October 2025. In a whole year Deniz's messages were basically "I exeeded it with 1.20", "Nee", "76" and "Hockey uitval". Meanwhile the chat treats Deniz as a main character: Missy in the Young Sheldon cast, Maki in the Danganronpa lineup, half of the "Deniz ❤️ Adam" canon ship, and the subject of whole debates ("Deniz is NIET de meest chopped in deze gc").</p>
@@ -387,7 +514,7 @@ footer .hand{font-size:26px;color:var(--ink);display:block;margin-bottom:8px;let
         <div class="chips"><span class="chip">ratio <b>40 mentions per message</b></span><span class="chip">3 votes in the very first poll</span><span class="chip">"Lars maar dan groter"</span></div>
       </article>
       <article class="ghost rv">
-        <div class="g-ratio"><div><b data-count="6">0</b><span>messages sent</span></div><div class="vs">vs</div><div><b data-count="89">0</b><span>times mentioned</span></div></div>
+        <div class="g-ratio"><div><b id="gR1" data-count="6">0</b><span>messages sent</span></div><div class="vs">vs</div><div><b id="gR2" data-count="89">0</b><span>times mentioned</span></div></div>
         <h3>Rênas <span>🍍</span></h3>
         <div class="role hand">"Rênas Ananas", the short visit</div>
         <p>Joined on 4 July 2026 and left on 26 August, 53 days later. Rênas's messages were one gaming question for Lars ("wat zijn de beste 3ds games"), an "Oke", a "Fuck jou" and one sticker. Shares the Ibrahim surname with Josh, who mostly talked for Rênas ("Rênas is aan het douche hij komt zo"). Also "renas binas", "evil Renas", and, according to Adam, one of the three people Adam has lost to most in games.</p>
@@ -432,7 +559,7 @@ footer .hand{font-size:26px;color:var(--ink);display:block;margin-bottom:8px;let
     <div class="rv">
       <div class="kicker">04½ · Censored edition</div>
       <h2>The <em>swear jar</em> 🫙</h2>
-      <p class="lede">1,539 swear words in total. Every person's count, their favourite word and how they swear. Sorted by total, with the rate per 1,000 messages so the small posters count too.</p>
+      <p class="lede" id="swLede">1,539 swear words in total. Every person's count, their favourite word and how they swear. Sorted by total, with the rate per 1,000 messages so the small posters count too.</p>
     </div>
     <div class="jar-top rv" id="jarTop"></div>
     <div class="jars" id="jars"></div>
@@ -511,8 +638,8 @@ footer .hand{font-size:26px;color:var(--ink);display:block;margin-bottom:8px;let
       <p class="lede">Every meme, slang word and inside joke the chat runs on: what it means, how WidR uses it, who says it most and when it first showed up.</p>
     </div>
     <div class="motm rv">
-      <div><div class="kicker" style="color:#3a3833">Word of the year</div><b>GOAT</b><span>862 uses. Lars says it 338 times alone, and "goated" is the highest praise in the chat.</span></div>
-      <div class="motm-stats"><div><b>38</b><span>terms</span></div><div><b>Lars</b><span>top user of 24</span></div><div><b>day 1</b><span>"pmo" showed up within 3 minutes</span></div></div>
+      <div><div class="kicker" style="color:#3a3833">Word of the year</div><b id="motmW">GOAT</b><span id="motmT">862 uses. Lars says it 338 times alone, and "goated" is the highest praise in the chat.</span></div>
+      <div class="motm-stats"><div><b>38</b><span>terms</span></div><div id="motmU"><b>Lars</b><span>top user of 24</span></div><div><b>day 1</b><span>"pmo" showed up within 3 minutes</span></div></div>
     </div>
     <div class="meme-ctrl">
       <div class="tabs" id="memeTabs" style="margin:0"></div>
@@ -520,6 +647,60 @@ footer .hand{font-size:26px;color:var(--ink);display:block;margin-bottom:8px;let
     </div>
     <div class="memes" id="memeGrid"></div>
     <p class="meme-note">Counts are messages containing the word, Meta AI excluded. Short words like "ahh", "W" and "son" can also match normal text, so treat those numbers as estimates.</p>
+  </div>
+</section>
+
+<!-- WHO SAID IT -->
+<section id="quotes">
+  <div class="wrap">
+    <div class="rv">
+      <div class="kicker">05¾ · Out of context</div>
+      <h2>Wie zei <em>dit?</em> 🤨</h2>
+      <p class="lede" id="wsLede">The weirdest real messages from every member, word for word. Guess who sent it, then see if you were right.</p>
+    </div>
+    <div class="ws-modes" id="wsModes" role="tablist">
+      <button class="tab on" type="button" data-mode="who" role="tab">🤨 Who said it?</button>
+      <button class="tab" type="button" data-mode="ctx" role="tab">🧩 What was the context?</button>
+    </div>
+    <div class="ws-bar">
+      <div class="ws-score" id="wsScore">0 / 0</div>
+      <div class="ws-streak" id="wsStreak"></div>
+      <div class="ws-prog"><i id="wsProg"></i></div>
+      <button class="btn ghost" id="wsAll" type="button">Show all quotes</button>
+    </div>
+    <div class="ws-stage" id="wsStage">
+      <div class="ws-card" id="wsCard">
+        <div class="ws-mark">“</div>
+        <blockquote id="wsQ"></blockquote>
+        <div class="ws-meta" id="wsMeta"></div>
+        <div class="ws-opts" id="wsOpts"></div>
+        <div class="ws-res" id="wsRes"></div>
+        <button class="btn" id="wsNext" type="button" hidden>Next quote →</button>
+      </div>
+    </div>
+    <div class="ws-wall" id="wsWall" hidden></div>
+  </div>
+</section>
+
+<!-- POLL ARCHIVE -->
+<section id="polls">
+  <div class="wrap">
+    <div class="rv">
+      <div class="kicker">05⅞ · The archive</div>
+      <h2>Every <em>poll</em><br>ever 🗳️</h2>
+      <p class="lede">All 241 polls from the chat with their final results. Filter by who made them, search, or sort by the most votes.</p>
+    </div>
+    <div class="pl-stats rv" id="plStats"></div>
+    <div class="pl-ctrl">
+      <div class="tabs" id="plWho" style="margin:0"></div>
+      <div class="pl-right">
+        <select id="plSort" aria-label="Sort polls"><option value="new">Newest first</option><option value="old">Oldest first</option><option value="votes">Most votes</option><option value="close">Closest race</option></select>
+        <input id="plSearch" type="search" placeholder="Search polls or options…" aria-label="Search polls">
+      </div>
+    </div>
+    <div class="pl-count" id="plCount"></div>
+    <div class="pl-grid" id="plGrid"></div>
+    <div style="text-align:center;margin-top:26px"><button class="btn" id="plMore" type="button">Show more polls</button></div>
   </div>
 </section>
 
@@ -548,9 +729,9 @@ footer .hand{font-size:26px;color:var(--ink);display:block;margin-bottom:8px;let
       <h2>The part that<br>could backfire</h2>
       <p class="lede">Most of WidR is harmless chaos. But some "jokes" already got the chat noticed at school once, and screenshots last forever.</p>
       <div class="wgrid">
-        <div class="wbox"><b>107</b><span>uses of the n-word (Lars 38, Maciej 20 in just 433 messages, Reshman 16, Milo 15)</span></div>
-        <div class="wbox"><b>151</b><span>times "kanker" was used as an insult</span></div>
-        <div class="wbox"><b>169</b><span>"gay" mentions, often as an insult</span></div>
+        <div class="wbox" id="wN"><b>107</b><span>uses of the n-word (Lars 38, Maciej 20 in just 433 messages, Reshman 16, Milo 15)</span></div>
+        <div class="wbox" id="wK"><b>151</b><span>times "kanker" was used as an insult</span></div>
+        <div class="wbox" id="wG"><b>169</b><span>"gay" mentions, often as an insult</span></div>
         <div class="wbox"><b>1</b><span>"I want to bomb the school" joke, just yesterday. Clearly a joke, but schools don't laugh</span></div>
       </div>
     </div>
@@ -559,7 +740,7 @@ footer .hand{font-size:26px;color:var(--ink);display:block;margin-bottom:8px;let
 
 <footer>
   <span class="hand">Rank responsibly. ✌️</span>
-  Based on 77,356 messages from the WidR chat export · 12 Oct 2025 to 3 Nov 2026 · topic counts are keyword estimates
+  <span id="footTxt">Based on 77,356 messages from the WidR chat export · 12 Oct 2025 to 3 Nov 2026 · topic counts are keyword estimates</span>
 </footer>
 
 <script>
@@ -573,34 +754,51 @@ setTimeout(()=>document.querySelectorAll('.stk [data-count]').forEach(countUp),7
 
 /* marquees */
 const quotes=["Wat in de Ranking","Goon squad","Sea lions","67 Tung sahur","Yuno Miles Fanboy Club","potaTOE","Certified rankers","Shanghai Sharks","Bedrijfseconomie lovers","Huize Ibrahim","Femboy Fanclub","Dollar store WidR","Goblin Machine","Alonehout 67","Stephon Castle Fangroup","Bali Boyzz (Formerly WidR)","Jim Clark le GOAT","Rank of registry"];
-const words=["9,593 stickers","3,046 images","572 voice notes","549 GIFs","289 deleted","454 edited","241 polls","142 videos","1 Meta AI","10 rankers"];
+let words=["9,593 stickers","3,046 images","572 voice notes","549 GIFs","289 deleted","454 edited","241 polls","142 videos","1 Meta AI","10 rankers"];
 function fill(id,arr){const h=arr.map(x=>`<span>${x}</span><span class="dot">✦</span>`).join('');document.getElementById(id).innerHTML=h+h}
 fill('mq1',quotes);fill('mq2',words);
 
-/* months chart */
-const months=[["Oct",983,"'25"],["Nov",421],["Dec",137],["Jan",3041,"'26"],["Feb",4101],["Mar",3657],["Apr",2064],["May",7654],["Jun",12844],["Jul",13193],["Aug",6815],["Sep",7304],["Oct",13624],["Nov",1518,"3 days"]];
-const mx=13624, M=document.getElementById('months');
-months.forEach((m,i)=>{const b=document.createElement('div');b.className='bar'+(m[1]===mx?' hot':'');
-  const pct=m[1]/mx*100;
-  let ann='';if(m[0]==='Dec')ann=`<span class="ann" style="bottom:${pct+6}%">nearly dead 💀</span>`;
-  if(m[1]===mx)ann=`<span class="ann" style="bottom:calc(${pct}% + 6px)">record! 🔥</span>`;
-  b.innerHTML=`<i data-h="${pct}"></i><span class="lb">${m[0]}${m[2]&&m[2]!=='3 days'?m[2]:''}</span>${ann}`;
-  b.onmousemove=e=>showTip(e,`${m[0]} ${i<3?'2025':'2026'}${m[2]==='3 days'?' (3 days)':''}<br><b>${m[1].toLocaleString('en-US')}</b> messages`);b.onmouseleave=hideTip;M.appendChild(b)});
+/* is this chart's section already on screen (so new data should show instantly)? */
+const shown=el=>{const r=el&&el.closest('.rv');return !!(r&&r.classList.contains('in'))};
+const MN=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const fmt=n=>Number(n).toLocaleString('en-US');
+
+/* months chart: [year, month, count, partialDays] */
+let months=[[2025,10,983],[2025,11,421],[2025,12,137],[2026,1,3041],[2026,2,4101],[2026,3,3657],[2026,4,2064],[2026,5,7654],[2026,6,12844],[2026,7,13193],[2026,8,6815],[2026,9,7304],[2026,10,13624],[2026,11,1518,3]];
+const M=document.getElementById('months');
+function renderMonths(){M.innerHTML='';const mx=Math.max(...months.map(m=>m[2]));
+  const mid=months.slice(1,-1).map(m=>m[2]);const low=mid.length?Math.min(...mid):-1;
+  months.forEach((m,i)=>{const b=document.createElement('div');b.className='bar'+(m[2]===mx?' hot':'');
+    const pct=m[2]/mx*100;let ann='';
+    if(m[2]===mx)ann=`<span class="ann" style="bottom:calc(${pct}% + 6px)">record! 🔥</span>`;
+    else if(m[2]===low&&low<mx*.05)ann=`<span class="ann" style="bottom:calc(${pct}% + 6px)">nearly dead 💀</span>`;
+    const yr=(i===0||m[1]===1)?"'"+String(m[0]).slice(2):'';
+    b.innerHTML=`<i data-h="${pct}"></i><span class="lb">${MN[m[1]-1]}${yr}</span>${ann}`;
+    b.onmousemove=e=>showTip(e,`${MN[m[1]-1]} ${m[0]}${m[3]?` (${m[3]} days so far)`:''}<br><b>${fmt(m[2])}</b> messages`);b.onmouseleave=hideTip;M.appendChild(b)});
+  if(shown(M))M.querySelectorAll('.bar i').forEach(b=>b.style.height=b.dataset.h+'%')}
+renderMonths();
 
 /* hours chart */
-const hours=[2354,486,160,11,5,69,89,1124,1464,1825,2240,2625,3314,3548,3086,4072,4965,4475,3535,5516,8063,9215,8551,6564];
-const hm=Math.max(...hours),H=document.getElementById('hours');
-hours.forEach((v,h)=>{const b=document.createElement('div');b.className='bar'+(v===hm?' hot':'');
-  b.innerHTML=`<i data-h="${v/hm*100}"></i>${h%3===0?`<span class="lb">${String(h).padStart(2,'0')}h</span>`:''}`;
-  b.onmousemove=e=>showTip(e,`${String(h).padStart(2,'0')}:00 to ${String(h).padStart(2,'0')}:59<br><b>${v.toLocaleString('en-US')}</b> messages`);b.onmouseleave=hideTip;H.appendChild(b)});
+let hours=[2354,486,160,11,5,69,89,1124,1464,1825,2240,2625,3314,3548,3086,4072,4965,4475,3535,5516,8063,9215,8551,6564];
+const H=document.getElementById('hours');
+function renderHours(){H.innerHTML='';const hm=Math.max(...hours);
+  hours.forEach((v,h)=>{const b=document.createElement('div');b.className='bar'+(v===hm?' hot':'');
+    b.innerHTML=`<i data-h="${v/hm*100}"></i>${h%3===0?`<span class="lb">${String(h).padStart(2,'0')}h</span>`:''}`;
+    b.onmousemove=e=>showTip(e,`${String(h).padStart(2,'0')}:00 to ${String(h).padStart(2,'0')}:59<br><b>${fmt(v)}</b> messages`);b.onmouseleave=hideTip;H.appendChild(b)});
+  if(shown(H))H.querySelectorAll('.bar i').forEach(b=>b.style.height=b.dataset.h+'%')}
+renderHours();
 
-/* share stack */
-const TOTAL=77356;
-const share=[["Lars",23265,"#E4472C","#fff"],["Adam",16562,"#2C4FD8","#fff"],["Nathaniel",16514,"#1E8F55","#fff"],["Fionn",5392,"#F4C430","#1B1A17"],["Reshman",5196,"#F2A7C3","#1B1A17"],["Milo",3346,"#8C867B","#fff"],["Josh",3067,"#55514A","#fff"],["Meta AI",1756,"#1B1A17","#fff"],["Rest",2258,"#D9CFB8","#1B1A17"]];
+/* share stack — colour follows the person, not the rank */
+let TOTAL=77356;
+const COL={Lars:["#E4472C","#fff"],Adam:["#2C4FD8","#fff"],Nathaniel:["#1E8F55","#fff"],Fionn:["#F4C430","#1B1A17"],Reshman:["#F2A7C3","#1B1A17"],Milo:["#8C867B","#fff"],Josh:["#55514A","#fff"],"Meta AI":["#1B1A17","#fff"],Rest:["#D9CFB8","#1B1A17"]};
+let share=[["Lars",23265],["Adam",16562],["Nathaniel",16514],["Fionn",5392],["Reshman",5196],["Milo",3346],["Josh",3067],["Meta AI",1756],["Rest",2258]];
 const S=document.getElementById('stack'),SL=document.getElementById('stackLegend');
-share.forEach(s=>{const d=document.createElement('div');const p=s[1]/TOTAL*100;d.dataset.w=p;d.style.background=s[2];d.style.color=s[3];d.textContent=p>12?`${s[0]} ${p.toFixed(0)}%`:'';
-  d.onmousemove=e=>showTip(e,`${s[0]}<br><b>${s[1].toLocaleString('en-US')}</b> messages · ${p.toFixed(1)}%`);d.onmouseleave=hideTip;S.appendChild(d);
-  SL.insertAdjacentHTML('beforeend',`<span><i style="background:${s[2]}"></i>${s[0]} · ${p.toFixed(1)}%</span>`)});
+function renderShare(){S.innerHTML='';SL.innerHTML='';
+  share.forEach(s=>{const c=COL[s[0]]||["#B9B1A0","#1B1A17"];const d=document.createElement('div');const p=s[1]/TOTAL*100;d.dataset.w=p;d.style.background=c[0];d.style.color=c[1];d.textContent=p>12?`${s[0]} ${p.toFixed(0)}%`:'';
+    d.onmousemove=e=>showTip(e,`${s[0]}<br><b>${fmt(s[1])}</b> messages · ${p.toFixed(1)}%`);d.onmouseleave=hideTip;S.appendChild(d);
+    SL.insertAdjacentHTML('beforeend',`<span><i style="background:${c[0]}"></i>${s[0]} · ${p.toFixed(1)}%</span>`)});
+  if(shown(S))S.querySelectorAll('div').forEach(d=>d.style.width=d.dataset.w+'%')}
+renderShare();
 
 /* members */
 const people=[
@@ -649,7 +847,7 @@ const MEM=document.getElementById('members');
 people.forEach(m=>{MEM.insertAdjacentHTML('beforeend',`<article class="mem rv"><div class="mem-top" style="background:${m.c};color:${m.t}"><span class="emo">${m.emo}</span><h3>${m.n}</h3><div class="role">${m.role}</div></div><div class="mem-body"><p>${m.p}</p><div class="q">"${m.q}"</div><div class="chips">${m.s.map(x=>`<span class="chip">${x[0]} <b>${x[1]}</b></span>`).join('')}</div></div></article>`)});
 
 /* rankings */
-const R={
+let R={
  msgs:{t:"Most messages",s:"total messages sent",u:"",d:{Lars:23265,Adam:16562,Nathaniel:16514,Fionn:5392,Reshman:5196,Milo:3346,Josh:3067,"Daniël":943,Sichen:589,Maciej:433}},
  funny:{t:"Funniest",s:"how often the next person laughs, per 1,000 messages",u:"",d:{Josh:9.1,Adam:8.8,Fionn:8.5,Reshman:8.1,Nathaniel:8.0,"Daniël":7.4,Milo:5.7,Lars:5.6}},
  sticker:{t:"Sticker lord",s:"share of their messages that are stickers",u:"%",d:{Milo:38.3,Josh:17.9,Nathaniel:16.5,Reshman:15.3,Fionn:9.8,Lars:9.7,Adam:8.5,"Daniël":1.4}},
@@ -669,17 +867,18 @@ const R={
  q:{t:"Most curious",s:"share of messages that are questions",u:"%",d:{"Daniël":10.0,Adam:7.8,Fionn:3.3,Nathaniel:2.8,Josh:2.5,Lars:1.8,Reshman:1.8,Milo:0.7}}
 };
 const T=document.getElementById('tabs'),ROWS=document.getElementById('rows');
-Object.entries(R).forEach(([k,v],i)=>{const b=document.createElement('button');b.className='tab'+(i===0?' on':'');b.textContent=v.t;b.onclick=()=>{T.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));b.classList.add('on');renderRank(k)};T.appendChild(b)});
+let curRank='msgs';
+Object.entries(R).forEach(([k,v],i)=>{const b=document.createElement('button');b.className='tab'+(i===0?' on':'');b.textContent=v.t;b.onclick=()=>{T.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));b.classList.add('on');curRank=k;renderRank(k)};T.appendChild(b)});
 const medal=["🥇","🥈","🥉"];
 function renderRank(k){const r=R[k];document.getElementById('rTitle').textContent=r.t;document.getElementById('rSub').textContent=r.s;
-  const arr=Object.entries(r.d).sort((a,b)=>b[1]-a[1]);const top=arr[0][1]||1;
+  const arr=Object.entries(r.d).sort((a,b)=>b[1]-a[1]);if(!arr.length){ROWS.innerHTML='<div class="meme-empty">Nobody qualifies yet.</div>';return}const top=arr[0][1]||1;
   ROWS.innerHTML=arr.map((a,i)=>`<div class="row"><div class="pos">${medal[i]||i+1}</div><div class="nm">${a[0]}</div><div class="trk"><div class="fill" data-w="${a[1]/top*100}"></div></div><div class="val">${a[1].toLocaleString('en-US')}${r.u}</div></div>`).join('');
   [...ROWS.children].forEach((row,i)=>setTimeout(()=>{row.classList.add('show');row.querySelector('.fill').style.width=row.querySelector('.fill').dataset.w+'%'},60*i+40))}
 renderRank('msgs');
 
 /* swear jar */
 const SW_WORDS=[["fuck","#E4472C"],["shit","#8B5A2B"],["kanker","#2C4FD8"],["kkr","#7FA0F0"],["kut","#F2A7C3"],["tering","#F4C430"],["mongool","#1E8F55"],["bitch","#B9417A"],["kys","#1B1A17"],["n-woord","#55514A"],["homo","#E8833A"],["hoer","#A9A294"]];
-const SW=[
+let SW=[
  ["Lars",23265,[51,149,100,80,53,4,1,2,22,38,24,3]],
  ["Adam",16562,[127,74,0,1,47,6,5,11,1,0,26,1]],
  ["Nathaniel",16514,[163,25,2,1,61,2,0,1,6,1,13,1]],
@@ -691,19 +890,32 @@ const SW=[
  ["Maciej",433,[14,10,0,2,2,0,0,0,1,20,0,0]],
  ["Sichen",589,[1,0,0,0,2,3,0,0,0,0,0,1]]
 ];
-const swTot=SW.map(p=>p[2].reduce((a,b)=>a+b,0)),swMax=Math.max(...swTot);
+const sum=a=>a.reduce((x,y)=>x+y,0);
 const fav=p=>{let m=0;p[2].forEach((v,i)=>{if(v>p[2][m])m=i});return SW_WORDS[m][0]};
+const JR=document.getElementById('jars');let jarShown=false;
+function renderJar(custom){
+ const tots=SW.map(p=>sum(p[2])),swMax=Math.max(1,...tots);
+ if(custom){
+  const top=SW[0],tf=top[2].indexOf(Math.max(...top[2]));
+  const byRate=[...SW].sort((a,b)=>sum(b[2])/b[1]-sum(a[2])/a[1]),hi=byRate[0],lo=[...SW].sort((a,b)=>sum(a[2])-sum(b[2]))[0];
+  const hr=Math.round(sum(hi[2])/hi[1]*1000);
+  document.getElementById('jarTop').innerHTML=`
+  <div class="jt" style="background:var(--red);color:#fff"><div class="k">Most swear words</div><b>${top[0]} · ${fmt(sum(top[2]))}</b><span>Favourite: "${SW_WORDS[tf][0]}" (${top[2][tf]}×)</span></div>
+  <div class="jt" style="background:var(--yellow)"><div class="k">Highest rate</div><b>${hi[0]} · ${hr}</b><span>per 1,000 messages${hr?`. That's about 1 in every ${Math.round(1000/hr)} messages`:''}</span></div>
+  <div class="jt" style="background:#fff"><div class="k">Cleanest mouth</div><b>${lo[0]} · ${sum(lo[2])}</b><span>only ${sum(lo[2])} in ${fmt(lo[1])} messages</span></div>`;
+  document.getElementById('swLede').textContent=`${fmt(sum(tots))} swear words in total. Every person's count, their favourite word and how they swear. Sorted by total, with the rate per 1,000 messages so the small posters count too.`}
+ JR.innerHTML='';
+ SW.forEach((p,i)=>{const t=tots[i];const rate=(t/p[1]*1000).toFixed(0);const w=t/swMax*100;
+  const segs=p[2].map((v,j)=>v?`<i style="width:${v/t*100}%;background:${SW_WORDS[j][1]}" data-tip="${SW_WORDS[j][0]}: ${v}×"></i>`:'').join('');
+  JR.insertAdjacentHTML('beforeend',`<div class="jr${jarShown?' show':''}"><div class="pos">${medal[i]||i+1}</div><div class="nm">${p[0]}<small>${t?`fav: "${fav(p)}"`:'squeaky clean'}</small></div><div><div class="seg" data-w="${w}" style="--w:${w}%${jarShown?`;width:${w}%`:''}">${segs}</div></div><div class="num">${fmt(t)}<small>${rate} per 1k msgs</small></div></div>`)});
+ JR.querySelectorAll('.seg i').forEach(s=>{s.onmousemove=e=>showTip(e,s.dataset.tip.replace(/: (\d+)×/,': <b>$1×</b>'));s.onmouseleave=hideTip})}
 document.getElementById('jarTop').innerHTML=`
  <div class="jt" style="background:var(--red);color:#fff"><div class="k">Most swear words</div><b>Lars · 527</b><span>almost as many as Adam and Nathaniel combined (575). Favourite: "shit" (149×), with "kanker" 100×</span></div>
  <div class="jt" style="background:var(--yellow)"><div class="k">Highest rate</div><b>Maciej · 113</b><span>per 1,000 messages. That's about 1 in every 9 messages</span></div>
  <div class="jt" style="background:#fff"><div class="k">Cleanest mouth</div><b>Sichen · 7</b><span>only 7 in 589 messages, and most of those on the 24 June day</span></div>`;
-const JR=document.getElementById('jars');
-SW.forEach((p,i)=>{const t=swTot[i];const rate=(t/p[1]*1000).toFixed(0);const w=t/swMax*100;
- const segs=p[2].map((v,j)=>v?`<i style="width:${v/t*100}%;background:${SW_WORDS[j][1]}" data-tip="${SW_WORDS[j][0]}: ${v}×"></i>`:'').join('');
- JR.insertAdjacentHTML('beforeend',`<div class="jr"><div class="pos">${medal[i]||i+1}</div><div class="nm">${p[0]}<small>fav: "${fav(p)}"</small></div><div><div class="seg" data-w="${w}" style="--w:${w}%">${segs}</div></div><div class="num">${t}<small>${rate} per 1k msgs</small></div></div>`)});
-JR.querySelectorAll('.seg i').forEach(s=>{s.onmousemove=e=>showTip(e,s.dataset.tip.replace(/: (\d+)×/,': <b>$1×</b>'));s.onmouseleave=hideTip});
+renderJar(false);
 document.getElementById('jarLegend').innerHTML=SW_WORDS.map(w=>`<span><i style="background:${w[1]}"></i>${w[0]}</span>`).join('');
-const jio=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){[...JR.children].forEach((r,i)=>setTimeout(()=>{r.classList.add('show');const s=r.querySelector('.seg');s.style.width=s.dataset.w+'%'},i*90));jio.disconnect()}}),{threshold:.15});jio.observe(JR);
+const jio=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){jarShown=true;[...JR.children].forEach((r,i)=>setTimeout(()=>{r.classList.add('show');const s=r.querySelector('.seg');s.style.width=s.dataset.w+'%'},i*90));jio.disconnect()}}),{threshold:.15});jio.observe(JR);
 
 /* meme dictionary */
 const CATS={orig:["WidR original","#F2A7C3"],slang:["Internet slang","#CFE0FF"],brain:["Brainrot","#CFEFD9"],nl:["Dutch street","#FFE3B3"]};
@@ -760,9 +972,412 @@ const mgio=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){rend
 addEventListener('beforeprint',()=>{if(!MG.children.length)renderMemes();MG.querySelectorAll('.mm').forEach(c=>c.classList.add('show'))});
 
 /* names wall */
-const NAMES=[["4V npcs","Nathaniel · 24 Jun"],["Wat in de Ranking?","Lars · 24 Jun"],["Goon squad","Adam · 3 Jul"],["67 Tung sahur","Adam · 3 Jul"],["Wat in de Games","Lars · 3 Jul"],["Sea lions","Adam · 3 Jul"],["Yuno Miles Fanboy Club","Lars · 3 Jul"],["Fionn volgers association","Adam · 3 Jul"],["potaTOE","Adam · 12 Jul"],["Adam ragebait gc","Lars · 12 Jul"],["67 mango mango","Adam · 12 Jul"],["Certified rankers","Adam · 17 Jul"],["Shanghai Sharks","Adam · 17 Jul"],["Wat in de Ranking; dé groepschat voor dingen rangschikken, ordenen en cijfers geven! Wees welkom <3!","Lars · 17 Jul"],["Jij + 9 anderen","Lars · 17 Jul"],["Bedrijfseconomie lovers","Reshman · 17 Jul"],["Huize Ibrahim","Lars · 17 Jul"],["Larpervereniging (behalve Reshman)","Adam · 17 Jul"],["Jim Clark le GOAT","Adam · 17 Jul"],["ماذا في الترتيب؟","6 Sep"],["Goon Squad Elite (Formerly WidR)","Nathaniel · 6 Sep"],["Bali Boyzz (Formerly WidR)","Nathaniel · 6 Sep"],["Dollar store WidR","Lars · 6 Sep"],["Goblin Machine","Nathaniel · 11 Sep"],["A T I = G O A T","Nathaniel · 11 Sep"],["Gert Weelders Fanclub","Adam · 11 Sep"],["Lofoten Honderd zevenenzestig","Nathaniel · 13 Sep"],["Alonehout 67","Lars · 13 Sep"],["Rank of registry","Adam · 13 Sep"],["~El Bois De Alonehout","Milo · 13 Sep"],["*Wat In De Ranking* (Le goons)","Reshman · 2 Oct"],["Stephon Castle Fangroup","Adam · 2 Oct"],["WidR","Nathaniel · 2 Oct · current"]];
-const NW=document.getElementById('names');
-NAMES.forEach((n,i)=>{const s=document.createElement('span');s.className='nm-tag';s.style.setProperty('--r',((i*37)%9-4)+'deg');if(n[0]==='WidR'){s.style.background='var(--red)';s.style.color='#fff'}s.innerHTML=`${n[0].replace(/</g,'&lt;')}<small>${n[1]}</small>`;NW.appendChild(s)});
+let NAMES=[["4V npcs","Nathaniel · 24 Jun"],["Wat in de Ranking?","Lars · 24 Jun"],["Goon squad","Adam · 3 Jul"],["67 Tung sahur","Adam · 3 Jul"],["Wat in de Games","Lars · 3 Jul"],["Sea lions","Adam · 3 Jul"],["Yuno Miles Fanboy Club","Lars · 3 Jul"],["Fionn volgers association","Adam · 3 Jul"],["potaTOE","Adam · 12 Jul"],["Adam ragebait gc","Lars · 12 Jul"],["67 mango mango","Adam · 12 Jul"],["Certified rankers","Adam · 17 Jul"],["Shanghai Sharks","Adam · 17 Jul"],["Wat in de Ranking; dé groepschat voor dingen rangschikken, ordenen en cijfers geven! Wees welkom <3!","Lars · 17 Jul"],["Jij + 9 anderen","Lars · 17 Jul"],["Bedrijfseconomie lovers","Reshman · 17 Jul"],["Huize Ibrahim","Lars · 17 Jul"],["Larpervereniging (behalve Reshman)","Adam · 17 Jul"],["Jim Clark le GOAT","Adam · 17 Jul"],["ماذا في الترتيب؟","6 Sep"],["Goon Squad Elite (Formerly WidR)","Nathaniel · 6 Sep"],["Bali Boyzz (Formerly WidR)","Nathaniel · 6 Sep"],["Dollar store WidR","Lars · 6 Sep"],["Goblin Machine","Nathaniel · 11 Sep"],["A T I = G O A T","Nathaniel · 11 Sep"],["Gert Weelders Fanclub","Adam · 11 Sep"],["Lofoten Honderd zevenenzestig","Nathaniel · 13 Sep"],["Alonehout 67","Lars · 13 Sep"],["Rank of registry","Adam · 13 Sep"],["~El Bois De Alonehout","Milo · 13 Sep"],["*Wat In De Ranking* (Le goons)","Reshman · 2 Oct"],["Stephon Castle Fangroup","Adam · 2 Oct"],["WidR","Nathaniel · 2 Oct · current"]];
+const NW=document.getElementById('names');let namesShown=false;
+function renderNames(){NW.innerHTML='';
+ NAMES.forEach((n,i)=>{const s=document.createElement('span');s.className='nm-tag'+(namesShown?' show':'');s.style.setProperty('--r',((i*37)%9-4)+'deg');if(i===NAMES.length-1){s.style.background='var(--red)';s.style.color='#fff'}s.innerHTML=`${esc(n[0])}<small>${esc(n[1])}</small>`;NW.appendChild(s)})}
+renderNames();
+
+/* who said it: every quote is copied word for word from the chat */
+const wq=id=>document.getElementById(id);
+const WS=[
+ ['makes me want to name my daughter "ken kun je"',"Lars","16 Jun 2026"],
+ ['" - " ik ben het ENIGE mens dat dit gebruikt',"Lars","1 Jun 2026"],
+ ["Cheetah is niet sterk maar zeker niet weakest","Lars","8 Jul 2026"],
+ ['"i was tickling my brothers feet, my mom said wait till he\'s born"',"Lars","10 Jun 2026"],
+ ["reshman the freshman that has no reshwoman, he is in a rushman or he is gonna become a trash man","Adam","10 May 2026"],
+ ["ik ga 100 miljard eulo aan koffie uitgeven","Adam","16 Jun 2026"],
+ ["er zitten allemaal microrubbers op mijn bureau","Adam","4 May 2026"],
+ ["koop sportsokken van puma, doe atletiekschoenen aan, een sportbroek en een sporthemd en ga dan een marathon rennen","Adam","3 May 2026"],
+ ["No way he put a “no way he put a Narutoo reference in there” reference","Nathaniel","3 Feb 2026"],
+ ["Ik ben net wakker maar ik ge nu wel weer slapen","Nathaniel","22 May 2026"],
+ ["Ik trok de eeeste inning mijn hemsteng dus moest hele tijd bank en we verloren 11-6","Nathaniel","18 Apr 2026"],
+ ["Lars, respectfully, SYBAU","Fionn","29 Jan 2026"],
+ ["Wel Edelgeleerde Heer Doctorandus Bastiaan van der Ploeg","Fionn","11 Jun 2026"],
+ ["Moet ik lowk naar een casino?","Fionn","13 Jun 2026"],
+ ["don’t get ur hopes up lil brotein shake","Reshman","16 Jan 2026"],
+ ["im immune to remembering a lot","Reshman","18 Jan 2026"],
+ ["korte coupe : milo, 2 milo : x? … x = 2 milo^2/korte coupe = 2 korte coupe.","Reshman","15 May 2026"],
+ ["goed excuus brotosynthesis","Milo","21 May 2026"],
+ ["zoontje komt on zijn loontje","Milo","27 May 2026"],
+ ["mind numbingly gritty","Milo","18 Mar 2026"],
+ ["Wij zitten nu twee uur in stadthart omdat me broertje geen schoenen kan kiezen","Josh","21 Mar 2026"],
+ ["Is zij minituur ik volg haar like 2 jaar op Duolingo","Josh","25 Jun 2026"],
+ ["Stuur allemaal ff locatie","Josh","12 Oct 2025, day 1"],
+ ["beter bid je nu tot de oerknal voor mij bro","Daniël","26 Jan 2026"],
+ ["besef mijn berichten worden nu wss gelezen door een government agent","Daniël","5 May 2026"],
+ ["hoezo huilt de trainer van japan","Daniël","14 Jun 2026"],
+ ["Im tryna start a deep mature discussion bro bro bro sahur","Maciej","12 May 2026"],
+ ["Alsjeblieft snelheid","Maciej","3 Feb 2026"],
+ ["Roblox ahh expression","Maciej","3 Feb 2026"],
+ ["Ik krijg oprecht alle ziektes van valorant","Sichen","13 May 2026"],
+ ["Er is altijd in het leven een oplossing als niet miljoenen","Sichen","24 Jun 2026"],
+ ["I exeeded it with 1.20","Deniz","17 Mar 2026"],
+ ["Hockey uitval","Deniz","31 Mar 2026"],
+ ["wat zijn de beste 3ds games","Rênas","5 Jul 2026"]
+];
+const WS_NAMES=[...new Set(WS.map(q=>q[1]))];
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+/* context mode: [quote, who, date, what really happened, 3 fake contexts]. Real contexts were checked against the messages around each quote. */
+const CTX=[
+ ['makes me want to name my daughter "ken kun je"',"Lars","16 Jun 2026","Josh asked Meta AI, in very broken Dutch, to make a video of the group chat: “Kun je me help zodat meta ai het kan maken kun je de prompt maken”. Lars quoted it 🥹 and then said this.",["The group was picking baby names for a school assignment","Someone asked what Lars would name a pet","They were voting on a new name for the group chat"]],
+ ['" - " ik ben het ENIGE mens dat dit gebruikt',"Lars","1 Jun 2026","The group checked out a WidR website that Josh had made. Lars thought the text looked AI-written because of the dashes, and told Josh to put more effort in.",["Lars was correcting Reshman's English essay","A teacher told the class to stop using dashes","They were arguing about Morse code"]],
+ ["Cheetah is niet sterk maar zeker niet weakest","Lars","8 Jul 2026","A debate about the weakest big cat. Nathaniel said cheetahs aren't even big cats (they chirp), and Adam claimed a cheetah could beat a black bear. Lars settled it with this.",["They were ranking animals for a biology test","Fionn's hockey team picked a new mascot","They were making a Brawl Stars tier list"]],
+ ["reshman the freshman that has no reshwoman, he is in a rushman or he is gonna become a trash man","Adam","10 May 2026","Lars bragged about a 7.5 average for wiskunde B and Reshman got jealous. Lars said “Reshwoman hahaha”, and Adam turned it into this. Reshman's reply: “sybau Bombardiro Adamino”.",["Reshman had just been added to the group","Reshman asked the group for dating advice","They were writing a rap for Dutch class"]],
+ ["No way he put a “no way he put a Narutoo reference in there” reference","Nathaniel","3 Feb 2026","Daniël kept spamming World War 1 jokes (“the black hand” reference, “Archduke Ferdinand!”, “Gavrilo Princip!”). Nathaniel topped it with a reference to a reference.",["They were watching anime together on a call","Adam had posted a Naruto edit","A history test had a question about Japan"]],
+ ["Ik ben net wakker maar ik ge nu wel weer slapen","Nathaniel","22 May 2026","Nathaniel was home sick in bed, and Josh and Adam teased that Nathaniel could still text on WhatsApp. Adam: “ga maar weer slapen, nathie”.",["Milo had planned a 7 AM study call","Nathaniel overslept for a test","There was a sleepover at Lars's place"]],
+ ["Ik trok de eeeste inning mijn hemsteng dus moest hele tijd bank en we verloren 11-6","Nathaniel","18 Apr 2026","Nathaniel's baseball match went badly: a hamstring injury in the first inning, the rest of the game on the bench, and an 11-6 loss. Adam replied that Adam's team had won 9-1 again.",["A football match in gym class","An online game of Mario Sluggers","The school sports day"]],
+ ["Lars, respectfully, SYBAU","Fionn","29 Jan 2026","Adam was sending voice notes that the group said were “better than lofi beats”. Fionn said “el Adam con más aura”, Lars answered “El Fionn no con más aura”, and Fionn replied with this.",["Lars spoiled the end of a football match","Lars renamed the group again","Lars posted Fionn's grades in the chat"]],
+ ["Moet ik lowk naar een casino?","Fionn","13 Jun 2026","Fionn's World Cup score prediction came true, worth 8 bonus points in the group's prediction game. Adam: “Nee. Het is bait. Ga naar rusland”.",["Fionn found money on the street","Fionn won a raffle at school","Fionn opened a lucky Brawl Stars box"]],
+ ["don’t get ur hopes up lil brotein shake","Reshman","16 Jan 2026","Fionn said the “gemengde opgaven” were way too hard to be on the maths test. Reshman warned that the teacher had said the test was going to be heavy.",["Fionn announced plans to start going to the gym","Someone posted a protein-shake ad","Fionn was hoping for a snow day"]],
+ ["im immune to remembering a lot","Reshman","18 Jan 2026","Studying for biology: Lars said you only had to learn the organelles, not the whole picture. Reshman had just learnt “200 words for duits”. Lars only mocked the “I've”.",["Reshman forgot someone's birthday","Reshman left a phone at school","They were playing a memory game on a call"]],
+ ["korte coupe : milo, 2 milo : x? … x = 2 milo^2/korte coupe = 2 korte coupe.","Reshman","15 May 2026","The group was making Meta AI rank everyone's haircuts (“add fionette”, “add buzz cut Deniz”), and Meta AI kept messing up the list. Reshman solved Milo's haircut as a maths ratio instead.",["It was real wiskunde homework about ratios","Milo had just posted a new haircut selfie","Reshman was calculating everyone's grade averages"]],
+ ["goed excuus brotosynthesis","Milo","21 May 2026","Milo wanted to do a group call at 7 AM. Nathaniel got out of it by saying “Ik heb nog steeds hantavirus ofzo”.",["There was a biology test on photosynthesis","Nathaniel's plant had died","Nathaniel was late for school again"]],
+ ["zoontje komt on zijn loontje","Milo","27 May 2026","Nathaniel spammed “BKOZL”, Lars yelled SYBAU NATHAN, and Nathaniel answered “Boontje komt om zijn loontje”. Milo remixed the proverb.",["Lars got detention","They had a test on Dutch proverbs","Someone got grounded by their dad"]],
+ ["mind numbingly gritty","Milo","18 Mar 2026","Wiskunde B homework. Reshman called question 3 of the gemengde opgaven “mind numbingly gritting”, and Milo agreed, with an even stranger version.",["Describing a horror movie","Reviewing a very dry sandwich","Talking about a new Brawl Stars map"]],
+ ["Wij zitten nu twee uur in stadthart omdat me broertje geen schoenen kan kiezen","Josh","21 Mar 2026","While Adam was roasting Nathaniel in the chat, Josh was out shopping: two hours in Stadshart because Josh's little brother couldn't pick shoes. Josh's next message: “Holy rage bait”.",["Josh lost a pair of shoes at gym","Josh was waiting for a sneaker drop","It was a school trip to Amsterdam"]],
+ ["Is zij minituur ik volg haar like 2 jaar op Duolingo","Josh","25 Jun 2026","The group was gossiping about people from school (“Seina en haar bf”) and Adam posted a YouTube short to recreate. This was Josh's contribution.",["Josh had just hit a 700-day streak","Josh was learning Spanish for school","Josh got a passive-aggressive Duolingo notification"]],
+ ["beter bid je nu tot de oerknal voor mij bro","Daniël","26 Jan 2026","Daniël's dad was checking Daniël's grades live. A minute later: “Hij scheld mij nu uit… hij kijkt nog”.",["There was a physics test about the Big Bang","They were watching a scary movie","Daniël's football team was in a final"]],
+ ["hoezo huilt de trainer van japan","Daniël","14 Jun 2026","The group was watching Netherlands vs Japan at the World Cup, and Japan's coach was crying. Lars: “Hij is hella blij uit de qualifiers te komen”.",["It was the ending of an anime","There was a judo match at school","A baseball game was on TV"]],
+ ["Alsjeblieft snelheid","Maciej","3 Feb 2026","Adam and Maciej were trading insults, and Adam said “ik ga je niet inviten in mijn fortinite battle squad”. Maciej begged, and Adam said ok.",["Maciej's wifi was lagging","Maciej was waiting for a late bus","They were playing a racing game"]],
+ ["Roblox ahh expression","Maciej","3 Feb 2026","Adam was teasing Nathaniel for simping and called it a “roblox hoofd”. Maciej piled on, followed by “Shawty can I get sum robux ahh ✌🏿😭”.",["Maciej showed off a new Roblox avatar","A big Roblox update came out","Someone took a picture of a teacher's face"]],
+ ["Ik krijg oprecht alle ziektes van valorant","Sichen","13 May 2026","Everyone was complaining about getting up at half past six and about dentists in Brussels and the Ardennes. Sichen dropped this out of nowhere.",["Sichen had just lost a ranked game","The school banned games on laptops","A new Valorant update came out"]],
+ ["I exeeded it with 1.20","Deniz","17 Mar 2026","Reshman panicked about going 10 seconds over the 7-minute limit in the oral exam. Deniz, who almost never types, revealed going 1:20 over. Lars: “DENIZ MESSAGE. HOLY SHIT”.",["Deniz got a speeding ticket","Deniz went over the daily screen-time limit","Deniz used up all the phone's mobile data"]],
+ ["wat zijn de beste 3ds games","Rênas","5 Jul 2026","Lars and Adam were arguing about who has more skill in Brawl Stars (“adam je hebt gwn geen skill”). Rênas jumped in with a completely different question.",["Lars was selling an old 3DS","Nintendo had just held a Direct","Everyone was writing a Christmas wishlist"]]
+];
+/* short version of each real story, same length as the fake options, used on the answer buttons */
+const CTX_SHORT=["Josh asked Meta AI for help in very broken Dutch","Lars thought Josh's WidR website was written by AI","A debate about the weakest big cat","Lars bragged about a 7.5 average for wiskunde B","Daniël was spamming World War 1 jokes","Nathaniel was home sick in bed","Nathaniel's baseball team lost 11-6","Lars clapped back at Fionn's aura compliment for Adam","Fionn's World Cup prediction came true","The maths test was going to be really hard","Studying the cell organelles for biology","Meta AI was ranking everyone's haircuts","Milo wanted a group call at 7 AM","Nathaniel said “Boontje komt om zijn loontje”","Stuck on wiskunde B homework","Shopping with family in Stadshart","The group was gossiping about people from school","Daniël's dad was checking Daniël's grades","Japan's coach was crying at the World Cup","Adam wouldn't invite Maciej to the Fortnite squad","Adam was teasing Nathaniel for simping","Everyone was complaining about getting up at 6:30","Going over the time limit in the oral exam","Lars and Adam were arguing about Brawl Stars skills"];
+let wsMode='who',wsDeck=[],wsI=0,wsRight=0,wsDone=0,wsRun=0,wsBest=0;
+const WC=wq('wsCard');
+const wsPool=()=>wsMode==='ctx'?CTX:WS;
+function wsStart(){wsDeck=shuffle(wsPool().map((_,i)=>i));wsI=0;wsRight=0;wsDone=0;wsRun=0;wsShow()}
+function wsShow(){
+  if(wsI>=wsDeck.length){wsEnd();return}
+  const q=wsPool()[wsDeck[wsI]],O=wq('wsOpts');
+  WC.classList.remove('ok','no');wq('wsRes').textContent='';wq('wsNext').hidden=true;
+  wq('wsQ').textContent=q[0];
+  if(wsMode==='ctx'){
+    wq('wsMeta').textContent=`${q[1]} · ${q[2]} · quote ${wsI+1} of ${wsDeck.length}`;
+    const opts=shuffle([{t:CTX_SHORT[wsDeck[wsI]]||q[3],ok:true},...q[4].map(t=>({t,ok:false}))]);
+    O.className='ws-opts ctx';
+    O.innerHTML=opts.map(o=>`<button class="ws-opt" type="button" data-ok="${o.ok?1:0}">${esc(o.t)}</button>`).join('');
+    O.querySelectorAll('.ws-opt').forEach(b=>b.onclick=()=>wsPickCtx(b,q))}
+  else{
+    wq('wsMeta').textContent=`Quote ${wsI+1} of ${wsDeck.length}`;
+    const opts=shuffle([q[1],...shuffle(WS_NAMES.filter(n=>n!==q[1])).slice(0,3)]);
+    O.className='ws-opts';
+    O.innerHTML=opts.map(o=>`<button class="ws-opt" type="button">${esc(o)}</button>`).join('');
+    O.querySelectorAll('.ws-opt').forEach(b=>b.onclick=()=>wsPick(b,q))}
+  wq('wsProg').style.width=(wsI/wsDeck.length*100)+'%';wsScore()}
+function wsScore(){wq('wsScore').textContent=`${wsRight} / ${wsDone}`;wq('wsStreak').textContent=wsRun>=3?`🔥 ${wsRun} in a row`:(wsBest>=3?`best streak: ${wsBest}`:'')}
+function wsTally(ok,b){wsDone++;if(ok){wsRight++;wsRun++;wsBest=Math.max(wsBest,wsRun)}else{wsRun=0;b.classList.add('wrong');WC.classList.add('shake');setTimeout(()=>WC.classList.remove('shake'),420)}WC.classList.add(ok?'ok':'no')}
+function wsNextBtn(){wq('wsNext').hidden=false;wq('wsNext').textContent=wsI+1>=wsDeck.length?'See my score →':'Next quote →';wq('wsNext').focus({preventScroll:true});wsScore()}
+function wsPick(b,q){
+  const ok=b.textContent===q[1];
+  wq('wsOpts').querySelectorAll('.ws-opt').forEach(x=>{x.disabled=true;if(x.textContent===q[1])x.classList.add('right')});
+  wsTally(ok,b);wq('wsRes').textContent=ok?`Yes! ${q[1]} said this.`:`Nope, it was ${q[1]}.`;wq('wsMeta').textContent=`${q[1]} · ${q[2]}`;wsNextBtn()}
+function wsPickCtx(b,q){
+  const ok=b.dataset.ok==='1';
+  wq('wsOpts').querySelectorAll('.ws-opt').forEach(x=>{x.disabled=true;if(x.dataset.ok==='1')x.classList.add('right')});
+  wsTally(ok,b);
+  wq('wsRes').innerHTML=`${ok?'Yes, that\'s what happened!':'Nope. Here\'s what really happened:'}<div class="ws-story"><b>The real story</b>${esc(q[3])}</div>`;wsNextBtn()}
+function wsEnd(){
+  const p=wsDone?wsRight/wsDone:0,O=wq('wsOpts');wq('wsProg').style.width='100%';WC.classList.remove('ok','no');
+  wq('wsQ').textContent=wsMode==='ctx'?(p>=.8?'You were basically there 🏆':p>=.5?'You know most of the lore.':'Context? Never heard of it 💀'):(p>=.8?'Certified WidR historian 🏆':p>=.5?'You clearly read the chat. Mostly.':'Are you even in this gc? 💀');
+  wq('wsMeta').textContent=`${wsRight} out of ${wsDone} right · best streak ${wsBest}`;wq('wsRes').textContent='';O.innerHTML='';O.className='ws-opts';
+  wq('wsNext').hidden=false;wq('wsNext').textContent='Play again ↻'}
+wq('wsNext').onclick=()=>{if(wsI>=wsDeck.length){wsStart();return}WC.classList.add('out');setTimeout(()=>{wsI++;wsShow();WC.classList.remove('out')},320)};
+function wsWall(){const W=wq('wsWall');
+  W.innerHTML=wsMode==='ctx'
+   ?CTX.map((q,i)=>`<div class="ws-q" style="--r:${((i*31)%5-2)*.5}deg"><p>“${esc(q[0])}”</p><div class="ctx">${esc(q[3])}</div><small><b>${esc(q[1])}</b> · ${esc(q[2])}</small></div>`).join('')
+   :WS_NAMES.map(n=>WS.filter(q=>q[1]===n)).flat().map((q,i)=>`<div class="ws-q" style="--r:${((i*31)%5-2)*.5}deg"><p>“${esc(q[0])}”</p><small><b>${esc(q[1])}</b> · ${esc(q[2])}</small></div>`).join('')}
+wq('wsAll').onclick=()=>{const W=wq('wsWall'),open=W.hidden;W.hidden=!open;wq('wsStage').hidden=open;
+  wq('wsAll').textContent=open?'Back to the game':(wsMode==='ctx'?'Show all stories':'Show all quotes');if(open)wsWall()};
+wq('wsModes').querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  if(t.dataset.mode===wsMode)return;wsMode=t.dataset.mode;
+  wq('wsModes').querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x===t));
+  wq('wsLede').textContent=wsMode==='ctx'?'You know who said it. But do you remember why? Pick what was really going on in the chat, then read the full story.':'The weirdest real messages from every member, word for word. Guess who sent it, then see if you were right.';
+  wq('wsWall').hidden=true;wq('wsStage').hidden=false;wq('wsAll').textContent=wsMode==='ctx'?'Show all stories':'Show all quotes';wsBest=0;
+  WC.classList.add('out');setTimeout(()=>{wsStart();WC.classList.remove('out')},320)});
+addEventListener('beforeprint',()=>{const W=wq('wsWall');wsWall();W.hidden=false});
+wsStart();
+
+/* poll archive: every poll from the export, [date (M/D/YY), creator, title, [[option, votes]...]] */
+const POLLS=[
+["10/12/25","Josh","nummer 10",[["Deniz",3],["Robin",4],["Adam",1],["Dion",0],["Josh",1],["Lars",1],["Nathan",1],["Milo",1]]],
+["10/12/25","Josh","Nummer 8",[["Deniz",0],["Josh",3],["Adam",0],["Robin",0],["Nathan",0],["Milo",0],["Dion",0],["Reshnam",1],["Daniel",0],["Lars",1]]],
+["10/12/25","Adam","Rate je accomodatie",[["10/10",2],["9/10",0],["8/10",3],["7/10",1],["6/10",0],["5/10",0],["4/10",1],["3/10",0],["2/10",0],["1/10",0]]],
+["1/9/26","Nathaniel","Wie doet er mee met fantasy Cricket volgend seizoen",[["Ik",6],["Ik ben homo en ik doen niet mee",1]]],
+["1/16/26","Adam","Gay son or Thot daughter?",[["Gay son",0],["Thot daughter",0]]],
+["1/16/26","Adam","Welke was de beste?",[["Nathan",1],["Milo",0],["Daniel",1],["Reshman",0],["Fionn",1],["Lars",0],["Adam",1],["Maciej",0]]],
+["1/18/26","Lars","Wie moet groepsbeheerder #2 worden",[["nathan",1],["adam",1],["fionn",1],["reshman",2],["milo",2],["josh",0],["maciej",0]]],
+["1/18/26","Lars","zelfde vraag",[["nathan",2],["adam",0],["reshman",2],["josh",0],["milo",2],["fionn",1],["maciej",0],["deniz",0],["daniel",0]]],
+["2/2/26","Adam","Sta je tekort?",[["ja",3],["nee",3]]],
+["2/4/26","Lars","zijn fionn stickers goed",[["Goed",0],["mid",2],["HOLY SHIT KKR ASS WAT DE KANKER IS DIT VOOR OPINION FIONN MOET PUBLICLY EXECUTED WORDEN RAAAAAAAAAAH",2]]],
+["2/14/26","Lars","WIE wint deze",[["Choi Minjeong",1],["Kim Boutin",1],["Chiara Betti",0],["Ascic",0]]],
+["2/15/26","Adam","Wie gaat de ploegenachtervolging winnen?",[["Nederland",3],["Italie",1],["VS",2],["China",0]]],
+["2/16/26","Adam","Eerste keuze studiereis",[["Parijs",0],["Londen",3],["Rome",4],["Berlijn",0]]],
+["2/20/26","Adam","Oprecht wel",[["Ja",5],["Nee",2]]],
+["2/28/26","Adam","Wat wordt de voorshow?",[["Voetbalwedstrijd",1],["Dance battle",1],["Comedy show",2]]],
+["3/12/26","Adam","Voor of achter? (BECO reference)",[["voor",3],["Achter",0]]],
+["3/16/26","Adam","Waar ga je naartoe?",[["Rome",3],["Londen",4],["Parijs",1],["Berlijn",1]]],
+["3/18/26","Milo","ja",[["nee",2],["hou je van negers",0]]],
+["3/18/26","Milo","is socrates diddy blud",[["yes boiii",4],["no bradar",1],["microcooler",1]]],
+["3/18/26","Milo","oke",[["4",3],["nee toch niet",0]]],
+["3/25/26","Lars","@Adam🦀",[["@Adam🦀",1],["@Alam🦀",0],["@Salam🦀",0]]],
+["3/25/26","Reshman","Adam",[["Adam",0],["Adam2",1],["Adam3",0],["Adam4",0]]],
+["3/25/26","Nathaniel","Nathan’s prediction word een leuke WiDR daily event",[["Ja",3],["Nee (Ik val op mannen)",0],["Ja (ik val op mannen)",2]]],
+["3/25/26","Nathaniel","Ga ik geselecteerd worden voor team zuid-Holland",[["Ja",4],["Nee",1]]],
+["4/5/26","Nathaniel","Beste ranking",[["OG ranking",1],["General ranking",1],["Baseball ELO ranking",1],["Pannenkoek eten ranking",0],["Landen grootte ranking",0],["Sterrenbeeld ranking",0],["Quote ranking",0]]],
+["4/17/26","Nathaniel","Is Adam een goon",[["Ja",3],["Nee (Als Adam hierop stemt niet meetellen)",0]]],
+["4/17/26","Reshman","Who has the most game",[["Adam",2],["Fionn",1],["Milo",1],["Daniel",2],["Lars",1],["Nathan",1],["Reshman",1],["Deniz",2],["Robin",0],["Maceij",3]]],
+["4/17/26","Reshman","Does josh have game",[["Yes",2],["No",2]]],
+["4/17/26","Adam","Hoeveel mensen heb jij gepulld?",[["0",2],["1",2],["2",0],["3",2],["4",0],["5",1]]],
+["4/17/26","Lars","hoe groot is je dih",[["4cm (adma)",0],["7cm (tts bot)",0],["10cm (angham)",1],["13cm (robin nudeking)",0],["15cm (single T)",0],["17cm (zurm)",0],["20+cm (daniel glaze)",2]]],
+["4/20/26","Josh","Moet Sichen ind WidR",[["Ja",6],["Nee",0]]],
+["4/22/26","Nathaniel","Ik ga Nathan missen",[["Ja",0],["Best wel",0],["Heel erg",5],["Tuurlijk",0],["Zeker",0]]],
+["4/23/26","Reshman","Ik ga Natan missen",[["Misschien",0],["Niet echt",0],["waarschijnlijk niet",0],["Nee",0],["Fuh nah",0],["Ik hoop dat hij daar blijft en nooit meer terugkomt.",9]]],
+["5/3/26","Adam","Zitten er gevaarlijke stoffen in een stuiterbal?",[["Ja",0],["Nee",0],["Gay",1]]],
+["5/3/26","Lars","Moet ik mezelf clicker trainen en dan op 17 juni een dog clicker aan Adam geven zodat ik zijn goede kleine submissive femboy word? 🥺😎",[["Ja 🥰",2],["Nee 🥺",1]]],
+["5/3/26","Adam","Ben ik veilig?",[["Ja",0],["Nee",1],["PVV",1]]],
+["5/3/26","Lars","Welke kleur",[["Blauw",0],["Zwart",0],["Roze",1]]],
+["5/3/26","Lars",":3",[["Black",1],["Pink",0]]],
+["5/4/26","Adam","Geleerd voor aankomende toetsen?",[["Ja",0],["Nee",3]]],
+["5/4/26","Adam","Wat is erger",[["Danganronpa (lijkt op gangnamstile denk ik)",0],["Femboys",2]]],
+["5/4/26","Nathaniel","Wie heeft meer aura",[["‘Darren Watkins Jr.’ Aurafarmer chick",0],["Mensen die in de Kennedy Booth zitten in de Union Oyster House",1],["Nathaniel Timothy Good",2]]],
+["5/4/26","Adam","Morgen sporten?",[["Ja",2],["Nee",2],["Licht aan locatie",1]]],
+["5/5/26","Fionn","Kom je",[["Ja",2],["Nee",3]]],
+["5/5/26","Adam","Wil fionn door NAC naar Brabant verhuizen",[["Ja",2],["Nee",3]]],
+["5/5/26","Adam","Wil Lars door NAC naar Brabant verhuizen",[["nee",2],["Nee",2]]],
+["5/5/26","Adam","Wil Adam door NAC naar Brabant verhuizen",[["Ja",3],["Nee",2],["Misschien",2],["Welles",2],["Nietes",2],["Toch wel",2],["Toch niet",2],["Hij blijft in Zoetermeer",2]]],
+["5/5/26","Adam","Wil Reshman door NAC naar Brabant verhuizen",[["Ja",0],["Nee",1],["Boven",2],["Onder",1],["Aan",2],["Uit",1]]],
+["5/5/26","Adam","Boven of onder",[["Boven",2],["Onder",3]]],
+["5/5/26","Nathaniel","Wil Dang Ann Ronpa door NAC naar Brabant verhuizen",[["Trigger Happy Havoc",0],["Goodbye Despair",1],["Killing Harmony",0],["Ultimate Summer Camp",0],["Ultra Despair Girls",1]]],
+["5/5/26","Lars","Adams vraag maar beter",[["True Top",0],["Top Switch",0],["True Switch",0],["Bottom Switch",0],["True Bottom",0]]],
+["5/7/26","Adam","Eerste keuze?",[["Golfsurfen",0],["Tennis",0],["Padel",0],["Badminton",0],["Voetbaltoernooi",0],["Golfen",0],["Snowboarden",0],["Skiën",1],["Handboogschieten",3],["Klimmen",0],["Yoga",1],["Ik kijk gewoon waar ze me indelen",0]]],
+["5/10/26","Adam","Natuurkunde toets?",[["easy",0],["Going to be ok",2],["moderate",1],["Barely pass",3],["Just onfoldoende",2],["Not going to be ok",0],["cooked",3]]],
+["5/19/26","Reshman","Who would crack fionette the hardest",[["So hard that the hole turns into a black hole",0],["So hard that it bleeds",0],["Very hard",0],["Not that hard",0],["I would but slowly",1],["I would if you bribed me",1],["I will not crack fionette",0],["I will NOT crack fionette",1],["I’d rather kms then crack fionette",1]]],
+["5/19/26","Adam","Waar?",[["In de kroeg",0],["Via whattsap (#nevertouchgrass)",0],["Andere keuze",1]]],
+["5/20/26","Nathaniel","WIP meest voorkomende karakter (Goede antwoord krijgt een koekje)",[["Isis",1],["Josh",1],["Milo",0],["Reshman",4],["Lars",0]]],
+["5/21/26","Reshman","Waneer moeten we leren voor le wisb",[["Right now",1],["Not right now and goon",2],["Tomorroe tijdends studieuren",2],["During lessons secretly",1],["Its over for us anyway",1],["Isis",1]]],
+["5/22/26","Reshman","What we got for le big b",[["1",1],["4",1],["5.5",2],["6",0],["7",1],["9",1],["Isis",1]]],
+["5/24/26","Adam","Is het gay om een ijsje te likken",[["Ja",3],["Nee",2]]],
+["5/25/26","Reshman","Should I continue with le fahdih verhaal or study for IB eng",[["Ib eng",2],["le fahdih verhaal",2],["Le NO",0],["Circus milo",1],["tiki tiki tiki tiki",1]]],
+["5/25/26","Reshman","Who is the biggest goon",[["Natan",0],["Reshman",0],["Lars",1],["Josh",0],["Adam",0],["Donald",0],["Maciek",0],["Milo",0],["Deniz Koç",1],["Sichen",0],["Fionn",0],["Fionette (canon le fahdih character)",0]]],
+["5/25/26","Reshman","Should we keep Canon fionette design or change it",[["Change it",1],["No It’s tuff",0],["Ts so buns",2],["i would tap",1],["Mimimimimimimimi (lars reference)",1],["Alastor (Circus Milo reference)",1],["Pine tree",1]]],
+["5/25/26","Reshman","W fionette canon le fahdih design?",[["no",0],["yes",2],["it’s so buns",0],["I would tap",2],["isis",0]]],
+["5/25/26","Reshman","Fionette character design",[["New one",1],["Peter griffin one",0],["the old one",0],["isis",1]]],
+["5/25/26","Reshman","tap",[["yes",2],["no",0]]],
+["5/27/26","Adam","GOAT? (Ball knowledge test)",[["WidR",4],["WidC",1],["WidF",0]]],
+["5/31/26","Reshman","Beste lidtags",[["Reshman",1],["Nataniel",1],["Laraunce",0],["Sichi",0],["Milo",0],["joshua",0],["fionn(ette)",1],["daniel",0],["isis",0],["deniz",1]]],
+["5/31/26","Reshman","Beste lidtags 2",[["adamina",3],["Maciek",0]]],
+["5/31/26","Reshman","Best story",[["Dangoonronpa",1],["Wip",1],["Le fahdih verhaal",1],["Shakespears hamlet",1],["Fionn ib essay paragraph about symbolism",3]]],
+["5/31/26","Reshman","Best ships",[["Essex-class carriers",0],["Danna",3],["Adma",0],["Fiulie",2],["Fionette + Adam (le fahdih lore)",1]]],
+["5/31/26","Reshman","Best ships in WiDr that WE are going to drag (top 3)",[["Fiulie (Fionn + Julie)",3],["Adna (Adam + Anna)",1],["Nathan + Sonia never mind (Son)",1]]],
+["5/31/26","Adam","ships",[["Natars",1],["Danna",1],["Julionn",2]]],
+["5/31/26","Reshman","best ships oat",[["Titanic",0],["milo + kapper (milkap)",3],["Adam + Adam (made, also known as evil Adam)",1],["Fionn + Julie (Juionn)",2],["Yassin + Julie (Yulie)",2],["Isis + Sisi (ssss, also known as s^4)",0],["Natan + Deniz Koç (Naden, sound like “nothing”, hahah)",2],["Goonseppe + eppesnoog",0]]],
+["5/31/26","Reshman","Pfp ranking (pick beste)",[["Natan",1],["Josh",0],["Lars",1],["Fionn",0],["Adam",1],["Maciej",2]]],
+["5/31/26","Adam","Goated fiction",[["RTR",0],["WIP",2],["WidR constitution",1],["NDA",1],["Other",0]]],
+["5/31/26","Reshman","Best moments in WiDr",[["Fionn getting angry from fionn en Julie ship",1],["Adam discovering the meaning of the universe",2],["Lars opened his third eye and can see everything in the universe",0],["Deniz en Nathan accidentele summons Charles darwin, the peak of evolution unravels",1],["Lars unlocks the power of the 4th dimension after almost getting killed by mana (evil Adam)",3],["lars defeating mana, Adam fading away from the pact with death (final goodbye)",0],["Daniel destroying all evil entities and bringing the universe to eternal peace and harmony",1],["General Milo’s last speech",3],["Space leviathan’s appearance",1],["Lars’s final message to humanity before fading away",3]]],
+["5/31/26","Reshman","Most tuffet quotes in WiDr",[["Lars  \"I wasn't chosen by destiny. Destiny was chosen by me.\"",0],["Evil Adam  \"Hope is the lie mortals tell themselves before they die.\"",0],["Galactic General Milo  \"If the universe demands we kneel, then let it learn how humans die standing.",4],["Death  \"Gods seek immortality. Legends earn it.\"",1],["Galactic General Milo  “I don’t need you to remember my name. I need you to remember who you are.”",0],["Daniel, Destroyer of Evil  “Peace is not given. It is earned by those willing to stand against the d",1],["Fionette  “Even when the world laughs at me, I’ll keep walking until it has no choice but to believe",1],["Daniel's final quote after defeating all evil  “The universe was never saved by power. It was saved",0],["Lars (\"Lirili Lari\")  \"If the universe wants a serious hero, it picked the wrong guy.\"",0],["The Narrator  \"Legends are remembered for what they achieved. Heroes are remembered for what they in",0]]],
+["5/31/26","Reshman","Should I send the doc for the tuff tuff WidR lore",[["yes",5],["no",0],["Patat",3]]],
+["5/31/26","Nathaniel","Wie vind die sticker ook maar een KLEIN beetje leuk",[["Ik",3],["Ik niet",4]]],
+["5/31/26","Adam","S-tier sticker",[["Ja",1],["Nee",2]]],
+["6/1/26","Reshman","Best wc area",[["Near locker",0],["Naast geo",1],["Naast eco",0],["Naast arts",0],["Naast eng (110)",0],["Naast talen (120)",1],["Naast wiskunde",2],["Near bio/schei/nat lokaat (200)",1]]],
+["6/3/26","Reshman","What we are going to do in brussuls",[["goon",2],["Make lars do the ga hw",2],["drag symbolism paragraph van fionn",0],["Add r34 in watinderanking",3],["dijnjinou ahh",0],["milow",1],["isis",0]]],
+["6/3/26","Fionn","Ga je morgen naar school fietsen?",[["Ja",4],["Nee",2]]],
+["6/3/26","Reshman","Welke is beter",[["Hollebollegijs phonk",3],["Yara yara phonk",1],["Le iconic tiki tiki phonk",1]]],
+["6/4/26","Nathaniel","Welke toffe spelletjes heb je gedownload",[["Among us",0],["Uno",2],["Allebei",3],["Geen een",0]]],
+["6/5/26","Adam","Who does this foto embody?",[["Nathan",0],["Deniz",1],["Daniel",0],["Lars",0],["Josh",0],["Adam",0],["Reshman",2],["Sichen",5],["Milo",0],["Maciej",0],["Fionn",0]]],
+["6/6/26","Adam","Is fionn langer dan nathan?",[["ja",1],["Nee (ik ben nathan)",3]]],
+["6/6/26","Adam","Wie is de langste?",[["Maciej",1],["Fionn",1],["Lars",1],["Nathan",0]]],
+["6/7/26","Adam","Ventte nathan?",[["ja",1],["Nee (ik ben Natan)",1]]],
+["6/7/26","Adam","Hoeveel social media applicaties heb jij (whattsapp telt niet)?",[["0 (bulletproof low cortisol level)",0],["1",1],["2",2],["3",0],["4",0],["5",0],["Meer dan 5",0]]],
+["6/7/26","Adam","Welke is beter?",[["1982 Nissan Skyline R30",0],["Nissan Skyline GT-R R32",1],["Nissan Skyline GT-R R34",1]]],
+["6/9/26","Adam","Wie is de bij?",[["Adam",1],["Daniel",0],["Deniz",1],["Fionn",0],["Josh",0],["Lars",1],["Maciej",0],["Milo",0],["Nathan",0],["Reshmeat",0],["Sichen",0]]],
+["6/9/26","Adam","Hup holland hup?",[["Ja, Nederland gaat winnen",3],["Jupiler holland Jupiler (only legends know)",1],["Nee, ze gaan niet winnen",0],["Fuh nah",1]]],
+["6/13/26","Nathaniel","Wie gaat winnen",[["Grizzlies (1 win 4 losses)",3],["Zwijndrecht (5 wins 0 losses)",4]]],
+["6/14/26","Reshman","Who are we supporting",[["Nederlands",1],["Japan",0],["Curaçao",5]]],
+["6/14/26","Lars","Je mag adam slimen maar je dih krimpt",[["Ik slime hem",3],["Nee mijn dih is te klein",0],["Ik geef Adam healthcare en mijn dih groeit",0]]],
+["6/14/26","Adam","Wide 8 inches average",[["yes",1],["No",2]]],
+["6/14/26","Adam","Deze gc: 8 inches average?",[["ja",1],["nee",2],["Ik breng het gemiddelde naar beneden",0]]],
+["6/14/26","Lars","Kijken je ouders",[["Ja",4],["Nee",0]]],
+["6/14/26","Reshman","10 euro for 2 - 2 prediction who u bet on",[["Japan",0],["Ned",0],["Curaçao",3]]],
+["6/16/26","Adam","Ga jij naar skireis?",[["Ja",0],["Nee",4]]],
+["6/17/26","Adam","Doe je mee aan wk poll",[["Ja a mattie",2],["Nee man",0]]],
+["6/17/26","Adam","Gaat iemand AS vak doen?",[["ja",2],["nee",0]]],
+["6/18/26","Adam","Would you rather…",[["Een kopstoot krijgen van Kouwenhoven",5],["Aangereden worden door een fatbike",1]]],
+["6/18/26","Lars","gaan WIJ AS biology doen",[["Ja ik ben skibidi tuff",2],["Nee ik ben skibidi sichen",3]]],
+["6/18/26","Lars","Wil je met Lors chillen? Forever?",[["Ja",1],["Absoluut ja",1]]],
+["6/21/26","Adam","Best song era?",[["70’s",1],["80’s",0],["90’s",0],["00’s",2],["10’s",2],["20’s",0]]],
+["6/22/26","Adam","Favoriete toets?",[["GP",1],["engels",1],["nederlands",0],["Frans/duits",1],["natuurkunde",0],["Wiskunde",3]]],
+["6/22/26","Adam","Wie is de Goat? Kies je top 3 en zeg daarna op volgoorde",[["Messi",2],["Cristiano Ronaldo",0],["Pele",1],["Cruyff",2],["Maradonna",1],["Van Basten",1],["Di Stefano",0],["Ronaldo Nazario",1],["Zidane",0],["Beckenbauer",0]]],
+["6/22/26","Reshman","Bet 10 euros it was god of larp",[["Ok",1],["no",1]]],
+["6/22/26","Adam","Oprecht dit is perfect",[["ja",1],["nee",3],["ei",1]]],
+["6/22/26","Adam","Welke zijn de meest accurate",[["Adam",2],["Lars",1],["Milo",3],["Nathan",0],["Reshman",1],["Sichen",1],["Josh",1],["Deniz",0],["Fionn",1],["Daniel",1]]],
+["6/24/26","Adam","Sturen?",[["ja",4],["Nee (verander nog wat)",0]]],
+["6/25/26","Milo","WIE komt vnv voor 8 uur Among us",[["Ik",4],["Ik niet",2]]],
+["6/28/26","Reshman","(New) best canon events",[["Lars becomes miku fan",1],["BFDI larping is mainstream",1],["3 goons got slimed",1],["Sybau varients",1],["Serious siichi",2],["Lars larps celeste ngs books",0],["Adam met banaan",2],["Disco party new variants van josh",1]]],
+["6/30/26","Reshman","Predictions for wis b",[["10",1],["9",1],["8",0],["7",1],["6",1],["5",2],["4",3],["3",0],["2",0],["1",0],["adam",1]]],
+["7/1/26","Reshman","What are we getting for nat",[["8",0],["7",1],["6",2],["5",3],["4",0],["3",0],["2",0],["1",0],["Mada (evil Adam)",1]]],
+["7/5/26","Reshman","Devin variants",[["Kevin",1],["Aevin",0],["Evil Adam devin",0],["Evil Adam kevin",1],["Bevin",0],["Cevin",0],["Eevin",0],["Fevin",0],["Gevin",0],["Hevin",0],["ievin",0],["Jevin",0]]],
+["7/5/26","Reshman","WE love BFDI and devin variants",[["Yes",0],["No and I love taking dih",1],["Yes and I love taking dih",1]]],
+["7/5/26","Fionn","Gaan jullie naar schoolfeest",[["Ja",0],["Nee",2],["Miss als genoeg anderen gaan",3],["Als Lina gaat (Josh)",1]]],
+["7/7/26","Reshman","Petition to bring back meta ai, si chen en natan",[["Ja",2],["Nee",0],["Ik ben gay",0],["Nee maar gay",0],["Ja maar gay",2]]],
+["7/8/26","Reshman","Would you rather",[["Biketok son",0],["Booktok daughter",2]]],
+["7/8/26","Reshman","Did you ever go to a date/or are going to today",[["no",1],["Haha foids are evil fuh nah",1],["Yeh and I am gay",1],["Chemmy boi",1],["Fionn volgers associates have NOT gone on a date",2],["No I like goofing",1],["Juicy feet",0]]],
+["7/8/26","Reshman","Who most prob get puh",[["Me myself and i",1],["Adam",2],["Lars",2],["Nathan",2],["Josh",2],["Fionn",1],["Milo",2],["Daniel",2]]],
+["7/8/26","Fionn","Kom schoolfeest",[["Ja",1],["Nee",4]]],
+["7/8/26","Reshman","Are you going to the feest",[["No",5],["Yes but i am gay",0]]],
+["7/8/26","Adam","Are you going to schoolfeest",[["ja",0],["Nee",5]]],
+["7/8/26","Adam","Among us ipv schoolfeest?",[["ja",1],["Ja",1]]],
+["7/8/26","Adam","Moet July TOCH een categorie worden?",[["ja",1],["Nee",0]]],
+["7/8/26","Nathaniel","Speel je widf",[["Ja ik heb aura",5],["Nee ik val op mannen",0],["Ja ik heb aura en val op mannen",2]]],
+["7/8/26","Josh","Wat vinden we van de nieuwe update",[["Tuff ik ben ook tuff",1],["Ik ben anders en ik zeg nee",0],["Ik ben gay",2]]],
+["7/8/26","Reshman","OG wat in de ranking beste picks",[["Nathan",0],["Daniel",0],["Lars",0],["Adam",0],["Fionn",0],["Josh",0],["Milo",0],["Deniz",3],["Robin",2],["Me",1],["Chemmy",2],["Keizer Chem",0]]],
+["7/8/26","Adam","Among us rn?",[["ja",2],["Nee",3]]],
+["7/8/26","Reshman","Should we hop on le amongus",[["No",3],["Yes and i am gay",1],["Ig bro",1]]],
+["7/8/26","Adam","Ben je op schoolfeest",[["Ja",0],["Nee",7]]],
+["7/9/26","Reshman","Cijfer lijst reveal (screenshot)",[["yes",0],["no and I am gay",4]]],
+["7/9/26","Adam","Is Marco Borsato schuldig?",[["Ja",0],["Nee",3]]],
+["7/9/26","Adam","Wat is sexistisch",[["Mannen zijn beter",1],["Vrouwen zijn beter",1],["Mannen moeten meer werken",0],["Vrouwen moeten meer geld verdienen",0],["Vrouwen mogen geen 67 zeggen",2],["Pepernoten zijn zout",1]]],
+["7/11/26","Fionn","Morgen om 2 uur voetballen bij FCZ",[["Ja ik kom",4],["No",4]]],
+["7/12/26","Reshman","Would you rather",[["Let norway win but you lose your limbs",1],["Let englang win but you get milo yams",1]]],
+["7/12/26","Adam","Morgen online awards?",[["11:00",1],["12:00",1],["13:00",1],["14:00",1]]],
+["7/14/26","Adam","Wie wil je zien winnen?",[["Fhrankrijk",3],["Sphanje",2]]],
+["7/14/26","Adam","Welk shirt is mooier?",[["Spanje uit",0],["Frankrijk thuis",1]]],
+["7/14/26","Nathaniel","Mall morgen",[["Cool idee",5],["Nee (ik val op mannen)",0],["Cool idee (ik val op mannen)",0]]],
+["7/17/26","Reshman","Age old question",[["Would you crack mina dragonfruit",1],["Or dance if sleep servers are full",1],["Or evil adam",3]]],
+["7/17/26","Adam","Who does dis song embody?",[["Daniel",0],["Fionn",0],["Josh",1],["Lars",0],["Milo",1],["Natan",0],["Reshman",0],["Adam",0]]],
+["7/19/26","Fionn","Ik ben in Zoetje en ga wk finale kijkem",[["Ja",2],["Nee",2]]],
+["7/19/26","Reshman","Bet on",[["The big yahu",2],["Spain",1]]],
+["7/19/26","Lars","Scoort cucurella vandaag?",[["Ja",1],["Nee",1],["Assist",2]]],
+["7/20/26","Adam","Morgen 1:00 DSO voetballen?",[["ja",6],["Nee",0]]],
+["7/25/26","Adam","Wie is beter?",[["Doué",5],["Barcola",1]]],
+["7/29/26","Nathaniel","Fantasy Football WidFF",[["Ja ik ben goated",5],["Nee ik val op mannen",0],["Ja ik ben goated en val op mannen",0]]],
+["7/29/26","Lars","Wie is beter",[["Adma's vaders aartsvijand",0],["Natan",1]]],
+["7/30/26","Reshman","Did you",[["Goon all summer at home",0],["Or not and your gay",1]]],
+["8/1/26","Reshman","Revive 2r legacy",[["Yes",2],["No",4]]],
+["8/19/26","Adam","Famalam",[["???",0],["Get off my set bro",2],["Hoe bedoel je",0],["Stop met ksi kijken",4]]],
+["8/24/26","Fionn","2 uur Dso voetballen",[["Ja",1],["Nee",6]]],
+["8/24/26","Adam","donderdag 2:00 uur?",[["ja",2],["nee",4]]],
+["8/24/26","Nathaniel","Wie zei dit",[["Lars",0],["Milo",0],["Josh",0],["Chemmy",2],["Daniel",1],["Reshman",0],["Fionn",1],["Deniz",0],["Renas",0]]],
+["8/24/26","Adam","Heb jij lijm gelikt?",[["Ja",0],["Nee",1],["Ik ben natan, dus tuurlijk",2]]],
+["8/25/26","Nathaniel","Is dit een goede prediction",[["Je bent de goat dit gaat 100% gebeuren",1],["Hmm zou best kunnen maar ik denk anders (explain your opinion)",1],["Nee nee nee dit is 100% fout",1]]],
+["8/26/26","Adam","Wie is jouw mentor?",[["Janse",1],["Duiven",1],["Glissenaar",3],["Koemans",1],["Hugens",2],["Iemand Anders",0]]],
+["8/27/26","Adam","wie komt",[["ik",2],["ik niet",4]]],
+["8/31/26","Adam","doe jij cabridge bio?",[["ja",4],["nee",3],["nee, andere cambridge ding",1]]],
+["9/6/26","Josh","🔴",[["Rood",3],["Roze",2]]],
+["9/6/26","Adam","is “maradonna-modus” offensive?",[["ja",1],["nee",3]]],
+["9/9/26","Reshman","Meta ai revival",[["Yes",2],["No and i like to lick my own pipi",1]]],
+["9/11/26","Adam","Wat is moeilijker?",[["Dunk",2],["Omhaal",4]]],
+["9/11/26","Adam","Heb jij morgen wedstrijd?",[["ja",0],["nee",0]]],
+["9/11/26","Adam","Who has the best lidtag?",[["Adam",0],["Daniel (geen lidtag)",0],["Deniz",0],["Fionn",0],["Josh",0],["Lars",0],["Milo",0],["Nathan",0],["Reshman",1]]],
+["9/14/26","Adam","ey maar wie heeft gim uytval?",[["ik, hehehe siu",1],["ik niet, miauw miauw miauw miauw",0]]],
+["9/16/26","Adam","heb jij gim studieplein?",[["ja, hehehe siuuu",3],["nee, miauw miauw miauw miauw",3]]],
+["9/21/26","Nathaniel","Beste Ludekings video",[["This is NOT the Cat in the Hat I Remember...",2],["Can I Win Every Pokemon Prize in ONLY 1 Hour",0],["Minecraft, But Drops are Modded GUNS!",0],["I Filled My House With CEREAL vs CHOCOLATE!",1]]],
+["9/22/26","Adam","stelling van de dag: zou jij wel of niet naar een random persoon gaan en haar vertellen dat je het met haar wil uitmaken?",[["ik zou dat wel doen",0],["ik zou dat niet doen",2]]],
+["9/27/26","Nathaniel","WIE gaat de NFC south winnen",[["Panthers",1],["Saints",1],["Buccs",1],["Falcons",1],["NIEMAND (Goed antwoord)",0]]],
+["9/30/26","Lars","gaan wij nathans plan volgen",[["ja",2],["nee",2]]],
+["9/30/26","Lars","gaan wij naar adams goonmatch kijken",[["nee",0],["ja",1]]],
+["9/30/26","Adam","25 oktober kom",[["ja",2],["tuurlijk",3]]],
+["10/1/26","Lars","Hoe spel je deze goon naam properly",[["Sierra",3],["Xierra",0],["Zierra",0]]],
+["10/2/26","Adam","wie is de beste",[["Gaethje",0],["Topuria",0],["Tsarukyan",2],["Oliveira",0],["Holloway",1],["Pimblett",1]]],
+["10/4/26","Lars","Wie heeft de # uitgevonden",[["Adam",1],["U",1],["Chris Messinga",0],["The American Dream",4]]],
+["10/5/26","Adam","smartest?",[["Adam",2],["Daniel",0],["Deniz",0],["Fionn",2],["Josh",0],["Milo",0],["Nathan",0],["Reshman",1],["Lars",0]]],
+["10/5/26","Adam","Funniest?",[["Adam",3],["Daniel",1],["Deniz",0],["Fionn",0],["Josh",0],["Lars",0],["Milo",0],["Nathan",0],["Reshman",1]]],
+["10/5/26","Adam","most well dressed?",[["Adam",0],["Daniel",1],["Deniz",0],["Fionn",0],["Josh",0],["Lars",0],["Milo",1],["Nathan",3],["Reshman",0]]],
+["10/5/26","Adam","Most Aware?",[["Adam",0],["Daniel",0],["Deniz",1],["Fionn",0],["Josh",1],["Lars",1],["Milo",1],["Nathan",0],["Reshman",0]]],
+["10/5/26","Adam","goofiest?",[["Adie",0],["Dihniel",0],["Dihniz",2],["Fyon",0],["Joh",0],["Larps",2],["Mielo",0],["Natan",0],["Freshman",1]]],
+["10/5/26","Adam","Most Ball knowledge?",[["Adam",0],["Daniel",0],["Deniz",2],["Fionn",0],["Josh",1],["Lars",0],["Milo",1],["Nathan",1],["Reshman",0]]],
+["10/5/26","Adam","nicest?",[["Adam",0],["Daniel",0],["Deniz",3],["Fionn",1],["Josh",0],["Lars",0],["Milo",0],["Nathan",0],["Reshman",1]]],
+["10/5/26","Adam","underrated?",[["Adam",0],["Daniel",2],["Deniz",0],["Fionn",0],["Josh",2],["Lars",0],["Milo",0],["Nathan",0],["Reshman",1]]],
+["10/5/26","Adam","hungriest?",[["Adam",1],["Daniel",0],["Deniz",0],["Fionn",0],["Josh",0],["Lars",0],["Milo",0],["Nathan",4],["Reshman",0]]],
+["10/5/26","Adam","best dance moves?",[["Adam",0],["Daniel",0],["Deniz",1],["Fionn",0],["Josh",0],["Lars",0],["Milo",4],["Nathan",0],["Reshman",0]]],
+["10/5/26","Adam","most rizz?",[["Adam",0],["Daniel",0],["Deniz",0],["Fionn",0],["Josh",1],["Lars",1],["Milo",2],["Nathan",0],["Reshman",1]]],
+["10/5/26","Adam","most sportive?",[["Adam",2],["Daniel",0],["Deniz",1],["Fionn",2],["Josh",0],["Lars",0],["Milo",0],["Nathan",1],["Reshman",0]]],
+["10/5/26","Adam","best personality?",[["Adam",0],["Daniel",0],["Deniz",0],["Fionn",0],["Josh",0],["Lars",0],["Milo",0],["Nathan",1],["Reshman",4]]],
+["10/5/26","Adam","toughest (least afraid)?",[["Adam",0],["Daniel",2],["Deniz",0],["Fionn",0],["Josh",0],["Lars",0],["Milo",0],["Nathan",3],["Reshman",0]]],
+["10/5/26","Adam","zestiest?",[["Adam",0],["Daniel",0],["Deniz",0],["Fionn",0],["Josh",0],["Lars",4],["Milo",1],["Nathan",0],["Reshman",0]]],
+["10/5/26","Adam","most lore?",[["Adam",4],["Daniel",0],["Deniz",0],["Fionn",0],["Josh",0],["Lars",1],["Milo",0],["Nathan",0],["Reshman",1]]],
+["10/5/26","Adam","most ape-like behaviour?",[["Adam",0],["Daniel",0],["Deniz",1],["Fionn",0],["Josh",0],["Lars",0],["Milo",5],["Nathan",0],["Reshman",0]]],
+["10/5/26","Adam","most respectful?",[["Adam",0],["Daniel",0],["Deniz",2],["Fionn",0],["Josh",0],["Lars",0],["Milo",0],["Nathan",0],["Reshman",2]]],
+["10/5/26","Adam","most serious?",[["Adam",0],["Daniel",3],["Deniz",0],["Fionn",2],["Lars",0],["Milo",0],["Nathan",0],["Reshman",0]]],
+["10/5/26","Reshman","Most daddy/mommy",[["Natan",1],["Adam",0],["Milo",0],["Denis",1],["Lars",0],["Daniel",0],["Josh",0],["Female malfoy (le elite ballkennis trust)",4],["Reshman",1]]],
+["10/5/26","Adam","heetste female version?",[["Adam",0],["Daniel",0],["Deniz",0],["Fionn",1],["Josh",0],["Lars",1],["Milo",0],["Nathan",2],["Reshman",0]]],
+["10/5/26","Nathaniel","Best widr ship",[["Chemyon",1],["Reshniel",0],["Chemiz",0],["Larthan",2],["Milosh",0],["Milars",0],["Machien",0],["Naniel",2],["Fiosh",0],["Miniz",0]]],
+["10/5/26","Reshman","Top ships",[["Natan x lars",2],["Fionn x julie",3],["Daniel x nathaniel",1],["Josh x anna (haters to lovers)",2],["Harry x female malfoy",0]]],
+["10/5/26","Nathaniel","Best WidR ship with at least one member outside of WidR",[["Fyulie",3],["Joshnna",0],["Chemchen",0],["Nielsh",0],["Miljoy",0],["Linthan",0],["Reshra",0],["Dan-Xuen",0],["Groenciej",1]]],
+["10/7/26","Reshman","Beste ships",[["Lars x nathan",1],["Alex x Alex",1],["Fiulie (meta)",1],["Ricardo x Aleks (niche)",0]]],
+["10/8/26","Adam","Kom naar studiekuezue kik of?",[["ja",2],["Jammer genoeg niet",3]]],
+["10/12/26","Reshman","Wie gaat hier goonen",[["Milo",2],["Fionn",1],["Lars",0],["Alexander",1],["Josh",1],["Enno",3],["Joah",3],["Raaf",2],["Ik",1],["Natan",0],["Iemand anders",0]]],
+["10/12/26","Reshman","Wie gaat hier goonen 2",[["Daniel",1],["Adam",1],["Qaish",1],["Jake",2],["Iemand anders",1]]],
+["10/12/26","Reshman","Wie goonen hier 3",[["Deniz",2],["Robin",2],["Thijmen",2],["Casper",4],["Josh",2]]],
+["10/16/26","Reshman","Wie heeft gegoond tijdends the rijs (the most suspected)",[["Chemmy",0],["Lars",1],["Natan",0],["Milo",0],["Josh",0],["Fionn",0],["Daniel",0],["Deniz",2]]],
+["10/16/26","Adam","Vraag van de dag: gebruik jij nog CD’s?",[["Ja",2],["Nee",3]]],
+["10/17/26","Adam","Vraag van de dag: welke fast food restaurant in Nederland is de beste?",[["McDonalds",0],["Burger King",3],["Kentucky Fried Chicken",0]]],
+["10/18/26","Adam","Welke van deze push-ups is het moeilijkst?",[["Diamond",0],["Clap",2],["Knuckle",3]]],
+["10/18/26","Lars","Wat is moeilijker",[["Een croissantje eten",0],["Een klok in elkaar zetten",1],["In 1 uur >3 keer cummen",1]]],
+["10/19/26","Adam","Vraag van de dag: heb jij een ochtendhumeur",[["Ja",0],["Nee",3],["Soms (kan heel weinig zijn maar ook gewoon 1 op de 3 dagen)",2]]],
+["10/20/26","Adam","Vraag van de dag: wanneer poets je je tanden?",[["Voor ontbijt, midden in de dag, voor slapen",0],["Na ontbijt, midden in de dag, voor slapen",0],["Voor ontbijt, voor slapen",5],["Na ontbijt, voor slapen",1],["Anders (psychopaat)",0]]],
+["10/20/26","Reshman","When do you poets your tanden",[["After adam",3],["Before adam",1]]],
+["10/21/26","Josh","Weet je wie Alex Adams is",[["Ja",2],["Nee random kids",4]]],
+["10/21/26","Reshman","New allegation: lars supports incest. Do we support?",[["Yes",2],["No",2]]],
+["10/21/26","Adam","Vraag van de dag: welke van deze onderstaande bekenden is het meest overrated?",[["Harry Potter",2],["NOS Jeugdjournaal",2],["Fortnite",1]]],
+["10/21/26","Reshman","Who is the biggest larper",[["Larp jacobi",1],["Adam",0],["Josh",4],["Fyon",2],["Milo",0],["Natan",0],["Deniz Koç (aura)",0],["Sichi",0],["Reshman",2]]],
+["10/21/26","Adam","Wie kent de meeste ball? Selecteer je top 3",[["Adam",3],["Daniel",2],["Deniz",1],["Fionn",1],["Josh",1],["Lars",4],["Milo",2],["Nathan",5],["Reshman",1],["Sichen",2]]],
+["10/21/26","Adam","Yan of Merab?",[["Yan a man",0],["Merab a gap",0]]],
+["10/22/26","Adam","Vraag van de dag: wie van deze jongemannen heeft de beste celebration?",[["Matheus Cunha",2],["Cristiano Ronaldo",0],["Paulo Dybala",0],["Viktor Gyökeres",3]]],
+["10/22/26","Nathaniel","Is een celly die bij een aspect/nickname/trait van een speler hoort tuff",[["Ja",1],["Nee",4]]],
+["10/22/26","Adam","Wie van deze heeft de grootste dong?",[["LeBron",2],["Filet Mignon",1],["Le bouton du “on”",0]]],
+["10/23/26","Reshman","Best bekend core",[["Adamcore",1],["losercore",2],["Larpcore (get it cuz lars)",2]]],
+["10/23/26","Adam","Vraag van de dag: heb jij de wisb studieplanner met opdrachten van hoofdstuk 8 erin?",[["Ja",1],["Nee",4]]],
+["10/24/26","Adam","Vraag van de dag: wat is je schaakrating? Als je wel schaakt maar geen rating hebt, schat dan",[["Minder dan 500",1],["500-700",0],["700-850",2],["900-1050",2],["1100",1],["1200",0],["1300",0],["Meer dan 1300",0]]],
+["10/25/26","Adam","Vraag van de dag: je kijkt naar een digitale klok, wat is 4 + 7? Adam mag niet stemmen",[["5",0],["8",2],["9",3]]],
+["10/26/26","Adam","Vraag van de dag: hoe kunnen we natan opvrolijken?",[["Met een liedje",5],["Met glaze",0],["Anders (zeg het dan)",0]]],
+["10/27/26","Nathaniel","QotD: wie moet WidR MVP ‘26 winnen (je mag niet op jezelf stemmen)",[["Lars",1],["Nathan",3],["Chemmy",2],["Reshman",0],["Milo",0]]],
+["10/27/26","Lars","is de eindtijd instellen een goede feature",[["ja",3],["nee",2]]],
+["10/27/26","Lars","is de eindtijd instellen een slechte feature",[["nee",1],["ja",2]]],
+["10/27/26","Lars","Rare drop! vote om hem te claimen",[["100 gems",1],["nieuwe title",1],["dih",2]]],
+["10/27/26","Adam","Vraag van de dag: welke van deze quotes is het beste?",[["N****! Dinners ready! (Maciej Marcin Maziarz)",2],["Mevrouw, help! Ze verkrachten me! (Daniel Ahmed Momand)",4],["Maar ik wil niet naar Erasmus! (Adam Adamson Cemerikic)",0]]],
+["10/28/26","Nathaniel","QotD: Wie denk je dat de Olifant is",[["Van Boven",1],["Verlee",0],["Roders",2],["Anders (licht toe)",1]]],
+["10/28/26","Adam","Vraag van de dag: wie van deze acteurs is de beste?",[["Jack Black",3],["Ryan Gosling",2],["Dolf Lundgren",0],["Christian Bale",0]]],
+["10/28/26","Adam","Wie is de grootste ragbaiter hier?",[["Nathan",1],["natan",2],["Natan",2],["nathan",1]]],
+["10/30/26","Adam","Vraag van de dag: hoe raar ben jij op deze schaal?",[["Niet",1],["Misschien",0],["Een beetje",2],["Wel",3],["Heel erg",0]]],
+["11/1/26","Adam","Vraag van de dag: hoeveel toetsen heb jij morgen?",[["0",0],["1",2],["2",3],["3",0]]],
+];
+/* slurs in poll text are masked on screen */
+const censor=s=>s.replace(/nigg\w*/gi,m=>m[0]+'****').replace(/neger\w*/gi,m=>m[0]+'****');
+const PL=POLLS.map((p,i)=>{const [mo,d,y]=p[0].split('/').map(Number),votes=p[3].reduce((a,o)=>a+o[1],0),top=Math.max(0,...p[3].map(o=>o[1]));
+  const sorted=p[3].map(o=>o[1]).sort((a,b)=>b-a);
+  return {i,date:new Date(2000+y,mo-1,d),ds:`${d} ${MN[mo-1]} ${2000+y}`,who:p[1],title:censor(p[2]),opts:p[3].map(o=>[censor(o[0]),o[1]]),votes,top,gap:sorted.length>1?sorted[0]-sorted[1]:99,tie:sorted.length>1&&sorted[0]>0&&sorted[0]===sorted[1]}});
+let plWho='all',plShown=24;
+const PG=wq('plGrid'),PSort=wq('plSort'),PSearch=wq('plSearch');
+(function plStats(){
+  const tv=PL.reduce((a,p)=>a+p.votes,0),big=PL.reduce((a,p)=>p.votes>a.votes?p:a),by={};PL.forEach(p=>by[p.who]=(by[p.who]||0)+1);
+  const topWho=Object.entries(by).sort((a,b)=>b[1]-a[1])[0],ties=PL.filter(p=>p.tie).length;
+  wq('plStats').innerHTML=`<div class="pl-st"><b>${PL.length}</b><span>polls in total</span></div><div class="pl-st"><b>${fmt(tv)}</b><span>votes cast</span></div><div class="pl-st"><b>${esc(topWho[0])} · ${topWho[1]}</b><span>made the most polls</span></div><div class="pl-st"><b>${big.votes} votes</b><span>most-voted: "${esc(big.title.length>40?big.title.slice(0,38)+'…':big.title)}"</span></div>`;
+  const whos=Object.entries(by).sort((a,b)=>b[1]-a[1]);
+  wq('plWho').innerHTML=`<button class="tab on" type="button" data-w="all">All (${PL.length})</button>`+whos.map(([w,c])=>`<button class="tab" type="button" data-w="${esc(w)}">${esc(w)} (${c})</button>`).join('');
+  wq('plWho').querySelectorAll('.tab').forEach(b=>b.onclick=()=>{wq('plWho').querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x===b));plWho=b.dataset.w;plShown=24;plRender()})})();
+function plCard(p){
+  const max=Math.max(1,p.top),many=p.opts.length>8;
+  const rows=p.opts.map((o,j)=>`<div class="pl-o${o[1]===p.top&&p.top>0?' win':''}"${many&&j>=8?' data-x hidden':''}><i data-w="${o[1]/max*100}"></i><span>${esc(o[0])}</span><em>${o[1]} ${o[1]===1?'vote':'votes'}</em></div>`).join('');
+  const verdict=p.votes===0?'nobody voted 💀':p.tie?'tie at the top 🤝':`winner: ${esc(p.opts.find(o=>o[1]===p.top)[0].slice(0,40))}`;
+  return `<article class="pl"><div class="pl-h"><span><b>${esc(p.who)}</b></span><span>${p.ds}</span></div><div class="pl-t">${esc(p.title)}</div>${rows}${many?`<button class="pl-more" type="button">+ ${p.opts.length-8} more options</button>`:''}<div class="pl-f">${p.votes} ${p.votes===1?'vote':'votes'} · ${p.opts.length} options · ${verdict}</div></article>`}
+function plRender(){
+  const q=PSearch.value.trim().toLowerCase(),s=PSort.value;
+  let L=PL.filter(p=>(plWho==='all'||p.who===plWho)&&(!q||(p.title+' '+p.opts.map(o=>o[0]).join(' ')).toLowerCase().includes(q)));
+  L.sort(s==='old'?(a,b)=>a.date-b.date||a.i-b.i:s==='votes'?(a,b)=>b.votes-a.votes||b.date-a.date:s==='close'?(a,b)=>(a.votes<2)-(b.votes<2)||a.gap-b.gap||b.votes-a.votes:(a,b)=>b.date-a.date||b.i-a.i);
+  wq('plCount').textContent=L.length?`Showing ${Math.min(plShown,L.length)} of ${L.length} polls`:'';
+  PG.innerHTML=L.length?L.slice(0,plShown).map(plCard).join(''):`<div class="meme-empty">No poll found for "${esc(q)}".</div>`;
+  wq('plMore').hidden=plShown>=L.length;
+  PG.querySelectorAll('.pl-more').forEach(b=>b.onclick=()=>{b.parentNode.querySelectorAll('[data-x]').forEach(x=>{x.hidden=false;const f=x.querySelector('i');f.style.width=f.dataset.w+'%'});b.remove()});
+  [...PG.children].forEach((c,i)=>setTimeout(()=>{c.classList.add('show');c.querySelectorAll('.pl-o:not([hidden]) i').forEach(f=>f.style.width=f.dataset.w+'%')},Math.min(i,24)*30))}
+PSort.onchange=()=>{plShown=24;plRender()};PSearch.oninput=()=>{plShown=24;plRender()};
+wq('plMore').onclick=()=>{plShown+=24;plRender()};
+const plio=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){plRender();plio.disconnect()}}),{threshold:.02});plio.observe(PG);
+addEventListener('beforeprint',()=>{plShown=9999;plRender();PG.querySelectorAll('[data-x]').forEach(x=>x.hidden=false);PG.querySelectorAll('.pl').forEach(c=>c.classList.add('show'))});
 
 /* quiz */
 const NAMES_Q=["Lars","Adam","Nathaniel","Fionn","Reshman","Milo","Josh","Daniël","Sichen","Maciej","Meta AI","Deniz","Rênas"];
@@ -804,14 +1419,339 @@ const io=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return
   if(el.id==='podWrap')el.querySelectorAll('.blk').forEach((b,i)=>setTimeout(()=>b.style.height=b.dataset.h+'px',[300,0,550][i]));
   io.unobserve(el)}),{threshold:.18});
 document.querySelectorAll('.rv').forEach(el=>io.observe(el));
-const nio=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){[...NW.children].forEach((t,i)=>setTimeout(()=>t.classList.add('show'),i*45));nio.disconnect()}}),{threshold:.1});nio.observe(NW);
+const nio=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){namesShown=true;[...NW.children].forEach((t,i)=>setTimeout(()=>t.classList.add('show'),i*45));nio.disconnect()}}),{threshold:.1});nio.observe(NW);
 
 /* nav highlight */
-const secs=['top','timeline','crew','rank','swear','lore','memes','quiz'].map(id=>document.getElementById(id));
+const secs=['top','timeline','crew','rank','swear','lore','memes','quotes','polls','quiz'].map(id=>document.getElementById(id));
 addEventListener('scroll',()=>{let cur='top';secs.forEach(s=>{if(s.getBoundingClientRect().top<200)cur=s.id});document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+cur))},{passive:true});
 
 /* print: show everything */
 addEventListener('beforeprint',()=>{document.querySelectorAll('.bar i').forEach(b=>b.style.height=b.dataset.h+'%');S.querySelectorAll('div').forEach(d=>d.style.width=d.dataset.w+'%');document.querySelectorAll('.blk').forEach(b=>b.style.height=b.dataset.h+'px');document.querySelectorAll('.nm-tag').forEach(t=>t.classList.add('show'))});
+
+/* ===================== LIVE UPDATE FROM A NEW EXPORT =====================
+   Drop a WhatsApp export (_chat.txt or the .zip) anywhere on the page.
+   It is parsed right here in the browser, every number is recounted, and the
+   result is remembered (localStorage) so the site stays updated on reload. */
+const KEY='widr_wrapped_stats_v1';
+const ALIAS={Nathananiel:"Nathaniel",Ragger:"Rênas"};
+const normName=raw=>{const f=raw.split(/\s+/)[0]||raw;return ALIAS[f]||f};
+const SW_RX=[/fuck/g,/shit/g,/kanker/g,/kkr/g,/kut/g,/tering/g,/mongool/g,/bitch/g,/kys/g,/nigg/g,/homo/g,/hoer/g];
+const RX_SCHOOL=/toets|leren|huiswerk|hoofdstuk|wisb|natuurkunde|bio|scheikunde|duits|engels|cijfer|pto|so /,
+      RX_SPORT=/voetbal|wk|goal|tennis|nba|baseball|yankees|spurs|messi|ronaldo|djokovic|match|wedstrijd/,
+      RX_GAMES=/game|brawl|roblox|rolbox|minecraft|fortnite|among us|mario|switch|nintendo|fifa|fc2/,
+      RX_LAUGH=/haha|😂|💀|😭|lmao|lol/;
+const MEME_RX={"GOAT":/goat/,"ts":/\bts\b/,"___ ahh ___":/ahh\b/,"son":/\bson\b/,"goon / goonen":/goon/,"lowk":/lowk|lwk/,"holy ___":/holy/,"bait / ragebait":/bait/,"tuff":/tuff/,"oprecht":/oprecht/,"aura":/aura/,"pmo":/pmo/,"larp":/larp/,"unc":/\bunc\b/,"peak":/peak/,"random kid":/random kid/,"ragger / raggen":/ragger|raggen|ragt\b/,"sybau":/sybau/,"W / L":/(^|\s)[wl](\s|$)/,"twin":/\btwin\b/,"fym":/\bfym\b/,"dih":/\bdih\b/,"slimen":/slime/,"vro":/\bvro\b/,"67":/67\b/,"boii":/boii/,"glaze":/glaze/,"jzm":/jzm/,"fairs":/fairs/,"syfm":/syfm/,"huzz":/huzz/,"npc":/npc/,"lidtag":/lidtag/,"le ___":/(^|\s)le [a-z]/,"tung tung tung sahur":/tung/,"puh":/\bpuh\b/,"Zo Sigma 🐺":/sigma/,"IDEDIDEWDDD":/idedid/};
+/* iPhone: "[10/12/25, 4:48:02 PM] Name: text"   Android: "12-10-2025 16:48 - Name: text" */
+const RX_IOS=/^[‎‏\s]*\[(\d{1,4})[\/.\-](\d{1,2})[\/.\-](\d{1,4}),?\s+(\d{1,2})[:.](\d{2})(?:[:.](\d{2}))?\s*([AaPp]\.?\s?[Mm]\.?)?\]\s*([^:\n]{1,80}?):\s?([\s\S]*)$/;
+const RX_AND=/^[‎‏\s]*(\d{1,4})[\/.\-](\d{1,2})[\/.\-](\d{1,4}),?\s+(\d{1,2})[:.](\d{2})(?:[:.](\d{2}))?\s*([AaPp]\.?\s?[Mm]\.?)?\s[-–]\s([^:\n]{1,80}?):\s([\s\S]*)$/;
+const RX_AND_SYS=/^[‎‏\s]*\d{1,4}[\/.\-]\d{1,2}[\/.\-]\d{1,4},?\s+\d{1,2}[:.]\d{2}.{0,12}?\s[-–]\s/;
+const newP=()=>({tot:0,st:0,img:0,au:0,poll:0,ai:0,del:0,ed:0,ren:0,night:0,early:0,q:0,len:0,txt:0,laugh:0,school:0,sport:0,games:0,sw:Array(12).fill(0)});
+const dk2a=k=>[Math.floor(k/10000),Math.floor(k/100)%100,k%100];
+
+function take(st,m){
+  const raw=m.from.replace(/[‎‏‪-‮⁦-⁩]/g,'').replace(/^~\s*/,'').trim();
+  const t=m.text.replace(/[‎‏]/g,'').trim(),low=t.toLowerCase();
+  if(st.G===null)st.G=/end-to-end|encrypted|versleuteld/i.test(t)?raw:'';
+  st.total++;
+  const dk=m.y*10000+m.mo*100+m.d,mk=m.y*100+m.mo;
+  if(!st.firstK||dk<st.firstK)st.firstK=dk;if(dk>st.lastK)st.lastK=dk;
+  st.months[mk]=(st.months[mk]||0)+1;st.days[dk]=(st.days[dk]||0)+1;st.hours[m.h]++;
+  if(/deniz/i.test(t))st.ment.deniz++;
+  if(/r(e|ê|ê)nas/i.test(t))st.ment.renas++;
+  if(low.includes('nigg'))st.warn.n++;if(low.includes('kanker'))st.warn.k++;if(low.includes('gay'))st.warn.g++;
+  if(/\bwidr\b|wat in de ranking/i.test(t))st.widr++;
+  if(!raw||raw===st.G){st.prev=null;return}           // system lines posted "by" the group itself
+  if(raw==='Meta AI'){st.ai++;st.prev='Meta AI';return}
+  const name=normName(raw),P=st.P[name]||(st.P[name]=newP());
+  P.tot++;if(m.h<5)P.night++;if(m.h>=7&&m.h<9)P.early++;
+  let kind=null;const md=/^(sticker|image|audio|video|gif|document|contact card|location)\s+omitted$/i.exec(t)||/<attached:[^>]*?(sticker|photo|audio|opus|video|gif)/i.exec(t);
+  if(md){kind=md[1].toLowerCase();if(kind==='photo')kind='image';if(kind==='opus')kind='audio'}else if(/^<media omitted>$/i.test(t))kind='media';
+  if(kind==='sticker'){P.st++;st.stickers++}else if(kind==='image'){P.img++;st.images++}else if(kind==='audio'){P.au++;st.audio++}else if(kind==='video')st.videos++;else if(kind==='gif')st.gifs++;
+  if(/This message was deleted|You deleted this message|Dit bericht is verwijderd|Je hebt dit bericht verwijderd/.test(t)){P.del++;st.deleted++}
+  if(/<This message was edited>|<Dit bericht is bewerkt>/.test(t)){P.ed++;st.edited++}
+  if(/^(POLL|PEILING):/.test(t)){P.poll++;st.polls++}
+  const rn=/changed (?:the )?group name (?:from .*? )?to [“"](.+?)[”"]\s*$/.exec(t)||/changed the subject (?:from .*? )?to [“"](.+?)[”"]/.exec(t)||/groepsnaam (?:gewijzigd )?(?:van .*? )?(?:in|naar) [“"](.+?)[”"]/.exec(t);
+  if(rn){P.ren++;st.renames++;st.renList.push([rn[1],name,m.d,m.mo,m.y])}
+  if(t.includes('Meta AI'))P.ai++;
+  if(!kind){P.txt++;P.len+=t.length}
+  if(t.includes('?'))P.q++;
+  if(st.prev&&st.prev!==name&&st.P[st.prev]&&RX_LAUGH.test(low))st.P[st.prev].laugh++;
+  for(let j=0;j<SW_RX.length;j++){const x=low.match(SW_RX[j]);if(x)P.sw[j]+=x.length}
+  if(RX_SCHOOL.test(low))P.school++;if(RX_SPORT.test(low))P.sport++;if(RX_GAMES.test(low))P.games++;
+  for(const k in MEME_RX){if(MEME_RX[k].test(low)){const e=st.memes[k]||(st.memes[k]={c:0,u:{},f:null});e.c++;e.u[name]=(e.u[name]||0)+1;if(!e.f)e.f=[m.y,m.mo,m.d]}}
+  st.prev=name}
+
+function parseChat(text){
+  const lines=text.replace(/^﻿/,'').split(/\r?\n/);
+  let ymd=false,dayFirst=null,ampm=false;
+  for(let i=0,k=0;i<lines.length&&k<5000;i++){const m=RX_IOS.exec(lines[i])||RX_AND.exec(lines[i]);if(!m)continue;k++;
+    const a=+m[1],b=+m[2];if(m[7])ampm=true;if(a>31){ymd=true;break}if(a>12)dayFirst=true;else if(b>12&&dayFirst===null)dayFirst=false}
+  if(dayFirst===null)dayFirst=!ampm;
+  const st={G:null,total:0,ai:0,stickers:0,images:0,audio:0,videos:0,gifs:0,deleted:0,edited:0,polls:0,renames:0,months:{},days:{},hours:Array(24).fill(0),firstK:0,lastK:0,P:{},prev:null,renList:[],memes:{},ment:{deniz:0,renas:0},warn:{n:0,k:0,g:0},widr:0};
+  let cur=null;
+  for(const line of lines){
+    const m=RX_IOS.exec(line)||RX_AND.exec(line);
+    if(m){const a=+m[1],b=+m[2],c=+m[3];let y,mo,d;if(ymd){y=a;mo=b;d=c}else{y=c;if(dayFirst){d=a;mo=b}else{mo=a;d=b}}if(y<100)y+=2000;
+      if(mo>=1&&mo<=12&&d>=1&&d<=31){if(cur)take(st,cur);
+        let h=+m[4];const ap=(m[7]||'').toLowerCase().replace(/[^ap]/g,'');if(ap==='p'&&h<12)h+=12;if(ap==='a'&&h===12)h=0;
+        cur={y,mo,d,h:h%24,from:m[8],text:m[9]};continue}}
+    if(RX_AND_SYS.test(line)){if(cur)take(st,cur);cur=null;continue}   // Android system line: ends the previous message
+    if(cur)cur.text+='\n'+line}
+  if(cur)take(st,cur);
+  if(!st.total)return st;
+  const first=dk2a(st.firstK),last=dk2a(st.lastK);
+  const months=[];let y=first[0],mo=first[1];
+  while(y*100+mo<=last[0]*100+last[1]){months.push([y,mo,st.months[y*100+mo]||0]);if(++mo>12){mo=1;y++}}
+  if(last[2]<new Date(last[0],last[1],0).getDate())months[months.length-1][3]=last[2];
+  let busy=[0,0];for(const k in st.days)if(st.days[k]>busy[1])busy=[+k,st.days[k]];
+  const span=Math.round((Date.UTC(last[0],last[1]-1,last[2])-Date.UTC(first[0],first[1]-1,first[2]))/864e5)+1;
+  return {total:st.total,ai:st.ai,stickers:st.stickers,images:st.images,audio:st.audio,videos:st.videos,gifs:st.gifs,deleted:st.deleted,edited:st.edited,polls:st.polls,renames:st.renames,
+    months,hours:st.hours,span,active:Object.keys(st.days).length,busy:[dk2a(busy[0]),busy[1]],first,last,P:st.P,renList:st.renList,memes:st.memes,ment:st.ment,warn:st.warn,G:st.G||'',widr:st.widr}}
+
+/* is this really the WidR chat? Three independent checks, all must pass */
+const WIDR_CORE=["Lars","Adam","Nathaniel","Fionn","Reshman","Milo","Josh","Daniël","Sichen","Maciej"];
+const WIDR_START=[2025,10,12];
+let curLast=[2026,11,3];
+const dnum=a=>a[0]*10000+a[1]*100+a[2];
+function verifyWidr(D){
+  const found=WIDR_CORE.filter(n=>D.P[n]&&D.P[n].tot>=20);
+  const strangers=Object.keys(D.P).filter(n=>!WIDR_CORE.includes(n)&&!['Deniz','Rênas','You','Jij'].includes(n)&&D.P[n].tot>=Math.max(50,D.total*.05));
+  const nameOk=/widr|wat in de ranking/i.test(D.G)||D.widr>=3||D.renList.some(r=>/widr|wat in de ranking/i.test(r[0]));
+  const startOk=dnum(D.first)<=dnum([2025,10,20])&&dnum(D.first)>=dnum([2025,10,1]);
+  const idOk=nameOk||startOk;
+  const checks=[
+    {ok:found.length>=6,label:`${found.length}/10 WidR members found`,why:found.length?`only ${found.length}/10 WidR members found (${found.join(', ')})`:'none of the WidR members are in it'},
+    {ok:idOk,label:nameOk?`group name WidR / Wat in de Ranking found${startOk?`, starts ${dstr(D.first,1)}`:''}`:`starts ${dstr(D.first,1)}, the day WidR began`,why:`the name WidR never appears and it starts on ${dstr(D.first,1)} instead of 12 Oct 2025`},
+    {ok:strangers.length<=2,label:'no unknown regulars',why:`it has regulars who aren't in WidR (${strangers.slice(0,3).join(', ')})`}];
+  return {ok:checks.every(c=>c.ok),checks,older:dnum(D.last)<dnum(curLast),same:dnum(D.last)===dnum(curLast)}}
+
+/* minimal .zip reader: finds the chat .txt and inflates it with the browser's own DecompressionStream */
+async function unzipChat(buf){
+  const v=new DataView(buf),u8=new Uint8Array(buf),dec=new TextDecoder();let e=-1;
+  for(let i=buf.byteLength-22;i>=Math.max(0,buf.byteLength-66000);i--)if(v.getUint32(i,true)===0x06054b50){e=i;break}
+  if(e<0)throw new Error("that .zip looks broken");
+  const n=v.getUint16(e+10,true);let p=v.getUint32(e+16,true),best=null;
+  for(let k=0;k<n;k++){if(v.getUint32(p,true)!==0x02014b50)break;
+    const method=v.getUint16(p+10,true),csize=v.getUint32(p+20,true),nl=v.getUint16(p+28,true),xl=v.getUint16(p+30,true),cl=v.getUint16(p+32,true),off=v.getUint32(p+42,true);
+    const name=dec.decode(u8.subarray(p+46,p+46+nl));
+    if(/\.txt$/i.test(name)&&!/__MACOSX|\/\._/.test(name)&&(!best||/_chat\.txt$/i.test(name)))best={method,csize,off};
+    p+=46+nl+xl+cl}
+  if(!best)throw new Error("there's no chat .txt inside that .zip");
+  const start=best.off+30+v.getUint16(best.off+26,true)+v.getUint16(best.off+28,true),data=u8.subarray(start,start+best.csize);
+  if(best.method===0)return dec.decode(data);
+  if(best.method!==8||typeof DecompressionStream==='undefined')throw new Error("this browser can't open that .zip, so unzip it and drop the _chat.txt instead");
+  return await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text()}
+async function readFile(f){return (/\.zip$/i.test(f.name)||/zip/.test(f.type))?unzipChat(await f.arrayBuffer()):f.text()}
+
+const $=id=>document.getElementById(id);
+const setText=(id,s)=>{const el=$(id);if(el)el.textContent=s},setHTML=(id,s)=>{const el=$(id);if(el)el.innerHTML=s};
+const dstr=(a,yr)=>`${a[2]} ${MN[a[1]-1]}${yr?' '+a[0]:''}`;
+const CHIP={"msgs":"tot","AI prompts":"ai","images":"img","renames":"ren","polls":"poll","voice notes":"au","edits":"ed","stickers":"st"};
+
+function applyStats(D,meta){
+  curLast=D.last;
+  const P=D.P,names=Object.keys(P);
+  const core=names.filter(n=>P[n].tot>=100&&n!=='You'),mid=core.filter(n=>P[n].tot>=300),big=core.filter(n=>P[n].tot>=800);
+  /* hero */
+  const hv=[D.total,D.stickers,D.polls,D.renames,D.ai];
+  document.querySelectorAll('.stk b').forEach((b,i)=>{b.dataset.count=hv[i];b.textContent=fmt(hv[i])});
+  setText('heroRange',`${dstr(D.first,1)} → ${dstr(D.last,1)} · WhatsApp · 4V / 5VWO`);
+  setText('heroP',`${fmt(D.span)} days, ${core.length} regulars, a few ghosts, 1 AI and an unreasonable number of stickers. Every message in the chat export, counted, sorted and (obviously) ranked.`);
+  words=[`${fmt(D.stickers)} stickers`,`${fmt(D.images)} images`,`${fmt(D.audio)} voice notes`,`${fmt(D.gifs)} GIFs`,`${fmt(D.deleted)} deleted`,`${fmt(D.edited)} edited`,`${fmt(D.polls)} polls`,`${fmt(D.videos)} videos`,"1 Meta AI",`${core.length} rankers`];fill('mq2',words);
+  /* timeline */
+  months=D.months;renderMonths();
+  const rec=months.reduce((a,b)=>b[2]>a[2]?b:a),inner=months.slice(1,-1),low=inner.length?inner.reduce((a,b)=>b[2]<a[2]?b:a):null,lastM=months[months.length-1];
+  setText('tlLede',`WidR started on ${dstr(D.first,1)}. ${low?`Its quietest month was ${MN[low[1]-1]} ${low[0]}, with just ${fmt(low[2])} messages. `:''}The record month is ${MN[rec[1]-1]} ${rec[0]} with ${fmt(rec[2])} messages${lastM!==rec?`, and ${MN[lastM[1]-1]} ${lastM[0]} has ${fmt(lastM[2])} ${lastM[3]?`after ${lastM[3]} days`:'messages'}`:''}.`);
+  const avg=Math.round(D.total/D.span);
+  setHTML('fAvg',`<b data-count="${avg}">${fmt(avg)}</b><span>messages on an average day</span>`);
+  setHTML('fActive',`<b>${fmt(D.active)} / ${fmt(D.span)}</b><span>days with at least one message</span>`);
+  setHTML('fBusy',`<b>${dstr(D.busy[0])} '${String(D.busy[0][0]).slice(2)}</b><span>busiest day ever, with ${fmt(D.busy[1])} messages</span>`);
+  setHTML('fRecord',`<b>${fmt(rec[2])}</b><span>messages in ${MN[rec[1]-1]} ${rec[0]}, the record month</span>`);
+  hours=D.hours;renderHours();const ph=hours.indexOf(Math.max(...hours));
+  setText('hoursSub',`All messages by hour of day. Peak is ${String(ph).padStart(2,'0')}:00, and ${fmt(hours[0]+hours[1]+hours[2]+hours[3]+hours[4])} messages were sent between midnight and 5 AM.`);
+  /* share */
+  TOTAL=D.total;const ppl=core.map(n=>[n,P[n].tot]).sort((a,b)=>b[1]-a[1]),top7=ppl.slice(0,7);
+  share=[...top7,["Meta AI",D.ai],["Rest",Math.max(0,D.total-sum(top7.map(x=>x[1]))-D.ai)]];renderShare();
+  const t3=ppl.slice(0,3),p3=Math.round(sum(t3.map(x=>x[1]))/D.total*100);
+  setHTML('shareH',`Three people write<br><em>${p3}%</em> of everything.`);
+  setText('shareL',`${t3.map(x=>x[0]).join(', ').replace(/, ([^,]*)$/,' and $1')} are the engine. Everyone else is the (very loud) audience.`);
+  /* member card chips (the personality text stays as written) */
+  document.querySelectorAll('.mem').forEach(card=>{const p=P[card.querySelector('h3').textContent.trim()];if(!p)return;
+    card.querySelectorAll('.chip').forEach(ch=>{const lab=ch.firstChild.textContent.trim(),b=ch.querySelector('b');if(CHIP[lab]&&/^[\d,]+$/.test(b.textContent))b.textContent=fmt(p[CHIP[lab]])})});
+  const gs=(id,v)=>{const el=$(id);if(el){el.dataset.count=v;el.textContent=fmt(v)}};
+  gs('gD1',(P.Deniz||{}).tot||0);gs('gD2',D.ment.deniz);gs('gR1',(P['Rênas']||{}).tot||0);gs('gR2',D.ment.renas);
+  /* rankings */
+  const per=(n,v)=>+(v/P[n].tot*1000).toFixed(1),pc=(n,v)=>+(v/P[n].tot*100).toFixed(1),obj=(l,f)=>Object.fromEntries(l.map(n=>[n,f(n)]));
+  R.msgs.d=obj(core,n=>P[n].tot);R.funny.d=obj(big,n=>per(n,P[n].laugh));R.sticker.d=obj(big,n=>pc(n,P[n].st));R.voice.d=obj(big,n=>P[n].au);
+  R.polls.d=obj(big,n=>P[n].poll);R.ai.d=obj(big,n=>P[n].ai);R.night.d=obj(big,n=>pc(n,P[n].night));R.early.d=obj(big,n=>pc(n,P[n].early));
+  R.school.d=obj(big,n=>per(n,P[n].school));R.sport.d=obj(big,n=>per(n,P[n].sport));R.games.d=obj(big,n=>per(n,P[n].games));
+  R.essay.d=obj(mid,n=>Math.round(P[n].len/Math.max(1,P[n].txt)));R.deleted.d=obj(big,n=>P[n].del);R.renames.d=obj(core.filter(n=>P[n].ren),n=>P[n].ren);
+  R.swearTot.d=obj(mid,n=>sum(P[n].sw));R.swear.d=obj(mid,n=>per(n,sum(P[n].sw)));R.q.d=obj(big,n=>pc(n,P[n].q));
+  renderRank(curRank);
+  /* swear jar */
+  SW=mid.map(n=>[n,P[n].tot,P[n].sw]).sort((a,b)=>sum(b[2])-sum(a[2]));if(SW.length)renderJar(true);
+  /* meme dictionary: recount, re-sort, new word of the year */
+  const F=D.first,users={};
+  MEMES.forEach(m=>{const e=D.memes[m[0]];if(!e){m[2]=0;m[9]='—';return}m[2]=e.c;const tu=Object.entries(e.u).sort((a,b)=>b[1]-a[1])[0];m[8]=tu[0];users[tu[0]]=(users[tu[0]]||0)+1;
+    m[9]=(e.f[0]===F[0]&&e.f[1]===F[1]&&e.f[2]===F[2])?'Day 1':`${MN[e.f[1]-1]} '${String(e.f[0]).slice(2)}`});
+  MEMES.sort((a,b)=>b[2]-a[2]);
+  const w=MEMES[0],we=D.memes[w[0]];
+  if(we){setText('motmW',w[0].replace(/\s*\/.*$/,'').replace(/_+/g,'').trim()||w[0]);setText('motmT',`${fmt(w[2])} uses, and ${w[8]} says it ${fmt(we.u[w[8]])} times alone.`)}
+  const tu=Object.entries(users).sort((a,b)=>b[1]-a[1])[0];if(tu)setHTML('motmU',`<b>${esc(tu[0])}</b><span>top user of ${tu[1]}</span>`);
+  if(MG.children.length)renderMemes();
+  /* rename wall: the 40 most recent names */
+  if(D.renList.length){NAMES=D.renList.slice(-40).map((r,i,a)=>[r[0],`${r[1]} · ${r[2]} ${MN[r[3]-1]}${i===a.length-1?' · current':''}`]);renderNames()}
+  /* warning box */
+  const nt=core.map(n=>[n,P[n].sw[9]]).filter(x=>x[1]).sort((a,b)=>b[1]-a[1]).slice(0,4);
+  setHTML('wN',`<b>${fmt(D.warn.n)}</b><span>uses of the n-word${nt.length?` (${nt.map(x=>x[0]+' '+x[1]).join(', ')})`:''}</span>`);
+  setHTML('wK',`<b>${fmt(D.warn.k)}</b><span>times "kanker" was used as an insult</span>`);
+  setHTML('wG',`<b>${fmt(D.warn.g)}</b><span>"gay" mentions, often as an insult</span>`);
+  setText('footTxt',`Based on ${fmt(D.total)} messages from the WidR chat export · ${dstr(D.first,1)} to ${dstr(D.last,1)} · topic counts are keyword estimates`);
+  if(meta)setHTML('dataLine',`${meta.cloud?'☁️ Shared via Firestore':'🔄 Updated'} from <b>${esc(meta.file||'an export')}</b> on ${esc(meta.when||'')} · data through ${dstr(D.last,1)} · <button type="button" class="linkbtn" data-upd>load another</button>${meta.cloud?'':' · <button type="button" class="linkbtn" data-reset>back to original</button>'}`)}
+
+/* UI: button, drag & drop, toast */
+const BTN=$('updBtn'),FILE=$('updFile'),DROP=$('drop'),TT=$('toast');let tTimer;
+function toast(h,ms,err){TT.innerHTML=h;TT.classList.toggle('err',!!err);TT.classList.add('on');clearTimeout(tTimer);if(ms)tTimer=setTimeout(()=>TT.classList.remove('on'),ms)}
+async function handleFile(f){
+  if(!f)return;BTN.classList.add('busy');toast(`Reading <b>${esc(f.name)}</b> and recounting everything…`);
+  try{
+    const text=await readFile(f);await new Promise(r=>setTimeout(r,40));
+    const D=parseChat(text);
+    if(!D.total||D.total<20||!Object.keys(D.P).length)throw new Error("I couldn't find WhatsApp messages in that file. Use “Export chat” in WhatsApp and drop the _chat.txt or .zip");
+    const V=verifyWidr(D),list=V.checks.map(c=>`<div class="chk ${c.ok?'y':'n'}">${c.ok?'✔':'✘'} ${esc(c.ok?c.label:c.why)}</div>`).join('');
+    if(!V.ok){toast(`<b>That's not the WidR chat 🚫</b><div class="chks">${list}</div>Nothing was changed. Export the WidR group itself and try again.`,12000,true);return}
+    if(V.older&&!confirm(`This export only goes up to ${dstr(D.last,1)}, which is older than what the site shows now (${dstr(curLast,1)}). Use it anyway?`)){toast('Kept the current data. Nothing was changed.',4000);return}
+    toast(`<b>Verified: this is WidR ✅</b><div class="chks">${list}</div>Recounting everything…`);await new Promise(r=>setTimeout(r,900));
+    const before=TOTAL,meta={file:f.name,when:new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})};
+    applyStats(D,meta);
+    let saved=true;try{localStorage.setItem(KEY,JSON.stringify({D,meta}))}catch(e){saved=false}
+    const diff=D.total-before;
+    toast(`<b>Verified ✅ and updated!</b> <b>${fmt(D.total)}</b> messages through ${dstr(D.last,1)} (${diff>=0?'+':''}${fmt(diff)} vs before). Every chart, ranking and count is redrawn.${saved?'':' (This browser won\'t remember it after a reload.)'}`,fbReady()?0:8000);
+    const dl=$('dataLine');dl.classList.remove('flash');void dl.offsetWidth;dl.classList.add('flash');
+    if(fbReady()){await new Promise(r=>setTimeout(r,1400));await shareToCloud(D,meta)}
+  }catch(err){toast(`<b>Couldn't update:</b> ${esc(String(err&&err.message||err))}`,9000,true)}
+  finally{BTN.classList.remove('busy')}}
+BTN.onclick=()=>FILE.click();
+FILE.onchange=()=>{handleFile(FILE.files[0]);FILE.value=''};
+document.addEventListener('click',e=>{if(e.target.closest('[data-upd]'))FILE.click();if(e.target.closest('[data-reset]')){try{localStorage.removeItem(KEY)}catch(_){}location.reload()}});
+const hasFiles=e=>!!(e.dataTransfer&&[...e.dataTransfer.types].includes('Files'));let dragN=0;
+addEventListener('dragenter',e=>{if(!hasFiles(e))return;e.preventDefault();dragN++;DROP.classList.add('on')});
+addEventListener('dragover',e=>{if(hasFiles(e))e.preventDefault()});
+addEventListener('dragleave',()=>{dragN=Math.max(0,dragN-1);if(!dragN)DROP.classList.remove('on')});
+addEventListener('drop',e=>{if(!hasFiles(e))return;e.preventDefault();dragN=0;DROP.classList.remove('on');handleFile(e.dataTransfer.files[0])});
+
+/* restore the last export someone dropped in */
+try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&s.D&&s.D.total)applyStats(s.D,s.meta)}catch(e){}
+
+/* ============================ FIRESTORE SYNC ============================
+   Only the computed stats are sent, never message text. Firestore's REST API is
+   used directly (the Firebase SDK can't be loaded here).
+   Paste your project's values below so everyone who opens the site gets them.
+   Both are safe to publish; the security rules are what protect the data. */
+const FIREBASE={projectId:"wat-in-de-ranking-rankings",apiKey:"AIzaSyBIQwVxZhUnb_bH5DiTIEADSxGzTc6Iljg"};
+const FB_KEY='widr_fb_cfg',FB_DOC='widr/stats',FB_GATE='widr_gate',PW_KEY='widr_pw';
+const fbCfg=()=>{let o={};try{o=JSON.parse(localStorage.getItem(FB_KEY)||'{}')}catch(e){}return{projectId:(FIREBASE.projectId||o.projectId||'').trim(),apiKey:(FIREBASE.apiKey||o.apiKey||'').trim()}};
+const fbReady=()=>{const c=fbCfg();return !!(c.projectId&&c.apiKey)};
+const fbRoot=c=>`projects/${encodeURIComponent(c.projectId)}/databases/(default)/documents`;
+const fbUrl=(c,p)=>`https://firestore.googleapis.com/v1/${fbRoot(c)}${p}${p.includes('?')?'&':'?'}key=${encodeURIComponent(c.apiKey)}`;
+async function sha256hex(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+const pwHash=pw=>sha256hex('widr-wrapped:'+pw);
+function rulesFor(h){return `rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // everyone can read the shared stats
+    match /widr/stats {
+      allow read: if true;
+      // writing only works in the same commit as a gate write (see below)
+      allow write: if getAfter(/databases/$(database)/documents/${FB_GATE}/${h}).data.t == request.time;
+    }
+    // the gate's ID is the password hash, so only someone with the password can write it
+    match /${FB_GATE}/{g} {
+      allow read: if false;
+      allow write: if g == "${h}";
+    }
+  }
+}`}
+async function fbFetch(url,opt){let r;try{r=await fetch(url,opt)}catch(e){throw new Error("couldn't reach Firestore. This page may be blocking the connection, so open the site from a normal web address (for example Firebase Hosting)")}
+  let j=null;try{j=await r.json()}catch(e){}
+  if(!r.ok){const m=(j&&j.error&&j.error.message)||r.statusText;const err=new Error(m);err.status=r.status;throw err}return j}
+async function cloudLoad(){const c=fbCfg();const doc=await fbFetch(fbUrl(c,'/'+FB_DOC),{}).catch(e=>{if(e.status===404)return null;throw e});
+  if(!doc||!doc.fields||!doc.fields.json)return null;
+  const D=JSON.parse(doc.fields.json.stringValue),meta=JSON.parse((doc.fields.meta||{}).stringValue||'{}');meta.cloud=doc.updateTime;return {D,meta}}
+async function cloudSave(D,meta,pw){const c=fbCfg(),h=await pwHash(pw),root=fbRoot(c);
+  const writes=[
+    {update:{name:`${root}/${FB_GATE}/${h}`,fields:{}},updateTransforms:[{fieldPath:'t',setToServerValue:'REQUEST_TIME'}]},
+    {update:{name:`${root}/${FB_DOC}`,fields:{json:{stringValue:JSON.stringify(D)},meta:{stringValue:JSON.stringify({file:meta.file,when:meta.when})},total:{integerValue:String(D.total)},through:{stringValue:dstr(D.last,1)}}},updateTransforms:[{fieldPath:'t',setToServerValue:'REQUEST_TIME'}]}];
+  return fbFetch(`https://firestore.googleapis.com/v1/${root}:commit?key=${encodeURIComponent(c.apiKey)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({writes})})}
+
+/* little modal for the password + settings */
+const MD=$('mdl'),MB=$('mbox');let pendingRes=null;
+function modal(html){MB.innerHTML=html;MD.classList.add('on');const f=MB.querySelector('input');if(f)setTimeout(()=>f.focus(),60)}
+function closeModal(){MD.classList.remove('on');if(pendingRes){const r=pendingRes;pendingRes=null;r(null)}}
+MD.addEventListener('click',e=>{if(e.target===MD)closeModal()});
+addEventListener('keydown',e=>{if(e.key==='Escape'&&MD.classList.contains('on'))closeModal()});
+function askPassword(D){return new Promise(res=>{
+  pendingRes=res;const saved=sessionStorage.getItem(PW_KEY)||'';
+  modal(`<div class="kicker">Share with everyone</div><h3>Upload to Firestore? ☁️</h3>
+   <p>This shares the new stats (${fmt(D.total)} messages through ${dstr(D.last,1)}) with everyone who opens the site. Only numbers are sent, never message text.</p>
+   <label>WidR upload password<input type="password" id="pwIn" value="${esc(saved)}" autocomplete="current-password"></label>
+   <label class="cb"><input type="checkbox" id="pwRem" ${saved?'checked':''}> remember until I close this tab</label>
+   <div class="mrow"><button class="btn" id="pwGo">Upload for everyone</button><button class="btn ghost" id="pwNo">Only on this device</button></div>`);
+  const go=()=>{const v=$('pwIn').value;if(!v){$('pwIn').focus();return}if($('pwRem').checked)sessionStorage.setItem(PW_KEY,v);else sessionStorage.removeItem(PW_KEY);pendingRes=null;closeModal();res(v)};
+  $('pwGo').onclick=go;$('pwIn').onkeydown=e=>{if(e.key==='Enter')go()};$('pwNo').onclick=closeModal})}
+async function shareToCloud(D,meta){
+  const pw=await askPassword(D);
+  if(!pw){toast('Kept on this device only. Nobody else sees this update.',5000);return}
+  toast('Uploading the stats to Firestore…');
+  try{const r=await cloudSave(D,meta,pw);
+    const when=(r&&r.commitTime)||new Date().toISOString();
+    try{const s=JSON.parse(localStorage.getItem(KEY)||'{}');s.meta=Object.assign({},meta,{cloud:when});localStorage.setItem(KEY,JSON.stringify(s))}catch(e){}
+    applyStats(D,Object.assign({},meta,{cloud:when}));
+    toast(`<b>Shared ☁️</b> Everyone who opens the site now sees ${fmt(D.total)} messages through ${dstr(D.last,1)}.`,7000)}
+  catch(e){sessionStorage.removeItem(PW_KEY);
+    const m=e.status===403||/permission/i.test(e.message)?"Firestore said no. Either the password is wrong, or the security rules aren't set up yet (open ☁️ settings to get them)":e.message;
+    toast(`<b>Upload failed:</b> ${esc(m)}. The update is still saved on this device.`,10000,true)}}
+
+/* settings: project config + rules generator */
+function openSettings(){const c=fbCfg(),baked=!!(FIREBASE.projectId&&FIREBASE.apiKey);
+  modal(`<div class="kicker">Firestore sync</div><h3>Cloud settings ☁️</h3>
+   ${baked?`<p class="ok">✔ Connected to <b>${esc(c.projectId)}</b> (built into the site).</p>`:`<p>Paste the values from Firebase console → Project settings → General → Your apps (web app config).</p>
+   <label>projectId<input id="fbPid" value="${esc(c.projectId)}" placeholder="widr-wrapped"></label>
+   <label>apiKey<input id="fbKey" value="${esc(c.apiKey)}" placeholder="AIza…"></label>`}
+   <details ${fbReady()?'':'open'}><summary>Set the upload password (do this once)</summary>
+    <p>Choose a password, then copy the rules into Firebase console → Firestore Database → Rules → Publish. The password itself is never stored anywhere, only its fingerprint inside your rules.</p>
+    <label>New upload password<input type="password" id="fbPw" autocomplete="new-password"></label>
+    <button class="btn ghost" id="fbGen" type="button">Generate rules</button>
+    <textarea id="fbRules" readonly rows="9" placeholder="rules appear here"></textarea>
+    <button class="btn ghost" id="fbCopy" type="button" hidden>Copy rules</button>
+   </details>
+   <div class="mrow">${baked?'':`<button class="btn" id="fbSave">Save</button>`}<button class="btn ghost" id="fbTest">Test connection</button><button class="btn ghost" id="fbClose">Close</button></div>
+   <div class="mstat" id="fbStat"></div>`);
+  const stat=(h,bad)=>{const s=$('fbStat');s.innerHTML=h;s.className='mstat '+(bad?'n':'y')};
+  if($('fbSave'))$('fbSave').onclick=()=>{localStorage.setItem(FB_KEY,JSON.stringify({projectId:$('fbPid').value.trim(),apiKey:$('fbKey').value.trim()}));stat('Saved on this device. To make it work for everyone, these two values also need to go into the site file.');syncFromCloud(true)};
+  $('fbGen').onclick=async()=>{const p=$('fbPw').value;if(p.length<6){stat('Use at least 6 characters.',1);return}$('fbRules').value=rulesFor(await pwHash(p));$('fbCopy').hidden=false;stat('Rules ready. Paste them into Firestore → Rules and press Publish.')};
+  $('fbCopy').onclick=()=>{$('fbRules').select();navigator.clipboard&&navigator.clipboard.writeText($('fbRules').value);stat('Copied ✔')};
+  $('fbTest').onclick=async()=>{if($('fbPid')&&!baked)localStorage.setItem(FB_KEY,JSON.stringify({projectId:$('fbPid').value.trim(),apiKey:$('fbKey').value.trim()}));
+    if(!fbReady()){stat('Fill in projectId and apiKey first.',1);return}stat('Testing…');
+    try{const s=await cloudLoad();stat(s?`✔ Connected. Firestore has ${fmt(s.D.total)} messages through ${dstr(s.D.last,1)}.`:'✔ Connected. Nothing has been shared yet, so drop an export to upload the first version.')}
+    catch(e){stat('✘ '+esc(e.status===403?'Permission denied. Publish the rules first':e.message),1)}};
+  $('fbClose').onclick=closeModal}
+$('cloudBtn').onclick=openSettings;
+
+/* on load: pull the shared stats so everyone sees the latest version */
+async function syncFromCloud(loud){
+  if(!fbReady())return;const CB=$('cloudBtn');CB.classList.add('busy');
+  try{const s=await cloudLoad();if(!s){if(loud)toast('Connected, but nothing is shared yet.',4000);return}
+    if(!verifyWidr(s.D).ok){toast('<b>Ignored the cloud data:</b> it didn\'t pass the WidR check.',7000,true);return}
+    let local=null;try{local=JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){}
+    const lt=local&&local.meta&&local.meta.cloud;
+    if(local&&local.D&&!lt&&dnum(local.D.last)>dnum(s.D.last)){if(loud)toast('Your device has newer data than the cloud. Drop the export again to upload it.',6000);return}
+    if(lt===s.meta.cloud&&!loud){CB.classList.add('synced');return}
+    applyStats(s.D,s.meta);try{localStorage.setItem(KEY,JSON.stringify({D:s.D,meta:s.meta}))}catch(e){}
+    CB.classList.add('synced');if(loud||lt!==s.meta.cloud)toast(`<b>Synced ☁️</b> ${fmt(s.D.total)} messages through ${dstr(s.D.last,1)}.`,4500)}
+  catch(e){CB.classList.add('off');if(loud)toast(`<b>Sync failed:</b> ${esc(e.message)}`,8000,true)}
+  finally{CB.classList.remove('busy')}}
+syncFromCloud(false);
 </script>
 </body>
 </html>
