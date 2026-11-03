@@ -1,0 +1,15 @@
+  // Valentine's Day: Natan's chocolates (skipped if you're dating Natan or Lars, it would be a different story)
+  const VD=G=>G.dating.length>=2?'val_caught':G.dating.length===1?'val_one':'val_none';
+  const c7=SCENES.ch7, i7=c7.findIndex(s=>s.if && /dating\.length>=2/.test(s.if.toString()));
+  c7.splice(i7,0,{if:G=>G.dating.includes('natan')||G.dating.includes('lars')?null:G.flags.bet_natan?'val_bet':'val_natan'});
+  const intro=[{cast:[['natan','shy'],['reshman','smirk']]},
+    {t:`Natan walks into school holding a box of chocolates very carefully with both hands. He sees Lars at the end of the hallway.`}];
+  SCENES.val_natan=[...intro,
+    {fx:'shake', t:`He trips over absolutely nothing. The chocolates fly. Daniel, walking past, catches the box without looking.`},
+    {s:'reshman', t:`And the chocolates go to... Daniel. Of course. Unbelievable.`},
+    {cast:[]},{if:VD}];
+  SCENES.val_bet=[...intro,
+    {fx:'shake', t:`He trips over absolutely nothing. The chocolates fly everywhere.`},
+    {s:'reshman', e:'sad', t:`(Handing you €9) I hate that you were right. I hate it. Take your money.`},
+    {do:G=>{G.money+=9; G.flags.bet_natan=false;}, t:`Natan gathers the chocolates off the floor, blows on each one, and gives them to Lars anyway. Lars eats one immediately. "Five-second rule," he says. "Statistically fine."`},
+    {cast:[]},{if:VD}];
