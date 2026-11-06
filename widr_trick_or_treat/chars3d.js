@@ -1,5 +1,5 @@
 // 3D helpers and character models (px units, y up, characters face +z)
-import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
+import * as THREE from 'https://unpkg.com/three@0.180.0/build/three.module.js';
 export { THREE };
 
 const matCache = new Map();
