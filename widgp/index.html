@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WidGP: What in the Gartic Phone</title>
+<style>
+:root{
+  --paper:#f5f4f0; --card:#ffffff; --ink:#111114; --ink2:#6b6b76; --soft:#efeee9;
+  --tomato:#ff4d2e; --sun:#d7ff3a; --mint:#e9f9ef; --sky:#e8f1ff; --pink:#ffe3ec;
+  --line:rgba(17,17,20,.08);
+  --hand:ui-rounded,"SF Pro Rounded","Nunito","Segoe UI Variable Display",system-ui,sans-serif;
+  --body:-apple-system,"SF Pro Text","Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
+  --shadow:0 1px 2px rgba(17,17,20,.04),0 18px 48px -18px rgba(17,17,20,.18);
+  --grad:linear-gradient(120deg,#ff4d2e 0%,#ff8a3d 55%,#ffc53d 100%);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  font-family:var(--body);color:var(--ink);min-height:100vh;background:var(--paper);
+  padding-bottom:84px;-webkit-font-smoothing:antialiased;letter-spacing:-.005em;
+}
+body::before,body::after{content:"";position:fixed;z-index:-1;border-radius:50%;filter:blur(90px);opacity:.55;pointer-events:none}
+body::before{width:520px;height:520px;background:#ffb199;top:-180px;right:-120px}
+body::after{width:480px;height:480px;background:#e4ff8a;bottom:-200px;left:-160px}
+button,input,textarea,select{font:inherit;color:inherit}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+
+/* header */
+header{position:sticky;top:0;z-index:20;padding:14px 0;background:rgba(245,244,240,.72);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);border-bottom:1px solid var(--line)}
+header .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.logo{display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none}
+.logo h1{font-family:var(--hand);font-size:24px;font-weight:800;margin:0;letter-spacing:-.03em}
+.logo h1 span{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.logo svg{width:38px;height:38px}
+.nav{display:flex;gap:8px}
+
+/* buttons */
+.btn{
+  border:none;background:var(--card);border-radius:999px;padding:11px 20px;font-weight:650;cursor:pointer;
+  box-shadow:0 0 0 1px var(--line),0 2px 6px rgba(17,17,20,.05);
+  transition:transform .15s ease,box-shadow .15s ease,background .15s;display:inline-flex;align-items:center;gap:8px;text-decoration:none;
+}
+.btn:hover{transform:translateY(-1px);box-shadow:0 0 0 1px var(--line),0 8px 20px -6px rgba(17,17,20,.2)}
+.btn:active{transform:translateY(0) scale(.98)}
+.btn.primary{background:var(--ink);color:#fff;box-shadow:0 8px 24px -8px rgba(17,17,20,.5)}
+.btn.primary:hover{background:#000;box-shadow:0 12px 28px -8px rgba(255,77,46,.55)}
+.btn.sun{background:var(--sun);box-shadow:none}
+.btn.mint{background:var(--mint);box-shadow:0 0 0 1px rgba(30,140,80,.12)}
+.btn.sky{background:var(--sky);box-shadow:0 0 0 1px rgba(40,90,200,.12)}
+.btn.small{padding:7px 14px;font-size:14px}
+.btn.ghost{background:transparent;box-shadow:0 0 0 1px var(--line)}
+.btn.ghost:hover{background:rgba(255,255,255,.7)}
+.btn:disabled{opacity:.4;pointer-events:none}
+.btn.big{font-size:17px;padding:15px 28px}
+
+.view{display:none;animation:pop .45s cubic-bezier(.2,.9,.3,1)}
+.view.on{display:block}
+@keyframes pop{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+.card{background:rgba(255,255,255,.86);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:28px;box-shadow:var(--shadow);padding:32px;position:relative}
+.tape{display:none}
+h2{font-family:var(--hand);font-size:34px;font-weight:800;margin:0 0 8px;line-height:1.05;letter-spacing:-.035em}
+h3{font-family:var(--hand);font-size:20px;font-weight:750;margin:0 0 8px;letter-spacing:-.02em}
+.muted{color:var(--ink2)}
+.hl{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* home */
+.hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:48px;align-items:center;margin:56px 0 64px}
+.hero h2{font-size:clamp(44px,6vw,76px);letter-spacing:-.05em;line-height:.98}
+.hero p{font-size:18px;line-height:1.55;max-width:480px;color:var(--ink2)}
+.hero .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}
+.flow{display:flex;flex-direction:column;gap:10px;position:relative}
+.flowstep{display:flex;gap:14px;align-items:center;background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:20px;padding:14px 18px;box-shadow:var(--shadow);transition:transform .25s}
+.flowstep:nth-child(2){margin-left:28px}
+.flowstep:nth-child(3){margin-left:56px}
+.flowstep:nth-child(4){margin-left:84px}
+.flowstep:hover{transform:translateX(6px)}
+.flowstep .ico{font-size:22px;width:44px;height:44px;border-radius:14px;display:grid;place-items:center;flex:none}
+.flowstep:nth-child(1) .ico{background:#fff6c7!important}
+.flowstep:nth-child(2) .ico{background:var(--sky)!important}
+.flowstep:nth-child(3) .ico{background:var(--mint)!important}
+.flowstep:nth-child(4) .ico{background:var(--pink)!important}
+.flowstep b{font-family:var(--hand);font-size:16px;font-weight:700;display:block;letter-spacing:-.01em}
+.flowstep small{color:var(--ink2)}
+
+.shelfhead{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.shelfhead h3{font-size:28px!important}
+.shelf{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px}
+.book{background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);padding:20px;position:relative;display:flex;flex-direction:column;gap:12px;min-height:200px;overflow:hidden;transition:transform .2s,box-shadow .2s}
+.book:hover{transform:translateY(-3px);box-shadow:0 1px 2px rgba(17,17,20,.04),0 26px 56px -20px rgba(17,17,20,.28)}
+.book::before{content:"";position:absolute;inset:0 0 auto 0;height:5px;background:var(--bc,var(--tomato))}
+.book .title{font-family:var(--hand);font-size:20px;font-weight:750;letter-spacing:-.02em}
+.progress{height:6px;border-radius:6px;overflow:hidden;background:var(--soft)}
+.progress i{display:block;height:100%;background:var(--grad);border-radius:6px}
+.avatars{display:flex;flex-wrap:wrap}
+.av{width:28px;height:28px;border-radius:50%;border:2px solid #fff;margin-right:-6px;display:grid;place-items:center;font-size:11px;font-weight:800;background:#fff6c7;color:var(--ink)}
+.book .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
+.badge{display:inline-block;font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--soft);color:var(--ink)}
+.badge.done{background:var(--ink);color:#fff}
+.empty{border:1.5px dashed rgba(17,17,20,.18);border-radius:24px;padding:40px;text-align:center;color:var(--ink2);grid-column:1/-1;background:rgba(255,255,255,.4)}
+.empty b{font-family:var(--hand);font-size:20px;color:var(--ink);display:block;margin-bottom:4px}
+.import{display:flex;gap:10px;margin-top:36px;align-items:center;flex-wrap:wrap;padding:14px 14px 14px 22px;background:rgba(255,255,255,.7);border:1px solid var(--line);border-radius:999px}
+.import input{flex:1;min-width:200px;background:transparent!important;box-shadow:none!important}
+
+/* forms */
+.field{margin-bottom:18px}
+.field label{display:block;font-weight:650;font-size:14px;margin-bottom:8px;color:var(--ink2)}
+input[type=text],textarea,select{width:100%;background:var(--soft);border:1px solid transparent;border-radius:16px;padding:13px 16px;font-size:16px;outline:none;transition:box-shadow .15s,background .15s}
+input[type=text]:focus,textarea:focus,select:focus{background:#fff;border-color:rgba(255,77,46,.5);box-shadow:0 0 0 4px rgba(255,77,46,.14)}
+textarea{resize:vertical;min-height:90px;font-family:var(--hand);font-size:22px;font-weight:650;letter-spacing:-.02em}
+.inline{display:flex;gap:10px;align-items:stretch}
+.inline>*:first-child{flex:1}
+.inline .btn{border-radius:16px;font-size:24px!important;padding:0 18px}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+.narrow{max-width:640px;margin:44px auto 0}
+.seg{display:inline-flex;flex-wrap:wrap;gap:4px;background:var(--soft);padding:4px;border-radius:999px}
+.seg button{border:none;background:transparent;border-radius:999px;padding:7px 14px;cursor:pointer;font-weight:650;font-size:14px;color:var(--ink2);transition:background .15s,color .15s}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(17,17,20,.12)}
+
+/* pass */
+.pass{text-align:center;padding:48px 32px}
+.pass .env{font-size:56px;display:grid;place-items:center;width:104px;height:104px;margin:0 auto 18px;border-radius:32px;background:linear-gradient(140deg,#fff6c7,#ffe0d6);animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-8px) rotate(4deg)}}
+.pass input{max-width:320px;margin:18px auto 20px;display:block;text-align:center}
+.who{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin:16px 0}
+.who .badge{background:var(--soft)!important}
+.who .badge[style*="sun"]{background:var(--ink)!important;color:#fff}
+
+/* turn */
+.turnbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:26px 0 16px;flex-wrap:wrap}
+.turnbar .pg{font-weight:700;color:var(--tomato);font-size:13px;text-transform:uppercase;letter-spacing:.12em;margin-bottom:4px}
+.timer{font-family:var(--hand);font-variant-numeric:tabular-nums;font-size:22px;font-weight:800;border-radius:999px;padding:8px 20px;background:#fff;box-shadow:var(--shadow);min-width:96px;text-align:center}
+.timer.low{background:var(--tomato);color:#fff;animation:pulse .5s infinite alternate}
+@keyframes pulse{to{transform:scale(1.06)}}
+.prompt-card{background:var(--ink);color:#fff;border-radius:24px;padding:18px 24px;margin-bottom:18px;box-shadow:0 18px 40px -18px rgba(17,17,20,.6);position:relative;overflow:hidden}
+.prompt-card::after{content:"";position:absolute;right:-40px;top:-60px;width:200px;height:200px;border-radius:50%;background:var(--grad);filter:blur(40px);opacity:.55}
+.prompt-card small{font-weight:700;text-transform:uppercase;letter-spacing:.14em;font-size:11px;color:var(--sun);position:relative;z-index:1}
+.prompt-card .txt{font-family:var(--hand);font-weight:800;letter-spacing:-.03em;font-size:clamp(22px,3.4vw,34px);line-height:1.1;word-break:break-word;position:relative;z-index:1;margin-top:4px}
+.studio{display:grid;grid-template-columns:76px minmax(0,1fr);gap:18px;align-items:start}
+.tools{display:flex;flex-direction:column;gap:12px;background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:26px;padding:12px 10px;box-shadow:var(--shadow);position:sticky;top:90px}
+.swatches{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.sw{width:22px;height:22px;border-radius:50%;border:none;box-shadow:inset 0 0 0 1px rgba(17,17,20,.15);cursor:pointer;padding:0;justify-self:center;transition:transform .12s}
+.sw:hover{transform:scale(1.15)}
+.sw.on{box-shadow:inset 0 0 0 1px rgba(17,17,20,.15),0 0 0 2px #fff,0 0 0 4px var(--ink)}
+.sizes{display:flex;flex-direction:column;align-items:center;gap:4px}
+.sz{width:46px;height:34px;border:none;border-radius:12px;background:transparent;cursor:pointer;display:grid;place-items:center;padding:0}
+.sz:hover{background:var(--soft)}
+.sz i{display:block;border-radius:50%;background:var(--ink)}
+.sz.on{background:var(--soft)}
+.tbtn{width:46px;height:42px;border:none;border-radius:14px;background:transparent;cursor:pointer;font-size:19px;justify-self:center;align-self:center;padding:0;transition:background .12s}
+.tbtn:hover{background:var(--soft)}
+.tbtn.on{background:var(--sun)}
+.tools hr{border:none;border-top:1px solid var(--line);width:100%;margin:0}
+.tools .stack{display:flex;flex-direction:column;align-items:center;gap:4px}
+.canvas-holder{min-width:0;display:flex;flex-direction:column;align-items:center}
+.canvas-wrap{width:min(100%,calc((100vh - 300px) * 1.3333));min-width:280px;aspect-ratio:4/3;border-radius:24px;overflow:hidden;background:#fffdf6;box-shadow:0 0 0 1px var(--line),0 30px 60px -28px rgba(17,17,20,.35);touch-action:none;position:relative}
+.canvas-wrap canvas{width:100%;height:100%;display:block;cursor:crosshair}
+.canvas-wrap.ro canvas{cursor:default}
+.submitrow{display:flex;justify-content:flex-end;gap:10px;margin-top:22px;width:100%;flex-wrap:wrap}
+.guess-wrap{max-width:780px;margin:0 auto}
+.guess-wrap .canvas-wrap{width:100%;margin-bottom:24px;min-width:0}
+
+/* done */
+.linkbox{margin-top:22px;text-align:left;display:none}
+.linkbox label{font-size:14px;color:var(--ink2)}
+.linkbox textarea{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:12px;font-weight:400;letter-spacing:0;min-height:80px}
+.done-actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:24px}
+
+/* reveal */
+.reveal-head{text-align:center;margin:40px 0 34px}
+.reveal-head h2{font-size:clamp(36px,5vw,56px);letter-spacing:-.045em;margin-top:12px}
+.chain{display:flex;flex-direction:column;align-items:center;max-width:720px;margin:0 auto}
+.page{width:100%;display:none}
+.page.shown{display:block;animation:rise .6s cubic-bezier(.2,.9,.3,1)}
+@keyframes rise{from{opacity:0;transform:translateY(24px) scale(.97)}to{opacity:1;transform:none}}
+.page .card{padding:18px 22px 22px}
+.page .by{font-weight:650;font-size:14px;color:var(--ink2);margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.page .by .av{margin:0}
+.page .words{font-family:var(--hand);font-weight:800;letter-spacing:-.035em;font-size:clamp(26px,4vw,40px);line-height:1.08;word-break:break-word}
+.page.prompt .card{background:var(--ink);color:#fff}
+.page.prompt .by{color:rgba(255,255,255,.65)}
+.page .canvas-wrap{width:100%;min-width:0;box-shadow:0 0 0 1px var(--line);border-radius:18px}
+.arrow{width:2px;height:34px;margin:0 auto;background:linear-gradient(var(--line),rgba(255,77,46,.5));display:none;font-size:0}
+.page.shown + .arrow{display:block}
+.reveal-ctrl{position:sticky;bottom:60px;display:flex;justify-content:center;gap:10px;margin-top:30px;flex-wrap:wrap;z-index:5}
+.reveal-ctrl .btn:not(.primary){background:rgba(255,255,255,.9);backdrop-filter:blur(10px)}
+
+/* how */
+.how ol{padding-left:0;list-style:none;counter-reset:s;font-size:16px;line-height:1.6}
+.how li{counter-increment:s;position:relative;padding-left:46px;margin-bottom:14px}
+.how li::before{content:counter(s);position:absolute;left:0;top:0;width:30px;height:30px;border-radius:10px;background:var(--soft);display:grid;place-items:center;font-weight:800;font-size:14px}
+
+.toast{position:fixed;left:50%;top:18px;transform:translateX(-50%) translateY(-130px);background:rgba(17,17,20,.92);backdrop-filter:blur(10px);color:#fff;padding:12px 20px;border-radius:999px;font-weight:600;font-size:15px;z-index:50;transition:transform .35s cubic-bezier(.2,1.2,.3,1);max-width:90vw;text-align:center;box-shadow:0 12px 32px -8px rgba(0,0,0,.4)}
+.toast.on{transform:translateX(-50%) translateY(0)}
+
+@media (max-width:760px){
+  .hero{grid-template-columns:minmax(0,1fr);margin-top:32px}
+  .flowstep:nth-child(n){margin-left:0}
+  .studio{grid-template-columns:minmax(0,1fr)}
+  .tools{flex-direction:row;flex-wrap:wrap;justify-content:center;position:static;border-radius:22px}
+  .swatches{grid-template-columns:repeat(8,1fr)}
+  .tools hr{display:none}
+  .sizes,.tools .stack{flex-direction:row}
+  .canvas-wrap{width:100%;min-width:0}
+  .grid2{grid-template-columns:minmax(0,1fr)}
+  .card{padding:24px}
+  .import{border-radius:24px}
+}
+@media print{
+  header,.reveal-ctrl,.view:not(#v-reveal),.toast{display:none!important}
+  body::before,body::after{display:none}
+  #v-reveal{display:block!important}
+  .page{display:block!important;break-inside:avoid}
+  .card,.btn{box-shadow:none}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="logo" onclick="goHome()">
+      <svg viewBox="0 0 48 48" fill="none"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff4d2e"/><stop offset="1" stop-color="#ffc53d"/></linearGradient></defs><rect x="2" y="2" width="44" height="44" rx="14" fill="#111114"/><g stroke-linecap="round" stroke-linejoin="round" stroke-width="3.2">
+        <path d="M12 30c4-9 8 6 12-3s6-8 12-2" stroke="url(#lg)"/>
+        <circle cx="35" cy="15" r="3.5" fill="#d7ff3a" stroke="none"/>
+        <path d="M13 37h14" stroke="#ffffff55"/>
+        </g>
+      </svg>
+      <div><h1>Wid<span>GP</span></h1><div style="font-size:12px;font-weight:700;color:var(--ink2);margin-top:-2px">what in the gartic phone</div></div>
+    </div>
+    <div class="nav">
+      <button class="btn small ghost" onclick="show('v-how')">How to play</button>
+      <button class="btn small" onclick="goHome()">📚 Shelf</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- HOME -->
+  <section id="v-home" class="view on">
+    <div class="hero">
+      <div>
+        <h2>Telephone, but with <span class="hl">terrible drawings</span>.</h2>
+        <p>A private game for you and your friends. Write a prompt. The next person in your group draws it. The next describes the drawing, without seeing the prompt. Then someone draws <em>that</em>. Nobody needs to be online at the same time: each player gets a link when it's their turn, plays, and sends it on.</p>
+        <div class="actions">
+          <button class="btn primary big" onclick="openNew()">✏️ Start a sketchbook</button>
+          <button class="btn sun" onclick="show('v-how')">How it works</button>
+        </div>
+      </div>
+      <div class="flow">
+        <div class="flowstep"><div class="ico" style="background:var(--sun)">📝</div><div><b>"A cat running a bakery"</b><small>Ana writes the prompt</small></div></div>
+        <div class="flowstep"><div class="ico" style="background:var(--sky)">🎨</div><div><b>[a lumpy orange blob holding bread]</b><small>Ben draws it, two days later</small></div></div>
+        <div class="flowstep"><div class="ico" style="background:var(--mint)">💬</div><div><b>"Pumpkin selling baguettes"</b><small>Cleo only sees Ben's drawing</small></div></div>
+        <div class="flowstep"><div class="ico" style="background:var(--pink)">🎉</div><div><b>The big reveal</b><small>Everyone sees how it went wrong</small></div></div>
+      </div>
+    </div>
+
+    <div class="shelfhead">
+      <div><h3 style="font-size:28px;margin:0">Your shelf</h3><span class="muted">Sketchbooks on this device</span></div>
+      <button class="btn small mint" onclick="openNew()">+ New sketchbook</button>
+    </div>
+    <div class="shelf" id="shelf"></div>
+
+    <div class="import">
+      <b>📬 Got a sketchbook link?</b>
+      <input type="text" id="importIn" placeholder="Paste the link or code here">
+      <button class="btn small sky" onclick="doImport()">Open it</button>
+    </div>
+  </section>
+
+  <!-- NEW -->
+  <section id="v-new" class="view">
+    <div class="card narrow">
+      <div class="tape"></div>
+      <h2>New sketchbook</h2>
+      <p class="muted" style="margin-top:0">You write page one. After that you can't see what happens until the reveal.</p>
+      <div class="grid2">
+        <div class="field">
+          <label for="newName">Your name</label>
+          <input type="text" id="newName" maxlength="24" placeholder="e.g. Sam">
+        </div>
+        <div class="field">
+          <label for="newGroup">Your group, in turn order</label>
+          <input type="text" id="newGroup" maxlength="300" placeholder="Ben, Cleo, Dev">
+        </div>
+      </div>
+      <p class="muted" style="margin:-8px 0 18px;font-size:14px">Separate names with commas. The sketchbook goes to them in this order, starting after you, so everyone knows whose turn it is.</p>
+      <div class="field">
+        <label for="newPrompt">The starting prompt</label>
+        <div class="inline">
+          <textarea id="newPrompt" maxlength="120" placeholder="A wizard stuck in traffic"></textarea>
+          <button class="btn sun" title="Random prompt" onclick="rollPrompt()" style="font-size:26px">🎲</button>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label>Laps around the group</label>
+          <div class="seg" id="segPages"></div>
+        </div>
+        <div class="field">
+          <label>Drawing timer</label>
+          <div class="seg" id="segTimer"></div>
+        </div>
+      </div>
+      <div class="submitrow">
+        <button class="btn ghost" onclick="goHome()">Cancel</button>
+        <button class="btn primary" onclick="createBook()">Seal page one ✉️</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- PASS -->
+  <section id="v-pass" class="view">
+    <div class="card narrow pass">
+      <span class="env">📒</span>
+      <p class="muted" id="passMsg" style="margin:0 0 4px;font-weight:700"></p>
+      <h2 id="passTitle"></h2>
+      <p id="passSub" class="muted" style="margin:4px 0 0"></p>
+      <div class="who" id="passWho"></div>
+      <input type="text" id="passName" maxlength="24" placeholder="Your name">
+      <button class="btn primary big" onclick="startTurn()">Open the sketchbook →</button>
+      <p class="muted" style="font-size:14px;margin-top:18px">Make sure only you are looking. You'll see the previous page and nothing else.</p>
+    </div>
+  </section>
+
+  <!-- TURN -->
+  <section id="v-turn" class="view">
+    <div class="turnbar">
+      <div>
+        <div class="pg" id="turnPg"></div>
+        <h2 id="turnTitle" style="margin:0"></h2>
+      </div>
+      <div class="timer" id="timer" style="display:none"></div>
+    </div>
+
+    <div id="drawMode">
+      <div class="prompt-card"><small>Draw this</small><div class="txt" id="drawPrompt"></div></div>
+      <div class="studio">
+        <div class="tools">
+          <div class="swatches" id="swatches"></div>
+          <hr>
+          <div class="sizes" id="sizes"></div>
+          <hr>
+          <div class="stack">
+            <button class="tbtn on" id="toolPen" title="Pen" onclick="setTool('pen')">✏️</button>
+            <button class="tbtn" id="toolEraser" title="Eraser" onclick="setTool('eraser')">🧽</button>
+            <button class="tbtn" title="Undo (Ctrl+Z)" onclick="pad.undo()">↩️</button>
+            <button class="tbtn" title="Clear" onclick="if(confirm('Clear the whole drawing?'))pad.clear()">🗑️</button>
+          </div>
+        </div>
+        <div class="canvas-holder">
+          <div class="canvas-wrap" id="padWrap"><canvas id="pad" width="1200" height="900"></canvas></div>
+          <div class="submitrow"><button class="btn primary big" onclick="submitDraw(false)">Done drawing ✓</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="guessMode" class="guess-wrap">
+      <div class="canvas-wrap ro"><canvas id="guessCanvas" width="1200" height="900"></canvas></div>
+      <div class="field">
+        <label for="guessIn" style="font-size:18px">What is this? Describe it for the next artist.</label>
+        <textarea id="guessIn" maxlength="120" placeholder="I think it's…"></textarea>
+      </div>
+      <div class="submitrow"><button class="btn primary big" onclick="submitGuess()">Send it on →</button></div>
+    </div>
+  </section>
+
+  <!-- DONE -->
+  <section id="v-done" class="view">
+    <div class="card narrow pass">
+      <span class="env" id="doneIco">✅</span>
+      <h2 id="doneTitle"></h2>
+      <p class="muted" id="doneSub"></p>
+      <div class="done-actions" id="doneActions"></div>
+      <div class="linkbox" id="linkbox">
+        <label style="font-weight:800;display:block;margin-bottom:6px" id="linkLabel">Send this link to the next player</label>
+        <textarea id="linkOut" readonly onclick="this.select()"></textarea>
+        <p class="muted" style="font-size:13px;margin:6px 0 0" id="linkNote"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- REVEAL -->
+  <section id="v-reveal" class="view">
+    <div class="reveal-head">
+      <span class="badge done">The big reveal</span>
+      <h2 id="revealTitle"></h2>
+      <p class="muted" id="revealSub"></p>
+    </div>
+    <div class="chain" id="chain"></div>
+    <div class="reveal-ctrl">
+      <button class="btn primary big" id="nextPageBtn" onclick="revealNext()">Turn the page →</button>
+      <button class="btn" id="allBtn" onclick="revealAll()">Show all</button>
+      <button class="btn sun" id="saveImgBtn" onclick="saveStrip()" style="display:none">⬇️ Save as image</button>
+      <button class="btn sky" id="shareRevealBtn" onclick="shareReveal()" style="display:none">🔗 Share</button>
+    </div>
+    <div class="linkbox narrow" id="revealLinkbox" style="max-width:720px">
+      <label style="font-weight:800;display:block;margin-bottom:6px">Send this so everyone can watch the reveal</label>
+      <textarea id="revealLinkOut" readonly onclick="this.select()"></textarea>
+    </div>
+  </section>
+
+  <!-- HOW -->
+  <section id="v-how" class="view">
+    <div class="card narrow how">
+      <div class="tape"></div>
+      <h2>How to play</h2>
+      <ol>
+        <li><b>Set up your group once.</b> Start a sketchbook, add your friends' names in turn order and write a prompt.</li>
+        <li><b>Send it to the next person.</b> WidGP tells you whose turn it is and copies a message with the link. Send it to them privately, so nobody else peeks.</li>
+        <li><b>Turns alternate.</b> Got words? Draw them. Got a drawing? Describe it in words. You only ever see the page right before yours.</li>
+        <li><b>Keep it moving.</b> The link holds the whole sketchbook, so after your turn you send your own new link to the next person.</li>
+        <li><b>When the last page is filled</b>, the reveal unlocks. Post the reveal link in your group chat and flip through it together, with every drawing replaying stroke by stroke.</li>
+      </ol>
+      <p class="muted"><b>Play it like Gartic Phone:</b> everyone in the group starts their own sketchbook at the same time. They all go round in different orders, so you end up with one reveal per person. When a sketchbook reaches you, there's a button to start your own with the same group.</p>
+      <div class="submitrow"><button class="btn primary" onclick="openNew()">Let's go ✏️</button></div>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const LS='doodlerelay.v1', LSN='doodlerelay.name', LSG='doodlerelay.group';
+const COLORS=['#1b1b1f','#ffffff','#80808c','#c9c9cf','#e63946','#ff8c42','#ffd23f','#7ac74f','#2a9d8f','#3a86ff','#0b3d91','#8338ec','#ff5fa2','#f4c9a0','#8d5a3b','#a8e6ff'];
+const PAPER='#fffdf6';
+const SIZES=[3,7,14,30];
+const SPINES=['#ff4d2e','#ffc53d','#d7ff3a','#5aa9ff','#ff7ab6','#3ddc97'];
+const PROMPTS=["A wizard stuck in traffic","A cat running a bakery","Dinosaur at a job interview","The moon eating spaghetti","A shark learning to ride a bike","Grandma winning a rap battle","A cactus who wants a hug","Penguins robbing a bank","A ghost doing laundry","A robot falling in love with a toaster","Snowman on a beach holiday","A giraffe stuck in an elevator","An octopus playing the drums","A haunted vending machine","A frog king with a tiny crown","Aliens visiting IKEA","A hamster piloting a mech","A very tired superhero","Pizza delivery on a dragon","A sloth winning a race","A volcano with hiccups","A banana in witness protection","Two clouds arguing","A knight afraid of his horse","A tree doing yoga","A cowboy riding a snail","A duck who became mayor","A mermaid at the dentist","A toaster that predicts the future","A bear opening a coffee shop","Vampire at a garlic festival","The world's smallest elephant","A pigeon wearing a suit","Couch potato, literally","Pirates finding Wi‑Fi","A lighthouse that is scared of the dark","A goldfish's birthday party","A skeleton playing xylophone on itself","Bees having a business meeting","An astronaut who forgot their keys"];
+
+let books=load(), currentId=null, pad=null, timerInt=null, pendingPrompt=null;
+let newLaps=1, newTimer=0;
+
+function load(){try{return JSON.parse(localStorage.getItem(LS))||[]}catch(e){return []}}
+function save(){try{localStorage.setItem(LS,JSON.stringify(books))}catch(e){toast('Could not save on this device. Storage may be full.')}}
+function getName(){try{return localStorage.getItem(LSN)||''}catch(e){return ''}}
+function setName(n){try{localStorage.setItem(LSN,n)}catch(e){}}
+function rid(){return Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4)}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function book(){return books.find(b=>b.id===currentId)}
+function isDone(b){return b.steps.length>=b.pages}
+function nextType(b){return b.steps[b.steps.length-1].t==='d'?'g':'d'}
+function players(b){return [...new Set(b.steps.map(s=>s.a))]}
+function nextPlayer(b){return b.group&&b.group.length?b.group[b.steps.length%b.group.length]:null}
+function getGroup(){try{return JSON.parse(localStorage.getItem(LSG))||[]}catch(e){return []}}
+function setGroup(g){try{localStorage.setItem(LSG,JSON.stringify(g))}catch(e){}}
+function same(a,b){return a.trim().toLowerCase()===b.trim().toLowerCase()}
+// the group in turn order starting with `me`, so a new sketchbook goes round starting after its creator
+function rotateFrom(group,me){const i=group.findIndex(g=>same(g,me));return i<0?[me,...group]:[...group.slice(i),...group.slice(0,i)]}
+function spine(b){let h=0;for(const c of b.id)h=(h*31+c.charCodeAt(0))>>>0;return SPINES[h%SPINES.length]}
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),2600)}
+
+function show(id){
+  stopTimer();
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  $('#'+id).classList.add('on');
+  window.scrollTo({top:0});
+}
+function goHome(){renderShelf();show('v-home')}
+
+/* ---------- shelf ---------- */
+function renderShelf(){
+  const el=$('#shelf');
+  const list=[...books].sort((a,b)=>b.updated-a.updated);
+  if(!list.length){el.innerHTML='<div class="empty"><b>The shelf is empty</b>Start a sketchbook, or open a link a friend sent you.</div>';return}
+  el.innerHTML=list.map(b=>{
+    const done=isDone(b), n=b.steps.length, np=nextPlayer(b);
+    const ps=b.group&&b.group.length?b.group:players(b);
+    return `<div class="book" style="--bc:${spine(b)}">
+      <div>${done?'<span class="badge done">Finished</span>':`<span class="badge">Next: ${np?esc(np)+' · ':''}${nextType(b)==='d'?'🎨 draw':'💬 describe'}</span>`}</div>
+      <div class="title">${esc(b.creator)}'s sketchbook</div>
+      <div class="progress"><i style="width:${Math.round(n/b.pages*100)}%"></i></div>
+      <small class="muted">${n} of ${b.pages} pages filled${b.timer?` · ${b.timer}s to draw`:''}</small>
+      <div class="avatars">${ps.map(p=>`<span class="av" title="${esc(p)}"${np&&same(p,np)&&!done?' style="background:var(--tomato);color:#fff"':''}>${esc(p.slice(0,1).toUpperCase())}</span>`).join('')}</div>
+      <div class="row">
+        ${done?`<button class="btn small primary" onclick="openReveal('${b.id}')">Reveal 🎉</button>`
+              :`<button class="btn small primary" onclick="openPass('${b.id}')">Take a turn</button>
+                <button class="btn small sky" onclick="linkFor('${b.id}')">🔗 Link</button>`}
+        <button class="btn small ghost" title="Delete" onclick="delBook('${b.id}')">🗑️</button>
+      </div>
+    </div>`}).join('');
+}
+function delBook(id){if(!confirm('Remove this sketchbook from this device?'))return;books=books.filter(b=>b.id!==id);save();renderShelf()}
+async function linkFor(id){currentId=id;await showDone(false,true)}
+
+/* ---------- new ---------- */
+function seg(el,opts,val,cb){
+  el.innerHTML=opts.map(o=>`<button data-v="${o[0]}" class="${o[0]===val?'on':''}">${o[1]}</button>`).join('');
+  el.onclick=e=>{const b=e.target.closest('button');if(!b)return;el.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));cb(+b.dataset.v)};
+}
+function openNew(fromGroup){
+  const me=getName(), g=fromGroup||getGroup();
+  $('#newName').value=me;
+  $('#newGroup').value=(me?rotateFrom(g,me).slice(1):g).join(', ');
+  $('#newPrompt').value='';
+  seg($('#segPages'),[[1,'1 lap'],[2,'2 laps'],[3,'3 laps']],newLaps,v=>newLaps=v);
+  seg($('#segTimer'),[[0,'Off'],[60,'60s'],[90,'90s'],[180,'3m']],newTimer,v=>newTimer=v);
+  show('v-new');
+  setTimeout(()=>($('#newName').value?($('#newGroup').value?$('#newPrompt'):$('#newGroup')):$('#newName')).focus(),50);
+}
+function rollPrompt(){const cur=$('#newPrompt').value;let p;do{p=PROMPTS[Math.floor(Math.random()*PROMPTS.length)]}while(p===cur);$('#newPrompt').value=p}
+async function createBook(){
+  const name=$('#newName').value.trim(), prompt=$('#newPrompt').value.trim();
+  const others=$('#newGroup').value.split(/[,\n]/).map(s=>s.trim().slice(0,24)).filter(s=>s&&!same(s,name))
+    .filter((s,i,a)=>a.findIndex(x=>same(x,s))===i);
+  if(!name)return toast('Add your name first'),$('#newName').focus();
+  if(!others.length)return toast('Add at least one friend to your group'),$('#newGroup').focus();
+  if(!prompt)return toast('Write a prompt, or roll the dice 🎲'),$('#newPrompt').focus();
+  setName(name);
+  const group=[name,...others];setGroup(group);
+  const pages=Math.max(3,group.length*newLaps);
+  const b={id:rid(),creator:name,group,pages,timer:newTimer,created:Date.now(),updated:Date.now(),steps:[{t:'p',a:name,v:prompt}]};
+  books.push(b);save();currentId=b.id;
+  await showDone(true);
+}
+
+/* ---------- pass ---------- */
+function openPass(id,msg){
+  currentId=id;const b=book(), np=nextPlayer(b);
+  $('#passMsg').textContent=msg||'Your turn with';
+  $('#passTitle').textContent=np?`${np}, it's your turn!`:`${b.creator}'s sketchbook`;
+  $('#passSub').textContent=`${b.creator}'s sketchbook · page ${b.steps.length+1} of ${b.pages} · you'll ${nextType(b)==='d'?'draw something 🎨':'describe a drawing 💬'}`;
+  const ps=b.group&&b.group.length?b.group:players(b);
+  $('#passWho').innerHTML=ps.map(p=>`<span class="badge" style="background:${np&&same(p,np)?'var(--sun)':'#fff'}">${esc(p)}</span>`).join('');
+  $('#passName').value=np||getName();
+  show('v-pass');
+}
+function startTurn(){
+  const name=$('#passName').value.trim();
+  if(!name)return toast('Who is playing? Add your name'),$('#passName').focus();
+  const b=book(), np=nextPlayer(b);
+  if(np&&!same(np,name)){if(!confirm(`It's ${np}'s turn, not ${name}'s. Play anyway?`))return}
+  else if(same(b.steps[b.steps.length-1].a,name)&&!confirm(`${name} did the previous page too. Play anyway?`))return;
+  setName(name);
+  const last=b.steps[b.steps.length-1], t=nextType(b);
+  $('#turnPg').textContent=`Page ${b.steps.length+1} of ${b.pages}`;
+  show('v-turn');
+  if(t==='d'){
+    $('#turnTitle').textContent=`${name}, draw it!`;
+    $('#drawMode').style.display='';$('#guessMode').style.display='none';
+    $('#drawPrompt').textContent=last.v;
+    pad.reset();
+    if(b.timer)startTimer(b.timer);
+  }else{
+    $('#turnTitle').textContent=`${name}, what did they draw?`;
+    $('#drawMode').style.display='none';$('#guessMode').style.display='';
+    $('#guessIn').value='';
+    renderStatic($('#guessCanvas'),last.v);
+    setTimeout(()=>$('#guessIn').focus(),60);
+  }
+}
+function startTimer(sec){
+  const el=$('#timer');let left=sec;el.style.display='';
+  const upd=()=>{el.textContent=`${Math.floor(left/60)}:${String(left%60).padStart(2,'0')}`;el.classList.toggle('low',left<=10)};
+  upd();
+  timerInt=setInterval(()=>{left--;upd();if(left<=0){stopTimer();toast("⏰ Time's up! Pencils down.");submitDraw(true)}},1000);
+}
+function stopTimer(){clearInterval(timerInt);timerInt=null;const el=$('#timer');if(el){el.style.display='none';el.classList.remove('low')}}
+
+async function submitDraw(forced){
+  if(!forced&&!pad.strokes.length)return toast('Draw something first!');
+  const b=book();
+  b.steps.push({t:'d',a:getName(),v:pad.strokes.slice()});
+  b.updated=Date.now();save();stopTimer();
+  await showDone(false);
+}
+async function submitGuess(){
+  const v=$('#guessIn').value.trim();
+  if(!v)return toast('Write what you think it is');
+  const b=book();
+  b.steps.push({t:'g',a:getName(),v});
+  b.updated=Date.now();save();
+  await showDone(false);
+}
+
+/* ---------- done / link ---------- */
+async function showDone(first,linkOnly){
+  const b=book(), done=isDone(b);
+  $('#linkbox').style.display='none';
+  const np=nextPlayer(b), who=np||'the next player';
+  if(linkOnly){
+    $('#doneIco').textContent='🔗';
+    $('#doneTitle').textContent=`Send it to ${who}`;
+    $('#doneSub').textContent=`${b.creator}'s sketchbook, page ${b.steps.length+1} of ${b.pages} is up next.`;
+  }else if(done){
+    $('#doneIco').textContent='🎉';
+    $('#doneTitle').textContent="That was the last page!";
+    $('#doneSub').textContent='The sketchbook is full. Post the reveal link in your group chat and see how wrong it all went.';
+  }else{
+    $('#doneIco').textContent=first?'✉️':'✅';
+    $('#doneTitle').textContent=`Now send it to ${who}`;
+    $('#doneSub').textContent=`${np?np+' will':'The next player will'} ${nextType(b)==='d'?'draw':'describe'} page ${b.steps.length+1} of ${b.pages}. Send the link to them privately so nobody else peeks.`;
+  }
+  const own=b.group&&b.group.length&&!same(b.creator,getName())&&!books.some(x=>x.group&&same(x.creator,getName())&&!isDone(x)&&x.created>=b.created-864e5)
+    ?`<button class="btn mint" onclick="openNew(book().group)">✏️ Start my own sketchbook for this group</button>`:'';
+  const A=$('#doneActions');
+  A.innerHTML=done
+    ?`<button class="btn primary big" onclick="openReveal('${b.id}')">Reveal it 🎉</button>
+      <button class="btn sky" onclick="makeLinkUI(true)">🔗 Send to the group</button>
+      <button class="btn ghost" onclick="goHome()">Back to shelf</button>`
+    :`<button class="btn primary big" onclick="makeLinkUI(false)">🔗 Copy link for ${esc(who)}</button>
+      ${own}
+      ${linkOnly?'':`<button class="btn ghost" onclick="openPass('${b.id}','Passed to you:')">🤝 They're right here</button>`}
+      <button class="btn ghost" onclick="goHome()">Back to shelf</button>`;
+  show('v-done');
+  if(linkOnly)makeLinkUI(false);
+}
+async function makeLink(b){return location.href.split('#')[0]+'#book='+await pack(b)}
+async function makeLinkUI(isReveal){
+  const b=book(), url=await makeLink(b), np=nextPlayer(b);
+  const msg=isReveal?`🎉 ${b.creator}'s WidGP sketchbook is finished! Watch the reveal: ${url}`
+    :`${np?np+', it':'It'}'s your turn in WidGP! ${nextType(b)==='d'?'🎨 Draw':'💬 Describe'} page ${b.steps.length+1} of ${b.pages}: ${url}`;
+  $('#linkbox').style.display='block';
+  $('#linkLabel').textContent=isReveal?'Post this in your group chat':`Send this to ${np||'the next player'} (copied)`;
+  $('#linkOut').value=msg;
+  $('#linkNote').textContent=`Link is ${(url.length/1024).toFixed(1)} KB. Very detailed drawings make longer links; if a chat app cuts it off, send it as a file or note.`;
+  await copy(msg,$('#linkOut'));
+}
+async function copy(text,ta){
+  try{await navigator.clipboard.writeText(text);toast('Link copied 📋');return}catch(e){}
+  try{ta.focus();ta.select();if(document.execCommand('copy')){toast('Link copied 📋');return}}catch(e){}
+  ta.focus();ta.select();toast('Select the link and copy it');
+}
+
+/* ---------- import ---------- */
+function merge(inc){
+  if(!inc||!inc.id||!Array.isArray(inc.steps))throw new Error('bad');
+  const i=books.findIndex(b=>b.id===inc.id);
+  if(i<0)books.push(inc);
+  else if(inc.steps.length>=books[i].steps.length)books[i]=inc;
+  else return books[i];
+  save();return inc;
+}
+async function importCode(code){
+  const m=code.match(/book=([A-Za-z0-9_\-]+)/);const c=m?m[1]:code.trim();
+  const b=merge(await unpack(c));
+  currentId=b.id;
+  if(b.group&&b.group.length)setGroup(b.group);
+  if(isDone(b)){toast('📬 A finished sketchbook arrived!');openReveal(b.id)}
+  else openPass(b.id,`📬 Sent by ${b.steps[b.steps.length-1].a}`);
+}
+async function doImport(){
+  const v=$('#importIn').value.trim();if(!v)return toast('Paste a link first');
+  try{await importCode(v);$('#importIn').value=''}catch(e){toast("That link doesn't look like a sketchbook")}
+}
+
+/* ---------- packing ---------- */
+function b64u(bytes){let s='';for(let i=0;i<bytes.length;i+=0x8000)s+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+function unb64u(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';const bin=atob(s),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u}
+async function pack(obj){
+  const data=new TextEncoder().encode(JSON.stringify(obj));
+  if('CompressionStream' in window){
+    const buf=await new Response(new Blob([data]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer();
+    return 'z'+b64u(new Uint8Array(buf));
+  }
+  return 'j'+b64u(data);
+}
+async function unpack(code){
+  const kind=code[0], bytes=unb64u(code.slice(1));
+  let txt;
+  if(kind==='z'){txt=await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text()}
+  else if(kind==='j'){txt=new TextDecoder().decode(bytes)}
+  else throw new Error('bad');
+  return JSON.parse(txt);
+}
+
+/* ---------- drawing ---------- */
+// stroke format: [colorIndex(-1 eraser), width, x0, y0, dx1, dy1, ...] in 800x600 space
+function decode(s){const p=[s[2],s[3]];let x=s[2],y=s[3];for(let i=4;i<s.length;i+=2){x+=s[i];y+=s[i+1];p.push(x,y)}return p}
+function colorOf(ci){return ci<0?PAPER:COLORS[ci]}
+function drawPts(ctx,ci,w,p){
+  ctx.strokeStyle=ctx.fillStyle=colorOf(ci);ctx.lineWidth=w;ctx.lineCap='round';ctx.lineJoin='round';
+  if(p.length<=4&&(p.length===2||(p[0]===p[2]&&p[1]===p[3]))){ctx.beginPath();ctx.arc(p[0],p[1],w/2,0,Math.PI*2);ctx.fill();return}
+  ctx.beginPath();ctx.moveTo(p[0],p[1]);
+  const n=p.length/2;
+  for(let i=1;i<n-1;i++){const x=p[i*2],y=p[i*2+1],mx=(x+p[i*2+2])/2,my=(y+p[i*2+3])/2;ctx.quadraticCurveTo(x,y,mx,my)}
+  ctx.lineTo(p[p.length-2],p[p.length-1]);ctx.stroke();
+}
+function clearCtx(ctx){ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle=PAPER;ctx.fillRect(0,0,ctx.canvas.width,ctx.canvas.height);ctx.setTransform(ctx.canvas.width/800,0,0,ctx.canvas.height/600,0,0)}
+function renderStatic(canvas,strokes){const ctx=canvas.getContext('2d');clearCtx(ctx);for(const s of strokes)drawPts(ctx,s[0],s[1],decode(s))}
+
+class Pad{
+  constructor(canvas){
+    this.c=canvas;this.ctx=canvas.getContext('2d');
+    this.base=document.createElement('canvas');this.base.width=canvas.width;this.base.height=canvas.height;this.bctx=this.base.getContext('2d');
+    this.strokes=[];this.cur=null;this.ci=0;this.w=7;this.tool='pen';
+    canvas.addEventListener('pointerdown',e=>this.down(e));
+    canvas.addEventListener('pointermove',e=>this.move(e));
+    canvas.addEventListener('pointerup',e=>this.up(e));
+    canvas.addEventListener('pointercancel',e=>this.up(e));
+    this.reset();
+  }
+  pos(e){const r=this.c.getBoundingClientRect();return [Math.round((e.clientX-r.left)/r.width*800),Math.round((e.clientY-r.top)/r.height*600)]}
+  down(e){e.preventDefault();this.c.setPointerCapture(e.pointerId);const [x,y]=this.pos(e);this.cur={ci:this.tool==='eraser'?-1:this.ci,w:this.tool==='eraser'?Math.max(this.w*2,16):this.w,p:[x,y]};this.paint()}
+  move(e){
+    if(!this.cur)return;
+    const evs=e.getCoalescedEvents?e.getCoalescedEvents():[e];
+    for(const ev of evs){const [x,y]=this.pos(ev),p=this.cur.p,lx=p[p.length-2],ly=p[p.length-1];if(Math.hypot(x-lx,y-ly)>=2)p.push(x,y)}
+    this.paint();
+  }
+  up(){
+    if(!this.cur)return;const {ci,w,p}=this.cur;this.cur=null;
+    const s=[ci,w,p[0],p[1]];for(let i=2;i<p.length;i+=2)s.push(p[i]-p[i-2],p[i+1]-p[i-1]);
+    this.strokes.push(s);drawPts(this.bctx,ci,w,p);this.paint();
+  }
+  paint(){
+    const ctx=this.ctx;ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(this.base,0,0);
+    ctx.setTransform(this.c.width/800,0,0,this.c.height/600,0,0);
+    if(this.cur)drawPts(ctx,this.cur.ci,this.cur.w,this.cur.p);
+  }
+  rebuild(){clearCtx(this.bctx);for(const s of this.strokes)drawPts(this.bctx,s[0],s[1],decode(s));this.paint()}
+  undo(){this.strokes.pop();this.rebuild()}
+  clear(){this.strokes=[];this.rebuild()}
+  reset(){this.cur=null;this.clear()}
+}
+
+function buildTools(){
+  $('#swatches').innerHTML=COLORS.map((c,i)=>`<button class="sw${i===0?' on':''}" style="background:${c}" data-i="${i}" title="${c}"></button>`).join('');
+  $('#swatches').onclick=e=>{const b=e.target.closest('.sw');if(!b)return;pad.ci=+b.dataset.i;document.querySelectorAll('.sw').forEach(x=>x.classList.toggle('on',x===b));setTool('pen')};
+  $('#sizes').innerHTML=SIZES.map((s,i)=>`<button class="sz${i===1?' on':''}" data-s="${s}" title="Brush ${s}"><i style="width:${Math.min(s,24)}px;height:${Math.min(s,24)}px"></i></button>`).join('');
+  $('#sizes').onclick=e=>{const b=e.target.closest('.sz');if(!b)return;pad.w=+b.dataset.s;document.querySelectorAll('.sz').forEach(x=>x.classList.toggle('on',x===b))};
+}
+function setTool(t){pad.tool=t;$('#toolPen').classList.toggle('on',t==='pen');$('#toolEraser').classList.toggle('on',t==='eraser')}
+
+/* ---------- reveal ---------- */
+let revealIdx=0;
+function openReveal(id){
+  currentId=id;const b=book();revealIdx=0;
+  $('#revealTitle').textContent=`${b.creator}'s sketchbook`;
+  $('#revealSub').textContent=`${b.pages} pages · ${players(b).join(', ')}`;
+  $('#revealLinkbox').style.display='none';
+  const icons={p:'📝',d:'🎨',g:'💬'}, verbs={p:'started with',d:'drew',g:'thought it was'};
+  $('#chain').innerHTML=b.steps.map((s,i)=>`
+    <div class="page ${s.t==='d'?'draw':'text'} ${s.t==='p'?'prompt':''}" id="pg${i}">
+      <div class="card">
+        <div class="by"><span class="av">${esc(s.a.slice(0,1).toUpperCase())}</span>${icons[s.t]} ${esc(s.a)} ${verbs[s.t]}${s.t==='d'?'':':'}</div>
+        ${s.t==='d'?`<div class="canvas-wrap ro"><canvas width="1200" height="900"></canvas></div>`:`<div class="words">"${esc(s.v)}"</div>`}
+      </div>
+    </div>${i<b.steps.length-1?'<div class="arrow">↓</div>':''}`).join('');
+  $('#nextPageBtn').style.display='';$('#allBtn').style.display='';
+  $('#saveImgBtn').style.display='none';$('#shareRevealBtn').style.display='none';
+  show('v-reveal');
+  revealNext();
+}
+function revealNext(){
+  const b=book();if(revealIdx>=b.steps.length)return;
+  const i=revealIdx++, el=$('#pg'+i);el.classList.add('shown');
+  const s=b.steps[i];
+  if(s.t==='d')animateDraw(el.querySelector('canvas'),s.v);
+  if(i>0)setTimeout(()=>el.scrollIntoView({behavior:'smooth',block:'center'}),40);
+  if(revealIdx>=b.steps.length)finishReveal();
+  else $('#nextPageBtn').textContent=revealIdx===b.steps.length-1?'Final page →':'Turn the page →';
+}
+function revealAll(){
+  const b=book();
+  while(revealIdx<b.steps.length){const i=revealIdx++,el=$('#pg'+i);el.classList.add('shown');if(b.steps[i].t==='d')renderStatic(el.querySelector('canvas'),b.steps[i].v)}
+  finishReveal();
+}
+function finishReveal(){
+  $('#nextPageBtn').style.display='none';$('#allBtn').style.display='none';
+  $('#saveImgBtn').style.display='';$('#shareRevealBtn').style.display='';
+}
+async function shareReveal(){
+  const url=await makeLink(book());
+  $('#revealLinkbox').style.display='block';$('#revealLinkOut').value=url;
+  await copy(url,$('#revealLinkOut'));
+}
+function animateDraw(canvas,strokes){
+  const ctx=canvas.getContext('2d');clearCtx(ctx);
+  const all=strokes.map(s=>({ci:s[0],w:s[1],p:decode(s)}));
+  const total=all.reduce((n,s)=>n+s.p.length/2,0)||1;
+  const dur=Math.min(4500,Math.max(1200,total*6));
+  const t0=performance.now();let si=0,pi=0,drawn=0;
+  const step=now=>{
+    if(!canvas.isConnected)return;
+    const target=Math.min(total,Math.ceil((now-t0)/dur*total));
+    while(drawn<target&&si<all.length){
+      const s=all[si];ctx.strokeStyle=ctx.fillStyle=colorOf(s.ci);ctx.lineWidth=s.w;ctx.lineCap='round';ctx.lineJoin='round';
+      if(pi===0){ctx.beginPath();ctx.arc(s.p[0],s.p[1],s.w/2,0,Math.PI*2);ctx.fill()}
+      else{ctx.beginPath();ctx.moveTo(s.p[pi*2-2],s.p[pi*2-1]);ctx.lineTo(s.p[pi*2],s.p[pi*2+1]);ctx.stroke()}
+      pi++;drawn++;if(pi>=s.p.length/2){si++;pi=0}
+    }
+    if(drawn<total)requestAnimationFrame(step);else renderStatic(canvas,strokes);
+  };
+  requestAnimationFrame(step);
+}
+function wrapText(ctx,text,maxW){const words=text.split(' ');const lines=[];let line='';for(const w of words){const t=line?line+' '+w:w;if(ctx.measureText(t).width>maxW&&line){lines.push(line);line=w}else line=t}lines.push(line);return lines}
+function saveStrip(){
+  const b=book(),W=900,pad=40,font='ui-rounded,"SF Pro Rounded",system-ui,sans-serif';
+  const tmp=document.createElement('canvas').getContext('2d');tmp.font=`800 34px ${font}`;
+  const blocks=b.steps.map(s=>s.t==='d'?{s,h:600+56}:{s,lines:wrapText(tmp,`"${s.v}"`,W-pad*2-20),get h(){return 56+this.lines.length*42+20}});
+  const H=110+blocks.reduce((n,x)=>n+x.h+24,0)+20;
+  const c=document.createElement('canvas');c.width=W;c.height=H;const ctx=c.getContext('2d');
+  ctx.fillStyle='#f5f4f0';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#111114';ctx.font=`800 40px ${font}`;ctx.fillText(`${b.creator}'s sketchbook`,pad,64);
+  ctx.font='18px "Avenir Next",sans-serif';ctx.fillStyle='#5b5f7a';ctx.fillText('WidGP · '+players(b).join(', '),pad,92);
+  let y=120;const verbs={p:'started with:',d:'drew:',g:'thought it was:'};
+  for(const blk of blocks){
+    const s=blk.s;ctx.fillStyle=s.t==='p'?'#111114':'#ffffff';ctx.strokeStyle='rgba(17,17,20,.08)';ctx.lineWidth=2;
+    ctx.beginPath();ctx.roundRect(pad,y,W-pad*2,blk.h,16);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#5b5f7a';ctx.font='bold 18px "Avenir Next",sans-serif';ctx.fillText(`${s.a} ${verbs[s.t]}`,pad+18,y+34);
+    if(s.t==='d'){
+      const off=document.createElement('canvas');off.width=1200;off.height=900;renderStatic(off,s.v);
+      ctx.drawImage(off,pad+10,y+46,W-pad*2-20,(W-pad*2-20)*.75);
+    }else{
+      ctx.fillStyle=s.t==='p'?'#ffffff':'#111114';ctx.font=`800 34px ${font}`;blk.lines.forEach((l,i)=>ctx.fillText(l,pad+18,y+86+i*42));
+    }
+    y+=blk.h+24;
+  }
+  c.toBlob(blob=>{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`widgp-${b.creator}.png`;document.body.appendChild(a);a.click();a.remove();toast('Image saved ⬇️')});
+}
+
+/* ---------- boot ---------- */
+pad=new Pad($('#pad'));buildTools();
+// the drawing view's canvas holds a 4:3 ratio; drawing blocks are 600 tall + header in the strip
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='z'&&$('#v-turn').classList.contains('on')&&$('#drawMode').style.display!=='none'){e.preventDefault();pad.undo()}});
+renderShelf();
+(async()=>{
+  const h=location.hash;
+  if(h.startsWith('#book=')){
+    try{history.replaceState(null,'',location.href.split('#')[0])}catch(e){}
+    try{await importCode(h)}catch(e){toast("Couldn't open that sketchbook link")}
+  }
+})();
+</script>
+</body>
+</html>
