@@ -61,3 +61,4 @@ Tweak balance in `data.js`: each brawler's `hp`, `spd`, `reload`, `range` and `s
 ## Credits
 
 Characters from the WIDR 64 games by Josh Ibrahim and friends. Fan game, not affiliated with Supercell or Brawl Stars.
+
