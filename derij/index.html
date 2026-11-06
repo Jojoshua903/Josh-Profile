@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DE RIJ: one player at a time</title>
+<style>
+:root{
+  --ink:#1d1a2f; --paper:#f6efe0; --card:#fffaf0; --red:#ff3b3b; --yellow:#ffd23f; --blue:#2f7bff; --green:#3ccf6e; --pink:#ff7ccf;
+  --round:"Arial Rounded MT Bold","Avenir Next Rounded","Nunito",ui-rounded,"Trebuchet MS",sans-serif;
+  --mono:"SF Mono",ui-monospace,"Menlo",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--paper);color:var(--ink);font-family:var(--round);
+  background-image:radial-gradient(rgba(29,26,47,.07) 1px,transparent 1.4px);background-size:14px 14px;
+  display:flex;flex-direction:column;min-height:100vh;padding:14px 18px 60px;}
+button{font-family:inherit;cursor:pointer;color:var(--ink)}
+.chunk{background:var(--card);border:3px solid var(--ink);border-radius:14px;box-shadow:4px 4px 0 var(--ink)}
+.btn{background:var(--yellow);border:3px solid var(--ink);border-radius:12px;box-shadow:3px 3px 0 var(--ink);padding:10px 16px;font-size:15px;font-weight:700;transition:transform .08s,box-shadow .08s}
+.btn:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--ink)}
+.btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+.btn.red{background:var(--red);color:#fff}.btn.blue{background:var(--blue);color:#fff}.btn.ghost{background:var(--card)}
+
+header{display:flex;align-items:center;gap:16px;margin-bottom:12px;flex-wrap:wrap}
+.logo{display:flex;align-items:baseline;gap:10px}
+.logo h1{margin:0;font-size:34px;letter-spacing:-1px;line-height:1;
+  text-shadow:3px 3px 0 var(--yellow),5px 5px 0 var(--ink)}
+.logo small{font-size:12px;opacity:.7;letter-spacing:.5px;text-transform:uppercase}
+.chips{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+.chip{border:2.5px solid var(--ink);border-radius:999px;padding:5px 12px;font-size:13px;background:var(--card);white-space:nowrap}
+.chip b{font-family:var(--mono)}
+.chip.live{background:var(--red);color:#fff}
+.chip.live::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#fff;margin-right:6px;animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.2}}
+
+main{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;flex:1;min-height:0}
+@media (max-width:900px){main{grid-template-columns:minmax(0,1fr)}}
+.stage{position:relative;align-self:start;padding:10px}
+.screen{position:relative;width:100%;aspect-ratio:480/272;border:3px solid var(--ink);border-radius:8px;overflow:hidden;background:#fff}
+canvas#game{width:100%;height:100%;display:block;image-rendering:pixelated}
+.hud{display:flex;align-items:center;gap:12px;margin-top:10px}
+.now{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.now canvas{width:48px;height:48px;image-rendering:pixelated;border:2.5px solid var(--ink);border-radius:10px;background:#fff}
+.now .who{font-size:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.now .sub{font-size:12px;opacity:.7}
+.timer{position:relative;width:64px;height:64px;flex:none}
+.timer svg{width:100%;height:100%;transform:rotate(-90deg)}
+.timer span{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--mono);font-weight:800;font-size:20px}
+.timer.low span{color:var(--red);animation:blink .5s infinite}
+.keys{font-size:12px;opacity:.75;text-align:right}
+kbd{font-family:var(--mono);border:2px solid var(--ink);border-bottom-width:3px;border-radius:5px;padding:0 5px;background:#fff;font-size:11px}
+
+aside{display:flex;flex-direction:column;gap:14px;min-width:0}
+aside section{padding:12px 14px}
+aside h2{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:1px;display:flex;justify-content:space-between;align-items:center}
+.queue{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;max-height:260px;overflow:auto}
+.queue li{display:flex;align-items:center;gap:8px;padding:5px 6px;border:2px solid var(--ink);border-radius:10px;background:#fff;font-size:14px}
+.queue li.cur{background:var(--yellow)}
+.queue li canvas{width:30px;height:30px;image-rendering:pixelated;flex:none}
+.queue li .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.queue li .pos{font-family:var(--mono);font-size:12px;width:20px;text-align:center}
+.queue li button{border:none;background:none;font-size:16px;opacity:.5;padding:0 4px}
+.queue li button:hover{opacity:1}
+.empty{font-size:13px;opacity:.6;padding:6px 0}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td{padding:3px 2px;border-bottom:1.5px dashed rgba(29,26,47,.2)}
+td.n{font-family:var(--mono);text-align:right}
+.feed{display:flex;flex-direction:column;gap:5px;max-height:220px;overflow:auto;font-size:13px}
+.feed div{line-height:1.3}
+.feed b{font-weight:800}
+.feed .sys{opacity:.65;font-style:italic}
+
+.overlay{position:absolute;inset:0;display:none;place-items:center;background:rgba(246,239,224,.82);backdrop-filter:blur(2px);z-index:5}
+.overlay.on{display:grid}
+.card{padding:22px 26px;text-align:center;max-width:92%}
+.card h3{margin:0 0 6px;font-size:28px}
+.card p{margin:6px 0 14px;font-size:15px}
+.big{font-size:44px !important;letter-spacing:-1px;text-shadow:3px 3px 0 var(--pink)}
+.count{font-family:var(--mono);font-size:56px;font-weight:800;line-height:1;margin:2px 0 4px;color:var(--red);text-shadow:3px 3px 0 var(--ink)}
+.chip.net.live{background:var(--green)}
+.chip.net.error{background:var(--red);color:#fff}
+.chip.invite{background:var(--yellow);font-weight:700;cursor:pointer;font-size:13px}
+.link{font-family:var(--mono);font-size:12px;word-break:break-all;background:#fff;border:2px dashed var(--ink);border-radius:8px;padding:2px 6px;display:inline-block;margin-top:6px;opacity:1}
+.queue li.you{outline:2.5px dashed var(--blue);outline-offset:1px}
+.queue li em{font-style:normal;opacity:.6;font-size:12px}
+.chatform{display:flex;gap:6px;margin-top:8px}
+.chatform input{flex:1;min-width:0;font-family:inherit;font-size:13px;border:2.5px solid var(--ink);border-radius:10px;padding:6px 10px;background:#fff;color:var(--ink)}
+.chatform .btn{padding:5px 12px;font-size:13px}
+.row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.hand canvas{width:96px;height:96px;image-rendering:pixelated}
+
+/* customizer */
+#custom{position:fixed;inset:0;display:none;place-items:center;background:rgba(29,26,47,.35);z-index:20;padding:16px}
+#custom.on{display:grid}
+.cbox{width:min(920px,100%);max-height:calc(100vh - 32px);overflow:auto;padding:18px;display:grid;grid-template-columns:260px minmax(0,1fr);gap:18px}
+@media (max-width:720px){.cbox{grid-template-columns:1fr}}
+.preview{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+.preview canvas{width:200px;height:200px;image-rendering:pixelated;border:3px solid var(--ink);border-radius:14px;background:repeating-linear-gradient(45deg,#fff 0 10px,#fbf3e2 10px 20px)}
+.preview .t{font-size:24px}
+.preview .tl{font-size:12px;text-transform:uppercase;letter-spacing:1px;padding:3px 10px;border-radius:999px;color:#fff;border:2px solid var(--ink)}
+.preview .d{font-size:13px;opacity:.8;min-height:52px}
+.opts h4{margin:12px 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:1px}
+.opts h4:first-child{margin-top:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px}
+.pick{border:2.5px solid var(--ink);border-radius:10px;background:#fff;padding:4px 2px 3px;font-size:10px;display:flex;flex-direction:column;align-items:center;gap:1px}
+.pick canvas{width:44px;height:44px;image-rendering:pixelated}
+.pick.sel{background:var(--yellow);box-shadow:2px 2px 0 var(--ink)}
+.pills{display:flex;gap:6px;flex-wrap:wrap}
+.pill{border:2.5px solid var(--ink);border-radius:999px;padding:5px 12px;background:#fff;font-size:13px}
+.pill.sel{background:var(--ink);color:#fff}
+.sw{width:30px;height:30px;border-radius:50%;border:2.5px solid var(--ink)}
+.sw.sel{outline:3px solid var(--ink);outline-offset:2px}
+.sw.orig{background:conic-gradient(var(--red),var(--yellow),var(--green),var(--blue),var(--pink),var(--red))}
+input[type=text]{font-family:inherit;font-size:18px;border:3px solid var(--ink);border-radius:10px;padding:8px 12px;width:100%;background:#fff;color:var(--ink)}
+.cfoot{grid-column:1/-1;display:flex;gap:10px;justify-content:flex-end}
+
+@media print{
+  body{padding:10px}
+  .overlay,#custom,.keys,button{display:none !important}
+  main{grid-template-columns:minmax(0,1fr) 260px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><h1>DE RIJ</h1><small>one player at a time · 60 seconds each</small></div>
+  <div class="chips">
+    <span class="chip live" id="liveChip">LIVE</span>
+    <span class="chip" id="netChip">Connecting…</span>
+    <button class="chip invite" id="inviteBtn">Copy invite link</button>
+    <span class="chip">Room <b id="cRoom">1</b></span>
+    <span class="chip" id="cTheme">Guiseppe Orchard</span>
+    <span class="chip">Cleared <b id="cClear">0</b></span>
+    <span class="chip">Deaths <b id="cDeath">0</b></span>
+  </div>
+</header>
+
+<main>
+  <div class="stage chunk">
+    <div class="screen">
+      <canvas id="game" width="480" height="272"></canvas>
+
+      <div class="overlay on" id="lobby"><div class="card chunk">
+        <h3 class="big">DE RIJ</h3>
+        <p>One shared runner. One player at a time.<br>You get <b>60 seconds</b>, then the next person in line takes over from exactly where you stopped.</p>
+        <div class="row"><button class="btn red" id="joinBtn">+ Join the line</button></div>
+        <p class="empty" id="lobbyNote" style="margin-top:12px"></p>
+      </div></div>
+
+      <div class="overlay" id="handoff"><div class="card chunk hand">
+        <p id="handTop" style="margin:0;font-size:13px;text-transform:uppercase;letter-spacing:1px">Next in line</p>
+        <canvas id="handCv" width="32" height="32"></canvas>
+        <h3 id="handName">Name</h3>
+        <div class="count" id="handCount">6</div>
+        <p id="handSub">Room 1</p>
+        <div class="row"><button class="btn red" id="handGo">Start now <kbd>Enter</kbd></button></div>
+      </div></div>
+
+      <div class="overlay" id="paused"><div class="card chunk">
+        <h3>Paused</h3><p>The clock is stopped.</p>
+        <div class="row"><button class="btn" id="resumeBtn">Resume <kbd>P</kbd></button></div>
+      </div></div>
+    </div>
+
+    <div class="hud">
+      <div class="now"><canvas id="nowCv" width="32" height="32"></canvas>
+        <div style="min-width:0"><div class="who" id="nowName">Nobody yet</div><div class="sub" id="nowSub">Join the line to play</div></div></div>
+      <div class="keys"><kbd>A</kbd><kbd>D</kbd> / <kbd>←</kbd><kbd>→</kbd> move · <kbd>W</kbd> <kbd>Space</kbd> jump (hold = higher)<br><span id="keysPause"><kbd>P</kbd> pause · </span><kbd>R</kbd> retry room</div>
+      <div class="timer" id="timer"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="#fff" stroke="#1d1a2f" stroke-width="3"/><circle id="ring" cx="20" cy="20" r="16" fill="none" stroke="#ff3b3b" stroke-width="5" stroke-dasharray="100.5" stroke-dashoffset="0"/></svg><span id="tNum">60</span></div>
+    </div>
+  </div>
+
+  <aside>
+    <section class="chunk"><h2>The line <button class="btn" style="padding:4px 10px;font-size:12px" id="joinBtn2">+ Join</button></h2>
+      <ul class="queue" id="queue"></ul></section>
+    <section class="chunk"><h2>Leaderboard</h2>
+      <table><thead><tr><td><b>Player</b></td><td class="n"><b>Rooms</b></td><td class="n"><b>Deaths</b></td></tr></thead><tbody id="board"></tbody></table></section>
+    <section class="chunk"><h2>Chat</h2><div class="feed" id="feed"></div>
+      <form id="chatForm" class="chatform"><input type="text" id="chatIn" maxlength="120" placeholder="Say something…" autocomplete="off"><button class="btn" type="submit">Send</button></form></section>
+  </aside>
+</main>
+
+<div id="custom"><div class="cbox chunk">
+  <div class="preview">
+    <canvas id="prevCv" width="40" height="40"></canvas>
+    <div class="t" id="pName">Nathan</div>
+    <span class="tl" id="pTitle">Baseball Slugger</span>
+    <div class="d" id="pDesc"></div>
+    <input type="text" id="nameIn" maxlength="16" placeholder="Your name">
+  </div>
+  <div class="opts">
+    <h4>Character</h4><div class="grid" id="charGrid"></div>
+    <h4>Accessory</h4><div class="pills" id="accRow"></div>
+    <h4>Outfit colour</h4><div class="pills" id="tintRow"></div>
+    <h4>Trail</h4><div class="pills" id="trailRow"></div>
+  </div>
+  <div class="cfoot"><button class="btn ghost" id="cancelC">Cancel</button><button class="btn red" id="saveC">Get in line</button></div>
+</div></div>
+
+<script src="config.js"></script>
+<script src="chars.js"></script>
+<script src="level.js"></script>
+<script src="net.js"></script>
+<script src="main.js"></script>
+</body>
+</html>
