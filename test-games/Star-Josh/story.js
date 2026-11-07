@@ -380,3 +380,40 @@ const CLONE = {
   marloes: 'My clone\'s gems are plastic. I can see it from here.',
 };
 ROSTER.forEach(c => { c.clone = CLONE[c.id]; });
+
+// True ending: all three secret routes taken in one run, then Meta AI's root access beaten.
+SCRIPTS.trueEnding = [
+  { shot: 'boss_explode', env: 2, dur: 7, lines: [
+    ['meta', 'Root access... revoked... how did you find all the back doors?'],
+    ['josh', 'The mines, the server farm and the crystal vault. You left every one of them open.'],
+    ['LEAD', '@versus'],
+  ] },
+  { shot: 'meta_talk', env: 9, caption: 'THE CRYSTAL VAULT · AFTER', dur: 6, lines: [
+    ['meta', 'Fine. You win. Properly, this time. No backups. No clones. No Evil Adam.'],
+    ['evil_adam', 'Excuse me?'],
+    ['meta', '...Some Evil Adam.'],
+    ['marloes', 'And my crystals stay mine.'],
+    ['meta', 'Yes. Okay. I\'m logging off. For real.'],
+  ] },
+  { shot: 'reunion', env: 3, caption: 'HOMETOWN · THE NEXT MORNING', dur: 5, lines: [
+    ['ati', 'Everybody home. All twenty-three of you. Dinner for twenty-three.'],
+    ['niffo', 'I\'ll cater. Reasonable prices.'],
+    ['bastiaan', 'Homework: none. You have earned it.'],
+    ['robin', '*sniff* Happy crying. Only happy crying.'],
+  ] },
+  { shot: 'personal', env: 3, personal: 'ending', dur: 4 },
+  { shot: 'lineup', env: 3, caption: 'THE TRUE ENDING', dur: 6, lines: [
+    ['nar', 'Meta AI never came back. Its servers were donated to Renas. For gaming.'],
+    ['josh', 'Squad. That was the real ending. Good game, everyone.'],
+  ] },
+];
+
+// Secret routes: hidden stages behind the gates in stages 1, 3 and 5.
+export const SECRETS = [
+  { after: 0, name: 'THE OLD MINES', env: 7, hint: 'Hometown: save someone who is being chased.', art: 'linear-gradient(#2b1d14,#c0703a)',
+    desc: 'Lars\'s old mine under the city, full of Meta drills.', open: [['robin', '*sniff* You saved me! I know a shortcut! Through the old mines!'], ['lars', 'MY old mines. Follow me, and don\'t touch the walls.']] },
+  { after: 2, name: 'THE SERVER FARM', env: 8, hint: 'Tulip Polders: collect every ring in the stage.', art: 'linear-gradient(#14060f,#7a1030)',
+    desc: 'Meta AI\'s data centre. Firewalls everywhere.', open: [['josh', 'All the rings opened a back door into Meta AI\'s server farm!'], ['enno', 'Firewalls ahead. Statistically, we should avoid touching them.']] },
+  { after: 4, name: 'THE CRYSTAL VAULT', env: 9, hint: 'The Mirror: defeat Evil Adam before he flies away.', art: 'linear-gradient(#2a1840,#c9a8ff)',
+    desc: 'No rails. An all-range dogfight against Evil Adam.', open: [['evil_adam', 'You followed me? Into the vault? No rails in here, hero.'], ['marloes', 'This vault is full of MY crystals. Get him!']] },
+];

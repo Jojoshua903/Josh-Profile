@@ -40,5 +40,5 @@ const saved = load();
 export const S = { ...DEFAULTS, ...(saved.settings || {}) };
 export const P = { unlocked: 1, best: 0, lastHero: null, lastStage: 0, clears: 0, chars: [], stats: {}, ...(saved.progress || {}) };
 export function persist() { try { localStorage.setItem(KEY, JSON.stringify({ settings: S, progress: P })); } catch { /* storage unavailable */ } }
-export function resetProgress() { Object.assign(P, { unlocked: 1, best: 0, lastHero: null, lastStage: 0, clears: 0, chars: [], stats: {} }); persist(); }
+export function resetProgress() { Object.assign(P, { unlocked: 1, best: 0, lastHero: null, lastStage: 0, clears: 0, chars: [], stats: {}, ranks: {}, tokens: {}, skins: {}, skinSel: {}, trophies: [], modeBest: {}, daily: null, winners: {}, shells: 0, owned: [], hat: null, trail: null, armed: {}, secrets: {}, sides: {} }); persist(); }
 export function restoreDefaults() { Object.assign(S, DEFAULTS); persist(); }

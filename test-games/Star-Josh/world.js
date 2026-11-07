@@ -44,6 +44,10 @@ export const ENVS = [
   { top: 0x5fb8ff, bottom: 0xfff4e0, fog: 0xe4f1ff, sun: 0xfff1d0, sunDir: [-0.4, 0.2, -1], hemiG: 0x8fae5a, ground: 'tulips', gy: 0, decor: 'windmills', bounds: [2.5, 16] },
   { top: 0xff6ec7, bottom: 0xd8fbff, fog: 0xf3dcff, sun: 0xffffff, sunDir: [0.1, 0.3, -1], hemiG: 0x7b5cff, ground: 'grid', gy: -14, decor: 'cubes', bounds: [-6, 14], size: 1.6 },
   { top: 0x7fe0e6, bottom: 0xf6fbff, fog: 0xe6f7fb, sun: 0xffffff, sunDir: [0.3, 0.25, -1], hemiG: 0x9fd6e0, ground: 'ice', gy: -16, decor: 'crystals', bounds: [-6, 14] },
+  // 7 The Old Mines, 8 The Server Farm, 9 The Crystal Vault (all-range arena).
+  { top: 0x2b1d14, bottom: 0xc0703a, fog: 0x7a4626, sun: 0xffc86b, sunDir: [0.2, 0.15, -1], hemiG: 0x5a3a1e, ground: null, decor: 'rocks', bounds: [-9, 13], size: 1.4 },
+  { top: 0x14060f, bottom: 0x7a1030, fog: 0x3a0f22, sun: 0xff3d5a, sunDir: [-0.2, 0.2, -1], hemiG: 0x5a0f2a, ground: 'grid', gy: -14, decor: 'cubes', bounds: [-6, 14], size: 2.2 },
+  { top: 0x2a1840, bottom: 0xc9a8ff, fog: 0x8a6ac0, sun: 0xf3e8ff, sunDir: [0.3, 0.3, -1], hemiG: 0x6a4a9a, ground: null, decor: 'crystals', bounds: [-12, 22], size: 1.8 },
 ];
 export const W = { scroll: 0, env: null, envIndex: -1, shakeOn: true, ratio: Math.min(devicePixelRatio, 2) };
 export function setQuality(q) { W.ratio = q === "low" ? 0.6 : q === "medium" ? Math.min(devicePixelRatio, 1) : Math.min(devicePixelRatio, 2); R.setPixelRatio(W.ratio); R.setSize(innerWidth, innerHeight); }
@@ -228,4 +232,15 @@ function makeWindmill() {
   blades.add(new THREE.Mesh(new THREE.SphereGeometry(0.6, 8, 6), MD.M(0x2b2d42)));
   g.userData.blades = blades; g.rotation.y = rnd(-0.6, 0.6);
   return g;
+}
+
+// All-range mode: the world spins around the player when they turn.
+const YAXIS = new THREE.Vector3(0, 1, 0);
+export function turnWorld(a) {
+  if (!a) return;
+  const c = Math.cos(a), s = Math.sin(a);
+  const rot = p => { const x = p.x * c + p.z * s, z = -p.x * s + p.z * c; p.x = x; p.z = z; };
+  for (const d of decor) { rot(d.m.position); d.m.rotation.y += a; }
+  if (streaks) streaks.userData.p.forEach(rot);
+  skyMat.uniforms.sunDir.value.applyAxisAngle(YAXIS, a);
 }

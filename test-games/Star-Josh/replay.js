@@ -76,6 +76,18 @@ export const TROPHIES = [
   ['streak5', '🗓️', 'ON A ROLL', 'Play the daily challenge 5 days in a row.', P => [(P.daily || {}).streak || 0, 5]],
   ['skin', '✨', 'DRESSED TO KILL', 'Earn any gold or glitch skin.', P => [skinCount(P), 1]],
   ['onehit', '💀', 'ONE AND DONE', 'Score 20,000 with the One Hit modifier.', P => [st(P, 'onehitBest'), 20000]],
+  ['secret1', '🌀', 'OFF THE MAP', 'Fly through a secret gate and take a hidden route.', P => [count(P.secrets), 1]],
+  ['secret3', '🗺️', 'CARTOGRAPHER', 'Discover all 3 secret routes.', P => [count(P.secrets), 3]],
+  ['trueEnd', '👁️', 'ROOT ACCESS', 'Take all 3 secret routes in one run and see the true ending.', P => [st(P, 'trueEnd'), 1]],
+  ['arena6', '🛩️', 'ALL-RANGE MODE', 'Reach wave 6 in Arena.', P => [(mb(P, 'arena') || {}).wave || 0, 6]],
+  ['side1', '📖', 'SIDE QUEST', 'Finish a side story.', P => [count(P.sides), 1]],
+  ['side10', '📚', 'BOOKWORM', 'Finish 10 side stories.', P => [count(P.sides), 10]],
+  ['sideAll', '🏛️', 'THE WHOLE SAGA', 'Finish every side story.', P => [count(P.sides), 23]],
+  ['shop1', '🦦', 'VALUED CUSTOMER', 'Buy something from Niffo.', P => [st(P, 'purchases'), 1]],
+  ['shop10', '💸', 'NIFFO\'S FAVOURITE', 'Buy 10 things from Niffo.', P => [st(P, 'purchases'), 10]],
+  ['coop', '👥', 'SQUAD UP', 'Clear a story stage or side story with 2 players.', P => [st(P, 'coopClears'), 1]],
+  ['trio5', '🔺', 'TRIPLE THREAT', 'Beat the first boss in Triple Threat (wave 5).', P => [(mb(P, 'trio') || {}).wave || 0, 5]],
+  ['trio15', '☠️', 'THREE\'S A CROWD', 'Reach wave 15 in Triple Threat.', P => [(mb(P, 'trio') || {}).wave || 0, 15]],
 ];
 export const trophyProgress = (P, t) => { const [v, g] = t[4](P); return { v: Math.min(v, g), g, done: v >= g }; };
 export function checkTrophies(P) {
