@@ -1,7 +1,7 @@
-import { THREE, G, scene, camera, toon, basic, mk, surf, dirOf, tangentTo, orientOn, puff, clamp, $ } from './core.js?v=20261111t';
-import { setVolume } from './audio.js?v=20261111t';
-import { tr } from './lang.js?v=20261111t';
-import { P, keys, pressed, mouse } from './player.js?v=20261111t';
+import { THREE, G, scene, camera, toon, basic, mk, surf, dirOf, tangentTo, orientOn, puff, clamp, $ } from './core.js?v=20261111u';
+import { setVolume } from './audio.js?v=20261111u';
+import { tr } from './lang.js?v=20261111u';
+import { P, keys, pressed, mouse } from './player.js?v=20261111u';
 
 // Quality-of-life layer: a guide arrow to your next goal, light beams on collectibles, dust, a hurt flash,
 // floating biome particles, volume settings and gamepad support.

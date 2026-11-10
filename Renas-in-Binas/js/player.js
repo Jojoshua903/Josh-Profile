@@ -1,8 +1,8 @@
-import { THREE, G, scene, camera, canvas, V3, clamp, damp, puff, anyPerp, orientOn, altOf, dirOf, surf, rOf, tangentTo, $ } from './core.js?v=20261111t';
-import { sfx } from './audio.js?v=20261111t';
-import { buildRenas } from './models.js?v=20261111t';
-import { makeShadow } from './fx.js?v=20261111t';
-import { cutSpeaker, cutTyping } from './cutscene.js?v=20261111t';
+import { THREE, G, scene, camera, canvas, V3, clamp, damp, puff, anyPerp, orientOn, altOf, dirOf, surf, rOf, tangentTo, $ } from './core.js?v=20261111u';
+import { sfx } from './audio.js?v=20261111u';
+import { buildRenas } from './models.js?v=20261111u';
+import { makeShadow } from './fx.js?v=20261111u';
+import { cutSpeaker, cutTyping } from './cutscene.js?v=20261111u';
 
 // Movement feel copied from Otis in Orbit (ui.js FEEL_DEF + main.js), on round planets instead of flat ground.
 export const S = { speed: 7, jump: 12, gravity: 30, air: 0.45 };
@@ -132,10 +132,10 @@ export function updatePlayer(dt, t, ctrl = true) {
   // ---------- input ----------
   let ix = 0, iy = 0;
   if (ctrl) {
-    if (keys.has('KeyW') || keys.has('ArrowUp')) iy += 1;
-    if (keys.has('KeyS') || keys.has('ArrowDown')) iy -= 1;
-    if (keys.has('KeyD') || keys.has('ArrowRight')) ix += 1;
-    if (keys.has('KeyA') || keys.has('ArrowLeft')) ix -= 1;
+    if (keys.has('KeyW')) iy += 1;
+    if (keys.has('KeyS')) iy -= 1;
+    if (keys.has('KeyD')) ix += 1;
+    if (keys.has('KeyA')) ix -= 1;
   }
   const jumpP = ctrl && pressed.has('Space'), jumpH = ctrl && keys.has('Space');
   // Shift = sprint. C = crouch: C + Space while running is the long jump. In the air, Shift or C = ground pound.
@@ -469,8 +469,10 @@ export function updateCamera(dt, t, opts = {}) {
     mouse.dx = mouse.dy = 0; cam.lastIn = t;
   }
   // keys to turn the camera too
-  if (keys.has('KeyQ')) { cam.fwd.applyAxisAngle(up, 2.2 * dt); cam.lastIn = t; }
-  if (keys.has('KeyR')) { cam.fwd.applyAxisAngle(up, -2.2 * dt); cam.lastIn = t; }
+  if (keys.has('KeyQ') || keys.has('ArrowLeft')) { cam.fwd.applyAxisAngle(up, 2.2 * dt); cam.lastIn = t; }
+  if (keys.has('KeyR') || keys.has('ArrowRight')) { cam.fwd.applyAxisAngle(up, -2.2 * dt); cam.lastIn = t; }
+  if (keys.has('ArrowUp')) { cam.pitch = clamp(cam.pitch + 1.1 * dt, -0.02, 1.2); cam.lastIn = t; }
+  if (keys.has('ArrowDown')) { cam.pitch = clamp(cam.pitch - 1.1 * dt, -0.02, 1.2); cam.lastIn = t; }
   // Like Mario: when you run and haven't touched the camera for a bit, it slowly swings behind you.
   const hs = P.vt.length();
   if (t - cam.lastIn > 1.4 && hs > 2 && P.pound === 0) {
