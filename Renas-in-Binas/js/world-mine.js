@@ -1,8 +1,8 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261111l';
-import { fbm } from './world.js?v=20261111l';
-import { buildLars, buildLantern, textBoard, buildLocal, buildPickaxe } from './models.js?v=20261111l';
-import { Gruis } from './bosses.js?v=20261111l';
-import { addParkour } from './parkour.js?v=20261111l';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261111q';
+import { fbm } from './world.js?v=20261111q';
+import { buildLars, buildLantern, textBoard, buildLocal, buildPickaxe } from './models.js?v=20261111q';
+import { Gruis } from './bosses.js?v=20261111q';
+import { addParkour } from './parkour.js?v=20261111q';
 
 // World 2: DE DIEPE MIJN. Lars' mining planet, full of crystals and rails. Boss: Gruis the ore golem.
 export function buildMine(ctx) {
@@ -115,21 +115,21 @@ export function buildMine(ctx) {
     id: 'kiki', name: 'Kiki', who: 'KIKI', dir: LL(14, 22), bubbleY: 1.7,
     model: buildLocal({ s: 0.55, skin: 0xf0c8a0, shirt: 0xff7ad8, pants: 0x5a3a20, hair: 0xd9a35a, hat: 'beanie', capC: 0x5ef2e0 }),
     anim: (dt, t, n) => { n.model.r.position.y = Math.max(0, Math.sin(t * 5)) * 0.06; n.model.arms[0].rotation.z = -0.4 - Math.max(0, Math.sin(t * 5)) * 0.5; },
-    task: { type: 'stomp', enemy: 'kever', at: LL(-42, 30), n: 3, spread: 5, found: 'They’re gone! The mushrooms are glowing happy! Come back!' },
+    task: { type: 'duel', game: 'race', to: LL(-42, 30), speed: 7.4, color: 0xff7ad8, winTitle: 'RACE WON!', found: 'You beat me to the mushrooms! Come get your star shard!', lost: 'I WON! Mushroom power! Talk to me if you want to race again.' },
     first: [
       ['KIKI', 'Shh! Don’t step on the mushrooms! I grow them from spores Lars brought from the Paddenstoelenbos.'],
-      ['KIKI', 'They glow, so the mine isn’t so dark. But Kristalkevers keep sneaking into my garden and munching them!'],
-      ['KIKI', 'Three of them are in there right now, past the rails. Munch munch munch. Rude!'],
-      ['RÊNAS', 'Their shells are hard. I’ll stomp twice.'],
-      ['KIKI', 'Or ground pound them! Save my garden and you get my star shard. It’s my best one. My only one.'],
+      ['KIKI', 'I’m the fastest kid in the whole mine. Lars says that’s because I’m the ONLY kid in the whole mine.'],
+      ['RÊNAS', 'I’m pretty fast too. I have rocket boots.'],
+      ['KIKI', 'Prove it! Race me to my mushroom garden, past the rails. The pink flag!'],
+      ['KIKI', 'Hold Shift to sprint, jump over the rails. Beat me and you get my star shard. It’s my best one. My only one.'],
     ],
-    progress: (l) => [['KIKI', `${l.left} Kristalkevers still munching in my garden, past the rails! Stomp twice, or ground pound!`]],
+    progress: () => [['KIKI', 'Again? Okay! To the pink flag, past the rails. Ready… steady…']],
     done: [
-      ['KIKI', 'My mushrooms are safe! Look, they’re glowing happy!'],
+      ['KIKI', 'No way! You’re faster than a Kristalkever on a minecart!'],
       ['KIKI', 'Here’s the star shard. Don’t lose it. Lars loses everything. Once he lost his hat while it was ON his head.'],
     ],
-    after: [['KIKI', 'When I grow up I want to be a mushroom. Lars says that’s not a job. I say it is.']],
-    bubbles: { new: ['Shh! Mushrooms!', 'Help!', 'Munch munch… rude!'], progress: ['Past the rails!', 'Stomp twice!', 'My poor mushrooms…'], done: ['They glow again!', 'Thank you!!', 'Mushroom power!'] },
+    after: [['KIKI', 'Rematch tomorrow. I’m going to eat a LOT of mushrooms first.']],
+    bubbles: { new: ['Shh! Mushrooms!', 'Race me!', 'I’m SO fast!'], progress: ['Again?', 'To the pink flag!', 'Ready… steady…'], done: ['You’re fast!', 'Thank you!!', 'Mushroom power!'] },
   });
   // Kiki's glowing mushroom garden
   for (let i = 0; i < 9; i++) {

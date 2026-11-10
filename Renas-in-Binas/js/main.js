@@ -1,29 +1,30 @@
-import { THREE, G, renderer, scene, camera, ambient, hemi, sun, V3, clamp, damp, surf, orientOn, anyPerp, frameDir, $, toast, banner, fade, wait, setPrompt, updateParticles, clearParticles, puff } from './core.js?v=20261111l';
-import { initAudio, music, sfx } from './audio.js?v=20261111l';
-import { P, model, spawnPlayer, updatePlayer, updateCamera, drawHearts, pressed, consumePressed, requestLock, locked, mouse, squash, cam, healPlayer, hurtPlayer } from './player.js?v=20261111l';
-import { play, advance, skip, updateCut, cutActive, showTitle } from './cutscene.js?v=20261111l';
-import { buildPhonk } from './world-phonk.js?v=20261111l';
-import { buildMine } from './world-mine.js?v=20261111l';
-import { buildStadium } from './world-stadium.js?v=20261111l';
-import { buildIce } from './world-ice.js?v=20261111l';
-import { buildLuck } from './world-luck.js?v=20261111l';
-import { buildJungle } from './world-jungle.js?v=20261111l';
-import { buildLava } from './world-lava.js?v=20261111l';
-import { buildDesert } from './world-desert.js?v=20261111l';
-import { buildMoon } from './world-moon.js?v=20261111l';
-import { buildSea } from './world-sea.js?v=20261111l';
-import { buildSpook } from './world-spook.js?v=20261111l';
-import { buildWerk } from './world-werk.js?v=20261111l';
-import { buildStuiter, buildWissel, buildSprong } from './world-park.js?v=20261111l';
-import { buildTempel, GOD_BOSS, HALL, PANTHEONS, BINDS, TIERS } from './world-tempel.js?v=20261111l';
-import { buildIntro, playIntro, playFinale, menuShot } from './story.js?v=20261111l';
-import { buildGroteKern } from './models.js?v=20261111l';
-import { updateExtras, pollPad } from './extras.js?v=20261111l';
-import { tr, LANG, setLang, applyHTML, onLang } from './lang.js?v=20261111l';
-import { initDev, devTick } from './dev.js?v=20261111l';
-import { initAch, checkAch, unlockAch, buildAchPanel } from './achievements.js?v=20261111l';
-import { initShop, openShop, closeShop, applyStyle, shopMaxHp, shopTick } from './shop.js?v=20261111l';
-import { initGalaxy, openGalaxy, closeGalaxy, galaxyTick, galaxyOpen, galaxyIdx } from './galaxy.js?v=20261111l';
+import { THREE, G, renderer, scene, camera, ambient, hemi, sun, V3, clamp, damp, surf, orientOn, anyPerp, frameDir, $, toast, banner, fade, wait, setPrompt, updateParticles, clearParticles, puff } from './core.js?v=20261111q';
+import { initAudio, music, sfx } from './audio.js?v=20261111q';
+import { P, model, spawnPlayer, updatePlayer, updateCamera, drawHearts, pressed, consumePressed, requestLock, locked, mouse, squash, cam, healPlayer, hurtPlayer } from './player.js?v=20261111q';
+import { play, advance, skip, updateCut, cutActive, showTitle } from './cutscene.js?v=20261111q';
+import { sysOf, sysName, addSystemSun } from './systems.js?v=20261111q';
+import { buildPhonk } from './world-phonk.js?v=20261111q';
+import { buildMine } from './world-mine.js?v=20261111q';
+import { buildStadium } from './world-stadium.js?v=20261111q';
+import { buildIce } from './world-ice.js?v=20261111q';
+import { buildLuck } from './world-luck.js?v=20261111q';
+import { buildJungle } from './world-jungle.js?v=20261111q';
+import { buildLava } from './world-lava.js?v=20261111q';
+import { buildDesert } from './world-desert.js?v=20261111q';
+import { buildMoon } from './world-moon.js?v=20261111q';
+import { buildSea } from './world-sea.js?v=20261111q';
+import { buildSpook } from './world-spook.js?v=20261111q';
+import { buildWerk } from './world-werk.js?v=20261111q';
+import { buildStuiter, buildWissel, buildSprong } from './world-park.js?v=20261111q';
+import { buildTempel, GOD_BOSS, HALL, PANTHEONS, BINDS, TIERS } from './world-tempel.js?v=20261111q';
+import { buildIntro, playIntro, playFinale, menuShot } from './story.js?v=20261111q';
+import { buildGroteKern } from './models.js?v=20261111q';
+import { updateExtras, pollPad } from './extras.js?v=20261111q';
+import { tr, LANG, setLang, applyHTML, onLang } from './lang.js?v=20261111q';
+import { initDev, devTick } from './dev.js?v=20261111q';
+import { initAch, checkAch, unlockAch, buildAchPanel } from './achievements.js?v=20261111q';
+import { initShop, openShop, closeShop, applyStyle, shopMaxHp, shopTick } from './shop.js?v=20261111q';
+import { initGalaxy, openGalaxy, closeGalaxy, galaxyTick, galaxyOpen, galaxyIdx } from './galaxy.js?v=20261111q';
 const nl = () => LANG.cur === 'nl';
 
 const BUILDERS = [buildPhonk, buildMine, buildStadium, buildIce, buildLuck, buildJungle, buildLava, buildDesert, buildMoon, buildSea, buildSpook, buildWerk, buildStuiter, buildWissel, buildSprong, buildTempel];
@@ -128,6 +129,7 @@ function hud() {
   const w = cur.w, q = $('quest');
   if (!w || (!w.quest && !w.hudText)) { q.style.display = 'none'; return; }
   q.style.display = cur.onArena ? 'none' : 'flex';
+  if (w.duel) { q.innerHTML = w.duel.hud(nl()); return; }   // a duel with a local: the score
   if (w.hudText) { q.innerHTML = w.hudText(nl()); return; }
   const fs = w.friendState ? w.friendState() : 'new';
   let txt;
@@ -153,6 +155,7 @@ function applyLook(w, arena) {
 const showHud = (v) => document.body.classList.toggle('ingame', v);
 
 // ---------- loading worlds ----------
+let lastSys = null;   // the solar system of the planet you were on
 async function loadWorld(idx) {
   planetT0 = save.time;
   G.state = 'loading';
@@ -163,6 +166,7 @@ async function loadWorld(idx) {
   clearParticles();
   $('boss').classList.remove('show');
   const w = BUILDERS[idx](ctx);
+  addSystemSun(w, idx);
   G.world = w; cur.w = w; cur.idx = idx; cur.onArena = false;
   save.last = idx; persist();
   w.boss.onWin = () => bossWon(w);
@@ -175,6 +179,9 @@ async function loadWorld(idx) {
   await fade(false, 500);
   const st = ws(w);
   if (!st.visited) { st.visited = true; persist(); (w.arrive || arrival)(w); } else showTitle(w.title, w.sub);
+  // flying into another solar system: say which one
+  const sy = sysOf(idx);
+  if (sy !== lastSys) { if (lastSys) setTimeout(() => toast(nl() ? `☀️ Welkom in ${sy.nl}!` : `☀️ Welcome to ${sy.en}!`, 3200), 1500); lastSys = sy; }
   setTimeout(() => G.state === 'play' && !cutActive() && G.toastOnce('dash', '☄️ New move: press X for the Komeetduik, Rênas’ jetpack dash. Once per jump, and a stomp gives it back!'), 5000);
 }
 const ARRIVE = {
@@ -409,6 +416,7 @@ async function godLoad() {
   if (G.world) G.world.destroy();
   clearParticles(); $('boss').classList.remove('show'); setPrompt('');
   const w = BUILDERS[idx](ctx);
+  addSystemSun(w, idx);
   G.world = w; cur.w = w; cur.idx = idx; cur.onArena = true;
   const b = w.boss;
   if (g.kind === 'hall' && g.tier) { b.maxHp += 1; b.hp = b.maxHp; }
@@ -601,7 +609,7 @@ function delSlot(n) {
 }
 function panel(name) { if (name !== 'planets') closeGalaxy(); for (const p of document.querySelectorAll('.panel')) p.classList.toggle('show', p.dataset.p === name); $('menu').scrollTop = 0; }
 function buildPlanetCards() {
-  const list = $('planetList'); list.innerHTML = ''; planetItems = [];
+  const list = $('planetList'); list.innerHTML = ''; planetItems = []; let lastS = null;
   ORDER.concat(BONUS, TEMPLE).forEach((i) => { const [nm, friend, col] = NAMES[i];
     const open = (i === BONUS || i === TEMPLE ? save.finale : step(i) <= save.unlocked) && save.introSeen;
     const rares = Object.keys(save.rares).filter((k) => k.startsWith(['milo', 'lars', 'nathan', 'deniz', 'fionn', 'reshman', 'lotte', 'farah', 'kosmo', 'sami', 'saar', 'werk', 'stuiter', 'wissel', 'sprong', 'tempel'][i])).length;
@@ -609,20 +617,28 @@ function buildPlanetCards() {
     b.innerHTML = `<span class="orb" style="--c:${col}"></span><span class="pt"><b>${nm}</b><small>${open ? `${nl() ? 'met' : 'with'} ${friend} · ⚙️ ${rares}/${RARES_PER[i]}${save.cleared[i] ? ` · ✅ ${save.tries[i] ? save.tries[i] + (save.tries[i] === 1 ? (nl() ? ' poging' : ' try') : (nl() ? ' pogingen' : ' tries')) : ''}` : ''}` : i === BONUS || i === TEMPLE ? (nl() ? "🔒 bonus · speel eerst de finale" : "🔒 bonus · beat the finale first") : (nl() ? '🔒 op slot' : '🔒 locked')}</small></span>`;
     if (i === TEMPLE && open) b.querySelector('small').textContent = godCard();
     if (open) b.onclick = () => { sfx.select(); closeOverlays(); loadWorld(i); };
-    planetItems.push({ idx: i, name: nm, col, open, info: b.querySelector('small').innerHTML, go: () => { closeOverlays(); loadWorld(i); } });
+    const sy = sysOf(i); if (sy !== lastS) { list.appendChild(sysHead(sy, open)); lastS = sy; }
+    planetItems.push({ idx: i, name: nm, col, open, sys: sy, info: b.querySelector('small').innerHTML, go: () => { closeOverlays(); loadWorld(i); } });
     list.appendChild(b);
   });
+}
+// a heading with the solar system's name and its sun, above its planets in a list
+function sysHead(sy, known) {
+  const h = document.createElement('div'); h.className = 'sysHead'; h.style.setProperty('--sun', sy.sun);
+  h.innerHTML = `<span class="sun"></span>${known ? sysName(sy, nl()) : (nl() ? '🔒 Onbekend zonnestelsel' : '🔒 Unknown solar system')}`;
+  return h;
 }
 let planetItems = [];   // the same planets, for the turning-planet picker (galaxy.js)
 function closeOverlays() { closeGalaxy(); closeShop(); $('menu').classList.remove('show'); $('travel').classList.remove('show'); $('pause').classList.remove('show'); $('god').classList.remove('show'); G.paused = false; }
 function openTravel() {
   G.paused = true; if (document.pointerLockElement) document.exitPointerLock();
-  const list = $('travelList'); list.innerHTML = '';
+  const list = $('travelList'); list.innerHTML = ''; let lastS = null;
   ORDER.concat(BONUS, TEMPLE).forEach((i) => { const [nm, friend, col] = NAMES[i];
     if (i === BONUS || i === TEMPLE ? !save.finale : step(i) > save.unlocked) return;
     const b = document.createElement('button'); b.className = 'planet';
     b.innerHTML = `<span class="orb" style="--c:${col}"></span><span class="pt"><b>${nm}</b><small>${i === cur.idx ? (nl() ? 'je bent hier' : 'you are here') : `${nl() ? 'vlieg naar' : 'fly to'} ${friend}`}</small></span>`;
     b.onclick = () => { sfx.select(); closeOverlays(); if (i !== cur.idx) loadWorld(i); };
+    const sy = sysOf(i); if (sy !== lastS) { list.appendChild(sysHead(sy, true)); lastS = sy; }
     list.appendChild(b);
   });
   $('travel').classList.add('show');

@@ -46,6 +46,8 @@ function noise(dur, vol, freq = 1200, type = 'lowpass', when = 0, dest = null, q
   s.start(t0, Math.random() * 0.5); s.stop(t0 + dur + 0.03);
 }
 
+// the two loudest pitches in each vowel: these make a mumble sound like a voice
+const VOWELS = { a: [800, 1250], e: [480, 1950], i: [320, 2450], o: [520, 900], u: [340, 760] };
 export const sfx = {
   jump(n = 1) { tone(320 + n * 80, 0.15, 'square', 0.08, 620 + n * 170); },
   airJump() { noise(0.18, 0.2, 1800, 'bandpass'); tone(500, 0.14, 'triangle', 0.08, 1100); },
@@ -66,6 +68,33 @@ export const sfx = {
   boom() { noise(0.6, 0.45, 260); tone(70, 0.6, 'sine', 0.45, 30); },
   warn() { tone(880, 0.09, 'square', 0.07); tone(880, 0.09, 'square', 0.07, null, 0.15); },
   blip(p = 520) { tone(p * (0.95 + Math.random() * 0.1), 0.035, 'square', 0.025); },
+  // a talking mumble, one syllable at a time (like Animal Crossing). v is the speaker's voice (see voiceOf in cutscene.js).
+  // The tone goes through two vowel filters so it sounds like a, e, i, o or u instead of a beep,
+  // and the same letter always gets the same note, so a word sounds the same every time it is said.
+  mumble(v, ch, ask) {
+    if (!ac) return;
+    const t0 = ac.currentTime, d = v.d, c = (ch || 'a').toLowerCase();
+    const code = c.charCodeAt(0) || 97;
+    const vow = 'aeiou'.includes(c) ? c : 'aeiou'[code % 5];
+    const f = v.p * 2 ** ((((code * 7) % 9) - 4) * v.range / 12);
+    const o = ac.createOscillator(); o.type = v.w;
+    o.frequency.setValueAtTime(f * 1.05, t0);
+    o.frequency.exponentialRampToValueAtTime(f * (ask ? 1.4 : 0.97), t0 + d);   // a question goes up at the end
+    if (v.vib) {
+      const l = ac.createOscillator(), lg = ac.createGain();
+      l.frequency.value = v.vib; lg.gain.value = f * 0.07; l.connect(lg); lg.connect(o.frequency); l.start(t0); l.stop(t0 + d + 0.05);
+    }
+    const vol = 0.08 * v.vol, g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + 0.008);
+    g.gain.setValueAtTime(vol, t0 + d * 0.55); g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+    const [f1, f2] = VOWELS[vow], mix = ac.createGain(), dry = ac.createGain();
+    mix.gain.value = 2.4; dry.gain.value = v.dry;
+    for (const [fr, q] of [[f1, 5], [f2, 7]]) { const b = ac.createBiquadFilter(); b.type = 'bandpass'; b.frequency.value = fr * v.fs; b.Q.value = q; o.connect(b); b.connect(mix); }
+    o.connect(dry); dry.connect(g); mix.connect(g); g.connect(sfxGain);
+    o.start(t0); o.stop(t0 + d + 0.05);
+    if (v.growl) noise(d, 0.05 * v.growl, f1 * v.fs, 'bandpass', 0, null, 3);     // rough, raspy voices
+    if (v.click) tone(2600, 0.014, 'square', 0.03);                               // robots and clocks tick while they talk
+  },
   launch() { noise(1.2, 0.25, 600, 'lowpass'); tone(200, 1.2, 'sawtooth', 0.06, 1200); },
   whoosh() { noise(0.5, 0.2, 1400, 'bandpass', 0, null, 1.5); },
   select() { tone(660, 0.06, 'square', 0.07); tone(990, 0.1, 'square', 0.07, null, 0.05); },

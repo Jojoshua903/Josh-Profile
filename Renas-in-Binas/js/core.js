@@ -1,5 +1,9 @@
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
-import { tr } from './lang.js?v=20261111l';
+// three.js (0.180.0): first from jsDelivr, which works on any website (like joshibrahim.nl).
+// Inside Dia that one is blocked, so then it comes from Dia's own copy. The rest of the game waits until one has loaded.
+let THREE;
+try { THREE = await import('https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js'); }
+catch (e) { THREE = await import('https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js'); }
+import { tr } from './lang.js?v=20261111q';
 export { THREE };
 
 // Shared state, so modules can reach each other at runtime without import cycles.

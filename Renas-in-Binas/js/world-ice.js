@@ -1,8 +1,8 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261111l';
-import { fbm } from './world.js?v=20261111l';
-import { buildPingo, buildDeniz, buildAuraCrystal, buildScarf, textBoard, buildLocal, buildTrinket } from './models.js?v=20261111l';
-import { Deniz } from './bosses.js?v=20261111l';
-import { addParkour, buildBeacon } from './parkour.js?v=20261111l';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261111q';
+import { fbm } from './world.js?v=20261111q';
+import { buildPingo, buildDeniz, buildAuraCrystal, buildScarf, textBoard, buildLocal, buildTrinket } from './models.js?v=20261111q';
+import { Deniz } from './bosses.js?v=20261111q';
+import { addParkour, buildBeacon } from './parkour.js?v=20261111q';
 
 // World 3 on the route: HET HERTOGDOM IJS. A frozen planet ruled by Deniz, the Duke of Ice, who has way too much aura.
 // Boss: Deniz himself, in the Aura Throne Room.
@@ -107,21 +107,21 @@ export function buildIce(ctx) {
     id: 'henk', name: 'Henk', who: 'HENK', dir: LL(12, 26), bubbleY: 1.9,
     model: buildLocal({ s: 0.7, skin: 0xf0c8a0, shirt: 0x2a6ab0, pants: 0x3a3e4e, hat: 'beanie', capC: 0xffa23a, beard: 0xf4f1ea, shoes: 0x5a3a20 }),
     anim: (dt, t, n) => { n.model.arms[1].rotation.x = -1.0 + Math.sin(t * 1.2) * 0.1; n.model.head.rotation.x = Math.sin(t * 0.7) * 0.1; },
-    task: { type: 'stomp', enemy: 'slider', at: LL(-36, 44), n: 3, spread: 5, found: 'Quiet again! Come back, lad, I’ve got something for you!' },
+    task: { type: 'duel', game: 'race', to: LL(-36, 44), speed: 7.2, color: 0xffa23a, winTitle: 'RACE WON!', found: 'You beat me to my fishing hole! Come back, lad, I’ve got something for you!', lost: 'Ha! Forty years on this ice, lad. Talk to me if you want another go.' },
     first: [
       ['HENK', 'Shh. The fish are sleeping. …They WERE sleeping.'],
-      ['HENK', 'Henk. Ice fisher. Forty years on this lake. Then the Duke made those penguins his royal guards.'],
-      ['HENK', 'Three IJspinguïns are belly-sliding around my fishing hole, past the pines. They scare off every fish on the planet.'],
-      ['RÊNAS', 'I can stomp penguins. Wait. Is that allowed?'],
-      ['HENK', 'Grumpy guard penguins? Yes. Step aside when they slide, then jump on them. Clear them out and my star shard is yours.'],
+      ['HENK', 'Henk. Ice fisher. Forty years on this lake. In my day I won the Big Ice Race every winter.'],
+      ['RÊNAS', 'Every winter? That’s a lot of winters.'],
+      ['HENK', 'Forty, lad. Want to see if the old man still has it? Race me to my fishing hole, past the pines. Orange flag.'],
+      ['HENK', 'The ice is slippery, so mind your feet. Beat me and the star shard I pulled out of the ice is yours.'],
     ],
-    progress: (l) => [['HENK', `${l.left} IJspinguïns left at my fishing hole, past the pines. They slide straight, so step aside first.`]],
+    progress: () => [['HENK', 'Another race? To my fishing hole, past the pines. Mind the ice.']],
     done: [
-      ['HENK', 'Quiet again. Listen to that. …That’s a fish. Snoring.'],
+      ['HENK', 'Beaten by a kid in a fishbowl. Well done, lad. Well done.'],
       ['HENK', 'Here’s your star shard. Pulled it out of the ice this morning. Thought it was a very shiny fish.'],
     ],
     after: [['HENK', 'Biggest fish I ever caught? A frozen pizza. Still ate it.']],
-    bubbles: { new: ['Shh…', 'The fish are sleeping.', '*sigh*'], progress: ['Step aside, then stomp!', 'Those penguins…', 'My poor fish.'], done: ['Peace and quiet.', 'Good lad.', 'Shh, the fish snore.'] },
+    bubbles: { new: ['Shh…', 'The fish are sleeping.', 'Fancy a race?'], progress: ['Another race?', 'Mind the ice!', 'Orange flag, lad.'], done: ['Well done, lad.', 'Fast feet.', 'Shh, the fish snore.'] },
   });
   // Henk's fishing hole
   { const hole = new THREE.Group(); mk(new THREE.CircleGeometry(1.1, 24), basic(0x1a4a7a), 0, 0.03, 0, hole, 0).rotation.x = -Math.PI / 2; mk(new THREE.TorusGeometry(1.15, 0.12, 6, 24), toon(0xe8fbff), 0, 0.05, 0, hole, 0).rotation.x = Math.PI / 2; w.put(pl, hole, LL(-36, 44), 0); }

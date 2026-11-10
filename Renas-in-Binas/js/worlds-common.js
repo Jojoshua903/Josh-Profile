@@ -1,11 +1,12 @@
-import { THREE, G, V3, toon, basic, mk, LL, frameDir, surf, clamp, tangentTo, stepDir, placeOn, banner, toast, puff } from './core.js?v=20261111l';
-import { sfx } from './audio.js?v=20261111l';
-import { P, hurtPlayer, bouncePlayer } from './player.js?v=20261111l';
-import { SurfaceWall } from './fx.js?v=20261111l';
-import { World, addStars, addBackdropPlanet } from './world.js?v=20261111l';
-import { play, shot } from './cutscene.js?v=20261111l';
-import { buildRocket, buildLaunchStar, textBoard } from './models.js?v=20261111l';
+import { THREE, G, V3, toon, basic, mk, LL, frameDir, surf, clamp, tangentTo, stepDir, placeOn, banner, toast, puff } from './core.js?v=20261111q';
+import { sfx } from './audio.js?v=20261111q';
+import { P, hurtPlayer, bouncePlayer } from './player.js?v=20261111q';
+import { SurfaceWall } from './fx.js?v=20261111q';
+import { World, addStars, addBackdropPlanet } from './world.js?v=20261111q';
+import { play, shot } from './cutscene.js?v=20261111q';
+import { buildRocket, buildLaunchStar, textBoard } from './models.js?v=20261111q';
 
+import { startDuel } from './duels.js?v=20261111q';
 export { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, G, P, sfx, play, shot };
 export const slerpDir = (a, b, k) => a.clone().lerp(b, k).normalize();
 
@@ -140,7 +141,7 @@ export { buildLaunchStar, tangentTo, stepDir, placeOn, banner, toast };
 // ---------- the locals: small side quests ----------
 // Everyone you help gives you a star shard. The Launch Star only wakes up when the friend has their items AND every shard is in.
 // o: { id, name, who, model, dir, yaw, bubbleY, anim, task, first, progress(loc), done, after, bubbles }
-// task: { type: 'fetch', dir, alt, model, banner } or { type: 'stomp', enemy, at, n, spread }
+// task: { type: 'fetch', dir, alt, model, banner } or { type: 'stomp', enemy, at, n, spread } or { type: 'duel', game, ... } (see duels.js)
 export const localsDone = (w) => !w.locals || w.locals.every((l) => l.state() === 'done');
 export const localsLeft = (w) => (w.locals || []).filter((l) => l.state() !== 'done').map((l) => l.name);
 export function setupLocal(w, ctx, o) {
@@ -162,9 +163,16 @@ export function setupLocal(w, ctx, o) {
     mark.visible = s === 'new' || s === 'got';
     mark.position.y = (o.bubbleY || 2.2) + 0.35 + Math.sin(t * 3) * 0.1;
     mm.color.setHex(s === 'got' ? 0x5ef2e0 : 0xffd23a);
+    if (loc.duel && loc.run) loc.run.update(dt);
   });
   const finish = (msg) => { set('got'); sfx.quest(); G.radio(o.who, msg); };
   const begin = () => {
+    if (T.type === 'duel') {
+      if (loc.duel) return;
+      w.hudRefresh = ctx.hud;
+      loc.run = startDuel(w, loc, T, () => finish(T.found || 'You beat me! Come get your star shard!'), (text) => { ctx.hud(); if (text) G.radio(o.who, text); });
+      return;
+    }
     if (T.type === 'fetch') {
       if (loc.item) return;
       loc.item = w.addPickup(w.main, T.dir, T.alt, 'side', { model: T.model, radius: 1.4, spin: 1.6, onTake: () => { banner(T.banner, `Bring it to ${o.name}`, '#9fe8ff'); finish(T.found || 'You found it! Come back to me!'); } });
@@ -186,17 +194,17 @@ export function setupLocal(w, ctx, o) {
   npc.lines = () => o.bubbles[S() === 'done' ? 'done' : S() === 'new' ? 'new' : 'progress'];
   w.addBubble(npc, npc.bubbleY);
   w.addInteract({
-    planet: w.main, pos: () => npc.g.position, radius: 2.6,
+    planet: w.main, pos: () => npc.g.position, radius: 2.6, cond: () => !loc.duel,
     prompt: () => `<kbd>E</kbd> talk to ${o.name}`,
     use: () => {
       const s = S();
-      if (s === 'new') play(steps(o.first), () => { set('progress'); begin(); toast('Your goal is at the top of the screen!', 2400); });
-      else if (s === 'progress') play(steps(o.progress(loc)), () => {});
+      if (s === 'new') play(steps(o.first), () => { set('progress'); begin(); if (T.type !== 'duel') toast('Your goal is at the top of the screen!', 2400); });
+      else if (s === 'progress') play(steps(o.progress(loc)), () => { if (T.type === 'duel') begin(); });   // a duel: talk again for a rematch
       else if (s === 'got') play(steps(o.done), () => { set('done'); ctx.gotShard(w, o.id); });
       else play(steps(o.after), () => {});
     },
   });
-  if (S() === 'progress') begin();
+  if (S() === 'progress' && T.type !== 'duel') begin();
   return loc;
 }
 

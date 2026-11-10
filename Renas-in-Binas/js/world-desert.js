@@ -1,8 +1,9 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, rock, palm, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, quicksand, gusts, addMore } from './worlds-common.js?v=20261111l';
-import { fbm } from './world.js?v=20261111l';
-import { buildFarah, buildCamel, buildScarab, buildScroll, textBoard, buildLocal, buildTrinket } from './models.js?v=20261111l';
-import { Gruizel } from './bosses.js?v=20261111l';
-import { addParkour, buildBeacon } from './parkour.js?v=20261111l';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, rock, palm, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, quicksand, gusts, addMore } from './worlds-common.js?v=20261111q';
+import { fbm } from './world.js?v=20261111q';
+import { buildFarah, buildCamel, buildScarab, buildScroll, textBoard, buildLocal, buildTrinket } from './models.js?v=20261111q';
+import { Gruizel } from './bosses.js?v=20261111q';
+import { addParkour, buildBeacon } from './parkour.js?v=20261111q';
+import { duelModels } from './duels.js?v=20261111q';
 
 // World 7 on the route: DUINENRIJK. A desert planet with a pyramid, an obelisk and an oasis.
 // New here: quicksand slows you down, sandstorms push you around, and cacti prick.
@@ -114,17 +115,18 @@ export function buildDesert(ctx) {
     id: 'tess', name: 'Tess', who: 'TESS', dir: LL(-30, 196), bubbleY: 1.8,
     model: buildLocal({ s: 0.68, skin: 0xc8946a, shirt: 0xe03a5a, pants: 0x3a3e4e, hair: 0x2b1a10, hat: 'bun', shoes: 0xfbf7ef }),
     anim: (dt, t, n) => { n.model.arms[1].rotation.x = -1.0 + Math.sin(t * 4) * 0.4; n.model.arms[0].rotation.z = -0.5; },
-    task: { type: 'stomp', enemy: 'scorpion', at: LL(-40, 220), n: 3, spread: 6, found: 'The scorpions are gone! Come back, I’ve got something for you!' },
+    task: { type: 'duel', game: 'grab', n: 13, time: 25, speed: 5.4, color: 0xffe14a, model: duelModels.lemon, winTitle: 'LEMON CHAMP!', found: 'You got more lemons than me! Come back, I’ve got something for you!', lost: 'More lemons for me! Talk to me if you want a rematch!', tie: 'A tie! The lemons can’t decide. Talk to me for a rematch!' },
     first: [
       ['TESS', 'Hi! I’m Tess. I run the lemonade stand at the oasis. Best lemonade in the desert. Only lemonade in the desert.'],
-      ['TESS', 'But three scorpions moved in next to my stand, past the big rocks. Nobody dares to come and buy anything.'],
-      ['RÊNAS', 'Scorpions? I’ll stomp them!'],
-      ['TESS', 'Jump on their backs, not their tails! Clear them out and you get my star shard. And a free lemonade.'],
+      ['TESS', 'Oh no, a sandstorm blew my lemons everywhere! …Okay, I threw them. It’s a game.'],
+      ['TESS', 'Lemon Rush! We both grab lemons. Whoever has the most when time’s up wins.'],
+      ['RÊNAS', 'I’m going to win this.'],
+      ['TESS', 'Everyone says that. Beat me and you get my star shard. And a free lemonade.'],
     ],
-    progress: (l) => [['TESS', `${l.left} scorpions left by my stand, past the big rocks. Jump on their backs!`]],
-    done: [['TESS', 'They’re gone! Customers, here I come!'], ['TESS', 'Here’s the star shard, and a lemonade. …The lemonade is warm. It’s a desert.']],
+    progress: () => [['TESS', 'Lemon Rush, round two! I already threw them. Go go go!']],
+    done: [['TESS', 'You beat me at Lemon Rush! Nobody beats me at Lemon Rush!'], ['TESS', 'Here’s the star shard, and a lemonade. …The lemonade is warm. It’s a desert.']],
     after: [['TESS', 'Lemonade! Warm lemonade! Get your warm lemonade!']],
-    bubbles: { new: ['Lemonade!', 'Scorpions!', 'Hi!'], progress: ['Past the big rocks!', 'Not the tails!', 'Jump on their backs!'], done: ['Thank you!', 'Warm lemonade!', 'Customers!'] },
+    bubbles: { new: ['Lemonade!', 'Lemon Rush?', 'Hi!'], progress: ['Round two!', 'Grab the lemons!', 'Go go go!'], done: ['Thank you!', 'Warm lemonade!', 'Lemon champ!'] },
   });
 
   // ---------- decor: cacti (they prick!), palms at the oasis, rocks, bones ----------

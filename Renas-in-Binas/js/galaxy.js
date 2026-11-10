@@ -1,5 +1,5 @@
-import { THREE, $, clamp } from './core.js?v=20261111l';
-import { sfx } from './audio.js?v=20261111l';
+import { THREE, $, clamp } from './core.js?v=20261111q';
+import { sfx } from './audio.js?v=20261111q';
 
 // THE PLANET PICKER, like the galaxy map in Mario Galaxy: one planet at a time, slowly turning, and you
 // scroll left and right through all of them (arrows, mouse wheel, A/D or the arrow keys, or swipe).
@@ -82,10 +82,18 @@ function show(i, dir) {
   $('galGo').classList.toggle('locked', !it.open);
   $('galLock').style.display = it.open ? 'none' : 'flex';
   $('galCv').style.filter = it.open ? '' : 'brightness(0.08) saturate(0)';   // a locked planet is a dark silhouette
+  // which solar system, and where in it: the planet's sun glows in the corner of the stage
+  const sy = it.sys, known = sy && items.some((x) => x.sys === sy && x.open);
+  if (sy) {
+    const mine = items.filter((x) => x.sys === sy);
+    $('galSys').innerHTML = `<span class="sun"></span>${known ? (nl ? sy.nl : sy.en) : (nl ? 'Onbekend zonnestelsel' : 'Unknown solar system')} · ${mine.indexOf(it) + 1}/${mine.length}`;
+    $('galStage').style.setProperty('--sun', sy.sun); $('galSys').style.setProperty('--sun', sy.sun);
+  }
   const dots = $('galDots'); dots.innerHTML = '';
   items.forEach((x, k) => {
     const d = document.createElement('i'); d.style.setProperty('--c', x.col);
     if (!x.open) d.className = 'lock'; if (k === i) d.classList.add('on');
+    if (k > 0 && x.sys !== items[k - 1].sys) d.classList.add('gap');   // a little space between solar systems
     d.title = x.open ? x.name : '???';
     d.onclick = () => { if (k !== at) { sfx.move(); show(k, k > at ? 1 : -1); } };
     dots.appendChild(d);

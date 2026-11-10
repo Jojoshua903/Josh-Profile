@@ -1,8 +1,8 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, palm, lamp, sign, pulseSpeaker, addRocket, questItem, rareItem, setupFriend, setupLocal, slerpDir, addMore } from './worlds-common.js?v=20261111l';
-import { fbm } from './world.js?v=20261111l';
-import { buildMilo, buildBarrelBooth, buildVinyl, textBoard, buildLocal, buildTrinket, buildSneaker } from './models.js?v=20261111l';
-import { Miauwtron } from './bosses.js?v=20261111l';
-import { addParkour, buildBeacon } from './parkour.js?v=20261111l';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, palm, lamp, sign, pulseSpeaker, addRocket, questItem, rareItem, setupFriend, setupLocal, slerpDir, addMore } from './worlds-common.js?v=20261111q';
+import { fbm } from './world.js?v=20261111q';
+import { buildMilo, buildBarrelBooth, buildVinyl, textBoard, buildLocal, buildTrinket, buildSneaker } from './models.js?v=20261111q';
+import { Miauwtron } from './bosses.js?v=20261111q';
+import { addParkour, buildBeacon } from './parkour.js?v=20261111q';
 
 // World 1: PLANETA PHONK. Milo's neon party planet. Boss: DJ Miauwtron on the Bass Drop Moon.
 export function buildPhonk(ctx) {
@@ -98,21 +98,21 @@ export function buildPhonk(ctx) {
     id: 'rosa', name: 'Rosa', who: 'ROSA', dir: LL(-8, 36), bubbleY: 2.0,
     model: buildLocal({ skin: 0xd8a070, shirt: 0x5ef2e0, pants: 0x2b2440, hair: 0x2a1a14, hat: 'bun', item: 'spray', shoes: 0xff5ab4 }),
     anim: (dt, t, n) => { n.model.arms[1].rotation.x = -1.3 + Math.sin(t * 7) * 0.15; n.model.arms[1].rotation.z = Math.sin(t * 3) * 0.3; },
-    task: { type: 'stomp', enemy: 'beatbug', at: LL(-30, 72), n: 4, spread: 6, found: '¡Eso! All four squashed. Come get your star shard!' },
+    task: { type: 'duel', game: 'simon', rounds: [3, 4, 5], speed: 0.75, colors: [0xff5ab4, 0xffd23a, 0x5ef2e0, 0x9a7aff], winTitle: 'DANCE-OFF WON!', found: '¡Eso! You copied every step! Come get your star shard!', lost: 'Wrong step, astronaut! Talk to me for a rematch. I’ll go slower. …No I won’t.' },
     first: [
       ['ROSA', '¡Oye! Careful, the paint is still wet. I’m Rosa, Milo’s cousin. I paint everything he raps about.'],
-      ['ROSA', 'My best wall says “JOSH VS. THE LICHTVRETER”. Three weeks of work. Then Kayo & Yara dropped a nest of Beatbugs in my valley.'],
-      ['ROSA', 'They eat paint. They hop on the beat. They are VERY annoying.'],
-      ['RÊNAS', 'I can stomp them. I stomp stuff all day.'],
-      ['ROSA', 'Four of them, down in the purple valley. Stomp them all and the star shard from my paint bucket is yours.'],
+      ['ROSA', 'Milo says you’ve got moves. Milo says a LOT of things.'],
+      ['RÊNAS', 'I do have moves. I can ground pound.'],
+      ['ROSA', 'That’s not dancing, that’s falling with style. Let’s see. DANCE-OFF!'],
+      ['ROSA', 'I dance on my four paint tiles. You copy my steps, in the same order. Three rounds. Win, and the star shard from my paint bucket is yours.'],
     ],
-    progress: (l) => [['ROSA', `${l.left} Beatbugs left in the purple valley. Jump on their heads. On the beat, if you can.`]],
+    progress: () => [['ROSA', 'Rematch? Okay. Watch my feet, not my face. My face is distracting. ¡Vamos!']],
     done: [
-      ['ROSA', 'They’re gone! My paint is safe! Here, one star shard. Still a bit sticky.'],
-      ['ROSA', 'I’m painting you next. “RÊNAS, BUG STOMPER”. Big letters. Milo can rap about it.'],
+      ['ROSA', '¡No puede ser! You copied every step! Milo was right. Don’t tell him.'],
+      ['ROSA', 'Here, one star shard. Still a bit sticky. I’m painting you next: “RÊNAS, DANCE MACHINE”.'],
     ],
-    after: [['ROSA', 'Hold still. …No, keep running. I’ll paint you running.']],
-    bubbles: { new: ['Psst! Help me out?', 'Wet paint!', 'Those bugs…'], progress: ['Stomp those Beatbugs!', 'The purple valley!', 'Paint thieves…'], done: ['¡Gracias, artista!', 'You look good in purple.', 'Next mural: you.'] },
+    after: [['ROSA', 'Hold still. …No, keep dancing. I’ll paint you dancing.']],
+    bubbles: { new: ['Psst! Got moves?', 'Wet paint!', 'Dance-off?'], progress: ['Rematch?', 'Watch my feet!', '¡Vamos!'], done: ['¡Gracias, artista!', 'Dance machine!', 'Next mural: you.'] },
   });
   const tw = [[24, 62, 1.8], [30, 70, 3.4], [36, 78, 5.0]].map(([la, lo, h], i) => w.addPlatform(pl, { lat: la, lon: lo, r: 1.3, h, float: i > 0, color: 0x2b2440, top: neon3[i], bob: i === 1 ? [0.35, 1.6, 0] : undefined }));
   coinOn(w, tw[0]); coinOn(w, tw[1]);

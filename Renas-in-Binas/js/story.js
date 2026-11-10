@@ -1,9 +1,9 @@
-import { THREE, G, V3, toon, basic, mk, LL, surf, puff, placeOn, orientOn, anyPerp } from './core.js?v=20261111l';
-import { sfx, music } from './audio.js?v=20261111l';
-import { P, spawnPlayer, model } from './player.js?v=20261111l';
-import { World, addStars, addBackdropPlanet, fbm } from './world.js?v=20261111l';
-import { play, shot } from './cutscene.js?v=20261111l';
-import { buildStation, buildKnabbel, buildSaucer, buildKern, buildRocket, buildJosh, buildOtis, buildMilo, buildLars, buildBout } from './models.js?v=20261111l';
+import { THREE, G, V3, toon, basic, mk, LL, surf, puff, placeOn, orientOn, anyPerp } from './core.js?v=20261111q';
+import { sfx, music } from './audio.js?v=20261111q';
+import { P, spawnPlayer, model } from './player.js?v=20261111q';
+import { World, addStars, addBackdropPlanet, fbm } from './world.js?v=20261111q';
+import { play, shot } from './cutscene.js?v=20261111q';
+import { buildStation, buildKnabbel, buildSaucer, buildKern, buildRocket, buildJosh, buildOtis, buildMilo, buildLars, buildBout } from './models.js?v=20261111q';
 
 const T = (who, text, sub, extra = {}) => ({ say: { who, text, sub }, ...extra });
 

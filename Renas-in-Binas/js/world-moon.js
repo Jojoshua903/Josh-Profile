@@ -1,9 +1,9 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, gusts, addMore } from './worlds-common.js?v=20261111l';
-import { fbm } from './world.js?v=20261111l';
-import { buildNiek, buildBattery, buildFlag, textBoard, buildLocal } from './models.js?v=20261111l';
-import { Mecha } from './bosses.js?v=20261111l';
-import { addParkour, buildBeacon } from './parkour.js?v=20261111l';
-import { rOf } from './core.js?v=20261111l';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, gusts, addMore } from './worlds-common.js?v=20261111q';
+import { fbm } from './world.js?v=20261111q';
+import { buildNiek, buildBattery, buildFlag, textBoard, buildLocal } from './models.js?v=20261111q';
+import { Mecha } from './bosses.js?v=20261111q';
+import { addParkour, buildBeacon } from './parkour.js?v=20261111q';
+import { rOf } from './core.js?v=20261111q';
 
 // World 8 on the route: MAANKRATER. A grey moon with craters, a radio tower and a satellite that circles it.
 // New here: moon gravity. You jump more than twice as high and fall slowly, so everything is built tall.
@@ -117,17 +117,18 @@ export function buildMoon(ctx) {
     id: 'bas', name: 'Bas', who: 'BAS', dir: LL(-30, 196), bubbleY: 2.1,
     model: buildLocal({ s: 0.84, skin: 0xf0c8a0, shirt: 0x3a4a7a, pants: 0x2b2440, hair: 0xa8a8a8, hat: 'cap', capC: 0x2b2440, beard: 0xc8c8c8, shoes: 0x2b2440 }),
     anim: (dt, t, n) => { n.model.arms[1].rotation.x = -2.2; n.model.arms[1].rotation.z = -0.4; },   // a salute
-    task: { type: 'stomp', enemy: 'mite', at: LL(-40, 220), n: 3, spread: 7, found: 'Mission accomplished! Report back to the commandant, soldier!' },
+    task: { type: 'duel', game: 'tag', n: 3, time: 34, speed: 6.2, winTitle: 'DRILL PASSED!', found: 'Training complete! Report back to the commandant, soldier!', lost: 'Too slow, cadet! Talk to me to repeat the drill!' },
     first: [
-      ['BAS', 'At ease, cadet. Commandant Bas, moon base Krater-1. We have a situation.'],
-      ['BAS', 'Three Maanmijten have taken our antenna field, past the boulders. They hop around and chew the cables.'],
-      ['RÊNAS', 'Mites? I’ll stomp them!'],
-      ['BAS', 'They hop very high, cadet. Stomp them right after they land. Clear the field and the star shard is yours.'],
+      ['BAS', 'At ease, cadet. Commandant Bas, moon base Krater-1.'],
+      ['BAS', 'Every cadet has to pass the Moon Drill. In low gravity, catching someone is harder than you think.'],
+      ['RÊNAS', 'Catching who?'],
+      ['BAS', 'Me, cadet. I may be old, but I hop like a moon rabbit. Tag me three times before the clock runs out.'],
+      ['BAS', 'Pass the drill and the star shard is yours. Ready? …That was a rhetorical question. GO!'],
     ],
-    progress: (l) => [['BAS', `${l.left} Maanmijten left in the antenna field, past the boulders. Stomp them after they land, cadet!`]],
-    done: [['BAS', 'Field clear! Excellent work, cadet. I’m promoting you. To captain.'], ['BAS', 'Here is the star shard. Wait. You were already a captain? …Then you’re a SUPER captain.']],
+    progress: () => [['BAS', 'Again, cadet? The Moon Drill waits for no one. Catch me!']],
+    done: [['BAS', 'Drill passed! Excellent work, cadet. I’m promoting you. To captain.'], ['BAS', 'Here is the star shard. Wait. You were already a captain? …Then you’re a SUPER captain.']],
     after: [['BAS', 'Dismissed, super captain. *salutes*']],
-    bubbles: { new: ['At ease, cadet.', 'We have a situation.', '*salutes*'], progress: ['Past the boulders!', 'Stomp after they land!', 'Chewing cables…'], done: ['Super captain!', 'Mission accomplished!', 'Dismissed.'] },
+    bubbles: { new: ['At ease, cadet.', 'Moon Drill!', '*salutes*'], progress: ['Again, cadet?', 'Catch me!', 'Hop hop!'], done: ['Super captain!', 'Drill passed!', 'Dismissed.'] },
   });
 
   // ---------- decor: boulders, moon crystals, a little base ----------

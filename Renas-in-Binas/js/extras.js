@@ -1,7 +1,7 @@
-import { THREE, G, scene, camera, toon, basic, mk, surf, dirOf, tangentTo, orientOn, puff, clamp, $ } from './core.js?v=20261111l';
-import { setVolume } from './audio.js?v=20261111l';
-import { tr } from './lang.js?v=20261111l';
-import { P, keys, pressed, mouse } from './player.js?v=20261111l';
+import { THREE, G, scene, camera, toon, basic, mk, surf, dirOf, tangentTo, orientOn, puff, clamp, $ } from './core.js?v=20261111q';
+import { setVolume } from './audio.js?v=20261111q';
+import { tr } from './lang.js?v=20261111q';
+import { P, keys, pressed, mouse } from './player.js?v=20261111q';
 
 // Quality-of-life layer: a guide arrow to your next goal, light beams on collectibles, dust, a hurt flash,
 // floating biome particles, volume settings and gamepad support.
@@ -42,6 +42,7 @@ function goal() {
       const s = l.state();
       if (s === 'new' || s === 'got') todo.push({ pos: l.npc.g.position, label: l.name });
       else if (s === 'progress' && l.task.type === 'fetch' && l.item && !l.item.taken) todo.push({ pos: l.item.obj.position, label: `${l.name}: ${tr(l.task.banner.replace('!', '').toLowerCase())}` });
+      else if (s === 'progress' && l.task.type === 'duel') todo.push(l.duel ? { pos: l.duel.goal(), label: l.task.game === 'race' ? tr('the flag') : l.name } : { pos: l.npc.g.position, label: `${l.name}: ${tr('rematch')}` });
       else if (s === 'progress') for (const e of l.bugs) if (!e.dead) todo.push({ pos: surf(e.p, e.dir, 0.5), label: `${l.name}: ${tr('pests')}` });
     }
     if (todo.length) {

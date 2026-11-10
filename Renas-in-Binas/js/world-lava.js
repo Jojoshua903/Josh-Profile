@@ -1,9 +1,10 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, lavaFloor, geyser, addMore } from './worlds-common.js?v=20261111l';
-import { fbm } from './world.js?v=20261111l';
-import { puff } from './core.js?v=20261111l';
-import { buildImmanuel, buildFireGem, buildHammer, textBoard, buildLocal } from './models.js?v=20261111l';
-import { Smeul } from './bosses.js?v=20261111l';
-import { addParkour, buildBeacon } from './parkour.js?v=20261111l';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, lavaFloor, geyser, addMore } from './worlds-common.js?v=20261111q';
+import { fbm } from './world.js?v=20261111q';
+import { puff } from './core.js?v=20261111q';
+import { buildImmanuel, buildFireGem, buildHammer, textBoard, buildLocal } from './models.js?v=20261111q';
+import { Smeul } from './bosses.js?v=20261111q';
+import { addParkour, buildBeacon } from './parkour.js?v=20261111q';
+import { duelModels } from './duels.js?v=20261111q';
 
 // World 6 on the route: DE ASBERG. A volcano planet: rivers of lava, geysers, basalt towers.
 // New here: the lava floor burns (hop out!) and geysers that hurt, or shoot you sky-high.
@@ -133,17 +134,18 @@ export function buildLava(ctx) {
     id: 'pip', name: 'Pip', who: 'PIP', dir: LL(-30, 196), bubbleY: 1.6,
     model: buildLocal({ s: 0.6, skin: 0xf6d8c0, shirt: 0xff7a3a, pants: 0x3a4a7a, hair: 0xd8602a, hat: 'beanie', capC: 0xffd23a, shoes: 0xfbf7ef }),
     anim: (dt, t, n) => { n.model.arms[0].rotation.x = n.model.arms[1].rotation.x = -2.4 + Math.sin(t * 8) * 0.3; n.model.r.position.y = Math.abs(Math.sin(t * 5)) * 0.1; },
-    task: { type: 'stomp', enemy: 'slug', at: LL(-40, 220), n: 3, spread: 6, found: 'The slugs are gone! Come back, I want to say thank you!' },
+    task: { type: 'duel', game: 'dodge', time: 20, every: 0.95, fly: 1.05, color: 0xff7a2a, model: duelModels.rock, winTitle: 'DODGE MASTER!', found: 'You dodged everything! Come back, I want to say thank you!', lost: 'Got you! Volcano scientist wins! Talk to me for a rematch!' },
     first: [
       ['PIP', 'Whoa, a real astronaut! I’m Pip. I’m going to measure volcanoes too. Like Immanuel. And play soccer like him.'],
-      ['PIP', 'But Magmaslakken are eating my rock garden! Three of them, past the black rocks. They leave a hot slimy trail.'],
-      ['RÊNAS', 'Slugs? I’ll stomp them!'],
-      ['PIP', 'Jump on them! But not too long, they’re HOT. Clear them out and you get my star shard.'],
+      ['PIP', 'I’m practising being a volcano. Volcanoes throw rocks. So I throw rocks! Soft ones. Mostly.'],
+      ['RÊNAS', 'At me?'],
+      ['PIP', 'At you! The red circle shows where they land. Don’t get hit for twenty seconds!'],
+      ['PIP', 'If you can do that, you get my star shard. It glows in the dark!'],
     ],
-    progress: (l) => [['PIP', `${l.left} Magmaslakken left in my rock garden, past the black rocks. Jump on them!`]],
-    done: [['PIP', 'My rock garden is safe! Look, that one is shaped like a duck.'], ['PIP', 'Here’s the star shard. It glows in the dark. I used it as a nightlight.']],
+    progress: () => [['PIP', 'Again? Okay! I’m a volcano! RUMBLE RUMBLE!']],
+    done: [['PIP', 'You dodged EVERYTHING! You’re like a… a… rock that doesn’t get hit!'], ['PIP', 'Here’s the star shard. It glows in the dark. I used it as a nightlight.']],
     after: [['PIP', 'When I grow up I’m going to name a volcano after you. Mount Rênas.']],
-    bubbles: { new: ['A real astronaut!', 'My rock garden!', 'Slugs!'], progress: ['Past the black rocks!', 'Jump on them!', 'They’re hot!'], done: ['Thank you!', 'Mount Rênas!', 'A duck rock!'] },
+    bubbles: { new: ['A real astronaut!', 'I’m a volcano!', 'Dodge this!'], progress: ['Again?', 'RUMBLE!', 'Watch the circles!'], done: ['Thank you!', 'Mount Rênas!', 'You’re fast!'] },
   });
 
   // ---------- decor: black rocks, smoking vents, glowing crystals ----------

@@ -1,10 +1,11 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, G, P, sfx, coinRing, coinLine, coinOn, rock, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261111l';
-import { fbm } from './world.js?v=20261111l';
-import { clamp, placeOn, orientOn, tangentTo, stepDir } from './core.js?v=20261111l';
-import { hurtPlayer } from './player.js?v=20261111l';
-import { buildNathan, buildBaseball, textBoard, buildLocal, buildTrinket, buildMustard } from './models.js?v=20261111l';
-import { Zennith } from './bosses.js?v=20261111l';
-import { addParkour, buildBeacon } from './parkour.js?v=20261111l';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, G, P, sfx, coinRing, coinLine, coinOn, rock, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261111q';
+import { fbm } from './world.js?v=20261111q';
+import { clamp, placeOn, orientOn, tangentTo, stepDir } from './core.js?v=20261111q';
+import { hurtPlayer } from './player.js?v=20261111q';
+import { buildNathan, buildBaseball, textBoard, buildLocal, buildTrinket, buildMustard } from './models.js?v=20261111q';
+import { Zennith } from './bosses.js?v=20261111q';
+import { addParkour, buildBeacon } from './parkour.js?v=20261111q';
+import { duelModels } from './duels.js?v=20261111q';
 
 // World 3: HOMERUN HEUVEL. Nathan's baseball planet. Boss: Zennith, the demon pitcher.
 export function buildStadium(ctx) {
@@ -130,20 +131,21 @@ export function buildStadium(ctx) {
     id: 'tim', name: 'Tim', who: 'TIM', dir: LL(14, 26), bubbleY: 1.9,
     model: buildLocal({ s: 0.66, skin: 0xc89a70, shirt: 0xfff8ec, pants: 0x2a4ae0, hair: 0x2a1a14, hat: 'cap', capC: 0x2a4ae0, item: 'bat' }),
     anim: (dt, t, n) => { const s = (t % 3) / 3; n.model.arms[1].rotation.x = s > 0.8 ? -2 + (s - 0.8) * 10 : -0.3; },
-    task: { type: 'stomp', enemy: 'kattenbot', at: LL(-32, 30), n: 4, spread: 6, found: 'The dugout is clear! Rookie of the year! Come get your star shard!' },
+    task: { type: 'duel', game: 'grab', n: 15, time: 28, speed: 5.0, color: 0xfff8ec, model: duelModels.ball, winTitle: 'CATCH CHAMP!', found: 'You caught more than me! Rookie of the year! Come get your star shard!', lost: 'I caught more! Batboy wins! Talk to me for a rematch, rookie.', tie: 'A tie?! That doesn’t count in baseball. Talk to me for a rematch!' },
     first: [
       ['TIM', 'Batboy Tim reporting! Are you the new rookie? Nathan said a rookie was coming.'],
-      ['TIM', 'Kattenbots broke into our dugout and they’re playing with our bats. Four of them, past the giant baseball.'],
-      ['TIM', 'I tried to scare them off. I meowed at them. They meowed back. It was a lot.'],
-      ['TIM', 'Clear them out and I’ll give you my star shard. Nathan says home plate needs them.'],
+      ['TIM', 'Every rookie has to pass the Batboy Test. I spill a whole bucket of baseballs…'],
+      ['TIM', '…and we both grab as many as we can. Whoever has the most, wins.'],
+      ['RÊNAS', 'Easy. I collect bolts all day.'],
+      ['TIM', 'We’ll see! Beat me and I’ll give you my star shard. Nathan says home plate needs them.'],
     ],
-    progress: (l) => [['TIM', `${l.left} Kattenbots left in the dugout, past the giant baseball! Jump on them, or spin with F!`]],
+    progress: () => [['TIM', 'Rematch! I’ll spill the bucket again. Grab, grab, grab!']],
     done: [
-      ['TIM', 'The dugout is ours again! Rookie of the year!'],
+      ['TIM', 'You caught more than me! You passed the Batboy Test! Rookie of the year!'],
       ['TIM', 'Here’s your star shard. When you beat Zennith, can I have your autograph? And Josh’s? And Otis’ paw print?'],
     ],
     after: [['TIM', 'I’m practising my swing. *swish* …I hit myself.']],
-    bubbles: { new: ['Rookie! Over here!', 'Batboy reporting!', 'Our dugout…'], progress: ['Past the giant baseball!', 'Meow back at them!', 'Four Kattenbots!'], done: ['Rookie of the year!', 'Go get Zennith!', '*practice swing*'] },
+    bubbles: { new: ['Rookie! Over here!', 'Batboy reporting!', 'Batboy Test?'], progress: ['Rematch!', 'Grab grab grab!', 'Spill the bucket!'], done: ['Rookie of the year!', 'Go get Zennith!', '*practice swing*'] },
   });
 
   // ---------- decor: bleachers crowd, scoreboard, giant baseballs, foul poles ----------

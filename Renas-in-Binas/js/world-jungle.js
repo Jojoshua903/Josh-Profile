@@ -1,8 +1,8 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, rock, lamp, sign, palm, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261111l';
-import { fbm } from './world.js?v=20261111l';
-import { buildReshman, buildMonkey, buildGoldBanana, buildCamera, textBoard, buildLocal, buildTrinket } from './models.js?v=20261111l';
-import { Kokos } from './bosses.js?v=20261111l';
-import { addParkour, buildBeacon } from './parkour.js?v=20261111l';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, rock, lamp, sign, palm, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261111q';
+import { fbm } from './world.js?v=20261111q';
+import { buildReshman, buildMonkey, buildGoldBanana, buildCamera, textBoard, buildLocal, buildTrinket } from './models.js?v=20261111q';
+import { Kokos } from './bosses.js?v=20261111q';
+import { addParkour, buildBeacon } from './parkour.js?v=20261111q';
 
 // World 5 on the route: HET OERWOUD. Reshman the monkey's jungle: giant trees, a river, an old temple.
 // Boss: Koning Kokos, the gorilla king, in the Apenarena.
@@ -121,21 +121,21 @@ export function buildJungle(ctx) {
     id: 'bobo', name: 'Bobo', who: 'BOBO', dir: LL(-20, 196), bubbleY: 1.5,
     model: buildMonkey({ s: 0.6, fur: 0xa86a3a, bandana: 0x3a8ad8, banana: false }),
     anim: (dt, t, n) => { n.model.arms[0].rotation.x = n.model.arms[1].rotation.x = -2.6 + Math.sin(t * 9) * 0.3; n.model.body.position.y = Math.abs(Math.sin(t * 6)) * 0.12; n.model.tail.rotation.z = Math.sin(t * 6) * 0.4; },   // hops up and down
-    task: { type: 'stomp', enemy: 'snake', at: LL(-40, 220), n: 3, spread: 6, found: 'The snakes are gone! Come back, come back! Oe!' },
+    task: { type: 'duel', game: 'tag', n: 3, time: 30, speed: 6.6, winTitle: 'TAG, YOU WIN!', found: 'You caught me three times! Come back, come back! Oe!', lost: 'Too slow, bubble-head! Talk to me if you want to play again! Oe oe!' },
     first: [
       ['BOBO', 'Oe! Oe! You’re the bubble-head! Reshman told me about you!'],
       ['BOBO', 'I’m Bobo. His little brother. I’m almost as fast as him. Almost.'],
-      ['BOBO', 'Three Slingerslangen moved into my climbing tree, past the big rocks. They hiss at me. Every time!'],
-      ['RÊNAS', 'Snakes? I’ll stomp them!'],
-      ['BOBO', 'Jump on their heads! Clear them out and I’ll give you my star shard. I keep it in my cheek. …It’s clean. Mostly.'],
+      ['BOBO', 'Wanna play tag? Nobody can catch me. NOBODY. Not even the snakes.'],
+      ['RÊNAS', 'I bet I can.'],
+      ['BOBO', 'Catch me three times before the time runs out! Then I’ll give you my star shard. I keep it in my cheek. …It’s clean. Mostly.'],
     ],
-    progress: (l) => [['BOBO', `${l.left} Slingerslangen left in my tree, past the big rocks. Jump on their heads!`]],
+    progress: () => [['BOBO', 'Again? Oe oe! Catch me if you caaan!']],
     done: [
-      ['BOBO', 'My tree! I can climb again! Look! …Okay, you can’t see, I’m too fast.'],
+      ['BOBO', 'You caught me! Three times! Nobody ever caught me! Except Reshman. And mum.'],
       ['BOBO', 'Here’s the star shard. I wiped it off. With my tail.'],
     ],
     after: [['BOBO', 'Race you to the temple! …You’re too slow. I already won.']],
-    bubbles: { new: ['Oe! Oe!', 'Snakes!', 'Hiss is scary!'], progress: ['Past the big rocks!', 'Jump on their heads!', 'Hissss…'], done: ['My tree!', 'Oe oe!', 'Race you!'] },
+    bubbles: { new: ['Oe! Oe!', 'Tag?', 'Can’t catch me!'], progress: ['Again?', 'Catch me!', 'Too slow!'], done: ['You caught me!', 'Oe oe!', 'Race you!'] },
   });
 
   // ---------- decor: palms, ferns, big leaves, rocks, totems ----------

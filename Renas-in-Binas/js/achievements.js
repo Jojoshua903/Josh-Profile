@@ -1,5 +1,5 @@
-import { $, toast, banner } from './core.js?v=20261111l';
-import { sfx } from './audio.js?v=20261111l';
+import { $, toast, banner } from './core.js?v=20261111q';
+import { sfx } from './audio.js?v=20261111q';
 
 // ACHIEVEMENTS. Most of them are read straight from the save (bosses beaten, gears found, play time...),
 // so they also work for old saves. A few are moments (a quick boss fight, a fast planet): main.js calls

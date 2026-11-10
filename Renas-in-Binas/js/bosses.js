@@ -1,9 +1,9 @@
-import { THREE, G, V3, toon, basic, mk, ink, clamp, damp, puff, placeOn, orientOn, surf, dirOf, altOf, anyPerp, tangentTo, stepDir, frameDir, wrapA, toast, $, canvasTex } from './core.js?v=20261111l';
-import { sfx } from './audio.js?v=20261111l';
-import { tr } from './lang.js?v=20261111l';
-import { P, hurtPlayer, bouncePlayer, pfTest } from './player.js?v=20261111l';
-import { SurfaceWall, lonAround, makeMarker } from './fx.js?v=20261111l';
-import { buildKern, buildDeniz, buildLeprechaun, buildGorilla, buildCoconut, buildDragon, buildWorm, buildMecha, buildOctopus, buildGhostKing, buildCogTitan, buildGear } from './models.js?v=20261111l';
+import { THREE, G, V3, toon, basic, mk, ink, clamp, damp, puff, placeOn, orientOn, surf, dirOf, altOf, anyPerp, tangentTo, stepDir, frameDir, wrapA, toast, $, canvasTex } from './core.js?v=20261111q';
+import { sfx } from './audio.js?v=20261111q';
+import { tr } from './lang.js?v=20261111q';
+import { P, hurtPlayer, bouncePlayer, pfTest } from './player.js?v=20261111q';
+import { SurfaceWall, lonAround, makeMarker } from './fx.js?v=20261111q';
+import { buildKern, buildDeniz, buildLeprechaun, buildGorilla, buildCoconut, buildDragon, buildWorm, buildMecha, buildOctopus, buildGhostKing, buildCogTitan, buildGear } from './models.js?v=20261111q';
 
 // ---------- shared hazards ----------
 const arcTo = (pl, a, b) => Math.acos(clamp(a.dot(b), -1, 1)) * pl.r;
@@ -32,12 +32,13 @@ class Sweep {  // a laser fence that sweeps around the pole like a clock hand
     this.b = boss; this.B = B.clone(); this.speed = o.speed ?? 0.8; this.left = (o.turns ?? 1) * Math.PI * 2; this.h = o.h ?? 0.75;
     this.phi = lonAround(this.B, P.up) + Math.PI * 0.85;
     this.wall = new SurfaceWall(boss.g, boss.a, o.color ?? 0x5ef2e0, this.h, 60); this.wall.visible = true;
-    this.t = 0;
+    this.t = 0; this.flip = o.flip; this.sgn = 1;   // flip: after this many seconds it turns round (DJ Miauwtron's record scratch)
   }
   update(dt) {
     this.t += dt;
     const s = this.speed * Math.min(1, this.t / 1.2);
-    this.phi += s * dt; this.left -= s * dt;
+    if (this.flip && !this.flipped && this.t > this.flip) { this.flipped = true; this.sgn = -1; sfx.swing(); G.shake = Math.max(G.shake, 0.2); }
+    this.phi += s * dt * this.sgn; this.left -= s * dt;
     if (this.left <= 0) { this.kill(); return false; }
     this.wall.meridian(this.B, this.phi, 0.32, Math.PI - 0.03);
     this.wall.mat.opacity = Math.min(0.9, this.t * 1.5);
@@ -101,6 +102,305 @@ class Spike {  // a crystal spike that comes up out of the ground
   kill() { this.b.g.remove(this.marker, this.m); }
 }
 
+// ---------- signature attacks: every boss has moves nobody else has ----------
+const onA = (b) => P.planet === b.a && !P.dead;
+const latOf = (pl, arc) => 90 - (arc / pl.r) * (180 / Math.PI);   // frameDir's latitude for a distance over the ground
+const shove = (tan, dist) => P.pos.addScaledVector(tan, dist);   // push Rênas over the ground (whirlpool, conveyor belt)
+const fxCss = document.createElement('style');
+fxCss.textContent = `.inkFx,.darkFx{position:fixed;inset:0;pointer-events:none;z-index:6;transition:opacity .5s}
+.inkFx i{position:absolute;border-radius:50%;background:radial-gradient(circle at 40% 38%,#4a3a6a,#1a1030 55%,rgba(26,16,48,.9) 66%,rgba(26,16,48,0) 72%);transform:scale(0);animation:inkPop .22s ease-out forwards}
+.inkFx i::after{content:'';position:absolute;left:44%;top:78%;width:12%;height:40%;border-radius:0 0 50% 50%;background:#1a1030}
+@keyframes inkPop{to{transform:scale(1)}}
+.darkFx{background:radial-gradient(circle at 50% 58%,rgba(8,0,18,0) 0 12%,rgba(8,0,18,.7) 21%,rgba(5,0,12,.96) 32%);opacity:0}`;
+document.head.appendChild(fxCss);
+// screen effects live outside the 3D scene, so they check now and then that their fight is still going
+const watchFx = (h) => setInterval(() => { if (!h.b.w.group.parent || h.b.state !== 'fight') h.kill(); }, 400);
+
+// models for the new attacks
+function rollBall(r, col, band) {   // a ball that rolls: the outer group sits on the ground, the pivot spins
+  const g = new THREE.Group(), pv = new THREE.Group(); pv.position.y = r; g.add(pv);
+  mk(new THREE.SphereGeometry(r, 16, 12), toon(col), 0, 0, 0, pv, 1.07);
+  const b = mk(new THREE.TorusGeometry(r * 0.98, r * 0.09, 6, 24), toon(band), 0, 0, 0, pv, 0); b.rotation.y = Math.PI / 2;
+  g.userData.pivot = pv; return g;
+}
+function gearWheel(r) {
+  const g = new THREE.Group(), pv = new THREE.Group(); pv.position.y = r; g.add(pv);
+  const w = mk(new THREE.CylinderGeometry(r * 0.82, r * 0.82, 0.55, 20), toon(0xc8a040), 0, 0, 0, pv, 1.06); w.rotation.z = Math.PI / 2;
+  for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; const t = mk(new THREE.BoxGeometry(0.5, 0.42, 0.42), toon(0xffd23a), 0, Math.cos(a) * r * 0.9, Math.sin(a) * r * 0.9, pv, 1.08); t.rotation.x = a; }
+  mk(new THREE.CylinderGeometry(r * 0.25, r * 0.25, 0.6, 10), toon(0x5a4a3a), 0, 0, 0, pv, 0).rotation.z = Math.PI / 2;
+  g.userData.pivot = pv; return g;
+}
+function finModel() { const g = new THREE.Group(); const f = mk(new THREE.ConeGeometry(0.5, 1.3, 4), toon(0xa8743a), 0, 0.5, 0, g, 1.08); f.scale.z = 0.35; f.rotation.y = Math.PI / 4; return g; }
+function ghostClone() {
+  const g = new THREE.Group(), mat = basic(0xe8e0ff, { transparent: true, opacity: 0.55, depthWrite: false });
+  mk(new THREE.SphereGeometry(0.8, 14, 10), mat, 0, 1.4, 0, g, 0);
+  const tail = mk(new THREE.ConeGeometry(0.8, 1.4, 12), mat, 0, 0.5, 0, g, 0); tail.rotation.x = Math.PI;
+  for (const s of [-1, 1]) mk(new THREE.SphereGeometry(0.13, 8, 6), basic(0x7dffb0), 0.28 * s, 1.5, 0.68, g, 0);
+  return g;
+}
+function cloverModel() { const g = new THREE.Group(); for (let i = 0; i < 4; i++) { const a = (i / 4) * Math.PI * 2; mk(new THREE.SphereGeometry(0.32, 10, 8), toon(0x5cd85a), Math.cos(a) * 0.32, 1.6, Math.sin(a) * 0.32, g, 1.08); } mk(new THREE.CylinderGeometry(0.05, 0.05, 1.4, 6), toon(0x2a8a3a), 0, 0.8, 0, g, 0); return g; }
+
+class Floor {   // DJ Miauwtron: the whole planet is a dance floor. On every beat the flashing tiles DROP
+  constructor(boss, B, o = {}) {
+    this.b = boss; this.beat = o.beat ?? 1.1; this.left = o.beats ?? 4; this.t = 0; this.side = 0; this.tiles = [];
+    [[70, 8], [47, 14], [24, 18], [0, 20], [-24, 18], [-47, 14], [-70, 8], [-90, 1]].forEach(([lat, n], ring) => {
+      for (let i = 0; i < n; i++) {
+        const d = frameDir(B, lat, (i / n) * 360 + ring * 11), m = makeMarker(boss.g, 2.1, 0xff3d7f);
+        m.place(boss.a, d); m.visible = false;
+        this.tiles.push({ d, m, grp: (i + ring) % 2 });   // a checkerboard
+      }
+    });
+    this.show();
+  }
+  show() { for (const tl of this.tiles) tl.m.visible = tl.grp === this.side; }
+  update(dt) {
+    this.t += dt;
+    const k = this.t / this.beat;
+    for (const tl of this.tiles) if (tl.grp === this.side) { tl.m.pulse(this.t * (6 + k * 16)); tl.m.userData.fill.material.opacity = 0.12 + k * 0.5; }
+    if (this.t < this.beat) return true;
+    sfx.bass(); G.shake = Math.max(G.shake, 0.22);
+    for (const tl of this.tiles) if (tl.grp === this.side) {
+      if (Math.random() < 0.5) puff(surf(this.b.a, tl.d, 0.2), 2, 0xff3d7f, 3, 1.4, tl.d);
+      if (onA(this.b) && arcTo(this.b.a, P.up, tl.d) < 2.5 && P.alt < 1.1) hurtPlayer(surf(this.b.a, tl.d, 0));
+      tl.m.userData.fill.material.opacity = 0.22;
+    }
+    this.side = 1 - this.side; this.t = 0;
+    if (--this.left <= 0) { this.kill(); return false; }
+    this.show();
+    return true;
+  }
+  kill() { for (const tl of this.tiles) this.b.g.remove(tl.m); }
+}
+class Chase {   // Gruis: a crack in the ground snakes after you, and crystals punch up behind it
+  constructor(boss, from, o = {}) { this.b = boss; this.d = from.clone(); this.f = onA(boss) ? tangentTo(from, P.up) : anyPerp(from); this.t = 0; this.life = o.life ?? 4; this.speed = o.speed ?? 5; this.acc = 0; }
+  update(dt) {
+    this.t += dt;
+    if (onA(this.b)) this.f.lerp(tangentTo(this.d, P.up), damp(2.2, dt)).normalize();
+    stepDir(this.d, this.f, this.speed * dt, this.b.a.r); this.f.addScaledVector(this.d, -this.f.dot(this.d)).normalize();
+    if (Math.random() < dt * 25) puff(surf(this.b.a, this.d, 0.1), 1, 0xd8b890, 2, 0.5, this.d);
+    this.acc += this.speed * dt;
+    if (this.acc >= 1.2) { this.acc = 0; this.b.haz.push(new Spike(this.b, this.d.clone(), 0.2, 0xff7ad8)); }
+    return this.t < this.life;
+  }
+  kill() {}
+}
+class Roller {   // something big rolling straight over the planet: jump over it
+  constructor(boss, from, fwd, o = {}) {
+    this.b = boss; this.d = from.clone(); this.f = fwd.clone().addScaledVector(from, -fwd.dot(from)).normalize();
+    this.speed = o.speed ?? 9; this.r = o.r ?? 0.7; this.left = o.dist ?? Math.PI * boss.a.r * 1.05; this.t = 0; this.spin = 0;
+    this.m = o.model; boss.g.add(this.m); this.col = o.color ?? 0xd8b890;
+  }
+  update(dt) {
+    this.t += dt;
+    const s = this.speed * Math.min(1, this.t * 3);
+    stepDir(this.d, this.f, s * dt, this.b.a.r); this.f.addScaledVector(this.d, -this.f.dot(this.d)).normalize(); this.left -= s * dt;
+    this.spin += (s * dt) / this.r;
+    placeOn(this.m, this.b.a, this.d, 0); orientOn(this.m, this.d, this.f);
+    if (this.m.userData.pivot) this.m.userData.pivot.rotation.x = this.spin;
+    if (Math.random() < dt * 14) puff(surf(this.b.a, this.d, 0.15), 1, this.col, 1.5, 0.4, this.d);
+    if (onA(this.b) && arcTo(this.b.a, P.up, this.d) < this.r + 0.45 && P.alt < this.r * 1.6) hurtPlayer(surf(this.b.a, this.d, 0));
+    if (this.left <= 0) { puff(surf(this.b.a, this.d, this.r), 12, this.col, 3, 1, this.d); this.kill(); return false; }
+    return true;
+  }
+  kill() { this.b.g.remove(this.m); }
+}
+class Orbiter {   // Deniz: ice shards circling his throne. The ring breathes in and out
+  constructor(boss, B, o = {}) {
+    this.b = boss; this.B = B.clone(); this.t = 0; this.life = o.life ?? 6; this.spin = o.spin ?? 0.9; this.th0 = o.th0 ?? 0.75; this.amp = o.amp ?? 0.45; this.w = o.w ?? 1.3;
+    this.ms = [];
+    for (let i = 0; i < (o.n ?? 6); i++) { const g = new THREE.Group(); const s = mk(new THREE.OctahedronGeometry(0.55), toon(0xbff2ff), 0, 0.9, 0, g, 1.08); s.scale.y = 1.8; g.userData.s = s; boss.g.add(g); this.ms.push(g); }
+    this.ph = lonAround(this.B, onA(boss) ? P.up : anyPerp(B)) * (180 / Math.PI);
+  }
+  update(dt) {
+    this.t += dt;
+    if (this.t > this.life) { this.kill(); return false; }
+    const grow = Math.min(1, this.t / 0.7), th = (this.th0 + this.amp * Math.sin(this.t * this.w)) * grow + 0.15;
+    this.ms.forEach((g, i) => {
+      const d = frameDir(this.B, 90 - th * (180 / Math.PI), this.ph + (i / this.ms.length) * 360 + this.t * this.spin * 57.3);
+      placeOn(g, this.b.a, d, 0); g.userData.s.rotation.y += dt * 4;
+      if (this.t > 0.5 && onA(this.b) && arcTo(this.b.a, P.up, d) < 0.85 && P.alt < 1.7) hurtPlayer(surf(this.b.a, d, 0));
+    });
+    return true;
+  }
+  kill() { for (const g of this.ms) { puff(g.position.clone(), 4, 0xbff2ff, 3, 1); this.b.g.remove(g); } }
+}
+class Beam {   // a beam over the ground from pole S, aimed at you. Thin while it aims (and follows you), then it FIRES
+  constructor(boss, S, o = {}) {
+    this.b = boss; this.S = S.clone(); this.t = 0; this.aim = o.aim ?? 1.3; this.fire = o.fire ?? 0.75; this.off = o.off ?? 0;
+    this.th0 = o.th0 ?? 0.15; this.th1 = o.th1 ?? 2.7;
+    this.wall = new SurfaceWall(boss.g, boss.a, o.color ?? 0x7dff9a, 0.15, 50); this.wall.visible = true;
+    this.phi = lonAround(this.S, onA(boss) ? P.up : anyPerp(S)) + this.off;
+  }
+  update(dt) {
+    this.t += dt;
+    if (this.t < this.aim) {
+      // it follows you, then locks a moment before it fires: that's when you step aside
+      if (onA(this.b)) this.phi += wrapA(lonAround(this.S, P.up) + this.off - this.phi) * damp(this.t < this.aim - 0.4 ? 5 : 0, dt);
+      this.wall.h = 0.15; this.wall.mat.opacity = 0.25 + 0.4 * Math.abs(Math.sin(this.t * (this.t > this.aim - 0.4 ? 30 : 10)));
+      this.wall.meridian(this.S, this.phi, this.th0, this.th1);
+      return true;
+    }
+    if (!this.fired) { this.fired = true; sfx.crack(); sfx.whoosh(); G.shake = Math.max(G.shake, 0.3); }
+    this.wall.h = 1.15; this.wall.mat.opacity = 0.95; this.wall.meridian(this.S, this.phi, this.th0, this.th1);
+    if (onA(this.b)) {
+      const thp = Math.acos(clamp(P.up.dot(this.S), -1, 1));
+      const d = Math.abs(wrapA(lonAround(this.S, P.up) - this.phi)) * this.b.a.r * Math.sin(thp);
+      if (thp > this.th0 && thp < this.th1 && d < 0.55 && P.alt < 1.0) hurtPlayer(surf(this.b.a, P.up, 0));
+    }
+    if (this.t > this.aim + this.fire) { this.kill(); return false; }
+    return true;
+  }
+  kill() { this.b.g.remove(this.wall.mesh, this.wall.mesh2); }
+}
+class Bouncer {   // Lorcan: a lucky coin that bounces after you. Hop, hop, hop
+  constructor(boss, from, o = {}) {
+    this.b = boss; this.d = from.clone(); this.hops = o.hops ?? 5; this.hopT = o.hopT ?? 0.7; this.len = o.len ?? 3.4;
+    this.m = goldCoin(); boss.g.add(this.m); this.mk = makeMarker(boss.g, 1.2, 0xffd23a); this.next();
+  }
+  next() {
+    this.from = this.d.clone(); this.t = 0;
+    const f = onA(this.b) ? tangentTo(this.d, P.up) : anyPerp(this.d);
+    const dist = onA(this.b) ? clamp(arcTo(this.b.a, this.d, P.up), 0.8, this.len) : this.len;
+    this.to = stepDir(this.d.clone(), f, dist, this.b.a.r); this.mk.place(this.b.a, this.to);
+  }
+  update(dt) {
+    this.t += dt;
+    const k = Math.min(1, this.t / this.hopT);
+    this.d.copy(this.from).lerp(this.to, k).normalize();
+    placeOn(this.m, this.b.a, this.d, Math.sin(k * Math.PI) * 2.6, this.t * 9); this.mk.pulse(this.t * 16);
+    if (k < 1) return true;
+    sfx.coin(); puff(surf(this.b.a, this.d, 0.2), 8, 0xffd23a, 3, 0.6, this.d);
+    if (onA(this.b) && arcTo(this.b.a, P.up, this.d) < 1.35 && P.alt < 1.0) hurtPlayer(surf(this.b.a, this.d, 0));
+    if (--this.hops <= 0) { this.kill(); return false; }
+    this.next();
+    return true;
+  }
+  kill() { this.b.g.remove(this.m, this.mk); }
+}
+class Gamble {   // Lorcan: three circles, and only the one with the clover is safe. Everywhere else: BAD LUCK
+  constructor(boss, o = {}) {
+    this.b = boss; this.t = 0; this.delay = o.delay ?? 2.4; this.swap = o.swap; this.r = 2.4;
+    const base = onA(boss) ? P.up.clone() : frameDir(boss.B, 40, 0), a0 = Math.random() * 360;
+    this.spots = [0, 1, 2].map((i) => frameDir(base, latOf(boss.a, 4.4), a0 + i * 120));
+    this.good = Math.floor(Math.random() * 3);
+    this.mks = this.spots.map((d) => { const m = makeMarker(boss.g, this.r, 0xff3a5a); m.place(boss.a, d); return m; });
+    this.clover = cloverModel(); boss.g.add(this.clover);
+    this.paint();
+  }
+  paint() {
+    this.mks.forEach((m, i) => { const c = i === this.good ? 0x5cd85a : 0xff3a5a; m.userData.rim.material.color.setHex(c); m.userData.fill.material.color.setHex(c); });
+    placeOn(this.clover, this.b.a, this.spots[this.good], 0);
+  }
+  update(dt) {
+    this.t += dt;
+    this.mks.forEach((m) => m.pulse(this.t * (5 + this.t * 6)));
+    this.clover.rotation.y += dt * 3;
+    if (this.swap && !this.swapped && this.t > this.delay * 0.55) {   // UNLUCKY: the clover jumps to another circle!
+      this.swapped = true; this.good = (this.good + 1 + Math.floor(Math.random() * 2)) % 3; this.paint(); sfx.meow();
+      if (G.toastOnce) G.toastOnce('lp-swap', 'Unlucky! The clover jumped to another circle!');
+    }
+    if (this.t < this.delay) return true;
+    sfx.boom(); G.shake = Math.max(G.shake, 0.5);
+    this.spots.forEach((d, i) => puff(surf(this.b.a, d, 0.4), 18, i === this.good ? 0x5cd85a : 0xff3a5a, 5, 2, d));
+    if (onA(this.b) && arcTo(this.b.a, P.up, this.spots[this.good]) > this.r + 0.2) hurtPlayer(surf(this.b.a, P.up, 0));
+    this.kill(); return false;
+  }
+  kill() { this.b.g.remove(...this.mks, this.clover); }
+}
+class FirePatch {   // Smeul: fire left burning on the ground where he ran
+  constructor(boss, dir, life = 3.4) {
+    this.b = boss; this.d = dir.clone(); this.t = 0; this.life = life;
+    this.m = new THREE.Group();
+    this.fl = mk(new THREE.ConeGeometry(0.6, 1.4, 7), basic(0xff7a2a, { transparent: true, opacity: 0.9, depthWrite: false }), 0, 0.7, 0, this.m, 0);
+    this.core = mk(new THREE.ConeGeometry(0.32, 0.8, 7), basic(0xffe14a, { transparent: true, opacity: 0.9, depthWrite: false }), 0, 0.4, 0, this.m, 0);
+    placeOn(this.m, boss.a, this.d, 0, Math.random() * 6); boss.g.add(this.m);
+  }
+  update(dt) {
+    this.t += dt;
+    const fade = Math.min(1, this.t / 0.25, (this.life - this.t) / 0.5);
+    this.m.scale.set(fade, fade * (1 + Math.sin(this.t * 22) * 0.15), fade);
+    if (Math.random() < dt * 4) puff(surf(this.b.a, this.d, 1.2), 1, 0xff9a2a, 1.2, 1.2, this.d);
+    if (this.t > 0.3 && onA(this.b) && arcTo(this.b.a, P.up, this.d) < 1.0 && P.alt < 0.8) hurtPlayer(surf(this.b.a, this.d, 0));
+    if (this.t > this.life) { this.kill(); return false; }
+    return true;
+  }
+  kill() { this.b.g.remove(this.m); }
+}
+class Homing {   // something that chases you over the ground for a while: a missile, a sand shark fin, a ghost
+  constructor(boss, from, o = {}) {
+    this.b = boss; this.d = from.clone(); this.f = onA(boss) ? tangentTo(from, P.up) : anyPerp(from); this.t = 0;
+    this.speed = o.speed ?? 6; this.turn = o.turn ?? 1.8; this.life = o.life ?? 4; this.alt = o.alt ?? 0.7; this.over = o.over ?? 0.9; this.hitR = o.hitR ?? 0.95;
+    this.m = o.model; boss.g.add(this.m); this.col = o.color ?? 0xffffff; this.trail = o.trail;
+  }
+  update(dt) {
+    this.t += dt;
+    if (onA(this.b)) this.f.lerp(tangentTo(this.d, P.up), damp(this.turn, dt)).normalize();
+    stepDir(this.d, this.f, this.speed * Math.min(1, this.t * 2) * dt, this.b.a.r); this.f.addScaledVector(this.d, -this.f.dot(this.d)).normalize();
+    placeOn(this.m, this.b.a, this.d, this.alt); orientOn(this.m, this.d, this.f);
+    if (this.trail !== undefined && Math.random() < dt * 30) puff(surf(this.b.a, this.d, this.alt + 0.1), 1, this.trail, 1.5, 0.4, this.d);
+    if (this.t > 0.35 && onA(this.b) && arcTo(this.b.a, P.up, this.d) < this.hitR && P.alt < this.alt + this.over) { hurtPlayer(surf(this.b.a, this.d, 0)); this.boom(); return false; }
+    if (this.t > this.life) { this.boom(); return false; }
+    return true;
+  }
+  boom() { puff(surf(this.b.a, this.d, this.alt + 0.3), 14, this.col, 4, 1, this.d); sfx.thud(); this.kill(); }
+  kill() { this.b.g.remove(this.m); }
+}
+class Pull {   // Kraak: a whirlpool that drags you toward him (and round him)
+  constructor(boss, centre, o = {}) { this.b = boss; this.centre = centre; this.t = 0; this.life = o.life ?? 4.5; this.force = o.force ?? 3.2; }
+  update(dt) {
+    this.t += dt;
+    const c = this.centre(), k = Math.min(1, this.t / 0.8, Math.max(0, (this.life - this.t) / 0.5));
+    if (onA(this.b) && arcTo(this.b.a, P.up, c) > 0.6) {
+      const tan = tangentTo(P.up, c), swirl = new THREE.Vector3().crossVectors(P.up, tan);
+      shove(tan, this.force * k * dt); shove(swirl, this.force * 0.45 * k * dt);
+    }
+    if (Math.random() < dt * 30) { const d = frameDir(c, latOf(this.b.a, 1.5 + Math.random() * 9), Math.random() * 360); puff(surf(this.b.a, d, 0.2), 1, 0x9fe8ff, 1.5, 0.3, d); }
+    return this.t < this.life;
+  }
+  kill() {}
+}
+class Splat {   // Kraak: INK on your helmet! Blobs cover part of the screen for a moment
+  constructor(boss, o = {}) {
+    this.b = boss; this.t = 0; this.life = o.life ?? 3.5;
+    this.el = document.createElement('div'); this.el.className = 'inkFx';
+    const n = o.n ?? 5;
+    for (let i = 0; i < n; i++) {
+      const s = document.createElement('i'), size = 18 + Math.random() * 16;
+      // mostly round the edges, one closer to the middle: you can still see Rênas
+      const edge = i < n - 1, x = edge ? (Math.random() < 0.5 ? -6 + Math.random() * 30 : 60 + Math.random() * 30) : 30 + Math.random() * 25;
+      s.style.cssText = `left:${x}%;top:${-5 + Math.random() * 75}%;width:${size}vmin;height:${size}vmin;animation-delay:${i * 0.12}s`;
+      this.el.appendChild(s);
+    }
+    document.body.appendChild(this.el); sfx.thud(); this.watch = watchFx(this);
+  }
+  update(dt) { this.t += dt; this.el.style.opacity = String(Math.min(1, Math.max(0, (this.life - this.t) / 0.8))); if (this.t > this.life) { this.kill(); return false; } return true; }
+  kill() { this.el.remove(); clearInterval(this.watch); }
+}
+class Dark {   // Koning Boe: LIGHTS OUT. You can only see a little circle round Rênas
+  constructor(boss, o = {}) { this.b = boss; this.t = 0; this.life = o.life ?? 5; this.el = document.createElement('div'); this.el.className = 'darkFx'; document.body.appendChild(this.el); requestAnimationFrame(() => (this.el.style.opacity = '1')); this.watch = watchFx(this); }
+  end() { this.life = Math.min(this.life, this.t + 0.6); }
+  update(dt) { this.t += dt; if (this.t > this.life - 0.6) this.el.style.opacity = '0'; if (this.t > this.life) { this.kill(); return false; } return true; }
+  kill() { this.el.remove(); clearInterval(this.watch); }
+}
+class Conveyor {   // Tandwieltron: the whole floor turns into a conveyor belt
+  constructor(boss, B, o = {}) {
+    this.b = boss; this.B = B.clone(); this.t = 0; this.life = o.life ?? 5; this.speed = (o.speed ?? 3.2) * (Math.random() < 0.5 ? -1 : 1);
+    this.stripes = [0, 1, 2, 3, 4, 5, 6, 7].map((i) => { const w = new SurfaceWall(boss.g, boss.a, i % 2 ? 0xffd23a : 0xff8a1a, 0.06, 40, 0.6); w.visible = true; w.ph = (i / 8) * Math.PI * 2; return w; });
+  }
+  update(dt) {
+    this.t += dt;
+    const k = Math.min(1, this.t / 0.6, Math.max(0, (this.life - this.t) / 0.5));
+    for (const w of this.stripes) { w.ph += (this.speed / this.b.a.r) * k * dt; w.meridian(this.B, w.ph, 0.35, Math.PI - 0.35); }
+    if (onA(this.b) && P.grounded) {
+      const tan = new THREE.Vector3().crossVectors(this.B, P.up);
+      if (tan.lengthSq() > 1e-4) shove(tan.normalize(), this.speed * k * dt);
+    }
+    if (this.t > this.life) { this.kill(); return false; }
+    return true;
+  }
+  kill() { for (const w of this.stripes) this.b.g.remove(w.mesh, w.mesh2); }
+}
+
 // ---------- base ----------
 class Boss {
   constructor(world, arena, info) {
@@ -160,9 +460,9 @@ export class Miauwtron extends Boss {
     this.B = V3(0, 1, 0);
     this.H0 = 5.4; this.Hs = 1.9; this.h = this.H0; this.stunned = false;
     this.plans = [
-      ['rings', 'bells', 'rings', 'stun'],
-      ['rings', 'drones', 'sweep', 'bells', 'stun'],
-      ['sweep', 'bells', 'double', 'drones', 'rings', 'stun'],
+      ['rings', 'bells', 'floor', 'stun'],
+      ['rings', 'scratch', 'drones', 'bells', 'stun'],
+      ['floor', 'scratch', 'bells', 'drones', 'rings', 'stun'],
     ];
     // the tower
     this.pf = world.addPlatform(arena, { dir: this.B, hx: 2.1, hz: 2.1, h: this.H0, color: 0x2b2440 });
@@ -222,6 +522,15 @@ export class Miauwtron extends Boss {
     if (mv === 'double') { this.n = 3; this.nt = 0.2; }
     if (mv === 'bells') { this.n = [2, 3, 3][p]; this.nt = 0.3; }
     if (mv === 'sweep') { this.haz.push(new Sweep(this, this.B, { speed: [0.7, 0.85, 1.05][p], turns: [1, 1, 1.4][p] })); this.nt = 2.5; sfx.warn(); }
+    if (mv === 'floor') {
+      const beat = [1.25, 1.1, 0.95][p];
+      this.haz.push(new Floor(this, this.B, { beat, beats: [4, 5, 6][p] })); this.nt = 0; this.beat = beat; sfx.warn();
+      G.toastOnce('mt-floor', 'DANCE FLOOR! On every beat the flashing tiles DROP: hop onto the dark ones!');
+    }
+    if (mv === 'scratch') {
+      this.haz.push(new Sweep(this, this.B, { speed: [0.75, 0.9, 1.05][p], turns: [1.3, 1.5, 1.7][p], flip: [2.4, 2.0, 1.6][p], color: 0xff3d7f })); sfx.warn();
+      G.toastOnce('mt-scratch', 'RECORD SCRATCH! The laser turns round halfway. Don’t get caught out!');
+    }
     if (mv === 'drones') { this.n = [2, 2, 3][p]; this.spawnDrones(this.n); }
     if (mv === 'stun') { this.stunned = true; this.ms = 0; sfx.boom(); G.toastOnce('mt-stun', 'The bass DROPPED! Jump on top and GROUND POUND the Drop Button! (Shift in the air)'); }
   }
@@ -267,6 +576,11 @@ export class Miauwtron extends Boss {
       return this.haz.some((h) => h instanceof Sweep);
     }
     if (mv === 'drones') return this.mt < 6 && this.drones.some((e) => !e.dead);
+    if (mv === 'floor') {   // the tower pumps along with the beat
+      this.nt -= dt; if (this.nt <= 0) { this.pump(); this.nt = this.beat; }
+      return this.haz.some((h) => h instanceof Floor);
+    }
+    if (mv === 'scratch') return this.haz.some((h) => h instanceof Sweep);
     if (mv === 'stun') {
       const hold = [4.6, 4.0, 3.4][p];
       const tt = this.mt;
@@ -320,8 +634,8 @@ export class Gruis extends Boss {
     this.B = V3(0, 1, 0);
     this.plans = [
       ['walk', 'roll', 'walk', 'roll', 'slam'],
-      ['slam', 'roll', 'walk', 'roll', 'slam', 'roll'],
-      ['spikes', 'roll', 'slam', 'roll', 'spikes', 'walk', 'roll'],
+      ['slam', 'roll', 'chase', 'roll', 'slam', 'roll'],
+      ['chase', 'roll', 'slam', 'roll', 'chase', 'walk', 'roll'],
     ];
     // crystal pillars round the equator: roll him into one!
     this.pillars = [0, 90, 180, 270].map((lon) => {
@@ -373,10 +687,23 @@ export class Gruis extends Boss {
       }
       sfx.warn();
     }
+    if (mv === 'chase') {
+      // he punches the ground: a crack runs after you, and in phase 3 a second one a moment later
+      this.haz.push(new Chase(this, this.dir, { speed: [5, 5.2, 5.6][p], life: [4, 4.2, 4.5][p] })); this.second = p < 2;
+      sfx.boom(); G.shake = 0.5; sfx.warn();
+      G.toastOnce('gr-chase', 'A crack is coming after you! Keep running: crystals shoot up behind it.');
+    }
   }
   step(mv, dt, t) {
     const p = this.phase;
     const onMe = P.planet === this.a;
+    if (mv === 'chase') {
+      this.arms.forEach((a) => (a.rotation.x = -2.2 + Math.sin(this.mt * 10) * 0.3)); this.body.rotation.z = Math.sin(this.mt * 20) * 0.04;
+      if (!this.second && this.mt > 1.6) { this.second = true; this.haz.push(new Chase(this, this.dir, { speed: 5.6, life: 3.6 })); sfx.boom(); G.shake = 0.5; }
+      this.touch();
+      if (this.mt > 1.2 && !this.haz.some((h) => h instanceof Chase)) { this.arms.forEach((a) => (a.rotation.x = 0)); this.body.rotation.z = 0; return false; }
+      return true;
+    }
     if (mv === 'walk') {
       if (onMe) this.steer(tangentTo(this.dir, P.up), 3, dt);
       this.walk([2.6, 3.0, 3.4][p], dt);
@@ -525,8 +852,8 @@ export class Zennith extends Boss {
     super(world, arena, { name: 'ZENNITH', sub: "The demon pitcher · Nathan's worst nightmare", hp: 4 });
     this.plans = [
       ['fast', 'curve', 'fast', 'rest', 'fast', 'curve', 'fast', 'rest'],
-      ['split', 'curve', 'stomp', 'fast', 'curve', 'split', 'rest'],
-      ['meteor', 'rally', 'curve', 'stomp', 'split', 'rally', 'rest'],
+      ['split', 'curve', 'grounders', 'fast', 'curve', 'split', 'rest'],
+      ['grounders', 'rally', 'curve', 'stomp', 'split', 'rally', 'rest'],
     ];
     this.dir = V3(0, 1, 0); this.alt = 7.2;
     const m = new THREE.Group(); this.m = m; this.g.add(m);
@@ -592,10 +919,21 @@ export class Zennith extends Boss {
     this.wind = 0; this.thrown = false;
     if (mv === 'meteor') { sfx.warn(); for (let i = 0; i < 6; i++) this.haz.push(new Drop(this, frameDir(P.up, 90 - (i ? 10 + Math.random() * 18 : 0), Math.random() * 360), { delay: 1.0 + i * 0.28, radius: 1.4, model: meteor(), color: 0xff5a2a, from: 16 })); }
     if (mv === 'stomp') { sfx.warn(); }
+    if (mv === 'grounders') { this.n = [0, 2, 3][this.phase]; this.nt = 0.5; sfx.warn(); G.toastOnce('zn-ground', 'GROUNDERS! He bats balls along the ground at you: JUMP over them.'); }
   }
   step(mv, dt) {
     const p = this.phase;
     if (mv === 'rest') { this.body.rotation.z = Math.sin(this.mt * 10) * 0.08; return this.mt < 1.1; }
+    if (mv === 'grounders') {
+      // a fan of three balls rolling over the ground from right under him
+      this.nt -= dt; this.arm.rotation.x = this.nt < 0.25 ? 1.4 : -2.2 * Math.min(1, (0.5 - this.nt) / 0.5);
+      if (this.nt <= 0 && this.n > 0) {
+        const base = P.planet === this.a ? tangentTo(this.dir, P.up) : anyPerp(this.dir);
+        for (const s of [-0.38, 0, 0.38]) this.haz.push(new Roller(this, this.dir, base.clone().applyAxisAngle(this.dir, s), { speed: [10, 11, 12.5][p], r: 0.55, model: rollBall(0.55, 0xfff2e0, 0xd8323a), color: 0xfff2e0 }));
+        sfx.bat(); G.shake = 0.25; this.n--; this.nt = 1.3;
+      }
+      return this.n > 0 || this.mt < 1.6;
+    }
     if (mv === 'meteor') return this.mt < 3;
     if (mv === 'stomp') {
       this.body.position.y = this.mt < 0.6 ? this.mt * 1.5 : Math.max(0, 0.9 - (this.mt - 0.6) * 9);
@@ -679,9 +1017,9 @@ export class Deniz extends Boss {
     this.B = V3(0, 1, 0);
     this.H = 4.4; this.alt = this.H; this.vuln = false;
     this.plans = [
-      ['icicles', 'frost', 'spikes', 'icicles', 'break'],
-      ['frost', 'blizzard', 'spikes', 'icicles', 'frost', 'break'],
-      ['storm', 'spikes', 'blizzard2', 'frost', 'spikes', 'storm', 'break'],
+      ['icicles', 'orbit', 'spikes', 'icicles', 'break'],
+      ['orbit', 'gaze', 'spikes', 'icicles', 'orbit', 'break'],
+      ['storm', 'spikes', 'gaze2', 'orbit', 'spikes', 'storm', 'break'],
     ];
     // the ice throne
     this.pf = world.addPlatform(arena, { dir: this.B, r: 1.7, h: 1.1, sides: 6, color: 0x9fd8ff, top: 0xe8fbff });
@@ -735,6 +1073,19 @@ export class Deniz extends Boss {
       s2.phi = s1.phi + Math.PI; this.haz.push(s1, s2);
     }
     if (mv === 'break') { sfx.warn(); this.ms = 0; G.toastOnce('dz-aura', 'His aura is overloading… get ready!'); }
+    if (mv === 'orbit') {
+      this.haz.push(new Orbiter(this, this.B, { n: [5, 6, 6][p], spin: [0.8, 1.0, 1.15][p], life: [5, 5.5, 6][p] }));
+      if (p >= 2) this.haz.push(new Orbiter(this, this.B, { n: 5, spin: -1.0, th0: 1.25, amp: 0.3, w: 1.7, life: 6 }));
+      sfx.chime(); G.toastOnce('dz-orbit', 'Ice shards circle his throne! The ring breathes in and out: jump over them, or slip between.');
+    }
+    if (mv === 'gaze' || mv === 'gaze2') { this.n = [2, 2, 3][p] - 1; this.stare(mv === 'gaze2'); G.toastOnce('dz-gaze', 'His icy stare follows you… when it flashes, it FIRES. Step aside or jump!'); }
+  }
+  // a frozen beam over the ice, aimed at you. gaze2: two at once, in a V
+  stare(two) {
+    const p = this.phase, o = { aim: [1.4, 1.25, 1.1][p], fire: 0.7, color: 0x7dfcff, th0: 0.25, th1: 2.9 };
+    if (two) { this.haz.push(new Beam(this, this.B, { ...o, off: -0.32 }), new Beam(this, this.B, { ...o, off: 0.32, color: 0xffffff })); }
+    else this.haz.push(new Beam(this, this.B, o));
+    sfx.chime();
   }
   spikeLine(spread) {
     const B = this.B, base = tangentTo(B, P.up);
@@ -775,6 +1126,12 @@ export class Deniz extends Boss {
       return this.n > 0 || this.mt < 2.4;
     }
     if (mv === 'storm') return this.mt < 3.6;
+    if (mv === 'orbit') { this.cast(Math.sin(this.mt * 3) > 0); return this.haz.some((h) => h instanceof Orbiter); }
+    if (mv === 'gaze' || mv === 'gaze2') {
+      this.cast(true);
+      if (!this.haz.some((h) => h instanceof Beam)) { if (this.n > 0) { this.n--; this.stare(mv === 'gaze2'); } else return false; }
+      return true;
+    }
     if (mv === 'blizzard' || mv === 'blizzard2') return this.haz.some((h) => h instanceof Sweep);
     if (mv === 'break') {
       const tt = this.mt, hold = [4.6, 4.0, 3.4][p];
@@ -861,9 +1218,9 @@ export class Lorcan extends Boss {
     super(world, arena, { name: 'LORCAN PECH', sub: 'The Bad-Luck Leprechaun · three pots, one leprechaun', hp: 4 });
     this.B = V3(0, 1, 0);
     this.plans = [
-      ['coins', 'clover', 'boulders', 'shuffle'],
-      ['clover', 'rainbow', 'coins', 'boulders', 'shuffle'],
-      ['boulders', 'rainbow', 'coins', 'clover', 'coins', 'shuffle'],
+      ['bounce', 'lucky', 'boulders', 'shuffle'],
+      ['lucky', 'rainbow', 'bounce', 'boulders', 'shuffle'],
+      ['boulders', 'rainbow', 'bounce', 'lucky', 'bounce', 'shuffle'],
     ];
     // his mossy rock at the pole
     this.rock = world.addPlatform(arena, { dir: this.B, r: 1.3, h: 1.4, sides: 7, color: 0x8a8a7a, top: 0x4aa84a });
@@ -925,6 +1282,8 @@ export class Lorcan extends Boss {
     const p = this.phase;
     this.n = 0; this.nt = 0.3;
     if (mv === 'coins') this.n = [3, 4, 4][p];
+    if (mv === 'bounce') { this.n = [2, 3, 4][p]; this.nt = 0.4; G.toastOnce('lp-bounce', 'Lucky coins bounce after you! Watch the yellow circles: that’s where they land.'); }
+    if (mv === 'lucky') { this.n = [2, 2, 3][p]; G.toastOnce('lp-lucky', 'Feeling lucky? Only the GREEN circle with the clover is safe. Run into it!'); }
     if (mv === 'clover') { this.n = [2, 3, 3][p]; this.nt = 0.2; }
     if (mv === 'rainbow') {
       sfx.whoosh();
@@ -969,6 +1328,20 @@ export class Lorcan extends Boss {
       return this.n > 0 || this.mt < 2.2;
     }
     if (mv === 'rainbow') return this.haz.some((h) => h instanceof Sweep);
+    if (mv === 'bounce') {
+      this.nt -= dt; this.l.arms[0].rotation.x = this.nt < 0.3 ? -2.4 : -0.3;
+      if (this.nt <= 0 && this.n > 0) { this.haz.push(new Bouncer(this, this.B, { hops: [4, 5, 6][p], hopT: [0.75, 0.65, 0.55][p] })); sfx.coin(); this.n--; this.nt = 0.9; }
+      return this.n > 0 || this.haz.some((h) => h instanceof Bouncer);
+    }
+    if (mv === 'lucky') {
+      if (!this.haz.some((h) => h instanceof Gamble)) {
+        if (this.n <= 0) return false;
+        // in the later phases the last round is a trick: the clover jumps!
+        this.haz.push(new Gamble(this, { delay: [2.6, 2.3, 2.0][p], swap: p >= 1 && this.n === 1 })); this.n--; sfx.warn();
+      }
+      this.l.arms[1].rotation.z = 0.4 + Math.sin(this.mt * 12) * 0.5;
+      return true;
+    }
     if (mv === 'boulders') {
       for (const e of this.rocks) if (!e.dead) { e.life -= dt; if (e.life <= 0) e.kill(true); }
       return this.mt < 7 && this.rocks.some((e) => !e.dead);
@@ -1051,9 +1424,9 @@ export class Kokos extends Boss {
     super(world, arena, { name: 'KONING KOKOS', sub: 'The gorilla king · way too many coconuts', hp: 4 });
     this.B = V3(0, 1, 0);
     this.plans = [
-      ['walk', 'coconuts', 'beat', 'leap'],
-      ['vines', 'walk', 'coconuts', 'beat', 'leap'],
-      ['coco', 'vines', 'beat', 'coconuts', 'walk', 'leap'],
+      ['walk', 'bowling', 'beat', 'leap'],
+      ['swing', 'walk', 'bowling', 'beat', 'leap'],
+      ['coco', 'swing', 'beat', 'bowling', 'walk', 'leap'],
     ];
     // tree stumps round the arena: something to hop on
     for (let i = 0; i < 5; i++) world.addPlatform(arena, { dir: frameDir(this.B, 62, i * 72 + 36), r: 1.1, h: 1.4, sides: 9, color: 0x6a4020, top: 0xc8a060 });
@@ -1081,6 +1454,8 @@ export class Kokos extends Boss {
     const p = this.phase;
     this.n = 0; this.nt = 0.4;
     if (mv === 'coconuts') { this.n = [3, 4, 5][p]; G.toastOnce('kk-coco', 'Coconuts incoming! Keep moving out of the red circles.'); }
+    if (mv === 'bowling') { this.n = [3, 4, 5][p]; this.nt = 0.6; G.toastOnce('kk-bowl', 'COCONUT BOWLING! He rolls them straight at you, one after the other: jump over them.'); }
+    if (mv === 'swing') { this.n = [0, 2, 3][p]; this.ms = 'aim'; sfx.whoosh(); G.toastOnce('kk-swing', 'He grabs a vine and SWINGS through the arena! Jump over him when he comes past.'); }
     if (mv === 'beat') { this.n = [2, 3, 3][p]; this.nt = 0.7; sfx.warn(); G.toastOnce('kk-beat', 'He’s beating his chest! JUMP over the shockwaves.'); }
     if (mv === 'vines') {
       sfx.whoosh(); G.toastOnce('kk-vines', 'Swinging vines! Jump over them, or run ahead of them.');
@@ -1131,6 +1506,38 @@ export class Kokos extends Boss {
         this.n--; this.nt = [1.4, 1.15, 1.0][p];
       }
       if (this.n <= 0 && this.mt > 2.4) { k.arms.forEach((a) => a.rotation.set(0, 0, 0)); return false; }
+      return true;
+    }
+    if (mv === 'bowling') {
+      // one coconut at a time, every one aimed at where you are now
+      if (onMe) this.steer(tangentTo(this.dir, P.up), 6, dt);
+      this.nt -= dt; k.arms[1].rotation.x = this.nt < 0.3 ? 0.8 : -1.6 * Math.min(1, this.mt);
+      this.place(); this.touch();
+      if (this.nt <= 0 && this.n > 0) {
+        const f = onMe ? tangentTo(this.dir, P.up) : this.fwd.clone();
+        this.haz.push(new Roller(this, stepDir(this.dir.clone(), f, 2.2, this.a.r), f, { speed: [8, 9, 10][p], r: 0.85, model: rollBall(0.85, 0x8a5a34, 0x5a3a20), color: 0xc8a060 }));
+        sfx.swing(); this.n--; this.nt = [1.1, 0.9, 0.75][p];
+      }
+      return this.n > 0 || this.mt < 1.2;
+    }
+    if (mv === 'swing') {
+      // aim at you, then swing straight through on a vine, low over the ground
+      k.arms[0].rotation.x = k.arms[1].rotation.x = -3;
+      if (this.ms === 'aim') {
+        if (onMe) this.steer(tangentTo(this.dir, P.up), 8, dt);
+        this.place(Math.min(1, this.mt / 0.6) * 0.5); this.touch();
+        if (this.mt > 0.7) { this.ms = 'go'; this.mt = 0; sfx.whoosh(); }
+        return true;
+      }
+      this.walk([0, 12, 13][p], dt); this.place(0.5 + Math.sin(Math.min(1, this.mt / 1.5) * Math.PI) * 0.8);
+      k.r.rotation.x = -0.4;
+      if (Math.random() < dt * 20) puff(surf(this.a, this.dir, 0.4), 1, 0x5cc84a, 2, 0.6, this.dir);
+      if (onMe && arcTo(this.a, P.up, this.dir) < 1.8 && P.alt < 1.5) hurtPlayer(surf(this.a, this.dir, 0), 12);
+      if (this.mt > 1.5) {
+        k.r.rotation.x = 0; this.place();
+        if (--this.n <= 0) { k.arms.forEach((a) => a.rotation.set(0, 0, 0)); return false; }
+        this.ms = 'aim'; this.mt = 0;
+      }
       return true;
     }
     if (mv === 'vines') { k.arms[0].rotation.x = k.arms[1].rotation.x = -2.8 + Math.sin(this.mt * 6) * 0.3; this.place(); this.touch(); const busy = this.haz.some((h) => h instanceof Sweep); if (!busy) k.arms.forEach((a) => a.rotation.set(0, 0, 0)); return busy; }
@@ -1213,7 +1620,7 @@ export class Smeul extends Boss {
   constructor(world, arena) {
     super(world, arena, { name: 'SMEUL', sub: 'The fire dragon · hot-headed, literally', hp: 4 });
     this.B = V3(0, 1, 0);
-    this.plans = [['meteors', 'breath'], ['fly', 'quake', 'breath'], ['fly', 'meteors', 'quake', 'breath']];
+    this.plans = [['firetrail', 'breath'], ['fly', 'erupt', 'breath'], ['fly', 'firetrail', 'erupt', 'breath']];
     for (let i = 0; i < 4; i++) world.addPlatform(arena, { dir: frameDir(this.B, 64, i * 90 + 45), r: 1.2, h: 1.2, sides: 7, color: 0x3a3038, top: 0x5a4a50 });
     this.k = buildDragon(); this.m = this.k.root; this.g.add(this.m);
     walker(this); this.home();
@@ -1230,6 +1637,16 @@ export class Smeul extends Boss {
     if (mv === 'fly') { this.n = [0, 5, 7][p]; this.ms = 'up'; sfx.whoosh(); G.toastOnce('sm-fly', 'He’s flying! Fireballs rain down where you stand. Keep moving!'); }
     if (mv === 'quake') { this.n = [2, 2, 3][p]; this.nt = 0.6; sfx.warn(); G.toastOnce('sm-quake', 'Lava waves! JUMP over them.'); }
     if (mv === 'breath') { this.ms = 'aim'; sfx.warn(); G.toastOnce('sm-breath', 'FLAME BREATH! Jump over the fire, or run ahead of it. Afterwards he’s out of breath…'); }
+    if (mv === 'firetrail') { this.acc = 0; sfx.warn(); G.toastOnce('sm-trail', 'He’s running circles round you and leaving FIRE behind! Don’t get boxed in.'); }
+    if (mv === 'erupt') {
+      // three arms of lava pillars spiral out of the ground from where he stands
+      const a0 = Math.random() * 360;
+      for (let arm = 0; arm < 3; arm++) for (let i = 0; i < [0, 9, 11][p]; i++) {
+        const d = frameDir(this.dir, latOf(this.a, 2.4 + i * 1.25), a0 + arm * 120 + i * 24);
+        this.haz.push(new Spike(this, d, 0.3 + i * [0.14, 0.13, 0.11][p] + arm * 0.05, 0xff7a2a));
+      }
+      sfx.boom(); G.shake = 0.5; G.toastOnce('sm-erupt', 'Lava pillars spiral out of the ground! Find the gaps between the arms.');
+    }
   }
   step(mv, dt) {
     const p = this.phase, k = this.k, onMe = P.planet === this.a;
@@ -1246,9 +1663,25 @@ export class Smeul extends Boss {
       if (this.n <= 0 && this.mt > 2) { k.neck.rotation.x = 0; return false; }
       return true;
     }
+    if (mv === 'firetrail') {
+      // runs a wide curve round you on all fours, leaving burning patches behind
+      if (onMe) { const to = tangentTo(this.dir, P.up), side = new THREE.Vector3().crossVectors(this.dir, to); this.steer(to.multiplyScalar(0.55).addScaledVector(side, 0.85).normalize(), 2.2, dt); }
+      const sp = [6.5, 7, 7.8][p]; this.walk(sp, dt);
+      k.r.rotation.x = 0.25; k.neck.rotation.x = 0.4; const flap = Math.sin(this.mt * 10) * 0.3; k.wings[0].rotation.z = flap; k.wings[1].rotation.z = -flap;
+      this.place(); this.bodyTouch();
+      this.acc += sp * dt;
+      if (this.acc > 1.15) { this.acc = 0; this.haz.push(new FirePatch(this, this.dir, [3.4, 3.8, 4.2][p])); }
+      if (this.mt > [3.6, 4, 4.6][p]) { k.r.rotation.x = 0; k.neck.rotation.x = 0; k.wings.forEach((w) => (w.rotation.z = 0)); return false; }
+      return true;
+    }
+    if (mv === 'erupt') {
+      // roars at the sky while the lava comes up
+      k.neck.rotation.x = -0.7; k.jaw.rotation.x = 0.5 + Math.sin(this.mt * 20) * 0.1; this.place(); this.bodyTouch();
+      if (this.mt > 2.6) { k.neck.rotation.x = 0; k.jaw.rotation.x = 0; return false; }
+      return true;
+    }
     if (mv === 'fly') {
-      const wing = Math.sin(this.mt * 12) * 0.6; k.wings[0].rotation.z = wing; k.wings[1].rotation.z = -wing;
-      if (this.ms === 'up') { this.place(Math.min(1, this.mt / 0.8) * 8); if (this.mt > 0.8) { this.ms = 'air'; this.mt = 0; } return true; }
+      const wing = Math.sin(this.mt * 12) * 0.6; k.wings[0].rotation.z = wing; k.wings[1].rotation.z = -wing;      if (this.ms === 'up') { this.place(Math.min(1, this.mt / 0.8) * 8); if (this.mt > 0.8) { this.ms = 'air'; this.mt = 0; } return true; }
       if (this.ms === 'air') {
         if (onMe) this.steer(tangentTo(this.dir, P.up), 2, dt);
         this.walk(5, dt); this.place(8 + Math.sin(this.mt * 3) * 0.5);
@@ -1314,7 +1747,7 @@ export class Gruizel extends Boss {
   constructor(world, arena) {
     super(world, arena, { name: 'GRUIZEL', sub: 'The giant sandworm · always hungry', hp: 4 });
     this.B = V3(0, 1, 0);
-    this.plans = [['spit', 'hunt'], ['quake', 'spit', 'hunt'], ['tail', 'quake', 'spit', 'hunt']];
+    this.plans = [['spit', 'hunt'], ['dive', 'spit', 'hunt'], ['shark', 'dive', 'spit', 'hunt']];
     for (let i = 0; i < 4; i++) world.addPlatform(arena, { dir: frameDir(this.B, 60, i * 90 + 45), r: 1.0, h: 1.4, sides: 8, color: 0xc8945a, top: 0xe8c890 });
     this.k = buildWorm(); this.m = new THREE.Group(); this.m.add(this.k.root); this.g.add(this.m);   // an extra group, so tipping him over survives orientOn
     walker(this); this.home();
@@ -1333,6 +1766,22 @@ export class Gruizel extends Boss {
     if (mv === 'quake') { this.under(); this.n = [3, 3, 4][p]; this.nt = 0.5; sfx.warn(); G.toastOnce('gz-quake', 'Sand waves! JUMP over them.'); }
     if (mv === 'tail') { this.under(); sfx.whoosh(); G.toastOnce('gz-tail', 'His tail sweeps through the sand! Jump over it.'); this.haz.push(new Sweep(this, this.B, { speed: [0.8, 0.9, 1.0][p], turns: 1, color: 0xd8a868 })); if (p >= 2) { const s2 = new Sweep(this, this.B, { speed: 0.9, turns: 1, color: 0xc8945a }); s2.phi += Math.PI; this.haz.push(s2); } }
     if (mv === 'hunt') { this.under(); this.ms = 'trail'; this.dir.copy(frameDir(P.planet === this.a ? P.up : this.B, 70, Math.random() * 360)); this.fwd = anyPerp(this.dir); sfx.warn(); G.toastOnce('gz-hunt', 'He’s hunting you under the sand! When the circle shows up: GET OUT!'); }
+    if (mv === 'dive') {
+      this.under(); this.n = [0, 3, 4][p]; this.diveMark();
+      G.toastOnce('gz-dive', 'He leaps out of the sand like a dolphin, again and again! Get out of the circles.');
+    }
+    if (mv === 'shark') {
+      this.under(); this.n = [0, 0, 3][p]; this.nt = 0;
+      G.toastOnce('gz-shark', 'Sand sharks! Their fins chase you through the sand: zigzag, or jump over them.');
+    }
+  }
+  // the next dolphin leap: from where he is to a circle where you are
+  diveMark() {
+    this.from = this.dir.clone();
+    this.to = P.planet === this.a ? P.up.clone() : frameDir(this.B, 50, Math.random() * 360);
+    if (arcTo(this.a, this.from, this.to) < 3) this.from = frameDir(this.to, latOf(this.a, 7), Math.random() * 360);
+    if (this.mk) this.g.remove(this.mk);
+    this.mk = makeMarker(this.g, 2.2, 0xff3a5a); this.mk.place(this.a, this.to); this.ms = 'mark'; this.mt = 0; sfx.warn();
   }
   step(mv, dt) {
     const p = this.phase, k = this.k, onMe = P.planet === this.a;
@@ -1354,6 +1803,34 @@ export class Gruizel extends Boss {
       return this.n > 0 || this.mt < 3;
     }
     if (mv === 'tail') return this.haz.some((h) => h instanceof Sweep);
+    if (mv === 'dive') {
+      if (this.ms === 'mark') { this.mk.pulse(this.mt * 14); if (this.mt > [0.9, 0.75, 0.65][p]) { this.ms = 'air'; this.mt = 0; puff(surf(this.a, this.from, 0.3), 24, 0xd8b070, 6, 1.5, this.from); sfx.whoosh(); } return true; }
+      if (this.ms === 'air') {
+        // a big arc through the air, head first, then down into the circle
+        const air = 0.95, kk = Math.min(1, this.mt / air);
+        this.dir.copy(this.from).lerp(this.to, kk).normalize(); this.fwd = tangentTo(this.dir, this.to);
+        this.m.visible = true; this.place(Math.sin(kk * Math.PI) * 7 - 5 * (1 - Math.sin(kk * Math.PI)));
+        k.root.rotation.x = -1.2 + kk * 2.4;
+        if (kk >= 1) {
+          this.g.remove(this.mk); this.mk = null; sfx.boom(); G.shake = 0.7; puff(surf(this.a, this.to, 0.3), 30, 0xd8b070, 7, 2, this.to);
+          if (onMe && arcTo(this.a, P.up, this.to) < 2.3 && P.alt < 3) { hurtPlayer(surf(this.a, this.to, 0)); bouncePlayer(12); }
+          this.under(); this.dir.copy(this.to);
+          if (--this.n <= 0) return false;
+          this.diveMark();
+        }
+        return true;
+      }
+      return false;
+    }
+    if (mv === 'shark') {
+      this.nt -= dt;
+      if (this.nt <= 0 && this.n > 0) {
+        const from = frameDir(onMe ? P.up : this.B, latOf(this.a, 9), Math.random() * 360);
+        this.haz.push(new Homing(this, from, { model: finModel(), speed: 7, turn: 1.4, life: 4.2, alt: 0, over: 1.0, hitR: 1.05, trail: 0xd8b070, color: 0xd8b070 }));
+        sfx.whoosh(); this.n--; this.nt = 0.9;
+      }
+      return this.n > 0 || this.haz.some((h) => h instanceof Homing);
+    }
     if (mv === 'hunt') {
       if (this.ms === 'trail') {
         // a dust trail swims toward you under the sand
@@ -1402,7 +1879,7 @@ export class Mecha extends Boss {
   constructor(world, arena) {
     super(world, arena, { name: 'MECHA-MIAUW', sub: 'Kayo & Yara’s giant robot cat · version 2.0', hp: 4 });
     this.B = V3(0, 1, 0);
-    this.plans = [['walk', 'missiles', 'stomp'], ['laser', 'walk', 'missiles', 'stomp'], ['mice', 'laser', 'missiles', 'walk', 'stomp']];
+    this.plans = [['walk', 'homing', 'stomp'], ['eyes', 'walk', 'homing', 'stomp'], ['mice', 'eyes', 'homing', 'walk', 'stomp']];
     for (let i = 0; i < 4; i++) world.addPlatform(arena, { dir: frameDir(this.B, 62, i * 90), r: 1.1, h: 1.6, float: true, thick: 0.4, color: 0x6a6e84, top: 0x9fe8ff, bob: [0.4, 1.2, i] });
     this.k = buildMecha(); this.m = this.k.root; this.g.add(this.m);
     this.bots = [];
@@ -1416,9 +1893,17 @@ export class Mecha extends Boss {
     this.m.visible = true; this.k.r.rotation.set(0, 0, 0); this.cool(); this.bar(false); this.home();
   }
   cool() { this.k.dome.visible = true; this.k.body.position.y = 0; this.k.eyeM.color.setHex(0x7dff9a); }
+  // two eye lasers in a V, aimed at you
+  lock() {
+    const o = { aim: [1.4, 1.25, 1.1][this.phase], fire: 0.6, th0: 0.2, th1: 2.8 };
+    this.haz.push(new Beam(this, this.dir, { ...o, off: -0.22, color: 0x7dff9a }), new Beam(this, this.dir, { ...o, off: 0.22, color: 0xff5ab4 }));
+    sfx.warn();
+  }
   begin(mv) {
     const p = this.phase; this.n = 0; this.nt = 0.4; this.ms = null;
     if (mv === 'missiles') { this.n = [4, 5, 6][p]; sfx.warn(); G.toastOnce('mm-mis', 'Missiles! Keep moving out of the red circles.'); }
+    if (mv === 'homing') { this.n = [3, 4, 5][p]; this.nt = 0.3; sfx.warn(); G.toastOnce('mm-homing', 'HOMING MISSILES! They follow you: turn sharply at the last moment, or jump over them.'); }
+    if (mv === 'eyes') { this.n = [2, 2, 3][p] - 1; this.lock(); G.toastOnce('mm-eyes', 'Its eyes LOCK ON to you… when the lasers flash, they FIRE!'); }
     if (mv === 'laser') {
       sfx.warn(); G.toastOnce('mm-laser', 'Eye lasers! Jump over them. On the moon you jump REALLY high.');
       this.haz.push(new Sweep(this, this.dir, { speed: [0.8, 0.9, 1.05][p], turns: 1, color: 0x7dff9a }));
@@ -1440,6 +1925,24 @@ export class Mecha extends Boss {
       return this.n > 0 || this.mt < 1.5;
     }
     if (mv === 'laser') { k.head.rotation.y = Math.sin(this.mt * 2) * 0.3; k.eyeM.color.setHex(Math.sin(this.mt * 30) > 0 ? 0xffffff : 0x7dff9a); this.place(); this.bodyTouch(2.0, 3.2); const busy = this.haz.some((h) => h instanceof Sweep); if (!busy) { k.head.rotation.y = 0; k.eyeM.color.setHex(0x7dff9a); } return busy; }
+    if (mv === 'homing') {
+      if (onMe) this.steer(tangentTo(this.dir, P.up), 4, dt);
+      this.place(); this.bodyTouch(2.0, 3.2);
+      this.nt -= dt;
+      if (this.nt <= 0 && this.n > 0) {
+        // fired from its back, they fly low over the ground and follow you
+        const m = new THREE.Group(), ms = missile(); ms.rotation.x = -Math.PI / 2; m.add(ms);
+        this.haz.push(new Homing(this, this.ahead(-0.5), { model: m, speed: [6.5, 7, 7.6][p], turn: [1.6, 1.8, 2.0][p], life: 4, alt: 0.7, over: 0.9, trail: 0xffffff, color: 0xff7a2a }));
+        sfx.whoosh(); k.arms.forEach((a) => (a.rotation.x = -0.6)); this.n--; this.nt = 0.75;
+      } else k.arms.forEach((a) => (a.rotation.x *= 0.9));
+      return this.n > 0 || this.haz.some((h) => h instanceof Homing);
+    }
+    if (mv === 'eyes') {
+      if (onMe) this.steer(tangentTo(this.dir, P.up), 3, dt);
+      k.eyeM.color.setHex(Math.sin(this.mt * 30) > 0 ? 0xffffff : 0xff3a5a); this.place(); this.bodyTouch(2.0, 3.2);
+      if (!this.haz.some((h) => h instanceof Beam)) { if (this.n > 0) { this.n--; this.lock(); } else { k.eyeM.color.setHex(0x7dff9a); return false; } }
+      return true;
+    }
     if (mv === 'mice') { for (const e of this.bots) if (!e.dead) { e.life -= dt; if (e.life <= 0) e.kill(true); } this.place(); this.bodyTouch(2.0, 3.2); return this.mt < 8 && this.bots.some((e) => !e.dead); }
     if (mv === 'stomp') {
       if (this.ms === 'air') {
@@ -1493,7 +1996,7 @@ export class Kraak extends Boss {
   constructor(world, arena) {
     super(world, arena, { name: 'KRAAK', sub: 'The giant octopus · eight arms, zero manners', hp: 4 });
     this.B = V3(0, 1, 0);
-    this.plans = [['ink', 'smash'], ['spin', 'ink', 'smash'], ['spin', 'waves', 'ink', 'smash']];
+    this.plans = [['blind', 'smash'], ['whirl', 'blind', 'smash'], ['spin', 'whirl', 'blind', 'smash']];
     for (let i = 0; i < 4; i++) world.addPlatform(arena, { dir: frameDir(this.B, 62, i * 90 + 45), r: 1.2, h: 1.2, sides: 7, color: 0x3a6a8a, top: 0xff9ac8 });
     this.k = buildOctopus(); this.m = this.k.root; this.g.add(this.m);
     walker(this); this.home();
@@ -1507,6 +2010,14 @@ export class Kraak extends Boss {
   begin(mv) {
     const p = this.phase; this.n = 0; this.nt = 0.4; this.ms = null;
     if (mv === 'ink') { this.n = [4, 5, 6][p]; sfx.warn(); G.toastOnce('kr-ink', 'Ink blobs! Watch the red circles.'); }
+    if (mv === 'blind') {
+      this.n = [4, 5, 6][p]; this.haz.push(new Splat(this, { life: [3.4, 3.8, 4.2][p], n: [4, 5, 6][p] }));
+      G.toastOnce('kr-blind', 'SPLAT! Ink all over your helmet! You can hardly see… watch for the circles.');
+    }
+    if (mv === 'whirl') {
+      this.haz.push(new Pull(this, () => this.dir, { life: [0, 4.6, 5.2][p], force: [0, 3.0, 3.5][p] })); this.nt = 0.8; this.ring = 0;
+      sfx.whoosh(); G.toastOnce('kr-whirl', 'WHIRLPOOL! It drags you toward him: run against it, and mind the tentacles!');
+    }
     if (mv === 'waves') { this.n = [2, 2, 3][p]; this.nt = 0.6; sfx.warn(); G.toastOnce('kr-wave', 'Tentacle waves! JUMP over them.'); }
     if (mv === 'spin') { this.ms = 'wind'; sfx.warn(); G.toastOnce('kr-spin', 'He’s spinning a tentacle round! Jump over it.'); }
     if (mv === 'smash') { this.ms = 'rear'; sfx.warn(); G.toastOnce('kr-smash', 'He’s rearing up! Get away from the red circle… then he’s dizzy!'); }
@@ -1514,7 +2025,7 @@ export class Kraak extends Boss {
   step(mv, dt) {
     const p = this.phase, k = this.k, onMe = P.planet === this.a;
     const wiggle = (s) => k.tentacles.forEach((t, i) => (t.rotation.x = Math.sin(this.mt * s + i) * 0.25));
-    if (mv === 'ink') {
+    if (mv === 'ink' || mv === 'blind') {
       if (onMe) this.steer(tangentTo(this.dir, P.up), 4, dt);
       wiggle(6); this.place(); this.bodyTouch(2.2, 3);
       this.nt -= dt;
@@ -1525,6 +2036,18 @@ export class Kraak extends Boss {
         sfx.whoosh(); this.n--; this.nt = delay * 0.7;
       }
       if (this.n <= 0 && this.mt > 2) return false;
+      return true;
+    }
+    if (mv === 'whirl') {
+      // spins in the middle of the whirlpool; every so often a ring of tentacles shoots up round him
+      k.r.rotation.y += dt * 3; wiggle(12); this.place(); this.bodyTouch(2.2, 3);
+      this.nt -= dt;
+      if (this.nt <= 0) {
+        const arc = this.ring % 2 ? 4.4 : 2.9, n = this.ring % 2 ? 10 : 7, a0 = Math.random() * 360;
+        for (let i = 0; i < n; i++) this.haz.push(new Spike(this, frameDir(this.dir, latOf(this.a, arc), a0 + (i / n) * 360), 0, 0xc87ad8));
+        sfx.crack(); this.ring++; this.nt = 1.4;
+      }
+      if (!this.haz.some((h) => h instanceof Pull)) { k.r.rotation.y = 0; return false; }
       return true;
     }
     if (mv === 'waves') {
@@ -1596,7 +2119,7 @@ export class Boe extends Boss {
   constructor(world, arena) {
     super(world, arena, { name: 'KONING BOE', sub: 'The ghost king · boo-tiful and very rude', hp: 4 });
     this.B = V3(0, 1, 0);
-    this.plans = [['fire', 'swoop'], ['vanish', 'fire', 'swoop'], ['vanish', 'sweep', 'fire', 'swoop']];
+    this.plans = [['lights', 'swoop'], ['vanish', 'lights', 'swoop'], ['vanish', 'clones', 'lights', 'swoop']];
     for (let i = 0; i < 4; i++) world.addPlatform(arena, { dir: frameDir(this.B, 62, i * 90 + 45), r: 1.2, h: 1.2, sides: 6, color: 0x3a2a4a, top: 0x7dffb0 });
     this.k = buildGhostKing(); this.m = this.k.root; this.g.add(this.m);
     walker(this); this.home();
@@ -1610,6 +2133,15 @@ export class Boe extends Boss {
   begin(mv) {
     const p = this.phase; this.n = 0; this.nt = 0.4; this.ms = null;
     if (mv === 'fire') { this.n = [4, 5, 6][p]; sfx.warn(); G.toastOnce('bo-fire', 'Ghost fire! Watch the red circles.'); }
+    if (mv === 'lights') {
+      this.n = [4, 5, 6][p]; this.haz.push(new Dark(this, { life: 30 })); sfx.whoosh();
+      G.toastOnce('bo-lights', 'LIGHTS OUT! You can only see right round you… watch for the glowing circles of ghost fire.');
+    }
+    if (mv === 'clones') {
+      const at = P.planet === this.a ? P.up : this.dir;
+      for (let i = 0; i < [0, 0, 3][p]; i++) this.haz.push(new Homing(this, frameDir(at, latOf(this.a, 8), i * 120 + Math.random() * 40), { model: ghostClone(), speed: 4.4, turn: 1.3, life: 5.5, alt: 0.4, over: 1.6, hitR: 1.1, color: 0xe8e0ff }));
+      sfx.meow(); G.toastOnce('bo-clones', 'Ghost copies! They float after you: keep moving until they fade away.');
+    }
     if (mv === 'vanish') { this.ms = 'out'; this.n = [0, 4, 6][p]; this.nt = 0.6; sfx.whoosh(); G.toastOnce('bo-vanish', 'He vanished! Spooky spikes pop up where you stand. Keep moving!'); }
     if (mv === 'sweep') { this.ms = 'wind'; sfx.warn(); G.toastOnce('bo-sweep', 'A ghost wall! Jump over it.'); }
     if (mv === 'swoop') { this.ms = 'rise'; sfx.warn(); G.toastOnce('bo-swoop', 'He’s going to swoop at you! Dodge to the side… then he crashes!'); }
@@ -1617,7 +2149,7 @@ export class Boe extends Boss {
   step(mv, dt) {
     const p = this.phase, k = this.k, onMe = P.planet === this.a;
     const float = () => { this.place(this.hover + Math.sin(this.mt * 3) * 0.25); k.arms.forEach((a, i) => (a.rotation.z = Math.sin(this.mt * 4 + i * 3) * 0.3)); };
-    if (mv === 'fire') {
+    if (mv === 'fire' || mv === 'lights') {
       if (onMe) this.steer(tangentTo(this.dir, P.up), 3, dt);
       this.walk(1.2, dt); float(); this.bodyTouch(2.0, 4);
       this.nt -= dt;
@@ -1627,9 +2159,10 @@ export class Boe extends Boss {
         this.haz.push(new Drop(this, frameDir(P.up, 70, Math.random() * 360), { delay: delay + 0.25, radius: 1.5, model: ghostFire(), color: 0x7dffb0, from: 14 }));
         sfx.whoosh(); this.n--; this.nt = delay * 0.7;
       }
-      if (this.n <= 0 && this.mt > 2) return false;
+      if (this.n <= 0 && this.mt > 2) { for (const h of this.haz) if (h instanceof Dark) h.end(); return false; }   // the lights come back on
       return true;
     }
+    if (mv === 'clones') { float(); this.bodyTouch(2.0, 4); return this.mt < 1 || this.haz.some((h) => h instanceof Homing); }
     if (mv === 'vanish') {
       if (this.ms === 'out') { k.r.scale.setScalar(1.7 * Math.max(0.01, 1 - this.mt / 0.5)); if (this.mt > 0.5) { this.m.visible = false; this.ms = 'gone'; this.mt = 0; } return true; }
       if (this.ms === 'gone') {
@@ -1704,7 +2237,7 @@ export class Tandwieltron extends Boss {
   constructor(world, arena) {
     super(world, arena, { name: 'TANDWIELTRON', sub: 'The builder robot · built to win, built by cats', hp: 5 });
     this.B = V3(0, 1, 0);
-    this.plans = [['bolts', 'charge'], ['saws', 'bolts', 'charge'], ['laser', 'press', 'saws', 'bolts', 'charge']];
+    this.plans = [['bolts', 'charge'], ['conveyor', 'bolts', 'charge'], ['gears', 'press', 'conveyor', 'bolts', 'charge']];
     for (let i = 0; i < 4; i++) world.addPlatform(arena, { dir: frameDir(this.B, 62, i * 90 + 45), r: 1.2, h: 1.2, sides: 8, color: 0x5a4a3a, top: 0xffd23a });
     this.k = buildCogTitan(); this.m = this.k.root; this.g.add(this.m);
     walker(this); this.home();
@@ -1723,6 +2256,11 @@ export class Tandwieltron extends Boss {
     if (mv === 'laser') { this.ms = 'wind'; sfx.warn(); G.toastOnce('tw-laser', 'A laser fence! Jump over it.'); }
     if (mv === 'press') { this.n = [3, 4, 5][p]; this.nt = 0.4; sfx.warn(); G.toastOnce('tw-press', 'Pistons! They punch up where you stand. Keep moving!'); }
     if (mv === 'charge') { this.ms = 'rev'; sfx.warn(); G.toastOnce('tw-charge', 'He’s revving up! Dodge his charge… then he overheats!'); }
+    if (mv === 'conveyor') {
+      this.haz.push(new Conveyor(this, this.B, { life: [0, 5.5, 6][p], speed: [0, 3.2, 3.8][p] })); this.n = [0, 4, 5][p]; this.nt = 1.0;
+      sfx.warn(); G.toastOnce('tw-belt', 'The floor is a CONVEYOR BELT! Walk against it… and dodge the bolts.');
+    }
+    if (mv === 'gears') { this.n = [0, 0, 4][p]; this.nt = 0.4; sfx.warn(); G.toastOnce('tw-gears', 'GIANT GEARS come rolling at you from every side! JUMP over them.'); }
   }
   step(mv, dt) {
     const p = this.phase, k = this.k, onMe = P.planet === this.a;
@@ -1759,9 +2297,27 @@ export class Tandwieltron extends Boss {
       if (!this.haz.some((h) => h instanceof Sweep)) return false;
       return true;
     }
+    if (mv === 'conveyor') {
+      // he stands still and works the controls; bolts keep falling where you are
+      this.place(); this.bodyTouch(2.2, 4); k.gear.rotation.z += dt * 8; k.arms[0].rotation.x = -1.2 + Math.sin(this.mt * 6) * 0.4; k.arms[1].rotation.x = -1.2 - Math.sin(this.mt * 6) * 0.4;
+      this.nt -= dt;
+      if (this.nt <= 0 && this.n > 0 && onMe) { this.haz.push(new Drop(this, P.up.clone(), { delay: [1.1, 1.0, 0.9][p], radius: 1.5, model: bolt(), color: 0xff3a5a, from: 14 })); sfx.whoosh(); this.n--; this.nt = 1.1; }
+      if (!this.haz.some((h) => h instanceof Conveyor)) { k.arms.forEach((a) => (a.rotation.x = 0)); return false; }
+      return true;
+    }
+    if (mv === 'gears') {
+      // big gear wheels roll in from every side, each one aimed at you
+      this.place(); this.bodyTouch(2.2, 4); k.gear.rotation.z += dt * 12;
+      this.nt -= dt;
+      if (this.nt <= 0 && this.n > 0) {
+        const at = onMe ? P.up : this.B, from = frameDir(at, latOf(this.a, 11), Math.random() * 360);
+        this.haz.push(new Roller(this, from, tangentTo(from, at), { speed: 8, r: 1.1, model: gearWheel(1.1), color: 0xffd23a, dist: 26 }));
+        sfx.clank(); this.n--; this.nt = 0.85;
+      }
+      return this.n > 0 || this.haz.some((h) => h instanceof Roller);
+    }
     if (mv === 'press') {
-      if (onMe) this.steer(tangentTo(this.dir, P.up), 3, dt);
-      stomp(1.2); this.bodyTouch(2.2, 4);
+      if (onMe) this.steer(tangentTo(this.dir, P.up), 3, dt);      stomp(1.2); this.bodyTouch(2.2, 4);
       this.nt -= dt;
       if (this.nt <= 0 && this.n > 0 && onMe) {
         this.haz.push(new Spike(this, P.up.clone(), 0, 0xffd23a));

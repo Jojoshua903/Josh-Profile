@@ -1,8 +1,9 @@
-import { World, planetStem, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261111l';
-import { fbm } from './world.js?v=20261111l';
-import { buildFionn, buildLuckyStone, buildHorseshoe, textBoard, buildLocal } from './models.js?v=20261111l';
-import { Lorcan } from './bosses.js?v=20261111l';
-import { addParkour, buildBeacon } from './parkour.js?v=20261111l';
+import { World, planetStem, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261111q';
+import { fbm } from './world.js?v=20261111q';
+import { buildFionn, buildLuckyStone, buildHorseshoe, textBoard, buildLocal } from './models.js?v=20261111q';
+import { Lorcan } from './bosses.js?v=20261111q';
+import { addParkour, buildBeacon } from './parkour.js?v=20261111q';
+import { duelModels } from './duels.js?v=20261111q';
 
 // World 4 on the route: SMARAGDEILAND. Fionn's green island: Irish hills, very old rocks and a lot of luck.
 // Boss: Lorcan Pech, the Bad-Luck Leprechaun, on the Rainbow Ring.
@@ -125,21 +126,21 @@ export function buildLuck(ctx) {
     id: 'paddy', name: 'Paddy', who: 'PADDY', dir: LL(12, 26), bubbleY: 2.0,
     model: buildLocal({ s: 0.8, skin: 0xf0c0a0, shirt: 0x8a6a4a, pants: 0x3a4a3a, hat: 'cap', capC: 0x5a5a4a, beard: 0xa8a8a8, shoes: 0x3a2a1a }),
     anim: (dt, t, n) => { n.model.arms[1].rotation.x = -0.3 + Math.sin(t * 1.5) * 0.1; n.model.body.rotation.z = Math.sin(t * 1.1) * 0.04; },
-    task: { type: 'stomp', enemy: 'gnome', at: LL(-36, 44), n: 3, spread: 6, found: 'My field is clear! Come back, lad, I owe you one!' },
+    task: { type: 'duel', game: 'hop', target: 8, time: 28, window: 2.6, tiles: 6, color: 0x5cd85a, model: duelModels.clover, winTitle: 'CLOVER CHAMP!', found: 'Eight clovers! You beat my record! Come back, lad, I owe you one!', lost: 'Not quite eight, lad. My record stands! Talk to me for another go.' },
     first: [
       ['PADDY', 'Grand day for it. Well. It was.'],
-      ['PADDY', 'Paddy. Sheep farmer. Ever since the luck went, rock gnomes have been stealing the clover from my field.'],
-      ['PADDY', 'Three of them, out past the stone walls. Little rascals. My sheep are starving.'],
-      ['RÊNAS', 'Rock gnomes? I’ll stomp them!'],
-      ['PADDY', 'Good lad. Jump on their heads. Clear them out and the star shard I found is yours.'],
+      ['PADDY', 'Paddy. Sheep farmer. Ever since the luck went, the lucky clovers pop up and vanish before my sheep can eat them.'],
+      ['PADDY', 'Only one way to catch them: be quick. My record is seven in one go. Seven! Nobody’s beaten it.'],
+      ['RÊNAS', 'Seven? I can do eight.'],
+      ['PADDY', 'Ha! Step on each clover that lights up before it fades. Get eight and the star shard I found is yours.'],
     ],
-    progress: (l) => [['PADDY', `${l.left} rock gnomes left in my field, past the stone walls. Jump on their heads!`]],
+    progress: () => [['PADDY', 'Another go? Eight clovers, lad. Watch for the glow.']],
     done: [
-      ['PADDY', 'My field is clear! Listen to the sheep. That’s happy baa-ing, that is.'],
+      ['PADDY', 'Eight! You beat my record! Listen to the sheep. That’s happy baa-ing, that is.'],
       ['PADDY', 'Here’s the star shard. My best sheep, Dolly, found it. She wants a thank-you. Baa.'],
     ],
     after: [['PADDY', 'Count my sheep with me? One… two… *snore*']],
-    bubbles: { new: ['Grand day.', 'My clover…', 'Baa.'], progress: ['Past the stone walls!', 'Jump on their heads!', 'Little rascals.'], done: ['Happy sheep!', 'Good lad.', 'Baaa!'] },
+    bubbles: { new: ['Grand day.', 'My clover…', 'Beat my record?'], progress: ['Another go?', 'Watch the glow!', 'Eight clovers!'], done: ['Record breaker!', 'Good lad.', 'Baaa!'] },
   });
 
   // ---------- decor: sheep, standing stones, clover, a pub sign ----------

@@ -1,9 +1,10 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, geyser, addMore } from './worlds-common.js?v=20261111l';
-import { fbm } from './world.js?v=20261111l';
-import { buildSami, buildPearl, textBoard, buildLocal, buildTrinket } from './models.js?v=20261111l';
-import { Kraak } from './bosses.js?v=20261111l';
-import { addParkour, buildBeacon } from './parkour.js?v=20261111l';
-import { rOf } from './core.js?v=20261111l';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, geyser, addMore } from './worlds-common.js?v=20261111q';
+import { fbm } from './world.js?v=20261111q';
+import { buildSami, buildPearl, textBoard, buildLocal, buildTrinket } from './models.js?v=20261111q';
+import { Kraak } from './bosses.js?v=20261111q';
+import { addParkour, buildBeacon } from './parkour.js?v=20261111q';
+import { rOf } from './core.js?v=20261111q';
+import { duelModels } from './duels.js?v=20261111q';
 
 // World 9 on the route: DE KORAALZEE. A planet under the sea: coral, kelp, a sunken ship and giant clams.
 // New here: you're underwater, so you float a little, and bubble streams shoot you up high.
@@ -121,17 +122,18 @@ export function buildSea(ctx) {
     dir: LL(-30, 196), bubbleY: 2.0,
     model: buildLocal({ s: 0.82, skin: 0xf0c8a0, shirt: 0x3a6a8a, pants: 0x2b2440, hair: 0xd8c8a0, hat: 'cap', capC: 0x2b2440, beard: 0xe8e0d0 }),
     anim: (dt, t, n) => { n.model.arms[1].rotation.x = -1.6 + Math.sin(t * 2) * 0.2; },
-    task: { type: 'stomp', enemy: 'crab', at: LL(-40, 220), n: 3, spread: 7, found: 'The crabs are gone! Come back, matey!' },
+    task: { type: 'duel', game: 'hop', target: 9, time: 28, window: 2.3, tiles: 7, color: 0xfff4f8, model: duelModels.pearl, winTitle: 'PEARL DIVER!', found: 'Nine pearls! A true pirate! Come back, matey!', lost: 'Not enough pearls, matey! Talk to me for another dive.' },
     first: [
       ['JUUL', 'Ahoy, little sailor! Captain Juul. That sunken ship? That was MY ship. Long story.'],
-      ['JUUL', 'Three Knijpkrabben have moved into my treasure garden, past the big rocks. They pinch my toes!'],
-      ['RÊNAS', 'Crabs? I’ll stomp them!'],
-      ['JUUL', 'Jump on their shells! Clear them out and my star shard is yours.'],
+      ['JUUL', 'Every pirate has to pass the Pearl Test. The clams round here open up one by one, just for a moment.'],
+      ['JUUL', 'Grab the pearl before the clam snaps shut! Nine pearls and you’re a real pirate.'],
+      ['RÊNAS', 'Nine pearls. Aye aye, captain!'],
+      ['JUUL', 'That’s the spirit! Pass the test and my star shard is yours.'],
     ],
-    progress: (l) => [['JUUL', `${l.left} Knijpkrabben left in my treasure garden, past the big rocks. Stomp them!`]],
-    done: [['JUUL', 'My garden! My toes are safe again! Yo ho ho!'], ['JUUL', 'Here’s the star shard. Best treasure I ever found. Don’t tell the others.']],
+    progress: () => [['JUUL', 'Another dive? Nine pearls, matey. Quick feet!']],
+    done: [['JUUL', 'Nine pearls! You’re a real pirate now! Yo ho ho!'], ['JUUL', 'Here’s the star shard. Best treasure I ever found. Don’t tell the others.']],
     after: [['JUUL', 'Yo ho ho, and a bottle of… lemonade. I’m a nice pirate.']],
-    bubbles: { new: ['Ahoy!', 'My toes!', 'Crabs!'], progress: ['Past the big rocks!', 'Stomp them!', 'Pinch pinch…'], done: ['Yo ho ho!', 'Thank you, matey!', '*salutes*'] },
+    bubbles: { new: ['Ahoy!', 'Pearl Test?', 'Yo ho!'], progress: ['Another dive?', 'Nine pearls!', 'Quick feet!'], done: ['Yo ho ho!', 'Real pirate!', '*salutes*'] },
   });
 
   // ---------- decor: kelp, coral, rocks, fish ----------

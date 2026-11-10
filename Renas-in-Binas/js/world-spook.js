@@ -1,8 +1,8 @@
-import { World, surf, planetStem, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261111l';
-import { fbm } from './world.js?v=20261111l';
-import { buildSaar, buildCandle, textBoard, buildLocal, buildTrinket } from './models.js?v=20261111l';
-import { Boe } from './bosses.js?v=20261111l';
-import { addParkour, buildBeacon } from './parkour.js?v=20261111l';
+import { World, surf, planetStem, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261111q';
+import { fbm } from './world.js?v=20261111q';
+import { buildSaar, buildCandle, textBoard, buildLocal, buildTrinket } from './models.js?v=20261111q';
+import { Boe } from './bosses.js?v=20261111q';
+import { addParkour, buildBeacon } from './parkour.js?v=20261111q';
 
 // World 10 on the route: SPOOKPLANEET. A dark, purple planet with a haunted house, a graveyard and a giant dead tree.
 // New here: ghost platforms. They fade away and come back on a timer: watch them blink, then jump.
@@ -117,17 +117,18 @@ export function buildSpook(ctx) {
     id: 'wendy', name: 'Wendy', who: 'WENDY', dir: LL(-30, 196), bubbleY: 2.0,
     model: buildLocal({ s: 0.76, skin: 0x8a5a3a, shirt: 0x5a2a8a, pants: 0x2b2440, hair: 0x1a1010, hat: 'curls' }),
     anim: (dt, t, n) => { n.model.arms[1].rotation.x = -2.0 + Math.sin(t * 4) * 0.3; },
-    task: { type: 'stomp', enemy: 'pumpkin', at: LL(-40, 220), n: 3, spread: 7, found: 'The pumpkins are squashed! Come back to me!' },
+    task: { type: 'duel', game: 'simon', rounds: [3, 4, 5], speed: 0.65, colors: [0x9a5aff, 0x5cff9a, 0xff8a2a, 0xe8e0ff], winTitle: 'SPELL CAST!', found: 'You cast the whole spell! Come back to me!', lost: 'Oops, wrong step! The spell went poof. Talk to me to try again!' },
     first: [
       ['WENDY', 'Hi! I’m Wendy. I’m a witch. A trainee witch. I can already do one spell: making pumpkins.'],
-      ['WENDY', 'The problem is, they came alive. Three Rolpompoenen are rolling around my garden, past the gravestones.'],
-      ['RÊNAS', 'Pumpkins? I’ll stomp them!'],
-      ['WENDY', 'Step aside when they roll, then stomp them while they’re dizzy! Squash them all and my star shard is yours.'],
+      ['WENDY', 'But for the big spell I need a helper. You walk the magic steps after me, on my four glowing stones.'],
+      ['RÊNAS', 'What does the big spell do?'],
+      ['WENDY', 'It makes… cupcakes. Hopefully. Last time it made a frog. The frog was nice.'],
+      ['WENDY', 'Watch me, then copy my steps in the same order. Three spells. Get them right and my star shard is yours!'],
     ],
-    progress: (l) => [['WENDY', `${l.left} Rolpompoenen left in my garden, past the gravestones. Squash them!`]],
-    done: [['WENDY', 'My garden is safe! Next time I’ll try a spell for cupcakes.'], ['WENDY', 'Here, a star shard. It fell out of my spell book.']],
+    progress: () => [['WENDY', 'Let’s try again! Abracadabra… watch closely!']],
+    done: [['WENDY', 'We did it! …It made a pumpkin. A very small one. Still counts!'], ['WENDY', 'Here, a star shard. It fell out of my spell book.']],
     after: [['WENDY', 'Abracadabra! …Nope, still no cupcakes.']],
-    bubbles: { new: ['Hi!', 'Oops, pumpkins…', 'Abracadabra!'], progress: ['Past the gravestones!', 'Squash them!', 'Roll roll…'], done: ['Thank you!', 'Cupcakes next!', '*waves her wand*'] },
+    bubbles: { new: ['Hi!', 'Need a helper!', 'Abracadabra!'], progress: ['Try again!', 'Watch closely!', 'Magic steps!'], done: ['Thank you!', 'Cupcakes next!', '*waves her wand*'] },
   });
 
   // ---------- decor: gravestones, dead trees, pumpkins, wisps ----------

@@ -1,11 +1,12 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore, lavaFloor } from './worlds-common.js?v=20261111l';
-import { fbm } from './world.js?v=20261111l';
-import { buildLars, buildNathan, buildMilo, buildBlueprint, buildGear, textBoard, buildLocal, buildTrinket } from './models.js?v=20261111l';
-import { Tandwieltron } from './bosses.js?v=20261111l';
-import { addParkour, buildBeacon } from './parkour.js?v=20261111l';
-import { G, toast, banner, puff, surf } from './core.js?v=20261111l';
-import { P } from './player.js?v=20261111l';
-import { sfx } from './audio.js?v=20261111l';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore, lavaFloor } from './worlds-common.js?v=20261111q';
+import { fbm } from './world.js?v=20261111q';
+import { buildLars, buildNathan, buildMilo, buildBlueprint, buildGear, textBoard, buildLocal, buildTrinket } from './models.js?v=20261111q';
+import { Tandwieltron } from './bosses.js?v=20261111q';
+import { addParkour, buildBeacon } from './parkour.js?v=20261111q';
+import { G, toast, banner, puff, surf } from './core.js?v=20261111q';
+import { P } from './player.js?v=20261111q';
+import { sfx } from './audio.js?v=20261111q';
+import { duelModels } from './duels.js?v=20261111q';
 
 // BONUS planet, after the finale: DE GOUDEN WERKPLAATS. Lars and Nathan built it as a thank-you for Rênas,
 // but Kayo & Yara snuck in and took over Tandwieltron, the big builder robot.
@@ -116,17 +117,18 @@ export function buildWerk(ctx) {
     id: 'nathan2', name: 'Nathan', who: 'NATHAN', dir: LL(-30, 196), bubbleY: 2.0,
     model: buildNathan(),
     anim: (dt, t, n) => { n.model.arm.rotation.y = Math.sin(t * 2) * 0.4; n.model.head.rotation.y = Math.sin(t * 0.9) * 0.3; },
-    task: { type: 'stomp', enemy: 'kattenbot', at: LL(-40, 220), n: 4, spread: 7, found: 'All the cat robots are scrap! Come back, buddy!' },
+    task: { type: 'duel', game: 'dodge', time: 22, every: 0.85, fly: 0.9, color: 0xfff8ec, model: duelModels.ball, winTitle: 'DODGE MASTER!', found: 'You dodged every pitch! Come back, buddy!', lost: 'Strike! Got you, buddy! Talk to me for a rematch!' },
     first: [
       ['NATHAN', 'Rênas! Buddy! Lars and I built this whole place in a week. Okay, Lars built it. I held the flashlight.'],
-      ['NATHAN', 'But four of Kayo and Yara’s cat robots moved into my batting cage, past the big gears. They keep catching my baseballs!'],
-      ['RÊNAS', 'Cat robots? I’ll stomp them!'],
-      ['NATHAN', 'Jump on their heads! Clear them out and my star shard is yours.'],
+      ['NATHAN', 'Now I’ve got my own pitching machine! It’s me. I’m the machine.'],
+      ['RÊNAS', 'You want me to hit them?'],
+      ['NATHAN', 'Nope! Dodge them! I throw, you dodge. The circle shows where each ball lands. Don’t get hit for twenty-two seconds!'],
+      ['NATHAN', 'Survive my fastball and my star shard is yours.'],
     ],
-    progress: (l) => [['NATHAN', `${l.left} cat robots left in my batting cage, past the big gears. Stomp them!`]],
-    done: [['NATHAN', 'My batting cage is free! Lars is gonna flip when he hears this.'], ['NATHAN', 'Here’s the star shard. I found it in my glove. Lucky glove.']],
+    progress: () => [['NATHAN', 'Rematch? Batter up! Well. Dodger up!']],
+    done: [['NATHAN', 'You dodged every single pitch! Lars is gonna flip when he hears this.'], ['NATHAN', 'Here’s the star shard. I found it in my glove. Lucky glove.']],
     after: [['NATHAN', 'Lars is my best friend. But don’t tell him I said that. …Actually, do tell him.']],
-    bubbles: { new: ['Buddy!', 'Batter up!', '*swings*'], progress: ['Past the big gears!', 'Stomp them!', 'Meow… beep?'], done: ['Home run!', 'Thanks, buddy!', '*swings happily*'] },
+    bubbles: { new: ['Buddy!', 'Batter up!', '*winds up*'], progress: ['Rematch?', 'Dodger up!', 'Fastball!'], done: ['Home run!', 'Thanks, buddy!', '*swings happily*'] },
   });
 
   // ---------- decor: big gears, chimneys, crates, lamps ----------
