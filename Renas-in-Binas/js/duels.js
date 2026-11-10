@@ -1,8 +1,8 @@
-import { THREE, G, toon, basic, mk, clamp, puff, placeOn, orientOn, surf, frameDir, tangentTo, stepDir, toast, banner } from './core.js?v=20261111s';
-import { tr } from './lang.js?v=20261111s';
-import { sfx } from './audio.js?v=20261111s';
-import { P, bouncePlayer, requestLock } from './player.js?v=20261111s';
-import { makeMarker } from './fx.js?v=20261111s';
+import { THREE, G, toon, basic, mk, clamp, puff, placeOn, orientOn, surf, frameDir, tangentTo, stepDir, toast, banner } from './core.js?v=20261111t';
+import { tr } from './lang.js?v=20261111t';
+import { sfx } from './audio.js?v=20261111t';
+import { P, bouncePlayer, requestLock } from './player.js?v=20261111t';
+import { makeMarker } from './fx.js?v=20261111t';
 
 // DUELS: some locals don't send you on an errand, they challenge you to a mini game.
 // task: { type: 'duel', game, ...settings, found, lost }
@@ -87,6 +87,8 @@ export function startDuel(w, loc, T, onWin, onLose) {
   const end = (won, text) => {
     if (d.over) return; d.over = true;
     w.group.remove(grp); w.duel = null; loc.duel = null;
+    // the grab things go for good, so rematches don't pile up hidden pickups
+    if (S.items) { for (const pk of S.items) { pk.taken = true; w.group.remove(pk.obj); } w.pickups = w.pickups.filter((pk) => !S.items.includes(pk)); }
     if (S.pad) { S.pad.remove(); S.pad = null; G.duelPad = false; if (!document.pointerLockElement && G.state === 'play') requestLock(); }
     // they hop back home
     puff(npc.g.position.clone(), 10, 0xffffff, 3, 1);
@@ -119,7 +121,7 @@ export function startDuel(w, loc, T, onWin, onLose) {
     S.pad = makePad(T.colors || COLS, T.names || NAMES, (i) => press(i));
     G.duelPad = true; if (document.pointerLockElement) document.exitPointerLock();
   }
-  if (T.game === 'hop') { S.cur = -1; S.curT = 0; S.prize = T.model ? T.model() : null; if (S.prize) grp.add(S.prize); }
+  if (T.game === 'hop') { S.cur = -1; S.last = -1; S.curT = 0; S.prize = T.model ? T.model() : null; if (S.prize) grp.add(S.prize); }
   if (T.game === 'grab') {
     S.items = [];
     for (let i = 0; i < (T.n ?? 12); i++) {
@@ -129,7 +131,7 @@ export function startDuel(w, loc, T, onWin, onLose) {
       S.items.push(pk);
     }
   }
-  if (T.game === 'tag') { S.cool = 0; S.burst = 0; S.wig = Math.random() * 6; }
+  if (T.game === 'tag') { S.cool = 1.0; S.burst = 0; S.wig = Math.random() * 6; }
   if (T.game === 'dodge') { S.next = 0.6; S.shots = []; }
   const ctxHud = () => { if (w.hudRefresh) w.hudRefresh(); };
 
@@ -159,7 +161,10 @@ export function startDuel(w, loc, T, onWin, onLose) {
     if (P.dead) { end(false, T.lost); return; }
     if (P.planet !== pl) { end(false, null); return; }
     // walking far away gives up the duel (not during a race: that's the point)
-    if (T.game !== 'race' && arc(pl, P.up, home) > 24) { toast('You walked away from the duel…', 2000); end(false, null); return; }
+    // (dodging means running around a lot, so that one gets more room, and you get a warning first)
+    const far = arc(pl, P.up, home), max = T.game === 'dodge' ? 40 : 24;
+    if (T.game !== 'race' && far > max - 6 && G.toastOnce) G.toastOnce('duelFar', 'Careful! Walk any further and you give up the duel.');
+    if (T.game !== 'race' && far > max) { toast('You walked away from the duel…', 2000); end(false, null); return; }
 
     if (d.phase === 'count') {
       const before = Math.ceil(d.count); d.count -= dt; const now = Math.ceil(d.count);
@@ -254,14 +259,14 @@ export function startDuel(w, loc, T, onWin, onLose) {
     S.curT -= dt;
     const win = Math.max(1.2, (T.window ?? 2.4) - d.t * 0.04);
     if (S.cur < 0 || S.curT <= 0) {
-      let k; do k = Math.floor(Math.random() * S.tiles.length); while (k === S.cur); S.cur = k; S.curT = win; sfx.blip(900);
+      let k; do k = Math.floor(Math.random() * S.tiles.length); while (k === S.cur || k === S.last); S.cur = k; S.curT = win; sfx.blip(900);
     }
     const tl = S.tiles[S.cur];
     S.tiles.forEach((x, i) => { x.m.userData.fill.material.opacity = i === S.cur ? 0.3 + 0.5 * (S.curT / win) : 0.08; x.m.pulse(i === S.cur ? d.t * 14 : 0); });
     if (S.prize) { placeOn(S.prize, pl, tl.dir, 0.6 + Math.sin(d.t * 6) * 0.15); S.prize.rotation.y += dt * 3; }
     stepNpc(tl.dir, 3.5, dt);   // they cheer you on, running after the light
     if (arc(pl, P.up, tl.dir) < 1.4 && P.alt < 2.5) {
-      d.score++; S.cur = -1; sfx.coin(); puff(surf(pl, tl.dir, 0.4), 10, T.color ?? 0x5cd85a, 3, 0.8, tl.dir); ctxHud();
+      d.score++; S.last = S.cur; S.cur = -1; sfx.coin(); puff(surf(pl, tl.dir, 0.4), 10, T.color ?? 0x5cd85a, 3, 0.8, tl.dir); ctxHud();
       if (d.score >= T.target) { end(true); return; }
     }
     if (d.t >= T.time) end(false, T.lost);

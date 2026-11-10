@@ -1,8 +1,8 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261111s';
-import { fbm } from './world.js?v=20261111s';
-import { buildPingo, buildDeniz, buildAuraCrystal, buildScarf, textBoard, buildLocal, buildTrinket } from './models.js?v=20261111s';
-import { Deniz } from './bosses.js?v=20261111s';
-import { addParkour, buildBeacon } from './parkour.js?v=20261111s';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261111t';
+import { fbm } from './world.js?v=20261111t';
+import { buildPingo, buildDeniz, buildAuraCrystal, buildScarf, textBoard, buildLocal, buildTrinket } from './models.js?v=20261111t';
+import { Deniz } from './bosses.js?v=20261111t';
+import { addParkour, buildBeacon } from './parkour.js?v=20261111t';
 
 // World 3 on the route: HET HERTOGDOM IJS. A frozen planet ruled by Deniz, the Duke of Ice, who has way too much aura.
 // Boss: Deniz himself, in the Aura Throne Room.

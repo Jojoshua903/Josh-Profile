@@ -1,11 +1,11 @@
-import { World, addStars, addBackdropPlanet, LL, V3, toon, basic, mk, THREE, sign, addRocket } from './worlds-common.js?v=20261111s';
-import { fbm } from './world.js?v=20261111s';
-import { buildJosh, buildOtis, textBoard } from './models.js?v=20261111s';
-import { G, toast, banner, puff, surf, placeOn, orientOn } from './core.js?v=20261111s';
-import { P } from './player.js?v=20261111s';
-import { sfx } from './audio.js?v=20261111s';
-import { play, orbitShot } from './cutscene.js?v=20261111s';
-import { LANG } from './lang.js?v=20261111s';
+import { World, addStars, addBackdropPlanet, LL, V3, toon, basic, mk, THREE, sign, addRocket } from './worlds-common.js?v=20261111t';
+import { fbm } from './world.js?v=20261111t';
+import { buildJosh, buildOtis, textBoard } from './models.js?v=20261111t';
+import { G, toast, banner, puff, surf, placeOn, orientOn } from './core.js?v=20261111t';
+import { P } from './player.js?v=20261111t';
+import { sfx } from './audio.js?v=20261111t';
+import { play, orbitShot } from './cutscene.js?v=20261111t';
+import { LANG } from './lang.js?v=20261111t';
 
 // DE STERRENTEMPEL: this game's Godhome. Opens after the finale.
 // Josh trained here before he saved the galaxy. RENAS-1 turned the scans of every boss Rênas beat into holograms:

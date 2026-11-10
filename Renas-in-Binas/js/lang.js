@@ -112,6 +112,7 @@ const NL = {
   'Harder! Hold Shift in the air for a ground pound!': 'Harder! Druk in de lucht op Shift voor een ground pound!',
   // ---------- the bosses' signature attacks ----------
   // ---------- duels with the locals ----------
+  'Careful! Walk any further and you give up the duel.': 'Pas op! Loop je nog verder, dan geef je het duel op.',
   'RED!': 'ROOD!', 'YELLOW!': 'GEEL!', 'GREEN!': 'GROEN!', 'BLUE!': 'BLAUW!', 'PINK!': 'ROZE!', 'PURPLE!': 'PAARS!', 'ORANGE!': 'ORANJE!', 'WHITE!': 'WIT!',
   'Your turn! Press the buttons in the same order (or keys 1 2 3 4).': 'Jouw beurt! Druk op de knoppen in dezelfde volgorde (of toets 1 2 3 4).',
   'Look at my four paint tiles: pink, yellow, blue and purple. I dance from tile to tile and each one lights up. When it’s your turn, press the same colour buttons in the same order.': 'Kijk naar mijn vier verftegels: roze, geel, blauw en paars. Ik dans van tegel naar tegel en elke tegel licht op. Als jij aan de beurt bent, druk je op dezelfde kleurknoppen, in dezelfde volgorde.',

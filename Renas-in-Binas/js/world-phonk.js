@@ -1,8 +1,8 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, palm, lamp, sign, pulseSpeaker, addRocket, questItem, rareItem, setupFriend, setupLocal, slerpDir, addMore } from './worlds-common.js?v=20261111s';
-import { fbm } from './world.js?v=20261111s';
-import { buildMilo, buildBarrelBooth, buildVinyl, textBoard, buildLocal, buildTrinket, buildSneaker } from './models.js?v=20261111s';
-import { Miauwtron } from './bosses.js?v=20261111s';
-import { addParkour, buildBeacon } from './parkour.js?v=20261111s';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, palm, lamp, sign, pulseSpeaker, addRocket, questItem, rareItem, setupFriend, setupLocal, slerpDir, addMore } from './worlds-common.js?v=20261111t';
+import { fbm } from './world.js?v=20261111t';
+import { buildMilo, buildBarrelBooth, buildVinyl, textBoard, buildLocal, buildTrinket, buildSneaker } from './models.js?v=20261111t';
+import { Miauwtron } from './bosses.js?v=20261111t';
+import { addParkour, buildBeacon } from './parkour.js?v=20261111t';
 
 // World 1: PLANETA PHONK. Milo's neon party planet. Boss: DJ Miauwtron on the Bass Drop Moon.
 export function buildPhonk(ctx) {

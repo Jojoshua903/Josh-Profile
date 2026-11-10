@@ -1,6 +1,6 @@
-import { THREE, G, camera, V3, damp, $ } from './core.js?v=20261111s';
-import { sfx } from './audio.js?v=20261111s';
-import { tr } from './lang.js?v=20261111s';
+import { THREE, G, camera, V3, damp, $ } from './core.js?v=20261111t';
+import { sfx } from './audio.js?v=20261111t';
+import { tr } from './lang.js?v=20261111t';
 
 // Cutscenes in the Otis in Orbit style: letterbox bars, scripted camera shots, typed dialogue with a mumbling voice for each character.
 // A step: { say: { who, text, sub }, cam: () => ({ pos, look, up }), dur, start(), update(dt, k), title: [big, small], snap }
