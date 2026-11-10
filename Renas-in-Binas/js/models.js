@@ -1,4 +1,4 @@
-import { THREE, toon, basic, addOutline, mk, ink, V3, label, canvasTex } from './core.js?v=20261111q';
+import { THREE, toon, basic, addOutline, mk, ink, V3, label, canvasTex } from './core.js?v=20261111s';
 
 // Materials from Otis in Orbit (josh.js)
 export const LOOK = { hoodie: '#ff7a3d', pants: '#3a4a7a', hair: '#3b2a20', skin: '#f1c49b', shoes: '#f4f1ea', drone: '#14b8a6' };

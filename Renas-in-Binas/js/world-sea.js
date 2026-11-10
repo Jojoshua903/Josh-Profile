@@ -1,10 +1,10 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, geyser, addMore } from './worlds-common.js?v=20261111q';
-import { fbm } from './world.js?v=20261111q';
-import { buildSami, buildPearl, textBoard, buildLocal, buildTrinket } from './models.js?v=20261111q';
-import { Kraak } from './bosses.js?v=20261111q';
-import { addParkour, buildBeacon } from './parkour.js?v=20261111q';
-import { rOf } from './core.js?v=20261111q';
-import { duelModels } from './duels.js?v=20261111q';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, geyser, addMore } from './worlds-common.js?v=20261111s';
+import { fbm } from './world.js?v=20261111s';
+import { buildSami, buildPearl, textBoard, buildLocal, buildTrinket } from './models.js?v=20261111s';
+import { Kraak } from './bosses.js?v=20261111s';
+import { addParkour, buildBeacon } from './parkour.js?v=20261111s';
+import { rOf } from './core.js?v=20261111s';
+import { duelModels } from './duels.js?v=20261111s';
 
 // World 9 on the route: DE KORAALZEE. A planet under the sea: coral, kelp, a sunken ship and giant clams.
 // New here: you're underwater, so you float a little, and bubble streams shoot you up high.

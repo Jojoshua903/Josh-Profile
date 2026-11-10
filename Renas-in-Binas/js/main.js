@@ -1,30 +1,30 @@
-import { THREE, G, renderer, scene, camera, ambient, hemi, sun, V3, clamp, damp, surf, orientOn, anyPerp, frameDir, $, toast, banner, fade, wait, setPrompt, updateParticles, clearParticles, puff } from './core.js?v=20261111q';
-import { initAudio, music, sfx } from './audio.js?v=20261111q';
-import { P, model, spawnPlayer, updatePlayer, updateCamera, drawHearts, pressed, consumePressed, requestLock, locked, mouse, squash, cam, healPlayer, hurtPlayer } from './player.js?v=20261111q';
-import { play, advance, skip, updateCut, cutActive, showTitle } from './cutscene.js?v=20261111q';
-import { sysOf, sysName, addSystemSun } from './systems.js?v=20261111q';
-import { buildPhonk } from './world-phonk.js?v=20261111q';
-import { buildMine } from './world-mine.js?v=20261111q';
-import { buildStadium } from './world-stadium.js?v=20261111q';
-import { buildIce } from './world-ice.js?v=20261111q';
-import { buildLuck } from './world-luck.js?v=20261111q';
-import { buildJungle } from './world-jungle.js?v=20261111q';
-import { buildLava } from './world-lava.js?v=20261111q';
-import { buildDesert } from './world-desert.js?v=20261111q';
-import { buildMoon } from './world-moon.js?v=20261111q';
-import { buildSea } from './world-sea.js?v=20261111q';
-import { buildSpook } from './world-spook.js?v=20261111q';
-import { buildWerk } from './world-werk.js?v=20261111q';
-import { buildStuiter, buildWissel, buildSprong } from './world-park.js?v=20261111q';
-import { buildTempel, GOD_BOSS, HALL, PANTHEONS, BINDS, TIERS } from './world-tempel.js?v=20261111q';
-import { buildIntro, playIntro, playFinale, menuShot } from './story.js?v=20261111q';
-import { buildGroteKern } from './models.js?v=20261111q';
-import { updateExtras, pollPad } from './extras.js?v=20261111q';
-import { tr, LANG, setLang, applyHTML, onLang } from './lang.js?v=20261111q';
-import { initDev, devTick } from './dev.js?v=20261111q';
-import { initAch, checkAch, unlockAch, buildAchPanel } from './achievements.js?v=20261111q';
-import { initShop, openShop, closeShop, applyStyle, shopMaxHp, shopTick } from './shop.js?v=20261111q';
-import { initGalaxy, openGalaxy, closeGalaxy, galaxyTick, galaxyOpen, galaxyIdx } from './galaxy.js?v=20261111q';
+import { THREE, G, renderer, scene, camera, ambient, hemi, sun, V3, clamp, damp, surf, orientOn, anyPerp, frameDir, $, toast, banner, fade, wait, setPrompt, updateParticles, clearParticles, puff } from './core.js?v=20261111s';
+import { initAudio, music, sfx } from './audio.js?v=20261111s';
+import { P, model, spawnPlayer, updatePlayer, updateCamera, drawHearts, pressed, consumePressed, requestLock, locked, mouse, squash, cam, healPlayer, hurtPlayer } from './player.js?v=20261111s';
+import { play, advance, skip, updateCut, cutActive, showTitle } from './cutscene.js?v=20261111s';
+import { sysOf, sysName, addSystemSun } from './systems.js?v=20261111s';
+import { buildPhonk } from './world-phonk.js?v=20261111s';
+import { buildMine } from './world-mine.js?v=20261111s';
+import { buildStadium } from './world-stadium.js?v=20261111s';
+import { buildIce } from './world-ice.js?v=20261111s';
+import { buildLuck } from './world-luck.js?v=20261111s';
+import { buildJungle } from './world-jungle.js?v=20261111s';
+import { buildLava } from './world-lava.js?v=20261111s';
+import { buildDesert } from './world-desert.js?v=20261111s';
+import { buildMoon } from './world-moon.js?v=20261111s';
+import { buildSea } from './world-sea.js?v=20261111s';
+import { buildSpook } from './world-spook.js?v=20261111s';
+import { buildWerk } from './world-werk.js?v=20261111s';
+import { buildStuiter, buildWissel, buildSprong } from './world-park.js?v=20261111s';
+import { buildTempel, GOD_BOSS, HALL, PANTHEONS, BINDS, TIERS } from './world-tempel.js?v=20261111s';
+import { buildIntro, playIntro, playFinale, menuShot } from './story.js?v=20261111s';
+import { buildGroteKern } from './models.js?v=20261111s';
+import { updateExtras, pollPad } from './extras.js?v=20261111s';
+import { tr, LANG, setLang, applyHTML, onLang } from './lang.js?v=20261111s';
+import { initDev, devTick } from './dev.js?v=20261111s';
+import { initAch, checkAch, unlockAch, buildAchPanel } from './achievements.js?v=20261111s';
+import { initShop, openShop, closeShop, applyStyle, shopMaxHp, shopTick } from './shop.js?v=20261111s';
+import { initGalaxy, openGalaxy, closeGalaxy, galaxyTick, galaxyOpen, galaxyIdx } from './galaxy.js?v=20261111s';
 const nl = () => LANG.cur === 'nl';
 
 const BUILDERS = [buildPhonk, buildMine, buildStadium, buildIce, buildLuck, buildJungle, buildLava, buildDesert, buildMoon, buildSea, buildSpook, buildWerk, buildStuiter, buildWissel, buildSprong, buildTempel];
@@ -726,10 +726,10 @@ onLang(() => { langLabel(); slotLabel(); timerLabel(); $('btnPlay').textContent 
 applyHTML(); langLabel(); slotLabel(); timerLabel();
 
 // pointer lock: click the game to lock the mouse, Esc (or losing it) pauses
-$('c').addEventListener('click', () => { initAudio(); if (G.state === 'play' && !cutActive() && !locked() && !G.paused) requestLock(); });
+$('c').addEventListener('click', () => { initAudio(); if (G.state === 'play' && !cutActive() && !locked() && !G.paused && !G.duelPad) requestLock(); });
 document.addEventListener('pointerlockchange', () => {
   if (locked()) { G.lockedOnce = true; $('lockhint').classList.remove('show'); return; }
-  if (G.state === 'play' && !cutActive() && !G.paused && !G.devOpen && G.lockedOnce && !$('travel').classList.contains('show') && !$('god').classList.contains('show') && !$('shop').classList.contains('show')) { G.paused = true; $('pause').classList.add('show'); }
+  if (G.state === 'play' && !cutActive() && !G.paused && !G.duelPad && !G.devOpen && G.lockedOnce && !$('travel').classList.contains('show') && !$('god').classList.contains('show') && !$('shop').classList.contains('show')) { G.paused = true; $('pause').classList.add('show'); }
 });
 addEventListener('keydown', (e) => {
   if (e.code === 'KeyP' && G.state === 'play' && !cutActive()) {

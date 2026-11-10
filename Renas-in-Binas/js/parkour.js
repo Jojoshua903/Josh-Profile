@@ -1,9 +1,9 @@
-import { LL, V3, basic, mk, THREE, surf, coinRing, coinOn, sign, rareItem, G, sfx, toast } from './worlds-common.js?v=20261111q';
-import { fbm } from './world.js?v=20261111q';
-import { textBoard } from './models.js?v=20261111q';
-import { fade, placeOn, anyPerp } from './core.js?v=20261111q';
-import { P, drawHearts, spawnPlayer, resetCam } from './player.js?v=20261111q';
-import { showTitle } from './cutscene.js?v=20261111q';
+import { LL, V3, basic, mk, THREE, surf, coinRing, coinOn, sign, rareItem, G, sfx, toast } from './worlds-common.js?v=20261111s';
+import { fbm } from './world.js?v=20261111s';
+import { textBoard } from './models.js?v=20261111s';
+import { fade, placeOn, anyPerp } from './core.js?v=20261111s';
+import { P, drawHearts, spawnPlayer, resetCam } from './player.js?v=20261111s';
+import { showTitle } from './cutscene.js?v=20261111s';
 
 // A parkour over a bottomless void, on a small hidden planet far away. Its ground is invisible:
 // fall off the platforms and you drop into the void. Checkpoint markers light up when you touch them.

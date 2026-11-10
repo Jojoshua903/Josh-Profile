@@ -1,8 +1,8 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, palm, lamp, sign, pulseSpeaker, addRocket, questItem, rareItem, setupFriend, setupLocal, slerpDir, addMore } from './worlds-common.js?v=20261111q';
-import { fbm } from './world.js?v=20261111q';
-import { buildMilo, buildBarrelBooth, buildVinyl, textBoard, buildLocal, buildTrinket, buildSneaker } from './models.js?v=20261111q';
-import { Miauwtron } from './bosses.js?v=20261111q';
-import { addParkour, buildBeacon } from './parkour.js?v=20261111q';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, palm, lamp, sign, pulseSpeaker, addRocket, questItem, rareItem, setupFriend, setupLocal, slerpDir, addMore } from './worlds-common.js?v=20261111s';
+import { fbm } from './world.js?v=20261111s';
+import { buildMilo, buildBarrelBooth, buildVinyl, textBoard, buildLocal, buildTrinket, buildSneaker } from './models.js?v=20261111s';
+import { Miauwtron } from './bosses.js?v=20261111s';
+import { addParkour, buildBeacon } from './parkour.js?v=20261111s';
 
 // World 1: PLANETA PHONK. Milo's neon party planet. Boss: DJ Miauwtron on the Bass Drop Moon.
 export function buildPhonk(ctx) {
@@ -98,13 +98,14 @@ export function buildPhonk(ctx) {
     id: 'rosa', name: 'Rosa', who: 'ROSA', dir: LL(-8, 36), bubbleY: 2.0,
     model: buildLocal({ skin: 0xd8a070, shirt: 0x5ef2e0, pants: 0x2b2440, hair: 0x2a1a14, hat: 'bun', item: 'spray', shoes: 0xff5ab4 }),
     anim: (dt, t, n) => { n.model.arms[1].rotation.x = -1.3 + Math.sin(t * 7) * 0.15; n.model.arms[1].rotation.z = Math.sin(t * 3) * 0.3; },
-    task: { type: 'duel', game: 'simon', rounds: [3, 4, 5], speed: 0.75, colors: [0xff5ab4, 0xffd23a, 0x5ef2e0, 0x9a7aff], winTitle: 'DANCE-OFF WON!', found: '¡Eso! You copied every step! Come get your star shard!', lost: 'Wrong step, astronaut! Talk to me for a rematch. I’ll go slower. …No I won’t.' },
+    task: { type: 'duel', game: 'simon', rounds: [3, 4, 5], speed: 1.0, colors: [0xff5ab4, 0xffd23a, 0x5ef2e0, 0x9a7aff], names: ['PINK!', 'YELLOW!', 'BLUE!', 'PURPLE!'], winTitle: 'DANCE-OFF WON!', found: '¡Eso! You copied every step! Come get your star shard!', lost: 'Wrong step, astronaut! Talk to me for a rematch. I’ll go slower. …No I won’t.' },
     first: [
       ['ROSA', '¡Oye! Careful, the paint is still wet. I’m Rosa, Milo’s cousin. I paint everything he raps about.'],
       ['ROSA', 'Milo says you’ve got moves. Milo says a LOT of things.'],
       ['RÊNAS', 'I do have moves. I can ground pound.'],
       ['ROSA', 'That’s not dancing, that’s falling with style. Let’s see. DANCE-OFF!'],
-      ['ROSA', 'I dance on my four paint tiles. You copy my steps, in the same order. Three rounds. Win, and the star shard from my paint bucket is yours.'],
+      ['ROSA', 'Look at my four paint tiles: pink, yellow, blue and purple. I dance from tile to tile and each one lights up. When it’s your turn, press the same colour buttons in the same order.'],
+      ['ROSA', 'First three steps, then four, then five. One wrong tile and you lose. Win, and the star shard from my paint bucket is yours.'],
     ],
     progress: () => [['ROSA', 'Rematch? Okay. Watch my feet, not my face. My face is distracting. ¡Vamos!']],
     done: [

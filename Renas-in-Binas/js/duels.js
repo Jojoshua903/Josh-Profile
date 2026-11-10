@@ -1,7 +1,8 @@
-import { THREE, G, toon, basic, mk, clamp, puff, placeOn, orientOn, surf, frameDir, tangentTo, stepDir, toast, banner } from './core.js?v=20261111q';
-import { sfx } from './audio.js?v=20261111q';
-import { P, bouncePlayer } from './player.js?v=20261111q';
-import { makeMarker } from './fx.js?v=20261111q';
+import { THREE, G, toon, basic, mk, clamp, puff, placeOn, orientOn, surf, frameDir, tangentTo, stepDir, toast, banner } from './core.js?v=20261111s';
+import { tr } from './lang.js?v=20261111s';
+import { sfx } from './audio.js?v=20261111s';
+import { P, bouncePlayer, requestLock } from './player.js?v=20261111s';
+import { makeMarker } from './fx.js?v=20261111s';
 
 // DUELS: some locals don't send you on an errand, they challenge you to a mini game.
 // task: { type: 'duel', game, ...settings, found, lost }
@@ -17,9 +18,42 @@ const arc = (pl, a, b) => Math.acos(clamp(a.dot(b), -1, 1)) * pl.r;
 const latAt = (pl, d) => 90 - (d / pl.r) * (180 / Math.PI);
 const COLS = [0xff3a5a, 0xffd23a, 0x5cd85a, 0x3aa8ff];
 const NOTES = [523, 659, 784, 1047];
+const NAMES = ['RED!', 'YELLOW!', 'GREEN!', 'BLUE!'];
 
 // a little beep, so the simon tiles each have their own sound
 function beep(i) { sfx.mumble({ p: NOTES[i], w: 'triangle', fs: 1.2, d: 0.22, range: 0, vib: 0, growl: 0, click: 0, every: 1, dry: 0.8, vol: 1.3 }, 'aeio'[i]); }
+
+// SIMON PAD: four big buttons on screen (click them, or press 1 2 3 4) instead of walking onto the tiles
+const padCss = `
+#simonPad{position:fixed;left:50%;bottom:7vh;transform:translateX(-50%);display:flex;gap:14px;z-index:40;pointer-events:auto;font-family:inherit}
+#simonPad button{width:118px;height:118px;border-radius:22px;border:5px solid #2b2440;color:#2b2440;font:800 17px/1.1 inherit;cursor:pointer;
+  box-shadow:0 7px 0 #2b2440;transition:transform .08s,filter .08s,opacity .2s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+#simonPad button b{font-size:30px}
+#simonPad button.lit{filter:brightness(1.45) saturate(1.2);transform:translateY(-6px) scale(1.08);box-shadow:0 13px 0 #2b2440,0 0 34px #fff}
+#simonPad button:active{transform:translateY(5px);box-shadow:0 2px 0 #2b2440}
+#simonPad.wait button{opacity:.55;cursor:default}
+@media (max-width:640px){#simonPad button{width:78px;height:78px;font-size:12px}#simonPad button b{font-size:22px}}`;
+function makePad(cols, names, onPress) {
+  if (!document.getElementById('simonPadCss')) { const s = document.createElement('style'); s.id = 'simonPadCss'; s.textContent = padCss; document.head.appendChild(s); }
+  const el = document.createElement('div'); el.id = 'simonPad'; el.className = 'wait';
+  const btns = cols.map((c, i) => {
+    const b = document.createElement('button'); b.type = 'button';
+    b.style.background = '#' + new THREE.Color(c).getHexString();
+    b.innerHTML = `<b>${i + 1}</b>${tr(names[i]).replace('!', '')}`;
+    // don't let the click turn the camera or shoot through to the game
+    for (const ev of ['mousedown', 'pointerdown']) b.addEventListener(ev, (e) => e.stopPropagation());
+    b.addEventListener('click', (e) => { e.stopPropagation(); onPress(i); });
+    el.appendChild(b); return b;
+  });
+  const key = (e) => { const i = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Numpad1', 'Numpad2', 'Numpad3', 'Numpad4'].indexOf(e.code); if (i >= 0 && !e.ctrlKey) onPress(i % 4); };
+  addEventListener('keydown', key);
+  document.body.appendChild(el);
+  return {
+    light: (i, on) => btns[i] && btns[i].classList.toggle('lit', on),
+    wait: (on) => el.classList.toggle('wait', on),
+    remove: () => { removeEventListener('keydown', key); el.remove(); },
+  };
+}
 
 function flagModel(color) {
   const g = new THREE.Group();
@@ -53,6 +87,7 @@ export function startDuel(w, loc, T, onWin, onLose) {
   const end = (won, text) => {
     if (d.over) return; d.over = true;
     w.group.remove(grp); w.duel = null; loc.duel = null;
+    if (S.pad) { S.pad.remove(); S.pad = null; G.duelPad = false; if (!document.pointerLockElement && G.state === 'play') requestLock(); }
     // they hop back home
     puff(npc.g.position.clone(), 10, 0xffffff, 3, 1);
     npc.dir.copy(home); placeOn(npc.g, pl, home, 0); npc.g.quaternion.copy(homeQ); npc.face = true;
@@ -78,7 +113,12 @@ export function startDuel(w, loc, T, onWin, onLose) {
       S.tiles.push({ dir, m });
     }
   }
-  if (T.game === 'simon') { S.round = 0; S.seq = []; S.showI = 0; S.showT = 0.8; S.at = 0; S.on = -1; S.lit = -1; S.litT = 0; d.phase = 'count'; }
+  if (T.game === 'simon') {
+    S.round = 0; S.seq = []; S.showI = 0; S.showT = 0.8; S.at = 0; S.lit = -1; S.litT = 0; d.phase = 'count'; S.showing = true;
+    // the mouse is set free so you can click the buttons (the game doesn't pause for that)
+    S.pad = makePad(T.colors || COLS, T.names || NAMES, (i) => press(i));
+    G.duelPad = true; if (document.pointerLockElement) document.exitPointerLock();
+  }
   if (T.game === 'hop') { S.cur = -1; S.curT = 0; S.prize = T.model ? T.model() : null; if (S.prize) grp.add(S.prize); }
   if (T.game === 'grab') {
     S.items = [];
@@ -100,7 +140,7 @@ export function startDuel(w, loc, T, onWin, onLose) {
       const vs = `⚔️ ${n ? 'Duel met' : 'Duel with'} ${loc.name}`;
       if (d.phase === 'count') return `${vs} &nbsp;· ${n ? 'klaar?' : 'ready?'}`;
       if (T.game === 'race') return `${vs} &nbsp;· 🏁 ${n ? 'Eerst bij de vlag!' : 'First to the flag!'}`;
-      if (T.game === 'simon') return `${vs} &nbsp;· ${S.showing ? (n ? '👀 Kijk goed…' : '👀 Watch closely…') : (n ? '🕺 Jouw beurt!' : '🕺 Your turn!')} <b>${n ? 'ronde' : 'round'} ${S.round + 1} / ${T.rounds.length}</b>`;
+      if (T.game === 'simon') return `${vs} &nbsp;· ${S.showing ? (n ? '👀 Kijk goed…' : '👀 Watch closely…') : (n ? `🕺 Jouw beurt! Knop ${S.at + 1} van ${S.seq.length}` : `🕺 Your turn! Press ${S.at + 1} of ${S.seq.length}`)} &nbsp;<b>${n ? 'ronde' : 'round'} ${S.round + 1} / ${T.rounds.length}</b>`;
       if (T.game === 'grab') return `${vs} &nbsp;· ${n ? 'Jij' : 'You'} <b>${d.score}</b> – <b>${d.them}</b> ${loc.name} &nbsp;⏱ ${left()}`;
       if (T.game === 'tag') return `${vs} &nbsp;· ${n ? 'Gepakt' : 'Caught'} <b>${d.score} / ${T.n}</b> &nbsp;⏱ ${left()}`;
       if (T.game === 'hop') return `${vs} &nbsp;· <b>${d.score}</b> / ${T.target} &nbsp;⏱ ${left()}`;
@@ -148,37 +188,34 @@ export function startDuel(w, loc, T, onWin, onLose) {
     S.showing = true; S.showI = 0; S.showT = 0.9; S.at = 0;
   }
   const flash = (i, time = 0.45) => { S.lit = i; S.litT = time; beep(i); puff(surf(pl, S.tiles[i].dir, 0.3), 8, (T.colors || COLS)[i], 3, 0.8, S.tiles[i].dir); };
+  // you press a button (click or 1-4): only counts when it's your turn
+  function press(i) {
+    if (d.over || d.phase !== 'go' || S.showing || G.paused || G.cutscene) return;
+    if (i === S.seq[S.at]) {
+      flash(i, 0.3); S.at++; ctxHud();
+      if (S.at >= S.seq.length) {
+        S.round++;
+        if (S.round >= T.rounds.length) { end(true); return; }
+        sfx.quest(); toast(`Round ${S.round + 1}!`, 1200); S.showing = true; S.showI = 0; S.showT = 1.4; nextRoundSoon();
+      }
+    } else { sfx.hurt(); end(false, T.lost); }
+  }
   games.simon = (dt) => {
     S.litT -= dt;
-    S.tiles.forEach((tl, i) => { tl.m.userData.fill.material.opacity = i === S.lit && S.litT > 0 ? 0.85 : 0.12; tl.m.pulse(d.t * 3 + i); });
+    S.tiles.forEach((tl, i) => { const on = i === S.lit && S.litT > 0; tl.m.userData.fill.material.opacity = on ? 0.85 : 0.12; tl.m.pulse(d.t * 3 + i); S.pad.light(i, on); });
+    S.pad.wait(S.showing);
     if (S.showing) {
       // they dance to each tile in turn
       const k = S.seq[S.showI];
       if (k !== undefined) stepNpc(S.tiles[k].dir, 9, dt);
       S.showT -= dt;
       if (S.showT <= 0) {
-        if (S.showI < S.seq.length) { flash(S.seq[S.showI], 0.5); S.showI++; S.showT = T.speed ?? 0.75; }
-        else { S.showing = false; S.on = -2; toast('Your turn!', 1100); }
+        if (S.showI < S.seq.length) { const k = S.seq[S.showI]; flash(k, 0.7); toast(`${S.showI + 1}. ${tr((T.names || NAMES)[k])}`, 650); S.showI++; S.showT = T.speed ?? 0.75; }
+        else { S.showing = false; toast('Your turn! Press the buttons in the same order (or keys 1 2 3 4).', 2400); }
       }
       return;
     }
     stepNpc(home, 5, dt);
-    // which tile are you standing on?
-    let on = -1;
-    S.tiles.forEach((tl, i) => { if (P.grounded && arc(pl, P.up, tl.dir) < 1.5) on = i; });
-    if (S.on === -2) { S.on = on; return; }   // the tile you're already standing on when your turn starts doesn't count
-    if (on !== S.on) {
-      S.on = on;
-      if (on < 0) return;
-      if (on === S.seq[S.at]) {
-        flash(on); S.at++;
-        if (S.at >= S.seq.length) {
-          S.round++;
-          if (S.round >= T.rounds.length) { end(true); return; }
-          sfx.quest(); toast(`Round ${S.round + 1}!`, 1200); S.showing = true; S.showI = 0; S.showT = 1.4; nextRoundSoon();
-        }
-      } else { sfx.hurt(); end(false, T.lost); }
-    }
   };
   const nextRoundSoon = () => { const r = S.round; S.seq = []; for (let i = 0; i < T.rounds[r]; i++) { let k; do k = Math.floor(Math.random() * 4); while (S.seq.length && k === S.seq[S.seq.length - 1]); S.seq.push(k); } S.at = 0; };
   // GRAB: things are scattered round them; they grab too

@@ -1,9 +1,9 @@
-import { THREE, G, scene, camera, V3, toon, toonV, basic, mk, addOutline, damp, clamp, puff, placeOn, orientOn, surf, rOf, dirOf, anyPerp, LL, toast, banner, setPrompt, $ } from './core.js?v=20261111q';
-import { sfx } from './audio.js?v=20261111q';
-import { tr } from './lang.js?v=20261111q';
-import { P, healPlayer, pfTest } from './player.js?v=20261111q';
-import { buildBout, buildTandwiel, buildHeart, buildLaunchStar } from './models.js?v=20261111q';
-import { Enemy } from './enemies.js?v=20261111q';
+import { THREE, G, scene, camera, V3, toon, toonV, basic, mk, addOutline, damp, clamp, puff, placeOn, orientOn, surf, rOf, dirOf, anyPerp, LL, toast, banner, setPrompt, $ } from './core.js?v=20261111s';
+import { sfx } from './audio.js?v=20261111s';
+import { tr } from './lang.js?v=20261111s';
+import { P, healPlayer, pfTest } from './player.js?v=20261111s';
+import { buildBout, buildTandwiel, buildHeart, buildLaunchStar } from './models.js?v=20261111s';
+import { Enemy } from './enemies.js?v=20261111s';
 
 // A World: one or more round planets with platforms, pickups, enemies, friends and a boss arena.
 const hash = (x, y, z) => { const s = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453; return s - Math.floor(s); };

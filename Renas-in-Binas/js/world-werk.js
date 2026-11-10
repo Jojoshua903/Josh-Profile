@@ -1,12 +1,12 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore, lavaFloor } from './worlds-common.js?v=20261111q';
-import { fbm } from './world.js?v=20261111q';
-import { buildLars, buildNathan, buildMilo, buildBlueprint, buildGear, textBoard, buildLocal, buildTrinket } from './models.js?v=20261111q';
-import { Tandwieltron } from './bosses.js?v=20261111q';
-import { addParkour, buildBeacon } from './parkour.js?v=20261111q';
-import { G, toast, banner, puff, surf } from './core.js?v=20261111q';
-import { P } from './player.js?v=20261111q';
-import { sfx } from './audio.js?v=20261111q';
-import { duelModels } from './duels.js?v=20261111q';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore, lavaFloor } from './worlds-common.js?v=20261111s';
+import { fbm } from './world.js?v=20261111s';
+import { buildLars, buildNathan, buildMilo, buildBlueprint, buildGear, textBoard, buildLocal, buildTrinket } from './models.js?v=20261111s';
+import { Tandwieltron } from './bosses.js?v=20261111s';
+import { addParkour, buildBeacon } from './parkour.js?v=20261111s';
+import { G, toast, banner, puff, surf } from './core.js?v=20261111s';
+import { P } from './player.js?v=20261111s';
+import { sfx } from './audio.js?v=20261111s';
+import { duelModels } from './duels.js?v=20261111s';
 
 // BONUS planet, after the finale: DE GOUDEN WERKPLAATS. Lars and Nathan built it as a thank-you for Rênas,
 // but Kayo & Yara snuck in and took over Tandwieltron, the big builder robot.

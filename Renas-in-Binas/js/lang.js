@@ -112,6 +112,10 @@ const NL = {
   'Harder! Hold Shift in the air for a ground pound!': 'Harder! Druk in de lucht op Shift voor een ground pound!',
   // ---------- the bosses' signature attacks ----------
   // ---------- duels with the locals ----------
+  'RED!': 'ROOD!', 'YELLOW!': 'GEEL!', 'GREEN!': 'GROEN!', 'BLUE!': 'BLAUW!', 'PINK!': 'ROZE!', 'PURPLE!': 'PAARS!', 'ORANGE!': 'ORANJE!', 'WHITE!': 'WIT!',
+  'Your turn! Press the buttons in the same order (or keys 1 2 3 4).': 'Jouw beurt! Druk op de knoppen in dezelfde volgorde (of toets 1 2 3 4).',
+  'Look at my four paint tiles: pink, yellow, blue and purple. I dance from tile to tile and each one lights up. When it’s your turn, press the same colour buttons in the same order.': 'Kijk naar mijn vier verftegels: roze, geel, blauw en paars. Ik dans van tegel naar tegel en elke tegel licht op. Als jij aan de beurt bent, druk je op dezelfde kleurknoppen, in dezelfde volgorde.',
+  'First three steps, then four, then five. One wrong tile and you lose. Win, and the star shard from my paint bucket is yours.': 'Eerst drie stappen, dan vier, dan vijf. Eén verkeerde tegel en je verliest. Win je, dan is de sterrenscherf uit mijn verfemmer van jou.',
   'GO!': 'GO!', 'Your turn!': 'Jouw beurt!', 'Round #!': 'Ronde #!', 'GOTCHA!': 'GEPAKT!', 'Gotcha! # more!': 'Gepakt! Nog #!',
   'You walked away from the duel…': 'Je liep weg van het duel…', 'YOU WIN!': 'GEWONNEN!', 'the flag': 'de vlag', 'rematch': 'revanche',
   'You beat me! Come get your star shard!': 'Je hebt me verslagen! Kom je sterrenscherf halen!',
@@ -215,7 +219,7 @@ const NL = {
   // Wendy
   'You cast the whole spell! Come back to me!': 'Je hebt de hele spreuk gedaan! Kom terug!',
   'Oops, wrong step! The spell went poof. Talk to me to try again!': 'Oeps, verkeerde stap! De spreuk ging poef. Praat met me om het opnieuw te proberen!',
-  'But for the big spell I need a helper. You walk the magic steps after me, on my four glowing stones.': 'Maar voor de grote spreuk heb ik een helper nodig. Jij loopt de toverstappen na, op mijn vier gloeiende stenen.',
+  'But for the big spell I need a helper. Press the magic buttons after me: my four glowing stones.': 'Maar voor de grote spreuk heb ik een helper nodig. Druk mij na op de toverknoppen: mijn vier gloeiende stenen.',
   'What does the big spell do?': 'Wat doet de grote spreuk?',
   'It makes… cupcakes. Hopefully. Last time it made a frog. The frog was nice.': 'Hij maakt… cupcakes. Hopelijk. Vorige keer maakte hij een kikker. De kikker was aardig.',
   'Watch me, then copy my steps in the same order. Three spells. Get them right and my star shard is yours!': 'Kijk naar mij en doe dan mijn stappen na, in dezelfde volgorde. Drie spreuken. Doe je ze goed, dan is mijn sterrenscherf van jou!',
