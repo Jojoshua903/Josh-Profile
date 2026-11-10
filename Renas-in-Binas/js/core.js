@@ -1,4 +1,4 @@
-import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 import { tr } from './lang.js?v=20261111l';
 export { THREE };
 
