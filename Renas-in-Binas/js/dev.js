@@ -1,9 +1,9 @@
 // ---------- dev tools ----------
 // Press ` (backquote) or F2 to open. Jump to any planet, skip to the boss, finish a quest, teleport around, and cheat.
 // Everything here talks to main.js through the `api` object, so the game itself stays untouched.
-import { THREE, G, frameDir, anyPerp, toast, rOf } from './core.js?v=20261111u';
-import { P, S, spawnPlayer, drawHearts, keys } from './player.js?v=20261111u';
-import { LANG } from './lang.js?v=20261111u';
+import { THREE, G, frameDir, anyPerp, toast, rOf } from './core.js?v=20261112d';
+import { P, S, spawnPlayer, drawHearts, keys } from './player.js?v=20261112d';
+import { LANG } from './lang.js?v=20261112d';
 
 const nl = () => LANG.cur === 'nl';
 const L = (en, dutch) => (nl() ? dutch : en);
@@ -91,7 +91,7 @@ function render() {
 
   // planets
   let r = section(L('Planets (click = fly there)', 'Planeten (klik = vlieg erheen)'));
-  ORDER.concat(api.BONUS ?? [], api.TEMPLE ?? []).forEach((i) => {
+  ORDER.concat(api.BONUS ?? [], api.TEMPLE ?? [], api.ZWEEF ?? []).forEach((i) => {
     const [nm, , col] = NAMES[i];
     btn(r, `<span class="pl"><span class="dot" style="background:${col}"></span>${nm}${save.cleared[i] ? ' ✅' : ''}</span>`, () => goPlanet(i), { here: w && cur.idx === i });
   });
@@ -141,7 +141,7 @@ async function goPlanet(i) {
   try {
     const save = api.save();
     // make sure the route counts it as open, so saving and the travel menu keep working
-    if (i === api.BONUS || i === api.TEMPLE) save.finale = true; else save.unlocked = Math.max(save.unlocked, api.step(i));
+    if (i === api.BONUS || i === api.TEMPLE) save.finale = true; else save.unlocked = Math.max(save.unlocked, api.step(i === api.ZWEEF ? 12 : i));
     save.introSeen = true; api.persist();
     // a cutscene that is still playing (an arrival, a talk) would freeze the new planet: end it first
     if (api.cutActive()) api.skip();

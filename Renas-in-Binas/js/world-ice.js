@@ -1,8 +1,8 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261111u';
-import { fbm } from './world.js?v=20261111u';
-import { buildPingo, buildDeniz, buildAuraCrystal, buildScarf, textBoard, buildLocal, buildTrinket } from './models.js?v=20261111u';
-import { Deniz } from './bosses.js?v=20261111u';
-import { addParkour, buildBeacon } from './parkour.js?v=20261111u';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261112d';
+import { fbm } from './world.js?v=20261112d';
+import { buildPingo, buildDeniz, buildAuraCrystal, buildScarf, textBoard, buildLocal, buildTrinket } from './models.js?v=20261112d';
+import { Deniz } from './bosses.js?v=20261112d';
+import { addParkour, buildBeacon } from './parkour.js?v=20261112d';
 
 // World 3 on the route: HET HERTOGDOM IJS. A frozen planet ruled by Deniz, the Duke of Ice, who has way too much aura.
 // Boss: Deniz himself, in the Aura Throne Room.
@@ -58,7 +58,7 @@ export function buildIce(ctx) {
       ['RÊNAS', 'A penguin in a bow tie! Who are you?'],
       ['PINGO', 'Pingo. Royal butler to His Frostiness, Deniz, the Duke of Ice.'],
       ['PINGO', 'His Frostiness heard that a little astronaut saved two Energiekernen. Now the whole galaxy says YOU have the most aura.'],
-      ['PINGO', 'He did not like that. He froze his own core, the IJskern, into his throne. He will only hand it to someone with more aura than him.'],
+      ['PINGO', 'He did not like that. Then one of your cores fell into his palace. He named it the IJskern and froze it into his throne. He will only hand it to someone with more aura than him.'],
       ['RÊNAS', 'Aura? Like… being cool?'],
       ['PINGO', 'Being cool. Standing cool. Breathing cool. He practises his pose in the mirror. Seven hours a day.'],
       ['PINGO', 'His aura got so strong it sucked up the three Aura Crystals that power our Launch Star. Then it spat them out all over the planet.'],
@@ -252,7 +252,7 @@ export function buildIce(ctx) {
     ['DENIZ', '…Fine. FINE. Your aura is… acceptable. Take the IJskern.'],
     ['DENIZ', 'But I am still the coolest. Literally. I am made of ice. Mostly.'],
     ['RENAS-1', 'Fuel secured: the IJskern. Aura levels: off the charts. Range: still not enough for Homerun Heuvel.'],
-    ['RENAS-1', 'One more fuel stop. Next signal: Smaragdeiland.'],
+    ['RENAS-1', 'Next fuel stop: Smaragdeiland.'],
     ['RÊNAS', 'Josh is never going to believe this. A Duke! Of ICE!'],
   ];
   void frameDir;

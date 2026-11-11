@@ -1,8 +1,8 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, palm, lamp, sign, pulseSpeaker, addRocket, questItem, rareItem, setupFriend, setupLocal, slerpDir, addMore } from './worlds-common.js?v=20261111u';
-import { fbm } from './world.js?v=20261111u';
-import { buildMilo, buildBarrelBooth, buildVinyl, textBoard, buildLocal, buildTrinket, buildSneaker } from './models.js?v=20261111u';
-import { Miauwtron } from './bosses.js?v=20261111u';
-import { addParkour, buildBeacon } from './parkour.js?v=20261111u';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, palm, lamp, sign, pulseSpeaker, addRocket, questItem, rareItem, setupFriend, setupLocal, slerpDir, addMore } from './worlds-common.js?v=20261112d';
+import { fbm } from './world.js?v=20261112d';
+import { buildMilo, buildBarrelBooth, buildVinyl, textBoard, buildLocal, buildTrinket, buildSneaker } from './models.js?v=20261112d';
+import { Miauwtron } from './bosses.js?v=20261112d';
+import { addParkour, buildBeacon } from './parkour.js?v=20261112d';
 
 // World 1: PLANETA PHONK. Milo's neon party planet. Boss: DJ Miauwtron on the Bass Drop Moon.
 export function buildPhonk(ctx) {
@@ -105,7 +105,7 @@ export function buildPhonk(ctx) {
       ['RÊNAS', 'I do have moves. I can ground pound.'],
       ['ROSA', 'That’s not dancing, that’s falling with style. Let’s see. DANCE-OFF!'],
       ['ROSA', 'Look at my four paint tiles: pink, yellow, blue and purple. I dance from tile to tile and each one lights up. When it’s your turn, press the same colour buttons in the same order.'],
-      ['ROSA', 'First three steps, then four, then five. One wrong tile and you lose. Win, and the star shard from my paint bucket is yours.'],
+      ['ROSA', 'First three steps, then four, then five. One wrong button and you lose. Win, and the star shard from my paint bucket is yours.'],
     ],
     progress: () => [['ROSA', 'Rematch? Okay. Watch my feet, not my face. My face is distracting. ¡Vamos!']],
     done: [
@@ -263,7 +263,7 @@ export function buildPhonk(ctx) {
   w.hitLines = [['MILO', '¡ESO! That’s going in the edit!'], ['MILO', 'Slow-motion replay! Reverb on it! ONE MORE!']];
   w.winLines = [
     ['MILO', '(radio) “Rênas vs. Miauwtron (phonk remix)”. Uploading… You’re famous now. On the Mistmaan.'],
-    ['RENAS-1', 'Energiekern 1 of 3 secured. Next signal: De Diepe Mijn.'],
+    ['RENAS-1', 'Energiekern secured! Next signal: De Diepe Mijn.'],
     ['RÊNAS', 'The mine? That’s where Lars lives. Josh’s best friend!'],
   ];
   void slerpDir; void frameDir; void surf; void basic;

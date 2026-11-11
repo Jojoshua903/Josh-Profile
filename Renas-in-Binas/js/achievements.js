@@ -1,5 +1,5 @@
-import { $, toast, banner } from './core.js?v=20261111u';
-import { sfx } from './audio.js?v=20261111u';
+import { $, toast, banner } from './core.js?v=20261112d';
+import { sfx } from './audio.js?v=20261112d';
 
 // ACHIEVEMENTS. Most of them are read straight from the save (bosses beaten, gears found, play time...),
 // so they also work for old saves. A few are moments (a quick boss fight, a fast planet): main.js calls
@@ -31,7 +31,7 @@ export const ACH = [
   ['try1', '🎯', 'First try!', 'In één keer!', 'Beat a boss on your first try', 'Versla een baas in één poging', (s) => firstTry(s) >= 1],
   ['try5', '🥇', 'Untouchable', 'Onverslaanbaar', 'Beat 5 bosses on your first try', 'Versla 5 bazen in één poging', (s) => firstTry(s) >= 5, (s) => [firstTry(s), 5]],
   ['gear25', '⚙️', 'Gear collector', 'Tandwielverzamelaar', 'Find 25 golden gears', 'Vind 25 gouden tandwielen', (s) => gears(s) >= 25, (s) => [gears(s), 25]],
-  ['gearall', '🌟', 'Every last gear', 'Alle tandwielen', 'Find all 57 golden gears', 'Vind alle 57 gouden tandwielen', (s) => gears(s) >= 57, (s) => [gears(s), 57]],
+  ['gearall', '🌟', 'Every last gear', 'Alle tandwielen', 'Find all 60 golden gears', 'Vind alle 60 gouden tandwielen', (s) => gears(s) >= 60, (s) => [gears(s), 60]],
   ['bolts', '🔩', 'Bolt millionaire', 'Boutenmiljonair', 'Have 500 bolts', 'Heb 500 bouten', (s) => (s.coins || 0) >= 500, (s) => [Math.min(500, s.coins || 0), 500]],
   ['park', '🤸', 'Parkour king', 'Parkourkoning', 'Clear all 3 parkour planets', 'Haal alle 3 parkourplaneten', (s) => n(PARK, (i) => s.cleared[i]) >= 3, (s) => [n(PARK, (i) => s.cleared[i]), 3]],
   ['nofall', '🦶', 'Sure-footed', 'Vaste voeten', 'Clear a parkour planet without falling once', 'Haal een parkourplaneet zonder één keer te vallen', (s) => PARK.some((i) => s.cleared[i] && s.tries[i] === 1)],

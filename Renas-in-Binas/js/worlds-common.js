@@ -1,12 +1,12 @@
-import { THREE, G, V3, toon, basic, mk, LL, frameDir, surf, clamp, tangentTo, stepDir, placeOn, banner, toast, puff } from './core.js?v=20261111u';
-import { sfx } from './audio.js?v=20261111u';
-import { P, hurtPlayer, bouncePlayer } from './player.js?v=20261111u';
-import { SurfaceWall } from './fx.js?v=20261111u';
-import { World, addStars, addBackdropPlanet } from './world.js?v=20261111u';
-import { play, shot } from './cutscene.js?v=20261111u';
-import { buildRocket, buildLaunchStar, textBoard } from './models.js?v=20261111u';
+import { THREE, G, V3, toon, basic, mk, LL, frameDir, surf, clamp, tangentTo, stepDir, placeOn, banner, toast, puff } from './core.js?v=20261112d';
+import { sfx } from './audio.js?v=20261112d';
+import { P, hurtPlayer, bouncePlayer } from './player.js?v=20261112d';
+import { SurfaceWall } from './fx.js?v=20261112d';
+import { World, addStars, addBackdropPlanet } from './world.js?v=20261112d';
+import { play, shot } from './cutscene.js?v=20261112d';
+import { buildRocket, buildLaunchStar, textBoard } from './models.js?v=20261112d';
 
-import { startDuel } from './duels.js?v=20261111u';
+import { startDuel } from './duels.js?v=20261112d';
 export { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, G, P, sfx, play, shot };
 export const slerpDir = (a, b, k) => a.clone().lerp(b, k).normalize();
 
@@ -97,7 +97,7 @@ export function addRocket(w, ctx, pl, dir) {
   w.put(pl, r.g, dir, 0, 0.4);
   w.addSolid(pl, dir, 0.85, 3.6);
   w.rocket = r;
-  w.addInteract({ planet: pl, pos: surf(pl, dir, 0.5), radius: 2.6, prompt: () => '<kbd>E</kbd> rocket: travel', use: () => ctx.openTravel() });
+  w.addInteract({ planet: pl, pos: surf(pl, dir, 0.5), radius: 2.6, prompt: () => (w.nextName ? `<kbd>E</kbd> rocket: fly on to ${w.nextName}` : '<kbd>E</kbd> rocket: travel'), use: () => ctx.openTravel() });
   return r;
 }
 

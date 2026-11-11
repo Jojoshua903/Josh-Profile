@@ -1,10 +1,10 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, lavaFloor, geyser, addMore } from './worlds-common.js?v=20261111u';
-import { fbm } from './world.js?v=20261111u';
-import { puff } from './core.js?v=20261111u';
-import { buildImmanuel, buildFireGem, buildHammer, textBoard, buildLocal } from './models.js?v=20261111u';
-import { Smeul } from './bosses.js?v=20261111u';
-import { addParkour, buildBeacon } from './parkour.js?v=20261111u';
-import { duelModels } from './duels.js?v=20261111u';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, lavaFloor, geyser, addMore } from './worlds-common.js?v=20261112d';
+import { fbm } from './world.js?v=20261112d';
+import { puff } from './core.js?v=20261112d';
+import { buildImmanuel, buildFireGem, buildHammer, textBoard, buildLocal } from './models.js?v=20261112d';
+import { Smeul } from './bosses.js?v=20261112d';
+import { addParkour, buildBeacon } from './parkour.js?v=20261112d';
+import { duelModels } from './duels.js?v=20261112d';
 
 // World 6 on the route: DE ASBERG. A volcano planet: rivers of lava, geysers, basalt towers.
 // New here: the lava floor burns (hop out!) and geysers that hurt, or shoot you sky-high.
@@ -91,7 +91,7 @@ export function buildLava(ctx) {
       ['IMMANUEL', 'But we have a problem. Smeul. A fire dragon. He lives in the crater and he’s in a VERY bad mood.'],
       ['IMMANUEL', 'He blew my three fire gems right out of my measuring station. Without them I can’t predict the next eruption. Red card for Smeul.'],
       ['RÊNAS', 'Does he have an energy core, by any chance?'],
-      ['IMMANUEL', 'How did you know? The Vuurkern. Forged in lava. He sleeps on it like a pillow.'],
+      ['IMMANUEL', 'How did you know? It fell into his crater, glowing hot. He calls it the Vuurkern now. He sleeps on it like a pillow.'],
       ['IMMANUEL', 'One gem landed on the floating rocks over the lava lake. One is on top of the Basalt Towers in the west: use the geyser to get up there.'],
       ['IMMANUEL', 'And one is on the summit of the old cone in the north. Mind the geysers on the way up. They go off every few seconds.'],
       ['IMMANUEL', 'Bram the blacksmith and little Pip each found a star shard. Help them and they’ll give them to you. And remember: orange is hot!'],

@@ -1,9 +1,9 @@
-import { THREE, G, V3, toon, basic, mk, LL, surf, puff, placeOn, orientOn, anyPerp } from './core.js?v=20261111u';
-import { sfx, music } from './audio.js?v=20261111u';
-import { P, spawnPlayer, model } from './player.js?v=20261111u';
-import { World, addStars, addBackdropPlanet, fbm } from './world.js?v=20261111u';
-import { play, shot } from './cutscene.js?v=20261111u';
-import { buildStation, buildKnabbel, buildSaucer, buildKern, buildRocket, buildJosh, buildOtis, buildMilo, buildLars, buildBout } from './models.js?v=20261111u';
+import { THREE, G, V3, toon, basic, mk, LL, surf, puff, placeOn, orientOn, anyPerp } from './core.js?v=20261112d';
+import { sfx, music } from './audio.js?v=20261112d';
+import { P, spawnPlayer, model } from './player.js?v=20261112d';
+import { World, addStars, addBackdropPlanet, fbm } from './world.js?v=20261112d';
+import { play, shot } from './cutscene.js?v=20261112d';
+import { buildStation, buildKnabbel, buildSaucer, buildKern, buildRocket, buildJosh, buildOtis, buildMilo, buildLars, buildBout } from './models.js?v=20261112d';
 
 const T = (who, text, sub, extra = {}) => ({ say: { who, text, sub }, ...extra });
 
@@ -37,7 +37,7 @@ export function buildIntro() {
   const sc = buildSaucer(); sc.saucer.visible = false; w.group.add(sc.saucer); w.saucer = sc;
   const rk = buildRocket(); w.put(pl, rk.g, LL(-34, 48), 0); w.rocket = rk;
   w.upAt = (pos) => pos.clone().normalize();
-  // the three cores flying off
+  // the eleven cores flying off
   w.flyers = [];
   w.updaters.push((dt) => { for (const f of w.flyers) { f.g.position.addScaledVector(f.v, dt); f.g.rotation.y += dt * 4; puff(f.g.position.clone(), 1, 0x5ef2e0, 0.5, 0.2); } });
   return w;
@@ -67,7 +67,7 @@ export function playIntro(w, onDone) {
     T('RÊNAS', 'Captain’s log, day 7. The station works great. Knabbel only ate one solar panel. A small one.', null, { cam: atR }),
     T('KNABBEL', 'HAP.', null, { cam: atK, start: () => sfx.hap() }),
     T('RENAS-1', 'Incoming call. It is Josh.', null, { cam: atR }),
-    T('JOSH', '(radio) Kleine broer! Julie built you three Energiekernen for the station engine. With those you can fly anywhere.', null, { cam: atR }),
+    T('JOSH', '(radio) Kleine broer! Raaf built you eleven Energiekernen for the station engine. With those you can fly anywhere.', null, { cam: atR }),
     T('JOSH', '(radio) They’re in the crate on the deck. Don’t let Knabbel eat them.', null, { cam: () => ({ pos: tinPos.clone().addScaledVector(tinUp, 2.5).add(V3(2, 0, 2)), look: tinPos, up: tinUp }) }),
     T('RÊNAS', 'Josh, I’m a captain. Captains don’t lose energy cores.', null, { cam: atR }),
     T('JOSH', '(radio) Sure thing, Captain Rênas Binas.', null, { cam: atR }),
@@ -75,7 +75,7 @@ export function playIntro(w, onDone) {
     { dur: 2.4, cam: () => ({ pos: tinPos.clone().addScaledVector(tinUp, 3).add(V3(6, 0, 6)), look: sAt, up: tinUp }),
       start: () => { sc.saucer.visible = true; sc.saucer.position.copy(sAt).add(V3(-40, 20, -30)); G.shake = 0.3; sfx.whoosh(); sfx.meow(); },
       update: (dt, k) => { sc.saucer.position.lerpVectors(sAt.clone().add(V3(-40, 20, -30)), sAt, 1 - (1 - k) ** 3); orientOn(sc.saucer, tinUp, V3(1, 0, 0)); } },
-    T('KAYO', 'Miauw.', '(RENAS-1 translates: “Three glowing cores. Unguarded.”)', { cam: atS }),
+    T('KAYO', 'Miauw.', '(RENAS-1 translates: “Eleven glowing cores. Unguarded.”)', { cam: atS }),
     T('YARA', 'Miauw miauw.', '(RENAS-1 translates: “Guarded by a child. In a fishbowl.”)', { cam: atS }),
     { dur: 2.2, cam: () => ({ pos: tinPos.clone().addScaledVector(tinUp, 2).add(V3(5, 0, 5)), look: tinPos.clone().addScaledVector(tinUp, 3), up: tinUp }),
       start: () => { sc.beam.visible = true; sfx.launch(); },
@@ -86,13 +86,15 @@ export function playIntro(w, onDone) {
         sfx.boom(); G.shake = 0.5;
         const from = sc.saucer.position.clone();
         puff(from, 30, 0x5ef2e0, 6, 2, V3(0, 1, 0));
-        for (const target of [V3(-60, 20, -90), V3(70, -10, -110), V3(10, 50, -130)]) {
-          const g = buildKern(1.4); g.position.copy(from); w.group.add(g);
-          w.flyers.push({ g, v: target.clone().sub(from).multiplyScalar(0.4) });
+        // all eleven cores scatter in every direction, one for each boss planet
+        for (let i = 0; i < 11; i++) {
+          const a = (i / 11) * Math.PI * 2, target = V3(Math.cos(a) * 110, -20 + (i % 4) * 22, -90 + Math.sin(a) * 60);
+          const g = buildKern(1.0); g.position.copy(from); w.group.add(g);
+          w.flyers.push({ g, v: target.clone().sub(from).multiplyScalar(0.3 + (i % 3) * 0.08) });
         }
       },
       update: (dt) => { sc.saucer.position.add(V3(30 * dt, 12 * dt, -20 * dt)); } },
-    T('RENAS-1', 'The crate broke open and the cores are gone. Something big has picked up every core. I count fourteen planets with signals. The closest one: Planeta Phonk.', null, { cam: wide, start: () => (sc.saucer.visible = false) }),
+    T('RENAS-1', 'The crate broke open and the cores are gone. They scattered all over the galaxy, and something big grabbed every single one. Eleven core signals. The closest one: Planeta Phonk.', null, { cam: wide, start: () => (sc.saucer.visible = false) }),
     T('JOSH', '(radio) Rênas? Stay there! Otis and I are coming. Give me a few days, the rocket is—', null, { cam: atR }),
     T('OTIS', '(radio) *WOOF WOOF!*', '(RENAS-1 translates: “KLEINE JOSH! WE’RE COMING! IS THERE FOOD?”)', { cam: atR, start: () => sfx.bark() }),
     T('RÊNAS', 'No. Josh saved a whole galaxy by himself. I can do fourteen planets. …Probably.', null, { cam: atR }),
@@ -129,7 +131,7 @@ export function playFinale(w, onDone) {
   const sAt = surf(pl, home, 7);
   const atS = () => ({ pos: sc.saucer.position.clone().add(V3(4, -2, 5)), look: sc.saucer.position.clone(), up: P.up.clone() });
   const steps = [
-    T('RÊNAS', 'Three cores. Fourteen planets. Eleven bosses. All by myself!', null, { cam: atR, start: () => { music('finale'); sfx.win(); } }),
+    T('RÊNAS', 'Eleven cores. Fourteen planets. Eleven bosses. All by myself!', null, { cam: atR, start: () => { music('finale'); sfx.win(); } }),
     { dur: 2, cam: () => ({ pos: surf(pl, home, 3).add(V3(6, 0, 6)), look: sAt, up: P.up.clone() }),
       start: () => { sc.saucer.visible = true; sfx.meow(); G.shake = 0.3; },
       update: (dt, k) => { sc.saucer.position.lerpVectors(sAt.clone().add(V3(40, 25, 10)), sAt, 1 - (1 - k) ** 3); orientOn(sc.saucer, P.up, V3(1, 0, 0)); } },
@@ -152,7 +154,7 @@ export function playFinale(w, onDone) {
     T('RÊNAS', 'Well… almost by myself.', null, { cam: atR }),
     T('JOSH', 'Ha. You sound just like me.', null, { cam: group }),
     T('NATHAN', '*HATSJOE!* …Sorry. That one was for Otis.', null, { cam: group, start: () => sfx.sneeze() }),
-    T('RENAS-1', 'All three Energiekernen are back. Station engine: ready. Destination: anywhere.', null, { cam: group }),
+    T('RENAS-1', 'All eleven Energiekernen are back. Station engine: ready. Destination: anywhere.', null, { cam: group }),
     T('RÊNAS', 'Josh? Next time, I’m the captain.', null, { cam: atR }),
     { dur: 4, title: ['THE END…?', 'Somewhere out there, two cats are making a plan.'], titleMs: 3800, cam: (t) => ({ pos: surf(pl, home, 0).add(V3(Math.sin(t * 0.2) * 14, 8, 14)), look: surf(pl, home, 1), up: P.up.clone() }) },
   ];

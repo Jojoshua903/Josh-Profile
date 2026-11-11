@@ -1,10 +1,10 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, geyser, addMore } from './worlds-common.js?v=20261111u';
-import { fbm } from './world.js?v=20261111u';
-import { buildSami, buildPearl, textBoard, buildLocal, buildTrinket } from './models.js?v=20261111u';
-import { Kraak } from './bosses.js?v=20261111u';
-import { addParkour, buildBeacon } from './parkour.js?v=20261111u';
-import { rOf } from './core.js?v=20261111u';
-import { duelModels } from './duels.js?v=20261111u';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, geyser, addMore } from './worlds-common.js?v=20261112d';
+import { fbm } from './world.js?v=20261112d';
+import { buildSami, buildPearl, textBoard, buildLocal, buildTrinket } from './models.js?v=20261112d';
+import { Kraak } from './bosses.js?v=20261112d';
+import { addParkour, buildBeacon } from './parkour.js?v=20261112d';
+import { rOf } from './core.js?v=20261112d';
+import { duelModels } from './duels.js?v=20261112d';
 
 // World 9 on the route: DE KORAALZEE. A planet under the sea: coral, kelp, a sunken ship and giant clams.
 // New here: you're underwater, so you float a little, and bubble streams shoot you up high.
@@ -79,7 +79,7 @@ export function buildSea(ctx) {
       ['SAMI', 'That’s the water! You jump higher and fall slower. And the bubble streams shoot you up really high. Try one!'],
       ['SAMI', 'But there’s a problem. A big one with eight arms. Kraak, the giant octopus. He stole my three pearls.'],
       ['SAMI', 'And he’s hugging a glowing core down in De Diepe Trog. The Zeekern. That’s your fuel, right?'],
-      ['RÊNAS', 'Yes! My station runs on energy cores. Long story.'],
+      ['RÊNAS', 'Yes! That’s one of mine. Raaf built it for my station.'],
       ['SAMI', 'One pearl is on top of the Koraaltoren, the coral tower to the west. One is in the crow’s nest of the sunken ship.'],
       ['SAMI', 'And one is on the giant clam up north. Ride a bubble stream to get up there!'],
       ['SAMI', 'Mo and Juul each found a star shard. Help them and they’ll give them to you. Blub!'],

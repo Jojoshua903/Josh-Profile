@@ -1,11 +1,11 @@
-import { World, addStars, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinOn, sign, rareItem } from './worlds-common.js?v=20261111u';
-import { fbm } from './world.js?v=20261111u';
-import { buildLocal, textBoard } from './models.js?v=20261111u';
-import { buildBeacon, coursePath } from './parkour.js?v=20261111u';
-import { G, toast, puff, surf, placeOn, orientOn, clamp } from './core.js?v=20261111u';
-import { sfx } from './audio.js?v=20261111u';
-import { P, spawnPlayer, resetCam, hurtPlayer, drawHearts } from './player.js?v=20261111u';
-import { play, orbitShot } from './cutscene.js?v=20261111u';
+import { World, addStars, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinOn, sign, rareItem } from './worlds-common.js?v=20261112d';
+import { fbm } from './world.js?v=20261112d';
+import { buildLocal, textBoard } from './models.js?v=20261112d';
+import { buildBeacon, coursePath } from './parkour.js?v=20261112d';
+import { G, toast, puff, surf, placeOn, orientOn, clamp } from './core.js?v=20261112d';
+import { sfx } from './audio.js?v=20261112d';
+import { P, spawnPlayer, resetCam, hurtPlayer, drawHearts } from './player.js?v=20261112d';
+import { play, orbitShot } from './cutscene.js?v=20261112d';
 
 // PARKOUR PLANETS: detours on the route, between the story planets. No quest and no boss: one long course
 // over a bottomless void, from the start beacon to the star gate. Every planet has its own trick:
@@ -98,7 +98,7 @@ export function buildSprong(ctx) {
   });
 }
 
-function buildPark(ctx, D) {
+export function buildPark(ctx, D) {
   const T = D.theme;
   const w = new World(D.id);
   Object.assign(w, {
@@ -108,6 +108,7 @@ function buildPark(ctx, D) {
   // the planet itself is invisible: everything below the platforms is the void
   const pl = w.addPlanet({ c: V3(0, 0, 0), r: R, atmo: 0x000000, atmoOp: 0, paint: (p, out) => out.setHex(0x0a0610) });
   pl.mesh.visible = false; pl.halo.visible = false;
+  if (D.grav) pl.grav = D.grav;   // Zweefrijk: floaty anti-gravity
   w.main = pl;
   w.boss = { g: new THREE.Group(), dead: true, reset() {}, start() {}, update() {} };   // main.js expects one
   addStars(w, 200);
@@ -120,15 +121,16 @@ function buildPark(ctx, D) {
       col.set([c.r, c.g, c.b], i * 3);
     }
     dome.setAttribute('color', new THREE.BufferAttribute(col, 3));
-    w.group.add(new THREE.Mesh(dome, new THREE.MeshToonMaterial({ vertexColors: true, side: THREE.BackSide })));
+    w.dome = new THREE.Mesh(dome, new THREE.MeshToonMaterial({ vertexColors: true, side: THREE.BackSide })); w.group.add(w.dome);
+    w.gems = [];
     for (let i = 0; i < 26; i++) {
       const d = V3(Math.sin(i * 2.4) * Math.cos(i * 0.9), Math.cos(i * 1.7), Math.sin(i * 0.9) * Math.cos(i * 2.4)).normalize();
       const cr = mk(new THREE.OctahedronGeometry(0.9 + (i % 3) * 0.5), basic(T.gems[i % T.gems.length]), 0, 0, 0, w.group, 1.08);
-      cr.position.copy(pl.c).addScaledVector(d, 45); cr.scale.y = 2.4; cr.lookAt(pl.c); cr.rotateX(Math.PI / 2);
+      cr.position.copy(pl.c).addScaledVector(d, 45); cr.scale.y = 2.4; cr.lookAt(pl.c); cr.rotateX(Math.PI / 2); w.gems.push(cr);
     }
     w.group.add(new THREE.Mesh(new THREE.SphereGeometry(5, 24, 16), basic(T.core)));
     const glow = new THREE.Mesh(new THREE.SphereGeometry(10, 24, 16), basic(T.glow, { transparent: true, opacity: 0.18, depthWrite: false, blending: THREE.AdditiveBlending }));
-    w.group.add(glow);
+    w.group.add(glow); w.glow = glow;
     w.updaters.push((dt, t) => glow.scale.setScalar(1 + Math.sin(t * 1.3) * 0.06));
   }
 
@@ -178,6 +180,11 @@ function buildPark(ctx, D) {
         rings.push({ lon: lon + 15, h: h + 1.8 }, { lon: lon + 31, h: h + 2.0 });
         h += 0.4; add(46, 0, h, { r: 1.8 }, coin);
       }
+      // Zweefrijk: an anti-gravity beam that carries you straight up; the next platform floats right beside the top
+      if (type === 'lift') {
+        const s = add(12, 0, h + 0.2, { r: 1.5, color: T.bounce, top: 0xffffff }); s.lift = 7.5;
+        h += 7.5; add(4.2, 0, h, { r: 1.8 }, coin);
+      }
     }
   }
   const finS = add(14, 0, h, { hx: 2.4, hz: 2.4, top: T.finTop }); cps.push(finS);
@@ -194,6 +201,7 @@ function buildPark(ctx, D) {
     if (s.opt.swap !== undefined) swaps.push(swapper(w, s.pf, s.opt.swap));
     if (s.opt.slide) slider(w, pl, s.pf, along(s.lon), s.opt.slide);
     if (s.sweep) sweeper(w, pl, s.pf, s.sweep);
+    if (s.lift) liftBeam(w, pl, s.pf, s.lift);
     if (s.then) s.then(s.pf);
     if (s.sign) sign(w, pl, path.place(s.lon, s.off + 2.4), textBoard(s.sign, 1.8, 0.8, T.signFg, T.signBg), 0.4, hh + 1.6);
     if (s.rare) rareItem(w, ctx, pl, s.pf.n, s.pf.h + 1.2, s.rare[0], s.rare[1]);
@@ -222,7 +230,7 @@ function buildPark(ctx, D) {
   coinRing(w, pl, fin.n, 1.8, 8, fin.h + 0.8);
 
   // ---------- the host: at the start to explain, and at the star gate to cheer ----------
-  const host = w.addNPC(pl, D.model(), frameDir(start.n, 90 - 3.2, 120), { alt: start.h, name: D.host, bubbleY: 1.9, lines: () => D.bubbles, anim: (dt, t, n) => { n.model.r.position.y = Math.abs(Math.sin(t * 3)) * 0.1; } });
+  const host = w.addNPC(pl, D.model(), frameDir(start.n, 90 - 3.2, 120), { alt: start.h, name: D.host, bubbleY: 1.9, lines: () => D.bubbles, anim: D.hostAnim || ((dt, t, n) => { n.model.r.position.y = Math.abs(Math.sin(t * 3)) * 0.1; }) });
   const host2 = w.addNPC(pl, D.model(), frameDir(fin.n, 90 - 3.2, 120), { alt: fin.h, name: D.host, bubbleY: 1.9, anim: (dt, t, n) => { n.model.arms[0].rotation.z = -2.4 + Math.sin(t * 8) * 0.3; n.model.arms[1].rotation.z = 2.4 - Math.sin(t * 8) * 0.3; } });
   w.winCam = ctx.talkCam(host2);
   w.winLines = D.win;
@@ -268,7 +276,31 @@ function buildPark(ctx, D) {
       standOn(cp);
     }
   });
+  if (D.extra) D.extra(w, pl);   // planet-specific extras (Zweefrijk: gravity waves and the trippy colours)
   return w;
+}
+
+// an anti-gravity beam: a see-through column of rising sparkles above a platform. Inside it you float up
+function liftBeam(w, pl, pf, height) {
+  const holder = new THREE.Group();
+  const col = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.25, height + 2, 20, 1, true), basic(0xc8a8ff, { transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }));
+  col.position.y = (height + 2) / 2; holder.add(col);
+  const rings = [];
+  for (let i = 0; i < 5; i++) { const r = mk(new THREE.TorusGeometry(1.25, 0.06, 6, 24), basic(0xffffff, { transparent: true, opacity: 0.6 }), 0, 0, 0, holder, 0); r.rotation.x = Math.PI / 2; rings.push(r); }
+  placeOn(holder, pl, pf.n, pf.h); w.group.add(holder);
+  w.updaters.push((dt, t) => {
+    rings.forEach((r, i) => { const k = ((t * 0.45 + i / rings.length) % 1); r.position.y = k * (height + 2); r.material.opacity = 0.7 * Math.sin(k * Math.PI); });
+    col.material.color.setHSL((t * 0.15) % 1, 0.8, 0.75);
+    if (P.planet !== pl || P.dead || G.cutscene) return;
+    const flat = Math.acos(clamp(P.up.dot(pf.n), -1, 1)) * (pl.r + pf.h);
+    if (flat > 1.35 || P.alt < pf.h - 0.3 || P.alt > pf.h + height + 2.2) return;
+    // float up, gently slowing down near the top so you can steer onto the next platform
+    const top = P.alt > pf.h + height + 0.6;
+    P.vr = top ? Math.min(P.vr + 18 * dt, 3) : Math.min(P.vr + 46 * dt, 8.5);
+    P.grounded = false; P.pound = 0;
+    if (Math.random() < dt * 20) puff(P.pos.clone(), 1, 0xc8a8ff, 1.5, 0.4, pf.n);
+    if (G.toastOnce) G.toastOnce('lift', 'Anti-gravity beam! Float up, then steer onto the platform.');
+  });
 }
 
 // red/blue platforms: each one belongs to group 0 or 1. The clock decides which group is solid.

@@ -1,8 +1,8 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, rock, lamp, sign, palm, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261111u';
-import { fbm } from './world.js?v=20261111u';
-import { buildReshman, buildMonkey, buildGoldBanana, buildCamera, textBoard, buildLocal, buildTrinket } from './models.js?v=20261111u';
-import { Kokos } from './bosses.js?v=20261111u';
-import { addParkour, buildBeacon } from './parkour.js?v=20261111u';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, rock, lamp, sign, palm, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261112d';
+import { fbm } from './world.js?v=20261112d';
+import { buildReshman, buildMonkey, buildGoldBanana, buildCamera, textBoard, buildLocal, buildTrinket } from './models.js?v=20261112d';
+import { Kokos } from './bosses.js?v=20261112d';
+import { addParkour, buildBeacon } from './parkour.js?v=20261112d';
 
 // World 5 on the route: HET OERWOUD. Reshman the monkey's jungle: giant trees, a river, an old temple.
 // Boss: Koning Kokos, the gorilla king, in the Apenarena.
@@ -64,7 +64,7 @@ export function buildJungle(ctx) {
       ['RESHMAN', 'But I’ve got a problem. A big one. A BIG, hairy one with a crown.'],
       ['RESHMAN', 'Koning Kokos. The gorilla king. He took my three golden bananas, the ones that keep the jungle growing.'],
       ['RESHMAN', 'And he’s sitting on a glowing core in his arena. A Kokoskern. It hums like a beehive. That’s your fuel, isn’t it?'],
-      ['RÊNAS', 'Yes! My station runs on energy cores. Long story.'],
+      ['RÊNAS', 'Yes! That’s one of mine. Raaf built it for my station.'],
       ['RESHMAN', 'His monkeys dropped my bananas while they ran off. One is on top of the Reuzenboom, the giant tree to the west. Climb round and round.'],
       ['RESHMAN', 'One is over the river, on the floating logs. And one is on top of the old temple in the north. Watch the crumbly stones.'],
       ['RESHMAN', 'Oh, and Zara and my little brother Bobo each found a star shard. Help them, and they’ll give them to you. Oe oe!'],

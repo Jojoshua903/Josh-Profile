@@ -1,34 +1,35 @@
-import { THREE, G, renderer, scene, camera, ambient, hemi, sun, V3, clamp, damp, surf, orientOn, anyPerp, frameDir, $, toast, banner, fade, wait, setPrompt, updateParticles, clearParticles, puff } from './core.js?v=20261111u';
-import { initAudio, music, sfx } from './audio.js?v=20261111u';
-import { P, model, spawnPlayer, updatePlayer, updateCamera, drawHearts, pressed, consumePressed, requestLock, locked, mouse, squash, cam, healPlayer, hurtPlayer } from './player.js?v=20261111u';
-import { play, advance, skip, updateCut, cutActive, showTitle } from './cutscene.js?v=20261111u';
-import { sysOf, sysName, addSystemSun } from './systems.js?v=20261111u';
-import { buildPhonk } from './world-phonk.js?v=20261111u';
-import { buildMine } from './world-mine.js?v=20261111u';
-import { buildStadium } from './world-stadium.js?v=20261111u';
-import { buildIce } from './world-ice.js?v=20261111u';
-import { buildLuck } from './world-luck.js?v=20261111u';
-import { buildJungle } from './world-jungle.js?v=20261111u';
-import { buildLava } from './world-lava.js?v=20261111u';
-import { buildDesert } from './world-desert.js?v=20261111u';
-import { buildMoon } from './world-moon.js?v=20261111u';
-import { buildSea } from './world-sea.js?v=20261111u';
-import { buildSpook } from './world-spook.js?v=20261111u';
-import { buildWerk } from './world-werk.js?v=20261111u';
-import { buildStuiter, buildWissel, buildSprong } from './world-park.js?v=20261111u';
-import { buildTempel, GOD_BOSS, HALL, PANTHEONS, BINDS, TIERS } from './world-tempel.js?v=20261111u';
-import { buildIntro, playIntro, playFinale, menuShot } from './story.js?v=20261111u';
-import { buildGroteKern } from './models.js?v=20261111u';
-import { updateExtras, pollPad } from './extras.js?v=20261111u';
-import { tr, LANG, setLang, applyHTML, onLang } from './lang.js?v=20261111u';
-import { initDev, devTick } from './dev.js?v=20261111u';
-import { initAch, checkAch, unlockAch, buildAchPanel } from './achievements.js?v=20261111u';
-import { initShop, openShop, closeShop, applyStyle, shopMaxHp, shopTick } from './shop.js?v=20261111u';
-import { initGalaxy, openGalaxy, closeGalaxy, galaxyTick, galaxyOpen, galaxyIdx } from './galaxy.js?v=20261111u';
+import { THREE, G, renderer, scene, camera, ambient, hemi, sun, V3, clamp, damp, surf, orientOn, anyPerp, frameDir, dirOf, tangentTo, $, toast, banner, fade, wait, setPrompt, updateParticles, clearParticles, puff } from './core.js?v=20261112d';
+import { initAudio, music, sfx } from './audio.js?v=20261112d';
+import { P, model, spawnPlayer, updatePlayer, updateCamera, drawHearts, pressed, consumePressed, requestLock, locked, mouse, squash, cam, healPlayer, hurtPlayer } from './player.js?v=20261112d';
+import { play, advance, skip, updateCut, cutActive, showTitle } from './cutscene.js?v=20261112d';
+import { sysOf, sysName, addSystemSun } from './systems.js?v=20261112d';
+import { buildPhonk } from './world-phonk.js?v=20261112d';
+import { buildMine } from './world-mine.js?v=20261112d';
+import { buildStadium } from './world-stadium.js?v=20261112d';
+import { buildIce } from './world-ice.js?v=20261112d';
+import { buildLuck } from './world-luck.js?v=20261112d';
+import { buildJungle } from './world-jungle.js?v=20261112d';
+import { buildLava } from './world-lava.js?v=20261112d';
+import { buildDesert } from './world-desert.js?v=20261112d';
+import { buildMoon } from './world-moon.js?v=20261112d';
+import { buildSea } from './world-sea.js?v=20261112d';
+import { buildSpook } from './world-spook.js?v=20261112d';
+import { buildWerk } from './world-werk.js?v=20261112d';
+import { buildStuiter, buildWissel, buildSprong } from './world-park.js?v=20261112d';
+import { buildZweef } from './world-zweef.js?v=20261112d';
+import { buildTempel, GOD_BOSS, HALL, PANTHEONS, BINDS, TIERS } from './world-tempel.js?v=20261112d';
+import { buildIntro, playIntro, playFinale, menuShot } from './story.js?v=20261112d';
+import { buildGroteKern } from './models.js?v=20261112d';
+import { updateExtras, pollPad } from './extras.js?v=20261112d';
+import { tr, LANG, setLang, applyHTML, onLang } from './lang.js?v=20261112d';
+import { initDev, devTick } from './dev.js?v=20261112d';
+import { initAch, checkAch, unlockAch, buildAchPanel } from './achievements.js?v=20261112d';
+import { initShop, openShop, closeShop, applyStyle, shopMaxHp, shopTick } from './shop.js?v=20261112d';
+import { initGalaxy, openGalaxy, closeGalaxy, galaxyTick, galaxyOpen, galaxyIdx } from './galaxy.js?v=20261112d';
 const nl = () => LANG.cur === 'nl';
 
-const BUILDERS = [buildPhonk, buildMine, buildStadium, buildIce, buildLuck, buildJungle, buildLava, buildDesert, buildMoon, buildSea, buildSpook, buildWerk, buildStuiter, buildWissel, buildSprong, buildTempel];
-const NAMES = [['Planeta Phonk', 'Milo', '#ff5ab4'], ['De Diepe Mijn', 'Lars', '#c89050'], ['Homerun Heuvel', 'Nathan', '#5cc85a'], ['Hertogdom IJs', 'Pingo', '#9fe8ff'], ['Smaragdeiland', 'Fionn', '#5cd85a'], ['Het Oerwoud', 'Reshman', '#3aa84a'], ['De Asberg', 'Immanuel', '#ff7a2a'], ['Duinenrijk', 'Farah', '#e0b070'], ['Maankrater', 'Niek', '#b8b8c8'], ['De Koraalzee', 'Sami', '#3ab0d8'], ['Spookplaneet', 'Saar', '#9a7aff'], ['De Gouden Werkplaats', 'Lars', '#ffd23a'], ['Stuiterstad', 'Thomas', '#ff7ab6'], ['De Wisselbaan', 'Dean', '#ff3a5a'], ['Sterrensprong', 'Robin', '#5ef2e0'], ['De Sterrentempel', 'Josh', '#fff2b8']];
+const BUILDERS = [buildPhonk, buildMine, buildStadium, buildIce, buildLuck, buildJungle, buildLava, buildDesert, buildMoon, buildSea, buildSpook, buildWerk, buildStuiter, buildWissel, buildSprong, buildTempel, buildZweef];
+const NAMES = [['Planeta Phonk', 'Milo', '#ff5ab4'], ['De Diepe Mijn', 'Lars', '#c89050'], ['Homerun Heuvel', 'Nathan', '#5cc85a'], ['Hertogdom IJs', 'Pingo', '#9fe8ff'], ['Smaragdeiland', 'Fionn', '#5cd85a'], ['Het Oerwoud', 'Reshman', '#3aa84a'], ['De Asberg', 'Immanuel', '#ff7a2a'], ['Duinenrijk', 'Farah', '#e0b070'], ['Maankrater', 'Niek', '#b8b8c8'], ['De Koraalzee', 'Sami', '#3ab0d8'], ['Spookplaneet', 'Saar', '#9a7aff'], ['De Gouden Werkplaats', 'Lars', '#ffd23a'], ['Stuiterstad', 'Thomas', '#ff7ab6'], ['De Wisselbaan', 'Dean', '#ff3a5a'], ['Sterrensprong', 'Robin', '#5ef2e0'], ['De Sterrentempel', 'Josh', '#fff2b8'], ['Zweefrijk', 'Lumi', '#b07aff']];
 // story order: Phonk, Mijn, IJs, Smaragdeiland, and Homerun Heuvel last (the finale is staged there).
 // save.unlocked counts steps along this route, not planet indices.
 // 12, 13, 14 are the parkour planets: detours between the story planets, no quest and no boss
@@ -37,11 +38,13 @@ const ORDER = [0, 1, 3, 12, 4, 5, 6, 13, 7, 9, 10, 14, 8, 2], FINAL = 2;
 const BONUS = 11;
 // De Sterrentempel (this game’s Godhome) also opens after the finale. It is not on the route either
 const TEMPLE = 15;
+// Zweefrijk, the anti-gravity planet: a side trip that opens once you reach Stuiterstad. Not on the route either
+const ZWEEF = 16, zweefOpen = (s) => step(12) <= s.unlocked || !!s.finale;
 const step = (i) => ORDER.indexOf(i);
 const resumeAt = (s) => (step(s.last || 0) <= s.unlocked ? (s.last || 0) : ORDER[s.unlocked]);
 const SIDE_CORE = { 3: ['IJSKERN!', 'Deniz’ ice core', 'De IJskern van Deniz', 'You have more aura than the Duke of Ice!', 'Je hebt meer aura dan de Hertog van IJs!'], 4: ['KLAVERKERN!', 'Lorcan’s lucky core', 'De gelukskern van Lorcan', 'The luck is back on Smaragdeiland!', 'Het geluk is terug op Smaragdeiland!'], 5: ['KOKOSKERN!', 'Koning Kokos’ coconut core', 'De Kokoskern van Koning Kokos', 'The bananas are back in Het Oerwoud!', 'De bananen zijn terug in Het Oerwoud!'], 6: ['VUURKERN!', 'Smeul’s fire core', 'De Vuurkern van Smeul', 'De Asberg is calm again!', 'De Asberg is weer rustig!'], 7: ['ZANDKERN!', 'Gruizel’s sand core', 'De Zandkern van Gruizel', 'Farah’s dig site is safe!', 'Farah’s opgraving is veilig!'], 8: ['MAANKERN!', 'The moon core', 'De Maankern', 'Kayo & Yara fled the moon!', 'Kayo & Yara zijn van de maan gevlucht!'], 9: ['ZEEKERN!', 'Kraak’s sea core', 'De Zeekern van Kraak', 'Sami’s pearls are safe!', 'Sami’s parels zijn veilig!'], 10: ['SPOOKKERN!', 'Koning Boe’s ghost core', 'De Spookkern van Koning Boe', 'The Spookplaneet is glowing again!', 'De Spookplaneet gloeit weer!'], 11: ['GOUDEN KERN!', 'The Gouden Kern', 'De Gouden Kern', 'Your station is SUPER fast now!', 'Je station is nu SUPERsnel!'] };
-const RARE_TOTAL = 57;
-const RARES_PER = [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 3, 3, 3, 0];   // the parkour planets hide three   // every planet has a 4th one at the end of its parkour
+const RARE_TOTAL = 60;
+const RARES_PER = [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 3, 3, 3, 0, 3];   // the parkour planets hide three   // every planet has a 4th one at the end of its parkour
 
 // ---------- save ----------
 // three save slots. Slot 1 keeps the old key, so progress from before the slots still loads
@@ -133,7 +136,8 @@ function hud() {
   if (w.hudText) { q.innerHTML = w.hudText(nl()); return; }
   const fs = w.friendState ? w.friendState() : 'new';
   let txt;
-  if (save.cleared[w.index]) txt = nl() ? `✅ ${w.title} gehaald` : `✅ ${w.title} cleared`;
+  if (w.nextStop !== undefined) txt = nl() ? `🚀 Naar je raket · volgende stop: <b>${w.nextName}</b>` : `🚀 To your rocket · next stop: <b>${w.nextName}</b>`;
+  else if (save.cleared[w.index]) txt = nl() ? `✅ ${w.title} gehaald` : `✅ ${w.title} cleared`;
   else if (fs === 'new') txt = nl() ? `💬 Zoek ${w.friendName} (praat met E)` : `💬 Find ${w.friendName} (E to talk)`;
   else if (fs !== 'done' && (w.quest.got < w.quest.need || !shardsDone(w))) {
     txt = `${w.quest.icon} ${tr(w.quest.label)} <b>${w.quest.got} / ${w.quest.need}</b>`;
@@ -166,13 +170,13 @@ async function loadWorld(idx) {
   clearParticles();
   $('boss').classList.remove('show');
   const w = BUILDERS[idx](ctx);
-  addSystemSun(w, idx);
+  addSystemSun(w, idx, NAMES.map((n) => n[2]));
   G.world = w; cur.w = w; cur.idx = idx; cur.onArena = false;
   save.last = idx; persist();
   w.boss.onWin = () => bossWon(w);
   if (save.cleared[idx]) { w.boss.dead = true; w.boss.g.visible = false; }
   applyLook(w, false);
-  spawnPlayer(w.main, w.spawn.dir, w.spawn.fwd);
+  spawnPlayer(w.main, w.spawn.dir, w.spawn.fwd); P.hidden = false;   // (leaving in the rocket hid Rênas)
   P.hp = P.maxHp; drawHearts();
   music(w.music); showHud(true); hud();
   G.state = 'play';
@@ -312,10 +316,12 @@ function bossWon(w) {
   toast(`Beaten in ${attempts} ${attempts === 1 ? 'try' : 'tries'}! Grab the Energiekern!`, 3400);
 }
 function collectBig(w) {
-  // IJs and Smaragdeiland hand out their own core (the station fuel); the other three give back Julie's
+  // every boss hands back one of Raaf's eleven cores (the bosses gave theirs a name, like the IJskern)
   const side = SIDE_CORE[w.index], at = step(w.index);
-  if (side) banner(side[0], nl() ? side[2] : side[1], { 3: '#9fe8ff', 4: '#9aff6a', 5: '#ffd23a', 6: '#ff9a2a', 7: '#ffe27a', 8: '#c8d8ff', 9: '#9fe8ff', 10: '#7dffb0', 11: '#ffd23a' }[w.index]);
-  else banner('ENERGIEKERN!', `${[0, 1, FINAL].indexOf(w.index) + 1} / 3`, '#ffe27a');
+  // the count covers every core in the game (Raaf's eleven and the bonus Gouden Kern), so it never looks stuck at "2 / 3"
+  const cores = [0, 1, FINAL, ...Object.keys(SIDE_CORE).map(Number)], got = `${nl() ? 'kern' : 'core'} ${cores.filter((i) => save.cleared[i]).length} / ${cores.length}`;
+  if (side) banner(side[0], `${nl() ? side[2] : side[1]} · ${got}`, { 3: '#9fe8ff', 4: '#9aff6a', 5: '#ffd23a', 6: '#ff9a2a', 7: '#ffe27a', 8: '#c8d8ff', 9: '#9fe8ff', 10: '#7dffb0', 11: '#ffd23a' }[w.index]);
+  else banner('ENERGIEKERN!', got, '#ffe27a');
   sfx.rare();
   if (at >= 0) save.unlocked = Math.max(save.unlocked, Math.min(ORDER.length - 1, at + 1));
   persist();
@@ -324,7 +330,18 @@ function collectBig(w) {
     .concat(w.winLines.map(([who, text, sub]) => ({ say: { who, text, sub }, cam: atR })));
   setTimeout(() => play(steps, async () => {
     if (w.index === BONUS) { attempts = 1; showEnd(); if (side) toast(nl() ? side[4] : side[3], 3600); return; }
-    if (w.index !== FINAL) { attempts = 1; await loadWorld(ORDER[at + 1]); if (side) toast(nl() ? side[4] : side[3], 3600); return; }
+    if (w.index !== FINAL) {
+      attempts = 1;
+      const next = ORDER[at + 1];
+      if (!w.rocket) { await loadWorld(next); if (side) toast(nl() ? side[4] : side[3], 3600); return; }
+      // back to the planet, next to your rocket: the core is in, so you fly on from there yourself
+      backFromArena(w, () => {
+        w.nextStop = next; w.nextName = NAMES[next][0]; hud();
+        if (side) toast(nl() ? side[4] : side[3], 3400);
+        setTimeout(() => toast(nl() ? `🚀 Je raket is volgetankt! Stap in om naar ${w.nextName} te vliegen.` : `🚀 Your rocket is fueled! Get in to fly on to ${w.nextName}.`, 4200), side ? 3600 : 400);
+      });
+      return;
+    }
     // the finale, back on Homerun Heuvel
     G.state = 'loading';
     await fade(true, 500);
@@ -335,17 +352,40 @@ function collectBig(w) {
   }), 900);
 }
 
+// after a boss: the Launch Star flies you from the arena back down to the planet, right next to your rocket
+function backFromArena(w, done) {
+  const pl = w.main, rd = dirOf(pl, w.rocket.g.position), land = frameDir(rd, 90 - 3.6, 0);
+  fly(pl, land, tangentTo(land, rd), () => { cur.onArena = false; applyLook(w, false); music(w.music); hud(); done(); });
+}
+// leaving a planet in your rocket: Rênas climbs in, the rocket fires up and shoots into space. Then the next planet
+// loads, where the same rocket lands (see arrival). Without a rocket close by (parkour planets) you just go.
+function depart(go) {
+  const w = cur.w, rk = w && w.rocket;
+  if (!rk || cur.onArena || P.planet !== w.main || P.pos.distanceTo(rk.g.position) > 9) { go(); return; }
+  const pl = w.main, rDir = dirOf(pl, rk.g.position), rPos = rk.g.position.clone(), side = anyPerp(rDir);
+  setPrompt('');
+  play([
+    { dur: 0.6, cam: () => ({ pos: rPos.clone().addScaledVector(rDir, 2).addScaledVector(side, 9), look: rPos.clone().addScaledVector(rDir, 1.6), up: rDir }),
+      start: () => { P.hidden = true; puff(P.pos.clone(), 10, 0xffffff, 3, 0.6); sfx.select(); } },
+    { dur: 2.2, cam: () => ({ pos: rPos.clone().addScaledVector(rDir, 3).addScaledVector(side, 13), look: rk.g.position, up: rDir }),
+      start: () => { rk.fire.visible = true; sfx.launch(); G.shake = 0.35; },
+      update: (dt, k) => { rk.g.position.copy(rPos).addScaledVector(rDir, k * k * 45); if (Math.random() < 0.7) puff(rk.g.position.clone(), 2, 0xffb03a, 3, 0.4, rDir); } },
+  ], () => go());
+}
+
 // a parkour planet is done when you land on the star gate: the host cheers, then on to the next planet on the route
 function parkDone(w) {
   const at = step(w.index), first = !save.cleared[w.index];
   save.cleared[w.index] = true;
   save.tries[w.index] = save.tries[w.index] ? Math.min(save.tries[w.index], w.falls + 1) : w.falls + 1;
-  save.unlocked = Math.max(save.unlocked, Math.min(ORDER.length - 1, at + 1));
+  if (at >= 0) save.unlocked = Math.max(save.unlocked, Math.min(ORDER.length - 1, at + 1));   // a side trip (Zweefrijk) doesn't move the route on
   persist();
   sfx.win(); banner(nl() ? 'PARKOUR GEHAALD!' : 'PARKOUR CLEARED!', nl() ? `${w.falls}× gevallen` : `${w.falls}× fallen`, '#5ef2e0');
   puff(P.pos.clone().addScaledVector(P.up, 1), 30, 0xffd23a, 5, 2);
   const steps = [{ dur: 1.6, cam: w.winCam }].concat((first ? w.winLines : w.winLines.slice(-1)).map(([who, text, sub]) => ({ say: { who, text, sub }, cam: w.winCam })));
-  setTimeout(() => play(steps, async () => { await loadWorld(ORDER[at + 1]); }), 700);
+  // the star gate pulls you up and flings you to the next planet, where your rocket lands
+  const warp = [{ dur: 1.3, cam: w.winCam, start: () => { sfx.launch(); G.shake = 0.3; puff(P.pos.clone().addScaledVector(P.up, 1), 34, 0x9fe8ff, 6, 1.6, P.up); P.hidden = true; } }];
+  setTimeout(() => play(steps, async () => { if (at < 0) { openTravel(); return; } play(warp, () => loadWorld(ORDER[at + 1])); }), 700);
 }
 
 // ---------- De Sterrentempel: hologram fights (this game's Godhome) ----------
@@ -416,7 +456,7 @@ async function godLoad() {
   if (G.world) G.world.destroy();
   clearParticles(); $('boss').classList.remove('show'); setPrompt('');
   const w = BUILDERS[idx](ctx);
-  addSystemSun(w, idx);
+  addSystemSun(w, idx, NAMES.map((n) => n[2]));
   G.world = w; cur.w = w; cur.idx = idx; cur.onArena = true;
   const b = w.boss;
   if (g.kind === 'hall' && g.tier) { b.maxHp += 1; b.hp = b.maxHp; }
@@ -610,11 +650,11 @@ function delSlot(n) {
 function panel(name) { if (name !== 'planets') closeGalaxy(); for (const p of document.querySelectorAll('.panel')) p.classList.toggle('show', p.dataset.p === name); $('menu').scrollTop = 0; }
 function buildPlanetCards() {
   const list = $('planetList'); list.innerHTML = ''; planetItems = []; let lastS = null;
-  ORDER.concat(BONUS, TEMPLE).forEach((i) => { const [nm, friend, col] = NAMES[i];
-    const open = (i === BONUS || i === TEMPLE ? save.finale : step(i) <= save.unlocked) && save.introSeen;
-    const rares = Object.keys(save.rares).filter((k) => k.startsWith(['milo', 'lars', 'nathan', 'deniz', 'fionn', 'reshman', 'lotte', 'farah', 'kosmo', 'sami', 'saar', 'werk', 'stuiter', 'wissel', 'sprong', 'tempel'][i])).length;
+  ORDER.concat(BONUS, TEMPLE, ZWEEF).forEach((i) => { const [nm, friend, col] = NAMES[i];
+    const open = (i === ZWEEF ? zweefOpen(save) : i === BONUS || i === TEMPLE ? save.finale : step(i) <= save.unlocked) && save.introSeen;
+    const rares = Object.keys(save.rares).filter((k) => k.startsWith(['milo', 'lars', 'nathan', 'deniz', 'fionn', 'reshman', 'lotte', 'farah', 'kosmo', 'sami', 'saar', 'werk', 'stuiter', 'wissel', 'sprong', 'tempel', 'zweef'][i])).length;
     const b = document.createElement('button'); b.className = 'planet' + (open ? '' : ' locked');
-    b.innerHTML = `<span class="orb" style="--c:${col}"></span><span class="pt"><b>${nm}</b><small>${open ? `${nl() ? 'met' : 'with'} ${friend} · ⚙️ ${rares}/${RARES_PER[i]}${save.cleared[i] ? ` · ✅ ${save.tries[i] ? save.tries[i] + (save.tries[i] === 1 ? (nl() ? ' poging' : ' try') : (nl() ? ' pogingen' : ' tries')) : ''}` : ''}` : i === BONUS || i === TEMPLE ? (nl() ? "🔒 bonus · speel eerst de finale" : "🔒 bonus · beat the finale first") : (nl() ? '🔒 op slot' : '🔒 locked')}</small></span>`;
+    b.innerHTML = `<span class="orb" style="--c:${col}"></span><span class="pt"><b>${nm}</b><small>${open ? `${nl() ? 'met' : 'with'} ${friend} · ⚙️ ${rares}/${RARES_PER[i]}${save.cleared[i] ? ` · ✅ ${save.tries[i] ? save.tries[i] + (save.tries[i] === 1 ? (nl() ? ' poging' : ' try') : (nl() ? ' pogingen' : ' tries')) : ''}` : ''}` : i === ZWEEF ? (nl() ? "🔒 zijtrip · bereik eerst Stuiterstad" : "🔒 side trip · reach Stuiterstad first") : i === BONUS || i === TEMPLE ? (nl() ? "🔒 bonus · speel eerst de finale" : "🔒 bonus · beat the finale first") : (nl() ? '🔒 op slot' : '🔒 locked')}</small></span>`;
     if (i === TEMPLE && open) b.querySelector('small').textContent = godCard();
     if (open) b.onclick = () => { sfx.select(); closeOverlays(); loadWorld(i); };
     const sy = sysOf(i); if (sy !== lastS) { list.appendChild(sysHead(sy, open)); lastS = sy; }
@@ -633,11 +673,21 @@ function closeOverlays() { closeGalaxy(); closeShop(); $('menu').classList.remov
 function openTravel() {
   G.paused = true; if (document.pointerLockElement) document.exitPointerLock();
   const list = $('travelList'); list.innerHTML = ''; let lastS = null;
-  ORDER.concat(BONUS, TEMPLE).forEach((i) => { const [nm, friend, col] = NAMES[i];
-    if (i === BONUS || i === TEMPLE ? !save.finale : step(i) > save.unlocked) return;
+  // the next planet on the route goes on top, big and golden, so after a boss you know where to go
+  const at = step(cur.idx), nxt = cur.w && cur.w.nextStop !== undefined ? cur.w.nextStop
+    : save.cleared[cur.idx] && at >= 0 && ORDER[at + 1] !== undefined && !save.cleared[ORDER[at + 1]] ? ORDER[at + 1] : undefined;
+  if (nxt !== undefined) {
+    const [nm, friend, col] = NAMES[nxt], b = document.createElement('button');
+    b.className = 'planet'; b.style.cssText = 'border-color:#ffd23a;box-shadow:0 0 0 3px #ffd23a,4px 5px 0 var(--ink)';
+    b.innerHTML = `<span class="orb" style="--c:${col}"></span><span class="pt"><b>⭐ ${nm}</b><small>${nl() ? 'volgende stop · vlieg naar' : 'next stop · fly to'} ${friend}</small></span>`;
+    b.onclick = () => { sfx.select(); closeOverlays(); depart(() => loadWorld(nxt)); };
+    list.appendChild(b);
+  }
+  ORDER.concat(BONUS, TEMPLE, ZWEEF).forEach((i) => { const [nm, friend, col] = NAMES[i];
+    if (i === ZWEEF ? !zweefOpen(save) : i === BONUS || i === TEMPLE ? !save.finale : step(i) > save.unlocked) return;
     const b = document.createElement('button'); b.className = 'planet';
     b.innerHTML = `<span class="orb" style="--c:${col}"></span><span class="pt"><b>${nm}</b><small>${i === cur.idx ? (nl() ? 'je bent hier' : 'you are here') : `${nl() ? 'vlieg naar' : 'fly to'} ${friend}`}</small></span>`;
-    b.onclick = () => { sfx.select(); closeOverlays(); if (i !== cur.idx) loadWorld(i); };
+    b.onclick = () => { sfx.select(); closeOverlays(); if (i !== cur.idx) depart(() => loadWorld(i)); };
     const sy = sysOf(i); if (sy !== lastS) { list.appendChild(sysHead(sy, true)); lastS = sy; }
     list.appendChild(b);
   });
@@ -740,6 +790,7 @@ addEventListener('keydown', (e) => {
 
 // ---------- the loop ----------
 let last = performance.now(), talkCd = 0, achT = 2;
+const REGEN = 10, regen = { t: 0, last: 0 };   // passive regeneration (see the main loop)
 function frame(now) {
   requestAnimationFrame(frame);
   // the first rAF timestamp can be a little EARLIER than `last`: a negative dt broke Rênas' speed into NaN
@@ -776,6 +827,14 @@ function frame(now) {
     devTick(dt);
     updatePlayer(dt, t, G.state === 'play');
     if (G.god) { if (P.hp < G.god.lastHp) G.god.hit = true; G.god.lastHp = P.hp; }   // for the crown: a pantheon without one hit
+    // passive regeneration: 10 s without getting hurt brings back one heart, and the next empty heart fills up
+    // while you wait. Not during a boss fight or in the pantheon, so those stay a real challenge.
+    const fight = !!G.god || (cur.onArena && cur.w && !cur.w.boss.dead);
+    if (P.hp < regen.last || P.dead || fight || P.hp >= P.maxHp) regen.t = 0;
+    else if (!cutActive()) { regen.t += dt; if (regen.t >= REGEN) { regen.t = 0; healPlayer(1); } }
+    regen.last = P.hp;
+    const nextHeart = $('hp').children[P.hp];
+    if (nextHeart) nextHeart.style.background = regen.t > 0 ? `conic-gradient(#ff5a6e ${(regen.t / REGEN) * 360}deg, rgba(255,248,236,.35) 0)` : '';
     updateCamera(dt, t, cur.onArena && cur.w && !cur.w.boss.dead ? { focus: bossFocus(cur.w), focusK: 0.9 } : {});
     // the E that closes a conversation must not start the same conversation again
     const it = w && G.state === 'play' && talkCd <= 0 ? w.nearestInteract() : null;
@@ -805,7 +864,7 @@ initShop({
   onHeart: () => { if (cur.w && !G.god) { P.maxHp = shopMaxHp(); P.hp = P.maxHp; drawHearts(); } },
   backMusic: () => (cur.w ? (cur.onArena ? cur.w.bossMusic : cur.w.music) : 'menu'),
 });
-initDev({ cur, ORDER, BONUS, TEMPLE, NAMES, step, save: () => save, persist, ws, hud, loadWorld, toArena, openMenu, closeOverlays, cutActive, skip });
+initDev({ cur, ORDER, BONUS, TEMPLE, ZWEEF, NAMES, step, save: () => save, persist, ws, hud, loadWorld, toArena, openMenu, closeOverlays, cutActive, skip });
 requestAnimationFrame(frame);
 void healPlayer;
 

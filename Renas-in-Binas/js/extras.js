@@ -1,7 +1,7 @@
-import { THREE, G, scene, camera, toon, basic, mk, surf, dirOf, tangentTo, orientOn, puff, clamp, $ } from './core.js?v=20261111u';
-import { setVolume } from './audio.js?v=20261111u';
-import { tr } from './lang.js?v=20261111u';
-import { P, keys, pressed, mouse } from './player.js?v=20261111u';
+import { THREE, G, scene, camera, toon, basic, mk, surf, dirOf, tangentTo, orientOn, puff, clamp, $ } from './core.js?v=20261112d';
+import { setVolume } from './audio.js?v=20261112d';
+import { tr } from './lang.js?v=20261112d';
+import { P, keys, pressed, mouse, cam } from './player.js?v=20261112d';
 
 // Quality-of-life layer: a guide arrow to your next goal, light beams on collectibles, dust, a hurt flash,
 // floating biome particles, volume settings and gamepad support.
@@ -25,6 +25,7 @@ function goal() {
     if (best) return { pos: best.obj.position, label: '⚙️' };
   }
   if (!w || cur.onArena || !P.planet || P.planet !== w.main || !w.quest) return null;
+  if (w.nextStop !== undefined && w.rocket) return { pos: w.rocket.g.position, label: tr('your rocket') };   // a boss just went down: fly on
   const fs = w.friendState ? w.friendState() : 'new';
   const save = G.save && G.save();
   if (save && save.cleared[w.index]) return null;
@@ -68,7 +69,7 @@ function beams() {
 }
 
 // ---------- floating particles per biome ----------
-const AMB = { milo: [0xff5ab4, 0x5ef2e0, 0xffd23a], lars: [0xffd36a, 0xd8b890, 0x5ef2e0], nathan: [0xffffff, 0xfff2a8, 0x9aff6a], deniz: [0xffffff, 0x9fe8ff, 0x7dfcff], fionn: [0x5cd85a, 0xffd23a, 0xffffff], reshman: [0x5cc84a, 0xffd23a, 0xff5ab4], lotte: [0xff7a2a, 0xffd23a, 0x8a7a7a], farah: [0xffe8b0, 0xe0b070, 0xffffff], kosmo: [0xffffff, 0x9fe8ff, 0xc8b0ff], sami: [0xe8fbff, 0x9fe8ff, 0xff9ac8], saar: [0x7dffb0, 0x9a7aff, 0xffe14a], intro: [0xffffff, 0xc8b0ff, 0x7ac8ff] };
+const AMB = { milo: [0xff5ab4, 0x5ef2e0, 0xffd23a], lars: [0xffd36a, 0xd8b890, 0x5ef2e0], nathan: [0xffffff, 0xfff2a8, 0x9aff6a], deniz: [0xffffff, 0x9fe8ff, 0x7dfcff], fionn: [0x5cd85a, 0xffd23a, 0xffffff], reshman: [0x5cc84a, 0xffd23a, 0xff5ab4], lotte: [0xff7a2a, 0xffd23a, 0x8a7a7a], farah: [0xffe8b0, 0xe0b070, 0xffffff], kosmo: [0xffffff, 0x9fe8ff, 0xc8b0ff], sami: [0xe8fbff, 0x9fe8ff, 0xff9ac8], saar: [0x7dffb0, 0x9a7aff, 0xffe14a], intro: [0xffffff, 0xc8b0ff, 0x7ac8ff], zweef: [0xff7ad8, 0x5ef2e0, 0xb07aff] };
 let amb = null, ambId = null;
 const AMB_N = 140, AMB_R = 16;
 function makeAmb(id) {
@@ -146,6 +147,86 @@ export function pollPad() {
   for (let i = 0; i < gp.buttons.length; i++) prevBtn[i] = b(i);
 }
 
+// ---------- minimap ----------
+// A round map in the corner, turned with the camera (up on the map = where the camera looks).
+// Distances on your own planet are measured over the ground; other planets and moons show as circles.
+// M switches it on and off.
+const MKEY = 'renas-rocket-rumble-minimap';
+let mapOn = true;
+try { mapOn = localStorage.getItem(MKEY) !== 'off'; } catch (e) { /* default on */ }
+addEventListener('keydown', (e) => {
+  if (e.code !== 'KeyM' || e.ctrlKey || e.metaKey || e.repeat || G.state !== 'play') return;
+  mapOn = !mapOn; try { localStorage.setItem(MKEY, mapOn ? 'on' : 'off'); } catch (er) { /* ignore */ }
+});
+const MAP_R = 48;   // metres from the middle to the edge
+const mR = new THREE.Vector3(), mF = new THREE.Vector3(), mT = new THREE.Vector3();
+// where a point lands on the map, in metres: [right, forward]
+function mapXY(pos, pl) {
+  if (pl && pl === P.planet) {
+    const d = dirOf(pl, pos), c = clamp(d.dot(P.up), -1, 1), ang = Math.acos(c) * pl.r;
+    mT.copy(d).addScaledVector(P.up, -c);
+    const l = mT.length(); if (l < 1e-6) return [0, 0];
+    return [mT.dot(mR) / l * ang, mT.dot(mF) / l * ang];
+  }
+  mT.copy(pos).sub(P.pos);
+  return [mT.dot(mR), mT.dot(mF)];
+}
+function drawMap(gl) {
+  const cv = $('minimap'); if (!cv) return;
+  const w = G.world, show = mapOn && G.state === 'play' && !G.cutscene && w && P.planet;
+  cv.style.display = show ? 'block' : 'none';
+  if (!show) return;
+  const S = 160, H = S / 2, k = (H - 8) / MAP_R, x = cv.getContext('2d');
+  mF.copy(cam.fwd).addScaledVector(P.up, -cam.fwd.dot(P.up)).normalize();
+  mR.crossVectors(mF, P.up).normalize();
+  const at = (pos, pl) => { const [a, b] = mapXY(pos, pl); return [H + a * k, H - b * k, Math.hypot(a, b)]; };
+  x.clearRect(0, 0, S, S);
+  x.save(); x.beginPath(); x.arc(H, H, H, 0, 6.2832); x.clip();
+  // rings every 16 m
+  x.strokeStyle = 'rgba(255,248,236,.13)'; x.lineWidth = 1.5;
+  for (let r = 16; r < MAP_R; r += 16) { x.beginPath(); x.arc(H, H, r * k, 0, 6.2832); x.stroke(); }
+  // other planets and moons close by
+  for (const pl of w.planets || []) {
+    if (pl === P.planet) continue;
+    const [px, py] = at(pl.c, null);
+    x.fillStyle = 'rgba(158,200,255,.22)'; x.strokeStyle = 'rgba(158,200,255,.6)'; x.lineWidth = 2;
+    x.beginPath(); x.arc(px, py, Math.max(3, pl.r * k), 0, 6.2832); x.fill(); x.stroke();
+  }
+  const dot = (pos, pl, col, r, ring) => {
+    const [px, py, d] = at(pos, pl); if (d > MAP_R + 4) return;
+    x.fillStyle = col; x.beginPath(); x.arc(px, py, r, 0, 6.2832); x.fill();
+    if (ring) { x.strokeStyle = '#2b2440'; x.lineWidth = 2; x.stroke(); }
+  };
+  // things to pick up (golden gears only with the compass, so they stay a secret)
+  for (const pk of w.pickups || []) {
+    if (pk.taken) continue;
+    if (pk.kind === 'quest') dot(pk.obj.position, pk.planet, '#ffe27a', 3.5, true);
+    else if (pk.kind === 'rare' && G.compass) dot(pk.obj.position, pk.planet, '#ffd23a', 4, true);
+  }
+  // baddies
+  for (const e of w.enemies || []) if (!e.dead && e.m && e.m.g) dot(e.m.g.position, e.p, '#ff5a6e', 3, false);
+  // friends and locals: the ones with something for you are yellow
+  const busy = new Set();
+  for (const l of w.locals || []) { const s = l.state(); if (s !== 'done') busy.add(l.npc); }
+  for (const n of w.npcs || []) dot(n.g.position, n.planet, busy.has(n) ? '#ffd23a' : '#fff8ec', busy.has(n) ? 4.5 : 3.5, true);
+  if (w.launchStar) dot(w.launchStar.ls.g.position, P.planet, '#7dfcff', 4.5, true);
+  // the goal: a star, stuck to the edge when it's further away
+  if (gl) {
+    let [px, py, d] = at(gl.pos, P.planet);
+    if (d > MAP_R) { const a = Math.atan2(py - H, px - H); px = H + Math.cos(a) * (H - 9); py = H + Math.sin(a) * (H - 9); }
+    x.save(); x.translate(px, py); x.fillStyle = '#ffe27a'; x.strokeStyle = '#2b2440'; x.lineWidth = 2.5; x.beginPath();
+    for (let i = 0; i < 10; i++) { const r = i % 2 ? 3.2 : 7.5, a = -Math.PI / 2 + i * Math.PI / 5; x.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+    x.closePath(); x.stroke(); x.fill(); x.restore();
+  }
+  x.restore();
+  // you: an arrow in the middle, pointing where Rênas faces
+  const fa = Math.atan2(P.fwd.dot(mR), P.fwd.dot(mF));
+  x.save(); x.translate(H, H); x.rotate(fa);
+  x.fillStyle = '#ff7a3d'; x.strokeStyle = '#2b2440'; x.lineWidth = 2.5; x.lineJoin = 'round';
+  x.beginPath(); x.moveTo(0, -9); x.lineTo(7, 7); x.lineTo(0, 3.5); x.lineTo(-7, 7); x.closePath(); x.stroke(); x.fill();
+  x.restore();
+}
+
 // ---------- per frame ----------
 export function updateExtras(dt, t) {
   setVolume(vol.m, vol.s);
@@ -154,6 +235,7 @@ export function updateExtras(dt, t) {
   feel(dt);
   const gEl = $('goal');
   const gl = G.state === 'play' && !G.cutscene ? goal() : null;
+  drawMap(gl);
   if (!gl) { arrow.visible = false; gEl.style.display = 'none'; return; }
   const d = dirOf(P.planet, gl.pos), dist = Math.acos(clamp(d.dot(P.up), -1, 1)) * P.planet.r;
   gEl.style.display = 'flex'; gEl.textContent = `➜ ${gl.label} · ${Math.round(dist)} m`;

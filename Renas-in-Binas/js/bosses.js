@@ -1,9 +1,9 @@
-import { THREE, G, V3, toon, basic, mk, ink, clamp, damp, puff, placeOn, orientOn, surf, dirOf, altOf, anyPerp, tangentTo, stepDir, frameDir, wrapA, toast, $, canvasTex } from './core.js?v=20261111u';
-import { sfx } from './audio.js?v=20261111u';
-import { tr } from './lang.js?v=20261111u';
-import { P, hurtPlayer, bouncePlayer, pfTest } from './player.js?v=20261111u';
-import { SurfaceWall, lonAround, makeMarker } from './fx.js?v=20261111u';
-import { buildKern, buildDeniz, buildLeprechaun, buildGorilla, buildCoconut, buildDragon, buildWorm, buildMecha, buildOctopus, buildGhostKing, buildCogTitan, buildGear } from './models.js?v=20261111u';
+import { THREE, G, V3, toon, basic, mk, ink, clamp, damp, puff, placeOn, orientOn, surf, dirOf, altOf, anyPerp, tangentTo, stepDir, frameDir, wrapA, toast, $, canvasTex } from './core.js?v=20261112d';
+import { sfx } from './audio.js?v=20261112d';
+import { tr } from './lang.js?v=20261112d';
+import { P, hurtPlayer, bouncePlayer, pfTest } from './player.js?v=20261112d';
+import { SurfaceWall, lonAround, makeMarker } from './fx.js?v=20261112d';
+import { buildKern, buildDeniz, buildLeprechaun, buildGorilla, buildCoconut, buildDragon, buildWorm, buildMecha, buildOctopus, buildGhostKing, buildCogTitan, buildGear } from './models.js?v=20261112d';
 
 // ---------- shared hazards ----------
 const arcTo = (pl, a, b) => Math.acos(clamp(a.dot(b), -1, 1)) * pl.r;
@@ -401,6 +401,65 @@ class Conveyor {   // Tandwieltron: the whole floor turns into a conveyor belt
   kill() { for (const w of this.stripes) this.b.g.remove(w.mesh, w.mesh2); }
 }
 
+// ---------- death effects: bits that fly and bounce, rings that grow, a flash over the screen ----------
+// They live in the boss's hazard list (harmless), so they update and clean up like everything else.
+class Debris {
+  constructor(boss, pos, o = {}) {
+    this.b = boss; this.t = 0; this.life = o.life ?? 2.4; this.bits = [];
+    const up = dirOf(boss.a, pos), cols = [].concat(o.color ?? 0x8a7a6a);
+    for (let i = 0; i < (o.n ?? 10); i++) {
+      const s = (o.size ?? 0.35) * (0.6 + Math.random() * 0.8);
+      const m = new THREE.Mesh(o.geo ? o.geo(s) : new THREE.DodecahedronGeometry(s, 0), toon(cols[i % cols.length]));
+      m.position.copy(pos); boss.g.add(m);
+      const side = anyPerp(up).applyAxisAngle(up, Math.random() * 6.283);
+      const v = up.clone().multiplyScalar((o.up ?? 7) * (0.5 + Math.random())).addScaledVector(side, (o.out ?? 5) * (0.4 + Math.random()));
+      this.bits.push({ m, v, s: V3(Math.random(), Math.random(), Math.random()).multiplyScalar(9) });
+    }
+  }
+  update(dt) {
+    this.t += dt;
+    const k = Math.max(0, 1 - Math.max(0, this.t - this.life + 0.6) / 0.6), a = this.b.a;
+    for (const b of this.bits) {
+      const up = dirOf(a, b.m.position);
+      b.v.addScaledVector(up, -18 * dt); b.m.position.addScaledVector(b.v, dt);
+      if (b.m.position.distanceTo(a.c) < a.r + 0.2) {   // bounce on the floor
+        b.m.position.copy(a.c).addScaledVector(up, a.r + 0.2);
+        const vn = b.v.dot(up); if (vn < 0) b.v.addScaledVector(up, -vn * 1.45).multiplyScalar(0.6);
+      }
+      b.m.rotation.x += b.s.x * dt; b.m.rotation.y += b.s.y * dt; b.m.scale.setScalar(k);
+    }
+    if (this.t >= this.life) { this.kill(); return false; }
+    return true;
+  }
+  kill() { for (const b of this.bits) this.b.g.remove(b.m); }
+}
+class Ring {
+  constructor(boss, pos, o = {}) {
+    this.b = boss; this.t = 0; this.life = o.life ?? 0.9; this.max = o.size ?? 9; this.op = o.opacity ?? 0.9;
+    this.m = new THREE.Mesh(new THREE.TorusGeometry(1, o.thick ?? 0.12, 6, 48), basic(o.color ?? 0xffffff, { transparent: true, opacity: this.op, depthWrite: false }));
+    this.m.position.copy(pos); this.m.quaternion.setFromUnitVectors(V3(0, 0, 1), dirOf(boss.a, pos)); boss.g.add(this.m);
+  }
+  update(dt) {
+    this.t += dt; const k = this.t / this.life;
+    this.m.scale.setScalar(0.3 + k * this.max); this.m.material.opacity = this.op * (1 - k);
+    if (k >= 1) { this.kill(); return false; }
+    return true;
+  }
+  kill() { this.b.g.remove(this.m); }
+}
+function flash(color, ms = 450) {
+  const el = document.createElement('div');
+  el.style.cssText = `position:fixed;inset:0;z-index:20;pointer-events:none;background:${color};opacity:.7;transition:opacity ${ms}ms ease-out`;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => requestAnimationFrame(() => (el.style.opacity = '0')));
+  setTimeout(() => el.remove(), ms + 80);
+}
+const box = (s) => new THREE.BoxGeometry(s * 1.4, s * 1.4, s * 1.4);
+const ball = (s) => new THREE.SphereGeometry(s, 10, 8);
+const shard = (s) => new THREE.OctahedronGeometry(s * 1.2, 0);
+const coin = (s) => new THREE.CylinderGeometry(s, s, s * 0.3, 14);
+const cog = (s) => new THREE.TorusGeometry(s, s * 0.35, 5, 8);
+
 // ---------- base ----------
 class Boss {
   constructor(world, arena, info) {
@@ -418,6 +477,7 @@ class Boss {
     for (let i = 0; i < this.maxHp; i++) { const s = document.createElement('i'); if (i >= this.hp) s.className = 'off'; pips.appendChild(s); }
   }
   clearHaz() { for (const h of this.haz) h.kill(); this.haz = []; this.wiped = true; }
+  fx(o) { this.haz.push(o); return o; }   // a death effect
   start() { this.state = 'fight'; this.queue = []; this.mv = null; this.rest = 0.9; this.bar(true); }
   nextMove() {
     if (!this.queue.length) this.queue = this.plans[Math.min(this.phase, this.plans.length - 1)].slice();
@@ -605,10 +665,23 @@ export class Miauwtron extends Boss {
       for (const f of this.faces) f.material.color.setHex(this.stunned ? 0xffe27a : 0xffffff);
     }
     if (this.state === 'dying') {
+      // the beat slows down… and down… and down… until the speaker blows up
       this.dt = (this.dt || 0) + dt;
-      this.tw.rotation.y += dt * 4; this.setH(Math.max(0.3, this.h - dt * 1.5));
+      this.beat = (this.beat ?? 0.05) - dt;
+      if (this.beat <= 0 && this.dt < 3) {
+        this.beat = 0.26 + this.dt * 0.24; this.pulse = 1; this.nb = (this.nb || 0) + 1; sfx.bass();
+        this.fx(new Ring(this, surf(this.a, this.B, 0.3), { color: this.nb % 2 ? 0xff3d7f : 0x5ef2e0, size: 11, life: 0.8 }));
+      }
+      this.pulse = Math.max(0, (this.pulse || 0) - dt * 5);
+      this.tw.scale.set(1 + this.pulse * 0.25, 1 - this.pulse * 0.15, 1 + this.pulse * 0.25);
+      this.tw.rotation.y += dt * Math.max(0.4, 4 - this.dt * 1.2); this.setH(Math.max(0.3, this.h - dt * 1.1));
       if (Math.random() < dt * 30) puff(surf(this.a, this.B, this.h + Math.random() * 2).add(V3(Math.random() - 0.5, 0, Math.random() - 0.5).multiplyScalar(4)), 3, Math.random() < 0.5 ? 0xff3d7f : 0x5ef2e0, 5, 2, this.B);
-      if (this.dt > 2.4 && !this.boomed) { this.boomed = true; sfx.boom(); G.shake = 1; this.tw.visible = false; this.pf.h = 0.01; puff(surf(this.a, this.B, 1), 60, 0xff3d7f, 9, 4, this.B); this.onWin && this.onWin(); }
+      if (this.dt > 3.3 && !this.boomed) {
+        this.boomed = true; sfx.boom(); G.shake = 1.1; flash('#ff3d7f'); this.tw.visible = false; this.pf.h = 0.01;
+        this.fx(new Debris(this, surf(this.a, this.B, 1.5), { n: 18, color: [0xff3d7f, 0x5ef2e0, 0x2b2440], geo: box, up: 11, out: 7 }));
+        this.fx(new Ring(this, surf(this.a, this.B, 0.3), { size: 18, life: 1.2, thick: 0.25 }));
+        puff(surf(this.a, this.B, 1), 60, 0xff3d7f, 9, 4, this.B); this.onWin && this.onWin();
+      }
     }
     this.tick(dt, t);
   }
@@ -782,10 +855,20 @@ export class Gruis extends Boss {
     for (const pf of this.pillars) if (pf.grow > 0) { pf.grow = Math.min(1, pf.grow + dt * 1.5); pf.mesh.scale.set(1, pf.grow, 1); if (pf.grow >= 1) pf.grow = 0; }
     if (this.state === 'idle') { this.body.position.y = 1.7 + Math.sin(t * 1.5) * 0.05; this.arms.forEach((a, i) => (a.rotation.z = Math.sin(t * 1.5 + i) * 0.1)); }
     if (this.state === 'dying') {
+      // he tips over, crumbles into a pile of rubble with the core still glowing on top… and falls asleep
       this.dt = (this.dt || 0) + dt;
       this.body.rotation.z = Math.min(1.5, this.dt) * 1.0; this.body.position.y = Math.max(0.6, 1.7 - this.dt * 0.8);
+      const top = this.m.position.clone().addScaledVector(this.dir, 2);
+      if (this.dt > 1.1 && !this.cracked) {
+        this.cracked = true; sfx.crack(); sfx.thud(); G.shake = 0.8;
+        this.fx(new Debris(this, top, { n: 16, color: [0x8a7a6a, 0x6a5a4e, 0x5ef2e0], up: 8, out: 6, size: 0.45 }));
+        this.fx(new Ring(this, surf(this.a, this.dir, 0.2), { color: 0xd8c8a8, size: 12, life: 1 }));
+      }
+      if (this.cracked) this.body.scale.set(1 + Math.min(0.3, (this.dt - 1.1) * 0.6), Math.max(0.45, 1 - (this.dt - 1.1) * 0.9), 1 + Math.min(0.3, (this.dt - 1.1) * 0.6));
+      this.core.scale.setScalar(1 + Math.sin(this.dt * 8) * 0.12);
+      if (this.cracked && Math.random() < dt * 3) puff(top.addScaledVector(this.dir, 1.5), 1, 0xffffff, 0.6, 0.8, this.dir);   // 💤
       if (Math.random() < dt * 20) puff(this.m.position.clone().addScaledVector(this.dir, 2), 2, 0xffe27a, 2, 1, this.dir);
-      if (this.dt > 2.2 && !this.boomed) { this.boomed = true; this.core.visible = false; sfx.win(); this.onWin && this.onWin(); }
+      if (this.dt > 3.0 && !this.boomed) { this.boomed = true; this.core.visible = false; sfx.chime(); this.fx(new Ring(this, top, { color: 0x5ef2e0, size: 6, life: 0.7 })); sfx.win(); this.onWin && this.onWin(); }
     }
     this.tick(dt, t);
   }
@@ -988,10 +1071,17 @@ export class Zennith extends Boss {
     this.body.rotation.z *= Math.exp(-dt * 3);
     if (this.state === 'idle') { this.arm.rotation.x = Math.sin(t * 2) * 0.3; }
     if (this.state === 'dying') {
+      // HOME RUN: he gets knocked out of the park, spinning up into the sky until he's a twinkle… *ting*
       this.dt = (this.dt || 0) + dt;
-      this.alt = Math.max(0.8, 7.2 - this.dt * 3); this.body.rotation.x = Math.min(1.4, this.dt);
-      if (Math.random() < dt * 30) puff(this.m.position.clone(), 2, Math.random() < 0.5 ? 0xff5a2a : 0x2b2440, 4, 2);
-      if (this.dt > 2.4 && !this.boomed) { this.boomed = true; sfx.boom(); G.shake = 0.8; this.m.visible = false; puff(this.m.position.clone(), 50, 0xff5a2a, 8, 3); this.onWin && this.onWin(); }
+      if (!this.batted) { this.batted = true; sfx.bat(); G.shake = 0.7; flash('#fff8ec', 300); this.fx(new Ring(this, this.m.position.clone(), { color: 0xffd23a, size: 7, life: 0.6 })); }
+      this.alt = 7.2 + this.dt * this.dt * 9; this.body.rotation.x += dt * 14; this.body.rotation.z += dt * 6;
+      this.m.scale.setScalar(Math.max(0.05, 1 - this.dt / 2.8));
+      if (Math.random() < dt * 40) puff(this.m.position.clone(), 2, Math.random() < 0.5 ? 0xff5a2a : 0xffd23a, 3, 1.5);
+      if (this.dt > 2.8 && !this.boomed) {
+        this.boomed = true; sfx.chime(); this.m.visible = false;
+        this.fx(new Ring(this, this.m.position.clone(), { color: 0xffffff, size: 5, life: 0.6, thick: 0.2 }));
+        puff(this.m.position.clone(), 24, 0xfff2a0, 6, 1.5); this.onWin && this.onWin();
+      }
     }
     this.tick(dt, t);
   }
@@ -1191,11 +1281,19 @@ export class Deniz extends Boss {
       }
     }
     if (this.state === 'dying') {
+      // his aura cracks, crack, CRACK… and he shatters into a thousand ice shards
       this.dt = (this.dt || 0) + dt;
       d.root.rotation.y += dt * (4 + this.dt * 6); this.aura.visible = true; this.aura.scale.setScalar(1 + this.dt * 0.8);
       this.inner.material.opacity = 0.3 + Math.random() * 0.3;
+      this.cracks = this.cracks || 0;
+      if (this.dt > 0.7 + this.cracks * 0.6 && this.cracks < 3) { this.cracks++; sfx.crack(); G.shake = 0.3 + this.cracks * 0.15; this.fx(new Ring(this, this.centre(), { color: 0x9fe8ff, size: 4 + this.cracks * 2, life: 0.5 })); }
       if (Math.random() < dt * 40) puff(this.centre(), 3, Math.random() < 0.5 ? 0x9fe8ff : 0xffffff, 6, 2, this.B);
-      if (this.dt > 2.6 && !this.boomed) { this.boomed = true; sfx.shatter(); sfx.boom(); G.shake = 1; this.m.visible = false; puff(this.centre(), 80, 0x9fe8ff, 10, 4, this.B); this.onWin && this.onWin(); }
+      if (this.dt > 2.9 && !this.boomed) {
+        this.boomed = true; sfx.shatter(); sfx.boom(); G.shake = 1; flash('#cfefff'); this.m.visible = false;
+        this.fx(new Debris(this, this.centre(), { n: 24, color: [0x9fe8ff, 0xffffff, 0x7ac8ff], geo: shard, up: 9, out: 8, size: 0.3, life: 2.8 }));
+        this.fx(new Ring(this, surf(this.a, this.B, 0.2), { color: 0x9fe8ff, size: 16, life: 1.1, thick: 0.2 }));
+        puff(this.centre(), 80, 0x9fe8ff, 10, 4, this.B); this.onWin && this.onWin();
+      }
     }
     this.tick(dt, t);
   }
@@ -1403,10 +1501,20 @@ export class Lorcan extends Boss {
     // touching him while he's out of the pots hurts (he kicks)
     if (this.state === 'fight' && this.inPot < 0 && !this.hop && P.planet === this.a && !P.dead && P.pos.distanceTo(this.m.position.clone().addScaledVector(this.B, 0.8)) < 1.3) { hurtPlayer(this.m.position.clone()); bouncePlayer(10); }
     if (this.state === 'dying') {
+      // he spins faster and faster, then POP: a fountain of gold coins and a rainbow, ring by ring
       this.dt = (this.dt || 0) + dt;
-      this.l.root.visible = true; this.l.root.rotation.y += dt * (5 + this.dt * 6);
+      this.l.root.visible = true; this.l.root.rotation.y += dt * (5 + this.dt * 8);
+      this.l.root.position.y = Math.min(2.5, this.dt * 0.9);
       if (Math.random() < dt * 40) puff(this.m.position.clone().addScaledVector(this.B, 1), 3, Math.random() < 0.5 ? 0xffd23a : 0x5cd85a, 6, 3, this.B);
-      if (this.dt > 2.4 && !this.boomed) { this.boomed = true; sfx.boom(); sfx.rare(); G.shake = 0.8; this.m.visible = false; puff(this.m.position.clone(), 60, 0xffd23a, 8, 4, this.B); this.onWin && this.onWin(); }
+      if (this.dt > 2.6 && !this.boomed) {
+        this.boomed = true; sfx.boom(); sfx.rare(); G.shake = 0.8; flash('#fff2a0'); this.m.visible = false; this.rainbow = 0;
+        this.fx(new Debris(this, this.m.position.clone().addScaledVector(this.B, 1.5), { n: 26, color: [0xffd23a, 0xffe27a, 0xd8a020], geo: coin, up: 13, out: 5, size: 0.32, life: 3 }));
+        puff(this.m.position.clone(), 60, 0xffd23a, 8, 4, this.B); this.onWin && this.onWin();
+      }
+      if (this.boomed && this.rainbow < 6 && this.dt > 2.6 + this.rainbow * 0.12) {
+        this.fx(new Ring(this, surf(this.a, this.B, 0.3 + this.rainbow * 0.15), { color: [0xff3a5a, 0xff9a2a, 0xffd23a, 0x5cd85a, 0x3aa8ff, 0x9a5aff][this.rainbow], size: 14 - this.rainbow, life: 1.3, thick: 0.22 }));
+        this.rainbow++;
+      }
     }
     this.tick(dt, t);
   }
@@ -1590,10 +1698,22 @@ export class Kokos extends Boss {
     const k = this.k;
     if (this.state === 'idle') { k.body.position.y = Math.sin(t * 1.6) * 0.04; k.head.rotation.y = Math.sin(t * 0.8) * 0.3; }
     if (this.state === 'dying') {
+      // dizzy: stars round his head, he sways… sways… and falls flat on his back. THUD. Then it rains coconuts
       this.dt = (this.dt || 0) + dt;
-      k.r.rotation.x = -Math.min(1.4, this.dt * 0.9);
+      const head = this.m.position.clone().addScaledVector(this.dir, 3.4);
+      if (this.dt < 1.6) {
+        k.r.rotation.z = Math.sin(this.dt * 5) * 0.35 * Math.min(1, this.dt * 2);
+        if (Math.random() < dt * 14) { const a = this.dt * 9; puff(head.clone().addScaledVector(anyPerp(this.dir).applyAxisAngle(this.dir, a), 1.1), 1, 0xffe27a, 0.3, 0.4, this.dir); }
+      } else {
+        k.r.rotation.z *= Math.exp(-dt * 6); k.r.rotation.x = -Math.min(1.45, (this.dt - 1.6) * 2.4);
+        if (!this.thud && this.dt > 2.2) {
+          this.thud = true; sfx.thud(); sfx.boom(); G.shake = 1;
+          this.fx(new Ring(this, surf(this.a, this.dir, 0.2), { color: 0xc8a878, size: 15, life: 1, thick: 0.25 }));
+          this.fx(new Debris(this, head.addScaledVector(this.dir, 7), { n: 10, color: [0x7a4a2a, 0x5a3418], geo: ball, up: 0, out: 6, size: 0.4, life: 2.6 }));   // coconuts from the trees
+        }
+      }
       if (Math.random() < dt * 20) puff(this.m.position.clone().addScaledVector(this.dir, 3), 2, 0xffe27a, 2, 1, this.dir);
-      if (this.dt > 2.4 && !this.boomed) { this.boomed = true; sfx.win(); G.shake = 0.6; this.onWin && this.onWin(); }
+      if (this.dt > 3.1 && !this.boomed) { this.boomed = true; sfx.win(); G.shake = 0.6; this.onWin && this.onWin(); }
     }
     this.tick(dt, t);
   }
@@ -1730,9 +1850,20 @@ export class Smeul extends Boss {
     if (this.state === 'idle') { k.neck.rotation.y = Math.sin(t * 0.8) * 0.3; k.tail.rotation.y = Math.sin(t * 1.5) * 0.3; }
     else k.tail.rotation.y = Math.sin(t * 3) * 0.4;
     if (this.state === 'dying') {
-      this.dt = (this.dt || 0) + dt; k.r.rotation.z = Math.min(1.5, this.dt);
-      if (Math.random() < dt * 20) puff(this.m.position.clone().addScaledVector(this.dir, 2.5), 2, 0xffe27a, 2, 1, this.dir);
-      if (this.dt > 2.4 && !this.boomed) { this.boomed = true; sfx.win(); G.shake = 0.6; this.onWin && this.onWin(); }
+      // out of fire: he coughs up black smoke puffs, a last tiny flame… *fft*… and flops over with smoke rings rising
+      this.dt = (this.dt || 0) + dt;
+      const snout = this.m.position.clone().addScaledVector(this.dir, 3);
+      this.coughs = this.coughs || 0;
+      if (this.coughs < 3 && this.dt > 0.3 + this.coughs * 0.5) {
+        this.coughs++; sfx.thud(); G.shake = 0.35; k.r.rotation.x = 0.25;
+        puff(snout.clone(), 18, 0x3a3038, 5, 1.6, this.dir);
+      }
+      if (this.dt > 1.8 && !this.fizzle) { this.fizzle = true; puff(snout.clone(), 6, 0xff7a2a, 2, 0.5, this.dir); sfx.whoosh(); }
+      k.r.rotation.z = Math.min(1.5, Math.max(0, this.dt - 1.9) * 1.6);
+      if (this.dt < 1.9) k.r.rotation.x *= Math.exp(-dt * 8);
+      if (this.dt > 2.1 && Math.random() < dt * 2.5) this.fx(new Ring(this, snout.clone().addScaledVector(this.dir, 1), { color: 0x6a6070, size: 3, life: 1.4, opacity: 0.6 }));
+      if (this.dt > 2.4 && !this.embers) { this.embers = true; sfx.thud(); G.shake = 0.8; this.fx(new Debris(this, this.m.position.clone().addScaledVector(this.dir, 1), { n: 12, color: [0xff7a2a, 0xffd23a], geo: ball, up: 6, out: 6, size: 0.18 })); }
+      if (this.dt > 3.1 && !this.boomed) { this.boomed = true; sfx.win(); G.shake = 0.6; this.onWin && this.onWin(); }
     }
     this.tick(dt, t);
   }
@@ -1859,12 +1990,20 @@ export class Gruizel extends Boss {
   update(dt, t) {
     if (this.state === 'idle') { this.m.visible = true; this.k.root.rotation.x = Math.sin(t * 1.2) * 0.08; }
     if (this.state === 'dying') {
+      // a giant *BURP* that blasts a fountain of sand, then he wobbles and spirals down into the sand for good
       this.dt = (this.dt || 0) + dt; this.m.visible = true;
       if (this.dt < 0.1) { this.k.root.rotation.set(0, 0, 0); this.place(0); }
-      this.k.root.rotation.z = Math.sin(this.dt * 10) * 0.2 * Math.max(0, 1 - this.dt / 2.4);
-      this.place(-Math.min(1, this.dt / 2.4) * 7);
-      if (Math.random() < dt * 20) puff(surf(this.a, this.dir, 0.4), 2, 0xd8b070, 3, 1, this.dir);
-      if (this.dt > 2.4 && !this.boomed) { this.boomed = true; sfx.win(); this.m.visible = false; this.onWin && this.onWin(); }
+      if (this.dt > 0.5 && !this.burp) {
+        this.burp = true; sfx.hap(); sfx.boom(); G.shake = 0.9;
+        this.fx(new Debris(this, surf(this.a, this.dir, 5), { n: 22, color: [0xd8b070, 0xe8c890, 0xffd23a], geo: ball, up: 14, out: 4, size: 0.3, life: 2.8 }));
+        puff(surf(this.a, this.dir, 6), 30, 0xd8b070, 6, 2, this.dir);
+      }
+      const f = Math.max(0, this.dt - 1.0) / 2.2;
+      this.k.root.rotation.y += dt * 4 * Math.min(1, f * 3);
+      this.k.root.rotation.z = Math.sin(this.dt * 10) * 0.2 * Math.max(0, 1 - f);
+      this.place(-Math.min(1, f) * 7);
+      if (Math.random() < dt * 24) puff(surf(this.a, this.dir, 0.4), 2, 0xd8b070, 3, 1, this.dir);
+      if (this.dt > 3.2 && !this.boomed) { this.boomed = true; sfx.win(); this.m.visible = false; this.fx(new Ring(this, surf(this.a, this.dir, 0.2), { color: 0xd8b070, size: 10, life: 1, thick: 0.3 })); this.onWin && this.onWin(); }
     }
     this.tick(dt, t);
   }
@@ -1977,10 +2116,23 @@ export class Mecha extends Boss {
     if (this.state === 'idle') { k.tail.rotation.z = Math.sin(t * 2) * 0.3; k.body.position.y = Math.sin(t * 2) * 0.03; }
     else k.tail.rotation.z = Math.sin(t * 5) * 0.4;
     if (this.state === 'dying') {
+      // short circuit: sparks, bolts popping off… Kayo and Yara EJECT (two little cats flying off)… KABOOM
       this.dt = (this.dt || 0) + dt; k.dome.visible = false;
-      k.r.rotation.z = Math.sin(this.dt * 20) * 0.05 * Math.min(1, this.dt);
-      if (Math.random() < dt * 30) puff(this.m.position.clone().addScaledVector(this.dir, 2 + Math.random() * 2), 2, Math.random() < 0.5 ? 0xff7a2a : 0xffffff, 4, 1.5, this.dir);
-      if (this.dt > 2.4 && !this.boomed) { this.boomed = true; sfx.boom(); sfx.win(); G.shake = 0.9; this.m.visible = false; puff(this.m.position.clone().addScaledVector(this.dir, 2), 60, 0xff7a2a, 8, 4, this.dir); this.onWin && this.onWin(); }
+      k.r.rotation.z = Math.sin(this.dt * 24) * 0.06 * Math.min(1, this.dt);
+      const top = this.m.position.clone().addScaledVector(this.dir, 3);
+      this.pops = this.pops || 0;
+      if (this.pops < 4 && this.dt > 0.3 + this.pops * 0.45) { this.pops++; sfx.clank(); this.fx(new Debris(this, top.clone(), { n: 4, color: [0xb8b8c8, 0xffd23a], geo: box, up: 7, out: 6, size: 0.22 })); }
+      if (this.dt > 1.4 && !this.eject) {
+        this.eject = true; sfx.meow(); sfx.launch();
+        this.fx(new Debris(this, top.clone().addScaledVector(this.dir, 1), { n: 2, color: [0xff9a3d, 0x8a8a9a], geo: ball, up: 22, out: 3, size: 0.5, life: 2.5 }));   // Kayo and Yara
+      }
+      if (Math.random() < dt * 34) puff(this.m.position.clone().addScaledVector(this.dir, 2 + Math.random() * 2), 2, Math.random() < 0.5 ? 0xff7a2a : 0xffffff, 4, 1.5, this.dir);
+      if (this.dt > 2.9 && !this.boomed) {
+        this.boomed = true; sfx.boom(); sfx.win(); G.shake = 1.1; flash('#ffb070'); this.m.visible = false;
+        this.fx(new Debris(this, top, { n: 20, color: [0xb8b8c8, 0x6a6a7a, 0xff7a2a], geo: box, up: 11, out: 8, size: 0.4 }));
+        this.fx(new Ring(this, surf(this.a, this.dir, 0.2), { color: 0xff7a2a, size: 17, life: 1.1, thick: 0.25 }));
+        puff(this.m.position.clone().addScaledVector(this.dir, 2), 60, 0xff7a2a, 8, 4, this.dir); this.onWin && this.onWin();
+      }
     }
     this.tick(dt, t);
   }
@@ -2101,9 +2253,15 @@ export class Kraak extends Boss {
     const k = this.k;
     if (this.state === 'idle') k.tentacles.forEach((tt, i) => (tt.rotation.x = Math.sin(t * 2 + i) * 0.2));
     if (this.state === 'dying') {
-      this.dt = (this.dt || 0) + dt; k.r.rotation.z = Math.min(1.4, this.dt);
-      if (Math.random() < dt * 20) puff(this.m.position.clone().addScaledVector(this.dir, 2.5), 2, 0x9fe8ff, 2, 1, this.dir);
-      if (this.dt > 2.4 && !this.boomed) { this.boomed = true; sfx.win(); G.shake = 0.6; this.onWin && this.onWin(); }
+      // a big ink cloud, he goes all wobbly like jelly, then flops over while bubbles float up
+      this.dt = (this.dt || 0) + dt;
+      if (!this.inked) { this.inked = true; sfx.whoosh(); G.shake = 0.6; puff(this.m.position.clone().addScaledVector(this.dir, 2.5), 50, 0x3a2a5a, 8, 2.5, this.dir); this.fx(new Ring(this, surf(this.a, this.dir, 0.3), { color: 0x5a3a8a, size: 13, life: 1.2, thick: 0.35, opacity: 0.7 })); }
+      const wob = Math.sin(this.dt * 14) * 0.18 * Math.max(0, 1 - this.dt / 2);
+      k.r.scale.set(1.6 * (1 + wob), 1.6 * (1 - wob), 1.6 * (1 + wob));   // the octopus model is 1.6× size
+      k.r.rotation.z = Math.min(1.4, Math.max(0, this.dt - 1.2) * 1.2);
+      if (Math.random() < dt * 16) puff(this.m.position.clone().addScaledVector(this.dir, 1 + Math.random() * 3).addScaledVector(anyPerp(this.dir).applyAxisAngle(this.dir, Math.random() * 6.28), Math.random() * 2), 1, 0xe8fbff, 1.5, 1.5, this.dir);   // bubbles
+      if (this.dt > 2.4 && !this.flop) { this.flop = true; sfx.thud(); G.shake = 0.7; this.fx(new Debris(this, this.m.position.clone().addScaledVector(this.dir, 2), { n: 8, color: [0xfff4f8], geo: ball, up: 8, out: 4, size: 0.25 })); }   // his pearls roll out
+      if (this.dt > 3.1 && !this.boomed) { this.boomed = true; sfx.win(); G.shake = 0.6; this.onWin && this.onWin(); }
     }
     this.tick(dt, t);
   }
@@ -2218,9 +2376,14 @@ export class Boe extends Boss {
     const k = this.k;
     if (this.state === 'idle') { this.place(this.hover + Math.sin(t * 2) * 0.25); k.arms.forEach((a, i) => (a.rotation.z = Math.sin(t * 2 + i * 3) * 0.25)); }
     if (this.state === 'dying') {
-      this.dt = (this.dt || 0) + dt; this.m.visible = true; k.r.scale.setScalar(1.7 * Math.max(0.05, 1 - this.dt / 2.4)); k.r.rotation.y += dt * 6;
-      if (Math.random() < dt * 20) puff(this.m.position.clone().addScaledVector(this.dir, 2), 2, 0xe8e0ff, 2, 1, this.dir);
-      if (this.dt > 2.4 && !this.boomed) { this.boomed = true; this.m.visible = false; sfx.win(); G.shake = 0.6; this.onWin && this.onWin(); }
+      // he flickers like a bad lightbulb, floats up spinning, and fades out in a swirl of purple sparkles. Boo… hoo.
+      this.dt = (this.dt || 0) + dt; if (!this.boomed) this.m.visible = this.dt > 2.0 ? Math.sin(this.dt * 40) > 0 : Math.sin(this.dt * 18) > -0.6;
+      k.r.scale.setScalar(1.7 * Math.max(0.05, 1 - Math.max(0, this.dt - 0.8) / 2.2)); k.r.rotation.y += dt * (3 + this.dt * 5);
+      k.r.position.y = this.dt * this.dt * 0.7;
+      if (Math.random() < dt * 30) { const a = this.dt * 7 + Math.random(); puff(this.m.position.clone().addScaledVector(this.dir, 2 + k.r.position.y).addScaledVector(anyPerp(this.dir).applyAxisAngle(this.dir, a), 1.6), 1, Math.random() < 0.5 ? 0x9a7aff : 0xe8e0ff, 1, 1, this.dir); }
+      this.rings = this.rings || 0;
+      if (this.rings < 3 && this.dt > 0.4 + this.rings * 0.8) { this.rings++; sfx.chime(); this.fx(new Ring(this, surf(this.a, this.dir, 0.3), { color: 0x9a7aff, size: 9, life: 1.2 })); }
+      if (this.dt > 3.0 && !this.boomed) { this.boomed = true; this.m.visible = false; flash('#c8b0ff', 350); sfx.win(); G.shake = 0.6; puff(this.m.position.clone().addScaledVector(this.dir, 4), 40, 0x9a7aff, 6, 2, this.dir); this.onWin && this.onWin(); }
     }
     this.tick(dt, t);
   }
@@ -2363,9 +2526,17 @@ export class Tandwieltron extends Boss {
     const k = this.k;
     if (this.state === 'idle') { this.place(); k.gear.rotation.z += dt; k.arms.forEach((a, i) => (a.rotation.x = Math.sin(t * 1.5 + i * 3) * 0.2)); }
     if (this.state === 'dying') {
-      this.dt = (this.dt || 0) + dt; this.m.visible = true; k.r.rotation.z = Math.sin(this.dt * 30) * 0.08; k.r.scale.setScalar(1.5 * Math.max(0.05, 1 - Math.max(0, this.dt - 1.4) / 1.2));
-      if (Math.random() < dt * 24) puff(this.m.position.clone().addScaledVector(this.dir, 2 + Math.random() * 2), 2, Math.random() < 0.5 ? 0xffd23a : 0xd8d0c0, 3, 1, this.dir);
-      if (this.dt > 2.6 && !this.boomed) { this.boomed = true; this.m.visible = false; sfx.win(); G.shake = 0.8; this.onWin && this.onWin(); }
+      // he doesn't die: the cats' program crashes. He shakes, his gears pop off, steam blasts out,
+      // and he shrinks back to his friendly size and stays standing (he's Lars' builder robot again)
+      this.dt = (this.dt || 0) + dt; this.m.visible = true;
+      const top = this.m.position.clone().addScaledVector(this.dir, 3);
+      if (!this.boomed) k.r.rotation.z = Math.sin(this.dt * 30) * 0.08 * Math.max(0, 1 - this.dt / 2.4); else k.r.rotation.z *= Math.exp(-dt * 6);
+      k.r.scale.setScalar(1.5 - 0.5 * Math.min(1, Math.max(0, this.dt - 1.6) / 1.0));
+      this.gears = this.gears || 0;
+      if (this.gears < 4 && this.dt > 0.2 + this.gears * 0.4) { this.gears++; sfx.clank(); this.fx(new Debris(this, top.clone(), { n: 3, color: [0xffd23a, 0xd8d0c0], geo: cog, up: 9, out: 6, size: 0.4 })); }
+      if (this.dt > 1.6 && !this.steam) { this.steam = true; sfx.whoosh(); G.shake = 0.6; puff(top.clone(), 40, 0xf0f0f0, 7, 2, this.dir); this.fx(new Ring(this, surf(this.a, this.dir, 0.3), { color: 0xffffff, size: 12, life: 1, opacity: 0.6 })); }
+      if (!this.boomed && Math.random() < dt * 24) puff(this.m.position.clone().addScaledVector(this.dir, 2 + Math.random() * 2), 2, Math.random() < 0.5 ? 0xffd23a : 0xd8d0c0, 3, 1, this.dir);
+      if (this.dt > 2.9 && !this.boomed) { this.boomed = true; sfx.chime(); sfx.win(); G.shake = 0.5; this.fx(new Ring(this, top, { color: 0x7dffb0, size: 5, life: 0.8 })); this.onWin && this.onWin(); }
     }
     this.tick(dt, t);
   }

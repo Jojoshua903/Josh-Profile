@@ -1,8 +1,8 @@
-import { THREE, G, toon, basic, mk, clamp, puff, placeOn, orientOn, surf, frameDir, tangentTo, stepDir, toast, banner } from './core.js?v=20261111u';
-import { tr } from './lang.js?v=20261111u';
-import { sfx } from './audio.js?v=20261111u';
-import { P, bouncePlayer, requestLock } from './player.js?v=20261111u';
-import { makeMarker } from './fx.js?v=20261111u';
+import { THREE, G, toon, basic, mk, clamp, puff, placeOn, orientOn, surf, frameDir, tangentTo, stepDir, toast, banner } from './core.js?v=20261112d';
+import { tr } from './lang.js?v=20261112d';
+import { sfx } from './audio.js?v=20261112d';
+import { P, bouncePlayer, requestLock } from './player.js?v=20261112d';
+import { makeMarker } from './fx.js?v=20261112d';
 
 // DUELS: some locals don't send you on an errand, they challenge you to a mini game.
 // task: { type: 'duel', game, ...settings, found, lost }

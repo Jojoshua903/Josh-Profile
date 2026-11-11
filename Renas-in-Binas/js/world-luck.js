@@ -1,9 +1,9 @@
-import { World, planetStem, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261111u';
-import { fbm } from './world.js?v=20261111u';
-import { buildFionn, buildLuckyStone, buildHorseshoe, textBoard, buildLocal } from './models.js?v=20261111u';
-import { Lorcan } from './bosses.js?v=20261111u';
-import { addParkour, buildBeacon } from './parkour.js?v=20261111u';
-import { duelModels } from './duels.js?v=20261111u';
+import { World, planetStem, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261112d';
+import { fbm } from './world.js?v=20261112d';
+import { buildFionn, buildLuckyStone, buildHorseshoe, textBoard, buildLocal } from './models.js?v=20261112d';
+import { Lorcan } from './bosses.js?v=20261112d';
+import { addParkour, buildBeacon } from './parkour.js?v=20261112d';
+import { duelModels } from './duels.js?v=20261112d';
 
 // World 4 on the route: SMARAGDEILAND. Fionn's green island: Irish hills, very old rocks and a lot of luck.
 // Boss: Lorcan Pech, the Bad-Luck Leprechaun, on the Rainbow Ring.
@@ -74,7 +74,7 @@ export function buildLuck(ctx) {
       ['FIONN', 'But my luck ran out this morning. A leprechaun called Lorcan Pech nicked my three lucky stones. And with them, all the luck on the island.'],
       ['FIONN', 'Now everything goes wrong. Rocks roll uphill. Toast lands butter-side down. Sheep walk backwards.'],
       ['RÊNAS', 'A leprechaun? Like, with a pot of gold?'],
-      ['FIONN', 'Three pots, actually. He hides in one and shuffles them. He also has the Klaverkern, a core with a four-leaf clover glowing inside it. Lucky core, that.'],
+      ['FIONN', 'Three pots, actually. He hides in one and shuffles them. He also grabbed one of your cores. A four-leaf clover started glowing inside it, so now he calls it the Klaverkern. Lucky core, that.'],
       ['FIONN', 'He dropped my stones while running off. One is on top of the Giant’s Causeway in the west. One is at the top of the rainbow. One is on the sea cliffs up north.'],
       ['FIONN', 'And Saoirse and Paddy each found a star shard in the hills. Give them a hand and they’ll give them to you. Sure look, that’s how it works around here.'],
     ],
@@ -265,7 +265,7 @@ export function buildLuck(ctx) {
   w.winLines = [
     ['LORCAN', 'Alright, alright! You win! Here, take the Klaverkern. And the luck. All of it.'],
     ['LORCAN', 'Nobody ever finds me. Nobody! …Was it the hiccups? It was the hiccups.'],
-    ['RENAS-1', 'Fuel secured: the Klaverkern. Luck levels: restored. Range: almost enough. One more fuel stop: Het Oerwoud.'],
+    ['RENAS-1', 'Fuel secured: the Klaverkern. Luck levels: restored. Range: growing. Next fuel stop: Het Oerwoud.'],
     ['RÊNAS', 'Fionn was right. Science AND luck!'],
   ];
   return w;
