@@ -1,0 +1,2581 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bio Blast</title>
+<style>
+  :root { --ink:#2a2230; --paper:#f3ecdc; --green:#3f9b4a; --gold:#d9a440; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--paper); color:var(--ink);
+    font-family:"Chalkboard SE","Comic Sans MS","Marker Felt",cursive; overflow:hidden; }
+  body { background-image:radial-gradient(rgba(42,34,48,.07) 1px, transparent 1px); background-size:14px 14px; }
+  #wrap { height:100%; display:flex; flex-direction:column; align-items:center; padding:10px 12px 64px; gap:10px; }
+  #bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:center; font-size:13px; }
+  #bar b { font-size:16px; letter-spacing:.5px; }
+  #bar .keys { opacity:.65; font-family:ui-monospace,Menlo,monospace; font-size:11px; }
+  button { font:inherit; font-size:12px; border:2px solid var(--ink); background:#fff8d6; color:var(--ink);
+    padding:4px 10px; border-radius:6px; box-shadow:2px 2px 0 var(--ink); cursor:pointer; outline:none; }
+  button:active { transform:translate(2px,2px); box-shadow:none; }
+  canvas { image-rendering:pixelated; image-rendering:crisp-edges; border:3px solid var(--ink);
+    box-shadow:6px 6px 0 rgba(42,34,48,.85); border-radius:4px; background:#fbf6e9; touch-action:none; }
+  #wrap:fullscreen { background:var(--paper); padding:10px; }
+  @media print { #bar { display:none; } canvas { box-shadow:none; } }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="bar">
+    <b>🧪 Bio Blast</b>
+    <span class="keys">muis · spatie · ← → · 1 2 3 · ESC menu</span>
+    <button id="mute">🔊 Geluid aan (M)</button>
+    <button id="mus">♪ Muziek aan (N)</button>
+    <button id="fs">⛶ Volledig scherm</button>
+  </div>
+  <canvas id="game"></canvas>
+  <div id="err" style="display:none;max-width:90vw;font:12px ui-monospace,Menlo,monospace;background:#fde4e4;border:2px solid #d94040;color:#7a1a1a;padding:6px 10px;border-radius:6px;white-space:pre-wrap"></div>
+</div>
+<script>
+  window.addEventListener('error', e => {
+    const el = document.getElementById('err'); el.style.display = 'block';
+    el.textContent += 'Fout: ' + e.message + ' (' + (e.filename || '').split('/').pop() + ':' + e.lineno + ')\n';
+  });
+</script>
+<script>/* ===== engine.js ===== */
+'use strict';
+// ===== Basis =====
+const C = document.getElementById('game'), X = C.getContext('2d');
+const W = 320, H = 180, SC = 3;
+C.width = W * SC; C.height = H * SC;
+const FONT = '"Chalkboard SE","Comic Sans MS","Marker Felt",cursive';
+const MONO = 'ui-monospace,"SF Mono",Menlo,monospace';
+
+function fit() {
+  const aw = innerWidth - 24, ah = innerHeight - 110;
+  const s = Math.max(1, Math.min(aw / W, ah / H));
+  C.style.width = Math.floor(W * s) + 'px';
+  C.style.height = Math.floor(H * s) + 'px';
+}
+addEventListener('resize', fit); fit();
+
+let REMIX = false;
+const rnd = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+// ===== Input =====
+const I = { keys: {}, pressed: {}, mx: 160, my: 90, down: false, clicked: false, mv: 0 };
+const nk = k => k.length === 1 ? k.toLowerCase() : k;
+addEventListener('keydown', e => {
+  const k = nk(e.key);
+  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Enter'].includes(k)) e.preventDefault();
+  if (document.activeElement && document.activeElement.tagName === 'BUTTON') document.activeElement.blur();
+  if (!I.keys[k]) I.pressed[k] = true;
+  I.keys[k] = true; audioInit();
+  if (k === 'm') toggleMute();
+});
+addEventListener('keyup', e => { I.keys[nk(e.key)] = false; });
+function ptr(e) {
+  const r = C.getBoundingClientRect();
+  const nx = (e.clientX - r.left - C.clientLeft) / C.clientWidth * W, ny = (e.clientY - r.top - C.clientTop) / C.clientHeight * H;
+  I.mv += Math.hypot(nx - I.mx, ny - I.my); I.mx = nx; I.my = ny;
+}
+C.addEventListener('pointermove', ptr);
+C.addEventListener('pointerdown', e => { ptr(e); I.mv = 0; I.down = true; I.clicked = true; audioInit(); });
+addEventListener('pointerup', () => { I.down = false; });
+const P = k => !!I.pressed[k], K = k => !!I.keys[k];
+const LEFT = () => K('ArrowLeft') || K('a'), RIGHT = () => K('ArrowRight') || K('d');
+const PL = () => P('ArrowLeft') || P('a'), PR = () => P('ArrowRight') || P('d');
+
+// ===== Geluid =====
+let AC = null, muted = localStorage.getItem('bio_mute') === '1';
+function audioInit() {
+  if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { } }
+  if (AC && AC.state === 'suspended') AC.resume();
+}
+function tone(f, d, type = 'square', v = 0.05, slide = 0, delay = 0) {
+  if (muted || !AC) return;
+  const t = AC.currentTime + delay, o = AC.createOscillator(), g = AC.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t);
+  if (slide) o.frequency.linearRampToValueAtTime(Math.max(30, f + slide), t + d);
+  g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+  o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + d + 0.03);
+}
+const SFX = {
+  win() { tone(523, .09); tone(659, .09, 'square', .05, 0, .09); tone(988, .18, 'square', .05, 0, .18); },
+  lose() { tone(330, .35, 'sawtooth', .05, -200); },
+  tick() { tone(880, .03, 'square', .025); },
+  blip() { tone(700, .06, 'triangle', .07); },
+  jump() { tone(300, .14, 'square', .04, 300); },
+  brush() { tone(rnd(1800, 2600), .03, 'triangle', .012); },
+  splash() { tone(392, .07); tone(523, .07, 'square', .05, 0, .07); tone(784, .12, 'square', .05, 0, .14); },
+  boss() { [262, 247, 233, 220].forEach((f, i) => tone(f, .16, 'sawtooth', .05, 0, i * .15)); },
+  stamp() { tone(120, .2, 'square', .08, -60); },
+};
+function toggleMute() {
+  muted = !muted; localStorage.setItem('bio_mute', muted ? '1' : '0');
+  document.getElementById('mute').textContent = muted ? '🔇 Geluid uit (M)' : '🔊 Geluid aan (M)';
+}
+document.getElementById('mute').textContent = muted ? '🔇 Geluid uit (M)' : '🔊 Geluid aan (M)';
+document.getElementById('mute').onclick = e => { audioInit(); toggleMute(); e.currentTarget.blur(); };
+document.getElementById('fs').onclick = e => {
+  e.currentTarget.blur();
+  const el = document.getElementById('wrap');
+  if (document.fullscreenElement) document.exitFullscreen(); else if (el.requestFullscreen) el.requestFullscreen();
+};
+document.addEventListener('fullscreenchange', () => setTimeout(fit, 50));
+
+// ===== Tekenen (pixels) =====
+function R(x, y, w, h, c) { X.fillStyle = c; X.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); }
+function E(cx, cy, rx, ry, c) {
+  X.fillStyle = c; cx = Math.round(cx); cy = Math.round(cy);
+  for (let dy = -ry; dy <= ry; dy++) {
+    const w = Math.floor(rx * Math.sqrt(Math.max(0, 1 - (dy * dy) / (ry * ry + .01))));
+    X.fillRect(cx - w, cy + dy, 2 * w + 1, 1);
+  }
+}
+function O(cx, cy, r, c) { E(cx, cy, r, r, c); }
+function Ln(x1, y1, x2, y2, c, w = 2) {
+  const n = Math.max(1, Math.ceil(Math.hypot(x2 - x1, y2 - y1)));
+  X.fillStyle = c;
+  for (let i = 0; i <= n; i++) X.fillRect(Math.round(x1 + (x2 - x1) * i / n - w / 2), Math.round(y1 + (y2 - y1) * i / n - w / 2), w, w);
+}
+function T(s, x, y, sz = 8, c = '#2a2230', al = 'center', ol = null, font = FONT) {
+  X.font = `bold ${sz}px ${font}`; X.textAlign = al; X.textBaseline = 'middle';
+  if (ol) { X.lineWidth = sz / 3.5; X.strokeStyle = ol; X.lineJoin = 'round'; X.strokeText(s, x, y); }
+  X.fillStyle = c; X.fillText(s, x, y);
+}
+function SPR(rows, pal, x, y, sc = 1, flip = false) {
+  x = Math.round(x); y = Math.round(y);
+  for (let j = 0; j < rows.length; j++) {
+    const r = rows[j];
+    for (let i = 0; i < r.length; i++) {
+      const c = pal[r[i]]; if (!c) continue;
+      X.fillStyle = c; X.fillRect(x + (flip ? r.length - 1 - i : i) * sc, y + j * sc, sc, sc);
+    }
+  }
+}
+
+// ===== Personages =====
+const HAAS = [
+  '     kkkkkk     ',
+  '    ksHHsssk    ',
+  '   kssHsssssk   ',
+  '   gssssssssg   ',
+  '   gbllbbllbg   ',
+  '   gssssSsssg   ',
+  '    smmmmmms    ',
+  '    ssskksss    ',
+  '     ssssss     ',
+  '   wwwsGGswww   ',
+  '  wwwwwGGwwwww  ',
+  ' wwruwwGGwwwwww ',
+  ' wWwwwwGGwwwwWw ',
+  ' wWwwwwwGwwwwWw ',
+  'ss wwwwwwwwww ss',
+  '   wwwwwwwwww   ',
+  '   wWwwwwwwWw   ',
+  '   wWwwwwwwWw   ',
+  '    pppppppp    ',
+  '    ppp  ppp    ',
+  '    ppp  ppp    ',
+  '    ppp  ppp    ',
+  '   hhhh  hhhh   ',
+];
+const HAAS_PAL = { k: '#2a2230', s: '#f2c29b', S: '#d79c78', H: '#fff4e8', g: '#a3a3b0', b: '#2a2230', l: '#bfe3ff', m: '#6b5a4a', w: '#f7f7f2', W: '#c9cdd6', G: '#3f9b4a', r: '#d94040', u: '#3d6fd9', p: '#44506a', h: '#2a2230' };
+const MACI = [
+  '      yyy       ',
+  '     dyddyd     ',
+  '    ddddddddy   ',
+  '   ddnnnnnndd   ',
+  '   dnssssssnd   ',
+  '   dsksssskSd   ',
+  '   dsssssssSd   ',
+  '   ddsskksssdd  ',
+  '    ddssssdd    ',
+  '   dddddddddd   ',
+  '  dddDddddDddd  ',
+  '  ddDddyyddDdd  ',
+  ' sddDddddddDdds ',
+  ' s dddddddddd s ',
+  '   dddddddddd   ',
+  '    jjjjjjjj    ',
+  '    jjj  jjj    ',
+  '    jjj  jjj    ',
+  '   hhhh  hhhh   ',
+];
+const MACI_PAL = { d: '#5cb85c', D: '#3d8b3d', y: '#f2c94c', s: '#f0c8a0', S: '#d8a880', n: '#6b4426', k: '#2a2230', j: '#3d5a9e', h: '#2a2230' };
+
+function spoon(x, y, ang, sc = 1) {
+  X.save(); X.translate(Math.round(x), Math.round(y)); X.rotate(ang);
+  X.fillStyle = '#9aa0ae'; X.fillRect(-1 * sc, 0, 2 * sc, 7 * sc);
+  X.fillStyle = '#c8ccd6'; X.beginPath(); X.ellipse(0, -2 * sc, 2.6 * sc, 3.4 * sc, 0, 0, 7); X.fill();
+  X.fillStyle = '#eef0f4'; X.fillRect(-1 * sc, -4 * sc, 1 * sc, 2 * sc);
+  X.restore();
+}
+function drawHaas(x, y, sc = 1, t = 0, flip = false) {
+  SPR(HAAS, HAAS_PAL, x, y, sc, flip);
+  const w = Math.sin(t * 6) * .25;
+  spoon(x + 1 * sc, y + 14 * sc, -0.3 + w, sc);
+  spoon(x + 15 * sc, y + 14 * sc, 0.3 - w, sc);
+}
+function drawMaci(x, y, sc = 1, flip = false) { SPR(MACI, MACI_PAL, x, y, sc, flip); }
+function drawTeacher(name, x, y, sc, t) { if (name === 'Maciej') drawMaci(x, y + 4 * sc, sc); else drawHaas(x, y, sc, t); }
+
+// ===== Gedeelde tekeningen =====
+function paper(bg = '#fbf6e9') {
+  R(0, 0, W, H, bg);
+  for (let y = 14; y < H; y += 12) R(0, y, W, 1, 'rgba(90,130,200,.18)');
+  R(22, 0, 1, H, 'rgba(217,64,64,.35)');
+}
+function board(x, y, w, h) {
+  R(x - 3, y - 3, w + 6, h + 6, '#a8743f'); R(x - 3, y + h, w + 6, 3, '#8a5a2e');
+  R(x, y, w, h, '#2f5d46');
+  for (let i = 0; i < 6; i++) R(x + 8 + i * 37 % (w - 20), y + 6 + (i * 13) % (h - 10), 14, 1, 'rgba(255,255,255,.05)');
+}
+function flask(x, y, full) {
+  const c = full ? '#64c0d9' : 'rgba(0,0,0,0)';
+  R(x + 3, y, 4, 4, '#5a6070'); R(x + 4, y + 1, 2, 3, '#dfe8f2');
+  E(x + 5, y + 9, 5, 5, '#5a6070'); E(x + 5, y + 9, 4, 4, '#dfe8f2');
+  if (full) { E(x + 5, y + 10, 3, 3, c); R(x + 4, y + 7, 1, 1, '#fff'); }
+}
+</script>
+<script>/* ===== games.js ===== */
+'use strict';
+// ===== LES 1: Haastregt — Cellen & het Lab =====
+function cell(x, y) {
+  E(x, y, 40, 30, '#5f9f52'); E(x, y, 38, 28, '#c8ecb0');
+  O(x + 8, y - 3, 10, '#7a4fa8'); O(x + 8, y - 3, 8, '#9b6fd0'); O(x + 5, y - 6, 3, '#d2b6f2');
+  for (const [a, b] of [[-20, 8], [-14, -14], [24, 12], [-4, 16]]) { E(x + a, y + b, 6, 3, '#c0602a'); E(x + a, y + b, 5, 2, '#e08a4a'); }
+}
+
+const G_SCHERP = {
+  verb: 'STEL SCHERP!', hint: 'SPATIE (of klik) als de cel scherp is', time: 5, bg: '#e9f3ec',
+  fact: 'Echt: de kern van een cel bewaart het DNA.',
+  init() { return { t: 0, w: rnd(2.2, 3.1), ph: rnd(0, 6), blur: 8 }; },
+  update(s, dt) {
+    if (s.done) return;
+    s.t += dt; s.blur = Math.abs(Math.sin(s.t * s.w + s.ph)) * 9;
+    if (P(' ') || I.clicked) { s.done = true; if (s.blur < 1.7) { s.win = true; SFX.win(); } else { s.lose = true; SFX.lose(); } }
+  },
+  draw(s) {
+    R(150, 160, 20, 10, '#5a6070'); R(120, 168, 80, 6, '#5a6070');
+    O(160, 92, 64, '#3a3340'); O(160, 92, 60, '#fff9e6');
+    const b = s.win ? 0 : s.blur;
+    if (b < .6) cell(160, 92);
+    else { X.globalAlpha = .4; cell(160 - b, 92); cell(160 + b, 92); cell(160, 92 + b * .6); X.globalAlpha = 1; }
+    R(272, 36, 14, 112, '#5a6070'); R(274, 38, 10, 108, '#dfe3ea'); R(274, 38, 10, 18, '#9fdc8a');
+    R(268, 38 + (s.blur / 9) * 100, 22, 8, '#3f9b4a'); R(268, 38 + (s.blur / 9) * 100, 22, 2, '#7fd06a');
+    T('SCHERP', 279, 30, 7, '#3f9b4a');
+    if (s.lose) T('WAZIG!', 160, 92, 16, '#d94040', 'center', '#fff');
+  }
+};
+
+const G_VANG = {
+  verb: 'VANG!', hint: 'KLIK op de bacterie', time: 4.5, bg: '#f3ece9',
+  fact: 'Echt: in je mond wonen meer bacteriën dan er mensen op aarde zijn.',
+  init() { const a = rnd(0, 6); return { x: 160, y: 95, vx: Math.cos(a) * 85, vy: Math.sin(a) * 85, wob: 0 }; },
+  update(s, dt) {
+    s.wob += dt; if (s.win) return;
+    s.x += s.vx * dt; s.y += s.vy * dt;
+    const dx = s.x - 160, dy = s.y - 95, d = Math.hypot(dx, dy);
+    if (d > 52) { const nx = dx / d, ny = dy / d, dot = s.vx * nx + s.vy * ny; s.vx -= 2 * dot * nx; s.vy -= 2 * dot * ny; s.x = 160 + nx * 52; s.y = 95 + ny * 52; }
+    if (Math.random() < dt * 1.8) { const a = Math.atan2(s.vy, s.vx) + rnd(-1.2, 1.2), sp = Math.hypot(s.vx, s.vy); s.vx = Math.cos(a) * sp; s.vy = Math.sin(a) * sp; }
+    if (I.clicked) { if (Math.hypot(I.mx - s.x, I.my - s.y) < 12) { s.win = true; SFX.win(); } else SFX.tick(); }
+  },
+  draw(s) {
+    O(160, 95, 66, '#9aa6b0'); O(160, 95, 62, '#fdf3c8');
+    for (let i = 0; i < 9; i++) O(160 + Math.cos(i * 2.3) * 38, 95 + Math.sin(i * 1.7) * 32, 2, '#efe0a0');
+    const x = s.x, y = s.y;
+    for (let i = 0; i < 5; i++) R(x - 11 - i * 2, y + Math.round(Math.sin(s.wob * 22 + i) * 2), 2, 1, '#2a2230');
+    E(x, y, 10, 6, '#2a2230'); E(x, y, 9, 5, '#d94a8a');
+    R(x - 4, y - 2, 3, 3, '#fff'); R(x + 1, y - 2, 3, 3, '#fff'); R(x - 3, y - 1, 1, 1, '#000'); R(x + 2, y - 1, 1, 1, '#000');
+    R(x - 5, y - 8, 10, 2, '#2a2230'); R(x - 3, y - 13, 6, 5, '#2a2230'); R(x - 3, y - 10, 6, 1, '#d94040');
+    if (s.win) T('GEVANGEN!', x, y - 22, 9, '#3f9b4a', 'center', '#fff');
+    T('(deze bacterie draagt een hoed, dat is normaal)', 160, 170, 6, '#8a7f70');
+  }
+};
+
+const G_KOKEN = {
+  verb: 'NIET OVERKOKEN!', hint: 'HOUD SPATIE (of muis) in om het vuur lager te zetten', time: 5, surviveWin: true, bg: '#eef0f6',
+  fact: 'Echt: op de Mount Everest kookt water al bij ongeveer 70 °C.',
+  init() { return { lv: .35, rate: rnd(.3, .4), bub: [], t: 0 }; },
+  update(s, dt) {
+    if (s.lose) return; s.t += dt;
+    const cool = K(' ') || I.down;
+    s.lv += (cool ? -.5 : s.rate + Math.sin(s.t * 5) * .15) * dt; s.lv = Math.max(.05, s.lv);
+    if (Math.random() < dt * (cool ? 3 : 14)) s.bub.push({ x: rnd(-7, 7), y: 0, v: rnd(20, 40) });
+    s.bub.forEach(b => b.y += b.v * dt); s.bub = s.bub.filter(b => b.y < 100);
+    if (s.lv >= .9) { s.lose = true; SFX.lose(); }
+  },
+  draw(s) {
+    const top = 36, bot = 136, h = bot - top, ly = bot - h * Math.min(1, s.lv);
+    R(148, top, 24, h, '#e6eef6');
+    R(150, ly, 20, bot - ly, s.lv > .7 ? '#e8708a' : '#64c0d9');
+    for (const b of s.bub) if (bot - b.y > ly + 2) O(160 + b.x, bot - b.y, 2, '#d8f4fb');
+    R(146, top, 2, h + 2, '#5a6070'); R(172, top, 2, h + 2, '#5a6070'); R(146, bot, 28, 2, '#5a6070'); R(142, top - 3, 36, 3, '#5a6070');
+    R(138, top + 10, 44, 2, '#d94040'); T('MAX', 196, top + 11, 8, '#d94040');
+    R(150, 150, 20, 16, '#5a6070'); R(140, 166, 40, 4, '#44495a');
+    const cool = K(' ') || I.down, fh = cool ? 4 : 11 + Math.sin(s.t * 30) * 3;
+    E(160, 146 - fh / 2, 5, Math.max(1, fh / 2), '#f2994a'); E(160, 147 - fh / 3, 3, Math.max(1, fh / 3), '#f2c94c');
+    if (s.lose) { for (let i = 0; i < 7; i++) O(145 + i * 5, top - 6 - (i % 2) * 4, 5, '#f4c0cc'); T('KOOKT OVER!', 160, 20, 14, '#d94040', 'center', '#fff'); }
+  }
+};
+
+const G_LEPEL = {
+  verb: 'ONTWIJK!', hint: '← → (of A/D) om de lepels te ontwijken', time: 5, surviveWin: true, bg: '#f6efe3',
+  fact: 'Niet waar: Haastregt heeft ooit een lepel laten ontkiemen.',
+  init() { return { x: 160, sp: [], cd: .35, t: 0 }; },
+  update(s, dt) {
+    s.t += dt; if (s.lose) return;
+    s.x = clamp(s.x + ((RIGHT() ? 1 : 0) - (LEFT() ? 1 : 0)) * 140 * dt, 16, 304);
+    s.cd -= dt;
+    if (s.cd <= 0) { s.cd = rnd(.22, .4); s.sp.push({ x: clamp(s.x + rnd(-55, 55), 12, 308), y: 34, r: rnd(0, 6), v: rnd(95, 135) }); SFX.tick(); }
+    for (const p of s.sp) { p.y += p.v * dt; p.r += dt * 14; if (Math.abs(p.x - s.x) < 9 && p.y > 146 && p.y < 172) { s.lose = true; SFX.lose(); } }
+    s.sp = s.sp.filter(p => p.y < 190);
+  },
+  draw(s) {
+    R(0, 170, W, 10, '#c9b48a');
+    drawHaas(152, 4, 1, s.t * 3);
+    for (const p of s.sp) spoon(p.x, p.y, p.r, 1.4);
+    drawMaci(s.x - 8, 151);
+    if (s.lose) T('AU! LEPEL!', s.x, 140, 10, '#d94040', 'center', '#fff');
+  }
+};
+
+const Q1 = [
+  ['Waar zit het DNA in een cel?', 'In de kern', 'In de lepel'],
+  ['Wat doet een mitochondrie?', 'Energie maken', 'Zingen'],
+  ['Hoeveel poten heeft een insect?', '6', '8'],
+  ['Wat is een amoebe?', 'Een eencellige', 'Een Pokémon'],
+  ['Planten maken suiker met...', 'Zonlicht', 'Wifi'],
+  ['Hoeveel lepels heeft Haastregt?', '2', '0'],
+  ['Wat heeft een plantencel wel en jij niet?', 'Een celwand', 'Een snor'],
+  ['Wat zie je door een microscoop?', 'Kleine dingen', 'De toekomst'],
+  ['Wat is de grootste cel van je lichaam?', 'De eicel', 'Haastregts ego'],
+];
+const G_VRAAG = {
+  verb: 'BEANTWOORD!', hint: 'KLIK het antwoord of druk ← →', time: 4.5, bg: '#fbf6e9',
+  fact: 'Niet waar: Haastregts snor doet aan fotosynthese.',
+  init() { const q = pick(Q1), sw = Math.random() < .5; return { q: q[0], a: sw ? [q[2], q[1]] : [q[1], q[2]], ok: sw ? 1 : 0, picked: -1 }; },
+  update(s) {
+    if (s.win || s.lose) return;
+    let p = -1;
+    if (PL() || P('1')) p = 0; if (PR() || P('2')) p = 1;
+    if (I.clicked) for (let k = 0; k < 2; k++) { const bx = k ? 170 : 30; if (I.mx > bx && I.mx < bx + 120 && I.my > 104 && I.my < 144) p = k; }
+    if (p >= 0) { s.picked = p; if (p === s.ok) { s.win = true; SFX.win(); } else { s.lose = true; SFX.lose(); } }
+  },
+  draw(s) {
+    board(20, 22, 280, 64);
+    T(s.q, 160, 54, 11, '#f7f7f2');
+    for (let k = 0; k < 2; k++) {
+      const bx = k ? 170 : 30, sel = s.picked === k, good = sel && k === s.ok;
+      R(bx + 2, 106, 120, 40, '#2a2230');
+      R(bx, 104, 120, 40, sel ? (good ? '#9fdc8a' : '#f29a9a') : '#fff');
+      R(bx, 104, 120, 3, k ? '#3d6fd9' : '#d9a440');
+      T((k ? '→  ' : '←  ') + s.a[k], bx + 60, 125, 9, '#2a2230');
+    }
+    if (s.lose) T('FOUT. NABLIJVEN.', 160, 160, 12, '#d94040', 'center', '#fff');
+  }
+};
+
+const G_PIPET = {
+  verb: 'DRUPPEL!', hint: 'SPATIE (of klik) als de pipet boven het schaaltje hangt', time: 4.5, bg: '#eef4f0',
+  fact: 'Echt: in een petrischaal kweek je bacteriën op een soort gelei.',
+  init() { return { x: rnd(40, 280), v: Math.random() < .5 ? 125 : -125, tx: rnd(90, 230), d: null }; },
+  update(s, dt) {
+    if (s.win || s.lose) return;
+    if (!s.d) {
+      s.x += s.v * dt;
+      if (s.x < 30) { s.x = 30; s.v *= -1; } if (s.x > 290) { s.x = 290; s.v *= -1; }
+      if (P(' ') || I.clicked) { s.d = { x: s.x, y: 52 }; SFX.tick(); }
+    } else {
+      s.d.y += 200 * dt;
+      if (s.d.y >= 136) { if (Math.abs(s.d.x - s.tx) < 16) { s.win = true; SFX.win(); } else { s.lose = true; SFX.lose(); } }
+    }
+  },
+  draw(s) {
+    R(0, 150, W, 30, '#c9cdd6'); R(0, 150, W, 2, '#9aa0ae');
+    E(s.tx, 143, 22, 6, '#7a8090'); E(s.tx, 142, 20, 5, '#e8f0f4'); E(s.tx, 143, 16, 3, '#f2e6a0');
+    if (s.win) { for (let i = 0; i < 5; i++) O(s.tx - 10 + i * 5, 142, 2, '#d94a8a'); T('KOLONIE!', s.tx, 118, 10, '#3f9b4a', 'center', '#fff'); }
+    const px = Math.round(s.x);
+    R(px - 5, 10, 10, 14, '#d94040'); R(px - 2, 24, 4, 24, '#dfe8f2'); R(px - 1, 26, 2, 18, '#64c0d9'); R(px - 1, 48, 2, 4, '#dfe8f2');
+    if (s.d && !s.win) { O(s.d.x, s.d.y, 3, '#64c0d9'); R(s.d.x - 1, s.d.y - 2, 1, 1, '#fff'); }
+    if (s.lose) T('NAAST!', 160, 90, 16, '#d94040', 'center', '#fff');
+  }
+};
+
+const G_SORTEER = {
+  verb: 'SORTEER!', hint: '← PLANT  ·  DIER →   (of klik op een bak)', time: 6.5, bg: '#f0f4e6',
+  fact: 'Echt: plantencellen hebben een stevige celwand en bladgroenkorrels. Dierencellen niet.',
+  init() { return { ks: shuffle(['plant', 'dier', Math.random() < .4 ? 'haas' : pick(['plant', 'dier'])]), i: 0, x: 160, y: 20, fly: null }; },
+  update(s, dt) {
+    if (s.win || s.lose) return;
+    if (s.fly) {
+      s.fly.t += dt; s.x += s.fly.dir * 260 * dt; s.y += 60 * dt;
+      if (s.fly.t > .3) { s.fly = null; s.i++; s.x = 160; s.y = 20; if (s.i >= s.ks.length) { s.win = true; SFX.win(); } }
+      return;
+    }
+    s.y += 38 * dt;
+    let c = 0; if (PL()) c = -1; if (PR()) c = 1;
+    if (I.clicked && I.my > 110) c = I.mx < 160 ? -1 : 1;
+    if (c) { if ((c === -1) === (s.ks[s.i] === 'plant')) { s.fly = { dir: c, t: 0 }; SFX.blip(); } else { s.lose = true; SFX.lose(); } }
+    else if (s.y > 118) { s.lose = true; SFX.lose(); }
+  },
+  draw(s) {
+    for (const [bx, lab, col] of [[20, 'PLANT', '#3f9b4a'], [220, 'DIER', '#d94a8a']]) {
+      R(bx + 2, 128, 80, 44, '#2a2230'); R(bx, 126, 80, 44, col); R(bx + 4, 130, 72, 8, 'rgba(255,255,255,.3)'); T(lab, bx + 40, 152, 11, '#fff');
+    }
+    T('←', 112, 150, 14, '#3f9b4a'); T('→', 208, 150, 14, '#d94a8a');
+    if (s.i < s.ks.length && !s.win) {
+      const k = s.ks[s.i], x = s.x, y = s.y;
+      if (k === 'plant') { R(x - 14, y - 11, 28, 22, '#3d7a33'); R(x - 12, y - 9, 24, 18, '#c8ecb0'); for (const [a, b] of [[-7, -4], [5, -5], [-3, 5], [7, 4]]) E(x + a, y + b, 3, 2, '#3f9b4a'); O(x + 1, y, 4, '#7a4fa8'); }
+      else if (k === 'dier') { E(x, y, 14, 11, '#c0607a'); E(x, y, 13, 10, '#f6c8d4'); O(x - 2, y - 1, 4, '#7a4fa8'); }
+      else { SPR(HAAS.slice(0, 9), HAAS_PAL, x - 16, y - 9, 2); T('(ook een dier)', x, y + 16, 6, '#6b5a4a'); }
+    }
+    T(Math.min(s.i, s.ks.length) + ' / ' + s.ks.length, 160, 10, 8, '#6b5a4a');
+    if (s.lose) T('VERKEERDE BAK!', 160, 70, 14, '#d94040', 'center', '#fff');
+  }
+};
+
+// ===== LES 2: Maciej — Fossielen =====
+function bone(x, y, ang = 0, sc = 1) {
+  X.save(); X.translate(Math.round(x), Math.round(y)); X.rotate(ang); X.scale(sc, sc);
+  X.fillStyle = '#8a7f60'; X.fillRect(-6, -2, 12, 4); for (const a of [-6, 6]) for (const b of [-2, 2]) { X.beginPath(); X.arc(a, b, 2.6, 0, 7); X.fill(); }
+  X.fillStyle = '#fffbe8'; X.fillRect(-6, -1, 12, 2); for (const a of [-6, 6]) for (const b of [-2, 2]) { X.beginPath(); X.arc(a, b, 1.8, 0, 7); X.fill(); }
+  X.restore();
+}
+function chicken(x, y, t = 0) {
+  E(x, y, 7, 5, '#2a2230'); E(x, y, 6, 4, '#fff'); O(x + 5, y - 5, 3, '#fff'); R(x + 8, y - 5, 3, 2, '#f2994a');
+  R(x + 4, y - 9, 3, 2, '#d94040'); R(x + 5, y - 6, 1, 1, '#000'); R(x - 2, y + 4, 1, 4, '#f2994a'); R(x + 2, y + 4, 1, 4, '#f2994a');
+  R(x - 4, y - 1 + Math.round(Math.sin(t * 20)), 4, 2, '#e8e2d6');
+}
+
+const G_BORSTEL = {
+  verb: 'BORSTEL!', hint: 'BEWEEG DE MUIS heen en weer over het zand', time: 5.5, bg: '#f4e6c8',
+  fact: 'Echt: sommige dinobotten die gevonden zijn, zijn groter dan een volwassen mens.',
+  init() { return { g: new Array(14 * 6).fill(1), bx: 90, by: 66, pct: 0 }; },
+  update(s, dt) {
+    if (s.win) return;
+    if (I.mv > 0) for (let j = 0; j < 6; j++) for (let i = 0; i < 14; i++) {
+      const k = j * 14 + i; if (s.g[k] <= 0) continue;
+      if (Math.hypot(I.mx - (s.bx + i * 10 + 5), I.my - (s.by + j * 10 + 5)) < 12) s.g[k] -= I.mv * .06;
+    }
+    if (I.mv > 3 && Math.random() < .5) SFX.brush();
+    s.pct = 1 - s.g.filter(v => v > 0).length / s.g.length;
+    if (s.pct >= (REMIX ? .6 : .85)) { s.win = true; SFX.win(); }
+  },
+  draw(s) {
+    R(80, 58, 160, 76, '#c99a5c'); R(84, 62, 152, 68, '#e3c08a');
+    Ln(110, 96, 210, 96, '#8a7f60', 12); Ln(110, 96, 210, 96, '#fffbe8', 9);
+    for (const [a, b] of [[106, 89], [106, 103], [214, 89], [214, 103]]) { O(a, b, 8, '#8a7f60'); O(a, b, 6, '#fffbe8'); }
+    for (let j = 0; j < 6; j++) for (let i = 0; i < 14; i++) {
+      const v = s.g[j * 14 + i]; if (v <= 0) continue;
+      R(s.bx + i * 10, s.by + j * 10, 10, 10, (i + j) % 2 ? '#b8894f' : '#ad7f47');
+      if (v < .5) R(s.bx + i * 10 + 3, s.by + j * 10 + 3, 4, 4, '#e3c08a');
+    }
+    T(Math.round(s.pct * 100) + '% schoon', 160, 146, 9, '#6b4426');
+    drawMaci(30, 128); T('voorzichtig!!', 38, 120, 7, '#3d8b3d');
+    R(I.mx - 4, I.my - 9, 8, 5, '#a8743f'); R(I.mx - 4, I.my - 4, 8, 4, '#f2c94c');
+    if (s.win) T('EEN DIJBEEN!', 160, 40, 14, '#3d8b3d', 'center', '#fff');
+  }
+};
+
+function trex(x, y, t) {
+  const c = '#5c9e4a', d = '#3d7a33';
+  R(x - 84, y - 22, 16, 6, c); R(x - 72, y - 26, 14, 8, c);
+  R(x - 60, y - 34, 40, 28, c); R(x - 60, y - 14, 40, 6, d);
+  R(x - 32, y - 52, 32, 18, c); R(x - 30, y - 34, 28, 6, c); R(x - 32, y - 37, 32, 2, d);
+  R(x - 10, y - 48, 4, 4, '#fff'); R(x - 8, y - 47, 2, 2, '#000');
+  for (let i = 0; i < 5; i++) { R(x - 28 + i * 5, y - 36, 2, 3, '#fff'); R(x - 26 + i * 5, y - 34, 2, 2, '#fff'); }
+  R(x - 22, y - 24, 6, 2, d); R(x - 17, y - 24, 2, 4, d);
+  const o = Math.round(Math.sin(t * 16) * 3);
+  R(x - 52, y - 8 + o, 9, 12 - o, d); R(x - 36, y - 8 - o, 9, 12 + o, d);
+}
+const G_RENNEN = {
+  verb: 'RENNEN!', hint: '← en → OM DE BEURT indrukken', time: 5, surviveWin: true, bg: '#e3f0d8',
+  fact: 'Echt: een volwassen T-rex kon waarschijnlijk maar ongeveer 20 km/u rennen.',
+  init() { return { d: REMIX ? 95 : 70, last: '', t: 0, run: 0 }; },
+  update(s, dt) {
+    s.t += dt; if (s.lose) return;
+    let k = ''; if (PL()) k = 'L'; if (PR()) k = 'R';
+    if (k && k !== s.last) { s.d = Math.min(130, s.d + 7); s.last = k; s.run += 1; SFX.tick(); }
+    s.d -= 26 * dt;
+    if (s.d <= 0) { s.lose = true; SFX.lose(); }
+  },
+  draw(s) {
+    R(0, 150, W, 30, '#a8c87a'); R(0, 150, W, 2, '#7da050');
+    for (let i = 0; i < 8; i++) { const fx = ((i * 53 - s.t * 90) % 360 + 360) % 360 - 20; Ln(fx, 150, fx - 5, 138, '#5c9e4a', 2); Ln(fx, 150, fx + 5, 138, '#5c9e4a', 2); }
+    const mx = 220, bob = s.run % 2 ? -2 : 0;
+    drawMaci(mx, 131 + bob, 1, true);
+    trex(mx - 4 - s.d, 146, s.t);
+    T('afstand: ' + Math.max(0, Math.round(s.d)), 270, 20, 8, '#3d7a33');
+    if (s.lose) T('HAP!', mx, 110, 18, '#d94040', 'center', '#fff');
+  }
+};
+
+const DINOS = ['T-rex', 'Brachiosaurus', 'Triceratops', 'Stegosaurus', 'Kip'];
+function skel(type, cx, cy) {
+  const b = '#fffbe8', ln = (a, c, d, e, w = 2) => Ln(cx + a, cy + c, cx + d, cy + e, b, w);
+  if (type === 'Kip') {
+    E(cx, cy + 10, 14, 10, b); E(cx, cy + 10, 12, 8, '#3a6650');
+    for (let i = -8; i <= 8; i += 4) ln(i, 4, i, 16, 1);
+    O(cx + 16, cy - 6, 6, b); O(cx + 16, cy - 6, 4, '#3a6650'); R(cx + 22, cy - 7, 5, 3, b); R(cx + 13, cy - 14, 6, 3, b);
+    ln(12, 2, 15, -2); ln(-4, 20, -4, 34); ln(4, 20, 4, 34); ln(-4, 34, -9, 36, 1); ln(4, 34, 9, 36, 1); ln(-14, 8, -22, 2);
+    return;
+  }
+  if (type === 'T-rex') {
+    ln(-50, 14, -20, 0); ln(-20, 0, 20, -4); for (let i = -16; i <= 14; i += 5) ln(i, -2, i, 12, 1);
+    R(cx + 20, cy - 18, 26, 16, b); R(cx + 22, cy - 16, 22, 6, '#3a6650'); R(cx + 30, cy - 15, 4, 4, b);
+    for (let i = 0; i < 5; i++) R(cx + 24 + i * 4, cy - 4, 1, 3, b);
+    ln(14, 2, 20, 8, 1); ln(20, 8, 23, 7, 1); ln(-8, 4, -14, 24); ln(-14, 24, -6, 40); ln(4, 2, -2, 24); ln(-2, 24, 6, 40);
+    return;
+  }
+  if (type === 'Brachiosaurus') {
+    ln(-50, 12, -30, 4); ln(-30, 4, 14, 2); for (let i = -26; i <= 10; i += 5) ln(i, 4, i, 18, 1);
+    ln(14, 2, 34, -40); O(cx + 38, cy - 44, 5, b); R(cx + 40, cy - 44, 8, 3, b);
+    ln(-22, 10, -22, 42); ln(-10, 10, -10, 42); ln(4, 8, 4, 42); ln(12, 6, 12, 42);
+    return;
+  }
+  if (type === 'Triceratops') {
+    ln(-50, 10, -30, 2); ln(-30, 2, 14, 2); for (let i = -26; i <= 10; i += 5) ln(i, 2, i, 16, 1);
+    E(cx + 22, cy - 6, 9, 14, b); E(cx + 22, cy - 6, 7, 12, '#3a6650');
+    R(cx + 24, cy - 2, 18, 10, b); ln(30, -2, 46, -12); ln(36, 0, 50, -6); ln(40, 6, 48, 2, 3);
+    ln(-20, 10, -20, 34); ln(-8, 10, -8, 34); ln(4, 10, 4, 34); ln(12, 10, 12, 34);
+    return;
+  }
+  // Stegosaurus
+  ln(-50, 14, -30, 0); ln(-30, 0, -10, -8); ln(-10, -8, 14, 2); ln(14, 2, 28, 8); for (let i = -26; i <= 10; i += 5) ln(i, -2, i, 14, 1);
+  for (let i = 0; i < 6; i++) { const px = -34 + i * 9, py = (i < 3 ? -6 - i * 3 : -14 + (i - 3) * 4); X.fillStyle = b; X.beginPath(); X.moveTo(cx + px - 4, cy + py + 4); X.lineTo(cx + px, cy + py - 8); X.lineTo(cx + px + 4, cy + py + 4); X.fill(); }
+  ln(-50, 14, -56, 8); ln(-50, 14, -58, 16); O(cx + 31, cy + 9, 4, b);
+  ln(-20, 8, -20, 32); ln(-8, 4, -8, 32); ln(4, 4, 4, 32); ln(14, 6, 14, 32);
+}
+const G_DINO = {
+  verb: 'WELKE DINO?', hint: 'KLIK het goede antwoord (of 1 2 3)', time: 5, bg: '#f4e6c8',
+  fact: 'Echt: vogels stammen af van dinosaurussen. Een kip is dus familie van de T-rex.',
+  init() { const t = Math.random() < .25 ? 'Kip' : pick(DINOS); return { t, opts: shuffle([t, ...shuffle(DINOS.filter(d => d !== t)).slice(0, 2)]), picked: -1 }; },
+  update(s) {
+    if (s.win || s.lose) return;
+    let p = -1; ['1', '2', '3'].forEach((k, i) => { if (P(k)) p = i; });
+    if (I.clicked) for (let i = 0; i < 3; i++) { const bx = 22 + i * 96; if (I.mx > bx && I.mx < bx + 84 && I.my > 128 && I.my < 160) p = i; }
+    if (p >= 0) { s.picked = p; if (s.opts[p] === s.t) { s.win = true; SFX.win(); } else { s.lose = true; SFX.lose(); } }
+  },
+  draw(s) {
+    R(56, 16, 208, 104, '#5a4a3a'); R(60, 20, 200, 96, '#3a6650'); T('MUSEUM VAN MACIEJ', 160, 28, 7, '#bfe3c0');
+    skel(s.t, 160, 70);
+    for (let i = 0; i < 3; i++) {
+      const bx = 22 + i * 96, sel = s.picked === i, ok = s.opts[i] === s.t;
+      R(bx + 2, 130, 84, 30, '#2a2230');
+      R(bx, 128, 84, 30, sel ? (ok ? '#9fdc8a' : '#f29a9a') : (s.lose && ok ? '#d9f2d0' : '#fff'));
+      T((i + 1) + '. ' + s.opts[i], bx + 42, 143, 8, '#2a2230');
+    }
+  }
+};
+
+const G_SPRING = {
+  verb: 'SPRING!', hint: 'SPATIE (of klik) om over de meteorieten te springen', time: 5, surviveWin: true, bg: '#fde9d6',
+  fact: 'Echt: 66 miljoen jaar geleden sloeg een enorme meteoriet in en stierven de meeste dino\'s uit.',
+  init() { const ob = []; let x = 210; for (let i = 0; i < 3; i++) { ob.push({ x, f: rnd(0, 6) }); x += rnd(95, 130); } return { y: 0, vy: 0, ob, t: 0 }; },
+  update(s, dt) {
+    s.t += dt; if (s.lose) return;
+    if ((P(' ') || P('ArrowUp') || P('w') || I.clicked) && s.y === 0) { s.vy = 150; SFX.jump(); }
+    s.vy -= 420 * dt; s.y = Math.max(0, s.y + s.vy * dt); if (s.y === 0) s.vy = 0;
+    for (const o of s.ob) { o.x -= 110 * dt; if (Math.abs(o.x - 68) < 11 && s.y < 10) { s.lose = true; SFX.lose(); } }
+  },
+  draw(s) {
+    X.fillStyle = '#c96a4a'; X.beginPath(); X.moveTo(200, 150); X.lineTo(250, 70); X.lineTo(270, 70); X.lineTo(320, 150); X.fill();
+    R(248, 64, 24, 8, '#f2994a'); for (let i = 0; i < 4; i++) O(258 + Math.sin(s.t * 3 + i) * 6, 56 - i * 9 - (s.t * 20 % 9), 4 + i, 'rgba(120,110,110,.35)');
+    R(0, 150, W, 30, '#d9a46a'); R(0, 150, W, 2, '#a8743f');
+    for (const o of s.ob) {
+      for (let i = 1; i < 4; i++) O(o.x + i * 6, 144 - i, 5 - i, i % 2 ? '#f2994a' : '#f2c94c');
+      O(o.x, 144, 6, '#5a4a4a'); O(o.x, 144, 5, '#7a6464'); R(o.x - 3, 142, 2, 2, '#fff'); R(o.x + 1, 142, 2, 2, '#fff'); R(o.x - 2, 146, 4, 1, '#2a2230');
+    }
+    drawMaci(60, 131 - s.y, 1, true);
+    if (s.lose) T('UITGESTORVEN.', 160, 40, 14, '#d94040', 'center', '#fff');
+  }
+};
+
+const G_BOTTEN = {
+  verb: 'VANG BOTTEN!', hint: 'Vang 3 botten met ← → of de muis. GEEN kippen!', time: 6.5, bg: '#f4e6c8',
+  fact: 'Niet waar: een kip is gewoon een dino die het heeft opgegeven.',
+  init() { return { x: 160, it: [], cd: .2, n: 0, lmx: I.mx, t: 0 }; },
+  update(s, dt) {
+    s.t += dt; if (s.win || s.lose) return;
+    if (LEFT() || RIGHT()) s.x += ((RIGHT() ? 1 : 0) - (LEFT() ? 1 : 0)) * 160 * dt;
+    if (Math.abs(I.mx - s.lmx) > .5) s.x = I.mx; s.lmx = I.mx; s.x = clamp(s.x, 18, 302);
+    s.cd -= dt;
+    if (s.cd <= 0) { s.cd = rnd(.35, .55); s.it.push({ x: rnd(20, 300), y: 14, v: rnd(65, 95), k: Math.random() < .3 ? 'kip' : 'bot', r: rnd(0, 6) }); }
+    for (const o of s.it) {
+      o.y += o.v * dt; o.r += dt * 4;
+      if (!o.got && o.y > 146 && o.y < 160 && Math.abs(o.x - s.x) < 18) {
+        o.got = true;
+        if (o.k === 'bot') { s.n++; SFX.blip(); if (s.n >= 3) { s.win = true; SFX.win(); } } else { s.lose = true; SFX.lose(); }
+      }
+    }
+    s.it = s.it.filter(o => !o.got && o.y < 190);
+  },
+  draw(s) {
+    R(0, 166, W, 14, '#c99a5c');
+    R(232, 12, 80, 40, '#3a6650'); T('Botten: ' + s.n + '/3', 272, 20, 7, '#bfe3c0');
+    for (let i = 0; i < 3; i++) if (i < s.n) bone(246 + (i % 3) * 22, 32 + Math.floor(i / 3) * 10, 0, .9);
+    for (const o of s.it) o.k === 'bot' ? bone(o.x, o.y, o.r) : chicken(o.x, o.y, s.t);
+    drawMaci(s.x - 8, 136);
+    R(s.x - 17, 151, 34, 15, '#7a5228'); R(s.x - 15, 153, 30, 11, '#a8743f'); R(s.x - 15, 157, 30, 1, '#7a5228');
+    if (s.lose) T('DAT IS EEN LEVENDE DINO!', 160, 80, 12, '#d94040', 'center', '#fff');
+  }
+};
+
+function babyDino(x, y) {
+  R(x - 10, y - 4, 16, 10, '#5c9e4a'); R(x + 2, y - 12, 10, 10, '#5c9e4a'); R(x + 8, y - 10, 2, 2, '#000');
+  R(x - 14, y, 6, 3, '#5c9e4a'); R(x - 8, y + 6, 3, 4, '#3d7a33'); R(x, y + 6, 3, 4, '#3d7a33'); R(x + 6, y - 2, 4, 2, '#3d7a33');
+}
+const G_EI = {
+  verb: 'BROED!', hint: 'RAM op SPATIE (of klik heel snel)', time: 4.5, bg: '#f6ecd8',
+  fact: 'Echt: dino\'s legden eieren, net als vogels nu.',
+  init() { return { n: 0, need: REMIX ? 8 : 12, wob: 0, kid: Math.random() < .5 ? 'kip' : 'dino', t: 0 }; },
+  update(s, dt) {
+    s.t += dt; s.wob = Math.max(0, s.wob - dt * 6); if (s.win) return;
+    if (P(' ') || P('Enter') || I.clicked) { s.n++; s.wob = 1; SFX.tick(); if (s.n >= s.need) { s.win = true; SFX.win(); } }
+  },
+  draw(s) {
+    R(100, 140, 120, 10, '#c9a060'); for (let i = 0; i < 10; i++) Ln(100 + i * 12, 141, 110 + i * 12, 135, '#e0c080', 2);
+    if (!s.win) {
+      const o = Math.round(Math.sin(s.t * 40) * 2 * s.wob), cr = s.n / s.need;
+      E(160 + o, 114, 18, 24, '#8a7f60'); E(160 + o, 114, 16, 22, '#f4eedc');
+      O(152 + o, 106, 3, '#a8c87a'); O(167 + o, 120, 4, '#a8c87a'); O(158 + o, 126, 2, '#a8c87a');
+      if (cr > .3) Ln(150 + o, 108, 158 + o, 114, '#2a2230', 1);
+      if (cr > .6) { Ln(158 + o, 114, 152 + o, 121, '#2a2230', 1); Ln(161 + o, 100, 169 + o, 107, '#2a2230', 1); }
+    } else {
+      E(144, 134, 10, 7, '#f4eedc'); E(176, 134, 10, 7, '#f4eedc');
+      if (s.kid === 'kip') { chicken(160, 122, s.t); T('...een kip?', 160, 92, 10, '#d9a440', 'center', '#fff'); }
+      else { babyDino(160, 124); T('EEN BABY-DINO!', 160, 92, 11, '#3d8b3d', 'center', '#fff'); }
+    }
+    R(110, 160, 100, 6, '#d6cfc0'); R(110, 160, 100 * Math.min(1, s.n / s.need), 6, '#f2994a');
+    drawMaci(40, 128); T('warm houden!', 48, 120, 7, '#3d8b3d');
+  }
+};
+
+const G_STAPEL = {
+  verb: 'STAPEL!', hint: 'SPATIE (of klik) om het stuk skelet te laten vallen', time: 7, bg: '#eef0f6',
+  fact: 'Niet waar: de Brachiosaurus is in elkaar gezet door Maciej. Laag voor laag.',
+  init() { return { st: [{ x: 160, w: 64 }], t: 0, w: rnd(2.4, 3.1), fall: null }; },
+  update(s, dt) {
+    s.t += dt; if (s.win || s.lose) return;
+    const top = s.st[s.st.length - 1];
+    if (s.fall) {
+      s.fall.y += 260 * dt;
+      const ty = 150 - s.st.length * 14;
+      if (s.fall.y >= ty) {
+        s.fall.y = ty;
+        const a = Math.max(s.fall.x - s.fall.w / 2, top.x - top.w / 2), b = Math.min(s.fall.x + s.fall.w / 2, top.x + top.w / 2);
+        if (b - a < 12) { s.lose = true; SFX.lose(); }
+        else { s.st.push({ x: (a + b) / 2, w: b - a }); s.fall = null; SFX.blip(); if (s.st.length >= 4) { s.win = true; SFX.win(); } }
+      }
+      return;
+    }
+    if (P(' ') || I.clicked) s.fall = { x: 160 + Math.sin(s.t * s.w) * 90, w: top.w, y: 30 };
+  },
+  draw(s) {
+    R(0, 164, W, 16, '#c99a5c');
+    const parts = ['poten', 'lijf', 'nek', 'kop'];
+    s.st.forEach((b, i) => { const y = 150 - i * 14; R(b.x - b.w / 2, y, b.w, 14, '#8a7f60'); R(b.x - b.w / 2 + 1, y + 1, b.w - 2, 12, '#fffbe8'); T(parts[i], b.x, y + 7, 7, '#8a7f60'); });
+    if (!s.win) {
+      const top = s.st[s.st.length - 1], m = s.fall || { x: 160 + Math.sin(s.t * s.w) * 90, w: top.w, y: 30 };
+      if (!s.fall) Ln(m.x, 0, m.x, 30, '#9aa0ae', 1);
+      R(m.x - m.w / 2, m.y, m.w, 14, '#8a7f60'); R(m.x - m.w / 2 + 1, m.y + 1, m.w - 2, 12, s.lose ? '#f29a9a' : '#f2c94c');
+      T(parts[s.st.length], m.x, m.y + 7, 7, '#6b4426');
+    }
+    drawMaci(276, 145);
+    if (s.win) T('BRACHIOSAURUS!', 160, 24, 12, '#3d8b3d', 'center', '#fff');
+    if (s.lose) T('INGESTORT!', 160, 24, 14, '#d94040', 'center', '#fff');
+  }
+};
+
+// ===== Lessen =====
+const LESSONS = [
+  {
+    n: 1, title: 'Cellen & het Lab', teacher: 'Haastregt', color: '#3f9b4a', open: true,
+    intro: ['Goedemorgen. Lepels op tafel.', 'Vandaag: cellen. En opletten.'],
+    win: ['Voldoende.', 'Hm. Niet slecht.', 'Lepel van goedkeuring.', 'Dat zet ik in Magister. Positief.'],
+    lose: ['Fout. Biologisch fout.', 'Zelfs een amoebe deed dat beter.', 'Nablijven.', 'Ik ben teleurgesteld. In de mensheid.'],
+    games: [G_SCHERP, G_VANG, G_KOKEN, G_LEPEL, G_PIPET, G_SORTEER, G_VRAAG],
+    remixLine: 'Haastregt zet muziek aan. Dit is ongehoord.'
+  },
+  {
+    n: 2, title: 'Fossielen', teacher: 'Maciej', color: '#d9a440', open: true,
+    intro: ['Maciej neemt het vandaag over.', 'Hij houdt van dino\'s. Te veel.'],
+    win: ['DINO-WAARDIG!', 'RAWR! (dat betekent goed)', 'Dat is museumwerk!', 'Haastregt knikt. Een beetje.'],
+    lose: ['Een T-rex had dat gehaald.', 'Met zúlke armpjes zelfs.', 'Fossiel-gedrag.', 'Maciej huilt zachtjes.'],
+    games: [G_BORSTEL, G_RENNEN, G_DINO, G_SPRING, G_BOTTEN, G_EI, G_STAPEL],
+    remixLine: 'Maciej\'s playlist heet "Jurassic Bangers".'
+  },
+  { n: 3, title: 'Bodemleven', teacher: 'Dih' },
+  { n: 4, title: 'Planten', teacher: 'Prei' },
+  { n: 5, title: 'Waterleven', teacher: 'Niffo' },
+  { n: 6, title: 'Zeeleven', teacher: 'Grumbleclaw' },
+  { n: 7, title: 'Het lichaam', teacher: 'Robin' },
+];
+</script>
+<script>/* ===== games3.js ===== */
+'use strict';
+// ===== LES 3: Dih — Bodemleven =====
+const DIH = [
+  '          yyy   ',
+  '         yyLyy  ',
+  '        ppppppp ',
+  '       ppwkpwkpp',
+  '  ppp  pppppppp ',
+  ' ppPpppPpppmmpp ',
+  'ppPppPpppPpppp  ',
+  ' pppppppppppp   ',
+];
+const DIH_PAL = { p: '#f29ab0', P: '#d9708e', w: '#fff', k: '#2a2230', y: '#f2c94c', L: '#fff8b0', m: '#a8405e' };
+function drawDih(x, y, sc = 1, flip = false) { SPR(DIH, DIH_PAL, x, y, sc, flip); }
+
+function vraag(Q, fact) {
+  return Object.assign({}, G_VRAAG, {
+    fact,
+    init() { const q = pick(Q), sw = Math.random() < .5; return { q: q[0], a: sw ? [q[2], q[1]] : [q[1], q[2]], ok: sw ? 1 : 0, picked: -1 }; }
+  });
+}
+function soil(top = 40) {
+  R(0, 0, W, top, '#bfe3ff'); R(0, top, W, H - top, '#8a5a34'); R(0, top - 4, W, 4, '#5cb85c');
+  for (let i = 0; i < 40; i++) R((i * 73) % W, top + 6 + (i * 37) % (H - top - 10), 2, 2, i % 3 ? '#7a4c2a' : '#a8743f');
+}
+
+function reach(st, sx, sy, tx, ty) {
+  const seen = new Set([sy * 20 + sx]), q = [[sx, sy]];
+  while (q.length) {
+    const [x, y] = q.shift(); if (x === tx && y === ty) return true;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx, ny = y + dy, k = ny * 20 + nx;
+      if (nx < 0 || nx >= 20 || ny < 0 || ny >= 10 || st.has(k) || seen.has(k)) continue;
+      seen.add(k); q.push([nx, ny]);
+    }
+  }
+  return false;
+}
+const G_GRAAF = {
+  verb: 'GRAAF!', hint: 'Pijltjes (of WASD) · naar het blaadje, niet tegen stenen', time: 6, bg: '#8a5a34',
+  fact: 'Echt: een regenworm eet elke dag ongeveer zijn eigen gewicht aan aarde en blaadjes.',
+  init() {
+    let st = new Set(), lc = 17, lr = 5;
+    for (let t = 0; t < 30; t++) {
+      st = new Set(); lc = Math.floor(rnd(14, 19)); lr = Math.floor(rnd(1, 9));
+      for (let k = 0; k < 16; k++) { const c = Math.floor(rnd(3, 20)), r = Math.floor(rnd(0, 10)); if (!(c === lc && r === lr)) st.add(r * 20 + c); }
+      if (reach(st, 1, 5, lc, lr)) break; st = new Set();
+    }
+    return { st, lc, lr, x: 1, y: 5, dx: 1, dy: 0, ndx: 1, ndy: 0, tr: [[1, 5]], acc: 0 };
+  },
+  update(s, dt) {
+    if (s.win || s.lose) return;
+    if ((P('ArrowUp') || P('w')) && s.dy !== 1) { s.ndx = 0; s.ndy = -1; }
+    if ((P('ArrowDown') || P('s')) && s.dy !== -1) { s.ndx = 0; s.ndy = 1; }
+    if ((P('ArrowLeft') || P('a')) && s.dx !== 1) { s.ndx = -1; s.ndy = 0; }
+    if ((P('ArrowRight') || P('d')) && s.dx !== -1) { s.ndx = 1; s.ndy = 0; }
+    s.acc += dt;
+    if (s.acc >= .17) {
+      s.acc -= .17; s.dx = s.ndx; s.dy = s.ndy; s.x += s.dx; s.y += s.dy;
+      if (s.x < 0 || s.x >= 20 || s.y < 0 || s.y >= 10 || s.st.has(s.y * 20 + s.x)) { s.lose = true; SFX.lose(); return; }
+      s.tr.push([s.x, s.y]); SFX.brush();
+      if (s.x === s.lc && s.y === s.lr) { s.win = true; SFX.win(); }
+    }
+  },
+  draw(s) {
+    soil(40);
+    const ox = 40, oy = 40, cs = 12;
+    R(ox - 2, oy, 244, 122, '#7a4c2a'); R(ox, oy, 240, 120, '#9a6a40');
+    for (const [c, r] of s.tr) R(ox + c * cs, oy + r * cs, cs, cs, '#4a2e1a');
+    for (const k of s.st) { const c = k % 20, r = Math.floor(k / 20); E(ox + c * cs + 6, oy + r * cs + 6, 6, 5, '#5a5460'); E(ox + c * cs + 5, oy + r * cs + 5, 4, 3, '#8a8494'); }
+    const lx = ox + s.lc * cs + 6, ly = oy + s.lr * cs + 6;
+    E(lx, ly, 6, 4, '#3d8b3d'); E(lx, ly, 5, 3, '#6abf4b'); Ln(lx - 6, ly, lx + 6, ly, '#3d8b3d', 1);
+    const n = s.tr.length;
+    for (let i = Math.max(0, n - 5); i < n; i++) { const [c, r] = s.tr[i]; O(ox + c * cs + 6, oy + r * cs + 6, i === n - 1 ? 6 : 4, i === n - 1 ? '#f29ab0' : '#d9708e'); }
+    const hx = ox + s.x * cs + 6, hy = oy + s.y * cs + 6;
+    R(hx - 3, hy - 3, 2, 2, '#fff'); R(hx + 1, hy - 3, 2, 2, '#fff'); R(hx - 2, hy - 2, 1, 1, '#000'); R(hx + 2, hy - 2, 1, 1, '#000');
+    drawDih(250, 22); T('Dih', 240, 28, 7, '#2a2230', 'right');
+    if (s.lose) T('BONK! STEEN.', 160, 100, 14, '#d94040', 'center', '#fff');
+    if (s.win) T('MJAM!', 160, 100, 16, '#3f9b4a', 'center', '#fff');
+  }
+};
+
+const G_MOL = {
+  verb: 'ONTWIJK DE MOL!', hint: '↑ ↓ (of W/S of klik) om van tunnel te wisselen', time: 5, surviveWin: true, bg: '#8a5a34',
+  fact: 'Echt: een mol kan een stuk of 20 meter tunnel per dag graven. En hij eet wormen.',
+  init() { return { lane: 1, ms: [], cd: .3, t: 0 }; },
+  update(s, dt) {
+    s.t += dt; if (s.lose) return;
+    if (P('ArrowUp') || P('w')) { s.lane = Math.max(0, s.lane - 1); SFX.tick(); }
+    if (P('ArrowDown') || P('s')) { s.lane = Math.min(2, s.lane + 1); SFX.tick(); }
+    if (I.clicked) s.lane = clamp(Math.round((I.my - 72) / 36), 0, 2);
+    s.cd -= dt;
+    if (s.cd <= 0) {
+      s.cd = rnd(.65, .95);
+      const dir = Math.random() < .5 ? 1 : -1;
+      s.ms.push({ lane: Math.random() < .5 ? s.lane : Math.floor(rnd(0, 3)), dir, x: dir > 0 ? -24 : 344, warn: .45 });
+    }
+    for (const m of s.ms) {
+      if (m.warn > 0) { m.warn -= dt; continue; }
+      m.x += m.dir * 175 * dt;
+      if (m.lane === s.lane && Math.abs(m.x - 160) < 16) { s.lose = true; SFX.lose(); }
+    }
+    s.ms = s.ms.filter(m => m.x > -40 && m.x < 360);
+  },
+  draw(s) {
+    soil(40);
+    const ys = [72, 108, 144];
+    for (const y of ys) { R(0, y - 10, W, 20, '#4a2e1a'); R(0, y + 8, W, 2, '#3a2214'); }
+    for (const m of s.ms) {
+      const y = ys[m.lane];
+      if (m.warn > 0) { T('!', m.dir > 0 ? 10 : 310, y, 14, Math.floor(m.warn * 12) % 2 ? '#d94040' : '#fff'); continue; }
+      E(m.x, y + 1, 14, 8, '#2a2230'); E(m.x, y, 13, 7, '#4a4458');
+      O(m.x + m.dir * 13, y + 1, 3, '#f29ab0');
+      R(m.x + m.dir * 6 - 1, y - 3, 2, 2, '#fff');
+      R(m.x + m.dir * 8 - 3, y + 5, 6, 3, '#f6c8d4');
+    }
+    drawDih(152, ys[s.lane] - 5, 1, false);
+    if (s.lose) T('GEMOLD!', 160, 24, 14, '#d94040', 'center', '#fff');
+  }
+};
+
+const G_REGEN = {
+  verb: 'WACHT OP REGEN!', hint: 'Pas als het REGENT: spatie (of klik) om naar boven te gaan', time: 5, bg: '#bfe3ff',
+  fact: 'Echt: als het regent komen wormen naar boven. Merels weten dat ook.',
+  init() { return { rt: rnd(1.2, 3.0), t: 0, up: false, rain: false }; },
+  update(s, dt) {
+    s.t += dt; if (s.win || s.lose) return;
+    if (!s.rain && s.t >= s.rt) { s.rain = true; SFX.blip(); }
+    if (P(' ') || I.clicked || P('ArrowUp') || P('w')) {
+      s.up = true;
+      if (s.rain) { s.win = true; SFX.win(); } else { s.lose = true; s.bird = true; SFX.lose(); }
+    }
+    if (s.rain && s.t > s.rt + 1.3) { s.lose = true; s.late = true; SFX.lose(); }
+  },
+  draw(s) {
+    R(0, 0, W, 92, s.rain ? '#9aa6b8' : '#bfe3ff');
+    for (const [cx, cy] of [[70, 24], [210, 18], [280, 34]]) { E(cx, cy, 22, 8, s.rain ? '#6a7488' : '#fff'); E(cx + 10, cy - 5, 12, 6, s.rain ? '#6a7488' : '#fff'); }
+    if (s.rain) for (let i = 0; i < 40; i++) { const x = (i * 47) % W, y = ((i * 31 + s.t * 260) % 92); Ln(x, y, x - 2, y + 6, '#d8f4fb', 1); }
+    R(0, 92, W, H - 92, '#8a5a34'); R(0, 88, W, 4, '#5cb85c');
+    for (let i = 0; i < 20; i++) R((i * 61) % W, 100 + (i * 29) % 70, 2, 2, '#7a4c2a');
+    const bx = s.rain ? 200 + (s.t - s.rt) * 80 : 200, by = s.rain ? 80 - (s.t - s.rt) * 60 : 80;
+    E(bx, by, 10, 7, '#1e1a22'); O(bx + 8, by - 6, 5, '#1e1a22'); R(bx + 12, by - 7, 6, 2, '#f2994a'); R(bx + 8, by - 8, 2, 2, '#f2994a'); R(bx - 2, by + 6, 1, 4, '#f2994a'); R(bx + 3, by + 6, 1, 4, '#f2994a');
+    R(150, 92, 20, 50, '#5a3a22');
+    if (s.up) drawDih(146, s.bird ? 80 : 82); else drawDih(146, 128);
+    if (s.bird) T('MEREL! HAP!', 160, 50, 14, '#d94040', 'center', '#fff');
+    if (s.late) T('TE LAAT. AL DROOG.', 160, 50, 12, '#d94040', 'center', '#fff');
+    if (s.win) T('LEKKER NAT!', 160, 50, 14, '#3d6fd9', 'center', '#fff');
+  }
+};
+
+const AFVAL = { appel: 1, blad: 1, schil: 1, blik: 0, batterij: 0, lepel: 0 };
+function afvalItem(k, x, y) {
+  if (k === 'appel') { E(x, y - 7, 6, 3, '#d94040'); E(x, y + 7, 6, 3, '#d94040'); R(x - 2, y - 6, 4, 12, '#f4eedc'); R(x, y - 12, 1, 3, '#6b4426'); }
+  else if (k === 'blad') { E(x, y, 10, 6, '#a8603a'); E(x, y, 9, 5, '#d9a440'); Ln(x - 10, y, x + 10, y, '#a8603a', 1); }
+  else if (k === 'schil') { Ln(x - 8, y + 6, x, y - 6, '#d9a440', 4); Ln(x + 8, y + 6, x, y - 6, '#d9a440', 4); Ln(x, y - 6, x, y + 6, '#f2c94c', 4); R(x - 1, y - 9, 2, 3, '#6b4426'); }
+  else if (k === 'blik') { R(x - 6, y - 9, 12, 18, '#9aa0ae'); R(x - 6, y - 3, 12, 6, '#d94040'); R(x - 6, y - 9, 12, 2, '#c8ccd6'); }
+  else if (k === 'batterij') { R(x - 10, y - 5, 20, 10, '#2a2230'); R(x - 10, y - 5, 8, 10, '#f2994a'); R(x + 10, y - 2, 2, 4, '#9aa0ae'); }
+  else { spoon(x, y, .8, 1.6); T('(sorry Haastregt)', x, y + 16, 6, '#6b5a4a'); }
+}
+const G_COMPOST = {
+  verb: 'COMPOST!', hint: '← COMPOST  ·  REST →   (of klik op een bak)', time: 6.5, bg: '#efe6d6',
+  fact: 'Echt: wormen en schimmels maken van groente-afval weer nieuwe aarde.',
+  init() {
+    const c = ['appel', 'blad', 'schil'], r = ['blik', 'batterij', 'lepel'];
+    return { ks: shuffle([pick(c), pick(r), pick(Math.random() < .5 ? c : r)]), i: 0, x: 160, y: 20, fly: null };
+  },
+  // zelfde logica als SORTEER: compost gaat naar links (daar heet dat 'plant')
+  update(s, dt) {
+    const real = s.ks; s.ks = real.map(k => AFVAL[k] ? 'plant' : 'dier');
+    G_SORTEER.update(s, dt); s.ks = real;
+  },
+  draw(s) {
+    for (const [bx, lab, col] of [[20, 'COMPOST', '#7a5228'], [220, 'REST', '#5a6070']]) {
+      R(bx + 2, 128, 80, 44, '#2a2230'); R(bx, 126, 80, 44, col); R(bx + 4, 130, 72, 8, 'rgba(255,255,255,.25)'); T(lab, bx + 40, 152, 10, '#fff');
+    }
+    T('←', 112, 150, 14, '#7a5228'); T('→', 208, 150, 14, '#5a6070');
+    if (s.i < s.ks.length && !s.win) afvalItem(s.ks[s.i], s.x, s.y);
+    T(Math.min(s.i, s.ks.length) + ' / ' + s.ks.length, 160, 10, 8, '#6b5a4a');
+    drawDih(150, 112);
+    if (s.lose) T('DIH IS TELEURGESTELD.', 160, 70, 12, '#d94040', 'center', '#fff');
+  }
+};
+
+const BEESTJES = [['een pissebed', 14, 'pissebed'], ['een spin', 8, 'spin'], ['een mier', 6, 'mier'], ['een regenworm', 0, 'worm'], ['Haastregt', 2, 'haas']];
+function beestje(k, x, y) {
+  if (k === 'pissebed') {
+    for (let i = 0; i < 7; i++) Ln(x - 15 + i * 5, y + 6, x - 17 + i * 5, y + 12, '#2a2230', 1);
+    E(x, y, 20, 10, '#5a5460'); E(x, y - 1, 19, 9, '#8a8494'); for (let i = 0; i < 7; i++) R(x - 16 + i * 5, y - 9, 1, 18, '#5a5460');
+    O(x + 21, y + 2, 4, '#5a5460'); Ln(x + 23, y - 1, x + 30, y - 8, '#2a2230', 1); Ln(x + 23, y, x + 31, y - 3, '#2a2230', 1);
+  } else if (k === 'spin') {
+    for (let i = 0; i < 4; i++) { Ln(x, y, x - 14 - i * 2, y - 10 + i * 8, '#2a2230', 2); Ln(x - 14 - i * 2, y - 10 + i * 8, x - 20 - i * 2, y + 4 + i * 6, '#2a2230', 1); Ln(x, y, x + 14 + i * 2, y - 10 + i * 8, '#2a2230', 2); Ln(x + 14 + i * 2, y - 10 + i * 8, x + 20 + i * 2, y + 4 + i * 6, '#2a2230', 1); }
+    O(x, y + 2, 10, '#2a2230'); O(x, y - 8, 6, '#2a2230'); R(x - 3, y - 9, 2, 2, '#fff'); R(x + 1, y - 9, 2, 2, '#fff');
+  } else if (k === 'mier') {
+    for (const d of [-8, 0, 8]) Ln(x, y, x + d, y + 13, '#6b2a1a', 1);
+    for (const d of [-6, 6]) Ln(x, y, x + d * 2, y + 10, '#6b2a1a', 1);
+    Ln(x, y, x, y + 12, '#6b2a1a', 1);
+    O(x - 14, y, 7, '#6b2a1a'); O(x, y, 4, '#6b2a1a'); O(x + 12, y - 2, 5, '#6b2a1a'); Ln(x + 14, y - 6, x + 20, y - 14, '#6b2a1a', 1);
+  } else if (k === 'worm') drawDih(x - 24, y - 12, 3);
+  else drawHaas(x - 16, y - 24, 2, 0);
+}
+const G_POTEN = {
+  verb: 'TEL DE POTEN!', hint: 'KLIK het goede getal (of 1 2 3)', time: 5, bg: '#efe6d6',
+  fact: 'Echt: een pissebed is geen insect, maar familie van de krab. Hij heeft 14 poten.',
+  init() {
+    const b = pick(BEESTJES), others = shuffle([0, 2, 6, 8, 14, 100].filter(n => n !== b[1])).slice(0, 2);
+    return { b, opts: shuffle([b[1], ...others]), picked: -1 };
+  },
+  update(s) {
+    if (s.win || s.lose) return;
+    let p = -1; ['1', '2', '3'].forEach((k, i) => { if (P(k)) p = i; });
+    if (I.clicked) for (let i = 0; i < 3; i++) { const bx = 22 + i * 96; if (I.mx > bx && I.mx < bx + 84 && I.my > 128 && I.my < 160) p = i; }
+    if (p >= 0) { s.picked = p; if (s.opts[p] === s.b[1]) { s.win = true; SFX.win(); } else { s.lose = true; SFX.lose(); } }
+  },
+  draw(s) {
+    R(56, 12, 208, 108, '#5a3a22'); R(60, 16, 200, 100, '#d9c4a0');
+    T('Hoeveel poten heeft ' + s.b[0] + '?', 160, 26, 9, '#2a2230');
+    beestje(s.b[2], 160, 74);
+    for (let i = 0; i < 3; i++) {
+      const bx = 22 + i * 96, sel = s.picked === i, ok = s.opts[i] === s.b[1];
+      R(bx + 2, 130, 84, 30, '#2a2230');
+      R(bx, 128, 84, 30, sel ? (ok ? '#9fdc8a' : '#f29a9a') : (s.lose && ok ? '#d9f2d0' : '#fff'));
+      T((i + 1) + '.  ' + s.opts[i], bx + 42, 143, 10, '#2a2230');
+    }
+  }
+};
+
+const G_GLIBBER = {
+  verb: 'GLIBBER!', hint: 'Muis naar START, dan door de tunnel zonder de wand te raken', time: 5.5, bg: '#8a5a34',
+  fact: 'Echt: wormen hebben borstelharen op hun buik, zo kruipen ze door de grond.',
+  init() { return { ph: rnd(0, 6), amp: rnd(24, 36), hw: REMIX ? 16 : 13, started: false, prog: 30 }; },
+  update(s) {
+    if (s.win || s.lose) return;
+    const yAt = x => 95 + Math.sin(x / 30 + s.ph) * s.amp;
+    if (!s.started) { if (I.mx < 46 && I.mx > 22 && Math.abs(I.my - yAt(I.mx)) < s.hw) { s.started = true; SFX.blip(); } return; }
+    if (Math.abs(I.my - yAt(clamp(I.mx, 24, 296))) > s.hw || I.mx < 16) { s.lose = true; SFX.lose(); return; }
+    if (I.mv > 2 && Math.random() < .4) SFX.brush();
+    s.prog = Math.max(s.prog, I.mx);
+    if (I.mx >= 286) { s.win = true; SFX.win(); }
+  },
+  draw(s) {
+    const yAt = x => 95 + Math.sin(x / 30 + s.ph) * s.amp;
+    R(0, 0, W, H, '#8a5a34');
+    for (let i = 0; i < 50; i++) R((i * 67) % W, (i * 41) % H, 3, 2, i % 2 ? '#6b4426' : '#7a4c2a');
+    for (let x = 24; x < 298; x += 2) { const y = yAt(x); R(x, y - s.hw, 2, s.hw * 2, x < s.prog && s.started ? '#5a3a22' : '#d9b88a'); }
+    R(24, yAt(34) - s.hw, 20, s.hw * 2, s.started ? '#9fdc8a' : (Math.floor(Date.now() / 250) % 2 ? '#9fdc8a' : '#d9f2d0'));
+    T('START', 34, yAt(34), 6, '#2a2230');
+    E(292, yAt(292), 6, 4, '#3d8b3d'); E(292, yAt(292), 5, 3, '#6abf4b');
+    if (s.started && !s.lose) drawDih(I.mx - 13, I.my - 5);
+    if (!s.started) T('ga met je muis naar START', 160, 20, 9, '#fff', 'center', '#2a2230');
+    if (s.lose) T('AU! DE WAND!', 160, 20, 14, '#d94040', 'center', '#fff');
+    if (s.win) T('DOORGEGLIBBERD!', 160, 20, 14, '#3f9b4a', 'center', '#fff');
+  }
+};
+
+const Q3 = [
+  ['Wat eet een regenworm?', 'Dode bladeren', 'Pizza'],
+  ['Waar ademt een worm mee?', 'Zijn huid', 'Een snorkel'],
+  ['Wat maakt van afval compost?', 'Beestjes en schimmels', 'Toverkracht'],
+  ['Is een pissebed een insect?', 'Nee', 'Ja, een grote'],
+  ['Wie eet er graag wormen?', 'Merels', 'Haastregt'],
+  ['Wat doen wormen bij regen?', 'Naar boven komen', 'Paraplu pakken'],
+  ['Wie geeft les 3?', 'Dih', 'Meneer Mol'],
+];
+const G_VRAAG3 = vraag(Q3, 'Niet waar: Dih heeft een rijbewijs. Voor ondergrondse tunnels.');
+
+Object.assign(LESSONS[2], {
+  color: '#a8603a', open: true,
+  intro: ['Dih graaft zich door het bord heen.', 'Vandaag: alles onder de grond.'],
+  win: ['Dih kronkelt van trots.', 'Diep. Heel diep.', 'Goed gegraven!', 'Haastregt: "Acceptabel, worm."'],
+  lose: ['Dih zit vast in de klei.', 'Een mol had dat beter gedaan.', 'Terug de grond in.', 'Dih is even heel stil.'],
+  games: [G_GRAAF, G_MOL, G_REGEN, G_COMPOST, G_POTEN, G_GLIBBER, G_VRAAG3],
+  remixLine: 'Dih danst. Het is vooral kronkelen.'
+});
+</script>
+<script>/* ===== games4.js ===== */
+'use strict';
+// ===== LES 4: Prei — Planten =====
+const PREI = [
+  ' kk   kk  ',
+  'kwpk kwpk ',
+  'kwpk kwpk ',
+  'kwpk kwpk ',
+  'kwwwkwwwk ',
+  'kwwwwwwwwk',
+  'kwbwwwwbwk',
+  'kwwwwnwwwk',
+  'kwwwmmmwwk',
+  ' kwwwwwwk ',
+  '  kwwwwk  ',
+  ' kwwwwwwk ',
+  'kwwwwwwwwk',
+  'kwwwwwwwwk',
+  ' kwwkkwwk ',
+  ' kkk  kkk ',
+];
+const PREI_PAL = { k: '#6b5a4a', w: '#d8c8b4', p: '#f0b4c0', b: '#2a2230', n: '#d9708e', m: '#fff' };
+function drawPrei(x, y, sc = 1, flip = false) {
+  SPR(PREI, PREI_PAL, x, y, sc, flip);
+  const lx = flip ? x - 9 * sc : x + 5 * sc;
+  R(lx, y + 10 * sc, 14 * sc, 3 * sc, '#f4f0dc'); R(lx, y + 10 * sc, 14 * sc, 1 * sc, '#fffbe8');
+  R(flip ? lx - 6 * sc : lx + 14 * sc, y + 9 * sc, 6 * sc, 5 * sc, '#3f9b4a');
+  R(flip ? lx + 13 * sc : lx, y + 10 * sc, sc, 3 * sc, '#8a7f60');
+}
+const GUESTS = {};
+function drawGuest(name, x, yb, sc = 1, flip = false) {
+  if (name === 'Maciej') drawMaci(x, yb - 19 * sc, sc, flip);
+  else if (name === 'Dih') drawDih(x, yb - DIH.length * sc, sc, flip);
+  else if (name === 'Prei') drawPrei(x, yb - PREI.length * sc, sc, flip);
+  else if (GUESTS[name]) GUESTS[name](x, yb, sc, flip);
+}
+function field() { R(0, 0, W, 150, '#cfeaf6'); R(0, 150, W, 30, '#7a5228'); R(0, 146, W, 4, '#6abf4b'); }
+function flower(x, y, c, r = 6) {
+  for (let i = 0; i < 5; i++) O(x + Math.cos(i * 1.256) * r * .8, y + Math.sin(i * 1.256) * r * .8, Math.ceil(r * .55), c);
+  O(x, y, Math.ceil(r * .45), '#f2c94c');
+}
+
+const G_ZON = {
+  verb: 'NAAR DE ZON!', hint: '← → (of muis) · houd de bloem naar de zon gericht', time: 5, bg: '#cfeaf6',
+  fact: 'Echt: planten groeien naar het licht toe. Dat heet fototropie.',
+  init() { return { ph: rnd(0, 6), sp: rnd(.8, 1.1), a: 0, m: 0, t: 0, sa: 0, lmx: I.mx }; },
+  update(s, dt) {
+    s.t += dt; s.sa = Math.sin(s.t * s.sp + s.ph) * 1.1;
+    if (s.win) return;
+    if (LEFT()) s.a -= 2.2 * dt; if (RIGHT()) s.a += 2.2 * dt;
+    if (Math.abs(I.mx - s.lmx) > .5) s.a = (I.mx - 160) / 100; s.lmx = I.mx;
+    s.a = clamp(s.a, -1.3, 1.3);
+    if (Math.abs(s.a - s.sa) < .2) s.m += dt * .5; else s.m = Math.max(0, s.m - dt * .15);
+    if (s.m >= 1) { s.win = true; SFX.win(); }
+  },
+  draw(s) {
+    field();
+    const sx = 160 + Math.sin(s.sa) * 120, sy = 165 - Math.cos(s.sa) * 120;
+    for (let i = 0; i < 8; i++) Ln(sx + Math.cos(i * .785 + s.t) * 14, sy + Math.sin(i * .785 + s.t) * 14, sx + Math.cos(i * .785 + s.t) * 19, sy + Math.sin(i * .785 + s.t) * 19, '#f2c94c', 2);
+    O(sx, sy, 11, '#f2994a'); O(sx, sy, 9, '#f2c94c');
+    const hx = 160 + Math.sin(s.a) * 55, hy = 150 - Math.cos(s.a) * 55, ok = Math.abs(s.a - s.sa) < .2;
+    Ln(160, 150, (160 + hx) / 2 - Math.sin(s.a) * 4, (150 + hy) / 2, '#3d8b3d', 3); Ln((160 + hx) / 2 - Math.sin(s.a) * 4, (150 + hy) / 2, hx, hy, '#3d8b3d', 3);
+    E(152, 128, 7, 3, '#5cb85c'); E(168, 120, 7, 3, '#5cb85c');
+    flower(hx, hy, ok ? '#f6a0c0' : '#c8a0b0', 9);
+    R(hx - 2, hy - 1, 1, 1, '#2a2230'); R(hx + 1, hy - 1, 1, 1, '#2a2230');
+    R(298, 30, 10, 110, '#5a6070'); R(300, 32 + 106 * (1 - s.m), 6, 106 * s.m, '#f2c94c');
+    T('ZON', 303, 22, 7, '#d9a440');
+    drawPrei(10, 130, 1);
+    if (s.win) T('FOTOSYNTHESE!', 160, 20, 14, '#3f9b4a', 'center', '#fff');
+  }
+};
+
+const G_WATER = {
+  verb: 'WATER GEVEN!', hint: 'HOUD SPATIE (of muis) in · stop in het groene vak', time: 5, bg: '#f0f4e6',
+  fact: 'Echt: te veel water is ook slecht. Dan kunnen de wortels niet ademen.',
+  init() { const lo = rnd(.45, .6); return { lv: .2, lo, hi: lo + .2, t: 0, pour: false }; },
+  update(s, dt) {
+    s.t += dt; if (s.lose) return;
+    s.pour = K(' ') || I.down;
+    s.lv = Math.max(0, s.lv + (s.pour ? .42 : -.1) * dt);
+    if (s.lv >= 1) { s.lose = true; SFX.lose(); }
+  },
+  judge(s) { const ok = s.lv >= s.lo && s.lv <= s.hi; ok ? SFX.win() : SFX.lose(); return ok; },
+  draw(s) {
+    R(0, 0, W, H, '#f0f4e6'); R(0, 150, W, 30, '#d9c4a0');
+    const droop = s.lv < s.lo ? (s.lo - s.lv) * 2.4 : 0, drown = s.lv > s.hi;
+    R(136, 120, 48, 30, '#c0602a'); R(132, 116, 56, 6, '#a8501f'); R(140, 122, 40, 4, '#7a4c2a');
+    const tx = 160 + droop * 26, ty = 74 + droop * 20;
+    Ln(160, 118, 160 + droop * 10, 96, drown ? '#5a9aa0' : '#3d8b3d', 3); Ln(160 + droop * 10, 96, tx, ty, drown ? '#5a9aa0' : '#3d8b3d', 3);
+    E(150, 104, 9, 3, drown ? '#7ab8c0' : '#5cb85c'); E(170, 98, 9, 3, drown ? '#7ab8c0' : '#5cb85c');
+    flower(tx, ty, drown ? '#a0b8e0' : droop > .4 ? '#c8b0a0' : '#f6a0c0', 8);
+    if (drown) for (let i = 0; i < 3; i++) O(150 + i * 10, 60 - ((s.t * 30 + i * 10) % 30), 2, '#64c0d9');
+    const ca = s.pour ? .5 : 0;
+    X.save(); X.translate(90, 54); X.rotate(ca);
+    X.fillStyle = '#5a8fd0'; X.fillRect(-14, -8, 24, 16); X.fillRect(10, -4, 18, 3); X.fillStyle = '#3d6fd9'; X.fillRect(-14, -8, 24, 3); X.restore();
+    if (s.pour) for (let i = 0; i < 6; i++) { const y = 74 + ((s.t * 120 + i * 9) % 44); R(118 + (i % 3) * 3, y, 2, 3, '#64c0d9'); }
+    R(270, 30, 14, 112, '#5a6070'); R(272, 32, 10, 108, '#e6eef6');
+    R(272, 32 + 108 * (1 - s.hi), 10, 108 * (s.hi - s.lo), '#9fdc8a');
+    R(272, 32 + 108 * (1 - Math.min(1, s.lv)), 10, 108 * Math.min(1, s.lv), 'rgba(100,192,217,.75)');
+    T('WATER', 277, 22, 7, '#3d6fd9');
+    drawPrei(20, 134, 1);
+    if (s.lose) T('VERZOPEN!', 160, 20, 14, '#d94040', 'center', '#fff');
+  }
+};
+
+const G_BIJ = {
+  verb: 'BESTUIF!', hint: 'Muis (of pijltjes) · vlieg de bij langs alle 3 bloemen', time: 5, bg: '#e3f3d0',
+  fact: 'Echt: bijen brengen stuifmeel van bloem naar bloem. Zonder bijen geen appels.',
+  init() {
+    const fl = [];
+    for (let t = 0; fl.length < 3 && t < 200; t++) { const f = { x: rnd(50, 290), y: rnd(70, 140) }; if (fl.every(g => Math.hypot(g.x - f.x, g.y - f.y) > 60) && Math.hypot(f.x - 50, f.y - 40) > 50) fl.push(f); }
+    return { fl, bx: 50, by: 40, tx: 50, ty: 40, lmx: I.mx, lmy: I.my, t: 0, n: 0 };
+  },
+  update(s, dt) {
+    s.t += dt; if (s.win) return;
+    if (Math.abs(I.mx - s.lmx) + Math.abs(I.my - s.lmy) > .5) { s.tx = I.mx; s.ty = I.my; }
+    s.lmx = I.mx; s.lmy = I.my;
+    const kx = (RIGHT() ? 1 : 0) - (LEFT() ? 1 : 0), ky = (K('ArrowDown') || K('s') ? 1 : 0) - (K('ArrowUp') || K('w') ? 1 : 0);
+    if (kx || ky) { s.tx = s.bx + kx * 30; s.ty = s.by + ky * 30; }
+    const dx = s.tx - s.bx, dy = s.ty - s.by, d = Math.hypot(dx, dy), st = Math.min(d, 180 * dt);
+    if (d > .5) { s.bx += dx / d * st; s.by += dy / d * st; }
+    s.bx = clamp(s.bx, 8, 312); s.by = clamp(s.by, 8, 144);
+    for (const f of s.fl) if (!f.done && Math.hypot(f.x - s.bx, f.y - s.by) < 13) { f.done = true; s.n++; SFX.blip(); if (s.n >= 3) { s.win = true; SFX.win(); } }
+  },
+  draw(s) {
+    R(0, 0, W, H, '#e3f3d0'); R(0, 150, W, 30, '#6abf4b');
+    for (const f of s.fl) {
+      Ln(f.x, f.y + 6, f.x, 150, '#3d8b3d', 2);
+      flower(f.x, f.y, f.done ? '#f6a0c0' : '#e8d0dc', 9);
+      if (f.done) for (let i = 0; i < 4; i++) R(f.x - 8 + ((i * 7 + s.t * 20) % 16), f.y - 12 - (i * 3), 2, 2, '#f2c94c');
+    }
+    const x = s.bx, y = s.by, fl = Math.floor(s.t * 30) % 2;
+    E(x - 2, y - 6 - fl, 4, 3, 'rgba(255,255,255,.85)'); E(x + 3, y - 6 - fl, 4, 3, 'rgba(255,255,255,.85)');
+    E(x, y, 7, 5, '#2a2230'); E(x, y, 6, 4, '#f2c94c'); R(x - 2, y - 4, 2, 8, '#2a2230'); R(x + 2, y - 4, 2, 8, '#2a2230');
+    R(x + 5, y - 2, 1, 1, '#000');
+    T('bloemen: ' + s.n + ' / 3', 160, 10, 8, '#3d8b3d');
+    if (s.win) T('BZZZ-PERFECT!', 160, 30, 14, '#d9a440', 'center', '#fff');
+  }
+};
+
+const G_RAKET = {
+  verb: 'PREI-RAKET!', hint: 'SPATIE (of klik) om te schieten · raak de slak', time: 5.5, bg: '#cfeaf6',
+  fact: 'Echt: slakken eten graag jonge plantjes. Prei vindt dat niet oké.',
+  init() { return { t: 0, ang: .8, r: null, sx: rnd(195, 290), ph: rnd(0, 6), boom: 0 }; },
+  update(s, dt) {
+    s.t += dt; if (s.win) s.boom += dt; if (s.win || s.lose) return;
+    if (!s.r) {
+      s.ang = .26 + (Math.sin(s.t * 2.2 + s.ph) * .5 + .5) * 1.05;
+      if (P(' ') || I.clicked) { s.r = { x: 58, y: 136, vx: Math.cos(s.ang) * 200, vy: -Math.sin(s.ang) * 200 }; SFX.jump(); }
+    } else {
+      s.r.vy += 160 * dt; s.r.x += s.r.vx * dt; s.r.y += s.r.vy * dt;
+      if (s.r.y >= 148) { s.r.y = 148; if (Math.abs(s.r.x - s.sx) < 16) { s.win = true; SFX.win(); } else { s.lose = true; SFX.lose(); } }
+    }
+  },
+  draw(s) {
+    field();
+    const x0 = 46, y0 = 136;
+    if (!s.r) for (let i = 1; i < 5; i++) { const t = i * .1; O(x0 + 12 + Math.cos(s.ang) * 200 * t, y0 - Math.sin(s.ang) * 200 * t + 80 * t * t, 1, '#6b5a4a'); }
+    if (!s.win) {
+      const sx = s.sx;
+      R(sx - 12, 144, 20, 4, '#c8b090'); Ln(sx + 6, 144, sx + 9, 136, '#c8b090', 1); Ln(sx + 9, 144, sx + 13, 137, '#c8b090', 1);
+      O(sx - 3, 139, 7, '#7a4c2a'); O(sx - 3, 139, 5, '#d9a46a'); O(sx - 3, 139, 2, '#7a4c2a');
+      E(sx + 2, 156, 12, 2, '#3d8b3d');
+    } else {
+      const b = Math.min(1, s.boom * 4);
+      O(s.sx, 140, 6 + b * 14, '#f2994a'); O(s.sx, 140, 3 + b * 9, '#f2c94c'); T('SLAK WEG!', s.sx, 110, 10, '#3f9b4a', 'center', '#fff');
+    }
+    drawPrei(28, 130, 1);
+    Ln(x0, y0, x0 + Math.cos(s.ang) * 18, y0 - Math.sin(s.ang) * 18, '#f4f0dc', 4);
+    Ln(x0 + Math.cos(s.ang) * 14, y0 - Math.sin(s.ang) * 14, x0 + Math.cos(s.ang) * 20, y0 - Math.sin(s.ang) * 20, '#3f9b4a', 5);
+    if (s.r && !s.win) { const r = s.r, n = Math.hypot(r.vx, r.vy); Ln(r.x, r.y, r.x - r.vx / n * 10, r.y - r.vy / n * 10, '#f4f0dc', 3); Ln(r.x - r.vx / n * 10, r.y - r.vy / n * 10, r.x - r.vx / n * 15, r.y - r.vy / n * 15, '#3f9b4a', 4); }
+    if (s.lose) T('MIS!', 160, 40, 16, '#d94040', 'center', '#fff');
+  }
+};
+
+const GATEN = [[80, 90], [160, 90], [240, 90], [80, 145], [160, 145], [240, 145]];
+const G_PLUK = {
+  verb: 'PLUK DE PREI!', hint: 'KLIK op de prei · NIET op de giftige paddenstoel', time: 5, bg: '#d9c4a0',
+  fact: 'Echt: prei is familie van de ui en de knoflook.',
+  init() { return { h: Array(6).fill(null), cd: .15, n: 0, need: REMIX ? 3 : 4, t: 0 }; },
+  update(s, dt) {
+    s.t += dt; if (s.win || s.lose) return;
+    s.cd -= dt;
+    if (s.cd <= 0) {
+      s.cd = rnd(.3, .5);
+      const free = [0, 1, 2, 3, 4, 5].filter(i => !s.h[i]);
+      if (free.length) s.h[pick(free)] = { k: Math.random() < .27 ? 'pad' : 'prei', life: .95, t: 0 };
+    }
+    for (let i = 0; i < 6; i++) { const h = s.h[i]; if (!h) continue; h.life -= dt; h.t += dt; if (h.life <= 0) s.h[i] = null; }
+    if (I.clicked) for (let i = 0; i < 6; i++) {
+      const h = s.h[i], [x, y] = GATEN[i];
+      if (h && Math.abs(I.mx - x) < 18 && I.my > y - 36 && I.my < y + 8) {
+        if (h.k === 'prei') { s.n++; s.h[i] = null; SFX.blip(); if (s.n >= s.need) { s.win = true; SFX.win(); } }
+        else { s.lose = true; SFX.lose(); }
+        break;
+      }
+    }
+  },
+  draw(s) {
+    R(0, 0, W, H, '#b8d890'); for (let i = 0; i < 30; i++) R((i * 53) % W, (i * 37) % H, 2, 3, '#9cc070');
+    for (let i = 0; i < 6; i++) {
+      const [x, y] = GATEN[i], h = s.h[i];
+      E(x, y, 17, 6, '#4a2e1a');
+      if (h) {
+        const p = Math.min(1, h.t * 7, h.life * 7) * 28;
+        if (h.k === 'prei') { R(x - 3, y - p, 6, p, '#f4f0dc'); R(x - 5, y - p - 10, 4, 12, '#3f9b4a'); R(x + 1, y - p - 12, 4, 14, '#5cb85c'); }
+        else { R(x - 2, y - p + 6, 4, p - 6, '#f4eedc'); E(x, y - p + 6, 10, 6, '#d94040'); O(x - 4, y - p + 4, 1, '#fff'); O(x + 3, y - p + 3, 1, '#fff'); O(x, y - p + 7, 1, '#fff'); }
+      }
+      E(x, y + 3, 17, 3, '#7a5228');
+    }
+    T('prei: ' + s.n + ' / ' + s.need, 160, 14, 9, '#2a2230');
+    drawPrei(286, 20, 1);
+    if (s.lose) T('GIFTIG! BLEH.', 160, 40, 14, '#d94040', 'center', '#fff');
+  }
+};
+
+const RECEPT = [['CO₂', '#9aa0ae'], ['ZON', '#f2c94c'], ['WATER', '#64c0d9']];
+function receptKnop(i, x, y, lit) {
+  R(x + 2, y + 2, 64, 50, '#2a2230'); R(x, y, 64, 50, lit ? RECEPT[i][1] : '#fff');
+  if (i === 0) { O(x + 26, y + 22, 9, lit ? '#fff' : '#c9cdd6'); O(x + 38, y + 22, 9, lit ? '#fff' : '#c9cdd6'); T('CO₂', x + 32, y + 22, 8, '#2a2230'); }
+  else if (i === 1) { O(x + 32, y + 22, 11, lit ? '#fff8d6' : '#f2c94c'); }
+  else { O(x + 32, y + 26, 8, lit ? '#fff' : '#64c0d9'); X.fillStyle = lit ? '#fff' : '#64c0d9'; X.beginPath(); X.moveTo(x + 25, y + 23); X.lineTo(x + 32, y + 9); X.lineTo(x + 39, y + 23); X.fill(); }
+  T(['←', '↑', '→'][i], x + 32, y + 42, 9, '#2a2230');
+}
+const G_HERHAAL = {
+  verb: 'HERHAAL!', hint: 'Onthoud het recept en doe het na met ← ↑ → (of klik)', time: 6.5, bg: '#f0f4e6',
+  fact: 'Echt: voor fotosynthese heeft een plant zonlicht, water en CO₂ nodig. Er komt suiker en zuurstof uit.',
+  init() { const len = REMIX ? 3 : 4; return { seq: Array.from({ length: len }, () => Math.floor(rnd(0, 3))), i: 0, t: 0, ph: 'show', fl: -1, ft: 0, last: -1 }; },
+  update(s, dt) {
+    s.t += dt; s.ft -= dt; if (s.win || s.lose) return;
+    if (s.ph === 'show') {
+      const slot = Math.floor(s.t / .5);
+      if (slot !== s.last && slot < s.seq.length) { s.last = slot; tone([523, 659, 784][s.seq[slot]], .2, 'triangle', .07); }
+      if (s.t >= s.seq.length * .5) s.ph = 'input';
+      return;
+    }
+    let p = -1;
+    if (P('ArrowLeft') || P('a')) p = 0; if (P('ArrowUp') || P('w')) p = 1; if (P('ArrowRight') || P('d')) p = 2;
+    if (I.clicked) for (let k = 0; k < 3; k++) { const x = 52 + k * 76; if (I.mx > x && I.mx < x + 64 && I.my > 100 && I.my < 150) p = k; }
+    if (p < 0) return;
+    s.fl = p; s.ft = .2;
+    if (p === s.seq[s.i]) { tone([523, 659, 784][p], .15, 'triangle', .07); s.i++; if (s.i >= s.seq.length) { s.win = true; SFX.win(); } }
+    else { s.lose = true; SFX.lose(); }
+  },
+  draw(s) {
+    board(40, 12, 240, 72);
+    T('Fotosynthese-recept', 160, 24, 8, '#bfe3c0');
+    for (let k = 0; k < s.seq.length; k++) {
+      const x = 160 - (s.seq.length * 26) / 2 + k * 26 + 13, shown = s.ph === 'show' ? k <= Math.floor(s.t / .5) : k < s.i;
+      R(x - 10, 40, 20, 20, shown ? RECEPT[s.seq[k]][1] : 'rgba(255,255,255,.12)');
+      if (s.ph === 'show' && shown) T(RECEPT[s.seq[k]][0].slice(0, 1), x, 50, 9, '#2a2230');
+      if (s.ph === 'input' && k < s.i) T('✓', x, 50, 10, '#2a2230');
+    }
+    T(s.ph === 'show' ? 'kijk goed...' : 'jouw beurt!', 160, 72, 8, '#f7f7f2');
+    const cur = s.ph === 'show' ? (s.t % .5 < .38 ? s.seq[Math.floor(s.t / .5)] : -1) : (s.ft > 0 ? s.fl : -1);
+    for (let k = 0; k < 3; k++) receptKnop(k, 52 + k * 76, 98, cur === k);
+    if (s.win) T('SUIKER!', 160, 166, 12, '#3f9b4a', 'center', '#fff');
+    if (s.lose) T('MISLUKT. ZETMEEL.', 160, 166, 12, '#d94040', 'center', '#fff');
+  }
+};
+
+const Q4 = [
+  ['Wat maken planten met zonlicht?', 'Suiker', 'Stroom'],
+  ['Wat geven planten af?', 'Zuurstof', 'Glitter'],
+  ['Hoe heet het groen in een blad?', 'Bladgroen', 'Groenteketchup'],
+  ['Wat doet een bij bij een bloem?', 'Stuifmeel brengen', 'Belasting innen'],
+  ['Prei is familie van de...', 'ui', 'konijn'],
+  ['Hoe drinkt een plant water?', 'Via de wortels', 'Met een rietje'],
+  ['Wat gebruikt Prei als wapen?', 'Prei', 'Een wortel'],
+];
+const G_VRAAG4 = vraag(Q4, 'Niet waar: Prei heeft een wapenvergunning. Voor groente.');
+
+Object.assign(LESSONS[3], {
+  color: '#5aa83f', open: true,
+  intro: ['Prei komt binnen met een raketwerper.', 'Haastregt zegt niks. Hij is bang.'],
+  win: ['Prei-fect.', 'Prei laadt opnieuw. Van blijdschap.', 'Fotosynthetisch goed!', 'Groen licht!'],
+  lose: ['Je plant is verwelkt.', 'Prei richt. Op jou.', 'Dat was niet groen.', 'Slap. Net als gekookte prei.'],
+  games: [G_ZON, G_WATER, G_BIJ, G_RAKET, G_PLUK, G_HERHAAL, G_VRAAG4],
+  remixLine: 'Prei vuurt op de maat. Bukken!'
+});
+</script>
+<script>/* ===== games5.js ===== */
+'use strict';
+// ===== LES 5: Niffo — Waterleven =====
+const NIFFO = [
+  '  bb      bb  ',
+  ' bbbbbbbbbbbb ',
+  'bbbbbbbbbbbbbb',
+  'bbkbbbbbbbbkbb',
+  'bbbccccccccbbb',
+  'wbccccnncccbbw',
+  'bbcccmmmmccbbb',
+  ' bbccccccccbb ',
+  '  bbbbbbbbbb  ',
+  ' bbbccccccbbb ',
+  'bbbbccccccbbbb',
+  'bb bccccccb bb',
+  '   bccccccb   ',
+  '   bbbbbbbb   ',
+  '  bbb    bbb  ',
+  '  dd      dd  ',
+];
+const NIFFO_PAL = { b: '#8a5a34', c: '#e8d0a8', k: '#2a2230', n: '#2a2230', m: '#a8603a', d: '#5a3a22', w: '#2a2230' };
+function drawNiffo(x, y, sc = 1, flip = false) { SPR(NIFFO, NIFFO_PAL, x, y, sc, flip); }
+GUESTS.Niffo = (x, yb, sc, flip) => drawNiffo(x, yb - NIFFO.length * sc, sc, flip);
+
+function otterSwim(x, y, t) {
+  const w = Math.round(Math.sin(t * 12) * 2);
+  Ln(x - 14, y, x - 24, y + w, '#6b4426', 4);
+  E(x - 2, y, 13, 6, '#6b4426'); E(x - 2, y + 2, 10, 3, '#a8743f');
+  O(x + 12, y - 2, 6, '#6b4426'); E(x + 14, y, 4, 3, '#e8d0a8'); R(x + 13, y - 4, 2, 2, '#000'); R(x + 18, y - 1, 2, 1, '#000');
+}
+function fishy(x, y, c = '#f2994a', flip = false) {
+  const d = flip ? -1 : 1;
+  E(x, y, 7, 4, c); X.fillStyle = c; X.beginPath(); X.moveTo(x - 6 * d, y); X.lineTo(x - 12 * d, y - 4); X.lineTo(x - 12 * d, y + 4); X.fill();
+  R(x + 3 * d - 1, y - 2, 2, 2, '#fff'); R(x + 3 * d, y - 1, 1, 1, '#000');
+}
+function jelly(x, y, t) {
+  E(x, y, 8, 6, '#e8a0e0'); R(x - 8, y, 16, 3, '#e8a0e0');
+  for (let i = 0; i < 4; i++) Ln(x - 6 + i * 4, y + 3, x - 6 + i * 4 + Math.sin(t * 8 + i) * 2, y + 12, '#c070c0', 1);
+  R(x - 3, y - 2, 1, 2, '#2a2230'); R(x + 2, y - 2, 1, 2, '#2a2230');
+}
+function water(top = 40) {
+  R(0, 0, W, top, '#d8eef8'); R(0, top, W, H - top, '#3d8fd0');
+  for (let i = 0; i < 16; i++) R(((i * 41 + Date.now() / 40) % 340) - 10, top + (i % 2), 12, 2, '#7fc0ea');
+  R(0, H - 14, W, 14, '#c9b48a');
+}
+
+const G_DUIK = {
+  verb: 'DUIK!', hint: 'HOUD SPATIE (of muis) in = omlaag · loslaten = omhoog · vang 3 vissen', time: 6, bg: '#3d8fd0',
+  fact: 'Echt: een otter kan zijn neus en oren dichtdoen onder water.',
+  init() { const fy = rnd(70, 140); return { y: 100, it: [{ k: 'vis', x: 260, y: fy }], fy, cd: .55, nr: 0, n: 0, need: REMIX ? 2 : 3, t: 0 }; },
+  update(s, dt) {
+    s.t += dt; if (s.win || s.lose) return;
+    const down = K(' ') || I.down || K('ArrowDown') || K('s'), up = K('ArrowUp') || K('w');
+    s.y = clamp(s.y + (down ? 120 : up ? -120 : -75) * dt, 52, 152);
+    s.cd -= dt;
+    if (s.cd <= 0) {
+      s.cd = rnd(.55, .7); s.nr++;
+      if (s.nr % 3 === 0) s.it.push({ k: 'kwal', x: 340, y: s.fy < 100 ? rnd(122, 148) : rnd(56, 80) });
+      else { s.fy = clamp(s.fy + rnd(-45, 45), 62, 146); s.it.push({ k: 'vis', x: 340, y: s.fy }); }
+    }
+    for (const o of s.it) {
+      o.x -= 110 * dt;
+      if (!o.got && o.k === 'vis' && Math.hypot(o.x - 82, o.y - s.y) < 17) { o.got = true; s.n++; SFX.blip(); if (s.n >= s.need) { s.win = true; SFX.win(); } }
+      if (o.k === 'kwal' && Math.abs(o.x - 80) < 10 && Math.abs(o.y + 3 - s.y) < 8) { s.lose = true; SFX.lose(); }
+    }
+    s.it = s.it.filter(o => !o.got && o.x > -20);
+  },
+  draw(s) {
+    water(40);
+    for (const o of s.it) o.k === 'vis' ? fishy(o.x, o.y, '#f2994a', true) : jelly(o.x, o.y, s.t);
+    otterSwim(70, s.y, s.t);
+    T('vis: ' + s.n + ' / ' + s.need, 160, 12, 8, '#2a2230');
+    if (s.lose) T('AU! KWAL!', 160, 90, 14, '#d94040', 'center', '#fff');
+  }
+};
+
+const KETEN = [['alg', 'Alg'], ['vlo', 'Watervlo'], ['vis', 'Visje'], ['niffo', 'Niffo']];
+function ketenIcon(k, x, y) {
+  if (k === 'alg') { for (let i = 0; i < 6; i++) O(x - 8 + (i % 3) * 8, y - 4 + Math.floor(i / 3) * 8, 3, '#5cb85c'); }
+  else if (k === 'vlo') { E(x, y, 6, 8, 'rgba(160,120,80,.6)'); O(x, y - 4, 2, '#2a2230'); Ln(x - 2, y - 8, x - 8, y - 14, '#8a5a34', 1); Ln(x + 2, y - 8, x + 8, y - 14, '#8a5a34', 1); }
+  else if (k === 'vis') fishy(x, y, '#9aa6b0');
+  else SPR(NIFFO.slice(0, 9), NIFFO_PAL, x - 14, y - 9, 2);
+}
+const G_KETEN = {
+  verb: 'WIE EET WIE?', hint: 'KLIK van klein naar groot (of 1 2 3 4)', time: 6, bg: '#e6f2f8',
+  fact: 'Echt: dat heet een voedselketen. Algen staan onderaan, de otter bovenaan.',
+  init() { return { order: shuffle([0, 1, 2, 3]), i: 0, bad: -1 }; },
+  update(s) {
+    if (s.win || s.lose) return;
+    let p = -1; ['1', '2', '3', '4'].forEach((k, i) => { if (P(k)) p = i; });
+    if (I.clicked) for (let i = 0; i < 4; i++) { const x = 24 + i * 72; if (I.mx > x && I.mx < x + 64 && I.my > 60 && I.my < 130) p = i; }
+    if (p < 0) return;
+    const k = s.order[p];
+    if (k < s.i) return;
+    if (k === s.i) { s.i++; SFX.blip(); if (s.i >= 4) { s.win = true; SFX.win(); } }
+    else { s.bad = p; s.lose = true; SFX.lose(); }
+  },
+  draw(s) {
+    T('Wie wordt door wie opgegeten? Begin bij de kleinste.', 160, 24, 8, '#2a2230');
+    for (let i = 0; i < 4; i++) {
+      const x = 24 + i * 72, k = s.order[i], done = k < s.i;
+      R(x + 2, 62, 64, 70, '#2a2230'); R(x, 60, 64, 70, s.bad === i ? '#f29a9a' : done ? '#9fdc8a' : '#fff');
+      ketenIcon(KETEN[k][0], x + 32, 88);
+      T(KETEN[k][1], x + 32, 120, 8, '#2a2230');
+      if (done) T(String(k + 1), x + 56, 68, 9, '#3f9b4a');
+      if (i < 3) T('·', x + 68, 95, 10, '#a39a8c');
+    }
+    if (s.win) T('alg → vlo → vis → Niffo', 160, 154, 10, '#3f9b4a', 'center', '#fff');
+    if (s.lose) T('ZO WERKT DE NATUUR NIET.', 160, 154, 11, '#d94040', 'center', '#fff');
+  }
+};
+
+const KWAAK_PAT = [[0, 1, 2], [0, 1, 3], [0, 2, 3], [0, 1, 2, 3], [0, 1.5, 3], [0, 2, 2.5]];
+const KWAAK_WIN = .24;
+const G_KWAAK = {
+  verb: 'KWAAK MEE!', hint: 'Eerst luisteren. Dan in het gele deel: SPATIE op de stippen', time: 5.4, bg: '#e3f3d0',
+  fact: 'Echt: kikkers kwaken met een kwaakblaas. Die blazen ze op als een ballon.',
+  init() { const b = .42, pat = pick(KWAAK_PAT), t0 = .6 + 4 * b; return { b, pat, t0, exp: pat.map(o => ({ at: t0 + o * b, hit: false })), t: 0, played: 0, puff: 0, me: 0, lastBeat: -1 }; },
+  update(s, dt) {
+    s.t += dt; s.puff = Math.max(0, s.puff - dt * 6); s.me = Math.max(0, s.me - dt * 6);
+    if (s.win || s.lose) return;
+    while (s.played < s.pat.length && s.t >= .6 + s.pat[s.played] * s.b) { s.played++; s.puff = 1; tone(170, .13, 'square', .07, -60); }
+    const beat = Math.floor((s.t - .6) / s.b + .001);
+    if (beat !== s.lastBeat && beat >= 0 && beat < 8) { s.lastBeat = beat; tone(beat < 4 ? 1200 : 1500, .03, 'square', .02); }
+    if ((P(' ') || I.clicked) && s.t > s.t0 - KWAAK_WIN) {
+      s.me = 1;
+      const e = s.exp.find(e => !e.hit && Math.abs(s.t - e.at) < KWAAK_WIN);
+      if (e) { e.hit = true; tone(220, .13, 'square', .07, -60); if (s.exp.every(e => e.hit)) { s.win = true; SFX.win(); } }
+      else if (!s.exp.some(e => e.hit && Math.abs(s.t - e.at) < KWAAK_WIN)) { s.lose = true; SFX.lose(); }
+    }
+    if (s.exp.some(e => !e.hit && s.t > e.at + KWAAK_WIN)) { s.lose = true; SFX.lose(); }
+  },
+  draw(s) {
+    R(0, 120, W, 60, '#5aa8d0'); E(90, 128, 36, 8, '#5cb85c'); E(230, 128, 36, 8, '#5cb85c');
+    const fy = 112;
+    E(90, fy, 16, 11, '#3d8b3d'); O(82, fy - 10, 5, '#3d8b3d'); O(98, fy - 10, 5, '#3d8b3d');
+    R(81, fy - 11, 2, 2, '#000'); R(97, fy - 11, 2, 2, '#000');
+    if (s.puff > 0) O(90, fy + 4, 4 + s.puff * 6, '#c8ecb0');
+    drawNiffo(222, 96 - Math.round(s.me * 3));
+    if (s.me > 0) T('KWAAK!', 252, 86, 8, '#3f9b4a');
+    const bx = i => 30 + i * 34 + (i >= 4 ? 16 : 0);
+    R(bx(0) - 4, 26, 4 * 34 + 4, 40, '#d9f2d0'); R(bx(4) - 4, 26, 4 * 34 + 4, 40, '#fff3b8');
+    T('KIKKER (luister)', bx(0) + 66, 18, 8, '#3d8b3d'); T('JIJ (doe na)', bx(4) + 66, 18, 8, '#a8743f');
+    for (let i = 0; i < 8; i++) R(bx(i) + 13, 30, 2, 32, 'rgba(42,34,48,.15)');
+    const pos = o => bx(Math.floor(o)) + 14 + (o % 1) * 34;
+    for (const o of s.pat) O(pos(o), 40, 5, s.played > s.pat.indexOf(o) ? '#3d8b3d' : '#9fcf8f');
+    s.exp.forEach((e, k) => {
+      const x = pos(4 + s.pat[k]);
+      O(x, 54, 6, '#2a2230'); O(x, 54, 5, e.hit ? '#3f9b4a' : '#fff');
+    });
+    const ph = (s.t - .6) / s.b;
+    if (ph >= -.5 && ph < 8) { const x = ph < 4 ? bx(0) + 14 + ph * 34 : bx(4) + 14 + (ph - 4) * 34; R(x - 1, 26, 2, 40, '#d94040'); }
+    if (s.lose) T('UIT DE MAAT!', 160, 84, 14, '#d94040', 'center', '#fff');
+    if (s.win) T('KIKKERKOOR!', 160, 84, 14, '#3f9b4a', 'center', '#fff');
+  }
+};
+
+const G_KRAAK = {
+  verb: 'KRAAK!', hint: 'SPATIE (of klik) als de ring precies om de schelp zit', time: 5, bg: '#3d8fd0',
+  fact: 'Echt: zeeotters gebruiken een steen om schelpen open te slaan op hun buik.',
+  init() { return { n: 0, r: 34, t: 0, slam: 0, crack: 0 }; },
+  update(s, dt) {
+    s.t += dt; s.slam = Math.max(0, s.slam - dt * 5); s.crack = Math.max(0, s.crack - dt * 2);
+    if (s.win || s.lose) return;
+    s.r -= 30 * dt;
+    if (P(' ') || I.clicked) {
+      s.slam = 1;
+      if (Math.abs(s.r - 9) < 4.5) { s.n++; s.crack = 1; SFX.blip(); s.r = 34; if (s.n >= 3) { s.win = true; SFX.win(); } }
+      else { s.lose = true; SFX.lose(); }
+    } else if (s.r < 3) { s.lose = true; SFX.lose(); }
+  },
+  draw(s) {
+    water(30);
+    const x = 160, y = 110;
+    E(x, y + 6, 46, 14, '#6b4426'); E(x, y + 4, 34, 9, '#e8d0a8');
+    O(x + 46, y - 2, 11, '#6b4426'); E(x + 48, y + 2, 7, 5, '#e8d0a8'); R(x + 44, y - 6, 2, 2, '#000'); R(x + 50, y - 6, 2, 2, '#000');
+    Ln(x - 46, y + 6, x - 62, y + 2, '#6b4426', 5);
+    if (!s.win) { E(x, y - 6, 9, 7, '#f4d0b0'); for (let i = -1; i <= 1; i++) Ln(x + i * 4, y - 12, x + i * 4, y, '#c09070', 1); }
+    if (s.crack > 0) for (let i = 0; i < 6; i++) R(x + Math.cos(i) * 18 * (1.2 - s.crack), y - 8 + Math.sin(i) * 12 * (1.2 - s.crack), 3, 2, '#fff');
+    const ry = y - 40 + s.slam * 24;
+    E(x + 22, ry, 9, 6, '#7a7480'); E(x + 21, ry - 1, 7, 4, '#9a94a0');
+    if (!s.win && !s.lose) { X.strokeStyle = Math.abs(s.r - 9) < 4.5 ? '#9fdc8a' : '#fff'; X.lineWidth = 2; X.beginPath(); X.arc(x, y - 6, Math.max(1, s.r), 0, 7); X.stroke(); }
+    T('schelpen: ' + s.n + ' / 3', 160, 12, 8, '#2a2230');
+    if (s.lose) T('MIS! SCHELP NOG DICHT.', 160, 60, 12, '#d94040', 'center', '#fff');
+    if (s.win) T('MOSSEL-TIJD!', 160, 60, 14, '#3f9b4a', 'center', '#fff');
+  }
+};
+
+const ROMMEL = ['blik', 'zak', 'fles'];
+function rommel(k, x, y) {
+  if (k === 'blik') { R(x - 6, y - 4, 12, 8, '#9aa0ae'); R(x - 2, y - 4, 4, 8, '#d94040'); }
+  else if (k === 'zak') { E(x, y, 9, 6, 'rgba(255,255,255,.85)'); R(x - 3, y - 9, 2, 4, 'rgba(255,255,255,.85)'); R(x + 2, y - 9, 2, 4, 'rgba(255,255,255,.85)'); }
+  else if (k === 'fles') { R(x - 8, y - 3, 14, 6, '#7fd0a0'); R(x + 6, y - 2, 4, 4, '#3d8fd0'); }
+  else { E(x, y, 9, 6, '#f2c94c'); O(x + 8, y - 5, 4, '#f2c94c'); R(x + 11, y - 5, 3, 2, '#f2994a'); R(x + 8, y - 6, 1, 1, '#000'); }
+}
+const G_OPRUIMEN = {
+  verb: 'RUIM OP!', hint: 'KLIK op het afval in de rivier · NIET op de eendjes', time: 5.5, bg: '#3d8fd0',
+  fact: 'Echt: plastic in het water breekt af in heel kleine stukjes. Dieren eten dat per ongeluk op.',
+  init() { return { it: [], cd: 0, n: 0, need: REMIX ? 3 : 4, t: 0 }; },
+  update(s, dt) {
+    s.t += dt; if (s.win || s.lose) return;
+    s.cd -= dt;
+    if (s.cd <= 0) { s.cd = rnd(.35, .5); s.it.push({ k: Math.random() < .7 ? pick(ROMMEL) : 'eend', x: -12, y: rnd(60, 150), v: rnd(70, 100), ph: rnd(0, 6) }); }
+    for (const o of s.it) o.x += o.v * dt;
+    if (I.clicked) for (const o of s.it) {
+      if (Math.hypot(I.mx - o.x, I.my - o.y) < 13) {
+        if (o.k === 'eend') { s.lose = true; SFX.lose(); } else { o.gone = true; s.n++; SFX.blip(); if (s.n >= s.need) { s.win = true; SFX.win(); } }
+        break;
+      }
+    }
+    s.it = s.it.filter(o => !o.gone && o.x < 340);
+  },
+  draw(s) {
+    R(0, 0, W, 44, '#6abf4b'); R(0, 44, W, 120, '#3d8fd0'); R(0, 164, W, 16, '#6abf4b');
+    for (let i = 0; i < 14; i++) R(((i * 47 + s.t * 60) % 340) - 10, 50 + (i * 23) % 110, 14, 2, '#7fc0ea');
+    for (const o of s.it) rommel(o.k, o.x, o.y + Math.sin(s.t * 3 + o.ph) * 2);
+    drawNiffo(288, 16, 1, true);
+    T('afval: ' + s.n + ' / ' + s.need, 160, 14, 9, '#2a2230');
+    if (s.lose) T('NIET DE EEND!', 160, 100, 14, '#d94040', 'center', '#fff');
+  }
+};
+
+const DRIJFT = { eend: 1, hout: 1, appel: 1, steen: 0, sleutel: 0, haas: 0 };
+function drijfItem(k, x, y) {
+  if (k === 'eend') rommel('eend', x, y);
+  else if (k === 'hout') { R(x - 14, y - 4, 28, 8, '#8a5a34'); E(x + 14, y, 3, 4, '#c9a060'); }
+  else if (k === 'appel') { O(x, y, 8, '#d94040'); R(x, y - 11, 1, 4, '#6b4426'); E(x + 3, y - 9, 3, 2, '#5cb85c'); }
+  else if (k === 'steen') { E(x, y, 10, 7, '#5a5460'); E(x - 1, y - 1, 8, 5, '#8a8494'); }
+  else if (k === 'sleutel') { O(x - 6, y, 5, '#d9a440'); O(x - 6, y, 2, '#fff8d6'); R(x - 2, y - 1, 14, 3, '#d9a440'); R(x + 8, y + 2, 2, 3, '#d9a440'); }
+  else { SPR(HAAS.slice(0, 9), HAAS_PAL, x - 16, y - 9, 2); T('(kan niet zwemmen)', x, y + 16, 6, '#6b5a4a'); }
+}
+const G_DRIJF = {
+  verb: 'DRIJFT HET?', hint: '← DRIJFT  ·  ZINKT →   (of klik op een kant)', time: 6.5, bg: '#e6f2f8',
+  fact: 'Echt: een appel drijft, want er zit veel lucht in.',
+  init() {
+    const d = ['eend', 'hout', 'appel'], z = ['steen', 'sleutel', 'haas'];
+    return { ks: shuffle([pick(d), pick(z), pick(Math.random() < .5 ? d : z)]), i: 0, x: 160, y: 20, fly: null };
+  },
+  // zelfde logica als SORTEER: drijven gaat naar links (daar heet dat 'plant')
+  update(s, dt) {
+    const real = s.ks; s.ks = real.map(k => DRIJFT[k] ? 'plant' : 'dier');
+    G_SORTEER.update(s, dt); s.ks = real;
+  },
+  draw(s) {
+    R(0, 130, W, 50, '#3d8fd0'); R(0, 130, W, 3, '#7fc0ea');
+    R(20, 128, 80, 6, '#fff'); T('DRIJFT', 60, 150, 10, '#fff'); T('←', 112, 150, 14, '#fff');
+    R(220, 170, 80, 6, '#1e5a90'); T('ZINKT', 260, 150, 10, '#fff'); T('→', 208, 150, 14, '#fff');
+    if (s.i < s.ks.length && !s.win) drijfItem(s.ks[s.i], s.x, s.y);
+    T(Math.min(s.i, s.ks.length) + ' / ' + s.ks.length, 160, 10, 8, '#6b5a4a');
+    drawNiffo(286, 40, 1, true);
+    if (s.lose) T('BLUB. FOUT.', 160, 70, 14, '#d94040', 'center', '#fff');
+  }
+};
+
+const Q5 = [
+  ['Waarmee ademt een vis?', 'Kieuwen', 'Een snorkel'],
+  ['Wat eet een otter graag?', 'Vis', 'Spaghetti'],
+  ['Hoe slapen zeeotters?', 'Drijvend op hun rug', 'In een hotel'],
+  ['Wat is een kikkervisje?', 'Een baby-kikker', 'Een vis met een kikker'],
+  ['Wat is een watervlo?', 'Een klein kreeftje', 'Een vlo die zwemt'],
+  ['Waarom drijft een eend?', 'Lucht in zijn veren', 'Hij doet zijn best'],
+  ['Wie geeft les 5?', 'Niffo', 'Meneer Otter'],
+];
+const G_VRAAG5 = vraag(Q5, 'Niet waar: Niffo heeft zijn zwemdiploma C. Hij heeft het zelf getekend.');
+
+Object.assign(LESSONS[4], {
+  color: '#3d8fd0', open: true,
+  intro: ['Niffo zwemt het lokaal binnen.', 'Het lokaal staat nu onder water.'],
+  win: ['Niffo klapt met zijn pootjes.', 'Otter-lijk goed!', 'Spetterend!', 'Haastregt: "Nat, maar goed."'],
+  lose: ['Plons. Fout.', 'Niffo kijkt teleurgesteld.', 'Je bent gezonken.', 'Zelfs een kwal snapt dit.'],
+  games: [G_DUIK, G_KETEN, G_KWAAK, G_KRAAK, G_OPRUIMEN, G_DRIJF, G_VRAAG5],
+  remixLine: 'Niffo drijft op zijn rug en tikt de maat.'
+});
+</script>
+<script>/* ===== games6.js ===== */
+'use strict';
+// ===== LES 6: Grumbleclaw — Zeeleven =====
+const GRUMBLE = [
+  '    kw      wk    ',
+  '    ww      ww    ',
+  '     o      o     ',
+  'CC   o      o   CC',
+  'CCC oooooooooo CCC',
+  'C C oBBooooBBo C C',
+  ' CCoooooooooooooCC',
+  '  ooooommmmooooo  ',
+  '  oooooooooooooo  ',
+  '   oooooooooooo   ',
+  ' l l l      l l l ',
+  'l l l        l l l',
+];
+const GRUMBLE_PAL = { k: '#2a2230', w: '#fff', o: '#f2782a', C: '#e0601a', B: '#7a2a10', m: '#7a2a10', l: '#c0501a' };
+const GRUMBLE_GRIJS = { k: '#8a8494', w: '#dcd8e0', o: '#b8b0bc', C: '#a8a0ac', B: '#8a8494', m: '#8a8494', l: '#a8a0ac' };
+function drawGrumble(x, y, sc = 1, flip = false, pal = GRUMBLE_PAL) { SPR(GRUMBLE, pal, x, y, sc, flip); }
+GUESTS.Grumbleclaw = (x, yb, sc, flip) => drawGrumble(x - 2 * sc, yb - GRUMBLE.length * sc, sc, flip);
+function beach() { R(0, 0, W, 70, '#cfeaf6'); R(0, 70, W, 30, '#3d8fd0'); R(0, 96, W, 84, '#f2dca0'); for (let i = 0; i < 30; i++) R((i * 59) % W, 104 + (i * 31) % 70, 2, 1, '#d9c080'); }
+
+const G_KNIP = {
+  verb: 'KNIP!', hint: 'SPATIE (of klik) als het ZEEWIER in de schaar zit · NIET de vissen', time: 5, bg: '#3d8fd0',
+  fact: 'Echt: krabben eten onder andere zeewier. En alles wat ze kunnen pakken.',
+  init() {
+    const ks = shuffle(['wier', 'wier', 'wier', Math.random() < .5 ? 'wier' : 'vis', 'vis']);
+    return { it: ks.map((k, i) => ({ k, at: .4 + i * .6 })), t: 0, snap: 0, n: 0 };
+  },
+  update(s, dt) {
+    s.t += dt; s.snap = Math.max(0, s.snap - dt * 6); if (s.win || s.lose) return;
+    for (const o of s.it) o.x = 330 - (s.t - o.at) * 140;
+    if (P(' ') || I.clicked) {
+      s.snap = 1;
+      const o = s.it.find(o => !o.cut && Math.abs(o.x - 100) < 13);
+      if (o && o.k === 'wier') { o.cut = true; SFX.blip(); tone(1800, .04, 'square', .03); }
+      else { s.lose = true; s.why = o ? 'vis' : 'lucht'; SFX.lose(); }
+    }
+    for (const o of s.it) if (o.k === 'wier' && !o.cut && o.x < 86) { s.lose = true; s.why = 'gemist'; SFX.lose(); }
+    if (!s.lose && s.it.every(o => o.x < 86)) { s.win = true; SFX.win(); }
+  },
+  draw(s) {
+    R(0, 0, W, H, '#2f78b8'); R(0, 150, W, 30, '#c9b48a');
+    for (let i = 0; i < 10; i++) R(((i * 47 - s.t * 140) % 340 + 340) % 340 - 10, 124, 12, 2, '#5a9ad0');
+    R(88, 92, 24, 50, 'rgba(255,255,255,.15)');
+    for (const o of s.it) {
+      if (o.x > 340 || o.x < -20) continue;
+      if (o.k === 'wier') { if (o.cut) { Ln(o.x, 122, o.x - 4, 140, '#3d8b3d', 3); Ln(o.x + 6, 104 - (s.t * 30) % 20, o.x + 2, 116, '#5cb85c', 3); } else { Ln(o.x, 140, o.x - 3, 120, '#3d8b3d', 3); Ln(o.x - 3, 120, o.x + 2, 100, '#5cb85c', 3); } }
+      else fishy(o.x, 116, '#9aa6b0', true);
+    }
+    drawGrumble(70, 54, 2);
+    const o = s.snap * 4;
+    Ln(104, 100 - 6 + o, 118, 106, '#e0601a', 4); Ln(104, 114 - o, 118, 108, '#e0601a', 4);
+    if (s.lose) T(s.why === 'vis' ? 'DAT WAS EEN VIS.' : s.why === 'gemist' ? 'WIER GEMIST.' : 'KNIP IN DE LUCHT.', 200, 40, 12, '#d94040', 'center', '#fff');
+    if (s.win) T('Hmpf. Netjes.', 200, 40, 12, '#3f9b4a', 'center', '#fff');
+  }
+};
+
+function shell(x, y, r, c = '#f4d0b0') {
+  E(x, y, r, Math.round(r * .8), '#a8603a'); E(x, y - 1, r - 2, Math.round(r * .8) - 2, c);
+  for (let i = -2; i <= 2; i++) Ln(x + i * r / 3, y - r * .7, x + i * r / 5, y + r * .6, '#d9a080', 1);
+  E(x, y + Math.round(r * .55), Math.round(r * .5), Math.max(1, Math.round(r * .2)), '#5a3a22');
+}
+const G_SCHELP = {
+  verb: 'NIEUW HUIS!', hint: 'KLIK de schelp die precies past (of 1 2 3)', time: 4.5, bg: '#f2dca0',
+  fact: 'Echt: heremietkreeften wisselen van schelp als ze groeien. Grumbleclaw is geen heremietkreeft, maar wil het toch.',
+  init() { const sc = pick([1, 2, 3]); return { sc, opts: shuffle([1, 2, 3]), picked: -1 }; },
+  update(s) {
+    if (s.win || s.lose) return;
+    let p = -1; ['1', '2', '3'].forEach((k, i) => { if (P(k)) p = i; });
+    if (I.clicked) for (let i = 0; i < 3; i++) { const x = 60 + i * 100; if (Math.abs(I.mx - x) < 34 && I.my > 90 && I.my < 160) p = i; }
+    if (p >= 0) { s.picked = p; if (s.opts[p] === s.sc) { s.win = true; SFX.win(); } else { s.lose = true; SFX.lose(); } }
+  },
+  draw(s) {
+    beach();
+    drawGrumble(160 - 9 * s.sc, 60 - 12 * s.sc, s.sc);
+    for (let i = 0; i < 3; i++) {
+      const x = 60 + i * 100, r = [0, 11, 20, 29][s.opts[i]], sel = s.picked === i;
+      if (sel) E(x, 132, r + 6, r * .8 + 6, s.opts[i] === s.sc ? '#9fdc8a' : '#f29a9a');
+      shell(x, 132, r);
+      T(String(i + 1), x, 170, 9, '#6b5a4a');
+    }
+    if (s.lose) T('PAST NIET. GRRR.', 160, 82, 12, '#d94040', 'center', '#fff');
+    if (s.win) T('...prima.', 160, 82, 12, '#3f9b4a', 'center', '#fff');
+  }
+};
+
+const G_VERVEL = {
+  verb: 'VERVEL!', hint: 'Pak de krab met de muis en TREK hem naar rechts (of houd → in)', time: 5, bg: '#f2dca0',
+  fact: 'Echt: een krab groeit door zijn oude schild uit te trekken. Dat heet vervellen.',
+  init() { return { x: 120, grab: false, t: 0 }; },
+  update(s, dt) {
+    s.t += dt; if (s.win) return;
+    if (I.clicked && Math.abs(I.mx - (s.x + 18)) < 26 && Math.abs(I.my - 112) < 24) s.grab = true;
+    if (!I.down) s.grab = false;
+    let pull = 0;
+    if (s.grab && I.mx > s.x + 18) pull = 60;
+    if (RIGHT()) pull = 55;
+    s.x = s.x + (pull ? pull : -25) * dt;
+    s.x = Math.max(120, s.x);
+    if (s.x >= 230) { s.win = true; SFX.win(); }
+    if (pull && Math.random() < .2) SFX.brush();
+  },
+  draw(s) {
+    beach();
+    drawGrumble(120, 100, 2, false, GRUMBLE_GRIJS);
+    const w = Math.round(Math.sin(s.t * 30) * (s.grab || RIGHT() ? 1 : 0));
+    drawGrumble(s.x + w, 100, 2);
+    if (!s.win) { const st = clamp((s.x - 120) / 110, 0, 1); for (let i = 0; i < 4; i++) Ln(130 + i * 6, 104 + i * 4, s.x + 6 + i * 6, 104 + i * 4, 'rgba(180,170,180,.7)', 1); R(110, 160, 100, 6, '#d6cfc0'); R(110, 160, 100 * st, 6, '#f2782a'); }
+    T(s.win ? 'GLANZEND NIEUW. Grmbl.' : 'trek hem eruit!', 160, 40, 11, s.win ? '#3f9b4a' : '#6b4426', 'center', '#fff');
+  }
+};
+
+function toerist(x, y, t, flip, run) {
+  const d = flip ? -1 : 1, o = Math.round(Math.sin(t * (run ? 30 : 14)) * 3);
+  R(x - 3 + o, y + 8, 3, 10, '#f2b09b'); R(x + 1 - o, y + 8, 3, 10, '#f2b09b');
+  R(x - 5, y - 4, 10, 12, '#f29aa0'); R(x - 5, y + 4, 10, 5, '#3d6fd9');
+  O(x, y - 9, 5, '#f2b09b'); R(x - 5, y - 15, 10, 3, '#f2c94c'); R(x + d * 2, y - 10, 1, 1, '#000');
+  if (run) T('AAH!', x, y - 22, 7, '#d94040');
+}
+const G_STRAND = {
+  verb: 'MIJN STRAND!', hint: 'Toeristen dichtbij? ← of → (of klik die kant) om ze weg te knippen', time: 6, bg: '#f2dca0',
+  fact: 'Echt: strandkrabben verstoppen zich in het zand als ze bang zijn. Grumbleclaw is nooit bang. Alleen boos.',
+  init() {
+    const gap = REMIX ? .55 : .8;
+    return { tr: shuffle([-1, 1, -1, 1]).map((side, i) => ({ side, at: .2 + i * gap, x: side < 0 ? -20 : 340, run: false })), t: 0, snap: 0, sd: 0 };
+  },
+  update(s, dt) {
+    s.t += dt; s.snap = Math.max(0, s.snap - dt * 5); if (s.win || s.lose) return;
+    for (const p of s.tr) {
+      if (s.t < p.at) continue;
+      if (p.run) p.x -= p.side * 200 * dt; else p.x += -p.side * 80 * dt;
+      if (!p.run && Math.abs(p.x - 160) < 22) { s.lose = true; SFX.lose(); }
+    }
+    let side = 0; if (PL()) side = -1; if (PR()) side = 1;
+    if (I.clicked) side = I.mx < 160 ? -1 : 1;
+    if (side) {
+      s.snap = 1; s.sd = side;
+      const p = s.tr.filter(p => !p.run && p.side === side && s.t >= p.at && Math.abs(p.x - 160) < 80).sort((a, b) => Math.abs(a.x - 160) - Math.abs(b.x - 160))[0];
+      if (p) { p.run = true; SFX.blip(); tone(1800, .04, 'square', .03); }
+      else tone(110, .1, 'sawtooth', .04);
+    }
+    if (s.tr.every(p => p.run)) { s.win = true; SFX.win(); }
+  },
+  draw(s) {
+    beach();
+    R(150, 128, 20, 12, '#d9b870'); R(146, 122, 8, 8, '#d9b870'); R(166, 122, 8, 8, '#d9b870'); R(156, 116, 8, 12, '#d9b870'); R(159, 108, 1, 8, '#6b4426'); R(160, 108, 5, 3, '#d94040');
+    R(80, 150, 160, 1, 'rgba(160,100,40,.4)');
+    for (const p of s.tr) if (s.t >= p.at && p.x > -30 && p.x < 350) toerist(p.x, 128, s.t, p.run ? p.side < 0 : p.side > 0, p.run);
+    drawGrumble(142, 142, 2);
+    if (s.snap > 0) { const cx = s.sd < 0 ? 132 : 188; Ln(cx, 150, cx + s.sd * 12, 146 - s.snap * 4, '#e0601a', 4); Ln(cx, 154, cx + s.sd * 12, 158 + s.snap * 4, '#e0601a', 4); }
+    if (s.t < 1.2) T('"Ga van mijn strand af."', 160, 40, 10, '#7a2a10');
+    if (s.lose) T('ZE STAAN OP HET KASTEEL!', 160, 40, 12, '#d94040', 'center', '#fff');
+    if (s.win) T('Rust. Eindelijk.', 160, 40, 12, '#3f9b4a', 'center', '#fff');
+  }
+};
+
+const G_ZOEK = {
+  verb: 'WAAR IS DE VIS?', hint: 'Volg de schelp met de vis en KLIK hem (of 1 2 3)', time: 5.2, bg: '#f2dca0',
+  fact: 'Niet waar: Grumbleclaw speelt dit spelletje op de markt. Hij wint altijd. Hij speelt vals.',
+  init() {
+    const n = REMIX ? 3 : 5, sw = [];
+    for (let i = 0; i < n; i++) { const a = Math.floor(rnd(0, 3)); let b = Math.floor(rnd(0, 2)); if (b >= a) b++; sw.push([a, b]); }
+    return { slot: [0, 1, 2], f: Math.floor(rnd(0, 3)), sw, t: 0, k: 0, ph: 'show', picked: -1 };
+  },
+  update(s, dt) {
+    s.t += dt; if (s.win || s.lose) return;
+    const sd = .34;
+    if (s.ph === 'show' && s.t > .8) { s.ph = 'mix'; s.t0 = s.t; }
+    if (s.ph === 'mix') {
+      const k = Math.floor((s.t - s.t0) / sd);
+      while (s.k < Math.min(k, s.sw.length)) {
+        const [a, b] = s.sw[s.k];
+        s.slot = s.slot.map(v => v === a ? b : v === b ? a : v); s.k++; tone(500 + s.k * 60, .05, 'triangle', .04);
+      }
+      if (s.k >= s.sw.length) s.ph = 'pick';
+      return;
+    }
+    if (s.ph !== 'pick') return;
+    let p = -1; ['1', '2', '3'].forEach((key, i) => { if (P(key)) p = i; });
+    if (I.clicked) for (let i = 0; i < 3; i++) if (Math.abs(I.mx - (80 + i * 80)) < 28 && I.my > 90 && I.my < 150) p = i;
+    if (p < 0) return;
+    s.picked = p;
+    if (s.slot[s.f] === p) { s.win = true; SFX.win(); } else { s.lose = true; SFX.lose(); }
+  },
+  draw(s) {
+    beach();
+    drawGrumble(142, 30, 2);
+    const sd = .34, prog = s.ph === 'mix' ? clamp(((s.t - s.t0) / sd) - s.k, 0, 1) : 0, cur = s.ph === 'mix' ? s.sw[s.k] : null;
+    for (let i = 0; i < 3; i++) {
+      let sl = s.slot[i], x = 80 + sl * 80, y = 124;
+      if (cur && (sl === cur[0] || sl === cur[1])) { const to = sl === cur[0] ? cur[1] : cur[0]; x = 80 + (sl + (to - sl) * prog) * 80; y -= Math.sin(prog * Math.PI) * (sl === cur[0] ? 18 : -10); }
+      const reveal = s.ph === 'show' || s.win || s.lose;
+      if (reveal && i === s.f) { fishy(x, 138, '#f2994a'); }
+      shell(x, reveal && (i === s.f || s.picked === sl) ? y - 18 : y, 24);
+    }
+    if (s.ph === 'pick' && !s.win && !s.lose) for (let i = 0; i < 3; i++) T(String(i + 1), 80 + i * 80, 164, 9, '#6b5a4a');
+    if (s.lose) T('Ha. Vals gespeeld.', 160, 82, 12, '#d94040', 'center', '#fff');
+    if (s.win) T('Grrr. Gevonden.', 160, 82, 12, '#3f9b4a', 'center', '#fff');
+  }
+};
+
+function hengelvis(x, y, t) {
+  E(x, y, 16, 12, '#3a3a5a'); E(x + 2, y + 2, 13, 8, '#4a4a70');
+  for (let i = 0; i < 5; i++) { R(x + 6 + i * 2, y + 4, 1, 4, '#fff'); }
+  R(x + 6, y - 5, 3, 3, '#fff'); R(x + 7, y - 4, 1, 1, '#000');
+  X.fillStyle = '#3a3a5a'; X.beginPath(); X.moveTo(x - 15, y); X.lineTo(x - 26, y - 8); X.lineTo(x - 26, y + 8); X.fill();
+  Ln(x + 2, y - 11, x + 12, y - 22, '#3a3a5a', 1);
+}
+const G_DIEPZEE = {
+  verb: 'DIEPZEE!', hint: 'Zoek met je zaklamp (muis of pijltjes) de HENGELVIS en klik hem', time: 5, bg: '#08122a',
+  fact: 'Echt: een hengelvis heeft een lichtgevend lokaasje op zijn kop. Andere vissen zwemmen erop af.',
+  init() {
+    const pts = []; const far = (x, y) => pts.every(p => Math.hypot(p.x - x, p.y - y) > 50);
+    for (let t = 0; pts.length < 4 && t < 300; t++) { const x = rnd(40, 290), y = rnd(40, 150); if (far(x, y) && Math.hypot(x - 160, y - 95) > 50) pts.push({ x, y }); }
+    while (pts.length < 4) pts.push({ x: rnd(40, 290), y: rnd(40, 150) });
+    return { a: pts[0], dec: pts.slice(1), lx: 160, ly: 95, lmx: I.mx, lmy: I.my, t: 0 };
+  },
+  update(s, dt) {
+    s.t += dt; if (s.win || s.lose) return;
+    if (Math.abs(I.mx - s.lmx) + Math.abs(I.my - s.lmy) > .5) { s.lx = I.mx; s.ly = I.my; }
+    s.lmx = I.mx; s.lmy = I.my;
+    s.lx = clamp(s.lx + ((RIGHT() ? 1 : 0) - (LEFT() ? 1 : 0)) * 160 * dt, 0, W);
+    s.ly = clamp(s.ly + ((K('ArrowDown') || K('s') ? 1 : 0) - (K('ArrowUp') || K('w') ? 1 : 0)) * 160 * dt, 0, H);
+    const hit = (I.clicked && Math.hypot(I.mx - s.a.x, I.my - s.a.y) < 18) || ((P(' ') || P('Enter')) && Math.hypot(s.lx - s.a.x, s.ly - s.a.y) < 18);
+    if (hit) { s.win = true; SFX.win(); }
+  },
+  draw(s) {
+    R(0, 0, W, H, '#08122a');
+    O(s.lx, s.ly, 36, '#152a50'); O(s.lx, s.ly, 28, '#1e3e70');
+    const vis = (x, y) => s.win || Math.hypot(x - s.lx, y - s.ly) < 38;
+    s.dec.forEach((d, i) => { if (vis(d.x, d.y)) i % 2 ? jelly(d.x, d.y, s.t) : fishy(d.x, d.y, '#7a8aa0', i === 0); });
+    if (vis(s.a.x, s.a.y)) hengelvis(s.a.x, s.a.y, s.t);
+    const g = .5 + Math.sin(s.t * 5) * .5;
+    O(s.a.x + 12, s.a.y - 23, 1 + Math.round(g), `rgba(255,240,140,${.35 + g * .5})`);
+    T('Tip: kijk naar het lichtje', 160, 172, 7, '#4a6a9a');
+    if (s.win) T('GEVONDEN! Lelijk ding.', 160, 20, 12, '#9fdc8a', 'center', '#08122a');
+  }
+};
+
+const Q6 = [
+  ['Hoeveel poten heeft een krab?', '10', '6'],
+  ['Waarom loopt een krab zijwaarts?', 'Zo buigen zijn poten', 'Hij is chagrijnig'],
+  ['Wat doet een krab als hij groeit?', 'Vervellen', 'Grotere jas kopen'],
+  ['Is een kwal een vis?', 'Nee', 'Ja'],
+  ['Waarmee lokt een hengelvis prooi?', 'Een lichtje', 'Snoep'],
+  ['Wat eet een zeester?', 'Schelpdieren', 'Sterren'],
+  ['Wie geeft les 6?', 'Grumbleclaw', 'Meneer Krab'],
+];
+const G_VRAAG6 = vraag(Q6, 'Niet waar: Grumbleclaw is ooit één keer blij geweest. Op een dinsdag.');
+
+Object.assign(LESSONS[5], {
+  color: '#e0601a', open: true,
+  intro: ['Grumbleclaw schuifelt zijwaarts binnen.', '"Ik wilde hier niet zijn." Hij geeft toch les.'],
+  win: ['Hmpf. Verdiend.', 'Grrrmbl... goed.', 'Ik ben niet blij. Wel tevreden.', 'Knip. Dat betekent goed.'],
+  lose: ['Ga van mijn strand af.', 'Grrrmbl.', 'Zelfs een zeekomkommer kan dat.', 'Knip knip. Dat betekent fout.'],
+  games: [G_KNIP, G_SCHELP, G_VERVEL, G_STRAND, G_ZOEK, G_DIEPZEE, G_VRAAG6],
+  remixLine: 'Grumbleclaw knipt op de maat. Chagrijnig.'
+});
+</script>
+<script>/* ===== games7.js ===== */
+'use strict';
+// ===== LES 7: Robin — Het lichaam =====
+const ROBIN = [
+  '    bbbbbbbb    ',
+  '   bbbbbbbbbb   ',
+  '  bbhhhhhhhhbb  ',
+  '  bbssssssssbb  ',
+  '  bbskksskksbb  ',
+  '  bbtsssssstbb  ',
+  '  bbtssrrsstbb  ',
+  '  bbssmmmmssbb  ',
+  '   bbssssssbb   ',
+  '  bbbbbbbbbbbb  ',
+  ' bbbbbbccbbbbbb ',
+  ' bbbbbbccbbbbbb ',
+  'bbbbBBBBBBBBbbbb',
+  'bbbbBBBBBBBBbbbb',
+  'ss bbbbbbbbbb ss',
+  '   bbbbbbbbbb   ',
+  '    jjjjjjjj    ',
+  '    jjj  jjj    ',
+  '    jjj  jjj    ',
+  '   kkkk  kkkk   ',
+];
+const ROBIN_PAL = { b: '#3d6fd9', B: '#2f58b0', h: '#6b4426', s: '#f2c29b', k: '#2a2230', t: '#7fd0f2', r: '#e04848', m: '#a8405e', c: '#fff', j: '#44506a' };
+function drawRobin(x, y, sc = 1, flip = false, t = 0) {
+  SPR(ROBIN, ROBIN_PAL, x, y, sc, flip);
+  const d = ((t * 40) % 10) * sc;
+  R(x + 4 * sc, y + 7 * sc + d, sc, sc, '#7fd0f2'); R(x + 11 * sc, y + 7 * sc + d, sc, sc, '#7fd0f2');
+}
+GUESTS.Robin = (x, yb, sc, flip) => drawRobin(x, yb - ROBIN.length * sc, sc, flip, tS);
+
+const G_TRANEN = {
+  verb: 'VANG DE TRANEN!', hint: '← → (of muis) · vang de tranen met de zakdoek', time: 6, bg: '#eef4fa',
+  fact: 'Echt: tranen komen uit je traanklieren en houden je ogen schoon.',
+  init() { return { x: 160, it: [], cd: .2, n: 0, need: REMIX ? 3 : 5, miss: 0, lmx: I.mx, t: 0 }; },
+  update(s, dt) {
+    s.t += dt; if (s.win || s.lose) return;
+    if (LEFT() || RIGHT()) s.x += ((RIGHT() ? 1 : 0) - (LEFT() ? 1 : 0)) * 170 * dt;
+    if (Math.abs(I.mx - s.lmx) > .5) s.x = I.mx; s.lmx = I.mx; s.x = clamp(s.x, 18, 302);
+    s.cd -= dt;
+    if (s.cd <= 0) { s.cd = rnd(.4, .55); const e = Math.random() < .5 ? -1 : 1; s.it.push({ x: 160 + e * 7, y: 40, vx: e * rnd(20, 85), vy: rnd(-70, -30) }); tone(rnd(600, 800), .06, 'sine', .03, -200); }
+    for (const o of s.it) {
+      o.vy += 200 * dt; o.x += o.vx * dt; o.y += o.vy * dt;
+      if (o.x < 6 || o.x > 314) o.vx *= -1;
+      if (!o.done && o.vy > 0 && o.y > 150 && o.y < 162 && Math.abs(o.x - s.x) < 18) { o.done = true; s.n++; SFX.blip(); if (s.n >= s.need) { s.win = true; SFX.win(); } }
+      if (!o.done && o.y > 172) { o.done = true; s.miss++; if (s.miss >= 3) { s.lose = true; SFX.lose(); } }
+    }
+    s.it = s.it.filter(o => !o.done);
+  },
+  draw(s) {
+    R(0, 170, W, 10, '#c9cdd6');
+    drawRobin(144, 6, 2, false, s.t);
+    for (const o of s.it) { O(o.x, o.y, 3, '#3d8fd0'); O(o.x, o.y, 2, '#7fd0f2'); R(o.x - 1, o.y - 4, 2, 2, '#7fd0f2'); }
+    R(s.x - 17, 154, 34, 8, '#3d6fd9'); R(s.x - 16, 155, 32, 6, '#fff'); R(s.x - 16, 157, 32, 1, '#bfe3ff');
+    T('tranen: ' + s.n + ' / ' + s.need, 50, 14, 8, '#3d6fd9');
+    for (let i = 0; i < 3; i++) R(262 + i * 14, 10, 10, 6, i < s.miss ? '#d94040' : '#d6cfc0');
+    if (s.lose) T('PLAS OP DE VLOER.', 160, 110, 12, '#d94040', 'center', '#fff');
+  }
+};
+
+const G_HART = {
+  verb: 'HARTSLAG!', hint: 'SPATIE (of klik) als een hartje op de lijn is', time: 4.3, bg: '#fde9ee',
+  fact: 'Echt: je hart klopt ongeveer 100.000 keer per dag.',
+  init() { const b = rnd(.5, .62); return { notes: [0, 1, 2, 3].map(i => ({ at: 1.1 + i * b, hit: false })), t: 0, pump: 0, b }; },
+  update(s, dt) {
+    s.t += dt; s.pump = Math.max(0, s.pump - dt * 5); if (s.win || s.lose) return;
+    for (const n of s.notes) if (!n.snd && s.t >= n.at) { n.snd = true; tone(70, .1, 'sine', .14, -20); tone(60, .1, 'sine', .1, -20, .14); }
+    if (P(' ') || I.clicked) {
+      const n = s.notes.find(n => !n.hit && Math.abs(s.t - n.at) < .14);
+      if (n) { n.hit = true; s.pump = 1; SFX.blip(); if (s.notes.every(n => n.hit)) { s.win = true; SFX.win(); } }
+      else { s.lose = true; SFX.lose(); }
+    }
+    if (s.notes.some(n => !n.hit && s.t > n.at + .14)) { s.lose = true; SFX.lose(); }
+  },
+  draw(s) {
+    R(0, 60, W, 70, '#2a2230');
+    let px = 0, py = 95;
+    for (let x = 0; x < W; x += 2) {
+      const tt = s.t - (x - 80) / 140, ph = ((tt - 1.1) / s.b) % 1, f = ((ph % 1) + 1) % 1;
+      const y = 95 - (f < .06 ? Math.sin(f / .06 * Math.PI) * 22 : 0) + (f > .06 && f < .1 ? 8 : 0);
+      Ln(px, py, x, y, '#5cd06a', 1); px = x; py = y;
+    }
+    R(79, 62, 2, 66, '#fff8d6');
+    for (const n of s.notes) {
+      const x = 80 + (n.at - s.t) * 140; if (x < -10 || x > 330) continue;
+      const c = n.hit ? '#9fdc8a' : '#e04848';
+      O(x - 3, 74, 4, c); O(x + 3, 74, 4, c); X.fillStyle = c; X.beginPath(); X.moveTo(x - 7, 75); X.lineTo(x + 7, 75); X.lineTo(x, 84); X.fill();
+    }
+    const sz = 1 + s.pump * .3;
+    X.save(); X.translate(250, 30); X.scale(sz, sz);
+    O(-6, -2, 8, '#e04848'); O(6, -2, 8, '#e04848'); X.fillStyle = '#e04848'; X.beginPath(); X.moveTo(-14, 0); X.lineTo(14, 0); X.lineTo(0, 16); X.fill();
+    X.restore();
+    drawRobin(30, 136, 1, false, s.t);
+    if (s.lose) T('HARTRITMESTOORNIS!', 160, 150, 12, '#d94040', 'center', '#fff');
+    if (s.win) T('KLOPT!', 160, 150, 14, '#3f9b4a', 'center', '#fff');
+  }
+};
+
+const G_NIES = {
+  verb: 'NIES!', hint: 'HOUD SPATIE (of muis) in en LAAT LOS in het groene vak', time: 5, bg: '#fdf6e0',
+  fact: 'Niet waar: je ogen vallen eruit als je niest met je ogen open.',
+  init() { const lo = rnd(.6, .75); return { lv: 0, lo, hi: lo + .14, held: false, t: 0, boom: 0 }; },
+  update(s, dt) {
+    s.t += dt; if (s.win) s.boom += dt; if (s.win || s.lose) return;
+    const down = K(' ') || I.down;
+    if (down) { s.held = true; s.lv += .42 * dt; if (Math.random() < .2) tone(300 + s.lv * 400, .05, 'sine', .02); }
+    else if (s.held) {
+      if (s.lv >= s.lo && s.lv <= s.hi) { s.win = true; tone(900, .25, 'sawtooth', .06, -700); SFX.win(); }
+      else { s.lose = true; s.why = 'vroeg'; SFX.lose(); }
+    }
+    if (s.lv > 1) { s.lose = true; s.why = 'lang'; SFX.lose(); }
+  },
+  draw(s) {
+    for (let i = 0; i < 10; i++) O((i * 37 + s.t * 20) % W, 30 + (i * 29) % 120 + Math.sin(s.t * 2 + i) * 4, 2, '#f2c94c');
+    const sh = s.held && !s.win && !s.lose ? Math.round(Math.sin(s.t * 50) * s.lv * 2) : 0;
+    drawRobin(112 + sh, 22, 6, false, 0);
+    if (s.win) { const b = Math.min(1, s.boom * 3); for (let i = 0; i < 9; i++) Ln(160, 62, 160 + Math.cos(i * .7 - 2.8) * 80 * b, 62 + Math.sin(i * .7 - 2.8) * 50 * b, '#bfe3ff', 2); T('HATSJOE!', 160, 20, 18, '#3d6fd9', 'center', '#fff'); }
+    R(290, 30, 14, 112, '#5a6070'); R(292, 32, 10, 108, '#e6eef6');
+    R(292, 32 + 108 * (1 - s.hi), 10, 108 * (s.hi - s.lo), '#9fdc8a');
+    R(292, 32 + 108 * (1 - Math.min(1, s.lv)), 10, 108 * Math.min(1, s.lv), 'rgba(242,201,76,.8)');
+    if (s.held && !s.win && !s.lose) T('H' + 'a'.repeat(1 + Math.floor(s.lv * 8)) + '...', 160, 168, 10, '#2a2230');
+    if (s.lose) T(s.why === 'lang' ? 'TE LANG. HIJ IS WEG.' : '...niks. Ongemakkelijk.', 160, 20, 12, '#d94040', 'center', '#fff');
+  }
+};
+
+const ORGANEN = [
+  ['je hersenen', 'hersenen', 0, -66, 12],
+  ['je hart', 'hart', 7, -14, 7],
+  ['je longen', 'longen', -14, -18, 9],
+  ['je longen', 'longen', 16, -26, 7],
+  ['je maag', 'maag', 8, 8, 8],
+  ['je darmen', 'darmen', -2, 30, 11],
+];
+const G_WIJS = {
+  verb: 'WIJS AAN!', hint: 'KLIK op de goede plek in het lichaam', time: 4.5, bg: '#fdf6e0',
+  fact: 'Echt: je hart zit bijna in het midden van je borst, een klein beetje naar links.',
+  init() { return { q: pick(['hersenen', 'hart', 'longen', 'maag', 'darmen']), cx: 160, cy: 100, picked: null }; },
+  update(s) {
+    if (s.win || s.lose || !I.clicked) return;
+    const hits = ORGANEN.filter(o => Math.hypot(I.mx - (s.cx + o[2]), I.my - (s.cy + o[3])) < o[4] + 3).sort((a, b) => a[4] - b[4]);
+    if (!hits.length && (Math.abs(I.mx - s.cx) > 40 || I.my < 20 || I.my > 170)) return;
+    s.picked = hits[0] || null;
+    if (s.picked && s.picked[1] === s.q) { s.win = true; SFX.win(); } else { s.lose = true; SFX.lose(); }
+  },
+  draw(s) {
+    const x = s.cx, y = s.cy, skin = '#f2c29b';
+    O(x, y - 64, 18, skin); R(x - 4, y - 46, 8, 6, skin);
+    R(x - 26, y - 40, 52, 80, skin); R(x - 38, y - 38, 12, 56, skin); R(x + 26, y - 38, 12, 56, skin);
+    R(x - 22, y + 40, 18, 40, skin); R(x + 4, y + 40, 18, 40, skin);
+    R(x - 26, y - 40, 52, 4, '#3d6fd9');
+    const name = { hersenen: 'je HERSENEN', hart: 'je HART', longen: 'je LONGEN', maag: 'je MAAG', darmen: 'je DARMEN' }[s.q];
+    T('Waar zit ' + name + '?', 160, 12, 10, '#2a2230');
+    if (s.win || s.lose) for (const o of ORGANEN) {
+      const ox = x + o[2], oy = y + o[3];
+      const col = { hersenen: '#f6a0c0', hart: '#e04848', longen: '#f29aa0', maag: '#f2b070', darmen: '#e8a088' }[o[1]];
+      O(ox, oy, o[4], col);
+    }
+    if (s.lose) { T(s.picked ? 'Dat is ' + s.picked[0] + '.' : 'Daar zit niks.', 260, 90, 9, '#d94040'); T('Robin huilt.', 260, 104, 8, '#3d6fd9'); }
+    if (s.win) T('Precies!', 260, 90, 11, '#3f9b4a');
+    drawRobin(16, 140, 1, false, tS);
+  }
+};
+
+const G_REFLEX = {
+  verb: 'REFLEX!', hint: 'Pas na de TIK op je knie: spatie (of klik) om te schoppen', time: 4.5, bg: '#eef4fa',
+  fact: 'Echt: bij een kniereflex gaat het signaal niet eens naar je hersenen, alleen naar je ruggenmerg.',
+  init() { return { tk: rnd(1.0, 2.8), t: 0, kick: 0 }; },
+  update(s, dt) {
+    s.t += dt; if (s.win) s.kick = Math.min(1, s.kick + dt * 8); if (s.win || s.lose) return;
+    if (!s.tikked && s.t >= s.tk) { s.tikked = true; tone(1400, .04, 'square', .05); }
+    if (P(' ') || I.clicked) {
+      if (s.tikked) { s.win = true; SFX.win(); tone(180, .12, 'square', .06, -80); }
+      else { s.lose = true; s.why = 'vroeg'; SFX.lose(); }
+    }
+    if (s.tikked && s.t > s.tk + .45) { s.lose = true; s.why = 'laat'; SFX.lose(); }
+  },
+  draw(s) {
+    R(60, 120, 100, 10, '#a8743f'); R(66, 130, 6, 40, '#8a5a34'); R(148, 130, 6, 40, '#8a5a34');
+    drawRobin(80, 82, 2, false, s.t);
+    R(96, 118, 32, 12, '#44506a');
+    const kx = 128, a = s.win ? -s.kick * 1.2 : 0;
+    Ln(kx, 126, kx + Math.cos(Math.PI / 2 + a) * 30, 126 + Math.sin(Math.PI / 2 + a) * 30, '#44506a', 8);
+    const sw = s.tikked ? 0 : Math.max(0, Math.sin(s.t * 6)) * .6;
+    const hx = s.win ? 210 + s.kick * 20 : 200;
+    drawHaas(hx, 96 + (s.win ? -s.kick * 10 : 0), 2, 0, true);
+    spoon(186 - sw * 10, 120 - sw * 16, -1 + sw, 2);
+    if (s.tikked && !s.win && !s.lose) T('TIK!', 150, 102, 12, '#d94040', 'center', '#fff');
+    if (s.win) T('AU! Goede reflex.', 220, 70, 10, '#3f9b4a', 'center', '#fff');
+    if (s.lose) T(s.why === 'vroeg' ? 'TE VROEG. Valsspeler.' : 'TE TRAAG. Zenuwen kapot?', 160, 30, 12, '#d94040', 'center', '#fff');
+  }
+};
+
+const G_VERDEDIG = {
+  verb: 'VERDEDIG!', hint: 'KLIK op de virussen voordat ze de cel raken', time: 6, bg: '#f6d8d8',
+  fact: 'Echt: witte bloedcellen ruimen bacteriën en virussen op in je lichaam.',
+  init() { return { v: [], cd: .1, n: 0, need: REMIX ? 4 : 5, t: 0, zap: [] }; },
+  update(s, dt) {
+    s.t += dt; s.zap.forEach(z => z.t += dt); s.zap = s.zap.filter(z => z.t < .25);
+    if (s.win || s.lose) return;
+    s.cd -= dt;
+    if (s.cd <= 0) { s.cd = rnd(.45, .65); const a = rnd(0, 6.28); s.v.push({ x: 160 + Math.cos(a) * 180, y: 95 + Math.sin(a) * 120, sp: rnd(40, 55), ph: rnd(0, 6) }); }
+    for (const v of s.v) {
+      const dx = 160 - v.x, dy = 95 - v.y, d = Math.hypot(dx, dy);
+      v.x += dx / d * v.sp * dt; v.y += dy / d * v.sp * dt;
+      if (d < 22) { s.lose = true; SFX.lose(); }
+    }
+    if (I.clicked) for (const v of s.v) if (Math.hypot(I.mx - v.x, I.my - v.y) < 11) {
+      v.dead = true; s.n++; s.zap.push({ x: v.x, y: v.y, t: 0 }); SFX.blip();
+      if (s.n >= s.need) { s.win = true; SFX.win(); } break;
+    }
+    s.v = s.v.filter(v => !v.dead);
+  },
+  draw(s) {
+    for (let i = 0; i < 8; i++) { const x = (i * 53 + s.t * 15) % 340 - 10, y = 20 + (i * 41) % 150; E(x, y, 8, 5, '#e07070'); E(x, y, 4, 2, '#c05050'); }
+    O(160, 95, 18, '#d0c0e0'); O(160, 95, 16, '#f0e8f8'); O(163, 92, 6, '#9b6fd0');
+    R(155, 100, 2, 2, '#2a2230'); R(163, 100, 2, 2, '#2a2230');
+    for (const v of s.v) {
+      for (let i = 0; i < 8; i++) Ln(v.x, v.y, v.x + Math.cos(i * .785 + v.ph) * 10, v.y + Math.sin(i * .785 + v.ph) * 10, '#3d8b3d', 1);
+      O(v.x, v.y, 7, '#5cb85c'); R(v.x - 3, v.y - 2, 2, 2, '#2a2230'); R(v.x + 1, v.y - 2, 2, 2, '#2a2230'); R(v.x - 2, v.y + 2, 4, 1, '#2a2230');
+    }
+    for (const z of s.zap) { O(z.x, z.y, 4 + z.t * 40, 'rgba(255,255,255,.7)'); }
+    T('virussen: ' + s.n + ' / ' + s.need, 160, 12, 8, '#a8405e');
+    if (s.lose) T('GEÏNFECTEERD. Robin snottert.', 160, 160, 11, '#d94040', 'center', '#fff');
+  }
+};
+
+const Q7 = [
+  ['Hoeveel botten heeft een volwassene?', 'Ongeveer 206', 'Precies 12'],
+  ['Wat pompt je bloed rond?', 'Je hart', 'Je knieën'],
+  ['Waar komen tranen uit?', 'Traanklieren', 'Een kraantje'],
+  ['Wat doen witte bloedcellen?', 'Ziektes bestrijden', 'Bloed wit maken'],
+  ['Wat is je grootste orgaan?', 'Je huid', 'Je neus'],
+  ['Waarmee adem je?', 'Je longen', 'Je oren'],
+  ['Wie geeft les 7?', 'Robin', 'Een ui'],
+];
+const G_VRAAG7 = vraag(Q7, 'Niet waar: Robin huilt 2 liter per dag. Het is meer.');
+
+Object.assign(LESSONS[6], {
+  color: '#3d6fd9', open: true,
+  intro: ['Robin geeft les. Hij huilt al.', 'Vandaag: het menselijk lichaam.'],
+  win: ['Robin huilt. Van blijdschap.', 'Snif... dat was goed.', 'Robin snuit zijn neus. Trots.', 'Haastregt geeft Robin een zakdoek.'],
+  lose: ['Robin huilt. Van verdriet.', 'Snif. Fout.', 'Er valt een traan op je rapport.', 'Robin moet even naar de gang.'],
+  games: [G_TRANEN, G_HART, G_NIES, G_WIJS, G_REFLEX, G_VERDEDIG, G_VRAAG7],
+  remixLine: 'Robin huilt op de maat. Het is prachtig.'
+});
+</script>
+<script>/* ===== exam.js ===== */
+'use strict';
+// ===== Examen: eindeloze modus met alle microgames =====
+const EXAM_LEVELS = [
+  { name: 'Normaal', sub: 'gewone snelheid, wordt langzaam sneller', base: 1, step: .08, gap: 1.2, col: '#3f9b4a' },
+  { name: 'Snel', sub: 'begint op ×1,3 en versnelt harder', base: 1.3, step: .1, gap: .9, col: '#d9a440' },
+  { name: 'Overhoring', sub: 'remix-tempo, korte games, geen pauze', base: 1.45, step: .1, gap: .5, col: '#d94040' },
+];
+const EXAM_ITEM = { n: '★', title: 'EXAMEN', teacher: 'alle lessen', color: '#d94040', open: true, exam: true };
+const EXAM_LINES = {
+  win: ['Goed.', 'Door.', 'Netjes.', 'Volgende.'],
+  lose: ['Fout.', 'Au.', 'Hm.', 'Dat kost je.'],
+};
+let examSel = 0;
+
+const menuItems = () => [...LESSONS, EXAM_ITEM];
+const examPool = () => LESSONS.filter(L => L.open).flatMap(L => L.games.map(g => ({ g, L })));
+
+function startExam(level) {
+  S = { exam: true, level, L: LESSONS[0], q: [], i: 0, lives: 4, lost: 0, score: 0, last: null, phase: 'exam', pool: examPool() };
+  REMIX = false;
+  examNext();
+  go('ebetween');
+}
+function examNext() {
+  const lv = EXAM_LEVELS[S.level], prev = S.q[S.q.length - 1];
+  let it; do { it = pick(S.pool); } while (prev && it.g === prev.g && S.pool.length > 1);
+  S.q.push({ g: it.g, L: it.L, spd: Math.min(2.4, lv.base + Math.floor(S.q.length / 6) * lv.step) });
+}
+function examFinish(win) {
+  S.last = win; S.line = pick(EXAM_LINES[win ? 'win' : 'lose']);
+  if (win) S.score++; else { S.lives--; S.lost++; }
+  go('eresult');
+}
+function examEnd() {
+  REMIX = false;
+  const k = 'exam' + S.level;
+  S.record = S.score > (best[k] || 0);
+  if (S.record) { best[k] = S.score; localStorage.setItem('bio_best', JSON.stringify(best)); }
+  go('ereport'); SFX.stamp();
+}
+const examSplashDur = () => S.level === 2 ? .55 : .9 / S.q[S.i].spd;
+function examTrack() {
+  if (!TRACKS.exam) TRACKS.exam = {
+    bpm: 118, lt: 'square', lv: .028, bt: 'triangle', bv: .055,
+    lead: seq('72 . 74 76 . 79 . 76 74 . 72 . 69 . 72 .  72 . 74 76 . 79 . 81 79 . 76 . 74 . . .'),
+    bass: seq('48 . 48 . 55 . 48 . 45 . 45 . 52 . 45 .  41 . 41 . 48 . 41 . 43 . 43 . 50 . 47 .'),
+    drum: seq('k . h k s . h . k k h . s . h s'),
+  };
+  const it = S.q[S.i], hot = scene === 'play' || scene === 'splash';
+  if (S.level === 2) return ['remix', 1 + (it.spd - 1.45) * .5, true];
+  return ['exam', 1 + (it.spd - 1) * .5, hot];
+}
+
+function examUpdate() {
+  if (scene === 'examSel') {
+    if (PL()) { examSel = (examSel + 2) % 3; SFX.tick(); }
+    if (PR()) { examSel = (examSel + 1) % 3; SFX.tick(); }
+    let start = P('Enter') || P(' ');
+    if (I.clicked) for (let i = 0; i < 3; i++) {
+      const x = 24 + i * 94;
+      if (I.mx > x && I.mx < x + 84 && I.my > 62 && I.my < 140) { if (examSel === i) start = true; examSel = i; SFX.tick(); }
+    }
+    if (start && tS > .2) { SFX.splash(); startExam(examSel); }
+    return true;
+  }
+  if (scene === 'ebetween') {
+    if (tS > EXAM_LEVELS[S.level].gap || (tS > .3 && (P(' ') || P('Enter') || I.clicked))) {
+      S.L = S.q[S.i].L; go('splash'); S.level === 2 ? SFX.tick() : SFX.splash();
+    }
+    return true;
+  }
+  if (scene === 'eresult') {
+    if (tS > (S.level === 2 ? .4 : .7)) { if (S.lives <= 0) examEnd(); else { S.i++; examNext(); go('ebetween'); } }
+    return true;
+  }
+  if (scene === 'ereport') {
+    let again = P('Enter') || P(' '), menu = false;
+    if (I.clicked && I.my > 150 && I.my < 168) { if (I.mx > 96 && I.mx < 156) again = true; if (I.mx > 164 && I.mx < 224) menu = true; }
+    if (tS > .6 && again) startExam(S.level);
+    else if (menu) go('menu');
+    return true;
+  }
+  return false;
+}
+
+function drawExamSel() {
+  paper();
+  board(56, 8, 208, 44);
+  T('EXAMEN', 160, 22, 16, '#f7f7f2', 'center', '#1e4030');
+  T('Alle ' + examPool().length + ' microgames door elkaar. 4 levens. Hoe ver kom je?', 160, 41, 7, '#bfe3c0');
+  EXAM_LEVELS.forEach((lv, i) => {
+    const x = 24 + i * 94, y = 62, on = examSel === i, lift = on ? -3 : 0;
+    R(x + 3, y + 3, 84, 78, '#2a2230');
+    R(x, y + lift, 84, 78, on ? '#fff8d6' : '#fff');
+    R(x, y + lift, 84, 20, lv.col);
+    T(lv.name, x + 42, y + 10 + lift, 10, '#fff');
+    wrapText(lv.sub, x + 42, y + 32 + lift, 76, 7, '#2a2230');
+    const b = best['exam' + i];
+    T(b ? 'record: ' + b : 'nog geen record', x + 42, y + 66 + lift, 8, b ? lv.col : '#a39a8c');
+  });
+  T('← → kiezen · ENTER starten · ESC terug', 160, 154, 7, '#6b5a4a');
+  drawHaas(290, 146 - Math.round((M.pulse || 0) * 3), 1, tS);
+  T('"Spieken = nablijven."', 248, 170, 6, '#6b5a4a');
+}
+function drawEBetween() {
+  const it = S.q[S.i], prev = S.q[S.i - 1], lv = EXAM_LEVELS[S.level], p = M.pulse || 0;
+  if (S.level === 2) {
+    R(0, 0, W, H, REMIX_COLS[S.i % REMIX_COLS.length]);
+    for (let i = 0; i < 14; i++) R(((i * 30 - tS * 300) % 420 + 420) % 420 - 50, 0, 12, H, 'rgba(255,255,255,.1)');
+  } else paper();
+  board(96, 12, 128, 52);
+  X.save(); X.translate(160, 34); X.scale(1 + p * .1, 1 + p * .1);
+  T(String(S.score), 0, 0, 24, '#f7f7f2', 'center', '#1e4030'); X.restore();
+  T('gehaald', 160, 55, 7, '#bfe3c0');
+  for (let i = 0; i < 4; i++) flask(126 + i * 18, 72, i < S.lives);
+  const tch = it.L.teacher, b = Math.round(p * 3);
+  if (tch === 'Haastregt') drawHaas(18, 96 - b, 3, tS); else drawGuest(tch, 18, 165 - b, 3);
+  drawHaas(270, 120 - b, 2, tS);
+  T('Les ' + it.L.n + ' · ' + tch, 160, 100, 8, S.level === 2 ? '#fff' : '#2a2230');
+  if (prev && it.spd > prev.spd) T('SNELLER!', 160, 120, 14, '#d9a440', 'center', '#fff');
+  if (S.last !== null) T('"' + S.line + '"', 160, 140, 9, S.last ? '#3f9b4a' : '#d94040', 'center', '#fff');
+  T(lv.name + ' · ×' + it.spd.toFixed(2).replace(/0$/, '').replace('.', ','), 160, 168, 7, S.level === 2 ? '#fff' : '#6b5a4a');
+}
+function drawEReport() {
+  const lv = EXAM_LEVELS[S.level], sc = S.score;
+  paper('#f3ecdc');
+  R(52, 8, 216, 138, '#2a2230'); R(50, 6, 216, 138, '#fffdf6'); R(50, 6, 216, 16, lv.col);
+  T('EXAMEN · ' + lv.name, 158, 14, 8, '#fff');
+  T('Opdrachten gehaald', 64, 36, 8, '#2a2230', 'left'); T(String(sc), 196, 36, 8, '#2a2230', 'right');
+  T('Gespeeld', 64, 50, 8, '#2a2230', 'left'); T(String(S.i + 1), 196, 50, 8, '#2a2230', 'right');
+  T('Eindsnelheid', 64, 64, 8, '#2a2230', 'left'); T('×' + S.q[S.i].spd.toFixed(2).replace(/0$/, '').replace('.', ','), 196, 64, 8, '#2a2230', 'right');
+  const com = sc >= 30 ? 'Cum laude. Ik ben sprakeloos.' : sc >= 20 ? 'Geslaagd. Met vlag en lepel.' : sc >= 10 ? 'Geslaagd. Net.' : 'Gezakt. Volgend jaar weer.';
+  T('Opmerking docent:', 64, 86, 7, '#a39a8c', 'left');
+  T('"' + com + '"', 64, 98, 8, '#2a2230', 'left');
+  drawHaas(70, 108, 1, tS);
+  const z = 1 + Math.max(0, .25 - tS) * 4;
+  X.save(); X.translate(232, 56); X.scale(z, z); X.rotate(-.2);
+  O(0, 0, 24, lv.col); O(0, 0, 21, '#fffdf6');
+  T(String(sc), 0, 1, 16, lv.col); X.restore();
+  T(S.record ? 'nieuw record!' : 'record: ' + (best['exam' + S.level] || 0), 232, 92, 8, S.record ? '#d9a440' : '#a39a8c');
+  R(96, 150, 60, 18, '#2a2230'); R(96, 150, 58, 16, '#fff3b8'); T('Opnieuw', 125, 158, 8);
+  R(164, 150, 60, 18, '#2a2230'); R(164, 150, 58, 16, '#e6eef6'); T('Menu', 193, 158, 8);
+}
+</script>
+<script>/* ===== main.js ===== */
+'use strict';
+// ===== Scènes =====
+let scene = 'menu', tS = 0, sel = 0, S = null, cur = null;
+const best = JSON.parse(localStorage.getItem('bio_best') || '{}');
+const go = s => { scene = s; tS = 0; };
+const fmt = g => g.toFixed(1).replace('.', ',');
+const REMIX_COLS = ['#d94a8a', '#3d6fd9', '#f2994a', '#3f9b4a', '#9b6fd0', '#d9a440', '#2fa6a0'];
+
+function startLesson(L) {
+  const a = shuffle(L.games.slice()).map(g => ({ g, spd: 1 }));
+  const b = shuffle(L.games.slice()).slice(0, 5).map(g => ({ g, spd: 1.25 }));
+  const ra = shuffle(L.games.slice()).map(g => ({ g, spd: 1.35 }));
+  const rb = shuffle(L.games.slice()).slice(0, 3).map(g => ({ g, spd: 1.7 }));
+  S = { L, q: [...a, ...b], i: 0, lives: 4, lost: 0, last: null, fact: '', line: pick(L.intro),
+        phase: 'les', rq: [...ra, ...rb], ri: 0, rres: [], bt: 0, beat: 0 };
+  REMIX = false;
+  go('intro');
+}
+function startGame(it) {
+  REMIX = S.phase === 'remix' || (S.exam && S.level === 2);
+  const t = REMIX ? Math.min(it.g.time, 5.2) : it.g.time;
+  cur = { g: it.g, spd: it.spd, s: it.g.init(), t: 0, dur: t / it.spd, endT: -1, res: null };
+  go('play');
+}
+function finishGame(win) {
+  cur.res = win;
+  if (S.exam) { examFinish(win); return; }
+  if (S.phase === 'remix') { S.rres.push(win); go('rresult'); return; }
+  S.last = win;
+  if (win) S.line = pick(S.L.win); else { S.lives--; S.lost++; S.line = pick(S.L.lose); }
+  S.fact = cur.g.fact || '';
+  go('result');
+}
+const rHits = () => S.rres.filter(Boolean).length;
+function grade() {
+  if (S.phase !== 'remix') return Math.round(clamp(1 + (S.i / S.q.length) * 3.5, 1, 10) * 10) / 10;
+  const ratio = rHits() / S.rq.length;
+  return Math.round(clamp(10 - S.lost * .9 - (1 - ratio) * 5, 1, 10) * 10) / 10;
+}
+function toReport() {
+  REMIX = false;
+  S.grade = grade();
+  const k = 'les' + S.L.n;
+  S.record = !best[k] || S.grade > best[k];
+  if (S.record) { best[k] = S.grade; localStorage.setItem('bio_best', JSON.stringify(best)); }
+  go('report'); SFX.stamp();
+}
+
+// ===== Muziek =====
+const seq = s => s.trim().split(/\s+/).map(t => t === '.' ? 0 : (isNaN(+t) ? t : +t));
+const TRACKS = {
+  menu: { bpm: 96, lt: 'triangle', lv: .045, bt: 'triangle', bv: .05,
+    lead: seq('72 . 76 . 79 . 76 . 74 . 71 . 67 . . .  72 . 76 . 79 . 81 . 79 . 76 . 74 . . .'),
+    bass: seq('48 . . . 48 . . . 43 . . . 43 . . .  45 . . . 45 . . . 41 . . . 43 . . .'),
+    drum: seq('k . h . s . h . k . h . s . h h') },
+  les1: { bpm: 116, lt: 'square', lv: .028, bt: 'triangle', bv: .055,
+    lead: seq('69 . 72 69 76 . 74 72 71 . 72 . 74 . . .  69 . 72 69 76 . 79 76 77 . 76 . 74 . . .'),
+    bass: seq('45 . 45 . 52 . 45 . 41 . 41 . 48 . 41 .  43 . 43 . 50 . 43 . 40 . 40 . 47 . 40 .'),
+    drum: seq('k . h k s . h . k . h k s . h s') },
+  les2: { bpm: 120, lt: 'sine', lv: .07, ld: .16, bt: 'triangle', bv: .06,
+    lead: seq('62 65 . 69 . 67 65 . 62 . 60 . 62 . . .  62 65 . 69 . 72 70 . 69 . 67 . 65 . . .'),
+    bass: seq('38 . . 38 . . 45 . 36 . . 36 . . 43 .  38 . . 38 . . 45 . 41 . . 41 . . 43 .'),
+    drum: seq('k . t . s t . t k . t . s . t t') },
+  les3: { bpm: 104, lt: 'square', lv: .025, bt: 'sawtooth', bv: .04,
+    lead: seq('. . 64 . 67 . . 64 . 62 . 60 . . . .  . . 64 . 67 . 69 67 . 64 . 62 64 . . .'),
+    bass: seq('40 . 40 52 . 40 50 . 43 . 43 55 . 43 52 .  45 . 45 57 . 45 55 . 43 . 43 55 . 47 50 .'),
+    drum: seq('k . h . s . h k . k h . s . h .') },
+  les4: { bpm: 124, lt: 'triangle', lv: .05, bt: 'triangle', bv: .05,
+    lead: seq('79 . 77 79 76 . 72 . 74 . 76 . 72 . . .  79 . 77 79 81 . 79 . 77 . 76 . 74 . . .'),
+    bass: seq('48 . 55 . 52 . 55 . 53 . 57 . 60 . 57 .  48 . 55 . 52 . 55 . 43 . 50 . 47 . 50 .'),
+    drum: seq('k . h h s . h . k h . h s . h h') },
+  les5: { bpm: 100, lt: 'sine', lv: .06, ld: .2, bt: 'triangle', bv: .05,
+    lead: seq('76 . . 74 . 72 . . 69 . 71 . 72 . . .  76 . . 79 . 77 . 76 . 74 . 72 . . . .'),
+    bass: seq('45 . . 52 . . 45 . 50 . . 57 . . 50 .  43 . . 50 . . 43 . 48 . . 55 . . 52 .'),
+    drum: seq('k . . h . . s . . h k . s . h .') },
+  les6: { bpm: 132, lt: 'square', lv: .025, bt: 'triangle', bv: .055,
+    lead: seq('67 . 72 . 72 72 74 . 76 . 74 . 72 . 69 .  67 . 72 . 72 72 74 . 76 . 79 . 76 . 74 .'),
+    bass: seq('48 . . . 55 . . . 48 . . . 53 . . .  48 . . . 55 . . . 50 . . . 55 . . .'),
+    drum: seq('k . h . s . h . k . h k s . h .') },
+  les7: { bpm: 110, lt: 'triangle', lv: .045, bt: 'sawtooth', bv: .035,
+    lead: seq('. 74 . 72 . 69 . 67 . . 69 . 72 . . .  . 74 . 76 . 77 . 76 . . 74 . 72 . . .'),
+    bass: seq('38 . 38 . . . 45 . 41 . 41 . . . 43 .  38 . 38 . . . 45 . 43 . 43 . . . 40 .'),
+    drum: seq('k . . k s . h . k k . . s . h h') },
+  remix: { bpm: 126, lt: 'square', lv: .03, bt: 'sawtooth', bv: .035,
+    lead: seq('72 76 79 76 74 77 81 77 72 76 79 84 83 79 76 74'),
+    bass: seq('45 . 45 57 45 . 45 57 41 . 41 53 43 . 43 55'),
+    drum: seq('k . h . s . h k k . h . s . h h') },
+  report: { bpm: 90, lt: 'triangle', lv: .045, bt: 'triangle', bv: .05,
+    lead: seq('67 . 72 . 76 . 79 . . . 76 . 72 . . .'),
+    bass: seq('48 . . . 55 . . . 53 . . . 48 . . .'),
+    drum: seq('k . . . h . . . k . . . h . . .') },
+};
+let musicOn = localStorage.getItem('bio_music') !== '0';
+const M = { name: null, step: 0, next: 0, beats: [] };
+const mf = m => 440 * Math.pow(2, (m - 69) / 12);
+function mtone(f, d, type, v, slide, at) { if (!musicOn || muted) return; tone(f, d, type, v, slide, Math.max(0, at - AC.currentTime)); }
+function drumHit(c, at) {
+  if (c === 'k') mtone(130, .13, 'sine', .13, -90, at);
+  else if (c === 's') { mtone(220, .08, 'triangle', .06, -110, at); mtone(rnd(2400, 3000), .05, 'square', .012, 0, at); }
+  else if (c === 'h') mtone(7500, .025, 'square', .006, 0, at);
+  else if (c === 't') mtone(180, .12, 'sine', .08, -60, at);
+}
+function wantTrack() {
+  if (scene === 'menu' || scene === 'examSel') return ['menu', 1, false];
+  if (scene === 'report' || scene === 'ereport') return ['report', 1, false];
+  if (!S) return ['menu', 1, false];
+  if (S.exam) return examTrack();
+  if (S.phase === 'remix') { const it = S.rq[Math.min(S.ri, S.rq.length - 1)]; return ['remix', it.spd >= 1.7 ? 1.2 : 1, true]; }
+  const it = S.q[Math.min(S.i, S.q.length - 1)], hot = scene === 'play' || scene === 'splash';
+  return ['les' + S.L.n, hot ? 1 + (it.spd - 1) * .6 : 1, hot];
+}
+function updateMusic() {
+  if (!AC) return;
+  const [name, mul, hot] = wantTrack(), tr = TRACKS[name] || TRACKS.menu;
+  if (name !== M.name) { M.name = name; M.step = 0; M.next = AC.currentTime + .05; M.beats = []; }
+  const sd = 60 / (tr.bpm * mul) / 4;
+  if (M.next < AC.currentTime - .25) M.next = AC.currentTime + .02;
+  while (M.next < AC.currentTime + .12) {
+    const i = M.step, at = M.next, l = tr.lead[i % tr.lead.length], b = tr.bass[i % tr.bass.length], d = tr.drum[i % tr.drum.length];
+    if (l) mtone(mf(l), tr.ld || sd * 1.6, tr.lt, tr.lv, 0, at);
+    if (l && hot && name !== 'remix') mtone(mf(l + 12), sd, 'triangle', tr.lv * .4, 0, at);
+    if (b) mtone(mf(b), sd * 1.8, tr.bt, tr.bv, 0, at);
+    if (d) drumHit(d, at);
+    if (hot && i % 2 === 1 && d !== 'h') drumHit('h', at);
+    if (i % 4 === 0) { M.beats.push({ at, spb: sd * 4 }); if (M.beats.length > 8) M.beats.shift(); }
+    M.step++; M.next += sd;
+  }
+  let bt = null; for (const x of M.beats) if (x.at <= AC.currentTime) bt = x;
+  const pulse = bt ? clamp(1 - (AC.currentTime - bt.at) / bt.spb, 0, 1) : 0;
+  if (S) S.pulse = pulse; M.pulse = pulse;
+}
+function setMusicBtn() { document.getElementById('mus').textContent = musicOn ? '♪ Muziek aan (N)' : '♪ Muziek uit (N)'; }
+function toggleMusic() { musicOn = !musicOn; localStorage.setItem('bio_music', musicOn ? '1' : '0'); setMusicBtn(); }
+setMusicBtn();
+document.getElementById('mus').onclick = e => { audioInit(); toggleMusic(); e.currentTarget.blur(); };
+
+function update(dt) {
+  tS += dt;
+  if (P('Escape') && scene !== 'menu') { REMIX = false; go('menu'); return; }
+  if (P('n')) toggleMusic();
+  updateMusic();
+  if (examUpdate()) return;
+  if (scene === 'menu') {
+    const MI = menuItems();
+    if (P('ArrowUp') || P('w')) { sel = (sel + MI.length - 1) % MI.length; SFX.tick(); }
+    if (P('ArrowDown') || P('s')) { sel = (sel + 1) % MI.length; SFX.tick(); }
+    let start = P('Enter') || P(' ');
+    if (I.clicked) MI.forEach((L, i) => { if (I.mx > 120 && I.mx < 306 && I.my > 63 + i * 13 && I.my < 75 + i * 13) { if (sel === i) start = true; sel = i; SFX.tick(); } });
+    if (start) {
+      const L = MI[sel];
+      if (L.exam) { SFX.splash(); go('examSel'); }
+      else if (L.open) { SFX.splash(); startLesson(L); } else SFX.lose();
+    }
+  } else if (scene === 'intro') {
+    if (tS > 3 || (tS > .4 && (P(' ') || P('Enter') || I.clicked))) go('between');
+  } else if (scene === 'between') {
+    const dur = S.last === null ? 1.4 : 2.1;
+    if (tS > dur || (tS > .5 && (P(' ') || P('Enter') || I.clicked))) {
+      if (S.i >= S.q.length) { S.phase = 'remix'; go('remixIntro'); SFX.boss(); }
+      else { go('splash'); SFX.splash(); }
+    }
+  } else if (scene === 'splash') {
+    if (tS > (S.exam ? examSplashDur() : .95 / S.q[S.i].spd)) startGame(S.q[S.i]);
+  } else if (scene === 'play') {
+    const g = cur.g, s = cur.s;
+    g.update(s, dt * cur.spd);
+    cur.t += dt;
+    const hold = REMIX ? .25 : .45;
+    if (cur.endT < 0 && (s.win || s.lose)) cur.endT = cur.t;
+    if (cur.endT >= 0 && cur.t - cur.endT > hold) finishGame(!!s.win && !s.lose);
+    else if (cur.endT < 0 && cur.t >= cur.dur) finishGame(g.judge ? g.judge(s) : g.surviveWin ? !s.lose : !!s.win);
+  } else if (scene === 'result') {
+    if (tS > .8) {
+      if (S.lives <= 0) { toReport(); return; }
+      S.i++; go('between');
+    }
+  } else if (scene === 'remixIntro') {
+    if (tS > 2.6) go('rsplash');
+  } else if (scene === 'rsplash') {
+    if (tS > (S.rq[S.ri].spd >= 1.7 ? .5 : .62)) startGame(S.rq[S.ri]);
+  } else if (scene === 'rresult') {
+    if (tS > .38) { S.ri++; if (S.ri >= S.rq.length) toReport(); else go('rsplash'); }
+  } else if (scene === 'report') {
+    let again = P('Enter') || P(' '), menu = false;
+    if (I.clicked && I.my > 150 && I.my < 168) { if (I.mx > 96 && I.mx < 156) again = true; if (I.mx > 164 && I.mx < 224) menu = true; }
+    if (tS > .6 && again) startLesson(S.L);
+    else if (menu) go('menu');
+  }
+}
+
+// ===== Tekenen per scène =====
+function drawMenu() {
+  paper();
+  board(32, 10, 176, 50);
+  T('BIO BLAST', 120, 28, 22, '#f7f7f2', 'center', '#1e4030');
+  T('een biologieles van Haastregt', 120, 48, 8, '#bfe3c0');
+  drawHaas(236, 6 - Math.round((M.pulse || 0) * 3), 2, tS * 1.2);
+  T('"Lepels op tafel."', 252, 60, 7, '#6b5a4a');
+  menuItems().forEach((L, i) => {
+    const y = 64 + i * 13, on = sel === i;
+    if (on) { R(118, y - 1, 190, 13, L.open ? '#fff3b8' : '#eee8dc'); R(118, y - 1, 3, 13, L.color || '#a3a3b0'); }
+    if (L.exam) {
+      R(118, y - 3, 190, 1, '#d6cfc0');
+      T('★ EXAMEN', 126, y + 5, 8, '#d94040', 'left');
+      const b = [0, 1, 2].map(k => best['exam' + k] || 0);
+      T(b.some(Boolean) ? 'records: ' + b.join(' · ') : 'eindeloos · alle lessen', 302, y + 5, 7, '#d94040', 'right');
+      return;
+    }
+    T('Les ' + L.n, 126, y + 5, 8, L.open ? '#2a2230' : '#a39a8c', 'left');
+    T(L.title, 156, y + 5, 8, L.open ? '#2a2230' : '#a39a8c', 'left');
+    T(L.open ? (best['les' + L.n] ? 'beste: ' + fmt(best['les' + L.n]) : L.teacher) : 'binnenkort · ' + L.teacher, 302, y + 5, 7, L.open ? (best['les' + L.n] ? '#3f9b4a' : '#6b5a4a') : '#b8ae9e', 'right');
+  });
+  T('↑ ↓ kiezen · ENTER starten', 64, 92, 7, '#6b5a4a');
+  T('M geluid · N muziek', 64, 104, 7, '#6b5a4a');
+  T('ESC = terug', 64, 116, 7, '#6b5a4a');
+  drawMaci(56, 132 - Math.round((M.pulse || 0) * 3)); T('dino\'s!!', 64, 126, 7, '#3d8b3d');
+}
+function classroom() {
+  paper();
+  board(60, 14, 200, 60);
+  drawHaas(16, 70, 3, tS);
+  if (S.L.teacher !== 'Haastregt') drawGuest(S.L.teacher, 268, 167, 3, true);
+}
+function drawIntro() {
+  classroom();
+  T('Les ' + S.L.n + ': ' + S.L.title, 160, 30, 12, '#f7f7f2');
+  T(S.L.intro[0], 160, 50, 8, '#bfe3c0');
+  T(S.L.intro[1], 160, 62, 8, '#bfe3c0');
+  T((S.L.teacher !== 'Haastregt' ? 'Gastdocent: ' + S.L.teacher : 'Docent: Haastregt') + ' · ' + S.L.games.length + ' opdrachten + remix', 160, 92, 8, '#2a2230');
+  T('klik of spatie', 160, 166, 7, '#a39a8c');
+}
+function drawBetween() {
+  classroom();
+  const nx = S.q[S.i], prev = S.q[S.i - 1];
+  T(S.last === null ? 'Daar gaan we.' : '"' + S.line + '"', 160, 34, 10, S.last === false ? '#f29a9a' : '#f7f7f2');
+  for (let i = 0; i < 4; i++) flask(126 + i * 18, 50, i < S.lives);
+  if (!nx) {
+    T('OVERHORING: REMIX!', 160, 92, 13, '#d94040', 'center', '#fff');
+    T('Alles nog een keer. Kort. Snel. Op de beat.', 160, 106, 8, '#2a2230');
+  } else {
+    T('Opdracht ' + (S.i + 1) + ' / ' + S.q.length, 160, 88, 9, '#2a2230');
+    if (prev && nx.spd > prev.spd) T('SNELLER!', 160, 104, 14, '#d9a440', 'center', '#fff');
+  }
+  if (S.fact && S.last !== null) {
+    R(70, 124, 180, 34, '#fff8d6'); R(70, 124, 180, 2, '#f2c94c');
+    T('Feitje van de dag', 160, 132, 7, '#a8743f');
+    wrapText(S.fact, 160, 142, 172, 7, '#2a2230');
+  }
+}
+function wrapText(s, x, y, maxW, sz, c) {
+  X.font = `bold ${sz}px ${FONT}`;
+  const words = s.split(' '); let line = '', yy = y;
+  for (const w of words) {
+    const test = line ? line + ' ' + w : w;
+    if (X.measureText(test).width > maxW && line) { T(line, x, yy, sz, c); line = w; yy += sz + 2; } else line = test;
+  }
+  if (line) T(line, x, yy, sz, c);
+}
+function drawSplash() {
+  const it = S.q[S.i], col = S.L.color || '#3f9b4a';
+  R(0, 0, W, H, col);
+  for (let i = 0; i < 12; i++) R(((i * 40 + tS * 240) % 400) - 40, 0, 16, H, 'rgba(255,255,255,.08)');
+  const sc = 1 + Math.max(0, .35 - tS) * 1.6;
+  X.save(); X.translate(160, 78); X.scale(sc, sc);
+  T(it.g.verb, 0, 0, it.g.verb.length > 12 ? 22 : 28, '#fff', 'center', '#2a2230'); X.restore();
+  T(it.g.hint, 160, 112, 8, '#fff', 'center', 'rgba(0,0,0,.35)');
+  if (it.spd > 1) T('×' + it.spd.toFixed(2).replace(/0$/, '').replace('.', ','), 290, 16, 9, '#fff');
+}
+function remixDots(y) {
+  const n = S.rq.length, w = 9, x0 = 160 - (n * w) / 2;
+  for (let i = 0; i < n; i++) {
+    const r = S.rres[i], c = r === true ? '#3f9b4a' : r === false ? '#d94040' : (i === S.ri ? '#fff' : 'rgba(255,255,255,.4)');
+    R(x0 + i * w + 1, y + 1, 6, 6, '#2a2230'); R(x0 + i * w, y, 6, 6, c);
+  }
+}
+function drawRemixIntro() {
+  const p = S.pulse || 0;
+  R(0, 0, W, H, REMIX_COLS[Math.floor(tS * 2.4) % REMIX_COLS.length]);
+  for (let i = 0; i < 14; i++) R(((i * 30 - tS * 300) % 420 + 420) % 420 - 50, 0, 12, H, 'rgba(255,255,255,.1)');
+  T('OVERHORING', 160, 26, 12, '#fff', 'center', '#2a2230');
+  X.save(); X.translate(160, 70); X.scale(1 + p * .12, 1 + p * .12); X.rotate(Math.sin(tS * 6) * .05);
+  T('REMIX!', 0, 0, 40, '#fff8d6', 'center', '#2a2230'); X.restore();
+  T(S.L.remixLine, 160, 106, 8, '#fff', 'center', 'rgba(0,0,0,.4)');
+  const b = Math.round(p * 4);
+  drawHaas(40, 120 - b, 2, tS * 8);
+  if (S.L.teacher !== 'Haastregt') drawGuest(S.L.teacher, 244, 164 - b, 2, true);
+  else for (let i = 0; i < 3; i++) spoon(240 + i * 18, 150 - b * (i % 2 ? 1 : 2), Math.sin(tS * 8 + i), 2);
+  remixDots(170);
+}
+function drawRSplash() {
+  const it = S.rq[S.ri], p = S.pulse || 0;
+  R(0, 0, W, H, REMIX_COLS[S.ri % REMIX_COLS.length]);
+  for (let i = 0; i < 10; i++) R(0, ((i * 22 + tS * 200) % 220) - 20, W, 6, 'rgba(255,255,255,.08)');
+  T('REMIX · ' + (S.ri + 1) + '/' + S.rq.length + (it.spd >= 1.7 ? ' · NOG SNELLER!' : ''), 160, 16, 8, '#fff', 'center', 'rgba(0,0,0,.35)');
+  const sc = (1 + Math.max(0, .2 - tS) * 3) * (1 + p * .06);
+  X.save(); X.translate(160, 82); X.scale(sc, sc);
+  T(it.g.verb, 0, 0, it.g.verb.length > 12 ? 24 : 32, '#fff', 'center', '#2a2230'); X.restore();
+  remixDots(170);
+}
+function drawPlay() {
+  paper(cur.g.bg);
+  cur.g.draw(cur.s);
+  const left = clamp(1 - cur.t / cur.dur, 0, 1), rmx = S.phase === 'remix';
+  R(10, 174, 300, 4, '#d6cfc0');
+  R(10, 174, 300 * left, 4, left < .25 ? '#d94040' : (rmx ? REMIX_COLS[S.ri % REMIX_COLS.length] : S.L.color));
+  T(cur.g.verb, 6, 8, 7, '#2a2230', 'left');
+  if (rmx) {
+    const n = S.rq.length;
+    for (let i = 0; i < n; i++) { const r = S.rres[i]; R(318 - (n - i) * 6, 4, 4, 4, r === true ? '#3f9b4a' : r === false ? '#d94040' : (i === S.ri ? '#2a2230' : '#c9c0b0')); }
+    T('REMIX', 318 - n * 6 - 4, 6, 6, REMIX_COLS[S.ri % REMIX_COLS.length], 'right');
+  } else for (let i = 0; i < 4; i++) flask(262 + i * 14, 2, i < S.lives);
+  if (S.exam) T('score ' + S.score, 256, 8, 7, '#2a2230', 'right');
+}
+function drawResult() {
+  drawPlay();
+  const ok = cur.res, sc = 1 + Math.max(0, .2 - tS) * 3;
+  X.save(); X.translate(160, 90); X.scale(sc, sc); X.rotate(-.12);
+  R(-62, -20, 124, 40, ok ? '#3f9b4a' : '#d94040'); R(-58, -16, 116, 32, ok ? '#e7f6df' : '#fde4e4');
+  T(ok ? 'GOED!' : 'FOUT!', 0, 1, 22, ok ? '#3f9b4a' : '#d94040');
+  X.restore();
+}
+function drawReport() {
+  paper('#f3ecdc');
+  R(52, 8, 216, 138, '#2a2230'); R(50, 6, 216, 138, '#fffdf6'); R(50, 6, 216, 16, S.L.color);
+  T('RAPPORT · Les ' + S.L.n + ': ' + S.L.title, 158, 14, 8, '#fff');
+  const g = S.grade, pass = g >= 5.5, rm = S.phase === 'remix';
+  const done = rm ? S.q.length : S.i + 1;
+  T('Opdrachten gehaald', 64, 34, 8, '#2a2230', 'left'); T((done - S.lost) + ' / ' + S.q.length, 196, 34, 8, '#2a2230', 'right');
+  T('Levens over', 64, 47, 8, '#2a2230', 'left'); T(Math.max(0, S.lives) + ' / 4', 196, 47, 8, '#2a2230', 'right');
+  T('Remix', 64, 60, 8, '#2a2230', 'left');
+  T(rm ? rHits() + ' / ' + S.rq.length : 'niet bereikt', 196, 60, 8, rm && rHits() / S.rq.length >= .6 ? '#3f9b4a' : '#d94040', 'right');
+  if (rm) S.rq.forEach((_, i) => { R(64 + i * 7, 68, 5, 5, S.rres[i] ? '#3f9b4a' : '#d94040'); });
+  const rating = !rm ? 'Nog eens proberen.' : g >= 9 ? 'SUPERIEUR. Ik heb een lepel laten vallen.' : g >= 7 ? 'Goed. Je had de beat.' : g >= 5.5 ? 'Voldoende. Net. Heel net.' : 'Onvoldoende. Herkansing. Nu.';
+  T('Opmerking docent:', 64, 86, 7, '#a39a8c', 'left');
+  T('"' + rating + '"', 64, 98, 8, '#2a2230', 'left');
+  drawHaas(70, 108, 1, tS);
+  const sc = 1 + Math.max(0, .25 - tS) * 4;
+  X.save(); X.translate(232, 56); X.scale(sc, sc); X.rotate(-.2);
+  O(0, 0, 24, pass ? '#3f9b4a' : '#d94040'); O(0, 0, 21, '#fffdf6');
+  T(fmt(g), 0, 1, 15, pass ? '#3f9b4a' : '#d94040'); X.restore();
+  if (S.record) T('nieuw record!', 232, 92, 8, '#d9a440');
+  R(96, 150, 60, 18, '#2a2230'); R(96, 150, 58, 16, '#fff3b8'); T('Opnieuw', 125, 158, 8);
+  R(164, 150, 60, 18, '#2a2230'); R(164, 150, 58, 16, '#e6eef6'); T('Menu', 193, 158, 8);
+}
+function drawRResult() {
+  drawPlay();
+  const ok = cur.res, sc = 1 + Math.max(0, .15 - tS) * 3;
+  X.save(); X.translate(160, 90); X.scale(sc, sc);
+  T(ok ? '✓' : '✗', 0, 0, 40, ok ? '#3f9b4a' : '#d94040', 'center', '#fff'); X.restore();
+}
+
+function draw() {
+  X.setTransform(SC, 0, 0, SC, 0, 0); X.imageSmoothingEnabled = false;
+  ({ menu: drawMenu, intro: drawIntro, between: drawBetween, splash: drawSplash, play: drawPlay, result: drawResult,
+     report: drawReport, remixIntro: drawRemixIntro, rsplash: drawRSplash, rresult: drawRResult,
+     examSel: drawExamSel, ebetween: drawEBetween, eresult: drawResult, ereport: drawEReport })[scene]();
+}
+let lastT = performance.now(), lastErr = '';
+function frame(now) {
+  const dt = Math.min(.05, (now - lastT) / 1000); lastT = now;
+  try { update(dt); draw(); }
+  catch (err) {
+    const msg = (err && err.message) + ' · scène: ' + scene + (cur && scene === 'play' ? ' · game: ' + cur.g.verb : '');
+    if (msg !== lastErr) {
+      lastErr = msg; console.error(err);
+      const el = document.getElementById('err'); el.style.display = 'block'; el.textContent += 'Fout: ' + msg + '\n';
+    }
+    if (scene === 'play' && cur) finishGame(false); else if (scene !== 'menu') go('menu');
+  }
+  I.pressed = {}; I.clicked = false; I.mv = 0;
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
