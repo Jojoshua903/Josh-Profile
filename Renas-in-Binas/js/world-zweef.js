@@ -1,9 +1,9 @@
-import { THREE, V3, mk, basic } from './worlds-common.js?v=20261112d';
-import { buildLocal } from './models.js?v=20261112d';
-import { G, camera, toast, puff } from './core.js?v=20261112d';
-import { sfx } from './audio.js?v=20261112d';
-import { P } from './player.js?v=20261112d';
-import { buildPark } from './world-park.js?v=20261112d';
+import { THREE, V3, mk, basic } from './worlds-common.js?v=20261112i';
+import { buildLocal } from './models.js?v=20261112i';
+import { G, camera, toast, puff } from './core.js?v=20261112i';
+import { sfx } from './audio.js?v=20261112i';
+import { P } from './player.js?v=20261112i';
+import { buildPark } from './world-park.js?v=20261112i';
 
 // ZWEEFRIJK: an anti-gravity parkour planet, and a very trippy one.
 //   - floaty gravity everywhere: every jump is a big slow float
@@ -12,6 +12,8 @@ import { buildPark } from './world-park.js?v=20261112d';
 //   - the sky, the dome and the floating shapes keep changing colour, and the view gently breathes
 // A side planet: it opens once you reach Stuiterstad, and it is not on the story route.
 export function buildZweef(ctx) {
+  // after Maankrater (story step 12) and before the finale, Ratjetoe is off with the cats, so Rênas reads the signal himself
+  const s = G.save && G.save(), ratGone = !!s && s.unlocked > 12 && !s.finale;
   return buildPark(ctx, {
     id: 'zweef', index: 16, shape: 'spiral', title: 'Zweefrijk', sub: 'An anti-gravity planet. Up is down, down is up… probably.',
     host: 'Lumi', who: 'LUMI', grav: 0.42,
@@ -26,7 +28,8 @@ export function buildZweef(ctx) {
     route: [['hop', 2], ['bob', 2], ['lift'], ['cp'], ['circle', 2], ['secret', 'zweef-r1', 'Where the wave takes you'], ['hop', 2], ['down', 2], ['zig', 2], ['cp'],
       ['lift'], ['bob', 3], ['secret', 'zweef-r2', 'Above the beam'], ['crumble', 2], ['cp'], ['down', 3], ['circle', 2], ['lift'], ['secret', 'zweef-r3', 'Floating at the top'], ['hop', 2]],
     intro: [
-      ['RENAS-1', 'Strange signal. A planet where gravity… goes the wrong way. Name: Zweefrijk. It is not on our route. I am curious anyway.'],
+      ratGone ? ['RÊNAS', 'Strange signal. A planet where gravity goes the wrong way… Ratjetoe would know what that means. Hmpf. I’ll find out myself.']
+        : ['RATJETOE', 'Strange signal. A planet where gravity… goes the wrong way. Name: Zweefrijk. It is not on our route. I am curious anyway. My whiskers are tingling.'],
       ['RÊNAS', 'Whoa. Whoa! Why is everything purple? And why is that kid upside down?'],
       ['LUMI', 'Heyyy, a visitor! I’m Lumi. Gravity is very relaxed here. It’s weak, so you float. Jump and enjoy the ride.'],
       ['LUMI', 'See the glowing beams? Step in and you float straight up. Steer onto the platform at the top.'],

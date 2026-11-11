@@ -1,8 +1,8 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261112d';
-import { fbm } from './world.js?v=20261112d';
-import { buildPingo, buildDeniz, buildAuraCrystal, buildScarf, textBoard, buildLocal, buildTrinket } from './models.js?v=20261112d';
-import { Deniz } from './bosses.js?v=20261112d';
-import { addParkour, buildBeacon } from './parkour.js?v=20261112d';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261112i';
+import { fbm } from './world.js?v=20261112i';
+import { buildPingo, buildDeniz, buildAuraCrystal, buildScarf, textBoard, buildLocal, buildTrinket } from './models.js?v=20261112i';
+import { Deniz } from './bosses.js?v=20261112i';
+import { addParkour, buildBeacon } from './parkour.js?v=20261112i';
 
 // World 3 on the route: HET HERTOGDOM IJS. A frozen planet ruled by Deniz, the Duke of Ice, who has way too much aura.
 // Boss: Deniz himself, in the Aura Throne Room.
@@ -251,8 +251,8 @@ export function buildIce(ctx) {
   w.winLines = [
     ['DENIZ', '…Fine. FINE. Your aura is… acceptable. Take the IJskern.'],
     ['DENIZ', 'But I am still the coolest. Literally. I am made of ice. Mostly.'],
-    ['RENAS-1', 'Fuel secured: the IJskern. Aura levels: off the charts. Range: still not enough for Homerun Heuvel.'],
-    ['RENAS-1', 'Next fuel stop: Smaragdeiland.'],
+    ['RATJETOE', 'Fuel secured: the IJskern. Aura levels: off the charts. My tail is frozen stiff. Range: still not enough for Homerun Heuvel.'],
+    ['RATJETOE', 'Next fuel stop: Smaragdeiland.'],
     ['RÊNAS', 'Josh is never going to believe this. A Duke! Of ICE!'],
   ];
   void frameDir;

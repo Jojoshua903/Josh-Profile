@@ -1,9 +1,9 @@
-import { LL, V3, basic, mk, THREE, surf, coinRing, coinOn, sign, rareItem, G, sfx, toast } from './worlds-common.js?v=20261112d';
-import { fbm } from './world.js?v=20261112d';
-import { textBoard } from './models.js?v=20261112d';
-import { fade, placeOn, anyPerp } from './core.js?v=20261112d';
-import { P, drawHearts, spawnPlayer, resetCam } from './player.js?v=20261112d';
-import { showTitle } from './cutscene.js?v=20261112d';
+import { LL, V3, basic, mk, THREE, surf, coinRing, coinOn, sign, rareItem, G, sfx, toast } from './worlds-common.js?v=20261112i';
+import { fbm } from './world.js?v=20261112i';
+import { textBoard } from './models.js?v=20261112i';
+import { fade, placeOn, anyPerp } from './core.js?v=20261112i';
+import { P, drawHearts, spawnPlayer, resetCam } from './player.js?v=20261112i';
+import { showTitle } from './cutscene.js?v=20261112i';
 
 // A parkour over a bottomless void, on a small hidden planet far away. Its ground is invisible:
 // fall off the platforms and you drop into the void. Checkpoint markers light up when you touch them.
@@ -89,6 +89,10 @@ export function addParkour(w, ctx, o) {
   }
   const lit = (pf) => { const m = markers.get(pf); if (m) m.traverse((c) => c.isMesh && !c.parent.isMesh && c.material.color && c.geometry.type === 'SphereGeometry' && c.material.color.setHex(0x7dffe0)); };   // outlines are children of meshes and share one material: skip them
   let cp = startS; lit(start);
+  // NO SHORTCUTS (like the parkour planets): landing far ahead of where you have been puts you back
+  const order = new Map(spec.map((s, i) => [s.pf, i]));
+  let best = 0, lastOk = startS;
+  const safe = (s) => !s.opt.crumble && !s.opt.circle && !s.opt.bob;
   const tangentToDir = (from, to) => to.clone().addScaledVector(from, -to.dot(from)).normalize();
   const standOn = (s) => {
     const ahead = path.ahead(s.lon);
@@ -99,7 +103,7 @@ export function addParkour(w, ctx, o) {
   // in and out
   w.addInteract({ planet: o.home, pos: surf(o.home, o.entryDir, 0.6), radius: 2.6, prompt: () => o.entryPrompt, use: async () => {
     sfx.select(); await fade(true, 350);
-    cp = startS; standOn(startS);
+    cp = startS; best = 0; lastOk = startS; standOn(startS);
     await fade(false, 400);
     showTitle(o.title, o.sub, 3200);
   } });
@@ -115,6 +119,11 @@ export function addParkour(w, ctx, o) {
     const inside = P.planet === park;
     if (inside !== !!w.inPark) { w.inPark = inside; ctx.setSky(inside ? T.sky : w.sky); }
     if (!inside || G.state !== 'play' || G.cutscene || P.dead) return;
+    if (P.grounded && order.has(P.ground)) {
+      const i = order.get(P.ground);
+      if (i > best + 4) { sfx.warn(); G.shake = Math.max(G.shake, 0.2); toast('No shortcuts! Follow the course. Back you go.', 2200); standOn(lastOk); return; }
+      if (i >= best) { best = i; if (safe(spec[i])) lastOk = spec[i]; }
+    }
     if (P.grounded && P.ground !== cp.pf) {
       const s = cps.find((c) => c.pf === P.ground);
       if (s && s !== startS) { cp = s; lit(s.pf); sfx.quest(); toast('Checkpoint!', 1400); }

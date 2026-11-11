@@ -1,8 +1,8 @@
-import { THREE, G, scene, camera, canvas, V3, clamp, damp, puff, anyPerp, orientOn, altOf, dirOf, surf, rOf, tangentTo, $ } from './core.js?v=20261112d';
-import { sfx } from './audio.js?v=20261112d';
-import { buildRenas } from './models.js?v=20261112d';
-import { makeShadow } from './fx.js?v=20261112d';
-import { cutSpeaker, cutTyping } from './cutscene.js?v=20261112d';
+import { THREE, G, scene, camera, canvas, V3, clamp, damp, puff, anyPerp, orientOn, altOf, dirOf, surf, rOf, tangentTo, $ } from './core.js?v=20261112i';
+import { sfx } from './audio.js?v=20261112i';
+import { buildRenas } from './models.js?v=20261112i';
+import { makeShadow } from './fx.js?v=20261112i';
+import { cutSpeaker, cutTyping } from './cutscene.js?v=20261112i';
 
 // Movement feel copied from Otis in Orbit (ui.js FEEL_DEF + main.js), on round planets instead of flat ground.
 export const S = { speed: 7, jump: 12, gravity: 30, air: 0.45 };
@@ -274,6 +274,24 @@ export function updatePlayer(dt, t, ctrl = true) {
   if (P.grounded) {
     if (!wasGrounded) onLand(fall, wasPound);
     if (P.grounded) P.coyote = 0.2;
+  }
+  // MARIO GALAXY: jump off a little planet into the pull of another one and its gravity takes over.
+  // Only planets with a gravity field (pl.field, in metres above their surface) pull you in.
+  if (!P.grounded && pl.world && pl.world.planets.length > 1) {
+    let to = null, bd = P.alt;
+    for (const q of pl.world.planets) {
+      if (q === pl || !q.field) continue;
+      const d = P.pos.distanceTo(q.c) - rOf(q, P.pos.clone().sub(q.c).normalize());   // height above its ground (shaped planets too)
+      if (d < q.field && d < bd) { bd = d; to = q; }
+    }
+    if (to) {
+      const vel = v.clone().addScaledVector(P.up, P.vr);
+      P.planet = to; P.up.copy(P.pos).sub(to.c).normalize();
+      P.vr = vel.dot(P.up); v.copy(vel).addScaledVector(P.up, -P.vr);
+      P.alt = P.prevAlt = P.pos.distanceTo(to.c) - rOf(to, P.up);
+      P.ground = null; P.coyote = 0; reproject(P.fwd, P.up, false);
+      if (G.onGravity) G.onGravity(to);
+    }
   }
 
   // facing

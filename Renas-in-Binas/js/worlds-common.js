@@ -1,12 +1,12 @@
-import { THREE, G, V3, toon, basic, mk, LL, frameDir, surf, clamp, tangentTo, stepDir, placeOn, banner, toast, puff } from './core.js?v=20261112d';
-import { sfx } from './audio.js?v=20261112d';
-import { P, hurtPlayer, bouncePlayer } from './player.js?v=20261112d';
-import { SurfaceWall } from './fx.js?v=20261112d';
-import { World, addStars, addBackdropPlanet } from './world.js?v=20261112d';
-import { play, shot } from './cutscene.js?v=20261112d';
-import { buildRocket, buildLaunchStar, textBoard } from './models.js?v=20261112d';
+import { THREE, G, V3, toon, basic, mk, LL, frameDir, surf, clamp, tangentTo, stepDir, placeOn, banner, toast, puff } from './core.js?v=20261112i';
+import { sfx } from './audio.js?v=20261112i';
+import { P, hurtPlayer, bouncePlayer } from './player.js?v=20261112i';
+import { SurfaceWall } from './fx.js?v=20261112i';
+import { World, addStars, addBackdropPlanet } from './world.js?v=20261112i';
+import { play, shot } from './cutscene.js?v=20261112i';
+import { buildRocket, buildLaunchStar, textBoard } from './models.js?v=20261112i';
 
-import { startDuel } from './duels.js?v=20261112d';
+import { startDuel } from './duels.js?v=20261112i';
 export { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, G, P, sfx, play, shot };
 export const slerpDir = (a, b, k) => a.clone().lerp(b, k).normalize();
 

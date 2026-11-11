@@ -1,9 +1,9 @@
-import { THREE, G, V3, toon, basic, mk, ink, clamp, damp, puff, placeOn, orientOn, surf, dirOf, altOf, anyPerp, tangentTo, stepDir, frameDir, wrapA, toast, $, canvasTex } from './core.js?v=20261112d';
-import { sfx } from './audio.js?v=20261112d';
-import { tr } from './lang.js?v=20261112d';
-import { P, hurtPlayer, bouncePlayer, pfTest } from './player.js?v=20261112d';
-import { SurfaceWall, lonAround, makeMarker } from './fx.js?v=20261112d';
-import { buildKern, buildDeniz, buildLeprechaun, buildGorilla, buildCoconut, buildDragon, buildWorm, buildMecha, buildOctopus, buildGhostKing, buildCogTitan, buildGear } from './models.js?v=20261112d';
+import { THREE, G, V3, toon, basic, mk, ink, clamp, damp, puff, placeOn, orientOn, surf, dirOf, altOf, anyPerp, tangentTo, stepDir, frameDir, wrapA, toast, $, canvasTex } from './core.js?v=20261112i';
+import { sfx } from './audio.js?v=20261112i';
+import { tr } from './lang.js?v=20261112i';
+import { P, hurtPlayer, bouncePlayer, pfTest } from './player.js?v=20261112i';
+import { SurfaceWall, lonAround, makeMarker } from './fx.js?v=20261112i';
+import { buildKern, buildDeniz, buildLeprechaun, buildGorilla, buildCoconut, buildDragon, buildWorm, buildMecha, buildOctopus, buildGhostKing, buildCogTitan, buildGear } from './models.js?v=20261112i';
 
 // ---------- shared hazards ----------
 const arcTo = (pl, a, b) => Math.acos(clamp(a.dot(b), -1, 1)) * pl.r;
@@ -877,7 +877,7 @@ export class Gruis extends Boss {
 function stalactite() { const g = new THREE.Group(); const c = mk(new THREE.ConeGeometry(0.6, 2.2, 6), toon(0x8a6a4a), 0, 1.1, 0, g, 1.06); c.rotation.x = Math.PI; return g; }
 
 // ======================================================================
-// Boss 3: ZENNITH, the demon pitcher (Nathan's worst nightmare) on the Helle Diamant
+// The final boss: ZENNITH, the demon pitcher (Nathan's worst nightmare) on the Helle Diamant. One hit more than the others
 // ======================================================================
 class Ball {
   constructor(boss, pos, vel, kind, o = {}) {
@@ -932,7 +932,7 @@ class Ball {
 }
 export class Zennith extends Boss {
   constructor(world, arena) {
-    super(world, arena, { name: 'ZENNITH', sub: "The demon pitcher · Nathan's worst nightmare", hp: 4 });
+    super(world, arena, { name: 'ZENNITH', sub: "The demon pitcher · Nathan's worst nightmare", hp: 5 });
     this.plans = [
       ['fast', 'curve', 'fast', 'rest', 'fast', 'curve', 'fast', 'rest'],
       ['split', 'curve', 'grounders', 'fast', 'curve', 'split', 'rest'],

@@ -1,10 +1,10 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, geyser, addMore } from './worlds-common.js?v=20261112d';
-import { fbm } from './world.js?v=20261112d';
-import { buildSami, buildPearl, textBoard, buildLocal, buildTrinket } from './models.js?v=20261112d';
-import { Kraak } from './bosses.js?v=20261112d';
-import { addParkour, buildBeacon } from './parkour.js?v=20261112d';
-import { rOf } from './core.js?v=20261112d';
-import { duelModels } from './duels.js?v=20261112d';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, geyser, addMore } from './worlds-common.js?v=20261112i';
+import { fbm } from './world.js?v=20261112i';
+import { buildSami, buildPearl, textBoard, buildLocal, buildTrinket } from './models.js?v=20261112i';
+import { Kraak } from './bosses.js?v=20261112i';
+import { addParkour, buildBeacon } from './parkour.js?v=20261112i';
+import { rOf } from './core.js?v=20261112i';
+import { duelModels } from './duels.js?v=20261112i';
 
 // World 9 on the route: DE KORAALZEE. A planet under the sea: coral, kelp, a sunken ship and giant clams.
 // New here: you're underwater, so you float a little, and bubble streams shoot you up high.
@@ -279,7 +279,9 @@ export function buildSea(ctx) {
   w.winLines = [
     ['KRAAK', '…Blub. My head. Okay, okay. You win, tiny fishbowl.'],
     ['KRAAK', 'Take the Zeekern. And tell Sami… sorry about the pearls. I just like round things.'],
-    ['RENAS-1', 'Fuel secured: the Zeekern. Range: still not enough. Next signal: the Spookplaneet. Readings: very… spooky.'],
+    ['RATJETOE', 'Fuel secured: the Zeekern. Range: still not enough. Next signal: the Spookplaneet. Readings: very… spooky. I am not scared. *squeaks very quietly*'],
+    ['RÊNAS', 'Ratjetoe… why do I hear meowing on your radio?'],
+    ['RATJETOE', 'Meowing? That’s… static. Cat-shaped static. Very normal. *squeak*'],
     ['RÊNAS', 'Thanks, Sami! A ghost planet? I’m not scared. …I’m a little scared.'],
   ];
   return w;

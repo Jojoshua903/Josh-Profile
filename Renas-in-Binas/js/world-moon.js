@@ -1,9 +1,9 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, gusts, addMore } from './worlds-common.js?v=20261112d';
-import { fbm } from './world.js?v=20261112d';
-import { buildNiek, buildBattery, buildFlag, textBoard, buildLocal } from './models.js?v=20261112d';
-import { Mecha } from './bosses.js?v=20261112d';
-import { addParkour, buildBeacon } from './parkour.js?v=20261112d';
-import { rOf } from './core.js?v=20261112d';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, gusts, addMore } from './worlds-common.js?v=20261112i';
+import { fbm } from './world.js?v=20261112i';
+import { buildNiek, buildBattery, buildFlag, textBoard, buildLocal } from './models.js?v=20261112i';
+import { Mecha } from './bosses.js?v=20261112i';
+import { addParkour, buildBeacon } from './parkour.js?v=20261112i';
+import { rOf } from './core.js?v=20261112i';
 
 // World 8 on the route: MAANKRATER. A grey moon with craters, a radio tower and a satellite that circles it.
 // New here: moon gravity. You jump more than twice as high and fall slowly, so everything is built tall.
@@ -245,11 +245,16 @@ export function buildMoon(ctx) {
 
   w.boss = new Mecha(w, arena);
   w.hitLines = [['NIEK', '(radio) Direct hit in the cockpit! The cats are panicking!'], ['NIEK', '(radio) Watch out, MECHA-MIAUW is really angry now. More lasers incoming!']];
+  // the betrayal: Ratjetoe goes back to being Bad Ratjetoe and flies off with the cats and the Maankern
   w.winLines = [
-    ['KAYO', 'MIAUW! MIAUW MIAUW!', '(RENAS-1 translates: “Our robot! You broke our beautiful robot!”)'],
-    ['YARA', 'Miauw… miauw.', '(RENAS-1 translates: “Fine. Keep the Maankern. We’ll get you at Homerun Heuvel!”)'],
-    ['RENAS-1', 'Fuel secured: the Maankern. Tank: FULL. Range: Homerun Heuvel. Last signal!'],
-    ['RÊNAS', 'Thanks, Niek! Next stop: Nathan’s planet. He’s the best baseball player in the galaxy!'],
+    ['KAYO', 'MIAUW! MIAUW MIAUW!', '(Ratjetoe translates: “Our robot! You broke our beautiful robot!”)'],
+    ['YARA', 'Miauw… miauw.', '(Ratjetoe translates: “Fine. Plan B. Ratjetoe… NOW.”)'],
+    ['RATJETOE', '…Fuel secured. Tank: full. Range: Homerun Heuvel. And, um… Captain? I’m not at the station anymore.'],
+    ['RATJETOE', 'I’m in the saucer. They picked me up on the way here. And right now they’re beaming up the Maankern. *bzzzzzt*'],
+    ['RÊNAS', 'WHAT?! Ratjetoe, you’re with THEM again?'],
+    ['RATJETOE', 'They promised me a cheese the size of a MOON, Captain! So I told them every route you took. That’s how they knew where to put the mines. Sorry! *squeak*'],
+    ['RATJETOE', 'Don’t worry, I left you enough fuel for Homerun Heuvel. I’m a traitor, not a monster. Bye!'],
+    ['RÊNAS', 'RATJETOE! …Fine. Next stop: Nathan’s planet. And then I’m getting that Maankern back.'],
   ];
   return w;
 }

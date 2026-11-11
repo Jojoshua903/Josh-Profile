@@ -1,8 +1,8 @@
-import { World, surf, planetStem, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261112d';
-import { fbm } from './world.js?v=20261112d';
-import { buildSaar, buildCandle, textBoard, buildLocal, buildTrinket } from './models.js?v=20261112d';
-import { Boe } from './bosses.js?v=20261112d';
-import { addParkour, buildBeacon } from './parkour.js?v=20261112d';
+import { World, surf, planetStem, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261112i';
+import { fbm } from './world.js?v=20261112i';
+import { buildSaar, buildCandle, textBoard, buildLocal, buildTrinket } from './models.js?v=20261112i';
+import { Boe } from './bosses.js?v=20261112i';
+import { addParkour, buildBeacon } from './parkour.js?v=20261112i';
 
 // World 10 on the route: SPOOKPLANEET. A dark, purple planet with a haunted house, a graveyard and a giant dead tree.
 // New here: ghost platforms. They fade away and come back on a timer: watch them blink, then jump.
@@ -274,7 +274,8 @@ export function buildSpook(ctx) {
   w.winLines = [
     ['KONING BOE', 'Booo… hoo. Okay. OKAY. You win, little astronaut. You’re braver than you look.'],
     ['KONING BOE', 'Take the Spookkern. And give Saar back her candles. I was just… scared of the dark.'],
-    ['RENAS-1', 'Fuel secured: the Spookkern. Range: one more stop. Warning: Kayo & Yara signal detected. Next: Maankrater.'],
+    ['RATJETOE', 'Fuel secured: the Spookkern. Range: one more stop. Warning: Kayo & Yara signal detected. Next: Maankrater.'],
+    ['RATJETOE', 'Oh, and… the cats sent me a message. Something about a cheese the size of a moon. I deleted it! …Probably.'],
     ['RÊNAS', 'Kayo and Yara?! On the moon? I’m coming for you, cats!'],
   ];
   return w;

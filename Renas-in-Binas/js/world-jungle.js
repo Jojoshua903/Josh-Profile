@@ -1,8 +1,8 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, rock, lamp, sign, palm, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261112d';
-import { fbm } from './world.js?v=20261112d';
-import { buildReshman, buildMonkey, buildGoldBanana, buildCamera, textBoard, buildLocal, buildTrinket } from './models.js?v=20261112d';
-import { Kokos } from './bosses.js?v=20261112d';
-import { addParkour, buildBeacon } from './parkour.js?v=20261112d';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, rock, lamp, sign, palm, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261112i';
+import { fbm } from './world.js?v=20261112i';
+import { buildReshman, buildMonkey, buildGoldBanana, buildCamera, textBoard, buildLocal, buildTrinket } from './models.js?v=20261112i';
+import { Kokos } from './bosses.js?v=20261112i';
+import { addParkour, buildBeacon } from './parkour.js?v=20261112i';
 
 // World 5 on the route: HET OERWOUD. Reshman the monkey's jungle: giant trees, a river, an old temple.
 // Boss: Koning Kokos, the gorilla king, in the Apenarena.
@@ -285,7 +285,7 @@ export function buildJungle(ctx) {
   w.winLines = [
     ['KOKOS', '…Ooh. My head. Okay. OKAY. You win, little bubble.'],
     ['KOKOS', 'Take the Kokoskern. And tell Reshman… sorry about the bananas. They were just really, really shiny.'],
-    ['RENAS-1', 'Fuel secured: the Kokoskern. Range: still too short for Homerun Heuvel. Next signal: De Asberg. Temperature: very hot.'],
+    ['RATJETOE', 'Fuel secured: the Kokoskern. Range: still too short for Homerun Heuvel. Next signal: De Asberg. Temperature: very hot.'],
     ['RÊNAS', 'Thanks, Reshman! Next stop: a volcano. Oe oe!'],
   ];
   return w;

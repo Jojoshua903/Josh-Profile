@@ -1,6 +1,6 @@
-import { THREE, $, clamp } from './core.js?v=20261112d';
-import { sfx } from './audio.js?v=20261112d';
-import { orbitAngle } from './systems.js?v=20261112d';
+import { THREE, $, clamp } from './core.js?v=20261112i';
+import { sfx } from './audio.js?v=20261112i';
+import { orbitAngle } from './systems.js?v=20261112i';
 
 // THE PLANET PICKER, like the galaxy map in Mario Galaxy: one planet at a time, slowly turning, and you
 // scroll left and right through all of them (arrows, mouse wheel, A/D or the arrow keys, or swipe).

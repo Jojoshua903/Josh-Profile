@@ -1,10 +1,10 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, lavaFloor, geyser, addMore } from './worlds-common.js?v=20261112d';
-import { fbm } from './world.js?v=20261112d';
-import { puff } from './core.js?v=20261112d';
-import { buildImmanuel, buildFireGem, buildHammer, textBoard, buildLocal } from './models.js?v=20261112d';
-import { Smeul } from './bosses.js?v=20261112d';
-import { addParkour, buildBeacon } from './parkour.js?v=20261112d';
-import { duelModels } from './duels.js?v=20261112d';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, lavaFloor, geyser, addMore } from './worlds-common.js?v=20261112i';
+import { fbm } from './world.js?v=20261112i';
+import { puff } from './core.js?v=20261112i';
+import { buildImmanuel, buildFireGem, buildHammer, textBoard, buildLocal } from './models.js?v=20261112i';
+import { Smeul } from './bosses.js?v=20261112i';
+import { addParkour, buildBeacon } from './parkour.js?v=20261112i';
+import { duelModels } from './duels.js?v=20261112i';
 
 // World 6 on the route: DE ASBERG. A volcano planet: rivers of lava, geysers, basalt towers.
 // New here: the lava floor burns (hop out!) and geysers that hurt, or shoot you sky-high.
@@ -253,7 +253,7 @@ export function buildLava(ctx) {
   w.winLines = [
     ['SMEUL', '*cough* *cough* …Okay. OKAY. You’re hotter than me, little bubble. Take the Vuurkern.'],
     ['SMEUL', 'And tell Immanuel… sorry about the gems. I had a cold. Dragons sneeze FIRE.'],
-    ['RENAS-1', 'Fuel secured: the Vuurkern. Very hot. Range: still not enough. Next signal: Duinenrijk.'],
+    ['RATJETOE', 'Fuel secured: the Vuurkern. Very hot. *blows on his wrench* Range: still not enough. Next signal: Duinenrijk.'],
     ['RÊNAS', 'Thanks, Immanuel! Next stop: the desert!'],
   ];
   return w;

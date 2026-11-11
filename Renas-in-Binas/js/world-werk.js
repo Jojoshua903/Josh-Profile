@@ -1,12 +1,12 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore, lavaFloor } from './worlds-common.js?v=20261112d';
-import { fbm } from './world.js?v=20261112d';
-import { buildLars, buildNathan, buildMilo, buildBlueprint, buildGear, textBoard, buildLocal, buildTrinket } from './models.js?v=20261112d';
-import { Tandwieltron } from './bosses.js?v=20261112d';
-import { addParkour, buildBeacon } from './parkour.js?v=20261112d';
-import { G, toast, banner, puff, surf } from './core.js?v=20261112d';
-import { P } from './player.js?v=20261112d';
-import { sfx } from './audio.js?v=20261112d';
-import { duelModels } from './duels.js?v=20261112d';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore, lavaFloor } from './worlds-common.js?v=20261112i';
+import { fbm } from './world.js?v=20261112i';
+import { buildLars, buildNathan, buildMilo, buildBlueprint, buildGear, textBoard, buildLocal, buildTrinket } from './models.js?v=20261112i';
+import { Tandwieltron } from './bosses.js?v=20261112i';
+import { addParkour, buildBeacon } from './parkour.js?v=20261112i';
+import { G, toast, banner, puff, surf } from './core.js?v=20261112i';
+import { P } from './player.js?v=20261112i';
+import { sfx } from './audio.js?v=20261112i';
+import { duelModels } from './duels.js?v=20261112i';
 
 // BONUS planet, after the finale: DE GOUDEN WERKPLAATS. Lars and Nathan built it as a thank-you for Rênas,
 // but Kayo & Yara snuck in and took over Tandwieltron, the big builder robot.
@@ -296,7 +296,7 @@ export function buildWerk(ctx) {
     ['TANDWIELTRON', 'BZZT… SYSTEM… COOLING DOWN. Cats… no longer… in control. Hello. I am Tandwieltron. I like building things.'],
     ['TANDWIELTRON', 'Here. The Gouden Kern. For the little astronaut who jumped on my head five times. Ouch.'],
     ['LARS', '(radio) You did it, Binas! He’s back to normal! And look, Kayo and Yara are running away again!'],
-    ['RENAS-1', 'Gouden Kern installed. Station speed: SUPER. Warning: Captain Rênas is now the coolest captain in the galaxy.'],
+    ['RATJETOE', 'Gouden Kern installed. Station speed: SUPER. Warning: Captain Rênas is now the coolest captain in the galaxy. *happy squeak*'],
     ['RÊNAS', 'Thanks, Lars! Thanks, Nathan! Best. Friends. Ever!'],
   ];
   return w;

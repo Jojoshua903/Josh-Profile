@@ -1,14 +1,14 @@
-import { World, addStars, addBackdropPlanet, LL, V3, toon, basic, mk, THREE, sign, addRocket } from './worlds-common.js?v=20261112d';
-import { fbm } from './world.js?v=20261112d';
-import { buildJosh, buildOtis, textBoard } from './models.js?v=20261112d';
-import { G, toast, banner, puff, surf, placeOn, orientOn } from './core.js?v=20261112d';
-import { P } from './player.js?v=20261112d';
-import { sfx } from './audio.js?v=20261112d';
-import { play, orbitShot } from './cutscene.js?v=20261112d';
-import { LANG } from './lang.js?v=20261112d';
+import { World, addStars, addBackdropPlanet, LL, V3, toon, basic, mk, THREE, sign, addRocket } from './worlds-common.js?v=20261112i';
+import { fbm } from './world.js?v=20261112i';
+import { buildJosh, buildOtis, textBoard } from './models.js?v=20261112i';
+import { G, toast, banner, puff, surf, placeOn, orientOn } from './core.js?v=20261112i';
+import { P } from './player.js?v=20261112i';
+import { sfx } from './audio.js?v=20261112i';
+import { play, orbitShot } from './cutscene.js?v=20261112i';
+import { LANG } from './lang.js?v=20261112i';
 
 // DE STERRENTEMPEL: this game's Godhome. Opens after the finale.
-// Josh trained here before he saved the galaxy. RENAS-1 turned the scans of every boss Rênas beat into holograms:
+// Josh trained here before he saved the galaxy. Ratjetoe turned the scans of every boss Rênas beat into holograms:
 // nobody gets hurt, they're only light, but they hit just as hard.
 //   Hal der Hologrammen (Hall of Gods) - a statue per boss: fight it alone as Hologram, Opgeklommen or Stralend (one hit)
 //   Four pantheon doors                - bosses back to back, hearts carry over, no healing in between
@@ -88,7 +88,7 @@ export function buildTempel(ctx) {
   if (from && from.door !== undefined) w.spawn = { dir: LL(-29, from.door * 90), fwd: V3(0, -1, 0) };
   addRocket(w, ctx, pl, LL(-4, -14));
 
-  // ---------- the RENAS-1 projector at the north pole: it beams the holograms ----------
+  // ---------- Ratjetoe’s projector at the north pole: it beams the holograms ----------
   const N = V3(0, 1, 0);
   w.addPlatform(pl, { dir: N, r: 2.4, h: 0.6, color: 0xd8d0c4, top: 0xffd23a });
   {
@@ -185,13 +185,13 @@ export function buildTempel(ctx) {
   w.arrive = () => {
     play([
       { dur: 3.2, title: [w.title, w.sub], cam: over() },
-      say('RENAS-1', L('Sterrentempel reached. Hologram projectors online. Captain, I saved a scan of every boss you beat.', 'Sterrentempel bereikt. Hologramprojectoren aan. Kapitein, ik heb van elke baas die je versloeg een scan bewaard.')),
+      say('RATJETOE', L('Sterrentempel reached. Hologram projectors online. Captain, I saved a scan of every boss you beat.', 'Sterrentempel bereikt. Hologramprojectoren aan. Kapitein, ik heb van elke baas die je versloeg een scan bewaard.')),
       say('JOSH', L('Welcome to De Sterrentempel, little brother. I trained here, before I saved the galaxy.', 'Welkom in De Sterrentempel, kleine broer. Hier heb ik getraind, voordat ik de melkweg redde.')),
-      say('JOSH', L('RENAS-1 turned the scans into holograms. Nobody gets hurt, they’re only light. But they hit just as hard.', 'RENAS-1 heeft van die scans hologrammen gemaakt. Niemand raakt gewond, het is alleen licht. Maar ze slaan net zo hard.')),
+      say('JOSH', L('Ratjetoe turned the scans into holograms. Nobody gets hurt, they’re only light. But they hit just as hard.', 'Ratjetoe heeft van die scans hologrammen gemaakt. Niemand raakt gewond, het is alleen licht. Maar ze slaan net zo hard.')),
       say('JOSH', L('Up north is the Hall of Holograms: one statue per boss. Down south are four doors, the pantheons. Bosses back to back, no break.', 'In het noorden staat de Hal der Hologrammen: één beeld per baas. In het zuiden zijn vier deuren, de pantheons. Bazen achter elkaar, geen pauze.')),
       say('JOSH', L('And the last door, the Pantheon of the Galaxy… I never got through that one.', 'En de laatste deur, het Pantheon van de Melkweg… daar ben ik zelf nooit doorheen gekomen.')),
       say('RÊNAS', L('You never got through it? Then I will. Captain’s orders.', 'Jij bent er nooit doorheen gekomen? Dan doe ik het. Bevel van de kapitein.')),
-      say('OTIS', '*WOOF!*', L('(RENAS-1 translates: “LITTLE JOSH WILL WIN! THEN WE EAT!”)', '(RENAS-1 vertaalt: “KLEINE JOSH GAAT WINNEN! DAARNA ETEN!”)')),
+      say('OTIS', '*WOOF!*', L('(Ratjetoe translates: “LITTLE JOSH WILL WIN! THEN WE EAT!”)', '(Ratjetoe vertaalt: “KLEINE JOSH GAAT WINNEN! DAARNA ETEN!”)')),
     ], () => { toast(L('Statues up north, pantheon doors down south. Press E at one!', 'Beelden in het noorden, pantheondeuren in het zuiden. Druk E bij eentje!'), 3600); ctx.hud(); });
   };
   // back from a pantheon: Josh has something to say
@@ -203,7 +203,7 @@ export function buildTempel(ctx) {
         say('JOSH', L('Rênas… you did it. Twelve bosses in a row. The door I never got through.', 'Rênas… het is je gelukt. Twaalf bazen op een rij. De deur waar ik nooit doorheen kwam.')),
         say('RÊNAS', L('So that means I’m the best astronaut in the family now?', 'Dus nu ben ik de beste astronaut van de familie?')),
         say('JOSH', L('…Don’t tell Mom. But yes. Captain Rênas Binas.', '…Niet tegen mama zeggen. Maar ja. Kapitein Rênas Binas.')),
-        say('OTIS', '*WOOF WOOF WOOF!*', L('(RENAS-1 translates: “FOOD TIME! FOOD TIME!”)', '(RENAS-1 vertaalt: “ETENSTIJD! ETENSTIJD!”)')),
+        say('OTIS', '*WOOF WOOF WOOF!*', L('(Ratjetoe translates: “FOOD TIME! FOOD TIME!”)', '(Ratjetoe vertaalt: “ETENSTIJD! ETENSTIJD!”)')),
       ], () => { sfx.rare(); banner(L('RADIANT CAPTAIN!', 'STRALENDE KAPITEIN!'), L('Try the bindings for the crown!', 'Probeer de bindingen voor de kroon!'), '#ffd23a'); ctx.hud(); });
       return;
     }

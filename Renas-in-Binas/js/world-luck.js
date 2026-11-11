@@ -1,9 +1,9 @@
-import { World, planetStem, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261112d';
-import { fbm } from './world.js?v=20261112d';
-import { buildFionn, buildLuckyStone, buildHorseshoe, textBoard, buildLocal } from './models.js?v=20261112d';
-import { Lorcan } from './bosses.js?v=20261112d';
-import { addParkour, buildBeacon } from './parkour.js?v=20261112d';
-import { duelModels } from './duels.js?v=20261112d';
+import { World, planetStem, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261112i';
+import { fbm } from './world.js?v=20261112i';
+import { buildFionn, buildLuckyStone, buildHorseshoe, textBoard, buildLocal } from './models.js?v=20261112i';
+import { Lorcan } from './bosses.js?v=20261112i';
+import { addParkour, buildBeacon } from './parkour.js?v=20261112i';
+import { duelModels } from './duels.js?v=20261112i';
 
 // World 4 on the route: SMARAGDEILAND. Fionn's green island: Irish hills, very old rocks and a lot of luck.
 // Boss: Lorcan Pech, the Bad-Luck Leprechaun, on the Rainbow Ring.
@@ -265,7 +265,7 @@ export function buildLuck(ctx) {
   w.winLines = [
     ['LORCAN', 'Alright, alright! You win! Here, take the Klaverkern. And the luck. All of it.'],
     ['LORCAN', 'Nobody ever finds me. Nobody! …Was it the hiccups? It was the hiccups.'],
-    ['RENAS-1', 'Fuel secured: the Klaverkern. Luck levels: restored. Range: growing. Next fuel stop: Het Oerwoud.'],
+    ['RATJETOE', 'Fuel secured: the Klaverkern. Luck levels: restored. Range: growing. Next fuel stop: Het Oerwoud.'],
     ['RÊNAS', 'Fionn was right. Science AND luck!'],
   ];
   return w;

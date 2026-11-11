@@ -1,11 +1,11 @@
-import { World, addStars, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinOn, sign, rareItem } from './worlds-common.js?v=20261112d';
-import { fbm } from './world.js?v=20261112d';
-import { buildLocal, textBoard } from './models.js?v=20261112d';
-import { buildBeacon, coursePath } from './parkour.js?v=20261112d';
-import { G, toast, puff, surf, placeOn, orientOn, clamp } from './core.js?v=20261112d';
-import { sfx } from './audio.js?v=20261112d';
-import { P, spawnPlayer, resetCam, hurtPlayer, drawHearts } from './player.js?v=20261112d';
-import { play, orbitShot } from './cutscene.js?v=20261112d';
+import { World, addStars, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinOn, sign, rareItem } from './worlds-common.js?v=20261112i';
+import { fbm } from './world.js?v=20261112i';
+import { buildLocal, textBoard } from './models.js?v=20261112i';
+import { buildBeacon, coursePath } from './parkour.js?v=20261112i';
+import { G, toast, puff, surf, placeOn, orientOn, clamp } from './core.js?v=20261112i';
+import { sfx } from './audio.js?v=20261112i';
+import { P, spawnPlayer, resetCam, hurtPlayer, drawHearts } from './player.js?v=20261112i';
+import { play, orbitShot } from './cutscene.js?v=20261112i';
 
 // PARKOUR PLANETS: detours on the route, between the story planets. No quest and no boss: one long course
 // over a bottomless void, from the start beacon to the star gate. Every planet has its own trick:
@@ -27,7 +27,7 @@ export function buildStuiter(ctx) {
     route: [['hop', 2], ['pads', 3], ['cp'], ['sweep', 2], ['hop', 2], ['secret', 'stuiter-r1', 'Off the trampoline path'], ['bounce'], ['zig', 2], ['cp'],
       ['pads', 4], ['sweep'], ['crumble', 2], ['secret', 'stuiter-r2', 'A secret bounce'], ['cp'], ['circle', 2], ['sweep', 2], ['pads', 2], ['bob', 2], ['secret', 'stuiter-r3', 'Right before the finish'], ['hop', 2]],
     intro: [
-      ['RENAS-1', 'Detour! An asteroid storm is blocking the way to Smaragdeiland. The only safe path goes through Stuiterstad.'],
+      ['RATJETOE', 'Detour! An asteroid storm is blocking the way to Smaragdeiland. The only safe path goes through Stuiterstad.'],
       ['RÊNAS', 'Stuiterstad? Where’s the ground?'],
       ['THOMAS', 'There is no ground! Hi, I’m Thomas. They call me The Rounder. I’m perfectly round, so I bounce everywhere. Fall off here and you drop into the void.'],
       ['THOMAS', 'Trampolines bounce you to the next one: steer in the air. And watch the spinning bars. Jump over them! I just roll under them. Round life.'],
@@ -55,7 +55,7 @@ export function buildWissel(ctx) {
     route: [['hop', 2], ['swap', 4], ['cp'], ['slide', 3], ['hop'], ['secret', 'wissel-r1', 'Between red and blue'], ['swap', 5], ['cp'], ['crumble', 2], ['slide', 2], ['bounce'],
       ['secret', 'wissel-r2', 'Above the switches'], ['swap', 6], ['cp'], ['zig', 2], ['slide', 2], ['swap', 4], ['secret', 'wissel-r3', 'The last switch'], ['hop', 2]],
     intro: [
-      ['RENAS-1', 'Detour! The path to Duinenrijk is blocked by a solar flare. Safe route: De Wisselbaan.'],
+      ['RATJETOE', 'Detour! The path to Duinenrijk is blocked by a solar flare. Safe route: De Wisselbaan.'],
       ['DEAN', 'Welcome to De Wisselbaan! I’m Dean. Breakdancer by day, gamer by night. Here the platforms switch: red, then blue, then red again.'],
       ['DEAN', 'Listen to the ticking. It’s just like a beat. When the platforms blink, they’re about to switch. Jump to the other colour before that!'],
       ['DEAN', 'And the grey ones slide back and forth. Time your jump. The star gate at the end takes you on.'],
@@ -83,7 +83,9 @@ export function buildSprong(ctx) {
     route: [['hop', 2], ['ring'], ['cp'], ['circle', 2], ['ring'], ['secret', 'sprong-r1', 'Next to the first ring'], ['crumble', 3], ['cp'], ['ring2'], ['bob', 2], ['bounce'],
       ['secret', 'sprong-r2', 'High above the rings'], ['cp'], ['ring'], ['circle', 2], ['crumble', 2], ['ring2'], ['secret', 'sprong-r3', 'The longest jump'], ['hop', 2]],
     intro: [
-      ['RENAS-1', 'Detour! Kayo & Yara mined the direct route to Maankrater. Safe path: Sterrensprong. Warning: big gaps.'],
+      ['RATJETOE', 'Detour! Kayo & Yara mined the direct route to Maankrater. Safe path: Sterrensprong. Warning: big gaps.'],
+      ['RÊNAS', 'Again?! How do those cats always know which way we’re going?'],
+      ['RATJETOE', 'No idea! Lucky guess! Lucky cats! *nervous squeak*'],
       ['ROBIN', 'Hey, a real captain! I’m Robin. I’m training to be an astronaut. But the gaps here are SO scary… *sniff*'],
       ['ROBIN', 'They’re HUGE. Too far for a normal jump. But see the glowing rings? Fly through one and your Komeetduik is back.'],
       ['ROBIN', 'So: jump, dash with X, fly through the ring, dash again! Reach the star gate and you’re on your way to the moon. I’ll… cheer from here.'],
@@ -255,14 +257,25 @@ export function buildPark(ctx, D) {
   w.arrive = () => {
     standOn(startS);
     const over = orbitShot(surf(pl, start.n, 3), start.n, 16, 9, 0.25);
-    play([{ dur: 3.2, title: [w.title, w.sub], cam: over }].concat(D.intro.map(([who, text]) => ({ say: { who, text }, cam: who === 'RÊNAS' || who === 'RENAS-1' ? over : ctx.talkCam(host) }))),
+    play([{ dur: 3.2, title: [w.title, w.sub], cam: over }].concat(D.intro.map(([who, text]) => ({ say: { who, text }, cam: who === 'RÊNAS' || who === 'RATJETOE' ? over : ctx.talkCam(host) }))),
       () => { toast('Reach the star gate at the end! Beacons are checkpoints.', 3200); ctx.hud(); });
   };
   let placed = false;
+  // NO SHORTCUTS: the planet is small, so later parts of the course hang close to earlier ones. You may skip a
+  // couple of platforms (that's good jumping), but landing far ahead of where you've been puts you back.
+  const order = new Map(spec.map((s, i) => [s.pf, i]));
+  let best = 0, lastOk = startS;
+  const SKIP = 4;
   w.updaters.push(() => {
     if (P.planet !== pl) return;
     if (!placed) { placed = true; standOn(cp); return; }   // the world loads you onto the bare (invisible) ground: put you on the start
     if (G.state !== 'play' || G.cutscene || P.dead) return;
+    if (P.grounded && order.has(P.ground)) {
+      const i = order.get(P.ground);
+      if (i > best + SKIP) { sfx.warn(); G.shake = Math.max(G.shake, 0.2); toast('No shortcuts! Follow the course. Back you go.', 2200); standOn(lastOk); return; }
+      // (only a still, solid platform counts as a safe place to be put back on)
+      if (i >= best) { best = i; const o = spec[i].opt; if (!o.crumble && o.swap === undefined && !o.circle && !o.slide && !o.bob && !spec[i].sweep) lastOk = spec[i]; }
+    }
     if (P.grounded && P.ground !== cp.pf) {
       const s = cps.find((c) => c.pf === P.ground);
       if (s && s !== startS && cps.indexOf(s) > cps.indexOf(cp)) { cp = s; lit(s.pf); if (s !== finS) { sfx.quest(); toast('Checkpoint!', 1400); } ctx.hud(); }

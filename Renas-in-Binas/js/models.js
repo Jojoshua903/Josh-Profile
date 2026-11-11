@@ -1,4 +1,4 @@
-import { THREE, toon, basic, addOutline, mk, ink, V3, label, canvasTex } from './core.js?v=20261112d';
+import { THREE, toon, basic, addOutline, mk, ink, V3, label, canvasTex } from './core.js?v=20261112i';
 
 // Materials from Otis in Orbit (josh.js)
 export const LOOK = { hoodie: '#ff7a3d', pants: '#3a4a7a', hair: '#3b2a20', skin: '#f1c49b', shoes: '#f4f1ea', drone: '#14b8a6' };
@@ -311,6 +311,42 @@ export function buildKnabbel() {
   for (let i = 0; i < 4; i++) mk(new THREE.ConeGeometry(0.07, 0.16, 4), toon(0xfff8ec), -0.24 + i * 0.16, -0.12, 0.12, jaw, 0);
   eyes(rock, 0.3, 0.66, 0.24, 0.1);
   return { g, rock, jaw };
+}
+
+// ---------- Ratjetoe: the OiO rat mechanic in blue overalls, never without his wrench. Now the station's mechanic. ----------
+export function buildRatjetoe() {
+  const root = new THREE.Group();
+  const body = new THREE.Group(); root.add(body);
+  const fur = toon(0x9a9aa6), pink = toon(0xffa0b4), overall = toon(0x2f7bff), steel = toon(0xc9d3e0), yellow = toon(0xffd23a);
+  for (const s of [-1, 1]) {
+    mk(new THREE.CapsuleGeometry(0.07, 0.14, 4, 8), overall, 0.1 * s, 0.16, 0, body);
+    mk(new THREE.SphereGeometry(0.08, 10, 8), pink, 0.1 * s, 0.03, 0.05, body).scale.set(1, 0.6, 1.5);
+  }
+  mk(new THREE.SphereGeometry(0.26, 16, 12), overall, 0, 0.42, 0, body, 1.06).scale.set(1, 1.05, 0.9);
+  mk(new THREE.SphereGeometry(0.2, 14, 10), fur, 0, 0.62, -0.02, body).scale.set(1, 0.8, 0.9);
+  for (const s of [-1, 1]) mk(new THREE.BoxGeometry(0.05, 0.3, 0.03), overall, 0.12 * s, 0.6, 0.15, body).rotation.x = -0.25;
+  for (const s of [-1, 1]) mk(new THREE.SphereGeometry(0.03, 8, 6), yellow, 0.12 * s, 0.56, 0.2, body);
+  mk(new THREE.BoxGeometry(0.16, 0.1, 0.04), overall, 0, 0.5, 0.24, body);   // the big front pocket
+  const tail = new THREE.Group(); tail.position.set(0, 0.3, -0.24); body.add(tail);
+  for (let i = 0; i < 5; i++) mk(new THREE.SphereGeometry(0.045 - i * 0.006, 8, 6), pink, 0, Math.sin(i * 0.8) * 0.12, -i * 0.1, tail);
+  const head = new THREE.Group(); head.position.set(0, 0.84, 0.04); body.add(head);
+  mk(new THREE.SphereGeometry(0.22, 18, 14), fur, 0, 0, 0, head, 1.06);
+  const snout = mk(new THREE.ConeGeometry(0.12, 0.26, 14), fur, 0, -0.05, 0.25, head); snout.rotation.x = Math.PI / 2;
+  mk(new THREE.SphereGeometry(0.045, 8, 6), pink, 0, -0.05, 0.39, head);
+  for (const s of [-1, 1]) {
+    const ear = mk(new THREE.CylinderGeometry(0.13, 0.13, 0.03, 16), fur, 0.16 * s, 0.17, -0.02, head); ear.rotation.x = Math.PI / 2;
+    mk(new THREE.CylinderGeometry(0.09, 0.09, 0.032, 14), pink, 0.16 * s, 0.17, 0.0, head).rotation.x = Math.PI / 2;
+    for (const k of [-1, 1]) { const w = mk(new THREE.BoxGeometry(0.2, 0.008, 0.008), ink, 0.12 * s, -0.06 + k * 0.025, 0.3, head, 0); w.rotation.z = k * 0.15 * s; }
+  }
+  eyes(head, 0.06, 0.18, 0.08, 0.04);
+  // the wrench, in his right paw
+  const arm = new THREE.Group(); arm.position.set(0.27, 0.52, 0.04); body.add(arm);
+  mk(new THREE.CapsuleGeometry(0.05, 0.14, 4, 8), fur, 0, -0.08, 0.04, arm).rotation.x = -0.5;
+  const wrench = new THREE.Group(); wrench.position.set(0, -0.12, 0.16); arm.add(wrench);
+  mk(new THREE.BoxGeometry(0.05, 0.36, 0.03), steel, 0, 0.14, 0, wrench, 1.1);
+  const jaw = mk(new THREE.TorusGeometry(0.07, 0.03, 6, 12, Math.PI * 1.4), steel, 0, 0.36, 0, wrench, 1.1); jaw.rotation.z = -0.9;
+  mk(new THREE.SphereGeometry(0.05, 8, 6), fur, -0.27, 0.48, 0.05, body);   // left paw
+  return { root, body, head, tail, arm, wrench };
 }
 
 // ---------- collectibles ----------

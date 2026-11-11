@@ -1,8 +1,8 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261112d';
-import { fbm } from './world.js?v=20261112d';
-import { buildLars, buildLantern, textBoard, buildLocal, buildPickaxe } from './models.js?v=20261112d';
-import { Gruis } from './bosses.js?v=20261112d';
-import { addParkour } from './parkour.js?v=20261112d';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261112i';
+import { fbm } from './world.js?v=20261112i';
+import { buildLars, buildLantern, textBoard, buildLocal, buildPickaxe } from './models.js?v=20261112i';
+import { Gruis } from './bosses.js?v=20261112i';
+import { addParkour } from './parkour.js?v=20261112i';
 
 // World 2: DE DIEPE MIJN. Lars' mining planet, full of crystals and rails. Boss: Gruis the ore golem.
 export function buildMine(ctx) {
@@ -238,8 +238,8 @@ export function buildMine(ctx) {
   w.hitLines = [['LARS', 'Yes! Right in the crystal! Just like Josh would do it!'], ['LARS', 'He’s getting faster! Keep your eyes on the pillars!']];
   w.winLines = [
     ['LARS', '(radio) He’s asleep again. Look at him. Sweet.'],
-    ['RENAS-1', 'Energiekern secured! The big signal is on Homerun Heuvel. Distance: too far. Fuel: low.'],
-    ['RENAS-1', 'Nearest fuel source: the Hertogdom IJs. Warning: extreme aura levels detected.'],
+    ['RATJETOE', 'Energiekern secured! The big signal is on Homerun Heuvel. Distance: too far. Fuel: low. My cheese supply: also low.'],
+    ['RATJETOE', 'Nearest fuel source: the Hertogdom IJs. Warning: extreme aura levels detected.'],
     ['RÊNAS', 'Extreme aura? Then they’ve never met me. Hold on, Nathan, I’m coming!'],
   ];
   void surf; void sign;

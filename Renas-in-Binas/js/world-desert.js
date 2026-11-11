@@ -1,9 +1,9 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, rock, palm, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, quicksand, gusts, addMore } from './worlds-common.js?v=20261112d';
-import { fbm } from './world.js?v=20261112d';
-import { buildFarah, buildCamel, buildScarab, buildScroll, textBoard, buildLocal, buildTrinket } from './models.js?v=20261112d';
-import { Gruizel } from './bosses.js?v=20261112d';
-import { addParkour, buildBeacon } from './parkour.js?v=20261112d';
-import { duelModels } from './duels.js?v=20261112d';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, rock, palm, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, quicksand, gusts, addMore } from './worlds-common.js?v=20261112i';
+import { fbm } from './world.js?v=20261112i';
+import { buildFarah, buildCamel, buildScarab, buildScroll, textBoard, buildLocal, buildTrinket } from './models.js?v=20261112i';
+import { Gruizel } from './bosses.js?v=20261112i';
+import { addParkour, buildBeacon } from './parkour.js?v=20261112i';
+import { duelModels } from './duels.js?v=20261112i';
 
 // World 7 on the route: DUINENRIJK. A desert planet with a pyramid, an obelisk and an oasis.
 // New here: quicksand slows you down, sandstorms push you around, and cacti prick.
@@ -245,7 +245,9 @@ export function buildDesert(ctx) {
   w.winLines = [
     ['GRUIZEL', '*BURP* …Okay. You win, tiny bubble. Here. The Zandkern. Bit sandy.'],
     ['GRUIZEL', 'I wasn’t trying to eat the dig site. I just like old stuff. It’s crunchy.'],
-    ['RENAS-1', 'Fuel secured: the Zandkern. Range: still not enough. Next signal: De Koraalzee. It’s… underwater?'],
+    ['RATJETOE', 'Fuel secured: the Zandkern. Range: still not enough. Next signal: De Koraalzee. It’s… underwater?'],
+    // the first hint that Ratjetoe is up to something
+    ['RATJETOE', '*whispering* …yes, Duinenrijk is done. Next is the sea. …No, he doesn’t suspect a thing. …Oh! Captain! I was just talking to… my wrench.'],
     ['RÊNAS', 'Underwater? Good thing my helmet is a fishbowl!'],
   ];
   return w;
