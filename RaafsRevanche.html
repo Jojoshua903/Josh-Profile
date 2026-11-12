@@ -1,0 +1,2994 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raafs Revanche</title>
+<style>
+  :root {
+    --ink: #2b2233;
+    --paper: #fff6e3;
+    --paper2: #ffe9c2;
+    --raaf: #5b3d86;
+    --raaf2: #8b63c9;
+    --oranje: #ff8a1f;
+    --geel: #ffd23f;
+    --gras: #79b84a;
+    --rood: #e5484d;
+    --pix: "Silkscreen", "Menlo", "Consolas", "Courier New", monospace;
+    --body: "Avenir Next", "Trebuchet MS", "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #8fd3ff; font-family: var(--body); color: var(--ink); user-select: none; }
+  #stage { position: fixed; inset: 0; cursor: crosshair; }
+  #stage canvas { width: 100% !important; height: 100% !important; image-rendering: pixelated; display: block; }
+
+  .px { font-family: var(--pix); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; }
+  .panel {
+    background: var(--paper); border: 3px solid var(--ink);
+    box-shadow: 4px 4px 0 var(--ink), inset -3px -3px 0 var(--paper2);
+    border-radius: 2px;
+  }
+  button.btn {
+    font-family: var(--pix); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    font-size: 14px; padding: 10px 16px; cursor: pointer; color: var(--ink);
+    background: var(--geel); border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink);
+    border-radius: 2px; transition: transform .06s;
+  }
+  button.btn:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }
+  button.btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+  button.btn.paars { background: var(--raaf2); color: #fff; }
+  button.btn.wit { background: var(--paper); }
+
+  /* ------------------------------------------------------------- HUD */
+  #hud { position: fixed; inset: 0; pointer-events: none; }
+  #hud.hidden, .hidden { display: none !important; }
+  #lvlname { position: absolute; top: 14px; left: 14px; padding: 8px 12px; font-size: 13px; }
+  #lvlname small { display: block; font-family: var(--body); text-transform: none; letter-spacing: 0; font-weight: 600; opacity: .7; font-size: 12px; margin-top: 2px; }
+  #score { position: absolute; top: 14px; right: 14px; padding: 8px 14px; font-size: 22px; text-align: right; min-width: 140px; }
+  #score small { display: block; font-size: 10px; opacity: .6; }
+  #pauseBtn { position: absolute; top: 14px; right: 176px; pointer-events: auto; padding: 8px 11px; font-size: 13px; }
+  #queue { position: absolute; left: 14px; bottom: 64px; display: flex; gap: 6px; align-items: flex-end; }
+  .qb { width: 46px; height: 46px; border: 3px solid var(--ink); background: var(--paper); box-shadow: 3px 3px 0 var(--ink); display: grid; place-items: center; position: relative; }
+  .qb.cur { width: 58px; height: 58px; background: var(--geel); }
+  .qb.used { opacity: .25; filter: grayscale(1); }
+  .qb span { position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%); font-size: 9px; white-space: nowrap; text-shadow: 0 1px 0 #fff8; }
+  #hint { position: absolute; left: 50%; bottom: 64px; transform: translateX(-50%); padding: 8px 14px; font-size: 12px; white-space: nowrap; text-align: center; }
+  #hint b { color: var(--raaf); }
+  #power { position: absolute; left: 50%; bottom: 112px; transform: translateX(-50%); width: 260px; height: 22px; padding: 3px; }
+  #power i { display: block; height: 100%; width: 0; background: repeating-linear-gradient(90deg, var(--oranje) 0 8px, var(--geel) 8px 12px); }
+  #fuel { position: absolute; left: 50%; bottom: 112px; transform: translateX(-50%); width: 200px; height: 16px; padding: 2px; }
+  #fuel i { display: block; height: 100%; width: 100%; background: #ff6a1f; }
+  #boss { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); width: min(420px, 60vw); padding: 6px 10px 8px; text-align: center; font-size: 11px; }
+  #boss .bar { height: 12px; border: 2px solid var(--ink); background: #fff; margin-top: 4px; }
+  #boss .bar i { display: block; height: 100%; width: 100%; background: var(--rood); transition: width .2s; }
+  #left { position: absolute; top: 76px; left: 14px; padding: 6px 10px; font-size: 11px; }
+
+  #cross { position: absolute; left: 50%; top: 50%; width: 30px; height: 30px; transform: translate(-50%, -50%); border: 3px solid #fff; outline: 2px solid var(--ink); box-shadow: inset 0 0 0 2px var(--ink); }
+  #cross::after { content: ""; position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; transform: translate(-50%, -50%); background: var(--geel); outline: 2px solid var(--ink); }
+  #cross.used { border-color: #ffffff66; }
+  #cross.used::after { background: #ffffff66; }
+
+  #speed { position: absolute; inset: 0; opacity: 0; background:
+      repeating-conic-gradient(from 0deg at 50% 50%, #ffffff00 0deg 4deg, #ffffffaa 4.4deg 4.8deg, #ffffff00 5.2deg 11deg);
+    -webkit-mask: radial-gradient(circle at 50% 50%, transparent 30%, #000 75%); mask: radial-gradient(circle at 50% 50%, transparent 30%, #000 75%); }
+
+  /* ------------------------------------------------- first person overlays */
+  .fp { position: absolute; inset: 0; display: none; }
+  .fp.on { display: block; }
+  .fp svg { position: absolute; image-rendering: pixelated; }
+  #fp-raaf .beak { left: 50%; top: -6px; width: 120px; transform: translateX(-50%); }
+  #fp-raaf .wl, #fp-raaf .wr { bottom: -30px; width: min(42vw, 520px); transform-origin: 0% 100%; }
+  #fp-raaf .wl { left: -30px; animation: flapL 0.9s ease-in-out infinite; }
+  #fp-raaf .wr { right: -30px; transform-origin: 100% 100%; animation: flapR 0.9s ease-in-out infinite; }
+  #fp-raaf.dive .wl, #fp-raaf.dive .wr { animation: none; transform: translateY(40%) scale(0.8); transition: transform .2s; }
+  @keyframes flapL { 0%,100% { transform: rotate(-4deg); } 50% { transform: rotate(7deg) translateY(4%); } }
+  @keyframes flapR { 0%,100% { transform: rotate(4deg); } 50% { transform: rotate(-7deg) translateY(4%); } }
+  #fp-otis { background: radial-gradient(ellipse 72% 76% at 50% 50%, transparent 82%, #cfefff55 88%, #eef0f2 92%, #9aa3ad 100%); }
+  #fp-otis::after { content: ""; position: absolute; left: 12%; top: 10%; width: 18%; height: 8%; border-radius: 50%; background: #ffffff55; transform: rotate(-20deg); }
+  #fp-otis .flames { position: absolute; left: 0; right: 0; bottom: 0; height: 22%; display: none;
+    background: radial-gradient(ellipse 30% 100% at 30% 110%, #ffb627, #ff6a1f88 50%, transparent 70%), radial-gradient(ellipse 30% 100% at 70% 110%, #ffb627, #ff6a1f88 50%, transparent 70%); }
+  #fp-otis.jet .flames { display: block; animation: flick .08s steps(2) infinite; }
+  @keyframes flick { 50% { opacity: .7; transform: scaleY(1.15); transform-origin: bottom; } }
+  #fp-byte { background:
+      linear-gradient(#41f2dc 0 0) top left / 60px 4px no-repeat, linear-gradient(#41f2dc 0 0) top left / 4px 60px no-repeat,
+      linear-gradient(#41f2dc 0 0) top right / 60px 4px no-repeat, linear-gradient(#41f2dc 0 0) top right / 4px 60px no-repeat,
+      linear-gradient(#41f2dc 0 0) bottom left / 60px 4px no-repeat, linear-gradient(#41f2dc 0 0) bottom left / 4px 60px no-repeat,
+      linear-gradient(#41f2dc 0 0) bottom right / 60px 4px no-repeat, linear-gradient(#41f2dc 0 0) bottom right / 4px 60px no-repeat,
+      repeating-linear-gradient(0deg, #1f2c5c14 0 2px, transparent 2px 5px);
+    background-origin: content-box; padding: 24px; }
+  #fp-byte .tag { position: absolute; left: 34px; top: 30px; color: #1f2c5c; font-size: 11px; background: #41f2dccc; padding: 3px 6px; }
+  #fp-byte.mech { background-color: #8e98a322; }
+  #fp-byte .arms { display: none; position: absolute; bottom: -10px; left: 0; right: 0; height: 30%; }
+  #fp-byte.mech .arms { display: block; }
+  #fp-guiseppe { background: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 78%, #8cc63f66 92%, #8cc63fcc 100%); }
+  #fp-guiseppe .sail { display: none; left: 50%; top: -2px; transform: translateX(-50%); width: min(110vw, 1500px); }
+  #fp-guiseppe.glide .sail { display: block; }
+
+  /* ---------------------------------------------------------- popups */
+  #pops { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+  .pop { position: absolute; font-family: var(--pix); font-weight: 700; font-size: 18px; color: #fff; transform: translate(-50%, -50%);
+    text-shadow: 2px 0 var(--ink), -2px 0 var(--ink), 0 2px var(--ink), 0 -2px var(--ink), 3px 3px 0 var(--ink); animation: popup 1.1s ease-out forwards; }
+  .pop.big { font-size: 28px; }
+  @keyframes popup { 0% { opacity: 0; margin-top: 10px; } 15% { opacity: 1; } 100% { opacity: 0; margin-top: -50px; } }
+  #shout { position: fixed; left: 50%; top: 30%; transform: translate(-50%, -50%); font-size: clamp(28px, 6vw, 64px); color: var(--geel); pointer-events: none;
+    text-shadow: 3px 0 var(--ink), -3px 0 var(--ink), 0 3px var(--ink), 0 -3px var(--ink), 6px 6px 0 var(--raaf); opacity: 0; white-space: nowrap; }
+  #shout.go { animation: shout 1.4s ease-out; }
+  @keyframes shout { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.6); } 15% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); } 75% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; } }
+
+  /* --------------------------------------------------------- schermen */
+  .screen { position: fixed; inset: 0; display: grid; place-items: center; padding: 20px 20px 64px; overflow: auto; }
+  .dim { background: #2b223355; }
+  #menu { background:
+      linear-gradient(#8fd3ffcc, #e7f6ffcc),
+      repeating-linear-gradient(45deg, #ffffff22 0 12px, transparent 12px 24px); }
+  .menuwrap { width: min(980px, 100%); display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 22px; align-items: start; }
+  @media (max-width: 820px) { .menuwrap { grid-template-columns: minmax(0, 1fr); } }
+  .logo { padding: 22px 24px 18px; position: relative; overflow: hidden; }
+  .logo h1 { margin: 0; font-size: clamp(42px, 7vw, 76px); line-height: .95; color: var(--raaf); text-shadow: 4px 4px 0 var(--ink); }
+  .logo h1 em { font-style: normal; color: var(--oranje); display: block; font-size: .62em; text-shadow: 3px 3px 0 var(--ink); }
+  .logo p { margin: 12px 0 0; font-size: 15px; max-width: 46ch; line-height: 1.45; }
+  .logo .stamp { position: absolute; right: 16px; top: 16px; transform: rotate(8deg); border: 3px solid var(--rood); color: var(--rood); padding: 4px 8px; font-size: 11px; }
+  .worlds { display: grid; gap: 14px; margin-top: 18px; }
+  .world { padding: 12px 14px 14px; }
+  .world h3 { margin: 0 0 10px; font-size: 13px; display: flex; justify-content: space-between; }
+  .world h3 span { opacity: .55; }
+  .lv { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .lvb { pointer-events: auto; cursor: pointer; border: 3px solid var(--ink); background: #fff; box-shadow: 3px 3px 0 var(--ink); padding: 8px 4px 6px; text-align: center; font-family: var(--pix); font-weight: 700; font-size: 18px; color: var(--ink); }
+  .lvb:hover { background: var(--geel); }
+  .lvb .st { display: block; font-size: 11px; letter-spacing: 1px; margin-top: 2px; color: #c9b48c; }
+  .lvb .st b { color: var(--oranje); font-weight: 700; }
+  .lvb.lock { background: #e8dfcd; color: #a99c86; cursor: not-allowed; box-shadow: 3px 3px 0 #a99c86; border-color: #a99c86; }
+  .lvb.boss { background: #ffe1e1; }
+  .roster { padding: 14px; }
+  .roster h3 { margin: 0 0 10px; font-size: 13px; }
+  .who { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 10px; padding: 9px 0; border-top: 2px dashed #e2cfa8; align-items: center; }
+  .who:first-of-type { border-top: 0; }
+  .who .ic { width: 54px; height: 54px; border: 3px solid var(--ink); display: grid; place-items: center; background: var(--paper2); }
+  .who b { font-family: var(--pix); text-transform: uppercase; font-size: 13px; }
+  .who small { display: block; font-size: 12.5px; line-height: 1.35; margin-top: 2px; }
+  .who.lock { opacity: .45; }
+  .who.lock .ic svg { filter: brightness(0); opacity: .5; }
+  .ctrl { margin-top: 12px; font-size: 12.5px; line-height: 1.6; background: #fff; border: 2px solid var(--ink); padding: 8px 10px; }
+  kbd { font-family: var(--pix); font-size: 10px; border: 2px solid var(--ink); border-bottom-width: 3px; padding: 0 4px; background: var(--paper); }
+  .tools { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+
+  .modal { padding: 22px 24px; width: min(460px, 100%); text-align: center; }
+  .modal h2 { margin: 0 0 6px; font-size: 26px; color: var(--raaf); text-shadow: 2px 2px 0 var(--ink); }
+  .modal p { margin: 6px 0; line-height: 1.45; }
+  .modal .row { display: flex; gap: 10px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+  .stars { font-size: 46px; letter-spacing: 6px; margin: 6px 0; color: #d9ccb2; text-shadow: 3px 3px 0 var(--ink); }
+  .stars b { color: var(--geel); display: inline-block; animation: starpop .4s backwards; }
+  .stars b:nth-child(2) { animation-delay: .35s; } .stars b:nth-child(3) { animation-delay: .7s; }
+  @keyframes starpop { 0% { transform: scale(0) rotate(-90deg); } 70% { transform: scale(1.3); } }
+  .card .big { width: 120px; height: 120px; margin: 4px auto 10px; border: 3px solid var(--ink); background: var(--paper2); display: grid; place-items: center; }
+  .card .abil { background: #fff; border: 2px solid var(--ink); padding: 8px 10px; margin-top: 10px; text-align: left; font-size: 14px; }
+  .card .abil b { font-family: var(--pix); color: var(--oranje); text-transform: uppercase; font-size: 12px; display: block; }
+  .new { display: inline-block; background: var(--rood); color: #fff; padding: 3px 8px; font-size: 11px; transform: rotate(-3deg); }
+
+  /* ------------------------------------------------------------ verhaal */
+  #story { position: fixed; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; padding: 0 20px 70px; cursor: pointer;
+    background: linear-gradient(transparent 40%, #2b223388); }
+  #story::before, #story::after { content: ""; position: absolute; left: 0; right: 0; height: 9vh; background: var(--ink); }
+  #story::before { top: 0; } #story::after { bottom: 0; height: 52px; }
+  #storyTitle { position: absolute; top: 14vh; left: 50%; transform: translateX(-50%); font-size: clamp(20px, 3.4vw, 34px); color: var(--paper);
+    text-shadow: 3px 3px 0 var(--ink), -2px 0 var(--ink), 0 -2px var(--ink); white-space: nowrap; opacity: 0; }
+  #storyTitle.go { animation: ttl 3.2s ease-out forwards; }
+  @keyframes ttl { 0% { opacity: 0; letter-spacing: .3em; } 20%, 70% { opacity: 1; letter-spacing: .08em; } 100% { opacity: 0; } }
+  .sbox { position: relative; z-index: 1; width: min(820px, 100%); display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 16px; padding: 16px 18px 18px; align-items: start; }
+  #story.narr .sbox { grid-template-columns: minmax(0, 1fr); background: #2b2233; color: var(--paper); box-shadow: 4px 4px 0 #000, inset -3px -3px 0 #3d3249; }
+  #story.narr #storyText { font-style: italic; }
+  .sbox .ic { width: 104px; height: 104px; border: 3px solid var(--ink); background: var(--paper2); display: grid; place-items: center; }
+  #story.narr .sbox .ic, #story.narr #storyName { display: none; }
+  #story[data-sp="ratjetoe"] .sbox .ic { background: #ffd6d6; }
+  #story[data-sp="ratjetoe"] #storyName { color: var(--rood); }
+  #storyName { font-size: 14px; color: var(--raaf); margin-bottom: 6px; }
+  #storyText { font-size: 17px; line-height: 1.5; min-height: 3em; }
+  #storyNext { position: absolute; right: 12px; bottom: 8px; font-size: 13px; animation: nudge 1s steps(2) infinite; }
+  @keyframes nudge { 50% { transform: translateX(4px); } }
+  #storySkip { position: absolute; z-index: 2; top: calc(9vh + 14px); right: 18px; pointer-events: auto; padding: 6px 10px; font-size: 11px; }
+  #say { position: fixed; top: 124px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; padding: 8px 14px 8px 8px; max-width: min(560px, 90vw); pointer-events: none; animation: sayin .3s ease-out; transition: opacity .4s; }
+  #say.out { opacity: 0; }
+  #say .ic { width: 52px; height: 52px; border: 3px solid var(--ink); background: var(--paper2); display: grid; place-items: center; flex: none; }
+  #say b { display: block; font-size: 11px; color: var(--raaf); }
+  #say div:last-child { font-size: 14.5px; line-height: 1.35; }
+  @keyframes sayin { from { transform: translate(-50%, -12px); opacity: 0; } }
+
+  @media print {
+    #stage, #hud, #pops { display: none !important; }
+    .screen { position: static; }
+  }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+
+<div id="hud" class="hidden">
+  <div id="lvlname" class="panel px">—<small></small></div>
+  <div id="left" class="panel px"></div>
+  <button id="pauseBtn" class="btn wit" title="Pauze (Esc)">❚❚</button>
+  <div id="score" class="panel px"><small>score</small><span>0</span></div>
+  <div id="boss" class="panel px hidden">Ratjetoe<div class="bar"><i></i></div></div>
+  <div id="speed"></div>
+  <div id="fp-raaf" class="fp">
+    <svg class="beak" viewBox="0 0 24 10" shape-rendering="crispEdges"><path d="M6 0h12v2h-1v2h-1v2h-1v2h-1v2h-4V8H9V6H8V4H7V2H6z" fill="#3a3a40"/><path d="M8 0h4v2h-1v2h-1V2H8z" fill="#55555c"/></svg>
+    <svg class="wl" viewBox="0 0 64 40" shape-rendering="crispEdges">
+      <path d="M0 40V24h4v-4h6v-4h6v-4h8V8h8V4h10V0h4v4h-4v4h-6v4h-6v4h-4v4h-6v4h-4v4h-4v4h-4v4z" fill="#16131b"/>
+      <path d="M10 40v-8h6v-4h6v-4h6v-4h8v4h-4v4h-6v4h-6v4h-4v4z" fill="#3c2c58"/>
+      <path d="M26 40v-4h6v-4h8v-4h8v4h-4v4h-6v4h-6v4z" fill="#16131b"/>
+    </svg>
+    <svg class="wr" viewBox="0 0 64 40" shape-rendering="crispEdges" style="transform-origin:100% 100%">
+      <g transform="translate(64 0) scale(-1 1)">
+      <path d="M0 40V24h4v-4h6v-4h6v-4h8V8h8V4h10V0h4v4h-4v4h-6v4h-6v4h-4v4h-6v4h-4v4h-4v4h-4v4z" fill="#16131b"/>
+      <path d="M10 40v-8h6v-4h6v-4h6v-4h8v4h-4v4h-6v4h-6v4h-4v4z" fill="#3c2c58"/>
+      <path d="M26 40v-4h6v-4h8v-4h8v4h-4v4h-6v4h-6v4z" fill="#16131b"/>
+      </g>
+    </svg>
+  </div>
+  <div id="fp-otis" class="fp"><div class="flames"></div></div>
+  <div id="fp-byte" class="fp"><div class="tag px">byte.cam ● rec</div>
+    <svg class="arms" viewBox="0 0 100 30" preserveAspectRatio="none" shape-rendering="crispEdges"><rect x="4" y="6" width="16" height="30" fill="#8e98a3"/><rect x="4" y="6" width="16" height="4" fill="#4c545e"/><rect x="80" y="6" width="16" height="30" fill="#8e98a3"/><rect x="80" y="6" width="16" height="4" fill="#4c545e"/></svg>
+  </div>
+  <div id="fp-guiseppe" class="fp">
+    <svg class="sail" viewBox="0 0 100 18" shape-rendering="crispEdges"><path d="M0 0h100v6L50 18 0 6z" fill="#ff8a1f"/><path d="M0 2h100v2H0zM20 8h60v2H20zM40 13h20v2H40z" fill="#ffd23f"/></svg>
+  </div>
+  <div id="cross" class="hidden"></div>
+  <div id="power" class="panel hidden"><i></i></div>
+  <div id="fuel" class="panel hidden"><i></i></div>
+  <div id="queue"></div>
+  <div id="hint" class="panel px"></div>
+</div>
+<div id="pops"></div>
+<div id="shout" class="px"></div>
+<div id="say" class="panel hidden"></div>
+
+<div id="story" class="hidden">
+  <div id="storyTitle" class="px"></div>
+  <button class="btn wit" id="storySkip">Overslaan ⏭</button>
+  <div class="sbox panel">
+    <div class="ic" id="storyIc"></div>
+    <div><div class="px" id="storyName"></div><div id="storyText"></div></div>
+    <span class="px" id="storyNext">▸</span>
+  </div>
+</div>
+
+<div id="menu" class="screen">
+  <div class="menuwrap">
+    <div>
+      <div class="logo panel">
+        <div class="stamp px">Wat in de Combat</div>
+        <h1 class="px">Raafs<em>Revanche</em></h1>
+        <p>Ratjetoe heeft de Combat-beker van Raaf gejat. Zijn knaagdierenbende heeft overal forten gebouwd, van hout, ijs, steen en gejatte kaas. Lanceer jezelf uit de katapult, vlieg in first person en haal de beker terug.</p>
+        <div class="row" style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+          <button class="btn paars" id="playBtn">▸ Speel verder</button>
+          <button class="btn wit" id="storyBtn">📖 Verhaal</button>
+        </div>
+      </div>
+      <div class="worlds" id="worlds"></div>
+    </div>
+    <div class="roster panel">
+      <h3 class="px">De vliegers</h3>
+      <div id="roster"></div>
+      <div class="ctrl">
+        <b class="px" style="font-size:11px">Katapult</b><br>
+        Muis = mikken · <kbd>klik</kbd> ingedrukt houden = spannen · loslaten = lanceer<br>
+        <b class="px" style="font-size:11px">In de lucht</b><br>
+        Muis = kijken en sturen · <kbd>klik</kbd> of <kbd>spatie</kbd> = ability<br>
+        <kbd>R</kbd> opnieuw · <kbd>Esc</kbd> pauze
+      </div>
+      <div class="tools">
+        <button class="btn wit" id="sndBtn">🔊 Geluid: aan</button>
+        <button class="btn wit" id="pixBtn">▦ Pixels: groot</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="card" class="screen dim hidden">
+  <div class="modal panel card">
+    <span class="new px">Nieuwe vlieger</span>
+    <div class="big" id="cardIc"></div>
+    <h2 class="px" id="cardName"></h2>
+    <p id="cardDesc"></p>
+    <div class="abil"><b id="cardAb"></b><span id="cardHow"></span></div>
+    <div class="row"><button class="btn" id="cardOk">Vliegen!</button></div>
+  </div>
+</div>
+
+<div id="end" class="screen dim hidden">
+  <div class="modal panel">
+    <h2 class="px" id="endTitle"></h2>
+    <div class="stars" id="endStars"></div>
+    <p class="px" id="endScore" style="font-size:20px"></p>
+    <p id="endNote"></p>
+    <div class="row">
+      <button class="btn wit" id="endMenu">Menu</button>
+      <button class="btn wit" id="endRetry">Opnieuw</button>
+      <button class="btn" id="endNext">Volgende ▸</button>
+    </div>
+  </div>
+</div>
+
+<div id="pause" class="screen dim hidden">
+  <div class="modal panel">
+    <h2 class="px">Pauze</h2>
+    <div class="row">
+      <button class="btn" id="pResume">Verder</button>
+      <button class="btn wit" id="pRetry">Opnieuw</button>
+      <button class="btn wit" id="pMenu">Menu</button>
+    </div>
+    <div class="row">
+      <button class="btn wit" id="pSnd">🔊 Geluid</button>
+      <button class="btn wit" id="pPix">▦ Pixels</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
+
+/* =================================================================== tex */
+const { rng, tex, mat, flat, boxGeo, MAT_COLOR, pic, speckle } = (() => {
+// Pixel-textures: alles wordt op kleine canvasjes getekend en met NearestFilter opgeschaald.
+
+function rng(seed) {
+  let s = (Math.imul(seed | 0, 2654435761) >>> 0) || 1;
+  return () => {
+    s ^= s << 13; s >>>= 0;
+    s ^= s >>> 17;
+    s ^= s << 5; s >>>= 0;
+    return s / 4294967296;
+  };
+}
+
+const C = new THREE.Color();
+function col(hex, dl, r) {
+  C.set(hex);
+  if (dl && r) C.offsetHSL(0, 0, (r() - 0.5) * dl);
+  return '#' + C.getHexString();
+}
+
+function make(size, paint) {
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const g = c.getContext('2d');
+  paint(g, size);
+  const t = new THREE.CanvasTexture(c);
+  t.magFilter = THREE.NearestFilter;
+  t.minFilter = THREE.NearestFilter;
+  t.generateMipmaps = false;
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.userData.canvas = c;
+  return t;
+}
+const px = (g, x, y, c) => { g.fillStyle = c; g.fillRect(x, y, 1, 1); };
+function noise(g, s, base, dl, r) {
+  for (let y = 0; y < s; y++) for (let x = 0; x < s; x++) px(g, x, y, col(base, dl, r));
+}
+
+const PAINT = {
+  wood(g, s) {
+    const r = rng(11);
+    for (let row = 0; row < 4; row++) {
+      const shade = ['#b5803f', '#a87335', '#bb8946', '#a06c31'][row];
+      for (let y = row * 4; y < row * 4 + 4; y++)
+        for (let x = 0; x < s; x++) px(g, x, y, col(shade, 0.06, r));
+      for (let x = 0; x < s; x++) px(g, x, row * 4, '#6e4520');
+      for (let i = 0; i < 3; i++) px(g, (r() * s) | 0, row * 4 + 1 + ((r() * 3) | 0), '#86552a');
+      const seam = (row * 7 + 5) % s;
+      px(g, seam, row * 4 + 1, '#6e4520'); px(g, seam, row * 4 + 2, '#6e4520'); px(g, seam, row * 4 + 3, '#6e4520');
+    }
+    px(g, 2, 2, '#d8d0c0'); px(g, 13, 10, '#d8d0c0');
+  },
+  ice(g, s) {
+    const r = rng(22);
+    noise(g, s, '#bfe6f3', 0.05, r);
+    for (let i = 0; i < 3; i++) {
+      let x = (r() * s) | 0;
+      for (let y = 0; y < s; y++) { px(g, (x + y) % s, y, '#eefaff'); if (r() < 0.3) x++; }
+    }
+    g.fillStyle = '#e2f6fc'; g.fillRect(0, 0, s, 1); g.fillRect(0, 0, 1, s);
+    g.fillStyle = '#93c9dc'; g.fillRect(0, s - 1, s, 1); g.fillRect(s - 1, 0, 1, s);
+  },
+  stone(g, s) {
+    const r = rng(33);
+    noise(g, s, '#5e5e68', 0.04, r);
+    const rows = [[0, 5], [5, 5], [10, 6]];
+    rows.forEach(([y0, h], ri) => {
+      let x = ri % 2 ? -3 : 0;
+      while (x < s) {
+        const w = 5 + ((r() * 3) | 0);
+        const base = ['#9b9ba4', '#8e8e98', '#a6a6ae'][(r() * 3) | 0];
+        for (let y = y0 + 1; y < y0 + h; y++)
+          for (let xx = x + 1; xx < x + w; xx++)
+            if (xx >= 0 && xx < s) px(g, xx, y, col(base, 0.06, r));
+        if (x + 1 >= 0) px(g, x + 1, y0 + 1, '#c2c2c8');
+        x += w;
+      }
+    });
+  },
+  kaas(g, s) {
+    const r = rng(44);
+    noise(g, s, '#f2c443', 0.05, r);
+    for (let i = 0; i < 5; i++) {
+      const x = (r() * (s - 3)) | 0, y = (r() * (s - 3)) | 0, d = 1 + ((r() * 2) | 0);
+      g.fillStyle = '#d29a1e'; g.fillRect(x, y, d + 1, d + 1);
+      g.fillStyle = '#b97f12'; g.fillRect(x, y, d, d);
+    }
+  },
+  rock(g, s) {
+    const r = rng(55);
+    noise(g, s, '#6f6a66', 0.08, r);
+    for (let i = 0; i < 10; i++) px(g, (r() * s) | 0, (r() * s) | 0, '#4d4945');
+    for (let i = 0; i < 6; i++) px(g, (r() * s) | 0, (r() * s) | 0, '#8e8984');
+  },
+  grass(g, s) {
+    const r = rng(66);
+    noise(g, s, '#79b84a', 0.08, r);
+    for (let i = 0; i < 14; i++) px(g, (r() * s) | 0, (r() * s) | 0, '#5c9a35');
+    for (let i = 0; i < 6; i++) px(g, (r() * s) | 0, (r() * s) | 0, '#a4d36a');
+    if (r() < 2) { px(g, 4, 9, '#f6e46a'); px(g, 12, 3, '#ffffff'); }
+  },
+  snow(g, s) {
+    const r = rng(77);
+    noise(g, s, '#f4f8fc', 0.03, r);
+    for (let i = 0; i < 10; i++) px(g, (r() * s) | 0, (r() * s) | 0, '#d6e4f0');
+    for (let i = 0; i < 4; i++) px(g, (r() * s) | 0, (r() * s) | 0, '#ffffff');
+  },
+  lake(g, s) {
+    const r = rng(78);
+    noise(g, s, '#a9dbea', 0.04, r);
+    for (let i = 0; i < 2; i++) { const y = (r() * s) | 0; for (let x = 0; x < s; x++) if (r() < 0.6) px(g, x, (y + (x >> 2)) % s, '#e6f7fc'); }
+  },
+  straw(g, s) {
+    const r = rng(88);
+    noise(g, s, '#d6b765', 0.08, r);
+    for (let i = 0; i < 16; i++) { const x = (r() * s) | 0, y = (r() * s) | 0; px(g, x, y, '#b8963f'); px(g, (x + 1) % s, y, '#b8963f'); }
+    for (let i = 0; i < 8; i++) px(g, (r() * s) | 0, (r() * s) | 0, '#ecd38a');
+  },
+  bark(g, s) {
+    const r = rng(99);
+    for (let x = 0; x < s; x++) {
+      const shade = x % 4 === 0 ? '#4e3420' : '#6b4a2c';
+      for (let y = 0; y < s; y++) px(g, x, y, col(shade, 0.08, r));
+    }
+  },
+  leaves(g, s) {
+    const r = rng(111);
+    noise(g, s, '#4f9a3c', 0.12, r);
+    for (let i = 0; i < 12; i++) px(g, (r() * s) | 0, (r() * s) | 0, '#2f6e2a');
+    for (let i = 0; i < 8; i++) px(g, (r() * s) | 0, (r() * s) | 0, '#86c95a');
+  },
+  pine(g, s) {
+    const r = rng(112);
+    noise(g, s, '#2f6b4c', 0.1, r);
+    for (let i = 0; i < 14; i++) px(g, (r() * s) | 0, (r() * s) | 0, '#1f4c37');
+    for (let i = 0; i < 10; i++) px(g, (r() * s) | 0, (r() * s) | 0, '#f1f6fa');
+  },
+  barn(g, s) {
+    const r = rng(122);
+    for (let x = 0; x < s; x++) {
+      const shade = x % 4 === 0 ? '#7d2a22' : '#a8392c';
+      for (let y = 0; y < s; y++) px(g, x, y, col(shade, 0.06, r));
+    }
+  },
+  roof(g, s) {
+    const r = rng(133);
+    for (let y = 0; y < s; y++) for (let x = 0; x < s; x++) px(g, x, y, col(y % 4 === 3 ? '#3e3a40' : '#5a555e', 0.06, r));
+  },
+  tnt(g, s) {
+    const r = rng(155);
+    noise(g, s, '#c8352b', 0.06, r);
+    g.fillStyle = '#7a1c16'; g.fillRect(0, 0, s, 1); g.fillRect(0, s - 1, s, 1); g.fillRect(0, 0, 1, s); g.fillRect(s - 1, 0, 1, s);
+    g.fillStyle = '#f3e3b0'; g.fillRect(2, 6, 12, 4);
+    g.fillStyle = '#2a1a12';
+    // "BOEM" in 3x3-achtige pixels is te krap; een bom-icoontje leest beter
+    g.fillRect(6, 7, 3, 2); px(g, 9, 6, '#2a1a12'); px(g, 10, 5, '#ffb627');
+    g.fillRect(3, 7, 1, 2); g.fillRect(11, 7, 2, 2);
+  },
+  hay(g, s) {
+    const r = rng(144);
+    noise(g, s, '#e1c162', 0.1, r);
+    for (let y = 0; y < s; y += 5) for (let x = 0; x < s; x++) px(g, x, y, '#a8862e');
+  },
+};
+
+function crack(g, s, seed, c1, c2) {
+  const r = rng(seed);
+  for (let k = 0; k < 2; k++) {
+    let x = 3 + ((r() * (s - 6)) | 0), y = 0;
+    while (y < s) {
+      px(g, x, y, c1);
+      if (r() < 0.5) px(g, x + 1, y, c2);
+      y++; x += r() < 0.33 ? -1 : r() < 0.5 ? 1 : 0;
+      x = Math.max(0, Math.min(s - 1, x));
+    }
+  }
+}
+
+const texCache = {};
+function tex(name, cracked = false) {
+  const key = name + (cracked ? '_c' : '');
+  if (texCache[key]) return texCache[key];
+  const t = make(16, (g, s) => {
+    PAINT[name](g, s);
+    if (cracked) {
+      const c = { wood: ['#3e2410', '#6e4520'], ice: ['#ffffff', '#7fb6ca'], stone: ['#2f2f36', '#5e5e68'], kaas: ['#8a5a08', '#c9901a'] }[name] || ['#222', '#555'];
+      crack(g, s, name.length * 17, c[0], c[1]);
+    }
+  });
+  texCache[key] = t;
+  return t;
+}
+
+const matCache = {};
+function mat(name, cracked = false) {
+  const key = name + (cracked ? '_c' : '');
+  if (matCache[key]) return matCache[key];
+  const m = new THREE.MeshLambertMaterial({ map: tex(name, cracked) });
+  if (name === 'ice' || name === 'lake') { m.transparent = true; m.opacity = name === 'ice' ? 0.88 : 0.95; }
+  matCache[key] = m;
+  return m;
+}
+
+// Effen kleur met een beetje pixelruis, voor personages.
+const flatCache = {};
+function flat(hex) {
+  if (flatCache[hex]) return flatCache[hex];
+  const r = rng(hex.length * 31 + parseInt(hex.slice(1), 16));
+  const t = make(8, (g, s) => noise(g, s, hex, 0.07, r));
+  return (flatCache[hex] = new THREE.MeshLambertMaterial({ map: t }));
+}
+
+// Box met UV's die meeschalen met de maat, zodat de pixeldichtheid overal gelijk is.
+function boxGeo(w, h, d, unit = 1) {
+  const g = new THREE.BoxGeometry(w, h, d);
+  const uv = g.attributes.uv;
+  const dims = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]];
+  for (let i = 0; i < uv.count; i++) {
+    const f = Math.floor(i / 4);
+    uv.setXY(i, uv.getX(i) * dims[f][0] / unit, uv.getY(i) * dims[f][1] / unit);
+  }
+  return g;
+}
+
+const MAT_COLOR = { wood: '#b07a3f', ice: '#cfeef8', stone: '#9b9ba4', kaas: '#f2c443', tnt: '#c8352b' };
+
+// Een vlak met een getekend pixelplaatje (gezichten, logo's). w,h in pixels.
+function pic(w, h, paint, transparent = false) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const g = c.getContext('2d');
+  paint(g, (x, y, cc) => { g.fillStyle = cc; g.fillRect(x, y, 1, 1); });
+  const t = new THREE.CanvasTexture(c);
+  t.magFilter = t.minFilter = THREE.NearestFilter;
+  t.generateMipmaps = false;
+  t.colorSpace = THREE.SRGBColorSpace;
+  return new THREE.MeshLambertMaterial({ map: t, transparent, alphaTest: transparent ? 0.5 : 0 });
+}
+
+// Kleur met ruis + willekeurige accentpixels (bijv. paarse glans op Raafs hoodie).
+function speckle(hex, accent, amount, seed = 1) {
+  const r = rng(seed);
+  const t = make(8, (g, s) => {
+    noise(g, s, hex, 0.06, r);
+    for (let i = 0; i < amount; i++) px(g, (r() * s) | 0, (r() * s) | 0, accent);
+  });
+  return new THREE.MeshLambertMaterial({ map: t });
+}
+return { rng, tex, mat, flat, boxGeo, MAT_COLOR, pic, speckle };
+})();
+
+/* =================================================================== models */
+const { makeRaaf, makeOtis, makeByte, makeGuiseppe, RODENT, makeRodent, makeSlingshot, makeTree, makeBarn, makeHayBale, makeFence, makeCloud, makeMountain } = (() => {
+// Alle modellen zijn blokkerig, met pixel-textures. Personages kijken naar +Z.
+
+const B = (w, h, d) => new THREE.BoxGeometry(w, h, d);
+function add(parent, geo, material, x = 0, y = 0, z = 0) {
+  const m = new THREE.Mesh(geo, material);
+  m.position.set(x, y, z);
+  m.castShadow = true;
+  parent.add(m);
+  return m;
+}
+// Box met een eigen voorkant (index 4 = +Z).
+function faced(material, front) {
+  return [material, material, material, material, front, material];
+}
+
+/* ------------------------------------------------------------------ RAAF */
+function makeRaaf() {
+  const g = new THREE.Group();
+  const hoodie = speckle('#27222f', '#5b3d86', 7, 3);
+  const jeans = flat('#2b3442');
+  const skin = flat('#e2b48f');
+  const beakM = flat('#3a3a40');
+
+  const face = pic(12, 12, (c, p) => {
+    c.fillStyle = '#27222f'; c.fillRect(0, 0, 12, 12);
+    c.fillStyle = '#e2b48f'; c.fillRect(2, 3, 8, 8);
+    c.fillStyle = '#1a1620'; c.fillRect(2, 3, 8, 2); p(3, 5, '#1a1620'); p(8, 5, '#1a1620'); // pony
+    p(4, 6, '#ffffff'); p(4, 7, '#1b1b1b'); p(7, 6, '#ffffff'); p(7, 7, '#1b1b1b');
+    p(4, 9, '#7a2f2f'); p(5, 9, '#7a2f2f'); p(6, 9, '#7a2f2f'); p(7, 8, '#7a2f2f'); // scheve grijns
+    p(1, 1, '#5b3d86'); p(9, 2, '#5b3d86');
+  });
+
+  const legL = add(g, B(0.22, 0.7, 0.24), jeans, -0.13, -0.5, 0);
+  const legR = add(g, B(0.22, 0.7, 0.24), jeans, 0.13, -0.5, 0);
+  add(legL, B(0.24, 0.12, 0.32), flat('#e8e8e8'), 0, -0.36, 0.04);
+  add(legR, B(0.24, 0.12, 0.32), flat('#e8e8e8'), 0, -0.36, 0.04);
+  const body = add(g, B(0.6, 0.66, 0.34), hoodie, 0, 0.18, 0);
+  add(body, B(0.3, 0.14, 0.02), flat('#1c1822'), 0, -0.16, 0.18); // buidelzak
+  const armL = add(g, B(0.18, 0.62, 0.2), hoodie, -0.4, 0.2, 0);
+  const armR = add(g, B(0.18, 0.62, 0.2), hoodie, 0.4, 0.2, 0);
+  add(armL, B(0.16, 0.12, 0.16), skin, 0, -0.34, 0);
+  add(armR, B(0.16, 0.12, 0.16), skin, 0, -0.34, 0);
+  const head = add(g, B(0.56, 0.56, 0.56), faced(hoodie, face), 0, 0.8, 0);
+  // Ravensnavel en oogjes op de capuchon
+  const beak = add(head, new THREE.ConeGeometry(0.11, 0.42, 4), beakM, 0, 0.2, 0.42);
+  beak.rotation.x = Math.PI / 2; beak.rotation.y = Math.PI / 4;
+  add(head, B(0.07, 0.07, 0.03), flat('#e9e3f2'), -0.15, 0.22, 0.29);
+  add(head, B(0.07, 0.07, 0.03), flat('#e9e3f2'), 0.15, 0.22, 0.29);
+  add(head, B(0.035, 0.035, 0.03), flat('#141018'), -0.15, 0.22, 0.305);
+  add(head, B(0.035, 0.035, 0.03), flat('#141018'), 0.15, 0.22, 0.305);
+
+  // Verenmantel: twee helften die in de lucht als vleugels openklappen
+  const cape = [];
+  const feather = flat('#16131b');
+  const sheen = flat('#3c2c58');
+  for (const side of [-1, 1]) {
+    const pivot = new THREE.Group();
+    pivot.position.set(side * 0.22, 0.48, -0.2);
+    g.add(pivot);
+    for (let i = 0; i < 4; i++) {
+      const len = 0.75 + (i % 2) * 0.18 - i * 0.05;
+      const f = add(pivot, B(0.14, len, 0.03), i % 2 ? sheen : feather, side * (0.07 + i * 0.12), -len / 2, -0.02 * i);
+      f.rotation.z = side * (0.06 + i * 0.05);
+    }
+    cape.push(pivot);
+  }
+  return {
+    group: g, radius: 0.5, eye: new THREE.Vector3(0, 0.82, 0.3),
+    anim(t, mode, k) {
+      // mode: 'idle' | 'fly' | 'dive'
+      const flap = mode === 'fly' ? Math.sin(t * 7) * 0.35 : 0;
+      const open = mode === 'idle' ? 0.05 : mode === 'dive' ? 0.25 : 1.15;
+      cape.forEach((p, i) => {
+        const s = i ? 1 : -1;
+        p.rotation.z += ((s * (open + flap)) - p.rotation.z) * Math.min(1, k * 8);
+        p.rotation.x += ((mode === 'idle' ? 0.08 : -0.9) - p.rotation.x) * Math.min(1, k * 8);
+      });
+      const arm = mode === 'idle' ? 0.05 : mode === 'dive' ? 2.9 : 1.35;
+      armL.rotation.z += ((-arm) - armL.rotation.z) * Math.min(1, k * 8);
+      armR.rotation.z += (arm - armR.rotation.z) * Math.min(1, k * 8);
+      legL.rotation.x = mode === 'idle' ? 0 : 0.25;
+      legR.rotation.x = mode === 'idle' ? 0 : -0.15;
+    },
+  };
+}
+
+/* ------------------------------------------------------------------ OTIS */
+function makeOtis() {
+  const g = new THREE.Group();
+  const suit = flat('#eef0f2');
+  const fur = flat('#b7854f');
+  const dogFace = pic(10, 10, (c, p) => {
+    c.fillStyle = '#b7854f'; c.fillRect(0, 0, 10, 10);
+    c.fillStyle = '#e9cfa8'; c.fillRect(3, 5, 4, 4);
+    p(2, 3, '#1b1b1b'); p(7, 3, '#1b1b1b'); p(2, 2, '#ffffff'); p(7, 2, '#ffffff');
+    c.fillStyle = '#2a1d16'; c.fillRect(4, 5, 2, 1);
+    p(5, 8, '#e46a7c'); p(5, 9, '#e46a7c'); // tongetje
+  });
+  add(g, B(0.2, 0.42, 0.22), suit, -0.12, -0.42, 0);
+  add(g, B(0.2, 0.42, 0.22), suit, 0.12, -0.42, 0);
+  const body = add(g, B(0.52, 0.5, 0.36), suit, 0, 0.02, 0);
+  const panel = pic(6, 4, (c, p) => {
+    c.fillStyle = '#c9ced6'; c.fillRect(0, 0, 6, 4);
+    p(1, 1, '#e5484d'); p(3, 1, '#3fb36b'); p(4, 2, '#2f7de1'); p(1, 2, '#f4c430');
+  });
+  add(body, B(0.28, 0.18, 0.02), panel, 0, 0.04, 0.19);
+  add(g, B(0.16, 0.44, 0.18), suit, -0.35, 0.04, 0);
+  add(g, B(0.16, 0.44, 0.18), suit, 0.35, 0.04, 0);
+  const head = add(g, B(0.4, 0.36, 0.38), faced(fur, dogFace), 0, 0.48, 0);
+  add(head, B(0.2, 0.14, 0.18), flat('#e9cfa8'), 0, -0.07, 0.24);
+  add(head, B(0.08, 0.06, 0.04), flat('#2a1d16'), 0, -0.01, 0.34);
+  add(head, B(0.08, 0.28, 0.14), flat('#7b5532'), -0.24, -0.06, 0);
+  add(head, B(0.08, 0.28, 0.14), flat('#7b5532'), 0.24, -0.06, 0);
+  const glass = new THREE.MeshLambertMaterial({ color: '#cfefff', transparent: true, opacity: 0.28 });
+  add(g, new THREE.SphereGeometry(0.4, 10, 8), glass, 0, 0.5, 0.02).castShadow = false;
+  const tank = add(g, new THREE.CylinderGeometry(0.13, 0.13, 0.55, 8), flat('#9aa3ad'), 0, 0.05, -0.3);
+  add(tank, B(0.1, 0.06, 0.1), flat('#5c646d'), 0, 0.3, 0);
+  const flameM = new THREE.MeshBasicMaterial({ color: '#ffb627' });
+  const flame = add(tank, new THREE.ConeGeometry(0.12, 0.5, 6), flameM, 0, -0.5, 0);
+  flame.rotation.x = Math.PI;
+  flame.visible = false;
+  add(flame, new THREE.ConeGeometry(0.06, 0.3, 6), new THREE.MeshBasicMaterial({ color: '#fff3c4' }), 0, 0.08, 0);
+  return {
+    group: g, radius: 0.45, eye: new THREE.Vector3(0, 0.5, 0.25), flame,
+    anim(t, mode) {
+      flame.visible = mode === 'jet';
+      if (flame.visible) flame.scale.set(1, 0.8 + Math.random() * 0.6, 1);
+    },
+  };
+}
+
+/* ------------------------------------------------------------------ BYTE */
+function makeByte() {
+  const g = new THREE.Group();
+  const shell = flat('#efe9df');
+  const panelM = pic(8, 6, (c, p) => {
+    c.fillStyle = '#1f2c5c'; c.fillRect(0, 0, 8, 6);
+    c.fillStyle = '#f7b98b'; c.fillRect(3, 2, 2, 2);
+    p(3, 2, '#ffe1c9');
+  });
+  const drone = new THREE.Group();
+  g.add(drone);
+  add(drone, new THREE.SphereGeometry(0.38, 10, 8), shell);
+  add(drone, B(0.4, 0.26, 0.06), panelM, 0, 0.03, 0.34);
+  const ring = add(drone, new THREE.TorusGeometry(0.33, 0.06, 6, 14), flat('#2bb3a3'), 0, -0.2, 0);
+  ring.rotation.x = Math.PI / 2;
+  const props = [];
+  for (const s of [-1, 1]) {
+    const stick = add(drone, B(0.04, 0.26, 0.04), flat('#1b1b1b'), s * 0.18, 0.44, 0);
+    const blade = add(stick, B(0.42, 0.02, 0.07), flat('#2a2a2a'), 0, 0.14, 0);
+    props.push(blade);
+  }
+
+  // Mech-vorm: zelfde hoofd op een zwaar metalen lijf, iets groter dan een normaal personage
+  const mech = new THREE.Group();
+  g.add(mech);
+  mech.visible = false;
+  const metal = speckle('#8e98a3', '#b9c2cc', 6, 9);
+  const dark = flat('#4c545e');
+  add(mech, B(0.38, 0.8, 0.4), dark, -0.3, -0.9, 0);
+  add(mech, B(0.38, 0.8, 0.4), dark, 0.3, -0.9, 0);
+  const torso = add(mech, B(1.1, 0.9, 0.7), metal, 0, 0, 0);
+  add(torso, B(0.3, 0.3, 0.04), new THREE.MeshBasicMaterial({ color: '#41f2dc' }), 0, 0.05, 0.36);
+  add(mech, B(0.32, 0.9, 0.36), metal, -0.75, -0.05, 0);
+  add(mech, B(0.32, 0.9, 0.36), metal, 0.75, -0.05, 0);
+  add(mech, B(0.4, 0.3, 0.44), dark, -0.75, -0.6, 0.04);
+  add(mech, B(0.4, 0.3, 0.44), dark, 0.75, -0.6, 0.04);
+  return {
+    group: g, radius: 0.42, eye: new THREE.Vector3(0, 0.05, 0.38),
+    setMech(on) {
+      mech.visible = on;
+      drone.position.y = on ? 0.75 : 0;
+      this.radius = on ? 1.1 : 0.42;
+      this.eye.set(0, on ? 0.8 : 0.05, 0.4);
+    },
+    anim(t) { props.forEach((p, i) => (p.rotation.y = t * 40 * (i ? 1 : -1))); },
+  };
+}
+
+/* -------------------------------------------------------------- GUISEPPE */
+function makeGuiseppe() {
+  const g = new THREE.Group();
+  const gum = speckle('#8cc63f', '#b5e06a', 10, 21);
+  const apple = add(g, new THREE.SphereGeometry(0.42, 9, 7), gum);
+  apple.scale.set(1.05, 0.92, 1.0);
+  add(g, new THREE.CylinderGeometry(0.035, 0.035, 0.18, 5), flat('#6b4424'), 0, 0.44, 0);
+  const leaf = add(g, B(0.2, 0.03, 0.1), flat('#3f8f2f'), 0.1, 0.48, 0);
+  leaf.rotation.z = -0.4;
+  const faceM = pic(8, 6, (c, p) => {
+    p(1, 1, '#ffffff'); p(1, 2, '#1b1b1b'); p(6, 1, '#ffffff'); p(6, 2, '#1b1b1b');
+    p(3, 4, '#2f5e1a'); p(4, 4, '#2f5e1a');
+  }, true);
+  const f = add(g, new THREE.PlaneGeometry(0.42, 0.32), faceM, 0, 0.04, 0.42);
+  f.castShadow = false;
+  // Gumplek: hier zie je dat hij al gebruikt is
+  add(g, B(0.2, 0.12, 0.04), flat('#dff0b8'), -0.22, -0.2, 0.35).rotation.y = -0.5;
+
+  const glider = new THREE.Group();
+  g.add(glider);
+  glider.position.y = 0.95;
+  glider.visible = false;
+  const sail = new THREE.BufferGeometry();
+  sail.setAttribute('position', new THREE.Float32BufferAttribute([0, 0.05, 1.0, -1.6, -0.15, -0.6, 1.6, -0.15, -0.6], 3));
+  sail.setAttribute('uv', new THREE.Float32BufferAttribute([0.5, 1, 0, 0, 1, 0], 2));
+  sail.computeVertexNormals();
+  const sailM = pic(8, 8, (c) => {
+    for (let y = 0; y < 8; y++) { c.fillStyle = y % 4 < 2 ? '#ff8a1f' : '#ffd23f'; c.fillRect(0, y, 8, 1); }
+  });
+  sailM.side = THREE.DoubleSide;
+  add(glider, sail, sailM);
+  add(glider, B(0.04, 0.9, 0.04), flat('#3a3a3a'), 0, -0.45, 0.1);
+  add(glider, B(1.0, 0.04, 0.04), flat('#3a3a3a'), 0, -0.85, 0.12);
+  return {
+    group: g, radius: 0.45, eye: new THREE.Vector3(0, 0.15, 0.35), glider,
+    anim() {},
+  };
+}
+
+/* -------------------------------------------------------------- KNAAGDIEREN */
+function rodentFace(fur, eye = '#1b1b1b', extra) {
+  return pic(8, 8, (c, p) => {
+    c.fillStyle = fur; c.fillRect(0, 0, 8, 8);
+    p(2, 3, '#ffffff'); p(2, 4, eye); p(5, 3, '#ffffff'); p(5, 4, eye);
+    c.fillStyle = '#e88aa0'; c.fillRect(3, 6, 2, 1);
+    p(1, 1, '#00000022');
+    // Boze wenkbrauwen
+    p(1, 2, '#2a2a2a'); p(2, 2, '#2a2a2a'); p(5, 2, '#2a2a2a'); p(6, 2, '#2a2a2a');
+    if (extra) extra(c, p);
+  });
+}
+
+const RODENT = {
+  muis: { hp: 7, r: 0.38, score: 5000 },
+  rat: { hp: 12, r: 0.5, score: 5000 },
+  eekhoorn: { hp: 10, r: 0.45, score: 5000 },
+  fret: { hp: 16, r: 0.55, score: 6000 },
+  ratjetoe: { hp: 140, r: 1.25, score: 30000 },
+};
+
+function makeRodent(kind) {
+  const g = new THREE.Group();
+  const s = { muis: 0.7, rat: 0.95, eekhoorn: 0.85, fret: 1.0, ratjetoe: 2.4 }[kind];
+  const inner = new THREE.Group();
+  inner.scale.setScalar(s);
+  g.add(inner);
+  const furHex = { muis: '#a99a8a', rat: '#7d7f86', eekhoorn: '#c4602b', fret: '#e7d6b8', ratjetoe: '#8a8c93' }[kind];
+  const fur = flat(furHex);
+  const pink = flat('#f2a0b4');
+  const faceM = rodentFace(furHex, kind === 'ratjetoe' ? '#c3122f' : '#1b1b1b', kind === 'fret'
+    ? (c) => { c.fillStyle = '#5a4433'; c.fillRect(1, 3, 6, 2); c.fillStyle = '#ffffff'; c.fillRect(2, 3, 1, 1); c.fillRect(5, 3, 1, 1); }
+    : null);
+
+  add(inner, B(0.5, 0.42, 0.44), fur, 0, 0.21, 0);
+  const head = add(inner, B(0.42, 0.36, 0.38), faced(fur, faceM), 0, 0.58, 0.02);
+  add(head, B(0.16, 0.12, 0.14), fur, 0, -0.07, 0.24);
+  add(head, B(0.06, 0.05, 0.04), pink, 0, -0.04, 0.32);
+  for (const sd of [-1, 1]) {
+    if (kind === 'eekhoorn') {
+      add(head, B(0.1, 0.16, 0.06), fur, sd * 0.14, 0.24, 0);
+    } else {
+      const big = kind === 'muis' || kind === 'ratjetoe' ? 0.24 : 0.17;
+      const ear = add(head, B(big, big, 0.05), fur, sd * 0.2, 0.22, -0.02);
+      add(ear, B(big * 0.6, big * 0.6, 0.02), pink, 0, 0, 0.03);
+    }
+  }
+  add(inner, B(0.12, 0.1, 0.16), fur, -0.13, 0.04, 0.2);
+  add(inner, B(0.12, 0.1, 0.16), fur, 0.13, 0.04, 0.2);
+  if (kind === 'eekhoorn') {
+    const tail = add(inner, B(0.3, 0.7, 0.24), flat('#d9763b'), 0, 0.55, -0.34);
+    add(tail, B(0.32, 0.25, 0.26), flat('#e8955e'), 0, 0.32, 0.04);
+  } else {
+    const tail = add(inner, B(0.06, 0.06, 0.6), kind === 'fret' ? flat('#5a4433') : pink, 0, 0.1, -0.5);
+    tail.rotation.x = -0.3;
+  }
+  if (kind === 'fret') {
+    // Helm (een omgekeerde pan)
+    add(head, new THREE.CylinderGeometry(0.26, 0.28, 0.14, 8), flat('#6d737b'), 0, 0.22, 0);
+    add(head, B(0.06, 0.04, 0.3), flat('#2f3338'), 0.22, 0.2, -0.02);
+  }
+  if (kind === 'rat') add(head, B(0.44, 0.06, 0.4), flat('#c0392b'), 0, 0.12, 0); // bandana
+  if (kind === 'ratjetoe') {
+    // Hij jat alles wat glimt: een kroon van flessendopjes en een buit aan zijn voeten
+    const crown = new THREE.Group();
+    head.add(crown);
+    crown.position.y = 0.26;
+    const cols = ['#ffd23f', '#d8dde3', '#ffb627', '#e5484d', '#ffd23f'];
+    cols.forEach((cc, i) => {
+      const a = (i / cols.length) * Math.PI * 2;
+      add(crown, new THREE.CylinderGeometry(0.06, 0.06, 0.03, 8), new THREE.MeshBasicMaterial({ color: cc }), Math.sin(a) * 0.18, 0.04, Math.cos(a) * 0.18).rotation.x = Math.PI / 2;
+    });
+    add(crown, new THREE.TorusGeometry(0.2, 0.025, 4, 12), new THREE.MeshBasicMaterial({ color: '#e6b422' })).rotation.x = Math.PI / 2;
+    const pear = add(inner, new THREE.SphereGeometry(0.1, 6, 5), flat('#c5d63b'), 0.33, 0.25, 0.2);
+    pear.scale.y = 1.3;
+  }
+  return { group: g, scale: s, head, kind };
+}
+
+/* ------------------------------------------------------------------ DECOR */
+function makeSlingshot() {
+  const g = new THREE.Group();
+  const bark = mat('bark');
+  add(g, boxGeo(0.45, 1.8, 0.45, 1), bark, 0, 0.9, 0);
+  const l = add(g, boxGeo(0.32, 1.7, 0.32, 1), bark, -0.6, 2.3, 0); l.rotation.z = 0.35;
+  const r = add(g, boxGeo(0.32, 1.7, 0.32, 1), bark, 0.6, 2.3, 0); r.rotation.z = -0.35;
+  add(g, B(0.4, 0.2, 0.4), flat('#5a3a1e'), -0.88, 3.1, 0);
+  add(g, B(0.4, 0.2, 0.4), flat('#5a3a1e'), 0.88, 3.1, 0);
+  const bandM = new THREE.LineBasicMaterial({ color: '#4a2412' });
+  const bandGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()]);
+  const band = new THREE.Line(bandGeo, bandM);
+  g.add(band);
+  const pouch = add(g, B(0.5, 0.3, 0.12), flat('#5b3218'), 0, 3, 0);
+  const tipL = new THREE.Vector3(-0.92, 3.05, 0), tipR = new THREE.Vector3(0.92, 3.05, 0);
+  return {
+    group: g,
+    // p = positie van de buidel in lokale coördinaten
+    setPouch(p) {
+      pouch.position.copy(p);
+      const a = bandGeo.attributes.position;
+      a.setXYZ(0, tipL.x, tipL.y, tipL.z); a.setXYZ(1, p.x, p.y, p.z); a.setXYZ(2, tipR.x, tipR.y, tipR.z);
+      a.needsUpdate = true;
+    },
+    rest: new THREE.Vector3(0, 3.0, 0),
+  };
+}
+
+function makeTree(kind, seed) {
+  const r = rng(seed);
+  const g = new THREE.Group();
+  const h = 2.5 + r() * 2.5;
+  add(g, boxGeo(0.5, h, 0.5, 1), mat('bark'), 0, h / 2, 0);
+  if (kind === 'pine') {
+    for (let i = 0; i < 3; i++) {
+      const w = 2.6 - i * 0.7;
+      add(g, boxGeo(w, 1.1, w, 1), mat('pine'), 0, h + i * 0.95, 0);
+    }
+  } else {
+    const leaves = mat('leaves');
+    add(g, boxGeo(2.6, 2, 2.6, 1), leaves, 0, h + 0.6, 0);
+    add(g, boxGeo(1.6, 1.2, 1.6, 1), leaves, 0.3 * (r() - 0.5), h + 2, 0.3 * (r() - 0.5));
+    if (r() < 0.5) add(g, boxGeo(1.2, 1, 1.2, 1), leaves, 1.3, h + 0.2, 0.4);
+  }
+  return g;
+}
+
+function makeBarn() {
+  const g = new THREE.Group();
+  add(g, boxGeo(8, 5, 6, 1), mat('barn'), 0, 2.5, 0);
+  const roofL = add(g, boxGeo(4.8, 0.3, 6.6, 1), mat('roof'), -2, 5.9, 0); roofL.rotation.z = 0.55;
+  const roofR = add(g, boxGeo(4.8, 0.3, 6.6, 1), mat('roof'), 2, 5.9, 0); roofR.rotation.z = -0.55;
+  add(g, B(2.4, 3, 0.1), flat('#f1ece2'), 0, 1.5, 3.02);
+  add(g, B(2.2, 2.8, 0.12), flat('#7d2a22'), 0, 1.5, 3.04);
+  return g;
+}
+
+function makeHayBale() {
+  const g = new THREE.Group();
+  const m = add(g, new THREE.CylinderGeometry(0.8, 0.8, 1.3, 10), mat('hay'), 0, 0.8, 0);
+  m.rotation.z = Math.PI / 2;
+  return g;
+}
+
+function makeFence(len) {
+  const g = new THREE.Group();
+  const w = mat('wood');
+  for (let x = 0; x <= len; x += 2) add(g, boxGeo(0.18, 1.2, 0.18, 1), w, x - len / 2, 0.6, 0);
+  add(g, boxGeo(len, 0.16, 0.08, 1), w, 0, 0.9, 0);
+  add(g, boxGeo(len, 0.16, 0.08, 1), w, 0, 0.45, 0);
+  return g;
+}
+
+function makeCloud(seed) {
+  const r = rng(seed);
+  const g = new THREE.Group();
+  const m = new THREE.MeshLambertMaterial({ color: '#ffffff', emissive: '#c9d9ea', emissiveIntensity: 0.35 });
+  const n = 3 + ((r() * 3) | 0);
+  for (let i = 0; i < n; i++) {
+    const s = 3 + r() * 4;
+    const c = new THREE.Mesh(B(s * 1.6, s * 0.7, s), m);
+    c.position.set(i * 3.5 - n * 1.7, r() * 1.5, r() * 2);
+    g.add(c);
+  }
+  return g;
+}
+
+function makeMountain(seed, snow) {
+  const r = rng(seed);
+  const g = new THREE.Group();
+  const h = 30 + r() * 40;
+  const m = new THREE.Mesh(new THREE.ConeGeometry(h * 0.9, h, 5 + ((r() * 3) | 0)), mat('rock'));
+  m.position.y = h / 2;
+  m.rotation.y = r() * 3;
+  g.add(m);
+  if (snow || r() < 0.5) {
+    const cap = new THREE.Mesh(new THREE.ConeGeometry(h * 0.33, h * 0.37, m.geometry.parameters.radialSegments), mat('snow'));
+    cap.position.y = h - h * 0.185;
+    cap.rotation.y = m.rotation.y;
+    g.add(cap);
+  }
+  return g;
+}
+return { makeRaaf, makeOtis, makeByte, makeGuiseppe, RODENT, makeRodent, makeSlingshot, makeTree, makeBarn, makeHayBale, makeFence, makeCloud, makeMountain };
+})();
+
+/* =================================================================== levels */
+const { WORLDS, BIRDS, LEVELS } = (() => {
+// Levels. De katapult staat op de oorsprong en schiet richting +Z.
+// Blokken: m = materiaal, x/z = midden, y = onderkant, w/h/d = maat.
+// Knaagdieren: ze vallen bij de start vanzelf op het blok onder ze.
+
+function L() {
+  const b = [], r = [];
+  const api = {
+    b, r,
+    box(m, x, y, z, w, h, d) { b.push({ m, x, y, z, w, h, d }); return y + h; },
+    rod(k, x, y, z) { r.push({ k, x, y, z }); },
+    // Hutje: vier palen met een dak. Geeft de bovenkant terug.
+    hut(m, x, z, y, w, d, h, roof = m) {
+      const px = w / 2 - 0.25, pz = d / 2 - 0.25;
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) api.box(m, x + sx * px, y, z + sz * pz, 0.5, h, 0.5);
+      return api.box(roof, x, y + h, z, w, 0.5, d);
+    },
+    tower(m, x, z, y, size, floors, fh, roof = m) {
+      for (let i = 0; i < floors; i++) y = api.hut(m, x, z, y, size, size, fh, roof);
+      return y;
+    },
+  };
+  return api;
+}
+
+function lvl(name, world, birds, build) {
+  const l = L();
+  build(l);
+  return { name, world, birds, blocks: l.b, rodents: l.r };
+}
+
+const WORLDS = [
+  { id: 'bos', name: 'Het Bos', ground: 'grass', sky: ['#8fd3ff', '#e7f6ff'], fog: '#d9efff' },
+  { id: 'boer', name: 'De Boerderij', ground: 'grass', sky: ['#ffc99a', '#fff1d6'], fog: '#ffe6c7' },
+  { id: 'sneeuw', name: 'Het Sneeuwdal', ground: 'snow', sky: ['#b9d4ee', '#f2f7fc'], fog: '#e4eef8' },
+];
+
+const BIRDS = {
+  raaf: {
+    name: 'Raaf', mass: 1, gravity: 6.5, steer: 7, power: 33,
+    mult: { wood: 1.2, ice: 1, stone: 0.85, kaas: 1.2, tnt: 1 },
+    ability: 'Duikvlucht', key: 'Klik',
+    desc: 'Gewoon een gast in een ravenhoodie. Hij zweeft lang met zijn verenmantel.',
+    how: 'Klik in de lucht: hij duikt keihard naar waar je kijkt en boort door hout heen.',
+  },
+  otis: {
+    name: 'Otis', mass: 1.2, gravity: 5, steer: 6, power: 30,
+    mult: { wood: 1, ice: 1.8, stone: 0.85, kaas: 1, tnt: 1 },
+    ability: 'Jetpack', key: 'Klik ingedrukt houden',
+    desc: 'De ruimtehond in zijn astronautenpak. Lage zwaartekracht, en een tank vol vuur.',
+    how: 'Houd ingedrukt: hij vliegt met zijn jetpack naar waar je kijkt, tot de tank leeg is. Zijn vlammen smelten ijs.',
+  },
+  byte: {
+    name: 'Byte', mass: 0.8, gravity: 7, steer: 9, power: 31,
+    mult: { wood: 0.9, ice: 0.9, stone: 1, kaas: 0.9, tnt: 1 },
+    mechMult: { wood: 2, ice: 2, stone: 3, kaas: 2, tnt: 1 },
+    ability: 'Transformeer', key: 'Klik',
+    desc: 'Josh z\'n drone. Licht en wendbaar dankzij zijn propellers.',
+    how: 'Klik: hij wordt een zware mech die recht naar beneden door de hele toren beukt, ook door steen. Onderaan komt een schokgolf.',
+  },
+  guiseppe: {
+    name: 'Guiseppe', mass: 0.9, gravity: 7, steer: 7, power: 31,
+    mult: { wood: 1, ice: 1, stone: 0.85, kaas: 1, tnt: 1 },
+    ability: 'Zweefvlieger', key: 'Klik',
+    desc: 'Een gum in de vorm van een groene appel.',
+    how: 'Klik: zijn zweefvlieger klapt open, zodat je heel precies kunt sturen. Elk blok dat hij raakt gumt hij uit, ook steen, met een maximum van 4.',
+  },
+};
+
+const LEVELS = [
+  /* ---------------------------------------------------------- HET BOS */
+  lvl('Eerste vlucht', 0, ['raaf', 'raaf', 'raaf'], (l) => {
+    const top = l.hut('wood', 0, 45, 0, 3.4, 3, 2.4);
+    l.rod('rat', 0, 0.2, 45);
+    l.box('wood', -0.8, top, 45, 0.5, 1.6, 0.5);
+    l.box('wood', 0.8, top, 45, 0.5, 1.6, 0.5);
+    l.box('wood', 0, top + 1.6, 45, 2.4, 0.5, 1.2);
+    l.rod('rat', 0, top + 2.3, 45);
+    l.box('wood', 4, 0, 47, 1, 1, 1);
+    l.box('wood', 4, 1, 47, 1, 1, 1);
+  }),
+  lvl('Twee torens', 0, ['raaf', 'raaf', 'raaf'], (l) => {
+    const a = l.tower('wood', -4.5, 48, 0, 2.6, 3, 2);
+    const b = l.tower('wood', 4.5, 48, 0, 2.6, 3, 2);
+    l.rod('muis', -4.5, a + 0.2, 48);
+    l.rod('muis', 4.5, b + 0.2, 48);
+    l.rod('muis', 4.5, 2.7, 48);
+    l.box('kaas', 0, 0, 47, 1.6, 1.2, 1.2);
+    l.rod('rat', 0, 0.2, 49.2);
+    // Plank tussen de torens
+    l.box('wood', 0, a, 48, 7.4, 0.4, 1);
+    l.rod('rat', 0, a + 0.6, 48);
+  }),
+  lvl('De rots', 0, ['raaf', 'otis', 'raaf'], (l) => {
+    const top = l.box('stone', 0, 0, 56, 4.4, 6, 4.4);
+    const h = l.hut('wood', 0, 56, top, 3.6, 3.6, 2.2);
+    l.rod('rat', 0, top + 0.2, 56);
+    l.box('kaas', -1, h, 56, 1, 1, 1);
+    l.box('kaas', 1, h, 56, 1, 1, 1);
+    l.rod('rat', 0, h + 0.2, 56);
+    const s = l.hut('wood', 7, 50, 0, 2.6, 2.6, 2);
+    l.rod('muis', 7, 0.2, 50);
+    l.rod('muis', 7, s + 0.2, 50);
+    l.box('ice', -6, 0, 51, 1.2, 2.4, 1.2);
+    l.box('ice', -6, 2.4, 51, 1.2, 1.2, 1.2);
+    l.rod('muis', -6, 3.8, 51);
+  }),
+  lvl('Eekhoornnest', 0, ['raaf', 'otis', 'raaf', 'otis'], (l) => {
+    const t = l.tower('wood', 0, 54, 0, 2.2, 5, 1.9);
+    l.rod('eekhoorn', 0, 4.9, 54);
+    l.rod('eekhoorn', 0, t + 0.2, 54);
+    l.box('tnt', 0, 0, 54, 0.9, 0.9, 0.9);
+    const u = l.tower('wood', -6, 60, 0, 2.4, 3, 2);
+    l.rod('eekhoorn', -6, u + 0.2, 60);
+    l.box('ice', -6, u, 60, 0.6, 0.6, 0.6);
+    l.box('kaas', 5, 0, 50, 2, 1, 1.4);
+    l.rod('muis', 5, 1.2, 50);
+    l.rod('muis', 5, 0.2, 51.6);
+  }),
+
+  /* ------------------------------------------------------ DE BOERDERIJ */
+  lvl('De stenen schuur', 1, ['raaf', 'byte', 'raaf'], (l) => {
+    const top = l.hut('stone', 0, 50, 0, 4.2, 4.2, 3, 'stone');
+    l.rod('fret', 0, 0.2, 50);
+    l.box('wood', -1.2, top, 50, 0.5, 1.6, 0.5);
+    l.box('wood', 1.2, top, 50, 0.5, 1.6, 0.5);
+    l.box('wood', 0, top + 1.6, 50, 3.2, 0.4, 1.4);
+    l.rod('rat', 0, top + 0.2, 50);
+    const a = l.hut('wood', -6, 47, 0, 2.4, 2.4, 1.8);
+    const b = l.hut('wood', 6, 47, 0, 2.4, 2.4, 1.8);
+    l.rod('muis', -6, a + 0.2, 47);
+    l.rod('muis', 6, b + 0.2, 47);
+  }),
+  lvl('De silo', 1, ['byte', 'otis', 'raaf'], (l) => {
+    const t = l.tower('stone', 0, 56, 0, 3.2, 4, 2.2, 'wood');
+    l.box('tnt', 0, 0, 56, 1, 1, 1);
+    l.rod('rat', 0, 2.9, 56);
+    l.rod('rat', 0, 5.6, 56);
+    l.rod('muis', 0, t + 0.2, 56);
+    const s = l.hut('wood', 7, 50, 0, 3, 2.6, 2.2);
+    l.rod('rat', 7, 0.2, 50);
+    l.box('kaas', 7, s, 50, 1.2, 1.2, 1.2);
+    l.rod('muis', -5, 0.2, 52);
+    l.box('wood', -5, 0, 53.4, 2, 1.4, 0.4);
+  }),
+  lvl('De kaasmarkt', 1, ['raaf', 'raaf', 'byte', 'otis'], (l) => {
+    for (const x of [-6, 0, 6]) {
+      const top = l.hut('wood', x, 49, 0, 2.8, 2.4, 2, 'kaas');
+      l.rod('muis', x, 0.2, 49);
+      l.box('kaas', x, top, 49, 0.8, 0.8, 0.8);
+    }
+    const k = l.tower('kaas', 0, 56, 0, 3, 3, 1.8);
+    l.rod('rat', 0, 2.5, 56);
+    l.rod('rat', 0, k + 0.2, 56);
+    l.box('tnt', -3, 0, 53, 0.9, 0.9, 0.9);
+    l.box('tnt', 3, 0, 53, 0.9, 0.9, 0.9);
+  }),
+  lvl('De rattenburcht', 1, ['byte', 'raaf', 'byte', 'otis', 'byte'], (l) => {
+    for (const x of [-5, 5]) for (const z of [50, 60]) {
+      const t = l.tower('stone', x, z, 0, 2.2, 3, 1.8, 'wood');
+      if (z === 60) l.rod('fret', x, t + 0.2, z);
+      else l.rod('rat', x, t + 0.2, z);
+    }
+    l.box('stone', 0, 0, 50, 7.8, 2.4, 0.6);
+    l.box('wood', 0, 2.4, 50, 7.8, 0.4, 0.6);
+    l.box('wood', 0, 0, 60, 7.8, 2.4, 0.6);
+    l.box('tnt', -3, 0, 58.6, 0.9, 0.9, 0.9);
+    l.box('tnt', 3, 0, 58.6, 0.9, 0.9, 0.9);
+    const h = l.hut('wood', 0, 55, 0, 3.4, 3, 2.2);
+    l.rod('fret', 0, 0.2, 55);
+    l.box('tnt', 0, h, 55, 0.9, 0.9, 0.9);
+    l.rod('rat', 1.2, h + 0.2, 55);
+  }),
+
+  /* ---------------------------------------------------- HET SNEEUWDAL */
+  lvl('Het ijspaleis', 2, ['guiseppe', 'otis', 'raaf'], (l) => {
+    const a = l.tower('ice', -5.5, 52, 0, 2.6, 3, 1.8);
+    l.box('stone', 0, 0, 54, 3.6, 1.2, 3.6);
+    const b = l.tower('ice', 0, 54, 1.2, 3, 4, 1.8);
+    const c = l.tower('ice', 5.5, 52, 0, 2.6, 3, 1.8);
+    l.rod('muis', -5.5, a + 0.2, 52);
+    l.rod('muis', 5.5, c + 0.2, 52);
+    l.rod('rat', 0, 1.4, 54);
+    l.rod('rat', 0, 5.8, 54);
+    l.rod('eekhoorn', 0, b + 0.2, 54);
+  }),
+  lvl('De bevroren brug', 2, ['raaf', 'guiseppe', 'otis'], (l) => {
+    l.box('stone', -5.5, 0, 55, 2, 6, 2);
+    l.box('stone', 5.5, 0, 55, 2, 6, 2);
+    const top = l.box('ice', 0, 6, 55, 13, 0.5, 2);
+    l.rod('muis', -2.5, top + 0.2, 55);
+    l.rod('muis', 0, top + 0.2, 55);
+    l.rod('muis', 2.5, top + 0.2, 55);
+    const a = l.hut('ice', -5.5, 55, top, 2, 2, 1.6);
+    const b = l.hut('ice', 5.5, 55, top, 2, 2, 1.6);
+    l.rod('rat', -5.5, a + 0.2, 55);
+    l.rod('rat', 5.5, b + 0.2, 55);
+    l.rod('rat', 0, 0.2, 55);
+    l.box('ice', 0, 0, 53.6, 2, 1.2, 0.5);
+  }),
+  lvl('Fort Fret', 2, ['byte', 'guiseppe', 'raaf', 'otis'], (l) => {
+    const base = l.hut('stone', 0, 56, 0, 6, 4, 2.6, 'stone');
+    l.rod('fret', -1.4, 0.2, 56);
+    l.rod('fret', 1.4, 0.2, 56);
+    l.box('tnt', 0, 0, 56, 0.9, 0.9, 0.9);
+    const up = l.hut('ice', -1.6, 56, base, 2.6, 3, 2);
+    const up2 = l.hut('ice', 1.6, 56, base, 2.6, 3, 2);
+    l.rod('rat', -1.6, base + 0.2, 56);
+    l.rod('rat', 1.6, up2 + 0.2, 56);
+    l.box('wood', -1.6, up, 56, 0.6, 1.4, 0.6);
+    l.rod('muis', -1.6, up + 1.6, 56);
+    l.box('ice', -7, 0, 50, 1.4, 3, 1.4);
+    l.rod('eekhoorn', -7, 3.2, 50);
+    l.box('ice', 7, 0, 50, 1.4, 3, 1.4);
+    l.rod('eekhoorn', 7, 3.2, 50);
+  }),
+  lvl('De schatkamer van Ratjetoe', 2, ['raaf', 'otis', 'byte', 'guiseppe', 'raaf'], (l) => {
+    const p = l.box('stone', 0, 0, 63, 9, 2.4, 6);
+    l.rod('ratjetoe', 0, p + 0.2, 64);
+    // Buit om hem heen
+    l.box('kaas', -2.6, p, 64.5, 1.2, 1.2, 1.2);
+    l.box('tnt', 2.6, p, 64.5, 1, 1, 1);
+    l.box('tnt', 2.6, p + 1, 64.5, 1, 1, 1);
+    // Voorwand van ijs en hout
+    l.box('ice', -2.5, p, 61, 3.6, 2.4, 0.6);
+    l.box('ice', 2.5, p, 61, 3.6, 2.4, 0.6);
+    l.box('wood', 0, p + 2.4, 61, 8.8, 0.5, 0.8);
+    l.rod('rat', 0, p + 3.1, 61);
+    // Wachttorens
+    const a = l.tower('stone', -8, 58, 0, 2.4, 3, 2, 'wood');
+    const b = l.tower('stone', 8, 58, 0, 2.4, 3, 2, 'wood');
+    l.rod('fret', -8, a + 0.2, 58);
+    l.rod('fret', 8, b + 0.2, 58);
+    l.rod('muis', -8, 0.2, 58);
+    l.rod('muis', 8, 0.2, 58);
+    l.box('wood', 0, 0, 55, 3, 1.6, 0.5);
+    l.rod('rat', 0, 0.2, 56.5);
+  }),
+];
+return { WORLDS, BIRDS, LEVELS };
+})();
+
+/* =================================================================== story */
+const { NAMES, SCENES, BEFORE, LEVEL_LINES } = (() => {
+// Het verhaal: korte gesprekjes tussen de levels.
+// Elke regel: [spreker, tekst]. Spreker 'verteller' heeft geen gezicht.
+
+const NAMES = {
+  raaf: 'Raaf', otis: 'Otis', byte: 'Byte', guiseppe: 'Guiseppe', ratjetoe: 'Ratjetoe', verteller: '',
+};
+
+const SCENES = {
+  proloog: {
+    title: 'Proloog · De beker',
+    lines: [
+      ['verteller', 'Na het grote toernooi van Wat in de Combat stond hij eindelijk op Raafs kamer: de Combat-beker. Goud en glimmend, met zijn naam erop gegraveerd.'],
+      ['raaf', 'Kijk hem nou glimmen. Ik ga hem elke ochtend poetsen. Twee keer.'],
+      ['verteller', 'Die nacht hoorde Raaf iets in de vents. Getrippel, gegiechel en het geluid van iets zwaars dat over de vloer werd gesleept.'],
+      ['ratjetoe', 'Hehehe. Glimmend, goud én met een naam erop. Die neem ik mee.'],
+      ['raaf', 'HÉ! Dat is MIJN beker!'],
+      ['ratjetoe', 'Was jouw beker. Kom hem maar halen, vogeltje. Mijn bende heeft overal forten gebouwd, van hier tot het Sneeuwdal.'],
+      ['raaf', 'Ik ben geen vogel. Ik ben gewoon een gast.'],
+      ['raaf', '…Een gast met een verenmantel en een katapult. Ratjetoe, ik kom eraan.'],
+    ],
+  },
+  bos: {
+    title: 'Hoofdstuk 1 · Het Bos',
+    lines: [
+      ['verteller', 'Het spoor van gejatte kaas en kleine pootafdrukken leidt het bos in. Tussen de bomen staan houten hutjes. Daarin zitten ratten met bandana\'s.'],
+      ['raaf', 'Ze hebben van mijn beker een bouwproject gemaakt. Ongelofelijk.'],
+      ['raaf', 'Oké. Katapult spannen, mikken en loslaten. In de lucht kan ik nog bijsturen, en met een duikvlucht ga ik dwars door hout.'],
+    ],
+  },
+  otis: {
+    title: 'Een neus in de lucht',
+    lines: [
+      ['verteller', 'Boven op een rots hoort Raaf een raar geluid: het gesis van een zuurstoftank, en een beagle die snuffelt in zijn astronautenhelm.'],
+      ['otis', 'Woef! Ik ruik kaas. En ratten. En… goud? Wauw. Wat ruik jij?'],
+      ['raaf', 'Otis! Ratjetoe heeft mijn beker gejat. Kun jij zijn spoor volgen?'],
+      ['otis', 'Mijn neus werkt zelfs in de ruimte. Ik vlieg mee. Mijn jetpack smelt trouwens ook ijs, mocht dat handig zijn.'],
+    ],
+  },
+  boer: {
+    title: 'Hoofdstuk 2 · De Boerderij',
+    lines: [
+      ['verteller', 'Het spoor gaat over de heuvels naar een boerderij. De schuren zijn verstevigd met steen. Fretten met pannetjes op hun hoofd houden de wacht.'],
+      ['otis', 'Steen. Daar komen we met onze kop niet doorheen.'],
+      ['byte', 'BIEP. Systeemmelding: Ratjetoe heeft mij ooit gehackt. Toen werd ik een mech. Ik heb het hem nooit vergeven.'],
+      ['raaf', 'Byte? Josh z\'n drone? Wat doe jij hier?'],
+      ['byte', 'Josh stuurde me. Hij zei: "Ga helpen en kom niet terug zonder die beker." Ik kan op commando een mech worden. Zwaar, en goed tegen steen.'],
+      ['raaf', 'Een mech die uit de lucht valt. Perfect.'],
+    ],
+  },
+  sneeuw: {
+    title: 'Hoofdstuk 3 · Het Sneeuwdal',
+    lines: [
+      ['verteller', 'Achter de boerderij ligt een bevroren dal. Daar glinstert iets tussen de ijsforten: een paleis van ijs, en helemaal achteraan de schatkamer van Ratjetoe.'],
+      ['guiseppe', 'Psst. Hier beneden. Nee, lager. Ik ben een gum.'],
+      ['raaf', 'Guiseppe?! Hoe kom jij hier?'],
+      ['guiseppe', 'Ratjetoe had me in zijn zak gestopt. Hij dacht dat ik een appel was. Ik heb me uit zijn zak gegumd en ben ontsnapt.'],
+      ['guiseppe', 'Ik heb ook een zweefvlieger. Daarmee kan ik heel precies sturen, en alles wat ik raak gum ik gewoon uit.'],
+      ['otis', 'Een vliegende gum. Ik heb in de ruimte rarere dingen gezien. Een beetje.'],
+    ],
+  },
+  baas: {
+    title: 'De schatkamer',
+    lines: [
+      ['verteller', 'Bovenop een stenen sokkel, tussen bergen gejatte spullen, zit hij: Ratjetoe, met een kroon van flessendopjes. Naast hem glimt de Combat-beker.'],
+      ['ratjetoe', 'Welkom in mijn schatkamer! Kijk eens wat ik allemaal heb: lepeltjes, sleutels, een fietsbel en één heel mooie beker.'],
+      ['raaf', 'Geef hem terug, Ratjetoe.'],
+      ['ratjetoe', 'Ruilen kan. Ik wil er… zestien peren voor. Nee, wacht. Ik wil hem gewoon houden.'],
+      ['byte', 'BIEP. Wraakmodus geactiveerd.'],
+      ['otis', 'Ik ruik angst. Het is van hem.'],
+      ['ratjetoe', 'Bende! Iedereen op zijn plek! Hehehe…'],
+    ],
+  },
+  einde: {
+    title: 'Epiloog',
+    lines: [
+      ['verteller', 'Het fort valt met een donderende klap in elkaar. In het puin, tussen de flessendopjes, ligt hij: de Combat-beker. Een beetje gedeukt, maar hij glimt nog.'],
+      ['ratjetoe', 'Au. Oké, oké. Neem je beker maar mee. Ik ga wel weer in de vents zitten.'],
+      ['raaf', 'En de rest geef je ook terug. De lepeltjes, de fietsbel, alles.'],
+      ['ratjetoe', '…Mag ik één flessendopje houden?'],
+      ['raaf', 'Eén.'],
+      ['otis', 'Woef! Missie geslaagd! Krijgen we nu een koekje?'],
+      ['byte', 'BIEP. Ik meld aan Josh: beker terug. Ratjetoe is verslagen.'],
+      ['guiseppe', 'Ik ben trouwens nog steeds geen appel.'],
+      ['verteller', 'Die avond staat de beker weer op Raafs kamer, gepoetst en wel. Twee keer.'],
+      ['raaf', 'Volgend toernooi win ik er gewoon nog een.'],
+    ],
+  },
+};
+
+// Welke scène hoort voor welk level (index), en wanneer de verteller komt
+const BEFORE = { 0: ['proloog', 'bos'], 2: ['otis'], 4: ['boer'], 8: ['sneeuw'], 11: ['baas'] };
+
+// Korte opmerking tijdens de vlucht langs het fort
+const LEVEL_LINES = [
+  ['raaf', 'Eén hutje en een paar ratten. Opwarmertje.'],
+  ['raaf', 'Twee torens met een plank ertussen. Als ik die plank raak…'],
+  ['otis', 'Die rots is te hoog om te raken. Raak de hut erbovenop!'],
+  ['ratjetoe', 'Mijn eekhoorns zitten hoog en droog. Hehehe.'],
+  ['byte', 'Stenen schuur gedetecteerd. Transformatie aanbevolen.'],
+  ['otis', 'Onderin die silo zit buskruit. Laat dat maar ontploffen.'],
+  ['ratjetoe', 'Blijf van mijn kaasmarkt af! Daar zit mijn hele voorraad!'],
+  ['byte', 'Vier torens en twee muren. Ik heb drie kopieën van mezelf meegenomen.'],
+  ['guiseppe', 'Een paleis van ijs. Otis, jouw vlammen zijn hier je vriend.'],
+  ['ratjetoe', 'De brug is van ijs. Als die breekt, vallen mijn muizen in de diepte. …Wacht.'],
+  ['raaf', 'Fort Fret. Nog één fort, en dan staan we bij Ratjetoe.'],
+  ['ratjetoe', 'Kom maar op, vogeltje. Deze beker gaat nergens heen.'],
+];
+return { NAMES, SCENES, BEFORE, LEVEL_LINES };
+})();
+
+/* =================================================================== world */
+const { MATS, World } = (() => {
+// De wereld: blokken, puin, knaagdieren, explosies en deeltjes.
+// Vaste blokken zijn assen-uitgelijnde dozen. Valt hun steun weg, of worden ze hard
+// geraakt, dan worden ze los puin met eenvoudige rigid-body physics.
+
+const MATS = {
+  wood: { dens: 0.6, hp: 20, score: 500, snd: 'wood' },
+  ice: { dens: 0.9, hp: 12, score: 500, snd: 'ice' },
+  stone: { dens: 2.4, hp: 30, score: 800, snd: 'stone' },
+  kaas: { dens: 1.0, hp: 15, score: 600, snd: 'kaas' },
+  tnt: { dens: 0.5, hp: 4, score: 1000, snd: 'wood' },
+};
+const G = 9.8;
+const V = () => new THREE.Vector3();
+const tmp = V(), tmp2 = V(), tmp3 = V(), tmpQ = new THREE.Quaternion();
+
+class World {
+  constructor(scene, events) {
+    this.scene = scene;
+    this.ev = events; // { score(pts,pos,color), sound(name,vol), shake(amt), poof(pos) }
+    this.root = new THREE.Group();
+    scene.add(this.root);
+    this.blocks = [];
+    this.rodents = [];
+    this.parts = [];
+    this.partGeo = new THREE.BoxGeometry(1, 1, 1);
+    this.supportDirty = false;
+    this.time = 0;
+  }
+
+  clear() {
+    this.root.clear();
+    for (const p of this.parts) this.scene.remove(p.mesh);
+    this.blocks = []; this.rodents = []; this.parts = [];
+    this.time = 0;
+  }
+
+  load(level) {
+    this.clear();
+    level.blocks.forEach((d) => {
+      const vol = d.w * d.h * d.d;
+      const M = MATS[d.m];
+      const mesh = new THREE.Mesh(boxGeo(d.w, d.h, d.d, 1), mat(d.m));
+      mesh.castShadow = mesh.receiveShadow = true;
+      const b = {
+        m: d.m, w: d.w, h: d.h, d: d.d, half: new THREE.Vector3(d.w / 2, d.h / 2, d.d / 2),
+        pos: new THREE.Vector3(d.x, d.y + d.h / 2, d.z),
+        quat: new THREE.Quaternion(), vel: V(), ang: V(),
+        mass: M.dens * vol, maxHp: M.hp * Math.pow(Math.max(0.35, vol), 0.6),
+        alive: true, dyn: false, sleep: 0, asleep: false, cracked: false, mesh,
+        supported: true,
+      };
+      b.hp = b.maxHp;
+      b.invI = 18 / (b.mass * (d.w * d.w + d.h * d.h + d.d * d.d));
+      mesh.position.copy(b.pos);
+      this.root.add(mesh);
+      this.blocks.push(b);
+    });
+    level.rodents.forEach((d) => {
+      const R = RODENT[d.k];
+      const m = makeRodent(d.k);
+      m.group.rotation.y = Math.PI;
+      this.root.add(m.group);
+      this.rodents.push({
+        kind: d.k, model: m, pos: new THREE.Vector3(d.x, d.y, d.z), vy: 0, r: R.r, hp: R.hp, maxHp: R.hp,
+        alive: true, grace: 1.5, phase: Math.random() * 6, hurt: 0, laugh: 0,
+      });
+    });
+    this.supportDirty = true;
+    this.updateSupport(true);
+  }
+
+  /* ---------------------------------------------------------- hulpjes */
+  aabb(b) {
+    return [b.pos.x - b.half.x, b.pos.y - b.half.y, b.pos.z - b.half.z, b.pos.x + b.half.x, b.pos.y + b.half.y, b.pos.z + b.half.z];
+  }
+  statics() { return this.blocks.filter((b) => b.alive && !b.dyn); }
+  get rodentsLeft() { return this.rodents.filter((r) => r.alive).length; }
+  get boss() { return this.rodents.find((r) => r.kind === 'ratjetoe'); }
+
+  // Bol tegen vast blok: geeft {q, n, d} of null
+  sphereAabb(p, r, b) {
+    const a = this.aabb(b);
+    const q = tmp.set(
+      Math.max(a[0], Math.min(p.x, a[3])),
+      Math.max(a[1], Math.min(p.y, a[4])),
+      Math.max(a[2], Math.min(p.z, a[5])),
+    );
+    const d = q.distanceTo(p);
+    if (d >= r) return null;
+    const n = V();
+    if (d > 1e-5) n.copy(p).sub(q).divideScalar(d);
+    else {
+      // Middelpunt zit erin: duw naar de dichtstbijzijnde zijkant
+      const dx = [p.x - a[0], a[3] - p.x], dy = [p.y - a[1], a[4] - p.y], dz = [p.z - a[2], a[5] - p.z];
+      const m = Math.min(...dx, ...dy, ...dz);
+      if (m === dx[0]) n.set(-1, 0, 0); else if (m === dx[1]) n.set(1, 0, 0);
+      else if (m === dy[0]) n.set(0, -1, 0); else if (m === dy[1]) n.set(0, 1, 0);
+      else if (m === dz[0]) n.set(0, 0, -1); else n.set(0, 0, 1);
+    }
+    return { q: q.clone(), n, d };
+  }
+  // Bol tegen gedraaid blok
+  sphereObb(p, r, b) {
+    tmpQ.copy(b.quat).invert();
+    const l = tmp2.copy(p).sub(b.pos).applyQuaternion(tmpQ);
+    const c = tmp3.set(
+      Math.max(-b.half.x, Math.min(l.x, b.half.x)),
+      Math.max(-b.half.y, Math.min(l.y, b.half.y)),
+      Math.max(-b.half.z, Math.min(l.z, b.half.z)),
+    );
+    const d = c.distanceTo(l);
+    if (d >= r) return null;
+    const q = c.clone().applyQuaternion(b.quat).add(b.pos);
+    const n = d > 1e-5 ? p.clone().sub(q).divideScalar(d) : V().set(0, 1, 0);
+    return { q, n, d };
+  }
+
+  /* ----------------------------------------------------- schade & puin */
+  damage(b, dmg, from) {
+    if (!b.alive || dmg <= 0.2) return false;
+    b.hp -= dmg;
+    if (b.hp <= 0) { this.destroy(b, from); return true; }
+    if (!b.cracked && b.hp < b.maxHp * 0.55) {
+      b.cracked = true;
+      b.mesh.material = mat(b.m, true);
+    }
+    if (dmg > 2) this.ev.sound(MATS[b.m].snd, Math.min(1, dmg / 30) * 0.6);
+    return false;
+  }
+
+  destroy(b, from) {
+    if (!b.alive) return;
+    b.alive = false;
+    this.root.remove(b.mesh);
+    b.mesh.geometry.dispose();
+    const vol = b.w * b.h * b.d;
+    const n = Math.min(26, 6 + Math.round(vol * 5));
+    for (let i = 0; i < n; i++) {
+      const p = b.pos.clone().add(V().set((Math.random() - 0.5) * b.w, (Math.random() - 0.5) * b.h, (Math.random() - 0.5) * b.d));
+      const v = V().set((Math.random() - 0.5) * 6, Math.random() * 6 + 1, (Math.random() - 0.5) * 6);
+      if (from) v.addScaledVector(from, 0.25);
+      this.particle(p, v, MAT_COLOR[b.m], 0.12 + Math.random() * 0.2, 1.4 + Math.random());
+    }
+    this.ev.sound(MATS[b.m].snd, 1);
+    this.ev.score(MATS[b.m].score, b.pos, MAT_COLOR[b.m]);
+    this.supportDirty = true;
+    this.wakeNear(b.pos, 6);
+    if (b.m === 'tnt') this.explode(b.pos.clone(), 4.5, 60);
+  }
+
+  dislodge(b, vel, ang) {
+    if (!b.alive || b.dyn) return;
+    b.dyn = true;
+    b.vel.copy(vel || V());
+    b.ang.copy(ang || V().set((Math.random() - 0.5) * 0.6, 0, (Math.random() - 0.5) * 0.6));
+    b.sleep = 0; b.asleep = false;
+    this.supportDirty = true;
+    this.wakeNear(b.pos, 5);
+  }
+
+  // Slapend puin opnieuw laten checken of het nog ergens op ligt
+  wakeNear(p, r) {
+    for (const o of this.blocks) if (o.alive && o.dyn && o.asleep && o.pos.distanceTo(p) < r) this.wake(o);
+  }
+
+  wake(b) { b.asleep = false; b.sleep = 0; }
+
+  explode(pos, radius, power, opts = {}) {
+    this.ev.sound(opts.soft ? 'thud' : 'boom', 1);
+    this.ev.shake(opts.soft ? 0.35 : 0.8);
+    const fire = opts.soft ? ['#c9ced6', '#8e98a3', '#41f2dc'] : ['#ffb627', '#ff6a1f', '#ffe08a', '#3d3d3d'];
+    for (let i = 0; i < (opts.soft ? 24 : 40); i++) {
+      const dir = V().randomDirection();
+      if (opts.soft) dir.y = Math.abs(dir.y) * 0.3;
+      this.particle(pos.clone(), dir.multiplyScalar(4 + Math.random() * 8), fire[i % fire.length], 0.2 + Math.random() * 0.35, 0.7 + Math.random() * 0.6, opts.soft ? 0.5 : 0.15);
+    }
+    for (const b of this.blocks) {
+      if (!b.alive) continue;
+      const d = b.pos.distanceTo(pos) - Math.min(b.half.x, b.half.y, b.half.z);
+      if (d > radius) continue;
+      const f = 1 - Math.max(0, d) / radius;
+      if (this.damage(b, power * f, null)) continue;
+      const push = tmp.copy(b.pos).sub(pos).normalize().multiplyScalar((power * f * 0.5) / Math.max(0.6, b.mass));
+      push.y += 2 * f;
+      if (power * f > b.mass * 2 + 2) this.dislodge(b, push, V().randomDirection().multiplyScalar(2 * f));
+      else if (b.dyn) { b.vel.add(push); this.wake(b); }
+    }
+    for (const r of this.rodents) {
+      if (!r.alive) continue;
+      const d = r.pos.distanceTo(pos) - r.r;
+      if (d < radius) this.hurtRodent(r, power * 0.7 * (1 - Math.max(0, d) / radius), pos);
+    }
+  }
+
+  hurtRodent(r, dmg, from) {
+    if (!r.alive || dmg < 0.5) return;
+    r.hp -= dmg;
+    r.hurt = 0.35;
+    if (r.hp <= 0) {
+      r.alive = false;
+      this.root.remove(r.model.group);
+      const c = r.pos.clone(); c.y += r.r;
+      for (let i = 0; i < (r.kind === 'ratjetoe' ? 50 : 18); i++)
+        this.particle(c.clone(), V().randomDirection().multiplyScalar(2 + Math.random() * 4), i % 3 ? '#ffffff' : '#cfd6dd', 0.25 + Math.random() * 0.3, 0.9 + Math.random() * 0.5, -0.1);
+      this.ev.sound(r.kind === 'ratjetoe' ? 'bosspoof' : 'squeak', 1);
+      this.ev.score(RODENT[r.kind].score, c, '#7a3fbf');
+      this.ev.poof(r);
+    } else {
+      this.ev.sound('squeakhurt', 0.7);
+    }
+  }
+
+  /* ------------------------------------------------------------- steun */
+  updateSupport(initial = false) {
+    if (!this.supportDirty) return;
+    this.supportDirty = false;
+    const list = this.statics().sort((a, b) => (a.pos.y - a.half.y) - (b.pos.y - b.half.y));
+    const ok = [];
+    for (const b of list) {
+      const bottom = b.pos.y - b.half.y;
+      if (bottom < 0.03) { ok.push(b); continue; }
+      let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity, any = false, count = 0, cx = 0, cz = 0;
+      for (const s of ok) {
+        if (Math.abs(s.pos.y + s.half.y - bottom) > 0.06) continue;
+        const ox0 = Math.max(b.pos.x - b.half.x, s.pos.x - s.half.x), ox1 = Math.min(b.pos.x + b.half.x, s.pos.x + s.half.x);
+        const oz0 = Math.max(b.pos.z - b.half.z, s.pos.z - s.half.z), oz1 = Math.min(b.pos.z + b.half.z, s.pos.z + s.half.z);
+        if (ox1 - ox0 < 0.02 || oz1 - oz0 < 0.02) continue;
+        any = true; count++; cx += s.pos.x; cz += s.pos.z;
+        x0 = Math.min(x0, ox0); x1 = Math.max(x1, ox1); z0 = Math.min(z0, oz0); z1 = Math.max(z1, oz1);
+      }
+      if (!any) {
+        this.dislodge(b, V(), V().set((Math.random() - 0.5) * 0.3, 0, (Math.random() - 0.5) * 0.3));
+        continue;
+      }
+      if (initial) b.sup0 = count;
+      else if (count < (b.sup0 || 0)) {
+        // Een steunpunt is weg: kantel naar de kant waar het ontbreekt
+        const d = V().set(b.pos.x - cx / count, 0, b.pos.z - cz / count);
+        if (d.lengthSq() < 0.01) d.set(Math.random() - 0.5, 0, Math.random() - 0.5);
+        d.normalize();
+        this.dislodge(b, d.clone().multiplyScalar(0.6), V().set(d.z, 0, -d.x).multiplyScalar(1.8));
+        continue;
+      }
+      const m = 0.04;
+      if (b.pos.x < x0 - m || b.pos.x > x1 + m || b.pos.z < z0 - m || b.pos.z > z1 + m) {
+        // Zwaartepunt hangt over de rand: kantelen richting de overhang
+        const ox = b.pos.x < x0 ? -1 : b.pos.x > x1 ? 1 : 0;
+        const oz = b.pos.z < z0 ? -1 : b.pos.z > z1 ? 1 : 0;
+        this.dislodge(b, V().set(ox * 0.4, 0, oz * 0.4), V().set(oz * 1.4, 0, -ox * 1.4));
+        continue;
+      }
+      ok.push(b);
+    }
+    if (initial) this.supportDirty = false;
+  }
+
+  // Bovenkant van wat er onder punt p ligt (vaste blokken of de grond)
+  floorUnder(p, r, maxY) {
+    let top = 0;
+    for (const b of this.blocks) {
+      if (!b.alive || b.dyn) continue;
+      const t = b.pos.y + b.half.y;
+      if (t > maxY + 0.05 || t <= top) continue;
+      const k = r * 0.35;
+      if (Math.abs(p.x - b.pos.x) <= b.half.x + k && Math.abs(p.z - b.pos.z) <= b.half.z + k) top = t;
+    }
+    return top;
+  }
+
+  /* -------------------------------------------------------- simulatie */
+  step(dt) {
+    this.time += dt;
+    const sub = 3, h = dt / sub;
+    for (let s = 0; s < sub; s++) {
+      for (const b of this.blocks) if (b.alive && b.dyn && !b.asleep) this.stepBlock(b, h);
+      this.updateSupport();
+    }
+    for (const b of this.blocks) {
+      if (!b.alive) continue;
+      b.mesh.position.copy(b.pos);
+      b.mesh.quaternion.copy(b.quat);
+      if (b.pos.y < -20) this.destroy(b);
+    }
+    this.stepRodents(dt);
+    this.stepParticles(dt);
+  }
+
+  stepBlock(b, h) {
+    b.vel.y -= G * h;
+    b.pos.addScaledVector(b.vel, h);
+    const w = b.ang.length();
+    if (w > 1e-6) {
+      tmpQ.setFromAxisAngle(tmp.copy(b.ang).divideScalar(w), w * h);
+      b.quat.premultiply(tmpQ).normalize();
+    }
+    b.ang.multiplyScalar(0.998);
+
+    const corners = [];
+    for (const sx of [-1, 1]) for (const sy of [-1, 1]) for (const sz of [-1, 1])
+      corners.push(V().set(sx * b.half.x, sy * b.half.y, sz * b.half.z).applyQuaternion(b.quat).add(b.pos));
+    // Middens van de lange randen, zodat lange planken niet door paaltjes zakken
+    if (Math.max(b.w, b.h, b.d) > 1.6) {
+      for (const sy of [-1, 1]) for (const sz of [-1, 1]) {
+        const v = b.w >= b.d ? V().set(0, sy * b.half.y, sz * b.half.z) : V().set(sz * b.half.x, sy * b.half.y, 0);
+        corners.push(v.applyQuaternion(b.quat).add(b.pos));
+      }
+    }
+
+    let hitTarget = null, hitSpeed = 0;
+    const statics = this.blocks.filter((o) => o.alive && !o.dyn && o !== b);
+    let pushY = 0;
+    const push = V();
+    for (const c of corners) {
+      let n = null, pen = 0, target = null;
+      if (c.y < 0) { n = tmp2.set(0, 1, 0); pen = -c.y; }
+      else {
+        for (const o of statics) {
+          const a = this.aabb(o);
+          if (c.x <= a[0] || c.x >= a[3] || c.y <= a[1] || c.y >= a[4] || c.z <= a[2] || c.z >= a[5]) continue;
+          const opts = [[c.x - a[0], -1, 0, 0], [a[3] - c.x, 1, 0, 0], [c.y - a[1], 0, -1, 0], [a[4] - c.y, 0, 1, 0], [c.z - a[2], 0, 0, -1], [a[5] - c.z, 0, 0, 1]];
+          opts.sort((p, q) => p[0] - q[0]);
+          n = tmp2.set(opts[0][1], opts[0][2], opts[0][3]);
+          pen = opts[0][0]; target = o;
+          break;
+        }
+      }
+      if (!n) continue;
+      const r = tmp3.copy(c).sub(b.pos);
+      const vp = V().copy(b.ang).cross(r).add(b.vel);
+      const vn = vp.dot(n);
+      if (vn < 0) {
+        const rn = V().copy(r).cross(n);
+        const k = 1 / b.mass + b.invI * rn.lengthSq();
+        const j = (-(1 + 0.12) * vn) / k;
+        b.vel.addScaledVector(n, j / b.mass);
+        b.ang.addScaledVector(V().copy(r).cross(n), j * b.invI);
+        const vt = vp.addScaledVector(n, -vn);
+        const tl = vt.length();
+        if (tl > 1e-4) {
+          vt.divideScalar(tl);
+          const rt = V().copy(r).cross(vt);
+          const kt = 1 / b.mass + b.invI * rt.lengthSq();
+          const jt = Math.min(tl / kt, 0.6 * j);
+          b.vel.addScaledVector(vt, -jt / b.mass);
+          b.ang.addScaledVector(V().copy(r).cross(vt), -jt * b.invI);
+        }
+        if (-vn > hitSpeed) { hitSpeed = -vn; hitTarget = target || 'ground'; }
+      }
+      if (n.y > 0.5) pushY = Math.max(pushY, pen);
+      else push.addScaledVector(n, pen * 0.5);
+    }
+    b.pos.y += pushY * 0.9;
+    b.pos.add(push);
+
+    // Harde klappen doen pijn, zowel bij het doelwit als bij het puin zelf
+    if (hitSpeed > 4.5) {
+      const imp = b.mass * hitSpeed;
+      if (hitTarget && hitTarget !== 'ground') {
+        if (!this.damage(hitTarget, imp * 0.55)) {
+          if (imp > hitTarget.mass * 3 + 2) this.dislodge(hitTarget, b.vel.clone().multiplyScalar(0.3), V().randomDirection().multiplyScalar(0.8));
+        }
+      }
+      const selfDmg = hitSpeed * (hitTarget && hitTarget !== 'ground' && hitTarget.m === 'stone' ? 1.6 : 1.1) * (b.m === 'ice' ? 2 : 1);
+      if (this.damage(b, selfDmg)) return;
+    }
+
+    // Puin raakt knaagdieren
+    const sp = b.vel.length();
+    if (sp > 2.2) {
+      for (const r of this.rodents) {
+        if (!r.alive) continue;
+        const c = tmp.copy(r.pos); c.y += r.r;
+        if (this.sphereObb(c, r.r, b)) this.hurtRodent(r, b.mass * sp * 1.6 * (r.grace > 0 ? 0 : 1), b.pos);
+      }
+    }
+
+    if (sp < 0.35 && b.ang.length() < 0.5) {
+      b.sleep += h;
+      if (b.sleep > 0.8) { b.asleep = true; b.vel.set(0, 0, 0); b.ang.set(0, 0, 0); }
+    } else b.sleep = 0;
+  }
+
+  stepRodents(dt) {
+    for (const r of this.rodents) {
+      if (!r.alive) continue;
+      r.grace -= dt;
+      r.hurt = Math.max(0, r.hurt - dt);
+      r.laugh = Math.max(0, r.laugh - dt);
+      const floor = this.floorUnder(r.pos, r.r, r.pos.y);
+      if (r.pos.y > floor + 0.01 || r.vy > 0) {
+        r.vy -= G * dt;
+        r.pos.y += r.vy * dt;
+        if (r.pos.y <= floor) {
+          const v = -r.vy;
+          r.pos.y = floor; r.vy = 0;
+          if (r.grace <= 0 && v > 6.5) this.hurtRodent(r, (v - 5.5) * 4, null);
+        }
+      } else r.pos.y = floor;
+      if (r.pos.y < -10) this.hurtRodent(r, 999);
+      const m = r.model;
+      m.group.position.copy(r.pos);
+      r.phase += dt * (r.laugh > 0 ? 14 : 3);
+      const bob = r.laugh > 0 ? Math.abs(Math.sin(r.phase)) * 0.25 : Math.sin(r.phase) * 0.03;
+      m.group.children[0].position.y = bob * m.scale;
+      m.group.scale.setScalar(r.hurt > 0 ? 1 + Math.sin(r.hurt * 40) * 0.08 : 1);
+    }
+  }
+
+  laugh() { this.rodents.forEach((r) => r.alive && (r.laugh = 1.6)); }
+
+  /* ----------------------------------------------------------- deeltjes */
+  particle(pos, vel, color, size, life, grav = 1) {
+    if (this.parts.length > 420) { const o = this.parts.shift(); this.scene.remove(o.mesh); }
+    const mesh = new THREE.Mesh(this.partGeo, flat(color));
+    mesh.scale.setScalar(size);
+    mesh.position.copy(pos);
+    mesh.rotation.set(Math.random() * 3, Math.random() * 3, 0);
+    this.scene.add(mesh);
+    this.parts.push({ mesh, vel, life, max: life, size, grav, spin: (Math.random() - 0.5) * 10 });
+  }
+
+  stepParticles(dt) {
+    for (let i = this.parts.length - 1; i >= 0; i--) {
+      const p = this.parts[i];
+      p.life -= dt;
+      if (p.life <= 0) { this.scene.remove(p.mesh); this.parts.splice(i, 1); continue; }
+      p.vel.y -= G * p.grav * dt;
+      p.vel.multiplyScalar(1 - dt * 0.6);
+      p.mesh.position.addScaledVector(p.vel, dt);
+      if (p.mesh.position.y < p.size / 2) { p.mesh.position.y = p.size / 2; p.vel.y *= -0.3; p.vel.x *= 0.7; p.vel.z *= 0.7; }
+      p.mesh.rotation.x += p.spin * dt;
+      p.mesh.scale.setScalar(p.size * Math.min(1, (p.life / p.max) * 2.5));
+    }
+  }
+
+  // Is alles tot rust gekomen?
+  settled() {
+    const moving = this.blocks.some((b) => b.alive && b.dyn && !b.asleep);
+    const falling = this.rodents.some((r) => r.alive && (r.vy !== 0));
+    return !moving && !falling;
+  }
+
+  center() {
+    const live = this.blocks.filter((b) => b.alive);
+    const c = V();
+    if (!live.length) return c.set(0, 2, 55);
+    live.forEach((b) => c.add(b.pos));
+    return c.divideScalar(live.length);
+  }
+}
+return { MATS, World };
+})();
+
+/* =================================================================== audio */
+const { audio, unlock, setOn, sfx, setWind } = (() => {
+// Kleine synth voor alle geluiden; geen bestanden nodig.
+let ctx = null, master = null, noiseBuf = null, wind = null, windGain = null;
+const audio = { on: true };
+
+function init() {
+  if (ctx) return;
+  try {
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+  } catch (e) { return; }
+  master = ctx.createGain();
+  master.gain.value = 0.55;
+  master.connect(ctx.destination);
+  noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+  const d = noiseBuf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  // Wind loopt altijd; we draaien alleen het volume open
+  wind = ctx.createBufferSource();
+  wind.buffer = noiseBuf; wind.loop = true;
+  const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 500; f.Q.value = 0.6;
+  windGain = ctx.createGain(); windGain.gain.value = 0;
+  wind.connect(f); f.connect(windGain); windGain.connect(master);
+  wind.start();
+  audio.windFilter = f;
+}
+function unlock() { init(); if (ctx && ctx.state === 'suspended') ctx.resume(); }
+function setOn(on) { audio.on = on; if (master) master.gain.value = on ? 0.55 : 0; }
+
+function env(g, t, a, peak, dec) {
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(peak, t + a);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + a + dec);
+}
+function tone(type, f0, f1, dur, vol, t = 0) {
+  const T = ctx.currentTime + t;
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(f0, T);
+  o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), T + dur);
+  env(g, T, 0.005, vol, dur);
+  o.connect(g); g.connect(master);
+  o.start(T); o.stop(T + dur + 0.05);
+}
+function noise(type, freq, q, dur, vol, t = 0, sweep) {
+  const T = ctx.currentTime + t;
+  const s = ctx.createBufferSource(); s.buffer = noiseBuf;
+  s.playbackRate.value = 0.8 + Math.random() * 0.4;
+  const f = ctx.createBiquadFilter(); f.type = type; f.frequency.setValueAtTime(freq, T); f.Q.value = q;
+  if (sweep) f.frequency.exponentialRampToValueAtTime(sweep, T + dur);
+  const g = ctx.createGain(); env(g, T, 0.004, vol, dur);
+  s.connect(f); f.connect(g); g.connect(master);
+  s.start(T, Math.random()); s.stop(T + dur + 0.05);
+}
+
+const last = {};
+function sfx(name, vol = 1) {
+  if (!ctx || !audio.on) return;
+  const now = performance.now();
+  if (last[name] && now - last[name] < 45) return; // niet 30 keer tegelijk
+  last[name] = now;
+  const v = Math.max(0.05, Math.min(1, vol));
+  switch (name) {
+    case 'stretch': tone('sawtooth', 90, 160, 0.25, 0.05 * v); break;
+    case 'launch': tone('sawtooth', 220, 60, 0.3, 0.18); noise('bandpass', 900, 1, 0.35, 0.25, 0, 300); break;
+    case 'wood': noise('bandpass', 700 + Math.random() * 300, 3, 0.18, 0.5 * v); tone('square', 180, 90, 0.08, 0.06 * v); break;
+    case 'ice': noise('highpass', 3500, 1, 0.25, 0.35 * v); tone('sine', 2400 + Math.random() * 800, 1800, 0.3, 0.08 * v); break;
+    case 'stone': noise('lowpass', 500, 1, 0.3, 0.55 * v); tone('sine', 90, 50, 0.2, 0.2 * v); break;
+    case 'kaas': noise('lowpass', 900, 2, 0.15, 0.4 * v); tone('sine', 300, 120, 0.12, 0.1 * v); break;
+    case 'thud': tone('sine', 120, 40, 0.35, 0.35 * v); noise('lowpass', 300, 1, 0.3, 0.4 * v); break;
+    case 'boom':
+      noise('lowpass', 1600, 0.7, 1.1, 0.9 * v, 0, 120);
+      tone('sine', 110, 30, 0.8, 0.5 * v);
+      break;
+    case 'squeak': tone('square', 700, 1600, 0.12, 0.09); tone('square', 1400, 900, 0.1, 0.07, 0.11); noise('highpass', 2000, 1, 0.25, 0.15, 0.05); break;
+    case 'squeakhurt': tone('square', 900, 600, 0.09, 0.06 * v); break;
+    case 'bosspoof':
+      tone('sawtooth', 300, 60, 1.2, 0.15); tone('square', 1200, 200, 1.0, 0.06, 0.1);
+      noise('lowpass', 1200, 0.7, 1.4, 0.6, 0, 100);
+      break;
+    case 'laugh': for (let i = 0; i < 4; i++) tone('square', 900 + i * 60, 1300, 0.07, 0.04, i * 0.11); break;
+    case 'dive': noise('bandpass', 1800, 2, 0.5, 0.35, 0, 600); tone('sawtooth', 500, 1400, 0.25, 0.06); break;
+    case 'jet': noise('lowpass', 900, 1, 0.12, 0.22 * v); break;
+    case 'transform': tone('square', 200, 800, 0.15, 0.08); tone('square', 800, 150, 0.25, 0.08, 0.15); noise('highpass', 3000, 1, 0.2, 0.2, 0.1); break;
+    case 'glider': noise('bandpass', 1200, 3, 0.3, 0.3, 0, 400); tone('triangle', 400, 600, 0.15, 0.06); break;
+    case 'erase': noise('bandpass', 2600, 6, 0.22, 0.3); noise('bandpass', 1800, 6, 0.18, 0.25, 0.08); break;
+    case 'ground': noise('lowpass', 400, 1, 0.2, 0.3 * v); break;
+    case 'click': tone('square', 900, 700, 0.04, 0.05); break;
+    case 'win': [523, 659, 784, 1046].forEach((f, i) => tone('square', f, f, 0.16, 0.07, i * 0.12)); break;
+    case 'star': tone('triangle', 1300, 2000, 0.18, 0.1); break;
+    case 'lose': [392, 349, 311, 262].forEach((f, i) => tone('triangle', f, f * 0.98, 0.25, 0.08, i * 0.2)); break;
+  }
+}
+
+function setWind(speed) {
+  if (!windGain) return;
+  const t = ctx.currentTime;
+  windGain.gain.setTargetAtTime(audio.on ? Math.min(0.35, speed * 0.009) : 0, t, 0.1);
+  audio.windFilter.frequency.setTargetAtTime(300 + speed * 35, t, 0.1);
+}
+return { audio, unlock, setOn, sfx, setWind };
+})();
+
+/* =================================================================== scene */
+const { createStage } = (() => {
+// Renderer, licht, lucht en decor per wereld.
+
+function createStage(el) {
+  const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.BasicShadowMap;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  el.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(62, 1, 0.1, 900);
+
+  const hemi = new THREE.HemisphereLight('#e8f4ff', '#7a6a4f', 1.25);
+  scene.add(hemi);
+  const sun = new THREE.DirectionalLight('#fff4dc', 2.1);
+  sun.position.set(-30, 60, 10);
+  sun.target.position.set(0, 0, 45);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(1024, 1024);
+  const sc = sun.shadow.camera;
+  sc.left = -40; sc.right = 40; sc.top = 45; sc.bottom = -30; sc.near = 1; sc.far = 160;
+  scene.add(sun, sun.target);
+
+  // Lucht als grote bol met een verloop
+  const skyMat = new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, fog: false,
+    uniforms: { top: { value: new THREE.Color('#8fd3ff') }, bot: { value: new THREE.Color('#e7f6ff') } },
+    vertexShader: 'varying float h; void main(){ h = normalize(position).y; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+    fragmentShader: 'uniform vec3 top; uniform vec3 bot; varying float h; void main(){ float t = smoothstep(-0.05, 0.6, h); vec3 c = mix(bot, top, t); c = floor(c * 24.0) / 24.0; gl_FragColor = vec4(c,1.0); }',
+  });
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(600, 16, 12), skyMat);
+  scene.add(sky);
+  const sunDisc = new THREE.Mesh(new THREE.BoxGeometry(16, 16, 1), new THREE.MeshBasicMaterial({ color: '#fff3b0', fog: false }));
+  sunDisc.position.set(-160, 190, 420);
+  sunDisc.lookAt(0, 0, 0);
+  scene.add(sunDisc);
+
+  scene.fog = new THREE.Fog('#d9efff', 90, 420);
+
+  const decor = new THREE.Group();
+  scene.add(decor);
+  const sling = makeSlingshot();
+  scene.add(sling.group);
+  sling.setPouch(sling.rest);
+
+  const clouds = [];
+
+  function setWorld(w, seedBase = 1) {
+    decor.clear();
+    clouds.length = 0;
+    skyMat.uniforms.top.value.set(w.sky[0]);
+    skyMat.uniforms.bot.value.set(w.sky[1]);
+    scene.fog.color.set(w.fog);
+    renderer.setClearColor(w.fog);
+    const r = rng(seedBase * 97 + w.id.length);
+
+    const gtex = mat(w.ground).map.clone();
+    gtex.needsUpdate = true;
+    gtex.repeat.set(160, 160);
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(640, 640), new THREE.MeshLambertMaterial({ map: gtex }));
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    decor.add(ground);
+
+    // Paadje van de katapult naar het fort
+    const path = new THREE.Mesh(boxGeo(5, 0.04, 34, 1), mat(w.id === 'sneeuw' ? 'lake' : 'straw'));
+    path.position.set(0, 0.02, 14);
+    path.receiveShadow = true;
+    if (w.id !== 'sneeuw') decor.add(path);
+
+    const place = (obj, x, z, s = 1) => { obj.position.set(x, 0, z); obj.scale.setScalar(s); obj.rotation.y = r() * 6; decor.add(obj); };
+    const ring = (n, fn) => {
+      for (let i = 0; i < n; i++) {
+        const a = r() * Math.PI * 2;
+        const d = 20 + r() * 110;
+        const x = Math.cos(a) * d, z = 40 + Math.sin(a) * d;
+        // Niet in de vluchtlijn of op het fort
+        if (Math.abs(x) < 14 && z > -20 && z < 80) continue;
+        fn(x, z);
+      }
+    };
+    if (w.id === 'bos') {
+      ring(90, (x, z) => place(makeTree(r() < 0.25 ? 'pine' : 'oak', (r() * 1e6) | 0), x, z, 0.9 + r() * 0.7));
+    } else if (w.id === 'boer') {
+      place(makeBarn(), -26, 70, 1.2);
+      const silo = new THREE.Mesh(new THREE.CylinderGeometry(3, 3, 14, 10), mat('stone'));
+      silo.position.set(-36, 7, 76); decor.add(silo);
+      const cap = new THREE.Mesh(new THREE.ConeGeometry(3.3, 3, 10), mat('roof'));
+      cap.position.set(-36, 15.5, 76); decor.add(cap);
+      for (let i = 0; i < 12; i++) place(makeHayBale(), 18 + r() * 40, 20 + r() * 50, 1);
+      for (let i = 0; i < 5; i++) { const f = makeFence(10); f.position.set(-15, 0, 16 + i * 10.5); f.rotation.y = Math.PI / 2; decor.add(f); }
+      ring(40, (x, z) => place(makeTree('oak', (r() * 1e6) | 0), x, z, 0.8 + r() * 0.6));
+    } else {
+      const lake = new THREE.Mesh(new THREE.CylinderGeometry(18, 18, 0.06, 18), mat('lake'));
+      lake.position.set(30, 0.03, 40); decor.add(lake);
+      ring(80, (x, z) => place(makeTree('pine', (r() * 1e6) | 0), x, z, 0.9 + r() * 0.8));
+    }
+    // Bergen aan de horizon
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2 + r() * 0.3;
+      const m = makeMountain((r() * 1e6) | 0, w.id === 'sneeuw');
+      m.position.set(Math.cos(a) * 260, 0, 40 + Math.sin(a) * 260);
+      m.scale.setScalar(1 + r());
+      decor.add(m);
+    }
+    for (let i = 0; i < 14; i++) {
+      const c = makeCloud((r() * 1e6) | 0);
+      c.position.set((r() - 0.5) * 300, 35 + r() * 30, -60 + r() * 260);
+      c.userData.v = 0.6 + r() * 1.2;
+      decor.add(c);
+      clouds.push(c);
+    }
+  }
+
+  function tick(dt) {
+    for (const c of clouds) { c.position.x += c.userData.v * dt; if (c.position.x > 170) c.position.x = -170; }
+  }
+
+  let pixel = 0.5;
+  function resize() {
+    const w = el.clientWidth, h = el.clientHeight;
+    renderer.setPixelRatio(pixel === 1 ? Math.min(2, window.devicePixelRatio) : pixel);
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  return {
+    renderer, scene, camera, sling, setWorld, tick, resize,
+    setPixel(p) { pixel = p; resize(); },
+    get pixel() { return pixel; },
+  };
+}
+return { createStage };
+})();
+
+/* =================================================================== ui */
+const { playStory, say, icon, unlockedLevel, birdUnlocked, buildMenu, showCard, renderQueue, shout, pop } = (() => {
+// Pixel-icoontjes en schermen (menu, kaartjes, eindscherm).
+
+const ART = {
+  raaf: {
+    rows: ['....kkkk....', '...kkkkkk...', '..kkwkkwkk..', '..kkkggkkk..', '.kkkkggkkkk.', '.kkhhhhhhkk.', '.kkhsssshkk.', '.kksbssbskk.', '.kksssssskk.', '.kkssrrrskk.', '..kkpkkkkk..', '..kkkkkkpk..'],
+    c: { k: '#27222f', w: '#e9e3f2', g: '#77777f', h: '#1a1620', s: '#e2b48f', b: '#1b1b1b', r: '#7a2f2f', p: '#5b3d86' },
+  },
+  otis: {
+    rows: ['...cccccc...', '..c......c..', '.c.bbbbbb.c.', '.cbbwbbwbbc.', '.cbbkbbkbbc.', '.cBbbttbbBc.', '.cBbtnntbBc.', '..cbbppbbc..', '...cccccc...', '..eeeeeeee..', '.eeerrgyeee.', '.eeeeeeeeee.'],
+    c: { c: '#9fd8f0', b: '#b7854f', w: '#ffffff', k: '#1b1b1b', B: '#7b5532', t: '#e9cfa8', n: '#2a1d16', p: '#e46a7c', e: '#eef0f2', r: '#e5484d', g: '#3fb36b', y: '#f4c430' },
+  },
+  byte: {
+    rows: ['.kkkk..kkkk.', '...k....k...', '...k....k...', '....oooo....', '..oooooooo..', '.oonnnnnnoo.', '.oonnppnnoo.', '.oonnnnnnoo.', '.oooooooooo.', '.tttttttttt.', '..oooooooo..', '....oooo....'],
+    c: { k: '#2a2a2a', o: '#efe9df', n: '#1f2c5c', p: '#f7b98b', t: '#2bb3a3' },
+  },
+  guiseppe: {
+    rows: ['.....b......', '.....bll....', '..gggbgggg..', '.gggggggggg.', '.ggwgggwggg.', '.ggkgggkggg.', '.gggggggggg.', '.gggggggLgg.', '.ggggddgLLg.', '..gggggggg..', '...gggggg...', '............'],
+    c: { b: '#6b4424', l: '#3f8f2f', g: '#8cc63f', w: '#ffffff', k: '#1b1b1b', d: '#2f5e1a', L: '#dff0b8' },
+  },
+  ratjetoe: {
+    rows: ['..y.r.y.c...', '.yyyyyyyy...', 'pp.gggggg.pp', 'pPpggggggpPp', 'pppgwgwgggpp', '..ggRgRgggg.', '..gggggggggg', '..ggggggnngg', '...gggggTTg.', '....eeeeee..', '...eeeeeeee.', '...eeeeeeee.'],
+    c: { y: '#e6b422', r: '#e5484d', c: '#d8dde3', p: '#8a8c93', P: '#f2a0b4', g: '#8a8c93', w: '#ffffff', R: '#c3122f', n: '#f2a0b4', T: '#ffffff', e: '#3f7a4a' },
+  },
+};
+
+const $s = (id) => document.getElementById(id);
+
+// Speelt een rij scènes af. Klik, spatie of enter = verder; Esc = alles overslaan.
+function playStory(scenes, done) {
+  const box = $s('story');
+  const lines = [];
+  scenes.forEach((sc) => sc.lines.forEach((l, i) => lines.push({ sp: l[0], text: l[1], title: i === 0 ? sc.title : null })));
+  let i = -1, typing = null, full = '';
+  box.classList.remove('hidden');
+  const finish = () => {
+    clearInterval(typing);
+    box.classList.add('hidden');
+    removeEventListener('keydown', onKey, true);
+    box.onclick = null;
+    done();
+  };
+  const show = () => {
+    i++;
+    if (i >= lines.length) return finish();
+    const l = lines[i];
+    if (l.title) {
+      $s('storyTitle').textContent = l.title;
+      $s('storyTitle').classList.remove('go'); void $s('storyTitle').offsetWidth; $s('storyTitle').classList.add('go');
+    }
+    const narr = l.sp === 'verteller';
+    box.classList.toggle('narr', narr);
+    box.dataset.sp = l.sp;
+    $s('storyIc').innerHTML = narr ? '' : icon(l.sp, 84);
+    $s('storyName').textContent = narr ? '' : l.sp[0].toUpperCase() + l.sp.slice(1);
+    full = l.text;
+    const t = $s('storyText');
+    t.textContent = '';
+    let k = 0;
+    clearInterval(typing);
+    typing = setInterval(() => {
+      k += 2;
+      t.textContent = full.slice(0, k);
+      if (k >= full.length) { clearInterval(typing); typing = null; }
+    }, 18);
+    $s('storyNext').textContent = i === lines.length - 1 ? 'Verder ▸' : '▸';
+  };
+  const next = () => {
+    if (typing) { clearInterval(typing); typing = null; $s('storyText').textContent = full; return; }
+    show();
+  };
+  const onKey = (e) => {
+    if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); e.stopImmediatePropagation(); if (!e.repeat) next(); }
+    if (e.code === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); finish(); }
+  };
+  addEventListener('keydown', onKey, true);
+  box.onclick = (e) => { if (e.target.id === 'storySkip') finish(); else next(); };
+  show();
+}
+
+let sayTimer = null;
+function say(sp, text, ms = 4200) {
+  const b = $s('say');
+  b.innerHTML = `<div class="ic">${icon(sp, 44)}</div><div><b class="px">${sp[0].toUpperCase() + sp.slice(1)}</b>${text}</div>`;
+  b.classList.remove('hidden', 'out');
+  clearTimeout(sayTimer);
+  sayTimer = setTimeout(() => { b.classList.add('out'); sayTimer = setTimeout(() => b.classList.add('hidden'), 400); }, ms);
+}
+
+function icon(id, size = 36) {
+  const a = ART[id];
+  let s = `<svg width="${size}" height="${size}" viewBox="0 0 12 12" shape-rendering="crispEdges">`;
+  a.rows.forEach((row, y) => [...row].forEach((ch, x) => { if (a.c[ch]) s += `<rect x="${x}" y="${y}" width="1" height="1" fill="${a.c[ch]}"/>`; }));
+  return s + '</svg>';
+}
+
+const $ = (id) => document.getElementById(id);
+
+function unlockedLevel(save, i) { return i === 0 || (save.stars[i - 1] || 0) > 0; }
+
+// Een vlieger is vrij zodra het eerste level waarin hij meedoet open is
+function birdUnlocked(save, id) {
+  const first = LEVELS.findIndex((l) => l.birds.includes(id));
+  return first >= 0 && unlockedLevel(save, first);
+}
+
+function buildMenu(save, onPick) {
+  const w = $('worlds');
+  w.innerHTML = '';
+  WORLDS.forEach((wd, wi) => {
+    const idx = LEVELS.map((l, i) => [l, i]).filter(([l]) => l.world === wi);
+    const total = idx.reduce((s, [, i]) => s + (save.stars[i] || 0), 0);
+    const el = document.createElement('div');
+    el.className = 'world panel';
+    el.innerHTML = `<h3 class="px">${wd.name}<span>★ ${total}/${idx.length * 3}</span></h3><div class="lv"></div>`;
+    const grid = el.querySelector('.lv');
+    idx.forEach(([l, i]) => {
+      const b = document.createElement('button');
+      const open = unlockedLevel(save, i);
+      const st = save.stars[i] || 0;
+      b.className = 'lvb' + (open ? '' : ' lock') + (l.rodents.some((r) => r.k === 'ratjetoe') ? ' boss' : '');
+      b.title = open ? l.name : 'Haal eerst het vorige level';
+      b.innerHTML = open
+        ? `${i + 1}<span class="st">${'<b>★</b>'.repeat(st)}${'★'.repeat(3 - st)}</span>`
+        : `🔒<span class="st">&nbsp;</span>`;
+      if (open) b.onclick = () => onPick(i);
+      grid.appendChild(b);
+    });
+    w.appendChild(el);
+  });
+  const r = $('roster');
+  r.innerHTML = '';
+  Object.entries(BIRDS).forEach(([id, B]) => {
+    const open = birdUnlocked(save, id);
+    const d = document.createElement('div');
+    d.className = 'who' + (open ? '' : ' lock');
+    d.innerHTML = `<div class="ic">${icon(id, 40)}</div><div><b>${open ? B.name : '???'}</b> ${open ? `<span class="px" style="font-size:10px;color:var(--oranje)">· ${B.ability}</span>` : ''}<small>${open ? B.how : 'Speel verder om deze vlieger vrij te spelen.'}</small></div>`;
+    r.appendChild(d);
+  });
+}
+
+function showCard(id, done) {
+  const B = BIRDS[id];
+  $('cardIc').innerHTML = icon(id, 96);
+  $('cardName').textContent = B.name;
+  $('cardDesc').textContent = B.desc;
+  $('cardAb').textContent = `${B.ability} · ${B.key}`;
+  $('cardHow').textContent = B.how;
+  $('card').classList.remove('hidden');
+  $('cardOk').onclick = () => { $('card').classList.add('hidden'); done(); };
+}
+
+function renderQueue(birds, cur) {
+  const q = $('queue');
+  q.innerHTML = birds.map((id, i) => `<div class="qb ${i === cur ? 'cur' : ''} ${i < cur ? 'used' : ''}">${icon(id, i === cur ? 40 : 30)}${i === cur ? `<span class="px">${BIRDS[id].name}</span>` : ''}</div>`).join('');
+}
+
+function shout(text) {
+  const s = $('shout');
+  s.textContent = text;
+  s.classList.remove('go');
+  void s.offsetWidth;
+  s.classList.add('go');
+}
+
+function pop(text, x, y, color, big) {
+  const p = document.createElement('div');
+  p.className = 'pop' + (big ? ' big' : '');
+  p.textContent = text;
+  p.style.left = x + 'px';
+  p.style.top = y + 'px';
+  if (color) p.style.color = color;
+  $('pops').appendChild(p);
+  setTimeout(() => p.remove(), 1150);
+}
+return { playStory, say, icon, unlockedLevel, birdUnlocked, buildMenu, showCard, renderQueue, shout, pop };
+})();
+
+/* =================================================================== main */
+
+const $ = (id) => document.getElementById(id);
+const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
+const UP = V(0, 1, 0);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+
+/* ---------------------------------------------------------------- opslag */
+const SAVE_KEY = 'raaf_lanceer_v1';
+const save = { stars: {}, best: {}, seen: {}, story: {}, sound: true, pixel: 0.6 };
+try { Object.assign(save, JSON.parse(localStorage.getItem(SAVE_KEY)) || {}); } catch (e) { /* geen opslag */ }
+save.story = save.story || {};
+const persist = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* prima */ } };
+
+/* ---------------------------------------------------------------- wereld */
+const stage = createStage($('stage'));
+const { scene, camera, renderer, sling } = stage;
+stage.setPixel(save.pixel);
+
+let shake = 0;
+let killedThisBird = 0;
+const game = {
+  state: 'menu', paused: false, level: 0, L: null, birdIdx: 0, score: 0, bird: null,
+  t: 0, stateT: 0, t2: 0, t3: 0, newBirds: [],
+};
+
+const world = new World(scene, {
+  score(pts, pos, color) {
+    game.score += pts;
+    popAt(pos, pts >= 5000 ? `+${pts}` : `+${pts}`, color === '#7a3fbf' ? '#ffd23f' : '#ffffff', pts >= 5000);
+    updateHud();
+  },
+  sound: (n, v) => sfx(n, v),
+  shake: (a) => (shake = Math.max(shake, a)),
+  poof() { killedThisBird++; updateHud(); },
+});
+
+/* ------------------------------------------------------- mikken & dots */
+const dotGeo = new THREE.BoxGeometry(0.16, 0.16, 0.16);
+const dotMat = new THREE.MeshBasicMaterial({ color: '#ffffff' });
+const trailMat = new THREE.MeshBasicMaterial({ color: '#fff3c4', transparent: true, opacity: 0.75 });
+const preview = [];
+for (let i = 0; i < 22; i++) { const m = new THREE.Mesh(dotGeo, dotMat); m.visible = false; scene.add(m); preview.push(m); }
+const trail = [];
+function clearTrail() { trail.forEach((m) => scene.remove(m)); trail.length = 0; }
+
+/* --------------------------------------------------------------- input */
+const mouse = { x: 0, y: 0, down: false, ref: { x: 0, y: 0 } };
+addEventListener('mousemove', (e) => {
+  mouse.x = (e.clientX / innerWidth) * 2 - 1;
+  mouse.y = (e.clientY / innerHeight) * 2 - 1;
+});
+$('stage').addEventListener('mousedown', (e) => {
+  unlock();
+  if (e.button === 2) { cancelCharge(); return; }
+  if (e.button !== 0) return;
+  mouse.down = true;
+  press();
+});
+addEventListener('mouseup', (e) => { if (e.button === 0) { mouse.down = false; release(); } });
+addEventListener('contextmenu', (e) => e.preventDefault());
+addEventListener('keydown', (e) => {
+  if (e.repeat) return;
+  if (e.code === 'Space') { e.preventDefault(); unlock(); mouse.down = true; press(true); }
+  if (e.code === 'KeyR' && game.state !== 'menu' && game.state !== 'story') startLevel(game.level);
+  if (e.code === 'Escape') togglePause();
+});
+addEventListener('keyup', (e) => { if (e.code === 'Space') { mouse.down = false; release(true); } });
+
+/* --------------------------------------------------------------- vliegers */
+const MODELS = { raaf: makeRaaf, otis: makeOtis, byte: makeByte, guiseppe: makeGuiseppe };
+const aim = { yaw: 0, pitch: 0.45, power: 0, charging: false };
+
+function spawnBird() {
+  if (game.bird) scene.remove(game.bird.model.group);
+  const id = game.L.birds[game.birdIdx];
+  const B = BIRDS[id];
+  const model = MODELS[id]();
+  scene.add(model.group);
+  game.bird = {
+    id, B, model, pos: sling.rest.clone(), vel: V(), mass: B.mass, g: B.gravity, steer: B.steer,
+    mult: { ...B.mult }, used: false, hit: false, hitT: 0, mode: 'idle', t: 0, slowT: 0,
+    fuel: 1.8, jetting: false, mech: false, glide: false, erases: 0, diving: false, done: false, shocked: false,
+    view: V(0, 0, 1),
+  };
+  renderQueue(game.L.birds, game.birdIdx);
+  setHint();
+}
+
+function aimDir() {
+  return V(Math.sin(aim.yaw) * Math.cos(aim.pitch), Math.sin(aim.pitch), Math.cos(aim.yaw) * Math.cos(aim.pitch));
+}
+
+function press(fromKey) {
+  if (game.paused) return;
+  if (game.state === 'story' || game.state === 'menu') return;
+  const b = game.bird;
+  if (game.state === 'intro') { game.stateT = 99; return; }
+  if (game.state === 'aim' && b && !fromKey) {
+    aim.charging = true; aim.power = 0;
+    sfx('stretch', 1);
+  } else if (game.state === 'aim' && b && fromKey) {
+    aim.charging = true; aim.power = 0;
+  } else if (game.state === 'fly' && b && !b.hit) {
+    useAbility();
+  } else if (game.state === 'watch') {
+    game.stateT = 6; // sneller door
+  }
+}
+function release() {
+  const b = game.bird;
+  if (b && b.jetting) { b.jetting = false; b.model.anim(0, 'idle'); }
+  if (game.state === 'aim' && aim.charging) launch();
+}
+function cancelCharge() { aim.charging = false; aim.power = 0; }
+
+function launch() {
+  aim.charging = false;
+  const b = game.bird;
+  const dir = aimDir();
+  const speed = b.B.power * (0.35 + 0.65 * aim.power);
+  b.pos.copy(pouchPos());
+  b.vel.copy(dir).multiplyScalar(speed);
+  b.mode = 'fly';
+  game.state = 'fly';
+  game.stateT = 0;
+  startBlend();
+  mouse.ref.x = mouse.x; mouse.ref.y = mouse.y;
+  preview.forEach((p) => (p.visible = false));
+  clearTrail();
+  killedThisBird = 0;
+  sfx('launch');
+  shake = 0.25;
+  sling.setPouch(sling.rest);
+  setHint();
+  $('power').classList.add('hidden');
+}
+
+function pouchPos() {
+  return sling.rest.clone().addScaledVector(aimDir(), -1.6 * aim.power);
+}
+
+function useAbility() {
+  const b = game.bird;
+  if (b.used) return;
+  const sp = b.vel.length();
+  const v = b.view.clone();
+  if (b.id === 'raaf') {
+    b.used = true; b.diving = true;
+    b.vel.copy(v).multiplyScalar(Math.max(sp * 1.7, 40));
+    for (const k in b.mult) b.mult[k] *= k === 'wood' ? 2 : 1.7;
+    b.mode = 'dive';
+    sfx('dive'); shake = 0.3;
+    for (let i = 0; i < 14; i++) world.particle(b.pos.clone(), V().randomDirection().multiplyScalar(3), i % 2 ? '#16131b' : '#5b3d86', 0.15, 1.2, 0.2);
+    shout('Duikvlucht!');
+  } else if (b.id === 'otis') {
+    if (b.fuel <= 0) return;
+    b.jetting = true;
+    b.mult.ice = Math.max(b.mult.ice, 3.2);
+  } else if (b.id === 'byte') {
+    b.used = true; b.mech = true; b.smash = 7;
+    b.model.setMech(true);
+    b.mass = 4;
+    b.mult = { ...b.B.mechMult };
+    // Zware duik naar waar je kijkt, altijd met een flinke hoek omlaag
+    const d = v.clone();
+    d.y = Math.min(d.y, -0.55);
+    d.normalize();
+    b.vel.copy(d).multiplyScalar(Math.max(sp, 28));
+    b.g *= 3;
+    sfx('transform'); shake = 0.35;
+    shout('Transformeer!');
+  } else if (b.id === 'guiseppe') {
+    b.used = true; b.glide = true; b.erases = 4;
+    b.model.glider.visible = true;
+    b.g *= 0.22; b.steer *= 2.6;
+    sfx('glider');
+    shout('Zweefvlieger!');
+  }
+  setHint();
+}
+
+/* ------------------------------------------------------ vlucht-physics */
+const tmpV = V();
+function stepBird(dt) {
+  const b = game.bird;
+  b.t += dt;
+  const sp0 = b.vel.length();
+  const f = b.vel.clone().normalize();
+
+  // Kijkrichting: muis ten opzichte van waar hij stond bij de lancering
+  const mx = clamp((mouse.x - mouse.ref.x) * 1.7, -1, 1);
+  const my = clamp((mouse.y - mouse.ref.y) * 1.7, -1, 1);
+  const right = f.clone().cross(UP).normalize();
+  const camUp = right.clone().cross(f).normalize();
+  const dz = (v) => (Math.abs(v) < 0.05 ? 0 : v);
+  b.view.copy(f).addScaledVector(right, Math.tan(dz(mx) * 0.62)).addScaledVector(camUp, Math.tan(-dz(my) * 0.5)).normalize();
+  b.mx = mx;
+
+  if (!b.hit) {
+    // Bijsturen richting de kijkrichting, met een maximale zijwaartse versnelling
+    const lat = b.view.clone().addScaledVector(f, -b.view.dot(f));
+    const ang = Math.acos(clamp(b.view.dot(f), -1, 1));
+    if (lat.lengthSq() > 1e-6) {
+      lat.normalize();
+      const a = Math.min(b.steer, ang * Math.max(sp0, 1) * 2.5);
+      lat.multiplyScalar(a);
+      if (lat.y > 0) lat.y *= 0.45; // omhoog sturen kost meer moeite dan omlaag
+      b.vel.addScaledVector(lat, dt);
+      b.vel.setLength(sp0);
+    }
+    if (b.jetting) {
+      if (b.fuel > 0) {
+        b.fuel -= dt;
+        b.vel.addScaledVector(b.view, 30 * dt);
+        b.vel.y += b.g * 0.6 * dt;
+        sfx('jet', 0.8);
+        if (Math.random() < 0.7) world.particle(b.pos.clone().addScaledVector(f, -0.6), f.clone().multiplyScalar(-6).add(V().randomDirection()), Math.random() < 0.5 ? '#ffb627' : '#ff6a1f', 0.2, 0.4, -0.2);
+      } else { b.jetting = false; b.used = true; setHint(); }
+    }
+    if (b.glide) {
+      // Zweven: snelheid zakt rustig naar ~15 m/s
+      const s = b.vel.length();
+      if (s > 15) b.vel.multiplyScalar(1 - dt * 0.6);
+    }
+  }
+  b.vel.y -= (b.diving && !b.hit ? b.g * 0.25 : b.g) * dt;
+  b.vel.multiplyScalar(1 - 0.015 * dt);
+
+  const steps = Math.max(1, Math.ceil((b.vel.length() * dt) / 0.2));
+  const h = dt / steps;
+  for (let i = 0; i < steps; i++) {
+    b.pos.addScaledVector(b.vel, h);
+    collideBird(b);
+  }
+
+  // Spoor van de vorige worp, zoals in Angry Birds
+  if (!b.hit && (b.t * 12.5 | 0) > trail.length && trail.length < 220) {
+    const m = new THREE.Mesh(dotGeo, trailMat);
+    m.position.copy(b.pos);
+    m.scale.setScalar(trail.length % 3 === 0 ? 1.6 : 1);
+    scene.add(m); trail.push(m);
+  }
+
+  // Klaar?
+  const sp = b.vel.length();
+  if (b.hit && sp < 1.2) b.slowT += dt; else b.slowT = 0;
+  const out = b.pos.y < -6 || Math.abs(b.pos.x) > 160 || b.pos.z > 230 || b.pos.z < -40;
+  if (b.slowT > 0.7 || b.t > 14 || out || (b.hit && b.t - b.hitT > 6)) finishBird();
+}
+
+function hitOnce(b) {
+  if (!b.hit) {
+    b.hit = true; b.hitT = b.t; b.jetting = false;
+    b.model.group.visible = true;
+    setHint();
+  }
+}
+
+function collideBird(b) {
+  const r = b.model.radius;
+  // Knaagdieren
+  for (const rd of world.rodents) {
+    if (!rd.alive) continue;
+    const c = tmpV.copy(rd.pos); c.y += rd.r;
+    const d = c.distanceTo(b.pos);
+    if (d < r + rd.r) {
+      const sp = b.vel.length();
+      world.hurtRodent(rd, b.mass * sp * 1.6, b.pos);
+      if (rd.alive) {
+        const n = b.pos.clone().sub(c).normalize();
+        const vn = b.vel.dot(n);
+        if (vn < 0) b.vel.addScaledVector(n, -vn * 1.4);
+        b.pos.copy(c).addScaledVector(n, r + rd.r);
+        hitOnce(b);
+      } else b.vel.multiplyScalar(0.85);
+    }
+  }
+  // Vaste blokken
+  for (const bl of world.blocks) {
+    if (!bl.alive) continue;
+    const hit = bl.dyn ? world.sphereObb(b.pos, r, bl) : world.sphereAabb(b.pos, r, bl);
+    if (!hit) continue;
+    const vn = b.vel.dot(hit.n);
+    if (vn >= 0) { b.pos.copy(hit.q).addScaledVector(hit.n, r + 0.001); continue; }
+    const impact = -vn;
+    if (b.mech && !b.shocked) {
+      // Mech: dwars door alles heen naar beneden, tot de sloopbudget op is
+      const cost = Math.max(1, (bl.w * bl.h * bl.d) / 4);
+      if (b.smash >= cost || b.smash > 0 && cost <= 2) {
+        b.smash -= cost;
+        world.destroy(bl, V(0, -8, 0));
+        // Wat ernaast staat krijgt een flinke duw, zodat de toren omvalt
+        for (const o of world.blocks) {
+          if (!o.alive || o.pos.distanceTo(bl.pos) > 3.2) continue;
+          const away = o.pos.clone().sub(bl.pos).setY(0);
+          if (away.lengthSq() < 0.01) away.set(Math.random() - 0.5, 0, Math.random() - 0.5);
+          away.normalize();
+          world.dislodge(o, away.clone().multiplyScalar(4 / Math.max(0.5, Math.sqrt(o.mass))).setY(1), V(away.z, 0, -away.x).multiplyScalar(1.5));
+        }
+        b.vel.x *= 0.85; b.vel.z *= 0.85;
+        b.vel.y = Math.min(b.vel.y * 0.95, -14);
+        shake = Math.max(shake, 0.45);
+        continue;
+      }
+      mechShock(b);
+    }
+    if (impact < 1.5) { b.pos.copy(hit.q).addScaledVector(hit.n, r + 0.001); b.vel.addScaledVector(hit.n, -vn); continue; }
+    if (b.glide && b.erases > 0) {
+      // Guiseppe gumt alles weg wat hij raakt
+      b.erases--;
+      sfx('erase');
+      for (let i = 0; i < 10; i++) world.particle(hit.q.clone(), V().randomDirection().multiplyScalar(2.5), i % 2 ? '#dff0b8' : '#8cc63f', 0.12, 1);
+      world.destroy(bl, b.vel);
+      b.vel.multiplyScalar(0.9);
+      hitOnce(b);
+      continue;
+    }
+    const dmg = b.mass * impact * (b.mult[bl.m] || 1);
+    hitOnce(b);
+    if (dmg >= bl.hp) {
+      const hp = bl.hp;
+      world.damage(bl, dmg, b.vel.clone());
+      b.vel.multiplyScalar(Math.sqrt(Math.max(0.06, 1 - hp / dmg)));
+      shake = Math.max(shake, 0.2);
+      continue;
+    }
+    world.damage(bl, dmg, b.vel.clone());
+    const imp = b.mass * impact;
+    if (bl.dyn) {
+      // Twee bewegende dingen: impuls verdelen
+      const j = (1.3 * impact) / (1 / b.mass + 1 / bl.mass);
+      b.vel.addScaledVector(hit.n, j / b.mass);
+      bl.vel.addScaledVector(hit.n, -j / bl.mass);
+      bl.ang.add(V().randomDirection().multiplyScalar(j / bl.mass * 0.3));
+      world.wake(bl);
+    } else {
+      if (imp > bl.mass * 4 + 2) {
+        const push = b.vel.clone().multiplyScalar(Math.min(1.2, (imp / bl.mass) * 0.04));
+        world.dislodge(bl, push, V().crossVectors(b.vel.clone().normalize(), UP).multiplyScalar(-Math.min(3, imp / bl.mass * 0.08)));
+      }
+      b.vel.addScaledVector(hit.n, -vn * 1.3);
+      b.vel.multiplyScalar(0.65);
+    }
+    b.pos.copy(hit.q).addScaledVector(hit.n, r + 0.001);
+  }
+  // Grond
+  if (b.pos.y < r) {
+    const vy = -b.vel.y;
+    b.pos.y = r;
+    if (vy > 0) {
+      mechShock(b);
+      if (vy > 3) sfx('ground', vy / 15);
+      b.vel.y = vy * 0.3;
+      b.vel.x *= 0.75; b.vel.z *= 0.75;
+      if (vy > 4 && !b.hit) for (let i = 0; i < 6; i++) world.particle(b.pos.clone(), V((Math.random() - .5) * 3, 2, (Math.random() - .5) * 3), '#a4d36a', 0.15, 0.8);
+      hitOnce(b);
+    }
+    b.vel.x *= 0.985; b.vel.z *= 0.985;
+  }
+}
+
+function mechShock(b) {
+  if (b.mech && !b.shocked) {
+    b.shocked = true;
+    hitOnce(b);
+    world.explode(b.pos.clone(), 5.5, 55, { soft: true });
+  }
+}
+
+function finishBird() {
+  const b = game.bird;
+  if (b.done) return;
+  b.done = true;
+  for (let i = 0; i < 16; i++) world.particle(b.pos.clone(), V().randomDirection().multiplyScalar(3), '#ffffff', 0.25, 0.8, -0.1);
+  scene.remove(b.model.group);
+  if (!killedThisBird && world.rodentsLeft) { world.laugh(); sfx('laugh'); }
+  game.state = 'watch';
+  game.stateT = 0;
+  setWind(0);
+  setHint();
+}
+
+/* ---------------------------------------------------------------- camera */
+const cam = { pos: V(), look: V(), fov: 62 };
+const camFrom = { pos: V(), look: V() };
+let blendT = 1;
+function aimCam(out) {
+  const flat = V(Math.sin(aim.yaw), 0, Math.cos(aim.yaw));
+  out.pos.copy(sling.rest).addScaledVector(flat, -6.5).add(V(0, 1.6 + aim.pitch * 1.2, 0));
+  out.look.copy(sling.rest).addScaledVector(flat, 30).add(V(0, 1 + aim.pitch * 9, 0));
+  return out;
+}
+function watchCam(out) {
+  const c = world.center();
+  out.pos.set(c.x - 13, Math.max(8, c.y + 7), c.z - 17);
+  out.look.copy(c).add(V(0, 0.5, 0));
+  return out;
+}
+function startBlend() { camFrom.pos.copy(cam.pos); camFrom.look.copy(cam.look); blendT = 0; }
+
+const camQuat = new THREE.Quaternion();
+function updateCamera(dt) {
+  const b = game.bird;
+  const tgt = { pos: V(), look: V() };
+  let fov = 62, roll = 0, fp = false;
+  if (game.state === 'intro') {
+    const k = clamp(game.stateT / 3, 0, 1);
+    const e = k * k * (3 - 2 * k);
+    const w = watchCam({ pos: V(), look: V() });
+    w.pos.add(V(10, 6, 2));
+    const a = aimCam({ pos: V(), look: V() });
+    tgt.pos.lerpVectors(w.pos, a.pos, e);
+    tgt.look.lerpVectors(w.look, a.look, e);
+  } else if (game.state === 'aim' || game.state === 'card') {
+    aimCam(tgt);
+  } else if (game.state === 'fly' && b && !b.hit) {
+    fp = true;
+    tgt.pos.copy(b.pos).add(V(0, b.model.eye.y * 0.6, 0));
+    tgt.look.copy(tgt.pos).add(b.view);
+    const sp = b.vel.length();
+    fov = 62 + clamp((sp - 14) * 0.9, 0, 26);
+    roll = -(b.mx || 0) * 0.22;
+  } else if (game.state === 'fly' && b) {
+    const dir = V(b.vel.x, 0, b.vel.z);
+    if (dir.lengthSq() < 0.5) dir.set(0, 0, 1);
+    dir.normalize();
+    tgt.pos.copy(b.pos).addScaledVector(dir, -8).add(V(0, 4, 0));
+    tgt.look.copy(b.pos);
+  } else if (game.state === 'story') {
+    // Langzaam rond het fort draaien terwijl er gepraat wordt
+    const c = world.center();
+    const a = game.t * 0.12;
+    tgt.pos.set(c.x + Math.sin(a) * 22, c.y + 9, c.z - Math.cos(a) * 22);
+    tgt.look.copy(c).add(V(0, 1.5, 0));
+  } else {
+    watchCam(tgt);
+  }
+
+  // Vloeiend overvloeien bij een wissel van camera
+  if (blendT < 1) {
+    blendT = Math.min(1, blendT + dt / (fp ? 0.38 : 0.9));
+    const e = blendT * blendT * (3 - 2 * blendT);
+    cam.pos.lerpVectors(camFrom.pos, tgt.pos, e);
+    cam.look.lerpVectors(camFrom.look, tgt.look, e);
+  } else if (fp) {
+    cam.pos.copy(tgt.pos); cam.look.copy(tgt.look);
+  } else {
+    const k = 1 - Math.exp(-dt * (game.state === 'fly' ? 6 : 3.5));
+    cam.pos.lerp(tgt.pos, k); cam.look.lerp(tgt.look, k);
+  }
+  cam.fov = lerp(cam.fov, fov, 1 - Math.exp(-dt * 6));
+  camera.position.copy(cam.pos);
+  camera.lookAt(cam.look);
+  if (roll) camera.rotateZ(roll);
+  if (shake > 0.001) {
+    camera.position.add(V((Math.random() - .5) * shake, (Math.random() - .5) * shake, (Math.random() - .5) * shake));
+    shake *= Math.exp(-dt * 7);
+  }
+  if (Math.abs(camera.fov - cam.fov) > 0.05) { camera.fov = cam.fov; camera.updateProjectionMatrix(); }
+
+  // First person: het eigen model verbergen, overlay tonen
+  const showFp = fp && blendT > 0.6;
+  if (b && !b.done) b.model.group.visible = !showFp;
+  ['raaf', 'otis', 'byte', 'guiseppe'].forEach((id) => $('fp-' + id).classList.toggle('on', showFp && b && b.id === id));
+  $('cross').classList.toggle('hidden', !showFp);
+  if (b) {
+    $('cross').classList.toggle('used', b.used && !b.jetting);
+    $('fp-raaf').classList.toggle('dive', !!b.diving);
+    $('fp-otis').classList.toggle('jet', !!b.jetting);
+    $('fp-byte').classList.toggle('mech', !!b.mech);
+    $('fp-guiseppe').classList.toggle('glide', !!b.glide);
+  }
+  const sp = b && game.state === 'fly' ? b.vel.length() : 0;
+  $('speed').style.opacity = showFp ? clamp((sp - 20) / 28, 0, 0.75) : 0;
+}
+
+/* ---------------------------------------------------------------- level */
+function startLevel(i) {
+  game.level = i;
+  game.L = LEVELS[i];
+  game.birdIdx = 0;
+  game.score = 0;
+  game.paused = false;
+  $('pause').classList.add('hidden');
+  $('end').classList.add('hidden');
+  $('menu').classList.add('hidden');
+  $('hud').classList.remove('hidden');
+  stage.setWorld(WORLDS[game.L.world], i + 1);
+  world.load(game.L);
+  clearTrail();
+  aim.yaw = 0; aim.pitch = 0.42; aim.power = 0; aim.charging = false;
+  sling.setPouch(sling.rest);
+  const rod = game.L.rodents.reduce((s, r) => s + RODENT[r.k].score, 0);
+  const blk = game.L.blocks.reduce((s, b) => s + MATS[b.m].score, 0);
+  game.t2 = rod + blk * 0.3;
+  game.t3 = rod + blk * 0.3 + 10000 * Math.ceil((game.L.birds.length - 1) / 2);
+  spawnBird();
+  $('lvlname').innerHTML = `${i + 1} · ${game.L.name}<small>${WORLDS[game.L.world].name}</small>`;
+  $('boss').classList.toggle('hidden', !world.boss);
+  game.newBirds = [...new Set(game.L.birds)].filter((id) => !save.seen[id]);
+  const wv = watchCam({ pos: V(), look: V() });
+  cam.pos.copy(wv.pos).add(V(10, 6, 2)); cam.look.copy(wv.look);
+  blendT = 1;
+  updateHud();
+  // Proloog en wereld-intro altijd eerst, ook als je halverwege instapt
+  const wk = ['bos', 'boer', 'sneeuw'][game.L.world];
+  const pending = [...new Set(['proloog', wk, ...(BEFORE[i] || [])])].filter((k) => !save.story[k]);
+  if (pending.length) {
+    game.state = 'story';
+    $('hud').classList.add('hidden');
+    playStory(pending.map((k) => SCENES[k]), () => {
+      pending.forEach((k) => (save.story[k] = true));
+      persist();
+      $('hud').classList.remove('hidden');
+      beginIntro();
+    });
+  } else beginIntro();
+}
+
+function beginIntro() {
+  game.state = 'intro';
+  game.stateT = 0;
+  const wv = watchCam({ pos: V(), look: V() });
+  cam.pos.copy(wv.pos).add(V(10, 6, 2)); cam.look.copy(wv.look);
+  shout(game.L.name);
+  const line = LEVEL_LINES[game.level];
+  if (line) setTimeout(() => game.state !== 'menu' && say(line[0], line[1]), 900);
+}
+
+function nextCard(done) {
+  const id = game.newBirds.shift();
+  if (!id) return done();
+  save.seen[id] = true; persist();
+  game.state = 'card';
+  showCard(id, () => nextCard(done));
+}
+
+function afterSettle() {
+  if (world.rodentsLeft === 0) return win();
+  if (game.birdIdx + 1 < game.L.birds.length) {
+    game.birdIdx++;
+    spawnBird();
+    startBlend();
+    game.state = 'aim';
+    return;
+  }
+  lose();
+}
+
+function win() {
+  game.state = 'end';
+  const left = game.L.birds.length - game.birdIdx - 1;
+  for (let i = 0; i < left; i++) {
+    setTimeout(() => { game.score += 10000; updateHud(); pop('+10000', innerWidth / 2, innerHeight * 0.4, '#ffd23f', true); sfx('star'); }, 400 + i * 450);
+  }
+  setTimeout(() => {
+    const s = game.score;
+    const stars = 1 + (s >= game.t2 ? 1 : 0) + (s >= game.t3 ? 1 : 0);
+    save.stars[game.level] = Math.max(save.stars[game.level] || 0, stars);
+    save.best[game.level] = Math.max(save.best[game.level] || 0, s);
+    persist();
+    const showEnd = () => {
+      $('endTitle').textContent = world.boss ? 'De beker is terug!' : 'Fort gesloopt!';
+      $('endStars').innerHTML = '<b>★</b>'.repeat(stars) + '★'.repeat(3 - stars);
+      $('endScore').textContent = s.toLocaleString('nl-NL');
+      const nxt = game.level + 1 < LEVELS.length;
+      $('endNote').textContent = world.boss
+        ? 'Ratjetoe is verslagen en de Combat-beker staat weer op Raafs kamer. Gepoetst, twee keer.'
+        : `Record: ${(save.best[game.level] || 0).toLocaleString('nl-NL')}` + (left ? ` · ${left} vlieger${left > 1 ? 's' : ''} over (+${left * 10000})` : '');
+      $('endNext').classList.toggle('hidden', !nxt);
+      $('end').classList.remove('hidden');
+      sfx('win');
+      [0, 1, 2].slice(0, stars).forEach((k) => setTimeout(() => sfx('star'), 380 + k * 350));
+    };
+    if (world.boss && !save.story.einde) {
+      game.state = 'story';
+      $('hud').classList.add('hidden');
+      playStory([SCENES.einde], () => {
+        save.story.einde = true; persist();
+        game.state = 'end';
+        $('hud').classList.remove('hidden');
+        showEnd();
+      });
+    } else showEnd();
+  }, 600 + left * 450);
+}
+
+function lose() {
+  game.state = 'end';
+  world.laugh();
+  sfx('lose');
+  $('endTitle').textContent = 'De knaagdieren lachen je uit';
+  $('endStars').innerHTML = '★★★';
+  $('endScore').textContent = game.score.toLocaleString('nl-NL');
+  $('endNote').textContent = `Nog ${world.rodentsLeft} over. Probeer een andere hoek, of bewaar je ability voor vlak voor de inslag.`;
+  $('endNext').classList.add('hidden');
+  $('end').classList.remove('hidden');
+}
+
+/* ------------------------------------------------------------------ HUD */
+function updateHud() {
+  $('score').querySelector('span').textContent = game.score.toLocaleString('nl-NL');
+  const n = world.rodentsLeft;
+  $('left').textContent = `🐀 nog ${n}`;
+  const boss = world.boss;
+  if (boss) $('boss').querySelector('i').style.width = (boss.alive ? (Math.max(0, boss.hp) / boss.maxHp) * 100 : 0) + '%';
+}
+
+function setHint() {
+  const b = game.bird;
+  const h = $('hint');
+  if (!b) return (h.innerHTML = '');
+  if (game.state === 'aim') h.innerHTML = `Muis = mikken · <b>houd klik ingedrukt</b> om te spannen · loslaten = lanceer`;
+  else if (game.state === 'fly' && !b.hit && !b.used) h.innerHTML = `Muis = kijken &amp; sturen · <b>${b.B.key}</b> = ${b.B.ability}`;
+  else if (game.state === 'fly' && !b.hit && b.glide) h.innerHTML = `Gummen: nog <b>${b.erases}</b> blokken`;
+  else if (game.state === 'watch') h.innerHTML = 'Klik om door te gaan';
+  else h.innerHTML = '';
+}
+
+const projV = V();
+function popAt(pos, text, color, big) {
+  projV.copy(pos).project(camera);
+  if (projV.z > 1) return;
+  pop(text, (projV.x + 1) / 2 * innerWidth, (1 - projV.y) / 2 * innerHeight, color, big);
+}
+
+/* ---------------------------------------------------------------- pauze */
+function togglePause() {
+  if (game.state === 'menu' || game.state === 'end' || game.state === 'card' || game.state === 'story') return;
+  game.paused = !game.paused;
+  $('pause').classList.toggle('hidden', !game.paused);
+  if (game.paused) setWind(0);
+}
+function toMenu() {
+  game.state = 'menu';
+  game.paused = false;
+  ['pause', 'end', 'hud', 'card'].forEach((id) => $(id).classList.add('hidden'));
+  $('menu').classList.remove('hidden');
+  buildMenu(save, (i) => { sfx('click'); startLevel(i); });
+  setWind(0);
+}
+const PIX = [[0.4, 'grof'], [0.6, 'groot'], [1, 'uit']];
+function soundLabel() { return `${save.sound ? '🔊' : '🔇'} Geluid: ${save.sound ? 'aan' : 'uit'}`; }
+function pixLabel() { return `▦ Pixels: ${(PIX.find((p) => p[0] === save.pixel) || PIX[1])[1]}`; }
+function toggleSound() { save.sound = !save.sound; setOn(save.sound); persist(); $('sndBtn').textContent = $('pSnd').textContent = soundLabel(); }
+function togglePix() {
+  const i = PIX.findIndex((p) => p[0] === save.pixel);
+  save.pixel = PIX[(i + 1) % PIX.length][0];
+  stage.setPixel(save.pixel); persist();
+  $('pixBtn').textContent = $('pPix').textContent = pixLabel();
+}
+$('sndBtn').onclick = () => { unlock(); toggleSound(); };
+$('pSnd').onclick = toggleSound;
+$('pixBtn').onclick = togglePix;
+$('pPix').onclick = togglePix;
+$('pauseBtn').onclick = togglePause;
+$('pResume').onclick = togglePause;
+$('pRetry').onclick = () => startLevel(game.level);
+$('pMenu').onclick = toMenu;
+$('endMenu').onclick = toMenu;
+$('endRetry').onclick = () => startLevel(game.level);
+$('endNext').onclick = () => startLevel(Math.min(LEVELS.length - 1, game.level + 1));
+$('playBtn').onclick = () => {
+  unlock(); sfx('click');
+  // Eerste level zonder sterren, anders het laatste open level
+  let i = LEVELS.findIndex((_, k) => !(save.stars[k] > 0));
+  if (i < 0) i = LEVELS.length - 1;
+  startLevel(i);
+};
+$('storyBtn').onclick = () => {
+  unlock(); sfx('click');
+  const keys = ['proloog', 'bos', 'otis', 'boer', 'sneeuw', 'baas', 'einde'].filter((k) => k === 'proloog' || save.story[k]);
+  $('menu').classList.add('hidden');
+  game.state = 'story';
+  playStory(keys.map((k) => SCENES[k]), () => toMenu());
+};
+$('sndBtn').textContent = $('pSnd').textContent = soundLabel();
+$('pixBtn').textContent = $('pPix').textContent = pixLabel();
+setOn(save.sound);
+
+/* ---------------------------------------------------------------- lus */
+let lastT = performance.now();
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.033, (now - lastT) / 1000);
+  lastT = now;
+  game.t += dt;
+  stage.tick(dt);
+
+  if (game.state === 'menu') {
+    // Langzaam rondcirkelen boven het eerste fort
+    const a = game.t * 0.08;
+    camera.position.set(Math.sin(a) * 34, 14, 50 - Math.cos(a) * 34);
+    camera.lookAt(0, 3, 50);
+    world.step(dt);
+    renderer.render(scene, camera);
+    return;
+  }
+  if (game.paused) { renderer.render(scene, camera); return; }
+
+  game.stateT += dt;
+  const b = game.bird;
+
+  if (game.state === 'intro' && game.stateT > 3) {
+    game.state = 'aim';
+    startBlend();
+    blendT = 1;
+    if (game.newBirds.length) nextCard(() => { game.state = 'aim'; setHint(); });
+    setHint();
+  }
+
+  if ((game.state === 'aim' || game.state === 'intro' || game.state === 'card') && b) {
+    const aiming = game.state === 'aim';
+    if (aiming) {
+      aim.yaw = lerp(aim.yaw, -mouse.x * 0.55, 1 - Math.exp(-dt * 10));
+      aim.pitch = lerp(aim.pitch, 0.06 + (1 - (mouse.y + 1) / 2) * 1.0, 1 - Math.exp(-dt * 10));
+    }
+    if (aim.charging && aiming) {
+      aim.power = Math.min(1, aim.power + dt / 1.1);
+      $('power').classList.remove('hidden');
+      $('power').querySelector('i').style.width = aim.power * 100 + '%';
+    } else $('power').classList.add('hidden');
+    const p = pouchPos();
+    sling.setPouch(p);
+    b.pos.copy(p).add(V(0, b.model.radius * 0.6, 0));
+    b.model.group.position.copy(b.pos);
+    b.model.group.lookAt(b.pos.clone().add(aimDir()));
+    b.model.anim(game.t, 'idle', dt);
+    // Voorspelde baan: alleen het eerste stuk, dan blijft het mikken spannend
+    const v = aimDir().multiplyScalar(b.B.power * (0.35 + 0.65 * Math.max(aim.power, 0.55)));
+    const q = p.clone();
+    preview.forEach((m, i) => {
+      const t = (i + 1) * 0.07;
+      m.position.set(q.x + v.x * t, q.y + v.y * t - 0.5 * b.g * t * t, q.z + v.z * t);
+      m.visible = aiming;
+      m.scale.setScalar(1 - i / 30);
+    });
+  }
+
+  if (game.state === 'fly' && b) {
+    stepBird(dt);
+    if (!b.done) {
+      b.model.group.position.copy(b.pos);
+      if (b.vel.lengthSq() > 0.5) b.model.group.lookAt(b.pos.clone().add(b.vel));
+      b.model.anim(game.t, b.jetting ? 'jet' : b.diving ? 'dive' : b.hit ? 'idle' : 'fly', dt);
+      setWind(b.hit ? 0 : b.vel.length());
+    }
+    if (b.id === 'otis' && !b.hit) {
+      $('fuel').classList.remove('hidden');
+      $('fuel').querySelector('i').style.width = clamp(b.fuel / 1.8, 0, 1) * 100 + '%';
+    } else $('fuel').classList.add('hidden');
+  } else $('fuel').classList.add('hidden');
+
+  world.step(dt);
+  if (world.boss) updateHud();
+
+  if (game.state === 'watch') {
+    if ((world.settled() && game.stateT > 1.4) || game.stateT > 6) afterSettle();
+  }
+  if (b && b.id === 'byte') b.model.anim(game.t);
+
+  updateCamera(dt);
+  renderer.render(scene, camera);
+}
+
+// Menu-achtergrond: het eerste level als decor
+stage.setWorld(WORLDS[0], 1);
+world.load(LEVELS[0]);
+toMenu();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
