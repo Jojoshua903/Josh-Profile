@@ -131,6 +131,18 @@ addEventListener('error', e => {
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
 
 // =====================================================================
+//  TOEVAL EN TIJD die bij online spelen op elke computer gelijk moeten lopen
+// =====================================================================
+// Math.random is het toeval van het SPEL (dobbelstenen, bots, minigames). Online wordt het op elke computer met hetzelfde
+// getal gestart, zodat iedereen exact hetzelfde potje speelt. fxRand is voor beeld en geluid: dat mag per computer verschillen.
+const _mathRandom = Math.random, fxRand = () => _mathRandom();
+// Later: zoals setTimeout, maar in speltijd (telt mee met de frames). Zo gebeurt het op elke computer op hetzelfde moment.
+const Later = { q: [],
+  add(sec, fn) { this.q.push({ t: sec, fn }); },
+  step(dt) { const due = []; for (const x of this.q) { x.t -= dt; if (x.t <= 0) due.push(x); } if (!due.length) return; this.q = this.q.filter(x => x.t > 0); for (const x of due) x.fn(); },
+  clear() { this.q = []; } };
+
+// =====================================================================
 //  INVOER: toetsenbord + controllers (Gamepad API)
 // =====================================================================
 // welke knop heet hoe, per apparaat (voor de hints op het scherm)
@@ -211,12 +223,14 @@ const Input = (() => {
         s[k] = !!r[k[0]] || s[k + 'P']; }   // a, b, e(mo), s(tart)
       navEdges(s, dt);
     }
-    for (const id of Object.keys(states)) if (!isKb(id) && !seen.has(id)) delete states[id];
+    for (const id of Object.keys(states)) if (!isKb(id) && !seen.has(id) && id[0] !== 'L') delete states[id];   // L0..L3: online-spelers, zie 61_lockstep.js
   }
   const get = id => states[id] || mk(id);
   const pads = () => Object.keys(states).filter(i => !isKb(i));
-  const label = id => id === 'kb' ? '⌨ Toetsenbord (WASD)' : id === 'kb2' ? '⌨ Toetsenbord (pijltjes)' : id.startsWith('np') ? '🌐 ' + Net.name(id) : '🎮 Controller ' + (parseInt(id.slice(2)) + 1);
-  return { poll, get, pads, label, all: () => Object.keys(states) };
+  const label = id => id === 'kb' ? '⌨ Toetsenbord (WASD)' : id === 'kb2' ? '⌨ Toetsenbord (pijltjes)' : id.startsWith('np') ? '🌐 ' + Net.name(id) : id.startsWith('rp') ? '📺 ' + Peer.name(id) : '🎮 Controller ' + (parseInt(id.slice(2)) + 1);
+  // online (eigen scherm): de knoppen van speler k voor deze tik, voor elke computer hetzelfde
+  const setNet = (id, v) => { states[id] = Object.assign(states[id] || mk(id), v); };
+  return { poll, get, pads, label, setNet, all: () => Object.keys(states).filter(id => id[0] !== 'L') };
 })();
 
 // =====================================================================
@@ -246,11 +260,11 @@ const Sfx = (() => {
   let nbuf = null;   // witte ruis voor trommels en bekkens
   function noise(d, vol = 0.1, hp = 1000, delay = 0) {
     if (!ctx || !opts.sound) return;
-    if (!nbuf) { nbuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate); const a = nbuf.getChannelData(0); for (let i = 0; i < a.length; i++) a[i] = Math.random() * 2 - 1; }
+    if (!nbuf) { nbuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate); const a = nbuf.getChannelData(0); for (let i = 0; i < a.length; i++) a[i] = fxRand() * 2 - 1; }
     const t = ctx.currentTime + delay, s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
     s.buffer = nbuf; f.type = 'highpass'; f.frequency.value = hp;
     g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0008, t + d);
-    s.connect(f); f.connect(g); g.connect(sfxGain); s.start(t, Math.random()); s.stop(t + d + 0.05);
+    s.connect(f); f.connect(g); g.connect(sfxGain); s.start(t, fxRand()); s.stop(t + d + 0.05);
   }
   const play = {
     move: () => tone(660, 0.06, 'square', 0.06),
@@ -258,15 +272,15 @@ const Sfx = (() => {
     back: () => tone(420, 0.12, 'triangle', 0.12, -160),
     join: () => [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.16, 'square', 0.08, 0, i * 0.07)),
     leave: () => [784, 523, 392].forEach((f, i) => tone(f, 0.14, 'triangle', 0.1, 0, i * 0.07)),
-    step: () => tone(140 + Math.random() * 40, 0.04, 'triangle', 0.05, -40),
+    step: () => tone(140 + fxRand() * 40, 0.04, 'triangle', 0.05, -40),
     jump: () => tone(300, 0.18, 'square', 0.07, 500),
     poof: () => tone(900, 0.25, 'sawtooth', 0.05, -700),
-    blip: p => tone(p * (0.92 + Math.random() * 0.16), 0.045, 'square', 0.035),
+    blip: p => tone(p * (0.92 + fxRand() * 0.16), 0.045, 'square', 0.035),
     wat: () => { tone(300, 0.1, 'square', 0.12, 400); tone(700, 0.25, 'square', 0.1, -200, 0.1); },
     lock: () => { tone(200, 0.1, 'square', 0.1); tone(150, 0.16, 'square', 0.1, 0, 0.09); },
     coin: () => { tone(1320, 0.05, 'square', 0.05); tone(1760, 0.09, 'square', 0.05, 0, 0.045); },
     lose: () => tone(520, 0.14, 'triangle', 0.08, -260),
-    tick: () => tone(1500 + Math.random() * 300, 0.02, 'square', 0.03),
+    tick: () => tone(1500 + fxRand() * 300, 0.02, 'square', 0.03),
     hit: () => { tone(200, 0.08, 'square', 0.12, 300); tone(880, 0.2, 'triangle', 0.08, 0, 0.05); },
     whoosh: () => tone(240, 0.4, 'sawtooth', 0.04, 900),
     fanfare: () => [523, 659, 784, 1046, 784, 1046].forEach((f, i) => tone(f, i > 3 ? 0.3 : 0.14, 'square', 0.08, 0, i * 0.11)),
@@ -287,9 +301,29 @@ const Sfx = (() => {
 //  Geen Firebase-bibliotheek nodig: alleen de REST-API (fetch om te schrijven, EventSource om mee te luisteren).
 //  De host speelt het spel en deelt zijn beeld (bijv. via Discord); online spelers zijn voor het spel gewoon controllers.
 // =====================================================================
+// het vaste adres van de Firebase Realtime Database van dit spel. Staat hij hier, dan hoeft niemand iets te plakken.
+// waarom lukt het niet? Een geblokkeerde verbinding, regels die nog niet gepubliceerd zijn, of iets anders
+async function dbCheck(db, code) {
+  let r; try { r = await fetch(`${db}/rooms/${code}.json`, { method: 'PUT', body: JSON.stringify({ t: Date.now(), test: 1 }) }); }
+  catch (e) { return location.protocol === 'file:' || /artifact|localhost|127\.0\.0\.1/.test(location.host + location.pathname) || location.origin === 'null'
+    ? 'Deze pagina mag geen verbinding met internet maken (je speelt hem waarschijnlijk in een voorbeeldvenster of als los bestand). Open het spel via je GitHub-adres.'
+    : 'Je browser of netwerk blokkeert de verbinding met Firebase (adblocker, school- of werknetwerk?). Probeer het zonder adblocker of op een ander netwerk.'; }
+  if (r.status === 401 || r.status === 403) return 'Firebase weigert: de regels staan nog niet goed. Klik in Firebase bij Rules op "Publiceren" (alleen plakken is niet genoeg).';
+  if (r.status === 404) return 'Firebase kent deze database niet. Klopt het adres?';
+  if (!r.ok) return `Firebase gaf foutcode ${r.status}.`;
+  return '';
+}
+// een melding die blijft staan tot je hem wegklikt (een toast is te snel weg om te lezen)
+function dbFail(why) {
+  let m = document.getElementById('netlink'); if (m) m.remove();
+  m = document.createElement('div'); m.id = 'netlink';
+  m.innerHTML = `<div><h3>❌ Online lukt niet</h3><p>${why}</p><div class="row"><button class="x">Oké</button></div></div>`;
+  document.body.appendChild(m); m.querySelector('.x').onclick = () => m.remove(); Sfx.play.bad();
+}
+const NET_DB = 'https://dihdih3-default-rtdb.europe-west1.firebasedatabase.app';
 const Net = (() => {
-  const qs = new URLSearchParams(location.search), ctrl = qs.has('join');
-  const st = { db: '', code: '', es: null, pads: {}, seen: {}, on: false, seat: {}, timer: 0 };
+  const qs = new URLSearchParams(location.search);
+  const st = { db: '', code: '', es: null, pads: {}, seen: {}, on: false, seat: {}, timer: 0, ctrl: qs.has('join') };
   const clean = u => (u || '').trim().replace(/\/+$/, '');
   const url = p => `${st.db}/rooms/${st.code}${p ? '/' + p : ''}.json`;
   const send = (p, v, method = 'PUT') => fetch(url(p), { method, body: v === undefined ? undefined : JSON.stringify(v), keepalive: true }).then(r => r.ok).catch(() => false);
@@ -298,8 +332,8 @@ const Net = (() => {
     const h = type => e => { try { const m = JSON.parse(e.data); if (m) fn(type, m.path, m.data); } catch (_) { } };
     es.addEventListener('put', h('put')); es.addEventListener('patch', h('patch')); return es;
   }
-  const makeCode = () => { const L = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; let s = ''; for (let i = 0; i < 4; i++) s += L[Math.floor(Math.random() * L.length)]; return s; };
-  const link = () => `${location.origin}${location.pathname}?join=${st.code}&db=${encodeURIComponent(st.db)}`;
+  const makeCode = () => { const L = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; let s = ''; for (let i = 0; i < 4; i++) s += L[Math.floor(fxRand() * L.length)]; return s; };
+  const link = () => `${location.origin}${location.pathname}?join=${st.code}${NET_DB ? '' : `&db=${encodeURIComponent(st.db)}`}`;
 
   // ---------- host: luistert naar alle controllers in de kamer ----------
   function setPad(id, v) {
@@ -331,11 +365,13 @@ const Net = (() => {
     chip();
   }
   async function host() {
-    let db = prompt('Plak de URL van je Firebase Realtime Database.\nVoorbeeld: https://wat-in-de-party-default-rtdb.europe-west1.firebasedatabase.app', localStorage.getItem('witp_db') || '');
+    if (typeof Peer !== 'undefined' && Peer.on) Peer.stop();
+    let db = NET_DB || prompt('Plak de URL van je Firebase Realtime Database.\nVoorbeeld: https://wat-in-de-party-default-rtdb.europe-west1.firebasedatabase.app', localStorage.getItem('witp_db') || '');
     if (!db) return; db = clean(db);
     if (!/^https:\/\/[^/]+\.(firebaseio\.com|firebasedatabase\.app)$/.test(db)) { toast('❌ Dat lijkt geen Firebase-database-URL. Hij begint met https:// en eindigt op firebasedatabase.app of firebaseio.com'); return; }
     localStorage.setItem('witp_db', db); st.db = db; st.code = makeCode();
-    if (!(await send('', { t: Date.now(), v: 1 }))) { toast('❌ Kon de database niet bereiken. Kloppen de URL en de regels? (stap 4 van de uitleg)'); return; }
+    { const why = await dbCheck(st.db, st.code); if (why) { dbFail(why); return; } }
+    await send('', { t: Date.now(), v: 1 });
     st.on = true; st.pads = {}; st.seen = {}; st.seat = {}; st.es = listen('pads', merge); st.timer = setInterval(seats, 1000);
     chip(); showLink(); Sfx.play.join();
   }
@@ -351,8 +387,8 @@ const Net = (() => {
   function showLink() {
     let m = document.getElementById('netlink'); if (m) m.remove();
     m = document.createElement('div'); m.id = 'netlink';
-    m.innerHTML = `<div><h3>🌐 Online spelen</h3><p>Kamercode <b class="code">${st.code}</b></p><p>Stuur deze link naar je vrienden. Op hun telefoon of laptop wordt het een controller. Deel je scherm (bijv. in Discord), dan zien ze het spel.</p>
-      <input readonly value="${link()}"><div class="row"><button class="cp">📋 Kopieer link</button><button class="x">Sluiten</button></div><p class="sm">Ze komen erbij als controller: op het plein drukken ze op Ⓐ om mee te doen, net als met een echte controller.</p></div>`;
+    m.innerHTML = `<div><h3>🌐 Online spelen</h3><p>Kamercode <b class="code">${st.code}</b></p><p>Je vrienden openen dit spel op hun telefoon of laptop, kiezen op het titelscherm <b>🌐 Meedoen met code</b> en typen <b>${st.code}</b>. Dan wordt hun apparaat een controller. Deel je scherm (bijv. in Discord), dan zien ze het spel.</p>
+      <p class="sm">Of stuur deze link, dan is de code al ingevuld:</p><input readonly value="${link()}"><div class="row"><button class="cp">📋 Kopieer link</button><button class="x">Sluiten</button></div><p class="sm">Op het plein drukken ze op Ⓐ om mee te doen, net als met een echte controller.</p></div>`;
     document.body.appendChild(m);
     m.querySelector('.cp').onclick = () => { const i = m.querySelector('input'); i.select(); (navigator.clipboard ? navigator.clipboard.writeText(i.value) : Promise.reject()).then(() => toast('📋 Link gekopieerd'), () => { document.execCommand('copy'); toast('📋 Link gekopieerd'); }); };
     m.querySelector('.x').onclick = () => m.remove();
@@ -360,17 +396,34 @@ const Net = (() => {
 
   // ---------- controller: deze pagina is de afstandsbediening ----------
   function runController() {
-    st.db = clean(qs.get('db')); st.code = (qs.get('join') || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
-    const id = localStorage.getItem('witp_id') || Math.random().toString(36).slice(2, 10); localStorage.setItem('witp_id', id);
+    st.db = clean(NET_DB || qs.get('db') || localStorage.getItem('witp_db')); st.code = (qs.get('join') || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+    const id = localStorage.getItem('witp_id') || fxRand().toString(36).slice(2, 10); localStorage.setItem('witp_id', id);
     const root = document.createElement('div'); root.id = 'netc'; document.body.appendChild(root);
     const S = { x: 0, y: 0, a: 0, b: 0, e: 0, s: 0, an: 0, bn: 0, en: 0, sn: 0, q: 0 };
     let nm = localStorage.getItem('witp_name') || '', last = '', lastT = 0, busy = false, live = false;
-    root.innerHTML = `<div class="join"><h2>🎉 Wat in de Party</h2><p>Kamer <b>${st.code || '?'}</b></p><input class="nm" maxlength="14" placeholder="Jouw naam" value="${nm.replace(/"/g, '')}"><button class="go">Meedoen</button><p class="err"></p></div>`;
+    root.innerHTML = `<div class="join"><div class="jc">
+      <div class="jlogo">🎉</div><h2>Wat in de Party</h2><p class="jsub">Doe mee met de kamer van een vriend</p>
+      <label>Kamercode</label>
+      <div class="tiles"><input class="cd" maxlength="4" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="kamercode" value="${st.code}"><b></b><b></b><b></b><b></b></div>
+      <label>Jouw naam</label><input class="nm" maxlength="14" placeholder="bijv. Daan" value="${nm.replace(/[<>&"]/g, '')}">
+      <button class="go">Meedoen! 🚀</button><p class="err"></p><button class="bk">← terug</button></div></div>`;
+    // de vier letter-tegels volgen wat je typt
+    const cdIn = root.querySelector('.cd'), tiles = [...root.querySelectorAll('.tiles b')], err = t => { const e = root.querySelector('.err'); e.textContent = t; e.classList.toggle('on', !!t); if (t) Sfx.play.bad(); };
+    const showTiles = () => { cdIn.value = cdIn.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4); const v = cdIn.value;
+      tiles.forEach((t, i) => { const was = t.textContent; t.textContent = v[i] || ''; t.classList.toggle('full', !!v[i]); t.classList.toggle('cur', i === Math.min(v.length, 3) && document.activeElement === cdIn); if (v[i] && was !== v[i]) { t.classList.remove('pop'); void t.offsetWidth; t.classList.add('pop'); } }); };
+    ['input', 'focus', 'blur'].forEach(ev => cdIn.addEventListener(ev, () => { showTiles(); if (ev === 'input') { err(''); if (cdIn.value.length === 4) root.querySelector('.nm').focus(); } }));
+    root.querySelector('.nm').addEventListener('keydown', e => { if (e.key === 'Enter') root.querySelector('.go').click(); });
+    showTiles(); setTimeout(() => (st.code.length === 4 ? root.querySelector('.nm') : cdIn).focus(), 50);
+    root.querySelector('.bk').onclick = () => { if (qs.has('join')) location.href = location.pathname; else { root.remove(); st.ctrl = false; } };
     root.querySelector('.go').onclick = async () => {
       nm = root.querySelector('.nm').value.trim() || 'Speler'; localStorage.setItem('witp_name', nm);
+      st.code = cdIn.value; if (st.code.length !== 4) { err('Een kamercode heeft 4 letters.'); return; } if (busy) return; busy = true; const go = root.querySelector('.go'); go.textContent = 'Kamer zoeken...'; go.disabled = true; const done = () => { busy = false; go.textContent = 'Meedoen! 🚀'; go.disabled = false; };
+      if (!st.db) { done(); err('Dit spel is nog niet aan een database gekoppeld. Gebruik de link van de host.'); return; }
       const ok = st.db && st.code.length === 4 && await fetch(url(''), { method: 'GET' }).then(r => r.ok ? r.json() : null).then(v => !!v).catch(() => false);
-      if (!ok) { root.querySelector('.err').textContent = 'Deze kamer bestaat niet (meer). Vraag de host om een nieuwe link.'; return; }
-      pad(); live = true; loop();
+      const room = ok && await fetch(url(''), { method: 'GET' }).then(r => r.json()).catch(() => null);
+      if (room && room.mode === 'scherm') { location.href = `${location.pathname}?play=${st.code}&n=${encodeURIComponent(nm)}`; return; }   // eigen scherm: dit wordt geen controller maar het spel zelf
+      if (!ok) { done(); err('Kamer ' + st.code + ' bestaat niet (meer). Klopt de code? Anders moet de host opnieuw een kamer maken.'); return; }
+      busy = false; pad(); live = true; loop();
     };
     function pad() {
       root.innerHTML = `<div class="top"><span class="seat">Verbonden als <b>${nm}</b> · druk op Ⓐ om mee te doen</span><span class="ping"></span></div>
@@ -422,7 +475,28 @@ const Net = (() => {
 #netlink{position:fixed;inset:0;z-index:9500;background:#0008;display:grid;place-items:center;font:16px system-ui}#netlink>div{background:#fff8ec;border:4px solid #2b2140;border-radius:20px;padding:18px 22px;max-width:520px;color:#2b2140}
 #netlink .code{font-size:32px;letter-spacing:4px}#netlink input{width:100%;font:14px monospace;padding:8px;border:2px solid #2b2140;border-radius:10px;margin:6px 0}#netlink .row{display:flex;gap:8px}#netlink button{flex:1;font:700 16px system-ui;padding:9px;border-radius:12px;border:3px solid #2b2140;background:#ffc93c;cursor:pointer}#netlink .sm{font-size:13px;opacity:.75}
 #netc{position:fixed;inset:0;z-index:99999;background:#2b2140;color:#fff;font:16px system-ui;touch-action:none;user-select:none;-webkit-user-select:none;--me:#ffc93c}
-#netc .join{max-width:360px;margin:12vh auto;text-align:center}#netc .join input{width:100%;font:20px system-ui;padding:10px;border-radius:12px;border:0;margin:10px 0}#netc .join button{width:100%;font:700 20px system-ui;padding:12px;border-radius:14px;border:0;background:#ffc93c}#netc .err{color:#ff9a9a}
+#netjoin{position:fixed;left:50%;bottom:7vh;transform:translateX(-50%);z-index:9000;font:800 20px system-ui;padding:12px 22px;border-radius:16px;border:4px solid #2b2140;background:#ffc93c;color:#2b2140;cursor:pointer;box-shadow:0 6px 0 #2b2140}
+#netc .join{position:absolute;inset:0;overflow:auto;display:grid;place-items:center;padding:16px;touch-action:auto;user-select:auto;-webkit-user-select:auto;color:var(--ink,#2b2140);
+  background:radial-gradient(circle at 15% 20%,#ffc93c66 0 10%,transparent 11%),radial-gradient(circle at 88% 75%,#3dd6a366 0 13%,transparent 14%),radial-gradient(circle at 80% 12%,#ff6b5b55 0 7%,transparent 8%),linear-gradient(160deg,#8a5cff,#5bb8ff)}
+#netc .jc{width:min(380px,100%);background:var(--cream,#fff7e8);border:5px solid var(--ink,#2b2140);border-radius:28px;box-shadow:0 10px 0 var(--ink,#2b2140);padding:18px 22px 14px;text-align:center;animation:jIn .45s cubic-bezier(.3,1.6,.5,1)}
+@keyframes jIn{from{transform:scale(.8) translateY(30px);opacity:0}}
+#netc .jlogo{font-size:46px;line-height:1;animation:jBob 2s ease-in-out infinite}@keyframes jBob{50%{transform:translateY(-6px) rotate(-8deg)}}
+#netc .jc h2{margin:4px 0 0;font:900 30px var(--display,system-ui)}#netc .jsub{margin:2px 0 12px;opacity:.65}
+#netc .jc label{display:block;text-align:left;font:900 13px var(--display,system-ui);text-transform:uppercase;letter-spacing:1px;opacity:.6;margin:10px 0 6px}
+#netc .tiles{position:relative;display:flex;gap:8px;justify-content:center}
+#netc .tiles .cd{position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:16px;border:0;padding:0;margin:0;cursor:text}
+#netc .tiles b{display:grid;place-items:center;width:62px;height:72px;background:#fff;border:4px solid var(--ink,#2b2140);border-radius:14px;box-shadow:0 5px 0 var(--ink,#2b2140);font:900 40px var(--display,system-ui);pointer-events:none}
+#netc .tiles b.full{background:var(--sun,#ffc93c)}#netc .tiles b.full:nth-of-type(odd){transform:rotate(-3deg)}#netc .tiles b.full:nth-of-type(even){transform:rotate(3deg)}
+#netc .tiles b.cur{border-color:var(--grape,#8a5cff);box-shadow:0 5px 0 var(--grape,#8a5cff);animation:jCur 1s infinite}@keyframes jCur{50%{background:#efe6ff}}
+#netc .tiles b.pop{animation:jPop .3s cubic-bezier(.3,2,.5,1)}@keyframes jPop{from{transform:scale(1.35)}}
+#netc .jc .nm{width:100%;box-sizing:border-box;font:700 20px var(--body,system-ui);padding:12px 14px;border-radius:14px;border:4px solid var(--ink,#2b2140);background:#fff;color:var(--ink,#2b2140);outline:none}
+#netc .jc .nm:focus{border-color:var(--grape,#8a5cff)}
+#netc .jc .go{width:100%;margin-top:16px;font:900 22px var(--display,system-ui);padding:13px;border-radius:16px;border:4px solid var(--ink,#2b2140);background:var(--mint,#3dd6a3);color:var(--ink,#2b2140);box-shadow:0 6px 0 var(--ink,#2b2140);cursor:pointer}
+#netc .jc .go:active{transform:translateY(4px);box-shadow:0 2px 0 var(--ink,#2b2140)}#netc .jc .go:disabled{background:#d8d2c4;cursor:wait}
+#netc .err{display:none;position:relative;margin:14px 0 0;padding:10px 12px;border-radius:14px;background:#ffe1dc;border:3px solid var(--coral,#ff6b5b);color:#8f1f14;font-weight:700;font-size:14px}
+#netc .err.on{display:block;animation:jShake .4s}#netc .err::before{content:'';position:absolute;top:-11px;left:50%;margin-left:-8px;border:8px solid transparent;border-bottom-color:var(--coral,#ff6b5b);border-top:0}
+@keyframes jShake{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+#netc .jc .bk{margin-top:10px;background:none;border:0;color:var(--ink,#2b2140);font:700 15px var(--body,system-ui);opacity:.55;cursor:pointer}
 #netc .top{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;padding:10px 14px;background:#0003}#netc .top b{padding:1px 8px;border-radius:8px;background:#fff3}#netc .ping{opacity:.7;font-size:13px}
 #netc .stick{position:absolute;left:0;top:48px;bottom:0;width:55%;}#netc .stick small{position:absolute;bottom:14px;left:0;right:0;text-align:center;opacity:.4}
 #netc .base{position:absolute;left:30%;top:55%;width:120px;height:120px;margin:-60px;border-radius:50%;background:#fff2;border:3px solid #fff4}#netc .base.on{background:#fff3}
@@ -432,7 +506,12 @@ const Net = (() => {
 #netc .mid{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:flex;gap:10px}#netc .mid button{font:600 15px system-ui;padding:8px 14px;border-radius:12px;border:2px solid #fff6;background:#fff2;color:#fff}`;
   document.head.appendChild(css);
 
-  return { ctrl, host, stop, list, name, showLink, runController, get on() { return st.on; } };
+  // meedoen vanaf het titelscherm: deze pagina wordt dan een controller
+  function joinCode() { st.ctrl = true; runController(); }
+  if (!st.ctrl) { const b = document.createElement('button'); b.id = 'netjoin'; b.textContent = '🌐 Meedoen met code'; b.onclick = e => { e.stopPropagation(); joinCode(); };
+    addEventListener('DOMContentLoaded', () => document.body.appendChild(b)); if (document.body) document.body.appendChild(b);
+    setInterval(() => { b.style.display = !st.ctrl && typeof Game !== 'undefined' && Game.state === 'title' ? '' : 'none'; }, 250); }
+  return { host, stop, list, name, showLink, runController, joinCode, get ctrl() { return st.ctrl; }, get on() { return st.on; }, get code() { return st.code; }, get count() { return Object.keys(st.pads).length; } };
 })();
 
 // =====================================================================
@@ -475,7 +554,7 @@ const Music = (() => {
     const src = ctx.createBufferSource(); src.buffer = noise; const f = ctx.createBiquadFilter(); f.type = o.type; f.frequency.value = o.f; f.Q.value = o.q || 0.8;
     const g = ctx.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0008, t + o.d);
     src.connect(f); f.connect(g); g.connect(o.dest || bus); if (o.send) { const sg = ctx.createGain(); sg.gain.value = o.send; g.connect(sg); sg.connect(verbIn); }
-    src.start(t, Math.random() * 0.5); src.stop(t + o.d + 0.05);
+    src.start(t, fxRand() * 0.5); src.stop(t + o.d + 0.05);
   }
   const DR = {
     k: (t, v) => { voice(t, 150, 0.16, 'sine', 0.62 * v, { bend: 0.3, bendT: 0.11, a: 0.002, d: 0.2, s: 0.01, r: 0.12 }); voice(t, 2400, 0.01, 'square', 0.05 * v, { a: 0.001, s: 0, d: 0.01, r: 0.01 }); },
@@ -593,9 +672,9 @@ const Music = (() => {
     lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 12000; lp.connect(out);
     bus = ctx.createGain(); bus.gain.value = 0.0001; bus.connect(lp);
     jbus = ctx.createGain(); jbus.gain.value = 1; jbus.connect(out);
-    noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate); const nd = noise.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+    noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate); const nd = noise.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = fxRand() * 2 - 1;
     const conv = ctx.createConvolver(), ir = ctx.createBuffer(2, ctx.sampleRate * 1.6, ctx.sampleRate);
-    for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3.2); }
+    for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < d.length; i++) d[i] = (fxRand() * 2 - 1) * Math.pow(1 - i / d.length, 3.2); }
     conv.buffer = ir; verbIn = ctx.createGain(); verbIn.gain.value = 0.5; verbIn.connect(conv); conv.connect(lp);
     dly = ctx.createDelay(1); dly.delayTime.value = 0.28; const fb = ctx.createGain(); fb.gain.value = 0.28; const dlp = ctx.createBiquadFilter(); dlp.type = 'lowpass'; dlp.frequency.value = 2400;
     dly.connect(dlp); dlp.connect(fb); fb.connect(dly); dlp.connect(lp);
@@ -706,7 +785,7 @@ const _texs = {};
 function matTex(kind) {
   if (_texs[kind]) return _texs[kind];
   const N = 256, cv = document.createElement('canvas'); cv.width = cv.height = N; const g = cv.getContext('2d');
-  const rnd = (a, b) => a + Math.random() * (b - a);
+  const rnd = (a, b) => a + fxRand() * (b - a);
   const base = { grain: 244, cloth: 238, knit: 236, denim: 228, hair: 232, skin: 248, leather: 232, metal: 236, wood: 230, fur: 236 }[kind] || 244;
   g.fillStyle = `rgb(${base},${base},${base})`; g.fillRect(0, 0, N, N);
   const px = (x, y, v, a = 1) => { g.fillStyle = `rgba(${v},${v},${v},${a})`; g.fillRect(x, y, 1, 1); };
@@ -730,7 +809,7 @@ function matTex(kind) {
     g.strokeStyle = `rgba(${v},${v},${v},0.7)`; g.lineWidth = rnd(1, 3); g.beginPath(); g.moveTo(0, y);
     for (let x = 0; x <= N; x += 16) g.lineTo(x, y + Math.sin(x * 0.05 + i) * 4); g.stroke(); }
   // fijne ruis (alles)
-  for (let i = 0; i < N * N * 0.25; i++) px(Math.random() * N | 0, Math.random() * N | 0, base + rnd(-18, 10), 0.35);
+  for (let i = 0; i < N * N * 0.25; i++) px(fxRand() * N | 0, fxRand() * N | 0, base + rnd(-18, 10), 0.35);
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping;
   const rep = { grain: [2, 2], cloth: [5, 5], knit: [6, 4], denim: [5, 5], hair: [5, 1], fur: [6, 2], skin: [2, 2], leather: [3, 3], metal: [2, 2], wood: [2, 2] }[kind] || [2, 2];
   t.repeat.set(rep[0], rep[1]); t.anisotropy = 4;
@@ -918,7 +997,7 @@ function buildChar(id) {
   const P = Object.assign({ skin:0xf1c29b, shirt:0xffffff, pants:0x3a3a48, shoes:0x2b2140, hand:null, head:null,
     eye:0x5a3a22, brow:0x3b2a20, sole:0xf3efe6, scale:1, headScale:1, face:true, mouth:true, blush:true, nose:true, sleeve:null,
     shirtTex:'cloth', pantsTex:'cloth', headTex:'skin' }, D.base);
-  const c = { id, root:new THREE.Group(), walkT:Math.random() * 6, emoteT:0, talkT:0, holdR:false, flutter:[] };
+  const c = { id, root:new THREE.Group(), walkT:fxRand() * 6, emoteT:0, talkT:0, holdR:false, flutter:[] };
   const root = c.root;
   const rig = new THREE.Group(); rig.scale.setScalar(P.scale); root.add(rig);
   const hips = new THREE.Group(); hips.position.y = 0.38; rig.add(hips); c.hips = hips;
@@ -972,7 +1051,7 @@ function charMood(c, m, sec = 1.2) { if (!c || (c.emoteT > 0 && m !== 'happy')) 
 // Alle beweging van een personage. Ritme en kijkrichting zijn per personage anders (ph),
 // zodat een groep nooit synchroon wiebelt.
 function animChar(c, dt, t, speed01, moving) {
-  const A = c.an || (c.an = { ph: Math.random() * 6.28, lookT: 0.5 + Math.random() * 2, ly: 0, lx: 0, blinkT: 0.5 + Math.random() * 3, bl: 0, py: null, vy: 0, minVy: 0, air: false, sq: 0, yaw: null, lean: 0, hop: 0 });
+  const A = c.an || (c.an = { ph: fxRand() * 6.28, lookT: 0.5 + fxRand() * 2, ly: 0, lx: 0, blinkT: 0.5 + fxRand() * 3, bl: 0, py: null, vy: 0, minVy: 0, air: false, sq: 0, yaw: null, lean: 0, hop: 0 });
   if (moving) c.walkT += dt * (7 + 7 * speed01);
   const s = Math.sin(c.walkT), amp = moving ? 0.6 + 0.4 * speed01 : 0, k = 1 - Math.exp(-dt * 14), kS = 1 - Math.exp(-dt * 6), ph = A.ph;
   const lerp = (o, key, v, kk = k) => { o.rotation[key] += (v - o.rotation[key]) * kk; };
@@ -1025,14 +1104,14 @@ function animChar(c, dt, t, speed01, moving) {
   if (c.tongue) c.tongue.rotation.x = 0.35 + (mood === "happy" || moving ? Math.sin(t * 16) * 0.22 : Math.sin(t * 3) * 0.05);
   c.body.scale.y = 1 + (moving ? 0 : Math.sin(t * 2.4 + ph) * 0.02);
   // hoofd: rondkijken in stilstand, meeknikken bij lopen, en de stemming
-  A.lookT -= dt; if (A.lookT <= 0) { const back = Math.random() < 0.35; A.ly = back ? 0 : (Math.random() - 0.5) * 0.9; A.lx = back ? 0 : (Math.random() - 0.4) * 0.22; A.lookT = 1.2 + Math.random() * 3; }
+  A.lookT -= dt; if (A.lookT <= 0) { const back = fxRand() < 0.35; A.ly = back ? 0 : (fxRand() - 0.5) * 0.9; A.lx = back ? 0 : (fxRand() - 0.4) * 0.22; A.lookT = 1.2 + fxRand() * 3; }
   const hY = moving || c.emoteT > 0 ? 0 : A.ly, hX = moving ? 0.06 - Math.abs(Math.cos(c.walkT)) * 0.05 : mood === 'sad' ? 0.3 : mood === 'shock' ? -0.18 : c.talkT > 0 ? Math.sin(t * 8) * 0.08 : A.lx;
   const hZ = moving ? s * 0.07 : c.emoteT > 0 ? Math.sin(t * 7 + ph) * 0.15 : Math.sin(t * 1.3 + ph) * 0.05 + A.ly * -0.08;
   lerp(c.head, 'y', hY, kS); lerp(c.head, 'x', hX, kS); lerp(c.head, 'z', hZ, kS);
   // gezicht: knipperen, ogen, wenkbrauwen en mond volgen de stemming
   const F = c.face;
   if (F) {
-    A.blinkT -= dt; if (A.blinkT <= 0) { A.bl = 0.13; A.blinkT = Math.random() < 0.15 ? 0.25 : 2 + Math.random() * 4; } A.bl = Math.max(0, A.bl - dt);
+    A.blinkT -= dt; if (A.blinkT <= 0) { A.bl = 0.13; A.blinkT = fxRand() < 0.15 ? 0.25 : 2 + fxRand() * 4; } A.bl = Math.max(0, A.bl - dt);
     const ey = A.bl > 0 ? 0.1 : mood === 'happy' ? 0.55 : mood === 'shock' ? 1.3 : mood === 'sad' ? 0.8 : mood === 'angry' ? 0.72 : 1, ex = mood === 'shock' ? 1.15 : 1;
     const kE = A.bl > 0 ? 1 : 1 - Math.exp(-dt * 18);
     for (const e of F.eyes) { e.scale.y += (ey - e.scale.y) * kE; e.scale.x += (ex - e.scale.x) * kE; }
@@ -1395,7 +1474,7 @@ function shellGeo(f) {
 const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 // --- gedeeld V2-skelet; dress() kleedt het aan ---
 function buildV2(id, o) {
-  const c = { id, v2: true, root: new THREE.Group(), walkT: Math.random() * 6, emoteT: 0, talkT: 0, holdR: false, flutter: [], hipY: 0.7, headR: 0.32 };
+  const c = { id, v2: true, root: new THREE.Group(), walkT: fxRand() * 6, emoteT: 0, talkT: 0, holdR: false, flutter: [], hipY: 0.7, headR: 0.32 };
   const K = Object.assign({}, STD.K, o.K);
   const torso = o.torso || prof(STD.torso, o.wide || 1, 1), sleeve = o.sleeve || STD.sleeve, legP = o.leg || prof(STD.leg, o.legW || 1, (K.hipY - 0.08) / 0.48);
   c.hipY = K.hipY; c.headR = 0.32 * K.headS;
@@ -1773,7 +1852,7 @@ function toonFace(parent, o) {
 }
 // leeg skelet voor wie geen mensenlijf heeft
 function rigBase(id, hipY) {
-  const c = { id, v2: true, root: new THREE.Group(), walkT: Math.random() * 6, emoteT: 0, talkT: 0, holdR: false, flutter: [], hipY, headR: 0.36 };
+  const c = { id, v2: true, root: new THREE.Group(), walkT: fxRand() * 6, emoteT: 0, talkT: 0, holdR: false, flutter: [], hipY, headR: 0.36 };
   c.hips = new THREE.Group(); c.hips.position.y = hipY; c.root.add(c.hips);
   c.body = new THREE.Group(); c.hips.add(c.body);
   c.head = new THREE.Group(); c.hips.add(c.head);
@@ -3150,8 +3229,8 @@ const W = C2;   // schone kleuren + dunne inkt (zelfde als de personages)
 function ground() {
   const grass = canvasTex(256, 256, (g, w, h) => {
     g.fillStyle = '#86d46c'; g.fillRect(0, 0, w, h);
-    for (let i = 0; i < 200; i++) { g.fillStyle = Math.random() < 0.5 ? '#7fcd66' : '#8fda74';
-      g.beginPath(); g.ellipse(Math.random() * w, Math.random() * h, 8 + Math.random() * 14, 4 + Math.random() * 7, Math.random() * 3, 0, 7); g.fill(); }
+    for (let i = 0; i < 200; i++) { g.fillStyle = fxRand() < 0.5 ? '#7fcd66' : '#8fda74';
+      g.beginPath(); g.ellipse(fxRand() * w, fxRand() * h, 8 + fxRand() * 14, 4 + fxRand() * 7, fxRand() * 3, 0, 7); g.fill(); }
   }, 16);
   const gm = new THREE.Mesh(new THREE.CircleGeometry(140, 64), new THREE.MeshToonMaterial({ map: grass, gradientMap: GRAD }));
   gm.rotation.x = -Math.PI / 2; gm.receiveShadow = true; scene.add(gm);
@@ -3204,7 +3283,7 @@ function fountain() {
     r.rotation.x = -Math.PI / 2; r.position.y = 0.505; f.add(r); rings.push(r); }
   // waterval: druppels vallen over de rand van de bovenste schaal in de bak
   const N = 120, drops = new THREE.InstancedMesh(G.sph(0.06, 6, 4), toonMat(0xd6f3ff, { tex: 'none', rim: 0 }), N); f.add(drops);
-  const d = Array.from({ length: N }, (_, i) => ({ a: i / N * Math.PI * 2 + Math.random() * 0.05, t: Math.random() }));
+  const d = Array.from({ length: N }, (_, i) => ({ a: i / N * Math.PI * 2 + fxRand() * 0.05, t: fxRand() }));
   const M = new THREE.Matrix4();
   anim.push((dt, t) => {
     ball.rotation.y = t * 0.8;
@@ -3238,7 +3317,7 @@ function planter(x, z, ry = 0, w = 1.4) {
   circ(x, z, Math.max(0.55, w * 0.5));
 }
 function barrel(x, z, s = 1) {
-  const b = grp(x, z, Math.random() * 3); b.scale.setScalar(s);
+  const b = grp(x, z, fxRand() * 3); b.scale.setScalar(s);
   b.add(part(lathe([[0.001, 0], [0.3, 0], [0.36, 0.2], [0.38, 0.4], [0.36, 0.6], [0.3, 0.8], [0.001, 0.8]], 24), 0xc98f55, W({ ol: 0.016 })));
   for (const y of [0.12, 0.68]) b.add(at(part(G.tor(0.34, 0.025, Math.PI * 2, 6, 24), 0x6e7884, W({ ol: 0 })), 0, y, 0, Math.PI / 2));
   circ(x, z, 0.4 * s);
@@ -3259,7 +3338,7 @@ function balloons(x, y, z, n = 3) {
     b.add(at(part(G.cone(0.05, 0.08, 8), 0x2b2140, { ol: 0, tex: 'none' }), 0, -0.33, 0, Math.PI)); g.add(b); bs.push(b);
     g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), top.clone().add(new THREE.Vector3(0, -0.35, 0))]), new THREE.LineBasicMaterial({ color: 0xffffff })));
   }
-  const ph = Math.random() * 6; anim.push((dt, t) => bs.forEach((b, k) => { b.position.y = 1.1 + (k % 2) * 0.25 + Math.sin(t * 1.6 + k + ph) * 0.06; b.rotation.z = Math.sin(t + k + ph) * 0.1; }));
+  const ph = fxRand() * 6; anim.push((dt, t) => bs.forEach((b, k) => { b.position.y = 1.1 + (k % 2) * 0.25 + Math.sin(t * 1.6 + k + ph) * 0.06; b.rotation.z = Math.sin(t + k + ph) * 0.1; }));
 }
 function tree(x, z, s = 1, col = 0x5cbf5a, collide = true) {
   const t = grp(x, z); t.scale.setScalar(s);
@@ -3267,7 +3346,7 @@ function tree(x, z, s = 1, col = 0x5cbf5a, collide = true) {
   const cols = [col, 0x6fcf63, 0x4fae4f];
   [[0, 2.25, 0, 1.15], [0.65, 1.85, 0.25, 0.8], [-0.6, 1.95, -0.2, 0.85], [0.1, 2.95, 0.1, 0.78], [-0.2, 2.2, 0.6, 0.7]]
     .forEach(([a, b, c, r], i) => t.add(at(part(G.sph(r, 22, 16), cols[i % 3], W({ ol: 0.045 })), a, b, c)));
-  const ph = Math.random() * 6; anim.push((dt, tt) => { t.rotation.z = Math.sin(tt * 0.9 + ph) * 0.012; });
+  const ph = fxRand() * 6; anim.push((dt, tt) => { t.rotation.z = Math.sin(tt * 0.9 + ph) * 0.012; });
   if (collide) circ(x, z, 0.45 * s);
   return t;
 }
@@ -3290,7 +3369,7 @@ function bunting(a, b) {
     const f = at(part(G.cone(0.2, 0.42, 3), flagCols[i % 6], W({ ol: 0.012, side: THREE.DoubleSide })), p.x, p.y - 0.21, p.z, Math.PI, Math.atan2(b.x - a.x, b.z - a.z), 0, [1, 1, 0.15]);
     scene.add(f); flags.push(f);
   }
-  const ph = Math.random() * 6; anim.push((dt, t) => flags.forEach((f, i) => { f.rotation.x = Math.PI + Math.sin(t * 3 + i + ph) * 0.15; }));
+  const ph = fxRand() * 6; anim.push((dt, t) => flags.forEach((f, i) => { f.rotation.x = Math.PI + Math.sin(t * 3 + i + ph) * 0.15; }));
 }
 function signpost(x, z, ry, boards) {
   const s = grp(x, z, ry);
@@ -3452,10 +3531,10 @@ function gate(x = 0, z = 12.9) {
 }
 function clouds() {
   for (let i = 0; i < 9; i++) {
-    const c = new THREE.Group(), a = i / 9 * Math.PI * 2, r = 50 + Math.random() * 25;
-    c.position.set(Math.cos(a) * r, 22 + Math.random() * 10, Math.sin(a) * r);
-    for (let j = 0; j < 5; j++) c.add(at(part(G.sph(2 + Math.random() * 2, 20, 14), 0xffffff, { ol: 0.15, shadow: false, tex: 'none', rim: 0.2 }), (j - 2) * 2.4, Math.random() * 1.2, Math.random() * 1.5));
-    scene.add(c); const sp = 0.004 + Math.random() * 0.004;
+    const c = new THREE.Group(), a = i / 9 * Math.PI * 2, r = 50 + fxRand() * 25;
+    c.position.set(Math.cos(a) * r, 22 + fxRand() * 10, Math.sin(a) * r);
+    for (let j = 0; j < 5; j++) c.add(at(part(G.sph(2 + fxRand() * 2, 20, 14), 0xffffff, { ol: 0.15, shadow: false, tex: 'none', rim: 0.2 }), (j - 2) * 2.4, fxRand() * 1.2, fxRand() * 1.5));
+    scene.add(c); const sp = 0.004 + fxRand() * 0.004;
     anim.push((dt) => { const ang = Math.atan2(c.position.z, c.position.x) + dt * sp, rr = Math.hypot(c.position.x, c.position.z);
       c.position.x = Math.cos(ang) * rr; c.position.z = Math.sin(ang) * rr; });
   }
@@ -3463,11 +3542,11 @@ function clouds() {
 function confetti() {
   const N = 200, cols = [0xff5a5a, 0xffc93c, 0x3dd6a3, 0x5bb8ff, 0x8a5cff, 0xff9ad0];
   const mesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.1, 0.17), new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }), N);
-  const P = Array.from({ length: N }, () => ({ x: (Math.random() - 0.5) * 24, y: Math.random() * 12, z: (Math.random() - 0.5) * 24, s: 0.6 + Math.random(), r: Math.random() * 6, w: Math.random() * 6 }));
+  const P = Array.from({ length: N }, () => ({ x: (fxRand() - 0.5) * 24, y: fxRand() * 12, z: (fxRand() - 0.5) * 24, s: 0.6 + fxRand(), r: fxRand() * 6, w: fxRand() * 6 }));
   const col = new THREE.Color(); P.forEach((p, i) => mesh.setColorAt(i, col.setHex(cols[i % 6]))); scene.add(mesh);
   const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler(), S1 = new THREE.Vector3(1, 1, 1), V = new THREE.Vector3();
   anim.push((dt, t) => {
-    P.forEach((p, i) => { p.y -= dt * p.s * 0.8; p.r += dt * 3; if (p.y < 0.05) { p.y = 10 + Math.random() * 4; p.x = (Math.random() - 0.5) * 24; p.z = (Math.random() - 0.5) * 24; }
+    P.forEach((p, i) => { p.y -= dt * p.s * 0.8; p.r += dt * 3; if (p.y < 0.05) { p.y = 10 + fxRand() * 4; p.x = (fxRand() - 0.5) * 24; p.z = (fxRand() - 0.5) * 24; }
       E.set(p.r, p.r * 0.7, 0); Q.setFromEuler(E); V.set(p.x + Math.sin(t + p.w) * 0.4, p.y, p.z); M.compose(V, Q, S1); mesh.setMatrixAt(i, M); });
     mesh.instanceMatrix.needsUpdate = true;
   });
@@ -3475,16 +3554,16 @@ function confetti() {
 function flowers() {
   const cols = [0xff5a5a, 0xffffff, 0xffc93c, 0xff9ad0, 0x8a5cff], N = 500, M = new THREE.Matrix4(), col = new THREE.Color();
   const mesh = new THREE.InstancedMesh(G.sph(0.12, 8, 6), toonMat(0xffffff, { tex: 'none', rim: 0 }), N);
-  for (let i = 0; i < N; i++) { let x, z; do { const a = Math.random() * Math.PI * 2, r = 13.2 + Math.random() * 30; x = Math.sin(a) * r; z = Math.cos(a) * r; } while (Math.abs(x) < 2.6 && z > 0);
+  for (let i = 0; i < N; i++) { let x, z; do { const a = fxRand() * Math.PI * 2, r = 13.2 + fxRand() * 30; x = Math.sin(a) * r; z = Math.cos(a) * r; } while (Math.abs(x) < 2.6 && z > 0);
     M.makeTranslation(x, 0.12, z); mesh.setMatrixAt(i, M); mesh.setColorAt(i, col.setHex(cols[i % 5])); }
   scene.add(mesh);
   const tuft = new THREE.InstancedMesh(G.cone(0.12, 0.4, 5), toonMat(0x5fb84c, { tex: 'none', rim: 0 }), 700);
-  for (let i = 0; i < 700; i++) { const a = Math.random() * Math.PI * 2, r = 13 + Math.random() * 40; M.makeTranslation(Math.sin(a) * r, 0.2, Math.cos(a) * r); tuft.setMatrixAt(i, M); }
+  for (let i = 0; i < 700; i++) { const a = fxRand() * Math.PI * 2, r = 13 + fxRand() * 40; M.makeTranslation(Math.sin(a) * r, 0.2, Math.cos(a) * r); tuft.setMatrixAt(i, M); }
   scene.add(tuft);
 }
 
 function buildWorld() {
-  ground(); fountain(); stage(); cityHall(); workshop(); arcade(); wardrobe(); gate(); clouds(); confetti(); flowers();
+  ground(); fountain(); stage(); cityHall(); workshop(); arcade(); wardrobe(); onlineKiosk(); gate(); clouds(); confetti(); flowers();
   // lantaarns + vlaggetjes + ballontrossen
   const angs = [24, 76, 122, 160, 200, 236, 284, 336].map(d => d * Math.PI / 180);
   const pts = angs.map(a => lamp(Math.sin(a) * 11.4, Math.cos(a) * 11.4));
@@ -3713,7 +3792,7 @@ function flatHouse(x, z, w, h, col, ry = 0) {
   return g;
 }
 function tent(x, z, col, r = 1.8) {
-  const g = grp(x, z, Math.random() * 3);
+  const g = grp(x, z, fxRand() * 3);
   const tm = new THREE.MeshToonMaterial({ map: stripeTex(col, '#fff7e8', 12), gradientMap: GRAD });
   const wall = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 1.8, 24, 1, true), tm); wall.position.y = 0.9; wall.castShadow = true; g.add(wall);
   const roof = new THREE.Mesh(new THREE.ConeGeometry(r * 1.15, 1.6, 24), tm); roof.position.y = 2.6; roof.castShadow = true; g.add(roof);
@@ -3803,7 +3882,7 @@ function buildBoard() {
   ORIGIN.x = BX; ORIGIN.z = BZ;
   // grond
   const grass = canvasTex(256, 256, (g, w, h) => { g.fillStyle = "#86d46c"; g.fillRect(0, 0, w, h);
-    for (let i = 0; i < 200; i++) { g.fillStyle = i % 2 ? "#7fcd66" : "#8fda74"; g.beginPath(); g.ellipse(Math.random() * w, Math.random() * h, 8 + Math.random() * 14, 4 + Math.random() * 7, Math.random() * 3, 0, 7); g.fill(); } }, 26);
+    for (let i = 0; i < 200; i++) { g.fillStyle = i % 2 ? "#7fcd66" : "#8fda74"; g.beginPath(); g.ellipse(fxRand() * w, fxRand() * h, 8 + fxRand() * 14, 4 + fxRand() * 7, fxRand() * 3, 0, 7); g.fill(); } }, 26);
   const gm = new THREE.Mesh(new THREE.CircleGeometry(170, 72), new THREE.MeshToonMaterial({ map: grass, gradientMap: GRAD }));
   gm.rotation.x = -Math.PI / 2; gm.position.set(BX, 0.005, BZ); gm.receiveShadow = true; scene.add(gm);
   const plaza = new THREE.Mesh(new THREE.CircleGeometry(8.2, 64), toonMat(0xf3dcb8, { tex: 'none', rim: 0 })); plaza.rotation.x = -Math.PI / 2; plaza.position.set(BX, 0.01, BZ); plaza.receiveShadow = true; scene.add(plaza);
@@ -3993,13 +4072,13 @@ function orchInfo(round) {   // voor de bordverkenner
 const Orchard = { built: false, leafM: [], pears: [], pearS: 0, streamS: 1, gates: [] };
 const _oc = new THREE.Color();
 function orchTree(x, z, s = 1) {   // perenboom: bladeren en peren wisselen met het seizoen
-  const g = grp(x, z, Math.random() * 6); g.scale.setScalar(s);
+  const g = grp(x, z, fxRand() * 6); g.scale.setScalar(s);
   g.add(part(Orchard.trunkG, 0x8a5a33, W({ ol: 0.03 })));
   [[0, 2.15, 0, 1.0, 0], [0.62, 1.8, 0.2, 0.7, 1], [-0.58, 1.9, -0.18, 0.74, 1], [0.08, 2.8, 0.05, 0.66, 0]]
     .forEach(([a, b, c, r, m]) => g.add(at(part(Orchard.leafG, 0, W({ ol: 0.04, mat: Orchard.leafM[m] })), a, b, c, 0, 0, 0, [r, r * 0.92, r])));
   const pg = new THREE.Group(); g.add(pg); Orchard.pears.push(pg);
   for (const [a, b, c] of [[0.7, 1.55, 0.55], [-0.5, 1.6, 0.66], [0.15, 1.95, 0.95]]) pg.add(at(part(Orchard.pearG, 0, W({ ol: 0.012, mat: Orchard.pearM })), a, b, c));
-  const ph = Math.random() * 6; anim.push((dt, tt) => { g.rotation.z = Math.sin(tt * 0.9 + ph) * 0.012; });
+  const ph = fxRand() * 6; anim.push((dt, tt) => { g.rotation.z = Math.sin(tt * 0.9 + ph) * 0.012; });
   return g;
 }
 function orchGate(r) {   // hek met een bordje: welk seizoen dit pad open is
@@ -4029,7 +4108,7 @@ function buildOrchard() {
   Orchard.pearG = lathe([[0.001, -0.2], [0.13, -0.15], [0.15, -0.04], [0.08, 0.1], [0.05, 0.18], [0.001, 0.2]], 12);
   // grond: lichte textuur, de kleur komt van het seizoen
   const gt = canvasTex(256, 256, (g, w, h) => { g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h);
-    for (let i = 0; i < 200; i++) { g.fillStyle = i % 2 ? '#eef2ea' : '#f8fbf5'; g.beginPath(); g.ellipse(Math.random() * w, Math.random() * h, 8 + Math.random() * 14, 4 + Math.random() * 7, Math.random() * 3, 0, 7); g.fill(); } }, 26);
+    for (let i = 0; i < 200; i++) { g.fillStyle = i % 2 ? '#eef2ea' : '#f8fbf5'; g.beginPath(); g.ellipse(fxRand() * w, fxRand() * h, 8 + fxRand() * 14, 4 + fxRand() * 7, fxRand() * 3, 0, 7); g.fill(); } }, 26);
   Orchard.grassM = new THREE.MeshToonMaterial({ map: gt, gradientMap: GRAD, color: SEASONS[0].grass });
   const gm = new THREE.Mesh(new THREE.CircleGeometry(170, 72), Orchard.grassM); gm.rotation.x = -Math.PI / 2; gm.position.set(OX, 0.005, OZ); gm.receiveShadow = true; scene.add(gm);
   const plaza = new THREE.Mesh(new THREE.CircleGeometry(3.4, 40), toonMat(0xe8cfa6, { tex: 'none', rim: 0 })); plaza.rotation.x = -Math.PI / 2; plaza.position.set(OX, 0.012, OZ); plaza.receiveShadow = true; scene.add(plaza);
@@ -4103,7 +4182,7 @@ function buildOrchard() {
     .forEach(([x, z, s]) => tree(OX + x, OZ + z, s, 0x5cbf5a, false));
   // --- vallende blaadjes / bloesem / sneeuw ---
   const N = 420, pos = new Float32Array(N * 3); Orchard.fxV = [];
-  for (let i = 0; i < N; i++) { pos.set([(Math.random() - 0.5) * 80, Math.random() * 22, (Math.random() - 0.5) * 70], i * 3); Orchard.fxV.push(0.8 + Math.random() * 0.9); }
+  for (let i = 0; i < N; i++) { pos.set([(fxRand() - 0.5) * 80, fxRand() * 22, (fxRand() - 0.5) * 70], i * 3); Orchard.fxV.push(0.8 + fxRand() * 0.9); }
   const fg = new THREE.BufferGeometry(); fg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   Orchard.fx = new THREE.Points(fg, new THREE.PointsMaterial({ color: 0xffb3d1, size: 0.32, transparent: true, opacity: 0, depthWrite: false }));
   Orchard.fx.position.set(OX, 0, OZ); scene.add(Orchard.fx);
@@ -4304,7 +4383,7 @@ function orbPlanet(q) {
     [[0.55, 1.0, 1.25], [0.9, 2.7, 0.8], [1.3, 4.4, 0.95], [1.6, 0.4, 0.7], [1.2, 5.6, 0.6], [1.85, 3.3, 0.75], [0.85, 3.8, 0.55]].forEach(([la, lo, s], k) => { const m = new THREE.Group(); onBall(sp, m, la, lo, R - 0.05);
       m.add(at(P2(G.cyl(0.12 * s, 0.17 * s, 0.9 * s, 10), 0xf3ead8, { ol: 0.012 }), 0, 0.45 * s, 0));
       m.add(at(P2(G.dome(0.5 * s, 0.5), glow[k % 3], { ol: 0.02, emissive: glow[k % 3], emissiveIntensity: 0.55 }), 0, 0.85 * s, 0)); });
-    const N = 60, pos = new Float32Array(N * 3); for (let i = 0; i < N; i++) pos.set([(Math.random() - 0.5) * 9, Math.random() * 5, (Math.random() - 0.5) * 9], i * 3);
+    const N = 60, pos = new Float32Array(N * 3); for (let i = 0; i < N; i++) pos.set([(fxRand() - 0.5) * 9, fxRand() * 5, (fxRand() - 0.5) * 9], i * 3);
     const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     Orbit.spores = new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xb8ffd8, size: 0.18, transparent: true, opacity: 0.85, depthWrite: false })); g.add(Orbit.spores);
   }
@@ -4415,7 +4494,7 @@ function buildOrbit() {
   for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2; ufo.add(at(part(G.sph(0.13, 8, 6), 0xffd36a, W({ ol: 0, emissive: 0xffd000, emissiveIntensity: 0.9 })), Math.cos(a) * 1.35, -0.05, Math.sin(a) * 1.35)); }
   // --- sterrenhemel rondom (alleen op dit bord zichtbaar) ---
   const N = 900, pos = new Float32Array(N * 3), col = new Float32Array(N * 3), tint = [[1, 1, 1], [0.75, 0.85, 1], [1, 0.9, 0.7], [1, 0.75, 0.9]];
-  for (let i = 0; i < N; i++) { const u = Math.random() * 2 - 1, a = Math.random() * Math.PI * 2, r = 170, s = Math.sqrt(1 - u * u);
+  for (let i = 0; i < N; i++) { const u = fxRand() * 2 - 1, a = fxRand() * Math.PI * 2, r = 170, s = Math.sqrt(1 - u * u);
     pos.set([Math.cos(a) * s * r, u * r, Math.sin(a) * s * r], i * 3); col.set(tint[i % 4], i * 3); }
   const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(pos, 3)); sg.setAttribute('color', new THREE.BufferAttribute(col, 3));
   Orbit.sky = new THREE.Points(sg, new THREE.PointsMaterial({ size: 1.1, vertexColors: true, fog: false, depthWrite: false })); Orbit.sky.position.set(QX, 0, QZ); scene.add(Orbit.sky);
@@ -5842,7 +5921,7 @@ const SHOW = {
 function scProject(v) { _v.copy(v).project(SC.cam); return { x: (_v.x + 1) / 2 * innerWidth, y: (1 - _v.y) / 2 * innerHeight }; }
 function poofAt(root, x, y, z) {
   for (let i = 0; i < 10; i++) { const m = new THREE.Mesh(G.sph(0.22, 10, 8), new THREE.MeshToonMaterial({ color: 0xffffff, gradientMap: GRAD, transparent: true }));
-    const a = i / 10 * Math.PI * 2; m.position.set(x + Math.cos(a) * 0.4, y + Math.random() * 0.8, z + Math.sin(a) * 0.4); root.add(m);
+    const a = i / 10 * Math.PI * 2; m.position.set(x + Math.cos(a) * 0.4, y + fxRand() * 0.8, z + Math.sin(a) * 0.4); root.add(m);
     Panel.fx.push({ m, a, t: 0, root }); }
 }
 
@@ -5899,6 +5978,55 @@ const Panel = {
       if (f.t > 0.45) { f.root.remove(f.m); f.m.material.dispose(); this.fx.splice(i, 1); } }
   },
 };
+
+// =====================================================================
+//  ONLINE-KIOSK op het plein (noordwest): kamer maken, code bekijken of meedoen met een code
+// =====================================================================
+const KIOSK = { x: -7.2, z: -7.6 };
+function onlineKiosk() {
+  const k = grp(KIOSK.x, KIOSK.z, Math.atan2(-KIOSK.x, -KIOSK.z));
+  k.add(at(part(G.cyl(1.3, 1.35, 0.14, 24), 0x3a3550, W({ ol: 0.02 })), 0, 0.07, 0));
+  k.add(at(part(G.box(1.7, 2.3, 1.1), 0x3d8bff, W({ ol: 0.04 })), 0, 1.3, -0.15));
+  k.add(at(part(G.box(1.9, 0.18, 1.3), 0x2b2140, W({ ol: 0.03 })), 0, 2.52, -0.15));
+  k.add(at(part(G.box(1.4, 0.1, 0.45), 0xfff7e8, W({ ol: 0.02 })), 0, 0.95, 0.5));   // toonbank
+  // scherm: laat de kamercode zien zodra er gehost wordt
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 160; const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+  const scr = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.81), new THREE.MeshBasicMaterial({ map: tex })); scr.position.set(0, 1.72, 0.41); k.add(scr);
+  let shown = null;
+  const draw = () => { const g = cv.getContext('2d'), R = Peer.on ? Peer : Net, on = R.on, code = on ? R.code : '';
+    g.fillStyle = '#16213f'; g.fillRect(0, 0, 256, 160); g.textAlign = 'center';
+    g.fillStyle = '#5bc8ff'; g.font = 'bold 30px "Arial Rounded MT Bold",sans-serif'; g.fillText('🌐 ONLINE', 128, 42);
+    g.fillStyle = on ? '#ffc93c' : '#7d8bb0'; g.font = 'bold 54px monospace'; g.fillText(on ? code : '- - - -', 128, 108);
+    g.fillStyle = on ? '#5dffb0' : '#7d8bb0'; g.font = 'bold 20px sans-serif'; g.fillText(on ? `${R.count} online` : 'geen kamer', 128, 142); tex.needsUpdate = true; };
+  // schotelantenne en een knipperlampje op het dak
+  const dish = grp(-0.45, -0.3, 0.6, k); dish.position.y = 2.62;
+  dish.add(at(part(G.cyl(0.05, 0.05, 0.4, 8), 0x6e7884, W({ ol: 0.01 })), 0, 0.2, 0));
+  dish.add(at(part(new THREE.SphereGeometry(0.42, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2.6), 0xdfe6ee, W({ ol: 0.02 })), 0, 0.5, 0.05, -1.1, 0, 0));
+  const mast = grp(0.55, -0.4, 0, k); mast.position.y = 2.62;
+  mast.add(at(part(G.cyl(0.03, 0.04, 1.3, 6), 0x6e7884, W({ ol: 0.01 })), 0, 0.65, 0));
+  const led = new THREE.Mesh(G.sph(0.09, 10, 8), new THREE.MeshBasicMaterial({ color: 0xff3a3a })); led.position.y = 1.35; mast.add(led);
+  for (let i = 1; i <= 3; i++) { const r = new THREE.Mesh(G.tor(0.14 * i, 0.018, Math.PI / 1.6, 6, 18), new THREE.MeshBasicMaterial({ color: 0x5bc8ff, transparent: true })); r.position.y = 1.35; r.rotation.z = Math.PI / 2 + 0.6; mast.add(r); }
+  anim.push((dt, t) => { const R = Peer.on ? Peer : Net, on = R.on, key = on ? R.code + ':' + R.count : '';
+    if (key !== shown) { shown = key; draw(); }
+    led.material.color.setHex(on ? (Math.sin(t * 6) > 0 ? 0x5dffb0 : 0x1f6f4f) : (Math.sin(t * 3) > 0.6 ? 0xff3a3a : 0x5a1a1a));
+    mast.children.slice(2).forEach((r, i) => { r.material.opacity = on ? 0.3 + 0.7 * Math.max(0, Math.sin(t * 4 - i)) : 0.12; }); });
+  circ(KIOSK.x, KIOSK.z, 1.2);
+}
+SCRIPTS.online = { name: 'Online-kiosk', color: '#3d8bff', pitch: 640, nodes: {
+  start: () => Peer.on
+    ? { text: `Kamer ${Peer.code} is open (eigen scherm), met ${Peer.count} online. Je vrienden openen dit spel, kiezen 🌐 Meedoen met code en typen ${Peer.code}. Start de party bij Wattie, dan speelt iedereen op zijn eigen scherm.`,
+        opts: [{ label: '📋 Code tonen', fn: () => { Peer.showCode(); return null; } }, { label: '🔌 Online stoppen', fn: () => { Peer.stop(); return 'start'; } }, { label: 'Doei', go: null }] }
+    : Net.on
+    ? { text: `Kamer ${Net.code} is open (controllers), met ${Net.count} online. Je vrienden openen dit spel op hun telefoon of laptop, kiezen 🌐 Meedoen met code en typen ${Net.code}. Op het plein drukken ze dan op Ⓐ om mee te doen.`,
+        opts: [{ label: '📋 Code en link tonen', fn: () => { Net.showLink(); return null; } }, { label: '🔌 Online stoppen', fn: () => { Net.stop(); return 'start'; } }, { label: 'Doei', go: null }] }
+    : { text: 'Online spelen! Maak een kamer en je krijgt een code van 4 letters. Of doe zelf mee met de code van iemand anders.',
+        opts: [{ label: '🌐 Kamer maken', go: 'kind' }, { label: '🔑 Meedoen met code', fn: () => { Net.joinCode(); return null; } }, { label: 'Hoe werkt het?', go: 'how' }, { label: 'Doei', go: null }] },
+  kind: { text: 'Wat voor kamer? Met een eigen scherm speelt iedereen het spel op zijn eigen computer. Met controllers deel jij je scherm (bijv. in Discord) en worden de telefoons van je vrienden controllers.',
+    opts: [{ label: '📺 Eigen scherm', fn: () => { Peer.host().then(() => { if (Dialog.cur && Dialog.cur.key === 'online') Dialog.go('start'); }); return 'busy'; } },
+      { label: '🎮 Controllers (scherm delen)', fn: () => { Net.host().then(() => { if (Dialog.cur && Dialog.cur.key === 'online') Dialog.go('start'); }); return 'busy'; } }, { label: 'Terug', go: 'start' }] },
+  busy: { text: 'Even verbinden met de server... piep... piep...' },
+  how: { text: 'Eigen scherm: iedereen opent het spel zelf, kiest in de wachtkamer een personage, en speelt het potje op zijn eigen computer. In minigames met gedeeld scherm zie je alleen jouw eigen beeld, groot. Controllers: alleen de host draait het spel en deelt zijn beeld; de rest bestuurt met de telefoon.', next: 'start' },
+} };
 
 // =====================================================================
 //  BORD: verkenner (vakjes bekijken, rondes doorspoelen, draaimolen)
@@ -6012,7 +6140,7 @@ Object.assign(Board, {
     ring.rotation.x = -Math.PI / 2; g.add(ring); this.cursorRing = ring;
     // sterren voor de nacht
     const N = 260, pos = new Float32Array(N * 3);
-    for (let i = 0; i < N; i++) { const a = Math.random() * Math.PI * 2, e = 0.15 + Math.random() * 1.2, r = 150;
+    for (let i = 0; i < N; i++) { const a = fxRand() * Math.PI * 2, e = 0.15 + fxRand() * 1.2, r = 150;
       pos.set([Math.cos(a) * Math.cos(e) * r, Math.sin(e) * r, Math.sin(a) * Math.cos(e) * r], i * 3); }
     const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     this.stars = new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xffffff, size: 1.3, transparent: true, opacity: 0, fog: false, depthWrite: false })); scene.add(this.stars);
@@ -7156,7 +7284,7 @@ Object.assign(Party, {
   start() {
     Game.slots.forEach(s => s.picking = false);
     P.final = false; Game.state = 'entering'; elFade.style.opacity = 1; Sfx.play.join();
-    setTimeout(() => {
+    Later.add(0.45, () => {
       useBoard(boardSel()); Board.setup(); buildPartyProps(); boardSigns(); Board.cursorG.visible = false;
       P.mode = S.mode || 0; P.order = null; P.total = P.mode === 2 ? mgCount() : S.rounds; P.on = true; P.paused = false; P.waits = []; P.hops = []; P.round = 1; P.pot = 0; P.balloon = null; P.gbFly = false; P.askCur = P.dieCur = P.dirCur = null; P.cur = null; P.waitAny = null;
       P.blocks.forEach(b => scene.remove(b.m)); P.blocks = []; Object.values(P.traps).forEach(x => scene.remove(x.m)); Object.values(P.tolls).forEach(x => scene.remove(x.m)); P.traps = {}; P.tolls = {}; Object.values(P.holes).forEach(x => scene.remove(x.m)); P.holes = {}; Object.values(P.smokes).forEach(x => scene.remove(x.m)); P.smokes = {};
@@ -7172,18 +7300,18 @@ Object.assign(Party, {
       Game.state = 'party'; camTgt.set(BX, 0, BZ); camPos.set(BX, 60, BZ + 60);
       elFade.style.opacity = 0;
       partyMain();
-    }, 450);
+    });
   },
   stop() {
     P.on = false; elFade.style.opacity = 1; Game.state = 'leaving-party';
-    setTimeout(() => {
+    Later.add(0.45, () => {
       finLeave(); P.players.forEach(p => { scene.remove(p.c.root); scene.remove(p.ring); }); P.players = []; P.waits = []; P.hops = [];
       if (P.dieCur) scene.remove(P.dieCur.m); if (Stage.cur) stageClose(); P.askCur = P.dieCur = P.dirCur = null; renderAsk(); P.pz = null; renderPause(); P.arrows.forEach(a => a.visible = false); P.gb.visible = P.beam.visible = false;
       P.blocks.forEach(b => scene.remove(b.m)); P.blocks = []; Object.values(P.traps).forEach(x => scene.remove(x.m)); Object.values(P.tolls).forEach(x => scene.remove(x.m)); P.traps = {}; P.tolls = {}; Object.values(P.holes).forEach(x => scene.remove(x.m)); P.holes = {}; Object.values(P.smokes).forEach(x => scene.remove(x.m)); P.smokes = {};
       BRIDGES.forEach(b => setBridge(b, 0)); JUNCS().forEach(j => j.t.sign = null); refreshSigns();
       elP.classList.add('hidden'); $p('.layer').innerHTML = '';
       Board.teardown(); Game.state = 'hub'; elFade.style.opacity = 0;
-    }, 450);
+    });
   },
   update(dt, t) {
     // pauze: elke mens kan met Start/Esc pauzeren
@@ -7640,7 +7768,9 @@ function splitHTML(A) {
     const pos = `${right ? 'right' : 'left'}:16px;top:${low ? 12 : 62}px`;
     return `<div class="vp" style="left:${r[0] * 100}%;top:${r[1] * 100}%;width:${r[2] * 100}%;height:${r[3] * 100}%;--c:${mp ? mp.color : 'var(--ink)'}"><b style="${pos}">${mp ? mp.name : '👀 iedereen'}</b></div>`; }).join('');
 }
+let SPLIT_SOLO = -1;   // online met een eigen scherm: alleen jouw vak, op het hele scherm
 function splitScreen(A, mp, v) {
+  if (SPLIT_SOLO >= 0) { if (mp.k !== SPLIT_SOLO) return { x: -999, y: -999 }; _sv.copy(v).project(SPLIT_CAMS[mp.k]); return { x: (_sv.x + 1) / 2 * innerWidth, y: (1 - _sv.y) / 2 * innerHeight }; }
   const r = splitRects(A.mps.length)[mp.k]; _sv.copy(v).project(SPLIT_CAMS[mp.k]);
   return { x: (r[0] + (_sv.x + 1) / 2 * r[2]) * innerWidth, y: (r[1] + (1 - _sv.y) / 2 * r[3]) * innerHeight };
 }
@@ -7708,7 +7838,7 @@ const MG = {
     return new Promise(res => {
       const def = MGDEF[id], prev = Game.state, phud = document.getElementById('phud'), phudOn = phud && !phud.classList.contains('hidden'), cam0 = [camPos.clone(), camTgt.clone()];
       Game.state = 'mg-enter'; elFade.style.opacity = 1; Sfx.play.whoosh();
-      setTimeout(() => {
+      Later.add(0.45, () => {
         const A = { def, id, root: new THREE.Group(), t: 0, phase: 'intro', left: def.time || 0, mps: [], outs: [], fx: [], res, prev, phudOn, cam0, opts, data: {}, ready: new Set() };
         A.root.position.set(MX, 0, MZ); scene.add(A.root);
         A.mps = ents.map((e, k) => { const c = buildChar(e.id); A.root.add(c.root);
@@ -7729,7 +7859,7 @@ const MG = {
         A.split = !!def.split && A.mps.length > 1; if (A.split) A.mps.forEach(mp => splitAim(A, mp, 0)); $m('.spl').innerHTML = A.split ? splitHTML(A) : '';
         const [px, py, pz, tx, ty, tz] = def.cam; camPos.set(MX + px, py, MZ + pz); camTgt.set(MX + tx, ty, MZ + tz);
         this.intro(); Game.state = 'minigame'; elFade.style.opacity = 0;
-      }, 450);
+      });
     });
   },
   intro() {
@@ -7756,11 +7886,11 @@ const MG = {
   },
   close() {
     const A = this.A; this.A = null; elFade.style.opacity = 1; Game.state = 'mg-leave';
-    setTimeout(() => {
+    Later.add(0.45, () => {
       scene.remove(A.root); A.root.traverse(o => { if (o.geometry) o.geometry.dispose(); }); elM.classList.add("hidden"); $m('.pnw').innerHTML = ''; $m('.fx').innerHTML = ''; $m('.tm').style.display = 'none';
       const phud = document.getElementById('phud'); if (phud && A.phudOn) phud.classList.remove('hidden');
       camPos.copy(A.cam0[0]); camTgt.copy(A.cam0[1]); Game.state = A.prev; Game.closedFrame = Game.frame; elFade.style.opacity = 0; A.res(A.result);
-    }, 450);
+    });
   },
   update(dt, t) {
     const A = this.A; if (!A) return;
@@ -7821,7 +7951,9 @@ const MG = {
   },
   // split screen: elk vak zijn eigen camera, schaduwen maar één keer per frame
   render() {
-    const A = this.A, W = innerWidth, H = innerHeight;
+    const A = this.A, W = innerWidth, H = innerHeight, me = LS.on ? A.mps.find(m => LS.isMine(m.dev)) : null;
+    SPLIT_SOLO = me ? me.k : -1; $m(".spl").style.display = me ? "none" : "";
+    if (me) { const cam = SPLIT_CAMS[me.k]; cam.position.copy(me.vcam.p); cam.lookAt(me.vcam.t); cam.aspect = W / H; cam.updateProjectionMatrix(); renderer.render(scene, cam); return; }
     renderer.setScissorTest(true);
     splitRects(A.mps.length).forEach((r, i) => {
       const mp = A.mps[i], x = r[0] * W, y = (1 - r[1] - r[3]) * H, w = r[2] * W, h = r[3] * H, cam = mp ? SPLIT_CAMS[i] : camera;
@@ -9025,8 +9157,8 @@ function setCrowd(A, pts, look = [0, 0]) {
   const body = mk(bodyG, mat), head = mk(headG, mat), bodyO = mk(bodyG, olm), headO = mk(headG, olm);
   const c = new THREE.Color();
   const P = pts.map((p, i) => { const yaw = Math.atan2(look[0] - p[0], look[1] - p[2]);
-    body.setColorAt(i, c.setHex(CROWD_COL[Math.floor(Math.random() * CROWD_COL.length)])); head.setColorAt(i, c.setHex(SKIN_COL[Math.floor(Math.random() * SKIN_COL.length)]));
-    return { x: p[0], y: p[1], z: p[2], yaw, ph: Math.random() * 6.28, sp: 4 + Math.random() * 4 }; });
+    body.setColorAt(i, c.setHex(CROWD_COL[Math.floor(fxRand() * CROWD_COL.length)])); head.setColorAt(i, c.setHex(SKIN_COL[Math.floor(fxRand() * SKIN_COL.length)]));
+    return { x: p[0], y: p[1], z: p[2], yaw, ph: fxRand() * 6.28, sp: 4 + fxRand() * 4 }; });
   const put = t => { const h = hype(A);
     P.forEach((p, i) => { const j = Math.max(0, Math.sin(t * p.sp + p.ph)) * (0.06 + h * 0.4);
       _sq2.setFromEuler(_se.set(0, p.yaw, Math.sin(t * 2 + p.ph) * 0.08 * (0.3 + h)));
@@ -9043,7 +9175,7 @@ function setStandsArc(A, cx, cz, r, a0, a1, rows = 4, col = 0x3d8bff, opt = {}) 
     if (base) { const rm = r + (rows - 1) * depth / 2, b = at(part(G.box(w * rm / r, base, rows * depth), base > 0 ? 0x8a5a33 : 0, C2({ ol: 0.03, tex: "wood" })), cx + Math.sin(a) * rm, -base / 2, cz + Math.cos(a) * rm, 0, a, 0); b.castShadow = false; A.root.add(b); }
     for (let k = 0; k < rows; k++) { const rr = r + k * depth, x = cx + Math.sin(a) * rr, z = cz + Math.cos(a) * rr, h = y0 + (k + 1) * step;
       const m = at(part(G.box(w * rr / r, h, depth), k % 2 ? col : seat, C2({ ol: 0.025 })), x, h / 2, z, 0, a, 0); m.castShadow = false; A.root.add(m);
-      for (let q = 0; q < 3; q++) if (Math.random() < fill) { const u = (q + 0.5) / 3 - 0.5, aa = a + u * span / segs; pts.push([cx + Math.sin(aa) * rr, h, cz + Math.cos(aa) * rr]); } } }
+      for (let q = 0; q < 3; q++) if (fxRand() < fill) { const u = (q + 0.5) / 3 - 0.5, aa = a + u * span / segs; pts.push([cx + Math.sin(aa) * rr, h, cz + Math.cos(aa) * rr]); } } }
   setCrowd(A, pts, [cx, cz]);
 }
 // rechte tribune langs de x-as (achter het veld), rijen gaan van z0 naar achteren (dir = -1) of voren
@@ -9051,7 +9183,7 @@ function setStandsLine(A, x0, x1, z0, rows = 4, col = 0x3d8bff, dir = -1, opt = 
   const { step = 0.75, depth = 1.15, fill = 0.75, seat = 0xfff7e8, look } = opt, pts = [], w = x1 - x0;
   for (let k = 0; k < rows; k++) { const z = z0 + dir * k * depth, h = (k + 1) * step;
     const m = sbox(A, w, h, depth, k % 2 ? col : seat, (x0 + x1) / 2, h / 2, z, { ol: 0.025 }); m.castShadow = false;
-    for (let x = x0 + 0.4; x < x1 - 0.2; x += 0.62) if (Math.random() < fill) pts.push([x + (Math.random() - 0.5) * 0.15, h, z]); }
+    for (let x = x0 + 0.4; x < x1 - 0.2; x += 0.62) if (fxRand() < fill) pts.push([x + (fxRand() - 0.5) * 0.15, h, z]); }
   setCrowd(A, pts, look || [(x0 + x1) / 2, z0 - dir * 20]);
 }
 // lichtmast met lampen die naar het veld kijken
@@ -9087,9 +9219,9 @@ function setHills(A, col = 0x7cc864, r = 48, n = 9) {
     const m = at(part(G.sph(s, 20, 12), [col, 0x6ab857, 0x8fd473][k % 3], C2({ ol: 0.06 })), Math.sin(a) * rr, -s * 0.45, Math.cos(a) * rr, 0, 0, 0, [1.6, 0.8, 1]); m.castShadow = false; A.root.add(m); }
 }
 function setClouds(A, n = 6, y = 18, z = -40) {
-  for (let k = 0; k < n; k++) { const g = new THREE.Group(); g.position.set(-30 + k * 12 + Math.random() * 4, y + Math.random() * 4, z - Math.random() * 10); A.root.add(g);
+  for (let k = 0; k < n; k++) { const g = new THREE.Group(); g.position.set(-30 + k * 12 + fxRand() * 4, y + fxRand() * 4, z - fxRand() * 10); A.root.add(g);
     [[0, 0, 1.8], [1.7, -0.3, 1.3], [-1.7, -0.3, 1.4], [0.6, 0.8, 1.2]].forEach(([x, yy, r]) => { const m = at(part(G.sph(r, 14, 10), 0xffffff, C2({ ol: 0.05 })), x, yy, 0); m.castShadow = false; g.add(m); });
-    const sp = 0.3 + Math.random() * 0.4, x0 = g.position.x; setAnim(A, (dt, t) => { g.position.x = x0 + Math.sin(t * 0.05 * sp) * 6; }); }
+    const sp = 0.3 + fxRand() * 0.4, x0 = g.position.x; setAnim(A, (dt, t) => { g.position.x = x0 + Math.sin(t * 0.05 * sp) * 6; }); }
 }
 function setTree(A, x, z, s = 1, cols = [0x5cbf5a, 0x6fcf63, 0x4fae4f]) {
   const g = new THREE.Group(); g.position.set(x, 0, z); g.scale.setScalar(s); A.root.add(g);
@@ -9171,7 +9303,7 @@ MG_SET.munten = A => {   // het Muntenplein: bank, winkeltjes, stapels goud
   for (let k = 0; k < 3; k++) sbox(A, 10 - k * 1.2, 0.3, 1, 0xd9d2c4, 0, 0.15 + k * 0.3, bz + 1.3 - k * 0.5);
   setSign(A, '🪙 BANK VAN WAT 🪙', 8, 1.3, 0, 5.4, bz + 0.25, 0, '#ffc93c', '#2b2140', 64);
   const coin = (x, y, z, s = 1) => sadd(A, at(part(G.cyl(0.42 * s, 0.42 * s, 0.12 * s, 20), GOLD, C2({ ol: 0.015, emissive: 0x6a4a00, emissiveIntensity: 0.25 })), x, y, z));
-  const pile = (x, z, n) => { for (let i = 0; i < n; i++) coin(x + (Math.random() - 0.5) * 0.15, 0.06 + i * 0.12, z + (Math.random() - 0.5) * 0.15); };
+  const pile = (x, z, n) => { for (let i = 0; i < n; i++) coin(x + (fxRand() - 0.5) * 0.15, 0.06 + i * 0.12, z + (fxRand() - 0.5) * 0.15); };
   [[-8.5, -6, 9], [-9.2, -4.8, 6], [8.6, -6, 10], [9.3, -4.7, 5], [-8.8, 3, 7], [8.8, 2.5, 8], [-4, -8.6, 6], [4.2, -8.7, 7]].forEach(([x, z, n]) => pile(x, z, n));
   for (const [x, z] of [[-9.5, -2], [9.6, -1], [-9.8, 5.5]]) { sadd(A, at(part(G.sph(0.6, 16, 12), 0xc98f55, C2({ ol: 0.025 })), x, 0.55, z, 0, 0, 0, [1, 0.9, 1]));
     sadd(A, at(part(G.cyl(0.12, 0.2, 0.3, 10), 0xb87a45, C2({ ol: 0.015 })), x, 1.15, z)); setSign(A, '🪙', 0.5, 0.5, x, 0.6, z + 0.6, 0, '#c98f55'); }
@@ -9200,7 +9332,7 @@ MG_SET.schotsen = A => {   // het bevroren meer van Deniz: sneeuwoevers, dennen,
   sm.add(at(part(G.sph(0.9, 16, 12), 0xffffff, C2({ ol: 0.03 })), 0, 0.8, 0)); sm.add(at(part(G.sph(0.65, 16, 12), 0xffffff, C2({ ol: 0.03 })), 0, 2.0, 0)); sm.add(at(part(G.sph(0.45, 16, 12), 0xffffff, C2({ ol: 0.03 })), 0, 2.95, 0));
   sm.add(at(part(G.cone(0.08, 0.45, 8), 0xff9a3c, C2({ ol: 0.01 })), -0.1, 2.95, 0.6, Math.PI / 2 + 0.3, 0, 0)); sm.add(at(part(G.cyl(0.4, 0.42, 0.5, 16), 0x2b2140, C2({ ol: 0.02 })), 0, 3.5, 0));
   sm.add(at(part(G.tor(0.5, 0.12, Math.PI * 2, 8, 18), 0xff5a5a, C2({ ol: 0.015 })), 0, 2.45, 0, Math.PI / 2)); sm.rotation.y = -0.6;
-  const N = 220, pos = new Float32Array(N * 3); for (let i = 0; i < N; i++) { pos[i * 3] = (Math.random() - 0.5) * 40; pos[i * 3 + 1] = Math.random() * 16; pos[i * 3 + 2] = (Math.random() - 0.5) * 30 - 4; }
+  const N = 220, pos = new Float32Array(N * 3); for (let i = 0; i < N; i++) { pos[i * 3] = (fxRand() - 0.5) * 40; pos[i * 3 + 1] = fxRand() * 16; pos[i * 3 + 2] = (fxRand() - 0.5) * 30 - 4; }
   const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   const snow = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.18, transparent: true, opacity: 0.9, depthWrite: false })); A.root.add(snow);
   setAnim(A, (dt, t) => { for (let i = 0; i < N; i++) { pos[i * 3 + 1] -= dt * (1.2 + (i % 5) * 0.2); pos[i * 3] += Math.sin(t + i) * dt * 0.3; if (pos[i * 3 + 1] < -0.5) pos[i * 3 + 1] = 16; } geo.attributes.position.needsUpdate = true; });
@@ -9265,7 +9397,7 @@ MG_SET.bliksem = A => {   // Milo's toverveld: tovenaarstoren, kristallen, onwee
   for (let k = 0; k < 9; k++) { const g = new THREE.Group(); g.position.set(-24 + k * 6, 13 + (k % 3), -24 - (k % 2) * 4); A.root.add(g);
     [[0, 0, 2.4], [2.2, -0.4, 1.7], [-2.2, -0.4, 1.8]].forEach(([x, y, r]) => { const m = new THREE.Mesh(G.sph(r, 14, 10), cloudMat); m.position.set(x, y, 0); g.add(m); }); }
   let flash = 0, next = 2;
-  setAnim(A, (dt, t) => { next -= dt; if (next <= 0) { flash = 0.25; next = 1.5 + Math.random() * 3; } flash = Math.max(0, flash - dt);
+  setAnim(A, (dt, t) => { next -= dt; if (next <= 0) { flash = 0.25; next = 1.5 + fxRand() * 3; } flash = Math.max(0, flash - dt);
     cloudMat.emissiveIntensity = flash > 0 ? (Math.floor(flash * 40) % 2 ? 0.9 : 0.3) : 0;
     crys.forEach((c, i) => { c.rotation.y += dt * 0.4; c.position.y = c.scale.y + Math.sin(t * 1.5 + i) * 0.15; }); });
   for (let k = 0; k < 8; k++) { const a = Math.PI + (k / 7 - 0.5) * 3, r = 18; setPine(A, Math.sin(a) * r, Math.cos(a) * r, 1.6); }
@@ -9282,7 +9414,7 @@ MG_SET.fort = A => {   // Ratjetoe's fort: de burcht op het plateau achter de mu
   // tribune achter het lage deel van het pad (bij de helling is het plateau in de weg)
   const steps = [[0.3, -8.2], [0.9, -9.5], [1.5, -10.8]];
   steps.forEach(([h, z], i) => sbox(A, 20, h * 2, 1.3, i % 2 ? 0x7a4f2a : 0x8a5a33, -7, h, z, { tex: 'wood' }));
-  const fans = []; steps.forEach(([h, z]) => { for (let k = 0; k < 8; k++) fans.push([-16 + k * 2.5 + (Math.random() - 0.5) * 0.8, h * 2, z]); });
+  const fans = []; steps.forEach(([h, z]) => { for (let k = 0; k < 8; k++) fans.push([-16 + k * 2.5 + (fxRand() - 0.5) * 0.8, h * 2, z]); });
   setCrowd(A, fans, [0, 0]);
   const wheel = (x, z, s = 1) => { const g = new THREE.Group(); g.position.set(x, 0, z); g.scale.setScalar(s); A.root.add(g);
     g.add(at(part(new THREE.CylinderGeometry(0.9, 0.9, 0.6, 24, 1, false, 0, Math.PI * 1.65), 0xffd23f, C2({ ol: 0.025 })), 0, 0.3, 0));
@@ -9324,7 +9456,7 @@ function setHall(A, title, col, hw, back) {
   setStandsLine(A, -hw - 4, hw + 4, back, 5, col, -1, { step: 0.8, fill: 0.78, look: [0, 4] });
   for (const sx of [-1, 1]) { const pts = [];
     for (let k = 0; k < 3; k++) { const x = sx * (hw + 1.6 + k * 1.15), h = (k + 1) * 0.7; sbox(A, 1.15, h, 9, k % 2 ? col : 0xfff7e8, x, h / 2, back + 5.5, { ol: 0.025 }).castShadow = false;
-      for (let z = back + 1.4; z < back + 9.8; z += 0.65) if (Math.random() < 0.7) pts.push([x, h, z]); }
+      for (let z = back + 1.4; z < back + 9.8; z += 0.65) if (fxRand() < 0.7) pts.push([x, h, z]); }
     setCrowd(A, pts, [0, back + 5.5]); }
   setSign(A, title, 12, 2, 0, 7.6, back - 6.5, 0, '#2b2140', '#ffc93c', 70);
   for (const sx of [-1, 1]) setLightTower(A, sx * (hw + 6), back - 5, 12);
@@ -9358,7 +9490,7 @@ MG_SET.kabel = A => {   // energiecentrale: hoogspanningsmasten, transformator, 
     for (let k = 0; k < 6; k++) sadd(A, at(part(G.tor(0.36, 0.05, Math.PI * 2, 6, 16), 0xd98a3a, C2({ ol: 0, tex: 'metal' })), x, 0.8 + k * 0.4, -0.5, Math.PI / 2));
     sadd(A, at(part(G.tor(0.55, 0.22, Math.PI * 2, 10, 24), 0xd0d6de, C2({ ol: 0.02, tex: 'metal' })), x, 3.5, -0.5, Math.PI / 2));
     tips.push(sadd(A, at(part(G.sph(0.25, 12, 8), 0xfff6a0, { ...NO2, emissive: 0xffe000, emissiveIntensity: 1 }), x, 3.5, -0.5))); }
-  setAnim(A, (dt, t) => tips.forEach((m, i) => { m.scale.setScalar(1 + Math.abs(Math.sin(t * 23 + i * 3)) * 0.5); if (Math.random() < dt * 4) A.burst(new THREE.Vector3(m.position.x, 3.5, -0.5), 0xffe14a, 3, 3); }));
+  setAnim(A, (dt, t) => tips.forEach((m, i) => { m.scale.setScalar(1 + Math.abs(Math.sin(t * 23 + i * 3)) * 0.5); if (fxRand() < dt * 4) A.burst(new THREE.Vector3(m.position.x, 3.5, -0.5), 0xffe14a, 3, 3); }));
   setStandsLine(A, -9, 9, -11, 4, 0xffc93c, -1, { fill: 0.7, look: [0, 0] });
   setHills(A, 0x86d46c, 50);
 };
@@ -9418,7 +9550,7 @@ MG_SET.shuriken = A => {   // dojo: houten vloer, papieren wanden, torii, lantaa
     g.add(at(part(G.cyl(0.18, 0.28, 2.4, 8), 0x5a3a2a, C2({ ol: 0.02 })), 0, 1.2, 0, 0, 0, 0.1));
     [[0, 2.8, 0, 1.2], [0.9, 2.4, 0.3, 0.8], [-0.9, 2.5, -0.2, 0.85], [0.2, 3.4, 0.2, 0.7]].forEach(([a, b, c, r], i) => g.add(at(part(G.sph(r, 16, 12), [0xffb3cf, 0xffc8dc, 0xff9ac0][i % 3], C2({ ol: 0.03 })), a, b, c))); };
   sakura(-9.5, -3, 1.3); sakura(9.6, -3.5, 1.2); sakura(-6, -9, 1.5); sakura(6.5, -9.5, 1.4);
-  const N = 60, pos = new Float32Array(N * 3); for (let i = 0; i < N; i++) { pos[i * 3] = (Math.random() - 0.5) * 22; pos[i * 3 + 1] = Math.random() * 7; pos[i * 3 + 2] = -2 - Math.random() * 8; }
+  const N = 60, pos = new Float32Array(N * 3); for (let i = 0; i < N; i++) { pos[i * 3] = (fxRand() - 0.5) * 22; pos[i * 3 + 1] = fxRand() * 7; pos[i * 3 + 2] = -2 - fxRand() * 8; }
   const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); A.root.add(new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffb3cf, size: 0.16 })));
   setAnim(A, (dt, t) => { for (let i = 0; i < N; i++) { pos[i * 3 + 1] -= dt * 0.6; pos[i * 3] += Math.sin(t * 2 + i) * dt * 0.6; if (pos[i * 3 + 1] < 0) pos[i * 3 + 1] = 7; } geo.attributes.position.needsUpdate = true; });
   for (const sx of [-1, 1]) { const g = new THREE.Group(); g.position.set(sx * 7.6, 0, 1.5); A.root.add(g);
@@ -9877,7 +10009,7 @@ MG_SET.lawine = A => {   // skipiste: bergtoppen, dennen, skilift, sneeuwval
   const chairs = []; for (let k = 0; k < 5; k++) { const c = new THREE.Group(); A.root.add(c); c.add(at(part(G.box(1.0, 0.12, 0.6), 0xe23b3b, C2({ ol: 0.02 })), 0, -1.2, 0)); c.add(at(part(G.cyl(0.03, 0.03, 1.2, 6), 0x3a3550, NO2), 0, -0.6, 0)); chairs.push(c); }
   setAnim(A, (dt, t) => chairs.forEach((c, i) => { const u = ((t * 0.04 + i / 5) % 1), z = -24 + u * 19.5, y = (z < -5 ? (-5 - z) * 11 / 19 : 0) + 6; c.position.set(12.5, y, z); }));
   setSign(A, '⛷️ LAWINE-ALARM', 6, 1.4, -9.5, 2.2, -3, 0.5, '#e23b3b', '#ffffff', 60);
-  const N = 200, pos = new Float32Array(N * 3); for (let i = 0; i < N; i++) { pos[i * 3] = (Math.random() - 0.5) * 40; pos[i * 3 + 1] = Math.random() * 18; pos[i * 3 + 2] = (Math.random() - 0.5) * 34 - 6; }
+  const N = 200, pos = new Float32Array(N * 3); for (let i = 0; i < N; i++) { pos[i * 3] = (fxRand() - 0.5) * 40; pos[i * 3 + 1] = fxRand() * 18; pos[i * 3 + 2] = (fxRand() - 0.5) * 34 - 6; }
   const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); A.root.add(new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.18, transparent: true, opacity: 0.9, depthWrite: false })));
   setAnim(A, (dt, t) => { for (let i = 0; i < N; i++) { pos[i * 3 + 1] -= dt * (1.2 + (i % 5) * 0.2); pos[i * 3] += Math.sin(t + i) * dt * 0.3; if (pos[i * 3 + 1] < -0.3) pos[i * 3 + 1] = 18; } geo.attributes.position.needsUpdate = true; });
 };
@@ -9906,7 +10038,7 @@ MG_SET.ritme = A => {   // neon-podium: speakers, lichttorens die op de maat kni
   setAnim(A, (dt, t) => { const b = Math.floor(t * 2); lamps.forEach((m, i) => { m.color && m.color.setHex(cols[(i + b) % 4]); if (m.emissive) m.emissive.setHex(cols[(i + b) % 4]); }); });
   setSign(A, '🎮 RENAS’ BEAT SABER', 11, 1.8, 0, 10.6, -16.5, 0, '#1b1820', '#5ad1e0', 70);
   for (const sx of [-1, 1]) { const pts = []; for (let k = 0; k < 3; k++) { const x = sx * (11 + k * 1.15), h = (k + 1) * 0.7; sbox(A, 1.15, h, 9, k % 2 ? 0x5ad1e0 : 0x2b2546, x, h / 2, -2, { ol: 0.025 }).castShadow = false;
-      for (let z = -6; z < 2.4; z += 0.65) if (Math.random() < 0.7) pts.push([x, h, z]); } setCrowd(A, pts, [0, -2]); }
+      for (let z = -6; z < 2.4; z += 0.65) if (fxRand() < 0.7) pts.push([x, h, z]); } setCrowd(A, pts, [0, -2]); }
 };
 MG_SET.stapel = A => {   // Casper's sloperij: bandenbergen, autowrakken, golfplaten muur, olievaten
   for (let x = -24; x <= 24; x += 3.2) sbox(A, 3.1, 7, 0.3, [0x9aa4ae, 0x8a949e][Math.abs(x / 3.2) % 2], x, 3.5, -10, { tex: 'metal' });
@@ -10872,7 +11004,7 @@ MGDEF.wortel = { botRT: true, ic: '🥕', nm: 'Prei’s Wortels trekken', type: 
       if (!mp.in.aP) continue; const c = d.cs.find(c => c.p < 1 && Math.hypot(c.x - mp.pos.x, c.z - mp.pos.z) < 0.95); if (!c) continue;
       c.p += 1 / c.T.need; mp.pull = 0.18; Sfx.play.blip(220 + c.p * 400);
       if (c.p >= 1) { mp.score += c.T.v; A.float(mp, `🥕 +${c.T.v}`, '#ffb36b'); Sfx.play.coin(); A.burst(new THREE.Vector3(c.x, 0.5, c.z), 0x8a5a33, 10); c.pop = 0.01; } }
-    for (let i = d.cs.length - 1; i >= 0; i--) { const c = d.cs[i]; if (c.pop > 0) { c.pop += dt; if (c.pop > 0.7) { A.root.remove(c.g); d.cs.splice(i, 1); setTimeout(() => { if (MG.A === A) this.add(A); }, 900); } } }
+    for (let i = d.cs.length - 1; i >= 0; i--) { const c = d.cs[i]; if (c.pop > 0) { c.pop += dt; if (c.pop > 0.7) { A.root.remove(c.g); d.cs.splice(i, 1); Later.add(0.9, () => { if (MG.A === A) this.add(A); }); } } }
     mgSep(A, 0.7);
   },
   bot(mp, A, dt) { const d = A.data, ai = mp.ai, L = botLv(), rate = [6, 7.5, 9][L];
@@ -11596,7 +11728,7 @@ function makeEnt(slot, charId, x, z) {
   const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: new THREE.Color(slot.color), transparent: true, opacity: slot.kind === 'bot' ? 0.55 : 0.95 }));
   ring.rotation.x = -Math.PI / 2; scene.add(ring);
   const e = { slot, charId, c, ring, pos: new THREE.Vector3(x, 0, z), vel: new THREE.Vector3(), yaw: Math.PI, jy: 0, vy: 0, stepT: 0,
-    faceTo: null, near: null, bot: slot.kind === 'bot' ? { st: 'idle', t: 0.5 + Math.random() * 2, tx: 0, tz: 0, npc: null, stuck: 0, side: 0, sideT: 0, lastD: 0 } : null };
+    faceTo: null, near: null, bot: slot.kind === 'bot' ? { st: 'idle', t: 0.5 + fxRand() * 2, tx: 0, tz: 0, npc: null, stuck: 0, side: 0, sideT: 0, lastD: 0 } : null };
   c.root.position.copy(e.pos);
   return e;
 }
@@ -11607,7 +11739,7 @@ const poofs = [];
 function poof(p) {
   for (let i = 0; i < 8; i++) {
     const m = new THREE.Mesh(G.sph(0.25, 10, 8), new THREE.MeshToonMaterial({ color: 0xffffff, gradientMap: GRAD, transparent: true }));
-    const a = i / 8 * Math.PI * 2; m.position.set(p.x + Math.cos(a) * 0.3, 0.5 + Math.random() * 0.6, p.z + Math.sin(a) * 0.3);
+    const a = i / 8 * Math.PI * 2; m.position.set(p.x + Math.cos(a) * 0.3, 0.5 + fxRand() * 0.6, p.z + Math.sin(a) * 0.3);
     scene.add(m); poofs.push({ m, a, t: 0 });
   }
   Sfx.play.poof();
@@ -11638,6 +11770,7 @@ function placeAll() {
   placeNpc('rommel', 'Rommel', rx, 0, rz, { face: false, pt: { x: rx - rx / d * 1.6, z: rz - rz / d * 1.6 }, r: 2.2, ly: 3.0 }); circ(rx, rz, 1.25);
   placeNpc('spelbreker', 'De Spelbreker', 7.0, 0, -8.0, { r: 2.3 }); circ(7.0, -8.0, 0.75);
   placeNpc('kleed', 'Kleedhokje', -6.8, 0, 6.9, { build: false, verb: 'Personage wisselen', lx: -8.2, ly: 4.4, lz: 5.6, r: 2.3 });
+  { const d = Math.hypot(KIOSK.x, KIOSK.z); placeNpc('online', 'Online-kiosk', KIOSK.x, 0, KIOSK.z, { build: false, verb: 'Online spelen', pt: { x: KIOSK.x - KIOSK.x / d * 1.5, z: KIOSK.z - KIOSK.z / d * 1.5 }, ly: 4.3, r: 2.2 }); }
 }
 
 // ---------- spelers erbij / eraf ----------
@@ -11768,7 +11901,7 @@ function updateNpc(n, dt, t) {
   n.cool = (n.cool ?? 1.5) - dt;
   if (n.cool <= 0 && !(Dialog.cur && Dialog.cur.key === n.key) && BOT_LINES[n.key]
       && Game.slots.some(s => s.ent && Math.hypot(s.ent.pos.x - n.pt.x, s.ent.pos.z - n.pt.z) < 5.5)) {
-    n.bubble = pick(BOT_LINES[n.key]); n.bubbleT = 2.6; n.cool = 11 + Math.random() * 9;
+    n.bubble = pick(BOT_LINES[n.key]); n.bubbleT = 2.6; n.cool = 11 + fxRand() * 9;
     for (let i = 0; i < 3; i++) setTimeout(() => Sfx.play.blip(SCRIPTS[n.key].pitch), i * 70);
   }
   if (!n.face) return;
@@ -11803,7 +11936,7 @@ function drawLabels(dt) {
       const dlg = Dialog.cur && Dialog.cur.key === n.key;
       const nearH = Game.slots.find(s => s.kind === 'human' && s.ent && s.ent.near === n);
       if (n.bubbleT > 0 && !dlg) label('bb' + n.key, 'bubble', n.bubble, _tmp2.copy(n.lab).setY(n.lab.y + 0.9));
-      if (nearH && !Dialog.cur && !Panel.cur) label('pr' + n.key, 'prompt', `<kbd>${keyA(nearH.dev)}</kbd>${n.verb}${n.key === 'kleed' ? '' : ' met ' + n.name}`, n.lab, nearH.color);
+      if (nearH && !Dialog.cur && !Panel.cur) label('pr' + n.key, 'prompt', `<kbd>${keyA(nearH.dev)}</kbd>${n.verb}${n.obj ? ' met ' + n.name : ''}`, n.lab, nearH.color);
       else if (!dlg && Game.slots.some(s => s.ent && s.ent.pos.distanceTo(_tmp.set(n.pt.x, 0, n.pt.z)) < 8)) label('nn' + n.key, 'label', n.name, n.lab);
     }
     for (let i = emotes.length - 1; i >= 0; i--) {
@@ -11834,7 +11967,8 @@ const Pause = {
       ['Muziek', S.music ? 'aan' : 'uit', () => { S.music = !S.music; Sfx.setMusic(S.music); }],
       ['Bot-niveau in een potje', BOTLV[S.botLevel], () => { S.botLevel = (S.botLevel + 1) % 3; }],
       ['Volledig scherm', '⛶', () => toggleFS()],
-      ...(Net.on ? [['🌐 Online: link tonen', '', () => { this.close(); Net.showLink(); }], ['🌐 Online stoppen', '', () => { this.close(); Net.stop(); }]] : [['🌐 Online spelen', 'host', () => { this.close(); Net.host(); }]]),
+      ...(Peer.on ? [['📺 Online: code tonen', '', () => { this.close(); Peer.showCode(); }], ['📺 Online stoppen', '', () => { this.close(); Peer.stop(); }]] : []),
+      ...(Peer.on ? [] : Net.on ? [['🌐 Online: link tonen', '', () => { this.close(); Net.showLink(); }], ['🌐 Online stoppen', '', () => { this.close(); Net.stop(); }]] : [['🌐 Online spelen', 'host', () => { this.close(); Net.host(); }]]),
     ];
     if (humans > 1) it.push(['Deze speler laten stoppen', '', () => { const s = Game.slots.find(s => s.dev === this.dev); this.close(); if (s) dropSlot(s); }]);
     return it;
@@ -11910,12 +12044,20 @@ addEventListener('pointerdown', () => Sfx.ensure());
 // ---------- hoofdlus ----------
 if (Net.ctrl) Net.runController(); else { buildWorld(); placeAll(); renderCards(); }   // met een ?join=-link is deze pagina alleen een controller
 let last = performance.now();
+// één stap spellogica. Online (eigen scherm) roept de lockstep dit aan met een vaste stap, op elke computer even vaak.
+function simStep(dt) {
+  Game.t += dt; Game.frame++; const t = Game.t;
+  Later.step(dt);
+  if (Game.state === 'party') Party.update(dt, t);
+  else if (Game.state === 'minigame') MG.update(dt, t);
+}
 function frame(now) {
-  if (Net.ctrl) return; requestAnimationFrame(frame);
+  requestAnimationFrame(frame); if (Net.ctrl) { last = now; return; }   // deze pagina is (even) een controller
   try { musicPick(); } catch (e) { }   // muziek mag het spel nooit laten vastlopen
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (LS.on) { LS.frame(dt); drawFrame(dt, Game.t); return; }
   Game.t += dt; Game.frame++; const t = Game.t;
-  Input.poll(dt); checkPads();
+  Input.poll(dt); checkPads(); Later.step(dt);
   if (Game.state === 'title') {
     for (const d of Input.all()) if (Input.get(d).aP || Input.get(d).startP) { startHub(d); Game.state = 'starting'; break; }
   } else if (Game.state === 'board') { Board.update(dt, t);
@@ -11938,6 +12080,10 @@ function frame(now) {
     for (const s of Game.slots) if (s.ent) updateHuman(s.ent, dt, t);
     separate();
   }
+  drawFrame(dt, t);
+}
+// alles wat alleen beeld is: decor, camera, labels en tekenen
+function drawFrame(dt, t) {
   updateWorld(dt, t); for (const n of NPCS) updateNpc(n, dt, t); updatePoofs(dt);
   sun.position.set(camTgt.x + 14, 26, camTgt.z + 12); sun.target.position.set(camTgt.x, 0, camTgt.z);
   updateCamera(dt, t); drawLabels(dt);
@@ -11948,6 +12094,360 @@ function frame(now) {
   else renderer.render(scene, camera);
 }
 requestAnimationFrame(frame);
+
+// =====================================================================
+//  ONLINE MET EEN EIGEN SCHERM
+//  Elke computer speelt zelf precies hetzelfde potje ("lockstep"). Over het netwerk gaan alleen de knoppen die iemand
+//  indrukt, plus één keer een startpakket (instellingen, personages en een toevalsgetal). Omdat het spel met hetzelfde
+//  toeval en dezelfde knoppen op elke computer exact hetzelfde doet, ziet iedereen hetzelfde, op zijn eigen scherm.
+//  Verbinding: rechtstreeks tussen de spelers (WebRTC). Firebase wordt alleen gebruikt om die verbinding op te zetten.
+// =====================================================================
+const LS_DT = 1 / 60, LS_D = 6;   // vaste stap van 1/60 s; knoppen tellen 6 stappen (0,1 s) later, zodat ze op tijd overal zijn
+const ICE = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
+const fb = {
+  url: (code, p) => `${NET_DB}/rooms/${code}${p ? '/' + p : ''}.json`,
+  send: (code, p, v, method = 'PUT') => fetch(fb.url(code, p), { method, body: v === undefined ? undefined : JSON.stringify(v) }).then(r => r.ok).catch(() => false),
+  get: (code, p) => fetch(fb.url(code, p)).then(r => r.ok ? r.json() : null).catch(() => null),
+  listen(code, p, fn) { const es = new EventSource(fb.url(code, p)); const h = type => e => { try { const m = JSON.parse(e.data); if (m) fn(type, m.path, m.data); } catch (_) { } };
+    es.addEventListener('put', h('put')); es.addEventListener('patch', h('patch')); return es; },
+};
+const iceDone = pc => new Promise(r => { if (pc.iceGatheringState === 'complete') return r();
+  const f = () => { if (pc.iceGatheringState === 'complete') { pc.removeEventListener('icegatheringstatechange', f); r(); } }; pc.addEventListener('icegatheringstatechange', f); setTimeout(r, 3000); });
+
+// ---------- kamer en verbindingen ----------
+const Peer = (() => {
+  const st = { on: false, host: false, code: '', es: null, peers: {}, me: '', ch: null, pc: null, name: '', lobby: null, timer: 0, lastLobby: '' };
+  const makeCode = () => { const L = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; let s = ''; for (let i = 0; i < 4; i++) s += L[Math.floor(fxRand() * L.length)]; return s; };
+  const open = () => Object.values(st.peers).filter(p => p.ch && p.ch.readyState === 'open');
+  function sendTo(p, m) { try { if (p.ch && p.ch.readyState === 'open') p.ch.send(JSON.stringify(m)); } catch (_) { } }
+  const all = m => { const s = JSON.stringify(m); for (const p of open()) try { p.ch.send(s); } catch (_) { } };
+  const toHost = m => { try { if (st.ch && st.ch.readyState === 'open') st.ch.send(JSON.stringify(m)); } catch (_) { } };
+
+  // ===== host =====
+  async function host() {
+    if (!NET_DB) { toast('❌ Dit spel is niet aan een database gekoppeld'); return; }
+    if (Net.on) Net.stop();
+    st.code = makeCode(); st.host = true; st.peers = {};
+    { const why = await dbCheck(NET_DB, st.code); if (why) { dbFail(why); return; } }
+    await fb.send(st.code, '', { t: Date.now(), v: 2, mode: 'scherm' });
+    st.on = true; st.es = fb.listen(st.code, 'peers', onSignal); st.timer = setInterval(lobbyTick, 500);
+    chip(); showCode(); Sfx.play.join();
+  }
+  // nieuwe spelers melden zich met een "offer"; wij antwoorden en dan staat de directe verbinding
+  function onSignal(type, path, data) {
+    const parts = path.split('/').filter(Boolean);
+    const look = (id, v) => { if (v && v.offer && !st.peers[id]) answer(id, v.offer); };
+    if (!parts.length) { for (const id in data || {}) look(id, data[id]); return; }
+    if (parts.length === 1) look(parts[0], data); else if (parts[1] === 'offer') look(parts[0], { offer: data });
+  }
+  async function answer(id, offer) {
+    if (LS.on) return;   // tijdens een potje kan er niemand bij
+    const pc = new RTCPeerConnection(ICE), p = st.peers[id] = { id, pc, ch: null, name: String(offer.n || 'Speler').slice(0, 14), ch0: offer.ch, slot: -1 };
+    pc.ondatachannel = e => { p.ch = e.channel; p.ch.onmessage = ev => hostMsg(p, JSON.parse(ev.data)); p.ch.onclose = () => gone(p); };
+    pc.onconnectionstatechange = () => { if (['failed', 'closed', 'disconnected'].includes(pc.connectionState)) gone(p); };
+    await pc.setRemoteDescription({ type: 'offer', sdp: offer.sdp }); await pc.setLocalDescription(await pc.createAnswer()); await iceDone(pc);
+    fb.send(st.code, `peers/${id}/answer`, { sdp: pc.localDescription.sdp });
+  }
+  function hostMsg(p, m) {
+    if (m.k === 'hi') join(p, m.ch || p.ch0);
+    else if (m.k === 'ch') pickChar(p, m.ch);
+    else if (m.k === 'i' || m.k === 'h') LS.hostMsg(p, m);
+  }
+  // een online speler krijgt een eigen plek, net als een controller die meedoet
+  function join(p, ch) {
+    if (p.slot >= 0) return;
+    const slot = Game.slots.find(s => s.kind !== 'human');
+    if (!slot) { sendTo(p, { k: 'full' }); return; }
+    if (slot.ent) { removeEnt(slot.ent); slot.ent = null; }
+    slot.kind = 'human'; slot.dev = 'rp' + p.id; p.slot = slot.idx;
+    const pos = { x: KIOSK.x + 1.6 + slot.idx * 0.9, z: KIOSK.z + 2.2 };
+    slot.ent = makeEnt(slot, freeChar(slot, BUILT.some(c => c.id === ch) ? ch : null), pos.x, pos.z); poof(slot.ent.pos);
+    for (const s of Game.slots) if (s !== slot && s.kind === 'bot' && s.ent && s.ent.charId === slot.ent.charId) Game.setChar(s, freeChar(s));
+    renderCards(slot.idx); toast(`📺 ${p.name} doet online mee als P${slot.idx + 1}`); Sfx.play.join(); lobbyTick(true);
+  }
+  function pickChar(p, ch) {
+    const slot = Game.slots[p.slot]; if (!slot || !slot.ent || !BUILT.some(c => c.id === ch)) return;
+    if (Game.slots.some(s => s !== slot && s.kind === 'human' && s.ent && s.ent.charId === ch)) { sendTo(p, { k: 'taken', ch }); return; }
+    Game.setChar(slot, ch); lobbyTick(true);
+  }
+  function gone(p) {
+    if (!st.peers[p.id]) return; delete st.peers[p.id]; try { p.pc.close(); } catch (_) { }
+    const slot = Game.slots[p.slot];
+    if (LS.on) { if (slot) LS.drop(slot.idx); toast(`📺 ${p.name} is weggevallen: een bot neemt het over`); return; }
+    if (slot && slot.dev === 'rp' + p.id) dropSlot(slot);
+    toast(`📺 ${p.name} is weg`); lobbyTick(true);
+  }
+  // iedereen in de wachtkamer ziet wie er meedoet en met welk personage
+  function lobbyTick(force) {
+    if (!st.on || !st.host) return; chip(); if (LS.on) return;
+    const list = Game.slots.filter(s => s.kind === 'human' && s.ent).map(s => ({ p: s.idx, c: s.color, ch: s.ent.charId, n: s.dev.startsWith('rp') ? (st.peers[s.dev.slice(2)] || {}).name : 'host' }));
+    const info = `${MODES[S.mode || 0]} · ${S.mode === 2 ? mgCount() + ' minigames' : BOARD_DEFS[boardSel()].nm + ' · ' + S.rounds + ' rondes'}`;
+    const key = JSON.stringify([list, info]); if (!force && key === st.lastLobby) return; st.lastLobby = key;
+    for (const p of open()) sendTo(p, { k: 'lobby', you: p.slot, list, info });
+  }
+  function stop() {
+    if (!st.on) return; if (LS.on) { toast('Eerst het potje afmaken'); return; }
+    st.on = false; clearInterval(st.timer); if (st.es) st.es.close();
+    for (const p of Object.values(st.peers)) { const s = Game.slots[p.slot]; if (s && s.dev === 'rp' + p.id) dropSlot(s); try { p.pc.close(); } catch (_) { } }
+    st.peers = {}; fb.send(st.code, '', undefined, 'DELETE'); const c = document.getElementById('netchip'); if (c) c.remove(); toast('📺 Online gestopt');
+  }
+  function chip() {
+    if (!st.on) return; let c = document.getElementById('netchip');
+    if (!c) { c = document.createElement('div'); c.id = 'netchip'; c.onclick = showCode; document.body.appendChild(c); }
+    c.innerHTML = `📺 Kamer <b>${st.code}</b> · ${open().length} online · <u>code</u>`;
+  }
+  function showCode() {
+    let m = document.getElementById('netlink'); if (m) m.remove();
+    m = document.createElement('div'); m.id = 'netlink';
+    m.innerHTML = `<div><h3>📺 Online spelen (eigen scherm)</h3><p>Kamercode <b class="code">${st.code}</b></p><p>Je vrienden openen dit spel op hun eigen computer, kiezen op het titelscherm <b>🌐 Meedoen met code</b> en typen <b>${st.code}</b>. In de wachtkamer kiezen ze hun personage. Start de party bij Wattie, dan speelt iedereen mee op zijn eigen scherm.</p>
+      <div class="row"><button class="x">Sluiten</button></div><p class="sm">Werkt het best als iedereen Chrome, Edge, Brave of Dia gebruikt.</p></div>`;
+    document.body.appendChild(m); m.querySelector('.x').onclick = () => m.remove();
+  }
+
+  // ===== meedoen met een kamer =====
+  async function join2(code, name) {
+    st.code = code; st.name = name; st.me = localStorage.getItem('witp_id') || fxRand().toString(36).slice(2, 10); localStorage.setItem('witp_id', st.me);
+    lobbyUI(); lobbySay('Verbinden met kamer ' + code + '...');
+    const pc = st.pc = new RTCPeerConnection(ICE), ch = st.ch = pc.createDataChannel('g', { ordered: true });
+    ch.onopen = () => { lobbySay('Verbonden met de host', 'ok'); toHost({ k: 'hi', ch: st.lobbyCh }); };
+    ch.onmessage = e => clientMsg(JSON.parse(e.data));
+    ch.onclose = () => { if (!st.left) lost(); };
+    pc.onconnectionstatechange = () => { if (pc.connectionState === 'failed') lost(); };
+    await pc.setLocalDescription(await pc.createOffer()); await iceDone(pc);
+    await fb.send(code, `peers/${st.me}`, { offer: { sdp: pc.localDescription.sdp, n: name, ch: st.lobbyCh } });
+    st.es = fb.listen(code, `peers/${st.me}/answer`, (type, path, v) => { if (path === '/' && v && v.sdp && !pc.remoteDescription) pc.setRemoteDescription({ type: 'answer', sdp: v.sdp }); });
+    setTimeout(() => { if (ch.readyState !== 'open') lobbySay('Het lukt niet om verbinding te maken. Soms blokkeert een (school)netwerk dit. Probeer een ander netwerk, of vraag de host om een kamer met controllers.', 'bad'); }, 15000);
+  }
+  function lost() { st.left = true; if (LS.on) LS.abort(); lobbyUI(); lobbySay('De verbinding met de host is weg. Herlaad de pagina om opnieuw mee te doen.', 'bad'); }
+  function clientMsg(m) {
+    if (m.k === 'lobby') { st.lobby = m; lobbyDraw(); }
+    else if (m.k === 'taken') lobbyPop('Dat personage is al gekozen. Kies een ander!');
+    else if (m.k === 'full') lobbySay('De kamer zit vol: er doen al 4 spelers mee.', 'bad');
+    else if (m.k === 'start') { lobbyHide(); LS.begin(m); }
+    else if (m.k === 'b' || m.k === 'warn' || m.k === 'end') LS.clientMsg(m);
+  }
+  // wachtkamer: personage kiezen en zien wie er meedoet
+  function lobbyUI() {
+    Game.state = 'netlobby'; document.getElementById('title').classList.add('hidden');
+    let el = document.getElementById('lobby');
+    if (!el) { el = document.createElement('div'); el.id = 'lobby'; document.body.appendChild(el);
+      el.innerHTML = `<div class="lb">
+        <div class="lb-top"><div class="lb-t">📺 Wachtkamer</div><div class="lb-code"></div></div>
+        <div class="lb-status"><i class="dot"></i><span class="say"></span></div>
+        <div class="lb-main">
+          <div class="lb-pick"><div class="lb-lab">Jouw personage</div>
+            <div class="lb-car"><button class="l" aria-label="vorige">◀</button><div class="lb-me"><div class="pic"></div><b class="nm"></b><small class="tag"></small></div><button class="r" aria-label="volgende">▶</button></div>
+            <div class="lb-hint">◀ ▶ of A / D om te wisselen</div></div>
+          <div class="lb-seats"><div class="lb-lab">Wie doet er mee?</div><div class="seats"></div></div>
+        </div>
+        <div class="lb-info"></div>
+        <div class="lb-foot"><span class="hg">⏳</span> De host start de party bij Wattie. Lege plekken worden bots.</div>
+      </div><div class="lb-pop"></div>`;
+      el.querySelector('.l').onclick = () => lobbyStep(-1); el.querySelector('.r').onclick = () => lobbyStep(1);
+      addEventListener('keydown', e => { if (Game.state !== 'netlobby') return; if (['ArrowLeft', 'KeyA'].includes(e.code)) lobbyStep(-1); if (['ArrowRight', 'KeyD'].includes(e.code)) lobbyStep(1); }); }
+    if (!st.lobbyCh) st.lobbyCh = (Save.d.chars && Save.d.chars[0] && BUILT.some(c => c.id === Save.d.chars[0])) ? Save.d.chars[0] : BUILT[0].id;
+    el.classList.remove('hidden'); el.querySelector('.lb-code').innerHTML = [...st.code].map(c => `<b>${c}</b>`).join(''); lobbyDraw();
+  }
+  // een ander personage kiezen; wat al gekozen is, sla je over
+  function lobbyStep(d) {
+    const L = BUILT, taken = new Set(((st.lobby && st.lobby.list) || []).filter(x => x.p !== st.lobby.you).map(x => x.ch));
+    let i = Math.max(0, L.findIndex(c => c.id === st.lobbyCh));
+    for (let n = 0; n < L.length; n++) { i = (i + d + L.length) % L.length; if (!taken.has(L[i].id)) break; }
+    st.lobbyCh = L[i].id; st.pickT = performance.now(); Sfx.play.move(); lobbyDraw(); toHost({ k: 'ch', ch: st.lobbyCh });
+  }
+  function lobbySay(t, kind = 'wait') { const el = document.getElementById('lobby'); if (!el) return; el.querySelector('.say').textContent = t; el.querySelector('.lb-status').dataset.k = kind; }
+  function lobbyHide() { const el = document.getElementById('lobby'); if (el) el.classList.add('hidden'); }
+  function lobbyPop(t) { const el = document.getElementById('lobby'); if (!el) return; const p = el.querySelector('.lb-pop'); p.textContent = t; p.classList.remove('on'); void p.offsetWidth; p.classList.add('on'); }
+  function lobbyDraw() {
+    const el = document.getElementById("lobby"); if (!el) return; const L = st.lobby, pt = portraits(), esc = s => String(s).replace(/[<>&"]/g, "");
+    // wat de host zegt dat jij hebt, wint (behalve vlak nadat je zelf wisselde: dan is zijn bericht nog onderweg)
+    if (L) { const mine = L.list.find(x => x.p === L.you); if (mine && mine.ch !== st.lobbyCh && performance.now() - (st.pickT || 0) > 1500) st.lobbyCh = mine.ch; }
+    const c = byId(st.lobbyCh) || BUILT[0];
+    el.querySelector('.pic').innerHTML = pt[c.id] ? `<img src="${pt[c.id]}" alt="">` : `<span>${c.emo}</span>`;
+    el.querySelector('.nm').textContent = `${c.emo} ${c.name}`; el.querySelector('.tag').textContent = c.tag || '';
+    const me = L ? L.you : -1, list = L ? L.list : [];
+    el.querySelector('.lb-me').style.setProperty('--c', me >= 0 ? SLOT_COLORS[me] : '#ffc93c');
+    el.querySelector('.seats').innerHTML = [0, 1, 2, 3].map(i => { const x = list.find(y => y.p === i), col = SLOT_COLORS[i];
+      if (!x) return `<div class="seat empty" style="--c:${col}"><div class="sp">?</div><div class="sx"><b>P${i + 1}</b><span>wacht op een speler…</span></div></div>`;
+      const ch = byId(x.ch) || {}, who = x.p === me ? 'JIJ' : x.n === 'host' ? 'HOST' : '';
+      return `<div class="seat${x.p === me ? ' me' : ''}" style="--c:${col}"><div class="sp">${pt[x.ch] ? `<img src="${pt[x.ch]}" alt="">` : ch.emo || '?'}</div>
+        <div class="sx"><b>P${i + 1}${who ? ` <em>${who}</em>` : ''}</b><span>${ch.emo || ''} ${ch.name || ''}</span><small>${x.n && x.n !== "host" ? esc(x.n) : x.n === 'host' ? 'speelt op het grote scherm' : ''}</small></div></div>`; }).join('');
+    el.querySelector('.lb-info').innerHTML = L ? L.info.split(' · ').map(s => `<span>${s}</span>`).join('') : '';
+    // wie is er net bij gekomen of weggegaan?
+    const now = list.map(x => x.p + ':' + (x.n || '')), before = st.seen || [];
+    if (st.seen) { for (const k of now) if (!before.includes(k)) { const x = list.find(y => y.p + ':' + (y.n || '') === k); if (x && x.p !== me) { lobbyPop(`🎉 ${x.n === 'host' ? 'De host' : x.n} doet mee als P${x.p + 1}!`); Sfx.play.join(); } }
+      for (const k of before) if (!now.includes(k)) { const n = k.split(':').slice(1).join(':'); lobbyPop(`👋 ${n === 'host' ? 'De host' : n || 'Iemand'} is weg`); Sfx.play.leave(); } }
+    st.seen = now;
+  }
+  return { host, stop, showCode, join: join2, lobbyUI, all, toHost, sendTo, open, peerOf: slot => Object.values(st.peers).find(p => p.slot === slot),
+    name: dev => (st.peers[dev.slice(2)] || {}).name || 'online speler',
+    get on() { return st.on; }, get isHost() { return st.host && st.on; }, get code() { return st.code; }, get count() { return open().length; } };
+})();
+
+// ---------- lockstep: elke computer speelt dezelfde stappen met dezelfde knoppen ----------
+const LS = (() => {
+  const st = { on: false, host: false, T: 0, bundles: new Map(), pend: new Map(), humans: [], mine: {}, acc: 0, run: false, n: 0, dropped: new Set(), dropNew: [], hashes: new Map(), warned: false, rngN: 0, backup: null, devs: null, started: false };
+  // eigen toeval met een startgetal (mulberry32), en een teller om te controleren of iedereen nog gelijk loopt
+  let seedV = 1; const rng = () => { st.rngN++; seedV |= 0; seedV = seedV + 0x6D2B79F5 | 0; let t = Math.imul(seedV ^ seedV >>> 15, 1 | seedV); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const BITS = ['a', 'b', 'aP', 'bP', 'upP', 'downP', 'leftP', 'rightP', 'emoP', 'startP', 'run', 'start', 'emo'];
+  const pack = s => [Math.round((s.x || 0) * 100), Math.round((s.y || 0) * 100), BITS.reduce((v, k, i) => v | (s[k] ? 1 << i : 0), 0)];
+  const unpack = a => { const o = { x: (a ? a[0] : 0) / 100, y: (a ? a[1] : 0) / 100 }; BITS.forEach((k, i) => { o[k] = !!(a && a[2] & 1 << i); }); return o; };
+  const zero = [0, 0, 0];
+  // de knoppen van deze computer: bij de host per eigen plek, bij een gast alles wat er is (toetsenbord en controllers samen)
+  function local(dev) {
+    if (dev !== '*') return Input.get(dev);
+    const o = { x: 0, y: 0 }; let m = 0;
+    for (const id of Input.all()) { if (id.startsWith('np')) continue; const s = Input.get(id), mm = Math.hypot(s.x, s.y); if (mm > m) { m = mm; o.x = s.x; o.y = s.y; } for (const k of BITS) o[k] = o[k] || s[k]; }
+    return o;
+  }
+  const port = new MessageChannel();
+  port.port1.onmessage = () => {
+    // elke stap in een eigen taak: zo lopen alle "await"-ketens in het spel op elke computer in dezelfde volgorde
+    if (!st.on) { st.run = false; return; }
+    const ahead = [...st.bundles.keys()].filter(t => t >= st.T).length;
+    if ((st.acc >= LS_DT || ahead > 4) && st.bundles.has(st.T) && st.n < 8) { tick(); st.acc = Math.max(0, st.acc - LS_DT); st.n++; port.port2.postMessage(0); return; }
+    st.run = false;
+  };
+  function frame(dt) { st.acc = Math.min(st.acc + dt, 0.25); st.n = 0; if (!st.run) { st.run = true; port.port2.postMessage(0); } }
+
+  function tick() {
+    const T = st.T, b = st.bundles.get(T); st.bundles.delete(T);
+    Input.poll(LS_DT);
+    const mine = {}; for (const k in st.mine) mine[k] = pack(local(st.mine[k]));
+    if (st.host) hostInput(T + LS_D, mine); else Peer.toHost({ k: 'i', t: T + LS_D, s: mine });
+    for (const k of st.humans) Input.setNet('L' + k, unpack(b.s[k]));
+    if (b.d) for (const k of b.d) applyDrop(k);
+    Math.random = rng;
+    try { if (T === 0) startParty(); simStep(LS_DT); } finally { Math.random = _mathRandom; }
+    st.T++;
+    if (T % 120 === 60) { const h = hash(); if (st.host) { st.hashes.set(T, h); if (st.hashes.size > 20) st.hashes.delete(st.hashes.keys().next().value); } else Peer.toHost({ k: 'h', t: T, h }); }
+    if (st.started && Game.state === 'hub') finish();
+    if (Game.state === 'party' || Game.state === 'minigame') st.started = true;
+  }
+  function hash() {
+    let s = Game.state + '|' + st.rngN + '|';
+    for (const p of Party.players) s += p.tile + ',' + p.coins + ',' + p.balloons + ',' + p.items.join('') + ';';
+    if (MG.A) for (const m of MG.A.mps) s += m.pos.x.toFixed(3) + ',' + m.pos.z.toFixed(3) + ',' + m.score + ';';
+    let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0;
+  }
+  // host: verzamelt de knoppen van iedereen per stap en stuurt het pakket rond zodra het compleet is
+  function hostInput(t, s) {
+    const p = st.pend.get(t) || {}; Object.assign(p, s); st.pend.set(t, p);
+    for (const [tt, pp] of st.pend) { if (!st.humans.every(k => st.dropped.has(k) || pp[k])) continue;
+      const msg = { k: 'b', t: tt, s: {} }; for (const k of st.humans) if (!st.dropped.has(k)) msg.s[k] = pp[k];
+      if (st.dropNew.length) { msg.d = st.dropNew; st.dropNew = []; }
+      st.pend.delete(tt); st.bundles.set(tt, msg); Peer.all(msg); }
+  }
+  function hostMsg(p, m) {
+    if (!st.on) return;
+    if (m.k === 'i') { const s = {}; if (m.s && m.s[p.slot] != null) s[p.slot] = m.s[p.slot]; hostInput(m.t, s); }
+    else if (m.k === 'h' && st.hashes.has(m.t) && st.hashes.get(m.t) !== m.h && !st.warned) { st.warned = true; const txt = `⚠️ Het spel loopt niet meer gelijk bij ${p.name}. Herstart de party als het raar wordt.`; toast(txt); Peer.all({ k: 'warn', txt }); }
+  }
+  function clientMsg(m) {
+    if (m.k === 'b') st.bundles.set(m.t, m);
+    else if (m.k === 'warn') toast(m.txt);
+  }
+  // iemand valt weg: vanaf een afgesproken stap neemt een bot het over, op elke computer tegelijk
+  function drop(k) { if (!st.on || st.dropped.has(k)) return; st.dropped.add(k); st.dropNew.push(k); hostInput(st.T + LS_D, {}); }
+  function applyDrop(k) {
+    const s = Game.slots[k]; if (s) s.kind = 'bot';
+    const p = Party.players[k]; if (p) { p.bot = true; p.dev = null; }
+    if (MG.A) for (const mp of MG.A.mps) if (mp.i === k) { mp.bot = true; mp.dev = null; }
+  }
+
+  // ---------- starten ----------
+  const _start = Party.start.bind(Party);
+  function startParty() { _start(); }
+  // de host start de party bij Wattie: met online spelers erbij wordt het een gedeeld potje
+  Party.start = function () {
+    if (!Peer.isHost || !Peer.open().length || st.on) return _start();
+    const seed = (fxRand() * 4294967296) >>> 0;
+    const slots = Game.slots.map(s => ({ k: s.kind, ch: s.ent ? s.ent.charId : null }));   // precies zoals bij de host, ook bots die al rondlopen
+    const S2 = Object.assign({}, S); delete S2.sound; delete S2.music;
+    const base = { k: 'start', seed, slots, S: S2, done: Save.d.done || [] };
+    for (const p of Peer.open()) Peer.sendTo(p, Object.assign({ you: p.slot }, base));
+    const mine = {}; Game.slots.forEach((s, i) => { if (s.kind === 'human' && s.ent && !String(s.dev).startsWith('rp')) mine[i] = s.dev; });
+    begin(base, true, mine);
+  };
+  function begin(m, isHost = false, mineHost = null) {
+    Object.assign(st, { on: true, host: isHost, T: 0, acc: 0, run: false, bundles: new Map(), pend: new Map(), dropped: new Set(), dropNew: [], hashes: new Map(), warned: false, rngN: 0, started: false });
+    seedV = m.seed | 0;
+    st.humans = m.slots.map((s, i) => s.k === 'human' && s.ch ? i : -1).filter(i => i >= 0);
+    st.devs = Game.slots.map(s => s.dev);
+    if (isHost) st.mine = mineHost;
+    else {   // gast: instellingen en personages van de host overnemen (je eigen opslag blijft onaangeroerd)
+      st.backup = { S: Object.assign({}, S), done: Save.d.done ? Save.d.done.slice() : undefined, write: Save.write };
+      Save.write = () => { }; Object.assign(S, m.S); Save.d.done = m.done.slice();
+      Game.slots.forEach((s, i) => { const x = m.slots[i]; if (s.ent && s.ent.c) removeEnt(s.ent); s.kind = x.k; s.ent = x.ch ? { charId: x.ch } : null; s.picking = false; });
+      st.mine = { [m.you]: '*' };
+    }
+    for (const k of st.humans) Game.slots[k].dev = 'L' + k;
+    Later.clear(); Game.t = 0; Game.frame = 0; if (Dialog.cur) Dialog.close();
+    for (let t = 0; t < LS_D; t++) { const b = { k: 'b', t, s: {} }; for (const k of st.humans) b.s[k] = zero; st.bundles.set(t, b); }
+    ['players', 'coins', 'helpbar'].forEach(id => { const e = document.getElementById(id); if (e && !isHost) e.classList.add('hidden'); });
+  }
+  // het potje is klaar (iedereen is terug op het plein): de host gaat verder op zijn plein, gasten naar de wachtkamer
+  function finish() {
+    st.on = false; Math.random = _mathRandom;
+    if (st.host) { Game.slots.forEach((s, i) => { if (st.devs[i] != null && s.kind === 'human') s.dev = st.devs[i]; });
+      for (const k of st.dropped) { const s = Game.slots[k]; if (s && s.ent) { removeEnt(s.ent); s.ent = null; } if (s) { s.kind = 'empty'; s.dev = null; } }
+      renderCards(); Peer.all({ k: 'end' }); }
+    else { Save.write = st.backup.write; Object.assign(S, st.backup.S); if (st.backup.done) Save.d.done = st.backup.done;
+      Game.slots.forEach(s => { s.kind = 'empty'; s.dev = null; s.ent = null; }); Peer.lobbyUI(); }
+  }
+  function abort() { if (!st.on) return; st.started = true; Game.state = 'hub'; finish(); }
+  return { begin, frame, hostMsg, clientMsg, drop, abort, isMine: dev => dev != null && st.mine[String(dev).slice(1)] != null && String(dev)[0] === 'L', get on() { return st.on; } };
+})();
+
+// met ?play=CODE&n=NAAM in het adres: meteen meedoen met een kamer met eigen scherm
+{ const q = new URLSearchParams(location.search); if (q.has('play')) { const code = q.get('play').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4), n = (q.get('n') || 'Speler').slice(0, 14);
+  history.replaceState(null, '', location.pathname); Peer.join(code, n); } }
+{ const css = document.createElement('style');
+  css.textContent = `#lobby{position:fixed;inset:0;z-index:8000;display:grid;place-items:center;padding:16px;overflow:auto;font:16px var(--body,system-ui);color:var(--ink,#2b2140);
+  background:radial-gradient(circle at 20% 15%,#ffc93c55 0 12%,transparent 13%),radial-gradient(circle at 85% 80%,#3dd6a355 0 14%,transparent 15%),radial-gradient(circle at 80% 18%,#ff6b5b44 0 8%,transparent 9%),linear-gradient(160deg,#8a5cff,#5bb8ff)}
+#lobby.hidden{display:none}
+#lobby .lb{width:min(860px,100%);background:var(--cream,#fff7e8);border:5px solid var(--ink,#2b2140);border-radius:28px;box-shadow:0 10px 0 var(--ink,#2b2140);padding:20px 24px 16px;animation:lbIn .45s cubic-bezier(.3,1.6,.5,1)}
+@keyframes lbIn{from{transform:scale(.8) translateY(30px);opacity:0}}
+#lobby .lb-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+#lobby .lb-t{font:900 30px var(--display,system-ui)}
+#lobby .lb-code{display:flex;gap:6px}#lobby .lb-code b{display:grid;place-items:center;width:46px;height:54px;background:var(--sun,#ffc93c);border:4px solid var(--ink,#2b2140);border-radius:12px;box-shadow:0 4px 0 var(--ink,#2b2140);font:900 30px var(--display,system-ui)}
+#lobby .lb-code b:nth-child(even){transform:rotate(4deg)}#lobby .lb-code b:nth-child(odd){transform:rotate(-3deg)}
+#lobby .lb-status{display:flex;align-items:center;gap:8px;margin:12px 0 4px;padding:8px 14px;border-radius:999px;background:#2b214012;font-weight:700;width:fit-content;max-width:100%}
+#lobby .dot{width:12px;height:12px;border-radius:50%;background:var(--sun,#ffc93c);flex:none;animation:lbBlink 1s infinite}
+#lobby .lb-status[data-k=ok] .dot{background:var(--mint,#3dd6a3);animation:none;box-shadow:0 0 0 4px #3dd6a355}
+#lobby .lb-status[data-k=bad]{background:#ff6b5b22;color:#b2281c}#lobby .lb-status[data-k=bad] .dot{background:var(--coral,#ff6b5b);animation:none}
+@keyframes lbBlink{50%{opacity:.25}}
+#lobby .lb-main{display:grid;grid-template-columns:minmax(220px,1fr) 1.4fr;gap:18px;margin-top:12px}
+@media(max-width:640px){#lobby .lb-main{grid-template-columns:1fr}}
+#lobby .lb-lab{font:900 15px var(--display,system-ui);text-transform:uppercase;letter-spacing:1px;opacity:.6;margin-bottom:8px}
+#lobby .lb-pick{background:#fff;border:4px solid var(--ink,#2b2140);border-radius:20px;padding:14px;text-align:center}
+#lobby .lb-car{display:flex;align-items:center;justify-content:center;gap:8px}
+#lobby .lb-car button{flex:none;width:48px;height:48px;border-radius:50%;border:4px solid var(--ink,#2b2140);background:var(--sun,#ffc93c);box-shadow:0 4px 0 var(--ink,#2b2140);font:900 20px system-ui;color:var(--ink,#2b2140);cursor:pointer}
+#lobby .lb-car button:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink,#2b2140)}
+#lobby .lb-me{flex:1;min-width:0}#lobby .lb-me .pic{width:140px;height:140px;margin:0 auto 8px;border-radius:50%;border:5px solid var(--c);background:radial-gradient(circle,#fff,color-mix(in srgb,var(--c) 30%,#fff));display:grid;place-items:center;overflow:hidden;font-size:70px;animation:lbBob 2.4s ease-in-out infinite}
+#lobby .lb-me .pic img{width:100%;height:100%;object-fit:cover}
+@keyframes lbBob{50%{transform:translateY(-5px) rotate(2deg)}}
+#lobby .lb-me .nm{display:block;font:900 22px var(--display,system-ui)}#lobby .lb-me .tag{display:block;opacity:.65;font-style:italic;min-height:1.2em}
+#lobby .lb-hint{font-size:12px;opacity:.5;margin-top:8px}
+#lobby .seats{display:grid;gap:8px}
+#lobby .seat{display:flex;align-items:center;gap:12px;background:#fff;border:4px solid var(--ink,#2b2140);border-left:12px solid var(--c);border-radius:16px;padding:7px 12px;animation:lbPop .4s cubic-bezier(.3,1.8,.5,1)}
+#lobby .seat.me{background:color-mix(in srgb,var(--c) 14%,#fff)}
+@keyframes lbPop{from{transform:scale(.85);opacity:0}}
+#lobby .seat .sp{flex:none;width:52px;height:52px;border-radius:50%;border:3px solid var(--c);background:#fff;display:grid;place-items:center;overflow:hidden;font-size:28px}
+#lobby .seat .sp img{width:100%;height:100%;object-fit:cover}
+#lobby .seat .sx{min-width:0;display:flex;flex-direction:column}#lobby .seat .sx b{font:900 17px var(--display,system-ui);color:var(--c);-webkit-text-stroke:.4px var(--ink,#2b2140)}
+#lobby .seat .sx em{font:900 11px system-ui;font-style:normal;background:var(--ink,#2b2140);color:#fff;-webkit-text-stroke:0;border-radius:6px;padding:2px 6px;vertical-align:2px}
+#lobby .seat .sx span{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#lobby .seat .sx small{opacity:.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#lobby .seat.empty{background:transparent;border-style:dashed;border-color:#2b214055;border-left-color:var(--c);animation:none}
+#lobby .seat.empty .sp{border-style:dashed;color:#2b214066;background:transparent;font:900 24px var(--display,system-ui)}#lobby .seat.empty span{opacity:.5;font-weight:400;font-style:italic}
+#lobby .lb-info{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}#lobby .lb-info span{background:var(--sky,#5bb8ff);color:#fff;font-weight:800;border:3px solid var(--ink,#2b2140);border-radius:999px;padding:3px 12px}
+#lobby .lb-info span:nth-child(2){background:var(--grape,#8a5cff)}#lobby .lb-info span:nth-child(3){background:var(--coral,#ff6b5b)}
+#lobby .lb-foot{margin-top:12px;padding-top:10px;border-top:3px dashed #2b214033;text-align:center;font-weight:700;opacity:.8}
+#lobby .hg{display:inline-block;animation:lbSpin 2s linear infinite}@keyframes lbSpin{to{transform:rotate(360deg)}}
+#lobby .lb-pop{position:fixed;top:22px;left:50%;transform:translate(-50%,-160%);background:var(--mint,#3dd6a3);border:4px solid var(--ink,#2b2140);border-radius:18px;box-shadow:0 6px 0 var(--ink,#2b2140);padding:10px 22px;font:900 20px var(--display,system-ui);pointer-events:none;white-space:nowrap;max-width:94vw;overflow:hidden;text-overflow:ellipsis}
+#lobby .lb-pop.on{animation:lbBan 2.8s cubic-bezier(.3,1.5,.5,1)}
+@keyframes lbBan{0%{transform:translate(-50%,-160%)}12%,82%{transform:translate(-50%,0)}100%{transform:translate(-50%,-160%)}}`;
+  document.head.appendChild(css); }
 
 </script>
 </body>
