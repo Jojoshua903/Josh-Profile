@@ -1,9 +1,9 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, gusts, addMore } from './worlds-common.js?v=20261114g';
-import { fbm } from './world.js?v=20261114g';
-import { buildNiek, buildBattery, buildFlag, textBoard, buildLocal } from './models.js?v=20261114g';
-import { Mecha } from './bosses.js?v=20261114g';
-import { addParkour, buildBeacon } from './parkour.js?v=20261114g';
-import { rOf } from './core.js?v=20261114g';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, gusts, addMore } from './worlds-common.js?v=20261114i';
+import { fbm } from './world.js?v=20261114i';
+import { buildNiek, buildBattery, buildFlag, textBoard, buildLocal } from './models.js?v=20261114i';
+import { Mecha } from './bosses.js?v=20261114i';
+import { addParkour, buildBeacon } from './parkour.js?v=20261114i';
+import { rOf } from './core.js?v=20261114i';
 
 // World 8 on the route: MAANKRATER. A grey moon with craters, a radio tower and a satellite that circles it.
 // New here: moon gravity. You jump more than twice as high and fall slowly, so everything is built tall.

@@ -1,4 +1,4 @@
-import { THREE, basic, V3, anyPerp, placeOn, surf, rOf } from './core.js?v=20261114g';
+import { THREE, basic, V3, anyPerp, placeOn, surf, rOf } from './core.js?v=20261114i';
 
 // A glowing wall that stands up out of a planet's surface. Used for shockwave rings and sweeping lasers.
 export class SurfaceWall {

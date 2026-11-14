@@ -1,5 +1,5 @@
-import { G, $, toast } from './core.js?v=20261114g';
-import { sfx, music, curTrack } from './audio.js?v=20261114g';
+import { G, $, toast } from './core.js?v=20261114i';
+import { sfx, music, curTrack } from './audio.js?v=20261114i';
 
 // KNABBELS WERKPLAATS: the shop on the station. Knabbel (the rock that eats everything) eats your bolts
 // and spits out things for Rênas: suits, hats, jetpack trails, two upgrades, and a music box with every

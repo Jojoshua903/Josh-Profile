@@ -1,8 +1,8 @@
-import { THREE, G, scene, camera, canvas, V3, clamp, damp, puff, anyPerp, orientOn, altOf, dirOf, surf, rOf, tangentTo, $ } from './core.js?v=20261114g';
-import { sfx } from './audio.js?v=20261114g';
-import { buildRenas } from './models.js?v=20261114g';
-import { makeShadow } from './fx.js?v=20261114g';
-import { cutSpeaker, cutTyping } from './cutscene.js?v=20261114g';
+import { THREE, G, scene, camera, canvas, V3, clamp, damp, puff, anyPerp, orientOn, altOf, dirOf, surf, rOf, tangentTo, $ } from './core.js?v=20261114i';
+import { sfx } from './audio.js?v=20261114i';
+import { buildRenas } from './models.js?v=20261114i';
+import { makeShadow } from './fx.js?v=20261114i';
+import { cutSpeaker, cutTyping } from './cutscene.js?v=20261114i';
 
 // Movement feel copied from Otis in Orbit (ui.js FEEL_DEF + main.js), on round planets instead of flat ground.
 export const S = { speed: 7, jump: 12, gravity: 30, air: 0.45 };
@@ -148,6 +148,8 @@ export function updatePlayer(dt, t, ctrl = true) {
   const dashP = ctrl && !G.noDash && pressed.has('KeyX');   // G.noDash: the Komeetband in De Sterrentempel
   const { fwd: cf, right: cr } = camBasis();
   const move = V3().addScaledVector(cf, iy).addScaledVector(cr, ix);
+  // VR: the left stick walks relative to where your head looks (vr.js hands over the direction, and how far the stick is pushed)
+  if (ctrl && G.vrMove) { const m = G.vrMove; move.set(0, 0, 0).addScaledVector(m.fwd, m.y).addScaledVector(m.right, m.x); reproject(move, P.up, true); }
   let len = move.length();
   if (len > 1) { move.divideScalar(len); len = 1; }
 

@@ -1,7 +1,7 @@
-import { THREE, G, renderer, scene, camera, anyPerp, $, toast, toon, mk } from './core.js?v=20261114g';
-import { initAudio } from './audio.js?v=20261114g';
-import { tr, LANG } from './lang.js?v=20261114g';
-import { P, keys, pressed, cam, model } from './player.js?v=20261114g';
+import { THREE, G, renderer, scene, camera, anyPerp, $, toast, toon, mk } from './core.js?v=20261114i';
+import { initAudio } from './audio.js?v=20261114i';
+import { tr, LANG } from './lang.js?v=20261114i';
+import { P, keys, pressed, cam, model } from './player.js?v=20261114i';
 
 // VR on the Meta Quest (WebXR).
 // - An "Enter VR" button shows up only when the browser can do immersive VR, so on a normal computer nothing changes.
@@ -17,8 +17,8 @@ import { P, keys, pressed, cam, model } from './player.js?v=20261114g';
 //   right trigger / A: jump, next line             right grip: spin
 //   left trigger: Komeetduik                       left grip: crouch / ground pound
 //   B or X: talk / use                             Y: pause (in a cutscene: skip)
-//   click the right stick: switch between 3rd person (watch Rênas) and 1st person (look through his helmet)
-//   🥽 VR settings (in the pause menu): view, turning, comfort vignette, distance, seated, watch, left-handed, stars, silhouette
+//   🥽 VR settings (in the pause menu): turning, comfort vignette, seated, watch, left-handed, stars, silhouette, minimap
+// While you play you always look through Rênas's helmet (1st person); cutscenes use the game's own camera.
 //   menus: either stick up/down = choose · trigger or A = OK · B = back
 // With hand tracking a pinch is the same as the trigger.
 
@@ -28,13 +28,11 @@ const EYE = 1.5;           // the headset adds your real eye height (about 1.5 m
 const FP_SCALE = 0.68;
 // ---------- VR settings (saved in this browser, apart from the saves) ----------
 const SET_KEY = 'renas-rocket-rumble-vr';
-const DEF = { view: '3rd', turn: 30, comfort: 1, seated: false, dist: 1, sil: true, stars: true, hud: 'wrist', lefty: false };
+const DEF = { turn: 30, comfort: 1, seated: false, sil: true, stars: true, hud: 'wrist', lefty: false };
 const S = Object.assign({}, DEF);
 try { Object.assign(S, JSON.parse(localStorage.getItem(SET_KEY) || '{}')); } catch (e) { /* defaults */ }
-if (localStorage.getItem('renas-rocket-rumble-vrview') === '1st') S.view = '1st';   // the older 1st/3rd switch
 G.vrSet = S;   // main.js reads S.sil (Rênas's silhouette behind walls)
 const saveSet = () => { try { localStorage.setItem(SET_KEY, JSON.stringify(S)); } catch (e) { /* ignore */ } };
-let firstPerson = S.view === '1st';
 renderer.xr.enabled = true;
 renderer.xr.setReferenceSpaceType('local-floor');
 
@@ -65,6 +63,7 @@ btn.onclick = async () => {
 };
 
 const sel = { left: false, right: false }, sqz = { left: false, right: false };
+const vmF = new THREE.Vector3(), vmR = new THREE.Vector3();   // where your head looks, flat on the planet
 function begin(s) {
   session = s; G.vr = true; label();
   saved = { fov: camera.fov, aspect: camera.aspect, bg: scene.background };
@@ -79,7 +78,7 @@ function begin(s) {
 }
 function finish() {
   session = null; G.vr = false; label();
-  releaseAll();
+  releaseAll(); G.vrMove = null;
   sel.left = sel.right = sqz.left = sqz.right = false;
   scene.remove(rig); scene.remove(fx); scene.remove(stars); scene.remove(bubG); rig.scale.setScalar(1); skyKey = '';
   scene.background = saved ? saved.bg : null;
@@ -114,25 +113,13 @@ export function vrBegin() {
   sp.copy(camera.position); sq.copy(camera.quaternion); su.copy(camera.up);
   const playing = (G.state === 'play' || G.state === 'over') && !G.cutscene;
   modelWas = model.root.visible;
-  if (playing && firstPerson && P.planet && !P.hidden) {
-    // 1st person: the rig stands on Rênas's feet, facing the camera's heading, and you don't see his body
-    // (his shadow stays, so you can still see where you'll land)
+  if (playing && P.planet && !P.hidden) {
+    // while you play you are always Rênas: the rig stands on his feet, facing the camera's heading, and you
+    // don't see his body (his shadow stays, so you can still see where you'll land)
     setRig(P.pos, P.up, cam.fwd, true, FP_SCALE);
     model.root.visible = false;
   }
-  // 3rd person: the rig faces the camera's heading (not Rênas himself), so walking never turns your view.
-  // The distance setting slides you closer to Rênas or further back along the line from him to the camera.
-  // The game camera hangs high and looks down at Rênas, but in VR your head decides where you look, so looking
-  // straight ahead from up there you mostly saw sky. Now Rênas stands a few metres in front of you and a bit below
-  // eye height: looking ahead you see him and the ground round him. (Closer when the game camera had to slide in
-  // front of a wall; the distance setting moves you nearer or further.)
-  else if (playing) {
-    _hf.copy(cam.fwd).addScaledVector(cam.up, -cam.fwd.dot(cam.up)).normalize();
-    const m = [0.7, 1, 1.4][S.dist] ?? 1;
-    const back = Math.max(1.6, Math.min(4.2 * m, -_lk.copy(cam.pos).sub(P.pos).dot(_hf)));
-    _lk.copy(P.pos).addScaledVector(_hf, -back).addScaledVector(cam.up, 2 * m);
-    setRig(_lk, cam.up, _hf);
-  }
+  // cutscenes, flights and menus: you stand where the game's own camera is
   else setRig(camera.position, camera.up, _f.set(0, 0, -1).applyQuaternion(camera.quaternion));
   rig.add(camera);
   camera.position.set(0, 0, 0); camera.quaternion.identity(); camera.up.set(0, 1, 0);
@@ -146,19 +133,13 @@ export function vrEnd() {
   camera.position.copy(sp); camera.quaternion.copy(sq); camera.up.copy(su);
   camera.updateMatrixWorld();
 }
-function toggleView() {
-  firstPerson = !firstPerson; S.view = firstPerson ? '1st' : '3rd'; saveSet(); setMenu();
-  toast(firstPerson ? '👀 1st person: you look through Rênas’s helmet' : '🎥 3rd person: you watch Rênas from behind', 1800);
-}
 
 // ---------- the VR settings menu ----------
 // A normal menu page (so the VR menu control works on it), opened from the pause menu in VR, or from ⚙️ Settings
 // on a computer that can do VR. Every button switches one setting to its next choice.
 const OPTS = [
-  ['view', ['3rd', '1st'], (v) => (nl() ? `👀 Kijken: ${v === '1st' ? '1e persoon (door de helm)' : '3e persoon (achter Rênas)'}` : `👀 View: ${v === '1st' ? '1st person (through the helmet)' : '3rd person (behind Rênas)'}`)],
   ['turn', [30, 45, 90, 0], (v) => (nl() ? `🔄 Draaien: ${v ? `stappen van ${v}°` : 'vloeiend'}` : `🔄 Turning: ${v ? `steps of ${v}°` : 'smooth'}`)],
   ['comfort', [0, 1, 2], (v) => (nl() ? `🌫 Comfortrand bij bewegen: ${['uit', 'zacht', 'sterk'][v]}` : `🌫 Comfort vignette when moving: ${['off', 'soft', 'strong'][v]}`)],
-  ['dist', [0, 1, 2], (v) => (nl() ? `🎥 Afstand tot Rênas (3e persoon): ${['dichtbij', 'normaal', 'ver'][v]}` : `🎥 Distance to Rênas (3rd person): ${['close', 'normal', 'far'][v]}`)],
   ['seated', [false, true], (v) => (nl() ? `🪑 Zittend spelen: ${v ? 'aan' : 'uit'}` : `🪑 Play seated: ${v ? 'on' : 'off'}`)],
   ['hud', ['wrist', 'front'], (v) => (nl() ? `⌚ Hartjes en bouten: ${v === 'wrist' ? 'op je pols' : 'zwevend voor je'}` : `⌚ Hearts and bolts: ${v === 'wrist' ? 'on your wrist' : 'floating in front'}`)],
   ['lefty', [false, true], (v) => (nl() ? `✋ Linkshandig (sticks en knoppen omgewisseld): ${v ? 'aan' : 'uit'}` : `✋ Left-handed (sticks and buttons swapped): ${v ? 'on' : 'off'}`)],
@@ -187,7 +168,6 @@ function setMenu() {
   box.appendChild(mb);
 }
 function applySet() {
-  firstPerson = S.view === '1st';
   stars.visible = !!S.stars;
   placeHud();
 }
@@ -655,7 +635,7 @@ export function pollVR(dt) {
   // ----- menus -----
   const ov = overlayNow();
   if (ov) {
-    releaseAll(); comfortK = 0;
+    releaseAll(); comfortK = 0; G.vrMove = null;
     const bs = buttonsOf(ov);
     const sy = Math.abs(ly) > Math.abs(ry) ? ly : ry;
     const down = edge('mDown', sy > 0.6), up = edge('mUp', sy < -0.6);
@@ -692,14 +672,23 @@ export function pollVR(dt) {
   if (G.state === 'play') cam.lastIn = G.t;     // and the camera doesn't swing behind Rênas by itself: you turn with the stick
   cam.pitch = Math.min(cam.pitch, 0.6);
   const dz = 0.35;
-  vk('KeyW', ly < -dz); vk('KeyS', ly > dz); vk('KeyA', lx < -dz); vk('KeyD', lx > dz);
+  // the left stick walks where your HEAD looks: look straight ahead and push forward, and Rênas walks that way
+  // (smoothly in every direction, and how far you push is how fast he walks)
+  const sl = Math.hypot(lx, ly);
+  if (sl > 0.15 && P.up) {
+    const xc = renderer.xr.getCamera();
+    vmF.set(0, 0, -1).transformDirection(xc.matrixWorld).addScaledVector(P.up, -vmF.dot(P.up));
+    if (vmF.lengthSq() < 0.02) vmF.copy(cam.fwd).addScaledVector(P.up, -cam.fwd.dot(P.up));   // looking straight down: use the camera's heading
+    vmF.normalize(); vmR.crossVectors(vmF, P.up).normalize();
+    const k = Math.min(1, (sl - 0.15) / 0.85) / sl;
+    G.vrMove = { fwd: vmF, right: vmR, x: lx * k, y: -ly * k };
+  } else G.vrMove = null;
   vk('ShiftLeft', Math.hypot(lx, ly) > 0.92 || btn('left', 3));
   vk('Space', trigR || A);
   vk('KeyF', gripR);
   vk('KeyX', trigL);
   vk('KeyC', gripL);
   vk('KeyE', B || X);
-  if (edge('view', btn('right', 3)) && G.state === 'play' && !G.cutscene) { toggleView(); buzz(H.right, 0.4); }
   // turning: in steps (the camera jumps round Rênas in one go: gliding is what makes most people seasick), or smooth if you like that
   const canTurn = G.state === 'play' && !G.cutscene && P.up;
   const spin = (a) => { cam.fwd.applyAxisAngle(P.up, a); cam.pos.sub(P.pos).applyAxisAngle(P.up, a).add(P.pos); };
