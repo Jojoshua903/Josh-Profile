@@ -3000,47 +3000,63 @@ const NPC_BUILD = {
     }};
   },
   // ---------------------------------------------------------------
-  //  ROMMEL, de winkelmuis met zijn kar vol spullen
-  //  root.children[0] = de muis, [1] = de kar (de winkel verbergt de kar)
+  //  ROMMEL, de jonge albino winkelrat met haar kar vol spullen: chibi, groene hoodie, omgekeerde pet, sneakers, robijnrode glimoogjes
+  //  root.children[0] = de rat, [1] = de kar (de winkel verbergt de kar)
   // ---------------------------------------------------------------
   rommel() {
     const root = new THREE.Group(), m = new THREE.Group(); root.add(m); m.position.set(-0.35, 0, 0.9); m.rotation.y = 0.15;   // vóór de kar, niet ernaast
-    const grey = 0xa9a4b5, pink = 0xffb3c1, M = NM(0.02);
-    const BP = [[0.001, 0.04], [0.2, 0.05], [0.3, 0.18], [0.33, 0.36], [0.28, 0.54], [0.17, 0.64], [0.001, 0.67]];
-    m.add(part(lathe(BP, 36), grey, M));
-    const belly = part(G.sph(0.2, 20, 14), 0xd8d4e0, NM(0)); belly.scale.set(1, 1.15, 0.3); npcOnL(m, belly, BP, 0, 0.3, -0.04);
-    m.add(part(latheW(BP.slice(1, 5).map(([r, y]) => [r * 1.03, y]), 14, -0.95, 1.9), 0x2fcf6f, { ...NO2, side: THREE.DoubleSide }));   // schortje
-    const pin = new THREE.Group(); pin.add(at(part(G.cyl(0.05, 0.05, 0.015, 16), GOLD, NM(0.008)), 0, 0, 0, Math.PI / 2)); npcOnL(m, pin, BP, 0.06, 0.24, 0.02);
-    m.add(at(part(G.tor(0.17, 0.06, Math.PI * 2, 10, 28), 0x2fcf6f, NM(0.012)), 0, 0.62, 0, Math.PI / 2));
-    m.add(at(part(G.cap(0.05, 0.16, 6), 0x2fcf6f, NM(0.012)), 0.1, 0.5, 0.17, 0.2, 0, 0.3));
-    for (const sx of [-1, 1]) m.add(at(part(G.sph(0.09, 14, 10), pink, M), sx * 0.13, 0.04, 0.12, 0, 0, 0, [1, 0.45, 1.5]));
-    const tail = new THREE.Group(); tail.position.set(0, 0.12, -0.28); m.add(tail);
-    tail.add(part(strand([V3(0, 0, 0), V3(0, -0.02, -0.3), V3(0.16, 0.16, -0.48), V3(0.1, 0.4, -0.42)], 0.024, 0.01, 20, 6), pink, NM(0.008)));
-    // hoofd
-    const head = new THREE.Group(); head.position.y = 0.88; m.add(head); const R = 0.3;
-    head.add(part(G.sph(R, 32, 24), grey, M));
-    head.add(at(part(lathe([[0.001, 0], [0.15, 0.02], [0.13, 0.13], [0.07, 0.23], [0.001, 0.27]], 24), grey, NM(0.018)), 0, -0.07, 0.19, Math.PI / 2));
-    head.add(at(part(G.sph(0.045, 12, 8), 0xff7b8f, NM(0.01)), 0, -0.07, 0.46));
+    const fur = 0xfbf8f4, fur2 = 0xf3eef2, pink = 0xffb3c6, pink2 = 0xff8fab, hood = 0x3dd68a, hood2 = 0x2fb873, M = NM(0.02);
+    // chibi: klein lijfje in een te grote hoodie
+    const BP = [[0.001, 0.12], [0.2, 0.13], [0.27, 0.22], [0.28, 0.34], [0.22, 0.45], [0.13, 0.5], [0.001, 0.52]];
+    m.add(part(lathe(BP, 36), hood, M));
+    m.add(at(part(G.tor(0.205, 0.035, Math.PI * 2, 8, 32), hood2, NM(0.01)), 0, 0.13, 0, Math.PI / 2));   // boord onderaan
+    m.add(at(part(G.tor(0.13, 0.06, Math.PI * 2, 10, 28), hood2, NM(0.012)), 0, 0.5, -0.06, 1.25, 0, 0, [1.2, 1, 1]));   // capuchon in de nek
+    const pk = new THREE.Group(); pk.add(part(G.box(0.24, 0.09, 0.03), hood2, NM(0.008))); npcOnL(m, pk, BP, 0, 0.24, 0.005);   // buidelzak
+    const logo = new THREE.Group(); logo.add(at(part(G.cyl(0.05, 0.05, 0.012, 18), GOLD, NM(0.006, { tex: 'metal' })), 0, 0, 0, Math.PI / 2)); npcOnL(m, logo, BP, 0, 0.36, 0.01);
+    for (const sx of [-1, 1]) m.add(part(strand([V3(sx * 0.04, 0.48, 0.13), V3(sx * 0.045, 0.42, 0.2), V3(sx * 0.05, 0.36, 0.215)], 0.008, 0.008, 8, 4), 0xffffff, NO2));
+    // korte witte beentjes met groen-witte sneakers
+    for (const sx of [-1, 1]) { m.add(at(part(G.cyl(0.06, 0.07, 0.12, 12), fur, NM(0.01)), sx * 0.11, 0.1, 0.02));
+      const sh = new THREE.Group(); sh.position.set(sx * 0.11, 0.035, 0.07); m.add(sh);
+      sh.add(at(part(G.sph(0.085, 14, 10), 0xffffff, NM(0.012)), 0, 0, 0, 0, 0, 0, [0.95, 0.55, 1.5]));
+      sh.add(at(part(G.box(0.15, 0.025, 0.24), hood2, NO2), 0, -0.035, 0)); sh.add(at(part(G.tor(0.035, 0.01, Math.PI, 6, 10), hood, NO2), sx * 0.08, 0.01, 0.02, 0, Math.PI / 2, 0)); }
+    // lange roze staart met een krulletje
+    const tail = new THREE.Group(); tail.position.set(0, 0.16, -0.24); m.add(tail);
+    tail.add(part(strand([V3(0, 0, 0), V3(0, -0.08, -0.28), V3(0.12, -0.08, -0.56), V3(0.32, 0.08, -0.64), V3(0.36, 0.3, -0.52), V3(0.24, 0.36, -0.42)], 0.028, 0.007, 30, 6), pink, NM(0.008)));
+    // groot rond hoofd (chibi), korte snuit, ogen laag en ver uit elkaar
+    const head = new THREE.Group(); head.position.y = 0.84; m.add(head); const R = 0.4;
+    head.add(at(part(G.sph(R, 32, 24), fur, M), 0, 0, 0, 0, 0, 0, [1.06, 0.95, 1]));
+    for (const sx of [-1, 1]) head.add(at(part(G.sph(0.16, 18, 12), fur, NM(0.012)), sx * 0.2, -0.17, 0.2, 0, 0, 0, [1, 0.8, 0.85]));   // bolle wangetjes
+    head.add(at(part(lathe([[0.001, 0], [0.13, 0.02], [0.11, 0.08], [0.06, 0.14], [0.001, 0.16]], 24), fur2, NM(0.014)), 0, -0.14, 0.32, Math.PI / 2));
+    head.add(at(part(G.sph(0.048, 14, 10), pink2, NM(0.01)), 0, -0.13, 0.49, 0, 0, 0, [1.25, 0.9, 1]));
+    head.add(at(part(G.sph(0.015, 8, 6), 0xffffff, NO2), -0.016, -0.11, 0.53));
+    const mouth = new THREE.Group(); mouth.position.set(0, -0.22, 0.44); head.add(mouth);
+    mouth.add(part(strand([V3(-0.04, 0.01, 0), V3(-0.018, -0.008, 0.008), V3(0, 0.004, 0.01), V3(0.018, -0.008, 0.008), V3(0.04, 0.01, 0)], 0.006, 0.006, 10, 4), 0xd0607a, NO2));
+    mouth.add(at(part(G.box(0.036, 0.03, 0.01), 0xffffff, NM(0.004)), 0, -0.018, 0.01));
     for (const sx of [-1, 1]) {
-      for (let k = 0; k < 3; k++) head.add(part(strand([V3(sx * 0.07, -0.07 + (k - 1) * 0.02, 0.38), V3(sx * 0.18, -0.06 + (k - 1) * 0.035, 0.38), V3(sx * 0.3, -0.05 + (k - 1) * 0.06, 0.33)], 0.004, 0.0025, 8, 4), INK, NO2));
-      const ear = at(new THREE.Group(), sx * 0.25, 0.25, -0.04, 0, -sx * 0.3, sx * 0.35); head.add(ear);
-      ear.add(at(part(G.sph(0.22, 24, 16), grey, M), 0, 0, 0, 0, 0, 0, [1, 1, 0.22]));
-      ear.add(at(part(G.sph(0.15, 20, 14), pink, NO2), 0, -0.01, 0.03, 0, 0, 0, [1, 1, 0.2]));
+      for (let k = 0; k < 2; k++) head.add(part(strand([V3(sx * 0.08, -0.14 + (k - 0.5) * 0.03, 0.44), V3(sx * 0.2, -0.13 + (k - 0.5) * 0.05, 0.44), V3(sx * 0.3, -0.12 + (k - 0.5) * 0.08, 0.38)], 0.004, 0.0025, 8, 4), 0xf0c8d4, NO2));
+      head.add(at(part(G.sph(0.07, 12, 8), 0xff8fab, { ...NO2, transparent: true, opacity: 0.6 }), sx * 0.25, -0.14, 0.3, 0, 0, 0, [1.2, 0.65, 0.4]));   // blosjes
+      // grote ronde oren (muizig schattig), roze van binnen
+      const ear = at(new THREE.Group(), sx * 0.3, 0.3, -0.04, 0, -sx * 0.3, sx * 0.45); ear.userData.ear = sx; head.add(ear);
+      ear.add(at(part(G.sph(0.21, 24, 16), fur, M), 0, 0, 0, 0, 0, 0, [1, 1.05, 0.24]));
+      ear.add(at(part(G.sph(0.155, 20, 14), pink, NO2), 0, -0.005, 0.035, 0, 0, 0, [1, 1.05, 0.2]));
     }
-    const eyes = []; for (const sx of [-1, 1]) { eyes.push(npcOnS(head, npcEye(0.058), R, sx * 0.11, 0.06, -0.01));
-      npcOnS(head, npcLine(0.045, 0.014, 0x6e6880, 0.25, -sx * 0.1), R, sx * 0.115, 0.15, 0.004);
-      npcOnS(head, at(part(G.tor(0.062, 0.008, Math.PI * 2, 6, 28), 0xc9a24a, NO2), 0, 0, 0), R, sx * 0.11, 0.06, 0.035); }   // brilletje
-    head.add(part(strand([V3(-0.05, 0.07, 0.31), V3(0, 0.085, 0.325), V3(0.05, 0.07, 0.31)], 0.006, 0.006, 8, 4), 0xc9a24a, NO2));
-    // wimpers boven het brilletje, en een strik op het linkeroor
-    for (const sx of [-1, 1]) for (let k = 0; k < 3; k++) { const l = new THREE.Group();
-      l.add(at(part(G.cap(0.008, 0.035, 4), INK, NO2), 0, 0.02, 0, 0, 0, -sx * (0.35 + k * 0.3))); npcOnS(head, l, R, sx * (0.135 + k * 0.022), 0.115 - k * 0.012, 0.002); }
-    const bow = at(new THREE.Group(), 0.22, 0.4, 0.04, 0, 0, -0.35); head.add(bow);
-    for (const sx of [-1, 1]) bow.add(at(part(G.sph(0.075, 16, 12), 0xff5a8a, NM(0.012)), sx * 0.085, 0, 0, 0, 0, sx * -0.3, [1.4, 0.95, 0.55]));
-    bow.add(at(part(G.sph(0.036, 10, 8), 0xe0386a, NM(0.008)), 0, 0, 0.02));
-    // armpjes, links een munt
-    for (const sx of [-1, 1]) { const a = at(new THREE.Group(), sx * 0.29, 0.48, 0.04, 0, 0, sx * 0.5); m.add(a);
-      a.add(at(part(G.cap(0.05, 0.14, 6), grey, NM(0.012)), 0, -0.1, 0)); a.add(at(part(G.sph(0.055, 12, 8), pink, NM(0.01)), 0, -0.21, 0.01));
-      if (sx > 0) a.add(at(part(G.cyl(0.07, 0.07, 0.02, 20), GOLD, NM(0.008, { tex: 'metal' })), 0, -0.26, 0.05, Math.PI / 2)); }
+    // grote glanzende robijnrode ogen, laag op het gezicht, met twee glimmen en een wimpertje aan de buitenkant
+    const eyes = []; for (const sx of [-1, 1]) { const e = npcOnS(head, npcEye(0.105, 0xe8284e), R, sx * 0.155, -0.02, -0.015); eyes.push(e);
+      e.add(at(part(G.sph(0.032, 10, 8), 0xffffff, NO2), sx * -0.028, 0.035, 0.05)); e.add(at(part(G.sph(0.014, 8, 6), 0xffffff, NO2), sx * 0.025, -0.03, 0.05));
+      e.add(at(part(G.cap(0.008, 0.035, 4), INK, NO2), sx * 0.09, 0.07, 0.01, 0, 0, -sx * 0.9)); }
+    // omgekeerde pet met de klep naar achter, en een sterren-speldje
+    const cap = new THREE.Group(); cap.position.set(0, 0.13, -0.02); cap.rotation.set(-0.25, 0, 0); head.add(cap);
+    cap.add(at(part(G.dome(R * 0.93, 0.48), hood, NM(0.014)), 0, 0, 0));
+    cap.add(at(part(G.cyl(R * 0.62, R * 0.66, 0.035, 24, 1, false, 0, Math.PI), hood2, NM(0.01)), 0, 0.02, -R * 0.62, 0, Math.PI / 2, 0, [1, 1, 1.2]));
+    cap.add(at(part(G.sph(0.03, 10, 8), hood2, NO2), 0, R * 0.9, 0));
+    cap.add(at(part(G.box(0.12, 0.05, 0.02), GOLD, NM(0.005, { tex: 'metal' })), 0, R * 0.5, R * 0.78, -0.6));
+    const clip = new THREE.Group(); for (let i = 0; i < 5; i++) clip.add(at(part(G.cone(0.025, 0.06, 4), 0xffd23c, NM(0.004)), Math.sin(i * 1.257) * 0.03, Math.cos(i * 1.257) * 0.03, 0, 0, 0, -i * 1.257));
+    clip.add(part(G.sph(0.025, 8, 6), 0xffd23c, NO2)); at(clip, -0.26, 0.1, 0.27, 0, -0.5, 0.3); head.add(clip);
+    // korte armpjes in te lange mouwen, roze handjes, rechts een munt
+    for (const sx of [-1, 1]) { const a = at(new THREE.Group(), sx * 0.24, 0.42, 0.04, 0, 0, sx * 0.55); m.add(a);
+      a.add(at(part(G.cap(0.055, 0.11, 6), hood, NM(0.012)), 0, -0.08, 0)); a.add(at(part(G.tor(0.05, 0.015, Math.PI * 2, 6, 14), hood2, NO2), 0, -0.16, 0, Math.PI / 2));
+      a.add(at(part(G.sph(0.048, 12, 8), pink, NM(0.01)), 0, -0.2, 0.01));
+      if (sx > 0) a.add(at(part(G.cyl(0.07, 0.07, 0.02, 20), GOLD, NM(0.008, { tex: 'metal' })), 0, -0.25, 0.05, Math.PI / 2)); }
     // --- de kar ---
     const cart = new THREE.Group(); root.add(cart); cart.position.set(0.5, 0, -0.2); cart.rotation.y = -0.3;
     const wood = 0xb87a45, wood2 = 0x8a5530;
@@ -3071,9 +3087,12 @@ const NPC_BUILD = {
     [[vase, -0.55, 1.08, 0.1, 0], [gear, -0.2, 1.22, -0.2, 1.2], [gift, 0.15, 1.2, 0.15, 0.3], [ball, 0.5, 1.22, -0.15, 0], [lamp, 0.25, 1.22, -0.3, 0.2], [tin, -0.35, 1.22, 0.25, 0.1], [duck, 0.55, 1.2, 0.25, 0]]
       .forEach(([o, x, y, z, r]) => cart.add(at(o, x, y, z, r * 0.3, r, 0)));
     return { root, h: 1.8, anim(dt, t, talking) {
-      head.rotation.y = Math.sin(t * 2.2) * 0.25; head.rotation.x = talking ? Math.sin(t * 12) * 0.1 : 0;
-      tail.rotation.z = Math.sin(t * 3) * 0.4; m.position.y = Math.abs(Math.sin(t * 3)) * 0.03;
+      head.rotation.y = Math.sin(t * 2.2) * 0.25; head.rotation.x = talking ? Math.sin(t * 12) * 0.1 : 0; head.rotation.z = Math.sin(t * 1.1) * 0.08;
+      tail.rotation.z = Math.sin(t * 3) * 0.4; m.position.y = Math.abs(Math.sin(t * 3.4)) * 0.05;
       npcBlink(eyes, t, 0.9);
+      mouth.scale.y = talking ? 0.6 + Math.abs(Math.sin(t * 13)) * 0.8 : 1;
+      head.children.forEach(o => { if (o.userData.ear) o.rotation.z = o.userData.ear * (0.4 + Math.max(0, Math.sin(t * 1.7 + o.userData.ear)) * 0.18); });
+      const sn = (t * 1.3) % 3 < 0.6; head.scale.z = 1 + (sn ? Math.abs(Math.sin(t * 30)) * 0.02 : 0);
     }};
   },
   // ---------------------------------------------------------------
@@ -13398,6 +13417,22 @@ const fb = {
 const iceDone = pc => new Promise(r => { if (pc.iceGatheringState === 'complete') return r();
   const f = () => { if (pc.iceGatheringState === 'complete') { pc.removeEventListener('icegatheringstatechange', f); r(); } }; pc.addEventListener('icegatheringstatechange', f); setTimeout(r, 3000); });
 
+// Lukt een rechtstreekse verbinding niet (sommige routers en providers laten dat niet toe), dan gaan de berichten via Firebase.
+// Een "kanaal" dat zich gedraagt als een WebRTC-kanaal: berichten worden gebundeld en één voor één, op volgorde, verstuurd.
+function relayCh(code, out) {
+  const c = { readyState: 'open', q: [], busy: false, onmessage: null, onclose: null, es: null,
+    send(s) { c.q.push(s); kick(); }, close() { c.readyState = 'closed'; if (c.es) c.es.close(); } };
+  const kick = () => { if (c.busy || !c.q.length || c.readyState !== 'open') return; const batch = c.q.splice(0, c.q.length); c.busy = true;
+    fb.send(code, out, batch, 'POST').then(() => { c.busy = false; kick(); }); };
+  return c;
+}
+function relayListen(code, path, fn) {
+  const seen = new Set();
+  return fb.listen(code, path, (type, p, data) => {
+    const items = p === '/' ? (data ? Object.keys(data).sort().map(k => [k, data[k]]) : []) : [[p.slice(1).split('/')[0], data]];
+    for (const [k, arr] of items) { if (!k || seen.has(k) || !Array.isArray(arr)) continue; seen.add(k); for (const s of arr) { try { fn(JSON.parse(s)); } catch (_) { } } } });
+}
+
 // ---------- kamer en verbindingen ----------
 const Peer = (() => {
   const st = { on: false, host: false, code: '', es: null, peers: {}, me: '', ch: null, pc: null, name: '', lobby: null, timer: 0, lastLobby: '' };
@@ -13420,19 +13455,26 @@ const Peer = (() => {
   // nieuwe spelers melden zich met een "offer"; wij antwoorden en dan staat de directe verbinding
   function onSignal(type, path, data) {
     const parts = path.split('/').filter(Boolean);
-    const look = (id, v) => { if (v && v.offer && !st.peers[id]) answer(id, v.offer); };
+    const look = (id, v) => { if (!v) return; if (v.relay) return relayPeer(id, v.relay); if (!v.offer) return; const old = st.peers[id]; if (old && (old.relay || old.sdp === v.offer.sdp)) return; if (old) gone(old, true); answer(id, v.offer); };
     if (!parts.length) { for (const id in data || {}) look(id, data[id]); return; }
-    if (parts.length === 1) look(parts[0], data); else if (parts[1] === 'offer') look(parts[0], { offer: data });
+    if (parts.length === 1) look(parts[0], data); else if (parts[1] === 'offer') look(parts[0], { offer: data }); else if (parts[1] === 'relay') look(parts[0], { relay: data });
   }
   async function answer(id, offer) {
     if (LS.on) return;   // tijdens een potje kan er niemand bij
-    const pc = new RTCPeerConnection(ICE), p = st.peers[id] = { id, pc, ch: null, name: String(offer.n || 'Speler').slice(0, 14), ch0: offer.ch, slot: -1 };
+    const pc = new RTCPeerConnection(ICE), p = st.peers[id] = { id, pc, ch: null, name: String(offer.n || 'Speler').slice(0, 14), ch0: offer.ch, slot: -1, sdp: offer.sdp };
     pc.ondatachannel = e => { p.ch = e.channel; p.ch.onmessage = ev => hostMsg(p, JSON.parse(ev.data)); p.ch.onclose = () => gone(p); };
     pc.onconnectionstatechange = () => { if (['failed', 'closed', 'disconnected'].includes(pc.connectionState)) gone(p); };
     await pc.setRemoteDescription({ type: 'offer', sdp: offer.sdp }); await pc.setLocalDescription(await pc.createAnswer()); await iceDone(pc);
     fb.send(st.code, `peers/${id}/answer`, { sdp: pc.localDescription.sdp });
   }
+  // een speler die via de server meedoet
+  function relayPeer(id, info) {
+    if (LS.on) return; const old = st.peers[id]; if (old && old.relay) return; if (old) gone(old, true);
+    const p = st.peers[id] = { id, pc: null, relay: true, name: String(info.n || 'Speler').slice(0, 14), ch0: info.ch, slot: -1, seen: Date.now() };
+    p.ch = relayCh(st.code, `relay/${id}/down`); p.es = relayListen(st.code, `relay/${id}/up`, m => hostMsg(p, m));
+  }
   function hostMsg(p, m) {
+    p.seen = Date.now(); if (m.k === "ping") return;
     if (m.k === 'hi') join(p, m.ch || p.ch0);
     else if (m.k === 'ch') pickChar(p, m.ch);
     else if (m.k === 'i' || m.k === 'h') LS.hostMsg(p, m);
@@ -13456,16 +13498,18 @@ const Peer = (() => {
     for (const s of Game.slots) if (s !== slot && s.kind === "bot" && s.ent && s.ent.charId === ch) Game.setChar(s, freeChar(s));
     renderCards(slot.idx); lobbyTick(true);
   }
-  function gone(p) {
-    if (!st.peers[p.id]) return; delete st.peers[p.id]; try { p.pc.close(); } catch (_) { }
+  function gone(p, quiet = false) {
+    if (!st.peers[p.id]) return; delete st.peers[p.id]; try { p.pc.close(); } catch (_) { } try { if (p.relay) p.ch.close(); if (p.es) p.es.close(); } catch (_) { }
     const slot = Game.slots[p.slot];
     if (LS.on) { if (slot) LS.drop(slot.idx); toast(`📺 ${p.name} is weggevallen: een bot neemt het over`); return; }
     if (slot && slot.dev === 'rp' + p.id) dropSlot(slot);
-    toast(`📺 ${p.name} is weg`); lobbyTick(true);
+    if (!quiet) toast(`📺 ${p.name} is weg`); lobbyTick(true);
   }
   // iedereen in de wachtkamer ziet wie er meedoet en met welk personage
   function lobbyTick(force) {
-    if (!st.on || !st.host) return; chip(); if (LS.on) return;
+    if (!st.on || !st.host) return;
+    for (const p of Object.values(st.peers)) if (p.relay && Date.now() - p.seen > 9000) gone(p);
+    chip(); if (LS.on) return;
     const list = Game.slots.filter(s => s.kind === 'human' && s.ent).map(s => ({ p: s.idx, c: s.color, ch: s.ent.charId, n: s.dev.startsWith('rp') ? (st.peers[s.dev.slice(2)] || {}).name : 'host' }));
     const info = `${MODES[S.mode || 0]} · ${S.mode === 2 ? mgCount() + ' minigames' : BOARD_DEFS[boardSel()].nm + ' · ' + S.rounds + ' rondes'}`;
     const key = JSON.stringify([list, info]); if (!force && key === st.lastLobby) return; st.lastLobby = key;
@@ -13474,7 +13518,7 @@ const Peer = (() => {
   function stop() {
     if (!st.on) return; if (LS.on) { toast('Eerst het potje afmaken'); return; }
     st.on = false; clearInterval(st.timer); if (st.es) st.es.close();
-    for (const p of Object.values(st.peers)) { const s = Game.slots[p.slot]; if (s && s.dev === 'rp' + p.id) dropSlot(s); try { p.pc.close(); } catch (_) { } }
+    for (const p of Object.values(st.peers)) { const s = Game.slots[p.slot]; if (s && s.dev === 'rp' + p.id) dropSlot(s); try { p.pc.close(); } catch (_) { } try { if (p.relay) p.ch.close(); } catch (_) { } }
     st.peers = {}; fb.send(st.code, '', undefined, 'DELETE'); const c = document.getElementById('netchip'); if (c) c.remove(); toast('📺 Online gestopt');
   }
   function chip() {
@@ -13493,16 +13537,30 @@ const Peer = (() => {
   // ===== meedoen met een kamer =====
   async function join2(code, name) {
     st.code = code; st.name = name; st.me = localStorage.getItem('witp_id') || fxRand().toString(36).slice(2, 10); localStorage.setItem('witp_id', st.me);
+    st.relay = false; st.opened = false; st.heard = false;
     lobbyUI(); lobbySay('Verbinden met kamer ' + code + '...');
     const pc = st.pc = new RTCPeerConnection(ICE), ch = st.ch = pc.createDataChannel('g', { ordered: true });
-    ch.onopen = () => { lobbySay('Verbonden met de host', 'ok'); toHost({ k: 'hi', ch: st.lobbyCh }); };
-    ch.onmessage = e => clientMsg(JSON.parse(e.data));
-    ch.onclose = () => { if (!st.left) lost(); };
-    pc.onconnectionstatechange = () => { if (pc.connectionState === 'failed') lost(); };
+    ch.onopen = () => { if (st.relay) return; st.opened = true; lobbySay('Verbonden met de host', 'ok'); toHost({ k: 'hi', ch: st.lobbyCh }); };
+    ch.onmessage = e => { st.heard = true; clientMsg(JSON.parse(e.data)); };
+    ch.onclose = () => { if (!st.left && !st.relay) lost(); };
+    pc.onconnectionstatechange = () => { if (pc.connectionState === 'failed' && !st.relay) { if (st.opened) lost(); else viaServer(); } };
     await pc.setLocalDescription(await pc.createOffer()); await iceDone(pc);
     await fb.send(code, `peers/${st.me}`, { offer: { sdp: pc.localDescription.sdp, n: name, ch: st.lobbyCh } });
-    st.es = fb.listen(code, `peers/${st.me}/answer`, (type, path, v) => { if (path === '/' && v && v.sdp && !pc.remoteDescription) pc.setRemoteDescription({ type: 'answer', sdp: v.sdp }); });
-    setTimeout(() => { if (ch.readyState !== 'open') lobbySay('Het lukt niet om verbinding te maken. Soms blokkeert een (school)netwerk dit. Probeer een ander netwerk, of vraag de host om een kamer met controllers.', 'bad'); }, 15000);
+    st.es = fb.listen(code, `peers/${st.me}/answer`, (type, path, v) => { if (path === '/' && v && v.sdp && !pc.remoteDescription && !st.relay) pc.setRemoteDescription({ type: 'answer', sdp: v.sdp }).catch(() => { }); });
+    // na 7 seconden nog geen rechtstreekse verbinding? dan via de server
+    setTimeout(() => { if (!st.opened) viaServer(); }, 7000);
+  }
+  // rechtstreeks lukt niet: alle berichten gaan nu via Firebase (iets meer vertraging, maar het werkt bijna altijd)
+  async function viaServer() {
+    if (st.relay || st.opened) return; st.relay = true;
+    try { st.pc.close(); } catch (_) { } if (st.es) st.es.close();
+    lobbySay('Rechtstreeks lukt niet, we verbinden via de server...');
+    await fb.send(st.code, `relay/${st.me}`, undefined, 'DELETE');
+    const rc = st.ch = relayCh(st.code, `relay/${st.me}/up`);
+    rc.es = relayListen(st.code, `relay/${st.me}/down`, m => { if (!st.heard) { st.heard = true; lobbySay('Verbonden via de server (iets meer vertraging)', 'ok'); } clientMsg(m); });
+    await fb.send(st.code, `peers/${st.me}/relay`, { n: st.name, ch: st.lobbyCh });
+    toHost({ k: 'hi', ch: st.lobbyCh }); clearInterval(st.ping); st.ping = setInterval(() => toHost({ k: 'ping' }), 2500);
+    setTimeout(() => { if (!st.heard) lobbySay('Het lukt niet om de host te bereiken, ook niet via de server. Klopt de code nog, en staat de kamer van de host nog open? Herlaad dan en probeer opnieuw.', 'bad'); }, 12000);
   }
   function lost() { st.left = true; if (LS.on) LS.abort(); lobbyUI(); lobbySay('De verbinding met de host is weg. Herlaad de pagina om opnieuw mee te doen.', 'bad'); }
   function clientMsg(m) {
@@ -13612,7 +13670,7 @@ const LS = (() => {
     const T = st.T, b = st.bundles.get(T); st.bundles.delete(T);
     Input.poll(LS_DT);
     const mine = {}; for (const k in st.mine) mine[k] = pack(local(st.mine[k]));
-    if (st.host) hostInput(T + LS_D, mine); else Peer.toHost({ k: 'i', t: T + LS_D, s: mine });
+    if (st.host) hostInput(T + st.d, mine); else Peer.toHost({ k: "i", t: T + st.d, s: mine });
     for (const k of st.humans) Input.setNet('L' + k, unpack(b.s[k]));
     if (b.d) for (const k of b.d) applyDrop(k);
     Math.random = rng;
@@ -13646,7 +13704,7 @@ const LS = (() => {
     else if (m.k === 'warn') toast(m.txt);
   }
   // iemand valt weg: vanaf een afgesproken stap neemt een bot het over, op elke computer tegelijk
-  function drop(k) { if (!st.on || st.dropped.has(k)) return; st.dropped.add(k); st.dropNew.push(k); hostInput(st.T + LS_D, {}); }
+  function drop(k) { if (!st.on || st.dropped.has(k)) return; st.dropped.add(k); st.dropNew.push(k); hostInput(st.T + st.d, {}); }
   function applyDrop(k) {
     const s = Game.slots[k]; if (s) s.kind = 'bot';
     const p = Party.players[k]; if (p) { p.bot = true; p.dev = null; }
@@ -13662,13 +13720,13 @@ const LS = (() => {
     const seed = (fxRand() * 4294967296) >>> 0;
     const slots = Game.slots.map(s => ({ k: s.kind, ch: s.ent ? s.ent.charId : null }));   // precies zoals bij de host, ook bots die al rondlopen
     const S2 = Object.assign({}, S); delete S2.sound; delete S2.music;
-    const base = { k: 'start', seed, slots, S: S2, done: Save.d.done || [] };
+    const base = { k: 'start', seed, slots, S: S2, done: Save.d.done || [], d: Peer.open().some(p => p.relay) ? 22 : LS_D };
     for (const p of Peer.open()) Peer.sendTo(p, Object.assign({ you: p.slot }, base));
     const mine = {}; Game.slots.forEach((s, i) => { if (s.kind === 'human' && s.ent && !String(s.dev).startsWith('rp')) mine[i] = s.dev; });
     begin(base, true, mine);
   };
   function begin(m, isHost = false, mineHost = null) {
-    Object.assign(st, { on: true, host: isHost, T: 0, acc: 0, run: false, bundles: new Map(), pend: new Map(), dropped: new Set(), dropNew: [], hashes: new Map(), warned: false, rngN: 0, started: false });
+    Object.assign(st, { on: true, d: m.d || LS_D, host: isHost, T: 0, acc: 0, run: false, bundles: new Map(), pend: new Map(), dropped: new Set(), dropNew: [], hashes: new Map(), warned: false, rngN: 0, started: false });
     seedV = m.seed | 0;
     st.humans = m.slots.map((s, i) => s.k === 'human' && s.ch ? i : -1).filter(i => i >= 0);
     st.devs = Game.slots.map(s => s.dev);
@@ -13681,7 +13739,7 @@ const LS = (() => {
     }
     for (const k of st.humans) Game.slots[k].dev = 'L' + k;
     Later.clear(); Game.t = 0; Game.frame = 0; if (Dialog.cur) Dialog.close();
-    for (let t = 0; t < LS_D; t++) { const b = { k: 'b', t, s: {} }; for (const k of st.humans) b.s[k] = zero; st.bundles.set(t, b); }
+    for (let t = 0; t < st.d; t++) { const b = { k: "b", t, s: {} }; for (const k of st.humans) b.s[k] = zero; st.bundles.set(t, b); }
     ['players', 'coins', 'helpbar'].forEach(id => { const e = document.getElementById(id); if (e && !isHost) e.classList.add('hidden'); });
   }
   // het potje is klaar (iedereen is terug op het plein): de host gaat verder op zijn plein, gasten naar de wachtkamer
