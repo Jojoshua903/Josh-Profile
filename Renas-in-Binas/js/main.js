@@ -1,32 +1,33 @@
-import { THREE, G, renderer, scene, camera, ambient, hemi, sun, V3, clamp, damp, surf, orientOn, anyPerp, frameDir, dirOf, tangentTo, $, toast, banner, fade, wait, setPrompt, updateParticles, clearParticles, puff } from './core.js?v=20261112i';
-import { initAudio, music, sfx } from './audio.js?v=20261112i';
-import { P, model, spawnPlayer, updatePlayer, updateCamera, drawHearts, pressed, consumePressed, requestLock, locked, mouse, squash, cam, healPlayer, hurtPlayer } from './player.js?v=20261112i';
-import { play, advance, skip, updateCut, cutActive, showTitle } from './cutscene.js?v=20261112i';
-import { sysOf, sysName, addSystemSun } from './systems.js?v=20261112i';
-import { addMiniGalaxy } from './galaxyhop.js?v=20261112i';
-import { buildPhonk } from './world-phonk.js?v=20261112i';
-import { buildMine } from './world-mine.js?v=20261112i';
-import { buildStadium } from './world-stadium.js?v=20261112i';
-import { buildIce } from './world-ice.js?v=20261112i';
-import { buildLuck } from './world-luck.js?v=20261112i';
-import { buildJungle } from './world-jungle.js?v=20261112i';
-import { buildLava } from './world-lava.js?v=20261112i';
-import { buildDesert } from './world-desert.js?v=20261112i';
-import { buildMoon } from './world-moon.js?v=20261112i';
-import { buildSea } from './world-sea.js?v=20261112i';
-import { buildSpook } from './world-spook.js?v=20261112i';
-import { buildWerk } from './world-werk.js?v=20261112i';
-import { buildStuiter, buildWissel, buildSprong } from './world-park.js?v=20261112i';
-import { buildZweef } from './world-zweef.js?v=20261112i';
-import { buildTempel, GOD_BOSS, HALL, PANTHEONS, BINDS, TIERS } from './world-tempel.js?v=20261112i';
-import { buildIntro, playIntro, playFinale, menuShot } from './story.js?v=20261112i';
-import { buildGroteKern } from './models.js?v=20261112i';
-import { updateExtras, pollPad } from './extras.js?v=20261112i';
-import { tr, LANG, setLang, applyHTML, onLang } from './lang.js?v=20261112i';
-import { initDev, devTick } from './dev.js?v=20261112i';
-import { initAch, checkAch, unlockAch, buildAchPanel } from './achievements.js?v=20261112i';
-import { initShop, openShop, closeShop, applyStyle, shopMaxHp, shopTick } from './shop.js?v=20261112i';
-import { initGalaxy, openGalaxy, closeGalaxy, galaxyTick, galaxyOpen, galaxyIdx } from './galaxy.js?v=20261112i';
+import { THREE, G, renderer, scene, camera, ambient, hemi, sun, V3, clamp, damp, surf, orientOn, anyPerp, frameDir, dirOf, tangentTo, $, toast, banner, fade, wait, setPrompt, updateParticles, clearParticles, puff } from './core.js?v=20261114b';
+import { initAudio, music, sfx } from './audio.js?v=20261114b';
+import { P, model, spawnPlayer, updatePlayer, updateCamera, drawHearts, pressed, consumePressed, requestLock, locked, mouse, squash, cam, healPlayer, hurtPlayer } from './player.js?v=20261114b';
+import { play, advance, skip, updateCut, cutActive, showTitle } from './cutscene.js?v=20261114b';
+import { sysOf, sysName, addSystemSun } from './systems.js?v=20261114b';
+import { addMiniGalaxy } from './galaxyhop.js?v=20261114b';
+import { buildPhonk } from './world-phonk.js?v=20261114b';
+import { buildMine } from './world-mine.js?v=20261114b';
+import { buildStadium } from './world-stadium.js?v=20261114b';
+import { buildIce } from './world-ice.js?v=20261114b';
+import { buildLuck } from './world-luck.js?v=20261114b';
+import { buildJungle } from './world-jungle.js?v=20261114b';
+import { buildLava } from './world-lava.js?v=20261114b';
+import { buildDesert } from './world-desert.js?v=20261114b';
+import { buildMoon } from './world-moon.js?v=20261114b';
+import { buildSea } from './world-sea.js?v=20261114b';
+import { buildSpook } from './world-spook.js?v=20261114b';
+import { buildWerk } from './world-werk.js?v=20261114b';
+import { buildStuiter, buildWissel, buildSprong } from './world-park.js?v=20261114b';
+import { buildZweef } from './world-zweef.js?v=20261114b';
+import { buildTempel, GOD_BOSS, HALL, PANTHEONS, BINDS, TIERS } from './world-tempel.js?v=20261114b';
+import { buildIntro, playIntro, playFinale, menuShot } from './story.js?v=20261114b';
+import { buildGroteKern } from './models.js?v=20261114b';
+import { updateExtras, pollPad } from './extras.js?v=20261114b';
+import { tr, LANG, setLang, applyHTML, onLang } from './lang.js?v=20261114b';
+import { initDev, devTick } from './dev.js?v=20261114b';
+import { initAch, checkAch, unlockAch, buildAchPanel } from './achievements.js?v=20261114b';
+import { initShop, openShop, closeShop, applyStyle, shopMaxHp, shopTick } from './shop.js?v=20261114b';
+import { initGalaxy, openGalaxy, closeGalaxy, galaxyTick, galaxyOpen, galaxyIdx } from './galaxy.js?v=20261114b';
+import { startLoop, vrBegin, vrEnd, pollVR } from './vr.js?v=20261114b';
 const nl = () => LANG.cur === 'nl';
 
 const BUILDERS = [buildPhonk, buildMine, buildStadium, buildIce, buildLuck, buildJungle, buildLava, buildDesert, buildMoon, buildSea, buildSpook, buildWerk, buildStuiter, buildWissel, buildSprong, buildTempel, buildZweef];
@@ -685,11 +686,15 @@ function openTravel() {
     b.onclick = () => { sfx.select(); closeOverlays(); depart(() => loadWorld(nxt)); };
     list.appendChild(b);
   }
+  // every planet is in the list; the ones you haven't reached yet are grey and locked, so you can see what's still coming
   ORDER.concat(BONUS, TEMPLE, ZWEEF).forEach((i) => { const [nm, friend, col] = NAMES[i];
-    if (i === ZWEEF ? !zweefOpen(save) : i === BONUS || i === TEMPLE ? !save.finale : step(i) > save.unlocked) return;
-    const b = document.createElement('button'); b.className = 'planet';
-    b.innerHTML = `<span class="orb" style="--c:${col}"></span><span class="pt"><b>${nm}</b><small>${i === cur.idx ? (nl() ? 'je bent hier' : 'you are here') : `${nl() ? 'vlieg naar' : 'fly to'} ${friend}`}</small></span>`;
-    b.onclick = () => { sfx.select(); closeOverlays(); if (i !== cur.idx) depart(() => loadWorld(i)); };
+    const open = i === ZWEEF ? zweefOpen(save) : i === BONUS || i === TEMPLE ? !!save.finale : step(i) <= save.unlocked;
+    const b = document.createElement('button'); b.className = 'planet' + (open ? '' : ' locked');
+    const why = i === ZWEEF ? (nl() ? '🔒 zijtrip · bereik eerst Stuiterstad' : '🔒 side trip · reach Stuiterstad first')
+      : i === BONUS || i === TEMPLE ? (nl() ? '🔒 bonus · speel eerst de finale' : '🔒 bonus · beat the finale first') : (nl() ? '🔒 op slot · nog niet bereikt' : '🔒 locked · not reached yet');
+    b.innerHTML = `<span class="orb" style="--c:${col}"></span><span class="pt"><b>${nm}</b><small>${!open ? why : i === cur.idx ? (nl() ? 'je bent hier' : 'you are here') : `${nl() ? 'vlieg naar' : 'fly to'} ${friend}`}</small></span>`;
+    if (open) b.onclick = () => { sfx.select(); closeOverlays(); if (i !== cur.idx) depart(() => loadWorld(i)); };
+    else { b.disabled = true; b.title = why; }
     const sy = sysOf(i); if (sy !== lastS) { list.appendChild(sysHead(sy, true)); lastS = sy; }
     list.appendChild(b);
   });
@@ -781,7 +786,7 @@ applyHTML(); langLabel(); slotLabel(); timerLabel();
 $('c').addEventListener('click', () => { initAudio(); if (G.state === 'play' && !cutActive() && !locked() && !G.paused && !G.duelPad) requestLock(); });
 document.addEventListener('pointerlockchange', () => {
   if (locked()) { G.lockedOnce = true; $('lockhint').classList.remove('show'); return; }
-  if (G.state === 'play' && !cutActive() && !G.paused && !G.duelPad && !G.devOpen && G.lockedOnce && !$('travel').classList.contains('show') && !$('god').classList.contains('show') && !$('shop').classList.contains('show')) { G.paused = true; $('pause').classList.add('show'); }
+  if (G.state === 'play' && !G.vr && !cutActive() && !G.paused && !G.duelPad && !G.devOpen && G.lockedOnce && !$('travel').classList.contains('show') && !$('god').classList.contains('show') && !$('shop').classList.contains('show')) { G.paused = true; $('pause').classList.add('show'); }
 });
 addEventListener('keydown', (e) => {
   if (e.code === 'KeyP' && G.state === 'play' && !cutActive()) {
@@ -794,10 +799,10 @@ addEventListener('keydown', (e) => {
 let last = performance.now(), talkCd = 0, achT = 2;
 const REGEN = 10, regen = { t: 0, last: 0 };   // passive regeneration (see the main loop)
 function frame(now) {
-  requestAnimationFrame(frame);
+  // (the loop itself is started with startLoop below: requestAnimationFrame on a screen, the headset's own frames in VR)
   // the first rAF timestamp can be a little EARLIER than `last`: a negative dt broke Rênas' speed into NaN
   const dt = Math.max(0, Math.min(0.05, (now - last) / 1000) || 0); last = now;
-  pollPad();
+  pollPad(); pollVR(dt);
   if (G.paused) { renderAll(); consumePressed(); return; }
   G.t += dt; const t = G.t;
   G.shake = Math.max(0, G.shake - dt * 1.6);
@@ -867,7 +872,7 @@ initShop({
   backMusic: () => (cur.w ? (cur.onArena ? cur.w.bossMusic : cur.w.music) : 'menu'),
 });
 initDev({ cur, ORDER, BONUS, TEMPLE, ZWEEF, NAMES, step, save: () => save, persist, ws, hud, loadWorld, toArena, openMenu, closeOverlays, cutActive, skip });
-requestAnimationFrame(frame);
+startLoop(frame);
 void healPlayer;
 
 // ---------- drawing ----------
@@ -878,6 +883,11 @@ model.root.traverse((o) => o.layers.enable(PLAYER_LAYER));
 for (const l of [ambient, hemi, sun]) l.layers.enable(PLAYER_LAYER);
 const silMat = new THREE.MeshBasicMaterial({ color: 0x7ac8ff, transparent: true, opacity: 0.55, depthWrite: false, depthFunc: THREE.GreaterDepth });
 function renderAll() {
+  const vr = vrBegin();   // in the headset: hang the camera in the VR rig for these passes (does nothing on a normal screen)
+  drawPasses();
+  if (vr) vrEnd();
+}
+function drawPasses() {
   const show = model.root.visible;
   renderer.autoClear = true;
   model.root.visible = false;

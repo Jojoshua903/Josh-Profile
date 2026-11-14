@@ -1,9 +1,9 @@
 // ---------- dev tools ----------
 // Press ` (backquote) or F2 to open. Jump to any planet, skip to the boss, finish a quest, teleport around, and cheat.
 // Everything here talks to main.js through the `api` object, so the game itself stays untouched.
-import { THREE, G, frameDir, anyPerp, toast, rOf } from './core.js?v=20261112i';
-import { P, S, spawnPlayer, drawHearts, keys } from './player.js?v=20261112i';
-import { LANG } from './lang.js?v=20261112i';
+import { THREE, G, frameDir, anyPerp, toast, rOf } from './core.js?v=20261114b';
+import { P, S, spawnPlayer, drawHearts, keys } from './player.js?v=20261114b';
+import { LANG } from './lang.js?v=20261114b';
 
 const nl = () => LANG.cur === 'nl';
 const L = (en, dutch) => (nl() ? dutch : en);

@@ -1,5 +1,5 @@
 // Little synth: sound effects plus a step sequencer for each planet's music. No samples, all made here.
-let ac = null, master, musicGain, sfxGain, noiseBuf, shaper;
+let ac = null, master, musicGain, mFilt, sfxGain, noiseBuf, shaper;
 let pending = null, broken = false;
 export function initAudio() {
   if (ac) { if (ac.state === 'suspended') ac.resume().catch(() => {}); return; }
@@ -10,7 +10,9 @@ export function initAudio() {
   try {
     ac = new AC();
     master = ac.createGain(); master.gain.value = 0.8; master.connect(ac.destination);
-    musicGain = ac.createGain(); musicGain.gain.value = 0.3; musicGain.connect(master);
+    musicGain = ac.createGain(); musicGain.gain.value = 0.3;
+    mFilt = ac.createBiquadFilter(); mFilt.type = 'lowpass'; mFilt.frequency.value = 20000; mFilt.Q.value = 0.8;   // the 'under water' filter for a boss going down
+    musicGain.connect(mFilt); mFilt.connect(master);
     sfxGain = ac.createGain(); sfxGain.gain.value = 0.55; sfxGain.connect(master);
     noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
     const d = noiseBuf.getChannelData(0);
@@ -347,6 +349,21 @@ function playStep(tr, n, t, st) {
     const bars = tr.mel['_' + sec.mel], ev = bars.length && bars[bi % bars.length][i];
     if (ev) lead(tr.mel.type || 'square', note(tr, ev.d, ev.oct + (tr.mel.oct ?? 1)) + ev.acc, t, ev.len * st, (tr.mel.vol ?? 0.07) * (L === 'r' ? 0.75 : 1), B.lead);
   }
+  // ----- boss phase layers: they play into their own fader, so a phase change fades them in and out smoothly -----
+  if (lay && (heat > 0 || lay[0].gain.value > 0.01)) {
+    const [x1, x2] = lay;
+    noise(0.025, i % 2 ? 0.05 : 0.08, 8000, 'highpass', t, x1);   // busier hats
+    if (sec.mel && tr.mel) {   // the melody doubled an octave higher
+      const bars = tr.mel['_' + sec.mel], ev = bars.length && bars[bi % bars.length][i];
+      if (ev) lead(tr.mel.type || 'square', note(tr, ev.d, ev.oct + (tr.mel.oct ?? 1) + 1) + ev.acc, t, ev.len * st, (tr.mel.vol ?? 0.07) * 0.35, x1);
+    }
+    if (heat > 1 || lay[1].gain.value > 0.01) {
+      const vo = voiced(ch, 62), j = [0, 1, 2, 3, 2, 1][i % 6];   // a driving arpeggio
+      lead('pluck', vo[j % vo.length] + 12 * Math.floor(j / vo.length), t, st * 0.9, 0.035, x2);
+      if (i % 4 === 2) tone([210, 175, 145, 120][Math.floor(i / 4) % 4], 0.2, 'sine', 0.22, 90, t, x2);   // toms between the kicks
+      if (i >= S - 2) snare(t, 0.5, x2);
+    }
+  }
 }
 
 // ---------- the tracks ----------
@@ -657,6 +674,47 @@ const TRACKS = {
   },
 };
 let song = null, n = 0, nextT = 0, timer = null, curName = null;
+// ---------- boss phases: the fight music grows with the boss ----------
+// phase 1: the track as written. Phase 2: a bit faster, busier hats and the melody doubled an octave up.
+// Phase 3: faster again, plus a driving arpeggio, toms and snare pickups. Every step up is announced by a riser
+// that lands right on the next bar line, with a crash, and the new layers swell in from there. When the boss
+// goes down the music sinks "under water" and slows down, until the next track takes over.
+let tempo = 1, tempoTo = 1, heat = 0, lay = null;
+function layers() {
+  if (lay) return lay;
+  const B = buses();
+  lay = [0, 1].map(() => { const g = ac.createGain(); g.gain.value = 0; g.connect(musicGain); g.connect(B.rvbIn); return g; });
+  return lay;
+}
+function riser(t0, t1) {
+  const s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+  s.buffer = noiseBuf; s.loop = true; f.type = 'bandpass'; f.Q.value = 1.4;
+  f.frequency.setValueAtTime(350, t0); f.frequency.exponentialRampToValueAtTime(7000, t1);
+  g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.12, t1 - 0.02); g.gain.linearRampToValueAtTime(0, t1 + 0.06);
+  s.connect(f); f.connect(g); g.connect(musicGain); g.connect(buses().rvbIn); s.start(t0); s.stop(t1 + 0.1);
+}
+// p: 0, 1 or 2 for the boss's phase, -1 once he is beaten
+export function musicPhase(p) {
+  if (!ac || !song || p === heat) return;
+  const now = ac.currentTime, L = layers(), fq = mFilt.frequency;
+  if (p < 0) {
+    heat = -1; tempoTo = 0.82;
+    fq.cancelScheduledValues(now); fq.setValueAtTime(Math.min(20000, fq.value), now); fq.exponentialRampToValueAtTime(450, now + 2.5);
+    for (const g of L) { g.gain.cancelScheduledValues(now); g.gain.setTargetAtTime(0, now, 0.5); }
+    return;
+  }
+  const up = p > heat; heat = p; tempoTo = [1, 1.05, 1.1][p] || 1;
+  fq.cancelScheduledValues(now); fq.setTargetAtTime(20000, now, 0.3);
+  let land = now;
+  if (up) {
+    // land on the next bar line (at least most of a second away, so the riser has room to build)
+    const st = 60 / (song.bpm * tempo) / (song.div || 4), S = song.steps || 16;
+    let k = (S - (n % S)) % S; if (k * st < 0.8) k += S;
+    land = nextT + k * st;
+    riser(now, land); crash(land);
+  }
+  L.forEach((g, i) => { g.gain.cancelScheduledValues(now); g.gain.setValueAtTime(g.gain.value, now); g.gain.setTargetAtTime(p > i ? 1 : 0, up ? land - 0.1 : now, up ? 0.3 : 0.8); });
+}
 export function music(name) {
   if (!ac) { pending = name; return; }
   if (curName === name) return;
@@ -664,13 +722,19 @@ export function music(name) {
   song = TRACKS[name] ? prep(TRACKS[name]) : null;
   n = 0; nextT = ac.currentTime + 0.1;
   if (song) { const B = buses(); B.dly.delayTime.value = Math.min(1.2, (60 / song.bpm) * 0.75); B.pad.gain.cancelScheduledValues(ac.currentTime); B.pad.gain.value = 1; song._last = 0; }
+  // a new track starts clean: normal speed, no boss layers, no under-water filter
+  const now = ac.currentTime;
+  tempo = tempoTo = 1; heat = 0;
+  if (lay) for (const g of lay) { g.gain.cancelScheduledValues(now); g.gain.value = 0; }
+  mFilt.frequency.cancelScheduledValues(now); mFilt.frequency.setTargetAtTime(20000, now, 0.15);
   if (!timer) timer = setInterval(sched, 25);
 }
 export function stopMusic() { song = null; curName = null; }
 export const curTrack = () => curName;   // for the music box in Knabbels Werkplaats: which songs you have heard
 function sched() {
   if (!song || !ac) return;
-  const st = 60 / song.bpm / (song.div || 4);
+  tempo += (tempoTo - tempo) * 0.012;   // the tempo glides to its new speed over a couple of seconds
+  const st = 60 / (song.bpm * tempo) / (song.div || 4);
   if (nextT < ac.currentTime - 0.25) nextT = ac.currentTime + 0.05;   // the tab was asleep: don't play everything we missed at once
   while (nextT < ac.currentTime + 0.12) {
     const sw = song.swing && n % 2 ? st * song.swing : 0;

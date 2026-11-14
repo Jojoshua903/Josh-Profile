@@ -1,8 +1,8 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261112i';
-import { fbm } from './world.js?v=20261112i';
-import { buildLars, buildLantern, textBoard, buildLocal, buildPickaxe } from './models.js?v=20261112i';
-import { Gruis } from './bosses.js?v=20261112i';
-import { addParkour } from './parkour.js?v=20261112i';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261114b';
+import { fbm } from './world.js?v=20261114b';
+import { buildLars, buildLantern, textBoard, buildLocal, buildPickaxe } from './models.js?v=20261114b';
+import { Gruis } from './bosses.js?v=20261114b';
+import { addParkour } from './parkour.js?v=20261114b';
 
 // World 2: DE DIEPE MIJN. Lars' mining planet, full of crystals and rails. Boss: Gruis the ore golem.
 export function buildMine(ctx) {

@@ -1,9 +1,9 @@
-import { THREE, G, V3, toon, basic, mk, LL, surf, puff, placeOn, orientOn, anyPerp } from './core.js?v=20261112i';
-import { sfx, music } from './audio.js?v=20261112i';
-import { P, spawnPlayer, model } from './player.js?v=20261112i';
-import { World, addStars, addBackdropPlanet, fbm } from './world.js?v=20261112i';
-import { play, shot } from './cutscene.js?v=20261112i';
-import { buildStation, buildKnabbel, buildSaucer, buildKern, buildRocket, buildJosh, buildOtis, buildMilo, buildLars, buildBout, buildRatjetoe } from './models.js?v=20261112i';
+import { THREE, G, V3, toon, basic, mk, LL, surf, puff, placeOn, orientOn, anyPerp, camera } from './core.js?v=20261114b';
+import { sfx, music } from './audio.js?v=20261114b';
+import { P, spawnPlayer, model } from './player.js?v=20261114b';
+import { World, addStars, addBackdropPlanet, fbm } from './world.js?v=20261114b';
+import { play, shot } from './cutscene.js?v=20261114b';
+import { buildStation, buildKnabbel, buildSaucer, buildKern, buildRocket, buildJosh, buildOtis, buildMilo, buildLars, buildBout, buildRatjetoe } from './models.js?v=20261114b';
 
 const T = (who, text, sub, extra = {}) => ({ say: { who, text, sub }, ...extra });
 
@@ -29,8 +29,16 @@ export function buildIntro() {
   const kn = buildKnabbel(); w.put(pl, kn.g, LL(-24, -34), 0, 0.8); w.knabbel = kn;
   w.updaters.push((dt, t) => { kn.jaw.position.y = 0.6 + Math.abs(Math.sin(t * 5)) * -0.08; kn.rock.rotation.y = Math.sin(t) * 0.2; });
   // Ratjetoe, the station's mechanic, tapping on the hull with his wrench
-  const rat = buildRatjetoe(); w.put(pl, rat.root, LL(-24, 23), 0, -2.2); w.rat = rat;
-  w.updaters.push((dt, t) => { rat.arm.rotation.x = -0.4 + Math.abs(Math.sin(t * 3)) * -0.9; rat.tail.rotation.y = Math.sin(t * 2) * 0.5; rat.head.rotation.z = Math.sin(t * 1.3) * 0.12; });
+  // he stands right next to Rênas, 1.4 m to the side (seen from the menu camera), so both are in the shot and he is never in front of him
+  const ru = LL(-28, 18), rt = anyPerp(ru).applyAxisAngle(ru, 0.6 + Math.PI / 2);
+  const rat = buildRatjetoe(); w.put(pl, rat.root, ru.clone().applyAxisAngle(ru.clone().cross(rt).normalize(), 1.4 / 9), 0, -2.2); w.rat = rat;
+  // he always turns to look at the camera (slowly, like he just noticed you), so you see his face, not his back
+  const ratQ = new THREE.Quaternion(), ratTmp = new THREE.Object3D();
+  w.updaters.push((dt, t) => {
+    rat.arm.rotation.x = -0.4 + Math.abs(Math.sin(t * 3)) * -0.9; rat.tail.rotation.y = Math.sin(t * 2) * 0.5; rat.head.rotation.z = Math.sin(t * 1.3) * 0.12;
+    orientOn(ratTmp, rat.root.position.clone().normalize(), camera.position.clone().sub(rat.root.position)); ratQ.copy(ratTmp.quaternion);
+    rat.root.quaternion.slerp(ratQ, Math.min(1, dt * 4));
+  });
   // the crate with the three energy cores
   const tin = new THREE.Group();
   mk(new THREE.BoxGeometry(1.3, 0.8, 1.0), toon(0x6a7a96), 0, 0.4, 0, tin, 1.08);
@@ -63,7 +71,8 @@ export function playIntro(w, onDone) {
   const tinPos = w.tin.position.clone(), tinUp = tinPos.clone().normalize();
   const sc = w.saucer;
   const rp = w.rat.root.position, rUp = rp.clone().normalize();
-  const atRat = () => ({ pos: rp.clone().addScaledVector(rUp, 1.1).add(V3(1.6, 0, 1.8)), look: rp.clone().addScaledVector(rUp, 0.75), up: rUp });
+  const ratFwd = () => V3(0, 0, 1).applyQuaternion(w.rat.root.quaternion);
+  const atRat = () => ({ pos: rp.clone().addScaledVector(rUp, 1.1).addScaledVector(ratFwd(), 2.6).addScaledVector(anyPerp(rUp), 0.6), look: rp.clone().addScaledVector(rUp, 0.75), up: rUp });
   const sAt = tinPos.clone().addScaledVector(tinUp, 6);
   const wide = (t) => ({ pos: V3(Math.sin(t * 0.15) * 22, 9, 22), look: V3(0, 2, 0), up: V3(0, 1, 0) });
   const atS = () => ({ pos: sc.saucer.position.clone().add(V3(3, -1.5, 5)), look: sc.saucer.position.clone(), up: V3(0, 1, 0) });
@@ -136,7 +145,7 @@ export function playFinale(w, onDone) {
   const ratKern = buildKern(0.45); ratKern.position.set(0, 1.35, 0); rat.root.add(ratKern);   // he still has the Maankern
   // Bad Ratjetoe rides along in the saucer, between the two cats
   const sRat = buildRatjetoe(); sRat.root.position.set(0, 0.15, 0.75); sRat.root.scale.setScalar(1.3);
-  const atRat = () => ({ pos: rat.root.position.clone().addScaledVector(ratUp, 1.1).add(V3(1.8, 0, 2)), look: rat.root.position.clone().addScaledVector(ratUp, 0.7), up: ratUp });
+  const atRat = () => ({ pos: rat.root.position.clone().addScaledVector(ratUp, 1.1).addScaledVector(V3(0, 0, 1).applyQuaternion(rat.root.quaternion), 2.6), look: rat.root.position.clone().addScaledVector(ratUp, 0.7), up: ratUp });
   const rk = buildRocket(); const rDir = LL(-1, 11); w.group.add(rk.g); rk.g.visible = false;
   const sc = buildSaucer(); w.group.add(sc.saucer); sc.saucer.visible = false; sc.saucer.add(sRat.root);
   const big = buildKern(2.2); w.group.add(big); placeOn(big, pl, home, 2.6);

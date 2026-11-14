@@ -1,9 +1,9 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, rock, palm, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, quicksand, gusts, addMore } from './worlds-common.js?v=20261112i';
-import { fbm } from './world.js?v=20261112i';
-import { buildFarah, buildCamel, buildScarab, buildScroll, textBoard, buildLocal, buildTrinket } from './models.js?v=20261112i';
-import { Gruizel } from './bosses.js?v=20261112i';
-import { addParkour, buildBeacon } from './parkour.js?v=20261112i';
-import { duelModels } from './duels.js?v=20261112i';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, rock, palm, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, quicksand, gusts, addMore } from './worlds-common.js?v=20261114b';
+import { fbm } from './world.js?v=20261114b';
+import { buildFarah, buildCamel, buildScarab, buildScroll, textBoard, buildLocal, buildTrinket } from './models.js?v=20261114b';
+import { Gruizel } from './bosses.js?v=20261114b';
+import { addParkour, buildBeacon } from './parkour.js?v=20261114b';
+import { duelModels } from './duels.js?v=20261114b';
 
 // World 7 on the route: DUINENRIJK. A desert planet with a pyramid, an obelisk and an oasis.
 // New here: quicksand slows you down, sandstorms push you around, and cacti prick.

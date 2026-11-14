@@ -1334,6 +1334,8 @@ const NL = {
   'Thanks, Roos! I can still hear the ticking…': 'Bedankt, Roos! Ik hoor het tikken nog steeds…',
   'A parkour planet: huge gaps and dash rings.': 'Een parkourplaneet: enorme gaten en dash-ringen.',
   'No shortcuts! Follow the course. Back you go.': 'Niet afsnijden! Volg de baan. Terug jij.',
+  '👀 1st person: you look through Rênas’s helmet': '👀 1e persoon: je kijkt door de helm van Rênas',
+  '🎥 3rd person: you watch Rênas from behind': '🎥 3e persoon: je kijkt van achter naar Rênas',
   // ---------- Ratjetoe's betrayal: hints, the moon, and the finale ----------
   '*whispering* …yes, Duinenrijk is done. Next is the sea. …No, he doesn’t suspect a thing. …Oh! Captain! I was just talking to… my wrench.': '*fluistert* …ja, Duinenrijk is klaar. Nu de zee. …Nee, hij heeft niks door. …Oh! Kapitein! Ik praatte gewoon met… mijn moersleutel.',
   'Ratjetoe… why do I hear meowing on your radio?': 'Ratjetoe… waarom hoor ik gemiauw op jouw radio?',

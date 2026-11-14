@@ -1,11 +1,11 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, G, P, sfx, coinRing, coinLine, coinOn, rock, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261112i';
-import { fbm } from './world.js?v=20261112i';
-import { clamp, placeOn, orientOn, tangentTo, stepDir } from './core.js?v=20261112i';
-import { hurtPlayer } from './player.js?v=20261112i';
-import { buildNathan, buildBaseball, textBoard, buildLocal, buildTrinket, buildMustard } from './models.js?v=20261112i';
-import { Zennith } from './bosses.js?v=20261112i';
-import { addParkour, buildBeacon } from './parkour.js?v=20261112i';
-import { duelModels } from './duels.js?v=20261112i';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, G, P, sfx, coinRing, coinLine, coinOn, rock, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261114b';
+import { fbm } from './world.js?v=20261114b';
+import { clamp, placeOn, orientOn, tangentTo, stepDir } from './core.js?v=20261114b';
+import { hurtPlayer } from './player.js?v=20261114b';
+import { buildNathan, buildBaseball, textBoard, buildLocal, buildTrinket, buildMustard } from './models.js?v=20261114b';
+import { Zennith } from './bosses.js?v=20261114b';
+import { addParkour, buildBeacon } from './parkour.js?v=20261114b';
+import { duelModels } from './duels.js?v=20261114b';
 
 // World 3: HOMERUN HEUVEL. Nathan's baseball planet. Boss: Zennith, the demon pitcher.
 export function buildStadium(ctx) {

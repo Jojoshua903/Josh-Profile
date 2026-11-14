@@ -1,6 +1,6 @@
-import { THREE, G, camera, V3, damp, $ } from './core.js?v=20261112i';
-import { sfx } from './audio.js?v=20261112i';
-import { tr } from './lang.js?v=20261112i';
+import { THREE, G, camera, V3, damp, $, altOf, surf, dirOf } from './core.js?v=20261114b';
+import { sfx } from './audio.js?v=20261114b';
+import { tr } from './lang.js?v=20261114b';
 
 // Cutscenes in the Otis in Orbit style: letterbox bars, scripted camera shots, typed dialogue with a mumbling voice for each character.
 // A step: { say: { who, text, sub }, cam: () => ({ pos, look, up }), dur, start(), update(dt, k), title: [big, small], snap }
@@ -49,7 +49,7 @@ export const cutSpeaker = () => { const s = C.on && C.steps && C.steps[C.i]; ret
 export const cutTyping = () => C.on && C.typed < C.text.length;
 export function play(steps, onEnd) {
   C.on = true; G.cutscene = true;
-  C.steps = steps.filter(Boolean); C.i = -1; C.onEnd = onEnd; C.snapNext = true;
+  C.steps = steps.filter(Boolean); C.i = -1; C.onEnd = onEnd; C.snapNext = true; C.pull = 1;
   C.camPos.copy(camera.position); C.camUp.copy(camera.up);
   const d = V3(); camera.getWorldDirection(d); C.camLook.copy(camera.position).addScaledVector(d, 10);
   document.body.classList.add('cutscene');
@@ -147,10 +147,40 @@ export function updateCut(dt) {
       C.camPos.lerp(shot.pos, kk); C.camLook.lerp(shot.look, kk); C.camUp.lerp(up, kk).normalize();
     }
   }
-  camera.position.copy(C.camPos);
+  // never film from inside a rock, house, rocket or character: if something solid sits between what we look at
+  // and the camera, slide the camera in front of it. It jumps in at once (so you never see the inside of a thing)
+  // and eases back out once the way is clear.
+  const f = clearFrac(C.camPos, C.camLook);
+  C.pull = f < C.pull ? f : C.pull + (f - C.pull) * damp(3, dt);
+  camera.position.copy(C.camLook).lerp(C.camPos, C.pull);
+  // and never under the ground of the planet
+  const pl = G.world && G.world.main;
+  if (pl && pl.c && altOf(pl, camera.position) < 0.7) camera.position.copy(surf(pl, dirOf(pl, camera.position), 0.7));
   if (G.shake > 0) camera.position.add(V3((Math.random() - 0.5) * G.shake, (Math.random() - 0.5) * G.shake, (Math.random() - 0.5) * G.shake));
   camera.up.copy(C.camUp);
   camera.lookAt(C.camLook);
+}
+// how far along the line from the look point to the camera we can go before hitting something solid (1 = all the way)
+const ray = new THREE.Raycaster(), rayDir = V3();
+function solid(o) {
+  if (!o.isMesh) return false;
+  for (let p = o; p; p = p.parent) if (!p.visible) return false;
+  const m = Array.isArray(o.material) ? o.material[0] : o.material;
+  // outlines (drawn on the back side), glass, glows, beams and atmospheres don't count
+  return !!m && m.side !== THREE.BackSide && !(m.transparent && m.opacity < 0.7) && !m.wireframe && m.depthWrite !== false;
+}
+function clearFrac(pos, look) {
+  const w = G.world;
+  if (!w || !w.group) return 1;
+  // wide shots look at the middle of the planet: then the whole planet is in the way on purpose, so leave those alone
+  if (w.main && w.main.c && altOf(w.main, look) < -0.5) return 1;
+  rayDir.copy(pos).sub(look);
+  const len = rayDir.length();
+  if (len < 1) return 1;
+  rayDir.divideScalar(len);
+  ray.set(look, rayDir); ray.near = 0.6; ray.far = len + 0.4;   // skip the face we're looking at, and catch walls just behind the camera too
+  for (const h of ray.intersectObject(w.group, true)) if (solid(h.object)) return Math.max(0.6, h.distance - 0.45) / len;
+  return 1;
 }
 // Helpers to build shots
 export const shot = (pos, look, up) => ({ pos, look, up });

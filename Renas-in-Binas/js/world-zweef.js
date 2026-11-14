@@ -1,9 +1,9 @@
-import { THREE, V3, mk, basic } from './worlds-common.js?v=20261112i';
-import { buildLocal } from './models.js?v=20261112i';
-import { G, camera, toast, puff } from './core.js?v=20261112i';
-import { sfx } from './audio.js?v=20261112i';
-import { P } from './player.js?v=20261112i';
-import { buildPark } from './world-park.js?v=20261112i';
+import { THREE, V3, mk, basic } from './worlds-common.js?v=20261114b';
+import { buildLocal } from './models.js?v=20261114b';
+import { G, camera, toast, puff } from './core.js?v=20261114b';
+import { sfx } from './audio.js?v=20261114b';
+import { P } from './player.js?v=20261114b';
+import { buildPark } from './world-park.js?v=20261114b';
 
 // ZWEEFRIJK: an anti-gravity parkour planet, and a very trippy one.
 //   - floaty gravity everywhere: every jump is a big slow float
@@ -64,7 +64,7 @@ function trippy(w, pl) {
   const WAVE = { every: 11, warn: 2, len: 2.6 };
   let waveT = 7, state = 'calm', skyT = 0;
   const base = pl.grav;
-  const banner = document.createElement('div');
+  const banner = document.createElement('div'); banner.className = 'vrTint'; banner.dataset.vr = '#b07aff';   // (the VR view paints the same purple edge)
   banner.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:3;opacity:0;transition:opacity .4s;background:radial-gradient(circle,transparent 45%,rgba(200,140,255,.35) 100%)';
   document.body.appendChild(banner);
   w.updaters.push((dt, t) => {

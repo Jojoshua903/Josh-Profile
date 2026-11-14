@@ -1,9 +1,9 @@
-import { THREE, G, V3, toon, basic, mk, ink, clamp, damp, puff, placeOn, orientOn, surf, dirOf, altOf, anyPerp, tangentTo, stepDir, frameDir, wrapA, toast, $, canvasTex } from './core.js?v=20261112i';
-import { sfx } from './audio.js?v=20261112i';
-import { tr } from './lang.js?v=20261112i';
-import { P, hurtPlayer, bouncePlayer, pfTest } from './player.js?v=20261112i';
-import { SurfaceWall, lonAround, makeMarker } from './fx.js?v=20261112i';
-import { buildKern, buildDeniz, buildLeprechaun, buildGorilla, buildCoconut, buildDragon, buildWorm, buildMecha, buildOctopus, buildGhostKing, buildCogTitan, buildGear } from './models.js?v=20261112i';
+import { THREE, G, V3, toon, basic, mk, ink, clamp, damp, puff, placeOn, orientOn, surf, dirOf, altOf, anyPerp, tangentTo, stepDir, frameDir, wrapA, toast, $, canvasTex } from './core.js?v=20261114b';
+import { sfx, musicPhase } from './audio.js?v=20261114b';
+import { tr } from './lang.js?v=20261114b';
+import { P, hurtPlayer, bouncePlayer, pfTest } from './player.js?v=20261114b';
+import { SurfaceWall, lonAround, makeMarker } from './fx.js?v=20261114b';
+import { buildKern, buildDeniz, buildLeprechaun, buildGorilla, buildCoconut, buildDragon, buildWorm, buildMecha, buildOctopus, buildGhostKing, buildCogTitan, buildGear } from './models.js?v=20261114b';
 
 // ---------- shared hazards ----------
 const arcTo = (pl, a, b) => Math.acos(clamp(a.dot(b), -1, 1)) * pl.r;
@@ -487,6 +487,9 @@ class Boss {
   tick(dt, t) {
     // hazards spawned while the others update (a split ball, a rally return) go into a fresh list,
     // so they don't get lost. If the boss gets hit halfway through, everything left over is wiped
+    // the music follows the fight: it grows with every phase and sinks away when he goes down
+    const mp = this.dead || this.state === 'dying' ? -1 : this.state === 'fight' ? this.phase : 0;
+    if (mp !== this._mp) { this._mp = mp; musicPhase(mp); }
     const cur = this.haz; this.haz = []; this.wiped = false;
     const keep = cur.filter((h) => (this.wiped ? (h.kill(), false) : h.update(dt)));
     if (this.wiped) for (const h of keep) h.kill();

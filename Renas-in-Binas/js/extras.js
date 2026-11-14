@@ -1,7 +1,7 @@
-import { THREE, G, scene, camera, toon, basic, mk, surf, dirOf, tangentTo, orientOn, puff, clamp, $ } from './core.js?v=20261112i';
-import { setVolume } from './audio.js?v=20261112i';
-import { tr } from './lang.js?v=20261112i';
-import { P, keys, pressed, mouse, cam } from './player.js?v=20261112i';
+import { THREE, G, scene, camera, toon, basic, mk, surf, dirOf, tangentTo, orientOn, puff, clamp, $ } from './core.js?v=20261114b';
+import { setVolume } from './audio.js?v=20261114b';
+import { tr } from './lang.js?v=20261114b';
+import { P, keys, pressed, mouse, cam } from './player.js?v=20261114b';
 
 // Quality-of-life layer: a guide arrow to your next goal, light beams on collectibles, dust, a hurt flash,
 // floating biome particles, volume settings and gamepad support.
@@ -134,7 +134,7 @@ function padKey(code, on) {
 export function pollPad() {
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
   const gp = pads && Array.from(pads).find((p) => p && p.connected);
-  if (!gp) return;
+  if (!gp || G.vr) return;   // in VR the Touch controllers are read by vr.js
   const ax = gp.axes, b = (i) => !!(gp.buttons[i] && gp.buttons[i].pressed);
   const dz = 0.35;
   padKey('KeyW', ax[1] < -dz); padKey('KeyS', ax[1] > dz); padKey('KeyA', ax[0] < -dz); padKey('KeyD', ax[0] > dz);
