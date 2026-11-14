@@ -1,10 +1,10 @@
-import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, lavaFloor, geyser, addMore } from './worlds-common.js?v=20261114i';
-import { fbm } from './world.js?v=20261114i';
-import { puff } from './core.js?v=20261114i';
-import { buildImmanuel, buildFireGem, buildHammer, textBoard, buildLocal } from './models.js?v=20261114i';
-import { Smeul } from './bosses.js?v=20261114i';
-import { addParkour, buildBeacon } from './parkour.js?v=20261114i';
-import { duelModels } from './duels.js?v=20261114i';
+import { World, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, lavaFloor, geyser, addMore } from './worlds-common.js?v=20261114j';
+import { fbm } from './world.js?v=20261114j';
+import { puff } from './core.js?v=20261114j';
+import { buildImmanuel, buildFireGem, buildHammer, textBoard, buildLocal } from './models.js?v=20261114j';
+import { Smeul } from './bosses.js?v=20261114j';
+import { addParkour, buildBeacon } from './parkour.js?v=20261114j';
+import { duelModels } from './duels.js?v=20261114j';
 
 // World 6 on the route: DE ASBERG. A volcano planet: rivers of lava, geysers, basalt towers.
 // New here: the lava floor burns (hop out!) and geysers that hurt, or shoot you sky-high.

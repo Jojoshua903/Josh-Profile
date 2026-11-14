@@ -1,11 +1,11 @@
-import { World, addStars, addBackdropPlanet, LL, V3, toon, basic, mk, THREE, sign, addRocket } from './worlds-common.js?v=20261114i';
-import { fbm } from './world.js?v=20261114i';
-import { buildJosh, buildOtis, textBoard } from './models.js?v=20261114i';
-import { G, toast, banner, puff, surf, placeOn, orientOn } from './core.js?v=20261114i';
-import { P } from './player.js?v=20261114i';
-import { sfx } from './audio.js?v=20261114i';
-import { play, orbitShot } from './cutscene.js?v=20261114i';
-import { LANG } from './lang.js?v=20261114i';
+import { World, addStars, addBackdropPlanet, LL, V3, toon, basic, mk, THREE, sign, addRocket } from './worlds-common.js?v=20261114j';
+import { fbm } from './world.js?v=20261114j';
+import { buildJosh, buildOtis, textBoard } from './models.js?v=20261114j';
+import { G, toast, banner, puff, surf, placeOn, orientOn } from './core.js?v=20261114j';
+import { P } from './player.js?v=20261114j';
+import { sfx } from './audio.js?v=20261114j';
+import { play, orbitShot } from './cutscene.js?v=20261114j';
+import { LANG } from './lang.js?v=20261114j';
 
 // DE STERRENTEMPEL: this game's Godhome. Opens after the finale.
 // Josh trained here before he saved the galaxy. Ratjetoe turned the scans of every boss Rênas beat into holograms:

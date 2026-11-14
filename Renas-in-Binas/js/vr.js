@@ -1,7 +1,7 @@
-import { THREE, G, renderer, scene, camera, anyPerp, $, toast, toon, mk } from './core.js?v=20261114i';
-import { initAudio } from './audio.js?v=20261114i';
-import { tr, LANG } from './lang.js?v=20261114i';
-import { P, keys, pressed, cam, model } from './player.js?v=20261114i';
+import { THREE, G, renderer, scene, camera, anyPerp, $, toast, toon, mk } from './core.js?v=20261114j';
+import { initAudio } from './audio.js?v=20261114j';
+import { tr, LANG } from './lang.js?v=20261114j';
+import { P, keys, pressed, cam, model } from './player.js?v=20261114j';
 
 // VR on the Meta Quest (WebXR).
 // - An "Enter VR" button shows up only when the browser can do immersive VR, so on a normal computer nothing changes.
@@ -43,6 +43,23 @@ let session = null, saved = null;
 // ---------- the loop ----------
 export function startLoop(frame) { renderer.setAnimationLoop(frame); }
 
+// ---------- the page underneath keeps working ----------
+// While the headset shows VR, the Quest browser stops updating the web page under it:
+//  - requestAnimationFrame callbacks never run (the planet picker, some boss effects and fades wait on them)
+//  - CSS transitions and animations stop moving, so things fading in or out (the black fade between planets,
+//    toasts, menu panels) can stay stuck half-way or invisible, and the VR view reads that stuck state.
+// So in VR: requestAnimationFrame callbacks run from the headset's own frames, and CSS transitions/animations are
+// switched off (everything jumps straight to where it was going). The VR view does its own smooth fades instead.
+const nativeRAF = window.requestAnimationFrame.bind(window), rafQ = [];
+window.requestAnimationFrame = (cb) => {
+  if (renderer.xr.isPresenting) { rafQ.push(cb); return -1; }
+  return nativeRAF(cb);
+};
+function flushRAF() { if (!rafQ.length) return; const q = rafQ.splice(0), now = performance.now(); for (const cb of q) { try { cb(now); } catch (e) { setTimeout(() => { throw e; }); } } }
+const noAnim = document.createElement('style');
+noAnim.textContent = 'html.vrOn *,html.vrOn *::before,html.vrOn *::after{transition:none!important;animation:none!important}';
+document.head.appendChild(noAnim);
+
 // ---------- the Enter VR button ----------
 const btn = document.createElement('button');
 btn.id = 'vrBtn';
@@ -66,6 +83,7 @@ const sel = { left: false, right: false }, sqz = { left: false, right: false };
 const vmF = new THREE.Vector3(), vmR = new THREE.Vector3();   // where your head looks, flat on the planet
 function begin(s) {
   session = s; G.vr = true; label();
+  document.documentElement.classList.add('vrOn');   // CSS transitions and animations off (see above)
   saved = { fov: camera.fov, aspect: camera.aspect, bg: scene.background };
   if (document.pointerLockElement) document.exitPointerLock();
   try { renderer.xr.setFoveation(0.25); } catch (e) { /* not every browser */ }   // only a little: at full strength the edges of the view go blurry
@@ -78,6 +96,7 @@ function begin(s) {
 }
 function finish() {
   session = null; G.vr = false; label();
+  document.documentElement.classList.remove('vrOn'); flushRAF();
   releaseAll(); G.vrMove = null;
   sel.left = sel.right = sqz.left = sqz.right = false;
   scene.remove(rig); scene.remove(fx); scene.remove(stars); scene.remove(bubG); rig.scale.setScalar(1); skyKey = '';
@@ -406,8 +425,10 @@ const fxSheet = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.5), new THREE.Mesh
 fxSheet.position.z = -0.3; fxSheet.renderOrder = 1001; fxSheet.frustumCulled = false; fx.add(fxSheet);
 const fadeBall = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 12), new THREE.MeshBasicMaterial({ color: 0x14121f, side: THREE.BackSide, transparent: true, opacity: 0, depthTest: false, depthWrite: false, fog: false }));
 fadeBall.renderOrder = 1002; fadeBall.frustumCulled = false; fx.add(fadeBall);
-let fxKey = '', barsK = 0, comfortK = 0;
+let fxKey = '', barsK = 0, comfortK = 0, fadeK = 0, darkK = 0, hurtK = 0, lastHp = null, flashK = 0, flashCol = '#ffffff';
+const seenFlash = new WeakSet();
 const op = (el) => (el ? +getComputedStyle(el).opacity || 0 : 0);
+const ease = (cur, to, dt, rate) => cur + (to - cur) * Math.min(1, dt * rate);
 function edgeGlow(x, S, col, a, inner) {
   const g = x.createRadialGradient(S / 2, S / 2, S * inner, S / 2, S / 2, S * 0.72);
   g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, col);
@@ -415,11 +436,19 @@ function edgeGlow(x, S, col, a, inner) {
 }
 function drawFx(dt) {
   barsK += ((document.body.classList.contains('cutscene') ? 1 : 0) - barsK) * Math.min(1, dt * 6);
-  const hurt = op($('hurt')), dark = Math.max(0, ...[...document.querySelectorAll('.darkFx')].map(op)), tints = [...document.querySelectorAll('.vrTint')].map((e) => [e.dataset.vr || '#b07aff', op(e)]).filter(([, a]) => a > 0.02);
+  // (CSS transitions are off in VR, so the page jumps straight to where it is going: the fades are smoothed here)
+  fadeK = ease(fadeK, op($('fade')), dt, 7);
+  darkK = ease(darkK, Math.max(0, ...[...document.querySelectorAll('.darkFx')].map(op)), dt, 3);
+  if (lastHp !== null && P.hp < lastHp) hurtK = 1;   // got hit: a red flash round the edges (on a screen that is a CSS animation)
+  lastHp = P.hp; hurtK = Math.max(0, hurtK - dt / 0.55);
+  for (const e of document.querySelectorAll('.vrFlash')) if (!seenFlash.has(e)) { seenFlash.add(e); flashK = 0.7; flashCol = e.dataset.vr || '#ffffff'; }
+  flashK = Math.max(0, flashK - dt / 0.45 * 0.7);
+  const low = $('hurt') && $('hurt').classList.contains('low') ? 0.18 + 0.37 * (0.5 + 0.5 * Math.sin((G.t || 0) * 5.7)) : 0;   // last heart: a slow red pulse
+  const hurt = Math.max(hurtK, low), dark = darkK, tints = [...document.querySelectorAll('.vrTint')].map((e) => [e.dataset.vr || '#b07aff', op(e)]).filter(([, a]) => a > 0.02);
   const inks = [...document.querySelectorAll('.inkFx i')].map((e) => { const r = e.getBoundingClientRect(); return [(r.left + r.width / 2) / innerWidth, (r.top + r.height / 2) / innerHeight, r.width / innerWidth]; }).filter((v) => v[2] > 0.005);
-  fadeBall.material.opacity = op($('fade'));
-  fadeBall.visible = fadeBall.material.opacity > 0.01;
-  const flashes = [...document.querySelectorAll('.vrFlash')].map((e) => [e.dataset.vr || '#ffffff', op(e)]).filter(([, a]) => a > 0.02);
+  fadeBall.material.opacity = fadeK;
+  fadeBall.visible = fadeK > 0.01;
+  const flashes = flashK > 0.02 ? [[flashCol, flashK]] : [];
   const key = [hurt, dark, barsK, Math.round(comfortK * 20) / 20, ...tints.flat(), ...inks.flat(), ...flashes.flat()].map((v) => (typeof v === 'number' ? v.toFixed(2) : v)).join(',');
   if (key === fxKey) return;
   fxKey = key;
@@ -615,6 +644,7 @@ function buzz(src, k = 0.3) { try { const h = src && src.gamepad && src.gamepad.
 let uiT = 0;
 export function pollVR(dt) {
   if (!G.vr || !session) return;
+  flushRAF();   // the page's own requestAnimationFrame callbacks, run from the headset's frames
   // read both hands
   const H = { left: null, right: null };
   for (const src of session.inputSources) if (src.handedness in H) H[S.lefty ? (src.handedness === 'left' ? 'right' : 'left') : src.handedness] = src;   // left-handed: the hands swap jobs

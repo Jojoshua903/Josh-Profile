@@ -1,6 +1,6 @@
-import { THREE, G, V3, toon, basic, mk, ink, damp, puff, surf, orientOn, tangentTo, stepDir, anyPerp, label, rOf } from './core.js?v=20261114i';
-import { sfx } from './audio.js?v=20261114i';
-import { P, hurtPlayer, bouncePlayer, pfTest } from './player.js?v=20261114i';
+import { THREE, G, V3, toon, basic, mk, ink, damp, puff, surf, orientOn, tangentTo, stepDir, anyPerp, label, rOf } from './core.js?v=20261114j';
+import { sfx } from './audio.js?v=20261114j';
+import { P, hurtPlayer, bouncePlayer, pfTest } from './player.js?v=20261114j';
 
 // Enemies that walk on a planet's surface. You beat them like in Otis in Orbit: jump on top.
 // Armoured ones (Kristalkevers) need two stomps or one ground pound. A spin (F) knocks most of them out too.
@@ -469,6 +469,6 @@ export class Enemy {
     void silent;
   }
 }
-import { keys } from './player.js?v=20261114i';
+import { keys } from './player.js?v=20261114j';
 const keysJump = () => keys.has('Space');
 export { V3 };

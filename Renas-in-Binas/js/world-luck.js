@@ -1,9 +1,9 @@
-import { World, planetStem, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261114i';
-import { fbm } from './world.js?v=20261114i';
-import { buildFionn, buildLuckyStone, buildHorseshoe, textBoard, buildLocal } from './models.js?v=20261114i';
-import { Lorcan } from './bosses.js?v=20261114i';
-import { addParkour, buildBeacon } from './parkour.js?v=20261114i';
-import { duelModels } from './duels.js?v=20261114i';
+import { World, planetStem, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, surf, coinRing, coinLine, coinOn, crystal, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261114j';
+import { fbm } from './world.js?v=20261114j';
+import { buildFionn, buildLuckyStone, buildHorseshoe, textBoard, buildLocal } from './models.js?v=20261114j';
+import { Lorcan } from './bosses.js?v=20261114j';
+import { addParkour, buildBeacon } from './parkour.js?v=20261114j';
+import { duelModels } from './duels.js?v=20261114j';
 
 // World 4 on the route: SMARAGDEILAND. Fionn's green island: Irish hills, very old rocks and a lot of luck.
 // Boss: Lorcan Pech, the Bad-Luck Leprechaun, on the Rainbow Ring.

@@ -1,9 +1,9 @@
-import { THREE, G, V3, toon, basic, mk, clamp, frameDir, puff, banner, rOf } from './core.js?v=20261114i';
-import { sfx } from './audio.js?v=20261114i';
-import { P, healPlayer } from './player.js?v=20261114i';
-import { coinRing, sign } from './worlds-common.js?v=20261114i';
-import { textBoard } from './models.js?v=20261114i';
-import { fbm } from './world.js?v=20261114i';
+import { THREE, G, V3, toon, basic, mk, clamp, frameDir, puff, banner, rOf } from './core.js?v=20261114j';
+import { sfx } from './audio.js?v=20261114j';
+import { P, healPlayer } from './player.js?v=20261114j';
+import { coinRing, sign } from './worlds-common.js?v=20261114j';
+import { textBoard } from './models.js?v=20261114j';
+import { fbm } from './world.js?v=20261114j';
 
 // MINI-GALAXY: the most Mario Galaxy thing there is. Every story planet gets a bounce pad near where you land,
 // with four little planets floating above it, each with its own gravity. Bounce up, walk round a little planet to

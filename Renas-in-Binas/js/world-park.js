@@ -1,11 +1,11 @@
-import { World, addStars, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinOn, sign, rareItem } from './worlds-common.js?v=20261114i';
-import { fbm } from './world.js?v=20261114i';
-import { buildLocal, textBoard } from './models.js?v=20261114i';
-import { buildBeacon, coursePath } from './parkour.js?v=20261114i';
-import { G, toast, puff, surf, placeOn, orientOn, clamp } from './core.js?v=20261114i';
-import { sfx } from './audio.js?v=20261114i';
-import { P, spawnPlayer, resetCam, hurtPlayer, drawHearts } from './player.js?v=20261114i';
-import { play, orbitShot } from './cutscene.js?v=20261114i';
+import { World, addStars, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinOn, sign, rareItem } from './worlds-common.js?v=20261114j';
+import { fbm } from './world.js?v=20261114j';
+import { buildLocal, textBoard } from './models.js?v=20261114j';
+import { buildBeacon, coursePath } from './parkour.js?v=20261114j';
+import { G, toast, puff, surf, placeOn, orientOn, clamp } from './core.js?v=20261114j';
+import { sfx } from './audio.js?v=20261114j';
+import { P, spawnPlayer, resetCam, hurtPlayer, drawHearts } from './player.js?v=20261114j';
+import { play, orbitShot } from './cutscene.js?v=20261114j';
 
 // PARKOUR PLANETS: detours on the route, between the story planets. No quest and no boss: one long course
 // over a bottomless void, from the start beacon to the star gate. Every planet has its own trick:
