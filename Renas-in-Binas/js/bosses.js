@@ -1,9 +1,9 @@
-import { THREE, G, V3, toon, basic, mk, ink, clamp, damp, puff, placeOn, orientOn, surf, dirOf, altOf, anyPerp, tangentTo, stepDir, frameDir, wrapA, toast, $, canvasTex } from './core.js?v=20261114b';
-import { sfx, musicPhase } from './audio.js?v=20261114b';
-import { tr } from './lang.js?v=20261114b';
-import { P, hurtPlayer, bouncePlayer, pfTest } from './player.js?v=20261114b';
-import { SurfaceWall, lonAround, makeMarker } from './fx.js?v=20261114b';
-import { buildKern, buildDeniz, buildLeprechaun, buildGorilla, buildCoconut, buildDragon, buildWorm, buildMecha, buildOctopus, buildGhostKing, buildCogTitan, buildGear } from './models.js?v=20261114b';
+import { THREE, G, V3, toon, basic, mk, ink, clamp, damp, puff, placeOn, orientOn, surf, dirOf, altOf, anyPerp, tangentTo, stepDir, frameDir, wrapA, toast, $, canvasTex } from './core.js?v=20261114d';
+import { sfx, musicPhase } from './audio.js?v=20261114d';
+import { tr } from './lang.js?v=20261114d';
+import { P, hurtPlayer, bouncePlayer, pfTest } from './player.js?v=20261114d';
+import { SurfaceWall, lonAround, makeMarker } from './fx.js?v=20261114d';
+import { buildKern, buildDeniz, buildLeprechaun, buildGorilla, buildCoconut, buildDragon, buildWorm, buildMecha, buildOctopus, buildGhostKing, buildCogTitan, buildGear } from './models.js?v=20261114d';
 
 // ---------- shared hazards ----------
 const arcTo = (pl, a, b) => Math.acos(clamp(a.dot(b), -1, 1)) * pl.r;

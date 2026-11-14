@@ -1,8 +1,8 @@
-import { World, surf, planetStem, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261114b';
-import { fbm } from './world.js?v=20261114b';
-import { buildSaar, buildCandle, textBoard, buildLocal, buildTrinket } from './models.js?v=20261114b';
-import { Boe } from './bosses.js?v=20261114b';
-import { addParkour, buildBeacon } from './parkour.js?v=20261114b';
+import { World, surf, planetStem, addStars, addBackdropPlanet, LL, frameDir, V3, toon, basic, mk, THREE, coinRing, coinLine, coinOn, rock, lamp, sign, addRocket, questItem, rareItem, setupFriend, setupLocal, addMore } from './worlds-common.js?v=20261114d';
+import { fbm } from './world.js?v=20261114d';
+import { buildSaar, buildCandle, textBoard, buildLocal, buildTrinket } from './models.js?v=20261114d';
+import { Boe } from './bosses.js?v=20261114d';
+import { addParkour, buildBeacon } from './parkour.js?v=20261114d';
 
 // World 10 on the route: SPOOKPLANEET. A dark, purple planet with a haunted house, a graveyard and a giant dead tree.
 // New here: ghost platforms. They fade away and come back on a timer: watch them blink, then jump.

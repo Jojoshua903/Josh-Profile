@@ -1,4 +1,4 @@
-import { THREE } from './core.js?v=20261114b';
+import { THREE } from './core.js?v=20261114d';
 
 // SOLAR SYSTEMS: the planets come in groups round their own sun, like the galaxies in Mario Galaxy.
 // The groups follow the story route. The planet picker and the travel list show them, and every planet
