@@ -1,7 +1,7 @@
-import { THREE, G, renderer, scene, camera, anyPerp, $, toast, toon, mk } from './core.js?v=20261114d';
-import { initAudio } from './audio.js?v=20261114d';
-import { tr, LANG } from './lang.js?v=20261114d';
-import { P, keys, pressed, cam, model } from './player.js?v=20261114d';
+import { THREE, G, renderer, scene, camera, anyPerp, $, toast, toon, mk } from './core.js?v=20261114g';
+import { initAudio } from './audio.js?v=20261114g';
+import { tr, LANG } from './lang.js?v=20261114g';
+import { P, keys, pressed, cam, model } from './player.js?v=20261114g';
 
 // VR on the Meta Quest (WebXR).
 // - An "Enter VR" button shows up only when the browser can do immersive VR, so on a normal computer nothing changes.
@@ -69,8 +69,8 @@ function begin(s) {
   session = s; G.vr = true; label();
   saved = { fov: camera.fov, aspect: camera.aspect, bg: scene.background };
   if (document.pointerLockElement) document.exitPointerLock();
-  try { renderer.xr.setFoveation(1); } catch (e) { /* not every browser */ }
-  scene.add(rig); scene.add(fx); scene.add(stars); applySet();
+  try { renderer.xr.setFoveation(0.25); } catch (e) { /* not every browser */ }   // only a little: at full strength the edges of the view go blurry
+  scene.add(rig); scene.add(fx); scene.add(stars); scene.add(bubG); applySet();
   s.addEventListener('selectstart', (e) => (sel[e.inputSource.handedness] = true));
   s.addEventListener('selectend', (e) => (sel[e.inputSource.handedness] = false));
   s.addEventListener('squeezestart', (e) => (sqz[e.inputSource.handedness] = true));
@@ -81,7 +81,7 @@ function finish() {
   session = null; G.vr = false; label();
   releaseAll();
   sel.left = sel.right = sqz.left = sqz.right = false;
-  scene.remove(rig); scene.remove(fx); scene.remove(stars); rig.scale.setScalar(1); skyKey = '';
+  scene.remove(rig); scene.remove(fx); scene.remove(stars); scene.remove(bubG); rig.scale.setScalar(1); skyKey = '';
   scene.background = saved ? saved.bg : null;
   if (saved) { camera.fov = saved.fov; camera.aspect = saved.aspect; }
   camera.updateProjectionMatrix();
@@ -108,7 +108,7 @@ function setRig(pos, up, fwd, feet = false, scale = 1) {
   if (S.seated) rig.position.addScaledVector(_u, 0.45 * scale);   // sitting down: lift the rig, so your eyes end up where they would be standing
 }
 let modelWas = true;
-const _lk = new THREE.Vector3();
+const _lk = new THREE.Vector3(), _hf = new THREE.Vector3();
 export function vrBegin() {
   if (!G.vr || !renderer.xr.isPresenting) return false;
   sp.copy(camera.position); sq.copy(camera.quaternion); su.copy(camera.up);
@@ -122,7 +122,17 @@ export function vrBegin() {
   }
   // 3rd person: the rig faces the camera's heading (not Rênas himself), so walking never turns your view.
   // The distance setting slides you closer to Rênas or further back along the line from him to the camera.
-  else if (playing) { _lk.copy(P.pos).addScaledVector(P.up, 1.1); setRig(_lk.lerp(cam.pos, [0.6, 1, 1.35][S.dist] ?? 1), cam.up, cam.fwd); }
+  // The game camera hangs high and looks down at Rênas, but in VR your head decides where you look, so looking
+  // straight ahead from up there you mostly saw sky. Now Rênas stands a few metres in front of you and a bit below
+  // eye height: looking ahead you see him and the ground round him. (Closer when the game camera had to slide in
+  // front of a wall; the distance setting moves you nearer or further.)
+  else if (playing) {
+    _hf.copy(cam.fwd).addScaledVector(cam.up, -cam.fwd.dot(cam.up)).normalize();
+    const m = [0.7, 1, 1.4][S.dist] ?? 1;
+    const back = Math.max(1.6, Math.min(4.2 * m, -_lk.copy(cam.pos).sub(P.pos).dot(_hf)));
+    _lk.copy(P.pos).addScaledVector(_hf, -back).addScaledVector(cam.up, 2 * m);
+    setRig(_lk, cam.up, _hf);
+  }
   else setRig(camera.position, camera.up, _f.set(0, 0, -1).applyQuaternion(camera.quaternion));
   rig.add(camera);
   camera.position.set(0, 0, 0); camera.quaternion.identity(); camera.up.set(0, 1, 0);
@@ -169,6 +179,12 @@ function setMenu() {
     b.onclick = () => { S[k] = vals[(vals.indexOf(S[k]) + 1) % vals.length]; applySet(); saveSet(); setMenu(); };
     box.appendChild(b);
   }
+  // the minimap has no setting of its own: it is the same switch as the M key on a keyboard
+  const mapOnNow = () => { try { return localStorage.getItem('renas-rocket-rumble-minimap') !== 'off'; } catch (e) { return true; } };
+  const mb = document.createElement('button'); mb.className = 'btn small'; mb.style.textAlign = 'left';
+  mb.textContent = nl() ? `🗺 Minimap: ${mapOnNow() ? 'aan' : 'uit'}` : `🗺 Minimap: ${mapOnNow() ? 'on' : 'off'}`;
+  mb.onclick = () => { const was = G.state; G.state = 'play'; tap('KeyM'); G.state = was; setMenu(); };
+  box.appendChild(mb);
 }
 function applySet() {
   firstPerson = S.view === '1st';
@@ -199,16 +215,40 @@ function panel(w, h, cw, ch, parent = rig) {
   return { m, cv, x: cv.getContext('2d'), tex, key: '', on: false, k: 0 };
 }
 const main = panel(1.5, 0.75, 1024, 512);
-main.m.position.set(0, 1.3, -1.6); main.m.rotation.x = 0.12;
+// where the big panel hangs: menus in the middle of your view (the game waits anyway), dialogue lower and
+// smaller, so it never covers what is happening. Below your eyes a panel tilts back to face you.
+const PLACE = { menu: [1.35, -1.6, -0.12, 1], talk: [1.0, -1.5, -0.34, 0.72] };
+function placeMain(mode) { const [y, z, rx, s] = PLACE[mode]; main.baseY = y; main.sz = s; main.m.position.set(0, y, z); main.m.rotation.x = rx; }
+placeMain('talk');
+// a small strip low in front of you for the goal, prompts, toasts and banners
+const info = panel(0.85, 0.3, 768, 270);
+info.m.position.set(0, 0.72, -1.25); info.m.rotation.x = -0.55;
 // the hearts, bolts and gears: a little screen on your left wrist, like a watch (until a left controller shows up, it floats low in front of you)
 const hud = panel(0.2, 0.067, 600, 200);
-const HUD_FLOAT = () => { rig.add(hud.m); hud.m.scale.setScalar(3.4); hud.m.position.set(0, 0.85, -1.25); hud.m.rotation.set(-0.6, 0, 0); };
+const HUD_FLOAT = () => { rig.add(hud.m); hud.m.scale.setScalar(3.4); hud.m.position.set(0, 0.5, -1.05); hud.m.rotation.set(-0.9, 0, 0); };
 HUD_FLOAT();
 function animPanel(p, dt, t, baseY) {
   p.k += ((p.on ? 1 : 0) - p.k) * Math.min(1, dt * 10);
   p.m.visible = p.k > 0.02;
   p.m.material.opacity = p.k;
-  if (baseY !== undefined) { p.m.scale.setScalar(0.88 + 0.12 * p.k); p.m.position.y = baseY + Math.sin(t * 1.3) * 0.012; }
+  if (baseY !== undefined) { p.m.scale.setScalar((p.sz || 1) * (0.88 + 0.12 * p.k)); p.m.position.y = baseY + Math.sin(t * 1.3) * 0.012; }
+}
+function drawInfo(lines) {
+  const key = JSON.stringify(lines);
+  if (key === info.key) return;
+  info.key = key; info.on = lines.length > 0;
+  if (!info.on) return;
+  const x = info.x, W = info.cv.width, H = info.cv.height;
+  bg(x, W, H);
+  x.textBaseline = 'top'; x.textAlign = 'center';
+  let y = 22;
+  for (const [k, t] of lines.slice(0, 5)) {
+    const big = k === 'banner' || k === 'title';
+    x.font = big ? '800 38px system-ui,sans-serif' : '600 30px system-ui,sans-serif';
+    x.fillStyle = big ? '#ffd23a' : k === 'prompt' ? '#7affc8' : k === 'quest' ? '#d9c8ff' : k === 'timer' ? '#8fd8ff' : '#fff8ec';
+    for (const l of wrap(x, t, W - 60).slice(0, 2)) { if (y > H - 40) break; x.fillText(l, W / 2, y); y += big ? 44 : 36; }
+  }
+  info.tex.needsUpdate = true;
 }
 
 const shown = (el) => { if (!el || !el.getClientRects().length) return false; const cs = getComputedStyle(el); return cs.visibility !== 'hidden' && +cs.opacity > 0.1; };
@@ -254,7 +294,13 @@ function overlayNow() {
   const list = [...document.querySelectorAll('.overlay.show, #simonPad')].filter(shown);
   return list[list.length - 1] || null;
 }
-function buttonsOf(ov) { return [...ov.querySelectorAll('button')].filter((b) => shown(b) && txt(b)); }
+const isRange = (b) => b.tagName === 'INPUT' && b.type === 'range';
+function itemText(b) {
+  if (isRange(b)) { const lab = txt(b.previousElementSibling) || b.id, v = (+b.value - +b.min) / ((+b.max - +b.min) || 1); return `◀ ${lab}: ${Math.round(v * 100)}% ▶`; }
+  const t = txt(b); if (t.length <= 1 && b.getAttribute('aria-label')) return t === '‹' ? '‹ ' + (nl() ? 'vorige' : 'previous') : (nl() ? 'volgende' : 'next') + ' ›';
+  return t;
+}
+function buttonsOf(ov) { return [...ov.querySelectorAll('button, input[type=range]')].filter((b) => shown(b) && itemText(b)); }
 let menuSel = 0, menuOv = null;
 function drawMain() {
   const P_ = main, x = P_.x, W = P_.cv.width, H = P_.cv.height;
@@ -265,7 +311,7 @@ function drawMain() {
     if (ov !== menuOv) { menuOv = ov; menuSel = Math.max(0, bs.findIndex((b) => !b.disabled)); }
     menuSel = Math.min(menuSel, bs.length - 1);
     const title = [...ov.querySelectorAll('.bigword, h3, #galSys, #galName, #galInfo')].filter(shown).map(txt).filter(Boolean).slice(0, 3);
-    content = { menu: true, title, items: bs.map((b) => [txt(b).slice(0, 46), !!b.disabled]), sel: menuSel };
+    content = { menu: true, title, items: bs.map((b) => [itemText(b).slice(0, 52), !!b.disabled]), sel: menuSel };
   } else {
     const d = $('dText'), sub = d && d.querySelector('small'), dlg = shown($('dialog')), rad = !dlg && shown($('radio'));
     const said = d ? [...d.childNodes].filter((n) => n !== sub).map((n) => n.textContent).join('').trim() : '';
@@ -275,16 +321,22 @@ function drawMain() {
       say: dlg ? said : rad ? txt($('radioTxt')) : '',
       radio: rad,
       sub: dlg && sub ? txt(sub) : '',
-      lines: [['title', $('title')], ['banner', $('banner')], ['toast', $('toast')], ['prompt', $('prompt')], ['goal', G.state === 'play' && !G.cutscene ? $('goal') : null]]
+      lines: [['title', $('title')], ['banner', $('banner')], ['toast', $('toast')], ['prompt', $('prompt')], ...(G.state === 'play' && !G.cutscene ? [['goal', $('goal')], ['quest', $('quest')], ['timer', $('speedrun')]] : [])]
         .filter(([, el]) => el && shown(el) && txt(el)).map(([k, el]) => [k, txt(el)]),
     };
+    // the goal, toasts and banners go on the small strip; the big panel only shows a line of dialogue or a radio call
+    // (with its prompt), and stays away the rest of the time
+    drawInfo(content.lines.filter(([k]) => !content.say || !['goal', 'prompt', 'quest', 'timer'].includes(k)));
+    content.lines = content.say ? content.lines.filter(([k]) => k === 'prompt') : [];
   }
+  if (ov) drawInfo([]);
   const key = JSON.stringify(content);
   if (key === P_.key) return;
   P_.key = key;
-  const empty = !content.menu && !content.say && !content.lines.length;
+  const empty = !content.menu && !content.say;
   P_.on = !empty;
   if (empty) return;
+  placeMain(content.menu ? 'menu' : 'talk');
   x.textBaseline = 'top'; x.textAlign = 'left';
   let y = 44;
   if (content.menu) {
@@ -344,7 +396,8 @@ function drawMain() {
 function drawHud() {
   hud.on = (G.state === 'play' || G.state === 'over') && !G.cutscene && !overlayNow();
   if (!hud.on) return;
-  const boss = shown($('boss')) ? txt($('bossName')) : '';
+  const pips = $('bossPips') ? [...$('bossPips').children] : [], left = pips.filter((p) => !p.classList.contains('off')).length;
+  const boss = shown($('boss')) ? `${txt($('bossName'))} ${'●'.repeat(left)}${'○'.repeat(pips.length - left)}` : '';
   const key = `${P.hp}/${P.maxHp}/${G.coins}/${txt($('rareN'))}/${boss}`;
   if (key === hud.key) return;
   hud.key = key;
@@ -386,7 +439,8 @@ function drawFx(dt) {
   const inks = [...document.querySelectorAll('.inkFx i')].map((e) => { const r = e.getBoundingClientRect(); return [(r.left + r.width / 2) / innerWidth, (r.top + r.height / 2) / innerHeight, r.width / innerWidth]; }).filter((v) => v[2] > 0.005);
   fadeBall.material.opacity = op($('fade'));
   fadeBall.visible = fadeBall.material.opacity > 0.01;
-  const key = [hurt, dark, barsK, Math.round(comfortK * 20) / 20, ...tints.flat(), ...inks.flat()].map((v) => (typeof v === 'number' ? v.toFixed(2) : v)).join(',');
+  const flashes = [...document.querySelectorAll('.vrFlash')].map((e) => [e.dataset.vr || '#ffffff', op(e)]).filter(([, a]) => a > 0.02);
+  const key = [hurt, dark, barsK, Math.round(comfortK * 20) / 20, ...tints.flat(), ...inks.flat(), ...flashes.flat()].map((v) => (typeof v === 'number' ? v.toFixed(2) : v)).join(',');
   if (key === fxKey) return;
   fxKey = key;
   const x = fxCv.getContext('2d'), S = 512;
@@ -408,6 +462,7 @@ function drawFx(dt) {
     x.fillStyle = g; x.beginPath(); x.arc(px, py, r, 0, 6.3); x.fill();
   }
   if (hurt > 0.01) edgeGlow(x, S, 'rgba(230,40,70,.9)', hurt * 0.8, 0.3);
+  for (const [col, a] of flashes) { x.globalAlpha = a * 0.8; x.fillStyle = col; x.fillRect(0, 0, S, S); x.globalAlpha = 1; }   // a boss going down: the whole view flashes
   fxTex.needsUpdate = true;
 }
 // hang the effects in front of your eyes: the headset's own head pose for this frame (so they never lag behind)
@@ -514,6 +569,59 @@ const grips = [0, 1].map((i) => {
 });
 void grips;
 
+// ---------- the minimap, next to the watch ----------
+// The same round map as on a screen (same canvas, same M key to switch it off), shown beside the watch.
+const mapCv = $('minimap');
+const mapTex = mapCv ? new THREE.CanvasTexture(mapCv) : null;
+if (mapTex) mapTex.colorSpace = THREE.SRGBColorSpace;
+const mapM = new THREE.Mesh(new THREE.CircleGeometry(0.05, 40), new THREE.MeshBasicMaterial({ map: mapTex, transparent: true, depthTest: false, depthWrite: false, fog: false, toneMapped: false }));
+mapM.position.set(0.16, 0, 0.002); mapM.renderOrder = 1000; mapM.frustumCulled = false; mapM.visible = false;
+hud.m.add(mapM);
+let mapT = 0;
+function updateMap(dt) {
+  const on = !!mapCv && mapCv.style.display === 'block' && hud.m.visible;
+  mapM.visible = on;
+  if (!on) return;
+  mapM.material.opacity = hud.m.material.opacity;
+  mapT -= dt; if (mapT <= 0) { mapT = 1 / 15; mapTex.needsUpdate = true; }
+}
+
+// ---------- the locals' speech bubbles ----------
+// On a screen they are HTML stuck over each local's head. In VR they are little cream bubbles in the world itself,
+// floating over the same heads, always turned toward you, with the same lines at the same moments.
+const bubG = new THREE.Group();
+const bubs = new Map();   // bubble (from the world) -> its VR sprite
+function bubSprite(text) {
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 160;
+  const x = cv.getContext('2d');
+  x.font = '700 38px system-ui,sans-serif';
+  const lines = wrap(x, text, 440).slice(0, 2), w = Math.min(500, Math.max(...lines.map((l) => x.measureText(l).width)) + 50), h = 30 + lines.length * 46;
+  const L = (512 - w) / 2;
+  x.fillStyle = '#fff8ec'; x.strokeStyle = '#2b2440'; x.lineWidth = 6;
+  x.beginPath(); x.roundRect(L, 6, w, h, 26); x.fill(); x.stroke();
+  x.beginPath(); x.moveTo(246, 6 + h - 3); x.lineTo(256, 6 + h + 18); x.lineTo(268, 6 + h - 3); x.closePath(); x.fill(); x.stroke();
+  x.fillRect(244, 6 + h - 8, 26, 6);
+  x.fillStyle = '#2b2440'; x.textAlign = 'center'; x.textBaseline = 'top';
+  lines.forEach((l, i) => x.fillText(l, 256, 22 + i * 46));
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, fog: false, toneMapped: false }));
+  sp.scale.set(1.6, 0.5, 1); sp.center.set(0.5, 0);
+  return sp;
+}
+function updateBubbles() {
+  const w = G.world, list = (w && w.bubbles) || [], live = new Set();
+  for (const b of list) {
+    const text = b.el && b.el.textContent;
+    const on = b.shown && text && b.el.style.opacity !== '0' && !G.cutscene;
+    if (!on) continue;
+    live.add(b);
+    let s = bubs.get(b);
+    if (!s || s.text !== text) { if (s) { bubG.remove(s.sp); s.sp.material.map.dispose(); s.sp.material.dispose(); } s = { text, sp: bubSprite(text) }; bubs.set(b, s); bubG.add(s.sp); }
+    s.sp.position.copy(b.npc.g.position).addScaledVector(b.npc.dir, b.y);
+  }
+  for (const [b, s] of bubs) if (!live.has(b)) { bubG.remove(s.sp); s.sp.material.map.dispose(); s.sp.material.dispose(); bubs.delete(b); }
+}
+
 // ---------- controllers ----------
 const held = new Set(), prev = {};
 function vk(code, on) {
@@ -539,9 +647,10 @@ export function pollVR(dt) {
   const A = btn('right', 4), B = btn('right', 5), X = btn('left', 4), Y = btn('left', 5);
 
   // panels: redrawn ten times a second at most
-  uiT -= dt; if (uiT <= 0) { uiT = 0.1; drawMain(); drawHud(); drawSky(); }
+  uiT -= dt; if (uiT <= 0) { uiT = 0.1; drawMain(); drawHud(); drawSky(); updateBubbles(); }
+  updateMap(dt);
   drawFx(dt); twinkle(G.t || 0);
-  animPanel(main, dt, G.t || 0, 1.3); animPanel(hud, dt, G.t || 0);
+  animPanel(main, dt, G.t || 0, main.baseY); animPanel(info, dt, G.t || 0); animPanel(hud, dt, G.t || 0);
 
   // ----- menus -----
   const ov = overlayNow();
@@ -552,7 +661,23 @@ export function pollVR(dt) {
     const down = edge('mDown', sy > 0.6), up = edge('mUp', sy < -0.6);
     if (sy > -0.3 && sy < 0.3) { prev.mDown = prev.mUp = false; }
     if ((down || up) && bs.length) { menuSel = (menuSel + (down ? 1 : -1) + bs.length) % bs.length; buzz(H.right || H.left, 0.2); main.key = ''; uiT = 0; }
-    if (edge('mOk', trigR || trigL || A) && bs[menuSel] && !bs[menuSel].disabled) { buzz(H.right, 0.5); bs[menuSel].click(); menuOv = null; main.key = ''; uiT = 0; }
+    // stick left/right: move a slider (music, sound, mouse speed), or flip through the planets in the planet picker
+    const sx = Math.abs(lx) > Math.abs(rx) ? lx : rx;
+    const goR = edge('mRight', sx > 0.6), goL = edge('mLeft', sx < -0.6);
+    if (sx > -0.3 && sx < 0.3) { prev.mRight = prev.mLeft = false; }
+    if (goR || goL) {
+      const it = bs[menuSel];
+      if (it && isRange(it)) {
+        const st = +it.step || 0.05;
+        it.value = Math.min(+it.max, Math.max(+it.min, +it.value + (goR ? st * 2 : -st * 2)));
+        it.dispatchEvent(new Event('input', { bubbles: true })); it.dispatchEvent(new Event('change', { bubbles: true }));
+        buzz(H.right || H.left, 0.15); main.key = ''; uiT = 0;
+      } else {
+        const arrow = ov.querySelector(goR ? '#galNext' : '#galPrev');
+        if (arrow && shown(arrow)) { arrow.click(); buzz(H.right || H.left, 0.2); main.key = ''; uiT = 0; }
+      }
+    }
+    if (edge('mOk', trigR || trigL || A) && bs[menuSel] && !bs[menuSel].disabled && !isRange(bs[menuSel])) { buzz(H.right, 0.5); bs[menuSel].click(); menuOv = null; main.key = ''; uiT = 0; }
     if (edge('mBack', B || Y)) {
       const back = bs.find((b) => /Close|Back|Resume|Skip/.test(b.id) || /^←/.test(txt(b)));
       if (back) { back.click(); menuOv = null; main.key = ''; uiT = 0; } else if ($('pause').classList.contains('show')) tap('KeyP');

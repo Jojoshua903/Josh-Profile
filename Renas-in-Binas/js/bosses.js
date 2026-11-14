@@ -1,9 +1,9 @@
-import { THREE, G, V3, toon, basic, mk, ink, clamp, damp, puff, placeOn, orientOn, surf, dirOf, altOf, anyPerp, tangentTo, stepDir, frameDir, wrapA, toast, $, canvasTex } from './core.js?v=20261114d';
-import { sfx, musicPhase } from './audio.js?v=20261114d';
-import { tr } from './lang.js?v=20261114d';
-import { P, hurtPlayer, bouncePlayer, pfTest } from './player.js?v=20261114d';
-import { SurfaceWall, lonAround, makeMarker } from './fx.js?v=20261114d';
-import { buildKern, buildDeniz, buildLeprechaun, buildGorilla, buildCoconut, buildDragon, buildWorm, buildMecha, buildOctopus, buildGhostKing, buildCogTitan, buildGear } from './models.js?v=20261114d';
+import { THREE, G, V3, toon, basic, mk, ink, clamp, damp, puff, placeOn, orientOn, surf, dirOf, altOf, anyPerp, tangentTo, stepDir, frameDir, wrapA, toast, $, canvasTex } from './core.js?v=20261114g';
+import { sfx, musicPhase } from './audio.js?v=20261114g';
+import { tr } from './lang.js?v=20261114g';
+import { P, hurtPlayer, bouncePlayer, pfTest } from './player.js?v=20261114g';
+import { SurfaceWall, lonAround, makeMarker } from './fx.js?v=20261114g';
+import { buildKern, buildDeniz, buildLeprechaun, buildGorilla, buildCoconut, buildDragon, buildWorm, buildMecha, buildOctopus, buildGhostKing, buildCogTitan, buildGear } from './models.js?v=20261114g';
 
 // ---------- shared hazards ----------
 const arcTo = (pl, a, b) => Math.acos(clamp(a.dot(b), -1, 1)) * pl.r;
@@ -448,7 +448,7 @@ class Ring {
   kill() { this.b.g.remove(this.m); }
 }
 function flash(color, ms = 450) {
-  const el = document.createElement('div');
+  const el = document.createElement('div'); el.className = 'vrFlash'; el.dataset.vr = color;   // (the VR view paints the same flash)
   el.style.cssText = `position:fixed;inset:0;z-index:20;pointer-events:none;background:${color};opacity:.7;transition:opacity ${ms}ms ease-out`;
   document.body.appendChild(el);
   requestAnimationFrame(() => requestAnimationFrame(() => (el.style.opacity = '0')));

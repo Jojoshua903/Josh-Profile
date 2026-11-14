@@ -1,8 +1,8 @@
-import { THREE, G, scene, camera, canvas, V3, clamp, damp, puff, anyPerp, orientOn, altOf, dirOf, surf, rOf, tangentTo, $ } from './core.js?v=20261114d';
-import { sfx } from './audio.js?v=20261114d';
-import { buildRenas } from './models.js?v=20261114d';
-import { makeShadow } from './fx.js?v=20261114d';
-import { cutSpeaker, cutTyping } from './cutscene.js?v=20261114d';
+import { THREE, G, scene, camera, canvas, V3, clamp, damp, puff, anyPerp, orientOn, altOf, dirOf, surf, rOf, tangentTo, $ } from './core.js?v=20261114g';
+import { sfx } from './audio.js?v=20261114g';
+import { buildRenas } from './models.js?v=20261114g';
+import { makeShadow } from './fx.js?v=20261114g';
+import { cutSpeaker, cutTyping } from './cutscene.js?v=20261114g';
 
 // Movement feel copied from Otis in Orbit (ui.js FEEL_DEF + main.js), on round planets instead of flat ground.
 export const S = { speed: 7, jump: 12, gravity: 30, air: 0.45 };

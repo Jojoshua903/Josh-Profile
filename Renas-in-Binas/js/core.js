@@ -3,7 +3,7 @@
 let THREE;
 try { THREE = await import('https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js'); }
 catch (e) { THREE = await import('https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js'); }
-import { tr } from './lang.js?v=20261114d';
+import { tr } from './lang.js?v=20261114g';
 export { THREE };
 
 // Shared state, so modules can reach each other at runtime without import cycles.

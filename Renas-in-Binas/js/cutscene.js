@@ -1,6 +1,6 @@
-import { THREE, G, camera, V3, damp, $, altOf, surf, dirOf } from './core.js?v=20261114d';
-import { sfx } from './audio.js?v=20261114d';
-import { tr } from './lang.js?v=20261114d';
+import { THREE, G, camera, V3, damp, $, altOf, surf, dirOf } from './core.js?v=20261114g';
+import { sfx } from './audio.js?v=20261114g';
+import { tr } from './lang.js?v=20261114g';
 
 // Cutscenes in the Otis in Orbit style: letterbox bars, scripted camera shots, typed dialogue with a mumbling voice for each character.
 // A step: { say: { who, text, sub }, cam: () => ({ pos, look, up }), dur, start(), update(dt, k), title: [big, small], snap }
@@ -162,6 +162,7 @@ export function updateCut(dt) {
 }
 // how far along the line from the look point to the camera we can go before hitting something solid (1 = all the way)
 const ray = new THREE.Raycaster(), rayDir = V3();
+ray.camera = camera;   // sprites (sun glows, halos) need a camera to be hit-tested: without one three.js crashes on camera.matrixWorld
 function solid(o) {
   if (!o.isMesh) return false;
   for (let p = o; p; p = p.parent) if (!p.visible) return false;
