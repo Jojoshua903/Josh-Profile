@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>WIDR 64 Mansion</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Three.js renderer canvas is mounted here -->
+    <div id="stage"></div>
+
+    <!-- Optional CRT scanlines (V key) -->
+    <div id="crt" class="crt-overlay" aria-hidden="true"></div>
+    <div id="vignette" aria-hidden="true"></div>
+    <div id="flash-fx" aria-hidden="true"></div>
+    <div id="hurt-fx" aria-hidden="true"></div>
+    <div id="fade-fx" aria-hidden="true"></div>
+    <!-- in-engine cutscenes: letterbox, title cards, dialogue -->
+    <div id="cutscene" class="cutscene hidden">
+      <div class="cs-bar cs-top"></div>
+      <div class="cs-bar cs-bottom"></div>
+      <div class="cs-title" id="cs-title"><div class="cs-title-main" id="cs-title-main"></div><div class="cs-title-sub" id="cs-title-sub"></div></div>
+      <div class="cs-box" id="cs-box">
+        <canvas class="cs-portrait" id="cs-portrait" width="96" height="96"></canvas>
+        <div class="cs-body"><div class="cs-name" id="cs-name"></div><div class="cs-text" id="cs-text"></div></div>
+        <div class="cs-next" id="cs-next">▼</div>
+      </div>
+      <div class="cs-skip" id="cs-skip"><span class="kb-only"><kbd>ENTER</kbd> next · <kbd>ESC</kbd> skip</span><span class="pad-only"><kbd class="pad-a">A</kbd> next · <kbd>B</kbd> skip</span></div>
+    </div>
+    <button id="fs-btn" class="fs-btn" type="button" title="Fullscreen (F)" aria-label="Toggle fullscreen"><span class="fs-enter">⛶</span><span class="fs-exit">✕</span></button>
+
+    <!-- ============ TITLE SCREEN (Press Start) ============ -->
+    <section id="boot" class="screen lm-title">
+      <div class="title-lockup">
+        <div class="title-kicker">WIDR<b>64</b> PRESENTS</div>
+        <h1 class="title-logo">
+          <span class="tl-small">The</span>
+          <span class="tl-main">WIDR&nbsp;64</span>
+          <span class="tl-mansion">MANSION</span>
+        </h1>
+        <button id="boot-start" class="press-start">PRESS START</button>
+        <div id="boot-best" class="boot-best"></div>
+      </div>
+      <div class="title-foot">Click, press <kbd>ENTER</kbd> or <kbd class="pad-a">A</kbd> on a controller · © WIDR 64</div>
+    </section>
+
+    <!-- ============ DATA SELECT (portrait gallery) ============ -->
+    <section id="dataselect" class="screen lm-gallery hidden">
+      <div class="lm-wall">
+        <header class="lm-head">
+          <div class="lm-question">Which game will you play?</div>
+          <div class="lm-welcome">Welcome to our mansion...</div>
+        </header>
+        <div class="ds-row" id="ds-row"></div>
+        <div class="lm-message" id="ds-message"></div>
+        <footer class="lm-foot">
+          <span><kbd>&larr;</kbd><kbd>&rarr;</kbd> choose</span>
+          <span><kbd class="kb-only">ENTER</kbd><kbd class="pad-only pad-a">A</kbd> confirm</span>
+          <span><kbd class="kb-only">C</kbd><kbd class="pad-only">Y</kbd> copy</span>
+          <span><kbd class="kb-only">DEL</kbd><kbd class="pad-only">X</kbd> erase</span>
+          <span><kbd class="kb-only">ESC</kbd><kbd class="pad-only">B</kbd> back</span>
+        </footer>
+      </div>
+      <div class="lm-confirm hidden" id="ds-confirm">
+        <div class="lm-confirm-box">
+          <div id="ds-confirm-text">Erase this data?</div>
+          <div class="lm-yesno"><span data-v="yes">YES</span><span data-v="no">NO</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ OPTIONS ============ -->
+    <section id="options" class="screen lm-gallery hidden">
+      <div class="lm-wall lm-options">
+        <canvas id="opt-portrait" width="160" height="160"></canvas>
+        <div class="opt-body">
+          <div class="lm-question">Change your settings.</div>
+          <div class="lm-welcome">&uarr;&darr; choose · &larr;&rarr; change · ENTER select</div>
+          <ul class="opt-list" id="opt-list"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ PORTRAIT GALLERY ============ -->
+    <section id="gallery" class="screen lm-gallery hidden">
+      <div class="lm-wall gal-wall">
+        <header class="lm-head">
+          <div class="lm-question">The Portrait Gallery</div>
+          <div class="lm-welcome" id="gal-sub">0 framed</div>
+        </header>
+        <div class="gal-row" id="gal-row"></div>
+        <div class="gal-detail" id="gal-detail"></div>
+        <footer class="lm-foot">
+          <span><kbd>&larr;</kbd><kbd>&rarr;</kbd> browse</span>
+          <span><kbd class="kb-only">ESC</kbd><kbd class="pad-only">B</kbd> back</span>
+        </footer>
+      </div>
+    </section>
+
+    <!-- ============ BRIGHTNESS CHECK ============ -->
+    <section id="brightness" class="screen lm-gallery hidden">
+      <div class="lm-wall bc-wall">
+        <div class="lm-question">Brightness Check</div>
+        <canvas id="bc-canvas" width="640" height="300"></canvas>
+        <div class="bc-meter" id="bc-meter"></div>
+        <div class="lm-welcome">Adjust until only the ghosts on the <b>LEFT</b> can be seen. &larr;&rarr; adjust · ENTER done</div>
+      </div>
+    </section>
+
+    <!-- ============ CHARACTER SELECT: Who's Playing? ============ -->
+    <section id="select" class="screen hidden">
+      <div class="sel-backdrop" aria-hidden="true"><i></i><i></i><i></i></div>
+      <header class="select-head">
+        <div class="mini-logo">WIDR<b>64</b></div>
+        <h2>WHO'S PLAYING?</h2>
+        <div class="select-prog">
+          <div class="sp-level" id="sp-level">LV 1</div>
+          <div class="sp-mid">
+            <div class="sp-bar"><i id="sp-fill"></i></div>
+            <div class="sp-text" id="sp-text"></div>
+          </div>
+          <button id="select-shop" class="sp-shop">🔧 WORKSHOP <b id="sp-bank">$0</b></button>
+        </div>
+        <div class="select-best" id="select-best"></div>
+      </header>
+      <div class="select-body">
+        <div id="roster" class="roster" role="listbox" aria-label="Choose your hero"></div>
+        <div class="select-stage">
+          <div class="stage-beam" aria-hidden="true"></div>
+          <div id="hero-preview" class="hero-preview"></div>
+          <div class="stage-poof" id="stage-poof" aria-hidden="true"></div>
+          <div class="stage-plate"><div class="stage-name" id="stage-name"></div><div class="stage-title" id="stage-title"></div></div>
+        </div>
+        <aside id="hero-info" class="hero-info">
+          <div class="hero-info-top">
+            <div class="hero-role" id="info-role"></div>
+            <h3 id="info-name"></h3>
+            <div class="hero-title" id="info-title"></div>
+          </div>
+          <div class="hero-level" id="info-level">
+            <div class="hl-badge" id="hl-badge">1</div>
+            <div class="hl-mid">
+              <div class="hl-bar"><i id="hl-fill"></i></div>
+              <div class="hl-next" id="hl-next"></div>
+            </div>
+          </div>
+          <div class="hero-locked hidden" id="info-locked"></div>
+          <p class="hero-desc" id="info-desc"></p>
+          <div class="stat-list" id="info-stats"></div>
+          <div class="passive">
+            <div class="passive-label">PASSIVE</div>
+            <div class="passive-name" id="info-passive-name"></div>
+            <div class="passive-text" id="info-passive-text"></div>
+          </div>
+          <button id="select-go" class="chunky-btn small">ENTER THE MANSION</button>
+        </aside>
+      </div>
+      <footer class="select-foot">
+        <span><kbd>&larr;</kbd><kbd>&uarr;</kbd><kbd>&rarr;</kbd><kbd>&darr;</kbd> / mouse to choose</span>
+        <span><kbd class="kb-only">ENTER</kbd><kbd class="pad-only pad-a">A</kbd> confirm</span>
+        <span><kbd class="kb-only">ESC</kbd><kbd class="pad-only">B</kbd> back to files</span>
+        <span><kbd class="kb-only">C</kbd><kbd class="pad-only">Y</kbd> workshop</span>
+        <span><kbd>M</kbd> mute</span>
+        <span><kbd>V</kbd> CRT</span>
+      </footer>
+    </section>
+
+    <!-- In-game HUD -->
+    <section id="hud" class="hidden">
+      <div id="gbh" class="gbh">
+        <div class="gbh-top">
+          <span class="gbh-brand">KOÇ RADAR 64</span>
+          <span class="gbh-led" id="gbh-led"></span>
+        </div>
+        <div class="gbh-screen">
+          <canvas id="radar" width="200" height="150"></canvas>
+          <div class="gbh-room" id="gbh-room">FOYER</div>
+          <div class="gbh-ghosts" id="gbh-ghosts">GHOSTS 0</div>
+        </div>
+        <div class="gbh-buttons"><i></i><i></i></div>
+      </div>
+
+      <div id="hero-card" class="hero-card">
+        <canvas id="hud-portrait" width="96" height="96"></canvas>
+        <div class="hero-card-info">
+          <div class="hero-card-name" id="hud-name">NATHAN</div>
+          <div class="hp-wrap">
+            <div class="hp-bar"><div class="hp-fill" id="hud-hp-fill"></div></div>
+            <div class="hp-text" id="hud-hp-text">100</div>
+          </div>
+          <div class="passive-chip" id="hud-passive"></div>
+        </div>
+      </div>
+
+      <div id="cash-box" class="cash-box">
+        <div class="cash-label">TREASURE</div>
+        <div class="cash-amount" id="hud-cash">$0</div>
+        <div class="rank-row">RANK <span id="hud-rank" class="rank-letter">C</span></div>
+        <div id="key-ring" class="key-ring"></div>
+        <div id="quest-tracker" class="quest-tracker hidden"></div>
+      </div>
+
+      <div id="gauges" class="gauges">
+        <div class="gauge-block">
+          <canvas id="vac-gauge" width="120" height="120"></canvas>
+          <div class="gauge-label">POLTERGUST</div>
+        </div>
+        <div class="gauge-block flash-block element-block empty" id="element-block">
+          <div class="flash-bar element-bar"><div class="element-fill" id="element-fill"></div></div>
+          <div class="gauge-label" id="element-label">EMPTY</div>
+        </div>
+        <div class="gauge-block flash-block">
+          <div class="flash-bar"><div class="flash-fill" id="flash-fill"></div></div>
+          <div class="gauge-label" id="light-label">LIGHT ON</div>
+        </div>
+      </div>
+
+      <div id="boss-bar" class="boss-bar hidden">
+        <div class="boss-name">GRUMBLECLAW <small>the Goon of the Banquet</small></div>
+        <div class="boss-track"><div class="boss-fill" id="boss-fill"></div></div>
+        <div class="boss-state" id="boss-state">EATING</div>
+      </div>
+
+      <div id="team-bar" class="team-bar hidden"></div>
+      <div id="tutorial" class="tutorial hidden"></div>
+      <div id="frame-pop" class="frame-pop hidden">
+        <canvas id="frame-pop-canvas" width="160" height="160"></canvas>
+        <div class="frame-pop-tier" id="frame-pop-tier">GOLD FRAME!</div>
+        <div class="frame-pop-detail" id="frame-pop-detail"></div>
+      </div>
+      <div id="prompt" class="prompt hidden"></div>
+      <div id="toast-stack" class="toast-stack"></div>
+      <div id="tug" class="tug hidden">
+        <div class="tug-heart"><span id="tug-hp">100</span></div>
+        <div class="tug-arrow" id="tug-arrow">PULL!</div>
+      </div>
+      <div id="controls-hint" class="controls-hint">
+        <span class="kb-only"><kbd>WASD</kbd>/<kbd>ARROWS</kbd> move</span>
+        <span class="kb-only"><kbd>CLICK</kbd>/<kbd>SPACE</kbd>/<kbd>Z</kbd> light on/off</span>
+        <span class="kb-only"><kbd>R-CLICK</kbd>/<kbd>SHIFT</kbd>/<kbd>X</kbd> vacuum</span>
+        <span class="kb-only"><kbd>Q</kbd>/<kbd>C</kbd> spray element</span>
+        <span class="kb-only"><kbd>T</kbd> switch hero</span>
+        <span class="kb-only"><kbd>E</kbd>/<kbd>ENTER</kbd> open</span>
+        <span class="kb-only"><kbd>P</kbd> pause</span>
+        <span class="kb-only"><kbd>F</kbd> fullscreen</span>
+        <span class="pad-only"><kbd>L-STICK</kbd> move</span>
+        <span class="pad-only"><kbd>R-STICK</kbd> aim light</span>
+        <span class="pad-only"><kbd>LT</kbd>/<kbd>X</kbd> light on/off</span>
+        <span class="pad-only"><kbd>RT</kbd> vacuum</span>
+        <span class="pad-only"><kbd>Y</kbd> spray element</span>
+        <span class="pad-only"><kbd>B</kbd> switch hero</span>
+        <span class="pad-only"><kbd class="pad-a">A</kbd> open</span>
+        <span class="pad-only"><kbd>START</kbd> pause</span>
+      </div>
+    </section>
+
+    <!-- ============ PAUSE (Continue / Quit framed by ghosts) ============ -->
+    <section id="pause" class="screen lm-pause hidden">
+      <button class="pause-side" id="pause-standard" data-ctl="standard">STANDARD</button>
+      <div class="pause-center">
+        <canvas class="pause-ghost" id="pause-ghost-l" width="96" height="96"></canvas>
+        <ul class="pause-menu" id="pause-menu">
+          <li data-v="continue">CONTINUE</li>
+          <li data-v="quit">QUIT</li>
+        </ul>
+        <canvas class="pause-ghost" id="pause-ghost-r" width="96" height="96"></canvas>
+      </div>
+      <button class="pause-side" id="pause-lateral" data-ctl="lateral">LATERAL</button>
+      <div class="pause-foot">
+        <span><kbd>&uarr;</kbd><kbd>&darr;</kbd> choose · <kbd class="kb-only">ENTER</kbd><kbd class="pad-only pad-a">A</kbd> select · <kbd>&larr;</kbd><kbd>&rarr;</kbd> control style · <kbd class="kb-only">P</kbd><kbd class="pad-only">START</kbd> resume</span>
+        <span><kbd>M</kbd> mute: <b id="pause-mute">OFF</b> · <kbd>V</kbd> CRT: <b id="pause-crt">OFF</b></span>
+        <div class="pause-stickers" id="pause-stickers"></div>
+      </div>
+      <div class="lm-confirm hidden" id="pause-confirm">
+        <div class="lm-confirm-box">
+          <div>Quit and return to the title screen?</div>
+          <div class="lm-yesno"><span data-v="yes">YES</span><span data-v="no">NO</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SAVE ============ -->
+    <section id="save" class="screen lm-gallery hidden">
+      <div class="lm-wall save-wall">
+        <canvas id="save-portrait" width="160" height="160"></canvas>
+        <div class="save-body">
+          <div class="lm-question" id="save-question">Would you like to save your progress?</div>
+          <ul class="pause-menu save-menu" id="save-menu">
+            <li data-v="save">SAVE GAME</li>
+            <li data-v="quit">QUIT</li>
+          </ul>
+          <div class="lm-message" id="save-message"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ RESULTS / RANK MANSION ============ -->
+    <section id="results" class="screen hidden">
+      <div class="panel results-panel">
+        <div class="results-kicker" id="res-kicker">MANSION CLEARED</div>
+        <h2 id="res-title">Results</h2>
+        <div class="rank-painting-wrap" id="rank-painting-wrap">
+          <canvas id="res-painting" width="480" height="300"></canvas>
+          <div class="rank-stamp" id="res-stamp"></div>
+          <div class="rank-message" id="res-message"></div>
+        </div>
+        <div class="results-grid">
+          <canvas id="res-portrait" width="160" height="160"></canvas>
+          <div class="results-stats">
+            <div><span>HERO</span><b id="res-hero"></b></div>
+            <div><span>TREASURE</span><b id="res-cash"></b></div>
+            <div><span>GHOSTS</span><b id="res-ghosts"></b></div>
+            <div><span>TIME</span><b id="res-time"></b></div>
+            <div><span>RANK</span><b id="res-rank" class="rank-big"></b></div>
+          </div>
+        </div>
+        <div class="results-rescue" id="res-rescue">
+          <canvas id="res-cameo" width="96" height="96"></canvas>
+          <div id="res-rescue-text"></div>
+        </div>
+        <div class="results-progress" id="res-progress"></div>
+        <div class="results-stickers" id="res-stickers"></div>
+        <button id="res-again" class="chunky-btn small">PLAY AGAIN</button>
+      </div>
+    </section>
+
+    <!-- ============ WORKSHOP (upgrade shop) ============ -->
+    <section id="workshop" class="screen hidden">
+      <div class="panel workshop-panel">
+        <div class="ws-head">
+          <div>
+            <div class="results-kicker">PROFESSOR KOÇ'S WORKSHOP</div>
+            <h2>Vacuum Upgrades</h2>
+          </div>
+          <div class="ws-bank"><span>BANK</span><b id="ws-bank">$0</b></div>
+        </div>
+        <p class="ws-note" id="ws-note">Treasure you carry out of the mansion is saved here. Upgrades work for every hero.</p>
+        <ul class="ws-list" id="ws-list"></ul>
+        <div class="ws-foot">
+          <span><kbd>&uarr;</kbd><kbd>&darr;</kbd> choose</span>
+          <span><kbd class="kb-only">ENTER</kbd><kbd class="pad-only pad-a">A</kbd> buy</span>
+          <span><kbd class="kb-only">ESC</kbd><kbd class="pad-only">B</kbd> back</span>
+          <button id="ws-back" class="chunky-btn small">BACK</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
