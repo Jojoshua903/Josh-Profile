@@ -1,0 +1,100 @@
+/* =========================================================
+   CHAMPIONSHIP TROPHIES · the shared list (menu + game pages)
+   Unlocks live in localStorage 'ei_trophies' as
+   { id: { at: ISO date, mode: 'Standard' | 'Shot Clock' | 'Sudden Death' } }
+   and survive New Game. Each icon is a small inked comic badge.
+   ========================================================= */
+const TROPHY_CATS = [['all', 'All'], ['story', 'Story'], ['explore', 'Exploration'], ['combat', 'Combat'], ['hardcore', 'Hardcore & Endings']];
+const TI = (s) => `<svg viewBox="0 0 100 100" stroke="#0d0b10" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">${s}</svg>`;
+const TBALL = (cx, cy, r, f = '#f3ead8') => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${f}"/><path d="M${cx - r * 0.55} ${cy - r * 0.75} Q${cx - r * 0.15} ${cy} ${cx - r * 0.55} ${cy + r * 0.75} M${cx + r * 0.55} ${cy - r * 0.75} Q${cx + r * 0.15} ${cy} ${cx + r * 0.55} ${cy + r * 0.75}" fill="none" stroke="#e8361c" stroke-width="2.5"/>`;
+const TBAT = (x1, y1, x2, y2, f = '#c9a36b', w = 9) => `<path d="M${x1} ${y1} L${x2} ${y2}" stroke="#0d0b10" stroke-width="${w + 6}"/><path d="M${x1} ${y1} L${x2} ${y2}" stroke="${f}" stroke-width="${w}"/>`;
+const TROPHIES = [
+  // A · Story & bosses
+  { id: 'play_ball', cat: 'story', name: 'Play Ball!', info: 'Wake up in the Scrapyard Dugout and survive the Rogue Server.',
+    icon: TI(`<rect x="18" y="44" width="64" height="40" rx="5" fill="#2a2f38"/><path d="M30 52 L44 64 L38 72 M60 50 L56 66" fill="none" stroke="#6fd3ff" stroke-width="3"/><rect x="42" y="84" width="16" height="8" fill="#2a2f38"/>${TBALL(50, 34, 20, '#e8361c')}`) },
+  { id: 'josh_launch', cat: 'story', name: 'Works On My Machine', info: 'Recruit Josh and unlock the Mid-Air Bat Launch.',
+    icon: TI(`<path d="M22 80 L78 24" stroke-width="10"/><path d="M22 80 L78 24" stroke="#b8bcc4" stroke-width="5"/><circle cx="78" cy="24" r="9" fill="#b8bcc4"/><path d="M20 60 Q50 18 80 60 Z" fill="#6fd3ff"/><circle cx="50" cy="50" r="10" fill="#f2c14e"/><circle cx="50" cy="50" r="4" fill="#0d0b10"/>`) },
+  { id: 'warm_up', cat: 'story', name: 'Warm-Up Match', info: 'Defeat normal Adam in the Deep Quarry rival duel.',
+    icon: TI(`${TBAT(20, 82, 74, 22, '#e8361c')}<ellipse cx="66" cy="66" rx="17" ry="21" fill="none" stroke="#0d0b10" stroke-width="8" transform="rotate(35 66 66)"/><ellipse cx="66" cy="66" rx="17" ry="21" fill="none" stroke="#f2e04e" stroke-width="4" transform="rotate(35 66 66)"/><path d="M54 80 L36 96" stroke-width="7"/><path d="M48 40 L52 32 M56 44 L64 40 M44 46 L36 42" stroke="#f2c14e" stroke-width="3"/>`) },
+  { id: 'slowpoke', cat: 'story', name: 'Slowpoke', info: 'Catch Renas in the Ventilation Shafts and unlock fast travel.',
+    icon: TI(`<path d="M8 40 L40 40 M4 52 L34 52 M10 64 L38 64" stroke="#f2c14e" stroke-width="4"/><circle cx="62" cy="54" r="22" fill="#2a2f38"/><circle cx="62" cy="54" r="9" fill="#f2c14e"/><path d="M44 36 Q70 24 84 44 M46 72 Q74 84 86 62" fill="none" stroke="#c8561c" stroke-width="3"/>`) },
+  { id: 'lucky_one', cat: 'story', name: 'The Lucky One', info: 'Defeat Daniel in the Pyrotechnic Foundry by batting back his Lucky Bomb.',
+    icon: TI(`<circle cx="50" cy="58" r="28" fill="#3fbf5a"/><path d="M62 30 Q70 16 82 16" fill="none"/><path d="M80 10 L86 18 L78 20 Z" fill="#f2c14e"/><g fill="#9be36a"><circle cx="44" cy="52" r="6"/><circle cx="56" cy="52" r="6"/><circle cx="44" cy="64" r="6"/><circle cx="56" cy="64" r="6"/></g><path d="M50 58 L50 76" stroke-width="3"/>`) },
+  { id: 'sedimentary', cat: 'story', name: 'Sedimentary, My Dear', info: 'Survive Fionn\'s geology lecture and earn the first Golden Pennant.',
+    icon: TI(`<ellipse cx="38" cy="66" rx="22" ry="16" fill="#a8998a"/><circle cx="32" cy="62" r="2" fill="#0d0b10"/><circle cx="44" cy="62" r="2" fill="#0d0b10"/><path d="M33 70 Q38 74 43 70" fill="none" stroke-width="2.5"/><rect x="22" y="78" width="22" height="9" fill="#f3ead8" stroke-width="2.5"/><circle cx="64" cy="38" r="18" fill="rgba(159,230,255,.35)" stroke-width="5"/><path d="M76 52 L90 70" stroke-width="9"/>`) },
+  { id: 'storm_obeys', cat: 'story', name: 'The Storm Obeys Me!', info: 'Short-circuit Milo\'s runaway hurricane and earn the second Golden Pennant.',
+    icon: TI(`<path d="M30 92 Q36 60 46 30" stroke="#8a5a3a" stroke-width="8"/><path d="M28 34 Q20 14 40 16 Q46 4 60 14 Q78 10 74 30 Q86 40 66 44 Q52 52 40 42 Q24 46 28 34 Z" fill="#9a5ad8"/><path d="M62 46 L54 62 L64 62 L56 80" fill="none" stroke="#fff27a" stroke-width="5"/>`) },
+  { id: 'bad_vibes', cat: 'story', name: 'Bad Vibes', info: 'Shatter King Deniz\'s Glacier Crown and earn the third Golden Pennant.',
+    icon: TI(`<path d="M10 54 L16 30 L26 44 L32 24 L40 42 L44 54 Z" fill="#bfefff"/><path d="M40 60 L46 46 L52 58 L60 40 L66 56 L70 66 Z" fill="#bfefff" transform="rotate(14 55 55)"/><rect x="58" y="62" width="26" height="26" rx="4" fill="#e9dcc0"/><path d="M84 68 Q94 74 84 82" fill="none"/><path d="M64 54 Q60 46 66 40 M74 54 Q70 46 76 40" fill="none" stroke="#f3ead8" stroke-width="3"/>`) },
+  // B · Exploration, quests & collectibles
+  { id: 'blorp', cat: 'explore', name: '…Blorp.', info: 'Find Reshman hiding in every single zone of the Spire.',
+    icon: TI(`<ellipse cx="50" cy="74" rx="40" ry="14" fill="#000"/><path d="M18 74 Q20 40 50 38 Q80 40 82 74 Z" fill="#000"/><ellipse cx="40" cy="56" rx="7" ry="10" fill="#f3ead8" stroke="none"/><ellipse cx="60" cy="56" rx="7" ry="10" fill="#f3ead8" stroke="none"/><circle cx="41" cy="58" r="3" fill="#000" stroke="none"/><circle cx="59" cy="58" r="3" fill="#000" stroke="none"/>`) },
+  { id: 'rock_stone', cat: 'explore', name: 'Rock and Stone!', info: 'Bring Lars enough Raw Titanium Ore to fully upgrade Nathan\'s bat.',
+    icon: TI(`<path d="M14 62 L86 62 L76 74 L60 76 L64 90 L36 90 L40 76 L24 74 Z" fill="#4a4a54"/><rect x="38" y="22" width="26" height="36" rx="3" fill="#f2c14e"/><path d="M64 30 Q76 32 64 48" fill="none"/><path d="M36 24 Q38 12 50 16 Q60 8 66 22 Z" fill="#f3ead8"/>`) },
+  { id: 'cat_herder', cat: 'explore', name: 'Cat Herder', info: 'Find both of Lars\'s runaway cats and bring them home to Base Camp.',
+    icon: TI(`<path d="M10 66 Q12 30 50 28 Q88 30 90 66 Z" fill="#f2c14e"/><rect x="44" y="20" width="12" height="12" rx="2" fill="#f3ead8"/><ellipse cx="36" cy="72" rx="18" ry="12" fill="#e08a3a"/><ellipse cx="64" cy="72" rx="18" ry="12" fill="#2b2228"/><path d="M24 64 L26 56 L32 62 M56 64 L58 56 L64 62" fill="none" stroke-width="3"/><path d="M10 66 L90 66" stroke-width="5"/>`) },
+  { id: 'pebbles', cat: 'explore', name: 'Pebble Collector', info: 'Find all 50 of Fionn\'s Lucky Pebbles across the Spire.',
+    icon: TI(`${[[50, 26], [38, 46], [62, 46], [26, 66], [50, 66], [74, 66], [16, 84], [38, 84], [62, 84], [84, 84]].map(([x, y], i) => `<ellipse cx="${x}" cy="${y}" rx="11" ry="9" fill="${['#e8361c', '#f2c14e', '#6fd3ff', '#9be36a', '#b98bff', '#f3ead8', '#ff8a2a', '#bfefff', '#d9b77a', '#e08a3a'][i]}" stroke-width="3"/>`).join('')}`) },
+  { id: 'damage_control', cat: 'explore', name: 'Damage Control', info: 'Seal all four of Milo\'s Cursed Spellbooks.',
+    icon: TI(`<rect x="20" y="20" width="56" height="64" rx="4" fill="#7a3ab8"/><path d="M28 20 L28 84" stroke-width="3"/><path d="M14 44 L86 60 M14 62 L86 44" stroke="#8a8f98" stroke-width="7"/><rect x="40" y="46" width="20" height="18" rx="3" fill="#f2c14e"/><path d="M44 46 Q44 36 50 36 Q56 36 56 46" fill="none" stroke-width="3"/>`) },
+  { id: 'spite_powered', cat: 'explore', name: 'Spite-Powered', info: 'Buy out Josh\'s entire tech shop.',
+    icon: TI(`${[[24, 80], [40, 84], [58, 82], [74, 80], [32, 70], [50, 72], [66, 70], [42, 60], [58, 60]].map(([x, y]) => `<path d="M${x} ${y - 7} L${x + 7} ${y - 3} L${x + 7} ${y + 4} L${x} ${y + 8} L${x - 7} ${y + 4} L${x - 7} ${y - 3} Z" fill="#f2c14e" stroke-width="2.5"/>`).join('')}<rect x="30" y="14" width="40" height="30" rx="8" fill="#3b4f66"/><path d="M40 30 L48 30" stroke="#6fd3ff" stroke-width="5"/><path d="M54 30 Q58 24 62 30" fill="none" stroke="#6fd3ff" stroke-width="4"/>`) },
+  { id: 'benchwarmer', cat: 'explore', name: 'Benchwarmer', info: 'Rest at every single Dugout bench in the game.',
+    icon: TI(`<path d="M44 6 L56 6 L52 14 L48 14 Z" fill="#3a3340"/><path d="M48 14 L20 80 L80 80 L52 14 Z" fill="rgba(255,214,150,.45)" stroke="none"/><rect x="18" y="56" width="64" height="10" rx="2" fill="#8a5a3a"/><rect x="16" y="68" width="68" height="10" rx="2" fill="#a8734c"/><path d="M24 78 L24 90 M76 78 L76 90" stroke-width="6"/>`) },
+  // C · Combat & skill
+  { id: 'mvp_baby', cat: 'combat', name: 'MVP Baby!', info: 'Defeat any major boss without taking a single point of damage.',
+    icon: TI(`<circle cx="50" cy="60" r="26" fill="none" stroke="#0d0b10" stroke-width="16"/><circle cx="50" cy="60" r="26" fill="none" stroke="#f2c14e" stroke-width="9"/><path d="M34 34 L40 18 L60 18 L66 34 L50 44 Z" fill="#f3ead8"/><path d="M44 20 Q50 6 56 20" fill="#ff8a2a"/>`) },
+  { id: 'untouchable', cat: 'combat', name: 'Untouchable', info: 'Parry 10 projectiles in a row without touching the ground.',
+    icon: TI(`${TBAT(28, 80, 72, 22)}${[[20, 30], [80, 44], [26, 58], [74, 74], [50, 12]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="7" fill="#f2e04e" stroke-width="3"/>`).join('')}<path d="M12 46 Q50 -6 90 34 M14 70 Q60 100 92 60" fill="none" stroke="#6fd3ff" stroke-width="3" stroke-dasharray="6 5"/>`) },
+  { id: 'grand_slam', cat: 'combat', name: 'Grand Slam', info: 'Win the Gold Cup in Coach Monfort\'s Championship Colosseum.',
+    icon: TI(`<path d="M28 20 L72 20 L68 48 Q50 62 32 48 Z" fill="#f2c14e"/><path d="M28 26 Q12 26 18 40 Q22 46 32 44 M72 26 Q88 26 82 40 Q78 46 68 44" fill="none"/><rect x="44" y="56" width="12" height="12" fill="#f2c14e"/><rect x="30" y="68" width="40" height="10" fill="#c9a33a"/><rect x="24" y="78" width="52" height="12" fill="#8a6a1a"/><circle cx="50" cy="12" r="7" fill="#f3ead8"/>`) },
+  { id: 'seq_break', cat: 'combat', name: 'Sequence Breaker', info: 'Reach Milo\'s Storm Atrium without Daniel\'s Explosive Baseballs.',
+    icon: TI(`${[0, 1, 2, 3].map(r => [0, 1, 2].map(c => `<rect x="${12 + c * 26 + (r % 2) * 13}" y="${18 + r * 18}" width="24" height="16" fill="#b8563a" stroke-width="3"/>`).join('')).join('')}<rect x="24" y="80" width="40" height="12" fill="#f2c14e" stroke-width="3"/><text x="44" y="90" font-size="9" font-family="Impact" text-anchor="middle" fill="#0d0b10" stroke="none">DETOUR</text>${TBAT(10, 70, 88, 30, '#e8361c')}`) },
+  // D · Speedrun & Sudden Death
+  { id: 'shot_clock', cat: 'hardcore', name: 'Beat the Shot Clock', info: 'Reach an ending in under 2 hours with the Shot Clock switched on.',
+    icon: TI(`<path d="M34 24 Q38 8 46 18 Q50 4 56 18 Q64 8 66 24 Z" fill="#ff8a2a"/><rect x="14" y="26" width="72" height="50" rx="6" fill="#16101a"/><text x="50" y="62" font-size="24" font-family="Impact" text-anchor="middle" fill="#ff3a1a" stroke="none">00:01</text><path d="M40 76 L36 90 M60 76 L64 90" stroke-width="5"/>`) },
+  { id: 'lightning', cat: 'hardcore', name: 'Lightning Round', info: 'Reach 100% completion in under 4 hours.',
+    icon: TI(`${[0, 1, 2, 3, 4, 5, 6].map(k => `<rect x="${72 + (k % 2) * 6}" y="${16 + k * 10}" width="6" height="10" fill="${k % 2 ? '#0d0b10' : '#f3ead8'}" stroke="none"/>`).join('')}<path d="M4 48 L40 48 M8 60 L36 60" stroke="#f2c14e" stroke-width="4"/><path d="M38 66 L62 66 L66 52" fill="none" stroke-width="5"/><circle cx="40" cy="74" r="9" fill="#2a2f38"/><circle cx="64" cy="74" r="9" fill="#2a2f38"/><path d="M64 52 L58 36" stroke-width="5"/>`) },
+  { id: 'no_extra', cat: 'hardcore', name: 'No Extra Innings', info: 'Complete the game on Sudden Death mode without dying once.',
+    icon: TI(`<path d="M14 72 Q6 40 30 22 M86 72 Q94 40 70 22" fill="none" stroke="#9be36a" stroke-width="8"/>${[0, 1, 2, 3].map(k => `<ellipse cx="${18 + k * 2}" cy="${64 - k * 12}" rx="5" ry="8" fill="#5aa03a" stroke-width="2" transform="rotate(-30 ${18 + k * 2} ${64 - k * 12})"/><ellipse cx="${82 - k * 2}" cy="${64 - k * 12}" rx="5" ry="8" fill="#5aa03a" stroke-width="2" transform="rotate(30 ${82 - k * 2} ${64 - k * 12})"/>`).join('')}<path d="M50 20 L74 48 L50 82 L26 48 Z" fill="#bfefff"/><path d="M26 48 L74 48 M50 20 L40 48 L50 82 L60 48 Z" fill="none" stroke-width="2.5"/>`) },
+  { id: 'undefeated', cat: 'hardcore', name: 'Undefeated MVP', info: 'Reach the True Ending on Sudden Death mode.',
+    icon: TI(`${[0, 1, 2, 3, 4, 5, 6, 7].map(k => { const a = k * Math.PI / 4; return `<path d="M50 50 L${50 + Math.cos(a) * 46} ${50 + Math.sin(a) * 46}" stroke="#f2c14e" stroke-width="5"/>`; }).join('')}<circle cx="50" cy="50" r="22" fill="rgba(255,240,180,.85)" stroke="none"/>${TBAT(30, 76, 70, 24, '#d9b77a')}`) },
+  { id: 'world_series', cat: 'hardcore', name: 'World Series Champion', info: 'Finish the game on World Series difficulty (or Sudden Death at World Series speed).',
+    icon: TI(`<path d="M30 14 H70 V38 Q70 60 50 64 Q30 60 30 38 Z" fill="#ffd700"/><path d="M30 22 Q12 22 14 36 Q16 46 32 46 M70 22 Q88 22 86 36 Q84 46 68 46" fill="none" stroke-width="5"/><rect x="42" y="64" width="16" height="12" fill="#c9a33a"/><rect x="28" y="76" width="44" height="10" rx="2" fill="#6a3aa8"/><path d="M50 26 L54 35 L63 35 L56 41 L59 50 L50 44 L41 50 L44 41 L37 35 L46 35 Z" fill="#fff3c0" stroke-width="2.5"/>`) },
+  // E · The five endings (secret)
+  { id: 'end_standard', cat: 'hardcore', secret: true, name: 'Game, Set, Match', info: 'Defeat Evil Adam and escape the collapsing Spire.', hint: 'Win the championship.',
+    icon: TI(`<rect x="4" y="66" width="92" height="26" fill="#f2c14e" stroke="none"/><path d="M4 66 L96 66" stroke="#fff6d8" stroke-width="3"/><ellipse cx="44" cy="40" rx="22" ry="28" fill="none" stroke="#0d0b10" stroke-width="9" transform="rotate(-30 44 40)"/><ellipse cx="44" cy="40" rx="22" ry="28" fill="none" stroke="#2a1238" stroke-width="5" transform="rotate(-30 44 40)"/><path d="M58 62 L76 84" stroke-width="9"/><path d="M36 30 L48 46 L42 52" fill="none" stroke="#f2c14e" stroke-width="3"/>`) },
+  { id: 'end_ego', cat: 'hardcore', secret: true, name: 'New Management', info: 'Claim the Cursed Trophies and crown yourself ruler of the Spire.', hint: 'What if you kept it?',
+    icon: TI(`<path d="M14 58 Q16 20 50 20 Q84 20 86 58 Z" fill="#1a0a10"/><path d="M8 58 L94 58 L84 68 L8 66 Z" fill="#2a1016"/><ellipse cx="38" cy="72" rx="6" ry="3" fill="#ff2a1a" stroke="none"/><ellipse cx="62" cy="72" rx="6" ry="3" fill="#ff2a1a" stroke="none"/>`) },
+  { id: 'end_joke', cat: 'hardcore', secret: true, name: '404: Boss Not Found', info: 'Let Josh hack the Gilded Stadium from his laptop.', hint: 'Some problems are best solved remotely.',
+    icon: TI(`<rect x="10" y="16" width="80" height="66" rx="4" fill="#2a6ae0"/><rect x="10" y="16" width="80" height="12" fill="#1a4ab0"/><circle cx="82" cy="22" r="3" fill="#e8361c" stroke="none"/><rect x="24" y="44" width="52" height="30" fill="#000"/><circle cx="50" cy="52" r="3" fill="none" stroke="#f3ead8" stroke-width="2"/><path d="M50 55 L50 63 M46 58 L54 60 M50 63 L46 69 M50 63 L55 68" stroke="#f3ead8" stroke-width="2"/><text x="50" y="40" font-size="11" font-family="Impact" text-anchor="middle" fill="#f3ead8" stroke="none">404</text>`) },
+  { id: 'end_chill', cat: 'hardcore', secret: true, name: 'Peace & Love', info: 'Bring Deniz\'s calming herbal tea to the final championship match.', hint: 'Not every match needs a swing.',
+    icon: TI(`<path d="M24 66 L76 66 L70 90 L30 90 Z" fill="#e9dcc0"/><path d="M76 70 Q92 72 80 86" fill="none"/><path d="M44 62 Q40 56 46 50 M56 62 Q52 56 58 50" fill="none" stroke="#f3ead8" stroke-width="3"/><circle cx="50" cy="28" r="20" fill="#f2e04e"/><path d="M34 22 Q50 14 66 22 M32 32 Q50 40 68 32" fill="none" stroke="#e8361c" stroke-width="3"/><circle cx="44" cy="26" r="2" fill="#0d0b10" stroke="none"/><circle cx="56" cy="26" r="2" fill="#0d0b10" stroke="none"/><path d="M44 33 Q50 37 56 33" fill="none" stroke-width="2.5"/>`) },
+  { id: 'end_true', cat: 'hardcore', secret: true, name: 'Out of the Park!', info: 'Conquer the Zennith Core with your Spare Bat and bring everyone home.', hint: 'Everyone. Everything. The bat you started with.',
+    icon: TI(`<rect x="0" y="0" width="100" height="100" fill="#8fd0f0" stroke="none" rx="10"/>${['#e8361c', '#ff8a2a', '#f2e04e', '#9be36a', '#6fd3ff'].map((c, k) => `<path d="M${6 + k * 4} 96 Q30 50 ${66 + k * 2} ${30 + k * 4}" fill="none" stroke="${c}" stroke-width="5"/>`).join('')}${TBALL(72, 26, 14)}`) },
+  // F · The Overtime Abyss (secret)
+  { id: 'bunt_god', cat: 'hardcore', secret: true, name: 'Bunt God', info: 'Conquer The Overtime Abyss without losing your cool.', hint: 'Something is ticking behind the golden lockers.',
+    icon: TI(`<rect x="0" y="0" width="100" height="100" fill="#0d0b10" stroke="none" rx="10"/>${[0, 1, 2].map(k => `<path d="M${30 + k * 20} 0 L${18 + k * 20} 100 L${34 + k * 20} 100 Z" fill="rgba(255,236,170,.18)" stroke="none"/>`).join('')}<path d="M20 86 L80 86" stroke="#f3ead8" stroke-width="6"/>${TBAT(24, 62, 76, 62, '#f3ead8')}${TBALL(50, 34, 13)}<path d="M38 18 L34 10 M50 16 L50 6 M62 18 L66 10" stroke="#f2c14e" stroke-width="3"/>`) },
+  // G · Base Camp extras (secret)
+  { id: 'king_cage', cat: 'combat', secret: true, name: 'King of the Cage', info: 'Hit a 100 combo in the Batting Cage and beat Adam\'s record.', hint: 'The Pitch-O-Matic 3000 has never been beaten.',
+    icon: TI(`<rect x="8" y="10" width="84" height="80" fill="#1a2030"/>${[0, 1, 2, 3, 4, 5].map(k => `<path d="M${8 + k * 17} 10 L${8 + k * 17 + 30} 90 M${8 + k * 17 + 30} 10 L${8 + k * 17} 90" stroke="#8a8f99" stroke-width="1.5" opacity=".6"/>`).join('')}<rect x="8" y="10" width="84" height="80" fill="none" stroke-width="4"/>${TBAT(24, 80, 70, 30, '#f2c14e')}${TBALL(74, 26, 10)}<text x="50" y="96" font-size="12" font-family="Impact" text-anchor="middle" fill="#f2c14e" stroke="none">100</text>`) },
+  { id: 'lucid_dreamer', cat: 'combat', secret: true, name: 'Lucid Dreamer', info: 'Beat all four Dream Rematches and bring Deniz the Astral Essences.', hint: 'Deniz brews a tea that is not for sleeping well.',
+    icon: TI(`<circle cx="50" cy="50" r="44" fill="#1a1040"/>${[[22, 24], [74, 20], [80, 66], [20, 70], [50, 14]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.5" fill="#fff6d8" stroke="none"/>`).join('')}<path d="M62 22 A30 30 0 1 0 78 64 A24 24 0 1 1 62 22 Z" fill="#d9b8ff"/><path d="M34 70 H62 L58 88 H38 Z" fill="#f3ead8"/><path d="M36 74 H60" stroke="#b388ff" stroke-width="4"/>`) },
+];
+const ENDING_TROPHY = { standard: 'end_standard', ego: 'end_ego', joke: 'end_joke', chill: 'end_chill', true: 'end_true' };
+const Trophies = {
+  all() { try { return JSON.parse(localStorage.getItem('ei_trophies') || '{}') || {}; } catch (e) { logErr("trophies.js:79", e); return {}; } },
+  has(id) { return !!this.all()[id]; },
+  unlock(id, mode) {
+    if ((typeof PAGE_BLOCKED !== 'undefined' && PAGE_BLOCKED) || window.DEV_LOCK) return false;
+    const A = this.all(); if (A[id]) return false;
+    A[id] = { at: new Date().toISOString(), mode: mode || 'Standard' };
+    try { localStorage.setItem('ei_trophies', JSON.stringify(A)); } catch (e) { logErr("trophies.js:84", e); }
+    return true;
+  },
+  // endings found before trophies existed still count
+  reconcile() {
+    let L = []; try { L = JSON.parse(localStorage.getItem('ei_endings') || '[]') || []; } catch (e) { logErr("trophies.js:89", e); }
+    for (const e of L) if (ENDING_TROPHY[e]) this.unlock(ENDING_TROPHY[e]);
+  },
+};

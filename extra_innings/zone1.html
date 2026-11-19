@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Extra Innings · The Scrapyard Dugout</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="stylesheet" href="play.css">
+<link rel="stylesheet" href="zone.css">
+<link rel="stylesheet" href="pausemenu.css">
+<script src="release.js"></script>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<!-- ================= HUD ================= -->
+<div id="hud">
+  <div class="hud-portrait">
+    <svg viewBox="0 0 60 60"><circle cx="30" cy="32" r="20" fill="#f3ead8" stroke="#0d0b10" stroke-width="4"/><path d="M10 30 Q12 10 31 10 Q50 10 51 28 L60 30 Q56 24 50 26" fill="#e8361c" stroke="#0d0b10" stroke-width="4" stroke-linejoin="round"/><path d="M21 34 L28 32 M35 32 L42 34" stroke="#0d0b10" stroke-width="3.5" stroke-linecap="round"/><path d="M24 43 Q32 49 40 41" fill="none" stroke="#0d0b10" stroke-width="3" stroke-linecap="round"/></svg>
+  </div>
+  <div class="hud-stack">
+    <div class="hp" id="hp"></div>
+    <div class="hype" id="hype">
+      <div class="hype-fill" id="hypeFill"></div>
+      <label>HYPE</label>
+    </div>
+    <div class="hud-row">
+      <div class="balls" id="balls"></div>
+      <div class="bolts" id="bolts"><svg viewBox="0 0 20 20"><path d="M10 2 L17 6 L17 14 L10 18 L3 14 L3 6 Z" fill="#b8bcc4" stroke="#0d0b10" stroke-width="2"/><circle cx="10" cy="10" r="2.6" fill="#0d0b10"/></svg><b id="boltN">0</b></div>
+      <div class="bolts ore" id="ores" style="display:none"><svg viewBox="0 0 20 20"><path d="M3 13 L6 5 L12 2 L17 8 L15 15 L8 18 Z" fill="#9fd8e8" stroke="#0d0b10" stroke-width="2" stroke-linejoin="round"/><path d="M6 5 L10 10 L17 8 M10 10 L8 18" fill="none" stroke="#0d0b10" stroke-width="1.3"/></svg><b id="oreN">0</b></div>
+    </div>
+  </div>
+</div>
+<div id="combo"><b id="comboN">0</b><small>HIT COMBO</small></div>
+<div id="roomName"></div>
+<div id="zoneTitle"><small id="zoneSub"></small><h1 id="zoneMain"></h1><i></i></div>
+<div id="bossBar"><span>THE ROGUE SERVER</span><div><i id="bossFill"></i></div></div>
+<div id="toast"></div>
+
+
+
+<!-- ================= PAUSE ================= -->
+<div id="pause" class="overlay">
+  <div class="card pause-card">
+    <p class="eyebrow">TIMEOUT</p>
+    <h1>PAUSED</h1>
+    <nav>
+      <button class="pbtn" data-p="resume">Resume</button>
+      <button class="pbtn" data-p="map">Map</button>
+      <button class="pbtn" data-p="menu">Main Menu</button>
+    </nav>
+    <div class="row"><label>Volume</label><input type="range" id="vol" min="0" max="100" value="70"></div>
+  </div>
+</div>
+
+<!-- ================= MAP ================= -->
+<div id="map" class="overlay">
+  <div class="map-sheet">
+    <canvas id="mapCanvas"></canvas>
+    <button class="x" data-close aria-label="Close map">✕</button>
+    <div class="map-legend">
+      <span><i class="pin here"></i>Nathan</span><span><i class="pin bench"></i>Bench</span><span><i class="pin shop"></i>Camp crew</span><span><i class="pin bell"></i>Call bell</span><span><i class="pin reshman"></i>Reshman</span><span><i class="pin ore"></i>Titanium</span><span><i class="pin pebble"></i>Pebble</span><span><i class="pin fog"></i>Pencil sketch</span>
+      <span class="close-hint"><kbd data-act="map">Tab</kbd> / <kbd>Esc</kbd> close</span>
+    </div>
+  </div>
+</div>
+
+<!-- ================= SHOP ================= -->
+<div id="shop" class="overlay">
+  <div class="card shop-card">
+    <header>
+      <div class="josh-face" id="shopFace"><svg viewBox="0 0 60 60"><circle cx="30" cy="34" r="19" fill="#f3ead8" stroke="#0d0b10" stroke-width="4"/><path d="M11 33 Q12 10 30 10 Q49 10 49 32 Z" fill="#8fd3ff" stroke="#0d0b10" stroke-width="4" stroke-linejoin="round"/><rect x="11" y="27" width="38" height="5" fill="#6fb8e0"/><circle cx="38" cy="36" r="5" fill="#6fd3ff" stroke="#0d0b10" stroke-width="3"/><path d="M20 35 L26 35" stroke="#0d0b10" stroke-width="3" stroke-linecap="round"/><path d="M24 45 L36 43" stroke="#0d0b10" stroke-width="3" stroke-linecap="round"/></svg></div>
+      <div><p class="eyebrow" id="shopTitle">JOSH'S WORKBENCH</p><p class="josh-line" id="joshLine">"Back already?"</p></div>
+      <div class="shop-bolts" id="shopBolts"></div>
+    </header>
+    <div id="shopItems"></div>
+    <p class="shop-hint"><kbd>↑</kbd><kbd>↓</kbd> choose · <kbd>J</kbd> buy · <kbd>Esc</kbd> leave</p>
+  </div>
+</div>
+
+<!-- ================= FAST TRAVEL ================= -->
+<div id="travel" class="overlay">
+  <div class="card shop-card travel-card">
+    <header>
+      <div class="josh-face" style="background:#c8561c"><svg viewBox="0 0 60 60"><circle cx="30" cy="35" r="17" fill="#f3ead8" stroke="#0d0b10" stroke-width="4"/><path d="M12 32 Q13 13 30 13 Q47 13 48 32 Z" fill="#ff8a2a" stroke="#0d0b10" stroke-width="4" stroke-linejoin="round"/><rect x="14" y="23" width="32" height="7" rx="3.5" fill="#6fd3ff" stroke="#0d0b10" stroke-width="2.5"/><path d="M22 36 L26 35 M34 35 L38 36" stroke="#0d0b10" stroke-width="3" stroke-linecap="round"/><path d="M23 43 Q31 49 39 41" fill="none" stroke="#0d0b10" stroke-width="3" stroke-linecap="round"/><path d="M35 45 L37 51 L41 45" fill="#e8361c" stroke="#0d0b10" stroke-width="2"/></svg></div>
+      <div><p class="eyebrow">RENAS'S SCOOTER SERVICE</p><p class="josh-line" id="renasLine">"Where to, slowpoke?"</p></div>
+    </header>
+    <div id="travelList"></div>
+    <p class="shop-hint"><kbd>↑</kbd><kbd>↓</kbd> choose · <kbd>J</kbd> ride · <kbd>Esc</kbd> stay</p>
+  </div>
+</div>
+
+<!-- ================= UNLOCK CARD ================= -->
+<div id="unlock" class="overlay">
+  <div class="unlock-card">
+    <p class="eyebrow" id="unlockKicker">NEW MOVE</p>
+    <h1 id="unlockTitle">BAT‑LAUNCH</h1>
+    <p id="unlockBody"></p>
+    <div class="unlock-keys" id="unlockKeys"></div>
+    <button class="btn primary" data-close>GOT IT</button>
+  </div>
+</div>
+
+<!-- ================= END CARD ================= -->
+<div id="end" class="overlay">
+  <div class="card end-card">
+    <p class="eyebrow">ZONE 1 CLEARED</p>
+    <h1>OUT OF THE DUGOUT!</h1>
+    <p class="lede">Nathan Bat‑Launched across the chasm. Next stop: <b>The Deep Quarry</b>, where Lars, his two cats, and Adam's first rival duel are waiting.</p>
+    <div class="end-stats" id="endStats"></div>
+    <div class="end-btns"><button class="btn" id="endStay">Keep exploring</button><button class="btn" id="endMenu">Main menu</button><button class="btn primary" id="endGo">Into the Quarry →</button></div>
+  </div>
+</div>
+
+<script src="errlog.js"></script>
+<script src="keybinds.js"></script>
+<script src="themes.js"></script>
+<script src="game/audio.js"></script>
+<script src="game/music.js"></script>
+<script src="game/core.js"></script>
+<script src="game/level.js"></script>
+<script src="game/entities.js"></script>
+<script src="game/player.js"></script>
+<script src="game/render.js"></script>
+<script src="zone/world.js"></script>
+<script src="zone/actors.js"></script>
+<script src="zone/story.js"></script>
+<script src="zone/cast.js"></script>
+<script src="zone/common.js"></script>
+<script src="zone/main.js"></script>
+<script src="zone/map-art.js"></script>
+<script src="zone/map.js"></script>
+<script src="zone/map-z1.js"></script>
+<script src="zone/quest-cast.js"></script>
+<script src="zone/quest-gadgets.js"></script>
+<script src="zone/quests.js"></script>
+<script src="zone/quest-story.js"></script>
+<script src="zone/quest-ui.js"></script>
+<script src="zone/gauntlets.js"></script>
+<script src="zone/badges.js"></script>
+<script src="zone/barks.js"></script>
+<script src="zone/polish.js"></script>
+<script src="zone/endings.js"></script>
+<script src="zone/visuals.js"></script>
+<script src="zone/spikekill.js"></script>
+<script src="trophies.js"></script>
+<script src="zone/trophies-game.js"></script>
+<script src="zone/abyss.js"></script>
+<script src="zone/kit.js"></script>
+<script src="zone/pausemenu.js"></script>
+<script src="zone/pm-gear.js"></script>
+<script src="zone/pm-log.js"></script>
+<script src="zone/outfits.js"></script>
+<script src="zone/cage.js"></script>
+<script src="zone/dreams.js"></script>
+<script src="zone/art.js"></script>
+<script src="zone/map-live.js"></script>
+<script src="zone/spire.js"></script>
+<script src="zone/benches.js"></script>
+<script src="zone/difficulty.js"></script>
+<script src="zone/legends-core.js"></script>
+<script src="zone/legends-bosses.js"></script>
+<script src="zone/legends-art.js"></script>
+<script src="zone/legends-hall.js"></script>
+<script src="zone/legends-fight.js"></script>
+<script src="zone/boss-rematch.js"></script>
+<script src="zone/menu-keys.js"></script>
+<script src="zone/dialogue.js"></script>
+<script src="zone/tutorial.js"></script>
+<script src="zone/caravan.js"></script>
+<script src="zone/transit.js"></script>
+<script src="zone/camp-life.js"></script>
+<script src="zone/boss-anims.js"></script>
+<script src="zone/micro-anims.js"></script>
+<script src="zone/pennant.js"></script>
+<script src="silk-ui.js"></script>
+<script src="zone/perf.js"></script>
+<script src="dev.js"></script>
+<script>
+/* if a core script fails to load the page is a black canvas with a HUD — say so instead */
+setTimeout(function () {
+  if (typeof loop !== 'undefined') return;
+  var d = document.createElement('div');
+  d.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:9999;display:flex;align-items:center;' +
+    'justify-content:center;background:#141019;color:#f1e6d0;font:15px/1.7 ui-monospace,Menlo,monospace;text-align:center;padding:40px';
+  d.innerHTML = '<div>GAME SCRIPTS FAILED TO LOAD<br><br><span style="opacity:.65">The local server is not answering, ' +
+    'or a script was blocked.<br>Start the server, then reload this page.</span></div>';
+  document.body.appendChild(d);
+}, 1500);
+</script>
+</body>
+</html>
