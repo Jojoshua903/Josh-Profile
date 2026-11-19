@@ -70,7 +70,7 @@ function trSync() {
       if (b) { trScooter(b, true).rider = true; Player.hidden = true; Input.enabled = false; Player.invuln = Math.max(Player.invuln, 2); }
       else { Player.hidden = false; Input.enabled = true; RIDE.ride = false; window.EI_RIDE = false; }   // no post in this room: just drop him off
       RIDE.arrive = null;
-    }
+    } else if (!RIDE.tunnel) { RIDE.ride = false; window.EI_RIDE = false; }   // left the room mid peel-out: the ride is off
   }
   // a bench rest rebuilds the room's NPCs: follow the new signpost
   const nb = NPCs.find(n => n.kind === 'bell') || null;
@@ -213,7 +213,7 @@ const _trRing = ringBell;
 ringBell = function (b) {
   const D = Save.data;
   if (!D.chase) return _trRing(b);
-  if (RIDE.ride || RIDE.dial || Story.active) return;
+  if (RIDE.ride || RIDE.dial || RIDE.paying || RIDE.tunnel || Story.active) return;   // spam-proof: one thing at a time
   if (!D.bells[b.zone]) { trPay(b); return; }
   if (RIDE.R && RIDE.R.b === b && RIDE.R.st === 'idle') { trBoard(); return; }
   if (!RIDE.R || RIDE.R.b !== b) { trScooter(b, true).then = 'board'; trHideRenasNPC(); }
@@ -227,6 +227,7 @@ function trPay(b) {
     return;
   }
   D.bolts -= price; D.bells[b.zone] = 1; saveGame();
+  RIDE.paying = true;   // ▲ does nothing until Renas has pulled up after the ka-ching
   const c = Player.center();
   for (let k = 0; k < Math.min(14, 4 + Math.round(price / 40)); k++) RIDE.fx.push({ x: c.x, y: c.y - 10, tx: b.x, ty: b.y - 58, t: -k * 0.045, dur: 0.45, ox: rand(-60, 60), oy: rand(-90, -40) });
   setTimeout(() => {
@@ -236,7 +237,8 @@ function trPay(b) {
     toast(`SCOOTER STOP UNLOCKED · ${ZONES[b.zone] ? ZONES[b.zone].name.toUpperCase() : ''} · EVERY RIDE FROM HERE IS FREE`);
   }, 700);
   setTimeout(() => {
-    if (Zone.room !== RIDE.room) return;
+    RIDE.paying = false;
+    if (Zone.room !== RIDE.room || RIDE.R || RIDE.ride || RIDE.tunnel) return;   // never send a second scooter over the first
     trScooter(b, true).then = 'greet'; trHideRenasNPC();
   }, 1300);
 }
@@ -260,8 +262,9 @@ function trDialMove(d) {
   if (RIDE.R) RIDE.R.rev = 0.4;
 }
 function trGo() {
-  const T = RIDE.dial, R = RIDE.R; if (!T || !R || !T.list.length) { SFX.deny(); return; }
+  const T = RIDE.dial, R = RIDE.R; if (!T || !R || !T.list.length || !T.list[T.i]) { SFX.deny(); return; }
   RIDE.dial = null; RIDE.ride = T.list[T.i]; window.EI_RIDE = true;
+  R.rider = true; Player.hidden = true;   // he's on the back for the whole peel-out
   R.st = 'peel'; R.k = 0; R.gog = 1; SFX.scooter(); SFX.whoosh && SFX.whoosh();
 }
 
@@ -299,7 +302,7 @@ PAGE.tick = function (dt) {
   trSync(); trPadPoll();
   // safety net: Nathan is only ever hidden while he's on the scooter. If the scooter is gone
   // (a warp, a death or a bench mid-ride cleared it), put him back and hand over the controls.
-  const onBoard = RIDE.tunnel || RIDE.arrive || RIDE.dial || (RIDE.R && (RIDE.R.rider || RIDE.R.st === 'board'));
+  const onBoard = RIDE.tunnel || RIDE.arrive || RIDE.dial || RIDE.ride || (RIDE.R && (RIDE.R.rider || RIDE.R.st === 'board' || RIDE.R.st === 'peel'));
   if (Player.hidden && !onBoard) {
     Player.hidden = false; RIDE.ride = false; window.EI_RIDE = false;
     if (!Story.active) { Input.enabled = true; Input.clear && Input.clear(); }
@@ -457,13 +460,18 @@ function trTunnel(id) {
     if (t < DUR) { requestAnimationFrame(frame); return; }
     if (fired) return;
     fired = true; RIDE.tunnel = null;
-    Travel.list = [id]; travelTo(0);
+    const fade = () => { cv.style.transition = 'opacity .35s'; cv.style.opacity = '0'; setTimeout(() => cv.remove(), 400); };
+    // a stop that can't be reached (gone, locked, or the one you're on): drop him back at the post, never hang
+    const ok = id && ZONES[id] && Save.data.bells[id] && id !== PAGE.zoneHere();
+    if (!ok) { RIDE.ride = false; window.EI_RIDE = false; Player.hidden = false; Input.enabled = true; Input.clear && Input.clear(); SFX.deny(); fade(); return; }
+    try { Travel.list = [id]; travelTo(0); } catch (e) { logErr('zone/transit.js: tunnel', e); }
     const samePage = ZONES[id].page === ZONES[PAGE.id].page;
-    if (samePage) {
-      RIDE.ride = false; window.EI_RIDE = false;
-      setTimeout(() => { cv.style.transition = 'opacity .35s'; cv.style.opacity = '0'; setTimeout(() => cv.remove(), 400); }, 450);
-    }
-    // another page: the tunnel stays up until the browser moves on
+    if (samePage) { RIDE.ride = false; window.EI_RIDE = false; setTimeout(fade, 450); return; }
+    // another page: the tunnel stays up until the browser moves on, unless it never does
+    setTimeout(() => {
+      if (!document.body.contains(cv)) return;
+      RIDE.ride = false; window.EI_RIDE = false; Player.hidden = false; Input.enabled = true; Input.clear && Input.clear(); fade();
+    }, 5000);
   };
   requestAnimationFrame(frame);
 }
