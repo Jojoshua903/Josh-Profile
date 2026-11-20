@@ -215,6 +215,10 @@ ringBell = function (b) {
   if (!D.chase) return _trRing(b);
   if (RIDE.ride || RIDE.dial || RIDE.paying || RIDE.tunnel || Story.active) return;   // spam-proof: one thing at a time
   if (!D.bells[b.zone]) { trPay(b); return; }
+  // a scooter left over from something that never finished (a stale post after a rebuild, a slide that
+  // never landed): clear it so this call always brings Renas in fresh
+  const R = RIDE.R;
+  if (R && (!NPCs.includes(R.b) || (R.st === 'in' && R.k > 2.5) || (R.st !== 'idle' && R.st !== 'in'))) { RIDE.R = null; }
   if (RIDE.R && RIDE.R.b === b && RIDE.R.st === 'idle') { trBoard(); return; }
   if (!RIDE.R || RIDE.R.b !== b) { trScooter(b, true).then = 'board'; trHideRenasNPC(); }
 };
@@ -314,7 +318,11 @@ PAGE.tick = function (dt) {
     if (Player.onGround && Math.abs(Player.vx) > 40) for (let k = 0; k < 2; k++) spawnParticle({ x: Player.x + Player.w / 2 + rand(-6, 6), y: Player.y + Player.h - 2, vx: -Player.vx * 0.15, vy: rand(-30, -5), life: 0.45, size: rand(2, 4), color: Math.random() < 0.5 ? '#6fe3ff' : '#bff3ff', type: 'dot' });
   }
   const R = RIDE.R; if (!R) return;
-  R.k += dt; R.rev = Math.max(0, (R.rev || 0) - dt);
+  // the arrival slide waits until the screen has cleared (the fade, the tunnel), so you always see Renas pull in
+  // (never longer than 1.5 s, so a fade that sticks can't leave Nathan stuck on the back)
+  const covered = R.st === 'in' && R.rider && (R.hold || 0) < 1.5 && (Game.fade > 0.3 || performance.now() < (RIDE.coverUntil || 0));
+  if (covered) R.hold = (R.hold || 0) + dt; else R.k += dt;
+  R.rev = Math.max(0, (R.rev || 0) - dt);
   if (R.st === 'in') {
     // the power-slide: bursts in, drifts sideways to a stop in blue-white friction sparks
     const u = Math.min(1, R.k / 0.7), e = 1 - Math.pow(1 - u, 3);
@@ -466,7 +474,7 @@ function trTunnel(id) {
     if (!ok) { RIDE.ride = false; window.EI_RIDE = false; Player.hidden = false; Input.enabled = true; Input.clear && Input.clear(); SFX.deny(); fade(); return; }
     try { Travel.list = [id]; travelTo(0); } catch (e) { logErr('zone/transit.js: tunnel', e); }
     const samePage = ZONES[id].page === ZONES[PAGE.id].page;
-    if (samePage) { RIDE.ride = false; window.EI_RIDE = false; setTimeout(fade, 450); return; }
+    if (samePage) { RIDE.ride = false; window.EI_RIDE = false; RIDE.coverUntil = performance.now() + 900; setTimeout(fade, 450); return; }
     // another page: the tunnel stays up until the browser moves on, unless it never does
     setTimeout(() => {
       if (!document.body.contains(cv)) return;
@@ -477,6 +485,7 @@ function trTunnel(id) {
 }
 function trTunnelTail() {   // the destination page picks the ride up where the last page left it
   const { cv, g, w, h } = trTunnelCanvas(), t0 = performance.now();
+  RIDE.coverUntil = t0 + 450;   // the arrival slide starts as the tunnel clears
   let r = {}; try { r = JSON.parse(sessionStorage.getItem('ei_ride') || '{}'); } catch (e) { /* */ }
   const tint = TR_TINT[r.to] || '242,193,78';
   const frame = now => {
