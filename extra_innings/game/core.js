@@ -64,7 +64,7 @@ function saveTune() { try { localStorage.setItem('mpz_tune', JSON.stringify(TUNE
 const OPT = { boxes: false, slow: false, infHype: false, god: false };
 // Unlockable moves (all on in the test room; story pages start with some locked)
 const ABIL = { dash: true, wall: true, double: true, launch: true, boom: true };
-const BOOM_COST = 11;          // Hype per Explosive Baseball
+const BOOM_COST = 15;          // Hype per Explosive Baseball (15% of the orb)
 
 /* ---------- Math ---------- */
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;

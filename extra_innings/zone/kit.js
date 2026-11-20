@@ -147,11 +147,11 @@ Ball.prototype.update = function (dt) {
   _kitBall.call(this, dt);
   if (Math.random() < 0.9) spawnParticle({ x: this.x + rand(-6, 6), y: this.y + rand(-6, 6), vx: rand(-90, 90), vy: rand(-90, 90), life: 0.22, size: rand(2, 3.5), color: Math.random() < 0.6 ? '#9fe6ff' : '#ffffff', type: 'spark' });
   if (this.state !== 'shot' || this.hitSet.size === before) return;
-  for (const e of this.hitSet) if (!this.zapped.has(e)) { this.zapped.add(e); stunEnemy(e, ROBOTS.has(e.constructor.name) ? 1.6 : 0.6); }
+  for (const e of this.hitSet) if (!this.zapped.has(e)) { this.zapped.add(e); stunEnemy(e, ROBOTS.has(e.constructor.name) ? 1.6 : 0.6); if (badgesOn().coil) Player.gainHype((Player.hypeMax || 99) * 0.05); }
   pop(this.x, this.y - 30, 'ZZZAP!', { size: 24, color: '#9fe6ff', burstColor: '#2a4a66' }); SFX.staticBuzz(0.25);
-  // chain to the nearest enemy it hasn't hit yet (up to 3 hops)
+  // chain to the nearest enemy it hasn't hit yet (up to 3 hops, 5 with the Chain Lightning Coil)
   this.hops = (this.hops || 0) + 1;
-  if (this.hops > 3) return;
+  if (this.hops > (badgesOn().coil ? 5 : 3)) return;
   let best = null, bd = 320;
   for (const e of Enemies) {
     if (e.dead || e.untargetable || e.type === 'orb' || this.hitSet.has(e)) continue;

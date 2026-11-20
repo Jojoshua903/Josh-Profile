@@ -58,6 +58,18 @@ const Sfx = (() => {
     crack: () => { noise(.25, .5, 1200); tone(140, .25, 'sine', .35, 50); },
     boom: () => { noise(.8, .55, 80); tone(90, .7, 'sine', .5, 30); },
     whoosh: () => noise(.45, .18, 2500),
+    // the studio splash: a soft wind swelling up and a single wooden bat tap
+    splash() {
+      ensure(); const t = ctx.currentTime, d = 2.4;
+      const b = ctx.createBuffer(1, ctx.sampleRate * d, ctx.sampleRate), data = b.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+      const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+      s.buffer = b; f.type = 'bandpass'; f.Q.value = .7;
+      f.frequency.setValueAtTime(380, t); f.frequency.linearRampToValueAtTime(1000, t + 1.2); f.frequency.linearRampToValueAtTime(480, t + d);
+      g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(.12 * sfxVol(), t + 1.1); g.gain.linearRampToValueAtTime(.0001, t + d);
+      s.connect(f).connect(g).connect(master); s.start(t);
+      setTimeout(() => { tone(760, .06, 'triangle', .16, 380); noise(.07, .2, 1600); tone(170, .14, 'sine', .2, 85); }, 750);
+    },
     startDrone() {
       ensure(); if (drone) return;
       const g = ctx.createGain(); g.gain.value = 0;
@@ -71,7 +83,9 @@ const Sfx = (() => {
       g.gain.linearRampToValueAtTime((settings.music / 100) * .12, ctx.currentTime + 4);
       drone = g;
     },
-    setMusic() { if (drone) drone.gain.value = (settings.music / 100) * .12; }
+    setMusic() { if (drone) drone.gain.value = (settings.music / 100) * .12; },
+    // out over 0.4s on the way into a loading screen
+    fadeMusic(d = .4) { if (!drone) return; const t = ctx.currentTime; drone.gain.cancelScheduledValues(t); drone.gain.setValueAtTime(drone.gain.value, t); drone.gain.linearRampToValueAtTime(0, t + d); }
   };
 })();
 
@@ -252,11 +266,31 @@ function enterTitle() {
     .to('#title .logo-sub', { opacity: .75, duration: .8 }, '-=.2')
     .add(() => { $('.press-start').style.animationPlayState = 'running'; titleReady = true; });
 }
+// after PRESS ANY KEY: the studio card, a golden shimmer over black, before the main menu (any key skips it)
+function studioSplash(done) {
+  const el = document.createElement('div'); el.id = 'studioSplash';
+  el.innerHTML = '<div class="ss-mark"><b>IBRAHIM</b><span>INTERACTIVE</span></div>';
+  document.body.appendChild(el);
+  void el.offsetWidth; el.classList.add('on');
+  Sfx.splash();
+  let over = false;
+  const finish = () => {
+    if (over) return; over = true;
+    removeEventListener('keydown', skip, true); el.removeEventListener('click', skip);
+    clearTimeout(auto); done();
+    el.classList.add('out'); setTimeout(() => el.remove(), 700);
+  };
+  const born = performance.now();
+  // the key that skips must not also press a menu button
+  const skip = e => { e.stopImmediatePropagation(); if (e.cancelable) e.preventDefault(); if (performance.now() - born > 400) finish(); };
+  addEventListener('keydown', skip, true); el.addEventListener('click', skip);
+  const auto = setTimeout(finish, 2600);
+}
 function leaveTitle() {
   if (!titleReady) return; titleReady = false;
-  Sfx.crack(); Sfx.startDrone();
+  Sfx.crack();
   pow(innerWidth / 2, innerHeight * .78, 'CRACK!', 60);
-  wipe(enterMenu);
+  setTimeout(() => studioSplash(() => { Sfx.startDrone(); enterMenu(); }), 260);
 }
 addEventListener('keydown', e => { if ($('#title').classList.contains('active')) leaveTitle(); });
 $('#title').addEventListener('click', leaveTitle);

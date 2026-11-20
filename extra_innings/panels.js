@@ -33,7 +33,7 @@ function savedSpot() {
 
 /* Loading into the game (shared by Continue / New / Load) */
 function bootGame(where, url = 'zone1.html') {
-  closePanel(); inMenu = false;
+  closePanel(); inMenu = false; if (Sfx.fadeMusic) Sfx.fadeMusic(.4);
   gsap.to('#menu', { opacity: 0, duration: .5, ease: 'power1.inOut', onComplete: () => {
     show('loader'); spireMode = 'loader';
     gsap.set('#menu', { opacity: 1 });

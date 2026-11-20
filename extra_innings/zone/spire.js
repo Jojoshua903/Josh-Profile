@@ -39,7 +39,9 @@ const SP_PAL = {
 const spPal = z => SP_PAL[z] || { fill: '#1A171C', ink: '#8A8177', acc: '#C8A060' };
 const spA = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
 const spDark = (hex, k) => { const n = parseInt(hex.slice(1), 16); return `rgb(${Math.round((n >> 16) * k)},${Math.round(((n >> 8) & 255) * k)},${Math.round((n & 255) * k)})`; };
-const spBandKnown = Zn => !Zn.fog && (pmKnown(Zn.z) || Zn.z === 'z11' || !!Zn.layer);
+// reached = the save knows the zone, or you have at least one room of it on paper (a painted layer alone
+// doesn't count: every floor in the atlas gets one, even the ones you've never set foot on)
+const spBandKnown = Zn => !Zn.fog && (pmKnown(Zn.z) || Zn.z === 'z11' || !!(Zn.shown && Zn.shown.length));
 
 
 /* ---------- the atlas ---------- */
@@ -192,6 +194,7 @@ function spBuild() {
     Zn.sx0 = Zn.bx0 + Zn.ox; Zn.sy0 = Zn.by0 + Zn.oy;   // world-sheet rect of the zone
     zones.push(Zn);
   }
+  for (const Zn of zones) if (!Zn.fog) spPaint(Zn);   // first, so the framing below knows which rooms are on paper
   // frame only the part of the tower you have actually reached; the rest is mist
   const kb = zones.filter(spBandKnown);
   if (kb.length) {
@@ -201,7 +204,6 @@ function spBuild() {
     };
   } else SP.bounds = { x0: -20, x1: 260, y0: fogY - 20, y1: 80 };
   SP.benches = benches; SP.bells = bells; SP.links = links; SP.byId = byId; SP.joins = joins;
-  for (const Zn of zones) if (!Zn.fog) spPaint(Zn);
   SP.zones = zones; SP.dirty = false;
   return zones;
 }
@@ -301,6 +303,46 @@ function spPaint(Zn) {
     }
   }
   Zn.layer = L;
+  /* room separation: a dark seam round every room, bridged where a doorway crosses into the next room,
+     so a zone reads as separate chambers instead of one solid bar (the map coordinates don't move) */
+  const shown = Zn.shown, inR = (o, tx, ty) => tx >= o.x0 && tx < o.x0 + o.tw && ty >= o.y0 && ty < o.y0 + o.th;
+  const kindOf = r => (inked.includes(r) ? 'ink' : wet.includes(r) ? 'wet' : 'sketch');
+  g.save(); g.strokeStyle = 'rgba(8,7,10,.95)'; g.lineWidth = Math.max(2, s * 0.55);
+  for (const r of shown) g.strokeRect(X(r.x0), Y(r.y0), r.tw * s, r.th * s);
+  g.restore();
+  const bridge = (r, x, y, bw, bh) => {
+    const k = kindOf(r);
+    if (k === 'ink') g.fillStyle = pal.fill; else if (k === 'wet') g.fillStyle = 'rgba(200,190,175,.18)';
+    if (k !== 'sketch') g.fillRect(x, y, bw, bh); else g.clearRect(x, y, bw, bh);
+  };
+  const seam = Math.max(2, s * 0.55);
+  for (const r of shown) {
+    // right edge (vertical doorways) and bottom edge (shafts), so each shared wall is checked once
+    for (const [edge, len] of [['r', r.th], ['b', r.tw]]) {
+      let run = -1;
+      for (let i = 0; i <= len; i++) {
+        let open = false;
+        if (i < len) {
+          const tx = edge === 'r' ? r.x0 + r.tw - 1 : r.x0 + i, ty = edge === 'r' ? r.y0 + i : r.y0 + r.th - 1;
+          const nx = edge === 'r' ? tx + 1 : tx, ny = edge === 'r' ? ty : ty + 1;
+          open = at(tx, ty) !== 1 && at(nx, ny) !== 1 && shown.some(o => o !== r && inR(o, nx, ny));
+        }
+        if (open && run < 0) run = i;
+        if (!open && run >= 0) {
+          if (edge === 'r') {
+            const x = X(r.x0 + r.tw) - seam, y = Y(r.y0 + run), bh = (i - run) * s;
+            bridge(r, x, y, seam * 2, bh);
+            g.strokeStyle = spA(pal.acc, 0.85); g.lineWidth = Math.max(1, s * 0.22); g.beginPath(); g.moveTo(x - s * 0.3, y); g.lineTo(x + seam * 2 + s * 0.3, y); g.moveTo(x - s * 0.3, y + bh); g.lineTo(x + seam * 2 + s * 0.3, y + bh); g.stroke();
+          } else {
+            const y = Y(r.y0 + r.th) - seam, x = X(r.x0 + run), bw = (i - run) * s;
+            bridge(r, x, y, bw, seam * 2);
+            g.strokeStyle = spA(pal.acc, 0.85); g.lineWidth = Math.max(1, s * 0.22); g.beginPath(); g.moveTo(x, y - s * 0.3); g.lineTo(x, y + seam * 2 + s * 0.3); g.moveTo(x + bw, y - s * 0.3); g.lineTo(x + bw, y + seam * 2 + s * 0.3); g.stroke();
+          }
+          run = -1;
+        }
+      }
+    }
+  }
 }
 
 /* ---------- camera ---------- */
@@ -376,10 +418,14 @@ function spFrame(now, cv) {
     else PM.towerSegs.push({ z: Zn.z, x0, x1, y0, y1 });
     if (!live(Zn) || x1 < -220 || x0 > w + 220 || y1 < -80 || y0 > h + 80) continue;
     const pal = spPal(Zn.z), on = Zn.z === PM.zone;
-    g.save(); g.fillStyle = spDark(pal.fill, 0.78);
+    g.save(); g.fillStyle = spDark(pal.fill, 0.65);
     if (Zn.z === 'z10') { g.shadowColor = spA(pal.acc, 0.85); g.shadowBlur = 16 + Math.sin(t * 2) * 8; }
     else if (on) { g.shadowColor = spA(pal.ink, 0.55); g.shadowBlur = 12; }
-    for (const r of Zn.shown) { const [a, b, c, d] = roomRect(Zn, r, 1); g.fillRect(a, b, c - a, d - b); }
+    // each room its own plate with a small dark gap round it, and a crisp ink border
+    const gp = clamp(zm * 0.5, 1, 3);
+    for (const r of Zn.shown) { const [a, b, c, d] = roomRect(Zn, r, 0); g.fillRect(a + gp, b + gp, c - a - gp * 2, d - b - gp * 2); }
+    g.shadowBlur = 0; g.strokeStyle = spA(pal.ink, 0.75); g.lineWidth = 2;
+    for (const r of Zn.shown) { const [a, b, c, d] = roomRect(Zn, r, 0); g.strokeRect(a + gp, b + gp, c - a - gp * 2, d - b - gp * 2); }
     g.restore();
   }
   /* pass 2: the rooms themselves, inked or sketched */
@@ -411,26 +457,43 @@ function spFrame(now, cv) {
       g.beginPath(); g.arc(x, y, jr * 0.45, 0, 7); g.fillStyle = spPal(Zx.z).acc; g.fill();
     }
   }
-  /* pass 4: each zone's name floats over it at overview and slips away as you zoom in */
+  /* pass 4: each zone's name floats above it (below it, for the underground zones) at overview and slips
+     away as you zoom in. Labels never sit on each other or on Nathan's cap: a label that would collide
+     is nudged 22px further out until it's clear. */
+  const fit = spFitZoom(w, h), nameA = clamp(1 - (zm - fit * 1.15) / Math.max(0.0001, fit * 0.8), 0, 1);
+  const subA = clamp((zm - fit * 1.05) / Math.max(0.0001, fit * 0.1), 0, 1);   // all the way out: just the name
+  const taken = [];
+  { const hz = PAGE.zoneHere(), Zh = zs.find(o => o.z === hz);
+    if (D.up.compass && Zh && !Zh.fog && Zone.room) { const c = Player.center(), [cx, cy] = S(c.x / TILE + Zh.ox, (Player.y + Player.h) / TILE + Zh.oy); taken.push([cx - 16, cy - 26, cx + 16, cy + 4]); } }
+  const under = z => z === 'z12' || z === 'z11' || z === 'z10';
   for (const Zn of zs) {
     if (!spBandKnown(Zn)) continue;
     const [x0, y0, x1, y1] = rectOf(Zn, SP_M), on = Zn.z === PM.zone, pal = spPal(Zn.z);
     if (x1 < -220 || x0 > w + 220 || y1 < -80 || y0 > h + 80) continue;
-    // centred on the rooms you know, not on the zone's bounding box (zones on one page interlock)
+    // centred over the rooms you know, not the zone's bounding box (zones on one page interlock)
     const list = Zn.shown && Zn.shown.length ? Zn.shown : Zn.rooms;
-    let ax = 0, ay = 0, an = 0;
-    for (const r of list) { const k = r.tw * r.th; ax += (r.x0 + r.tw / 2 + Zn.ox) * k; ay += (r.y0 + r.th / 2 + Zn.oy) * k; an += k; }
-    const [mx, my] = an ? S(ax / an, ay / an) : [(x0 + x1) / 2, (y0 + y1) / 2];
+    let ax = 0, an = 0, ry0 = Infinity, ry1 = -Infinity;
+    for (const r of list) { const k = r.tw * r.th; ax += (r.x0 + r.tw / 2 + Zn.ox) * k; an += k; ry0 = Math.min(ry0, r.y0 + Zn.oy); ry1 = Math.max(ry1, r.y0 + r.th + Zn.oy); }
+    const mx = an ? S(ax / an, 0)[0] : (x0 + x1) / 2;
+    const top = an ? S(0, ry0)[1] : y0, bot = an ? S(0, ry1)[1] : y1, down = under(Zn.z);
     const Zi = ZONES[Zn.z] || { name: 'The Overtime Abyss', sub: 'Secret' };
-    const fit = spFitZoom(w, h), nameA = clamp(1 - (zm - fit * 1.15) / Math.max(0.0001, fit * 0.8), 0, 1);
     if (nameA > 0.02) {
       g.save(); g.globalAlpha = nameA; g.textAlign = 'center'; g.textBaseline = 'middle';
-      g.font = `italic ${clamp(13 + zm * 2.6, 14, 26)}px "Iowan Old Style", Palatino, Georgia, serif`;
+      const fs = clamp(13 + zm * 2.6, 14, 26), sub = subA > 0.02;
+      g.font = `italic ${fs}px "Iowan Old Style", Palatino, Georgia, serif`;
+      const tw = g.measureText(Zi.name).width, lh = fs + (sub ? 16 : 4);
+      let my = down ? bot + 16 + fs / 2 : top - 14 - (sub ? 16 : 0) - fs / 2;
+      const box = yy => [mx - tw / 2 - 6, yy - fs / 2 - 2, mx + tw / 2 + 6, yy - fs / 2 + lh];
+      for (let k = 0; k < 10 && taken.some(T => { const B = box(my); return B[0] < T[2] && B[2] > T[0] && B[1] < T[3] && B[3] > T[1]; }); k++) my += down ? 22 : -22;
+      taken.push(box(my));
       g.lineWidth = 4; g.strokeStyle = 'rgba(8,7,10,.85)'; g.strokeText(Zi.name, mx, my);
       g.fillStyle = on ? '#F3EAD8' : 'rgba(233,226,208,.78)'; g.fillText(Zi.name, mx, my);
-      const pct = q.zonePct && q.zonePct[Zn.z];
-      g.font = `${clamp(9 + zm, 10, 13)}px "Iowan Old Style", Palatino, Georgia, serif`; g.fillStyle = spA(pal.acc, on ? 0.95 : 0.55);
-      g.fillText([Zi.sub.split(' · ')[0], pct !== undefined ? `${pct}%` : ''].filter(Boolean).join(' · '), mx, my + clamp(13, zm * 7, 22));
+      if (sub) {
+        const pct = q.zonePct && q.zonePct[Zn.z];
+        g.globalAlpha = nameA * subA;
+        g.font = `${clamp(9 + zm, 10, 13)}px "Iowan Old Style", Palatino, Georgia, serif`; g.fillStyle = spA(pal.acc, on ? 0.95 : 0.55);
+        g.fillText([Zi.sub.split(' · ')[0], pct !== undefined ? `${pct}%` : ''].filter(Boolean).join(' · '), mx, my + fs / 2 + 9);
+      }
       g.restore();
     }
     if (on) {   // gold corner brackets round the chosen zone
@@ -440,7 +503,7 @@ function spFrame(now, cv) {
   }
   // the mist: everything above the highest floor you have reached is still a rumour
   const topKnown = zs.filter(spBandKnown).reduce((m, Zn) => Math.min(m, S(Zn.sx0, Zn.sy0)[1]), h);
-  const mistBot = topKnown + 30, mistTop = topKnown - 260;
+  const mistBot = topKnown - 56, mistTop = topKnown - 320;   // stops short of the top zone's name, which now floats above it
   const mg = g.createLinearGradient(0, mistTop, 0, mistBot);
   mg.addColorStop(0, 'rgba(11,10,14,1)'); mg.addColorStop(0.6, 'rgba(11,10,14,.9)'); mg.addColorStop(1, 'rgba(11,10,14,0)');
   g.fillStyle = mg; g.fillRect(0, 0, w, Math.max(0, mistBot));

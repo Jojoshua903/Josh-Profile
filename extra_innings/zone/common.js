@@ -219,6 +219,7 @@ function roomToast(name) {
 function zoneTitle(main, sub) {
   const el = $('#zoneTitle'); $('#zoneMain').textContent = main; $('#zoneSub').textContent = sub || '';
   el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  try { SFX.arrive(); } catch (e) { logErr("zone/common.js:zoneTitle", e); }
 }
 const BossBar = {
   show(name) {
@@ -511,6 +512,7 @@ function saveSpin() {
     document.body.appendChild(el);
   }
   el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  try { SFX.arrive(); } catch (e) { logErr("zone/common.js:zoneTitle", e); }
 }
 function respawnAtBench() {
   forgetKills();   // waking up at a bench counts as resting
@@ -565,14 +567,17 @@ function step(dt) {
   }
 
   if (!Story.active) {
-    for (const e of Enemies) if (!e.dead) e.update(dt);
+    // anything an enemy, shot or ball sounds while it updates is panned to where it is
+    for (const e of Enemies) if (!e.dead) { SFX.from(e.x + e.w / 2); e.update(dt); }
+    SFX.from(null);
     if (!P.dead && !P.hazard) {
       const hb = P.hurtbox();
       for (const e of Enemies) if (!e.dead && e.harmful && !e.untargetable && overlap(hb, { x: e.x + 4, y: e.y + 4, w: e.w - 8, h: e.h - 8 }))
         P.hurt(sgn(P.x + P.w / 2 - (e.x + e.w / 2)) || 1);
     }
-    for (const b of Bolts) b.update(dt);
-    for (const b of Balls) b.update(dt);
+    for (const b of Bolts) { SFX.from(b.x); b.update(dt); }
+    for (const b of Balls) { SFX.from(b.x); b.update(dt); }
+    SFX.from(null);
     updateHazards(dt);
     updateLasers(dt);
     if (PAGE.update) PAGE.update(dt);
@@ -580,7 +585,8 @@ function step(dt) {
   for (let i = Bolts.length - 1; i >= 0; i--) if (Bolts[i].dead) Bolts.splice(i, 1);
   for (let i = Balls.length - 1; i >= 0; i--) if (Balls[i].dead) Balls.splice(i, 1);
   for (let i = Enemies.length - 1; i >= 0; i--) if (Enemies[i].dead && Enemies[i] !== Zone.boss) Enemies.splice(i, 1);
-  for (const n of NPCs) n.update(dt);
+  for (const n of NPCs) { SFX.from(n.x); n.update(dt); }
+  SFX.from(null);
   for (let i = NPCs.length - 1; i >= 0; i--) if (NPCs[i].gone) NPCs.splice(i, 1);
   updatePickups(dt);
 
@@ -682,7 +688,7 @@ function loop(now) {
   try {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;   // a background tab never dumps a huge step on the physics
   if (started && !UI.modal) {
-    acc += dt;
+    acc += dt * (Game.timeK || 1);   // timeK: the ball wheel (zone/arsenal.js) slows time to half while it is open
     let n = 0;
     while (acc >= STEP && n < 24) { step(STEP); acc -= STEP; n++; }
     if (n >= 24) acc = 0;

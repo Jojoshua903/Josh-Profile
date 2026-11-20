@@ -210,6 +210,14 @@ class RogueServer {
     if (this.cornered) return;
     const fast = this.hp <= this.maxHp / 2 ? 0.72 : 1;
     const P = Player, arena = ROOM.server.px;
+    // hugging the heap (standing next to it or riding on top) is no longer safe: after ~1.2s up close it
+    // stops what it's doing (between attacks) and discharges a static pulse round its whole body
+    const near = this.near();
+    this.hugT = near ? (this.hugT || 0) + dt : Math.max(0, (this.hugT || 0) - dt * 1.5);
+    this.pulseCd = Math.max(0, (this.pulseCd || 0) - dt);
+    if (this.hugT > 1.2 && this.pulseCd <= 0 && (this.state === 'idle' || this.state === 'summon')) {
+      this.state = 'pulse'; this.t = 0.5 * (fast < 1 ? 0.85 : 1); this.hugT = 0; SFX.staticBuzz(0.5);
+    }
     switch (this.state) {
       case 'wake': if (this.t <= 0) { this.state = 'idle'; this.t = 0.6; } break;
       case 'idle':
@@ -254,6 +262,17 @@ class RogueServer {
           this.state = 'idle'; this.t = 1.3 * fast;
         }
         break;
+      case 'pulse':
+        if (this.t <= 0) {
+          const cx = this.x + this.w / 2, cy = this.y + this.h * 0.55;
+          ring(cx, cy, 30, 190, 0.35, '#6fd3ff', 6); ring(cx, cy, 20, 150, 0.3, '#ffffff', 3);
+          burst(cx, cy, 24, { colors: ['#6fd3ff', '#ffffff', '#ff4a3a'], maxSpeed: 520, maxLife: 0.35 });
+          SFX.staticBuzz(0.3); SFX.smallBoom(); addShake(8);
+          pop(cx, this.y - 20, 'ZZZAP!', { size: 38, color: '#6fd3ff' });
+          if (this.near(16)) Player.hurt(sgn(P.x + P.w / 2 - cx) || 1);
+          this.state = 'idle'; this.t = 0.8 * fast; this.pulseCd = 2.2;
+        }
+        break;
       case 'laser': {
         const L = this.laser; L.t -= dt;
         if (L.ph === 'warn' && L.t <= 0) { L.ph = 'fire'; L.t = 1.2; SFX.laser(); addShake(5); }
@@ -271,6 +290,11 @@ class RogueServer {
       Hazards.length = 0; for (const e of Enemies) if (e.type === 'drone') { e.dead = true; burst(e.x + 15, e.y + 13, 10, { color: '#ff4a3a' }); }
       Story.bossFinale(this);
     }
+  }
+  // is Nathan right up against the heap (or on top of it)? `pad` grows the zone when the pulse goes off
+  near(pad = 0) {
+    const P = Player, hb = P.hurtbox();
+    return !P.dead && overlap(hb, { x: this.x - 70 - pad, y: this.y - 60 - pad, w: this.w + 140 + pad * 2, h: this.h + 60 + pad });
   }
   laserRect() {
     const arena = ROOM.server.px, cx = this.x + this.w / 2, L = this.laser;
@@ -321,6 +345,20 @@ class RogueServer {
       ctx.beginPath(); ctx.arc(x + w / 2, y + 118, 13 + Math.sin(this.anim * 6) * 2, 0, 7); inked('#ffb0a0', 3);
     }
     ctx.restore();
+    // static pulse wind-up: blue sparks crawl over the heap and a ring marks how far it reaches
+    if (this.state === 'pulse') {
+      const k = 1 - Math.max(0, this.t) / 0.5;
+      ctx.save();
+      ctx.strokeStyle = `rgba(111,211,255,${0.25 + 0.45 * (Math.sin(Game.time * 40) > 0 ? 1 : 0.4)})`; ctx.lineWidth = 3; ctx.setLineDash([10, 8]);
+      ctx.strokeRect(x - 70, y - 60, w + 140, h + 60); ctx.setLineDash([]);
+      for (let i = 0; i < 4; i++) {
+        let px = x + Math.random() * w, py = y + 40 + Math.random() * (h - 40);
+        ctx.strokeStyle = Math.random() < 0.5 ? '#6fd3ff' : '#ffffff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px, py);
+        for (let s = 0; s < 4; s++) { px += rand(-18, 18) * (1 + k); py += rand(-18, 18); ctx.lineTo(px, py); }
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
     // laser warning / beam
     if (this.laser) {
       const L = this.laser, r = this.laserRect();

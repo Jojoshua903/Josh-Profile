@@ -114,7 +114,7 @@ const Story = {
         const before = Math.floor(b.shown);
         b.shown = Math.min(b.text.length, b.shown + dt * 44 * (held ? 3.5 : 1));   // hold to fast-forward
         const now = Math.floor(b.shown);
-        if (now !== before && now % 2 === 0 && b.text[now] !== ' ') SFX.voice(b.voice);
+        if (now !== before && now % 2 === 0 && b.text[now] !== ' ') SFX.voice(b.voice, b.who);
         // a little breath after punctuation, so lines land with rhythm
         const ch = b.text[now - 1];
         if (now !== before && now < b.text.length && b.text[now] === ' ' && /[.!?…,—]/.test(ch)) b.pause = ch === ',' ? 0.07 : 0.22;
@@ -128,7 +128,10 @@ const Story = {
       if (Input.down('attack')) this.skipHold += dt; else this.skipHold = Math.max(0, this.skipHold - dt * 2);
       if (this.skipHold > 1.1) { this.skipHold = 0; this.skip(); }
     }
-    this.letterbox = approach(this.letterbox, this.active ? 1 : 0, dt * 3);
+    // the bars also frame a boss intro, and slide away the moment the fight starts (the first swing, or ~1.6s)
+    if (this.bossCard && Player.attackT > 0) this.bossCard.fight = true;
+    const bossLB = !!this.bossCard && !this.bossCard.fight && this.bossCard.t < 1.6;
+    this.letterbox = approach(this.letterbox, this.active || bossLB ? 1 : 0, dt * 3);
     const I = this.intro;
     I.black = approach(I.black, I.blackTarget, dt * 0.8);
     I.flash = Math.max(0, I.flash - dt * 1.6); I.bolt = Math.max(0, I.bolt - dt * 1.2);
@@ -138,7 +141,7 @@ const Story = {
     if (this.beam) this.beam.t += dt;
     // cinematic camera: a gentle push-in while a scene plays, tighter when it frames something
     const flat = typeof Scene !== 'undefined' && Scene.on;
-    const zt = this.zoomTarget !== null ? this.zoomTarget : this.active ? (this.camTarget ? 1.12 : 1.07) : 1;
+    const zt = this.zoomTarget !== null ? this.zoomTarget : this.active ? (this.camTarget ? 1.12 : 1.07) : bossLB ? 1.04 : 1;
     this.zoom += (zt - this.zoom) * (1 - Math.exp(-dt * 2.4));
     this.punchZ *= Math.exp(-dt * 6);
     // the key light follows whoever is talking, easing between speakers
@@ -248,7 +251,7 @@ const Story = {
     ctx.font = F;
     const lines = wrapText(b.text, 330), lh = 23;
     const w = Math.min(410, Math.max(180, Math.max(...lines.map(l => ctx.measureText(l).width)) + 56)), h = lines.length * lh + 40;
-    const top = VH * 0.11 * this.letterbox + 40;
+    const top = this.barH() * this.letterbox + 40;
     const bx = clamp(a.x - w / 2, 20, VW - w - 20);
     let by = a.y - 34 - h, below = false;
     if (by < top) { by = Math.max(top, a.y + 46); below = true; }   // speaker near the top: hang the bubble underneath
@@ -425,7 +428,7 @@ const Story = {
     if (flat) { this.drawDialogue(); if (L > 0.01) this.drawBars(L); }
     if (this.card) this.drawCard(this.card);
     if (this.bossCard) this.drawBossCard(this.bossCard);
-    const barY = VH - VH * 0.055 * L;
+    const barY = VH - this.barH() * 0.5 * L;
     if (this.skippable && !this.skipping) {
       ctx.font = `13px ${DISPLAY_FONT}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       ctx.fillStyle = `rgba(243,234,216,${0.45 + this.skipHold * 0.5})`;
@@ -510,8 +513,10 @@ const Story = {
     ctx.fillStyle = core; ctx.fillRect(K.x - 90, K.y - 96, 180, 180);
     ctx.restore();
   },
+  // the full height of one letterbox bar: 45 screen pixels, whatever the window size
+  barH() { return Math.min(VH * 0.11, 45 * DPR / (SCALE || 1)); },
   drawBars(L) {
-    const e = L * L * (3 - 2 * L), h = VH * 0.11 * e;
+    const e = L * L * (3 - 2 * L), h = this.barH() * e;
     for (const [y0, y1] of [[0, h], [VH - h, VH]]) {
       const g = ctx.createLinearGradient(0, y0, 0, y1);
       g.addColorStop(0, y0 === 0 ? '#050308' : '#140d18'); g.addColorStop(1, y0 === 0 ? '#140d18' : '#050308');
@@ -806,7 +811,7 @@ const Story = {
       Object.assign(this.intro, { black: 0, blackTarget: 0, flash: 0, bolt: 0, ball: null, memory: null, lids: 0 });
       this.jumbo.on = false; Player.lie = 0; Player.noBat = false;
       Save.data.introSeen = true; saveGame();
-      zoneTitle('THE SCRAPYARD DUGOUT', 'Zone 1 · The Lower Bracket');
+      Save.data.seenZones.z1 = 1; zoneTitle('THE SCRAPYARD DUGOUT', 'Zone 1 · The Lower Bracket');
     });
   },
 

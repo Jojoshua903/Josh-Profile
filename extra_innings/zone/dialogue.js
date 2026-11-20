@@ -19,7 +19,7 @@ Story.drawDialogue = function () {
   const b = this.bubble; if (!b) { DLG.last = null; return; }
   if (DLG.last !== b) { DLG.last = b; DLG.bornAt = Game.time; }
   const age = Game.time - DLG.bornAt, col = this.tagColors[b.who] || FLAME;
-  const L = this.letterbox, e = L * L * (3 - 2 * L), floor = VH - VH * 0.11 * e - 14;
+  const L = this.letterbox, e = L * L * (3 - 2 * L), floor = VH - this.barH() * e - 14;
   const F = b.font || `18px ${SERIF_FONT}`;
   ctx.save();
   ctx.font = F;
@@ -111,40 +111,4 @@ Story.drawDialogue = function () {
   ctx.restore();
 };
 
-/* ---------- a voice per character ---------- */
-const DLG_VOICES = {
-  // Lars: low, heavy, a little gravel
-  LARS(A, t, p) {
-    const o = A.ctx.createOscillator(), f = A.ctx.createBiquadFilter(), g = A.ctx.createGain();
-    o.type = 'sawtooth'; o.frequency.setValueAtTime(72 + Math.random() * 18, t); o.frequency.exponentialRampToValueAtTime(58, t + 0.09);
-    f.type = 'lowpass'; f.frequency.value = 420; f.Q.value = 4;
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.09 * p, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
-    o.connect(f).connect(g).connect(A.out); o.start(t); o.stop(t + 0.12);
-  },
-  // Josh: two quick square chirps, like a modem with opinions
-  JOSH(A, t, p) {
-    for (let i = 0; i < 2; i++) {
-      const o = A.ctx.createOscillator(), g = A.ctx.createGain(), s = t + i * 0.022;
-      o.type = 'square'; o.frequency.setValueAtTime([880, 1320, 1760, 1175][(Math.random() * 4) | 0], s);
-      g.gain.setValueAtTime(0.022 * p, s); g.gain.setValueAtTime(0.0001, s + 0.018);
-      o.connect(g).connect(A.out); o.start(s); o.stop(s + 0.02);
-    }
-  },
-  // Reshman: a wet downward blorp
-  RESHMAN(A, t, p) {
-    const o = A.ctx.createOscillator(), g = A.ctx.createGain();
-    o.type = 'sine'; o.frequency.setValueAtTime(360 + Math.random() * 60, t); o.frequency.exponentialRampToValueAtTime(110, t + 0.11);
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.08 * p, t + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.13);
-    o.connect(g).connect(A.out); o.start(t); o.stop(t + 0.15);
-  },
-};
-const _dlgVoice = SFX.voice;
-SFX.voice = function (pitch) {
-  const b = Story.bubble, fn = b && DLG_VOICES[b.who];
-  const A = fn && typeof SFX.audio === 'function' ? SFX.audio() : null;
-  if (!A) return _dlgVoice.apply(this, arguments);
-  const vol = typeof SFX.sfxVolume === 'number' ? SFX.sfxVolume : 1;
-  if (vol <= 0.01) return;
-  try { fn(A, A.ctx.currentTime, vol); }
-  catch (e) { logErr('dialogue: voice', e); return _dlgVoice.apply(this, arguments); }
-};
+/* the character voices (Josh, Lars, Fionn, Deniz, Reshman) now live in game/audio.js, next to the other sounds */

@@ -183,6 +183,6 @@ buildZone();
 })();
 PAGE.start = () => {
   if (!Save.data.introSeen) Story.playIntro();
-  else { Game.fade = 1; Game.fadeTarget = 0; SFX.bench(); zoneTitle(Zone.room.name.toUpperCase(), 'The Scrapyard Dugout'); }
+  else { Game.fade = 1; Game.fadeTarget = 0; SFX.bench(); if (!Save.data.seenZones.z1) { Save.data.seenZones.z1 = 1; zoneTitle(Zone.room.name.toUpperCase(), 'The Scrapyard Dugout'); } }
 };
 runPage();

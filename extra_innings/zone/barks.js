@@ -19,7 +19,7 @@ const Bark = {
     if ((this.cd[key] || -99) > now - (o.cooldown || 4)) return false;
     this.cd[key] = now;
     const words = text.split(/\s+/).length;
-    SFX.babble(V.pitch, Math.max(2, Math.min(7, Math.round(words * 1.6))), /!$/.test(text));
+    SFX.babble(V.pitch, Math.max(2, Math.min(7, Math.round(words * 1.6))), /!$/.test(text), who);
     if (at) { this.list = this.list.filter(b => b.who !== who); this.list.push({ who, text, at, t: 0, life: o.dur || 1.6, color: V.color }); }
     return true;
   },

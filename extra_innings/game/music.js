@@ -12,8 +12,10 @@
 const Music = (() => {
   let A = null, bus, duckG, cutG, motifL, noiseBuf, distCurve;
   let vol = 0.8, cur = null, fading = [], forced, spotT = -99, timer = null;
+  // the live tempo/key push in a boss's last 30%: rate multiplies the BPM, keyShift moves every note
+  let rate = 1, keyShift = 0, bossK = 1, musSend = null;
   try { const v = localStorage.getItem('mpz_music'); if (v !== null) vol = +v; } catch (e) { logErr("game/music.js:15", e); }
-  const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+  const mtof = m => 440 * Math.pow(2, (m + keyShift - 69) / 12);
   const rnd = (a, b) => a + Math.random() * (b - a);
   const at = (b, P) => P[b % P.length];
 
@@ -24,6 +26,8 @@ const Music = (() => {
     bus = c.createGain(); bus.gain.value = vol;
     duckG = c.createGain(); cutG = c.createGain();
     bus.connect(duckG).connect(cutG).connect(a.out);
+    // part of the music rings out in the same stadium room as the effects
+    if (a.room) { musSend = c.createGain(); musSend.gain.value = 0.2; cutG.connect(musSend).connect(a.room); }
     noiseBuf = c.createBuffer(1, c.sampleRate * 4, c.sampleRate);
     const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     distCurve = new Float32Array(1024); for (let i = 0; i < 1024; i++) { const x = i / 512 - 1; distCurve[i] = (1 + 30) * x / (1 + 30 * Math.abs(x)); }
@@ -46,6 +50,7 @@ const Music = (() => {
     if (o.det) os.detune.value = o.det;
     if (o.vib) { const lfo = c.createOscillator(), lg = c.createGain(); lfo.frequency.value = o.vib[0]; lg.gain.value = o.vib[1]; lfo.connect(lg).connect(os.frequency); lfo.start(t); lfo.stop(t + dur + 0.1); }
     let n = os;
+    if ((type === 'sawtooth' || type === 'square') && !o.lp && !o.bp) o = Object.assign({ lp: 3500 }, o);   // warmth: no fizzy edges
     if (o.dist) { const ws = c.createWaveShaper(); ws.curve = distCurve; n.connect(ws); n = ws; }
     if (o.lp) { const fl = c.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.setValueAtTime(o.lp, t); if (o.lpTo) fl.frequency.exponentialRampToValueAtTime(o.lpTo, t + dur); fl.Q.value = o.q || 0.7; n.connect(fl); n = fl; }
     if (o.bp) { const fl = c.createBiquadFilter(); fl.type = 'bandpass'; fl.frequency.value = o.bp; fl.Q.value = o.q || 2; n.connect(fl); n = fl; }
@@ -351,6 +356,45 @@ const Music = (() => {
         if (MEL[s]) V.flute(L, t, MEL[s], I.sd * 3.5, 0.022);
       } },
   };
+  /* ---------- the computed layer: each zone picks its own notes from its own scale ----------
+     On top of every composed track a quiet voice wanders through that zone's scale (a random walk,
+     so it never repeats exactly): note n → 440 · 2^((n − 69) / 12) like everything else. */
+  const SCALES = {
+    minPent: [0, 3, 5, 7, 10], lydian: [0, 2, 4, 6, 7, 9, 11], harmMin: [0, 2, 3, 5, 7, 8, 11],
+    whole: [0, 2, 4, 6, 8, 10], phrygDom: [0, 1, 4, 5, 7, 8, 10],
+  };
+  const deg = (root, S, d) => root + S[((d % S.length) + S.length) % S.length] + 12 * Math.floor(d / S.length);
+  const walk = (I, lo, hi) => { I.gw = Math.max(lo, Math.min(hi, (I.gw === undefined ? lo + 2 : I.gw) + [-2, -1, -1, 1, 1, 2][(Math.random() * 6) | 0])); return I.gw; };
+  // a two-operator FM bell: a sine whose pitch is wobbled by another sine 3.5× higher, the wobble dying fast
+  function fm(L, t, m, d, v) {
+    const c = A.ctx, f = mtof(m), car = c.createOscillator(), mod = c.createOscillator(), mg = c.createGain(), g = c.createGain();
+    car.type = 'sine'; mod.type = 'sine'; car.frequency.value = f; mod.frequency.value = f * 3.5;
+    mg.gain.setValueAtTime(f * 2.2, t); mg.gain.exponentialRampToValueAtTime(f * 0.05, t + d * 0.6);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    mod.connect(mg).connect(car.frequency); car.connect(g); g.connect(L.dry); g.connect(L.wet);
+    car.start(t); mod.start(t); car.stop(t + d + 0.05); mod.stop(t + d + 0.05);
+  }
+  const GEN = {
+    // the Scrapyard: warm minor pentatonic, plucked short like an acoustic guitar
+    camp(s, t, b, L, I) { if ([2, 6, 11, 14].includes(s) && Math.random() < 0.55) V.pluck(L, t, deg(57, SCALES.minPent, walk(I, 0, 8)), 0.32, 0.013, 1); },
+    industrial(s, t, b, L, I) { if ((s === 6 || s === 14) && Math.random() < 0.35) V.pluck(L, t, deg(57, SCALES.minPent, walk(I, 0, 7)), 0.3, 0.011, 1); },
+    // the Geode Caverns: floating Lydian, high FM bells in a lot of room
+    geode(s, t, b, L, I) { if (s % 4 === 2 && Math.random() < 0.6) fm(L, t, deg(76, SCALES.lydian, walk(I, 0, 9)), 1.6, 0.012); },
+    // the Storm Atrium: fast arpeggios through the bar's chord, harmonic minor (the A major bar brings the C#)
+    storm(s, t, b, L, I) {
+      if (b % 2 === 0) return;
+      const C = at(b, [[50, 53, 57], [46, 50, 53], [43, 46, 50], [45, 49, 52]]);
+      V.harpsi(L, t, C[s % 3] + 24 + (s >= 8 ? 12 : 0), 0.008, 1);
+    },
+    // the Glacier Crown: slow, thin whole-tone glints (when the crown breaks the track itself turns to reggae)
+    glacier(s, t, b, L, I) { if ((s === 0 || s === 8) && Math.random() < 0.5) V.bell(L, t, deg(76, SCALES.whole, walk(I, 0, 7)), 0.012); },
+    // Evil Adam: a 55 Hz sub on every beat and Phrygian dominant stabs
+    evil(s, t, b, L, I) {
+      if (s % 4 === 0) osc(L, 'sine', 55, t, 0.28, 0.14, { a: 0.006 });
+      if ((s === 2 || s === 10) && Math.random() < 0.5) V.violin(L, t, deg(64, SCALES.phrygDom, walk(I, 0, 8)), I.sd * 2, 0.01, 1);
+    },
+  };
+
   // older names still used by story scripts
   const LEGACY = { choir: 'stadium', core: 'rain', coreWar: 'anthem' };
 
@@ -411,12 +455,13 @@ const Music = (() => {
       const cx = P.x + P.w / 2, cy = P.y + P.h / 2, B = typeof Zone !== 'undefined' ? Zone.boss : null;
       for (const e of Enemies) {
         if (e.dead || e === B || !e.harmful || !(e.hp > 0) || e.type === 'boss') continue;
-        if (e.engaged || Math.hypot(e.x + e.w / 2 - cx, e.y + e.h / 2 - cy) < 340) { spotT = now; break; }
+        if (e.engaged || Math.hypot(e.x + e.w / 2 - cx, e.y + e.h / 2 - cy) < 400) { spotT = now; break; }
       }
     }
     return now - spotT < 3 ? 1 : 0;
   }
 
+  const ROOMY = { geode: 0.38, quarry: 0.28, storm: 0.3, stadium: 0.3, hush: 0.34, evil: 0.26, rain: 0.3, concourse: 0.24, glacier: 0.26 };
   /* ---------- the look-ahead scheduler ---------- */
   function startTrack(name) {
     const T = TRACKS[name], c = A.ctx, now = c.currentTime, sd = 60 / T.bpm / 4;
@@ -435,6 +480,7 @@ const Music = (() => {
     try {
       inst.T.calm(s, t, b, inst.calm, inst);
       if (inst.T.act && inst.actLv > 0) inst.T.act(s, t, b, inst.act, inst);
+      if (GEN[inst.name]) GEN[inst.name](s, t, b, inst.calm, inst);
     } catch (e) { logErr("game/music.js:438", e); /* a bad note never stops the game */ }
     inst.step++; inst.next += inst.sd;
   }
@@ -442,9 +488,18 @@ const Music = (() => {
     if (!init()) return;
     const c = A.ctx; if (c.state !== 'running') return;
     const want = pick(), now = c.currentTime;
-    if ((cur ? cur.name : null) !== (want && TRACKS[want] ? want : null)) { if (cur) stopTrack(cur); cur = want && TRACKS[want] ? startTrack(want) : null; }
+    if ((cur ? cur.name : null) !== (want && TRACKS[want] ? want : null)) {
+      if (cur) stopTrack(cur); cur = want && TRACKS[want] ? startTrack(want) : null;
+      // how much room each place has: a crystal cathedral, a stadium, a tight vent
+      if (cur) { try { SFX.room(ROOMY[cur.name] || 0.16); } catch (e) { /* */ } if (musSend) musSend.gain.setTargetAtTime(0.12 + cur.T.echo * 0.25, now, 0.5); }
+    }
     if (cur) {
       cur.boss = fighting();
+      // a boss under 30% HP: the tempo is pushed up live (120 → 145 BPM is ×1.21) and the key rises a half step
+      const push = cur.boss && bossK < 0.3, goal = push ? 145 / 120 : 1;
+      rate += (goal - rate) * 0.04; if (Math.abs(goal - rate) < 0.002) rate = goal;
+      keyShift = push ? 1 : 0;
+      cur.sd = 60 / (cur.T.bpm * rate) / 4;
       const a = cur.T.act ? actionTarget() : 0;
       if (a !== cur.actLv) { cur.actLv = a; cur.act.fade.gain.cancelScheduledValues(now); cur.act.fade.gain.setTargetAtTime(a ? 1 : 0.0001, now, a ? 0.3 : 1.1); }
       if (cur.next < now) cur.next = now + 0.02;   // the tab was asleep: pick up cleanly instead of bursting
@@ -467,7 +522,18 @@ const Music = (() => {
     }
     if (typeof Story !== 'undefined' && Story.say) {
       const say = Story.say;
-      Story.say = function (who, text, anchor, opts) { if (!this.skipping) { Music.duck(); Music.motif(who); } return say.call(this, who, text, anchor, opts); };
+      // the first line of a scene ducks hard; the lines after it only lean the music back a little
+      Story.say = function (who, text, anchor, opts) { if (!this.skipping) { if (!this.lastWho) Music.duck(); else Music.duck(0.2, 1); Music.motif(who); } return say.call(this, who, text, anchor, opts); };
+    }
+    // the boss bar tells the music how much fight is left (for the last-30% tempo push), and a boss's roar ducks it
+    if (typeof BossBar !== 'undefined') {
+      const set = BossBar.set, hide = BossBar.hide;
+      BossBar.set = function (k) { bossK = typeof k === 'number' && isFinite(k) ? k : 1; return set.apply(this, arguments); };
+      BossBar.hide = function () { bossK = 1; return hide.apply(this, arguments); };
+    }
+    if (typeof Story !== 'undefined' && Story.bossIntro) {
+      const intro = Story.bossIntro;
+      Story.bossIntro = function () { Music.duck(0.65, 0.6); return intro.apply(this, arguments); };
     }
     // a Music slider next to the pause menu's volume
     const vr = document.getElementById('vol');
@@ -483,13 +549,25 @@ const Music = (() => {
   return {
     force(kind) { forced = kind === null ? null : (LEGACY[kind] || kind); },
     release() { forced = undefined; },
-    duck(amount = 0.2, dur = 1) {
+    // ducking: down to 35% in 0.08s, held for `dur`, then eased back to 100% (a boss roar, a scene starting, a Grand Slam)
+    duck(amount = 0.65, dur = 0.6) {
       if (!bus) return; const now = A.ctx.currentTime, g = duckG.gain;
-      g.cancelScheduledValues(now); g.setTargetAtTime(1 - amount, now, 0.04); g.setTargetAtTime(1, now + dur, 0.25);
+      g.cancelScheduledValues(now); g.setValueAtTime(g.value, now); g.setTargetAtTime(1 - amount, now, 0.027); g.setTargetAtTime(1, now + 0.08 + dur, 0.2);
     },
     cut(dur = 0.2) {
       if (!bus) return; const now = A.ctx.currentTime, g = cutG.gain;
       g.cancelScheduledValues(now); g.setValueAtTime(0, now); g.setValueAtTime(0, now + dur); g.linearRampToValueAtTime(1, now + dur + 0.12);
+    },
+    // a smooth level change over `dur` seconds: 0 before a loading screen, ~0.4 under a menu, 1 to come back
+    fadeTo(level = 0, dur = 0.4) {
+      if (!bus) return; const now = A.ctx.currentTime, g = cutG.gain;
+      g.cancelScheduledValues(now); g.setValueAtTime(g.value, now); g.linearRampToValueAtTime(Math.max(0, level), now + dur);
+    },
+    // down and back up again: the music steps aside while a boss arena seals
+    dip(dur = 0.4, hold = 0.25) {
+      if (!bus) return; const now = A.ctx.currentTime, g = cutG.gain;
+      g.cancelScheduledValues(now); g.setValueAtTime(g.value, now); g.linearRampToValueAtTime(0, now + dur);
+      g.setValueAtTime(0, now + dur + hold); g.linearRampToValueAtTime(1, now + dur * 2 + hold);
     },
     motif(who) {
       if (!bus || !MOTIFS[who]) return;

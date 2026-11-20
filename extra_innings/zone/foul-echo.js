@@ -2,8 +2,8 @@
 /* =========================================================
    FOUL ECHO & CURVEBALL (every story page)
    · the Curveball (Coach Maya, act/bullpen.js): once you have it,
-     a smacked kinetic ball bends toward the nearest target in front
-     of you. A curved ball carries `curve`, which slips past shields
+     the Curveball ball type (10 Hype, tagged in zone/arsenal.js) breaks 90°
+     after 0.3s, or hunts a target. A curved ball carries `curve`, which slips past shields
      (Catcher Bot masks, the armoured switch in the Pump Room).
    · the Foul Echo: when Nathan strikes out, every Scrap Bolt he was
      carrying stays behind with a shadowy echo of him, and his Hype
@@ -29,28 +29,39 @@ function feCurveTarget(b) {
   }
   return best;
 }
+// the Curveball is its own ball type now (zone/arsenal.js tags it kind 'curve', 10 Hype):
+// it flies straight for 0.3s, then breaks 90° the way you hold up or down. Hold neither and it
+// hunts the nearest target in front instead. Every curveball carries `curve`, so it slips past shields.
 const _feBallUpd = Ball.prototype.update;
 Ball.prototype.update = function (dt) {
-  if (this.state === 'shot' && !this.boom && !this.skipper && Save.data.up.curve) {
-    if (this.curveInit === undefined) {
-      this.curveInit = true;
-      const T = feCurveTarget(this);
-      if (T) {
-        this.curve = true; this.target = T; this.life = Math.max(this.life, 0.8);
-        // it leaves the bat bent away from the line, then breaks back in
-        const side = (this.vx >= 0 ? -1 : 1) * 0.5, c = Math.cos(side), s = Math.sin(side);
-        const vx = this.vx * c - this.vy * s, vy = this.vx * s + this.vy * c; this.vx = vx; this.vy = vy;
+  if (this.state === 'shot' && this.kind === 'curve') {
+    if (this.cvT === undefined) { this.cvT = 0.3; this.curve = true; this.life = Math.max(this.life, 0.95); }
+    else if (this.cvT > 0) {
+      this.cvT -= dt;
+      if (this.cvT <= 0) {
+        const up = Input.down('up'), dn = Input.down('down'), sp = Math.hypot(this.vx, this.vy) || 1, dx = this.vx / sp, dy = this.vy / sp;
+        if (up || dn) {
+          const want = up ? -1 : 1;
+          let nx, ny;
+          if (Math.abs(dy) > 0.8) { nx = Player.facing || 1; ny = 0; }        // already flying up or down: break sideways
+          else { const a = [-dy, dx], b = [dy, -dx]; [nx, ny] = (a[1] * want > b[1] * want) ? a : b; }
+          const v = Math.max(1100, sp); this.vx = nx * v; this.vy = ny * v; this.life = Math.max(this.life, 0.6);
+          pop(this.x, this.y - 14, 'BREAK!', { size: 22, color: '#6fd3ff', burst: false, vy: -40 });
+          burst(this.x, this.y, 10, { colors: ['#6fd3ff', '#bfefff'], maxSpeed: 260 });
+        } else this.target = feCurveTarget(this);
       }
-    } else if (this.curve) {
-      const T = this.target && !this.target.dead ? this.target : (this.target = feCurveTarget(this));
+    } else if (this.target) {
+      const T = !this.target.dead ? this.target : (this.target = feCurveTarget(this));
       if (T) {
         const sp = Math.hypot(this.vx, this.vy) || 1, want = Math.atan2(T.y + T.h / 2 - this.y, T.x + T.w / 2 - this.x), cur = Math.atan2(this.vy, this.vx);
         let da = want - cur; while (da > Math.PI) da -= Math.PI * 2; while (da < -Math.PI) da += Math.PI * 2;
         const a = cur + clamp(da, -7 * dt, 7 * dt), v = Math.max(1100, sp * 0.995);
         this.vx = Math.cos(a) * v; this.vy = Math.sin(a) * v;
       }
-      if (Math.random() < 0.7) spawnParticle({ x: this.x, y: this.y, vx: rand(-30, 30), vy: rand(-30, 30), life: 0.3, size: rand(2, 3.5), color: '#5fd6c0', type: 'dot' });
     }
+    // a swirl of water-blue mist
+    const k = (this.cvSpin = (this.cvSpin || 0) + dt * 18);
+    if (Math.random() < 0.85) spawnParticle({ x: this.x + Math.cos(k) * 9, y: this.y + Math.sin(k) * 9, vx: rand(-20, 20), vy: rand(-20, 20), life: 0.35, size: rand(2, 4), color: Math.random() < 0.5 ? '#6fd3ff' : '#bfefff', type: 'dot' });
   }
   return _feBallUpd.call(this, dt);
 };

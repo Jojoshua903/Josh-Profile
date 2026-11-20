@@ -99,8 +99,8 @@ class TrKettle {
   interact() {
     if (Story.active) return;
     const q = Save.data.q;
-    if (q.brew) { SFX.deny(); toast('"THE THERMOS IS ALREADY FULL, MAN. DRINK IT FIRST." · DENIZ'); return; }
-    q.brew = 1; saveGame(); SFX.buy();
+    if ((q.brew || 0) >= arsBrewMax()) { SFX.deny(); toast('"THE THERMOS IS ALREADY FULL, MAN. DRINK IT FIRST." · DENIZ'); return; }
+    q.brew = arsBrewMax(); saveGame(); SFX.buy();   // two sips, three with Double Brew
     for (let k = 0; k < 8; k++) spawnParticle({ x: this.x + rand(-6, 6), y: this.y - 30, vx: rand(-20, 20), vy: rand(-80, -40), life: 1, size: rand(3, 6), color: 'rgba(243,234,216,.5)', type: 'dot' });
     toast('CHILL BREW THERMOS REFILLED · "SMOOTH CORNERS, RENAS." · DENIZ');
   }
@@ -116,7 +116,7 @@ class TrKettle {
     ctx.strokeStyle = 'rgba(243,234,216,.45)'; ctx.lineWidth = 2;
     for (let k = 0; k < 2; k++) { const s = (t * 0.7 + k * 0.5) % 1; ctx.globalAlpha = 1 - s; ctx.beginPath(); ctx.moveTo(x + 19, y - 38 - s * 26); ctx.quadraticCurveTo(x + 25, y - 44 - s * 26, x + 19, y - 50 - s * 26); ctx.stroke(); }
     ctx.restore();
-    if (this.near && !Story.active) gxPrompt(Save.data.q.brew ? 'CHILL BREW · FULL' : 'REFILL CHILL BREW', x, y - 66);
+    if (this.near && !Story.active) gxPrompt((Save.data.q.brew || 0) >= arsBrewMax() ? 'CHILL BREW · FULL' : 'REFILL CHILL BREW', x, y - 66);
   }
 }
 class TrBench {
