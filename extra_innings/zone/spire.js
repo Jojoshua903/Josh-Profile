@@ -4,8 +4,11 @@
    · every story page writes the shape of its own rooms into an
      atlas in localStorage ('ei_atlas_v1') when it loads: tile
      geometry (2 bits a tile), names, benches, bells and links
-   · the pause-menu Tower view stacks every zone from that atlas,
-     bottom to top, and inks it with the same rules as a zone sheet:
+   · the pause-menu Tower view lays every zone from that atlas out
+     where it really is: zones on one page keep their place in that
+     page's grid, and the pages are joined exit-to-entrance (with a
+     gold marker on every doorway between two zones). It inks them
+     with the same rules as a zone sheet:
      a bought map = pencil sketch, rested-in rooms = ink, walked but
      unsaved rooms = wet graphite (needs the Quill)
    · floors you haven't loaded yet are fog: you can't have been there
@@ -16,7 +19,7 @@
    ========================================================= */
 const SP_KEY = 'ei_atlas_v1';
 const SP = { zones: null, dirty: true, cx: 0, cy: 0, zm: 1, goal: null, focus: null, drag: null, lastZone: null, last: 0, broken: false, bounds: null };
-const SP_GAP = 2, SP_M = 3, SP_MAX = 6;
+const SP_M = 3, SP_MAX = 6;
 
 /* ---------- the tower's ink: one palette per floor ---------- */
 const SP_PAL = {
@@ -37,68 +40,6 @@ const spA = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n
 const spDark = (hex, k) => { const n = parseInt(hex.slice(1), 16); return `rgb(${Math.round((n >> 16) * k)},${Math.round(((n >> 8) & 255) * k)},${Math.round((n & 255) * k)})`; };
 const spBandKnown = Zn => !Zn.fog && (pmKnown(Zn.z) || Zn.z === 'z11' || !!Zn.layer);
 
-/* ---------- the silhouette: one organic cross-section, floor by floor ----------
-   Every floor gets its own recognisable cut-out; SP_GAP keeps them touching so the
-   whole thing reads as a single mass rather than a stack of separate pages. */
-function spShell(g, z, x0, y0, x1, y1, t) {
-  const W = x1 - x0, H = y1 - y0, hx = v => x0 + v * W, hy = v => y0 + v * H;
-  const rnd = (i, k) => mhash(i * 37 + 11, k * 53 + 7);
-  g.beginPath();
-  if (z === 'z1') {                              // the dugout: a broad low base, rocky underside, cellar bulge
-    g.moveTo(hx(0.03), hy(0.02)); g.lineTo(hx(0.97), hy(0.02));
-    g.lineTo(hx(0.97), hy(0.84));
-    for (let i = 8; i >= 0; i--) g.lineTo(hx(0.03 + 0.94 * i / 8), hy(0.84 + (i % 2 ? 0.11 : 0.03) + rnd(i, 2) * 0.05));
-    g.lineTo(hx(0.03), hy(0.84));
-    g.lineTo(hx(0.03), hy(0.02));
-    // the old cellar hangs off the bottom left
-    g.moveTo(hx(0.09), hy(0.88)); g.lineTo(hx(0.30), hy(0.88)); g.lineTo(hx(0.28), hy(1.16)); g.lineTo(hx(0.12), hy(1.16)); g.closePath();
-  } else if (z === 'z2') {                       // the quarry: a ragged cave with stalactites
-    g.moveTo(hx(0.10), hy(0.06));
-    for (let i = 0; i <= 6; i++) { const fx = 0.10 + 0.80 * i / 6; g.lineTo(hx(fx), hy(0.02 + (i % 2 ? 0.10 : 0.02))); }
-    g.lineTo(hx(0.96), hy(0.90));
-    for (let i = 6; i >= 0; i--) { const fx = 0.06 + 0.90 * i / 6; g.lineTo(hx(fx), hy(0.90 + (i % 2 ? 0.02 : 0.10))); }
-    g.closePath();
-    g.moveTo(hx(0.46), hy(0.02)); g.lineTo(hx(0.54), hy(0.02)); g.lineTo(hx(0.53), hy(0.30)); g.lineTo(hx(0.47), hy(0.30)); g.closePath();
-  } else if (z === 'z3') {                       // the shafts: narrow, with pipes jutting out
-    g.moveTo(hx(0.22), hy(0.02)); g.lineTo(hx(0.78), hy(0.02)); g.lineTo(hx(0.78), hy(0.96)); g.lineTo(hx(0.22), hy(0.96)); g.closePath();
-    for (const [fy, side] of [[0.22, 1], [0.40, -1], [0.62, 1], [0.78, -1]]) {
-      const px = side > 0 ? 0.78 : 0.22, pw = side > 0 ? 0.16 : -0.16;
-      g.moveTo(hx(px), hy(fy)); g.lineTo(hx(px + pw), hy(fy)); g.lineTo(hx(px + pw), hy(fy + 0.06)); g.lineTo(hx(px), hy(fy + 0.06)); g.closePath();
-    }
-  } else if (z === 'z4') {                       // the foundry: an angular hall with two chimneys
-    g.moveTo(hx(0.04), hy(0.16)); g.lineTo(hx(0.14), hy(0.04)); g.lineTo(hx(0.86), hy(0.04)); g.lineTo(hx(0.96), hy(0.16));
-    g.lineTo(hx(0.96), hy(0.94)); g.lineTo(hx(0.04), hy(0.94)); g.closePath();
-    g.moveTo(hx(0.18), hy(0.04)); g.lineTo(hx(0.27), hy(0.04)); g.lineTo(hx(0.27), hy(-0.22)); g.lineTo(hx(0.18), hy(-0.22)); g.closePath();
-    g.moveTo(hx(0.73), hy(0.04)); g.lineTo(hx(0.82), hy(0.04)); g.lineTo(hx(0.82), hy(-0.16)); g.lineTo(hx(0.73), hy(-0.16)); g.closePath();
-  } else if (z === 'z5') {                       // the concourse: a crossroads with wide arms
-    g.moveTo(hx(0.00), hy(0.38)); g.lineTo(hx(0.30), hy(0.38)); g.lineTo(hx(0.30), hy(0.06)); g.lineTo(hx(0.70), hy(0.06)); g.lineTo(hx(0.70), hy(0.38));
-    g.lineTo(hx(1.00), hy(0.38)); g.lineTo(hx(1.00), hy(0.72)); g.lineTo(hx(0.70), hy(0.72)); g.lineTo(hx(0.70), hy(0.96)); g.lineTo(hx(0.30), hy(0.96));
-    g.lineTo(hx(0.30), hy(0.72)); g.lineTo(hx(0.00), hy(0.72)); g.closePath();
-  } else if (z === 'z6') {                       // the geode: a cluster of crystals fanning left
-    g.moveTo(hx(0.34), hy(0.04)); g.lineTo(hx(0.96), hy(0.04)); g.lineTo(hx(0.96), hy(0.94)); g.lineTo(hx(0.34), hy(0.94));
-    for (let i = 0; i < 5; i++) { const fy = 0.94 - i * 0.19; g.lineTo(hx(0.34 - (i % 2 ? 0.26 : 0.14)), hy(fy - 0.09)); g.lineTo(hx(0.34), hy(fy - 0.12)); }
-    g.closePath();
-  } else if (z === 'z7') {                       // the storm atrium: a gothic point
-    g.moveTo(hx(0.16), hy(0.94)); g.lineTo(hx(0.16), hy(0.34)); g.lineTo(hx(0.42), hy(0.34)); g.lineTo(hx(0.50), hy(-0.10)); g.lineTo(hx(0.58), hy(0.34));
-    g.lineTo(hx(0.84), hy(0.34)); g.lineTo(hx(0.84), hy(0.94)); g.closePath();
-  } else if (z === 'z8') {                       // the glacier: a jagged massif on the right
-    g.moveTo(hx(0.04), hy(0.96)); g.lineTo(hx(0.04), hy(0.06)); g.lineTo(hx(0.62), hy(0.06));
-    for (let i = 0; i < 4; i++) { const fy = 0.06 + i * 0.22; g.lineTo(hx(0.62 + (i % 2 ? 0.30 : 0.16)), hy(fy + 0.10)); g.lineTo(hx(0.62), hy(fy + 0.20)); }
-    g.lineTo(hx(0.62), hy(0.96)); g.closePath();
-  } else if (z === 'z9') {                       // the stadium: a wide crown dome
-    g.moveTo(hx(0.02), hy(0.96)); g.lineTo(hx(0.02), hy(0.52));
-    g.quadraticCurveTo(hx(0.10), hy(0.02), hx(0.50), hy(0.02));
-    g.quadraticCurveTo(hx(0.90), hy(0.02), hx(0.98), hy(0.52));
-    g.lineTo(hx(0.98), hy(0.96)); g.closePath();
-    for (let i = 0; i < 3; i++) { const fy = 0.30 + i * 0.18; g.moveTo(hx(0.06 + i * 0.05), hy(fy)); g.lineTo(hx(0.94 - i * 0.05), hy(fy)); }
-  } else if (z === 'z10') {                      // the core: a dark, pulsing circle under everything
-    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, rr2 = Math.min(W, H) * 0.46 + Math.sin(t * 2) * Math.min(W, H) * 0.03;
-    g.arc(cx, cy, rr2, 0, 7);
-  } else {                                        // the abyss: a torn pocket
-    g.moveTo(hx(0.10), hy(0.10)); g.lineTo(hx(0.90), hy(0.06)); g.lineTo(hx(0.94), hy(0.88)); g.lineTo(hx(0.52), hy(0.98)); g.lineTo(hx(0.08), hy(0.86)); g.closePath();
-  }
-}
-
 
 /* ---------- the atlas ---------- */
 function spLoad() {
@@ -108,6 +49,18 @@ function spLoad() {
 const spPage = () => (location.pathname.split('/').pop() || 'zone1.html');
 const spB64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
 const spUnB64 = s => { const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; };
+
+/* where each page joins the next one, in that page's own tiles, on the edge of the room you
+   leave through. Both ends of a join share a key; the layout lays one end on top of the other.
+   Fixed here (not recorded) so an atlas written before this existed lines up straight away. */
+const SP_PORTALS = {
+  'zone1.html': [{ key: 'z1-z2', x: 280, y: 62 }],                              // the chasm on the right of camp
+  'act1.html':  [{ key: 'z1-z2', x: 0, y: 83 },                                 // ...out the left of the Quarry Mouth
+                 { key: 'z4-z5', x: 837, y: 0 }],                               // the golden lift, up through the Foundry Core roof
+  'act2.html':  [{ key: 'z4-z5', x: 127, y: 88 },                               // ...arriving in the Concourse floor
+                 { key: 'z5-z9', x: 180, y: 76 }],                              // the Pennant Gate rises to the peak
+  'act3.html':  [{ key: 'z5-z9', x: 5, y: 44 }],                                // ...to the bottom of the Golden Steps
+};
 
 // write this page's rooms into the atlas (the live grid, so walls you've broken stay open)
 function spRecord() {
@@ -143,7 +96,36 @@ function spRecord() {
 }
 setTimeout(() => { try { spRecord(); } catch (e) { logErr('spire: record', e); } }, 600);
 
-/* ---------- laying the tower out ---------- */
+/* ---------- laying the tower out ----------
+   One world sheet: every page keeps its own tile grid (so zones on the same page sit
+   exactly where they are in the game), and the pages are slid together so each exit
+   lands on the entrance it leads to. A page that would sit on top of one already
+   placed is lifted clear, and the join is drawn as a dashed passage instead. */
+function spCell(r, tx, ty) {
+  if (tx < r.x0 || ty < r.y0 || tx >= r.x0 + r.tw || ty >= r.y0 + r.th) return 1;
+  if (!r.u) r.u = spUnB64(r.t);
+  const i = (ty - r.y0) * r.tw + (tx - r.x0);
+  return (r.u[i >> 2] >> ((i & 3) * 2)) & 3;
+}
+// the doorway between two rooms that touch (tile coords): the middle of the open run on their shared edge
+function spDoor(a, b) {
+  const vert = a.x0 + a.tw === b.x0 || b.x0 + b.tw === a.x0, horz = a.y0 + a.th === b.y0 || b.y0 + b.th === a.y0;
+  if (vert) {
+    const ex = a.x0 + a.tw === b.x0 ? b.x0 : a.x0, y0 = Math.max(a.y0, b.y0), y1 = Math.min(a.y0 + a.th, b.y0 + b.th);
+    if (y1 <= y0) return null;
+    const [L, R] = a.x0 < b.x0 ? [a, b] : [b, a], open = [];
+    for (let ty = y0; ty < y1; ty++) if (spCell(L, ex - 1, ty) !== 1 && spCell(R, ex, ty) !== 1) open.push(ty);
+    return { x: ex, y: open.length ? (open[0] + open[open.length - 1] + 1) / 2 : (y0 + y1) / 2 };
+  }
+  if (horz) {
+    const ey = a.y0 + a.th === b.y0 ? b.y0 : a.y0, x0 = Math.max(a.x0, b.x0), x1 = Math.min(a.x0 + a.tw, b.x0 + b.tw);
+    if (x1 <= x0) return null;
+    const [T, B] = a.y0 < b.y0 ? [a, b] : [b, a], open = [];
+    for (let tx = x0; tx < x1; tx++) if (spCell(T, tx, ey - 1) !== 1 && spCell(B, tx, ey) !== 1) open.push(tx);
+    return { x: open.length ? (open[0] + open[open.length - 1] + 1) / 2 : (x0 + x1) / 2, y: ey };
+  }
+  return null;
+}
 function spBuild() {
   const AT = spRecord() || spLoad(), D = Save.data, q = D.q;
   // merge every page; this page last so its rooms win
@@ -151,26 +133,62 @@ function spBuild() {
   const order = Object.keys(AT.pages).filter(p => p !== here).concat(AT.pages[here] ? [here] : []);
   for (const p of order) {
     const P = AT.pages[p];
-    (P.rooms || []).forEach(r => { byId[r.id] = r; });
+    (P.rooms || []).forEach(r => { r.page = p; byId[r.id] = r; });
     benches.push(...(P.benches || [])); bells.push(...(P.bells || [])); links.push(...(P.links || []));
   }
+  // where each page sits on the world sheet
+  const pages = [...new Set(Object.values(byId).map(r => r.page))];
+  const off = {}, placed = [], joins = [];
+  // secret rooms you haven't found don't take up space yet, so they can't push a page away from its door
+  const rectsOf = p => { const all = Object.values(byId).filter(r => r.page === p), real = all.filter(r => !r.secret || D.visited[r.id]); return real.length ? real : all; };
+  const hits = (p, o) => rectsOf(p).some(r => placed.some(s => r.x0 + o.x < s.x1 && r.x0 + r.tw + o.x > s.x0 && r.y0 + o.y < s.y1 && r.y0 + r.th + o.y > s.y0));
+  const put = (p, o) => { off[p] = o; for (const r of rectsOf(p)) placed.push({ x0: r.x0 + o.x, y0: r.y0 + o.y, x1: r.x0 + r.tw + o.x, y1: r.y0 + r.th + o.y }); };
+  const top = () => placed.reduce((m, s) => Math.min(m, s.y0), 0);
+  const first = pages.includes('zone1.html') ? 'zone1.html' : pages[0];
+  if (first) put(first, { x: 0, y: 0 });
+  for (let grew = true; grew;) {
+    grew = false;
+    for (const p of pages) {
+      if (off[p]) continue;
+      for (const pt of (SP_PORTALS[p] || [])) {
+        const src = pages.find(o => off[o] && (SP_PORTALS[o] || []).some(m => m.key === pt.key));
+        if (!src) continue;
+        const m = SP_PORTALS[src].find(k => k.key === pt.key), wx = m.x + off[src].x, wy = m.y + off[src].y;
+        let o = { x: wx - pt.x, y: wy - pt.y }, lifted = false;
+        // a page that would cover rooms already on the sheet climbs until it's clear
+        for (let k = 0; k < 400 && hits(p, o); k++) { o.y -= 2; lifted = true; }
+        put(p, o);
+        joins.push({ key: pt.key, x: wx, y: wy, x2: pt.x + o.x, y2: pt.y + o.y, lifted });
+        grew = true; break;
+      }
+    }
+  }
+  // pages with no known way in yet (a dev warp, an old atlas): parked above everything, side by side
+  let park = 0;
+  for (const p of pages) if (!off[p]) { const rs = rectsOf(p), x0 = Math.min(...rs.map(r => r.x0)), y1 = Math.max(...rs.map(r => r.y0 + r.th)); put(p, { x: park - x0, y: top() - 30 - y1 }); park += Math.max(...rs.map(r => r.x0 + r.tw)) - x0 + 30; }
+  // the doorways between zones that share a page
+  for (const [a, b] of links) {
+    const ra = byId[a], rb = byId[b];
+    if (!ra || !rb || ra.zone === rb.zone || ra.page !== rb.page) continue;
+    const d = spDoor(ra, rb); if (!d) continue;
+    const o = off[ra.page]; joins.push({ key: ra.zone + '-' + rb.zone, za: ra.zone, zb: rb.zone, x: d.x + o.x, y: d.y + o.y, x2: d.x + o.x, y2: d.y + o.y, lifted: false });
+  }
+  for (const J of joins) if (!J.za) { const [za, zb] = J.key.split('-'); J.za = za; J.zb = zb; }
   const floors = pmTowerZones().map(r => r[0]);
-  if (q.abyss) floors.unshift('z11');   // the Abyss sits under the Dugout
-  if (floors.includes('z10')) { floors.splice(floors.indexOf('z10'), 1); floors.unshift('z10'); }   // the Core hangs under the whole tower
+  if (q.abyss) floors.unshift('z11');   // the Abyss sits under the stadium
   const zones = [];
-  let yc = 0, minX = Infinity, maxX = -Infinity;
+  let fogX = 0;
+  const fogY = top() - 120;
   for (const z of floors) {
     const rooms = Object.values(byId).filter(r => r.zone === z);
     let Zn;
     if (rooms.length) {
       const bx0 = Math.min(...rooms.map(r => r.x0)), by0 = Math.min(...rooms.map(r => r.y0));
       const bw = Math.max(...rooms.map(r => r.x0 + r.tw)) - bx0, bh = Math.max(...rooms.map(r => r.y0 + r.th)) - by0;
-      Zn = { z, rooms, bx0, by0, bw, bh };
-    } else Zn = { z, rooms: [], bx0: 0, by0: 0, bw: 220, bh: 60, fog: true };
-    Zn.ox = -Zn.bw / 2 - Zn.bx0; Zn.oy = (yc - Zn.bh) - Zn.by0;
-    Zn.sx0 = -Zn.bw / 2; Zn.sy0 = yc - Zn.bh;       // spire-space rect of the floor
-    yc = Zn.sy0 - SP_GAP;
-    minX = Math.min(minX, Zn.sx0); maxX = Math.max(maxX, Zn.sx0 + Zn.bw);
+      const o = off[rooms[0].page];
+      Zn = { z, rooms, bx0, by0, bw, bh, ox: o.x, oy: o.y };
+    } else { Zn = { z, rooms: [], bx0: 0, by0: 0, bw: 220, bh: 60, fog: true, ox: fogX, oy: fogY }; fogX += 240; }
+    Zn.sx0 = Zn.bx0 + Zn.ox; Zn.sy0 = Zn.by0 + Zn.oy;   // world-sheet rect of the zone
     zones.push(Zn);
   }
   // frame only the part of the tower you have actually reached; the rest is mist
@@ -180,8 +198,8 @@ function spBuild() {
       x0: Math.min(...kb.map(Zn => Zn.sx0)) - 40, x1: Math.max(...kb.map(Zn => Zn.sx0 + Zn.bw)) + 40,
       y0: Math.min(...kb.map(Zn => Zn.sy0)) - 130, y1: Math.max(...kb.map(Zn => Zn.sy0 + Zn.bh)) + 26,
     };
-  } else SP.bounds = { x0: minX - 20, x1: maxX + 20, y0: yc, y1: SP_GAP };
-  SP.benches = benches; SP.bells = bells; SP.links = links; SP.byId = byId;
+  } else SP.bounds = { x0: -20, x1: 260, y0: fogY - 20, y1: 80 };
+  SP.benches = benches; SP.bells = bells; SP.links = links; SP.byId = byId; SP.joins = joins;
   for (const Zn of zones) if (!Zn.fog) spPaint(Zn);
   SP.zones = zones; SP.dirty = false;
   return zones;
@@ -344,85 +362,80 @@ function spFrame(now, cv) {
     g.fillStyle = `rgba(214,203,182,${0.012 + 0.02 * mhash(i, 5)})`; g.fillRect(gx, gy, 1.5, 1.5);
   }
   const zs = SP.zones;
-  // the lift shafts that join one floor to the next, so the tower is one mass
-  for (let i = 0; i < zs.length - 1; i++) {
-    const A = zs[i], B = zs[i + 1];
-    if (!spBandKnown(A) || !spBandKnown(B)) continue;
-    const [ax, ay] = S(A.sx0 + A.bw * 0.76, A.sy0), [bx, by] = S(B.sx0 + B.bw * 0.70, B.sy0 + B.bh);
-    const wA = Math.max(3, 10 * zm), wB = wA * 0.85;
-    g.beginPath(); g.moveTo(ax - wA, ay); g.lineTo(bx - wB, by); g.lineTo(bx + wB, by); g.lineTo(ax + wA, ay); g.closePath();
-    g.fillStyle = spDark(spPal(A.z).fill, 0.55); g.fill();
-    g.strokeStyle = spA(spPal(A.z).ink, 0.3); g.lineWidth = 1; g.stroke();
-  }
   PM.towerSegs = [];
   g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+  const rectOf = (Zn, pad) => { const [x0, y0] = S(Zn.sx0 - pad, Zn.sy0 - pad), [x1, y1] = S(Zn.sx0 + Zn.bw + pad, Zn.sy0 + Zn.bh + pad); return [x0, y0, x1, y1]; };
+  const roomRect = (Zn, r, pad) => { const [x0, y0] = S(r.x0 + Zn.ox - pad, r.y0 + Zn.oy - pad), [x1, y1] = S(r.x0 + r.tw + Zn.ox + pad, r.y0 + r.th + Zn.oy + pad); return [x0, y0, x1, y1]; };
+  const live = Zn => spBandKnown(Zn) && !Zn.fogged && Zn.layer;
+  /* pass 1: a dark plate under every room you know, in that zone's own colour (all plates first, so a
+     neighbouring zone's plate never paints over rooms that were already drawn) */
   for (const Zn of zs) {
-    const [x0, y0] = S(Zn.sx0 - SP_M, Zn.sy0 - SP_M), [x1, y1] = S(Zn.sx0 + Zn.bw + SP_M, Zn.sy0 + Zn.bh + SP_M);
-    const on = Zn.z === PM.zone;
-    PM.towerSegs.push({ z: Zn.z, x0, x1, y0, y1 });
+    const [x0, y0, x1, y1] = rectOf(Zn, SP_M);
+    if (Zn.shown && Zn.shown.length) for (const r of Zn.shown) { const [a, b, c, d] = roomRect(Zn, r, 0); PM.towerSegs.push({ z: Zn.z, x0: a, x1: c, y0: b, y1: d }); }
+    else PM.towerSegs.push({ z: Zn.z, x0, x1, y0, y1 });
+    if (!live(Zn) || x1 < -220 || x0 > w + 220 || y1 < -80 || y0 > h + 80) continue;
+    const pal = spPal(Zn.z), on = Zn.z === PM.zone;
+    g.save(); g.fillStyle = spDark(pal.fill, 0.78);
+    if (Zn.z === 'z10') { g.shadowColor = spA(pal.acc, 0.85); g.shadowBlur = 16 + Math.sin(t * 2) * 8; }
+    else if (on) { g.shadowColor = spA(pal.ink, 0.55); g.shadowBlur = 12; }
+    for (const r of Zn.shown) { const [a, b, c, d] = roomRect(Zn, r, 1); g.fillRect(a, b, c - a, d - b); }
+    g.restore();
+  }
+  /* pass 2: the rooms themselves, inked or sketched */
+  for (const Zn of zs) {
+    if (!spBandKnown(Zn)) continue;             // zones you have never reached stay in the mist
+    const [x0, y0, x1, y1] = rectOf(Zn, SP_M);
     if (x1 < -220 || x0 > w + 220 || y1 < -80 || y0 > h + 80) continue;
-    if (!spBandKnown(Zn)) continue;             // floors you have never reached stay in the mist
-    const pal = spPal(Zn.z);
-    /* the floor's own cut-out, in its own ink */
-    g.save();
-    spShell(g, Zn.z, x0, y0, x1, y1, t);
-    g.fillStyle = spDark(pal.fill, 0.78); g.fill();
-    if (Zn.z === 'z10') { g.shadowColor = spA(pal.acc, 0.85); g.shadowBlur = 16 + Math.sin(t * 2) * 8; g.fill(); g.shadowBlur = 0; }
-    g.lineWidth = on ? 1.9 : 1.2; g.strokeStyle = spA(pal.ink, on ? 0.95 : 0.62);
-    if (on) { g.shadowColor = spA(pal.ink, 0.55); g.shadowBlur = 12; }
-    g.stroke(); g.restore();
-    /* the rooms, inked or sketched, live on the plate */
-    if (Zn.layer && !Zn.fogged) {
-      g.drawImage(Zn.layer, x0, y0, x1 - x0, y1 - y0);
-    } else {
+    if (live(Zn)) g.drawImage(Zn.layer, x0, y0, x1 - x0, y1 - y0);
+    else {
       g.font = `italic ${clamp(zm * 9, 11, 20)}px "Iowan Old Style", Palatino, Georgia, serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
-      g.fillStyle = spA(pal.ink, 0.45); g.fillText('uncharted', (x0 + x1) / 2, (y0 + y1) / 2);
+      g.fillStyle = spA(spPal(Zn.z).ink, 0.45); g.fillText('uncharted', (x0 + x1) / 2, (y0 + y1) / 2);
     }
-    /* the floor's name floats over the plate at overview and slips away as you zoom in */
+  }
+  /* pass 3: where one zone's exit meets the next zone's entrance */
+  const zoneOf = {}; for (const Zn of zs) zoneOf[Zn.z] = Zn;
+  const jr = clamp(zm * 1.4, 3.5, 7);
+  for (const J of SP.joins || []) {
+    const A = zoneOf[J.za], B = zoneOf[J.zb];
+    if (!A || !B || !live(A) || !live(B)) continue;
+    const [ax, ay] = S(J.x, J.y), [bx, by] = S(J.x2, J.y2);
+    if (Math.max(ax, bx) < -40 || Math.min(ax, bx) > w + 40 || Math.max(ay, by) < -40 || Math.min(ay, by) > h + 40) continue;
+    if (J.lifted) {   // the pages couldn't touch: a dotted lift line from door to door
+      g.save(); g.setLineDash([4, 4]); g.lineDashOffset = -t * 12; g.strokeStyle = 'rgba(242,193,78,.6)'; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.stroke(); g.restore();
+    }
+    for (const [x, y, Zx] of J.lifted ? [[ax, ay, A], [bx, by, B]] : [[ax, ay, B]]) {
+      g.beginPath(); g.arc(x, y, jr, 0, 7); g.fillStyle = 'rgba(10,8,12,.9)'; g.fill();
+      g.lineWidth = 1.6; g.strokeStyle = 'rgba(242,193,78,.95)'; g.stroke();
+      g.beginPath(); g.arc(x, y, jr * 0.45, 0, 7); g.fillStyle = spPal(Zx.z).acc; g.fill();
+    }
+  }
+  /* pass 4: each zone's name floats over it at overview and slips away as you zoom in */
+  for (const Zn of zs) {
+    if (!spBandKnown(Zn)) continue;
+    const [x0, y0, x1, y1] = rectOf(Zn, SP_M), on = Zn.z === PM.zone, pal = spPal(Zn.z);
+    if (x1 < -220 || x0 > w + 220 || y1 < -80 || y0 > h + 80) continue;
+    // centred on the rooms you know, not on the zone's bounding box (zones on one page interlock)
+    const list = Zn.shown && Zn.shown.length ? Zn.shown : Zn.rooms;
+    let ax = 0, ay = 0, an = 0;
+    for (const r of list) { const k = r.tw * r.th; ax += (r.x0 + r.tw / 2 + Zn.ox) * k; ay += (r.y0 + r.th / 2 + Zn.oy) * k; an += k; }
+    const [mx, my] = an ? S(ax / an, ay / an) : [(x0 + x1) / 2, (y0 + y1) / 2];
     const Zi = ZONES[Zn.z] || { name: 'The Overtime Abyss', sub: 'Secret' };
     const fit = spFitZoom(w, h), nameA = clamp(1 - (zm - fit * 1.15) / Math.max(0.0001, fit * 0.8), 0, 1);
     if (nameA > 0.02) {
-      const tall = (y1 - y0) > 150;
-      const cxb = (x0 + x1) / 2, cyb = tall ? (y0 + y1) / 2 : y0 - 16;
       g.save(); g.globalAlpha = nameA; g.textAlign = 'center'; g.textBaseline = 'middle';
       g.font = `italic ${clamp(13 + zm * 2.6, 14, 26)}px "Iowan Old Style", Palatino, Georgia, serif`;
-      g.lineWidth = 4; g.strokeStyle = 'rgba(8,7,10,.85)'; g.strokeText(Zi.name, cxb, cyb);
-      g.fillStyle = on ? '#F3EAD8' : 'rgba(233,226,208,.78)'; g.fillText(Zi.name, cxb, cyb);
-      const pct = q.zonePct && q.zonePct[Zn.z], alt = (PM_ZONES.find(r => r[0] === Zn.z) || [0, null])[1];
+      g.lineWidth = 4; g.strokeStyle = 'rgba(8,7,10,.85)'; g.strokeText(Zi.name, mx, my);
+      g.fillStyle = on ? '#F3EAD8' : 'rgba(233,226,208,.78)'; g.fillText(Zi.name, mx, my);
+      const pct = q.zonePct && q.zonePct[Zn.z];
       g.font = `${clamp(9 + zm, 10, 13)}px "Iowan Old Style", Palatino, Georgia, serif`; g.fillStyle = spA(pal.acc, on ? 0.95 : 0.55);
-      g.fillText([Zi.sub.split(' · ')[0], alt !== null ? `${alt} m` : '', pct !== undefined ? `${pct}%` : ''].filter(Boolean).join(' · '), cxb, cyb + clamp(13, zm * 7, 22));
+      g.fillText([Zi.sub.split(' · ')[0], pct !== undefined ? `${pct}%` : ''].filter(Boolean).join(' · '), mx, my + clamp(13, zm * 7, 22));
       g.restore();
     }
-    if (on) {   // gold corner brackets round the chosen floor
+    if (on) {   // gold corner brackets round the chosen zone
       g.strokeStyle = '#EFE6D2'; g.lineWidth = 1.6; const c = 14, p = 6;
       for (const [cx, cy, sx, sy] of [[x0 - p, y0 - p, 1, 1], [x1 + p, y0 - p, -1, 1], [x0 - p, y1 + p, 1, -1], [x1 + p, y1 + p, -1, -1]]) { g.beginPath(); g.moveTo(cx + sx * c, cy); g.lineTo(cx, cy); g.lineTo(cx, cy + sy * c); g.stroke(); }
     }
-  }
-  /* ---- the altitude ruler, fading into the mist above the act you are in ---- */
-  const yAtAlt = a => {
-    const pts = [];
-    for (const Zn of zs) { const alt = (PM_ZONES.find(r => r[0] === Zn.z) || [0, null])[1]; if (alt === null || !spBandKnown(Zn)) continue; pts.push([alt, S(0, Zn.sy0 + Zn.bh)[1]]); }
-    if (!pts.length) return null;
-    for (let i = 0; i < pts.length - 1; i++) if (a >= pts[i][0] && a <= pts[i + 1][0]) return lerp(pts[i][1], pts[i + 1][1], (a - pts[i][0]) / (pts[i + 1][0] - pts[i][0]));
-    // above or below what you have charted: keep the same scale instead of jumping to another one
-    const [a0, y0] = pts[pts.length - 2] || pts[pts.length - 1], [a1, y1] = pts[pts.length - 1];
-    return a1 === a0 ? y1 : y1 + (a - a1) * ((y1 - y0) / (a1 - a0));
-  };
-  // with only one floor charted there is nothing to interpolate between: fall back to the sheet's own span
-  const yAlt = a => { const v = yAtAlt(a); return v === null ? lerp(S(0, SP.bounds.y1)[1], S(0, SP.bounds.y0)[1], a / 3500) : v; };
-
-  const rulerX = 74, ry0 = yAlt(0), ry1 = yAlt(3500);
-  if (Math.abs(ry1 - ry0) > 8) {
-    g.strokeStyle = 'rgba(214,203,182,.22)'; g.lineWidth = 1; g.beginPath(); g.moveTo(rulerX, ry0); g.lineTo(rulerX, ry1); g.stroke();
-    g.font = 'italic 10px "Iowan Old Style", Palatino, Georgia, serif'; g.textAlign = 'right'; g.textBaseline = 'middle';
-    for (let a = 0; a <= 3500; a += 250) {
-      const y = yAlt(a); if (y < -20 || y > h + 20) continue;
-      const big = a % 500 === 0;
-      g.strokeStyle = big ? 'rgba(214,203,182,.55)' : 'rgba(214,203,182,.22)';
-      g.beginPath(); g.moveTo(rulerX, y); g.lineTo(rulerX + (big ? 8 : 4), y); g.stroke();
-      if (big) { g.fillStyle = 'rgba(233,226,208,.5)'; g.fillText(a.toLocaleString('en-US') + ' m', rulerX - 8, y); }
-    }
-    g.save(); g.translate(22, (ry0 + ry1) / 2); g.rotate(-Math.PI / 2); g.textAlign = 'center'; g.fillStyle = 'rgba(214,203,182,.5)'; g.font = 'italic 10px "Iowan Old Style", Palatino, Georgia, serif'; g.fillText('altitude', 0, 0); g.restore();
   }
   // the mist: everything above the highest floor you have reached is still a rumour
   const topKnown = zs.filter(spBandKnown).reduce((m, Zn) => Math.min(m, S(Zn.sx0, Zn.sy0)[1]), h);

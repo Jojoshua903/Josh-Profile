@@ -128,12 +128,13 @@ class Stalagmite {   // dust cloud warning, then a jagged spike bursts out of th
 class Fionn {
   constructor() {
     const p = A.fionn;
-    Object.assign(this, { type: 'boss', w: 30, h: 56, hp: 64, maxHp: 64, flash: 0, harmful: false, pogoable: true, givesHype: true, state: 'wait', t: 0, anim: 0, facing: -1,
-      step: 0, rocks: [], throwT: 0, shield: null, shout: null, cast: 0, stomp: 0, vx: 0, bolts: 45, nameI: 0, clangT: 0 });
+    Object.assign(this, { type: 'boss', w: 30, h: 56, hp: 112, maxHp: 112, flash: 0, harmful: false, pogoable: true, givesHype: true, state: 'wait', t: 0, anim: 0, facing: -1,
+      step: 0, rocks: [], throwT: 0, shield: null, shout: null, cast: 0, stomp: 0, vx: 0, bolts: 60, nameI: 0, clangT: 0, wave: 1, drops: 0 });
     this.x = p.x - this.w / 2; this.y = p.y - this.h;
   }
   arena() { return ROOM.g_pedestal.px; }
-  phase() { const k = this.hp / this.maxHp; return k > 0.6 ? 1 : k > 0.3 ? 2 : 3; }
+  // four waves: 112 → 78 → 50 → 22
+  phase() { const k = this.hp / this.maxHp; return k > 0.7 ? 1 : k > 0.45 ? 2 : k > 0.2 ? 3 : 4; }
   begin() { this.state = 'idle'; this.t = 1.0; this.harmful = true; }
   say(text, dur = 1.6) { this.shout = { text, t: dur }; }
   nextName() { return ROCK_NAMES[this.nameI++ % ROCK_NAMES.length]; }
@@ -144,6 +145,14 @@ class Fionn {
     if (this.state === 'wait' || this.state === 'beaten') return;
     const P = Player, cx = this.x + this.w / 2, pcx = P.x + P.w / 2, ph = this.phase(), ar = this.arena();
     if (this.state !== 'stunned') this.facing = sgn(pcx - cx) || this.facing;
+    // a new wave: he stops, drops what he's holding and stomps the whole cave awake
+    if (ph > this.wave && (this.state === 'idle' || this.state === 'barrage' || this.state === 'stompWind')) {
+      this.wave = ph; this.state = 'roar'; this.t = 1.4; this.vx = 0; this.stomp = 1;
+      for (const b of this.rocks) if (!b.dead) b.shatter(); this.rocks = [];
+      this.say(['', '', 'THE CAVE IS LISTENING!', 'THE MOUNTAIN ITSELF!', 'AVALANCHE SEASON!'][ph], 1.4);
+      pop(cx, this.y - 50, 'WAVE ' + ph + '/4', { size: 40, color: '#9be36a', burstColor: '#2a4a2a' });
+      SFX.slam(); addShake(14); dust(cx, this.y + this.h, 18); ring(cx, this.y + this.h, 10, 160, 0.6, '#9be36a', 6);
+    }
     if (this.shield) {
       this.shield.update(dt);
       if (this.shield.t <= 0) { this.shield = null; this.say('Hmph. Pebble break.', 1.2); if (this.state === 'shield') { this.state = 'idle'; this.t = 0.9; } }
@@ -159,8 +168,8 @@ class Fionn {
         this.vx = 0; this.throwT -= dt;
         if (this.throwT <= 0) {
           const r = this.rocks.find(b => !b.dead && b.state === 'hold');
-          if (r) { r.throwAt(pcx, P.y + P.h / 2); this.say(this.nextName(), 1.1); this.throwT = ph === 3 ? 0.55 : 0.8; }
-          else if (!this.rocks.some(b => !b.dead && b.state === 'rise')) { this.rocks = []; this.state = 'idle'; this.t = ph === 3 ? 0.8 : 1.2; }
+          if (r) { r.throwAt(pcx, P.y + P.h / 2); this.say(this.nextName(), 1.1); this.throwT = ph === 4 ? 0.45 : ph === 3 ? 0.55 : 0.8; }
+          else if (!this.rocks.some(b => !b.dead && b.state === 'rise')) { this.rocks = []; this.state = 'idle'; this.t = ph >= 3 ? 0.8 : 1.2; }
         }
         break;
       case 'stompWind':
@@ -170,15 +179,32 @@ class Fionn {
           const fy = A.fionn.y, xs = [clamp(pcx, ar.x + 2 * TILE, ar.x + ar.w - 2 * TILE)];
           if (ph >= 2) xs.push(clamp(pcx + rand(140, 220), ar.x + 2 * TILE, ar.x + ar.w - 14 * TILE), clamp(pcx - rand(140, 220), ar.x + 2 * TILE, ar.x + ar.w - 2 * TILE));
           xs.forEach(x => FX.push(new Stalagmite(x, fy)));
-          if (ph === 3) for (let k = 0; k < 6; k++) FX.push(new Stalagmite(cx - this.facing * 0 + this.facing * (90 + k * 120), fy, 0.25 + k * 0.14));
-          this.state = 'idle'; this.t = ph === 3 ? 1.6 : 1.5;
+          if (ph >= 3) for (let k = 0; k < 6; k++) FX.push(new Stalagmite(cx + this.facing * (90 + k * 120), fy, 0.25 + k * 0.14));
+          if (ph === 4) for (let k = 0; k < 6; k++) FX.push(new Stalagmite(cx - this.facing * (90 + k * 120), fy, 0.55 + k * 0.14));   // both ways at once
+          this.state = 'idle'; this.t = ph >= 3 ? 1.6 : 1.5;
+        }
+        break;
+      case 'roar':
+        this.vx = 0; this.stomp = Math.max(this.stomp, 0.6);
+        if (this.t <= 0) { this.state = 'idle'; this.t = 0.5; }
+        break;
+      case 'avalanche':   // rocks rain from the cave roof, every third one green and smackable
+        this.vx = 0; this.throwT -= dt;
+        if (this.throwT <= 0) {
+          const x = clamp(this.drops % 2 ? pcx : rand(ar.x + 3 * TILE, ar.x + ar.w - 3 * TILE), ar.x + 3 * TILE, ar.x + ar.w - 3 * TILE);
+          let y = P.y - 360; while (pointSolid(x, y) && y < P.y - 120) y += TILE;
+          const b = new Boulder(this, 0, this.drops % 3 === 2);
+          Object.assign(b, { state: 'thrown', x, y, vx: 0, vy: 430 }); Bolts.push(b); SFX.dirt();
+          if (Math.random() < 0.4) this.say(this.nextName(), 0.9);
+          this.drops++; this.throwT = 0.32;
+          if (this.drops >= 9) { this.state = 'idle'; this.t = 1.3; }
         }
         break;
       case 'shield':
         this.vx = 0; this.throwT -= dt;
         if (this.throwT <= 0) {
           const b = new Boulder(this, 0, true); b.state = 'thrown'; b.x = cx + this.facing * 20; b.y = this.y - 30; b.throwAt(pcx, P.y + P.h / 2); Bolts.push(b);
-          this.say(this.nextName(), 1); this.throwT = ph === 3 ? 0.95 : 1.2;
+          this.say(this.nextName(), 1); this.throwT = ph >= 3 ? 0.95 : 1.2;
         }
         break;
       case 'stunned':
@@ -189,14 +215,16 @@ class Fionn {
     this.x = clamp(this.x + this.vx * dt, ar.x + 30 * TILE, ar.x + 68 * TILE - this.w);
   }
   pick(ph) {
-    const plan = ph === 1 ? ['barrage', 'pillar'] : ph === 2 ? ['shield', 'barrage', 'pillar', 'barrage', 'pillar'] : ['shield', 'pillar', 'barrage', 'pillar'];
+    const plan = ph === 1 ? ['barrage', 'pillar'] : ph === 2 ? ['shield', 'barrage', 'pillar', 'barrage', 'pillar'] : ph === 3 ? ['shield', 'pillar', 'barrage', 'pillar']
+      : ['avalanche', 'barrage', 'pillar', 'shield', 'avalanche', 'pillar'];
     const a = plan[this.step++ % plan.length];
     if (a === 'barrage') {
-      const n = ph === 3 ? 4 : 3, pat = ph === 1 ? [false, true, false] : [true, false, true, false];
+      const n = ph === 4 ? 5 : ph === 3 ? 4 : 3, pat = ph === 1 ? [false, true, false] : [true, false, true, false];
       this.rocks = [];
       for (let k = 0; k < n; k++) { const b = new Boulder(this, (k - (n - 1) / 2) * 60, pat[k % pat.length]); b.t = -k * 0.12; this.rocks.push(b); Bolts.push(b); }
       this.state = 'barrage'; this.throwT = 0.75; SFX.summon(); this.say('BEHOLD! GEOLOGY!', 1);
     } else if (a === 'pillar') { this.state = 'stompWind'; this.t = 0.5; this.say('FEEL THE STRATA!', 0.9); SFX.windup(); }
+    else if (a === 'avalanche') { this.state = 'avalanche'; this.drops = 0; this.throwT = 0.6; this.stomp = 1; SFX.slam(); addShake(10); this.say('ROCKFALL! EVERYONE HAS A NAME!', 1.3); }
     else { this.shield = new PebbleShield(); this.state = 'shield'; this.throwT = 0.9; SFX.summon(); this.say('LUCKY PEBBLE SHIELD!', 1.4); }
   }
   rockHit(rock) {
@@ -333,11 +361,12 @@ class OverloadOrb {   // Milo's unstable energy sphere: rally it back three time
 class Milo {
   constructor() {
     const p = A.milo;
-    Object.assign(this, { type: 'boss', w: 34, h: 56, hp: 60, maxHp: 60, flash: 0, harmful: false, pogoable: true, givesHype: true, state: 'wait', t: 0, anim: 0, facing: -1, step: 0,
-      hx: p.x, hy: p.y, vy: 0, orb: null, panic: 0, bolts: 45, shout: null });
+    Object.assign(this, { type: 'boss', w: 34, h: 56, hp: 100, maxHp: 100, flash: 0, harmful: false, pogoable: true, givesHype: true, state: 'wait', t: 0, anim: 0, facing: -1, step: 0,
+      hx: p.x, hy: p.y, vy: 0, orb: null, panic: 0, bolts: 60, shout: null, wave: 1, k: 0 });
     this.x = p.x - this.w / 2; this.y = p.y - this.h / 2;
   }
-  phase() { return this.hp > this.maxHp / 2 ? 1 : 2; }
+  // three waves: 100 → 66 → 33
+  phase() { const k = this.hp / this.maxHp; return k > 0.66 ? 1 : k > 0.33 ? 2 : 3; }
   begin() { this.state = 'float'; this.t = 1.2; this.harmful = true; }
   say(text, dur = 1.6) { this.shout = { text, t: dur }; }
   update(dt) {
@@ -352,23 +381,50 @@ class Milo {
       this.x = lerp(this.x, tx - this.w / 2, 1 - Math.exp(-1.5 * dt)); this.y = lerp(this.y, ty - this.h / 2, 1 - Math.exp(-2 * dt));
     };
     switch (this.state) {
-      case 'float': hover(); if (this.t <= 0) this.pick(ph); break;
+      case 'float':
+        hover();
+        // a new wave: he flares up, the storm gets meaner
+        if (ph > this.wave) {
+          this.wave = ph; this.state = 'roar'; this.t = 1.4;
+          this.say(ph === 2 ? 'OKAY. OKAY! STORM, LEVEL TWO!' : 'I CAN\'T STOP IT! I CAN\'T STOP IT!', 1.4);
+          pop(cx, this.y - 50, 'WAVE ' + ph + '/3', { size: 40, color: '#d9b8ff', burstColor: '#4a3a8a' });
+          SFX.thunder(); addShake(12); Game.flashWhite = Math.max(Game.flashWhite, 0.25); ring(cx, this.y + this.h / 2, 10, 170, 0.6, '#d9b8ff', 6);
+          break;
+        }
+        if (this.t <= 0) this.pick(ph);
+        break;
+      case 'roar':
+        this.y = lerp(this.y, this.hy - this.h / 2 - 30, 1 - Math.exp(-4 * dt)); this.panic = 0.3;
+        if (this.t <= 0) { this.state = 'float'; this.t = 0.4; }
+        break;
+      case 'castStorm':   // three gusts back to back: both walls, then one side, then the other, with lightning in between
+        hover();
+        if (this.t <= 0) {
+          if (this.k === 0) FX.push(new Tornado(ar.x + 2 * TILE, 1, floorY), new Tornado(ar.x + ar.w - 2 * TILE, -1, floorY));
+          else FX.push(this.k === 1 ? new Tornado(ar.x + 2 * TILE, 1, floorY) : new Tornado(ar.x + ar.w - 2 * TILE, -1, floorY));
+          const xs = [clamp(pcx, ar.x + 60, ar.x + ar.w - 60), rand(ar.x + 60, ar.x + ar.w - 60)];
+          xs.forEach((x, n) => FX.push(new RuneStrike(x, landYAt(x, ar.y + 2 * TILE), 0.4 + n * 0.15)));
+          SFX.wind(); SFX.whoosh();
+          this.k++; this.t = 1.5;
+          if (this.k >= 3) { this.state = 'float'; this.t = 1.8; }
+        }
+        break;
       case 'castTornado':
         hover();
-        if (this.t <= 0) { FX.push(new Tornado(ar.x + 2 * TILE, 1, floorY), new Tornado(ar.x + ar.w - 2 * TILE, -1, floorY)); SFX.wind(); SFX.whoosh(); this.state = 'float'; this.t = ph === 2 ? 2.0 : 2.6; }
+        if (this.t <= 0) { FX.push(new Tornado(ar.x + 2 * TILE, 1, floorY), new Tornado(ar.x + ar.w - 2 * TILE, -1, floorY)); SFX.wind(); SFX.whoosh(); this.state = 'float'; this.t = ph >= 2 ? 2.0 : 2.6; }
         break;
       case 'castRunes':
         hover();
         if (this.t <= 0) {
-          const n = ph === 2 ? 6 : 4, xs = [clamp(pcx, ar.x + 60, ar.x + ar.w - 60)];
+          const n = ph === 3 ? 8 : ph === 2 ? 6 : 4, xs = [clamp(pcx, ar.x + 60, ar.x + ar.w - 60)];
           for (let k = 1; k < n; k++) xs.push(rand(ar.x + 60, ar.x + ar.w - 60));
           xs.forEach((x, k) => FX.push(new RuneStrike(x, landYAt(x, ar.y + 2 * TILE), k * 0.12)));
-          this.state = 'float'; this.t = ph === 2 ? 1.6 : 2.0;
+          this.state = 'float'; this.t = ph >= 2 ? 1.6 : 2.0;
         }
         break;
       case 'charge':
         this.y = lerp(this.y, this.hy - this.h / 2, 1 - Math.exp(-3 * dt));
-        if (this.t <= 0 && this.orb) { this.orb.launch(330); this.state = 'rally'; this.say('THE STORM… OBEYS… ME!', 1.2); }
+        if (this.t <= 0 && this.orb) { this.orb.launch(ph === 3 ? 390 : 330); this.state = 'rally'; this.say('THE STORM… OBEYS… ME!', 1.2); }
         break;
       case 'rally':
         this.y = lerp(this.y, this.hy - this.h / 2 + Math.sin(this.anim * 3) * 8, 1 - Math.exp(-3 * dt));
@@ -392,16 +448,18 @@ class Milo {
     this.x = clamp(this.x, ar.x + TILE, ar.x + ar.w - TILE - this.w);
   }
   pick(ph) {
-    const plan = ph === 1 ? ['tornado', 'runes', 'overload'] : ['runes', 'tornado', 'overload', 'runes', 'overload'];
+    const plan = ph === 1 ? ['tornado', 'runes', 'overload'] : ph === 2 ? ['runes', 'tornado', 'overload', 'runes', 'overload']
+      : ['storm', 'overload', 'runes', 'storm', 'overload', 'tornado'];
     const a = plan[this.step++ % plan.length];
     if (a === 'tornado') { this.state = 'castTornado'; this.t = 0.7; this.say('TORNADO WALLS!', 1.1); SFX.windup(); }
+    else if (a === 'storm') { this.state = 'castStorm'; this.k = 0; this.t = 0.8; this.say('PERFECT STORM! …PROBABLY!', 1.3); SFX.windup(); SFX.staticBuzz(0.4); }
     else if (a === 'runes') { this.state = 'castRunes'; this.t = 0.5; this.say('ARCANE LIGHTNING!', 1.1); SFX.staticBuzz(0.4); }
     else { this.orb = new OverloadOrb(this); Bolts.push(this.orb); this.state = 'charge'; this.t = 1.5; this.say('BEHOLD! OVERLOAD!', 1.3); SFX.laserCharge(); }
   }
   orbReturned(o) {
     if (o.rally < 3) {
       // panic-swat it back, faster each time
-      o.friendly = false; o.launch(330 + o.rally * 120); this.panic = 0.9; SFX.deflect();
+      o.friendly = false; o.launch(330 + o.rally * 120 + (this.phase() === 3 ? 60 : 0)); this.panic = 0.9; SFX.deflect();
       this.say(['oh no oh no oh no', 'NOPE! NOPE NOPE NOPE!'][o.rally - 1] || 'AAAH!', 1.1);
       return;
     }
@@ -432,7 +490,7 @@ class Milo {
   draw() {
     const cx = this.x + this.w / 2, st = this.state === 'stunned' || this.state === 'fall' || this.state === 'beaten';
     if (!st) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(cx, this.y + this.h, 0, cx, this.y + this.h, 50); g.addColorStop(0, 'rgba(185,139,255,.3)'); g.addColorStop(1, 'rgba(185,139,255,0)'); ctx.fillStyle = g; ctx.fillRect(cx - 50, this.y + this.h - 50, 100, 100); ctx.restore(); }
-    drawMilo(cx, this.y + this.h, this.facing, this.anim, { cast: this.state === 'castTornado' || this.state === 'castRunes' || this.state === 'charge', panic: this.panic > 0, stun: st });
+    drawMilo(cx, this.y + this.h, this.facing, this.anim, { cast: this.state === 'castTornado' || this.state === 'castRunes' || this.state === 'castStorm' || this.state === 'roar' || this.state === 'charge', panic: this.panic > 0, stun: st });
     if (this.flash > 0) { ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(this.x, this.y, this.w, this.h); }
     if (this.state === 'stunned') for (let k = 0; k < 3; k++) { const a = this.anim * 4 + k * 2.1; ctx.fillStyle = GOLD; ctx.font = `12px ${DISPLAY_FONT}`; ctx.textAlign = 'center'; ctx.fillText('★', cx + Math.cos(a) * 16, this.y - 14 + Math.sin(a) * 5); }
     drawShout(cx, this.y - 34, this.shout);
