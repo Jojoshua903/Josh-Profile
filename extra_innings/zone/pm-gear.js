@@ -97,7 +97,7 @@ PM_VIEWS.tools = {
   hint: '<kbd>←</kbd><kbd>→</kbd> choose · <kbd>Enter</kbd> take in hand / drink',
   render(body) {
     const D = Save.data, T = TOOLS[TB.sel], have = T.have(), mode = ballMode(), q = D.q;
-    const pens = typeof PENNANTS !== 'undefined' ? PENNANTS : ['fionn', 'milo', 'deniz'], penN = pens.filter(k => D.pennants[k]).length;
+    const pens = typeof PENNANTS !== 'undefined' ? PENNANTS : ['fionn', 'milo', 'deniz', 'maya'], penN = pens.filter(k => D.pennants[k]).length;
     const peb = pebblesFound(), oreFound = Object.keys(D.ores || {}).length;
     const act = T.id === 'brew' ? `<button class="pm-btn" data-use ${have && q.brew && atBench() ? '' : 'disabled'}>${q.brew ? 'Drink' : 'Empty'}</button>`
       : `<button class="pm-btn ${have && mode === T.mode ? 'sel' : ''}" data-use ${have && mode !== T.mode ? '' : 'disabled'}>${mode === T.mode && have ? 'In hand' : 'Take in hand'}</button>`;
@@ -111,7 +111,7 @@ PM_VIEWS.tools = {
           <p class="pm-note">${pmEsc(Bindings.label('swap'))} cycles your ball types in play.</p></div></div>
       <hr class="pm-rule"><h3>Key Items &amp; Collectibles</h3>
       <div class="pm-case">
-        <div class="pm-cell"><div>${pens.map((k, i) => PENNANT_SVG(D.pennants[k] ? ['#9be36a', '#6fd3ff', '#bfefff'][i] : '#2a2d3a')).join('')}</div><b>Golden Pennants</b><span class="pm-big">${penN} / 3</span></div>
+        <div class="pm-cell"><div>${pens.map((k, i) => PENNANT_SVG(D.pennants[k] ? ['#9be36a', '#6fd3ff', '#bfefff', '#5fd6c0'][i] : '#2a2d3a')).join('')}</div><b>Golden Pennants</b><span class="pm-big">${penN} / ${pens.length}</span></div>
         <div class="pm-cell">${ORE_SVG}<b>Raw Titanium Ore</b><span class="pm-big">${D.ore}</span><span class="pm-note">${oreFound} found in total</span></div>
         <div class="pm-cell"><svg viewBox="0 0 40 30"><ellipse cx="20" cy="18" rx="15" ry="10" fill="#9a9488" stroke="#0d0b10" stroke-width="2.5"/><path d="M12 14 Q18 10 24 13" fill="none" stroke="#f3ead8" stroke-width="2"/></svg><b>Lucky Pebbles</b><span class="pm-big">${peb} / ${PEBBLE_TOTAL}</span><div class="pm-bar" style="width:80%"><i style="width:${100 * peb / PEBBLE_TOTAL}%"></i></div></div>
         <div class="pm-cell">${BOLT_SVG}<b>Scrap Bolts</b><span class="pm-big">${D.bolts}</span></div>

@@ -22,7 +22,7 @@
      Deniz's kettle and Josh's fold-out workbench beside it
    Loaded on every story page after zone/caravan.js.
    ========================================================= */
-const TOLLS = { z1: 0, z2: 100, z3: 125, z4: 150, z5: 200, z6: 250, z7: 300, z8: 350, z9: 500 };
+const TOLLS = { z1: 0, z2: 100, z3: 125, z4: 150, z12: 140, z5: 200, z6: 250, z7: 300, z8: 350, z9: 500 };
 const tollOf = id => { const p = TOLLS[id] || 0; return Save.data.q.rivalry === 'renas' ? Math.round(p / 2 / 5) * 5 : p; };
 const trTurbo = () => Save.data.q.rivalry === 'renas';
 const RIDE = { room: null, bell: null, R: null, dial: null, ride: false, fx: [], bark: null, trail: 0, pad: {}, arrive: null };
@@ -445,7 +445,7 @@ function trDrawBark(B) {
 })();
 
 /* ---------- phase 2: the Spire tunnel (1.8 s), then the real trip ---------- */
-const TR_TINT = { z1: '242,193,78', z2: '255,138,42', z3: '160,200,220', z4: '232,54,28', z5: '111,211,255', z6: '185,139,255', z7: '159,230,255', z8: '191,239,255', z9: '255,215,0' };
+const TR_TINT = { z1: '242,193,78', z2: '255,138,42', z12: '95,214,192', z3: '160,200,220', z4: '232,54,28', z5: '111,211,255', z6: '185,139,255', z7: '159,230,255', z8: '191,239,255', z9: '255,215,0' };
 function trTunnelCanvas() {
   const cv = document.createElement('canvas');
   cv.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;z-index:2147483640;pointer-events:none';

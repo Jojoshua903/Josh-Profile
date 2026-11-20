@@ -17,6 +17,8 @@ const ROOMS = [
   { id: 'z_core',   zone: 'z10', name: 'The Zennith Core',              ux: 8, uy: 1, uw: 2, uh: 1, tint: '90,70,140', secret: true },
   // gauntlet (zone/gauntlets.js): the VIP wing under the locker room
   { id: 't_colo',   zone: 'z9',  name: 'The Championship Colosseum',    ux: 6, uy: 1, uw: 2, uh: 1, tint: '230,180,90', secret: true },
+  // the Hall of Legends' gate wing (zone/legends-hall.js): sealed rock unless you're dreaming there
+  { id: 't_hall',   zone: 'z9',  name: 'The Hall of Legends',           ux: 5, uy: 1, uw: 1, uh: 1, tint: '240,220,170', secret: true, dream: true },
   // secret (zone/abyss.js): the Overtime Abyss, far below the stadium · no benches
   { id: 'a_breach', zone: 'z11', name: 'The Secret Breach',             ux: 0, uy: 2, uw: 2, uh: 2, tint: '230,210,160', secret: true },
   { id: 'a_canyon', zone: 'z11', name: 'The Pogo Canyon',               ux: 1, uy: 4, uw: 3, uh: 1, tint: '240,220,170', secret: true },
@@ -105,6 +107,7 @@ function buildAct3() {
   carve(241, 23, 78, 18);                             // the floor is row 41
   plank(36, 262, 6); plank(36, 296, 6); plank(32, 279, 7);
   fill(309, 34, 10, 7, 1);                            // the VIP stage (Big Bertha parks on it)
+  carve(201, 23, 39, 18);                             // the Hall of Legends' gate wing: column 240 stays rock until the dream opens it
 
   /* === Secret · The Overtime Abyss (zone/abyss.js places its hazards) === */
   // the breach: a low tunnel through a triple laser, then a long dark shaft

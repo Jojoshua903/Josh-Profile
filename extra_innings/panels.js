@@ -18,6 +18,7 @@ panelWrap.addEventListener('click', e => { if (e.target === panelWrap) closePane
 const SPOTS = {
   z1: ['The Scrapyard Dugout', 'Zone 1', 'zone1.html'], z2: ['The Deep Quarry', 'Zone 2', 'act1.html'],
   z3: ['The Ventilation Shafts', 'Zone 3', 'act1.html'], z4: ['The Pyrotechnic Foundry', 'Zone 4', 'act1.html'],
+  z12: ['The Sunken Bullpen', 'Zone 2½', 'act1.html'],
   z5: ['The Grand Concourse', 'Zone 5', 'act2.html'], z6: ['The Geode Caverns', 'Zone 6', 'act2.html'],
   z7: ['The Storm Atrium', 'Zone 7', 'act2.html'], z8: ['The Glacier Crown', 'Zone 8', 'act2.html'],
   z9: ['The Gilded Stadium', 'Zone 9', 'act3.html'], z10: ['The Zennith Core', 'Act IV', 'act3.html'],

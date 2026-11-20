@@ -10,7 +10,7 @@
 const PM = { tab: 'map', slowT: 0, slowAcc: 0, raf: 0, mapMode: 'tower', zone: null, pin: null, mouse: null, built: false, dashed: [], towerSegs: [], padL: false, padR: false, R: {} };
 const PM_SLOW = 0.3;
 const PM_TABS = [['map', 'Map'], ['crests', 'Crests & Badges'], ['tools', 'Tools & Balls'], ['log', 'Logbook'], ['trophies', 'Trophies']];
-const PM_ZONES = [['z1', 0, '#c8641e'], ['z2', 420, '#b8432a'], ['z3', 840, '#6f97a8'], ['z4', 1260, '#e8561c'], ['z5', 1700, '#d9b26a'],
+const PM_ZONES = [['z1', 0, '#c8641e'], ['z12', 210, '#3fb8a0'], ['z2', 420, '#b8432a'], ['z3', 840, '#6f97a8'], ['z4', 1260, '#e8561c'], ['z5', 1700, '#d9b26a'],
   ['z6', 2150, '#8a4fd0'], ['z7', 2600, '#5a7aa8'], ['z8', 3050, '#8fd6f0'], ['z9', 3500, '#f2c14e'], ['z10', 3920, '#d9c8ff']];
 const PM_PINS = [['ball', 'Red Baseball', 'Cracked wall · needs an Explosive Baseball'], ['bolt', 'Purple Lightning', 'Red laser barrier · needs the Static Dash'],
   ['star', 'Gold Star', 'Lucky Pebble or hard-to-reach treasure'], ['skull', 'Black Skull', 'Tough boss or combat gauntlet']];
@@ -190,12 +190,28 @@ addEventListener('padpause', () => { if (UI.modal === 'pmenu') closeModal(); });
    TAB 1 · THE MAP
    ========================================================= */
 const pmRoomZone = rm => rm.zone || PAGE.zoneOf(rm.id);
-function pmZoneRooms(z) { const C = MAP_CFG[z]; return C ? C.rooms.filter(rm => pmRoomZone(rm) === z) : []; }
+function pmZoneRooms(z) { const C = MAP_CFG[z]; return C ? C.rooms.filter(rm => !rm.dream && pmRoomZone(rm) === z) : []; }
+// side-quest pieces that live in this zone's rooms: [done, total]
+function pmZoneQuests(z, rooms) {
+  if (typeof QUEST_SPOTS === 'undefined') return [0, 0];
+  const q = Save.data.q, S = QUEST_SPOTS, ids = new Set(rooms.map(rm => rm.id)), has = (k, id) => !!(q[k] || {})[id];
+  let done = 0, total = 0;
+  const add = ok => { total++; if (ok) done++; };
+  for (const s of S.stubs || []) if (ids.has(s.room)) add(has('stubs', s.id));
+  for (const s of S.goals || []) if (ids.has(s.room)) add(has('goals', s.id));
+  for (const s of S.books || []) if (ids.has(s.room)) add(has('books', s.id));
+  for (const s of S.herbs || []) if (ids.has(s.room)) add(has('herbs', s.id));
+  for (const s of S.cats || []) if (ids.has(s.room)) add(q.cats === 'done' || has('catsFound', s.id));
+  for (const s of S.elites || []) if (ids.has(s.room)) add(has('boards', s.id));
+  const tr = S.trials && S.trials[z]; if (tr && ids.has(tr.room)) add(has('trials', z));
+  return [done, total];
+}
 function pmZonePct(z) {
   const D = Save.data, q = D.q;
   if (MAP_CFG[z]) {
-    const list = pmZoneRooms(z).filter(rm => !rm.secret || D.visited[rm.id]);
-    if (list.length) q.zonePct[z] = Math.round(100 * list.filter(rm => D.visited[rm.id]).length / list.length);
+    const all = pmZoneRooms(z), list = all.filter(rm => !rm.secret || D.visited[rm.id]);
+    const [qd, qt] = pmZoneQuests(z, all);
+    if (list.length) q.zonePct[z] = Math.round(100 * (list.filter(rm => D.visited[rm.id]).length + qd) / (list.length + qt));
   }
   return q.zonePct[z];
 }
@@ -402,7 +418,7 @@ function pmRenderMapSide() {
   const pins = (D.q.pins[z] || []).length;
   side.innerHTML = `<h3>${PM.mapMode === 'tower' ? 'The Tower of Zennith' : 'Zone Detail'}</h3>
     <h2>${known ? pmEsc(Z.name) : '? ? ?'}</h2><p class="pm-dim" style="font-style:italic">${known ? pmEsc(Z.sub) : 'Uncharted'}</p>
-    <div class="pm-kv"><span>Explored</span><b>${pct !== undefined ? pct + '%' : '—'}</b>${alt !== null && alt !== undefined ? `<span>Altitude</span><b>${alt.toLocaleString('en-US')} m</b>` : ''}
+    <div class="pm-kv"><span>Complete</span><b>${pct !== undefined ? pct + '%' : '—'}</b>${alt !== null && alt !== undefined ? `<span>Altitude</span><b>${alt.toLocaleString('en-US')} m</b>` : ''}
       <span>Reshman's map</span><b>${C && C.hasMap() ? 'Yes' : 'No'}</b><span>Quill · Compass</span><b>${D.up.quill ? 'yes' : 'no'} · ${D.up.compass ? 'yes' : 'no'}</b></div>
     <div class="pm-bar"><i style="width:${pct || 0}%"></i></div>
     ${C && !C.hasMap() ? `<p class="pm-note">${pmEsc(C.noMap)}</p>` : ''}

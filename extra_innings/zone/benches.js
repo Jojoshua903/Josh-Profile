@@ -21,6 +21,7 @@ const BENCH_MAT = {
   z5:  { back: '#8a5a3a', seat: '#a8734c', leg: '#2a1e14', trim: '#f2c14e', kind: 'stadium' },
   z6:  { back: '#6a3ab0', seat: '#7a4ac8', leg: '#3a2060', trim: '#e0c8ff', kind: 'crystal' },
   z7:  { back: '#6a5236', seat: '#7a6040', leg: '#3a2e20', trim: '#6a9a52', kind: 'moss' },
+  z12: { back: '#4a5a4a', seat: '#566a56', leg: '#2a3430', trim: '#5fd6c0', kind: 'moss' },
   z8:  { back: '#4a5a6a', seat: '#566878', leg: '#2a3440', trim: '#eef8ff', kind: 'frost' },
   z9:  { back: '#7a3a5a', seat: '#8a4a6a', leg: '#24121c', trim: '#f2c14e', kind: 'stadium' },
   z10: { back: '#2a2040', seat: '#342850', leg: '#120c1c', trim: '#b388ff', kind: 'core' },

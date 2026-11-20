@@ -221,7 +221,7 @@ function drawLift(rect, label) {
   ctx.restore();
   if (Act2.liftNear) { ctx.font = `14px ${DISPLAY_FONT}`; ctx.textAlign = 'center'; ctx.fillStyle = GOLD; ctx.fillText('▲ ' + Bindings.label('up', Game.lastInput) + ' · ' + label, x + w / 2, y - 186 + Math.sin(Game.time * 4) * 2); }
 }
-// the Pennant Gate: a massive golden elevator door with three pennant slots
+// the Pennant Gate: a massive golden elevator door with four pennant slots
 function drawPennantGate() {
   const g = A.gate, D = Save.data, t = Game.time, cx = g.x + g.w / 2, bot = g.y + g.h, op = Gate.open || (D.gateOpen ? 1 : 0);
   ctx.save(); ctx.lineJoin = 'round';
@@ -242,9 +242,9 @@ function drawPennantGate() {
     ctx.strokeStyle = 'rgba(90,67,32,.8)'; ctx.lineWidth = 2;
     for (let k = 1; k < 4; k++) { ctx.beginPath(); ctx.moveTo(dx + 8, g.y + 30 + k * (g.h - 30) / 4); ctx.lineTo(dx + half - 8, g.y + 30 + k * (g.h - 30) / 4); ctx.stroke(); }
   }
-  // the three slots (west · up · east)
+  // the four slots (west · up · east · down)
   PENNANTS.forEach((k, i) => {
-    const sx = cx + (i - 1) * 110, sy = g.y + 4;
+    const sx = cx + (i - 1.5) * 100, sy = g.y + 4;
     rr(sx - 22, sy - 30, 44, 62, 6); inked('#3a2c16', 3);
     if (D.slots[k]) { drawPennant(sx - 12, sy + 28, t + i, 0.9); if (Gate.insert > 0) { ctx.fillStyle = `rgba(255,240,180,${Gate.insert})`; ctx.fillRect(sx - 22, sy - 30, 44, 62); } }
     else { ctx.strokeStyle = `rgba(242,193,78,${0.35 + 0.2 * Math.sin(t * 3 + i)})`; ctx.lineWidth = 2; ctx.setLineDash([4, 4]); ctx.strokeRect(sx - 14, sy - 22, 28, 46); ctx.setLineDash([]); }
@@ -263,6 +263,7 @@ function drawPennantGate() {
     arrow(g.x - 90 + bob * -1, g.y + 30, Math.PI, '#b98bff', 'GEODE CAVERNS', D.pennants.fionn);
     arrow(cx, g.y - 110 - bob, -Math.PI / 2, '#d9b8ff', 'STORM ATRIUM', D.pennants.milo);
     arrow(g.x + g.w + 90 + bob, g.y + 30, 0, '#bfefff', 'GLACIER CROWN', D.pennants.deniz);
+    arrow(cx, bot - 60 + bob, Math.PI / 2, '#5fd6c0', 'DOWN · UNDER THE DEEP QUARRY', D.pennants.maya);
     ctx.restore();
   }
   if (Act2.gateNear && !Story.active) { ctx.font = `14px ${DISPLAY_FONT}`; ctx.textAlign = 'center'; ctx.fillStyle = GOLD; ctx.fillText('▲ ' + Bindings.label('up', Game.lastInput) + (D.gateOpen ? ' · RIDE TO THE PEAK' : ' · PENNANT GATE'), cx, bot - 170 + Math.sin(t * 4) * 2); }

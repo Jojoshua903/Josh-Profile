@@ -30,6 +30,7 @@ const SP_PAL = {
   z5:  { fill: '#241F1C', ink: '#C7B8A1', acc: '#E0C088' },
   z6:  { fill: '#1F1430', ink: '#A985E0', acc: '#B388FF' },
   z7:  { fill: '#121B2E', ink: '#7A9AD6', acc: '#7C4DFF' },
+  z12: { fill: '#0C1E20', ink: '#6FD8C4', acc: '#5FD6C0' },
   z8:  { fill: '#102833', ink: '#7AC5D8', acc: '#80DEEA' },
   z9:  { fill: '#291E12', ink: '#E6C27A', acc: '#FFD700' },
   z10: { fill: '#140A0E', ink: '#FF3B30', acc: '#FF3B30' },
@@ -66,7 +67,7 @@ const SP_PORTALS = {
 function spRecord() {
   if (typeof ROOMS === 'undefined' || typeof grid === 'undefined' || !grid) return;
   const list = [], ids = new Set();
-  const add = rm => { if (rm && rm.id && !ids.has(rm.id) && rm.tw > 0 && rm.th > 0 && rm.x0 !== undefined) { ids.add(rm.id); list.push(rm); } };
+  const add = rm => { if (rm && rm.id && !rm.dream && !ids.has(rm.id) && rm.tw > 0 && rm.th > 0 && rm.x0 !== undefined) { ids.add(rm.id); list.push(rm); } };
   ROOMS.forEach(add);
   if (typeof MAP_CFG !== 'undefined') for (const k in MAP_CFG) { const C = MAP_CFG[k]; if (C && Array.isArray(C.rooms)) C.rooms.forEach(add); }
   const rooms = [];

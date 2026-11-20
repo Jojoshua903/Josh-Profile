@@ -185,6 +185,7 @@ body.silk-panel #menu .menu-foot{visibility:hidden}
     z8: '<path d="M2 56 L30 14 L42 30 L58 6 L98 56Z"/><path d="M50 18 L58 6 L66 18 L58 22Z M24 24 L30 14 L36 24Z" fill="#0B0D13" opacity=".35"/>',
     z9: '<path d="M4 50 Q50 34 96 50 V56 H4Z"/><path d="M10 46 V22 Q50 8 90 22 V46 Q50 32 10 46Z" opacity=".75"/><path d="M20 22 V8 M80 22 V8 M50 15 V2" stroke="currentColor" stroke-width="3"/>',
     z10: '<path d="M50 2 L74 30 L50 58 L26 30Z"/><path d="M50 14 L64 30 L50 46 L36 30Z" fill="#0B0D13"/><circle cx="50" cy="30" r="5"/>',
+    z12: '<path d="M6 56 H94 V50 Q78 44 64 50 Q50 56 36 50 Q22 44 6 50Z"/><path d="M18 44 V24 Q50 4 82 24 V44 H74 V28 Q50 14 26 28 V44Z"/><path d="M50 22 Q46 30 50 34 Q54 30 50 22Z"/>',
   };
   const BALL = (on, crack) => `<svg viewBox="0 0 24 24" class="sb-ball ${on ? 'on' : ''}"><circle cx="12" cy="12" r="9.5"/><path d="M7 5 Q10 12 7 19 M17 5 Q14 12 17 19" fill="none"/>${crack ? '<path class="crk" d="M12 2 L10 8 L14 12 L11 17 L13 22" fill="none"/>' : ''}</svg>`;
   const CRACKED = '<svg viewBox="0 0 100 100" class="sb-crack"><circle cx="50" cy="50" r="38" fill="#2a1416" stroke="#FF3B30" stroke-width="3"/><path d="M30 24 Q40 50 30 76 M70 24 Q60 50 70 76" fill="none" stroke="#FF3B30" stroke-width="2.5" stroke-dasharray="5 4"/><path d="M50 8 L44 30 L56 42 L46 58 L58 72 L52 92" fill="none" stroke="#FFF8EB" stroke-width="3.5" stroke-linejoin="round"/><path d="M56 42 L76 36 M46 58 L24 62" fill="none" stroke="#FFF8EB" stroke-width="2.5"/></svg>';

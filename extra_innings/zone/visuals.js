@@ -22,6 +22,7 @@ const MOOD = {
   z8:  { beam: '200,245,255', p: 'snow',  fg: 'ice',     spire: 1, grade: '15,35,60' },
   z9:  { beam: '255,225,130', p: 'gold',  fg: 'rail',    spire: 1, grade: '50,20,70' },
   z10: { beam: '200,180,230', p: 'rain',  fg: null,      spire: 0, grade: '30,15,45' },
+  z12: { beam: '120,235,215', p: 'spore', fg: 'pipes',   spire: 0, grade: '10,40,45' },
 };
 const V = { parts: [], tris: [], ribbon: [], benchZoom: false, duckT: 0, lastZ: null };
 const vOn = () => typeof GFX === 'undefined' || GFX.on;
@@ -157,7 +158,7 @@ function drawMotes(M, cam) {
    cost is a handful of drawImage calls (a full-screen blur every frame is not). */
 // dark zone tints: they sit a shade above the near-black walls, so the shape reads
 // without ever becoming a flat black bar (the game's back walls are ~rgb(13,11,16))
-const FG_TINT = { z1: '40,25,17', z2: '39,23,16', z3: '18,35,42', z4: '44,20,26', z5: '38,32,27', z6: '27,19,42', z7: '19,27,44', z8: '16,34,42', z9: '44,32,19', z10: '21,14,21', z11: '16,12,21' };
+const FG_TINT = { z1: '40,25,17', z2: '39,23,16', z12: '14,36,38', z3: '18,35,42', z4: '44,20,26', z5: '38,32,27', z6: '27,19,42', z7: '19,27,44', z8: '16,34,42', z9: '44,32,19', z10: '21,14,21', z11: '16,12,21' };
 const FG = { cache: new Map() };
 function fgDepth() { return !(typeof Save !== 'undefined' && Save.data && Save.data.opt && Save.data.opt.fg === 0); }
 function fgBoss() { try { return !!(typeof Zone !== 'undefined' && Zone.boss); } catch (e) { return false; }

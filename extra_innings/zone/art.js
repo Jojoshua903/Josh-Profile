@@ -31,6 +31,7 @@ const ART = {
   z9:  { cap: 'marble',  inner: 'brick',  jag: 1 },
   z10: { cap: 'core',    inner: 'beam',   jag: 2 },
   z11: { cap: 'chalk',   inner: 'strata', jag: 4 },
+  z12: { cap: 'moss',    inner: 'brick',  jag: 5 },
 };
 // the ragged lower edge of the cap, continuous from tile to tile
 const artEdge = (gi, ty, jag) => ART_CAP - jag / 2 + (jag > 1 ? tileHash(gi, ty * 7 + 3) % jag : 0);

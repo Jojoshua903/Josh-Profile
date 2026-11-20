@@ -8,7 +8,7 @@ const TG = { pollT: 0, parry: 0, mvp: null, lastHp: -1, tauntT: 0, shattered: fa
 const tMode = () => { const q = Save.data.q; return q.sudden ? 'Sudden Death' : q.shotClock ? 'Shot Clock' : 'Standard'; };
 const BOSS_FLAGS = ['bossDead', 'adamDead', 'danielDead', 'fionnDead', 'miloDead', 'denizDead', 'evilAdamDead', 'zennithDead'];
 const bossKills = D => BOSS_FLAGS.filter(k => D[k]).length;
-const BENCH_TOTAL = 16;   // Zone 1: 3 · Act I: 6 · Act II: 5 · Act III: 2
+const BENCH_TOTAL = 18;   // Zone 1: 3 · Act I: 6 · Sunken Bullpen: 2 · Act II: 5 · Act III: 2
 
 /* ---------- a new save that asked for Sudden Death; a shattered save can't be loaded ---------- */
 (function () {
@@ -75,6 +75,7 @@ const TCHECK = {
   sedimentary: D => D.fionnDead,
   storm_obeys: D => D.miloDead,
   bad_vibes: D => D.denizDead,
+  on_the_beat: D => D.mayaDead,
   blorp: D => ['z1', 'z2', 'z3', 'z4', 'z5', 'z6', 'z7', 'z8', 'z9'].every(z => (D.reshmanMet || {})[z]),
   rock_stone: D => D.batLv >= 3,
   cat_herder: D => D.q.cats === 'done',

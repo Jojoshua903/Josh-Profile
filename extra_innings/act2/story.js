@@ -3,11 +3,12 @@
    ACT II STORY: the Grand Concourse · Pennant Gate ·
    Fionn · Milo · King Deniz (extends zone/story.js)
    ========================================================= */
-const PENNANTS = ['fionn', 'milo', 'deniz'];
+const PENNANTS = ['fionn', 'milo', 'deniz', 'maya'];   // maya: Coach Maya, under the Deep Quarry (act/bullpen.js)
 const pennantCount = () => PENNANTS.filter(k => Save.data.pennants[k]).length;
 function pennantToast() {
   const n = pennantCount();
-  setTimeout(() => toast(n >= 3 ? 'ALL THREE GOLDEN PENNANTS · TAKE THEM TO THE PENNANT GATE' : `GOLDEN PENNANT ${n} / 3 · THE GATE IN THE CONCOURSE NEEDS ${3 - n} MORE`), 600);
+  const N = PENNANTS.length;
+  setTimeout(() => toast(n >= N ? 'ALL FOUR GOLDEN PENNANTS · TAKE THEM TO THE PENNANT GATE' : `GOLDEN PENNANT ${n} / ${N} · THE GATE IN THE CONCOURSE NEEDS ${N - n} MORE`), 600);
 }
 Object.assign(Story, {
   concourseArrive() {
@@ -23,10 +24,10 @@ Object.assign(Story, {
       Gate.hint = 4.5; SFX.unlock();
       for (let k = 0; k < 24; k++) spawnParticle({ x: g.x + rand(0, g.w), y: g.y + g.h - rand(0, 40), vx: rand(-10, 10), vy: rand(-90, -40), life: rand(1.4, 2.4), size: rand(2, 4), color: k % 2 ? GOLD : BONE, type: 'dot' });
       this.zoomTo(1.15);
-      await this.say('NATHAN', 'A giant golden elevator… with three empty pennant slots.', () => ({ x: g.x + g.w / 2, y: g.y - 20 }));
+      await this.say('NATHAN', 'A giant golden elevator… with FOUR empty pennant slots.', () => ({ x: g.x + g.w / 2, y: g.y - 20 }));
       this.zoomTo(1.0);
       this.camTarget = { x: 192 * TILE, y: 56 * TILE }; await this.wait(1.2);
-      await this.say('NATHAN', 'Caves to the west, a storm up top, ice to the east. Pick a direction, MVP.', nh);
+      await this.say('NATHAN', 'Caves to the west, a storm up top, ice to the east. And the fourth slot has a raincloud on it… pointing DOWN.', nh);
       D.concourse = true; saveGame();
     }).then(() => toast('THE GRAND CONCOURSE · ▲ AT THE PENNANT GATE FOR A HINT'));
   },
@@ -37,8 +38,8 @@ Object.assign(Story, {
     const fresh = PENNANTS.filter(k => D.pennants[k] && !D.slots[k]);
     if (!fresh.length) {
       Gate.hint = 6; SFX.ui();
-      const left = 3 - pennantCount();
-      toast(left === 3 ? 'THREE EMPTY SLOTS · THE ENGRAVINGS POINT WEST, UP AND EAST' : `${left} SLOT${left > 1 ? 'S' : ''} STILL EMPTY · FOLLOW THE GLOWING ARROWS`);
+      const left = PENNANTS.length - pennantCount();
+      toast(left === PENNANTS.length ? 'FOUR EMPTY SLOTS · THE ENGRAVINGS POINT WEST, UP, EAST, AND DOWN UNDER THE DEEP QUARRY' : `${left} SLOT${left > 1 ? 'S' : ''} STILL EMPTY · FOLLOW THE GLOWING ARROWS`);
       return;
     }
     return this.run(async () => {
@@ -47,15 +48,15 @@ Object.assign(Story, {
       for (const k of fresh) {
         await this.wait(0.5);
         D.slots[k] = 1; saveGame(); Gate.insert = 1; SFX.unlock();
-        const i = PENNANTS.indexOf(k), sx = g.x + g.w / 2 + (i - 1) * 110;
+        const i = PENNANTS.indexOf(k), sx = g.x + g.w / 2 + (i - 1.5) * 100;
         burst(sx, g.y + 34, 20, { colors: [GOLD, BONE, '#ff8a2a'], maxSpeed: 340 });
         this.impact(sx, g.y + 34, GOLD);
-        pop(sx, g.y, `PENNANT ${PENNANTS.filter(p => D.slots[p]).length}/3`, { size: 32 });
+        pop(sx, g.y, `PENNANT ${PENNANTS.filter(p => D.slots[p]).length}/${PENNANTS.length}`, { size: 32 });
         await this.wait(0.6);
       }
     }).then(() => {
       if (PENNANTS.every(k => D.slots[k])) this.gateOpen();
-      else toast(`${3 - PENNANTS.filter(k => D.slots[k]).length} MORE PENNANT${PENNANTS.filter(k => D.slots[k]).length === 2 ? '' : 'S'} TO GO`);
+      else { const left = PENNANTS.length - PENNANTS.filter(k => D.slots[k]).length; toast(`${left} MORE PENNANT${left === 1 ? '' : 'S'} TO GO`); }
     });
   },
 
@@ -85,7 +86,7 @@ Object.assign(Story, {
       D.gateOpen = true; D.act2Cleared = true; saveGame();
     }).then(() => {
       themeCheck(800);
-      showCard('ACT II COMPLETE', 'THE PENNANT GATE OPENS', 'All three Golden Pennants are in. The elevator to the Spire\'s peak is open, and Evil Adam is waiting at the top. Step inside the gate when you\'re ready. Rest first. Spend your bolts.',
+      showCard('ACT II COMPLETE', 'THE PENNANT GATE OPENS', 'All four Golden Pennants are in. The elevator to the Spire\'s peak is open, and Evil Adam is waiting at the top. Step inside the gate when you\'re ready. Rest first. Spend your bolts.',
         [`pebbles ${pebblesFound()}/${PEBBLE_TOTAL}`, `<kbd>${Bindings.label('up')}</kbd> at the gate to ride up`]);
     });
   },

@@ -178,8 +178,8 @@ function drawLgFountain(x, y, t) {
 
 /* ---------- the sky over the Hall ---------- */
 const LG_CLOUDS = Array.from({ length: 14 }, (_, i) => ({ u: (i * 0.137 + 0.05) % 1, v: 0.08 + ((i * 0.31) % 0.7), s: 0.6 + ((i * 0.53) % 0.8), sp: 6 + (i % 4) * 4 }));
-function drawLgSky() {
-  const r = ROOM.t_colo.px, t = Game.time, fy = 41 * TILE;
+function drawLgSky(r0) {
+  const r = r0 || ROOM.t_colo.px, t = Game.time, fy = 41 * TILE;
   ctx.save();
   const g = ctx.createLinearGradient(0, r.y, 0, r.y + r.h); g.addColorStop(0, '#8fc7ef'); g.addColorStop(0.55, '#f6dfb0'); g.addColorStop(1, '#f2c98a');
   ctx.fillStyle = g; ctx.fillRect(r.x, r.y, r.w, r.h);

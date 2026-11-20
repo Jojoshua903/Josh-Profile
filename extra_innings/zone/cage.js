@@ -58,7 +58,7 @@ const Cage = {
   start() {
     if (!this.canStart()) return;
     const P = Player;
-    Object.assign(this, { on: true, balls: [], strikes: 0, combo: 0, points: 0, pitches: 0, nextT: 1.6, queue: [], flash: 0 });
+    Object.assign(this, { on: true, balls: [], strikes: 0, combo: 0, points: 0, pitches: 0, nextT: 1.6, queue: [], flash: 0, swing: null, lastAT: 0 });
     // the hub's critters wait outside
     this.saved = Enemies.filter(e => !e.dead && e !== Zone.boss); for (const e of this.saved) { const i = Enemies.indexOf(e); if (i >= 0) Enemies.splice(i, 1); }
     P.reset({ x: GX_T(CAGE.plate, CAGE.floor).x, y: CAGE.floor * TILE }, true); P.facing = 1;
@@ -83,6 +83,12 @@ const Cage = {
     this.bestRun = 0;
   },
   say(t) { this.msg = t; this.msgT = 1.1; },
+  whiff() {
+    if (this.strikes >= 3) return;
+    this.points = Math.max(0, this.points - 1); this.combo = 0; SFX.whoosh();
+    const P = Player; pop(P.x + P.w / 2 + 30, P.y - 10, '−1', { size: 22, color: '#ff8a6a' });
+    this.say('WHIFF! · −1 POINT');
+  },
   strike(why) {
     if (this.strikes >= 3) return;   // already out: balls still in the air don't count
     this.strikes++; this.combo = 0; this.flash = 0.35; SFX.deny(); addShake(5);
@@ -109,12 +115,20 @@ const Cage = {
       if (this.queue.length) { for (let i = this.queue.length - 1; i >= 0; i--) { this.queue[i] -= dt; if (this.queue[i] <= 0) { this.queue.splice(i, 1); this.balls.push(new CageBall('volley', Math.min(1100, 760 + this.combo * 4))); SFX.serve(); } } }
       else if ((this.nextT -= dt) <= 0) { this.nextT = this.pitch(); SFX.serve(); }
     }
-    const swinging = P.attackT > 0 && P.attackType !== 'launch', hb = swinging ? P.hitbox() : null, hurt = P.hurtbox();
+    // a level swing hits anything in front; an up-swing only counts for balls above Nathan's head (the high lobs),
+    // so spamming up-attack doesn't cover the chest-high pitches. A down-swing never counts.
+    const swinging = P.attackT > 0 && (P.attackType === 'fwd' || P.attackType === 'up'), hb = swinging ? P.hitbox() : null, hurt = P.hurtbox();
+    const highOnly = P.attackType === 'up';
+    // every level or up swing has to connect: a swing that hits nothing is a whiff (−1 point, combo gone)
+    if (swinging && (P.attackT > (this.lastAT || 0) + 0.001 || !this.swing)) { if (this.swing && !this.swing.hit) this.whiff(); this.swing = { hit: false }; }
+    else if (!swinging && this.swing) { if (!this.swing.hit) this.whiff(); this.swing = null; }
+    this.lastAT = swinging ? P.attackT : 0;
     for (const b of this.balls) {
       b.update(dt);
       if (b.state !== 'fly' || this.strikes >= 3) continue;
       const box = { x: b.x - b.r, y: b.y - b.r, w: b.r * 2, h: b.r * 2 };
-      if (hb && overlap(hb, box)) {
+      if (hb && overlap(hb, box) && (!highOnly || b.y < P.y)) {
+        if (this.swing) this.swing.hit = true;
         if (b.kind === 'bomb') { b.dead = true; explode(b.x, b.y, 60, 0, { friendly: false, small: true, word: 'BOOM!' }); this.strike('NEVER HIT THE BOMB'); continue; }
         b.state = 'hit'; b.vx = rand(900, 1300); b.vy = rand(-650, -300); b.g = 600;
         this.combo++; this.points++; this.bestRun = Math.max(this.bestRun || 0, this.combo);

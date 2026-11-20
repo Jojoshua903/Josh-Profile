@@ -8,7 +8,9 @@
    gate (lock on bindings, then PLAY BALL).
    The fights themselves: zone/legends-fight.js.
    ========================================================= */
-const LG_X = { pad: 243, ump: 247, bench: 251.5, gates: [256.5, 260.5, 264.5, 268.5], statue0: 273, step: 3 };
+// the gate wing (t_hall, tiles 201–239) holds the pad, the Umpire, the bench and the cup gates;
+// the Colosseum (t_colo) is the statue gallery, and the ring the matches are played in
+const LG_X = { pad: 204, ump: 209, bench: 214, gates: [220, 225, 230, 235], statue0: 245, step: 4 };
 const lgSpot = tx => ({ x: tx * TILE + TILE / 2, y: 41 * TILE });
 const lgNear = (o, reach = 26) => { const c = Player.center(); return !Player.dead && Math.abs(c.x - o.x) < reach && Math.abs(Player.y + Player.h - o.y) < 16; };
 
@@ -64,13 +66,14 @@ class LgGate {
   }
 }
 
-// fill the hall with its furniture (called on entering the Colosseum while dreaming)
-function lgBuildHall() {
-  NPCs.push(new GPost(lgSpot(LG_X.pad).x, 41 * TILE, { look: 'pad', label: 'WAKE UP · BACK TO BASE CAMP', go: () => lgWake() }));
-  NPCs.push(new LgUmpire(lgSpot(LG_X.ump).x, 41 * TILE));
-  NPCs.push(new LgBench(lgSpot(LG_X.bench).x, 41 * TILE));
-  LG_CUP_ORDER.forEach((k, i) => NPCs.push(new LgGate(lgSpot(LG_X.gates[i]).x, 41 * TILE, LG_CUPS[k])));
-  LG_RIVALS.forEach((R, i) => NPCs.push(new LgStatue(lgSpot(LG_X.statue0 + i * LG_X.step).x, 41 * TILE, R)));
+// fill a room of the hall with its furniture (called on entering the wing or the Colosseum while dreaming)
+function lgBuildHall(id = 't_colo') {
+  if (id === 't_hall') {
+    NPCs.push(new GPost(lgSpot(LG_X.pad).x, 41 * TILE, { look: 'pad', label: 'WAKE UP · BACK TO BASE CAMP', go: () => lgWake() }));
+    NPCs.push(new LgUmpire(lgSpot(LG_X.ump).x, 41 * TILE));
+    NPCs.push(new LgBench(lgSpot(LG_X.bench).x, 41 * TILE));
+    LG_CUP_ORDER.forEach((k, i) => NPCs.push(new LgGate(lgSpot(LG_X.gates[i]).x, 41 * TILE, LG_CUPS[k])));
+  } else LG_RIVALS.forEach((R, i) => NPCs.push(new LgStatue(lgSpot(LG_X.statue0 + i * LG_X.step).x, 41 * TILE, R)));
 }
 function lgWake() {
   const q = Save.data.q;

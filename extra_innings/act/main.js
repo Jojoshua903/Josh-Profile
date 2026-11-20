@@ -10,6 +10,7 @@ const PAL = {
   z2: { a: '#2a1a16', b: '#24160f', top: '#6b3a22', top2: '#4a2614', side: '#341e14', plank: '#7a5232', plankHi: '#9a6a42', spike: '#ffc890', vein: 'rgba(255,110,30,A)', crystal: '#8fe3ff', rivet: null, fog: '90,30,10' },
   z3: { a: '#1f2a33', b: '#1a242c', top: '#5f7a8a', top2: '#3e5462', side: '#2a3842', plank: '#6b7a86', plankHi: '#8c9ba6', spike: '#d9e2e8', vein: null, crystal: null, rivet: '#4a5d6a', fog: '30,60,80' },
   z4: { a: '#2a1c1c', b: '#241818', top: '#7a4a2a', top2: '#552f1a', side: '#3a2420', plank: '#8a5a3a', plankHi: '#b8733c', spike: '#e8d0a8', vein: null, crystal: null, rivet: '#5a3a2a', fog: '80,30,20' },
+  z12: { a: '#16262a', b: '#122024', top: '#3f6a4e', top2: '#2a4a38', side: '#1c3034', plank: '#5a6a5a', plankHi: '#7a8f78', spike: '#cfe8e0', vein: null, crystal: '#7ff0dc', rivet: '#2e4a4e', fog: '20,70,70' },
 };
 Object.assign(PAGE, {
   id: 'z2', benchKey: 'bench2', benches: A.benches,
@@ -134,7 +135,9 @@ function breakWall(b) {
     const D = Save.data; D.walls[b.id] = 1; saveGame(); fill(b.tx, b.ty, b.w, b.h, 0);
     burst((b.tx + b.w / 2) * TILE, (b.ty + b.h / 2) * TILE, 28, { colors: ['#4a2c1a', '#7a5232', '#2a1a16'], maxSpeed: 480, grav: 1300, type: 'debris' });
     pop((b.tx + b.w / 2) * TILE, b.ty * TILE - 10, 'CRUMBLE!', { size: 34 });
-    if (b.id === 'f_core') { toast('A GOLDEN LIFT WAS HIDING BEHIND THE CANNON!'); themeCheck(); } else toast('A SECRET PASSAGE!');
+    if (b.id === 'f_core') { toast('A GOLDEN LIFT WAS HIDING BEHIND THE CANNON!'); themeCheck(); }
+    else if (b.id === 'q_floor') toast('THE FLOOR CAVES IN · SOMETHING IS DRIPPING DOWN THERE…');
+    else toast('A SECRET PASSAGE!');
   };
 }
 PAGE.onRespawn = () => {

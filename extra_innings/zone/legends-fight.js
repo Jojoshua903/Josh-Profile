@@ -57,7 +57,7 @@ if (PAGE.id === 'z9' && typeof COLO !== 'undefined' && typeof ROOM !== 'undefine
   function lgPlace() {
     const p = LG.gate || lgSpot(LG_X.gates[0]);
     Player.reset(p, true); applyUpgrades(); Player.hp = Player.maxHp; Player.facing = 1; Player.invuln = 1;
-    enterRoom(ROOM.t_colo); snapCamera(); HUD.hpPop = true;
+    enterRoom(roomAt(p.x, p.y - TILE) || ROOM.t_colo); snapCamera(); HUD.hpPop = true;
   }
   function lgReturn(msg, after) {
     Gaunt.warping = true; Input.enabled = false; Game.fadeTarget = 1;
@@ -79,6 +79,7 @@ if (PAGE.id === 'z9' && typeof COLO !== 'undefined' && typeof ROOM !== 'undefine
       Gaunt.warping = false; Input.enabled = true;
       try {
         Player.reset(lgSpot(250), true); Player.facing = 1;
+        if (Zone.room !== ROOM.t_colo) enterRoom(ROOM.t_colo);   // the gates are in the wing; the matches are played in the ring
         NPCs.length = 0; Enemies.length = 0; Bolts.length = 0; FX.length = 0; Hazards.length = 0;
         lgProxy();
         LG.F = Object.assign({ rested: false, sh0: Player.shield || 0 }, cfg, { restAt: cfg.kind === 'cup' ? Math.floor(cfg.list.length / 2) : 0 });
@@ -220,15 +221,16 @@ if (PAGE.id === 'z9' && typeof COLO !== 'undefined' && typeof ROOM !== 'undefine
   };
   // the room: furniture instead of podiums, marble tiles, a sky instead of the stands
   const _lgEnterColo = COLO.enter;
-  COLO.enter = function (r) { if (LG.on && r.id === 't_colo') { if (!LG.F) lgBuildHall(); return; } return _lgEnterColo.call(this, r); };
+  COLO.enter = function (r) { if (LG.on && r.id === 't_colo') { if (!LG.F) lgBuildHall('t_colo'); return; } return _lgEnterColo.call(this, r); };
   const _lgER = enterRoom;
   enterRoom = function (r) {
     _lgER.apply(this, arguments);
     if (!LG.on || !r) return;
-    if (r.id === 't_colo') Game.tilePal = LG_PAL; else LG.on = false;   // wandered off: the dream ends
+    if (r.id === 't_hall') { delete Save.data.visited.t_hall; if (!LG.F) lgBuildHall('t_hall'); }   // a dream isn't a visit
+    if (r.id === 't_colo' || r.id === 't_hall') Game.tilePal = LG_PAL; else LG.on = false;   // wandered off: the dream ends
   };
   const _lgBehind = COLO.draw_behindTiles;
-  COLO.draw_behindTiles = function () { if (LG.on && Zone.room.id === 't_colo') { drawLgSky(); return; } return _lgBehind.apply(this, arguments); };
+  COLO.draw_behindTiles = function () { if (LG.on && (Zone.room.id === 't_colo' || Zone.room.id === 't_hall')) { drawLgSky(Zone.room.px); return; } return _lgBehind.apply(this, arguments); };
   Gaunt.add({ id: 'legends', page: 'z9',
     draw_screen() {
       if (!LG.on || DR.on) return;
@@ -274,8 +276,9 @@ if (PAGE.id === 'z9' && typeof COLO !== 'undefined' && typeof ROOM !== 'undefine
     const q = Save.data.q;
     if (!q.legendsPrev && q.pages) delete q.pages['act3.html'];   // a dream isn't a visit
     LG.on = true;
-    Player.reset(lgSpot(246), true); Player.facing = 1; applyUpgrades(); Player.hp = Player.maxHp;
-    enterRoom(ROOM.t_colo); snapCamera(); Game.fade = 1; Game.fadeTarget = 0;
+    fill(240, 23, 1, 18, 0);   // the dream opens the wall between the gate wing and the Colosseum
+    Player.reset(lgSpot(LG_X.pad + 2), true); Player.facing = 1; applyUpgrades(); Player.hp = Player.maxHp;
+    enterRoom(ROOM.t_hall); snapCamera(); Game.fade = 1; Game.fadeTarget = 0;
     setTimeout(() => {
       SFX.music('anthem');
       if (!lgQ().met) Story.umpireIntro(); else toast('THE HALL OF LEGENDS · THE UMPIRE TIPS HIS CAP');

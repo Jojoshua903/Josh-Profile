@@ -817,6 +817,7 @@ const Story = {
       z2: ['…blorp. You followed me down here?', 'Sparks are a great hiding spot. Want a map of the quarry? It\'s only slightly singed.'],
       z3: ['…blorp. It\'s very windy.', 'My maps keep flying away. Buy one before it does.'],
       z4: ['…blorp. Everything in here explodes.', 'Including my last three maps. This one is fine. Probably.'],
+      z12: ['…blorp. Finally, somewhere damp and dark. I love it here.', 'The old coach doesn\'t mind me. Map of the Bullpen? Mind the drips.'],
       z5: ['…blorp. Big room. Nowhere to hide.', 'I\'m hiding anyway. Maps of the Concourse and everything around it. Ask nicely.'],
       z6: ['…blorp. Don\'t tell the rock man I\'m here.', 'He tried to name me. I am not a rock.'],
       z7: ['…blorp. I\'m wet. Everything is wet.', 'The wizard says the storm is on purpose. It isn\'t.'],

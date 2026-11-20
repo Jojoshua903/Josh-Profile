@@ -22,7 +22,7 @@ const MAP_CFG = {
     notes(note, g, X, Y, s, V) {
       const D = Save.data;
       if (!V.c_hall) return;
-      note(D.gateOpen ? 'the Pennant Gate (OPEN!)' : `the Pennant Gate · ${PENNANTS.filter(k => D.slots[k]).length}/3`, X(180), Y(74), 12, -0.02);
+      note(D.gateOpen ? 'the Pennant Gate (OPEN!)' : `the Pennant Gate · ${PENNANTS.filter(k => D.slots[k]).length}/${PENNANTS.length}`, X(180), Y(74), 12, -0.02);
       note('← caves', X(124), Y(54), 11, 0); note('up the golden draft ↑', X(192), Y(48), 11, 0); note('ice →', X(234), Y(80), 11, 0);
       note(D.up.staticDash ? 'lasers (dash through!)' : 'red lasers?!', X(229), Y(66), 10, 0.04);
       note('lift ↓ Foundry', X(127), Y(80), 10, 0);

@@ -33,14 +33,14 @@ const Signs = { crackHint: false };
   };
 })();
 
-/* ---------- all three Golden Pennants: keep the goal on screen until the gate opens ---------- */
+/* ---------- all four Golden Pennants: keep the goal on screen until the gate opens ---------- */
 (function () {
   const H = Game.hooks, o = H.screen;
   H.screen = function (cam) {
     if (o) o.call(H, cam);
     const D = Save.data;
-    if (PAGE.id !== 'z5' || Story.active || D.gateOpen || typeof pennantCount !== 'function' || pennantCount() < 3) return;
-    const s = '★ ALL THREE GOLDEN PENNANTS · TAKE THEM TO THE PENNANT GATE IN THE GRAND CONCOURSE';
+    if (PAGE.id !== 'z5' || Story.active || D.gateOpen || typeof pennantCount !== 'function' || pennantCount() < PENNANTS.length) return;
+    const s = '★ ALL FOUR GOLDEN PENNANTS · TAKE THEM TO THE PENNANT GATE IN THE GRAND CONCOURSE';
     ctx.save(); ctx.font = `12px ${DISPLAY_FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const w = ctx.measureText(s).width + 26;
     ctx.globalAlpha = 0.85; ctx.fillStyle = 'rgba(8,5,12,.7)'; rr(VW / 2 - w / 2, 12, w, 24, 6); ctx.fill();
@@ -209,8 +209,8 @@ function nextGoal() {
   if (!D.up.boom) return ['Ring a Scooter Call Bell, ride back to Base Camp and visit Daniel\'s fireworks stand', 'Base Camp'];
   if (!D.walls.f_core) return ['Blow open the cracked wall behind Big Bertha (the Foundry Core) with an Explosive Baseball: a golden lift is behind it', 'Zone 4'];
   if (!D.concourse) return ['Ride the golden lift in the Foundry Core up to the Grand Concourse', 'Zone 4'];
-  if (!(got('fionn') && got('milo') && got('deniz'))) return [`Win the three Golden Pennants: Geode Caverns ${got('fionn') ? '✓' : '·'} · Storm Atrium ${got('milo') ? '✓' : '·'} · Glacier Crown ${got('deniz') ? '✓' : '·'}`, 'Act II'];
-  if (!D.gateOpen) return ['Take all three pennants to the Pennant Gate in the Grand Concourse', 'Zone 5'];
+  if (!(got('fionn') && got('milo') && got('deniz') && got('maya'))) return [`Win the four Golden Pennants: Geode Caverns ${got('fionn') ? '✓' : '·'} · Storm Atrium ${got('milo') ? '✓' : '·'} · Glacier Crown ${got('deniz') ? '✓' : '·'} · Sunken Bullpen ${got('maya') ? '✓' : '·'} (blow open the cracked floor of the Quarry Mouth)`, 'Act II'];
+  if (!D.gateOpen) return ['Take all four pennants to the Pennant Gate in the Grand Concourse', 'Zone 5'];
   if (!D.adamAssist) return ['Climb the Gilded Stadium. Somebody is moping in the Grand Locker Room', 'Zone 9'];
   if (!D.evilAdamDead) return ['Face Evil Adam on the Grand Championship Court', 'Zone 9'];
   if (!D.zennithDead) return trueEndingReady() ? ['Something stirs beneath the Championship Court…', 'Zone 9'] : ['The story isn\'t over. Check "The Whole Story" below', 'Everywhere'];
