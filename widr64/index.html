@@ -3565,7 +3565,7 @@ function openSettings(){
     ${[["motion","🐢 Reduce motion","Turns off most animations and the bouncing screensaver"],["big","🔍 Bigger text","Makes the whole menu a bit larger"],["contrast","◐ High contrast","Darker text and stronger outlines"]].map(([k,l,h])=>`<label class="on-toggle"><input type="checkbox" data-t="${k}" ${s[k]?"checked":""}> <span>${l}</span><small>${h}</small></label>`).join("")}
     <h5>💾 MEMORY CARD</h5>
     <p class="pf-hint">Save ${p?`<b>${escA(p.name)}</b>`:"a player"} to a file, and load it on another device or browser. The file includes your online login, so anyone with it can post as you: keep it private.</p>
-    <div class="gp-actions"><button type="button" class="btn" id="stExport" ${p?"":"disabled"}>⬇ Save player to file</button><button type="button" class="btn fav" id="stImport">⬆ Load player from file</button><input type="file" id="stFile" accept=".json,.widr64,application/json" hidden></div>
+    <div class="gp-actions"><button type="button" class="btn" id="stExport" ${p?"":"disabled"}>⬇ Save player to file</button><button type="button" class="btn fav" id="stImport">⬆ Load player from file</button><button type="button" class="btn fav" id="stRecover">🔑 Recover account</button><input type="file" id="stFile" accept=".json,.widr64,application/json" hidden></div>
     <p class="dl-note">STORAGE USED ON THIS DEVICE: ${(used/1024).toFixed(0)} KB OF ABOUT 5000 KB</p>`;
   $("stBody").querySelectorAll("input[type=range]").forEach(r=>r.oninput=()=>{
     SET()[r.dataset.k]=+r.value/100;$("stv-"+r.dataset.k).textContent=r.value+"%";saveStore();
@@ -3574,6 +3574,7 @@ function openSettings(){
   $("stExport").onclick=exportPlayer;
   $("stImport").onclick=()=>$("stFile").click();
   $("stFile").onchange=()=>{const f=$("stFile").files[0];if(f)importPlayer(f)};
+  $("stRecover").onclick=recoverAccount;
   $("settings").classList.add("open");beep(520,.08,"triangle");
 }
 const closeSettings=()=>$("settings").classList.remove("open");
@@ -3609,6 +3610,61 @@ function importPlayer(file){
     cmToast(iconSvg(clean0.icon),`<b>${escA(clean0.name)}</b> was loaded from the memory card into P${slot+1}.`);
   };
   r.readAsText(file);
+}
+/* account recovery: an admin puts recovery/<CODE> {oldUid} in Firestore by hand.
+   The code rebuilds the old profile in a new slot with a new login, then is deleted so it only works once. */
+async function recoverAccount(){
+  const code=(prompt("Enter the recovery code you were given:")||"").trim();
+  if(!code)return;
+  if(!/^[A-Za-z0-9_-]{16,128}$/.test(code)){alert("That recovery code isn't valid. Check for typos and try again.");return}
+  let slot=store.slots.findIndex(x=>!x);
+  if(slot<0){
+    if(!confirm(`All 4 player slots are full. Replace ${store.slots[store.active].name} (P${store.active+1}) with the recovered player?`))return;
+    slot=store.active;
+  }
+  $("stRecover").disabled=true;
+  let p=null;
+  try{
+    /* 1. the code: a missing document means a wrong or already-used code */
+    let r=await fetch(`${FS}/recovery/${code}`);
+    if(r.status===404||r.status===403)throw new Error("BADCODE");
+    if(!r.ok)throw await fsError(r,"recovery");
+    const oldUid=docOf(await r.json()).oldUid;
+    if(typeof oldUid!=="string"||!/^[A-Za-z0-9]{10,128}$/.test(oldUid))throw new Error("BADCODE");
+    /* 2. the old public profile */
+    r=await fetch(`${FS}/players/${oldUid}`);
+    if(r.status===404)throw new Error("NOPROFILE");
+    if(!r.ok)throw await fsError(r,"players");
+    const o=docOf(await r.json());
+    const shown=(Array.isArray(o.stickers)?o.stickers:[]).filter(k=>STICKERS.some(s=>s.id===k)).slice(0,3);
+    p={...blank(),
+      name:String(o.name||"Player").slice(0,16),icon:ICONS[o.icon]?o.icon:"guiseppe",
+      about:String(o.about||"").slice(0,150),status:String(o.status||"").slice(0,40),
+      banner:BANNERS[o.banner]?o.banner:"none",
+      played:(Array.isArray(o.played)?o.played:[]).filter(s=>typeof s==="string").slice(0,40),
+      favChars:(Array.isArray(o.chars)?o.chars:[]).filter(n=>CHARACTERS.some(c=>c.name===n)).slice(0,3),
+      stickers:Object.fromEntries(shown.map(k=>[k,Date.now()])),showStickers:shown,
+      anim:!!o.anim,online:true,recoveredFrom:oldUid};
+    /* 3. a fresh anonymous login (new uid), then the profile goes up under it */
+    const a=await token(p);
+    await publishProfile(p);
+    if(!p.sinceOk)throw new Error("PUBLISH");
+    /* 4. use up the code */
+    r=await fetch(`${FS}/recovery/${code}`,{method:"DELETE",headers:{Authorization:"Bearer "+a.id}});
+    if(!r.ok)throw await fsError(r,"recovery delete");
+  }catch(e){
+    const m=String(e?.message||"");
+    $("stRecover").disabled=false;
+    if(m==="BADCODE")return alert("That recovery code is wrong or has already been used.");
+    if(m==="NOPROFILE")return alert("The code is valid, but the old player's profile can't be found online anymore. Ask the admin to check it.");
+    /* the profile is already rebuilt, so keep it even if the code couldn't be used up */
+    if(!p||!p.auth||!p.sinceOk){onNetErr(e);return alert("Couldn't recover the account right now. Check your connection and try again.")}
+    console.warn("WIDR 64 recovery: code not deleted",e);
+  }
+  store.slots[slot]=p;
+  try{saveStore()}catch(e){}
+  closeSettings();pickSlot(slot);
+  cmToast(iconSvg(p.icon),`Welcome back, <b>${escA(p.name)}</b>! Your player was recovered into P${slot+1}. Save it to a file in ⚙ Settings so this doesn't happen again.`);
 }
 applySettings();
 
