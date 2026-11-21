@@ -332,8 +332,8 @@ buildAct();
 PAGE.start = () => {
   const D = Save.data, z = Zone.room.zone;
   Game.fade = 1; Game.fadeTarget = 0; SFX.bench();
-  if (!D.seenZones[z]) D.seenZones[z] = 1;
-  zoneTitle(ZONES[z].name.toUpperCase(), ZONES[z].sub);
+  // the area banner only greets a zone the first time: coming back, the loading card already named it
+  if (!D.seenZones[z]) { D.seenZones[z] = 1; zoneTitle(ZONES[z].name.toUpperCase(), ZONES[z].sub); }
   if (Zone.room.id === 'v_chase' && !D.chase && D.renasMet) startChase();
 };
 runPage();

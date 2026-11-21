@@ -253,8 +253,11 @@ const devDo = {
     const D = Save.data;
     D.abil = { dash: true, wall: true, double: true, launch: true, boom: true };
     D.up.core = true; D.up.launcher = true; D.up.boom = true; D.up.staticDash = true;
+    devQ().pennant = 1;
     applyUpgrades(); Dev.note('ALL MOVES + STATIC DASH');
   },
+  // the Champion's Pennant (glider + thermals), on and off
+  pennant: () => { const q = devQ(); q.pennant = q.pennant ? 0 : 1; if (q.pennant) q.banners = 3; if (typeof THM !== 'undefined') { THM.room = null; THM.byRoom = {}; } devRefresh(); Dev.note(q.pennant ? 'GLIDER ON · HOLD JUMP WHILE FALLING' : 'GLIDER OFF'); },
   stance: id => { if (typeof setStance === 'function') { setStance(id); Dev.note('STANCE · ' + id.toUpperCase()); } },
   outfit: id => {
     devQ().outfit = id;
@@ -395,7 +398,7 @@ const DEV_TABS = {
     h += devHead('HEALTH') + devGrid(devBtn('heal', 'FULL HEAL') + devBtn('hurt', '−1 HEART') + devBtn('die', 'STRIKE OUT'), 3);
     h += devHead('STUFF') + devGrid(
       devBtn('bolts', '+100 BOLTS', 100) + devBtn('bolts', '+1000 BOLTS', 1000) + devBtn('ore', '+5 TITANIUM') +
-      devBtn('bat', `BAT LV ${D.batLv || 0} → ${(D.batLv || 0) >= 3 ? 0 : (D.batLv || 0) + 1}`) + devBtn('charms', (D.charms || 0) >= 5 ? 'CHARMS → 0' : 'CHARMS → 5') + devBtn('moves', 'ALL MOVES'), 3);
+      devBtn('bat', `BAT LV ${D.batLv || 0} → ${(D.batLv || 0) >= 3 ? 0 : (D.batLv || 0) + 1}`) + devBtn('charms', (D.charms || 0) >= 5 ? 'CHARMS → 0' : 'CHARMS → 5') + devBtn('moves', 'ALL MOVES') + devBtn('pennant', 'GLIDER (PENNANT)', undefined, !!devQ().pennant), 3);
     if (typeof STANCES !== 'undefined') {
       const now = stanceNow().id;
       h += devHead('STANCE' + (Dev.unlockAll ? '' : ' · LOCKED ONES NEED “UNLOCK ALL GEAR”')) +

@@ -6,7 +6,7 @@
      Bring 3 to Lars at Base Camp; Byte measures, Lars stitches
      them with the fabric off Renas's scooter tarp.
    · hold JUMP while falling (after any jump, double jump or
-     Bat-Launch): the pennant billows open above Nathan's head,
+     Bat-Launch): the cloak on his shoulders snaps open into a bell,
      the fall slows to a float and he steers wide in the air.
      Let go and he drops fast again. Dash, pogo and baseballs
      all still work mid-glide.
@@ -120,13 +120,14 @@ if (typeof Quests !== 'undefined' && Quests.entries) {
     PN.was = PN.gliding; PN.gliding = want;
     if (this.onGround) PN.hop = false;
     if (!want) return r;
-    if (!PN.was) { SFX.paper && SFX.paper(); SFX.whoosh && SFX.whoosh(); this.sx = 1.12; this.sy = 0.9; }   // the crisp fabric snap
+    if (!PN.was) { SFX.snap ? SFX.snap() : SFX.paper(); PN.snapT = Game.time; PN.trail = null; this.sx = 1.12; this.sy = 0.9; }   // the crisp fabric snap
     // in an updraft: ride it up fast
     let draft = false;
     if (typeof UPDRAFTS !== 'undefined') for (const u of UPDRAFTS) {
       if (u.room && Zone.room && u.room !== Zone.room.id) continue;
       if (overlap(this, u)) { draft = true; break; }
     }
+    if (draft) PN.draftT = Game.time;
     if (draft) { this.vy = Math.max(this.vy - 5200 * dt, -820); if (Math.random() < 0.5) spawnParticle({ x: this.x + rand(0, this.w), y: this.y + this.h, vx: rand(-20, 20), vy: rand(120, 260), life: 0.4, size: 2, color: '#d9f2ff', type: 'dot' }); }
     else this.vy = Math.min(this.vy, 120);                                   // ~a fifth of the normal fall
     // wide steering in the air
@@ -134,37 +135,87 @@ if (typeof Quests !== 'undefined' && Quests.entries) {
     if (ix) { this.vx = approach(this.vx, ix * top, TUNE.airAccel * 1.6 * dt); this.facing = ix; }
     // Tailwind Stitch: one small thermal hop per glide
     if (pnTail() && !PN.hop && Input.pressed('jump') && !this.canDouble) { PN.hop = true; this.vy = -380; SFX.djump(); ring(this.x + this.w / 2, this.y + 6, 6, 40, 0.3, GOLD, 3); }
-    // red-and-gold wind ribbons
-    if (Math.random() < 0.6) spawnParticle({ x: this.x + this.w / 2 - this.facing * rand(16, 40), y: this.y - rand(20, 40), vx: -this.facing * rand(40, 120) - this.vx * 0.2, vy: rand(-20, 20), life: 0.5, size: rand(1.5, 3), color: pnMage() ? (Math.random() < 0.5 ? '#b98bff' : '#ffffff') : Math.random() < 0.5 ? '#e8361c' : GOLD, type: 'dot' });
     return r;
   };
 })();
+/* the float cloak: no canopy, no strings. It hangs off Nathan's collar and snaps open into a bell
+   (crimson outside, gold lining showing under the flare), ripples along its hem, leans away from
+   the way he steers, and stretches tall inside an updraft or thermal */
+const PN_RED = '#D92B2B', PN_INK = '#0B0A0E', PN_GOLD = '#F2C14E';
+function pnCloakShape(span, top, hem, t, hemFn) {
+  // collar → two sharp wingtips → a scalloped hem back across
+  ctx.beginPath(); ctx.moveTo(-5, top);
+  ctx.bezierCurveTo(-span * 0.35, top + 2, -span * 0.95, top + (hem - top) * 0.35, -span, hem);
+  const n = 6;
+  for (let i = 1; i <= n; i++) {
+    const x0 = -span + (2 * span) * (i - 1) / n, x1 = -span + (2 * span) * i / n, xm = (x0 + x1) / 2;
+    ctx.quadraticCurveTo(xm, hem - 7 + hemFn(xm), x1, hem + hemFn(x1));
+  }
+  ctx.bezierCurveTo(span * 0.95, top + (hem - top) * 0.35, span * 0.35, top + 2, 5, top);
+  ctx.closePath();
+}
 function pnDrawGlider(P) {
-  const px = P.x + P.w / 2, py = P.y + P.h, t = Game.time, f = P.facing, mage = pnMage(), billow = Math.sin(t * 8) * 3;
-  ctx.save(); ctx.translate(px, py); ctx.scale(f, 1); ctx.lineJoin = 'round';
-  // cords down to his shoulders
-  ctx.strokeStyle = 'rgba(243,234,216,.7)'; ctx.lineWidth = 1.2;
-  ctx.beginPath(); ctx.moveTo(-6, -34); ctx.lineTo(-38, -80); ctx.moveTo(-6, -34); ctx.lineTo(44, -86); ctx.moveTo(4, -34); ctx.lineTo(6, -104 - billow); ctx.stroke();
-  // the canopy: a huge triangular pennant, billowing
-  ctx.beginPath(); ctx.moveTo(-42, -78); ctx.quadraticCurveTo(-30, -112 - billow, 4, -108 - billow); ctx.lineTo(58, -90); ctx.quadraticCurveTo(10, -84 + billow * 0.5, -42, -78); ctx.closePath();
-  inked(mage ? '#2a1f5a' : '#e8361c', 2.5);
-  ctx.save(); ctx.clip();
-  if (mage) { ctx.fillStyle = '#f3ead8'; for (let k = 0; k < 9; k++) { const sx = -36 + ((k * 23) % 86), sy = -104 + ((k * 13) % 22); const s = 0.6 + 0.6 * Math.sin(t * 3 + k); ctx.fillRect(sx, sy, 1.6 * s + 0.4, 1.6 * s + 0.4); } }
-  else { ctx.fillStyle = GOLD; ctx.fillRect(-50, -96 - billow * 0.5, 120, 5); ctx.fillStyle = BONE; ctx.font = `12px ${DISPLAY_FONT}`; ctx.textAlign = 'center'; ctx.fillText('★', 6, -98 - billow); }
+  const px = P.x + P.w / 2, py = P.y + P.h, t = Game.time, mage = pnMage();
+  const top = -(P.h - 10), hem = -12, span = P.w * 1.6;
+  const ripple = x => Math.sin(t * 12 + x * 0.15) * 2.5;
+  // lean against the steering, stretch in rising air
+  const lean = clamp(-(P.vx / (TUNE.runSpeed || 300)) * 0.18, -0.22, 0.22);
+  PN.stretch = approach(PN.stretch || 0, PN.draftT && t - PN.draftT < 0.12 ? 1 : 0, 0.12);
+  const sY = 1 + 0.15 * PN.stretch, sX = 1 - 0.1 * PN.stretch;
+  const outer = mage ? '#2a1f5a' : PN_RED, lining = mage ? '#b98bff' : PN_GOLD;
+  ctx.save(); ctx.translate(px, py + top); ctx.rotate(lean); ctx.scale(sX, sY); ctx.translate(0, -top); ctx.lineJoin = 'round';
+  // the gold lining, peeking out a little below and wider than the crimson
+  pnCloakShape(span + 2, top + 3, hem + 3, t, x => ripple(x + 3));
+  ctx.fillStyle = lining; ctx.fill();
+  // the crimson outside, with a crisp ink outline
+  pnCloakShape(span, top, hem, t, ripple);
+  ctx.fillStyle = outer; ctx.fill(); ctx.strokeStyle = PN_INK; ctx.lineWidth = 2; ctx.stroke();
+  // a soft fold down the middle, and a thin gold trim stripe just above the hem
+  ctx.strokeStyle = 'rgba(11,10,14,.35)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(-span * 0.35, top + 8); ctx.quadraticCurveTo(-span * 0.45, (top + hem) / 2, -span * 0.5, hem - 3); ctx.moveTo(span * 0.35, top + 8); ctx.quadraticCurveTo(span * 0.45, (top + hem) / 2, span * 0.5, hem - 3); ctx.stroke();
+  ctx.strokeStyle = lining; ctx.lineWidth = 1.2; ctx.beginPath();
+  for (let i = 0; i <= 24; i++) { const x = -span * 0.94 + (span * 1.88) * i / 24, y = hem - 4 + ripple(x) * 0.8; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+  ctx.stroke();
+  if (mage) { ctx.fillStyle = '#f3ead8'; for (let k = 0; k < 7; k++) { const sx = -span * 0.7 + ((k * 23) % (span * 1.4)), sy = top + 8 + ((k * 13) % (hem - top - 14)); const s = 0.6 + 0.6 * Math.sin(t * 3 + k); ctx.fillRect(sx, sy, 1.4 * s + 0.4, 1.4 * s + 0.4); } }
+  // where the wingtips are in the world, for the ribbons
+  const tips = [-span, span].map(lx => {
+    const ly = hem - top, c = Math.cos(lean), s = Math.sin(lean);
+    const x = lx * sX, y = ly * sY;
+    return { x: px + x * c - y * s, y: py + top + x * s + y * c };
+  });
   ctx.restore();
-  // stitched edge and tassels
-  ctx.strokeStyle = mage ? '#b98bff' : GOLD; ctx.lineWidth = 1.2; ctx.setLineDash([3, 3]);
-  ctx.beginPath(); ctx.moveTo(-38, -80); ctx.quadraticCurveTo(-28, -108 - billow, 4, -104 - billow); ctx.lineTo(52, -90); ctx.stroke(); ctx.setLineDash([]);
-  for (const [tx, ty] of [[-42, -78], [58, -90], [8, -86]]) { ctx.strokeStyle = mage ? '#b98bff' : GOLD; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx - 3 + Math.sin(t * 9 + tx) * 2, ty + 9); ctx.stroke(); }
+  pnRibbons(tips, t, mage);
+  // the opening snap: a white oval puff round his shoulders for 0.15s
+  const sa = t - (PN.snapT || -9);
+  if (sa < 0.15) {
+    const k = sa / 0.15;
+    ctx.save(); ctx.strokeStyle = `rgba(255,255,255,${0.9 * (1 - k)})`; ctx.lineWidth = 2.5 * (1 - k) + 0.5;
+    ctx.beginPath(); ctx.ellipse(px, py + top + 4, 14 + k * 34, 6 + k * 14, 0, 0, 7); ctx.stroke(); ctx.restore();
+  }
+}
+// two thin white-and-gold ribbons trailing off the wingtips, 1.5px, gone in 0.25s
+function pnRibbons(tips, t, mage) {
+  PN.trail = PN.trail || [[], []];
+  tips.forEach((p, i) => { const L = PN.trail[i]; L.push({ x: p.x, y: p.y, t }); while (L.length && t - L[0].t > 0.25) L.shift(); });
+  ctx.save(); ctx.lineCap = 'round';
+  PN.trail.forEach((L, i) => {
+    for (let k = 1; k < L.length; k++) {
+      const a = 1 - (t - L[k].t) / 0.25; if (a <= 0) continue;
+      ctx.strokeStyle = (k % 2 ? 'rgba(255,255,255,' : mage ? 'rgba(185,139,255,' : 'rgba(242,193,78,') + (a * 0.85).toFixed(3) + ')';
+      ctx.lineWidth = 1.5 * a + 0.2;
+      ctx.beginPath(); ctx.moveTo(L[k - 1].x, L[k - 1].y); ctx.lineTo(L[k].x, L[k].y); ctx.stroke();
+    }
+  });
   ctx.restore();
 }
 function pnDrawFolded(P) {
-  // tucked in: the pennant hangs off his shoulders like a short cape
+  // tucked in: a slim folded red-and-gold team cape hanging off his shoulders
+  PN.trail = null;
   const px = P.x + P.w / 2, py = P.y + P.h, f = P.facing, sway = Math.sin(Game.time * 3) * 1.5 - Math.min(6, Math.abs(P.vx) / 60);
   ctx.save(); ctx.translate(px, py); ctx.scale(f * (P.sx || 1), P.sy || 1); ctx.lineJoin = 'round';
   ctx.beginPath(); ctx.moveTo(-8, -34); ctx.lineTo(4, -34); ctx.lineTo(-10 + sway * 2, -12); ctx.lineTo(-16 + sway, -18); ctx.closePath();
-  inked(pnMage() ? '#2a1f5a' : '#e8361c', 2);
-  ctx.strokeStyle = pnMage() ? '#b98bff' : GOLD; ctx.lineWidth = 1; ctx.setLineDash([2, 2]); ctx.beginPath(); ctx.moveTo(-6, -32); ctx.lineTo(-10 + sway * 2, -14); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = pnMage() ? '#2a1f5a' : PN_RED; ctx.fill(); ctx.strokeStyle = PN_INK; ctx.lineWidth = 2; ctx.stroke();
+  ctx.strokeStyle = pnMage() ? '#b98bff' : PN_GOLD; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-6, -32); ctx.lineTo(-10 + sway * 2, -14); ctx.stroke();
   ctx.restore();
 }
 const _pnDrawNathan = drawNathan;

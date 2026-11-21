@@ -13,7 +13,7 @@ const Signs = { crackHint: false };
     if (!Save.data.up.boom || typeof Breakables === 'undefined') return;
     const c = Player.center(), t = Game.time;
     for (const b of Breakables) {
-      if (b.broken) continue;
+      if (b.broken || b.secret) continue;   // hidden walls keep their secret: only cracks and dust give them away
       const bx = b.x + b.w / 2, by = b.y + b.h / 2, d = Math.hypot(c.x - bx, c.y - by);
       if (d > 420) continue;
       const a = (1 - d / 420) * (0.55 + Math.sin(t * 5) * 0.25);

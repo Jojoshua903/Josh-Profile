@@ -587,8 +587,8 @@ Object.assign(Story, {
       m.state = 'off'; m.harmful = false; m.untargetable = true; Zone.boss = null;
     }).then(() => {
       const n = BP_PENNANTS.filter(k => Save.data.pennants[k]).length;
-      showCard('NEW ABILITY', 'THE CURVEBALL', 'Smacked baseballs now bend toward the nearest target in front of you. A curveball slips past shields: Catcher Bot masks, armoured switches. There is an armoured switch in the Pump Room.',
-        [`Golden Pennants ${n}/4`, 'hit a ball as usual · it curves on its own']);
+      showCard('NEW BALL', 'THE CURVEBALL', 'A new ball type (10 Hype). Smack it and after a moment it breaks 90 degrees: hold up or down to bend it that way, or hold neither and it hunts the nearest target. Curveballs slip past shields: Catcher Bot masks, armoured switches. There is an armoured switch in the Pump Room.',
+        [`Golden Pennants ${n}/4`, Bindings.label('swap') + ' pick the Curveball', 'hold up / down to break it']);
       themeCheck();
     });
   },

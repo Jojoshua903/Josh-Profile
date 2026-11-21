@@ -214,6 +214,8 @@ const SFX = (() => {
     blorp()  { tone(220, 0.18, 'sine', 0.12, 110); tone(160, 0.2, 'sine', 0.1, 90, 0.12); },
     poof()   { noise(0.35, 0.25, 'bandpass', 900); },
     paper()  { noise(0.18, 0.15, 'highpass', 2500); },
+    // the cloak snapping open: a crisp crack of fabric and a short puff of air
+    snap()   { noise(0.04, 0.28, 'highpass', 3800); noise(0.09, 0.1, 'bandpass', 1600, 3, 0.015, 600); tone(900, 0.03, 'triangle', 0.03, 500); },
     buy()    { [880, 1175, 1568].forEach((f, i) => tone(f, 0.15, 'square', 0.05, null, i * 0.06)); },
     deny()   { tone(200, 0.2, 'square', 0.06, 150); },
     bossDie(){ noise(1.8, 0.6, 'lowpass', 300); tone(200, 1.6, 'sawtooth', 0.1, 30); },
