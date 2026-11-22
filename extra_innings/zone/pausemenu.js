@@ -169,18 +169,26 @@ Input.pollPad = function () {
   if (UI.modal !== 'pmenu') return;
   const B = this.buffered, V = PM_VIEWS[PM.tab];
   const pads = navigator.getGamepads ? navigator.getGamepads() : [], p = pads && [...pads].find(Boolean);
+  // pad buttons read raw here (Silksong menu rules): B backs out, Y is the extra action,
+  // LB/RB and LT/RT flip tabs, whatever button is bound to the map toggles the map
+  const prev = PM.padPrev || [], now = p ? p.buttons.map(b => !!b.pressed) : [];
+  const fresh = i => now[i] && !prev[i];
+  const padHit = a => (Bindings.pad[a] || []).some(i => i !== null && fresh(i));
+  const kb = a => B.has(a) && !padHit(a);   // the same action, but from the keyboard
+  const mapOn = i => (Bindings.pad.map || []).includes(i);
+  PM.padPrev = now;
   if (p) {
-    const l = !!(p.buttons[4] && p.buttons[4].pressed), r = !!(p.buttons[5] && p.buttons[5].pressed);
-    if (l && !PM.padL) pmTabStep(-1); if (r && !PM.padR) pmTabStep(1);
-    PM.padL = l; PM.padR = r;
+    const trig = PM.tab !== 'map';   // on the map the triggers zoom (zone/map-live.js)
+    if ((fresh(4) && !mapOn(4)) || (trig && fresh(6) && !mapOn(6))) pmTabStep(-1);
+    if ((fresh(5) && !mapOn(5)) || (trig && fresh(7) && !mapOn(7))) pmTabStep(1);
   }
   if (V) {
     if (B.has('left')) V.nav(-1, 0); if (B.has('right')) V.nav(1, 0);
     if (B.has('up')) V.nav(0, -1); if (B.has('down')) V.nav(0, 1);
     if (B.has('jump') || B.has('attack')) V.ok();
-    if (B.has('ball') && V.alt) V.alt();
+    if ((kb('ball') || fresh(3)) && V.alt) V.alt();
   }
-  if (B.has('dash')) closeModal();
+  if (kb('dash') || fresh(1)) closeModal();
   else if (B.has('map')) { if (PM.tab === 'map') closeModal(); else pmSetTab('map'); }
   B.clear();
 };

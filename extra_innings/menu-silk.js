@@ -99,9 +99,11 @@ body.silk-panel #menu .menu-foot{visibility:hidden}
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
 
   const KEYS = { nav: ['W/S', 'Navigate'], ok: ['Enter', 'Select'], tab: ['Q/E', 'Tab'], back: ['Esc', 'Back'] };
-  const PADK = { nav: ['✚', 'Navigate'], ok: ['A', 'Select'], tab: ['LB/RB', 'Tab'], back: ['B', 'Back'] };
+  // pad names follow the controller in hand (pad.js): A/B on Xbox, ✕/○ on PlayStation, B/A on Nintendo
+  const PADK_N = i => (typeof padN === 'function' ? padN(i) : ['A', 'B', 'X', 'Y', 'LB', 'RB'][i]);
+  const padk = () => ({ nav: ['✚', 'Navigate'], ok: [PADK_N(0), 'Select'], tab: [PADK_N(4) + '/' + PADK_N(5), 'Tab'], back: [PADK_N(1), 'Back'] });
   let padMode = false;
-  const barHtml = () => Object.keys(KEYS).map(k => { const [key, what] = (padMode ? PADK : KEYS)[k]; return `<span><span class="silk-key ${padMode && key.length === 1 ? 'pad' : ''}">${key}</span>${what}</span>`; }).join('');
+  const barHtml = () => Object.keys(KEYS).map(k => { const [key, what] = (padMode ? padk() : KEYS)[k]; return `<span><span class="silk-key ${padMode && key.length === 1 ? 'pad' : ''}">${key}</span>${what}</span>`; }).join('');
   const foot = document.querySelector('#menu .menu-foot'), ver = foot && foot.querySelector('.ver');
   const bar = document.createElement('div'); bar.className = 'silk-bar'; document.body.appendChild(bar);
   const drawBars = () => {

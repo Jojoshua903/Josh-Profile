@@ -16,31 +16,38 @@ const Bindings = (() => {
     ['dash',   'Dash'],
     ['heal',   'Heal (hold)'],
     ['swap',   'Swap baseball type'],
+    ['gadget', 'Use gadget'],
     ['map',    'Map'],
   ];
   const DEFAULT_KEYS = {
     left: ['KeyA', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'], up: ['KeyW', 'ArrowUp'], down: ['KeyS', 'ArrowDown'],
     jump: ['Space', 'KeyZ'], attack: ['KeyJ', 'KeyX'], ball: ['KeyK', 'KeyC'], dash: ['ShiftLeft', 'KeyL'],
-    heal: ['KeyH', 'KeyV'], swap: ['KeyQ', 'KeyB'], map: ['Tab', 'KeyM'],
+    heal: ['KeyH', 'KeyV'], swap: ['KeyQ', 'KeyB'], gadget: ['KeyE', 'KeyN'], map: ['Tab', 'KeyM'],
   };
   const PRESETS = {
     'Default': DEFAULT_KEYS,
     'Arrows + Z X C': {
       left: ['ArrowLeft', null], right: ['ArrowRight', null], up: ['ArrowUp', null], down: ['ArrowDown', null],
-      jump: ['KeyZ', null], attack: ['KeyX', null], ball: ['KeyC', null], dash: ['ShiftLeft', null], heal: ['KeyV', null], swap: ['KeyA', null], map: ['Tab', null],
+      jump: ['KeyZ', null], attack: ['KeyX', null], ball: ['KeyC', null], dash: ['ShiftLeft', null], heal: ['KeyV', null], swap: ['KeyA', null], gadget: ['KeyS', null], map: ['Tab', null],
     },
     'WASD + Arrows': {
       left: ['KeyA', null], right: ['KeyD', null], up: ['KeyW', null], down: ['KeyS', null],
-      jump: ['Space', null], attack: ['ArrowLeft', null], ball: ['ArrowUp', null], dash: ['ArrowRight', null], heal: ['ArrowDown', null], swap: ['KeyQ', null], map: ['Tab', null],
+      jump: ['Space', null], attack: ['ArrowLeft', null], ball: ['ArrowUp', null], dash: ['ArrowRight', null], heal: ['ArrowDown', null], swap: ['KeyQ', null], gadget: ['KeyE', null], map: ['Tab', null],
     },
   };
+  // the Silksong layout: A jump · X swing · B heal · Y balls (and talk) · RT dash/sprint · RB toss · LT gadget · LB map
   const DEFAULT_PAD = {
     left: [14, null], right: [15, null], up: [12, null], down: [13, null],
-    jump: [0, null], attack: [2, null], ball: [3, null], dash: [1, 7], heal: [5, 4], swap: [6, null], map: [8, null],
+    jump: [0, null], attack: [2, null], ball: [5, null], dash: [7, null], heal: [1, null], swap: [3, null], gadget: [6, null], map: [4, null],
+  };
+  // the layout before it: players who never touched it get moved to the new one
+  const OLD_PAD = {
+    left: [14, null], right: [15, null], up: [12, null], down: [13, null],
+    jump: [0, null], attack: [2, null], ball: [3, null], dash: [1, 7], heal: [5, 4], swap: [6, null], gadget: [10, null], map: [8, null],
   };
   // keys the game uses for pause / tuning / menus
   const RESERVED_KEYS = ['Escape', 'KeyP', 'KeyT', 'Backquote', 'Enter', 'NumpadEnter'];
-  const RESERVED_PAD = [9];
+  const RESERVED_PAD = [8, 9];   // VIEW opens the inventory, MENU pauses
 
   const clone = o => JSON.parse(JSON.stringify(o));
   let keys = clone(DEFAULT_KEYS), pad = clone(DEFAULT_PAD);
@@ -48,6 +55,7 @@ const Bindings = (() => {
     const s = JSON.parse(localStorage.getItem('ei_binds') || 'null');
     if (s && s.keys) ACTIONS.forEach(([a]) => { if (Array.isArray(s.keys[a])) keys[a] = s.keys[a].slice(0, 2); });
     if (s && s.pad) ACTIONS.forEach(([a]) => { if (Array.isArray(s.pad[a])) pad[a] = s.pad[a].slice(0, 2); });
+    if (s && s.pad && JSON.stringify(pad) === JSON.stringify(OLD_PAD)) { pad = clone(DEFAULT_PAD); localStorage.setItem('ei_binds', JSON.stringify({ keys, pad })); }
   } catch (e) { logErr("keybinds.js:51", e); }
   const save = () => { try { localStorage.setItem('ei_binds', JSON.stringify({ keys, pad })); } catch (e) { logErr("keybinds.js:52", e); } };
 

@@ -87,7 +87,7 @@ function pollPadBind() {
       const down = p.buttons[i].pressed;
       if (!down) { listening.held.delete(i); continue; }
       if (listening.held.has(i)) continue;
-      if (Bindings.RESERVED_PAD.includes(i)) { ctrlMsg(`${Bindings.padName(i)} is reserved for pausing. Pick another button.`, 'warn'); listening.held.add(i); continue; }
+      if (Bindings.RESERVED_PAD.includes(i)) { ctrlMsg(`${Bindings.padName(i)} is reserved for the pause menu and inventory. Pick another button.`, 'warn'); listening.held.add(i); continue; }
       const stolen = Bindings.setPad(listening.a, listening.s, i);
       finishBind(stolen, Bindings.padName(i)); return;
     }

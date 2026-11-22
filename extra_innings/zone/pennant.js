@@ -5,7 +5,7 @@
      drones in the Ventilation Shafts drop Torn Stadium Banners.
      Bring 3 to Lars at Base Camp; Byte measures, Lars stitches
      them with the fabric off Renas's scooter tarp.
-   · hold JUMP while falling (after any jump, double jump or
+   · press JUMP again in mid-air and hold it (after any jump, double jump or
      Bat-Launch): the cloak on his shoulders snaps open into a bell,
      the fall slows to a float and he steers wide in the air.
      Let go and he drops fast again. Dash, pogo and baseballs
@@ -88,10 +88,10 @@ if (typeof openShop === 'function') {
       await Story.say('LARS', 'Banner up top. And a strip of the old bus tarp underneath. Wind-proof. Don\'t tell Renas.', lh, { voice: 0.8 });
       SFX.paper && SFX.paper(); burst(Player.x + Player.w / 2, Player.y + 10, 24, { colors: ['#e8361c', GOLD, BONE], maxSpeed: 260 });
       await Story.say('NATHAN', 'A cape? …A CHAMPIONSHIP cape. Oh, this is going in the highlight reel.', nh);
-      await Story.say('LARS', 'Hold JUMP when you fall. It\'ll catch the air. Updrafts will throw you to the roof.', lh, { voice: 0.8 });
+      await Story.say('LARS', 'Tap JUMP again in the air and hold it. It\'ll catch the air. Updrafts will throw you to the roof.', lh, { voice: 0.8 });
     }).then(() => {
       q.pennant = 1; saveGame();
-      showCard('NEW ABILITY', 'THE CHAMPION\'S PENNANT', 'Hold JUMP while falling to glide. Steer wide in the air, let go to drop. Open it inside an updraft to ride the column up fast.', ['HOLD ' + Bindings.label('jump', Game.lastInput) + ' · GLIDE']);
+      showCard('NEW ABILITY', 'THE CHAMPION\'S PENNANT', 'Press JUMP again in mid-air and hold it to glide. Steer wide in the air, let go to drop. Open it inside an updraft to ride the column up fast.', ['IN THE AIR: PRESS + HOLD ' + Bindings.label('jump', Game.lastInput) + ' · GLIDE']);
     });
   };
 }
@@ -104,7 +104,7 @@ if (typeof Quests !== 'undefined' && Quests.entries) {
       const n = q.pennant ? 3 : Math.min(3, q.banners || 0), tick = (txt, ok) => ({ txt, ok: !!ok });
       L.push({ title: 'The Champion\'s Pennant', who: 'Lars & Byte', done: !!q.pennant,
         steps: [tick(`Torn Stadium Banners from the Ventilation Shaft drones (${n}/3)`, n >= 3), tick('Bring them to Lars at Base Camp', q.pennant)],
-        reward: 'The Champion\'s Pennant: hold JUMP while falling to glide' });
+        reward: 'The Champion\'s Pennant: press and hold JUMP in mid-air to glide' });
     }
     return L;
   };
@@ -114,9 +114,14 @@ if (typeof Quests !== 'undefined' && Quests.entries) {
 (function () {
   const P = Player, U0 = P.update;
   P.update = function (dt) {
+    // the cloak needs a FRESH press in the air: holding the jump you took off with never opens it,
+    // so a full jump stays a full jump. A double jump's press counts, a wall jump's doesn't
+    const wasGround = this.onGround || this.coyoteT > 0, wasDouble = this.canDouble, press = Input.pressed('jump');
     const r = U0.call(this, dt);
+    if (this.onGround) PN.armed = false;
+    else if (press && !wasGround && (this.vy > -200 || (wasDouble && !this.canDouble))) PN.armed = true;
     const busy = this.dead || this.hidden || this.dashT > 0 || this.sliding || this.healT > 0 || this.onGround || this.sit > 0.01 || this.hazard || !Input.enabled;
-    const want = pnHave() && !busy && Input.down('jump') && (this.vy > 0 || PN.gliding);
+    const want = pnHave() && !busy && Input.down('jump') && (PN.armed || PN.gliding) && (this.vy > 0 || PN.gliding);
     PN.was = PN.gliding; PN.gliding = want;
     if (this.onGround) PN.hop = false;
     if (!want) return r;

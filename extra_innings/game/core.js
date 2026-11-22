@@ -23,7 +23,7 @@ const TUNE_SPEC = [
     ['jumpCut',      'Jump release cut',0.42, 0.1, 1, 0.02],
     ['doubleJumpVel','Double jump vel',  650, 0, 1200, 10],
     ['coyote',       'Coyote time',     0.10, 0, 0.3, 0.01],
-    ['jumpBuffer',   'Jump buffer',     0.10, 0, 0.3, 0.01],
+    ['jumpBuffer',   'Jump buffer',     0.12, 0, 0.3, 0.01],
   ]],
   ['Dash & Wall', [
     ['dashSpeed',    'Dash speed',       760, 300, 1600, 10],
@@ -95,8 +95,13 @@ const Input = {
     if (!p) return;
     p.buttons.forEach((b, i) => { if (b.pressed && PADMAP[i]) this.padDown.add(PADMAP[i]); });
     const ax = p.axes[0] || 0, ay = p.axes[1] || 0;
-    if (ax < -0.4) this.padDown.add('left'); if (ax > 0.4) this.padDown.add('right');
-    if (ay < -0.5) this.padDown.add('up'); if (ay > 0.5) this.padDown.add('down');
+    // a 0.25 radial deadzone so a drifting thumb does nothing; up needs a firm push so running never turns
+    // into an up-swing; in the air the down cone is generous, so a diagonal still pogoes
+    if (Math.hypot(ax, ay) > 0.25) {
+      const air = typeof Player !== 'undefined' && !Player.onGround;
+      if (ax < -0.4) this.padDown.add('left'); if (ax > 0.4) this.padDown.add('right');
+      if (ay < -0.6) this.padDown.add('up'); if (ay > (air ? 0.45 : 0.5)) this.padDown.add('down');
+    }
     this.padDown.forEach(a => { if (!this.prevPad.has(a)) this.buffered.add(a); });
     if (p.buttons[9] && p.buttons[9].pressed && !this._start) { this._start = true; window.dispatchEvent(new CustomEvent('padpause')); }
     if (p.buttons[9] && !p.buttons[9].pressed) this._start = false;
