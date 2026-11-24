@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EarthDoku · Daily Mother Series Enemy Grid</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-flavor="mint" data-tab="grid">
+<div class="bg" aria-hidden="true"></div>
+
+<header class="top">
+  <nav class="tabs" role="tablist" aria-label="Modes">
+    <span class="tabGroup" data-g="Daily">
+      <button class="tab on" id="tabGrid" role="tab" aria-selected="true">🎯 Grid</button>
+      <button class="tab" id="tabGeo" role="tab" aria-selected="false">🗺️ Map Guessr</button>
+      <button class="tab" id="tabMini" role="tab" aria-selected="false">🕹️ Minigames</button>
+    </span>
+    <span class="tabGroup" data-g="Adventure">
+      <button class="tab" id="tabTower" role="tab" aria-selected="false">🗼 Tower</button>
+    </span>
+    <span class="tabGroup" data-g="Records">
+      <button class="tab" id="tabList" role="tab" aria-selected="false">📖 Enemy list <span class="lock" id="lockIcon">🔒</span></button>
+      <button class="tab" id="tabStats" role="tab" aria-selected="false">📊 Stats</button>
+    </span>
+  </nav>
+  <button class="tab shopTab" id="tabShop" role="tab" aria-selected="false"><span class="shopIc" aria-hidden="true">🪐</span> <span class="shopTx">Saturn&#39;s shop</span> <b class="wallet" id="walletTop">$0</b></button>
+</header>
+
+<main id="viewGrid" class="view">
+  <div class="boardWrap">
+    <section class="board" id="board" aria-label="Enemy grid"></section>
+  </div>
+
+  <aside class="side">
+    <div class="win dialog" aria-live="polite">
+      <p id="say"></p>
+    </div>
+    <div class="win results" id="results" hidden></div>
+    <button class="win eotd" id="eotd" aria-label="Enemy of the day"></button>
+    <div class="actions">
+      <button class="btn" id="btnGiveUp">Give up</button>
+      <button class="btn" id="btnPractice">♾️ Infinite grid</button>
+      <button class="btn" id="btnDaily" hidden>Back to daily</button>
+      <button class="btn" id="btnHelp">How to play</button>
+      <button class="btn hot" id="btnShare" hidden>Share result</button>
+    </div>
+    <div class="practiceGames" id="practiceGames" role="group" aria-label="Games in infinite grids">
+      <span>Infinite uses</span>
+      <label><input type="checkbox" value="M1" checked> Mother</label>
+      <label><input type="checkbox" value="EB" checked> EarthBound</label>
+      <label><input type="checkbox" value="M3" checked> Mother 3</label>
+    </div>
+    <label class="hardChk" title="No suggestions: type the enemy's full name. 1.5× money.">
+      <input type="checkbox" id="hardMode"> 🔥 Hard mode <small>no suggestions, type full names</small>
+    </label>
+  </aside>
+</main>
+
+<main id="viewList" class="view" hidden>
+  <div class="win locked" id="listLocked">
+    <p>🔒 The enemy list is locked while a grid is in progress, so nobody peeks mid‑battle.</p>
+    <p>Finish or give up on the current grid and it opens right up.</p>
+  </div>
+  <div class="listBody" id="listBody" hidden>
+    <div class="win filters">
+      <div class="chips" id="fMode" role="group" aria-label="View">
+        <button data-m="table" class="on">📋 Table</button>
+        <button data-m="charts">📊 Charts</button>
+      </div>
+      <input class="search" id="fq" placeholder="Search enemies…" autocomplete="off" spellcheck="false">
+      <div class="chips" id="fGame">
+        <button data-g="all" class="on">All</button>
+        <button data-g="M1">Mother</button>
+        <button data-g="EB">EarthBound</button>
+        <button data-g="M3">Mother 3</button>
+      </div>
+      <select id="fKind" aria-label="Kind"><option value="">Any kind</option></select>
+      <select id="fRegion" aria-label="Location"><option value="">Any location</option></select>
+      <select id="fColl" aria-label="Collection">
+        <option value="">Collected or not</option><option value="yes">★ Collected</option><option value="no">☆ Not yet</option>
+      </select>
+      <label class="bosschk"><input type="checkbox" id="fBoss"> Bosses</label>
+      <span class="count" id="fCount"></span>
+    </div>
+    <div class="win collBar" id="collBar"></div>
+    <div class="tableWrap" id="tableWrap">
+      <table class="bestiary">
+        <thead><tr>
+          <th class="spc" aria-label="Sprite"></th>
+          <th data-s="name">Name</th><th data-s="coll" title="Collected">★</th><th data-s="game">Game</th><th>Kind</th><th>Found in</th>
+          <th data-s="hp" class="n">HP</th><th data-s="pp" class="n">PP</th><th data-s="off" class="n">Off</th>
+          <th data-s="def" class="n">Def</th><th data-s="spd" class="n">Spd</th>
+        </tr></thead>
+        <tbody id="fRows"></tbody>
+      </table>
+    </div>
+    <div class="chartsWrap" id="chartsWrap" hidden>
+      <section class="chartCard">
+        <h3>Offense vs. Defense</h3>
+        <p class="cs">Each dot is one enemy with both stats listed. Each game uses its own scale. Hover a dot for its name.</p>
+        <div class="legend" id="lgScatter"></div>
+        <div class="cbox"><canvas id="cScatter" aria-label="Scatter chart of offense against defense"></canvas></div>
+      </section>
+      <section class="chartCard">
+        <h3>How tough are they? HP spread</h3>
+        <p class="cs">Number of enemies in each HP band.</p>
+        <div class="legend" id="lgHp"></div>
+        <div class="cbox"><canvas id="cHp" aria-label="Bar chart of enemy counts by HP band"></canvas></div>
+      </section>
+      <section class="chartCard">
+        <h3>Enemies by kind</h3>
+        <p class="cs">Some enemies have two kinds and count in both.</p>
+        <div class="legend" id="lgKind"></div>
+        <div class="cbox tall"><canvas id="cKind" aria-label="Stacked bar chart of enemy counts by kind and game"></canvas></div>
+      </section>
+      <section class="chartCard">
+        <h3>Your collection by game</h3>
+        <p class="cs">Share of each game's enemies you've placed correctly in a grid.</p>
+        <div id="collGames"></div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<main id="viewGeo" class="view" hidden>
+  <aside class="geoSide">
+    <div class="win geoClueWin">
+      <div class="geoHead"><span id="geoRound">Map Guessr</span><b id="geoTotal">0 pts</b></div>
+      <div class="geoClueRow">
+        <div class="geoClue" id="geoClue" role="img" aria-label="Zoomed-in piece of a map to find"><span id="geoClueMsg">Loading the clue…</span><span class="geoClueE" id="geoClueE"></span></div>
+        <div class="geoInfo">
+          <p class="geoSay" id="geoSay" aria-live="polite"></p>
+          <div class="geoBar" id="geoBar" aria-label="Round results"></div>
+        </div>
+      </div>
+      <div class="geoBtns">
+        <button class="btn" id="geoHint" title="Show a wider view for −20%">🔍 Zoom out</button>
+        <button class="btn hot" id="geoGuess" disabled>📍 Drop a pin first</button>
+        <button class="btn hot" id="geoNext" hidden>Next round ▶</button>
+      </div>
+      <div class="geoHere" id="geoHere" hidden></div>
+    </div>
+    <div class="win geoListWin">
+      <form class="geoFind" id="geoFind" autocomplete="off">
+        <input class="search" id="geoQ" placeholder="Name the place… (e.g. Onett)" spellcheck="false" aria-label="Map name">
+        <button class="btn" type="submit">Open</button>
+      </form>
+      <p class="geoFindMsg" id="geoFindMsg" aria-live="polite">No list to scroll: type 3 letters of a place to see matching maps.</p>
+      <div class="geoPick" id="geoPick"></div>
+      <span class="sub geoSub">Opened this round</span>
+      <div class="geoMaps" id="geoMaps"></div>
+    </div>
+    <div class="win geoRoam" id="geoRoam"></div>
+  </aside>
+  <section class="geoMain">
+    <div class="geoView" id="geoView" tabindex="0" aria-label="Map viewer. Arrow keys pan, plus and minus zoom, Enter drops a pin at the center.">
+      <div class="geoStage" id="geoStage"><img id="geoImg" alt="" draggable="false"></div>
+      <canvas class="geoFog" id="geoFog" hidden aria-hidden="true"></canvas>
+      <div class="geoOver" id="geoOver"></div>
+      <div class="geoEmpty" id="geoEmpty">🗺️<br>Type a place name on the left to open its map.</div>
+      <div class="geoLoading" id="geoLoading" hidden>Loading map…</div>
+    </div>
+    <div class="geoTools left">
+      <button class="btn" id="geoDaily" hidden>Daily run</button>
+      <button class="btn" id="geoPractice">🎮 Modes</button>
+      <button class="btn" id="geoRoamBtn">🧭 Free roam</button>
+      <button class="btn hot" id="geoRoamExit">◀ Back to Map Guessr</button>
+      <button class="btn" id="geoHelp">How it works</button>
+      <button class="btn hot" id="geoShare" hidden>Share</button>
+    </div>
+    <div class="geoTools right">
+      <span class="geoMapName" id="geoMapName"></span>
+      <button id="geoIn" aria-label="Zoom in">+</button>
+      <button id="geoOut" aria-label="Zoom out">−</button>
+      <button id="geoFit" aria-label="Fit map">⤢</button>
+      <button id="geoFogBtn" aria-label="Fog of war" aria-pressed="false" title="Fog of war">🌫️</button>
+    </div>
+  </section>
+</main>
+
+
+<main id="viewMini" class="view" hidden>
+  <nav class="win mgMenu" id="mgMenu" aria-label="Minigames"></nav>
+  <section class="win mgStage" id="mgStage" aria-live="polite"></section>
+</main>
+
+<main id="viewTower" class="view" hidden>
+  <div class="twWrap" id="twWrap"></div>
+</main>
+
+<main id="viewStats" class="view" hidden>
+  <div class="stBody" id="stBody"></div>
+</main>
+
+<main id="viewShop" class="view" hidden>
+  <div class="shWrap" id="shWrap"></div>
+</main>
+
+<footer class="foot">
+  <div class="brand">
+    <h1 class="logo">Earth<span>Doku</span></h1>
+    <p class="tag" id="tagline">Daily enemy grid</p>
+    <span class="achBadge" id="achBadge" hidden></span>
+  </div>
+  <span class="credits">Data: EarthBound Wiki enemy lists for
+  <a href="https://earthbound.fandom.com/wiki/List_of_enemies_in_EarthBound_Beginnings" target="_blank" rel="noopener">Mother</a>,
+  <a href="https://earthbound.fandom.com/wiki/List_of_enemies_in_EarthBound" target="_blank" rel="noopener">EarthBound</a>,
+  <a href="https://earthbound.fandom.com/wiki/List_of_enemies_in_Mother_3" target="_blank" rel="noopener">Mother 3</a>
+  + <a href="https://wikibound.info/wiki/Enemy" target="_blank" rel="noopener">WikiBound</a> · sprites &amp; maps via WikiBound + <a href="https://vgmaps.de/" target="_blank" rel="noopener">VGMaps</a> · <span id="totals"></span></span>
+</footer>
+
+<div class="modal" id="modal" hidden>
+  <div class="win sheet" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <button class="x" id="mClose" aria-label="Close">✕</button>
+    <h2 id="mTitle"></h2>
+    <div id="mBody"></div>
+  </div>
+</div>
+
+<script src="data_m1.js"></script>
+<script src="data.js"></script>
+<script src="data_m3.js"></script>
+<script src="logic.js"></script>
+<script src="sprite_files.js"></script>
+<script src="sprite_dirs.js"></script>
+<script src="sprites.js"></script>
+<script src="app.js"></script>
+<script src="bestiary.js"></script>
+<script src="maps.js"></script>
+<script src="geo.js"></script>
+<script src="shop.js"></script>
+<script src="sound.js"></script>
+<script src="minigames.js"></script>
+<script src="tower_data.js"></script>
+<script src="tower.js"></script>
+<script src="tower_combo.js"></script>
+<script src="tower_ui.js"></script>
+<script src="https://artifactcdn.diabrowser.engineering/ajax/libs/Chart.js/chart.umd.js"></script>
+<script src="charts.js"></script>
+<script src="stats.js"></script>
+<script src="achieve.js"></script>
+</body>
+</html>
