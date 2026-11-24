@@ -1,6 +1,6 @@
 // ---------- Enemy Tower screens ----------
 // hero sprites wear whatever skin the player picked in Saturn's shop
-const heroImg = (h, cls = "") => { const k = heroLook(h.id); return `<img class="twSpr ${cls}" src="${h.spr}" alt="" referrerpolicy="no-referrer" draggable="false"${k ? ` style="--skf:${HLOOKS[k].f}"` : ""}>`; };
+const heroImg = (h, cls = "") => { const k = heroLook(h.id); return `<img class="twSpr ${cls}${k ? lookClass(k) : ""}" src="${h.spr}" alt="" referrerpolicy="no-referrer" draggable="false"${k ? lookStyle(k) : ""}>`; };
 const twUi = {goods:false};
 const stIcons = st => `${st.sleep ? "💤" : ""}${st.cry ? "😢" : ""}${st.poison ? "☠️" : ""}${st.stun ? "📌" : ""}${st.weak ? "🎯" : ""}${st.distract ? "🍯" : ""}`;
 const dailyHero = () => HERO[STARTERS[Math.floor(mulberry32(hashStr("tower2-" + todayKey()))() * STARTERS.length)]];
@@ -11,6 +11,7 @@ function drawTower() {
   $("#viewTower").dataset.act = tr ? Math.min(4, Math.floor((Math.min(tr.floor, TW_TOP) - 1) / 10) + 1) : 0;
   el.classList.toggle("isPick", !tr);
   if (!tr) return drawPicker(el);
+  noteRelics();
   if (tr.phase === "map" || tr.phase === "bless") twSaveRun();
   const relics = (tr.bless || []).filter((k, i, a) => a.indexOf(k) === i).map(k => `<button class="twRel twBlessIc" data-rel="b:${k}" title="${BLESSINGS[k].n}: ${BLESSINGS[k].d}">${BLESSINGS[k].ic}</button>`).join("") + tr.relics.map(k => `<button class="twRel" data-rel="r:${k}" title="${RELICS[k].n}: ${RELICS[k].d}">${RELICS[k].ic}</button>`).join("") + tr.curses.map(k => `<button class="twRel twCurse" data-rel="c:${k}" title="Curse · ${CURSES[k].n}: ${CURSES[k].d}">${CURSES[k].ic}</button>`).join("");
   const bag = Object.keys(tr.goods).length;
@@ -100,6 +101,7 @@ function blessHTML() {
 function summitHTML() {
   return `<div class="win dialog twLog">${tr.log.map(l => `<p class="${l.cls}">${l.t}</p>`).join("")}</div>
     <section class="win twStage twSummit"><h2>🏆 You reached the top of the tower!</h2>
+      ${tr.bellHero && HERO[tr.bellHero] ? `<div class="twMeetHero twBellHero">${heroImg(HERO[tr.bellHero])}<b>🔔 ${HERO[tr.bellHero].name}</b> ${badge({game:HERO[tr.bellHero].game})}<small>${tr.bellJoined ? "came running at the sound of the Friend bell, and joins the party!" : "came running at the sound of the Friend bell! Pick them as a starting hero next time."}</small></div>` : ""}
       <p class="twSay">The clear is saved${tr.heatUp ? ` and Heat ${tw.heatMax} is unlocked` : ""}. But a staircase keeps going up, into the swirl...</p>
       <p class="twHint">♾️ Endless mode: floors past ${TW_TOP} get tougher every time, with a boss every 5 floors. You keep your party, goods and relics. Your best endless floor is ${tw.bestEndless || "not set yet"}.</p>
       <div class="twMenu"><button class="btn hot" id="twEndless">♾️ Keep climbing</button><button class="btn" id="twTrophy">🏆 Take the trophy and leave</button></div></section>`;
@@ -125,7 +127,7 @@ function roomHTML() {
     return `<section class="win twStage"><h2>❓ ${r.ev.who}${r.ev.game ? ` ${badge({game:r.ev.game})}` : ""}</h2><p class="twSay">${quoted}</p>
       <div class="twMenu">${r.done ? `<button class="btn hot" id="twOn">Onward ▶</button>` : `<button class="btn hot" id="twYes">${r.ev.yes}</button><button class="btn" id="twOn">No thanks ▶</button>`}</div></section>`;
   }
-  if (["statue", "dojo", "meet", "arcade", "library", "vault"].includes(t)) {
+  if (["statue", "dojo", "meet", "arcade", "library", "vault", "chest"].includes(t)) {
     const cs = r.choices || [], wide = t === "vault" || t === "library";
     return `<section class="win twStage${t === "meet" ? " twMeet" : ""}${wide ? " twPickRoom" : ""}"><h2>${ROOMS[t].ic} ${ROOMS[t].n}</h2>${r.hero ? `<div class="twMeetHero">${heroImg(r.hero)}<b>${r.hero.name}</b> ${badge({game:r.hero.game})}</div>` : ""}<p class="twSay">${r.text}</p>
       <div class="twMenu">${r.done || !cs.length ? `<button class="btn hot" id="twOn">Onward ▶</button>` : cs.map((c, i) => `<button class="btn hot" data-ch="${i}">${c.label}</button>`).join("") + `<button class="btn" id="twOn">Leave ▶</button>`}</div></section>`;
@@ -144,6 +146,7 @@ function overHTML() {
     ${r.cash ? `<small class="twCash">💰 +${r.cash} for Saturn's shop!${tr.mods && tr.mods.length && !hasMod("training") ? ` (New Run+ ${cashTag(modCash(tr.mods))})` : ""}</small>` : ""}
     <small>${r.tokens ? `🎟️ +${r.tokens} Tower Token${r.tokens === 1 ? "" : "s"}! ` : ""}You have ${tw.tokens} 🎟️ to spend on perks.</small>` : ""}
     ${tr.weekly ? `<small>📅 Weekly best this week: floor ${tw.weekly[weekKey()] || 0}${r.weekNew ? " · new best!" : ""}</small>` : ""}
+    ${tr.bellHero && HERO[tr.bellHero] ? `<div class="twBellMeet">${heroImg(HERO[tr.bellHero])}<small>🔔 The Friend bell brought <b>${HERO[tr.bellHero].name}</b>! They can be picked as a starting hero from now on.</small></div>` : ""}
     <small>Heroes found so far: ${tw.found.length}/${HEROES.length}</small>${r.heatUp ? `<small>🌡️ Heat ${tw.heatMax} unlocked: ${HEAT[tw.heatMax]}.</small>` : ""}${r.endlessNew && r.endlessNew.length ? `<small>🏅 New endless best for ${r.endlessNew.join(", ")}! See 📊 Records.</small>` : ""}${r.champs && r.champs.length ? `<small class="twCash">🏆 Champion skin${r.champs.length === 1 ? "" : "s"} unlocked for ${r.champs.join(", ")}! Wear ${r.champs.length === 1 ? "it" : "them"} from Saturn's shop.</small>` : ""}
     <div class="mgBtns"><button class="btn hot" id="twAgain">New run</button><button class="btn" id="twShare">Share</button></div></div>`;
 }
@@ -271,13 +274,16 @@ const findHint = h => FIND[h.id] ? `Not found yet. Someone is hiding somewhere i
 // ---------- the hero carousel: cycle through everyone, the one in the middle is the one you pick ----------
 const twCar = {game:"all", busy:0};
 // heroes you've found come first, so they sit side by side on the carousel; the unfound ones follow
-const carList = () => { const l = HEROES.filter(h => twCar.game === "all" || h.game === twCar.game); return [...l.filter(isUnlocked), ...l.filter(h => !isUnlocked(h))]; };
+// tabs: all, one game each (series heroes only), or ✏️ Yours for the heroes you made
+const inTab = (h, g) => g === "all" || (g === "mine" ? !!h.mine : !h.mine && h.game === g);
+const carList = () => { const l = HEROES.filter(h => inTab(h, twCar.game)); return [...l.filter(isUnlocked), ...l.filter(h => !isUnlocked(h))]; };
 // Daily Hard and Weekly climbs use a set hero
 const fixedHero = () => twMode === "weekly" ? HERO[weeklyPlan().hero] : dailyHero();
 function pickerSel() {
   if (twMode !== "normal") return fixedHero();
   const list = carList();
   let h = HERO[twView] || HERO[twPick] || HERO.ness;
+  if (!list.length) return null;   // the ✏️ Yours tab before you've made anyone
   if (!list.includes(h)) h = list.find(isUnlocked) || list[0];
   twView = h.id;
   if (isUnlocked(h)) twPick = h.id;
@@ -295,7 +301,7 @@ function profileHTML(sel) {
         <p class="twRole">${found ? sel.role : findHint(sel)}</p>
         ${found ? `<span class="twRates">${bars(sel)}</span>
         <p class="twMoveList"><b>Starts with</b> ${sel.start.map(k => TMOVES[k].n).join(", ")}<br><b>Can learn</b> ${sel.learn.map(k => (TMOVES[k].sig ? "★ " : "") + TMOVES[k].n + (PSI_NEEDS[k] ? ` <small>(after ${TMOVES[PSI_NEEDS[k]].n})</small>` : "")).join(", ")}<br>${comboLine(sel)}</p>` : ""}
-        ${found ? `<button class="btn twSmall twCodexOne" id="twCodexOne">📘 Codex page</button>` : ""}
+        ${found ? `<span class="twProfBtns"><button class="btn twSmall twCodexOne" id="twCodexOne">📘 Codex page</button>${sel.mine ? `<button class="btn twSmall twCodexOne" id="twEditMine">✏️ Edit hero</button>` : ""}</span>` : ""}
       </div>
       <div class="twStart">
         <div class="chips" id="twModes"><button data-m="normal" class="${fixed ? "" : "on"}">Normal</button><button data-m="hard" class="${hard ? "on" : ""}" title="Everyone gets the same hero, rooms and enemies today. No hot springs, Save Frog or act rests, and enemies hit harder.">🔥 Daily Hard</button><button data-m="weekly" class="${weekly ? "on" : ""}" title="The same hero, twists and tower for everyone all week. Retry as often as you like.">📅 Weekly</button></div>
@@ -305,6 +311,7 @@ function profileHTML(sel) {
         ${fixed ? "" : `<div class="twModRow"><label class="twHeat">🌡️ Heat <select id="twHeatSel">${HEAT.map((d, i) => `<option value="${i}" ${i === heatNow ? "selected" : ""} ${i > (tw.heatMax || 0) ? "disabled" : ""}>${i}${i > (tw.heatMax || 0) ? " 🔒" : ""}</option>`).join("")}</select></label><button class="btn twSmall twModsBtn" id="twModsBtn">✨ New Run+${activeMods().length ? ` · ${activeMods().length} on · ${cashTag(modCash(activeMods()))}` : ""}</button>${activeMods().map(k => `<span class="twModChip" title="${RUNMOD[k].n}: ${RUNMOD[k].d}">${RUNMOD[k].ic}</span>`).join("")}<button class="btn twSmall twModsBtn" id="twPerksBtn" title="Spend Tower Tokens from run goals on permanent perks">🎖️ Perks · ${tw.tokens} 🎟️</button></div><small class="twHeatTx">${heatNow ? HEAT.slice(1, heatNow + 1).join(" · ") : "Reach the top to unlock Heat 1."}</small>`}
         <button class="btn hot twGo" id="twGo" ${canGo ? "" : "disabled"}>${fixed ? `Climb with ${dh.name} ▶` : canGo ? `Climb with ${HERO[twPick].name} ▶` : "Pick a hero you've found"}</button>
       </div>
+      ${typeof shop !== "undefined" && shop.bell ? `<p class="twBellNote">🔔 Friend bell ready: reach the top of your next climb and a hero you haven't met will come running. It stays with you until then.</p>` : ""}
       <p class="twBest">Best floor <b>${tw.best}</b> · Runs ${tw.runs} · Reached the top ${tw.clears}× · Heroes found <b>${tw.found.length}/${HEROES.length}</b>${tw.bestEndless ? ` · ♾️ Endless best <b>${tw.bestEndless}</b>` : ""}${hardDone ? ` · Daily Hard today: floor ${tw.hard[day]}` : ""}</p>
     </section>`;
 }
@@ -312,6 +319,7 @@ function bindProfile(el, sel) {
   el.querySelectorAll("#twModes button").forEach(b => b.onclick = () => { twMode = b.dataset.m; drawPicker(el); });
   const hs = $("#twHeatSel"); if (hs) hs.onchange = () => { tw.heat = +hs.value; twSave(); drawPicker(el); };
   const cb = $("#twCodexOne"); if (cb) cb.onclick = () => codexPage(sel);
+  const eb = $("#twEditMine"); if (eb) eb.onclick = () => { sfx("open"); openCustom(sel.id); };
   const mb = $("#twModsBtn"); if (mb) mb.onclick = () => openRunMods(el);
   const pb = $("#twPerksBtn"); if (pb) pb.onclick = () => openPerks(el);
   const rb = $("#twResume"); if (rb) rb.onclick = () => { if (!twLoadRun()) drawPicker(el); };
@@ -330,11 +338,13 @@ function drawPicker(el) {
       <span class="twCardArt">${heroImg(h)}</span><b>${ok ? h.name : "???"}</b>${badge({game:h.game})}</button>`; };
   el.innerHTML = `
   <div class="twPick">
-    ${profileHTML(sel)}
+    ${sel ? profileHTML(sel) : `<section class="twProfile twMineEmpty" id="twProfile"><div class="twMineArt">🎨</div><div class="twProfileInfo"><h2>Your own heroes</h2>
+      <p class="twRole">Make up to ${CU_MAX} heroes of your own. Draw their sprite pixel by pixel (or borrow any hero or enemy sprite), name them, spend ${CU_POINTS} stat points and pick their moves.</p>
+      <button class="btn hot twGo" id="twMakeBig">✨ Create your first hero</button></div></section>`}
     <section class="twRoster">
-      <h2 class="twTitle">🗼 Enemy Tower <button class="btn twSmall twCodexBtn" id="twCodex">📘 Hero codex ${tw.found.length}/${HEROES.length}</button><button class="btn twSmall twCodexBtn" id="twRecords">📊 Records</button>${resumeHTML()}</h2>
-      <div class="chips twCarG" id="twCarG">${[["all", "All"], ["M1", "Mother"], ["EB", "EarthBound"], ["M3", "Mother 3"]].map(([g, l]) =>
-        `<button data-g="${g}" class="${twCar.game === g ? "on" : ""}" ${hard ? "disabled" : ""}>${l} <small>${HEROES.filter(h => (g === "all" || h.game === g) && isUnlocked(h)).length}/${HEROES.filter(h => g === "all" || h.game === g).length}</small></button>`).join("")}</div>
+      <h2 class="twTitle">🗼 Enemy Tower <button class="btn twSmall twCodexBtn" id="twCodex">📘 Hero codex ${tw.found.length}/${HEROES.length}</button><button class="btn twSmall twCodexBtn" id="twRecords">📊 Records${relicNew() ? ` · 📖 ${relicNew()} new` : ""}</button><button class="btn twSmall twCodexBtn twMakeBtn" id="twMake" title="Make your own hero: sprite, name, stats and moves">✨ New hero <small>${tw.customs.length}/${CU_MAX}</small></button>${resumeHTML()}</h2>
+      <div class="chips twCarG" id="twCarG">${[["all", "All"], ["M1", "Mother"], ["EB", "EarthBound"], ["M3", "Mother 3"], ["mine", "✏️ Yours"]].map(([g, l]) =>
+        `<button data-g="${g}" class="${twCar.game === g ? "on" : ""}" ${hard ? "disabled" : ""}>${l} <small>${g === "mine" ? `${tw.customs.length}/${CU_MAX}` : `${HEROES.filter(h => inTab(h, g) && isUnlocked(h)).length}/${HEROES.filter(h => inTab(h, g)).length}`}</small></button>`).join("")}</div>
       <div class="twCar${hard ? " hard" : ""}" id="twCar" tabindex="0" aria-label="Hero carousel: use the arrow keys, scroll, or swipe to browse">
         <div class="twCarStage" id="twCarStage">${(hard ? [sel] : list).map(card).join("")}</div>
         <button class="twCarNav prev" data-step="-1" aria-label="Previous hero" ${hard ? "disabled" : ""}>◀</button>
@@ -344,15 +354,18 @@ function drawPicker(el) {
       <details class="twHow"><summary>How the tower works</summary>
         <p>Start with one hero and climb ${TW_TOP} floors over four acts: EarthBound enemies, then Mother, then Mother 3, then all three at once. Pick a room on every floor. After every win, pick an upgrade: a new move, stat boosts, gear, goods, a relic, or sometimes a recruit you've already found.</p>
         <p>Only Ninten, Ness and Lucas are known at first. Everyone else is hidden behind rare ✨ rooms: each one only shows up in one act, from a certain floor on. Find them once and they're yours for good.</p>
+        <p>✏️ You can also make up to ${CU_MAX} heroes of your own with <b>✨ New hero</b> (they live under the ✏️ Yours tab): draw a sprite pixel by pixel or pick any hero or enemy sprite, a color, a name, how to spend ${CU_POINTS} stat points, a combo minigame, one starting move and up to ${CU_LEARN} moves to learn along the way. They can join climbs as a recruit too, and earn their own gold look by reaching the top.</p>
         <p>Battles work like the games: Bash, PSI, Goods, Defend, Run and Auto. HP rolls down, so you can heal before it hits zero. After a Bash, every hero plays their own combo minigame (a swing, a charge, a spelling test...) for extra hits. A boss waits every 5 floors.</p>
         <p>♾️ Beat the final foe on floor ${TW_TOP} in a normal run and you can keep climbing in Endless mode. Every floor past the top gets tougher, and your best endless floor is saved.</p>
-        <p>✨ Each act starts with a choice of blessings. Every run also has 3 goals: finish them for 🎟️ Tower Tokens, and spend those on permanent 🎖️ Perks for normal climbs. Watch for the 🎰 Arcade, 📚 Library and 🗝️ Vault rooms, and use 🔄 Reroll when you don't like an upgrade pick.</p>
+        <p>✨ Each act starts with a choice of blessings. Every run also has 3 goals: finish them for 🎟️ Tower Tokens, and spend those on permanent 🎖️ Perks for normal climbs. Watch for the 🎰 Arcade, 📚 Library and 🗝️ Vault rooms, and the rare 💎 Golden chest that holds a cosmetic for Saturn's shop, and use 🔄 Reroll when you don't like an upgrade pick.</p>
       </details>
     </section>
   </div>`;
-  bindProfile(el, sel);
+  if (sel) bindProfile(el, sel);
+  else $("#twMakeBig").onclick = () => { sfx("open"); openCustom(); };
   $("#twCodex").onclick = () => codexAll();
   $("#twRecords").onclick = () => { sfx("click"); openRecords(); };
+  $("#twMake").onclick = () => { sfx("open"); openCustom(); };
   $("#twCarG").onclick = ev => { const b = ev.target.closest("button[data-g]"); if (!b || hard) return; twCar.game = b.dataset.g; sfx("click"); drawPicker(el); };
   const car = $("#twCar");
   car.querySelectorAll(".twCarNav").forEach(b => b.onclick = () => carStep(+b.dataset.step));
@@ -371,6 +384,7 @@ function carLayout(animate = true) {
   const stage = $("#twCarStage");
   if (!stage) return;
   const list = twMode !== "normal" ? [fixedHero()] : carList(), n = list.length, c = Math.max(0, list.findIndex(h => h.id === twView));
+  if (!n) { $("#twCarInfo").innerHTML = "<span>No heroes of your own yet</span>"; return; }
   stage.classList.toggle("still", !animate);
   stage.querySelectorAll(".twCard").forEach((el, i) => {
     let d = i - c;
@@ -436,26 +450,50 @@ const comboLine = h => { const c = comboOf(h); return `<b>Combo</b> ${c.ic} ${c.
 
 // ---------- hero codex: a page for every hero you've found ----------
 function codexMet(h) {
+  if (h.mine) return "You made them yourself in the hero maker. Edit them any time from the Tower picker.";
   if (STARTERS.includes(h.id)) return "Known from the very start.";
   const x = FIND[h.id];
   return x ? `Met in ${actOf(x[0]).n}, from floor ${x[0]} on. “${x[2]}”` : "Met somewhere in the tower.";
+}
+// what each kind of move does, shown as a small icon and label on the codex page
+const CX_KIND = {hit:["⚔️", "Attack"], psi:["✨", "PSI attack"], heal:["💚", "Heal"], healall:["💚", "Party heal"], cure:["🩹", "Cure"],
+  sleep:["💤", "Sleep"], stun:["⛓️", "Pin down"], weak:["🔻", "Weaken"], revive:["💖", "Revive"], cry:["😵", "Distract"], shield:["🛡️", "Shield"],
+  offup:["💪", "Power up"], magnet:["🧲", "Drain PP"], tough:["🪨", "Toughen"], pray:["🙏", "Prayer"], chant:["🎵", "Chant"], guard:["🙈", "Guard"],
+  invent:["🔧", "Gadget"], steal:["💰", "Steal"], ppall:["🔋", "Restore PP"], run:["🏃", "Escape"]};
+function cxMove(k) {
+  const m = TMOVES[k];
+  if (!m) return "";
+  const [ic, kind] = CX_KIND[m.kind] || ["•", "Move"];
+  const targets = ["hit", "psi", "weak"].includes(m.kind) ? (m.all ? "every enemy" : "one enemy") : "";
+  const tags = [m.pp ? `${m.pp} PP` : "free", m.cd ? `${m.cd}-turn reload` : "", targets, m.times ? `hits ×${m.times}` : "", m.miss ? "can miss" : "",
+    PSI_NEEDS[k] ? `after ${TMOVES[PSI_NEEDS[k]].n}` : ""].filter(Boolean);
+  return `<li class="cxMv${m.sig ? " sig" : ""}"><span class="cxMvIc" title="${kind}">${ic}</span>
+    <div class="cxMvTx"><div class="cxMvTop"><b>${m.n}</b>${m.sig ? `<span class="cxStar">★ Signature</span>` : ""}<span class="cxKindTag">${kind}</span></div>
+      ${m.d ? `<small>${m.d}</small>` : ""}<div class="cxTags">${tags.map(t => `<span>${t}</span>`).join("")}</div></div></li>`;
 }
 function codexPage(h) {
   if (!isUnlocked(h)) return codexAll();
   const r = tw.heroes[h.id] || {runs:0, team:0, best:0, clears:0};
   const list = HEROES.filter(isUnlocked), i = list.indexOf(h);
   const prev = list[(i - 1 + list.length) % list.length], next = list[(i + 1) % list.length];
-  const nums = statNums(h), rates = ["HP", "PP", "Off", "Def", "Spd"].map((l, k) => `<span class="twRate"><i>${l}</i><b style="--w:${h.r[k] * 10}%"></b><em>${nums[k] || "–"}</em></span>`).join("");
-  const mv = k => { const m = TMOVES[k]; return m ? `<li><b>${m.sig ? "★ " : ""}${m.n}</b>${m.pp ? ` <small>${m.pp} PP</small>` : ""}<br><small>${m.d || ""}</small></li>` : ""; };
-  openModal(`📘 ${h.name} ${badge({game:h.game})}`, `<div class="cxPage">
-    <div class="cxTop"><div class="cxArt">${heroImg(h, "big")}</div>
-      <div><p class="cxRole">${h.role}</p><span class="twRates">${rates}</span><p class="cxCombo">${comboLine(h)}</p></div></div>
-    <div class="cxRecs">
-      <div><b>${r.runs}</b><small>runs started</small></div><div><b>${r.team}</b><small>runs in the party</small></div>
-      <div><b>${r.best || "–"}</b><small>best floor</small></div><div><b>${r.clears}</b><small>times at the top</small></div><div><b>${r.endless ? `♾️ ${r.endless}` : "–"}</b><small>endless best</small></div></div>
-    <h3>How you met</h3><p class="cxMet">${codexMet(h)}</p>
-    <h3>Moves</h3><div class="cxMoves"><div><span class="cxSub">Starts with</span><ul>${h.start.map(mv).join("")}</ul></div>
-      <div><span class="cxSub">Can learn</span><ul>${h.learn.map(mv).join("")}</ul></div></div>
+  const nums = statNums(h), c = comboOf(h);
+  const rates = ["HP", "PP", "Offense", "Defense", "Speed"].map((l, k) => `<div class="cxStat"><span>${l}</span><b style="--w:${h.r[k] * 10}%"></b><em>${nums[k] || "–"}</em></div>`).join("");
+  // signature moves go last, so the everyday moves are easy to scan
+  const learn = h.learn.slice().sort((a, b) => !!(TMOVES[a] && TMOVES[a].sig) - !!(TMOVES[b] && TMOVES[b].sig));
+  const rec = (v, l) => `<div><b>${v}</b><small>${l}</small></div>`;
+  openModal(`📘 Hero codex <small style="font-family:var(--mono)">${i + 1}/${list.length}</small>`, `<div class="cxPage cxNew">
+    <section class="cxHero g${h.game}">
+      <div class="cxArt">${heroImg(h, "big")}</div>
+      <div class="cxId"><h2>${h.name} ${badge({game:h.game})}</h2><p class="cxRole">${h.role}</p>
+        <div class="cxStats">${rates}</div></div>
+    </section>
+    <div class="cxRecs">${rec(r.runs, "runs started")}${rec(r.team, "in the party")}${rec(r.best || "–", "best floor")}${rec(r.clears, "times at the top")}${rec(r.endless ? `♾️ ${r.endless}` : "–", "endless best")}</div>
+    <div class="cxTwo">
+      <section class="cxBox"><h3>🤝 How you met</h3><p class="cxMet">${codexMet(h)}</p></section>
+      <section class="cxBox"><h3>${c.ic} Combo · ${c.n}</h3><p class="cxMet">${c.tip}.</p></section>
+    </div>
+    <section class="cxBox"><h3>Starts with <small>${h.start.length}</small></h3><ul class="cxMvs">${h.start.map(cxMove).join("")}</ul></section>
+    <section class="cxBox"><h3>Can learn <small>${learn.length}</small></h3>${learn.length ? `<ul class="cxMvs">${learn.map(cxMove).join("")}</ul>` : `<p class="cxMet">Nothing. ${h.name} is happy just as they are.</p>`}</section>
     <div class="cxNav"><button class="btn" data-cx="${prev.id}">◀ ${prev.name}</button><button class="btn" data-cx="all">All heroes</button><button class="btn" data-cx="${next.id}">${next.name} ▶</button></div>
   </div>`);
   bindCodex();
@@ -463,7 +501,7 @@ function codexPage(h) {
 function codexAll() {
   const found = HEROES.filter(isUnlocked).length;
   openModal(`📘 Hero codex <small style="font-family:var(--mono)">${found}/${HEROES.length} found</small>`, `<div class="cxAll">
-    ${["M1", "EB", "M3"].map(g => `<h3>${GAMES[g].l}</h3><div class="cxGrid">${HEROES.filter(h => h.game === g).map(h => {
+    ${["M1", "EB", "M3", ...(tw.customs.length ? ["mine"] : [])].map(g => `<h3>${g === "mine" ? "✏️ Your heroes" : GAMES[g].l} <small>${HEROES.filter(h => inTab(h, g) && isUnlocked(h)).length}/${HEROES.filter(h => inTab(h, g)).length}</small></h3><div class="cxGrid">${HEROES.filter(h => inTab(h, g)).map(h => {
       const ok = isUnlocked(h), r = tw.heroes[h.id];
       return ok ? `<button class="cxTile" data-cx="${h.id}">${heroImg(h)}<b>${h.name}</b><small>${r && r.best ? `best floor ${r.best}` : "no runs yet"}</small></button>`
         : `<div class="cxTile locked">${heroImg(h)}<b>???</b><small>${FIND[h.id] ? `hiding in ${actOf(FIND[h.id][0]).n.split(" · ")[0]}` : "somewhere"}</small></div>`;
@@ -503,13 +541,77 @@ function historyHTML() {
       <div class="rcTags">${modeTag(x)}${x.heat ? `<span class="twTag">🌡️ Heat ${x.heat}</span>` : ""}${x.mods.filter(k => RUNMOD[k]).map(k => `<span class="twTag" title="${RUNMOD[k].n}">${RUNMOD[k].ic} ${RUNMOD[k].n}</span>`).join("")}
         ${x.training ? `<span class="twTag">🐣 Training: not counted</span>` : `<span class="twTag">💰 ${fmt$(x.cash)}</span>${x.tokens ? `<span class="twTag">🎟️ ${x.tokens}</span>` : ""}`}</div></div>`).join("")}</div>`;
 }
+// the relic book: one page per relic, filled in the first time you pick it up
+const relicNew = () => Object.values(tw.relicBook).filter(b => !b.seen).length;
+function bookHTML() {
+  const keys = Object.keys(RELICS), got = keys.filter(k => tw.relicBook[k]);
+  const when = t => new Date(t).toLocaleDateString(undefined, {month:"short", day:"numeric"});
+  const html = `<p class="twModIntro">Every relic you've ever picked up in the Tower. Look for them in treasure, shops, events, the Arcade and the Vault. <b>${got.length}/${keys.length}</b> found.</p>
+    <div class="rcStats rbStats"><div><b>${got.length}</b><small>pages filled</small></div><div><b>${keys.length - got.length}</b><small>still missing</small></div>
+      <div><b>${got.length ? RELICS[got.slice().sort((a, c) => tw.relicBook[c].runs - tw.relicBook[a].runs)[0]].ic : "–"}</b><small>carried most</small></div><div><b>${Math.round(got.length / keys.length * 100)}%</b><small>complete</small></div></div>
+    <div class="rbGrid">${keys.map((k, i) => { const r = RELICS[k], b = tw.relicBook[k];
+      return b ? `<div class="rbTile${b.seen ? "" : " new"}">${b.seen ? "" : `<i class="rbNew">NEW</i>`}<span class="rbNo">#${i + 1}</span><span class="rbIc">${r.ic}</span><b>${r.n}</b><small>${r.d}</small>
+          <em>First found ${when(b.t)} on floor ${b.fl} · carried in ${b.runs} climb${b.runs === 1 ? "" : "s"}</em></div>`
+        : `<div class="rbTile locked"><span class="rbNo">#${i + 1}</span><span class="rbIc">❔</span><b>???</b><small>Not found yet</small></div>`; }).join("")}</div>`;
+  // opening the book marks every page as read
+  if (got.some(k => !tw.relicBook[k].seen)) { got.forEach(k => tw.relicBook[k].seen = true); twSave(); }
+  return html;
+}
 function openRecords(tab) {
   if (tab) twRec.tab = tab;
-  const tabs = [["board", "🏅 Endless leaderboard"], ["hist", "📜 Run history"]];
+  const fresh = relicNew();
+  const tabs = [["board", "🏅 Endless leaderboard"], ["hist", "📜 Run history"], ["book", `📖 Relic book${fresh ? ` <small>${fresh} new</small>` : ""}`]];
+  const body = twRec.tab === "board" ? boardHTML() : twRec.tab === "book" ? bookHTML() : historyHTML();
   openModal("📊 Tower records", `<div class="chips rcTabs" role="tablist">${tabs.map(([k, l]) => `<button data-rc="${k}" role="tab" aria-selected="${twRec.tab === k}" class="${twRec.tab === k ? "on" : ""}">${l}</button>`).join("")}</div>
-    <div class="rcBody">${twRec.tab === "board" ? boardHTML() : historyHTML()}</div>`);
+    <div class="rcBody">${body}</div>`);
   document.querySelectorAll("#mBody [data-rc]").forEach(b => b.onclick = () => { sfx("click"); openRecords(b.dataset.rc); });
   bindCodex();
+}
+
+// ---------- boss intro cards: a title card before every boss, with a line about who you're up against ----------
+const BOSS_NAMED = [
+  [/giygas/i, "You cannot grasp the true form of Giygas's attack!"], [/pokey|porky/i, "Spankety spankety spankety! He's been waiting for this."],
+  [/starman/i, "Your abilities are... interesting. Starmen don't usually say that."], [/belch/i, "The smell arrives before he does."],
+  [/mani mani/i, "The statue's eyes follow you everywhere."], [/carpainter/i, "Lightning! Behold the power of the Mani Mani!"],
+  [/masked man/i, "..."], [/fassad/i, "Nwehehehe! He brought his bananas."], [/devil|demon/i, "It's been waiting at the top of these stairs a long time."],
+  [/robot|cyborg|mecha/i, "Fully charged and fully rude."], [/king/i, "Royalty demands that you lose."]
+];
+const BOSS_KIND = {
+  Human:["has been practicing that evil laugh all week.", "cracks their knuckles. It's personal now.", "says this tower isn't big enough for both of you."],
+  Animal:["growls. It definitely skipped breakfast.", "sniffs the air. It smells fear. And cookies.", "is having a very bad day."],
+  Bug:["buzzes menacingly. Mostly menacingly.", "has six legs and zero chill.", "wants its floor back."],
+  Plant:["is rooted to the spot. On purpose.", "has been photosynthesizing pure rage.", "smells nice, which is somehow worse."],
+  Machine:["beeps. Translation: you're in trouble.", "was programmed to ruin your day.", "is running at 110% capacity."],
+  Alien:["came from very far away just for this.", "says resistance is pretty futile, actually.", "glows in a way that seems unfriendly."],
+  Ghost:["was here before the tower, and it's staying.", "rattles something. You'd rather not know what.", "is dead serious."],
+  Object:["is an object. An angry object.", "should not be able to move. And yet.", "has a lot of nerve for a thing."],
+  Weird:["...You can't tell which way it's facing.", "is happening. Somehow.", "makes the room feel slightly sideways."]
+};
+function bossLine(x) {
+  const e = x.e, named = BOSS_NAMED.find(([re]) => re.test(e.name));
+  if (named) return named[1];
+  if (tr.battle.type === "final") return `${e.name} is all that stands between you and the top.`;
+  const lines = BOSS_KIND[e.kinds[0]] || BOSS_KIND.Weird;
+  return `${e.name} ${lines[hashStr("boss-" + e.name) % lines.length]}`;
+}
+function bossCard(done) {
+  const b = tr.battle, x = b.foes.find(f => f.boss) || b.foes[0], v = $("#viewTower"), fin = b.type === "final";
+  if (!x || !v) return done();
+  const card = document.createElement("div");
+  card.className = "bossCard" + (fin ? " final" : "");
+  card.setAttribute("role", "dialog"); card.setAttribute("aria-label", `${fin ? "Final foe" : "Boss"}: ${x.e.name}`);
+  const traits = x.traits.length ? `<p class="bcTraits">${x.traits.map(t => `<span>${TRAITS[t].ic} ${TRAITS[t].n}</span>`).join("")}</p>` : "";
+  card.innerHTML = `<div class="bcInner win"><small class="bcTag">${fin ? "🌀 THE FINAL FOE" : `👑 BOSS · FLOOR ${tr.floor}`}</small>
+    <div class="bcArt">${spriteHTML(x.e, "big")}</div><h2 class="bcName">${x.e.name}</h2><p class="bcGame">${badge(x.e)}${b.foes.length > 1 ? ` <small>and ${b.foes.length - 1} more</small>` : ""}</p>${traits}
+    <p class="bcLine">“${bossLine(x)}”</p><small class="bcSkip">Click or press any key to fight</small></div>`;
+  let gone = false, shown = false;
+  // while the card is up, key presses only close it, so they can't press a battle button by accident
+  const key = ev => { if (ev.metaKey || ev.ctrlKey || v.hidden || !$("#modal").hidden) return; ev.preventDefault(); ev.stopPropagation(); close(); };
+  const close = () => { if (gone) return; gone = true; document.removeEventListener("keydown", key, true); if (shown) { card.classList.add("out"); setTimeout(() => card.remove(), 250); } done(); };
+  card.onclick = close;
+  // it slides in once the battle swirl clears, and closes by itself after a few seconds
+  setTimeout(() => { if (gone) return; shown = true; v.appendChild(card); document.addEventListener("keydown", key, true); }, fin ? 1050 : 850);
+  setTimeout(close, (fin ? 1050 : 850) + (tr.auto ? 1800 : 3600));
 }
 
 // using goods from the bag between battles: ask who gets it when there's a choice

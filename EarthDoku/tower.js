@@ -102,6 +102,7 @@ function startTower(heroId, mode) {
   if (hard) heroId = pickR(STARTERS, rng);
   if (weekly) heroId = weeklyPlan().hero;
   tr.weekly = weekly;
+  tr.rk = Date.now().toString(36);   // tells climbs apart, so a golden chest can't be reopened by reloading
   tr.seed = hard ? "tower2-" + todayKey() : weekly ? "tower-week-run-" + weekKey() : null;
   const perks = !hard && !weekly;   // Tower perks only help normal climbs
   tr.perks = perks;
@@ -152,6 +153,8 @@ function makeDoors() {
   if (hasRelic("repelring")) w.battle *= .6;
   if (hasMod("noshop")) { w.shop = 0; w.present += .8; w.event += .8; }
   Object.assign(w, {arcade:f >= 3 ? .7 : 0, library:f >= 4 ? .6 : 0, vault:f >= 6 ? .45 : 0});
+  // golden chests are rare: at most two a climb, never in training runs, and not in the shared Daily Hard and Weekly towers
+  w.chest = f >= 4 && !tr.seed && !hasMod("training") && (tr.chests || 0) < 2 && typeof shopTowerChest === "function" ? .22 : 0;
   const doors = [], count = (hasCurse("fog") ? 2 : 3) + (tr.perks && perkLv("scout") ? 1 : 0);
   while (doors.length < count) {
     const keys = Object.keys(w).filter(k => w[k] > 0 && !doors.includes(k)), tot = keys.reduce((s, k) => s + w[k], 0);
@@ -201,6 +204,7 @@ function enterRoom(type) {
   else if (type === "arcade") { tr.st.special++; makeArcade(); }
   else if (type === "library") { tr.st.special++; makeLibrary(); }
   else if (type === "vault") { tr.st.special++; makeVault(); }
+  else if (type === "chest") makeChest();
   tr.phase = "room";
   drawTower();
 }
@@ -246,7 +250,9 @@ function startBattle(type) {
     : names.length > 1 ? `• You confront ${first} and its cohorts!` : `• You encountered ${first}!`);
   startRolling();
   if (hasRelic("ropesnake")) { const x = pickR(tr.battle.foes, Math.random); x.st.stun = Math.max(x.st.stun || 0, 1); twLog(`• The Rope Snake wrapped around ${x.e.name}! It can't move this turn.`, "good"); }
-  later(newRound, 700);
+  // bosses get a title card first; the fight starts once it closes
+  if (type !== "battle" && window.bossCard) bossCard(() => later(newRound, 250));
+  else later(newRound, 700);
 }
 function newRound() {
   const b = tr.battle; b.round++;
@@ -799,6 +805,13 @@ function eventYes() {
 
 // per-hero records for the codex
 const heroRec = id => tw.heroes[id] || (tw.heroes[id] = {runs:0, team:0, best:0, clears:0});
+// a relic gets a page in the relic book the first time you hold it (checked every time the tower redraws)
+function noteRelics() {
+  if (!tr || !tr.relics) return;
+  let added = false;
+  tr.relics.forEach(k => { if (RELICS[k] && !tw.relicBook[k]) { tw.relicBook[k] = {t:Date.now(), fl:Math.min(tr.floor, 999), runs:0, seen:false}; added = true; } });
+  if (added) twSave();
+}
 // reaching the top counts once per run, even if the party keeps climbing in endless mode
 function twClear() {
   if (tr.cleared) return;
@@ -806,7 +819,23 @@ function twClear() {
   if (hasMod("training")) return;
   tw.clears++;
   if (!tr.hard && tr.heat >= (tw.heatMax || 0) && tr.heat < HEAT.length - 1) { tw.heatMax = tr.heat + 1; tr.heatUp = true; }
+  ringBell();
   twSave();
+}
+// the Friend bell from Saturn's shop: reaching the top brings a hero you haven't met. It's only used up when it does
+function ringBell() {
+  if (typeof shop === "undefined" || !shop.bell) return;
+  const left = HEROES.filter(h => !tw.found.includes(h.id));
+  if (!left.length) return;
+  const h = pickR(left, Math.random);
+  tw.found.push(h.id);
+  shop.bell = false; shopSave();
+  tr.bellHero = h.id;
+  // they hop straight into the party for the endless climb if there's room (Full squad runs stay closed)
+  tr.bellJoined = tr.team.length < 4 && !hasMod("squad");
+  if (tr.bellJoined) tr.team.push(newMember(h, 1));
+  twLog(`• 🔔 Ring ring! The Friend bell echoes down the tower... ${h.name} comes running! ${h.name} can now be picked as a starting hero${tr.bellJoined ? ", and joins your party right away" : ""}.`, "good");
+  if (window.checkAch) checkAch();
 }
 function goEndless() {
   tr.endless = true;
@@ -837,6 +866,8 @@ function twEnd(cleared, left) {
   // per-hero endless bests for the leaderboard (training runs don't count)
   tr.result.endlessNew = [];
   if (tr.endless && !hasMod("training")) tr.team.forEach(m => { const r = heroRec(m.h.id); if (floors > (r.endless || 0)) { r.endless = floors; tr.result.endlessNew.push(m.h.name); } });
+  // every relic carried to the end of this climb counts one more climb in the relic book
+  noteRelics(); (tr.relics || []).forEach(k => { if (tw.relicBook[k]) tw.relicBook[k].runs++; });
   // run history: the last few climbs, newest first
   tw.history.unshift({t:Date.now(), mode:tr.hard ? "hard" : tr.weekly ? "weekly" : "normal", team:tr.team.map(m => m.h.id), floors, at:tr.floor,
     cleared:!!tr.cleared, endless:!!tr.endless, left:!!left, heat:tr.heat || 0, mods:[...(tr.mods || [])], cash:+String(tr.result.cash || 0).replace(/[^0-9]/g, "") || 0, tokens, training:hasMod("training")});
@@ -952,6 +983,18 @@ function makeLibrary() {
   }
 }
 // the vault: pick one of up to three relics, but the lock takes some HP from everyone
+// a golden chest: one random cosmetic for Saturn's shop (or money if you own everything)
+function makeChest() {
+  const key = (tr.rk || "old") + ":" + tr.floor;
+  if (tw.chestKey === key) { tr.room.text = "The golden chest is already open. You emptied it before."; tr.room.choices = []; return; }
+  tr.room.text = "A golden chest sits on a little rug, with Mr. Saturn's mark on the lid. It hums softly.";
+  tr.room.choices = [{label:"🔓 Open the chest", fn:() => {
+    tw.chestKey = key; tr.chests = (tr.chests || 0) + 1; twSave();
+    const got = shopTowerChest();
+    return got.item ? `Click! Inside: <b>${got.item.n}</b> (${LOOT_KIND[got.item.cat]}). It's yours in Saturn's shop now!`
+      : `Click! You already own every cosmetic, so the chest was stuffed with money instead: +${got.cash} for Saturn's shop.`;
+  }}];
+}
 function makeVault() {
   const left = mgShuffle(Object.keys(RELICS).filter(k => !tr.relics.includes(k) && !(RELICS[k].normalOnly && tr.hard))).slice(0, 3);
   tr.room.text = left.length ? "Three old chests sit behind a humming lock. Take one, and the lock will zap everyone for 25% of their Max HP." : "The vault is empty. Someone got here first.";

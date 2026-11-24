@@ -4,28 +4,42 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>EarthDoku · Daily Mother Series Enemy Grid</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="style.css">
 </head>
 <body data-flavor="mint" data-tab="grid">
 <div class="bg" aria-hidden="true"></div>
 
 <header class="top">
-  <nav class="tabs" role="tablist" aria-label="Modes">
-    <span class="tabGroup" data-g="Daily">
-      <button class="tab on" id="tabGrid" role="tab" aria-selected="true">🎯 Grid</button>
-      <button class="tab" id="tabGeo" role="tab" aria-selected="false">🗺️ Map Guessr</button>
-      <button class="tab" id="tabMini" role="tab" aria-selected="false">🕹️ Minigames</button>
-    </span>
-    <span class="tabGroup" data-g="Adventure">
-      <button class="tab" id="tabTower" role="tab" aria-selected="false">🗼 Tower</button>
-    </span>
-    <span class="tabGroup" data-g="Records">
-      <button class="tab" id="tabList" role="tab" aria-selected="false">📖 Enemy list <span class="lock" id="lockIcon">🔒</span></button>
-      <button class="tab" id="tabStats" role="tab" aria-selected="false">📊 Stats</button>
-    </span>
-  </nav>
-  <button class="tab shopTab" id="tabShop" role="tab" aria-selected="false"><span class="shopIc" aria-hidden="true">🪐</span> <span class="shopTx">Saturn&#39;s shop</span> <b class="wallet" id="walletTop">$0</b></button>
+  <button class="menuBtn" id="menuBtn" aria-label="Open menu" aria-expanded="false" aria-controls="sideMenu">
+    <span class="menuBars" aria-hidden="true"><i></i><i></i><i></i></span>
+    <span class="menuCur" id="menuCur"></span>
+  </button>
+  <button class="walletBtn" id="walletBtn" title="Saturn's shop"><span class="nIc" data-ic="shop" aria-hidden="true"></span><b class="wallet" id="walletTop">$0</b></button>
 </header>
+<div class="sideShade" id="sideShade" hidden></div>
+<nav class="sideMenu" id="sideMenu" aria-label="Modes" aria-hidden="true" inert>
+  <div class="smHead">
+    <b class="smLogo">Earth<span>Doku</span></b>
+    <button class="smClose" id="smClose" aria-label="Close menu">✕</button>
+  </div>
+  <div class="smGroup"><span class="smLabel">Daily</span>
+    <button class="navItem" id="tabGrid" aria-selected="true"><span class="nIc" data-ic="grid" aria-hidden="true"></span><span class="nTx"><b>Grid</b><small>Today's 3×3 enemy puzzle</small></span><kbd>1</kbd></button>
+    <button class="navItem" id="tabGeo" aria-selected="false"><span class="nIc" data-ic="geo" aria-hidden="true"></span><span class="nTx"><b>Map Guessr</b><small>Find the spot on the map</small></span><kbd>2</kbd></button>
+    <button class="navItem" id="tabMini" aria-selected="false"><span class="nIc" data-ic="mini" aria-hidden="true"></span><span class="nTx"><b>Minigames</b><small>Quick games for extra cash</small></span><kbd>3</kbd></button>
+  </div>
+  <div class="smGroup"><span class="smLabel">Adventure</span>
+    <button class="navItem" id="tabTower" aria-selected="false"><span class="nIc" data-ic="tower" aria-hidden="true"></span><span class="nTx"><b>Enemy Tower</b><small>A roguelike climb with your party</small></span><kbd>4</kbd></button>
+  </div>
+  <div class="smGroup"><span class="smLabel">Records</span>
+    <button class="navItem" id="tabList" aria-selected="false"><span class="nIc" data-ic="list" aria-hidden="true"></span><span class="nTx"><b>Enemy list <span class="lock" id="lockIcon">🔒</span></b><small>Every enemy and where it lives</small></span><kbd>5</kbd></button>
+    <button class="navItem" id="tabStats" aria-selected="false"><span class="nIc" data-ic="stats" aria-hidden="true"></span><span class="nTx"><b>Stats</b><small>Streaks, scores and trophies</small></span><kbd>6</kbd></button>
+  </div>
+  <div class="smGroup"><span class="smLabel">Shopping</span>
+    <button class="navItem" id="tabShop" aria-selected="false"><span class="nIc" data-ic="shop" aria-hidden="true"></span><span class="nTx"><b>Saturn's shop</b><small id="smWallet">Skins, wallpapers and supplies</small></span><kbd>7</kbd></button>
+  </div>
+  <p class="smFoot">Press <kbd>M</kbd> to open this menu anywhere</p>
+</nav>
 
 <main id="viewGrid" class="view">
   <div class="boardWrap">
@@ -128,22 +142,23 @@
     <div class="win geoClueWin">
       <div class="geoHead"><span id="geoRound">Map Guessr</span><b id="geoTotal">0 pts</b></div>
       <div class="geoClueRow">
-        <div class="geoClue" id="geoClue" role="img" aria-label="Zoomed-in piece of a map to find"><span id="geoClueMsg">Loading the clue…</span><span class="geoClueE" id="geoClueE"></span></div>
+        <div class="geoClue" id="geoClue" role="img" aria-label="Zoomed-in piece of a map to find"><span id="geoClueMsg">Loading the clue…</span><span class="geoClueE" id="geoClueE"></span><span class="geoClueTag" id="geoClueTag"></span><button class="geoPipBtn" id="geoPipBtn" aria-label="Float the clue over the map" aria-pressed="false" title="Float the clue over the map (C)">📌</button></div>
         <div class="geoInfo">
           <p class="geoSay" id="geoSay" aria-live="polite"></p>
           <div class="geoBar" id="geoBar" aria-label="Round results"></div>
         </div>
       </div>
       <div class="geoBtns">
-        <button class="btn" id="geoHint" title="Show a wider view for −20%">🔍 Zoom out</button>
-        <button class="btn hot" id="geoGuess" disabled>📍 Drop a pin first</button>
-        <button class="btn hot" id="geoNext" hidden>Next round ▶</button>
+        <button class="btn" id="geoHintG" title="Tell me which game for −10% (E)">🎮 Game</button>
+        <button class="btn" id="geoHint" title="Show a wider view for −20% (Z)">🔍 Zoom out</button>
+        <button class="btn hot geoGo" id="geoGuess" disabled title="Guess (G)">📍 Drop a pin first</button>
+        <button class="btn hot geoGo" id="geoNext" hidden title="Next round (N)">Next round ▶</button>
       </div>
       <div class="geoHere" id="geoHere" hidden></div>
     </div>
     <div class="win geoListWin">
       <form class="geoFind" id="geoFind" autocomplete="off">
-        <input class="search" id="geoQ" placeholder="Name the place… (e.g. Onett)" spellcheck="false" aria-label="Map name">
+        <input class="search" id="geoQ" placeholder="Name the place… (press /)" spellcheck="false" aria-label="Map name">
         <button class="btn" type="submit">Open</button>
       </form>
       <p class="geoFindMsg" id="geoFindMsg" aria-live="polite">No list to scroll: type 3 letters of a place to see matching maps.</p>
@@ -160,6 +175,8 @@
       <div class="geoOver" id="geoOver"></div>
       <div class="geoEmpty" id="geoEmpty">🗺️<br>Type a place name on the left to open its map.</div>
       <div class="geoLoading" id="geoLoading" hidden>Loading map…</div>
+      <div class="geoPip" id="geoPip" hidden aria-hidden="true"></div>
+      <div class="geoResult" id="geoResult" hidden aria-live="polite"></div>
     </div>
     <div class="geoTools left">
       <button class="btn" id="geoDaily" hidden>Daily run</button>
@@ -236,6 +253,7 @@
 <script src="tower.js"></script>
 <script src="tower_combo.js"></script>
 <script src="tower_ui.js"></script>
+<script src="tower_custom.js"></script>
 <script src="tower_fx.js"></script>
 <script src="https://artifactcdn.diabrowser.engineering/ajax/libs/Chart.js/chart.umd.js"></script>
 <script src="charts.js"></script>

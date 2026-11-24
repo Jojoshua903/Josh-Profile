@@ -322,7 +322,7 @@ Object.assign(FIND, {
 // New Run+ options: twists you can switch on before a normal climb (never in Daily Hard)
 // each one is unlocked its own way, and changes Saturn's shop money for the climb: easier twists pay less, harder ones pay more
 const towerEarned = () => typeof shop !== "undefined" && shop.by ? shop.by.tower || 0 : 0;
-const gamesSpread = () => Math.min(...["M1", "EB", "M3"].map(g => HEROES.filter(h => h.game === g && isUnlocked(h)).length));
+const gamesSpread = () => Math.min(...["M1", "EB", "M3"].map(g => HEROES.filter(h => !h.mine && h.game === g && isUnlocked(h)).length));
 const RUNMODS = [
   {id:"training", ic:"🐣", n:"Training wheels", d:"Enemies are 30% weaker, but nothing from this run counts toward your records or Heat.", cash:0, prog:() => [tw.runs, 1], lock:"Finish your first climb"},
   {id:"mystery", ic:"🎲", n:"Mystery hero", d:"Your starting hero is picked at random from everyone you've found. +25% battle money.", cash:1.1, prog:() => [tw.found.length, 5], lock:"Find 5 heroes"},
@@ -399,6 +399,7 @@ const perkLv = k => tw.perks[k] || 0;
 ROOMS.arcade = {ic:"🎰", n:"Arcade", d:"Feeling lucky? Spin for prizes."};
 ROOMS.library = {ic:"📚", n:"Library", d:"Pick one new move to learn."};
 ROOMS.vault = {ic:"🗝️", n:"Vault", d:"Pick a relic, paid for in HP."};
+ROOMS.chest = {ic:"💎", n:"Golden chest", d:"Rare! Something for Saturn's shop is locked inside."};
 // the weekly challenge: same hero, same twists and same tower for everyone all week
 const weekKey = () => { const d = new Date(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const WEEKLY_MODS = ["glass", "noshop", "bossrush", "chaos", "cursed", "fragile", "elite", "rich"];
@@ -545,6 +546,86 @@ HEROES.forEach(h => {
   [pool[a], pool[b]].forEach((k, i) => HSKINS.push({id:`hs_${h.id}_${k}`, h:h.id, look:k, p:HSKIN_PRICE[i], n:`${h.name} · ${HLOOKS[k].n}`, d:HLOOKS[k].d}));
   HSKINS.push({id:`hs_${h.id}_champ`, h:h.id, look:"champ", champ:true, p:0, n:`${h.name} · Champion`, d:`Clear floor ${TW_TOP} with ${h.name} in your party.`});
 });
+// ---------- two more skins per hero: a signature look made just for them, and a moving one ----------
+// signature: [name, color filter, glow color, description]
+const HSIG = {
+  ninten:["Psychic Cap", "hue-rotate(200deg) saturate(1.3)", "#6cf0ff", "PSI passed down from great-grandma Maria."],
+  ana:["Snow Wood Angel", "sepia(.3) hue-rotate(300deg) brightness(1.15)", "#ffd1e6", "A gentle glow from Ellay's church."],
+  lloyd:["Rocket Scientist", "hue-rotate(30deg) saturate(2)", "#ff9a3d", "Smells faintly of bottle rocket fuel."],
+  teddy:["Bla-Bla Boss", "grayscale(.6) contrast(1.4)", "#ff4d4d", "Leader of the toughest gang in Ellay."],
+  ness:["Nightmare Ness", "invert(.85) hue-rotate(160deg) saturate(1.5)", "#c49bff", "The dark side waiting in Magicant."],
+  paula:["Polestar Pink", "hue-rotate(320deg) saturate(1.6) brightness(1.1)", "#ff9ad5", "Fresh from the Polestar Preschool."],
+  jeff:["Winters Chill", "hue-rotate(190deg) saturate(.8) brightness(1.2)", "#9be7ff", "Straight out of Snow Wood Boarding School."],
+  poo:["Mu Training", "sepia(.8) hue-rotate(-20deg) saturate(1.8)", "#ffcf3f", "Clear-minded after the trial of Mu."],
+  lucas:["Sunflower Field", "sepia(.6) hue-rotate(10deg) saturate(2.2) brightness(1.1)", "#ffe14d", "Warm as the field where it all ends."],
+  kumatora:["Osohe Princess", "hue-rotate(280deg) saturate(1.8)", "#ff5fd2", "Royalty, even if she'd never say so."],
+  duster:["Thief's Shadow", "brightness(.55) saturate(.5) contrast(1.3)", "#7a6aff", "Quiet steps, quick hands."],
+  boney:["Wess's Best Friend", "sepia(.9) saturate(1.4) brightness(1.05)", "#e0b070", "A very good dog with a very loud owner."],
+  flint:["Lone Cowboy", "sepia(.7) contrast(1.2) brightness(.9)", "#c08a5a", "Dusty boots and a heavy heart."],
+  pippi:["Twinkle Elementary", "hue-rotate(60deg) saturate(1.5)", "#ffe066", "Brave enough to follow Ninten anywhere."],
+  flyingman:["Magicant Courage", "hue-rotate(240deg) saturate(1.2) brightness(1.15)", "#fff6c0", "His tombstone says he was brave."],
+  king:["Midnight Snack", "brightness(.75) hue-rotate(200deg) saturate(1.2)", "#6fa0ff", "Too sleepy to come along. Usually."],
+  picky:["Sleepy Brother", "saturate(.4) brightness(1.2)", "#d8d0ff", "Still in his pajamas from that night."],
+  buzzbuzz:["Messenger from the Future", "hue-rotate(140deg) saturate(2) brightness(1.2)", "#5ef2d6", "Ten years ahead and very small."],
+  bubblemonkey:["Gum Gum Pink", "hue-rotate(290deg) saturate(2.4)", "#ff9ad5", "Blows the biggest bubbles in Summers."],
+  dungeonman:["Living Labyrinth", "sepia(.5) hue-rotate(60deg) contrast(1.2)", "#9cff7a", "Mossy halls and creaky stairs."],
+  salsa:["Fassad's Rival", "hue-rotate(100deg) saturate(1.6)", "#7fd35a", "Finally free to dance for himself."],
+  eve:["Robot Guardian", "grayscale(.8) brightness(1.1) contrast(1.4)", "#6cf0ff", "George built her to protect Ninten."],
+  claus:["Masked Man", "grayscale(.7) brightness(.8) contrast(1.5)", "#ff2d55", "A cold glow behind the mask."],
+  pokey:["King of New Pork", "hue-rotate(310deg) saturate(2.2)", "#ff5fd2", "He's the boss now. Just ask him."],
+  tony:["Snow Wood Buddy", "hue-rotate(170deg) saturate(.6) brightness(1.25)", "#cdf6ff", "Jeff's truest friend in Winters."],
+  mrsaturn:["Saturn Valley Coffee", "sepia(.7) hue-rotate(-30deg) saturate(1.4)", "#c08a5a", "Brewed fresh. Very zoom. Ding!"],
+  applekid:["Mad Inventor", "hue-rotate(90deg) saturate(2) contrast(1.1)", "#c8ff6a", "Ideas faster than food can arrive."],
+  andonuts:["Phase Distorter", "hue-rotate(250deg) saturate(1.4) contrast(1.2)", "#9a7aff", "Bent slightly out of time."],
+  mick:["Podunk Pup", "sepia(.6) saturate(1.5) brightness(1.1)", "#ffb366", "Waiting by the door for Ninten."],
+  queenmary:["Lullaby Queen", "hue-rotate(260deg) saturate(.9) brightness(1.2)", "#ffe9a8", "She remembers the melody now."],
+  mimmie:["Twin Trouble", "hue-rotate(330deg) saturate(1.8)", "#ff8ac8", "Two times the pestering."],
+  laura:["Canary Song", "sepia(.5) hue-rotate(20deg) saturate(3) brightness(1.15)", "#fff04d", "Sings the first of the eight melodies."],
+  brickroad:["Dungeon Architect", "sepia(.8) hue-rotate(-15deg) saturate(1.2) contrast(1.15)", "#b5835a", "Half man, half floor plan."],
+  maxwell:["Snow Wood Scholar", "hue-rotate(210deg) saturate(.7) brightness(1.1)", "#7aa0ff", "Saves the game. Saves the day."],
+  cat:["Midnight Cat", "brightness(.5) contrast(1.4)", "#ffe14d", "Just two glowing eyes in the dark."],
+  everdred:["Burglin Park Boss", "hue-rotate(100deg) brightness(.85) saturate(1.3)", "#6fd35a", "Money in every pocket."],
+  alec:["Mountain Grandpa", "sepia(.6) brightness(1.05) contrast(1.1)", "#e8d0a0", "Lives up the hill with the cows."],
+  butch:["Money Pig", "hue-rotate(300deg) saturate(1.3) brightness(1.1)", "#ffd84a", "Counts his DP twice a day."],
+  fuel:["Sunshine Forest Hero", "sepia(.6) hue-rotate(-25deg) saturate(2.6)", "#ff6a1a", "Ran back into the fire, and lived."],
+  butterfly:["Dream Wings", "hue-rotate(180deg) saturate(2) brightness(1.2)", "#7ad8ff", "Every flap restores a little hope."],
+  bbgang:["Bla-Bla Leather", "grayscale(1) contrast(1.6) brightness(.85)", "#ff6a5c", "Polished jacket, cracked knuckles."],
+  benny:["Night Shift", "hue-rotate(160deg) saturate(.6) brightness(1.15)", "#a8ffd8", "The clinic never really closes."],
+  tracy:["Delivery Day", "hue-rotate(40deg) saturate(1.7)", "#ffcf3f", "Escargo Express, at your service."],
+  captainstrong:["Onett's Finest", "hue-rotate(210deg) saturate(1.8)", "#6fa0ff", "Badge shined, ego too."],
+  venus:["Topolla Star", "hue-rotate(270deg) saturate(2)", "#c49bff", "Sold out every night."],
+  orangekid:["Big Investor", "sepia(.6) hue-rotate(-10deg) saturate(2.8)", "#ffa24d", "Still waiting on that return."],
+  lisa:["Tazmily Kitchen", "sepia(.4) hue-rotate(-15deg) saturate(1.5) brightness(1.1)", "#ffb36b", "Smells like nut bread."],
+  lou:["Lighter's Lumberjack", "sepia(.5) hue-rotate(40deg) saturate(1.5)", "#7fcf6a", "Forest green from boots to cap."],
+  reggie:["Teepee Zen", "hue-rotate(50deg) saturate(.8) brightness(1.1)", "#e0e8a8", "Reggie is very calm about this."],
+  samba:["Dance Floor", "hue-rotate(320deg) saturate(2.2) contrast(1.1)", "#ff5fa2", "Never misses a beat."]
+};
+// moving looks: the animation sets the whole filter, so each one keeps the sprite's little shadow
+const HANIM = {
+  rainbow:{n:"Rainbow Rockin", a:"skRainbow 3s linear infinite", d:"Cycles through every color, like PK Rockin."},
+  shimmer:{n:"Starman Shimmer", a:"skShimmer 1.6s ease-in-out infinite", d:"Flickers like something from another world."},
+  aura:{n:"PSI Aura", a:"skAura 1.8s ease-in-out infinite", d:"A pink and blue glow that pulses with power."},
+  ghost:{n:"Ghost Mode", a:"skGhost 2.4s ease-in-out infinite", d:"Fades in and out. Spooky but friendly."},
+  glitch:{n:"Giygas Glitch", a:"skGlitch 1.2s steps(1) infinite", d:"It's not there. ...Now it is."},
+  flame:{n:"Fire Spring Aura", a:"skFlame .9s ease-in-out infinite alternate", d:"Wrapped in a flickering orange glow."},
+  frozen:{n:"Deep Freeze", a:"skFrozen 2s ease-in-out infinite", d:"Icy blue, with a frosty shine."},
+  disco:{n:"Club Titiboo", a:"skDisco 1.4s steps(1) infinite", d:"Disco lights, all night long."}
+};
+const HSKIN_PRICE2 = {sig:500, anim:800};
+const HANIM_KEYS = Object.keys(HANIM);
+HEROES.forEach(h => {
+  const s = HSIG[h.id];
+  if (s) {
+    HLOOKS["sig_" + h.id] = {n:s[0], f:`${s[1]} drop-shadow(0 0 3px ${s[2]})`, d:s[3]};
+    HSKINS.push({id:`hs_${h.id}_sig`, h:h.id, look:"sig_" + h.id, p:HSKIN_PRICE2.sig, n:`${h.name} · ${s[0]}`, d:s[3], sig:true});
+  }
+  const k = HANIM_KEYS[hashStr("hanim-" + h.id) % HANIM_KEYS.length], a = HANIM[k];
+  if (!HLOOKS["anim_" + k]) HLOOKS["anim_" + k] = {n:a.n, f:"brightness(1)", a:a.a, d:a.d};
+  HSKINS.push({id:`hs_${h.id}_anim`, h:h.id, look:"anim_" + k, p:HSKIN_PRICE2.anim, n:`${h.name} · ${a.n}`, d:a.d, anim:true});
+});
+// the style a hero image needs for a look: its color filter, plus a moving animation for the moving looks
+const lookStyle = k => { const L = HLOOKS[k]; return L ? ` style="--skf:${L.f}${L.a ? `;--ska:${L.a}` : ""}"` : ""; };
+const lookClass = k => HLOOKS[k] && HLOOKS[k].a ? " skA" : "";
 HSKINS.forEach(s => { s.cat = "hero"; ITEMS.push(s); ITEM[s.id] = s; });
 // champion skins unlock when the hero is in the party that reaches the top (training runs don't count)
 const champWon = id => !!(tw.heroes[id] && tw.heroes[id].top);
@@ -553,6 +634,8 @@ if (!tw.skinV) { Object.values(tw.heroes).forEach(r => { if (r.clears) r.top = t
 // run history keeps the last climbs; older saves get each hero's endless best from their best floor past the top
 const TW_HISTORY = 30;
 if (!Array.isArray(tw.history)) tw.history = [];
+// relic book: every relic ever picked up, when it was first found and how many climbs it was carried in
+if (!tw.relicBook || typeof tw.relicBook !== "object") tw.relicBook = {};
 if (!tw.endlessV) { Object.values(tw.heroes).forEach(r => { if (r.best > TW_TOP && !r.endless) r.endless = r.best; }); tw.endlessV = 1; twSave(); }
 // the look a hero is wearing right now (null for the original)
-const heroLook = id => { const s = ITEM[shop.heroSkin[id]]; return s && s.look && owns(s.id) ? s.look : null; };
+const heroLook = id => { if (HERO[id] && HERO[id].mine) return HERO[id].look && HLOOKS[HERO[id].look] ? HERO[id].look : null; const s = ITEM[shop.heroSkin[id]]; return s && s.look && owns(s.id) ? s.look : null; };

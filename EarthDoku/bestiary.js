@@ -21,8 +21,98 @@ function setTab(which) {
   else if (window.onGeoShow) window.onGeoShow();
   if (window.onTabSound) window.onTabSound(which);
   if (window.checkAch) checkAch();
+  drawMenuCur();
 }
-Object.keys(TABS).forEach(k => $(TABS[k][1]).onclick = () => setTab(k));
+Object.keys(TABS).forEach(k => $(TABS[k][1]).onclick = () => { closeMenu(); setTab(k); });
+
+// ---------- side menu: every mode gets its own little pixel icon ----------
+// each icon is rows of palette letters; "." is see-through
+const NAV_PAL = {k:"#2b2140", w:"#fffaf0", y:"#ffcf3f", r:"#e2352c", g:"#5cbf6a", b:"#4a8fe0", p:"#f28fb8", v:"#8b5bd6", t:"#2bb3bf", o:"#f2a65a", s:"#c9c2d9"};
+const NAV_ICONS = {
+  grid:["kkkkkkkkkkkkk", "kyyykwwwkwwwk", "kyyykwwwkwwwk", "kyyykwwwkwwwk", "kkkkkkkkkkkkk", "kwwwkrrrkwwwk", "kwwwkrrrkwwwk", "kwwwkrrrkwwwk",
+        "kkkkkkkkkkkkk", "kwwwkwwwkyyyk", "kwwwkwwwkyyyk", "kwwwkwwwkyyyk", "kkkkkkkkkkkkk"],
+  geo:["........kkk..", ".......krrrk.", ".......krwrk.", "kkkkkkkkrrrkk", "kgggkbbbkgkgk", "kgggkbbbkgkgk", "kgyykbwbkgggk", "kggykbbbkgggk",
+       "kgggkbbbkyygk", "kgggkwbbkgggk", "kgggkbbbkgggk", "kkkkkkkkkkkkk"],
+  mini:["..kkkkkkkkk..", ".kpppppppppk.", "kppkppppppypk", "kpkkkpppprppk", "kppkppppppppk", "kpppk...kpppk", ".kkk.....kkk."],
+  tower:[".....r.....", ".....rr....", ".....k.....", "...kkkkk...", "...kvvvk...", "...kvyvk...", "..kkkkkkk..", "..kvvvvvk..",
+         "..kvvyvvk..", ".kkkkkkkkk.", ".kvvvvvvvk.", ".kvvvyvvvk.", "kkkkkkkkkkk"],
+  list:[".kkkkkkkkkk.", "kbbbbbbbbbbk", "kbbbbybbbbbk", "kbbbyyybbbbk", "kbbyyyyybbbk", "kbbbyyybbbbk", "kbbbybybbbbk", "kbbbbbbbbbbk",
+        "kbbbbbbbbbbk", "kkkkkkkkkkkk", "kwwwwwwwwwwk", ".kkkkkkkkkk."],
+  stats:["........kkk.", "........kyk.", "........kyk.", "....kkk.kyk.", "....ktk.kyk.", "....ktk.kyk.", "kkk.ktk.kyk.", "krk.ktk.kyk.",
+         "krk.ktk.kyk.", "krk.ktk.kyk.", "kkkkkkkkkkkk"],
+  shop:["....kkkkk....", "...kowoook...", "..koooooook..", "kyyyyyyyyyyyk", ".kkyyyyyyykk.", "..koooooook..", "...koooook...", "....kkkkk...."]
+};
+function pixIcon(rows) {
+  const w = Math.max(...rows.map(r => r.length)), h = rows.length;
+  let rects = "";
+  // one rect per run of the same color keeps the svg small
+  rows.forEach((row, y) => { for (let x = 0; x < row.length;) {
+    const c = row[x]; let n = 1;
+    while (row[x + n] === c) n++;
+    if (c !== ".") rects += `<rect x="${x}" y="${y}" width="${n}" height="1" fill="${NAV_PAL[c]}"/>`;
+    x += n;
+  } });
+  return `<svg viewBox="0 0 ${w} ${h}" shape-rendering="crispEdges" aria-hidden="true">${rects}</svg>`;
+}
+document.querySelectorAll(".nIc[data-ic]").forEach(el => el.innerHTML = pixIcon(NAV_ICONS[el.dataset.ic]));
+
+const NAV_NAMES = {grid:"Grid", geo:"Map Guessr", mini:"Minigames", tower:"Enemy Tower", list:"Enemy list", stats:"Stats", shop:"Saturn's shop"};
+function drawMenuCur() {
+  const k = document.body.dataset.tab || "grid";
+  $("#menuCur").innerHTML = `<span class="nIc">${pixIcon(NAV_ICONS[k])}</span><span>${NAV_NAMES[k]}</span>`;
+}
+let menuBack = null;
+function openMenu() {
+  const m = $("#sideMenu");
+  if (m.classList.contains("open")) return;
+  menuBack = document.activeElement;
+  $("#smWallet").textContent = `You have ${$("#walletTop").textContent} to spend`;
+  $("#sideShade").hidden = false;
+  m.inert = false; m.setAttribute("aria-hidden", "false");
+  requestAnimationFrame(() => { m.classList.add("open"); $("#sideShade").classList.add("on"); });
+  $("#menuBtn").setAttribute("aria-expanded", "true");
+  (m.querySelector(".navItem.on") || m.querySelector(".navItem")).focus({preventScroll:true});
+  if (window.sfx) sfx("open");
+}
+function closeMenu() {
+  const m = $("#sideMenu");
+  if (!m.classList.contains("open")) return;
+  m.classList.remove("open"); $("#sideShade").classList.remove("on");
+  m.inert = true; m.setAttribute("aria-hidden", "true");
+  $("#menuBtn").setAttribute("aria-expanded", "false");
+  setTimeout(() => { if (!m.classList.contains("open")) $("#sideShade").hidden = true; }, 300);
+  if (menuBack && menuBack.focus && document.contains(menuBack)) menuBack.focus({preventScroll:true});
+  menuBack = null;
+}
+$("#menuBtn").onclick = openMenu;
+$("#smClose").onclick = closeMenu;
+$("#sideShade").onclick = closeMenu;
+$("#walletBtn").onclick = () => setTab("shop");
+// while the menu is open it takes every key, so the Tower or Map Guessr don't react underneath:
+// ↑ ↓ move, 1–7 jump, Esc closes. M opens it from anywhere you're not typing or mid-fight.
+document.addEventListener("keydown", ev => {
+  const m = $("#sideMenu"), open = m.classList.contains("open");
+  if (!open) {
+    if ((ev.key === "m" || ev.key === "M") && !ev.metaKey && !ev.ctrlKey && !ev.altKey && $("#modal").hidden
+      && !(ev.target.closest && ev.target.closest("input,textarea,select,[contenteditable]"))
+      && !(!$("#viewTower").hidden && typeof tr !== "undefined" && tr)) { ev.preventDefault(); openMenu(); }
+    return;
+  }
+  ev.stopPropagation();
+  const items = [...m.querySelectorAll(".navItem")], i = items.indexOf(document.activeElement);
+  if (ev.key === "Escape" || ev.key === "m" || ev.key === "M") { ev.preventDefault(); closeMenu(); }
+  else if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
+    ev.preventDefault();
+    items[(i + (ev.key === "ArrowDown" ? 1 : -1) + items.length) % items.length].focus();
+  } else if (/^[1-7]$/.test(ev.key)) { ev.preventDefault(); items[+ev.key - 1].click(); }
+  else if (ev.key === "Tab") {
+    // keep focus inside the drawer
+    const f = [$("#smClose"), ...items], j = f.indexOf(document.activeElement);
+    ev.preventDefault();
+    f[(j + (ev.shiftKey ? -1 : 1) + f.length) % f.length].focus();
+  }
+}, true);
+drawMenuCur();
 
 window.onGameState = g => {
   listUnlocked = !!g && g.done;

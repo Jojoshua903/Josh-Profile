@@ -49,7 +49,6 @@ const ACHS = [
   {id:"rich", ic:"💰", n:"Saving up", d:"Have $1,000 in your wallet at once.", t:"Piggy banker", ok:() => shop.money >= 1000},
   {id:"spender", ic:"🛍️", n:"Big spender", d:"Spend $3,000 in Saturn's shop.", t:"Big spender", ok:() => shop.spent >= 3000},
   {id:"windows", ic:"🪟", n:"Window shopper", d:"Own 10 bought (or won) window skins.", t:"Window shopper", ok:x => x.paidWindows >= 10},
-  {id:"shelf", ic:"🏺", n:"Full shelf", d:"Own every keepsake.", t:"Collector", ok:() => KEEPS.every(k => owns(k.id))}
 ];
 const ACH = Object.fromEntries(ACHS.map(a => [a.id, a]));
 const rewardName = id => { const s = ITEM[id]; return s ? `${s.n} ${{skin:"window", wall:"wallpaper", hit:"hit text"}[s.cat] || ""}`.trim() : ""; };
@@ -80,7 +79,7 @@ function checkAch() {
 
 // the chosen title shows in the bottom bar next to the logo
 function drawTitle() {
-  const t = ach.title && ach.got[ach.title] ? ACH[ach.title].t : null;
+  const t = ach.title && ach.got[ach.title] && ACH[ach.title] ? ACH[ach.title].t : null;
   const el = $("#achBadge"); el.hidden = !t; el.textContent = t ? `🏅 ${t}` : "";
 }
 function achCardHTML() {

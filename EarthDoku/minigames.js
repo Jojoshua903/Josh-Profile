@@ -22,8 +22,8 @@ function mgEnd(id, score, base, line) {
   const first = mg.xpDay[id] !== todayKey();
   mg.xpDay[id] = todayKey();
   mgSave();
-  const name = (MINIGAMES.find(g => g.id === id) || {name:"Minigame"}).name;
-  const cash = window.shopMiniCash ? shopMiniCash(base, first, name) : "";
+  const game = MINIGAMES.find(g => g.id === id) || {name:"Minigame"}, name = game.name;
+  const cash = window.shopMiniCash ? shopMiniCash(base, first, name, game.pay || 1) : "";
   sfx(score > 0 ? "win" : "lose");
   drawMgMenu();
   return `<div class="mgEnd"><b>${line}</b>${isBest && prev != null ? `<span class="mgNew">🏆 New best!</span>` : ""}
@@ -642,6 +642,137 @@ function scrTick() {
   bindEnd();
 }
 
+// ---------- Battle Memory: flip cards to find the 8 matching pairs of enemies ----------
+const MEM_PAIRS = 8;
+let mem;
+function startMem() {
+  const g = mgRand(ALL_GAMES), pool = mgShuffle(ALL.filter(e => e.game === g)).slice(0, MEM_PAIRS);
+  mem = {g, cards:mgShuffle([...pool, ...pool].map((e, i) => ({id:e.id, k:i}))), open:[], got:new Set(), moves:0, lock:false, done:false};
+  drawMem();
+}
+// fewer wasted flips score more: a perfect game (8 moves) is 30 points
+const memScore = () => Math.max(1, 30 - (mem.moves - MEM_PAIRS));
+function drawMem() {
+  stage().innerHTML = `<h2>🃏 Battle Memory <small>${mem.got.size}/${MEM_PAIRS} pairs · ${mem.moves} moves</small></h2>
+    <p class="mgSay">${mem.done ? `All ${MEM_PAIRS} pairs found in ${mem.moves} moves!` : `Flip two cards at a time to find the matching ${GAMES[mem.g].l} enemies. Fewer moves score more.`}</p>
+    <div class="memGrid">${mem.cards.map((c, i) => { const up = mem.open.includes(i) || mem.got.has(c.id), e = BY_ID.get(c.id);
+      return `<button class="memCard${up ? " up" : ""}${mem.got.has(c.id) ? " got" : ""}" data-i="${i}" ${up || mem.done ? "disabled" : ""} aria-label="${up ? e.name : "Face-down card"}">
+        ${up ? `${spriteHTML(e, "mini")}<span>${e.name}</span>` : `<span class="memBack">?</span>`}</button>`; }).join("")}</div>
+    <div id="memEnd"></div>`;
+  document.querySelectorAll(".memGrid [data-i]").forEach(b => b.onclick = () => memFlip(+b.dataset.i));
+  if (mem.done) { const n = memScore(); $("#memEnd").innerHTML = mgEnd("mem", n, n * 3, `${n} points · ${mem.moves} moves`); bindEnd(); }
+}
+function memFlip(i) {
+  if (mem.lock || mem.done || mem.open.includes(i)) return;
+  mem.open.push(i); sfx("click");
+  if (mem.open.length < 2) return drawMem();
+  mem.moves++;
+  const [a, b] = mem.open.map(j => mem.cards[j]);
+  if (a.id === b.id) { mem.got.add(a.id); mem.open = []; sfx("smash"); if (mem.got.size === MEM_PAIRS) mem.done = true; return drawMem(); }
+  // a miss: show both for a moment, then flip them back
+  mem.lock = true; drawMem();
+  setTimeout(() => { if (mgCur !== "mem" || !mem.lock) return; mem.open = []; mem.lock = false; drawMem(); }, 750);
+}
+
+// ---------- Kind Bash: enemies pop up; bash only the kind you're told, for 30 seconds ----------
+const KB_SECS = 30;
+let kb;
+function kbKinds() { return Object.keys(KINDS).filter(k => ALL.filter(e => e.kinds.includes(k)).length >= 12); }
+function startKb() {
+  clearInterval(mgTimer);
+  kb = {left:KB_SECS, hits:0, miss:0, holes:Array(9).fill(null), want:mgRand(kbKinds()), swap:10, started:false, done:false, tick:0};
+  drawKb();
+}
+function kbSpawn() {
+  // about half of the pop-ups are the kind you want
+  const free = kb.holes.map((h, i) => h ? -1 : i).filter(i => i >= 0);
+  if (!free.length) return;
+  const yes = Math.random() < .5, pool = ALL.filter(e => yes === e.kinds.includes(kb.want));
+  kb.holes[mgRand(free)] = {id:mgRand(pool).id, life:3 + Math.floor(Math.random() * 2)};
+}
+function kbStep() {
+  // runs 4 times a second: enemies duck back down, new ones pop up, the clock and target change
+  kb.tick++;
+  kb.holes = kb.holes.map(h => h && --h.life > 0 ? h : null);
+  if (kb.tick % 2 === 0) kbSpawn();
+  if (kb.tick % 4 === 0) {
+    kb.left--; kb.swap--;
+    if (kb.swap <= 0) { const ks = kbKinds().filter(k => k !== kb.want); kb.want = mgRand(ks); kb.swap = 10; kb.holes = Array(9).fill(null); sfx("open"); }
+  }
+  if (kb.left <= 0) { clearInterval(mgTimer); kb.done = true; kb.holes = Array(9).fill(null); }
+  drawKb();
+}
+function drawKb() {
+  const k = KINDS[kb.want], score = Math.max(0, kb.hits - kb.miss);
+  stage().innerHTML = `<h2>🔨 Kind Bash <small>${score} points · ${kb.left}s</small></h2>
+    <p class="mgSay">${kb.done ? `Time's up! ${kb.hits} good bashes, ${kb.miss} wrong ones.`
+      : kb.started ? `Bash only the <b>${k.e} ${k.l}</b> enemies! The target changes every 10 seconds.` : `Enemies pop out of the holes. Bash the ones of the kind shown, and leave the rest alone: wrong bashes cost a point. Tap any hole to start.`}</p>
+    ${kb.done ? "" : `<div class="kbWant">${k.e} <b>${k.l}</b> <small>next target in ${kb.swap}s</small></div>`}
+    <div class="kbGrid">${kb.holes.map((h, i) => { const e = h && BY_ID.get(h.id);
+      return `<button class="kbHole${e ? " up" : ""}${h && h.hit ? (h.hit > 0 ? " hit" : " bad") : ""}" data-i="${i}" ${kb.done ? "disabled" : ""}>${e ? `${spriteHTML(e, "mini")}<span>${e.name}</span>` : ""}</button>`; }).join("")}</div>
+    <div id="kbEnd"></div>`;
+  document.querySelectorAll(".kbGrid [data-i]").forEach(b => b.onpointerdown = ev => { ev.preventDefault(); kbBash(+b.dataset.i); });
+  if (kb.done) { $("#kbEnd").innerHTML = mgEnd("kb", score, score * 4, `${score} points (${kb.hits} bashes, ${kb.miss} misses)`); bindEnd(); }
+}
+function kbBash(i) {
+  if (kb.done) return;
+  if (!kb.started) { kb.started = true; mgTimer = setInterval(kbStep, 250); }
+  const h = kb.holes[i];
+  if (!h || h.hit) return drawKb();
+  const good = BY_ID.get(h.id).kinds.includes(kb.want);
+  if (good) kb.hits++; else kb.miss++;
+  h.hit = good ? 1 : -1; h.life = 1;
+  sfx(good ? "smash" : "bad");
+  drawKb();
+}
+
+// ---------- Stat Lineup: put four enemies in order, lowest stat to highest ----------
+const LU_ROUNDS = 6, LU_SIZE = 4;
+const LU_STATS = [["hp", "HP"], ["off", "Offense"], ["def", "Defense"], ["spd", "Speed"]];
+let lu;
+function luRound() {
+  for (let t = 0; t < 200; t++) {
+    const [s, lb] = mgRand(LU_STATS), g = mgRand(ALL_GAMES);
+    const four = mgShuffle(ALL.filter(e => e.game === g && has(e[s]))).slice(0, LU_SIZE);
+    // every value must be different, so there's exactly one right order
+    if (four.length === LU_SIZE && new Set(four.map(e => e[s])).size === LU_SIZE) return {s, lb, g, ids:four.map(e => e.id), pick:[]};
+  }
+  return null;
+}
+function startLu() {
+  const rounds = [];
+  for (let i = 0; i < LU_ROUNDS; i++) { const r = luRound(); if (r) rounds.push(r); }
+  if (rounds.length < LU_ROUNDS) { stage().innerHTML = `<p class="mgSay">Couldn't build a lineup this time. Try again!</p>`; return; }
+  lu = {rounds, i:0, pts:0};
+  drawLu();
+}
+function drawLu() {
+  const r = lu.rounds[lu.i], done = r.pick.length === LU_SIZE;
+  const right = r.ids.slice().sort((a, c) => BY_ID.get(a)[r.s] - BY_ID.get(c)[r.s]);
+  const got = done ? r.pick.filter((id, k) => id === right[k]).length : 0;
+  stage().innerHTML = `<h2>📊 Stat Lineup <small>round ${lu.i + 1}/${LU_ROUNDS} · ${lu.pts + got} pts</small></h2>
+    <p class="mgSay">${done ? `${got === LU_SIZE ? "✔️ Perfect lineup!" : `${got}/${LU_SIZE} in the right spot.`} The right order is below.`
+      : `Tap these ${GAMES[r.g].l} enemies from <b>lowest to highest ${r.lb}</b>. Tap a picked one again to take it back.`}</p>
+    <div class="luRow">${r.ids.map(id => { const e = BY_ID.get(id), at = r.pick.indexOf(id);
+      return `<button class="conTile luTile${at >= 0 ? " on" : ""}" data-id="${id}" ${done ? "disabled" : ""}>${at >= 0 ? `<i class="luNo">${at + 1}</i>` : ""}${spriteHTML(e, "mini")}<span>${e.name}</span>${badge(e)}</button>`; }).join("")}</div>
+    ${done ? `<div class="luAns">${right.map((id, k) => { const e = BY_ID.get(id);
+      return `<span class="chip${r.pick[k] === id ? " ok" : " no"}">${k + 1}. ${e.name} <b>${e[r.s]}</b></span>`; }).join("")}</div>` : ""}
+    <div class="mgBtns" id="luEnd">${done ? `<button class="btn hot" id="luNext">${lu.i < LU_ROUNDS - 1 ? "Next round ▶" : "Results ▶"}</button>` : ""}</div>`;
+  document.querySelectorAll(".luRow [data-id]").forEach(b => b.onclick = () => {
+    const id = b.dataset.id, at = r.pick.indexOf(id);
+    if (at >= 0) r.pick.splice(at, 1); else r.pick.push(id);
+    sfx("click"); drawLu();
+  });
+  if (!done) return;
+  $("#luNext").onclick = () => {
+    lu.pts += got;
+    if (lu.i < LU_ROUNDS - 1) { lu.i++; drawLu(); return; }
+    const n = lu.pts, max = LU_ROUNDS * LU_SIZE;
+    $("#luEnd").innerHTML = mgEnd("lu", n, n * 3.75, `${n}/${max} enemies in the right spot`);
+    bindEnd();
+  };
+}
+
 // ---------- menu ----------
 const MINIGAMES = [
   {id:"hl", ic:"⬆️", name:"Higher or Lower", desc:"Guess which enemy has the bigger stat. Go for a streak.", start:startHL, fmt:n => `streak ${n}`},
@@ -652,7 +783,11 @@ const MINIGAMES = [
   {id:"song", ic:"🎶", name:"Song Quiz", desc:"Match EarthBound song titles to where they play.", start:startSong, fmt:n => `${n}/${SONG_ROUNDS}`},
   {id:"quote", ic:"💬", name:"Who Said It?", desc:"Match real lines from the script to the character who said them.", start:startQuote, fmt:n => `${n}/${QUOTE_ROUNDS}`},
   {id:"odd", ic:"🎯", name:"Odd One Out", desc:"Three enemies share a grid header. Spot the one that doesn't.", start:startOdd, fmt:n => `${n}/${ODD_ROUNDS}`},
-  {id:"scr", ic:"🔤", name:"Enemy Scramble", desc:"Unscramble enemy names against the clock.", start:startScr, fmt:n => `${n} names`}
+  {id:"scr", ic:"🔤", name:"Enemy Scramble", desc:"Unscramble enemy names against the clock.", start:startScr, fmt:n => `${n} names`},
+  // the newer games pay 1.5× as much
+  {id:"mem", ic:"🃏", name:"Battle Memory", desc:"Flip cards to find 8 pairs of matching enemies. Fewer moves score more.", start:startMem, fmt:n => `${n} pts`, pay:1.5},
+  {id:"kb", ic:"🔨", name:"Kind Bash", desc:"Enemies pop up for 30 seconds. Bash only the kind you're told.", start:startKb, fmt:n => `${n} pts`, pay:1.5},
+  {id:"lu", ic:"📊", name:"Stat Lineup", desc:"Put four enemies in order, lowest stat to highest.", start:startLu, fmt:n => `${n}/${LU_ROUNDS * LU_SIZE}`, pay:1.5}
 ];
 function startMg(id) {
   clearInterval(mgTimer);
@@ -663,15 +798,15 @@ function startMg(id) {
 }
 function drawMgMenu() {
   $("#mgMenu").innerHTML = MINIGAMES.map(g => `<button class="mgItem${mgCur === g.id ? " on" : ""}" data-g="${g.id}">
-      <span class="mgIc">${g.ic}</span><span class="mgTx"><b>${g.name}${g.lock && g.lock() ? " 🔒" : ""}</b>
+      <span class="mgIc">${g.ic}</span><span class="mgTx"><b>${g.name}${g.lock && g.lock() ? " 🔒" : ""}${g.pay ? ` <i class="mgPay">💰 ×${g.pay}</i>` : ""}</b>
       <small>${mg.best[g.id] != null ? "Best: " + g.fmt(mg.best[g.id]) : "Not played yet"}${mg.xpDay[g.id] === todayKey() ? " · ✔ today" : ""}</small></span></button>`).join("");
   document.querySelectorAll(".mgItem").forEach(b => b.onclick = () => startMg(b.dataset.g));
 }
 function drawMgIntro() {
   clearInterval(mgTimer);
   stage().innerHTML = `<h2>🕹️ Minigames</h2>
-    <p class="mgSay">Nine quick games. Each one pays money for Saturn's shop: full pay for the first run of each game every day, half pay for replays.</p>
-    <div class="mgCards">${MINIGAMES.map(g => `<button class="win mgCard" data-g="${g.id}"><span class="mgIc">${g.ic}</span><b>${g.name}${g.lock && g.lock() ? " 🔒" : ""}</b><small>${g.desc}</small></button>`).join("")}</div>`;
+    <p class="mgSay">${MINIGAMES.length} quick games. Each one pays money for Saturn's shop: full pay for the first run of each game every day, half pay for replays. The newest ones, marked 💰 ×1.5, pay extra.</p>
+    <div class="mgCards">${MINIGAMES.map(g => `<button class="win mgCard" data-g="${g.id}"><span class="mgIc">${g.ic}</span><b>${g.name}${g.lock && g.lock() ? " 🔒" : ""}${g.pay ? ` <i class="mgPay">💰 ×${g.pay} pay</i>` : ""}</b><small>${g.desc}</small></button>`).join("")}</div>`;
   document.querySelectorAll(".mgCard").forEach(b => b.onclick = () => startMg(b.dataset.g));
 }
 window.onMiniShow = () => { drawMgMenu(); if (!mgCur) drawMgIntro(); };
