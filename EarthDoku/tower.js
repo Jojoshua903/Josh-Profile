@@ -282,6 +282,7 @@ function nextActor() {
   }
 }
 function afterAction() {
+  tr.battle.fx = null;
   if (checkEnd()) return;
   tr.battle.idx++;
   drawFoes(); drawTeam();
@@ -356,17 +357,21 @@ function act(key, foe, ally) {
   const b = tr.battle, m = b.actor;
   if (!m || m.ko) return;
   tr.phase = "busy"; b.pending = null; b.actor = null;
+  // battle effects: remember what was used and by whom, so each hit can show that move's look
+  b.fx = key; b.fxN = 0; b.fxT = null; b.lastActor = m;
   drawMenu();
-  if (key === "bash") return doBash(m, foe);
+  if (key === "bash") { if (window.fxCast) fxCast(m, key); return doBash(m, foe); }
   if (key === "defend") { m.guard = true; twLog(`• ${m.h.name} is on guard.`); return afterAction(); }
   if (key === "run") return tryRun(m, false);
-  if (key.startsWith("g:")) { useGood(key.slice(2), m, foe, ally); return afterAction(); }
+  if (key.startsWith("g:")) { if (window.fxCast) fxCast(m, key); useGood(key.slice(2), m, foe, ally); if (window.fxMove) fxMove(m, key, foe, ally); return afterAction(); }
   const mv = TMOVES[key];
   if (mv.pp && m.pp < mv.pp) { twLog(`• Not enough PP for ${mv.n}.`); b.actor = m; tr.phase = "fight"; return drawMenu(); }
   m.pp -= mv.pp || 0;
   if (mv.pp) tr.st.psi++;
   if (mv.cd) m.cd[key] = mv.cd + 1;
+  if (window.fxCast) fxCast(m, key);
   doMove(m, mv, foe, ally);
+  if (window.fxMove) fxMove(m, key, foe, ally);
   if (mv.kind === "run") return;
   afterAction();
 }
@@ -387,6 +392,7 @@ function hurtFoe(foe, d, what, smashy) {
   twLog(`• ${what}${smashy ? " SMAAAASH!!" : ""} ${d} HP of damage to ${foe.e.name}!${foe.hp <= 0 ? ` ${foe.e.name} was defeated!` : ""}`, smashy ? "good" : "");
   if (smashy) sfx("smash");
   if (window.flashFoe) flashFoe(foe);
+  if (window.fxFoe) fxFoe(foe, smashy);
   drawFoes();
 }
 function doBash(m, foe) {
@@ -400,6 +406,7 @@ function doBash(m, foe) {
 function healOne(t, amt, what) {
   if (!t) return;
   t.hp = Math.min(t.mhp, t.hp + amt);
+  if (window.fxHero) fxHero(t);
   twLog(`• ${what} ${t.h.name} recovered ${amt} HP!`, "good");
 }
 const mostHurt = () => aliveH().sort((a, c) => a.shown / a.mhp - c.shown / c.mhp)[0];
@@ -427,7 +434,7 @@ function doMove(m, mv, foe, ally) {
   else if (mv.kind === "revive") {
     const t = ally && ally.ko ? ally : tr.team.find(x => x.ko);
     if (!t) twLog(`• ${said} ...but nobody needed it.`);
-    else { t.ko = false; t.hp = t.shown = Math.round(t.mhp * mv.pow); t.st = {}; twLog(`• ${said} ${t.h.name} was revived!`, "good"); }
+    else { t.ko = false; t.hp = t.shown = Math.round(t.mhp * mv.pow); t.st = {}; b.fxT = t; twLog(`• ${said} ${t.h.name} was revived!`, "good"); }
   }
   else if (mv.kind === "cry") {
     aliveF().forEach(x => { if (Math.random() < (x.boss ? mv.chance / 2 : mv.chance)) x.st.cry = 3; });
@@ -500,7 +507,7 @@ function useGood(k, m, foe, ally) {
   else if (g.kind === "heal") { const t = pick(up) || mostHurt(); healOne(t, Math.round(t.mhp * g.amt), `${who} used the ${g.n}.`); }
   else if (g.kind === "healall") { twLog(`• ${who} shared the ${g.n}.`, "good"); aliveH().forEach(t => healOne(t, Math.round(t.mhp * g.amt), "")); }
   else if (g.kind === "pp") { const t = pick(x => up(x) && x.mpp) || aliveH().filter(x => x.mpp).sort((a, c) => a.pp / a.mpp - c.pp / c.mpp)[0]; if (t) { const a = Math.max(8, Math.round(t.mpp * g.amt)); t.pp = Math.min(t.mpp, t.pp + a); twLog(`• ${who} used the ${g.n}. ${t.h.name} recovered ${a} PP!`, "good"); } }
-  else if (g.kind === "revive") { const t = pick(x => x.ko) || tr.team.find(x => x.ko); if (t) { t.ko = false; t.hp = t.shown = Math.round(t.mhp * g.amt); t.st = {}; twLog(`• ${who} used the ${g.n}. ${t.h.name} was revived!`, "good"); } }
+  else if (g.kind === "revive") { const t = pick(x => x.ko) || tr.team.find(x => x.ko); if (t) { t.ko = false; t.hp = t.shown = Math.round(t.mhp * g.amt); t.st = {}; if (tr.battle) tr.battle.fxT = t; twLog(`• ${who} used the ${g.n}. ${t.h.name} was revived!`, "good"); } }
   else if (g.kind === "dmgall") { twLog(`• ${who} used the ${g.n}!`); aliveF().forEach(x => hurtFoe(x, Math.round((20 + f * 8) * g.pow * rnd(.9, 1.1)), "")); }
   else if (g.kind === "dmg") { const hit = g.vs && foe.e.kinds.includes(g.vs) ? 4 : 1; hurtFoe(foe, Math.round((20 + f * 8) * g.pow * hit * rnd(.9, 1.1)), `${who} used the ${g.n}!${hit > 1 ? " It's super effective!" : ""}`); }
   else if (g.kind === "distract") { aliveF().forEach(x => x.st.distract = 1); twLog(`• ${who} opened the ${g.n}. The enemies can't stop staring at it!`, "good"); }
@@ -571,6 +578,7 @@ function hitHero(foe, m, scale) {
   twLog(`• ${scale === 1 ? foe.e.name + " attacked " + m.h.name + "!" : ""}${smashy ? " SMAAAASH!!" : ""} ${d} HP of damage to ${m.h.name}!${wasUp && m.hp === 0 ? " Mortal damage! Heal fast!" : ""}`, "bad");
   sfx("bad");
   if (window.flashHero) flashHero(m);
+  if (window.fxEnemy) fxEnemy(foe, m, smashy, scale);
 }
 
 // ---------- winning, losing and upgrades ----------
@@ -579,7 +587,7 @@ function twVictory() {
   if (b.combo) { comboClear(b.combo); b.combo = null; }
   stopRolling();
   const f = tr.floor, mult = {battle:1, tough:2, boss:3, final:0}[b.type];
-  let cash = Math.round(b.foes.reduce((s, x) => s + (5 + f * 3) * rnd(.8, 1.2), 0) * mult * (hasRelic("coin") ? 1.5 : 1) * (hasRelic("spittoon") ? 1.25 : 1) * (hasMod("mystery") ? 1.25 : 1) * (hasMod("bossrush") ? 1.5 : 1) * (hasMod("elite") ? 1.3 : 1) * (hasBless("wealth") ? 1.15 : 1) * (tr.perks ? 1 + .1 * perkLv("keen") : 1));
+  let cash = Math.round(b.foes.reduce((s, x) => s + (5 + f * 3) * rnd(.8, 1.2), 0) * mult * (hasRelic("coin") ? 1.5 : 1) * (hasRelic("spittoon") ? 1.25 : 1) * (hasMod("mystery") ? 1.25 : 1) * (hasMod("bossrush") ? 1.5 : 1) * (hasMod("elite") ? 1.3 : 1) * (hasBless("wealth") ? 1.15 : 1) * (tr.perks ? 1 + .1 * perkLv("keen") : 1) * (1 + .05 * (tr.heat || 0)));
   if (b.type === "boss" && hasRelic("phone")) cash += 40 + f * 6;
   if (hasRelic("thieftools") && b.type !== "final") { const k = pickR(FOOD, Math.random); tr.goods[k] = (tr.goods[k] || 0) + 1; twLog(`• Thief tools: you swiped a ${GOODS[k].n}!`, "good"); }
   tr.money += cash;
@@ -633,7 +641,7 @@ function makeOffers(rare) {
       apply:() => { team.push(newMember(h, 1)); twLog(`• ${h.name} joined your party!`, "good"); }};
   };
   const learn = () => {
-    const opts = team.flatMap(m => m.h.learn.filter(k => !m.moves.includes(k)).map(k => [m, k]));
+    const opts = team.flatMap(m => m.h.learn.filter(k => canLearn(m, k)).map(k => [m, k]));
     if (!opts.length) return null;
     const [m, k] = pickR(opts), mv = TMOVES[k];
     return {key:"l:" + m.h.id + k, kind:"New move", hero:m.h, title:`${m.h.name} learns ${mv.n}`, sub:mv.d || `${mv.kind === "psi" ? "PSI attack" : "Attack"}${mv.all ? " on every enemy" : ""}${mv.pp ? ` · ${mv.pp} PP` : ""}`,
@@ -734,7 +742,7 @@ const EVENTS = [
   {who:"Queen Mary", game:"M1", narr:true, say:"In a dreamy pink room, Queen Mary hums a half-remembered lullaby.", yes:"Listen to her song", run:() => { aliveH().forEach(m => { m.hp = m.shown = m.mhp; m.pp = m.mpp; m.st = {}; }); return "The melody fills the room. Everyone standing is fully restored."; }},
   {who:"Mimmie & Minnie", game:"M1", narr:true, say:"Ninten's little sisters wave from a window: come home and rest for a bit!", yes:"Rest at home", run:() => { tr.team.forEach(m => { if (m.ko) { m.ko = false; m.hp = m.shown = Math.round(m.mhp * .5); } else m.hp = m.shown = Math.min(m.mhp, m.hp + Math.round(m.mhp * .25)); m.st = {}; }); return "Mom made dinner. Everyone feels better, and fallen friends are back on their feet."; }},
   {who:"Mayor of Podunk", game:"M1", narr:true, say:"The Mayor of Podunk wants a photo with some real heroes for the town paper.", yes:"Pose for the photo", run:() => { const c = 50 + tr.floor * 6; tr.money += c; return `Say cheese! The Mayor pays you $${c} for your trouble.`; }},
-  {who:"George's journal", game:"M1", narr:true, say:"An old journal lies open on a desk. It's George's notes on PSI.", yes:"Read it", run:() => { const opts = tr.team.flatMap(m => m.h.learn.filter(k => !m.moves.includes(k)).map(k => [m, k])); if (opts.length) { const [m, k] = pickR(opts); m.moves.push(k); return `${m.h.name} studied the notes and learned ${TMOVES[k].n}!`; } tr.team.forEach(m => { m.bonus.pp += .1; refresh(m); }); return "Everyone already knows it all, but reading it still sharpens the mind. +10% Max PP."; }},
+  {who:"George's journal", game:"M1", narr:true, say:"An old journal lies open on a desk. It's George's notes on PSI.", yes:"Read it", run:() => { const opts = tr.team.flatMap(m => m.h.learn.filter(k => canLearn(m, k)).map(k => [m, k])); if (opts.length) { const [m, k] = pickR(opts); m.moves.push(k); return `${m.h.name} studied the notes and learned ${TMOVES[k].n}!`; } tr.team.forEach(m => { m.bonus.pp += .1; refresh(m); }); return "Nobody can learn anything new from it yet, but reading it still sharpens the mind. +10% Max PP."; }},
   {who:"Canary chick", game:"M1", narr:true, say:"A lost canary chick chirps a short melody, over and over.", yes:"Hum along", run:() => { tr.team.forEach(m => { m.bonus.spd += 1; m.bonus.pp += .05; refresh(m); }); return "The chick flutters off happily. Everyone feels lighter: +1 Speed and +5% Max PP."; }},
   {who:"Alec", game:"M3", narr:true, say:"Lucas's grandpa Alec has packed far too much lunch for one person.", yes:"Take some lunch", run:() => { tr.goods.hamburger = (tr.goods.hamburger || 0) + 1; tr.goods.nutbread = (tr.goods.nutbread || 0) + 2; return "He insists. You got a Hamburger and 2 Nut Bread."; }},
   {who:"Hinawa", game:"M3", narr:true, say:"A warm, familiar light fills the room. Hinawa smiles at you.", yes:"Stay a moment", run:() => { tr.team.forEach(m => { m.ko = false; m.bonus.hp += .03; refresh(m); m.hp = m.shown = m.mhp; m.pp = m.mpp; m.st = {}; }); return "When the light fades, everyone is fully restored and a little stronger (+3% Max HP)."; }},
@@ -754,7 +762,7 @@ function makeStatue() {
 }
 // Dalaam training: give up HP now for a new move or more power
 function makeDojo() {
-  const opts = tr.team.flatMap(m => m.h.learn.filter(k => !m.moves.includes(k)).map(k => [m, k]));
+  const opts = tr.team.flatMap(m => m.h.learn.filter(k => canLearn(m, k)).map(k => [m, k]));
   const cost = m => Math.round(m.mhp * .35);
   tr.room.text = "\"Prince Poo, the time has now come for you to undertake your final trial.\" The masters of Dalaam will train one of your heroes, but the training hurts.";
   tr.room.choices = [];
@@ -817,13 +825,22 @@ function twEnd(cleared, left) {
   if (tr.endless && !hasMod("training")) tw.bestEndless = Math.max(tw.bestEndless || 0, floors);
   if (tr.hard) { const k = todayKey(); tw.hard[k] = Math.max(tw.hard[k] || 0, floors); tw.bestHard = Math.max(tw.bestHard, floors); }
   tr.team.forEach(m => { const r = heroRec(m.h.id); r.team++; r.best = Math.max(r.best, floors); if (tr.cleared) r.clears++; });
+  // reaching the top unlocks each party member's Champion skin
+  tr.result.champs = tr.cleared && !hasMod("training") ? tr.team.filter(m => !heroRec(m.h.id).top).map(m => { heroRec(m.h.id).top = true; return m.h.name; }) : [];
   // run goals pay out Tower Tokens (training runs don't count)
   let tokens = 0;
   tr.result.goals = (tr.goals || []).map(k => { const ok = !hasMod("training") && !!tr.st && GOALS[k].ok(tr.st, floors); if (ok) tokens += GOALS[k].t; return {k, ok}; });
   tr.result.tokens = tokens; tw.tokens += tokens; tw.tokensAll += tokens;
   // Saturn's shop money (training runs don't pay)
-  tr.result.cash = !hasMod("training") && typeof shopTowerCash === "function" ? shopTowerCash(floors, !!tr.cleared, tr.hard || tr.weekly) : 0;
+  tr.result.cash = !hasMod("training") && typeof shopTowerCash === "function" ? shopTowerCash(floors, !!tr.cleared, tr.hard || tr.weekly, tr.heat || 0, modCash(tr.mods || [])) : 0;
   if (tr.weekly) { const w = weekKey(); tr.result.weekNew = floors > (tw.weekly[w] || 0); tw.weekly[w] = Math.max(tw.weekly[w] || 0, floors); }
+  // per-hero endless bests for the leaderboard (training runs don't count)
+  tr.result.endlessNew = [];
+  if (tr.endless && !hasMod("training")) tr.team.forEach(m => { const r = heroRec(m.h.id); if (floors > (r.endless || 0)) { r.endless = floors; tr.result.endlessNew.push(m.h.name); } });
+  // run history: the last few climbs, newest first
+  tw.history.unshift({t:Date.now(), mode:tr.hard ? "hard" : tr.weekly ? "weekly" : "normal", team:tr.team.map(m => m.h.id), floors, at:tr.floor,
+    cleared:!!tr.cleared, endless:!!tr.endless, left:!!left, heat:tr.heat || 0, mods:[...(tr.mods || [])], cash:+String(tr.result.cash || 0).replace(/[^0-9]/g, "") || 0, tokens, training:hasMod("training")});
+  tw.history = tw.history.slice(0, TW_HISTORY);
   tw.xpDay = todayKey();
   twSave();
   sfx(tr.cleared ? "reward" : floors ? "win" : "lose");
@@ -926,7 +943,7 @@ function makeArcade() {
 }
 // the library: choose one of up to three moves for your party to learn
 function makeLibrary() {
-  const opts = mgShuffle(tr.team.flatMap(m => m.h.learn.filter(k => !m.moves.includes(k)).map(k => [m, k]))).slice(0, 3);
+  const opts = mgShuffle(tr.team.flatMap(m => m.h.learn.filter(k => canLearn(m, k)).map(k => [m, k]))).slice(0, 3);
   tr.room.text = "Rows and rows of dusty books. One of them is open to a page about a move you could learn.";
   tr.room.choices = opts.map(([m, k]) => ({label:`📖 ${m.h.name}: ${TMOVES[k].n}`, fn:() => { m.moves.push(k); return `${m.h.name} studied hard and learned ${TMOVES[k].n}!`; }}));
   if (!opts.length) {

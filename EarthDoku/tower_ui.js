@@ -1,5 +1,6 @@
 // ---------- Enemy Tower screens ----------
-const heroImg = (h, cls = "") => `<img class="twSpr ${cls}" src="${h.spr}" alt="" referrerpolicy="no-referrer" draggable="false">`;
+// hero sprites wear whatever skin the player picked in Saturn's shop
+const heroImg = (h, cls = "") => { const k = heroLook(h.id); return `<img class="twSpr ${cls}" src="${h.spr}" alt="" referrerpolicy="no-referrer" draggable="false"${k ? ` style="--skf:${HLOOKS[k].f}"` : ""}>`; };
 const twUi = {goods:false};
 const stIcons = st => `${st.sleep ? "💤" : ""}${st.cry ? "😢" : ""}${st.poison ? "☠️" : ""}${st.stun ? "📌" : ""}${st.weak ? "🎯" : ""}${st.distract ? "🍯" : ""}`;
 const dailyHero = () => HERO[STARTERS[Math.floor(mulberry32(hashStr("tower2-" + todayKey()))() * STARTERS.length)]];
@@ -17,7 +18,7 @@ function drawTower() {
   const fighting = ["fight", "target", "ally", "busy", "combo", "fled"].includes(tr.phase);
   el.classList.toggle("isFight", fighting);
   const swirl = fighting && tr.battle && !tr.battle.swirled ? (tr.battle.swirled = true, `<div class="twSwirl ${tr.battle.type}"></div>`) : "";
-  if (fighting) body = `${swirl}<section class="twArena ${tr.battle.type}" id="twFoes"></section><div class="win dialog twLog" id="twLog" aria-live="polite"></div><div class="twMenu" id="twMenu"></div>`;
+  if (fighting) body = `${swirl}<section class="twArena ${tr.battle.type}" id="twFoes"></section><div class="twLogWrap"><div class="win dialog twLog" id="twLog" aria-live="polite"></div><div class="twComboOver" id="twComboOver" hidden></div></div><div class="twMenu" id="twMenu"></div>`;
   else if (tr.phase === "map") body = mapHTML();
   else if (tr.phase === "reward") body = rewardHTML();
   else if (tr.phase === "room") body = roomHTML();
@@ -140,10 +141,10 @@ function overHTML() {
   return `<div class="mgEnd twOver"><b>${title}</b><small>${r.floors} floor${r.floors === 1 ? "" : "s"} cleared with ${names}${tr.hard ? " · 🔥 Daily Hard" : ""}${r.endless ? " · 🏆 top reached" : ""} · Best ever: ${tw.best}${tw.bestEndless ? ` · ♾️ Endless best: ${tw.bestEndless}` : ""}</small>
     ${tr.mods && tr.mods.length ? `<small>✨ New Run+: ${tr.mods.map(k => `${RUNMOD[k].ic} ${RUNMOD[k].n}`).join(", ")}${hasMod("training") ? " (training run: records not saved)" : ""}</small>` : ""}
     ${r.goals && r.goals.length ? `<div class="twGoals twGoalsEnd">${r.goals.map(g => `<span class="twGoal${g.ok ? " ok" : ""}">${g.ok ? "✓" : "✗"} ${GOALS[g.k].n} <small>${GOALS[g.k].t} 🎟️</small></span>`).join("")}</div>
-    ${r.cash ? `<small class="twCash">💰 +$${r.cash} for Saturn's shop!</small>` : ""}
+    ${r.cash ? `<small class="twCash">💰 +${r.cash} for Saturn's shop!${tr.mods && tr.mods.length && !hasMod("training") ? ` (New Run+ ${cashTag(modCash(tr.mods))})` : ""}</small>` : ""}
     <small>${r.tokens ? `🎟️ +${r.tokens} Tower Token${r.tokens === 1 ? "" : "s"}! ` : ""}You have ${tw.tokens} 🎟️ to spend on perks.</small>` : ""}
     ${tr.weekly ? `<small>📅 Weekly best this week: floor ${tw.weekly[weekKey()] || 0}${r.weekNew ? " · new best!" : ""}</small>` : ""}
-    <small>Heroes found so far: ${tw.found.length}/${HEROES.length}</small>${r.heatUp ? `<small>🌡️ Heat ${tw.heatMax} unlocked: ${HEAT[tw.heatMax]}.</small>` : ""}
+    <small>Heroes found so far: ${tw.found.length}/${HEROES.length}</small>${r.heatUp ? `<small>🌡️ Heat ${tw.heatMax} unlocked: ${HEAT[tw.heatMax]}.</small>` : ""}${r.endlessNew && r.endlessNew.length ? `<small>🏅 New endless best for ${r.endlessNew.join(", ")}! See 📊 Records.</small>` : ""}${r.champs && r.champs.length ? `<small class="twCash">🏆 Champion skin${r.champs.length === 1 ? "" : "s"} unlocked for ${r.champs.join(", ")}! Wear ${r.champs.length === 1 ? "it" : "them"} from Saturn's shop.</small>` : ""}
     <div class="mgBtns"><button class="btn hot" id="twAgain">New run</button><button class="btn" id="twShare">Share</button></div></div>`;
 }
 
@@ -203,9 +204,19 @@ function drawMenu() {
   const el = $("#twMenu");
   if (!el || !tr || !tr.battle) return;
   const b = tr.battle, m = b.actor;
+  // the combo minigame sits on top of the battle text; the button bar keeps its size and has nothing to press
+  const over = $("#twComboOver");
+  if (tr.phase !== "combo") { el.style.minHeight = ""; if (over) { over.hidden = true; over.innerHTML = ""; } }
   if (tr.phase === "fled") { el.innerHTML = `<button class="btn hot" id="twOnF">Continue ▶</button>`; $("#twOnF").onclick = () => goMap(true); return; }
   if (tr.phase === "combo") {
-    el.innerHTML = comboShell(b.combo); cRedraw(b.combo); return;
+    if (!over) { el.innerHTML = comboShell(b.combo); cRedraw(b.combo); return; }
+    if (!el.style.minHeight) el.style.minHeight = el.offsetHeight + "px";
+    el.innerHTML = `<span class="twWho">⚡ Combo time! Play it in the box above.</span>`;
+    // nothing else keeps focus, so Space and Enter can't press a button behind the minigame
+    if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+    // clicking the minigame never moves focus onto its buttons, so a later key press can't click them twice
+    over.onmousedown = ev => ev.preventDefault();
+    over.innerHTML = comboShell(b.combo); over.hidden = false; cRedraw(b.combo); return;
   }
   if (tr.phase === "ally") {
     const k = b.pending, n = k.startsWith("g:") ? GOODS[k.slice(2)].n : TMOVES[k].n;
@@ -283,7 +294,7 @@ function profileHTML(sel) {
         <h2>${found ? sel.name : "???"} ${badge({game:sel.game})}</h2>
         <p class="twRole">${found ? sel.role : findHint(sel)}</p>
         ${found ? `<span class="twRates">${bars(sel)}</span>
-        <p class="twMoveList"><b>Starts with</b> ${sel.start.map(k => TMOVES[k].n).join(", ")}<br><b>Can learn</b> ${sel.learn.map(k => (TMOVES[k].sig ? "★ " : "") + TMOVES[k].n).join(", ")}<br>${comboLine(sel)}</p>` : ""}
+        <p class="twMoveList"><b>Starts with</b> ${sel.start.map(k => TMOVES[k].n).join(", ")}<br><b>Can learn</b> ${sel.learn.map(k => (TMOVES[k].sig ? "★ " : "") + TMOVES[k].n + (PSI_NEEDS[k] ? ` <small>(after ${TMOVES[PSI_NEEDS[k]].n})</small>` : "")).join(", ")}<br>${comboLine(sel)}</p>` : ""}
         ${found ? `<button class="btn twSmall twCodexOne" id="twCodexOne">📘 Codex page</button>` : ""}
       </div>
       <div class="twStart">
@@ -291,7 +302,7 @@ function profileHTML(sel) {
         ${hard ? `<small class="twHeatTx">Today's hero is <b>${dh.name}</b>. Everyone starts with the same hero and meets the same rooms.</small>`
         : weekly ? `<small class="twHeatTx">This week's hero is <b>${dh.name}</b>, with ${wp.mods.map(k => `${RUNMOD[k].ic} <b>${RUNMOD[k].n}</b>`).join(" and ")}. The same tower for everyone until Monday, and you can retry as often as you like.${wBest != null ? ` Your best this week: floor <b>${wBest}</b>.` : ""}</small>`
         : ""}
-        ${fixed ? "" : `<div class="twModRow"><label class="twHeat">🌡️ Heat <select id="twHeatSel">${HEAT.map((d, i) => `<option value="${i}" ${i === heatNow ? "selected" : ""} ${i > (tw.heatMax || 0) ? "disabled" : ""}>${i}${i > (tw.heatMax || 0) ? " 🔒" : ""}</option>`).join("")}</select></label><button class="btn twSmall twModsBtn" id="twModsBtn">✨ New Run+${activeMods().length ? ` · ${activeMods().length} on` : ""}</button>${activeMods().map(k => `<span class="twModChip" title="${RUNMOD[k].n}: ${RUNMOD[k].d}">${RUNMOD[k].ic}</span>`).join("")}<button class="btn twSmall twModsBtn" id="twPerksBtn" title="Spend Tower Tokens from run goals on permanent perks">🎖️ Perks · ${tw.tokens} 🎟️</button></div><small class="twHeatTx">${heatNow ? HEAT.slice(1, heatNow + 1).join(" · ") : "Reach the top to unlock Heat 1."}</small>`}
+        ${fixed ? "" : `<div class="twModRow"><label class="twHeat">🌡️ Heat <select id="twHeatSel">${HEAT.map((d, i) => `<option value="${i}" ${i === heatNow ? "selected" : ""} ${i > (tw.heatMax || 0) ? "disabled" : ""}>${i}${i > (tw.heatMax || 0) ? " 🔒" : ""}</option>`).join("")}</select></label><button class="btn twSmall twModsBtn" id="twModsBtn">✨ New Run+${activeMods().length ? ` · ${activeMods().length} on · ${cashTag(modCash(activeMods()))}` : ""}</button>${activeMods().map(k => `<span class="twModChip" title="${RUNMOD[k].n}: ${RUNMOD[k].d}">${RUNMOD[k].ic}</span>`).join("")}<button class="btn twSmall twModsBtn" id="twPerksBtn" title="Spend Tower Tokens from run goals on permanent perks">🎖️ Perks · ${tw.tokens} 🎟️</button></div><small class="twHeatTx">${heatNow ? HEAT.slice(1, heatNow + 1).join(" · ") : "Reach the top to unlock Heat 1."}</small>`}
         <button class="btn hot twGo" id="twGo" ${canGo ? "" : "disabled"}>${fixed ? `Climb with ${dh.name} ▶` : canGo ? `Climb with ${HERO[twPick].name} ▶` : "Pick a hero you've found"}</button>
       </div>
       <p class="twBest">Best floor <b>${tw.best}</b> · Runs ${tw.runs} · Reached the top ${tw.clears}× · Heroes found <b>${tw.found.length}/${HEROES.length}</b>${tw.bestEndless ? ` · ♾️ Endless best <b>${tw.bestEndless}</b>` : ""}${hardDone ? ` · Daily Hard today: floor ${tw.hard[day]}` : ""}</p>
@@ -321,7 +332,7 @@ function drawPicker(el) {
   <div class="twPick">
     ${profileHTML(sel)}
     <section class="twRoster">
-      <h2 class="twTitle">🗼 Enemy Tower <button class="btn twSmall twCodexBtn" id="twCodex">📘 Hero codex ${tw.found.length}/${HEROES.length}</button>${resumeHTML()}</h2>
+      <h2 class="twTitle">🗼 Enemy Tower <button class="btn twSmall twCodexBtn" id="twCodex">📘 Hero codex ${tw.found.length}/${HEROES.length}</button><button class="btn twSmall twCodexBtn" id="twRecords">📊 Records</button>${resumeHTML()}</h2>
       <div class="chips twCarG" id="twCarG">${[["all", "All"], ["M1", "Mother"], ["EB", "EarthBound"], ["M3", "Mother 3"]].map(([g, l]) =>
         `<button data-g="${g}" class="${twCar.game === g ? "on" : ""}" ${hard ? "disabled" : ""}>${l} <small>${HEROES.filter(h => (g === "all" || h.game === g) && isUnlocked(h)).length}/${HEROES.filter(h => g === "all" || h.game === g).length}</small></button>`).join("")}</div>
       <div class="twCar${hard ? " hard" : ""}" id="twCar" tabindex="0" aria-label="Hero carousel: use the arrow keys, scroll, or swipe to browse">
@@ -341,6 +352,7 @@ function drawPicker(el) {
   </div>`;
   bindProfile(el, sel);
   $("#twCodex").onclick = () => codexAll();
+  $("#twRecords").onclick = () => { sfx("click"); openRecords(); };
   $("#twCarG").onclick = ev => { const b = ev.target.closest("button[data-g]"); if (!b || hard) return; twCar.game = b.dataset.g; sfx("click"); drawPicker(el); };
   const car = $("#twCar");
   car.querySelectorAll(".twCarNav").forEach(b => b.onclick = () => carStep(+b.dataset.step));
@@ -406,7 +418,7 @@ document.addEventListener("keydown", ev => {
   if (ev.target.closest && ev.target.closest("input,textarea")) return;
   if (tr.phase === "combo") {
     const k = ev.code === "Space" || ev.key === "Enter" ? (ev.repeat ? null : "tap") : {ArrowLeft:"L", ArrowRight:"R", ArrowUp:"U", ArrowDown:"D"}[ev.key] || (/^[1-5]$/.test(ev.key) ? ev.key : /^[a-z]$/i.test(ev.key) && !ev.metaKey && !ev.ctrlKey ? "k:" + ev.key : null);
-    if (ev.code === "Space" || ev.key.startsWith("Arrow")) ev.preventDefault();
+    if (ev.code === "Space" || ev.key === "Enter" || ev.key.startsWith("Arrow")) ev.preventDefault();
     if (k && comboKey(k)) ev.preventDefault();
     return;
   }
@@ -417,7 +429,7 @@ document.addEventListener("keydown", ev => {
 });
 
 // letting go of Space ends a charge combo
-document.addEventListener("keyup", ev => { if (tr && tr.phase === "combo" && (ev.code === "Space" || ev.key === "Enter")) comboKey("up"); });
+document.addEventListener("keyup", ev => { if (tr && tr.phase === "combo" && (ev.code === "Space" || ev.key === "Enter")) { ev.preventDefault(); comboKey("up"); } });
 // a hero's starting numbers, in the same order as the rating bars
 const statNums = h => { const s = heroStats(h, 1); return [s.mhp, s.mpp, s.atk, s.def, s.spd].map(Math.round); };
 const comboLine = h => { const c = comboOf(h); return `<b>Combo</b> ${c.ic} ${c.n}: ${c.tip.charAt(0).toLowerCase() + c.tip.slice(1)}`; };
@@ -440,7 +452,7 @@ function codexPage(h) {
       <div><p class="cxRole">${h.role}</p><span class="twRates">${rates}</span><p class="cxCombo">${comboLine(h)}</p></div></div>
     <div class="cxRecs">
       <div><b>${r.runs}</b><small>runs started</small></div><div><b>${r.team}</b><small>runs in the party</small></div>
-      <div><b>${r.best || "–"}</b><small>best floor</small></div><div><b>${r.clears}</b><small>times at the top</small></div></div>
+      <div><b>${r.best || "–"}</b><small>best floor</small></div><div><b>${r.clears}</b><small>times at the top</small></div><div><b>${r.endless ? `♾️ ${r.endless}` : "–"}</b><small>endless best</small></div></div>
     <h3>How you met</h3><p class="cxMet">${codexMet(h)}</p>
     <h3>Moves</h3><div class="cxMoves"><div><span class="cxSub">Starts with</span><ul>${h.start.map(mv).join("")}</ul></div>
       <div><span class="cxSub">Can learn</span><ul>${h.learn.map(mv).join("")}</ul></div></div>
@@ -460,6 +472,44 @@ function codexAll() {
 }
 function bindCodex() {
   document.querySelectorAll("#mBody [data-cx]").forEach(b => b.onclick = () => { sfx("click"); b.dataset.cx === "all" ? codexAll() : codexPage(HERO[b.dataset.cx]); });
+}
+
+// ---------- Tower records: an endless leaderboard for every hero, and the last few climbs ----------
+const twRec = {tab:"board"};
+function boardHTML() {
+  const rows = HEROES.filter(isUnlocked).map(h => ({h, r:tw.heroes[h.id] || {}}));
+  const ranked = rows.filter(x => x.r.endless).sort((a, b) => b.r.endless - a.r.endless || (b.r.clears || 0) - (a.r.clears || 0) || a.h.name.localeCompare(b.h.name));
+  const rest = rows.filter(x => !x.r.endless).sort((a, b) => (b.r.best || 0) - (a.r.best || 0) || a.h.name.localeCompare(b.h.name));
+  const medal = i => ["🥇", "🥈", "🥉"][i] || `${i + 1}.`;
+  const row = (x, rank) => `<button class="rcRow" data-cx="${x.h.id}"><span class="rcRank">${rank}</span>${heroImg(x.h)}<b>${x.h.name}</b>
+    <span class="rcNums"><em>${x.r.endless ? `♾️ ${x.r.endless}` : "–"}</em><small>best ${x.r.best || "–"} · top ${x.r.clears || 0}×</small></span></button>`;
+  return `<p class="twModIntro">Every hero's highest endless floor. A hero gets credit for any climb they're in the party for. Training runs don't count. Tap a hero for their codex page.</p>
+    ${ranked.length ? `<div class="rcList">${ranked.map((x, i) => row(x, medal(i))).join("")}</div>` : `<p class="rcEmpty">Nobody has gone past floor ${TW_TOP} yet. Beat the final foe in a normal climb, then keep going!</p>`}
+    ${rest.length ? `<h3 class="rcSub">Not past the top yet</h3><div class="rcList dim">${rest.map(x => row(x, "·")).join("")}</div>` : ""}`;
+}
+function historyHTML() {
+  if (!tw.history.length) return `<p class="rcEmpty">No climbs saved yet. Your last ${TW_HISTORY} climbs will show up here.</p>`;
+  const h = tw.history, counted = h.filter(x => !x.training);
+  const avg = counted.length ? Math.round(counted.reduce((s, x) => s + x.floors, 0) / counted.length) : 0;
+  const modeTag = x => x.mode === "hard" ? `<span class="twTag">🔥 Daily Hard</span>` : x.mode === "weekly" ? `<span class="twTag">📅 Weekly</span>` : "";
+  const result = x => x.endless ? `🏆 Top, then ♾️ ${x.left ? "left on" : "fell on"} floor ${x.left ? x.floors : x.at}` : x.cleared ? "🏆 Reached the top"
+    : x.left ? `Left after ${x.floors} floor${x.floors === 1 ? "" : "s"}` : `Fell on floor ${x.at}`;
+  const when = t => new Date(t).toLocaleString(undefined, {month:"short", day:"numeric", hour:"2-digit", minute:"2-digit"});
+  return `<div class="rcStats"><div><b>${h.length}</b><small>climbs saved</small></div><div><b>${avg}</b><small>average floors</small></div>
+      <div><b>${h.filter(x => x.cleared).length}</b><small>reached the top</small></div><div><b>${fmt$(h.reduce((s, x) => s + (x.cash || 0), 0))}</b><small>earned for the shop</small></div></div>
+    <div class="rcHist">${h.map(x => `<div class="rcRun${x.cleared ? " top" : ""}">
+      <div class="rcRunHead"><b>${result(x)}</b><small>${when(x.t)}</small></div>
+      <div class="rcParty">${x.team.filter(id => HERO[id]).map(id => `<span title="${HERO[id].name}">${heroImg(HERO[id])}</span>`).join("")}</div>
+      <div class="rcTags">${modeTag(x)}${x.heat ? `<span class="twTag">🌡️ Heat ${x.heat}</span>` : ""}${x.mods.filter(k => RUNMOD[k]).map(k => `<span class="twTag" title="${RUNMOD[k].n}">${RUNMOD[k].ic} ${RUNMOD[k].n}</span>`).join("")}
+        ${x.training ? `<span class="twTag">🐣 Training: not counted</span>` : `<span class="twTag">💰 ${fmt$(x.cash)}</span>${x.tokens ? `<span class="twTag">🎟️ ${x.tokens}</span>` : ""}`}</div></div>`).join("")}</div>`;
+}
+function openRecords(tab) {
+  if (tab) twRec.tab = tab;
+  const tabs = [["board", "🏅 Endless leaderboard"], ["hist", "📜 Run history"]];
+  openModal("📊 Tower records", `<div class="chips rcTabs" role="tablist">${tabs.map(([k, l]) => `<button data-rc="${k}" role="tab" aria-selected="${twRec.tab === k}" class="${twRec.tab === k ? "on" : ""}">${l}</button>`).join("")}</div>
+    <div class="rcBody">${twRec.tab === "board" ? boardHTML() : historyHTML()}</div>`);
+  document.querySelectorAll("#mBody [data-rc]").forEach(b => b.onclick = () => { sfx("click"); openRecords(b.dataset.rc); });
+  bindCodex();
 }
 
 // using goods from the bag between battles: ask who gets it when there's a choice
@@ -488,12 +538,13 @@ function drawTip() {
 const activeMods = () => (tw.mods || []).filter(k => RUNMOD[k] && RUNMOD[k].need());
 function openRunMods(el) {
   const draw = () => {
-    const on = activeMods();
-    $("#mBody").innerHTML = `<p class="twModIntro">Twists for your next normal climb. Mix as many as you like. They never apply to the Daily Hard climb.</p>
-      <div class="twModList">${RUNMODS.map(m => { const ok = m.need(), act = on.includes(m.id);
+    const on = activeMods(), mult = modCash(on);
+    $("#mBody").innerHTML = `<p class="twModIntro">Twists for your next normal climb. Mix as many as you like. They never apply to the Daily Hard climb. Each one changes the money Mr. Saturn pays when the climb ends: easier twists pay less, harder ones pay more.</p>
+      <div class="twModList">${RUNMODS.map(m => { const ok = m.need(), act = on.includes(m.id), [n, goal] = m.prog();
+        const tag = `<em class="twModCash ${m.cash > 1 ? "up" : "down"}">${cashTag(m.cash)}</em>`;
         return `<button class="twMod${act ? " on" : ""}${ok ? "" : " locked"}" data-mod="${m.id}" ${ok ? "" : "disabled"} aria-pressed="${act}">
-          <span class="twModIc">${ok ? m.ic : "🔒"}</span><span><b>${m.n}</b><small>${ok ? m.d : `Locked: ${m.lock}`}</small></span><span class="twModSw">${act ? "ON" : ok ? "OFF" : ""}</span></button>`; }).join("")}</div>
-      <div class="twModFoot"><span>${on.length} on</span><button class="btn" id="twModClear" ${on.length ? "" : "disabled"}>Turn all off</button><button class="btn hot" id="twModDone">Done</button></div>`;
+          <span class="twModIc">${ok ? m.ic : "🔒"}</span><span><b>${m.n} ${tag}</b><small>${ok ? m.d : `Locked: ${m.lock} (${Math.min(n, goal).toLocaleString()}/${goal.toLocaleString()})`}</small></span><span class="twModSw">${act ? "ON" : ok ? "OFF" : ""}</span></button>`; }).join("")}</div>
+      <div class="twModFoot"><span>${on.length} on${on.length ? ` · ${cashTag(mult)} shop money${mult === MOD_CASH_MAX || mult === MOD_CASH_MIN ? " (limit)" : ""}` : ""}</span><button class="btn" id="twModClear" ${on.length ? "" : "disabled"}>Turn all off</button><button class="btn hot" id="twModDone">Done</button></div>`;
     document.querySelectorAll("#mBody [data-mod]").forEach(b => b.onclick = () => {
       const k = b.dataset.mod;
       tw.mods = tw.mods.includes(k) ? tw.mods.filter(x => x !== k) : [...tw.mods, k];

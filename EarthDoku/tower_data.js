@@ -320,21 +320,30 @@ Object.assign(FIND, {
 });
 
 // New Run+ options: twists you can switch on before a normal climb (never in Daily Hard)
+// each one is unlocked its own way, and changes Saturn's shop money for the climb: easier twists pay less, harder ones pay more
+const towerEarned = () => typeof shop !== "undefined" && shop.by ? shop.by.tower || 0 : 0;
+const gamesSpread = () => Math.min(...["M1", "EB", "M3"].map(g => HEROES.filter(h => h.game === g && isUnlocked(h)).length));
 const RUNMODS = [
-  {id:"rich", ic:"💰", n:"Head start", d:"Start with $150 and a random relic.", need:() => true, lock:""},
-  {id:"mystery", ic:"🎲", n:"Mystery hero", d:"Your starting hero is picked at random from everyone you've found. +25% battle money.", need:() => true, lock:""},
-  {id:"training", ic:"🐣", n:"Training wheels", d:"Enemies are 30% weaker, but nothing from this run counts toward your records or Heat.", need:() => true, lock:""},
-  {id:"glass", ic:"🗡️", n:"Glass cannon", d:"Your party deals 50% more damage and takes 50% more.", need:() => tw.best >= 10, lock:"Reach floor 10"},
-  {id:"noshop", ic:"🚫", n:"No shops", d:"Mr. Saturn's shops never show up. Present boxes and visitors are more common.", need:() => tw.best >= 10, lock:"Reach floor 10"},
-  {id:"bossrush", ic:"👑", n:"Boss rush", d:"Every battle room is a tough foe instead. +50% battle money.", need:() => tw.best >= 15, lock:"Reach floor 15"},
-  {id:"squad", ic:"👥", n:"Full squad", d:"Start with three more heroes you've found, but nobody new will ever join.", need:() => tw.found.length >= 8, lock:"Find 8 heroes"},
-  {id:"chaos", ic:"🌀", n:"Chaos acts", d:"Every act mixes enemies from all three games.", need:() => tw.best >= 20, lock:"Reach floor 20"},
-  {id:"quick", ic:"⏩", n:"Quick start", d:"Skip Act 1: start on floor 11 with three free upgrades.", need:() => tw.best >= 20, lock:"Reach floor 20"},
-  {id:"cursed", ic:"😈", n:"Devil's bargain", d:"Start with two random relics... and two random curses.", need:() => tw.best >= 25, lock:"Reach floor 25"},
-  {id:"fragile", ic:"💔", n:"Fragile hearts", d:"Everyone has half Max HP. Hot springs and Dr. Saturn heal fully.", need:() => tw.clears >= 1, lock:"Reach the top once"},
-  {id:"elite", ic:"💀", n:"Elite foes", d:"Every enemy has a trait, and bosses have two more. +30% battle money.", need:() => tw.clears >= 1, lock:"Reach the top once"}
+  {id:"training", ic:"🐣", n:"Training wheels", d:"Enemies are 30% weaker, but nothing from this run counts toward your records or Heat.", cash:0, prog:() => [tw.runs, 1], lock:"Finish your first climb"},
+  {id:"mystery", ic:"🎲", n:"Mystery hero", d:"Your starting hero is picked at random from everyone you've found. +25% battle money.", cash:1.1, prog:() => [tw.found.length, 5], lock:"Find 5 heroes"},
+  {id:"rich", ic:"💰", n:"Head start", d:"Start with $150 and a random relic.", cash:.8, prog:() => [towerEarned(), 300], lock:"Earn $300 for Saturn's shop from Tower climbs"},
+  {id:"glass", ic:"🗡️", n:"Glass cannon", d:"Your party deals 50% more damage and takes 50% more.", cash:1.15, prog:() => [tw.best, 10], lock:"Reach floor 10"},
+  {id:"noshop", ic:"🚫", n:"No shops", d:"Mr. Saturn's shops never show up. Present boxes and visitors are more common.", cash:1.25, prog:() => [tw.runs, 10], lock:"Play 10 climbs"},
+  {id:"bossrush", ic:"👑", n:"Boss rush", d:"Every battle room is a tough foe instead. +50% battle money.", cash:1.4, prog:() => [tw.best, 15], lock:"Reach floor 15"},
+  {id:"squad", ic:"👥", n:"Full squad", d:"Start with three more heroes you've found, but nobody new will ever join.", cash:.7, prog:() => [tw.found.length, 8], lock:"Find 8 heroes"},
+  {id:"chaos", ic:"🌀", n:"Chaos acts", d:"Every act mixes enemies from all three games.", cash:1.1, prog:() => [gamesSpread(), 3], lock:"Find 3 heroes from each game"},
+  {id:"quick", ic:"⏩", n:"Quick start", d:"Skip Act 1: start on floor 11 with three free upgrades.", cash:.75, prog:() => [tw.best, 20], lock:"Reach floor 20"},
+  {id:"cursed", ic:"😈", n:"Devil's bargain", d:"Start with two random relics... and two random curses.", cash:1.1, prog:() => [tw.tokensAll || 0, 10], lock:"Earn 10 Tower Tokens from run goals"},
+  {id:"fragile", ic:"💔", n:"Fragile hearts", d:"Everyone has half Max HP. Hot springs and Dr. Saturn heal fully.", cash:1.35, prog:() => [tw.clears, 1], lock:"Reach the top once"},
+  {id:"elite", ic:"💀", n:"Elite foes", d:"Every enemy has a trait, and bosses have two more. +30% battle money.", cash:1.4, prog:() => [tw.heatMax || 0, 2], lock:"Unlock Heat 2"}
 ];
+RUNMODS.forEach(m => m.need = () => { const [n, goal] = m.prog(); return n >= goal; });
 const RUNMOD = Object.fromEntries(RUNMODS.map(m => [m.id, m]));
+// all the twists in a climb multiply together, from ×0.25 up to ×3 (training wheels always pays nothing)
+const MOD_CASH_MIN = .25, MOD_CASH_MAX = 3;
+const modCash = mods => mods.some(k => RUNMOD[k] && RUNMOD[k].cash === 0) ? 0
+  : Math.min(MOD_CASH_MAX, Math.max(MOD_CASH_MIN, mods.reduce((x, k) => x * (RUNMOD[k] ? RUNMOD[k].cash : 1), 1)));
+const cashTag = x => x === 0 ? "💰 ×0" : `💰 ×${+x.toFixed(2)}`;
 if (!Array.isArray(tw.mods)) tw.mods = [];
 
 // ---------- replayability: blessings, run goals, Tower Tokens and perks, weekly challenge ----------
@@ -483,3 +492,67 @@ const SIGNATURE = {ninten:["lifeupG"], ana:["pkbeamG"], ness:["pkrockinG", "pkro
   dungeonman:["boulder"], eve:["rocketpunch"], pokey:["spidermech"], tony:["besthug"], mrsaturn:["saturncoffee"], applekid:["zombiepaper"],
   andonuts:["disruptor"], mick:["pounce"], queenmary:["queensong"], benny:["surgery"], alec:["hotspring"], salsa:["shockdance"]};
 Object.entries(SIGNATURE).forEach(([id, ks]) => { const h = HERO[id]; if (h) ks.forEach(k => { if (!h.learn.includes(k)) h.learn.push(k); }); });
+
+// ---------- PSI tiers: α → β → γ → Ω. A stronger tier can only be learned once the hero knows the one below it ----------
+const PSI_TIERS = ["α", "β", "γ", "\u03A9"];
+// the last character of a move's name is its tier; names may use either omega character for Ω
+const psiTier = k => { const m = TMOVES[k] && TMOVES[k].n.match(/^(.+) (\S)$/); if (!m) return null; const c = m[2] === "\u2126" ? "\u03A9" : m[2], t = PSI_TIERS.indexOf(c); return t < 0 ? null : [m[1], t]; };
+// the next weaker move in the same family (PK Beam γ needs PK Beam α, since there's no PK Beam β)
+const PSI_NEEDS = {};
+Object.keys(TMOVES).forEach(k => {
+  const t = psiTier(k);
+  if (!t || !t[1]) return;
+  let need = null, best = -1;
+  Object.keys(TMOVES).forEach(j => { const u = psiTier(j); if (u && u[0] === t[0] && u[1] < t[1] && u[1] > best) { need = j; best = u[1]; } });
+  if (need) PSI_NEEDS[k] = need;
+});
+// a hero who can learn a stronger tier can always learn the weaker one too, so nothing is out of reach
+HEROES.forEach(h => {
+  for (let i = 0; i < h.learn.length; i++) {
+    const need = PSI_NEEDS[h.learn[i]];
+    if (need && !h.start.includes(need) && !h.learn.includes(need)) { h.learn.splice(i, 0, need); i = -1; }
+  }
+});
+const canLearn = (m, k) => !m.moves.includes(k) && (!PSI_NEEDS[k] || m.moves.includes(PSI_NEEDS[k]));
+
+// ---------- hero skins: two color swaps per hero sold in Saturn's shop, plus a Champion look for reaching the top with them ----------
+const HLOOKS = {
+  moon:{n:"Moonside", f:"invert(1) hue-rotate(180deg)", d:"Colors turned inside out. Yes. No."},
+  silver:{n:"Starman Silver", f:"grayscale(1) brightness(1.2) contrast(1.15)", d:"Shiny chrome from another world."},
+  pig:{n:"Pigmask Pink", f:"hue-rotate(300deg) saturate(1.5)", d:"Standard-issue army pink."},
+  dark:{n:"Deep Darkness", f:"hue-rotate(80deg) brightness(.72) saturate(1.4)", d:"Swampy green and very murky."},
+  dream:{n:"Magicant Dream", f:"hue-rotate(200deg) saturate(.6) brightness(1.2)", d:"Soft pastels from a dream."},
+  lava:{n:"Fire Spring", f:"sepia(.7) hue-rotate(-35deg) saturate(3)", d:"Red-hot from the volcano."},
+  frost:{n:"Winters Frost", f:"hue-rotate(180deg) saturate(.5) brightness(1.25)", d:"Chilly blue from up north."},
+  photo:{n:"Fuzzy Pickles", f:"sepia(1) contrast(1.1) brightness(1.05)", d:"An old photo from the camera man."},
+  mani:{n:"Mani Mani", f:"hue-rotate(250deg) saturate(2.2) contrast(1.1)", d:"Warped by an evil statue."},
+  ghost:{n:"Osohe Ghost", f:"grayscale(.6) brightness(1.35) opacity(.7)", d:"Spooky, see-through and friendly."},
+  lumine:{n:"Lumine Glow", f:"hue-rotate(140deg) saturate(1.8) brightness(1.1)", d:"Teal light that reads your thoughts."},
+  tenda:{n:"Tenda Moss", f:"hue-rotate(55deg) saturate(1.4)", d:"Leafy green and a little shy."},
+  giygas:{n:"Giygas Red", f:"hue-rotate(330deg) saturate(3) contrast(1.35)", d:"Red. Very red. ...It hurts."},
+  night:{n:"Threed Night", f:"brightness(.6) hue-rotate(210deg) saturate(.8) contrast(1.25)", d:"After dark in a spooky town."},
+  chimera:{n:"Chimera Lab", f:"hue-rotate(110deg) saturate(2.4)", d:"Mixed up in a Pigmask lab."},
+  peach:{n:"Saturn Peach", f:"sepia(.5) hue-rotate(-25deg) saturate(1.6) brightness(1.12)", d:"Peachy keen. Boing!"},
+  champ:{n:"Champion", f:"sepia(1) saturate(4) hue-rotate(-12deg) brightness(1.12) contrast(1.1) drop-shadow(0 0 3px #ffd84a)", d:"Solid gold, for reaching the top."}
+};
+const HSKIN_PRICE = [200, 350];
+const HSKINS = [];
+HEROES.forEach(h => {
+  // each hero gets its own pair of looks, picked from the hero's id so it never changes
+  const pool = Object.keys(HLOOKS).filter(k => k !== "champ"), a = hashStr("hskin-" + h.id) % pool.length;
+  const b = (a + 1 + hashStr("hskin2-" + h.id) % (pool.length - 1)) % pool.length;
+  HSKINS.push({id:`hs_${h.id}_base`, h:h.id, look:null, base:true, p:0, n:`${h.name} · Original`, d:"The look they started with."});
+  [pool[a], pool[b]].forEach((k, i) => HSKINS.push({id:`hs_${h.id}_${k}`, h:h.id, look:k, p:HSKIN_PRICE[i], n:`${h.name} · ${HLOOKS[k].n}`, d:HLOOKS[k].d}));
+  HSKINS.push({id:`hs_${h.id}_champ`, h:h.id, look:"champ", champ:true, p:0, n:`${h.name} · Champion`, d:`Clear floor ${TW_TOP} with ${h.name} in your party.`});
+});
+HSKINS.forEach(s => { s.cat = "hero"; ITEMS.push(s); ITEM[s.id] = s; });
+// champion skins unlock when the hero is in the party that reaches the top (training runs don't count)
+const champWon = id => !!(tw.heroes[id] && tw.heroes[id].top);
+// older saves: heroes who already reached the top get their Champion skin
+if (!tw.skinV) { Object.values(tw.heroes).forEach(r => { if (r.clears) r.top = true; }); tw.skinV = 1; twSave(); }
+// run history keeps the last climbs; older saves get each hero's endless best from their best floor past the top
+const TW_HISTORY = 30;
+if (!Array.isArray(tw.history)) tw.history = [];
+if (!tw.endlessV) { Object.values(tw.heroes).forEach(r => { if (r.best > TW_TOP && !r.endless) r.endless = r.best; }); tw.endlessV = 1; twSave(); }
+// the look a hero is wearing right now (null for the original)
+const heroLook = id => { const s = ITEM[shop.heroSkin[id]]; return s && s.look && owns(s.id) ? s.look : null; };

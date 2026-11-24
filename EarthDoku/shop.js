@@ -58,7 +58,7 @@ const SKINS = [
   {id:"manimani", n:"Mani Mani", p:1200, d:"A golden glow that warps the mind."},
   {id:"giygas", n:"Giygas", p:1500, d:"You cannot grasp the true form of this window."}
 ].map(s => ({...s, cat:"skin"}));
-// wallpapers change the Grid tab's backdrop (other tabs keep their own looks)
+// wallpapers change the backdrop behind every tab
 const WALLS = [
   {id:"w_classic", n:"Classic swirl", p:0, d:"The spinning stripes you started with."},
   {id:"w_onett", n:"Onett hilltop", p:300, d:"Green hills under a sunset sky."},
@@ -71,7 +71,12 @@ const WALLS = [
   {id:"w_moonside", n:"Moonside lights", p:600, d:"Neon dots on a lilac night."},
   {id:"w_lumine", n:"Lumine glow", p:700, d:"A gentle teal shimmer."},
   {id:"w_sound", n:"Sound Stone rainbow", p:900, d:"Eight soft colors around the stone."},
-  {id:"w_giygas", n:"Giygas ripples", p:1200, d:"Red rings, but friendly. Mostly."}
+  {id:"w_giygas", n:"Giygas ripples", p:1200, d:"Red rings, but friendly. Mostly."},
+  {id:"w_underworld", n:"Lost Underworld", p:500, d:"Jungle leaves over a warm lava glow."},
+  {id:"w_dalaam", n:"Dalaam sunrise", p:650, d:"Golden rays over the mountain palace."},
+  {id:"w_starman", n:"Starman twilight", p:750, d:"Drifting stars in a lilac evening sky."},
+  {id:"w_newpork", n:"New Pork neon", p:900, d:"A glowing grid that never stops scrolling."},
+  {id:"w_battle", n:"Battle backdrop", p:1300, d:"Wavy bands like the fights in EarthBound. It moves!"}
 ].map(s => ({...s, cat:"wall"}));
 // hit text: what pops out of a square when you place an enemy
 const HITS = [
@@ -122,7 +127,7 @@ const SKIN = Object.fromEntries(SKINS.map(s => [s.id, s]));
 const FREE = ITEMS.filter(s => !s.p && s.cat !== "tower").map(s => s.id);
 const shop = (() => {
   const s = Object.assign({money:40, earned:0, spent:0, owned:[], by:{grid:0, map:0, mini:0}, log:[], told:[], v:0,
-    wall:"w_classic", hit:"h_smash", bag:{}}, store.get(SHOP_KEY) || {});
+    wall:"w_classic", hit:"h_smash", bag:{}, heroSkin:{}}, store.get(SHOP_KEY) || {});
   // first visit: whatever skin you were already wearing comes with you
   if (!s.v) {
     const worn = store.get("earthdoku-flavor");
@@ -132,11 +137,25 @@ const shop = (() => {
   return s;
 })();
 const shopSave = () => store.set(SHOP_KEY, shop);
-const owns = id => FREE.includes(id) || shop.owned.includes(id);
+// hero skins are added by the Tower: originals are always yours, Champion looks are earned at the top
+const owns = id => { const s = ITEM[id]; return FREE.includes(id) || shop.owned.includes(id) || !!(s && (s.base || s.champ && typeof champWon === "function" && champWon(s.h))); };
 const fmt$ = n => "$" + Math.round(n).toLocaleString();
 // one permanent item is 30% off each day
-const dealId = () => { const pool = ITEMS.filter(s => s.p && s.cat !== "tower"); return pool[hashStr("saturn-deal-" + todayKey()) % pool.length].id; };
-const priceOf = id => Math.round(ITEM[id].p * (id === dealId() ? .7 : 1) / 5) * 5;
+const dealId = () => { const pool = ITEMS.filter(s => s.p && s.cat !== "tower" && s.cat !== "hero"); return pool[hashStr("saturn-deal-" + todayKey()) % pool.length].id; };
+// Saturn's weekly special: one hero skin is 40% off from Monday to Sunday. It's picked from heroes you've found and stays put all week
+const WEEKLY_OFF = .4;
+function weeklyId() {
+  if (typeof weekKey !== "function" || typeof HEROES === "undefined" || typeof isUnlocked !== "function") return null;
+  const wk = weekKey();
+  if (!shop.weekly || shop.weekly.wk !== wk || (shop.weekly.id && !ITEM[shop.weekly.id])) {
+    const pool = ITEMS.filter(s => s.cat === "hero" && s.p && !owns(s.id) && isUnlocked(HERO[s.h]));
+    shop.weekly = {wk, id:pool.length ? pool[hashStr("saturn-week-" + wk) % pool.length].id : null};
+    shopSave();
+  }
+  return shop.weekly.id;
+}
+const weekDaysLeft = () => 7 - ((new Date().getDay() + 6) % 7);
+const priceOf = id => Math.round(ITEM[id].p * (id === dealId() ? .7 : id === weeklyId() ? 1 - WEEKLY_OFF : 1) / 5) * 5;
 const bagCount = () => Object.values(shop.bag).reduce((s, n) => s + n, 0);
 
 // ---------- toasts ----------
@@ -187,9 +206,10 @@ function shopMapCash(score, practice, fog) {
   if (score <= 0) return "";
   return ` · 💰 +${earn(score / 250 * (fog ? 1.25 : 1) * (practice ? .5 : 1), "Map Guessr round", "map")}`;
 }
-// tower: paid when a climb ends, about $1.5 a floor, +$40 for reaching the top; Daily Hard and Weekly pay 25% more
-function shopTowerCash(floors, cleared, seeded) {
-  const base = (floors * 1.5 + (cleared ? 40 : 0)) * (seeded ? 1.25 : 1);
+// tower: paid when a climb ends, about $1.5 a floor, +$40 for reaching the top; Daily Hard and Weekly pay 25% more, each Heat level 10% more,
+// and New Run+ twists scale it up or down
+function shopTowerCash(floors, cleared, seeded, heat = 0, mods = 1) {
+  const base = (floors * 1.5 + (cleared ? 40 : 0)) * (seeded ? 1.25 : 1) * (1 + .1 * heat) * mods;
   return base >= 1 ? earn(base, "Enemy Tower climb", "tower") : 0;
 }
 // minigames: first run of each game every day pays full, replays pay half
@@ -226,56 +246,77 @@ const SAT_LINES = ["Hi HO! Me sell window. Very nice. ding!", "ZOOM! Money from 
   "Window make text box pretty. Me like pretty. zoom.", "Today one thing is cheap. Look for tag! ding.",
   "Me Mr. Saturn. You customer. Happy happy. BOING!", "Wear window, take off window. Free! Only buying cost. zoom.",
   "Money not grow on tree. Me checked. boing.", "Keepsake make shelf happy. Shelf have feelings. ding!"];
-const AISLES = [["skin", "🪟 Windows"], ["wall", "🖼️ Wallpapers"], ["hit", "💥 Hit text"], ["tower", "🎒 Tower supplies"], ["keep", "🏺 Keepsakes"], ["closet", "✔ Wear & use"]];
-const sv = {tab:"skin", armed:null, line:null};
+const AISLES = [["skin", "🪟 Windows"], ["wall", "🖼️ Wallpapers"], ["hit", "💥 Hit text"], ["hero", "🎭 Hero skins"], ["tower", "🎒 Tower supplies"], ["keep", "🏺 Keepsakes"], ["closet", "✔ Wear & use"]];
+const sv = {tab:"skin", armed:null, line:null, hg:"all"};
 const prevHTML = id => `<div class="win shPrev" data-flavor="${id}"><span>• ${hitWord()}</span><small>${SKIN[id].n}</small></div>`;
+const HSKIN_LIST = () => ITEMS.filter(s => s.cat === "hero" && !s.base);
 function itemPrev(s) {
   if (s.cat === "skin") return prevHTML(s.id);
   if (s.cat === "wall") return `<div class="shWallPrev" data-wall="${s.id}"></div>`;
   if (s.cat === "hit") return `<div class="shHitPrev"><span>${s.n}</span></div>`;
+  if (s.cat === "hero") return `<div class="shHeroPrev${s.champ && !owns(s.id) ? " dim" : ""}"><img class="twSpr" src="${HERO[s.h].spr}" alt="" referrerpolicy="no-referrer" draggable="false"${s.look ? ` style="--skf:${HLOOKS[s.look].f}"` : ""}></div>`;
   if (s.cat === "tower") { const g = typeof GOODS !== "undefined" && GOODS[s.g]; return `<div class="shIconPrev">${(g ? g.ic : "🎁").repeat(s.x)}</div>`; }
   return `<div class="shIconPrev${owns(s.id) ? "" : " dim"}">${s.ic}</div>`;
 }
-const inUse = s => s.cat === "skin" ? document.body.dataset.flavor === s.id : s.cat === "wall" ? shop.wall === s.id : s.cat === "hit" ? shop.hit === s.id : false;
+const inUse = s => s.cat === "skin" ? document.body.dataset.flavor === s.id : s.cat === "wall" ? shop.wall === s.id : s.cat === "hit" ? shop.hit === s.id
+  : s.cat === "hero" ? (s.base ? !heroLook(s.h) : shop.heroSkin[s.h] === s.id && owns(s.id)) : false;
+// wearing a hero skin; picking the one already worn (or the original) goes back to the original
+function wearHero(s) {
+  if (s.base || shop.heroSkin[s.h] === s.id) delete shop.heroSkin[s.h];
+  else shop.heroSkin[s.h] = s.id;
+}
 
 function drawShop() {
-  const deal = dealId();
+  const deal = dealId(), wk = weeklyId(), wkItem = wk && ITEM[wk], days = weekDaysLeft();
+  const wkLeft = days === 1 ? "Last day!" : `Ends in ${days} days`;
   const line = sv.line || SAT_LINES[hashStr("sat" + todayKey()) % SAT_LINES.length];
-  const perm = ITEMS.filter(s => s.cat !== "tower"), have = perm.filter(s => owns(s.id)).length;
+  const perm = ITEMS.filter(s => s.cat !== "tower" && !s.base), have = perm.filter(s => owns(s.id)).length;
   const earnRows = [["🎯", "Grid square", "$5–20", "rarer squares pay more"], ["⭐", "Perfect grid", "+$40", ""],
-    ["🗺️", "Map Guessr round", "up to $20", "+25% in fog"], ["🕹️", "Minigame run", "up to $22", "first run each day"], ["🗼", "Tower climb", "$1.50 a floor", "+$40 at the top"]];
+    ["🗺️", "Map Guessr round", "up to $20", "+25% in fog"], ["🕹️", "Minigame run", "up to $22", "first run each day"], ["🗼", "Tower climb", "$1.50 a floor", "+$40 at the top, +10% per Heat"]];
   const left = `<section class="win shCounter">
       <div class="shSat"><img src="${SATURN_SPR}" alt="Mr. Saturn" referrerpolicy="no-referrer"><p class="shSay">${line}</p></div>
       <div class="shPurse"><span>Your wallet</span><b>${fmt$(shop.money)}</b><small>${fmt$(shop.earned)} earned · ${fmt$(shop.spent)} spent</small></div>
       <ul class="shEarn">${earnRows.map(([i, a, b, c]) => `<li><span>${i}</span><b>${a}</b><em>${b}</em>${c ? `<small>${c}</small>` : ""}</li>`).join("")}</ul>
-      <p class="shFine">Hard mode grids pay 1.5×. Infinite grids, practice maps and minigame replays pay half. Daily Hard and Weekly climbs pay 1.25×, and training climbs pay nothing.${owns("k_piggy") ? " 🐷 Piggy bank: +10% on everything." : ""}</p>
+      <p class="shFine">Hard mode grids pay 1.5×. Infinite grids, practice maps and minigame replays pay half. Daily Hard and Weekly climbs pay 1.25×, each Tower Heat level adds 10%, New Run+ twists pay more or less depending on how hard they make the climb, and training climbs pay nothing.${owns("k_piggy") ? " 🐷 Piggy bank: +10% on everything." : ""}</p>
       ${bagCount() ? `<p class="shFine">🎒 Tower bag: ${bagCount()} item${bagCount() === 1 ? "" : "s"} waiting for your next normal run.</p>` : ""}
       ${shop.log.length ? `<div class="shLog"><span>Recent</span>${shop.log.slice(-5).reverse().map(x => `<p>${x.why}<b>+${fmt$(x.n)}</b></p>`).join("")}</div>` : ""}
     </section>`;
   const card = s => {
-    const own = s.cat !== "tower" && owns(s.id), use = inUse(s), price = priceOf(s.id), sale = s.id === deal && !own, wearable = s.cat === "skin" || s.cat === "wall" || s.cat === "hit";
+    const own = s.cat !== "tower" && owns(s.id), use = inUse(s), price = priceOf(s.id), weekly = s.id === wk && !own, sale = (s.id === deal || weekly) && !own, wearable = s.cat === "skin" || s.cat === "wall" || s.cat === "hit" || s.cat === "hero";
     let action;
     if (own && wearable) action = use ? `<span class="shTag on">✔ In use</span>` : `<span class="shTag got">${sv.tab === "closet" ? "Use" : "Owned · use"}</span>`;
     else if (own) action = `<span class="shTag got">✔ On your shelf</span>`;
+    else if (s.champ) action = `<span class="shTag cant">🏆 Reach floor ${TW_TOP}</span>`;
     else if (sv.armed === s.id) action = `<span class="shTag buy">Sure? Buy for ${fmt$(price)}</span>`;
     else action = `<span class="shTag ${shop.money >= price ? "can" : "cant"}">${sale ? `<s>${fmt$(s.p)}</s> ` : ""}${fmt$(price)}</span>`;
     const bag = s.cat === "tower" && shop.bag[s.g] ? `<span class="shTag got">In bag: ${shop.bag[s.g]}</span>` : "";
-    return `<button class="shSkin${use ? " wear" : ""}${sale ? " sale" : ""}" data-sk="${s.id}">${sale ? `<i class="shDeal">30% off today</i>` : ""}
+    return `<button class="shSkin${use ? " wear" : ""}${sale ? " sale" : ""}" data-sk="${s.id}">${sale ? `<i class="shDeal">${weekly ? `🪐 ${Math.round(WEEKLY_OFF * 100)}% off this week` : "30% off today"}</i>` : ""}
       ${itemPrev(s)}<b>${s.n}</b><small>${s.d}</small><span class="shTags">${action}${bag}</span></button>`;
   };
-  const counts = {skin:SKINS, wall:WALLS, hit:HITS, keep:KEEPS};
-  const chip = ([k, l]) => `<button data-sv="${k}" class="${sv.tab === k ? "on" : ""}">${l}${counts[k] ? ` <small>${counts[k].filter(s => owns(s.id)).length}/${counts[k].length}</small>` : ""}</button>`;
+  const counts = {skin:SKINS, wall:WALLS, hit:HITS, hero:HSKIN_LIST(), keep:KEEPS};
+  const chip = ([k, l]) => `<button data-sv="${k}" class="${sv.tab === k ? "on" : ""}"${k === "hero" && wkItem && !owns(wk) ? ` title="🪐 This week: ${wkItem.n} is ${Math.round(WEEKLY_OFF * 100)}% off"` : ""}>${l}${k === "hero" && wkItem && !owns(wk) ? " 🪐" : ""}${counts[k] ? ` <small>${counts[k].filter(s => owns(s.id)).length}/${counts[k].length}</small>` : ""}</button>`;
   let body;
   if (sv.tab === "closet") {
     const cur = document.body.dataset.flavor;
     const sec = (t, list) => `<h4 class="shSec">${t}</h4><div class="shGrid sub">${list.filter(s => owns(s.id)).map(card).join("")}</div>`;
+    const heroSec = HSKIN_LIST().some(s => owns(s.id)) ? sec("🎭 Hero skins", HSKIN_LIST()) : "";
     body = `<div class="shNow">${prevHTML(cur)}<div><b>Window: ${SKIN[cur].n} · Wallpaper: ${ITEM[shop.wall].n} · Hit text: ${hitWord()}</b>
-        <small>Pick anything you own. Switching is always free. Wallpapers show on the Grid tab.</small></div></div>
-      <div class="shScroll">${sec("🪟 Windows", SKINS)}${sec("🖼️ Wallpapers", WALLS)}${sec("💥 Hit text", HITS)}</div>`;
+        <small>Pick anything you own. Switching is always free. Wallpapers show behind every tab. Tap a hero skin you're wearing to go back to the original.</small></div></div>
+      <div class="shScroll">${sec("🪟 Windows", SKINS)}${sec("🖼️ Wallpapers", WALLS)}${sec("💥 Hit text", HITS)}${heroSec}</div>`;
+  } else if (sv.tab === "hero") {
+    // one row per hero you've found in the Tower: original, two skins for sale, and the Champion look
+    const found = HEROES.filter(h => isUnlocked(h)), shown = found.filter(h => sv.hg === "all" || h.game === sv.hg);
+    const games = [["all", "All"], ...["M1", "EB", "M3"].map(g => [g, GAMES[g].l])];
+    const missing = HEROES.length - found.length;
+    body = `<p class="shNote">Each hero has two skins for sale and a gold Champion skin for reaching floor ${TW_TOP} with them in your party (not in training runs). Skins show everywhere in the Tower.${missing ? ` Find ${missing} more hero${missing === 1 ? "" : "es"} in the Tower to see their skins.` : ""}</p>
+      <div class="chips shHeroGames" role="group" aria-label="Filter by game">${games.map(([g, l]) => `<button data-hg="${g}" class="${sv.hg === g ? "on" : ""}">${l}</button>`).join("")}</div>
+      <div class="shScroll">${wkItem && !owns(wk) ? `<h4 class="shSec">🪐 Weekly special <small>${wkLeft}</small></h4><div class="shGrid sub">${card(wkItem)}</div>` : ""}${shown.length ? shown.map(h => `<div class="shHeroRow"><h4 class="shSec">${h.name} <small>${GAMES[h.game].l}</small></h4>
+        <div class="shGrid sub">${ITEMS.filter(s => s.cat === "hero" && s.h === h.id).map(card).join("")}</div></div>`).join("")
+        : `<p class="shNote">No heroes found here yet. Climb the Tower to meet them!</p>`}</div>`;
   } else {
     const list = ITEMS.filter(s => s.cat === sv.tab && (s.p || s.cat === "keep"));
     const note = sv.tab === "tower" ? `<p class="shNote">Supplies go in your bag and are added to your next normal Tower run (not the daily Hard climb). Buy as many as you like.</p>`
-      : sv.tab === "wall" ? `<p class="shNote">Wallpapers replace the Grid tab's backdrop. The other tabs keep their own themes.</p>`
+      : sv.tab === "wall" ? `<p class="shNote">Wallpapers replace the backdrop behind every tab, and inside the Enemy Tower too.</p>`
       : sv.tab === "keep" ? `<p class="shNote">Keepsakes live on your shelf. Collect them all! The Piggy bank also adds 10% to everything you earn.</p>` : "";
     body = `${note}<div class="shScroll"><div class="shGrid sub">${list.map(card).join("")}</div></div>`;
   }
@@ -289,6 +330,8 @@ function drawShop() {
 $("#viewShop").addEventListener("click", ev => {
   const t = ev.target.closest("[data-sv]");
   if (t) { sv.tab = t.dataset.sv; sv.armed = null; sv.line = null; sfx("click"); return drawShop(); }
+  const hg = ev.target.closest("[data-hg]");
+  if (hg) { sv.hg = hg.dataset.hg; sv.armed = null; sfx("click"); return drawShop(); }
   const b = ev.target.closest("[data-sk]");
   if (!b) return;
   const id = b.dataset.sk, s = ITEM[id];
@@ -296,9 +339,12 @@ $("#viewShop").addEventListener("click", ev => {
     if (s.cat === "skin") setFlavor(id);
     else if (s.cat === "wall") setWall(id);
     else if (s.cat === "hit") shop.hit = id;
+    else if (s.cat === "hero") wearHero(s);
     sv.armed = null; shopSave();
-    sv.line = s.cat === "keep" ? `${s.n}. ${s.d} Me dust it every day. zoom.` : `${s.n}! Good choice. ding!`;
+    sv.line = s.cat === "keep" ? `${s.n}. ${s.d} Me dust it every day. zoom.` : s.cat === "hero" && !inUse(s) ? `${HERO[s.h].name} back to normal. Also nice. ding.` : `${s.n}! Good choice. ding!`;
     sfx("ok");
+  } else if (s.champ) {
+    sv.armed = null; sv.line = `Gold ${HERO[s.h].name} only for champion. Reach floor ${TW_TOP} with ${HERO[s.h].name} in party! boing.`; sfx("bad");
   } else if (shop.money < priceOf(id)) {
     sv.armed = null; sv.line = `Need ${fmt$(priceOf(id) - shop.money)} more. Play grid, map, games! boing.`; sfx("bad");
   } else if (sv.armed !== id) {
@@ -312,6 +358,7 @@ $("#viewShop").addEventListener("click", ev => {
       if (s.cat === "skin") setFlavor(id);
       else if (s.cat === "wall") setWall(id);
       else if (s.cat === "hit") shop.hit = id;
+      else if (s.cat === "hero") shop.heroSkin[s.h] = id;
       sv.line = s.cat === "keep" ? `${s.n} go on shelf now. Shelf happy! DING!` : `Thank you! ${s.n} yours now! DING! BOING!`;
     }
     shopSave(); drawWallet(true); sfx("reward");
