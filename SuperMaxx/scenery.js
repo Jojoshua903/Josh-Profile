@@ -15,6 +15,10 @@ export const THEMES = {
     skyTop: 0x8cc7ef, skyBottom: 0xffe4ec, fog: 0xf4e3e9, sun: 0xfff0f0, hemiSky: 0xfff6fa, hemiGround: 0x9fb67c,
     sunPos: [40, 60, 40],
   },
+  neon: {
+    skyTop: 0x1d1a5a, skyBottom: 0xd44a8a, fog: 0x2a1650, sun: 0xc9c8ff, hemiSky: 0x8a7aff, hemiGround: 0x4a2a6a,
+    sunPos: [-40, 40, 80],
+  },
   alpine: {
     skyTop: 0x5d7fd0, skyBottom: 0xffc8a8, fog: 0xe8e4f0, sun: 0xffd0a8, hemiSky: 0xf2f0ff, hemiGround: 0xc8d4e4,
     sunPos: [-50, 26, 60],
@@ -118,6 +122,16 @@ export function groundTexture(theme) {
     }
     speckle(g, s, 2500, ['rgba(60,50,40,.08)', 'rgba(255,255,255,.1)']);
   });
+  if (theme === 'neon') return canvasTex(512, (g, s) => {
+    // dark rooftop tiles with glowing seams, the odd vent and painted hazard corner
+    g.fillStyle = '#1c1838'; g.fillRect(0, 0, s, s);
+    const q = s / 8;
+    for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) { const c = 30 + Math.random() * 14 | 0; g.fillStyle = `rgb(${c},${c - 4},${c + 26})`; g.fillRect(x * q + 3, y * q + 3, q - 6, q - 6); }
+    speckle(g, s, 2500, ['rgba(0,0,0,.18)', 'rgba(255,255,255,.04)']);
+    g.lineWidth = 3;
+    for (let i = 0; i <= 8; i++) { g.strokeStyle = i % 4 ? 'rgba(90,240,255,.35)' : 'rgba(255,90,168,.7)'; g.beginPath(); g.moveTo(i * q, 0); g.lineTo(i * q, s); g.moveTo(0, i * q); g.lineTo(s, i * q); g.stroke(); }
+    g.fillStyle = 'rgba(10,8,24,.8)'; for (let k = 0; k < 3; k++) { const x = (1 + k * 3) * q + q * 0.25, y = (2 + k * 2) * q + q * 0.25; g.fillRect(x, y, q * 0.5, q * 0.5); }
+  });
   if (theme === 'alpine') return canvasTex(512, (g, s) => {
     // soft snow with drifts, sparkle and the odd boot print
     g.fillStyle = '#eef2fa'; g.fillRect(0, 0, s, s);
@@ -160,6 +174,15 @@ export function pathTexture(theme) {
     }
     g.fillStyle = '#d9d2c3'; g.fillRect(0, 0, 12, s); g.fillRect(s - 12, 0, 12, s);
   });
+  if (theme === 'neon') return canvasTex(256, (g, s) => {
+    // a walkway with cyan light strips down both edges and pink chevrons pointing along it
+    g.fillStyle = '#2a2450'; g.fillRect(0, 0, s, s);
+    speckle(g, s, 800, ['rgba(0,0,0,.2)', 'rgba(255,255,255,.05)']);
+    g.fillStyle = '#5af0ff'; g.fillRect(0, 0, 10, s); g.fillRect(s - 10, 0, 10, s);
+    g.fillStyle = 'rgba(90,240,255,.25)'; g.fillRect(10, 0, 8, s); g.fillRect(s - 18, 0, 8, s);
+    g.strokeStyle = 'rgba(255,90,168,.75)'; g.lineWidth = 9; g.lineCap = 'round';
+    for (const y of [s * 0.25, s * 0.75]) { g.beginPath(); g.moveTo(s * 0.34, y + 22); g.lineTo(s / 2, y - 6); g.lineTo(s * 0.66, y + 22); g.stroke(); }
+  });
   if (theme === 'alpine') return canvasTex(256, (g, s) => {
     // a boardwalk of wooden planks through the snow, with snow banked at the edges
     g.fillStyle = '#7a5236'; g.fillRect(0, 0, s, s);
@@ -185,7 +208,7 @@ export function pathTexture(theme) {
 export function buildGround(scene, map, theme) {
   const tex = groundTexture(theme);
   tex.repeat.set(map.W / 8, map.L / 8);
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(map.W * 2, map.L * 2), new THREE.MeshStandardMaterial({ map: tex }));
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(map.W * 2, map.L * 2), new THREE.MeshStandardMaterial({ map: tex, ...(theme === 'neon' ? { emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.35 } : {}) }));
   ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
   // outer ground under the backdrop (Solmare sits on its own island in the sea)
   if (theme !== 'plaza') {
@@ -200,7 +223,7 @@ export function buildGround(scene, map, theme) {
       const [ax, az] = lane[i], [bx, bz] = lane[i + 1];
       const len = Math.hypot(bx - ax, bz - az) + 3.5;
       const t = pt.clone(); t.needsUpdate = true; t.repeat.set(1, len / 4);
-      const strip = new THREE.Mesh(new THREE.PlaneGeometry(3.6, len), new THREE.MeshStandardMaterial({ map: t, polygonOffset: true, polygonOffsetFactor: -1 }));
+      const strip = new THREE.Mesh(new THREE.PlaneGeometry(3.6, len), new THREE.MeshStandardMaterial({ map: t, ...(theme === 'neon' ? { emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 0.45 } : {}), polygonOffset: true, polygonOffsetFactor: -1 }));
       strip.rotation.x = -Math.PI / 2; strip.rotation.z = Math.atan2(bx - ax, bz - az);
       strip.position.set((ax + bx) / 2, 0.02 + i * 0.002, (az + bz) / 2); strip.receiveShadow = true;
       scene.add(strip);

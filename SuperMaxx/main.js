@@ -1,29 +1,31 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { HEROES, MAPS, DIFFICULTY, TUNING, SURVIVOR_MAP, SURVIVOR, HILL, DUEL, CART } from './data.js?v=20261125v';
-import { initSurvivor, updateSurvivor, survivorLeaders, stormInfo, inStorm } from './survivor.js?v=20261125v';
-import { initHill, updateHill, hillVisuals, onHill } from './hill.js?v=20261125v';
-import { initCart, updateCart, nearCart, cartLead } from './payload.js?v=20261125v';
-import { buildWorld, mirror } from './world.js?v=20261125v';
+import { HEROES, MAPS, DIFFICULTY, TUNING, SURVIVOR_MAP, SURVIVOR, HILL, DUEL, CART } from './data.js?v=20261126a';
+import { initSurvivor, updateSurvivor, survivorLeaders, stormInfo, inStorm } from './survivor.js?v=20261126a';
+import { initHill, updateHill, hillVisuals, onHill } from './hill.js?v=20261126a';
+import { initCart, updateCart, nearCart, cartLead } from './payload.js?v=20261126a';
+import { buildWorld, mirror } from './world.js?v=20261126a';
 import { createHero, spawnHero, createStructure, spawnMinion, fire, releaseFire, chargeLevel, startReload, tickHero, tickCorpse, chestOf,
-  updateMinions, updateStructures, updateProjectiles, updateFx, dirFrom, eyeOf, TEAM_COLOR } from './units.js?v=20261125v';
-import { steer, initBot, updateBot } from './botbrain.js?v=20261125v';
-import { castSlot, updateAbilities } from './abilities.js?v=20261125v';
-import { floatText } from './anim.js?v=20261125v';
-import { cfg, applyGraphics } from './settings.js?v=20261125v';
-import { initMenu, showMenu, menuFrame, openSettings, settingsVisible } from './menu.js?v=20261125v';
-import { dressed, heroOwned, wear, myCosIds, resolveCos, matchXp, award, rewardInfo, tierProgress, SEASON, MAX_TIER, cosById, cosOwned, equippedCos } from './pass.js?v=20261125v';
-import { aimSpray, placeSpray, SPRAY_CD } from './sprays.js?v=20261125v';
-import { headshot } from './portraits.js?v=20261125v';
-import './personality.js?v=20261125v';
-import { openSession, tickPuppet, myUid, lobbyState, leaveRoom, onLobby } from './net.js?v=20261125v';
-import { initAudio, applyVolume, tone, noise, ABIL_SFX } from './audio.js?v=20261125v';
-import { playMusic } from './music.js?v=20261125v';
-import { sparks, castFx, lightFlash } from './vfx.js?v=20261125v';
-import { applyEnvironment } from './stage.js?v=20261125v';
-import { perfFrame } from './perf.js?v=20261125v';
-import { gainMastery } from './mastery.js?v=20261125v';
-import { startTutorial, stopTutorial, tickTutorial, tutorialCast, tutorialKill, onTutorialPass } from './tutorial.js?v=20261125v';
-import { initReplay, recFrame, recEvent, recKill, finalClip, startPlayback, tickPlayback, stopPlayback } from './replay.js?v=20261125v';
+  updateMinions, updateStructures, updateProjectiles, updateFx, dirFrom, eyeOf, TEAM_COLOR } from './units.js?v=20261126a';
+import { steer, initBot, updateBot } from './botbrain.js?v=20261126a';
+import { castSlot, updateAbilities } from './abilities.js?v=20261126a';
+import { floatText } from './anim.js?v=20261126a';
+import { cfg, applyGraphics } from './settings.js?v=20261126a';
+import { initMenu, showMenu, menuFrame, openSettings, settingsVisible } from './menu.js?v=20261126a';
+import { dressed, heroOwned, wear, myCosIds, resolveCos, matchXp, award, rewardInfo, tierProgress, SEASON, MAX_TIER, cosById, cosOwned, equippedCos } from './pass.js?v=20261126a';
+import { aimSpray, placeSpray, SPRAY_CD } from './sprays.js?v=20261126a';
+import { headshot } from './portraits.js?v=20261126a';
+import './personality.js?v=20261126a';
+import { openSession, tickPuppet, myUid, lobbyState, leaveRoom, onLobby } from './net.js?v=20261126a';
+import { initAudio, applyVolume, tone, noise, ABIL_SFX, audioTap } from './audio.js?v=20261126a';
+import { startClipRec, saveClip, sendClip } from './clips.js?v=20261126a';
+import { playMusic } from './music.js?v=20261126a';
+import { sparks, castFx, lightFlash } from './vfx.js?v=20261126a';
+import { applyEnvironment } from './stage.js?v=20261126a';
+import { perfFrame } from './perf.js?v=20261126a';
+import { gainMastery } from './mastery.js?v=20261126a';
+import { recordMatch, tasksDone } from './contracts.js?v=20261126a';
+import { startTutorial, stopTutorial, tickTutorial, tutorialCast, tutorialKill, onTutorialPass } from './tutorial.js?v=20261126a';
+import { initReplay, recFrame, recEvent, recKill, finalClip, startPlayback, tickPlayback, stopPlayback } from './replay.js?v=20261126a';
 let envRT = null;
 
 const $ = id => document.getElementById(id);
@@ -81,6 +83,9 @@ const SHOT = {
   medic: v => { noise(0.04, 0.06 * v, 3800, 0, { type: 'bandpass', to: 2400, q: 2 }); tone(880, 0.06, 'sine', 0.03 * v, 1.4); },
   spark: v => { noise(0.05, 0.05 * v, 5000); tone(1200 + Math.random() * 400, 0.04, 'square', 0.02 * v, 0.5); },
   builder: v => { tone(140, 0.12, 'sine', 0.08 * v, 0.6); noise(0.1, 0.1 * v, 700); },
+  wellington: v => { noise(0.12, 0.08 * v, 500, 0, { type: 'lowpass', to: 250 }); tone(330, 0.1, 'sine', 0.05 * v, 0.6); },
+  shepherd: v => { noise(0.1, 0.06 * v, 2200, 0, { type: 'bandpass', to: 700, q: 2 }); tone(260, 0.06, 'triangle', 0.04 * v, 0.7); },
+  microwave: v => { tone(120, 0.08, 'sawtooth', 0.025 * v, 1); if (Math.random() < 0.25) tone(1568, 0.25, 'sine', 0.04 * v, 1, 0.02); },
 };
 
 // ---------- game state ----------
@@ -100,6 +105,7 @@ const VIEW = {
   slime: { len: 0.38, w: 0.15, barrel: 0.06, goo: true }, brawler: { len: 0.16, w: 0.18, barrel: 0.001, glove: true }, chipmunk: { len: 0.5, w: 0.17, barrel: 0.06, drum: true },
   elf: { len: 0.5, w: 0.05, barrel: 0.012, longbow: true }, dancer: { len: 0.28, w: 0.035, barrel: 0.008, ribbon: true }, mole: { len: 0.55, w: 0.06, barrel: 0.02, shovel: true },
   medic: { len: 0.55, w: 0.08, barrel: 0.02, vial: true }, spark: { len: 0.3, w: 0.1, barrel: 0.03, clamps: true }, builder: { len: 0.5, w: 0.16, barrel: 0.07, bricks: true },
+  wellington: { len: 0.26, w: 0.14, barrel: 0.03, gravy: true }, shepherd: { len: 0.2, w: 0.06, barrel: 0.01, sling: true }, microwave: { len: 0.3, w: 0.1, barrel: 0.04, dish: true },
 };
 function makeViewGun(def) {
   const v = VIEW[def.id], p = def.palette;
@@ -127,6 +133,9 @@ function makeViewGun(def) {
   if (v.vial) { add(new THREE.CylinderGeometry(0.03, 0.03, 0.2, 10), new THREE.MeshStandardMaterial({ color: 0x7affc0, emissive: 0x7affc0, emissiveIntensity: 0.8 }), 0, 0.1, -0.05).rotation.x = Math.PI / 2; add(new THREE.BoxGeometry(0.06, 0.015, 0.015), L(p.trim), 0, 0.075, 0.12); add(new THREE.BoxGeometry(0.015, 0.06, 0.015), L(p.trim), 0, 0.075, 0.12); }
   if (v.clamps) { for (const s of [-1, 1]) { const j = add(new THREE.BoxGeometry(0.035, 0.05, 0.16), L(s < 0 ? 0xff4f6b : 0x1d1d24), s * 0.04, 0, bz - 0.06); j.rotation.y = s * 0.15; } add(new THREE.SphereGeometry(0.035, 8, 6), new THREE.MeshBasicMaterial({ color: 0x7af0ff }), 0, 0, bz - 0.17); }
   if (v.bricks) for (let i = 0; i < 3; i++) add(new THREE.BoxGeometry(0.15, 0.06, 0.09), L([0xd9733a, 0xc8642e, 0xe0844a][i]), 0, 0.1 + i * 0.065, 0.05 - i * 0.02);
+  if (v.gravy) { add(new THREE.SphereGeometry(0.11, 14, 10), L(0xffffff), 0, 0.03, bz + 0.1).scale.set(1, 0.6, 1.7); add(new THREE.CylinderGeometry(0.09, 0.09, 0.02, 14), L(0x6a3a1a), 0, 0.08, bz + 0.1).scale.set(1, 1, 1.6); }
+  if (v.sling) { for (const s of [-1, 1]) add(new THREE.CylinderGeometry(0.005, 0.005, 0.3, 4), L(0xd8c8a0), s * 0.025, -0.12, bz + 0.1); add(new THREE.SphereGeometry(0.05, 8, 6), L(0x6b4a33), 0, -0.28, bz + 0.1).scale.set(1.2, 0.7, 1); }
+  if (v.dish) { add(new THREE.ConeGeometry(0.13, 0.11, 16), L(p.main), 0, 0, bz - 0.04).rotation.x = -Math.PI / 2; add(new THREE.SphereGeometry(0.045, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffd27a }), 0, 0, bz - 0.1); }
   const tip = new THREE.Object3D(); tip.position.z = bz - 0.16; tip.name = 'tip'; g.add(tip);
   g.position.set(0.24, -0.22, -0.45);
   // off-hand for casting: a glove with a glowing ring in the hero's colour
@@ -140,6 +149,7 @@ function makeViewGun(def) {
 
 let mode = 'lane';
 function startGame(m = mode, online = null) {
+  dropClip();
   if (online) m = online.mode === 'duel' ? 'duel' : 'hill';
   const uid = online && myUid(), mine = online && online.roster.find(r => r.uid === uid);
   if (online && !mine) { showMenu('online'); return; }            // no slot for us in this match
@@ -315,6 +325,19 @@ function meCard(win) {
 // ---------- play of the game ----------
 // A title card for the star of the match, then their best moment replayed from over the shoulder.
 let potgT = 0, potgG = null;
+// the highlight is recorded as it plays, so it can be saved to the Clip Vault or sent afterwards
+let clipRec = null, clipTap = null, clipProg = 0, lastClip = null, clipSaved = false;
+function finishClip() {
+  if (!clipRec) return;
+  const r = clipRec; clipRec = null;
+  r.stop().then(c => { clipTap?.stop(); clipTap = null; if (c && c.dur > 1.5) { lastClip = c; clipSaved = false; clipButtons(); } });
+}
+function dropClip() { if (clipRec) { clipRec.stop(); clipRec = null; } clipTap?.stop(); clipTap = null; lastClip = null; clipSaved = false; clipButtons(); }
+function clipButtons() {
+  const s = $('clipSave'), n = $('clipSend'); if (!s) return;
+  s.hidden = n.hidden = !lastClip;
+  s.disabled = clipSaved; s.innerHTML = clipSaved ? '✓ In your Clip Vault' : '💾 Save clip'; n.innerHTML = '📤 Send clip';
+}
 function playPotg(clip) {
   if (!G || !G.over) return;
   const star = G.heroes[clip.i]; if (!star) return showEnd();
@@ -337,6 +360,8 @@ function playPotg(clip) {
   potgT = setTimeout(() => {
     if (potgG !== G) return;
     el.className = 'live';
+    clipTap = audioTap(); clipProg = 0;
+    clipRec = startClipRec(renderer.domElement, { who: name, callsign: star.def.callsign, heroId: star.def.id, color: star.def.color, label: clip.label, map: G.map.name, mode: END_MODE[G.mode] || 'Match' }, clipTap?.stream);
     startPlayback(G, clip, {
       shot: h => { const d = h.pos.distanceTo(camera.position); if (d < 40) SHOT[h.def.id]?.(0.6 * (1 - d / 40)); },
       ability: (h, slot) => { ABIL_SFX[h.def[slot]?.id]?.(h === star ? 0.8 : 0.4); if (slot === 'ult') ultFlash(h.def.color); },
@@ -346,11 +371,11 @@ function playPotg(clip) {
         f.innerHTML = `<span class="k">${k.isPlayer ? 'You' : k.name}</span><i>▶</i>${v.isPlayer ? 'You' : v.name}`;
         el.querySelector('.pc-feed')?.prepend(f);
       },
-      progress: p => { const b = el.querySelector('.pc-bar i'); if (b) b.style.width = (p * 100).toFixed(1) + '%'; },
+      progress: p => { clipProg = p; const b = el.querySelector('.pc-bar i'); if (b) b.style.width = (p * 100).toFixed(1) + '%'; },
     });
   }, 2400);
 }
-function hidePotg() { clearTimeout(potgT); potgG = null; $('potg').className = 'hidden'; $('potg').innerHTML = ''; hideMvp(); }
+function hidePotg() { clearTimeout(potgT); finishClip(); potgG = null; $('potg').className = 'hidden'; $('potg').innerHTML = ''; hideMvp(); }
 // The strip along the top of the highlight and awards: where you are, and a way straight out.
 const postNav = at => {
   const steps = [G?.hadPotg && 'Highlight', 'Standouts', 'Results'].filter(Boolean), cur = steps.length - 3 + at;
@@ -360,7 +385,7 @@ const postNav = at => {
 const wireLeave = el => { el.querySelector('.pn-leave').onclick = () => toMenu('main'); };
 function showEnd() {
   if (!G) return;
-  stopPlayback(G); clearTimeout(potgT); potgG = null; $('potg').className = 'hidden'; $('potg').innerHTML = '';
+  stopPlayback(G); finishClip(); clearTimeout(potgT); potgG = null; $('potg').className = 'hidden'; $('potg').innerHTML = '';
   if (!G.tutorial && !G.mvpShown) { G.mvpShown = true; if (showMvp()) return; }
   hideMvp();
   $('end').classList.remove('hidden');
@@ -431,6 +456,7 @@ function showPassGain(win) {
   }
   const res = award(matchXp({ mode: G.mode, win, kills: P.kills, place: win ? 1 : P.place, players: G.heroes.length }));
   const mst = gainMastery(P.def.id, { win, kills: P.kills, dmg: P.dmgDealt });
+  const ct = recordMatch({ win, kills: P.kills, dmg: P.dmgDealt, heal: P.healDone || 0, arch: P.def.arch, mode: G.mode });
   const p0 = tierProgress(res.before), p1 = tierProgress(res.after);
   const el = $('passGain');
   const chip = r => { const inf = rewardInfo(r); return inf.cos ? `<span class="cos"><i>${inf.glyph}</i>${inf.title} · ${inf.sub}</span>`
@@ -447,6 +473,10 @@ function showPassGain(win) {
       <div class="pg-tier"><span>${mst.after.rank.name} · Lv ${mst.before.level}${mst.levelUp ? ` → <b>${mst.after.level}</b>` : ''}</span><span>${mst.after.max ? `${mst.after.into} / ${mst.after.need} to bonus token` : `${mst.after.into} / ${mst.after.need} XP`}</span></div>
       ${mst.rankUp ? `<div class="pg-rank">New rank: ${mst.after.rank.name}! <span class="pg-tok">+${(mst.tokens - mst.bonus)} mastery token${(mst.tokens - mst.bonus) > 1 ? "s" : ""} 🎰</span></div>` : ''}
       ${mst.bonus ? `<div class="pg-rank">Mastery bonus! <span class="pg-tok">+${mst.bonus} mastery token${mst.bonus > 1 ? "s" : ""} 🎰</span></div>` : ''}</div>` : ''}`;
+  // recruitment contracts: a chip for anyone just recruited, and a line for contracts that moved
+  if (ct.recruited.length || ct.progressed.length) el.insertAdjacentHTML('beforeend', `<div class="pg-ct">${
+    ct.recruited.map(id => { const h = HEROES.find(x => x.id === id); return `<span class="pg-new" style="--hc:#${h.color.toString(16).padStart(6, '0')}"><img src="${headshot(h)}" alt="">Recruited: <b>${h.callsign}</b>!</span>`; }).join('')}${
+    ct.progressed.map(id => `<span>📜 ${HEROES.find(x => x.id === id).callsign}’s contract · ${tasksDone(id)} of 3 tasks</span>`).join('')}</div>`);
   if (mst) setTimeout(() => { const b = el.querySelector('.pg-mst .pg-bar i'); if (b) b.style.width = (mst.after.frac * 100) + '%'; }, 1700);
   if (mst?.levelUp) setTimeout(() => { tone(523, 0.15, 'square', 0.05, 1); tone(784, 0.25, 'square', 0.05, 1, 0.12); }, 1800);
   setTimeout(() => { el.querySelector('.pg-bar i').style.width = (p1.frac * 100) + '%'; }, 1500);
@@ -520,15 +550,19 @@ const unitName = u => !u ? (G.mode === 'survivor' ? 'The storm' : 'The fountain'
 function deathRecap(src) {
   const killer = src?.kind === 'hero' ? src : src?.owner?.kind === 'hero' ? src.owner : null;
   G.killCam = killer && killer !== P ? { who: killer, t: 3.4 } : null;
-  // damage taken in the last 10 seconds, grouped by who dealt it
+  // everything that hurt you this life, grouped by who dealt it, shown as a share of the total
   const by = new Map();
   for (const e of (P._log || [])) {
-    if (G.time - e.t > 10) continue;
     const k = e.src?.kind === 'hero' ? e.src : e.src?.owner?.kind === 'hero' ? e.src.owner : e.src;
     const r = by.get(k) || { u: k, amt: 0, heads: 0 }; r.amt += e.amt; r.heads += e.head ? 1 : 0; by.set(k, r);
   }
   P._log = [];
-  const rows = [...by.values()].sort((a, b) => b.amt - a.amt).slice(0, 4), total = rows.reduce((a, r) => a + r.amt, 0) || 1;
+  const all = [...by.values()].sort((a, b) => b.amt - a.amt), total = all.reduce((a, r) => a + r.amt, 0) || 1;
+  // whole percentages that still add up to 100: round down, then hand the leftovers to the biggest remainders
+  all.forEach(r => { r.exact = r.amt / total * 100; r.pct = Math.floor(r.exact); });
+  let spare = 100 - all.reduce((a, r) => a + r.pct, 0);
+  [...all].sort((a, b) => (b.exact - b.pct) - (a.exact - a.pct)).forEach(r => { if (spare > 0) { r.pct++; spare--; } });
+  const rows = all.slice(0, 6);
   const col = u => u?.kind === 'hero' ? hex(u.def.color) : '#8a8f99';
   const el = $('recap');
   el.innerHTML = `
@@ -537,8 +571,8 @@ function deathRecap(src) {
       <div><small>Eliminated by</small><b>${unitName(killer || src)}</b>
         ${killer ? `<span>${killer.def.callsign} · ${killer.def.role}${killer.alive ? ` · ${Math.ceil(killer.hp)} HP left` : ''}</span>` : ''}</div>
     </div>
-    ${rows.length ? `<div class="rc-rows">${rows.map(r => `<div class="rc-row"><i style="background:${col(r.u)};width:${Math.max(8, r.amt / total * 100)}%"></i>
-      <span>${unitName(r.u)}</span><b>${Math.round(r.amt)}${r.heads ? ` <em>· ${r.heads} head</em>` : ''}</b></div>`).join('')}</div>` : ''}`;
+    ${rows.length ? `<div class="rc-rows">${rows.map(r => `<div class="rc-row"><i style="background:${col(r.u)};width:${Math.max(6, r.pct)}%"></i>
+      <span>${unitName(r.u)}</span><b>${r.pct}%${r.heads ? ` <em>· ${r.heads} head</em>` : ''}</b></div>`).join('')}${all.length > rows.length ? `<div class="rc-more">+${all.length - rows.length} more · ${all.slice(rows.length).reduce((a, r) => a + r.pct, 0)}%</div>` : ''}</div>` : ''}`;
   el.classList.remove('hidden', 'on'); void el.offsetWidth; el.classList.add('on');
 }
 const camBack = new THREE.Vector3(), camLook = new THREE.Vector3();
@@ -600,7 +634,7 @@ const events = {
     }
     if (t === P && src) { hurt = Math.min(1, hurt + amt / 60); if (src.pos && amt >= 2) dmgDir(src.pos);
       if (P.alive && P.hp < P.maxHp * 0.3 && !P._lowSaid) { P._lowSaid = true; say(P, 'lowhp'); }
-      (P._log ||= []).push({ src, amt, head, t: G.time }); if (P._log.length > 200) P._log.splice(0, 100); }
+      (P._log ||= []).push({ src, amt, head, t: G.time }); if (P._log.length > 1500) P._log.splice(0, 500); }
   },
   passive(u) {
     if (u !== P) return;
@@ -753,7 +787,8 @@ const events = {
     if (sfx) { if (d < 45) sfx(h === P ? 1 : 0.6 * (1 - d / 45)); }
     else if (near) tone(slot === 'ult' ? 200 : 360, 0.25, 'triangle', 0.05, 1.6);
     if (h === P && slot === 'ult') { tone(220, 0.6, 'sawtooth', 0.05, 3); ultFlash(h.def.color); }
-    if (slot === 'ult') {
+    // super call-outs (banner and voice line) only for your own super or ones going off nearby
+    if (slot === 'ult' && (h === P || d < ULT_NEAR)) {
       banner(`${h.isPlayer ? 'You' : h.def.callsign}: ${h.def.ult.name}!`, h.team === 'blue' ? 'var(--blue)' : 'var(--red)', `“${pick(h.def.quips.ult)}”`);
       say(h, 'ult');
     } else if (near && Math.random() < 0.6) say(h, 'ability');
@@ -761,7 +796,8 @@ const events = {
 };
 
 // Per-hero feel for the first-person gun.
-const RECOIL = { vanguard: 0.25, striker: 0.18, ember: 0.7, warden: 1, thicket: 0.9, ratchet: 0.3, mirage: 0.3, avalanche: 0.55, tempo: 0.06, kestrel: 0.4, croc: 0.6, cavalier: 0.45, slime: 0.5, brawler: 0, chipmunk: 0.12, elf: 0.35, dancer: 0.05, mole: 0.7, medic: 0.2, spark: 0.06, builder: 0.6 };
+const RECOIL = { vanguard: 0.25, striker: 0.18, ember: 0.7, warden: 1, thicket: 0.9, ratchet: 0.3, mirage: 0.3, avalanche: 0.55, tempo: 0.06, kestrel: 0.4, croc: 0.6, cavalier: 0.45, slime: 0.5, brawler: 0, chipmunk: 0.12, elf: 0.35, dancer: 0.05, mole: 0.7, medic: 0.2, spark: 0.06, builder: 0.6, wellington: 0.45, shepherd: 0.35, microwave: 0.04 };
+const ULT_NEAR = 30;                                  // metres: supers further away than this stay quiet
 const SPIN_RELOAD = new Set(['striker', 'mirage', 'ratchet']);
 function ultFlash(color) {
   const f = $('ultflash'); f.style.background = `radial-gradient(circle, transparent 40%, ${hex(color)}aa)`;
@@ -847,6 +883,11 @@ const toMenu = (where = 'main') => {
   showMenu(net && !midMatch && where !== 'main' ? 'online' : where);
 };
 $('again').onclick = () => (G?.net ? toMenu('online') : startGame());
+$('clipSave').onclick = () => {
+  if (!lastClip || clipSaved) return;
+  saveClip(lastClip).then(() => { clipSaved = true; clipButtons(); tone(784, 0.12, 'triangle', 0.05, 1.2); }).catch(() => { $('clipSave').textContent = 'Couldn’t save (storage full?)'; });
+};
+$('clipSend').onclick = () => { if (lastClip) sendClip(lastClip).then(r => { if (r === 'downloaded') $('clipSend').textContent = '✓ Downloaded'; }); };
 $('quit').onclick = () => toMenu('main'); $('toMenu').onclick = () => toMenu('roster'); $('toMain').onclick = () => toMenu('main');
 // the host closing the room ends the match for everyone else
 onLobby((st, extra) => {
@@ -1149,6 +1190,7 @@ function loop() {
   if (replaying) { G.worldTick(dt, G.replay.t); if (!tickPlayback(G, dt, camera)) showEnd(); }
   updateFx(G, live || replaying ? dt : 0, camera);
   renderer.render(G.scene, camera);
+  if (clipRec && replaying) clipRec.frame(clipProg);
 }
 loop();
 

@@ -1,10 +1,10 @@
-import { HEROES } from './heroes.js?v=20261125v';
-import { cfg, save } from './settings.js?v=20261125v';
-import { headshot } from './portraits.js?v=20261125v';
-import { skinById, dressedAny, equip, cosById, equipCos } from './pass.js?v=20261125v';
-import { sprayUrl } from './sprays.js?v=20261125v';
-import { tokens, spin, prizes, spins } from './slots.js?v=20261125v';
-import { initAudio, tone, noise } from './audio.js?v=20261125v';
+import { HEROES } from './heroes.js?v=20261126a';
+import { cfg, save } from './settings.js?v=20261126a';
+import { headshot } from './portraits.js?v=20261126a';
+import { skinById, dressedAny, equip, cosById, equipCos } from './pass.js?v=20261126a';
+import { sprayUrl } from './sprays.js?v=20261126a';
+import { tokens, spin, prizes, spins } from './slots.js?v=20261126a';
+import { initAudio, tone, noise } from './audio.js?v=20261126a';
 
 // The slot machine screen: three reels, a lever and the prize board. Pull costs one mastery
 // token; every pull lands three of a kind on something new, then shows what you won.

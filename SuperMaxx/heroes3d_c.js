@@ -1,7 +1,7 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { kit, body, face, finish, gunAt, part, joint, chain, ball, pill, tube, cone, ring, slab, dome, live } from './rig.js?v=20261125v';
+import { kit, body, face, finish, gunAt, part, joint, chain, ball, pill, tube, cone, ring, slab, dome, live } from './rig.js?v=20261126a';
 
-// Slot machine heroes on the stylised rig: Gloop, Torque, Nutcracker, Larkspur, Pirouette, Burrow, Stitch, Dynamo and Mortar.
+// Slot machine heroes on the stylised rig: Gloop, Torque, Nutcracker, Larkspur, Pirouette, Burrow, Stitch, Dynamo and Mortar, plus the contract heroes Beef Wellington, Crook and The Microwave.
 
 // ---------------- Gloop: a professor made of slime ----------------
 function slime(p, team) {
@@ -347,4 +347,120 @@ function builder(p, team) {
   }, { stride: 1.05 });
 }
 
-export const ROSTER_C = { slime, brawler, chipmunk, elf, dancer, mole, medic, spark, builder };
+// ---------------- Beef Wellington: a knighted pastry ----------------
+function wellington(p, team) {
+  const K = kit(p);
+  const pastry = K.c(p.main, { rough: 0.55 }), crisp = K.c(0xc8862e, { rough: 0.6 }), beef = K.c(0xd9707a, { rough: 0.7 }), dux = K.c(0x3a4a2a, { rough: 0.9 });
+  const P = body(K, { w: 1.2, headR: 0, shoes: 'boot', boots: K.c(0x1d1d24, { rough: 0.3, metal: 0.2 }), top: pastry, sleeves: K.c(0x1d1d24), forearms: K.c(0x1d1d24), pants: K.c(0x2a2a32), gloves: K.white,
+    torso: [0.3, 0.32, 0.38, 0.38, 0.56] });
+  P.torso.visible = false; P.neck.visible = false;
+  // the body: one standing log of golden puff pastry with a criss-cross lattice
+  part(P.spine, tube(0.44, 0.46, 1.05, 20), pastry, 0, 0.5, 0);
+  for (let i = 0; i < 4; i++) part(P.spine, ring(0.455, 0.022), crisp, 0, 0.12 + i * 0.25, 0).rotation.x = Math.PI / 2;
+  for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2, s = part(P.spine, slab(0.04, 1.0, 0.03), crisp, Math.sin(a) * 0.45, 0.5, Math.cos(a) * 0.45); s.rotation.y = a; s.rotation.z = (i % 2 ? 1 : -1) * 0.35; }
+  // the cut end on top shows the layers: crust, mushroom duxelles and a pink centre
+  part(P.spine, tube(0.43, 0.43, 0.04, 20), crisp, 0, 1.03, 0);
+  part(P.spine, tube(0.36, 0.36, 0.045, 20), dux, 0, 1.04, 0);
+  part(P.spine, tube(0.28, 0.28, 0.05, 20), beef, 0, 1.05, 0);
+  part(P.spine, tube(0.1, 0.1, 0.055, 12), K.c(0xb8485a, { rough: 0.7 }), 0, 1.06, 0);
+  // the face sits on the front of the pastry: a monocle, a waxed moustache and a dashing top hat
+  P.head.position.set(0, 0.62, 0);
+  face(P, K, { r: 0.5, brow: 0.1, mouth: 'smirk', eyeColor: 0x3a2418 });
+  part(P.head, ring(0.075, 0.012), K.gold, 0.105, 0.035, -0.45);
+  part(P.head, tube(0.004, 0.004, 0.3), K.gold, 0.17, -0.12, -0.44).rotation.z = 0.3;
+  for (const s of [-1, 1]) { const m = part(P.head, pill(0.025, 0.1), K.c(0x3a2418), s * 0.06, -0.07, -0.45); m.rotation.z = Math.PI / 2 + s * 0.25; part(P.head, ball(0.025), K.c(0x3a2418), s * 0.13, -0.05, -0.44); }
+  const hat = joint(P.spine, 0.14, 1.07, 0.05); hat.rotation.z = -0.2;
+  part(hat, tube(0.22, 0.22, 0.025), K.c(0x1d1d24, { rough: 0.3 }), 0, 0.01, 0);
+  part(hat, tube(0.14, 0.15, 0.3), K.c(0x1d1d24, { rough: 0.3 }), 0, 0.17, 0);
+  part(hat, tube(0.152, 0.152, 0.05), K.c(p.trim), 0, 0.06, 0);
+  // a bow tie and a tiny sprig of rosemary on the lapel
+  part(P.spine, cone(0.05, 0.1, 8), K.c(p.trim), -0.05, 0.3, -0.45).rotation.z = Math.PI / 2;
+  part(P.spine, cone(0.05, 0.1, 8), K.c(p.trim), 0.05, 0.3, -0.45).rotation.z = -Math.PI / 2;
+  for (let i = 0; i < 4; i++) part(P.spine, cone(0.012, 0.07, 4), K.c(0x3a7a3a), -0.2 + i * 0.012, 0.42 + i * 0.03, -0.43).rotation.z = 0.4 - i * 0.2;
+  // Gravy Boat: a porcelain jug full of steaming gravy
+  const gun = gunAt(P, 0.36, 1.2, -0.42);
+  part(gun, ball(0.12), K.white, 0, 0, 0, 1, 0.6, 1.7);
+  part(gun, cone(0.05, 0.14, 8), K.white, 0, 0.02, -0.24).rotation.x = -Math.PI / 2 + 0.3;
+  part(gun, ring(0.06, 0.015, Math.PI), K.white, 0, 0.02, 0.2).rotation.y = Math.PI / 2;
+  part(gun, tube(0.095, 0.095, 0.02), K.c(0x6a3a1a, { rough: 0.2 }), 0, 0.06, 0, 1, 1, 1.6);
+  part(gun, tube(0.1, 0.08, 0.04), K.c(0x2f5aa8), 0, -0.07, 0, 1, 1, 1.6);
+  const steam = [0, 1, 2].map(i => live(part(gun, ball(0.035), K.c(0xffffff, { glow: 0.4, rim: 0 }), (i - 1) * 0.04, 0.14 + i * 0.05, 0)));
+  return finish(P, team, gun, -0.3, (dt, s, t, k) => {
+    steam.forEach((m, i) => { const u = (t * 0.8 + i / 3) % 1; m.position.y = 0.1 + u * 0.25; m.scale.setScalar(0.6 + u); m.visible = u < 0.9; });
+    hat.rotation.z = -0.2 + Math.sin(t * 2) * 0.04 * (1 + k);
+  }, { stride: 1.1 });
+}
+
+// ---------------- Crook: the highland shepherd ----------------
+function shepherd(p, team) {
+  const K = kit(p);
+  const wax = K.c(p.main, { rough: 0.5 }), beard = K.c(0xd8d4cc, { rough: 0.95 }), tweed = K.c(0x8a7a5a, { rough: 0.95 });
+  const P = body(K, { w: 1.02, shoes: 'boot', boots: K.c(0x5a3a2a, { rough: 0.8 }), top: wax, sleeves: wax, forearms: wax, pants: K.c(0x4a4a3a, { rough: 0.85 }), shins: K.c(0x8a2a2a, { rough: 0.9 }), gloves: K.skin });
+  face(P, K, { brow: -0.12, mouth: 'flat', eyeColor: 0x3a6a8a });
+  // a big white beard, bushy eyebrows and a tweed flat cap
+  part(P.head, ball(0.2), beard, 0, -0.15, -0.14, 1.3, 1.1, 0.75);
+  for (const s of [-1, 1]) part(P.head, pill(0.03, 0.08), beard, s * 0.11, 0.15, -0.26).rotation.z = Math.PI / 2;
+  part(P.head, dome(0.31, Math.PI * 0.45), tweed, 0, 0.06, 0.01, 1.05, 0.8, 1.05);
+  part(P.head, slab(0.36, 0.03, 0.18), tweed, 0, 0.1, -0.3).rotation.x = 0.25;
+  // a tartan kilt and sporran under the waxed jacket
+  for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2; part(P.hips, slab(0.13, 0.32, 0.03), K.c(i % 2 ? 0xc23b3b : 0x2a4a2a, { rough: 0.9 }), Math.sin(a) * 0.25, -0.1, Math.cos(a) * 0.2).rotation.y = a; }
+  part(P.hips, slab(0.12, 0.13, 0.05), K.leather, 0, -0.1, -0.24);
+  part(P.spine, tube(0.24, 0.24, 0.05), K.leather, 0, 0.08, 0, 1, 1, 0.8);
+  // the crook on his back and a sleepy lamb peeking out of his satchel
+  const crook = joint(P.spine, -0.18, 0.4, 0.22); crook.rotation.z = 0.35;
+  part(crook, tube(0.022, 0.022, 1.5), K.c(0x8a5a3a), 0, 0, 0);
+  part(crook, ring(0.1, 0.022, Math.PI * 1.3), K.c(0x8a5a3a), 0.1, 0.75, 0).rotation.z = -0.2;
+  part(P.hips, slab(0.24, 0.22, 0.14), K.leather, 0.26, 0.05, 0.12);
+  const lamb = joint(P.hips, 0.26, 0.2, 0.12);
+  part(lamb, ball(0.1), K.c(0xf6f2ea, { rough: 1 }), 0, 0, 0);
+  part(lamb, ball(0.06), K.c(0x2a2a32), 0, 0.03, -0.08, 1, 1, 1.2);
+  // Shepherd's Sling: a leather pouch on two cords swinging from his hand
+  const gun = gunAt(P, 0.28, 1.2, -0.38);
+  part(gun, tube(0.03, 0.03, 0.12), K.leather, 0, 0, 0.05).rotation.x = Math.PI / 2;
+  const cords = joint(gun, 0, 0, -0.05);
+  for (const s of [-1, 1]) part(cords, tube(0.006, 0.006, 0.35), K.c(0xd8c8a0), s * 0.03, -0.17, 0);
+  part(cords, ball(0.06), K.leather, 0, -0.36, 0, 1.2, 0.7, 1);
+  part(cords, ball(0.04), K.c(0xc8c0b0), 0, -0.33, 0);
+  return finish(P, team, gun, -0.2, (dt, s, t, k) => {
+    cords.rotation.x = Math.sin(t * (3 + k * 6)) * (0.4 + k * 0.6);
+    lamb.rotation.y = Math.sin(t * 0.9) * 0.4; lamb.position.y = 0.2 + Math.abs(Math.sin(t * 6)) * 0.02 * k;
+  }, { stride: 1.2 });
+}
+
+// ---------------- The Microwave: a kitchen appliance with legs ----------------
+function microwave(p, team) {
+  const K = kit(p);
+  const shell = K.c(p.main, { rough: 0.3, metal: 0.35 }), dark = K.c(p.trim, { rough: 0.4 });
+  const P = body(K, { w: 1.1, headR: 0, shoes: 'sneaker', boots: K.c(0x3a3f4a), soles: K.c(0x1d1d24), top: shell, sleeves: K.c(0x8a94a8, { metal: 0.5 }), forearms: K.c(0x8a94a8, { metal: 0.5 }), pants: K.c(0x8a94a8, { metal: 0.5 }), gloves: K.c(0x3a3f4a) });
+  P.torso.visible = false; P.neck.visible = false;
+  // the box itself sits on top of the legs
+  part(P.spine, slab(1.0, 0.7, 0.7), shell, 0, 0.55, 0);
+  for (const x of [-0.42, 0.42]) part(P.spine, slab(0.08, 0.08, 0.08), K.c(0x2a2f3c), x, 0.18, 0.3);     // little rubber feet on the back corners
+  // the door: a dark window with a glowing interior and a spinning plate inside
+  part(P.spine, slab(0.66, 0.56, 0.03), dark, -0.13, 0.55, -0.355);
+  const glow = live(part(P.spine, slab(0.56, 0.44, 0.02), K.c(0xffd27a, { glow: 0.7, rim: 0 }), -0.13, 0.55, -0.36));
+  const plate = live(part(P.spine, tube(0.18, 0.18, 0.02, 16), K.c(0xffffff, { rough: 0.2 }), -0.13, 0.36, -0.2));
+  const dish = live(part(plate, ball(0.08), K.c(0xc8642e), 0, 0.06, 0, 1.4, 0.6, 1));          // the same lasagne, forever
+  part(P.spine, slab(0.05, 0.3, 0.05), K.steel, 0.17, 0.55, -0.39);                              // door handle
+  // control panel with a clock, buttons and a dial, plus the face on the panel
+  part(P.spine, slab(0.24, 0.6, 0.02), K.c(0x2a2f3c), 0.36, 0.55, -0.355);
+  const clock = live(part(P.spine, slab(0.18, 0.07, 0.01), K.c(0x5af0ff, { glow: 1, rim: 0 }), 0.36, 0.78, -0.37));
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) part(P.spine, slab(0.04, 0.03, 0.01), K.c(0xd8dee8), 0.31 + c * 0.05, 0.47 - r * 0.05, -0.37);
+  part(P.spine, tube(0.04, 0.04, 0.03), K.steel, 0.36, 0.3, -0.37).rotation.x = Math.PI / 2;
+  P.head.position.set(-0.13, 0.6, 0);
+  face(P, K, { r: 0.42, brow: 0.2, mouth: 'open' });
+  // Heat Beam: a handheld emitter dish with a glowing core
+  const gun = gunAt(P, 0.42, 1.2, -0.4);
+  part(gun, tube(0.04, 0.04, 0.25), K.c(0x3a3f4a), 0, 0, 0.05).rotation.x = Math.PI / 2;
+  const dishG = part(gun, cone(0.14, 0.12, 16), shell, 0, 0, -0.14); dishG.rotation.x = -Math.PI / 2;
+  const core = live(part(gun, ball(0.05), K.c(0xffd27a, { glow: 1.4, rim: 0 }), 0, 0, -0.2));
+  return finish(P, team, gun, -0.24, (dt, s, t, k) => {
+    plate.rotation.y += dt * 2;
+    glow.scale.setScalar(0.97 + Math.sin(t * 5) * 0.03);
+    clock.visible = Math.sin(t * 3) > -0.6;
+    core.scale.setScalar(0.85 + Math.sin(t * 12) * 0.15 * (1 + k));
+    dish.rotation.y = Math.sin(t) * 0.2;
+  }, { stride: 0.9 });
+}
+
+export const ROSTER_C = { slime, brawler, chipmunk, elf, dancer, mole, medic, spark, builder, wellington, shepherd, microwave };

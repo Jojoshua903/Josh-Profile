@@ -1,7 +1,9 @@
-import { HEROES } from './heroes.js?v=20261125v';
-import { cfg, save } from './settings.js?v=20261125v';
-import { SLOT_HEROES, slotOwned, isSlotItem } from './slots.js?v=20261125v';
-import { sprayUrl } from './sprays.js?v=20261125v';
+import { HEROES } from './heroes.js?v=20261126a';
+import { cfg, save } from './settings.js?v=20261126a';
+import { SLOT_HEROES, slotOwned, isSlotItem } from './slots.js?v=20261126a';
+import { sprayUrl } from './sprays.js?v=20261126a';
+import { isContractHero, contractDone, tasksDone } from './contracts.js?v=20261126a';
+export { isContractHero } from './contracts.js?v=20261126a';
 
 // Season pass: XP from matches (mostly from winning) climbs a 30-tier track of hero skins,
 // cosmetics and three season heroes. Progress is saved locally.
@@ -134,11 +136,11 @@ const heroReward = id => TRACK.find(r => r.type === 'hero' && r.id === id);
 const skinReward = id => TRACK.find(r => r.type === 'skin' && r.id === id);
 export const heroTier = id => heroReward(id)?.tier || 0;           // 0 = in the base roster
 export const skinTier = id => skinReward(id)?.tier || 0;
-export const heroOwned = id => SLOT_HEROES.includes(id) ? slotOwned(id) : tier() >= heroTier(id);
+export const heroOwned = id => isContractHero(id) ? contractDone(id) : SLOT_HEROES.includes(id) ? slotOwned(id) : tier() >= heroTier(id);
 export const skinOwned = id => isSlotItem(id) ? slotOwned(id) : tier() >= skinTier(id);
 // What a locked hero or skin is waiting on, for tiles and chips: the slot machine or a pass tier.
-export const lockShort = (id, skin) => isSlotItem(id) ? '🎰' : `T${skin ? skinTier(id) : heroTier(id)}`;
-export const lockLong = (id, skin) => isSlotItem(id) ? 'Slot machine prize' : `Season pass · tier ${skin ? skinTier(id) : heroTier(id)}`;
+export const lockShort = (id, skin) => !skin && isContractHero(id) ? `📜 ${tasksDone(id)}/3` : isSlotItem(id) ? '🎰' : `T${skin ? skinTier(id) : heroTier(id)}`;
+export const lockLong = (id, skin) => !skin && isContractHero(id) ? `Recruitment contract · ${tasksDone(id)} of 3 tasks done` : isSlotItem(id) ? 'Slot machine prize' : `Season pass · tier ${skin ? skinTier(id) : heroTier(id)}`;
 export { isSlotItem };
 export const skinsFor = heroId => SKINS.filter(s => s.hero === heroId);
 export const skinById = id => SKINS.find(s => s.id === id);

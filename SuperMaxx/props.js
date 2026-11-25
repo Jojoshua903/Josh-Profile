@@ -1,6 +1,6 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { M, put } from './scenery.js?v=20261125v';
-import { pine, blossom, snowPine } from './backdrop.js?v=20261125v';
+import { M, put } from './scenery.js?v=20261126a';
+import { pine, blossom, snowPine } from './backdrop.js?v=20261126a';
 
 // Themed cover blocks and scattered props inside the arena. Props are placed on the blue
 // half and point-mirrored, always clear of lanes, bases, towers and cover.
@@ -78,6 +78,26 @@ export function styleBlock(scene, theme, [x, z, w, d, h], i, r) {
       put(g, box(w + 0.5, 0.28, d + 0.5), M(0xf6f8fd), 0, h + 0.3, 0);
       for (const s of [-1, 1]) put(g, box(Math.min(1.1, w * 0.4), 0.8, 0.08), M(0xffd38a, { emissive: 0xffb45a, emissiveIntensity: 0.7 }), 0, Math.min(h - 0.7, 2), s * (d / 2 + 0.01), false);
       for (let k = 0; k < Math.ceil(w); k++) put(g, new THREE.ConeGeometry(0.07, 0.45, 5), M(0xdff0ff, { roughness: 0.2 }), (r() - 0.5) * w, h - 0.15, (r() < 0.5 ? -1 : 1) * (d / 2 + 0.25), false).rotation.x = Math.PI;   // icicles
+    }
+  } else if (theme === 'neon') {
+    const glow = c => M(c, { emissive: c, emissiveIntensity: 1.1 }), pink = 0xff5aa8, cyan = 0x5af0ff, col = [pink, cyan, 0xffc93c][i % 3];
+    if (low) {
+      // a rooftop AC unit: metal casing, fan grilles on top and a light strip along the base
+      edges(put(g, box(w, h, d), M(0x5a6478, { metalness: 0.5, roughness: 0.45 }), 0, h / 2, 0));
+      put(g, box(w + 0.05, 0.08, d + 0.05), glow(col), 0, 0.12, 0, false);
+      const n = Math.max(1, Math.round(w / 1.4));
+      for (let k = 0; k < n; k++) {
+        const x = -w / 2 + (k + 0.5) * (w / n);
+        put(g, cyl(Math.min(0.5, d * 0.32), Math.min(0.5, d * 0.32), 0.06, 16), M(0x1d2030), x, h + 0.02, 0, false);
+        for (const a of [0, Math.PI / 3, -Math.PI / 3]) put(g, box(Math.min(0.9, d * 0.6), 0.03, 0.08), M(0x8a94a8, { metalness: 0.6 }), x, h + 0.06, 0, false).rotation.y = a;
+      }
+    } else {
+      // a neon kiosk / billboard tower: dark body, glowing corner strips and a lit sign band
+      edges(put(g, box(w, h, d), M([0x241a55, 0x1a1440, 0x30206a][i % 3]), 0, h / 2, 0));
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) put(g, box(0.1, h, 0.1), glow(sx * sz > 0 ? pink : cyan), sx * (w / 2), h / 2, sz * (d / 2), false);
+      put(g, box(w + 0.1, 0.5, d + 0.1), glow(col), 0, h - 0.6, 0, false);
+      put(g, box(w + 0.3, 0.18, d + 0.3), M(0x14102a), 0, h + 0.05, 0);
+      for (let y = 0.8; y < h - 1.2; y += 0.9) for (const s of [-1, 1]) put(g, box(w * 0.7, 0.35, 0.04), M(0x9ef0ff, { emissive: 0x5ad0ff, emissiveIntensity: r() < 0.6 ? 0.8 : 0.15 }), 0, y, s * (d / 2 + 0.02), false);
     }
   } else {
     const stone = [0xd8d2c4, 0xcfc8b8, 0xe0dacb][i % 3];
@@ -200,6 +220,40 @@ const P = {
     for (const s of [-1, 1]) { const a = put(g, cyl(0.03, 0.04, 0.9, 5), M(0x6b4a32), s * 0.6, 1.5, 0, false); a.rotation.z = s * 1.1; }
     return [g, [1.1, 1.1, 2.6]];
   },
+  antenna(r) {
+    const g = new THREE.Group(), h = 4 + r() * 2;
+    put(g, box(0.9, 0.3, 0.9), M(0x3a3f4a), 0, 0.15, 0);
+    put(g, cyl(0.06, 0.1, h, 6), M(0x8a94a8, { metalness: 0.6 }), 0, h / 2, 0);
+    for (let k = 1; k < 4; k++) put(g, box(1.4 - k * 0.3, 0.05, 0.05), M(0x8a94a8, { metalness: 0.6 }), 0, h * (0.4 + k * 0.15), 0, false);
+    put(g, sphere(0.14), M(0xff4466, { emissive: 0xff4466, emissiveIntensity: 1.5 }), 0, h + 0.1, 0, false);
+    return [g, [0.9, 0.9, h]];
+  },
+  tank(r) {
+    const g = new THREE.Group();
+    for (const [x, z] of [[-0.6, -0.6], [0.6, -0.6], [-0.6, 0.6], [0.6, 0.6]]) put(g, cyl(0.06, 0.06, 2, 6), M(0x3a3f4a), x, 1, z);
+    put(g, cyl(1.05, 1.05, 1.9, 16), M(0x8a6a4a, { roughness: 0.9 }), 0, 2.95, 0);
+    put(g, new THREE.ConeGeometry(1.15, 0.7, 16), M(0x5a4a3a), 0, 4.25, 0);
+    put(g, cyl(1.07, 1.07, 0.08, 16), M(0x5af0ff, { emissive: 0x5af0ff, emissiveIntensity: 1 }), 0, 2.2, 0, false);
+    return [g, [1.6, 1.6, 4.5]];
+  },
+  vending(r) {
+    const g = new THREE.Group(), c = [0xff5aa8, 0x5af0ff, 0xffc93c][Math.floor(r() * 3)];
+    put(g, box(1.1, 2, 0.8), M(0x2a2450), 0, 1, 0);
+    put(g, box(0.85, 1.3, 0.04), M(0xbfe8ff, { emissive: c, emissiveIntensity: 0.7 }), -0.06, 1.2, -0.41, false);
+    put(g, box(0.12, 0.5, 0.04), M(0x1d1d24), 0.43, 1, -0.41, false);
+    put(g, box(1.12, 0.12, 0.82), M(c, { emissive: c, emissiveIntensity: 1 }), 0, 1.95, 0, false);
+    return [g, [1.2, 0.9, 2]];
+  },
+  neonSign(r) {
+    const g = new THREE.Group(), c = [0xff5aa8, 0x5af0ff, 0x9b5cff, 0xffc93c][Math.floor(r() * 4)];
+    for (const s of [-1, 1]) put(g, box(0.08, 3, 0.08), M(0x2a2a32), s * 0.9, 1.5, 0);
+    put(g, box(2.1, 1, 0.12), M(0x14102a), 0, 3, 0);
+    const frame = M(c, { emissive: c, emissiveIntensity: 1.4 });
+    for (const y of [-0.42, 0.42]) put(g, box(2, 0.06, 0.14), frame, 0, 3 + y, 0, false);
+    for (const x of [-0.97, 0.97]) put(g, box(0.06, 0.9, 0.14), frame, x, 3, 0, false);
+    for (let k = 0; k < 3; k++) put(g, box(0.36, 0.42, 0.14), frame, -0.55 + k * 0.55, 3, 0, false).rotation.z = k % 2 ? 0.6 : -0.6;
+    return [g, [0.4, 0.4, 3.5]];
+  },
   firewood() {
     const g = new THREE.Group();
     for (let k = 0; k < 9; k++) {
@@ -229,6 +283,7 @@ const RECIPES = {
   canals: [['linden', 7, 0.7], ['bike', 6, 0.8], ['tulips', 6, 1.2], ['lamp', 6, 0.4], ['barrel', 5, 0.5]],
   terraces: [['pine', 6, 0.9], ['blossom', 7, 0.8], ['column', 8, 0.6], ['rock', 9, 0.8], ['stoneLantern', 6, 0.4]],
   alpine: [['snowPine', 9, 0.9], ['snowman', 4, 0.7], ['firewood', 4, 0.9], ['sled', 4, 0.9], ['lamp', 5, 0.4], ['skiRack', 2, 1.3, true], ['barrel', 3, 0.5]],
+  neon: [['neonSign', 5, 0.5], ['vending', 5, 0.8], ['antenna', 4, 0.6], ['tank', 2, 1.4, true], ['lamp', 6, 0.4], ['barrel', 4, 0.5]],
 };
 
 function segDist(px, pz, ax, az, bx, bz) {

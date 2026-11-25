@@ -1,12 +1,12 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { TUNING, HILL, CART } from './data.js?v=20261125v';
-import { buildHeroModel } from './models.js?v=20261125v';
-import { makeBox, moveBody, resolveXZ, rayBox, raySphere, rayWorld, hasLOS } from './world.js?v=20261125v';
+import { TUNING, HILL, CART } from './data.js?v=20261126a';
+import { buildHeroModel } from './models.js?v=20261126a';
+import { makeBox, moveBody, resolveXZ, rayBox, raySphere, rayWorld, hasLOS } from './world.js?v=20261126a';
 import { resetStatus, tickStatus, afterMove, takenMult, fireMult, canAct, breakInvis, isHidden, slow as applySlow, stun as applyStun, knock as applyKnock, dropBlobs,
-  dealtMult, onDealt, onHurt, onKill, mend } from './abilities.js?v=20261125v';
-import { poseHero, rubble, killFx } from './anim.js?v=20261125v';
-import { onEliminated, survivorPreMove, survivorPostMove } from './survivor.js?v=20261125v';
-import { tickVfx, tickLight, blast, sparks } from './vfx.js?v=20261125v';
+  dealtMult, onDealt, onHurt, onKill, mend } from './abilities.js?v=20261126a';
+import { poseHero, rubble, killFx } from './anim.js?v=20261126a';
+import { onEliminated, survivorPreMove, survivorPostMove } from './survivor.js?v=20261126a';
+import { tickVfx, tickLight, blast, sparks } from './vfx.js?v=20261126a';
 
 // Survivor teams are per-hero ids; anything that isn't blue reads as an enemy red.
 export const TEAM_COLOR = new Proxy({ blue: 0x2f5bff, red: 0xff5a36 }, { get: (t, k) => (k in t ? t[k] : 0xff5a36) });
@@ -319,7 +319,7 @@ function shoot(G, h, dir, muzzle, charge, replay = false) {
   let rate = w.rate;
   if (w.mode === 'ramp') {
     h.ramp = Math.min(1, (G.time - (h.lastShotT ?? -9) < 0.3 ? (h.ramp || 0) : 0) + 0.06);
-    rate = w.rate / (1 + h.ramp * 2.4);
+    rate = w.rate / (1 + h.ramp * (w.rampMax ?? 2.4));
   }
   h.fireT = rate / fireMult(h); h.lastShotT = G.time;
   const bonus = h.ambush || 1; h.ambush = 1;
@@ -515,6 +515,9 @@ function explode(G, p, owner, w, direct) {
         if (w.slow) applySlow(u, w.slow.mult, w.slow.dur);
       }
     }
+  }
+  if (w.heal && w.splash > 0) {                       // Beef Wellington's gravy: teammates in the splash get a hot top-up
+    for (const u of G.heroes) if (u.alive && u !== owner && u.team === owner.team && chestOf(u).distanceTo(p) < w.splash + 0.6) { mend(G, owner, u, w.heal); burst(G, chestOf(u), 0xffd27a, 0.5); }
   }
   if (w.mode === 'cluster' && !w.child) {           // firework shell pops into sparklers
     const cols = [0xff4fa3, 0xffd23c, 0x7af0ff];

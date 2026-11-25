@@ -1,5 +1,5 @@
 // Maps and tuning shared across the game. The hero roster lives in heroes.js.
-export { HEROES } from './heroes.js?v=20261125v';
+export { HEROES } from './heroes.js?v=20261126a';
 
 
 export const DIFFICULTY = {
@@ -86,6 +86,23 @@ export const MAPS = [
     blocks: [
       [0, -14, 4, 1.6, 1.2], [-15, -2, 3, 5, 3.2], [14, -10, 2.4, 2.4, 1.3], [0, -42, 3, 3, 3],
       [-24, -24, 4, 1.5, 1.2], [22, -24, 2, 6, 3], [8, -30, 2.2, 2.2, 2.4], [-20, -40, 3, 3, 2.6],
+    ],
+  },
+  {
+    id: 'neon', theme: 'neon', name: 'Neon Heights', lanesLabel: '2 weaving lanes · night rooftops',
+    desc: 'A skyscraper rooftop above the glowing city at night. Two lanes weave around a giant billboard in the middle, with AC units and kiosks to fight over.',
+    W: 28, L: 62, accent: 0xff5aa8,
+    hills: [[0, -12], [-14, -18], [0, 12], [14, 18]], duel: [0, -24],
+    // each lane swings out to the edge, pinches in past the billboard, then swings out again
+    lanes: [
+      [[0, -50], [-16, -34], [-6, 0], [-16, 34], [0, 50]],
+      [[0, -50], [16, -34], [6, 0], [16, 34], [0, 50]],
+    ],
+    towers: [[-19.5, -32], [19.5, -32]],
+    blocks: [
+      [0, 0, 3, 6, 4.5], [0, -20, 6, 1.6, 1.2], [-3, -24, 2.4, 2.4, 1.3], [2, -12, 2.4, 2.4, 1.3],
+      [-24, -18, 2, 6, 3], [24, -22, 4, 1.5, 1.2], [-22, -4, 3, 3, 2], [13, -2, 2.4, 2.4, 1.3],
+      [-22, -42, 3, 3, 2.6], [22, -44, 4, 3, 2.6],
     ],
   },
 ];

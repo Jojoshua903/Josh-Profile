@@ -3,7 +3,7 @@
 // win / lose: the results screen · kill: extra elimination lines · rivals: a taunt for knocking out
 // that hero · friends: a hello when that hero spawns on your team · likes, dislikes, fact: Story tab
 
-import { HEROES } from './heroes.js?v=20261125v';
+import { HEROES } from './heroes.js?v=20261126a';
 
 const P = {
   vanguard: {
@@ -152,6 +152,27 @@ const P = {
     thanks: ['Grazie! Solid work!', 'You’re a load-bearing friend.'], win: ['Built to last!', 'Job done. Lunch break.'], lose: ['Back to the drawing board.', 'Condemned.'],
     kill: ['Bricked.', 'Flattened.'], rivals: { mole: 'You dug under my foundations AGAIN, Digby!' }, friends: { chipmunk: 'Pip! Want to see my new wall?' },
     likes: 'Straight lines, big lunches, a nice right angle', dislikes: 'Rain on wet cement, wobbly tables, blueprints', fact: 'Once built a sandcastle so big the city made him get a permit.',
+  },
+  wellington: {
+    select: ['Beef Wellington, at your service.', 'Dinner is served. Do keep up.', 'One does not simply skip the main course.'],
+    death: ['I have been... overcooked...', 'Tell the chef... I was delicious...'], lowhp: ['My crust is cracking!', 'I am NOT a snack!'],
+    thanks: ['Most kind, old sport.', 'A true gentleman!'], win: ['Compliments to the team!', 'A five-star performance.'], lose: ['Sent back to the kitchen.', 'Rather a soggy bottom, that.'],
+    kill: ['Served cold.', 'Off the menu.'], rivals: { microwave: 'You will NOT reheat me, you humming box!' }, friends: { medic: 'Doctor Quist! Do take a slice.' },
+    likes: 'Fine gravy, good manners, a hot oven', dislikes: 'Microwaves, ketchup, people who cut him in half', fact: 'Was knighted for services to Sunday lunch. Has never once been eaten.',
+  },
+  shepherd: {
+    select: ['Crook. Let’s round them up.', 'Come by, lambs.', 'Forty years of herding. You lot are easy.'],
+    death: ['Ach... the wolves got me...', 'Mind the flock...'], lowhp: ['I’m being fleeced here!', 'Need a hand, lads!'],
+    thanks: ['Cheers, lad!', 'Good dog. Er, good friend.'], win: ['All safely in the pen!', 'Not a sheep lost.'], lose: ['The flock’s scattered.', 'Back to the hills.'],
+    kill: ['Sheared.', 'Counted.'], rivals: { mirage: 'I can count, lass. There’s only ONE of you.' }, friends: { thicket: 'Hazel! Lovely grazing you’ve grown.' },
+    likes: 'Wet hills, warm tea, a well-behaved collie', dislikes: 'Wolves, fences left open, being called "Bo Peep"', fact: 'Knows all four hundred of his sheep by name. They do not know his.',
+  },
+  microwave: {
+    select: ['*hum* ... DING.', 'The Microwave. Online.', '*low hum intensifies*'],
+    death: ['*sad ding*', 'Error... E7...'], lowhp: ['*worried humming*', 'Door... seal... failing...'],
+    thanks: ['*grateful ding*', 'Ding ding!'], win: ['DING DING DING!', '*victorious humming*'], lose: ['*defeated hum*', 'Cycle... interrupted.'],
+    kill: ['Thirty seconds. Done.', 'DING.'], rivals: { wellington: 'Thirty seconds on high, pastry.' }, friends: { builder: 'Bruno! Your lunch is ready.' },
+    likes: 'Lasagne, the number 1000, a good long hum', dislikes: 'Forks, tin foil, being unplugged', fact: 'Has reheated the same lasagne 4,112 times. It refuses to throw it away.',
   },
 };
 

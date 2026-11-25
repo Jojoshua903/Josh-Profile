@@ -1,8 +1,8 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { buildHeroModel } from './models.js?v=20261125v';
-import { buildWorld } from './world.js?v=20261125v';
-import { createStructure } from './units.js?v=20261125v';
-import { HEROES } from './heroes.js?v=20261125v';
+import { buildHeroModel } from './models.js?v=20261126a';
+import { buildWorld } from './world.js?v=20261126a';
+import { createStructure } from './units.js?v=20261126a';
+import { HEROES } from './heroes.js?v=20261126a';
 
 // Menu artwork, generated once and cached as data URLs: hero splash art (themed
 // painted backdrop + a posed render of the model), headshot tiles, and map previews.
@@ -43,6 +43,9 @@ const POSE = {
   medic: { turn: 0.45, arm: -1.2, lean: -0.03, cam: [-1.2, 0.8, -3.5] },
   spark: { turn: -0.5, arm: -2.0, lean: 0.06, cam: [-1.2, 0.8, -3.5], hop: 0.1 },
   builder: { turn: 0.4, arm: -1.1, lean: 0.05, cam: [-1.5, 0.6, -3.9] },
+  wellington: { turn: 0.45, arm: -1.2, lean: -0.04, cam: [-1.4, 0.55, -3.8] },
+  shepherd: { turn: -0.45, arm: -1.3, lean: 0.04, cam: [-1.2, 0.8, -3.5] },
+  microwave: { turn: 0.5, arm: -1.1, lean: 0, cam: [-1.5, 0.45, -3.8] },
 };
 
 function heroScene(def, t = 0.6) {
@@ -279,6 +282,32 @@ const MOTIF = {
     g.strokeStyle = rgba(p.main, 0.8); g.lineWidth = 10; g.beginPath(); g.moveTo(w * 0.85, h * 0.55); g.lineTo(w * 0.85, h * 0.05); g.lineTo(w * 0.25, h * 0.05); g.stroke();
     g.lineWidth = 3; g.beginPath(); g.moveTo(w * 0.4, h * 0.05); g.lineTo(w * 0.4, h * 0.2); g.stroke();
   },
+  wellington(g, w, h, p) {                     // a candlelit banquet: tablecloth check, candles and silver cloches
+    g.fillStyle = rgba(0x8a3a2a, 0.35);
+    for (let y = 0; y < h; y += 60) for (let x = (y / 60 % 2) * 60; x < w; x += 120) g.fillRect(x, y, 60, 60);
+    for (let i = 0; i < 6; i++) {
+      const x = w * (0.1 + i * 0.16), y = h * 0.62 + (i % 2) * 30;
+      g.fillStyle = rgba(0xfff6e0, 0.85); g.fillRect(x - 6, y - 60, 12, 60);
+      g.fillStyle = rgba(0xffc93c, 0.9); g.beginPath(); g.ellipse(x, y - 72, 7, 13, 0, 0, 7); g.fill();
+      g.fillStyle = rgba(0xffd27a, 0.25); g.beginPath(); g.arc(x, y - 70, 40, 0, 7); g.fill();
+    }
+    for (const [x, r] of [[w * 0.2, 70], [w * 0.8, 60]]) { g.fillStyle = rgba(0xd8dee8, 0.7); g.beginPath(); g.arc(x, h * 0.92, r, Math.PI, 0); g.fill(); g.fillRect(x - r - 10, h * 0.92, r * 2 + 20, 10); }
+  },
+  shepherd(g, w, h, p) {                       // rolling highland hills, a stone wall and grazing sheep
+    [[0x5f8f45, 0.55], [0x4a7a3a, 0.68], [0x3a6a2a, 0.82]].forEach(([c, y], i) => { g.fillStyle = rgba(c, 0.85); g.beginPath(); g.moveTo(0, h * y); for (let x = 0; x <= w; x += 30) g.lineTo(x, h * y - Math.sin(x * 0.006 + i * 2) * 40); g.lineTo(w, h); g.lineTo(0, h); g.fill(); });
+    g.fillStyle = rgba(0x9a9488, 0.85);
+    for (let x = 0; x < w; x += 26) g.fillRect(x, h * 0.74 + Math.sin(x) * 3, 22, 14);
+    for (let i = 0; i < 9; i++) { const x = Math.random() * w, y = h * (0.6 + Math.random() * 0.35); g.fillStyle = rgba(0xf6f2ea, 0.95); g.beginPath(); g.ellipse(x, y, 22, 15, 0, 0, 7); g.fill(); g.fillStyle = rgba(0x2a2a32, 0.95); g.beginPath(); g.ellipse(x - 22, y - 4, 8, 7, 0, 0, 7); g.fill(); }
+  },
+  microwave(g, w, h, p) {                      // a kitchen: wall tiles, a glowing turntable and steam
+    g.strokeStyle = rgba(0xffffff, 0.2); g.lineWidth = 3;
+    for (let x = 0; x < w; x += 40) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); } for (let y = 0; y < h; y += 40) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); }
+    const gr = g.createRadialGradient(w / 2, h * 0.55, 10, w / 2, h * 0.55, w * 0.5); gr.addColorStop(0, rgba(0xffd27a, 0.6)); gr.addColorStop(1, rgba(0xffd27a, 0));
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    g.strokeStyle = rgba(0xffffff, 0.45); g.lineWidth = 8; g.beginPath(); g.ellipse(w / 2, h * 0.82, w * 0.3, 30, 0, 0, 7); g.stroke();
+    for (let i = 0; i < 5; i++) { const x = w * (0.2 + i * 0.15); g.strokeStyle = rgba(0xffffff, 0.35); g.lineWidth = 6; g.beginPath(); g.moveTo(x, h * 0.6); g.bezierCurveTo(x + 30, h * 0.5, x - 30, h * 0.4, x, h * 0.3); g.stroke(); }
+    g.fillStyle = rgba(0x5af0ff, 0.85); g.font = 'bold 64px monospace'; g.fillText('12:00', w * 0.62, h * 0.14);
+  },
   mole(g, w, h, p) {                           // underground: dirt layers, tunnels, roots and buried rocks
     const bands = [0x7a5a3a, 0x6b4a30, 0x5a3c26, 0x4a301e];
     bands.forEach((c, i) => { g.fillStyle = rgba(c, 0.85); g.beginPath(); g.moveTo(0, h * (0.2 + i * 0.22)); for (let x = 0; x <= w; x += 40) g.lineTo(x, h * (0.2 + i * 0.22) + Math.sin(x * 0.02 + i) * 12); g.lineTo(w, h); g.lineTo(0, h); g.fill(); });
@@ -379,7 +408,7 @@ export function mapArt(map, W = 640, H = 1000) {
     m.root.traverse(o => { if (o.isMesh) o.castShadow = true; });
     sc.add(m.root);
   });
-  const cam = new THREE.PerspectiveCamera(58, W / H, 0.5, 900);
+  const cam = new THREE.PerspectiveCamera(W > H ? 46 : 58, W / H, 0.5, 900);
   cam.position.set(map.W * 0.4, 18, -map.L + 4); cam.lookAt(-map.W * 0.05, 0, -map.L * 0.15);
   const r = renderer();
   r.setSize(W, H, false); r.setClearColor(0xffffff, 1);

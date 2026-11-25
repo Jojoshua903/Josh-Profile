@@ -1,6 +1,6 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { cfg } from './settings.js?v=20261125v';
-import { bake } from './rig.js?v=20261125v';
+import { cfg } from './settings.js?v=20261126a';
+import { bake } from './rig.js?v=20261126a';
 
 // Stage atmosphere: sky, sun, fill light, haze, image-based lighting and set dressing.
 // Each stage has its own time of day; Maxx Island (Survivor) gets a tropical midday.
@@ -25,6 +25,11 @@ export const LOOK = {
     top: 0x4a66c4, horizon: 0xffbfa0, bottom: 0xd7c6d6, sun: 0xffb98a, sunI: 2.8, sunPos: [-50, 26, 60],
     hemiSky: 0xeef0ff, hemiGround: 0xb9c6dd, hemiI: 0.95, fill: 0x9db8ff, fillI: 0.6, fog: 0xe6dfec, fogD: 0.0046, env: 0.8,
     motes: 0xffffff, shafts: 0.06, clouds: 0xffe6dc,
+  },
+  neon: {      // Neon Heights: night over the city, moonlight with pink and cyan neon bounce
+    top: 0x0b0d2e, horizon: 0xd44a8a, bottom: 0x2a1650, sun: 0xd8d4ff, sunI: 1.7, sunPos: [-40, 40, 80],
+    hemiSky: 0x9a8aff, hemiGround: 0x6a2a7a, hemiI: 1.15, fill: 0xff5aa8, fillI: 0.8, fog: 0x3a1a5a, fogD: 0.0055, env: 0.65,
+    motes: 0xff9ad8, shafts: 0, clouds: 0x2a1a4a, cloudCol: 0x4a3a7a, night: true,
   },
   island: {     // Survivor: hot tropical midday
     top: 0x2a84e4, horizon: 0xbfe8ff, bottom: 0x9fd6e8, sun: 0xfff4dc, sunI: 3.3, sunPos: [30, 80, 20],
@@ -78,7 +83,7 @@ export function buildStageSky(scene, map) {
   scene.add(sun);
   const fill = new THREE.DirectionalLight(L.fill, L.fillI); fill.position.set(-L.sunPos[0], 30, -L.sunPos[2]); scene.add(fill);
   // puffy clouds lit by the sun colour
-  const cloudMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: L.clouds, emissiveIntensity: 0.35, roughness: 1, transparent: true, opacity: 0.95, fog: false });
+  const cloudMat = new THREE.MeshStandardMaterial({ color: L.cloudCol ?? 0xffffff, emissive: L.clouds, emissiveIntensity: 0.35, roughness: 1, transparent: true, opacity: 0.95, fog: false });
   const puff = new THREE.SphereGeometry(1, 14, 10), clouds = [];
   for (let i = 0; i < 12; i++) {
     const c = new THREE.Group();
@@ -182,6 +187,26 @@ function skyLanterns(scene, map, n = 24) {
   return (dt, t) => ls.forEach(m => { m.position.y += m.userData.v * dt; m.position.x += Math.sin(t * 0.4 + m.userData.p) * dt * 0.3; if (m.position.y > 55) m.position.y = 3; });
 }
 
+// Night stages: a dome of twinkling stars and searchlights sweeping up from the city.
+function nightSky(scene, map) {
+  const pts = [];
+  for (let i = 0; i < 900; i++) { const a = Math.random() * Math.PI * 2, e = 0.15 + Math.random() * 1.3; pts.push(Math.cos(a) * Math.cos(e) * 340, Math.sin(e) * 340, Math.sin(a) * Math.cos(e) * 340); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+  const stars = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false, transparent: true, fog: false, depthWrite: false }));
+  scene.add(stars);
+  const beams = [];
+  for (let i = 0; i < 5; i++) {
+    const m = new THREE.Mesh(new THREE.ConeGeometry(7, 160, 16, 1, true), new THREE.MeshBasicMaterial({ color: [0x9fd0ff, 0xff9ad8, 0xfff1c9][i % 3], transparent: true, opacity: 0.08, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false }));
+    m.geometry.translate(0, -80, 0);                  // pivot at the tip so the cone fans upward from the base
+    const a = i / 5 * Math.PI * 2 + 0.4, d = 140 + (i % 2) * 40;
+    m.position.set(Math.cos(a) * d, 0, Math.sin(a) * d); m.userData.p = i * 1.3; scene.add(m); beams.push(m);
+  }
+  return (dt, t) => {
+    stars.material.opacity = 0.75 + Math.sin(t * 1.7) * 0.2;
+    beams.forEach(b => { b.rotation.z = Math.PI + Math.sin(t * 0.3 + b.userData.p) * 0.45; b.rotation.x = Math.cos(t * 0.23 + b.userData.p) * 0.3; });
+  };
+}
+
 export function buildDressing(scene, map) {
   const L = lookFor(map), ticks = [];
   ticks.push(motes(scene, map, L.motes));
@@ -190,6 +215,8 @@ export function buildDressing(scene, map) {
   if (map.id === 'plaza') ticks.push(festoons(scene, map, [14, 34], [0xffe1a0, 0xffc27a, 0xfff3d6]));
   if (map.id === 'canals') { ticks.push(skyLanterns(scene, map)); ticks.push(festoons(scene, map, [10], [0xffe1a0, 0xff9ab8, 0x9fe0ff])); }
   if (map.id === 'frostpeak') ticks.push(festoons(scene, map, [20, 40], [0xffd27a, 0xff7a5a, 0x8fe08a, 0x9fd0ff]));
+  if (L.night) ticks.push(nightSky(scene, map));
+  if (map.id === 'neon') ticks.push(festoons(scene, map, [16, 36], [0xff5aa8, 0x5af0ff, 0xffc93c, 0x9b5cff]));
   return (dt, t) => ticks.forEach(f => f(dt, t));
 }
 

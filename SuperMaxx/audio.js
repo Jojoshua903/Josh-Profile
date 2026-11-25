@@ -1,10 +1,10 @@
-import { cfg } from './settings.js?v=20261125v';
+import { cfg } from './settings.js?v=20261126a';
 
 // Shared Web Audio graph: everything is synthesised, nothing is loaded.
 // master -> compressor -> speakers, with separate effect and music buses under it.
 
 export let actx = null, noiseBuf = null, sfxBus = null, musicBus = null, impulse = null;
-let master = null;
+let master = null, comp = null;
 const ready = [];
 export const onAudioReady = fn => { if (actx) fn(); else ready.push(fn); };
 
@@ -18,13 +18,20 @@ export function initAudio() {
   const len = actx.sampleRate * 2.4;
   impulse = actx.createBuffer(2, len, actx.sampleRate);
   for (let c = 0; c < 2; c++) { const ch = impulse.getChannelData(c); for (let i = 0; i < len; i++) ch[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3); }
-  const comp = actx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4;
+  comp = actx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4;
   master = actx.createGain(); master.connect(comp).connect(actx.destination);
   sfxBus = actx.createGain(); sfxBus.connect(master);
   musicBus = actx.createGain(); musicBus.connect(master);
   applyVolume();
   ready.splice(0).forEach(fn => fn());
 }
+// A copy of everything the game plays, for recording clips. Returns { stream, stop } or null.
+export function audioTap() {
+  if (!actx || !comp || !actx.createMediaStreamDestination) return null;
+  const d = actx.createMediaStreamDestination(); comp.connect(d);
+  return { stream: d.stream, stop: () => { try { comp.disconnect(d); } catch {} } };
+}
+
 export function applyVolume() {
   if (!actx) return;
   master.gain.value = cfg.volume;
@@ -65,6 +72,17 @@ function hooves(n, v, at = 0) {                      // gallop: da-da-DUM
 
 // ---------- one sound per ability, by ability id. v = loudness (1 = your own cast) ----------
 export const ABIL_SFX = {
+  // Beef Wellington
+  roast: v => { tone(392, 0.12, 'triangle', 0.05 * v, 1); noise(0.2, 0.06 * v, 1200, 0.3); [523, 659].forEach((f, i) => tone(f, 0.2, 'sine', 0.04 * v, 1, 0.4 + i * 0.1)); },
+  crust: v => { noise(0.3, 0.06 * v, 3000, 0, { type: 'bandpass', to: 1500, q: 1 }); tone(440, 0.3, 'sine', 0.05 * v, 1.3); },
+  banquet: v => { for (let i = 0; i < 4; i++) tone(2093, 0.12, 'sine', 0.04 * v, 1, i * 0.18); [392, 523, 659, 784].forEach((f, i) => tone(f, 0.5, 'triangle', 0.05 * v, 1, 0.8 + i * 0.1)); },
+  // Crook
+  pen: v => { for (let i = 0; i < 4; i++) noise(0.06, 0.1 * v, 600, 0.3 + i * 0.08, { type: 'lowpass', to: 400 }); tone(520, 0.2, 'triangle', 0.04 * v, 1.2); },
+  counting: v => { for (let i = 0; i < 3; i++) { tone(330, 0.35, 'sawtooth', 0.04 * v, 1.04, i * 0.4); tone(332, 0.35, 'sawtooth', 0.03 * v, 0.98, i * 0.4); } },
+  // The Microwave
+  popcorn: v => { for (let i = 0; i < 10; i++) noise(0.03, 0.1 * v, 2500 + Math.random() * 2000, 0.35 + Math.random() * 0.6); },
+  reheat: v => { tone(110, 3, 'sawtooth', 0.03 * v, 1); noise(0.1, 0.08 * v, 900); },
+  meltdown: v => { tone(100, 1.2, 'sawtooth', 0.06 * v, 3); tone(1568, 0.6, 'sine', 0.08 * v, 1, 1.2); tone(1568, 0.6, 'sine', 0.06 * v, 1, 1.5); noise(0.5, 0.12 * v, 500, 1.2); },
   // Stitch
   medbomb: v => { tone(660, 0.12, 'sine', 0.05 * v, 1.2); noise(0.25, 0.08 * v, 2000, 0.3, { type: 'bandpass', to: 900, q: 1.5 }); [784, 988, 1175].forEach((f, i) => tone(f, 0.18, 'sine', 0.04 * v, 1, 0.35 + i * 0.06)); },
   lifeline: v => { tone(523, 0.4, 'sine', 0.05 * v, 1.5); tone(1046, 0.3, 'triangle', 0.03 * v, 1, 0.1); },

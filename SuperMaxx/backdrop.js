@@ -1,5 +1,5 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { M, put, mergeStatic } from './scenery.js?v=20261125v';
+import { M, put, mergeStatic } from './scenery.js?v=20261126a';
 
 // Buildings and far scenery around the arena. Everything sits outside the playable
 // rectangle (|x| > W, |z| > L) so it never affects collision.
@@ -267,10 +267,77 @@ function alpineFar(scene, map, r) {
   return dt => chairs.forEach(c => { c.userData.u = (c.userData.u + dt * 0.01) % 1; c.position.lerpVectors(pts[0], pts[1], c.userData.u); });
 }
 
+// ---------- Neon Heights: night rooftops over the glowing city ----------
+let winTex = null;
+function windowTex() {                       // the same lit-window pattern as the main menu skyline
+  if (winTex) return winTex;
+  const cv = document.createElement('canvas'); cv.width = 64; cv.height = 128;
+  const g = cv.getContext('2d');
+  g.fillStyle = '#000'; g.fillRect(0, 0, 64, 128);
+  for (let y = 6; y < 124; y += 10) for (let x = 5; x < 60; x += 10) { const v = Math.random(); g.fillStyle = v < 0.42 ? (v < 0.12 ? '#9ef0ff' : '#ffd88a') : '#1a1538'; g.fillRect(x, y, 5, 6); }
+  winTex = new THREE.CanvasTexture(cv); winTex.colorSpace = THREE.SRGBColorSpace; winTex.wrapS = winTex.wrapT = THREE.RepeatWrapping;
+  return winTex;
+}
+const towerMats = {};
+function towerMat(c, rx, ry) {
+  const k = `${c}:${rx}:${ry}`;
+  if (!towerMats[k]) { const t = windowTex().clone(); t.needsUpdate = true; t.repeat.set(rx, ry); towerMats[k] = new THREE.MeshLambertMaterial({ color: c, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 0.9 }); }
+  return towerMats[k];
+}
+// the rooftop edge: a parapet wall with neon trim, and the next building over rising behind it
+function neonRoof(w, r) {
+  const g = new THREE.Group(), neon = [0xff5aa8, 0x5af0ff, 0x9b5cff, 0xffc93c][Math.floor(r() * 4)];
+  put(g, box(w, 1.3, 0.6), M(0x2a2450), 0, 0.65, 0.3);
+  put(g, box(w, 0.1, 0.62), M(neon, { emissive: neon, emissiveIntensity: 1.2 }), 0, 1.32, 0.3, false);
+  const h = 6 + r() * 18, d = 7, fl = Math.max(1, Math.round(h / 3)), cols = Math.max(1, Math.round(w / 1.6));
+  put(g, box(w - 0.4, h, d), towerMat([0x1a1440, 0x241a55, 0x30206a][Math.floor(r() * 3)], cols / 6, fl / 12), 0, h / 2 - 2, d / 2 + 2.5);
+  if (r() < 0.4) put(g, box(w * 0.6, 1.4, 0.15), M(neon, { emissive: neon, emissiveIntensity: 1.3 }), 0, h - 0.5, 2.4, false);   // a lit sign on the roofline
+  return g;
+}
+function neonFar(scene, map, r) {
+  const g = new THREE.Group();
+  // three rings of towers, taller and denser further out
+  for (const [n, d0, spread, hMin, hMax, c] of [[40, 50, 30, 18, 50, 0x30206a], [50, 95, 50, 30, 90, 0x241a55], [44, 170, 70, 50, 140, 0x1a1440]]) {
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + r() * 0.1, d = d0 + r() * spread, w = 6 + r() * 10, h = hMin + r() * (hMax - hMin);
+      const x = Math.cos(a) * (d + map.W), z = Math.sin(a) * (d + map.L * 0.8);
+      put(g, box(w, h, w), towerMat(c, Math.round(w / 3) / 6, Math.round(h / 4) / 12), x, h / 2 - 6, z, false);
+    }
+  }
+  scene.add(g); mergeStatic(g);
+  // neon billboards on the nearer towers, and red aircraft lights that blink
+  const signs = [], lights = [];
+  const words = [['MAXX', '#ff5aa8', '#ffc93c'], ['GG!', '#5af0ff', '#9b5cff'], ['NOODLES', '#ffc93c', '#ff5aa8'], ['24/7', '#9b5cff', '#5af0ff'], ['SUPER', '#ff5aa8', '#5af0ff'], ['ARCADE', '#5af0ff', '#ffc93c']];
+  for (let i = 0; i < 10; i++) {
+    const [text, c1, c2] = words[i % words.length];
+    const cv = document.createElement('canvas'); cv.width = 512; cv.height = 160;
+    const c = cv.getContext('2d');
+    c.fillStyle = 'rgba(16,10,40,.9)'; c.fillRect(0, 0, 512, 160);
+    c.strokeStyle = c2; c.lineWidth = 10; c.strokeRect(8, 8, 496, 144);
+    c.font = 'italic 900 88px Futura, "Avenir Next", "Trebuchet MS", sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.shadowColor = c1; c.shadowBlur = 24; c.fillStyle = c1; c.fillText(text, 256, 84);
+    const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(20, 6.25), new THREE.MeshBasicMaterial({ map: t, fog: false, side: THREE.DoubleSide, transparent: true }));
+    const a = (i / 10) * Math.PI * 2 + 0.3, d = 70 + r() * 30;
+    m.position.set(Math.cos(a) * (d + map.W), 22 + r() * 22, Math.sin(a) * (d + map.L * 0.8)); m.lookAt(0, m.position.y * 0.6, 0);
+    m.userData.p = r() * 9; scene.add(m); signs.push(m);
+  }
+  for (let i = 0; i < 26; i++) {
+    const l = new THREE.Mesh(new THREE.SphereGeometry(0.7, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff4466, fog: false, transparent: true }));
+    const a = r() * Math.PI * 2, d = 90 + r() * 120;
+    l.position.set(Math.cos(a) * (d + map.W), 40 + r() * 80, Math.sin(a) * (d + map.L)); l.userData.p = r() * 6; scene.add(l); lights.push(l);
+  }
+  return (dt, t) => {
+    for (const m of signs) m.material.opacity = Math.sin(t * 9 + m.userData.p) > -0.96 ? 1 : 0.35;   // the odd flicker
+    for (const l of lights) l.material.opacity = Math.sin(t * 3 + l.userData.p) > 0.6 ? 1 : 0.12;
+  };
+}
+
 export function buildBackdrop(scene, map, theme, r) {
   const g = new THREE.Group(); scene.add(g);
   if (theme === 'plaza') { ring(map, r, [5, 9], plazaHouse, g); mergeStatic(g); return plazaFar(scene, map, r); }
   if (theme === 'canals') { ring(map, r, [4, 6.5], canalHouse, g); mergeStatic(g); return canalsFar(scene, map, r); }
   if (theme === 'alpine') { ring(map, r, [5, 8], chalet, g); mergeStatic(g); return alpineFar(scene, map, r); }
+  if (theme === 'neon') { ring(map, r, [4, 8], neonRoof, g); mergeStatic(g); return neonFar(scene, map, r); }
   ring(map, r, [4, 8], ruinWall, g); mergeStatic(g); return terracesFar(scene, map, r);
 }

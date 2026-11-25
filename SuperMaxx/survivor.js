@@ -1,7 +1,7 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { SURVIVOR } from './data.js?v=20261125v';
-import { mirror, groundAt, resolveXZ } from './world.js?v=20261125v';
-import { damage, setBar, burst, ring, chestOf } from './units.js?v=20261125v';
+import { SURVIVOR } from './data.js?v=20261126a';
+import { mirror, groundAt, resolveXZ } from './world.js?v=20261126a';
+import { damage, setBar, burst, ring, chestOf } from './units.js?v=20261126a';
 
 // Survivor: free-for-all battle royale. Sky drop with gliders, loot on the ground,
 // a storm that closes in phase by phase, no respawns, last hero standing wins.

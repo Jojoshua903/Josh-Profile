@@ -1,4 +1,4 @@
-import { addTokens } from './slots.js?v=20261125v';
+import { addTokens } from './slots.js?v=20261126a';
 
 // Hero mastery: every hero earns its own XP from the matches you play with it.
 // Ten levels, four ranks. Rank shows as a badge on the hero tile and in the hero panel;

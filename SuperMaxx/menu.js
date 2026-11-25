@@ -1,18 +1,19 @@
-import { LOOK, applyEnvironment } from './stage.js?v=20261125v';
-import { masteryOf } from './mastery.js?v=20261125v';
+import { LOOK, applyEnvironment } from './stage.js?v=20261126a';
+import { masteryOf } from './mastery.js?v=20261126a';
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { HEROES, ARCHETYPES, archOf } from './heroes.js?v=20261125v';
-import './personality.js?v=20261125v';
-import { MAPS, DIFFICULTY } from './data.js?v=20261125v';
-import { THEMES } from './scenery.js?v=20261125v';
-import { cfg, save, resetSettings, QUALITY } from './settings.js?v=20261125v';
-import { splash, headshot, mapArt } from './portraits.js?v=20261125v';
-import { initOnline, enterOnline } from './online.js?v=20261125v';
-import { enterCloset } from './closet.js?v=20261125v';
-import { enterSlots } from './slotmachine.js?v=20261125v';
-import { tokens as slotTokens } from './slots.js?v=20261125v';
+import { HEROES, ARCHETYPES, archOf } from './heroes.js?v=20261126a';
+import './personality.js?v=20261126a';
+import { MAPS, DIFFICULTY } from './data.js?v=20261126a';
+import { THEMES } from './scenery.js?v=20261126a';
+import { cfg, save, resetSettings, QUALITY } from './settings.js?v=20261126a';
+import { splash, headshot, mapArt } from './portraits.js?v=20261126a';
+import { initOnline, enterOnline } from './online.js?v=20261126a';
+import { enterCloset } from './closet.js?v=20261126a';
+import { enterSlots } from './slotmachine.js?v=20261126a';
+import { tokens as slotTokens } from './slots.js?v=20261126a';
+import { CONTRACTS, contractOf, taskFrac, taskDone, statOf, tasksDone, openContracts } from './contracts.js?v=20261126a';
 import { SEASON, TRACK, MAX_TIER, passXp, tierProgress, heroOwned, heroTier, skinOwned, skinTier, skinsFor, dressed, equip, rewardInfo,
-  COS_TYPES, cosById, cosOwned, equippedCos, equipCos, cosArt, lockShort, lockLong, isSlotItem } from './pass.js?v=20261125v';
+  COS_TYPES, cosById, cosOwned, equippedCos, equipCos, cosArt, lockShort, lockLong, isSlotItem, isContractHero } from './pass.js?v=20261126a';
 
 // Front end: main menu → roster select → stage select → match. Settings overlay on top.
 
@@ -166,10 +167,11 @@ function frameShowcase(renderer, dt) {
 // ---------- screens ----------
 function go(name) {
   screen = name;
-  for (const s of ['main', 'roster', 'stage', 'pass', 'online', 'closet', 'slots']) $('scr-' + s).classList.toggle('on', s === name);
+  for (const s of ['main', 'roster', 'stage', 'pass', 'online', 'closet', 'slots', 'contracts']) $('scr-' + s).classList.toggle('on', s === name);
   $('front').classList.remove('hidden');
-  if (name === 'main') { refreshPassCard(); $('modeTut')?.classList.toggle('fresh', !cfg.tutorialDone); const t = slotTokens(); $('mmTok').textContent = t || ''; $('mmTok').classList.toggle('on', t > 0); }
+  if (name === 'main') { refreshPassCard(); $('modeTut')?.classList.toggle('fresh', !cfg.tutorialDone); const t = slotTokens(); $('mmTok').textContent = t || ''; $('mmTok').classList.toggle('on', t > 0); const o = openContracts(); $('mmCt').textContent = o || ''; $('mmCt').classList.toggle('on', o > 0); }
   if (name === 'slots') enterSlots();
+  if (name === 'contracts') enterContracts();
   if (name === 'roster') { enterRoster(); requestAnimationFrame(fitKit); }
   if (name === 'stage') enterStage();
   if (name === 'pass') enterPass();
@@ -250,7 +252,7 @@ function refreshTileLock(id) {
   t.classList.toggle('locked', !own);
   t.querySelector('.lock')?.remove(); t.querySelector('.newb')?.remove();
   if (!own) t.insertAdjacentHTML('beforeend', `<span class="lock">🔒 ${lockShort(id)}</span>`);
-  else if (heroTier(id) || isSlotItem(id)) t.insertAdjacentHTML('beforeend', '<span class="newb">NEW</span>');
+  else if (heroTier(id) || isSlotItem(id) || isContractHero(id)) t.insertAdjacentHTML('beforeend', '<span class="newb">NEW</span>');
   // mastery: level badge, gold and diamond frames
   const m = masteryOf(id);
   t.querySelector('.mst')?.remove();
@@ -318,7 +320,7 @@ function showHero(h, instant) {
     <header class="ih">
       ${own ? `<div class="mline" style="--mc:${m.rank.color}" title="${m.xp} mastery XP">
           <b>${m.rank.name} · Lv ${m.level}</b><i><em style="width:${Math.round(m.frac * 100)}%"></em></i><small>${m.max ? `🎰 ${m.into}/${m.need} to bonus token` : `${m.into}/${m.need}`}</small></div>`
-        : `<div class="hs-locked">🔒 ${lockLong(h.id)}</div>`}
+        : contractOf(h.id) ? contractCard(contractOf(h.id), true) : `<div class="hs-locked">🔒 ${lockLong(h.id)}</div>`}
       <div class="hs-stats">${STATS(h).map(([k, v, f]) => `<div><small>${k}</small><b>${v}</b><i><em style="width:${Math.round(Math.min(1, f) * 100)}%"></em></i></div>`).join('')}</div>
     </header>
     <nav class="itabs">${tab('kit', 'Abilities')}${tab('story', 'Story')}${tab('skins', `Skins <i>${ownedSkins + 1}/${skins.length + 1}</i>`)}</nav>
@@ -352,7 +354,7 @@ function showHero(h, instant) {
   setTimeout(fitKit, 450); document.fonts?.ready.then(fitKit);
   $('lockName').textContent = own ? h.callsign : 'Locked';
   $('lockIn').classList.toggle('locked', !own);
-  $('lockIn').querySelector('small').textContent = !own ? (isSlotItem(h.id) ? 'Win it at the slots' : `Reach tier ${heroTier(h.id)}`) : mode === 'survivor' ? 'Drop in as' : 'Lock in';
+  $('lockIn').querySelector('small').textContent = !own ? (isContractHero(h.id) ? 'Finish the contract' : isSlotItem(h.id) ? 'Win it at the slots' : `Reach tier ${heroTier(h.id)}`) : mode === 'survivor' ? 'Drop in as' : 'Lock in';
 }
 
 // Shrink the ability list until all four rows fit the panel: smaller text first, then two
@@ -362,9 +364,10 @@ const fitSoon = () => { cancelAnimationFrame(fitRaf); fitRaf = requestAnimationF
 function fitKit() {
   const body = $('info').querySelector('.ibody'), kit = body?.querySelector('.kit');
   if (!kit) return;
-  // measure with the rows at natural height: stretched rows always reach the bottom edge
-  kit.classList.add('fitting');
-  try { sizeKit(body, kit); } finally { kit.classList.remove('fitting'); }
+  // measure with the pane and rows at natural height: stretched ones always reach the bottom edge,
+  // which made every size look like it overflowed
+  kit.classList.add('fitting'); body.classList.add('fitting');
+  try { sizeKit(body, kit); } finally { kit.classList.remove('fitting'); body.classList.remove('fitting'); }
 }
 function sizeKit(body, kit) {
   body.classList.remove('spill');
@@ -389,6 +392,31 @@ function pickSkin(skinId) {
   refreshTile(h.id);
   showHero(h, false);
   api?.blip?.(skinId ? 900 : 700);
+}
+
+// ---------- recruitment contracts ----------
+const fmtN = n => n >= 1000 ? (n / 1000).toFixed(n % 1000 ? 1 : 0) + 'k' : String(n);
+function contractCard(c, compact) {
+  const h = HEROES.find(x => x.id === c.hero), done = tasksDone(c.hero), all = done === c.tasks.length;
+  const rows = c.tasks.map(t => {
+    const ok = taskDone(t), v = Math.min(statOf(t.stat), t.n);
+    return `<li class="${ok ? 'ok' : ''}"><i>${ok ? '✓' : ''}</i><span>${t.label}</span><b>${fmtN(v)} / ${fmtN(t.n)}</b><u><em style="width:${Math.round(taskFrac(t) * 100)}%"></em></u></li>`;
+  }).join('');
+  if (compact) return `<div class="ct-mini"><div class="ct-h"><span>📜 Recruitment contract</span><b>${done} / ${c.tasks.length}</b></div><ul class="ct-tasks">${rows}</ul></div>`;
+  return `<article class="ct-card ${all ? 'done' : ''}" style="--hc:${hex(h.color)}">
+    <div class="ct-pic"><img alt="" data-ct="${h.id}"><span class="ct-seal">${c.seal}</span>${all ? '<span class="ct-stamp">Recruited!</span>' : ''}</div>
+    <div class="ct-body">
+      <small class="ct-from">From ${c.from}</small>
+      <h3>${h.callsign}</h3><em class="ct-role">${archOf(h).icon} ${h.role}</em>
+      <p>${c.pitch}</p>
+      <ul class="ct-tasks">${rows}</ul>
+      <div class="ct-foot">${all ? `<button class="ct-go" data-play="${h.id}">Play ${h.callsign} ▸</button>` : `<span><b>${done} of ${c.tasks.length}</b> tasks done</span>`}</div>
+    </div>
+  </article>`;
+}
+function enterContracts() {
+  $('ctList').innerHTML = CONTRACTS.map(c => contractCard(c)).join('');
+  $('ctList').querySelectorAll('img[data-ct]').forEach((img, k) => setTimeout(() => { img.src = headshot(dressed(HEROES.find(x => x.id === img.dataset.ct))); }, 30 + k * 60));
 }
 
 // ---------- season pass ----------
@@ -491,7 +519,7 @@ function showStage(m, now) {
   stageT = setTimeout(() => {
     if (stageView !== m.id) return;
     img.onload = () => { if (stageView === m.id) { img.classList.add('in'); $('stgLoad').classList.remove('on'); } };
-    img.src = mapArt(m);
+    img.src = mapArt(m, 1280, 720);
   }, now ? 60 : 220);
 }
 function deployStage(id) {
@@ -571,6 +599,8 @@ export function initMenu(opts) {
   $('modeOnline').onclick = () => go('online');
   $('modeCloset').onclick = () => { api?.blip?.(760); go('closet'); };
   $('modeSlots').onclick = () => { api?.blip?.(760); go('slots'); };
+  $('modeContracts').onclick = () => { api?.blip?.(760); go('contracts'); };
+  $('ctList').onclick = e => { const b = e.target.closest('[data-play]'); if (!b) return; cfg.hero = b.dataset.play; save(); api?.blip?.(900); go('roster'); };
   initOnline({ go, screen: () => screen, blip: f => api?.blip?.(f), start: m => api.onStartOnline(m), pickHero: () => { setMode('online'); go('roster'); } });
   document.querySelectorAll('[data-open-settings]').forEach(b => { b.onclick = openSettings; });
   document.querySelectorAll('[data-back]').forEach(b => { b.onclick = () => go(b.dataset.back); });
@@ -655,6 +685,7 @@ export function initMenu(opts) {
     }
     else if (screen === 'pass' && e.code === 'Escape') go('main');
     else if (screen === 'closet' && e.code === 'Escape') go('main');
+    else if (screen === 'contracts' && e.code === 'Escape') go('main');
     else if (screen === 'slots' && e.code === 'Escape') go('main');
     else if (screen === 'main' && e.code === 'Enter') { setMode('lane'); go('roster'); }
   });
