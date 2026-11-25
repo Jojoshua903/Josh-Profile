@@ -1,11 +1,11 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { TUNING } from './data.js?v=20261125q';
-import { hasLOS } from './world.js?v=20261125q';
-import { fire, releaseFire, chargeLevel, startReload, eyeOf, chestOf, dirFrom, coreVulnerable } from './units.js?v=20261125q';
-import { ABIL, castSlot, canAct, canMove, moveMult, isHidden } from './abilities.js?v=20261125q';
-import { survivorGoal, inStorm } from './survivor.js?v=20261125q';
-import { hillGoal } from './hill.js?v=20261125q';
-import { cartGoal } from './payload.js?v=20261125q';
+import { TUNING } from './data.js?v=20261125v';
+import { hasLOS } from './world.js?v=20261125v';
+import { fire, releaseFire, chargeLevel, startReload, eyeOf, chestOf, dirFrom, coreVulnerable } from './units.js?v=20261125v';
+import { ABIL, castSlot, canAct, canMove, moveMult, isHidden } from './abilities.js?v=20261125v';
+import { survivorGoal, inStorm } from './survivor.js?v=20261125v';
+import { hillGoal } from './hill.js?v=20261125v';
+import { cartGoal } from './payload.js?v=20261125v';
 
 const v1 = new THREE.Vector3(), v2 = new THREE.Vector3();
 
@@ -192,17 +192,29 @@ export function updateBot(G, b, dt, D) {
   steer(b, wish, sprint && !tgt, jump, dt);
 
   // ---- aim & shoot ----
+  // healers and chargers aim at a teammate who needs it when no enemy hero is pressing
+  let aimAt = tgt;
+  if (def.weapon.mode === 'mend') {
+    const need = u => def.weapon.heal ? 1 - u.hp / u.maxHp : u.ult < 100 ? 0.35 : 0;
+    let pal = null, pn = 0.12;
+    for (const u of G.heroes) {
+      if (!u.alive || u === b || u.team !== b.team || u.pos.distanceTo(b.pos) > def.weapon.range * 0.8) continue;
+      const n = need(u);
+      if (n > pn && hasLOS(eyeOf(b), chestOf(u, v1), G.colliders)) { pn = n; pal = u; }
+    }
+    if (pal && (!tgt || tgt.kind !== 'hero' || pn > 0.4)) aimAt = pal;
+  }
   let wantYaw = b.yaw, wantPitch = 0;
   const eye = eyeOf(b);
-  if (tgt) {
+  if (aimAt) {
     ai.errT -= dt;
-    const dist = tgt.pos.distanceTo(b.pos);
+    const dist = aimAt.pos.distanceTo(b.pos);
     if (ai.errT <= 0) {
       ai.errT = 0.35;
       ai.err.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(D.aimErr * dist * 2);
     }
-    const aim = chestOf(tgt);
-    if (def.weapon.type === 'rocket' && tgt.vel) aim.addScaledVector(tgt.vel, dist / def.weapon.speed);
+    const aim = chestOf(aimAt);
+    if (def.weapon.type === 'rocket' && aimAt.vel) aim.addScaledVector(aimAt.vel, dist / def.weapon.speed);
     if (def.weapon.type === 'rocket') aim.y -= 0.6;
     aim.add(ai.err);
     const d = aim.sub(eye);
@@ -218,8 +230,8 @@ export function updateBot(G, b, dt, D) {
   b.pitch += Math.max(-turn, Math.min(turn, wantPitch - b.pitch));
 
   ai.seenT -= dt;
-  if (tgt && ai.seenT <= 0 && Math.abs(dy) < D.fireCone && Math.abs(wantPitch - b.pitch) < D.fireCone) {
-    const dist = tgt.pos.distanceTo(b.pos);
+  if (aimAt && (aimAt !== tgt || ai.seenT <= 0) && Math.abs(dy) < D.fireCone && Math.abs(wantPitch - b.pitch) < D.fireCone) {
+    const dist = aimAt.pos.distanceTo(b.pos);
     if (dist < def.weapon.range * 0.9) {
       const muzzle = b.gun.getWorldPosition(new THREE.Vector3());
       fire(G, b, dirFrom(b.yaw, b.pitch), muzzle);

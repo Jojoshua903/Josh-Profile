@@ -1,18 +1,18 @@
-import { LOOK, applyEnvironment } from './stage.js?v=20261125q';
-import { masteryOf } from './mastery.js?v=20261125q';
+import { LOOK, applyEnvironment } from './stage.js?v=20261125v';
+import { masteryOf } from './mastery.js?v=20261125v';
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { HEROES, ARCHETYPES, archOf } from './heroes.js?v=20261125q';
-import './personality.js?v=20261125q';
-import { MAPS, DIFFICULTY } from './data.js?v=20261125q';
-import { THEMES } from './scenery.js?v=20261125q';
-import { cfg, save, resetSettings, QUALITY } from './settings.js?v=20261125q';
-import { splash, headshot, mapArt } from './portraits.js?v=20261125q';
-import { initOnline, enterOnline } from './online.js?v=20261125q';
-import { enterCloset } from './closet.js?v=20261125q';
-import { enterSlots } from './slotmachine.js?v=20261125q';
-import { tokens as slotTokens } from './slots.js?v=20261125q';
+import { HEROES, ARCHETYPES, archOf } from './heroes.js?v=20261125v';
+import './personality.js?v=20261125v';
+import { MAPS, DIFFICULTY } from './data.js?v=20261125v';
+import { THEMES } from './scenery.js?v=20261125v';
+import { cfg, save, resetSettings, QUALITY } from './settings.js?v=20261125v';
+import { splash, headshot, mapArt } from './portraits.js?v=20261125v';
+import { initOnline, enterOnline } from './online.js?v=20261125v';
+import { enterCloset } from './closet.js?v=20261125v';
+import { enterSlots } from './slotmachine.js?v=20261125v';
+import { tokens as slotTokens } from './slots.js?v=20261125v';
 import { SEASON, TRACK, MAX_TIER, passXp, tierProgress, heroOwned, heroTier, skinOwned, skinTier, skinsFor, dressed, equip, rewardInfo,
-  COS_TYPES, cosById, cosOwned, equippedCos, equipCos, cosArt, lockShort, lockLong, isSlotItem } from './pass.js?v=20261125q';
+  COS_TYPES, cosById, cosOwned, equippedCos, equipCos, cosArt, lockShort, lockLong, isSlotItem } from './pass.js?v=20261125v';
 
 // Front end: main menu → roster select → stage select → match. Settings overlay on top.
 
@@ -178,46 +178,60 @@ function go(name) {
 }
 
 // ---------- roster ----------
-const STAT = h => [
-  ['Health', h.hp / 260], ['Speed', h.speed / 8.4],
-  ['Range', h.prefRange / 28], ['Burst', Math.min(1, (h.weapon.dmg * (h.weapon.pellets || 1)) / (h.weapon.rate * 110))],
-];
-// The tile strip is a looping carousel: 8 slots visible, the selected hero sits in slot 4,
-// and every step rotates the ring by one tile. The archetype filter narrows the ring; a short
-// list lines up in a row instead of looping.
-const VIS = 8, LEFT = 3;
-let viewId = null, infoTab = 'kit', arch = cfg.rosterArch || 'all';
-const pool = () => { const l = arch === 'all' ? HEROES : HEROES.filter(h => h.arch === arch); return l.length ? l : HEROES; };
+// Hero select is a wall of portraits, a big showcase of the pick in the middle and its details on
+// the right. The wall sorts by role (grouped by archetype), by name, or by most mastery; the
+// archetype filter narrows any of them. Arrows and the keyboard step through what's showing.
+let viewId = null, infoTab = 'kit', arch = cfg.rosterArch || 'all', sort = cfg.rosterSort || 'role';
+const SORTS = [['role', '🧩', 'Role', 'Grouped by archetype'], ['name', '🔤', 'A–Z', 'Alphabetical by callsign'], ['mastery', '🏅', 'Mastery', 'Most played first']];
+const BY_ROLE = ARCHETYPES.flatMap(a => HEROES.filter(h => h.arch === a.id));
+const orderOf = () => sort === 'name' ? [...HEROES].sort((a, b) => a.callsign.localeCompare(b.callsign))
+  : sort === 'mastery' ? [...HEROES].sort((a, b) => heroOwned(b.id) - heroOwned(a.id) || masteryOf(b.id).xp - masteryOf(a.id).xp || a.callsign.localeCompare(b.callsign))
+  : BY_ROLE;
+let ORDER = BY_ROLE;
+const pool = () => arch === 'all' ? ORDER : ORDER.filter(h => h.arch === arch);
 function renderArchBar() {
   const btn = (id, icon, name, n, color, desc) => `<button class="${arch === id ? 'on' : ''}" data-arch="${id}" style="--ac:${color}" title="${desc}"><i>${icon}</i>${name}<small>${n}</small></button>`;
-  const a = ARCHETYPES.find(x => x.id === arch);
   $('archBar').innerHTML = btn('all', '✦', 'All', HEROES.length, '#1d2340', 'Every hero')
-    + ARCHETYPES.map(x => btn(x.id, x.icon, x.name, HEROES.filter(h => h.arch === x.id).length, hex(x.color), x.desc)).join('')
-    + `<span class="ab-desc">${a ? a.desc : 'Every hero in the roster'}</span>`;
+    + ARCHETYPES.map(x => btn(x.id, x.icon, x.name, HEROES.filter(h => h.arch === x.id).length, hex(x.color), x.desc)).join('');
+  $('sortBar').innerHTML = '<span>Sort</span>' + SORTS.map(([id, icon, name, desc]) => `<button class="${sort === id ? 'on' : ''}" data-sort="${id}" title="${desc}"><i>${icon}</i>${name}</button>`).join('');
 }
 function setArch(a) {
   if (a === arch) return;
   arch = a; cfg.rosterArch = a; save();
   renderArchBar();
   const L = pool(), keep = L.find(h => h.id === viewId);
-  const next = keep || L.find(h => heroOwned(h.id)) || L[0];
-  viewId = null;                                                     // lay the new strip out without sliding
-  pickHero(next.id, true);
+  pickHero((keep || L.find(h => heroOwned(h.id)) || L[0]).id, true);
+}
+function setSort(s) {
+  if (s === sort) return;
+  sort = s; cfg.rosterSort = s; save();
+  renderArchBar(); layoutWall();
+  $('tiles').scrollTop = 0;
+  markWall();
+}
+// Tiles are made once and moved between layouts, so their headshots never re-render.
+const tileEls = {};
+function layoutWall() {
+  if (!tileEls[HEROES[0].id]) for (const h of HEROES) {
+    const d = document.createElement('div');
+    d.innerHTML = `<button class="tile" data-hero="${h.id}" style="--hc:${hex(h.color)}" title="${h.callsign} · ${h.role}"><img alt=""><b>${h.callsign}</b></button>`;
+    tileEls[h.id] = d.firstElementChild;
+  }
+  ORDER = orderOf();
+  const S = SORTS.find(x => x[0] === sort);
+  const groups = sort === 'role'
+    ? ARCHETYPES.map(a => ({ id: a.id, icon: a.icon, name: a.name, desc: a.desc, color: hex(a.color), hs: ORDER.filter(h => h.arch === a.id) }))
+    : [{ id: 'flat', icon: S[1], name: sort === 'name' ? 'A to Z' : 'Most mastery', desc: S[3], color: '#1d2340', hs: ORDER }];
+  const tiles = $('tiles');
+  tiles.innerHTML = groups.map(g => `<div class="hs-grp" data-grp="${g.id}" style="--ac:${g.color}">
+    <h6 title="${g.desc}"><i>${g.icon}</i>${g.name}<small>${g.hs.length}</small></h6><div class="hs-row"></div></div>`).join('');
+  groups.forEach((g, i) => tiles.children[i].querySelector('.hs-row').append(...g.hs.map(h => tileEls[h.id])));
 }
 function enterRoster() {
-  const tiles = $('tiles');
-  if (!tiles.children.length) {
-    tiles.innerHTML = HEROES.map((h, i) => `
-      <button class="tile" data-hero="${h.id}" style="--hc:${hex(h.color)}" title="${h.callsign} · ${h.role} · ${archOf(h).name}">
-        <span class="num">${String(i + 1).padStart(2, '0')}</span>
-        <span class="arc" title="${archOf(h).name}">${archOf(h).icon}</span>
-        <img alt="">
-        <b>${h.callsign}</b>
-      </button>`).join('');
-    // headshots render one per frame so the screen appears immediately
-    HEROES.forEach((h, i) => setTimeout(() => refreshTile(h.id), 30 + i * 40));
-    new ResizeObserver(() => layoutCarousel(0, true)).observe(tiles);
-  }
+  const first = !tileEls[HEROES[0].id];
+  layoutWall();                                                     // re-sorts too, since mastery moves after matches
+  // headshots render one per frame so the screen appears immediately
+  if (first) ORDER.forEach((h, i) => setTimeout(() => refreshTile(h.id), 30 + i * 40));
   for (const h of HEROES) refreshTileLock(h.id);
   renderArchBar();
   const L = pool();
@@ -225,7 +239,7 @@ function enterRoster() {
   viewId = null;
   pickHero(start.id, true);
 }
-const tileOf = id => $('tiles').querySelector(`[data-hero="${id}"]`);
+const tileOf = id => tileEls[id];
 function refreshTile(id) {
   const h = HEROES.find(x => x.id === id), t = tileOf(id);
   t.querySelector('img').src = headshot(dressed(h));
@@ -243,57 +257,42 @@ function refreshTileLock(id) {
   if (own) t.insertAdjacentHTML('beforeend', `<span class="mst" style="--mc:${m.rank.color}" title="${m.rank.name} mastery · level ${m.level}">${m.level}</span>`);
   t.classList.toggle('m-gold', own && m.level >= 7 && m.level < 10); t.classList.toggle('m-diamond', own && m.level >= 10);
 }
-
-function layoutCarousel(dir, instant) {
-  const tiles = $('tiles'), L = pool(), N = L.length, loop = N > VIS;
-  const sel = Math.max(0, L.findIndex(h => h.id === viewId));
-  const slot = tiles.clientWidth / VIS, tw = Math.max(60, slot - 10);
-  tiles.style.setProperty('--tw', tw + 'px');
-  const xf = k => {
-    const c = k + LEFT - (VIS - 1) / 2;                 // distance from the middle of the strip
-    return `translateX(${(k + LEFT) * slot + 5}px) translateZ(${-Math.abs(c) * 14}px) rotateY(${c * -5}deg)` + (k === 0 ? ' translateY(-12px)' : '');
-  };
-  // a short filtered list sits centred under the selected slot rather than looping
-  const shift = loop ? 0 : Math.round((VIS - N) / 2) - LEFT;
-  for (const h of HEROES) {
-    const t = tileOf(h.id), i = L.indexOf(h);
-    if (i < 0) { t.style.transition = 'none'; t.style.opacity = 0; t.style.pointerEvents = 'none'; t._k = null; t._vis = false; t.classList.remove('sel'); continue; }
-    let k;
-    if (loop) { k = ((i - sel) % N + N) % N; if (k >= N - LEFT) k -= N; }      // -LEFT .. N-1-LEFT
-    else k = i + shift;
-    const vis = k >= -LEFT && k <= VIS - 1 - LEFT;
-    const lift = !loop && h.id === viewId ? ' translateY(-12px)' : '';             // in a short row the pick stays put, so lift it
-    const place = (kk, op, anim) => { t.style.transition = anim ? '' : 'none'; t.style.transform = xf(kk) + (kk === 0 ? '' : lift); t.style.opacity = op; };
-    if (instant || t._k == null) place(k, vis ? 1 : 0, false);
-    else if (vis && t._vis) place(k, 1, true);
-    else if (vis) { place(dir > 0 ? VIS - LEFT : -LEFT - 1, 0, false); void t.offsetWidth; place(k, 1, true); }   // slides in from the edge
-    else if (t._vis) place(dir > 0 ? -LEFT - 1 : VIS - LEFT, 0, true);                                            // slides out the other side
-    else place(k, 0, false);
-    t._k = k; t._vis = vis;
-    t.style.pointerEvents = vis ? '' : 'none';
-    t.classList.toggle('sel', h.id === viewId);
+// Show the filtered heroes and mark the pick.
+function markWall() {
+  for (const g of $('tiles').querySelectorAll('.hs-grp')) {
+    g.classList.toggle('off', sort === 'role' && arch !== 'all' && g.dataset.grp !== arch);
+    if (g.dataset.grp === 'flat') g.querySelector('h6 small').textContent = pool().length;
   }
+  for (const h of HEROES) tileEls[h.id].classList.toggle('off', sort !== 'role' && arch !== 'all' && h.arch !== arch);
+  for (const t of $('tiles').querySelectorAll('.tile')) t.classList.toggle('sel', t.dataset.hero === viewId);
+  const t = tileOf(viewId), box = $('tiles');
+  if (t && (t.offsetTop < box.scrollTop || t.offsetTop + t.offsetHeight > box.scrollTop + box.clientHeight)) box.scrollTop = t.offsetTop - box.clientHeight / 2;
 }
 function stepHero(d) {
   const L = pool(), N = L.length, i = L.findIndex(h => h.id === viewId);
-  pickHero(L[(i + d + N) % N].id, false, d);
+  pickHero(L[(i + d + N) % N].id);
 }
 
-function pickHero(id, instant, dir) {
+function pickHero(id, instant) {
   const L = pool();
   const h = L.find(x => x.id === id) || HEROES.find(x => x.id === id) || L[0];
-  const N = L.length, from = L.findIndex(x => x.id === viewId);
-  if (dir == null && from >= 0) { const d = ((L.indexOf(h) - from) % N + N) % N; dir = d <= N / 2 ? 1 : -1; }
+  if (h.id === viewId && !instant) return;
   viewId = h.id;
-  const own = heroOwned(h.id);
-  if (own) { cfg.hero = h.id; save(); }
-  layoutCarousel(dir || 1, instant && from < 0);
+  if (heroOwned(h.id)) { cfg.hero = h.id; save(); }
+  markWall();
   showHero(h, instant);
-  api?.blip?.(520 + HEROES.indexOf(h) * 30);
+  api?.blip?.(520 + ORDER.indexOf(h) * 30);
 }
 
+// Stats with real numbers: health, move speed, the range the hero likes to fight at, and
+// rough damage per second from the main weapon.
+const STATS = h => {
+  const w = h.weapon, dps = Math.round(w.dmg * (w.pellets || 1) / (w.rate || 1));
+  return [['Health', h.hp, h.hp / 260], ['Speed', h.speed.toFixed(1), h.speed / 8.4], ['Range', `${h.prefRange} m`, h.prefRange / 30], ['Damage', `${dps}/s`, dps / 110]];
+};
+
 function showHero(h, instant) {
-  const d = dressed(h), own = heroOwned(h.id);
+  const d = dressed(h), own = heroOwned(h.id), a = archOf(h);
   const sp = $('splash');
   $('scr-roster').style.setProperty('--hc', hex(d.color));
   sp.style.setProperty('--hd', hex(d.palette.dark));
@@ -306,25 +305,21 @@ function showHero(h, instant) {
     $('splashImg').classList.add('in');
   };
   if (instant) setTimeout(set, 20); else set();
-  // the hero says hello: a random select line in a speech bubble over the splash art
-  const q = $('splashQuote'), lines = h.quips.select || [];
-  q.classList.remove('in'); q.textContent = lines.length ? lines[Math.floor(Math.random() * lines.length)] : '';
-  if (lines.length) { void q.offsetWidth; q.classList.add('in'); }
+  // the name plate over the showcase
+  $('hsPlate').innerHTML = `<span class="hs-arch" style="--ac:${hex(a.color)}">${a.icon} ${a.name}</span><h2>${h.callsign}</h2><small>${h.name} · ${h.role}</small>`;
+  $('hsPlate').classList.remove('in'); void $('hsPlate').offsetWidth; $('hsPlate').classList.add('in');
   const skins = skinsFor(h.id);
   const cur = d.skinId || null;
   const ownedSkins = skins.filter(s => own && skinOwned(s.id)).length;
   const tab = (id, label) => `<button class="${infoTab === id ? 'on' : ''}" data-tab="${id}">${label}</button>`;
   const pane = id => `data-pane="${id}" class="${infoTab === id ? 'on' : ''}"`;
+  const m = own ? masteryOf(h.id) : null;
   $('info').innerHTML = `
     <header class="ih">
-      <div class="ihname">
-        <div class="ihchips"><div class="chip ${own ? '' : 'pass'}">${own ? h.role : `🔒 ${lockLong(h.id)}`}</div><span class="archchip" style="--ac:${hex(archOf(h).color)}" title="${archOf(h).desc}">${archOf(h).icon} ${archOf(h).name}</span></div>
-        <h2>${h.callsign}</h2>
-        <div class="who">${h.name}</div>
-        ${own ? (() => { const m = masteryOf(h.id); return `<div class="mline" style="--mc:${m.rank.color}" title="${m.xp} mastery XP">
-          <b>${m.rank.name} · Lv ${m.level}</b><i><em style="width:${Math.round(m.frac * 100)}%"></em></i><small>${m.max ? 'Mastered' : `${m.into}/${m.need}`}</small></div>`; })() : ''}
-      </div>
-      <div class="statbars">${STAT(h).map(([k, v]) => `<div><span>${k}</span><i><em style="width:${Math.round(Math.min(1, v) * 100)}%"></em></i></div>`).join('')}</div>
+      ${own ? `<div class="mline" style="--mc:${m.rank.color}" title="${m.xp} mastery XP">
+          <b>${m.rank.name} · Lv ${m.level}</b><i><em style="width:${Math.round(m.frac * 100)}%"></em></i><small>${m.max ? `🎰 ${m.into}/${m.need} to bonus token` : `${m.into}/${m.need}`}</small></div>`
+        : `<div class="hs-locked">🔒 ${lockLong(h.id)}</div>`}
+      <div class="hs-stats">${STATS(h).map(([k, v, f]) => `<div><small>${k}</small><b>${v}</b><i><em style="width:${Math.round(Math.min(1, f) * 100)}%"></em></i></div>`).join('')}</div>
     </header>
     <nav class="itabs">${tab('kit', 'Abilities')}${tab('story', 'Story')}${tab('skins', `Skins <i>${ownedSkins + 1}/${skins.length + 1}</i>`)}</nav>
     <div class="ibody">
@@ -367,12 +362,17 @@ const fitSoon = () => { cancelAnimationFrame(fitRaf); fitRaf = requestAnimationF
 function fitKit() {
   const body = $('info').querySelector('.ibody'), kit = body?.querySelector('.kit');
   if (!kit) return;
+  // measure with the rows at natural height: stretched rows always reach the bottom edge
+  kit.classList.add('fitting');
+  try { sizeKit(body, kit); } finally { kit.classList.remove('fitting'); }
+}
+function sizeKit(body, kit) {
   body.classList.remove('spill');
   if (!body.clientHeight || !kit.offsetParent) return;
   // everything in view, with a few pixels to spare so the last row never loses its bottom edge
   const fits = () => { const last = kit.lastElementChild; return body.scrollHeight <= body.clientHeight - 2 && (!last || last.getBoundingClientRect().bottom <= body.getBoundingClientRect().bottom - 3); };
   const wide = body.clientWidth >= 380;
-  const tries = [[false, 1], [false, .92], [false, .85], ...(wide ? [[true, 1], [true, .92], [true, .85]] : []), [false, .78], [false, .72], ...(wide ? [[true, .78], [true, .7], [true, .62]] : []), [false, .66]];
+  const tries = [[false, 1.8], [false, 1.65], [false, 1.5], [false, 1.38], [false, 1.26], [false, 1.2], [false, 1.1], [false, 1], [false, .92], [false, .85], ...(wide ? [[true, 1], [true, .92], [true, .85]] : []), [false, .78], [false, .72], ...(wide ? [[true, .78], [true, .7], [true, .62]] : []), [false, .66]];
   for (const [two, s] of tries) {
     kit.classList.toggle('two', two); kit.style.setProperty('--ks', s);
     if (fits()) return;
@@ -576,6 +576,7 @@ export function initMenu(opts) {
   document.querySelectorAll('[data-back]').forEach(b => { b.onclick = () => go(b.dataset.back); });
   $('tiles').onclick = e => { const t = e.target.closest('.tile'); if (t) pickHero(t.dataset.hero); };
   $('archBar').onclick = e => { const b = e.target.closest('[data-arch]'); if (b) { api?.blip?.(700); setArch(b.dataset.arch); } };
+  $('sortBar').onclick = e => { const b = e.target.closest('[data-sort]'); if (b) { api?.blip?.(760); setSort(b.dataset.sort); } };
   $('carL').onclick = () => stepHero(-1);
   $('carR').onclick = () => stepHero(1);
   $('info').addEventListener('click', e => {

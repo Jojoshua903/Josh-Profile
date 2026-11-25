@@ -1,6 +1,6 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { CART } from './data.js?v=20261125q';
-import { TEAM_COLOR } from './units.js?v=20261125q';
+import { CART } from './data.js?v=20261125v';
+import { TEAM_COLOR } from './units.js?v=20261125v';
 
 // Payload: a tug of war over a cart on the first lane. It starts in the middle; whichever team
 // has it to itself pushes it toward the other base (more pushers, faster). Both teams near it

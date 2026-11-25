@@ -1,17 +1,17 @@
-import { HEROES } from './heroes.js?v=20261125q';
-import { cfg, save } from './settings.js?v=20261125q';
-import { headshot } from './portraits.js?v=20261125q';
-import { skinById, dressedAny, equip, cosById, equipCos } from './pass.js?v=20261125q';
-import { sprayUrl } from './sprays.js?v=20261125q';
-import { tokens, spin, prizes, spins } from './slots.js?v=20261125q';
-import { initAudio, tone, noise } from './audio.js?v=20261125q';
+import { HEROES } from './heroes.js?v=20261125v';
+import { cfg, save } from './settings.js?v=20261125v';
+import { headshot } from './portraits.js?v=20261125v';
+import { skinById, dressedAny, equip, cosById, equipCos } from './pass.js?v=20261125v';
+import { sprayUrl } from './sprays.js?v=20261125v';
+import { tokens, spin, prizes, spins } from './slots.js?v=20261125v';
+import { initAudio, tone, noise } from './audio.js?v=20261125v';
 
 // The slot machine screen: three reels, a lever and the prize board. Pull costs one mastery
 // token; every pull lands three of a kind on something new, then shows what you won.
 
 const $ = id => document.getElementById(id);
 const hex = c => '#' + c.toString(16).padStart(6, '0');
-const SYM = { slime: '🟢', brawler: '🥊', chipmunk: '🐿️', elf: '🏹', dancer: '🩰', mole: '🕳️', skin: '💎', spray: '🎨' };
+const SYM = { slime: '🟢', brawler: '🥊', chipmunk: '🐿️', elf: '🏹', dancer: '🩰', mole: '🕳️', medic: '🩺', spark: '⚡', builder: '🧱', skin: '💎', spray: '🎨' };
 const FILL = ['🍒', '⭐', '🔔', '🍋', '7️⃣', '🍀', '🥜'];
 const ROW = 76, STRIP = 26;              // ROW matches .sl-strip i height in menu.css
 let busy = false, wired = false;
@@ -38,7 +38,7 @@ function board() {
   $('slGo').disabled = busy || !t || done;
   $('slGo').querySelector('small').textContent = done ? 'Every prize won!' : t ? '1 mastery token' : 'No tokens yet';
   $('slHint').textContent = done ? 'You have cleaned out the machine. More prizes next season.'
-    : t ? `${t} token${t > 1 ? 's' : ''} ready. Every pull wins something new.` : 'Rank a hero up in mastery (Bronze → Silver, Silver → Gold, Gold → Diamond) to earn a token.';
+    : t ? `${t} token${t > 1 ? 's' : ''} ready. Every pull wins something new.` : 'Rank a hero up in mastery (Bronze → Silver → Gold → Diamond) to earn a token. Maxed heroes keep earning one every 7,400 XP.';
 }
 
 function strip(reel, final) {

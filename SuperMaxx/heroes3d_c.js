@@ -1,7 +1,7 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { kit, body, face, finish, gunAt, part, joint, chain, ball, pill, tube, cone, ring, slab, dome, live } from './rig.js?v=20261125q';
+import { kit, body, face, finish, gunAt, part, joint, chain, ball, pill, tube, cone, ring, slab, dome, live } from './rig.js?v=20261125v';
 
-// Slot machine heroes on the stylised rig: Gloop, Torque, Nutcracker, Larkspur, Pirouette and Burrow.
+// Slot machine heroes on the stylised rig: Gloop, Torque, Nutcracker, Larkspur, Pirouette, Burrow, Stitch, Dynamo and Mortar.
 
 // ---------------- Gloop: a professor made of slime ----------------
 function slime(p, team) {
@@ -242,4 +242,109 @@ function mole(p, team) {
   }, { stride: 1.05 });
 }
 
-export const ROSTER_C = { slime, brawler, chipmunk, elf, dancer, mole };
+// ---------------- Stitch: field medic ----------------
+function medic(p, team) {
+  const K = kit(p);
+  const coat = K.c(p.main, { rough: 0.55 }), red = K.c(p.trim, { rough: 0.4 }), scrubs = K.c(0x3fb8a0, { rough: 0.7 }), hair = K.c(0x1d1410, { rough: 0.6 });
+  const P = body(K, { w: 0.92, shoes: 'sneaker', boots: K.c(0xf4f6fa), soles: K.c(0x2a3550), top: scrubs, sleeves: coat, forearms: coat, pants: scrubs, gloves: K.c(0x9fe0ff, { rough: 0.3 }) });
+  face(P, K, { brow: 0.08, mouth: 'smile', lashes: true, eyeColor: 0x3a2418 });
+  // big curly hair pulled up, a head mirror and round glasses
+  part(P.head, dome(0.31, Math.PI * 0.55), hair, 0, 0.03, 0.02, 1.05, 1, 1.05);
+  for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2; part(P.head, ball(0.1), hair, Math.cos(a) * 0.12, 0.3 + Math.sin(i * 1.7) * 0.03, Math.sin(a) * 0.12 + 0.05); }
+  part(P.head, tube(0.28, 0.28, 0.03), K.c(0x2a3550), 0, 0.14, 0.02).rotation.x = 0.15;
+  const mirror = live(part(P.head, tube(0.07, 0.07, 0.015), K.c(0xe8f8ff, { metal: 0.6, rough: 0.1, glow: 0.3 }), 0, 0.2, -0.27));
+  mirror.rotation.x = Math.PI / 2 - 0.3;
+  for (const s of [-1, 1]) part(P.head, ring(0.06, 0.01), K.c(p.trim), s * 0.105, 0.035, -0.29);
+  // a long white coat that swings, a red cross armband and a stethoscope
+  const tails = chain(P.hips, 3, 0.18, K.c(p.main, { rough: 0.55, double: true }), 0, 0.05, 0.14, 0.24, 0.24, [0, -1, 0.25]);
+  for (const s of [-1, 1]) part(P.spine, slab(0.14, 0.5, 0.03), coat, s * 0.15, 0.22, -0.24);
+  part(P.armL, tube(0.085, 0.085, 0.08), red, 0, -0.1, 0);
+  part(P.armL, slab(0.06, 0.02, 0.02), K.white, -0.09, -0.1, 0).rotation.y = Math.PI / 2;
+  part(P.spine, ring(0.17, 0.014, Math.PI), K.c(0x2a3550), 0, 0.5, -0.12).rotation.set(0.3, 0, Math.PI);
+  part(P.spine, tube(0.035, 0.035, 0.02), K.steel, 0.07, 0.3, -0.26).rotation.x = Math.PI / 2;
+  // a med pouch with a cross on the hip
+  part(P.hips, slab(0.16, 0.14, 0.08), K.white, -0.22, 0, -0.08);
+  part(P.hips, slab(0.08, 0.025, 0.01), red, -0.22, 0, -0.125); part(P.hips, slab(0.025, 0.08, 0.01), red, -0.22, 0, -0.125);
+  // Mender Dart Rifle: a white rifle with a glowing syringe chamber
+  const gun = gunAt(P, 0.26, 1.24, -0.44);
+  part(gun, slab(0.08, 0.1, 0.6), K.c(0xf4f6fa, { rough: 0.3 }), 0, 0, 0);
+  part(gun, slab(0.085, 0.03, 0.3), red, 0, 0.055, 0.02);
+  part(gun, tube(0.02, 0.022, 0.32), K.ink, 0, 0, -0.42).rotation.x = Math.PI / 2;
+  const vial = live(part(gun, tube(0.035, 0.035, 0.2), K.c(0x7affc0, { glow: 0.9, rough: 0.1, rim: 0 }), 0, 0.09, -0.08));
+  vial.rotation.x = Math.PI / 2;
+  part(gun, slab(0.06, 0.15, 0.08), K.ink, 0, -0.1, 0.18).rotation.x = 0.3;
+  return finish(P, team, gun, -0.6, (dt, s, t, k) => {
+    tails.wave(t, k, 0.1, 4);
+    vial.scale.y = 0.85 + Math.sin(t * 2.5) * 0.15;
+    mirror.rotation.z = Math.sin(t * 0.8) * 0.15;
+  }, { stride: 1.25 });
+}
+
+// ---------------- Dynamo: pit-lane electrician ----------------
+function spark(p, team) {
+  const K = kit(p);
+  const suit = K.c(p.main, { rough: 0.6 }), volt = K.c(p.trim, { rough: 0.3, glow: 0.35 }), hair = K.c(0xffe14a, { rough: 0.4, glow: 0.25 });
+  const P = body(K, { w: 0.9, shoes: 'boot', boots: K.c(0x1d1d24, { rough: 0.6 }), top: suit, sleeves: suit, forearms: K.skin, pants: suit, gloves: K.c(0xff4f6b, { rough: 0.5 }) });
+  face(P, K, { brow: 0.22, mouth: 'open', cheeks: true, eyeColor: 0x2f6aff });
+  // hair standing on end in lightning spikes, and welding goggles pushed up
+  part(P.head, dome(0.305, Math.PI * 0.5), hair, 0, 0.03, 0.02, 1.03, 1, 1.03);
+  for (let i = 0; i < 7; i++) { const a = (i - 3) * 0.35; const c = part(P.head, cone(0.06, 0.26, 4), hair, Math.sin(a) * 0.18, 0.32, Math.cos(a) * 0.08 + 0.04); c.rotation.z = -a * 0.8; c.rotation.x = 0.25; }
+  part(P.head, tube(0.3, 0.3, 0.05), K.ink, 0, 0.13, 0.01);
+  for (const s of [-1, 1]) part(P.head, tube(0.07, 0.07, 0.06), K.c(0x7af0ff, { glow: 0.5, rough: 0.1 }), s * 0.1, 0.19, -0.25).rotation.x = Math.PI / 2 - 0.4;
+  // hazard stripes on the jumpsuit, and a rattly backpack of mismatched batteries
+  for (let i = 0; i < 4; i++) part(P.spine, slab(0.07, 0.04, 0.02), i % 2 ? K.ink : volt, -0.15 + i * 0.1, 0.12, -0.25).rotation.z = 0.6;
+  part(P.hips, tube(0.24, 0.24, 0.05), volt, 0, 0.08, 0, 1, 1, 0.8);
+  const pack = part(P.spine, slab(0.42, 0.42, 0.18), K.c(0x3a3f4a, { metal: 0.3, rough: 0.4 }), 0, 0.3, 0.26);
+  const cells = [-1, 0, 1].map(i => live(part(pack, tube(0.06, 0.06, 0.3), K.c(i ? 0xffe14a : 0x7af0ff, { glow: 1, rim: 0 }), i * 0.13, 0.08, 0.1)));
+  for (const s of [-1, 1]) part(pack, cone(0.04, 0.12, 6), K.steel, s * 0.15, 0.27, 0);
+  const cord = chain(pack, 4, 0.14, K.c(0xff4f6b, { rough: 0.5 }), 0.18, -0.2, 0, 0.025, 0.025, [0.3, -1, -0.4]);
+  // Jumper Cables: a grip with a red and a black clamp and a copper coil
+  const gun = gunAt(P, 0.26, 1.22, -0.42);
+  part(gun, tube(0.04, 0.04, 0.3), K.ink, 0, 0, 0.02).rotation.x = Math.PI / 2;
+  part(gun, ring(0.05, 0.015), K.c(0xc87533, { metal: 0.6, rough: 0.3 }), 0, 0, -0.08).rotation.y = Math.PI / 2;
+  part(gun, ring(0.05, 0.015), K.c(0xc87533, { metal: 0.6, rough: 0.3 }), 0, 0, -0.02).rotation.y = Math.PI / 2;
+  const jaws = [-1, 1].map(s => { const j = part(gun, slab(0.04, 0.05, 0.2), K.c(s < 0 ? 0xff4f6b : 0x1d1d24, { rough: 0.4 }), s * 0.05, 0, -0.24); j.rotation.y = s * 0.15; return j; });
+  const arc = live(part(gun, ball(0.04), K.c(0x7af0ff, { glow: 1.4, rim: 0 }), 0, 0, -0.36));
+  return finish(P, team, gun, -0.38, (dt, s, t, k) => {
+    cells.forEach((c, i) => { c.scale.y = 0.75 + Math.abs(Math.sin(t * 3 + i * 1.3)) * 0.3; });
+    jaws.forEach((j, i) => { j.rotation.y = (i ? 1 : -1) * (0.12 + Math.abs(Math.sin(t * 6)) * 0.08 * (1 + k)); });
+    arc.visible = Math.sin(t * 23) > -0.3; arc.scale.setScalar(0.7 + Math.random() * 0.6);
+    cord.wave(t, k, 0.12, 5);
+  }, { stride: 1.35 });
+}
+
+// ---------------- Mortar: the site foreman ----------------
+function builder(p, team) {
+  const K = kit(p);
+  const vest = K.c(p.main, { rough: 0.5 }), shirt = K.c(0x5a7aa8, { rough: 0.8 }), denim = K.c(0x3a4a6a, { rough: 0.85 }), beard = K.c(0x5a3420, { rough: 0.9 });
+  const P = body(K, { w: 1.2, shoes: 'boot', boots: K.c(0x8a5a2a, { rough: 0.8 }), top: shirt, sleeves: shirt, forearms: K.skin, pants: denim, gloves: K.c(0xe8c56a, { rough: 0.85 }),
+    torso: [0.25, 0.28, 0.33, 0.3, 0.56] });
+  face(P, K, { brow: -0.05, mouth: 'smile', eyeColor: 0x3a2418 });
+  // a big bushy beard and moustache, and a beanie with a pencil tucked behind the ear
+  part(P.head, ball(0.2), beard, 0, -0.14, -0.15, 1.35, 0.9, 0.7);
+  part(P.head, pill(0.04, 0.12), beard, 0, -0.07, -0.29).rotation.z = Math.PI / 2;
+  part(P.head, dome(0.31, Math.PI * 0.52), K.c(0xff8a2a, { rough: 0.9 }), 0, 0.04, 0.01, 1.04, 1.05, 1.04);
+  part(P.head, tube(0.315, 0.315, 0.08), K.c(0xc86a1a, { rough: 0.9 }), 0, 0.08, 0.01);
+  part(P.head, ball(0.06), K.c(0xc86a1a, { rough: 0.9 }), 0, 0.34, 0.01);
+  part(P.head, tube(0.012, 0.012, 0.2), K.c(0xffc93c), 0.29, 0.02, 0.02).rotation.x = Math.PI / 2;
+  // hi-vis vest with reflective stripes, a tool belt with a hammer and a tape measure
+  part(P.spine, slab(0.46, 0.42, 0.33), vest, 0, 0.24, 0);
+  for (const y of [0.12, 0.3]) part(P.spine, slab(0.47, 0.04, 0.34), K.c(p.trim, { rough: 0.15, metal: 0.4, glow: 0.2 }), 0, y, 0);
+  part(P.hips, tube(0.27, 0.27, 0.07), K.leather, 0, 0.08, 0, 1, 1, 0.85);
+  part(P.hips, slab(0.12, 0.14, 0.08), K.leather, 0.2, -0.02, -0.12);
+  const hammer = part(P.hips, tube(0.015, 0.015, 0.3), K.c(0x8a5a3a), -0.24, -0.06, -0.05); hammer.rotation.z = 0.2;
+  part(hammer, slab(0.13, 0.05, 0.05), K.steel, 0, 0.15, 0);
+  part(P.hips, tube(0.06, 0.06, 0.04), K.c(0xffe14a), 0.24, 0.05, 0.1).rotation.z = Math.PI / 2;
+  // Brick Launcher: a chunky boxy launcher with a hopper of bricks on top
+  const gun = gunAt(P, 0.3, 1.18, -0.42);
+  part(gun, slab(0.16, 0.16, 0.6), K.c(0x3a3f4a, { metal: 0.3, rough: 0.4 }), 0, 0, 0);
+  part(gun, slab(0.17, 0.04, 0.4), vest, 0, 0.09, 0.04);
+  part(gun, slab(0.15, 0.15, 0.08), K.ink, 0, 0, -0.32);
+  const bricks = [0, 1, 2].map(i => live(part(gun, slab(0.16, 0.07, 0.09), K.c([0xd9733a, 0xc8642e, 0xe0844a][i], { rough: 0.9 }), 0, 0.15 + i * 0.075, 0.08 - i * 0.02)));
+  part(gun, slab(0.07, 0.16, 0.09), K.ink, 0, -0.13, 0.18).rotation.x = 0.3;
+  return finish(P, team, gun, -0.4, (dt, s, t, k) => {
+    bricks.forEach((b, i) => { b.position.x = Math.sin(t * 4 + i) * 0.008 * (1 + k * 3); });
+  }, { stride: 1.05 });
+}
+
+export const ROSTER_C = { slime, brawler, chipmunk, elf, dancer, mole, medic, spark, builder };

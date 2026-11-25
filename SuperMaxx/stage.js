@@ -1,6 +1,6 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { cfg } from './settings.js?v=20261125q';
-import { bake } from './rig.js?v=20261125q';
+import { cfg } from './settings.js?v=20261125v';
+import { bake } from './rig.js?v=20261125v';
 
 // Stage atmosphere: sky, sun, fill light, haze, image-based lighting and set dressing.
 // Each stage has its own time of day; Maxx Island (Survivor) gets a tropical midday.

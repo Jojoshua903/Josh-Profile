@@ -1,8 +1,8 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { buildHeroModel } from './models.js?v=20261125q';
-import { buildWorld } from './world.js?v=20261125q';
-import { createStructure } from './units.js?v=20261125q';
-import { HEROES } from './heroes.js?v=20261125q';
+import { buildHeroModel } from './models.js?v=20261125v';
+import { buildWorld } from './world.js?v=20261125v';
+import { createStructure } from './units.js?v=20261125v';
+import { HEROES } from './heroes.js?v=20261125v';
 
 // Menu artwork, generated once and cached as data URLs: hero splash art (themed
 // painted backdrop + a posed render of the model), headshot tiles, and map previews.
@@ -40,6 +40,9 @@ const POSE = {
   elf: { turn: -0.55, arm: -1.3, lean: 0.04, cam: [-1.2, 0.8, -3.5], hop: 0.04 },
   dancer: { turn: 0.5, arm: -2.4, lean: -0.1, cam: [-1.2, 0.85, -3.5], hop: 0.12 },
   mole: { turn: -0.4, arm: -1.1, lean: 0.03, cam: [-1.4, 0.6, -3.7] },
+  medic: { turn: 0.45, arm: -1.2, lean: -0.03, cam: [-1.2, 0.8, -3.5] },
+  spark: { turn: -0.5, arm: -2.0, lean: 0.06, cam: [-1.2, 0.8, -3.5], hop: 0.1 },
+  builder: { turn: 0.4, arm: -1.1, lean: 0.05, cam: [-1.5, 0.6, -3.9] },
 };
 
 function heroScene(def, t = 0.6) {
@@ -251,6 +254,30 @@ const MOTIF = {
     for (let x = 0; x < w; x += 34) { g.fillStyle = rgba(0xffd23c, 0.9); g.beginPath(); g.arc(x + 17, 34, 8, 0, Math.PI); g.fill(); }
     for (let x = 20; x < w; x += 60) { g.fillStyle = rgba(0xfff3a0, 0.9); g.beginPath(); g.arc(x, h - 12, 7, 0, 7); g.fill(); }
     for (let i = 0; i < 16; i++) { g.fillStyle = rgba(p.main, 0.7); g.beginPath(); g.arc(Math.random() * w, Math.random() * h * 0.8, 3 + Math.random() * 4, 0, 7); g.fill(); }
+  },
+  medic(g, w, h, p) {                          // a clinic: soft tiles, a heartbeat line and floating crosses
+    g.strokeStyle = rgba(0xffffff, 0.14); g.lineWidth = 2;
+    for (let x = 0; x < w; x += 48) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); } for (let y = 0; y < h; y += 48) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); }
+    g.strokeStyle = rgba(0x7affc0, 0.85); g.lineWidth = 6; g.beginPath();
+    for (let x = 0; x <= w; x += 10) { const k = (x / w * 4) % 1; const y = h * 0.62 - (k > 0.42 && k < 0.5 ? 90 : k > 0.5 && k < 0.56 ? -50 : 0); x ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
+    for (let i = 0; i < 9; i++) { const x = Math.random() * w, y = Math.random() * h, s = 8 + Math.random() * 14; g.fillStyle = rgba(i % 3 ? 0xffffff : p.trim, 0.7); g.fillRect(x - s, y - s / 3, s * 2, s / 1.5); g.fillRect(x - s / 3, y - s, s / 1.5, s * 2); }
+  },
+  spark(g, w, h, p) {                          // a storm of lightning bolts over a neon grid
+    g.strokeStyle = rgba(p.trim, 0.25); g.lineWidth = 2;
+    for (let y = h * 0.6; y < h; y += 26) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); }
+    for (let i = 0; i < 5; i++) {
+      let x = Math.random() * w, y = 0; g.strokeStyle = rgba(i % 2 ? p.trim : 0x7af0ff, 0.85); g.lineWidth = 5 + Math.random() * 4; g.beginPath(); g.moveTo(x, y);
+      while (y < h * 0.9) { x += (Math.random() - 0.5) * 80; y += 30 + Math.random() * 40; g.lineTo(x, y); } g.stroke();
+    }
+    for (let i = 0; i < 20; i++) { g.fillStyle = rgba(p.trim, 0.8); g.beginPath(); g.arc(Math.random() * w, Math.random() * h, 2 + Math.random() * 4, 0, 7); g.fill(); }
+  },
+  builder(g, w, h, p) {                        // a building site: a brick wall, scaffolding and a crane
+    for (let r = 0; r * 28 < h * 0.5; r++) for (let x = -60; x < w; x += 60) { g.fillStyle = rgba([0xd9733a, 0xc8642e, 0xe0844a][(r + Math.round(x / 60) + 9) % 3], 0.75); g.fillRect(x + (r % 2) * 30 + 2, h - (r + 1) * 28 + 2, 56, 24); }
+    g.strokeStyle = rgba(0xffe14a, 0.6); g.lineWidth = 6;
+    for (let x = w * 0.08; x < w; x += w * 0.28) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h * 0.55); g.stroke(); }
+    for (let y = h * 0.1; y < h * 0.55; y += h * 0.15) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); }
+    g.strokeStyle = rgba(p.main, 0.8); g.lineWidth = 10; g.beginPath(); g.moveTo(w * 0.85, h * 0.55); g.lineTo(w * 0.85, h * 0.05); g.lineTo(w * 0.25, h * 0.05); g.stroke();
+    g.lineWidth = 3; g.beginPath(); g.moveTo(w * 0.4, h * 0.05); g.lineTo(w * 0.4, h * 0.2); g.stroke();
   },
   mole(g, w, h, p) {                           // underground: dirt layers, tunnels, roots and buried rocks
     const bands = [0x7a5a3a, 0x6b4a30, 0x5a3c26, 0x4a301e];

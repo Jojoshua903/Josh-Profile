@@ -3,7 +3,7 @@
 // win / lose: the results screen · kill: extra elimination lines · rivals: a taunt for knocking out
 // that hero · friends: a hello when that hero spawns on your team · likes, dislikes, fact: Story tab
 
-import { HEROES } from './heroes.js?v=20261125q';
+import { HEROES } from './heroes.js?v=20261125v';
 
 const P = {
   vanguard: {
@@ -131,6 +131,27 @@ const P = {
     thanks: ['Ta, mate!', 'That\'ll keep me digging!'], win: ['Shift complete. Tea break!', 'Dug our way to victory.'], lose: ['Hit bedrock.', 'Back underground.'],
     kill: ['Six feet under.', 'Buried.'], rivals: { thicket: 'Your roots were in MY tunnel!' }, friends: { chipmunk: 'Pip! Fancy a tunnel?' },
     likes: 'Worms (for snacking), hard hats, a good long tunnel', dislikes: 'Bright lights, gravel, Hazel\'s garden beds', fact: 'Cannot see further than his own nose. Navigates entirely by smell. Has never once got lost.',
+  },
+  medic: {
+    select: ['Stitch. Clinic’s open.', 'Who’s bleeding? Everyone? Lovely.', 'Hold still and nobody gets hurt.'],
+    death: ['Physician... heal thyself...', 'Somebody... call a doctor...'], lowhp: ['I need a doctor! Oh wait.', 'Medic down! Ish!'],
+    thanks: ['Thank you, I never get treated!', 'Good bedside manner!'], win: ['Clean bill of health!', 'Everyone discharged. Well done.'], lose: ['We lost the patient.', 'Back to triage.'],
+    kill: ['Time of death: now.', 'Prescription: rest.'], rivals: { ember: 'Every match I treat your burns. EVERY match.' }, friends: { dancer: 'Odette! Mind those ankles today.' },
+    likes: 'Clean bandages, strong tea, patients who listen', dislikes: 'Paper cuts, people who say “it’s just a scratch”', fact: 'Has never lost a dart. Has lost forty-one pens.',
+  },
+  spark: {
+    select: ['Dynamo! Fully charged!', 'Who wants a jump start?', 'Feeling flat? I can fix that.'],
+    death: ['Battery... low...', 'Powering... down...'], lowhp: ['I’m on reserve power!', 'Running on fumes here!'],
+    thanks: ['Ooh, that tingles! Thanks!', 'Recharged!'], win: ['Lights on, everybody!', 'Shocking performance. In a good way.'], lose: ['Blown a fuse.', 'Total blackout.'],
+    kill: ['Zapped.', 'Unplugged.'], rivals: { ratchet: 'Your wiring is a crime, Bastian.' }, friends: { tempo: 'Ines! I fixed your speakers again.' },
+    likes: 'Neon signs, thunderstorms, the smell of solder', dislikes: 'Rubber boots, dead batteries, wet socks', fact: 'Her hair has stood on end since an incident with the Grand Canal tram in 2019.',
+  },
+  builder: {
+    select: ['Mortar. Let’s build something.', 'Measure once. Build wherever.', 'Hard work, soft bricks. No, hard bricks.'],
+    death: ['Structural... failure...', 'Should have... used... rebar...'], lowhp: ['I’m crumbling here!', 'Need some support beams!'],
+    thanks: ['Grazie! Solid work!', 'You’re a load-bearing friend.'], win: ['Built to last!', 'Job done. Lunch break.'], lose: ['Back to the drawing board.', 'Condemned.'],
+    kill: ['Bricked.', 'Flattened.'], rivals: { mole: 'You dug under my foundations AGAIN, Digby!' }, friends: { chipmunk: 'Pip! Want to see my new wall?' },
+    likes: 'Straight lines, big lunches, a nice right angle', dislikes: 'Rain on wet cement, wobbly tables, blueprints', fact: 'Once built a sandcastle so big the city made him get a permit.',
   },
 };
 

@@ -1,6 +1,6 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { HILL } from './data.js?v=20261125q';
-import { ring, burst, TEAM_COLOR } from './units.js?v=20261125q';
+import { HILL } from './data.js?v=20261125v';
+import { ring, burst, TEAM_COLOR } from './units.js?v=20261125v';
 
 // Hill Rush: 3v3 king of the hill on the lane stages. A team scores while it has the ring
 // to itself; anyone from both teams inside means contested. The ring hops around the map.

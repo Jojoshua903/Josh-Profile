@@ -1,12 +1,12 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { TUNING, HILL, CART } from './data.js?v=20261125q';
-import { buildHeroModel } from './models.js?v=20261125q';
-import { makeBox, moveBody, resolveXZ, rayBox, raySphere, rayWorld, hasLOS } from './world.js?v=20261125q';
+import { TUNING, HILL, CART } from './data.js?v=20261125v';
+import { buildHeroModel } from './models.js?v=20261125v';
+import { makeBox, moveBody, resolveXZ, rayBox, raySphere, rayWorld, hasLOS } from './world.js?v=20261125v';
 import { resetStatus, tickStatus, afterMove, takenMult, fireMult, canAct, breakInvis, isHidden, slow as applySlow, stun as applyStun, knock as applyKnock, dropBlobs,
-  dealtMult, onDealt, onHurt, onKill } from './abilities.js?v=20261125q';
-import { poseHero, rubble, killFx } from './anim.js?v=20261125q';
-import { onEliminated, survivorPreMove, survivorPostMove } from './survivor.js?v=20261125q';
-import { tickVfx, tickLight, blast, sparks } from './vfx.js?v=20261125q';
+  dealtMult, onDealt, onHurt, onKill, mend } from './abilities.js?v=20261125v';
+import { poseHero, rubble, killFx } from './anim.js?v=20261125v';
+import { onEliminated, survivorPreMove, survivorPostMove } from './survivor.js?v=20261125v';
+import { tickVfx, tickLight, blast, sparks } from './vfx.js?v=20261125v';
 
 // Survivor teams are per-hero ids; anything that isn't blue reads as an enemy red.
 export const TEAM_COLOR = new Proxy({ blue: 0x2f5bff, red: 0xff5a36 }, { get: (t, k) => (k in t ? t[k] : 0xff5a36) });
@@ -441,6 +441,22 @@ function shoot(G, h, dir, muzzle, charge, replay = false) {
       const t = k / 8, a = mz.clone().addScaledVector(d, t * w.range * 0.8).addScaledVector(side, flip * Math.sin(t * Math.PI) * 1.6).setY(o.y - 0.3 + Math.sin(t * Math.PI * 2) * 0.35);
       tracer(G, prev, a, k % 2 ? w.tracer : 0xffffff, 0.18); prev = a;
     }
+  } else if (w.mode === 'mend') {                   // Stitch's darts and Dynamo's cables: hurt enemies, help teammates
+    spend();
+    const d = jitter(dir, sp), r = trace(G, o, d, w.range, h.team);
+    let pal = null, best = r.t;
+    for (const u of G.heroes) {                     // teammates have bigger hitboxes, so helping is forgiving
+      if (!u.alive || u === h || u.team !== h.team) continue;
+      for (const [y, rad] of [[0.55, 0.55], [1.15, 0.55], [1.62, 0.38]]) { const t = raySphere(o, d, v3.set(u.pos.x, u.pos.y + y, u.pos.z), rad, best); if (t < best) { best = t; pal = u; } }
+    }
+    const end = pal ? o.clone().addScaledVector(d, best) : r.point, col = pal ? w.ally : w.tracer;
+    if (w.zap) {                                    // a crackling bolt rather than a straight line
+      let prev = mz.clone();
+      for (let k = 1; k <= 4; k++) { const p = mz.clone().lerp(end, k / 4); if (k < 4) p.add(new THREE.Vector3((Math.random() - 0.5) * 0.35, (Math.random() - 0.5) * 0.35, (Math.random() - 0.5) * 0.35)); tracer(G, prev, p, k % 2 ? col : 0xffffff, 0.08); prev = p; }
+    } else tracer(G, mz, end, col, 0.1);
+    if (pal) { mend(G, h, pal, w.heal || 0, w.boost || 0); burst(G, end, w.ally, 0.4); }
+    else if (r.unit) damage(G, r.unit, w.dmg * (r.head ? w.head : 1) * bonus, h, r.head);
+    else spark(G, r.point);
   } else if (w.mode === 'melee') {                  // Torque's glove: momentum turns a jab into a haymaker
     const m = h.momentum || 0, mult = 1 + w.momentum * m / 100, d = dir.clone().normalize();
     let hits = 0;

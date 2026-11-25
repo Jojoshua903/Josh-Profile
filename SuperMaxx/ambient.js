@@ -1,5 +1,5 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { M, put } from './scenery.js?v=20261125q';
+import { M, put } from './scenery.js?v=20261125v';
 
 // Moving life in each arena: bunting and gulls, canal water and boats, petals and grass.
 // Returns { tick(dt, t), colliders } where colliders are [x, z, w, d, h].

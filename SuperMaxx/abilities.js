@@ -1,7 +1,7 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { makeBox, resolveXZ, hasLOS, groundAt, rayWorld } from './world.js?v=20261125q';
-import { buildHeroModel } from './models.js?v=20261125q';
-import { damage, trace, tracer, burst, ring, setBar, makeBar, eyeOf, dirFrom, chestOf, spawnProjectile, TEAM_COLOR } from './units.js?v=20261125q';
+import { makeBox, resolveXZ, hasLOS, groundAt, rayWorld } from './world.js?v=20261125v';
+import { buildHeroModel } from './models.js?v=20261125v';
+import { damage, trace, tracer, burst, ring, setBar, makeBar, eyeOf, dirFrom, chestOf, spawnProjectile, TEAM_COLOR } from './units.js?v=20261125v';
 
 // Abilities, status effects, zones, traps, walls and deployables.
 // Each ability: cast(G, h, a, ctx) -> bool, ai(G, bot, a, ctx) -> bool (should the bot cast now?).
@@ -127,7 +127,7 @@ export function afterMove(G, h, dt) {
 const ZONE_LOOK = {
   dome: { color: 0x5fe0c0, dome: true }, sanctum: { color: 0xffe08a }, overgrowth: { color: 0x5fb05a },
   frost: { color: 0xbfeaff }, trap: { color: 0x8a5a3c }, nova: { color: 0xff8a3c }, vortex: { color: 0xff4fa3 },
-  banner: { color: 0xffe08a }, goo: { color: 0x7ee85a }, stage: { color: 0xff8fc0 },
+  banner: { color: 0xffe08a }, goo: { color: 0x7ee85a }, stage: { color: 0xff8fc0 }, pylon: { color: 0xffe14a }, fort: { color: 0xff8a2a },
 };
 function zoneMesh(G, kind, pos, radius) {
   const look = ZONE_LOOK[kind];
@@ -141,7 +141,7 @@ function zoneMesh(G, kind, pos, radius) {
     g.add(d);
   }
   const bits = [];
-  const n = kind === 'trap' || kind === 'banner' ? 0 : Math.round(radius * 3);
+  const n = kind === 'trap' || kind === 'banner' || kind === 'fort' ? 0 : Math.round(radius * 3);
   for (let i = 0; i < n; i++) {
     let m;
     if (kind === 'overgrowth') m = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.9, 5), new THREE.MeshStandardMaterial({ color: i % 4 ? 0x4f9a48 : 0xff5f8f }));
@@ -172,6 +172,13 @@ function zoneMesh(G, kind, pos, radius) {
     crest.position.set(0.62, 2.7, 0.01); g.add(crest);
     const tip = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.3, 6), new THREE.MeshStandardMaterial({ color: 0xffe08a }));
     tip.position.y = 3.35; g.add(tip);
+  }
+  if (kind === 'pylon') {                                  // Dynamo's pylon: a post with a crackling battery on top
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.14, 1.6, 8), new THREE.MeshStandardMaterial({ color: 0x2b2d4f, roughness: 0.5 }));
+    post.position.y = 0.8; g.add(post);
+    for (let i = 0; i < 3; i++) { const c = new THREE.Mesh(new THREE.TorusGeometry(0.22 - i * 0.03, 0.03, 6, 16), new THREE.MeshBasicMaterial({ color: 0xffe14a })); c.rotation.x = Math.PI / 2; c.position.y = 0.6 + i * 0.35; g.add(c); }
+    const cell = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 10), new THREE.MeshStandardMaterial({ color: 0xffe14a, emissive: 0xffe14a, emissiveIntensity: 1.2 }));
+    cell.position.y = 1.8; g.add(cell);
   }
   G.scene.add(g);
   return { g, bits, disc };
@@ -217,7 +224,7 @@ function tickPickups(G, dt) {
 }
 
 export function updateAbilities(G, dt) {
-  tickPickups(G, dt); tickHoles(G, dt);
+  tickPickups(G, dt); tickHoles(G, dt); tickBlocks(G, dt);
   for (const h of G.heroes) { h.zoneSlow = 1; h.zoneMult = 1; }
   for (let i = G.zones.length - 1; i >= 0; i--) {
     const z = G.zones[i];
@@ -243,6 +250,7 @@ export function updateAbilities(G, dt) {
       if (ally && z.mult && u.kind === 'hero') u.zoneMult = Math.min(u.zoneMult, z.mult);
       if (ally && z.rally && u.kind === 'hero') { u.rallyT = 0.25; u.rallyAmp = z.rally; }
       if (ally && z.haste && u.kind === 'hero') haste(u, 0.25, z.haste);
+      if (ally && z.boost && u.kind === 'hero') mend(G, z.owner, u, 0, z.boost * dt);
       if (!ally && z.dps) damage(G, u, z.dps * dt, z.owner);
       if (!ally && z.slow && u.kind === 'hero') u.zoneSlow = Math.min(u.zoneSlow, z.slow);
       if (!ally && z.pull) {                                    // mosh pit: drag toward the middle
@@ -1077,6 +1085,121 @@ export const ABIL = {
     },
     ai: (G, b, a, c) => c.heroT && c.dist < 28,
   },
+
+  // ---- Stitch ----
+  medbomb: {
+    cast(G, h, a, ctx) {
+      thrown(G, h, ctx, { dmg: 0, splash: 0, speed: 24, grav: 16, color: 0x7affc0, size: 0.2, lift: 0.22, noDirect: true,
+        onExplode: (G2, p) => {
+          ring(G, p, 0x7affc0, a.splash); burst(G, p, 0xffffff, a.splash * 0.45); burst(G, p, 0x7affc0, a.splash * 0.8);
+          for (const u of [...G.heroes, ...G.minions]) {
+            if (!u.alive || u.deploy || chestOf(u).distanceTo(p) > a.splash + 0.5) continue;
+            if (u.team === h.team) { if (u.kind === 'hero') mend(G, h, u, a.heal); }
+            else damage(G, u, a.dmg, h);
+          }
+        } });
+      return true;
+    },
+    ai: (G, b, a, c) => alliesOf(G, b).some(u => u.hp < u.maxHp * 0.7 && u.pos.distanceTo(b.pos) < 18) || (c.heroT && c.dist < 18),
+  },
+  lifeline: {
+    cast(G, h, a, ctx) {
+      const u = facedAlly(G, h, ctx, a.range) || h;
+      mend(G, h, u, a.heal); protect(u, a.mult, a.dur);
+      ring(G, u.pos, 0x7affc0, 1.6); burst(G, chestOf(u), 0x7affc0, 1);
+      if (u !== h) { tracer(G, chestOf(h), chestOf(u), 0x7affc0, 0.5, 2); G.ev.flash?.(u, 'Lifeline'); }
+      return true;
+    },
+    ai: (G, b, a) => b.hp < b.maxHp * 0.45 || alliesOf(G, b).some(u => u !== b && u.hp < u.maxHp * 0.5 && u.pos.distanceTo(b.pos) < a.range),
+  },
+  codeblue: {
+    cast(G, h, a) {
+      ring(G, h.pos, 0x7affc0, a.radius); ring(G, h.pos, 0xffffff, a.radius * 0.5);
+      for (const u of alliesOf(G, h)) {
+        if (u.pos.distanceTo(h.pos) > a.radius) continue;
+        mend(G, h, u, a.heal); protect(u, a.mult, a.dur);
+        burst(G, chestOf(u), 0x7affc0, 1.4);
+        if (u !== h) { tracer(G, chestOf(h), chestOf(u), 0xffffff, 0.6, 2); G.ev.flash?.(u, 'Code Blue'); }
+      }
+      return true;
+    },
+    ai: (G, b, a) => alliesOf(G, b).filter(u => u.hp < u.maxHp * 0.6 && u.pos.distanceTo(b.pos) < a.radius).length >= 2 || b.hp < b.maxHp * 0.3,
+  },
+
+  // ---- Dynamo ----
+  jumpstart: {
+    cast(G, h, a, ctx) {
+      const u = facedAlly(G, h, ctx, a.range) || h;
+      mend(G, h, u, 0, a.boost);
+      u.cd.q = Math.max(0, u.cd.q - a.cut); u.cd.ability = Math.max(0, u.cd.ability - a.cut);
+      if (u !== h) { zap(G, chestOf(h), chestOf(u)); G.ev.flash?.(u, 'Jump started!'); }
+      ring(G, u.pos, 0xffe14a, 1.6); burst(G, chestOf(u), 0xffe14a, 1.1);
+      return true;
+    },
+    ai: (G, b, a) => alliesOf(G, b).some(u => u !== b && u.ult < 85 && u.pos.distanceTo(b.pos) < a.range) || b.ult < 60,
+  },
+  pylon: {
+    cast(G, h, a) {
+      addZone(G, { kind: 'pylon', pos: h.pos.clone(), radius: a.radius, life: a.dur, team: h.team, owner: h, boost: a.rate, haste: a.speed });
+      ring(G, h.pos, 0xffe14a, a.radius); burst(G, h.pos.clone().setY(h.pos.y + 1.6), 0xffe14a, 1.2);
+      return true;
+    },
+    ai: (G, b, a, c) => c.alliesNear(9) >= 1 || (c.heroT && c.dist < 20),
+  },
+  overcharge: {
+    cast(G, h, a) {
+      ring(G, h.pos, 0xffe14a, a.radius); ring(G, h.pos, 0x7af0ff, a.radius * 0.5);
+      for (const u of alliesOf(G, h)) {
+        if (u === h || u.pos.distanceTo(h.pos) > a.radius) continue;
+        mend(G, h, u, 0, a.boost); haste(u, a.dur, 1, a.fire);
+        zap(G, chestOf(h), chestOf(u)); burst(G, chestOf(u), 0xffe14a, 1.3); G.ev.flash?.(u, 'Overcharged!');
+      }
+      haste(h, a.dur, 1, a.fire);
+      G.ev.shake?.(h, 0.3);
+      return true;
+    },
+    ai: (G, b, a, c) => c.alliesNear(a.radius) >= 2 || (c.alliesNear(a.radius) >= 1 && c.heroT),
+  },
+
+  // ---- Mortar ----
+  brick: {
+    cast(G, h, a, ctx) {
+      const s = blockSpot(G, h, ctx, a.range);
+      return !!(s && build(G, h, s.x, s.z, s.bottom, a.life));
+    },
+    // cover between the bot and whoever it's fighting
+    ai: (G, b, a, c) => c.heroT && c.dist < 24 && blocksOf(G, b).length < 5,
+  },
+  pillar: {
+    cast(G, h, a) {
+      if (!h.onGround) return false;
+      const x = cellOf(h.pos.x), z = cellOf(h.pos.z), bottom = groundAt(v.set(x, h.pos.y + 0.05, z), 0.05, G.colliders);
+      let made = 0;
+      for (let i = 0; i < a.n; i++) if (build(G, h, x, z, bottom + i * BLOCK.h, a.life)) made++;
+      if (!made) return false;
+      h.vel.y = Math.max(h.vel.y, 3); burst(G, h.pos.clone(), 0xd9733a, 1.2);
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && b.onGround && c.dist > 8 && c.dist < 40,
+  },
+  fortress: {
+    cast(G, h, a, ctx) {
+      const p = aimPoint(G, h, ctx, a.range), S = BLOCK.size, x0 = cellOf(p.x), z0 = cellOf(p.z);
+      // a 5x5 ring of walls with a doorway on the side facing Mortar, and a lookout block in the middle
+      const dx = h.pos.x - x0, dz = h.pos.z - z0;
+      const door = Math.abs(dx) > Math.abs(dz) ? [Math.sign(dx) * 2, 0] : [0, Math.sign(dz) * 2];
+      for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) {
+        const edge = Math.max(Math.abs(i), Math.abs(j)) === 2, mid = !i && !j;
+        if ((!edge && !mid) || (i === door[0] && j === door[1])) continue;
+        const x = x0 + i * S, z = z0 + j * S, b0 = groundAt(v.set(x, p.y + 0.5, z), 0.05, G.colliders);
+        for (let k = 0; k < (mid ? 1 : a.wall); k++) placeBlock(G, h, x, z, b0 + k * BLOCK.h, a.dur, true);
+      }
+      addZone(G, { kind: 'fort', pos: new THREE.Vector3(x0, p.y, z0), radius: S * 2.5, life: a.dur, team: h.team, owner: h, mult: a.mult });
+      ring(G, p, 0xff8a2a, S * 2.5); G.ev.shake?.(h, 0.5);
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist < 22,
+  },
 };
 
 // Cast a slot ('q', 'ability' or 'ult'). ctx: { wish, aim, target }.
@@ -1122,6 +1245,7 @@ export function dealtMult(src, t) {
   const id = pasId(src);
   if (id === 'aloft' && !src.onGround && src.airT > 0.25) return src.def.passive.amp;
   if (id === 'keeneye' && src.pos.distanceTo(t.pos) > src.def.passive.range) return src.def.passive.mult;
+  if (id === 'highground' && src.onBlock) return src.def.passive.amp;
   return 1;
 }
 // Damage reduction from the target's own passive.
@@ -1176,6 +1300,8 @@ function onCast(G, h, slot) {
 }
 // Every frame: burns, and regrowth after staying out of trouble.
 function tickPassive(G, h, dt) {
+  if (pasId(h) === 'highground') h.onBlock = h.onGround && (G.blocks || []).some(b => b.owner === h && Math.abs(h.pos.y - b.collider.top) < 0.15
+    && h.pos.x > b.collider.minX - 0.3 && h.pos.x < b.collider.maxX + 0.3 && h.pos.z > b.collider.minZ - 0.3 && h.pos.z < b.collider.maxZ + 0.3);
   if (h.burnT > 0) {
     h.burnT -= dt;
     if (h.alive && mine(G, h)) damage(G, h, h.burnDps * dt, h.burnSrc, false, true, true);
@@ -1253,5 +1379,127 @@ function tickHoles(G, dt) {
       tunnel(G, u, other);
       if (u !== x.owner) G.ev.flash?.(u, 'Tunnelled!');
     }
+  }
+}
+
+// ---------- Stitch and Dynamo: helping teammates ----------
+// Heal and/or super-charge a teammate. Healing also fills the healer's own super.
+export function mend(G, src, u, heal = 0, boost = 0) {
+  if (!u?.alive || !src) return 0;
+  let got = 0;
+  if (heal > 0 && u.hp < u.maxHp) {
+    const b = u.hp; healBy(G, u, heal, src); got = u.hp - b;
+    if (src.kind === 'hero' && src.def?.ult) src.ult = Math.min(100, src.ult + got / src.def.ult.cost * 100);
+    if (pasId(src) === 'bedside' && u !== src) healBy(G, src, got * src.def.passive.frac, src);
+  }
+  if (boost > 0 && u.kind === 'hero' && u.ult < 100) {
+    const b = u.ult; u.ult = Math.min(100, u.ult + boost); got += u.ult - b;
+    if (pasId(src) === 'feedback' && u !== src) src.ult = Math.min(100, src.ult + (u.ult - b) * src.def.passive.frac);
+    if (u.ult >= 100 && b < 100 && boost > 0.5) G.ev.flash?.(u, 'Super ready!');
+  }
+  return got;
+}
+// The teammate closest to where you're facing, in range and in sight.
+function facedAlly(G, h, ctx, range) {
+  const d = (ctx.aim || dirFrom(h.yaw, h.pitch)).clone().normalize(), o = eyeOf(h);
+  let pick = null, best = 0.8;
+  for (const u of alliesOf(G, h)) {
+    if (u === h) continue;
+    const to = chestOf(u).sub(o), dist = to.length();
+    if (dist > range) continue;
+    const dot = to.normalize().dot(d);
+    if (dot > best && hasLOS(o, chestOf(u), G.colliders)) { best = dot; pick = u; }
+  }
+  if (!pick && ctx.target && ctx.target.kind === 'hero' && ctx.target.team === h.team && ctx.target !== h) pick = ctx.target;
+  return pick;
+}
+// Take less damage for a while, keeping any stronger shield already up.
+function protect(u, mult, dur) {
+  u.barrierM = u.barrierT > 0 ? Math.min(u.barrierM, mult) : mult;
+  u.barrierT = Math.max(u.barrierT, dur);
+}
+// A jagged lightning bolt between two points.
+function zap(G, a, b, color = 0xffe14a) {
+  let prev = a.clone();
+  for (let k = 1; k <= 5; k++) {
+    const p = a.clone().lerp(b, k / 5);
+    if (k < 5) p.add(new THREE.Vector3((Math.random() - 0.5) * 0.6, (Math.random() - 0.5) * 0.6, (Math.random() - 0.5) * 0.6));
+    tracer(G, prev, p, k % 2 ? color : 0xffffff, 0.3, 1.5); prev = p;
+  }
+}
+
+// ---------- Mortar's blocks ----------
+// Blocks snap to a 2m grid and stack on the ground, map boxes and each other. Each Mortar keeps
+// up to BLOCK.max from Build Block and Scaffold; the fort from his super doesn't count.
+// Blocks are made by the cast, so online every machine builds the same ones.
+const BLOCK = { size: 2, h: 1.2, max: 8, top: 9 };
+const cellOf = x => (Math.floor(x / BLOCK.size) + 0.5) * BLOCK.size;
+export const blocksOf = (G, h) => (G.blocks || []).filter(b => b.owner === h && !b.fort);
+const BLOCK_GEO = new THREE.BoxGeometry(BLOCK.size, BLOCK.h, BLOCK.size), CAP_GEO = new THREE.BoxGeometry(BLOCK.size * 0.96, 0.06, BLOCK.size * 0.96);
+let brickMat = null;
+const capMats = {};
+function brickMaterial() {
+  if (brickMat) return brickMat;
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const g = c.getContext('2d');
+  g.fillStyle = '#e8d9c0'; g.fillRect(0, 0, 128, 128);                  // mortar
+  for (let r = 0; r < 4; r++) for (let k = -1; k < 3; k++) {
+    g.fillStyle = ['#d9733a', '#c8642e', '#e0844a'][(r + k + 3) % 3];
+    g.fillRect(k * 64 + (r % 2) * 32 + 3, r * 32 + 3, 58, 26);
+  }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  brickMat = new THREE.MeshStandardMaterial({ map: t, roughness: 0.85 });
+  return brickMat;
+}
+// Where Build Block lands: the grid cell just in front of whatever you aim at.
+function blockSpot(G, h, ctx, range) {
+  const o = eyeOf(h), d = (ctx.aim || dirFrom(h.yaw, h.pitch)).clone().normalize();
+  const t = rayWorld(o, d, range, G.colliders);
+  const p = o.clone().addScaledVector(d, Math.max(0, t - 0.05));
+  const x = cellOf(p.x), z = cellOf(p.z);
+  return { x, z, bottom: groundAt(v.set(x, p.y + 0.05, z), 0.05, G.colliders) };
+}
+// One of Mortar's own blocks: the oldest crumbles once he has too many.
+function build(G, h, x, z, bottom, life) {
+  const mine = blocksOf(G, h);
+  if (bottom > BLOCK.top) return null;
+  while (mine.length >= BLOCK.max) dropBlock(G, mine.shift());
+  return placeBlock(G, h, x, z, bottom, life, false);
+}
+function placeBlock(G, h, x, z, bottom, life, fort) {
+  if (bottom > BLOCK.top) return null;
+  G.blocks ||= [];
+  const collider = makeBox(x, z, BLOCK.size, BLOCK.size, BLOCK.h, bottom);
+  // anyone standing where it rises gets lifted onto it rather than trapped inside
+  for (const u of [...G.heroes, ...G.minions]) {
+    if (!u.alive || !u.vel) continue;
+    const r = u.radius || 0.45;
+    if (Math.abs(u.pos.x - x) > BLOCK.size / 2 + r * 0.7 || Math.abs(u.pos.z - z) > BLOCK.size / 2 + r * 0.7) continue;
+    if (u.pos.y < collider.top && u.pos.y + 1.8 > bottom) { u.pos.y = collider.top; if (u.vel.y < 0) u.vel.y = 0; }
+  }
+  G.colliders.push(collider);
+  const g = new THREE.Group(); g.position.set(x, bottom, z);
+  const m = new THREE.Mesh(BLOCK_GEO, brickMaterial()); m.position.y = BLOCK.h / 2; m.castShadow = m.receiveShadow = true; g.add(m);
+  const cap = new THREE.Mesh(CAP_GEO, capMats[h.team] ||= new THREE.MeshStandardMaterial({ color: TEAM_COLOR[h.team], roughness: 0.5 }));
+  cap.position.y = BLOCK.h + 0.03; cap.receiveShadow = true; g.add(cap);
+  g.scale.y = 0.02; G.scene.add(g);
+  const b = { owner: h, collider, g, life, t: 0, fort };
+  G.blocks.push(b);
+  burst(G, new THREE.Vector3(x, bottom + 0.3, z), 0xd9733a, 0.8);
+  return b;
+}
+function dropBlock(G, b) {
+  b.collider.alive = false;
+  const i = G.colliders.indexOf(b.collider); if (i >= 0) G.colliders.splice(i, 1);
+  G.scene.remove(b.g);
+  const k = G.blocks.indexOf(b); if (k >= 0) G.blocks.splice(k, 1);
+  burst(G, new THREE.Vector3(b.g.position.x, b.collider.bottom + 0.6, b.g.position.z), 0xc8642e, 1);
+}
+function tickBlocks(G, dt) {
+  const list = G.blocks; if (!list) return;
+  for (let i = list.length - 1; i >= 0; i--) {
+    const b = list[i]; b.life -= dt; b.t += dt;
+    b.g.scale.y = Math.max(0.02, Math.min(1, b.t * 7) * Math.min(1, Math.max(0, b.life) * 3));
+    if (b.life <= 0 || !b.owner) dropBlock(G, b);
   }
 }

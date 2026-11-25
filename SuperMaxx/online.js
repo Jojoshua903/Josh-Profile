@@ -1,9 +1,9 @@
-import { HEROES } from './heroes.js?v=20261125q';
-import { MAPS } from './data.js?v=20261125q';
-import { cfg, save } from './settings.js?v=20261125q';
-import { headshot } from './portraits.js?v=20261125q';
-import { dressed, wear, myCosIds, resolveCos, bannerCss } from './pass.js?v=20261125q';
-import * as net from './net.js?v=20261125q';
+import { HEROES } from './heroes.js?v=20261125v';
+import { MAPS } from './data.js?v=20261125v';
+import { cfg, save } from './settings.js?v=20261125v';
+import { headshot } from './portraits.js?v=20261125v';
+import { dressed, wear, myCosIds, resolveCos, bannerCss } from './pass.js?v=20261125v';
+import * as net from './net.js?v=20261125v';
 
 // Online front end: set up your name and hero, host or join a room by code, then the lobby
 // (mode, teams, stage, start). The match itself starts on every machine when the host hits Start.

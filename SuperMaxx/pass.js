@@ -1,7 +1,7 @@
-import { HEROES } from './heroes.js?v=20261125q';
-import { cfg, save } from './settings.js?v=20261125q';
-import { SLOT_HEROES, slotOwned, isSlotItem } from './slots.js?v=20261125q';
-import { sprayUrl } from './sprays.js?v=20261125q';
+import { HEROES } from './heroes.js?v=20261125v';
+import { cfg, save } from './settings.js?v=20261125v';
+import { SLOT_HEROES, slotOwned, isSlotItem } from './slots.js?v=20261125v';
+import { sprayUrl } from './sprays.js?v=20261125v';
 
 // Season pass: XP from matches (mostly from winning) climbs a 30-tier track of hero skins,
 // cosmetics and three season heroes. Progress is saved locally.
@@ -39,6 +39,19 @@ export const SKINS = [
   { id: 'croc-gummy', hero: 'croc', slot: true, name: 'Gummy Gator', color: 0xff5fa0, palette: { main: 0xff5fa0, trim: 0xfff07a, dark: 0xc23b7a, skin: 0xffa0c8, finish: { rough: 0.08, glow: 0.18 } } },
   { id: 'cavalier-phantom', hero: 'cavalier', slot: true, name: 'Phantom Knight', color: 0x9fe8ff, palette: { main: 0x9fe8ff, trim: 0x5a3aff, dark: 0x1a2240, finish: { glow: 0.5, rough: 0.2 } } },
   { id: 'mirage-hologram', hero: 'mirage', slot: true, name: 'Hologram', color: 0x7af0ff, palette: { main: 0x7af0ff, trim: 0xff8fd0, dark: 0x2a2f5a, finish: { glow: 0.55, rough: 0.1 } } },
+  { id: 'ember-supernova', hero: 'ember', slot: true, name: 'Supernova', color: 0xff7af0, palette: { main: 0x2a1a5a, trim: 0xff7af0, dark: 0x0d0820, finish: { glow: 0.8, rough: 0.25 } } },
+  { id: 'warden-stained', hero: 'warden', slot: true, name: 'Stained Glass', color: 0x3a8ac8, palette: { main: 0x3a8ac8, trim: 0xffd23c, dark: 0x5a1a4a, finish: { glow: 0.5, rough: 0.12 } } },
+  { id: 'thicket-sakura', hero: 'thicket', slot: true, name: 'Cherry Blossom', color: 0xffb3cf, palette: { main: 0xffb3cf, trim: 0x6a3a2a, dark: 0x3a2a30, finish: { rough: 0.45, glow: 0.2 } } },
+  { id: 'ratchet-overclock', hero: 'ratchet', slot: true, name: 'Overclocked', color: 0x39ff9a, palette: { main: 0x1d1f2a, trim: 0x39ff9a, dark: 0x0a0c12, finish: { metal: 0.5, rough: 0.25, glow: 0.9 } } },
+  { id: 'avalanche-volcanic', hero: 'avalanche', slot: true, name: 'Volcanic', color: 0xff6a2a, palette: { main: 0x3a2a2a, trim: 0xff6a2a, dark: 0x160c0c, finish: { glow: 1.0, rough: 0.85 } } },
+  { id: 'tempo-clockwork', hero: 'tempo', slot: true, name: 'Clockwork', color: 0xc9a14a, palette: { main: 0xc9a14a, trim: 0x2a2f3c, dark: 0x4a3010, finish: { metal: 0.65, rough: 0.25, trimMetal: 0.4 } } },
+  { id: 'kestrel-phoenix', hero: 'kestrel', slot: true, name: 'Phoenix', color: 0xff5a2a, palette: { main: 0xff5a2a, trim: 0xffe14a, dark: 0x6a1a10, finish: { glow: 0.6, rough: 0.3 } } },
+  { id: 'elf-winter', hero: 'elf', slot: true, name: 'Winter Court', color: 0xbfe6ff, palette: { main: 0xdff4ff, trim: 0x7ab8ff, dark: 0x3a4a6a, skin: 0xeaf2ff, finish: { glow: 0.35, rough: 0.2 } } },
+  { id: 'dancer-blackswan', hero: 'dancer', slot: true, name: 'Black Swan', color: 0xff2a5a, palette: { main: 0x1a1a24, trim: 0xff2a5a, dark: 0x0a0a10, finish: { rough: 0.15, glow: 0.4 } } },
+  { id: 'mole-diamond', hero: 'mole', slot: true, name: 'Diamond Digger', color: 0x9fe8ff, palette: { main: 0x9fe8ff, trim: 0xffffff, dark: 0x2a3a5a, skin: 0x8a7a9a, finish: { metal: 0.4, rough: 0.12, glow: 0.3 } } },
+  { id: 'medic-plague', hero: 'medic', slot: true, name: 'Plague Doctor', color: 0x6a4a8a, palette: { main: 0x2a2234, trim: 0xb98cff, dark: 0x120e18, finish: { rough: 0.7, glow: 0.4 } } },
+  { id: 'spark-thunder', hero: 'spark', slot: true, name: 'Thunderhead', color: 0x7af0ff, palette: { main: 0x3a4a8a, trim: 0x7af0ff, dark: 0x101a3a, finish: { glow: 0.9, rough: 0.25 } } },
+  { id: 'builder-marble', hero: 'builder', slot: true, name: 'Marble Mason', color: 0xf0ece4, palette: { main: 0xf0ece4, trim: 0xffc93c, dark: 0x6a6a72, finish: { rough: 0.15, trimMetal: 0.5, glow: 0.15 } } },
 ];
 
 // Cosmetics: titles and banners show on your player card, tracers recolour your shots,

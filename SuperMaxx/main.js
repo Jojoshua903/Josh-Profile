@@ -1,29 +1,29 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { HEROES, MAPS, DIFFICULTY, TUNING, SURVIVOR_MAP, SURVIVOR, HILL, DUEL, CART } from './data.js?v=20261125q';
-import { initSurvivor, updateSurvivor, survivorLeaders, stormInfo, inStorm } from './survivor.js?v=20261125q';
-import { initHill, updateHill, hillVisuals, onHill } from './hill.js?v=20261125q';
-import { initCart, updateCart, nearCart, cartLead } from './payload.js?v=20261125q';
-import { buildWorld, mirror } from './world.js?v=20261125q';
+import { HEROES, MAPS, DIFFICULTY, TUNING, SURVIVOR_MAP, SURVIVOR, HILL, DUEL, CART } from './data.js?v=20261125v';
+import { initSurvivor, updateSurvivor, survivorLeaders, stormInfo, inStorm } from './survivor.js?v=20261125v';
+import { initHill, updateHill, hillVisuals, onHill } from './hill.js?v=20261125v';
+import { initCart, updateCart, nearCart, cartLead } from './payload.js?v=20261125v';
+import { buildWorld, mirror } from './world.js?v=20261125v';
 import { createHero, spawnHero, createStructure, spawnMinion, fire, releaseFire, chargeLevel, startReload, tickHero, tickCorpse, chestOf,
-  updateMinions, updateStructures, updateProjectiles, updateFx, dirFrom, eyeOf, TEAM_COLOR } from './units.js?v=20261125q';
-import { steer, initBot, updateBot } from './botbrain.js?v=20261125q';
-import { castSlot, updateAbilities } from './abilities.js?v=20261125q';
-import { floatText } from './anim.js?v=20261125q';
-import { cfg, applyGraphics } from './settings.js?v=20261125q';
-import { initMenu, showMenu, menuFrame, openSettings, settingsVisible } from './menu.js?v=20261125q';
-import { dressed, heroOwned, wear, myCosIds, resolveCos, matchXp, award, rewardInfo, tierProgress, SEASON, MAX_TIER, cosById, cosOwned, equippedCos } from './pass.js?v=20261125q';
-import { aimSpray, placeSpray, SPRAY_CD } from './sprays.js?v=20261125q';
-import { headshot } from './portraits.js?v=20261125q';
-import './personality.js?v=20261125q';
-import { openSession, tickPuppet, myUid, lobbyState, leaveRoom, onLobby } from './net.js?v=20261125q';
-import { initAudio, applyVolume, tone, noise, ABIL_SFX } from './audio.js?v=20261125q';
-import { playMusic } from './music.js?v=20261125q';
-import { sparks, castFx, lightFlash } from './vfx.js?v=20261125q';
-import { applyEnvironment } from './stage.js?v=20261125q';
-import { perfFrame } from './perf.js?v=20261125q';
-import { gainMastery } from './mastery.js?v=20261125q';
-import { startTutorial, stopTutorial, tickTutorial, tutorialCast, tutorialKill, onTutorialPass } from './tutorial.js?v=20261125q';
-import { initReplay, recFrame, recEvent, recKill, finalClip, startPlayback, tickPlayback, stopPlayback } from './replay.js?v=20261125q';
+  updateMinions, updateStructures, updateProjectiles, updateFx, dirFrom, eyeOf, TEAM_COLOR } from './units.js?v=20261125v';
+import { steer, initBot, updateBot } from './botbrain.js?v=20261125v';
+import { castSlot, updateAbilities } from './abilities.js?v=20261125v';
+import { floatText } from './anim.js?v=20261125v';
+import { cfg, applyGraphics } from './settings.js?v=20261125v';
+import { initMenu, showMenu, menuFrame, openSettings, settingsVisible } from './menu.js?v=20261125v';
+import { dressed, heroOwned, wear, myCosIds, resolveCos, matchXp, award, rewardInfo, tierProgress, SEASON, MAX_TIER, cosById, cosOwned, equippedCos } from './pass.js?v=20261125v';
+import { aimSpray, placeSpray, SPRAY_CD } from './sprays.js?v=20261125v';
+import { headshot } from './portraits.js?v=20261125v';
+import './personality.js?v=20261125v';
+import { openSession, tickPuppet, myUid, lobbyState, leaveRoom, onLobby } from './net.js?v=20261125v';
+import { initAudio, applyVolume, tone, noise, ABIL_SFX } from './audio.js?v=20261125v';
+import { playMusic } from './music.js?v=20261125v';
+import { sparks, castFx, lightFlash } from './vfx.js?v=20261125v';
+import { applyEnvironment } from './stage.js?v=20261125v';
+import { perfFrame } from './perf.js?v=20261125v';
+import { gainMastery } from './mastery.js?v=20261125v';
+import { startTutorial, stopTutorial, tickTutorial, tutorialCast, tutorialKill, onTutorialPass } from './tutorial.js?v=20261125v';
+import { initReplay, recFrame, recEvent, recKill, finalClip, startPlayback, tickPlayback, stopPlayback } from './replay.js?v=20261125v';
 let envRT = null;
 
 const $ = id => document.getElementById(id);
@@ -78,6 +78,9 @@ const SHOT = {
   elf: v => { noise(0.06, 0.06 * v, 3200, 0, { type: 'bandpass', to: 1200, q: 3 }); tone(220, 0.09, 'triangle', 0.06 * v, 0.6); },
   dancer: v => { noise(0.14, 0.05 * v, 2400, 0, { type: 'bandpass', to: 5200, q: 2 }); tone(1046, 0.08, 'sine', 0.025 * v, 1.2); },
   mole: v => { noise(0.16, 0.12 * v, 700); for (let i = 0; i < 3; i++) tone(900 + i * 220, 0.03, 'square', 0.02 * v, 0.8, 0.04 + i * 0.03); },
+  medic: v => { noise(0.04, 0.06 * v, 3800, 0, { type: 'bandpass', to: 2400, q: 2 }); tone(880, 0.06, 'sine', 0.03 * v, 1.4); },
+  spark: v => { noise(0.05, 0.05 * v, 5000); tone(1200 + Math.random() * 400, 0.04, 'square', 0.02 * v, 0.5); },
+  builder: v => { tone(140, 0.12, 'sine', 0.08 * v, 0.6); noise(0.1, 0.1 * v, 700); },
 };
 
 // ---------- game state ----------
@@ -96,6 +99,7 @@ const VIEW = {
   croc: { len: 0.42, w: 0.17, barrel: 0.09, hopper: true }, cavalier: { len: 0.62, w: 0.08, barrel: 0.025 },
   slime: { len: 0.38, w: 0.15, barrel: 0.06, goo: true }, brawler: { len: 0.16, w: 0.18, barrel: 0.001, glove: true }, chipmunk: { len: 0.5, w: 0.17, barrel: 0.06, drum: true },
   elf: { len: 0.5, w: 0.05, barrel: 0.012, longbow: true }, dancer: { len: 0.28, w: 0.035, barrel: 0.008, ribbon: true }, mole: { len: 0.55, w: 0.06, barrel: 0.02, shovel: true },
+  medic: { len: 0.55, w: 0.08, barrel: 0.02, vial: true }, spark: { len: 0.3, w: 0.1, barrel: 0.03, clamps: true }, builder: { len: 0.5, w: 0.16, barrel: 0.07, bricks: true },
 };
 function makeViewGun(def) {
   const v = VIEW[def.id], p = def.palette;
@@ -120,6 +124,9 @@ function makeViewGun(def) {
   if (v.longbow) { const b = add(new THREE.TorusGeometry(0.34, 0.016, 6, 24, Math.PI * 0.8), L(0x8a5a3a), 0, 0.02, bz + 0.08); b.rotation.set(0, Math.PI / 2, Math.PI / 2 + Math.PI * 0.1); }
   if (v.ribbon) for (let i = 0; i < 6; i++) { const r = add(new THREE.BoxGeometry(0.06, 0.008, 0.12), L(i % 2 ? 0xffffff : def.color), Math.sin(i) * 0.04, 0.02 + i * 0.03, bz - 0.05 - i * 0.07); r.rotation.set(0.3, i * 0.4, 0.2); }
   if (v.shovel) { const s = add(new THREE.BoxGeometry(0.22, 0.025, 0.24), L(0xb8c0cc), 0, 0.01, bz - 0.02); s.rotation.x = -0.3; for (let i = 0; i < 3; i++) add(new THREE.SphereGeometry(0.03, 6, 4), L(0x9a8a72), (i - 1) * 0.06, 0.04, bz - 0.02); }
+  if (v.vial) { add(new THREE.CylinderGeometry(0.03, 0.03, 0.2, 10), new THREE.MeshStandardMaterial({ color: 0x7affc0, emissive: 0x7affc0, emissiveIntensity: 0.8 }), 0, 0.1, -0.05).rotation.x = Math.PI / 2; add(new THREE.BoxGeometry(0.06, 0.015, 0.015), L(p.trim), 0, 0.075, 0.12); add(new THREE.BoxGeometry(0.015, 0.06, 0.015), L(p.trim), 0, 0.075, 0.12); }
+  if (v.clamps) { for (const s of [-1, 1]) { const j = add(new THREE.BoxGeometry(0.035, 0.05, 0.16), L(s < 0 ? 0xff4f6b : 0x1d1d24), s * 0.04, 0, bz - 0.06); j.rotation.y = s * 0.15; } add(new THREE.SphereGeometry(0.035, 8, 6), new THREE.MeshBasicMaterial({ color: 0x7af0ff }), 0, 0, bz - 0.17); }
+  if (v.bricks) for (let i = 0; i < 3; i++) add(new THREE.BoxGeometry(0.15, 0.06, 0.09), L([0xd9733a, 0xc8642e, 0xe0844a][i]), 0, 0.1 + i * 0.065, 0.05 - i * 0.02);
   const tip = new THREE.Object3D(); tip.position.z = bz - 0.16; tip.name = 'tip'; g.add(tip);
   g.position.set(0.24, -0.22, -0.45);
   // off-hand for casting: a glove with a glowing ring in the hero's colour
@@ -436,9 +443,10 @@ function showPassGain(win) {
     ${res.unlocked.length ? `<div class="pg-un">${res.unlocked.map(chip).join('')}</div>` : ''}
     ${mst ? `<div class="pg-mst" style="--mc:${mst.after.rank.color}">
       <div class="pg-top"><span>${P.def.callsign} mastery</span><b>+${mst.gained} XP</b></div>
-      <div class="pg-bar"><i style="width:${mst.levelUp ? 0 : mst.before.frac * 100}%"></i></div>
-      <div class="pg-tier"><span>${mst.after.rank.name} · Lv ${mst.before.level}${mst.levelUp ? ` → <b>${mst.after.level}</b>` : ''}</span><span>${mst.after.max ? 'Mastered!' : `${mst.after.into} / ${mst.after.need} XP`}</span></div>
-      ${mst.rankUp ? `<div class="pg-rank">New rank: ${mst.after.rank.name}! <span class="pg-tok">+${mst.tokens} mastery token${mst.tokens > 1 ? "s" : ""} 🎰</span></div>` : ''}</div>` : ''}`;
+      <div class="pg-bar"><i style="width:${mst.levelUp || mst.bonus ? 0 : mst.before.frac * 100}%"></i></div>
+      <div class="pg-tier"><span>${mst.after.rank.name} · Lv ${mst.before.level}${mst.levelUp ? ` → <b>${mst.after.level}</b>` : ''}</span><span>${mst.after.max ? `${mst.after.into} / ${mst.after.need} to bonus token` : `${mst.after.into} / ${mst.after.need} XP`}</span></div>
+      ${mst.rankUp ? `<div class="pg-rank">New rank: ${mst.after.rank.name}! <span class="pg-tok">+${(mst.tokens - mst.bonus)} mastery token${(mst.tokens - mst.bonus) > 1 ? "s" : ""} 🎰</span></div>` : ''}
+      ${mst.bonus ? `<div class="pg-rank">Mastery bonus! <span class="pg-tok">+${mst.bonus} mastery token${mst.bonus > 1 ? "s" : ""} 🎰</span></div>` : ''}</div>` : ''}`;
   if (mst) setTimeout(() => { const b = el.querySelector('.pg-mst .pg-bar i'); if (b) b.style.width = (mst.after.frac * 100) + '%'; }, 1700);
   if (mst?.levelUp) setTimeout(() => { tone(523, 0.15, 'square', 0.05, 1); tone(784, 0.25, 'square', 0.05, 1, 0.12); }, 1800);
   setTimeout(() => { el.querySelector('.pg-bar i').style.width = (p1.frac * 100) + '%'; }, 1500);
@@ -753,7 +761,7 @@ const events = {
 };
 
 // Per-hero feel for the first-person gun.
-const RECOIL = { vanguard: 0.25, striker: 0.18, ember: 0.7, warden: 1, thicket: 0.9, ratchet: 0.3, mirage: 0.3, avalanche: 0.55, tempo: 0.06, kestrel: 0.4, croc: 0.6, cavalier: 0.45, slime: 0.5, brawler: 0, chipmunk: 0.12, elf: 0.35, dancer: 0.05, mole: 0.7 };
+const RECOIL = { vanguard: 0.25, striker: 0.18, ember: 0.7, warden: 1, thicket: 0.9, ratchet: 0.3, mirage: 0.3, avalanche: 0.55, tempo: 0.06, kestrel: 0.4, croc: 0.6, cavalier: 0.45, slime: 0.5, brawler: 0, chipmunk: 0.12, elf: 0.35, dancer: 0.05, mole: 0.7, medic: 0.2, spark: 0.06, builder: 0.6 };
 const SPIN_RELOAD = new Set(['striker', 'mirage', 'ratchet']);
 function ultFlash(color) {
   const f = $('ultflash'); f.style.background = `radial-gradient(circle, transparent 40%, ${hex(color)}aa)`;

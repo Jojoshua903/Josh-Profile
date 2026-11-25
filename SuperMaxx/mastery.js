@@ -1,9 +1,10 @@
-import { addTokens } from './slots.js?v=20261125q';
+import { addTokens } from './slots.js?v=20261125v';
 
 // Hero mastery: every hero earns its own XP from the matches you play with it.
 // Ten levels, four ranks. Rank shows as a badge on the hero tile and in the hero panel;
 // gold heroes get a gold tile frame, diamond (level 10) an animated one. Saved locally.
 // Every rank-up (Bronze → Silver → Gold → Diamond) pays one mastery token for the slot machine.
+// Past max level, every BONUS_XP more (what Gold → Diamond takes) pays another token.
 
 const KEY = 'supermaxx-mastery';
 const state = (() => { try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { return {}; } })();
@@ -19,11 +20,16 @@ export const RANKS = [
 ];
 export const rankOf = level => [...RANKS].reverse().find(r => level >= r.from);
 const rankIdx = level => RANKS.indexOf(rankOf(level));
+export const BONUS_XP = LEVELS[MAX_LEVEL - 1] - LEVELS[RANKS[RANKS.length - 2].from - 1];
+const bonusOf = xp => Math.max(0, Math.floor((xp - LEVELS[MAX_LEVEL - 1]) / BONUS_XP));
+const tokensOf = xp => rankIdx(masteryOf(null, xp).level) + bonusOf(xp);
 
 export function masteryOf(id, xp = state[id] || 0) {
   let level = 1; while (level < MAX_LEVEL && xp >= LEVELS[level]) level++;
-  const max = level >= MAX_LEVEL, into = xp - LEVELS[level - 1], need = max ? 1 : LEVELS[level] - LEVELS[level - 1];
-  return { xp, level, max, into, need, frac: max ? 1 : into / need, rank: rankOf(level) };
+  const max = level >= MAX_LEVEL;
+  // at max the bar tracks progress to the next bonus token instead
+  const into = max ? (xp - LEVELS[MAX_LEVEL - 1]) % BONUS_XP : xp - LEVELS[level - 1], need = max ? BONUS_XP : LEVELS[level] - LEVELS[level - 1];
+  return { xp, level, max, into, need, frac: into / need, rank: rankOf(level), bonus: bonusOf(xp) };
 }
 
 // One-time: players who ranked heroes up before tokens existed get those tokens now.
@@ -31,6 +37,11 @@ try {
   if (!localStorage.getItem(KEY + '-tokens')) {
     addTokens(Object.keys(state).reduce((a, id) => a + rankIdx(masteryOf(id).level), 0));
     localStorage.setItem(KEY + '-tokens', '1');
+  }
+  // one-time: XP already banked past max level pays its bonus tokens
+  if (!localStorage.getItem(KEY + '-bonus')) {
+    addTokens(Object.keys(state).reduce((a, id) => a + bonusOf(state[id] || 0), 0));
+    localStorage.setItem(KEY + '-bonus', '1');
   }
 } catch {}
 
@@ -45,7 +56,7 @@ export function gainMastery(id, { win, kills = 0, dmg = 0, tutorial }) {
   const before = masteryOf(id);
   state[id] = (state[id] || 0) + gained; persist();
   const after = masteryOf(id);
-  const tokens = rankIdx(after.level) - rankIdx(before.level);
+  const bonus = bonusOf(after.xp) - bonusOf(before.xp), tokens = tokensOf(after.xp) - tokensOf(before.xp);
   addTokens(tokens);
-  return { gained, parts, before, after, levelUp: after.level > before.level, rankUp: tokens > 0, tokens };
+  return { gained, parts, before, after, levelUp: after.level > before.level, rankUp: tokens - bonus > 0, bonus, tokens };
 }

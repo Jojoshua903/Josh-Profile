@@ -1,8 +1,8 @@
-import { HEROES } from './heroes.js?v=20261125q';
-import { cfg, save } from './settings.js?v=20261125q';
-import { headshot } from './portraits.js?v=20261125q';
+import { HEROES } from './heroes.js?v=20261125v';
+import { cfg, save } from './settings.js?v=20261125v';
+import { headshot } from './portraits.js?v=20261125v';
 import { COS_TYPES, COSMETICS, cosById, cosOwned, cosTier, equippedCos, equipCos, cosArt, bannerCss,
-  heroOwned, heroTier, skinsFor, skinOwned, skinTier, equip, dressed, dressedAny, isSlotItem, cosLock } from './pass.js?v=20261125q';
+  heroOwned, heroTier, skinsFor, skinOwned, skinTier, equip, dressed, dressedAny, isSlotItem, cosLock } from './pass.js?v=20261125v';
 
 // Closet: everything you've collected in one place. The player card on the left shows what you're
 // wearing; hovering any item tries it on. Click an owned item to equip it, click again to take it off.

@@ -274,6 +274,51 @@ export const HEROES = [
     passive: { id: 'network', name: 'Tunnel Network', desc: 'Teammates can travel through your tunnels too' },
     prefRange: 9,
   },
+  {
+    id: 'medic', name: 'Dr. Amara Quist', callsign: 'Stitch', role: 'Field medic', color: 0x5fe0a0,
+    title: 'Chief surgeon of the Solmare Field Hospital',
+    bio: 'Patched up half the league in a tent behind the canal stadium and billed none of them. Fires healing darts with the same steady hand she uses for stitches, and has opinions about your posture.',
+    quote: 'Hold still. This will only sting a lot.',
+    palette: { main: 0xf4f6fa, trim: 0xff4f6b, dark: 0x2a3550, skin: 0x8d5a3b },
+    quips: { kill: ['Flatlined.', 'Doctor’s orders: lie down.', 'No refunds.'], ability: ['Hold still!', 'Patching you up!', 'Breathe!'], ult: ['CODE BLUE! Everyone, on me!'], spawn: ['Clinic’s open.'] },
+    hp: 185, speed: 7.2, desc: 'A dart rifle that heals any teammate it hits, a triage grenade, a protective lifeline and a team-wide emergency heal.',
+    weapon: { name: 'Mender Dart Rifle', type: 'hitscan', mode: 'mend', dmg: 14, heal: 16, rate: 0.26, mag: 24, reload: 1.5, spread: 0.006, range: 60, head: 1.5, tracer: 0xff4f6b, ally: 0x7affc0, desc: 'Darts hurt enemies and heal any teammate you hit. Healing charges your super.' },
+    q: { id: 'medbomb', name: 'Triage Grenade', cd: 9, heal: 55, dmg: 35, splash: 4.5, desc: 'Lob a grenade that heals teammates (and you) and hurts enemies where it lands' },
+    ability: { id: 'lifeline', name: 'Lifeline', cd: 12, range: 30, heal: 30, dur: 4, mult: 0.6, desc: 'Tether the teammate you face (or yourself): heal 30 and take 40% less damage for 4s' },
+    ult: { id: 'codeblue', name: 'Code Blue', cost: 900, radius: 22, heal: 120, dur: 4, mult: 0.7, desc: 'Every teammate within 22m heals 120 and takes 30% less damage for 4s' },
+    passive: { id: 'bedside', name: 'Bedside Manner', frac: 0.25, desc: 'Healing a teammate also heals you for a quarter of it' },
+    prefRange: 18,
+  },
+  {
+    id: 'spark', name: 'Juniper Volt', callsign: 'Dynamo', role: 'Charge support', color: 0xffe14a,
+    title: 'Pit-lane electrician, self-taught',
+    bio: 'Wired the canal city’s neon signs by hand and has been mildly electric ever since. Carries a backpack of mismatched batteries and jumper cables that can kick-start a tram, a turret or a teammate’s super.',
+    quote: 'You look flat. Let me fix that.',
+    palette: { main: 0x2b2d4f, trim: 0xffe14a, dark: 0x14152a, skin: 0xf0c7a4 },
+    quips: { kill: ['Short-circuited.', 'Lights out!', 'Grounded.'], ability: ['Clear!', 'Juice up!', 'Bzzzt!'], ult: ['OVERCHARGE! Everybody, light it up!'], spawn: ['Fully charged.'] },
+    hp: 180, speed: 7.4, desc: 'Jumper cables that charge a teammate’s super with every zap, a jump start, a power pylon and a team-wide overcharge.',
+    weapon: { name: 'Jumper Cables', type: 'hitscan', mode: 'mend', zap: true, dmg: 11, boost: 1.4, rate: 0.15, mag: 40, reload: 1.4, spread: 0.012, range: 40, head: 1.3, tracer: 0xffe14a, ally: 0x7af0ff, desc: 'Zaps hurt enemies and pump super charge into any teammate you hit.' },
+    q: { id: 'jumpstart', name: 'Jump Start', cd: 10, range: 30, boost: 15, cut: 3, desc: 'Zap the teammate you face (or yourself): +15% super and 3s off their ability cooldowns' },
+    ability: { id: 'pylon', name: 'Power Pylon', cd: 14, radius: 5, dur: 6, rate: 4, speed: 1.15, desc: 'Plant a pylon: teammates near it gain 4% super every second and move 15% faster' },
+    ult: { id: 'overcharge', name: 'Overcharge', cost: 1000, radius: 25, boost: 35, dur: 5, fire: 1.25, desc: 'Every teammate within 25m gains 35% super, and you all fire 25% faster for 5s' },
+    passive: { id: 'feedback', name: 'Feedback Loop', frac: 0.25, desc: 'A quarter of the super charge you give teammates charges your own' },
+    prefRange: 16,
+  },
+  {
+    id: 'builder', name: 'Bruno Mortari', callsign: 'Mortar', role: 'Construction control', color: 0xff8a2a,
+    title: 'Site foreman, three-time sandcastle champion',
+    bio: 'Built half the rooftops in the canal city and the other half are still waiting on him. Lobs bricks, stacks bricks and, given four seconds and a bad idea, builds a fort around you. Never reads the blueprints.',
+    quote: 'Measure once. Build wherever.',
+    palette: { main: 0xff8a2a, trim: 0xe8eef2, dark: 0x3a3f4a, skin: 0xc68a5e },
+    quips: { kill: ['Bricked.', 'Demolished.', 'Knocked down!'], ability: ['Building!', 'Going up!', 'Brick by brick!'], ult: ['FORT MORTAR! Everybody in!'], spawn: ['Clocking in.'] },
+    hp: 205, speed: 6.9, desc: 'A brick launcher, blocks you can stack into platforms and cover, a scaffold that lifts you up and an instant fort.',
+    weapon: { name: 'Brick Launcher', type: 'rocket', mode: 'lob', box: true, dmg: 36, splash: 0, speed: 46, grav: 11, rate: 0.5, mag: 8, reload: 1.7, spread: 0.008, range: 70, head: 1.4, color: 0xd9733a, size: 0.17, desc: 'Lobs heavy bricks with an arc. Direct hits only.' },
+    q: { id: 'brick', name: 'Build Block', cd: 1.2, range: 18, life: 30, desc: 'Place a 2m block where you aim. Blocks stack on the ground, the map and each other. Up to 8 at once' },
+    ability: { id: 'pillar', name: 'Scaffold', cd: 9, n: 3, life: 20, desc: 'Raise a three-block tower under your feet and ride it up' },
+    ult: { id: 'fortress', name: 'Fort Mortar', cost: 950, range: 30, wall: 2, dur: 14, mult: 0.8, desc: 'Drop a walled fort where you aim, with a lookout in the middle. Teammates inside take 20% less damage' },
+    passive: { id: 'highground', name: 'High Ground', amp: 1.2, desc: 'Standing on your own blocks you deal 20% more damage' },
+    prefRange: 20,
+  },
 ];
 
 // Archetypes: the broad job each hero does, used to filter hero select.
@@ -286,8 +331,8 @@ export const ARCHETYPES = [
 const ARCH_OF = {
   vanguard: 'tank', avalanche: 'tank', croc: 'tank', cavalier: 'tank', chipmunk: 'tank',
   striker: 'damage', ember: 'damage', mirage: 'damage', kestrel: 'damage', brawler: 'damage', elf: 'damage',
-  warden: 'support', slime: 'support', dancer: 'support',
-  thicket: 'control', ratchet: 'control', tempo: 'control', mole: 'control',
+  warden: 'support', slime: 'support', dancer: 'support', medic: 'support', spark: 'support',
+  thicket: 'control', ratchet: 'control', tempo: 'control', mole: 'control', builder: 'control',
 };
 for (const h of HEROES) h.arch = ARCH_OF[h.id] || 'damage';
 export const archOf = h => ARCHETYPES.find(a => a.id === h.arch);

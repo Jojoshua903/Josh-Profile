@@ -1,4 +1,4 @@
-import { cfg } from './settings.js?v=20261125q';
+import { cfg } from './settings.js?v=20261125v';
 
 // Shared Web Audio graph: everything is synthesised, nothing is loaded.
 // master -> compressor -> speakers, with separate effect and music buses under it.
@@ -65,6 +65,18 @@ function hooves(n, v, at = 0) {                      // gallop: da-da-DUM
 
 // ---------- one sound per ability, by ability id. v = loudness (1 = your own cast) ----------
 export const ABIL_SFX = {
+  // Stitch
+  medbomb: v => { tone(660, 0.12, 'sine', 0.05 * v, 1.2); noise(0.25, 0.08 * v, 2000, 0.3, { type: 'bandpass', to: 900, q: 1.5 }); [784, 988, 1175].forEach((f, i) => tone(f, 0.18, 'sine', 0.04 * v, 1, 0.35 + i * 0.06)); },
+  lifeline: v => { tone(523, 0.4, 'sine', 0.05 * v, 1.5); tone(1046, 0.3, 'triangle', 0.03 * v, 1, 0.1); },
+  codeblue: v => { for (let i = 0; i < 3; i++) { tone(988, 0.12, 'square', 0.03 * v, 1, i * 0.22); tone(784, 0.12, 'square', 0.03 * v, 1, i * 0.22 + 0.11); } [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.5, 'sine', 0.05 * v, 1, 0.7 + i * 0.08)); },
+  // Dynamo
+  jumpstart: v => { noise(0.2, 0.1 * v, 5000); tone(220, 0.3, 'sawtooth', 0.05 * v, 4); },
+  pylon: v => { tone(60, 0.6, 'sawtooth', 0.06 * v, 1); for (let i = 0; i < 5; i++) noise(0.04, 0.05 * v, 6000, 0.1 + i * 0.09); tone(880, 0.3, 'sine', 0.04 * v, 1.5, 0.3); },
+  overcharge: v => { tone(110, 1, 'sawtooth', 0.08 * v, 6); for (let i = 0; i < 8; i++) noise(0.05, 0.07 * v, 5000, i * 0.1); tone(1760, 0.5, 'sine', 0.04 * v, 1, 0.9); },
+  // Mortar
+  brick: v => { noise(0.08, 0.12 * v, 500, 0, { type: 'lowpass', to: 300 }); tone(90, 0.12, 'sine', 0.08 * v, 0.7); },
+  pillar: v => { for (let i = 0; i < 3; i++) { noise(0.08, 0.1 * v, 500, i * 0.1, { type: 'lowpass', to: 300 }); tone(100 + i * 40, 0.1, 'sine', 0.07 * v, 1, i * 0.1); } },
+  fortress: v => { tone(55, 1, 'sawtooth', 0.07 * v, 1.5); for (let i = 0; i < 10; i++) noise(0.06, 0.08 * v, 500, i * 0.07, { type: 'lowpass', to: 300 }); tone(440, 0.3, 'triangle', 0.05 * v, 1.5, 0.8); },
   // Bulwark
   hook: v => { noise(0.3, 0.1 * v, 2500, 0, { type: 'bandpass', to: 6000, q: 4 }); for (let i = 0; i < 6; i++) tone(1800 + i * 120, 0.03, 'square', 0.03 * v, 0.8, i * 0.04); tone(220, 0.2, 'triangle', 0.1 * v, 0.6, 0.28); noise(0.08, 0.12 * v, 600, 0.28); },
   barrier: v => { tone(110, 0.5, 'sine', 0.12 * v, 1.5); tone(660, 0.4, 'triangle', 0.04 * v, 1.5, 0.05); tone(990, 0.3, 'sine', 0.03 * v, 1.2, 0.12); },
