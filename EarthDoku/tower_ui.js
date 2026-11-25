@@ -127,8 +127,8 @@ function roomHTML() {
     return `<section class="win twStage"><h2>❓ ${r.ev.who}${r.ev.game ? ` ${badge({game:r.ev.game})}` : ""}</h2><p class="twSay">${quoted}</p>
       <div class="twMenu">${r.done ? `<button class="btn hot" id="twOn">Onward ▶</button>` : `<button class="btn hot" id="twYes">${r.ev.yes}</button><button class="btn" id="twOn">No thanks ▶</button>`}</div></section>`;
   }
-  if (["statue", "dojo", "meet", "arcade", "library", "vault", "chest"].includes(t)) {
-    const cs = r.choices || [], wide = t === "vault" || t === "library";
+  if (["statue", "dojo", "meet", "arcade", "library", "vault", "chest", "workshop", "moonside"].includes(t)) {
+    const cs = r.choices || [], wide = t === "vault" || t === "library" || t === "workshop";
     return `<section class="win twStage${t === "meet" ? " twMeet" : ""}${wide ? " twPickRoom" : ""}"><h2>${ROOMS[t].ic} ${ROOMS[t].n}</h2>${r.hero ? `<div class="twMeetHero">${heroImg(r.hero)}<b>${r.hero.name}</b> ${badge({game:r.hero.game})}</div>` : ""}<p class="twSay">${r.text}</p>
       <div class="twMenu">${r.done || !cs.length ? `<button class="btn hot" id="twOn">Onward ▶</button>` : cs.map((c, i) => `<button class="btn hot" data-ch="${i}">${c.label}</button>`).join("") + `<button class="btn" id="twOn">Leave ▶</button>`}</div></section>`;
   }
@@ -162,19 +162,66 @@ function drawTwLog() {
 }
 function drawFoes() {
   const el = $("#twFoes");
-  if (!el || !tr || !tr.battle) return;
+  if (!el || !tr || !tr.battle) return hideFoeTip();
   const b = tr.battle, picking = tr.phase === "target";
   el.innerHTML = `<div class="twFoes${picking ? " picking" : ""}">${b.foes.map(x => {
     const p = x.hp / x.mhp, e = x.e;
-    return `<button class="twFoe${x.hp <= 0 ? " gone" : ""}" data-foe="${x.uid}" ${picking && x.hp > 0 ? "" : "disabled"}>
+    return `<button class="twFoe${x.hp <= 0 ? " gone" : ""}" data-foe="${x.uid}" ${picking && x.hp > 0 ? "" : `aria-disabled="true"`}>
       <span class="twFoeSpr">${spriteHTML(e, "big")}</span>
-      <span class="twFoeInfo"><b>${e.name}</b> ${badge(e)}${x.boss ? " 👑" : ""}${x.angry ? " 😤" : ""} <span>${stIcons(x.st)}</span>${x.traits.length ? `<span class="twTraits">${x.traits.map(t => `<span title="${TRAITS[t].d}">${TRAITS[t].ic} ${TRAITS[t].n}</span>`).join("")}${x.sturdy ? ` <span title="Hits left at half damage">×${x.sturdy}</span>` : ""}</span>` : ""}
-      <span class="twBar"><span style="width:${p * 100}%;background:${p > .5 ? "#3fae5a" : p > .2 ? "#f2b33d" : "#e2352c"}"></span></span>
-      <small class="twReal">In ${GAMES[e.game].l}: ${has(e.hp) ? "HP " + e.hp : "HP ?"}${has(e.off) ? " · Off " + e.off : ""}${has(e.def) ? " · Def " + e.def : ""}</small></span></button>`; }).join("")}</div>`;
+      <span class="twFoeInfo"><b>${e.name}</b> ${badge(e)}${x.boss ? " 👑" : ""}${x.angry ? " 😤" : ""} <span>${stIcons(x.st)}</span>${x.traits.length ? `<span class="twTraits">${x.traits.map(t => `<span>${TRAITS[t].ic} ${TRAITS[t].n}</span>`).join("")}${x.sturdy ? ` <span>×${x.sturdy}</span>` : ""}</span>` : ""}
+      <span class="twBar"><span style="width:${p * 100}%;background:${p > .5 ? "#3fae5a" : p > .2 ? "#f2b33d" : "#e2352c"}"></span></span></span>
+      </button>`; }).join("")}</div>`;
   el.querySelectorAll("[data-foe]").forEach(btn => btn.onclick = () => {
     const foe = b.foes.find(x => x.uid === +btn.dataset.foe);
     if (tr.phase === "target" && foe && foe.hp > 0) { const k = b.pending; tr.phase = "fight"; act(k, foe); }
   });
+  el.querySelectorAll("[data-foe]").forEach(btn => {
+    const uid = +btn.dataset.foe;
+    btn.onpointerenter = btn.onfocus = () => showFoeTip(uid);
+    btn.onpointerleave = btn.onblur = () => { if (tipUid === uid) hideFoeTip(); };
+  });
+  // the enemies redraw after every hit, so keep the card on whoever is still under the pointer
+  if (tipUid != null) showFoeTip(tipUid);
+}
+// ---------- enemy hover card: floats above the page so the battle frame can't cut it off ----------
+let tipUid = null;
+function showFoeTip(uid) {
+  const x = tr && tr.battle && tr.battle.foes.find(f => f.uid === uid), btn = document.querySelector(`[data-foe="${uid}"]`);
+  if (!x || x.hp <= 0 || !btn || $("#viewTower").hidden) return hideFoeTip();
+  tipUid = uid;
+  let tip = $("#twFoeTip");
+  if (!tip) { tip = document.createElement("div"); tip.id = "twFoeTip"; tip.className = "twFoeTip"; tip.setAttribute("role", "tooltip"); document.body.appendChild(tip); }
+  tip.innerHTML = foeTip(x); tip.hidden = false;
+  const r = btn.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
+  const left = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2));
+  // below the enemy when there's room, otherwise above it
+  const top = r.bottom + 8 + h < innerHeight ? r.bottom + 8 : Math.max(8, r.top - h - 8);
+  tip.style.left = left + "px"; tip.style.top = top + "px";
+}
+function hideFoeTip() { tipUid = null; const tip = $("#twFoeTip"); if (tip) tip.hidden = true; }
+// if the pointer slipped off while the enemies were redrawing, the card goes away on the next move
+document.addEventListener("pointermove", ev => { if (tipUid != null && !(ev.target.closest && ev.target.closest(`[data-foe="${tipUid}"]`))) hideFoeTip(); }, {passive:true});
+// the card that pops up when you hover over an enemy: its numbers in this fight, and what its traits and statuses mean
+const FOE_ST = {sleep:["💤", "Asleep: skips turns until it wakes"], cry:["😢", "Crying: its attacks miss more"], poison:["☠️", "Poisoned"],
+  stun:["📌", "Pinned down: can't move"], weak:["🎯", "Weak spot found: lower defense"], distract:["🍯", "Distracted: loses its next turn"]};
+function foeTip(x) {
+  const e = x.e, row = (l, v) => `<span><small>${l}</small><b>${v}</b></span>`;
+  const sts = Object.keys(x.st || {}).filter(k => FOE_ST[k]);
+  const notes = [
+    x.final ? "🌀 The final foe: it gets back up once" : "",
+    x.boss && !x.final ? `👑 Boss: hits the whole party every ${x.angry ? 2 : 3} turns` : "",
+    x.boss && !x.angry ? "Gets furious below half HP" : "",
+    x.angry ? "😤 Furious: hits harder" : ""
+  ].filter(Boolean);
+  const real = [has(e.hp) ? "HP " + e.hp : "", has(e.off) ? "Off " + e.off : "", has(e.def) ? "Def " + e.def : "", has(e.spd) ? "Spd " + e.spd : ""].filter(Boolean).join(" · ");
+  return `
+    <b class="twTipName">${e.name}</b>
+    <span class="twTipStats">${row("HP", `${Math.max(0, Math.ceil(x.hp))}/${x.mhp}`)}${row("Offense", Math.round(x.atk))}${row("Defense", Math.round(x.def * (x.st.weak ? .55 : 1)))}${row("Speed", Math.round(x.spd))}</span>
+    ${x.traits.length ? `<span class="twTipList">${x.traits.map(t => `<span><b>${TRAITS[t].ic} ${TRAITS[t].n}</b> ${TRAITS[t].d}${t === "sturdy" ? ` (${x.sturdy} left)` : t === "summoner" && x.called ? " (already called)" : ""}</span>`).join("")}</span>` : `<span class="twTipNone">No special traits</span>`}
+    ${sts.length ? `<span class="twTipList">${sts.map(k => `<span>${FOE_ST[k][0]} ${FOE_ST[k][1]}</span>`).join("")}</span>` : ""}
+    ${notes.length ? `<span class="twTipList">${notes.map(n => `<span>${n}</span>`).join("")}</span>` : ""}
+    ${real ? `<small class="twTipReal">In ${GAMES[e.game].l}: ${real}</small>` : ""}
+  `;
 }
 function odoDigits(n) { return String(Math.max(0, Math.ceil(n))).padStart(3, "0").split("").map(d => `<span>${d}</span>`).join(""); }
 function drawOdo(m) {
@@ -188,7 +235,7 @@ function drawTeam() {
   const pk = tr.phase === "ally" && tr.battle ? allyNeed(tr.battle.pending) : twUi.useK && twUi.goods && tr.goods[twUi.useK] && !["fight", "target", "ally", "busy", "combo", "fled"].includes(tr.phase) ? allyNeed("g:" + twUi.useK) : null;
   const ok = pk ? allyOpts(pk) : [];
   el.innerHTML = tr.team.map((m, i) => `
-    <div class="win twMember${m === actor ? " on" : ""}${m.ko ? " ko" : ""}${ok.includes(m) ? " pick" : pk ? " nopick" : ""}" data-i="${i}"${ok.includes(m) ? ` role="button" tabindex="0" data-ally="${i}"` : ""}>
+    <div class="win twMember${m === actor ? " on" : ""}${m.ko ? " ko" : ""}${ok.includes(m) ? " pick" : pk ? " nopick" : ""}" data-i="${i}"${ok.includes(m) ? ` role="button" tabindex="0" data-ally="${i}"` : pk ? "" : ` role="button" tabindex="0" data-info="${i}" title="See ${m.h.name}'s moves"`}>
       ${heroImg(m.h)}<div class="twMInfo"><b>${m.h.name}</b><small class="twMStats" title="Combo: ${comboOf(m.h).ic} ${comboOf(m.h).n}"><span>Off <b>${Math.round(m.atk)}</b></span><span>Def <b>${Math.round(m.def)}</b></span><span>Spd <b>${Math.round(m.spd)}</b></span>${m.mpp ? `<span>PSI <b>${Math.round(100 * (1 + m.bonus.psi))}%</b></span>` : ""}<span>${comboOf(m.h).ic}</span></small><small>${stIcons(m.st)}${m.guard ? "🛡️" : ""}${m.tough ? "💪" : ""}${p.shield ? "🔰" : ""}${p.offup ? "🔥" : ""}</small>
       <div class="twStat"><span>HP</span><span class="twOdo${m.shown > m.hp ? " rolling" : ""}">${odoDigits(m.shown)}</span><small>/${m.mhp}</small></div>
       ${m.mpp ? `<div class="twStat"><span>PP</span><span class="twPP">${m.pp}</span><small>/${m.mpp}</small></div>` : ""}
@@ -200,6 +247,11 @@ function drawTeam() {
       if (tr.phase === "ally" && tr.battle) { const k = tr.battle.pending; tr.phase = "fight"; act(k, null, m); }
       else if (twUi.useK) { const k = twUi.useK; twUi.useK = null; useGoodOutside(k, m); }
     };
+    c.onclick = go; c.onkeydown = ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); go(); } };
+  });
+  // any other time, tapping a hero opens their sheet (but never in the middle of a combo)
+  el.querySelectorAll("[data-info]").forEach(c => {
+    const go = () => { if (tr.phase !== "combo") heroSheet(+c.dataset.info); };
     c.onclick = go; c.onkeydown = ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); go(); } };
   });
 }
@@ -239,12 +291,13 @@ function drawMenu() {
   } else {
     const btn = k => {
       const mv = TMOVES[k], noPP = mv.pp && m.pp < mv.pp, cd = m.cd[k] > 0, none = mv.kind === "revive" && !tr.team.some(x => x.ko);
-      return `<button class="btn" data-k="${k}" ${noPP || cd || none ? "disabled" : ""} title="${mv.d || ""}">${mv.sig ? "★ " : ""}${mv.n}${mv.pp ? ` <small>${mv.pp}PP</small>` : ""}${cd ? ` <small>⏳${m.cd[k]}</small>` : ""}</button>`;
+      return `<button class="btn" data-k="${k}" ${noPP || cd || none ? "disabled" : ""} title="${mvDesc(mv)}${mvEst(masteredMove(m, k), m) ? ` (${mvEst(masteredMove(m, k), m)})` : ""}">${mv.sig ? "★ " : ""}${mv.n}${masteryOf(m, k) ? ` <small class="twMast">${"✦".repeat(masteryOf(m, k))}</small>` : ""}${mv.pp ? ` <small>${mv.pp}PP</small>` : ""}${cd ? ` <small>⏳${m.cd[k]}</small>` : ""}</button>`;
     };
     el.innerHTML = `<span class="twWho">${m.h.name}:</span><button class="btn hot" data-k="bash">Bash</button>${shownMoves(m).map(btn).join("")}
-      <button class="btn" id="twGoods">🎒 Goods</button><button class="btn" data-k="defend">Defend</button>${b.type === "battle" ? `<button class="btn" data-k="run">Run</button>` : ""}
+      <button class="btn" id="twGoods">🎒 Goods</button><button class="btn" data-k="defend">Defend</button>${b.type === "battle" ? `<button class="btn" data-k="run">Run</button>` : ""}<button class="btn twSmall" id="twSheet" title="See ${m.h.name}'s moves (I)">📋 Moves</button>
       <label class="twAuto"><input type="checkbox" id="twAutoBox" ${tr.auto ? "checked" : ""}> Auto</label>`;
     $("#twGoods").onclick = () => { twUi.goods = true; drawMenu(); };
+    $("#twSheet").onclick = () => heroSheet(tr.team.indexOf(m));
     $("#twAutoBox").onchange = e => { tr.auto = e.target.checked; if (tr.auto && b.actor) autoAct(); };
   }
   el.querySelectorAll("[data-k]").forEach(x => x.onclick = () => { twUi.goods = false; choose(x.dataset.k); });
@@ -437,6 +490,10 @@ document.addEventListener("keydown", ev => {
     return;
   }
   if ((tr.phase === "target" || tr.phase === "ally" || twUi.useK) && ev.key === "Escape") { const c = $("#twCancel") || $("#twUseCancel"); if (c) c.click(); return; }
+  // I: the sheet for whoever's turn it is (or the leader)
+  if ((ev.key === "i" || ev.key === "I") && !ev.metaKey && !ev.ctrlKey && tr.team.length) {
+    const a = tr.battle && tr.battle.actor; ev.preventDefault(); heroSheet(a ? tr.team.indexOf(a) : 0); return;
+  }
   if (tr.phase !== "fight") return;
   const btns = [...document.querySelectorAll("#twMenu .btn:not(:disabled)")], n = +ev.key;
   if (n >= 1 && n <= btns.length) { ev.preventDefault(); btns[n - 1].click(); }
@@ -460,16 +517,64 @@ const CX_KIND = {hit:["⚔️", "Attack"], psi:["✨", "PSI attack"], heal:["�
   sleep:["💤", "Sleep"], stun:["⛓️", "Pin down"], weak:["🔻", "Weaken"], revive:["💖", "Revive"], cry:["😵", "Distract"], shield:["🛡️", "Shield"],
   offup:["💪", "Power up"], magnet:["🧲", "Drain PP"], tough:["🪨", "Toughen"], pray:["🙏", "Prayer"], chant:["🎵", "Chant"], guard:["🙈", "Guard"],
   invent:["🔧", "Gadget"], steal:["💰", "Steal"], ppall:["🔋", "Restore PP"], run:["🏃", "Escape"]};
-function cxMove(k) {
+// a plain description for moves that don't have one written, built from their numbers
+function mvDesc(m) {
+  if (m.d) return m.d;
+  const who = m.all ? "every enemy" : "one enemy", pw = m.pow ? ` (${m.pow}× power)` : "";
+  if (m.kind === "hit") return `Hits ${who}${m.times ? ` ${m.times} times` : ""}${pw}${m.miss ? ", but can miss" : ""}`;
+  if (m.kind === "psi") return `PSI damage to ${who}${pw}${m.miss ? ", but can miss" : ""}`;
+  if (m.kind === "heal") return `Heals one friend by ${Math.round((m.pow || 0) * 100)}% of their max HP`;
+  if (m.kind === "healall") return `Heals the whole party by ${Math.round((m.pow || 0) * 100)}% of max HP`;
+  if (m.kind === "revive") return `Revives a fallen friend with ${Math.round((m.pow || 0) * 100)}% HP`;
+  return (CX_KIND[m.kind] || ["", "A special move"])[1];
+}
+// rough damage or healing for one hero right now, before the enemy's defense
+function mvEst(m, mem) {
+  if (!mem) return "";
+  const offup = tr && tr.battle && tr.battle.party.offup ? 1.3 : 1;
+  if (m.kind === "hit" && m.pow) return `≈${Math.round(mem.atk * 2 * m.pow * offup * (m.times || 1))} dmg`;
+  if (m.kind === "psi" && m.pow) return `≈${Math.round((12 + mem.atk * 1.05) * m.pow * (1 + mem.bonus.psi) * offup)} dmg`;
+  if ((m.kind === "heal" || m.kind === "healall") && m.pow) return `≈${Math.round(mem.mhp * m.pow)} HP`;
+  return "";
+}
+function cxMove(k, mem) {
   const m = TMOVES[k];
   if (!m) return "";
   const [ic, kind] = CX_KIND[m.kind] || ["•", "Move"];
   const targets = ["hit", "psi", "weak"].includes(m.kind) ? (m.all ? "every enemy" : "one enemy") : "";
-  const tags = [m.pp ? `${m.pp} PP` : "free", m.cd ? `${m.cd}-turn reload` : "", targets, m.times ? `hits ×${m.times}` : "", m.miss ? "can miss" : "",
-    PSI_NEEDS[k] ? `after ${TMOVES[PSI_NEEDS[k]].n}` : ""].filter(Boolean);
+  // for a hero in your party: can they use it right now, and how well do they know it?
+  const mm = mem ? masteredMove(mem, k) : m, lv = mem ? masteryOf(mem, k) : 0, used = mem && mem.uses ? mem.uses[k] || 0 : 0;
+  const mast = !mem ? "" : lv >= 2 ? `<span class="mast">✦✦ mastered</span>` : `<span class="mast">${"✦".repeat(lv) || "✧"} ${used}/${MASTERY[lv + 1]} uses to ${"✦".repeat(lv + 1)}</span>`;
+  const now = !mem ? "" : mem.ko ? "" : m.pp && mem.pp < m.pp ? `<span class="no">needs ${m.pp - mem.pp} more PP</span>` : mem.cd[k] > 0 ? `<span class="no">⏳ ready in ${mem.cd[k]}</span>` : `<span class="ok">ready</span>`;
+  const tags = [m.pp ? `${m.pp} PP` : "free", mm.cd ? `${mm.cd}-turn reload` : "", targets, m.times ? `hits ×${m.times}` : "", m.miss ? "can miss" : "", mvEst(mm, mem),
+    !mem && PSI_NEEDS[k] ? `after ${TMOVES[PSI_NEEDS[k]].n}` : ""].filter(Boolean);
   return `<li class="cxMv${m.sig ? " sig" : ""}"><span class="cxMvIc" title="${kind}">${ic}</span>
     <div class="cxMvTx"><div class="cxMvTop"><b>${m.n}</b>${m.sig ? `<span class="cxStar">★ Signature</span>` : ""}<span class="cxKindTag">${kind}</span></div>
-      ${m.d ? `<small>${m.d}</small>` : ""}<div class="cxTags">${tags.map(t => `<span>${t}</span>`).join("")}</div></div></li>`;
+      <small>${mvDesc(m)}</small><div class="cxTags">${tags.map(t => `<span>${t}</span>`).join("")}${now}${mast}</div></div></li>`;
+}
+// ---------- hero sheet: tap a hero in your party to see what they can do right now ----------
+function heroSheet(i) {
+  if (!tr || !tr.team[i]) return;
+  const mem = tr.team[i], h = mem.h, c = comboOf(h);
+  const left = h.learn.filter(k => TMOVES[k] && !mem.moves.includes(k));
+  const st = Object.keys(mem.st || {}).length ? stIcons(mem.st) : "";
+  const num = (l, v, sub) => `<div><b>${v}</b><small>${l}${sub ? ` <em>${sub}</em>` : ""}</small></div>`;
+  const nav = tr.team.length > 1 ? `<div class="cxNav">${tr.team.map((x, j) => `<button class="btn${j === i ? " hot" : ""}" data-sheet="${j}">${x.h.name}</button>`).join("")}</div>` : "";
+  sfx("open");
+  openModal(`📋 ${h.name}`, `<div class="cxPage cxNew twSheet">
+    <section class="cxHero g${h.game}">
+      <div class="cxArt">${heroImg(h, "big")}</div>
+      <div class="cxId"><h2>${h.name} ${badge({game:h.game})}</h2><p class="cxRole">Level ${mem.lv} · ${h.role}${mem.ko ? " · 😵 Unconscious" : ""}${st ? ` · ${st}` : ""}</p>
+        <div class="cxRecs twSheetNums">${num("HP", `${Math.ceil(mem.hp)}/${mem.mhp}`)}${mem.mpp ? num("PP", `${mem.pp}/${mem.mpp}`) : ""}${num("Offense", Math.round(mem.atk))}${num("Defense", Math.round(mem.def))}${num("Speed", Math.round(mem.spd))}${mem.bonus.psi ? num("PSI power", `+${Math.round(mem.bonus.psi * 100)}%`) : ""}</div></div>
+    </section>
+    <section class="cxBox"><h3>Moves <small>${mem.moves.length}</small></h3><ul class="cxMvs">
+      <li class="cxMv"><span class="cxMvIc">👊</span><div class="cxMvTx"><div class="cxMvTop"><b>Bash</b><span class="cxKindTag">Attack</span></div><small>A normal hit on one enemy. Always free.</small><div class="cxTags"><span>free</span><span>one enemy</span>${mvEst({kind:"hit", pow:1}, mem) ? `<span>${mvEst({kind:"hit", pow:1}, mem)}</span>` : ""}</div></div></li>
+      ${mem.moves.map(k => cxMove(k, mem)).join("")}</ul></section>
+    <section class="cxBox"><h3>${c.ic} Combo · ${c.n}</h3><p class="cxMet">${c.tip}.</p></section>
+    ${left.length ? `<section class="cxBox twSheetLeft"><h3>Can still learn <small>${left.length}</small></h3><ul class="cxMvs">${left.map(k => cxMove(k)).join("")}</ul></section>` : ""}
+    ${nav}
+  </div>`);
+  document.querySelectorAll("[data-sheet]").forEach(b => b.onclick = () => heroSheet(+b.dataset.sheet));
 }
 function codexPage(h) {
   if (!isUnlocked(h)) return codexAll();
@@ -492,8 +597,8 @@ function codexPage(h) {
       <section class="cxBox"><h3>🤝 How you met</h3><p class="cxMet">${codexMet(h)}</p></section>
       <section class="cxBox"><h3>${c.ic} Combo · ${c.n}</h3><p class="cxMet">${c.tip}.</p></section>
     </div>
-    <section class="cxBox"><h3>Starts with <small>${h.start.length}</small></h3><ul class="cxMvs">${h.start.map(cxMove).join("")}</ul></section>
-    <section class="cxBox"><h3>Can learn <small>${learn.length}</small></h3>${learn.length ? `<ul class="cxMvs">${learn.map(cxMove).join("")}</ul>` : `<p class="cxMet">Nothing. ${h.name} is happy just as they are.</p>`}</section>
+    <section class="cxBox"><h3>Starts with <small>${h.start.length}</small></h3><ul class="cxMvs">${h.start.map(k => cxMove(k)).join("")}</ul></section>
+    <section class="cxBox"><h3>Can learn <small>${learn.length}</small></h3>${learn.length ? `<ul class="cxMvs">${learn.map(k => cxMove(k)).join("")}</ul>` : `<p class="cxMet">Nothing. ${h.name} is happy just as they are.</p>`}</section>
     <div class="cxNav"><button class="btn" data-cx="${prev.id}">◀ ${prev.name}</button><button class="btn" data-cx="all">All heroes</button><button class="btn" data-cx="${next.id}">${next.name} ▶</button></div>
   </div>`);
   bindCodex();

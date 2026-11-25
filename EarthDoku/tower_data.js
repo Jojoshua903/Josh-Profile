@@ -144,7 +144,11 @@ const TRAITS = {
   vampiric:{n:"Vampiric", ic:"🩸", d:"Heals from the damage it deals"},
   enraged:{n:"Enraged", ic:"😡", d:"Hits much harder but has less HP"},
   sturdy:{n:"Sturdy", ic:"🧱", d:"The first 3 hits only do half damage"},
-  regen:{n:"Regenerating", ic:"🌱", d:"Heals a little every round"}
+  regen:{n:"Regenerating", ic:"🌱", d:"Heals a little every round"},
+  thorny:{n:"Thorny", ic:"🌵", d:"Hitting it up close hurts you back a little"},
+  psiward:{n:"PSI-proof", ic:"🔮", d:"PSI only does half damage"},
+  summoner:{n:"Summoner", ic:"📣", d:"Calls for help once it's hurt"},
+  explosive:{n:"Explosive", ic:"💥", d:"Blows up when defeated, hurting your whole party"}
 };
 
 // Heat: optional extra difficulty. Reaching the top at one level unlocks the next.
@@ -382,7 +386,7 @@ const GOALS = {
   boss5:{n:"Beat 5 bosses", t:2, ok:() => tr.bosses >= 5},
   full:{n:"Have a full party of 4", t:1, ok:s => s.maxTeam >= 4},
   wins:{n:"Win 20 battles", t:1, ok:s => s.wins >= 20},
-  rooms:{n:"Visit 3 new rooms (arcade, library or vault)", t:1, ok:s => s.special >= 3}
+  rooms:{n:"Visit 3 special rooms (arcade, library, vault, workshop or Moonside)", t:1, ok:s => s.special >= 3}
 };
 // permanent upgrades bought with Tower Tokens (they don't apply to the Daily Hard or Weekly climbs)
 const PERKS = {
@@ -400,6 +404,8 @@ ROOMS.arcade = {ic:"🎰", n:"Arcade", d:"Feeling lucky? Spin for prizes."};
 ROOMS.library = {ic:"📚", n:"Library", d:"Pick one new move to learn."};
 ROOMS.vault = {ic:"🗝️", n:"Vault", d:"Pick a relic, paid for in HP."};
 ROOMS.chest = {ic:"💎", n:"Golden chest", d:"Rare! Something for Saturn's shop is locked inside."};
+ROOMS.workshop = {ic:"🔧", n:"Apple Kid's workshop", d:"Tune up a move, or take a gadget."};
+ROOMS.moonside = {ic:"🌀", n:"Moonside", d:"Three doors. Yes. No. Anything could happen."};
 // the weekly challenge: same hero, same twists and same tower for everyone all week
 const weekKey = () => { const d = new Date(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const WEEKLY_MODS = ["glass", "noshop", "bossrush", "chaos", "cursed", "fragile", "elite", "rich"];
@@ -486,6 +492,16 @@ Object.assign(TMOVES, {
   surgery:{n:"Emergency surgery", kind:"revive", cd:4, pow:.5, sig:1, d:"Revives a fallen friend at 50% HP"},
   hotspring:{n:"Hot spring soak", kind:"healall", cd:4, pow:.3, sig:1, d:"Heals the whole party, no PP needed"},
   shockdance:{n:"Shock dance", kind:"cry", chance:.75, cd:2, sig:1, d:"A frantic dance that startles every enemy (they miss more)"}
+});
+// every move has a limit: PSI costs PP, and anything that's otherwise free needs a reload.
+// harder hits, and hits on every enemy, take longer to come back
+const FREE_CD = {chant:2, pray:2};
+Object.values(TMOVES).forEach(m => {
+  if (m.pp > 0 || m.cd) return;
+  if (m.kind === "hit" || m.kind === "steal") {
+    const total = (m.pow || 1) * (m.times || 1) * (m.all ? 1.8 : 1);
+    m.cd = total < 1.8 ? 2 : total < 2.4 ? 3 : 4;
+  } else m.cd = FREE_CD[m.kind] || 3;
 });
 const SIGNATURE = {ninten:["lifeupG"], ana:["pkbeamG"], ness:["pkrockinG", "pkrockinO"], paula:["pkfreezeG"], poo:["starstormO"], lucas:["pkloveG"],
   kumatora:["pkfireG"], claus:["pkthunderG"], lloyd:["multirocket"], jeff:["shieldkiller"], teddy:["doubleslash"], duster:["thiefkick"], boney:["playdead"],

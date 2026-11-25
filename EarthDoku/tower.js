@@ -152,7 +152,7 @@ function makeDoors() {
   if (f % 5 === 4) { if (!tr.hard) w.spring += 2.5; w.shop += 1.5; }
   if (hasRelic("repelring")) w.battle *= .6;
   if (hasMod("noshop")) { w.shop = 0; w.present += .8; w.event += .8; }
-  Object.assign(w, {arcade:f >= 3 ? .7 : 0, library:f >= 4 ? .6 : 0, vault:f >= 6 ? .45 : 0});
+  Object.assign(w, {arcade:f >= 3 ? .7 : 0, library:f >= 4 ? .6 : 0, vault:f >= 6 ? .45 : 0, workshop:f >= 4 ? .6 : 0, moonside:f >= 5 ? .5 : 0});
   // golden chests are rare: at most two a climb, never in training runs, and not in the shared Daily Hard and Weekly towers
   w.chest = f >= 4 && !tr.seed && !hasMod("training") && (tr.chests || 0) < 2 && typeof shopTowerChest === "function" ? .22 : 0;
   const doors = [], count = (hasCurse("fog") ? 2 : 3) + (tr.perks && perkLv("scout") ? 1 : 0);
@@ -205,6 +205,8 @@ function enterRoom(type) {
   else if (type === "library") { tr.st.special++; makeLibrary(); }
   else if (type === "vault") { tr.st.special++; makeVault(); }
   else if (type === "chest") makeChest();
+  else if (type === "workshop") { tr.st.special++; makeWorkshop(); }
+  else if (type === "moonside") { tr.st.special++; makeMoonside(); }
   tr.phase = "room";
   drawTower();
 }
@@ -219,7 +221,7 @@ function stopRolling() {
 }
 function rollTick() {
   const now = performance.now(), dt = Math.min(.2, (now - twLast) / 1000); twLast = now;
-  if (!tr || !tr.battle || tr.battle.over || $("#viewTower").hidden || document.hidden) return;
+  if (!tr || !tr.battle || tr.battle.over || $("#viewTower").hidden || document.hidden || !$("#modal").hidden) return;
   let fell = false;
   tr.team.forEach(m => {
     if (m.ko || m.shown === m.hp) return;
@@ -250,13 +252,22 @@ function startBattle(type) {
     : names.length > 1 ? `• You confront ${first} and its cohorts!` : `• You encountered ${first}!`);
   startRolling();
   if (hasRelic("ropesnake")) { const x = pickR(tr.battle.foes, Math.random); x.st.stun = Math.max(x.st.stun || 0, 1); twLog(`• The Rope Snake wrapped around ${x.e.name}! It can't move this turn.`, "good"); }
+  // EarthBound's swirls: a faster party sometimes gets the jump on normal battles, a slower one gets ambushed
+  if (type === "battle" || type === "tough") {
+    const avg = a => a.reduce((s, x) => s + x.spd, 0) / a.length, edge = (avg(aliveH()) - avg(tr.battle.foes)) / Math.max(1, avg(tr.battle.foes));
+    const r = Math.random(), green = clamp(.14 + edge * .25, .05, .3), red = clamp(.1 - edge * .2, .03, .22);
+    if (r < green) { tr.battle.open = "green"; twLog("• 🟢 You caught them off guard! Your party gets a free turn.", "good"); }
+    else if (r < green + red) { tr.battle.open = "red"; twLog("• 🔴 Ambush! The enemies attack first.", "bad"); }
+  }
   // bosses get a title card first; the fight starts once it closes
   if (type !== "battle" && window.bossCard) bossCard(() => later(newRound, 250));
   else later(newRound, 700);
 }
 function newRound() {
   const b = tr.battle; b.round++;
-  const units = [...aliveH().map(m => ({m})), ...aliveF().map(f => ({f}))];
+  let units = [...aliveH().map(m => ({m})), ...aliveF().map(f => ({f}))];
+  // the first round of a swirl battle belongs to one side
+  if (b.round === 1 && b.open) units = units.filter(u => b.open === "green" ? u.m : u.f);
   units.forEach(u => u.ord = (u.m ? u.m.spd : u.f.spd) * rnd(.75, 1.25));
   b.order = units.sort((a, c) => c.ord - a.ord); b.idx = 0;
   nextActor();
@@ -365,21 +376,45 @@ function act(key, foe, ally) {
   tr.phase = "busy"; b.pending = null; b.actor = null;
   // battle effects: remember what was used and by whom, so each hit can show that move's look
   b.fx = key; b.fxN = 0; b.fxT = null; b.lastActor = m;
+  // thorny enemies only hurt back when they're hit up close
+  b.melee = key === "bash" || (TMOVES[key] && ["hit", "steal"].includes(TMOVES[key].kind));
   drawMenu();
   if (key === "bash") { if (window.fxCast) fxCast(m, key); return doBash(m, foe); }
   if (key === "defend") { m.guard = true; twLog(`• ${m.h.name} is on guard.`); return afterAction(); }
   if (key === "run") return tryRun(m, false);
   if (key.startsWith("g:")) { if (window.fxCast) fxCast(m, key); useGood(key.slice(2), m, foe, ally); if (window.fxMove) fxMove(m, key, foe, ally); return afterAction(); }
-  const mv = TMOVES[key];
-  if (mv.pp && m.pp < mv.pp) { twLog(`• Not enough PP for ${mv.n}.`); b.actor = m; tr.phase = "fight"; return drawMenu(); }
+  const base = TMOVES[key];
+  if (base.pp && m.pp < base.pp) { twLog(`• Not enough PP for ${base.n}.`); b.actor = m; tr.phase = "fight"; return drawMenu(); }
+  const mv = masteredMove(m, key);
   m.pp -= mv.pp || 0;
   if (mv.pp) tr.st.psi++;
   if (mv.cd) m.cd[key] = mv.cd + 1;
   if (window.fxCast) fxCast(m, key);
   doMove(m, mv, foe, ally);
   if (window.fxMove) fxMove(m, key, foe, ally);
+  practice(m, key);
   if (mv.kind === "run") return;
   afterAction();
+}
+// ---------- move mastery: the more a hero uses a move, the better they get at it ----------
+const MASTERY = [0, 4, 10];   // uses needed for ✦ and ✦✦
+const masteryOf = (m, k) => { const u = (m.uses && m.uses[k]) || 0; return u >= MASTERY[2] ? 2 : u >= MASTERY[1] ? 1 : 0; };
+// ✦ hits 15% harder (and lands status moves more often); ✦✦ hits 30% harder and comes back a turn sooner
+function masteredMove(m, k) {
+  const mv = TMOVES[k], lv = masteryOf(m, k);
+  if (!lv) return mv;
+  const x = {...mv};
+  if (x.pow) x.pow *= 1 + .15 * lv;
+  if (x.chance) x.chance = Math.min(.95, x.chance + .08 * lv);
+  if (lv >= 2 && x.cd > 1) x.cd--;
+  return x;
+}
+function practice(m, k) {
+  m.uses = m.uses || {};
+  const before = masteryOf(m, k);
+  m.uses[k] = (m.uses[k] || 0) + 1;
+  const now = masteryOf(m, k);
+  if (now > before) { twLog(`• ${m.h.name} has mastered ${TMOVES[k].n}! ${"✦".repeat(now)}${now === 2 ? " It hits harder and reloads faster." : " It's stronger now."}`, "good"); sfx("reward"); }
 }
 function crit() { return Math.random() < (hasRelic("rabbit") ? 1 / 8 : 1 / 16) + (hasRelic("gutsy") ? .1 : 0) + (hasBless("fortune") ? .04 : 0); }
 function hitDmg(m, foe, pow, smashy) {
@@ -387,18 +422,30 @@ function hitDmg(m, foe, pow, smashy) {
   return Math.max(1, Math.round(smashy ? off * 2 - def * .3 : (off - def) * rnd(.85, 1.15)));
 }
 function psiDmg(m, foe, pow) {
-  const base = (12 + m.atk * 1.05) * pow * (1 + m.bonus.psi) * (hasRelic("diadem") ? 1.15 : 1) * (tr.battle.party.offup ? 1.3 : 1);
+  const base = (12 + m.atk * 1.05) * pow * (1 + m.bonus.psi) * (hasRelic("diadem") ? 1.15 : 1) * (tr.battle.party.offup ? 1.3 : 1) * (foe.traits.includes("psiward") ? .5 : 1);
   return Math.max(1, Math.round(base * rnd(.9, 1.1) - foe.def * .25 * (foe.st.weak ? .5 : 1)));
 }
 function hurtFoe(foe, d, what, smashy) {
   if (hasMod("glass")) d = Math.round(d * 1.5);
   if (foe.sturdy > 0) { foe.sturdy--; d = Math.max(1, Math.ceil(d / 2)); }
+  const wasUp = foe.hp > 0;
   foe.hp = Math.max(0, foe.hp - d);
   if (foe.st.sleep && Math.random() < .5) delete foe.st.sleep;
   twLog(`• ${what}${smashy ? " SMAAAASH!!" : ""} ${d} HP of damage to ${foe.e.name}!${foe.hp <= 0 ? ` ${foe.e.name} was defeated!` : ""}`, smashy ? "good" : "");
   if (smashy) sfx("smash");
   if (window.flashFoe) flashFoe(foe);
   if (window.fxFoe) fxFoe(foe, smashy);
+  const b = tr.battle, who = b && b.lastActor;
+  // thorny: hitting it up close hurts
+  if (foe.traits.includes("thorny") && b && b.melee && who && !who.ko && b.order[b.idx] && b.order[b.idx].m === who) {
+    const t = Math.max(1, Math.round(d * .15)); who.hp = Math.max(0, who.hp - t);
+    twLog(`• ${foe.e.name}'s spikes hurt ${who.h.name}! ${t} HP of damage.`, "bad");
+  }
+  // explosive: it goes out with a bang
+  if (foe.traits.includes("explosive") && wasUp && foe.hp <= 0) {
+    twLog(`• ${foe.e.name} exploded! The blast hit everyone.`, "bad"); sfx("smash");
+    aliveH().forEach(m => { m.hp = Math.max(0, m.hp - Math.max(1, Math.round(m.mhp * .08 + tr.floor * .6))); });
+  }
   drawFoes();
 }
 function doBash(m, foe) {
@@ -553,6 +600,15 @@ function enemyAct(foe) {
   if (foe.st.stun) { foe.st.stun--; if (!foe.st.stun) delete foe.st.stun; return twLog(`• ${foe.e.name} can't move!`); }
   const targets = aliveH();
   if (!targets.length) return;
+  // summoner: once it's hurt, it calls for help (one time only)
+  if (foe.traits.includes("summoner") && !foe.called && foe.hp < foe.mhp * .6 && aliveF().length < 4) {
+    foe.called = true;
+    const mates = ALL.filter(e => e.game === foe.e.game && !e.boss && spriteUrl(e) && Math.abs(powerOf(e) - powerOf(foe.e)) < 35);
+    const e = mates.length ? pickR(mates, Math.random) : foe.e, x = makeFoe(e, tr.floor, .55, .8);
+    b.foes.push(x);
+    twLog(`• ${foe.e.name} called for help! ${e.name} joined the battle!`, "bad"); sfx("open");
+    return drawFoes();
+  }
   // bosses get angry when they're hurt
   if (foe.boss && !foe.angry && foe.hp < foe.mhp / 2) { foe.angry = true; foe.atk *= 1.25; twLog(`• ${foe.e.name} is furious! Its attacks got stronger.`, "bad"); }
   if (foe.boss && foe.turns % (foe.angry ? 2 : 3) === 0) {
@@ -650,7 +706,7 @@ function makeOffers(rare) {
     const opts = team.flatMap(m => m.h.learn.filter(k => canLearn(m, k)).map(k => [m, k]));
     if (!opts.length) return null;
     const [m, k] = pickR(opts), mv = TMOVES[k];
-    return {key:"l:" + m.h.id + k, kind:"New move", hero:m.h, title:`${m.h.name} learns ${mv.n}`, sub:mv.d || `${mv.kind === "psi" ? "PSI attack" : "Attack"}${mv.all ? " on every enemy" : ""}${mv.pp ? ` · ${mv.pp} PP` : ""}`,
+    return {key:"l:" + m.h.id + k, kind:"New move", hero:m.h, title:`${m.h.name} learns ${mv.n}`, sub:`${mvDesc(mv)}${mv.pp ? ` · ${mv.pp} PP` : ""}`,
       apply:() => { m.moves.push(k); twLog(`• ${m.h.name} learned ${mv.n}!`, "good"); }};
   };
   const stat = () => {
@@ -1003,6 +1059,37 @@ function makeVault() {
     tr.team.forEach(m => { if (!m.ko) m.hp = m.shown = Math.max(1, m.hp - Math.round(m.mhp * .25)); });
     return `Zap! Everyone took a jolt... but you got the ${RELICS[k].n}.`;
   }}));
+}
+// Apple Kid's workshop: tune up one move to the next mastery level, or take a free gadget
+function makeWorkshop() {
+  const opts = mgShuffle(tr.team.filter(m => !m.ko).flatMap(m => m.moves.filter(k => TMOVES[k] && masteryOf(m, k) < 2).map(k => [m, k]))).slice(0, 3);
+  tr.room.text = "\"Oh! Customers! I just finished a new invention!\" Apple Kid wipes off his glasses. He has time to help with one thing.";
+  tr.room.choices = opts.map(([m, k]) => {
+    const lv = masteryOf(m, k);
+    return {label:`🔧 Tune up ${m.h.name}'s ${TMOVES[k].n}: ${"✦".repeat(lv) || "✧"} → ${"✦".repeat(lv + 1)}`, fn:() => {
+      m.uses = m.uses || {}; m.uses[k] = Math.max(m.uses[k] || 0, MASTERY[lv + 1]);
+      return `Apple Kid tinkered with ${m.h.name}'s technique. ${TMOVES[k].n} is now ${"✦".repeat(lv + 1)}!`;
+    }};
+  });
+  const g = pickR(["rocket", "bomb", "flyhoney", "superbomb"].filter(k => GOODS[k]));
+  tr.room.choices.push({label:`🎁 Take his new gadget: ${GOODS[g].ic} ${GOODS[g].n}`, fn:() => { tr.goods[g] = (tr.goods[g] || 0) + 1; return `"It works! Probably!" You got a ${GOODS[g].n}.`; }});
+}
+// Moonside: three doors, three answers, and nothing is what it seems
+function makeMoonside() {
+  tr.room.text = "\"Welcome to Moonside.\" The lights flicker in colors that don't exist. A man with no face points at three doors. \"Yes. No. Yes.\"";
+  const f = tr.floor, outcomes = [
+    () => { const c = 30 + f * 4; tr.money += c; return `A man in a tuxedo hands you $${c}. "No. Yes." He vanishes.`; },
+    () => { aliveH().forEach(m => { m.hp = m.shown = Math.min(m.mhp, m.hp + Math.round(m.mhp * .4)); m.pp = Math.min(m.mpp, m.pp + Math.round(m.mpp * .3)); }); return "The room spins and everyone feels... refreshed? +40% HP and +30% PP."; },
+    () => { const left = Object.keys(RELICS).filter(k => !tr.relics.includes(k) && !(RELICS[k].normalOnly && tr.hard)); if (!left.length) return "An empty pedestal. \"Yes,\" it says."; const k = pickR(left, Math.random); tr.relics.push(k); tr.team.forEach(refresh); return `On a pedestal: the ${RELICS[k].ic} ${RELICS[k].n}! ${RELICS[k].d}.`; },
+    () => { aliveH().forEach(m => { m.hp = m.shown = Math.max(1, m.hp - Math.round(m.mhp * .2)); }); return "An Abstract Art lunges out of the wall! Everyone took a hit (−20% HP) before it melted away."; },
+    () => { const l = Math.round(tr.money * .3); tr.money -= l; return `A smiling man shakes your hand... and your wallet is $${l} lighter. "Thank you. No."`; },
+    () => { const k = pickR(FOOD, Math.random); tr.goods[k] = (tr.goods[k] || 0) + 1; return `A cup of coffee... no, it's a ${GOODS[k].n}. You keep it anyway.`; },
+    () => { const opts = tr.team.filter(m => !m.ko).flatMap(m => m.moves.filter(k => TMOVES[k] && masteryOf(m, k) < 2).map(k => [m, k])); if (!opts.length) return "Nothing happens. That's the strangest part."; const [m, k] = pickR(opts, Math.random), lv = masteryOf(m, k); m.uses = m.uses || {}; m.uses[k] = Math.max(m.uses[k] || 0, MASTERY[lv + 1]); return `${m.h.name} has a strange dream about ${TMOVES[k].n}... and wakes up better at it! ${"✦".repeat(lv + 1)}`; }
+  ];
+  // the good answers are a bit more common than the bad ones
+  const weights = [3, 2, 1, 2, 2, 2, 2];
+  const roll = () => { let r = Math.random() * weights.reduce((a, b) => a + b, 0); for (let i = 0; i < weights.length; i++) { r -= weights[i]; if (r <= 0) return outcomes[i](); } return outcomes[0](); };
+  tr.room.choices = ["🟣 Yes", "🟢 No", "🔵 Yes. No."].map(l => ({label:l, fn:roll}));
 }
 
 // ---------- saved runs: the climb is saved at the start of every floor ----------
