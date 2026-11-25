@@ -194,8 +194,8 @@ function showFoeTip(uid) {
   tip.innerHTML = foeTip(x); tip.hidden = false;
   const r = btn.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
   const left = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2));
-  // below the enemy when there's room, otherwise above it
-  const top = r.bottom + 8 + h < innerHeight ? r.bottom + 8 : Math.max(8, r.top - h - 8);
+  // above the enemy when there's room, otherwise below it
+  const top = r.top - h - 8 >= 8 ? r.top - h - 8 : Math.min(innerHeight - h - 8, r.bottom + 8);
   tip.style.left = left + "px"; tip.style.top = top + "px";
 }
 function hideFoeTip() { tipUid = null; const tip = $("#twFoeTip"); if (tip) tip.hidden = true; }
@@ -353,7 +353,7 @@ function profileHTML(sel) {
         <h2>${found ? sel.name : "???"} ${badge({game:sel.game})}</h2>
         <p class="twRole">${found ? sel.role : findHint(sel)}</p>
         ${found ? `<span class="twRates">${bars(sel)}</span>
-        <p class="twMoveList"><b>Starts with</b> ${sel.start.map(k => TMOVES[k].n).join(", ")}<br><b>Can learn</b> ${sel.learn.map(k => (TMOVES[k].sig ? "★ " : "") + TMOVES[k].n + (PSI_NEEDS[k] ? ` <small>(after ${TMOVES[PSI_NEEDS[k]].n})</small>` : "")).join(", ")}<br>${comboLine(sel)}</p>` : ""}
+        <p class="twMoveList">${passiveLine(sel)}<br><b>Starts with</b> ${sel.start.map(k => TMOVES[k].n).join(", ")}<br><b>Can learn</b> ${sel.learn.map(k => (TMOVES[k].sig ? "★ " : "") + TMOVES[k].n + (PSI_NEEDS[k] ? ` <small>(after ${TMOVES[PSI_NEEDS[k]].n})</small>` : "")).join(", ")}<br>${comboLine(sel)}</p>` : ""}
         ${found ? `<span class="twProfBtns"><button class="btn twSmall twCodexOne" id="twCodexOne">📘 Codex page</button>${sel.mine ? `<button class="btn twSmall twCodexOne" id="twEditMine">✏️ Edit hero</button>` : ""}</span>` : ""}
       </div>
       <div class="twStart">
@@ -570,6 +570,7 @@ function heroSheet(i) {
     <section class="cxBox"><h3>Moves <small>${mem.moves.length}</small></h3><ul class="cxMvs">
       <li class="cxMv"><span class="cxMvIc">👊</span><div class="cxMvTx"><div class="cxMvTop"><b>Bash</b><span class="cxKindTag">Attack</span></div><small>A normal hit on one enemy. Always free.</small><div class="cxTags"><span>free</span><span>one enemy</span>${mvEst({kind:"hit", pow:1}, mem) ? `<span>${mvEst({kind:"hit", pow:1}, mem)}</span>` : ""}</div></div></li>
       ${mem.moves.map(k => cxMove(k, mem)).join("")}</ul></section>
+    ${passiveBox(h)}
     <section class="cxBox"><h3>${c.ic} Combo · ${c.n}</h3><p class="cxMet">${c.tip}.</p></section>
     ${left.length ? `<section class="cxBox twSheetLeft"><h3>Can still learn <small>${left.length}</small></h3><ul class="cxMvs">${left.map(k => cxMove(k)).join("")}</ul></section>` : ""}
     ${nav}
@@ -597,6 +598,7 @@ function codexPage(h) {
       <section class="cxBox"><h3>🤝 How you met</h3><p class="cxMet">${codexMet(h)}</p></section>
       <section class="cxBox"><h3>${c.ic} Combo · ${c.n}</h3><p class="cxMet">${c.tip}.</p></section>
     </div>
+    ${passiveBox(h)}
     <section class="cxBox"><h3>Starts with <small>${h.start.length}</small></h3><ul class="cxMvs">${h.start.map(k => cxMove(k)).join("")}</ul></section>
     <section class="cxBox"><h3>Can learn <small>${learn.length}</small></h3>${learn.length ? `<ul class="cxMvs">${learn.map(k => cxMove(k)).join("")}</ul>` : `<p class="cxMet">Nothing. ${h.name} is happy just as they are.</p>`}</section>
     <div class="cxNav"><button class="btn" data-cx="${prev.id}">◀ ${prev.name}</button><button class="btn" data-cx="all">All heroes</button><button class="btn" data-cx="${next.id}">${next.name} ▶</button></div>
@@ -792,3 +794,6 @@ function resumeHTML() {
   const mode = t.hard ? "🔥 Daily Hard · " : t.weekly ? "📅 Weekly · " : "";
   return `<button class="btn twSmall twResume" id="twResume" title="${names} · $${t.money} · saved ${new Date(s.at).toLocaleString()}">💾 Continue ${mode}floor ${t.floor}${t.endless ? " ♾️" : ""}</button>`;
 }
+// a hero's passive as a codex box, or as one line for tighter spots
+function passiveBox(h) { const p = passiveOf(h); return p ? `<section class="cxBox twPassive"><h3>${p.ic} Passive · ${p.n}</h3><p class="cxMet">${p.d}.</p></section>` : ""; }
+function passiveLine(h) { const p = passiveOf(h); return p ? `<b>Passive</b> ${p.ic} ${p.n}: ${p.d}.` : ""; }

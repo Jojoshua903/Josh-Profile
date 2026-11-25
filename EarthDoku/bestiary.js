@@ -3,7 +3,7 @@ const view = {game:"all", kind:"", region:"", boss:false, coll:"", q:"", sort:"n
 let listUnlocked = false;
 
 const TABS = {grid:["#viewGrid", "#tabGrid"], list:["#viewList", "#tabList"], geo:["#viewGeo", "#tabGeo"], shop:["#viewShop", "#tabShop"],
-  tower:["#viewTower", "#tabTower"], mini:["#viewMini", "#tabMini"], stats:["#viewStats", "#tabStats"]};
+  tower:["#viewTower", "#tabTower"], tactics:["#viewTactics", "#tabTactics"], mini:["#viewMini", "#tabMini"], stats:["#viewStats", "#tabStats"]};
 function setTab(which) {
   document.body.dataset.tab = which;
   Object.entries(TABS).forEach(([k, [v, t]]) => {
@@ -18,6 +18,7 @@ function setTab(which) {
   else if (which === "mini") { if (window.onMiniShow) window.onMiniShow(); }
   else if (which === "stats") { if (window.onStatsShow) window.onStatsShow(); }
   else if (which === "tower") { if (window.onTowerShow) window.onTowerShow(); }
+  else if (which === "tactics") { if (window.onTacticsShow) window.onTacticsShow(); }
   else if (window.onGeoShow) window.onGeoShow();
   if (window.onTabSound) window.onTabSound(which);
   if (window.checkAch) checkAch();
@@ -40,6 +41,7 @@ const NAV_ICONS = {
         "kbbbbbbbbbbk", "kkkkkkkkkkkk", "kwwwwwwwwwwk", ".kkkkkkkkkk."],
   stats:["........kkk.", "........kyk.", "........kyk.", "....kkk.kyk.", "....ktk.kyk.", "....ktk.kyk.", "kkk.ktk.kyk.", "krk.ktk.kyk.",
          "krk.ktk.kyk.", "krk.ktk.kyk.", "kkkkkkkkkkkk"],
+  tactics:["...krrr....", "...krrrr...", "...krr.....", "...k.......", "kkkkkkkkkkk", "kgwgwgwgwgk", "kwgwgwgwgwk", "kgwgwgwgwgk", "kkkkkkkkkkk"],
   shop:["....kkkkk....", "...kowoook...", "..koooooook..", "kyyyyyyyyyyyk", ".kkyyyyyyykk.", "..koooooook..", "...koooook...", "....kkkkk...."]
 };
 function pixIcon(rows) {
@@ -56,7 +58,7 @@ function pixIcon(rows) {
 }
 document.querySelectorAll(".nIc[data-ic]").forEach(el => el.innerHTML = pixIcon(NAV_ICONS[el.dataset.ic]));
 
-const NAV_NAMES = {grid:"Grid", geo:"Map Guessr", mini:"Minigames", tower:"Enemy Tower", list:"Enemy list", stats:"Stats", shop:"Saturn's shop"};
+const NAV_NAMES = {grid:"Grid", geo:"Map Guessr", mini:"Minigames", tower:"Enemy Tower", tactics:"Tactics", list:"Enemy list", stats:"Stats", shop:"Saturn's shop"};
 function drawMenuCur() {
   const k = document.body.dataset.tab || "grid";
   $("#menuCur").innerHTML = `<span class="nIc">${pixIcon(NAV_ICONS[k])}</span><span>${NAV_NAMES[k]}</span>`;
@@ -104,7 +106,7 @@ document.addEventListener("keydown", ev => {
   else if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
     ev.preventDefault();
     items[(i + (ev.key === "ArrowDown" ? 1 : -1) + items.length) % items.length].focus();
-  } else if (/^[1-7]$/.test(ev.key)) { ev.preventDefault(); items[+ev.key - 1].click(); }
+  } else if (/^[1-8]$/.test(ev.key)) { ev.preventDefault(); items[+ev.key - 1].click(); }
   else if (ev.key === "Tab") {
     // keep focus inside the drawer
     const f = [$("#smClose"), ...items], j = f.indexOf(document.activeElement);

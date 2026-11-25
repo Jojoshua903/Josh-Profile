@@ -132,7 +132,7 @@ function kitHTML() {
       ${kind === "start" ? `<button class="ceX" data-slot="start" title="Change the starting move" aria-label="Change the starting move">✎</button>` : `<button class="ceX" data-rm="${k}" title="Remove ${m.n}" aria-label="Remove ${m.n}">✕</button>`}</div>`;
   };
   const learn = Array.from({length:CU_LEARN}, (_, i) => slot(cu.learn[i], "learn"));
-  return `<div class="ceKit"><div class="ceKitCol"><span class="ceKitHead">⭐ Starts with</span>${slot(cu.start, "start")}</div>
+  return `<div class="ceKit"><div class="ceKitCol"><span class="ceKitHead">⭐ Starts with</span>${slot(cu.start, "start")}<p class="cePassive">${PASSIVES._mine.ic} <b>${PASSIVES._mine.n}</b> ${PASSIVES._mine.d}.</p></div>
     <div class="ceKitCol wide"><span class="ceKitHead">📚 Can learn <small>${cu.learn.length}/${CU_LEARN}${cuStars() ? " · ★ 1/1" : ""}</small></span><div class="ceKitGrid">${learn.join("")}</div></div></div>`;
 }
 

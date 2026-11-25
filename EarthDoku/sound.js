@@ -78,7 +78,7 @@ const SONGS = {
                [38,1],[50,1],[38,1],[50,1],[38,1],[50,1],[38,1],[50,1],[40,1],[52,1],[40,1],[52,1],[40,1],[52,1],[40,1],[52,1],
                [41,1],[53,1],[41,1],[53,1],[40,1],[52,1],[40,1],[52,1],[45,1],[57,1],[45,1],[57,1],[45,4]]}
 };
-const TAB_SONG = {grid:"town", list:"roam", geo:"roam", shop:"town", mini:"battle", tower:"battle", stats:"roam"};
+const TAB_SONG = {grid:"town", list:"roam", geo:"roam", shop:"town", mini:"battle", tower:"battle", tactics:"battle", stats:"roam"};
 const mus = {song:null, timer:null, next:0, li:0, bi:0, lt:0, bt:0};
 function musicStop() { clearInterval(mus.timer); mus.timer = null; mus.song = null; }
 function musicPlay(name) {

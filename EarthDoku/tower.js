@@ -9,6 +9,12 @@ const hasMod = k => !!(tr && tr.mods && tr.mods.includes(k));
 const hasBless = k => !!(tr && tr.bless && tr.bless.includes(k));
 const aliveF = () => tr.battle ? tr.battle.foes.filter(f => f.hp > 0) : [];
 const isUnlocked = h => tw.found.includes(h.id);
+// passives (see PASSIVES in tower_data.js): pv reads one hero's number, partyPv adds it up over everyone still standing
+const pv = (m, k) => { const p = m && passiveOf(m.h); return p && p[k] || 0; };
+const partyPv = k => tr && tr.team ? tr.team.filter(m => !m.ko).reduce((s, m) => s + (typeof pv(m, k) === "number" ? pv(m, k) : 0), 0) : 0;
+const pasHero = k => tr && tr.team ? tr.team.find(m => !m.ko && pv(m, k)) : null;
+const buddyOn = m => { const b = pv(m, "buddy"); return !!(b && tr && tr.team && tr.team.some(x => x.h.id === b)); };
+const immune = (m, s) => (pv(m, "immune") || []).includes(s);
 function twLog(t, cls = "") { tr.log.push({t, cls}); tr.log = tr.log.slice(-40); if (window.drawTwLog) drawTwLog(); }
 
 // ---------- hero numbers ----------
@@ -22,6 +28,8 @@ function refresh(m) {
   m.mhp = Math.round(s.mhp * k * (1 + b.hp) * (hasCurse("frail") ? .88 : 1) * (hasRelic("bracer") ? 1.08 : 1) * (hasMod("fragile") ? .5 : 1));
   m.mpp = s.mpp ? Math.round(s.mpp * k * (1 + b.pp) * (hasRelic("magicribbon") ? 1.15 : 1) * (hasRelic("magicantbat") ? 1.1 : 1)) : 0;
   m.atk = (s.atk * k + b.atk + (hasRelic("yoyo") ? 2 : 0)) * (hasRelic("swordkings") ? 1.12 : 1) * (hasRelic("magicantbat") ? 1.1 : 1); m.def = s.def * k + b.def + (hasRelic("goddess") ? 3 : 0); m.spd = s.spd + b.spd + (hasRelic("ribbon") ? 2 : 0) + (hasRelic("yoyo") ? 2 : 0);
+  // passive stat boosts
+  m.mhp = Math.round(m.mhp * (1 + pv(m, "hp"))); m.atk *= 1 + pv(m, "atk"); m.def *= 1 + pv(m, "def"); m.spd *= 1 + pv(m, "spd");
   m.hp = Math.min(m.hp, m.mhp); m.pp = Math.min(m.pp, m.mpp); m.shown = Math.min(m.shown, m.mhp);
 }
 function newMember(h, lv) {
@@ -242,7 +250,7 @@ function rollTick() {
 function later(fn, ms) { const b = tr && tr.battle, tok = b && b.tok; setTimeout(() => { if (tr && tr.battle && tr.battle.tok === tok && !tr.battle.over) fn(); }, ms); }
 function startBattle(type) {
   tr.battle = {type, foes:makeFoes(type), round:0, idx:0, order:[], tok:Math.random(), teddy:false, party:{}, over:false};
-  tr.team.forEach(m => { m.cd = {}; m.guard = false; m.tough = 0; });
+  tr.team.forEach(m => { m.cd = {}; m.guard = false; m.tough = 0; m.stood = false; refresh(m); });
   tr.phase = "fight"; tr.log = [];
   const names = tr.battle.foes.map(x => x.e.name), first = names[0];
   drawTower();
@@ -255,20 +263,52 @@ function startBattle(type) {
   // EarthBound's swirls: a faster party sometimes gets the jump on normal battles, a slower one gets ambushed
   if (type === "battle" || type === "tough") {
     const avg = a => a.reduce((s, x) => s + x.spd, 0) / a.length, edge = (avg(aliveH()) - avg(tr.battle.foes)) / Math.max(1, avg(tr.battle.foes));
-    const r = Math.random(), green = clamp(.14 + edge * .25, .05, .3), red = clamp(.1 - edge * .2, .03, .22);
+    const r = Math.random(), green = clamp(.14 + edge * .25, .05, .3) + partyPv("swirl"), red = partyPv("noAmbush") ? 0 : clamp(.1 - edge * .2, .03, .22);
     if (r < green) { tr.battle.open = "green"; twLog("• 🟢 You caught them off guard! Your party gets a free turn.", "good"); }
     else if (r < green + red) { tr.battle.open = "red"; twLog("• 🔴 Ambush! The enemies attack first.", "bad"); }
   }
+  startPassives();
   // bosses get a title card first; the fight starts once it closes
   if (type !== "battle" && window.bossCard) bossCard(() => later(newRound, 250));
   else later(newRound, 700);
+}
+// ---------- passives that kick in at the start of a battle, every round, and after a win ----------
+function startPassives() {
+  const b = tr.battle, foes = aliveF(), say = (m, t) => twLog(`• ${passiveOf(m.h).ic} ${m.h.name}: ${t}`, "good");
+  tr.team.filter(m => !m.ko).forEach(m => {
+    if (pv(m, "startShield")) { b.party.shield = Math.max(b.party.shield || 0, pv(m, "startShield")); say(m, "the party is wrapped in a bubble!"); }
+    if (pv(m, "startOffup")) { b.party.offup = Math.max(b.party.offup || 0, pv(m, "startOffup")); say(m, "everyone's offense went up!"); }
+    const pool = foes.filter(x => !x.boss), any = pool.length ? pickR(pool, Math.random) : null;
+    if (pv(m, "startCry") && any) { any.st.cry = 2; say(m, `${any.e.name} got scared and started crying!`); }
+    if (pv(m, "pinStart")) { const x = pickR(foes, Math.random); if (!x.boss || Math.random() < .5) { x.st.stun = Math.max(x.st.stun || 0, 1); say(m, `${x.e.name} is too starstruck to move!`); } }
+    if (pv(m, "startWeak")) { const x = pickR(foes, Math.random); x.st.weak = 3; say(m, `"Actually, ${x.e.name}'s weak spot is right there."`); }
+    if (pv(m, "startDistract")) { const hit = foes.filter(x => Math.random() < pv(m, "startDistract")); hit.forEach(x => x.st.distract = 1); if (hit.length) say(m, `${hit.map(x => x.e.name).join(", ")} got distracted by the monkey business!`); }
+  });
+  drawFoes();
+}
+function roundPassives() {
+  aliveH().forEach(m => { if (pv(m, "ppRegen") && m.mpp) m.pp = Math.min(m.mpp, m.pp + Math.max(1, Math.round(m.mpp * pv(m, "ppRegen")))); });
+  const heal = partyPv("partyRegen"), pp = partyPv("partyPP");
+  if (heal) aliveH().forEach(x => { x.hp = Math.min(x.mhp, x.hp + Math.max(1, Math.round(x.mhp * heal))); });
+  if (pp) aliveH().filter(x => x.mpp).forEach(x => { x.pp = Math.min(x.mpp, x.pp + Math.max(1, Math.round(x.mpp * pp))); });
+}
+function winPassives() {
+  const up = aliveH();
+  const heal = partyPv("winHeal"), pp = partyPv("winPP");
+  if (heal) { up.forEach(m => { m.hp = m.shown = Math.min(m.mhp, m.hp + Math.max(1, Math.round(m.mhp * heal))); }); twLog(`• ${pasHero("winHeal").h.name} patched everyone up.`, "good"); }
+  if (pp) { up.filter(m => m.mpp).forEach(m => { m.pp = Math.min(m.mpp, m.pp + Math.max(1, Math.round(m.mpp * pp))); }); twLog(`• ${pasHero("winPP").h.name} served coffee. Zoom! Everyone recovered PP.`, "good"); }
+  up.filter(m => pv(m, "loot") && Math.random() < pv(m, "loot")).forEach(m => {
+    const pool = pv(m, "pool") === "gadget" ? ["bomb", "rocket"].filter(k => GOODS[k]) : FOOD, k = pickR(pool, Math.random);
+    tr.goods[k] = (tr.goods[k] || 0) + 1;
+    twLog(`• ${m.h.name} ${pv(m, "pool") === "gadget" ? "found" : "got a delivery:"} a ${GOODS[k].n}!`, "good");
+  });
 }
 function newRound() {
   const b = tr.battle; b.round++;
   let units = [...aliveH().map(m => ({m})), ...aliveF().map(f => ({f}))];
   // the first round of a swirl battle belongs to one side
   if (b.round === 1 && b.open) units = units.filter(u => b.open === "green" ? u.m : u.f);
-  units.forEach(u => u.ord = (u.m ? u.m.spd : u.f.spd) * rnd(.75, 1.25));
+  units.forEach(u => u.ord = (u.m ? u.m.spd : u.f.spd) * rnd(.75, 1.25) + (b.round === 1 && u.m && pv(u.m, "first") ? 1e6 : 0));
   b.order = units.sort((a, c) => c.ord - a.ord); b.idx = 0;
   nextActor();
 }
@@ -317,6 +357,7 @@ function endRound() {
   aliveF().forEach(x => ["weak", "cry"].forEach(s => { if (x.st[s] && --x.st[s] <= 0) delete x.st[s]; }));
   aliveF().filter(x => x.traits.includes("regen")).forEach(x => { const a = Math.round(x.mhp * .05); x.hp = Math.min(x.mhp, x.hp + a); twLog(`• ${x.e.name} regenerated ${a} HP.`); });
   if (hasRelic("cherub")) aliveH().forEach(x => { x.hp = Math.min(x.mhp, x.hp + Math.max(1, Math.round(x.mhp * .04))); });
+  roundPassives();
   if (hasRelic("butterfly")) aliveH().filter(x => x.mpp).forEach(x => { x.pp = Math.min(x.mpp, x.pp + Math.max(1, Math.round(x.mpp * .03))); });
   const p = tr.battle.party;
   ["shield", "offup"].forEach(s => { if (p[s] && --p[s] <= 0) { delete p[s]; twLog(s === "shield" ? "• The shield disappeared." : "• Offense went back to normal."); } });
@@ -388,7 +429,7 @@ function act(key, foe, ally) {
   const mv = masteredMove(m, key);
   m.pp -= mv.pp || 0;
   if (mv.pp) tr.st.psi++;
-  if (mv.cd) m.cd[key] = mv.cd + 1;
+  if (mv.cd) m.cd[key] = Math.max(1, mv.cd + 1 - pv(m, "cdMinus"));
   if (window.fxCast) fxCast(m, key);
   doMove(m, mv, foe, ally);
   if (window.fxMove) fxMove(m, key, foe, ally);
@@ -412,17 +453,27 @@ function masteredMove(m, k) {
 function practice(m, k) {
   m.uses = m.uses || {};
   const before = masteryOf(m, k);
-  m.uses[k] = (m.uses[k] || 0) + 1;
+  m.uses[k] = (m.uses[k] || 0) + (pv(m, "fastMaster") ? 2 : 1);
   const now = masteryOf(m, k);
   if (now > before) { twLog(`• ${m.h.name} has mastered ${TMOVES[k].n}! ${"✦".repeat(now)}${now === 2 ? " It hits harder and reloads faster." : " It's stronger now."}`, "good"); sfx("reward"); }
 }
-function crit() { return Math.random() < (hasRelic("rabbit") ? 1 / 8 : 1 / 16) + (hasRelic("gutsy") ? .1 : 0) + (hasBless("fortune") ? .04 : 0); }
+function crit(m) { return Math.random() < (hasRelic("rabbit") ? 1 / 8 : 1 / 16) + (hasRelic("gutsy") ? .1 : 0) + (hasBless("fortune") ? .04 : 0) + pv(m, "critX") + partyPv("partyCrit"); }
+// how much harder a hero hits right now, from their passive
+function pasDmg(m, foe, psi) {
+  let x = 1 + (psi ? pv(m, "psiX") : 0) + (buddyOn(m) ? .2 : 0);
+  if (!psi && pv(m, "rage") && m.hp < m.mhp * .35) x += pv(m, "rage");
+  if (!psi && pv(m, "fullHpX") && m.hp >= m.mhp) x += pv(m, "fullHpX");
+  if (pv(m, "statusX") && foe && Object.keys(foe.st).length) x += pv(m, "statusX");
+  if (pv(m, "avenger") && tr.team.some(t => t !== m && t.ko)) x += pv(m, "avenger");
+  if (pv(m, "wild")) x *= rnd(.5, 1.8);
+  return x;
+}
 function hitDmg(m, foe, pow, smashy) {
-  const off = m.atk * 2 * pow * (tr.battle.party.offup ? 1.3 : 1), def = foe.def * (foe.st.weak ? .55 : 1);
+  const off = m.atk * 2 * pow * (tr.battle.party.offup ? 1.3 : 1) * pasDmg(m, foe, false), def = foe.def * (foe.st.weak ? .55 : 1);
   return Math.max(1, Math.round(smashy ? off * 2 - def * .3 : (off - def) * rnd(.85, 1.15)));
 }
 function psiDmg(m, foe, pow) {
-  const base = (12 + m.atk * 1.05) * pow * (1 + m.bonus.psi) * (hasRelic("diadem") ? 1.15 : 1) * (tr.battle.party.offup ? 1.3 : 1) * (foe.traits.includes("psiward") ? .5 : 1);
+  const base = (12 + m.atk * 1.05) * pow * (1 + m.bonus.psi) * (hasRelic("diadem") ? 1.15 : 1) * (tr.battle.party.offup ? 1.3 : 1) * (foe.traits.includes("psiward") ? .5 : 1) * pasDmg(m, foe, true);
   return Math.max(1, Math.round(base * rnd(.9, 1.1) - foe.def * .25 * (foe.st.weak ? .5 : 1)));
 }
 function hurtFoe(foe, d, what, smashy) {
@@ -451,10 +502,20 @@ function hurtFoe(foe, d, what, smashy) {
 function doBash(m, foe) {
   if (m.st.cry && !hasRelic("hawkeye") && Math.random() < .5) { twLog(`• ${m.h.name} attacked, but was crying too hard to aim. Missed!`); return afterAction(); }
   if (!hasRelic("hawkeye") && Math.random() < (hasRelic("casey") ? .25 : .04)) { twLog(`• ${m.h.name} attacked... just missed!`); return afterAction(); }
-  const smashy = crit(), d = hitDmg(m, foe, (hasRelic("casey") ? 1.6 : 1) * (hasRelic("legendbat") ? 1.25 : 1), smashy);
+  const smashy = crit(m), d = hitDmg(m, foe, (hasRelic("casey") ? 1.6 : 1) * (hasRelic("legendbat") ? 1.25 : 1) * (1 + pv(m, "bashX")), smashy);
   hurtFoe(foe, d, `${m.h.name} attacked!`, smashy);
+  bashPassive(m, foe, d);
   if (tr.auto || foe.hp <= 0) return afterAction();
   startCombo(m, foe, d);
+}
+// the extra things some heroes' Bash does
+function bashPassive(m, foe, d) {
+  const name = m.h.name;
+  if (pv(m, "bashCash")) { const c = 2 + Math.round(tr.floor / 2); tr.money += c; twLog(`• ${name} swiped $${c}!`, "good"); }
+  if (foe.hp <= 0) return;
+  if (pv(m, "weakOnHit") && !foe.st.weak) { foe.st.weak = 2; twLog(`• ${name} sniffed out ${foe.e.name}'s weak spot!`, "good"); }
+  if (pv(m, "bashStun") && Math.random() < pv(m, "bashStun") * (foe.boss ? .5 : 1)) { foe.st.stun = 1; twLog(`• ${name} pinned ${foe.e.name} to the wall!`, "good"); }
+  if (pv(m, "double") && Math.random() < pv(m, "double")) hurtFoe(foe, Math.max(1, Math.round(d * .6)), `${name} attacked again!`);
 }
 function healOne(t, amt, what) {
   if (!t) return;
@@ -470,13 +531,13 @@ function doMove(m, mv, foe, ally) {
     if (mv.miss && !hasRelic("hawkeye") && Math.random() < mv.miss) return twLog(`• ${said} ...but missed!`);
     if (mv.all) twLog(`• ${said}`);
     if (mv.times) twLog(`• ${said}`);
-    foes.forEach(x => { for (let i = 0; i < (mv.times || 1) && x.hp > 0; i++) { const s = crit(); hurtFoe(x, hitDmg(m, x, mv.pow, s), mv.all || mv.times ? "" : said, s); } });
+    foes.forEach(x => { for (let i = 0; i < (mv.times || 1) && x.hp > 0; i++) { const s = crit(m); hurtFoe(x, hitDmg(m, x, mv.pow, s), mv.all || mv.times ? "" : said, s); } });
   } else if (mv.kind === "psi") {
     if (mv.miss && !hasRelic("hawkeye") && Math.random() < mv.miss) return twLog(`• ${said} ...it missed!`);
     if (mv.all) twLog(`• ${said}`);
     foes.forEach(x => hurtFoe(x, psiDmg(m, x, mv.pow), mv.all ? "" : said));
-  } else if (mv.kind === "heal") { const t = ally && !ally.ko ? ally : mostHurt(); healOne(t, Math.round(t.mhp * mv.pow), said); }
-  else if (mv.kind === "healall") { twLog(`• ${said}`, "good"); aliveH().forEach(t => healOne(t, Math.round(t.mhp * mv.pow), "")); }
+  } else if (mv.kind === "heal") { const t = ally && !ally.ko ? ally : mostHurt(); healOne(t, Math.round(t.mhp * mv.pow * (1 + pv(m, "healX"))), said); }
+  else if (mv.kind === "healall") { twLog(`• ${said}`, "good"); aliveH().forEach(t => healOne(t, Math.round(t.mhp * mv.pow * (1 + pv(m, "healX"))), "")); }
   else if (mv.kind === "cure") { aliveH().forEach(t => t.st = {}); twLog(`• ${said} Everyone feels better.`, "good"); }
   else if (mv.kind === "sleep" || mv.kind === "stun") {
     const ok = Math.random() < (boss ? mv.chance / 2 : mv.chance);
@@ -503,7 +564,7 @@ function doMove(m, mv, foe, ally) {
   else if (mv.kind === "guard") { m.guard = true; twLog(`• ${m.h.name} used ${mv.n === "Use a friend as a shield" ? "a friend as a shield" : mv.n}!`); }
   else if (mv.kind === "invent") invent(m);
   else if (mv.kind === "steal") {
-    const s = crit(); hurtFoe(foe, hitDmg(m, foe, mv.pow, s), said, s);
+    const s = crit(m); hurtFoe(foe, hitDmg(m, foe, mv.pow, s), said, s);
     const c = 6 + tr.floor * 2; tr.money += c;
     if (Math.random() < .3) { const k = pickR(FOOD, Math.random); tr.goods[k] = (tr.goods[k] || 0) + 1; twLog(`• ${m.h.name} swiped $${c} and a ${GOODS[k].n}!`, "good"); }
     else twLog(`• ${m.h.name} swiped $${c}!`, "good");
@@ -557,8 +618,8 @@ function useGood(k, m, foe, ally) {
   if (g.kind === "full") { const t = pick(up) || mostHurt(); t.hp = t.mhp; t.pp = t.mpp; twLog(`• ${who} used the ${g.n}. ${t.h.name} is fully restored!`, "good"); }
   else if (g.kind === "cure") { aliveH().forEach(x => x.st = {}); twLog(`• ${who} used the ${g.n}. Everyone feels better.`, "good"); }
   else if (g.kind === "stat") { const t = pick(up) || pickR(aliveH(), Math.random), k = pickR(["atk", "def", "spd", "hp"], Math.random), a = {atk:2, def:2, spd:1, hp:.06}[k]; t.bonus[k] += a; const before = t.mhp; refresh(t); if (k === "hp") t.hp += t.mhp - before; twLog(`• ${who} used the ${g.n}. ${t.h.name}'s ${({atk:"Offense", def:"Defense", spd:"Speed", hp:"Max HP"})[k]} went up!`, "good"); }
-  else if (g.kind === "heal") { const t = pick(up) || mostHurt(); healOne(t, Math.round(t.mhp * g.amt), `${who} used the ${g.n}.`); }
-  else if (g.kind === "healall") { twLog(`• ${who} shared the ${g.n}.`, "good"); aliveH().forEach(t => healOne(t, Math.round(t.mhp * g.amt), "")); }
+  else if (g.kind === "heal") { const t = pick(up) || mostHurt(); healOne(t, Math.round(t.mhp * g.amt * (1 + partyPv("foodX"))), `${who} used the ${g.n}.`); }
+  else if (g.kind === "healall") { twLog(`• ${who} shared the ${g.n}.`, "good"); aliveH().forEach(t => healOne(t, Math.round(t.mhp * g.amt * (1 + partyPv("foodX"))), "")); }
   else if (g.kind === "pp") { const t = pick(x => up(x) && x.mpp) || aliveH().filter(x => x.mpp).sort((a, c) => a.pp / a.mpp - c.pp / c.mpp)[0]; if (t) { const a = Math.max(8, Math.round(t.mpp * g.amt)); t.pp = Math.min(t.mpp, t.pp + a); twLog(`• ${who} used the ${g.n}. ${t.h.name} recovered ${a} PP!`, "good"); } }
   else if (g.kind === "revive") { const t = pick(x => x.ko) || tr.team.find(x => x.ko); if (t) { t.ko = false; t.hp = t.shown = Math.round(t.mhp * g.amt); t.st = {}; if (tr.battle) tr.battle.fxT = t; twLog(`• ${who} used the ${g.n}. ${t.h.name} was revived!`, "good"); } }
   else if (g.kind === "dmgall") { twLog(`• ${who} used the ${g.n}!`); aliveF().forEach(x => hurtFoe(x, Math.round((20 + f * 8) * g.pow * rnd(.9, 1.1)), "")); }
@@ -617,11 +678,15 @@ function enemyAct(foe) {
   }
   // smarter enemies gang up on whoever looks weakest
   const weakest = targets.slice().sort((a, c) => a.shown / a.mhp - c.shown / c.mhp)[0];
-  const t = Math.random() < .3 + tr.floor * .006 ? weakest : pickR(targets, Math.random), k = foe.e.kinds[0];
+  let t = Math.random() < .3 + tr.floor * .006 ? weakest : pickR(targets, Math.random);
+  const k = foe.e.kinds[0], loud = targets.find(x => pv(x, "taunt"));
+  // some heroes draw attention, others hide in the back
+  if (loud && Math.random() < .35) t = loud;
+  else if (pv(t, "shy") && targets.length > 1 && Math.random() < .5) t = pickR(targets.filter(x => x !== t), Math.random);
   if (Math.random() < .2) {
-    if (k === "Bug" || k === "Plant" && Math.random() < .5) { if (!t.st.poison) { t.st.poison = 1; return twLog(`• ${foe.e.name} stung ${t.h.name}! ${t.h.name} got poisoned!`, "bad"); } }
-    else if (k === "Ghost" || k === "Weird") { t.st.cry = 3; return twLog(`• ${foe.e.name} did something spooky. ${t.h.name} started crying!`, "bad"); }
-    else if (k === "Plant" || k === "Object") { if (!t.st.sleep) { t.st.sleep = 1; return twLog(`• ${foe.e.name} scattered spores... ${t.h.name} fell asleep!`, "bad"); } }
+    if (k === "Bug" || k === "Plant" && Math.random() < .5) { if (!t.st.poison && !immune(t, "poison")) { t.st.poison = 1; return twLog(`• ${foe.e.name} stung ${t.h.name}! ${t.h.name} got poisoned!`, "bad"); } }
+    else if (k === "Ghost" || k === "Weird") { if (immune(t, "cry")) return twLog(`• ${foe.e.name} did something spooky, but ${t.h.name} didn't even blink.`); t.st.cry = 3; return twLog(`• ${foe.e.name} did something spooky. ${t.h.name} started crying!`, "bad"); }
+    else if (k === "Plant" || k === "Object") { if (immune(t, "sleep")) return twLog(`• ${foe.e.name} scattered spores, but ${t.h.name} stayed wide awake.`); if (!t.st.sleep) { t.st.sleep = 1; return twLog(`• ${foe.e.name} scattered spores... ${t.h.name} fell asleep!`, "bad"); } }
     else if (k === "Alien" || k === "Machine") { twLog(`• ${foe.e.name} fired a beam at the whole party!`, "bad"); return targets.forEach(m => hitHero(foe, m, .45)); }
   }
   hitHero(foe, t, 1);
@@ -629,18 +694,30 @@ function enemyAct(foe) {
 function hitHero(foe, m, scale) {
   const b = tr.battle;
   if (!b.teddy && hasRelic("teddy")) { b.teddy = true; return twLog(`• ${foe.e.name} attacked, but the Teddy bear took the hit!`, "good"); }
-  if (Math.random() < (foe.st.cry ? .45 : 0) + .05 + m.spd * .005) return twLog(`• ${foe.e.name} attacked ${m.h.name}... ${m.h.name} dodged quickly!`);
+  // a protector jumps in front of a badly hurt friend (single hits only)
+  const guard = scale === 1 && m.hp < m.mhp * .4 ? tr.team.find(x => x !== m && !x.ko && pv(x, "cover") && x.hp > x.mhp * .3) : null;
+  if (guard && Math.random() < pv(guard, "cover")) { twLog(`• ${guard.h.name} jumped in front of ${m.h.name}!`, "good"); m = guard; }
+  if (Math.random() < (foe.st.cry ? .45 : 0) + .05 + m.spd * .005 + pv(m, "dodge") + partyPv("partyDodge")) return twLog(`• ${foe.e.name} attacked ${m.h.name}... ${m.h.name} dodged quickly!`);
   const smashy = Math.random() < 1 / 18, def = m.def * (1 + .3 * m.tough);
   let d = smashy ? foe.atk * 3.2 : (foe.atk * 2 - def) * rnd(.85, 1.15);
-  d = Math.max(1, Math.round(d * scale * (hasMod("glass") ? 1.5 : 1) * (b.party.shield ? .6 : 1) * (m.guard ? .5 : 1) * (hasRelic("hardhat") ? .88 : 1) * (scale < 1 && hasRelic("earthpendant") ? .75 : 1)));
+  d = Math.max(1, Math.round(d * scale * (hasMod("glass") ? 1.5 : 1) * (b.party.shield ? .6 : 1) * (m.guard ? .5 : 1) * (hasRelic("hardhat") ? .88 : 1) * (scale < 1 && hasRelic("earthpendant") ? .75 : 1)
+    * (1 - pv(m, "dr")) * (1 - Math.min(.3, partyPv("partyDr")))));
   const wasUp = m.hp > 0;
   m.hp = Math.max(0, m.hp - d);
+  let stood = false;
+  if (wasUp && m.hp === 0 && pv(m, "lastStand") && !m.stood) { m.hp = 1; m.stood = stood = true; }
   if (foe.traits.includes("vampiric") && foe.hp > 0) foe.hp = Math.min(foe.mhp, foe.hp + Math.round(d * .5));
   if (m.st.sleep && Math.random() < .5) delete m.st.sleep;
   twLog(`• ${scale === 1 ? foe.e.name + " attacked " + m.h.name + "!" : ""}${smashy ? " SMAAAASH!!" : ""} ${d} HP of damage to ${m.h.name}!${wasUp && m.hp === 0 ? " Mortal damage! Heal fast!" : ""}`, "bad");
   sfx("bad");
   if (window.flashHero) flashHero(m);
   if (window.fxEnemy) fxEnemy(foe, m, smashy, scale);
+  if (stood) twLog(`• ${m.h.name} refused to fall! Hanging on with 1 HP!`, "good");
+  // a packed lunch for whoever's in trouble, once per battle
+  const cook = !b.lunch && m.hp > 0 && m.hp < m.mhp * .3 ? pasHero("lunch") : null;
+  if (cook) { b.lunch = true; healOne(m, Math.round(m.mhp * pv(cook, "lunch")), `${cook.h.name} shared a packed lunch!`); }
+  // biting back
+  if (m.hp > 0 && foe.hp > 0 && scale === 1 && pv(m, "counter") && Math.random() < pv(m, "counter")) hurtFoe(foe, hitDmg(m, foe, .6, false), `${m.h.name} bit back!`);
 }
 
 // ---------- winning, losing and upgrades ----------
@@ -650,6 +727,7 @@ function twVictory() {
   stopRolling();
   const f = tr.floor, mult = {battle:1, tough:2, boss:3, final:0}[b.type];
   let cash = Math.round(b.foes.reduce((s, x) => s + (5 + f * 3) * rnd(.8, 1.2), 0) * mult * (hasRelic("coin") ? 1.5 : 1) * (hasRelic("spittoon") ? 1.25 : 1) * (hasMod("mystery") ? 1.25 : 1) * (hasMod("bossrush") ? 1.5 : 1) * (hasMod("elite") ? 1.3 : 1) * (hasBless("wealth") ? 1.15 : 1) * (tr.perks ? 1 + .1 * perkLv("keen") : 1) * (1 + .05 * (tr.heat || 0)));
+  if (b.type !== "final") cash = Math.round(cash * (1 + partyPv("cash"))) + (pasHero("winCash") ? 4 + f : 0);
   if (b.type === "boss" && hasRelic("phone")) cash += 40 + f * 6;
   if (hasRelic("thieftools") && b.type !== "final") { const k = pickR(FOOD, Math.random); tr.goods[k] = (tr.goods[k] || 0) + 1; twLog(`• Thief tools: you swiped a ${GOODS[k].n}!`, "good"); }
   tr.money += cash;
@@ -670,6 +748,7 @@ function twVictory() {
   }
   tr.st.wins++; if (tr.team.length === 1) tr.st.soloTo = f; runTrack();
   if (hasBless("regen")) aliveH().forEach(m => { m.hp = m.shown = Math.min(m.mhp, m.hp + Math.max(1, Math.round(m.mhp * .08))); });
+  winPassives();
   tr.lastRare = b.type !== "battle" || (tr.rareLeft > 0 && tr.rareLeft-- > 0);
   tr.offers = makeOffers(tr.lastRare);
   tr.phase = "reward";
@@ -699,7 +778,7 @@ function makeOffers(rare) {
   const recruit = () => {
     if (team.length >= 4 || !free.length || hasMod("squad")) return null;
     const h = pickR(free);
-    return {key:"r:" + h.id, kind:"Recruit", hero:h, title:`${h.name} joins!`, sub:`${h.role}. Knows ${h.start.map(k => TMOVES[k].n).join(", ")}.`,
+    return {key:"r:" + h.id, kind:"Recruit", hero:h, title:`${h.name} joins!`, sub:`${h.role}. Knows ${h.start.map(k => TMOVES[k].n).join(", ")}.${passiveOf(h) ? ` ${passiveOf(h).ic} ${passiveOf(h).n}: ${passiveOf(h).d}.` : ""}`,
       apply:() => { team.push(newMember(h, 1)); twLog(`• ${h.name} joined your party!`, "good"); }};
   };
   const learn = () => {

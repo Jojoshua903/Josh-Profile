@@ -655,3 +655,67 @@ if (!tw.relicBook || typeof tw.relicBook !== "object") tw.relicBook = {};
 if (!tw.endlessV) { Object.values(tw.heroes).forEach(r => { if (r.best > TW_TOP && !r.endless) r.endless = r.best; }); tw.endlessV = 1; twSave(); }
 // the look a hero is wearing right now (null for the original)
 const heroLook = id => { if (HERO[id] && HERO[id].mine) return HERO[id].look && HLOOKS[HERO[id].look] ? HERO[id].look : null; const s = ITEM[shop.heroSkin[id]]; return s && s.look && owns(s.id) ? s.look : null; };
+
+// ---------- passives: every hero has one always-on ability ----------
+// the numbers are read in tower.js: stat boosts (hp/atk/def/spd), damage (psiX, rage, fullHpX, statusX, avenger, bashX, wild, critX),
+// defense (dodge, dr, lastStand, counter, cover, immune, shy, taunt), start of battle (startShield, startOffup, startCry, pinStart,
+// startWeak, startDistract, swirl, noAmbush, first), each round (ppRegen, partyRegen, partyPP), after a win (cash, winCash, winHeal, winPP, loot)
+// and a few one-offs (healX, cdMinus, buddy, bashCash, bashStun, weakOnHit, double, lunch, foodX, partyDr, partyDodge, partyCrit, fastMaster)
+const PASSIVES = {
+  // Mother
+  ninten:{ic:"👁️", n:"Sixth sense", d:"Your party is never ambushed, and catches enemies off guard more often", swirl:.15, noAmbush:1},
+  ana:{ic:"📿", n:"Prayer necklace", d:"PSI does 10% more damage, and she regains 4% PP every round", psiX:.1, ppRegen:.04},
+  lloyd:{ic:"🔧", n:"Genius tinkerer", d:"His moves reload one turn faster", cdMinus:1},
+  teddy:{ic:"🗡️", n:"Gang leader's pride", d:"Below 35% HP, his attacks do 35% more damage", rage:.35},
+  pippi:{ic:"🎀", n:"Plucky", d:"At full HP, her attacks do 20% more damage", fullHpX:.2},
+  flyingman:{ic:"🪶", n:"Brave to the end", d:"Once per battle, hangs on with 1 HP instead of falling", lastStand:1},
+  eve:{ic:"🤖", n:"Built to protect", d:"30% of the time, steps in front of a badly hurt friend and takes the hit", cover:.3},
+  mick:{ic:"🐕", n:"Scrappy", d:"Does 25% more damage to enemies with a status effect", statusX:.25},
+  queenmary:{ic:"🎵", n:"Magicant's song", d:"While she's standing, the whole party heals 3% HP every round", partyRegen:.03},
+  mimmie:{ic:"👯", n:"Twin trouble", d:"Her Bash hits a second time 25% of the time", double:.25},
+  laura:{ic:"🐤", n:"Early bird", d:"Always acts first in the first round of a battle", first:1},
+  bbgang:{ic:"🧢", n:"Bla-Bla bluster", d:"At the start of a battle, one enemy gets scared and starts crying", startCry:1},
+  benny:{ic:"🩺", n:"House call", d:"After every win, the whole party heals 10% HP", winHeal:.1},
+  // EarthBound
+  ness:{ic:"⚾", n:"Home run swing", d:"6% more likely to land a SMAAAASH!!", critX:.06},
+  paula:{ic:"🙏", n:"Warm heart", d:"Her healing heals 25% more", healX:.25},
+  jeff:{ic:"🎒", n:"Gadget pouch", d:"After a win, 20% chance to find a bomb or bottle rocket", loot:.2, pool:"gadget"},
+  poo:{ic:"🧘", n:"Mu training", d:"Can't be put to sleep or made to cry", immune:["sleep", "cry"]},
+  king:{ic:"🦴", n:"Loyal bite", d:"When an enemy attacks him, 25% chance to bite back", counter:.25},
+  picky:{ic:"🍀", n:"Lucky kid", d:"The whole party is 3% more likely to land a SMAAAASH!!", partyCrit:.03},
+  buzzbuzz:{ic:"🐝", n:"From the future", d:"He warns everyone: the whole party dodges 4% more often", partyDodge:.04},
+  bubblemonkey:{ic:"🫧", n:"Bubble gum shield", d:"Every battle starts with the party shielded for 2 rounds", startShield:2},
+  dungeonman:{ic:"🏰", n:"Walking fortress", d:"Takes 20% less damage, but is 20% slower", dr:.2, spd:-.2},
+  mrsaturn:{ic:"☕", n:"Zoom coffee", d:"After every win, the whole party regains 15% PP", winPP:.15},
+  pokey:{ic:"🙈", n:"Hides in the back", d:"Enemies pick on him half as often, and he pockets 10% extra money", shy:1, cash:.1},
+  tony:{ic:"💙", n:"Best friend", d:"Hits 20% harder when Jeff is in the party", buddy:"jeff"},
+  applekid:{ic:"🍎", n:"Results may vary", d:"Every attack does anywhere from 50% to 180% damage", wild:1},
+  andonuts:{ic:"🔬", n:"Scientific boost", d:"Every battle starts with the party's offense raised for 2 rounds", startOffup:2},
+  brickroad:{ic:"🧱", n:"Dungeon walls", d:"While he's standing, the whole party takes 8% less damage", partyDr:.08},
+  maxwell:{ic:"🤓", n:"Know-it-all", d:"At the start of a battle, he points out one enemy's weak spot", startWeak:1},
+  cat:{ic:"🐈", n:"Nine lives", d:"Dodges 15% more often", dodge:.15},
+  everdred:{ic:"💰", n:"Pickpocket", d:"Every Bash also steals a little money", bashCash:1},
+  tracy:{ic:"🐌", n:"Escargo Express", d:"After a win, 25% chance a food delivery arrives", loot:.25, pool:"food"},
+  captainstrong:{ic:"👮", n:"Chief of police", d:"20% more Defense", def:.2},
+  venus:{ic:"🎤", n:"Starstruck", d:"At the start of a battle, one enemy is too starstruck to move for a turn", pinStart:1},
+  orangekid:{ic:"🍊", n:"Investor pitch", d:"Every win brings in a few extra dollars", winCash:1},
+  // Mother 3
+  lucas:{ic:"🌻", n:"Gentle heart", d:"His healing heals 15% more, and he hits 20% harder when Claus is in the party", healX:.15, buddy:"claus"},
+  kumatora:{ic:"👑", n:"Princess's temper", d:"PSI does 20% more damage", psiX:.2},
+  duster:{ic:"📌", n:"Wall staple", d:"His Bash pins the enemy in place 15% of the time", bashStun:.15},
+  boney:{ic:"👃", n:"Sniff out", d:"His Bash also finds the enemy's weak spot", weakOnHit:1},
+  flint:{ic:"🤠", n:"Father's fury", d:"While a friend is knocked out, he hits 30% harder", avenger:.3},
+  salsa:{ic:"🐒", n:"Monkey business", d:"At the start of a battle, each enemy has a 25% chance to be distracted", startDistract:.25},
+  claus:{ic:"⚡", n:"Bold twin", d:"10% more Offense, and he hits 20% harder when Lucas is in the party", atk:.1, buddy:"lucas"},
+  butterfly:{ic:"🦋", n:"Glittering dust", d:"While she's flying, the whole party regains 4% PP every round", partyPP:.04},
+  alec:{ic:"🍙", n:"Packed lunch", d:"Once per battle, when a friend drops below 30% HP, he shares lunch and heals them 25%", lunch:.25},
+  butch:{ic:"🐖", n:"Money-hungry", d:"Battles pay out 30% more money", cash:.3},
+  fuel:{ic:"🔥", n:"Reckless", d:"20% more Offense, but 10% less Defense", atk:.2, def:-.1},
+  lisa:{ic:"🍲", n:"Home cooking", d:"While she's standing, food heals 50% more", foodX:.5},
+  lou:{ic:"🪓", n:"Lumberjack swing", d:"His Bash does 20% more damage, but he's 10% slower", bashX:.2, spd:-.1},
+  reggie:{ic:"🗣️", n:"Reggie talks about Reggie", d:"Enemies can't help but attack him more, but he takes 10% less damage", taunt:1, dr:.1},
+  samba:{ic:"💃", n:"Quick step", d:"15% faster, and 20% harder hits when Salsa is in the party", spd:.15, buddy:"salsa"},
+  // heroes you make yourself
+  _mine:{ic:"✏️", n:"Homemade hero", d:"Masters moves twice as fast", fastMaster:1}
+};
+const passiveOf = h => h ? PASSIVES[h.id] || (h.mine ? PASSIVES._mine : null) : null;
