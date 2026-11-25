@@ -1,0 +1,668 @@
+import { LOOK, applyEnvironment } from './stage.js?v=20261125q';
+import { masteryOf } from './mastery.js?v=20261125q';
+import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
+import { HEROES, ARCHETYPES, archOf } from './heroes.js?v=20261125q';
+import './personality.js?v=20261125q';
+import { MAPS, DIFFICULTY } from './data.js?v=20261125q';
+import { THEMES } from './scenery.js?v=20261125q';
+import { cfg, save, resetSettings, QUALITY } from './settings.js?v=20261125q';
+import { splash, headshot, mapArt } from './portraits.js?v=20261125q';
+import { initOnline, enterOnline } from './online.js?v=20261125q';
+import { enterCloset } from './closet.js?v=20261125q';
+import { enterSlots } from './slotmachine.js?v=20261125q';
+import { tokens as slotTokens } from './slots.js?v=20261125q';
+import { SEASON, TRACK, MAX_TIER, passXp, tierProgress, heroOwned, heroTier, skinOwned, skinTier, skinsFor, dressed, equip, rewardInfo,
+  COS_TYPES, cosById, cosOwned, equippedCos, equipCos, cosArt, lockShort, lockLong, isSlotItem } from './pass.js?v=20261125q';
+
+// Front end: main menu → roster select → stage select → match. Settings overlay on top.
+
+const $ = id => document.getElementById(id);
+const hex = c => '#' + c.toString(16).padStart(6, '0');
+let api = null, screen = 'main', settingsOpen = false, mode = 'lane';
+const MODE_NAME = { lane: 'Lane Breaker', survivor: 'Survivor', hill: 'Hill Rush', cart: 'Payload', online: 'Online' };
+function setMode(m) {
+  mode = m;
+  $('rosterMode').textContent = MODE_NAME[m];
+  $('stageMode').textContent = MODE_NAME[m];
+  $('lockIn').classList.toggle('surv', m === 'survivor');
+  $('lockIn').classList.toggle('hill', m === 'hill'); $('lockIn').classList.toggle('cart', m === 'cart');
+  $('lockIn').querySelector('small').textContent = m === 'survivor' ? 'Drop in as' : 'Lock in';
+}
+
+// ---------- main menu backdrop (3D scene behind the title) ----------
+// Night on a neon rooftop: an empty glowing stage above a lit-up skyline,
+// with a big moon, stars, sweeping searchlights and the odd firework.
+const show = { scene: null, cam: null, t: 0, tick: [] };
+const canvasTex = (w, h, draw) => {
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h; draw(cv.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
+};
+const GLOW = canvasTex(64, 64, (g, w) => { const r = g.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(0.35, 'rgba(255,255,255,.45)'); r.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = r; g.fillRect(0, 0, w, w); });
+function buildShowcase() {
+  const sc = new THREE.Scene(), add = o => (sc.add(o), o);
+  sc.fog = new THREE.Fog(0x2a1650, 45, 160);
+  // sky: deep indigo overhead, magenta and orange glow along the horizon
+  const sky = canvasTex(8, 256, (g, w, h) => {
+    const gr = g.createLinearGradient(0, 0, 0, h);
+    [[0, '#0b0d2e'], [0.3, '#1d1a5a'], [0.42, '#5a2a8a'], [0.47, '#d44a8a'], [0.51, '#ff9a5c'], [0.55, '#2a1650'], [1, '#120c2a']].forEach(([s, c]) => gr.addColorStop(s, c));
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  });
+  add(new THREE.Mesh(new THREE.SphereGeometry(140, 32, 16), new THREE.MeshBasicMaterial({ map: sky, side: THREE.BackSide, fog: false, depthWrite: false })));
+  // stars
+  const sp = [];
+  for (let i = 0; i < 700; i++) {
+    const a = Math.random() * Math.PI * 2, e = 0.12 + Math.random() * 1.3;
+    sp.push(Math.cos(a) * Math.cos(e) * 130, Math.sin(e) * 130, Math.sin(a) * Math.cos(e) * 130);
+  }
+  const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.Float32BufferAttribute(sp, 3));
+  const stars = add(new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xffffff, size: 1.3, map: GLOW, transparent: true, depthWrite: false, fog: false, sizeAttenuation: true })));
+  show.tick.push(t => { stars.material.opacity = 0.75 + Math.sin(t * 1.7) * 0.2; });
+  // moon with a soft halo
+  const moon = add(new THREE.Mesh(new THREE.CircleGeometry(6, 48), new THREE.MeshBasicMaterial({ color: 0xfff1c9, fog: false })));
+  moon.position.set(-16, 19, 92); moon.rotation.y = Math.PI;
+  const halo = add(new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW, color: 0xffc9e8, transparent: true, opacity: 0.55, fog: false, depthWrite: false })));
+  halo.position.copy(moon.position); halo.position.z += 1; halo.scale.set(34, 34, 1);
+  // skyline: rows of towers with lit windows, nearer rows darker and bigger
+  const win = canvasTex(64, 128, (g, w, h) => {
+    g.fillStyle = '#000000'; g.fillRect(0, 0, w, h);
+    for (let y = 6; y < h - 4; y += 10) for (let x = 5; x < w - 4; x += 10) {
+      const r = Math.random(); g.fillStyle = r < 0.42 ? (r < 0.12 ? '#9ef0ff' : '#ffd88a') : '#1a1538'; g.fillRect(x, y, 5, 6);
+    }
+  });
+  const towerM = [0x1a1440, 0x241a55, 0x30206a].map(c => new THREE.MeshLambertMaterial({ color: c, emissive: 0xffffff, emissiveMap: win, emissiveIntensity: 0.9 }));
+  const box = new THREE.BoxGeometry(1, 1, 1);
+  for (const [row, z, n, hMin, hMax] of [[2, 75, 26, 14, 40], [1, 56, 20, 9, 28], [0, 38, 14, 5, 16]]) {
+    for (let i = 0; i < n; i++) {
+      const w = 3 + Math.random() * 5, h = hMin + Math.random() * (hMax - hMin), x = (i / (n - 1) - 0.5) * (z * 2.4) + (Math.random() - 0.5) * 4;
+      const b = add(new THREE.Mesh(box, towerM[row])); b.scale.set(w, h, w); b.position.set(x, h / 2 - 3, z + Math.random() * 6);
+      if (Math.random() < 0.35) {                                          // blinking aircraft light on the roof
+        const l = add(new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW, color: 0xff4466, transparent: true, depthWrite: false, fog: false })));
+        l.position.set(x, h - 2.6, b.position.z); l.scale.setScalar(1.4); const ph = Math.random() * 6;
+        show.tick.push(t => { l.material.opacity = Math.sin(t * 3 + ph) > 0.6 ? 1 : 0.1; });
+      }
+    }
+  }
+  // neon billboards floating among the towers
+  const sign = (text, c1, c2, x, y, z, rot) => {
+    const tex = canvasTex(512, 160, (g, w, h) => {
+      g.fillStyle = 'rgba(16,10,40,.85)'; g.fillRect(0, 0, w, h);
+      g.strokeStyle = c2; g.lineWidth = 10; g.strokeRect(8, 8, w - 16, h - 16);
+      g.font = 'italic 900 92px Futura, "Avenir Next", "Trebuchet MS", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.shadowColor = c1; g.shadowBlur = 24; g.fillStyle = c1; g.fillText(text, w / 2, h / 2 + 4);
+    });
+    const m = add(new THREE.Mesh(new THREE.PlaneGeometry(12, 3.75), new THREE.MeshBasicMaterial({ map: tex, transparent: true, fog: false, side: THREE.DoubleSide })));
+    m.position.set(x, y, z); m.rotation.y = Math.PI + rot; const ph = Math.random() * 9;
+    show.tick.push(t => { m.material.opacity = Math.sin(t * 9 + ph) > -0.96 ? 1 : 0.35; });   // the occasional flicker
+  };
+  sign('MAXX', '#ff5aa8', '#ffc93c', -30, 17, 50, -0.3);
+  sign('GG!', '#5af0ff', '#9b5cff', 6, 19, 46, 0.1);
+  // the stage: dark disc with a glowing grid, neon rim and a soft pool of light
+  const grid = canvasTex(512, 512, (g, w) => {
+    g.fillStyle = '#1c1638'; g.fillRect(0, 0, w, w);
+    g.strokeStyle = 'rgba(90,240,255,.55)'; g.lineWidth = 3;
+    for (let i = 0; i <= w; i += 32) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i, w); g.stroke(); g.beginPath(); g.moveTo(0, i); g.lineTo(w, i); g.stroke(); }
+    const r = g.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); r.addColorStop(0, 'rgba(255,90,168,.5)'); r.addColorStop(0.5, 'rgba(155,92,255,.18)'); r.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = r; g.fillRect(0, 0, w, w);
+  });
+  const floor = add(new THREE.Mesh(new THREE.CircleGeometry(9, 64), new THREE.MeshStandardMaterial({ map: grid, roughness: 0.35, metalness: 0.2, emissive: 0xffffff, emissiveMap: grid, emissiveIntensity: 0.35 })));
+  floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true;
+  const rim = add(new THREE.Mesh(new THREE.CylinderGeometry(9.1, 9.4, 0.5, 64), new THREE.MeshStandardMaterial({ color: 0x120c2a, roughness: 0.5 }))); rim.position.y = -0.26;
+  const neon = add(new THREE.Mesh(new THREE.TorusGeometry(9.15, 0.09, 8, 96), new THREE.MeshBasicMaterial({ color: 0xff5aa8 })));
+  neon.rotation.x = -Math.PI / 2; neon.position.y = 0.02;
+  const neon2 = add(new THREE.Mesh(new THREE.TorusGeometry(9.35, 0.06, 8, 96), new THREE.MeshBasicMaterial({ color: 0x5af0ff })));
+  neon2.rotation.x = -Math.PI / 2; neon2.position.y = -0.4;
+  show.tick.push(t => { const k = 0.5 + Math.sin(t * 2) * 0.5; neon.material.color.setHSL(0.92 - k * 0.12, 1, 0.66); });
+  const roof = add(new THREE.Mesh(new THREE.PlaneGeometry(220, 220), new THREE.MeshLambertMaterial({ color: 0x17112e }))); roof.rotation.x = -Math.PI / 2; roof.position.y = -0.5;
+  // searchlights sweeping the sky from behind the skyline
+  const beamGeo = new THREE.CylinderGeometry(0.4, 4.5, 80, 24, 1, true); beamGeo.translate(0, 40, 0);
+  [[-26, 0x5af0ff, 0], [8, 0xff5aa8, 2], [34, 0xffc93c, 4]].forEach(([x, c, ph]) => {
+    const b = add(new THREE.Mesh(beamGeo, new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.13, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false })));
+    b.position.set(x, -2, 62);
+    show.tick.push(t => { b.rotation.z = Math.sin(t * 0.35 + ph) * 0.55; b.rotation.x = -0.25 + Math.sin(t * 0.27 + ph) * 0.12; });
+  });
+  // fireworks: a burst of additive sparks every few seconds over the city
+  const FW = 90, fwPos = new Float32Array(FW * 3), fwVel = new Float32Array(FW * 3);
+  const fwGeo = new THREE.BufferGeometry(); fwGeo.setAttribute('position', new THREE.BufferAttribute(fwPos, 3));
+  const fw = add(new THREE.Points(fwGeo, new THREE.PointsMaterial({ size: 0.9, map: GLOW, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, opacity: 0 })));
+  let fwT = 2, fwAge = 9;
+  show.tick.push((t, dt) => {
+    fwT -= dt; fwAge += dt;
+    if (fwT <= 0) {
+      fwT = 3.5 + Math.random() * 3; fwAge = 0;
+      const cx = (Math.random() - 0.5) * 50, cy = 18 + Math.random() * 10, cz = 60;
+      fw.material.color.setHSL(Math.random(), 1, 0.65);
+      for (let i = 0; i < FW; i++) {
+        const a = Math.random() * Math.PI * 2, e = Math.acos(Math.random() * 2 - 1), v = 5 + Math.random() * 3;
+        fwPos.set([cx, cy, cz], i * 3); fwVel.set([Math.sin(e) * Math.cos(a) * v, Math.cos(e) * v, Math.sin(e) * Math.sin(a) * v], i * 3);
+      }
+    }
+    for (let i = 0; i < FW * 3; i += 3) { fwPos[i] += fwVel[i] * dt; fwPos[i + 1] += fwVel[i + 1] * dt; fwPos[i + 2] += fwVel[i + 2] * dt; fwVel[i + 1] -= 3 * dt; fwVel[i] *= 0.985; fwVel[i + 2] *= 0.985; }
+    fwGeo.attributes.position.needsUpdate = true;
+    fw.material.opacity = Math.max(0, 1 - fwAge / 2.2);
+  });
+  // lights: cool moonlight overall, a warm key so the heroes still read, neon rims from behind
+  add(new THREE.HemisphereLight(0xb8b0ff, 0x3a2050, 1.5));
+  const sun = add(new THREE.DirectionalLight(0xffe6d0, 2.3)); sun.position.set(-6, 12, -8); sun.castShadow = true;
+  sun.shadow.mapSize.set(1024, 1024); Object.assign(sun.shadow.camera, { left: -12, right: 12, top: 12, bottom: -12 }); sun.shadow.camera.updateProjectionMatrix();
+  const pink = add(new THREE.DirectionalLight(0xff5aa8, 1.6)); pink.position.set(8, 5, 10);
+  const cyan = add(new THREE.DirectionalLight(0x5af0ff, 1.3)); cyan.position.set(-8, 4, 10);
+  show.cam = new THREE.PerspectiveCamera(38, 1, 0.1, 300);
+  show.scene = sc;
+}
+
+function frameShowcase(renderer, dt) {
+  if (!show.scene) { buildShowcase(); show.scene.userData.look = { ...LOOK.plaza, env: 0.35 }; applyEnvironment(renderer, show.scene); }
+  show.t += dt;
+  for (const f of show.tick) f(show.t, dt);
+  const w = innerWidth, h = innerHeight;
+  show.cam.aspect = w / h; show.cam.updateProjectionMatrix();
+  const a = Math.sin(show.t * 0.12) * 0.25;
+  const off = w > 900 ? 3.4 : 0;                        // camera looks along +z, so +x shifts the view right on screen
+  show.cam.position.set(off + Math.sin(a) * 15, 4.2, -15 + Math.cos(a) * 1.5);
+  show.cam.lookAt(off + 0.6, 4.2, 12);                  // tilted up a little: more skyline, searchlights and fireworks
+  renderer.render(show.scene, show.cam);
+}
+
+// ---------- screens ----------
+function go(name) {
+  screen = name;
+  for (const s of ['main', 'roster', 'stage', 'pass', 'online', 'closet', 'slots']) $('scr-' + s).classList.toggle('on', s === name);
+  $('front').classList.remove('hidden');
+  if (name === 'main') { refreshPassCard(); $('modeTut')?.classList.toggle('fresh', !cfg.tutorialDone); const t = slotTokens(); $('mmTok').textContent = t || ''; $('mmTok').classList.toggle('on', t > 0); }
+  if (name === 'slots') enterSlots();
+  if (name === 'roster') { enterRoster(); requestAnimationFrame(fitKit); }
+  if (name === 'stage') enterStage();
+  if (name === 'pass') enterPass();
+  if (name === 'online') enterOnline();
+  if (name === 'closet') enterCloset({ blip: f => api?.blip?.(f) });
+}
+
+// ---------- roster ----------
+const STAT = h => [
+  ['Health', h.hp / 260], ['Speed', h.speed / 8.4],
+  ['Range', h.prefRange / 28], ['Burst', Math.min(1, (h.weapon.dmg * (h.weapon.pellets || 1)) / (h.weapon.rate * 110))],
+];
+// The tile strip is a looping carousel: 8 slots visible, the selected hero sits in slot 4,
+// and every step rotates the ring by one tile. The archetype filter narrows the ring; a short
+// list lines up in a row instead of looping.
+const VIS = 8, LEFT = 3;
+let viewId = null, infoTab = 'kit', arch = cfg.rosterArch || 'all';
+const pool = () => { const l = arch === 'all' ? HEROES : HEROES.filter(h => h.arch === arch); return l.length ? l : HEROES; };
+function renderArchBar() {
+  const btn = (id, icon, name, n, color, desc) => `<button class="${arch === id ? 'on' : ''}" data-arch="${id}" style="--ac:${color}" title="${desc}"><i>${icon}</i>${name}<small>${n}</small></button>`;
+  const a = ARCHETYPES.find(x => x.id === arch);
+  $('archBar').innerHTML = btn('all', '✦', 'All', HEROES.length, '#1d2340', 'Every hero')
+    + ARCHETYPES.map(x => btn(x.id, x.icon, x.name, HEROES.filter(h => h.arch === x.id).length, hex(x.color), x.desc)).join('')
+    + `<span class="ab-desc">${a ? a.desc : 'Every hero in the roster'}</span>`;
+}
+function setArch(a) {
+  if (a === arch) return;
+  arch = a; cfg.rosterArch = a; save();
+  renderArchBar();
+  const L = pool(), keep = L.find(h => h.id === viewId);
+  const next = keep || L.find(h => heroOwned(h.id)) || L[0];
+  viewId = null;                                                     // lay the new strip out without sliding
+  pickHero(next.id, true);
+}
+function enterRoster() {
+  const tiles = $('tiles');
+  if (!tiles.children.length) {
+    tiles.innerHTML = HEROES.map((h, i) => `
+      <button class="tile" data-hero="${h.id}" style="--hc:${hex(h.color)}" title="${h.callsign} · ${h.role} · ${archOf(h).name}">
+        <span class="num">${String(i + 1).padStart(2, '0')}</span>
+        <span class="arc" title="${archOf(h).name}">${archOf(h).icon}</span>
+        <img alt="">
+        <b>${h.callsign}</b>
+      </button>`).join('');
+    // headshots render one per frame so the screen appears immediately
+    HEROES.forEach((h, i) => setTimeout(() => refreshTile(h.id), 30 + i * 40));
+    new ResizeObserver(() => layoutCarousel(0, true)).observe(tiles);
+  }
+  for (const h of HEROES) refreshTileLock(h.id);
+  renderArchBar();
+  const L = pool();
+  const start = L.find(h => h.id === cfg.hero && heroOwned(h.id)) || L.find(h => heroOwned(h.id)) || L[0];
+  viewId = null;
+  pickHero(start.id, true);
+}
+const tileOf = id => $('tiles').querySelector(`[data-hero="${id}"]`);
+function refreshTile(id) {
+  const h = HEROES.find(x => x.id === id), t = tileOf(id);
+  t.querySelector('img').src = headshot(dressed(h));
+  t.style.setProperty('--hc', hex(dressed(h).color));
+}
+function refreshTileLock(id) {
+  const t = tileOf(id), own = heroOwned(id);
+  t.classList.toggle('locked', !own);
+  t.querySelector('.lock')?.remove(); t.querySelector('.newb')?.remove();
+  if (!own) t.insertAdjacentHTML('beforeend', `<span class="lock">🔒 ${lockShort(id)}</span>`);
+  else if (heroTier(id) || isSlotItem(id)) t.insertAdjacentHTML('beforeend', '<span class="newb">NEW</span>');
+  // mastery: level badge, gold and diamond frames
+  const m = masteryOf(id);
+  t.querySelector('.mst')?.remove();
+  if (own) t.insertAdjacentHTML('beforeend', `<span class="mst" style="--mc:${m.rank.color}" title="${m.rank.name} mastery · level ${m.level}">${m.level}</span>`);
+  t.classList.toggle('m-gold', own && m.level >= 7 && m.level < 10); t.classList.toggle('m-diamond', own && m.level >= 10);
+}
+
+function layoutCarousel(dir, instant) {
+  const tiles = $('tiles'), L = pool(), N = L.length, loop = N > VIS;
+  const sel = Math.max(0, L.findIndex(h => h.id === viewId));
+  const slot = tiles.clientWidth / VIS, tw = Math.max(60, slot - 10);
+  tiles.style.setProperty('--tw', tw + 'px');
+  const xf = k => {
+    const c = k + LEFT - (VIS - 1) / 2;                 // distance from the middle of the strip
+    return `translateX(${(k + LEFT) * slot + 5}px) translateZ(${-Math.abs(c) * 14}px) rotateY(${c * -5}deg)` + (k === 0 ? ' translateY(-12px)' : '');
+  };
+  // a short filtered list sits centred under the selected slot rather than looping
+  const shift = loop ? 0 : Math.round((VIS - N) / 2) - LEFT;
+  for (const h of HEROES) {
+    const t = tileOf(h.id), i = L.indexOf(h);
+    if (i < 0) { t.style.transition = 'none'; t.style.opacity = 0; t.style.pointerEvents = 'none'; t._k = null; t._vis = false; t.classList.remove('sel'); continue; }
+    let k;
+    if (loop) { k = ((i - sel) % N + N) % N; if (k >= N - LEFT) k -= N; }      // -LEFT .. N-1-LEFT
+    else k = i + shift;
+    const vis = k >= -LEFT && k <= VIS - 1 - LEFT;
+    const lift = !loop && h.id === viewId ? ' translateY(-12px)' : '';             // in a short row the pick stays put, so lift it
+    const place = (kk, op, anim) => { t.style.transition = anim ? '' : 'none'; t.style.transform = xf(kk) + (kk === 0 ? '' : lift); t.style.opacity = op; };
+    if (instant || t._k == null) place(k, vis ? 1 : 0, false);
+    else if (vis && t._vis) place(k, 1, true);
+    else if (vis) { place(dir > 0 ? VIS - LEFT : -LEFT - 1, 0, false); void t.offsetWidth; place(k, 1, true); }   // slides in from the edge
+    else if (t._vis) place(dir > 0 ? -LEFT - 1 : VIS - LEFT, 0, true);                                            // slides out the other side
+    else place(k, 0, false);
+    t._k = k; t._vis = vis;
+    t.style.pointerEvents = vis ? '' : 'none';
+    t.classList.toggle('sel', h.id === viewId);
+  }
+}
+function stepHero(d) {
+  const L = pool(), N = L.length, i = L.findIndex(h => h.id === viewId);
+  pickHero(L[(i + d + N) % N].id, false, d);
+}
+
+function pickHero(id, instant, dir) {
+  const L = pool();
+  const h = L.find(x => x.id === id) || HEROES.find(x => x.id === id) || L[0];
+  const N = L.length, from = L.findIndex(x => x.id === viewId);
+  if (dir == null && from >= 0) { const d = ((L.indexOf(h) - from) % N + N) % N; dir = d <= N / 2 ? 1 : -1; }
+  viewId = h.id;
+  const own = heroOwned(h.id);
+  if (own) { cfg.hero = h.id; save(); }
+  layoutCarousel(dir || 1, instant && from < 0);
+  showHero(h, instant);
+  api?.blip?.(520 + HEROES.indexOf(h) * 30);
+}
+
+function showHero(h, instant) {
+  const d = dressed(h), own = heroOwned(h.id);
+  const sp = $('splash');
+  $('scr-roster').style.setProperty('--hc', hex(d.color));
+  sp.style.setProperty('--hd', hex(d.palette.dark));
+  sp.style.setProperty('--ht', hex(d.palette.trim));
+  $('splashWord').textContent = h.callsign;
+  $('splashImg').classList.remove('in');
+  const set = () => {
+    $('splashImg').src = splash(d);
+    void $('splashImg').offsetWidth;
+    $('splashImg').classList.add('in');
+  };
+  if (instant) setTimeout(set, 20); else set();
+  // the hero says hello: a random select line in a speech bubble over the splash art
+  const q = $('splashQuote'), lines = h.quips.select || [];
+  q.classList.remove('in'); q.textContent = lines.length ? lines[Math.floor(Math.random() * lines.length)] : '';
+  if (lines.length) { void q.offsetWidth; q.classList.add('in'); }
+  const skins = skinsFor(h.id);
+  const cur = d.skinId || null;
+  const ownedSkins = skins.filter(s => own && skinOwned(s.id)).length;
+  const tab = (id, label) => `<button class="${infoTab === id ? 'on' : ''}" data-tab="${id}">${label}</button>`;
+  const pane = id => `data-pane="${id}" class="${infoTab === id ? 'on' : ''}"`;
+  $('info').innerHTML = `
+    <header class="ih">
+      <div class="ihname">
+        <div class="ihchips"><div class="chip ${own ? '' : 'pass'}">${own ? h.role : `🔒 ${lockLong(h.id)}`}</div><span class="archchip" style="--ac:${hex(archOf(h).color)}" title="${archOf(h).desc}">${archOf(h).icon} ${archOf(h).name}</span></div>
+        <h2>${h.callsign}</h2>
+        <div class="who">${h.name}</div>
+        ${own ? (() => { const m = masteryOf(h.id); return `<div class="mline" style="--mc:${m.rank.color}" title="${m.xp} mastery XP">
+          <b>${m.rank.name} · Lv ${m.level}</b><i><em style="width:${Math.round(m.frac * 100)}%"></em></i><small>${m.max ? 'Mastered' : `${m.into}/${m.need}`}</small></div>`; })() : ''}
+      </div>
+      <div class="statbars">${STAT(h).map(([k, v]) => `<div><span>${k}</span><i><em style="width:${Math.round(Math.min(1, v) * 100)}%"></em></i></div>`).join('')}</div>
+    </header>
+    <nav class="itabs">${tab('kit', 'Abilities')}${tab('story', 'Story')}${tab('skins', `Skins <i>${ownedSkins + 1}/${skins.length + 1}</i>`)}</nav>
+    <div class="ibody">
+      <section ${pane('kit')}>
+        <ul class="kit">
+          <li><kbd>LMB</kbd><div><b>${h.weapon.name}</b><small>${h.weapon.desc}</small></div></li>
+          <li><kbd>Q</kbd><div><b>${h.q.name}</b><small>${h.q.desc}</small></div></li>
+          <li><kbd>E</kbd><div><b>${h.ability.name}</b><small>${h.ability.desc}</small></div></li>
+          <li class="ult"><kbd>F</kbd><div><b>${h.ult.name}</b><small>${h.ult.desc}</small></div></li>
+          ${h.passive ? `<li class="pas"><kbd title="Passive">PAS</kbd><div><b>${h.passive.name}</b><small>${h.passive.desc}</small></div></li>` : ''}
+        </ul>
+      </section>
+      <section ${pane('story')}>
+        <div class="st-title"><small>Title</small><b>${h.title}</b></div>
+        <blockquote>“${h.quote}”</blockquote>
+        <p>${h.bio}</p>
+      </section>
+      <section ${pane('skins')}>
+        <div class="skins">
+          <button class="sk ${cur ? '' : 'on'}" data-skin="" style="--a:${hex(h.palette.main)};--b:${hex(h.palette.trim)}"><i></i><span>Classic</span></button>
+          ${skins.map(s => { const ok = own && skinOwned(s.id); return `<button class="sk ${cur === s.id ? 'on' : ''} ${ok ? '' : 'locked'}" data-skin="${s.id}" title="${ok ? s.name : lockLong(s.id, true)}"
+            style="--a:${hex(s.palette.main)};--b:${hex(s.palette.trim)}"><i></i><span>${s.name}</span>${ok ? '' : `<em>🔒 ${lockShort(s.id, true)}</em>`}</button>`; }).join('')}
+        </div>
+      </section>
+    </div>`;
+  $('info').classList.remove('in'); void $('info').offsetWidth; $('info').classList.add('in');
+  fitKit();
+  // re-check once the header and fonts settle, and whenever the panel changes size
+  kitRO?.disconnect(); kitRO = new ResizeObserver(fitSoon); kitRO.observe($('info').querySelector('.ibody'));
+  setTimeout(fitKit, 450); document.fonts?.ready.then(fitKit);
+  $('lockName').textContent = own ? h.callsign : 'Locked';
+  $('lockIn').classList.toggle('locked', !own);
+  $('lockIn').querySelector('small').textContent = !own ? (isSlotItem(h.id) ? 'Win it at the slots' : `Reach tier ${heroTier(h.id)}`) : mode === 'survivor' ? 'Drop in as' : 'Lock in';
+}
+
+// Shrink the ability list until all four rows fit the panel: smaller text first, then two
+// columns, then smaller again. Only if nothing fits (a tiny window) does the panel scroll.
+let kitRO = null, fitRaf = 0;
+const fitSoon = () => { cancelAnimationFrame(fitRaf); fitRaf = requestAnimationFrame(fitKit); };
+function fitKit() {
+  const body = $('info').querySelector('.ibody'), kit = body?.querySelector('.kit');
+  if (!kit) return;
+  body.classList.remove('spill');
+  if (!body.clientHeight || !kit.offsetParent) return;
+  // everything in view, with a few pixels to spare so the last row never loses its bottom edge
+  const fits = () => { const last = kit.lastElementChild; return body.scrollHeight <= body.clientHeight - 2 && (!last || last.getBoundingClientRect().bottom <= body.getBoundingClientRect().bottom - 3); };
+  const wide = body.clientWidth >= 380;
+  const tries = [[false, 1], [false, .92], [false, .85], ...(wide ? [[true, 1], [true, .92], [true, .85]] : []), [false, .78], [false, .72], ...(wide ? [[true, .78], [true, .7], [true, .62]] : []), [false, .66]];
+  for (const [two, s] of tries) {
+    kit.classList.toggle('two', two); kit.style.setProperty('--ks', s);
+    if (fits()) return;
+  }
+  body.classList.add('spill');
+}
+let fitT = 0;
+addEventListener('resize', () => { clearTimeout(fitT); fitT = setTimeout(fitKit, 80); });
+
+function pickSkin(skinId) {
+  const h = HEROES.find(x => x.id === viewId);
+  if (!heroOwned(h.id) || (skinId && !skinOwned(skinId))) { api?.blip?.(160); return; }
+  equip(h.id, skinId || null);
+  refreshTile(h.id);
+  showHero(h, false);
+  api?.blip?.(skinId ? 900 : 700);
+}
+
+// ---------- season pass ----------
+function passSummary() {
+  const pr = tierProgress(), next = TRACK.find(r => r.tier === pr.tier + 1);
+  return { pr, next, info: next && rewardInfo(next) };
+}
+function refreshPassCard() {
+  const { pr, info } = passSummary();
+  $('pcTier').textContent = pr.tier;
+  $('pcBar').style.width = (pr.frac * 100) + '%';
+  $('pcNext').textContent = info ? `Next: ${info.title} · ${info.sub}` : 'Pass complete. Every reward unlocked!';
+}
+function enterPass(keepScroll) {
+  const { pr, next, info } = passSummary();
+  $('passSeason').textContent = `Season ${SEASON.n}`;
+  $('pTier').textContent = pr.tier; $('pMax').textContent = `of ${MAX_TIER}`;
+  $('pBar').style.width = '0%'; requestAnimationFrame(() => { $('pBar').style.width = (pr.frac * 100) + '%'; });
+  $('pXp').textContent = pr.tier >= MAX_TIER ? `${passXp()} XP · maxed` : `${pr.into} / ${pr.need} XP to tier ${pr.tier + 1}`;
+  const art = inf => inf.cos ? `<span class="pn-cos">${cosArt(inf.cos)}</span>` : `<img src="${headshot(inf.def)}" alt="" style="--hc:${hex(inf.def.color)}">`;
+  $('pNext').innerHTML = info ? `${art(info)}<div><small>Tier ${next.tier} reward</small><b>${info.title}</b><span>${info.sub}</span></div>`
+    : '<div><small>Season complete</small><b>All unlocked</b><span>Show them off.</span></div>';
+  // your loadout: what's equipped in each cosmetic slot (click a card below to change it)
+  const eq = equippedCos();
+  $('pLoad').innerHTML = Object.entries(COS_TYPES).map(([t, T]) => {
+    const c = cosById(eq[t]), ok = c && cosOwned(c.id);
+    return `<span class="${ok ? 'on' : ''}"><i>${T.icon}</i><small>${T.label}</small><b>${ok ? c.name : 'None'}</b></span>`;
+  }).join('');
+  // one column per tier: the main reward, plus the bonus cosmetic underneath
+  const tiers = [];
+  TRACK.forEach((r, i) => { (tiers[r.tier - 1] ||= []).push([r, i]); });
+  const card = (r, i, mini) => {
+    const inf = rewardInfo(r), own = pr.tier >= r.tier, isNext = r.tier === pr.tier + 1;
+    if (inf.cos) {
+      const on = own && eq[inf.cos.type] === inf.cos.id;
+      return `<div class="rw cos ${mini ? 'mini' : ''} ${own ? 'own' : 'lock'} ${isNext && !mini ? 'next' : ''} ${on ? 'equipped' : ''}" ${own ? `data-equip="${inf.cos.id}" title="${on ? 'Click to unequip' : 'Click to equip'}"` : ''}>
+        ${mini ? '' : `<span class="rt">T${r.tier}</span>`}<span class="state">${on ? '★ Equipped' : own ? 'Equip' : '🔒'}</span>
+        <div class="art">${cosArt(inf.cos)}</div>
+        <div class="meta"><small>${inf.sub}</small><b>${inf.title}</b></div></div>`;
+    }
+    return `<div class="rw ${r.type === 'hero' ? 'hero' : ''} ${own ? 'own' : 'lock'} ${isNext ? 'next' : ''}" style="--hc:${hex(inf.def.color)}">
+      ${r.type === 'hero' ? '<span class="ribbon">NEW HERO</span>' : ''}
+      <span class="rt">T${r.tier}</span><span class="state">${own ? '✓ Owned' : '🔒'}</span>
+      <div class="art"><img alt="" data-r="${i}"></div>
+      <div class="meta"><small>${inf.sub}</small><b>${inf.title}</b></div></div>`;
+  };
+  const tr = $('track'), scroll = tr.scrollLeft;
+  tr.innerHTML = tiers.map((list, t) => `<div class="tcol" style="animation-delay:${t * 0.02}s">${list.map(([r, i], k) => card(r, i, k > 0)).join('')}</div>`).join('');
+  tr.querySelectorAll('img[data-r]').forEach((img, k) => setTimeout(() => {
+    img.src = headshot(rewardInfo(TRACK[+img.dataset.r]).def); img.classList.add('ok');
+  }, keepScroll ? 0 : 40 + k * 35));
+  const focus = tr.children[Math.max(0, pr.tier - 1)];
+  tr.style.scrollBehavior = 'auto'; tr.scrollLeft = keepScroll ? scroll : focus ? focus.offsetLeft - 60 : 0; tr.style.scrollBehavior = '';
+}
+function toggleCos(id) {
+  const c = cosById(id);
+  if (!c || !cosOwned(id)) return;
+  const on = equippedCos()[c.type] === id;
+  equipCos(c.type, on ? null : id);
+  api?.blip?.(on ? 500 : 900);
+  enterPass(true);
+}
+// ---------- stage ----------
+// One big preview for the highlighted stage and a list of light cards beside it. Only the stage
+// you're looking at gets rendered, a moment after you settle on it.
+let stageView = null, stageT = 0;
+const modeChip = m => {
+  if (mode === 'hill') { const spots = new Set(m.hills.map(p => p.join())).size; return `${spots} hill spot${spots > 1 ? 's' : ''} ·${m.lanesLabel.split('·')[1]}`; }
+  if (mode === 'cart') return `1 cart track ·${m.lanesLabel.split('·')[1]}`;
+  return m.lanesLabel;
+};
+function enterStage() {
+  const h = dressed(HEROES.find(x => x.id === cfg.hero));
+  $('stageHero').innerHTML = `<img src="${headshot(h)}" alt=""><span>Playing as <b>${h.callsign}</b></span>`;
+  $('stageHero').style.setProperty('--hc', hex(h.color));
+  $('cols').innerHTML = MAPS.map((m, i) => {
+    const t = THEMES[m.theme];
+    return `<button class="stg-card" data-map="${m.id}" style="--ma:${hex(m.accent)};--s1:${hex(t.skyTop)};--s2:${hex(t.skyBottom)}">
+      <span class="num">0${i + 1}</span><span class="tx"><b>${m.name}</b><small>${modeChip(m)}</small></span><i>▸</i></button>`;
+  }).join('');
+  stageView = null;
+  showStage(MAPS.find(m => m.id === cfg.map) || MAPS[0], true);
+}
+function showStage(m, now) {
+  if (stageView === m.id) return;
+  stageView = m.id;
+  for (const c of $('cols').children) c.classList.toggle('on', c.dataset.map === m.id);
+  const t = THEMES[m.theme], v = $('stgView');
+  v.style.setProperty('--ma', hex(m.accent));
+  v.style.background = `linear-gradient(180deg, ${hex(t.skyTop)}, ${hex(t.skyBottom)})`;
+  $('stgChip').textContent = modeChip(m);
+  $('stgName').textContent = m.name;
+  $('stgDesc').textContent = m.desc;
+  const facts = [[m.lanes.length, m.lanes.length > 1 ? 'lanes' : 'lane'], [m.towers.length * 2, 'towers'], [`${m.W * 2}×${m.L * 2}`, 'metres']];
+  $('stgFacts').innerHTML = facts.map(([n, l]) => `<span><b>${n}</b>${l}</span>`).join('');
+  const img = $('stgImg');
+  img.classList.remove('in'); $('stgLoad').classList.add('on');
+  clearTimeout(stageT);
+  // wait for the cursor to settle so skimming the list doesn't render every stage
+  stageT = setTimeout(() => {
+    if (stageView !== m.id) return;
+    img.onload = () => { if (stageView === m.id) { img.classList.add('in'); $('stgLoad').classList.remove('on'); } };
+    img.src = mapArt(m);
+  }, now ? 60 : 220);
+}
+function deployStage(id) {
+  cfg.map = id; save();
+  $('front').classList.add('hidden');
+  api.onStart(mode);
+}
+
+// ---------- settings ----------
+const SCHEMA = [
+  { id: 'game', group: 'Gameplay', icon: '🎮', blurb: 'How matches feel', items: [
+    { key: 'diff', label: 'Bot difficulty', hint: 'How sharp the bots aim and react', type: 'choice', options: Object.entries(DIFFICULTY).map(([k, d]) => [k, d.label]) },
+    { key: 'dmgNumbers', label: 'Floating damage numbers', hint: 'Numbers pop off whatever you hit', type: 'toggle' },
+    { key: 'voiceLines', label: 'Hero voice lines', hint: 'Quips on kills, abilities and spawns', type: 'toggle' },
+  ] },
+  { id: 'controls', group: 'Controls', icon: '🖱️', blurb: 'Mouse and aiming', items: [
+    { key: 'sens', label: 'Mouse sensitivity', hint: 'How far the camera turns per mouse move', type: 'range', min: 0.3, max: 3, step: 0.05, fmt: v => v.toFixed(2) },
+    { key: 'invertY', label: 'Invert mouse Y', hint: 'Push the mouse forward to look down', type: 'toggle' },
+  ] },
+  { id: 'video', group: 'Video', icon: '🖥️', blurb: 'Looks and performance', items: [
+    { key: 'fov', label: 'Field of view', hint: 'Wider shows more around you', type: 'range', min: 70, max: 110, step: 1, fmt: v => v + '°' },
+    { key: 'quality', label: 'Render quality', hint: 'Lower runs smoother, higher looks sharper', type: 'choice', options: Object.entries(QUALITY).map(([k, q]) => [k, q.label]) },
+    { key: 'shadows', label: 'Shadows', hint: 'Soft shadows under heroes and props', type: 'toggle' },
+    { key: 'screenShake', label: 'Screen shake', hint: 'Shakes on blasts, slams and big hits', type: 'toggle' },
+    { key: 'perf', label: 'Performance overlay', hint: 'Frame rate in the corner (also F3)', type: 'toggle' },
+  ] },
+  { id: 'audio', group: 'Audio', icon: '🔊', blurb: 'Volume levels', items: [
+    { key: 'volume', label: 'Master volume', hint: 'Everything at once', type: 'range', min: 0, max: 1, step: 0.05, fmt: v => Math.round(v * 100) + '%' },
+    { key: 'music', label: 'Music', hint: 'Menu and stage soundtracks', type: 'range', min: 0, max: 1, step: 0.05, fmt: v => Math.round(v * 100) + '%' },
+    { key: 'sfx', label: 'Sound effects', hint: 'Shots, abilities and hits', type: 'range', min: 0, max: 1, step: 0.05, fmt: v => Math.round(v * 100) + '%' },
+  ] },
+  { id: 'keys', group: 'Key guide', icon: '⌨️', blurb: 'What every key does', items: [] },
+];
+const KEYS = [['WASD', 'Move'], ['Mouse', 'Aim'], ['LMB', 'Fire'], ['Space', 'Jump'], ['Shift', 'Sprint'], ['Q', 'Ability 1'], ['E', 'Ability 2'], ['F', 'Ultimate'],
+  ['R', 'Reload'], ['T', 'Spray'], ['Tab', 'Scoreboard'], ['Esc', 'Pause'], ['F3', 'Performance']];
+let setTab = 'game', savedT = 0, resetArm = 0;
+const rangeFill = (it, v) => ((v - it.min) / (it.max - it.min) * 100).toFixed(1) + '%';
+
+function renderSettings() {
+  $('setNav').innerHTML = SCHEMA.map(s => `<button class="${s.id === setTab ? 'on' : ''}" data-stab="${s.id}"><i>${s.icon}</i><span><b>${s.group}</b><small>${s.blurb}</small></span></button>`).join('');
+  const s = SCHEMA.find(x => x.id === setTab);
+  const row = it => {
+    const v = cfg[it.key], lab = `<div class="sr-l"><b>${it.label}</b><small>${it.hint}</small></div>`;
+    if (it.type === 'toggle') return `<div class="srow">${lab}<button class="tog ${v ? 'on' : ''}" data-key="${it.key}" data-type="toggle" aria-pressed="${!!v}"><i></i><em>${v ? 'On' : 'Off'}</em></button></div>`;
+    if (it.type === 'choice') return `<div class="srow">${lab}<div class="seg">${it.options.map(([k, l]) => `<button class="${v === k ? 'on' : ''}" data-key="${it.key}" data-type="choice" data-val="${k}">${l}</button>`).join('')}</div></div>`;
+    return `<div class="srow">${lab}<div class="rng"><input type="range" data-key="${it.key}" min="${it.min}" max="${it.max}" step="${it.step}" value="${v}" style="--p:${rangeFill(it, +v)}"><output>${it.fmt(+v)}</output></div></div>`;
+  };
+  $('setGrid').innerHTML = `<h3><i>${s.icon}</i>${s.group}</h3>` + (s.id === 'keys'
+    ? `<div class="keygrid">${KEYS.map(([k, l]) => `<div><kbd>${k}</kbd><span>${l}</span></div>`).join('')}</div>`
+    : `<div class="srows">${s.items.map(row).join('')}</div>`);
+}
+function setSetting(key, val) {
+  cfg[key] = val; save();
+  api?.onSettings?.(key);
+  const el = $('setSaved'); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+  clearTimeout(savedT); savedT = setTimeout(() => el.classList.remove('flash'), 1200);
+}
+export function openSettings() {
+  settingsOpen = true; renderSettings();
+  $('settings').classList.remove('hidden');
+}
+function closeSettings() {
+  settingsOpen = false; $('settings').classList.add('hidden');
+  api?.onSettingsClosed?.();
+}
+export const settingsVisible = () => settingsOpen;
+
+// ---------- wiring ----------
+export function initMenu(opts) {
+  api = opts;
+  $('modeLane').onclick = () => { setMode('lane'); go('roster'); };
+  $('modeSurv').onclick = () => { setMode('survivor'); go('roster'); };
+  $('modeHill').onclick = () => { setMode('hill'); go('roster'); };
+  $('modeCart').onclick = () => { setMode('cart'); go('roster'); };
+  $('modeTut').onclick = () => { api?.blip?.(880); $('front').classList.add('hidden'); api.onStart('tutorial'); };
+  $('modeTut').classList.toggle('fresh', !cfg.tutorialDone);
+  $('modeOnline').onclick = () => go('online');
+  $('modeCloset').onclick = () => { api?.blip?.(760); go('closet'); };
+  $('modeSlots').onclick = () => { api?.blip?.(760); go('slots'); };
+  initOnline({ go, screen: () => screen, blip: f => api?.blip?.(f), start: m => api.onStartOnline(m), pickHero: () => { setMode('online'); go('roster'); } });
+  document.querySelectorAll('[data-open-settings]').forEach(b => { b.onclick = openSettings; });
+  document.querySelectorAll('[data-back]').forEach(b => { b.onclick = () => go(b.dataset.back); });
+  $('tiles').onclick = e => { const t = e.target.closest('.tile'); if (t) pickHero(t.dataset.hero); };
+  $('archBar').onclick = e => { const b = e.target.closest('[data-arch]'); if (b) { api?.blip?.(700); setArch(b.dataset.arch); } };
+  $('carL').onclick = () => stepHero(-1);
+  $('carR').onclick = () => stepHero(1);
+  $('info').addEventListener('click', e => {
+    const b = e.target.closest('.sk'); if (b) return pickSkin(b.dataset.skin);
+    const t = e.target.closest('[data-tab]');
+    if (t) {
+      infoTab = t.dataset.tab;
+      $('info').querySelectorAll('[data-tab]').forEach(x => x.classList.toggle('on', x === t));
+      $('info').querySelectorAll('[data-pane]').forEach(x => x.classList.toggle('on', x.dataset.pane === infoTab));
+      fitKit();
+      api?.blip?.(640);
+    }
+  });
+  $('passCard').onclick = () => { api?.blip?.(760); go('pass'); };
+  $('track').addEventListener('click', e => { const c = e.target.closest('[data-equip]'); if (c) toggleCos(c.dataset.equip); });
+  $('track').addEventListener('wheel', e => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.preventDefault(); $('track').scrollLeft += e.deltaY; } }, { passive: false });
+  $('lockIn').onclick = () => {
+    if (!heroOwned(viewId)) { api?.blip?.(150); $('lockIn').classList.remove('nope'); void $('lockIn').offsetWidth; $('lockIn').classList.add('nope'); return; }
+    api?.blip?.(880);
+    if (mode === 'survivor') { $('front').classList.add('hidden'); api.onStart('survivor'); }
+    else if (mode === 'online') go('online');
+    else go('stage');
+  };
+  $('cols').onclick = e => {
+    const c = e.target.closest('.stg-card'); if (!c) return;
+    if (stageView === c.dataset.map) { api?.blip?.(880); return deployStage(c.dataset.map); }   // clicking the stage being previewed plays it
+    api?.blip?.(520); showStage(MAPS.find(m => m.id === c.dataset.map), true);
+  };
+  $('cols').onmouseover = e => { const c = e.target.closest('.stg-card'); if (c && stageView !== c.dataset.map) { api?.blip?.(300 + [...$('cols').children].indexOf(c) * 80); showStage(MAPS.find(m => m.id === c.dataset.map)); } };
+  $('stgGo').onclick = () => { api?.blip?.(880); deployStage(stageView); };
+  $('setNav').addEventListener('click', e => {
+    const b = e.target.closest('[data-stab]'); if (!b || b.dataset.stab === setTab) return;
+    setTab = b.dataset.stab; api?.blip?.(640); renderSettings();
+  });
+  $('setGrid').addEventListener('click', e => {
+    const b = e.target.closest('button[data-key]'); if (!b) return;
+    e.preventDefault();
+    if (b.dataset.type === 'toggle') setSetting(b.dataset.key, !cfg[b.dataset.key]);
+    else setSetting(b.dataset.key, b.dataset.val);
+    api?.blip?.(b.dataset.type === 'toggle' && !cfg[b.dataset.key] ? 420 : 760);
+    renderSettings();
+  });
+  $('setGrid').addEventListener('input', e => {
+    const k = e.target.dataset.key; if (!k) return;
+    const it = SCHEMA.flatMap(s => s.items).find(i => i.key === k);
+    setSetting(k, +e.target.value);
+    e.target.style.setProperty('--p', rangeFill(it, +e.target.value));
+    e.target.nextElementSibling.textContent = it.fmt(+e.target.value);
+  });
+  $('setDone').onclick = closeSettings; $('setX').onclick = closeSettings;
+  $('settings').addEventListener('click', e => { if (e.target === $('settings')) closeSettings(); });     // click outside the sheet
+  // reset asks twice, so a stray click can't wipe your setup
+  $('setReset').onclick = () => {
+    const b = $('setReset');
+    if (!resetArm) { resetArm = setTimeout(() => { resetArm = 0; b.classList.remove('arm'); b.textContent = '↺ Reset to defaults'; }, 2600); b.classList.add('arm'); b.textContent = 'Click again to reset'; api?.blip?.(300); return; }
+    clearTimeout(resetArm); resetArm = 0; b.classList.remove('arm'); b.textContent = '↺ Reset to defaults';
+    resetSettings(); renderSettings(); ['quality', 'shadows', 'fov', 'volume', 'music', 'sfx'].forEach(k => api?.onSettings?.(k));
+    setSetting('diff', cfg.diff);
+  };
+  addEventListener('keydown', e => {
+    if (settingsOpen && e.code === 'Escape') { closeSettings(); return; }
+    if ($('front').classList.contains('hidden') || settingsOpen) return;
+    if (screen === 'roster') {
+      if (e.code === 'ArrowRight' || e.code === 'KeyD') stepHero(1);
+      if (e.code === 'ArrowLeft' || e.code === 'KeyA') stepHero(-1);
+      const n = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5'].indexOf(e.code);                 // 1-5: All and each archetype
+      if (n >= 0) { api?.blip?.(700); setArch(['all', ...ARCHETYPES.map(a => a.id)][n]); }
+      if (e.code === 'Enter') $('lockIn').click();
+      if (e.code === 'Escape') go('main');
+    } else if (screen === 'stage') {
+      const i = MAPS.findIndex(m => m.id === stageView);
+      if (e.code === 'Escape') go('roster');
+      if (e.code === 'ArrowDown' || e.code === 'KeyS') showStage(MAPS[(i + 1) % MAPS.length], true);
+      if (e.code === 'ArrowUp' || e.code === 'KeyW') showStage(MAPS[(i - 1 + MAPS.length) % MAPS.length], true);
+      if (e.code === 'Enter') deployStage(stageView);
+    }
+    else if (screen === 'pass' && e.code === 'Escape') go('main');
+    else if (screen === 'closet' && e.code === 'Escape') go('main');
+    else if (screen === 'slots' && e.code === 'Escape') go('main');
+    else if (screen === 'main' && e.code === 'Enter') { setMode('lane'); go('roster'); }
+  });
+  go('main');
+}
+
+export function showMenu(name = 'main') { go(name); }
+export function menuFrame(renderer, dt) {
+  if ($('front').classList.contains('hidden') || screen !== 'main') return false;
+  frameShowcase(renderer, dt);
+  return true;
+}
