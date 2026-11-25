@@ -1,6 +1,6 @@
 // ---------- Enemy Tower screens ----------
 // hero sprites wear whatever skin the player picked in Saturn's shop
-const heroImg = (h, cls = "") => { const k = heroLook(h.id); return `<img class="twSpr ${cls}${k ? lookClass(k) : ""}" src="${h.spr}" alt="" referrerpolicy="no-referrer" draggable="false"${k ? lookStyle(k) : ""}>`; };
+const heroImg = (h, cls = "") => skinImg(h.spr, heroLook(h.id), cls);
 const twUi = {goods:false};
 const stIcons = st => `${st.sleep ? "💤" : ""}${st.cry ? "😢" : ""}${st.poison ? "☠️" : ""}${st.stun ? "📌" : ""}${st.weak ? "🎯" : ""}${st.distract ? "🍯" : ""}`;
 const dailyHero = () => HERO[STARTERS[Math.floor(mulberry32(hashStr("tower2-" + todayKey()))() * STARTERS.length)]];
@@ -353,7 +353,7 @@ function profileHTML(sel) {
         <h2>${found ? sel.name : "???"} ${badge({game:sel.game})}</h2>
         <p class="twRole">${found ? sel.role : findHint(sel)}</p>
         ${found ? `<span class="twRates">${bars(sel)}</span>
-        <p class="twMoveList">${passiveLine(sel)}<br><b>Starts with</b> ${sel.start.map(k => TMOVES[k].n).join(", ")}<br><b>Can learn</b> ${sel.learn.map(k => (TMOVES[k].sig ? "★ " : "") + TMOVES[k].n + (PSI_NEEDS[k] ? ` <small>(after ${TMOVES[PSI_NEEDS[k]].n})</small>` : "")).join(", ")}<br>${comboLine(sel)}</p>` : ""}
+        <p class="twMoveList">${comboLine(sel)}<br><small>Moves and passive are in the Codex.</small></p>` : ""}
         ${found ? `<span class="twProfBtns"><button class="btn twSmall twCodexOne" id="twCodexOne">📘 Codex page</button>${sel.mine ? `<button class="btn twSmall twCodexOne" id="twEditMine">✏️ Edit hero</button>` : ""}</span>` : ""}
       </div>
       <div class="twStart">

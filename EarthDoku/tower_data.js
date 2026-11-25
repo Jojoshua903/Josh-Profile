@@ -532,26 +532,99 @@ HEROES.forEach(h => {
 });
 const canLearn = (m, k) => !m.moves.includes(k) && (!PSI_NEEDS[k] || m.moves.includes(PSI_NEEDS[k]));
 
-// ---------- hero skins: two color swaps per hero sold in Saturn's shop, plus a Champion look for reaching the top with them ----------
+// ---------- hero skins: two outfits per hero sold in Saturn's shop, plus a Champion look for reaching the top with them ----------
+// every look has a color filter (f) and outfit pieces (acc) drawn on top: "cape:g" means the cape in green
 const HLOOKS = {
-  moon:{n:"Moonside", f:"invert(1) hue-rotate(180deg)", d:"Colors turned inside out. Yes. No."},
-  silver:{n:"Starman Silver", f:"grayscale(1) brightness(1.2) contrast(1.15)", d:"Shiny chrome from another world."},
-  pig:{n:"Pigmask Pink", f:"hue-rotate(300deg) saturate(1.5)", d:"Standard-issue army pink."},
-  dark:{n:"Deep Darkness", f:"hue-rotate(80deg) brightness(.72) saturate(1.4)", d:"Swampy green and very murky."},
-  dream:{n:"Magicant Dream", f:"hue-rotate(200deg) saturate(.6) brightness(1.2)", d:"Soft pastels from a dream."},
-  lava:{n:"Fire Spring", f:"sepia(.7) hue-rotate(-35deg) saturate(3)", d:"Red-hot from the volcano."},
-  frost:{n:"Winters Frost", f:"hue-rotate(180deg) saturate(.5) brightness(1.25)", d:"Chilly blue from up north."},
-  photo:{n:"Fuzzy Pickles", f:"sepia(1) contrast(1.1) brightness(1.05)", d:"An old photo from the camera man."},
-  mani:{n:"Mani Mani", f:"hue-rotate(250deg) saturate(2.2) contrast(1.1)", d:"Warped by an evil statue."},
-  ghost:{n:"Osohe Ghost", f:"grayscale(.6) brightness(1.35) opacity(.7)", d:"Spooky, see-through and friendly."},
-  lumine:{n:"Lumine Glow", f:"hue-rotate(140deg) saturate(1.8) brightness(1.1)", d:"Teal light that reads your thoughts."},
-  tenda:{n:"Tenda Moss", f:"hue-rotate(55deg) saturate(1.4)", d:"Leafy green and a little shy."},
-  giygas:{n:"Giygas Red", f:"hue-rotate(330deg) saturate(3) contrast(1.35)", d:"Red. Very red. ...It hurts."},
-  night:{n:"Threed Night", f:"brightness(.6) hue-rotate(210deg) saturate(.8) contrast(1.25)", d:"After dark in a spooky town."},
-  chimera:{n:"Chimera Lab", f:"hue-rotate(110deg) saturate(2.4)", d:"Mixed up in a Pigmask lab."},
-  peach:{n:"Saturn Peach", f:"sepia(.5) hue-rotate(-25deg) saturate(1.6) brightness(1.12)", d:"Peachy keen. Boing!"},
-  champ:{n:"Champion", f:"sepia(1) saturate(4) hue-rotate(-12deg) brightness(1.12) contrast(1.1) drop-shadow(0 0 3px #ffd84a)", d:"Solid gold, for reaching the top."}
+  moon:{n:"Moonside Tuxedo", f:"invert(1) hue-rotate(180deg)", acc:["tophat:r", "bowtie:r"], d:"Dressed up for a night in Moonside. Yes. No."},
+  silver:{n:"Starman Suit", f:"grayscale(1) brightness(1.2) contrast(1.15)", acc:["antenna", "jetpack"], d:"Chrome armor and a jetpack from another world."},
+  pig:{n:"Pigmask Private", f:"hue-rotate(300deg) saturate(1.5)", acc:["pighelm", "medal"], d:"Standard-issue helmet, and a medal for trying."},
+  dark:{n:"Swamp Ranger", f:"hue-rotate(80deg) brightness(.72) saturate(1.4)", acc:["beanie:g", "cape:g"], d:"Camouflage for wading through Deep Darkness."},
+  dream:{n:"Magicant Dreamer", f:"hue-rotate(200deg) saturate(.6) brightness(1.2)", acc:["halo", "wings:c"], d:"Soft pastels, a halo and dream wings."},
+  lava:{n:"Fire Spring Fighter", f:"sepia(.7) hue-rotate(-35deg) saturate(3)", acc:["bandana:r", "flames"], d:"A headband, and flames that never go out."},
+  frost:{n:"Winters Explorer", f:"hue-rotate(180deg) saturate(.5) brightness(1.25)", acc:["beanie:b", "scarf:b", "snow"], d:"Bundled up for the snow up north."},
+  photo:{n:"Old West Photo", f:"sepia(1) contrast(1.1) brightness(1.05)", acc:["cowboy:n", "scarf:n"], d:"Posing for the camera man. Fuzzy pickles!"},
+  mani:{n:"Mani Mani Gold", f:"hue-rotate(250deg) saturate(2.2) contrast(1.1)", acc:["crown", "sparkle:y"], d:"Crowned by an evil statue's golden glow."},
+  ghost:{n:"Osohe Ghost", f:"grayscale(.6) brightness(1.35) opacity(.7)", acc:["halo", "bubbles:w"], d:"Spooky, see-through and very friendly."},
+  lumine:{n:"Lumine Scholar", f:"hue-rotate(140deg) saturate(1.8) brightness(1.1)", acc:["glasses", "sparkle:c"], d:"Glowing glasses that read the walls' thoughts."},
+  tenda:{n:"Tenda Gardener", f:"hue-rotate(55deg) saturate(1.4)", acc:["flower", "cape:g"], d:"A leafy cape and a flower, a little shy."},
+  giygas:{n:"Giygas Mask", f:"hue-rotate(330deg) saturate(3) contrast(1.35)", acc:["mask", "sparkle:r"], d:"Red. Very red. ...It hurts."},
+  night:{n:"Threed Night Owl", f:"brightness(.6) hue-rotate(210deg) saturate(.8) contrast(1.25)", acc:["tophat:v", "cape:k"], d:"A dark cape for haunting a spooky town."},
+  chimera:{n:"Chimera Lab Tech", f:"hue-rotate(110deg) saturate(2.4)", acc:["goggles", "rocket"], d:"Safety goggles and an experiment in hand."},
+  peach:{n:"Saturn Sweetheart", f:"sepia(.5) hue-rotate(-25deg) saturate(1.6) brightness(1.12)", acc:["bow:r", "hearts"], d:"A Mr. Saturn bow and a lot of love. Boing!"},
+  champ:{n:"Champion", f:"sepia(1) saturate(4) hue-rotate(-12deg) brightness(1.12) contrast(1.1) drop-shadow(0 0 3px #ffd84a)", acc:["crown", "cape:r", "sparkle:y"], d:"Solid gold with a crown and cape, for reaching the top."}
 };
+// ---------- outfit pieces: tiny pixel art drawn over (or behind) the hero ----------
+// X is the piece's main color, swapped for whatever the look asks for
+const ACC_PAL = {k:"#1a1426", w:"#ffffff", y:"#ffcf3f", o:"#ff8a1a", r:"#e2352c", p:"#ff5fa2", v:"#8a4fff", b:"#3a7bff", c:"#6cf0ff", g:"#3fae5a",
+  n:"#8a5a2b", s:"#c9ccd6", d:"#4a4458", t:"#f2c48a", G:"#ffd84a", m:"#8a1a3a"};
+// where each slot sits, as a share of the hero picture: head pieces sit on top of the head, back pieces go behind
+const ACC_SLOT = {head:{w:62, x:19, b:86}, halo:{w:54, x:23, b:97}, face:{w:50, x:25, y:20}, neck:{w:48, x:26, y:42},
+  back:{w:112, x:-6, y:18, z:-1}, hand:{w:30, x:78, y:36}, aura:{w:140, x:-20, y:-20, fx:1}};
+const ACC = {
+  cap:{s:"head", X:"r", g:["...XXXX...", "..XXXXXX..", ".XXXwXXXX.", ".XXXXXXXXXXX"]},
+  crown:{s:"head", g:["G...G...G", "GG.GGG.GG", "GGGGGGGGG", "GrGGbGGrG", "GGGGGGGGG"]},
+  tophat:{s:"head", X:"r", g:["..kkkk..", "..kkkk..", "..kkkk..", "..XXXX..", "kkkkkkkk"]},
+  beanie:{s:"head", X:"b", g:["....w....", "..XXXXX..", ".XXXXXXX.", "XXXXXXXXX", "wwwwwwwww"]},
+  bow:{s:"head", X:"p", box:{w:44, x:28, b:84}, g:["XX...XX", "XXXmXXX", "XX...XX"]},
+  halo:{s:"halo", g:[".GGGGGGG.", "G.......G", ".GGGGGGG."]},
+  antenna:{s:"head", g:["c.....c", "k.....k", ".k...k.", "..k.k.."]},
+  cowboy:{s:"head", X:"n", box:{w:80, x:10, b:84}, g:["...XXXXX...", "...XXXXX...", "...ttttt...", "XXXXXXXXXXX"]},
+  party:{s:"head", box:{w:34, x:33, b:86}, g:["..y..", "..p..", ".pbp.", ".ppp.", "pbpbp", "ppppp"]},
+  flower:{s:"head", box:{w:34, x:56, b:80}, g:[".p.p.", "ppypp", ".ppp.", "..g..", ".gg.."]},
+  pighelm:{s:"head", box:{w:70, x:15, b:72}, g:[".ppppppp.", "ppppppppp", "pkkpppkkp", "ppppppppp", "p.......p"]},
+  headphones:{s:"head", box:{w:78, x:11, b:62}, g:["..kkkkkkk..", ".k.......k.", "k.........k", "rk.......kr", "rr.......rr", "rr.......rr"]},
+  chef:{s:"head", g:[".ww.ww..", "wwwwwwww", "wwwwwwww", ".wwwwww.", ".wwwwww.", ".kkkkkk."]},
+  hardhat:{s:"head", g:["...yyy...", ".yyyyyyy.", "yyyyyyyyy", "kkkkkkkkkkk"]},
+  bandana:{s:"head", X:"r", box:{w:64, x:18, b:78}, g:["XXXXXXXXXX", "XwXXwXXwXX", "........XX", ".........X"]},
+  shades:{s:"face", g:["kkkkkkkkkk", "kkkk..kkkk", ".kk....kk."]},
+  glasses:{s:"face", g:["kkkk.kkkk", "kcck.kcck", "kkkk.kkkk"]},
+  goggles:{s:"face", g:["nnnnnnnnnn", "nccnnnnccn", "nccnnnnccn", "nnnnnnnnnn"]},
+  mask:{s:"face", g:["ssssssssss", "sskksskkss", "ssssssssss"]},
+  scarf:{s:"neck", X:"r", g:["XXXXXXXXXX", "XwXwXwXwXw", ".......XX.", ".......XX.", ".......Xw."]},
+  bowtie:{s:"neck", X:"r", box:{w:32, x:34, y:42}, g:["XX...XX", "XXXkXXX", "XX...XX"]},
+  medal:{s:"neck", box:{w:22, x:40, y:42}, g:["r...r", ".r.r.", "..r..", ".GGG.", "GGyGG", ".GGG."]},
+  cape:{s:"back", X:"r", g:["..XXXXXXXX..", ".XXXXXXXXXX.", ".XXXXXXXXXX.", "XXXXXXXXXXXX", "XXXXXXXXXXXX", "XXXXXXXXXXXX", "XXXXXXXXXXXX", "XmXXmXXmXXmX"]},
+  wings:{s:"back", X:"c", box:{w:150, x:-25, y:10, z:-1}, g:["XX............XX", "XXX..........XXX", "XXXX........XXXX", "XXwXX......XXwXX", "XXXXXX....XXXXXX", ".XXXX......XXXX.", "..XX........XX.."]},
+  jetpack:{s:"back", g:["..ss....ss..", ".ssss..ssss.", ".ssss..ssss.", ".ssss..ssss.", ".ssss..ssss.", "..oo....oo..", "..yo....oy..", "...y....y..."]},
+  bat:{s:"hand", g:[".nn", ".nn", ".nn", ".n.", ".n.", ".n.", ".k."]},
+  pan:{s:"hand", g:[".kkk..", "kkkkk.", "kkkkk.", ".kkk..", "..n...", "..n...", "..n..."]},
+  rocket:{s:"hand", g:["..r..", ".rrr.", ".rrr.", ".www.", ".www.", ".o.o."]}
+};
+// moving particles around the hero: [main color, stamp shape]
+const AURAS = {sparkle:["y", [".X.", "XwX", ".X."]], flames:["o", [".X.", "XrX", "XrX"]], snow:["w", [".X.", "X.X", ".X."]],
+  hearts:["p", ["X.X", "XXX", ".X."]], notes:["k", ["XX", "X.", "X."]], bubbles:["c", [".X.", "X.X", ".X."]]};
+const AURA_AT = [[1, 3], [16, 1], [0, 13], [17, 11], [3, 20], [14, 19], [9, 0]];
+const accGrid = (rows, col) => { const w = Math.max(...rows.map(r => r.length)); return rows.map(r => r.padEnd(w, ".").replace(/X/g, col)); };
+function accSvg(rows) {
+  const h = rows.length, w = rows[0].length;
+  let px = "";
+  rows.forEach((r, y) => r.split("").forEach((c, x) => { if (ACC_PAL[c]) px += `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${ACC_PAL[c]}"/>`; }));
+  return {w, h, url:"data:image/svg+xml," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" shape-rendering="crispEdges">${px}</svg>`)};
+}
+const ACC_CACHE = {};
+function accPiece(spec) {
+  if (ACC_CACHE[spec]) return ACC_CACHE[spec];
+  const [k, col] = spec.split(":");
+  let out = "";
+  if (AURAS[k]) {
+    const [c0, stamp] = AURAS[k], c = col || c0, grid = Array.from({length:24}, () => Array(20).fill("."));
+    AURA_AT.forEach(([x, y]) => stamp.forEach((r, dy) => r.split("").forEach((p, dx) => { if (p !== "." && grid[y + dy] && x + dx < 20) grid[y + dy][x + dx] = p === "X" ? c : p; })));
+    const s = accSvg(grid.map(r => r.join(""))), b = ACC_SLOT.aura;
+    out = `<i class="twAcc aura a-${k}" style="left:${b.x}%;top:${b.y}%;width:${b.w}%;aspect-ratio:${s.w}/${s.h};background-image:url('${s.url}')"></i>`;
+  } else if (ACC[k]) {
+    const a = ACC[k], s = accSvg(accGrid(a.g, ACC_PAL[col] ? col : a.X || "r")), b = Object.assign({}, ACC_SLOT[a.s], a.box || {});
+    const pos = b.b != null ? `bottom:${b.b}%` : `top:${b.y}%`;
+    out = `<i class="twAcc s-${a.s}${b.z ? " behind" : ""}" style="left:${b.x}%;${pos};width:${b.w}%;aspect-ratio:${s.w}/${s.h};background-image:url('${s.url}')"></i>`;
+  }
+  return ACC_CACHE[spec] = out;
+}
+const lookAcc = k => (HLOOKS[k] && HLOOKS[k].acc || []).map(accPiece).join("");
+// one hero picture wearing a look: the colored sprite, with its outfit pieces layered on
+function skinImg(src, k, cls = "", extra = "") {
+  const L = k && HLOOKS[k];
+  const img = `<img class="twSpr ${cls}${L && L.a ? " skA" : ""}" src="${src}" alt="" referrerpolicy="no-referrer" draggable="false"${L ? ` style="--skf:${L.f}${L.a ? `;--ska:${L.a}` : ""}"` : ""}${extra}>`;
+  return L && L.acc && L.acc.length ? `<span class="twSprW ${cls}">${img}${lookAcc(k)}</span>` : img;
+}
 const HSKIN_PRICE = [200, 350];
 const HSKINS = [];
 HEROES.forEach(h => {
@@ -629,14 +702,30 @@ const HANIM = {
 };
 const HSKIN_PRICE2 = {sig:500, anim:800};
 const HANIM_KEYS = Object.keys(HANIM);
+// the outfit that goes with each signature look
+const HSIG_ACC = {
+  ninten:["cap:r", "sparkle:c"], ana:["bow:p", "halo"], lloyd:["glasses", "rocket"], teddy:["shades", "bandana:k"], ness:["cap:v", "bat", "sparkle:v"],
+  paula:["bow:p", "pan"], jeff:["glasses", "scarf:b"], poo:["crown", "cape:o"], lucas:["flower", "scarf:y"], kumatora:["crown", "cape:p"],
+  duster:["bandana:v", "cape:k"], boney:["scarf:r"], flint:["cowboy:n", "scarf:r"], pippi:["bow:y", "medal"], flyingman:["cape:w", "medal"],
+  king:["beanie:b", "snow"], picky:["beanie:p"], buzzbuzz:["antenna", "sparkle:c"], bubblemonkey:["bow:p", "bubbles"], dungeonman:["tophat:g", "cape:g"],
+  salsa:["party", "notes"], eve:["antenna", "jetpack"], claus:["mask", "cape:k"], pokey:["crown", "cape:p"], tony:["beanie:c", "scarf:c"],
+  mrsaturn:["bow:r", "hearts"], applekid:["goggles", "headphones"], andonuts:["glasses", "sparkle:v"], mick:["bandana:r"], queenmary:["crown", "notes"],
+  mimmie:["bow:p", "hearts"], laura:["bow:y", "notes"], brickroad:["hardhat"], maxwell:["glasses", "bowtie:b"], cat:["bow:r"],
+  everdred:["tophat:g", "bowtie:g"], alec:["cowboy:n"], butch:["tophat:k", "medal"], fuel:["bandana:r", "flames"], butterfly:["sparkle:c"],
+  bbgang:["shades", "bandana:k"], benny:["glasses", "scarf:w"], tracy:["cap:o", "scarf:o"], captainstrong:["cap:b", "medal"], venus:["headphones", "sparkle:p"],
+  orangekid:["tophat:o", "bowtie:o"], lisa:["chef", "pan"], lou:["beanie:r", "cape:g"], reggie:["flower"], samba:["party", "notes"]
+};
+// and with each moving look
+const HANIM_ACC = {rainbow:["party", "sparkle:p"], shimmer:["antenna", "sparkle:c"], aura:["halo", "sparkle:p"], ghost:["halo", "bubbles:w"],
+  glitch:["shades"], flame:["bandana:r", "flames"], frozen:["beanie:c", "snow"], disco:["shades", "notes"]};
 HEROES.forEach(h => {
   const s = HSIG[h.id];
   if (s) {
-    HLOOKS["sig_" + h.id] = {n:s[0], f:`${s[1]} drop-shadow(0 0 3px ${s[2]})`, d:s[3]};
+    HLOOKS["sig_" + h.id] = {n:s[0], f:`${s[1]} drop-shadow(0 0 3px ${s[2]})`, acc:HSIG_ACC[h.id] || [], d:s[3]};
     HSKINS.push({id:`hs_${h.id}_sig`, h:h.id, look:"sig_" + h.id, p:HSKIN_PRICE2.sig, n:`${h.name} · ${s[0]}`, d:s[3], sig:true});
   }
   const k = HANIM_KEYS[hashStr("hanim-" + h.id) % HANIM_KEYS.length], a = HANIM[k];
-  if (!HLOOKS["anim_" + k]) HLOOKS["anim_" + k] = {n:a.n, f:"brightness(1)", a:a.a, d:a.d};
+  if (!HLOOKS["anim_" + k]) HLOOKS["anim_" + k] = {n:a.n, f:"brightness(1)", a:a.a, acc:HANIM_ACC[k] || [], d:a.d};
   HSKINS.push({id:`hs_${h.id}_anim`, h:h.id, look:"anim_" + k, p:HSKIN_PRICE2.anim, n:`${h.name} · ${a.n}`, d:a.d, anim:true});
 });
 // the style a hero image needs for a look: its color filter, plus a moving animation for the moving looks
@@ -718,4 +807,5 @@ const PASSIVES = {
   // heroes you make yourself
   _mine:{ic:"✏️", n:"Homemade hero", d:"Masters moves twice as fast", fastMaster:1}
 };
-const passiveOf = h => h ? PASSIVES[h.id] || (h.mine ? PASSIVES._mine : null) : null;
+// your own heroes carry the passive you picked for them in the hero maker (h.pas)
+const passiveOf = h => h ? PASSIVES[h.id] || (h.mine ? h.pas || PASSIVES._mine : null) : null;

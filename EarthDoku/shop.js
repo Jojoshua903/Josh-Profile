@@ -331,7 +331,7 @@ function itemPrev(s) {
   if (s.cat === "skin") return prevHTML(s.id);
   if (s.cat === "wall") return `<div class="shWallPrev" data-wall="${s.id}"></div>`;
   if (s.cat === "hit") return `<div class="shHitPrev"><span>${s.n}</span></div>`;
-  if (s.cat === "hero") return `<div class="shHeroPrev${s.champ && !owns(s.id) ? " dim" : ""}"><img class="twSpr${s.look ? lookClass(s.look) : ""}" src="${HERO[s.h].spr}" alt="" referrerpolicy="no-referrer" draggable="false"${s.look ? lookStyle(s.look) : ""}></div>`;
+  if (s.cat === "hero") return `<div class="shHeroPrev${s.champ && !owns(s.id) ? " dim" : ""}">${skinImg(HERO[s.h].spr, s.look)}</div>`;
   if (s.cat === "mystery") return `<div class="shIconPrev mys">🎁</div>`;
   if (s.cat === "tower") { const g = typeof GOODS !== "undefined" && GOODS[s.g]; return `<div class="shIconPrev${s.bell && shop.bell ? " ring" : ""}">${(g ? g.ic : s.ic || "🎁").repeat(s.x)}</div>`; }
   return `<div class="shIconPrev${owns(s.id) ? "" : " dim"}">${s.ic}</div>`;
@@ -396,7 +396,7 @@ function drawShop() {
       const skins = ITEMS.filter(s => s.cat === "hero" && s.h === h.id).sort((a, c) => !!a.champ - !!c.champ);
       if (!skins.some(s => s.id === sv.cs)) sv.cs = (skins.find(s => inUse(s)) || skins[0]).id;
       const sel = ITEM[sv.cs], look = s => s.look, shortN = s => s.base ? "Original" : HLOOKS[s.look].n;
-      const img = (hh, lk, cls = "") => `<img class="twSpr ${cls}${lk ? lookClass(lk) : ""}" src="${hh.spr}" alt="" referrerpolicy="no-referrer" draggable="false"${lk ? lookStyle(lk) : ""}>`;
+      const img = (hh, lk, cls = "") => skinImg(hh.spr, lk, cls);
       const sale = s => !owns(s.id) && (s.id === wk || s.id === deal);
       const priceTag = s => `${sale(s) ? `<s>${fmt$(s.p)}</s> ` : ""}${fmt$(priceOf(s.id))}`;
       // the carousel: the hero you're dressing in the middle, neighbours shrinking away on each side
