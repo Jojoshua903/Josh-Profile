@@ -593,7 +593,7 @@
           return `<button class="txMapBtn${ok ? "" : " locked"}" data-map="${m.id}" ${ok ? "" : "disabled"}>${miniMap(m)}<span><b>${ok ? m.n : "🔒 " + m.n}</b><small>${o.ic} ${o.n} · Lv ${m.lv + 1}${rec ? ` · 🤝 ${sv.roster.includes(rec.id) ? rec.name : "?"}` : ""}</small><em>${starStr(s)}</em></span></button>`;
         }).join("")}</div>`; }).join("")}</div>
       <section class="txSquad"><h3>👥 Your squad</h3><div class="txSquadList">${sv.roster.map(id => HERO[id]).filter(Boolean).map(h => { const s = heroStats(h), c = CLASS[s.cls];
-        return `<div class="txSq">${heroImg(h)}<span><b>${h.name} <small>Lv ${s.lv}</small></b><small>${c.ic} ${c.n}</small>${xpBar(h.id)}</span></div>`; }).join("")}</div></section>
+        return `<button class="txSq" data-stats="${h.id}" title="See ${h.name}'s stats">${heroImg(h)}<span class="txSqTx"><b>${h.name} <small>Lv ${s.lv}</small></b><small>${c.n}</small>${xpBar(h.id)}</span></button>`; }).join("")}</div><p class="txNote">Tap a hero to see their stats.</p></section>
       <details class="twHow"><summary>How it works</summary>
         <p><b>Classes:</b> every hero gets one from their strengths. At Lv ${SKILL_LV} they learn their class skill, and at Lv ${MOVE_LV} they move 1 tile further.</p>
         ${Object.values(CLASS).map(c => `<p>${c.ic} <b>${c.n}:</b> ${c.pas} Skill: ${c.skill.ic} <b>${c.skill.n}</b>, ${c.skill.d.charAt(0).toLowerCase() + c.skill.d.slice(1)}</p>`).join("")}
@@ -603,6 +603,41 @@
         <p><b>Enemies:</b> ${Object.values(AI).map(a => `${a.ic} <b>${a.n}</b>: ${a.d}`).join(" ")} Machines and aliens fire beams, plants are rooted, ghosts float, objects are bombs, weird ones warp, animals and bugs are fast, and everyone else is a brawler. ★ marks a tougher elite.</p>
       </details></section>`;
     el.querySelectorAll("[data-map]").forEach(b => b.onclick = () => { sfx("click"); ui.map = b.dataset.map; ui.view = "party"; draw(); });
+    el.querySelectorAll("[data-stats]").forEach(b => b.onclick = () => statScreen(b.dataset.stats));
+  }
+  // ---------- stat screen: everything about one squad member, or one unit in battle ----------
+  function statScreen(id, u) {
+    const h = HERO[id];
+    if (!h) return;
+    const s = heroStats(h), c = CLASS[s.cls], L = s.lv, a = xpFor(L), b = xpFor(L + 1);
+    const cur = u && u.side === "h" ? u : null;
+    const num = (l, v, sub) => `<div><b>${v}</b><small>${l}${sub ? `<em>${sub}</em>` : ""}</small></div>`;
+    const abil = heroAbils(h).map(x => `<li class="cxMv txMvPlain${x.cls ? " sig" : ""}"><div class="cxMvTx"><div class="cxMvTop"><b>${x.n}</b>${x.cls ? `<span class="cxStar">Class skill</span>` : ""}</div><small>${x.d}</small>
+      <div class="cxTags">${[x.pp ? `${x.pp} PP` : "free", x.cd ? `${x.cd}-turn reload` : "", x.range ? `range ${x.range}` : "", x.line ? `line ${x.line}` : "", x.charge ? `charge ${x.charge}` : ""].filter(Boolean).map(t => `<span>${t}</span>`).join("")}${cur && x.cd && cur.cd[x.k] > 0 ? `<span class="no">ready in ${cur.cd[x.k]}</span>` : ""}</div></div></li>`).join("");
+    const nextUp = L >= MAX_LV ? "Max level!" : L < SKILL_LV ? `Lv ${SKILL_LV}: learns ${c.skill.n}` : L < MOVE_LV ? `Lv ${MOVE_LV}: +1 move` : `Lv ${L + 1}: more HP, Offense and Defense`;
+    sfx("open");
+    openModal(h.name, `<div class="cxPage cxNew txStat">
+      <section class="cxHero g${h.game}"><div class="cxArt">${heroImg(h, "big")}</div>
+        <div class="cxId"><h2>${h.name} ${badge({game:h.game})}</h2><p class="cxRole">Level ${L} ${c.n}${cur ? ` · in battle${cur.poison ? " · poisoned" : ""}${cur.guard ? " · guarding" : ""}${cur.buff ? " · powered up" : ""}` : ""}</p>
+          <div class="cxRecs txStatNums">${num("HP", cur ? `${cur.hp}/${cur.mhp}` : s.mhp)}${num("PP", cur ? (cur.mpp ? `${cur.pp}/${cur.mpp}` : "–") : s.mpp || "–")}${num("Offense", Math.round(s.atk))}${num("Defense", Math.round(s.def))}${num("Move", s.mv)}</div>
+          <div class="txStatXp">${xpBar(h.id)}<small>${L >= MAX_LV ? "Max level" : `${xpOf(h.id) - a}/${b - a} XP to Lv ${L + 1}`} · Next: ${nextUp}</small></div></div></section>
+      <section class="cxBox"><h3>${c.n}</h3><p class="cxMet">${c.pas} Class skill: <b>${c.skill.n}</b>, ${c.skill.d.charAt(0).toLowerCase() + c.skill.d.slice(1)}${L < SKILL_LV ? ` <i>(unlocks at Lv ${SKILL_LV})</i>` : ""}</p></section>
+      <section class="cxBox"><h3>Actions <small>${heroAbils(h).length}</small></h3><ul class="cxMvs">${abil}</ul></section>
+      ${cur ? `<section class="cxBox"><h3>This battle</h3><p class="cxMet">Enemies defeated: ${cur.kills}. Standing on: ${T(cur.x, cur.y).n}.</p></section>` : ""}
+    </div>`);
+  }
+  // the same for an enemy (or the one you're rescuing) in battle
+  function foeScreen(u) {
+    const t = T(u.x, u.y), num = (l, v) => `<div><b>${v}</b><small>${l}</small></div>`;
+    sfx("open");
+    if (u.side === "n") return openModal(u.name, `<div class="cxPage cxNew txStat"><section class="cxBox"><p class="cxMet">${u.name} has ${u.hp}/${u.mhp} HP. Reach them with any hero before the enemies take them down.</p></section></div>`);
+    openModal(u.name, `<div class="cxPage cxNew txStat">
+      <section class="cxHero"><div class="cxArt">${spriteHTML(u.e, "big")}</div>
+        <div class="cxId"><h2>${u.name} ${badge(u.e)}</h2><p class="cxRole">${AI[u.ai].n}${u.boss ? " · Boss" : ""}${u.elite ? " · Elite" : ""}${u.lit ? " · fuse lit!" : ""}</p>
+          <div class="cxRecs txStatNums">${num("HP", `${u.hp}/${u.mhp}`)}${num("Offense", Math.round(u.atk))}${num("Defense", Math.round(u.def * (1 + (t.def || 0))))}${num("Move", u.mv)}</div></div></section>
+      <section class="cxBox"><h3>How it fights</h3><p class="cxMet">${AI[u.ai].d}${u.elite ? " Elites are tougher than usual." : ""}</p></section>
+      <section class="cxBox"><h3>Where it stands</h3><p class="cxMet"><b>${t.n}</b>${t.d ? `: ${t.d}` : "."}</p></section>
+    </div>`);
   }
   const miniMap = m => `<span class="txMini" style="grid-template-columns:repeat(${m.rows[0].length},7px)">${m.rows.join("").split("").map(c => `<i class="m${c === "H" ? "h" : "EB".includes(c) ? "e" : c === "S" ? "s" : TILE_CLS[c] || "g"}"></i>`).join("")}</span>`;
   function drawParty(el) {
@@ -615,10 +650,21 @@
       <div class="txBrief">${miniMap(m)}<div><p class="txNote"><b>${o.ic} ${o.n}:</b> ${o.d(m)}</p>
         <p class="txNote">⭐ Win · ⭐ Nobody collapses · ⭐ ${m.obj === "survive" ? `Defeat ${m.par}+ enemies` : `Win within ${m.par} turns`}</p>
         ${m.recruit && HERO[m.recruit] && !sv.roster.includes(m.recruit) ? `<p class="txNote">🤝 Win to recruit someone new!</p>` : ""}</div></div>
-      <div class="txHeroes">${heroes.map(h => { const s = heroStats(h), c = CLASS[s.cls], on = ui.pick.includes(h.id);
-        return `<button class="txHero${on ? " on" : ""}" data-h="${h.id}">${heroImg(h)}<span><b>${h.name} <small>Lv ${s.lv} · ${c.ic} ${c.n}</small></b><small>HP ${s.mhp} · Off ${Math.round(s.atk)} · Def ${Math.round(s.def)} · Move ${s.mv}${s.mpp ? ` · PP ${s.mpp}` : ""}</small><em>${heroAbils(h).map(a => `<span title="${a.n}: ${a.d}">${a.ic}</span>`).join("")}${s.lv < SKILL_LV ? `<span class="txLockSk" title="${c.skill.n} unlocks at Lv ${SKILL_LV}: ${c.skill.d}">${c.skill.ic}</span>` : ""}</em>${xpBar(h.id)}</span></button>`; }).join("")}</div></section>`;
+      <div class="txSlots">${Array.from({length:slots}, (_, i) => { const h = HERO[ui.pick[i]];
+        return h ? `<button class="txSlot on" data-h="${h.id}" title="Remove ${h.name}">${heroImg(h)}<b>${h.name}</b><span class="txSlotX">Remove</span></button>` : `<div class="txSlot"><span>Slot ${i + 1}</span><b>Empty</b></div>`; }).join("")}</div>
+      <div class="txHeroes">${heroes.map(h => { const s = heroStats(h), c = CLASS[s.cls], i = ui.pick.indexOf(h.id);
+        return `<div class="txHero${i >= 0 ? " on" : ""}" data-h="${h.id}" role="button" tabindex="0" aria-pressed="${i >= 0}">
+          ${i >= 0 ? `<span class="txPickNo">${i + 1}</span>` : ""}
+          <div class="txHeroTop">${heroImg(h)}<div class="txHeroId"><b>${h.name}</b><small>Lv ${s.lv} · ${c.n}</small>${xpBar(h.id)}</div>
+            <button class="txInfoBtn" data-stats="${h.id}" title="See ${h.name}'s stats" aria-label="See ${h.name}'s stats">Stats</button></div>
+          <div class="txHeroNums"><span><small>HP</small><b>${s.mhp}</b></span><span><small>Off</small><b>${Math.round(s.atk)}</b></span><span><small>Def</small><b>${Math.round(s.def)}</b></span><span><small>Move</small><b>${s.mv}</b></span><span><small>PP</small><b>${s.mpp || "–"}</b></span></div>
+          <div class="txChips">${heroAbils(h).map(a => `<span class="${a.cls ? "sk" : ""}" title="${a.d}">${a.n}</span>`).join("")}${s.lv < SKILL_LV ? `<span class="lock" title="${c.skill.d}">${c.skill.n} (Lv ${SKILL_LV})</span>` : ""}</div>
+        </div>`; }).join("")}</div>
+      <p class="txNote">Tap a hero to add or remove them. Stats shows everything about them.</p></section>`;
     $("#txBack").onclick = () => { ui.view = "menu"; draw(); };
     $("#txGo").onclick = () => startMap(ui.map);
+    el.querySelectorAll("[data-stats]").forEach(b => b.onclick = ev => { ev.stopPropagation(); statScreen(b.dataset.stats); });
+    el.querySelectorAll("[data-h]").forEach(b => b.onkeydown = ev => { if (ev.target === b && (ev.key === "Enter" || ev.key === " ")) { ev.preventDefault(); b.click(); } });
     el.querySelectorAll("[data-h]").forEach(b => b.onclick = () => {
       const k = b.dataset.h, i = ui.pick.indexOf(k);
       if (i >= 0) ui.pick.splice(i, 1); else if (ui.pick.length < slots) ui.pick.push(k); else { ui.pick.shift(); ui.pick.push(k); }
@@ -667,7 +713,7 @@
     if (st.over) return "";
     if (!s) return `<p class="txHint">${st.phase === "player" ? "Tap a hero to move them. Blue tiles show where they can walk; red shows who they can hit. Hover anything for details." : "The enemies are moving..."}</p>`;
     const c = CLASS[s.cls];
-    return `<div class="txCard"><div class="txCardTop">${heroImg(s.h)}<span><b>${s.name} <small>Lv ${s.lv}</small></b><small>${c.ic} ${c.n} · HP ${s.hp}/${s.mhp}${s.mpp ? ` · PP ${s.pp}/${s.mpp}` : ""} · Move ${s.mv}</small></span></div>
+    return `<div class="txCard"><div class="txCardTop">${heroImg(s.h)}<button class="txInfoBtn" data-ustats="${s.id}" title="Full stats">Stats</button><span><b>${s.name} <small>Lv ${s.lv}</small></b><small>${c.ic} ${c.n} · HP ${s.hp}/${s.mhp}${s.mpp ? ` · PP ${s.pp}/${s.mpp}` : ""} · Move ${s.mv}</small></span></div>
       <div class="txAbils">${s.abil.map((a, i) => { const t = s.acted ? [] : targets(s, a), why = s.acted ? "Already acted" : a.pp && s.pp < a.pp ? `Needs ${a.pp} PP` : a.cd && s.cd[a.k] > 0 ? `Ready in ${s.cd[a.k]}` : !t.length ? "Nothing in range" : "";
         return `<button class="btn${ui.ab === a ? " hot" : ""}${a.cls ? " txSkill" : ""}" data-ab="${i}" ${why ? "disabled" : ""} title="${a.d}${why ? ` (${why})` : ""}">${a.ic} ${a.n}${a.pp ? ` <small>${a.pp}PP</small>` : ""}<kbd>${i + 1}</kbd></button>`; }).join("")}</div>
       <div class="txAbils">${s.moved && !s.acted && s.from ? `<button class="btn twSmall" id="txUndo">↩️ Undo move</button>` : ""}${!done(s) ? `<button class="btn twSmall" id="txWait">⏸️ Wait</button>` : ""}</div>
@@ -678,7 +724,7 @@
     let h = "";
     if (u && up(u)) {
       const t = T(u.x, u.y);
-      h += `<div class="txInfoCard ${u.side}"><b>${u.elite ? "★ " : ""}${u.name}</b>${u.side === "e" ? ` ${badge(u.e)}` : ""}
+      h += `<div class="txInfoCard ${u.side}"><div class="txInfoTop"><b>${u.elite ? "★ " : ""}${u.name}</b>${u.side === "e" ? ` ${badge(u.e)}` : ""}<button class="txInfoBtn" data-ustats="${u.id}" title="Full stats">Stats</button></div>
         <small>HP ${u.hp}/${u.mhp}${u.side !== "n" ? ` · Off ${Math.round(u.atk)} · Def ${Math.round(u.def)}${t.def ? " (+30% in cover)" : ""} · Move ${u.mv}` : ""}</small>
         ${u.side === "e" ? `<small><b>${AI[u.ai].ic} ${AI[u.ai].n}:</b> ${AI[u.ai].d}${u.elite ? " Elite: tougher than usual." : ""}${u.lit ? " 🔥 Its fuse is lit!" : ""}</small>`
           : u.side === "n" ? `<small>Reach them with any hero before the enemies take them down.</small>`
@@ -711,13 +757,17 @@
     on("#txUndo", () => { const s = unitBy(ui.sel); if (s && s.from) { s.x = s.from.x; s.y = s.from.y; s.from = null; s.moved = false; ui.ab = null; sfx("click"); draw(); } });
     on("#txWait", () => { const s = unitBy(ui.sel); if (s) { s.acted = s.moved = true; s.from = null; ui.sel = ui.ab = null; sfx("click"); afterHeroAction(); } });
     document.querySelectorAll("[data-ab]").forEach(b => b.onclick = () => pickAbil(+b.dataset.ab));
+    // the side panel redraws on hover, so its stat buttons are handled in one place
+    const side = $(".txSide");
+    if (side) side.onclick = ev => { const b = ev.target.closest && ev.target.closest("[data-ustats]"); if (!b) return; const u = unitBy(+b.dataset.ustats); if (u) u.side === "h" ? statScreen(u.h.id, u) : foeScreen(u); };
     document.querySelectorAll(".txC").forEach(c => {
       const x = +c.dataset.x, y = +c.dataset.y;
       c.onclick = () => tap(x, y);
       c.onpointerenter = () => {
         const u = unitAt(x, y), id = u ? u.id : null;
         if (id === ui.hover && ui.hoverTile && ui.hoverTile[0] === x && ui.hoverTile[1] === y) return;
-        ui.hover = id; ui.hoverTile = [x, y];
+        if (ui.pin && !id) return;
+        ui.pin = false; ui.hover = id; ui.hoverTile = [x, y];
         const i = $("#txInfo"); if (i) i.innerHTML = infoHTML();
       };
     });
@@ -747,6 +797,8 @@
       }
     }
     if (u && u.side === "h" && !done(u)) { ui.sel = u.id; ui.ab = null; sfx("click"); return draw(); }
+    // tapping anyone else shows their details in the side panel (handy without a mouse)
+    if (u) { ui.hover = u.id; ui.hoverTile = [x, y]; ui.pin = true; }
     ui.sel = ui.ab = null; draw();
   }
   document.addEventListener("keydown", ev => {

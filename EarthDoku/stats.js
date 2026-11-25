@@ -75,7 +75,7 @@ function drawStats() {
     <section class="win stCard"><h3>🪐 Saturn's shop</h3><div class="stTiles">
       ${tile(fmt$(shop.money), "in your wallet")}${tile(fmt$(shop.earned), "total earned")}
       ${tile(fmt$(shop.spent), "spent")}${tile(`${skinsHave}/${SKINS.length}`, "windows owned")}</div>
-      <div class="stBars">${[["grid", "🎯 Grid", "#e2352c"], ["map", "🗺️ Map", "#2f9e5b"], ["mini", "🕹️ Games", "#e0458f"], ["tower", "🗼 Tower", "#7d1fd1"]].map(([k, l, c]) => { const n = shop.by[k] || 0, p = shop.earned ? n / shop.earned * 100 : 0;
+      <div class="stBars">${[["grid", "🎯 Grid", "#e2352c"], ["map", "🗺️ Map", "#2f9e5b"], ["mini", "🕹️ Games", "#e0458f"], ["tower", "🗼 Tower", "#7d1fd1"], ["tactics", "♟️ Tactics", "#2b8fd6"]].map(([k, l, c]) => { const n = shop.by[k] || 0, p = shop.earned ? n / shop.earned * 100 : 0;
         return `<div class="stBar"><span class="stBl">${l}</span><span class="stTrack"><span style="width:${p}%;background:${c}"></span></span><span class="stBn">${fmt$(n)}</span></div>`; }).join("")}</div>
       ${shop.earned ? "" : `<p class="cs">Fill grid squares, guess maps and play minigames to earn money.</p>`}</section>
 
