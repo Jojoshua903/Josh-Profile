@@ -1,7 +1,7 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { makeBox, resolveXZ, hasLOS, groundAt, rayWorld } from './world.js?v=20261126a';
-import { buildHeroModel } from './models.js?v=20261126a';
-import { damage, trace, tracer, burst, ring, setBar, makeBar, eyeOf, dirFrom, chestOf, spawnProjectile, TEAM_COLOR } from './units.js?v=20261126a';
+import { makeBox, resolveXZ, hasLOS, groundAt, rayWorld } from './world.js?v=20261126f';
+import { buildHeroModel } from './models.js?v=20261126f';
+import { damage, trace, tracer, burst, ring, setBar, makeBar, eyeOf, dirFrom, chestOf, spawnProjectile, TEAM_COLOR } from './units.js?v=20261126f';
 
 // Abilities, status effects, zones, traps, walls and deployables.
 // Each ability: cast(G, h, a, ctx) -> bool, ai(G, bot, a, ctx) -> bool (should the bot cast now?).

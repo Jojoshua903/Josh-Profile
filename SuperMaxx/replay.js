@@ -1,7 +1,7 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { poseHero, killFx } from './anim.js?v=20261126a';
-import { castFx, sparks } from './vfx.js?v=20261126a';
-import { dirFrom, eyeOf } from './units.js?v=20261126a';
+import { poseHero } from './anim.js?v=20261126f';
+import { castFx, sparks } from './vfx.js?v=20261126f';
+import { dirFrom, eyeOf } from './units.js?v=20261126f';
 
 // Play of the game. Every hero's position, aim and status is recorded 20 times a second into
 // a rolling 12-second buffer. Each elimination is scored (multi-kills, ultimates, towers);
@@ -40,7 +40,7 @@ export function recEvent(G, k, h, extra = {}) {
 
 export function recKill(G, t, src) {
   const R = G.rec; if (!R || G.over || !src || src.kind !== 'hero') return;
-  if (t.kind === 'hero' && t !== src) recEvent(G, 'kill', src, { v: G.heroes.indexOf(t), fx: src.cos?.killfx || null });
+  if (t.kind === 'hero' && t !== src) recEvent(G, 'kill', src, { v: G.heroes.indexOf(t) });
   // score the moment for whoever made the play
   const w = t.kind === 'hero' && t !== src ? 100 : t.kind === 'core' ? 160 : t.kind === 'tower' ? 90 : 0;
   if (!w) return;                                                     // minions don't make the highlight reel
@@ -138,7 +138,7 @@ function fire(G, e, hooks) {
     h.recoilA = 1;
     const from = eyeOf(h).addScaledVector(dirFrom(h.yaw, 0), 0.5); from.y -= 0.35;
     const to = from.clone().addScaledVector(dirFrom(h.yaw, h.pitch), 26);
-    const col = h.cos?.tracer && h.cos.tracer !== 'rainbow' ? h.cos.tracer : h.def.color;
+    const col = h.def.color;
     const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([from, to]), new THREE.LineBasicMaterial({ color: col, transparent: true }));
     G.scene.add(line); G.fx.push({ obj: line, life: 0.12, max: 0.12, kind: 'fade' });
     hooks.shot?.(h);
@@ -148,7 +148,7 @@ function fire(G, e, hooks) {
   } else if (e.k === 'kill') {
     const v = G.heroes[e.v]; if (!v) return;
     const p = v.pos.clone().setY(v.pos.y + 1.1);
-    if (e.fx) killFx(G, p, e.fx); else sparks(G, p, 0xff5a5a, 14, 7);
+    sparks(G, p, 0xff5a5a, 14, 7);
     hooks.kill?.(h, v);
   }
 }

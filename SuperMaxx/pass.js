@@ -1,9 +1,9 @@
-import { HEROES } from './heroes.js?v=20261126a';
-import { cfg, save } from './settings.js?v=20261126a';
-import { SLOT_HEROES, slotOwned, isSlotItem } from './slots.js?v=20261126a';
-import { sprayUrl } from './sprays.js?v=20261126a';
-import { isContractHero, contractDone, tasksDone } from './contracts.js?v=20261126a';
-export { isContractHero } from './contracts.js?v=20261126a';
+import { HEROES } from './heroes.js?v=20261126f';
+import { cfg, save } from './settings.js?v=20261126f';
+import { SLOT_HEROES, slotOwned, isSlotItem, setSkinGate } from './slots.js?v=20261126f';
+import { sprayUrl } from './sprays.js?v=20261126f';
+import { isContractHero, contractDone, tasksDone } from './contracts.js?v=20261126f';
+export { isContractHero } from './contracts.js?v=20261126f';
 
 // Season pass: XP from matches (mostly from winning) climbs a 30-tier track of hero skins,
 // cosmetics and three season heroes. Progress is saved locally.
@@ -54,33 +54,18 @@ export const SKINS = [
   { id: 'medic-plague', hero: 'medic', slot: true, name: 'Plague Doctor', color: 0x6a4a8a, palette: { main: 0x2a2234, trim: 0xb98cff, dark: 0x120e18, finish: { rough: 0.7, glow: 0.4 } } },
   { id: 'spark-thunder', hero: 'spark', slot: true, name: 'Thunderhead', color: 0x7af0ff, palette: { main: 0x3a4a8a, trim: 0x7af0ff, dark: 0x101a3a, finish: { glow: 0.9, rough: 0.25 } } },
   { id: 'builder-marble', hero: 'builder', slot: true, name: 'Marble Mason', color: 0xf0ece4, palette: { main: 0xf0ece4, trim: 0xffc93c, dark: 0x6a6a72, finish: { rough: 0.15, trimMetal: 0.5, glow: 0.15 } } },
+  // contract heroes: only in the machine once you've recruited them
+  { id: 'wellington-truffle', hero: 'wellington', slot: true, name: 'Black Truffle', color: 0x2a1f1a, palette: { main: 0x2a1f1a, trim: 0xffd23c, dark: 0x120c08, skin: 0x3a2a20, finish: { rough: 0.25, trimMetal: 0.6, glow: 0.2 } } },
+  { id: 'shepherd-tartan', hero: 'shepherd', slot: true, name: 'Royal Tartan', color: 0x2a4fb0, palette: { main: 0x2a4fb0, trim: 0xffd23c, dark: 0x6a1a2a, skin: 0xe8b996, finish: { rough: 0.6, trimMetal: 0.3 } } },
+  { id: 'microwave-retro', hero: 'microwave', slot: true, name: 'Atomic Diner', color: 0x5ad8c8, palette: { main: 0x5ad8c8, trim: 0xff5a5a, dark: 0xf0ece4, skin: 0x5ad8c8, finish: { metal: 0.45, rough: 0.15, glow: 0.35 } } },
 ];
 
-// Cosmetics: titles and banners show on your player card, tracers recolour your shots,
-// elimination effects play on whoever you knock out, gliders are your Survivor canopy.
+// Cosmetics: gliders (Survivor canopy colours) and slot machine sprays.
 export const COS_TYPES = {
-  title: { label: 'Title', icon: '🏷️' }, banner: { label: 'Banner', icon: '🚩' }, tracer: { label: 'Tracer', icon: '✨' },
-  killfx: { label: 'Elimination effect', icon: '💥' }, glider: { label: 'Glider', icon: '🪂' },
+  glider: { label: 'Glider', icon: '🪂' },
   spray: { label: 'Spray', icon: '🎨' },
 };
 export const COSMETICS = [
-  { id: 't-rookie', type: 'title', name: 'Rookie Maxxer' }, { id: 't-hillhog', type: 'title', name: 'Hill Hog' },
-  { id: 't-duelist', type: 'title', name: 'Duelist' }, { id: 't-showoff', type: 'title', name: 'Showstopper' },
-  { id: 't-storm', type: 'title', name: 'Storm Chaser' }, { id: 't-sharp', type: 'title', name: 'Pixel Perfect' },
-  { id: 't-golden', type: 'title', name: 'Golden Hour Hero' }, { id: 't-legend', type: 'title', name: 'Legend of Maxx' },
-  { id: 'b-sunburst', type: 'banner', name: 'Sunburst', a: 0xffc93c, b: 0xff5a36, pattern: 'rays' },
-  { id: 'b-waves', type: 'banner', name: 'Harbour Waves', a: 0x2fb39a, b: 0x2a5bd7, pattern: 'waves' },
-  { id: 'b-checker', type: 'banner', name: 'Pit Lane', a: 0x1d2340, b: 0xfff3c4, pattern: 'checker' },
-  { id: 'b-confetti', type: 'banner', name: 'Confetti', a: 0xff4fa3, b: 0xfff0d6, pattern: 'dots' },
-  { id: 'b-circuit', type: 'banner', name: 'Circuit', a: 0x3ccf9a, b: 0x1d2340, pattern: 'grid' },
-  { id: 'b-blossom', type: 'banner', name: 'Blossom', a: 0xffffff, b: 0xe98aa6, pattern: 'dots' },
-  { id: 'b-goldleaf', type: 'banner', name: 'Gold Leaf', a: 0xffe08a, b: 0xd9a441, pattern: 'rays' },
-  { id: 'tr-pink', type: 'tracer', name: 'Hot Pink', color: 0xff4fa3 }, { id: 'tr-lime', type: 'tracer', name: 'Laser Lime', color: 0x9dff3c },
-  { id: 'tr-ice', type: 'tracer', name: 'Glacier', color: 0x9fe8ff }, { id: 'tr-void', type: 'tracer', name: 'Void', color: 0x8a3cff },
-  { id: 'tr-gold', type: 'tracer', name: 'Gilded', color: 0xffd23c }, { id: 'tr-rainbow', type: 'tracer', name: 'Rainbow', color: 'rainbow' },
-  { id: 'k-confetti', type: 'killfx', name: 'Party Popper', fx: 'confetti', glyph: '🎉' }, { id: 'k-hearts', type: 'killfx', name: 'Smitten', fx: 'hearts', glyph: '💖' },
-  { id: 'k-lightning', type: 'killfx', name: 'Thunderclap', fx: 'lightning', glyph: '⚡' }, { id: 'k-coins', type: 'killfx', name: 'Jackpot', fx: 'coins', glyph: '🪙' },
-  { id: 'k-fireworks', type: 'killfx', name: 'Grand Finale', fx: 'fireworks', glyph: '🎆' },
   { id: 'g-sunset', type: 'glider', name: 'Sunset', a: 0xff8a3c, b: 0xffd23c }, { id: 'g-checker', type: 'glider', name: 'Chequered', a: 0x1d2340, b: 0xffffff },
   { id: 'g-neon', type: 'glider', name: 'Neon Nights', a: 0x18e0f0, b: 0xff4fa3 }, { id: 'g-golden', type: 'glider', name: 'Golden Wing', a: 0xffc93c, b: 0xffffff, glow: true },
   // ---- sprays: slot machine only. Tag a wall or the floor with T during a match ----
@@ -105,17 +90,13 @@ const MAIN = {
   20: ['skin', 'croc-albino'], 21: ['skin', 'warden-eclipse'], 22: ['skin', 'thicket-frost'], 24: ['skin', 'ratchet-cobalt'],
   26: ['skin', 'mirage-noir'], 28: ['skin', 'avalanche-gold'], 30: ['hero', 'cavalier'],
 };
-const COS_TIER = {
-  't-rookie': 1, 'b-sunburst': 2, 't-hillhog': 3, 'tr-pink': 4, 'b-waves': 5, 't-duelist': 6, 'tr-lime': 7, 'b-checker': 8,
-  't-showoff': 9, 'k-confetti': 10, 'b-confetti': 11, 'tr-ice': 12, 't-storm': 13, 'k-hearts': 14, 'b-circuit': 15,
-  'g-sunset': 16, 't-sharp': 17, 'tr-void': 18, 'k-lightning': 19, 't-golden': 20, 'g-checker': 21, 'b-blossom': 22,
-  'k-coins': 23, 'tr-gold': 24, 'g-neon': 25, 'g-golden': 26, 'tr-rainbow': 27, 'b-goldleaf': 28, 'k-fireworks': 29, 't-legend': 30,
-};
+const COS_TIER = { 'g-sunset': 16, 'g-checker': 21, 'g-neon': 25, 'g-golden': 26 };
 export const TRACK = [
   ...Object.entries(MAIN).map(([tier, [type, id]]) => ({ tier: +tier, type, id })),
   ...Object.entries(COS_TIER).map(([id, tier]) => ({ tier, type: cosById(id).type, id, cos: true })),
 ].sort((a, b) => a.tier - b.tier || (a.cos ? 1 : 0) - (b.cos ? 1 : 0));
-export const MAX_TIER = Math.max(...TRACK.map(r => r.tier));
+// The pass stays 30 tiers long; tiers with nothing on them yet show as open slots.
+export const MAX_TIER = 30;
 
 // ---------- saved progress ----------
 const KEY = 'supermaxx-pass';
@@ -137,13 +118,18 @@ const skinReward = id => TRACK.find(r => r.type === 'skin' && r.id === id);
 export const heroTier = id => heroReward(id)?.tier || 0;           // 0 = in the base roster
 export const skinTier = id => skinReward(id)?.tier || 0;
 export const heroOwned = id => isContractHero(id) ? contractDone(id) : SLOT_HEROES.includes(id) ? slotOwned(id) : tier() >= heroTier(id);
-export const skinOwned = id => isSlotItem(id) ? slotOwned(id) : tier() >= skinTier(id);
+// A skin only counts once you have its hero; until then pass skins wait for you and slot skins stay out of the machine.
+export const skinOwned = id => heroOwned(skinById(id)?.hero) && (isSlotItem(id) ? slotOwned(id) : tier() >= skinTier(id));
+const skinHeroName = id => HEROES.find(h => h.id === skinById(id)?.hero)?.callsign || 'its hero';
+const needsHero = id => !heroOwned(skinById(id)?.hero);
 // What a locked hero or skin is waiting on, for tiles and chips: the slot machine or a pass tier.
-export const lockShort = (id, skin) => !skin && isContractHero(id) ? `📜 ${tasksDone(id)}/3` : isSlotItem(id) ? '🎰' : `T${skin ? skinTier(id) : heroTier(id)}`;
-export const lockLong = (id, skin) => !skin && isContractHero(id) ? `Recruitment contract · ${tasksDone(id)} of 3 tasks done` : isSlotItem(id) ? 'Slot machine prize' : `Season pass · tier ${skin ? skinTier(id) : heroTier(id)}`;
+export const lockShort = (id, skin) => skin && needsHero(id) ? 'Hero' : !skin && isContractHero(id) ? `📜 ${tasksDone(id)}/3` : isSlotItem(id) ? '🎰' : `T${skin ? skinTier(id) : heroTier(id)}`;
+export const lockLong = (id, skin) => skin && needsHero(id) ? `Unlock ${skinHeroName(id)} first, then ${isSlotItem(id) ? 'win it from the slot machine' : `season pass tier ${skinTier(id)}`}`
+  : !skin && isContractHero(id) ? `Recruitment contract · ${tasksDone(id)} of 3 tasks done` : isSlotItem(id) ? 'Slot machine prize' : `Season pass · tier ${skin ? skinTier(id) : heroTier(id)}`;
 export { isSlotItem };
 export const skinsFor = heroId => SKINS.filter(s => s.hero === heroId);
 export const skinById = id => SKINS.find(s => s.id === id);
+setSkinGate(id => heroOwned(skinById(id)?.hero));
 
 // A hero def wearing a skin. With no id, uses whatever the player has equipped (if owned).
 export function dressed(def, skinId = cfg.skins?.[def.id]) {
@@ -183,30 +169,13 @@ export function myCosIds() {
 }
 // Resolve ids (yours or another player's) into what the game needs.
 export function resolveCos(ids = {}) {
-  const get = t => { const c = cosById(ids[t]); return c && c.type === t ? c : null; };
-  const tr = get('tracer'), k = get('killfx'), g = get('glider');
-  return { tracer: tr ? tr.color : null, killfx: k ? k.fx : null, glider: g ? { a: g.a, b: g.b, glow: !!g.glow } : null,
-    title: get('title')?.name || '', banner: get('banner') };
+  const c = cosById(ids.glider), g = c?.type === 'glider' ? c : null;
+  return { glider: g ? { a: g.a, b: g.b, glow: !!g.glow } : null };
 }
 
 const css = c => '#' + c.toString(16).padStart(6, '0');
-export function bannerCss(c) {
-  if (!c) return '';
-  const a = css(c.a), b = css(c.b);
-  return {
-    rays: `background:repeating-conic-gradient(from 0deg at 18% 120%, ${a} 0 7deg, ${b} 7deg 14deg)`,
-    waves: `background:radial-gradient(circle at 50% 100%, ${a} 0 42%, transparent 43%) 0 0/34px 18px, ${b}`,
-    checker: `background:conic-gradient(${a} 25%, ${b} 0 50%, ${a} 0 75%, ${b} 0) 0 0/22px 22px`,
-    dots: `background:radial-gradient(${a} 26%, transparent 28%) 0 0/16px 16px, ${b}`,
-    grid: `background:linear-gradient(${a} 2px, transparent 2px) 0 0/18px 18px, linear-gradient(90deg, ${a} 2px, transparent 2px) 0 0/18px 18px, ${b}`,
-  }[c.pattern];
-}
 // Little preview art for a cosmetic (pass track, end screen).
 export function cosArt(c) {
-  if (c.type === 'title') return `<div class="ca ca-title"><span>${c.name}</span></div>`;
-  if (c.type === 'banner') return `<div class="ca ca-banner" style="${bannerCss(c)}"></div>`;
-  if (c.type === 'tracer') return `<div class="ca ca-tracer" style="--c:${c.color === 'rainbow' ? 'linear-gradient(90deg,#ff4f4f,#ffd23c,#3ccf9a,#2f8bff,#b98cff)' : css(c.color)}"><i></i><i></i><i></i></div>`;
-  if (c.type === 'killfx') return `<div class="ca ca-fx"><span>${c.glyph}</span></div>`;
   if (c.type === 'spray') return `<div class="ca ca-spray"><img src="${sprayUrl(c)}" alt=""></div>`;
   return `<div class="ca ca-glider" style="--a:${css(c.a)};--b:${css(c.b)}"><i></i></div>`;
 }

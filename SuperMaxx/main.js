@@ -1,31 +1,31 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { HEROES, MAPS, DIFFICULTY, TUNING, SURVIVOR_MAP, SURVIVOR, HILL, DUEL, CART } from './data.js?v=20261126a';
-import { initSurvivor, updateSurvivor, survivorLeaders, stormInfo, inStorm } from './survivor.js?v=20261126a';
-import { initHill, updateHill, hillVisuals, onHill } from './hill.js?v=20261126a';
-import { initCart, updateCart, nearCart, cartLead } from './payload.js?v=20261126a';
-import { buildWorld, mirror } from './world.js?v=20261126a';
+import { HEROES, MAPS, DIFFICULTY, TUNING, SURVIVOR_MAP, SURVIVOR, HILL, DUEL, CART } from './data.js?v=20261126f';
+import { initSurvivor, updateSurvivor, survivorLeaders, stormInfo, inStorm } from './survivor.js?v=20261126f';
+import { initHill, updateHill, hillVisuals, onHill } from './hill.js?v=20261126f';
+import { initCart, updateCart, nearCart, cartLead } from './payload.js?v=20261126f';
+import { buildWorld, mirror } from './world.js?v=20261126f';
 import { createHero, spawnHero, createStructure, spawnMinion, fire, releaseFire, chargeLevel, startReload, tickHero, tickCorpse, chestOf,
-  updateMinions, updateStructures, updateProjectiles, updateFx, dirFrom, eyeOf, TEAM_COLOR } from './units.js?v=20261126a';
-import { steer, initBot, updateBot } from './botbrain.js?v=20261126a';
-import { castSlot, updateAbilities } from './abilities.js?v=20261126a';
-import { floatText } from './anim.js?v=20261126a';
-import { cfg, applyGraphics } from './settings.js?v=20261126a';
-import { initMenu, showMenu, menuFrame, openSettings, settingsVisible } from './menu.js?v=20261126a';
-import { dressed, heroOwned, wear, myCosIds, resolveCos, matchXp, award, rewardInfo, tierProgress, SEASON, MAX_TIER, cosById, cosOwned, equippedCos } from './pass.js?v=20261126a';
-import { aimSpray, placeSpray, SPRAY_CD } from './sprays.js?v=20261126a';
-import { headshot } from './portraits.js?v=20261126a';
-import './personality.js?v=20261126a';
-import { openSession, tickPuppet, myUid, lobbyState, leaveRoom, onLobby } from './net.js?v=20261126a';
-import { initAudio, applyVolume, tone, noise, ABIL_SFX, audioTap } from './audio.js?v=20261126a';
-import { startClipRec, saveClip, sendClip } from './clips.js?v=20261126a';
-import { playMusic } from './music.js?v=20261126a';
-import { sparks, castFx, lightFlash } from './vfx.js?v=20261126a';
-import { applyEnvironment } from './stage.js?v=20261126a';
-import { perfFrame } from './perf.js?v=20261126a';
-import { gainMastery } from './mastery.js?v=20261126a';
-import { recordMatch, tasksDone } from './contracts.js?v=20261126a';
-import { startTutorial, stopTutorial, tickTutorial, tutorialCast, tutorialKill, onTutorialPass } from './tutorial.js?v=20261126a';
-import { initReplay, recFrame, recEvent, recKill, finalClip, startPlayback, tickPlayback, stopPlayback } from './replay.js?v=20261126a';
+  updateMinions, updateStructures, updateProjectiles, updateFx, dirFrom, eyeOf, TEAM_COLOR } from './units.js?v=20261126f';
+import { steer, initBot, updateBot } from './botbrain.js?v=20261126f';
+import { castSlot, updateAbilities } from './abilities.js?v=20261126f';
+import { floatText } from './anim.js?v=20261126f';
+import { cfg, applyGraphics } from './settings.js?v=20261126f';
+import { initMenu, showMenu, menuFrame, openSettings, settingsVisible } from './menu.js?v=20261126f';
+import { dressed, heroOwned, wear, myCosIds, resolveCos, matchXp, award, rewardInfo, tierProgress, SEASON, MAX_TIER, cosById, cosOwned, equippedCos } from './pass.js?v=20261126f';
+import { aimSpray, placeSpray, SPRAY_CD } from './sprays.js?v=20261126f';
+import { headshot } from './portraits.js?v=20261126f';
+import './personality.js?v=20261126f';
+import { openSession, tickPuppet, myUid, lobbyState, leaveRoom, onLobby } from './net.js?v=20261126f';
+import { initAudio, applyVolume, tone, noise, ABIL_SFX, audioTap } from './audio.js?v=20261126f';
+import { startClipRec, saveClip, sendClip } from './clips.js?v=20261126f';
+import { playMusic } from './music.js?v=20261126f';
+import { sparks, castFx, lightFlash } from './vfx.js?v=20261126f';
+import { applyEnvironment } from './stage.js?v=20261126f';
+import { perfFrame } from './perf.js?v=20261126f';
+import { gainMastery } from './mastery.js?v=20261126f';
+import { recordMatch, tasksDone } from './contracts.js?v=20261126f';
+import { startTutorial, stopTutorial, tickTutorial, tutorialCast, tutorialKill, onTutorialPass } from './tutorial.js?v=20261126f';
+import { initReplay, recFrame, recEvent, recKill, finalClip, startPlayback, tickPlayback, stopPlayback } from './replay.js?v=20261126f';
 let envRT = null;
 
 const $ = id => document.getElementById(id);
@@ -250,7 +250,7 @@ function startGame(m = mode, online = null) {
   renderer.compile(G.scene, camera);
   running = true; paused = false; streak = { multi: 0, lastT: -9, life: 0 };
   lockMouse();
-  if (surv) banner('Drop in!', '#9b5cff', 'Steer your glider with WASD. Last one standing wins.');
+  if (surv) banner('Survive!', '#9b5cff', 'You start somewhere on the island. Loot up, stay hidden, last one standing wins.');
   else if (duel) banner('Duel!', '#1d2340', `${map.name} · first to ${DUEL.toWin} rounds`);
   else if (cart) banner('Push the cart', '#3ccf9a', `${map.name} · get it to their flag`);
   else if (hill) banner('Take the hill', '#e0a100', `${map.name} · first to ${HILL.target}${online ? ' · online' : ''}`);
@@ -549,7 +549,9 @@ let beatT = 0;
 const unitName = u => !u ? (G.mode === 'survivor' ? 'The storm' : 'The fountain') : u.kind === 'hero' ? (u.isPlayer ? 'You' : u.name) : u.kind === 'tower' ? 'A tower' : u.kind === 'core' ? 'The core' : u.deploy ? `${u.owner?.name || 'A'}'s gadget` : 'A minion';
 function deathRecap(src) {
   const killer = src?.kind === 'hero' ? src : src?.owner?.kind === 'hero' ? src.owner : null;
-  G.killCam = killer && killer !== P ? { who: killer, t: 3.4 } : null;
+  // follow the killer for most of the respawn wait (up to 6s); in Survivor and Duel there's no respawn, so the full 6s
+  const rt = P.respawnT, camT = Number.isFinite(rt) && rt > 1.5 ? Math.min(KILLCAM_T, rt - 0.4) : KILLCAM_T;
+  G.killCam = killer && killer !== P ? { who: killer, t: camT, gone: 0 } : null;
   // everything that hurt you this life, grouped by who dealt it, shown as a share of the total
   const by = new Map();
   for (const e of (P._log || [])) {
@@ -576,9 +578,11 @@ function deathRecap(src) {
   el.classList.remove('hidden', 'on'); void el.offsetWidth; el.classList.add('on');
 }
 const camBack = new THREE.Vector3(), camLook = new THREE.Vector3();
+const KILLCAM_T = 6, KILLCAM_AFTER = 1.5;            // seconds on the killer, and how long to linger if they go down too
 function killCamera(dt) {
   const kc = G.killCam;
-  if (!kc || kc.t <= 0 || !kc.who.alive) return false;
+  if (!kc || kc.t <= 0) return false;
+  if (!kc.who.alive && (kc.gone += dt) > KILLCAM_AFTER) return false;
   kc.t -= dt;
   const k = kc.who, f = dirFrom(k.yaw, k.pitch || 0), side = new THREE.Vector3(Math.cos(k.yaw), 0, -Math.sin(k.yaw));
   camBack.copy(k.pos).addScaledVector(new THREE.Vector3(f.x, 0, f.z).normalize(), -3.2).addScaledVector(side, 0.9); camBack.y = k.pos.y + 2.4;
@@ -798,6 +802,7 @@ const events = {
 // Per-hero feel for the first-person gun.
 const RECOIL = { vanguard: 0.25, striker: 0.18, ember: 0.7, warden: 1, thicket: 0.9, ratchet: 0.3, mirage: 0.3, avalanche: 0.55, tempo: 0.06, kestrel: 0.4, croc: 0.6, cavalier: 0.45, slime: 0.5, brawler: 0, chipmunk: 0.12, elf: 0.35, dancer: 0.05, mole: 0.7, medic: 0.2, spark: 0.06, builder: 0.6, wellington: 0.45, shepherd: 0.35, microwave: 0.04 };
 const ULT_NEAR = 30;                                  // metres: supers further away than this stay quiet
+const VOICE_NEAR = 25;                                // metres: other heroes' voice lines only play inside this
 const SPIN_RELOAD = new Set(['striker', 'mirage', 'ratchet']);
 function ultFlash(color) {
   const f = $('ultflash'); f.style.background = `radial-gradient(circle, transparent 40%, ${hex(color)}aa)`;
@@ -820,6 +825,7 @@ function say(h, kind, victim) {
 function sayLine(h, line) {
   if (!cfg.voiceLines) return;
   if (!line) return;
+  if (h !== P && P?.pos && h.pos && h.pos.distanceTo(P.pos) > VOICE_NEAR) return;   // other heroes are only heard up close
   const v = $('voice');
   const side = h.team === 'blue' ? 'b' : 'r';
   v.innerHTML = `<b class="${side}">${h.def.callsign}${h.isPlayer ? ' <small>(you)</small>' : ''}</b> “${line}”`;
@@ -887,7 +893,7 @@ $('clipSave').onclick = () => {
   if (!lastClip || clipSaved) return;
   saveClip(lastClip).then(() => { clipSaved = true; clipButtons(); tone(784, 0.12, 'triangle', 0.05, 1.2); }).catch(() => { $('clipSave').textContent = 'Couldn’t save (storage full?)'; });
 };
-$('clipSend').onclick = () => { if (lastClip) sendClip(lastClip).then(r => { if (r === 'downloaded') $('clipSend').textContent = '✓ Downloaded'; }); };
+$('clipSend').onclick = () => { if (lastClip) sendClip(lastClip).then(r => { if (r === 'downloaded') $('clipSend').textContent = '✓ Downloaded'; if (r === 'shared') $('clipSend').textContent = '✓ Sent'; }); };
 $('quit').onclick = () => toMenu('main'); $('toMenu').onclick = () => toMenu('roster'); $('toMain').onclick = () => toMenu('main');
 // the host closing the room ends the match for everyone else
 onLobby((st, extra) => {
@@ -911,7 +917,7 @@ function wishDir() {
 let sprayAt = -99;
 function trySpray() {
   const c = cosById(equippedCos().spray);
-  if (!c || c.type !== 'spray' || !cosOwned(c.id)) { floatText(G, chestOf(P).setY(P.pos.y + 2.2), 'No spray equipped (Closet)', '#ffffff', 0.8); tone(160, 0.08, 'square', 0.04, 1); return; }
+  if (!c || c.type !== 'spray' || !cosOwned(c.id)) { floatText(G, chestOf(P).setY(P.pos.y + 2.2), 'No spray equipped (equip one in Slots)', '#ffffff', 0.8); tone(160, 0.08, 'square', 0.04, 1); return; }
   if (!P.alive || G.time - sprayAt < SPRAY_CD) { tone(160, 0.08, 'square', 0.04, 1); return; }
   const hit = aimSpray(G, eyeOf(P), dirFrom(P.yaw, P.pitch));
   if (!hit) { floatText(G, chestOf(P).setY(P.pos.y + 2.2), 'Get closer to a wall', '#ffffff', 0.8); tone(160, 0.08, 'square', 0.04, 1); return; }

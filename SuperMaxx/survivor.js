@@ -1,10 +1,10 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { SURVIVOR } from './data.js?v=20261126a';
-import { mirror, groundAt, resolveXZ } from './world.js?v=20261126a';
-import { damage, setBar, burst, ring, chestOf } from './units.js?v=20261126a';
+import { SURVIVOR, TUNING } from './data.js?v=20261126f';
+import { mirror, groundAt, resolveXZ } from './world.js?v=20261126f';
+import { damage, setBar, burst, ring, chestOf } from './units.js?v=20261126f';
 
-// Survivor: free-for-all battle royale. Sky drop with gliders, loot on the ground,
-// a storm that closes in phase by phase, no respawns, last hero standing wins.
+// Survivor: free-for-all battle royale. Everyone starts on the ground at a random spot, loot on
+// the ground, a storm that closes in phase by phase, no respawns, last hero standing wins.
 
 const TAU = Math.PI * 2;
 
@@ -39,16 +39,27 @@ export function initSurvivor(G) {
   // a little extra in every ruin doorway area so houses are worth looting
   for (const [bx, bz, w, d, h] of blocks) if (h === 1.1 && Math.random() < 0.8) spawnLoot(G, rollType(), bx + 1.4, bz);
 
-  // everyone drops in from the sky, spread around the island
-  G.heroes.forEach((h, i) => {
-    const a = (i / G.heroes.length) * TAU + Math.random() * 0.4, d = 20 + Math.random() * 45;
-    h.pos.set(Math.cos(a) * d, SURVIVOR.dropHeight + Math.random() * 6, Math.sin(a) * d);
+  // everyone wakes up on the ground at a random open spot, kept well apart from each other
+  const spots = [];
+  G.heroes.forEach(h => {
+    let best = null, bestD = -1;
+    for (let tries = 0; tries < 160; tries++) {
+      const x = (Math.random() * 2 - 1) * (m.W - 6), z = (Math.random() * 2 - 1) * (m.L - 6);
+      if (Math.hypot(x, z) < 9 || blocked(x, z)) continue;          // not on the centre stage or inside cover
+      const d = spots.reduce((a, s) => Math.min(a, Math.hypot(x - s.x, z - s.z)), Infinity);
+      if (d > bestD) { best = { x, z }; bestD = d; }
+      if (d > SPAWN_GAP) break;
+    }
+    best ||= { x: (Math.random() * 2 - 1) * 40, z: (Math.random() * 2 - 1) * 40 };
+    spots.push(best);
+    h.pos.set(best.x, 0, best.z); h.pos.y = groundAt(h.pos, TUNING.radius, G.colliders);
     h.vel.set(0, 0, 0);
-    h.armor = 0; h.power = 0; h.place = 0;
-    h.yaw = Math.atan2(h.pos.x, h.pos.z);           // face the centre
-    startGlide(h);
+    h.armor = 0; h.power = 0; h.place = 0; h.glide = false;
+    if (h.chute) h.chute.visible = false;
+    h.yaw = Math.atan2(-h.pos.x, -h.pos.z) + (Math.random() - 0.5) * 1.2;   // roughly towards the middle
   });
 }
+const SPAWN_GAP = 22;                                // metres between spawns when there's room
 
 function rollType() {
   const tot = SURVIVOR.lootTypes.reduce((s, t) => s + t.w, 0);
@@ -103,43 +114,9 @@ function grab(G, h, l) {
   return true;
 }
 
-// ---------- gliding ----------
-function startGlide(h) {
-  h.glide = true;
-  const gl = h.cos?.glider;                         // season pass glider colours
-  if (!h.chute) {
-    const c = new THREE.Group();
-    const canopy = new THREE.Mesh(new THREE.SphereGeometry(1.4, 16, 8, 0, TAU, 0, Math.PI / 2.6),
-      new THREE.MeshStandardMaterial({ color: gl ? gl.a : h.def.color, side: THREE.DoubleSide, emissive: gl?.glow ? gl.a : 0, emissiveIntensity: gl?.glow ? 0.45 : 0 }));
-    canopy.scale.y = 0.55; c.add(canopy);
-    const stripe = new THREE.Mesh(new THREE.TorusGeometry(1.0, gl ? 0.14 : 0.05, 6, 32), new THREE.MeshStandardMaterial({ color: gl ? gl.b : 0xffffff }));
-    stripe.rotation.x = Math.PI / 2; stripe.position.y = 0.42; c.add(stripe);
-    for (let i = 0; i < 4; i++) {
-      const a = i / 4 * TAU + Math.PI / 4;
-      const line = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 1.6, 3), new THREE.MeshBasicMaterial({ color: 0x1d2340 }));
-      line.position.set(Math.cos(a) * 0.6, -0.7, Math.sin(a) * 0.6); line.rotation.z = Math.cos(a) * 0.45; line.rotation.x = -Math.sin(a) * 0.45;
-      c.add(line);
-    }
-    c.position.y = 3.6;
-    h.mesh.add(c); h.chute = c;
-  }
-  h.chute.visible = true;
-}
-
-// Called before physics each frame for every hero.
-export function survivorPreMove(G, h) {
-  if (!h.glide) return;
-  if (h.vel.y < -SURVIVOR.glideFall) h.vel.y = -SURVIVOR.glideFall;
-}
-export function survivorPostMove(G, h) {
-  if (h.glide && h.onGround) {
-    h.glide = false;
-    if (h.chute) h.chute.visible = false;
-    burst(G, h.pos.clone().setY(0.2), 0xffffff, 1.2);
-    G.ev.landed?.(h);
-  }
-  if (h.chute && h.chute.visible) h.chute.rotation.z = Math.sin(G.time * 2 + h.pos.x) * 0.08;
-}
+// Survivor hooks around physics. Nobody glides any more (everyone starts on the ground), so these stay as no-ops for main.js.
+export function survivorPreMove() {}
+export function survivorPostMove() {}
 
 // ---------- storm ----------
 function nextPhase(G) {

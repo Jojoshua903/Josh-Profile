@@ -1,5 +1,5 @@
 // Maps and tuning shared across the game. The hero roster lives in heroes.js.
-export { HEROES } from './heroes.js?v=20261126a';
+export { HEROES } from './heroes.js?v=20261126f';
 
 
 export const DIFFICULTY = {
@@ -142,13 +142,34 @@ function islandBlocks() {
   }
   for (let i = 0; i < 6; i++) out.push([(r() * 2 - 1) * 66, -10 - r() * 60, 1.6, 1.6, 6]);              // pillars
   for (let i = 0; i < 5; i++) out.push([(r() * 2 - 1) * 60, -14 - r() * 54, 6 + r() * 3, 6 + r() * 3, 1.2]); // platforms
+
+  // ---- hiding places: more ruins, hedge corners, sheds and rock clusters, all taller than a hero ----
+  for (const [x, z] of [[-66, -42], [66, -40], [-30, -72], [8, -44]]) ruin(x, z, 7 + r() * 3, 7 + r() * 3);
+  const free = (x, z, rad) => Math.hypot(x, z) > 14 && out.every(([bx, bz, w, d]) => Math.abs(x - bx) > w / 2 + rad || Math.abs(z - bz) > d / 2 + rad);
+  const spot = rad => { for (let k = 0; k < 40; k++) { const x = (r() * 2 - 1) * 70, z = -8 - r() * 66; if (free(x, z, rad)) return [x, z]; } return null; };
+  const H = 2.6, T = 0.8;
+  for (let i = 0; i < 10; i++) {                                         // L-shaped hedge corners
+    const p = spot(4.5); if (!p) continue;
+    const [x, z] = p, a = 4 + r() * 3, b = 3.5 + r() * 2.5, sx = r() < 0.5 ? 1 : -1, sz = r() < 0.5 ? 1 : -1;
+    out.push([x + sx * a / 2, z, a, T, H], [x, z + sz * b / 2, T, b, H]);
+  }
+  for (let i = 0; i < 5; i++) {                                          // three-walled sheds to duck into
+    const p = spot(3.5); if (!p) continue;
+    const [x, z] = p, s = 3.6, open = Math.floor(r() * 4);
+    [[x, z - s / 2, s, T], [x, z + s / 2, s, T], [x - s / 2, z, T, s], [x + s / 2, z, T, s]].forEach((w, k) => { if (k !== open) out.push([...w, H]); });
+  }
+  for (let i = 0; i < 6; i++) {                                          // boulder clusters
+    const p = spot(3.5); if (!p) continue;
+    const [x, z] = p;
+    for (let k = 0; k < 3; k++) out.push([x + (r() - 0.5) * 3.4, z + (r() - 0.5) * 3.4, 1.8 + r() * 1.2, 1.8 + r() * 1.2, 2.2 + r() * 0.9]);
+  }
   out.push([0, 0, 10, 10, 1.2], [0, 0, 4, 4, 2.4]);                                                      // centre stage
   return out;
 }
 
 export const SURVIVOR_MAP = {
   id: 'island', theme: 'terraces', survivor: true, name: 'Maxx Island', lanesLabel: 'Free for all',
-  desc: 'Twelve drop in. One walks out.',
+  desc: 'Twelve wake up somewhere on the island. One walks out.',
   W: 80, L: 80, accent: 0x9b5cff, propScale: 3,
   lanes: [], towers: [],
   blocks: islandBlocks(),

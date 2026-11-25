@@ -74,16 +74,23 @@ export function startClipRec(gl, meta, audio) {
   return { frame, stop };
 }
 
+const clipFile = c => new File([c.blob], `SuperMaxx - ${c.who} - ${c.label}.${clipExt(c.mime)}`.replace(/[\\/:*?"<>|]/g, ''), { type: c.mime });
+export const canShareClips = () => !!navigator.canShare?.({ files: [new File([''], 'x.webm', { type: 'video/webm' })] });
+
+// Save the video file to this computer.
+export function downloadClip(c) {
+  const file = clipFile(c), url = URL.createObjectURL(file), a = document.createElement('a');
+  a.href = url; a.download = file.name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  return 'downloaded';
+}
+
 // Send a clip: the share sheet if this browser can share files, otherwise a download.
 export async function sendClip(c) {
-  const name = `SuperMaxx - ${c.who} - ${c.label}.${clipExt(c.mime)}`.replace(/[\\/:*?"<>|]/g, '');
-  const file = new File([c.blob], name, { type: c.mime });
+  const file = clipFile(c);
   if (navigator.canShare?.({ files: [file] })) {
     try { await navigator.share({ files: [file], title: `${c.who} · ${c.label}`, text: `Play of the game in SuperMaxx: ${c.who} (${c.callsign}) · ${c.label}` }); return 'shared'; }
     catch (e) { if (e?.name === 'AbortError') return 'cancelled'; }
   }
-  const url = URL.createObjectURL(file), a = document.createElement('a');
-  a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
-  return 'downloaded';
+  return downloadClip(c);
 }

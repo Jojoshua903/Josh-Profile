@@ -1,19 +1,19 @@
-import { LOOK, applyEnvironment } from './stage.js?v=20261126a';
-import { masteryOf } from './mastery.js?v=20261126a';
+import { LOOK, applyEnvironment } from './stage.js?v=20261126f';
+import { masteryOf } from './mastery.js?v=20261126f';
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { HEROES, ARCHETYPES, archOf } from './heroes.js?v=20261126a';
-import './personality.js?v=20261126a';
-import { MAPS, DIFFICULTY } from './data.js?v=20261126a';
-import { THEMES } from './scenery.js?v=20261126a';
-import { cfg, save, resetSettings, QUALITY } from './settings.js?v=20261126a';
-import { splash, headshot, mapArt } from './portraits.js?v=20261126a';
-import { initOnline, enterOnline } from './online.js?v=20261126a';
-import { enterCloset } from './closet.js?v=20261126a';
-import { enterSlots } from './slotmachine.js?v=20261126a';
-import { tokens as slotTokens } from './slots.js?v=20261126a';
-import { CONTRACTS, contractOf, taskFrac, taskDone, statOf, tasksDone, openContracts } from './contracts.js?v=20261126a';
+import { HEROES, ARCHETYPES, archOf } from './heroes.js?v=20261126f';
+import './personality.js?v=20261126f';
+import { MAPS, DIFFICULTY } from './data.js?v=20261126f';
+import { THEMES } from './scenery.js?v=20261126f';
+import { cfg, save, resetSettings, QUALITY } from './settings.js?v=20261126f';
+import { splash, headshot, mapArt } from './portraits.js?v=20261126f';
+import { initOnline, enterOnline } from './online.js?v=20261126f';
+import { enterSlots } from './slotmachine.js?v=20261126f';
+import { initVault, enterVault, leaveVault, clipCount } from './vault.js?v=20261126f';
+import { tokens as slotTokens } from './slots.js?v=20261126f';
+import { CONTRACTS, contractOf, taskFrac, taskDone, statOf, tasksDone, openContracts } from './contracts.js?v=20261126f';
 import { SEASON, TRACK, MAX_TIER, passXp, tierProgress, heroOwned, heroTier, skinOwned, skinTier, skinsFor, dressed, equip, rewardInfo,
-  COS_TYPES, cosById, cosOwned, equippedCos, equipCos, cosArt, lockShort, lockLong, isSlotItem, isContractHero } from './pass.js?v=20261126a';
+  COS_TYPES, cosById, cosOwned, equippedCos, equipCos, cosArt, lockShort, lockLong, isSlotItem, isContractHero } from './pass.js?v=20261126f';
 
 // Front end: main menu → roster select → stage select → match. Settings overlay on top.
 
@@ -166,8 +166,11 @@ function frameShowcase(renderer, dt) {
 
 // ---------- screens ----------
 function go(name) {
+  if (screen === 'vault' && name !== 'vault') leaveVault();
   screen = name;
-  for (const s of ['main', 'roster', 'stage', 'pass', 'online', 'closet', 'slots', 'contracts']) $('scr-' + s).classList.toggle('on', s === name);
+  for (const s of ['main', 'roster', 'stage', 'pass', 'online', 'seasons', 'slots', 'contracts', 'vault']) $('scr-' + s).classList.toggle('on', s === name);
+  if (name === 'main') clipCount().then(n => { $('mmClips').textContent = n || ''; $('mmClips').classList.toggle('on', n > 0); });
+  if (name === 'vault') enterVault({ blip: f => api?.blip?.(f) });
   $('front').classList.remove('hidden');
   if (name === 'main') { refreshPassCard(); $('modeTut')?.classList.toggle('fresh', !cfg.tutorialDone); const t = slotTokens(); $('mmTok').textContent = t || ''; $('mmTok').classList.toggle('on', t > 0); const o = openContracts(); $('mmCt').textContent = o || ''; $('mmCt').classList.toggle('on', o > 0); }
   if (name === 'slots') enterSlots();
@@ -176,7 +179,6 @@ function go(name) {
   if (name === 'stage') enterStage();
   if (name === 'pass') enterPass();
   if (name === 'online') enterOnline();
-  if (name === 'closet') enterCloset({ blip: f => api?.blip?.(f) });
 }
 
 // ---------- roster ----------
@@ -400,7 +402,7 @@ function contractCard(c, compact) {
   const h = HEROES.find(x => x.id === c.hero), done = tasksDone(c.hero), all = done === c.tasks.length;
   const rows = c.tasks.map(t => {
     const ok = taskDone(t), v = Math.min(statOf(t.stat), t.n);
-    return `<li class="${ok ? 'ok' : ''}"><i>${ok ? '✓' : ''}</i><span>${t.label}</span><b>${fmtN(v)} / ${fmtN(t.n)}</b><u><em style="width:${Math.round(taskFrac(t) * 100)}%"></em></u></li>`;
+    return `<li class="${ok ? 'ok' : ''}"><i>${ok ? '✓' : ''}</i><span>${t.label}</span><b>${fmtN(v)} / ${fmtN(t.n)}</b><u><em style="width:${taskFrac(t) > 0 ? Math.max(4, Math.round(taskFrac(t) * 100)) : 0}%"></em></u></li>`;
   }).join('');
   if (compact) return `<div class="ct-mini"><div class="ct-h"><span>📜 Recruitment contract</span><b>${done} / ${c.tasks.length}</b></div><ul class="ct-tasks">${rows}</ul></div>`;
   return `<article class="ct-card ${all ? 'done' : ''}" style="--hc:${hex(h.color)}">
@@ -421,7 +423,7 @@ function enterContracts() {
 
 // ---------- season pass ----------
 function passSummary() {
-  const pr = tierProgress(), next = TRACK.find(r => r.tier === pr.tier + 1);
+  const pr = tierProgress(), next = TRACK.find(r => r.tier > pr.tier);      // skip over open tiers to the next real reward
   return { pr, next, info: next && rewardInfo(next) };
 }
 function refreshPassCard() {
@@ -464,7 +466,10 @@ function enterPass(keepScroll) {
       <div class="meta"><small>${inf.sub}</small><b>${inf.title}</b></div></div>`;
   };
   const tr = $('track'), scroll = tr.scrollLeft;
-  tr.innerHTML = tiers.map((list, t) => `<div class="tcol" style="animation-delay:${t * 0.02}s">${list.map(([r, i], k) => card(r, i, k > 0)).join('')}</div>`).join('');
+  // tiers with no reward yet still get a column: an open slot for future rewards
+  const open = t => `<div class="rw open ${pr.tier >= t ? 'own' : 'lock'} ${t === pr.tier + 1 ? 'next' : ''}"><span class="rt">T${t}</span>
+    <div class="art"><span>＋</span></div><div class="meta"><small>Open tier</small><b>More soon</b></div></div>`;
+  tr.innerHTML = Array.from({ length: MAX_TIER }, (_, t) => tiers[t] || []).map((list, t) => `<div class="tcol" style="animation-delay:${t * 0.02}s">${list.length ? list.map(([r, i], k) => card(r, i, k > 0)).join('') : open(t + 1)}</div>`).join('');
   tr.querySelectorAll('img[data-r]').forEach((img, k) => setTimeout(() => {
     img.src = headshot(rewardInfo(TRACK[+img.dataset.r]).def); img.classList.add('ok');
   }, keepScroll ? 0 : 40 + k * 35));
@@ -597,9 +602,11 @@ export function initMenu(opts) {
   $('modeTut').onclick = () => { api?.blip?.(880); $('front').classList.add('hidden'); api.onStart('tutorial'); };
   $('modeTut').classList.toggle('fresh', !cfg.tutorialDone);
   $('modeOnline').onclick = () => go('online');
-  $('modeCloset').onclick = () => { api?.blip?.(760); go('closet'); };
+  $('modeSeasons').onclick = () => { api?.blip?.(760); go('seasons'); };
   $('modeSlots').onclick = () => { api?.blip?.(760); go('slots'); };
   $('modeContracts').onclick = () => { api?.blip?.(760); go('contracts'); };
+  $('modeVault').onclick = () => { api?.blip?.(760); go('vault'); };
+  initVault();
   $('ctList').onclick = e => { const b = e.target.closest('[data-play]'); if (!b) return; cfg.hero = b.dataset.play; save(); api?.blip?.(900); go('roster'); };
   initOnline({ go, screen: () => screen, blip: f => api?.blip?.(f), start: m => api.onStartOnline(m), pickHero: () => { setMode('online'); go('roster'); } });
   document.querySelectorAll('[data-open-settings]').forEach(b => { b.onclick = openSettings; });
@@ -684,9 +691,10 @@ export function initMenu(opts) {
       if (e.code === 'Enter') deployStage(stageView);
     }
     else if (screen === 'pass' && e.code === 'Escape') go('main');
-    else if (screen === 'closet' && e.code === 'Escape') go('main');
+    else if (screen === 'seasons' && e.code === 'Escape') go('main');
     else if (screen === 'contracts' && e.code === 'Escape') go('main');
     else if (screen === 'slots' && e.code === 'Escape') go('main');
+    else if (screen === 'vault' && e.code === 'Escape') go('main');
     else if (screen === 'main' && e.code === 'Enter') { setMode('lane'); go('roster'); }
   });
   go('main');

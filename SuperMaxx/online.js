@@ -1,9 +1,9 @@
-import { HEROES } from './heroes.js?v=20261126a';
-import { MAPS } from './data.js?v=20261126a';
-import { cfg, save } from './settings.js?v=20261126a';
-import { headshot } from './portraits.js?v=20261126a';
-import { dressed, wear, myCosIds, resolveCos, bannerCss } from './pass.js?v=20261126a';
-import * as net from './net.js?v=20261126a';
+import { HEROES } from './heroes.js?v=20261126f';
+import { MAPS } from './data.js?v=20261126f';
+import { cfg, save } from './settings.js?v=20261126f';
+import { headshot } from './portraits.js?v=20261126f';
+import { dressed, wear, myCosIds } from './pass.js?v=20261126f';
+import * as net from './net.js?v=20261126f';
 
 // Online front end: set up your name and hero, host or join a room by code, then the lobby
 // (mode, teams, stage, start). The match itself starts on every machine when the host hits Start.
@@ -97,12 +97,11 @@ function setupHTML() {
 }
 
 function meCard() {
-  const d = myDef(), c = resolveCos(myCosIds());
+  const d = myDef();
   return `<div class="oncard me">
     <h3>You</h3>
     <label class="onlabel">Name<input id="onName" maxlength="16" value="${esc(cfg.name)}" placeholder="Player" autocomplete="off"></label>
-    <div class="onhero" style="--hc:${hex(d.color)};${bannerCss(c.banner)}"><img src="${headshot(d)}" alt=""><div><small>Playing as</small><b>${d.callsign}</b>${d.skinName ? `<em>${esc(d.skinName)}</em>` : ''}
-      ${c.title ? `<span class="ptitle">${esc(c.title)}</span>` : ''}</div>
+    <div class="onhero" style="--hc:${hex(d.color)}"><img src="${headshot(d)}" alt=""><div><small>Playing as</small><b>${d.callsign}</b>${d.skinName ? `<em>${esc(d.skinName)}</em>` : ''}</div>
       <button class="ghost" data-act="hero">Change</button></div>
   </div>`;
 }
@@ -136,9 +135,9 @@ function lobbyHTML(st) {
   const col = team => {
     const list = players.filter(([uid, p]) => sideOf(uid, p) === team);
     const slots = list.map(([uid, p]) => {
-      const base = HEROES.find(h => h.id === p.hero) || HEROES[0], d = wear(base, p.skin), c = resolveCos(p.cos);
-      return `<div class="slot ${uid === st.me ? 'me' : ''} ${c.banner ? 'banner' : ''}" style="--hc:${hex(d.color)};${bannerCss(c.banner)}"><img src="${headshot(d)}" alt="">
-        <div><b>${esc(p.name)}${uid === st.meta?.host ? ' <span class="crown" title="Host">♛</span>' : ''}</b><small>${base.callsign}</small>${c.title ? `<span class="ptitle">${esc(c.title)}</span>` : ''}</div></div>`;
+      const base = HEROES.find(h => h.id === p.hero) || HEROES[0], d = wear(base, p.skin);
+      return `<div class="slot ${uid === st.me ? 'me' : ''}" style="--hc:${hex(d.color)}"><img src="${headshot(d)}" alt="">
+        <div><b>${esc(p.name)}${uid === st.meta?.host ? ' <span class="crown" title="Host">♛</span>' : ''}</b><small>${base.callsign}</small></div></div>`;
     });
     for (let i = list.length; i < M.per; i++) slots.push('<div class="slot bot"><span>🤖</span><div><b>Bot</b><small>fills this slot</small></div></div>');
     const full = list.length >= M.per;

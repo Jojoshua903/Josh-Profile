@@ -9,7 +9,7 @@ const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } ca
 export const SLOT_HEROES = ['slime', 'brawler', 'chipmunk', 'elf', 'dancer', 'mole', 'medic', 'spark', 'builder'];
 export const SLOT_SKINS = ['slime-magma', 'brawler-chrome', 'chipmunk-gold', 'vanguard-cosmos', 'striker-glitch', 'croc-gummy', 'cavalier-phantom', 'mirage-hologram',
   'ember-supernova', 'warden-stained', 'thicket-sakura', 'ratchet-overclock', 'avalanche-volcanic', 'tempo-clockwork', 'kestrel-phoenix', 'elf-winter', 'dancer-blackswan', 'mole-diamond',
-  'medic-plague', 'spark-thunder', 'builder-marble'];
+  'medic-plague', 'spark-thunder', 'builder-marble', 'wellington-truffle', 'shepherd-tartan', 'microwave-retro'];
 export const SLOT_SPRAYS = ['sp-gg', 'sp-splat', 'sp-nuts', 'sp-maxx', 'sp-chomp', 'sp-love', 'sp-bye', 'sp-crown'];
 // heroes are the jackpot: rarer than skins, which are rarer than sprays
 const WEIGHT = { hero: 1, skin: 2, spray: 3 };
@@ -19,16 +19,20 @@ export const spins = () => S.spins;
 export function addTokens(n) { if (n > 0) { S.tokens += n; persist(); } }
 export const slotOwned = id => S.owned.includes(id);
 export const isSlotItem = id => SLOT_HEROES.includes(id) || SLOT_SKINS.includes(id) || SLOT_SPRAYS.includes(id);
+// Skins only join the pool once you have their hero. pass.js knows who you own, so it plugs that check in here.
+let skinReady = () => true;
+export const setSkinGate = f => { skinReady = f; };
 
 export function prizes() {
-  const all = [...SLOT_HEROES.map(id => ({ id, kind: 'hero' })), ...SLOT_SKINS.map(id => ({ id, kind: 'skin' })), ...SLOT_SPRAYS.map(id => ({ id, kind: 'spray' }))];
-  const left = all.filter(p => !slotOwned(p.id)), total = left.reduce((a, p) => a + WEIGHT[p.kind], 0);
-  return all.map(p => ({ ...p, owned: slotOwned(p.id), odds: slotOwned(p.id) || !total ? 0 : WEIGHT[p.kind] / total }));
+  const all = [...SLOT_HEROES.map(id => ({ id, kind: 'hero' })), ...SLOT_SKINS.map(id => ({ id, kind: 'skin' })), ...SLOT_SPRAYS.map(id => ({ id, kind: 'spray' }))]
+    .map(p => ({ ...p, owned: slotOwned(p.id), locked: p.kind === 'skin' && !slotOwned(p.id) && !skinReady(p.id) }));
+  const left = all.filter(p => !p.owned && !p.locked), total = left.reduce((a, p) => a + WEIGHT[p.kind], 0);
+  return all.map(p => ({ ...p, odds: p.owned || p.locked || !total ? 0 : WEIGHT[p.kind] / total }));
 }
 
 // Spend a token and win something new. Returns the prize, or null with no tokens / nothing left.
 export function spin() {
-  const left = prizes().filter(p => !p.owned);
+  const left = prizes().filter(p => !p.owned && !p.locked);
   if (S.tokens < 1 || !left.length) return null;
   let r = Math.random() * left.reduce((a, p) => a + p.odds, 0), pick = left[left.length - 1];
   for (const p of left) { if ((r -= p.odds) <= 0) { pick = p; break; } }

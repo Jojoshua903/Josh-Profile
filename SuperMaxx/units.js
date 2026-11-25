@@ -1,12 +1,12 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { TUNING, HILL, CART } from './data.js?v=20261126a';
-import { buildHeroModel } from './models.js?v=20261126a';
-import { makeBox, moveBody, resolveXZ, rayBox, raySphere, rayWorld, hasLOS } from './world.js?v=20261126a';
+import { TUNING, HILL, CART } from './data.js?v=20261126f';
+import { buildHeroModel } from './models.js?v=20261126f';
+import { makeBox, moveBody, resolveXZ, rayBox, raySphere, rayWorld, hasLOS } from './world.js?v=20261126f';
 import { resetStatus, tickStatus, afterMove, takenMult, fireMult, canAct, breakInvis, isHidden, slow as applySlow, stun as applyStun, knock as applyKnock, dropBlobs,
-  dealtMult, onDealt, onHurt, onKill, mend } from './abilities.js?v=20261126a';
-import { poseHero, rubble, killFx } from './anim.js?v=20261126a';
-import { onEliminated, survivorPreMove, survivorPostMove } from './survivor.js?v=20261126a';
-import { tickVfx, tickLight, blast, sparks } from './vfx.js?v=20261126a';
+  dealtMult, onDealt, onHurt, onKill, mend } from './abilities.js?v=20261126f';
+import { poseHero, rubble } from './anim.js?v=20261126f';
+import { onEliminated, survivorPreMove, survivorPostMove } from './survivor.js?v=20261126f';
+import { tickVfx, tickLight, blast, sparks } from './vfx.js?v=20261126f';
 
 // Survivor teams are per-hero ids; anything that isn't blue reads as an enemy red.
 export const TEAM_COLOR = new Proxy({ blue: 0x2f5bff, red: 0xff5a36 }, { get: (t, k) => (k in t ? t[k] : 0xff5a36) });
@@ -238,7 +238,6 @@ function kill(G, t, src) {
     t.collapseT = 1;
     rubble(G, t.pos, TEAM_COLOR[t.team], t.kind === 'core' ? 26 : 14);
   }
-  if (t.kind === 'hero' && src?.cos?.killfx) killFx(G, chestOf(t), src.cos.killfx);
   if (t.kind === 'hero' && t.def.passive?.id === 'slimedrop') dropBlobs(G, t, t.def.passive);
   onKill(G, t, src);
   G.ev.kill(t, src);
@@ -253,7 +252,6 @@ export function remoteKill(G, t, src, head) {
   if (t.shimmer) t.shimmer.visible = false;
   if (src && src.kind === 'hero') src.kills++;
   G.score[src && src.kind === 'hero' ? src.team : t.team === 'blue' ? 'red' : 'blue']++;
-  if (t.kind === 'hero' && src?.cos?.killfx) killFx(G, chestOf(t), src.cos.killfx);
   if (t.def.passive?.id === 'slimedrop') dropBlobs(G, t, t.def.passive);
   onKill(G, t, src);
   G.ev.kill(t, src);
@@ -304,17 +302,9 @@ export function releaseFire(G, h, dir, muzzle) {
   return shoot(G, h, dir, muzzle, Math.max(0.05, c));
 }
 
-// Season pass tracer: recolours a hero's shots and projectiles ('rainbow' picks a hue per shot).
-const tc = new THREE.Color();
-function tinted(h) {
-  const t = h.cos?.tracer, w = h.def.weapon;
-  if (t == null) return w;
-  const c = t === 'rainbow' ? tc.setHSL(Math.random(), 1, 0.6).getHex() : t;
-  return { ...w, tracer: c, color: w.color != null ? c : w.color };
-}
 
 function shoot(G, h, dir, muzzle, charge, replay = false) {
-  const w = tinted(h);
+  const w = h.def.weapon;
   if (G.net && h.local && !replay) G.net.fire(h, dir, charge);
   let rate = w.rate;
   if (w.mode === 'ramp') {
