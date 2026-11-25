@@ -1,0 +1,802 @@
+import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
+import { makeBox, resolveXZ, hasLOS, groundAt } from './world.js';
+import { buildHeroModel } from './models.js';
+import { damage, trace, tracer, burst, ring, setBar, makeBar, eyeOf, dirFrom, chestOf, spawnProjectile, TEAM_COLOR } from './units.js';
+
+// Abilities, status effects, zones, traps, walls and deployables.
+// Each ability: cast(G, h, a, ctx) -> bool, ai(G, bot, a, ctx) -> bool (should the bot cast now?).
+
+const v = new THREE.Vector3();
+const enemiesOf = (G, h) => G.heroes.filter(e => e.alive && e.team !== h.team);
+const alliesOf = (G, h) => G.heroes.filter(e => e.alive && e.team === h.team);
+const flat = d => new THREE.Vector3(d.x, 0, d.z).normalize();
+
+// ---------- status ----------
+export function resetStatus(h) {
+  Object.assign(h, { slowT: 0, slowM: 1, stunT: 0, rootT: 0, hasteT: 0, hasteSpeed: 1, hasteFire: 1, markT: 0, markAmp: 1, lurkT: 0, rushT: 0, rallyT: 0, rallyAmp: 1, jamT: 0, grabbed: null,
+    invisT: 0, ambush: 1, barrierT: 0, barrierM: 1, noReloadT: 0, knockT: 0, dashT: 0, slamPending: false, airT: 0,
+    zoneSlow: 1, zoneMult: 1, glideT: 0 });
+  h.cd = { q: 0, ability: 0 };
+  h.hist = []; h.histT = 0;
+}
+export const canAct = h => h.stunT <= 0 && !(h.lurkT > 0);   // no shooting or casting while lurking in the mud
+export const canMove = h => h.stunT <= 0 && h.rootT <= 0;
+export const moveMult = h => (h.slowT > 0 ? h.slowM : 1) * (h.hasteT > 0 ? h.hasteSpeed : 1) * h.zoneSlow;
+export const fireMult = h => (h.hasteT > 0 ? h.hasteFire : 1);
+export function takenMult(h) {
+  return (h.barrierT > 0 ? h.barrierM : 1) * h.zoneMult * (h.markT > 0 ? h.markAmp : 1) * (h.lurkT > 0 ? 0.15 : 1);
+}
+export const isHidden = h => h.invisT > 0;
+
+export function stun(u, t) { if (u.kind === 'hero') { u.stunT = Math.max(u.stunT, t); breakInvis(u); } else if (u.kind === 'minion') u.stunT = Math.max(u.stunT || 0, t); }
+export function root(u, t) { if (u.kind === 'hero') u.rootT = Math.max(u.rootT, t); else if (u.kind === 'minion') u.stunT = Math.max(u.stunT || 0, t); }
+export function slow(u, mult, t) { if (u.kind === 'hero') { u.slowT = Math.max(u.slowT, t); u.slowM = Math.min(u.slowT > 0 ? u.slowM : 1, mult); } }
+export function knock(u, dir, force, up = 5) {
+  if (u.kind !== 'hero' && u.kind !== 'minion') return;
+  if (!u.vel) return;
+  u.vel.x = dir.x * force; u.vel.z = dir.z * force; u.vel.y = up;
+  u.knockT = 0.45;
+}
+export function breakInvis(h) { if (h.invisT > 0) { h.invisT = 0; } }
+
+export function tickStatus(G, h, dt) {
+  for (const k of ['slowT', 'stunT', 'rootT', 'hasteT', 'markT', 'invisT', 'barrierT', 'noReloadT', 'knockT', 'rushT', 'rallyT', 'jamT']) if (h[k] > 0) h[k] -= dt;
+  if (h.lurkT > 0 && (h.lurkT -= dt) <= 0) lurkBurst(G, h);
+  h.cd.q = Math.max(0, h.cd.q - dt); h.cd.ability = Math.max(0, h.cd.ability - dt);
+  h.ult = Math.min(100, h.ult + dt * 0.6);
+  if (h.invisT <= 0) h.ambush = 1;
+  // updraft glide: fall slowly until landing or the timer runs out
+  if (h.glideT > 0) {
+    h.glideT -= dt;
+    if (h.vel.y < -2.5) h.vel.y = -2.5;
+    if (h.onGround && h.vel.y <= 0 && h.airT === 0) h.glideT = 0;
+  }
+  // rewind keeps ~3s of breadcrumbs
+  if (h.def.ability.id === 'rewind') {
+    h.histT -= dt;
+    if (h.histT <= 0) {
+      h.histT = 0.1;
+      h.hist.push({ x: h.pos.x, y: h.pos.y, z: h.pos.z, hp: h.hp, t: G.time });
+      while (h.hist.length && h.hist[0].t < G.time - h.def.ability.back - 0.2) h.hist.shift();
+    }
+  }
+  // dashes: bobsled (bowls everyone over), death roll (grabs one), joust (launches one)
+  if (h.dashT > 0) {
+    h.dashT -= dt;
+    h.vel.x = h.dashDir.x * h.dashSpeed; h.vel.z = h.dashDir.z * h.dashSpeed;
+    const g = h.grabbed;
+    if (g) {                                               // drag the clamped enemy along in our jaws
+      if (g.alive) { g.pos.set(h.pos.x + h.dashDir.x * 1.1, h.pos.y, h.pos.z + h.dashDir.z * 1.1); g.vel.set(0, 0, 0); if (g.kind === 'hero') g.stunT = Math.max(g.stunT, 0.15); }
+      if (h.dashT <= 0) {
+        if (g.alive) { stun(g, h.grabStun); knock(g, h.dashDir, 5, 4); burst(G, chestOf(g), 0x9cc46a, 1.4); G.ev.flash?.(g, 'Death rolled'); }
+        h.grabbed = null;
+      }
+    }
+    for (const u of [...enemiesOf(G, h), ...G.minions.filter(m => m.alive && m.team !== h.team)]) {
+      if (h.dashT <= 0 || h.grabbed || h.dashHit.has(u) || u.pos.distanceTo(h.pos) > 1.6) continue;
+      h.dashHit.add(u);
+      if (h.dashMode === 'grab') {
+        damage(G, u, h.dashDmg, h);
+        if (u.kind === 'hero') { h.grabbed = u; h.dashT = Math.max(h.dashT, 0.35); }
+      } else if (h.dashMode === 'joust') {
+        const run = h.dashStart ? Math.hypot(h.pos.x - h.dashStart.x, h.pos.z - h.dashStart.z) : 0;
+        damage(G, u, h.dashDmg + run * h.dashPerM, h); knock(u, h.dashDir, 4, h.dashLift);
+        if (u.kind === 'hero') { stun(u, 0.4); G.ev.flash?.(u, run > 12 ? 'Unhorsed!' : 'Jousted'); h.dashT = 0; h.vel.x *= 0.2; h.vel.z *= 0.2; }
+      } else {
+        damage(G, u, h.dashDmg, h); knock(u, h.dashDir, h.dashKnock, 6);
+      }
+      burst(G, chestOf(u), h.dashColor || 0xffffff, 1.2);
+    }
+    if (h.dashSpin && h.grabbed) h.dashSpinA = (h.dashSpinA || 0) + dt * 22;
+  } else h.dashSpinA = 0;
+}
+
+// Snapjaw surfacing from Lurk: launch everyone around him
+function lurkBurst(G, h) {
+  h.lurkT = 0;
+  if (!h.alive) return;
+  const a = h.def.ability;
+  ring(G, h.pos, 0x7a5a2a, a.radius); burst(G, h.pos.clone().setY(0.6), 0x7a5a2a, a.radius * 0.7); burst(G, h.pos.clone().setY(1.2), 0x6fb5c4, 1.4);
+  for (const u of [...enemiesOf(G, h), ...G.minions.filter(m => m.alive && m.team !== h.team)]) {
+    if (Math.hypot(u.pos.x - h.pos.x, u.pos.z - h.pos.z) > a.radius) continue;
+    const away = v.subVectors(u.pos, h.pos).setY(0).normalize();
+    damage(G, u, a.dmg, h); knock(u, away, 3, a.lift);
+  }
+  G.ev.shake?.(h, 0.4);
+  G.ev.surface?.(h);
+}
+
+// After movement: handle the slam landing.
+export function afterMove(G, h, dt) {
+  if (!h.onGround) h.airT += dt;
+  else {
+    if (h.slamPending && h.airT > 0.25) slamLand(G, h);
+    h.airT = 0;
+  }
+}
+
+// ---------- zones ----------
+const ZONE_LOOK = {
+  dome: { color: 0x5fe0c0, dome: true }, sanctum: { color: 0xffe08a }, overgrowth: { color: 0x5fb05a },
+  frost: { color: 0xbfeaff }, trap: { color: 0x8a5a3c }, nova: { color: 0xff8a3c }, vortex: { color: 0xff4fa3 },
+  banner: { color: 0xffe08a },
+};
+function zoneMesh(G, kind, pos, radius) {
+  const look = ZONE_LOOK[kind];
+  const g = new THREE.Group(); g.position.copy(pos);
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(radius, 40), new THREE.MeshBasicMaterial({ color: look.color, transparent: true, opacity: 0.25, depthWrite: false }));
+  disc.rotation.x = -Math.PI / 2; disc.position.y = 0.06; g.add(disc);
+  const rim = new THREE.Mesh(new THREE.RingGeometry(radius - 0.18, radius, 48), new THREE.MeshBasicMaterial({ color: look.color, transparent: true, opacity: 0.8, depthWrite: false, side: THREE.DoubleSide }));
+  rim.rotation.x = -Math.PI / 2; rim.position.y = 0.08; g.add(rim);
+  if (look.dome) {
+    const d = new THREE.Mesh(new THREE.SphereGeometry(radius, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshBasicMaterial({ color: look.color, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide }));
+    g.add(d);
+  }
+  const bits = [];
+  const n = kind === 'trap' || kind === 'banner' ? 0 : Math.round(radius * 3);
+  for (let i = 0; i < n; i++) {
+    let m;
+    if (kind === 'overgrowth') m = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.9, 5), new THREE.MeshLambertMaterial({ color: i % 4 ? 0x4f9a48 : 0xff5f8f }));
+    else if (kind === 'frost') m = new THREE.Mesh(new THREE.OctahedronGeometry(0.25, 0), new THREE.MeshLambertMaterial({ color: 0xe8f8ff, emissive: 0x9fdcff, emissiveIntensity: 0.4 }));
+    else if (kind === 'vortex') m = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.18), new THREE.MeshBasicMaterial({ color: i % 2 ? 0x18e0f0 : 0xff4fa3 }));
+    else m = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 4), new THREE.MeshBasicMaterial({ color: look.color }));
+    const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * radius * 0.92;
+    m.position.set(Math.cos(a) * r, 0.2, Math.sin(a) * r); m.userData.p = Math.random() * 6;
+    g.add(m); bits.push(m);
+  }
+  if (kind === 'trap') {                                   // a little jaw of thorns
+    for (let i = 0; i < 8; i++) {
+      const c = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.35, 4), new THREE.MeshLambertMaterial({ color: 0x6b4a33 }));
+      const a = i / 8 * Math.PI * 2; c.position.set(Math.cos(a) * 0.6, 0.15, Math.sin(a) * 0.6); c.rotation.z = Math.cos(a) * 0.5; c.rotation.x = -Math.sin(a) * 0.5;
+      g.add(c);
+    }
+    // position is read-only on three.js objects, so set it rather than replace it
+    const seed = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 6), new THREE.MeshLambertMaterial({ color: 0x7fc06a, emissive: 0x5fb05a, emissiveIntensity: 0.3 }));
+    seed.position.set(0, 0.12, 0); g.add(seed);
+  }
+  if (kind === 'banner') {                                 // Cavalier's rally banner on a pole
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 3.2, 6), new THREE.MeshLambertMaterial({ color: 0x6b4a33 }));
+    pole.position.y = 1.6; g.add(pole);
+    const flag = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.8), new THREE.MeshLambertMaterial({ color: 0xc23b3b, side: THREE.DoubleSide }));
+    flag.position.set(0.62, 2.7, 0); g.add(flag);
+    const crest = new THREE.Mesh(new THREE.CircleGeometry(0.22, 12), new THREE.MeshBasicMaterial({ color: 0xffe08a, side: THREE.DoubleSide }));
+    crest.position.set(0.62, 2.7, 0.01); g.add(crest);
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.3, 6), new THREE.MeshLambertMaterial({ color: 0xffe08a }));
+    tip.position.y = 3.35; g.add(tip);
+  }
+  G.scene.add(g);
+  return { g, bits, disc };
+}
+export function addZone(G, z) {
+  const m = zoneMesh(G, z.kind, z.pos, z.radius);
+  G.zones.push({ max: z.life, ...z, ...m });
+}
+
+export function updateAbilities(G, dt) {
+  for (const h of G.heroes) { h.zoneSlow = 1; h.zoneMult = 1; }
+  for (let i = G.zones.length - 1; i >= 0; i--) {
+    const z = G.zones[i];
+    z.life -= dt;
+    const k = Math.min(1, (z.max - z.life) * 4) * Math.min(1, z.life * 2);
+    z.g.scale.setScalar(0.3 + 0.7 * Math.min(1, (z.max - z.life) * 4));
+    z.bits.forEach(b => { b.position.y = 0.2 + Math.abs(Math.sin(G.time * 2 + b.userData.p)) * (z.kind === 'sanctum' ? 2 : 0.25); b.rotation.y += dt; });
+    z.disc.material.opacity = 0.25 * k;
+    if (z.kind === 'vortex') z.g.rotation.y += dt * 3.5;
+    const inside = u => u.alive && Math.hypot(u.pos.x - z.pos.x, u.pos.z - z.pos.z) < z.radius;
+    if (z.kind === 'trap') {
+      const victim = [...G.heroes, ...G.minions].find(u => u.team !== z.team && !u.deploy && inside(u) && Math.hypot(u.pos.x - z.pos.x, u.pos.z - z.pos.z) < 1.3);
+      if (victim) {
+        root(victim, z.rootT); damage(G, victim, z.dmg, z.owner);
+        burst(G, victim.pos.clone().setY(victim.pos.y + 0.4), 0x5fb05a, 1.4); z.life = 0;
+        G.ev.flash?.(victim, 'Rooted');
+      }
+    }
+    for (const u of [...G.heroes, ...G.minions]) {
+      if (!inside(u) || u.deploy) continue;
+      const ally = u.team === z.team;
+      if (ally && z.hps && u.hp < u.maxHp) { u.hp = Math.min(u.maxHp, u.hp + z.hps * dt); setBar(u); }
+      if (ally && z.mult && u.kind === 'hero') u.zoneMult = Math.min(u.zoneMult, z.mult);
+      if (ally && z.rally && u.kind === 'hero') { u.rallyT = 0.25; u.rallyAmp = z.rally; }
+      if (!ally && z.dps) damage(G, u, z.dps * dt, z.owner);
+      if (!ally && z.slow && u.kind === 'hero') u.zoneSlow = Math.min(u.zoneSlow, z.slow);
+      if (!ally && z.pull) {                                    // mosh pit: drag toward the middle
+        const dx = z.pos.x - u.pos.x, dz = z.pos.z - u.pos.z, d = Math.hypot(dx, dz);
+        if (d > 0.7) { u.pos.x += dx / d * z.pull * dt; u.pos.z += dz / d * z.pull * dt; resolveXZ(u.pos, u.radius, G.colliders); }
+      }
+    }
+    if (z.life <= 0) { G.scene.remove(z.g); G.zones.splice(i, 1); }
+  }
+  for (let i = G.walls.length - 1; i >= 0; i--) {
+    const w = G.walls[i]; w.life -= dt;
+    const grow = Math.min(1, (w.max - w.life) * 5), fade = Math.min(1, w.life * 2);
+    w.mesh.scale.y = Math.max(0.01, grow * fade);
+    if (w.life <= 0) { w.collider.alive = false; G.scene.remove(w.mesh); G.walls.splice(i, 1); }
+  }
+  for (let i = G.timers.length - 1; i >= 0; i--) {
+    const t = G.timers[i]; t.t -= dt;
+    if (t.t <= 0) { G.timers.splice(i, 1); t.fn(); }
+  }
+}
+
+// ---------- deployables (live in G.minions with their own update) ----------
+function makeTurret(G, h, a, pos) {
+  const mesh = new THREE.Group();
+  const leg = new THREE.MeshLambertMaterial({ color: 0x3a3f4a });
+  for (let i = 0; i < 3; i++) { const l = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.8, 5), leg); const ang = i / 3 * Math.PI * 2; l.position.set(Math.cos(ang) * 0.25, 0.35, Math.sin(ang) * 0.25); l.rotation.set(Math.sin(ang) * 0.4, 0, -Math.cos(ang) * 0.4); mesh.add(l); }
+  const head = new THREE.Group(); head.position.y = 0.85; mesh.add(head);
+  head.add(new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 10), new THREE.MeshLambertMaterial({ color: 0x8fa3bf })));
+  const eye = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), new THREE.MeshLambertMaterial({ color: 0x7af0ff, emissive: 0x7af0ff, emissiveIntensity: 0.9 })); eye.position.z = -0.27; head.add(eye);
+  const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.5), new THREE.MeshLambertMaterial({ color: 0x1d2340 })); barrel.position.set(0.18, -0.05, -0.3); head.add(barrel);
+  for (const s of [-1, 1]) { const ear = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.2, 4), new THREE.MeshLambertMaterial({ color: 0xff7a2a })); ear.position.set(s * 0.18, 0.28, 0); head.add(ear); }
+  const flag = new THREE.Mesh(new THREE.RingGeometry(0.4, 0.5, 20), new THREE.MeshBasicMaterial({ color: TEAM_COLOR[h.team], side: THREE.DoubleSide }));
+  flag.rotation.x = -Math.PI / 2; flag.position.y = 0.04; mesh.add(flag);
+  mesh.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  return {
+    mesh, head, turret: true, hitY: 0.8, hitR: 0.45, hp: a.hp, maxHp: a.hp, life: a.life, atkT: 0.5, bob: 0, megaT: 0,
+    update(G, m, dt) {
+      m.life -= dt; m.atkT -= dt; m.bob += dt;
+      if (m.megaT > 0) m.megaT -= dt;
+      const big = m.megaT > 0 ? 1.7 : 1;
+      m.mesh.position.copy(m.pos); m.mesh.scale.setScalar(Math.min(1, m.bob * 4) * big);
+      if (m.life <= 0) { m.alive = false; burst(G, m.pos.clone().setY(0.8), 0x8fa3bf, 1.2); G.scene.remove(m.mesh); return; }
+      const top = m.pos.clone().setY(0.85);
+      let best = null, bd = a.range;
+      for (const e of [...G.heroes, ...G.minions]) {
+        if (!e.alive || e.team === m.team || (e.kind === 'hero' && isHidden(e))) continue;
+        const d = e.pos.distanceTo(m.pos);
+        if (d < bd && hasLOS(top, chestOf(e), G.colliders)) { bd = d; best = e; }
+      }
+      if (!best) { m.head.rotation.y += dt * 0.8; return; }
+      const c = chestOf(best);
+      m.head.rotation.y = Math.atan2(-(c.x - m.pos.x), -(c.z - m.pos.z));
+      if (m.atkT <= 0) {
+        const mega = m.megaT > 0;
+        m.atkT = a.rate / (mega ? m.megaRate : 1);
+        tracer(G, top, c, mega ? 0xff7a2a : 0x7af0ff, 0.06, mega ? 3 : 1);
+        damage(G, best, a.dmg * (mega ? m.megaDmg : 1), m.owner);
+        G.ev.turretShot?.(m);
+      }
+    },
+  };
+}
+
+function makeDecoy(G, h, a, pos) {
+  const model = buildHeroModel(h.def, TEAM_COLOR[h.team]);
+  model.root.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  const dir = dirFrom(h.yaw, 0);
+  return {
+    mesh: model.root, hitY: 1.0, hitR: 0.6, hp: a.hp, maxHp: a.hp, life: a.life, decoy: true, def: h.def, bob: 0,
+    update(G, m, dt) {
+      m.life -= dt; m.bob += dt;
+      if (m.life <= 0) { m.alive = false; confetti(G, m.pos); G.scene.remove(m.mesh); return; }
+      m.vel.x = dir.x * h.def.speed * 0.8; m.vel.z = dir.z * h.def.speed * 0.8;
+      m.vel.y -= 24 * dt; m.pos.addScaledVector(m.vel, dt);
+      resolveXZ(m.pos, 0.45, G.colliders);
+      const g = groundAt(m.pos, 0.45, G.colliders); if (m.pos.y <= g) { m.pos.y = g; m.vel.y = 0; }
+      m.mesh.position.copy(m.pos); m.mesh.rotation.y = h.yaw;
+      model.anim(dt, h.def.speed * 0.8, G.time);
+      if (Math.random() < dt * 0.6 && m.pos.y <= g + 0.01) m.vel.y = 7;
+    },
+  };
+}
+
+function deploy(G, h, part, pos) {
+  const m = {
+    kind: 'minion', deploy: true, team: h.team, owner: h, alive: true, pos: pos.clone(), vel: new THREE.Vector3(), radius: 0.45,
+    atkT: 0, bob: 0, stunT: 0, ...part,
+  };
+  m.bar = makeBar(0.9, (part.hitY || 0.5) + 1.05); m.mesh.add(m.bar); setBar(m, TEAM_COLOR[h.team]);
+  m.mesh.position.copy(pos); G.scene.add(m.mesh);
+  G.minions.push(m);
+  return m;
+}
+
+function confetti(G, p) {
+  for (let i = 0; i < 18; i++) {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 0.2), new THREE.MeshBasicMaterial({ color: [0xd94fa0, 0xf2c94c, 0xffffff, 0x5bc0eb][i % 4], side: THREE.DoubleSide, transparent: true }));
+    m.position.set(p.x, p.y + 1.2, p.z);
+    G.scene.add(m);
+    G.fx.push({ obj: m, life: 1.4, max: 1.4, kind: 'debris', vel: new THREE.Vector3((Math.random() - 0.5) * 6, 4 + Math.random() * 4, (Math.random() - 0.5) * 6), spin: Math.random() * 10 });
+  }
+}
+
+// ---------- helpers ----------
+function aimPoint(G, h, ctx, range) {
+  if (ctx.target) return ctx.target.pos.clone();
+  const o = eyeOf(h), d = ctx.aim || dirFrom(h.yaw, h.pitch);
+  const r = trace(G, o, d, range, h.team);
+  const p = r.point; p.y = groundAt(p, 0.1, G.colliders);
+  return p;
+}
+function thrown(G, h, ctx, w) {
+  const d = (ctx.aim || dirFrom(h.yaw, h.pitch)).clone();
+  d.y += w.lift ?? 0.18; d.normalize();
+  const from = eyeOf(h).addScaledVector(d, 0.8);
+  spawnProjectile(G, h, from, d.multiplyScalar(w.speed), w);
+}
+function slamLand(G, h) {
+  const a = h.def.ult;
+  h.slamPending = false; h.knockT = 0;
+  ring(G, h.pos, 0xbfeaff, a.radius); ring(G, h.pos, 0xffffff, a.radius * 0.6);
+  burst(G, h.pos.clone().setY(0.5), 0xffffff, a.radius * 0.7);
+  for (let i = 0; i < 14; i++) {
+    const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.25 + Math.random() * 0.25, 0), new THREE.MeshLambertMaterial({ color: 0xe8f8ff, transparent: true }));
+    m.position.set(h.pos.x, 0.4, h.pos.z); G.scene.add(m);
+    const ang = Math.random() * Math.PI * 2;
+    G.fx.push({ obj: m, life: 1, max: 1, kind: 'debris', vel: new THREE.Vector3(Math.cos(ang) * 8, 6 + Math.random() * 5, Math.sin(ang) * 8), spin: 6 });
+  }
+  for (const u of [...enemiesOf(G, h), ...G.minions.filter(m => m.alive && m.team !== h.team)]) {
+    const d = u.pos.distanceTo(h.pos);
+    if (d > a.radius) continue;
+    damage(G, u, a.dmg * (1 - 0.4 * d / a.radius), h);
+    knock(u, flat(v.subVectors(u.pos, h.pos).setY(0.001)), a.knock * (1 - d / a.radius * 0.5), 7);
+  }
+  G.ev.shake?.(h, 1);
+}
+
+// ---------- the abilities ----------
+export const ABIL = {
+  barrier: {
+    cast(G, h, a) { h.barrierT = a.dur; h.barrierM = a.mult; return true; },
+    ai: (G, b, a, c) => c.heroT && b.hp < b.maxHp * 0.65,
+  },
+  blink: {
+    cast(G, h, a, ctx) {
+      const d = ctx.wish && ctx.wish.lengthSq() > 0.01 ? ctx.wish.clone().normalize() : dirFrom(h.yaw, 0);
+      const from = h.pos.clone();
+      for (let s = 0; s < 30; s++) { h.pos.addScaledVector(d, a.dist / 30); resolveXZ(h.pos, h.radius, G.colliders); }
+      for (let i = 0; i < 4; i++) tracer(G, from.clone().setY(from.y + 0.5 + i * 0.4), h.pos.clone().setY(h.pos.y + 0.5 + i * 0.4), i % 2 ? 0xffc93c : 0xff4fa3, 0.35);
+      if (h.rushT > 0) {                                    // Rush Hour: leave a parcel bomb where you were
+        const box = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.35, 0.45), new THREE.MeshLambertMaterial({ color: 0xc99a62 }));
+        box.position.copy(from).setY(from.y + 0.2); G.scene.add(box);
+        G.timers.push({ t: 0.7, fn: () => {
+          G.scene.remove(box); ring(G, from, 0xffc93c, 3.5); burst(G, from.clone().setY(0.8), 0xffc93c, 1.6);
+          for (const u of [...enemiesOf(G, h), ...G.minions.filter(m => m.alive && m.team !== h.team)]) if (u.pos.distanceTo(from) < 3.5) damage(G, u, 40, h);
+          G.ev.boom?.(from);
+        } });
+      }
+      return true;
+    },
+    ai: (G, b, a, c) => (c.heroT && c.dist > b.def.prefRange + 6) || (b.ai.retreat && b.lastHurtT > G.time - 1),
+  },
+  nova: {
+    cast(G, h, a) {
+      ring(G, h.pos, 0xff8a3c, a.radius); ring(G, h.pos, 0xffd23c, a.radius * 0.7);
+      burst(G, h.pos.clone().setY(1), 0xffb05a, a.radius * 0.6);
+      for (const u of [...enemiesOf(G, h), ...G.minions.filter(m => m.alive && m.team !== h.team)]) if (u.pos.distanceTo(h.pos) < a.radius) damage(G, u, a.dmg, h);
+      return true;
+    },
+    ai: (G, b, a, c) => c.near(a.radius - 1) >= 1,
+  },
+  heal: {
+    cast(G, h, a) {
+      ring(G, h.pos, 0x3ccf9a, a.radius);
+      for (const u of alliesOf(G, h)) if (u.pos.distanceTo(h.pos) < a.radius) { const before = u.hp; u.hp = Math.min(u.maxHp, u.hp + a.amount); setBar(u); G.ev.heal?.(u, u.hp - before, h); }
+      return true;
+    },
+    ai: (G, b, a) => b.hp < b.maxHp * 0.6 || alliesOf(G, b).some(u => u !== b && u.hp < u.maxHp * 0.5 && u.pos.distanceTo(b.pos) < a.radius),
+  },
+  hook: {
+    cast(G, h, a, ctx) {
+      const o = eyeOf(h), d = ctx.aim || dirFrom(h.yaw, h.pitch);
+      const r = trace(G, o, d, a.range, h.team);
+      for (let i = 0; i < 3; i++) tracer(G, o.clone().setY(o.y - 0.3 + i * 0.05), r.point, i ? 0x8a8f99 : 0xd9a441, 0.35);
+      burst(G, r.point, 0xd9a441, 0.6);
+      const u = r.unit;
+      if (u && (u.kind === 'hero' || (u.kind === 'minion' && !u.deploy))) {
+        damage(G, u, a.dmg, h);
+        const back = flat(v.subVectors(h.pos, u.pos));
+        const dist = u.pos.distanceTo(h.pos);
+        knock(u, back, Math.min(a.pull, dist * 1.6), 5);
+        if (u.kind === 'hero') u.knockT = 0.5;
+      }
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist > 7 && c.dist < a.range - 2,
+  },
+  dome: {
+    cast(G, h, a) { addZone(G, { kind: 'dome', pos: h.pos.clone().setY(0), radius: a.radius, life: a.dur, team: h.team, owner: h, mult: a.mult }); return true; },
+    ai: (G, b, a, c) => c.heroT && (b.hp < b.maxHp * 0.6 || c.alliesNear(a.radius) >= 1),
+  },
+  parcel: {
+    cast(G, h, a, ctx) { thrown(G, h, ctx, { dmg: a.dmg, splash: a.splash, speed: a.speed, grav: 16, color: 0xc99a62, size: 0.3, box: true, lift: 0.22 }); return true; },
+    ai: (G, b, a, c) => c.tgt && c.dist > 5 && c.dist < 22,
+  },
+  rush: {
+    cast(G, h, a) { h.hasteT = a.dur; h.hasteSpeed = a.speed; h.hasteFire = a.fire; h.noReloadT = a.dur; h.reloadT = 0; h.ammo = h.def.weapon.mag; h.cd.ability = 0; h.rushT = a.dur; return true; },
+    ai: (G, b, a, c) => c.heroT && c.dist < 18,
+  },
+  candle: {
+    cast(G, h, a, ctx) {
+      const base = ctx.aim || dirFrom(h.yaw, h.pitch);
+      for (let i = 0; i < a.count; i++) {
+        const yaw = (i - (a.count - 1) / 2) * 0.09;
+        const d = base.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw); d.y += 0.04 + Math.random() * 0.03;
+        G.timers.push({ t: i * 0.07, fn: () => h.alive && spawnProjectile(G, h, eyeOf(h).addScaledVector(d, 0.8), d.clone().normalize().multiplyScalar(40), { dmg: a.dmg, splash: a.splash, grav: 2, color: [0xff4fa3, 0xffd23c, 0x7af0ff, 0xff8a3c, 0xb98cff][i % 5], size: 0.14, trail: true }) });
+      }
+      return true;
+    },
+    ai: (G, b, a, c) => c.tgt && c.dist < 22,
+  },
+  barrage: {
+    cast(G, h, a, ctx) {
+      const p = aimPoint(G, h, ctx, 60);
+      ring(G, p, 0xff8a3c, a.radius);
+      for (let i = 0; i < a.shells; i++) {
+        G.timers.push({ t: 0.4 + i * 0.16, fn: () => {
+          const ang = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * a.radius;
+          const at = new THREE.Vector3(p.x + Math.cos(ang) * r, 28, p.z + Math.sin(ang) * r);
+          spawnProjectile(G, h, at, new THREE.Vector3(0, -38, 0), { dmg: a.dmg, splash: a.splash, grav: 0, color: [0xff4fa3, 0xffd23c, 0x7af0ff, 0xff8a3c][i % 4], size: 0.3, trail: true, big: true });
+        } });
+      }
+      return true;
+    },
+    ai: (G, b, a, c) => c.tgt && c.dist < 45 && (c.heroT || c.tgt.kind === 'tower' || c.tgt.kind === 'core'),
+  },
+  mark: {
+    cast(G, h, a, ctx) {
+      const o = eyeOf(h), d = ctx.aim || dirFrom(h.yaw, h.pitch);
+      const r = trace(G, o, d, a.range, h.team);
+      tracer(G, o.clone().setY(o.y - 0.2), r.point, 0xffe08a, 0.4);
+      burst(G, r.point, 0xffe08a, 0.8);
+      if (r.unit && r.unit.kind === 'hero') { r.unit.markT = a.dur; r.unit.markAmp = a.amp; breakInvis(r.unit); G.ev.flash?.(r.unit, 'Marked'); }
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist < a.range,
+  },
+  sanctum: {
+    cast(G, h, a) { addZone(G, { kind: 'sanctum', pos: h.pos.clone().setY(0), radius: a.radius, life: a.dur, team: h.team, owner: h, hps: a.hps }); return true; },
+    ai: (G, b, a, c) => (b.hp < b.maxHp * 0.5 && c.heroT) || alliesOf(G, b).filter(u => u.pos.distanceTo(b.pos) < a.radius && u.hp < u.maxHp * 0.7).length >= 2,
+  },
+  wall: {
+    cast(G, h, a) {
+      const f = dirFrom(h.yaw, 0), c = h.pos.clone().addScaledVector(f, 3);
+      const alongX = Math.abs(f.z) > Math.abs(f.x);
+      const w = alongX ? a.width : 1, d = alongX ? 1 : a.width;
+      const collider = makeBox(c.x, c.z, w, d, a.height);
+      G.colliders.push(collider);
+      const mesh = new THREE.Group(); mesh.position.set(c.x, 0, c.z);
+      const core = new THREE.Mesh(new THREE.BoxGeometry(w, a.height, d), new THREE.MeshLambertMaterial({ color: 0x4f7a3a }));
+      core.position.y = a.height / 2; core.castShadow = true; mesh.add(core);
+      for (let i = 0; i < 26; i++) {
+        const t = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.5, 4), new THREE.MeshLambertMaterial({ color: i % 5 ? 0x6b4a33 : 0xff5f8f }));
+        t.position.set((Math.random() - 0.5) * w, Math.random() * a.height, (Math.random() - 0.5) * d);
+        t.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3); mesh.add(t);
+      }
+      for (let i = 0; i < 8; i++) {
+        const l = new THREE.Mesh(new THREE.IcosahedronGeometry(0.45, 0), new THREE.MeshLambertMaterial({ color: 0x5fb05a, flatShading: true }));
+        l.position.set((Math.random() - 0.5) * w, a.height - 0.1, (Math.random() - 0.5) * d); mesh.add(l);
+      }
+      G.scene.add(mesh);
+      G.walls.push({ collider, mesh, life: a.dur, max: a.dur });
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && (b.hp < b.maxHp * 0.5 || b.ai.retreat) && c.dist > 5,
+  },
+  snare: {
+    cast(G, h, a, ctx) {
+      thrown(G, h, ctx, { dmg: 0, splash: 0, speed: 22, grav: 18, color: 0x7fc06a, size: 0.2, lift: 0.25, noDirect: true,
+        onExplode: (G2, p) => { const at = p.clone(); at.y = groundAt(at, 0.1, G.colliders); addZone(G, { kind: 'trap', pos: at, radius: 1.4, life: a.life, team: h.team, owner: h, rootT: a.root, dmg: a.dmg }); } });
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist < 16,
+  },
+  overgrowth: {
+    cast(G, h, a, ctx) { addZone(G, { kind: 'overgrowth', pos: aimPoint(G, h, ctx, 22), radius: a.radius, life: a.dur, team: h.team, owner: h, dps: a.dps, slow: a.slow, hps: a.hps }); return true; },
+    ai: (G, b, a, c) => c.heroT && c.dist < 20,
+  },
+  turret: {
+    cast(G, h, a) {
+      const p = h.pos.clone().addScaledVector(dirFrom(h.yaw, 0), 1.6); resolveXZ(p, 0.5, G.colliders); p.y = groundAt(p, 0.3, G.colliders);
+      deploy(G, h, makeTurret(G, h, a, p), p);
+      return true;
+    },
+    ai: (G, b, a, c) => !!c.tgt && c.dist < a.range,
+  },
+  coil: {
+    cast(G, h, a, ctx) {
+      thrown(G, h, ctx, { dmg: a.dmg, splash: a.splash, speed: 24, grav: 14, color: 0x7af0ff, size: 0.22, lift: 0.2,
+        onExplode: (G2, p) => {
+          ring(G, p, 0x7af0ff, a.splash);
+          for (let i = 0; i < 6; i++) { const ang = i / 6 * Math.PI * 2; tracer(G, p, p.clone().add(new THREE.Vector3(Math.cos(ang) * a.splash, 0.6 + Math.random(), Math.sin(ang) * a.splash)), 0x7af0ff, 0.3); }
+          for (const u of [...G.heroes, ...G.minions]) if (u.alive && u.team !== h.team && chestOf(u).distanceTo(p) < a.splash) stun(u, a.stun);
+        } });
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist > 4 && c.dist < 20,
+  },
+  overclock: {
+    // Mega Biscuit: every Biscuit you own (or a fresh one) grows into a heavy turret
+    cast(G, h, a) {
+      let mine = G.minions.filter(m => m.alive && m.turret && m.owner === h);
+      if (!mine.length) {
+        const p = h.pos.clone().addScaledVector(dirFrom(h.yaw, 0), 1.6); resolveXZ(p, 0.5, G.colliders); p.y = groundAt(p, 0.3, G.colliders);
+        mine = [deploy(G, h, makeTurret(G, h, h.def.ability, p), p)];
+      }
+      for (const m of mine) {
+        m.megaT = a.dur; m.megaRate = a.rate; m.megaDmg = a.dmg;
+        m.life = Math.max(m.life, a.dur); m.maxHp = a.hp; m.hp = a.hp; setBar(m, TEAM_COLOR[m.team]);
+        ring(G, m.pos, 0xff7a2a, 3); burst(G, m.pos.clone().setY(1), 0xff7a2a, 1.6);
+      }
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist < 24,
+  },
+  vanish: {
+    cast(G, h, a) { h.invisT = a.dur; h.ambush = a.bonus; confetti(G, h.pos); return true; },
+    ai: (G, b, a, c) => c.heroT && (b.hp < b.maxHp * 0.5 || c.dist > b.def.prefRange + 6),
+  },
+  decoy: {
+    cast(G, h, a) {
+      const p = h.pos.clone().addScaledVector(dirFrom(h.yaw, 0), 1.2);
+      deploy(G, h, makeDecoy(G, h, a, p), p);
+      confetti(G, p);
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist < 30,
+  },
+  showstop: {
+    cast(G, h, a, ctx) {
+      const f = flat(ctx.aim || dirFrom(h.yaw, 0)), o = eyeOf(h);
+      for (let i = 0; i < 14; i++) {
+        const d = f.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), (i / 13 - 0.5) * 1.8);
+        tracer(G, o, o.clone().addScaledVector(d, a.range).setY(o.y - 0.6 + Math.random() * 0.8), i % 2 ? 0xd94fa0 : 0xf2c94c, 0.4);
+      }
+      for (const u of [...G.heroes, ...G.minions]) {
+        if (!u.alive || u.team === h.team) continue;
+        const to = v.subVectors(u.pos, h.pos); const d = to.length(); to.y = 0; to.normalize();
+        if (d < a.range && to.dot(f) > a.cone) { stun(u, a.stun); damage(G, u, a.dmg, h); burst(G, chestOf(u), 0xf2c94c, 0.8); }
+      }
+      return true;
+    },
+    ai: (G, b, a, c) => {
+      const f = dirFrom(b.yaw, 0);
+      return enemiesOf(G, b).filter(e => { const to = v.subVectors(e.pos, b.pos); const d = to.length(); to.y = 0; to.normalize(); return d < a.range && to.dot(f) > a.cone; }).length >= 1;
+    },
+  },
+  frost: {
+    cast(G, h, a, ctx) { addZone(G, { kind: 'frost', pos: aimPoint(G, h, ctx, 26), radius: a.radius, life: a.dur, team: h.team, owner: h, dps: a.dps, slow: a.slow }); return true; },
+    ai: (G, b, a, c) => c.heroT && c.dist < 22,
+  },
+  charge: {
+    cast(G, h, a) {
+      h.dashDir = dirFrom(h.yaw, 0); h.dashT = 0.45; h.dashSpeed = a.dist / 0.45; h.dashDmg = a.dmg; h.dashKnock = a.knock; h.dashHit = new Set();
+      h.dashStun = 0; h.dashColor = 0xffffff; h.dashSpin = false; h.dashMode = null; h.grabbed = null;
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist > 3 && c.dist < a.dist,
+  },
+  slam: {
+    cast(G, h, a) {
+      if (!h.onGround) return false;
+      const f = dirFrom(h.yaw, 0);
+      h.vel.set(f.x * 9, 13, f.z * 9); h.onGround = false; h.slamPending = true; h.knockT = 1.6; h.airT = 0;
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist < 9 && b.onGround,
+  },
+
+  // ---- Tempo ----
+  bassdrop: {
+    cast(G, h, a, ctx) {
+      const f = flat(ctx.aim || dirFrom(h.yaw, 0)), o = eyeOf(h);
+      for (let i = 1; i <= 3; i++) G.timers.push({ t: i * 0.05, fn: () => ring(G, h.pos.clone().addScaledVector(f, i * 2.6), i % 2 ? 0xff4fa3 : 0x18e0f0, 1.4 + i * 0.9) });
+      for (let i = 0; i < 9; i++) {
+        const d = f.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), (i / 8 - 0.5) * 1.6);
+        tracer(G, o.clone().setY(o.y - 0.4), o.clone().addScaledVector(d, a.range).setY(o.y - 0.5 + Math.random() * 0.6), i % 2 ? 0xff4fa3 : 0x18e0f0, 0.3);
+      }
+      for (const u of [...enemiesOf(G, h), ...G.minions.filter(m => m.alive && m.team !== h.team && !m.deploy)]) {
+        const to = v.subVectors(u.pos, h.pos); const d = to.length(); to.y = 0; to.normalize();
+        if (d > a.range || to.dot(f) < a.cone) continue;
+        damage(G, u, a.dmg, h); knock(u, to.clone(), a.knock * (1 - d / a.range * 0.4), 6);
+        burst(G, chestOf(u), 0xff4fa3, 0.7);
+      }
+      G.ev.shake?.(h, 0.5);
+      return true;
+    },
+    ai: (G, b, a, c) => {
+      const f = dirFrom(b.yaw, 0);
+      return enemiesOf(G, b).some(e => { const to = v.subVectors(e.pos, b.pos); const d = to.length(); to.y = 0; to.normalize(); return d < a.range * 0.8 && to.dot(f) > a.cone; });
+    },
+  },
+  rewind: {
+    cast(G, h, a) {
+      const s = h.hist.find(p => p.t >= G.time - a.back - 0.05);
+      if (!s || G.time - s.t < 0.5) return false;
+      const trail = h.hist.filter(p => p.t >= s.t);
+      for (let i = 1; i < trail.length; i++) {
+        const p0 = trail[i - 1], p1 = trail[i];
+        tracer(G, new THREE.Vector3(p0.x, p0.y + 1, p0.z), new THREE.Vector3(p1.x, p1.y + 1, p1.z), i % 2 ? 0x18e0f0 : 0xff4fa3, 0.6);
+      }
+      burst(G, chestOf(h), 0x18e0f0, 1.2);
+      h.pos.set(s.x, s.y, s.z); h.vel.set(0, 0, 0);
+      const before = h.hp; h.hp = Math.max(h.hp, s.hp); setBar(h);
+      if (h.hp > before) G.ev.heal?.(h, h.hp - before, h);
+      h.hist.length = 0;
+      ring(G, h.pos, 0xff4fa3, 2.4); burst(G, chestOf(h), 0xff4fa3, 1.2);
+      return true;
+    },
+    ai: (G, b, a) => b.hp < b.maxHp * 0.45 && b.hist.length > 20 && b.hist[0].hp > b.hp + 35,
+  },
+  moshpit: {
+    cast(G, h, a, ctx) {
+      const p = aimPoint(G, h, ctx, 30);
+      addZone(G, { kind: 'vortex', pos: p, radius: a.radius, life: a.dur, team: h.team, owner: h, dps: a.dps, pull: a.pull });
+      ring(G, p, 0xff4fa3, a.radius); ring(G, p, 0x18e0f0, a.radius * 0.6);
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist < 26,
+  },
+
+  // ---- Kestrel ----
+  updraft: {
+    cast(G, h, a) {
+      h.vel.y = a.lift; h.onGround = false; h.glideT = a.glide;
+      ring(G, h.pos, 0xffffff, 2.2); burst(G, h.pos.clone().setY(h.pos.y + 0.3), 0xf6ecd9, 1.3);
+      for (let i = 0; i < 6; i++) { const ang = i / 6 * Math.PI * 2; tracer(G, h.pos.clone().add(new THREE.Vector3(Math.cos(ang) * 0.8, 0.2, Math.sin(ang) * 0.8)), h.pos.clone().add(new THREE.Vector3(Math.cos(ang) * 0.4, 4, Math.sin(ang) * 0.4)), 0xffffff, 0.4); }
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && b.onGround && (b.hp < b.maxHp * 0.5 || c.dist < 9),
+  },
+  flare: {
+    cast(G, h, a, ctx) {
+      const p = aimPoint(G, h, ctx, a.range);
+      tracer(G, eyeOf(h), p.clone().setY(p.y + 0.5), 0xff5a36, 0.5);
+      ring(G, p, 0xff5a36, a.radius); burst(G, p.clone().setY(p.y + 1.5), 0xffd23c, 1.6);
+      for (const u of enemiesOf(G, h)) {
+        if (Math.hypot(u.pos.x - p.x, u.pos.z - p.z) > a.radius) continue;
+        breakInvis(u);                                       // reveal, then jam their gadgets
+        u.cd.q += a.jam; u.cd.ability += a.jam; u.ult = Math.max(0, u.ult - a.drain);
+        u.jamT = a.jam; G.ev.flash?.(u, 'Jammed');
+      }
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist < a.range,
+  },
+  strafe: {
+    cast(G, h, a, ctx) {
+      const f = flat(ctx.aim || dirFrom(h.yaw, 0));
+      const start = h.pos.clone().addScaledVector(f, 4).setY(0);
+      // the biplane: a fuselage mesh with wings and tail as children
+      const pal = h.def.palette;
+      const plane = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 4), new THREE.MeshLambertMaterial({ color: pal.main, transparent: true }));
+      for (const y of [-0.45, 0.75]) { const w = new THREE.Mesh(new THREE.BoxGeometry(7, 0.14, 1.2), new THREE.MeshLambertMaterial({ color: pal.trim })); w.position.set(0, y, -0.4); plane.add(w); }
+      const tail = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.1, 0.9), new THREE.MeshLambertMaterial({ color: pal.trim })); tail.position.set(0, 0.6, 1.7); plane.add(tail);
+      const prop = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.16, 0.06), new THREE.MeshLambertMaterial({ color: 0x1d2340 })); prop.position.z = -2.05; prop.name = 'prop'; plane.add(prop);
+      plane.position.copy(start).addScaledVector(f, -30).setY(17);
+      plane.rotation.y = Math.atan2(-f.x, -f.z);
+      G.scene.add(plane);
+      G.fx.push({ obj: plane, life: 2.6, max: 2.6, kind: 'fly', vel: f.clone().multiplyScalar(30) });
+      ring(G, start.clone().addScaledVector(f, a.bombs * a.gap * 0.5), 0xffc93c, a.bombs * a.gap * 0.5);
+      for (let i = 0; i < a.bombs; i++) {
+        const at = start.clone().addScaledVector(f, i * a.gap);
+        G.timers.push({ t: 0.9 + i * 0.085, fn: () => spawnProjectile(G, h, new THREE.Vector3(at.x, 16, at.z), new THREE.Vector3(f.x * 6, -34, f.z * 6),
+          { dmg: a.dmg, splash: a.splash, grav: 6, color: i % 2 ? 0xffc93c : 0xff5a36, size: 0.3, box: true, trail: true, big: true }) });
+      }
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist > 5 && c.dist < 28,
+  },
+
+  // ---- Snapjaw ----
+  roll: {
+    cast(G, h, a) {
+      h.dashDir = dirFrom(h.yaw, 0); h.dashT = 0.4; h.dashSpeed = a.dist / 0.4; h.dashDmg = a.dmg; h.dashHit = new Set();
+      h.dashMode = 'grab'; h.grabbed = null; h.grabStun = a.stun; h.dashColor = 0x9cc46a; h.dashSpin = true;
+      burst(G, h.pos.clone().setY(0.4), 0x7a5a2a, 1.1);
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist > 2 && c.dist < a.dist,
+  },
+  submerge: {
+    cast(G, h, a) {
+      ring(G, h.pos, 0x3f7a8a, 2.2); burst(G, h.pos.clone().setY(0.3), 0x6fb5c4, 1.4);
+      h.lurkT = a.dur; h.slowT = a.dur; h.slowM = a.speed;
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && (b.hp < b.maxHp * 0.45 || c.dist < a.radius + 3),
+  },
+  jaws: {
+    cast(G, h, a, ctx) {
+      const p = aimPoint(G, h, ctx, 34);
+      ring(G, p, 0x9cc46a, a.radius);
+      G.timers.push({ t: 0.55, fn: () => {
+        // two rows of teeth burst up and snap together
+        for (const s of [-1, 1]) for (let i = 0; i < 9; i++) {
+          const m = new THREE.Mesh(new THREE.ConeGeometry(0.28, 1.3, 4), new THREE.MeshLambertMaterial({ color: 0xf4efd8, transparent: true }));
+          m.position.set(p.x + (i - 4) * a.radius * 0.2, 0.3, p.z + s * a.radius * 0.6);
+          G.scene.add(m);
+          G.fx.push({ obj: m, life: 0.9, max: 0.9, kind: 'debris', vel: new THREE.Vector3(0, 7, -s * a.radius * 1.2), spin: 0 });
+        }
+        ring(G, p, 0x5f8f3a, a.radius); burst(G, p.clone().setY(0.8), 0x9cc46a, a.radius * 0.8);
+        for (const u of [...G.heroes, ...G.minions]) {
+          if (!u.alive || u.team === h.team || Math.hypot(u.pos.x - p.x, u.pos.z - p.z) > a.radius) continue;
+          damage(G, u, a.dmg, h); root(u, a.root);
+          if (u.kind === 'hero') G.ev.flash?.(u, 'Chomped');
+        }
+        G.ev.shake?.(h, 0.6);
+      } });
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist < 28,
+  },
+
+  // ---- Cavalier ----
+  lance: {
+    cast(G, h, a) {
+      h.dashDir = dirFrom(h.yaw, 0); h.dashT = 0.6; h.dashSpeed = a.dist / 0.6; h.dashDmg = a.dmg; h.dashHit = new Set();
+      h.dashMode = 'joust'; h.dashPerM = a.perM; h.dashLift = a.lift; h.dashStart = h.pos.clone(); h.grabbed = null;
+      h.dashStun = 0; h.dashColor = 0xffe08a; h.dashSpin = false;
+      for (let i = 0; i < 3; i++) tracer(G, h.pos.clone().setY(0.4 + i * 0.5), h.pos.clone().addScaledVector(h.dashDir, -3).setY(0.4 + i * 0.5), 0xffe08a, 0.4);
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist > 8 && c.dist < a.dist,
+  },
+  rally: {
+    cast(G, h, a) {
+      addZone(G, { kind: 'banner', pos: h.pos.clone().setY(0), radius: a.radius, life: a.dur, team: h.team, owner: h, rally: a.amp });
+      ring(G, h.pos, 0xffe08a, a.radius);
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist < 25,
+  },
+  stampede: {
+    cast(G, h, a, ctx) {
+      const f = flat(ctx.aim || dirFrom(h.yaw, 0)), side = new THREE.Vector3(-f.z, 0, f.x);
+      const start = h.pos.clone().addScaledVector(f, -2).setY(0);
+      const time = a.range / a.speed;
+      // a herd of glowing horses: bodies with a head, neck and legs as children
+      for (let i = 0; i < 7; i++) {
+        const off = (i / 6 - 0.5) * a.width, lag = Math.random() * 2;
+        const mat = new THREE.MeshBasicMaterial({ color: i % 2 ? 0xbfe6ff : 0xffffff, transparent: true });
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.75, 1.7), mat);
+        const neck = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.9, 0.4), mat); neck.position.set(0, 0.6, -0.8); neck.rotation.x = -0.5; body.add(neck);
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.7), mat); head.position.set(0, 1.0, -1.15); body.add(head);
+        for (const [x, z] of [[-0.25, -0.6], [0.25, -0.6], [-0.25, 0.6], [0.25, 0.6]]) { const l = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.8, 0.15), mat); l.position.set(x, -0.7, z); body.add(l); }
+        body.position.copy(start).addScaledVector(side, off).addScaledVector(f, -lag).setY(1.2);
+        body.rotation.y = Math.atan2(-f.x, -f.z);
+        G.scene.add(body);
+        G.fx.push({ obj: body, life: time + 0.3, max: time + 0.3, kind: 'fly', vel: f.clone().multiplyScalar(a.speed) });
+      }
+      const hit = new Set(), steps = Math.ceil(time / 0.05);
+      for (let s = 1; s <= steps; s++) G.timers.push({ t: s * 0.05, fn: () => {
+        const front = (s / steps) * a.range;
+        for (const u of [...G.heroes, ...G.minions]) {
+          if (!u.alive || u.team === h.team || hit.has(u)) continue;
+          const to = v.subVectors(u.pos, start); to.y = 0;
+          const along = to.dot(f), across = Math.abs(to.dot(side));
+          if (along < 0 || along > front || across > a.width / 2) continue;
+          hit.add(u); damage(G, u, a.dmg, h); knock(u, f.clone(), a.knock, 7);
+          burst(G, chestOf(u), 0xbfe6ff, 1);
+        }
+      } });
+      G.ev.shake?.(h, 0.7);
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist < a.range - 4,
+  },
+};
+
+// Cast a slot ('q', 'ability' or 'ult'). ctx: { wish, aim, target }.
+export function castSlot(G, h, slot, ctx = {}) {
+  const a = h.def[slot];
+  if (!h.alive || !canAct(h) || !a) return false;
+  if (slot === 'ult' ? h.ult < 100 : h.cd[slot] > 0) return false;
+  if (!ABIL[a.id].cast(G, h, a, ctx)) return false;
+  if (slot === 'ult') h.ult = 0; else h.cd[slot] = a.cd;
+  if (a.id === 'blink' && h.rushT > 0) h.cd.ability = h.def.ult.blinkCd || 1;
+  if (a.id !== 'vanish') breakInvis(h);
+  h.castA = slot === 'ult' ? 1.6 : 1; h.castSlot = slot;
+  G.ev.ability(h, slot);
+  if (G.net && h.local) G.net.cast(h, slot, ctx);
+  return true;
+}
+
+// Online: play a remote hero's cast here (cooldowns are theirs to track). Its damage is
+// ignored locally, but pushes, pulls, stuns and heals land on our own hero as they would.
+export function replayCast(G, h, slot, ctx) {
+  const a = h.def[slot];
+  if (!a || !ABIL[a.id].cast(G, h, a, ctx)) return;
+  h.castA = slot === 'ult' ? 1.6 : 1; h.castSlot = slot;
+  G.ev.ability(h, slot);
+}
