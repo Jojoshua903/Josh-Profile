@@ -1,11 +1,11 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { TUNING } from './data.js?v=20261126f';
-import { hasLOS } from './world.js?v=20261126f';
-import { fire, releaseFire, chargeLevel, startReload, eyeOf, chestOf, dirFrom, coreVulnerable } from './units.js?v=20261126f';
-import { ABIL, castSlot, canAct, canMove, moveMult, isHidden } from './abilities.js?v=20261126f';
-import { survivorGoal, inStorm } from './survivor.js?v=20261126f';
-import { hillGoal } from './hill.js?v=20261126f';
-import { cartGoal } from './payload.js?v=20261126f';
+import { TUNING } from './data.js?v=20261126j';
+import { hasLOS } from './world.js?v=20261126j';
+import { fire, releaseFire, chargeLevel, startReload, eyeOf, chestOf, dirFrom, coreVulnerable } from './units.js?v=20261126j';
+import { ABIL, castSlot, canAct, canMove, moveMult, isHidden } from './abilities.js?v=20261126j';
+import { survivorGoal, inStorm } from './survivor.js?v=20261126j';
+import { hillGoal } from './hill.js?v=20261126j';
+import { cartGoal } from './payload.js?v=20261126j';
 
 const v1 = new THREE.Vector3(), v2 = new THREE.Vector3();
 
@@ -13,8 +13,8 @@ const v1 = new THREE.Vector3(), v2 = new THREE.Vector3();
 export function steer(h, wish, sprint, jump, dt) {
   if (h.knockT > 0 || h.dashT > 0) return;          // knockback, charges and slams own the velocity
   if (!canMove(h)) { wish = new THREE.Vector3(); jump = false; }
-  const speed = h.def.speed * (sprint ? 1.38 : 1) * moveMult(h) * (h.glide ? 1.9 : 1);
-  const accel = h.onGround ? 14 : h.glide ? 5 : 3.5;
+  const speed = h.def.speed * (sprint ? 1.38 : 1) * moveMult(h);
+  const accel = h.onGround ? 14 : 3.5;
   const k = Math.min(1, accel * dt);
   h.vel.x += (wish.x * speed - h.vel.x) * k;
   h.vel.z += (wish.z * speed - h.vel.z) * k;
@@ -109,7 +109,7 @@ export function updateBot(G, b, dt, D) {
     // no base to run to: the storm and loot decide; fights only when the zone is safe
     const urgent = survivorGoal(G, b, goal);
     const stormy = urgent && inStorm(G, b.pos);
-    if (tgt && !stormy && !b.glide) {
+    if (tgt && !stormy) {
       const lowHp = b.hp < b.maxHp * 0.3;
       const pref = lowHp ? def.prefRange * 2.2 : def.prefRange;
       const dx = b.pos.x - tgt.pos.x, dz = b.pos.z - tgt.pos.z, d = Math.hypot(dx, dz) || 1;

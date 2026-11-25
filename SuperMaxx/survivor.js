@@ -1,7 +1,7 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { SURVIVOR, TUNING } from './data.js?v=20261126f';
-import { mirror, groundAt, resolveXZ } from './world.js?v=20261126f';
-import { damage, setBar, burst, ring, chestOf } from './units.js?v=20261126f';
+import { SURVIVOR, TUNING } from './data.js?v=20261126j';
+import { mirror, groundAt, resolveXZ } from './world.js?v=20261126j';
+import { damage, setBar, burst, ring, chestOf } from './units.js?v=20261126j';
 
 // Survivor: free-for-all battle royale. Everyone starts on the ground at a random spot, loot on
 // the ground, a storm that closes in phase by phase, no respawns, last hero standing wins.
@@ -54,8 +54,7 @@ export function initSurvivor(G) {
     spots.push(best);
     h.pos.set(best.x, 0, best.z); h.pos.y = groundAt(h.pos, TUNING.radius, G.colliders);
     h.vel.set(0, 0, 0);
-    h.armor = 0; h.power = 0; h.place = 0; h.glide = false;
-    if (h.chute) h.chute.visible = false;
+    h.armor = 0; h.power = 0; h.place = 0;
     h.yaw = Math.atan2(-h.pos.x, -h.pos.z) + (Math.random() - 0.5) * 1.2;   // roughly towards the middle
   });
 }
@@ -159,7 +158,7 @@ function updateStorm(G, dt) {
   edge.scale.set(r, 1, r); edge.position.set(s.cx, 0.3, s.cz);
   next.visible = s.state !== 'final';
   next.scale.setScalar(Math.max(0.5, s.to.r)); next.position.set(s.to.cx, 0.12, s.to.cz);
-  for (const h of G.heroes) if (h.alive && !h.glide && inStorm(G, h.pos)) damage(G, h, s.dps * dt, null);
+  for (const h of G.heroes) if (h.alive && inStorm(G, h.pos)) damage(G, h, s.dps * dt, null);
 }
 
 // ---------- per frame ----------
@@ -177,7 +176,7 @@ export function updateSurvivor(G, dt) {
     l.t += dt;
     l.item.rotation.y += dt * 1.8; l.item.position.y = 0.8 + Math.sin(l.t * 2.5) * 0.12;
     for (const h of G.heroes) {
-      if (!h.alive || h.glide) continue;
+      if (!h.alive) continue;
       if (Math.hypot(h.pos.x - l.pos.x, h.pos.z - l.pos.z) < 1.3 && Math.abs(h.pos.y - l.pos.y) < 1.6 && grab(G, h, l)) break;
     }
   }
@@ -198,7 +197,6 @@ export function onEliminated(G, t) {
   const drops = [SURVIVOR.lootTypes[0], rollType()];
   if (t.armor > 0 || t.power > 0) drops.push(SURVIVOR.lootTypes[t.power > 0 ? 2 : 1]);
   for (const ty of drops) spawnLoot(G, ty, t.pos.x, t.pos.z, true);
-  if (t.chute) t.chute.visible = false;
 }
 
 // ---------- bots ----------
@@ -214,7 +212,7 @@ export function survivorGoal(G, b, goal) {
   const dNext = Math.hypot(b.pos.x - s.to.cx, b.pos.z - s.to.cz);
   if (inStorm(G, b.pos) || (s.state === 'shrink' && dNext > s.to.r * 0.85) || (s.state === 'wait' && s.t < 12 && dNext > s.to.r)) { toSafe(); return true; }
   // loot: prefer health when hurt, skip things we can't use
-  let best = null, bd = b.glide ? 60 : 32;
+  let best = null, bd = 32;
   for (const l of G.loot) {
     if (!l.alive) continue;
     const id = l.type.id;

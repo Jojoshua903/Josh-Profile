@@ -1,19 +1,19 @@
-import { LOOK, applyEnvironment } from './stage.js?v=20261126f';
-import { masteryOf } from './mastery.js?v=20261126f';
+import { LOOK, applyEnvironment } from './stage.js?v=20261126j';
+import { masteryOf } from './mastery.js?v=20261126j';
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { HEROES, ARCHETYPES, archOf } from './heroes.js?v=20261126f';
-import './personality.js?v=20261126f';
-import { MAPS, DIFFICULTY } from './data.js?v=20261126f';
-import { THEMES } from './scenery.js?v=20261126f';
-import { cfg, save, resetSettings, QUALITY } from './settings.js?v=20261126f';
-import { splash, headshot, mapArt } from './portraits.js?v=20261126f';
-import { initOnline, enterOnline } from './online.js?v=20261126f';
-import { enterSlots } from './slotmachine.js?v=20261126f';
-import { initVault, enterVault, leaveVault, clipCount } from './vault.js?v=20261126f';
-import { tokens as slotTokens } from './slots.js?v=20261126f';
-import { CONTRACTS, contractOf, taskFrac, taskDone, statOf, tasksDone, openContracts } from './contracts.js?v=20261126f';
+import { HEROES, ARCHETYPES, archOf } from './heroes.js?v=20261126j';
+import './personality.js?v=20261126j';
+import { MAPS, DIFFICULTY } from './data.js?v=20261126j';
+import { THEMES } from './scenery.js?v=20261126j';
+import { cfg, save, resetSettings, QUALITY } from './settings.js?v=20261126j';
+import { splash, headshot, mapArt } from './portraits.js?v=20261126j';
+import { initOnline, enterOnline } from './online.js?v=20261126j';
+import { enterSlots } from './slotmachine.js?v=20261126j';
+import { initVault, enterVault, leaveVault, clipCount } from './vault.js?v=20261126j';
+import { tokens as slotTokens } from './slots.js?v=20261126j';
+import { CONTRACTS, contractOf, taskFrac, taskDone, statOf, tasksDone, openContracts } from './contracts.js?v=20261126j';
 import { SEASON, TRACK, MAX_TIER, passXp, tierProgress, heroOwned, heroTier, skinOwned, skinTier, skinsFor, dressed, equip, rewardInfo,
-  COS_TYPES, cosById, cosOwned, equippedCos, equipCos, cosArt, lockShort, lockLong, isSlotItem, isContractHero } from './pass.js?v=20261126f';
+  COS_TYPES, cosById, cosOwned, equippedCos, equipCos, cosArt, lockShort, lockLong, isSlotItem, isContractHero } from './pass.js?v=20261126j';
 
 // Front end: main menu → roster select → stage select → match. Settings overlay on top.
 
@@ -183,10 +183,10 @@ function go(name) {
 
 // ---------- roster ----------
 // Hero select is a wall of portraits, a big showcase of the pick in the middle and its details on
-// the right. The wall sorts by role (grouped by archetype), by name, or by most mastery; the
+// the right. The wall sorts by class (grouped by archetype), by name, or by most mastery; the
 // archetype filter narrows any of them. Arrows and the keyboard step through what's showing.
 let viewId = null, infoTab = 'kit', arch = cfg.rosterArch || 'all', sort = cfg.rosterSort || 'role';
-const SORTS = [['role', '🧩', 'Role', 'Grouped by archetype'], ['name', '🔤', 'A–Z', 'Alphabetical by callsign'], ['mastery', '🏅', 'Mastery', 'Most played first']];
+const SORTS = [['role', '🧩', 'Class', 'Grouped by class'], ['name', '🔤', 'Name', 'Alphabetical by callsign'], ['mastery', '🏅', 'Mastery', 'Most played first']];
 const BY_ROLE = ARCHETYPES.flatMap(a => HEROES.filter(h => h.arch === a.id));
 const orderOf = () => sort === 'name' ? [...HEROES].sort((a, b) => a.callsign.localeCompare(b.callsign))
   : sort === 'mastery' ? [...HEROES].sort((a, b) => heroOwned(b.id) - heroOwned(a.id) || masteryOf(b.id).xp - masteryOf(a.id).xp || a.callsign.localeCompare(b.callsign))
@@ -468,7 +468,7 @@ function enterPass(keepScroll) {
   const tr = $('track'), scroll = tr.scrollLeft;
   // tiers with no reward yet still get a column: an open slot for future rewards
   const open = t => `<div class="rw open ${pr.tier >= t ? 'own' : 'lock'} ${t === pr.tier + 1 ? 'next' : ''}"><span class="rt">T${t}</span>
-    <div class="art"><span>＋</span></div><div class="meta"><small>Open tier</small><b>More soon</b></div></div>`;
+    <div class="art"><span>＋</span></div><div class="meta"><b>Open tier</b></div></div>`;
   tr.innerHTML = Array.from({ length: MAX_TIER }, (_, t) => tiers[t] || []).map((list, t) => `<div class="tcol" style="animation-delay:${t * 0.02}s">${list.length ? list.map(([r, i], k) => card(r, i, k > 0)).join('') : open(t + 1)}</div>`).join('');
   tr.querySelectorAll('img[data-r]').forEach((img, k) => setTimeout(() => {
     img.src = headshot(rewardInfo(TRACK[+img.dataset.r]).def); img.classList.add('ok');

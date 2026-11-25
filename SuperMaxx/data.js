@@ -1,5 +1,5 @@
 // Maps and tuning shared across the game. The hero roster lives in heroes.js.
-export { HEROES } from './heroes.js?v=20261126f';
+export { HEROES } from './heroes.js?v=20261126j';
 
 
 export const DIFFICULTY = {
@@ -177,7 +177,7 @@ export const SURVIVOR_MAP = {
 
 export const SURVIVOR = {
   players: 12,
-  dropHeight: 48, glideFall: 7,
+
   // storm phases: wait, then shrink over `shrink` seconds to `r` (fraction of start radius); dps outside
   phases: [
     { wait: 40, shrink: 20, r: 0.62, dps: 2 },

@@ -1,9 +1,9 @@
-import { HEROES } from './heroes.js?v=20261126f';
-import { cfg, save } from './settings.js?v=20261126f';
-import { SLOT_HEROES, slotOwned, isSlotItem, setSkinGate } from './slots.js?v=20261126f';
-import { sprayUrl } from './sprays.js?v=20261126f';
-import { isContractHero, contractDone, tasksDone } from './contracts.js?v=20261126f';
-export { isContractHero } from './contracts.js?v=20261126f';
+import { HEROES } from './heroes.js?v=20261126j';
+import { cfg, save } from './settings.js?v=20261126j';
+import { SLOT_HEROES, slotOwned, isSlotItem, setSkinGate } from './slots.js?v=20261126j';
+import { sprayUrl } from './sprays.js?v=20261126j';
+import { isContractHero, contractDone, tasksDone } from './contracts.js?v=20261126j';
+export { isContractHero } from './contracts.js?v=20261126j';
 
 // Season pass: XP from matches (mostly from winning) climbs a 30-tier track of hero skins,
 // cosmetics and three season heroes. Progress is saved locally.
@@ -60,14 +60,11 @@ export const SKINS = [
   { id: 'microwave-retro', hero: 'microwave', slot: true, name: 'Atomic Diner', color: 0x5ad8c8, palette: { main: 0x5ad8c8, trim: 0xff5a5a, dark: 0xf0ece4, skin: 0x5ad8c8, finish: { metal: 0.45, rough: 0.15, glow: 0.35 } } },
 ];
 
-// Cosmetics: gliders (Survivor canopy colours) and slot machine sprays.
+// Cosmetics: slot machine sprays.
 export const COS_TYPES = {
-  glider: { label: 'Glider', icon: '🪂' },
   spray: { label: 'Spray', icon: '🎨' },
 };
 export const COSMETICS = [
-  { id: 'g-sunset', type: 'glider', name: 'Sunset', a: 0xff8a3c, b: 0xffd23c }, { id: 'g-checker', type: 'glider', name: 'Chequered', a: 0x1d2340, b: 0xffffff },
-  { id: 'g-neon', type: 'glider', name: 'Neon Nights', a: 0x18e0f0, b: 0xff4fa3 }, { id: 'g-golden', type: 'glider', name: 'Golden Wing', a: 0xffc93c, b: 0xffffff, glow: true },
   // ---- sprays: slot machine only. Tag a wall or the floor with T during a match ----
   { id: 'sp-gg', type: 'spray', slot: true, name: 'Good Game', glyph: '🎮', text: 'GG!', a: 0xff8fd0, b: 0x9b5cff, shape: 'star' },
   { id: 'sp-splat', type: 'spray', slot: true, name: 'Splat', glyph: '🟢', text: 'SPLAT', a: 0x9dff6a, b: 0x3fa82e, shape: 'splat', ribbon: 0xff8fd0 },
@@ -90,7 +87,7 @@ const MAIN = {
   20: ['skin', 'croc-albino'], 21: ['skin', 'warden-eclipse'], 22: ['skin', 'thicket-frost'], 24: ['skin', 'ratchet-cobalt'],
   26: ['skin', 'mirage-noir'], 28: ['skin', 'avalanche-gold'], 30: ['hero', 'cavalier'],
 };
-const COS_TIER = { 'g-sunset': 16, 'g-checker': 21, 'g-neon': 25, 'g-golden': 26 };
+const COS_TIER = {};                                 // no pass cosmetics this season
 export const TRACK = [
   ...Object.entries(MAIN).map(([tier, [type, id]]) => ({ tier: +tier, type, id })),
   ...Object.entries(COS_TIER).map(([id, tier]) => ({ tier, type: cosById(id).type, id, cos: true })),
@@ -169,15 +166,14 @@ export function myCosIds() {
 }
 // Resolve ids (yours or another player's) into what the game needs.
 export function resolveCos(ids = {}) {
-  const c = cosById(ids.glider), g = c?.type === 'glider' ? c : null;
-  return { glider: g ? { a: g.a, b: g.b, glow: !!g.glow } : null };
+  return {};                                         // nothing in a match depends on cosmetics any more
 }
 
 const css = c => '#' + c.toString(16).padStart(6, '0');
 // Little preview art for a cosmetic (pass track, end screen).
 export function cosArt(c) {
   if (c.type === 'spray') return `<div class="ca ca-spray"><img src="${sprayUrl(c)}" alt=""></div>`;
-  return `<div class="ca ca-glider" style="--a:${css(c.a)};--b:${css(c.b)}"><i></i></div>`;
+  return "";
 }
 // Preview a skin regardless of ownership (for the pass track).
 export const dressedAny = (h, s) => ({ ...h, skinId: s.id, color: s.color, palette: { ...h.palette, ...s.palette } });

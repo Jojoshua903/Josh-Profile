@@ -1,31 +1,31 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { HEROES, MAPS, DIFFICULTY, TUNING, SURVIVOR_MAP, SURVIVOR, HILL, DUEL, CART } from './data.js?v=20261126f';
-import { initSurvivor, updateSurvivor, survivorLeaders, stormInfo, inStorm } from './survivor.js?v=20261126f';
-import { initHill, updateHill, hillVisuals, onHill } from './hill.js?v=20261126f';
-import { initCart, updateCart, nearCart, cartLead } from './payload.js?v=20261126f';
-import { buildWorld, mirror } from './world.js?v=20261126f';
+import { HEROES, MAPS, DIFFICULTY, TUNING, SURVIVOR_MAP, SURVIVOR, HILL, DUEL, CART } from './data.js?v=20261126j';
+import { initSurvivor, updateSurvivor, survivorLeaders, stormInfo, inStorm } from './survivor.js?v=20261126j';
+import { initHill, updateHill, hillVisuals, onHill } from './hill.js?v=20261126j';
+import { initCart, updateCart, nearCart, cartLead } from './payload.js?v=20261126j';
+import { buildWorld, mirror } from './world.js?v=20261126j';
 import { createHero, spawnHero, createStructure, spawnMinion, fire, releaseFire, chargeLevel, startReload, tickHero, tickCorpse, chestOf,
-  updateMinions, updateStructures, updateProjectiles, updateFx, dirFrom, eyeOf, TEAM_COLOR } from './units.js?v=20261126f';
-import { steer, initBot, updateBot } from './botbrain.js?v=20261126f';
-import { castSlot, updateAbilities } from './abilities.js?v=20261126f';
-import { floatText } from './anim.js?v=20261126f';
-import { cfg, applyGraphics } from './settings.js?v=20261126f';
-import { initMenu, showMenu, menuFrame, openSettings, settingsVisible } from './menu.js?v=20261126f';
-import { dressed, heroOwned, wear, myCosIds, resolveCos, matchXp, award, rewardInfo, tierProgress, SEASON, MAX_TIER, cosById, cosOwned, equippedCos } from './pass.js?v=20261126f';
-import { aimSpray, placeSpray, SPRAY_CD } from './sprays.js?v=20261126f';
-import { headshot } from './portraits.js?v=20261126f';
-import './personality.js?v=20261126f';
-import { openSession, tickPuppet, myUid, lobbyState, leaveRoom, onLobby } from './net.js?v=20261126f';
-import { initAudio, applyVolume, tone, noise, ABIL_SFX, audioTap } from './audio.js?v=20261126f';
-import { startClipRec, saveClip, sendClip } from './clips.js?v=20261126f';
-import { playMusic } from './music.js?v=20261126f';
-import { sparks, castFx, lightFlash } from './vfx.js?v=20261126f';
-import { applyEnvironment } from './stage.js?v=20261126f';
-import { perfFrame } from './perf.js?v=20261126f';
-import { gainMastery } from './mastery.js?v=20261126f';
-import { recordMatch, tasksDone } from './contracts.js?v=20261126f';
-import { startTutorial, stopTutorial, tickTutorial, tutorialCast, tutorialKill, onTutorialPass } from './tutorial.js?v=20261126f';
-import { initReplay, recFrame, recEvent, recKill, finalClip, startPlayback, tickPlayback, stopPlayback } from './replay.js?v=20261126f';
+  updateMinions, updateStructures, updateProjectiles, updateFx, dirFrom, eyeOf, TEAM_COLOR } from './units.js?v=20261126j';
+import { steer, initBot, updateBot } from './botbrain.js?v=20261126j';
+import { castSlot, updateAbilities } from './abilities.js?v=20261126j';
+import { floatText } from './anim.js?v=20261126j';
+import { cfg, applyGraphics } from './settings.js?v=20261126j';
+import { initMenu, showMenu, menuFrame, openSettings, settingsVisible } from './menu.js?v=20261126j';
+import { dressed, heroOwned, wear, myCosIds, resolveCos, matchXp, award, rewardInfo, tierProgress, SEASON, MAX_TIER, cosById, cosOwned, equippedCos } from './pass.js?v=20261126j';
+import { aimSpray, placeSpray, SPRAY_CD } from './sprays.js?v=20261126j';
+import { headshot } from './portraits.js?v=20261126j';
+import './personality.js?v=20261126j';
+import { openSession, tickPuppet, myUid, lobbyState, leaveRoom, onLobby } from './net.js?v=20261126j';
+import { initAudio, applyVolume, tone, noise, ABIL_SFX, audioTap } from './audio.js?v=20261126j';
+import { startClipRec, saveClip, sendClip } from './clips.js?v=20261126j';
+import { playMusic } from './music.js?v=20261126j';
+import { sparks, castFx, lightFlash } from './vfx.js?v=20261126j';
+import { applyEnvironment } from './stage.js?v=20261126j';
+import { perfFrame } from './perf.js?v=20261126j';
+import { gainMastery } from './mastery.js?v=20261126j';
+import { recordMatch, tasksDone } from './contracts.js?v=20261126j';
+import { startTutorial, stopTutorial, tickTutorial, tutorialCast, tutorialKill, onTutorialPass } from './tutorial.js?v=20261126j';
+import { initReplay, recFrame, recEvent, recKill, finalClip, startPlayback, tickPlayback, stopPlayback } from './replay.js?v=20261126j';
 let envRT = null;
 
 const $ = id => document.getElementById(id);
@@ -549,8 +549,8 @@ let beatT = 0;
 const unitName = u => !u ? (G.mode === 'survivor' ? 'The storm' : 'The fountain') : u.kind === 'hero' ? (u.isPlayer ? 'You' : u.name) : u.kind === 'tower' ? 'A tower' : u.kind === 'core' ? 'The core' : u.deploy ? `${u.owner?.name || 'A'}'s gadget` : 'A minion';
 function deathRecap(src) {
   const killer = src?.kind === 'hero' ? src : src?.owner?.kind === 'hero' ? src.owner : null;
-  // follow the killer for most of the respawn wait (up to 6s); in Survivor and Duel there's no respawn, so the full 6s
-  const rt = P.respawnT, camT = Number.isFinite(rt) && rt > 1.5 ? Math.min(KILLCAM_T, rt - 0.4) : KILLCAM_T;
+  // follow the killer for most of the respawn wait (up to 5s); in Survivor and Duel there is no respawn, so the full 5s
+  const rt = P.respawnT, camT = Number.isFinite(rt) && rt > 2.5 ? Math.min(KILLCAM_T, rt - 1.4) : KILLCAM_T;
   G.killCam = killer && killer !== P ? { who: killer, t: camT, gone: 0 } : null;
   // everything that hurt you this life, grouped by who dealt it, shown as a share of the total
   const by = new Map();
@@ -578,7 +578,7 @@ function deathRecap(src) {
   el.classList.remove('hidden', 'on'); void el.offsetWidth; el.classList.add('on');
 }
 const camBack = new THREE.Vector3(), camLook = new THREE.Vector3();
-const KILLCAM_T = 6, KILLCAM_AFTER = 1.5;            // seconds on the killer, and how long to linger if they go down too
+const KILLCAM_T = 5, KILLCAM_AFTER = 0.5;            // seconds on the killer, and how long to linger if they go down too
 function killCamera(dt) {
   const kc = G.killCam;
   if (!kc || kc.t <= 0) return false;
@@ -1240,11 +1240,10 @@ function updateSurvHud() {
   $('arBar').style.width = (P.armor || 0) + '%';
   $('armorRow').style.display = P.armor > 0 ? '' : 'none';
   $('pow').textContent = P.power ? '★'.repeat(P.power) + ` +${P.power * 15}% dmg` : '';
-  const out = P.alive && !P.glide && inStorm(G, P.pos);
+  const out = P.alive && inStorm(G, P.pos);
   $('stormVign').style.opacity = out ? 0.85 + Math.sin(G.time * 6) * 0.15 : 0;
   if (out && !stormWarned) { banner('You\'re in the storm!', '#9b5cff', 'Get to the safe zone'); stormWarned = true; }
   if (!out) stormWarned = false;
-  $('glideTip').style.opacity = P.glide ? 1 : 0;
 }
 let stormWarned = false;
 
