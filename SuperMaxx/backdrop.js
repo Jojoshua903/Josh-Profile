@@ -68,7 +68,7 @@ function plazaHouse(w, r) {
 }
 
 function plazaFar(scene, map, r) {
-  const sea = new THREE.Mesh(new THREE.PlaneGeometry(1200, 1200), new THREE.MeshLambertMaterial({ color: 0x3fb0c9 }));
+  const sea = new THREE.Mesh(new THREE.PlaneGeometry(1200, 1200), new THREE.MeshStandardMaterial({ color: 0x3fb0c9 }));
   sea.rotation.x = -Math.PI / 2; sea.position.y = -0.2; scene.add(sea);
   // a town island around the arena so the sea frames it
   const land = new THREE.Mesh(new THREE.CircleGeometry(map.L + 40, 48), M(0xe8c79c));

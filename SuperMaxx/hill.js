@@ -19,7 +19,7 @@ export function initHill(G) {
   const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 1.4, 34, 16, 1, true),
     new THREE.MeshBasicMaterial({ color: NEUTRAL, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false, fog: false }));
   beam.position.y = 17;
-  const crown = new THREE.Mesh(new THREE.OctahedronGeometry(0.9, 0), new THREE.MeshLambertMaterial({ color: NEUTRAL, emissive: NEUTRAL, emissiveIntensity: 0.6, flatShading: true }));
+  const crown = new THREE.Mesh(new THREE.OctahedronGeometry(0.9, 0), new THREE.MeshStandardMaterial({ color: NEUTRAL, emissive: NEUTRAL, emissiveIntensity: 0.6, flatShading: true }));
   crown.position.y = 5.5; crown.scale.y = 1.4;
   // progress ring on the ground fills with the holder's colour
   const fill = new THREE.Mesh(new THREE.RingGeometry(HILL.radius - 0.7, HILL.radius - 0.2, 64, 1, 0, 0.001),

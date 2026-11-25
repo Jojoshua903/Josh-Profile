@@ -4,7 +4,7 @@ const KEY = 'supermaxx';
 const DEFAULTS = {
   hero: 'vanguard', map: 'plaza', diff: 'normal',
   sens: 1, invertY: false, fov: 90,
-  volume: 0.8, music: 0.6, sfx: 1, quality: 'high', shadows: true, dmgNumbers: true, voiceLines: true, screenShake: true, skins: {}, cos: {}, name: '',
+  volume: 0.8, music: 0.6, sfx: 1, perf: false, tutorialDone: false, quality: 'high', shadows: true, dmgNumbers: true, voiceLines: true, screenShake: true, skins: {}, cos: {}, name: '',
 };
 
 function load() {
@@ -24,7 +24,8 @@ export function resetSettings() {
 export const QUALITY = {
   low: { label: 'Low', ratio: 0.75 },
   medium: { label: 'Medium', ratio: 1 },
-  high: { label: 'High', ratio: 2 },
+  high: { label: 'High', ratio: 1.25 },
+  ultra: { label: 'Ultra', ratio: 2 },
 };
 
 // Apply render settings. Toggling shadows mid-match needs every material recompiled.

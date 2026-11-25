@@ -25,7 +25,7 @@ export function rng(seed) {
 const mats = new Map();
 export function M(color, opts) {
   const k = color + JSON.stringify(opts || {});
-  if (!mats.has(k)) mats.set(k, new THREE.MeshLambertMaterial({ color, ...(opts || {}) }));
+  if (!mats.has(k)) mats.set(k, new THREE.MeshStandardMaterial({ color, roughness: 0.85, ...(opts || {}) }));
   return mats.get(k);
 }
 export function put(parent, geo, mat, x, y, z, shadow = true) {
@@ -60,7 +60,7 @@ export function buildSky(scene, map, T) {
   scene.add(sun);
 
   // soft clouds
-  const cloudMat = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.92, fog: false });
+  const cloudMat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.92, fog: false });
   const clouds = [];
   for (let i = 0; i < 16; i++) {
     const c = new THREE.Group();
@@ -157,12 +157,12 @@ export function pathTexture(theme) {
 export function buildGround(scene, map, theme) {
   const tex = groundTexture(theme);
   tex.repeat.set(map.W / 8, map.L / 8);
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(map.W * 2, map.L * 2), new THREE.MeshLambertMaterial({ map: tex }));
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(map.W * 2, map.L * 2), new THREE.MeshStandardMaterial({ map: tex }));
   ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
   // outer ground under the backdrop (Solmare sits on its own island in the sea)
   if (theme !== 'plaza') {
     const outerTex = groundTexture(theme); outerTex.repeat.set(40, 40);
-    const outer = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), new THREE.MeshLambertMaterial({ map: outerTex, color: 0xdddddd }));
+    const outer = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), new THREE.MeshStandardMaterial({ map: outerTex, color: 0xdddddd }));
     outer.rotation.x = -Math.PI / 2; outer.position.y = -0.05; scene.add(outer);
   }
 
@@ -172,7 +172,7 @@ export function buildGround(scene, map, theme) {
       const [ax, az] = lane[i], [bx, bz] = lane[i + 1];
       const len = Math.hypot(bx - ax, bz - az) + 3.5;
       const t = pt.clone(); t.needsUpdate = true; t.repeat.set(1, len / 4);
-      const strip = new THREE.Mesh(new THREE.PlaneGeometry(3.6, len), new THREE.MeshLambertMaterial({ map: t, polygonOffset: true, polygonOffsetFactor: -1 }));
+      const strip = new THREE.Mesh(new THREE.PlaneGeometry(3.6, len), new THREE.MeshStandardMaterial({ map: t, polygonOffset: true, polygonOffsetFactor: -1 }));
       strip.rotation.x = -Math.PI / 2; strip.rotation.z = Math.atan2(bx - ax, bz - az);
       strip.position.set((ax + bx) / 2, 0.02 + i * 0.002, (az + bz) / 2); strip.receiveShadow = true;
       scene.add(strip);

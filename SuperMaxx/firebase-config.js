@@ -3,7 +3,7 @@
 // It MUST include databaseURL. These keys are safe to publish; access is controlled by
 // the database rules in database.rules.json. Leave as null to keep online play switched off.
 
-const API_KEY = 'PASTE_API_KEY_HERE';   // Project settings > Your apps > Config > apiKey ("AIza...")
+const API_KEY = 'AIzaSyAdAH3uSp3amb9poKAr4iv7jfzBH9QFgCU';   // Project settings > Your apps > Config > apiKey ("AIza...")
 
 export const FIREBASE_CONFIG = API_KEY.startsWith('AIza') ? {
   apiKey: API_KEY,

@@ -30,7 +30,7 @@ const crateTex = texOf((g, s) => {
 });
 
 function edges(mesh, opacity = 0.22) {
-  mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry), new THREE.LineBasicMaterial({ color: 0x1d2340, transparent: true, opacity })));
+  // the old ink outlines are gone: the stylised look relies on soft shading instead
   return mesh;
 }
 
@@ -53,10 +53,10 @@ export function styleBlock(scene, theme, [x, z, w, d, h], i, r) {
   } else if (theme === 'canals') {
     if (low) {
       const t = crateTex.clone(); t.needsUpdate = true; t.repeat.set(Math.max(1, Math.round(w / 1.2)), 1);
-      edges(put(g, box(w, h, d), new THREE.MeshLambertMaterial({ map: t }), 0, h / 2, 0), 0.3);
+      edges(put(g, box(w, h, d), new THREE.MeshStandardMaterial({ map: t }), 0, h / 2, 0), 0.3);
     } else {
       const t = brickTex.clone(); t.needsUpdate = true; t.repeat.set(Math.max(1, w / 1.5), h / 1.5);
-      edges(put(g, box(w, h, d), new THREE.MeshLambertMaterial({ map: t }), 0, h / 2, 0), 0.15);
+      edges(put(g, box(w, h, d), new THREE.MeshStandardMaterial({ map: t }), 0, h / 2, 0), 0.15);
       put(g, box(w + 0.3, 0.3, d + 0.3), M(0xe6dfd0), 0, h + 0.1, 0);
       put(g, box(w + 0.15, 0.4, d + 0.15), M(0x5b5f66), 0, 0.2, 0, false);
     }

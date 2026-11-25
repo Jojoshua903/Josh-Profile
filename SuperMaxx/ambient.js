@@ -18,7 +18,7 @@ function bunting(scene, map, zs) {
       const x = -map.W + i * (map.W * 2 / n), y = -1.3 * (1 - (x / map.W) ** 2);
       pts.push(new THREE.Vector3(x, y, 0));
       if (i < n) {
-        const f = new THREE.Mesh(tri, new THREE.MeshLambertMaterial({ color: colors[i % colors.length], side: THREE.DoubleSide }));
+        const f = new THREE.Mesh(tri, new THREE.MeshStandardMaterial({ color: colors[i % colors.length], side: THREE.DoubleSide }));
         f.position.set(x + 0.45, y - 0.02, 0); g.add(f);
       }
     }
@@ -63,7 +63,7 @@ function canals(scene, map) {
   const tex = waterTex();
   const water = (x0, x1, z0, z1) => {
     const t = tex.clone(); t.needsUpdate = true; t.repeat.set((x1 - x0) / 6, (z1 - z0) / 6);
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, z1 - z0), new THREE.MeshLambertMaterial({ map: t, transparent: true, opacity: 0.92 }));
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, z1 - z0), new THREE.MeshStandardMaterial({ map: t, transparent: true, opacity: 0.9, roughness: 0.08, metalness: 0.15, envMapIntensity: 1.6 }));
     m.rotation.x = -Math.PI / 2; m.position.set((x0 + x1) / 2, 0.035, (z0 + z1) / 2); m.receiveShadow = true; scene.add(m);
     for (const x of [x0, x1]) put(scene, box(0.35, 0.14, z1 - z0), M(0xd9d2c3), x, 0.07, (z0 + z1) / 2, false);
     return t;
@@ -94,7 +94,7 @@ function canals(scene, map) {
     for (let i = 0; i <= 14; i++) {
       const x = -12 + i * (24 / 14), y = 6.4 - 1.1 * (1 - (x / 12) ** 2);
       pts.push(new THREE.Vector3(x, y, z));
-      if (i % 2) lights.push(put(scene, new THREE.SphereGeometry(0.2, 8, 6), new THREE.MeshLambertMaterial({ color: 0xffd36a, emissive: 0xffb84a, emissiveIntensity: 0.9 }), x, y - 0.25, z, false));
+      if (i % 2) lights.push(put(scene, new THREE.SphereGeometry(0.2, 8, 6), new THREE.MeshStandardMaterial({ color: 0xffd36a, emissive: 0xffb84a, emissiveIntensity: 1.6, roughness: 0.4 }), x, y - 0.25, z, false));
     }
     scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0x1d2340 })));
   }
@@ -114,7 +114,7 @@ function segDist(px, pz, ax, az, bx, bz) {
 
 function grass(scene, map, r, colors, count) {
   const geo = new THREE.ConeGeometry(0.08, 0.45, 4); geo.translate(0, 0.22, 0);
-  const inst = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color: 0xffffff }), count);
+  const inst = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }), count);
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), c = new THREE.Color();
   let n = 0;
   for (let tries = 0; tries < count * 4 && n < count; tries++) {

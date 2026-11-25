@@ -33,9 +33,29 @@ export async function connect() {
     throw Object.assign(new Error('Could not load Firebase. This preview blocks outside connections, so open the hosted (GitHub Pages) version.'), { code: 'blocked' });
   }
   const app = appM.initializeApp(FIREBASE_CONFIG);
-  const cred = await authM.signInAnonymously(authM.getAuth(app));
+  let cred;
+  try { cred = await authM.signInAnonymously(authM.getAuth(app)); }
+  catch (e) { throw explain(e); }
   fb = { db: dbM.getDatabase(app), uid: cred.user.uid, f: dbM };
   return fb;
+}
+
+// Turn Firebase's error codes into the console step that fixes them.
+const FIXES = {
+  'auth/invalid-api-key': 'The API key in firebase-config.js is wrong. Copy apiKey again from Project settings → Your apps.',
+  'auth/api-key-not-valid': 'The API key in firebase-config.js is wrong. Copy apiKey again from Project settings → Your apps.',
+  'auth/operation-not-allowed': 'Anonymous sign-in is off. Firebase console → Authentication → Sign-in method → Anonymous → Enable.',
+  'auth/admin-restricted-operation': 'Anonymous sign-in is off. Firebase console → Authentication → Sign-in method → Anonymous → Enable.',
+  'auth/configuration-not-found': 'Authentication isn\'t set up. Firebase console → Authentication → Get started, then enable Anonymous.',
+  'auth/unauthorized-domain': `This site isn't allowed yet. Firebase console → Authentication → Settings → Authorized domains → add ${location.hostname}.`,
+  'auth/requests-from-referer-are-blocked': `The API key blocks this site. Google Cloud console → Credentials → your Browser key → allow ${location.hostname}.`,
+  'auth/network-request-failed': 'Could not reach Firebase. Check your connection or any ad/tracker blocker.',
+};
+export function explain(e) {
+  const code = e?.code || '', msg = String(e?.message || e);
+  if (FIXES[code]) return Object.assign(new Error(FIXES[code]), { code });
+  if (/PERMISSION_DENIED|permission_denied/i.test(code + msg)) return Object.assign(new Error('The database refused the write. Paste database.rules.json into Realtime Database → Rules and press Publish.'), { code: 'rules' });
+  return e;
 }
 
 // ---------- rooms & lobby ----------

@@ -1,7 +1,7 @@
 import { HEROES } from './heroes.js';
 import { MAPS } from './data.js';
 import { cfg, save } from './settings.js';
-import { headshot } from './art.js';
+import { headshot } from './portraits.js';
 import { dressed, wear, myCosIds, resolveCos, bannerCss } from './pass.js';
 import * as net from './net.js';
 
@@ -54,7 +54,7 @@ async function act(what, v) {
     if (what === 'join' && code.length < 5) { err = 'Room codes are 5 characters'; return render(); }
     busy = true; err = ''; render();
     try { if (what === 'create') await net.createRoom(profile()); else await net.joinRoom(code, profile()); }
-    catch (x) { err = x.message || String(x); }
+    catch (x) { err = net.explain(x).message || String(x); }
     busy = false; render();
     return;
   }
@@ -62,7 +62,7 @@ async function act(what, v) {
   if (what === 'team') net.setProfile({ team: v });
   if (what === 'map') net.setMap(v);
   if (what === 'mode') net.setMode(v);
-  if (what === 'start') net.startMatch().catch(x => { err = x.message; render(); });
+  if (what === 'start') net.startMatch().catch(x => { err = net.explain(x).message; render(); });
   if (what === 'leave') { await net.leaveRoom(); render(); }
   if (what === 'copy') navigator.clipboard?.writeText(st.code).then(() => { const b = $('onCopy'); if (b) { b.textContent = 'Copied!'; setTimeout(() => { b.textContent = 'Copy'; }, 1200); } }).catch(() => {});
 }

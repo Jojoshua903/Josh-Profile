@@ -5,17 +5,22 @@ import { initHill, updateHill, hillVisuals, onHill } from './hill.js';
 import { buildWorld, mirror } from './world.js';
 import { createHero, spawnHero, createStructure, spawnMinion, fire, releaseFire, chargeLevel, startReload, tickHero, tickCorpse, chestOf,
   updateMinions, updateStructures, updateProjectiles, updateFx, dirFrom, eyeOf, TEAM_COLOR } from './units.js';
-import { steer, initBot, updateBot } from './ai.js';
+import { steer, initBot, updateBot } from './botbrain.js';
 import { castSlot, updateAbilities } from './abilities.js';
 import { floatText } from './anim.js';
 import { cfg, applyGraphics } from './settings.js';
 import { initMenu, showMenu, menuFrame, openSettings, settingsVisible } from './menu.js';
 import { dressed, heroOwned, wear, myCosIds, resolveCos, matchXp, award, rewardInfo, tierProgress, SEASON, MAX_TIER } from './pass.js';
-import { headshot } from './art.js';
+import { headshot } from './portraits.js';
 import { openSession, tickPuppet, myUid, lobbyState, leaveRoom, onLobby } from './net.js';
 import { initAudio, applyVolume, tone, noise, ABIL_SFX } from './audio.js';
 import { playMusic } from './music.js';
-import { sparks, castFx } from './vfx.js';
+import { sparks, castFx, lightFlash } from './vfx.js';
+import { applyEnvironment } from './stage.js';
+import { perfFrame } from './perf.js';
+import { gainMastery } from './mastery.js';
+import { startTutorial, stopTutorial, tickTutorial, tutorialCast, tutorialKill, onTutorialPass } from './tutorial.js';
+let envRT = null;
 
 const $ = id => document.getElementById(id);
 const canvas = $('view');
@@ -83,7 +88,7 @@ const VIEW = {
 function makeViewGun(def) {
   const v = VIEW[def.id], p = def.palette;
   const g = new THREE.Group();
-  const L = c => new THREE.MeshLambertMaterial({ color: c });
+  const f = p.finish || {}, L = c => new THREE.MeshStandardMaterial({ color: c, roughness: f.rough ?? 0.42, metalness: Math.min(0.3, f.metal || 0.08) });   // matches the rig's soft shading
   const main = L(v.copper ? 0xb87333 : p.main), dark = L(0x1d2340), trim = L(p.trim);
   const add = (geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); g.add(m); return m; };
   add(new THREE.BoxGeometry(v.w, 0.13, v.len), main, 0, 0, 0);
@@ -116,17 +121,19 @@ function startGame(m = mode, online = null) {
   if (online && !mine) { showMenu('online'); return; }            // no slot for us in this match
   mode = m;
   initAudio();
-  const surv = mode === 'survivor', hill = mode === 'hill', duel = mode === 'duel';
-  const map = surv ? SURVIVOR_MAP : MAPS.find(x => x.id === (online ? online.map : cfg.map)) || MAPS[0];
+  const surv = mode === 'survivor', hill = mode === 'hill', duel = mode === 'duel', tut = mode === 'tutorial';   // the tutorial is a Lane Breaker match on the plaza
+  const map = surv ? SURVIVOR_MAP : MAPS.find(x => x.id === (tut ? 'plaza' : online ? online.map : cfg.map)) || MAPS[0];
   playMusic(map.id);
   let def = dressed(HEROES.find(h => h.id === cfg.hero && heroOwned(h.id)) || HEROES[0]);
   const scene = new THREE.Scene();
   if (G?.net) G.net.close();
-  G = { scene, map, mode, heroes: [], minions: [], structures: [], projectiles: [], fx: [], score: { blue: 0, red: 0 },
+  stopTutorial();
+  G = { scene, map, mode: tut ? 'lane' : mode, tutorial: tut, heroes: [], minions: [], structures: [], projectiles: [], fx: [], score: { blue: 0, red: 0 },
     zones: [], walls: [], timers: [], camera,
-    time: 0, waveT: surv || hill || duel ? Infinity : TUNING.firstWave, playerTeam: online ? mine.team : 'blue', D: DIFFICULTY[cfg.diff], over: false, ev: events, net: null };
+    time: 0, waveT: surv || hill || duel || tut ? Infinity : TUNING.firstWave, playerTeam: online ? mine.team : 'blue', D: DIFFICULTY[cfg.diff], over: false, ev: events, net: null };
   const world = buildWorld(scene, map);
   G.colliders = world.colliders; G.worldTick = world.tick;
+  envRT?.dispose(); envRT = applyEnvironment(renderer, scene);     // sky-lit reflections for every surface
 
   if (online) {
     // everyone builds the same roster in the same order; we own our hero, the host owns the bots
@@ -160,16 +167,25 @@ function startGame(m = mode, online = null) {
       for (const [x, z] of map.towers) createStructure(G, 'tower', team, x * s, z * s);
       createStructure(G, 'core', team, 0, -s * (map.L - 11));
     }
-    const allyPool = HEROES.filter(h => h.id !== def.id).sort(() => Math.random() - 0.5);
-    for (let i = 0; i < 2; i++) { const b = createHero(G, allyPool[i], 'blue', allyPool[i].callsign, false); initBot(G, b, i + 1); }
-    const redPool = [...HEROES].sort(() => Math.random() - 0.5);
-    for (let i = 0; i < 3; i++) { const b = createHero(G, redPool[i], 'red', redPool[i].callsign, false); initBot(G, b, i); }
+    if (tut) {
+      // three training dummies stand in the middle of the plaza, out of both towers' reach
+      [['vanguard', -4], ['avalanche', 0], ['croc', 4]].forEach(([id, x], i) => {
+        const d = HEROES.find(h => h.id === id) || HEROES[i];
+        const b = createHero(G, d, 'red', 'Dummy ' + (i + 1), false); initBot(G, b, i);
+        b.dummy = true; b.dummyAt = { x, z: -10 }; spawnHero(G, b);
+      });
+    } else {
+      const allyPool = HEROES.filter(h => h.id !== def.id).sort(() => Math.random() - 0.5);
+      for (let i = 0; i < 2; i++) { const b = createHero(G, allyPool[i], 'blue', allyPool[i].callsign, false); initBot(G, b, i + 1); }
+      const redPool = [...HEROES].sort(() => Math.random() - 0.5);
+      for (let i = 0; i < 3; i++) { const b = createHero(G, redPool[i], 'red', redPool[i].callsign, false); initBot(G, b, i); }
+    }
     if (hill) initHill(G);
   }
   $('hud').classList.toggle('surv', surv);
   $('hud').classList.toggle('hill', hill); $('hud').classList.toggle('duel', duel);
   $('lB').textContent = hill ? 'Blue hill' : duel ? 'Blue rounds' : 'Blue core'; $('lR').textContent = hill ? 'Red hill' : duel ? 'Red rounds' : 'Red core';
-  survEndT = 0; hitT = 0; tally.t = 0; flashing.clear();
+  survEndT = 0; hitT = 0; tally.t = 0; flashing.clear(); $('recap').classList.add('hidden'); P._log = [];
 
   camera.fov = cfg.fov; camera.updateProjectionMatrix();
   scene.add(camera);
@@ -186,11 +202,16 @@ function startGame(m = mode, online = null) {
   $('toMenu').classList.toggle('hidden', !!online);
   applyGraphics(renderer);
   $('hud').classList.remove('hidden');
+  // create the explosion light now and compile every shader up front, so the first blast
+  // or ability doesn't freeze the game while materials rebuild
+  lightFlash(G, new THREE.Vector3(0, -50, 0), 0xffffff, 0);
+  renderer.compile(G.scene, camera);
   running = true; paused = false; streak = { multi: 0, lastT: -9, life: 0 };
   canvas.requestPointerLock();
   if (surv) banner('Drop in!', '#9b5cff', 'Steer your glider with WASD. Last one standing wins.');
   else if (duel) banner('Duel!', '#1d2340', `${map.name} · first to ${DUEL.toWin} rounds`);
   else if (hill) banner('Take the hill', '#e0a100', `${map.name} · first to ${HILL.target}${online ? ' · online' : ''}`);
+  else if (tut) { banner('Training', '#1d2340', 'Follow the checklist on the left'); startTutorial(P); onTutorialPass(() => { tone(880, 0.1, 'triangle', 0.06, 1.3); tone(1320, 0.14, 'triangle', 0.05, 1, 0.08); }); }
   else banner(`Break the ${map.lanes.length > 1 ? 'lanes' : 'lane'}`, '#1d2340', map.name);
   say(P, 'spawn');
 }
@@ -199,7 +220,10 @@ let survEndT = 0;
 function endGame(win) {
   G.over = true; running = false;
   document.exitPointerLock();
-  if (G.mode === 'survivor') {
+  if (G.tutorial) {
+    $('endTitle').innerHTML = 'Training complete<small>You know the basics</small>';
+    $('endTitle').style.color = 'var(--blue)';
+  } else if (G.mode === 'survivor') {
     const place = win ? 1 : P.place;
     $('endTitle').innerHTML = win ? 'MAXX OUT!<small>#1 of ' + G.heroes.length + '</small>' : `#${place}<small>of ${G.heroes.length} · eliminated</small>`;
     $('endTitle').style.color = win ? '#9b5cff' : 'var(--red)';
@@ -224,7 +248,13 @@ function endGame(win) {
 function showPassGain(win) {
   if (G.awarded) return;
   G.awarded = true;
+  if (G.tutorial) {
+    $('passGain').innerHTML = `<div class="pg-top"><span>Tutorial complete</span><b>You're ready</b></div>
+      <div class="pg-parts">Try Lane Breaker, Survivor or Hill Rush from the main menu. Matches earn season pass and hero mastery XP.</div>`;
+    return;
+  }
   const res = award(matchXp({ mode: G.mode, win, kills: P.kills, place: win ? 1 : P.place, players: G.heroes.length }));
+  const mst = gainMastery(P.def.id, { win, kills: P.kills, dmg: P.dmgDealt });
   const p0 = tierProgress(res.before), p1 = tierProgress(res.after);
   const el = $('passGain');
   const chip = r => { const inf = rewardInfo(r); return inf.cos ? `<span class="cos"><i>${inf.glyph}</i>${inf.title} · ${inf.sub}</span>`
@@ -234,7 +264,14 @@ function showPassGain(win) {
     <div class="pg-parts">${res.parts.map(([k, v]) => `${k} +${v}`).join(' · ')}</div>
     <div class="pg-bar"><i style="width:${res.t1 > res.t0 ? 0 : p0.frac * 100}%"></i></div>
     <div class="pg-tier"><span>Tier ${res.t0}${res.t1 > res.t0 ? ` → <b>${res.t1}</b>` : ''}</span><span>${p1.tier >= MAX_TIER ? 'Pass complete!' : `${p1.into} / ${p1.need} XP to tier ${p1.tier + 1}`}</span></div>
-    ${res.unlocked.length ? `<div class="pg-un">${res.unlocked.map(chip).join('')}</div>` : ''}`;
+    ${res.unlocked.length ? `<div class="pg-un">${res.unlocked.map(chip).join('')}</div>` : ''}
+    ${mst ? `<div class="pg-mst" style="--mc:${mst.after.rank.color}">
+      <div class="pg-top"><span>${P.def.callsign} mastery</span><b>+${mst.gained} XP</b></div>
+      <div class="pg-bar"><i style="width:${mst.levelUp ? 0 : mst.before.frac * 100}%"></i></div>
+      <div class="pg-tier"><span>${mst.after.rank.name} · Lv ${mst.before.level}${mst.levelUp ? ` → <b>${mst.after.level}</b>` : ''}</span><span>${mst.after.max ? 'Mastered!' : `${mst.after.into} / ${mst.after.need} XP`}</span></div>
+      ${mst.rankUp ? `<div class="pg-rank">New rank: ${mst.after.rank.name}!</div>` : ''}</div>` : ''}`;
+  if (mst) setTimeout(() => { const b = el.querySelector('.pg-mst .pg-bar i'); if (b) b.style.width = (mst.after.frac * 100) + '%'; }, 1700);
+  if (mst?.levelUp) setTimeout(() => { tone(523, 0.15, 'square', 0.05, 1); tone(784, 0.25, 'square', 0.05, 1, 0.12); }, 1800);
   setTimeout(() => { el.querySelector('.pg-bar i').style.width = (p1.frac * 100) + '%'; }, 1500);
   if (res.unlocked.length) setTimeout(() => { tone(660, 0.2, 'triangle', 0.08, 1.5); tone(990, 0.3, 'triangle', 0.06, 1.3); }, 1600);
 }
@@ -295,6 +332,45 @@ function readyPing(name) {
   clearTimeout(cdPing); cdPing = setTimeout(() => { el.style.opacity = 0; }, 900);
 }
 let beatT = 0;
+
+// ---------- kill cam & death recap ----------
+const unitName = u => !u ? (G.mode === 'survivor' ? 'The storm' : 'The fountain') : u.kind === 'hero' ? (u.isPlayer ? 'You' : u.name) : u.kind === 'tower' ? 'A tower' : u.kind === 'core' ? 'The core' : u.deploy ? `${u.owner?.name || 'A'}'s gadget` : 'A minion';
+function deathRecap(src) {
+  const killer = src?.kind === 'hero' ? src : src?.owner?.kind === 'hero' ? src.owner : null;
+  G.killCam = killer && killer !== P ? { who: killer, t: 3.4 } : null;
+  // damage taken in the last 10 seconds, grouped by who dealt it
+  const by = new Map();
+  for (const e of (P._log || [])) {
+    if (G.time - e.t > 10) continue;
+    const k = e.src?.kind === 'hero' ? e.src : e.src?.owner?.kind === 'hero' ? e.src.owner : e.src;
+    const r = by.get(k) || { u: k, amt: 0, heads: 0 }; r.amt += e.amt; r.heads += e.head ? 1 : 0; by.set(k, r);
+  }
+  P._log = [];
+  const rows = [...by.values()].sort((a, b) => b.amt - a.amt).slice(0, 4), total = rows.reduce((a, r) => a + r.amt, 0) || 1;
+  const col = u => u?.kind === 'hero' ? hex(u.def.color) : '#8a8f99';
+  const el = $('recap');
+  el.innerHTML = `
+    <div class="rc-head">
+      ${killer ? `<img src="${headshot(killer.def)}" alt="">` : '<div class="rc-skull">☠</div>'}
+      <div><small>Eliminated by</small><b>${unitName(killer || src)}</b>
+        ${killer ? `<span>${killer.def.callsign} · ${killer.def.role}${killer.alive ? ` · ${Math.ceil(killer.hp)} HP left` : ''}</span>` : ''}</div>
+    </div>
+    ${rows.length ? `<div class="rc-rows">${rows.map(r => `<div class="rc-row"><i style="background:${col(r.u)};width:${Math.max(8, r.amt / total * 100)}%"></i>
+      <span>${unitName(r.u)}</span><b>${Math.round(r.amt)}${r.heads ? ` <em>· ${r.heads} head</em>` : ''}</b></div>`).join('')}</div>` : ''}`;
+  el.classList.remove('hidden', 'on'); void el.offsetWidth; el.classList.add('on');
+}
+const camBack = new THREE.Vector3(), camLook = new THREE.Vector3();
+function killCamera(dt) {
+  const kc = G.killCam;
+  if (!kc || kc.t <= 0 || !kc.who.alive) return false;
+  kc.t -= dt;
+  const k = kc.who, f = dirFrom(k.yaw, k.pitch || 0), side = new THREE.Vector3(Math.cos(k.yaw), 0, -Math.sin(k.yaw));
+  camBack.copy(k.pos).addScaledVector(new THREE.Vector3(f.x, 0, f.z).normalize(), -3.2).addScaledVector(side, 0.9); camBack.y = k.pos.y + 2.4;
+  camera.position.lerp(camBack, Math.min(1, dt * 6));
+  camLook.copy(eyeOf(k)).addScaledVector(f, 18);
+  camera.lookAt(camLook);
+  return true;
+}
 const FLASH = new THREE.MeshBasicMaterial({ color: 0xffffff });
 const flashing = new Set();
 function flashUnit(u) {
@@ -339,7 +415,8 @@ const events = {
         t._acc = 0; t._accT = G.time;
       }
     }
-    if (t === P && src) { hurt = Math.min(1, hurt + amt / 60); if (src.pos && amt >= 2) dmgDir(src.pos); }
+    if (t === P && src) { hurt = Math.min(1, hurt + amt / 60); if (src.pos && amt >= 2) dmgDir(src.pos);
+      (P._log ||= []).push({ src, amt, head, t: G.time }); if (P._log.length > 200) P._log.splice(0, 100); }
   },
   heal(u, amt, src) {
     if (cfg.dmgNumbers && amt >= 1 && (u === P || src === P)) floatText(G, chestOf(u).setY(u.pos.y + 2.1), '+' + Math.round(amt), '#5fe0a0');
@@ -365,8 +442,8 @@ const events = {
   landed(h) { if (h === P) { tone(180, 0.15, 'sine', 0.1, 0.5); landA = 0.6; } },
   turretShot(m) { const d = m.pos.distanceTo(P.pos); if (d < 30) tone(1200, 0.03, 'square', 0.03 * (1 - d / 30), 0.6); },
   kill(t, src) {
-    if (t.kind === 'hero' && src === P && t !== P) onPlayerKill();
-    if (t === P) streak.life = 0;
+    if (t.kind === 'hero' && src === P && t !== P) { onPlayerKill(); if (G.tutorial) tutorialKill(); }
+    if (t === P) { streak.life = 0; deathRecap(src); }
     const env = G.mode === 'survivor' ? 'The storm' : 'Fountain';
     const nm = u => u ? (u.kind === 'hero' ? (u.isPlayer ? 'You' : u.name) : u.kind === 'tower' ? 'Tower' : u.kind === 'core' ? 'Core' : 'Minion') : env;
     if (t.kind === 'hero' || t.kind === 'tower' || t.kind === 'core') {
@@ -440,6 +517,7 @@ const events = {
   },
   ability(h, slot) {
     if (h === P || !(h.invisT > 0)) castFx(G, h, slot);
+    if (h === P && G.tutorial) tutorialCast(slot);
     const d = h === P ? 0 : h.pos.distanceTo(P.pos), near = d < 25;
     const sfx = ABIL_SFX[h.def[slot]?.id];
     if (sfx) { if (d < 45) sfx(h === P ? 1 : 0.6 * (1 - d / 45)); }
@@ -513,7 +591,7 @@ const toMenu = (where = 'main') => {
   const net = G?.net, midMatch = net && !G.over;
   net?.close();
   if (midMatch || (net && where === 'main')) leaveRoom();
-  running = false; paused = false; G = null; document.exitPointerLock?.();
+  running = false; paused = false; G = null; document.exitPointerLock?.(); stopTutorial();
   playMusic('menu');
   ['end', 'pause'].forEach(id => $(id).classList.add('hidden')); $('hud').classList.add('hidden');
   showMenu(net && !midMatch && where !== 'main' ? 'online' : where);
@@ -542,15 +620,18 @@ function updatePlayer(dt) {
   if (!P.alive) {
     P.respawnT -= dt;
     $('center').classList.remove('hidden');
-    $('center').textContent = G.mode === 'survivor' ? (G.over ? 'Spectating' : 'Eliminated') : G.mode === 'duel' ? (G.over ? 'Duel over' : 'Knocked out · next round soon') : `Respawning in ${Math.max(0, P.respawnT).toFixed(1)}s`;
-    camera.position.lerp(new THREE.Vector3(P.pos.x, P.pos.y + 14, P.pos.z - Math.sign(P.pos.z || 1) * 10), Math.min(1, dt * 2));
-    camera.lookAt(P.pos);
+    const kc = killCamera(dt);
+    $('center').textContent = kc ? `Kill cam · ${G.killCam.who.name}` : G.mode === 'survivor' ? (G.over ? 'Spectating' : 'Eliminated') : G.mode === 'duel' ? (G.over ? 'Duel over' : 'Knocked out · next round soon') : `Respawning in ${Math.max(0, P.respawnT).toFixed(1)}s`;
+    if (!kc) {
+      camera.position.lerp(new THREE.Vector3(P.pos.x, P.pos.y + 14, P.pos.z - Math.sign(P.pos.z || 1) * 10), Math.min(1, dt * 2));
+      camera.lookAt(P.pos);
+    }
     viewGun.visible = false; viewHand.visible = false;
     if (G.mode === 'survivor') { if (survEndT > 0 && (survEndT -= dt) <= 0) endGame(false); return; }
-    if (P.respawnT <= 0) { spawnHero(G, P); say(P, "spawn"); }
+    if (P.respawnT <= 0) { spawnHero(G, P); say(P, "spawn"); G.killCam = null; $('recap').classList.add('hidden'); }
     return;
   }
-  $('center').classList.add('hidden');
+  $('center').classList.add('hidden'); $('recap').classList.add('hidden');
   viewGun.visible = true; viewHand.visible = true;
   const w = wishDir();
   const sprint = keys.has('ShiftLeft') && keys.has('KeyW') && !mouseDown && P.onGround;
@@ -754,6 +835,7 @@ const clock = new THREE.Clock();
 function loop() {
   requestAnimationFrame(loop);
   const dt = Math.min(0.05, clock.getDelta());
+  perfFrame(renderer, G?.net ? `online · ${G.heroes.length} players` : G ? `${G.heroes.length} heroes · ${G.minions.length} minions` : "menu");
   if (!G) { if (!menuFrame(renderer, dt)) renderer.clear(); return; }
   // online matches can't pause: the sim keeps running behind the pause sheet
   const live = running && (!paused || !!G.net);
@@ -761,13 +843,15 @@ function loop() {
     G.time += dt;
     G.waveT -= dt;
     if (G.waveT <= 0) { G.waveT = TUNING.waveEvery; spawnWave(); }
-    if (G.mode === 'lane' && !G.over) laneClock();
+    if (G.mode === 'lane' && !G.over && !G.tutorial) laneClock();
+    if (G.tutorial && !G.over && tickTutorial(G, { dt, sprinting: sprintA > 0.6 }) === 'done') { G.over = true; banner('Training complete', 'var(--blue)', 'Nicely done'); setTimeout(() => endGame(true), 2200); }
     updateAbilities(G, dt);
     updatePlayer(dt);
     for (const h of G.heroes) {
       if (h === P) continue;
       if (G.net && !h.local) { tickPuppet(G, h, dt, camera); continue; }
-      if (!h.alive) { tickCorpse(G, h, dt); if (G.mode === 'survivor') continue; h.respawnT -= dt; if (h.respawnT <= 0) { spawnHero(G, h); h.ai.wp = 0; h.ai.retreat = false; } continue; }
+      if (!h.alive) { tickCorpse(G, h, dt); if (G.mode === "survivor") continue; h.respawnT -= dt; if (h.respawnT <= 0) { spawnHero(G, h); if (h.ai) { h.ai.wp = 0; h.ai.retreat = false; } } continue; }
+      if (h.dummy) { tickHero(G, h, dt); continue; }                    // training dummies just stand there
       updateBot(G, h, dt, G.D);
       tickHero(G, h, dt);
     }

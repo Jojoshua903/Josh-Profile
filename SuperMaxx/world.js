@@ -4,6 +4,7 @@ import { THEMES, rng, buildSky, buildGround } from './scenery.js';
 import { buildBackdrop } from './backdrop.js';
 import { styleBlock, scatterProps, laneGates } from './props.js';
 import { buildAmbient } from './ambient.js';
+import { buildStageSky, buildDressing, contactShadows } from './stage.js';
 
 // ---------- collision primitives ----------
 // A collider is an axis-aligned box from y=0 (or bottom) to top.
@@ -114,7 +115,7 @@ export function mirror(list) {
 export function buildWorld(scene, map) {
   const colliders = [];
   const theme = map.theme, T = THEMES[theme], r = rng(map.id);
-  const ticks = [buildSky(scene, map, T)];
+  const ticks = [buildStageSky(scene, map)];      // the old flat-gradient buildSky is replaced by stage.js
   buildGround(scene, map, theme);
   const far = buildBackdrop(scene, map, theme, r);
   if (far) ticks.push(far);
@@ -128,6 +129,7 @@ export function buildWorld(scene, map) {
 
   const blocks = mirror(map.blocks);
   blocks.forEach((b, i) => { styleBlock(scene, theme, b, i, r); colliders.push(makeBox(...b)); });
+  contactShadows(scene, blocks);
 
   const towers = mirror(map.towers);
   const gates = map.survivor ? [] : laneGates(scene, map, theme);
@@ -137,7 +139,7 @@ export function buildWorld(scene, map) {
   ];
   const amb = buildAmbient(scene, map, theme, r);
   extra.push(...amb.colliders);
-  ticks.push(amb.tick);
+  ticks.push(amb.tick, buildDressing(scene, map));
   for (const c of extra) colliders.push(makeBox(...c));
 
   return { colliders, tick: (dt, t) => ticks.forEach(f => f(dt, t)) };

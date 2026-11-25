@@ -73,6 +73,7 @@ export function poseHero(G, h, dt, camera, playerTeam) {
 
   // jump / fall pose
   if (!h.onGround && m.legs) { m.legs[0].rotation.x = -0.8; m.legs[1].rotation.x = 0.35; }
+  if (!h.onGround && m.P?.kneeL) { m.P.kneeL.rotation.x = -0.4; m.P.kneeR.rotation.x = -1.2; m.legs[0].rotation.x = 0.2; m.legs[1].rotation.x = 0.9; }   // tucked jump
   // gun recoil
   const g = gunGroup(h);
   g.position.z = g.userData.base.z + h.recoilA * 0.14;
@@ -83,7 +84,7 @@ export function poseHero(G, h, dt, camera, playerTeam) {
   const ease = Math.sin(c * Math.PI);
   let lean = 0, squash = 1, y = h.pos.y;
   if (c > 0) {
-    if (slot === 'q') { m.arms[0].rotation.x = -1.6 - ease * 0.4; lean = ease * 0.32; g.position.z -= ease * 0.25; }
+    if (slot === 'q') { m.arms[0].rotation.x = 1.4 + ease * 0.4; if (m.P) m.P.elbowR.rotation.x = 0.1; lean = ease * 0.32; g.position.z -= ease * 0.25; }
     else if (slot === 'ult') { m.arms[0].rotation.x = -3 * Math.sin(c * Math.PI * 0.5); y += Math.sin(Math.min(1, h.castA / 1.6) * Math.PI) * 0.55; }
     else { m.arms[0].rotation.x = -2.7 * Math.sin(c * Math.PI * 0.5); y += ease * 0.16; lean = -ease * 0.1; }
   }

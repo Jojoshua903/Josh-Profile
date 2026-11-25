@@ -19,7 +19,7 @@ export function sparks(G, p, color, n = 8, speed = 7) {
 
 export function smoke(G, p, n = 5, color = 0x8a8f99, size = 0.6) {
   for (let i = 0; i < n; i++) {
-    const m = new THREE.Mesh(PUFF, new THREE.MeshLambertMaterial({ color, transparent: true, depthWrite: false }));
+    const m = new THREE.Mesh(PUFF, new THREE.MeshStandardMaterial({ color, transparent: true, depthWrite: false }));
     m.position.set(p.x + (Math.random() - 0.5) * size * 2, p.y + Math.random() * size, p.z + (Math.random() - 0.5) * size * 2);
     m.scale.setScalar(size * (0.5 + Math.random() * 0.5));
     add(G, m, { life: 0.9 + Math.random() * 0.5, max: 1.4, kind: 'smoke', grow: size * 1.6, vel: new THREE.Vector3((Math.random() - 0.5) * 1.5, 1.4 + Math.random(), (Math.random() - 0.5) * 1.5) });

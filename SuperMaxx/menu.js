@@ -1,10 +1,12 @@
+import { LOOK, applyEnvironment } from './stage.js';
+import { masteryOf } from './mastery.js';
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
 import { HEROES } from './heroes.js';
 import { MAPS, DIFFICULTY } from './data.js';
 import { THEMES } from './scenery.js';
 import { buildHeroModel } from './models.js';
 import { cfg, save, resetSettings, QUALITY } from './settings.js';
-import { splash, headshot, mapArt } from './art.js';
+import { splash, headshot, mapArt } from './portraits.js';
 import { initOnline, enterOnline } from './online.js';
 import { SEASON, TRACK, MAX_TIER, passXp, tierProgress, heroOwned, heroTier, skinOwned, skinTier, skinsFor, dressed, equip, rewardInfo,
   COS_TYPES, cosById, cosOwned, equippedCos, equipCos, cosArt } from './pass.js';
@@ -63,7 +65,7 @@ function buildShowcase() {
 }
 
 function frameShowcase(renderer, dt) {
-  if (!show.scene) buildShowcase();
+  if (!show.scene) { buildShowcase(); show.scene.userData.look = { ...LOOK.plaza, env: 0.6 }; applyEnvironment(renderer, show.scene); }
   show.t += dt;
   show.featureT -= dt;
   if (show.featureT <= 0) { show.featureT = 2.4; show.featured = (show.featured + 1) % show.heroes.length; }
@@ -73,7 +75,8 @@ function frameShowcase(renderer, dt) {
     m.hop = (m.hop || 0) + ((f ? 1 : 0) - (m.hop || 0)) * Math.min(1, dt * 5);
     m.root.position.y = Math.abs(Math.sin(show.t * 6)) * 0.25 * m.hop;
     m.root.rotation.y = m.base + Math.sin(show.t * 0.8 + m.phase) * 0.15 + m.hop * Math.sin(show.t * 3) * 0.3;
-    m.arms[0].rotation.x = -m.hop * 2.4;
+    // the featured hero raises the weapon skyward; the rest keep their grip from anim()
+    if (m.hop > 0.02) m.arms[0].rotation.x += (-2.4 - m.arms[0].rotation.x) * m.hop;
   });
   const w = innerWidth, h = innerHeight;
   show.cam.aspect = w / h; show.cam.updateProjectionMatrix();
@@ -89,7 +92,7 @@ function go(name) {
   screen = name;
   for (const s of ['main', 'roster', 'stage', 'pass', 'online']) $('scr-' + s).classList.toggle('on', s === name);
   $('front').classList.remove('hidden');
-  if (name === 'main') refreshPassCard();
+  if (name === 'main') { refreshPassCard(); $('modeTut')?.classList.toggle('fresh', !cfg.tutorialDone); }
   if (name === 'roster') enterRoster();
   if (name === 'stage') enterStage();
   if (name === 'pass') enterPass();
@@ -104,15 +107,15 @@ const STAT = h => [
 // The tile strip is a looping carousel: 8 slots visible, the selected hero sits in slot 4,
 // and every step rotates the ring by one tile.
 const VIS = 8, LEFT = 3;
-let viewId = null;
+let viewId = null, infoTab = 'kit';
 function enterRoster() {
   const tiles = $('tiles');
   if (!tiles.children.length) {
     tiles.innerHTML = HEROES.map((h, i) => `
-      <button class="tile" data-hero="${h.id}" style="--hc:${hex(h.color)}">
+      <button class="tile" data-hero="${h.id}" style="--hc:${hex(h.color)}" title="${h.callsign} · ${h.role}">
         <span class="num">${String(i + 1).padStart(2, '0')}</span>
         <img alt="">
-        <b>${h.callsign}</b><small>${h.role}</small>
+        <b>${h.callsign}</b>
       </button>`).join('');
     // headshots render one per frame so the screen appears immediately
     HEROES.forEach((h, i) => setTimeout(() => refreshTile(h.id), 30 + i * 40));
@@ -133,8 +136,13 @@ function refreshTileLock(id) {
   const t = tileOf(id), own = heroOwned(id);
   t.classList.toggle('locked', !own);
   t.querySelector('.lock')?.remove(); t.querySelector('.newb')?.remove();
-  if (!own) t.insertAdjacentHTML('beforeend', `<span class="lock">🔒 Tier ${heroTier(id)}</span>`);
+  if (!own) t.insertAdjacentHTML('beforeend', `<span class="lock">🔒 T${heroTier(id)}</span>`);
   else if (heroTier(id)) t.insertAdjacentHTML('beforeend', '<span class="newb">NEW</span>');
+  // mastery: level badge, gold and diamond frames
+  const m = masteryOf(id);
+  t.querySelector('.mst')?.remove();
+  if (own) t.insertAdjacentHTML('beforeend', `<span class="mst" style="--mc:${m.rank.color}" title="${m.rank.name} mastery · level ${m.level}">${m.level}</span>`);
+  t.classList.toggle('m-gold', own && m.level >= 7 && m.level < 10); t.classList.toggle('m-diamond', own && m.level >= 10);
 }
 
 function layoutCarousel(dir, instant) {
@@ -144,7 +152,7 @@ function layoutCarousel(dir, instant) {
   tiles.style.setProperty('--tw', tw + 'px');
   const xf = k => {
     const c = k + LEFT - (VIS - 1) / 2;                 // distance from the middle of the strip
-    return `translateX(${(k + LEFT) * slot + 5}px) translateZ(${-Math.abs(c) * 14}px) rotateY(${c * -5}deg)` + (k === 0 ? ' translateY(-12px) scale(1.07)' : '');
+    return `translateX(${(k + LEFT) * slot + 5}px) translateZ(${-Math.abs(c) * 14}px) rotateY(${c * -5}deg)` + (k === 0 ? ' translateY(-12px)' : '');
   };
   HEROES.forEach((h, i) => {
     const t = tileOf(h.id);
@@ -194,23 +202,42 @@ function showHero(h, instant) {
   if (instant) setTimeout(set, 20); else set();
   const skins = skinsFor(h.id);
   const cur = d.skinId || null;
+  const ownedSkins = skins.filter(s => own && skinOwned(s.id)).length;
+  const tab = (id, label) => `<button class="${infoTab === id ? 'on' : ''}" data-tab="${id}">${label}</button>`;
+  const pane = id => `data-pane="${id}" class="${infoTab === id ? 'on' : ''}"`;
   $('info').innerHTML = `
-    <div class="chip ${own ? '' : 'pass'}">${own ? h.role : `🔒 Season pass · tier ${heroTier(h.id)}`}</div>
-    <h2>${h.callsign}</h2>
-    <div class="who">${h.name} <span>·</span> ${h.title}</div>
-    ${skins.length ? `<div class="skins"><span>Skins</span>
-      <button class="sk ${cur ? '' : 'on'}" data-skin="" style="--a:${hex(h.palette.main)};--b:${hex(h.palette.trim)}"><i></i>Classic</button>
-      ${skins.map(s => { const ok = own && skinOwned(s.id); return `<button class="sk ${cur === s.id ? 'on' : ''} ${ok ? '' : 'locked'}" data-skin="${s.id}" title="${ok ? s.name : 'Season pass tier ' + skinTier(s.id)}"
-        style="--a:${hex(s.palette.main)};--b:${hex(s.palette.trim)}"><i></i>${s.name}${ok ? '' : ` <em>· T${skinTier(s.id)}</em>`}</button>`; }).join('')}</div>` : ''}
-    <blockquote>“${h.quote}”</blockquote>
-    <p>${h.bio}</p>
-    <div class="statbars">${STAT(h).map(([k, v]) => `<div><span>${k}</span><i><em style="width:${Math.round(Math.min(1, v) * 100)}%"></em></i></div>`).join('')}</div>
-    <ul class="kit">
-      <li><kbd>LMB</kbd><div><b>${h.weapon.name}</b><small>${h.weapon.desc}</small></div></li>
-      <li><kbd>Q</kbd><div><b>${h.q.name}</b><small>${h.q.desc}</small></div></li>
-      <li><kbd>E</kbd><div><b>${h.ability.name}</b><small>${h.ability.desc}</small></div></li>
-      <li class="ult"><kbd>F</kbd><div><b>${h.ult.name}</b><small>${h.ult.desc}</small></div></li>
-    </ul>`;
+    <header class="ih">
+      <div class="ihname">
+        <div class="chip ${own ? '' : 'pass'}">${own ? h.role : `🔒 Season pass · tier ${heroTier(h.id)}`}</div>
+        <h2>${h.callsign}</h2>
+        <div class="who" title="${h.name} · ${h.title}">${h.name} <span>·</span> ${h.title}</div>
+        ${own ? (() => { const m = masteryOf(h.id); return `<div class="mline" style="--mc:${m.rank.color}" title="${m.xp} mastery XP">
+          <b>${m.rank.name} · Lv ${m.level}</b><i><em style="width:${Math.round(m.frac * 100)}%"></em></i><small>${m.max ? 'Mastered' : `${m.into}/${m.need}`}</small></div>`; })() : ''}
+      </div>
+      <div class="statbars">${STAT(h).map(([k, v]) => `<div><span>${k}</span><i><em style="width:${Math.round(Math.min(1, v) * 100)}%"></em></i></div>`).join('')}</div>
+    </header>
+    <nav class="itabs">${tab('kit', 'Abilities')}${tab('story', 'Story')}${tab('skins', `Skins <i>${ownedSkins + 1}/${skins.length + 1}</i>`)}</nav>
+    <div class="ibody">
+      <section ${pane('kit')}>
+        <ul class="kit">
+          <li><kbd>LMB</kbd><div><b>${h.weapon.name}</b><small>${h.weapon.desc}</small></div></li>
+          <li><kbd>Q</kbd><div><b>${h.q.name}</b><small>${h.q.desc}</small></div></li>
+          <li><kbd>E</kbd><div><b>${h.ability.name}</b><small>${h.ability.desc}</small></div></li>
+          <li class="ult"><kbd>F</kbd><div><b>${h.ult.name}</b><small>${h.ult.desc}</small></div></li>
+        </ul>
+      </section>
+      <section ${pane('story')}>
+        <blockquote>“${h.quote}”</blockquote>
+        <p>${h.bio}</p>
+      </section>
+      <section ${pane('skins')}>
+        <div class="skins">
+          <button class="sk ${cur ? '' : 'on'}" data-skin="" style="--a:${hex(h.palette.main)};--b:${hex(h.palette.trim)}"><i></i><span>Classic</span></button>
+          ${skins.map(s => { const ok = own && skinOwned(s.id); return `<button class="sk ${cur === s.id ? 'on' : ''} ${ok ? '' : 'locked'}" data-skin="${s.id}" title="${ok ? s.name : 'Season pass tier ' + skinTier(s.id)}"
+            style="--a:${hex(s.palette.main)};--b:${hex(s.palette.trim)}"><i></i><span>${s.name}</span>${ok ? '' : `<em>🔒 T${skinTier(s.id)}</em>`}</button>`; }).join('')}
+        </div>
+      </section>
+    </div>`;
   $('info').classList.remove('in'); void $('info').offsetWidth; $('info').classList.add('in');
   $('lockName').textContent = own ? h.callsign : 'Locked';
   $('lockIn').classList.toggle('locked', !own);
@@ -338,6 +365,7 @@ const SCHEMA = [
     { key: 'quality', label: 'Render quality', type: 'choice', options: Object.entries(QUALITY).map(([k, q]) => [k, q.label]) },
     { key: 'shadows', label: 'Shadows', type: 'toggle' },
     { key: 'screenShake', label: 'Screen shake', type: 'toggle' },
+    { key: 'perf', label: 'Performance overlay (F3)', type: 'toggle' },
   ] },
   { group: 'Audio', items: [
     { key: 'volume', label: 'Master volume', type: 'range', min: 0, max: 1, step: 0.05, fmt: v => Math.round(v * 100) + '%' },
@@ -377,6 +405,8 @@ export function initMenu(opts) {
   $('modeLane').onclick = () => { setMode('lane'); go('roster'); };
   $('modeSurv').onclick = () => { setMode('survivor'); go('roster'); };
   $('modeHill').onclick = () => { setMode('hill'); go('roster'); };
+  $('modeTut').onclick = () => { api?.blip?.(880); $('front').classList.add('hidden'); api.onStart('tutorial'); };
+  $('modeTut').classList.toggle('fresh', !cfg.tutorialDone);
   $('modeOnline').onclick = () => go('online');
   initOnline({ go, screen: () => screen, blip: f => api?.blip?.(f), start: m => api.onStartOnline(m), pickHero: () => { setMode('online'); go('roster'); } });
   document.querySelectorAll('[data-open-settings]').forEach(b => { b.onclick = openSettings; });
@@ -384,7 +414,16 @@ export function initMenu(opts) {
   $('tiles').onclick = e => { const t = e.target.closest('.tile'); if (t) pickHero(t.dataset.hero); };
   $('carL').onclick = () => stepHero(-1);
   $('carR').onclick = () => stepHero(1);
-  $('info').addEventListener('click', e => { const b = e.target.closest('.sk'); if (b) pickSkin(b.dataset.skin); });
+  $('info').addEventListener('click', e => {
+    const b = e.target.closest('.sk'); if (b) return pickSkin(b.dataset.skin);
+    const t = e.target.closest('[data-tab]');
+    if (t) {
+      infoTab = t.dataset.tab;
+      $('info').querySelectorAll('[data-tab]').forEach(x => x.classList.toggle('on', x === t));
+      $('info').querySelectorAll('[data-pane]').forEach(x => x.classList.toggle('on', x.dataset.pane === infoTab));
+      api?.blip?.(640);
+    }
+  });
   $('passCard').onclick = () => { api?.blip?.(760); go('pass'); };
   $('track').addEventListener('click', e => { const c = e.target.closest('[data-equip]'); if (c) toggleCos(c.dataset.equip); });
   $('track').addEventListener('wheel', e => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.preventDefault(); $('track').scrollLeft += e.deltaY; } }, { passive: false });

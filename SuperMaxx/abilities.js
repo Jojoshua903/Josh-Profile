@@ -136,8 +136,8 @@ function zoneMesh(G, kind, pos, radius) {
   const n = kind === 'trap' || kind === 'banner' ? 0 : Math.round(radius * 3);
   for (let i = 0; i < n; i++) {
     let m;
-    if (kind === 'overgrowth') m = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.9, 5), new THREE.MeshLambertMaterial({ color: i % 4 ? 0x4f9a48 : 0xff5f8f }));
-    else if (kind === 'frost') m = new THREE.Mesh(new THREE.OctahedronGeometry(0.25, 0), new THREE.MeshLambertMaterial({ color: 0xe8f8ff, emissive: 0x9fdcff, emissiveIntensity: 0.4 }));
+    if (kind === 'overgrowth') m = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.9, 5), new THREE.MeshStandardMaterial({ color: i % 4 ? 0x4f9a48 : 0xff5f8f }));
+    else if (kind === 'frost') m = new THREE.Mesh(new THREE.OctahedronGeometry(0.25, 0), new THREE.MeshStandardMaterial({ color: 0xe8f8ff, emissive: 0x9fdcff, emissiveIntensity: 0.4 }));
     else if (kind === 'vortex') m = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.18), new THREE.MeshBasicMaterial({ color: i % 2 ? 0x18e0f0 : 0xff4fa3 }));
     else m = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 4), new THREE.MeshBasicMaterial({ color: look.color }));
     const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * radius * 0.92;
@@ -146,22 +146,22 @@ function zoneMesh(G, kind, pos, radius) {
   }
   if (kind === 'trap') {                                   // a little jaw of thorns
     for (let i = 0; i < 8; i++) {
-      const c = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.35, 4), new THREE.MeshLambertMaterial({ color: 0x6b4a33 }));
+      const c = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.35, 4), new THREE.MeshStandardMaterial({ color: 0x6b4a33 }));
       const a = i / 8 * Math.PI * 2; c.position.set(Math.cos(a) * 0.6, 0.15, Math.sin(a) * 0.6); c.rotation.z = Math.cos(a) * 0.5; c.rotation.x = -Math.sin(a) * 0.5;
       g.add(c);
     }
     // position is read-only on three.js objects, so set it rather than replace it
-    const seed = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 6), new THREE.MeshLambertMaterial({ color: 0x7fc06a, emissive: 0x5fb05a, emissiveIntensity: 0.3 }));
+    const seed = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 6), new THREE.MeshStandardMaterial({ color: 0x7fc06a, emissive: 0x5fb05a, emissiveIntensity: 0.3 }));
     seed.position.set(0, 0.12, 0); g.add(seed);
   }
   if (kind === 'banner') {                                 // Cavalier's rally banner on a pole
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 3.2, 6), new THREE.MeshLambertMaterial({ color: 0x6b4a33 }));
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 3.2, 6), new THREE.MeshStandardMaterial({ color: 0x6b4a33 }));
     pole.position.y = 1.6; g.add(pole);
-    const flag = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.8), new THREE.MeshLambertMaterial({ color: 0xc23b3b, side: THREE.DoubleSide }));
+    const flag = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.8), new THREE.MeshStandardMaterial({ color: 0xc23b3b, side: THREE.DoubleSide }));
     flag.position.set(0.62, 2.7, 0); g.add(flag);
     const crest = new THREE.Mesh(new THREE.CircleGeometry(0.22, 12), new THREE.MeshBasicMaterial({ color: 0xffe08a, side: THREE.DoubleSide }));
     crest.position.set(0.62, 2.7, 0.01); g.add(crest);
-    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.3, 6), new THREE.MeshLambertMaterial({ color: 0xffe08a }));
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.3, 6), new THREE.MeshStandardMaterial({ color: 0xffe08a }));
     tip.position.y = 3.35; g.add(tip);
   }
   G.scene.add(g);
@@ -221,13 +221,13 @@ export function updateAbilities(G, dt) {
 // ---------- deployables (live in G.minions with their own update) ----------
 function makeTurret(G, h, a, pos) {
   const mesh = new THREE.Group();
-  const leg = new THREE.MeshLambertMaterial({ color: 0x3a3f4a });
+  const leg = new THREE.MeshStandardMaterial({ color: 0x3a3f4a });
   for (let i = 0; i < 3; i++) { const l = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.8, 5), leg); const ang = i / 3 * Math.PI * 2; l.position.set(Math.cos(ang) * 0.25, 0.35, Math.sin(ang) * 0.25); l.rotation.set(Math.sin(ang) * 0.4, 0, -Math.cos(ang) * 0.4); mesh.add(l); }
   const head = new THREE.Group(); head.position.y = 0.85; mesh.add(head);
-  head.add(new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 10), new THREE.MeshLambertMaterial({ color: 0x8fa3bf })));
-  const eye = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), new THREE.MeshLambertMaterial({ color: 0x7af0ff, emissive: 0x7af0ff, emissiveIntensity: 0.9 })); eye.position.z = -0.27; head.add(eye);
-  const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.5), new THREE.MeshLambertMaterial({ color: 0x1d2340 })); barrel.position.set(0.18, -0.05, -0.3); head.add(barrel);
-  for (const s of [-1, 1]) { const ear = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.2, 4), new THREE.MeshLambertMaterial({ color: 0xff7a2a })); ear.position.set(s * 0.18, 0.28, 0); head.add(ear); }
+  head.add(new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 10), new THREE.MeshStandardMaterial({ color: 0x8fa3bf })));
+  const eye = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), new THREE.MeshStandardMaterial({ color: 0x7af0ff, emissive: 0x7af0ff, emissiveIntensity: 0.9 })); eye.position.z = -0.27; head.add(eye);
+  const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.5), new THREE.MeshStandardMaterial({ color: 0x1d2340 })); barrel.position.set(0.18, -0.05, -0.3); head.add(barrel);
+  for (const s of [-1, 1]) { const ear = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.2, 4), new THREE.MeshStandardMaterial({ color: 0xff7a2a })); ear.position.set(s * 0.18, 0.28, 0); head.add(ear); }
   const flag = new THREE.Mesh(new THREE.RingGeometry(0.4, 0.5, 20), new THREE.MeshBasicMaterial({ color: TEAM_COLOR[h.team], side: THREE.DoubleSide }));
   flag.rotation.x = -Math.PI / 2; flag.position.y = 0.04; mesh.add(flag);
   mesh.traverse(o => { if (o.isMesh) o.castShadow = true; });
@@ -320,7 +320,7 @@ function slamLand(G, h) {
   ring(G, h.pos, 0xbfeaff, a.radius); ring(G, h.pos, 0xffffff, a.radius * 0.6);
   burst(G, h.pos.clone().setY(0.5), 0xffffff, a.radius * 0.7);
   for (let i = 0; i < 14; i++) {
-    const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.25 + Math.random() * 0.25, 0), new THREE.MeshLambertMaterial({ color: 0xe8f8ff, transparent: true }));
+    const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.25 + Math.random() * 0.25, 0), new THREE.MeshStandardMaterial({ color: 0xe8f8ff, transparent: true }));
     m.position.set(h.pos.x, 0.4, h.pos.z); G.scene.add(m);
     const ang = Math.random() * Math.PI * 2;
     G.fx.push({ obj: m, life: 1, max: 1, kind: 'debris', vel: new THREE.Vector3(Math.cos(ang) * 8, 6 + Math.random() * 5, Math.sin(ang) * 8), spin: 6 });
@@ -347,7 +347,7 @@ export const ABIL = {
       for (let s = 0; s < 30; s++) { h.pos.addScaledVector(d, a.dist / 30); resolveXZ(h.pos, h.radius, G.colliders); }
       for (let i = 0; i < 4; i++) tracer(G, from.clone().setY(from.y + 0.5 + i * 0.4), h.pos.clone().setY(h.pos.y + 0.5 + i * 0.4), i % 2 ? 0xffc93c : 0xff4fa3, 0.35);
       if (h.rushT > 0) {                                    // Rush Hour: leave a parcel bomb where you were
-        const box = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.35, 0.45), new THREE.MeshLambertMaterial({ color: 0xc99a62 }));
+        const box = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.35, 0.45), new THREE.MeshStandardMaterial({ color: 0xc99a62 }));
         box.position.copy(from).setY(from.y + 0.2); G.scene.add(box);
         G.timers.push({ t: 0.7, fn: () => {
           G.scene.remove(box); ring(G, from, 0xffc93c, 3.5); burst(G, from.clone().setY(0.8), 0xffc93c, 1.6);
@@ -456,15 +456,15 @@ export const ABIL = {
       const collider = makeBox(c.x, c.z, w, d, a.height);
       G.colliders.push(collider);
       const mesh = new THREE.Group(); mesh.position.set(c.x, 0, c.z);
-      const core = new THREE.Mesh(new THREE.BoxGeometry(w, a.height, d), new THREE.MeshLambertMaterial({ color: 0x4f7a3a }));
+      const core = new THREE.Mesh(new THREE.BoxGeometry(w, a.height, d), new THREE.MeshStandardMaterial({ color: 0x4f7a3a }));
       core.position.y = a.height / 2; core.castShadow = true; mesh.add(core);
       for (let i = 0; i < 26; i++) {
-        const t = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.5, 4), new THREE.MeshLambertMaterial({ color: i % 5 ? 0x6b4a33 : 0xff5f8f }));
+        const t = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.5, 4), new THREE.MeshStandardMaterial({ color: i % 5 ? 0x6b4a33 : 0xff5f8f }));
         t.position.set((Math.random() - 0.5) * w, Math.random() * a.height, (Math.random() - 0.5) * d);
         t.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3); mesh.add(t);
       }
       for (let i = 0; i < 8; i++) {
-        const l = new THREE.Mesh(new THREE.IcosahedronGeometry(0.45, 0), new THREE.MeshLambertMaterial({ color: 0x5fb05a, flatShading: true }));
+        const l = new THREE.Mesh(new THREE.IcosahedronGeometry(0.45, 0), new THREE.MeshStandardMaterial({ color: 0x5fb05a, flatShading: true }));
         l.position.set((Math.random() - 0.5) * w, a.height - 0.1, (Math.random() - 0.5) * d); mesh.add(l);
       }
       G.scene.add(mesh);
@@ -659,10 +659,10 @@ export const ABIL = {
       const start = h.pos.clone().addScaledVector(f, 4).setY(0);
       // the biplane: a fuselage mesh with wings and tail as children
       const pal = h.def.palette;
-      const plane = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 4), new THREE.MeshLambertMaterial({ color: pal.main, transparent: true }));
-      for (const y of [-0.45, 0.75]) { const w = new THREE.Mesh(new THREE.BoxGeometry(7, 0.14, 1.2), new THREE.MeshLambertMaterial({ color: pal.trim })); w.position.set(0, y, -0.4); plane.add(w); }
-      const tail = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.1, 0.9), new THREE.MeshLambertMaterial({ color: pal.trim })); tail.position.set(0, 0.6, 1.7); plane.add(tail);
-      const prop = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.16, 0.06), new THREE.MeshLambertMaterial({ color: 0x1d2340 })); prop.position.z = -2.05; prop.name = 'prop'; plane.add(prop);
+      const plane = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 4), new THREE.MeshStandardMaterial({ color: pal.main, transparent: true }));
+      for (const y of [-0.45, 0.75]) { const w = new THREE.Mesh(new THREE.BoxGeometry(7, 0.14, 1.2), new THREE.MeshStandardMaterial({ color: pal.trim })); w.position.set(0, y, -0.4); plane.add(w); }
+      const tail = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.1, 0.9), new THREE.MeshStandardMaterial({ color: pal.trim })); tail.position.set(0, 0.6, 1.7); plane.add(tail);
+      const prop = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.16, 0.06), new THREE.MeshStandardMaterial({ color: 0x1d2340 })); prop.position.z = -2.05; prop.name = 'prop'; plane.add(prop);
       plane.position.copy(start).addScaledVector(f, -30).setY(17);
       plane.rotation.y = Math.atan2(-f.x, -f.z);
       G.scene.add(plane);
@@ -703,7 +703,7 @@ export const ABIL = {
       G.timers.push({ t: 0.55, fn: () => {
         // two rows of teeth burst up and snap together
         for (const s of [-1, 1]) for (let i = 0; i < 9; i++) {
-          const m = new THREE.Mesh(new THREE.ConeGeometry(0.28, 1.3, 4), new THREE.MeshLambertMaterial({ color: 0xf4efd8, transparent: true }));
+          const m = new THREE.Mesh(new THREE.ConeGeometry(0.28, 1.3, 4), new THREE.MeshStandardMaterial({ color: 0xf4efd8, transparent: true }));
           m.position.set(p.x + (i - 4) * a.radius * 0.2, 0.3, p.z + s * a.radius * 0.6);
           G.scene.add(m);
           G.fx.push({ obj: m, life: 0.9, max: 0.9, kind: 'debris', vel: new THREE.Vector3(0, 7, -s * a.radius * 1.2), spin: 0 });

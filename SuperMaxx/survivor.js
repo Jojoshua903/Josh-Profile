@@ -59,7 +59,7 @@ function rollType() {
 
 function lootMesh(type) {
   const g = new THREE.Group();
-  const M = (c, e = 0.35) => new THREE.MeshLambertMaterial({ color: c, emissive: c, emissiveIntensity: e });
+  const M = (c, e = 0.35) => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: e });
   if (type.id === 'health') {
     g.add(new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.45, 0.6), M(0xffffff, 0.15)));
     const c1 = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.14, 0.18), M(type.color)); c1.position.y = 0.05;
@@ -110,9 +110,9 @@ function startGlide(h) {
   if (!h.chute) {
     const c = new THREE.Group();
     const canopy = new THREE.Mesh(new THREE.SphereGeometry(1.4, 16, 8, 0, TAU, 0, Math.PI / 2.6),
-      new THREE.MeshLambertMaterial({ color: gl ? gl.a : h.def.color, side: THREE.DoubleSide, emissive: gl?.glow ? gl.a : 0, emissiveIntensity: gl?.glow ? 0.45 : 0 }));
+      new THREE.MeshStandardMaterial({ color: gl ? gl.a : h.def.color, side: THREE.DoubleSide, emissive: gl?.glow ? gl.a : 0, emissiveIntensity: gl?.glow ? 0.45 : 0 }));
     canopy.scale.y = 0.55; c.add(canopy);
-    const stripe = new THREE.Mesh(new THREE.TorusGeometry(1.0, gl ? 0.14 : 0.05, 6, 32), new THREE.MeshLambertMaterial({ color: gl ? gl.b : 0xffffff }));
+    const stripe = new THREE.Mesh(new THREE.TorusGeometry(1.0, gl ? 0.14 : 0.05, 6, 32), new THREE.MeshStandardMaterial({ color: gl ? gl.b : 0xffffff }));
     stripe.rotation.x = Math.PI / 2; stripe.position.y = 0.42; c.add(stripe);
     for (let i = 0; i < 4; i++) {
       const a = i / 4 * TAU + Math.PI / 4;

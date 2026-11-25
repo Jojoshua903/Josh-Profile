@@ -12,7 +12,7 @@ export const TEAM_COLOR = new Proxy({ blue: 0x2f5bff, red: 0xff5a36 }, { get: (t
 const INK = 0x1d2340;
 const tmpQ = new THREE.Quaternion();
 
-function lambert(c, o = {}) { return new THREE.MeshLambertMaterial({ color: c, ...o }); }
+function lambert(c, o = {}) { return new THREE.MeshStandardMaterial({ color: c, ...o }); }
 
 export function makeBar(width, y) {
   const g = new THREE.Group();
@@ -64,6 +64,7 @@ export function spawnHero(G, h) {
   h.spawnA = 1; h.deathT = 0; h.castA = 0; h.chargeStart = null; h.bleedT = 0; h.frost = 0; h.ramp = 0;
   h.mesh.rotation.set(0, 0, 0); h.mesh.scale.setScalar(1);
   h.yaw = h.team === 'blue' ? Math.PI : 0; h.pitch = 0;
+  if (h.dummyAt) h.pos.set(h.dummyAt.x, 0, h.dummyAt.z);               // tutorial training dummies
   h.mesh.visible = !h.isPlayer;
   setBar(h, h.team === G.playerTeam ? 0x3ccf9a : TEAM_COLOR[h.team]);
   if (G.mode === 'hill') { const s = HILL.spawnHaste; h.hasteT = s.dur; h.hasteSpeed = s.speed; h.hasteFire = 1; }  // sprint back to the ring
