@@ -1,12 +1,12 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { TUNING, HILL, CART } from './data.js?v=20261126w';
-import { buildHeroModel } from './models.js?v=20261126w';
-import { makeBox, moveBody, resolveXZ, rayBox, raySphere, rayWorld, hasLOS } from './world.js?v=20261126w';
+import { TUNING, HILL, CART } from './data.js?v=20261127a';
+import { buildHeroModel } from './models.js?v=20261127a';
+import { makeBox, moveBody, resolveXZ, rayBox, raySphere, rayWorld, hasLOS } from './world.js?v=20261127a';
 import { resetStatus, tickStatus, afterMove, wallClimb, takenMult, fireMult, canAct, breakInvis, isHidden, slow as applySlow, stun as applyStun, knock as applyKnock, dropBlobs,
-  dealtMult, onDealt, onHurt, onKill, mend, thaw } from './abilities.js?v=20261126w';
-import { poseHero, rubble } from './anim.js?v=20261126w';
-import { onEliminated, survivorPreMove, survivorPostMove } from './survivor.js?v=20261126w';
-import { tickVfx, tickLight, blast, sparks } from './vfx.js?v=20261126w';
+  dealtMult, onDealt, onHurt, onKill, mend, thaw } from './abilities.js?v=20261127a';
+import { poseHero, rubble } from './anim.js?v=20261127a';
+import { onEliminated, survivorPreMove, survivorPostMove } from './survivor.js?v=20261127a';
+import { tickVfx, tickLight, blast, sparks } from './vfx.js?v=20261127a';
 
 // Survivor teams are per-hero ids; anything that isn't blue reads as an enemy red.
 export const TEAM_COLOR = new Proxy({ blue: 0x2f5bff, red: 0xff5a36 }, { get: (t, k) => (k in t ? t[k] : 0xff5a36) });

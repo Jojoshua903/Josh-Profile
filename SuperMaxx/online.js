@@ -1,9 +1,9 @@
-import { HEROES, ARCHETYPES } from './heroes.js?v=20261126w';
-import { MAPS } from './data.js?v=20261126w';
-import { cfg, save } from './settings.js?v=20261126w';
-import { headshot } from './portraits.js?v=20261126w';
-import { dressed, wear, myCosIds, heroOwned } from './pass.js?v=20261126w';
-import * as net from './net.js?v=20261126w';
+import { HEROES, ARCHETYPES } from './heroes.js?v=20261127a';
+import { MAPS } from './data.js?v=20261127a';
+import { cfg, save } from './settings.js?v=20261127a';
+import { headshot } from './portraits.js?v=20261127a';
+import { dressed, wear, myCosIds, heroOwned } from './pass.js?v=20261127a';
+import * as net from './net.js?v=20261127a';
 
 // Online front end: set up your name and hero, host or join a room by code, then the lobby
 // (mode, teams, stage, start). The match itself starts on every machine when the host hits Start.
@@ -64,6 +64,7 @@ async function act(what, v) {
   if (what === 'map') net.setMap(v);
   if (what === 'mode') net.setMode(v);
   if (what === 'drafttog') net.setDraft(!st.meta?.draft);
+  if (what === 'botstog') net.setBots(!!st.meta?.noBots);
   if (what === 'draft') net.draftPick(v);
   if (what === 'start') net.startMatch().catch(x => { err = net.explain(x).message; render(); });
   if (what === 'leave') { await net.leaveRoom(); render(); }
@@ -143,14 +144,19 @@ function lobbyHTML(st) {
       return `<div class="slot ${uid === st.me ? 'me' : ''}" style="--hc:${hex(d.color)}"><img src="${headshot(d)}" alt="">
         <div><b>${esc(p.name)}${uid === st.meta?.host ? ' <span class="crown" title="Host">♛</span>' : ''}</b><small>${base.callsign}</small></div></div>`;
     });
-    for (let i = list.length; i < M.per; i++) slots.push('<div class="slot bot"><span>🤖</span><div><b>Bot</b><small>fills this slot</small></div></div>');
+    for (let i = list.length; i < M.per; i++) slots.push(st.meta?.noBots ? '<div class="slot bot off"><span>·</span><div><b>Empty</b><small>bots are off</small></div></div>'
+      : '<div class="slot bot"><span>🤖</span><div><b>Bot</b><small>fills this slot</small></div></div>');
     const full = list.length >= M.per;
     return `<div class="teamcol ${team}"><h4>${team === 'blue' ? 'Blue' : 'Red'} ${duel ? 'corner' : 'team'} <span>${Math.min(list.length, M.per)}/${M.per}</span></h4>${slots.join('')}
       ${!duel && mine && mine.team !== team ? `<button class="ghost" data-act="team" data-v="${team}" ${full ? 'disabled' : ''}>${full ? 'Team full' : 'Join ' + team}</button>` : ''}</div>`;
   };
   const playing = st.meta?.state === 'playing';
   const tooMany = duel && players.length > 2;
-  const bots = duel ? Math.max(0, 2 - players.length) : 6 - Math.min(6, players.length);
+  const botsOn = !st.meta?.noBots;
+  const bots = !botsOn ? 0 : duel ? Math.max(0, 2 - players.length) : 6 - Math.min(6, players.length);
+  // with bots off, say why the match can't start yet
+  const short = botsOn ? '' : duel ? (players.length < 2 ? 'Bots are off: you need a second player to duel.' : '')
+    : ['blue', 'red'].find(t => !players.some(([uid, p]) => sideOf(uid, p) === t)) ? 'Bots are off: each team needs at least one player.' : '';
   return `<div class="lobby">
     <div class="codebox"><small>Room code</small><b>${st.code}</b><button class="ghost" id="onCopy" data-act="copy">Copy</button><span>Share it. Friends pick <i>Online → Join</i>.</span></div>
     <div class="modechips">${Object.entries(MODES).map(([id, m]) => st.host
@@ -158,6 +164,8 @@ function lobbyHTML(st) {
       : `<div class="${id === mode ? 'on' : 'off'}"><b>${m.name}</b><small>${m.sub}</small></div>`).join('')}</div>
     ${duel ? '' : `<div class="draftopt ${st.meta?.draft ? 'on' : ''}">${st.host ? `<button data-act="drafttog" ${playing ? 'disabled' : ''}><i>${st.meta?.draft ? '✓' : ''}</i></button>` : `<i>${st.meta?.draft ? '✓' : '·'}</i>`}
       <div><b>Draft pick ${st.meta?.draft ? 'on' : 'off'}</b><small>${st.meta?.draft ? 'Teams take turns picking heroes before the match, and nobody can pick the same one.' : st.host ? 'Turn it on to pick heroes in turns, with no duplicates.' : 'Everyone plays the hero they chose.'}</small></div></div>`}
+    <div class="draftopt ${botsOn ? 'on' : ''}">${st.host ? `<button data-act="botstog" ${playing ? 'disabled' : ''}><i>${botsOn ? '✓' : ''}</i></button>` : `<i>${botsOn ? '✓' : '·'}</i>`}
+      <div><b>Bots ${botsOn ? 'on' : 'off'}</b><small>${botsOn ? 'Bots fill any empty seats.' : duel ? 'Players only: you need two to duel.' : 'Players only: empty seats stay empty, and each team needs at least one player.'}</small></div></div>
     <div class="teams ${duel ? 'duel' : ''}">${col('blue')}<div class="vs">VS</div>${col('red')}</div>
     ${duel && players.length > 2 ? `<div class="spect">Watching: ${players.slice(2).map(([, p]) => esc(p.name)).join(', ')}. Only two can duel.</div>` : ''}
     <div class="lobbyfoot">
@@ -168,8 +176,8 @@ function lobbyHTML(st) {
           : `<p><b>${map.name}</b><br>The host picks the stage.</p>`}
       </div>
       <div class="oncard go">
-        ${st.host ? `<button class="bigbtn" data-act="start" ${playing || tooMany ? 'disabled' : ''}>${!duel && st.meta?.draft ? 'Start draft' : `Start ${M.name.toLowerCase()}`}</button>
-          <p>${tooMany ? 'Duel is 1v1. Switch to Hill Rush or have extra players leave.' : `${Math.min(players.length, duel ? 2 : 6)} player${players.length > 1 ? 's' : ''} · ${bots} bot${bots === 1 ? '' : 's'}`}</p>`
+        ${st.host ? `<button class="bigbtn" data-act="start" ${playing || tooMany || short ? 'disabled' : ''}>${!duel && st.meta?.draft ? 'Start draft' : `Start ${M.name.toLowerCase()}`}</button>
+          <p>${tooMany ? 'Duel is 1v1. Switch to Hill Rush or have extra players leave.' : short || `${Math.min(players.length, duel ? 2 : 6)} player${players.length > 1 ? 's' : ''} · ${bots} bot${bots === 1 ? '' : 's'}`}</p>`
           : `<div class="wait">${playing ? 'Match in progress…' : 'Waiting for the host to start'}</div>`}
         <button class="ghost" data-act="leave">Leave room</button>
       </div>

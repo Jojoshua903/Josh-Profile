@@ -1,4 +1,4 @@
-import { cfg, save } from './settings.js?v=20261126w';
+import { cfg, save } from './settings.js?v=20261127a';
 
 // Guided first match: a checklist of ten short steps on Solmare Piazza against training
 // dummies that stand still. Each step watches what the player does and ticks itself off.

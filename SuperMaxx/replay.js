@@ -1,7 +1,7 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { poseHero } from './anim.js?v=20261126w';
-import { castFx, sparks } from './vfx.js?v=20261126w';
-import { dirFrom, eyeOf } from './units.js?v=20261126w';
+import { poseHero } from './anim.js?v=20261127a';
+import { castFx, sparks } from './vfx.js?v=20261127a';
+import { dirFrom, eyeOf } from './units.js?v=20261127a';
 
 // Play of the game. Every hero's position, aim and status is recorded 20 times a second into
 // a rolling 12-second buffer. Each elimination is scored (multi-kills, ultimates, towers);

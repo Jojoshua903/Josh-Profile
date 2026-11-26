@@ -1,19 +1,19 @@
-import { LOOK, applyEnvironment } from './stage.js?v=20261126w';
-import { masteryOf } from './mastery.js?v=20261126w';
+import { LOOK, applyEnvironment } from './stage.js?v=20261127a';
+import { masteryOf } from './mastery.js?v=20261127a';
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { HEROES, ARCHETYPES, archOf } from './heroes.js?v=20261126w';
-import './personality.js?v=20261126w';
-import { MAPS, DIFFICULTY } from './data.js?v=20261126w';
-import { THEMES } from './scenery.js?v=20261126w';
-import { cfg, save, resetSettings, QUALITY } from './settings.js?v=20261126w';
-import { splash, headshot, mapArt } from './portraits.js?v=20261126w';
-import { initOnline, enterOnline } from './online.js?v=20261126w';
-import { enterSlots } from './slotmachine.js?v=20261126w';
-import { initVault, enterVault, leaveVault, clipCount } from './vault.js?v=20261126w';
-import { tokens as slotTokens } from './slots.js?v=20261126w';
-import { CONTRACTS, contractOf, taskFrac, taskDone, statOf, tasksDone, openContracts, contractsLeft, contractUnlocked, contractDone } from './contracts.js?v=20261126w';
+import { HEROES, ARCHETYPES, archOf } from './heroes.js?v=20261127a';
+import './personality.js?v=20261127a';
+import { MAPS, DIFFICULTY } from './data.js?v=20261127a';
+import { THEMES } from './scenery.js?v=20261127a';
+import { cfg, save, resetSettings, QUALITY } from './settings.js?v=20261127a';
+import { splash, headshot, mapArt } from './portraits.js?v=20261127a';
+import { initOnline, enterOnline } from './online.js?v=20261127a';
+import { enterSlots } from './slotmachine.js?v=20261127a';
+import { initVault, enterVault, leaveVault, clipCount } from './vault.js?v=20261127a';
+import { tokens as slotTokens } from './slots.js?v=20261127a';
+import { CONTRACTS, contractOf, taskFrac, taskDone, statOf, tasksDone, openContracts, contractsLeft, contractUnlocked, contractDone } from './contracts.js?v=20261127a';
 import { SEASON, TRACK, MAX_TIER, passXp, tierProgress, heroOwned, heroTier, skinOwned, skinTier, skinsFor, dressed, equip, rewardInfo,
-  COS_TYPES, cosById, cosOwned, equippedCos, equipCos, cosArt, lockShort, lockLong, isSlotItem, isContractHero } from './pass.js?v=20261126w';
+  COS_TYPES, cosById, cosOwned, equippedCos, equipCos, cosArt, lockShort, lockLong, isSlotItem, isContractHero } from './pass.js?v=20261127a';
 
 // Front end: main menu → roster select → stage select → match. Settings overlay on top.
 

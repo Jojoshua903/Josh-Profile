@@ -1,9 +1,9 @@
-import { HEROES } from './heroes.js?v=20261126w';
-import { cfg, save } from './settings.js?v=20261126w';
-import { SLOT_HEROES, slotOwned, isSlotItem, setSkinGate } from './slots.js?v=20261126w';
-import { sprayUrl } from './sprays.js?v=20261126w';
-import { isContractHero, contractDone, tasksDone, contractUnlocked } from './contracts.js?v=20261126w';
-export { isContractHero } from './contracts.js?v=20261126w';
+import { HEROES } from './heroes.js?v=20261127a';
+import { cfg, save } from './settings.js?v=20261127a';
+import { SLOT_HEROES, slotOwned, isSlotItem, setSkinGate } from './slots.js?v=20261127a';
+import { sprayUrl } from './sprays.js?v=20261127a';
+import { isContractHero, contractDone, tasksDone, contractUnlocked } from './contracts.js?v=20261127a';
+export { isContractHero } from './contracts.js?v=20261127a';
 
 // Season pass: XP from matches (mostly from winning) climbs a 30-tier track of hero skins,
 // cosmetics and three season heroes. Progress is saved locally.

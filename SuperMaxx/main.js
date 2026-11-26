@@ -1,33 +1,33 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { HEROES, MAPS, DIFFICULTY, TUNING, SURVIVOR_MAP, SURVIVOR, HILL, DUEL, CART } from './data.js?v=20261126w';
-import { initSurvivor, updateSurvivor, survivorLeaders, stormInfo, inStorm } from './survivor.js?v=20261126w';
-import { initHill, updateHill, hillVisuals, onHill } from './hill.js?v=20261126w';
-import { initCart, updateCart, nearCart, cartLead } from './payload.js?v=20261126w';
-import { initPotato, updatePotato, potatoHit, holdsPotato, POTATO } from './potato.js?v=20261126w';
-import { buildWorld, mirror } from './world.js?v=20261126w';
+import { HEROES, MAPS, DIFFICULTY, TUNING, SURVIVOR_MAP, SURVIVOR, HILL, DUEL, CART } from './data.js?v=20261127a';
+import { initSurvivor, updateSurvivor, survivorLeaders, stormInfo, inStorm } from './survivor.js?v=20261127a';
+import { initHill, updateHill, hillVisuals, onHill } from './hill.js?v=20261127a';
+import { initCart, updateCart, nearCart, cartLead } from './payload.js?v=20261127a';
+import { initPotato, updatePotato, potatoHit, holdsPotato, POTATO } from './potato.js?v=20261127a';
+import { buildWorld, mirror } from './world.js?v=20261127a';
 import { createHero, spawnHero, createStructure, spawnMinion, fire, releaseFire, chargeLevel, startReload, tickHero, tickCorpse, chestOf,
-  updateMinions, updateStructures, updateProjectiles, updateFx, dirFrom, eyeOf, TEAM_COLOR } from './units.js?v=20261126w';
-import { steer, initBot, updateBot } from './botbrain.js?v=20261126w';
-import { castSlot, updateAbilities } from './abilities.js?v=20261126w';
-import { floatText, poseHero } from './anim.js?v=20261126w';
-import { cfg, applyGraphics } from './settings.js?v=20261126w';
-import { initMenu, showMenu, menuFrame, openSettings, settingsVisible } from './menu.js?v=20261126w';
-import { dressed, heroOwned, wear, myCosIds, resolveCos, matchXp, award, rewardInfo, tierProgress, SEASON, MAX_TIER, cosById, cosOwned, equippedCos } from './pass.js?v=20261126w';
-import { aimSpray, placeSpray, SPRAY_CD } from './sprays.js?v=20261126w';
-import { EMOTES, EMOTE_CD, BOT_EMOTES, startEmote, stopEmote } from './emotes.js?v=20261126w';
-import { headshot } from './portraits.js?v=20261126w';
-import './personality.js?v=20261126w';
-import { openSession, tickPuppet, myUid, lobbyState, leaveRoom, onLobby } from './net.js?v=20261126w';
-import { initAudio, applyVolume, tone, noise, ABIL_SFX, audioTap } from './audio.js?v=20261126w';
-import { startClipRec, saveClip, sendClip } from './clips.js?v=20261126w';
-import { playMusic } from './music.js?v=20261126w';
-import { sparks, castFx, lightFlash } from './vfx.js?v=20261126w';
-import { applyEnvironment } from './stage.js?v=20261126w';
-import { perfFrame } from './perf.js?v=20261126w';
-import { gainMastery } from './mastery.js?v=20261126w';
-import { recordMatch, tasksDone } from './contracts.js?v=20261126w';
-import { startTutorial, stopTutorial, tickTutorial, tutorialCast, tutorialKill, onTutorialPass } from './tutorial.js?v=20261126w';
-import { initReplay, recFrame, recEvent, recKill, finalClip, startPlayback, tickPlayback, stopPlayback } from './replay.js?v=20261126w';
+  updateMinions, updateStructures, updateProjectiles, updateFx, dirFrom, eyeOf, TEAM_COLOR } from './units.js?v=20261127a';
+import { steer, initBot, updateBot } from './botbrain.js?v=20261127a';
+import { castSlot, updateAbilities } from './abilities.js?v=20261127a';
+import { floatText, poseHero } from './anim.js?v=20261127a';
+import { cfg, applyGraphics } from './settings.js?v=20261127a';
+import { initMenu, showMenu, menuFrame, openSettings, settingsVisible } from './menu.js?v=20261127a';
+import { dressed, heroOwned, wear, myCosIds, resolveCos, matchXp, award, rewardInfo, tierProgress, SEASON, MAX_TIER, cosById, cosOwned, equippedCos } from './pass.js?v=20261127a';
+import { aimSpray, placeSpray, SPRAY_CD } from './sprays.js?v=20261127a';
+import { EMOTES, EMOTE_CD, BOT_EMOTES, startEmote, stopEmote } from './emotes.js?v=20261127a';
+import { headshot } from './portraits.js?v=20261127a';
+import './personality.js?v=20261127a';
+import { openSession, tickPuppet, myUid, lobbyState, leaveRoom, onLobby } from './net.js?v=20261127a';
+import { initAudio, applyVolume, tone, noise, ABIL_SFX, audioTap } from './audio.js?v=20261127a';
+import { startClipRec, saveClip, sendClip } from './clips.js?v=20261127a';
+import { playMusic } from './music.js?v=20261127a';
+import { sparks, castFx, lightFlash } from './vfx.js?v=20261127a';
+import { applyEnvironment } from './stage.js?v=20261127a';
+import { perfFrame } from './perf.js?v=20261127a';
+import { gainMastery } from './mastery.js?v=20261127a';
+import { recordMatch, tasksDone } from './contracts.js?v=20261127a';
+import { startTutorial, stopTutorial, tickTutorial, tutorialCast, tutorialKill, onTutorialPass } from './tutorial.js?v=20261127a';
+import { initReplay, recFrame, recEvent, recKill, finalClip, startPlayback, tickPlayback, stopPlayback } from './replay.js?v=20261127a';
 let envRT = null;
 
 const $ = id => document.getElementById(id);
@@ -262,6 +262,7 @@ function startGame(m = mode, online = null) {
   for (const h of G.heroes) headshot(h.def);                         // the scoreboard shows portraits; draw them now, not mid-fight
   renderer.compile(G.scene, camera);
   running = true; paused = false; streak = { multi: 0, lastT: -9, life: 0 };
+  G.countT = tut ? 0 : COUNT_FROM; $('myEmote').className = 'hidden'; $('countdown').className = 'hidden'; $('countdown').textContent = '';
   lockMouse();
   if (surv) banner('Survive!', '#9b5cff', 'You start somewhere on the island. Loot up, stay hidden, last one standing wins.');
   else if (duel) banner('Duel!', '#1d2340', `${map.name} · first to ${DUEL.toWin} rounds`);
@@ -286,7 +287,9 @@ function endLater(win, ms) { const g = G; setTimeout(() => { if (G && G === g) e
 const END_MODE = { lane: 'Lane Breaker', hill: 'Hill Rush', cart: 'Payload', potato: 'Hot Potato', survivor: 'Survivor', duel: 'Duel' };
 function endGame(win) {
   if (!G || G.ended) return;
-  G.ended = true; G.over = true; running = false; paused = false;
+  G.over = true;
+  G.net?.flush?.();                                     // online: get the last update out before this machine stops sending
+  G.ended = true; running = false; paused = false;
   document.exitPointerLock();
   $('pause').classList.add('hidden'); $('scoreboard').classList.add('hidden');
   if (G.tutorial) {
@@ -746,7 +749,13 @@ const events = {
     else if (t === P) say(P, 'death');
     else if (t.kind === 'hero' && src && src.kind === 'hero') say(src, 'kill', t);
     if (t.kind === 'tower') { const theirs = t.team !== G.playerTeam; banner(theirs ? 'Enemy tower down. Core exposed' : 'Our tower fell', theirs ? 'var(--blue)' : 'var(--red)'); tone(90, 0.6, 'sawtooth', 0.1, 0.4); }
-    if (t.kind === 'core') endGame(t.team !== G.playerTeam);
+    if (t.kind === 'core' && !G.over) {                // the host tells everyone, so nobody is left playing after the core falls
+      const w = t.team === 'blue' ? 'red' : 'blue', ours = w === G.playerTeam;
+      G.over = true;
+      if (G.net?.host) G.net.queue({ k: 'end', w, y: 'core' });
+      banner(ours ? 'Enemy core destroyed!' : 'Our core fell', ours ? 'var(--blue)' : 'var(--red)');
+      endLater(ours, 1400);
+    }
     if (G.duel && t.kind === 'hero' && (!G.net || G.net.host)) duelKnockout(t, src);
     if (G.mode === 'survivor' && t.kind === 'hero') {
       const left = G.aliveCount;
@@ -810,11 +819,12 @@ const events = {
   },
   // online: the host called the result
   netRound(e) { applyDuel(e); },
-  netEnd(team) {
+  netEnd(team, why) {
     if (G.over) return;
     G.over = true;
     const ours = team === G.playerTeam, H = G.hill;
-    if (H) banner(ours ? 'Hill secured' : 'They held the hill', ours ? 'var(--blue)' : 'var(--red)', `${Math.floor(H.pts2.blue)} – ${Math.floor(H.pts2.red)}`);
+    if (why === 'core') banner(ours ? 'Enemy core destroyed!' : 'Our core fell', ours ? 'var(--blue)' : 'var(--red)');
+    else if (H) banner(ours ? 'Hill secured' : 'They held the hill', ours ? 'var(--blue)' : 'var(--red)', `${Math.floor(H.pts2.blue)} – ${Math.floor(H.pts2.red)}`);
     else {                                                            // Lane Breaker went to time
       const core = t => G.structures.find(s => s.kind === 'core' && s.team === t), pct = t => Math.round(core(t).hp / core(t).maxHp * 100);
       banner('Time!', ours ? 'var(--blue)' : 'var(--red)', `Cores: ${pct('blue')}% – ${pct('red')}%`);
@@ -894,6 +904,7 @@ addEventListener('keydown', e => {
   if (e.code === 'Tab') { e.preventDefault(); if (running) { $('sbBody').innerHTML = scoreTable(); $('scoreboard').classList.remove('hidden'); } }
   keys.add(e.code);
   if (!running || paused) return;
+  if (G?.countT > 0) return;
   if (e.code === 'KeyR') startReload(P);
   if (e.code === 'KeyT') trySpray();
   if (e.code === 'KeyB' && !e.repeat) openWheel();
@@ -985,9 +996,9 @@ function trySpray() {
 }
 
 // ---------- emotes ----------
-// Hold B for the emote wheel, nudge the mouse toward one and let go. The camera pulls back so
-// you can see yourself; moving, firing or casting cancels it.
-let emoteAt = -99, wheel = null, emoteCam = 0;
+// Hold B for the emote wheel, nudge the mouse toward one and let go. You keep moving and the
+// camera stays first person; firing or using an ability cancels it.
+let emoteAt = -99, wheel = null;
 const emoteBusy = () => G.time >= emoteAt && G.time - emoteAt < EMOTE_CD;   // a new match restarts the clock
 const EMOTE_SFX = {
   wave: () => { tone(660, 0.08, 'triangle', 0.04, 1.2); tone(880, 0.1, 'triangle', 0.04, 1.1, 0.1); },
@@ -1026,9 +1037,12 @@ function tryEmote(id) {
   if (!startEmote(G, P, id)) return;
   emoteAt = G.time;
   G.net?.emote(P, id);
+  const el = $('myEmote'), e = EMOTES.find(x => x.id === id);
+  el.innerHTML = `<b>${e.icon}</b><small>${e.name}</small>`; el.className = ''; void el.offsetWidth; el.className = 'on';
 }
 function cancelEmote() {
   if (!P.emote) return;
+  $('myEmote').className = 'hidden';
   stopEmote(G, P);
   G.net?.emote(P, null);
 }
@@ -1044,8 +1058,8 @@ function updatePlayer(dt) {
       camera.position.lerp(new THREE.Vector3(P.pos.x, P.pos.y + 14, P.pos.z - Math.sign(P.pos.z || 1) * 10), Math.min(1, dt * 2));
       camera.lookAt(P.pos);
     }
-    viewGun.visible = false; viewHand.visible = false; emoteCam = 0; closeWheel(false);
-    if (P.emote) { stopEmote(G, P); P.mesh.visible = false; }
+    viewGun.visible = false; viewHand.visible = false; closeWheel(false);
+    if (P.emote) { stopEmote(G, P); $('myEmote').className = 'hidden'; }
     if (G.mode === 'survivor') { if (survEndT > 0 && (survEndT -= dt) <= 0) endGame(false); return; }
     if (P.respawnT <= 0) { spawnHero(G, P); P._lowSaid = false; say(P, "spawn"); G.killCam = null; $('recap').classList.add('hidden'); }
     return;
@@ -1053,7 +1067,7 @@ function updatePlayer(dt) {
   $('center').classList.add('hidden'); $('recap').classList.add('hidden');
   viewGun.visible = true; viewHand.visible = true;
   const w = wishDir();
-  if (P.emote && (w.lengthSq() > 0 || mouseDown || keys.has('Space'))) cancelEmote();
+  if (P.emote && mouseDown) cancelEmote();
   const sprint = keys.has('ShiftLeft') && keys.has('KeyW') && !mouseDown && P.onGround;
   steer(P, w, sprint, keys.has('Space'), dt);
   const vyBefore = P.vel.y;
@@ -1085,17 +1099,8 @@ function updatePlayer(dt) {
   const sh = shake * 0.12;
   const wob = P.stunT > 0 ? Math.sin(G.time * 9) * 0.06 : 0;
   camera.rotation.set(P.pitch + (Math.random() - 0.5) * sh, P.yaw + (Math.random() - 0.5) * sh, wob, 'YXZ');
-  // emoting: swing the camera out in front of you so you can watch, then back in
-  emoteCam += ((P.emote ? 1 : 0) - emoteCam) * Math.min(1, dt * 6);
-  if (emoteCam > 0.02) {
-    const fp = camera.quaternion.clone(), f = new THREE.Vector3(-Math.sin(P.yaw), 0, -Math.cos(P.yaw));
-    camera.position.lerp(new THREE.Vector3(P.pos.x + f.x * 3.8, P.pos.y + 2, P.pos.z + f.z * 3.8), emoteCam);
-    camera.lookAt(P.pos.x, P.pos.y + 1.2, P.pos.z);
-    camera.quaternion.copy(fp.slerp(camera.quaternion, emoteCam));
-    P.anim(dt, 0, G.time); poseHero(G, P, dt, camera, G.playerTeam);
-    P.bar.visible = false;
-    viewGun.visible = viewHand.visible = emoteCam < 0.3;
-  } else if (P.mesh.visible) P.mesh.visible = false;
+  // your own emote plays for everyone else; in first person you just get the icon on screen
+  if (P.emote) { P.emote.t += dt; P.emote.sp.visible = false; if (P.emote.t >= P.emote.dur) { stopEmote(G, P); $('myEmote').className = 'hidden'; } }
 
   // view model: sway, recoil, sprint tilt, reload flourish, cast dip
   const cast = Math.min(1, P.castA);
@@ -1278,6 +1283,25 @@ function drawMinimap() {
 }
 
 const clock = new THREE.Clock();
+
+// ---------- start-of-match countdown ----------
+const COUNT_FROM = 3;
+function countdown(dt) {
+  const el = $('countdown'), was = Math.ceil(G.countT);
+  G.countT -= dt;
+  const n = Math.ceil(G.countT);
+  if (n !== was || !el.textContent) {
+    el.textContent = n > 0 ? n : 'GO!';
+    el.className = n > 0 ? '' : 'go';
+    void el.offsetWidth; el.classList.add('pop');
+    if (n > 0) tone(440, 0.14, 'square', 0.05, 1); else { tone(880, 0.35, 'square', 0.06, 1); tone(1320, 0.3, 'triangle', 0.04, 1, 0.05); }
+    if (n <= 0) setTimeout(() => { if (el.classList.contains('go')) el.className = 'hidden'; }, 800);
+  }
+  eyeOf(P, camera.position);
+  camera.rotation.set(P.pitch, P.yaw, 0, 'YXZ');
+  for (const h of G.heroes) if (h !== P && h.alive) { h.anim(dt, 0, G.time); poseHero(G, h, dt, camera, G.playerTeam); }
+  updateHud(dt);
+}
 function loop() {
   requestAnimationFrame(loop);
   const dt = Math.min(0.05, clock.getDelta());
@@ -1285,7 +1309,9 @@ function loop() {
   if (!G) { if (!menuFrame(renderer, dt)) renderer.clear(); return; }
   // online matches can't pause: the sim keeps running behind the pause sheet
   const live = running && (!paused || !!G.net);
-  if (live) {
+  const counting = live && G.countT > 0;                 // 3, 2, 1: you can look around, nothing else moves yet
+  if (counting) countdown(dt);
+  if (live && !counting) {
     G.time += dt;
     G.waveT -= dt;
     if (G.waveT <= 0) { G.waveT = TUNING.waveEvery; if (!G.net || G.net.host) spawnWave(); }   // online, guests mirror the host's minions

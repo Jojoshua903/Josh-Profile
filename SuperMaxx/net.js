@@ -1,10 +1,10 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { FIREBASE_CONFIG, FIREBASE_VERSION } from './firebase-config.js?v=20261126w';
-import { HEROES } from './heroes.js?v=20261126w';
-import { damage, remoteKill, netShoot, spawnHero, setBar, tickCorpse, spawnMinion, unitDown, tracer, chestOf, TEAM_COLOR } from './units.js?v=20261126w';
-import { replayCast } from './abilities.js?v=20261126w';
-import { netHill } from './hill.js?v=20261126w';
-import { poseHero } from './anim.js?v=20261126w';
+import { FIREBASE_CONFIG, FIREBASE_VERSION } from './firebase-config.js?v=20261127a';
+import { HEROES } from './heroes.js?v=20261127a';
+import { damage, remoteKill, netShoot, spawnHero, setBar, tickCorpse, spawnMinion, unitDown, tracer, chestOf, TEAM_COLOR } from './units.js?v=20261127a';
+import { replayCast } from './abilities.js?v=20261127a';
+import { netHill } from './hill.js?v=20261127a';
+import { poseHero } from './anim.js?v=20261127a';
 
 // Online play over Firebase Realtime Database.
 //
@@ -146,11 +146,13 @@ export function setMap(map) { if (room && lobbyState().host) fb.f.update(R('meta
 export function setMode(mode) { if (room && lobbyState().host) fb.f.update(R('meta'), { mode }).catch(() => {}); }
 export function backToLobby() { if (room && lobbyState().host) fb.f.update(R('meta'), { state: 'lobby' }).catch(() => {}); }
 export function setDraft(on) { if (room && lobbyState().host) fb.f.update(R('meta'), { draft: !!on }).catch(() => {}); }
+export function setBots(on) { if (room && lobbyState().host) fb.f.update(R('meta'), { noBots: !on }).catch(() => {}); }
 
-// Who sits where: the first three of each team who joined, bots in the empty seats.
+// Who sits where: the first three of each team who joined, bots in the empty seats (unless the host
+// switched bots off, then empty seats stay empty and each side needs at least one player).
 // A Duel is the first two players, one per side (a bot if you're alone).
 function seats() {
-  const duel = room.meta.mode === 'duel';
+  const duel = room.meta.mode === 'duel', noBots = !!room.meta.noBots;
   const players = Object.entries(room.players).sort((a, b) => a[1].t - b[1].t);
   if (duel && players.length > 2) throw new Error('Duel is 1v1: only two players can be in the room');
   const human = (uid, p, team) => ({ key: uid, uid, name: p.name || 'Player', team, skin: p.skin || '', cos: p.cos || {}, want: p.hero });
@@ -158,11 +160,12 @@ function seats() {
   const out = [];
   if (duel) {
     players.forEach(([uid, p], i) => out.push(human(uid, p, i ? 'red' : 'blue')));
-    if (out.length < 2) out.push(bot('red', 0));
+    if (out.length < 2) { if (noBots) throw new Error('Bots are off: you need a second player to duel'); out.push(bot('red', 0)); }
   } else for (const team of ['blue', 'red']) {
     const humans = players.filter(([, p]) => p.team === team).slice(0, 3);
     for (const [uid, p] of humans) out.push(human(uid, p, team));
-    for (let i = humans.length; i < 3; i++) out.push(bot(team, i));
+    if (noBots && !humans.length) throw new Error(`Bots are off: the ${team} team needs at least one player`);
+    if (!noBots) for (let i = humans.length; i < 3; i++) out.push(bot(team, i));
   }
   return out;
 }
@@ -192,7 +195,7 @@ export const DRAFT_PICK_S = 20;
 const BOT_PICK_MS = 1600, GRACE_MS = 2500;
 async function beginDraft(slots) {
   const B = slots.filter(s => s.team === 'blue'), Rd = slots.filter(s => s.team === 'red');
-  const order = [B[0], Rd[0], Rd[1], B[1], B[2], Rd[2]].map(s => s.key);
+  const order = [B[0], Rd[0], Rd[1], B[1], B[2], Rd[2]].filter(Boolean).map(s => s.key);   // empty seats (bots off) just drop out
   const now = Date.now();
   await fb.f.set(R('draft'), { slots: slots.map(s => seatOut(s, '')), order, turn: 0, until: now + DRAFT_PICK_S * 1000, turnAt: now });
   await fb.f.update(R('meta'), { state: 'draft' });
@@ -332,10 +335,11 @@ export function openSession(G, match) {
     else if (e.k === 'k') { const t = byKey(e.t); if (t && !t.local) remoteKill(G, t, byKey(e.s), !!e.hd); }
     else if (e.k === 'sp') { if (h && !h.local) G.ev.netSpray?.(h, e.id, v3(e.p), v3(e.n), e.y || 0); }
     else if (e.k === 'em') { if (h && !h.local) G.ev.netEmote?.(h, e.id); }
-    else if (e.k === 'end') G.ev.netEnd?.(e.w);
+    else if (e.k === 'end') G.ev.netEnd?.(e.w, e.y);
     else if (e.k === 'round' || e.k === 'rstart') G.ev.netRound?.(e);
   }
 
+  S.flush = () => { if (S.closed) return; S.t = 0; S.tick(0); };         // send whatever is queued right now (the match is ending)
   S.close = () => { S.closed = true; S.unsubs.forEach(u => u()); };
   return S;
 }

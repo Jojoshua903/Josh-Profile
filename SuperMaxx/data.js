@@ -1,5 +1,5 @@
 // Maps and tuning shared across the game. The hero roster lives in heroes.js.
-export { HEROES } from './heroes.js?v=20261126w';
+export { HEROES } from './heroes.js?v=20261127a';
 
 
 export const DIFFICULTY = {
