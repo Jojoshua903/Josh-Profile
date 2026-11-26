@@ -1,21 +1,22 @@
-import { LOOK, applyEnvironment } from './stage.js?v=20261127j';
-import { masteryOf } from './mastery.js?v=20261127j';
+import { LOOK, applyEnvironment } from './stage.js?v=20261127l';
+import { masteryOf } from './mastery.js?v=20261127l';
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { HEROES, ARCHETYPES, archOf } from './heroes.js?v=20261127j';
-import './personality.js?v=20261127j';
-import { MAPS, DIFFICULTY } from './data.js?v=20261127j';
-import { THEMES } from './scenery.js?v=20261127j';
-import { cfg, save, resetSettings, QUALITY } from './settings.js?v=20261127j';
-import { ACTIONS, FIXED, kb, keyLabel, rebind, resetBinds } from './keys.js?v=20261127j';
-import { splash, headshot, mapArt } from './portraits.js?v=20261127j';
-import { initOnline, enterOnline } from './online.js?v=20261127j';
-import { enterSlots } from './slotmachine.js?v=20261127j';
-import { initVault, enterVault, leaveVault, clipCount } from './vault.js?v=20261127j';
-import { openHub } from './social.js?v=20261127j';
-import { tokens as slotTokens } from './slots.js?v=20261127j';
-import { CONTRACTS, contractOf, taskFrac, taskDone, statOf, tasksDone, openContracts, contractsLeft, contractUnlocked, contractDone } from './contracts.js?v=20261127j';
+import { HEROES, ARCHETYPES, archOf } from './heroes.js?v=20261127l';
+import './personality.js?v=20261127l';
+import { MAPS, DIFFICULTY } from './data.js?v=20261127l';
+import { BOSS_LIST, bossOf } from './raid.js?v=20261127l';
+import { THEMES } from './scenery.js?v=20261127l';
+import { cfg, save, resetSettings, QUALITY } from './settings.js?v=20261127l';
+import { ACTIONS, FIXED, kb, keyLabel, rebind, resetBinds } from './keys.js?v=20261127l';
+import { splash, headshot, mapArt } from './portraits.js?v=20261127l';
+import { initOnline, enterOnline } from './online.js?v=20261127l';
+import { enterSlots } from './slotmachine.js?v=20261127l';
+import { initVault, enterVault, leaveVault, clipCount } from './vault.js?v=20261127l';
+import { openHub } from './social.js?v=20261127l';
+import { tokens as slotTokens } from './slots.js?v=20261127l';
+import { CONTRACTS, contractOf, taskFrac, taskDone, statOf, tasksDone, openContracts, contractsLeft, contractUnlocked, contractDone } from './contracts.js?v=20261127l';
 import { SEASON, SEASONS, NEXT_SEASON, TRACKS, seasonLive, seasonTier, seasonStartLabel, skinById, TRACK, MAX_TIER, passXp, tierProgress, heroOwned, heroTier, skinOwned, skinTier, skinsFor, dressed, equip, rewardInfo,
-  COS_TYPES, cosById, cosOwned, equippedCos, equipCos, cosArt, lockShort, lockLong, isSlotItem, isContractHero } from './pass.js?v=20261127j';
+  COS_TYPES, cosById, cosOwned, equippedCos, equipCos, cosArt, lockShort, lockLong, isSlotItem, isContractHero } from './pass.js?v=20261127l';
 
 // Front end: main menu → roster select → stage select → match. Settings overlay on top.
 
@@ -555,7 +556,18 @@ function enterStage() {
       <span class="num">0${i + 1}</span><span class="tx"><b>${m.name}</b><small>${modeChip(m)}</small></span><i>▸</i></button>`;
   }).join('');
   stageView = null;
+  renderBosses();
   showStage(MAPS.find(m => m.id === cfg.map) || MAPS[0], true);
+}
+// Boss Raid: pick which boss to fight, under the stage preview
+function renderBosses() {
+  const el = $('stgBoss');
+  el.classList.toggle('hidden', mode !== 'raid');
+  if (mode !== 'raid') return;
+  const cur = bossOf(cfg.raidBoss), B = BOSS_LIST.find(b => b.id === cur);
+  el.innerHTML = `<div class="sb-row">${BOSS_LIST.map(b => `<button class="${b.id === cur ? 'on' : ''}" data-boss="${b.id}" style="--bc:${hex(b.color)}"><span>${b.icon}</span><b>${b.name.replace(/^The /, '')}</b></button>`).join('')}</div>
+    <p class="sb-desc"><b>${B.name}</b>, ${B.title}. ${B.blurb}</p>`;
+  el.onclick = e => { const b = e.target.closest('[data-boss]'); if (!b) return; cfg.raidBoss = b.dataset.boss; save(); api?.blip?.(620); renderBosses(); };
 }
 function showStage(m, now) {
   if (stageView === m.id) return;

@@ -1,7 +1,7 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { makeBox, resolveXZ, hasLOS, groundAt, rayWorld } from './world.js?v=20261127j';
-import { buildHeroModel } from './models.js?v=20261127j';
-import { damage, trace, tracer, burst, ring, setBar, makeBar, eyeOf, dirFrom, chestOf, spawnProjectile, TEAM_COLOR } from './units.js?v=20261127j';
+import { makeBox, resolveXZ, hasLOS, groundAt, rayWorld } from './world.js?v=20261127l';
+import { buildHeroModel } from './models.js?v=20261127l';
+import { damage, tally, trace, tracer, burst, ring, setBar, makeBar, eyeOf, dirFrom, chestOf, spawnProjectile, TEAM_COLOR } from './units.js?v=20261127l';
 
 // Abilities, status effects, zones, traps, walls and deployables.
 // Each ability: cast(G, h, a, ctx) -> bool, ai(G, bot, a, ctx) -> bool (should the bot cast now?).
@@ -22,11 +22,10 @@ export function resetStatus(h) {
 }
 export const canAct = h => h.stunT <= 0 && !(h.lurkT > 0);   // no shooting or casting while lurking in the mud
 export const canMove = h => h.stunT <= 0 && h.rootT <= 0;
-export const moveMult = h => (pasId(h) === "snowboots" ? 1 : (h.slowT > 0 ? h.slowM : 1) * h.zoneSlow * (h.wet || 1)) * (h.hasteT > 0 ? h.hasteSpeed : 1);   // wet: wading at high tide
+export const moveMult = h => (pasId(h) === "snowboots" ? 1 : (h.slowT > 0 ? h.slowM : 1) * h.zoneSlow * (h.wet || 1) * (h.zoomA > 0.5 ? 0.8 : 1)) * (h.hasteT > 0 ? h.hasteSpeed : 1);   // wet: wading at high tide; zoomed: walk slower
 export const fireMult = h => (h.hasteT > 0 ? h.hasteFire : 1);
 export function takenMult(h) {
-  return (h.barrierT > 0 ? h.barrierM : 1) * h.zoneMult * (h.markT > 0 ? h.markAmp : 1) * (h.lurkT > 0 ? 0.15 : 1) * passiveTaken(h)
-    * (h.campT > 0 ? 0.9 : 1);                                    // Golem's Might from the neutral camp (camp.js)
+  return (h.barrierT > 0 ? h.barrierM : 1) * h.zoneMult * (h.markT > 0 ? h.markAmp : 1) * (h.lurkT > 0 ? 0.15 : 1) * passiveTaken(h);
 }
 export const isHidden = h => h.invisT > 0;
 
@@ -44,7 +43,7 @@ export function breakInvis(h) { if (h.invisT > 0) { h.invisT = 0; } }
 
 export function tickStatus(G, h, dt) {
   tickPassive(G, h, dt);
-  for (const k of ['slowT', 'stunT', 'rootT', 'hasteT', 'markT', 'invisT', 'barrierT', 'noReloadT', 'knockT', 'rushT', 'rallyT', 'jamT', 'overdriveT', 'megaT', 'tunnelCd', 'vigilT', 'blindT', 'frozenT', 'oneUpT', 'campT']) if (h[k] > 0) h[k] -= dt;
+  for (const k of ['slowT', 'stunT', 'rootT', 'hasteT', 'markT', 'invisT', 'barrierT', 'noReloadT', 'knockT', 'rushT', 'rallyT', 'jamT', 'overdriveT', 'megaT', 'tunnelCd', 'vigilT', 'blindT', 'frozenT', 'oneUpT']) if (h[k] > 0) h[k] -= dt;
   // Torque: moving fills momentum, standing around drains it; Overdrive keeps it full
   const mw = h.def.weapon;
   if (mw.mode === 'melee') {
@@ -1818,7 +1817,7 @@ export function castSlot(G, h, slot, ctx = {}) {
   if (!h.alive || !canAct(h) || !a) return false;
   if (slot === 'ult' ? h.ult < 100 : h.cd[slot] > 0) return false;
   if (!ABIL[a.id].cast(G, h, a, ctx)) return false;
-  if (slot === 'ult') h.ult = 0; else { h.cd[slot] = a.cd; onCast(G, h, slot); }
+  if (slot === "ult") { h.ult = 0; tally(h, "ults"); } else { h.cd[slot] = a.cd; onCast(G, h, slot); }
   if (a.id === 'blink' && h.rushT > 0) h.cd.ability = h.def.ult.blinkCd || 1;
   if (a.id !== 'vanish') breakInvis(h);
   h.castA = slot === 'ult' ? 1.6 : 1; h.castSlot = slot;
@@ -1851,7 +1850,7 @@ function haste(h, dur, speed, fire = 1) {
 const proc = (G, h, text) => { G.ev.passive?.(h); if (text) G.ev.flash?.(h, text); };
 
 // Extra damage from the attacker's passive.
-export const dealtMult = (src, t) => passiveDealt(src, t) * (src.campT > 0 ? 1.15 : 1);   // + Golem's Might
+export const dealtMult = (src, t) => passiveDealt(src, t);
 function passiveDealt(src, t) {
   const id = pasId(src);
   if (id === 'aloft' && !src.onGround && src.airT > 0.25) return src.def.passive.amp;

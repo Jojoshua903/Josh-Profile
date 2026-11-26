@@ -1,4 +1,4 @@
-import { actx, noiseBuf, musicBus, impulse, onAudioReady, m2f } from './audio.js?v=20261127j';
+import { actx, noiseBuf, musicBus, impulse, onAudioReady, m2f } from './audio.js?v=20261127l';
 
 // Procedural soundtrack: each track is a set of 8-bar sections (chords, drum pattern,
 // bass style, lead density) played in a long form, so a loop runs about 3 minutes.

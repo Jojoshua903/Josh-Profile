@@ -1,7 +1,7 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { poseHero } from './anim.js?v=20261127j';
-import { castFx, sparks } from './vfx.js?v=20261127j';
-import { dirFrom, eyeOf } from './units.js?v=20261127j';
+import { poseHero } from './anim.js?v=20261127l';
+import { castFx, sparks } from './vfx.js?v=20261127l';
+import { dirFrom, eyeOf } from './units.js?v=20261127l';
 
 // Play of the game. Every hero's position, aim and status is recorded 20 times a second into
 // a rolling 12-second buffer. Each elimination is scored (multi-kills, ultimates, towers);
@@ -42,7 +42,7 @@ export function recKill(G, t, src) {
   const R = G.rec; if (!R || G.over || !src || src.kind !== 'hero') return;
   if (t.kind === 'hero' && t !== src) recEvent(G, 'kill', src, { v: G.heroes.indexOf(t) });
   // score the moment for whoever made the play
-  const w = t.kind === 'hero' && t !== src ? 100 : t.kind === 'core' ? 160 : t.kind === 'tower' || t.kind === 'camp' ? 90 : 0;
+  const w = t.kind === 'hero' && t !== src ? 100 : t.kind === 'core' ? 160 : t.kind === 'tower' ? 90 : 0;
   if (!w) return;                                                     // minions don't make the highlight reel
   const list = (R.kills.get(src) || []).filter(e => G.time - e.t < 8);
   list.push({ t: G.time, w, hero: t.kind === 'hero' });

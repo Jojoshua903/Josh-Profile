@@ -1,7 +1,7 @@
 // The roster. Every hero has a primary weapon, two abilities (Q, E) and an ultimate (F)
 // that charges by dealing damage. Ability ids map to behaviours in abilities.js.
 
-import { SEASONS, seasonLive } from './seasons.js?v=20261127j';
+import { SEASONS, seasonLive } from './seasons.js?v=20261127l';
 export const ALL_HEROES = [
   {
     id: 'vanguard', name: 'Ottilie Brandt', callsign: 'Bulwark', role: 'Frontline tank', color: 0x2fb39a,

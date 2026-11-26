@@ -1,12 +1,12 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { TUNING, HILL, CART } from './data.js?v=20261127j';
-import { buildHeroModel } from './models.js?v=20261127j';
-import { makeBox, moveBody, resolveXZ, rayBox, raySphere, rayWorld, hasLOS } from './world.js?v=20261127j';
+import { TUNING, HILL, CART } from './data.js?v=20261127l';
+import { buildHeroModel } from './models.js?v=20261127l';
+import { makeBox, moveBody, resolveXZ, rayBox, raySphere, rayWorld, hasLOS } from './world.js?v=20261127l';
 import { resetStatus, tickStatus, afterMove, wallClimb, takenMult, fireMult, canAct, breakInvis, isHidden, slow as applySlow, stun as applyStun, knock as applyKnock, dropBlobs,
-  dealtMult, onDealt, onHurt, onKill, mend, thaw } from './abilities.js?v=20261127j';
-import { poseHero, rubble } from './anim.js?v=20261127j';
-import { onEliminated, survivorPreMove, survivorPostMove } from './survivor.js?v=20261127j';
-import { tickVfx, tickLight, blast, sparks } from './vfx.js?v=20261127j';
+  dealtMult, onDealt, onHurt, onKill, mend, thaw } from './abilities.js?v=20261127l';
+import { poseHero, rubble } from './anim.js?v=20261127l';
+import { onEliminated, survivorPreMove, survivorPostMove } from './survivor.js?v=20261127l';
+import { tickVfx, tickLight, blast, sparks } from './vfx.js?v=20261127l';
 
 // Survivor teams are per-hero ids; anything that isn't blue reads as an enemy red.
 export const TEAM_COLOR = new Proxy({ blue: 0x2f5bff, red: 0xff5a36 }, { get: (t, k) => (k in t ? t[k] : 0xff5a36) });
@@ -158,7 +158,7 @@ export function spawnMinion(G, team, laneIdx, offset, id) {
 
 // Online Lane Breaker: the host runs the minions, towers and cores. Guests see them as puppets
 // and send their hits on them to the host, like hits on heroes go to the hero's owner.
-const laneUnit = u => (u.kind === 'minion' && !u.deploy) || u.kind === 'tower' || u.kind === 'core' || u.kind === 'camp';
+const laneUnit = u => (u.kind === 'minion' && !u.deploy) || u.kind === 'tower' || u.kind === 'core';
 // A guest's copy of a unit the host reports as destroyed: same crumble, no credit.
 export function unitDown(G, t) { if (t.alive) { t.hp = 0; kill(G, t, null); } }
 
@@ -189,6 +189,8 @@ export function trace(G, o, d, maxT, team) {
 }
 
 // `dot` marks burn and bleed ticks, which never trigger on-hit passives.
+// small per-match counts on a hero for the recruitment contracts (contracts.js)
+export const tally = (h, k, n = 1) => { if (h?.kind === "hero") (h.cs ||= {})[k] = (h.cs[k] || 0) + n; };
 export function damage(G, target, amt, src, head = false, force = false, dot = false) {
   if (!target.alive) return;
   if (src && !dot && !force) amt *= dealtMult(src, target);           // reported hits already include it
@@ -232,10 +234,10 @@ export function damage(G, target, amt, src, head = false, force = false, dot = f
   if (target.oneUpT > 0 && target.hp - amt <= 0) { amt = 0; target.oneUpT = 0; target.hp = Math.max(target.hp, target.maxHp * 0.5); target.barrierT = Math.max(target.barrierT, 1); target.barrierM = 0.2; setBar(target); burst(G, chestOf(target), 0x39ff6a, 1.8); G.ev.flash?.(target, '1-UP!'); }
   if (target.vigilT > 0 && target.hp - amt < 1) { amt = Math.max(0, target.hp - 1); if (G.time > (target.vigilFx || 0)) { target.vigilFx = G.time + 0.4; burst(G, chestOf(target), 0xffe08a, 1); } }   // Lantern's Vigil: hold on at 1 health
   target.hp -= amt;
-  if (target.kind === "camp" && src?.team) target.lastTeam = src.team;        // the last hit wins the camp
   if (src && src.kind === 'hero' && src.team !== target.team) {
     src.dmgDealt += amt;
     src.ult = Math.min(100, src.ult + amt / src.def.ult.cost * 100 * (target.kind === 'hero' ? 1 : 0.45));
+    if (head && target.kind === "hero") tally(src, "heads");
   }
   if (target.kind === 'hero') { target.lastHurtT = G.time; target.lastHitBy = src; }
   if (src && !dot) onDealt(G, src, target, amt, head, false);
@@ -255,6 +257,7 @@ function kill(G, t, src) {
     if (t.shimmer) t.shimmer.visible = false;
     if (src && src.kind === 'hero') {
       src.kills++; G.score[src.team]++;
+      if (!src.onGround) tally(src, "air");
       if (!src.isPlayer && src.onGround) { src.vel.y = 6; src.castA = 1; }  // victory hop
     }
     else G.score[t.team === 'blue' ? 'red' : 'blue']++;
@@ -266,6 +269,7 @@ function kill(G, t, src) {
     t.bar.visible = false;
     t.collapseT = 1;
     rubble(G, t.pos, TEAM_COLOR[t.team], t.kind === 'core' ? 26 : 14);
+    if (t.kind === "tower" || t.kind === "core") tally(src, "towers");
   }
   if (t.kind === 'hero' && t.def.passive?.id === 'slimedrop') dropBlobs(G, t, t.def.passive);
   onKill(G, t, src);
@@ -279,7 +283,7 @@ export function remoteKill(G, t, src, head) {
   t.killedByHead = head; t.alive = false; t.hp = 0; t.deathT = 0; t.deadAt = G.time; t.deaths++;
   burst(G, chestOf(t), TEAM_COLOR[t.team], 2.2);
   if (t.shimmer) t.shimmer.visible = false;
-  if (src && src.kind === 'hero') src.kills++;
+  if (src && src.kind === "hero") { src.kills++; if (!src.onGround) tally(src, "air"); }
   G.score[src && src.kind === 'hero' ? src.team : t.team === 'blue' ? 'red' : 'blue']++;
   if (t.def.passive?.id === 'slimedrop') dropBlobs(G, t, t.def.passive);
   onKill(G, t, src);
@@ -345,7 +349,7 @@ function shoot(G, h, dir, muzzle, charge, replay = false) {
   breakInvis(h);
   const o = eyeOf(h);
   const moving = Math.hypot(h.vel.x, h.vel.z) > 1;
-  let sp = w.spread * (moving ? 1.6 : 1) * (h.onGround ? 1 : 2.2);
+  let sp = w.spread * (moving ? 1.6 : 1) * (h.onGround ? 1 : 2.2) * (h.zoomA > 0.5 ? 0.6 : 1);   // zoomed in: 40% tighter
   if (w.mode === 'ramp') sp *= 1 + h.ramp * 0.7;
   const jitter = (d0, s) => { const d = d0.clone(); d.x += (Math.random() - 0.5) * 2 * s; d.y += (Math.random() - 0.5) * 2 * s; d.z += (Math.random() - 0.5) * 2 * s; return d.normalize(); };
   const mz = muzzle || o.clone().addScaledVector(dir, 0.7);
@@ -658,7 +662,7 @@ export function tickCorpse(G, h, dt) {
 function nearestEnemy(G, u, range, kinds) {
   let best = null, bd = range;
   for (const list of kinds) for (const e of list) {
-    if (!e.alive || e.team === u.team || e.kind === "camp") continue;      // minions and towers leave the neutral camp alone
+    if (!e.alive || e.team === u.team) continue;
     if (e.kind === 'core' && !coreVulnerable(G, e.team)) continue;
     const d = Math.hypot(e.pos.x - u.pos.x, e.pos.z - u.pos.z) - (e.rad || 0);
     if (d < bd) { bd = d; best = e; }

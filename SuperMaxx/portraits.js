@@ -1,8 +1,8 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { buildHeroModel } from './models.js?v=20261127j';
-import { buildWorld } from './world.js?v=20261127j';
-import { createStructure } from './units.js?v=20261127j';
-import { HEROES } from './heroes.js?v=20261127j';
+import { buildHeroModel } from './models.js?v=20261127l';
+import { buildWorld } from './world.js?v=20261127l';
+import { createStructure } from './units.js?v=20261127l';
+import { HEROES } from './heroes.js?v=20261127l';
 
 // Menu artwork, generated once and cached as data URLs: hero splash art (themed
 // painted backdrop + a posed render of the model), headshot tiles, and map previews.
@@ -319,6 +319,64 @@ const MOTIF = {
     for (let i = 0; i < 5; i++) { const x = w * (0.12 + i * 0.19), y = h * 0.16; g.strokeStyle = rgba(0x8a4a2a, 0.8); g.lineWidth = 4; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, y - 34); g.stroke(); g.fillStyle = rgba(0xc87a4a, 0.85); g.beginPath(); g.arc(x, y, 34 - (i % 2) * 8, 0, 7); g.fill(); g.fillStyle = rgba(0xffd27a, 0.35); g.beginPath(); g.arc(x - 8, y - 8, 10, 0, 7); g.fill(); }
     for (let i = 0; i < 9; i++) { const x = w * (0.05 + i * 0.115), fh = 90 + (i % 3) * 50; const gr = g.createLinearGradient(0, h * 0.72, 0, h * 0.72 - fh); gr.addColorStop(0, rgba(0xe8423a, 0.7)); gr.addColorStop(1, rgba(0xffd23c, 0)); g.fillStyle = gr; g.beginPath(); g.moveTo(x - 26, h * 0.72); g.quadraticCurveTo(x - 20, h * 0.72 - fh * 0.6, x, h * 0.72 - fh); g.quadraticCurveTo(x + 20, h * 0.72 - fh * 0.6, x + 26, h * 0.72); g.fill(); }
   },
+  owl(g, w, h, p) {                            // a moonlit night over the rooftops: a big full moon, stars and flying letters
+    const sky = g.createLinearGradient(0, 0, 0, h); sky.addColorStop(0, rgba(0x141a3a, 0.85)); sky.addColorStop(1, rgba(0x2a2a5a, 0.4));
+    g.fillStyle = sky; g.fillRect(0, 0, w, h);
+    const mx = w * 0.66, my = h * 0.3, mr = h * 0.24;
+    const glow = g.createRadialGradient(mx, my, mr * 0.8, mx, my, mr * 2.2); glow.addColorStop(0, rgba(0xfff4d0, 0.45)); glow.addColorStop(1, rgba(0xfff4d0, 0));
+    g.fillStyle = glow; g.fillRect(0, 0, w, h);
+    g.fillStyle = rgba(0xfff4d8, 0.95); g.beginPath(); g.arc(mx, my, mr, 0, 7); g.fill();
+    g.fillStyle = rgba(0xe8d8b0, 0.6); for (const [x, y, r] of [[-0.3, -0.2, 0.18], [0.25, 0.1, 0.14], [-0.05, 0.35, 0.1]]) { g.beginPath(); g.arc(mx + x * mr, my + y * mr, r * mr, 0, 7); g.fill(); }
+    g.fillStyle = rgba(0xffffff, 0.9); for (let i = 0; i < 70; i++) { const s = Math.random() < 0.15 ? 3 : 1.6; g.fillRect(Math.random() * w, Math.random() * h * 0.65, s, s); }
+    // letters fluttering across the sky
+    for (let i = 0; i < 7; i++) {
+      const x = w * (0.08 + Math.random() * 0.84), y = h * (0.1 + Math.random() * 0.5);
+      g.save(); g.translate(x, y); g.rotate((Math.random() - 0.5) * 0.8);
+      g.fillStyle = rgba(0xfff8ea, 0.9); g.fillRect(-22, -14, 44, 28);
+      g.strokeStyle = rgba(0xc8a878, 0.9); g.lineWidth = 2; g.beginPath(); g.moveTo(-22, -14); g.lineTo(0, 4); g.lineTo(22, -14); g.stroke();
+      g.fillStyle = rgba(0xc23b3b, 0.95); g.beginPath(); g.arc(0, 4, 4, 0, 7); g.fill();
+      g.restore();
+    }
+    // rooftops and chimneys along the bottom
+    g.fillStyle = rgba(0x0e1028, 0.85); g.beginPath(); g.moveTo(0, h);
+    for (let x = 0; x <= w; x += 90) { const top = h * (0.72 + ((x / 90) % 3) * 0.04); g.lineTo(x, top + 30); g.lineTo(x + 45, top); g.lineTo(x + 90, top + 30); }
+    g.lineTo(w, h); g.fill();
+    g.fillStyle = rgba(0xffd38a, 0.8); for (let i = 0; i < 8; i++) g.fillRect(w * (0.05 + i * 0.12), h * (0.84 + (i % 2) * 0.04), 14, 18);
+  },
+  pinball(g, w, h, p) {                        // the playfield of a pinball table: neon lanes, bumpers and score lights
+    g.fillStyle = rgba(0x1a0b2e, 0.7); g.fillRect(0, 0, w, h);
+    g.strokeStyle = rgba(0x7af0ff, 0.5); g.lineWidth = 6;
+    for (const s of [-1, 1]) { g.beginPath(); g.moveTo(w / 2 + s * w * 0.48, 0); g.quadraticCurveTo(w / 2 + s * w * 0.42, h * 0.6, w / 2 + s * w * 0.15, h * 0.9); g.stroke(); }
+    for (const [x, y, r, c] of [[0.2, 0.25, 60, 0xff3fa4], [0.8, 0.22, 54, 0x7af0ff], [0.5, 0.12, 44, 0xffd23c], [0.14, 0.6, 40, 0x39ff6a], [0.86, 0.58, 46, 0xff3fa4]]) {
+      g.fillStyle = rgba(c, 0.85); g.beginPath(); g.arc(w * x, h * y, r, 0, 7); g.fill();
+      g.strokeStyle = rgba(0xffffff, 0.8); g.lineWidth = 5; g.beginPath(); g.arc(w * x, h * y, r * 0.65, 0, 7); g.stroke();
+    }
+    g.fillStyle = rgba(0xffd23c, 0.9); g.font = 'bold 56px monospace'; g.fillText('1,000,000', w * 0.32, h * 0.95);
+    for (let i = 0; i < 12; i++) { g.fillStyle = rgba(i % 2 ? 0xff3fa4 : 0x7af0ff, 0.8); g.beginPath(); g.arc(w * (0.06 + i * 0.08), h * 0.42, 7, 0, 7); g.fill(); }
+  },
+  clawbot(g, w, h, p) {                        // inside a claw machine: a pile of plush prizes behind glass
+    g.fillStyle = rgba(0xbff4ff, 0.12); g.fillRect(0, 0, w, h);
+    const plush = [0xff6fb5, 0xffd23c, 0x8b7bff, 0x39d86a, 0xff8a3c, 0x7af0ff];
+    for (let i = 0; i < 40; i++) {
+      const x = Math.random() * w, y = h * (0.62 + Math.random() * 0.38), r = 28 + Math.random() * 22, c = plush[i % plush.length];
+      g.fillStyle = rgba(c, 0.9); g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
+      g.beginPath(); g.arc(x - r * 0.6, y - r * 0.8, r * 0.35, 0, 7); g.arc(x + r * 0.6, y - r * 0.8, r * 0.35, 0, 7); g.fill();
+      g.fillStyle = rgba(0x1d2340, 0.8); g.beginPath(); g.arc(x - r * 0.3, y - r * 0.15, 3.5, 0, 7); g.arc(x + r * 0.3, y - r * 0.15, 3.5, 0, 7); g.fill();
+    }
+    g.strokeStyle = rgba(0xffffff, 0.25); g.lineWidth = 14; for (const x of [w * 0.2, w * 0.7]) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x - 80, h); g.stroke(); }
+    g.fillStyle = rgba(0x9aa4b4, 0.9); g.fillRect(0, 0, w, 26); g.fillRect(w * 0.48, 26, 8, h * 0.18);
+    g.strokeStyle = rgba(0xffd23c, 0.9); g.lineWidth = 7; for (const s of [-1, 0, 1]) { g.beginPath(); g.moveTo(w * 0.49, h * 0.2); g.quadraticCurveTo(w * 0.49 + s * 40, h * 0.24, w * 0.49 + s * 24, h * 0.3); g.stroke(); }
+  },
+  pixel(g, w, h, p) {                          // an 8-bit level: blocky sky, clouds, brick ground and a floating coin row
+    const B = 30;
+    g.fillStyle = rgba(0x5c94fc, 0.6); g.fillRect(0, 0, w, h);
+    g.fillStyle = rgba(0xffffff, 0.9);
+    for (const [x, y] of [[0.1, 0.12], [0.62, 0.08], [0.8, 0.28]]) for (const [dx, dy] of [[0, 1], [1, 0], [1, 1], [2, 0], [2, 1], [3, 1]]) g.fillRect(w * x + dx * B, h * y + dy * B, B, B);
+    for (let x = 0; x < w; x += B * 2) for (let y = h * 0.82; y < h; y += B) { g.fillStyle = rgba(0xc84c0c, 0.95); g.fillRect(x + ((y / B) % 2 ? B : 0), y, B * 2 - 3, B - 3); }
+    for (let i = 0; i < 4; i++) { const x = w * (0.12 + i * 0.07), y = h * 0.5; g.fillStyle = rgba(0xfc9838, 0.95); g.fillRect(x, y, B, B); g.fillStyle = rgba(0xffffff, 0.9); g.font = `bold ${B}px monospace`; g.fillText('?', x + 6, y + B - 5); }
+    for (let i = 0; i < 6; i++) { g.fillStyle = rgba(0xffd23c, 0.95); g.fillRect(w * (0.62 + i * 0.06), h * 0.56, 14, 24); }
+    for (const x of [w * 0.86]) { g.fillStyle = rgba(0x00a800, 0.95); g.fillRect(x, h * 0.62, B * 3, h * 0.2); g.fillRect(x - 8, h * 0.6, B * 3 + 16, B); }
+  },
   manspider(g, w, h, p) {                      // an office at night: a big web across the window blinds
     g.fillStyle = rgba(0xffffff, 0.08); for (let y = 0; y < h * 0.7; y += 26) g.fillRect(0, y, w, 12);
     const cx = w * 0.62, cy = h * 0.34;
@@ -379,7 +437,7 @@ export function splash(def) {
   bg.addColorStop(0, css(def.color)); bg.addColorStop(1, css(p.dark));
   g.fillStyle = bg; g.fillRect(0, 0, W, H);
   g.globalAlpha = 0.35; burst(g, W, H, W * 0.5, H * 0.52, 28, rgba(0xffffff, 0.35), 'rgba(0,0,0,0)'); g.globalAlpha = 1;
-  MOTIF[def.id](g, W, H, p);
+  (MOTIF[def.id] || MOTIF.vanguard)(g, W, H, p);         // a missing backdrop must never stop the hero rendering
   halftone(g, W, H, rgba(p.dark, 0.35));
   // floor glow + shadow
   const fl = g.createRadialGradient(W / 2, H * 0.86, 10, W / 2, H * 0.86, 220);

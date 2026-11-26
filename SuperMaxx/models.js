@@ -1,10 +1,10 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { MORE } from './models2.js?v=20261127j';
-import { SEASON_MODELS } from './models3.js?v=20261127j';
-import { ROSTER_A } from './heroes3d_a.js?v=20261127j';
-import { ROSTER_B } from './heroes3d_b.js?v=20261127j';
-import { ROSTER_C } from './heroes3d_c.js?v=20261127j';
-import { ROSTER_D } from './heroes3d_d.js?v=20261127j';
+import { MORE } from './models2.js?v=20261127l';
+import { SEASON_MODELS } from './models3.js?v=20261127l';
+import { ROSTER_A } from './heroes3d_a.js?v=20261127l';
+import { ROSTER_B } from './heroes3d_b.js?v=20261127l';
+import { ROSTER_C } from './heroes3d_c.js?v=20261127l';
+import { ROSTER_D } from './heroes3d_d.js?v=20261127l';
 
 // Stylised hero models built from primitives. Every model faces -z, stands ~1.9 m tall,
 // keeps the head around y=1.62 (matches the hitboxes) and exposes an anim() hook.

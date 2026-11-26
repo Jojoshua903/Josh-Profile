@@ -1,14 +1,14 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { TUNING } from './data.js?v=20261127j';
-import { hasLOS } from './world.js?v=20261127j';
-import { fire, releaseFire, chargeLevel, startReload, eyeOf, chestOf, dirFrom, coreVulnerable } from './units.js?v=20261127j';
-import { ABIL, castSlot, canAct, canMove, moveMult, isHidden, flap } from './abilities.js?v=20261127j';
-import { survivorGoal, inStorm } from './survivor.js?v=20261127j';
-import { hillGoal } from './hill.js?v=20261127j';
-import { cartGoal } from './payload.js?v=20261127j';
-import { potatoGoal } from './potato.js?v=20261127j';
-import { avoidGuardians } from './guardian.js?v=20261127j';
-import { raidGoal } from './raid.js?v=20261127j';
+import { TUNING } from './data.js?v=20261127l';
+import { hasLOS } from './world.js?v=20261127l';
+import { fire, releaseFire, chargeLevel, startReload, eyeOf, chestOf, dirFrom, coreVulnerable } from './units.js?v=20261127l';
+import { ABIL, castSlot, canAct, canMove, moveMult, isHidden, flap } from './abilities.js?v=20261127l';
+import { survivorGoal, inStorm } from './survivor.js?v=20261127l';
+import { hillGoal } from './hill.js?v=20261127l';
+import { cartGoal } from './payload.js?v=20261127l';
+import { potatoGoal } from './potato.js?v=20261127l';
+import { avoidGuardians } from './guardian.js?v=20261127l';
+import { raidGoal } from './raid.js?v=20261127l';
 
 const v1 = new THREE.Vector3(), v2 = new THREE.Vector3();
 
@@ -85,7 +85,6 @@ function pickTarget(G, b) {
     if (!s.alive || s.team === b.team) continue;
     if (s.kind === 'core' && !coreVulnerable(G, s.team)) continue;
     if (s.kind === 'tower' && !towerCovered(G, s) && s.hp > s.maxHp * 0.25) continue;
-    if (s.kind === 'camp' && s.pos.distanceTo(b.pos) > 22) continue;          // only take the camp when it's close
     const d = s.pos.distanceTo(b.pos);
     if (d < 30 && d < score) { score = d; best = s; }
   }
@@ -137,7 +136,7 @@ export function updateBot(G, b, dt, D) {
     }
   }
   else if (G.mode === 'raid') {
-    // Magmaw is the only enemy: keep at range, circle it, dodge the red circles, hop its shockwave
+    // the boss is the only enemy: keep at range, circle it, shoot its pods, dodge what it throws
     const r = raidGoal(G, b, goal);
     if (r) { ai.tgt = r.target; sprint = r.sprint; ai.raidJump = r.jump; }
   }

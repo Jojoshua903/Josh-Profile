@@ -1,4 +1,4 @@
-import { cfg, save } from './settings.js?v=20261127j';
+import { cfg, save } from './settings.js?v=20261127l';
 
 // Rebindable controls. cfg.binds holds only the keys a player changed; everything else uses the
 // defaults below. Codes are KeyboardEvent.code values, so they don't change with the keyboard layout.
@@ -19,7 +19,7 @@ export const ACTIONS = [
   { id: 'board', label: 'Scoreboard (hold)', def: 'Tab' },
 ];
 // keys that always do the same thing and can't be taken
-export const FIXED = [['Mouse', 'Aim'], ['Left click', 'Fire'], ['Esc', 'Pause'], ['F3', 'Performance']];
+export const FIXED = [['Mouse', 'Aim'], ['Left click', 'Fire'], ['Right click', 'Zoom (hold)'], ['Esc', 'Pause'], ['F3', 'Performance']];
 const RESERVED = new Set(['Escape', 'F3']);
 
 export const kb = id => cfg.binds?.[id] || ACTIONS.find(a => a.id === id)?.def;

@@ -1,5 +1,5 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { kit, body, face, finish, gunAt, part, joint, chain, ball, pill, tube, cone, ring, slab, dome, live } from './rig.js?v=20261127j';
+import { kit, body, face, finish, gunAt, part, joint, chain, ball, pill, tube, cone, ring, slab, dome, live } from './rig.js?v=20261127l';
 
 // Season 2 "Insert Coin" heroes on the stylised rig: Tilt, Grabbit and Sir Pixel, plus the contract hero Hoot.
 

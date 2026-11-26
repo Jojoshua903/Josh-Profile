@@ -1,5 +1,5 @@
 // Maps and tuning shared across the game. The hero roster lives in heroes.js.
-export { HEROES } from './heroes.js?v=20261127j';
+export { HEROES } from './heroes.js?v=20261127l';
 
 
 export const DIFFICULTY = {
@@ -28,7 +28,6 @@ export const MAPS = [
     desc: 'A whitewashed harbour square at golden hour. One straight lane, lots of low cover, fast fights.',
     W: 22, L: 62, accent: 0xd9734e,
     hills: [[0, 0], [0, -24], [0, 0], [0, 24]], duel: [0, -26],
-    camp: [-16, 0],                                                    // the neutral Gilded Golem (camp.js)
     lanes: [[[0, -50], [0, 50]]],
     towers: [[3, -32]],
     blocks: [
@@ -42,7 +41,6 @@ export const MAPS = [
     desc: 'Gabled houses, bikes and tulips. Two lanes split by a canal wall. Wade the water to rotate.',
     W: 34, L: 66, accent: 0x4f9fc0,
     hills: [[-18, 0], [18, 0]], duel: [-18, -28],
-    camp: [-8, 0],
     lanes: [
       [[0, -54], [-18, -44], [-18, 44], [0, 54]],
       [[0, -54], [18, -44], [18, 44], [0, 54]],
@@ -60,7 +58,6 @@ export const MAPS = [
     desc: 'An overgrown temple under cherry blossoms. Three lanes with a raised jungle in between.',
     W: 44, L: 72, accent: 0xe98aa6,
     hills: [[0, 0], [-30, 0], [0, 0], [30, 0]], duel: [0, -30],
-    camp: [-15, 0],
     lanes: [
       [[0, -60], [0, 60]],
       [[0, -60], [-30, -48], [-30, 48], [0, 60]],
@@ -80,7 +77,6 @@ export const MAPS = [
     desc: 'A snowed-in ski village at sunset. Two lanes cross on the frozen pond in the middle, so every push meets in one big brawl.',
     W: 30, L: 64, accent: 0x5fb4e8,
     hills: [[0, 0], [-17, -14], [0, 0], [17, 14]], duel: [0, -24],
-    camp: [-22, 0],
     // an X: each lane swaps sides through the middle
     lanes: [
       [[0, -52], [-18, -30], [18, 30], [0, 52]],
@@ -97,7 +93,6 @@ export const MAPS = [
     desc: 'A skyscraper rooftop above the glowing city at night. Two lanes weave around a giant billboard in the middle, with AC units and kiosks to fight over.',
     W: 28, L: 62, accent: 0xff5aa8,
     hills: [[0, -12], [-14, -18], [0, 12], [14, 18]], duel: [0, -24],
-    camp: [-17, 0],
     // each lane swings out to the edge, pinches in past the billboard, then swings out again
     lanes: [
       [[0, -50], [-16, -34], [-6, 0], [-16, 34], [0, 50]],
@@ -115,7 +110,6 @@ export const MAPS = [
     desc: 'An adobe town in a red-rock canyon on a scorching afternoon. Both lanes hug the cliffs, then cut across the town square, with a huge mesa blocking the middle.',
     W: 32, L: 64, accent: 0xe0883a,
     hills: [[0, 0], [-20, -20], [0, 0], [20, 20]], duel: [0, -18],
-    camp: [-14, 0],
     // each lane runs up one cliff edge, crosses the square and finishes up the other side
     lanes: [
       [[0, -52], [-24, -34], [-24, -12], [0, 0], [24, 12], [24, 34], [0, 52]],
@@ -135,7 +129,6 @@ export const MAPS = [
     W: 30, L: 64, accent: 0xffc93c,
     gravity: 0.6,                                                      // everything falls 40% slower (mapfx.js)
     hills: [[0, 0], [-16, -14], [0, 0], [16, 14]], duel: [0, -28],
-    camp: [-24, 0],
     lanes: [
       [[0, -52], [-16, -38], [-16, 38], [0, 52]],
       [[0, -52], [16, -38], [16, 38], [0, 52]],
@@ -155,7 +148,6 @@ export const MAPS = [
     W: 32, L: 64, accent: 0x3fa8c8,
     tide: { every: 60, first: 40, dur: 16, warn: 6, rise: 2.5, level: 0.55, slow: 0.65 },   // mapfx.js
     hills: [[0, -14], [-18, -10], [0, 14], [18, 10]], duel: [0, -24],
-    camp: [-26, 0],
     lanes: [
       [[0, -52], [-18, -36], [-18, 36], [0, 52]],
       [[0, -52], [18, -36], [18, 36], [0, 52]],

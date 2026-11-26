@@ -1,6 +1,6 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { M, put } from './scenery.js?v=20261127j';
-import { pine, blossom, snowPine } from './backdrop.js?v=20261127j';
+import { M, put } from './scenery.js?v=20261127l';
+import { pine, blossom, snowPine } from './backdrop.js?v=20261127l';
 
 // Themed cover blocks and scattered props inside the arena. Props are placed on the blue
 // half and point-mirrored, always clear of lanes, bases, towers and cover.
@@ -486,7 +486,6 @@ export function scatterProps(scene, map, theme, blocks, towers, r) {
       if (segDist(x, z, ...lane[i], ...lane[i + 1]) < 3.2 + rad) return false;
     if (!map.survivor) for (const s of [-1, 1]) { if (Math.hypot(x, z - s * (map.L - 5)) < 10 + rad || Math.hypot(x, z - s * (map.L - 11)) < 5 + rad) return false; }
     for (const [tx, tz] of towers) if (Math.hypot(x - tx, z - tz) < 3 + rad) return false;
-    if (map.camp && Math.hypot(Math.abs(x) - Math.abs(map.camp[0]), Math.abs(z) - Math.abs(map.camp[1])) < 6 + rad) return false;   // the golem's lair
     for (const [px, pz] of map.pads || []) if (Math.hypot(Math.abs(x) - Math.abs(px), Math.abs(z) - Math.abs(pz)) < 2.2 + rad) return false;   // jump pads
     for (const [bx, bz, bw, bd] of blocks) if (Math.abs(x - bx) < bw / 2 + rad + 1.3 && Math.abs(z - bz) < bd / 2 + rad + 1.3) return false;
     for (const p of placed) if (Math.hypot(x - p[0], z - p[1]) < rad + p[2] + 0.8) return false;

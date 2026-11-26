@@ -1,11 +1,11 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { FIREBASE_CONFIG } from './firebase-config.js?v=20261127j';
-import { loadFirebase, setUserChangeHook } from './account.js?v=20261127j';
-import { HEROES } from './heroes.js?v=20261127j';
-import { damage, remoteKill, netShoot, spawnHero, setBar, tickCorpse, spawnMinion, unitDown, tracer, chestOf, TEAM_COLOR } from './units.js?v=20261127j';
-import { replayCast } from './abilities.js?v=20261127j';
-import { netHill } from './hill.js?v=20261127j';
-import { poseHero } from './anim.js?v=20261127j';
+import { FIREBASE_CONFIG } from './firebase-config.js?v=20261127l';
+import { loadFirebase, setUserChangeHook } from './account.js?v=20261127l';
+import { HEROES } from './heroes.js?v=20261127l';
+import { damage, remoteKill, netShoot, spawnHero, setBar, tickCorpse, spawnMinion, unitDown, tracer, chestOf, TEAM_COLOR } from './units.js?v=20261127l';
+import { replayCast } from './abilities.js?v=20261127l';
+import { netHill } from './hill.js?v=20261127l';
+import { poseHero } from './anim.js?v=20261127l';
 
 // Online play over Firebase Realtime Database.
 //
@@ -333,8 +333,6 @@ export function openSession(G, match) {
     else if (e.k === 'sp') { if (h && !h.local) G.ev.netSpray?.(h, e.id, v3(e.p), v3(e.n), e.y || 0); }
     else if (e.k === 'em') { if (h && !h.local) G.ev.netEmote?.(h, e.id); }
     else if (e.k === 'gs') G.ev.netGuard?.(e.t, e.x, e.z);
-    else if (e.k === 'cs') G.ev.netCampSlam?.(e.x, e.z);
-    else if (e.k === 'camp') G.ev.netCamp?.(e);
     else if (e.k === 'end') G.ev.netEnd?.(e.w, e.y);
     else if (e.k === 'round' || e.k === 'rstart') G.ev.netRound?.(e);
   }
