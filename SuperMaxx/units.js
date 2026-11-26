@@ -1,12 +1,12 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { TUNING, HILL, CART } from './data.js?v=20261127a';
-import { buildHeroModel } from './models.js?v=20261127a';
-import { makeBox, moveBody, resolveXZ, rayBox, raySphere, rayWorld, hasLOS } from './world.js?v=20261127a';
+import { TUNING, HILL, CART } from './data.js?v=20261127j';
+import { buildHeroModel } from './models.js?v=20261127j';
+import { makeBox, moveBody, resolveXZ, rayBox, raySphere, rayWorld, hasLOS } from './world.js?v=20261127j';
 import { resetStatus, tickStatus, afterMove, wallClimb, takenMult, fireMult, canAct, breakInvis, isHidden, slow as applySlow, stun as applyStun, knock as applyKnock, dropBlobs,
-  dealtMult, onDealt, onHurt, onKill, mend, thaw } from './abilities.js?v=20261127a';
-import { poseHero, rubble } from './anim.js?v=20261127a';
-import { onEliminated, survivorPreMove, survivorPostMove } from './survivor.js?v=20261127a';
-import { tickVfx, tickLight, blast, sparks } from './vfx.js?v=20261127a';
+  dealtMult, onDealt, onHurt, onKill, mend, thaw } from './abilities.js?v=20261127j';
+import { poseHero, rubble } from './anim.js?v=20261127j';
+import { onEliminated, survivorPreMove, survivorPostMove } from './survivor.js?v=20261127j';
+import { tickVfx, tickLight, blast, sparks } from './vfx.js?v=20261127j';
 
 // Survivor teams are per-hero ids; anything that isn't blue reads as an enemy red.
 export const TEAM_COLOR = new Proxy({ blue: 0x2f5bff, red: 0xff5a36 }, { get: (t, k) => (k in t ? t[k] : 0xff5a36) });
@@ -158,7 +158,7 @@ export function spawnMinion(G, team, laneIdx, offset, id) {
 
 // Online Lane Breaker: the host runs the minions, towers and cores. Guests see them as puppets
 // and send their hits on them to the host, like hits on heroes go to the hero's owner.
-const laneUnit = u => (u.kind === 'minion' && !u.deploy) || u.kind === 'tower' || u.kind === 'core';
+const laneUnit = u => (u.kind === 'minion' && !u.deploy) || u.kind === 'tower' || u.kind === 'core' || u.kind === 'camp';
 // A guest's copy of a unit the host reports as destroyed: same crumble, no credit.
 export function unitDown(G, t) { if (t.alive) { t.hp = 0; kill(G, t, null); } }
 
@@ -228,8 +228,11 @@ export function damage(G, target, amt, src, head = false, force = false, dot = f
   if (target.kind === 'hero') { amt *= takenMult(target); target.flinchA = Math.min(1, (target.flinchA || 0) + amt / 40); }
   if (target.armor > 0) { const a = Math.min(target.armor, amt); target.armor -= a; amt -= a; G.ev.armorHit?.(target, a); if (amt <= 0) { G.ev.damage(target, a, src, head); return; } }
   if (target.frozenT > 0 && amt > 1 && src !== target) { amt *= target.shatterM || 1.5; thaw(G, target, true); if (target.kind === 'hero') G.ev.flash?.(target, 'Shattered!'); }   // Avalanche: frozen enemies shatter
+  // Sir Pixel's 1-UP: the hit that would knock you out leaves you at half health instead
+  if (target.oneUpT > 0 && target.hp - amt <= 0) { amt = 0; target.oneUpT = 0; target.hp = Math.max(target.hp, target.maxHp * 0.5); target.barrierT = Math.max(target.barrierT, 1); target.barrierM = 0.2; setBar(target); burst(G, chestOf(target), 0x39ff6a, 1.8); G.ev.flash?.(target, '1-UP!'); }
   if (target.vigilT > 0 && target.hp - amt < 1) { amt = Math.max(0, target.hp - 1); if (G.time > (target.vigilFx || 0)) { target.vigilFx = G.time + 0.4; burst(G, chestOf(target), 0xffe08a, 1); } }   // Lantern's Vigil: hold on at 1 health
   target.hp -= amt;
+  if (target.kind === "camp" && src?.team) target.lastTeam = src.team;        // the last hit wins the camp
   if (src && src.kind === 'hero' && src.team !== target.team) {
     src.dmgDealt += amt;
     src.ult = Math.min(100, src.ult + amt / src.def.ult.cost * 100 * (target.kind === 'hero' ? 1 : 0.45));
@@ -301,7 +304,7 @@ export function spawnProjectile(G, owner, from, vel, w) {
     : w.box ? new THREE.BoxGeometry(w.size * 1.6, w.size * 1.2, w.size * 1.6) : new THREE.SphereGeometry(w.size || 0.22, 10, 8);
   const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: w.color || 0xff8a3c }));
   mesh.position.copy(from); G.scene.add(mesh);
-  G.projectiles.push({ owner, team: owner.team, pos: from.clone(), vel, w, mesh, life: 4, trailT: 0 });
+  G.projectiles.push({ owner, team: owner.team, pos: from.clone(), vel, w, mesh, life: 4, trailT: 0, trav: 0 });
 }
 
 // ---------- weapons ----------
@@ -419,7 +422,7 @@ function shoot(G, h, dir, muzzle, charge, replay = false) {
     spend();
     for (let k = 0; k < w.fan; k++) {
       const d = jitter(dir, sp).applyAxisAngle(UP, (k - (w.fan - 1) / 2) * w.fanAngle);
-      spawnProjectile(G, h, mz.clone(), d.multiplyScalar(w.speed), { ...w, dmg: w.dmg * bonus, trail: true });
+      spawnProjectile(G, h, mz.clone(), d.multiplyScalar(w.speed), { ...w, dmg: w.dmg * bonus, trail: true, maxRange: w.range });
     }
   } else if (w.mode === 'beam') {                   // sound beam: steady ticks, every fourth one is the bass hit
     spend();
@@ -432,6 +435,15 @@ function shoot(G, h, dir, muzzle, charge, replay = false) {
       damage(G, r.unit, w.dmg * (big ? w.beatMult : 1) * (r.head ? w.head : 1) * bonus, h, r.head);
       if (big) burst(G, r.point, 0xff4fa3, 0.55);
     } else if (big) spark(G, r.point);
+  } else if (w.mode === 'quill') {                  // Hoot's quills: two per shot, sharper from the air
+    spend();
+    const air = h.onGround ? 1 : 1 + w.aerial;
+    for (let i = 0; i < w.quills; i++) {
+      const r = trace(G, o, jitter(dir, sp + i * 0.004), w.range, h.team);
+      tracer(G, mz, r.point, air > 1 ? 0xffe08a : w.tracer, 0.08);
+      if (r.unit) damage(G, r.unit, w.dmg * air * (r.head ? w.head : 1) * bonus, h, r.head);
+      else spark(G, r.point);
+    }
   } else if (w.mode === 'carbine') {                // lever carbine: hits harder at a full gallop
     spend();
     const gal = Math.min(1, Math.hypot(h.vel.x, h.vel.z) / (h.def.speed || 8));
@@ -494,7 +506,7 @@ function shoot(G, h, dir, muzzle, charge, replay = false) {
     if (hits) { if (!(h.overdriveT > 0)) h.momentum = m * 0.15; G.ev.shake?.(h, 0.15 + m / 250); }
   } else {                                          // cluster, chain and plain projectiles
     spend();
-    spawnProjectile(G, h, mz, jitter(dir, sp).multiplyScalar(w.speed), { ...w, dmg: w.dmg * bonus, trail: true });
+    spawnProjectile(G, h, mz, jitter(dir, sp).multiplyScalar(w.speed), { ...w, dmg: w.dmg * bonus, trail: true, maxRange: w.range });
   }
   h.recoilA = w.mode === 'charge' ? 0.6 + charge : 1;
   if (h.ammo <= 0) startReload(h);
@@ -575,8 +587,20 @@ export function updateProjectiles(G, dt) {
       p.mesh.rotation.y += dt * 22;
     }
     const step = p.vel.length() * dt;
+    if (p.w.maxRange && (p.trav += step) > p.w.maxRange) p.life = 0;        // shots fizzle out past their weapon's range
     const d = p.vel.clone().normalize();
     const r = trace(G, p.pos, d, step, p.team);
+    if (p.w.bounce && r.t < step && !r.unit && (p.bounces || 0) < p.w.bounce) {
+      // Tilt's steel balls: bounce off floors and walls (whichever way they were mostly heading), a little slower each time
+      p.pos.copy(r.point).addScaledVector(d, -0.05);
+      const vy = Math.abs(p.vel.y), vh = Math.hypot(p.vel.x, p.vel.z);
+      if (p.vel.y < 0 && vy > vh * 0.45) p.vel.y = vy * 0.72;
+      else if (Math.abs(p.vel.x) > Math.abs(p.vel.z)) p.vel.x *= -0.8; else p.vel.z *= -0.8;
+      p.bounces = (p.bounces || 0) + 1;
+      if (p.owner?.def?.passive?.id === 'extraball') p.w = { ...p.w, dmg: p.w.dmg * (1 + p.owner.def.passive.bonus) };   // Extra Ball
+      spark(G, r.point); G.ev.bump?.(r.point, true);
+      continue;
+    }
     if (r.t < step || p.life <= 0) {
       if (p.w.stick && r.t < step) {                // stick instead of exploding
         p.pos.copy(r.point);
@@ -610,7 +634,7 @@ export function tickHero(G, h, dt) {
   // fountains: heal at home, burn trespassers
   const home = h.team === 'blue' ? -1 : 1;
   const zHome = home * (G.map.L - 5), zEnemy = -zHome;
-  const fountains = G.mode === 'lane' || G.mode === 'hill' || G.mode === 'cart';
+  const fountains = G.mode === 'lane' || G.mode === 'hill' || G.mode === 'cart' || G.mode === 'raid';
   if (fountains && Math.hypot(h.pos.x, h.pos.z - zHome) < 8 && h.hp < h.maxHp) { h.hp = Math.min(h.maxHp, h.hp + TUNING.fountainHeal * dt); setBar(h); }
   if (fountains && Math.hypot(h.pos.x, h.pos.z - zEnemy) < 8) damage(G, h, 90 * dt, null);
   if (G.mode === 'survivor') survivorPreMove(G, h);
@@ -634,7 +658,7 @@ export function tickCorpse(G, h, dt) {
 function nearestEnemy(G, u, range, kinds) {
   let best = null, bd = range;
   for (const list of kinds) for (const e of list) {
-    if (!e.alive || e.team === u.team) continue;
+    if (!e.alive || e.team === u.team || e.kind === "camp") continue;      // minions and towers leave the neutral camp alone
     if (e.kind === 'core' && !coreVulnerable(G, e.team)) continue;
     const d = Math.hypot(e.pos.x - u.pos.x, e.pos.z - u.pos.z) - (e.rad || 0);
     if (d < bd) { bd = d; best = e; }

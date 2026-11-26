@@ -1,4 +1,4 @@
-import { actx, noiseBuf, musicBus, impulse, onAudioReady, m2f } from './audio.js?v=20261127a';
+import { actx, noiseBuf, musicBus, impulse, onAudioReady, m2f } from './audio.js?v=20261127j';
 
 // Procedural soundtrack: each track is a set of 8-bar sections (chords, drum pattern,
 // bass style, lead density) played in a long form, so a loop runs about 3 minutes.
@@ -92,6 +92,30 @@ export const TRACKS = {
       D: { p: [0, 3, 6, 4], d: 'drive', b: 'octave', l: 0.85, a: 2, pad: 1 },
     },
     form: ['intro', 'A', 'A+', 'B', 'C', 'D', 'A+', 'B+', 'D+', 'C', 'intro'],
+  },
+  skyreach: {                              // Skyreach Isles: airy harp and soaring flute over a light pulse
+    bpm: 104, root: 55, scale: 'major', swing: 0.02,
+    lead: { type: 'triangle', cut: 4200, v: 0.055, vib: 1, a: 0.03 }, bass: { type: 'sine', cut: 700 }, arp: { type: 'triangle', cut: 4000, pluck: 1 }, pad: { type: 'sawtooth', cut: 1400 },
+    sections: {
+      intro: { p: [0, 3, 5, 4], b: 'long', l: 0, a: 2, pad: 1 },
+      A: { p: [0, 5, 3, 4], d: 'light', b: 'root', l: 0.5, a: 2, pad: 1 },
+      B: { p: [3, 4, 0, 5], d: 'groove', b: 'walk', l: 0.7, a: 2, pad: 1 },
+      C: { p: [5, 3, 0, 4], d: 'half', b: 'long', l: 0.35, a: 1, pad: 1 },
+      D: { p: [0, 4, 5, 3], d: 'drive', b: 'octave', l: 0.85, a: 2, pad: 1 },
+    },
+    form: ['intro', 'A', 'A+', 'B', 'C', 'D', 'A+', 'B+', 'D+', 'C', 'intro'],
+  },
+  docks: {                                 // Tidewater Docks: a sea shanty on accordion, stomping along
+    bpm: 112, root: 50, scale: 'dorian', swing: 0.12,
+    lead: { type: 'sawtooth', cut: 2400, v: 0.04, trem: 1 }, bass: { type: 'triangle', cut: 800 }, arp: { type: 'square', cut: 1600, pluck: 1 }, pad: { type: 'sawtooth', cut: 900 },
+    sections: {
+      intro: { p: [0, 6, 0, 4], d: 'half', b: 'long', l: 0.2, a: 1, pad: 1 },
+      A: { p: [0, 6, 3, 4], d: 'boom', b: 'octave', l: 0.6, a: 1, pad: 0 },
+      B: { p: [3, 0, 6, 4], d: 'latin', b: 'walk', l: 0.75, a: 2, pad: 1 },
+      C: { p: [5, 3, 0, 4], d: 'half', b: 'long', l: 0.4, a: 1, pad: 1 },
+      D: { p: [0, 3, 4, 0], d: 'drive', b: 'octave', l: 0.9, a: 2, pad: 1 },
+    },
+    form: ['intro', 'A', 'A+', 'B', 'C', 'D', 'A+', 'B+', 'D+', 'intro'],
   },
   island: {                                // Storm Drop: driving, tense survivor music
     bpm: 132, root: 45, scale: 'minor', swing: 0,

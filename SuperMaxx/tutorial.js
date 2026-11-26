@@ -1,4 +1,4 @@
-import { cfg, save } from './settings.js?v=20261127a';
+import { cfg, save } from './settings.js?v=20261127j';
 
 // Guided first match: a checklist of ten short steps on Solmare Piazza against training
 // dummies that stand still. Each step watches what the player does and ticks itself off.
@@ -40,6 +40,10 @@ const PASSIVE_TRY = {
   hunger: { how: 'Slow or stun a dummy, then hit it to heal yourself.', check: (T, P, G) => dealt(T, P) > 0 && dummies(G).some(d => d.slowT > 0 || d.stunT > 0 || d.rootT > 0) },
   seconds: { how: 'Empty a few rockets into a dummy and finish it: your bazooka refills on the spot.', check: (T, P) => P.kills > (T.kills0 ?? P.kills) },
   tailwind: { how: 'Finish off a dummy to reset your ability and get a burst of speed.', check: (T, P) => P.kills > (T.kills0 ?? P.kills) },
+  extraball: { how: 'Aim at the floor in front of a dummy so a ball bounces before it hits: each bounce adds damage.', check: (T, P, G) => (T.bounced ||= G.projectiles.some(p => p.owner === P && p.bounces > 0)) && dealt(T, P) > 0 },
+  prizetag: { how: `Grab a dummy with The Claw (${K('Q')}) to tag it: tagged targets take 20% more damage.`, check: (T, P, G) => dummies(G).some(d => d.markT > 0) },
+  highscore: { how: 'Finish off a dummy to start a High Score streak: more damage and healing per stack.', check: (T, P) => P.scoreStacks > 0 },
+  nightflight: { how: `Jump with ${K('Space')} and keep holding it to fly. Get above 8m!`, check: (T, P) => P.pos.y > 8 },
 };
 const WAIT = 7;            // seconds a hands-off passive step stays up before moving on
 export function heroSteps(def) {

@@ -27,6 +27,14 @@ export const THEMES = {
     skyTop: 0x3d8ee0, skyBottom: 0xffd59a, fog: 0xf2cfa0, sun: 0xffe0a8, hemiSky: 0xfff0d8, hemiGround: 0xd08a5a,
     sunPos: [55, 48, -40],
   },
+  sky: {
+    skyTop: 0x5a8fe0, skyBottom: 0xffd8c8, fog: 0xf4e6f0, sun: 0xfff0d8, hemiSky: 0xfff6ff, hemiGround: 0xa8c88a,
+    sunPos: [-55, 30, 60],
+  },
+  docks: {
+    skyTop: 0x3a4a8a, skyBottom: 0xff9a6a, fog: 0xc8a8b0, sun: 0xffb07a, hemiSky: 0xffd8c8, hemiGround: 0x6a7a8a,
+    sunPos: [60, 18, -50],
+  },
 };
 
 export function rng(seed) {
@@ -149,6 +157,36 @@ export function groundTexture(theme) {
     g.fillStyle = 'rgba(160,178,214,.28)';
     for (let i = 0; i < 14; i++) { const x = Math.random() * s, y = Math.random() * s; g.beginPath(); g.ellipse(x, y, 4, 7, 0.3, 0, 7); g.ellipse(x + 10, y + 14, 4, 7, 0.3, 0, 7); g.fill(); }
   });
+  if (theme === 'sky') return canvasTex(512, (g, s) => {
+    // bright meadow grass with white marble flagstones peeking through and little white flowers
+    g.fillStyle = '#a8d47a'; g.fillRect(0, 0, s, s);
+    for (let i = 0; i < 7000; i++) {
+      const v = Math.random();
+      g.strokeStyle = v < 0.45 ? 'rgba(90,150,60,.35)' : v < 0.9 ? 'rgba(200,236,150,.4)' : 'rgba(255,255,255,.7)';
+      const x = Math.random() * s, y = Math.random() * s;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.random() * 4 - 2, y - 4 - Math.random() * 6); g.stroke();
+    }
+    for (let i = 0; i < 9; i++) {
+      const x = Math.random() * s, y = Math.random() * s, w = 40 + Math.random() * 40, h = 30 + Math.random() * 30;
+      g.fillStyle = 'rgba(244,240,232,.85)'; g.beginPath(); g.roundRect(x, y, w, h, 6); g.fill();
+      g.strokeStyle = 'rgba(160,150,140,.35)'; g.lineWidth = 2; g.stroke();
+    }
+  });
+  if (theme === 'docks') return canvasTex(512, (g, s) => {
+    // wet harbour sand and shingle, darker where the tide has been, with shells and seaweed
+    g.fillStyle = '#b8a888'; g.fillRect(0, 0, s, s);
+    for (let i = 0; i < 30; i++) {
+      const x = Math.random() * s, y = Math.random() * s, r = 40 + Math.random() * 80;
+      const gr = g.createRadialGradient(x, y, 0, x, y, r);
+      gr.addColorStop(0, Math.random() < 0.6 ? 'rgba(90,96,90,.3)' : 'rgba(230,214,180,.35)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+    speckle(g, s, 4000, ['rgba(70,70,70,.22)', 'rgba(255,250,235,.35)'], 2);
+    g.strokeStyle = 'rgba(60,110,70,.5)'; g.lineWidth = 3;
+    for (let i = 0; i < 16; i++) { const x = Math.random() * s, y = Math.random() * s; g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + 10, y + 8, x + 4, y + 20); g.stroke(); }
+    g.fillStyle = 'rgba(255,236,220,.8)';
+    for (let i = 0; i < 24; i++) { g.beginPath(); g.ellipse(Math.random() * s, Math.random() * s, 3, 2.2, Math.random() * 3, 0, 7); g.fill(); }
+  });
   if (theme === 'desert') return canvasTex(512, (g, s) => {
     // warm sand with wind ripples, darker clay patches and scattered pebbles
     g.fillStyle = '#e8b97e'; g.fillRect(0, 0, s, s);
@@ -213,6 +251,24 @@ export function pathTexture(theme) {
     g.fillStyle = '#f4f6fc'; g.fillRect(0, 0, 16, s); g.fillRect(s - 16, 0, 16, s);
     speckle(g, s, 500, ['rgba(255,255,255,.7)'], 2);
   });
+  if (theme === 'sky') return canvasTex(256, (g, s) => {
+    // a white marble walkway with gold inlay down the edges and a sun motif
+    g.fillStyle = '#f4f0e8'; g.fillRect(0, 0, s, s);
+    for (let y = 0; y < 4; y++) { g.strokeStyle = 'rgba(170,160,150,.35)'; g.lineWidth = 2; g.beginPath(); g.moveTo(12, y * 64); g.lineTo(s - 12, y * 64); g.stroke(); }
+    speckle(g, s, 900, ['rgba(160,150,140,.12)', 'rgba(255,255,255,.5)']);
+    g.fillStyle = '#e8b84a'; g.fillRect(0, 0, 10, s); g.fillRect(s - 10, 0, 10, s);
+    g.strokeStyle = 'rgba(232,184,74,.7)'; g.lineWidth = 4; g.beginPath(); g.arc(s / 2, s / 2, 26, 0, 7); g.stroke();
+  });
+  if (theme === 'docks') return canvasTex(256, (g, s) => {
+    // a weathered boardwalk: grey-brown planks across the lane, with rope-and-post edges
+    g.fillStyle = '#4a3a2e'; g.fillRect(0, 0, s, s);
+    for (let y = 0; y < 16; y++) {
+      const c = 105 + Math.random() * 35 | 0;
+      g.fillStyle = `rgb(${c},${c * 0.86 | 0},${c * 0.7 | 0})`; g.fillRect(14, y * 16 + 1, s - 28, 14);
+      g.fillStyle = 'rgba(30,22,16,.55)'; g.fillRect(36 + (y % 3) * 60, y * 16 + 6, 3, 3); g.fillRect(s - 52 - (y % 2) * 50, y * 16 + 7, 3, 3);
+    }
+    g.fillStyle = '#c8b48a'; for (let y = 0; y < s; y += 6) { g.fillRect(2, y, 8, 3); g.fillRect(s - 10, y + 3, 8, 3); }
+  });
   if (theme === 'desert') return canvasTex(256, (g, s) => {
     // a packed red-clay road with two wagon ruts and painted turquoise edge stones
     g.fillStyle = '#c4703f'; g.fillRect(0, 0, s, s);
@@ -237,7 +293,7 @@ export function buildGround(scene, map, theme) {
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(map.W * 2, map.L * 2), new THREE.MeshStandardMaterial({ map: tex, ...(theme === 'neon' ? { emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.35 } : {}) }));
   ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
   // outer ground under the backdrop (Solmare sits on its own island in the sea)
-  if (theme !== 'plaza') {
+  if (theme !== 'plaza' && theme !== 'sky' && theme !== 'docks') {      // Skyreach floats over clouds, the docks sit in the sea
     const outerTex = groundTexture(theme); outerTex.repeat.set(40, 40);
     const outer = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), new THREE.MeshStandardMaterial({ map: outerTex, color: 0xdddddd }));
     outer.rotation.x = -Math.PI / 2; outer.position.y = -0.05; scene.add(outer);

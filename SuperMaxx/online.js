@@ -1,9 +1,9 @@
-import { HEROES, ARCHETYPES } from './heroes.js?v=20261127a';
-import { MAPS } from './data.js?v=20261127a';
-import { cfg, save } from './settings.js?v=20261127a';
-import { headshot } from './portraits.js?v=20261127a';
-import { dressed, wear, myCosIds, heroOwned } from './pass.js?v=20261127a';
-import * as net from './net.js?v=20261127a';
+import { HEROES, ARCHETYPES } from './heroes.js?v=20261127j';
+import { MAPS, DIFFICULTY } from './data.js?v=20261127j';
+import { cfg, save } from './settings.js?v=20261127j';
+import { headshot } from './portraits.js?v=20261127j';
+import { dressed, wear, myCosIds, heroOwned } from './pass.js?v=20261127j';
+import * as net from './net.js?v=20261127j';
 
 // Online front end: set up your name and hero, host or join a room by code, then the lobby
 // (mode, teams, stage, start). The match itself starts on every machine when the host hits Start.
@@ -50,6 +50,7 @@ async function act(what, v) {
   const st = net.lobbyState();
   api.blip?.(what === 'start' ? 880 : 620);
   if (what === 'hero') return api.pickHero();
+  if (what === 'card') return document.dispatchEvent(new CustomEvent('smx-card', { detail: v }));
   if (what === 'create' || what === 'join') {
     const code = $('onCode')?.value || '';
     if (what === 'join' && code.length < 5) { err = 'Room codes are 5 characters'; return render(); }
@@ -65,6 +66,7 @@ async function act(what, v) {
   if (what === 'mode') net.setMode(v);
   if (what === 'drafttog') net.setDraft(!st.meta?.draft);
   if (what === 'botstog') net.setBots(!!st.meta?.noBots);
+  if (what === 'botdiff') net.setBotDiff(v);
   if (what === 'draft') net.draftPick(v);
   if (what === 'start') net.startMatch().catch(x => { err = net.explain(x).message; render(); });
   if (what === 'leave') { await net.leaveRoom(); render(); }
@@ -141,7 +143,7 @@ function lobbyHTML(st) {
     const list = players.filter(([uid, p]) => sideOf(uid, p) === team);
     const slots = list.map(([uid, p]) => {
       const base = HEROES.find(h => h.id === p.hero) || HEROES[0], d = wear(base, p.skin);
-      return `<div class="slot ${uid === st.me ? 'me' : ''}" style="--hc:${hex(d.color)}"><img src="${headshot(d)}" alt="">
+      return `<div class="slot ${uid === st.me ? 'me' : ''}" data-act="card" data-v="${uid}" title="See their player card" style="--hc:${hex(d.color)}"><img src="${headshot(d)}" alt="">
         <div><b>${esc(p.name)}${uid === st.meta?.host ? ' <span class="crown" title="Host">♛</span>' : ''}</b><small>${base.callsign}</small></div></div>`;
     });
     for (let i = list.length; i < M.per; i++) slots.push(st.meta?.noBots ? '<div class="slot bot off"><span>·</span><div><b>Empty</b><small>bots are off</small></div></div>'
@@ -166,6 +168,9 @@ function lobbyHTML(st) {
       <div><b>Draft pick ${st.meta?.draft ? 'on' : 'off'}</b><small>${st.meta?.draft ? 'Teams take turns picking heroes before the match, and nobody can pick the same one.' : st.host ? 'Turn it on to pick heroes in turns, with no duplicates.' : 'Everyone plays the hero they chose.'}</small></div></div>`}
     <div class="draftopt ${botsOn ? 'on' : ''}">${st.host ? `<button data-act="botstog" ${playing ? 'disabled' : ''}><i>${botsOn ? '✓' : ''}</i></button>` : `<i>${botsOn ? '✓' : '·'}</i>`}
       <div><b>Bots ${botsOn ? 'on' : 'off'}</b><small>${botsOn ? 'Bots fill any empty seats.' : duel ? 'Players only: you need two to duel.' : 'Players only: empty seats stay empty, and each team needs at least one player.'}</small></div></div>
+    ${botsOn ? `<div class="botdiff"><b>Bot skill</b>${Object.entries(DIFFICULTY).map(([k, d]) => st.host
+      ? `<button class="${(st.meta?.botDiff || 'normal') === k ? 'on' : ''}" data-act="botdiff" data-v="${k}" ${playing ? 'disabled' : ''}>${d.label}</button>`
+      : `<span class="${(st.meta?.botDiff || 'normal') === k ? 'on' : ''}">${d.label}</span>`).join('')}</div>` : ''}
     <div class="teams ${duel ? 'duel' : ''}">${col('blue')}<div class="vs">VS</div>${col('red')}</div>
     ${duel && players.length > 2 ? `<div class="spect">Watching: ${players.slice(2).map(([, p]) => esc(p.name)).join(', ')}. Only two can duel.</div>` : ''}
     <div class="lobbyfoot">
@@ -227,3 +232,13 @@ setInterval(() => {
     net.draftPick(from[Math.floor(Math.random() * from.length)].id);
   }
 }, 250);
+
+// A friend's invite or "Join" button: leave any room we're in and join theirs.
+export async function joinFriend(code) {
+  if (net.lobbyState()) await net.leaveRoom();
+  api.go('online');
+  busy = true; err = ''; render();
+  try { await net.joinRoom(code, profile()); }
+  catch (x) { err = net.explain(x).message || String(x); }
+  busy = false; render();
+}

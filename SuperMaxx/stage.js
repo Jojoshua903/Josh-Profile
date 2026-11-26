@@ -1,6 +1,6 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { cfg } from './settings.js?v=20261127a';
-import { bake } from './rig.js?v=20261127a';
+import { cfg } from './settings.js?v=20261127j';
+import { bake } from './rig.js?v=20261127j';
 
 // Stage atmosphere: sky, sun, fill light, haze, image-based lighting and set dressing.
 // Each stage has its own time of day; Maxx Island (Survivor) gets a tropical midday.
@@ -35,6 +35,16 @@ export const LOOK = {
     top: 0x2f7fd8, horizon: 0xffd29a, bottom: 0xe8a06a, sun: 0xffd9a0, sunI: 3.3, sunPos: [55, 48, -40],
     hemiSky: 0xfff0d8, hemiGround: 0xd0804e, hemiI: 0.85, fill: 0x9fc4ff, fillI: 0.5, fog: 0xf2cfa0, fogD: 0.0034, env: 0.8,
     motes: 0xffe2b0, shafts: 0.05, clouds: 0xfff0dc,
+  },
+  sky: {        // Skyreach Isles: pastel sunrise above a sea of clouds
+    top: 0x4f86e0, horizon: 0xffd6c4, bottom: 0xffffff, sun: 0xffe6c4, sunI: 3.0, sunPos: [-55, 30, 60],
+    hemiSky: 0xfff4ff, hemiGround: 0xb8d0a0, hemiI: 1.0, fill: 0xb8c8ff, fillI: 0.55, fog: 0xf6e8f2, fogD: 0.0030, env: 0.85,
+    motes: 0xffffff, shafts: 0.08, clouds: 0xffffff,
+  },
+  docks: {      // Tidewater Docks: orange dusk over a grey-blue sea
+    top: 0x2e3a78, horizon: 0xff9a6a, bottom: 0x4a5a78, sun: 0xffa86a, sunI: 2.5, sunPos: [60, 18, -50],
+    hemiSky: 0xffd8c8, hemiGround: 0x5a6a7a, hemiI: 0.95, fill: 0x8aa0ff, fillI: 0.6, fog: 0xc8a0a8, fogD: 0.0048, env: 0.7,
+    motes: 0xffe0c8, shafts: 0.05, clouds: 0xffc8a8,
   },
   island: {     // Survivor: hot tropical midday
     top: 0x2a84e4, horizon: 0xbfe8ff, bottom: 0x9fd6e8, sun: 0xfff4dc, sunI: 3.3, sunPos: [30, 80, 20],
@@ -223,6 +233,7 @@ export function buildDressing(scene, map) {
   if (L.night) ticks.push(nightSky(scene, map));
   if (map.id === 'neon') ticks.push(festoons(scene, map, [16, 36], [0xff5aa8, 0x5af0ff, 0xffc93c, 0x9b5cff]));
   if (map.id === 'mesa') ticks.push(festoons(scene, map, [8, 30], [0xffd27a, 0xff7a5a, 0x3fb3a6, 0xffc93c]));
+  if (map.id === 'docks') ticks.push(festoons(scene, map, [12, 34], [0xffe1a0, 0xffc27a, 0xff9a6a]));
   return (dt, t) => ticks.forEach(f => f(dt, t));
 }
 

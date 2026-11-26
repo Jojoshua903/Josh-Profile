@@ -1,5 +1,5 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { M, put } from './scenery.js?v=20261127a';
+import { M, put } from './scenery.js?v=20261127j';
 
 // Moving life in each arena: bunting and gulls, canal water and boats, petals and grass.
 // Returns { tick(dt, t), colliders } where colliders are [x, z, w, d, h].
@@ -175,6 +175,14 @@ export function buildAmbient(scene, map, theme, r) {
     ticks.push(bunting(scene, map, [-40, -18]));                  // papel picado strung across the town
     ticks.push(petals(scene, map, 0xf2cfa0, 380));                 // drifting dust in the heat
     ticks.push(birds(scene, 3, 0x3a2a2a));
+  } else if (theme === 'sky') {
+    grass(scene, map, r, [0x8fc46a, 0xa8d47a, 0xffffff, 0xffe08a], 900);
+    ticks.push(petals(scene, map, 0xffffff, 420));                 // wisps of cloud drifting through
+    ticks.push(birds(scene, 5, 0xffffff));
+  } else if (theme === 'docks') {
+    ticks.push(bunting(scene, map, [-44, -20]));                  // signal flags strung between the sheds
+    ticks.push(petals(scene, map, 0xdff0ff, 300));                 // sea spray on the wind
+    ticks.push(birds(scene, 8, 0xffffff));                         // gulls
   } else if (theme === 'alpine') {
     ticks.push(pond(scene));
     ticks.push(petals(scene, map, 0xffffff, 900));                 // the same drift, as snowfall

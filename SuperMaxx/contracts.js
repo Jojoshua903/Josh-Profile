@@ -57,6 +57,15 @@ export const CONTRACTS = [
       { stat: 'wins', n: 4, label: 'Win 4 matches' },
     ],
   },
+  {
+    hero: 'owl', from: 'The Midnight Post Office', seal: '🦉', after: 3,
+    pitch: 'Wanted: a team that works nights. Our best courier wants a change of route. Must not mind feathers in the cockpit, or anywhere else.',
+    tasks: [
+      { stat: 'kills', n: 35, label: 'Get 35 eliminations' },
+      { stat: 'arch:damage', n: 4, label: 'Play 4 matches as a damage hero' },
+      { stat: 'wins', n: 4, label: 'Win 4 matches' },
+    ],
+  },
 ];
 for (const c of CONTRACTS) for (const t of c.tasks) t.hero = c.hero;
 export const CONTRACT_HEROES = CONTRACTS.map(c => c.hero);

@@ -1,12 +1,14 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { TUNING } from './data.js?v=20261127a';
-import { hasLOS } from './world.js?v=20261127a';
-import { fire, releaseFire, chargeLevel, startReload, eyeOf, chestOf, dirFrom, coreVulnerable } from './units.js?v=20261127a';
-import { ABIL, castSlot, canAct, canMove, moveMult, isHidden } from './abilities.js?v=20261127a';
-import { survivorGoal, inStorm } from './survivor.js?v=20261127a';
-import { hillGoal } from './hill.js?v=20261127a';
-import { cartGoal } from './payload.js?v=20261127a';
-import { potatoGoal } from './potato.js?v=20261127a';
+import { TUNING } from './data.js?v=20261127j';
+import { hasLOS } from './world.js?v=20261127j';
+import { fire, releaseFire, chargeLevel, startReload, eyeOf, chestOf, dirFrom, coreVulnerable } from './units.js?v=20261127j';
+import { ABIL, castSlot, canAct, canMove, moveMult, isHidden, flap } from './abilities.js?v=20261127j';
+import { survivorGoal, inStorm } from './survivor.js?v=20261127j';
+import { hillGoal } from './hill.js?v=20261127j';
+import { cartGoal } from './payload.js?v=20261127j';
+import { potatoGoal } from './potato.js?v=20261127j';
+import { avoidGuardians } from './guardian.js?v=20261127j';
+import { raidGoal } from './raid.js?v=20261127j';
 
 const v1 = new THREE.Vector3(), v2 = new THREE.Vector3();
 
@@ -20,6 +22,7 @@ export function steer(h, wish, sprint, jump, dt) {
   h.vel.x += (wish.x * speed - h.vel.x) * k;
   h.vel.z += (wish.z * speed - h.vel.z) * k;
   if (jump && h.onGround) { h.vel.y = TUNING.jump; h.onGround = false; }
+  else if (jump) flap(h, dt);                       // Hoot keeps flying while Jump is held
 }
 
 export function initBot(G, b, laneIdx) {
@@ -82,6 +85,7 @@ function pickTarget(G, b) {
     if (!s.alive || s.team === b.team) continue;
     if (s.kind === 'core' && !coreVulnerable(G, s.team)) continue;
     if (s.kind === 'tower' && !towerCovered(G, s) && s.hp > s.maxHp * 0.25) continue;
+    if (s.kind === 'camp' && s.pos.distanceTo(b.pos) > 22) continue;          // only take the camp when it's close
     const d = s.pos.distanceTo(b.pos);
     if (d < 30 && d < score) { score = d; best = s; }
   }
@@ -132,6 +136,11 @@ export function updateBot(G, b, dt, D) {
       sprint = !tgt;
     }
   }
+  else if (G.mode === 'raid') {
+    // Magmaw is the only enemy: keep at range, circle it, dodge the red circles, hop its shockwave
+    const r = raidGoal(G, b, goal);
+    if (r) { ai.tgt = r.target; sprint = r.sprint; ai.raidJump = r.jump; }
+  }
   else if (ai.retreat) {
     const cz = coreZ(G, b.team), inFront = Math.abs(b.pos.z) < Math.abs(cz) - 1;
     if (inFront) { const [ex, ez] = exitPoint(G, b); goal.set(ex, 0, ez); } else goal.set(0, 0, homeZ);
@@ -177,7 +186,7 @@ export function updateBot(G, b, dt, D) {
     if (Math.hypot(w[0] - b.pos.x, w[1] - b.pos.z) < 3 && ai.wp < path.length - 1) ai.wp++;
     sprint = Math.hypot(w[0] - b.pos.x, w[1] - b.pos.z) > 12;
   }
-  if (!ai.retreat) avoidTowers(G, b, goal);
+  if (!ai.retreat) { avoidTowers(G, b, goal); avoidGuardians(G, b, goal); }
 
   const wish = new THREE.Vector3(goal.x - b.pos.x, 0, goal.z - b.pos.z);
   const gd = wish.length();
@@ -204,7 +213,13 @@ export function updateBot(G, b, dt, D) {
   }
   if (ai.detourT > 0) { ai.detourT -= dt; wish.add(ai.detour).normalize(); }
   if (tgt && tgt.kind === 'hero' && Math.random() < dt * 0.4) jump = true;
-  steer(b, wish, sprint && !tgt, jump, dt);
+  // Hoot takes to the air in bursts during a fight, and lands to let his wings recover
+  if (b.def.passive?.id === "nightflight") {
+    ai.flyT = (ai.flyT || 0) - dt;
+    if (tgt && ai.flyT < -2.5 && b.wing > 60 && Math.random() < dt * 1.5) ai.flyT = 1 + Math.random() * 1.5;
+    if (ai.flyT > 0 && b.wing > 5) jump = true;
+  }
+  steer(b, wish, sprint && (!tgt || G.mode === 'raid'), jump || (G.mode === 'raid' && ai.raidJump), dt);
 
   // ---- aim & shoot ----
   // healers and chargers aim at a teammate who needs it when no enemy hero is pressing

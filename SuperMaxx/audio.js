@@ -1,4 +1,4 @@
-import { cfg } from './settings.js?v=20261127a';
+import { cfg } from './settings.js?v=20261127j';
 
 // Shared Web Audio graph: everything is synthesised, nothing is loaded.
 // master -> compressor -> speakers, with separate effect and music buses under it.
@@ -91,6 +91,18 @@ export const ABIL_SFX = {
   webline: v => { noise(0.18, 0.08 * v, 5000, 0, { type: 'bandpass', to: 2000, q: 2 }); tone(1600, 0.1, 'sine', 0.03 * v, 0.5); },
   thwip: v => { noise(0.12, 0.1 * v, 6000, 0, { type: 'bandpass', to: 3000, q: 3 }); tone(500, 0.25, 'triangle', 0.04 * v, 2.5, 0.05); },
   funnelweb: v => { for (let i = 0; i < 6; i++) noise(0.08, 0.07 * v, 5000, i * 0.07, { type: 'bandpass', to: 2500, q: 2 }); tone(220, 0.8, 'triangle', 0.05 * v, 0.6, 0.3); },
+  flipper: v => { noise(0.06, 0.1 * v, 2400, 0, { type: "highpass", to: 1800 }); tone(330, 0.08, "square", 0.05 * v, 1.8); },
+  bumper: v => { tone(1047, 0.12, "square", 0.05 * v, 1); tone(1568, 0.14, "square", 0.04 * v, 1, 0.05); },
+  jackpot: v => { [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.12, "square", 0.05 * v, 1, i * 0.07)); noise(0.4, 0.06 * v, 3000, 0.35); },
+  claw: v => { tone(140, 0.4, "sawtooth", 0.05 * v, 1.6); noise(0.1, 0.1 * v, 1200, 0.35, { type: "bandpass", to: 500, q: 3 }); },
+  capsule: v => { tone(784, 0.1, "triangle", 0.05 * v, 1.2); tone(1175, 0.2, "triangle", 0.04 * v, 1, 0.08); },
+  grandprize: v => { tone(90, 0.9, "sawtooth", 0.07 * v, 2.2); [784, 988, 1175, 1568].forEach((f, i) => tone(f, 0.18, "triangle", 0.05 * v, 1, 0.5 + i * 0.09)); },
+  powerup: v => { [392, 523, 659, 784, 1047].forEach((f, i) => tone(f, 0.06, "square", 0.04 * v, 1, i * 0.05)); },
+  warppipe: v => { tone(880, 0.5, "square", 0.04 * v, 0.25); },
+  oneup: v => { [659, 784, 1319, 1047, 1175, 1568].forEach((f, i) => tone(f, 0.1, "square", 0.05 * v, 1, i * 0.09)); },
+  talondive: v => { noise(0.5, 0.1 * v, 2600, 0, { type: "bandpass", to: 600, q: 1.5 }); tone(520, 0.4, "triangle", 0.04 * v, 0.4); },
+  screech: v => { tone(1800, 0.5, "sawtooth", 0.05 * v, 1.4); tone(2400, 0.4, "square", 0.025 * v, 0.8, 0.05); },
+  featherstorm: v => { for (let i = 0; i < 8; i++) noise(0.25, 0.08 * v, 3000 + i * 200, i * 0.12, { type: "bandpass", to: 1200, q: 1 }); tone(330, 0.3, "triangle", 0.05 * v, 1.5); tone(262, 0.4, "triangle", 0.05 * v, 0.9, 0.3); },
   // Stitch
   medbomb: v => { tone(660, 0.12, 'sine', 0.05 * v, 1.2); noise(0.25, 0.08 * v, 2000, 0.3, { type: 'bandpass', to: 900, q: 1.5 }); [784, 988, 1175].forEach((f, i) => tone(f, 0.18, 'sine', 0.04 * v, 1, 0.35 + i * 0.06)); },
   lifeline: v => { tone(523, 0.4, 'sine', 0.05 * v, 1.5); tone(1046, 0.3, 'triangle', 0.03 * v, 1, 0.1); },

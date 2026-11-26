@@ -1,5 +1,5 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { M, put, mergeStatic } from './scenery.js?v=20261127a';
+import { M, put, mergeStatic } from './scenery.js?v=20261127j';
 
 // Buildings and far scenery around the arena. Everything sits outside the playable
 // rectangle (|x| > W, |z| > L) so it never affects collision.
@@ -396,6 +396,80 @@ function desertFar(scene, map, r) {
   return (dt, t) => { const a = t * 0.12; hawk.position.set(Math.cos(a) * 46, 38 + Math.sin(t * 0.5) * 3, Math.sin(a) * 60); hawk.rotation.y = -a; hawk.rotation.z = 0.3; };
 }
 
+// ---------- Skyreach Isles: an island floating over a sea of clouds ----------
+function skyFar(scene, map, r) {
+  const g = new THREE.Group();
+  // the rock the arena sits on, tapering away into the clouds
+  const under = put(g, new THREE.ConeGeometry(Math.hypot(map.W, map.L) + 6, 60, 10), M(0x8a7a6a, { flatShading: true }), 0, -30.2, 0, false);
+  under.rotation.x = Math.PI; under.scale.x = (map.W + 8) / (map.L + 8);
+  put(g, new THREE.CylinderGeometry(Math.hypot(map.W, map.L) + 6, Math.hypot(map.W, map.L) + 6, 0.6, 10), M(0x8fc46a), 0, -0.32, 0, false).scale.x = (map.W + 8) / (map.L + 8);
+  // the cloud sea far below
+  const sea = new THREE.Mesh(new THREE.PlaneGeometry(1400, 1400), new THREE.MeshStandardMaterial({ color: 0xfdf2f4, roughness: 1 }));
+  sea.rotation.x = -Math.PI / 2; sea.position.y = -26; g.add(sea);
+  for (let i = 0; i < 70; i++) {
+    const a = r() * Math.PI * 2, d = 40 + r() * 260, s = 10 + r() * 22;
+    const c = put(g, new THREE.SphereGeometry(s, 12, 8), M([0xffffff, 0xfdeef2, 0xfff6ec][i % 3], { roughness: 1 }), Math.cos(a) * (d + map.W), -24 + r() * 8, Math.sin(a) * (d + map.L), false);
+    c.scale.y = 0.35;
+  }
+  scene.add(g); mergeStatic(g);
+  // other islands drifting at different heights, each with a tree or a little temple
+  const isles = [];
+  for (let i = 0; i < 14; i++) {
+    const isle = new THREE.Group(), s = 5 + r() * 9;
+    const rock = put(isle, new THREE.ConeGeometry(s, s * 1.6, 7), M(0x8a7a6a, { flatShading: true }), 0, -s * 0.8, 0, false); rock.rotation.x = Math.PI;
+    put(isle, new THREE.CylinderGeometry(s, s * 0.96, 0.8, 7), M(0x8fc46a), 0, 0, 0, false);
+    if (i % 2) { put(isle, new THREE.CylinderGeometry(0.4, 0.5, 3, 6), M(0x7a5a3a), 0, 1.9, 0, false); put(isle, new THREE.SphereGeometry(2.2, 10, 8), M(0xffb7c9), 0, 4.2, 0, false); }
+    else for (let k = 0; k < 4; k++) put(isle, new THREE.CylinderGeometry(0.35, 0.35, 4, 8), M(0xf4f0e8), Math.cos(k * 1.57) * 2, 2.4, Math.sin(k * 1.57) * 2, false);
+    const a = (i / 14) * Math.PI * 2 + r() * 0.3, d = 70 + r() * 120;
+    isle.position.set(Math.cos(a) * (d + map.W), -6 + r() * 28, Math.sin(a) * (d + map.L));
+    isle.userData = { y: isle.position.y, ph: r() * 6 };
+    scene.add(isle); isles.push(isle);
+  }
+  // a hot-air balloon drifting round the island
+  const bal = new THREE.Group();
+  put(bal, new THREE.SphereGeometry(4, 16, 12), M(0xffc93c), 0, 6, 0, false);
+  for (let k = 0; k < 6; k++) { const st = put(bal, new THREE.SphereGeometry(4.05, 16, 12, k * Math.PI / 3, 0.35), M(0xff5a36), 0, 6, 0, false); st.scale.set(1, 1, 1); }
+  put(bal, box(1.6, 1.2, 1.6), M(0x8a6a4a), 0, 0, 0, false);
+  scene.add(bal);
+  return (dt, t) => {
+    for (const s of isles) s.position.y = s.userData.y + Math.sin(t * 0.3 + s.userData.ph) * 1.5;
+    const a = t * 0.03; bal.position.set(Math.cos(a) * (map.W + 70), 30 + Math.sin(t * 0.4) * 2, Math.sin(a) * (map.L + 60));
+  };
+}
+
+// ---------- Tidewater Docks: a harbour town on the edge of a dusky sea ----------
+function docksFar(scene, map, r) {
+  const sea = new THREE.Mesh(new THREE.PlaneGeometry(1400, 1400), new THREE.MeshStandardMaterial({ color: 0x3a6080, roughness: 0.25, metalness: 0.2 }));
+  sea.rotation.x = -Math.PI / 2; sea.position.y = -0.3; scene.add(sea);
+  const quay = new THREE.Mesh(new THREE.PlaneGeometry(map.W * 2 + 30, map.L * 2 + 30), M(0x9a8a70));
+  quay.rotation.x = -Math.PI / 2; quay.position.y = -0.1; scene.add(quay);
+  // a lighthouse out on the rocks, its lamp sweeping round
+  const lh = new THREE.Group();
+  for (let i = 0; i < 6; i++) put(lh, new THREE.CylinderGeometry(2.4 - i * 0.2, 2.6 - i * 0.2, 4, 16), M(i % 2 ? 0xc8453a : 0xffffff), 0, 2 + i * 4, 0);
+  put(lh, new THREE.CylinderGeometry(1.6, 1.6, 2, 12), M(0xffe9a8, { emissive: 0xffd36a, emissiveIntensity: 1.2 }), 0, 25, 0);
+  put(lh, new THREE.ConeGeometry(2, 2, 12), M(0x2a3550), 0, 27, 0);
+  const beam = new THREE.Mesh(new THREE.ConeGeometry(4, 60, 16, 1, true), new THREE.MeshBasicMaterial({ color: 0xfff0c0, transparent: true, opacity: 0.12, depthWrite: false, side: THREE.DoubleSide }));
+  beam.rotation.z = Math.PI / 2; beam.position.x = 30; const pivot = new THREE.Group(); pivot.position.y = 25; pivot.add(beam); lh.add(pivot);
+  for (let k = 0; k < 6; k++) put(lh, new THREE.DodecahedronGeometry(3 + r() * 3, 0), M(0x5a5e66, { flatShading: true }), (r() - 0.5) * 14, 0, (r() - 0.5) * 14, false);
+  lh.position.set(-(map.W + 60), 0, -30); scene.add(lh);
+  // fishing boats bobbing at anchor
+  const boats = [];
+  for (let i = 0; i < 9; i++) {
+    const b = new THREE.Group(), hull = [0x3f7ab8, 0xc8453a, 0x3f9a6a, 0xe8d8b8][i % 4];
+    put(b, box(2.4, 1.2, 7), M(hull), 0, 0.4, 0);
+    put(b, box(2.5, 0.2, 7.1), M(0xffffff), 0, 1.05, 0, false);
+    put(b, box(1.6, 1.4, 2), M(0xf4f0e8), 0, 1.8, 0.8);
+    put(b, new THREE.CylinderGeometry(0.08, 0.08, 5, 6), M(0x5a4030), 0, 3.5, -1.5, false);
+    const [x, z] = outside(map, r, 26, 50);
+    b.position.set(x, 0, z); b.rotation.y = r() * Math.PI * 2; b.userData.ph = r() * 6;
+    scene.add(b); boats.push(b);
+  }
+  return (dt, t) => {
+    pivot.rotation.y = t * 0.6;
+    for (const b of boats) { b.position.y = Math.sin(t * 0.9 + b.userData.ph) * 0.25 - 0.1; b.rotation.z = Math.sin(t * 0.7 + b.userData.ph) * 0.05; }
+  };
+}
+
 export function buildBackdrop(scene, map, theme, r) {
   const g = new THREE.Group(); scene.add(g);
   if (theme === 'desert') { ring(map, r, [5, 9], adobeHouse, g); mergeStatic(g); return desertFar(scene, map, r); }
@@ -403,5 +477,7 @@ export function buildBackdrop(scene, map, theme, r) {
   if (theme === 'canals') { ring(map, r, [4, 6.5], canalHouse, g); mergeStatic(g); return canalsFar(scene, map, r); }
   if (theme === 'alpine') { ring(map, r, [5, 8], chalet, g); mergeStatic(g); return alpineFar(scene, map, r); }
   if (theme === 'neon') { ring(map, r, [4, 8], neonRoof, g); mergeStatic(g); return neonFar(scene, map, r); }
+  if (theme === 'sky') { ring(map, r, [4, 8], ruinWall, g); mergeStatic(g); return skyFar(scene, map, r); }
+  if (theme === 'docks') { ring(map, r, [4, 6.5], canalHouse, g); mergeStatic(g); return docksFar(scene, map, r); }
   ring(map, r, [4, 8], ruinWall, g); mergeStatic(g); return terracesFar(scene, map, r);
 }

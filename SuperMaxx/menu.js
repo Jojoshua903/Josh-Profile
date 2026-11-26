@@ -1,26 +1,28 @@
-import { LOOK, applyEnvironment } from './stage.js?v=20261127a';
-import { masteryOf } from './mastery.js?v=20261127a';
+import { LOOK, applyEnvironment } from './stage.js?v=20261127j';
+import { masteryOf } from './mastery.js?v=20261127j';
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { HEROES, ARCHETYPES, archOf } from './heroes.js?v=20261127a';
-import './personality.js?v=20261127a';
-import { MAPS, DIFFICULTY } from './data.js?v=20261127a';
-import { THEMES } from './scenery.js?v=20261127a';
-import { cfg, save, resetSettings, QUALITY } from './settings.js?v=20261127a';
-import { splash, headshot, mapArt } from './portraits.js?v=20261127a';
-import { initOnline, enterOnline } from './online.js?v=20261127a';
-import { enterSlots } from './slotmachine.js?v=20261127a';
-import { initVault, enterVault, leaveVault, clipCount } from './vault.js?v=20261127a';
-import { tokens as slotTokens } from './slots.js?v=20261127a';
-import { CONTRACTS, contractOf, taskFrac, taskDone, statOf, tasksDone, openContracts, contractsLeft, contractUnlocked, contractDone } from './contracts.js?v=20261127a';
-import { SEASON, TRACK, MAX_TIER, passXp, tierProgress, heroOwned, heroTier, skinOwned, skinTier, skinsFor, dressed, equip, rewardInfo,
-  COS_TYPES, cosById, cosOwned, equippedCos, equipCos, cosArt, lockShort, lockLong, isSlotItem, isContractHero } from './pass.js?v=20261127a';
+import { HEROES, ARCHETYPES, archOf } from './heroes.js?v=20261127j';
+import './personality.js?v=20261127j';
+import { MAPS, DIFFICULTY } from './data.js?v=20261127j';
+import { THEMES } from './scenery.js?v=20261127j';
+import { cfg, save, resetSettings, QUALITY } from './settings.js?v=20261127j';
+import { ACTIONS, FIXED, kb, keyLabel, rebind, resetBinds } from './keys.js?v=20261127j';
+import { splash, headshot, mapArt } from './portraits.js?v=20261127j';
+import { initOnline, enterOnline } from './online.js?v=20261127j';
+import { enterSlots } from './slotmachine.js?v=20261127j';
+import { initVault, enterVault, leaveVault, clipCount } from './vault.js?v=20261127j';
+import { openHub } from './social.js?v=20261127j';
+import { tokens as slotTokens } from './slots.js?v=20261127j';
+import { CONTRACTS, contractOf, taskFrac, taskDone, statOf, tasksDone, openContracts, contractsLeft, contractUnlocked, contractDone } from './contracts.js?v=20261127j';
+import { SEASON, SEASONS, NEXT_SEASON, TRACKS, seasonLive, seasonTier, seasonStartLabel, skinById, TRACK, MAX_TIER, passXp, tierProgress, heroOwned, heroTier, skinOwned, skinTier, skinsFor, dressed, equip, rewardInfo,
+  COS_TYPES, cosById, cosOwned, equippedCos, equipCos, cosArt, lockShort, lockLong, isSlotItem, isContractHero } from './pass.js?v=20261127j';
 
 // Front end: main menu → roster select → stage select → match. Settings overlay on top.
 
 const $ = id => document.getElementById(id);
 const hex = c => '#' + c.toString(16).padStart(6, '0');
 let api = null, screen = 'main', settingsOpen = false, mode = 'lane';
-const MODE_NAME = { lane: 'Lane Breaker', survivor: 'Survivor', hill: 'Hill Rush', cart: 'Payload', potato: 'Hot Potato', online: 'Online' };
+const MODE_NAME = { lane: 'Lane Breaker', survivor: 'Survivor', hill: 'Hill Rush', cart: 'Payload', potato: 'Hot Potato', raid: 'Boss Raid', online: 'Online' };
 function setMode(m) {
   mode = m;
   $('rosterMode').textContent = MODE_NAME[m];
@@ -178,6 +180,7 @@ function go(name) {
   if (name === 'roster') { enterRoster(); requestAnimationFrame(fitKit); }
   if (name === 'stage') enterStage();
   if (name === 'pass') enterPass();
+  if (name === 'seasons') enterSeasons();
   if (name === 'online') enterOnline();
 }
 
@@ -415,13 +418,57 @@ function contractCard(c, compact) {
 function enterContracts() {
   const open = CONTRACTS.filter(c => contractUnlocked(c.hero) && !contractDone(c.hero)), got = CONTRACTS.filter(c => contractDone(c.hero));
   const sealed = CONTRACTS.length - open.length - got.length;
-  $('ctList').innerHTML = (open.length ? open.map(c => contractCard(c)).join('') : '<div class="ct-all">🎉 Every contract is signed. The whole kitchen staff (and one spider) are on the team.</div>')
+  $('ctList').innerHTML = (open.length ? open.map(c => contractCard(c)).join('') : '<div class="ct-all">🎉 Every contract is signed. The whole kitchen staff, one spider and a night owl are on the team.</div>')
     + (got.length || sealed ? `<div class="ct-recruited"><span>Recruited</span>${got.map(c => { const h = HEROES.find(x => x.id === c.hero);
       return `<button data-play="${h.id}" style="--hc:${hex(h.color)}"><img alt="" data-ct="${h.id}"><b>${h.callsign}</b><i>Play ▸</i></button>`; }).join('') || '<em>No one yet. Finish a contract above!</em>'}
       ${sealed ? `<small>✉️ ${sealed} more ${sealed > 1 ? 'heroes are' : 'hero is'} waiting to send a contract</small>` : ''}</div>` : '');
   $('ctList').querySelectorAll('img[data-ct]').forEach((img, k) => setTimeout(() => { img.src = headshot(dressed(HEROES.find(x => x.id === img.dataset.ct))); }, 30 + k * 60));
 }
 
+// ---------- seasons: the name on the pass, the countdown to the next one, and the hall of fame ----------
+document.body.dataset.season = SEASON.n;
+const seasonTitle = s => `Season ${s.n} · ${s.name}`;
+function untilLabel(s) {
+  const ms = s.start - Date.now();
+  if (ms <= 0) return 'now';
+  const d = Math.floor(ms / 864e5), h = Math.floor(ms % 864e5 / 36e5), m = Math.ceil(ms % 36e5 / 6e4);
+  return d ? `${d}d ${h}h` : h ? `${h}h ${m}m` : `${m}m`;
+}
+function refreshSeasonText() {
+  $('pcSeason').textContent = `${seasonTitle(SEASON)} Pass`;
+  $('passName').textContent = `${SEASON.name} Pass`;
+  const N = NEXT_SEASON, soon = !!N && N.start > Date.now();
+  $('pcSoon').classList.toggle('hidden', !soon);
+  $('passSoon').classList.toggle('hidden', !soon);
+  if (!soon) return;
+  $('pcSoon').textContent = `${N.icon} Season ${N.n} in ${untilLabel(N)}`;
+  $('passSoon').innerHTML = `<span style="font-size:22px">${N.icon}</span><span><b>${seasonTitle(N)}</b> opens ${seasonStartLabel(N)} (in ${untilLabel(N)}). ${N.blurb} Everything you earn here stays yours.</span>`;
+}
+setInterval(() => { if (screen === 'main' || screen === 'pass') refreshSeasonText(); }, 30000);
+// what a finished (or not yet started) season's rewards look like as little chips
+function rewardChip(r, got) {
+  if (r.type === 'hero') { const h = ALL_HEROES.find(x => x.id === r.id); return `<span class="${got ? '' : 'off'}"><img src="${headshot(h)}" alt="" style="--hc:${hex(h.color)}">${h.callsign}</span>`; }
+  const s = skinById(r.id); if (!s) return '';
+  const h = ALL_HEROES.find(x => x.id === s.hero);
+  return `<span class="${got ? '' : 'off'}"><i style="--hc:${hex(s.color)}"></i>${s.name}${h ? ` · ${h.callsign}` : ''}</span>`;
+}
+function enterSeasons() {
+  const past = SEASONS.filter(s => seasonLive(s) && s.n < SEASON.n).reverse();
+  const N = NEXT_SEASON && NEXT_SEASON.start > Date.now() ? NEXT_SEASON : null;
+  if (!past.length && !N) return;                                        // keep the "nothing yet" card
+  const soon = N ? `<div class="ps-card soon"><div class="ps-head"><span class="ps-ico">${N.icon}</span><div><h3>${seasonTitle(N)}</h3>
+      <small>Opens ${seasonStartLabel(N)} · in ${untilLabel(N)}</small></div></div>
+      <div class="ps-note">${N.blurb} ${SEASON.name} rewards stay yours when it starts, and its tier is kept here.</div>
+      <div class="ps-got">${TRACKS[N.n].filter(r => r.type === 'hero').map(r => rewardChip(r, false)).join('')}</div></div>` : '';
+  const cards = past.map(s => {
+    const t = seasonTier(s.n), track = TRACKS[s.n].filter(r => !r.cos), got = track.filter(r => r.tier <= t);
+    return `<div class="ps-card"><div class="ps-head"><span class="ps-ico">${s.icon}</span><div><h3>${seasonTitle(s)}</h3>
+      <small>${got.length} of ${track.length} rewards earned</small></div><div class="ps-final"><small>Final tier</small><b>${t}</b></div></div>
+      <div class="ps-got">${track.map(r => rewardChip(r, r.tier <= t)).join('')}</div>
+      <div class="ps-note">This season is over. Everything you earned is still yours to use.</div></div>`;
+  }).join('');
+  $('psBody').innerHTML = `<div class="ps-list">${soon}${cards}</div>`;
+}
 // ---------- season pass ----------
 function passSummary() {
   const pr = tierProgress(), next = TRACK.find(r => r.tier > pr.tier);      // skip over open tiers to the next real reward
@@ -429,6 +476,7 @@ function passSummary() {
 }
 function refreshPassCard() {
   const { pr, info } = passSummary();
+  refreshSeasonText();
   $('pcTier').textContent = pr.tier;
   $('pcBar').style.width = (pr.frac * 100) + '%';
   $('pcNext').textContent = info ? `Next: ${info.title} · ${info.sub}` : 'Pass complete. Every reward unlocked!';
@@ -436,6 +484,7 @@ function refreshPassCard() {
 function enterPass(keepScroll) {
   const { pr, next, info } = passSummary();
   $('passSeason').textContent = `Season ${SEASON.n}`;
+  refreshSeasonText();
   $('pTier').textContent = pr.tier; $('pMax').textContent = `of ${MAX_TIER}`;
   $('pBar').style.width = '0%'; requestAnimationFrame(() => { $('pBar').style.width = (pr.frac * 100) + '%'; });
   $('pXp').textContent = pr.tier >= MAX_TIER ? `${passXp()} XP · maxed` : `${pr.into} / ${pr.need} XP to tier ${pr.tier + 1}`;
@@ -493,6 +542,7 @@ const modeChip = m => {
   if (mode === 'hill') { const spots = new Set(m.hills.map(p => p.join())).size; return `${spots} hill spot${spots > 1 ? 's' : ''} ·${m.lanesLabel.split('·')[1]}`; }
   if (mode === 'cart') return `1 cart track ·${m.lanesLabel.split('·')[1]}`;
   if (mode === 'potato') return `one bomb, 3v3 ·${m.lanesLabel.split('·')[1]}`;
+  if (mode === 'raid') return `1 boss, 3 heroes ·${m.lanesLabel.split('·')[1]}`;
   return m.lanesLabel;
 };
 function enterStage() {
@@ -558,11 +608,9 @@ const SCHEMA = [
     { key: 'music', label: 'Music', hint: 'Menu and stage soundtracks', type: 'range', min: 0, max: 1, step: 0.05, fmt: v => Math.round(v * 100) + '%' },
     { key: 'sfx', label: 'Sound effects', hint: 'Shots, abilities and hits', type: 'range', min: 0, max: 1, step: 0.05, fmt: v => Math.round(v * 100) + '%' },
   ] },
-  { id: 'keys', group: 'Key guide', icon: '⌨️', blurb: 'What every key does', items: [] },
+  { id: 'keys', group: 'Controls', icon: '⌨️', blurb: 'Change any key', items: [] },
 ];
-const KEYS = [['WASD', 'Move'], ['Mouse', 'Aim'], ['LMB', 'Fire'], ['Space', 'Jump'], ['Shift', 'Sprint'], ['Q', 'Ability 1'], ['E', 'Ability 2'], ['F', 'Ultimate'],
-  ['R', 'Reload'], ['T', 'Spray'], ['B', 'Emote wheel (hold)'], ['Tab', 'Scoreboard'], ['Esc', 'Pause'], ['F3', 'Performance']];
-let setTab = 'game', savedT = 0, resetArm = 0;
+let setTab = 'game', savedT = 0, resetArm = 0, capturing = null;     // capturing: the action waiting for a new key
 const rangeFill = (it, v) => ((v - it.min) / (it.max - it.min) * 100).toFixed(1) + '%';
 
 function renderSettings() {
@@ -575,7 +623,10 @@ function renderSettings() {
     return `<div class="srow">${lab}<div class="rng"><input type="range" data-key="${it.key}" min="${it.min}" max="${it.max}" step="${it.step}" value="${v}" style="--p:${rangeFill(it, +v)}"><output>${it.fmt(+v)}</output></div></div>`;
   };
   $('setGrid').innerHTML = `<h3><i>${s.icon}</i>${s.group}</h3>` + (s.id === 'keys'
-    ? `<div class="keygrid">${KEYS.map(([k, l]) => `<div><kbd>${k}</kbd><span>${l}</span></div>`).join('')}</div>`
+    ? `<p class="kb-hint">Click a key, then press the new one. Esc cancels. Taking a key another action uses swaps the two.</p>
+      <div class="kbgrid">${ACTIONS.map(a => `<div class="kbrow"><span>${a.label}</span><button data-bind="${a.id}" class="${capturing === a.id ? 'cap' : kb(a.id) !== a.def ? 'changed' : ''}">${capturing === a.id ? 'Press a key…' : keyLabel(kb(a.id))}</button></div>`).join('')}
+        ${FIXED.map(([k, l]) => `<div class="kbrow fixed"><span>${l}</span><kbd>${k}</kbd></div>`).join('')}</div>
+      <button class="ghost kb-reset" data-bindreset>↺ Reset keys</button>`
     : `<div class="srows">${s.items.map(row).join('')}</div>`);
 }
 function setSetting(key, val) {
@@ -589,7 +640,7 @@ export function openSettings() {
   $('settings').classList.remove('hidden');
 }
 function closeSettings() {
-  settingsOpen = false; $('settings').classList.add('hidden');
+  settingsOpen = false; capturing = null; $('settings').classList.add('hidden');
   api?.onSettingsClosed?.();
 }
 export const settingsVisible = () => settingsOpen;
@@ -602,9 +653,11 @@ export function initMenu(opts) {
   $('modeHill').onclick = () => { setMode('hill'); go('roster'); };
   $('modeCart').onclick = () => { setMode('cart'); go('roster'); };
   $('modePotato').onclick = () => { setMode('potato'); go('roster'); };
+  $('modeRaid').onclick = () => { setMode('raid'); go('roster'); };
   $('modeTut').onclick = () => { api?.blip?.(880); $('front').classList.add('hidden'); api.onStart('tutorial'); };
   $('modeTut').classList.toggle('fresh', !cfg.tutorialDone);
   $('modeOnline').onclick = () => go('online');
+  $('modeAccount').onclick = () => { api?.blip?.(760); openHub(); };
   $('modeSeasons').onclick = () => { api?.blip?.(760); go('seasons'); };
   $('modeSlots').onclick = () => { api?.blip?.(760); go('slots'); };
   $('modeContracts').onclick = () => { api?.blip?.(760); go('contracts'); };
@@ -658,6 +711,9 @@ export function initMenu(opts) {
     setTab = b.dataset.stab; api?.blip?.(640); renderSettings();
   });
   $('setGrid').addEventListener('click', e => {
+    const bd = e.target.closest('[data-bind]');
+    if (bd) { capturing = capturing === bd.dataset.bind ? null : bd.dataset.bind; api?.blip?.(640); renderSettings(); return; }
+    if (e.target.closest('[data-bindreset]')) { resetBinds(); capturing = null; api?.blip?.(420); renderSettings(); return; }
     const b = e.target.closest('button[data-key]'); if (!b) return;
     e.preventDefault();
     if (b.dataset.type === 'toggle') setSetting(b.dataset.key, !cfg[b.dataset.key]);
@@ -683,6 +739,11 @@ export function initMenu(opts) {
     setSetting('diff', cfg.diff);
   };
   addEventListener('keydown', e => {
+    if (settingsOpen && capturing) {                // waiting for a new key: this press is it
+      e.preventDefault(); e.stopImmediatePropagation();
+      if (e.code !== 'Escape' && !rebind(capturing, e.code)) { api?.blip?.(160); return; }
+      capturing = null; api?.blip?.(880); renderSettings(); return;
+    }
     if (settingsOpen && e.code === 'Escape') { closeSettings(); return; }
     if ($('front').classList.contains('hidden') || settingsOpen) return;
     if (screen === 'roster') {

@@ -1,5 +1,5 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { poseEmote, stopEmote } from './emotes.js?v=20261127a';
+import { poseEmote, stopEmote } from './emotes.js?v=20261127j';
 
 // Shared animation layer on top of each model's own idle/walk: jump pose, recoil, cast,
 // flinch, stun wobble, status markers, spawn pop and death fall. Plus floating numbers.

@@ -78,3 +78,21 @@ rooms/{CODE}/match/{n}/hill        hill score and position (host)
 - Some movement abilities (Avalanche's bobsled and slam) don't push other players yet.
 - No anti-cheat: shooter-authoritative damage trusts clients. Fine for friends, not for public matchmaking.
 - The starter rules let any signed-in player write to any room. Tighten them before going public.
+
+## Accounts (cross-device progress)
+
+Players can log in with an email and password from the 👤 button on the main menu. Their progress
+(settings, unlocks, pass, mastery, contracts, slots) is saved to `users/{uid}/save` and synced to any
+device they log in on. Two one-time console steps:
+
+1. **Authentication → Sign-in method → Email/Password → Enable** (keep Anonymous on too, for guests).
+2. **Realtime Database → Rules**: paste the new `database.rules.json` (it adds the `users` section) and press **Publish**.
+
+Clips stay on the device that recorded them.
+
+## Friends, profile cards and invites
+
+Signed-in players get a 6-character friend code (`codes/{CODE}`), a public profile at `profiles/{uid}`
+(name, player card, online status, current room), a private friend list at `users/{uid}/friends`, and
+inboxes for friend requests (`requests/{uid}`) and room invites (`invites/{uid}`). The updated
+`database.rules.json` covers all of these: paste it into Realtime Database → Rules and press **Publish**.

@@ -1,8 +1,8 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { buildHeroModel } from './models.js?v=20261127a';
-import { buildWorld } from './world.js?v=20261127a';
-import { createStructure } from './units.js?v=20261127a';
-import { HEROES } from './heroes.js?v=20261127a';
+import { buildHeroModel } from './models.js?v=20261127j';
+import { buildWorld } from './world.js?v=20261127j';
+import { createStructure } from './units.js?v=20261127j';
+import { HEROES } from './heroes.js?v=20261127j';
 
 // Menu artwork, generated once and cached as data URLs: hero splash art (themed
 // painted backdrop + a posed render of the model), headshot tiles, and map previews.
@@ -48,6 +48,10 @@ const POSE = {
   microwave: { turn: 0.5, arm: -1.1, lean: 0, cam: [-1.5, 0.45, -3.8] },
   chef: { turn: 0.45, arm: -1.1, lean: -0.03, cam: [-1.4, 0.75, -3.8] },
   manspider: { turn: -0.5, arm: -1.0, lean: 0.02, cam: [-1.6, 0.4, -3.9] },
+  pinball: { turn: 0.5, arm: -1.2, lean: 0.05, cam: [-1.3, 0.7, -3.6], hop: 0.08 },
+  clawbot: { turn: -0.4, arm: -1.0, lean: 0, cam: [-1.6, 0.6, -4.0] },
+  pixel: { turn: 0.45, arm: -1.4, lean: 0.04, cam: [-1.3, 0.7, -3.7] },
+  owl: { turn: -0.45, arm: -1.2, lean: 0.05, cam: [-1.4, 0.75, -3.8], hop: 0.06 },
 };
 
 function heroScene(def, t = 0.6) {

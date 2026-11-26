@@ -1,7 +1,7 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { makeBox, resolveXZ, hasLOS, groundAt, rayWorld } from './world.js?v=20261127a';
-import { buildHeroModel } from './models.js?v=20261127a';
-import { damage, trace, tracer, burst, ring, setBar, makeBar, eyeOf, dirFrom, chestOf, spawnProjectile, TEAM_COLOR } from './units.js?v=20261127a';
+import { makeBox, resolveXZ, hasLOS, groundAt, rayWorld } from './world.js?v=20261127j';
+import { buildHeroModel } from './models.js?v=20261127j';
+import { damage, trace, tracer, burst, ring, setBar, makeBar, eyeOf, dirFrom, chestOf, spawnProjectile, TEAM_COLOR } from './units.js?v=20261127j';
 
 // Abilities, status effects, zones, traps, walls and deployables.
 // Each ability: cast(G, h, a, ctx) -> bool, ai(G, bot, a, ctx) -> bool (should the bot cast now?).
@@ -15,17 +15,18 @@ const flat = d => new THREE.Vector3(d.x, 0, d.z).normalize();
 export function resetStatus(h) {
   Object.assign(h, { slowT: 0, slowM: 1, stunT: 0, rootT: 0, hasteT: 0, hasteSpeed: 1, hasteFire: 1, markT: 0, markAmp: 1, lurkT: 0, rushT: 0, rallyT: 0, rallyAmp: 1, jamT: 0, grabbed: null,
     invisT: 0, ambush: 1, barrierT: 0, barrierM: 1, noReloadT: 0, knockT: 0, dashT: 0, slamPending: false, airT: 0,
-    zoneSlow: 1, zoneMult: 1, glideT: 0, momentum: 0, overdriveT: 0, megaT: 0, burnT: 0, ejected: false, photoOn: false, tunnelCd: 0, twirlT: 0, vigilT: 0, dashSteer: false, blindT: 0, frozenT: 0 });
+    zoneSlow: 1, zoneMult: 1, glideT: 0, momentum: 0, overdriveT: 0, megaT: 0, burnT: 0, ejected: false, photoOn: false, tunnelCd: 0, twirlT: 0, vigilT: 0, dashSteer: false, blindT: 0, frozenT: 0, oneUpT: 0, scoreStacks: 0, wing: 100, flapT: 0, diving: false, diveT: 0 });
   if (h.iceMesh) { h.iceMesh.parent?.remove(h.iceMesh); h.iceMesh = null; }
   h.cd = { q: 0, ability: 0 };
   h.hist = []; h.histT = 0;
 }
 export const canAct = h => h.stunT <= 0 && !(h.lurkT > 0);   // no shooting or casting while lurking in the mud
 export const canMove = h => h.stunT <= 0 && h.rootT <= 0;
-export const moveMult = h => (pasId(h) === 'snowboots' ? 1 : (h.slowT > 0 ? h.slowM : 1) * h.zoneSlow) * (h.hasteT > 0 ? h.hasteSpeed : 1);
+export const moveMult = h => (pasId(h) === "snowboots" ? 1 : (h.slowT > 0 ? h.slowM : 1) * h.zoneSlow * (h.wet || 1)) * (h.hasteT > 0 ? h.hasteSpeed : 1);   // wet: wading at high tide
 export const fireMult = h => (h.hasteT > 0 ? h.hasteFire : 1);
 export function takenMult(h) {
-  return (h.barrierT > 0 ? h.barrierM : 1) * h.zoneMult * (h.markT > 0 ? h.markAmp : 1) * (h.lurkT > 0 ? 0.15 : 1) * passiveTaken(h);
+  return (h.barrierT > 0 ? h.barrierM : 1) * h.zoneMult * (h.markT > 0 ? h.markAmp : 1) * (h.lurkT > 0 ? 0.15 : 1) * passiveTaken(h)
+    * (h.campT > 0 ? 0.9 : 1);                                    // Golem's Might from the neutral camp (camp.js)
 }
 export const isHidden = h => h.invisT > 0;
 
@@ -43,7 +44,7 @@ export function breakInvis(h) { if (h.invisT > 0) { h.invisT = 0; } }
 
 export function tickStatus(G, h, dt) {
   tickPassive(G, h, dt);
-  for (const k of ['slowT', 'stunT', 'rootT', 'hasteT', 'markT', 'invisT', 'barrierT', 'noReloadT', 'knockT', 'rushT', 'rallyT', 'jamT', 'overdriveT', 'megaT', 'tunnelCd', 'vigilT', 'blindT', 'frozenT']) if (h[k] > 0) h[k] -= dt;
+  for (const k of ['slowT', 'stunT', 'rootT', 'hasteT', 'markT', 'invisT', 'barrierT', 'noReloadT', 'knockT', 'rushT', 'rallyT', 'jamT', 'overdriveT', 'megaT', 'tunnelCd', 'vigilT', 'blindT', 'frozenT', 'oneUpT', 'campT']) if (h[k] > 0) h[k] -= dt;
   // Torque: moving fills momentum, standing around drains it; Overdrive keeps it full
   const mw = h.def.weapon;
   if (mw.mode === 'melee') {
@@ -60,6 +61,13 @@ export function tickStatus(G, h, dt) {
     if (h.vel.y < -2.5) h.vel.y = -2.5;
     if (h.onGround && h.vel.y <= 0 && h.airT === 0) h.glideT = 0;
   }
+  // Hoot's Night Flight: wings refill on the ground; the dive ends on landing or after a moment
+  if (pasId(h) === 'nightflight') {
+    if (h.onGround) h.wing = Math.min(100, h.wing + h.def.passive.refill * dt);
+    h.flapT -= dt;
+    if (h.model) h.model.flying = !h.onGround && !h.climbing;
+  }
+  if (h.diving && (h.diveT -= dt) <= 0) { h.diving = false; h.knockT = 0; }
   // rewind keeps ~3s of breadcrumbs
   if (h.def.ability.id === 'rewind') {
     h.histT -= dt;
@@ -122,8 +130,35 @@ export function afterMove(G, h, dt) {
   if (!h.onGround) h.airT += dt;
   else {
     if (h.slamPending && h.airT > 0.25) slamLand(G, h);
+    if (h.diving && h.airT > 0.15) diveLand(G, h);
     h.airT = 0;
   }
+}
+
+// Hoot holding Jump in the air: flap upwards while there's wing stamina (up to a ceiling so he
+// can't hover out of reach for ever), otherwise glide down slowly. Called from steer().
+export function flap(h, dt) {
+  if (pasId(h) !== 'nightflight' || h.onGround || !h.alive) return;
+  const p = h.def.passive;
+  if (h.wing > 0 && h.pos.y < p.ceiling) {
+    h.vel.y = Math.min(p.lift, h.vel.y + 34 * dt);
+    h.wing = Math.max(0, h.wing - p.drain * dt);
+    h.flapT = 0.2;
+  } else if (h.vel.y < -2.5) h.vel.y = -2.5;
+}
+// Talon Dive hitting the ground
+function diveLand(G, h) {
+  const a = h.def.q;
+  h.diving = false; h.diveT = 0; h.knockT = 0;
+  ring(G, h.pos, 0xe0a85a, a.radius); ring(G, h.pos, 0xfff0d0, a.radius * 0.6);
+  burst(G, h.pos.clone().setY(h.pos.y + 0.5), 0xfff0d0, a.radius * 0.6);
+  for (const u of [...enemiesOf(G, h), ...G.minions.filter(m => m.alive && m.team !== h.team && !m.deploy)]) {
+    const d = u.pos.distanceTo(h.pos);
+    if (d > a.radius) continue;
+    damage(G, u, a.dmg * (1 - 0.35 * d / a.radius), h);
+    knock(u, flat(v.subVectors(u.pos, h.pos).setY(0.001)), a.knock, 5);
+  }
+  G.ev.shake?.(h, 0.5);
 }
 
 // Man-Spider's Wall Crawler: walking into a wall carries him straight up it. Runs before the
@@ -151,6 +186,7 @@ const ZONE_LOOK = {
   dome: { color: 0x5fe0c0, dome: true }, sanctum: { color: 0xffe08a }, overgrowth: { color: 0x5fb05a },
   frost: { color: 0xbfeaff }, trap: { color: 0x8a5a3c }, nova: { color: 0xff8a3c }, vortex: { color: 0xff4fa3 },
   banner: { color: 0xffe08a }, goo: { color: 0x7ee85a }, stage: { color: 0xff8fc0 }, pylon: { color: 0xffe14a }, fort: { color: 0xff8a2a }, pen: { color: 0x8a5a3a }, heat: { color: 0xffb35a }, web: { color: 0xe8e8ff }, gravy: { color: 0x9a5a28 },
+  bumper: { color: 0xff3fa4 }, claw: { color: 0xffd23c }, capsule: { color: 0x3fd8ff, dome: true },
 };
 function zoneMesh(G, kind, pos, radius) {
   const look = ZONE_LOOK[kind];
@@ -164,7 +200,7 @@ function zoneMesh(G, kind, pos, radius) {
     g.add(d);
   }
   const bits = [];
-  const n = kind === 'trap' || kind === 'banner' || kind === 'fort' || kind === 'pen' || kind === 'web' ? 0 : Math.round(radius * 3);
+  const n = kind === 'trap' || kind === 'banner' || kind === 'fort' || kind === 'pen' || kind === 'web' || kind === 'bumper' || kind === 'claw' || kind === 'capsule' ? 0 : Math.round(radius * 3);
   for (let i = 0; i < n; i++) {
     let m;
     if (kind === 'overgrowth') m = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.9, 5), new THREE.MeshStandardMaterial({ color: i % 4 ? 0x4f9a48 : 0xff5f8f }));
@@ -209,6 +245,25 @@ function zoneMesh(G, kind, pos, radius) {
     const silk = new THREE.MeshBasicMaterial({ color: 0xf4f4ff, transparent: true, opacity: 0.85, depthWrite: false });
     for (let i = 0; i < 12; i++) { const s = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, radius), silk); const a = i / 12 * Math.PI; s.rotation.y = a; s.scale.z = 2; s.position.y = 0.1; g.add(s); }
     for (let k = 1; k <= 4; k++) { const r = new THREE.Mesh(new THREE.TorusGeometry(radius * k / 4.4, 0.025, 4, 12), silk); r.rotation.x = Math.PI / 2; r.position.y = 0.1; g.add(r); }
+  }
+  if (kind === 'bumper') {                                 // Tilt's bumper: a chunky pinball bumper with a glowing cap
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.75, radius * 0.85, 0.5, 20), new THREE.MeshStandardMaterial({ color: 0x2a1040, roughness: 0.4 }));
+    base.position.y = 0.25; g.add(base);
+    const skirt = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.6, radius * 0.7, 0.7, 20), new THREE.MeshStandardMaterial({ color: 0xff3fa4, emissive: 0xff3fa4, emissiveIntensity: 0.5 }));
+    skirt.position.y = 0.85; g.add(skirt);
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.72, radius * 0.6, 0.3, 20), new THREE.MeshStandardMaterial({ color: 0x7af0ff, emissive: 0x7af0ff, emissiveIntensity: 0.9 }));
+    cap.position.y = 1.35; cap.name = 'cap'; g.add(cap);
+    const star = new THREE.Mesh(new THREE.OctahedronGeometry(0.28, 0), new THREE.MeshBasicMaterial({ color: 0xffd23c }));
+    star.position.y = 1.75; star.name = 'star'; g.add(star);
+  }
+  if (kind === 'claw') {                                   // Grabbit's claw: three prongs hanging over the spot
+    const steel = new THREE.MeshStandardMaterial({ color: 0xd8dee8, metalness: 0.7, roughness: 0.25 });
+    const hub = new THREE.Mesh(new THREE.SphereGeometry(0.35 * Math.max(1, radius / 2.6), 12, 10), steel); hub.position.y = 3; hub.name = 'hub'; g.add(hub);
+    for (let i = 0; i < 3; i++) {
+      const a = i / 3 * Math.PI * 2, prong = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.1, 1.4 * Math.max(1, radius / 2.6), 6), steel);
+      prong.position.set(Math.cos(a) * 0.45, -0.6, Math.sin(a) * 0.45); prong.rotation.z = Math.cos(a) * 0.5; prong.rotation.x = -Math.sin(a) * 0.5;
+      hub.add(prong);
+    }
   }
   if (kind === 'pylon') {                                  // Dynamo's pylon: a post with a crackling battery on top
     const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.14, 1.6, 8), new THREE.MeshStandardMaterial({ color: 0x2b2d4f, roughness: 0.5 }));
@@ -273,6 +328,8 @@ export function updateAbilities(G, dt) {
     z.bits.forEach(b => { b.position.y = 0.2 + Math.abs(Math.sin(G.time * 2 + b.userData.p)) * (z.kind === 'sanctum' ? 2 : 0.25); b.rotation.y += dt; });
     z.disc.material.opacity = 0.25 * k;
     if (z.kind === 'vortex') z.g.rotation.y += dt * 3.5;
+    if (z.kind === 'bumper') { const c = z.g.getObjectByName('cap'), s = z.g.getObjectByName('star'); if (s) s.rotation.y += dt * 4; if (c) c.scale.y += (1 - c.scale.y) * Math.min(1, dt * 10); }
+    if (z.kind === 'claw') { const hub = z.g.getObjectByName('hub'); if (hub) hub.position.y = 0.6 + 2.6 * Math.max(0, z.life - 0.15) / Math.max(0.01, z.max - 0.15); }
     if (z.follow) { if (z.follow.alive) { z.pos.copy(z.follow.pos); z.g.position.copy(z.pos); } else z.life = 0; }    // Reheat rides along with the Microwave
     if (z.vel) {                                                  // Gravy Train rolls forward, stopping at walls
       const nx = z.pos.x + z.vel.x * dt, nz = z.pos.z + z.vel.z * dt, t = v.set(nx, z.pos.y + 0.5, nz);
@@ -302,6 +359,12 @@ export function updateAbilities(G, dt) {
       if (ally && z.haste && u.kind === 'hero') haste(u, 0.25, z.haste);
       if (ally && z.boost && u.kind === 'hero') mend(G, z.owner, u, 0, z.boost * dt);
       if (!ally && z.dps) damage(G, u, z.dps * dt, z.owner);
+      if (!ally && z.bump && G.time - (z.bumped.get(u) || -9) > 0.7) {      // Tilt's bumper: boing!
+        z.bumped.set(u, G.time); damage(G, u, z.bump.dmg, z.owner);
+        knock(u, flat(v.set(u.pos.x - z.pos.x, 0.001, u.pos.z - z.pos.z)), z.bump.knock, 6);
+        burst(G, chestOf(u), 0xff3fa4, 0.9); const c = z.g.getObjectByName('cap'); if (c) c.scale.y = 1.8;
+        G.ev.bump?.(z.pos);
+      }
       if (!ally && z.slow && u.kind === 'hero') u.zoneSlow = Math.min(u.zoneSlow, z.slow);
       if (!ally && z.pull) {                                    // mosh pit: drag toward the middle
         const dx = z.pos.x - u.pos.x, dz = z.pos.z - u.pos.z, d = Math.hypot(dx, dz);
@@ -1562,6 +1625,191 @@ export const ABIL = {
     },
     ai: (G, b, a, c) => c.heroT && c.dist < 26,
   },
+
+  // ---- Hoot (contract) ----
+  talondive: {
+    // swoop at the aim point talons-first; landing does the damage (see diveLand)
+    cast(G, h, a, ctx) {
+      if (h.knockT > 0 || h.dashT > 0) return false;
+      const p = aimPoint(G, h, ctx, a.range), d = v.subVectors(p, h.pos);
+      if (h.onGround) { const f = flat(d); h.vel.set(f.x * 13, 11, f.z * 13); }    // hop up and pounce
+      else { d.normalize(); d.y = Math.min(d.y, -0.35); d.normalize(); h.vel.copy(d).multiplyScalar(a.speed); }
+      h.onGround = false; h.diving = true; h.diveT = 1.6; h.knockT = 1.6;
+      burst(G, chestOf(h), 0xfff0d0, 1);
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist < 16,
+  },
+  screech: {
+    cast(G, h, a) {
+      const f = dirFrom(h.yaw, 0), o = chestOf(h);
+      for (let k = 1; k <= 4; k++) ring(G, h.pos.clone().addScaledVector(f, k * a.range / 4.5), 0xfff0d0, 0.8 + k * 0.7);
+      for (const u of [...enemiesOf(G, h), ...G.minions.filter(m => m.alive && m.team !== h.team && !m.deploy)]) {
+        const to = v.subVectors(u.pos, h.pos); to.y = 0;
+        const d = to.length(); if (d > a.range || (d > 1 && to.normalize().dot(f) < 0.5)) continue;
+        slow(u, a.slow, a.dur);
+        if (u.kind !== 'hero') continue;
+        if (u.invisT > 0) breakInvis(u);
+        if (hasLOS(o, chestOf(u), G.colliders)) { u.blindT = Math.max(u.blindT || 0, a.blind); if (u.ai) u.ai.tgt = null; G.ev.flash?.(u, 'Screeched!'); }
+      }
+      G.ev.shake?.(h, 0.2);
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist < 12,
+  },
+  featherstorm: {
+    cast(G, h, a, ctx) {
+      const p = aimPoint(G, h, ctx, a.range), step = 0.25;
+      h.wing = 100;
+      ring(G, p, 0xe0a85a, a.radius); burst(G, p.clone().setY(p.y + 1.5), 0xfff0d0, a.radius * 0.5);
+      for (let k = 1; k <= a.dur / step; k++) G.timers.push({ t: k * step, fn: () => {
+        for (let i = 0; i < 3; i++) { const ang = Math.random() * Math.PI * 2, r = Math.random() * a.radius;
+          burst(G, new THREE.Vector3(p.x + Math.cos(ang) * r, p.y + 0.5 + Math.random() * 3, p.z + Math.sin(ang) * r), i ? 0xfff0d0 : 0xc8915a, 0.6); }
+        if (k % 4 === 0) ring(G, p, 0xfff0d0, a.radius);
+        for (const u of [...enemiesOf(G, h), ...G.minions.filter(m => m.alive && m.team !== h.team && !m.deploy)]) {
+          if (Math.hypot(u.pos.x - p.x, u.pos.z - p.z) > a.radius) continue;
+          damage(G, u, a.dps * step, h);
+          if (u.kind === 'hero' && u.alive && k % 4 === 1) knock(u, flat(new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5)), 3, a.lift);
+        }
+      } });
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist < 30 && c.near(7) >= 1.5,
+  },
+
+  // ---- Tilt (Season 2) ----
+  flipper: {
+    // a big flipper swings out in front: everything in the arc gets launched
+    cast(G, h, a) {
+      const f = dirFrom(h.yaw, 0);
+      const mid = h.pos.clone().addScaledVector(f, a.range * 0.55).setY(h.pos.y + 0.4);
+      burst(G, mid, 0xff3fa4, a.range * 0.45); ring(G, mid, 0x7af0ff, a.range * 0.6);
+      for (const u of [...enemiesOf(G, h), ...G.minions.filter(m => m.alive && m.team !== h.team && !m.deploy)]) {
+        const to = v.subVectors(u.pos, h.pos); to.y = 0;
+        const d = to.length(); if (d > a.range || d < 0.01 || to.normalize().dot(f) < 0.35) continue;
+        damage(G, u, a.dmg, h); knock(u, flat(f.clone().add(to).setY(0.001)), a.knock, a.up);
+        burst(G, chestOf(u), 0xffd23c, 0.8);
+      }
+      G.ev.shake?.(h, 0.25);
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist < a.range,
+  },
+  bumper: {
+    cast(G, h, a, ctx) {
+      const p = aimPoint(G, h, ctx, a.range);
+      addZone(G, { kind: 'bumper', pos: p, radius: a.radius, life: a.life, team: h.team, owner: h, bump: { dmg: a.dmg, knock: a.knock }, bumped: new Map() });
+      ring(G, p, 0xff3fa4, a.radius); burst(G, p.clone().setY(p.y + 0.6), 0x7af0ff, 1.2);
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist < 14,
+  },
+  jackpot: {
+    // multiball: steel balls in every direction, each bouncing up to five times
+    cast(G, h, a) {
+      const o = eyeOf(h);
+      for (let i = 0; i < a.n; i++) {
+        const ang = i / a.n * Math.PI * 2 + Math.random() * 0.2, up = 0.15 + Math.random() * 0.35;
+        const d = new THREE.Vector3(Math.cos(ang), up, Math.sin(ang)).normalize();
+        spawnProjectile(G, h, o.clone().addScaledVector(d, 0.7), d.multiplyScalar(34 + Math.random() * 8),
+          { ...h.def.weapon, dmg: a.dmg, bounce: 5, maxRange: 140, trail: true, size: 0.2 });
+      }
+      ring(G, h.pos, 0xff3fa4, 5); ring(G, h.pos, 0x7af0ff, 8); burst(G, chestOf(h), 0xffd23c, 2);
+      G.ev.shake?.(h, 0.4);
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist < 16,
+  },
+
+  // ---- Grabbit (Season 2) ----
+  claw: {
+    // a claw drops from above, grabs the first enemy under it and drags them in
+    cast(G, h, a, ctx) {
+      const p = aimPoint(G, h, ctx, a.range);
+      addZone(G, { kind: 'claw', pos: p, radius: a.radius, life: a.delay + 0.15, team: h.team, owner: h });
+      tracer(G, p.clone().setY(p.y + 14), p.clone().setY(p.y + 1), 0xd8dee8, a.delay, 2);
+      G.timers.push({ t: a.delay, fn: () => {
+        if (!h.alive) return;
+        const u = [...enemiesOf(G, h), ...G.minions.filter(m => m.alive && m.team !== h.team && !m.deploy)]
+          .filter(x => Math.hypot(x.pos.x - p.x, x.pos.z - p.z) < a.radius).sort((x, y) => x.pos.distanceTo(p) - y.pos.distanceTo(p))[0];
+        burst(G, p.clone().setY(p.y + 0.8), 0xffd23c, 1.2);
+        if (!u) return;
+        damage(G, u, a.dmg, h); stun(u, a.stun);
+        const back = flat(v.subVectors(h.pos, u.pos)), dist = u.pos.distanceTo(h.pos);
+        knock(u, back, Math.min(26, dist * 1.7), 6);
+        tracer(G, chestOf(u), chestOf(h), 0xd8dee8, 0.4, 2);
+        prizeTag(G, h, u);
+        if (u.kind === 'hero') G.ev.flash?.(u, 'Grabbed!');
+      } });
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist > 6 && c.dist < a.range - 2,
+  },
+  capsule: {
+    cast(G, h, a) {
+      protect(h, a.mult, a.dur); mend(G, h, h, a.heal);
+      addZone(G, { kind: 'capsule', pos: h.pos.clone(), radius: 1.2, life: a.dur, team: h.team, owner: h, follow: h });
+      burst(G, chestOf(h), 0x3fd8ff, 1.4);
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && b.hp < b.maxHp * 0.55,
+  },
+  grandprize: {
+    cast(G, h, a, ctx) {
+      const p = aimPoint(G, h, ctx, a.range);
+      addZone(G, { kind: 'claw', pos: p, radius: a.radius, life: a.delay + 0.2, team: h.team, owner: h });
+      for (let i = 0; i < 3; i++) tracer(G, p.clone().setY(p.y + 22).setX(p.x + (i - 1) * 1.2), p.clone().setY(p.y + 1).setX(p.x + (i - 1) * 2.5), 0xd8dee8, a.delay, 3);
+      G.timers.push({ t: a.delay, fn: () => {
+        if (!h.alive) return;
+        ring(G, p, 0xffd23c, a.radius); burst(G, p.clone().setY(p.y + 1), 0x3fd8ff, a.radius * 0.6); G.ev.shake?.(h, 0.6);
+        for (const u of [...enemiesOf(G, h), ...G.minions.filter(m => m.alive && m.team !== h.team && !m.deploy)]) {
+          const dx = p.x - u.pos.x, dz = p.z - u.pos.z, d = Math.hypot(dx, dz);
+          if (d > a.radius) continue;
+          damage(G, u, a.dmg, h); stun(u, a.stun); prizeTag(G, h, u);
+          if (d > 0.8) knock(u, flat(v.set(dx, 0.001, dz)), Math.min(18, d * 2.4), 7);
+          burst(G, chestOf(u), 0xffd23c, 0.9);
+        }
+      } });
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist < 26,
+  },
+
+  // ---- Sir Pixel (Season 2) ----
+  powerup: {
+    cast(G, h, a, ctx) {
+      const u = facedAlly(G, h, ctx, a.range) || h;
+      mend(G, h, u, a.heal);
+      u.rallyAmp = u.rallyT > 0 ? Math.max(u.rallyAmp, a.amp) : a.amp; u.rallyT = Math.max(u.rallyT, a.dur);
+      if (u !== h) tracer(G, chestOf(h), chestOf(u), 0x39ff6a, 0.3, 2);
+      burst(G, chestOf(u).setY(u.pos.y + 2), 0xff3a3a, 0.8); burst(G, chestOf(u), 0x39ff6a, 1.2);
+      G.ev.flash?.(u, 'POWER UP!');
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT || b.hp < b.maxHp * 0.5,
+  },
+  warppipe: {
+    cast(G, h, a, ctx) {
+      const p = aimPoint(G, h, ctx, a.range);
+      const from = h.pos.clone();
+      for (const q of [from, p]) { burst(G, q.clone().setY(q.y + 0.5), 0x39d86a, 1.3); ring(G, q, 0x39d86a, 1.4); }
+      h.pos.copy(p); h.pos.y += 0.1; h.vel.set(0, 3, 0); h.onGround = false;
+      mend(G, h, h, a.heal);
+      return true;
+    },
+    ai: (G, b, a, c) => (c.heroT && b.hp < b.maxHp * 0.35) || (!c.heroT && Math.random() < 0.02),
+  },
+  oneup: {
+    cast(G, h, a) {
+      for (const u of alliesOf(G, h)) {
+        if (u.pos.distanceTo(h.pos) > a.radius) continue;
+        u.oneUpT = a.dur; burst(G, chestOf(u).setY(u.pos.y + 2.2), 0x39ff6a, 1); G.ev.flash?.(u, '1-UP!');
+      }
+      ring(G, h.pos, 0x39ff6a, a.radius * 0.5); ring(G, h.pos, 0xffd23c, a.radius * 0.3);
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.alliesNear(a.radius) >= 1,
+  },
 };
 
 // Cast a slot ('q', 'ability' or 'ult'). ctx: { wish, aim, target }.
@@ -1603,12 +1851,14 @@ function haste(h, dur, speed, fire = 1) {
 const proc = (G, h, text) => { G.ev.passive?.(h); if (text) G.ev.flash?.(h, text); };
 
 // Extra damage from the attacker's passive.
-export function dealtMult(src, t) {
+export const dealtMult = (src, t) => passiveDealt(src, t) * (src.campT > 0 ? 1.15 : 1);   // + Golem's Might
+function passiveDealt(src, t) {
   const id = pasId(src);
   if (id === 'aloft' && !src.onGround && src.airT > 0.25) return src.def.passive.amp;
   if (id === 'keeneye' && src.pos.distanceTo(t.pos) > src.def.passive.range) return src.def.passive.mult;
   if (id === 'highground' && src.onBlock) return src.def.passive.amp;
   if (id === 'shear' && t && (t.slowT > 0 || t.stunT > 0 || t.rootT > 0 || t.zoneSlow < 1)) return src.def.passive.mult;
+  if (id === 'highscore' && src.scoreStacks) return 1 + src.scoreStacks * src.def.passive.per;
   return 1;
 }
 // Damage reduction from the target's own passive.
@@ -1652,6 +1902,7 @@ export function onKill(G, t, src) {
     const p = src.def.passive; src.cd.ability = 0; haste(src, p.dur, p.speed); proc(G, src, 'Tailwind!');
   }
   if (pasId(src) === 'seconds' && src.alive && mine(G, src)) { src.ammo = src.def.weapon.mag; src.reloadT = 0; proc(G, src, 'Second helpings!'); }
+  if (pasId(src) === 'highscore' && src.alive && mine(G, src) && t.team !== src.team) { const p = src.def.passive; src.scoreStacks = Math.min(p.max, (src.scoreStacks || 0) + 1); proc(G, src, `High score ×${src.scoreStacks}`); }
   for (const h of G.heroes) {
     if (!h.alive || h === t || !mine(G, h)) continue;
     const id = pasId(h), p = h.def.passive, near = h.pos.distanceTo(t.pos);
@@ -1751,6 +2002,7 @@ function tickHoles(G, dt) {
 // Heal and/or super-charge a teammate. Healing also fills the healer's own super.
 export function mend(G, src, u, heal = 0, boost = 0) {
   if (!u?.alive || !src) return 0;
+  if (pasId(src) === 'highscore' && src.scoreStacks) heal *= 1 + src.scoreStacks * src.def.passive.per;     // Sir Pixel's High Score
   let got = 0;
   if (heal > 0 && u.hp < u.maxHp) {
     const b = u.hp; healBy(G, u, heal, src); got = u.hp - b;
@@ -1778,6 +2030,12 @@ function facedAlly(G, h, ctx, range) {
   }
   if (!pick && ctx.target && ctx.target.kind === 'hero' && ctx.target.team === h.team && ctx.target !== h) pick = ctx.target;
   return pick;
+}
+// Grabbit's Prize Tag: whatever the claw grabs takes extra damage from his team for a while.
+function prizeTag(G, h, u) {
+  if (pasId(h) !== 'prizetag' || u.kind !== 'hero') return;
+  const p = h.def.passive; u.markT = Math.max(u.markT, p.dur); u.markAmp = Math.max(u.markT > 0 ? u.markAmp : 1, p.amp);
+  G.ev.flash?.(u, 'Prize tagged');
 }
 // Take less damage for a while, keeping any stronger shield already up.
 function protect(u, mult, dur) {

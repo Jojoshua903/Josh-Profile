@@ -1,6 +1,6 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { M, put } from './scenery.js?v=20261127a';
-import { pine, blossom, snowPine } from './backdrop.js?v=20261127a';
+import { M, put } from './scenery.js?v=20261127j';
+import { pine, blossom, snowPine } from './backdrop.js?v=20261127j';
 
 // Themed cover blocks and scattered props inside the arena. Props are placed on the blue
 // half and point-mirrored, always clear of lanes, bases, towers and cover.
@@ -132,6 +132,56 @@ export function styleBlock(scene, theme, [x, z, w, d, h], i, r) {
       for (const s of [-1, 1]) {
         put(g, box(Math.min(0.9, w * 0.35), Math.min(1.6, h * 0.55), 0.08), M(0x6b4a32), along ? -w * 0.18 : 0, Math.min(0.8, h * 0.28), s * (d / 2 + 0.02), false);
         put(g, box(0.6, 0.55, 0.08), M(0x3fb3a6), along ? w * 0.22 : 0, Math.min(h - 0.9, 1.6), s * (d / 2 + 0.03), false);
+      }
+    }
+  } else if (theme === 'sky') {
+    const marble = [0xf4f0e8, 0xece6da, 0xfaf6ee][i % 3], gold = M(0xe8b84a, { metalness: 0.4, roughness: 0.4 });
+    if (h >= 4.4) {
+      // a floating sky platform: marble slab on a rocky underside, gold rim and a crystal at each corner
+      put(g, box(w, 0.6, d), M(marble), 0, h - 0.3, 0);
+      put(g, box(w + 0.2, 0.14, d + 0.2), gold, 0, h + 0.02, 0, false);
+      const rock = put(g, new THREE.ConeGeometry(Math.max(w, d) * 0.62, h - 0.6, 6), M(0x8a7a6a, { flatShading: true }), 0, (h - 0.6) / 2, 0);
+      rock.rotation.x = Math.PI; rock.scale.z = d / Math.max(w, d); rock.scale.x = w / Math.max(w, d);
+      put(g, box(w * 0.92, 0.12, d * 0.92), M(0x8fc46a), 0, h - 0.62, 0, false);
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) put(g, new THREE.OctahedronGeometry(0.22, 0), M(0x9ad8ff, { emissive: 0x9ad8ff, emissiveIntensity: 0.8 }), sx * (w / 2 - 0.3), h + 0.45, sz * (d / 2 - 0.3), false);
+    } else if (low) {
+      // a low marble balustrade with a gold cap
+      edges(put(g, box(w, h, d), M(marble), 0, h / 2, 0));
+      put(g, box(w + 0.14, 0.12, d + 0.14), gold, 0, h + 0.04, 0, false);
+      const along = w >= d, n = Math.max(2, Math.round((along ? w : d) / 0.6));
+      for (let k = 0; k < n; k++) { const t = -((along ? w : d) / 2) + (k + 0.5) * ((along ? w : d) / n); for (const s of [-1, 1]) put(g, box(0.12, h * 0.6, 0.06), M(0xd8d0c0), along ? t : s * (w / 2 + 0.03), h * 0.45, along ? s * (d / 2 + 0.03) : t, false); }
+    } else {
+      // a broken marble temple pillar block, ivy creeping up one side
+      edges(put(g, box(w, h, d), M(marble), 0, h / 2, 0));
+      put(g, box(w + 0.3, 0.25, d + 0.3), M(0xe0d8c8), 0, 0.12, 0, false);
+      put(g, box(w + 0.3, 0.25, d + 0.3), M(0xe0d8c8), 0, h - 0.05, 0);
+      put(g, box(w + 0.32, 0.08, d + 0.32), gold, 0, h + 0.1, 0, false);
+      for (let k = 0; k < Math.ceil(w * 0.8); k++) put(g, box(0.3 + r() * 0.3, 0.5 + r() * h * 0.5, 0.05), M(0x6faa4a), (r() - 0.5) * w, h * 0.4, (r() < 0.5 ? -1 : 1) * (d / 2 + 0.03), false);
+    }
+  } else if (theme === 'docks') {
+    if (low && h <= 1.05) {
+      // a wooden pier: planks on stout posts, with rope rails and a bollard or two
+      const wood = M(0x8a6a4a), dark = M(0x5a4030);
+      put(g, box(w, 0.22, d), wood, 0, h - 0.11, 0);
+      const along = d >= w, len = along ? d : w;
+      for (let t = -len / 2 + 0.3; t < len / 2; t += 0.5) put(g, box(along ? w + 0.02 : 0.04, 0.23, along ? 0.04 : d + 0.02), dark, along ? 0 : t, h - 0.11, along ? t : 0, false);
+      for (let t = -len / 2 + 0.4; t <= len / 2 - 0.3; t += 2) for (const s of [-1, 1]) put(g, cyl(0.16, 0.18, h, 8), dark, along ? s * (w / 2 - 0.16) : t, (h - 0.22) / 2, along ? t : s * (d / 2 - 0.16), false);
+      put(g, cyl(0.2, 0.24, 0.5, 10), M(0x2a2e36, { metalness: 0.5 }), along ? w / 2 - 0.35 : -len / 2 + 0.5, h + 0.25, along ? -len / 2 + 0.5 : d / 2 - 0.35, false);
+    } else if (low) {
+      // stacked fish crates and a tarp
+      const t = crateTex.clone(); t.needsUpdate = true; t.repeat.set(Math.max(1, Math.round(w / 1.2)), 1);
+      edges(put(g, box(w, h, d), new THREE.MeshStandardMaterial({ map: t, color: 0xd8c8b0 }), 0, h / 2, 0), 0.3);
+      put(g, box(w * 0.7, 0.08, d * 0.8), M([0x3f7ab8, 0xc8453a, 0x3f9a6a][i % 3], { roughness: 0.9 }), (r() - 0.5) * w * 0.2, h + 0.04, 0, false);
+    } else {
+      // a fishing shed: painted clapboard walls, a dark tin roof, a lit window and a lifebuoy
+      const paint = [0x3f7ab8, 0xc8453a, 0x3f9a6a, 0xe8d8b8][i % 4];
+      put(g, box(w, 0.5, d), M(0x5a5a5a), 0, 0.25, 0);
+      edges(put(g, box(w - 0.06, h - 0.5, d - 0.06), M(paint), 0, 0.5 + (h - 0.5) / 2, 0));
+      for (let y = 0.8; y < h - 0.2; y += 0.35) for (const s of [-1, 1]) put(g, box(w + 0.01, 0.03, 0.02), M(0x000000, { transparent: true, opacity: 0.15 }), 0, y, s * (d / 2 - 0.02), false);
+      put(g, box(w + 0.5, 0.25, d + 0.5), M(0x3a3e46, { metalness: 0.4 }), 0, h + 0.1, 0);
+      for (const s of [-1, 1]) {
+        put(g, box(Math.min(1, w * 0.35), 0.7, 0.06), M(0xffd38a, { emissive: 0xffb45a, emissiveIntensity: 0.8 }), w * 0.2, Math.min(h - 0.8, 2.2), s * (d / 2 + 0.01), false);
+        put(g, new THREE.TorusGeometry(0.3, 0.09, 6, 16), M(s > 0 ? 0xff5a36 : 0xffffff), -w * 0.22, Math.min(h - 1, 1.8), s * (d / 2 + 0.06), false);
       }
     }
   } else {
@@ -362,6 +412,52 @@ const P = {
     const m = put(g, new THREE.DodecahedronGeometry(s, 0), M([0xc4583a, 0xd8754a, 0xb84a32][Math.floor(r() * 3)], { flatShading: true }), 0, s * 0.55, 0); m.scale.y = 0.75; m.rotation.y = r() * 3;
     return [g, [s * 1.4, s * 1.4, s * 1.1]];
   },
+  // ---- Skyreach Isles ----
+  crystal(r) {
+    // a glowing sky crystal hovering over a little marble plinth
+    const g = new THREE.Group(), c = [0x9ad8ff, 0xffd27a, 0xd8b0ff][Math.floor(r() * 3)];
+    put(g, cyl(0.45, 0.55, 0.5, 8), M(0xf4f0e8), 0, 0.25, 0);
+    put(g, cyl(0.5, 0.5, 0.08, 8), M(0xe8b84a, { metalness: 0.4, roughness: 0.4 }), 0, 0.52, 0, false);
+    const k = put(g, new THREE.OctahedronGeometry(0.42, 0), M(c, { emissive: c, emissiveIntensity: 0.8, roughness: 0.15 }), 0, 1.5, 0, false);
+    k.scale.y = 1.6; k.rotation.y = r() * 3;
+    return [g, [0.9, 0.9, 1.2]];
+  },
+  windvane(r) {
+    // a little windmill on a post
+    const g = new THREE.Group();
+    put(g, cyl(0.08, 0.1, 3, 6), M(0x8a6a4a), 0, 1.5, 0);
+    const hub = new THREE.Group(); hub.position.set(0, 3, -0.15); hub.rotation.z = r() * 3; g.add(hub);
+    for (let i = 0; i < 4; i++) { const s = put(hub, box(0.18, 1.1, 0.03), M(i % 2 ? 0xffffff : 0xffc93c), 0, 0.55, 0, false); const p = new THREE.Group(); p.rotation.z = i * Math.PI / 2; p.add(s); hub.add(p); }
+    return [g, [0.4, 0.4, 3]];
+  },
+  // ---- Tidewater Docks ----
+  bollard() {
+    const g = new THREE.Group();
+    put(g, cyl(0.22, 0.26, 0.7, 10), M(0x2a2e36, { metalness: 0.5, roughness: 0.5 }), 0, 0.35, 0);
+    put(g, cyl(0.3, 0.3, 0.1, 10), M(0x2a2e36, { metalness: 0.5, roughness: 0.5 }), 0, 0.72, 0, false);
+    put(g, new THREE.TorusGeometry(0.26, 0.05, 6, 14), M(0xc8b48a), 0, 0.5, 0, false).rotation.x = Math.PI / 2;
+    return [g, [0.6, 0.6, 0.8]];
+  },
+  lobsterPots(r) {
+    // a stack of rope lobster pots with a coil of rope and a bright float
+    const g = new THREE.Group(), net = M(0x8a6a4a, { roughness: 0.95 });
+    for (const [x, y, z] of [[-0.35, 0.25, 0], [0.35, 0.25, 0.05], [0, 0.75, 0]]) {
+      put(g, box(0.62, 0.48, 0.5), net, x, y, z);
+      for (const s of [-1, 1]) put(g, box(0.64, 0.04, 0.52), M(0x5a4030), x, y + s * 0.18, z, false);
+    }
+    put(g, new THREE.TorusGeometry(0.3, 0.08, 6, 16), M(0xd8c49a), 0.8, 0.08, 0.3, false).rotation.x = Math.PI / 2;
+    put(g, sphere(0.16), M([0xff5a36, 0xffc93c][Math.floor(r() * 2)]), -0.75, 0.16, 0.35, false);
+    return [g, [1.4, 0.7, 1]];
+  },
+  anchor() {
+    const g = new THREE.Group(), iron = M(0x3a3e46, { metalness: 0.55, roughness: 0.5 });
+    put(g, box(0.16, 1.8, 0.16), iron, 0, 0.9, 0);
+    put(g, box(1.0, 0.14, 0.14), iron, 0, 1.5, 0, false);
+    put(g, new THREE.TorusGeometry(0.5, 0.08, 6, 16, Math.PI), iron, 0, 0.5, 0, false).rotation.z = Math.PI;
+    put(g, new THREE.TorusGeometry(0.16, 0.05, 6, 12), iron, 0, 1.9, 0, false);
+    g.rotation.z = 0.25;
+    return [g, [0.9, 0.5, 1.8]];
+  },
 };
 
 const RECIPES = {
@@ -371,6 +467,8 @@ const RECIPES = {
   alpine: [['snowPine', 9, 0.9], ['snowman', 4, 0.7], ['firewood', 4, 0.9], ['sled', 4, 0.9], ['lamp', 5, 0.4], ['skiRack', 2, 1.3, true], ['barrel', 3, 0.5]],
   neon: [['neonSign', 5, 0.5], ['vending', 5, 0.8], ['antenna', 4, 0.6], ['tank', 2, 1.4, true], ['lamp', 6, 0.4], ['barrel', 4, 0.5]],
   desert: [['cactus', 9, 0.8], ['redRock', 8, 0.8], ['barrel', 5, 0.5], ['tumble', 6, 0.6], ['skull', 3, 0.5], ['lamp', 4, 0.4], ['wagon', 2, 1.8, true], ['waterTower', 2, 1.4, true]],
+  sky: [['crystal', 6, 0.6], ['blossom', 6, 0.8], ['column', 7, 0.6], ['windvane', 4, 0.4], ['stoneLantern', 5, 0.4], ['pot', 5, 0.5]],
+  docks: [['bollard', 8, 0.4], ['lobsterPots', 6, 0.9], ['barrel', 7, 0.5], ['anchor', 3, 0.7], ['lamp', 6, 0.4], ['firewood', 2, 0.9]],
 };
 
 function segDist(px, pz, ax, az, bx, bz) {
@@ -388,6 +486,8 @@ export function scatterProps(scene, map, theme, blocks, towers, r) {
       if (segDist(x, z, ...lane[i], ...lane[i + 1]) < 3.2 + rad) return false;
     if (!map.survivor) for (const s of [-1, 1]) { if (Math.hypot(x, z - s * (map.L - 5)) < 10 + rad || Math.hypot(x, z - s * (map.L - 11)) < 5 + rad) return false; }
     for (const [tx, tz] of towers) if (Math.hypot(x - tx, z - tz) < 3 + rad) return false;
+    if (map.camp && Math.hypot(Math.abs(x) - Math.abs(map.camp[0]), Math.abs(z) - Math.abs(map.camp[1])) < 6 + rad) return false;   // the golem's lair
+    for (const [px, pz] of map.pads || []) if (Math.hypot(Math.abs(x) - Math.abs(px), Math.abs(z) - Math.abs(pz)) < 2.2 + rad) return false;   // jump pads
     for (const [bx, bz, bw, bd] of blocks) if (Math.abs(x - bx) < bw / 2 + rad + 1.3 && Math.abs(z - bz) < bd / 2 + rad + 1.3) return false;
     for (const p of placed) if (Math.hypot(x - p[0], z - p[1]) < rad + p[2] + 0.8) return false;
     return Math.abs(x) > 0.5 || Math.abs(z) > 0.5;

@@ -1,9 +1,10 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { MORE } from './models2.js?v=20261127a';
-import { SEASON_MODELS } from './models3.js?v=20261127a';
-import { ROSTER_A } from './heroes3d_a.js?v=20261127a';
-import { ROSTER_B } from './heroes3d_b.js?v=20261127a';
-import { ROSTER_C } from './heroes3d_c.js?v=20261127a';
+import { MORE } from './models2.js?v=20261127j';
+import { SEASON_MODELS } from './models3.js?v=20261127j';
+import { ROSTER_A } from './heroes3d_a.js?v=20261127j';
+import { ROSTER_B } from './heroes3d_b.js?v=20261127j';
+import { ROSTER_C } from './heroes3d_c.js?v=20261127j';
+import { ROSTER_D } from './heroes3d_d.js?v=20261127j';
 
 // Stylised hero models built from primitives. Every model faces -z, stands ~1.9 m tall,
 // keeps the head around y=1.62 (matches the hitboxes) and exposes an anim() hook.
@@ -200,7 +201,7 @@ function lantern(p, team) {
 }
 
 // The stylised rig (rig.js + heroes3d_a/b.js) replaced the original blocky builders above.
-const BUILDERS = { ...ROSTER_A, ...ROSTER_B, ...ROSTER_C };
+const BUILDERS = { ...ROSTER_A, ...ROSTER_B, ...ROSTER_C, ...ROSTER_D };
 export function buildHeroModel(def, teamColor) {
   return BUILDERS[def.id](def.palette, teamColor);
 }

@@ -1,14 +1,16 @@
-import { HEROES } from './heroes.js?v=20261127a';
-import { cfg, save } from './settings.js?v=20261127a';
-import { SLOT_HEROES, slotOwned, isSlotItem, setSkinGate } from './slots.js?v=20261127a';
-import { sprayUrl } from './sprays.js?v=20261127a';
-import { isContractHero, contractDone, tasksDone, contractUnlocked } from './contracts.js?v=20261127a';
-export { isContractHero } from './contracts.js?v=20261127a';
+import { ALL_HEROES as HEROES } from './heroes.js?v=20261127j';
+import { cfg, save } from './settings.js?v=20261127j';
+import { SLOT_HEROES, slotOwned, isSlotItem, setSkinGate } from './slots.js?v=20261127j';
+import { sprayUrl } from './sprays.js?v=20261127j';
+import { isContractHero, contractDone, tasksDone, contractUnlocked } from './contracts.js?v=20261127j';
+export { isContractHero } from './contracts.js?v=20261127j';
 
 // Season pass: XP from matches (mostly from winning) climbs a 30-tier track of hero skins,
-// cosmetics and three season heroes. Progress is saved locally.
+// cosmetics and three season heroes. Each season has its own track and its own XP; whatever
+// you earned in an old season stays yours. Progress is saved locally (and to your account).
 
-export const SEASON = { n: 1, name: 'Golden Hour', tierXp: 150 };
+import { SEASONS, seasonLive, SEASON, NEXT_SEASON, seasonStartLabel } from './seasons.js?v=20261127j';
+export { SEASONS, seasonLive, SEASON, NEXT_SEASON, seasonStartLabel };
 
 // Skins override the hero palette (and the accent colour used for art and the view model).
 export const SKINS = [
@@ -32,6 +34,34 @@ export const SKINS = [
   { id: 'avalanche-gold', hero: 'avalanche', name: 'Golden Hour', color: 0xffc93c, palette: { main: 0xffc93c, trim: 0xffffff, dark: 0x8a5a20, finish: { metal: 0.38, rough: 0.22, trimMetal: 0.35, glow: 0.3 } } },
   { id: 'croc-mardi', hero: 'croc', name: 'Mardi Gras', color: 0xa64fd9, palette: { main: 0x7a3fb0, trim: 0xffd23c, dark: 0x2f8a4a, skin: 0xc9a6ff, finish: { glow: 0.55, rough: 0.4 } } },
   { id: 'croc-albino', hero: 'croc', name: 'Albino Ghost', color: 0xf4efe6, palette: { main: 0xf0e8dc, trim: 0xff7a8a, dark: 0x8a7a6a, skin: 0xfff8ee, finish: { rough: 0.3, glow: 0.2 } } },
+  // ---- Season 2 · Insert Coin: arcade cabinets, chiptunes and neon ----
+  { id: 'striker-turbo', hero: 'striker', name: 'Turbo Racer', color: 0xff2a5a, palette: { main: 0xff2a5a, trim: 0xffffff, dark: 0x1a1a24, finish: { glow: 0.4, rough: 0.25 } } },
+  { id: 'vanguard-pixel', hero: 'vanguard', name: 'Pixel Admiral', color: 0x3a5cff, palette: { main: 0x3a5cff, trim: 0xffd23c, dark: 0x10144a, finish: { rough: 0.9 } } },
+  { id: 'croc-whack', hero: 'croc', name: 'Whack-a-Gator', color: 0x4fd84a, palette: { main: 0x4fd84a, trim: 0xff3f8a, dark: 0x1d5a2a, skin: 0x9dff8a, finish: { rough: 0.3 } } },
+  { id: 'tempo-chiptune', hero: 'tempo', name: 'Chiptune', color: 0x7a5cff, palette: { main: 0x7a5cff, trim: 0x39ff9a, dark: 0x16103a, finish: { glow: 0.9, rough: 0.3 } } },
+  { id: 'ember-neon', hero: 'ember', name: 'Neon Marquee', color: 0xff3fa4, palette: { main: 0x1a1030, trim: 0xff3fa4, dark: 0x0a0618, finish: { glow: 1.1, rough: 0.25 } } },
+  { id: 'pinball-gameover', hero: 'pinball', name: 'Game Over', color: 0xff2a2a, palette: { main: 0x1d1d24, trim: 0xff2a2a, dark: 0x0a0a10, finish: { glow: 0.8, rough: 0.2 } } },
+  { id: 'medic-healthpack', hero: 'medic', name: 'Health Pack', color: 0xff2a2a, palette: { main: 0xffffff, trim: 0xff2a2a, dark: 0x6a6a72, finish: { rough: 0.35 } } },
+  { id: 'ratchet-joystick', hero: 'ratchet', name: 'Joystick Jockey', color: 0xff2a2a, palette: { main: 0xff2a2a, trim: 0x1d1d24, dark: 0xf0ece4, finish: { metal: 0.3, rough: 0.25 } } },
+  { id: 'warden-ghost', hero: 'warden', name: 'Ghost Hunter', color: 0x39ff9a, palette: { main: 0xbfe6ff, trim: 0x39ff9a, dark: 0x1d2340, finish: { glow: 0.6, rough: 0.3 } } },
+  { id: 'kestrel-starfighter', hero: 'kestrel', name: 'Star Fighter', color: 0xd8dee8, palette: { main: 0xd8dee8, trim: 0xff5a2a, dark: 0x2a2f5a, finish: { metal: 0.6, rough: 0.2 } } },
+  { id: 'slime-neon', hero: 'slime', name: 'Neon Ooze', color: 0x39ff9a, palette: { main: 0x39ff9a, trim: 0xff3fa4, dark: 0x0a3a20, skin: 0x39ff9a, finish: { glow: 0.6 } } },
+  { id: 'dancer-machine', hero: 'dancer', name: 'Dance Machine', color: 0xff3fa4, palette: { main: 0xff3fa4, trim: 0x7af0ff, dark: 0x2a0a3a, finish: { glow: 0.7, rough: 0.2 } } },
+  { id: 'avalanche-cabinet', hero: 'avalanche', name: 'Cold Cabinet', color: 0x2a5cff, palette: { main: 0x2a5cff, trim: 0x7af0ff, dark: 0x0a1440, finish: { glow: 0.5, rough: 0.3 } } },
+  { id: 'clawbot-plush', hero: 'clawbot', name: 'Plush Prize', color: 0xffb3cf, palette: { main: 0xffb3cf, trim: 0xffffff, dark: 0x8a4a6a, finish: { rough: 0.95 } } },
+  { id: 'brawler-finalround', hero: 'brawler', name: 'Final Round', color: 0xffd23c, palette: { main: 0xffd23c, trim: 0xff2a2a, dark: 0x1d1d24, finish: { rough: 0.3 } } },
+  { id: 'spark-coinop', hero: 'spark', name: 'Coin-Op', color: 0xffc93c, palette: { main: 0xffc93c, trim: 0x1d1d24, dark: 0x8a5a10, finish: { metal: 0.6, rough: 0.2 } } },
+  { id: 'chef-pizza', hero: 'chef', name: 'Pizza Party', color: 0xff5a2a, palette: { main: 0xff5a2a, trim: 0xffd23c, dark: 0x6a2a10, finish: { rough: 0.6 } } },
+  { id: 'cavalier-joust', hero: 'cavalier', name: 'Joust Champion', color: 0xffd23c, palette: { main: 0xffd23c, trim: 0x3a5cff, dark: 0x6a4a10, finish: { metal: 0.5, rough: 0.25 } } },
+  { id: 'mirage-highscore', hero: 'mirage', name: 'High Score', color: 0xffd23c, palette: { main: 0x111122, trim: 0xffd23c, dark: 0x05050a, finish: { glow: 0.9, rough: 0.2 } } },
+  { id: 'builder-blockdrop', hero: 'builder', name: 'Block Drop', color: 0x7af0ff, palette: { main: 0x7af0ff, trim: 0xff3fa4, dark: 0x2a2f5a, finish: { glow: 0.4, rough: 0.3 } } },
+  { id: 'thicket-bonus', hero: 'thicket', name: 'Bonus Stage', color: 0x39ff9a, palette: { main: 0x39ff9a, trim: 0xffd23c, dark: 0x16402a, finish: { glow: 0.5, rough: 0.4 } } },
+  { id: 'manspider-bug', hero: 'manspider', name: 'Bug in the Code', color: 0x39ff6a, palette: { main: 0x39ff6a, trim: 0x111111, dark: 0x0a2a10, skin: 0x39ff6a, finish: { glow: 0.7 } } },
+  { id: 'microwave-arcade', hero: 'microwave', name: 'Arcade Cabinet', color: 0x7af0ff, palette: { main: 0x1d1d24, trim: 0x7af0ff, dark: 0x0a0a10, skin: 0x1d1d24, finish: { glow: 0.7, rough: 0.2 } } },
+  { id: 'shepherd-8bit', hero: 'shepherd', name: 'Sheep Invaders', color: 0x39ff6a, palette: { main: 0x39ff6a, trim: 0xffffff, dark: 0x0a2a10, finish: { glow: 0.5, rough: 0.6 } } },
+  { id: 'wellington-tokens', hero: 'wellington', name: 'Token Tycoon', color: 0xffd23c, palette: { main: 0xffd23c, trim: 0x1d1d24, dark: 0x6a4a10, finish: { metal: 0.7, rough: 0.2 } } },
+  { id: 'pinball-chrome', hero: 'pinball', name: 'Chrome Flipper', color: 0xd8dee8, palette: { main: 0xd8dee8, trim: 0xff3fa4, dark: 0x2a2f3c, finish: { metal: 0.75, rough: 0.15 } } },
+  { id: 'elf-pixel', hero: 'elf', name: '8-Bit Archer', color: 0x39ff6a, palette: { main: 0x39ff6a, trim: 0x7a5cff, dark: 0x16402a, finish: { rough: 0.9 } } },
   // ---- slot machine exclusives: louder finishes you can only win with mastery tokens ----
   { id: 'slime-magma', hero: 'slime', slot: true, name: 'Magma Gloop', color: 0xff6a2a, palette: { main: 0xff6a2a, trim: 0xffe14a, dark: 0x6a1a10, skin: 0xff7a3a, finish: { glow: 0.35 } } },
   { id: 'brawler-chrome', hero: 'brawler', slot: true, name: 'Chrome Champ', color: 0xd8dee8, palette: { main: 0xd8dee8, trim: 0xff4fa3, dark: 0x2a2f3c, finish: { metal: 0.75, rough: 0.18, trimMetal: 0.2 } } },
@@ -79,8 +109,8 @@ export const COSMETICS = [
 ];
 export const cosById = id => COSMETICS.find(c => c.id === id);
 
-// The track: tier -> rewards. Skins and heroes are spread over all 30 tiers (every tier also has
-// a cosmetic); Tempo comes early, Kestrel mid-season and Cavalier is the tier 30 finale.
+// The tracks: tier -> rewards. Each season's three heroes land at tiers 5, 15 and 30.
+// Season 1: Tempo early, Kestrel mid-season and Cavalier as the finale.
 const MAIN = {
   1: ['skin', 'vanguard-deep'], 2: ['skin', 'striker-night'], 3: ['skin', 'croc-mardi'], 4: ['skin', 'ember-sapphire'],
   5: ['hero', 'tempo'], 6: ['skin', 'warden-dawn'], 7: ['skin', 'thicket-autumn'], 9: ['skin', 'ratchet-brass'],
@@ -89,42 +119,66 @@ const MAIN = {
   20: ['skin', 'croc-albino'], 21: ['skin', 'warden-eclipse'], 22: ['skin', 'thicket-frost'], 24: ['skin', 'ratchet-cobalt'],
   26: ['skin', 'mirage-noir'], 28: ['skin', 'avalanche-gold'], 30: ['hero', 'cavalier'],
 };
-const COS_TIER = {};                                 // no pass cosmetics this season
-export const TRACK = [
-  ...Object.entries(MAIN).map(([tier, [type, id]]) => ({ tier: +tier, type, id })),
-  ...Object.entries(COS_TIER).map(([id, tier]) => ({ tier, type: cosById(id).type, id, cos: true })),
+// Season 2 · Insert Coin: Tilt at 5, Grabbit at 15 and Sir Pixel as the finale, arcade skins on every other tier.
+const MAIN2 = {
+  1: ['skin', 'striker-turbo'], 2: ['skin', 'vanguard-pixel'], 3: ['skin', 'croc-whack'], 4: ['skin', 'tempo-chiptune'],
+  5: ['hero', 'pinball'], 6: ['skin', 'ember-neon'], 7: ['skin', 'pinball-gameover'], 8: ['skin', 'medic-healthpack'],
+  9: ['skin', 'ratchet-joystick'], 10: ['skin', 'warden-ghost'], 11: ['skin', 'kestrel-starfighter'], 12: ['skin', 'slime-neon'],
+  13: ['skin', 'dancer-machine'], 14: ['skin', 'avalanche-cabinet'], 15: ['hero', 'clawbot'], 16: ['skin', 'clawbot-plush'],
+  17: ['skin', 'brawler-finalround'], 18: ['skin', 'spark-coinop'], 19: ['skin', 'chef-pizza'], 20: ['skin', 'cavalier-joust'],
+  21: ['skin', 'mirage-highscore'], 22: ['skin', 'builder-blockdrop'], 23: ['skin', 'thicket-bonus'], 24: ['skin', 'manspider-bug'],
+  25: ['skin', 'microwave-arcade'], 26: ['skin', 'shepherd-8bit'], 27: ['skin', 'wellington-tokens'], 28: ['skin', 'pinball-chrome'],
+  29: ['skin', 'elf-pixel'], 30: ['hero', 'pixel'],
+};
+const COS_TIER = {};                                 // no pass cosmetics yet
+const build = (n, main) => [
+  ...Object.entries(main).map(([tier, [type, id]]) => ({ tier: +tier, type, id, season: n })),
+  ...(n === 1 ? Object.entries(COS_TIER).map(([id, tier]) => ({ tier, type: cosById(id).type, id, cos: true, season: n })) : []),
 ].sort((a, b) => a.tier - b.tier || (a.cos ? 1 : 0) - (b.cos ? 1 : 0));
-// The pass stays 30 tiers long; tiers with nothing on them yet show as open slots.
+export const TRACKS = { 1: build(1, MAIN), 2: build(2, MAIN2) };
+export const TRACK = TRACKS[SEASON.n];               // the season running now
+const ALL_REWARDS = Object.values(TRACKS).flat();
 export const MAX_TIER = 30;
 
 // ---------- saved progress ----------
+// xp is Season 1's (kept from before there were seasons); later seasons live in sx[n].
 const KEY = 'supermaxx-pass';
-const state = (() => { try { return { xp: 0, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { return { xp: 0 }; } })();
+const state = (() => { try { return { xp: 0, sx: {}, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { return { xp: 0, sx: {} }; } })();
 const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} };
+export const seasonXp = n => n === 1 ? state.xp : state.sx?.[n] || 0;
+const setSeasonXp = (n, v) => { if (n === 1) state.xp = v; else state.sx = { ...(state.sx || {}), [n]: v }; };
 
-export const passXp = () => state.xp;
+export const passXp = () => seasonXp(SEASON.n);
 export const tierOf = xp => Math.min(MAX_TIER, Math.floor(xp / SEASON.tierXp));
-export const tier = () => tierOf(state.xp);
-export function tierProgress(xp = state.xp) {
+export const tier = () => tierOf(passXp());
+export const seasonTier = n => tierOf(seasonXp(n));
+export function tierProgress(xp = passXp()) {
   const t = tierOf(xp);
   if (t >= MAX_TIER) return { tier: t, into: SEASON.tierXp, need: SEASON.tierXp, frac: 1 };
   const into = xp - t * SEASON.tierXp;
   return { tier: t, into, need: SEASON.tierXp, frac: into / SEASON.tierXp };
 }
 
-const heroReward = id => TRACK.find(r => r.type === 'hero' && r.id === id);
-const skinReward = id => TRACK.find(r => r.type === 'skin' && r.id === id);
+const heroReward = id => ALL_REWARDS.find(r => r.type === 'hero' && r.id === id);
+const skinReward = id => ALL_REWARDS.find(r => r.type === 'skin' && r.id === id);
 export const heroTier = id => heroReward(id)?.tier || 0;           // 0 = in the base roster
 export const skinTier = id => skinReward(id)?.tier || 0;
-export const heroOwned = id => isContractHero(id) ? contractDone(id) : SLOT_HEROES.includes(id) ? slotOwned(id) : tier() >= heroTier(id);
+export const rewardSeason = id => (heroReward(id) || skinReward(id))?.season || 0;
+const earned = r => !r || seasonTier(r.season) >= r.tier;           // reached in its own season's track
+export const heroOwned = id => isContractHero(id) ? contractDone(id) : SLOT_HEROES.includes(id) ? slotOwned(id) : earned(heroReward(id));
 // A skin only counts once you have its hero; until then pass skins wait for you and slot skins stay out of the machine.
-export const skinOwned = id => heroOwned(skinById(id)?.hero) && (isSlotItem(id) ? slotOwned(id) : tier() >= skinTier(id));
+export const skinOwned = id => heroOwned(skinById(id)?.hero) && (isSlotItem(id) ? slotOwned(id) : earned(skinReward(id)));
 const skinHeroName = id => HEROES.find(h => h.id === skinById(id)?.hero)?.callsign || 'its hero';
 const needsHero = id => !heroOwned(skinById(id)?.hero);
+// Where a pass reward lives: this season's tier, a coming season, or one that's over.
+const passTag = r => r.season === SEASON.n ? `T${r.tier}` : `S${r.season}`;
+const passLong = r => r.season === SEASON.n ? `season pass tier ${r.tier}` : r.season > SEASON.n
+  ? `the Season ${r.season} pass, tier ${r.tier} (opens ${seasonStartLabel(SEASONS[r.season - 1])})` : `the Season ${r.season} pass, tier ${r.tier} (that season is over)`;
+const reward = (id, skin) => (skin ? skinReward(id) : heroReward(id));
 // What a locked hero or skin is waiting on, for tiles and chips: the slot machine or a pass tier.
-export const lockShort = (id, skin) => skin && needsHero(id) ? 'Hero' : !skin && isContractHero(id) ? (contractUnlocked(id) ? `📜 ${tasksDone(id)}/3` : '✉️') : isSlotItem(id) ? '🎰' : `T${skin ? skinTier(id) : heroTier(id)}`;
-export const lockLong = (id, skin) => skin && needsHero(id) ? `Unlock ${skinHeroName(id)} first, then ${isSlotItem(id) ? 'win it from the slot machine' : `season pass tier ${skinTier(id)}`}`
-  : !skin && isContractHero(id) ? (contractUnlocked(id) ? `Recruitment contract · ${tasksDone(id)} of 3 tasks done` : 'Sealed contract · finish another recruitment contract to open it') : isSlotItem(id) ? 'Slot machine prize' : `Season pass · tier ${skin ? skinTier(id) : heroTier(id)}`;
+export const lockShort = (id, skin) => skin && needsHero(id) ? 'Hero' : !skin && isContractHero(id) ? (contractUnlocked(id) ? `📜 ${tasksDone(id)}/3` : '✉️') : isSlotItem(id) ? '🎰' : passTag(reward(id, skin));
+export const lockLong = (id, skin) => skin && needsHero(id) ? `Unlock ${skinHeroName(id)} first, then ${isSlotItem(id) ? 'win it from the slot machine' : `get it from ${passLong(skinReward(id))}`}`
+  : !skin && isContractHero(id) ? (contractUnlocked(id) ? `Recruitment contract · ${tasksDone(id)} of 3 tasks done` : 'Sealed contract · finish another recruitment contract to open it') : isSlotItem(id) ? 'Slot machine prize' : `Unlocks at ${passLong(reward(id, skin))}`;
 export { isSlotItem };
 export const skinsFor = heroId => SKINS.filter(s => s.hero === heroId);
 export const skinById = id => SKINS.find(s => s.id === id);
@@ -192,9 +246,9 @@ export function matchXp({ mode, win, kills, place, players }) {
   return parts;
 }
 export function award(parts) {
-  const before = state.xp, gained = parts.reduce((s, [, v]) => s + v, 0);
-  state.xp = Math.min(MAX_TIER * SEASON.tierXp, state.xp + gained);
+  const before = passXp(), gained = parts.reduce((s, [, v]) => s + v, 0);
+  setSeasonXp(SEASON.n, Math.min(MAX_TIER * SEASON.tierXp, before + gained));
   persist();
-  const t0 = tierOf(before), t1 = tierOf(state.xp);
-  return { before, after: state.xp, gained, parts, t0, t1, unlocked: TRACK.filter(r => r.tier > t0 && r.tier <= t1) };
+  const t0 = tierOf(before), t1 = tierOf(passXp());
+  return { before, after: passXp(), gained, parts, t0, t1, unlocked: TRACK.filter(r => r.tier > t0 && r.tier <= t1) };
 }

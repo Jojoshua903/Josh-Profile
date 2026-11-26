@@ -1,10 +1,11 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { FIREBASE_CONFIG, FIREBASE_VERSION } from './firebase-config.js?v=20261127a';
-import { HEROES } from './heroes.js?v=20261127a';
-import { damage, remoteKill, netShoot, spawnHero, setBar, tickCorpse, spawnMinion, unitDown, tracer, chestOf, TEAM_COLOR } from './units.js?v=20261127a';
-import { replayCast } from './abilities.js?v=20261127a';
-import { netHill } from './hill.js?v=20261127a';
-import { poseHero } from './anim.js?v=20261127a';
+import { FIREBASE_CONFIG } from './firebase-config.js?v=20261127j';
+import { loadFirebase, setUserChangeHook } from './account.js?v=20261127j';
+import { HEROES } from './heroes.js?v=20261127j';
+import { damage, remoteKill, netShoot, spawnHero, setBar, tickCorpse, spawnMinion, unitDown, tracer, chestOf, TEAM_COLOR } from './units.js?v=20261127j';
+import { replayCast } from './abilities.js?v=20261127j';
+import { netHill } from './hill.js?v=20261127j';
+import { poseHero } from './anim.js?v=20261127j';
 
 // Online play over Firebase Realtime Database.
 //
@@ -27,20 +28,15 @@ export const myUid = () => fb?.uid;
 export async function connect() {
   if (fb) return fb;
   if (!netConfigured()) throw Object.assign(new Error('Online play is not set up yet'), { code: 'not-configured' });
-  const base = `https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/`;
-  let appM, authM, dbM;
-  try {
-    [appM, authM, dbM] = await Promise.all(['firebase-app.js', 'firebase-auth.js', 'firebase-database.js'].map(f => import(base + f)));
-  } catch {
-    throw Object.assign(new Error('Could not load Firebase. This preview blocks outside connections, so open the hosted (GitHub Pages) version.'), { code: 'blocked' });
-  }
-  const app = appM.initializeApp(FIREBASE_CONFIG);
-  let cred;
-  try { cred = await authM.signInAnonymously(authM.getAuth(app)); }
-  catch (e) { throw explain(e); }
-  fb = { db: dbM.getDatabase(app), uid: cred.user.uid, f: dbM };
+  const F = await loadFirebase();
+  // signed in to an account: play as it; otherwise a throwaway guest login
+  let user = F.auth.currentUser;
+  if (!user) { try { user = (await F.authM.signInAnonymously(F.auth)).user; } catch (e) { throw explain(e); } }
+  fb = { db: F.db, uid: user.uid, f: F.dbM };
   return fb;
 }
+// signing in or out changes who we are online; pick it up on the next connect
+setUserChangeHook(() => { if (!room) fb = null; });
 
 // Turn Firebase's error codes into the console step that fixes them.
 const FIXES = {
@@ -115,7 +111,7 @@ async function enter(code, isHost) {
     room.meta = s.val();
     if (room.meta.state === 'playing' && room.meta.match !== room.started) {
       room.started = room.meta.match;
-      startCbs.forEach(cb => cb({ roster: Object.values(room.meta.roster || {}), map: room.meta.map, match: room.meta.match, mode: room.meta.mode || 'hill' }));
+      startCbs.forEach(cb => cb({ roster: Object.values(room.meta.roster || {}), map: room.meta.map, match: room.meta.match, mode: room.meta.mode || 'hill', diff: room.meta.botDiff || 'normal' }));
     }
     emit();
   }));
@@ -147,6 +143,7 @@ export function setMode(mode) { if (room && lobbyState().host) fb.f.update(R('me
 export function backToLobby() { if (room && lobbyState().host) fb.f.update(R('meta'), { state: 'lobby' }).catch(() => {}); }
 export function setDraft(on) { if (room && lobbyState().host) fb.f.update(R('meta'), { draft: !!on }).catch(() => {}); }
 export function setBots(on) { if (room && lobbyState().host) fb.f.update(R('meta'), { noBots: !on }).catch(() => {}); }
+export function setBotDiff(d) { if (room && lobbyState().host) fb.f.update(R('meta'), { botDiff: d }).catch(() => {}); }
 
 // Who sits where: the first three of each team who joined, bots in the empty seats (unless the host
 // switched bots off, then empty seats stay empty and each side needs at least one player).
@@ -335,6 +332,9 @@ export function openSession(G, match) {
     else if (e.k === 'k') { const t = byKey(e.t); if (t && !t.local) remoteKill(G, t, byKey(e.s), !!e.hd); }
     else if (e.k === 'sp') { if (h && !h.local) G.ev.netSpray?.(h, e.id, v3(e.p), v3(e.n), e.y || 0); }
     else if (e.k === 'em') { if (h && !h.local) G.ev.netEmote?.(h, e.id); }
+    else if (e.k === 'gs') G.ev.netGuard?.(e.t, e.x, e.z);
+    else if (e.k === 'cs') G.ev.netCampSlam?.(e.x, e.z);
+    else if (e.k === 'camp') G.ev.netCamp?.(e);
     else if (e.k === 'end') G.ev.netEnd?.(e.w, e.y);
     else if (e.k === 'round' || e.k === 'rstart') G.ev.netRound?.(e);
   }

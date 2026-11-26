@@ -1,10 +1,10 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { TUNING } from './data.js?v=20261127a';
-import { THEMES, rng, buildSky, buildGround } from './scenery.js?v=20261127a';
-import { buildBackdrop } from './backdrop.js?v=20261127a';
-import { styleBlock, scatterProps, laneGates } from './props.js?v=20261127a';
-import { buildAmbient } from './ambient.js?v=20261127a';
-import { buildStageSky, buildDressing, contactShadows } from './stage.js?v=20261127a';
+import { TUNING } from './data.js?v=20261127j';
+import { THEMES, rng, buildSky, buildGround } from './scenery.js?v=20261127j';
+import { buildBackdrop } from './backdrop.js?v=20261127j';
+import { styleBlock, scatterProps, laneGates } from './props.js?v=20261127j';
+import { buildAmbient } from './ambient.js?v=20261127j';
+import { buildStageSky, buildDressing, contactShadows } from './stage.js?v=20261127j';
 
 // ---------- collision primitives ----------
 // A collider is an axis-aligned box from y=0 (or bottom) to top.
@@ -46,9 +46,13 @@ export function groundAt(pos, r, colliders) {
 }
 
 // Shared body integrator for heroes and minions. Returns true when grounded.
+// Skyreach Isles falls slower: the map sets a gravity multiplier for the match (mapfx.js)
+let gravMul = 1;
+export const setGravity = m => { gravMul = m || 1; };
+export const gravity = () => TUNING.gravity * gravMul;
 export function moveBody(body, dt, colliders) {
   const p = body.pos, v = body.vel, r = body.radius;
-  v.y -= TUNING.gravity * dt;
+  v.y -= TUNING.gravity * gravMul * dt;
   p.x += v.x * dt; resolveXZ(p, r, colliders);
   p.z += v.z * dt; resolveXZ(p, r, colliders);
   p.y += v.y * dt;

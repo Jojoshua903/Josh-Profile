@@ -1,5 +1,5 @@
 // Maps and tuning shared across the game. The hero roster lives in heroes.js.
-export { HEROES } from './heroes.js?v=20261127a';
+export { HEROES } from './heroes.js?v=20261127j';
 
 
 export const DIFFICULTY = {
@@ -12,7 +12,7 @@ export const TUNING = {
   gravity: 24, jump: 8.2, radius: 0.45, eye: 1.6, step: 0.35,
   respawn: 6, waveEvery: 20, firstWave: 4, minionsPerWave: 4,
   towerHp: 1050, coreHp: 1700, towerRange: 18, towerDmg: 20, towerRate: 1.4,
-  minionHp: 70, minionDmg: 9, minionRange: 7, minionSpeed: 4.2,
+  minionHp: 55, minionDmg: 7, minionRange: 7, minionSpeed: 4.2,
   fountainHeal: 45,
   // Lane Breaker rounds: at overtime both cores lose their shield and take double damage;
   // at the time limit the team whose core has more health left wins
@@ -28,6 +28,7 @@ export const MAPS = [
     desc: 'A whitewashed harbour square at golden hour. One straight lane, lots of low cover, fast fights.',
     W: 22, L: 62, accent: 0xd9734e,
     hills: [[0, 0], [0, -24], [0, 0], [0, 24]], duel: [0, -26],
+    camp: [-16, 0],                                                    // the neutral Gilded Golem (camp.js)
     lanes: [[[0, -50], [0, 50]]],
     towers: [[3, -32]],
     blocks: [
@@ -41,6 +42,7 @@ export const MAPS = [
     desc: 'Gabled houses, bikes and tulips. Two lanes split by a canal wall. Wade the water to rotate.',
     W: 34, L: 66, accent: 0x4f9fc0,
     hills: [[-18, 0], [18, 0]], duel: [-18, -28],
+    camp: [-8, 0],
     lanes: [
       [[0, -54], [-18, -44], [-18, 44], [0, 54]],
       [[0, -54], [18, -44], [18, 44], [0, 54]],
@@ -58,6 +60,7 @@ export const MAPS = [
     desc: 'An overgrown temple under cherry blossoms. Three lanes with a raised jungle in between.',
     W: 44, L: 72, accent: 0xe98aa6,
     hills: [[0, 0], [-30, 0], [0, 0], [30, 0]], duel: [0, -30],
+    camp: [-15, 0],
     lanes: [
       [[0, -60], [0, 60]],
       [[0, -60], [-30, -48], [-30, 48], [0, 60]],
@@ -77,6 +80,7 @@ export const MAPS = [
     desc: 'A snowed-in ski village at sunset. Two lanes cross on the frozen pond in the middle, so every push meets in one big brawl.',
     W: 30, L: 64, accent: 0x5fb4e8,
     hills: [[0, 0], [-17, -14], [0, 0], [17, 14]], duel: [0, -24],
+    camp: [-22, 0],
     // an X: each lane swaps sides through the middle
     lanes: [
       [[0, -52], [-18, -30], [18, 30], [0, 52]],
@@ -93,6 +97,7 @@ export const MAPS = [
     desc: 'A skyscraper rooftop above the glowing city at night. Two lanes weave around a giant billboard in the middle, with AC units and kiosks to fight over.',
     W: 28, L: 62, accent: 0xff5aa8,
     hills: [[0, -12], [-14, -18], [0, 12], [14, 18]], duel: [0, -24],
+    camp: [-17, 0],
     // each lane swings out to the edge, pinches in past the billboard, then swings out again
     lanes: [
       [[0, -50], [-16, -34], [-6, 0], [-16, 34], [0, 50]],
@@ -110,6 +115,7 @@ export const MAPS = [
     desc: 'An adobe town in a red-rock canyon on a scorching afternoon. Both lanes hug the cliffs, then cut across the town square, with a huge mesa blocking the middle.',
     W: 32, L: 64, accent: 0xe0883a,
     hills: [[0, 0], [-20, -20], [0, 0], [20, 20]], duel: [0, -18],
+    camp: [-14, 0],
     // each lane runs up one cliff edge, crosses the square and finishes up the other side
     lanes: [
       [[0, -52], [-24, -34], [-24, -12], [0, 0], [24, 12], [24, 34], [0, 52]],
@@ -121,6 +127,45 @@ export const MAPS = [
       [0, -8, 5, 1.5, 1.2], [-6, -16, 4, 1.5, 1.2], [16, -16, 4, 1.5, 1.2],
       [-18, -21, 2.4, 2.4, 1.3], [12, -24, 2.4, 2.4, 1.3], [-10, -14, 2, 5, 2.6],
       [27, -21, 2, 6, 3], [6, -38, 3, 3, 2.8], [-6, -40, 3, 3, 2.8], [-28, -46, 3, 3, 2.4],
+    ],
+  },
+  {
+    id: 'skyreach', theme: 'sky', name: 'Skyreach Isles', lanesLabel: '2 lanes · floating islands',
+    desc: 'Marble ruins on islands floating above the clouds at sunrise. Low gravity makes every jump float, and golden jump pads fling you onto sky platforms or right across to the other lane.',
+    W: 30, L: 64, accent: 0xffc93c,
+    gravity: 0.6,                                                      // everything falls 40% slower (mapfx.js)
+    hills: [[0, 0], [-16, -14], [0, 0], [16, 14]], duel: [0, -28],
+    camp: [-24, 0],
+    lanes: [
+      [[0, -52], [-16, -38], [-16, 38], [0, 52]],
+      [[0, -52], [16, -38], [16, 38], [0, 52]],
+    ],
+    towers: [[-19, -32], [19, -32]],
+    blocks: [
+      [0, -18, 8, 5, 5], [-24, -8, 4, 6, 4.5],                               // sky platforms (reach them with the pads)
+      [-12, -24, 3, 1.5, 1.2], [12, -14, 3, 1.5, 1.2], [-6, -34, 2.4, 2.4, 1.3], [7, -40, 3, 3, 2.6],
+      [-20, -20, 2, 5, 2.6], [20, -26, 2, 5, 2.6], [4, -4, 2.4, 2.4, 1.3],
+    ],
+    // jump pads: [x, z, launch speed, landing x, landing z, landing height]
+    pads: [[0, -11, 13, 0, -17, 5], [-21, -14, 12, -24, -8, 4.5], [-12, -4, 12, 12, 4, 0]],
+  },
+  {
+    id: 'docks', theme: 'docks', name: 'Tidewater Docks', lanesLabel: '2 lanes · fishing harbour',
+    desc: 'A fishing harbour at dusk. Every minute the tide rolls in and floods the low ground, slowing anyone still in the water. Get up on the piers and crates to stay dry.',
+    W: 32, L: 64, accent: 0x3fa8c8,
+    tide: { every: 60, first: 40, dur: 16, warn: 6, rise: 2.5, level: 0.55, slow: 0.65 },   // mapfx.js
+    hills: [[0, -14], [-18, -10], [0, 14], [18, 10]], duel: [0, -24],
+    camp: [-26, 0],
+    lanes: [
+      [[0, -52], [-18, -36], [-18, 36], [0, 52]],
+      [[0, -52], [18, -36], [18, 36], [0, 52]],
+    ],
+    towers: [[-21, -30], [21, -30]],
+    blocks: [
+      [-9, -20, 3, 14, 1.0], [9, -6, 3, 12, 1.0],                           // piers: stay dry at high tide
+      [-24, -16, 3, 3, 1.2], [14, -28, 3, 3, 1.2], [0, -32, 4, 2, 1.2], [-4, -8, 2.4, 2.4, 1.3],
+      [0, 0, 6, 5, 4.5], [-27, -26, 3, 8, 3.5], [24, -12, 3, 5, 3],
+      [8, -42, 3, 3, 2.6], [-8, -44, 3, 3, 2.6],
     ],
   },
 ];

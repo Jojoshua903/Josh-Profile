@@ -3,7 +3,7 @@
 // win / lose: the results screen · kill: extra elimination lines · rivals: a taunt for knocking out
 // that hero · friends: a hello when that hero spawns on your team · likes, dislikes, fact: Story tab
 
-import { HEROES } from './heroes.js?v=20261127a';
+import { ALL_HEROES as HEROES } from './heroes.js?v=20261127j';
 
 const P = {
   vanguard: {
@@ -187,6 +187,34 @@ const P = {
     thanks: ['Thanks, I owe you a coffee.', 'Appreciated. I’ll put it in writing.'], win: ['Another productive day!', 'That’s a wrap. Literally.'], lose: ['Not my best quarter.', 'Back to the drawing board. And the ceiling.'],
     kill: ['Wrapped up.', 'Signed, sealed, webbed.'], rivals: { mirage: 'Real spiders don’t need tricks, Veil.' }, friends: { shepherd: 'Hamish! Your sheep keep walking through my webs.' },
     likes: 'Black coffee, a tidy spreadsheet, high ceilings', dislikes: 'Rolled-up newspapers, slippery bathtubs, Monday meetings', fact: 'Still files his tax returns every year. As a spider, he owes nothing.',
+  },
+  pinball: {
+    select: ['Tilt’s on the table!', 'Ball one, ready to launch.', 'Let’s rack up some points.'],
+    death: ['Drained... straight down the middle...', 'Tilt! TILT!'], lowhp: ['I’m about to drain here!', 'Somebody nudge the table!'],
+    thanks: ['Free ball! Thanks!', 'Bonus points for you!'], win: ['JACKPOT! High score!', 'Put my initials on the board!'], lose: ['Game over. Insert coin?', 'That was a bad bounce.'],
+    kill: ['Multiplier up!', 'Bonk!'], rivals: { tempo: 'Your beats are so last cabinet, Ines.' }, friends: { pixel: 'Sir P! Same arcade, different machine!' },
+    likes: 'Flashing lights, the sound of a replay, lucky quarters', dislikes: 'Slanted floors, sticky flippers, people who shake the table', fact: 'Has never once read the instructions on a pinball machine.',
+  },
+  clawbot: {
+    select: ['CL-4W ONLINE. PRIZES WILL BE GRABBED.', 'Insert token. Grabbit is ready.', 'FAIR PLAY SWITCH: OFF.'],
+    death: ['GRIP... STRENGTH... ZERO...', 'Prize... dropped...'], lowhp: ['WARNING: CABINET DAMAGED.', 'Low battery. Assistance please.'],
+    thanks: ['GRATITUDE.EXE', 'You are a valued customer.'], win: ['ALL PRIZES COLLECTED.', 'Winner. Winner. Winner.'], lose: ['The claw... slipped.', 'Rigged. As usual.'],
+    kill: ['Prize won.', 'Grab complete.'], rivals: { chipmunk: 'Your mech is not a real claw machine, rodent.' }, friends: { microwave: 'Fellow appliance. Greetings.' },
+    likes: 'Plush toys, firm grips, the chime of a winner', dislikes: 'Loose screws, tilting, people who say "so close"', fact: 'Has 2,417 plush toys hidden inside his cabinet. He knows every one by name.',
+  },
+  owl: {
+    select: ['Hoot here. Who ordered the trouble?', 'Night shift reporting for duty.', 'Got a delivery for the other team.'],
+    death: ['Lost... in the post...', 'Return... to sender...'], lowhp: ['I’m losing feathers here!', 'Need a hand! Or a wing!'],
+    thanks: ['Much obliged. I’ll send a postcard.', 'Thank you kindly. Hoo-hoo!'], win: ['Delivered on time, as always.', 'That’s the last of the post. Home for breakfast.'], lose: ['Undeliverable. Blast.', 'Ah. Wrong address, that one.'],
+    kill: ['First class.', 'Stamped and posted.'], rivals: { kestrel: 'That biplane of yours is very loud at night, Kestrel.' }, friends: { elf: 'Larkspur! Lovely night for a flight, isn’t it?' },
+    likes: 'A full moon, a tidy sorting office, warm mice on toast', dislikes: 'Daylight, wrong addresses, anyone who says “who” when they mean “whom”', fact: 'Can turn his head almost all the way round, which is why nobody ever sneaks up on him.',
+  },
+  pixel: {
+    select: ['PLAYER ONE: SIR PIXEL!', 'A new quest begins!', 'Press start to begin!'],
+    death: ['GAME... OVER...', 'Continue? Ten... nine...'], lowhp: ['My health bar is blinking!', 'One heart left!'],
+    thanks: ['Huzzah! A health potion!', 'My thanks, brave ally!'], win: ['LEVEL COMPLETE!', 'You have found the Golden Byte!'], lose: ['Our quest continues... next credit.', 'Saved progress. Try again!'],
+    kill: ['Foe vanquished!', '+1000 points!'], rivals: { mirage: 'Thine illusions are poorly rendered, Veil.' }, friends: { pinball: 'Lady Tilt! Thy flippers are legendary!' },
+    likes: 'Save points, treasure chests, a good 8-bit fanfare', dislikes: 'Bottomless pits, invisible walls, people who blow on cartridges', fact: 'Is exactly 16 pixels tall in his original game.',
   },
 };
 
