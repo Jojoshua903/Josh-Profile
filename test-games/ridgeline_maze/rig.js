@@ -6,7 +6,7 @@ import { THREE, label } from './world.js';
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 /* ================= options ================= */
-export const HATS = ['Pom beanie', 'Striped beanie', 'Trapper', 'Helmet', 'Bucket hat', 'Headband', 'Propeller cap', 'No hat'];
+export const HATS = ['Pom beanie', 'Striped beanie', 'Trapper', 'Helmet', 'Bucket hat', 'Headband', 'Propeller cap', 'No hat', 'Summit hat']; // the last one is a Summit reward
 export const OUTFITS = ['Puffer', 'Anorak', 'Overalls', 'Poncho'];
 export const EYES = ['round', 'dot', 'happy', 'sleepy', 'fierce', 'wink', 'lashes'];
 export const MOUTHS = ['smile', 'grin', 'open', 'flat', 'smirk', 'teeth', 'cat'];
@@ -20,7 +20,7 @@ export const DEFAULT_LOOK = {
 export const normLook = (l = {}) => {
   const o = { ...DEFAULT_LOOK, ...l };
   o.hat = clamp(+o.hat || 0, 0, HATS.length - 1); o.outfit = clamp(+o.outfit || 0, 0, OUTFITS.length - 1);
-  o.w = clamp(+o.w || 1, .82, 1.25); o.h = clamp(+o.h || 1, .86, 1.16);
+  o.w = clamp(+o.w || 1, .82, 1.25); o.h = clamp(+o.h || 1, .86, 1.16); o.rope = o.rope === 'gold' ? 'gold' : '';
   for (const [k, list] of [['eyes', EYES], ['mouth', MOUTHS], ['brows', BROWS], ['cheeks', CHEEKS]]) if (!list.includes(o[k])) o[k] = DEFAULT_LOOK[k];
   return o;
 };
@@ -162,7 +162,7 @@ export function makeClimber(color, name, look = {}) {
   const jc = new THREE.Color(color);
   const skin = std(L.skin, .65), jacket = std(jc, .75, { side: THREE.DoubleSide }), jDark = std(jc.clone().offsetHSL(0, 0, -.12), .8, { side: THREE.DoubleSide });
   const pants = std(L.pants, .85), gloves = std(L.gloves, .8), boot = std(0x5a3a24, .9), white = std(0xffffff), cream = std(0xf3e6c8, 1);
-  const hatMat = std(L.hatc || jc, .75), sole = std(0x2a1d14, .95);
+  const hatMat = std(L.hatc || jc, .75), sole = std(0x2a1d14, .95), scarfC = L.scarf === 'frost' ? '#cdeeff' : L.scarf;
   const add = (parent, geo, mat, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; parent.add(m); return m; };
   const pivot = (parent, x, y, z) => { const g = new THREE.Group(); g.position.set(x, y, z); parent.add(g); return g; };
 
@@ -181,11 +181,11 @@ export function makeClimber(color, name, look = {}) {
     for (const s of [-1, 1]) { add(torso, G.strap, jacket, s * .13, .44, -.372); add(torso, G.strap, jacket, s * .13, .44, .372); add(torso, G.button, std(0xffd23f, .4), s * .13, .38, -.4); }
   }
   if (L.outfit === 3) {
-    add(torso, G.jacket, jDark); add(torso, G.poncho, jacket, 0, .2, 0); add(torso, G.ponchoBand, std(L.scarf === 'none' ? 0xffffff : L.scarf, .8), 0, .02, 0);
+    add(torso, G.jacket, jDark); add(torso, G.poncho, jacket, 0, .2, 0); add(torso, G.ponchoBand, std(L.scarf === 'none' ? 0xffffff : scarfC, .8), 0, .02, 0);
     add(torso, G.collar, jacket, 0, .41, 0).rotation.x = Math.PI / 2;
   }
   if (L.scarf !== 'none') {
-    const sm = std(L.scarf, .85);
+    const sm = std(scarfC, .85, L.scarf === 'frost' ? { emissive: 0x6fc8ff, emissiveIntensity: .35 } : {}); // frost scarf: Standard summit reward
     add(torso, G.scarf, sm, 0, .4, 0).rotation.x = Math.PI / 2;
     const tl = add(torso, G.tail, sm, .15, .27, -.4); tl.rotation.z = -.18;
   }
@@ -217,6 +217,7 @@ export function makeClimber(color, name, look = {}) {
       add(prop, G.button, std(cols[2], .5));
       break;
     }
+    case 8: { const gold = std(0xffc531, .35, { metalness: .5 }); add(head, G.cap, std(L.hatc || 0xe5383b, .75), 0, hy); add(head, G.cuff, gold, 0, .15).rotation.x = Math.PI / 2; pom = add(head, G.pom, gold, 0, .44); break; } // Summit hat (Gentle summit reward)
     default: break;
   }
   if (L.goggles !== 'none') {
@@ -351,4 +352,19 @@ export function animateRig(root, s, dt) {
   r.bag.rotation.x += ((-P.tx * .35 + Math.sin(ph * 2) * .06 * walk) - r.bag.rotation.x) * Math.min(1, dt * 8);
   r.pom.position.x = Math.sin(ph) * .03 * walk;
   if (r.prop) r.prop.rotation.y += dt * (3 + speed * 4 + (s.ground ? 0 : 14));
+  // on the Summit wall: each arm reaches for the exact hold it grips (s.grip = [left hold, right hold], world positions)
+  if (s.grip) { root.updateWorldMatrix(true, true); gripArm(r, r.armL, s.grip[0], 'la', dt); gripArm(r, r.armR, s.grip[1], 'ra', dt); }
+}
+// two-bone reach: point the upper arm past the hold and bend the elbow so the mitten lands on it
+const UPPER = .36, LOWER = .44, _t = new THREE.Vector3();
+function gripArm(r, arm, h, key, dt) {
+  if (!h) return;
+  _t.set(h.x, h.y, h.z); r.torso.worldToLocal(_t); _t.sub(arm.sh.position);
+  const D = Math.min(UPPER + LOWER - .01, Math.max(.15, _t.length())); _t.normalize();
+  const sx = Math.atan2(-_t.z, -_t.y), sz = Math.asin(clamp(_t.x, -1, 1));
+  const a = Math.acos(clamp((UPPER * UPPER + D * D - LOWER * LOWER) / (2 * UPPER * D), -1, 1));
+  const e = Math.PI - Math.acos(clamp((UPPER * UPPER + LOWER * LOWER - D * D) / (2 * UPPER * LOWER), -1, 1));
+  const k = Math.min(1, dt * 16);
+  arm.sh.rotation.x += (sx - a - arm.sh.rotation.x) * k; arm.sh.rotation.z += (sz - arm.sh.rotation.z) * k; arm.el.rotation.x += (e - arm.el.rotation.x) * k;
+  r.v[key + 's'] = r.v[key + 'z'] = r.v[key + 'e'] = 0; // the springs pick up from here when the hand lets go
 }

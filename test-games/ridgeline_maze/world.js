@@ -33,14 +33,49 @@ export const scene = new THREE.Scene();
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; scene.background = t;
 }
 scene.fog = new THREE.Fog(0xe3edf5, 14, 120);
-export const hemi = new THREE.HemisphereLight(0xdaeeff, 0xf3e9dc, 1.25);
+/* ---------- lighting: a warm key (the low sun), a cool sky fill, a cool rim from behind ---------- */
+// Not lit evenly on purpose: the key is clearly stronger than the fill, so walls have a bright side and a shaded side.
+export const hemi = new THREE.HemisphereLight(0xbfc8f5, 0xf2dcc8, 1);
 scene.add(hemi);
-export const sun = new THREE.DirectionalLight(0xfff0d8, 2.6);
-sun.position.set(CX + 45, 80, CX + 30); sun.target.position.set(CX, 0, CX);
+export const sun = new THREE.DirectionalLight(0xffc58f, 2.8);
+const SUN_DIR = new THREE.Vector3(-60, 52, 30).normalize(); // same side of the sky as the sunset disc, about 38° up
+sun.position.set(CX - 60, 52, CX + 30); sun.target.position.set(CX, 0, CX);
 sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
-Object.assign(sun.shadow.camera, { left: -70, right: 70, top: 70, bottom: -70, near: 10, far: 220 });
-sun.shadow.bias = -0.0006;
+Object.assign(sun.shadow.camera, { left: -40, right: 40, top: 40, bottom: -40, near: 1, far: 320 });
+sun.shadow.bias = -0.0004; sun.shadow.normalBias = .03;
 scene.add(sun, sun.target);
+export const rim = new THREE.DirectionalLight(0x8fb4ff, .45); // no shadows: it only picks out edges against the sky
+rim.position.set(CX + 60, 30, CX - 40); rim.target.position.set(CX, 0, CX); scene.add(rim, rim.target);
+
+// light moods: the game picks one per zone and the lights ease towards it
+export const MOODS = {
+  day:    { sun: 0xffc58f, si: 2.8, sky: 0xbfc8f5, gnd: 0xf2dcc8, hi: 1.0,  ri: .45 },  // frost cliffs, the hall, the menu
+  ice:    { sun: 0xd6e6ff, si: 2.0, sky: 0x9fc4ee, gnd: 0xcfe6f5, hi: 1.15, ri: .6 },   // ice caverns: cold, flatter
+  temple: { sun: 0xffb36b, si: 3.0, sky: 0xd9b8ff, gnd: 0xf0c89a, hi: .9,  ri: .35 },  // temple ruins: golden, contrasty
+  storm:  { sun: 0xb9c3d6, si: 1.3, sky: 0x8d97ad, gnd: 0x6f7686, hi: 1.1, ri: .25 },  // storm ridge: grey and dim
+  summit: { sun: 0xfff0d8, si: 3.2, sky: 0xc4d8ff, gnd: 0xffffff, hi: 1.0, ri: .5 },   // the top: clean, bright light
+};
+const _mc = new THREE.Color();
+export function lightMood(name, dt) {
+  const m = MOODS[name] || MOODS.day, k = Math.min(1, dt * 1.5);
+  sun.color.lerp(_mc.set(m.sun), k); sun.intensity += (m.si - sun.intensity) * k;
+  hemi.color.lerp(_mc.set(m.sky), k); hemi.groundColor.lerp(_mc.set(m.gnd), k); hemi.intensity += (m.hi - hemi.intensity) * k;
+  rim.intensity += (m.ri - rim.intensity) * k;
+}
+// shadows: a tight box that follows the players (sharper than one huge box over the whole map),
+// snapped to whole shadow-map texels so the edges don't crawl when you move
+const _r = new THREE.Vector3(), _u = new THREE.Vector3(), _c = new THREE.Vector3();
+let shadowHalf = 40;
+export function followShadow(x, y, z, half = 40) {
+  half = Math.round(half);
+  if (half !== shadowHalf) { shadowHalf = half; Object.assign(sun.shadow.camera, { left: -half, right: half, top: half, bottom: -half }); sun.shadow.camera.updateProjectionMatrix(); }
+  _r.crossVectors(SUN_DIR, THREE.Object3D.DEFAULT_UP).normalize(); _u.crossVectors(_r, SUN_DIR).normalize();
+  const tx = 2 * half / sun.shadow.mapSize.x, snap = (v) => Math.round(v / tx) * tx;
+  _c.set(x, y, z); const a = _c.dot(_r), b = _c.dot(_u);
+  _c.addScaledVector(_r, snap(a) - a).addScaledVector(_u, snap(b) - b);
+  sun.target.position.copy(_c); sun.position.copy(_c).addScaledVector(SUN_DIR, 160);
+  rim.target.position.copy(_c); rim.position.set(_c.x + 60, _c.y + 30, _c.z - 40);
+}
 
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(1200, 1200), new THREE.MeshStandardMaterial({ color: 0xf2f6fa, roughness: 1 }));
 ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
@@ -54,8 +89,7 @@ export function setTileSize(c) {
   const k = C / CAMP_C;
   trail.scale.set(k, k, 1); trail.position.set(CX, .01, CX);
   scenery.forEach((o) => o.scale.setScalar(k)); // the forest ring scales out with the maze so trees never grow inside it
-  sun.position.set(CX - 60 * k, 72 + 20 * (k - 1), CX + 30 * k); sun.target.position.set(CX, 0, CX);
-  const e = SIZE / 2 + 22; Object.assign(sun.shadow.camera, { left: -e, right: e, top: e, bottom: -e, far: 260 }); sun.shadow.camera.updateProjectionMatrix();
+  followShadow(CX, 0, CX, SIZE / 2 + 22); // until the game starts following the players, cover the whole map
 }
 let sizedOnce = false;
 /* pines & far mountains */
@@ -441,8 +475,13 @@ const sticks = new Map();
 let stickSeq = 0;
 const H = 1 / 120, G = 18;
 const stickWall = (x, z, y) => topAt(x, z, y) > y;
-const stickFloor = (x, z, y) => { const t = topAt(x, z, y); return t > 0 && t < OUT && y >= t - .1 ? t : 0; };
+const stickFloor = (x, z, y) => { const t = topAt(x, z, y); return t > 0 && (t < OUT || maze?.summit) && y >= t - .1 ? t : 0; }; // Summit terraces go far above OUT
+let stickHook = null;
+/** Summit: glowsticks that hit a cliff face stick to it. fn(stick, step) returns true to stop the stick there. */
+export const setStickHook = (fn) => { stickHook = fn; };
+export const stickList = () => [...sticks.values()];
 function stepStick(s) {
+  if (stickHook && stickHook(s, H)) { s.rest = true; s.vx = s.vy = s.vz = 0; return; }
   s.vy -= G * H;
   const nx = s.x + s.vx * H; if (stickWall(nx, s.z, s.y)) { s.vx *= -.42; s.vz *= .85; s.hit = true; } else s.x = nx;
   const nz = s.z + s.vz * H; if (stickWall(s.x, nz, s.y)) { s.vz *= -.42; s.vx *= .85; s.hit = true; } else s.z = nz;
@@ -518,8 +557,23 @@ export function audioInit(vol) {
 }
 export function setVolume(v) { if (master) master.gain.value = v; }
 export const audioCtx = () => ({ ac, master });
+// a looping wind bed for the mountain: setWind(0..1) fades it (0 stops it costing anything)
+let windSrc = null, windGain = null, windF = null;
+export function setWind(v) {
+  if (!ac) return;
+  if (!windSrc && v > .01) {
+    const b = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate), d = b.getChannelData(0); let last = 0;
+    for (let i = 0; i < d.length; i++) { last = last * .97 + (Math.random() * 2 - 1) * .03; d[i] = last * 6; } // soft brown-ish noise
+    windSrc = ac.createBufferSource(); windSrc.buffer = b; windSrc.loop = true;
+    windF = ac.createBiquadFilter(); windF.type = 'lowpass'; windF.frequency.value = 500;
+    windGain = ac.createGain(); windGain.gain.value = 0; windSrc.connect(windF).connect(windGain).connect(master); windSrc.start();
+  }
+  if (!windSrc) return;
+  windGain.gain.setTargetAtTime(Math.max(0, v) * .35, ac.currentTime, .4); windF.frequency.setTargetAtTime(300 + v * 900, ac.currentTime, .5);
+  if (v <= .01) { const s = windSrc; windSrc = null; setTimeout(() => { try { s.stop(); } catch {} }, 1500); }
+}
 function noise(type, freq, dur, vol, q = .8, sweepTo) {
-  if (!ac) return; const s = ac.createBufferSource(); s.buffer = noiseBuf; s.playbackRate.value = .8 + Math.random() * .4;
+  if (!ac) return; const s = ac.createBufferSource(); s.buffer = noiseBuf; s.playbackRate.value = .8 + Math.random() * .4; s.loop = dur > .25; // long sounds loop the short noise buffer instead of cutting off
   const f = ac.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
   if (sweepTo) f.frequency.exponentialRampToValueAtTime(sweepTo, ac.currentTime + dur);
   const g = ac.createGain(); g.gain.setValueAtTime(vol, ac.currentTime); g.gain.exponentialRampToValueAtTime(.001, ac.currentTime + dur);
@@ -552,4 +606,12 @@ export const sfx = {
   chime: () => [784, 988, 1175].forEach((f, i) => tone(f, i * .08, .35, .08, 'sine')),
   splat: () => noise('lowpass', 900, .15, .2),
   doom: () => [330, 262, 196, 131].forEach((f, i) => tone(f, i * .3, .8, .14, 'sawtooth')),
+  // Summit climb
+  hammer: () => { [0, .13, .26].forEach((t, i) => { tone(2300 - i * 180, t, .07, .07, 'square'); tone(3400, t, .05, .03, 'sine'); }); noise('highpass', 5000, .05, .12); },
+  twang: (big = 1) => { tone(98, 0, .45, .12 * big, 'sawtooth'); tone(147, 0, .3, .06 * big, 'triangle'); noise('lowpass', 400, .2, .2 * big); },
+  grab: () => noise('lowpass', 1400 + Math.random() * 500, .07, .16),
+  thunder: (near = 1) => { noise('lowpass', 260, 2.2, .7 * near, .6, 60); tone(42, 0, 1.6, .18 * near, 'sine'); },
+  crackle: () => noise('highpass', 2500 + Math.random() * 3000, .03, .05 + Math.random() * .05, 1.5),
+  whistle: () => { if (!ac) return; const o = ac.createOscillator(), g = ac.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(1500, ac.currentTime); o.frequency.exponentialRampToValueAtTime(500, ac.currentTime + .7); g.gain.setValueAtTime(.0001, ac.currentTime); g.gain.linearRampToValueAtTime(.05, ac.currentTime + .1); g.gain.exponentialRampToValueAtTime(.001, ac.currentTime + .75); o.connect(g).connect(master); o.start(); o.stop(ac.currentTime + .8); },
+  camp: () => [523, 659, 784, 659, 1047].forEach((f, i) => tone(f, i * .1, .45, .1, 'triangle')),
 };

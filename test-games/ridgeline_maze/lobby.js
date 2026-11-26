@@ -410,6 +410,7 @@ const SPOTS = [
   { id: 'trail', x: 36.3, z: 44.6, r: 2, text: 'Choose the route at the desk' },
   { id: 'radio', x: 52.7, z: Z0 + 3.1, r: 2, text: 'Use the radio' },
   { id: 'camera', x: 66.7, z: 49.6, r: 2, text: 'Take a group photo' },
+  { id: 'practice', x: 52.5, z: 41.3, r: 2, text: 'Go through to the Practice Wall' },
   ...SEATS.map((s, k) => ({ id: 'bench' + k, x: s.x - .3, z: s.z, r: 1, text: 'Take a seat', seat: { x: s.x, z: s.z, yaw: Math.PI / 2 } })),
 ];
 export function nearInteract(x, z, yaw) {

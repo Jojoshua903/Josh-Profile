@@ -92,13 +92,24 @@ const faces = (k, list) => `<div class="chips">${list.map((v) => `<button class=
 const chips = (k, names) => `<div class="chips">${names.map((n, i) => `<button class="hatb${cur[k] === i ? ' on' : ''}" data-k="${k}" data-v="${i}" data-num="1">${n}</button>`).join('')}</div>`;
 const slider = (k, label, min, max) => `<div class="cslider"><span>${label}</span><input type="range" min="${min}" max="${max}" step="0.01" value="${cur[k]}" data-k="${k}" data-range="1"></div>`;
 const row = (label, html) => `<div class="lkrow"><label>${label}</label>${html}</div>`;
+// Summit rewards: one per pace you have finished the Summit on (saved by game.js in ridgeline_summit_wins)
+const summitWins = () => { try { return JSON.parse(localStorage.getItem('ridgeline_summit_wins') || '[]'); } catch { return []; } };
+const REWARDS = [['hat', 8, 'Summit hat', 'Gentle'], ['scarf', 'frost', 'Frost scarf', 'Standard'], ['rope', 'gold', 'Golden rope', 'Brutal']];
+function rewards() {
+  const w = summitWins();
+  return `<div class="chips">${REWARDS.map(([k, v, name, pace], i) => {
+    if (!w.includes(i)) return `<button class="hatb" disabled title="Reach the summit on ${pace} to unlock" style="opacity:.45">${name} · ${pace} summit</button>`;
+    const on = cur[k] === v, off = k === 'hat' ? 0 : k === 'scarf' ? '#ffd23f' : ''; // click again to take it off
+    return `<button class="hatb${on ? ' on' : ''}" data-k="${k}" data-v="${on ? off : v}"${k === 'hat' ? ' data-num="1"' : ''}>${name}</button>`;
+  }).join('')}</div>`;
+}
 function render() {
   document.querySelectorAll('#cTabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
   const P = {
     body: row('Body colour', sw('skin', SKINS)) + row('Build', slider('h', 'Short · Tall', .86, 1.16) + slider('w', 'Slim · Chunky', .82, 1.25)),
     face: row('Eyes', faces('eyes', EYES)) + row('Mouth', faces('mouth', MOUTHS)) + row('Brows', faces('brows', BROWS)) + row('Cheeks', faces('cheeks', CHEEKS)),
     outfit: row('Outfit', chips('outfit', OUTFITS)) + row('Jacket colour', sw('jacket', JACKETS)) + row('Trousers', sw('pants', PANTS)) + row('Mittens', sw('gloves', GLOVES)),
-    gear: row('Hat', chips('hat', HATS)) + row('Hat colour', sw('hatc', ACCENTS, [''])) + row('Scarf', sw('scarf', ACCENTS, ['none'])) + row('Backpack', sw('pack', ACCENTS, ['', 'none'])) + row('Goggles', sw('goggles', GOGGLES)),
+    gear: row('Hat', chips('hat', HATS.slice(0, -1))) + row('Hat colour', sw('hatc', ACCENTS, [''])) + row('Scarf', sw('scarf', ACCENTS, ['none'])) + row('Backpack', sw('pack', ACCENTS, ['', 'none'])) + row('Goggles', sw('goggles', GOGGLES)) + row('Summit rewards', rewards()),
   };
   const pane = $('cPane'); pane.innerHTML = P[tab];
   pane.querySelectorAll('button[data-k]').forEach((b) => b.onclick = () => set(b.dataset.k, b.dataset.num ? +b.dataset.v : b.dataset.v));
@@ -111,7 +122,7 @@ document.querySelectorAll('#cTabs button').forEach((b) => b.onclick = () => { ta
 $('cRandom').onclick = () => {
   cur = normLook({
     skin: pick(SKINS), eyes: pick(EYES), mouth: pick(MOUTHS), brows: pick(BROWS), cheeks: pick(CHEEKS), outfit: Math.floor(Math.random() * OUTFITS.length),
-    jacket: pick(JACKETS), pants: pick(PANTS), gloves: pick(GLOVES), hat: Math.floor(Math.random() * HATS.length), hatc: pick(['', ...ACCENTS]),
+    jacket: pick(JACKETS), pants: pick(PANTS), gloves: pick(GLOVES), hat: Math.floor(Math.random() * (HATS.length - 1)), hatc: pick(['', ...ACCENTS]),
     scarf: pick(['none', ...ACCENTS]), pack: pick(['', 'none', ...ACCENTS]), goggles: pick(GOGGLES), w: .88 + Math.random() * .3, h: .9 + Math.random() * .22,
   });
   showLook(cur); joy = 1.2; render(); onChange?.(cur);

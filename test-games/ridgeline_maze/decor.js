@@ -14,8 +14,7 @@ scene.background = canvasTex(4, 512, (g, w, h) => {
   [[0, '#2f4a8f'], [.35, '#6f7fc4'], [.58, '#e79bb0'], [.72, '#ffb77d'], [.82, '#ffd9a3'], [1, '#fff1dc']].forEach(([s, c]) => gr.addColorStop(s, c));
   g.fillStyle = gr; g.fillRect(0, 0, w, h);
 });
-sun.color.set(0xffc58f); sun.intensity = 2.4; sun.position.set(CX - 60, 72, CX + 30); // high enough to light the floor of the tall canyons
-hemi.color.set(0xffe2cf); hemi.groundColor.set(0xa9bce8); hemi.intensity = 1.35;
+// sun, sky fill and rim colours live in world.js (MOODS) so each zone can ease into its own light
 {
   const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: flake, color: 0xffc070, blending: THREE.AdditiveBlending, fog: false, depthWrite: false, transparent: true, opacity: .9 }));
   glow.position.set(CX - 420, 120, CX + 200); glow.scale.set(160, 160, 1); scene.add(glow);
@@ -291,7 +290,7 @@ function build(maze, seed) {
     const f1 = new THREE.Sprite(flameMat(0xff7a2a)), f2 = new THREE.Sprite(flameMat(0xffe08a));
     f1.position.set(fx, .55, fz); f2.position.set(fx, .45, fz); f1.scale.set(1.3, 1.7, 1); f2.scale.set(.6, .9, 1); group.add(f1, f2);
     flames.push({ f1, f2, s: k * 3, big: true });
-    const light = campLights[k]; light.position.set(fx, 1.1, fz); light.intensity = 18; flames[flames.length - 1].light = light;
+    const light = campLights[k]; if (light) { light.position.set(fx, 1.1, fz); light.intensity = 18; flames[flames.length - 1].light = light; } // up to 4 camps, 3 lights (every light costs every pixel)
   });
 
   // landmark 2: three giant crystal spires on ice-zone pillars, each its own colour

@@ -2,7 +2,7 @@
 import {
   THREE, C, GRID, CX, SIZE, OUT, renderer, scene, buildMaze, exitPos, tileTop, topAt, blockedAt, groundUnder, STEP,
   addMark, aimSurface, spawnStick, settleStick, updateSticks, clearMarksAndSticks, updateWorld,
-  audioInit, setVolume, sfx, SANCTUARY_R, maze, sun, rayTargets,
+  audioInit, setVolume, sfx, SANCTUARY_R, maze, sun, rayTargets, stickList,
 } from './world.js';
 import { COLORS, loadSdk, joinRoom, myId } from './net.js';
 import { GRACE, CREEP, fogRadius, fogDepth, updateFog, applyViewFog, buildDoors, updateDoors, leverNear, latchDoor, doorsOpen, doorCount, doorCenter, plateUnder, doorProgress } from './hazard.js';
@@ -19,9 +19,14 @@ import { resetTips } from './overlay.js';
 import { makeDebug, setDebugMode, debugSample, debugDraw, makeDevMenu, makeDevChip, setDevChip } from './debug.js';
 import { STATIONS, stamp, hasStamp, passportDone, resetPassport, showTraining, onSlate, inShed, inPuddle, checkStations, updateTraining } from './training.js';
 import { makeViewmodel, disposeViewmodel, vmUse, animateViewmodel, renderViewmodel } from './hands.js';
+import { buildSummit, showSummit, SUMMIT, chalkHold, breakHold, updateSummitWorld, campAt, markCamp, zoneAtY, ZONES, inChimney, twinAt, nearCrank, openGate, updateGate } from './summit_world.js';
+import { buildHazards, updateHazards, showHazards, flashAt, windAt, COLD } from './summit_hazards.js';
+import { climbStep, climbPrompt, updateClimbFx, aimedHold, resetClimber, releaseWall, onKbChalk, onLedge, setHintHold, nextRouteHold } from './climb.js';
+import { placePiton, ropeStep, ropePrompt, updateRopes, clearRope, partners, addPiton, pitonByKey, pitonData, jolt, BELAY_HIT } from './rope.js';
 import { fx, updateFx } from './fx.js';
-import { doorCenter as doorAt, setPace, setGrace, showFog } from './hazard.js';
-import { setGroundVisible } from './world.js';
+import { doorCenter as doorAt, setPace, setGrace, showFog, setRise, showRise, updateRise, applyRiseFog, shadowY, shadowCalm, RISE } from './hazard.js';
+import { setGroundVisible, setWind, lightMood, followShadow } from './world.js';
+import { renderViews, POST, setPost } from './post.js';
 import { showDecor } from './decor.js';
 import { enterLobbyWorld, exitLobbyWorld, updateLobby, gondola, startArrival, startDeparture, rideOffset, riding, inGondola, spawnSpot, nearInteract, throwSnowball, setOnBell, setBallHook, setBoard, pinPhoto, photoCam, flashCamera, setGateLight } from './lobby.js';
 
@@ -30,7 +35,7 @@ let LOOKS = [];
 try { LOOKS = JSON.parse(localStorage.getItem('ridgeline_looks') || '[]'); } catch {}
 const lookFor = (i, fallbackColor) => ({ ...DEFAULT_LOOK, jacket: fallbackColor, ...(LOOKS[i] || {}) });
 const saveLooks = () => { try { localStorage.setItem('ridgeline_looks', JSON.stringify(LOOKS)); } catch {} };
-const lobbySettings = { pace: 1, daily: false };
+const lobbySettings = { pace: 1, daily: false, route: 'maze', resume: false }; // route: 'maze' or 'summit'; resume: Summit from the saved camp
 let bellsRung = 0, departT = -1, uiOpen = null, departArmed = false;
 const panelUp = () => !!uiOpen && uiOpen !== 'photo';
 
@@ -56,6 +61,8 @@ const saveSet = () => { try { localStorage.setItem('ridgeline_settings', JSON.st
     const el = $(inp); el.value = SET[key]; $(out).textContent = f(SET[key]);
     el.addEventListener('input', () => { SET[key] = +el.value; $(out).textContent = f(SET[key]); saveSet(); if (key === 'vol') setVolume(SET.vol); });
   });
+// post effects (bloom, grade, vignette, height mist): on by default, off for slow machines or if you prefer it plain
+{ const el = $("sPost"), show = () => { $("vPost").textContent = POST.broken ? "Unavailable" : POST.on ? "On" : "Off"; }; el.value = POST.on ? 1 : 0; show(); el.addEventListener("input", () => { setPost(+el.value === 1); show(); }); }
 
 /* ---------- loading screens ---------- */
 const TIPS = [
@@ -102,9 +109,9 @@ async function runLoading(title, steps) {
 
 /* ---------- climbers ---------- */
 const CTRL = {
-  p1: { id: 'p1', ping: ['KeyG'], f: ['KeyW'], b: ['KeyS'], l: ['KeyA'], r: ['KeyD'], run: ['ShiftLeft'], jump: ['Space'], use: ['KeyF'], cycle: ['KeyQ'], boost: ['KeyE'], slots: ['Digit1', 'Digit2', 'Digit3'], hint: 'WASD · L‑Shift sprint · Space jump · F use · Q switch · E boost / hold to crank', bk: 'E' },
+  p1: { id: 'p1', ping: ['KeyG'], f: ['KeyW'], b: ['KeyS'], l: ['KeyA'], r: ['KeyD'], run: ['ShiftLeft'], jump: ['Space'], use: ['KeyF'], cycle: ['KeyQ'], boost: ['KeyE'], slots: ['Digit1', 'Digit2', 'Digit3', 'Digit4'], hint: 'WASD · L‑Shift sprint · Space jump · F use · Q switch · E boost / hold to crank', bk: 'E' },
   p2: { id: 'p2', ping: ['Quote'], f: ['ArrowUp'], b: ['ArrowDown'], l: ['ArrowLeft'], r: ['ArrowRight'], run: ['ShiftRight'], jump: ['Enter', 'NumpadEnter'], use: ['Slash'], cycle: ['Period'], boost: ['Comma'], slots: [], hint: 'Arrows · R‑Shift sprint · Enter jump · / use · . switch · , boost / hold to crank', bk: ',' },
-  mouse: { id: 'mouse', ping: ['KeyG', 'Mouse1'], f: ['KeyW', 'ArrowUp'], b: ['KeyS', 'ArrowDown'], l: ['ArrowLeft'], r: ['ArrowRight'], sl: ['KeyA'], sr: ['KeyD'], run: ['ShiftLeft', 'ShiftRight'], jump: ['Space'], use: ['Mouse0', 'KeyF'], cycle: ['KeyQ'], boost: ['KeyE'], slots: ['Digit1', 'Digit2', 'Digit3'], hint: 'Click use · 1 2 3 tools · Space jump · E boost / hold to crank', bk: 'E' },
+  mouse: { id: 'mouse', ping: ['KeyG', 'Mouse1'], f: ['KeyW', 'ArrowUp'], b: ['KeyS', 'ArrowDown'], l: ['ArrowLeft'], r: ['ArrowRight'], sl: ['KeyA'], sr: ['KeyD'], run: ['ShiftLeft', 'ShiftRight'], jump: ['Space'], use: ['Mouse0', 'KeyF'], cycle: ['KeyQ'], boost: ['KeyE'], slots: ['Digit1', 'Digit2', 'Digit3', 'Digit4'], hint: 'Click use · 1 2 3 tools · Space jump · E boost / hold to crank', bk: 'E' },
 };
 class Climber {
   constructor({ color, name, ctrl, mouse = false, look = {} }) {
@@ -127,9 +134,11 @@ class Climber {
 
 /* ---------- state ---------- */
 let mode = null, state = 'boot', paused = false, players = [], remotes = {}, net = null, sdkReady = false;
+let summitCamp = 0; // highest Summit camp the team has reached (0 = trailhead)
 let countdown = 0, raceTime = 0, lastCount = -1, seed = 1, sendTimer = 0, lastSent = { x: 0, z: 0, y: 0, yaw: 0, t: 0 };
-const inGame = () => ['countdown', 'racing', 'finished', 'lobby', 'departing'].includes(state);
+const inGame = () => ['countdown', 'racing', 'finished', 'lobby', 'departing', 'summit'].includes(state);
 const inLobby = () => state === 'lobby' || state === 'departing';
+const toolCount = () => state === 'summit' ? 4 : 3; // slot 4 (pitons) only exists on the mountain
 const isPointerMode = () => mode === 'solo' || mode === 'online';
 
 /* ---------- input ---------- */
@@ -150,9 +159,11 @@ addEventListener('keydown', (e) => {
   if (e.code === 'KeyR' && state === 'finished' && mode !== 'online' && !paused) newMaze();
 });
 addEventListener('keyup', (e) => keys.delete(e.code));
+addEventListener('mouseup', (e) => keys.delete('Mouse' + e.button));
+addEventListener('contextmenu', (e) => { if (locked() || inGame()) e.preventDefault(); }); // right click grabs in Summit
 addEventListener('blur', () => keys.clear());
-addEventListener('mousedown', (e) => { if (!locked()) return; if (e.button === 0) taps.add('Mouse0'); if (e.button === 1) { e.preventDefault(); taps.add('Mouse1'); } });
-addEventListener('wheel', (e) => { if (locked() && players[0]) players[0].slot = (players[0].slot + (e.deltaY > 0 ? 1 : 2)) % 3; }, { passive: true });
+addEventListener('mousedown', (e) => { if (!locked()) return; if (e.button === 0) { taps.add('Mouse0'); keys.add('Mouse0'); } if (e.button === 1) { e.preventDefault(); taps.add('Mouse1'); } if (e.button === 2) { e.preventDefault(); taps.add('Mouse2'); keys.add('Mouse2'); } });
+addEventListener('wheel', (e) => { if (locked() && players[0]) { const n = toolCount(); players[0].slot = (players[0].slot + (e.deltaY > 0 ? 1 : n - 1)) % n; } }, { passive: true });
 addEventListener('mousemove', (e) => {
   if (!locked() || !players[0] || paused) return;
   const p = players[0];
@@ -165,7 +176,7 @@ function updateLock() {
   $('lock').style.display = show ? 'flex' : 'none';
 }
 document.addEventListener('pointerlockchange', () => {
-  if (!locked() && isPointerMode() && !paused && !uiOpen && (state === 'racing' || state === 'countdown' || state === 'lobby')) setPause(true);
+  if (!locked() && isPointerMode() && !paused && !uiOpen && (state === 'racing' || state === 'countdown' || state === 'lobby' || state === 'summit')) setPause(true);
   updateLock();
 });
 $('lock').addEventListener('click', () => { audioInit(SET.vol); lockPointer(); });
@@ -176,6 +187,7 @@ const ICON = {
   chalk: '<svg width="30" height="30" viewBox="0 0 30 30"><path d="M4 25q4-3 8 0t8 0" fill="none" stroke="var(--pc)" stroke-width="3" stroke-linecap="round"/><rect x="11" y="2" width="8" height="20" rx="3" transform="rotate(35 15 12)" fill="#fff" stroke="#1b2738" stroke-width="2.5"/></svg>',
   stick: '<svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="12" fill="var(--pc)" opacity=".28"/><rect x="11" y="3" width="8" height="24" rx="4" transform="rotate(-30 15 15)" fill="var(--pc)" stroke="#1b2738" stroke-width="2.5"/></svg>',
   hand: '<svg width="30" height="30" viewBox="0 0 30 30"><path d="M9 16V8a2 2 0 0 1 4 0v6V5a2 2 0 0 1 4 0v9V7a2 2 0 0 1 4 0v10c0 6-3 10-8 10-4 0-6-2-8-6l-3-5a2 2 0 0 1 3-2l2 2" fill="#fff" stroke="#1b2738" stroke-width="2.2" stroke-linejoin="round"/></svg>',
+  piton: '<svg width="30" height="30" viewBox="0 0 30 30"><path d="M6 24 22 8" stroke="#c9ced6" stroke-width="4.5" stroke-linecap="round"/><path d="M6 24 22 8" stroke="#1b2738" stroke-width="1.4" stroke-linecap="round" opacity=".5"/><circle cx="21" cy="20" r="5" fill="none" stroke="var(--pc)" stroke-width="3"/><rect x="17" y="3" width="10" height="6" rx="2" transform="rotate(45 22 6)" fill="#ff7a2a" stroke="#1b2738" stroke-width="2"/></svg>',
 };
 function buildHuds() {
   const wrap = $('huds'); wrap.innerHTML = '';
@@ -192,12 +204,13 @@ function buildHuds() {
           <div class="slot" data-i="0"><span class="n">1</span>${ICON.chalk}<span class="lbl">Chalk</span></div>
           <div class="slot" data-i="1"><span class="n">2</span>${ICON.stick}<span class="c">3</span><span class="lbl">Glowstick</span></div>
           <div class="slot" data-i="2"><span class="n">3</span>${ICON.hand}<span class="lbl">Hands</span></div>
+          <div class="slot pit" data-i="3"><span class="n">4</span>${ICON.piton}<span class="c">0</span><span class="lbl">Pitons</span></div>
         </div>
         <div class="keys">${p.ctrl.hint}</div>
       </div><div class="done">SUMMIT!</div>`;
     wrap.appendChild(h);
     p.hud = { root: h, vig: h.querySelector('.vig'), fogvig: h.querySelector('.fogvig'), mic: h.querySelector('.mic'), micLvl: h.querySelector('.mic .lvl i'), needle: h.querySelector('.needle'), dist: h.querySelector('.dist'), prompt: h.querySelector('.prompt'), toast: h.querySelector('.toast'),
-      stam: h.querySelector('.stamina'), stamI: h.querySelector('.stamina i'), ghost: h.querySelector('.stamina u'), cross: h.querySelector('.cross'), slots: [...h.querySelectorAll('.slot')], count: h.querySelector('.slot .c'), slotLbl: h.querySelector('.slot[data-i="1"] .lbl'), done: h.querySelector('.done') };
+      stam: h.querySelector('.stamina'), stamI: h.querySelector('.stamina i'), ghost: h.querySelector('.stamina u'), cross: h.querySelector('.cross'), slots: [...h.querySelectorAll('.slot')], count: h.querySelector('.slot .c'), slotLbl: h.querySelector('.slot[data-i="1"] .lbl'), pitC: h.querySelector('.slot.pit .c'), done: h.querySelector('.done') };
     p.ov = initOverlay(h, p.ctrl); flashKeys(p.ov, 20);
   });
 }
@@ -218,12 +231,17 @@ function updateHud(p, dt) {
     H.micLvl.style.width = (micLevel() * 100).toFixed(0) + '%';
   }
   H.slots.forEach((s, i) => s.classList.toggle('on', i === p.slot));
+  { const kh = state === 'summit' ? summitKeys(p) : p.ctrl.hint; if (H.kh !== kh) { H.kh = kh; H.root.querySelector('.keys').textContent = kh; } } // key line follows the mode
   const lob = inLobby();
   if (H.lobby !== lob) { H.lobby = lob; H.slotLbl.textContent = 'Glowstick'; }
   H.count.textContent = lob ? '∞' : p.sticks; H.slots[1].classList.toggle('empty', !lob && p.sticks <= 0);
-  const e = exitPos(), dx = e.x - p.x, dz = e.z - p.z;
+  const sum = state === 'summit'; H.root.classList.toggle('summit', sum);
+  if (sum) { H.pitC.textContent = p.pitons ?? 0; H.slots[3].classList.toggle('empty', !(p.pitons > 0)); }
+  // on the mountain the compass points at the next camp the team hasn't reached yet, then the top
+  const nextCamp = sum ? SUMMIT.camps.find((c) => c.id > summitCamp) : null;
+  const e = sum ? (nextCamp ? { x: nextCamp.x, z: nextCamp.z } : { x: (SUMMIT.faces[0]?.x0 + SUMMIT.faces[0]?.x1) / 2 || p.x, z: SUMMIT.topZ || p.z }) : exitPos(), dx = e.x - p.x, dz = e.z - p.z;
   H.needle.style.transform = `rotate(${-(Math.atan2(-dx, -dz) - p.yaw)}rad)`;
-  H.dist.textContent = p.st === 1 ? 'Safe in the sanctuary' : `${Math.round(Math.hypot(dx, dz))} m to sanctuary`;
+  H.dist.textContent = sum ? (nextCamp ? `${Math.max(0, Math.round(nextCamp.y - p.y))} m up to ${nextCamp.name}` : `${Math.max(0, Math.round(SUMMIT.topY - p.y))} m to the top`) : p.st === 1 ? 'Safe in the sanctuary' : `${Math.round(Math.hypot(dx, dz))} m to sanctuary`;
   let msg = '';
   if (state === 'lobby' && !riding()) {
     const s = p.sit ? null : nearInteract(p.x, p.z, p.yaw);
@@ -248,6 +266,16 @@ function updateHud(p, dt) {
     if (p.climbing) msg = `Climbing… keep holding ${jumpKey}`;
     else if (!msg) { const f = climbFace(p); if (f) msg = `${jumpKey} · jump and hold to climb (${(f.top - p.y).toFixed(1)} m)`; }
   }
+  if (state === 'summit' && p.st === 0 && !msg) msg = ropePrompt(p, summitTeam) || climbPrompt(p);
+  if (state === 'summit' && p.st === 0 && SUMMIT.gate && !SUMMIT.gate.open) {
+    const pc = Math.round(SUMMIT.gate.prog * 100);
+    if (p.gateCrank) msg = `Winding the temple gate… ${pc}% · keep holding ${p.ctrl.bk}`;
+    else if (p.ground && nearCrank(p.x, p.y, p.z)) msg = `Hold ${p.ctrl.bk} · wind the temple gate (${pc}%)`;
+    else if (p.wall && twinAt(p.x, p.y, p.wall.face) >= 0) msg = 'On a rune ledge · a partner must stand on the other one';
+  }
+  if (state === 'summit' && p.st !== 2 && nearTripod(p)) msg = `${p.ctrl.bk} · Take the summit photo`;
+  else if (state === 'summit' && p.st === 0 && p.ground && !p.belay) { const tg = findTarget(p); if (tg && wallBeside(tg.o)) msg = `${p.ctrl.bk} · Boost ${tg.o.name} up to the high holds`; } // the human ladder
+  if (state === 'summit' && p.st === 2 && !p.spec) msg = everyone().some((q) => q.st === 0) ? 'Knocked out · a teammate standing at a camp brings you back' : 'Knocked out · back to camp in a moment';
   H.prompt.style.display = msg ? 'block' : 'none'; if (msg) H.prompt.textContent = msg;
   H.cross.classList.toggle('act', !!msg && msg.includes(' · '));
   if (p.toastT > 0) { p.toastT -= dt; if (p.toastT <= 0) H.toast.classList.remove('on'); }
@@ -265,7 +293,7 @@ function findTarget(p) {
   return best;
 }
 function wallBeside(o) {
-  for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const t = topAt(o.x + dx * 1.3, o.z + dz * 1.3); if (t < OUT && t > o.y + 1.2) return [dx, dz]; }
+  for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const t = topAt(o.x + dx * 1.3, o.z + dz * 1.3); if ((t < OUT || (maze?.summit && t < 300)) && t > o.y + 1.2) return [dx, dz]; }
   return null;
 }
 function doBoost(p, tg) {
@@ -286,6 +314,7 @@ function applyHit(p, ev) {
 }
 function useTool(p) {
   if (p.slot === 0) {
+    if (state === 'summit') { const h = aimedHold(p); if (h && h.type === 'chalk' && !h.chalked) { chalkHold(h); if (mode === 'online') net?.chalkHold(h.id); sfx.chalk(); vmUse(p.vm, 'chalk'); fx.chalk(h.x, h.y, h.z - .1, 0, 0, -1, '#ffffff'); toast(p, 'Chalked · now you can grip it'); return; } }
     if (p.markCd > 0) return;
     const d = aimSurface(p.cam, p.yaw, p.color);
     if (!d) { toast(p, 'Nothing close enough to chalk'); return; }
@@ -311,15 +340,25 @@ function useTool(p) {
     sfx.crack(); vmUse(p.vm, 'throw'); toast(p, `${p.sticks} glowstick${p.sticks === 1 ? '' : 's'} left`);
     if (net && mode === 'online') { d.owner = myId; const k = net.newStickKey(); spawnStick(d, k, (s) => net?.restStick(k, s)); net.putStick(k, d); }
     else spawnStick(d);
+  } else if (p.slot === 3) { // piton (Summit only)
+    if (state !== 'summit') return;
+    if (!p.wall) { toast(p, 'Get on the wall first · pitons go into the rock'); return; }
+    if (p.markCd > 0) return;
+    if (p.pitons <= 0) { toast(p, 'Out of pitons · every camp has a fresh bundle'); sfx.oof?.(); return; }
+    const r = placePiton(p, mode === 'online' && net ? net.newPitonKey() : undefined); p.markCd = .4; vmUse(p.vm, 'chalk');
+    if (r && r.fresh && mode === 'online' && net) net.putPiton(r.pit.key, pitonData(r.pit));
+    if (r && r.fresh) { p.pitons--; p.pitonsUsed = (p.pitonsUsed || 0) + 1; toast(p, `Piton in · you're clipped (${p.pitons} left)`); }
+    else toast(p, 'Clipped into the piton here');
+    if (p.ov) showTip(p.ov, 'piton', 'Pitons catch your falls', 'You are clipped into the last piton you placed or climbed past. Fall, and it catches you about a metre and a half below it. Grab a hold to climb on.', 'stam');
   } else {
-    const tg = findTarget(p); if (tg) doBoost(p, tg); else toast(p, 'Nobody close enough to boost');
+    const tg = findTarget(p); if (tg) doBoost(p, tg); else if (state !== 'summit') toast(p, 'Nobody close enough to boost');
   }
 }
 
 /* ---------- climber physics ---------- */
 function stepClimber(p, dt, time) {
   const c = p.ctrl, ride = inLobby() && (riding() || gondola.phase === 'gone');
-  const live = (state === 'racing' || (state === 'lobby' && !ride)) && p.st !== 2 && !paused && !panelUp() && !p.spec;
+  const live = (state === 'racing' || state === 'summit' || (state === 'lobby' && !ride)) && p.st !== 2 && !paused && !panelUp() && !p.spec;
   const on = (l) => live && held(l);
   const fwd = (on(c.f) ? 1 : 0) - (on(c.b) ? 1 : 0), side = p.mouse ? (on(c.sr) ? 1 : 0) - (on(c.sl) ? 1 : 0) : 0;
   if (!paused && !panelUp() && p.st !== 2) p.yaw += ((held(c.l) ? 1 : 0) - (held(c.r) ? 1 : 0)) * TURN * dt;
@@ -333,15 +372,32 @@ function stepClimber(p, dt, time) {
     if (fwd || side || tapped(c.jump) || !inLobby()) { p.sit = null; sfx.step(false); }
     else { p.x = p.sit.x; p.z = p.sit.z; p.y = 0; p.stamina = Math.min(1, p.stamina + .5 * dt); if (p.stamina > .4) p.exhausted = false; poseClimber(p, dt, time, 0); return; }
   }
+  if (state === 'summit') { // on the cliff: hands grab holds (climb.js), otherwise walk as normal
+    // belay: hold E (boost) while a roped teammate is below you, standing or on the wall with both hands
+    p.belay = live && p.st === 0 && !p.hang && held(c.boost) && !nearCrank(p.x, p.y, p.z) && (p.ground || (p.wall && p.wall.hands.every(Boolean))) && partners(summitTeam, p).some((q) => q.st === 0 && q.y < p.y - 1);
+    const side = (held(c.r) || held(c.sr) ? 1 : 0) - (held(c.l) || held(c.sl) ? 1 : 0);
+    const onWall = climbStep(p, dt, { live, tapL: taps.has('Mouse0'), tapR: taps.has('Mouse2'), holdL: keys.has('Mouse0'), holdR: keys.has('Mouse2'), fwd: live && held(c.f), back: live && held(c.b), side: live ? side : 0, jump: live && tapped(c.jump), jumpKeys: c.jump }, { toast, consume: (k) => taps.delete(k), onBreak: (h) => { if (mode === 'online') net?.breakHold(h.id); } });
+    if (onWall) { p.gateCrank = false; p.crank = -1; // hands on the rock: not on the gate crank
+      if (live) { // tools still work on the wall: chalk a slick hold, hammer in a piton
+        c.slots.forEach((k, i) => { if (taps.has(k)) p.slot = i; });
+        if (tapped(c.cycle)) p.slot = (p.slot + 1) % toolCount();
+        if (tapped(c.use)) useTool(p);
+        if (tapped(c.ping)) doPing(p);
+      }
+      p.inFog = p.st === 0 && !DEV.sleep && p.y + 1.2 < summitSY; if (p.inFog) p.stamina -= .12 * dt;
+      p.stamina -= (1 - COLD[zoneAtY(p.y)]) * .025 * dt; // cold fingers higher up // the Shadow drains you on the wall too (climb.js drops you at 0)
+      p.markCd -= dt; p.airTop = p.y; poseClimber(p, dt, time, 0); return;
+    }
+  }
   if (DEV.fly && devAllowed() && p.st !== 2) { flyClimber(p, dt, time, live, fwd, side); return; }
   const lever = live && p.st === 0 && (state === 'racing' || state === 'lobby') ? leverNear(p.x, p.z) : -1;
   if (live) {
-    c.slots.forEach((k, i) => { if (taps.has(k)) p.slot = i; });
-    if (tapped(c.cycle)) p.slot = (p.slot + 1) % 3;
+    c.slots.forEach((k, i) => { if (taps.has(k) && i < toolCount()) p.slot = i; });
+    if (tapped(c.cycle)) p.slot = (p.slot + 1) % toolCount();
     if (tapped(c.use)) { const bz = state === 'racing' ? brazierNear(p.x, p.z) : -1; if (bz >= 0) lightLocal(bz, p); else useTool(p); }
     if (tapped(c.boost) && lever < 0) {
       const spot = state === 'lobby' ? nearInteract(p.x, p.z, p.yaw) : null;
-      if (spot) interact(p, spot); else { const tg = findTarget(p); if (tg) doBoost(p, tg); }
+      if (spot) interact(p, spot); else if (state === 'summit' && nearTripod(p)) takePhoto({ summit: true }); else { const tg = findTarget(p); if (tg) doBoost(p, tg); }
     }
     if (tapped(c.jump)) p.wantJump = true;
     if (tapped(c.ping)) doPing(p);
@@ -350,13 +406,17 @@ function stepClimber(p, dt, time) {
   const wasCranking = p.crank >= 0;
   p.crank = lever >= 0 && held(c.boost) && !p.exhausted && p.ground ? lever : -1;
   if (p.crank >= 0) p.stamina -= .1 * dt;
+  // the temple gate crank on the mountain: same pose and stamina cost, shared with the room through crank = GATE_CRANK
+  p.gateCrank = state === 'summit' && live && p.st === 0 && p.ground && held(c.boost) && !p.exhausted && nearCrank(p.x, p.y, p.z);
+  if (p.gateCrank) { p.crank = GATE_CRANK; p.stamina -= .05 * dt; }
   if (wasCranking && p.crank < 0 && p.exhausted) toast(p, 'Too tired, you let go of the crank!');
   p.markCd -= dt; p.boostCd -= dt; p.stumble = Math.max(0, p.stumble - dt); p.land = Math.max(0, p.land - dt * 3);
 
-  const onRidge = p.ground && p.y > 6; // only real wall-tops count as ridges, not rock steps
+  const onRidge = p.ground && p.y > 6 && state !== 'summit'; // only real wall-tops count as ridges (Summit terraces are ledges)
   p.sprinting = live && held(c.run) && fwd > 0 && !p.exhausted && p.ground && !onRidge && p.stamina > 0;
   let spd = p.sprinting ? SPRINT : WALK;
   if (p.exhausted) spd = TIRED; if (onRidge) spd = RIDGE; if (p.stumble > 0) spd *= .5;
+  if (p.belay && state === 'summit') spd = 0; // belaying: plant your feet
   const sy = Math.sin(p.yaw), cy = Math.cos(p.yaw);
   let vx = -sy * fwd + cy * side, vz = -cy * fwd - sy * side;
   const len = Math.hypot(vx, vz); if (len > 1) { vx /= len; vz /= len; }
@@ -392,15 +452,22 @@ function stepClimber(p, dt, time) {
   }
   if (!p.climbing) { p.vy -= GRAV * dt; p.y += p.vy * dt; }
   const g = groundUnder(p.x, p.z, p.y, R);
+  if (!p.ground) p.airTop = Math.max(p.airTop ?? p.y, p.y);
+  if (!p.climbing && p.y <= g && !p.ground && state === 'summit') { // a long fall hurts: stamina and a stumble, more the further you dropped
+    const drop = (p.airTop ?? p.y) - g;
+    if (drop > 3.5) { p.stamina = Math.max(0, p.stamina - Math.min(.7, (drop - 3.5) * .05)); p.stumble = Math.min(2.5, .4 + drop * .08); p.shake = Math.max(p.shake, Math.min(1, drop / 14)); toast(p, drop > 9 ? `Ouch! A ${Math.round(drop)} m fall` : 'Oof, that was a drop'); sfx.oof?.(); p.falls = (p.falls || 0) + 1; }
+    if (drop > 13 && p.st === 0) knockOut(p, drop);
+  }
   if (!p.climbing && p.y <= g) { if (!p.ground && p.vy < -8) { sfx.land(); p.land = Math.min(1, -p.vy / 16); fx.dust(p.x, g, p.z, 10 + Math.round(p.land * 10), .6 + p.land); p.shake = Math.max(p.shake, p.land * .5); } p.y = g; p.vy = 0; p.ground = true; }
   else p.ground = false;
+  if (p.ground) p.airTop = p.y;
 
   // the Shadow Fog: no rest inside it, stamina bleeds away, and you collapse if you stay empty
-  p.inFog = state === 'racing' && p.st === 0 && fogDepth(p.x, p.z, raceTime) > 0;
+  p.inFog = (state === 'racing' && p.st === 0 && fogDepth(p.x, p.z, raceTime) > 0) || (state === 'summit' && p.st === 0 && !DEV.sleep && p.y + 1.2 < summitSY);
   if (p.sprinting) p.stamina -= .34 * dt;
   else if (p.inFog) p.stamina -= .12 * dt;
   else if (onRidge && live) p.stamina -= .07 * dt;
-  else if (p.ground && p.crank < 0) p.stamina += (sp > .3 ? .16 : .28) * dt;
+  else if (p.ground && p.crank < 0) p.stamina += (sp > .3 ? .16 : .28) * dt * (state === 'summit' && !p.campIn ? COLD[zoneAtY(p.y)] : 1); // the cold slows recovery away from camp fires
   if (p.sprinting && p.inFog) p.stamina -= .08 * dt;
   p.stamina = clamp(p.stamina, 0, 1);
   if (DEV.god && devAllowed()) { p.stamina = 1; p.exhausted = false; p.collapseT = 0; }
@@ -439,10 +506,10 @@ function poseClimber(p, dt, time, sp) {
   const eye = p.st === 2 ? .35 : p.sit ? 1.05 : EYE + bob - p.land * .35;
   p.cam.position.set(p.x, p.y + eye, p.z);
   p.cam.rotation.set(p.st === 2 ? -.15 : p.pitch + droop, p.yaw, p.roll);
-  p.mesh.position.set(p.x, p.y + (p.st === 2 ? .3 : Math.abs(bob) * .6), p.z); p.mesh.rotation.set(p.st === 2 ? -Math.PI / 2 : 0, p.sit ? p.sit.yaw : p.yaw, 0, 'YXZ');
+  p.mesh.position.set(p.x, p.y + (p.st === 2 ? .3 : Math.abs(bob) * .6), p.z); p.mesh.rotation.set(p.st === 2 ? -Math.PI / 2 : 0, p.sit ? p.sit.yaw : p.wall ? Math.PI : p.yaw, 0, 'YXZ');
   if (p.ragdoll) { const h = ragdollHead(p.ragId); if (h) p.cam.position.set(h.x, h.y + .12, h.z); }
   p.push = Math.max(0, p.push - dt); p.wave = Math.max(0, p.wave - dt);
-  animateRig(p.mesh, { speed: sp, ground: p.ground, vy: p.vy, sprint: p.sprinting, crank: p.crank >= 0, stumble: p.stumble, tired: p.exhausted || p.stamina < .2, wave: p.wave, push: p.push, down: p.st === 2, sit: !!p.sit, climb: p.climbing ? p.climbPh : null }, dt);
+  animateRig(p.mesh, { speed: sp, ground: p.ground, vy: p.vy, sprint: p.sprinting, crank: p.crank >= 0, stumble: p.stumble, tired: p.exhausted || p.stamina < .2, wave: p.wave, push: p.push, down: p.st === 2, sit: !!p.sit, climb: p.climbing ? p.climbPh : null, grip: p.wall ? p.wall.hands : null }, dt);
   p.bobScale = B;
   animateViewmodel(p.vm, p, dt, time);
   // camera shake from slams, hard landings and shoves
@@ -527,9 +594,12 @@ function updateRemotes(dt) {
     if (!down && r.ragdoll) { removeRagdoll('R' + r.id); r.ragdoll = false; }
     r.mesh.visible = !r.ragdoll;
     r.mesh.position.set(r.x, r.y + (down ? .3 : sp > .3 ? Math.abs(Math.sin(r.phase)) * .035 : 0), r.z);
-    r.mesh.rotation.set(down ? -Math.PI / 2 : 0, r.yaw, 0, 'YXZ');
+    // on the Summit wall the short summit string says which holds their hands are on: reach for exactly those
+    const sm = state === 'summit' && r.crank === -2 && r.sm ? String(r.sm).split(',') : null, onFace = sm && sm[6] !== undefined && sm[6] !== '';
+    const grip = onFace ? [SUMMIT.holds[+sm[0]] || null, SUMMIT.holds[+sm[1]] || null] : null;
+    r.mesh.rotation.set(down ? -Math.PI / 2 : 0, onFace ? Math.PI : r.yaw, 0, 'YXZ');
     const vy = (r.y - (r.py ?? r.y)) / Math.max(dt, 1e-4); r.py = r.y;
-    animateRig(r.mesh, { speed: sp, ground: Math.abs(vy) < .6, vy, sprint: sp > 6, crank: (r.crank ?? -1) >= 0, tired: false, down: down && !r.ragdoll, sit: r.st === 3, climb: r.crank === -2 ? r.climbPh = (r.climbPh || 0) + dt * 6.5 : null }, dt);
+    animateRig(r.mesh, { speed: sp, ground: Math.abs(vy) < .6, vy, sprint: sp > 6, crank: (r.crank ?? -1) >= 0, tired: false, down: down && !r.ragdoll, sit: r.st === 3, climb: r.crank === -2 ? r.climbPh = (r.climbPh || 0) + dt * 6.5 : null, grip }, dt);
   }
 }
 
@@ -546,7 +616,7 @@ function prepRound(s, opts = {}) {
   // opts: { pace, grace, maxDoors, first } (the gentle first climb uses these)
   roundOpts = { ...opts }; const pace = opts.pace ?? lobbySettings.pace; roundOpts.pace = pace; setPace(pace); if (opts.grace) setGrace(opts.grace);
   DEV.graceWas = GRACE; if (DEV.sleep && devAllowed()) setGrace(1e7);
-  seed = s; clearMarksAndSticks(); buildMaze(s, { maxDoors: opts.maxDoors, puzzles: !opts.first }); buildDoors(); buildPuzzles(); physRebuild(s); placeAtStart(); endShown = false;
+  seed = s; showSummit(false); updateClimbFx(null, false); clearRope(); showRise(false); showHazards(false); boltEl.style.opacity = 0; endPractice(); clearMarksAndSticks(); buildMaze(s, { maxDoors: opts.maxDoors, puzzles: !opts.first }); buildDoors(); buildPuzzles(); physRebuild(s); placeAtStart(); endShown = false;
   buildTrail(maze, pace); showTrail(true);
   players.forEach((p) => { p.ragdoll = false; });
   Object.values(remotes).forEach((r) => { r.ragdoll = false; r.st = 0; r.mesh.visible = true; });
@@ -562,7 +632,11 @@ function goCountdown() {
   updateLock();
 }
 function startRound(s) { prepRound(s); goCountdown(); }
-function newMaze() { if (mode !== 'online') startRound(newSeed()); }
+function newMaze() {
+  if (mode === 'online') return;
+  if (roundOpts.summit) { const won = roundOpts.won; enterSummitTest(won ? newSeed() : SUMMIT.seed, won ? 0 : summitCamp, SUMMIT.pace ?? lobbySettings.pace, !!roundOpts.dev); return; } // retry the mountain from the last camp
+  startRound(newSeed());
+}
 
 // Everyone still climbing must reach the sanctuary. The round ends when nobody is left climbing.
 let endShown = false;
@@ -585,6 +659,22 @@ function showEnd(o) {
   const total = o.escaped.length + o.lost.length;
   let title, sub;
   if (o.win && roundOpts.first && !roundOpts.dev) { try { localStorage.setItem('ridgeline_firstclimb', '1'); } catch {} }
+  if (o.summit) { // the mountain
+    roundOpts.won = o.win;
+    const campName = CAMP_NAMES[o.camp || 0] || 'Trailhead';
+    if (o.win) { title = o.lost.length ? `${o.escaped.length} of ${total} reached the summit` : total > 1 ? 'The whole team reached the summit' : 'You reached the summit'; sub = `Top in ${fmt(o.time)}` + (o.lost.length ? ` · lost: ${o.lost.join(', ')}` : ''); }
+    else { title = total > 1 ? 'The Shadow swallowed the mountain' : 'The Shadow caught you'; sub = `Highest camp: ${campName} · lasted ${fmt(o.time)}` + ((o.camp || 0) > 0 ? ' · the next climb can resume from that camp (trail board)' : ''); }
+    const T = (k) => players.reduce((s, p) => s + (p[k] || 0), 0); // team summary (this screen's climbers)
+    sub += ` · ${T("falls")} falls · ${T("ropeCatches")} rope catches · ${T("hauls")} hauls · ${T("pitonsUsed")} pitons · ${T("rests")} rests`;
+    if (roundOpts.dev) sub += " · dev tools were on, so no rewards";
+    $('banner').classList.toggle('lose', !o.win);
+    $('bFlag').innerHTML = o.win ? '<svg class="i sm"><use href="#i-sun"/></svg>Summit reached' : '<svg class="i sm"><use href="#i-moon"/></svg>Game over';
+    $('again').textContent = (o.camp || 0) > 0 && !o.win ? `Retry from ${campName} · R` : 'Climb again · R';
+    showBanner(title, sub + (mode === 'online' ? ' · back to the hall in 8 seconds' : ''), { again: mode !== 'online' });
+    if (o.win) domConfetti(true); else sfx.doom();
+    return;
+  }
+  $('again').textContent = 'New maze · R';
   if (o.win) {
     title = o.lost.length ? `${o.escaped.length} of ${total} escaped` : total > 1 ? 'Everyone escaped the Shadow' : 'You escaped the Shadow';
     sub = `Sanctuary reached in ${fmt(o.time)}` + (o.lost.length ? ` · lost: ${o.lost.join(', ')}` : '');
@@ -600,16 +690,16 @@ function showEnd(o) {
   $('banner').classList.toggle('lose', !o.win);
   $('bFlag').innerHTML = o.win ? '<svg class="i sm"><use href="#i-sun"/></svg>Sanctuary reached' : '<svg class="i sm"><use href="#i-moon"/></svg>Game over';
   showBanner(title, sub + (mode === 'online' ? ' · back to the hall in 8 seconds' : ''), { again: mode !== 'online' });
-  if (o.win) domConfetti();
+  if (o.win) domConfetti(true); else sfx.doom();
 }
-function domConfetti() {
+function domConfetti(win) {
   const host = $('banner'), cols = ['#ff6f59', '#ffd23f', '#2ec4f1', '#8ee34d', '#a37bff', '#ff5fa2'];
   for (let i = 0; i < 80; i++) {
     const c = document.createElement('i'); c.className = 'conf';
     c.style.cssText = `left:${Math.random() * 100}%;background:${cols[i % cols.length]};animation-delay:${Math.random() * .6}s;animation-duration:${2.2 + Math.random() * 1.6}s;--r:${(Math.random() - .5) * 1440}deg;--dx:${(Math.random() - .5) * 240}px;width:${8 + Math.random() * 8}px;height:${10 + Math.random() * 10}px`;
     host.appendChild(c); setTimeout(() => c.remove(), 4600);
   }
-  if (o.win) sfx.fanfare(); else sfx.doom();
+  if (win) sfx.fanfare();
 }
 function showBanner(title, sub, { again = false } = {}) {
   $('bTitle').textContent = title; $('bSub').textContent = sub;
@@ -699,7 +789,8 @@ function renderPassport(fresh) {
   const n = STATIONS.filter((s) => hasStamp(s.id)).length;
   $('passport').innerHTML = `<div class="pp-h"><b>Climber's passport</b><span>${n}/${STATIONS.length}</span></div>` +
     STATIONS.map((s) => `<div class="pp-r${hasStamp(s.id) ? ' done' : ''}${s.id === fresh ? ' pop' : ''}"><i></i><div><b>${esc(s.name)}</b>${hasStamp(s.id) ? '' : `<small>${esc(s.hint)}</small>`}</div></div>`).join('') +
-    (n === STATIONS.length ? '<p class="pp-done">All stamped. Off you go!</p>' : '<p class="pp-done">Optional · practise anything before you board</p>');
+    (n === STATIONS.length ? '<p class="pp-done">All stamped. Off you go!</p>' : '<p class="pp-done">Optional · practise anything before you board</p>') +
+    `<p class="pp-done">Summit badges: ${["Gentle", "Standard", "Brutal"].map((n, i) => summitWins().includes(i) ? `<b>${n}</b>` : `<s style="opacity:.5">${n}</s>`).join(" · ")}</p>`;
 }
 setBallHook((pos) => { if (!inShed(pos)) return false; if (stamp('glow')) passportStamp(players[0], 'glow', true); return true; });
 function lobbyTraining(dt) {
@@ -725,6 +816,7 @@ const CARDS = [
 const cardsHtml = () => CARDS.map(([t, d, svg], i) => `<div class="pcard2" style="--i:${i}"><svg viewBox="0 0 80 80">${svg}</svg><b>${i + 1}. ${t}</b><p>${d}</p></div>`).join('');
 document.querySelectorAll('.cards5').forEach((el) => el.innerHTML = cardsHtml());
 function maybeBriefing() {
+  document.querySelector('[data-panel="brief"] .cards5').innerHTML = cardsHtml(); // the Summit briefing may have swapped the cards
   let last = 0; try { last = +localStorage.getItem('ridgeline_last') || 0; localStorage.setItem('ridgeline_last', Date.now()); } catch {}
   if (!last) { $('briefTitle').textContent = 'Welcome, climber'; $('briefSub').textContent = 'Five things to know before your first climb. The training wing in the boarding hall lets you try each one.'; openPanel('brief'); }
   else if (Date.now() - last > 14 * 864e5) {
@@ -734,6 +826,381 @@ function maybeBriefing() {
   }
 }
 
+/* ---------- Summit climb: the test mountain with rope, pitons, camps and the rising Shadow (solo, local co-op, online) ---------- */
+const SUMMIT_SKY = new THREE.Color(0xdfe9f4);
+const PITON_N = [8, 5, 3];          // pitons per climber per camp, by pace
+const SUMMIT_SAVE = 'ridgeline_summit_cp';
+const CAMP_NAMES = ['Trailhead', 'Camp I', 'Camp II', 'Camp III', 'Camp IV', 'Camp V'];
+const summitSave = () => { try { return JSON.parse(localStorage.getItem(SUMMIT_SAVE) || 'null'); } catch { return null; } };
+// the camp the next Summit can resume from: this device's save offline, the room's checkpoint online
+const resumeCamp = () => (mode === 'online' ? net?.meta?.save?.camp : summitSave()?.camp) || 0;
+let summitSY = -10, summitTeam = [], campTimes = {}, summitStartCamp = 0, summitFlash = 0;
+const _zoneSky = new THREE.Color();
+const summitPauses = () => Object.values(campTimes);
+const boltEl = document.createElement('div'); boltEl.style.cssText = 'position:fixed;inset:0;background:#eef4ff;opacity:0;pointer-events:none;z-index:5;mix-blend-mode:screen'; document.body.appendChild(boltEl); // lightning
+onKbChalk((h) => { if (mode === 'online') net?.chalkHold(h.id); });
+/** Dev menu: straight onto the test mountain (solo or local co-op). */
+function enterSummitTest(s = newSeed(), camp = 0, pace = lobbySettings.pace, dev = true) {
+  closeDev(true);
+  return transition(() => { if (inLobby() || $('huds').classList.contains('lobby')) leaveLobbyWorld(); enterSummitNow(s, camp, pace); })
+    .then(() => { if (dev) roundOpts.dev = true; if (isPointerMode()) lockPointer(); }); // dev-menu runs don't earn rewards
+}
+/** Build the mountain from a seed and put everyone at a camp (0 = the trailhead). Used offline, online and for late joiners. */
+function enterSummitNow(s, camp = 0, pace = 1, { late = false, startCamp = camp, practice: prac = false } = {}) {
+  endPractice(); if (prac) practice = { done: new Set(), dummy: null, by: null, beat: 0, hall: null, finished: false };
+  state = 'summit'; paused = false; endShown = false; raceTime = 0; departT = -1; summitCamp = 0; campTimes = {}; seed = s;
+  roundOpts = { pace, summit: true, firstSummit: !prac && isFirstSummit() };
+  ['banner', 'count', 'pause', 'depart'].forEach((id) => $(id).style.display = 'none'); $('timer').style.display = 'block'; $('fogbar').style.display = 'flex';
+  clearMarksAndSticks(); clearTrail(); showTrail(false); showDecor(false); showFog(false); setGroundVisible(false); clearRope();
+  buildSummit(s, pace, { practice: prac }); buildDoors(); buildPuzzles(); physRebuild(1);
+  if (prac) { $('fogbar').style.display = 'none'; $('timer').style.display = 'none'; }
+  SUMMIT.pace = pace; setRise(pace); showRise(!prac); buildHazards(s, pace); showHazards(!prac);
+  const start = SUMMIT.camps[Math.min(camp, SUMMIT.camps.length - 1)];
+  for (const c of SUMMIT.camps) if (c.id <= start.id && c.id > 0) markCamp(c);
+  gateBoth = 0; if (SUMMIT.gate && start.y >= SUMMIT.faces[SUMMIT.gate.face].y1 - .5) openGate(); // resuming above the temple gate: it is already open
+  summitCamp = start.id; summitStartCamp = Math.min(startCamp, start.id);
+  RISE.base = summitStartCamp ? SUMMIT.camps[summitStartCamp].y - 24 : -4; // resuming: the Shadow starts a little below that camp (same for everyone, also late joiners)
+  if (prac) RISE.base = -1e4; // no Shadow on the Practice Wall
+  if (summitStartCamp === SUMMIT.camps.length - 1) campTimes[summitStartCamp] = 0; // resumed at the last camp: the final push is on
+  players.forEach((p, i) => {
+    Object.assign(p, { vy: 0, ex: 0, ez: 0, pitch: .25, roll: 0, stamina: 1, exhausted: false, ground: true, done: false,
+      st: 0, crank: -1, sit: null, slot: 2, sticks: 3, summited: false, ragdoll: false, inFog: false, collapseT: 0, stumble: 0,
+      pitons: PITON_N[pace] ?? 5, clip: null, hang: null, belay: false, falls: 0, ropeCatches: 0, pitonsUsed: 0, downT: 0, summitZone: start.zone ?? 0, gustT: 0, hauls: 0, rests: 0, hauled: false, ropeGold: p.look?.rope === 'gold', netId: mode === 'online' ? myId : 'L' + i });
+    resetClimber(p); placeAtCamp(p, start, i + (late ? Object.keys(remotes).length : 0));
+    if (p.hud) { p.hud.done.style.display = 'none'; p.hud.done.classList.remove('dead'); }
+  });
+  Object.values(remotes).forEach((r) => { if (r.ragdoll) removeRagdoll('R' + r.id); r.ragdoll = false; r.mesh.visible = true; r.rp = null; });
+  $('pRestart').style.display = 'none'; $('pLeave').querySelector('b').textContent = mode === 'online' && !prac ? 'Leave to menu' : 'Back to the boarding hall';
+  renderPractice();
+  updateLock();
+  setTimeout(() => players.forEach((p) => {
+    if (!p.ov) return;
+    const kb = !p.mouse, two = p.ctrl.id === 'p2';
+    zoneCard(p.ov, late ? `Joined at ${start.name}` : start.id ? `Back at ${start.name}` : prac ? 'Practice Wall' : roundOpts.firstSummit ? 'Your first Summit · Gentle hints on' : 'The Summit', kb ? `${two ? 'Enter' : 'Space'} at the wall to grab · ${two ? 'arrows' : 'W A S D'} move a hand` : 'Look at a hold · hold left or right click to grab it', 'goal');
+    if (!kb) showTip(p.ov, 'grab', 'Climb with two hands', 'Look at a hold and hold LEFT click for your left hand, RIGHT click for your right. Grab higher holds to pull yourself up. Let go of both and you fall.', 'stam');
+    else showTip(p.ov, 'grabkb', 'Climbing on the keyboard', 'Jump at the wall to grab it. Up moves your lower hand higher, down moves a hand lower, left and right reach sideways. Jump again to push off.', 'stam');
+  }), 700);
+}
+function placeAtCamp(p, c, i) {
+  const n = Math.max(players.length, i + 1), off = (i - (n - 1) / 2) * 1.3;
+  Object.assign(p, { x: c.x + off - (c.id ? 5 : 0), y: c.y, z: c.z - (c.id ? 2.5 : 0), yaw: Math.PI, vy: 0, ground: true, airTop: c.y });
+}
+/** Summit fall too long for the rope or a piton: knocked out until a teammate brings you back at a camp. */
+function knockOut(p, drop) {
+  p.st = 2; p.done = true; p.doneAt = time; p.downT = 0; p.hang = null; p.clip = null; p.belay = false; releaseWall(p, null, toast);
+  sfx.doom(); p.shake = 1; fx.dust(p.x, p.y, p.z, 20, 1.4, 0xffffff);
+  p.hud.done.textContent = 'KNOCKED OUT'; p.hud.done.style.display = 'flex'; p.hud.done.classList.add('dead');
+  toast(p, `A ${Math.round(drop)} m fall · knocked out`);
+  players.forEach((q) => { if (q !== p && q.st === 0) toast(q, `${p.name} is knocked out · stand at a camp to bring them back`); });
+  if (mode === 'online') sendNow();
+}
+function reviveAt(p, c) {
+  if (p.ragdoll) { removeRagdoll(p.ragId); p.ragdoll = false; }
+  Object.assign(p, { st: 0, done: false, stamina: .7, exhausted: false, stumble: 0, downT: 0, hang: null, clip: null, collapseT: 0, inFog: false, spec: null });
+  resetClimber(p); placeAtCamp(p, c, players.indexOf(p));
+  if (p.hud) { p.hud.done.style.display = 'none'; p.hud.done.classList.remove('dead'); }
+  fx.sparkle(p.x, p.y + 1, p.z, 0xffd23f, 18); sfx.chime?.(); toast(p, `Back on your feet at ${c.name}`);
+  if (mode === 'online') sendNow();
+}
+/** The rope team in a fixed order every client agrees on (local climbers, plus proxies for online teammates). */
+function teamList() {
+  if (practice) { const t = players.slice(); if (practice.dummy) t.splice(Math.max(0, t.indexOf(practice.by)) + 1, 0, practice.dummy); return t; } // Practice Wall: you and the sandbag, nobody online
+  if (mode !== "online") return players.slice();
+  const list = players.concat(Object.values(remotes).map(proxyOf));
+  return list.sort((a, b) => (a.netId < b.netId ? -1 : a.netId > b.netId ? 1 : 0));
+}
+// An online teammate as the rope rules see them, rebuilt from their position and their short summit string (sm)
+function proxyOf(r) {
+  const q = r.rp || (r.rp = { remote: true, id: r.id, netId: r.id, ragId: 'R' + r.id, ctrl: { bk: 'E' } }); q.ropeGold = String(r.lookStr || '').includes('"rope":"gold"');
+  const [hl, hr, ck, g, b, k, f] = String(r.sm || '').split(',');
+  const face = f === undefined || f === '' ? -1 : +f, H = SUMMIT.holds;
+  Object.assign(q, { name: r.name, color: r.color, x: r.x, y: r.y || 0, z: r.z, st: r.st || 0, hang: g === '1', belay: b === '1', campId: k === undefined ? -1 : +k,
+    wall: face >= 0 ? { face, hands: [H[+hl] || null, H[+hr] || null] } : null, clip: ck ? pitonByKey(ck) : null, gone: false });
+  q.ground = !q.wall && !q.hang;
+  return q;
+}
+const smOf = (p) => { const W = p.wall; return `${W?.hands[0]?.id ?? -1},${W?.hands[1]?.id ?? -1},${p.clip?.key || ''},${p.hang ? 1 : 0},${p.belay ? 1 : 0},${p.campIn ? p.campIn.id : -1},${W ? W.face : ''}`; };
+/** Everything the mountain does each frame: the Shadow, rope, camps, checkpoints, getting knocked-out teammates back. */
+function summitTick(dt) {
+  summitSY = shadowY(raceTime, summitPauses(), campTimes[SUMMIT.camps.length - 1] ?? Infinity);
+  // zone hazards: rocks, wind, lightning (all from the seed and the round clock)
+  const viewer = players[0]?.spec ? remotes[players[0].spec] : players[0];
+  updateHazards(raceTime, dt, players.filter((p) => p.st === 0), viewer, { zoneOf: zoneAtY, rockHit, gust, thunder: () => sfx.thunder(viewer && zoneAtY(viewer.y) >= 3 ? 1 : .5) });
+  summitFlash = viewer && zoneAtY(viewer.y) >= 3 ? flashAt(raceTime) : 0;
+  summitFeel(dt, viewer);
+  if (windAt(raceTime).k === 0) players.forEach((p) => { p.gustT = 0; p.gustSaid = false; });
+  // the sky and light follow the zone you are in
+  if (viewer) SUMMIT_SKY.lerp(_zoneSky.set(ZONES[zoneAtY(viewer.y)].sky), Math.min(1, dt * 1.2));
+  for (const p of players) {
+    if (p.st !== 0) continue;
+    const z = zoneAtY(p.y);
+    if (z > (p.summitZone ?? 0)) { p.summitZone = z; if (p.ov) { zoneCard(p.ov, ZONES[z].name, `Zone ${z + 1} of 5 · ${ZONES[z].idea}`, 'z' + Math.min(z, 2)); } sfx.chime?.(); }
+    // breath clouds in the cold
+    if (z >= 1 && !p.campIn && (p.breathT = (p.breathT || 0) - dt) <= 0) { p.breathT = 1.8 + Math.random(); const fwx = -Math.sin(p.yaw), fwz = -Math.cos(p.yaw); fx.dust(p.x + fwx * .5, p.y + 1.5, p.z + fwz * .5, 3, .12, 0xffffff); }
+  }
+  const cx = (SUMMIT.faces[0]?.x0 + SUMMIT.faces[0]?.x1) / 2 || 66, cz = SUMMIT.topZ || 50;
+  updateRise(summitSY, dt, cx, cz);
+  ropeStep(summitTeam, dt, { toast, letGo: (q, why) => releaseWall(q, why, toast), remoteHit: (q, kind, from) => net?.sendEvent(q.id, { type: kind, from }) });
+  updateRopes(summitTeam, dt);
+  if (practice) { practiceTick(dt); summitHints(dt); players.forEach(summitTips); return; } // the Practice Wall: no camps, no Shadow, no end
+  gateTick(dt);
+  summitHints(dt); players.forEach(summitTips);
+  const alive = players.filter((p) => p.st === 0);
+  for (const p of alive) {
+    const c = p.ground ? campAt(p.x, p.y, p.z) : null;
+    p.campIn = c;
+    if (!c) continue;
+    if (c.id > 0) p.stamina = Math.min(1, p.stamina + .25 * dt); // the fire warms you up
+    const full = PITON_N[SUMMIT.pace] ?? 5;
+    if ((p.pitons < full || p.sticks < 3) && c.id > 0) { p.pitons = Math.max(p.pitons, full); p.sticks = 3; toast(p, `Pitons (${full}) and glowsticks refilled`); }
+    p.clip = null;
+    if (c.id > summitCamp) reachCamp(c, p.name);
+  }
+  // knocked out or taken by the Shadow: a teammate standing in a camp above the Shadow brings you back there;
+  // with nobody left standing anywhere, everyone wakes at the team's last camp (if the Shadow hasn't reached it)
+  const safe = (c) => c && c.y > summitSY + .5;
+  const helperCamp = () => {
+    for (const q of alive) if (safe(q.campIn)) return q.campIn;
+    if (mode === 'online') for (const r of Object.values(remotes)) { const q = proxyOf(r); if (q.st === 0 && q.campId >= 0 && safe(SUMMIT.camps[q.campId])) return SUMMIT.camps[q.campId]; }
+    return null;
+  };
+  const anyoneUp = alive.length || (mode === 'online' && Object.values(remotes).some((r) => (r.st || 0) === 0));
+  for (const p of players) if (p.st === 2) {
+    p.downT += dt;
+    const c = helperCamp();
+    if (c && p.downT > 2) reviveAt(p, c);
+    else if (!anyoneUp && p.downT > 3.5 && safe(SUMMIT.camps[summitCamp])) reviveAt(p, SUMMIT.camps[summitCamp]);
+  }
+  // the top: you're safe (st 1) and can watch the others
+  for (const p of alive) if (p.ground && p.y >= SUMMIT.topY - .1 && !p.summited) {
+    p.summited = true; p.st = 1; p.done = true; p.doneAt = time; p.specOff = true; /* stay up here for the photo */ sfx.fanfare?.(); fx.confetti(p.x, p.y + 1.5, p.z, 70); p.wave = 2.5;
+    p.hud.done.textContent = 'SUMMIT!'; p.hud.done.style.display = 'flex'; setTimeout(() => { if (p.hud) p.hud.done.style.display = 'none'; }, 2200);
+    if (p.ov) zoneCard(p.ov, 'You reached the summit!', `Top in ${fmt(raceTime)} · ${p.falls || 0} falls · ${p.ropeCatches || 0} rope catches · ${p.pitonsUsed || 0} pitons`, 'goal');
+    players.forEach((q) => { if (q !== p) toast(q, `${p.name} reached the summit!`); });
+    summitReward(p); try { localStorage.setItem("ridgeline_firstsummit", "1"); } catch {}
+    if (mode === 'online') sendNow();
+  }
+  checkSummitEnd();
+}
+/* ---------- the temple gate: two climbers on the twin rune ledges at once, or one on the crank ---------- */
+const GATE_CRANK = 98;           // crank value a gate-cranking climber sends (remotes play the crank pose)
+const CRANK_T = [10, 14, 18];    // seconds of winding to open it, by pace
+let gateBoth = 0;
+function gateTick(dt) {
+  const G = SUMMIT.gate; if (!G) return;
+  const on = [false, false];
+  for (const p of players) if (p.st === 0 && p.wall) { const k = twinAt(p.x, p.y, p.wall.face); if (k >= 0) on[k] = true; }
+  if (mode === 'online') for (const r of Object.values(remotes)) {
+    if ((r.st || 0) !== 0) continue;
+    const f = String(r.sm || '').split(',')[6]; if (f === undefined || f === '') continue;
+    const k = twinAt(r.x, r.y, +f); if (k >= 0) on[k] = true;
+  }
+  if (!G.open) {
+    const n = players.filter((p) => p.gateCrank).length + (mode === 'online' ? Object.values(remotes).filter((r) => r.crank === GATE_CRANK && nearCrank(r.x, r.y, r.z)).length : 0);
+    const before = G.prog;
+    G.prog = n ? Math.min(1, G.prog + dt / CRANK_T[SUMMIT.pace ?? 1] * Math.min(2, n)) : Math.max(0, G.prog - dt * .03); // let go and it slowly unwinds
+    if (n && Math.floor(before * 24) !== Math.floor(G.prog * 24)) sfx.grind();
+    gateBoth = on[0] && on[1] ? gateBoth + dt : 0;
+    if (on.some(Boolean) && !G.wasOn) sfx.click(); G.wasOn = on.some(Boolean);
+    if (gateBoth > .6) gateOpened('twin', true); else if (G.prog >= 1) gateOpened('crank', true);
+  }
+  updateGate(dt, on);
+}
+function gateOpened(how, local) {
+  if (!openGate()) return;
+  const G = SUMMIT.gate, f = SUMMIT.faces[G.face], mid = G.y + G.h / 2;
+  sfx.slam(); setTimeout(() => sfx.unlock(), 250);
+  fx.dust(f.cx, mid, f.z - .6, 40, 2, 0xd8c8a8); fx.sparkle(f.cx, mid, f.z - .5, 0xffd23f, 30);
+  const sub = how === 'twin' ? 'Two climbers on the rune ledges · the holds came out' : how === 'crank' ? 'The crank wound the seal open · climb on' : 'Your team opened the seal · climb on';
+  players.forEach((p) => { if (Math.abs(p.y - mid) < 30) { p.shake = Math.max(p.shake, .5); if (p.ov) zoneCard(p.ov, 'The temple gate is open!', sub, 'goal'); } });
+  if (local && mode === 'online') net?.openGate(G.face);
+}
+// sound and feel on the mountain: a wind bed that follows altitude and gusts, camp fires crackling, a heartbeat when your arms give out
+let windOn = false, windT = 0;
+function summitFeel(dt, v) {
+  if ((windT -= dt) <= 0 && v) {
+    windT = .25; const z = zoneAtY(v.y), w = windAt(raceTime);
+    setWind(practice ? .05 : inChimney(v.x, v.y + 1.6, v.z) ? .03 : .08 + z * .06 + (z >= 3 ? w.k * .6 : 0)); windOn = true;
+  }
+  const p0 = players[0]; if (p0?.campIn && p0.campIn.id > 0 && Math.random() < dt * 5) sfx.crackle();
+  for (const p of players) if (p.st === 0 && (p.wall || p.hang) && p.stamina < .25 && (p.hbT = (p.hbT || 0) - dt) <= 0) { p.hbT = .5 + p.stamina * 3; sfx.heartbeat(); }
+}
+const handsOn = (p) => p.wall ? p.wall.hands.filter(Boolean).length : 0;
+/** A falling rock (or icicle) reached a local climber. */
+function rockHit(p, onFace) {
+  p.shake = Math.max(p.shake, .85); sfx.oof?.(); fx.dust(p.x, p.y + 1.5, p.z, 10, .6, 0x8a7a6a); p.stamina = Math.max(0, p.stamina - .25);
+  if (p.wall && handsOn(p) < 2) releaseWall(p, 'A rock knocked you off! Watch for the dark streaks', toast);
+  else if (p.wall) toast(p, 'Rock! You held on with both hands');
+  else if (!onFace) { p.stumble = Math.max(p.stumble, 1); toast(p, 'Hit by a falling rock!'); }
+  else toast(p, 'A rock hit you on the rope!');
+  if (p.ov) showTip(p.ov, 'rocks', 'Falling rocks', 'A dark streak down the face means a rock is coming. Move sideways out of it, or hold on with both hands.', 'fog');
+}
+/** Storm ridge wind: hold on with both hands, or stay away from the edge. k 0..1. */
+function gust(p, k, dir, dt) {
+  if (!p.gustSaid) { p.gustSaid = true; toast(p, handsOn(p) === 2 ? 'Gust! Hold on…' : 'Gust! Grab on with both hands!'); if (p.ov) showTip(p.ov, 'wind', 'Wind gusts', 'When the wind howls, hold on with both hands. One hand, or standing on a ledge, and the gust can tear you off.', 'fog'); }
+  if (p.wall) {
+    const n = handsOn(p);
+    if (n === 2) p.stamina -= .09 * k * dt;
+    else if (n === 1) { p.stamina -= .25 * k * dt; p.gustT = (p.gustT || 0) + dt * k; if (p.gustT > 1.1) { releaseWall(p, 'The wind tore you off! Use both hands in a gust', toast); p.ex = dir * 3; } }
+    else { releaseWall(p, 'A gust blew you off the ledge!', toast); p.ex = dir * 3; }
+  } else if (p.hang) p.x += dir * k * 1.6 * dt;
+  else { p.ex += dir * k * 7 * dt; p.ez -= k * 3.5 * dt; } // on a terrace it shoves you towards the edge
+}
+function reachCamp(c, by, fromNet = false, t = raceTime) {
+  if (c.id <= summitCamp && fromNet) { campTimes[c.id] = t; return; } // we got there first locally: take the room's time for the Shadow pause
+  if (c.id <= summitCamp) return;
+  summitCamp = c.id; markCamp(c); campTimes[c.id] = t;
+  if (!roundOpts.dev) { try { localStorage.setItem("ridgeline_firstsummit", "1"); } catch {} } // the guided first climb ends at Camp I
+  if (mode === 'online' && net && !fromNet) net.reachCamp(c.id, raceTime, by);
+  if (mode !== 'online' && !roundOpts.dev) { try { localStorage.setItem(SUMMIT_SAVE, JSON.stringify({ seed: SUMMIT.seed, pace: SUMMIT.pace, camp: c.id, t: Date.now() })); } catch {} }
+  sfx.bell(); setTimeout(() => sfx.bell(), 450); fx.confetti(c.x, c.y + 2, c.z, 80, 1.95); sfx.camp(); fx.sparkle(c.x, c.y + 1, c.z, 0xffa040, 30);
+  const last = c.id === SUMMIT.camps.length - 1;
+  const sub = last ? `The final push · after ${RISE.pause} s the Shadow rises faster · go for the top!` : `Checkpoint saved · the Shadow pauses for ${RISE.pause} s · pitons and glowsticks refilled · fallen climbers wake up here`;
+  players.forEach((q) => { if (q.ov) zoneCard(q.ov, `${c.name} reached!`, sub, 'goal'); if (q.name !== by) toast(q, `${by} reached ${c.name}`); });
+  if (mode === 'online') feed(`<b>${esc(by)}</b> reached ${esc(c.name)} · checkpoint saved`, 'good');
+}
+// Nobody left climbing: the summit was reached (win) or the Shadow has swallowed the last camp (lose)
+function checkSummitEnd() {
+  if (endShown || (mode === 'online' && net && net.outcomeShown === net.round)) return;
+  const all = everyone();
+  if (all.some((p) => p.st === 0)) return;
+  const campGone = summitSY > SUMMIT.camps[summitCamp].y - .5;
+  if (!all.every((p) => p.st === 1) && !campGone) return; // the fallen can still wake at camp
+  const outcome = { summit: true, win: all.some((p) => p.st === 1), time: +raceTime.toFixed(1), escaped: all.filter((p) => p.st === 1).map((p) => p.name), lost: all.filter((p) => p.st === 2).map((p) => p.name), camp: summitCamp };
+  if (outcome.win) { if (mode === 'online') net?.clearSave(); else { try { localStorage.removeItem(SUMMIT_SAVE); } catch {} } }
+  if (mode === 'online') { endShown = true; net?.endRound(outcome); return; }
+  showEnd(outcome);
+}
+function updateSummitBar() {
+  const p = players.find((q) => q.st === 0) || players[0], left = RISE.grace - raceTime, top = SUMMIT.topY || 1;
+  const below = p ? p.y - summitSY : 0;
+  const pushAt = campTimes[SUMMIT.camps.length - 1], pushing = pushAt !== undefined && raceTime > pushAt + RISE.pause;
+  boltEl.style.opacity = (summitFlash * .45).toFixed(2);
+  $('fogTxt').textContent = left > 0 ? `The Shadow wakes in ${Math.ceil(left)}s` : shadowCalm(raceTime, summitPauses()) ? 'Camp reached · the Shadow holds still' : pushing && below > 0 ? `Final push · the Shadow is speeding up · ${Math.round(below)} m below` : below > 0 ? `Shadow rising · ${Math.round(below)} m below you` : 'You are in the Shadow · climb!';
+  $('fogFill').style.width = Math.max(0, Math.min(100, (1 - Math.max(0, summitSY) / top) * 100)) + '%';
+  $('fogbar').classList.toggle('danger', left <= 0 && below < 4);
+  $('doorTxt').textContent = `Camps ${summitCamp}/${SUMMIT.camps.length - 1}`;
+}
+/* ---------- Summit onboarding: Practice Wall, first-climb hints, tips, briefing cards · and the rewards ---------- */
+const jumpKey = (p) => p.ctrl.id === 'p2' ? 'Enter' : 'Space';
+const PRACTICE_STEPS = [
+  ['grab', 'Grab a hold with one hand', (p) => p.mouse ? 'Look at a hold, then hold LEFT or RIGHT click' : `${jumpKey(p)} at the wall to grab it`],
+  ['two', 'Climb up using both hands', (p) => p.mouse ? 'Hold one button, grab higher with the other, swap' : `${p.ctrl.id === 'p2' ? 'Up arrow' : 'W'} moves your lower hand higher`],
+  ['rest', 'Rest on the stone ledge', () => 'Climb onto the ledge halfway up · your stamina refills there'],
+  ['piton', 'Hammer in a piton', (p) => `Press ${p.ctrl.id === 'p2' ? '. to pick pitons, then /' : '4, then F'} while you are on the wall`],
+  ['fall', 'Fall safely on the rope', () => 'Climb a metre above your piton, then let go of both hands'],
+  ['haul', 'Haul a friend up', (p) => `At the top, hold ${p.ctrl.bk} near the edge to haul the sandbag up`],
+];
+let practice = null; // { done: Set, dummy, by, beat, hall: {x,z,yaw}, finished }
+const practiceEl = document.createElement('div'); practiceEl.id = 'practice'; document.body.appendChild(practiceEl);
+function enterPractice() {
+  if (state !== 'lobby') return;
+  const p0 = players[0], hall = p0 ? { x: p0.x, z: p0.z, yaw: p0.yaw } : null;
+  closePanel(true);
+  return transition(() => { leaveLobbyWorld(); enterSummitNow(4242, 0, 0, { practice: true }); practice.hall = hall; })
+    .then(() => { if (isPointerMode()) lockPointer(); });
+}
+function renderPractice() {
+  if (!practice) { practiceEl.style.display = 'none'; return; }
+  const p = players[0], next = PRACTICE_STEPS.find(([id]) => !practice.done.has(id));
+  practiceEl.style.display = 'block';
+  practiceEl.innerHTML = `<div class="pp-h"><b>Practice Wall</b><span>${practice.done.size}/${PRACTICE_STEPS.length}</span></div>` +
+    PRACTICE_STEPS.map(([id, name, hint]) => `<div class="pp-r${practice.done.has(id) ? ' done' : ''}${id === practice.fresh ? ' pop' : ''}"><i></i><div><b>${esc(name)}</b>${next && next[0] === id ? `<small>${esc(hint(p))}</small>` : ''}</div></div>`).join('') +
+    `<p class="pp-done">${practice.finished ? 'All done! Back to the hall in a moment' : 'Esc · leave any time · come back whenever you like'}</p>`;
+}
+function endPractice() {
+  if (!practice) return;
+  if (practice.dummy) { scene.remove(practice.dummy.mesh); disposeClimber(practice.dummy.mesh); }
+  practice = null; renderPractice(); setHintHold(null);
+}
+function practiceTick(dt) {
+  const P = practice, f = SUMMIT.faces[0];
+  const mark = (id, p) => { if (P.done.has(id)) return; P.done.add(id); P.fresh = id; sfx.chime?.(); fx.sparkle(p.x, p.y + 1.4, p.z, 0x8ee34d, 18); toast(p, `Practice · ${PRACTICE_STEPS.find((s) => s[0] === id)[1]} · done`); renderPractice(); };
+  for (const p of players) {
+    if (p.st !== 0) continue;
+    const n = p.wall ? p.wall.hands.filter(Boolean).length : 0;
+    if (n >= 1) mark('grab', p);
+    if (n === 2 && p.y > 2) mark('two', p);
+    if (p.wall && onLedge(p)) mark('rest', p);
+    if ((p.pitonsUsed || 0) > 0) mark('piton', p);
+    if ((p.ropeCatches || 0) > 0) mark('fall', p);
+    // at the top: a sandbag "friend" appears hanging on your rope below the edge
+    if (!P.dummy && p.ground && p.y >= SUMMIT.topY - .2) {
+      const d = { dummy: true, name: 'Sandbag', st: 0, x: Math.max(f.x0 + 2, Math.min(f.x1 - 2, p.x)), y: f.y1 - 6.5, z: f.z - .45, vy: 0, ex: 0, ez: 0, stamina: 1, ctrl: { bk: 'E' }, ragId: 'sandbag', ground: false, land: 0, shake: 0, netId: 'zz' };
+      d.hang = { a: null, len: 5.6, by: p, hauling: false };
+      d.mesh = makeClimber(0xb07a43, 'Sandbag', { hat: 7, outfit: 2, skin: '#d9b48a', scarf: 'none', goggles: 'none' }); scene.add(d.mesh);
+      P.dummy = d; P.by = p; toast(p, `Your sandbag friend is hanging below the edge · hold ${p.ctrl.bk} to haul it up`);
+      if (p.ov) showTip(p.ov, 'haul', 'Haul a teammate', `Stand at the edge above them and hold ${p.ctrl.bk}. You reel them in, and it costs your stamina.`, 'stam');
+    }
+  }
+  const d = P.dummy;
+  if (d) {
+    if (!d.hang && !d.ground) { d.y = Math.max(f.y0, d.y - 6 * dt); if (d.y <= f.y0) d.ground = true; } // dropped: it lands at the foot
+    if (d.ground && !d.hauled && d.y < f.y1 - 1 && P.by?.st === 0 && P.by.ground && P.by.y >= SUMMIT.topY - .2) { d.ground = false; d.y = f.y1 - 6.5; d.x = Math.max(f.x0 + 2, Math.min(f.x1 - 2, P.by.x)); d.z = f.z - .45; d.hang = { a: null, len: 5.6, by: P.by, hauling: false }; } // dropped it? it goes back on the rope
+    if (d.hauled) mark('haul', P.by || players[0]);
+    d.mesh.position.set(d.x, d.y, d.z); d.mesh.rotation.y = d.ground ? 0 : Math.PI;
+  }
+  // every 3 s online, tell the room we are still here (standing in the hall where we left)
+  if (mode === 'online' && net && P.hall && (P.beat = (P.beat || 0) - dt) <= 0) { P.beat = 3; net.sendState({ x: P.hall.x, y: 0, z: P.hall.z, yaw: P.hall.yaw, crank: -1, st: 3, sm: '' }); }
+  if (P.done.size === PRACTICE_STEPS.length && !P.finished) {
+    P.finished = true; renderPractice();
+    passportStamp(players[0], 'wall'); fx.confetti(players[0].x, players[0].y + 2, players[0].z, 80); sfx.fanfare?.();
+    players.forEach((q) => q.ov && zoneCard(q.ov, 'Practice Wall complete!', "You're ready for the Summit · back to the boarding hall", 'camp'));
+    setTimeout(() => { if (practice?.finished && state === 'summit') toCamp(); }, 5000);
+  }
+}
+// the first Summit climb on this device: a beacon on the next hold after 5 s of being stuck (also on the Practice Wall)
+const isFirstSummit = () => { try { return !localStorage.getItem('ridgeline_firstsummit'); } catch { return false; } };
+function summitHints(dt) {
+  const p = players[0];
+  if (!p || p.st !== 0 || p.spec || !(roundOpts.firstSummit || practice)) { setHintHold(null); return; }
+  if (Math.abs(p.y - (p.hintY ?? p.y)) > .5 || p.hang) { p.hintY = p.y; p.idleT = 0; } else p.idleT = (p.idleT || 0) + dt;
+  if (p.idleT < 5) { setHintHold(null); return; }
+  const h = nextRouteHold(p);
+  setHintHold(h, time);
+  if ((p.hintToastT = (p.hintToastT || 0) - dt) <= 0) { p.hintToastT = 7; toast(p, h ? (p.mouse ? 'Try the glowing green hold · look at it and click' : `Try the glowing green hold · ${p.ctrl.id === 'p2' ? 'arrows' : 'W A S D'}`) : 'Walk up to the cliff and look up at the holds'); }
+}
+// one-time tips, shown the first time they matter
+function summitTips(p) {
+  const O = p.ov; if (!O || p.st !== 0) return;
+  if (p.hang) showTip(O, 'hang', 'Caught by the rope', `Grab any hold to climb on. A teammate above can hold ${p.ctrl.bk} to haul you up.`, 'stam');
+  if (partners(summitTeam, p).some((q) => q.st === 0 && q.y < p.y - 1 && !q.ground)) showTip(O, 'belay', 'Belay your team', `Hold ${p.ctrl.bk} while a teammate climbs below you: you catch their fall and can haul them up.`, 'stam');
+  if (p.wall && p.stamina < .45) showTip(O, 'wallstam', 'Arms getting tired', 'Two hands drain slowly, one hand fast. Stand on a stone ledge to recover, or hang on a piton.', 'stam');
+  if (p.mouse && state === 'summit') { const a = aimedHold(p); if (a && a.type === 'chalk' && !a.chalked) showTip(O, 'slick', 'Slick hold', 'Dark red holds are too slick to grip. Pick chalk (1) and click them first.', 'chalk'); }
+  if (!practice && raceTime > RISE.grace && raceTime < RISE.grace + 3) showTip(O, 'rise', 'The Shadow is rising', 'Keep climbing. It holds still for a while every time your team reaches a camp.', 'fog');
+  if (inChimney(p.x, p.y + 1.6, p.z)) showTip(O, 'chimney', 'Dark chimney', 'Throw a glowstick (2) at the rock. It sticks and lights up the holds around it.', 'ping');
+  { const G = SUMMIT.gate; if (G && !G.open && p.y > SUMMIT.faces[G.face].y0 - .5 && p.y < G.y && Math.hypot(p.x - SUMMIT.faces[G.face].cx, p.z - SUMMIT.faces[G.face].z) < 16) showTip(O, 'gate', 'Temple gate', `The carved band above is sealed. Two climbers stand on the glowing rune ledges at the same time, or one holds ${p.ctrl.bk} at the crank at the foot of the wall.`, 'door'); }
+  if (SUMMIT.tripod && p.ground && p.y >= SUMMIT.topY - .2) showTip(O, 'photo', 'Summit photo', `Walk to the tripod beside the flag and press ${p.ctrl.bk} for a team photo.`, 'ping');
+}
+// five picture cards for the Summit: in the briefing the first time you pick the route, and in the Field Guide
+const SUMMIT_CARDS = [
+  ['Grab with two hands', 'Look at a hold and hold left or right click. Grab higher holds to pull yourself up the cliff.', '<path d="M8 72 20 10h40l12 62z" fill="#9c8f82" stroke="#1b2738" stroke-width="3.5" stroke-linejoin="round"/><circle cx="30" cy="30" r="5" fill="#e9b27a" stroke="#1b2738" stroke-width="2.5"/><circle cx="50" cy="44" r="5" fill="#e9b27a" stroke="#1b2738" stroke-width="2.5"/><circle cx="36" cy="58" r="5" fill="#bfeaff" stroke="#1b2738" stroke-width="2.5"/><circle cx="30" cy="30" r="9" fill="none" stroke="#ffd23f" stroke-width="3"/>'],
+  ['Mind your stamina', 'Two hands drain slowly, one hand fast. Stand on stone ledges and sit by camp fires to recover.', '<rect x="10" y="30" width="60" height="20" rx="10" fill="#fff6e5" stroke="#1b2738" stroke-width="3.5"/><rect x="14" y="34" width="34" height="12" rx="6" fill="#ffd23f"/><path d="M40 8 30 26h8l-4 14 14-20h-8l4-12z" fill="#ffd23f" stroke="#1b2738" stroke-width="2.5" stroke-linejoin="round"/><rect x="14" y="60" width="52" height="8" rx="3" fill="#9c8f82" stroke="#1b2738" stroke-width="3"/>'],
+  ['Rope up and use pitons', 'You are roped to your team. Press 4 for pitons and hammer one in: it catches you if you fall.', '<path d="M14 70C30 50 20 30 40 22s30 6 26-14" fill="none" stroke="#ff7a2a" stroke-width="5" stroke-linecap="round"/><path d="M44 20l14-6" stroke="#c9ced6" stroke-width="6" stroke-linecap="round"/><circle cx="44" cy="22" r="5" fill="none" stroke="#1b2738" stroke-width="3"/><circle cx="14" cy="70" r="6" fill="#ff6f59" stroke="#1b2738" stroke-width="3"/>'],
+  ['Belay and haul', 'Hold E while a teammate climbs below you: you catch their fall and can haul them up. E also boosts.', '<path d="M8 30h46v42" fill="#9c8f82" stroke="#1b2738" stroke-width="3.5"/><circle cx="26" cy="20" r="8" fill="#8ee34d" stroke="#1b2738" stroke-width="3"/><path d="M30 26C50 30 56 44 58 62" fill="none" stroke="#ff7a2a" stroke-width="4"/><circle cx="60" cy="66" r="7" fill="#2ec4f1" stroke="#1b2738" stroke-width="3"/><path d="M66 40v-12m-5 5 5-5 5 5" fill="none" stroke="#1b2738" stroke-width="3" stroke-linecap="round"/>'],
+  ['Camps and the rising Shadow', 'Purple Shadow rises from below. Each camp saves your progress, refills gear and holds the Shadow back for a while.', '<rect x="6" y="52" width="68" height="22" rx="4" fill="#2b1840"/><path d="M6 52q12-8 22 0t22 0 24 0" fill="none" stroke="#b48cff" stroke-width="4"/><path d="M30 46 40 26l10 20z" fill="#ff8a3d" stroke="#1b2738" stroke-width="3" stroke-linejoin="round"/><path d="M40 26V8l12 4-12 4" fill="#ffd23f" stroke="#1b2738" stroke-width="3" stroke-linejoin="round"/>'],
+];
+const summitCardsHtml = () => SUMMIT_CARDS.map(([t, d, svg], i) => `<div class="pcard2" style="--i:${i}"><svg viewBox="0 0 80 80">${svg}</svg><b>${i + 1}. ${t}</b><p>${d}</p></div>`).join('');
+document.querySelectorAll('.cards5.summitcards').forEach((el) => el.innerHTML = summitCardsHtml());
+function summitBriefing() {
+  try { if (localStorage.getItem('ridgeline_summitbrief')) return false; localStorage.setItem('ridgeline_summitbrief', '1'); } catch { return false; }
+  document.querySelector('[data-panel="brief"] .cards5').innerHTML = summitCardsHtml();
+  $('briefTitle').textContent = 'The Summit climb'; $('briefSub').textContent = 'Five things before you rope up. The Practice Wall door by the radio desk lets you try them all.';
+  openPanel('brief'); return true;
+}
+// HUD key line on the mountain
+const summitKeys = (p) => p.mouse ? 'L / R click grab · 1 chalk · 2 glowstick · 4 piton · E belay / boost · Space push off'
+  : p.ctrl.id === 'p2' ? 'Enter grab · arrows move a hand · / use · . switch tool · , belay / boost' : 'Space grab · W A S D move a hand · F use · Q switch tool · E belay / boost';
+// rewards: Gentle unlocks the Summit hat, Standard the frost scarf, Brutal the golden rope (gear locker · Gear · Summit rewards)
+const REWARD_NAMES = ['the Summit hat', 'the frost scarf', 'the golden rope'];
+const summitWins = () => { try { return JSON.parse(localStorage.getItem('ridgeline_summit_wins') || '[]'); } catch { return []; } };
+function summitReward(p) {
+  if (roundOpts.dev || practice) return;
+  const pace = SUMMIT.pace ?? 1, w = summitWins();
+  if (!w.includes(pace)) { w.push(pace); try { localStorage.setItem('ridgeline_summit_wins', JSON.stringify(w)); } catch {} setTimeout(() => { if (p.ov) zoneCard(p.ov, `Unlocked ${REWARD_NAMES[pace]}!`, 'Find it in the gear locker · Gear · Summit rewards', 'camp'); }, 3500); }
+}
+const nearTripod = (p) => !!SUMMIT.tripod && p.ground && Math.abs(p.y - SUMMIT.tripod.y) < 1.2 && Math.hypot(p.x - SUMMIT.tripod.x, p.z - SUMMIT.tripod.z) < 2.4;
+
 /* ---------- base camp lobby ---------- */
 function enterLobby() { return transition(enterLobbyNow); }
 function enterLobbyNow() {
@@ -741,6 +1208,7 @@ function enterLobbyNow() {
   ['banner', 'timer', 'count', 'fogbar', 'pause'].forEach((id) => $(id).style.display = 'none');
   closePanel(true);
   clearMarksAndSticks(); clearTrail(); showDecor(false); showFog(false); setGroundVisible(false);
+  showSummit(false); updateClimbFx(null, false); clearRope(); showRise(false); showHazards(false); boltEl.style.opacity = 0; endPractice(); setWind(0); windOn = false;
   enterLobbyWorld(); buildDoors(); buildPuzzles(); physRebuild(1); // buildPuzzles on the hall layout just clears the braziers and runes
   players.forEach((p, i) => {
     const s = spawnSpot(i + (mode === 'online' ? Object.keys(remotes).length : 0));
@@ -765,16 +1233,24 @@ function leaveLobbyWorld() {
   players.forEach((p) => { p.sit = null; p.slot = 0; });
   $('pRestart').style.display = mode === 'online' ? 'none' : ''; $('pLeave').querySelector('b').textContent = 'Back to the boarding hall';
 }
-// everyone aboard, doors shut, cabin rides up the cable, wipe into the maze
-function depart(seed) {
-  const first = mode !== 'online' && isFirstClimb();
+// everyone aboard, doors shut, cabin rides up the cable, wipe into the maze (or onto the mountain: sm = { summit, camp, pace })
+function depart(seed, sm = null) {
+  const first = mode !== 'online' && isFirstClimb() && !sm;
   if (state !== 'lobby') return;
   state = 'departing'; departT = -1; closePanel(true); $('depart').style.display = 'none';
   players.forEach((p) => { p.rideX = p.x; p.rideZ = p.z; p.sit = null; });
   sfx.slam?.(); startDeparture(() => transition(() => {
-    leaveLobbyWorld(); prepRound(seed, first ? { pace: 0, grace: 60, maxDoors: 1, first: true } : {}); goCountdown();
+    leaveLobbyWorld();
+    if (sm) enterSummitNow(seed, sm.camp || 0, sm.pace ?? lobbySettings.pace);
+    else { prepRound(seed, first ? { pace: 0, grace: 60, maxDoors: 1, first: true } : {}); goCountdown(); }
     if (mode === 'online' && net) net.subscribeRound(net.meta.round);
-  }));
+  }).then(() => { if (sm && isPointerMode()) lockPointer(); }));
+}
+/** Offline departure: the maze, or the Summit (a new mountain, or the saved one from its last camp). */
+function departLocal() {
+  if (lobbySettings.route !== 'summit') return depart(lobbySettings.daily ? dailySeed() : newSeed());
+  const save = summitSave(), res = lobbySettings.resume && save;
+  depart(res ? save.seed : lobbySettings.daily ? dailySeed() : newSeed(), { summit: true, camp: res ? save.camp : 0, pace: res ? (save.pace ?? 1) : isFirstSummit() ? 0 : lobbySettings.pace }); // the first Summit is always Gentle
 }
 function aboardCount() {
   let n = players.filter((p) => inGondola(p.x, p.z)).length, total = players.length;
@@ -802,7 +1278,7 @@ function updateDeparture(dt) {
         if (ids[0] === myId) net.depart();
         setTimeout(() => { if (state === 'lobby' && departT === -99) departT = -1; }, 5000);
         departT = -99; // wait for the room
-      } else { sfx.beep(true); depart(lobbySettings.daily ? dailySeed() : newSeed()); }
+      } else { sfx.beep(true); departLocal(); }
     }
   } else if (n > 0 && departArmed) { el.style.display = 'flex'; el.querySelector('b').textContent = `${n}/${total}`; el.querySelector('span').textContent = 'Aboard the gondola · waiting for the team'; }
   else el.style.display = 'none';
@@ -817,7 +1293,7 @@ function updateBoard() {
     'RIDGELINE CABLEWAY GATE 1',
     `GONDOLA  ${st}`,
     `SHADOW   ${PACE[lobbySettings.pace] || 'STANDARD'}`,
-    `MAZE     ${lobbySettings.daily ? 'DAILY CLIMB' : 'RANDOM'}`,
+    lobbySettings.route === 'summit' ? `ROUTE    SUMMIT${lobbySettings.resume && resumeCamp() ? ' · ' + CAMP_NAMES[resumeCamp()].toUpperCase() : lobbySettings.daily ? ' · DAILY' : ''}` : `MAZE     ${lobbySettings.daily ? 'DAILY CLIMB' : 'RANDOM'}`,
     `ABOARD   ${n}/${total}   BELLS ${bellsRung}`,
     mode === 'online' && net ? `ROOM     ${net.room}` : isFirstClimb() ? 'NEXT     FIRST CLIMB · EASY' : `MODE     ${mode === 'local' ? 'LOCAL CO-OP' : 'SOLO'}`,
   ]);
@@ -827,6 +1303,7 @@ setOnBell(() => { bellsRung++; players.forEach((p) => toast(p, `Bell rung! ${bel
 function interact(p, s) {
   if (s.seat) { p.sit = s.seat; p.x = s.seat.x; p.z = s.seat.z; p.yaw = s.seat.yaw; sfx.step(false); toast(p, 'Taking a seat'); return; }
   if (s.id === 'camera') return takePhoto();
+  if (s.id === 'practice') return enterPractice();
   openPanel(s.id, players.indexOf(p));
 }
 
@@ -863,13 +1340,17 @@ function applyLook(i, lk) {
   if (mode === 'online' && net) { net.setLook(lk.jacket, lk); sendNow(); }
 }
 function renderTrail() {
-  const rows = [['pace', [['Gentle', 0, 'Shadow creeps for about 13 min'], ['Standard', 1, 'Shadow creeps for about 9 min'], ['Brutal', 2, 'Shadow creeps for about 5 min']]],
-    ['daily', [['Random maze', false, 'A new mountain every time'], ['Daily climb', true, 'Same maze for everyone today']]]];
+  const rc = resumeCamp();
+  const rows = [['route', [['Shadow maze', 'maze', 'Race the closing Shadow to the sanctuary'], ['Summit climb', 'summit', 'Rope up and climb while the Shadow rises']]],
+    ['pace', [['Gentle', 0, lobbySettings.route === 'summit' ? 'Slow Shadow · lots of pitons' : 'Shadow creeps for about 13 min'], ['Standard', 1, lobbySettings.route === 'summit' ? 'The climb as it is meant' : 'Shadow creeps for about 9 min'], ['Brutal', 2, lobbySettings.route === 'summit' ? 'Fast Shadow · few pitons' : 'Shadow creeps for about 5 min']]],
+    ['daily', [['Random', false, 'A new mountain every time'], ['Daily climb', true, 'Same one for everyone today']]]];
+  if (lobbySettings.route === 'summit' && rc > 0) rows.push(['resume', [['Fresh start', false, 'From the trailhead'], [`Resume at ${CAMP_NAMES[rc]}`, true, 'Same mountain, from the saved checkpoint']]]);
   $('trailOpts').innerHTML = rows.map(([k, opts]) => `<div class="trow">${opts.map(([l, v, d]) => `<button class="topt${lobbySettings[k] === v ? ' on' : ''}" data-k="${k}" data-v="${v}"><b>${l}</b><small>${d}</small></button>`).join('')}</div>`).join('');
   $('trailOpts').querySelectorAll('button').forEach((b) => b.onclick = () => {
-    const k = b.dataset.k, v = k === 'pace' ? +b.dataset.v : b.dataset.v === 'true';
+    const k = b.dataset.k, v = k === 'pace' ? +b.dataset.v : k === 'route' ? b.dataset.v : b.dataset.v === 'true';
     lobbySettings[k] = v; setPace(lobbySettings.pace); sfx.click?.(); renderTrail(); updateBoard();
     if (mode === 'online' && net) net.setSettings({ [k]: v });
+    if (k === 'route' && v === 'summit') summitBriefing(); // first time only
   });
   $('trailNote').textContent = mode === 'online' ? 'Changes apply to everyone in the room.' : 'Pick your poison, then board the gondola.';
 }
@@ -891,26 +1372,28 @@ $('radioCopy').onclick = async () => {
 $('radioMute').onclick = () => { toggleMute(); renderRadio(); };
 
 /* group photo: 3-2-1 from the tripod, then a polaroid pinned to the memories board */
-function takePhoto() {
+// opts.summit: the tripod on the summit (its own camera, the mountain sky, a summit caption)
+function takePhoto(opts = {}) {
   if (uiOpen) return;
   uiOpen = 'photo'; let n = 3; const el = $('photoCount');
-  players.forEach((p) => { p.wave = 3.6; toast(p, 'Group photo! Get in front of the fire and wave'); });
+  players.forEach((p) => { p.wave = 3.6; toast(p, opts.summit ? 'Summit photo! Stand by the flag and wave' : 'Group photo! Get in front of the fire and wave'); });
   el.style.display = 'flex';
   const tick = () => {
     if (uiOpen !== 'photo') { el.style.display = 'none'; return; }
     if (n > 0) { el.textContent = n; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); sfx.beep(false); n--; setTimeout(tick, 800); return; }
-    el.style.display = 'none'; snap();
+    el.style.display = 'none'; snap(opts);
   };
   tick();
 }
-function snap() {
+function snap(opts = {}) {
+  const pc = opts.summit ? SUMMIT.cam : photoCam;
   sfx.shutter(); flashCamera();
   const W = 640, H = 480, w = innerWidth, h = innerHeight;
   // draw one frame from the tripod camera, everyone visible
   players.forEach((q) => q.mesh.visible = !q.ragdoll);
-  applyViewFog(renderer, photoCam.position.x, photoCam.position.z, 0, false, LOBBY_SKY);
+  if (opts.summit) applyRiseFog(renderer, pc.position.y, summitSY, SUMMIT_SKY); else applyViewFog(renderer, pc.position.x, pc.position.z, 0, false, LOBBY_SKY);
   renderer.setScissorTest(false); renderer.setViewport(0, 0, w, h);
-  photoCam.aspect = w / h; photoCam.updateProjectionMatrix(); renderer.render(scene, photoCam);
+  pc.aspect = w / h; pc.updateProjectionMatrix(); renderer.render(scene, pc);
   const shot = document.createElement('canvas'); shot.width = W; shot.height = H;
   const g = shot.getContext('2d'), src = renderer.domElement, sw = src.width, sh = src.height, crop = Math.min(sw, sh * 4 / 3);
   g.drawImage(src, (sw - crop) / 2, (sh - crop * .75) / 2, crop, crop * .75, 0, 0, W, H);
@@ -922,7 +1405,7 @@ function snap() {
   const c = card.getContext('2d'); c.fillStyle = '#fffdf6'; c.fillRect(0, 0, card.width, card.height); c.drawImage(shot, 30, 30);
   const names = players.map((p) => p.name).concat(Object.values(remotes).map((r) => r.name)).join(' · ');
   c.fillStyle = '#1b2738'; c.font = '900 34px "Lilita One", "Arial Rounded MT Bold", system-ui'; c.textAlign = 'center';
-  c.fillText('RIDGELINE CABLEWAY', card.width / 2, H + 90);
+  c.fillText(opts.summit ? `THE SUMMIT · ${fmt(raceTime)}` : 'RIDGELINE CABLEWAY', card.width / 2, H + 90);
   c.font = '600 20px system-ui'; c.fillStyle = '#5a6475'; c.fillText(`${names}  ·  ${new Date().toLocaleDateString()}`.slice(0, 64), card.width / 2, H + 128);
   const url = card.toDataURL('image/png');
   $('polImg').src = url; $('polSave').href = url;
@@ -948,9 +1431,9 @@ function setupPlayers(m, opts = {}) {
   $('pauseBtn').style.display = 'block';
   $('pRestart').style.display = m === 'online' ? 'none' : '';
 }
-async function startLocal(m) {
+async function startLocal(m, o = {}) {
   audioInit(SET.vol); state = 'loading';
-  lobbySettings.pace = 1; lobbySettings.daily = false; setPace(1);
+  lobbySettings.pace = 1; lobbySettings.daily = false; lobbySettings.route = 'maze'; lobbySettings.resume = false; setPace(1);
   await runLoading(m === 'solo' ? 'Solo climb' : 'Local co‑op', [
     ['Lacing up boots', 260],
     ['Unpacking your gear locker', () => { setupPlayers(m); }],
@@ -958,6 +1441,9 @@ async function startLocal(m) {
     ['Calling the gondola', 220],
     ['Arriving at the boarding hall', () => enterLobbyNow()],
   ]);
+  if (state !== "lobby") return;
+  if (o.practice) { enterPractice(); return; }
+  if (o.route === "summit") { lobbySettings.route = "summit"; updateBoard(); if (!uiOpen) summitBriefing(); }
 }
 
 const handlers = {
@@ -966,7 +1452,17 @@ const handlers = {
     net.meta = m;
     if (m.pace !== undefined && m.pace !== lobbySettings.pace) { lobbySettings.pace = m.pace; setPace(m.pace); }
     if (m.daily !== undefined) lobbySettings.daily = !!m.daily;
+    lobbySettings.route = m.route === 'summit' ? 'summit' : 'maze'; lobbySettings.resume = !!m.resume;
     if (uiOpen === 'trail') renderTrail();
+    if (inLobby()) updateBoard();
+    // the room set off up the mountain: ride the gondola (or go straight there if we are not in the hall)
+    if (m.phase === 'summit' && m.round !== net.round) {
+      net.startAt = m.startAt || net.now(); net.outcomeShown = -1; net.round = m.round;
+      if (state === 'lobby') { depart(m.seed, { summit: true, camp: m.camp || 0, pace: m.pace ?? 1 }); return; }
+      if (state === 'departing') return;
+      transition(() => { if (inLobby() || $('huds').classList.contains('lobby')) leaveLobbyWorld(); enterSummitNow(m.seed, m.camp || 0, m.pace ?? 1, { late: true, startCamp: m.startCamp ?? 0 }); net.subscribeRound(m.round); }).then(() => lockPointer());
+      return;
+    }
     // the room left for a new maze: ride the gondola up (or jump straight in if we are not at camp)
     if (m.phase === 'maze' && m.round !== net.round) {
       net.startAt = m.startAt || net.now(); net.outcomeShown = -1; net.round = m.round;
@@ -976,9 +1472,9 @@ const handlers = {
       startRound(m.seed); net.subscribeRound(m.round); return;
     }
     if (m.phase === 'lobby' && !inLobby() && inGame()) { enterLobby(); return; }
-    if (m.phase === 'maze' && m.outcome && net.outcomeShown !== m.round) {
+    if ((m.phase === 'maze' || m.phase === 'summit') && m.outcome && net.outcomeShown !== m.round) {
       net.outcomeShown = m.round;
-      showEnd({ win: !!m.outcome.win, time: m.outcome.time || 0, escaped: m.outcome.escaped || [], lost: m.outcome.lost || [] });
+      showEnd({ summit: !!m.outcome.summit, camp: m.outcome.camp || 0, win: !!m.outcome.win, time: m.outcome.time || 0, escaped: m.outcome.escaped || [], lost: m.outcome.lost || [] });
       const rd = m.round; setTimeout(() => net?.backToLobby(rd), 8000);
     }
   },
@@ -999,14 +1495,19 @@ const handlers = {
         if (inLobby()) fx.sparkle(r.x, r.y + 1, r.z, new THREE.Color(p.color).getHex(), 14);
       }
       const st = p.st || 0;
+      if (r.st !== undefined && r.st !== st && state === 'summit') {
+        if (st === 1) feed(`${chip(p.color)}<b>${esc(p.name)}</b> reached the summit!`, 'good');
+        if (st === 2) feed(`${chip(p.color)}<b>${esc(p.name)}</b> is down · stand at a camp to bring them back`, 'bad');
+        if (st === 0 && r.st === 2) feed(`${chip(p.color)}<b>${esc(p.name)}</b> is back on their feet`);
+      }
       if (r.st !== undefined && r.st !== st && state === 'racing') {
         if (st === 1) feed(`${chip(p.color)}<b>${esc(p.name)}</b> reached the sanctuary`);
         if (st === 2) feed(`${chip(p.color)}<b>${esc(p.name)}</b> was taken by the Shadow`, 'bad');
       }
       pushSnap(r, p);
-      r.skin = lk.skin; r.tx = p.x; r.ty = p.y || 0; r.tz = p.z; r.tyaw = p.yaw; r.st = st; r.crank = p.crank ?? -1;
+      r.skin = lk.skin; r.tx = p.x; r.ty = p.y || 0; r.tz = p.z; r.tyaw = p.yaw; r.st = st; r.crank = p.crank ?? -1; r.sm = p.sm || '';
     }
-    for (const id of Object.keys(remotes)) if (!ps[id]) { feed(`${chip(remotes[id].color)}<b>${esc(remotes[id].name)}</b> left the room`, 'dim'); removeRagdoll('R' + id); scene.remove(remotes[id].mesh); delete remotes[id]; }
+    for (const id of Object.keys(remotes)) if (!ps[id]) { feed(`${chip(remotes[id].color)}<b>${esc(remotes[id].name)}</b> left the room`, 'dim'); removeRagdoll('R' + id); if (remotes[id].rp) { remotes[id].rp.gone = true; remotes[id].rp.st = 2; } scene.remove(remotes[id].mesh); delete remotes[id]; }
     syncPeers(Object.keys(remotes));
     renderRoster();
   },
@@ -1017,6 +1518,14 @@ const handlers = {
     if (ev?.type === 'snow') { if (inLobby()) throwSnowball(+ev.x, +ev.y, +ev.z, +ev.vx, +ev.vy, +ev.vz, ev.c ? String(ev.c) : '#ffd23f'); return; }
     if (ev?.type === 'ping') { addPing(+ev.x, +ev.y, +ev.z, String(ev.from || 'Climber').slice(0, 16), String(ev.c || '#ffd23f')); return; }
     if (ev?.type === 'chat') { showChat(String(ev.from || 'Climber').slice(0, 16), String(ev.c || '#ffd23f'), clamp(Math.floor(+ev.i) || 0, 0, QUICK.length - 1), String(ev.id || '')); return; }
+    // Summit rope: an online teammate fell on our rope
+    if (ev?.type === 'jolt' || ev?.type === 'yank' || ev?.type === 'belay') {
+      const p = players[0], from = String(ev.from || 'Climber').slice(0, 16); if (!p || state !== 'summit' || p.st !== 0) return;
+      if (ev.type === 'belay') { p.stamina -= BELAY_HIT; toast(p, `Caught ${from}!`); p.shake = Math.max(p.shake, .3); }
+      else if (ev.type === 'jolt') jolt(p, null, from, { toast });
+      else releaseWall(p, `${from} yanked you off the wall!`, toast);
+      return;
+    }
     applyHit(players[0], ev);
   },
   onConnection: (ok) => { netWarn.style.display = ok ? 'none' : 'block'; if (ok) { feed('Reconnected to the room', 'good'); sendNow(); } },
@@ -1026,6 +1535,12 @@ const handlers = {
     latchDoor(id);
   },
   onSignal: (from, msg) => onSignal(from, msg),
+  // Summit shared world (summit/{round}/...): late joiners get all of it on subscribe
+  onPiton: (d, key) => { if (state === 'summit' && SUMMIT.built) addPiton(d, key); },
+  onHoldBreak: (id) => { const h = SUMMIT.holds[id]; if (h && !h.broken) { breakHold(h); fx.dust(h.x, h.y, h.z - .2, 10, .6, 0x8a6a4a); } },
+  onChalk: (id) => { const h = SUMMIT.holds[id]; if (h && !h.chalked) chalkHold(h); },
+  onGate: (id) => { if (SUMMIT.gate && SUMMIT.gate.face === id) gateOpened('remote', false); },
+  onCamp: (id, d) => { const c = SUMMIT.camps[id]; if (c && state === 'summit') reachCamp(c, String(d.by || 'A climber').slice(0, 16), true, +d.t || raceTime); },
 };
 function sendNow() { sendTimer = 0; lastSent.t = 0; }
 
@@ -1034,23 +1549,24 @@ async function startOnline() {
   const name = $('inName').value.trim().slice(0, 16) || 'Climber', room = $('inRoom').value.trim() || 'lobby';
   try { localStorage.setItem('ridgeline_name', name); } catch {}
   audioInit(SET.vol); state = 'loading'; $('onlineMsg').textContent = '';
-  let n = null, inMaze = false;
+  let n = null, inMaze = false, inSummit = false;
   const saved = LOOKS[0] ? lookFor(0, '') : {};
   try {
     await runLoading('Online expedition', [
       ['Lacing up boots', 200],
       ['Radioing the boarding hall', async () => { n = await Promise.race([joinRoom(room, name, handlers, saved), sleep(12000).then(() => { throw new Error('timeout'); })]); }],
       ['Checking who is in the hall', () => {
-        net = n; net.outcomeShown = -1; net.startAt = n.meta.startAt; inMaze = n.meta.phase === 'maze';
-        lobbySettings.pace = n.meta.pace ?? 1; lobbySettings.daily = !!n.meta.daily; setPace(lobbySettings.pace);
+        net = n; net.outcomeShown = -1; net.startAt = n.meta.startAt; inMaze = n.meta.phase === 'maze'; inSummit = n.meta.phase === 'summit';
+        lobbySettings.pace = n.meta.pace ?? 1; lobbySettings.daily = !!n.meta.daily; lobbySettings.route = n.meta.route === 'summit' ? 'summit' : 'maze'; lobbySettings.resume = !!n.meta.resume; setPace(lobbySettings.pace);
         setupPlayers('online', { color: n.color, name });
         if (inMaze) prepRound(n.meta.seed);
+        if (inSummit) enterSummitNow(n.meta.seed, n.meta.camp || 0, n.meta.pace ?? 1, { late: true, startCamp: n.meta.startCamp ?? 0 }); // late join: spawn at the team's highest camp
       }],
       ['Warming up the radio', async () => {
         const ok = await Promise.race([startVoice({ myId, send: (to, msg) => n.signal(to, msg) }), sleep(15000).then(() => false)]);
         if (!ok) setTimeout(() => players[0] && toast(players[0], 'No mic: you can still hear others'), 4500);
       }],
-      ['Arriving at the boarding hall', () => { if (!inMaze) enterLobbyNow(); }],
+      ['Arriving at the boarding hall', () => { if (!inMaze && !inSummit) enterLobbyNow(); }],
     ]);
   } catch (e) {
     console.error(e); if (n) n.leave(); stopVoice(); net = null; clearPlayers(); mode = null; state = 'menu';
@@ -1059,7 +1575,10 @@ async function startOnline() {
     return;
   }
   if (inMaze) { goCountdown(); setTimeout(() => players[0] && toast(players[0], 'Your team was already climbing, so you joined them'), 1200); }
+  if (inSummit) setTimeout(() => players[0] && toast(players[0], 'Your team is on the mountain, so you joined them at their camp'), 1200);
   net.start();
+  if (pendingRoute && !inMaze && !inSummit) net.setSettings({ route: pendingRoute }); // came in through Summit climb · Online summit
+  pendingRoute = null;
 }
 
 /* ---------- pause & menus ---------- */
@@ -1074,7 +1593,7 @@ function setPause(v) {
   if (v) {
     showPView('main'); keys.clear(); closePanel(true); document.exitPointerLock?.();
     $('pInfo').textContent = inLobby() ? `Boarding hall${mode === 'online' && net ? ' · room ' + net.room : ''}` : `No. ${pad(seed % 1000)} · ${fmt(raceTime)}${mode === 'online' ? ' · live' : ''}`;
-    $('pLeave').querySelector('b').textContent = inLobby() || mode === 'online' ? 'Leave to menu' : 'Back to the boarding hall';
+    $('pLeave').querySelector('b').textContent = practice ? 'Back to the boarding hall' : inLobby() || mode === 'online' ? 'Leave to menu' : 'Back to the boarding hall';
     $('pRestart').style.display = inLobby() || mode === 'online' ? 'none' : '';
   }
   else if (isPointerMode() && state !== 'finished') lockPointer();
@@ -1087,6 +1606,7 @@ function showMenu(screen = 'main') {
   if (screen === 'guide') $('menuGuide').appendChild($('guideBlock'));
   if (screen === 'online') setTimeout(() => $('inName').focus(), 50);
   if (screen === 'creator') openMenuCreator();
+  if (screen === "summit") { const w = summitWins(); $("summitBadges").textContent = w.length ? `Summits: ${["Gentle", "Standard", "Brutal"].filter((_, i) => w.includes(i)).join(" · ")}` : "No summits yet · Gentle unlocks the Summit hat, Standard the frost scarf, Brutal the golden rope"; }
 }
 const hideMenu = () => { $('menu').style.display = 'none'; };
 // main-menu creator: edit Climber 1 (and Climber 2 for local co-op) before you ever leave the menu
@@ -1107,6 +1627,7 @@ function toMenuNow() {
   closePanel(true); departT = -1;
   clearTrail();
   if (inLobby() || $('huds').classList.contains('lobby')) leaveLobbyWorld();
+  showSummit(false); updateClimbFx(null, false); clearRope(); showRise(false); showHazards(false); boltEl.style.opacity = 0; endPractice(); setWind(0); windOn = false;
   if (maze?.lobby) { setGroundVisible(true); buildMaze(seed || 20261126); buildDoors(); }
   mode = null; state = 'menu';
   clearPlayers(); clearMarksAndSticks(); physClear(); document.exitPointerLock?.();
@@ -1120,13 +1641,20 @@ document.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click'
 document.querySelectorAll('[data-pgo]').forEach((b) => b.addEventListener('click', () => showPView(b.dataset.pgo)));
 $('mSolo').onclick = () => startLocal('solo');
 $('mLocal').onclick = () => startLocal('local');
+// Summit climb menu: the same boarding hall, with the Summit route already picked (or straight through the Practice Wall door)
+let pendingRoute = null; // set by Online summit: switch the room to the Summit once we are in
+$("sumSolo").onclick = () => startLocal("solo", { route: "summit" });
+$("sumLocal").onclick = () => startLocal("local", { route: "summit" });
+$("sumPractice").onclick = () => startLocal("solo", { practice: true });
+$("sumOnline").onclick = () => { pendingRoute = "summit"; showMenu("online"); };
+document.querySelector("#menu [data-go=\"online\"]")?.addEventListener("click", () => { pendingRoute = null; });
 $('goOnline').onclick = startOnline;
 $('inRoom').addEventListener('keydown', (e) => { if (e.key === 'Enter') startOnline(); });
 $('pResume').onclick = () => setPause(false);
 $('pRestart').onclick = () => { paused = false; $('pause').style.display = 'none'; newMaze(); if (isPointerMode()) lockPointer(); };
 // in the maze (solo/local) leave goes back to base camp; from camp or online it goes to the menu
 const toCamp = () => { paused = false; $('pause').style.display = 'none'; enterLobby().then(() => { if (isPointerMode()) lockPointer(); }); };
-$('pLeave').onclick = () => (inLobby() || mode === 'online' ? toMenu() : toCamp());
+$('pLeave').onclick = () => (practice ? toCamp() : inLobby() || mode === 'online' ? toMenu() : toCamp()); // the Practice Wall always goes back to the hall
 $('pauseBtn').onclick = () => setPause(!paused);
 $('again').onclick = () => { newMaze(); if (isPointerMode()) lockPointer(); };
 $('toMenu').onclick = () => (mode === 'online' ? toMenu() : toCamp());
@@ -1151,6 +1679,22 @@ function update(dt) {
       if (n !== lastCount) { lastCount = n; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); if (n <= 0) el.classList.add('go'); else el.classList.remove('go'); if (n > 0 && n <= 3) sfx.beep(false); }
       el.style.display = 'flex'; el.textContent = n > 3 ? '…' : n > 0 ? n : 'GO!';
       if (countdown <= 0) { state = 'racing'; sfx.beep(true); players.forEach((p) => p.ov && zoneCard(p.ov, roundOpts.first ? 'Your first climb' : 'Reach the Sanctuary', roundOpts.first ? `Gentle Shadow · one stone gate · ${GRACE}s head start` : (GRACE > 1e6 ? "Follow the compass · the Shadow is asleep (dev)" : `Follow the compass · the Shadow wakes in ${GRACE}s`), 'goal')); setTimeout(() => { if (state !== 'countdown') el.style.display = 'none'; }, 600); }
+    }
+    if (windOn && state !== 'summit') { windOn = false; setWind(0); } // off the mountain: no wind bed
+    if (state === 'summit' || (state === 'finished' && roundOpts.summit)) {
+      // online the clock comes from the room's startAt, so the Shadow is at the same height for everyone (and late joiners)
+      if (state === 'summit') raceTime = online ? Math.max(0, (net.now() - net.startAt) / 1000) : raceTime + dt;
+      $('timer').textContent = fmt(raceTime);
+      summitTeam = teamList();
+      players.forEach((p) => { specPre(p); stepClimber(p, dt, time); specPost(p, dt); });
+      if (SUMMIT.built) summitTick(dt);
+      updateClimbFx(players[0], !paused && !players[0]?.spec, time); updateSummitWorld(time, players[0], stickList(), summitFlash); updateSummitBar();
+      updateRemotes(dt); updateFx(dt); updateSticks(dt, (s) => { sfx.tink(); fx.sparkle(s.x, s.y, s.z, s.c, 3); });
+      if (practice) Object.values(remotes).forEach((r) => { r.mesh.visible = false; }); // they are in the hall, not here
+      physStep(dt, players.map((p) => ({ id: p.ragId, x: p.x, y: p.y, z: p.z, down: p.st === 2 })));
+      updateFog(0, dt, false);
+      if (online && players[0] && !practice) netTick(dt, false); // on the Practice Wall the room only gets a heartbeat (practiceTick)
+      taps.clear(); return;
     }
     if (inLobby()) {
       players.forEach((p) => stepClimber(p, dt, time));
@@ -1194,8 +1738,9 @@ function netTick(dt, maze) {
   rosterT -= dt; if (rosterT <= 0) { rosterT = 1; renderRoster(); }
   if (sendTimer <= 0) {
     sendTimer = .075; const p = players[0], now = Date.now(), st = p.sit ? 3 : p.st;
-    const moved = Math.abs(p.x - lastSent.x) > .03 || Math.abs(p.z - lastSent.z) > .03 || Math.abs(p.y - lastSent.y) > .03 || Math.abs(p.yaw - lastSent.yaw) > .02 || p.crank !== lastSent.crank || st !== lastSent.st;
-    if (moved || now - lastSent.t > 3000) { lastSent = { x: p.x, y: p.y, z: p.z, yaw: p.sit ? p.sit.yaw : p.yaw, crank: p.climbing ? -2 : p.crank, st, t: now }; net.sendState({ x: p.x, y: p.y, z: p.z, yaw: lastSent.yaw, crank: p.climbing ? -2 : p.crank, st }); }
+    const sm = state === 'summit' || (state === 'finished' && roundOpts.summit) ? smOf(p) : '', ck = p.climbing || p.wall ? -2 : p.crank; // -2: on the rock (remote climbing pose)
+    const moved = Math.abs(p.x - lastSent.x) > .03 || Math.abs(p.z - lastSent.z) > .03 || Math.abs(p.y - lastSent.y) > .03 || Math.abs(p.yaw - lastSent.yaw) > .02 || p.crank !== lastSent.crank || st !== lastSent.st || sm !== lastSent.sm;
+    if (moved || now - lastSent.t > 3000) { lastSent = { x: p.x, y: p.y, z: p.z, yaw: p.sit ? p.sit.yaw : p.yaw, crank: ck, st, sm, t: now }; net.sendState({ x: p.x, y: p.y, z: p.z, yaw: lastSent.yaw, crank: ck, st, sm }); }
   }
 }
 function updateFogBar() {
@@ -1206,22 +1751,40 @@ function updateFogBar() {
   $('doorTxt').textContent = doorCount() ? `Gates ${doorsOpen()}/${doorCount()}` : '';
 }
 function render() {
-  const w = innerWidth, h = innerHeight;
+  const w = innerWidth, h = innerHeight, dt = Math.min(.05, clock.elapsedTime - (render.last ?? clock.elapsedTime)); render.last = clock.elapsedTime;
   if (!inGame() || !players.length) {
-    applyViewFog(renderer, CX, CX, 0, false, zoneFog(0, 0));
-    renderer.setScissorTest(false); renderer.setViewport(0, 0, w, h);
-    menuCam.aspect = w / h; menuCam.updateProjectionMatrix(); renderer.render(scene, menuCam); return;
+    lightMood('day', dt); followShadow(CX, 0, CX, 70); Object.assign(POST.mist, { base: 0, fall: 3, max: .25, reach: 90 });
+    menuCam.aspect = w / h; menuCam.updateProjectionMatrix();
+    renderViews([{ cam: menuCam, x: 0, y: 0, w, h }], () => { applyViewFog(renderer, CX, CX, 0, false, zoneFog(0, 0)); }, () => {});
+    return;
   }
-  renderer.setScissorTest(true);
-  const n = players.length, vw = w / n;
-  players.forEach((p, i) => {
-    renderer.setViewport(i * vw, 0, vw, h); renderer.setScissor(i * vw, 0, vw, h);
-    p.cam.aspect = vw / h; p.cam.updateProjectionMatrix();
+  const n = players.length, vw = w / n, summitView = state === 'summit' || (state === 'finished' && roundOpts.summit);
+  // where the action is: the shadow box and the light mood follow the (first) local climber or whoever they watch
+  const eyes = players.map((p) => { const sp = p.spec && remotes[p.spec]; return sp ? { x: sp.x, y: sp.y || 0, z: sp.z } : { x: p.x, y: p.y, z: p.z }; });
+  const fx0 = eyes.reduce((s, e) => s + e.x, 0) / n, fy0 = eyes.reduce((s, e) => s + e.y, 0) / n, fz0 = eyes.reduce((s, e) => s + e.z, 0) / n;
+  const spread = n > 1 ? Math.hypot(eyes[0].x - eyes[1].x, eyes[0].y - eyes[1].y, eyes[0].z - eyes[1].z) : 0;
+  followShadow(fx0, fy0, fz0, Math.min(90, Math.max(summitView ? 36 : inLobby() ? 60 : 45, spread / 2 + 30))); // smaller box = sharper shadows; big enough that the edge stays in the fog
+  lightMood(summitView ? ['day', 'ice', 'temple', 'storm', 'summit'][zoneAtY(eyes[0].y)] : inLobby() ? 'day' : ['day', 'ice', 'temple'][zoneAt(eyes[0].x, eyes[0].z)] || 'day', dt);
+  // height mist: ground haze in the maze and the hall, a sea of cloud far below you on the mountain
+  Object.assign(POST.mist, summitView ? { base: 0, fall: 26, max: .55, reach: 140 } : inLobby() ? { base: 0, fall: 1.6, max: .18, reach: 110 } : { base: 0, fall: 2.4, max: .32, reach: 75 });
+  const views = players.map((p, i) => ({ cam: p.cam, x: i * vw, y: 0, w: vw, h, p }));
+  renderViews(views, ({ p }) => {
+    p.cam.aspect = vw / h;
     const sp = p.spec && remotes[p.spec];
     players.forEach((q) => q.mesh.visible = (q !== p || !!sp) && !q.ragdoll);
-    if (inLobby()) { p.fogK = applyViewFog(renderer, p.x, p.z, 0, false, LOBBY_SKY); scene.fog.near = 40; scene.fog.far = 340; if (inPuddle(p.x, p.z) && p.y < .5) p.fogK = .75; }
+    if (summitView) {
+      const ex = sp ? sp.x : p.x, ey = sp ? (sp.y || 0) + 1.6 : p.cam.position.y, ez = sp ? sp.z : p.z;
+      p.fogK = applyRiseFog(renderer, ey, summitSY, SUMMIT_SKY);
+      if (inChimney(ex, ey, ez)) renderer.toneMappingExposure *= .4; // the chimney is dark: bring a glowstick
+      if (zoneAtY(ey) === 3) renderer.toneMappingExposure *= .8; // storm clouds
+      renderer.toneMappingExposure += summitFlash * .9;
+    }
+    else if (inLobby()) { p.fogK = applyViewFog(renderer, p.x, p.z, 0, false, LOBBY_SKY); scene.fog.near = 40; scene.fog.far = 340; if (inPuddle(p.x, p.z) && p.y < .5) p.fogK = .75; }
     else p.fogK = applyViewFog(renderer, sp ? sp.x : p.x, sp ? sp.z : p.z, raceTime, state === 'racing' && (sp || p.st !== 1), zoneFog(sp ? sp.x : p.x, sp ? sp.z : p.z));
-    renderer.render(scene, p.cam);
+    p.cam.far = Math.max(60, scene.fog.far * 1.1); // nothing past the fog gets drawn: it would be invisible anyway
+    p.cam.updateProjectionMatrix();
+  }, ({ p }) => {
+    const sp = p.spec && remotes[p.spec];
     if (!sp) renderViewmodel(renderer, p.vm, vw / h, players.map((q) => q.vm));
     drawMarkers(p, vw, h);
   });
@@ -1280,7 +1843,7 @@ function renderRoster() {
 // Click (or F) for the next one, V to switch between watching and your own view, move the mouse to look around them.
 const specTargets = () => Object.values(remotes).filter((r) => (r.st || 0) === 0);
 function specPre(p) {
-  if (mode !== 'online' || state !== 'racing' || p.st === 0 || p !== players[0]) { p.spec = null; p.specOff = false; return; }
+  if (mode !== 'online' || (state !== 'racing' && state !== 'summit') || p.st === 0 || p !== players[0]) { p.spec = null; p.specOff = false; return; }
   const list = specTargets();
   if (!list.length) { p.spec = null; return; }
   if (taps.has('KeyV')) { taps.delete('KeyV'); if (p.spec) { p.spec = null; p.specOff = true; } else { p.specOff = false; p.spec = list[0].id; } }
@@ -1295,7 +1858,7 @@ const specV = new THREE.Vector3();
 function specPost(p, dt) {
   const r = p.spec && remotes[p.spec], H = p.hud;
   if (!r) {
-    if (H && mode === 'online' && state === 'racing' && p.st !== 0 && p.specOff && specTargets().length) { H.prompt.style.display = 'block'; H.prompt.textContent = 'V · watch your team'; }
+    if (H && mode === 'online' && (state === 'racing' || state === 'summit') && p.st !== 0 && p.specOff && specTargets().length) { H.prompt.style.display = 'block'; H.prompt.textContent = 'V · watch your team'; }
     return;
   }
   const a = r.yaw + (p.specYaw || 0), back = 4.2, lift = 1.2 + (p.specPitch || 0) * 3.2;
@@ -1402,7 +1965,7 @@ function activeCheats() {
 // called once per frame from the loop
 function devTick(rawDt) {
   const cheats = activeCheats();
-  if (cheats.length && (state === 'racing' || state === 'countdown')) roundOpts.dev = true;
+  if (cheats.length && (state === 'racing' || state === 'countdown' || state === 'summit')) roundOpts.dev = true;
   setDevChip(devChip, inGame() ? cheats.concat(DEV.wire ? ['Wireframe'] : []) : []);
   updatePathLine();
   if (wireLook !== (DEV.wire && inGame())) devApplyLooks();
@@ -1478,6 +2041,15 @@ const DEV_GROUPS = [
     { kind: 'button', label: 'Wake the Shadow', cheat: true, when: () => state === 'racing', run: () => { roundOpts.dev = true; DEV.sleep = false; DEV.graceWas = GRACE; setGrace(Math.floor(raceTime)); } },
     { kind: 'button', label: 'Skip 30 s', hint: 'Fast-forward the Shadow', cheat: true, when: () => state === 'racing', run: () => { roundOpts.dev = true; raceTime += 30; } },
     { kind: 'button', label: 'Refill glowsticks', cheat: true, when: () => inGame(), run: () => players.forEach((p) => p.sticks = 3) },
+    { kind: 'button', label: 'Summit test mountain', hint: 'Dev run · no rewards', cheat: true, when: () => inGame() && mode !== 'online' && state !== 'departing', tone: 'go', run: () => enterSummitTest() },
+    { kind: 'button', label: 'Resume Summit at last camp', hint: 'Uses the saved checkpoint', cheat: true, when: () => inGame() && mode !== 'online' && state !== 'departing' && !!summitSave(), run: () => { const s = summitSave(); enterSummitTest(s.seed, s.camp, s.pace ?? 1); } },
+    { kind: 'button', label: 'Summit: next camp', cheat: true, when: () => state === 'summit', run: () => { roundOpts.dev = true; const c = SUMMIT.camps.find((k) => k.id > summitCamp) || SUMMIT.camps.at(-1); players.forEach((p, i) => { resetClimber(p); p.hang = null; p.clip = null; placeAtCamp(p, c, i); }); } },
+    { kind: 'button', label: 'Summit: +5 pitons', cheat: true, when: () => state === 'summit', run: () => { roundOpts.dev = true; players.forEach((p) => p.pitons = (p.pitons || 0) + 5); } },
+    { kind: 'button', label: 'Summit: Shadow +10 m', hint: 'Offline only', cheat: true, when: () => state === 'summit' && mode !== 'online', run: () => { roundOpts.dev = true; raceTime = Math.max(raceTime, RISE.grace) + 10 / RISE.speed; } },
+    { kind: 'choice', label: 'Summit: go to camp', cheat: true, when: () => state === 'summit' && !practice, options: [[0, 'Trail'], [1, 'I'], [2, 'II'], [3, 'III'], [4, 'IV'], [5, 'V']], get: () => summitCamp, set: (v) => { roundOpts.dev = true; const c = SUMMIT.camps[v]; if (!c) return; players.forEach((p, i) => { resetClimber(p); p.hang = null; p.clip = null; placeAtCamp(p, c, i); }); if (SUMMIT.gate && c.y >= SUMMIT.faces[SUMMIT.gate.face].y1 - .5) gateOpened('crank', true); } },
+    { kind: 'button', label: 'Summit: Shadow 15 m below me', hint: 'Offline only', cheat: true, when: () => state === 'summit' && mode !== 'online' && !practice, run: () => { roundOpts.dev = true; if (raceTime < RISE.grace) raceTime = RISE.grace; RISE.base += (players[0].y - 15) - summitSY; } },
+    { kind: 'button', label: 'Summit: open the temple gate', cheat: true, when: () => state === 'summit' && !!SUMMIT.gate && !SUMMIT.gate.open, run: () => { roundOpts.dev = true; gateOpened('crank', true); } },
+    { kind: 'seed', label: 'Summit: climb a seed', hint: 'Offline · uses the pace below', cheat: true, when: () => inGame() && mode !== 'online' && state !== 'departing', run: (s) => enterSummitTest(s, 0, lobbySettings.pace) },
     { kind: 'button', label: 'Restart this maze', cheat: true, when: () => inMaze() && state !== 'departing', run: () => { closeDev(); startRound(seed); } },
     { kind: 'button', label: 'New random maze', cheat: true, when: () => inGame() && state !== 'departing', run: () => { closeDev(); if (state === 'lobby') depart(newSeed()); else startRound(newSeed()); } },
     { kind: 'seed', label: 'Play a seed', cheat: true, when: () => inGame() && state !== 'departing', run: (s) => { closeDev(); if (state === 'lobby') depart(s); else startRound(s); } },
@@ -1525,7 +2097,7 @@ function perfTick(rawDt) {
     PERF.slow = 0;
     if (PERF.ratio > PERF.min + .01) { PERF.ratio = Math.max(PERF.min, PERF.ratio - .25); renderer.setPixelRatio(PERF.ratio); renderer.setSize(innerWidth, innerHeight); }
     else if (!PERF.lite) { // still slow at the lowest resolution: switch to cheaper, sharper-edged shadows
-      PERF.lite = true; renderer.shadowMap.type = THREE.PCFShadowMap; sun.shadow.mapSize.set(1024, 1024);
+      PERF.lite = true; POST.bloom = false; renderer.shadowMap.type = THREE.PCFShadowMap; sun.shadow.mapSize.set(1024, 1024);
       sun.shadow.map?.dispose(); sun.shadow.map = null;
       scene.traverse((o) => { if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.needsUpdate = true); });
     }

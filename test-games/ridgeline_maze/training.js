@@ -10,6 +10,7 @@ export const STATIONS = [
   { id: 'gate', name: 'Staff door', hint: 'Open the stone staff door by the board: two plates, or hold the crank' },
   { id: 'shadow', name: 'Shadow sample', hint: 'Stand in the spilled purple Shadow and feel it drain you' },
   { id: 'climb', name: 'Bouldering wall', hint: 'Climb the bouldering wall to the very top' },
+  { id: 'wall', name: 'Practice Wall', hint: 'Step through the Practice Wall door by the radio desk: grab, rest, piton, fall, haul' },
 ];
 let stamps = new Set();
 try { stamps = new Set(JSON.parse(localStorage.getItem('ridgeline_passport') || '[]')); } catch {}
@@ -26,6 +27,7 @@ export const PUDDLE = { x: 58, z: 41.5, r: 1.9 };
 export const SLATE = { x: 64.5, y: 1.55, z: 40.5, w: 2.2, h: 1.3 };
 export const SHED = { x0: 32.2, x1: 35.8, z0: 60.2, z1: 63.8, y1: 2.3 };
 export const BOULDER_TOP = { i: 17, j: 8, y: 5 };
+export const PRACTICE_DOOR = { x: 52.5, z: 40 }; // the Practice Wall door (a free-standing arch facing the hall)
 
 const group = new THREE.Group(); group.visible = false; scene.add(group);
 const anim = { t: 0, swirl: [], lantern: null, lanternLight: null, flags: [] };
@@ -49,6 +51,7 @@ function flag(x, z, color, text) {
 
 function build() {
   built = true;
+  buildPracticeDoor();
   // 1. sprint lane: painted stripes with start and finish flags
   const paint = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .8 });
   for (const z of [LANE.z0, LANE.z1]) { const s = add(new THREE.PlaneGeometry(LANE.x1 - LANE.x0, .12), paint, (LANE.x0 + LANE.x1) / 2, .03, z); s.rotation.x = -Math.PI / 2; s.castShadow = false; }
@@ -131,4 +134,16 @@ export function updateTraining(dt) {
   for (const w of anim.swirl) { w.a += dt * w.sp; w.h = (w.h + dt * .35) % 1.8; w.s.position.set(PUDDLE.x + Math.cos(w.a) * w.r, .1 + w.h, PUDDLE.z + Math.sin(w.a) * w.r); w.s.material.opacity = .55 * (1 - w.h / 1.8); }
   anim.flags.forEach((f, k) => { f.rotation.y = Math.sin(anim.t * 3 + k) * .25; });
   if (anim.lanternLit && anim.lantern) anim.lantern.scale.setScalar(1 + Math.sin(anim.t * 6) * .06);
+}
+
+// the Practice Wall door: a stone arch with a dark doorway and a sign. Walk up and press E to go through
+function buildPracticeDoor() {
+  const { x, z } = PRACTICE_DOOR, stone = std(0x9c8f82, .95, { flatShading: true });
+  for (const s of [-1, 1]) add(new THREE.BoxGeometry(.5, 3, .6), stone, x + s * 1.3, 1.5, z);
+  add(new THREE.BoxGeometry(3.1, .5, .7), stone, x, 3.2, z);
+  add(new THREE.PlaneGeometry(2.1, 2.95), new THREE.MeshBasicMaterial({ color: 0x0a0d14 }), x, 1.48, z - .05).castShadow = false;
+  // a strip of holds on the arch so it reads as "climbing" from across the hall
+  const holdM = std(0xe9b27a, .7, { flatShading: true });
+  for (let k = 0; k < 5; k++) add(new THREE.DodecahedronGeometry(.12, 0), holdM, x + (k % 2 ? .9 : -.9) * (k / 5 + .4), .6 + k * .5, z + .32);
+  label('PRACTICE WALL', 2.8, .42, x, 3.75, z + .37, 0, '#8ee34d');
 }

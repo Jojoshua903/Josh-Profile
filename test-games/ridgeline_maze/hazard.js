@@ -176,3 +176,52 @@ export function plateUnder(x, z) {
   return null;
 }
 export const doorProgress = (id) => maze.doors[id]?.progress || 0;
+
+/* ================= Summit: the rising Shadow ================= */
+// The same purple Shadow, but as a surface that climbs the mountain. Its height is worked out from the round clock
+// (startAt online) plus the camp pauses, so every client sees it at the same height without sending it.
+export const RISE = { grace: 60, speed: .11, pause: 50, push: 1.7, base: -4 }; // base: where it starts (below the camp you resume from)
+/** Summit pace: 0 gentle, 1 standard, 2 brutal (metres per second the Shadow rises, seconds of calm at each camp). */
+// tuned for the five-zone mountain (186 m): Standard lets the Shadow reach the top after roughly 30-35 minutes
+export function setRise(p) { RISE.grace = [90, 60, 40][p] ?? 60; RISE.speed = [.075, .11, .16][p] ?? .11; RISE.pause = [75, 50, 35][p] ?? 50; }
+/** Shadow height at round time t (s). pauses: camp-reached times (s); the Shadow holds still for RISE.pause after each.
+ *  pushAt: when the team reached the last camp; after that pause the Shadow rises RISE.push times faster (the final push). */
+export function shadowY(t, pauses = [], pushAt = Infinity) {
+  let run = Math.max(0, t - RISE.grace);
+  for (const p of pauses) { const a = Math.max(p, RISE.grace), b = Math.min(p + RISE.pause, t); if (b > a) run -= b - a; }
+  return RISE.base + Math.max(0, run) * RISE.speed + Math.max(0, t - pushAt - RISE.pause) * RISE.speed * (RISE.push - 1);
+}
+export const shadowCalm = (t, pauses = []) => pauses.some((p) => t >= p && t < p + RISE.pause);
+const riseGroup = new THREE.Group(); riseGroup.visible = false; scene.add(riseGroup);
+const riseTop = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), new THREE.MeshBasicMaterial({ color: 0x3a1a5a, transparent: true, opacity: .78, depthWrite: false, side: THREE.DoubleSide, fog: false, toneMapped: false }));
+riseTop.rotation.x = -Math.PI / 2; riseTop.renderOrder = 2; riseGroup.add(riseTop);
+const riseLow = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), new THREE.MeshBasicMaterial({ color: 0x1a0a2a, transparent: true, opacity: .9, depthWrite: false, side: THREE.DoubleSide, fog: false, toneMapped: false }));
+riseLow.rotation.x = -Math.PI / 2; riseLow.renderOrder = 1; riseGroup.add(riseLow);
+// a ragged band of the curtain texture hanging just above the surface, so the edge looks alive
+const riseBand = new THREE.Mesh(new THREE.CylinderGeometry(160, 160, 5, 48, 1, true), curtainMat); riseBand.renderOrder = 3; riseGroup.add(riseBand);
+const RM = 500, rmGeo = new THREE.BufferGeometry(), rmPos = new Float32Array(RM * 3), rmHome = new Float32Array(RM * 3);
+for (let i = 0; i < RM; i++) { rmHome[i * 3] = (Math.random() - .5) * 140; rmHome[i * 3 + 1] = Math.random(); rmHome[i * 3 + 2] = (Math.random() - .5) * 140; }
+rmGeo.setAttribute('position', new THREE.BufferAttribute(rmPos, 3));
+const riseMotes = new THREE.Points(rmGeo, motes.material); riseMotes.frustumCulled = false; riseGroup.add(riseMotes);
+export function showRise(v) { riseGroup.visible = v; }
+/** Move the Shadow surface to height y, centred on (cx, cz). */
+export function updateRise(y, dt, cx, cz) {
+  riseTop.position.set(cx, y, cz); riseLow.position.set(cx, y - 1.2, cz); riseBand.position.set(cx, y + 1.5, cz);
+  const t = performance.now() / 1000;
+  for (let i = 0; i < RM; i++) {
+    rmPos[i * 3] = cx + rmHome[i * 3] + Math.sin(t * .4 + i) * 1.5;
+    rmPos[i * 3 + 1] = y - 3 + rmHome[i * 3 + 1] * 5 + Math.sin(t + i) * .4;
+    rmPos[i * 3 + 2] = cz + rmHome[i * 3 + 2] + Math.cos(t * .35 + i * 1.3) * 1.5;
+  }
+  rmGeo.attributes.position.needsUpdate = true;
+}
+/** Scene fog for one viewer on the mountain: eyeY against the Shadow height sy. Returns 0..1 like applyViewFog. */
+export function applyRiseFog(renderer, eyeY, sy, base) {
+  if (!skyTex) skyTex = scene.background;
+  const k = clamp((sy - eyeY + 3) / 5, 0, 1);
+  scene.fog.color.copy(base).lerp(SHADOW, k);
+  scene.fog.near = lerp(50, .4, k); scene.fog.far = lerp(260, 7, k);
+  if (k > .02) scene.background = bg.copy(base).lerp(SHADOW, Math.min(1, k * 1.2)); else scene.background = skyTex;
+  renderer.toneMappingExposure = lerp(1.05, .6, k);
+  return k;
+}

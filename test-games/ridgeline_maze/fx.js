@@ -18,7 +18,7 @@ function emit(o) {
   m.map = o.map || flake; m.color.set(o.color ?? 0xffffff);
   m.blending = o.add ? THREE.AdditiveBlending : THREE.NormalBlending; m.toneMapped = !o.add; m.rotation = Math.random() * 6.28;
   p.s.position.set(o.x, o.y, o.z); p.v.set(o.vx || 0, o.vy || 0, o.vz || 0);
-  Object.assign(p, { life: o.life, max: o.life, g: o.g || 0, drag: o.drag ?? 2, s0: o.s0, s1: o.s1 ?? o.s0, a: o.a ?? 1, spin: o.spin || 0 });
+  Object.assign(p, { life: o.life, max: o.life, g: o.g || 0, drag: o.drag ?? 2, s0: o.s0, s1: o.s1 ?? o.s0, a: o.a ?? 1, spin: o.spin || 0, floor: o.y < 4 ? .03 : o.drop !== undefined ? o.y - o.drop : -1e9 }); // up on the mountain the floor is the ledge or camp you are on
   p.s.scale.setScalar(o.s0); p.s.visible = true;
 }
 const rnd = (a = 1) => (Math.random() - .5) * 2 * a;
@@ -33,7 +33,7 @@ export const fx = {
   },
   /** Snow kicked up behind a running foot. */
   kick(x, y, z, dx, dz) {
-    for (let i = 0; i < 3; i++) emit({ x: x + rnd(.15), y: y + .05, z: z + rnd(.15), vx: -dx * 1.5 + rnd(.6), vy: 1 + Math.random(), vz: -dz * 1.5 + rnd(.6), life: .45, s0: .15, s1: .45, a: .8, g: 6, drag: 1.5 });
+    for (let i = 0; i < 3; i++) emit({ x: x + rnd(.15), y: y + .05, z: z + rnd(.15), vx: -dx * 1.5 + rnd(.6), vy: 1 + Math.random(), vz: -dz * 1.5 + rnd(.6), life: .45, s0: .15, s1: .45, a: .8, g: 6, drag: 1.5, drop: .05 });
   },
   /** Coloured chalk dust bursting off a surface. */
   chalk(x, y, z, nx, ny, nz, color) {
@@ -53,11 +53,11 @@ export const fx = {
     emit({ x, y, z, life: .35, s0: .5, s1: 4, add: true, color: 0xffffff, a: 1, drag: 0 });
   },
   /** Confetti cannon. */
-  confetti(x, y, z, n = 90) {
+  confetti(x, y, z, n = 90, drop = 1.45) { // drop: how far below the cannon the ground is
     const cols = [0xff6f59, 0xffd23f, 0x2ec4f1, 0x8ee34d, 0xa37bff, 0xff5fa2];
     for (let i = 0; i < n; i++) {
       const a = Math.random() * 6.28, sp = 2 + Math.random() * 4;
-      emit({ x, y, z, map: square, vx: Math.cos(a) * sp, vy: 6 + Math.random() * 6, vz: Math.sin(a) * sp, life: 2.4 + Math.random() * 1.4, s0: .22, s1: .2, color: cols[i % cols.length], g: 7, drag: 1.4, spin: rnd(12) });
+      emit({ x, y, z, map: square, vx: Math.cos(a) * sp, vy: 6 + Math.random() * 6, vz: Math.sin(a) * sp, life: 2.4 + Math.random() * 1.4, s0: .22, s1: .2, color: cols[i % cols.length], g: 7, drag: 1.4, spin: rnd(12), drop: drop });
     }
   },
 };
@@ -69,7 +69,7 @@ export function updateFx(dt) {
     if (p.life <= 0) { p.s.visible = false; continue; }
     p.v.y -= p.g * dt; p.v.multiplyScalar(Math.max(0, 1 - p.drag * dt));
     p.s.position.addScaledVector(p.v, dt);
-    if (p.s.position.y < .03) { p.s.position.y = .03; p.v.y = 0; p.v.x *= .9; p.v.z *= .9; }
+    if (p.s.position.y < p.floor) { p.s.position.y = p.floor; p.v.y = 0; p.v.x *= .9; p.v.z *= .9; }
     const k = 1 - p.life / p.max;
     p.s.scale.setScalar(p.s0 + (p.s1 - p.s0) * k);
     p.s.material.opacity = p.a * (k < .12 ? k / .12 : 1 - (k - .12) / .88);

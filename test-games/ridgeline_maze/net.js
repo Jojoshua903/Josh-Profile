@@ -1,12 +1,18 @@
 // Ridgeline online sync through Firebase Realtime Database
 // Layout under ridgeline/{room}:
-//   meta                 { seed, round, startAt, outcome? }
-//   players/{id}         { id, name, color, x, y, z, yaw, st (0 climbing, 1 safe, 2 collapsed), crank, t }
+//   meta                 { seed, round, startAt, phase 'lobby'|'maze'|'summit', pace, daily, route 'maze'|'summit', resume,
+//                          outcome?, camp (Summit: highest camp reached this round), save { seed, pace, camp } (Summit checkpoint) }
+//   players/{id}         { id, name, color, look, x, y, z, yaw, st (0 climbing, 1 safe/summited, 2 collapsed/knocked out, 3 resting), crank, sm, t }
+//                        sm (Summit only) is a short string: 'leftHoldId,rightHoldId,clipPitonKey,hanging,belaying,campId,face'
 //   marks/{round}/{key}  chalk mark
 //   sticks/{round}/{key} glowstick { x,y,z,vx,vy,vz,c,t,rest }
 //   doors/{round}/{id}   true once a door has been fully opened
 //   events/{id}/{key}    boosts/shoves aimed at a player
 //   rtc/{id}/{key}       WebRTC voice signalling (offer / answer / ice) for a player
+//   summit/{round}/pitons/{key}  { x, y, z, face, owner, color }   a piton someone hammered in
+//   summit/{round}/holds/{id}    true                              a crumbling hold that broke
+//   summit/{round}/chalk/{id}    true                              a slick hold someone chalked
+//   summit/{round}/camps/{id}    { by, t }                         camp reached (t = seconds after startAt; the Shadow pauses)
 
 export const FIREBASE_CONFIG = {
   apiKey: "AIzaSyAjras7u8-rOwsAwTCNmwWs_vxDzwVfi1Q",
@@ -61,8 +67,9 @@ export async function joinRoom(roomName, name, handlers, look = {}) {
   const now = () => Date.now() + offset;
   // new rooms start in the lobby; a maze round whose fog has long since finished falls back to the lobby
   const tx = await D.runTransaction(metaRef, (m) => {
-    if (!m) return { seed: newSeed(), round: 0, phase: 'lobby', pace: 1, daily: false };
-    if (m.phase !== 'lobby' && (!m.startAt || now() - m.startAt > 1100000)) return { ...m, phase: 'lobby', outcome: null };
+    if (!m) return { seed: newSeed(), round: 0, phase: 'lobby', pace: 1, daily: false, route: 'maze' };
+    // a Summit climb can run 45+ minutes, so it only falls back after two hours (the team can still resume from the checkpoint)
+    if (m.phase !== 'lobby' && (!m.startAt || now() - m.startAt > (m.phase === 'summit' ? 7200000 : 1100000))) return { ...m, phase: 'lobby', outcome: null };
     return m;
   });
   const meta = tx.snapshot.val();
@@ -90,6 +97,12 @@ export async function joinRoom(roomName, name, handlers, look = {}) {
     net.roundUnsubs.push(D.onChildAdded(sRef, (s) => handlers.onStick(s.val(), s.key)));
     net.roundUnsubs.push(D.onChildChanged(sRef, (s) => { const v = s.val(); if (v.rest) handlers.onStickRest(v, s.key); }));
     net.roundUnsubs.push(D.onChildAdded(dRef, (s) => handlers.onDoor(+s.key)));
+    const sm = (k) => r(`summit/${round}/${k}`);
+    net.roundUnsubs.push(D.onChildAdded(sm('pitons'), (s) => handlers.onPiton?.(s.val(), s.key)));
+    net.roundUnsubs.push(D.onChildAdded(sm('holds'), (s) => handlers.onHoldBreak?.(+s.key)));
+    net.roundUnsubs.push(D.onChildAdded(sm('chalk'), (s) => handlers.onChalk?.(+s.key)));
+    net.roundUnsubs.push(D.onChildAdded(sm('gates'), (s) => handlers.onGate?.(+s.key)));
+    net.roundUnsubs.push(D.onChildAdded(sm('camps'), (s) => handlers.onCamp?.(+s.key, s.val() || {})));
   };
   net.start = () => {
     net.subscribeRound(net.round);
@@ -116,7 +129,7 @@ export async function joinRoom(roomName, name, handlers, look = {}) {
   };
 
   net.sendState = (p) => {
-    net.last = { x: +p.x.toFixed(2), y: +p.y.toFixed(2), z: +p.z.toFixed(2), yaw: +p.yaw.toFixed(3), st: p.st || 0, crank: p.crank ?? -1 };
+    net.last = { x: +p.x.toFixed(2), y: +p.y.toFixed(2), z: +p.z.toFixed(2), yaw: +p.yaw.toFixed(3), st: p.st || 0, crank: p.crank ?? -1, sm: p.sm || '' };
     return D.update(meRef, { ...net.last, t: Date.now() }).catch(() => {});
   };
   net.signal = (to, msg) => D.push(r(`rtc/${to}`), { ...msg, from: myId }).catch(() => {});
@@ -127,13 +140,28 @@ export async function joinRoom(roomName, name, handlers, look = {}) {
   net.putStick = (key, d) => D.set(r(`sticks/${net.round}/${key}`), d).catch(() => {});
   net.restStick = (key, s) => D.update(r(`sticks/${net.round}/${key}`), { rest: true, x: +s.x.toFixed(3), y: +s.y.toFixed(3), z: +s.z.toFixed(3) }).catch(() => {});
   net.sendEvent = (targetId, ev) => D.push(r(`events/${targetId}`), ev).catch(() => {});
+  // Summit shared world: small nodes per round, so late joiners get the same pitons, broken holds and camps
+  net.newPitonKey = () => D.push(r(`summit/${net.round}/pitons`)).key;
+  net.putPiton = (key, d) => D.set(r(`summit/${net.round}/pitons/${key}`), d).catch(() => {});
+  net.breakHold = (id) => D.set(r(`summit/${net.round}/holds/${id}`), true).catch(() => {});
+  net.chalkHold = (id) => D.set(r(`summit/${net.round}/chalk/${id}`), true).catch(() => {});
+  net.openGate = (face) => D.set(r(`summit/${net.round}/gates/${face}`), true).catch(() => {});
+  // first to reach a camp records when (the Shadow pause), and the room checkpoint moves up
+  net.reachCamp = (id, t, by) => D.runTransaction(r(`summit/${net.round}/camps/${id}`), (c) => c || { by, t: +t.toFixed(1) })
+    .then(() => D.runTransaction(metaRef, (m) => { if (!m || m.round !== net.round || m.phase !== 'summit') return; if ((m.camp || 0) >= id) return; return { ...m, camp: id, save: { seed: m.seed, pace: m.pace ?? 1, camp: id } }; })).catch(() => {});
+  net.clearSave = () => D.runTransaction(metaRef, (m) => { if (!m) return; return { ...m, save: null }; }).catch(() => {});
 
   net.setLook = (color, lk) => { net.color = color; net.lookStr = JSON.stringify(lk); return D.update(meRef, { color, look: net.lookStr }).catch(() => {}); };
-  net.setSettings = (s) => D.runTransaction(metaRef, (m) => { if (!m || m.phase === 'maze') return; return { ...m, ...s }; }).catch(() => {});
+  net.setSettings = (s) => D.runTransaction(metaRef, (m) => { if (!m || m.phase === 'maze' || m.phase === 'summit') return; return { ...m, ...s }; }).catch(() => {});
   // everyone is aboard: start the next maze a few seconds from now (first client to ask wins)
   net.depart = () => D.runTransaction(metaRef, (m) => {
-    if (!m || m.phase === 'maze') return;
+    if (!m || m.phase === 'maze' || m.phase === 'summit') return;
     const daily = !!m.daily, d = new Date(), dseed = (d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate()) * 2654435761 % 2147483647;
+    // Summit can resume from the room checkpoint: same mountain, start at the saved camp
+    if (m.route === 'summit') {
+      const res = m.resume && m.save;
+      return { ...m, seed: res ? m.save.seed : daily ? dseed : newSeed(), pace: res ? (m.save.pace ?? m.pace) : m.pace, camp: res ? m.save.camp : 0, startCamp: res ? m.save.camp : 0, round: (m.round || 0) + 1, startAt: now() + 6500, phase: 'summit', outcome: null, resume: false };
+    }
     return { ...m, seed: daily ? dseed : newSeed(), round: (m.round || 0) + 1, startAt: now() + 6500, phase: 'maze', outcome: null };
   }).catch(() => {});
   // outcome: { win: bool, time, escaped: [names], lost: [names] }. First client to call it decides.
@@ -142,9 +170,9 @@ export async function joinRoom(roomName, name, handlers, look = {}) {
     m.outcome = outcome; return m;
   }).catch(() => {});
   net.backToLobby = (round) => D.runTransaction(metaRef, (m) => {
-    if (!m || m.round !== round || m.phase !== 'maze') return;
+    if (!m || m.round !== round || m.phase === 'lobby') return;
     return { ...m, phase: 'lobby', outcome: null };
-  }).then((res) => { if (res && res.committed) { ['marks', 'sticks', 'doors'].forEach((k) => D.remove(r(`${k}/${round}`))); } }).catch(() => {});
+  }).then((res) => { if (res && res.committed) { ['marks', 'sticks', 'doors', 'summit'].forEach((k) => D.remove(r(`${k}/${round}`))); } }).catch(() => {});
 
   net.leave = () => {
     net.roundUnsubs.forEach((u) => u()); net.unsubs.forEach((u) => u());
