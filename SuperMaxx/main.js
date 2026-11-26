@@ -1,31 +1,31 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { HEROES, MAPS, DIFFICULTY, TUNING, SURVIVOR_MAP, SURVIVOR, HILL, DUEL, CART } from './data.js?v=20261126j';
-import { initSurvivor, updateSurvivor, survivorLeaders, stormInfo, inStorm } from './survivor.js?v=20261126j';
-import { initHill, updateHill, hillVisuals, onHill } from './hill.js?v=20261126j';
-import { initCart, updateCart, nearCart, cartLead } from './payload.js?v=20261126j';
-import { buildWorld, mirror } from './world.js?v=20261126j';
+import { HEROES, MAPS, DIFFICULTY, TUNING, SURVIVOR_MAP, SURVIVOR, HILL, DUEL, CART } from './data.js?v=20261126r';
+import { initSurvivor, updateSurvivor, survivorLeaders, stormInfo, inStorm } from './survivor.js?v=20261126r';
+import { initHill, updateHill, hillVisuals, onHill } from './hill.js?v=20261126r';
+import { initCart, updateCart, nearCart, cartLead } from './payload.js?v=20261126r';
+import { buildWorld, mirror } from './world.js?v=20261126r';
 import { createHero, spawnHero, createStructure, spawnMinion, fire, releaseFire, chargeLevel, startReload, tickHero, tickCorpse, chestOf,
-  updateMinions, updateStructures, updateProjectiles, updateFx, dirFrom, eyeOf, TEAM_COLOR } from './units.js?v=20261126j';
-import { steer, initBot, updateBot } from './botbrain.js?v=20261126j';
-import { castSlot, updateAbilities } from './abilities.js?v=20261126j';
-import { floatText } from './anim.js?v=20261126j';
-import { cfg, applyGraphics } from './settings.js?v=20261126j';
-import { initMenu, showMenu, menuFrame, openSettings, settingsVisible } from './menu.js?v=20261126j';
-import { dressed, heroOwned, wear, myCosIds, resolveCos, matchXp, award, rewardInfo, tierProgress, SEASON, MAX_TIER, cosById, cosOwned, equippedCos } from './pass.js?v=20261126j';
-import { aimSpray, placeSpray, SPRAY_CD } from './sprays.js?v=20261126j';
-import { headshot } from './portraits.js?v=20261126j';
-import './personality.js?v=20261126j';
-import { openSession, tickPuppet, myUid, lobbyState, leaveRoom, onLobby } from './net.js?v=20261126j';
-import { initAudio, applyVolume, tone, noise, ABIL_SFX, audioTap } from './audio.js?v=20261126j';
-import { startClipRec, saveClip, sendClip } from './clips.js?v=20261126j';
-import { playMusic } from './music.js?v=20261126j';
-import { sparks, castFx, lightFlash } from './vfx.js?v=20261126j';
-import { applyEnvironment } from './stage.js?v=20261126j';
-import { perfFrame } from './perf.js?v=20261126j';
-import { gainMastery } from './mastery.js?v=20261126j';
-import { recordMatch, tasksDone } from './contracts.js?v=20261126j';
-import { startTutorial, stopTutorial, tickTutorial, tutorialCast, tutorialKill, onTutorialPass } from './tutorial.js?v=20261126j';
-import { initReplay, recFrame, recEvent, recKill, finalClip, startPlayback, tickPlayback, stopPlayback } from './replay.js?v=20261126j';
+  updateMinions, updateStructures, updateProjectiles, updateFx, dirFrom, eyeOf, TEAM_COLOR } from './units.js?v=20261126r';
+import { steer, initBot, updateBot } from './botbrain.js?v=20261126r';
+import { castSlot, updateAbilities } from './abilities.js?v=20261126r';
+import { floatText } from './anim.js?v=20261126r';
+import { cfg, applyGraphics } from './settings.js?v=20261126r';
+import { initMenu, showMenu, menuFrame, openSettings, settingsVisible } from './menu.js?v=20261126r';
+import { dressed, heroOwned, wear, myCosIds, resolveCos, matchXp, award, rewardInfo, tierProgress, SEASON, MAX_TIER, cosById, cosOwned, equippedCos } from './pass.js?v=20261126r';
+import { aimSpray, placeSpray, SPRAY_CD } from './sprays.js?v=20261126r';
+import { headshot } from './portraits.js?v=20261126r';
+import './personality.js?v=20261126r';
+import { openSession, tickPuppet, myUid, lobbyState, leaveRoom, onLobby } from './net.js?v=20261126r';
+import { initAudio, applyVolume, tone, noise, ABIL_SFX, audioTap } from './audio.js?v=20261126r';
+import { startClipRec, saveClip, sendClip } from './clips.js?v=20261126r';
+import { playMusic } from './music.js?v=20261126r';
+import { sparks, castFx, lightFlash } from './vfx.js?v=20261126r';
+import { applyEnvironment } from './stage.js?v=20261126r';
+import { perfFrame } from './perf.js?v=20261126r';
+import { gainMastery } from './mastery.js?v=20261126r';
+import { recordMatch, tasksDone } from './contracts.js?v=20261126r';
+import { startTutorial, stopTutorial, tickTutorial, tutorialCast, tutorialKill, onTutorialPass } from './tutorial.js?v=20261126r';
+import { initReplay, recFrame, recEvent, recKill, finalClip, startPlayback, tickPlayback, stopPlayback } from './replay.js?v=20261126r';
 let envRT = null;
 
 const $ = id => document.getElementById(id);
@@ -86,6 +86,8 @@ const SHOT = {
   wellington: v => { noise(0.12, 0.08 * v, 500, 0, { type: 'lowpass', to: 250 }); tone(330, 0.1, 'sine', 0.05 * v, 0.6); },
   shepherd: v => { noise(0.1, 0.06 * v, 2200, 0, { type: 'bandpass', to: 700, q: 2 }); tone(260, 0.06, 'triangle', 0.04 * v, 0.7); },
   microwave: v => { tone(120, 0.08, 'sawtooth', 0.025 * v, 1); if (Math.random() < 0.25) tone(1568, 0.25, 'sine', 0.04 * v, 1, 0.02); },
+  chef: v => { noise(0.3, 0.16 * v, 900, 0, { type: 'lowpass', to: 200 }); tone(70, 0.25, 'sine', 0.1 * v, 0.5); },
+  manspider: v => { noise(0.07, 0.07 * v, 4200, 0, { type: 'bandpass', to: 2400, q: 3 }); tone(1400, 0.04, 'sine', 0.02 * v, 0.6); },
 };
 
 // ---------- game state ----------
@@ -106,6 +108,7 @@ const VIEW = {
   elf: { len: 0.5, w: 0.05, barrel: 0.012, longbow: true }, dancer: { len: 0.28, w: 0.035, barrel: 0.008, ribbon: true }, mole: { len: 0.55, w: 0.06, barrel: 0.02, shovel: true },
   medic: { len: 0.55, w: 0.08, barrel: 0.02, vial: true }, spark: { len: 0.3, w: 0.1, barrel: 0.03, clamps: true }, builder: { len: 0.5, w: 0.16, barrel: 0.07, bricks: true },
   wellington: { len: 0.26, w: 0.14, barrel: 0.03, gravy: true }, shepherd: { len: 0.2, w: 0.06, barrel: 0.01, sling: true }, microwave: { len: 0.3, w: 0.1, barrel: 0.04, dish: true },
+  chef: { len: 0.75, w: 0.2, barrel: 0.12, copper: true }, manspider: { len: 0.3, w: 0.1, barrel: 0.03, vial: true },
 };
 function makeViewGun(def) {
   const v = VIEW[def.id], p = def.palette;
@@ -211,10 +214,10 @@ function startGame(m = mode, online = null) {
         b.dummy = true; b.dummyAt = { x, z: -10 }; spawnHero(G, b);
       });
     } else {
-      const allyPool = HEROES.filter(h => h.id !== def.id).sort(() => Math.random() - 0.5);
-      for (let i = 0; i < 2; i++) { const b = createHero(G, allyPool[i], 'blue', allyPool[i].callsign, false); initBot(G, b, i + 1); }
-      const redPool = [...HEROES].sort(() => Math.random() - 0.5);
-      for (let i = 0; i < 3; i++) { const b = createHero(G, redPool[i], 'red', redPool[i].callsign, false); initBot(G, b, i); }
+      // one shuffled pool for both teams, without your hero, so nobody appears twice in the match
+      const pool = HEROES.filter(h => h.id !== def.id).sort(() => Math.random() - 0.5);
+      for (let i = 0; i < 2; i++) { const d = pool.pop(), b = createHero(G, d, 'blue', d.callsign, false); initBot(G, b, i + 1); }
+      for (let i = 0; i < 3; i++) { const d = pool.pop(), b = createHero(G, d, 'red', d.callsign, false); initBot(G, b, i); }
     }
     if (hill) initHill(G);
     if (cart) initCart(G);
@@ -474,9 +477,10 @@ function showPassGain(win) {
       ${mst.rankUp ? `<div class="pg-rank">New rank: ${mst.after.rank.name}! <span class="pg-tok">+${(mst.tokens - mst.bonus)} mastery token${(mst.tokens - mst.bonus) > 1 ? "s" : ""} 🎰</span></div>` : ''}
       ${mst.bonus ? `<div class="pg-rank">Mastery bonus! <span class="pg-tok">+${mst.bonus} mastery token${mst.bonus > 1 ? "s" : ""} 🎰</span></div>` : ''}</div>` : ''}`;
   // recruitment contracts: a chip for anyone just recruited, and a line for contracts that moved
-  if (ct.recruited.length || ct.progressed.length) el.insertAdjacentHTML('beforeend', `<div class="pg-ct">${
+  if (ct.recruited.length || ct.progressed.length || ct.opened.length) el.insertAdjacentHTML('beforeend', `<div class="pg-ct">${
     ct.recruited.map(id => { const h = HEROES.find(x => x.id === id); return `<span class="pg-new" style="--hc:#${h.color.toString(16).padStart(6, '0')}"><img src="${headshot(h)}" alt="">Recruited: <b>${h.callsign}</b>!</span>`; }).join('')}${
-    ct.progressed.map(id => `<span>📜 ${HEROES.find(x => x.id === id).callsign}’s contract · ${tasksDone(id)} of 3 tasks</span>`).join('')}</div>`);
+    ct.progressed.map(id => `<span>📜 ${HEROES.find(x => x.id === id).callsign}’s contract · ${tasksDone(id)} of 3 tasks</span>`).join('')}${
+    ct.opened.map(id => `<span>✉️ New contract: <b>${HEROES.find(x => x.id === id).callsign}</b> wants to join. See Contracts</span>`).join('')}</div>`);
   if (mst) setTimeout(() => { const b = el.querySelector('.pg-mst .pg-bar i'); if (b) b.style.width = (mst.after.frac * 100) + '%'; }, 1700);
   if (mst?.levelUp) setTimeout(() => { tone(523, 0.15, 'square', 0.05, 1); tone(784, 0.25, 'square', 0.05, 1, 0.12); }, 1800);
   setTimeout(() => { el.querySelector('.pg-bar i').style.width = (p1.frac * 100) + '%'; }, 1500);
@@ -800,7 +804,7 @@ const events = {
 };
 
 // Per-hero feel for the first-person gun.
-const RECOIL = { vanguard: 0.25, striker: 0.18, ember: 0.7, warden: 1, thicket: 0.9, ratchet: 0.3, mirage: 0.3, avalanche: 0.55, tempo: 0.06, kestrel: 0.4, croc: 0.6, cavalier: 0.45, slime: 0.5, brawler: 0, chipmunk: 0.12, elf: 0.35, dancer: 0.05, mole: 0.7, medic: 0.2, spark: 0.06, builder: 0.6, wellington: 0.45, shepherd: 0.35, microwave: 0.04 };
+const RECOIL = { vanguard: 0.25, striker: 0.18, ember: 0.7, warden: 1, thicket: 0.9, ratchet: 0.3, mirage: 0.3, avalanche: 0.55, tempo: 0.06, kestrel: 0.4, croc: 0.6, cavalier: 0.45, slime: 0.5, brawler: 0, chipmunk: 0.12, elf: 0.35, dancer: 0.05, mole: 0.7, medic: 0.2, spark: 0.06, builder: 0.6, wellington: 0.45, shepherd: 0.35, microwave: 0.04, chef: 0.9, manspider: 0.15 };
 const ULT_NEAR = 30;                                  // metres: supers further away than this stay quiet
 const VOICE_NEAR = 25;                                // metres: other heroes' voice lines only play inside this
 const SPIN_RELOAD = new Set(['striker', 'mirage', 'ratchet']);

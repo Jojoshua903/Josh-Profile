@@ -1,5 +1,5 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { kit, body, face, finish, gunAt, part, joint, chain, ball, pill, tube, cone, ring, slab, dome, live } from './rig.js?v=20261126j';
+import { kit, body, face, finish, gunAt, part, joint, chain, ball, pill, tube, cone, ring, slab, dome, live } from './rig.js?v=20261126r';
 
 // Slot machine heroes on the stylised rig: Gloop, Torque, Nutcracker, Larkspur, Pirouette, Burrow, Stitch, Dynamo and Mortar, plus the contract heroes Beef Wellington, Crook and The Microwave.
 
@@ -463,4 +463,107 @@ function microwave(p, team) {
   }, { stride: 0.9 });
 }
 
-export const ROSTER_C = { slime, brawler, chipmunk, elf, dancer, mole, medic, spark, builder, wellington, shepherd, microwave };
+// ---------------- Flambé: the head chef with a bazooka ----------------
+function chef(p, team) {
+  const K = kit(p);
+  const coat = K.c(p.main, { rough: 0.7 }), check = K.c(p.dark, { rough: 0.85 }), copper = K.c(0xc87a4a, { rough: 0.3, metal: 0.55 });
+  const P = body(K, { w: 1.12, shoes: 'boot', boots: K.ink, top: coat, sleeves: coat, forearms: K.skin, pants: check, gloves: K.skin, torso: [0.24, 0.27, 0.32, 0.29, 0.56] });
+  face(P, K, { brow: 0.08, mouth: 'smile', cheeks: true, eyeColor: 0x3a6a8a });
+  // a curled moustache and the tallest toque in the hotel
+  for (const s of [-1, 1]) { const m = part(P.head, pill(0.03, 0.1), K.c(0x3a2418), s * 0.07, -0.07, -0.27); m.rotation.z = Math.PI / 2 + s * 0.3; part(P.head, ball(0.03), K.c(0x3a2418), s * 0.14, -0.04, -0.25); }
+  const toque = joint(P.head, 0, 0.2, 0.02);
+  part(toque, tube(0.24, 0.22, 0.12), K.white, 0, 0.04, 0);
+  part(toque, tube(0.26, 0.24, 0.32), K.white, 0, 0.24, 0);
+  for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; part(toque, ball(0.14), K.white, Math.sin(a) * 0.16, 0.42, Math.cos(a) * 0.16); }
+  part(toque, ball(0.16), K.white, 0, 0.46, 0);
+  // double-breasted jacket, red neckerchief, an apron and a tea towel tucked in the strings
+  for (const x of [-0.08, 0.08]) for (let i = 0; i < 3; i++) part(P.spine, ball(0.022), K.c(p.trim), x, 0.22 + i * 0.1, -0.245);
+  part(P.spine, tube(0.12, 0.13, 0.07), K.c(p.trim), 0, 0.57, 0);
+  part(P.spine, cone(0.07, 0.14, 4), K.c(p.trim), 0.02, 0.48, -0.17).rotation.x = Math.PI;
+  part(P.hips, slab(0.42, 0.5, 0.03), K.white, 0, -0.2, -0.23);
+  part(P.hips, slab(0.1, 0.24, 0.02), K.c(0xc23b3b, { rough: 0.9 }), 0.24, -0.12, -0.17).rotation.y = 0.5;
+  // Bouillabazooka: a copper stockpot tube with a lid sight, a ladle grip and a casserole rocket up front
+  const gun = gunAt(P, 0.32, 1.32, -0.34);
+  part(gun, tube(0.12, 0.12, 1.05, 18), copper, 0, 0.04, 0.1).rotation.x = Math.PI / 2;
+  part(gun, tube(0.16, 0.13, 0.14, 18), copper, 0, 0.04, -0.46).rotation.x = Math.PI / 2;
+  part(gun, cone(0.15, 0.2, 18), K.c(0x3a3f4a, { rough: 0.4 }), 0, 0.04, 0.72).rotation.x = Math.PI / 2;
+  for (const z of [-0.2, 0.25]) part(gun, ring(0.125, 0.018), K.c(0x8a4a2a, { metal: 0.6 }), 0, 0.04, z);
+  part(gun, tube(0.08, 0.08, 0.025), K.steel, 0, 0.18, 0.1);                          // a pot lid for a sight
+  part(gun, ball(0.025), K.c(0x1d1d24), 0, 0.2, 0.1);
+  part(gun, slab(0.05, 0.18, 0.06), K.leather, 0, -0.12, 0.05);                          // grip
+  const rocket = live(part(gun, ball(0.1), K.c(p.trim, { rough: 0.4, glow: 0.25 }), 0, 0.04, -0.5, 1, 1, 1.3));
+  const steam = [0, 1].map(i => live(part(gun, ball(0.04), K.c(0xffffff, { glow: 0.3, rim: 0 }), 0, 0.12, 0.8 + i * 0.05)));
+  return finish(P, team, gun, -0.6, (dt, s, t, k) => {
+    toque.rotation.z = Math.sin(t * 2.1) * 0.04 * (1 + k * 2);
+    rocket.scale.setScalar(1 + Math.sin(t * 6) * 0.04);
+    steam.forEach((m, i) => { const u = (t * 0.7 + i / 2) % 1; m.position.set(0, 0.1 + u * 0.3, 0.8 + u * 0.12); m.scale.setScalar(0.5 + u * 1.2); m.visible = u < 0.85; });
+  }, { stride: 1.4, aim: [1.15, 0.5], off: [1.1, 0.9, 0.35] });
+}
+
+// ---------------- Man-Spider: a spider who was bitten by a man ----------------
+// A segment of spider leg as a capsule from a to b, in the parent's space.
+const Y = new THREE.Vector3(0, 1, 0);
+function seg(parent, a, b, r, m) {
+  const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), d = B.clone().sub(A), len = d.length();
+  const o = part(parent, pill(r, Math.max(0.01, len - r * 2)), m, (A.x + B.x) / 2, (A.y + B.y) / 2, (A.z + B.z) / 2);
+  o.quaternion.setFromUnitVectors(Y, d.normalize());
+  return o;
+}
+function manspider(p, team) {
+  const K = kit(p);
+  const shell = K.c(p.main, { rough: 0.45, rim: 0.6 }), deep = K.c(p.dark, { rough: 0.5 }), mark = K.c(p.trim, { rough: 0.35, glow: 0.2 });
+  const hair = K.c(0x6a5a4a, { rough: 0.95 });
+  const P = body(K, { w: 0.85, legs: false, headR: 0, hipY: 0.62, top: shell, sleeves: deep, forearms: deep, pants: shell, gloves: deep, torso: [0.2, 0.22, 0.24, 0.22, 0.42] });
+  P.torso.visible = false; P.neck.visible = false;
+  // the body: a round cephalothorax up front and a big striped abdomen behind
+  part(P.spine, ball(0.34), shell, 0, 0.22, -0.02, 1, 0.85, 1.05);
+  const abd = live(part(P.hips, ball(0.5), shell, 0, 0.18, 0.62, 1, 0.85, 1.15));
+  for (let i = 0; i < 3; i++) part(P.hips, ring(0.32 - i * 0.07, 0.035), mark, 0, 0.55 - i * 0.07, 0.62 + i * 0.06).rotation.x = Math.PI / 2 - 0.35;
+  part(P.hips, ball(0.1), mark, 0, 0.1, 1.15);                                          // spinnerets
+  // the head: two big friendly eyes, six little spider ones, reading glasses and a sad combover
+  P.head.position.set(0, 0.42, -0.24);
+  part(P.head, ball(0.27), shell, 0, 0, 0, 1, 0.95, 0.95);
+  face(P, K, { r: 0.27, brow: -0.08, mouth: 'flat', eyeColor: 0x7a4ad8 });
+  for (const [x, y, z] of [[-0.18, 0.13, -0.18], [0.18, 0.13, -0.18], [-0.07, 0.2, -0.21], [0.07, 0.2, -0.21], [-0.22, 0.03, -0.14], [0.22, 0.03, -0.14]]) {
+    part(P.head, ball(0.035), K.eye, x, y, z); part(P.head, ball(0.01), K.shine, x - 0.01, y + 0.012, z - 0.03);
+  }
+  for (const s of [-1, 1]) part(P.head, ring(0.07, 0.01), K.c(0x2a2a32, { metal: 0.4 }), s * 0.105, 0.035, -0.26);
+  part(P.head, slab(0.06, 0.012, 0.012), K.c(0x2a2a32), 0, 0.04, -0.27);
+  for (let i = 0; i < 5; i++) { const c = part(P.head, pill(0.012, 0.36), hair, -0.08 + i * 0.04, 0.25, 0.02); c.rotation.z = Math.PI / 2 - 0.15; }
+  // fangs, a white shirt collar, a tie and an ID badge on a lanyard
+  for (const s of [-1, 1]) part(P.head, cone(0.025, 0.1, 6), K.c(0xe8e0d0), s * 0.05, -0.2, -0.2).rotation.x = Math.PI;
+  part(P.spine, tube(0.16, 0.2, 0.08), K.white, 0, 0.42, -0.14).rotation.x = -0.4;
+  const tie = live(part(P.spine, slab(0.07, 0.3, 0.02), K.c(0xc23b3b, { rough: 0.5 }), 0, 0.2, -0.34));
+  tie.rotation.x = 0.25;
+  part(P.spine, slab(0.1, 0.13, 0.01), K.white, 0.16, 0.18, -0.3).rotation.y = 0.4;
+  // eight legs, four a side, each a joint so they can scuttle
+  const legs = [];
+  for (const s of [-1, 1]) for (let i = 0; i < 4; i++) {
+    const l = joint(P.spine, s * 0.2, 0.2, -0.18 + i * 0.13);
+    l.rotation.y = s * (-0.6 + i * 0.4);
+    seg(l, [0, 0, 0], [s * 0.5, 0.32, 0], 0.045, deep);
+    part(l, ball(0.06), shell, s * 0.5, 0.32, 0);
+    seg(l, [s * 0.5, 0.32, 0], [s * 0.82, -0.8, 0], 0.038, deep);
+    part(l, ball(0.035), mark, s * 0.82, -0.8, 0);
+    l.userData.side = s; l.userData.ph = i * Math.PI / 2 + (s > 0 ? Math.PI : 0);
+    legs.push(l);
+  }
+  // Web Spitter: a coffee flask he has wired up to shoot silk
+  const gun = gunAt(P, 0.24, 1.0, -0.5);
+  part(gun, tube(0.07, 0.07, 0.3), K.c(0x3a3f4a, { metal: 0.4 }), 0, 0, 0.02).rotation.x = Math.PI / 2;
+  part(gun, tube(0.075, 0.075, 0.04), mark, 0, 0, -0.08).rotation.x = Math.PI / 2;
+  part(gun, ring(0.05, 0.015, Math.PI), K.c(0x3a3f4a), 0.08, 0, 0.04).rotation.y = Math.PI / 2;
+  const nozzle = live(part(gun, ball(0.05), K.c(0xf4f4ff, { glow: 0.7, rim: 0 }), 0, 0, -0.17));
+  return finish(P, team, gun, -0.2, (dt, s, t, k, w) => {
+    legs.forEach(l => {
+      const a = Math.sin(w * 2 + l.userData.ph), sd = l.userData.side;
+      l.rotation.z = sd * Math.max(0, a) * 0.35 * k;                                   // lift
+      l.rotation.y = sd * (-0.6 + legs.indexOf(l) % 4 * 0.4) + Math.cos(w * 2 + l.userData.ph) * 0.25 * k;
+    });
+    abd.scale.set(1 + Math.sin(t * 2) * 0.03, 0.85 + Math.sin(t * 2) * 0.03, 1.15);
+    tie.rotation.z = Math.sin(t * 3) * 0.15 * (0.3 + k);
+    nozzle.scale.setScalar(0.85 + Math.sin(t * 7) * 0.15);
+  }, { legs: [legs[1], legs[5]], stride: 1.3 });
+}
+
+export const ROSTER_C = { slime, brawler, chipmunk, elf, dancer, mole, medic, spark, builder, wellington, shepherd, microwave, chef, manspider };

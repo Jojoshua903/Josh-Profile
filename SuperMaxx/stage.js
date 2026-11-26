@@ -1,6 +1,6 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { cfg } from './settings.js?v=20261126j';
-import { bake } from './rig.js?v=20261126j';
+import { cfg } from './settings.js?v=20261126r';
+import { bake } from './rig.js?v=20261126r';
 
 // Stage atmosphere: sky, sun, fill light, haze, image-based lighting and set dressing.
 // Each stage has its own time of day; Maxx Island (Survivor) gets a tropical midday.
@@ -30,6 +30,11 @@ export const LOOK = {
     top: 0x0b0d2e, horizon: 0xd44a8a, bottom: 0x2a1650, sun: 0xd8d4ff, sunI: 1.7, sunPos: [-40, 40, 80],
     hemiSky: 0x9a8aff, hemiGround: 0x6a2a7a, hemiI: 1.15, fill: 0xff5aa8, fillI: 0.8, fog: 0x3a1a5a, fogD: 0.0055, env: 0.65,
     motes: 0xff9ad8, shafts: 0, clouds: 0x2a1a4a, cloudCol: 0x4a3a7a, night: true,
+  },
+  desert: {     // Sunscorch Mesa: blazing late afternoon, deep blue sky over orange rock and heat haze
+    top: 0x2f7fd8, horizon: 0xffd29a, bottom: 0xe8a06a, sun: 0xffd9a0, sunI: 3.3, sunPos: [55, 48, -40],
+    hemiSky: 0xfff0d8, hemiGround: 0xd0804e, hemiI: 0.85, fill: 0x9fc4ff, fillI: 0.5, fog: 0xf2cfa0, fogD: 0.0034, env: 0.8,
+    motes: 0xffe2b0, shafts: 0.05, clouds: 0xfff0dc,
   },
   island: {     // Survivor: hot tropical midday
     top: 0x2a84e4, horizon: 0xbfe8ff, bottom: 0x9fd6e8, sun: 0xfff4dc, sunI: 3.3, sunPos: [30, 80, 20],
@@ -217,6 +222,7 @@ export function buildDressing(scene, map) {
   if (map.id === 'frostpeak') ticks.push(festoons(scene, map, [20, 40], [0xffd27a, 0xff7a5a, 0x8fe08a, 0x9fd0ff]));
   if (L.night) ticks.push(nightSky(scene, map));
   if (map.id === 'neon') ticks.push(festoons(scene, map, [16, 36], [0xff5aa8, 0x5af0ff, 0xffc93c, 0x9b5cff]));
+  if (map.id === 'mesa') ticks.push(festoons(scene, map, [8, 30], [0xffd27a, 0xff7a5a, 0x3fb3a6, 0xffc93c]));
   return (dt, t) => ticks.forEach(f => f(dt, t));
 }
 

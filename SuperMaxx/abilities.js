@@ -1,7 +1,7 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { makeBox, resolveXZ, hasLOS, groundAt, rayWorld } from './world.js?v=20261126j';
-import { buildHeroModel } from './models.js?v=20261126j';
-import { damage, trace, tracer, burst, ring, setBar, makeBar, eyeOf, dirFrom, chestOf, spawnProjectile, TEAM_COLOR } from './units.js?v=20261126j';
+import { makeBox, resolveXZ, hasLOS, groundAt, rayWorld } from './world.js?v=20261126r';
+import { buildHeroModel } from './models.js?v=20261126r';
+import { damage, trace, tracer, burst, ring, setBar, makeBar, eyeOf, dirFrom, chestOf, spawnProjectile, TEAM_COLOR } from './units.js?v=20261126r';
 
 // Abilities, status effects, zones, traps, walls and deployables.
 // Each ability: cast(G, h, a, ctx) -> bool, ai(G, bot, a, ctx) -> bool (should the bot cast now?).
@@ -116,6 +116,7 @@ function lurkBurst(G, h) {
 
 // After movement: handle the slam landing.
 export function afterMove(G, h, dt) {
+  if (h.climbing) h.onGround = true;               // Man-Spider holding on to a wall counts as standing
   if (!h.onGround) h.airT += dt;
   else {
     if (h.slamPending && h.airT > 0.25) slamLand(G, h);
@@ -123,11 +124,31 @@ export function afterMove(G, h, dt) {
   }
 }
 
+// Man-Spider's Wall Crawler: walking into a wall carries him straight up it. Runs before the
+// move, so the climb speed replaces gravity while he presses in; at the top he steps over the
+// edge onto the roof. Map boundary walls are too tall to count.
+export function wallClimb(G, h) {
+  h.climbing = false;
+  if (pasId(h) !== 'wallcrawl' || !h.alive || !canMove(h) || h.knockT > 0) return;
+  const sp = Math.hypot(h.vel.x, h.vel.z);
+  if (sp < 1) return;
+  const dx = h.vel.x / sp, dz = h.vel.z / sp, r = h.radius + 0.15;
+  for (const b of G.colliders) {
+    if (!b.alive || b.top > 20 || h.pos.y >= b.top - 0.05 || h.pos.y + 1.8 <= b.bottom) continue;
+    const cx = Math.max(b.minX, Math.min(h.pos.x, b.maxX)), cz = Math.max(b.minZ, Math.min(h.pos.z, b.maxZ));
+    const ox = cx - h.pos.x, oz = cz - h.pos.z, d = Math.hypot(ox, oz);
+    if (d > r || (d > 1e-4 && (ox * dx + oz * dz) / d < 0.5)) continue;
+    h.climbing = true;
+    h.vel.y = Math.max(h.vel.y, h.def.passive.climb);
+    return;
+  }
+}
+
 // ---------- zones ----------
 const ZONE_LOOK = {
   dome: { color: 0x5fe0c0, dome: true }, sanctum: { color: 0xffe08a }, overgrowth: { color: 0x5fb05a },
   frost: { color: 0xbfeaff }, trap: { color: 0x8a5a3c }, nova: { color: 0xff8a3c }, vortex: { color: 0xff4fa3 },
-  banner: { color: 0xffe08a }, goo: { color: 0x7ee85a }, stage: { color: 0xff8fc0 }, pylon: { color: 0xffe14a }, fort: { color: 0xff8a2a }, pen: { color: 0x8a5a3a }, heat: { color: 0xffb35a },
+  banner: { color: 0xffe08a }, goo: { color: 0x7ee85a }, stage: { color: 0xff8fc0 }, pylon: { color: 0xffe14a }, fort: { color: 0xff8a2a }, pen: { color: 0x8a5a3a }, heat: { color: 0xffb35a }, web: { color: 0xe8e8ff },
 };
 function zoneMesh(G, kind, pos, radius) {
   const look = ZONE_LOOK[kind];
@@ -141,7 +162,7 @@ function zoneMesh(G, kind, pos, radius) {
     g.add(d);
   }
   const bits = [];
-  const n = kind === 'trap' || kind === 'banner' || kind === 'fort' || kind === 'pen' ? 0 : Math.round(radius * 3);
+  const n = kind === 'trap' || kind === 'banner' || kind === 'fort' || kind === 'pen' || kind === 'web' ? 0 : Math.round(radius * 3);
   for (let i = 0; i < n; i++) {
     let m;
     if (kind === 'overgrowth') m = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.9, 5), new THREE.MeshStandardMaterial({ color: i % 4 ? 0x4f9a48 : 0xff5f8f }));
@@ -181,6 +202,11 @@ function zoneMesh(G, kind, pos, radius) {
       const a2 = (i + 1) / n * Math.PI * 2, len = 2 * radius * Math.sin(Math.PI / n);
       for (const y of [0.45, 0.85]) { const rail = new THREE.Mesh(new THREE.BoxGeometry(len, 0.08, 0.06), wood); rail.position.set((Math.cos(a) + Math.cos(a2)) / 2 * radius, y, (Math.sin(a) + Math.sin(a2)) / 2 * radius); rail.rotation.y = -(a + a2) / 2 + Math.PI / 2; g.add(rail); }
     }
+  }
+  if (kind === 'web') {                                    // Man-Spider's funnel web: spokes and rings of silk on the ground
+    const silk = new THREE.MeshBasicMaterial({ color: 0xf4f4ff, transparent: true, opacity: 0.85, depthWrite: false });
+    for (let i = 0; i < 12; i++) { const s = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, radius), silk); const a = i / 12 * Math.PI; s.rotation.y = a; s.scale.z = 2; s.position.y = 0.1; g.add(s); }
+    for (let k = 1; k <= 4; k++) { const r = new THREE.Mesh(new THREE.TorusGeometry(radius * k / 4.4, 0.025, 4, 12), silk); r.rotation.x = Math.PI / 2; r.position.y = 0.1; g.add(r); }
   }
   if (kind === 'pylon') {                                  // Dynamo's pylon: a post with a crackling battery on top
     const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.14, 1.6, 8), new THREE.MeshStandardMaterial({ color: 0x2b2d4f, roughness: 0.5 }));
@@ -1321,6 +1347,88 @@ export const ABIL = {
     },
     ai: (G, b, a, c) => c.heroT && c.dist < a.radius - 1,
   },
+
+  // ---- Flambé ----
+  flambe: {
+    cast(G, h, a, ctx) {
+      thrown(G, h, ctx, { dmg: 0, splash: 0, speed: 22, grav: 16, color: 0x3a3f4a, size: 0.22, lift: 0.2, noDirect: true, box: true,
+        onExplode: (G2, p) => {
+          ring(G, p, 0xff8a3c, a.radius); burst(G, p, 0xff8a3c, a.radius * 0.6); burst(G, p.clone().setY(p.y + 0.6), 0xffd23c, a.radius * 0.35);
+          for (const u of [...enemiesOf(G, h), ...G.minions.filter(m => m.alive && m.team !== h.team && !m.deploy)]) {
+            if (u.pos.distanceTo(p) > a.radius + 0.8) continue;
+            damage(G, u, a.dmg, h);
+            if (u.kind === 'hero') { u.burnT = a.dur; u.burnDps = a.dps; u.burnSrc = h; }
+          }
+        } });
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist < 20,
+  },
+  rocketjump: {
+    cast(G, h, a, ctx) {
+      const f = ctx.wish && ctx.wish.lengthSq() > 0.01 ? ctx.wish.clone().normalize() : dirFrom(h.yaw, 0);
+      ring(G, h.pos, 0xff8a3c, a.radius); burst(G, h.pos.clone().setY(h.pos.y + 0.3), 0xff8a3c, a.radius * 0.6); burst(G, h.pos.clone().setY(h.pos.y + 0.3), 0xffffff, 1);
+      for (const u of [...enemiesOf(G, h), ...G.minions.filter(m => m.alive && m.team !== h.team && !m.deploy)]) {
+        if (u.pos.distanceTo(h.pos) > a.radius) continue;
+        damage(G, u, a.dmg, h); knock(u, flat(v.subVectors(u.pos, h.pos).setY(0.001)), 7, 4);
+      }
+      h.vel.set(f.x * a.push, a.up, f.z * a.push); h.onGround = false; h.knockT = 0.35; h.airT = 0;
+      G.ev.shake?.(h, 0.35);
+      return true;
+    },
+    ai: (G, b, a, c) => (c.heroT && c.dist < 6) || b.hp < b.maxHp * 0.35,
+  },
+  fivecourse: {
+    cast(G, h, a, ctx) {
+      const fire = k => {
+        if (!h.alive) return;
+        const d = (k === 0 && ctx.aim ? ctx.aim : ctx.target ? v.subVectors(chestOf(ctx.target), eyeOf(h)).normalize() : dirFrom(h.yaw, h.pitch)).clone();
+        const from = eyeOf(h).addScaledVector(d, 0.9);
+        spawnProjectile(G, h, from, d.multiplyScalar(30), { dmg: a.dmg, splash: a.splash, grav: 1.5, color: [0xe8423a, 0xffd23c, 0x7ee85a, 0xf4f1ea, 0x8a4a20][k % 5], size: 0.4, big: true, trail: true });
+        burst(G, from, 0xff8a3c, 0.6); G.ev.shake?.(h, 0.2);
+      };
+      for (let k = 0; k < a.n; k++) { if (k === 0) fire(0); else G.timers.push({ t: k * a.gap, fn: () => fire(k) }); }
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist < 30,
+  },
+
+  // ---- Man-Spider ----
+  webline: {
+    cast(G, h, a, ctx) {
+      const o = eyeOf(h), d = ctx.target ? v.subVectors(chestOf(ctx.target), o).normalize().clone() : (ctx.aim || dirFrom(h.yaw, h.pitch)).clone();
+      const r = trace(G, o, d, a.range, h.team);
+      tracer(G, o.clone().addScaledVector(d, 0.7).setY(o.y - 0.25), r.point, 0xf0f0ff, 0.5, 2);
+      if (r.unit && (r.unit.kind === 'hero' || r.unit.kind === 'minion')) {
+        damage(G, r.unit, a.dmg, h); root(r.unit, a.root);
+        burst(G, chestOf(r.unit), 0xf0f0ff, 1);
+        if (r.unit.kind === 'hero') G.ev.flash?.(r.unit, 'Webbed');
+      } else burst(G, r.point, 0xf0f0ff, 0.5);
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist < a.range - 4,
+  },
+  thwip: {
+    cast(G, h, a, ctx) {
+      const o = eyeOf(h), d = (ctx.aim || dirFrom(h.yaw, h.pitch)).clone();
+      if (d.y < 0.15) { d.y = 0.15; d.normalize(); }                  // always swing a little upwards
+      const len = Math.min(rayWorld(o, d, a.range, G.colliders), a.range), end = o.clone().addScaledVector(d, len);
+      tracer(G, o.clone().setY(o.y - 0.2), end, 0xf0f0ff, 0.45, 2); burst(G, end, 0xf0f0ff, 0.5);
+      const pull = v.subVectors(end, h.pos).normalize();
+      h.vel.set(pull.x * a.speed, Math.max(7, pull.y * a.speed + 5), pull.z * a.speed); h.onGround = false; h.knockT = 0.4; h.airT = 0;
+      return true;
+    },
+    ai: (G, b, a, c) => (c.heroT && c.dist > 22) || (b.hp < b.maxHp * 0.3 && c.near(10) > 0),
+  },
+  funnelweb: {
+    cast(G, h, a, ctx) {
+      const p = aimPoint(G, h, ctx, a.range);
+      addZone(G, { kind: 'web', pos: p, radius: a.radius, life: a.dur, team: h.team, owner: h, slow: a.slow, dps: a.dps });
+      ring(G, p, 0xf0f0ff, a.radius); burst(G, p.clone().setY(p.y + 0.5), 0xf0f0ff, a.radius * 0.4);
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist < 26,
+  },
 };
 
 // Cast a slot ('q', 'ability' or 'ult'). ctx: { wish, aim, target }.
@@ -1410,6 +1518,7 @@ export function onKill(G, t, src) {
   if (pasId(src) === 'tailwind' && src.alive && mine(G, src)) {
     const p = src.def.passive; src.cd.ability = 0; haste(src, p.dur, p.speed); proc(G, src, 'Tailwind!');
   }
+  if (pasId(src) === 'seconds' && src.alive && mine(G, src)) { src.ammo = src.def.weapon.mag; src.reloadT = 0; proc(G, src, 'Second helpings!'); }
   for (const h of G.heroes) {
     if (!h.alive || h === t || !mine(G, h)) continue;
     const id = pasId(h), p = h.def.passive, near = h.pos.distanceTo(t.pos);

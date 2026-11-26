@@ -1,5 +1,5 @@
 // Maps and tuning shared across the game. The hero roster lives in heroes.js.
-export { HEROES } from './heroes.js?v=20261126j';
+export { HEROES } from './heroes.js?v=20261126r';
 
 
 export const DIFFICULTY = {
@@ -103,6 +103,24 @@ export const MAPS = [
       [0, 0, 3, 6, 4.5], [0, -20, 6, 1.6, 1.2], [-3, -24, 2.4, 2.4, 1.3], [2, -12, 2.4, 2.4, 1.3],
       [-24, -18, 2, 6, 3], [24, -22, 4, 1.5, 1.2], [-22, -4, 3, 3, 2], [13, -2, 2.4, 2.4, 1.3],
       [-22, -42, 3, 3, 2.6], [22, -44, 4, 3, 2.6],
+    ],
+  },
+  {
+    id: 'mesa', theme: 'desert', name: 'Sunscorch Mesa', lanesLabel: '2 lanes · desert canyon town',
+    desc: 'An adobe town in a red-rock canyon on a scorching afternoon. Both lanes hug the cliffs, then cut across the town square, with a huge mesa blocking the middle.',
+    W: 32, L: 64, accent: 0xe0883a,
+    hills: [[0, 0], [-20, -20], [0, 0], [20, 20]], duel: [0, -18],
+    // each lane runs up one cliff edge, crosses the square and finishes up the other side
+    lanes: [
+      [[0, -52], [-24, -34], [-24, -12], [0, 0], [24, 12], [24, 34], [0, 52]],
+      [[0, -52], [24, -34], [24, -12], [0, 0], [-24, 12], [-24, 34], [0, 52]],
+    ],
+    towers: [[-27.5, -27], [27.5, -27]],
+    blocks: [
+      [0, -28, 8, 12, 5.5],                                                // the mesa in the middle
+      [0, -8, 5, 1.5, 1.2], [-6, -16, 4, 1.5, 1.2], [16, -16, 4, 1.5, 1.2],
+      [-18, -21, 2.4, 2.4, 1.3], [12, -24, 2.4, 2.4, 1.3], [-10, -14, 2, 5, 2.6],
+      [27, -21, 2, 6, 3], [6, -38, 3, 3, 2.8], [-6, -40, 3, 3, 2.8], [-28, -46, 3, 3, 2.4],
     ],
   },
 ];

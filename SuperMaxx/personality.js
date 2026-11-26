@@ -3,7 +3,7 @@
 // win / lose: the results screen · kill: extra elimination lines · rivals: a taunt for knocking out
 // that hero · friends: a hello when that hero spawns on your team · likes, dislikes, fact: Story tab
 
-import { HEROES } from './heroes.js?v=20261126j';
+import { HEROES } from './heroes.js?v=20261126r';
 
 const P = {
   vanguard: {
@@ -173,6 +173,20 @@ const P = {
     thanks: ['*grateful ding*', 'Ding ding!'], win: ['DING DING DING!', '*victorious humming*'], lose: ['*defeated hum*', 'Cycle... interrupted.'],
     kill: ['Thirty seconds. Done.', 'DING.'], rivals: { wellington: 'Thirty seconds on high, pastry.' }, friends: { builder: 'Bruno! Your lunch is ready.' },
     likes: 'Lasagne, the number 1000, a good long hum', dislikes: 'Forks, tin foil, being unplugged', fact: 'Has reheated the same lasagne 4,112 times. It refuses to throw it away.',
+  },
+  chef: {
+    select: ['Flambé! The kitchen is open.', 'Oui, it is supposed to be on fire.', 'Tonight’s special: explosions.'],
+    death: ['My soufflé... has fallen...', 'Tell the brigade... more butter...'], lowhp: ['I am being roasted here!', 'Somebody turn down the heat!'],
+    thanks: ['Merci, merci!', 'Magnifique!'], win: ['Service! Perfect service!', 'Three stars. No, four!'], lose: ['A disaster. A kitchen nightmare.', 'Back to the pastry station.'],
+    kill: ['Order up!', 'Garnished.'], rivals: { microwave: 'Thirty seconds is NOT cooking, you traitor!' }, friends: { wellington: 'Sir Reginald! You look... delicious, as always.' },
+    likes: 'Butter, open flames, a perfectly timed fuse', dislikes: 'Microwaves, health inspectors, people who ask for ketchup', fact: 'Holds four Michelin stars and four Michelin craters. The guide asked him to stop.',
+  },
+  manspider: {
+    select: ['Man-Spider. I’m on the clock.', 'Your friendly neighbourhood accountant.', 'Right. Coffee, then crime-fighting.'],
+    death: ['Should have... called in sick...', 'Filing... my last report...'], lowhp: ['I’m hanging by a thread here!', 'Need backup, team!'],
+    thanks: ['Thanks, I owe you a coffee.', 'Appreciated. I’ll put it in writing.'], win: ['Another productive day!', 'That’s a wrap. Literally.'], lose: ['Not my best quarter.', 'Back to the drawing board. And the ceiling.'],
+    kill: ['Wrapped up.', 'Signed, sealed, webbed.'], rivals: { mirage: 'Real spiders don’t need tricks, Veil.' }, friends: { shepherd: 'Hamish! Your sheep keep walking through my webs.' },
+    likes: 'Black coffee, a tidy spreadsheet, high ceilings', dislikes: 'Rolled-up newspapers, slippery bathtubs, Monday meetings', fact: 'Still files his tax returns every year. As a spider, he owes nothing.',
   },
 };
 

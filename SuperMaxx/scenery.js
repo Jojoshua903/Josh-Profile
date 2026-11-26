@@ -23,6 +23,10 @@ export const THEMES = {
     skyTop: 0x5d7fd0, skyBottom: 0xffc8a8, fog: 0xe8e4f0, sun: 0xffd0a8, hemiSky: 0xf2f0ff, hemiGround: 0xc8d4e4,
     sunPos: [-50, 26, 60],
   },
+  desert: {
+    skyTop: 0x3d8ee0, skyBottom: 0xffd59a, fog: 0xf2cfa0, sun: 0xffe0a8, hemiSky: 0xfff0d8, hemiGround: 0xd08a5a,
+    sunPos: [55, 48, -40],
+  },
 };
 
 export function rng(seed) {
@@ -145,6 +149,21 @@ export function groundTexture(theme) {
     g.fillStyle = 'rgba(160,178,214,.28)';
     for (let i = 0; i < 14; i++) { const x = Math.random() * s, y = Math.random() * s; g.beginPath(); g.ellipse(x, y, 4, 7, 0.3, 0, 7); g.ellipse(x + 10, y + 14, 4, 7, 0.3, 0, 7); g.fill(); }
   });
+  if (theme === 'desert') return canvasTex(512, (g, s) => {
+    // warm sand with wind ripples, darker clay patches and scattered pebbles
+    g.fillStyle = '#e8b97e'; g.fillRect(0, 0, s, s);
+    for (let i = 0; i < 26; i++) {
+      const x = Math.random() * s, y = Math.random() * s, r = 40 + Math.random() * 80;
+      const gr = g.createRadialGradient(x, y, 0, x, y, r);
+      gr.addColorStop(0, Math.random() < 0.5 ? 'rgba(200,120,70,.28)' : 'rgba(255,226,170,.4)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+    g.strokeStyle = 'rgba(170,100,55,.22)'; g.lineWidth = 2;
+    for (let y = 8; y < s; y += 14) { g.beginPath(); for (let x = 0; x <= s; x += 16) g.lineTo(x, y + Math.sin(x * 0.05 + y) * 4); g.stroke(); }
+    speckle(g, s, 3500, ['rgba(140,80,40,.18)', 'rgba(255,240,210,.35)'], 2);
+    g.fillStyle = 'rgba(150,95,60,.55)';
+    for (let i = 0; i < 40; i++) { g.beginPath(); g.ellipse(Math.random() * s, Math.random() * s, 2 + Math.random() * 3, 1.5 + Math.random() * 2, Math.random() * 3, 0, 7); g.fill(); }
+  });
   return canvasTex(512, (g, s) => {
     g.fillStyle = '#9dbd74'; g.fillRect(0, 0, s, s);
     for (let i = 0; i < 9000; i++) {
@@ -193,6 +212,13 @@ export function pathTexture(theme) {
     }
     g.fillStyle = '#f4f6fc'; g.fillRect(0, 0, 16, s); g.fillRect(s - 16, 0, 16, s);
     speckle(g, s, 500, ['rgba(255,255,255,.7)'], 2);
+  });
+  if (theme === 'desert') return canvasTex(256, (g, s) => {
+    // a packed red-clay road with two wagon ruts and painted turquoise edge stones
+    g.fillStyle = '#c4703f'; g.fillRect(0, 0, s, s);
+    speckle(g, s, 1400, ['rgba(90,40,20,.15)', 'rgba(255,210,160,.18)'], 2);
+    g.fillStyle = 'rgba(110,50,25,.35)'; g.fillRect(s * 0.3, 0, 14, s); g.fillRect(s * 0.7 - 14, 0, 14, s);
+    for (let y = 0; y < s; y += 32) for (const x of [0, s - 14]) { g.fillStyle = (y / 32) % 2 ? '#e9dcc4' : '#3fb3a6'; g.fillRect(x, y + 2, 14, 28); }
   });
   return canvasTex(256, (g, s) => {
     g.fillStyle = '#86a862'; g.fillRect(0, 0, s, s);

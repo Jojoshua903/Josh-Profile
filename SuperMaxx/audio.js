@@ -1,4 +1,4 @@
-import { cfg } from './settings.js?v=20261126j';
+import { cfg } from './settings.js?v=20261126r';
 
 // Shared Web Audio graph: everything is synthesised, nothing is loaded.
 // master -> compressor -> speakers, with separate effect and music buses under it.
@@ -83,6 +83,14 @@ export const ABIL_SFX = {
   popcorn: v => { for (let i = 0; i < 10; i++) noise(0.03, 0.1 * v, 2500 + Math.random() * 2000, 0.35 + Math.random() * 0.6); },
   reheat: v => { tone(110, 3, 'sawtooth', 0.03 * v, 1); noise(0.1, 0.08 * v, 900); },
   meltdown: v => { tone(100, 1.2, 'sawtooth', 0.06 * v, 3); tone(1568, 0.6, 'sine', 0.08 * v, 1, 1.2); tone(1568, 0.6, 'sine', 0.06 * v, 1, 1.5); noise(0.5, 0.12 * v, 500, 1.2); },
+  // Flambé
+  flambe: v => { noise(0.5, 0.1 * v, 1800, 0.3, { type: 'bandpass', to: 600, q: 0.8 }); tone(180, 0.3, 'sawtooth', 0.03 * v, 0.5, 0.3); },
+  rocketjump: v => { tone(900, 0.15, 'sine', 0.04 * v, 3); noise(0.35, 0.16 * v, 700, 0.05, { type: 'lowpass', to: 200 }); tone(60, 0.3, 'sine', 0.1 * v, 0.5, 0.05); },
+  fivecourse: v => { for (let i = 0; i < 5; i++) { noise(0.25, 0.12 * v, 900, i * 0.35, { type: 'lowpass', to: 200 }); tone(523 + i * 66, 0.12, 'triangle', 0.04 * v, 1, i * 0.35); } },
+  // Man-Spider
+  webline: v => { noise(0.18, 0.08 * v, 5000, 0, { type: 'bandpass', to: 2000, q: 2 }); tone(1600, 0.1, 'sine', 0.03 * v, 0.5); },
+  thwip: v => { noise(0.12, 0.1 * v, 6000, 0, { type: 'bandpass', to: 3000, q: 3 }); tone(500, 0.25, 'triangle', 0.04 * v, 2.5, 0.05); },
+  funnelweb: v => { for (let i = 0; i < 6; i++) noise(0.08, 0.07 * v, 5000, i * 0.07, { type: 'bandpass', to: 2500, q: 2 }); tone(220, 0.8, 'triangle', 0.05 * v, 0.6, 0.3); },
   // Stitch
   medbomb: v => { tone(660, 0.12, 'sine', 0.05 * v, 1.2); noise(0.25, 0.08 * v, 2000, 0.3, { type: 'bandpass', to: 900, q: 1.5 }); [784, 988, 1175].forEach((f, i) => tone(f, 0.18, 'sine', 0.04 * v, 1, 0.35 + i * 0.06)); },
   lifeline: v => { tone(523, 0.4, 'sine', 0.05 * v, 1.5); tone(1046, 0.3, 'triangle', 0.03 * v, 1, 0.1); },

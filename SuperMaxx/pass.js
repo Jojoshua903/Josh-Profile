@@ -1,9 +1,9 @@
-import { HEROES } from './heroes.js?v=20261126j';
-import { cfg, save } from './settings.js?v=20261126j';
-import { SLOT_HEROES, slotOwned, isSlotItem, setSkinGate } from './slots.js?v=20261126j';
-import { sprayUrl } from './sprays.js?v=20261126j';
-import { isContractHero, contractDone, tasksDone } from './contracts.js?v=20261126j';
-export { isContractHero } from './contracts.js?v=20261126j';
+import { HEROES } from './heroes.js?v=20261126r';
+import { cfg, save } from './settings.js?v=20261126r';
+import { SLOT_HEROES, slotOwned, isSlotItem, setSkinGate } from './slots.js?v=20261126r';
+import { sprayUrl } from './sprays.js?v=20261126r';
+import { isContractHero, contractDone, tasksDone, contractUnlocked } from './contracts.js?v=20261126r';
+export { isContractHero } from './contracts.js?v=20261126r';
 
 // Season pass: XP from matches (mostly from winning) climbs a 30-tier track of hero skins,
 // cosmetics and three season heroes. Progress is saved locally.
@@ -58,6 +58,8 @@ export const SKINS = [
   { id: 'wellington-truffle', hero: 'wellington', slot: true, name: 'Black Truffle', color: 0x2a1f1a, palette: { main: 0x2a1f1a, trim: 0xffd23c, dark: 0x120c08, skin: 0x3a2a20, finish: { rough: 0.25, trimMetal: 0.6, glow: 0.2 } } },
   { id: 'shepherd-tartan', hero: 'shepherd', slot: true, name: 'Royal Tartan', color: 0x2a4fb0, palette: { main: 0x2a4fb0, trim: 0xffd23c, dark: 0x6a1a2a, skin: 0xe8b996, finish: { rough: 0.6, trimMetal: 0.3 } } },
   { id: 'microwave-retro', hero: 'microwave', slot: true, name: 'Atomic Diner', color: 0x5ad8c8, palette: { main: 0x5ad8c8, trim: 0xff5a5a, dark: 0xf0ece4, skin: 0x5ad8c8, finish: { metal: 0.45, rough: 0.15, glow: 0.35 } } },
+  { id: 'chef-noir', hero: 'chef', slot: true, name: 'Midnight Service', color: 0x1d1d24, palette: { main: 0x1d1d24, trim: 0xffc93c, dark: 0x0c0c12, skin: 0xf0c09a, finish: { trimMetal: 0.6, glow: 0.15 } } },
+  { id: 'manspider-tarantula', hero: 'manspider', slot: true, name: 'Casual Friday', color: 0xc8642e, palette: { main: 0x6a3a1e, trim: 0xff8a3c, dark: 0x2a160a, skin: 0x6a3a1e, finish: { rough: 0.9 } } },
 ];
 
 // Cosmetics: slot machine sprays.
@@ -120,9 +122,9 @@ export const skinOwned = id => heroOwned(skinById(id)?.hero) && (isSlotItem(id) 
 const skinHeroName = id => HEROES.find(h => h.id === skinById(id)?.hero)?.callsign || 'its hero';
 const needsHero = id => !heroOwned(skinById(id)?.hero);
 // What a locked hero or skin is waiting on, for tiles and chips: the slot machine or a pass tier.
-export const lockShort = (id, skin) => skin && needsHero(id) ? 'Hero' : !skin && isContractHero(id) ? `📜 ${tasksDone(id)}/3` : isSlotItem(id) ? '🎰' : `T${skin ? skinTier(id) : heroTier(id)}`;
+export const lockShort = (id, skin) => skin && needsHero(id) ? 'Hero' : !skin && isContractHero(id) ? (contractUnlocked(id) ? `📜 ${tasksDone(id)}/3` : '✉️') : isSlotItem(id) ? '🎰' : `T${skin ? skinTier(id) : heroTier(id)}`;
 export const lockLong = (id, skin) => skin && needsHero(id) ? `Unlock ${skinHeroName(id)} first, then ${isSlotItem(id) ? 'win it from the slot machine' : `season pass tier ${skinTier(id)}`}`
-  : !skin && isContractHero(id) ? `Recruitment contract · ${tasksDone(id)} of 3 tasks done` : isSlotItem(id) ? 'Slot machine prize' : `Season pass · tier ${skin ? skinTier(id) : heroTier(id)}`;
+  : !skin && isContractHero(id) ? (contractUnlocked(id) ? `Recruitment contract · ${tasksDone(id)} of 3 tasks done` : 'Sealed contract · finish another recruitment contract to open it') : isSlotItem(id) ? 'Slot machine prize' : `Season pass · tier ${skin ? skinTier(id) : heroTier(id)}`;
 export { isSlotItem };
 export const skinsFor = heroId => SKINS.filter(s => s.hero === heroId);
 export const skinById = id => SKINS.find(s => s.id === id);

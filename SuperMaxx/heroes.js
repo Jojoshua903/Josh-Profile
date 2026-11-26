@@ -365,6 +365,37 @@ export const HEROES = [
     passive: { id: 'insulated', name: 'Insulated', desc: 'Slows, burns and bleeds wear off twice as fast' },
     prefRange: 9,
   },
+  // ---- Second-wave contract heroes: offered once any contract above is finished ----
+  {
+    id: 'chef', name: 'Gaston Boulanger', callsign: 'Flambé', role: 'Explosive cuisine', color: 0xe8423a,
+    title: 'Head chef of the Solmare Grand Hotel. Four Michelin craters',
+    bio: 'Ran the finest kitchen on the coast until a health inspector asked what the bazooka was for. Gaston still insists every great dish needs heat, timing and a blast radius. Has never forgiven the Microwave for leaving.',
+    quote: 'Oui, it is supposed to be on fire.',
+    palette: { main: 0xf4f1ea, trim: 0xe8423a, dark: 0x2a2a34, skin: 0xf0c09a },
+    quips: { kill: ['Bon appétit!', 'Overcooked.', 'Chef’s kiss.'], ability: ['Flambé!', 'Up we go!', 'Turn up the heat!'], ult: ['FIVE COURSES! SERVICE, SERVICE!'], spawn: ['Kitchen is open.'] },
+    hp: 220, speed: 6.7, desc: 'A bazooka that fires casserole rockets, a pan of flaming brandy, a pressure-cooker rocket jump and a five-course barrage.',
+    weapon: { name: 'Bouillabazooka', type: 'rocket', mode: 'bazooka', big: true, dmg: 68, splash: 3.2, speed: 34, grav: 1.5, rate: 0.9, mag: 4, reload: 2.2, spread: 0.002, range: 90, head: 1, color: 0xe8423a, size: 0.26, desc: 'Slow, heavy casserole rockets with a big splash.' },
+    q: { id: 'flambe', name: 'Flambé Pan', cd: 10, radius: 3.5, dmg: 20, dps: 10, dur: 4, desc: 'Lob a pan of flaming brandy: enemies within 3.5m take 20 and burn for 10 a second for 4s' },
+    ability: { id: 'rocketjump', name: 'Pressure Cooker', cd: 9, up: 15, push: 9, dmg: 30, radius: 3.5, desc: 'Blast off from a pressure cooker at your feet: launch high and hit enemies around you for 30' },
+    ult: { id: 'fivecourse', name: 'Five-Course Meal', cost: 1000, n: 5, gap: 0.35, dmg: 70, splash: 4, desc: 'Fire five giant rockets in a row wherever you aim' },
+    passive: { id: 'seconds', name: 'Second Helpings', desc: 'Every elimination instantly refills your bazooka' },
+    prefRange: 18,
+  },
+  {
+    id: 'manspider', name: 'Gary Longlegs', callsign: 'Man-Spider', role: 'Wall-crawling web slinger', color: 0x7a4ad8,
+    title: 'A spider who was bitten by a man',
+    bio: 'An ordinary garden spider until an accountant called Gary leaned on his web and bit him (it was a long day). Now Gary has the proportional strength, posture and paperwork of a grown man. He still climbs walls, wears a tie to every match and takes his coffee black.',
+    quote: 'With great power comes a lot of filing.',
+    palette: { main: 0x4a3a6a, trim: 0x7a4ad8, dark: 0x241c34, skin: 0x4a3a6a },
+    quips: { kill: ['Caught in the web.', 'Filed under “done”.', 'Thwip.'], ability: ['Thwip!', 'Hang on!', 'Up the wall!'], ult: ['FUNNEL WEB! Mind your step!'], spawn: ['Morning. Coffee first.'] },
+    hp: 190, speed: 7.6, desc: 'Sticky web globs that slow, a web line that roots, a web swing and a huge funnel web. Climbs any wall he walks into.',
+    weapon: { name: 'Web Spitter', type: 'rocket', mode: 'web', dmg: 24, splash: 0, speed: 60, grav: 3, rate: 0.32, mag: 14, reload: 1.6, spread: 0.006, range: 70, head: 1.4, color: 0xf0f0ff, size: 0.12, slow: { mult: 0.75, dur: 1 }, desc: 'Fast globs of web. Direct hits slow enemies by 25% for 1s.' },
+    q: { id: 'webline', name: 'Web Line', cd: 9, range: 30, dmg: 20, root: 1.2, desc: 'Shoot a web line: the first enemy it hits takes 20 and is stuck in place for 1.2s' },
+    ability: { id: 'thwip', name: 'Thwip!', cd: 7, range: 30, speed: 22, desc: 'Fire a web at whatever you aim at and swing yourself towards it' },
+    ult: { id: 'funnelweb', name: 'Funnel Web', cost: 950, range: 34, radius: 7, dur: 5, slow: 0.35, dps: 8, desc: 'Throw a giant web where you aim: enemies on it move at a third of their speed and take 8 damage a second for 5s' },
+    passive: { id: 'wallcrawl', name: 'Wall Crawler', climb: 6, desc: 'Walk into any wall to climb straight up it. Step away to let go' },
+    prefRange: 14,
+  },
 ];
 
 // Archetypes: the broad job each hero does, used to filter hero select.
@@ -376,9 +407,9 @@ export const ARCHETYPES = [
 ];
 const ARCH_OF = {
   vanguard: 'tank', avalanche: 'tank', croc: 'tank', cavalier: 'tank', chipmunk: 'tank', microwave: 'tank',
-  striker: 'damage', ember: 'damage', mirage: 'damage', kestrel: 'damage', brawler: 'damage', elf: 'damage',
+  striker: 'damage', ember: 'damage', mirage: 'damage', kestrel: 'damage', brawler: 'damage', elf: 'damage', chef: 'damage',
   warden: 'support', slime: 'support', dancer: 'support', medic: 'support', spark: 'support', wellington: 'support',
-  thicket: 'control', ratchet: 'control', tempo: 'control', mole: 'control', builder: 'control', shepherd: 'control',
+  thicket: 'control', ratchet: 'control', tempo: 'control', mole: 'control', builder: 'control', shepherd: 'control', manspider: 'control',
 };
 for (const h of HEROES) h.arch = ARCH_OF[h.id] || 'damage';
 export const archOf = h => ARCHETYPES.find(a => a.id === h.arch);

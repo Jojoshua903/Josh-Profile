@@ -1,11 +1,11 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { TUNING } from './data.js?v=20261126j';
-import { hasLOS } from './world.js?v=20261126j';
-import { fire, releaseFire, chargeLevel, startReload, eyeOf, chestOf, dirFrom, coreVulnerable } from './units.js?v=20261126j';
-import { ABIL, castSlot, canAct, canMove, moveMult, isHidden } from './abilities.js?v=20261126j';
-import { survivorGoal, inStorm } from './survivor.js?v=20261126j';
-import { hillGoal } from './hill.js?v=20261126j';
-import { cartGoal } from './payload.js?v=20261126j';
+import { TUNING } from './data.js?v=20261126r';
+import { hasLOS } from './world.js?v=20261126r';
+import { fire, releaseFire, chargeLevel, startReload, eyeOf, chestOf, dirFrom, coreVulnerable } from './units.js?v=20261126r';
+import { ABIL, castSlot, canAct, canMove, moveMult, isHidden } from './abilities.js?v=20261126r';
+import { survivorGoal, inStorm } from './survivor.js?v=20261126r';
+import { hillGoal } from './hill.js?v=20261126r';
+import { cartGoal } from './payload.js?v=20261126r';
 
 const v1 = new THREE.Vector3(), v2 = new THREE.Vector3();
 

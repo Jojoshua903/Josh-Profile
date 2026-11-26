@@ -1,5 +1,5 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { M, put } from './scenery.js?v=20261126j';
+import { M, put } from './scenery.js?v=20261126r';
 
 // Moving life in each arena: bunting and gulls, canal water and boats, petals and grass.
 // Returns { tick(dt, t), colliders } where colliders are [x, z, w, d, h].
@@ -171,6 +171,10 @@ export function buildAmbient(scene, map, theme, r) {
     grass(scene, map, r, [0x7fb069, 0x6c9e5a], 200);
   } else if (theme === 'neon') {
     ticks.push(petals(scene, map, 0xb8d8ff, 700));                 // a fine drizzle catching the neon
+  } else if (theme === 'desert') {
+    ticks.push(bunting(scene, map, [-40, -18]));                  // papel picado strung across the town
+    ticks.push(petals(scene, map, 0xf2cfa0, 380));                 // drifting dust in the heat
+    ticks.push(birds(scene, 3, 0x3a2a2a));
   } else if (theme === 'alpine') {
     ticks.push(pond(scene));
     ticks.push(petals(scene, map, 0xffffff, 900));                 // the same drift, as snowfall

@@ -1,6 +1,6 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { M, put } from './scenery.js?v=20261126j';
-import { pine, blossom, snowPine } from './backdrop.js?v=20261126j';
+import { M, put } from './scenery.js?v=20261126r';
+import { pine, blossom, snowPine } from './backdrop.js?v=20261126r';
 
 // Themed cover blocks and scattered props inside the arena. Props are placed on the blue
 // half and point-mirrored, always clear of lanes, bases, towers and cover.
@@ -98,6 +98,41 @@ export function styleBlock(scene, theme, [x, z, w, d, h], i, r) {
       put(g, box(w + 0.1, 0.5, d + 0.1), glow(col), 0, h - 0.6, 0, false);
       put(g, box(w + 0.3, 0.18, d + 0.3), M(0x14102a), 0, h + 0.05, 0);
       for (let y = 0.8; y < h - 1.2; y += 0.9) for (const s of [-1, 1]) put(g, box(w * 0.7, 0.35, 0.04), M(0x9ef0ff, { emissive: 0x5ad0ff, emissiveIntensity: r() < 0.6 ? 0.8 : 0.15 }), 0, y, s * (d / 2 + 0.02), false);
+    }
+  } else if (theme === 'desert') {
+    const adobe = [0xe0a070, 0xd8925e, 0xe8b084][i % 3];
+    if (low) {
+      // a low adobe wall with a terracotta cap and a couple of clay pots on top
+      edges(put(g, box(w, h, d), M(adobe), 0, h / 2, 0));
+      put(g, box(w + 0.16, 0.14, d + 0.16), M(0xb8583a), 0, h + 0.05, 0);
+      for (let k = 0; k < Math.max(1, Math.round(w / 2.5)); k++) {
+        const x = (r() - 0.5) * (w - 0.8), z = (r() - 0.5) * (d - 0.4);
+        put(g, cyl(0.2, 0.14, 0.42, 10), M(0xc8653d), x, h + 0.33, z, false);
+      }
+    } else if (h >= 4.5) {
+      // a red sandstone butte: stacked strata, each a little narrower, with a dusty cap
+      const bands = [0xc4583a, 0xd8754a, 0xb84a32, 0xe0905c, 0xc96a44];
+      let y = 0, k = 0;
+      while (y < h - 0.01) {
+        const bh = Math.min(h - y, 0.7 + r() * 0.6), shrink = 1 - (y / h) * 0.12;
+        edges(put(g, box(w * shrink + (r() - 0.5) * 0.3, bh, d * shrink + (r() - 0.5) * 0.3), M(bands[k % bands.length], { flatShading: true }), (r() - 0.5) * 0.15, y + bh / 2, (r() - 0.5) * 0.15));
+        y += bh; k++;
+      }
+      put(g, box(w * 0.86, 0.12, d * 0.86), M(0xe8b97e), 0, h + 0.04, 0, false);
+      for (let k = 0; k < 4; k++) put(g, new THREE.DodecahedronGeometry(0.4 + r() * 0.4, 0), M(0xb84a32, { flatShading: true }), (r() < 0.5 ? -1 : 1) * (w / 2 + 0.2), 0.3, (r() - 0.5) * d, false);
+    } else {
+      // an adobe hut: rounded clay body, wooden roof beams poking out, a door and a turquoise shutter
+      edges(put(g, box(w, h, d), M(adobe), 0, h / 2, 0));
+      put(g, box(w + 0.1, 0.35, d + 0.1), M(0xc8885a), 0, h - 0.1, 0);
+      const along = w >= d;
+      for (let k = 0; k < Math.max(2, Math.round((along ? w : d) / 0.9)); k++) {
+        const t = -((along ? w : d) / 2) + 0.45 + k * 0.9;
+        for (const s of [-1, 1]) put(g, cyl(0.09, 0.09, 0.6, 6), M(0x6b4a32), along ? t : s * (w / 2 + 0.2), h - 0.45, along ? s * (d / 2 + 0.2) : t, false).rotation[along ? 'x' : 'z'] = Math.PI / 2;
+      }
+      for (const s of [-1, 1]) {
+        put(g, box(Math.min(0.9, w * 0.35), Math.min(1.6, h * 0.55), 0.08), M(0x6b4a32), along ? -w * 0.18 : 0, Math.min(0.8, h * 0.28), s * (d / 2 + 0.02), false);
+        put(g, box(0.6, 0.55, 0.08), M(0x3fb3a6), along ? w * 0.22 : 0, Math.min(h - 0.9, 1.6), s * (d / 2 + 0.03), false);
+      }
     }
   } else {
     const stone = [0xd8d2c4, 0xcfc8b8, 0xe0dacb][i % 3];
@@ -276,6 +311,57 @@ const P = {
     put(g, box(2.3, 0.1, 0.4), M(0xf6f8fd), 0, 1.4, 0, false);
     return [g, [2.3, 0.5, 1.5]];
   },
+  // ---- Sunscorch Mesa ----
+  cactus(r) {
+    const g = new THREE.Group(), green = M(r() < 0.5 ? 0x4f8a4a : 0x5f9a52), h = 2.4 + r() * 1.6;
+    put(g, cyl(0.32, 0.36, h, 10), green, 0, h / 2, 0); put(g, sphere(0.32, 10, 8), green, 0, h, 0, false);
+    for (const [s, y0, len] of [[1, h * 0.4, 1 + r() * 0.6], [-1, h * 0.55, 0.8 + r() * 0.5]]) {
+      if (r() < 0.2) continue;
+      put(g, cyl(0.2, 0.2, 0.7, 8), green, s * 0.5, y0, 0, false).rotation.z = Math.PI / 2;
+      put(g, cyl(0.2, 0.22, len, 8), green, s * 0.85, y0 + len / 2, 0, false);
+      put(g, sphere(0.2, 8, 6), green, s * 0.85, y0 + len, 0, false);
+    }
+    if (r() < 0.5) put(g, sphere(0.14), M(0xff5f8f), 0.1, h + 0.28, 0, false);            // a flower on top
+    return [g, [0.8, 0.8, h]];
+  },
+  tumble(r) {
+    const g = new THREE.Group(), s = 0.45 + r() * 0.25;
+    put(g, new THREE.IcosahedronGeometry(s, 1), M(0xb08a52, { wireframe: true }), 0, s, 0, false);
+    put(g, new THREE.IcosahedronGeometry(s * 0.7, 0), M(0x9a7444, { wireframe: true }), 0, s, 0, false).rotation.y = 0.6;
+    return [g, null];
+  },
+  wagon(r) {
+    const g = new THREE.Group(), wood = M(0x8a5634);
+    put(g, box(1.6, 0.7, 3), wood, 0, 0.95, 0);
+    put(g, box(1.7, 0.1, 3.1), M(0x6b4a32), 0, 0.6, 0);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+      const wh = put(g, new THREE.TorusGeometry(0.5, 0.07, 6, 16), M(0x4a3020), sx * 0.9, 0.55, sz * 1.05); wh.rotation.y = Math.PI / 2;
+      put(g, cyl(0.04, 0.04, 0.95, 5), M(0x4a3020), sx * 0.9, 0.55, sz * 1.05, false).rotation.x = Math.PI / 2;
+    }
+    const cover = put(g, new THREE.CylinderGeometry(0.85, 0.85, 2.6, 14, 1, true, 0, Math.PI), M(0xf2e6cc, { side: THREE.DoubleSide }), 0, 1.3, 0);
+    cover.rotation.x = Math.PI / 2; cover.rotation.y = Math.PI / 2;
+    put(g, box(0.1, 0.1, 1.4), wood, 0, 0.6, -2.1, false);
+    return [g, [1.9, 3.2, 2.2]];
+  },
+  waterTower(r) {
+    const g = new THREE.Group(), wood = M(0x7b4a2e);
+    for (const [x, z] of [[-0.9, -0.9], [0.9, -0.9], [-0.9, 0.9], [0.9, 0.9]]) put(g, cyl(0.1, 0.12, 3.4, 6), wood, x, 1.7, z);
+    put(g, cyl(1.25, 1.25, 1.8, 16), M(0x9c6a3f), 0, 4.3, 0);
+    for (const y of [3.7, 4.9]) put(g, cyl(1.28, 1.28, 0.08, 16), M(0x3a3f4a), 0, y, 0, false);
+    put(g, new THREE.ConeGeometry(1.4, 0.8, 16), M(0x6b4a32), 0, 5.6, 0);
+    return [g, [1.9, 1.9, 6]];
+  },
+  skull() {
+    const g = new THREE.Group(), bone = M(0xf2ead8);
+    put(g, box(0.5, 0.35, 0.7), bone, 0, 0.18, 0, false);
+    for (const s of [-1, 1]) { const hn = put(g, new THREE.ConeGeometry(0.08, 0.7, 6), bone, s * 0.45, 0.4, -0.2, false); hn.rotation.z = -s * 1.1; }
+    return [g, null];
+  },
+  redRock(r) {
+    const g = new THREE.Group(), s = 0.6 + r() * 0.7;
+    const m = put(g, new THREE.DodecahedronGeometry(s, 0), M([0xc4583a, 0xd8754a, 0xb84a32][Math.floor(r() * 3)], { flatShading: true }), 0, s * 0.55, 0); m.scale.y = 0.75; m.rotation.y = r() * 3;
+    return [g, [s * 1.4, s * 1.4, s * 1.1]];
+  },
 };
 
 const RECIPES = {
@@ -284,6 +370,7 @@ const RECIPES = {
   terraces: [['pine', 6, 0.9], ['blossom', 7, 0.8], ['column', 8, 0.6], ['rock', 9, 0.8], ['stoneLantern', 6, 0.4]],
   alpine: [['snowPine', 9, 0.9], ['snowman', 4, 0.7], ['firewood', 4, 0.9], ['sled', 4, 0.9], ['lamp', 5, 0.4], ['skiRack', 2, 1.3, true], ['barrel', 3, 0.5]],
   neon: [['neonSign', 5, 0.5], ['vending', 5, 0.8], ['antenna', 4, 0.6], ['tank', 2, 1.4, true], ['lamp', 6, 0.4], ['barrel', 4, 0.5]],
+  desert: [['cactus', 9, 0.8], ['redRock', 8, 0.8], ['barrel', 5, 0.5], ['tumble', 6, 0.6], ['skull', 3, 0.5], ['lamp', 4, 0.4], ['wagon', 2, 1.8, true], ['waterTower', 2, 1.4, true]],
 };
 
 function segDist(px, pz, ax, az, bx, bz) {

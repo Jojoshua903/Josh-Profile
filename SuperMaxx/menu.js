@@ -1,19 +1,19 @@
-import { LOOK, applyEnvironment } from './stage.js?v=20261126j';
-import { masteryOf } from './mastery.js?v=20261126j';
+import { LOOK, applyEnvironment } from './stage.js?v=20261126r';
+import { masteryOf } from './mastery.js?v=20261126r';
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { HEROES, ARCHETYPES, archOf } from './heroes.js?v=20261126j';
-import './personality.js?v=20261126j';
-import { MAPS, DIFFICULTY } from './data.js?v=20261126j';
-import { THEMES } from './scenery.js?v=20261126j';
-import { cfg, save, resetSettings, QUALITY } from './settings.js?v=20261126j';
-import { splash, headshot, mapArt } from './portraits.js?v=20261126j';
-import { initOnline, enterOnline } from './online.js?v=20261126j';
-import { enterSlots } from './slotmachine.js?v=20261126j';
-import { initVault, enterVault, leaveVault, clipCount } from './vault.js?v=20261126j';
-import { tokens as slotTokens } from './slots.js?v=20261126j';
-import { CONTRACTS, contractOf, taskFrac, taskDone, statOf, tasksDone, openContracts } from './contracts.js?v=20261126j';
+import { HEROES, ARCHETYPES, archOf } from './heroes.js?v=20261126r';
+import './personality.js?v=20261126r';
+import { MAPS, DIFFICULTY } from './data.js?v=20261126r';
+import { THEMES } from './scenery.js?v=20261126r';
+import { cfg, save, resetSettings, QUALITY } from './settings.js?v=20261126r';
+import { splash, headshot, mapArt } from './portraits.js?v=20261126r';
+import { initOnline, enterOnline } from './online.js?v=20261126r';
+import { enterSlots } from './slotmachine.js?v=20261126r';
+import { initVault, enterVault, leaveVault, clipCount } from './vault.js?v=20261126r';
+import { tokens as slotTokens } from './slots.js?v=20261126r';
+import { CONTRACTS, contractOf, taskFrac, taskDone, statOf, tasksDone, openContracts, contractsLeft, contractUnlocked, contractDone } from './contracts.js?v=20261126r';
 import { SEASON, TRACK, MAX_TIER, passXp, tierProgress, heroOwned, heroTier, skinOwned, skinTier, skinsFor, dressed, equip, rewardInfo,
-  COS_TYPES, cosById, cosOwned, equippedCos, equipCos, cosArt, lockShort, lockLong, isSlotItem, isContractHero } from './pass.js?v=20261126j';
+  COS_TYPES, cosById, cosOwned, equippedCos, equipCos, cosArt, lockShort, lockLong, isSlotItem, isContractHero } from './pass.js?v=20261126r';
 
 // Front end: main menu → roster select → stage select → match. Settings overlay on top.
 
@@ -172,7 +172,7 @@ function go(name) {
   if (name === 'main') clipCount().then(n => { $('mmClips').textContent = n || ''; $('mmClips').classList.toggle('on', n > 0); });
   if (name === 'vault') enterVault({ blip: f => api?.blip?.(f) });
   $('front').classList.remove('hidden');
-  if (name === 'main') { refreshPassCard(); $('modeTut')?.classList.toggle('fresh', !cfg.tutorialDone); const t = slotTokens(); $('mmTok').textContent = t || ''; $('mmTok').classList.toggle('on', t > 0); const o = openContracts(); $('mmCt').textContent = o || ''; $('mmCt').classList.toggle('on', o > 0); }
+  if (name === 'main') { refreshPassCard(); $('modeTut')?.classList.toggle('fresh', !cfg.tutorialDone); const t = slotTokens(); $('mmTok').textContent = t || ''; $('mmTok').classList.toggle('on', t > 0); const o = contractsLeft(); $('mmCt').textContent = o || ''; $('mmCt').classList.toggle('on', o > 0); }
   if (name === 'slots') enterSlots();
   if (name === 'contracts') enterContracts();
   if (name === 'roster') { enterRoster(); requestAnimationFrame(fitKit); }
@@ -185,26 +185,16 @@ function go(name) {
 // Hero select is a wall of portraits, a big showcase of the pick in the middle and its details on
 // the right. The wall sorts by class (grouped by archetype), by name, or by most mastery; the
 // archetype filter narrows any of them. Arrows and the keyboard step through what's showing.
-let viewId = null, infoTab = 'kit', arch = cfg.rosterArch || 'all', sort = cfg.rosterSort || 'role';
+let viewId = null, infoTab = 'kit', sort = cfg.rosterSort || 'role';
 const SORTS = [['role', '🧩', 'Class', 'Grouped by class'], ['name', '🔤', 'Name', 'Alphabetical by callsign'], ['mastery', '🏅', 'Mastery', 'Most played first']];
 const BY_ROLE = ARCHETYPES.flatMap(a => HEROES.filter(h => h.arch === a.id));
 const orderOf = () => sort === 'name' ? [...HEROES].sort((a, b) => a.callsign.localeCompare(b.callsign))
   : sort === 'mastery' ? [...HEROES].sort((a, b) => heroOwned(b.id) - heroOwned(a.id) || masteryOf(b.id).xp - masteryOf(a.id).xp || a.callsign.localeCompare(b.callsign))
   : BY_ROLE;
 let ORDER = BY_ROLE;
-const pool = () => arch === 'all' ? ORDER : ORDER.filter(h => h.arch === arch);
+const pool = () => ORDER;                         // every hero always shows; sorting only reorders them
 function renderArchBar() {
-  const btn = (id, icon, name, n, color, desc) => `<button class="${arch === id ? 'on' : ''}" data-arch="${id}" style="--ac:${color}" title="${desc}"><i>${icon}</i>${name}<small>${n}</small></button>`;
-  $('archBar').innerHTML = btn('all', '✦', 'All', HEROES.length, '#1d2340', 'Every hero')
-    + ARCHETYPES.map(x => btn(x.id, x.icon, x.name, HEROES.filter(h => h.arch === x.id).length, hex(x.color), x.desc)).join('');
   $('sortBar').innerHTML = '<span>Sort</span>' + SORTS.map(([id, icon, name, desc]) => `<button class="${sort === id ? 'on' : ''}" data-sort="${id}" title="${desc}"><i>${icon}</i>${name}</button>`).join('');
-}
-function setArch(a) {
-  if (a === arch) return;
-  arch = a; cfg.rosterArch = a; save();
-  renderArchBar();
-  const L = pool(), keep = L.find(h => h.id === viewId);
-  pickHero((keep || L.find(h => heroOwned(h.id)) || L[0]).id, true);
 }
 function setSort(s) {
   if (s === sort) return;
@@ -263,14 +253,14 @@ function refreshTileLock(id) {
 }
 // Show the filtered heroes and mark the pick.
 function markWall() {
+  $('tiles').classList.toggle('solo', sort !== 'role');                    // one shelf showing: it gets the full width
   for (const g of $('tiles').querySelectorAll('.hs-grp')) {
-    g.classList.toggle('off', sort === 'role' && arch !== 'all' && g.dataset.grp !== arch);
     if (g.dataset.grp === 'flat') g.querySelector('h6 small').textContent = pool().length;
   }
-  for (const h of HEROES) tileEls[h.id].classList.toggle('off', sort !== 'role' && arch !== 'all' && h.arch !== arch);
   for (const t of $('tiles').querySelectorAll('.tile')) t.classList.toggle('sel', t.dataset.hero === viewId);
-  const t = tileOf(viewId), box = $('tiles');
-  if (t && (t.offsetTop < box.scrollTop || t.offsetTop + t.offsetHeight > box.scrollTop + box.clientHeight)) box.scrollTop = t.offsetTop - box.clientHeight / 2;
+  // keep the pick in view: every shelf scrolls sideways
+  const t = tileOf(viewId), row = t?.parentElement;
+  if (row && (t.offsetLeft < row.scrollLeft || t.offsetLeft + t.offsetWidth > row.scrollLeft + row.clientWidth)) row.scrollLeft = t.offsetLeft - (row.clientWidth - t.offsetWidth) / 2;
 }
 function stepHero(d) {
   const L = pool(), N = L.length, i = L.findIndex(h => h.id === viewId);
@@ -356,7 +346,7 @@ function showHero(h, instant) {
   setTimeout(fitKit, 450); document.fonts?.ready.then(fitKit);
   $('lockName').textContent = own ? h.callsign : 'Locked';
   $('lockIn').classList.toggle('locked', !own);
-  $('lockIn').querySelector('small').textContent = !own ? (isContractHero(h.id) ? 'Finish the contract' : isSlotItem(h.id) ? 'Win it at the slots' : `Reach tier ${heroTier(h.id)}`) : mode === 'survivor' ? 'Drop in as' : 'Lock in';
+  $('lockIn').querySelector('small').textContent = !own ? (isContractHero(h.id) ? (contractUnlocked(h.id) ? 'Finish the contract' : 'Contract sealed') : isSlotItem(h.id) ? 'Win it at the slots' : `Reach tier ${heroTier(h.id)}`) : mode === 'survivor' ? 'Drop in as' : 'Lock in';
 }
 
 // Shrink the ability list until all four rows fit the panel: smaller text first, then two
@@ -400,8 +390,12 @@ function pickSkin(skinId) {
 const fmtN = n => n >= 1000 ? (n / 1000).toFixed(n % 1000 ? 1 : 0) + 'k' : String(n);
 function contractCard(c, compact) {
   const h = HEROES.find(x => x.id === c.hero), done = tasksDone(c.hero), all = done === c.tasks.length;
+  if (!contractUnlocked(c.hero)) {                   // second wave: sealed until another contract is finished
+    if (compact) return `<div class="hs-locked">✉️ Sealed contract · Finish another recruitment contract and this hero will send theirs.</div>`;
+    return '';
+  }
   const rows = c.tasks.map(t => {
-    const ok = taskDone(t), v = Math.min(statOf(t.stat), t.n);
+    const ok = taskDone(t), v = Math.min(statOf(t.stat, c.hero), t.n);
     return `<li class="${ok ? 'ok' : ''}"><i>${ok ? '✓' : ''}</i><span>${t.label}</span><b>${fmtN(v)} / ${fmtN(t.n)}</b><u><em style="width:${taskFrac(t) > 0 ? Math.max(4, Math.round(taskFrac(t) * 100)) : 0}%"></em></u></li>`;
   }).join('');
   if (compact) return `<div class="ct-mini"><div class="ct-h"><span>📜 Recruitment contract</span><b>${done} / ${c.tasks.length}</b></div><ul class="ct-tasks">${rows}</ul></div>`;
@@ -416,8 +410,14 @@ function contractCard(c, compact) {
     </div>
   </article>`;
 }
+// Only the contracts on offer get a card (three at a time); heroes already recruited sit in a strip underneath.
 function enterContracts() {
-  $('ctList').innerHTML = CONTRACTS.map(c => contractCard(c)).join('');
+  const open = CONTRACTS.filter(c => contractUnlocked(c.hero) && !contractDone(c.hero)), got = CONTRACTS.filter(c => contractDone(c.hero));
+  const sealed = CONTRACTS.length - open.length - got.length;
+  $('ctList').innerHTML = (open.length ? open.map(c => contractCard(c)).join('') : '<div class="ct-all">🎉 Every contract is signed. The whole kitchen staff (and one spider) are on the team.</div>')
+    + (got.length || sealed ? `<div class="ct-recruited"><span>Recruited</span>${got.map(c => { const h = HEROES.find(x => x.id === c.hero);
+      return `<button data-play="${h.id}" style="--hc:${hex(h.color)}"><img alt="" data-ct="${h.id}"><b>${h.callsign}</b><i>Play ▸</i></button>`; }).join('') || '<em>No one yet. Finish a contract above!</em>'}
+      ${sealed ? `<small>✉️ ${sealed} more ${sealed > 1 ? 'heroes are' : 'hero is'} waiting to send a contract</small>` : ''}</div>` : '');
   $('ctList').querySelectorAll('img[data-ct]').forEach((img, k) => setTimeout(() => { img.src = headshot(dressed(HEROES.find(x => x.id === img.dataset.ct))); }, 30 + k * 60));
 }
 
@@ -612,7 +612,12 @@ export function initMenu(opts) {
   document.querySelectorAll('[data-open-settings]').forEach(b => { b.onclick = openSettings; });
   document.querySelectorAll('[data-back]').forEach(b => { b.onclick = () => go(b.dataset.back); });
   $('tiles').onclick = e => { const t = e.target.closest('.tile'); if (t) pickHero(t.dataset.hero); };
-  $('archBar').onclick = e => { const b = e.target.closest('[data-arch]'); if (b) { api?.blip?.(700); setArch(b.dataset.arch); } };
+  // every shelf scrolls sideways: let a normal mouse wheel do that too
+  $('tiles').addEventListener('wheel', e => {
+    const row = e.target.closest('.hs-row'), step = row && row.clientWidth / (sort === 'role' ? 5 : 9);
+    if (!row || row.scrollWidth <= row.clientWidth + 1 || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+    e.preventDefault(); row.scrollBy({ left: e.deltaY > 0 ? step : -step, behavior: 'smooth' });
+  }, { passive: false });
   $('sortBar').onclick = e => { const b = e.target.closest('[data-sort]'); if (b) { api?.blip?.(760); setSort(b.dataset.sort); } };
   $('carL').onclick = () => stepHero(-1);
   $('carR').onclick = () => stepHero(1);
@@ -679,8 +684,6 @@ export function initMenu(opts) {
     if (screen === 'roster') {
       if (e.code === 'ArrowRight' || e.code === 'KeyD') stepHero(1);
       if (e.code === 'ArrowLeft' || e.code === 'KeyA') stepHero(-1);
-      const n = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5'].indexOf(e.code);                 // 1-5: All and each archetype
-      if (n >= 0) { api?.blip?.(700); setArch(['all', ...ARCHETYPES.map(a => a.id)][n]); }
       if (e.code === 'Enter') $('lockIn').click();
       if (e.code === 'Escape') go('main');
     } else if (screen === 'stage') {

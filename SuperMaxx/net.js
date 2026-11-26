@@ -1,10 +1,10 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { FIREBASE_CONFIG, FIREBASE_VERSION } from './firebase-config.js?v=20261126j';
-import { HEROES } from './heroes.js?v=20261126j';
-import { damage, remoteKill, netShoot, spawnHero, setBar, tickCorpse } from './units.js?v=20261126j';
-import { replayCast } from './abilities.js?v=20261126j';
-import { netHill } from './hill.js?v=20261126j';
-import { poseHero } from './anim.js?v=20261126j';
+import { FIREBASE_CONFIG, FIREBASE_VERSION } from './firebase-config.js?v=20261126r';
+import { HEROES } from './heroes.js?v=20261126r';
+import { damage, remoteKill, netShoot, spawnHero, setBar, tickCorpse } from './units.js?v=20261126r';
+import { replayCast } from './abilities.js?v=20261126r';
+import { netHill } from './hill.js?v=20261126r';
+import { poseHero } from './anim.js?v=20261126r';
 
 // Online play over Firebase Realtime Database.
 //
@@ -149,16 +149,18 @@ export async function startMatch() {
   const duel = room.meta.mode === 'duel';
   const players = Object.entries(room.players).sort((a, b) => a[1].t - b[1].t);
   if (duel && players.length > 2) throw new Error('Duel is 1v1: only two players can be in the room');
-  const pool = [...HEROES].sort(() => Math.random() - 0.5);
+  // bots take heroes nobody in the room picked, each one different
+  const taken = new Set(players.map(([, p]) => p.hero));
+  const pool = HEROES.filter(h => !taken.has(h.id)).sort(() => Math.random() - 0.5);
   const roster = [];
   const human = (uid, p, team) => ({ key: uid, uid, name: p.name || 'Player', hero: p.hero, skin: p.skin || '', team, cos: p.cos || {} });
   if (duel) {
     players.forEach(([uid, p], i) => roster.push(human(uid, p, i ? 'red' : 'blue')));
-    if (roster.length < 2) roster.push({ key: 'bot-red-0', uid: '', name: '', hero: pool[0].id, skin: '', team: 'red' });
+    if (roster.length < 2) roster.push({ key: 'bot-red-0', uid: '', name: '', hero: pool.pop().id, skin: '', team: 'red' });
   } else for (const team of ['blue', 'red']) {
     const humans = players.filter(([, p]) => p.team === team).slice(0, 3);
     for (const [uid, p] of humans) roster.push(human(uid, p, team));
-    for (let i = humans.length; i < 3; i++) roster.push({ key: `bot-${team}-${i}`, uid: '', name: '', hero: pool[(roster.length) % pool.length].id, skin: '', team });
+    for (let i = humans.length; i < 3; i++) roster.push({ key: `bot-${team}-${i}`, uid: '', name: '', hero: pool.pop().id, skin: '', team });
   }
   const match = (room.meta.match || 0) + 1;
   await fb.f.remove(R('match'));

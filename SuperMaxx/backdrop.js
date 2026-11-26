@@ -1,5 +1,5 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { M, put, mergeStatic } from './scenery.js?v=20261126j';
+import { M, put, mergeStatic } from './scenery.js?v=20261126r';
 
 // Buildings and far scenery around the arena. Everything sits outside the playable
 // rectangle (|x| > W, |z| > L) so it never affects collision.
@@ -333,8 +333,72 @@ function neonFar(scene, map, r) {
   };
 }
 
+// ---------- Sunscorch Mesa: adobe town in a red-rock canyon ----------
+function adobeHouse(w, r) {
+  const g = new THREE.Group(), d = 7, h = 3.6 + r() * 3.4;
+  const clay = [0xe0a070, 0xd8925e, 0xe8b084, 0xcf8a5a][Math.floor(r() * 4)];
+  put(g, box(w - 0.3, h, d), M(clay), 0, h / 2, d / 2);
+  put(g, box(w - 0.1, 0.5, d + 0.1), M(0xc8885a), 0, h + 0.15, d / 2);                 // parapet
+  for (let k = 0; k < Math.max(2, Math.floor(w / 1.1)); k++) {                         // vigas: roof beam ends
+    const b = put(g, new THREE.CylinderGeometry(0.12, 0.12, 0.8, 6), M(0x6b4a32), -w / 2 + 0.6 + k * 1.1, h - 0.4, -0.3, false); b.rotation.x = Math.PI / 2;
+  }
+  if (r() < 0.45) {                                                                     // a second, set-back storey
+    const w2 = w * 0.55, h2 = 2.4 + r();
+    put(g, box(w2, h2, d * 0.6), M(clay), (r() - 0.5) * (w - w2) * 0.6, h + h2 / 2, d * 0.65);
+  }
+  const cols = Math.max(1, Math.floor(w / 2.4));
+  for (let c = 0; c < cols; c++) {
+    const x = -w / 2 + (c + 0.5) * (w / cols);
+    put(g, box(0.9, 1, 0.1), M(r() < 0.4 ? 0xffd38a : 0x3a2a2a, r() < 0.4 ? { emissive: 0xffb45a, emissiveIntensity: 0.5 } : undefined), x, Math.min(h - 1.2, 2.2), -0.05, false);
+    put(g, box(1.1, 0.12, 0.16), M(0x3fb3a6), x, Math.min(h - 1.2, 2.2) - 0.6, -0.08, false);     // turquoise sill
+  }
+  if (r() < 0.5) {                                                                      // a striped canvas awning on posts
+    const c = [0xd8453a, 0x3fb3a6, 0xffc93c][Math.floor(r() * 3)];
+    for (let k = 0; k < 5; k++) { const a = put(g, box(w * 0.7 / 5, 0.06, 1.6), M(k % 2 ? 0xf2e6cc : c), -w * 0.35 + (k + 0.5) * (w * 0.7 / 5), 2.6, -0.8, false); a.rotation.x = 0.2; }
+    for (const s of [-1, 1]) put(g, box(0.1, 2.6, 0.1), M(0x6b4a32), s * w * 0.34, 1.3, -1.5, false);
+  }
+  return g;
+}
+export function saguaro(parent, x, z, s = 1) {
+  const g = new THREE.Group(), green = M(0x5a8a4a), h = 5;
+  put(g, new THREE.CylinderGeometry(0.45, 0.55, h, 10), green, 0, h / 2, 0);
+  for (const [sx, y0, len] of [[1, 2, 1.8], [-1, 2.8, 1.4]]) {
+    put(g, new THREE.CylinderGeometry(0.3, 0.3, 0.9, 8), green, sx * 0.65, y0, 0).rotation.z = Math.PI / 2;
+    put(g, new THREE.CylinderGeometry(0.3, 0.32, len, 8), green, sx * 1.1, y0 + len / 2, 0);
+  }
+  g.position.set(x, 0, z); g.scale.setScalar(s); parent.add(g); return g;
+}
+function desertFar(scene, map, r) {
+  const g = new THREE.Group();
+  for (let i = 0; i < 22; i++) {                                  // flat-topped buttes and mesas ringing the canyon
+    const a = (i / 22) * Math.PI * 2 + r() * 0.1, d = 150 + r() * 90, w = 30 + r() * 40, h = 30 + r() * 45;
+    const x = Math.cos(a) * (d + map.W), z = Math.sin(a) * (d + map.L * 0.6);
+    let y = 0;
+    for (let k = 0; k < 4; k++) {
+      const bh = h / 4, sc = 1 - k * 0.07;
+      put(g, new THREE.CylinderGeometry(w * 0.5 * sc * 0.96, w * 0.5 * sc, bh, 7), M([0xc4583a, 0xd8754a, 0xb84a32, 0xe0905c][k], { flatShading: true }), x, y + bh / 2 - 4, z, false);
+      y += bh;
+    }
+  }
+  for (let i = 0; i < 26; i++) {                                  // low dunes in front of them
+    const a = r() * Math.PI * 2, d = 70 + r() * 70, s = 14 + r() * 20;
+    const m = put(g, new THREE.SphereGeometry(s, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), M(0xe8b97e), Math.cos(a) * (d + map.W), -s * 0.75, Math.sin(a) * (d + map.L), false); m.scale.y = 0.6;
+  }
+  scene.add(g); mergeStatic(g);
+  const cacti = new THREE.Group();
+  for (let i = 0; i < 40; i++) { const [x, z] = outside(map, r, 14, 34); saguaro(cacti, x, z, 0.9 + r() * 0.9); }
+  scene.add(cacti); mergeStatic(cacti);
+  // a hawk wheeling slowly high over the square
+  const hawk = new THREE.Group(), wing = M(0x4a3020);
+  for (const s of [-1, 1]) { const wm = put(hawk, box(2.2, 0.08, 0.7), wing, s * 1.1, 0, 0, false); wm.rotation.z = s * 0.15; }
+  put(hawk, box(0.35, 0.25, 1.2), wing, 0, 0, 0, false);
+  scene.add(hawk);
+  return (dt, t) => { const a = t * 0.12; hawk.position.set(Math.cos(a) * 46, 38 + Math.sin(t * 0.5) * 3, Math.sin(a) * 60); hawk.rotation.y = -a; hawk.rotation.z = 0.3; };
+}
+
 export function buildBackdrop(scene, map, theme, r) {
   const g = new THREE.Group(); scene.add(g);
+  if (theme === 'desert') { ring(map, r, [5, 9], adobeHouse, g); mergeStatic(g); return desertFar(scene, map, r); }
   if (theme === 'plaza') { ring(map, r, [5, 9], plazaHouse, g); mergeStatic(g); return plazaFar(scene, map, r); }
   if (theme === 'canals') { ring(map, r, [4, 6.5], canalHouse, g); mergeStatic(g); return canalsFar(scene, map, r); }
   if (theme === 'alpine') { ring(map, r, [5, 8], chalet, g); mergeStatic(g); return alpineFar(scene, map, r); }

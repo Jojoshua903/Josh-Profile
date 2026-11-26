@@ -1,8 +1,8 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { buildHeroModel } from './models.js?v=20261126j';
-import { buildWorld } from './world.js?v=20261126j';
-import { createStructure } from './units.js?v=20261126j';
-import { HEROES } from './heroes.js?v=20261126j';
+import { buildHeroModel } from './models.js?v=20261126r';
+import { buildWorld } from './world.js?v=20261126r';
+import { createStructure } from './units.js?v=20261126r';
+import { HEROES } from './heroes.js?v=20261126r';
 
 // Menu artwork, generated once and cached as data URLs: hero splash art (themed
 // painted backdrop + a posed render of the model), headshot tiles, and map previews.
@@ -46,6 +46,8 @@ const POSE = {
   wellington: { turn: 0.45, arm: -1.2, lean: -0.04, cam: [-1.4, 0.55, -3.8] },
   shepherd: { turn: -0.45, arm: -1.3, lean: 0.04, cam: [-1.2, 0.8, -3.5] },
   microwave: { turn: 0.5, arm: -1.1, lean: 0, cam: [-1.5, 0.45, -3.8] },
+  chef: { turn: 0.45, arm: -1.1, lean: -0.03, cam: [-1.4, 0.75, -3.8] },
+  manspider: { turn: -0.5, arm: -1.0, lean: 0.02, cam: [-1.6, 0.4, -3.9] },
 };
 
 function heroScene(def, t = 0.6) {
@@ -307,6 +309,21 @@ const MOTIF = {
     g.strokeStyle = rgba(0xffffff, 0.45); g.lineWidth = 8; g.beginPath(); g.ellipse(w / 2, h * 0.82, w * 0.3, 30, 0, 0, 7); g.stroke();
     for (let i = 0; i < 5; i++) { const x = w * (0.2 + i * 0.15); g.strokeStyle = rgba(0xffffff, 0.35); g.lineWidth = 6; g.beginPath(); g.moveTo(x, h * 0.6); g.bezierCurveTo(x + 30, h * 0.5, x - 30, h * 0.4, x, h * 0.3); g.stroke(); }
     g.fillStyle = rgba(0x5af0ff, 0.85); g.font = 'bold 64px monospace'; g.fillText('12:00', w * 0.62, h * 0.14);
+  },
+  chef(g, w, h, p) {                           // a hotel kitchen on fire: copper pans, flames and a checked floor
+    for (let y = h * 0.7; y < h; y += 40) for (let x = (Math.round(y / 40) % 2) * 40; x < w; x += 80) { g.fillStyle = rgba(0x2a2a34, 0.4); g.fillRect(x, y, 40, 40); }
+    for (let i = 0; i < 5; i++) { const x = w * (0.12 + i * 0.19), y = h * 0.16; g.strokeStyle = rgba(0x8a4a2a, 0.8); g.lineWidth = 4; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, y - 34); g.stroke(); g.fillStyle = rgba(0xc87a4a, 0.85); g.beginPath(); g.arc(x, y, 34 - (i % 2) * 8, 0, 7); g.fill(); g.fillStyle = rgba(0xffd27a, 0.35); g.beginPath(); g.arc(x - 8, y - 8, 10, 0, 7); g.fill(); }
+    for (let i = 0; i < 9; i++) { const x = w * (0.05 + i * 0.115), fh = 90 + (i % 3) * 50; const gr = g.createLinearGradient(0, h * 0.72, 0, h * 0.72 - fh); gr.addColorStop(0, rgba(0xe8423a, 0.7)); gr.addColorStop(1, rgba(0xffd23c, 0)); g.fillStyle = gr; g.beginPath(); g.moveTo(x - 26, h * 0.72); g.quadraticCurveTo(x - 20, h * 0.72 - fh * 0.6, x, h * 0.72 - fh); g.quadraticCurveTo(x + 20, h * 0.72 - fh * 0.6, x + 26, h * 0.72); g.fill(); }
+  },
+  manspider(g, w, h, p) {                      // an office at night: a big web across the window blinds
+    g.fillStyle = rgba(0xffffff, 0.08); for (let y = 0; y < h * 0.7; y += 26) g.fillRect(0, y, w, 12);
+    const cx = w * 0.62, cy = h * 0.34;
+    g.strokeStyle = rgba(0xf4f4ff, 0.55); g.lineWidth = 2;
+    for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(a) * w, cy + Math.sin(a) * w); g.stroke(); }
+    for (let r = 40; r < w; r += 46) { g.beginPath(); for (let i = 0; i <= 12; i++) { const a = i / 12 * Math.PI * 2; g.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); } g.stroke(); }
+    g.fillStyle = rgba(0x2a2a34, 0.75); g.fillRect(0, h * 0.78, w, h * 0.22);
+    g.fillStyle = rgba(0xf4f1ea, 0.85); for (let i = 0; i < 4; i++) g.fillRect(w * (0.08 + i * 0.05), h * 0.72 - i * 10, 70, 10);   // a stack of paperwork
+    g.fillStyle = rgba(p.trim, 0.8); g.beginPath(); g.arc(w * 0.86, h * 0.74, 22, 0, 7); g.fill(); g.fillRect(w * 0.86 - 22, h * 0.74, 44, 30);   // a coffee mug
   },
   mole(g, w, h, p) {                           // underground: dirt layers, tunnels, roots and buried rocks
     const bands = [0x7a5a3a, 0x6b4a30, 0x5a3c26, 0x4a301e];

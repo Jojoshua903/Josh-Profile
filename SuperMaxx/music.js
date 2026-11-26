@@ -1,4 +1,4 @@
-import { actx, noiseBuf, musicBus, impulse, onAudioReady, m2f } from './audio.js?v=20261126j';
+import { actx, noiseBuf, musicBus, impulse, onAudioReady, m2f } from './audio.js?v=20261126r';
 
 // Procedural soundtrack: each track is a set of 8-bar sections (chords, drum pattern,
 // bass style, lead density) played in a long form, so a loop runs about 3 minutes.
@@ -78,6 +78,18 @@ export const TRACKS = {
       B: { p: [3, 4, 2, 5], d: 'groove', b: 'octave', l: 0.7, a: 1, pad: 1 },
       C: { p: [5, 3, 0, 4], d: 'half', b: 'long', l: 0.35, a: 2, pad: 1 },
       D: { p: [0, 4, 5, 3], d: 'drive', b: 'octave', l: 0.9, a: 2, pad: 1 },
+    },
+    form: ['intro', 'A', 'A+', 'B', 'C', 'D', 'A+', 'B+', 'D+', 'C', 'intro'],
+  },
+  mesa: {                                  // Sunscorch Showdown: whistled spaghetti-western lead over twangy guitar
+    bpm: 96, root: 50, scale: 'minor', swing: 0.08,
+    lead: { type: 'sine', cut: 5000, v: 0.07, vib: 1, a: 0.04 }, bass: { type: 'triangle', cut: 650 }, arp: { type: 'sawtooth', cut: 2200, pluck: 1 }, pad: { type: 'sawtooth', cut: 700 },
+    sections: {
+      intro: { p: [0, 0, 6, 6], d: 'half', b: 'long', l: 0.3, a: 1, pad: 1 },
+      A: { p: [0, 6, 5, 4], d: 'boom', b: 'root', l: 0.55, a: 1, pad: 1 },
+      B: { p: [5, 6, 0, 4], d: 'latin', b: 'walk', l: 0.7, a: 2, pad: 0 },
+      C: { p: [3, 0, 4, 4], d: 'half', b: 'long', l: 0.35, a: 1, pad: 1 },
+      D: { p: [0, 3, 6, 4], d: 'drive', b: 'octave', l: 0.85, a: 2, pad: 1 },
     },
     form: ['intro', 'A', 'A+', 'B', 'C', 'D', 'A+', 'B+', 'D+', 'C', 'intro'],
   },

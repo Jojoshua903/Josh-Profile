@@ -1,12 +1,12 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { TUNING, HILL, CART } from './data.js?v=20261126j';
-import { buildHeroModel } from './models.js?v=20261126j';
-import { makeBox, moveBody, resolveXZ, rayBox, raySphere, rayWorld, hasLOS } from './world.js?v=20261126j';
-import { resetStatus, tickStatus, afterMove, takenMult, fireMult, canAct, breakInvis, isHidden, slow as applySlow, stun as applyStun, knock as applyKnock, dropBlobs,
-  dealtMult, onDealt, onHurt, onKill, mend } from './abilities.js?v=20261126j';
-import { poseHero, rubble } from './anim.js?v=20261126j';
-import { onEliminated, survivorPreMove, survivorPostMove } from './survivor.js?v=20261126j';
-import { tickVfx, tickLight, blast, sparks } from './vfx.js?v=20261126j';
+import { TUNING, HILL, CART } from './data.js?v=20261126r';
+import { buildHeroModel } from './models.js?v=20261126r';
+import { makeBox, moveBody, resolveXZ, rayBox, raySphere, rayWorld, hasLOS } from './world.js?v=20261126r';
+import { resetStatus, tickStatus, afterMove, wallClimb, takenMult, fireMult, canAct, breakInvis, isHidden, slow as applySlow, stun as applyStun, knock as applyKnock, dropBlobs,
+  dealtMult, onDealt, onHurt, onKill, mend } from './abilities.js?v=20261126r';
+import { poseHero, rubble } from './anim.js?v=20261126r';
+import { onEliminated, survivorPreMove, survivorPostMove } from './survivor.js?v=20261126r';
+import { tickVfx, tickLight, blast, sparks } from './vfx.js?v=20261126r';
 
 // Survivor teams are per-hero ids; anything that isn't blue reads as an enemy red.
 export const TEAM_COLOR = new Proxy({ blue: 0x2f5bff, red: 0xff5a36 }, { get: (t, k) => (k in t ? t[k] : 0xff5a36) });
@@ -588,6 +588,7 @@ export function tickHero(G, h, dt) {
   if (fountains && Math.hypot(h.pos.x, h.pos.z - zHome) < 8 && h.hp < h.maxHp) { h.hp = Math.min(h.maxHp, h.hp + TUNING.fountainHeal * dt); setBar(h); }
   if (fountains && Math.hypot(h.pos.x, h.pos.z - zEnemy) < 8) damage(G, h, 90 * dt, null);
   if (G.mode === 'survivor') survivorPreMove(G, h);
+  wallClimb(G, h);
   h.onGround = moveBody(h, dt, G.colliders);
   if (G.mode === 'survivor') survivorPostMove(G, h);
   afterMove(G, h, dt);

@@ -9,7 +9,7 @@ const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } ca
 export const SLOT_HEROES = ['slime', 'brawler', 'chipmunk', 'elf', 'dancer', 'mole', 'medic', 'spark', 'builder'];
 export const SLOT_SKINS = ['slime-magma', 'brawler-chrome', 'chipmunk-gold', 'vanguard-cosmos', 'striker-glitch', 'croc-gummy', 'cavalier-phantom', 'mirage-hologram',
   'ember-supernova', 'warden-stained', 'thicket-sakura', 'ratchet-overclock', 'avalanche-volcanic', 'tempo-clockwork', 'kestrel-phoenix', 'elf-winter', 'dancer-blackswan', 'mole-diamond',
-  'medic-plague', 'spark-thunder', 'builder-marble', 'wellington-truffle', 'shepherd-tartan', 'microwave-retro'];
+  'medic-plague', 'spark-thunder', 'builder-marble', 'wellington-truffle', 'shepherd-tartan', 'microwave-retro', 'chef-noir', 'manspider-tarantula'];
 export const SLOT_SPRAYS = ['sp-gg', 'sp-splat', 'sp-nuts', 'sp-maxx', 'sp-chomp', 'sp-love', 'sp-bye', 'sp-crown'];
 // heroes are the jackpot: rarer than skins, which are rarer than sprays
 const WEIGHT = { hero: 1, skin: 2, spray: 3 };
