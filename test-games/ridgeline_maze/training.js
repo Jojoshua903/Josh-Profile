@@ -1,15 +1,15 @@
-// Ridgeline training trail: six hands-on stations around Base Camp that stamp a Climber's Passport.
+// Ridgeline training wing: six hands-on stations around the boarding hall that stamp a Climber's Passport.
 // Each one practises something the maze will ask of you: sprinting, chalk, glowsticks, stone gates, the Shadow and climbing.
 import { THREE, scene, flake, rayTargets } from './world.js';
 import { fx } from './fx.js';
 
 export const STATIONS = [
-  { id: 'sprint', name: 'Sprint lane', hint: 'Sprint the painted lane by the railing, start to finish' },
-  { id: 'chalk', name: 'Chalk slate', hint: 'Chalk a mark on the slate easel (slot 1)' },
-  { id: 'glow', name: 'Light the shed', hint: 'Throw a glowstick into the dark shed (slot 2)' },
-  { id: 'gate', name: 'Practice gate', hint: 'Open the stone gate: two plates, or hold the crank' },
-  { id: 'shadow', name: 'Shadow puddle', hint: 'Stand in the purple puddle and feel it drain you' },
-  { id: 'climb', name: 'Boulder summit', hint: 'Climb the practice boulder to the very top' },
+  { id: 'sprint', name: 'Sprint lane', hint: 'Sprint the painted lane under the south windows, start to finish' },
+  { id: 'chalk', name: 'Chalk slate', hint: 'Chalk a mark on the slate by the bouldering wall (slot 1)' },
+  { id: 'glow', name: 'Light the baggage room', hint: 'Throw a glowstick into the dark baggage room by the gate (slot 2)' },
+  { id: 'gate', name: 'Staff door', hint: 'Open the stone staff door by the board: two plates, or hold the crank' },
+  { id: 'shadow', name: 'Shadow sample', hint: 'Stand in the spilled purple Shadow and feel it drain you' },
+  { id: 'climb', name: 'Bouldering wall', hint: 'Climb the bouldering wall to the very top' },
 ];
 let stamps = new Set();
 try { stamps = new Set(JSON.parse(localStorage.getItem('ridgeline_passport') || '[]')); } catch {}
@@ -20,12 +20,12 @@ export function resetPassport() { stamps.clear(); save(); }
 /** Returns true the first time a station is stamped. */
 export function stamp(id) { if (stamps.has(id)) return false; stamps.add(id); save(); lit[id]?.(); return true; }
 
-/* ================= where things are (Base Camp uses 4 m tiles) ================= */
-export const LANE = { x0: 50, x1: 66, z0: 60.6, z1: 63.6 };
-export const PUDDLE = { x: 46, z: 41, r: 1.9 };
-export const SLATE = { x: 44, y: 1.55, z: 58, w: 2.2, h: 1.3 };
-export const SHED = { x0: 36.2, x1: 39.8, z0: 60.2, z1: 63.8, y1: 2.3 };
-export const BOULDER_TOP = { i: 16, j: 10, y: 5 };
+/* ================= where things are (the hall uses 4 m tiles; see lobby.js for the floor plan) ================= */
+export const LANE = { x0: 40, x1: 64, z0: 59.4, z1: 62.4 };
+export const PUDDLE = { x: 58, z: 41.5, r: 1.9 };
+export const SLATE = { x: 64.5, y: 1.55, z: 40.5, w: 2.2, h: 1.3 };
+export const SHED = { x0: 32.2, x1: 35.8, z0: 60.2, z1: 63.8, y1: 2.3 };
+export const BOULDER_TOP = { i: 17, j: 8, y: 5 };
 
 const group = new THREE.Group(); group.visible = false; scene.add(group);
 const anim = { t: 0, swirl: [], lantern: null, lanternLight: null, flags: [] };
@@ -73,21 +73,16 @@ function build() {
   add(new THREE.BoxGeometry(SHED.x1 - SHED.x0 - .3, SHED.y1 - .2, SHED.z1 - SHED.z0 - .4), dark, cx - .1, SHED.y1 / 2, cz).castShadow = false;
   const lantern = add(new THREE.SphereGeometry(.22, 12, 10), new THREE.MeshBasicMaterial({ color: 0x3a3226, toneMapped: false }), cx + .4, 1.5, cz);
   anim.lantern = lantern;
-  label('DARK SHED · THROW A GLOWSTICK IN', 3.4, .32, SHED.x1 + .05, SHED.y1 + .55, cz, Math.PI / 2, '#a37bff', '#ffffff');
+  label('BAGGAGE ROOM · LIGHTS OUT', 3.4, .32, SHED.x1 + .05, SHED.y1 + .55, cz, Math.PI / 2, '#a37bff', '#ffffff');
   lit.glow = () => { lantern.material.color.set(0xffd27a); anim.lanternLit = true; };
 
-  // 4. practice gate balcony: a small wooden platform past the gate with the passport stamp on a pedestal
-  const deckMat = std(0xb07a43);
-  add(new THREE.BoxGeometry(4.2, .3, 4), deckMat, 70, -.15, 54);
-  for (const z of [52.1, 55.9]) add(new THREE.BoxGeometry(4, .08, .08), wood, 70, 1.05, z);
-  add(new THREE.BoxGeometry(.08, .08, 3.8), wood, 72, 1.05, 54);
-  for (const [x, z] of [[68.1, 52.1], [68.1, 55.9], [72, 52.1], [72, 55.9], [72, 54]]) add(new THREE.CylinderGeometry(.06, .06, 1.1, 6), wood, x, .55, z);
-  add(new THREE.CylinderGeometry(.35, .45, 1, 10), std(0x8b8178), 70.6, .5, 54);
-  const stampTop = add(new THREE.CylinderGeometry(.28, .28, .25, 16), std(0xe5383b), 70.6, 1.15, 54);
-  add(new THREE.CylinderGeometry(.07, .07, .35, 8), wood, 70.6, 1.42, 54);
-  add(new THREE.SphereGeometry(.12, 10, 8), wood, 70.6, 1.62, 54);
-  label('PRACTICE GATE', 2.6, .4, 63.95, 3.75, 54, -Math.PI / 2, '#ff9f1c');
-  lit.gate = () => { stampTop.material.color.set(0xffd23f); fx.confetti(70.6, 2, 54, 50); };
+  // 4. the staff door (practice gate): the back room behind it has the passport stamp on a pedestal
+  add(new THREE.CylinderGeometry(.35, .45, 1, 10), std(0x8b8178), 74.4, .5, 58);
+  const stampTop = add(new THREE.CylinderGeometry(.28, .28, .25, 16), std(0xe5383b), 74.4, 1.15, 58);
+  add(new THREE.CylinderGeometry(.07, .07, .35, 8), wood, 74.4, 1.42, 58);
+  add(new THREE.SphereGeometry(.12, 10, 8), wood, 74.4, 1.62, 58);
+  label('STAFF DOOR · PRACTICE GATE', 3.4, .42, 71.74, 4.05, 58, -Math.PI / 2, '#ff9f1c');
+  lit.gate = () => { stampTop.material.color.set(0xffd23f); fx.confetti(74.4, 2, 58, 50); };
 
   // 5. shadow puddle: a dark violet disc with drifting wisps
   const disc = add(new THREE.CircleGeometry(PUDDLE.r, 40), new THREE.MeshBasicMaterial({ color: 0x2b1840, transparent: true, opacity: .85, depthWrite: false }), PUDDLE.x, .025, PUDDLE.z);
@@ -98,7 +93,7 @@ function build() {
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: flake, color: 0x9b5cff, transparent: true, opacity: .5, depthWrite: false })); s.scale.setScalar(.9); group.add(s);
     anim.swirl.push({ s, a: k / 14 * Math.PI * 2, r: .3 + Math.random() * (PUDDLE.r - .4), h: Math.random() * 1.6, sp: .4 + Math.random() * .6 });
   }
-  label('SHADOW PUDDLE · STEP IN', 2.6, .34, PUDDLE.x, .35, PUDDLE.z - PUDDLE.r - .35, 0, '#2b1840', '#e6d4ff');
+  label('SHADOW SAMPLE · SPILLED · STEP IN', 2.6, .34, PUDDLE.x, .35, PUDDLE.z - PUDDLE.r - .35, 0, '#2b1840', '#e6d4ff');
 
 }
 

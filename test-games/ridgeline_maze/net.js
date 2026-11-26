@@ -62,7 +62,7 @@ export async function joinRoom(roomName, name, handlers, look = {}) {
   // new rooms start in the lobby; a maze round whose fog has long since finished falls back to the lobby
   const tx = await D.runTransaction(metaRef, (m) => {
     if (!m) return { seed: newSeed(), round: 0, phase: 'lobby', pace: 1, daily: false };
-    if (m.phase !== 'lobby' && (!m.startAt || now() - m.startAt > 620000)) return { ...m, phase: 'lobby', outcome: null };
+    if (m.phase !== 'lobby' && (!m.startAt || now() - m.startAt > 1100000)) return { ...m, phase: 'lobby', outcome: null };
     return m;
   });
   const meta = tx.snapshot.val();

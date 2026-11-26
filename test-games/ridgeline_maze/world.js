@@ -3,7 +3,7 @@ export let THREE;
 try { THREE = await import('https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js'); }
 catch { THREE = await import('https://unpkg.com/three@0.180.0/build/three.module.js'); }
 
-export const N = 12, GRID = 2 * N + 1;
+export const N = 16, GRID = 2 * N + 1; // 33 x 33 tiles: a long climb (was 25 x 25)
 // Tile size in metres. The maze uses wide 6 m corridors; Base Camp is laid out on 4 m tiles.
 // These are live exports: every module that imports them sees the current value.
 export const MAZE_C = 6, CAMP_C = 4;
@@ -114,6 +114,7 @@ function genMaze(seed, opts = {}) {
   const A = () => Array.from({ length: GRID }, () => new Float32Array(GRID));
   const maze = { g, top: A(), low: A(), bridge: A(), seed, doorAt: Array.from({ length: GRID }, () => new Int8Array(GRID).fill(-1)), doors: [], camps: [], spires: [] };
   placeDoors(maze, opts.maxDoors ?? 3);
+  if (opts.puzzles !== false) placePuzzles(maze, r);
   shapeZones(maze, r);
   // stone gates fill the whole gap between the walls on either side, so nobody can be boosted over them
   for (const d of maze.doors) { const tops = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([a, b]) => maze.g[d.i + a]?.[d.j + b] ? maze.top[d.i + a][d.j + b] : Infinity); d.h = Math.max(6, Math.min(16, ...tops)); }
@@ -121,13 +122,13 @@ function genMaze(seed, opts = {}) {
 }
 
 /** 0 = frost cliffs (outside), 1 = ice caverns (middle), 2 = overgrown temple (centre). */
-export const zoneOf = (i, j) => { const ring = Math.max(Math.abs(i - MID), Math.abs(j - MID)); return ring <= 4 ? 2 : ring <= 8 ? 1 : 0; };
+export const zoneOf = (i, j) => { const ring = Math.max(Math.abs(i - MID), Math.abs(j - MID)); return ring <= 5 ? 2 : ring <= 10 ? 1 : 0; };
 export const zoneAt = (x, z) => zoneOf(Math.floor(x / C), Math.floor(z / C));
 
 function shapeZones(m, r) {
   const { g } = m;
   const reserved = new Set();
-  for (const d of m.doors) [[d.i, d.j], ...d.plates, d.lever].forEach(([a, b]) => reserved.add(a + ',' + b));
+  for (const d of m.doors) [[d.i, d.j], ...d.plates, d.lever, ...(d.braziers || []), ...(d.runes || []).map((u) => [u.i, u.j])].filter(Boolean).forEach(([a, b]) => reserved.add(a + ',' + b));
   for (let x = 0; x < GRID; x++) for (let z = 0; z < GRID; z++) {
     if (!g[x][z]) continue;
     const edge = x === 0 || z === 0 || x === GRID - 1 || z === GRID - 1, zone = zoneOf(x, z);
@@ -156,10 +157,10 @@ function shapeZones(m, r) {
     const open = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([a, b]) => !g[x + a][z + b]);
     if (open.length === 1) dead.push([x, z, open[0]]);
   }
-  for (let k = 0; k < 3 && dead.length; k++) m.camps.push(dead.splice(Math.floor(r() * dead.length), 1)[0]);
+  for (let k = 0; k < 4 && dead.length; k++) m.camps.push(dead.splice(Math.floor(r() * dead.length), 1)[0]);
   // three crystal spires on ice-zone pillars, spread around the ring
   for (let k = 0; k < 3; k++) {
-    const a = r() * .6 + k * (Math.PI * 2 / 3), x = MID + Math.round(Math.cos(a) * 3.25) * 2, z = MID + Math.round(Math.sin(a) * 3.25) * 2;
+    const a = r() * .6 + k * (Math.PI * 2 / 3), x = MID + Math.round(Math.cos(a) * 4) * 2, z = MID + Math.round(Math.sin(a) * 4) * 2;
     if (g[x] && g[x][z]) m.spires.push([x, z, k]);
   }
 }
@@ -199,6 +200,83 @@ function placeDoors(m, maxDoors = 3) {
 }
 
 let buildHook = null;
+/* ---------- puzzle gates ----------
+   Two extra gates on the true path, each a chokepoint with no way around (like the plate doors):
+   - Ember Gate: opens once every brazier is lit. The braziers sit in dead ends you can reach before the gate.
+   - Rune Gate: a handful of rune tiles lie in the corridors just before it; step on them in the order carved on the gate.
+   Everything uses the maze seed, so every player in a room gets the same puzzles. */
+function placePuzzles(m, r) {
+  const P = bfs(m.g, [1, 1], [MID, MID]); if (!P) return;
+  const inRoom = ([x, z]) => Math.abs(x - MID) <= 1 && Math.abs(z - MID) <= 1;
+  const end = P.findIndex(inRoom), onPath = new Set(P.map(([x, z]) => x + ',' + z));
+  const idxOf = (d) => P.findIndex(([x, z]) => x === d.i && z === d.j);
+  const taken = () => { const s = new Set(); for (const d of m.doors) [[d.i, d.j], ...d.plates, d.lever, ...(d.braziers || []), ...(d.runes || []).map((u) => [u.i, u.j])].filter(Boolean).forEach(([a, b]) => s.add(a + ',' + b)); return s; };
+  const gate = (frac, kind) => {
+    const ks = m.doors.map(idxOf);
+    for (let k = Math.floor(end * frac); k < end - 2; k++) {
+      const [x, z] = P[k];
+      if ((x % 2) === (z % 2) || ks.some((q) => Math.abs(q - k) < 7)) continue;
+      if (bfs(m.g, [1, 1], [MID, MID], [x, z])) continue;
+      const d = { id: m.doors.length, i: x, j: z, alongX: x % 2 === 0, kind, plates: [], lever: null, approach: P[k - 1], progress: 0, latched: false, h: 4.4 };
+      m.doors.push(d); m.doorAt[x][z] = d.id; return { d, k };
+    }
+    return null;
+  };
+  // tiles reachable from the start without crossing this gate or any gate after it, with walking distance from a point
+  const region = (k, from) => {
+    const later = new Set(m.doors.filter((d) => idxOf(d) >= k).map((d) => d.i + ',' + d.j));
+    const dist = new Map([[from[0] + ',' + from[1], 0]]), q = [from];
+    for (let h = 0; h < q.length; h++) {
+      const [x, z] = q[h], dd = dist.get(x + ',' + z);
+      for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + a, nz = z + b, key = nx + ',' + nz;
+        if (nx < 0 || nz < 0 || nx >= GRID || nz >= GRID || m.g[nx][nz] || later.has(key) || dist.has(key)) continue;
+        dist.set(key, dd + 1); q.push([nx, nz]);
+      }
+    }
+    return dist;
+  };
+  const spread = (cands, n, gap) => {
+    const out = [];
+    for (const c of cands) if (out.every((o) => Math.abs(o[0] - c[0]) + Math.abs(o[1] - c[1]) >= gap)) { out.push(c); if (out.length === n) break; }
+    return out;
+  };
+  const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+  // Ember Gate a little before halfway, braziers in dead ends behind you (prefer ones well off the true path)
+  const eg = gate(.42, 'ember');
+  if (eg) {
+    const reach = region(eg.k, [1, 1]), used = taken(), dead = [];
+    for (const key of reach.keys()) {
+      const [x, z] = key.split(',').map(Number);
+      if (x % 2 !== 1 || z % 2 !== 1 || onPath.has(key) || used.has(key) || (x <= 3 && z <= 3)) continue;
+      if ([[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([a, b]) => !m.g[x + a][z + b]).length === 1) dead.push([x, z]);
+    }
+    const picks = spread(shuffle(dead), 3, 7);
+    const more = picks.length < 3 ? spread(dead.filter((c) => !picks.includes(c)), 3 - picks.length, 3) : [];
+    eg.d.braziers = picks.concat(more);
+    if (eg.d.braziers.length < 2) { m.doorAt[eg.d.i][eg.d.j] = -1; m.doors.pop(); } // not enough hiding spots: skip this puzzle
+  }
+  // Rune Gate deeper in: 4 rune tiles within a short walk of the gate, mostly in side corridors
+  const rg = gate(.68, 'rune');
+  if (rg) {
+    const near = region(rg.k, rg.d.approach), used = taken(), off = [], on = [];
+    for (const [key, dd] of near) {
+      if (dd > 8) continue;
+      const [x, z] = key.split(',').map(Number);
+      if (used.has(key) || inRoom([x, z])) continue;
+      (onPath.has(key) ? on : off).push([x, z]);
+    }
+    const tiles = spread(shuffle(off).concat(shuffle(on)), 4, 2);
+    if (tiles.length < 3) { m.doorAt[rg.d.i][rg.d.j] = -1; m.doors.pop(); }
+    else {
+      const glyphs = shuffle([0, 1, 2, 3, 4, 5]).slice(0, tiles.length);
+      rg.d.runes = tiles.map(([i, j], k) => ({ i, j, g: glyphs[k] }));
+      rg.d.order = shuffle(glyphs.slice());
+    }
+  }
+}
+
 /** decor.js registers the themed wall builder here (keeps imports one-way). */
 export const setBuildHook = (fn) => { buildHook = fn; };
 /** The lobby swaps in its own collision layout (same shape as a maze). */
@@ -419,7 +497,8 @@ export function updateWorld(dt) {
   for (let i = 0; i < SNOW; i++) {
     a[i * 3 + 1] -= dt * (1.4 + (i % 7) * .18); a[i * 3] += (Math.sin(wt * .7 + i) * .5 + gust) * dt;
     if (a[i * 3 + 1] < 0) a[i * 3 + 1] = 34;
-    if (a[i * 3] > CX + 85) a[i * 3] -= 170;
+    if (a[i * 3] > CX + 85) a[i * 3] -= 170; else if (a[i * 3] < CX - 85) a[i * 3] += 170;
+    if (a[i * 3 + 2] > CX + 85) a[i * 3 + 2] -= 170; else if (a[i * 3 + 2] < CX - 85) a[i * 3 + 2] += 170;
   }
   snowGeo.attributes.position.needsUpdate = true;
   if (flagGeo) {

@@ -87,9 +87,9 @@ const M = {
 };
 
 // zone floors (built once: the zones never move)
-const floorIce = new THREE.Mesh(new THREE.PlaneGeometry(17 * C, 17 * C), M.iceFloor);
+const floorIce = new THREE.Mesh(new THREE.PlaneGeometry(21 * C, 21 * C), M.iceFloor);
 floorIce.rotation.x = -Math.PI / 2; floorIce.position.set(CX, .015, CX); floorIce.receiveShadow = true; scene.add(floorIce);
-const floorTemple = new THREE.Mesh(new THREE.PlaneGeometry(9 * C, 9 * C), M.pave);
+const floorTemple = new THREE.Mesh(new THREE.PlaneGeometry(11 * C, 11 * C), M.pave);
 floorTemple.rotation.x = -Math.PI / 2; floorTemple.position.set(CX, .025, CX); floorTemple.receiveShadow = true; scene.add(floorTemple);
 
 /** Box with chunky, inward-only jitter so walls look hewn but never poke into corridors. */

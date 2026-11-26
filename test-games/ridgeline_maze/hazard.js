@@ -1,5 +1,5 @@
 // Ridgeline hazards: the creeping Shadow Fog and co-op pressure-plate doors
-import { THREE, C, CX, SIZE, scene, maze, rayTargets, sfx, flake, disposeTree, MAZE_C, CAMP_C } from './world.js';
+import { THREE, C, CX, SIZE, scene, maze, rayTargets, sfx, flake, disposeTree, MAZE_C, CAMP_C, GRID } from './world.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, k) => a + (b - a) * k;
@@ -11,7 +11,8 @@ export const halfSize = () => SIZE / 2 + 2;
 /** Fog pace from the trail board: 0 gentle (7 min), 1 standard (5 min), 2 brutal (3 min). */
 // creep time grows with the tile size so wider corridors don't make the Shadow unfair
 export function setGrace(g) { GRACE = g; }
-export function setPace(p) { CREEP = ([420, 300, 180][p] ?? 300) * (MAZE_C / CAMP_C) * .8; GRACE = [45, 30, 20][p] ?? 30; }
+// the Shadow also gets more time on the bigger 33-tile maze (it was tuned on 25 tiles)
+export function setPace(p) { CREEP = ([420, 300, 180][p] ?? 300) * (MAZE_C / CAMP_C) * .8 * Math.pow(GRID / 25, 1.5); GRACE = [45, 30, 20][p] ?? 30; }
 export function showFog(v) { curtains.forEach((m) => m.visible = v); floors.forEach((m) => m.visible = v); motes.visible = v; }
 /** Half-width of the still-lit square around the centre, in metres. */
 export function fogRadius(t) { const H = halfSize(); return t < GRACE ? H : H * (1 - Math.min(1, (t - GRACE) / CREEP)); }
@@ -106,7 +107,8 @@ export function buildDoors() {
   disposeTree(doorGroup, false); doorGroup.clear();
   doorObjs = maze.doors.map((d) => {
     const cx = d.i * C + C / 2, cz = d.j * C + C / 2;
-    const face = new THREE.MeshStandardMaterial({ map: runeTex, emissive: 0xff7a2a, emissiveMap: runeTex, emissiveIntensity: .25, roughness: .9 });
+    const glowCol = d.kind === 'ember' ? 0xff4a1a : d.kind === 'rune' ? 0x3dffd2 : 0xff7a2a;
+    const face = new THREE.MeshStandardMaterial({ map: runeTex, emissive: glowCol, emissiveMap: runeTex, emissiveIntensity: .25, roughness: .9 });
     const mats = d.alongX ? [face, face, stoneSide, stoneSide, stoneSide, stoneSide] : [stoneSide, stoneSide, stoneSide, stoneSide, face, face];
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(C, d.h, C), mats);
     mesh.position.set(cx, d.h / 2, cz); mesh.castShadow = mesh.receiveShadow = true; doorGroup.add(mesh); rayTargets.push(mesh);
@@ -115,6 +117,7 @@ export function buildDoors() {
       const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0x7a6a4a, toneMapped: false })); ring.rotation.x = Math.PI / 2; ring.position.set(px * C + C / 2, .14, pz * C + C / 2); doorGroup.add(ring);
       return ring;
     });
+    if (d.kind) return { d, mesh, face, rings, arm: null, leverPos: null, grindT: 0, slamming: false }; // puzzle gates: no plates, no crank
     // crank lever against the side wall of the corridor before the door
     const [lx, lz] = d.lever, side = d.alongX ? [0, 1.45] : [1.45, 0];
     const leverPos = { x: lx * C + C / 2 + side[0], z: lz * C + C / 2 + side[1] };
@@ -128,7 +131,7 @@ export function buildDoors() {
 
 /** Door id whose crank lever is within reach, or -1. */
 export function leverNear(x, z) {
-  for (const o of doorObjs) if (!o.d.latched && Math.hypot(x - o.leverPos.x, z - o.leverPos.z) < 2) return o.d.id;
+  for (const o of doorObjs) if (o.leverPos && !o.d.latched && Math.hypot(x - o.leverPos.x, z - o.leverPos.z) < 2) return o.d.id;
   return -1;
 }
 export function doorsOpen() { return doorObjs.filter((o) => o.d.latched).length; }
@@ -143,6 +146,7 @@ export function updateDoors(dt, people, { onLatch, onSlam, onGrind } = {}) {
   for (const o of doorObjs) {
     const d = o.d;
     if (d.latched) d.progress = Math.min(1, d.progress + dt * 1.5);
+    else if (d.kind) { /* puzzle gates are opened by puzzles.js */ }
     else {
       const pressed = d.plates.map(([px, pz]) => people.some((p) => p.y < .8 && Math.floor(p.x / C) === px && Math.floor(p.z / C) === pz));
       const cranking = people.some((p) => p.crank === d.id);
@@ -161,7 +165,7 @@ export function updateDoors(dt, people, { onLatch, onSlam, onGrind } = {}) {
     }
     o.mesh.position.y = d.h / 2 - d.progress * (d.h + .05);
     o.face.emissiveIntensity = .25 + d.progress * 2.2 + (d.latched ? 0 : Math.sin(performance.now() / 300) * .1);
-    o.arm.rotation.y = d.progress * Math.PI * 6;
+    if (o.arm) o.arm.rotation.y = d.progress * Math.PI * 6;
   }
 }
 export function doorCenter(id) { const d = maze.doors[id]; return d ? { x: d.i * C + C / 2, z: d.j * C + C / 2 } : null; }

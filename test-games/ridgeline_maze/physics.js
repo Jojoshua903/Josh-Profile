@@ -61,8 +61,9 @@ export function physRebuild(seed) {
   const crateGeo = new THREE.BoxGeometry(.7, .7, .7), crateMat = new THREE.MeshStandardMaterial({ color: 0xb07a43, roughness: .85, flatShading: true });
   const lidMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .6 }), lidGeo = new THREE.BoxGeometry(.74, .1, .74);
   const ballGeo = new THREE.IcosahedronGeometry(.32, 1), ballMat = new THREE.MeshStandardMaterial({ color: 0xf8fbff, roughness: .5, flatShading: true });
+  const puzzleTiles = new Set(); for (const d of maze.doors) [...(d.braziers || []), ...(d.runes || []).map((u) => [u.i, u.j])].forEach(([a, b]) => puzzleTiles.add(a + ',' + b)); // keep crates off braziers and rune tiles
   if (!maze.lobby) for (let x = 1; x < GRID - 1; x += 2) for (let z = 1; z < GRID - 1; z += 2) {
-    if ((x <= 3 && z <= 3) || (Math.abs(x - mid) <= 2 && Math.abs(z - mid) <= 2) || maze.low[x][z] || r() > .16) continue;
+    if ((x <= 3 && z <= 3) || (Math.abs(x - mid) <= 2 && Math.abs(z - mid) <= 2) || maze.low[x][z] || r() > .16 || puzzleTiles.has(x + ',' + z)) continue;
     const crate = r() < .55, px = x * C + C / 2 + (r() - .5) * 2, pz = z * C + C / 2 + (r() - .5) * 2;
     const body = world.createRigidBody(R.RigidBodyDesc.dynamic().setTranslation(px, crate ? .36 : .33, pz).setLinearDamping(.4).setAngularDamping(crate ? .5 : .2));
     world.createCollider((crate ? R.ColliderDesc.cuboid(.35, .35, .35).setDensity(.6) : R.ColliderDesc.ball(.32).setDensity(.4)).setRestitution(crate ? .1 : .3).setFriction(.8).setCollisionGroups(grp(G_PROP, G_WORLD | G_PROP | G_PLAYER | G_RAG)), body);

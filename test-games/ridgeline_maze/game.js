@@ -13,7 +13,8 @@ import { zoneAt } from './world.js';
 import { makeClimber, animateRig, disposeClimber, DEFAULT_LOOK } from './rig.js';
 import { openCreator } from './creator.js';
 import { initOverlay, updateMarkers, showTip, zoneCard, flashKeys, toggleKeys, tipSeen } from './overlay.js';
-import { buildTrail, clearTrail, showTrail, makeMap, resetMap, dropPin, updateMap, trail, cairnTiles } from './trail.js';
+import { buildTrail, clearTrail, showTrail, trail, cairnTiles } from './trail.js';
+import { buildPuzzles, updatePuzzles, lightBrazier, brazierNear, igniteAt, brazierCount, puzzleHint, nearPuzzle, puzzleSummary } from './puzzles.js';
 import { resetTips } from './overlay.js';
 import { makeDebug, setDebugMode, debugSample, debugDraw, makeDevMenu, makeDevChip, setDevChip } from './debug.js';
 import { STATIONS, stamp, hasStamp, passportDone, resetPassport, showTraining, onSlate, inShed, inPuddle, checkStations, updateTraining } from './training.js';
@@ -22,7 +23,7 @@ import { fx, updateFx } from './fx.js';
 import { doorCenter as doorAt, setPace, setGrace, showFog } from './hazard.js';
 import { setGroundVisible } from './world.js';
 import { showDecor } from './decor.js';
-import { enterLobbyWorld, exitLobbyWorld, updateLobby, gondola, startArrival, startDeparture, rideOffset, riding, inGondola, spawnSpot, nearInteract, throwSnowball, setOnBell, setBallHook, setBoard, pinPhoto, photoCam, flashCamera } from './lobby.js';
+import { enterLobbyWorld, exitLobbyWorld, updateLobby, gondola, startArrival, startDeparture, rideOffset, riding, inGondola, spawnSpot, nearInteract, throwSnowball, setOnBell, setBallHook, setBoard, pinPhoto, photoCam, flashCamera, setGateLight } from './lobby.js';
 
 /* ---------- saved looks (one per local player) ---------- */
 let LOOKS = [];
@@ -66,7 +67,7 @@ const TIPS = [
   'Sprinting and jumping both cost stamina. Run dry and the bar turns red until you rest.',
   'The compass in the corner always points at the sanctuary beam in the centre.',
   'Stone doors need two climbers on two plates. Step off before it is fully up and it slams.',
-  'The Shadow Fog wakes after 30 seconds. Inside it you cannot rest, only drain.',
+  'Ember Gates open when every brazier is lit. Look for blue pilot flames in dead ends.', 'Rune Gates show a row of runes. Step on the matching floor tiles in that order.', 'The Shadow wakes after a head start. Inside it you cannot rest, only drain.',
 ];
 const trailPts = [[20, 160], [80, 140], [55, 120], [105, 100], [90, 78], [120, 60], [125, 34]];
 function loaderSet(title, step, pct) {
@@ -101,9 +102,9 @@ async function runLoading(title, steps) {
 
 /* ---------- climbers ---------- */
 const CTRL = {
-  p1: { id: 'p1', ping: ['KeyG'], f: ['KeyW'], b: ['KeyS'], l: ['KeyA'], r: ['KeyD'], run: ['ShiftLeft'], jump: ['Space'], use: ['KeyF'], cycle: ['KeyQ'], boost: ['KeyE'], slots: ['Digit1', 'Digit2', 'Digit3', 'Digit4'], hint: 'WASD · L‑Shift sprint · Space jump · F use · Q switch · E boost / hold to crank', bk: 'E' },
+  p1: { id: 'p1', ping: ['KeyG'], f: ['KeyW'], b: ['KeyS'], l: ['KeyA'], r: ['KeyD'], run: ['ShiftLeft'], jump: ['Space'], use: ['KeyF'], cycle: ['KeyQ'], boost: ['KeyE'], slots: ['Digit1', 'Digit2', 'Digit3'], hint: 'WASD · L‑Shift sprint · Space jump · F use · Q switch · E boost / hold to crank', bk: 'E' },
   p2: { id: 'p2', ping: ['Quote'], f: ['ArrowUp'], b: ['ArrowDown'], l: ['ArrowLeft'], r: ['ArrowRight'], run: ['ShiftRight'], jump: ['Enter', 'NumpadEnter'], use: ['Slash'], cycle: ['Period'], boost: ['Comma'], slots: [], hint: 'Arrows · R‑Shift sprint · Enter jump · / use · . switch · , boost / hold to crank', bk: ',' },
-  mouse: { id: 'mouse', ping: ['KeyG', 'Mouse1'], f: ['KeyW', 'ArrowUp'], b: ['KeyS', 'ArrowDown'], l: ['ArrowLeft'], r: ['ArrowRight'], sl: ['KeyA'], sr: ['KeyD'], run: ['ShiftLeft', 'ShiftRight'], jump: ['Space'], use: ['Mouse0', 'KeyF'], cycle: ['KeyQ'], boost: ['KeyE'], slots: ['Digit1', 'Digit2', 'Digit3', 'Digit4'], hint: 'Click use · 1 2 3 tools · Space jump · E boost / hold to crank', bk: 'E' },
+  mouse: { id: 'mouse', ping: ['KeyG', 'Mouse1'], f: ['KeyW', 'ArrowUp'], b: ['KeyS', 'ArrowDown'], l: ['ArrowLeft'], r: ['ArrowRight'], sl: ['KeyA'], sr: ['KeyD'], run: ['ShiftLeft', 'ShiftRight'], jump: ['Space'], use: ['Mouse0', 'KeyF'], cycle: ['KeyQ'], boost: ['KeyE'], slots: ['Digit1', 'Digit2', 'Digit3'], hint: 'Click use · 1 2 3 tools · Space jump · E boost / hold to crank', bk: 'E' },
 };
 class Climber {
   constructor({ color, name, ctrl, mouse = false, look = {} }) {
@@ -151,7 +152,7 @@ addEventListener('keydown', (e) => {
 addEventListener('keyup', (e) => keys.delete(e.code));
 addEventListener('blur', () => keys.clear());
 addEventListener('mousedown', (e) => { if (!locked()) return; if (e.button === 0) taps.add('Mouse0'); if (e.button === 1) { e.preventDefault(); taps.add('Mouse1'); } });
-addEventListener('wheel', (e) => { if (locked() && players[0]) players[0].slot = (players[0].slot + (e.deltaY > 0 ? 1 : 3)) % 4; }, { passive: true });
+addEventListener('wheel', (e) => { if (locked() && players[0]) players[0].slot = (players[0].slot + (e.deltaY > 0 ? 1 : 2)) % 3; }, { passive: true });
 addEventListener('mousemove', (e) => {
   if (!locked() || !players[0] || paused) return;
   const p = players[0];
@@ -191,7 +192,6 @@ function buildHuds() {
           <div class="slot" data-i="0"><span class="n">1</span>${ICON.chalk}<span class="lbl">Chalk</span></div>
           <div class="slot" data-i="1"><span class="n">2</span>${ICON.stick}<span class="c">3</span><span class="lbl">Glowstick</span></div>
           <div class="slot" data-i="2"><span class="n">3</span>${ICON.hand}<span class="lbl">Hands</span></div>
-          <div class="slot" data-i="3"><span class="n">4</span>${ICON.map}<span class="lbl">Trail map</span></div>
         </div>
         <div class="keys">${p.ctrl.hint}</div>
       </div><div class="done">SUMMIT!</div>`;
@@ -199,7 +199,6 @@ function buildHuds() {
     p.hud = { root: h, vig: h.querySelector('.vig'), fogvig: h.querySelector('.fogvig'), mic: h.querySelector('.mic'), micLvl: h.querySelector('.mic .lvl i'), needle: h.querySelector('.needle'), dist: h.querySelector('.dist'), prompt: h.querySelector('.prompt'), toast: h.querySelector('.toast'),
       stam: h.querySelector('.stamina'), stamI: h.querySelector('.stamina i'), ghost: h.querySelector('.stamina u'), cross: h.querySelector('.cross'), slots: [...h.querySelectorAll('.slot')], count: h.querySelector('.slot .c'), slotLbl: h.querySelector('.slot[data-i="1"] .lbl'), done: h.querySelector('.done') };
     p.ov = initOverlay(h, p.ctrl); flashKeys(p.ov, 20);
-    p.map = makeMap(h, p.color);
   });
 }
 function toast(p, msg) { if (!p.hud) return; p.hud.toast.textContent = msg; p.hud.toast.classList.add('on'); p.toastT = 1.6; }
@@ -228,9 +227,9 @@ function updateHud(p, dt) {
   let msg = '';
   if (state === 'lobby' && !riding()) {
     const s = p.sit ? null : nearInteract(p.x, p.z, p.yaw);
-    if (p.sit) msg = 'Resting by the fire · move to stand up';
+    if (p.sit) msg = 'Taking a breather · move to stand up';
     else if (s) msg = `${p.ctrl.bk} · ${s.text}`;
-    else if (inGondola(p.x, p.z)) msg = !departArmed ? 'Step out and explore camp · board again together to climb' : departT >= 0 ? `Departing in ${Math.ceil(departT)}…` : 'Waiting for the rest of the team to board';
+    else if (inGondola(p.x, p.z)) msg = !departArmed ? 'Step through Gate 1 into the hall · board again together to climb' : departT >= 0 ? `Departing in ${Math.ceil(departT)}…` : 'Waiting for the rest of the team to board';
   }
   if ((state === 'racing' || state === 'lobby') && p.st === 0 && !riding()) {
     const lv = leverNear(p.x, p.z), plate = plateUnder(p.x, p.z), tg = findTarget(p);
@@ -238,6 +237,11 @@ function updateHud(p, dt) {
     else if (lv >= 0) msg = `Hold ${p.ctrl.bk} · crank the stone door`;
     else if (tg) msg = `${p.ctrl.bk} · ${wallBeside(tg.o) ? 'Boost' : 'Shove'} ${tg.o.name}${wallBeside(tg.o) ? ' up' : ''}`;
     else if (plate) msg = plate.progress > 0 ? `Door rising ${Math.round(plate.progress * 100)}% · hold still!` : 'Pressure plate · needs a partner on the other plate';
+    else if (state === 'racing') {
+      const bz = brazierNear(p.x, p.z);
+      if (bz >= 0) { const c = brazierCount(bz); msg = `${p.ctrl.id === 'p2' ? '/' : p.ctrl.id === 'p1' ? 'F' : 'F / click'} · light the brazier (${c.lit}/${c.total})`; }
+      else msg = puzzleHint(p.x, p.z);
+    }
   }
   if ((state === 'racing' || state === 'lobby') && p.st === 0 && !p.sit) {
     const jumpKey = p.ctrl.id === 'p2' ? 'Enter' : 'Space';
@@ -307,10 +311,6 @@ function useTool(p) {
     sfx.crack(); vmUse(p.vm, 'throw'); toast(p, `${p.sticks} glowstick${p.sticks === 1 ? '' : 's'} left`);
     if (net && mode === 'online') { d.owner = myId; const k = net.newStickKey(); spawnStick(d, k, (s) => net?.restStick(k, s)); net.putStick(k, d); }
     else spawnStick(d);
-  } else if (p.slot === 3) {
-    if (inLobby() || !p.map) { toast(p, 'Your map fills in once you are on the mountain'); return; }
-    if (p.markCd > 0) return; p.markCd = .3;
-    dropPin(p.map, p.x, p.z); sfx.chalk(); vmUse(p.vm, 'chalk'); toast(p, `Pin ${p.map.pins.at(-1).n} dropped on your map`);
   } else {
     const tg = findTarget(p); if (tg) doBoost(p, tg); else toast(p, 'Nobody close enough to boost');
   }
@@ -337,8 +337,8 @@ function stepClimber(p, dt, time) {
   const lever = live && p.st === 0 && (state === 'racing' || state === 'lobby') ? leverNear(p.x, p.z) : -1;
   if (live) {
     c.slots.forEach((k, i) => { if (taps.has(k)) p.slot = i; });
-    if (tapped(c.cycle)) p.slot = (p.slot + 1) % 4;
-    if (tapped(c.use)) useTool(p);
+    if (tapped(c.cycle)) p.slot = (p.slot + 1) % 3;
+    if (tapped(c.use)) { const bz = state === 'racing' ? brazierNear(p.x, p.z) : -1; if (bz >= 0) lightLocal(bz, p); else useTool(p); }
     if (tapped(c.boost) && lever < 0) {
       const spot = state === 'lobby' ? nearInteract(p.x, p.z, p.yaw) : null;
       if (spot) interact(p, spot); else { const tg = findTarget(p); if (tg) doBoost(p, tg); }
@@ -374,7 +374,7 @@ function stepClimber(p, dt, time) {
     p.climbing = false;
     if (p.stamina <= 0) { toast(p, 'Lost your grip!'); sfx.oof(); p.vy = -1; p.stumble = .6; }
   } else if (!p.climbing && face && held(c.jump) && !p.ground && p.vy < 4 && !p.exhausted && p.stamina > .06) {
-    p.climbing = true; p.wantJump = false; fx.chalk(p.x + face.dx * R, p.y + 1.2, p.z + face.dz * R, -face.dx, 0, -face.dz, '#ffffff');
+    p.climbing = true; p.climbDir = { dx: face.dx, dz: face.dz }; p.wantJump = false; fx.chalk(p.x + face.dx * R, p.y + 1.2, p.z + face.dz * R, -face.dx, 0, -face.dz, '#ffffff');
   }
   if (p.climbing) {
     p.wantJump = false; p.vy = 0; p.ground = false;
@@ -454,15 +454,19 @@ function poseClimber(p, dt, time, sp) {
   updateHud(p, dt);
 }
 
-/** The rock step right in front of a climber, if there is one low enough to climb (walls are far too tall). */
+/** The rock step right in front of a climber, if there is one low enough to climb (walls are far too tall).
+ *  Once you are on a face it stays locked: the direction you grabbed it, and it keeps counting right up to the lip
+ *  (otherwise the last half metre reads as "low enough to step onto" and you'd drop off just before hauling over). */
 function climbFace(p) {
   if (!maze) return null;
-  const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw), ax = Math.abs(fx) > Math.abs(fz);
-  const dx = ax ? Math.sign(fx) : 0, dz = ax ? 0 : Math.sign(fz);
+  let dx, dz;
+  if (p.climbing && p.climbDir) ({ dx, dz } = p.climbDir);
+  else { const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw), ax = Math.abs(fx) > Math.abs(fz); dx = ax ? Math.sign(fx) : 0; dz = ax ? 0 : Math.sign(fz); }
   const i = Math.floor((p.x + dx * (R + .45)) / C), j = Math.floor((p.z + dz * (R + .45)) / C);
   if (i < 0 || j < 0 || i >= GRID || j >= GRID || (i === Math.floor(p.x / C) && j === Math.floor(p.z / C))) return null;
   const top = maze.g[i][j] ? (maze.top[i][j] <= 6.5 ? maze.top[i][j] : 0) : maze.low[i][j];
-  if (!top || top - p.y < STEP + .2 || top - p.y > 4.4) return null;
+  const need = top - p.y;
+  if (!top || need > 4.4 || need < (p.climbing ? -.05 : STEP + .2)) return null;
   return { top, dx, dz };
 }
 function reachSanctuary(p) {
@@ -542,8 +546,8 @@ function prepRound(s, opts = {}) {
   // opts: { pace, grace, maxDoors, first } (the gentle first climb uses these)
   roundOpts = { ...opts }; const pace = opts.pace ?? lobbySettings.pace; roundOpts.pace = pace; setPace(pace); if (opts.grace) setGrace(opts.grace);
   DEV.graceWas = GRACE; if (DEV.sleep && devAllowed()) setGrace(1e7);
-  seed = s; clearMarksAndSticks(); buildMaze(s, { maxDoors: opts.maxDoors }); buildDoors(); physRebuild(s); placeAtStart(); endShown = false;
-  buildTrail(maze, pace); showTrail(true); players.forEach((p) => p.map && resetMap(p.map));
+  seed = s; clearMarksAndSticks(); buildMaze(s, { maxDoors: opts.maxDoors, puzzles: !opts.first }); buildDoors(); buildPuzzles(); physRebuild(s); placeAtStart(); endShown = false;
+  buildTrail(maze, pace); showTrail(true);
   players.forEach((p) => { p.ragdoll = false; });
   Object.values(remotes).forEach((r) => { r.ragdoll = false; r.st = 0; r.mesh.visible = true; });
   players.forEach((p) => { if (p.hud) { p.hud.done.style.display = 'none'; p.hud.done.classList.remove('dead'); } });
@@ -595,7 +599,7 @@ function showEnd(o) {
   }
   $('banner').classList.toggle('lose', !o.win);
   $('bFlag').innerHTML = o.win ? '<svg class="i sm"><use href="#i-sun"/></svg>Sanctuary reached' : '<svg class="i sm"><use href="#i-moon"/></svg>Game over';
-  showBanner(title, sub + (mode === 'online' ? ' · back to base camp in 8 seconds' : ''), { again: mode !== 'online' });
+  showBanner(title, sub + (mode === 'online' ? ' · back to the hall in 8 seconds' : ''), { again: mode !== 'online' });
   if (o.win) domConfetti();
 }
 function domConfetti() {
@@ -614,6 +618,17 @@ function showBanner(title, sub, { again = false } = {}) {
 }
 const getBest = () => { try { return +localStorage.getItem('ridgeline_best') || Infinity; } catch { return Infinity; } };
 const refreshBest = () => { const b = getBest(); $('bestTime').textContent = isFinite(b) ? fmt(b) : 'No climb yet'; };
+
+/* ---------- puzzle gates (Ember Gate, Rune Gate) ---------- */
+// Lighting a brazier is shared online through the doors list (id 100 + brazier), so late joiners see it too.
+function lightLocal(k, p) {
+  if (!lightBrazier(k)) return;
+  if (p) { vmUse(p.vm, 'push'); p.wave = Math.max(p.wave, .6); }
+  brazierToast(k);
+  if (mode === 'online' && net) net.latchDoor(100 + k);
+}
+function brazierToast(k) { const c = brazierCount(k); if (c) players.forEach((q) => toast(q, c.lit >= c.total ? 'Every brazier is lit · the Ember Gate opens!' : `Brazier lit · ${c.lit} of ${c.total}`)); }
+function gateToast(kind) { players.forEach((q) => toast(q, kind === 'ember' ? 'The Ember Gate is open!' : kind === 'rune' ? 'The Rune Gate is open!' : 'A gate opened!')); sfx.fanfare?.(); }
 
 /* ---------- pings, teammate markers and one-time tips ---------- */
 const pings = []; let pingSeq = 0;
@@ -654,11 +669,13 @@ let frameDt = 0;
 function checkTips(p) {
   const O = p.ov; if (!O || state !== 'racing' || p.st !== 0) return;
   if (raceTime > GRACE && raceTime < GRACE + 3) showTip(O, 'fogwake', 'The Shadow is awake', 'It creeps in from the edges towards the centre. Keep moving and follow the compass.', 'fog');
-  if (raceTime > 7) showTip(O, 'map', 'Your trail map', `Press ${p.ctrl.id === 'p2' ? '. to cycle to' : '4 for'} the map. It fills in as you explore and draws the way you came. Use it to drop numbered pins.`, 'chalk');
+  { const pz = nearPuzzle(p.x, p.z);
+    if (pz === 'ember') showTip(O, 'ember', 'Ember Gate', `This gate opens once every brazier is lit. They glow blue in dead ends behind you: walk up and press ${p.ctrl.id === 'p2' ? '/' : p.ctrl.id === 'p1' ? 'F' : 'F or click'}, or throw a glowstick in.`, 'door');
+    if (pz === 'rune') showTip(O, 'rune', 'Rune Gate', 'The gate shows a row of runes. Find the matching rune tiles in the corridors nearby and step on them in that order. A wrong step resets them.', 'door'); }
   if (p.inFog) showTip(O, 'infog', "You're in the Shadow", "You can't catch your breath in here and your stamina drains. Get out before it runs dry.", 'fog');
   if (p.exhausted) showTip(O, 'tired', 'Out of breath', 'Stand still on flat ground to recover. Sprinting, jumping and ridges all cost stamina.', 'stam');
   if (!tipSeen('door')) for (let k = 0; k < doorCount(); k++) {
-    const c = doorAt(k); if (doorProgress(k) < 1 && Math.hypot(p.x - c.x, p.z - c.z) < 9) { showTip(O, 'door', 'Stone door ahead', `Two climbers stand on both pressure plates, or one holds ${p.ctrl.bk} at the crank lever. Don't let go halfway.`, 'door'); break; }
+    const c = doorAt(k); if (!maze.doors[k]?.kind && doorProgress(k) < 1 && Math.hypot(p.x - c.x, p.z - c.z) < 9) { showTip(O, 'door', 'Stone door ahead', `Two climbers stand on both pressure plates, or one holds ${p.ctrl.bk} at the crank lever. Don't let go halfway.`, 'door'); break; }
   }
   { const f = climbFace(p); if (f) showTip(O, 'climb', 'Rock step ahead', `Jump at it, then keep holding ${p.ctrl.id === 'p2' ? 'Enter' : 'Space'} to climb. Climbing drains stamina, so catch your breath first if you are low.`, 'stam'); }
   // "lost" helper: no real progress towards the sanctuary for 30 seconds
@@ -701,15 +718,15 @@ function lobbyTraining(dt) {
 const CARDS = [
   ['Reach the Sanctuary', 'Follow the compass to the glowing centre. Everyone still climbing has to get there.', '<circle cx="40" cy="40" r="30" fill="#fff6e5" stroke="#1b2738" stroke-width="4"/><path d="M40 14 50 40 40 34 30 40z" fill="#ff5a1f" stroke="#1b2738" stroke-width="3" stroke-linejoin="round"/><path d="M40 66 30 40 40 46 50 40z" fill="#c9d6e3" stroke="#1b2738" stroke-width="3" stroke-linejoin="round"/>'],
   ['Outrun the Shadow', 'After a head start, purple fog closes in from the edges. Inside it you can\'t recover stamina.', '<rect x="8" y="8" width="64" height="64" rx="10" fill="#2b1840"/><rect x="22" y="22" width="36" height="36" rx="6" fill="#ffd23f" stroke="#1b2738" stroke-width="3"/><path d="M8 20q10-8 20 0t20 0 24 0" fill="none" stroke="#b48cff" stroke-width="4"/><circle cx="40" cy="40" r="5" fill="#ff6f59" stroke="#1b2738" stroke-width="2.5"/>'],
-  ['Open stone gates', 'Two climbers stand on both plates, or one holds the crank. Let go early and it slams.', '<rect x="26" y="10" width="28" height="44" rx="3" fill="#b9ab95" stroke="#1b2738" stroke-width="3.5"/><path d="M33 20h14M33 30h14M33 40h14" stroke="#ff7a2a" stroke-width="3"/><ellipse cx="16" cy="64" rx="11" ry="5" fill="#ffd23f" stroke="#1b2738" stroke-width="3"/><ellipse cx="64" cy="64" rx="11" ry="5" fill="#ffd23f" stroke="#1b2738" stroke-width="3"/>'],
+  ['Open stone gates', 'Stone doors: two on the plates or one on the crank. Ember Gates: light every brazier. Rune Gates: step on the runes in the order shown.', '<rect x="26" y="10" width="28" height="44" rx="3" fill="#b9ab95" stroke="#1b2738" stroke-width="3.5"/><path d="M33 20h14M33 30h14M33 40h14" stroke="#ff7a2a" stroke-width="3"/><ellipse cx="16" cy="64" rx="11" ry="5" fill="#ffd23f" stroke="#1b2738" stroke-width="3"/><ellipse cx="64" cy="64" rx="11" ry="5" fill="#ffd23f" stroke="#1b2738" stroke-width="3"/>'],
   ['Climb rock steps', 'Jump at a step, then keep holding jump to climb. Climbing drains stamina.', '<path d="M10 70 18 36 34 30 48 40 62 28 72 70z" fill="#9c8f82" stroke="#1b2738" stroke-width="3.5" stroke-linejoin="round"/><circle cx="30" cy="44" r="3.5" fill="#fff6e5"/><circle cx="44" cy="52" r="3.5" fill="#ff8a3d"/><circle cx="56" cy="42" r="3.5" fill="#fff6e5"/><path d="M40 22l8-8 4 4" fill="none" stroke="#1b2738" stroke-width="3.5" stroke-linecap="round"/>'],
-  ['Mark your way', 'Chalk (1), glowsticks (2), the trail map (4) and gold-capped cairns on the true path.', '<rect x="10" y="12" width="60" height="56" rx="6" fill="#efe0bd" stroke="#1b2738" stroke-width="3.5"/><path d="M18 56q12-18 22-10t20-20" fill="none" stroke="#ff6f59" stroke-width="4" stroke-dasharray="5 5" stroke-linecap="round"/><path d="M52 18l8 0 0 8" fill="none" stroke="#1b2738" stroke-width="3.5"/><circle cx="20" cy="56" r="4" fill="#ffd23f" stroke="#1b2738" stroke-width="2.5"/>'],
+  ['Mark your way', 'Chalk arrows (1), glowsticks (2), and gold-capped cairns that sit on the true path.', '<path d="M12 60 L44 28" stroke="#fff" stroke-width="9" stroke-linecap="round"/><path d="M30 24h18v18" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 60 L44 28M30 24h18v18" fill="none" stroke="#1b2738" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="60" cy="58" r="13" fill="#8ee34d" opacity=".35"/><rect x="55" y="44" width="10" height="28" rx="5" transform="rotate(-25 60 58)" fill="#8ee34d" stroke="#1b2738" stroke-width="3"/>'],
 ];
 const cardsHtml = () => CARDS.map(([t, d, svg], i) => `<div class="pcard2" style="--i:${i}"><svg viewBox="0 0 80 80">${svg}</svg><b>${i + 1}. ${t}</b><p>${d}</p></div>`).join('');
 document.querySelectorAll('.cards5').forEach((el) => el.innerHTML = cardsHtml());
 function maybeBriefing() {
   let last = 0; try { last = +localStorage.getItem('ridgeline_last') || 0; localStorage.setItem('ridgeline_last', Date.now()); } catch {}
-  if (!last) { $('briefTitle').textContent = 'Welcome, climber'; $('briefSub').textContent = 'Five things to know before your first climb. The training stations around camp let you try each one.'; openPanel('brief'); }
+  if (!last) { $('briefTitle').textContent = 'Welcome, climber'; $('briefSub').textContent = 'Five things to know before your first climb. The training wing in the boarding hall lets you try each one.'; openPanel('brief'); }
   else if (Date.now() - last > 14 * 864e5) {
     resetPassport(); renderPassport();
     $('briefTitle').textContent = 'Welcome back'; $('briefSub').textContent = "It's been a while, so here's a quick refresher. Your passport has been reset if you want to warm up at the stations.";
@@ -724,7 +741,7 @@ function enterLobbyNow() {
   ['banner', 'timer', 'count', 'fogbar', 'pause'].forEach((id) => $(id).style.display = 'none');
   closePanel(true);
   clearMarksAndSticks(); clearTrail(); showDecor(false); showFog(false); setGroundVisible(false);
-  enterLobbyWorld(); buildDoors(); physRebuild(1);
+  enterLobbyWorld(); buildDoors(); buildPuzzles(); physRebuild(1); // buildPuzzles on the hall layout just clears the braziers and runes
   players.forEach((p, i) => {
     const s = spawnSpot(i + (mode === 'online' ? Object.keys(remotes).length : 0));
     Object.assign(p, { x: s.x, z: s.z, rideX: s.x, rideZ: s.z, y: 0, vy: 0, ex: 0, ez: 0, yaw: s.yaw, pitch: 0, roll: 0, stamina: 1, exhausted: false, ground: true, done: false,
@@ -739,14 +756,14 @@ function enterLobbyNow() {
   setTimeout(() => { if (state === 'lobby') maybeBriefing(); }, 4200);
   if (mode === 'online') sendNow();
   updateLock();
-  setTimeout(() => players.forEach((p) => { if (!p.ov) return; zoneCard(p.ov, 'Ridgeline Base Camp', 'Board the gondola together to climb', 'camp'); flashKeys(p.ov, 20); }), 3300);
+  setTimeout(() => players.forEach((p) => { if (!p.ov) return; zoneCard(p.ov, 'Ridgeline Boarding Hall', 'Board the gondola at Gate 1 together to climb', 'camp'); flashKeys(p.ov, 20); }), 3300);
   if (mode !== 'solo') setTimeout(() => players.forEach((p) => p.ov && showTip(p.ov, 'ping', 'Point things out', `Press ${p.ctrl.id === 'p2' ? "'" : p.ctrl.id === 'p1' ? 'G' : 'G or middle-click'} to ping a spot. Your team sees it through walls.`, 'ping')), 9000);
 }
 function leaveLobbyWorld() {
   exitLobbyWorld(); showDecor(true); showFog(true); $('huds').classList.remove('lobby'); $('depart').style.display = 'none';
   showTraining(false); $('passport').style.display = 'none';
   players.forEach((p) => { p.sit = null; p.slot = 0; });
-  $('pRestart').style.display = mode === 'online' ? 'none' : ''; $('pLeave').querySelector('b').textContent = 'Back to base camp';
+  $('pRestart').style.display = mode === 'online' ? 'none' : ''; $('pLeave').querySelector('b').textContent = 'Back to the boarding hall';
 }
 // everyone aboard, doors shut, cabin rides up the cable, wipe into the maze
 function depart(seed) {
@@ -765,6 +782,7 @@ function aboardCount() {
   return { n, total };
 }
 function updateDeparture(dt) {
+  setGateLight(departT >= 0 ? 1 : 0);
   if (state !== 'lobby' || riding() || uiOpen === 'photo') return;
   const { n, total } = aboardCount(), el = $('depart');
   if (n < total) departArmed = true; // you arrive inside the cabin, so wait until someone has stepped out once
@@ -796,7 +814,7 @@ function updateBoard() {
   const { n, total } = aboardCount(), g = gondola.phase;
   const st = g === 'arrive' ? 'ARRIVING' : g === 'depart' ? 'DEPARTING' : departT >= 0 ? `BOARDING · ${Math.ceil(departT)}` : 'ON PLATFORM';
   setBoard([
-    'RIDGELINE BASE CAMP',
+    'RIDGELINE CABLEWAY GATE 1',
     `GONDOLA  ${st}`,
     `SHADOW   ${PACE[lobbySettings.pace] || 'STANDARD'}`,
     `MAZE     ${lobbySettings.daily ? 'DAILY CLIMB' : 'RANDOM'}`,
@@ -807,7 +825,7 @@ function updateBoard() {
 setOnBell(() => { bellsRung++; players.forEach((p) => toast(p, `Bell rung! ${bellsRung} so far`)); updateBoard(); });
 
 function interact(p, s) {
-  if (s.seat) { p.sit = s.seat; p.x = s.seat.x; p.z = s.seat.z; p.yaw = s.seat.yaw; sfx.step(false); toast(p, 'Warming up by the fire'); return; }
+  if (s.seat) { p.sit = s.seat; p.x = s.seat.x; p.z = s.seat.z; p.yaw = s.seat.yaw; sfx.step(false); toast(p, 'Taking a seat'); return; }
   if (s.id === 'camera') return takePhoto();
   openPanel(s.id, players.indexOf(p));
 }
@@ -845,7 +863,7 @@ function applyLook(i, lk) {
   if (mode === 'online' && net) { net.setLook(lk.jacket, lk); sendNow(); }
 }
 function renderTrail() {
-  const rows = [['pace', [['Gentle', 0, 'Shadow creeps for 7 min'], ['Standard', 1, 'Shadow creeps for 5 min'], ['Brutal', 2, 'Shadow creeps for 3 min']]],
+  const rows = [['pace', [['Gentle', 0, 'Shadow creeps for about 13 min'], ['Standard', 1, 'Shadow creeps for about 9 min'], ['Brutal', 2, 'Shadow creeps for about 5 min']]],
     ['daily', [['Random maze', false, 'A new mountain every time'], ['Daily climb', true, 'Same maze for everyone today']]]];
   $('trailOpts').innerHTML = rows.map(([k, opts]) => `<div class="trow">${opts.map(([l, v, d]) => `<button class="topt${lobbySettings[k] === v ? ' on' : ''}" data-k="${k}" data-v="${v}"><b>${l}</b><small>${d}</small></button>`).join('')}</div>`).join('');
   $('trailOpts').querySelectorAll('button').forEach((b) => b.onclick = () => {
@@ -859,7 +877,7 @@ function inviteLink() { const u = new URL(location.href); u.search = ''; u.hash 
 function renderRadio() {
   const online = mode === 'online' && net;
   $('radioRoom').textContent = online ? net.room : 'Offline';
-  $('radioInfo').textContent = online ? `${aboardCount().total} climber${aboardCount().total === 1 ? '' : 's'} at camp · ${peerCount()} on voice${isMuted() ? ' · you are muted' : ''}` : 'Play online to invite friends. Solo and local co-op stay on this screen.';
+  $('radioInfo').textContent = online ? `${aboardCount().total} climber${aboardCount().total === 1 ? '' : 's'} in the hall · ${peerCount()} on voice${isMuted() ? ' · you are muted' : ''}` : 'Play online to invite friends. Solo and local co-op stay on this screen.';
   $('radioLink').value = online ? inviteLink() : '';
   $('radioCopy').disabled = !online; $('radioMute').style.display = online ? '' : 'none';
   $('radioMute').querySelector('b').textContent = isMuted() ? 'Unmute mic' : 'Mute mic';
@@ -904,7 +922,7 @@ function snap() {
   const c = card.getContext('2d'); c.fillStyle = '#fffdf6'; c.fillRect(0, 0, card.width, card.height); c.drawImage(shot, 30, 30);
   const names = players.map((p) => p.name).concat(Object.values(remotes).map((r) => r.name)).join(' · ');
   c.fillStyle = '#1b2738'; c.font = '900 34px "Lilita One", "Arial Rounded MT Bold", system-ui'; c.textAlign = 'center';
-  c.fillText('RIDGELINE BASE CAMP', card.width / 2, H + 90);
+  c.fillText('RIDGELINE CABLEWAY', card.width / 2, H + 90);
   c.font = '600 20px system-ui'; c.fillStyle = '#5a6475'; c.fillText(`${names}  ·  ${new Date().toLocaleDateString()}`.slice(0, 64), card.width / 2, H + 128);
   const url = card.toDataURL('image/png');
   $('polImg').src = url; $('polSave').href = url;
@@ -936,9 +954,9 @@ async function startLocal(m) {
   await runLoading(m === 'solo' ? 'Solo climb' : 'Local co‑op', [
     ['Lacing up boots', 260],
     ['Unpacking your gear locker', () => { setupPlayers(m); }],
-    ['Lighting the campfire', 260],
+    ['Opening the boarding hall', 260],
     ['Calling the gondola', 220],
-    ['Arriving at base camp', () => enterLobbyNow()],
+    ['Arriving at the boarding hall', () => enterLobbyNow()],
   ]);
 }
 
@@ -1002,7 +1020,11 @@ const handlers = {
     applyHit(players[0], ev);
   },
   onConnection: (ok) => { netWarn.style.display = ok ? 'none' : 'block'; if (ok) { feed('Reconnected to the room', 'good'); sendNow(); } },
-  onDoor: (id) => latchDoor(id),
+  onDoor: (id) => {
+    if (id >= 100) { if (lightBrazier(id - 100)) brazierToast(id - 100); return; } // braziers share the doors list, offset by 100
+    const d = maze?.doors?.[id]; if (d?.kind && !d.latched) gateToast(d.kind);
+    latchDoor(id);
+  },
   onSignal: (from, msg) => onSignal(from, msg),
 };
 function sendNow() { sendTimer = 0; lastSent.t = 0; }
@@ -1017,8 +1039,8 @@ async function startOnline() {
   try {
     await runLoading('Online expedition', [
       ['Lacing up boots', 200],
-      ['Radioing base camp', async () => { n = await Promise.race([joinRoom(room, name, handlers, saved), sleep(12000).then(() => { throw new Error('timeout'); })]); }],
-      ['Checking who is at camp', () => {
+      ['Radioing the boarding hall', async () => { n = await Promise.race([joinRoom(room, name, handlers, saved), sleep(12000).then(() => { throw new Error('timeout'); })]); }],
+      ['Checking who is in the hall', () => {
         net = n; net.outcomeShown = -1; net.startAt = n.meta.startAt; inMaze = n.meta.phase === 'maze';
         lobbySettings.pace = n.meta.pace ?? 1; lobbySettings.daily = !!n.meta.daily; setPace(lobbySettings.pace);
         setupPlayers('online', { color: n.color, name });
@@ -1028,7 +1050,7 @@ async function startOnline() {
         const ok = await Promise.race([startVoice({ myId, send: (to, msg) => n.signal(to, msg) }), sleep(15000).then(() => false)]);
         if (!ok) setTimeout(() => players[0] && toast(players[0], 'No mic: you can still hear others'), 4500);
       }],
-      ['Arriving at base camp', () => { if (!inMaze) enterLobbyNow(); }],
+      ['Arriving at the boarding hall', () => { if (!inMaze) enterLobbyNow(); }],
     ]);
   } catch (e) {
     console.error(e); if (n) n.leave(); stopVoice(); net = null; clearPlayers(); mode = null; state = 'menu';
@@ -1051,8 +1073,8 @@ function setPause(v) {
   paused = v; $('pause').style.display = v ? 'flex' : 'none';
   if (v) {
     showPView('main'); keys.clear(); closePanel(true); document.exitPointerLock?.();
-    $('pInfo').textContent = inLobby() ? `Base camp${mode === 'online' && net ? ' · room ' + net.room : ''}` : `No. ${pad(seed % 1000)} · ${fmt(raceTime)}${mode === 'online' ? ' · live' : ''}`;
-    $('pLeave').querySelector('b').textContent = inLobby() || mode === 'online' ? 'Leave to menu' : 'Back to base camp';
+    $('pInfo').textContent = inLobby() ? `Boarding hall${mode === 'online' && net ? ' · room ' + net.room : ''}` : `No. ${pad(seed % 1000)} · ${fmt(raceTime)}${mode === 'online' ? ' · live' : ''}`;
+    $('pLeave').querySelector('b').textContent = inLobby() || mode === 'online' ? 'Leave to menu' : 'Back to the boarding hall';
     $('pRestart').style.display = inLobby() || mode === 'online' ? 'none' : '';
   }
   else if (isPointerMode() && state !== 'finished') lockPointer();
@@ -1131,7 +1153,6 @@ function update(dt) {
       if (countdown <= 0) { state = 'racing'; sfx.beep(true); players.forEach((p) => p.ov && zoneCard(p.ov, roundOpts.first ? 'Your first climb' : 'Reach the Sanctuary', roundOpts.first ? `Gentle Shadow · one stone gate · ${GRACE}s head start` : (GRACE > 1e6 ? "Follow the compass · the Shadow is asleep (dev)" : `Follow the compass · the Shadow wakes in ${GRACE}s`), 'goal')); setTimeout(() => { if (state !== 'countdown') el.style.display = 'none'; }, 600); }
     }
     if (inLobby()) {
-      players.forEach((p) => p.map && p.map.card.classList.remove('on'));
       players.forEach((p) => stepClimber(p, dt, time));
       updateRemotes(dt); updateFx(dt); updateDeparture(dt);
       lobbyTraining(dt);
@@ -1146,10 +1167,12 @@ function update(dt) {
     updateFogBar();
     players.forEach((p) => { specPre(p); stepClimber(p, dt, time); specPost(p, dt); });
     players.forEach(checkTips);
-    if (DEV.reveal && devAllowed()) players.forEach((p) => p.map?.seen.fill(1));
-    players.forEach((p) => updateMap(p.map, maze, p, players.filter((q) => q !== p).concat(Object.values(remotes)), lobbySettings.pace, p.slot === 3 && !paused, dt));
+    updatePuzzles(dt, players.filter((p) => p.st === 0).map((p) => ({ x: p.x, y: p.y, z: p.z })).concat(Object.values(remotes).filter((r) => (r.st || 0) === 0).map((r) => ({ x: r.x, y: r.y, z: r.z }))), {
+      onSolve: (id, kind) => { if (maze.doors[id]?.latched) return; gateToast(kind); latchDoor(id); if (mode === 'online' && net) net.latchDoor(id); const c = doorAt(id); fx.ring(c.x, 2.2, c.z, kind === 'ember' ? 0xff8a3d : 0x3dffd2); fx.sparkle(c.x, 1, c.z, 0xffd23f, 30); },
+      onRune: (ok, s) => players.forEach((p) => { if (Math.hypot(p.x - doorAt(s.d.id).x, p.z - doorAt(s.d.id).z) < C * 3) toast(p, ok ? `Rune ${s.step} of ${s.d.order.length}!` : 'Wrong rune · the sequence reset'); }),
+    });
     updateRemotes(dt);
-    updateSticks(dt, (s) => { sfx.tink(); fx.sparkle(s.x, s.y, s.z, s.c, 3); });
+    updateSticks(dt, (s) => { sfx.tink(); fx.sparkle(s.x, s.y, s.z, s.c, 3); const bz = state === 'racing' ? igniteAt(s.x, s.y, s.z) : -1; if (bz >= 0) lightLocal(bz, null); });
     updateFx(dt);
     const people = players.map((p) => ({ x: p.x, y: p.y, z: p.z, crank: p.crank })).concat(Object.values(remotes).map((r) => ({ x: r.x, y: r.y, z: r.z, crank: r.crank ?? -1 })));
     updateDoors(dt, people, {
@@ -1180,7 +1203,7 @@ function updateFogBar() {
   $('fogTxt').textContent = state !== 'racing' ? 'The Shadow sleeps…' : GRACE > 1e6 ? 'The Shadow sleeps (dev menu)' : left > 0 ? `Shadow wakes in ${Math.ceil(left)}s` : `Shadow closing · ${pct}% light left`;
   $('fogFill').style.width = (left > 0 ? 100 : pct) + '%';
   $('fogbar').classList.toggle('danger', left <= 0 && pct < 30);
-  $('doorTxt').textContent = doorCount() ? `Doors ${doorsOpen()}/${doorCount()}` : '';
+  $('doorTxt').textContent = doorCount() ? `Gates ${doorsOpen()}/${doorCount()}` : '';
 }
 function render() {
   const w = innerWidth, h = innerHeight;
@@ -1245,7 +1268,7 @@ function renderRoster() {
   el.innerHTML = `<b>Room ${esc(net.room)} · ${list.length} ${list.length === 1 ? 'climber' : 'climbers'}${lobby || state !== 'racing' ? '' : ` · ${climbing} still climbing`}</b>` + list.map((p) => {
     const mine = p.id === myId, r = remotes[p.id], st = mine ? (me?.sit ? 3 : me?.st ?? 0) : (p.st || 0);
     const x = mine ? me?.x : r?.x, z = mine ? me?.z : r?.z;
-    const tag = lobby ? (st === 3 ? 'by the fire' : x !== undefined && inGondola(x, z) ? 'aboard' : 'at camp') : ['climbing', 'safe', 'down', 'resting'][st] ?? '';
+    const tag = lobby ? (st === 3 ? 'seated' : x !== undefined && inGondola(x, z) ? 'aboard' : 'in the hall') : ['climbing', 'safe', 'down', 'resting'][st] ?? '';
     const dist = !mine && r && me && !lobby ? `${Math.round(Math.hypot(r.x - me.x, r.z - me.z))} m` : '';
     const weak = !mine && r && now - (r.rx || now) > 7;
     const watching = me?.spec === p.id;
@@ -1314,7 +1337,7 @@ function flyClimber(p, dt, t, live, fwd, side) {
   p.y = Math.max(0, p.y + (Math.sin(p.pitch) * fwd + up) * spd * dt);
   p.vxLast = (p.x - ox) / Math.max(dt, 1e-4); p.vzLast = (p.z - oz) / Math.max(dt, 1e-4);
   Object.assign(p, { vy: 0, ground: p.y <= .01, climbing: false, sprinting: false, stamina: 1, exhausted: false, inFog: false, collapseT: 0, crank: -1, ex: 0, ez: 0 });
-  if (live) { c.slots.forEach((k, i) => { if (taps.has(k)) p.slot = i; }); if (tapped(c.cycle)) p.slot = (p.slot + 1) % 4; if (tapped(c.use)) useTool(p); if (tapped(c.ping)) doPing(p); }
+  if (live) { c.slots.forEach((k, i) => { if (taps.has(k)) p.slot = i; }); if (tapped(c.cycle)) p.slot = (p.slot + 1) % 3; if (tapped(c.use)) useTool(p); if (tapped(c.ping)) doPing(p); }
   if (p.st === 0 && state === 'racing' && p.y < 1 && Math.hypot(p.x - CX, p.z - CX) < SANCTUARY_R) reachSanctuary(p);
   poseClimber(p, dt, t, 0);
 }
@@ -1373,7 +1396,7 @@ function activeCheats() {
   if (!devAllowed()) return [];
   const a = [];
   if (DEV.god) a.push('God mode'); if (DEV.fly) a.push('Fly'); if (DEV.sleep) a.push('Shadow asleep');
-  if (DEV.speed !== 1) a.push(`Time ×${DEV.speed}`); if (DEV.reveal) a.push('Full map'); if (DEV.path) a.push('True path');
+  if (DEV.speed !== 1) a.push(`Time ×${DEV.speed}`); if (DEV.path) a.push('True path');
   return a;
 }
 // called once per frame from the loop
@@ -1401,7 +1424,7 @@ function debugSections() {
     const flags = [p.ground && 'ground', p.climbing && 'climbing', p.sprinting && 'sprint', p.exhausted && 'exhausted', p.crank >= 0 && 'crank', p.sit && 'sitting', DEV.fly && devAllowed() && 'fly'].filter(Boolean).join(' · ') || 'air';
     out.push(['Climber · ' + p.name, [
       ['Position', `${f1(p.x)}  ${f2(p.y)}  ${f1(p.z)}`], ['Tile', tile],
-      ['Zone', inLobby() ? 'Base Camp' : ZONE_NAMES[zoneAt(p.x, p.z)] ?? '—'],
+      ['Zone', inLobby() ? 'Boarding hall' : ZONE_NAMES[zoneAt(p.x, p.z)] ?? '—'],
       ['Facing', `yaw ${deg(((p.yaw % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI))} · pitch ${deg(p.pitch)}`],
       ['Speed', `${f1(Math.hypot(p.vxLast, p.vzLast))} m/s · vy ${f1(p.vy)}`], ['State', flags],
       ['Stamina', Math.round(p.stamina * 100) + '%', p.stamina < .25 ? 'bad' : ''],
@@ -1412,11 +1435,11 @@ function debugSections() {
   const lobby = inLobby();
   out.push(['Round', [
     ['State', `${state}${paused ? ' (paused)' : ''} · ${mode ?? 'menu'}`],
-    ['Seed', lobby ? 'Base Camp' : `${seed}${roundOpts.first ? ' · first climb' : ''}${roundOpts.dev ? ' · dev run' : ''}`, roundOpts.dev ? 'warn' : ''],
+    ['Seed', lobby ? 'Boarding hall' : `${seed}${roundOpts.first ? ' · first climb' : ''}${roundOpts.dev ? ' · dev run' : ''}`, roundOpts.dev ? 'warn' : ''],
     ['Pace', PACE_NAMES[roundOpts.pace ?? lobbySettings.pace] ?? '—'],
     ['Time', fmt(raceTime)],
     ['Shadow', GRACE > 1e6 ? 'asleep (dev)' : `wakes ${GRACE}s · creep ${Math.round(CREEP)}s · r ${f1(fogRadius(raceTime))} m`],
-    ['Doors', `${doorsOpen()}/${doorCount()} open`],
+    ['Gates', `${doorsOpen()}/${doorCount()} open`], ['Puzzles', (() => { const s = puzzleSummary(); return lobby ? '—' : `braziers ${s.lit}/${s.braziers} · runes ${s.runes}`; })()],
     ['Trail', lobby ? '—' : `${trail.path.length} tiles · ${cairnTiles.length} cairns`],
     ['Grid', `${GRID}×${GRID} · tile ${C} m · ${Math.round(SIZE)} m wide`],
   ]]);
@@ -1463,7 +1486,6 @@ const DEV_GROUPS = [
   { title: 'View', items: [
     { kind: 'choice', label: 'Debug screen', options: [[0, 'Off'], [1, 'Compact'], [2, 'Full']], get: () => dbg.mode, set: (v) => setDebugMode(dbg, v) },
     { kind: 'toggle', label: 'Show the true path', hint: 'Pink line through walls, start to sanctuary', cheat: true, get: () => DEV.path, set: (v) => DEV.path = v },
-    { kind: 'toggle', label: 'Reveal the whole map', hint: 'Trail map item (slot 4)', cheat: true, get: () => DEV.reveal, set: (v) => DEV.reveal = v },
     { kind: 'toggle', label: 'Trail cairns', get: () => DEV.cairns, set: (v) => { DEV.cairns = v; showTrail(v); } },
     { kind: 'toggle', label: 'Wireframe', get: () => DEV.wire, set: (v) => { DEV.wire = v; devApplyLooks(); } },
     { kind: 'toggle', label: 'Hide HUD', hint: 'Same as F1', get: () => $('huds').classList.contains('nohud'), set: (v) => $('huds').classList.toggle('nohud', v) },
