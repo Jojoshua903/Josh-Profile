@@ -1,10 +1,10 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { FIREBASE_CONFIG, FIREBASE_VERSION } from './firebase-config.js?v=20261126r';
-import { HEROES } from './heroes.js?v=20261126r';
-import { damage, remoteKill, netShoot, spawnHero, setBar, tickCorpse } from './units.js?v=20261126r';
-import { replayCast } from './abilities.js?v=20261126r';
-import { netHill } from './hill.js?v=20261126r';
-import { poseHero } from './anim.js?v=20261126r';
+import { FIREBASE_CONFIG, FIREBASE_VERSION } from './firebase-config.js?v=20261126w';
+import { HEROES } from './heroes.js?v=20261126w';
+import { damage, remoteKill, netShoot, spawnHero, setBar, tickCorpse, spawnMinion, unitDown, tracer, chestOf, TEAM_COLOR } from './units.js?v=20261126w';
+import { replayCast } from './abilities.js?v=20261126w';
+import { netHill } from './hill.js?v=20261126w';
+import { poseHero } from './anim.js?v=20261126w';
 
 // Online play over Firebase Realtime Database.
 //
@@ -13,6 +13,8 @@ import { poseHero } from './anim.js?v=20261126r';
 //          rooms/{CODE}/match/{n}/heroes/{key}  15 Hz snapshot written by whoever owns that hero
 //          rooms/{CODE}/match/{n}/ev/{push}     batched events: shots, casts, hits, kills
 //          rooms/{CODE}/match/{n}/hill          hill state, written by the host
+//          rooms/{CODE}/match/{n}/lane          Lane Breaker: structure health and every minion, written by the host
+//          rooms/{CODE}/draft     draft pick order, whose turn it is and the picks so far
 //
 // Ownership: each player simulates their own hero; the host also simulates the bots.
 // Everyone replays everyone else's shots and casts so effects look and push the same, but
@@ -67,7 +69,7 @@ export const onLobby = cb => { lobbyCbs.add(cb); return () => lobbyCbs.delete(cb
 export const onMatchStart = cb => { startCbs.add(cb); return () => startCbs.delete(cb); };
 export function lobbyState() {
   if (!room) return null;
-  return { code: room.code, meta: room.meta, players: room.players, me: fb.uid, host: room.meta?.host === fb.uid };
+  return { code: room.code, meta: room.meta, players: room.players, draft: room.draft, me: fb.uid, host: room.meta?.host === fb.uid };
 }
 const emit = extra => lobbyCbs.forEach(cb => cb(lobbyState(), extra));
 const R = path => fb.f.ref(fb.db, `rooms/${room.code}${path ? '/' + path : ''}`);
@@ -95,7 +97,7 @@ export async function joinRoom(code, profile) {
   const v = s.val(), players = v.players || {};
   if (!players[fb.uid] && Object.keys(players).length >= 6) throw new Error('That room is full (6 players)');
   if (!players[fb.uid] && v.meta.mode === 'duel' && Object.keys(players).length >= 2) throw new Error('That room is set to Duel and already has two players');
-  if (v.meta.state === 'playing') throw new Error('A match is in progress there. Try again when it ends');
+  if (v.meta.state === 'playing' || v.meta.state === 'draft') throw new Error(v.meta.state === 'draft' ? 'They’re drafting right now. Try again when the match ends' : 'A match is in progress there. Try again when it ends');
   const team = teamCount(players, 'blue') <= teamCount(players, 'red') ? 'blue' : 'red';
   await f.set(f.ref(fb.db, `rooms/${code}/players/${fb.uid}`), { ...profile, team, t: Date.now() });
   await enter(code, false);
@@ -118,6 +120,8 @@ async function enter(code, isHost) {
     emit();
   }));
   room.unsubs.push(f.onValue(R('players'), s => { if (!room) return; room.players = s.val() || {}; emit(); }));
+  room.unsubs.push(f.onValue(R('draft'), s => { if (!room) return; room.draft = s.val(); emit(); hostDraft(); }));
+  if (isHost) { const t = setInterval(hostDraft, 400); room.unsubs.push(() => clearInterval(t)); }   // bot picks and timeouts
 }
 
 function closeLocal(reason) {
@@ -141,30 +145,94 @@ export function setProfile(patch) { if (room) fb.f.update(R('players/' + fb.uid)
 export function setMap(map) { if (room && lobbyState().host) fb.f.update(R('meta'), { map }).catch(() => {}); }
 export function setMode(mode) { if (room && lobbyState().host) fb.f.update(R('meta'), { mode }).catch(() => {}); }
 export function backToLobby() { if (room && lobbyState().host) fb.f.update(R('meta'), { state: 'lobby' }).catch(() => {}); }
+export function setDraft(on) { if (room && lobbyState().host) fb.f.update(R('meta'), { draft: !!on }).catch(() => {}); }
 
-// Host: lock in teams, fill empty slots with bots, and start everyone at once.
-// Hill Rush is 3v3; a Duel is the first two players, one per side (a bot if you're alone).
-export async function startMatch() {
-  if (!room || !lobbyState().host) return;
+// Who sits where: the first three of each team who joined, bots in the empty seats.
+// A Duel is the first two players, one per side (a bot if you're alone).
+function seats() {
   const duel = room.meta.mode === 'duel';
   const players = Object.entries(room.players).sort((a, b) => a[1].t - b[1].t);
   if (duel && players.length > 2) throw new Error('Duel is 1v1: only two players can be in the room');
-  // bots take heroes nobody in the room picked, each one different
-  const taken = new Set(players.map(([, p]) => p.hero));
-  const pool = HEROES.filter(h => !taken.has(h.id)).sort(() => Math.random() - 0.5);
-  const roster = [];
-  const human = (uid, p, team) => ({ key: uid, uid, name: p.name || 'Player', hero: p.hero, skin: p.skin || '', team, cos: p.cos || {} });
+  const human = (uid, p, team) => ({ key: uid, uid, name: p.name || 'Player', team, skin: p.skin || '', cos: p.cos || {}, want: p.hero });
+  const bot = (team, i) => ({ key: `bot-${team}-${i}`, uid: '', name: '', team, skin: '' });
+  const out = [];
   if (duel) {
-    players.forEach(([uid, p], i) => roster.push(human(uid, p, i ? 'red' : 'blue')));
-    if (roster.length < 2) roster.push({ key: 'bot-red-0', uid: '', name: '', hero: pool.pop().id, skin: '', team: 'red' });
+    players.forEach(([uid, p], i) => out.push(human(uid, p, i ? 'red' : 'blue')));
+    if (out.length < 2) out.push(bot('red', 0));
   } else for (const team of ['blue', 'red']) {
     const humans = players.filter(([, p]) => p.team === team).slice(0, 3);
-    for (const [uid, p] of humans) roster.push(human(uid, p, team));
-    for (let i = humans.length; i < 3; i++) roster.push({ key: `bot-${team}-${i}`, uid: '', name: '', hero: pool.pop().id, skin: '', team });
+    for (const [uid, p] of humans) out.push(human(uid, p, team));
+    for (let i = humans.length; i < 3; i++) out.push(bot(team, i));
   }
+  return out;
+}
+const seatOut = ({ want, ...s }, hero, skin) => ({ ...s, hero, skin: skin ?? s.skin });
+
+// Host: lock in teams and start everyone at once, or open the draft first if it's switched on.
+export async function startMatch() {
+  if (!room || !lobbyState().host) return;
+  const slots = seats();
+  if (room.meta.mode !== 'duel' && room.meta.draft) return beginDraft(slots);
+  // bots take heroes nobody in the room picked, each one different
+  const taken = new Set(slots.filter(s => s.uid).map(s => s.want));
+  const pool = HEROES.filter(h => !taken.has(h.id)).sort(() => Math.random() - 0.5);
+  await launch(slots.map(s => seatOut(s, s.uid ? s.want : pool.pop().id)));
+}
+async function launch(roster) {
   const match = (room.meta.match || 0) + 1;
   await fb.f.remove(R('match'));
   await fb.f.update(R('meta'), { state: 'playing', match, roster });
+}
+
+// ---------- draft (3v3 only) ----------
+// Teams take turns picking, snake order: blue 1, red 1 and 2, blue 2 and 3, red 3. Every hero can
+// only be picked once per match. Players write their own pick; the host checks it, picks for bots
+// (and anyone who runs out of time) and moves the turn on. When the last pick is in, the match starts.
+export const DRAFT_PICK_S = 20;
+const BOT_PICK_MS = 1600, GRACE_MS = 2500;
+async function beginDraft(slots) {
+  const B = slots.filter(s => s.team === 'blue'), Rd = slots.filter(s => s.team === 'red');
+  const order = [B[0], Rd[0], Rd[1], B[1], B[2], Rd[2]].map(s => s.key);
+  const now = Date.now();
+  await fb.f.set(R('draft'), { slots: slots.map(s => seatOut(s, '')), order, turn: 0, until: now + DRAFT_PICK_S * 1000, turnAt: now });
+  await fb.f.update(R('meta'), { state: 'draft' });
+}
+export const draftFree = D => HEROES.filter(h => !Object.values(D?.picks || {}).includes(h.id));
+// a guest picking on their turn
+export function draftPick(heroId) {
+  const D = room?.draft;
+  if (!D || D.order[D.turn] !== fb.uid || !draftFree(D).some(h => h.id === heroId)) return false;
+  fb.f.set(R(`draft/picks/${fb.uid}`), heroId).catch(() => {});
+  return true;
+}
+let draftBusy = false;
+async function hostDraft() {
+  if (!room || room.meta?.host !== fb.uid || room.meta?.state !== 'draft' || !room.draft || draftBusy) return;
+  const D = room.draft, picks = D.picks || {};
+  if (D.turn >= D.order.length) return;
+  const key = D.order[D.turn], slot = D.slots.find(s => s.key === key);
+  let pick = picks[key];
+  if (pick && (Object.entries(picks).some(([k, h]) => h === pick && k !== key) || !HEROES.some(h => h.id === pick))) {
+    draftBusy = true; await fb.f.remove(R(`draft/picks/${key}`)).catch(() => {}); draftBusy = false;   // taken already: pick again
+    return;
+  }
+  const now = Date.now(), human = slot?.uid && room.players[slot.uid];
+  if (!pick && (human ? now > D.until + GRACE_MS : now - (D.turnAt || 0) > BOT_PICK_MS)) {
+    const free = draftFree(D);
+    pick = free[Math.floor(Math.random() * free.length)].id;
+  }
+  if (!pick) return;
+  draftBusy = true;
+  const next = D.turn + 1;
+  try { await fb.f.update(R('draft'), { [`picks/${key}`]: pick, turn: next, until: now + DRAFT_PICK_S * 1000, turnAt: now }); } catch {}
+  draftBusy = false;
+  if (next >= D.order.length && room) {
+    const all = { ...picks, [key]: pick };
+    // a player who drafted the hero they have a skin on keeps it
+    const roster = D.slots.map(s => seatOut(s, all[s.key], s.uid && room.players[s.uid]?.hero === all[s.key] ? room.players[s.uid].skin || '' : ''));
+    await fb.f.remove(R('draft')).catch(() => {});
+    await launch(roster);
+  }
 }
 
 // ---------- in-match session ----------
@@ -179,11 +247,38 @@ function snap(h) {
     g: h.onGround ? 1 : 0, st, k: h.kills, d: h.deaths, dm: Math.round(h.dmgDealt) };
 }
 const hillSnap = H => ({ i: H.idx, b: r2(H.pts2.blue), r: r2(H.pts2.red), m: r2(H.moveT), cb: H.count.blue, cr: H.count.red, c: H.contested ? 1 : 0, o: H.owner || '' });
+// Lane Breaker, host → guests: every structure's health in build order, and each lane minion as
+// [id, team (0 blue, 1 red), lane, x, z, hp]. A minion missing from the list has been destroyed.
+const laneSnap = G => ({
+  s: G.structures.map(s => Math.max(0, Math.round(s.hp))),
+  m: G.minions.filter(m => m.alive && !m.deploy && m.id).map(m => [m.id, m.team === 'blue' ? 0 : 1, m.lane, r2(m.pos.x), r2(m.pos.z), Math.max(0, Math.round(m.hp))]),
+  w: r2(G.waveT),
+});
+function netLane(G, v) {
+  (v.s || []).forEach((hp, i) => {
+    const s = G.structures[i]; if (!s || !s.alive) return;
+    if (hp <= 0) unitDown(G, s);
+    else if (Math.abs(s.hp - hp) >= 1) { if (hp < s.hp) s.pulse = 1; s.hp = hp; setBar(s); }
+  });
+  const seen = new Set();
+  for (const a of Object.values(v.m || {})) {
+    const [id, tm, lane, x, z, hp] = a; seen.add(id);
+    let m = G.minions.find(o => o.puppet && o.id === id);
+    if (!m) { m = spawnMinion(G, tm ? 'red' : 'blue', lane, 0, id); m.puppet = true; m.pos.set(x, 0, z); }
+    m.netPos = { x, z };
+    if (m.hp !== hp) { m.hp = hp; setBar(m); }
+  }
+  for (const m of G.minions) if (m.puppet && m.alive && !seen.has(m.id)) unitDown(G, m);
+  if (v.w != null && Math.abs(G.waveT - v.w) > 1) G.waveT = v.w;              // keep the "minions in" countdown honest
+}
 
 export function openSession(G, match) {
   const { f } = fb, base = `match/${match}`;
   const S = { host: room?.meta?.host === fb.uid, uid: fb.uid, events: [], hits: new Map(), t: 0, unsubs: [], closed: false };
-  const byKey = k => k ? G.heroes.find(h => h.key === k) : null;
+  // heroes, plus (Lane Breaker) towers and cores 's0'… and minions 'm12'…
+  const byKey = k => !k ? null : k[0] === 's' && /^s\d+$/.test(k) ? G.structures[+k.slice(1)] || null
+    : k[0] === 'm' && /^m\d+$/.test(k) ? G.minions.find(m => m.key === k && !m.deploy) || null : G.heroes.find(h => h.key === k) || null;
+  const owned = t => t.kind === 'hero' ? t.local : S.host;            // whose machine applies damage to it
 
   S.queue = ev => { if (!S.closed) S.events.push(ev); };
   // damage on remote heroes is summed per attacker and sent with the next snapshot
@@ -196,6 +291,8 @@ export function openSession(G, match) {
   S.kill = (t, src) => S.queue({ k: 'k', t: t.key, s: src?.key || '', hd: t.killedByHead ? 1 : 0 });
   S.fire = (h, dir, charge) => S.queue({ k: 'f', h: h.key, d: vec(dir), c: r2(charge) });
   S.spray = (h, id, p, n) => S.queue({ k: 'sp', h: h.key, id, p: vec(p), n: vec(n), y: r2(h.yaw) });
+  S.emote = (h, id) => S.queue({ k: 'em', h: h.key, id });
+  S.towerShot = (s, t) => { if (S.host && t.key) S.queue({ k: 'tw', s: s.key, t: t.key }); };
   S.cast = (h, slot, ctx) => S.queue({ k: 'c', h: h.key, s: slot, a: vec(ctx.aim || new THREE.Vector3(0, 0, -1)), w: vec(ctx.wish || new THREE.Vector3()), tg: ctx.target?.key || '' });
 
   S.tick = dt => {
@@ -209,6 +306,7 @@ export function openSession(G, match) {
     const up = {};
     for (const h of G.heroes) if (h.local) up[`${base}/heroes/${h.key}`] = snap(h);
     if (S.host && G.hill) up[`${base}/hill`] = hillSnap(G.hill);
+    if (S.host && G.mode === 'lane' && (S.laneN = (S.laneN || 0) + 1) % 2) up[`${base}/lane`] = laneSnap(G);   // 7.5 Hz is plenty for minions
     const list = [...S.events, ...S.hits.values()];
     S.events = []; S.hits.clear();
     if (list.length) up[`${base}/ev/${f.push(R(base + '/ev')).key}`] = { f: fb.uid, l: list };
@@ -223,14 +321,17 @@ export function openSession(G, match) {
     for (const e of Object.values(b.l || {})) handle(e);
   }));
   S.unsubs.push(f.onValue(R(base + '/hill'), s => { if (!S.host && s.exists()) netHill(G, s.val()); }));
+  S.unsubs.push(f.onValue(R(base + '/lane'), s => { if (!S.host && s.exists() && !S.closed) netLane(G, s.val()); }));
 
   function handle(e) {
     const h = byKey(e.h);
     if (e.k === 'f') { if (h && !h.local && h.alive) netShoot(G, h, v3(e.d), e.c ?? 1); }
     else if (e.k === 'c') { if (h && !h.local && h.alive) replayCast(G, h, e.s, { aim: v3(e.a), wish: v3(e.w), target: byKey(e.tg) }); }
-    else if (e.k === 'h') { const t = byKey(e.t); if (t && t.local && t.alive) damage(G, t, e.a, byKey(e.s), !!e.hd, true); }
+    else if (e.k === 'h') { const t = byKey(e.t); if (t && owned(t) && t.alive) damage(G, t, e.a, byKey(e.s), !!e.hd, true); }
+    else if (e.k === 'tw') { const s = byKey(e.s), t = byKey(e.t); if (s && t && !S.host) { s.pulse = 1; tracer(G, s.pos.clone().setY(4.8), chestOf(t), TEAM_COLOR[s.team], 0.25, 3); } }
     else if (e.k === 'k') { const t = byKey(e.t); if (t && !t.local) remoteKill(G, t, byKey(e.s), !!e.hd); }
     else if (e.k === 'sp') { if (h && !h.local) G.ev.netSpray?.(h, e.id, v3(e.p), v3(e.n), e.y || 0); }
+    else if (e.k === 'em') { if (h && !h.local) G.ev.netEmote?.(h, e.id); }
     else if (e.k === 'end') G.ev.netEnd?.(e.w);
     else if (e.k === 'round' || e.k === 'rstart') G.ev.netRound?.(e);
   }

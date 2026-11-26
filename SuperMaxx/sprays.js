@@ -1,5 +1,5 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { rayBox } from './world.js?v=20261126r';
+import { rayBox } from './world.js?v=20261126w';
 
 // Sprays: sticker art you tag onto walls and floors with T during a match. Each player has one
 // spray on the map at a time; a new one replaces the old. Won only at the slot machine.

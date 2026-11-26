@@ -1,4 +1,5 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
+import { poseEmote, stopEmote } from './emotes.js?v=20261126w';
 
 // Shared animation layer on top of each model's own idle/walk: jump pose, recoil, cast,
 // flinch, stun wobble, status markers, spawn pop and death fall. Plus floating numbers.
@@ -51,6 +52,7 @@ export function poseHero(G, h, dt, camera, playerTeam) {
     m.arms[0].rotation.x = -1.8 * k;
     if (h.fxg) Object.values(h.fxg).forEach(o => { o.visible = false; });
     h.bar.visible = false;
+    if (h.emote) stopEmote(G, h);
     return;
   }
   h.bar.visible = true;
@@ -112,6 +114,7 @@ export function poseHero(G, h, dt, camera, playerTeam) {
   ind.frost.visible = h.slowT > 0 || h.zoneSlow < 1;
   ind.haste.visible = h.hasteT > 0; ind.haste.scale.setScalar(1 + Math.sin(G.time * 20) * 0.08);
   h.shield.visible = h.barrierT > 0;
+  poseEmote(G, h, dt);
 }
 
 // ---------- floating numbers ----------

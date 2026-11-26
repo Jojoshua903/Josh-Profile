@@ -1,26 +1,26 @@
-import { LOOK, applyEnvironment } from './stage.js?v=20261126r';
-import { masteryOf } from './mastery.js?v=20261126r';
+import { LOOK, applyEnvironment } from './stage.js?v=20261126w';
+import { masteryOf } from './mastery.js?v=20261126w';
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { HEROES, ARCHETYPES, archOf } from './heroes.js?v=20261126r';
-import './personality.js?v=20261126r';
-import { MAPS, DIFFICULTY } from './data.js?v=20261126r';
-import { THEMES } from './scenery.js?v=20261126r';
-import { cfg, save, resetSettings, QUALITY } from './settings.js?v=20261126r';
-import { splash, headshot, mapArt } from './portraits.js?v=20261126r';
-import { initOnline, enterOnline } from './online.js?v=20261126r';
-import { enterSlots } from './slotmachine.js?v=20261126r';
-import { initVault, enterVault, leaveVault, clipCount } from './vault.js?v=20261126r';
-import { tokens as slotTokens } from './slots.js?v=20261126r';
-import { CONTRACTS, contractOf, taskFrac, taskDone, statOf, tasksDone, openContracts, contractsLeft, contractUnlocked, contractDone } from './contracts.js?v=20261126r';
+import { HEROES, ARCHETYPES, archOf } from './heroes.js?v=20261126w';
+import './personality.js?v=20261126w';
+import { MAPS, DIFFICULTY } from './data.js?v=20261126w';
+import { THEMES } from './scenery.js?v=20261126w';
+import { cfg, save, resetSettings, QUALITY } from './settings.js?v=20261126w';
+import { splash, headshot, mapArt } from './portraits.js?v=20261126w';
+import { initOnline, enterOnline } from './online.js?v=20261126w';
+import { enterSlots } from './slotmachine.js?v=20261126w';
+import { initVault, enterVault, leaveVault, clipCount } from './vault.js?v=20261126w';
+import { tokens as slotTokens } from './slots.js?v=20261126w';
+import { CONTRACTS, contractOf, taskFrac, taskDone, statOf, tasksDone, openContracts, contractsLeft, contractUnlocked, contractDone } from './contracts.js?v=20261126w';
 import { SEASON, TRACK, MAX_TIER, passXp, tierProgress, heroOwned, heroTier, skinOwned, skinTier, skinsFor, dressed, equip, rewardInfo,
-  COS_TYPES, cosById, cosOwned, equippedCos, equipCos, cosArt, lockShort, lockLong, isSlotItem, isContractHero } from './pass.js?v=20261126r';
+  COS_TYPES, cosById, cosOwned, equippedCos, equipCos, cosArt, lockShort, lockLong, isSlotItem, isContractHero } from './pass.js?v=20261126w';
 
 // Front end: main menu → roster select → stage select → match. Settings overlay on top.
 
 const $ = id => document.getElementById(id);
 const hex = c => '#' + c.toString(16).padStart(6, '0');
 let api = null, screen = 'main', settingsOpen = false, mode = 'lane';
-const MODE_NAME = { lane: 'Lane Breaker', survivor: 'Survivor', hill: 'Hill Rush', cart: 'Payload', online: 'Online' };
+const MODE_NAME = { lane: 'Lane Breaker', survivor: 'Survivor', hill: 'Hill Rush', cart: 'Payload', potato: 'Hot Potato', online: 'Online' };
 function setMode(m) {
   mode = m;
   $('rosterMode').textContent = MODE_NAME[m];
@@ -345,6 +345,7 @@ function showHero(h, instant) {
   kitRO?.disconnect(); kitRO = new ResizeObserver(fitSoon); kitRO.observe($('info').querySelector('.ibody'));
   setTimeout(fitKit, 450); document.fonts?.ready.then(fitKit);
   $('lockName').textContent = own ? h.callsign : 'Locked';
+  $('hsPracticeName').textContent = own ? `Learn ${h.callsign}’s kit` : `Try ${h.callsign} before you unlock them`;
   $('lockIn').classList.toggle('locked', !own);
   $('lockIn').querySelector('small').textContent = !own ? (isContractHero(h.id) ? (contractUnlocked(h.id) ? 'Finish the contract' : 'Contract sealed') : isSlotItem(h.id) ? 'Win it at the slots' : `Reach tier ${heroTier(h.id)}`) : mode === 'survivor' ? 'Drop in as' : 'Lock in';
 }
@@ -491,6 +492,7 @@ let stageView = null, stageT = 0;
 const modeChip = m => {
   if (mode === 'hill') { const spots = new Set(m.hills.map(p => p.join())).size; return `${spots} hill spot${spots > 1 ? 's' : ''} ·${m.lanesLabel.split('·')[1]}`; }
   if (mode === 'cart') return `1 cart track ·${m.lanesLabel.split('·')[1]}`;
+  if (mode === 'potato') return `one bomb, 3v3 ·${m.lanesLabel.split('·')[1]}`;
   return m.lanesLabel;
 };
 function enterStage() {
@@ -559,7 +561,7 @@ const SCHEMA = [
   { id: 'keys', group: 'Key guide', icon: '⌨️', blurb: 'What every key does', items: [] },
 ];
 const KEYS = [['WASD', 'Move'], ['Mouse', 'Aim'], ['LMB', 'Fire'], ['Space', 'Jump'], ['Shift', 'Sprint'], ['Q', 'Ability 1'], ['E', 'Ability 2'], ['F', 'Ultimate'],
-  ['R', 'Reload'], ['T', 'Spray'], ['Tab', 'Scoreboard'], ['Esc', 'Pause'], ['F3', 'Performance']];
+  ['R', 'Reload'], ['T', 'Spray'], ['B', 'Emote wheel (hold)'], ['Tab', 'Scoreboard'], ['Esc', 'Pause'], ['F3', 'Performance']];
 let setTab = 'game', savedT = 0, resetArm = 0;
 const rangeFill = (it, v) => ((v - it.min) / (it.max - it.min) * 100).toFixed(1) + '%';
 
@@ -599,6 +601,7 @@ export function initMenu(opts) {
   $('modeSurv').onclick = () => { setMode('survivor'); go('roster'); };
   $('modeHill').onclick = () => { setMode('hill'); go('roster'); };
   $('modeCart').onclick = () => { setMode('cart'); go('roster'); };
+  $('modePotato').onclick = () => { setMode('potato'); go('roster'); };
   $('modeTut').onclick = () => { api?.blip?.(880); $('front').classList.add('hidden'); api.onStart('tutorial'); };
   $('modeTut').classList.toggle('fresh', !cfg.tutorialDone);
   $('modeOnline').onclick = () => go('online');
@@ -635,6 +638,7 @@ export function initMenu(opts) {
   $('passCard').onclick = () => { api?.blip?.(760); go('pass'); };
   $('track').addEventListener('click', e => { const c = e.target.closest('[data-equip]'); if (c) toggleCos(c.dataset.equip); });
   $('track').addEventListener('wheel', e => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.preventDefault(); $('track').scrollLeft += e.deltaY; } }, { passive: false });
+  $('hsPractice').onclick = () => { api?.blip?.(760); $('front').classList.add('hidden'); api.onPractice(viewId); };
   $('lockIn').onclick = () => {
     if (!heroOwned(viewId)) { api?.blip?.(150); $('lockIn').classList.remove('nope'); void $('lockIn').offsetWidth; $('lockIn').classList.add('nope'); return; }
     api?.blip?.(880);

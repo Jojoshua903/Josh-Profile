@@ -1,11 +1,12 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { TUNING } from './data.js?v=20261126r';
-import { hasLOS } from './world.js?v=20261126r';
-import { fire, releaseFire, chargeLevel, startReload, eyeOf, chestOf, dirFrom, coreVulnerable } from './units.js?v=20261126r';
-import { ABIL, castSlot, canAct, canMove, moveMult, isHidden } from './abilities.js?v=20261126r';
-import { survivorGoal, inStorm } from './survivor.js?v=20261126r';
-import { hillGoal } from './hill.js?v=20261126r';
-import { cartGoal } from './payload.js?v=20261126r';
+import { TUNING } from './data.js?v=20261126w';
+import { hasLOS } from './world.js?v=20261126w';
+import { fire, releaseFire, chargeLevel, startReload, eyeOf, chestOf, dirFrom, coreVulnerable } from './units.js?v=20261126w';
+import { ABIL, castSlot, canAct, canMove, moveMult, isHidden } from './abilities.js?v=20261126w';
+import { survivorGoal, inStorm } from './survivor.js?v=20261126w';
+import { hillGoal } from './hill.js?v=20261126w';
+import { cartGoal } from './payload.js?v=20261126w';
+import { potatoGoal } from './potato.js?v=20261126w';
 
 const v1 = new THREE.Vector3(), v2 = new THREE.Vector3();
 
@@ -95,7 +96,7 @@ export function updateBot(G, b, dt, D) {
   ai.scanT -= dt;
   if (ai.scanT <= 0 || (ai.tgt && !ai.tgt.alive)) {
     ai.scanT = 0.25;
-    const t = pickTarget(G, b);
+    const t = b.blindT > 0 ? null : pickTarget(G, b);              // dazzled by Cinder's Grand Finale: can't see anyone
     if (t !== ai.tgt) { ai.seenT = t && t.kind === 'hero' ? D.react : 0.1; }
     ai.tgt = t;
   }
@@ -116,6 +117,20 @@ export function updateBot(G, b, dt, D) {
       if (!urgent || d < pref * 1.5) goal.set(tgt.pos.x + (dx / d) * pref, 0, tgt.pos.z + (dz / d) * pref);
     }
     sprint = urgent || !tgt;
+  }
+  else if (G.mode === 'potato') {
+    // the bomb decides: chase someone down with it, run from an enemy who has it, otherwise brawl
+    const p = potatoGoal(G, b, goal);
+    if (p?.chase) { ai.tgt = p.chase; sprint = true; }
+    else if (p?.flee) sprint = true;
+    else {
+      const foe = tgt || G.heroes.filter(u => u.alive && u.team !== b.team).sort((x, y) => x.pos.distanceTo(b.pos) - y.pos.distanceTo(b.pos))[0];
+      if (foe) {
+        const dx = b.pos.x - foe.pos.x, dz = b.pos.z - foe.pos.z, d = Math.hypot(dx, dz) || 1;
+        goal.set(foe.pos.x + (dx / d) * def.prefRange, 0, foe.pos.z + (dz / d) * def.prefRange);
+      } else goal.set(0, 0, 0);
+      sprint = !tgt;
+    }
   }
   else if (ai.retreat) {
     const cz = coreZ(G, b.team), inFront = Math.abs(b.pos.z) < Math.abs(cz) - 1;

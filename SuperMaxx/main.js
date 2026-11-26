@@ -1,31 +1,33 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { HEROES, MAPS, DIFFICULTY, TUNING, SURVIVOR_MAP, SURVIVOR, HILL, DUEL, CART } from './data.js?v=20261126r';
-import { initSurvivor, updateSurvivor, survivorLeaders, stormInfo, inStorm } from './survivor.js?v=20261126r';
-import { initHill, updateHill, hillVisuals, onHill } from './hill.js?v=20261126r';
-import { initCart, updateCart, nearCart, cartLead } from './payload.js?v=20261126r';
-import { buildWorld, mirror } from './world.js?v=20261126r';
+import { HEROES, MAPS, DIFFICULTY, TUNING, SURVIVOR_MAP, SURVIVOR, HILL, DUEL, CART } from './data.js?v=20261126w';
+import { initSurvivor, updateSurvivor, survivorLeaders, stormInfo, inStorm } from './survivor.js?v=20261126w';
+import { initHill, updateHill, hillVisuals, onHill } from './hill.js?v=20261126w';
+import { initCart, updateCart, nearCart, cartLead } from './payload.js?v=20261126w';
+import { initPotato, updatePotato, potatoHit, holdsPotato, POTATO } from './potato.js?v=20261126w';
+import { buildWorld, mirror } from './world.js?v=20261126w';
 import { createHero, spawnHero, createStructure, spawnMinion, fire, releaseFire, chargeLevel, startReload, tickHero, tickCorpse, chestOf,
-  updateMinions, updateStructures, updateProjectiles, updateFx, dirFrom, eyeOf, TEAM_COLOR } from './units.js?v=20261126r';
-import { steer, initBot, updateBot } from './botbrain.js?v=20261126r';
-import { castSlot, updateAbilities } from './abilities.js?v=20261126r';
-import { floatText } from './anim.js?v=20261126r';
-import { cfg, applyGraphics } from './settings.js?v=20261126r';
-import { initMenu, showMenu, menuFrame, openSettings, settingsVisible } from './menu.js?v=20261126r';
-import { dressed, heroOwned, wear, myCosIds, resolveCos, matchXp, award, rewardInfo, tierProgress, SEASON, MAX_TIER, cosById, cosOwned, equippedCos } from './pass.js?v=20261126r';
-import { aimSpray, placeSpray, SPRAY_CD } from './sprays.js?v=20261126r';
-import { headshot } from './portraits.js?v=20261126r';
-import './personality.js?v=20261126r';
-import { openSession, tickPuppet, myUid, lobbyState, leaveRoom, onLobby } from './net.js?v=20261126r';
-import { initAudio, applyVolume, tone, noise, ABIL_SFX, audioTap } from './audio.js?v=20261126r';
-import { startClipRec, saveClip, sendClip } from './clips.js?v=20261126r';
-import { playMusic } from './music.js?v=20261126r';
-import { sparks, castFx, lightFlash } from './vfx.js?v=20261126r';
-import { applyEnvironment } from './stage.js?v=20261126r';
-import { perfFrame } from './perf.js?v=20261126r';
-import { gainMastery } from './mastery.js?v=20261126r';
-import { recordMatch, tasksDone } from './contracts.js?v=20261126r';
-import { startTutorial, stopTutorial, tickTutorial, tutorialCast, tutorialKill, onTutorialPass } from './tutorial.js?v=20261126r';
-import { initReplay, recFrame, recEvent, recKill, finalClip, startPlayback, tickPlayback, stopPlayback } from './replay.js?v=20261126r';
+  updateMinions, updateStructures, updateProjectiles, updateFx, dirFrom, eyeOf, TEAM_COLOR } from './units.js?v=20261126w';
+import { steer, initBot, updateBot } from './botbrain.js?v=20261126w';
+import { castSlot, updateAbilities } from './abilities.js?v=20261126w';
+import { floatText, poseHero } from './anim.js?v=20261126w';
+import { cfg, applyGraphics } from './settings.js?v=20261126w';
+import { initMenu, showMenu, menuFrame, openSettings, settingsVisible } from './menu.js?v=20261126w';
+import { dressed, heroOwned, wear, myCosIds, resolveCos, matchXp, award, rewardInfo, tierProgress, SEASON, MAX_TIER, cosById, cosOwned, equippedCos } from './pass.js?v=20261126w';
+import { aimSpray, placeSpray, SPRAY_CD } from './sprays.js?v=20261126w';
+import { EMOTES, EMOTE_CD, BOT_EMOTES, startEmote, stopEmote } from './emotes.js?v=20261126w';
+import { headshot } from './portraits.js?v=20261126w';
+import './personality.js?v=20261126w';
+import { openSession, tickPuppet, myUid, lobbyState, leaveRoom, onLobby } from './net.js?v=20261126w';
+import { initAudio, applyVolume, tone, noise, ABIL_SFX, audioTap } from './audio.js?v=20261126w';
+import { startClipRec, saveClip, sendClip } from './clips.js?v=20261126w';
+import { playMusic } from './music.js?v=20261126w';
+import { sparks, castFx, lightFlash } from './vfx.js?v=20261126w';
+import { applyEnvironment } from './stage.js?v=20261126w';
+import { perfFrame } from './perf.js?v=20261126w';
+import { gainMastery } from './mastery.js?v=20261126w';
+import { recordMatch, tasksDone } from './contracts.js?v=20261126w';
+import { startTutorial, stopTutorial, tickTutorial, tutorialCast, tutorialKill, onTutorialPass } from './tutorial.js?v=20261126w';
+import { initReplay, recFrame, recEvent, recKill, finalClip, startPlayback, tickPlayback, stopPlayback } from './replay.js?v=20261126w';
 let envRT = null;
 
 const $ = id => document.getElementById(id);
@@ -48,6 +50,7 @@ applyGraphics(renderer);
 initMenu({
   onStart: m => startGame(m),
   onStartOnline: m => startGame('hill', m),
+  onPractice: id => { practiceId = id; startGame('practice'); },
   blip: f => { initAudio(); tone(f, 0.06, 'triangle', 0.05, 1.3); },
   onSettings(key) {
     if (key === 'quality' || key === 'shadows') applyGraphics(renderer, G?.scene);
@@ -150,26 +153,34 @@ function makeViewGun(def) {
   return { gun: g, hand };
 }
 
-let mode = 'lane';
+let mode = 'lane', practiceId = null;              // practice: a solo run through one hero's kit against dummies
+// Lane Breaker bases: each side's towers and core, always built in the same order (online keys rely on it)
+function buildBases(G, map) {
+  for (const [team, s] of [['blue', 1], ['red', -1]]) {
+    for (const [x, z] of map.towers) createStructure(G, 'tower', team, x * s, z * s);
+    createStructure(G, 'core', team, 0, -s * (map.L - 11));
+  }
+}
 function startGame(m = mode, online = null) {
   dropClip();
-  if (online) m = online.mode === 'duel' ? 'duel' : 'hill';
+  if (online) m = online.mode === 'duel' || online.mode === 'lane' ? online.mode : 'hill';
   const uid = online && myUid(), mine = online && online.roster.find(r => r.uid === uid);
   if (online && !mine) { showMenu('online'); return; }            // no slot for us in this match
   // online starts arrive from the server, not a menu click, so close the lobby here
   if (online) { $('front').classList.add('hidden'); $('end').classList.add('hidden'); }
   mode = m;
   initAudio();
-  const surv = mode === 'survivor', hill = mode === 'hill', duel = mode === 'duel', tut = mode === 'tutorial', cart = mode === 'cart';   // the tutorial is a Lane Breaker match on the plaza
+  const surv = mode === 'survivor', hill = mode === 'hill', duel = mode === 'duel', practice = mode === 'practice', tut = mode === 'tutorial' || practice, cart = mode === 'cart', potato = mode === 'potato';   // the tutorial (and practice) is a Lane Breaker match on the plaza
   const map = surv ? SURVIVOR_MAP : MAPS.find(x => x.id === (tut ? 'plaza' : online ? online.map : cfg.map)) || MAPS[0];
   playMusic(map.id);
-  let def = dressed(HEROES.find(h => h.id === cfg.hero && heroOwned(h.id)) || HEROES[0]);
+  // practice runs can try any hero, owned or not
+  let def = dressed((practice && HEROES.find(h => h.id === practiceId)) || HEROES.find(h => h.id === cfg.hero && heroOwned(h.id)) || HEROES[0]);
   const scene = new THREE.Scene();
   if (G?.net) G.net.close();
   stopTutorial();
-  G = { scene, map, mode: tut ? 'lane' : mode, tutorial: tut, heroes: [], minions: [], structures: [], projectiles: [], fx: [], score: { blue: 0, red: 0 },
+  G = { scene, map, mode: tut ? 'lane' : mode, tutorial: tut, practice, heroes: [], minions: [], structures: [], projectiles: [], fx: [], score: { blue: 0, red: 0 },
     zones: [], walls: [], timers: [], camera,
-    time: 0, waveT: surv || hill || duel || tut || cart ? Infinity : TUNING.firstWave, playerTeam: online ? mine.team : 'blue', D: DIFFICULTY[cfg.diff], over: false, ev: events, net: null };
+    time: 0, waveT: surv || hill || duel || tut || cart || potato ? Infinity : TUNING.firstWave, playerTeam: online ? mine.team : 'blue', D: DIFFICULTY[cfg.diff], over: false, ev: events, net: null };
   const world = buildWorld(scene, map);
   G.colliders = world.colliders; G.worldTick = world.tick;
   envRT?.dispose(); envRT = applyEnvironment(renderer, scene);     // sky-lit reflections for every surface
@@ -188,6 +199,7 @@ function startGame(m = mode, online = null) {
     def = P.def;
     if (hill) initHill(G);
     if (duel) G.duel = { round: 1, pts: { blue: 0, red: 0 }, state: 'fight' };
+    if (G.mode === 'lane') buildBases(G, map);                      // every machine builds the same towers and cores; the host runs them
     G.net = openSession(G, online.match);
   } else { P = createHero(G, def, 'blue', 'You', true); P.cos = resolveCos(myCosIds()); }
   if (online) { /* roster and hill are set up above */ }
@@ -202,10 +214,7 @@ function startGame(m = mode, online = null) {
     }
     initSurvivor(G);
   } else {
-    if (!hill && !cart) for (const [team, s] of [['blue', 1], ['red', -1]]) {
-      for (const [x, z] of map.towers) createStructure(G, 'tower', team, x * s, z * s);
-      createStructure(G, 'core', team, 0, -s * (map.L - 11));
-    }
+    if (!hill && !cart && !potato) buildBases(G, map);
     if (tut) {
       // three training dummies stand in the middle of the plaza, out of both towers' reach
       [['vanguard', -4], ['avalanche', 0], ['croc', 4]].forEach(([id, x], i) => {
@@ -221,10 +230,11 @@ function startGame(m = mode, online = null) {
     }
     if (hill) initHill(G);
     if (cart) initCart(G);
+    if (potato) initPotato(G);
   }
   $('hud').classList.toggle('surv', surv);
-  $('hud').classList.toggle('hill', hill || cart); $('hud').classList.toggle('duel', duel);
-  $('lB').textContent = hill ? 'Blue hill' : cart ? 'Blue push' : duel ? 'Blue rounds' : 'Blue core'; $('lR').textContent = hill ? 'Red hill' : cart ? 'Red push' : duel ? 'Red rounds' : 'Red core';
+  $('hud').classList.toggle('hill', hill || cart || potato); $('hud').classList.toggle('duel', duel);
+  $('lB').textContent = hill ? 'Blue hill' : cart ? 'Blue push' : duel ? 'Blue rounds' : potato ? 'Blue blasts' : 'Blue core'; $('lR').textContent = hill ? 'Red hill' : cart ? 'Red push' : duel ? 'Red rounds' : potato ? 'Red blasts' : 'Red core';
   survEndT = 0; hitT = 0; tally.t = 0; flashing.clear(); $('recap').classList.add('hidden'); P._log = [];
   hidePotg();
   if (!surv && !tut) initReplay(G);                                 // team modes get a play of the game
@@ -256,8 +266,9 @@ function startGame(m = mode, online = null) {
   if (surv) banner('Survive!', '#9b5cff', 'You start somewhere on the island. Loot up, stay hidden, last one standing wins.');
   else if (duel) banner('Duel!', '#1d2340', `${map.name} · first to ${DUEL.toWin} rounds`);
   else if (cart) banner('Push the cart', '#3ccf9a', `${map.name} · get it to their flag`);
+  else if (potato) banner('Hot Potato', '#ff5a2a', `Hit an enemy to pass the bomb · first to ${POTATO.toWin} blasts`);
   else if (hill) banner('Take the hill', '#e0a100', `${map.name} · first to ${HILL.target}${online ? ' · online' : ''}`);
-  else if (tut) { banner('Training', '#1d2340', 'Follow the checklist on the left'); startTutorial(P); onTutorialPass(() => { tone(880, 0.1, 'triangle', 0.06, 1.3); tone(1320, 0.14, 'triangle', 0.05, 1, 0.08); }); }
+  else if (tut) { banner(practice ? `Practice · ${def.callsign}` : 'Training', '#1d2340', 'Follow the checklist on the left'); startTutorial(P, practice); onTutorialPass(() => { tone(880, 0.1, 'triangle', 0.06, 1.3); tone(1320, 0.14, 'triangle', 0.05, 1, 0.08); }); }
   else banner(`Break the ${map.lanes.length > 1 ? 'lanes' : 'lane'}`, '#1d2340', map.name);
   say(P, 'spawn');
   // a hello between friends on the same team, a moment after the match starts
@@ -272,14 +283,14 @@ function startGame(m = mode, online = null) {
 let survEndT = 0;
 // End the match after a short beat for the banner, unless the player has already left it.
 function endLater(win, ms) { const g = G; setTimeout(() => { if (G && G === g) endGame(win); }, ms); }
-const END_MODE = { lane: 'Lane Breaker', hill: 'Hill Rush', cart: 'Payload', survivor: 'Survivor', duel: 'Duel' };
+const END_MODE = { lane: 'Lane Breaker', hill: 'Hill Rush', cart: 'Payload', potato: 'Hot Potato', survivor: 'Survivor', duel: 'Duel' };
 function endGame(win) {
   if (!G || G.ended) return;
   G.ended = true; G.over = true; running = false; paused = false;
   document.exitPointerLock();
   $('pause').classList.add('hidden'); $('scoreboard').classList.add('hidden');
   if (G.tutorial) {
-    $('endTitle').innerHTML = 'Training complete<small>You know the basics</small>';
+    $('endTitle').innerHTML = G.practice ? `Practice complete<small>${P.def.callsign}’s kit, start to finish</small>` : 'Training complete<small>You know the basics</small>';
     $('endTitle').style.color = 'var(--blue)';
   } else if (G.mode === 'survivor') {
     const place = win ? 1 : P.place;
@@ -288,6 +299,10 @@ function endGame(win) {
   } else if (G.mode === 'duel') {
     const p = G.duel.pts;
     $('endTitle').innerHTML = `${win ? 'Duel won' : 'Duel lost'}<small>Rounds ${p.blue} – ${p.red}</small>`;
+    $('endTitle').style.color = win ? 'var(--blue)' : 'var(--red)';
+  } else if (G.mode === 'potato') {
+    const p = G.potato.pts, us = G.playerTeam, them = us === 'blue' ? 'red' : 'blue';
+    $('endTitle').innerHTML = `${win ? 'Victory' : 'Defeat'}<small>Blasts ${p[us]} – ${p[them]}</small>`;
     $('endTitle').style.color = win ? 'var(--blue)' : 'var(--red)';
   } else if (G.mode === 'cart') {
     const L = cartLead(G.cart), mine = G.playerTeam === 'blue' ? L.blue : L.red, theirs = G.playerTeam === 'blue' ? L.red : L.blue;
@@ -304,7 +319,7 @@ function endGame(win) {
   const end = $('end');
   end.classList.toggle('win', !!win); end.classList.toggle('lose', !win);
   end.style.setProperty('--rc', $('endTitle').style.color);
-  $('endMode').textContent = G.tutorial ? 'Training' : `${END_MODE[G.mode] || 'Match'} · ${G.map.name}${G.net ? ' · online' : ''} · ${fmtT(G.time || 0)}`;
+  $('endMode').textContent = G.tutorial ? (G.practice ? `Practice · ${P.def.callsign}` : 'Training') : `${END_MODE[G.mode] || 'Match'} · ${G.map.name}${G.net ? ' · online' : ''} · ${fmtT(G.time || 0)}`;
   $('endMe').innerHTML = meCard(win);
   $('endTable').innerHTML = scoreTable();
   showPassGain(win);
@@ -317,7 +332,7 @@ function endGame(win) {
 function meCard(win) {
   const s = [['Kills', P.kills], ['Deaths', P.deaths], ['Damage', Math.round(P.dmgDealt)]];
   if (P.healDone > 0) s.push(['Healing', Math.round(P.healDone)]);
-  if (G.mode === 'hill' || G.mode === 'cart') s.push([G.mode === 'hill' ? 'On hill' : 'On cart', fmtT(P.objT || 0)]);
+  if (G.mode === 'hill' || G.mode === 'cart' || G.mode === 'potato') s.push([G.mode === 'hill' ? 'On hill' : G.mode === 'cart' ? 'On cart' : 'Bomb held', fmtT(P.objT || 0)]);
   if (G.mode === 'lane' && P.objDmg > 0) s.push(['Siege', Math.round(P.objDmg)]);
   if (G.mode === 'survivor') s.splice(1, 1, ['Place', `#${P.alive ? 1 : P.place}`]);
   return `<img src="${headshot(P.def)}" alt="" style="--hc:${hex(P.def.color)}">
@@ -403,6 +418,7 @@ function mvpAwards() {
   const objective = {
     hill: { t: 'Hill hog', v: h => h.objT || 0, f: fmtT, s: 'on the hill' },
     cart: { t: 'Cart pusher', v: h => h.objT || 0, f: fmtT, s: 'on the cart' },
+    potato: { t: 'Hot hands', v: h => h.objT || 0, f: fmtT, s: 'holding the bomb' },
     lane: { t: 'Siege master', v: h => h.objDmg || 0, f: Math.round, s: 'damage to towers and cores' },
     survivor: { t: 'Last one standing', v: h => h.alive ? 100 : 100 - (h.place || 99), f: (v, h) => `#${h.alive ? 1 : h.place}`, s: 'final place' },
   }[G.mode];
@@ -453,7 +469,10 @@ function showPassGain(win) {
   if (G.awarded) return;
   G.awarded = true;
   if (G.tutorial) {
-    $('passGain').innerHTML = `<div class="pg-top"><span>Tutorial complete</span><b>You're ready</b></div>
+    $('passGain').innerHTML = G.practice
+      ? `<div class="pg-top"><span>Practice run</span><b>${P.def.callsign}</b></div>
+      <div class="pg-parts">Practice runs don’t earn XP, but you can try any hero, even ones you haven’t unlocked. Hit Play again to go through the kit once more.</div>`
+      : `<div class="pg-top"><span>Tutorial complete</span><b>You're ready</b></div>
       <div class="pg-parts">Try Lane Breaker, Survivor or Hill Rush from the main menu. Matches earn season pass and hero mastery XP.</div>`;
     return;
   }
@@ -620,6 +639,7 @@ function tickFlash(dt) {
 const events = {
   damage(t, amt, src, head) {
     if (src?.kind === 'hero' && (t.kind === 'tower' || t.kind === 'core')) src.objDmg = (src.objDmg || 0) + amt;
+    if (G.potato && src?.kind === 'hero') potatoHit(G, src, t);
     if (src === P && t !== P) {
       tally.v += amt; tally.t = 1.3;
       if (amt >= 2 || head) {                       // burns and bleeds tick too small to mark
@@ -651,6 +671,12 @@ const events = {
     tone(880, 0.08, 'triangle', 0.05, 1.4); tone(1320, 0.1, 'triangle', 0.04, 1.2, 0.06);
   },
   netSpray(h, id, p, n, yaw) { const c = cosById(id); if (c?.type === 'spray') placeSpray(G, h.key, c, p, n, yaw); },
+  netEmote(h, id) { if (id) startEmote(G, h, id); else stopEmote(G, h); },
+  emote(h, e) {                                         // sound and, for the hero line, a quip; only heard up close
+    if (h !== P && P?.pos && h.pos.distanceTo(P.pos) > VOICE_NEAR) return;
+    EMOTE_SFX[e.id]?.();
+    if (e.id === 'line') { const q = h.def.quips; sayLine(h, pick([...(q.spawn || []), ...(q.kill || []), ...(q.ability || [])])); }
+  },
   tunnel(u) {
     if (u !== P && u.pos.distanceTo(P.pos) > 25) return;
     const v = u === P ? 1 : 0.4;
@@ -693,9 +719,12 @@ const events = {
   turretShot(m) { const d = m.pos.distanceTo(P.pos); if (d < 30) tone(1200, 0.03, 'square', 0.03 * (1 - d / 30), 0.6); },
   kill(t, src) {
     recKill(G, t, src);
+    // bots celebrate now and then (online, only the machine running that bot decides)
+    if (t.kind === 'hero' && src?.kind === 'hero' && src !== t && !src.isPlayer && (!G.net || src.local) && !G.tutorial && Math.random() < 0.3)
+      G.timers.push({ t: 0.5, fn: () => { const id = pick(BOT_EMOTES); if (src.alive && !src.emote && startEmote(G, src, id)) G.net?.emote(src, id); } });
     if (t.kind === 'hero' && src === P && t !== P) { onPlayerKill(); if (G.tutorial) tutorialKill(); }
     if (t === P) { streak.life = 0; deathRecap(src); }
-    const env = G.mode === 'survivor' ? 'The storm' : 'Fountain';
+    const env = G.mode === 'survivor' ? 'The storm' : G.mode === 'potato' ? 'The bomb' : 'Fountain';
     const nm = u => u ? (u.kind === 'hero' ? (u.isPlayer ? 'You' : u.name) : u.kind === 'tower' ? 'Tower' : u.kind === 'core' ? 'Core' : 'Minion') : env;
     if (t.kind === 'hero' || t.kind === 'tower' || t.kind === 'core') {
       // killer ──▶ victim, coloured by side; your own kills and deaths stand out
@@ -716,8 +745,8 @@ const events = {
     else if (t === P && src?.kind === 'hero' && src.def.rivals?.[P.def.id]) sayLine(src, src.def.rivals[P.def.id]);   // rivals gloat
     else if (t === P) say(P, 'death');
     else if (t.kind === 'hero' && src && src.kind === 'hero') say(src, 'kill', t);
-    if (t.kind === 'tower') { banner(t.team === 'red' ? 'Enemy tower down. Core exposed' : 'Our tower fell', t.team === 'red' ? 'var(--blue)' : 'var(--red)'); tone(90, 0.6, 'sawtooth', 0.1, 0.4); }
-    if (t.kind === 'core') endGame(t.team === 'red');
+    if (t.kind === 'tower') { const theirs = t.team !== G.playerTeam; banner(theirs ? 'Enemy tower down. Core exposed' : 'Our tower fell', theirs ? 'var(--blue)' : 'var(--red)'); tone(90, 0.6, 'sawtooth', 0.1, 0.4); }
+    if (t.kind === 'core') endGame(t.team !== G.playerTeam);
     if (G.duel && t.kind === 'hero' && (!G.net || G.net.host)) duelKnockout(t, src);
     if (G.mode === 'survivor' && t.kind === 'hero') {
       const left = G.aliveCount;
@@ -728,6 +757,23 @@ const events = {
   },
   immune(t, src) {
     if (src === P && G.time > immuneTipT) { immuneTipT = G.time + 3; banner('Core is shielded. Take down a tower first', '#1d2340'); }
+  },
+  potato(type, T, h, from, scorer) {
+    const nm = u => u.isPlayer ? 'You' : u.name;
+    if (type === 'start') {
+      banner(h === P ? 'You have the bomb!' : `${nm(h)} has the bomb`, h.team === G.playerTeam ? 'var(--blue)' : 'var(--red)', h === P ? 'Hit an enemy to pass it on' : `Round ${T.round} · ${Math.round(T.maxFuse)}s fuse`);
+      tone(h === P ? 220 : 440, 0.3, 'sawtooth', 0.06, h === P ? 0.7 : 1.3);
+    } else if (type === 'pass') {
+      if (h === P) { banner('Tag, you’re it!', 'var(--red)', `${nm(from)} gave you the bomb. Hit an enemy!`); tone(180, 0.25, 'square', 0.07, 0.6); }
+      else if (from === P) { banner('Passed it!', 'var(--blue)', `${nm(h)} has the bomb now`); tone(880, 0.12, 'triangle', 0.07, 1.4); }
+      else tone(h.team === G.playerTeam ? 260 : 620, 0.08, 'triangle', 0.04, 1);
+    } else if (type === 'hop' && h === P) { banner('The bomb jumped to you!', 'var(--red)', 'Your holder went down. Hit an enemy!'); tone(200, 0.2, 'square', 0.06, 0.7); }
+    else if (type === 'boom' || type === 'win') {
+      const ours = scorer === G.playerTeam;
+      tone(70, 0.7, 'sawtooth', 0.12, 0.4); tone(110, 0.6, 'square', 0.06, 0.5, 0.05);
+      if (type === 'win') { G.over = true; banner(ours ? 'Last blast!' : 'They got the last blast', ours ? 'var(--blue)' : 'var(--red)', `${T.pts.blue} – ${T.pts.red}`); endLater(ours, 1500); }
+      else banner(ours ? `BOOM! ${nm(h)} blew up` : `BOOM! We lost ${nm(h)}`, ours ? 'var(--blue)' : 'var(--red)', `${T.pts.blue} – ${T.pts.red} · next bomb in ${POTATO.between}s`);
+    }
   },
   cart(type, C, team) {
     const ours = team === G.playerTeam, col = ours ? 'var(--blue)' : 'var(--red)';
@@ -768,7 +814,11 @@ const events = {
     if (G.over) return;
     G.over = true;
     const ours = team === G.playerTeam, H = G.hill;
-    banner(ours ? 'Hill secured' : 'They held the hill', ours ? 'var(--blue)' : 'var(--red)', `${Math.floor(H.pts2.blue)} – ${Math.floor(H.pts2.red)}`);
+    if (H) banner(ours ? 'Hill secured' : 'They held the hill', ours ? 'var(--blue)' : 'var(--red)', `${Math.floor(H.pts2.blue)} – ${Math.floor(H.pts2.red)}`);
+    else {                                                            // Lane Breaker went to time
+      const core = t => G.structures.find(s => s.kind === 'core' && s.team === t), pct = t => Math.round(core(t).hp / core(t).maxHp * 100);
+      banner('Time!', ours ? 'var(--blue)' : 'var(--red)', `Cores: ${pct('blue')}% – ${pct('red')}%`);
+    }
     endLater(ours, 1400);
   },
   netLeft(h) {
@@ -846,17 +896,19 @@ addEventListener('keydown', e => {
   if (!running || paused) return;
   if (e.code === 'KeyR') startReload(P);
   if (e.code === 'KeyT') trySpray();
+  if (e.code === 'KeyB' && !e.repeat) openWheel();
   const slot = { KeyQ: 'q', KeyE: 'ability', KeyF: 'ult' }[e.code];
+  if (slot) cancelEmote();
   if (slot && !castSlot(G, P, slot, { wish: wishDir(), aim: dirFrom(P.yaw, P.pitch) })) tone(160, 0.08, 'square', 0.04, 1);
 });
-addEventListener('keyup', e => { keys.delete(e.code); if (e.code === 'Tab') $('scoreboard').classList.add('hidden'); });
+addEventListener('keyup', e => { keys.delete(e.code); if (e.code === 'Tab') $('scoreboard').classList.add('hidden'); if (e.code === 'KeyB') closeWheel(running && !paused); });
 addEventListener('mousedown', e => { if (e.button === 0) mouseDown = true; });
 addEventListener('mouseup', e => { if (e.button === 0) mouseDown = false; });
 canvas.addEventListener('click', () => { if (running && !document.pointerLockElement) canvas.requestPointerLock(); });
 document.addEventListener('pointerlockchange', () => {
   const locked = document.pointerLockElement === canvas;
   if (running && !locked) {
-    paused = true; mouseDown = false; keys.clear();
+    paused = true; mouseDown = false; keys.clear(); closeWheel(false);
     $('pause').querySelector('p').textContent = G?.net ? 'The online match keeps going. Click resume to jump back in.' : 'Click resume to lock the mouse again.';
     $('pause').classList.remove('hidden');
   }
@@ -876,6 +928,7 @@ function lockMouse() {
 document.addEventListener('pointerlockerror', askForClick);
 document.addEventListener('mousemove', e => {
   if (!running || paused || !P) return;
+  if (wheel) { wheelMove(e.movementX, e.movementY); return; }              // the wheel borrows the mouse while it's open
   const k = 0.0022 * cfg.sens;
   P.yaw -= e.movementX * k;
   P.pitch = Math.max(-1.5, Math.min(1.5, P.pitch - e.movementY * k * (cfg.invertY ? -1 : 1)));
@@ -931,6 +984,55 @@ function trySpray() {
   G.net?.spray(P, c.id, hit.p, hit.n);
 }
 
+// ---------- emotes ----------
+// Hold B for the emote wheel, nudge the mouse toward one and let go. The camera pulls back so
+// you can see yourself; moving, firing or casting cancels it.
+let emoteAt = -99, wheel = null, emoteCam = 0;
+const emoteBusy = () => G.time >= emoteAt && G.time - emoteAt < EMOTE_CD;   // a new match restarts the clock
+const EMOTE_SFX = {
+  wave: () => { tone(660, 0.08, 'triangle', 0.04, 1.2); tone(880, 0.1, 'triangle', 0.04, 1.1, 0.1); },
+  cheer: () => { noise(0.5, 0.05, 1800, 0, { type: 'bandpass', to: 3000, q: 0.8 }); [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.12, 'square', 0.025, 1, i * 0.08)); },
+  dance: () => { [392, 494, 587, 494, 392, 587].forEach((f, i) => tone(f, 0.1, 'triangle', 0.035, 1, i * 0.18)); },
+  laugh: () => { for (let i = 0; i < 5; i++) tone(520 - i * 30, 0.07, 'sawtooth', 0.025, 0.85, i * 0.12); },
+  thumbs: () => { tone(740, 0.08, 'triangle', 0.04, 1); tone(1110, 0.14, 'triangle', 0.04, 1, 0.08); },
+  taunt: () => { tone(180, 0.18, 'sawtooth', 0.04, 0.7); tone(140, 0.22, 'sawtooth', 0.04, 0.7, 0.2); },
+  bow: () => { tone(880, 0.25, 'sine', 0.04, 0.6); },
+  line: () => { tone(980, 0.05, 'triangle', 0.03, 1.1); },
+};
+function openWheel() {
+  if (!P?.alive || wheel || G.tutorial) return;
+  wheel = { x: 0, y: 0, sel: -1 };
+  const el = $('emoteWheel');
+  el.innerHTML = EMOTES.map((e, i) => {
+    const a = i / EMOTES.length * Math.PI * 2 - Math.PI / 2;
+    return `<div class="ew-slot" style="left:${50 + Math.cos(a) * 36}%;top:${50 + Math.sin(a) * 36}%"><b>${e.icon}</b><small>${e.name}</small></div>`;
+  }).join('') + `<div class="ew-mid">${emoteBusy() ? 'Wait a moment…' : 'Move the mouse<br>Release B'}</div>`;
+  el.classList.remove('hidden');
+}
+function wheelMove(dx, dy) {
+  wheel.x = Math.max(-120, Math.min(120, wheel.x + dx)); wheel.y = Math.max(-120, Math.min(120, wheel.y + dy));
+  if (Math.hypot(wheel.x, wheel.y) < 30) wheel.sel = -1;
+  else { const a = Math.atan2(wheel.y, wheel.x) + Math.PI / 2; wheel.sel = ((Math.round(a / (Math.PI * 2) * EMOTES.length) % EMOTES.length) + EMOTES.length) % EMOTES.length; }
+  $('emoteWheel').querySelectorAll('.ew-slot').forEach((s, i) => s.classList.toggle('on', i === wheel.sel));
+}
+function closeWheel(play) {
+  if (!wheel) return;
+  const sel = wheel.sel; wheel = null;
+  $('emoteWheel').classList.add('hidden');
+  if (play && sel >= 0) tryEmote(EMOTES[sel].id);
+}
+function tryEmote(id) {
+  if (!P.alive || emoteBusy()) { tone(160, 0.08, 'square', 0.04, 1); return; }
+  if (!startEmote(G, P, id)) return;
+  emoteAt = G.time;
+  G.net?.emote(P, id);
+}
+function cancelEmote() {
+  if (!P.emote) return;
+  stopEmote(G, P);
+  G.net?.emote(P, null);
+}
+
 // ---------- per-frame ----------
 function updatePlayer(dt) {
   if (!P.alive) {
@@ -942,7 +1044,8 @@ function updatePlayer(dt) {
       camera.position.lerp(new THREE.Vector3(P.pos.x, P.pos.y + 14, P.pos.z - Math.sign(P.pos.z || 1) * 10), Math.min(1, dt * 2));
       camera.lookAt(P.pos);
     }
-    viewGun.visible = false; viewHand.visible = false;
+    viewGun.visible = false; viewHand.visible = false; emoteCam = 0; closeWheel(false);
+    if (P.emote) { stopEmote(G, P); P.mesh.visible = false; }
     if (G.mode === 'survivor') { if (survEndT > 0 && (survEndT -= dt) <= 0) endGame(false); return; }
     if (P.respawnT <= 0) { spawnHero(G, P); P._lowSaid = false; say(P, "spawn"); G.killCam = null; $('recap').classList.add('hidden'); }
     return;
@@ -950,6 +1053,7 @@ function updatePlayer(dt) {
   $('center').classList.add('hidden'); $('recap').classList.add('hidden');
   viewGun.visible = true; viewHand.visible = true;
   const w = wishDir();
+  if (P.emote && (w.lengthSq() > 0 || mouseDown || keys.has('Space'))) cancelEmote();
   const sprint = keys.has('ShiftLeft') && keys.has('KeyW') && !mouseDown && P.onGround;
   steer(P, w, sprint, keys.has('Space'), dt);
   const vyBefore = P.vel.y;
@@ -981,6 +1085,17 @@ function updatePlayer(dt) {
   const sh = shake * 0.12;
   const wob = P.stunT > 0 ? Math.sin(G.time * 9) * 0.06 : 0;
   camera.rotation.set(P.pitch + (Math.random() - 0.5) * sh, P.yaw + (Math.random() - 0.5) * sh, wob, 'YXZ');
+  // emoting: swing the camera out in front of you so you can watch, then back in
+  emoteCam += ((P.emote ? 1 : 0) - emoteCam) * Math.min(1, dt * 6);
+  if (emoteCam > 0.02) {
+    const fp = camera.quaternion.clone(), f = new THREE.Vector3(-Math.sin(P.yaw), 0, -Math.cos(P.yaw));
+    camera.position.lerp(new THREE.Vector3(P.pos.x + f.x * 3.8, P.pos.y + 2, P.pos.z + f.z * 3.8), emoteCam);
+    camera.lookAt(P.pos.x, P.pos.y + 1.2, P.pos.z);
+    camera.quaternion.copy(fp.slerp(camera.quaternion, emoteCam));
+    P.anim(dt, 0, G.time); poseHero(G, P, dt, camera, G.playerTeam);
+    P.bar.visible = false;
+    viewGun.visible = viewHand.visible = emoteCam < 0.3;
+  } else if (P.mesh.visible) P.mesh.visible = false;
 
   // view model: sway, recoil, sprint tilt, reload flourish, cast dip
   const cast = Math.min(1, P.castA);
@@ -1021,11 +1136,12 @@ function laneClock() {
     G.otOn = true; banner('OVERTIME', 'var(--red)', 'Cores are exposed and take double damage');
     tone(110, 0.8, 'sawtooth', 0.1, 2); tone(165, 0.8, 'sawtooth', 0.06, 2);
   }
-  if (t > TUNING.laneLimit) {
+  if (t > TUNING.laneLimit && (!G.net || G.net.host)) {             // online, the host calls time
     const core = team => G.structures.find(s => s.kind === 'core' && s.team === team);
     const b = core('blue').hp / core('blue').maxHp, r = core('red').hp / core('red').maxHp;
-    const win = b === r ? G.score.blue >= G.score.red : b > r;
+    const blue = b === r ? G.score.blue >= G.score.red : b > r, win = blue === (G.playerTeam === 'blue');
     G.over = true;
+    G.net?.queue({ k: 'end', w: blue ? 'blue' : 'red' });
     banner('Time!', win ? 'var(--blue)' : 'var(--red)', `Cores: ${Math.round(b * 100)}% – ${Math.round(r * 100)}%`);
     endLater(win, 1600);
   }
@@ -1064,12 +1180,14 @@ function updateHud(dt) {
   if (P.stunT > 0) st.push('Stunned'); if (P.rootT > 0) st.push('Rooted');
   if (P.slowT > 0 || P.zoneSlow < 1) st.push('Slowed'); if (P.markT > 0) st.push('Marked');
   if (P.hasteT > 0) st.push('Haste'); if (P.invisT > 0) st.push('Invisible'); if (P.barrierT > 0 || P.zoneMult < 1) st.push('Shielded');
-  if (P.lurkT > 0) st.push('Lurking'); if (P.rallyT > 0) st.push('Rallied +30% dmg'); if (P.jamT > 0) st.push('Jammed'); if (P.rushT > 0) st.push('Rush Hour');
+  if (P.lurkT > 0) st.push('Lurking'); if (P.rallyT > 0) st.push('Rallied +30% dmg'); if (P.jamT > 0) st.push('Jammed');
+  if (P.vigilT > 0) st.push('Vigil'); if (P.frozenT > 0) st.push('Frozen'); if (P.blindT > 0) st.push('Dazzled');
+  $('dazzle').style.opacity = P.blindT > 0 ? Math.min(0.92, P.blindT / 3 * 0.92 + 0.25) : 0;   // Cinder's Grand Finale whites out your screen
   $('status').textContent = st.join(' · ');
   $('hud').classList.toggle('invis', P.invisT > 0);
   const t = Math.floor(G.mode === 'lane' ? Math.max(0, TUNING.laneLimit - G.time) : G.mode === 'cart' ? Math.max(0, CART.limit - G.time) : G.time);
   $('clock').firstChild.textContent = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
-  if (G.mode === 'survivor') updateSurvHud(); else if (G.mode === 'hill') updateHillHud(); else if (G.mode === 'cart') updateCartHud(); else if (G.mode === 'duel') updateDuelHud(dt); else {
+  if (G.mode === 'survivor') updateSurvHud(); else if (G.mode === 'hill') updateHillHud(); else if (G.mode === 'cart') updateCartHud(); else if (G.mode === 'potato') updatePotatoHud(); else if (G.mode === 'duel') updateDuelHud(dt); else {
     $('kB').textContent = G.score.blue; $('kR').textContent = G.score.red;
     const core = t => G.structures.find(s => s.kind === 'core' && s.team === t);
     $('coreB').style.width = (100 * core('blue').hp / core('blue').maxHp) + '%';
@@ -1126,6 +1244,11 @@ function drawMinimap() {
     mctx.strokeStyle = '#1d2340'; mctx.lineWidth = 2;
     mctx.beginPath(); mctx.arc(X(H.pos.x), Y(H.pos.z), Math.max(4, H.r * s), 0, 7); mctx.fill(); mctx.stroke();
   }
+  if (G.mode === 'potato' && G.potato.holder?.alive && G.potato.wait <= 0) {   // the bomb: a pulsing orange dot on whoever holds it
+    const h = G.potato.holder, r = 6 + Math.sin(G.time * 10) * 2;
+    mctx.fillStyle = '#ff5a2a'; mctx.strokeStyle = '#1d2340'; mctx.lineWidth = 2;
+    mctx.beginPath(); mctx.arc(X(h.pos.x), Y(h.pos.z), r, 0, 7); mctx.fill(); mctx.stroke();
+  }
   if (G.mode === 'cart') {                          // the cart as a square, tinted by who's pushing
     const C = G.cart, c = C.contested ? '#ffc93c' : C.dir > 0 ? hex(TEAM_COLOR.blue) : C.dir < 0 ? hex(TEAM_COLOR.red) : '#fff3c4';
     mctx.fillStyle = c; mctx.strokeStyle = '#1d2340'; mctx.lineWidth = 2;
@@ -1165,7 +1288,7 @@ function loop() {
   if (live) {
     G.time += dt;
     G.waveT -= dt;
-    if (G.waveT <= 0) { G.waveT = TUNING.waveEvery; spawnWave(); }
+    if (G.waveT <= 0) { G.waveT = TUNING.waveEvery; if (!G.net || G.net.host) spawnWave(); }   // online, guests mirror the host's minions
     if (G.mode === 'lane' && !G.over && !G.tutorial) laneClock();
     if (G.tutorial && !G.over && tickTutorial(G, { dt, sprinting: sprintA > 0.6 }) === 'done') { G.over = true; banner('Training complete', 'var(--blue)', 'Nicely done'); endLater(true, 2200); }
     updateAbilities(G, dt);
@@ -1185,11 +1308,12 @@ function loop() {
     if (G.mode === 'survivor') updateSurvivor(G, dt);
     if (G.mode === 'hill') { if (G.net && !G.net.host) hillVisuals(G, dt); else updateHill(G, dt); }
     if (G.mode === 'cart') updateCart(G, dt);
+    if (G.mode === 'potato') updatePotato(G, dt);
     // stats for the MVP cards: time on the objective and the longest life
     if (!G.over) for (const h of G.heroes) {
       if (!h.alive) { h.lifeT = 0; continue; }
       h.lifeT = (h.lifeT || 0) + dt; if (h.lifeT > (h.bestLife || 0)) h.bestLife = h.lifeT;
-      if ((G.mode === 'hill' && onHill(G, h)) || (G.mode === 'cart' && nearCart(G, h))) h.objT = (h.objT || 0) + dt;
+      if ((G.mode === 'hill' && onHill(G, h)) || (G.mode === 'cart' && nearCart(G, h)) || holdsPotato(G, h)) h.objT = (h.objT || 0) + dt;
     }
     G.net?.tick(dt);
     tickFlash(dt);
@@ -1218,6 +1342,18 @@ function updateCartHud() {
 }
 
 // ---------- Hill Rush HUD ----------
+function updatePotatoHud() {
+  const T = G.potato, p = T.pts, h = T.holder;
+  $('kB').textContent = p.blue; $('kR').textContent = p.red;
+  $('coreB').style.width = (100 * p.blue / POTATO.toWin) + '%';
+  $('coreR').style.width = (100 * p.red / POTATO.toWin) + '%';
+  const fuse = Math.max(0, T.fuse);
+  $('wave').textContent = G.over ? 'game over' : T.wait > 0 ? `next bomb in ${Math.ceil(T.wait)}` : `fuse ${fuse.toFixed(1)}s`;
+  const tag = $('hillTag'), mine = h === P, ours = h && h.team === G.playerTeam;
+  tag.className = !h || T.wait > 0 ? '' : mine ? 'lost' + (fuse < 4 ? ' contest' : '') : ours ? 'on' : 'lost';
+  tag.textContent = T.wait > 0 || !h ? 'Bomb incoming' : mine ? `💣 You have it! ${fuse.toFixed(1)}s · hit an enemy`
+    : ours ? `Teammate ${h.name} has the bomb · give them space` : `${h.name} has the bomb · ${Math.round(h.pos.distanceTo(P.pos))}m away`;
+}
 function updateHillHud() {
   const H = G.hill, p = H.pts2;
   $('kB').textContent = Math.floor(p.blue); $('kR').textContent = Math.floor(p.red);

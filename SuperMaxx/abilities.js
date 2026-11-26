@@ -1,7 +1,7 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { makeBox, resolveXZ, hasLOS, groundAt, rayWorld } from './world.js?v=20261126r';
-import { buildHeroModel } from './models.js?v=20261126r';
-import { damage, trace, tracer, burst, ring, setBar, makeBar, eyeOf, dirFrom, chestOf, spawnProjectile, TEAM_COLOR } from './units.js?v=20261126r';
+import { makeBox, resolveXZ, hasLOS, groundAt, rayWorld } from './world.js?v=20261126w';
+import { buildHeroModel } from './models.js?v=20261126w';
+import { damage, trace, tracer, burst, ring, setBar, makeBar, eyeOf, dirFrom, chestOf, spawnProjectile, TEAM_COLOR } from './units.js?v=20261126w';
 
 // Abilities, status effects, zones, traps, walls and deployables.
 // Each ability: cast(G, h, a, ctx) -> bool, ai(G, bot, a, ctx) -> bool (should the bot cast now?).
@@ -15,7 +15,8 @@ const flat = d => new THREE.Vector3(d.x, 0, d.z).normalize();
 export function resetStatus(h) {
   Object.assign(h, { slowT: 0, slowM: 1, stunT: 0, rootT: 0, hasteT: 0, hasteSpeed: 1, hasteFire: 1, markT: 0, markAmp: 1, lurkT: 0, rushT: 0, rallyT: 0, rallyAmp: 1, jamT: 0, grabbed: null,
     invisT: 0, ambush: 1, barrierT: 0, barrierM: 1, noReloadT: 0, knockT: 0, dashT: 0, slamPending: false, airT: 0,
-    zoneSlow: 1, zoneMult: 1, glideT: 0, momentum: 0, overdriveT: 0, megaT: 0, burnT: 0, ejected: false, photoOn: false, tunnelCd: 0, twirlT: 0 });
+    zoneSlow: 1, zoneMult: 1, glideT: 0, momentum: 0, overdriveT: 0, megaT: 0, burnT: 0, ejected: false, photoOn: false, tunnelCd: 0, twirlT: 0, vigilT: 0, dashSteer: false, blindT: 0, frozenT: 0 });
+  if (h.iceMesh) { h.iceMesh.parent?.remove(h.iceMesh); h.iceMesh = null; }
   h.cd = { q: 0, ability: 0 };
   h.hist = []; h.histT = 0;
 }
@@ -42,7 +43,7 @@ export function breakInvis(h) { if (h.invisT > 0) { h.invisT = 0; } }
 
 export function tickStatus(G, h, dt) {
   tickPassive(G, h, dt);
-  for (const k of ['slowT', 'stunT', 'rootT', 'hasteT', 'markT', 'invisT', 'barrierT', 'noReloadT', 'knockT', 'rushT', 'rallyT', 'jamT', 'overdriveT', 'megaT', 'tunnelCd']) if (h[k] > 0) h[k] -= dt;
+  for (const k of ['slowT', 'stunT', 'rootT', 'hasteT', 'markT', 'invisT', 'barrierT', 'noReloadT', 'knockT', 'rushT', 'rallyT', 'jamT', 'overdriveT', 'megaT', 'tunnelCd', 'vigilT', 'blindT', 'frozenT']) if (h[k] > 0) h[k] -= dt;
   // Torque: moving fills momentum, standing around drains it; Overdrive keeps it full
   const mw = h.def.weapon;
   if (mw.mode === 'melee') {
@@ -71,6 +72,7 @@ export function tickStatus(G, h, dt) {
   // dashes: bobsled (bowls everyone over), death roll (grabs one), joust (launches one)
   if (h.dashT > 0) {
     h.dashT -= dt;
+    if (h.dashSteer) { if (h.dashT > 0) dirFrom(h.yaw, 0, h.dashDir); else h.dashSteer = false; }   // Jammer Lap follows your aim
     h.vel.x = h.dashDir.x * h.dashSpeed; h.vel.z = h.dashDir.z * h.dashSpeed;
     const g = h.grabbed;
     if (g) {                                               // drag the clamped enemy along in our jaws
@@ -148,7 +150,7 @@ export function wallClimb(G, h) {
 const ZONE_LOOK = {
   dome: { color: 0x5fe0c0, dome: true }, sanctum: { color: 0xffe08a }, overgrowth: { color: 0x5fb05a },
   frost: { color: 0xbfeaff }, trap: { color: 0x8a5a3c }, nova: { color: 0xff8a3c }, vortex: { color: 0xff4fa3 },
-  banner: { color: 0xffe08a }, goo: { color: 0x7ee85a }, stage: { color: 0xff8fc0 }, pylon: { color: 0xffe14a }, fort: { color: 0xff8a2a }, pen: { color: 0x8a5a3a }, heat: { color: 0xffb35a }, web: { color: 0xe8e8ff },
+  banner: { color: 0xffe08a }, goo: { color: 0x7ee85a }, stage: { color: 0xff8fc0 }, pylon: { color: 0xffe14a }, fort: { color: 0xff8a2a }, pen: { color: 0x8a5a3a }, heat: { color: 0xffb35a }, web: { color: 0xe8e8ff }, gravy: { color: 0x9a5a28 },
 };
 function zoneMesh(G, kind, pos, radius) {
   const look = ZONE_LOOK[kind];
@@ -272,6 +274,11 @@ export function updateAbilities(G, dt) {
     z.disc.material.opacity = 0.25 * k;
     if (z.kind === 'vortex') z.g.rotation.y += dt * 3.5;
     if (z.follow) { if (z.follow.alive) { z.pos.copy(z.follow.pos); z.g.position.copy(z.pos); } else z.life = 0; }    // Reheat rides along with the Microwave
+    if (z.vel) {                                                  // Gravy Train rolls forward, stopping at walls
+      const nx = z.pos.x + z.vel.x * dt, nz = z.pos.z + z.vel.z * dt, t = v.set(nx, z.pos.y + 0.5, nz);
+      if (G.colliders.some(b => b.alive && b.top > z.pos.y + 1 && nx > b.minX && nx < b.maxX && nz > b.minZ && nz < b.maxZ)) z.life = Math.min(z.life, 0.3);
+      else { z.pos.x = nx; z.pos.z = nz; z.pos.y = groundAt(t, 0.5, G.colliders); z.g.position.copy(z.pos); }
+    }
     const inside = u => u.alive && Math.hypot(u.pos.x - z.pos.x, u.pos.z - z.pos.z) < z.radius;
     if (z.kind === 'trap') {
       const victim = [...G.heroes, ...G.minions].find(u => u.team !== z.team && !u.deploy && inside(u) && Math.hypot(u.pos.x - z.pos.x, u.pos.z - z.pos.z) < 1.3);
@@ -283,6 +290,11 @@ export function updateAbilities(G, dt) {
     }
     for (const u of [...G.heroes, ...G.minions]) {
       if (!inside(u) || u.deploy) continue;
+      if (z.wave && !z.wave.hit.has(u)) {                     // each unit is caught by the wave once
+        z.wave.hit.add(u);
+        if (u.team === z.team) { if (u.kind === 'hero') { mend(G, z.owner, u, z.wave.heal); burst(G, chestOf(u), 0xffd27a, 0.9); } }
+        else { damage(G, u, z.wave.dmg, z.owner); knock(u, z.wave.dir, z.wave.knock, 5); burst(G, chestOf(u), 0x9a5a28, 1); }
+      }
       const ally = u.team === z.team;
       if (ally && z.hps && u.hp < u.maxHp) { u.hp = Math.min(u.maxHp, u.hp + z.hps * dt); setBar(u); }
       if (ally && z.mult && u.kind === 'hero') u.zoneMult = Math.min(u.zoneMult, z.mult);
@@ -423,9 +435,23 @@ function slamLand(G, h) {
     const d = u.pos.distanceTo(h.pos);
     if (d > a.radius) continue;
     damage(G, u, a.dmg * (1 - 0.4 * d / a.radius), h);
-    knock(u, flat(v.subVectors(u.pos, h.pos).setY(0.001)), a.knock * (1 - d / a.radius * 0.5), 7);
+    if (u.alive && !u.deploy) freeze(G, u, a.freeze, a.shatter);    // frozen solid where they stand
   }
   G.ev.shake?.(h, 1);
+}
+
+// Avalanche's slam freezes people in a block of ice: stunned, and the next hit shatters it for extra damage.
+const ICE_GEO = new THREE.BoxGeometry(1.2, 2.1, 1.2), ICE_MAT = new THREE.MeshStandardMaterial({ color: 0xbfeaff, transparent: true, opacity: 0.55, roughness: 0.1, metalness: 0.1 });
+export function freeze(G, u, dur, mult) {
+  stun(u, dur); u.frozenT = dur; u.shatterM = mult;
+  if (!u.iceMesh && u.mesh) { u.iceMesh = new THREE.Mesh(ICE_GEO, ICE_MAT); u.iceMesh.position.y = 1; u.mesh.add(u.iceMesh); }
+  if (u.kind === 'hero') G.ev.flash?.(u, 'Frozen solid');
+  G.timers.push({ t: dur, fn: () => { if (u.frozenT <= 0.05) thaw(G, u); } });
+}
+export function thaw(G, u, shattered) {
+  u.frozenT = 0;
+  if (u.iceMesh) { u.iceMesh.parent?.remove(u.iceMesh); u.iceMesh = null; }
+  if (shattered) { burst(G, chestOf(u), 0xe8f8ff, 1.4); ring(G, u.pos, 0xbfeaff, 1.6); u.stunT = 0; }
 }
 
 // ---------- the abilities ----------
@@ -497,8 +523,28 @@ export const ABIL = {
     ai: (G, b, a, c) => c.tgt && c.dist > 5 && c.dist < 22,
   },
   rush: {
-    cast(G, h, a) { h.hasteT = a.dur; h.hasteSpeed = a.speed; h.hasteFire = a.fire; h.noReloadT = a.dur; h.reloadT = 0; h.ammo = h.def.weapon.mag; h.cd.ability = 0; h.rushT = a.dur; return true; },
-    ai: (G, b, a, c) => c.heroT && c.dist < 18,
+    // Zip's Express Delivery: blink from enemy to enemy dropping parcels, then zip home
+    cast(G, h, a) {
+      const home = h.pos.clone();
+      const list = enemiesOf(G, h).filter(u => !isHidden(u) && u.pos.distanceTo(h.pos) < a.range)
+        .sort((x, y) => x.pos.distanceTo(h.pos) - y.pos.distanceTo(h.pos)).slice(0, a.n);
+      if (!list.length) return false;
+      list.forEach((u, i) => G.timers.push({ t: i * a.gap, fn: () => {
+        if (!h.alive || !u.alive) return;
+        const from = chestOf(h), side = flat(v.subVectors(h.pos, u.pos).setY(0.001));
+        const at = u.pos.clone().addScaledVector(side, 1.6); resolveXZ(at, h.radius, G.colliders); at.y = groundAt(at, 0.3, G.colliders);
+        h.pos.copy(at); h.vel.set(0, 0, 0); h.yaw = Math.atan2(-(u.pos.x - at.x), -(u.pos.z - at.z));
+        tracer(G, from, chestOf(h), 0x18e0f0, 0.3, 2); burst(G, chestOf(h), 0x18e0f0, 0.8);
+        spawnProjectile(G, h, u.pos.clone().setY(u.pos.y + 1.4), new THREE.Vector3(0, -4, 0), { dmg: a.dmg, splash: a.splash, grav: 20, color: 0xc89a5a, size: 0.22, box: true });
+      } }));
+      G.timers.push({ t: list.length * a.gap + 0.15, fn: () => {
+        if (!h.alive) return;
+        tracer(G, chestOf(h), home.clone().setY(home.y + 1.2), 0x18e0f0, 0.4, 2);
+        h.pos.copy(home); h.vel.set(0, 0, 0); burst(G, chestOf(h), 0x18e0f0, 1.2);
+      } });
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.near(a.range) >= 2,
   },
   candle: {
     cast(G, h, a, ctx) {
@@ -513,19 +559,30 @@ export const ABIL = {
     ai: (G, b, a, c) => c.tgt && c.dist < 22,
   },
   barrage: {
+    // Cinder's Grand Finale: one huge firework that bursts overhead and dazzles everyone watching
     cast(G, h, a, ctx) {
-      const p = aimPoint(G, h, ctx, 60);
+      const p = aimPoint(G, h, ctx, a.range), sky = p.clone().setY(p.y + 9);
       ring(G, p, 0xff8a3c, a.radius);
-      for (let i = 0; i < a.shells; i++) {
-        G.timers.push({ t: 0.4 + i * 0.16, fn: () => {
-          const ang = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * a.radius;
-          const at = new THREE.Vector3(p.x + Math.cos(ang) * r, 28, p.z + Math.sin(ang) * r);
-          spawnProjectile(G, h, at, new THREE.Vector3(0, -38, 0), { dmg: a.dmg, splash: a.splash, grav: 0, color: [0xff4fa3, 0xffd23c, 0x7af0ff, 0xff8a3c][i % 4], size: 0.3, trail: true, big: true });
-        } });
-      }
+      const up = eyeOf(h);                                          // the rocket climbs in a sparkly trail
+      for (let k = 1; k <= 6; k++) G.timers.push({ t: k * a.delay / 7, fn: () => { const q = up.clone().lerp(sky, k / 6); q.y += Math.sin(k / 6 * Math.PI) * 3; burst(G, q, 0xffd23c, 0.5); } });
+      G.timers.push({ t: a.delay, fn: () => {
+        const cols = [0xff4fa3, 0xffd23c, 0x7af0ff, 0xff8a3c, 0xb98cff];
+        for (let i = 0; i < 5; i++) burst(G, sky.clone().add(new THREE.Vector3((Math.random() - 0.5) * 3, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 3)), cols[i], 3 + i * 0.6);
+        for (let k = 0; k < 16; k++) { const ang = k / 16 * Math.PI * 2; tracer(G, sky, sky.clone().add(new THREE.Vector3(Math.cos(ang) * 7, -2 - Math.random() * 3, Math.sin(ang) * 7)), cols[k % 5], 0.7, 2); }
+        ring(G, p, 0xffd23c, a.radius);
+        for (const u of [...enemiesOf(G, h), ...G.minions.filter(m => m.alive && m.team !== h.team && !m.deploy)]) {
+          const d = Math.hypot(u.pos.x - p.x, u.pos.z - p.z);
+          if (d < a.radius) damage(G, u, a.dmg * (1 - 0.4 * d / a.radius), h);
+          if (u.kind === 'hero' && u.alive && chestOf(u).distanceTo(sky) < a.sight && hasLOS(eyeOf(u), sky, G.colliders)) {
+            u.blindT = Math.max(u.blindT || 0, a.blind); G.ev.flash?.(u, 'Dazzled!');
+            if (u.ai) u.ai.tgt = null;
+          }
+        }
+        G.ev.shake?.(h, 0.5);
+      } });
       return true;
     },
-    ai: (G, b, a, c) => c.tgt && c.dist < 45 && (c.heroT || c.tgt.kind === 'tower' || c.tgt.kind === 'core'),
+    ai: (G, b, a, c) => c.heroT && c.dist < 35 && c.near(14) >= 1.5,
   },
   mark: {
     cast(G, h, a, ctx) {
@@ -539,8 +596,19 @@ export const ABIL = {
     ai: (G, b, a, c) => c.heroT && c.dist < a.range,
   },
   sanctum: {
-    cast(G, h, a) { addZone(G, { kind: 'sanctum', pos: h.pos.clone().setY(0), radius: a.radius, life: a.dur, team: h.team, owner: h, hps: a.hps }); return true; },
-    ai: (G, b, a, c) => (b.hp < b.maxHp * 0.5 && c.heroT) || alliesOf(G, b).filter(u => u.pos.distanceTo(b.pos) < a.radius && u.hp < u.maxHp * 0.7).length >= 2,
+    // Lantern's Vigil: nobody nearby can go down for a few seconds (damage stops at 1 health)
+    cast(G, h, a) {
+      ring(G, h.pos, 0xb98cff, a.radius * 0.35); ring(G, h.pos, 0xffffff, 3);
+      burst(G, chestOf(h).setY(h.pos.y + 3), 0xffe08a, 2.2);
+      for (const u of alliesOf(G, h)) {
+        if (u.pos.distanceTo(h.pos) > a.radius) continue;
+        u.vigilT = Math.max(u.vigilT || 0, a.dur);
+        if (u !== h) { tracer(G, chestOf(h).setY(h.pos.y + 2.4), chestOf(u), 0xffe08a, 0.6, 2); G.ev.flash?.(u, 'Under the Vigil'); }
+        for (let k = 0; k < a.dur; k++) G.timers.push({ t: k + 0.5, fn: () => { if (u.alive) { mend(G, h, u, a.hps); ring(G, u.pos, 0xffe08a, 1.1); } } });
+      }
+      return true;
+    },
+    ai: (G, b, a) => alliesOf(G, b).some(u => u.hp < u.maxHp * 0.3 && u.pos.distanceTo(b.pos) < a.radius && u.lastHurtT > G.time - 1),
   },
   wall: {
     cast(G, h, a) {
@@ -576,8 +644,39 @@ export const ABIL = {
     ai: (G, b, a, c) => c.heroT && c.dist < 16,
   },
   overgrowth: {
-    cast(G, h, a, ctx) { addZone(G, { kind: 'overgrowth', pos: aimPoint(G, h, ctx, 22), radius: a.radius, life: a.dur, team: h.team, owner: h, dps: a.dps, slow: a.slow, hps: a.hps }); return true; },
-    ai: (G, b, a, c) => c.heroT && c.dist < 20,
+    // Thicket's Strangleroot: an old tree that lashes out at the nearest enemies every second
+    cast(G, h, a, ctx) {
+      const p = aimPoint(G, h, ctx, a.range);
+      addZone(G, { kind: 'overgrowth', pos: p.clone(), radius: a.radius, life: a.dur, team: h.team, owner: h });
+      const tree = new THREE.Group(); tree.position.copy(p); tree.scale.setScalar(0.2);
+      const bark = new THREE.MeshStandardMaterial({ color: 0x6b4a33, roughness: 0.9 });
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.7, 3.4, 8), bark); trunk.position.y = 1.7; tree.add(trunk);
+      for (let i = 0; i < 5; i++) {
+        const ang = i / 5 * Math.PI * 2, r = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.22, 1.6, 5), bark);
+        r.position.set(Math.cos(ang) * 0.7, 0.3, Math.sin(ang) * 0.7); r.rotation.set(Math.sin(ang) * 1.1, 0, -Math.cos(ang) * 1.1); tree.add(r);
+      }
+      for (const [x, y, z, s] of [[0, 3.9, 0, 1.5], [0.9, 3.4, 0.3, 1], [-0.8, 3.5, -0.4, 1.1], [0.2, 4.6, -0.3, 0.9]]) {
+        const leaf = new THREE.Mesh(new THREE.IcosahedronGeometry(s, 0), new THREE.MeshStandardMaterial({ color: 0x4f9a48, flatShading: true }));
+        leaf.position.set(x, y, z); tree.add(leaf);
+      }
+      tree.traverse(o => { if (o.isMesh) o.castShadow = true; });
+      G.scene.add(tree);
+      for (let k = 1; k <= 6; k++) G.timers.push({ t: k * 0.06, fn: () => tree.scale.setScalar(0.2 + k * 0.8 / 6) });   // it grows up out of the ground
+      for (let k = 1; k <= a.dur; k++) G.timers.push({ t: k, fn: () => {
+        const top = p.clone().setY(p.y + 1.2);
+        const near = [...enemiesOf(G, h), ...G.minions.filter(m => m.alive && m.team !== h.team && !m.deploy)]
+          .map(u => ({ u, d: Math.hypot(u.pos.x - p.x, u.pos.z - p.z) })).filter(x => x.d < a.radius).sort((x, y) => x.d - y.d).slice(0, a.n);
+        for (const { u } of near) {
+          const mid = top.clone().lerp(chestOf(u), 0.5).setY(p.y + 0.3);
+          tracer(G, top, mid, 0x6b4a33, 0.35, 3); tracer(G, mid, chestOf(u), 0x5fb05a, 0.35, 3);
+          damage(G, u, a.dmg, h); root(u, a.root); burst(G, chestOf(u), 0x5fb05a, 0.7);
+        }
+        tree.rotation.y += 0.3;
+      } });
+      G.timers.push({ t: a.dur + 0.4, fn: () => { G.scene.remove(tree); burst(G, p.clone().setY(p.y + 2.5), 0x5fb05a, 2); } });
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist < a.range - 4,
   },
   turret: {
     cast(G, h, a) {
@@ -600,21 +699,24 @@ export const ABIL = {
     ai: (G, b, a, c) => c.heroT && c.dist > 4 && c.dist < 20,
   },
   overclock: {
-    // Mega Biscuit: every Biscuit you own (or a fresh one) grows into a heavy turret
+    // Ratchet's Clocking In: the clocktower bell pulls every teammate on the map to his side
     cast(G, h, a) {
-      let mine = G.minions.filter(m => m.alive && m.turret && m.owner === h);
-      if (!mine.length) {
-        const p = h.pos.clone().addScaledVector(dirFrom(h.yaw, 0), 1.6); resolveXZ(p, 0.5, G.colliders); p.y = groundAt(p, 0.3, G.colliders);
-        mine = [deploy(G, h, makeTurret(G, h, h.def.ability, p), p)];
-      }
-      for (const m of mine) {
-        m.megaT = a.dur; m.megaRate = a.rate; m.megaDmg = a.dmg;
-        m.life = Math.max(m.life, a.dur); m.maxHp = a.hp; m.hp = a.hp; setBar(m, TEAM_COLOR[m.team]);
-        ring(G, m.pos, 0xff7a2a, 3); burst(G, m.pos.clone().setY(1), 0xff7a2a, 1.6);
-      }
+      ring(G, h.pos, 0xff7a2a, 4); burst(G, chestOf(h).setY(h.pos.y + 3), 0xffd23c, 2);
+      const team = alliesOf(G, h).filter(u => u !== h);
+      team.forEach((u, i) => {
+        if (mine(G, u)) {                                              // online, each player's own machine moves them
+          const ang = h.yaw + Math.PI + (i - (team.length - 1) / 2) * 0.8, at = h.pos.clone().add(new THREE.Vector3(Math.sin(ang) * 1.8, 0, Math.cos(ang) * 1.8));
+          resolveXZ(at, u.radius, G.colliders); at.y = groundAt(at, 0.3, G.colliders);
+          burst(G, chestOf(u), 0x7af0ff, 1.2);
+          u.pos.copy(at); u.vel.set(0, 2, 0); u.dashT = 0; u.knockT = 0;
+        }
+        tracer(G, chestOf(h).setY(h.pos.y + 3), chestOf(u), 0xffd23c, 0.5, 2);
+        G.ev.flash?.(u, 'Clocked in');
+      });
+      for (const u of alliesOf(G, h)) { mend(G, h, u, a.heal); protect(u, a.mult, a.dur); ring(G, u.pos, 0x7af0ff, 1.2); }
       return true;
     },
-    ai: (G, b, a, c) => c.heroT && c.dist < 24,
+    ai: (G, b, a, c) => (b.hp < b.maxHp * 0.5 && c.heroT) || (c.heroT && alliesOf(G, b).filter(u => u.pos.distanceTo(b.pos) > 25).length >= 1 && c.near(12) >= 2),
   },
   vanish: {
     cast(G, h, a) { h.invisT = a.dur; h.ambush = a.bonus; confetti(G, h.pos); return true; },
@@ -890,21 +992,20 @@ export const ABIL = {
     ai: (G, b, a, c) => c.heroT && b.hp < b.maxHp * 0.55,
   },
   slimetime: {
-    cast(G, h, a, ctx) {
-      const p = aimPoint(G, h, ctx, 30);
-      addZone(G, { kind: 'goo', pos: p.clone().setY(groundAt(p, 0.2, G.colliders)), radius: a.radius, life: a.dur, team: h.team, owner: h, hps: a.hps, dps: a.dps, slow: a.slow });
-      ring(G, p, 0x8af06a, a.radius); ring(G, p, 0xffe14a, a.radius * 0.6);
-      for (let i = 0; i < 26; i++) {                               // a wave of goo splashing up
-        const m = new THREE.Mesh(new THREE.SphereGeometry(0.2 + Math.random() * 0.25, 8, 6), BLOB_MAT);
-        const ang = Math.random() * Math.PI * 2, r = Math.random() * a.radius;
-        m.position.set(p.x + Math.cos(ang) * r, 0.3, p.z + Math.sin(ang) * r); G.scene.add(m);
-        G.fx.push({ obj: m, life: 1.1, max: 1.1, kind: 'debris', vel: new THREE.Vector3((Math.random() - 0.5) * 3, 6 + Math.random() * 6, (Math.random() - 0.5) * 3), spin: 3 });
-      }
-      dropBlobs(G, h, { blobs: a.blobs, heal: 40, life: a.dur + 6 }, p);
-      G.ev.shake?.(h, 0.4);
+    // Gloop slides off at speed, leaving a slime trail behind him, and bursts into blobs at the end
+    cast(G, h, a) {
+      haste(h, a.dur, a.speed);
+      ring(G, h.pos, 0x8af06a, 3); burst(G, chestOf(h), 0x8af06a, 1.6);
+      for (let k = 0; k < a.dur / 0.3; k++) G.timers.push({ t: k * 0.3, fn: () => {
+        if (!h.alive) return;
+        const p = h.pos.clone(); p.y = groundAt(p, 0.2, G.colliders);
+        addZone(G, { kind: 'goo', pos: p, radius: a.radius, life: a.life, team: h.team, owner: h, hps: a.hps, dps: a.dps, slow: a.slow });
+      } });
+      G.timers.push({ t: a.dur, fn: () => { if (h.alive) { dropBlobs(G, h, { blobs: a.blobs, heal: 40, life: 10 }); ring(G, h.pos, 0x8af06a, 4); } } });
+      G.ev.shake?.(h, 0.3);
       return true;
     },
-    ai: (G, b, a, c) => c.heroT && c.dist < 26,
+    ai: (G, b, a, c) => (c.heroT && c.dist < 14) || alliesOf(G, b).filter(u => u.hp < u.maxHp * 0.6 && u.pos.distanceTo(b.pos) < 10).length >= 2,
   },
 
   // ---- Torque ----
@@ -934,9 +1035,11 @@ export const ABIL = {
     ai: (G, b, a, c) => c.near(a.radius - 0.5) >= 1,
   },
   overdrive: {
+    // Torque's Jammer Lap: a long steerable charge that bowls over everyone in the way
     cast(G, h, a) {
-      h.overdriveT = a.dur; h.momentum = 100;
-      h.hasteT = a.dur; h.hasteSpeed = a.speed; h.hasteFire = a.fire;
+      h.dashDir = dirFrom(h.yaw, 0); h.dashT = a.dur; h.dashSpeed = a.speed; h.dashDmg = a.dmg; h.dashKnock = a.knock; h.dashHit = new Set();
+      h.dashStun = 0; h.dashColor = 0xffc93c; h.dashSpin = false; h.dashMode = null; h.grabbed = null; h.dashSteer = true;
+      h.overdriveT = a.dur + a.after; h.momentum = 100;
       ring(G, h.pos, 0xffc93c, 3); burst(G, h.pos.clone().setY(1), 0xff5a36, 1.8);
       return true;
     },
@@ -1008,24 +1111,21 @@ export const ABIL = {
     ai: (G, b, a, c) => c.heroT && (c.dist < 8 || b.hp < b.maxHp * 0.4),
   },
   moonshot: {
-    cast(G, h, a, ctx) {
-      const o = eyeOf(h), d = (ctx.aim || dirFrom(h.yaw, h.pitch)).clone().normalize();
-      const len = rayWorld(o, d, a.range, G.colliders), end = o.clone().addScaledVector(d, len);
-      // the arrow: a fat glowing shaft with a white core, then sparkles along the line
-      tracer(G, o.clone().setY(o.y - 0.15), end, 0xd8ffb0, 0.7, 4); tracer(G, o.clone().setY(o.y - 0.12), end, 0xffffff, 0.5, 2);
-      for (let k = 1; k < 10; k++) burst(G, o.clone().lerp(end, k / 10), k % 2 ? 0xd8ffb0 : 0xe8d27a, 0.6);
-      for (const u of [...G.heroes, ...G.minions, ...G.structures]) {
-        if (!u.alive || u.team === h.team) continue;
-        const c = chestOf(u), along = v.subVectors(c, o).dot(d);
-        if (along < 0 || along > len) continue;
-        if (c.distanceTo(o.clone().addScaledVector(d, along)) > a.width + (u.rad || 0)) continue;
+    // Larkspur's Hunter's Moon: the whole map is lit up and every enemy is marked, wherever they are
+    cast(G, h, a) {
+      burst(G, chestOf(h).setY(h.pos.y + 6), 0xe8f0ff, 3); ring(G, h.pos, 0xd8ffb0, 6);
+      for (const u of enemiesOf(G, h)) {
         damage(G, u, a.dmg, h);
-        if (u.kind === 'hero' && u.alive) { u.markT = a.mark; u.markAmp = a.amp; breakInvis(u); G.ev.flash?.(u, 'Moonstruck'); }
+        if (!u.alive) continue;
+        breakInvis(u); u.lurkT = 0;
+        u.markT = a.dur; u.markAmp = a.amp;
+        tracer(G, chestOf(u).setY(u.pos.y + 14), chestOf(u), 0xe8f0ff, 0.8, 3); burst(G, chestOf(u), 0xd8ffb0, 0.9);
+        G.ev.flash?.(u, 'Hunted');
       }
-      G.ev.shake?.(h, 0.5);
+      G.ev.shake?.(h, 0.3);
       return true;
     },
-    ai: (G, b, a, c) => c.heroT && c.dist < 60,
+    ai: (G, b, a, c) => c.heroT && enemiesOf(G, b).length >= 2,
   },
 
   // ---- Pirouette ----
@@ -1063,7 +1163,7 @@ export const ABIL = {
   },
   swanlake: {
     cast(G, h, a) {
-      addZone(G, { kind: 'stage', pos: h.pos.clone().setY(0), radius: a.radius, life: a.dur, team: h.team, owner: h, hps: a.hps, slow: a.slow, haste: a.haste });
+      addZone(G, { kind: 'stage', pos: h.pos.clone().setY(0), radius: a.radius, life: a.dur, team: h.team, owner: h, hps: a.hps, slow: a.slow, haste: a.haste, mult: a.mult, follow: h });   // the spotlight follows her
       ring(G, h.pos, 0xff8fc0, a.radius); ring(G, h.pos, 0xffffff, a.radius * 0.6);
       return true;
     },
@@ -1103,22 +1203,25 @@ export const ABIL = {
     ai: (G, b, a, c) => holesOf(G, b).length === 2 && ((c.heroT && b.hp < b.maxHp * 0.4) || (!c.heroT && Math.max(...holesOf(G, b).map(x => x.pos.distanceTo(b.pos))) > 35)),
   },
   cavein: {
+    // Burrow's Cave-In: rocks crash down in a ring, stunning everyone caught and walling them in
     cast(G, h, a, ctx) {
-      const p = aimPoint(G, h, ctx, 34);
-      ring(G, p, 0xc9a14a, a.radius);
+      const p = aimPoint(G, h, ctx, a.range), S = BLOCK.size, x0 = cellOf(p.x), z0 = cellOf(p.z), R = S * 1.5;
+      ring(G, new THREE.Vector3(x0, p.y, z0), 0xc9a14a, R + S);
       for (let i = 0; i < 18; i++) {                               // rocks tumble down first
-        const ang = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * a.radius;
+        const ang = Math.random() * Math.PI * 2, r = R + Math.random() * S;
         const m = new THREE.Mesh(new THREE.DodecahedronGeometry(0.3 + Math.random() * 0.35, 0), new THREE.MeshStandardMaterial({ color: i % 3 ? 0x7a6a5a : 0x9a8a72, roughness: 0.9, transparent: true }));
-        m.position.set(p.x + Math.cos(ang) * r, 14 + Math.random() * 4, p.z + Math.sin(ang) * r); G.scene.add(m);
+        m.position.set(x0 + Math.cos(ang) * r, 14 + Math.random() * 4, z0 + Math.sin(ang) * r); G.scene.add(m);
         G.fx.push({ obj: m, life: 1.1, max: 1.1, kind: 'debris', vel: new THREE.Vector3(0, -16, 0), spin: 4 });
       }
       G.timers.push({ t: 0.75, fn: () => {
-        ring(G, p, 0x7a5a3a, a.radius); burst(G, p.clone().setY(0.6), 0x9a8a72, a.radius * 0.8);
-        for (const u of [...G.heroes, ...G.minions]) {
-          if (!u.alive || u.team === h.team || Math.hypot(u.pos.x - p.x, u.pos.z - p.z) > a.radius) continue;
-          damage(G, u, a.dmg, h); stun(u, a.stun);
-          if (u.kind === 'hero') G.ev.flash?.(u, 'Buried');
+        const caught = [...G.heroes, ...G.minions].filter(u => u.alive && u.team !== h.team && !u.deploy && Math.abs(u.pos.x - x0) < R && Math.abs(u.pos.z - z0) < R);
+        for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) {
+          if (Math.max(Math.abs(i), Math.abs(j)) !== 2) continue;      // only the outer ring: a 3x3 pen inside
+          const x = x0 + i * S, z = z0 + j * S, b0 = groundAt(v.set(x, p.y + 0.5, z), 0.05, G.colliders);
+          for (let k = 0; k < 2; k++) { const b = placeBlock(G, h, x, z, b0 + k * BLOCK.h, a.dur, true); if (b) b.g.children[0].material = ROCK_MAT; }
         }
+        burst(G, new THREE.Vector3(x0, p.y + 0.6, z0), 0x9a8a72, R * 1.2);
+        for (const u of caught) { damage(G, u, a.dmg, h); stun(u, a.stun); if (u.kind === 'hero') G.ev.flash?.(u, 'Caved in'); }
         G.ev.shake?.(h, 0.8);
       } });
       return true;
@@ -1153,17 +1256,30 @@ export const ABIL = {
     ai: (G, b, a) => b.hp < b.maxHp * 0.45 || alliesOf(G, b).some(u => u !== b && u.hp < u.maxHp * 0.5 && u.pos.distanceTo(b.pos) < a.range),
   },
   codeblue: {
+    // Stitch's Code Blue: every knocked-out teammate is revived on the spot beside her
     cast(G, h, a) {
       ring(G, h.pos, 0x7affc0, a.radius); ring(G, h.pos, 0xffffff, a.radius * 0.5);
+      const down = G.heroes.filter(u => u.team === h.team && !u.alive && !u.gone && Number.isFinite(u.respawnT));
+      down.forEach((u, i) => {
+        if (!mine(G, u)) return;                                       // online, their own machine brings them back
+        u.respawnT = 0;
+        const ang = h.yaw + Math.PI / 2 + (i - (down.length - 1) / 2) * 0.9, at = h.pos.clone().add(new THREE.Vector3(Math.cos(ang) * 1.6, 0, Math.sin(ang) * 1.6));
+        G.timers.push({ t: 0.05, fn: () => {
+          if (!u.alive || !h.alive) return;
+          resolveXZ(at, u.radius, G.colliders); at.y = groundAt(at, 0.3, G.colliders);
+          u.pos.copy(at); u.vel.set(0, 3, 0);
+          burst(G, chestOf(u), 0x7affc0, 1.8); ring(G, u.pos, 0xffffff, 1.4);
+          G.ev.flash?.(u, 'Revived!');
+        } });
+      });
       for (const u of alliesOf(G, h)) {
         if (u.pos.distanceTo(h.pos) > a.radius) continue;
-        mend(G, h, u, a.heal); protect(u, a.mult, a.dur);
-        burst(G, chestOf(u), 0x7affc0, 1.4);
-        if (u !== h) { tracer(G, chestOf(h), chestOf(u), 0xffffff, 0.6, 2); G.ev.flash?.(u, 'Code Blue'); }
+        mend(G, h, u, a.heal); burst(G, chestOf(u), 0x7affc0, 1.2);
+        if (u !== h) tracer(G, chestOf(h), chestOf(u), 0xffffff, 0.6, 2);
       }
       return true;
     },
-    ai: (G, b, a) => alliesOf(G, b).filter(u => u.hp < u.maxHp * 0.6 && u.pos.distanceTo(b.pos) < a.radius).length >= 2 || b.hp < b.maxHp * 0.3,
+    ai: (G, b, a) => G.heroes.some(u => u.team === b.team && !u.alive && !u.gone && u.respawnT > 2) || alliesOf(G, b).filter(u => u.hp < u.maxHp * 0.45 && u.pos.distanceTo(b.pos) < a.radius).length >= 2,
   },
 
   // ---- Dynamo ----
@@ -1265,17 +1381,15 @@ export const ABIL = {
     ai: (G, b, a) => b.hp < b.maxHp * 0.45 || alliesOf(G, b).some(u => u !== b && u.hp < u.maxHp * 0.5 && u.pos.distanceTo(b.pos) < a.range),
   },
   banquet: {
-    cast(G, h, a) {
-      ring(G, h.pos, 0xffd27a, a.radius); ring(G, h.pos, 0xffffff, a.radius * 0.5);
-      for (const u of alliesOf(G, h)) {
-        if (u.pos.distanceTo(h.pos) > a.radius) continue;
-        haste(u, a.dur, a.speed);
-        for (let k = 0; k < a.dur; k++) G.timers.push({ t: k + 0.05, fn: () => { if (u.alive) { mend(G, h, u, a.hps); burst(G, chestOf(u), 0xffd27a, 0.6); } } });
-        if (u !== h) G.ev.flash?.(u, 'Dinner is served!');
-      }
+    // Beef Wellington's Gravy Train: a rolling wave of gravy that heals friends and sweeps enemies along
+    cast(G, h, a, ctx) {
+      const dir = flat(ctx.aim || dirFrom(h.yaw, 0)), start = h.pos.clone().addScaledVector(dir, 1.5);
+      addZone(G, { kind: 'gravy', pos: start, radius: a.radius, life: a.dist / a.speed, team: h.team, owner: h,
+        vel: dir.clone().multiplyScalar(a.speed), wave: { dir, hit: new Set(), heal: a.heal, dmg: a.dmg, knock: a.knock } });
+      ring(G, start, 0xffd27a, a.radius); burst(G, start.clone().setY(start.y + 0.6), 0x8a4a20, 1.6);
       return true;
     },
-    ai: (G, b, a) => alliesOf(G, b).filter(u => u.hp < u.maxHp * 0.6 && u.pos.distanceTo(b.pos) < a.radius).length >= 2 || b.hp < b.maxHp * 0.3,
+    ai: (G, b, a, c) => (c.heroT && c.dist < a.dist * 0.7) || alliesOf(G, b).filter(u => u.hp < u.maxHp * 0.6 && u.pos.distanceTo(b.pos) < 20).length >= 2,
   },
 
   // ---- Crook ----
@@ -1379,15 +1493,34 @@ export const ABIL = {
     ai: (G, b, a, c) => (c.heroT && c.dist < 6) || b.hp < b.maxHp * 0.35,
   },
   fivecourse: {
+    // Flambé serves a full menu: every rocket is a different course with its own effect
     cast(G, h, a, ctx) {
-      const fire = k => {
+      const foes = p => [...enemiesOf(G, h), ...G.minions.filter(m => m.alive && m.team !== h.team && !m.deploy)].filter(u => chestOf(u).distanceTo(p) < 4);
+      const COURSES = [
+        { name: 'Amuse-bouche', dmg: 30, splash: 2.4, color: 0xffd23c, size: 0.3, onExplode: (G2, p) => {        // starter: pops into four bites
+          for (let i = 0; i < 4; i++) { const ang = i / 4 * Math.PI * 2 + Math.random(); spawnProjectile(G, h, p.clone().setY(p.y + 0.4), new THREE.Vector3(Math.cos(ang) * 6, 7, Math.sin(ang) * 6), { dmg: 18, splash: 2, grav: 22, color: 0xffd23c, size: 0.14, child: true }); }
+        } },
+        { name: 'Soup of the day', dmg: 45, splash: 3.5, color: 0xe8423a, size: 0.36, onExplode: (G2, p) => {      // scalding: sets everyone in it alight
+          for (const u of foes(p)) if (u.kind === 'hero') { u.burnT = 3; u.burnDps = 12; u.burnSrc = h; }
+        } },
+        { name: 'Fish course', dmg: 55, splash: 3.5, color: 0x7ac8e8, size: 0.36, onExplode: (G2, p) => {          // a slap of fish: knocks everyone away
+          for (const u of foes(p)) knock(u, flat(v.subVectors(u.pos, p).setY(0.001)), 14, 7);
+        } },
+        { name: 'Main course', dmg: 110, splash: 5, color: 0x8a4a20, size: 0.55, onExplode: (G2, p) => { G.ev.shake?.(h, 0.6); } },
+        { name: 'Dessert', dmg: 30, splash: 4, color: 0xffb3d0, size: 0.4, onExplode: (G2, p) => {                 // sweet: heals teammates nearby
+          ring(G, p, 0xffb3d0, 5);
+          for (const u of alliesOf(G, h)) if (u.pos.distanceTo(p) < 5) { mend(G, h, u, 60); burst(G, chestOf(u), 0xffb3d0, 0.8); }
+        } },
+      ];
+      const serve = k => {
         if (!h.alive) return;
-        const d = (k === 0 && ctx.aim ? ctx.aim : ctx.target ? v.subVectors(chestOf(ctx.target), eyeOf(h)).normalize() : dirFrom(h.yaw, h.pitch)).clone();
+        const c = COURSES[k], d = (k === 0 && ctx.aim ? ctx.aim : ctx.target ? v.subVectors(chestOf(ctx.target), eyeOf(h)).normalize() : dirFrom(h.yaw, h.pitch)).clone();
         const from = eyeOf(h).addScaledVector(d, 0.9);
-        spawnProjectile(G, h, from, d.multiplyScalar(30), { dmg: a.dmg, splash: a.splash, grav: 1.5, color: [0xe8423a, 0xffd23c, 0x7ee85a, 0xf4f1ea, 0x8a4a20][k % 5], size: 0.4, big: true, trail: true });
-        burst(G, from, 0xff8a3c, 0.6); G.ev.shake?.(h, 0.2);
+        spawnProjectile(G, h, from, d.multiplyScalar(30), { ...c, grav: 1.5, big: true, trail: true });
+        burst(G, from, c.color, 0.6); G.ev.shake?.(h, 0.2);
+        if (h.isPlayer || h.local) G.ev.flash?.(h, c.name);
       };
-      for (let k = 0; k < a.n; k++) { if (k === 0) fire(0); else G.timers.push({ t: k * a.gap, fn: () => fire(k) }); }
+      COURSES.forEach((_, k) => { if (k === 0) serve(0); else G.timers.push({ t: k * a.gap, fn: () => serve(k) }); });
       return true;
     },
     ai: (G, b, a, c) => c.heroT && c.dist < 30,
@@ -1666,6 +1799,7 @@ function zap(G, a, b, color = 0xffe14a) {
 // up to BLOCK.max from Build Block and Scaffold; the fort from his super doesn't count.
 // Blocks are made by the cast, so online every machine builds the same ones.
 const BLOCK = { size: 2, h: 1.2, max: 8, top: 9 };
+const ROCK_MAT = new THREE.MeshStandardMaterial({ color: 0x7a6a5a, roughness: 0.95, flatShading: true });   // Cave-In's walls
 const cellOf = x => (Math.floor(x / BLOCK.size) + 0.5) * BLOCK.size;
 export const blocksOf = (G, h) => (G.blocks || []).filter(b => b.owner === h && !b.fort);
 const BLOCK_GEO = new THREE.BoxGeometry(BLOCK.size, BLOCK.h, BLOCK.size), CAP_GEO = new THREE.BoxGeometry(BLOCK.size * 0.96, 0.06, BLOCK.size * 0.96);

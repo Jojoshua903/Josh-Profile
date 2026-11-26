@@ -1,9 +1,9 @@
-import { HEROES } from './heroes.js?v=20261126r';
-import { MAPS } from './data.js?v=20261126r';
-import { cfg, save } from './settings.js?v=20261126r';
-import { headshot } from './portraits.js?v=20261126r';
-import { dressed, wear, myCosIds } from './pass.js?v=20261126r';
-import * as net from './net.js?v=20261126r';
+import { HEROES, ARCHETYPES } from './heroes.js?v=20261126w';
+import { MAPS } from './data.js?v=20261126w';
+import { cfg, save } from './settings.js?v=20261126w';
+import { headshot } from './portraits.js?v=20261126w';
+import { dressed, wear, myCosIds, heroOwned } from './pass.js?v=20261126w';
+import * as net from './net.js?v=20261126w';
 
 // Online front end: set up your name and hero, host or join a room by code, then the lobby
 // (mode, teams, stage, start). The match itself starts on every machine when the host hits Start.
@@ -12,7 +12,8 @@ const $ = id => document.getElementById(id);
 const hex = c => '#' + c.toString(16).padStart(6, '0');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 let api = null, err = '', busy = false, nameT = 0;
-const MODES = { hill: { name: 'Hill Rush', sub: '3v3 · bots fill gaps', per: 3 }, duel: { name: 'Duel', sub: '1v1 · first to 3 rounds', per: 1 } };
+const MODES = { hill: { name: 'Hill Rush', sub: '3v3 · bots fill gaps', per: 3 }, lane: { name: 'Lane Breaker', sub: '3v3 · towers, cores and minions', per: 3 },
+  duel: { name: 'Duel', sub: '1v1 · first to 3 rounds', per: 1 } };
 
 const myDef = () => dressed(HEROES.find(h => h.id === cfg.hero) || HEROES[0]);
 const profile = () => ({ name: (cfg.name || '').trim().slice(0, 16) || 'Player', hero: myDef().id, skin: myDef().skinId || '', cos: myCosIds() });
@@ -62,6 +63,8 @@ async function act(what, v) {
   if (what === 'team') net.setProfile({ team: v });
   if (what === 'map') net.setMap(v);
   if (what === 'mode') net.setMode(v);
+  if (what === 'drafttog') net.setDraft(!st.meta?.draft);
+  if (what === 'draft') net.draftPick(v);
   if (what === 'start') net.startMatch().catch(x => { err = net.explain(x).message; render(); });
   if (what === 'leave') { await net.leaveRoom(); render(); }
   if (what === 'copy') navigator.clipboard?.writeText(st.code).then(() => { const b = $('onCopy'); if (b) { b.textContent = 'Copied!'; setTimeout(() => { b.textContent = 'Copy'; }, 1200); } }).catch(() => {});
@@ -75,6 +78,7 @@ function render() {
   // lobby updates re-render the panel; keep typing in the name or code box uninterrupted
   const focus = document.activeElement?.id, caret = document.activeElement?.selectionStart, code = $('onCode')?.value;
   if (!net.netConfigured()) body.innerHTML = setupHTML();
+  else if (st && st.meta?.state === 'draft' && st.draft) body.innerHTML = draftHTML(st);
   else if (st) body.innerHTML = lobbyHTML(st);
   else body.innerHTML = homeHTML();
   if (code && $('onCode')) $('onCode').value = code;
@@ -111,7 +115,7 @@ function homeHTML() {
     ${meCard()}
     <div class="oncard">
       <h3>Host a room</h3>
-      <p>Get a code to share with friends. Up to six players, 3v3 Hill Rush. Bots fill any empty slots.</p>
+      <p>Get a code to share with friends. Up to six players: 3v3 Hill Rush or Lane Breaker, with an optional draft, or a 1v1 Duel. Bots fill any empty slots.</p>
       <button class="bigbtn" data-act="create" ${busy ? 'disabled' : ''}>Create room</button>
     </div>
     <div class="oncard">
@@ -129,7 +133,7 @@ function lobbyHTML(st) {
   const players = Object.entries(st.players || {}).sort((a, b) => a[1].t - b[1].t);
   const mine = st.players?.[st.me];
   const map = MAPS.find(m => m.id === st.meta?.map) || MAPS[0];
-  const mode = st.meta?.mode === 'duel' ? 'duel' : 'hill', M = MODES[mode], duel = mode === 'duel';
+  const mode = MODES[st.meta?.mode] ? st.meta.mode : 'hill', M = MODES[mode], duel = mode === 'duel';
   // in a duel the first two to join face off, whatever team they picked
   const sideOf = (uid, p) => duel ? (players.findIndex(([u]) => u === uid) === 0 ? 'blue' : 'red') : p.team;
   const col = team => {
@@ -152,6 +156,8 @@ function lobbyHTML(st) {
     <div class="modechips">${Object.entries(MODES).map(([id, m]) => st.host
       ? `<button class="${id === mode ? 'on' : ''}" data-act="mode" data-v="${id}" ${playing ? 'disabled' : ''}><b>${m.name}</b><small>${m.sub}</small></button>`
       : `<div class="${id === mode ? 'on' : 'off'}"><b>${m.name}</b><small>${m.sub}</small></div>`).join('')}</div>
+    ${duel ? '' : `<div class="draftopt ${st.meta?.draft ? 'on' : ''}">${st.host ? `<button data-act="drafttog" ${playing ? 'disabled' : ''}><i>${st.meta?.draft ? '✓' : ''}</i></button>` : `<i>${st.meta?.draft ? '✓' : '·'}</i>`}
+      <div><b>Draft pick ${st.meta?.draft ? 'on' : 'off'}</b><small>${st.meta?.draft ? 'Teams take turns picking heroes before the match, and nobody can pick the same one.' : st.host ? 'Turn it on to pick heroes in turns, with no duplicates.' : 'Everyone plays the hero they chose.'}</small></div></div>`}
     <div class="teams ${duel ? 'duel' : ''}">${col('blue')}<div class="vs">VS</div>${col('red')}</div>
     ${duel && players.length > 2 ? `<div class="spect">Watching: ${players.slice(2).map(([, p]) => esc(p.name)).join(', ')}. Only two can duel.</div>` : ''}
     <div class="lobbyfoot">
@@ -162,7 +168,7 @@ function lobbyHTML(st) {
           : `<p><b>${map.name}</b><br>The host picks the stage.</p>`}
       </div>
       <div class="oncard go">
-        ${st.host ? `<button class="bigbtn" data-act="start" ${playing || tooMany ? 'disabled' : ''}>Start ${M.name.toLowerCase()}</button>
+        ${st.host ? `<button class="bigbtn" data-act="start" ${playing || tooMany ? 'disabled' : ''}>${!duel && st.meta?.draft ? 'Start draft' : `Start ${M.name.toLowerCase()}`}</button>
           <p>${tooMany ? 'Duel is 1v1. Switch to Hill Rush or have extra players leave.' : `${Math.min(players.length, duel ? 2 : 6)} player${players.length > 1 ? 's' : ''} · ${bots} bot${bots === 1 ? '' : 's'}`}</p>`
           : `<div class="wait">${playing ? 'Match in progress…' : 'Waiting for the host to start'}</div>`}
         <button class="ghost" data-act="leave">Leave room</button>
@@ -171,3 +177,45 @@ function lobbyHTML(st) {
     ${err ? `<div class="onmsg err">${esc(err)}</div>` : ''}
   </div>`;
 }
+
+// ---------- draft ----------
+// Heroes grouped by class; you can only take ones you own that nobody has picked yet.
+const BY_CLASS = ARCHETYPES.flatMap(a => HEROES.filter(h => h.arch === a.id));
+function draftHTML(st) {
+  const D = st.draft, picks = D.picks || {}, done = D.turn >= D.order.length, cur = D.order[D.turn], mine = !done && cur === st.me;
+  const slotOf = k => D.slots.find(s => s.key === k);
+  const who = s => !s ? '' : s.uid ? esc(st.players?.[s.uid]?.name || s.name || 'Player') : 'Bot';
+  const col = team => `<div class="teamcol ${team}"><h4>${team === 'blue' ? 'Blue' : 'Red'} team</h4>${D.slots.filter(s => s.team === team).map(s => {
+    const h = HEROES.find(x => x.id === picks[s.key]), now = s.key === cur && !done, n = D.order.indexOf(s.key) + 1;
+    return `<div class="slot dr ${s.uid === st.me ? 'me' : ''} ${now ? 'now' : ''} ${h ? '' : 'empty'}" style="--hc:${h ? hex(h.color) : '#c8c0b0'}">
+      ${h ? `<img src="${headshot(h)}" alt="">` : `<span>${now ? '⏳' : s.uid ? '👤' : '🤖'}</span>`}
+      <div><b>${who(s)}</b><small>${h ? h.callsign : now ? 'picking…' : `pick ${n}`}</small></div></div>`;
+  }).join('')}</div>`;
+  const taken = new Set(Object.values(picks));
+  const grid = BY_CLASS.map(h => {
+    const own = heroOwned(h.id), t = taken.has(h.id);
+    return `<button class="dr-h ${t ? 'taken' : ''} ${own ? '' : 'locked'}" data-act="draft" data-v="${h.id}" ${!mine || t || !own ? 'disabled' : ''} style="--hc:${hex(h.color)}" title="${h.callsign} · ${h.role}">
+      <img src="${headshot(h)}" alt=""><b>${h.callsign}</b>${t ? '<i>Taken</i>' : !own ? '<i>🔒</i>' : ''}</button>`;
+  }).join('');
+  const head = done ? 'Draft complete · starting the match…' : mine ? 'Your pick!' : `${who(slotOf(cur))} is picking`;
+  return `<div class="lobby draft">
+    <div class="dr-top ${mine ? 'mine' : ''}"><small>Draft · pick ${Math.min(D.turn + 1, D.order.length)} of ${D.order.length}</small><b>${head}</b><span id="drClock">${done ? '' : clockText(D)}</span></div>
+    <div class="teams">${col('blue')}<div class="vs">VS</div>${col('red')}</div>
+    <div class="dr-grid">${grid}</div>
+    <p class="dr-note">${mine ? 'Click a hero to lock them in. If time runs out you get a random one.' : 'Heroes can only be picked once. Locked heroes need unlocking first.'}</p>
+    <button class="ghost" data-act="leave">Leave room</button>
+  </div>`;
+}
+const clockText = D => `${Math.max(0, Math.ceil((D.until - Date.now()) / 1000))}s`;
+// tick the countdown, and pick a random hero for us if our time runs out
+let autoFor = -1;
+setInterval(() => {
+  const st = net.lobbyState(), D = st?.draft;
+  if (!D || st.meta?.state !== 'draft' || D.turn >= D.order.length) return;
+  const c = $('drClock'); if (c) c.textContent = clockText(D);
+  if (D.order[D.turn] === st.me && Date.now() > D.until && autoFor !== D.turn) {
+    autoFor = D.turn;
+    const free = net.draftFree(D), mine = free.filter(h => heroOwned(h.id)), from = mine.length ? mine : free;
+    net.draftPick(from[Math.floor(Math.random() * from.length)].id);
+  }
+}, 250);

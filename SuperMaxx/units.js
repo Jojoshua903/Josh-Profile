@@ -1,12 +1,12 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { TUNING, HILL, CART } from './data.js?v=20261126r';
-import { buildHeroModel } from './models.js?v=20261126r';
-import { makeBox, moveBody, resolveXZ, rayBox, raySphere, rayWorld, hasLOS } from './world.js?v=20261126r';
+import { TUNING, HILL, CART } from './data.js?v=20261126w';
+import { buildHeroModel } from './models.js?v=20261126w';
+import { makeBox, moveBody, resolveXZ, rayBox, raySphere, rayWorld, hasLOS } from './world.js?v=20261126w';
 import { resetStatus, tickStatus, afterMove, wallClimb, takenMult, fireMult, canAct, breakInvis, isHidden, slow as applySlow, stun as applyStun, knock as applyKnock, dropBlobs,
-  dealtMult, onDealt, onHurt, onKill, mend } from './abilities.js?v=20261126r';
-import { poseHero, rubble } from './anim.js?v=20261126r';
-import { onEliminated, survivorPreMove, survivorPostMove } from './survivor.js?v=20261126r';
-import { tickVfx, tickLight, blast, sparks } from './vfx.js?v=20261126r';
+  dealtMult, onDealt, onHurt, onKill, mend, thaw } from './abilities.js?v=20261126w';
+import { poseHero, rubble } from './anim.js?v=20261126w';
+import { onEliminated, survivorPreMove, survivorPostMove } from './survivor.js?v=20261126w';
+import { tickVfx, tickLight, blast, sparks } from './vfx.js?v=20261126w';
 
 // Survivor teams are per-hero ids; anything that isn't blue reads as an enemy red.
 export const TEAM_COLOR = new Proxy({ blue: 0x2f5bff, red: 0xff5a36 }, { get: (t, k) => (k in t ? t[k] : 0xff5a36) });
@@ -113,6 +113,7 @@ export function createStructure(G, type, team, x, z) {
   };
   s.collider = makeBox(x, z, rad * 1.7, rad * 1.7, type === 'tower' ? 4 : 1.4);
   s.hitbox = makeBox(x, z, rad * 1.7, rad * 1.7, height);
+  s.key = 's' + G.structures.length;                                   // online: same build order on every machine, so the index names it
   s.collider.unit = s;
   G.colliders.push(s.collider);
   setBar(s, tc);
@@ -125,7 +126,8 @@ export function coreVulnerable(G, team) {
 }
 
 // ---------- minions ----------
-export function spawnMinion(G, team, laneIdx, offset) {
+// `id` is given when an online guest mirrors one of the host's minions; otherwise the next number.
+export function spawnMinion(G, team, laneIdx, offset, id) {
   const tc = TEAM_COLOR[team];
   const mesh = new THREE.Group();
   const body = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.7), lambert(tc));
@@ -146,10 +148,19 @@ export function spawnMinion(G, team, laneIdx, offset) {
     kind: 'minion', team, mesh, bar, body, path, wp: 1,
     pos: new THREE.Vector3(sx + offset * (bz - az) / l, 0, sz - offset * (bx - ax) / l), vel: new THREE.Vector3(), radius: 0.4,
     hp: TUNING.minionHp, maxHp: TUNING.minionHp, alive: true, atkT: Math.random(), bob: Math.random() * 6,
+    lane: laneIdx, id: id ?? (G.mid = (G.mid || 0) + 1),
   };
+  m.key = 'm' + m.id;
   setBar(m, tc);
   G.minions.push(m);
+  return m;
 }
+
+// Online Lane Breaker: the host runs the minions, towers and cores. Guests see them as puppets
+// and send their hits on them to the host, like hits on heroes go to the hero's owner.
+const laneUnit = u => (u.kind === 'minion' && !u.deploy) || u.kind === 'tower' || u.kind === 'core';
+// A guest's copy of a unit the host reports as destroyed: same crumble, no credit.
+export function unitDown(G, t) { if (t.alive) { t.hp = 0; kill(G, t, null); } }
 
 // ---------- combat ----------
 export function trace(G, o, d, maxT, team) {
@@ -192,10 +203,23 @@ export function damage(G, target, amt, src, head = false, force = false, dot = f
         target.flinchA = Math.min(1, (target.flinchA || 0) + amt / 40);
         G.ev.damage(target, amt, src, head);
         if (!dot) onDealt(G, src, target, amt, head, true);
-      }
+      } else if (src && G.net.host && laneUnit(src)) G.net.hit(target, amt, src, false);   // the host's minions and towers hit guests too
       return;
     }
     if (src && src.kind === 'hero' && !src.local) return;
+  }
+  if (G.net && laneUnit(target) && !force) {
+    if (!G.net.host) {
+      if (src && src.kind === 'hero' && src.local && src.team !== target.team) {
+        if (target.kind === 'core' && !coreVulnerable(G, target.team)) { G.ev.immune(target, src); return; }
+        G.net.hit(target, amt, src, head);
+        src.dmgDealt += amt;
+        src.ult = Math.min(100, src.ult + amt / src.def.ult.cost * 100 * 0.45);
+        G.ev.damage(target, amt, src, head);
+      }
+      return;
+    }
+    if (src && src.kind === 'hero' && !src.local) return;                 // that guest reports the hit itself
   }
   if (target.kind === 'core' && !coreVulnerable(G, target.team)) { G.ev.immune(target, src); return; }
   if (target.kind === 'core' && G.mode === 'lane' && G.time > TUNING.overtime) amt *= 2;   // overtime
@@ -203,6 +227,8 @@ export function damage(G, target, amt, src, head = false, force = false, dot = f
   if (src && src.rallyT > 0) amt *= src.rallyAmp;                           // Cavalier's banner
   if (target.kind === 'hero') { amt *= takenMult(target); target.flinchA = Math.min(1, (target.flinchA || 0) + amt / 40); }
   if (target.armor > 0) { const a = Math.min(target.armor, amt); target.armor -= a; amt -= a; G.ev.armorHit?.(target, a); if (amt <= 0) { G.ev.damage(target, a, src, head); return; } }
+  if (target.frozenT > 0 && amt > 1 && src !== target) { amt *= target.shatterM || 1.5; thaw(G, target, true); if (target.kind === 'hero') G.ev.flash?.(target, 'Shattered!'); }   // Avalanche: frozen enemies shatter
+  if (target.vigilT > 0 && target.hp - amt < 1) { amt = Math.max(0, target.hp - 1); if (G.time > (target.vigilFx || 0)) { target.vigilFx = G.time + 0.4; burst(G, chestOf(target), 0xffe08a, 1); } }   // Lantern's Vigil: hold on at 1 health
   target.hp -= amt;
   if (src && src.kind === 'hero' && src.team !== target.team) {
     src.dmgDealt += amt;
@@ -220,7 +246,7 @@ function kill(G, t, src) {
   t.alive = false; t.hp = 0;
   burst(G, chestOf(t), TEAM_COLOR[t.team], t.kind === 'minion' ? 1 : 2.2);
   if (t.kind === 'hero') {
-    t.deaths++; t.respawnT = G.mode === 'hill' ? HILL.respawn : G.mode === 'cart' ? CART.respawn : G.mode === 'duel' ? Infinity : TUNING.respawn; t.deathT = 0;      // the model plays its fall, then hides
+    t.deaths++; t.respawnT = G.mode === 'hill' ? HILL.respawn : G.mode === 'cart' || G.mode === 'potato' ? CART.respawn : G.mode === 'duel' ? Infinity : TUNING.respawn; t.deathT = 0;      // the model plays its fall, then hides
     if (G.mode === 'survivor') onEliminated(G, t);
     if (t.isPlayer) t.mesh.visible = false;
     if (t.shimmer) t.shimmer.visible = false;
@@ -621,6 +647,7 @@ export function updateMinions(G, dt) {
     const m = G.minions[i];
     if (!m.alive) { G.minions.splice(i, 1); continue; }
     if (m.update) { m.update(G, m, dt); continue; }
+    if (m.puppet) { puppetMinion(G, m, dt); continue; }
     m.atkT -= dt;
     m.lunge = Math.max(0, (m.lunge || 0) - dt * 5);
     if (m.stunT > 0) {
@@ -673,7 +700,7 @@ export function updateStructures(G, dt) {
     }
     const orb = s.mesh.getObjectByName('orb');
     if (orb) { orb.rotation.y += dt * 0.8; s.pulse = Math.max(0, (s.pulse || 0) - dt * 4); orb.scale.setScalar(1 + s.pulse * 0.35); orb.position.y = (s.kind === 'tower' ? 4.8 : 3.6) + Math.sin(G.time * 1.5) * 0.12; }
-    if (s.kind !== 'tower') continue;
+    if (s.kind !== 'tower' || (G.net && !G.net.host)) continue;          // online, only the host's towers fire (guests see the shots)
     s.atkT -= dt;
     if (s.atkT > 0) continue;
     const top = new THREE.Vector3(s.pos.x, 4.8, s.pos.z);
@@ -685,6 +712,7 @@ export function updateStructures(G, dt) {
     if (!tgt) continue;
     s.atkT = TUNING.towerRate; s.pulse = 1;
     tracer(G, top, chestOf(tgt.e), TEAM_COLOR[s.team], 0.25, 3);
+    G.net?.towerShot?.(s, tgt.e);
     damage(G, tgt.e, tgt.e.kind === 'minion' ? 35 : TUNING.towerDmg, s);
   }
 }
@@ -732,4 +760,18 @@ export function updateFx(G, dt, camera) {
     tmpQ.setFromEuler(u.mesh.rotation).invert().multiply(camera.quaternion);
     u.bar.quaternion.copy(tmpQ);
   }
+}
+
+// Online guests: a host minion glides toward its last reported spot and waddles while moving.
+function puppetMinion(G, m, dt) {
+  const t = m.netPos;
+  if (t) {
+    const dx = t.x - m.pos.x, dz = t.z - m.pos.z, d = Math.hypot(dx, dz);
+    if (d > 6) m.pos.set(t.x, 0, t.z); else { m.pos.x += dx * Math.min(1, dt * 8); m.pos.z += dz * Math.min(1, dt * 8); }
+    if (d > 0.05) m.mesh.rotation.y = Math.atan2(-dx, -dz);
+    m.bob += dt * (d > 0.15 ? 9 : 3);
+    m.body.rotation.z = d > 0.15 ? Math.sin(m.bob) * 0.12 : 0;
+  }
+  m.pos.y = 0;
+  m.mesh.position.set(m.pos.x, Math.abs(Math.sin(m.bob)) * 0.12, m.pos.z);
 }
