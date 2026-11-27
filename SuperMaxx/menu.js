@@ -1,32 +1,34 @@
-import { LOOK, applyEnvironment } from './stage.js?v=20261128r';
-import { masteryOf } from './mastery.js?v=20261128r';
+import { LOOK, applyEnvironment } from './stage.js?v=20261128w';
+import { masteryOf } from './mastery.js?v=20261128w';
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { HEROES, ALL_HEROES, ARCHETYPES, archOf } from './heroes.js?v=20261128r';
-import './personality.js?v=20261128r';
-import { MAPS, DIFFICULTY } from './data.js?v=20261128r';
-import { BOSS_LIST, bossOf } from './raid.js?v=20261128r';
-import { enterHeroes, stepHeroes } from './herodex.js?v=20261128r';
-import { storyMissions, storyDone, storyCount, GOAL, TYPE_ICON, MEDALS, MEDAL_ICON, medalOf, bestTime, parOf, medalCount, fmtTime } from './story.js?v=20261128r';
-import { THEMES } from './scenery.js?v=20261128r';
-import { cfg, save, resetSettings, QUALITY } from './settings.js?v=20261128r';
-import { ACTIONS, FIXED, kb, keyLabel, rebind, resetBinds } from './keys.js?v=20261128r';
-import { splash, headshot, mapArt } from './portraits.js?v=20261128r';
-import { initOnline, enterOnline } from './online.js?v=20261128r';
-import { enterSlots } from './slotmachine.js?v=20261128r';
-import { initVault, enterVault, leaveVault, clipCount } from './vault.js?v=20261128r';
-import { openHub } from './social.js?v=20261128r';
-import { tokens as slotTokens, SEASON_HEROES } from './slots.js?v=20261128r';
-import { playerLevel } from './level.js?v=20261128r';
-import { openHowTo } from './howto.js?v=20261128r';
-import { XH_STYLES, XH_COLORS, applyCrosshair } from './crosshair.js?v=20261128r';
-import { CONTRACTS, contractOf, taskFrac, taskDone, statOf, tasksDone, openContracts, contractsLeft, contractUnlocked, contractDone } from './contracts.js?v=20261128r';
+import { HEROES, ALL_HEROES, ARCHETYPES, archOf } from './heroes.js?v=20261128w';
+import './personality.js?v=20261128w';
+import { MAPS, DIFFICULTY } from './data.js?v=20261128w';
+import { BOSS_LIST, bossOf } from './raid.js?v=20261128w';
+import { enterHeroes, stepHeroes } from './herodex.js?v=20261128w';
+import { storyMissions, storyDone, storyCount, GOAL, TYPE_ICON, MEDALS, MEDAL_ICON, medalOf, bestTime, parOf, medalCount, fmtTime } from './story.js?v=20261128w';
+import { THEMES } from './scenery.js?v=20261128w';
+import { cfg, save, resetSettings, QUALITY } from './settings.js?v=20261128w';
+import { ACTIONS, FIXED, kb, keyLabel, rebind, resetBinds } from './keys.js?v=20261128w';
+import { pad, PAD_LAYOUT, PAD_MENU, padLabel } from './pad.js?v=20261128w';
+import { splash, headshot, mapArt } from './portraits.js?v=20261128w';
+import { initOnline, enterOnline } from './online.js?v=20261128w';
+import { enterSlots } from './slotmachine.js?v=20261128w';
+import { initVault, enterVault, leaveVault, clipCount } from './vault.js?v=20261128w';
+import { openHub } from './social.js?v=20261128w';
+import { tokens as slotTokens, SEASON_HEROES } from './slots.js?v=20261128w';
+import { playerLevel } from './level.js?v=20261128w';
+import { openHowTo } from './howto.js?v=20261128w';
+import { XH_STYLES, XH_COLORS, applyCrosshair } from './crosshair.js?v=20261128w';
+import { CONTRACTS, contractOf, taskFrac, taskDone, statOf, tasksDone, openContracts, contractsLeft, contractUnlocked, contractDone } from './contracts.js?v=20261128w';
 import { SEASON, SEASONS, NEXT_SEASON, TRACKS, seasonLive, seasonTier, seasonStartLabel, skinById, TRACK, MAX_TIER, passXp, tierProgress, heroOwned, heroTier, skinOwned, skinTier, skinsFor, dressed, equip, rewardInfo,
-  COS_TYPES, cosById, cosOwned, equippedCos, equipCos, cosArt, lockShort, lockLong, isSlotItem, isContractHero } from './pass.js?v=20261128r';
+  COS_TYPES, cosById, cosOwned, equippedCos, equipCos, cosArt, lockShort, lockLong, isSlotItem, isContractHero } from './pass.js?v=20261128w';
 
 // Front end: main menu → roster select → stage select → match. Settings overlay on top.
 
 const $ = id => document.getElementById(id);
 const hex = c => '#' + c.toString(16).padStart(6, '0');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 let api = null, screen = 'main', settingsOpen = false, mode = 'lane';
 const MODE_NAME = { lane: 'Lane Breaker', survivor: 'Survivor', hill: 'Hill Rush', cart: 'Payload', potato: 'Hot Potato', ball: 'Smash Ball', raid: 'Boss Raid', story: 'Story', online: 'Online' };
 function setMode(m) {
@@ -363,8 +365,8 @@ function showHero(h, instant) {
   $('lockIn').querySelector('small').textContent = !own ? (isContractHero(h.id) ? (contractUnlocked(h.id) ? 'Finish the contract' : 'Contract sealed') : isSlotItem(h.id) ? 'Win it at the slots' : `Reach tier ${heroTier(h.id)}`) : mode === 'survivor' ? 'Drop in as' : 'Lock in';
 }
 
-// Shrink the ability list until all four rows fit the panel: smaller text first, then two
-// columns, then smaller again. Only if nothing fits (a tiny window) does the panel scroll.
+// Size the ability list to the panel: big text when there's room, a little smaller when it's tight.
+// It never shrinks past a comfortable reading size: if the kit still doesn't fit, the list scrolls.
 let kitRO = null, fitRaf = 0;
 const fitSoon = () => { cancelAnimationFrame(fitRaf); fitRaf = requestAnimationFrame(fitKit); };
 function fitKit() {
@@ -380,13 +382,16 @@ function sizeKit(body, kit) {
   if (!body.clientHeight || !kit.offsetParent) return;
   // everything in view, with a few pixels to spare so the last row never loses its bottom edge
   const fits = () => { const last = kit.lastElementChild; return body.scrollHeight <= body.clientHeight - 2 && (!last || last.getBoundingClientRect().bottom <= body.getBoundingClientRect().bottom - 3); };
-  const wide = body.clientWidth >= 380;
-  const tries = [[false, 1.8], [false, 1.65], [false, 1.5], [false, 1.38], [false, 1.26], [false, 1.2], [false, 1.1], [false, 1], [false, .92], [false, .85], ...(wide ? [[true, 1], [true, .92], [true, .85]] : []), [false, .78], [false, .72], ...(wide ? [[true, .78], [true, .7], [true, .62]] : []), [false, .66]];
-  for (const [two, s] of tries) {
-    kit.classList.toggle('two', two); kit.style.setProperty('--ks', s);
+  const tries = [1.8, 1.65, 1.5, 1.38, 1.26, 1.2, 1.1, 1, .94];
+  kit.classList.remove('two');
+  for (const s of tries) {
+    kit.style.setProperty('--ks', s);
     if (fits()) return;
   }
   body.classList.add('spill');
+  // fade the bottom edge while there's more below, so it's clear the list scrolls
+  const edge = () => body.classList.toggle('end', body.scrollTop + body.clientHeight >= body.scrollHeight - 4);
+  body.onscroll = edge; edge();
 }
 let fitT = 0;
 addEventListener('resize', () => { clearTimeout(fitT); fitT = setTimeout(fitKit, 80); });
@@ -747,6 +752,13 @@ const SCHEMA = [
     { key: 'sens', label: 'Mouse sensitivity', hint: 'How far the camera turns per mouse move', type: 'range', min: 0.3, max: 3, step: 0.05, fmt: v => v.toFixed(2) },
     { key: 'invertY', label: 'Invert mouse Y', hint: 'Push the mouse forward to look down', type: 'toggle' },
   ] },
+  { id: 'pad', group: 'Controller', icon: '🕹️', blurb: 'Gamepad aiming and buttons', items: [
+    { type: 'padmap', key: 'padmap', label: 'Layout', hint: '' },
+    { key: 'padSens', label: 'Look sensitivity', hint: 'How fast the right stick turns the camera', type: 'range', min: 0.3, max: 3, step: 0.05, fmt: v => v.toFixed(2) },
+    { key: 'padInvert', label: 'Invert look Y', hint: 'Push the right stick up to look down', type: 'toggle' },
+    { key: 'aimAssist', label: 'Aim assist', hint: 'Turning slows a little while your crosshair is on an enemy hero, and follows them if they strafe', type: 'toggle' },
+    { key: 'padRumble', label: 'Vibration', hint: 'Rumble when you’re hit, land a knockout, use an ultimate or land hard', type: 'toggle' },
+  ] },
   { id: 'crosshair', group: 'Crosshair', icon: '🎯', blurb: 'Shape, colour and size', items: [
     { type: 'preview', key: 'xh', label: 'Preview', hint: 'How it looks in a match' },
     { key: 'xhStyle', label: 'Style', hint: 'The shape of the crosshair', type: 'choice', options: XH_STYLES },
@@ -783,6 +795,11 @@ function renderSettings() {
   const row = it => {
     const v = cfg[it.key], lab = `<div class="sr-l"><b>${it.label}</b><small>${it.hint}</small></div>`;
     if (it.type === 'preview') return `<div class="srow xh-row">${lab}<div class="xh-prev" id="xhPrev"></div></div>`;
+    if (it.type === 'padmap') {
+      const list = rows => rows.map(([b, l]) => `<div class="kbrow fixed"><span>${l}</span><kbd>${padLabel(b)}</kbd></div>`).join('');
+      return `<div class="padmap"><p class="pm-status ${pad.on ? 'on' : ''}">${pad.on ? `🎮 Connected: <b>${esc(pad.name.replace(/\s*\(.*$/, '') || 'Controller')}</b>` : '🎮 No controller found. Plug one in (or pair it) and press any button.'}</p>
+        <div class="pm-cols"><div><h5>In a match</h5><div class="kbgrid">${list(PAD_LAYOUT)}</div></div><div><h5>In menus</h5><div class="kbgrid">${list(PAD_MENU)}</div><p class="kb-hint">Text boxes open an on-screen keyboard. Rebound keyboard keys carry over: the buttons press your keys for you.</p></div></div></div>`;
+    }
     if (it.type === 'toggle') return `<div class="srow">${lab}<button class="tog ${v ? 'on' : ''}" data-key="${it.key}" data-type="toggle" aria-pressed="${!!v}"><i></i><em>${v ? 'On' : 'Off'}</em></button></div>`;
     if (it.type === 'choice') return `<div class="srow">${lab}<div class="seg">${it.options.map(([k, l]) => `<button class="${v === k ? 'on' : ''}" data-key="${it.key}" data-type="choice" data-val="${k}">${l}</button>`).join('')}</div></div>`;
     return `<div class="srow">${lab}<div class="rng"><input type="range" data-key="${it.key}" min="${it.min}" max="${it.max}" step="${it.step}" value="${v}" style="--p:${rangeFill(it, +v)}"><output>${it.fmt(+v)}</output></div></div>`;
@@ -900,6 +917,7 @@ export function initMenu(opts) {
     e.target.nextElementSibling.textContent = it.fmt(+e.target.value);
   });
   $('setDone').onclick = closeSettings; $('setX').onclick = closeSettings;
+  for (const ev of ['gamepadconnected', 'gamepaddisconnected']) addEventListener(ev, () => { if (settingsOpen && setTab === 'pad') setTimeout(renderSettings, 50); });
   $('settings').addEventListener('click', e => { if (e.target === $('settings')) closeSettings(); });     // click outside the sheet
   // reset asks twice, so a stray click can't wipe your setup
   $('setReset').onclick = () => {

@@ -1,4 +1,4 @@
-import { cfg, save } from './settings.js?v=20261128r';
+import { cfg, save } from './settings.js?v=20261128w';
 
 // Optional performance overlay (Settings → Video, or F3): FPS, 1% low, frame time,
 // draw calls, triangles, GPU memory and the render scale. Updates a few times a second.

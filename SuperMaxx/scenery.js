@@ -35,6 +35,10 @@ export const THEMES = {
     skyTop: 0x3a4a8a, skyBottom: 0xff9a6a, fog: 0xc8a8b0, sun: 0xffb07a, hemiSky: 0xffd8c8, hemiGround: 0x6a7a8a,
     sunPos: [60, 18, -50],
   },
+  harvest: {
+    skyTop: 0x4a86d8, skyBottom: 0xffcf8a, fog: 0xf0c890, sun: 0xffc884, hemiSky: 0xfff0d8, hemiGround: 0xb8803a,
+    sunPos: [-55, 34, 60],
+  },
 };
 
 export function rng(seed) {
@@ -187,6 +191,27 @@ export function groundTexture(theme) {
     g.fillStyle = 'rgba(255,236,220,.8)';
     for (let i = 0; i < 24; i++) { g.beginPath(); g.ellipse(Math.random() * s, Math.random() * s, 3, 2.2, Math.random() * 3, 0, 7); g.fill(); }
   });
+  if (theme === 'harvest') return canvasTex(512, (g, s) => {
+    // late-season grass going gold, with patches of bare earth and fallen leaves
+    g.fillStyle = '#a8b25a'; g.fillRect(0, 0, s, s);
+    for (let i = 0; i < 22; i++) {
+      const x = Math.random() * s, y = Math.random() * s, r = 40 + Math.random() * 70;
+      const gr = g.createRadialGradient(x, y, 0, x, y, r);
+      gr.addColorStop(0, Math.random() < 0.5 ? 'rgba(210,170,80,.4)' : 'rgba(120,90,50,.25)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+    for (let i = 0; i < 7000; i++) {
+      const v = Math.random();
+      g.strokeStyle = v < 0.4 ? 'rgba(110,120,40,.35)' : v < 0.85 ? 'rgba(230,200,110,.35)' : 'rgba(255,240,200,.4)';
+      const x = Math.random() * s, y = Math.random() * s;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.random() * 4 - 2, y - 4 - Math.random() * 6); g.stroke();
+    }
+    for (let i = 0; i < 70; i++) {
+      g.fillStyle = ['#e0702a', '#c8452a', '#f0a830', '#a85a2a'][i % 4];
+      g.save(); g.translate(Math.random() * s, Math.random() * s); g.rotate(Math.random() * 7);
+      g.beginPath(); g.ellipse(0, 0, 5, 2.6, 0, 0, 7); g.fill(); g.restore();
+    }
+  });
   if (theme === 'desert') return canvasTex(512, (g, s) => {
     // warm sand with wind ripples, darker clay patches and scattered pebbles
     g.fillStyle = '#e8b97e'; g.fillRect(0, 0, s, s);
@@ -268,6 +293,16 @@ export function pathTexture(theme) {
       g.fillStyle = 'rgba(30,22,16,.55)'; g.fillRect(36 + (y % 3) * 60, y * 16 + 6, 3, 3); g.fillRect(s - 52 - (y % 2) * 50, y * 16 + 7, 3, 3);
     }
     g.fillStyle = '#c8b48a'; for (let y = 0; y < s; y += 6) { g.fillRect(2, y, 8, 3); g.fillRect(s - 10, y + 3, 8, 3); }
+  });
+  if (theme === 'harvest') return canvasTex(256, (g, s) => {
+    // a dirt farm track with two worn ruts, straw blown across it and a grassy hump down the middle
+    g.fillStyle = '#9a7048'; g.fillRect(0, 0, s, s);
+    speckle(g, s, 1400, ['rgba(70,45,25,.2)', 'rgba(230,200,150,.2)'], 2);
+    g.fillStyle = 'rgba(70,46,26,.35)'; g.fillRect(s * 0.22, 0, 22, s); g.fillRect(s * 0.78 - 22, 0, 22, s);
+    g.fillStyle = 'rgba(150,160,80,.55)'; g.fillRect(s / 2 - 10, 0, 20, s);
+    g.strokeStyle = 'rgba(240,210,120,.8)'; g.lineWidth = 1.5;
+    for (let i = 0; i < 60; i++) { const x = Math.random() * s, y = Math.random() * s, a = Math.random() * 7; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * 9, y + Math.sin(a) * 9); g.stroke(); }
+    g.fillStyle = '#7a9a4a'; g.fillRect(0, 0, 10, s); g.fillRect(s - 10, 0, 10, s);
   });
   if (theme === 'desert') return canvasTex(256, (g, s) => {
     // a packed red-clay road with two wagon ruts and painted turquoise edge stones

@@ -3,7 +3,7 @@
 // something you don't own yet: a slot-exclusive hero, skin, spray or emote. Daily challenges
 // (daily.js) pay a token too. Saved locally.
 
-import { SEASONS, seasonLive } from './seasons.js?v=20261128r';
+import { SEASONS, seasonLive } from './seasons.js?v=20261128w';
 
 const KEY = 'supermaxx-slots';
 const S = (() => { try { return { tokens: 0, owned: [], spins: 0, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { return { tokens: 0, owned: [], spins: 0 }; } })();

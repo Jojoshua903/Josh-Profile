@@ -1,5 +1,5 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { burst, ring } from './units.js?v=20261128r';
+import { burst, ring } from './units.js?v=20261128w';
 
 // Victory poses: when your team wins, the camera swings round to face your hero, who strikes
 // their own pose with their own effect and line before the results come up. Poses are built on

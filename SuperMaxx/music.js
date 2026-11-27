@@ -1,4 +1,4 @@
-import { actx, noiseBuf, musicBus, impulse, onAudioReady, m2f } from './audio.js?v=20261128r';
+import { actx, noiseBuf, musicBus, impulse, onAudioReady, m2f } from './audio.js?v=20261128w';
 
 // Procedural soundtrack: each track is a set of 8-bar sections (chords, drum pattern,
 // bass style, lead density) played in a long form, so a loop runs about 3 minutes.
@@ -114,6 +114,18 @@ export const TRACKS = {
       B: { p: [3, 0, 6, 4], d: 'latin', b: 'walk', l: 0.75, a: 2, pad: 1 },
       C: { p: [5, 3, 0, 4], d: 'half', b: 'long', l: 0.4, a: 1, pad: 1 },
       D: { p: [0, 3, 4, 0], d: 'drive', b: 'octave', l: 0.9, a: 2, pad: 1 },
+    },
+    form: ['intro', 'A', 'A+', 'B', 'C', 'D', 'A+', 'B+', 'D+', 'intro'],
+  },
+  hollow: {                                // Pumpkin Hollow: a foot-stomping fiddle hoedown
+    bpm: 122, root: 50, scale: 'mixo', swing: 0.14,
+    lead: { type: 'sawtooth', cut: 3200, v: 0.045, vib: 1, a: 0.02 }, bass: { type: 'triangle', cut: 800 }, arp: { type: 'triangle', cut: 3600, pluck: 1 }, pad: { type: 'sawtooth', cut: 1000 },
+    sections: {
+      intro: { p: [0, 3, 0, 4], d: 'light', b: 'long', l: 0, a: 1, pad: 1 },
+      A: { p: [0, 3, 4, 0], d: 'boom', b: 'octave', l: 0.65, a: 2, pad: 0 },
+      B: { p: [3, 0, 6, 4], d: 'groove', b: 'walk', l: 0.75, a: 2, pad: 1 },
+      C: { p: [5, 3, 0, 4], d: 'half', b: 'long', l: 0.35, a: 1, pad: 1 },
+      D: { p: [0, 6, 3, 4], d: 'drive', b: 'octave', l: 0.9, a: 2, pad: 1 },
     },
     form: ['intro', 'A', 'A+', 'B', 'C', 'D', 'A+', 'B+', 'D+', 'intro'],
   },

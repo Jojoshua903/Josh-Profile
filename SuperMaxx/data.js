@@ -1,5 +1,5 @@
 // Maps and tuning shared across the game. The hero roster lives in heroes.js.
-export { HEROES } from './heroes.js?v=20261128r';
+export { HEROES } from './heroes.js?v=20261128w';
 
 
 export const DIFFICULTY = {
@@ -12,7 +12,7 @@ export const TUNING = {
   gravity: 24, jump: 8.2, radius: 0.45, eye: 1.6, step: 0.35,
   respawn: 6, waveEvery: 20, firstWave: 4, minionsPerWave: 4,
   towerHp: 1050, coreHp: 1700, towerRange: 18, towerDmg: 20, towerRate: 1.4,
-  minionHp: 55, minionDmg: 7, minionRange: 7, minionSpeed: 4.2,
+  minionHp: 45, minionDmg: 5.5, minionRange: 7, minionSpeed: 4.2,
   fountainHeal: 45,
   // Lane Breaker rounds: at overtime both cores lose their shield and take double damage;
   // at the time limit the team whose core has more health left wins
@@ -125,7 +125,7 @@ export const MAPS = [
   },
   {
     id: 'skyreach', theme: 'sky', name: 'Skyreach Isles', lanesLabel: '2 lanes · floating islands',
-    desc: 'Marble ruins on islands floating above the clouds at sunrise. Low gravity makes every jump float, and golden jump pads fling you onto sky platforms or right across to the other lane.',
+    desc: 'Marble ruins on islands floating above the clouds at sunrise. Low gravity makes every jump float, and golden jump pads fling you up onto the sky platforms.',
     W: 30, L: 64, accent: 0xffc93c,
     gravity: 0.6,                                                      // everything falls 40% slower (mapfx.js)
     hills: [[0, 0], [-16, -14], [0, 0], [16, 14]], duel: [0, -28],
@@ -140,7 +140,7 @@ export const MAPS = [
       [-20, -20, 2, 5, 2.6], [20, -26, 2, 5, 2.6], [4, -4, 2.4, 2.4, 1.3],
     ],
     // jump pads: [x, z, launch speed, landing x, landing z, landing height]
-    pads: [[0, -11, 13, 0, -17, 5], [-21, -14, 12, -24, -8, 4.5], [-12, -4, 12, 12, 4, 0]],
+    pads: [[0, -11, 13, 0, -17, 5], [-21, -14, 12, -24, -8, 4.5]],
   },
   {
     id: 'docks', theme: 'docks', name: 'Tidewater Docks', lanesLabel: '2 lanes · fishing harbour',
@@ -158,6 +158,26 @@ export const MAPS = [
       [-24, -16, 3, 3, 1.2], [14, -28, 3, 3, 1.2], [0, -32, 4, 2, 1.2], [-4, -8, 2.4, 2.4, 1.3],
       [0, 0, 6, 5, 4.5], [-27, -26, 3, 8, 3.5], [24, -12, 3, 5, 3],
       [8, -42, 3, 3, 2.6], [-8, -44, 3, 3, 2.6],
+    ],
+  },
+  {
+    id: 'hollow', theme: 'harvest', name: 'Pumpkin Hollow', lanesLabel: '2 lanes · autumn farm',
+    desc: 'A farm at harvest time under a golden autumn sky. Both lanes swing in past the big red barn in the middle. Every so often a gust of wind sweeps across the fields and shoves everyone sideways.',
+    W: 32, L: 64, accent: 0xe8742a,
+    gust: { every: 40, first: 25, dur: 6, warn: 4, push: 5.5 },        // mapfx.js
+    hills: [[0, -14], [-18, -12], [0, 14], [18, 12]], duel: [0, -24],
+    // each lane runs up the side of the field, ducks in past the barn, then back out
+    lanes: [
+      [[0, -52], [-20, -36], [-20, -8], [-9, 0], [-20, 8], [-20, 36], [0, 52]],
+      [[0, -52], [20, -36], [20, -8], [9, 0], [20, 8], [20, 36], [0, 52]],
+    ],
+    towers: [[-23.5, -30], [23.5, -30]],
+    blocks: [
+      [0, 0, 7, 9, 5.5],                                                   // the barn
+      [-12, -18, 4, 1.6, 1.2], [12, -12, 4, 1.6, 1.2], [-5, -28, 1.6, 4, 1.2],   // hay bales
+      [-26, -20, 2.5, 6, 3], [26, -16, 2.5, 5, 3],                         // sheds
+      [-14, -14, 2.4, 2.4, 1.3], [6, -20, 2.4, 2.4, 1.3],                  // pumpkin crates
+      [8, -40, 3, 3, 2.6], [-8, -42, 3, 3, 2.6],
     ],
   },
 ];
@@ -250,9 +270,10 @@ export const SURVIVOR = {
   ],
 };
 
-// ---------- Duel (online 1v1) ----------
-// Round based: a round ends on the first knockout, first to `toWin` rounds takes the duel.
-export const DUEL = { toWin: 3, breakT: 3.5 };
+// ---------- Duel (online 1v1, 2v2 or 3v3) ----------
+// Round based: nobody respawns, a round ends once one whole team is knocked out, first to `toWin`
+// rounds takes the duel. The room host picks the team size.
+export const DUEL = { toWin: 3, breakT: 3.5, sizes: [1, 2, 3] };
 
 // ---------- Payload ----------
 // 3v3 tug of war on the first lane of a stage: push the cart from the middle to the enemy flag.

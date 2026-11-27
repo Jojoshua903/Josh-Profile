@@ -1,6 +1,6 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { cfg } from './settings.js?v=20261128r';
-import { burst, ring, startReload } from './units.js?v=20261128r';
+import { cfg } from './settings.js?v=20261128w';
+import { burst, ring, startReload } from './units.js?v=20261128w';
 
 // Game feel on top of the HUD: small things that make a match read smoother. Each one is a
 // setting (Gameplay / Video), and everything here only touches the local player's view.

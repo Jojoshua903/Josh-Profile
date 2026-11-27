@@ -1,6 +1,6 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { M, put } from './scenery.js?v=20261128r';
-import { pine, blossom, snowPine } from './backdrop.js?v=20261128r';
+import { M, put } from './scenery.js?v=20261128w';
+import { pine, blossom, snowPine } from './backdrop.js?v=20261128w';
 
 // Themed cover blocks and scattered props inside the arena. Props are placed on the blue
 // half and point-mirrored, always clear of lanes, bases, towers and cover.
@@ -28,6 +28,27 @@ const crateTex = texOf((g, s) => {
   g.strokeStyle = '#7d5630'; g.lineWidth = 10; g.strokeRect(5, 5, s - 10, s - 10);
   g.beginPath(); g.moveTo(8, 8); g.lineTo(s - 8, s - 8); g.stroke();
 });
+const hayTex = texOf((g, s) => {
+  g.fillStyle = '#e0bc62'; g.fillRect(0, 0, s, s);
+  for (let i = 0; i < 900; i++) {
+    g.strokeStyle = ['rgba(170,130,50,.5)', 'rgba(255,236,160,.6)', 'rgba(200,160,70,.5)'][i % 3]; g.lineWidth = 1;
+    const x = Math.random() * s, y = Math.random() * s, a = (Math.random() - 0.5) * 0.8;
+    g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * 12, y + Math.sin(a) * 12); g.stroke();
+  }
+});
+// a gable roof: a triangle `span` wide and `rise` tall, run `len` along z
+function gable(span, rise, len) {
+  const s = new THREE.Shape(); s.moveTo(-span / 2, 0); s.lineTo(span / 2, 0); s.lineTo(0, rise); s.closePath();
+  const g = new THREE.ExtrudeGeometry(s, { depth: len, bevelEnabled: false }); g.translate(0, 0, -len / 2); return g;
+}
+// a ribbed pumpkin with a stalk
+function pumpkin(parent, x, y, z, s) {
+  const p = new THREE.Group(); p.position.set(x, y, z); parent.add(p);
+  const col = [0xe8742a, 0xf08a2a, 0xd86020, 0xf0c060][Math.floor(Math.random() * 4)];
+  for (let k = 0; k < 6; k++) { const lobe = put(p, sphere(s * 0.62, 10, 8), M(col), Math.cos(k * 1.047) * s * 0.4, 0, Math.sin(k * 1.047) * s * 0.4, false); lobe.scale.y = 0.85; }
+  put(p, cyl(s * 0.07, s * 0.1, s * 0.5, 6), M(0x5a6a2a), 0, s * 0.6, 0, false).rotation.z = 0.3;
+  return p;
+}
 
 function edges(mesh, opacity = 0.22) {
   // the old ink outlines are gone: the stylised look relies on soft shading instead
@@ -182,6 +203,53 @@ export function styleBlock(scene, theme, [x, z, w, d, h], i, r) {
       for (const s of [-1, 1]) {
         put(g, box(Math.min(1, w * 0.35), 0.7, 0.06), M(0xffd38a, { emissive: 0xffb45a, emissiveIntensity: 0.8 }), w * 0.2, Math.min(h - 0.8, 2.2), s * (d / 2 + 0.01), false);
         put(g, new THREE.TorusGeometry(0.3, 0.09, 6, 16), M(s > 0 ? 0xff5a36 : 0xffffff), -w * 0.22, Math.min(h - 1, 1.8), s * (d / 2 + 0.06), false);
+      }
+    }
+  } else if (theme === 'harvest') {
+    const wood = M(0x8a5634), trim = M(0xf4ecdc);
+    if (h >= 4.5) {
+      // the big red barn: white trim, a gambrel roof, X-braced doors and a hayloft window
+      edges(put(g, box(w, h - 1.2, d), M(0xb8392e), 0, (h - 1.2) / 2, 0));
+      const along = d >= w, span = along ? w : d, len = along ? d : w;
+      const roof = put(g, gable(span + 0.6, 1.9, len + 0.5), M(0x5a3a36), 0, h - 1.2, 0);
+      if (!along) roof.rotation.y = Math.PI / 2;
+      for (const s of [-1, 1]) {
+        const face = (x, y, ww, hh, mat, out = 0.03) => put(g, box(along ? ww : 0.06, hh, along ? 0.06 : ww), mat, along ? x : s * (w / 2 + out), y, along ? s * (d / 2 + out) : x, false);
+        face(0, 1.25, span * 0.5, 2.5, M(0x9a2c24));                            // the big doors
+        for (const k of [-1, 1]) { const b = face(0, 1.25, Math.hypot(span * 0.5, 2.5) - 0.1, 0.16, trim, 0.05); b.rotation[along ? 'z' : 'x'] = k * Math.atan2(2.5, span * 0.5); }
+        face(0, 2.55, span * 0.54, 0.16, trim, 0.05); face(0, 0.02 + 0.08, span * 0.54, 0.16, trim, 0.05);
+        face(0, h - 2, 1.1, 1, M(0x2a1e18)); face(0, h - 2, 1.3, 0.12, trim, 0.05);
+      }
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) put(g, box(0.2, h - 1.2, 0.2), trim, sx * (w / 2 + 0.02), (h - 1.2) / 2, sz * (d / 2 + 0.02), false);
+      put(g, box(0.9, 1.3, 0.9), M(0xf4ecdc), 0, h + 0.4, 0, false);            // the cupola, with a weathervane rooster
+      put(g, new THREE.ConeGeometry(0.75, 0.8, 4), M(0x5a3a36), 0, h + 1.45, 0, false).rotation.y = Math.PI / 4;
+      put(g, cyl(0.03, 0.03, 1, 5), M(0x2a2a2a), 0, h + 2.3, 0, false);
+      put(g, box(0.5, 0.35, 0.08), M(0x2a2a2a), 0, h + 2.7, 0, false);
+    } else if (low) {
+      // a row of square hay bales, with loose straw on top
+      const along = w >= d, len = along ? w : d, n = Math.max(1, Math.round(len / 1.4)), bl = len / n;
+      for (let k = 0; k < n; k++) {
+        const t = -len / 2 + bl * (k + 0.5);
+        edges(put(g, box(along ? bl - 0.08 : w, h, along ? d : bl - 0.08), new THREE.MeshStandardMaterial({ map: hayTex, color: [0xffffff, 0xf2e6c8, 0xfff4d8][(k + i) % 3] }), along ? t : 0, h / 2, along ? 0 : t));
+        for (const s of [-0.3, 0.3]) put(g, box(along ? 0.05 : w + 0.02, h + 0.02, along ? d + 0.02 : 0.05), M(0x8a6a3a), along ? t + s * bl : 0, h / 2, along ? 0 : t + s * bl, false);
+      }
+      if (r() < 0.7) put(g, box(0.9, 0.08, 0.6), M(0xe8c87a), (r() - 0.5) * w * 0.4, h + 0.04, (r() - 0.5) * d * 0.3, false).rotation.y = r() * 3;
+    } else if (h <= 1.4) {
+      // a slatted crate piled with pumpkins
+      const t = crateTex.clone(); t.needsUpdate = true;
+      edges(put(g, box(w, h * 0.7, d), new THREE.MeshStandardMaterial({ map: t, color: 0xe8d0b0 }), 0, h * 0.35, 0), 0.3);
+      for (let k = 0; k < 5; k++) pumpkin(g, (r() - 0.5) * (w - 0.8), h * 0.7 + 0.22, (r() - 0.5) * (d - 0.8), 0.32 + r() * 0.12);
+    } else {
+      // a tool shed: plank walls, a sloped tin roof, a lantern and a pitchfork leaning on it
+      edges(put(g, box(w, h, d), M([0x9a6a3e, 0x8a5634, 0xa87a48][i % 3]), 0, h / 2, 0));
+      const along = w >= d, len = along ? w : d, span = along ? d : w;
+      for (let t = -len / 2 + 0.25; t < len / 2; t += 0.5) for (const s of [-1, 1]) put(g, box(along ? 0.04 : 0.02, h - 0.1, along ? 0.02 : 0.04), M(0x5a3a22), along ? t : s * (w / 2 + 0.01), h / 2, along ? s * (d / 2 + 0.01) : t, false);
+      const roof = put(g, box(along ? len + 0.5 : span + 0.7, 0.14, along ? span + 0.7 : len + 0.5), M(0x8a96a0, { metalness: 0.4, roughness: 0.5 }), 0, h + 0.12, 0);
+      roof.rotation[along ? 'x' : 'z'] = 0.18;
+      for (const s of [-1, 1]) {
+        put(g, box(0.25, 0.35, 0.25), M(0xffd38a, { emissive: 0xffa040, emissiveIntensity: 1 }), along ? len * 0.3 : s * (w / 2 + 0.18), h * 0.72, along ? s * (d / 2 + 0.18) : len * 0.3, false);
+        const fork = put(g, cyl(0.04, 0.04, 1.9, 5), wood, along ? -len * 0.25 : s * (w / 2 + 0.2), 0.95, along ? s * (d / 2 + 0.2) : -len * 0.25, false);
+        fork.rotation[along ? 'x' : 'z'] = s * 0.25;
       }
     }
   } else {
@@ -449,6 +517,52 @@ const P = {
     put(g, sphere(0.16), M([0xff5a36, 0xffc93c][Math.floor(r() * 2)]), -0.75, 0.16, 0.35, false);
     return [g, [1.4, 0.7, 1]];
   },
+  pumpkins(r) {
+    // a little patch: a few pumpkins on curling vines
+    const g = new THREE.Group();
+    for (let k = 0; k < 3 + Math.floor(r() * 3); k++) pumpkin(g, (r() - 0.5) * 1.6, 0.25, (r() - 0.5) * 1.6, 0.34 + r() * 0.2);
+    for (let k = 0; k < 5; k++) put(g, box(0.5, 0.04, 0.3), M(0x5a8a3a), (r() - 0.5) * 1.8, 0.03, (r() - 0.5) * 1.8, false).rotation.y = r() * 3;
+    return [g, null];
+  },
+  scarecrow(r) {
+    const g = new THREE.Group(), wood = M(0x7a5232);
+    put(g, cyl(0.07, 0.08, 2.6, 6), wood, 0, 1.3, 0);
+    put(g, box(1.8, 0.1, 0.1), wood, 0, 1.9, 0, false);
+    put(g, box(0.75, 0.85, 0.36), M([0x3f6ab8, 0xc8453a, 0x6a8a3a][Math.floor(r() * 3)]), 0, 1.75, 0);
+    for (const s of [-1, 1]) put(g, box(0.6, 0.22, 0.22), M(0x3f6ab8), s * 0.62, 1.9, 0, false);
+    for (const s of [-1, 1]) put(g, new THREE.ConeGeometry(0.12, 0.3, 6), M(0xe8c87a), s * 0.98, 1.9, 0, false).rotation.z = s * Math.PI / 2;
+    put(g, sphere(0.26, 10, 8), M(0xe8d4a8), 0, 2.45, 0);
+    put(g, cyl(0.5, 0.5, 0.04, 14), M(0xb8904a), 0, 2.62, 0, false);
+    put(g, cyl(0.2, 0.26, 0.3, 10), M(0xb8904a), 0, 2.78, 0, false);
+    for (const s of [-1, 1]) put(g, sphere(0.04), M(0x1a1a1a), s * 0.09, 2.5, 0.24, false);
+    return [g, [0.4, 0.4, 2.6]];
+  },
+  autumnTree(r) {
+    // a round maple in red or gold, with a scatter of leaves at its foot
+    const g = new THREE.Group(), cols = [[0xd8452a, 0xe8642a, 0xc8352a], [0xf0a830, 0xe8c040, 0xe08a2a], [0xe8742a, 0xd85a2a, 0xf0a030]][Math.floor(r() * 3)], s = 0.9 + r() * 0.4;
+    put(g, cyl(0.22 * s, 0.34 * s, 2.4 * s, 8), M(0x5a3a26), 0, 1.2 * s, 0);
+    for (let k = 0; k < 6; k++) put(g, new THREE.IcosahedronGeometry((0.9 + r() * 0.5) * s, 0), M(cols[k % 3], { flatShading: true }), Math.cos(k * 1.1) * 0.9 * s, (2.8 + r() * 1.1) * s, Math.sin(k * 1.4) * 0.9 * s);
+    for (let k = 0; k < 10; k++) put(g, box(0.18, 0.02, 0.12), M(cols[k % 3]), (r() - 0.5) * 3, 0.02, (r() - 0.5) * 3, false).rotation.y = r() * 3;
+    return [g, [0.7, 0.7, 5]];
+  },
+  haystack(r) {
+    // a round bale lying on its side
+    const g = new THREE.Group(), rad = 0.65 + r() * 0.15;
+    const b = put(g, cyl(rad, rad, 1.3, 16), new THREE.MeshStandardMaterial({ map: hayTex, color: 0xfff0d0 }), 0, rad, 0); b.rotation.z = Math.PI / 2;
+    for (const s of [-1, 1]) { const e = put(g, new THREE.CircleGeometry(rad * 0.98, 16), M(0xd8b060), s * 0.66, rad, 0, false); e.rotation.y = s * Math.PI / 2; }
+    return [g, [1.3, rad * 2, rad * 2]];
+  },
+  sunflowers(r) {
+    const g = new THREE.Group();
+    for (let k = 0; k < 4; k++) {
+      const x = (r() - 0.5) * 1.2, z = (r() - 0.5) * 1.2, h = 1.4 + r() * 0.7;
+      put(g, cyl(0.04, 0.05, h, 5), M(0x4a7a2a), x, h / 2, z, false);
+      const head = new THREE.Group(); head.position.set(x, h, z); head.rotation.x = -0.4; g.add(head);
+      put(head, cyl(0.3, 0.3, 0.06, 14), M(0xffc93c), 0, 0, 0, false).rotation.x = Math.PI / 2;
+      put(head, cyl(0.15, 0.15, 0.08, 12), M(0x5a3a1a), 0, 0, 0.02, false).rotation.x = Math.PI / 2;
+    }
+    return [g, null];
+  },
   anchor() {
     const g = new THREE.Group(), iron = M(0x3a3e46, { metalness: 0.55, roughness: 0.5 });
     put(g, box(0.16, 1.8, 0.16), iron, 0, 0.9, 0);
@@ -469,6 +583,7 @@ const RECIPES = {
   desert: [['cactus', 9, 0.8], ['redRock', 8, 0.8], ['barrel', 5, 0.5], ['tumble', 6, 0.6], ['skull', 3, 0.5], ['lamp', 4, 0.4], ['wagon', 2, 1.8, true], ['waterTower', 2, 1.4, true]],
   sky: [['crystal', 6, 0.6], ['blossom', 6, 0.8], ['column', 7, 0.6], ['windvane', 4, 0.4], ['stoneLantern', 5, 0.4], ['pot', 5, 0.5]],
   docks: [['bollard', 8, 0.4], ['lobsterPots', 6, 0.9], ['barrel', 7, 0.5], ['anchor', 3, 0.7], ['lamp', 6, 0.4], ['firewood', 2, 0.9]],
+  harvest: [['autumnTree', 7, 0.9], ['pumpkins', 7, 1], ['haystack', 5, 0.9], ['scarecrow', 3, 0.6], ['sunflowers', 5, 0.8], ['barrel', 4, 0.5], ['lamp', 4, 0.4], ['wagon', 2, 1.8, true]],
 };
 
 function segDist(px, pz, ax, az, bx, bz) {

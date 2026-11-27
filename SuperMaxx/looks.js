@@ -1,5 +1,5 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { mat, part, joint, ball, pill, tube, cone, ring, slab, dome, live } from './rig.js?v=20261128r';
+import { mat, part, joint, ball, pill, tube, cone, ring, slab, dome, live } from './rig.js?v=20261128w';
 
 // Skin looks: every skin adds pieces to the hero's body as well as recolouring it. Crowns,
 // horns and visors sit on the head, capes, wings and jetpacks on the back, emblems on the chest,

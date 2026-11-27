@@ -1,12 +1,12 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { TUNING, HILL, CART } from './data.js?v=20261128r';
-import { buildHeroModel } from './models.js?v=20261128r';
-import { makeBox, moveBody, resolveXZ, rayBox, raySphere, rayWorld, hasLOS } from './world.js?v=20261128r';
+import { TUNING, HILL, CART } from './data.js?v=20261128w';
+import { buildHeroModel } from './models.js?v=20261128w';
+import { makeBox, moveBody, resolveXZ, rayBox, raySphere, rayWorld, hasLOS } from './world.js?v=20261128w';
 import { resetStatus, tickStatus, afterMove, wallClimb, takenMult, fireMult, canAct, breakInvis, isHidden, slow as applySlow, stun as applyStun, knock as applyKnock, dropBlobs,
-  dealtMult, onDealt, onHurt, onKill, mend, thaw } from './abilities.js?v=20261128r';
-import { poseHero, rubble } from './anim.js?v=20261128r';
-import { onEliminated, survivorPreMove, survivorPostMove } from './survivor.js?v=20261128r';
-import { tickVfx, tickLight, blast, sparks } from './vfx.js?v=20261128r';
+  dealtMult, onDealt, onHurt, onKill, mend, thaw } from './abilities.js?v=20261128w';
+import { poseHero, rubble } from './anim.js?v=20261128w';
+import { onEliminated, survivorPreMove, survivorPostMove } from './survivor.js?v=20261128w';
+import { tickVfx, tickLight, blast, sparks } from './vfx.js?v=20261128w';
 
 // Survivor teams are per-hero ids; anything that isn't blue reads as an enemy red.
 export const TEAM_COLOR = new Proxy({ blue: 0x2f5bff, red: 0xff5a36 }, { get: (t, k) => (k in t ? t[k] : 0xff5a36) });
@@ -58,7 +58,7 @@ export function spawnHero(G, h) {
   const s = h.team === 'blue' ? -1 : 1;
   h.pos.set((Math.random() - 0.5) * 8, 0, s * (G.map.L - 4) + (Math.random() - 0.5) * 3);
   // duels start face to face partway down the map; red is the point mirror of blue
-  if (G.mode === 'duel' && G.map.duel) { const [x, z] = G.map.duel; h.pos.set(-s * x + (Math.random() - 0.5) * 2, 0, -s * z + (Math.random() - 0.5) * 2); }
+  if (G.mode === 'duel' && G.map.duel) { const [x, z] = G.map.duel; const sp = G.heroes.filter(u => u.team === h.team).length > 1 ? 7 : 2; h.pos.set(-s * x + (Math.random() - 0.5) * sp, 0, -s * z + (Math.random() - 0.5) * 2); }
   h.vel.set(0, 0, 0);
   h.hp = h.maxHp; h.alive = true; h.ammo = h.def.weapon.mag; h.reloadT = 0;
   resetStatus(h);
@@ -750,7 +750,13 @@ export function updateMinions(G, dt) {
       continue;
     }
     m.mesh.rotation.z = 0;
-    const tgt = nearestEnemy(G, m, 10, [G.minions, G.heroes, G.structures]);
+    let tgt = nearestEnemy(G, m, 10, [G.minions, G.heroes, G.structures]);
+    // no shooting (or chasing) through walls: heroes and minions need a clear line, checked a few
+    // times a second. Towers and cores are big targets in the open lane, so they skip the check.
+    if (tgt && (tgt.e.kind === 'hero' || tgt.e.kind === 'minion')) {
+      if (m.losFor !== tgt.e || G.time > (m.losAt || 0)) { m.losFor = tgt.e; m.losAt = G.time + 0.25; m.losOk = hasLOS(chestOf(m), chestOf(tgt.e), G.colliders); }
+      if (!m.losOk) tgt = null;
+    }
     let gx, gz, stop = false;
     if (tgt && tgt.d < TUNING.minionRange) {
       stop = true;

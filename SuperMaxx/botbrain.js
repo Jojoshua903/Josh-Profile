@@ -1,16 +1,16 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { TUNING } from './data.js?v=20261128r';
-import { hasLOS } from './world.js?v=20261128r';
-import { fire, releaseFire, chargeLevel, startReload, eyeOf, chestOf, dirFrom, coreVulnerable } from './units.js?v=20261128r';
-import { ABIL, castSlot, canAct, canMove, moveMult, isHidden, flap } from './abilities.js?v=20261128r';
-import { survivorGoal, inStorm } from './survivor.js?v=20261128r';
-import { hillGoal } from './hill.js?v=20261128r';
-import { cartGoal } from './payload.js?v=20261128r';
-import { potatoGoal } from './potato.js?v=20261128r';
-import { ballGoal, ballAim } from './ball.js?v=20261128r';
-import { avoidGuardians } from './guardian.js?v=20261128r';
-import { raidGoal } from './raid.js?v=20261128r';
-import { storyGoal } from './story.js?v=20261128r';
+import { TUNING } from './data.js?v=20261128w';
+import { hasLOS } from './world.js?v=20261128w';
+import { fire, releaseFire, chargeLevel, startReload, eyeOf, chestOf, dirFrom, coreVulnerable } from './units.js?v=20261128w';
+import { ABIL, castSlot, canAct, canMove, moveMult, isHidden, flap } from './abilities.js?v=20261128w';
+import { survivorGoal, inStorm } from './survivor.js?v=20261128w';
+import { hillGoal } from './hill.js?v=20261128w';
+import { cartGoal } from './payload.js?v=20261128w';
+import { potatoGoal } from './potato.js?v=20261128w';
+import { ballGoal, ballAim } from './ball.js?v=20261128w';
+import { avoidGuardians } from './guardian.js?v=20261128w';
+import { raidGoal } from './raid.js?v=20261128w';
+import { storyGoal } from './story.js?v=20261128w';
 
 const v1 = new THREE.Vector3(), v2 = new THREE.Vector3();
 

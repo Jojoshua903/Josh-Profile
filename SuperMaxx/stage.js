@@ -1,6 +1,6 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { cfg } from './settings.js?v=20261128r';
-import { bake } from './rig.js?v=20261128r';
+import { cfg } from './settings.js?v=20261128w';
+import { bake } from './rig.js?v=20261128w';
 
 // Stage atmosphere: sky, sun, fill light, haze, image-based lighting and set dressing.
 // Each stage has its own time of day; Maxx Island (Survivor) gets a tropical midday.
@@ -45,6 +45,11 @@ export const LOOK = {
     top: 0x2e3a78, horizon: 0xff9a6a, bottom: 0x4a5a78, sun: 0xffa86a, sunI: 2.5, sunPos: [60, 18, -50],
     hemiSky: 0xffd8c8, hemiGround: 0x5a6a7a, hemiI: 0.95, fill: 0x8aa0ff, fillI: 0.6, fog: 0xc8a0a8, fogD: 0.0048, env: 0.7,
     motes: 0xffe0c8, shafts: 0.05, clouds: 0xffc8a8,
+  },
+  harvest: {    // Pumpkin Hollow: warm autumn afternoon, low gold sun and a hazy amber horizon
+    top: 0x3f7ad0, horizon: 0xffc884, bottom: 0xd8a060, sun: 0xffbe78, sunI: 3.0, sunPos: [-55, 34, 60],
+    hemiSky: 0xffecd0, hemiGround: 0xb8803a, hemiI: 0.9, fill: 0x9ab8ff, fillI: 0.5, fog: 0xf0c890, fogD: 0.0044, env: 0.75,
+    motes: 0xffc884, shafts: 0.08, clouds: 0xffe0bc,
   },
   island: {     // Survivor: hot tropical midday
     top: 0x2a84e4, horizon: 0xbfe8ff, bottom: 0x9fd6e8, sun: 0xfff4dc, sunI: 3.3, sunPos: [30, 80, 20],
@@ -234,6 +239,7 @@ export function buildDressing(scene, map) {
   if (map.id === 'neon') ticks.push(festoons(scene, map, [16, 36], [0xff5aa8, 0x5af0ff, 0xffc93c, 0x9b5cff]));
   if (map.id === 'mesa') ticks.push(festoons(scene, map, [8, 30], [0xffd27a, 0xff7a5a, 0x3fb3a6, 0xffc93c]));
   if (map.id === 'docks') ticks.push(festoons(scene, map, [12, 34], [0xffe1a0, 0xffc27a, 0xff9a6a]));
+  if (map.id === 'hollow') ticks.push(festoons(scene, map, [10, 32], [0xffc27a, 0xe8742a, 0xffe1a0, 0xc8452a]));
   return (dt, t) => ticks.forEach(f => f(dt, t));
 }
 

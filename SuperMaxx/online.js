@@ -1,9 +1,9 @@
-import { HEROES, ARCHETYPES } from './heroes.js?v=20261128r';
-import { MAPS, DIFFICULTY } from './data.js?v=20261128r';
-import { cfg, save } from './settings.js?v=20261128r';
-import { headshot } from './portraits.js?v=20261128r';
-import { dressed, wear, myCosIds, heroOwned } from './pass.js?v=20261128r';
-import * as net from './net.js?v=20261128r';
+import { HEROES, ARCHETYPES } from './heroes.js?v=20261128w';
+import { MAPS, DIFFICULTY } from './data.js?v=20261128w';
+import { cfg, save } from './settings.js?v=20261128w';
+import { headshot } from './portraits.js?v=20261128w';
+import { dressed, wear, myCosIds, heroOwned } from './pass.js?v=20261128w';
+import * as net from './net.js?v=20261128w';
 
 // Online front end: set up your name and hero, host or join a room by code, then the lobby
 // (mode, teams, stage, start). The match itself starts on every machine when the host hits Start.
@@ -13,7 +13,7 @@ const hex = c => '#' + c.toString(16).padStart(6, '0');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 let api = null, err = '', busy = false, nameT = 0;
 const MODES = { hill: { name: 'Hill Rush', sub: '3v3 · bots fill gaps', per: 3 }, lane: { name: 'Lane Breaker', sub: '3v3 · towers, cores and minions', per: 3 },
-  duel: { name: 'Duel', sub: '1v1 · first to 3 rounds', per: 1 } };
+  duel: { name: 'Duel', sub: 'first to 3 rounds', per: 1 } };
 
 const myDef = () => dressed(HEROES.find(h => h.id === cfg.hero) || HEROES[0]);
 const profile = () => ({ name: (cfg.name || '').trim().slice(0, 16) || 'Player', hero: myDef().id, skin: myDef().skinId || '', cos: myCosIds() });
@@ -71,6 +71,7 @@ async function act(what, v) {
   if (what === 'drafttog') net.setDraft(!st.meta?.draft);
   if (what === 'botstog') net.setBots(!!st.meta?.noBots);
   if (what === 'botdiff') net.setBotDiff(v);
+  if (what === 'duelsize') net.setDuelSize(+v);
   if (what === 'draft') net.draftPick(v);
   if (what === 'start') net.startMatch().catch(x => { err = net.explain(x).message; render(); });
   if (what === 'leave') { await net.leaveRoom(); render(); }
@@ -142,10 +143,11 @@ function lobbyHTML(st) {
   const players = Object.entries(st.players || {}).sort((a, b) => a[1].t - b[1].t);
   const mine = st.players?.[st.me];
   const map = MAPS.find(m => m.id === st.meta?.map) || MAPS[0];
-  const mode = MODES[st.meta?.mode] ? st.meta.mode : 'hill', M = MODES[mode], duel = mode === 'duel';
+  const mode = MODES[st.meta?.mode] ? st.meta.mode : 'hill', duel = mode === 'duel', dsz = duel ? st.meta?.duelSize || 1 : 3;
+  const M = { ...MODES[mode], per: dsz }, solo = duel && dsz === 1;
   const playing = st.meta?.state === 'playing', host = st.host, lock = playing ? 'disabled' : '';
-  // in a duel the first two to join face off, whatever team they picked
-  const sideOf = (uid, p) => duel ? (players.findIndex(([u]) => u === uid) === 0 ? 'blue' : 'red') : p.team;
+  // in a 1v1 duel the first two to join face off, whatever team they picked
+  const sideOf = (uid, p) => solo ? (players.findIndex(([u]) => u === uid) === 0 ? 'blue' : 'red') : p.team;
   const botsOn = !st.meta?.noBots, draft = !duel && !!st.meta?.draft, diff = st.meta?.botDiff || 'normal';
   const col = team => {
     const list = players.filter(([uid, p]) => sideOf(uid, p) === team), full = list.length >= M.per;
@@ -157,12 +159,12 @@ function lobbyHTML(st) {
     });
     for (let i = list.length; i < M.per; i++) rows.push(botsOn ? '<div class="rm-p bot"><span class="rm-ic">🤖</span><span><b>Bot</b><small>fills this seat</small></span></div>'
       : '<div class="rm-p empty"><span class="rm-ic">·</span><span><b>Open seat</b><small>bots are off</small></span></div>');
-    const join = !duel && mine && mine.team !== team ? `<button class="rm-join" data-act="team" data-v="${team}" ${full ? 'disabled' : ''}>${full ? 'Full' : 'Switch here'}</button>` : '';
-    return `<div class="rm-team ${team}"><header><b>${team === 'blue' ? 'Blue' : 'Red'} ${duel ? 'corner' : 'team'}</b><span>${Math.min(list.length, M.per)}/${M.per}</span>${join}</header>${rows.join('')}</div>`;
+    const join = !solo && mine && mine.team !== team ? `<button class="rm-join" data-act="team" data-v="${team}" ${full ? 'disabled' : ''}>${full ? 'Full' : 'Switch here'}</button>` : '';
+    return `<div class="rm-team ${team}"><header><b>${team === 'blue' ? 'Blue' : 'Red'} ${solo ? 'corner' : 'team'}</b><span>${Math.min(list.length, M.per)}/${M.per}</span>${join}</header>${rows.join('')}</div>`;
   };
-  const tooMany = duel && players.length > 2;
-  const bots = !botsOn ? 0 : duel ? Math.max(0, 2 - players.length) : 6 - Math.min(6, players.length);
-  const short = botsOn ? '' : duel ? (players.length < 2 ? 'Bots are off: you need a second player to duel.' : '')
+  const tooMany = duel && players.length > dsz * 2;
+  const bots = !botsOn ? 0 : solo ? Math.max(0, 2 - players.length) : ['blue', 'red'].reduce((n, t) => n + Math.max(0, dsz - players.filter(([uid, p]) => sideOf(uid, p) === t).length), 0);
+  const short = botsOn ? '' : solo ? (players.length < 2 ? 'Bots are off: you need a second player to duel.' : '')
     : ['blue', 'red'].find(t => !players.some(([uid, p]) => sideOf(uid, p) === t)) ? 'Bots are off: each team needs at least one player.' : '';
   // a settings row: the host gets controls, everyone else sees the current choice
   const seg = (act, opts, cur) => `<div class="rm-seg">${opts.map(([v, l]) => host
@@ -173,13 +175,13 @@ function lobbyHTML(st) {
   return `<div class="rm">
     <div class="rm-head">
       <div class="rm-code"><small>Room code</small><b>${st.code}</b><button class="ghost" id="onCopy" data-act="copy">Copy</button></div>
-      <div class="rm-sum"><b>${M.name}</b><span>${map.name} · ${players.length} player${players.length === 1 ? '' : 's'}${bots ? ` + ${bots} bot${bots === 1 ? '' : 's'}` : ''}${draft ? ' · draft' : ''}</span></div>
+      <div class="rm-sum"><b>${M.name}${duel ? ` ${dsz}v${dsz}` : ''}</b><span>${map.name} · ${players.length} player${players.length === 1 ? '' : 's'}${bots ? ` + ${bots} bot${bots === 1 ? '' : 's'}` : ''}${draft ? ' · draft' : ''}</span></div>
       <div class="rm-state ${playing ? 'live' : ''}">${playing ? '● Match in progress' : host ? 'You’re the host' : 'Waiting for the host'}</div>
     </div>
     <div class="rm-grid">
       <div class="rm-main">
-        <div class="rm-teams ${duel ? 'duel' : ''}">${col('blue')}<div class="rm-vs">VS</div>${col('red')}</div>
-        ${duel && players.length > 2 ? `<div class="rm-note">Watching: ${players.slice(2).map(([, p]) => esc(p.name)).join(', ')}. Only two can duel.</div>` : ''}
+        <div class="rm-teams ${solo ? 'duel' : ''}">${col('blue')}<div class="rm-vs">VS</div>${col('red')}</div>
+        ${solo && players.length > 2 ? `<div class="rm-note">Watching: ${players.slice(2).map(([, p]) => esc(p.name)).join(', ')}. Only two can duel.</div>` : ''}
         <div class="rm-chat">
           <header><b>💬 Room chat</b><small>Only people in this room can see it</small></header>
           <div class="rm-log" id="onLog">${chatRows(st)}</div>
@@ -191,6 +193,7 @@ function lobbyHTML(st) {
         <section class="rm-card">
           <h4>Match ${host ? '' : '<small>set by the host</small>'}</h4>
           <label>Mode</label>${seg('mode', Object.entries(MODES).map(([id, m]) => [id, m.name]), mode)}
+          ${duel ? `<label>Team size</label>${seg('duelsize', [['1', '1v1'], ['2', '2v2'], ['3', '3v3']], String(dsz))}` : ''}
           <label>Stage</label>${host ? `<select class="rm-sel" data-pick="map" ${lock}>${MAPS.map(m => `<option value="${m.id}" ${m.id === map.id ? 'selected' : ''}>${m.name}</option>`).join('')}</select>` : `<div class="rm-val">${map.name}</div>`}
           ${duel ? '' : `<div class="rm-row"><span><b>Draft pick</b><small>Take turns picking, no duplicates</small></span>${tog('drafttog', draft)}</div>`}
           <div class="rm-row"><span><b>Bots</b><small>${botsOn ? 'Fill any empty seats' : 'Players only'}</small></span>${tog('botstog', botsOn)}</div>
@@ -203,7 +206,7 @@ function lobbyHTML(st) {
         </section>
         <section class="rm-go">
           ${host ? `<button class="bigbtn" data-act="start" ${playing || tooMany || short ? 'disabled' : ''}>${draft ? 'Start draft ▸' : `Start ${M.name} ▸`}</button>
-            <p>${tooMany ? 'Duel is 1v1. Switch mode or have extra players leave.' : short || 'Everyone in the room joins the match.'}</p>`
+            <p>${tooMany ? `This Duel is ${dsz}v${dsz}. Pick a bigger team size, switch mode or have extra players leave.` : short || 'Everyone in the room joins the match.'}</p>`
             : `<div class="rm-wait">${playing ? 'Match in progress…' : '<i></i><i></i><i></i> Waiting for the host to start'}</div>`}
           <button class="ghost rm-leave" data-act="leave">Leave room</button>
         </section>
@@ -244,32 +247,42 @@ function say(text) {
 // Heroes grouped by class; you can only take ones you own that nobody has picked yet.
 const BY_CLASS = ARCHETYPES.flatMap(a => HEROES.filter(h => h.arch === a.id));
 function draftHTML(st) {
-  const D = st.draft, picks = D.picks || {}, done = D.turn >= D.order.length, cur = D.order[D.turn], mine = !done && cur === st.me;
+  const D = st.draft, picks = D.picks || {}, bans = D.bans || {}, done = D.turn >= D.order.length, cur = D.order[D.turn], mine = !done && cur === st.me;
+  const kind = net.draftKind(D), banning = !done && kind === 'ban';
+  const nBan = (D.kinds || []).filter(k => k === 'ban').length, nPick = D.order.length - nBan;
+  const step = banning ? D.turn + 1 : D.turn - nBan + 1;
   const slotOf = k => D.slots.find(s => s.key === k);
   const who = s => !s ? '' : s.uid ? esc(st.players?.[s.uid]?.name || s.name || 'Player') : 'Bot';
   const col = team => `<div class="teamcol ${team}"><h4>${team === 'blue' ? 'Blue' : 'Red'} team</h4>${D.slots.filter(s => s.team === team).map(s => {
-    const h = HEROES.find(x => x.id === picks[s.key]), now = s.key === cur && !done, n = D.order.indexOf(s.key) + 1;
-    return `<div class="slot dr ${s.uid === st.me ? 'me' : ''} ${now ? 'now' : ''} ${h ? '' : 'empty'}" style="--hc:${h ? hex(h.color) : '#c8c0b0'}">
-      ${h ? `<img src="${headshot(h)}" alt="">` : `<span>${now ? '⏳' : s.uid ? '👤' : '🤖'}</span>`}
-      <div><b>${who(s)}</b><small>${h ? h.callsign : now ? 'picking…' : `pick ${n}`}</small></div></div>`;
+    const h = HEROES.find(x => x.id === picks[s.key]), b = HEROES.find(x => x.id === bans[s.key]), now = s.key === cur && !done;
+    const n = D.order.lastIndexOf(s.key) - nBan + 1;
+    return `<div class="slot dr ${s.uid === st.me ? 'me' : ''} ${now ? 'now' : ''} ${now && banning ? 'banning' : ''} ${h ? '' : 'empty'}" style="--hc:${h ? hex(h.color) : '#c8c0b0'}">
+      ${h ? `<img src="${headshot(h)}" alt="">` : `<span>${now ? (banning ? '🚫' : '⏳') : s.uid ? '👤' : '🤖'}</span>`}
+      <div><b>${who(s)}</b><small>${h ? h.callsign : now ? (banning ? 'banning…' : 'picking…') : `pick ${n}`}</small></div>
+      ${b ? `<i class="dr-ban" title="Banned ${b.callsign}"><img src="${headshot(b)}" alt=""></i>` : ''}</div>`;
   }).join('')}</div>`;
-  const taken = new Set(Object.values(picks));
+  const taken = new Set(Object.values(picks)), banned = new Set(Object.values(bans));
   const grid = BY_CLASS.map(h => {
-    const own = heroOwned(h.id), t = taken.has(h.id);
-    return `<button class="dr-h ${t ? 'taken' : ''} ${own ? '' : 'locked'}" data-act="draft" data-v="${h.id}" ${!mine || t || !own ? 'disabled' : ''} style="--hc:${hex(h.color)}" title="${h.callsign} · ${h.role}">
-      <img src="${headshot(h)}" alt=""><b>${h.callsign}</b>${t ? '<i>Taken</i>' : !own ? '<i>🔒</i>' : ''}</button>`;
+    const own = heroOwned(h.id), t = taken.has(h.id), x = banned.has(h.id);
+    // you can ban any hero, but only pick ones you own
+    const off = !mine || t || x || (!banning && !own);
+    return `<button class="dr-h ${t ? 'taken' : ''} ${x ? 'banned' : ''} ${own || banning ? '' : 'locked'}" data-act="draft" data-v="${h.id}" ${off ? 'disabled' : ''} style="--hc:${hex(h.color)}" title="${h.callsign} · ${h.role}">
+      <img src="${headshot(h)}" alt=""><b>${h.callsign}</b>${x ? '<i>Banned</i>' : t ? '<i>Taken</i>' : !own && !banning ? '<i>🔒</i>' : ''}</button>`;
   }).join('');
-  const head = done ? 'Draft complete · starting the match…' : mine ? 'Your pick!' : `${who(slotOf(cur))} is picking`;
+  const head = done ? 'Draft complete · starting the match…' : mine ? (banning ? 'Your ban!' : 'Your pick!') : `${who(slotOf(cur))} is ${banning ? 'banning' : 'picking'}`;
+  const note = banning ? (mine ? 'Click a hero to ban them for this match. Nobody, on either team, can pick a banned hero.' : 'Each player bans one hero first, then everyone picks.')
+    : (mine ? 'Click a hero to lock them in. If time runs out you get a random one.' : 'Banned heroes are out. Each hero can only be picked once.');
   return `<div class="lobby draft">
-    <div class="dr-top ${mine ? 'mine' : ''}"><small>Draft · pick ${Math.min(D.turn + 1, D.order.length)} of ${D.order.length}</small><b>${head}</b><span id="drClock">${done ? '' : clockText(D)}</span></div>
+    <div class="dr-top ${mine ? 'mine' : ''} ${banning ? 'ban' : ''}"><small>${done ? 'Draft' : banning ? `Ban phase · ban ${step} of ${nBan}` : `Pick phase · pick ${step} of ${nPick}`}</small><b>${head}</b><span id="drClock">${done ? '' : clockText(D)}</span></div>
     <div class="teams">${col('blue')}<div class="vs">VS</div>${col('red')}</div>
-    <div class="dr-grid">${grid}</div>
-    <p class="dr-note">${mine ? 'Click a hero to lock them in. If time runs out you get a random one.' : 'Heroes can only be picked once. Locked heroes need unlocking first.'}</p>
+    ${banned.size ? `<div class="dr-bans"><b>Banned</b>${[...banned].map(id => { const h = HEROES.find(x => x.id === id); return h ? `<span style="--hc:${hex(h.color)}"><img src="${headshot(h)}" alt="">${h.callsign}</span>` : ''; }).join('')}</div>` : ''}
+    <div class="dr-grid ${banning ? 'banning' : ''}">${grid}</div>
+    <p class="dr-note">${note}</p>
     <button class="ghost" data-act="leave">Leave room</button>
   </div>`;
 }
 const clockText = D => `${Math.max(0, Math.ceil((D.until - Date.now()) / 1000))}s`;
-// tick the countdown, and pick a random hero for us if our time runs out
+// tick the countdown, and choose for us if our time runs out (a random ban, or a random hero we own)
 let autoFor = -1;
 setInterval(() => {
   const st = net.lobbyState(), D = st?.draft;
@@ -277,7 +290,7 @@ setInterval(() => {
   const c = $('drClock'); if (c) c.textContent = clockText(D);
   if (D.order[D.turn] === st.me && Date.now() > D.until && autoFor !== D.turn) {
     autoFor = D.turn;
-    const free = net.draftFree(D), mine = free.filter(h => heroOwned(h.id)), from = mine.length ? mine : free;
+    const free = net.draftFree(D), mine = free.filter(h => heroOwned(h.id)), from = net.draftKind(D) === 'ban' || !mine.length ? free : mine;
     net.draftPick(from[Math.floor(Math.random() * from.length)].id);
   }
 }, 250);

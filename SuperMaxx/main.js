@@ -1,49 +1,50 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { initAccount } from './account.js?v=20261128r';      // first, so it sees every change to the save
-import { HEROES, MAPS, DIFFICULTY, TUNING, SURVIVOR_MAP, SURVIVOR, HILL, DUEL, CART } from './data.js?v=20261128r';
-import { initSurvivor, updateSurvivor, survivorLeaders, stormInfo, inStorm } from './survivor.js?v=20261128r';
-import { initHill, updateHill, hillVisuals, onHill } from './hill.js?v=20261128r';
-import { initCart, updateCart, nearCart, cartLead } from './payload.js?v=20261128r';
-import { initPotato, updatePotato, potatoHit, holdsPotato, POTATO } from './potato.js?v=20261128r';
-import { initBall, updateBall, BALL } from './ball.js?v=20261128r';
-import { addPlayerXp, storyXp } from './level.js?v=20261128r';
-import { initGuardians, updateGuardians, netGuardSlam, guardianOf } from './guardian.js?v=20261128r';
-import { initMapFx, updateMapFx } from './mapfx.js?v=20261128r';
-import { MISSIONS, initStory, updateStory, storyInfo, finishMission, GOAL, awardMedal, MEDALS, MEDAL_ICON, fmtTime } from './story.js?v=20261128r';
-import { initRaid, updateRaid, raidInfo, raidAlert, RAID } from './raid.js?v=20261128r';
-import { buildWorld, mirror } from './world.js?v=20261128r';
+import { initAccount } from './account.js?v=20261128w';      // first, so it sees every change to the save
+import { HEROES, MAPS, DIFFICULTY, TUNING, SURVIVOR_MAP, SURVIVOR, HILL, DUEL, CART } from './data.js?v=20261128w';
+import { initSurvivor, updateSurvivor, survivorLeaders, stormInfo, inStorm } from './survivor.js?v=20261128w';
+import { initHill, updateHill, hillVisuals, onHill } from './hill.js?v=20261128w';
+import { initCart, updateCart, nearCart, cartLead } from './payload.js?v=20261128w';
+import { initPotato, updatePotato, potatoHit, holdsPotato, POTATO } from './potato.js?v=20261128w';
+import { initBall, updateBall, BALL } from './ball.js?v=20261128w';
+import { addPlayerXp, storyXp } from './level.js?v=20261128w';
+import { initGuardians, updateGuardians, netGuardSlam, guardianOf } from './guardian.js?v=20261128w';
+import { initMapFx, updateMapFx } from './mapfx.js?v=20261128w';
+import { MISSIONS, initStory, updateStory, storyInfo, finishMission, GOAL, awardMedal, MEDALS, MEDAL_ICON, fmtTime } from './story.js?v=20261128w';
+import { initRaid, updateRaid, raidInfo, raidAlert, RAID } from './raid.js?v=20261128w';
+import { buildWorld, mirror, hasLOS } from './world.js?v=20261128w';
 import { PRISM, createHero, spawnHero, createStructure, spawnMinion, fire, releaseFire, chargeLevel, startReload, tickHero, tickCorpse, chestOf,
-  updateMinions, updateStructures, updateProjectiles, updateFx, dirFrom, eyeOf, TEAM_COLOR } from './units.js?v=20261128r';
-import { steer, initBot, updateBot } from './botbrain.js?v=20261128r';
-import { castSlot, updateAbilities } from './abilities.js?v=20261128r';
-import { floatText, poseHero } from './anim.js?v=20261128r';
-import { cfg, applyGraphics } from './settings.js?v=20261128r';
-import { initMenu, showMenu, menuFrame, openSettings, settingsVisible } from './menu.js?v=20261128r';
-import { dressed, heroOwned, wear, myCosIds, resolveCos, matchXp, award, rewardInfo, tierProgress, SEASON, MAX_TIER, cosById, cosOwned, equippedCos } from './pass.js?v=20261128r';
-import { aimSpray, placeSpray, SPRAY_CD } from './sprays.js?v=20261128r';
-import { EMOTES, EMOTE_CD, BOT_EMOTES, startEmote, stopEmote, wheelEmotes } from './emotes.js?v=20261128r';
-import { headshot } from './portraits.js?v=20261128r';
-import './personality.js?v=20261128r';
-import { openSession, tickPuppet, myUid, lobbyState, leaveRoom, onLobby } from './net.js?v=20261128r';
-import { initAudio, applyVolume, tone, noise, ABIL_SFX, audioTap } from './audio.js?v=20261128r';
-import { startClipRec, saveClip, sendClip } from './clips.js?v=20261128r';
-import { playMusic } from './music.js?v=20261128r';
-import { sparks, castFx, lightFlash } from './vfx.js?v=20261128r';
-import { castCue, clearCastCue } from './castcue.js?v=20261128r';
-import { applyEnvironment } from './stage.js?v=20261128r';
-import { perfFrame } from './perf.js?v=20261128r';
-import { gainMastery } from './mastery.js?v=20261128r';
-import { recordMatch, tasksDone } from './contracts.js?v=20261128r';
-import { recordDaily } from './daily.js?v=20261128r';
-import { kb, keyOf } from './keys.js?v=20261128r';
-import { recordHistory } from './history.js?v=20261128r';
-import { hitStop, timeScale, shotBloom, crossScale, landDust, resetJuice, juiceFrame, killIcon } from './juice.js?v=20261128r';
-import { updateOutlines } from './outline.js?v=20261128r';
-import { applyCrosshair } from './crosshair.js?v=20261128r';
-import { victoryOf, poseVictory } from './victory.js?v=20261128r';
-import { publishCard } from './social.js?v=20261128r';
-import { startTutorial, stopTutorial, tickTutorial, tutorialCast, tutorialKill, onTutorialPass } from './tutorial.js?v=20261128r';
-import { initReplay, recFrame, recEvent, recKill, finalClip, startPlayback, tickPlayback, stopPlayback } from './replay.js?v=20261128r';
+  updateMinions, updateStructures, updateProjectiles, updateFx, dirFrom, eyeOf, TEAM_COLOR } from './units.js?v=20261128w';
+import { steer, initBot, updateBot } from './botbrain.js?v=20261128w';
+import { castSlot, updateAbilities } from './abilities.js?v=20261128w';
+import { floatText, poseHero } from './anim.js?v=20261128w';
+import { cfg, applyGraphics } from './settings.js?v=20261128w';
+import { initMenu, showMenu, menuFrame, openSettings, settingsVisible } from './menu.js?v=20261128w';
+import { dressed, heroOwned, wear, myCosIds, resolveCos, matchXp, award, rewardInfo, tierProgress, SEASON, MAX_TIER, cosById, cosOwned, equippedCos } from './pass.js?v=20261128w';
+import { aimSpray, placeSpray, SPRAY_CD } from './sprays.js?v=20261128w';
+import { EMOTES, EMOTE_CD, BOT_EMOTES, startEmote, stopEmote, wheelEmotes } from './emotes.js?v=20261128w';
+import { headshot } from './portraits.js?v=20261128w';
+import './personality.js?v=20261128w';
+import { openSession, tickPuppet, myUid, lobbyState, leaveRoom, onLobby } from './net.js?v=20261128w';
+import { initAudio, applyVolume, tone, noise, ABIL_SFX, audioTap } from './audio.js?v=20261128w';
+import { startClipRec, saveClip, sendClip } from './clips.js?v=20261128w';
+import { playMusic } from './music.js?v=20261128w';
+import { sparks, castFx, lightFlash } from './vfx.js?v=20261128w';
+import { castCue, clearCastCue } from './castcue.js?v=20261128w';
+import { applyEnvironment } from './stage.js?v=20261128w';
+import { perfFrame } from './perf.js?v=20261128w';
+import { gainMastery } from './mastery.js?v=20261128w';
+import { recordMatch, tasksDone } from './contracts.js?v=20261128w';
+import { recordDaily } from './daily.js?v=20261128w';
+import { kb, keyOf, padGlyph } from './keys.js?v=20261128w';
+import { initPad, padFrame, pad, padMode, rumble } from './pad.js?v=20261128w';
+import { recordHistory } from './history.js?v=20261128w';
+import { hitStop, timeScale, shotBloom, crossScale, landDust, resetJuice, juiceFrame, killIcon } from './juice.js?v=20261128w';
+import { updateOutlines } from './outline.js?v=20261128w';
+import { applyCrosshair } from './crosshair.js?v=20261128w';
+import { victoryOf, poseVictory } from './victory.js?v=20261128w';
+import { publishCard } from './social.js?v=20261128w';
+import { startTutorial, stopTutorial, tickTutorial, tutorialCast, tutorialKill, onTutorialPass } from './tutorial.js?v=20261128w';
+import { initReplay, recFrame, recEvent, recKill, finalClip, startPlayback, tickPlayback, stopPlayback } from './replay.js?v=20261128w';
 let envRT = null;
 
 const $ = id => document.getElementById(id);
@@ -302,7 +303,7 @@ function startGame(m = mode, online = null) {
   G.countT = tut ? 0 : COUNT_FROM; $('myEmote').className = 'hidden'; $('countdown').className = 'hidden'; $('countdown').textContent = '';
   lockMouse();
   if (surv) banner('Survive!', '#9b5cff', 'You start somewhere on the island. Loot up, stay hidden, last one standing wins.');
-  else if (duel) banner('Duel!', '#1d2340', `${map.name} · first to ${DUEL.toWin} rounds`);
+  else if (duel) { const n = G.heroes.filter(h => h.team === 'blue').length; banner(n > 1 ? `Duel · ${n}v${n}` : 'Duel!', '#1d2340', `${map.name} · first to ${DUEL.toWin} rounds${n > 1 ? ' · knock out the whole team' : ''}`); }
   else if (cart) banner('Push the cart', '#3ccf9a', `${map.name} · get it to their flag`);
   else if (potato) banner('Hot Potato', '#ff5a2a', `Hit an enemy to pass the bomb · first to ${POTATO.toWin} blasts`);
   else if (ball) banner('Smash Ball', '#3ccf9a', `Shoot or run the ball into their goal · first to ${BALL.toWin}`);
@@ -760,6 +761,7 @@ const events = {
       }
     }
     if (t === P && src) { hurt = Math.min(1, hurt + amt / 60); if (src.pos && amt >= 2) dmgDir(src.pos);
+      if (amt >= 2) rumble(Math.min(0.9, amt / 70), Math.min(1, amt / 40), 90 + Math.min(160, amt * 3));
       if (P.alive && P.hp < P.maxHp * 0.3 && !P._lowSaid) { P._lowSaid = true; say(P, 'lowhp'); }
       (P._log ||= []).push({ src, amt, head, t: G.time }); if (P._log.length > 1500) P._log.splice(0, 500); }
   },
@@ -797,6 +799,11 @@ const events = {
     if (type === 'warn') { banner('The tide is coming in!', '#3fa8c8', `${n}s · get up on the piers and crates`); tone(98, 0.9, 'sine', 0.08, 1.2); }
     if (type === 'in') { banner('High tide!', '#3fa8c8', 'Anyone in the water is slowed'); noise(1.4, 0.08, 600, 0, { type: 'lowpass', to: 200 }); }
     if (type === 'out') banner('The tide is going out', '#3fa8c8', '');
+  },
+  // Pumpkin Hollow: warn before a gust, then a whoosh as it hits
+  gust(type, n) {
+    if (type === 'warn') { banner('The wind is picking up!', '#e8742a', `${n}s · stay clear of ledges and keep your footing`); noise(1.2, 0.03, 900, 0, { type: 'bandpass', to: 1400 }); }
+    if (type === 'blow') { banner('Gust of wind!', '#e8742a', 'Everyone is blown sideways'); noise(2.6, 0.09, 1200, 0, { type: 'bandpass', to: 500 }); }
   },
   // Story missions: pick-ups, deliveries and checkpoints, then the end
   story(type, S) {
@@ -891,6 +898,7 @@ const events = {
   landed(h) { if (h === P) { tone(180, 0.15, 'sine', 0.1, 0.5); landA = 0.6; } },
   turretShot(m) { const d = m.pos.distanceTo(P.pos); if (d < 30) tone(1200, 0.03, 'square', 0.03 * (1 - d / 30), 0.6); },
   kill(t, src) {
+    if (src === P && t !== P && t.kind === 'hero') rumble(0.35, 0.7, 160);      // a kick for your eliminations
     recKill(G, t, src);
     // bots celebrate now and then (online, only the machine running that bot decides)
     if (t.kind === 'hero' && src?.kind === 'hero' && src !== t && !src.isPlayer && (!G.net || src.local) && !G.tutorial && Math.random() < 0.3)
@@ -1112,7 +1120,7 @@ addEventListener('keydown', e => {
   if (e.code === kb('emote') && !e.repeat) openWheel();
   const slot = { [kb('q')]: 'q', [kb('ability')]: 'ability', [kb('ult')]: 'ult' }[e.code];
   if (slot) cancelEmote();
-  if (slot && !castSlot(G, P, slot, { wish: wishDir(), aim: dirFrom(P.yaw, P.pitch) })) tone(160, 0.08, 'square', 0.04, 1);
+  if (slot) { if (!castSlot(G, P, slot, { wish: wishDir(), aim: dirFrom(P.yaw, P.pitch) })) tone(160, 0.08, 'square', 0.04, 1); else rumble(slot === 'ult' ? 0.6 : 0.12, slot === 'ult' ? 0.9 : 0.3, slot === 'ult' ? 280 : 70); }
 });
 addEventListener('keyup', e => { keys.delete(e.code); if (e.code === kb('board')) $('scoreboard').classList.add('hidden'); if (e.code === kb('emote')) closeWheel(running && !paused); });
 addEventListener('mousedown', e => { if (e.button === 0) mouseDown = true; if (e.button === 2) zoomDown = true; });
@@ -1123,7 +1131,7 @@ document.addEventListener('pointerlockchange', () => {
   const locked = document.pointerLockElement === canvas;
   if (running && !locked) {
     paused = true; mouseDown = false; zoomDown = false; keys.clear(); closeWheel(false);
-    $('pause').querySelector('p').textContent = G?.net ? 'The online match keeps going. Click resume to jump back in.' : 'Click resume to lock the mouse again.';
+    if (padMode()) showPauseSheet(); else $('pause').querySelector('p').textContent = G?.net ? 'The online match keeps going. Click resume to jump back in.' : 'Click resume to lock the mouse again.';
     $('pause').classList.remove('hidden');
   }
   if (locked) { paused = false; $('pause').classList.add('hidden'); }
@@ -1131,7 +1139,7 @@ document.addEventListener('pointerlockchange', () => {
 // Browsers only lock the mouse after a click. Players who didn't press Start (online guests)
 // get a "click to jump in" sheet instead of a frozen camera.
 function askForClick() {
-  if (!running || document.pointerLockElement === canvas) return;
+  if (!running || document.pointerLockElement === canvas || padMode()) return;           // a controller doesn't need the mouse locked
   paused = true; mouseDown = false; zoomDown = false; keys.clear();
   $('pause').querySelector('p').textContent = G?.net ? 'The match has started! Click resume to jump in.' : 'Click resume to lock the mouse.';
   $('pause').classList.remove('hidden');
@@ -1148,7 +1156,36 @@ document.addEventListener('mousemove', e => {
   P.pitch = Math.max(-1.5, Math.min(1.5, P.pitch - e.movementY * k * (cfg.invertY ? -1 : 1)));
 });
 
-$('resume').onclick = () => canvas.requestPointerLock();
+// On a controller there's no mouse to lock: Start pauses and resumes directly.
+function padPause() {
+  if (!running || paused || G?.ended) return;
+  if (document.pointerLockElement === canvas) { document.exitPointerLock(); return; }     // the lock handler shows the pause sheet
+  paused = true; mouseDown = false; zoomDown = false; keys.clear(); closeWheel(false);
+  showPauseSheet();
+}
+function showPauseSheet() {
+  $('pause').querySelector('p').textContent = G?.net ? `The online match keeps going. Press ${padGlyph('start')} to jump back in.` : `Press ${padGlyph('start')} or Resume to carry on.`;
+  $('pause').classList.remove('hidden');
+}
+function resume() {
+  if (!padMode()) { canvas.requestPointerLock(); return; }
+  paused = false; $('pause').classList.add('hidden');
+}
+const pauseOpen = () => running && paused && !$('pause').classList.contains('hidden') && !settingsVisible();
+initPad({
+  playing: () => running && !paused && !G?.ended && $('front').classList.contains('hidden') && !settingsVisible(),
+  inMatch: () => !!G,
+  pause: padPause,
+  back: () => { if (pauseOpen()) { resume(); return true; } return false; },
+  start: () => { if (pauseOpen()) { resume(); return true; } return false; },
+  blip: f => tone(f, 0.04, 'triangle', 0.025, 1),
+  onMode: on => {
+    if (G && running) [['abQ', 'q'], ['abE', 'ability'], ['abF', 'ult']].forEach(([el, id]) => { $(el).querySelector('b').textContent = keyOf(id); });
+    if (on && running && paused && !$('pause').classList.contains('hidden')) showPauseSheet();
+    if (!on && running && !paused && document.pointerLockElement !== canvas) askForClick();   // picked the mouse back up: lock it again
+  },
+});
+$('resume').onclick = () => resume();
 // Leaving an online match mid-game also leaves the room; after a match you go back to the lobby.
 const toMenu = (where = 'main') => {
   const net = G?.net, midMatch = net && !G.over;
@@ -1181,7 +1218,43 @@ function wishDir() {
   const w = new THREE.Vector3();
   if (keys.has(kb('fwd'))) w.add(f); if (keys.has(kb('back'))) w.sub(f);
   if (keys.has(kb('right'))) w.add(r); if (keys.has(kb('left'))) w.sub(r);
+  if (padMode() && (pad.lx || pad.ly)) w.addScaledVector(f, -pad.ly).addScaledVector(r, pad.lx);    // the left stick
   return w.lengthSq() ? w.normalize() : w;
+}
+
+// ---------- controller aiming ----------
+// The right stick turns at a set speed with a curve for fine aim near the centre, and speeds up
+// when held all the way over. Aim assist (offline and online, heroes only) slows the turn a little
+// while your crosshair is on an enemy, and drifts with them if they strafe.
+let padBoost = 0;
+const AIM = { turn: 3.2, pitch: 0.72, curve: 1.8, boost: 0.75, slow: 0.6, pull: 2.4 };
+function assistTarget() {
+  const eye = eyeOf(P), dir = dirFrom(P.yaw, P.pitch), range = Math.min(80, P.def.weapon.range || 40);
+  let best = null, bs = Infinity;
+  for (const h of G.heroes) {
+    if (h === P || !h.alive || h.team === P.team && G.mode !== 'survivor' || h.invisT > 0 || h.dummy && !G.tutorial) continue;
+    const c = chestOf(h), to = c.clone().sub(eye), d = to.length();
+    if (d > range || d < 1) continue;
+    const along = to.dot(dir); if (along <= 0) continue;
+    const side = Math.sqrt(Math.max(0, d * d - along * along)), lim = 1.2 + d * 0.035;     // how far off the crosshair, in metres
+    if (side > lim || side / lim >= bs || !hasLOS(eye, c, G.colliders)) continue;
+    bs = side / lim; best = c;
+  }
+  return best;
+}
+function padAim(dt) {
+  const m = Math.hypot(pad.rx, pad.ry);
+  padBoost = m > 0.94 ? Math.min(1, padBoost + dt * 2.5) : 0;
+  const t = cfg.aimAssist !== false ? assistTarget() : null;
+  const k = AIM.turn * cfg.padSens * (1 - zoomA * 0.5) * (1 + padBoost * AIM.boost) * (t ? AIM.slow : 1) * dt, c = m ? Math.pow(m, AIM.curve) / m : 0;
+  P.yaw -= pad.rx * c * k;
+  P.pitch = Math.max(-1.5, Math.min(1.5, P.pitch - pad.ry * c * k * AIM.pitch * (cfg.padInvert ? -1 : 1)));
+  if (t && (m > 0.08 || Math.hypot(pad.lx, pad.ly) > 0.2)) {           // only while you're aiming or moving: it never aims for you
+    const e = eyeOf(P), dx = t.x - e.x, dy = t.y - e.y, dz = t.z - e.z;
+    let dyaw = Math.atan2(-dx, -dz) - P.yaw; dyaw = Math.atan2(Math.sin(dyaw), Math.cos(dyaw));
+    const dpitch = Math.atan2(dy, Math.hypot(dx, dz)) - P.pitch, s = Math.min(1, dt * AIM.pull);
+    P.yaw += dyaw * s; P.pitch += dpitch * s * 0.5;
+  }
 }
 
 // ---------- sprays ----------
@@ -1221,7 +1294,7 @@ function openWheel() {
   el.innerHTML = wheel.list.map((e, i) => {
     const a = i / wheel.list.length * Math.PI * 2 - Math.PI / 2;
     return `<div class="ew-slot" style="left:${50 + Math.cos(a) * 36}%;top:${50 + Math.sin(a) * 36}%"><b>${e.icon}</b><small>${e.name}</small></div>`;
-  }).join('') + `<div class="ew-mid">${emoteBusy() ? 'Wait a moment…' : 'Move the mouse<br>Release B'}</div>`;
+  }).join('') + `<div class="ew-mid">${emoteBusy() ? 'Wait a moment…' : (padMode() ? `Tilt the right stick<br>Release ${keyOf('emote')}` : 'Move the mouse<br>Release B')}</div>`;
   el.classList.remove('hidden');
 }
 function wheelMove(dx, dy) {
@@ -1257,7 +1330,7 @@ function updatePlayer(dt) {
     P.respawnT -= dt;
     $('center').classList.remove('hidden');
     const kc = killCamera(dt);
-    $('center').textContent = kc ? `Kill cam · ${G.killCam.who.name}` : G.mode === 'survivor' ? (G.over ? 'Spectating' : 'Eliminated') : G.mode === 'duel' ? (G.over ? 'Duel over' : 'Knocked out · next round soon') : `Respawning in ${Math.max(0, P.respawnT).toFixed(1)}s`;
+    $('center').textContent = kc ? `Kill cam · ${G.killCam.who.name}` : G.mode === 'survivor' ? (G.over ? 'Spectating' : 'Eliminated') : G.mode === 'duel' ? (G.over ? 'Duel over' : G.heroes.some(h => h.team === P.team && h.alive) ? 'Knocked out · your team fights on' : 'Knocked out · next round soon') : `Respawning in ${Math.max(0, P.respawnT).toFixed(1)}s`;
     if (!kc) {
       camera.position.lerp(new THREE.Vector3(P.pos.x, P.pos.y + 14, P.pos.z - Math.sign(P.pos.z || 1) * 10), Math.min(1, dt * 2));
       camera.lookAt(P.pos);
@@ -1271,21 +1344,27 @@ function updatePlayer(dt) {
   $('center').classList.add('hidden'); $('recap').classList.add('hidden');
   viewGun.visible = true; viewHand.visible = true;
   const w = wishDir();
-  if (P.emote && mouseDown) cancelEmote();
-  const sprint = keys.has(kb('sprint')) && keys.has(kb('fwd')) && !mouseDown && P.onGround;
+  const firing = mouseDown || pad.fire;
+  if (padMode()) {
+    if (wheel) {                                                          // the emote wheel follows the right stick
+      if (Math.hypot(pad.rx, pad.ry) > 0.45) { wheel.x = wheel.y = 0; wheelMove(pad.rx * 120, pad.ry * 120); }
+    } else padAim(dt);
+  }
+  if (P.emote && firing) cancelEmote();
+  const sprint = ((keys.has(kb('sprint')) && keys.has(kb('fwd'))) || (pad.sprint && pad.ly < -0.4)) && !firing && P.onGround;
   steer(P, w, sprint, keys.has(kb('jump')), dt);
   const vyBefore = P.vel.y;
   tickHero(G, P, dt);
-  if (!wasGround && P.onGround) { landA = Math.min(1, Math.max(0, -fallV - 4) / 10); landDust(G, P, landA); }
+  if (!wasGround && P.onGround) { landA = Math.min(1, Math.max(0, -fallV - 4) / 10); landDust(G, P, landA); if (landA > 0.3) rumble(landA * 0.45, landA * 0.2, 90); }
   wasGround = P.onGround; fallV = vyBefore;
-  if (mouseDown) {
+  if (firing) {
     const tip = viewGun.getObjectByName('tip').getWorldPosition(new THREE.Vector3());
     if (fire(G, P, dirFrom(P.yaw, P.pitch), tip)) {
       P.pitch = Math.min(1.5, P.pitch + RECOIL[P.def.id] * 0.03);
       shotBloom(P.def.weapon.rate < 0.15 ? 0.18 : 0.4);
     }
   }
-  if (!mouseDown && P.chargeStart != null) {
+  if (!firing && P.chargeStart != null) {
     const tip = viewGun.getObjectByName('tip').getWorldPosition(new THREE.Vector3());
     const c = chargeLevel(G, P);
     if (releaseFire(G, P, dirFrom(P.yaw, P.pitch), tip)) { P.pitch = Math.min(1.5, P.pitch + 0.015 + c * 0.04); shotBloom(0.3 + c * 0.4); }
@@ -1329,7 +1408,7 @@ function updatePlayer(dt) {
   const glow = viewHand.getObjectByName('glow');
   glow.rotation.x += dt * 6; glow.rotation.y += dt * 4; glow.scale.setScalar(1 + cast * 0.8);
   // zoom: narrow the view, bring the gun to the middle and steady the aim (P.zoomA, read by fire)
-  zoomA += ((zoomDown && P.alive && !wheel ? 1 : 0) - zoomA) * Math.min(1, dt * 12); P.zoomA = zoomA;
+  zoomA += (((zoomDown || pad.zoom) && P.alive && !wheel ? 1 : 0) - zoomA) * Math.min(1, dt * 12); P.zoomA = zoomA;
   $("cross").style.transform = `translate(-50%,-50%) scale(${((1 - zoomA * 0.3) * crossScale()).toFixed(3)})`;
   const fovT = cfg.fov * (1 - zoomA * 0.42) + (sprintA * 6 + (P.castA > 1 ? 8 : 0) + (P.dashT > 0 ? 10 : 0)) * (1 - zoomA);
   if (Math.abs(camera.fov - fovT) > 0.1) { camera.fov += (fovT - camera.fov) * Math.min(1, dt * 8); camera.updateProjectionMatrix(); }
@@ -1564,12 +1643,13 @@ function countdown(dt) {
 function loop() {
   requestAnimationFrame(loop);
   const raw = Math.min(0.05, clock.getDelta()), dt = raw * (G && running && !paused ? timeScale(raw) : 1);
+  padFrame(raw);
   perfFrame(renderer, G?.net ? `online · ${G.heroes.length} players` : G ? `${G.heroes.length} heroes · ${G.minions.length} minions` : "menu");
   if (!G) { if (!menuFrame(renderer, dt)) renderer.clear(); return; }
   // online matches can't pause: the sim keeps running behind the pause sheet
   const live = running && (!paused || !!G.net);
   const counting = live && G.countT > 0;                 // 3, 2, 1: you can look around, nothing else moves yet
-  if (counting) countdown(dt);
+  if (counting) { if (padMode() && P?.alive) padAim(dt); countdown(dt); }
   const posing = live && !!G.victory;                    // you won: your hero's victory pose, then the results
   if (posing) victoryFrame(dt);
   if (live && !counting && !posing) {
@@ -1610,7 +1690,7 @@ function loop() {
     G.net?.tick(dt);
     tickFlash(dt);
     updateHud(dt);
-    juiceFrame(G, P, camera, dt, { sprintA, mouseDown, raw });
+    juiceFrame(G, P, camera, dt, { sprintA, mouseDown: mouseDown || pad.fire, raw });
     updateOutlines(G, P);
   }
   if (live) G.worldTick(dt, G.time);
@@ -1731,7 +1811,9 @@ let stormWarned = false;
 function duelKnockout(t, src) {
   const D = G.duel;
   if (D.state !== 'fight' || G.over) return;
-  const w = src && src.kind === 'hero' && src.team !== t.team ? src.team : t.team === 'blue' ? 'red' : 'blue';
+  // 2v2 and 3v3: the round only ends once the whole team is down
+  if (G.heroes.some(h => h.team === t.team && h !== t && h.alive)) return;
+  const w = t.team === 'blue' ? 'red' : 'blue';
   const pts = { ...D.pts, [w]: D.pts[w] + 1 };
   const e = { k: 'round', w, b: pts.blue, r: pts.red, n: D.round + 1, end: pts[w] >= DUEL.toWin ? 1 : 0 };
   G.net?.queue(e); applyDuel(e);

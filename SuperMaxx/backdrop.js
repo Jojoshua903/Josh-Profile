@@ -1,5 +1,5 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { M, put, mergeStatic } from './scenery.js?v=20261128r';
+import { M, put, mergeStatic } from './scenery.js?v=20261128w';
 
 // Buildings and far scenery around the arena. Everything sits outside the playable
 // rectangle (|x| > W, |z| > L) so it never affects collision.
@@ -470,6 +470,72 @@ function docksFar(scene, map, r) {
   };
 }
 
+// ---------- Pumpkin Hollow: farmhouses and fields under an autumn sky ----------
+function farmhouse(w, r) {
+  const g = new THREE.Group();
+  const h = 3.6 + r() * 2.4, d = 6;
+  const kind = r();
+  if (kind < 0.25) {                                               // a wooden fence run with a gap behind
+    for (let x = -w / 2 + 0.2; x < w / 2; x += 1.6) put(g, box(0.16, 1.2, 0.16), M(0xf4ecdc), x, 0.6, 0.3);
+    for (const y of [0.5, 0.95]) put(g, box(w, 0.12, 0.08), M(0xf4ecdc), 0, y, 0.3, false);
+    return g;
+  }
+  const wall = [0xf4ecdc, 0xe8d8b8, 0xd8a868, 0xb8392e][Math.floor(r() * 4)];
+  put(g, box(w - 0.3, h, d), M(wall), 0, h / 2, d / 2);
+  put(g, prism(w + 0.6, 2 + w * 0.16, d + 0.6), M([0x5a3a36, 0x6a4a3a, 0x4a4a52][Math.floor(r() * 3)]), 0, h, d / 2);
+  const cols = Math.max(1, Math.floor(w / 2.2));
+  for (let f = 0; f < Math.floor(h / 2.2); f++) for (let c = 0; c < cols; c++) {
+    const x = -w / 2 + (c + 0.5) * (w / cols), y = 1.4 + f * 2.2, lit = r() < 0.5;
+    put(g, box(0.9, 1, 0.1), M(lit ? 0xffd38a : 0x2a3550, lit ? { emissive: 0xffa04a, emissiveIntensity: 0.9 } : undefined), x, y, -0.05, false);
+    put(g, box(1.1, 0.12, 0.14), M(0xffffff), x, y - 0.56, -0.07, false);
+  }
+  if (r() < 0.5) put(g, box(0.6, 2, 0.6), M(0x9a5a3a), w * 0.25, h + 1.6, d * 0.6);
+  return g;
+}
+
+function harvestFar(scene, map, r) {
+  const g = new THREE.Group();
+  for (let i = 0; i < 30; i++) {                                  // rolling hills in patchwork colours
+    const a = (i / 30) * Math.PI * 2 + r() * 0.2, d = 120 + r() * 120, s = 40 + r() * 40;
+    const m = put(g, new THREE.SphereGeometry(s, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), M([0xa8b25a, 0xd8b060, 0x8a9a4a, 0xc89a4a, 0x9aaa5a][i % 5]), Math.cos(a) * (d + map.W), -s * 0.7, Math.sin(a) * (d + map.L), false);
+    m.scale.y = 0.55;
+  }
+  scene.add(g); mergeStatic(g);
+  const trees = new THREE.Group();
+  for (let i = 0; i < 55; i++) {
+    const [x, z] = outside(map, r, 10, 34), s = 1.3 + r() * 1.1, t = new THREE.Group();
+    put(t, new THREE.CylinderGeometry(0.25, 0.35, 2.4, 7), M(0x5a3a26), 0, 1.2, 0, false);
+    const cols = [[0xd8452a, 0xe8642a], [0xf0a830, 0xe8c040], [0xe8742a, 0xd85a2a], [0x8a9a3a, 0xa8a040]][Math.floor(r() * 4)];
+    for (let k = 0; k < 4; k++) put(t, new THREE.IcosahedronGeometry(1 + r() * 0.5, 0), M(cols[k % 2], { flatShading: true }), Math.cos(k * 1.6) * 0.8, 3 + r(), Math.sin(k * 1.6) * 0.8, false);
+    t.position.set(x, 0, z); t.scale.setScalar(s); trees.add(t);
+  }
+  scene.add(trees); mergeStatic(trees);
+  // a windmill on the hill behind the red base, its sails turning in the breeze
+  const mill = new THREE.Group();
+  put(mill, new THREE.CylinderGeometry(2.6, 3.6, 14, 8), M(0xf4ecdc), 0, 7, 0);
+  put(mill, new THREE.ConeGeometry(3.2, 3.4, 8), M(0x5a3a36), 0, 15.7, 0);
+  const sails = new THREE.Group(); sails.position.set(0, 13, -3.4); mill.add(sails);
+  for (let k = 0; k < 4; k++) {
+    const arm = new THREE.Group(); arm.rotation.z = k * Math.PI / 2; sails.add(arm);
+    put(arm, box(0.3, 9, 0.2), M(0x6a4a32), 0, 4.5, 0, false);
+    put(arm, box(1.8, 7, 0.08), M(0xf4ecdc), 1, 5, 0, false);
+  }
+  mill.position.set(-map.W - 26, 0, map.L + 30); mill.rotation.y = Math.PI * 0.8; scene.add(mill);
+  // crows circling the fields
+  const crows = [];
+  for (let i = 0; i < 5; i++) {
+    const c = new THREE.Group();
+    for (const s of [-1, 1]) put(c, box(0.9, 0.05, 0.3), M(0x1a1a22), s * 0.45, 0, 0, false).rotation.z = s * 0.25;
+    put(c, box(0.18, 0.18, 0.6), M(0x1a1a22), 0, 0, 0, false);
+    c.userData = { ph: r() * 6, rad: 30 + r() * 30, h: 22 + r() * 10 };
+    scene.add(c); crows.push(c);
+  }
+  return (dt, t) => {
+    sails.rotation.z = t * 0.5;
+    for (const c of crows) { const a = t * 0.15 + c.userData.ph; c.position.set(Math.cos(a) * c.userData.rad, c.userData.h + Math.sin(t + c.userData.ph) * 1.5, Math.sin(a) * c.userData.rad * 1.6); c.rotation.y = -a; }
+  };
+}
+
 export function buildBackdrop(scene, map, theme, r) {
   const g = new THREE.Group(); scene.add(g);
   if (theme === 'desert') { ring(map, r, [5, 9], adobeHouse, g); mergeStatic(g); return desertFar(scene, map, r); }
@@ -479,5 +545,6 @@ export function buildBackdrop(scene, map, theme, r) {
   if (theme === 'neon') { ring(map, r, [4, 8], neonRoof, g); mergeStatic(g); return neonFar(scene, map, r); }
   if (theme === 'sky') { ring(map, r, [4, 8], ruinWall, g); mergeStatic(g); return skyFar(scene, map, r); }
   if (theme === 'docks') { ring(map, r, [4, 6.5], canalHouse, g); mergeStatic(g); return docksFar(scene, map, r); }
+  if (theme === 'harvest') { ring(map, r, [4, 8], farmhouse, g); mergeStatic(g); return harvestFar(scene, map, r); }
   ring(map, r, [4, 8], ruinWall, g); mergeStatic(g); return terracesFar(scene, map, r);
 }

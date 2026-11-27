@@ -1,5 +1,5 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { cfg } from './settings.js?v=20261128r';
+import { cfg } from './settings.js?v=20261128w';
 
 // Cast cues for the abilities that don't throw, build or blow anything up: buffs, heals, shields,
 // stealth and teleports. In first person those are easy to miss, so each one gets

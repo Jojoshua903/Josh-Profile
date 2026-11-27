@@ -1,5 +1,5 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { cfg } from './settings.js?v=20261128r';
+import { cfg } from './settings.js?v=20261128w';
 
 // Enemy outlines: a red rim on every enemy you can see, so they stand out from busy maps, and a
 // see-through red silhouette for a moment after an enemy hits you (or you hit them), so you can

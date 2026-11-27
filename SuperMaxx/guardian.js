@@ -1,6 +1,6 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { damage, burst, ring, coreVulnerable, TEAM_COLOR } from './units.js?v=20261128r';
-import { knock } from './abilities.js?v=20261128r';
+import { damage, burst, ring, coreVulnerable, TEAM_COLOR } from './units.js?v=20261128w';
+import { knock } from './abilities.js?v=20261128w';
 
 // Lane Breaker base Guardians: a huge stone golem stands over each team's spawn. Enemy heroes who
 // hang around inside its ring get a second's warning, then it winds up and slams the ground where

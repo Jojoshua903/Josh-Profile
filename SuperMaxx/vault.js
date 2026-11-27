@@ -1,6 +1,6 @@
 // Clip Vault: every play of the game you've saved, with a player and send / download / delete.
 // Clips live in this browser's IndexedDB (see clips.js), so they don't follow you to another device.
-import { listClips, deleteClip, sendClip, downloadClip, canShareClips, canRecord } from './clips.js?v=20261128r';
+import { listClips, deleteClip, sendClip, downloadClip, canShareClips, canRecord } from './clips.js?v=20261128w';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);

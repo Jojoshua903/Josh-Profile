@@ -1,11 +1,11 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { FIREBASE_CONFIG } from './firebase-config.js?v=20261128r';
-import { loadFirebase, setUserChangeHook } from './account.js?v=20261128r';
-import { HEROES } from './heroes.js?v=20261128r';
-import { damage, remoteKill, netShoot, spawnHero, setBar, tickCorpse, spawnMinion, unitDown, tracer, chestOf, TEAM_COLOR } from './units.js?v=20261128r';
-import { replayCast } from './abilities.js?v=20261128r';
-import { netHill } from './hill.js?v=20261128r';
-import { poseHero } from './anim.js?v=20261128r';
+import { FIREBASE_CONFIG } from './firebase-config.js?v=20261128w';
+import { loadFirebase, setUserChangeHook } from './account.js?v=20261128w';
+import { HEROES } from './heroes.js?v=20261128w';
+import { damage, remoteKill, netShoot, spawnHero, setBar, tickCorpse, spawnMinion, unitDown, tracer, chestOf, TEAM_COLOR } from './units.js?v=20261128w';
+import { replayCast } from './abilities.js?v=20261128w';
+import { netHill } from './hill.js?v=20261128w';
+import { poseHero } from './anim.js?v=20261128w';
 
 // Online play over Firebase Realtime Database.
 //
@@ -92,7 +92,8 @@ export async function joinRoom(code, profile) {
   if (!s.exists() || !s.val().meta) throw new Error('No room with that code');
   const v = s.val(), players = v.players || {};
   if (!players[fb.uid] && Object.keys(players).length >= 6) throw new Error('That room is full (6 players)');
-  if (!players[fb.uid] && v.meta.mode === 'duel' && Object.keys(players).length >= 2) throw new Error('That room is set to Duel and already has two players');
+  const dsz = v.meta.duelSize || 1;
+  if (!players[fb.uid] && v.meta.mode === 'duel' && Object.keys(players).length >= dsz * 2) throw new Error(`That room is set to a ${dsz}v${dsz} Duel and it’s full`);
   if (v.meta.state === 'playing' || v.meta.state === 'draft') throw new Error(v.meta.state === 'draft' ? 'They’re drafting right now. Try again when the match ends' : 'A match is in progress there. Try again when it ends');
   const team = teamCount(players, 'blue') <= teamCount(players, 'red') ? 'blue' : 'red';
   await f.set(f.ref(fb.db, `rooms/${code}/players/${fb.uid}`), { ...profile, team, t: Date.now() });
@@ -169,26 +170,28 @@ export function setMode(mode) { if (room && lobbyState().host) fb.f.update(R('me
 export function backToLobby() { if (room && lobbyState().host) fb.f.update(R('meta'), { state: 'lobby' }).catch(() => {}); }
 export function setDraft(on) { if (room && lobbyState().host) fb.f.update(R('meta'), { draft: !!on }).catch(() => {}); }
 export function setBots(on) { if (room && lobbyState().host) fb.f.update(R('meta'), { noBots: !on }).catch(() => {}); }
+export function setDuelSize(n) { if (room && lobbyState().host && [1, 2, 3].includes(n)) fb.f.update(R('meta'), { duelSize: n }).catch(() => {}); }
 export function setBotDiff(d) { if (room && lobbyState().host) fb.f.update(R('meta'), { botDiff: d }).catch(() => {}); }
 
 // Who sits where: the first three of each team who joined, bots in the empty seats (unless the host
 // switched bots off, then empty seats stay empty and each side needs at least one player).
-// A Duel is the first two players, one per side (a bot if you're alone).
+// A 1v1 Duel is the first two players, one per side (a bot if you're alone). A 2v2 or 3v3 Duel
+// uses the teams people picked, like the other modes.
 function seats() {
-  const duel = room.meta.mode === 'duel', noBots = !!room.meta.noBots;
+  const duel = room.meta.mode === 'duel', noBots = !!room.meta.noBots, per = duel ? room.meta.duelSize || 1 : 3;
   const players = Object.entries(room.players).sort((a, b) => a[1].t - b[1].t);
-  if (duel && players.length > 2) throw new Error('Duel is 1v1: only two players can be in the room');
+  if (duel && players.length > per * 2) throw new Error(`This Duel is ${per}v${per}: only ${per * 2} players can play`);
   const human = (uid, p, team) => ({ key: uid, uid, name: p.name || 'Player', team, skin: p.skin || '', cos: p.cos || {}, want: p.hero });
   const bot = (team, i) => ({ key: `bot-${team}-${i}`, uid: '', name: '', team, skin: '' });
   const out = [];
-  if (duel) {
+  if (duel && per === 1) {
     players.forEach(([uid, p], i) => out.push(human(uid, p, i ? 'red' : 'blue')));
     if (out.length < 2) { if (noBots) throw new Error('Bots are off: you need a second player to duel'); out.push(bot('red', 0)); }
   } else for (const team of ['blue', 'red']) {
-    const humans = players.filter(([, p]) => p.team === team).slice(0, 3);
+    const humans = players.filter(([, p]) => p.team === team).slice(0, per);
     for (const [uid, p] of humans) out.push(human(uid, p, team));
     if (noBots && !humans.length) throw new Error(`Bots are off: the ${team} team needs at least one player`);
-    if (!noBots) for (let i = humans.length; i < 3; i++) out.push(bot(team, i));
+    if (!noBots) for (let i = humans.length; i < per; i++) out.push(bot(team, i));
   }
   return out;
 }
@@ -211,49 +214,57 @@ async function launch(roster) {
 }
 
 // ---------- draft (3v3 only) ----------
-// Teams take turns picking, snake order: blue 1, red 1 and 2, blue 2 and 3, red 3. Every hero can
-// only be picked once per match. Players write their own pick; the host checks it, picks for bots
+// Two phases. Bans first: every seat bans one hero, alternating blue, red, blue... Then picks, snake
+// order: blue 1, red 1 and 2, blue 2 and 3, red 3. A banned hero can't be picked, and every hero can
+// only be picked once. Players write their own ban or pick; the host checks it, chooses for bots
 // (and anyone who runs out of time) and moves the turn on. When the last pick is in, the match starts.
-export const DRAFT_PICK_S = 20;
+export const DRAFT_PICK_S = 20, DRAFT_BAN_S = 15;
 const BOT_PICK_MS = 1600, GRACE_MS = 2500;
 async function beginDraft(slots) {
   const B = slots.filter(s => s.team === 'blue'), Rd = slots.filter(s => s.team === 'red');
-  const order = [B[0], Rd[0], Rd[1], B[1], B[2], Rd[2]].filter(Boolean).map(s => s.key);   // empty seats (bots off) just drop out
+  const bans = [B[0], Rd[0], B[1], Rd[1], B[2], Rd[2]].filter(Boolean).map(s => s.key);   // empty seats (bots off) just drop out
+  const picks = [B[0], Rd[0], Rd[1], B[1], B[2], Rd[2]].filter(Boolean).map(s => s.key);
   const now = Date.now();
-  await fb.f.set(R('draft'), { slots: slots.map(s => seatOut(s, '')), order, turn: 0, until: now + DRAFT_PICK_S * 1000, turnAt: now });
+  await fb.f.set(R('draft'), { slots: slots.map(s => seatOut(s, '')), order: [...bans, ...picks], kinds: [...bans.map(() => 'ban'), ...picks.map(() => 'pick')],
+    turn: 0, until: now + DRAFT_BAN_S * 1000, turnAt: now });
   await fb.f.update(R('meta'), { state: 'draft' });
 }
-export const draftFree = D => HEROES.filter(h => !Object.values(D?.picks || {}).includes(h.id));
-// a guest picking on their turn
+export const draftKind = D => D?.kinds?.[D.turn] || 'pick';
+const used = D => [...Object.values(D?.picks || {}), ...Object.values(D?.bans || {})];
+export const draftFree = D => HEROES.filter(h => !used(D).includes(h.id));
+// a guest banning or picking on their turn
 export function draftPick(heroId) {
   const D = room?.draft;
   if (!D || D.order[D.turn] !== fb.uid || !draftFree(D).some(h => h.id === heroId)) return false;
-  fb.f.set(R(`draft/picks/${fb.uid}`), heroId).catch(() => {});
+  fb.f.set(R(`draft/${draftKind(D) === 'ban' ? 'bans' : 'picks'}/${fb.uid}`), heroId).catch(() => {});
   return true;
 }
 let draftBusy = false;
 async function hostDraft() {
   if (!room || room.meta?.host !== fb.uid || room.meta?.state !== 'draft' || !room.draft || draftBusy) return;
-  const D = room.draft, picks = D.picks || {};
+  const D = room.draft, picks = D.picks || {}, bans = D.bans || {};
   if (D.turn >= D.order.length) return;
+  const kind = draftKind(D), field = kind === 'ban' ? 'bans' : 'picks', mine = kind === 'ban' ? bans : picks;
   const key = D.order[D.turn], slot = D.slots.find(s => s.key === key);
-  let pick = picks[key];
-  if (pick && (Object.entries(picks).some(([k, h]) => h === pick && k !== key) || !HEROES.some(h => h.id === pick))) {
-    draftBusy = true; await fb.f.remove(R(`draft/picks/${key}`)).catch(() => {}); draftBusy = false;   // taken already: pick again
+  let choice = mine[key];
+  // already taken or banned by someone else: choose again
+  const others = [...Object.entries(picks).filter(([k]) => !(kind === 'pick' && k === key)), ...Object.entries(bans).filter(([k]) => !(kind === 'ban' && k === key))].map(([, h]) => h);
+  if (choice && (others.includes(choice) || !HEROES.some(h => h.id === choice))) {
+    draftBusy = true; await fb.f.remove(R(`draft/${field}/${key}`)).catch(() => {}); draftBusy = false;
     return;
   }
   const now = Date.now(), human = slot?.uid && room.players[slot.uid];
-  if (!pick && (human ? now > D.until + GRACE_MS : now - (D.turnAt || 0) > BOT_PICK_MS)) {
+  if (!choice && (human ? now > D.until + GRACE_MS : now - (D.turnAt || 0) > BOT_PICK_MS)) {
     const free = draftFree(D);
-    pick = free[Math.floor(Math.random() * free.length)].id;
+    choice = free[Math.floor(Math.random() * free.length)].id;
   }
-  if (!pick) return;
+  if (!choice) return;
   draftBusy = true;
-  const next = D.turn + 1;
-  try { await fb.f.update(R('draft'), { [`picks/${key}`]: pick, turn: next, until: now + DRAFT_PICK_S * 1000, turnAt: now }); } catch {}
+  const next = D.turn + 1, nextBan = D.kinds?.[next] === 'ban';
+  try { await fb.f.update(R('draft'), { [`${field}/${key}`]: choice, turn: next, until: now + (nextBan ? DRAFT_BAN_S : DRAFT_PICK_S) * 1000, turnAt: now }); } catch {}
   draftBusy = false;
   if (next >= D.order.length && room) {
-    const all = { ...picks, [key]: pick };
+    const all = { ...picks, ...(kind === 'pick' ? { [key]: choice } : {}) };
     // a player who drafted the hero they have a skin on keeps it
     const roster = D.slots.map(s => seatOut(s, all[s.key], s.uid && room.players[s.uid]?.hero === all[s.key] ? room.players[s.uid].skin || '' : ''));
     await fb.f.remove(R('draft')).catch(() => {});

@@ -1,4 +1,4 @@
-import { cfg } from './settings.js?v=20261128r';
+import { cfg } from './settings.js?v=20261128w';
 
 // Crosshair options (Settings → Crosshair). The crosshair is drawn as an SVG from these settings:
 //   xhStyle    cross, gap (lines with a gap), dot, circle (ring and dot), chevron, tee (no top line)

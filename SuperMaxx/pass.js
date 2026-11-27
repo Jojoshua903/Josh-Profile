@@ -1,15 +1,15 @@
-import { ALL_HEROES as HEROES } from './heroes.js?v=20261128r';
-import { cfg, save } from './settings.js?v=20261128r';
-import { SLOT_HEROES, RETIRED_HEROES, slotOwned, isSlotItem, setSkinGate, setHeroGate } from './slots.js?v=20261128r';
-import { sprayUrl } from './sprays.js?v=20261128r';
-import { isContractHero, contractDone, tasksDone, contractUnlocked } from './contracts.js?v=20261128r';
-export { isContractHero } from './contracts.js?v=20261128r';
+import { ALL_HEROES as HEROES } from './heroes.js?v=20261128w';
+import { cfg, save } from './settings.js?v=20261128w';
+import { SLOT_HEROES, RETIRED_HEROES, slotOwned, isSlotItem, setSkinGate, setHeroGate } from './slots.js?v=20261128w';
+import { sprayUrl } from './sprays.js?v=20261128w';
+import { isContractHero, contractDone, tasksDone, contractUnlocked } from './contracts.js?v=20261128w';
+export { isContractHero } from './contracts.js?v=20261128w';
 
 // Season pass: XP from matches (mostly from winning) climbs a 30-tier track of hero skins,
 // cosmetics and three season heroes. Each season has its own track and its own XP; whatever
 // you earned in an old season stays yours. Progress is saved locally (and to your account).
 
-import { SEASONS, seasonLive, SEASON, NEXT_SEASON, seasonStartLabel } from './seasons.js?v=20261128r';
+import { SEASONS, seasonLive, SEASON, NEXT_SEASON, seasonStartLabel } from './seasons.js?v=20261128w';
 export { SEASONS, seasonLive, SEASON, NEXT_SEASON, seasonStartLabel };
 
 // Skins override the hero palette (and the accent colour used for art and the view model).

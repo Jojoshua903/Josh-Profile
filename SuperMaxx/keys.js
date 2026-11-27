@@ -1,4 +1,4 @@
-import { cfg, save } from './settings.js?v=20261128r';
+import { cfg, save } from './settings.js?v=20261128w';
 
 // Rebindable controls. cfg.binds holds only the keys a player changed; everything else uses the
 // defaults below. Codes are KeyboardEvent.code values, so they don't change with the keyboard layout.
@@ -49,4 +49,16 @@ export function keyLabel(code) {
   if (code.startsWith('Numpad')) return 'Num ' + code.slice(6);
   return code;
 }
-export const keyOf = id => keyLabel(kb(id));
+
+// Controller buttons for each action (pad.js presses the action's key for you). While a pad is in
+// use, keyOf shows the button instead of the key, in that pad's own symbols.
+export const PAD = { jump: 'a', reload: 'x', ult: 'y', emote: 'b', q: 'lb', ability: 'rb', sprint: 'ls', spray: 'up', board: 'back' };
+const GLYPHS = {
+  xbox: { a: 'A', b: 'B', x: 'X', y: 'Y', lb: 'LB', rb: 'RB', lt: 'LT', rt: 'RT', ls: 'L3', rs: 'R3', back: 'View', start: 'Menu', up: 'D-pad ↑', down: 'D-pad ↓', left: 'D-pad ←', right: 'D-pad →' },
+  ps: { a: '✕', b: '○', x: '□', y: '△', lb: 'L1', rb: 'R1', lt: 'L2', rt: 'R2', ls: 'L3', rs: 'R3', back: 'Create', start: 'Options', up: 'D-pad ↑', down: 'D-pad ↓', left: 'D-pad ←', right: 'D-pad →' },
+  switch: { a: 'B', b: 'A', x: 'Y', y: 'X', lb: 'L', rb: 'R', lt: 'ZL', rt: 'ZR', ls: 'L-stick', rs: 'R-stick', back: '−', start: '+', up: 'D-pad ↑', down: 'D-pad ↓', left: 'D-pad ←', right: 'D-pad →' },
+};
+let padOn = false, padKind = 'xbox';
+export function setPadLabels(on, kind) { padOn = on; padKind = GLYPHS[kind] ? kind : 'xbox'; }
+export const padGlyph = b => GLYPHS[padKind][b] || b;
+export const keyOf = id => padOn && PAD[id] ? padGlyph(PAD[id]) : keyLabel(kb(id));

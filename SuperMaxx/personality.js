@@ -3,7 +3,7 @@
 // win / lose: the results screen · kill: extra elimination lines · rivals: a taunt for knocking out
 // that hero · friends: a hello when that hero spawns on your team · likes, dislikes, fact: Story tab
 
-import { ALL_HEROES as HEROES } from './heroes.js?v=20261128r';
+import { ALL_HEROES as HEROES } from './heroes.js?v=20261128w';
 
 const P = {
   vanguard: {

@@ -1,6 +1,6 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { burst, ring } from './units.js?v=20261128r';
-import { makeBox, rayWorld } from './world.js?v=20261128r';
+import { burst, ring } from './units.js?v=20261128w';
+import { makeBox, rayWorld } from './world.js?v=20261128w';
 
 // Smash Ball: 3v3 football with guns. A giant ball sits in the middle of the map and each team
 // defends a goal at its end. Shots shove the ball (harder-hitting shots shove it further), and
@@ -67,11 +67,14 @@ export function initBall(G) {
     );
     goals.push({ team, s, z0, zb, group: g });
   }
-  // centre spot
+  // centre spot, moved along the halfway line if something big stands in the middle (a barn, a billboard)
+  const clear = x => !G.colliders.some(b => b.alive !== false && b.top > 1 && b.maxX - b.minX < 40 && x + B.r + 0.6 > b.minX && x - B.r - 0.6 < b.maxX && B.r + 0.6 > b.minZ && -B.r - 0.6 < b.maxZ);
+  let dropX = 0;
+  for (let k = 1; !clear(dropX) && k < 50; k++) dropX = (k % 2 ? 1 : -1) * Math.ceil(k / 2);
   const spot = new THREE.Mesh(new THREE.RingGeometry(5.6, 6, 48), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, depthWrite: false }));
-  spot.rotation.x = -Math.PI / 2; spot.position.y = 0.04; G.scene.add(spot);
+  spot.rotation.x = -Math.PI / 2; spot.position.set(dropX, 0.04, 0); G.scene.add(spot);
 
-  G.ball = { root, shell, marker, goals, spot, pos: new THREE.Vector3(0, 9, 0), vel: new THREE.Vector3(), pts: { blue: 0, red: 0 },
+  G.ball = { root, shell, marker, goals, spot, dropX, pos: new THREE.Vector3(dropX, 9, 0), vel: new THREE.Vector3(), pts: { blue: 0, red: 0 },
     wait: 1.5, time: B.time, ot: false, over: false, last: null, prev: null, touchT: 0, flash: 0 };
   G.shotHook = ballShot;                                               // units.shoot calls this for every shot
   G.projHook = ballProj;                                               // and updateProjectiles for every rocket step
@@ -136,7 +139,7 @@ export function updateBall(G, dt) {
   // between goals: the ball hangs above the centre spot, then drops in
   if (T.wait > 0) {
     T.wait -= dt;
-    T.pos.set(0, 9 + Math.sin(G.time * 3) * 0.3, 0); T.vel.set(0, 0, 0);
+    T.pos.set(T.dropX, 9 + Math.sin(G.time * 3) * 0.3, 0); T.vel.set(0, 0, 0);
     T.root.rotation.y += dt * 1.5;
     if (T.wait <= 0) { T.vel.set(0, -2, 0); T.touchT = G.time; T.last = T.prev = null; G.ev.ball?.('kickoff', T); }
   } else {
