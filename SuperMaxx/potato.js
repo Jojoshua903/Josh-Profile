@@ -1,5 +1,5 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { damage, burst, ring, chestOf } from './units.js?v=20261128e';
+import { damage, burst, ring, chestOf } from './units.js?v=20261128l';
 
 // Hot Potato: a lit bomb rides on one hero's head. Whoever holds it runs faster and passes it
 // by landing any hit on an enemy hero. When the fuse burns out it blows up the holder (and

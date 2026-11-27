@@ -1,12 +1,12 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { TUNING, HILL, CART } from './data.js?v=20261128e';
-import { buildHeroModel } from './models.js?v=20261128e';
-import { makeBox, moveBody, resolveXZ, rayBox, raySphere, rayWorld, hasLOS } from './world.js?v=20261128e';
+import { TUNING, HILL, CART } from './data.js?v=20261128l';
+import { buildHeroModel } from './models.js?v=20261128l';
+import { makeBox, moveBody, resolveXZ, rayBox, raySphere, rayWorld, hasLOS } from './world.js?v=20261128l';
 import { resetStatus, tickStatus, afterMove, wallClimb, takenMult, fireMult, canAct, breakInvis, isHidden, slow as applySlow, stun as applyStun, knock as applyKnock, dropBlobs,
-  dealtMult, onDealt, onHurt, onKill, mend, thaw } from './abilities.js?v=20261128e';
-import { poseHero, rubble } from './anim.js?v=20261128e';
-import { onEliminated, survivorPreMove, survivorPostMove } from './survivor.js?v=20261128e';
-import { tickVfx, tickLight, blast, sparks } from './vfx.js?v=20261128e';
+  dealtMult, onDealt, onHurt, onKill, mend, thaw } from './abilities.js?v=20261128l';
+import { poseHero, rubble } from './anim.js?v=20261128l';
+import { onEliminated, survivorPreMove, survivorPostMove } from './survivor.js?v=20261128l';
+import { tickVfx, tickLight, blast, sparks } from './vfx.js?v=20261128l';
 
 // Survivor teams are per-hero ids; anything that isn't blue reads as an enemy red.
 export const TEAM_COLOR = new Proxy({ blue: 0x2f5bff, red: 0xff5a36 }, { get: (t, k) => (k in t ? t[k] : 0xff5a36) });
@@ -237,7 +237,11 @@ export function damage(G, target, amt, src, head = false, force = false, dot = f
   target.hp -= amt;
   if (src && src.kind === 'hero' && src.team !== target.team) {
     src.dmgDealt += amt;
-    if (target.kind === "hero") (target.hitLog ||= new Map()).set(src, G.time);     // for assists and enemy outlines
+    if (target.kind === "hero") {
+      (target.hitLog ||= new Map()).set(src, G.time);                       // enemy outlines
+      const e = (target.dmgLog ||= new Map()).get(src);                     // assists: how much each attacker has done lately
+      if (e && G.time - e.t <= ASSIST.dmg) { e.d += amt; e.t = G.time; } else target.dmgLog.set(src, { d: amt, t: G.time });
+    }
     src.ult = Math.min(100, src.ult + amt / src.def.ult.cost * 100 * (target.kind === 'hero' ? 1 : 0.45));
     if (head && target.kind === "hero") tally(src, "heads");
   }
@@ -249,16 +253,14 @@ export function damage(G, target, amt, src, head = false, force = false, dot = f
   else setBar(target);
 }
 
-// Assists: everyone else who hurt the victim in the last 8s, and anyone who healed the killer in
-// the last 6s (so supports get credit too). Each machine works these out for itself online.
-const ASSIST = { dmg: 8, heal: 6 };
+// Assists: anyone other than the killer who did at least 45% of the damage the victim took in
+// the last 8s (counting the killer's). Each machine works these out for itself online.
+const ASSIST = { dmg: 8, share: 0.45 };
 function assistsOn(G, t, src) {
-  const out = new Set();
-  for (const [h, at] of t.hitLog || []) if (h !== src && h.team !== t.team && G.time - at <= ASSIST.dmg) out.add(h);
-  if (src?.kind === 'hero') for (const [h, at] of src.healLog || []) if (h !== src && h.team === src.team && G.time - at <= ASSIST.heal) out.add(h);
-  out.delete(t);
-  t.hitLog?.clear();
-  const list = [...out];
+  const recent = [...(t.dmgLog || [])].filter(([h, e]) => h.team !== t.team && G.time - e.t <= ASSIST.dmg);
+  const total = recent.reduce((s, [, e]) => s + e.d, 0);
+  const list = total > 0 ? recent.filter(([h, e]) => h !== src && h !== t && e.d / total >= ASSIST.share).map(([h]) => h) : [];
+  t.hitLog?.clear(); t.dmgLog?.clear();
   for (const h of list) h.assists = (h.assists || 0) + 1;
   return list;
 }
@@ -267,7 +269,7 @@ function kill(G, t, src) {
   t.alive = false; t.hp = 0;
   burst(G, chestOf(t), TEAM_COLOR[t.team], t.kind === 'minion' ? 1 : 2.2);
   if (t.kind === 'hero') {
-    t.deaths++; t.respawnT = G.mode === 'hill' ? HILL.respawn : G.mode === 'cart' || G.mode === 'potato' || G.mode === 'paint' ? CART.respawn : G.mode === 'duel' ? Infinity : TUNING.respawn; t.deathT = 0;      // the model plays its fall, then hides
+    t.deaths++; t.respawnT = G.mode === 'hill' ? HILL.respawn : G.mode === 'cart' || G.mode === 'potato' || G.mode === 'ball' ? CART.respawn : G.mode === 'duel' ? Infinity : TUNING.respawn; t.deathT = 0;      // the model plays its fall, then hides
     if (G.mode === 'survivor') onEliminated(G, t);
     if (t.isPlayer) t.mesh.visible = false;
     if (t.shimmer) t.shimmer.visible = false;
@@ -377,7 +379,7 @@ function shoot(G, h, dir, muzzle, charge, replay = false) {
     rate = w.rate / (1 + h.ramp * (w.rampMax ?? 2.4));
   }
   h.fireT = rate / fireMult(h); h.lastShotT = G.time;
-  G.paintShot?.(G, h, dir, charge);                                     // Paint Party: shots splat the floor
+  G.shotHook?.(G, h, dir, charge);                                      // Smash Ball: shots shove the ball
   const bonus = h.ambush || 1; h.ambush = 1;
   breakInvis(h);
   const o = eyeOf(h);
@@ -505,6 +507,20 @@ function shoot(G, h, dir, muzzle, charge, replay = false) {
     if (r.unit) {
       damage(G, r.unit, w.dmg * (1 + w.gallop * gal) * (r.head ? w.head : 1) * bonus, h, r.head);
       if (gal > 0.8) burst(G, r.point, w.tracer, 0.4);
+    } else spark(G, r.point);
+  } else if (w.mode === 'magnet') {                 // Lodestar: bolts magnetise what they hit and tug enemies toward her
+    spend();
+    const r = trace(G, o, jitter(dir, sp), w.range, h.team);
+    tracer(G, mz, r.point, w.tracer, 0.08); tracer(G, mz, r.point, 0x7ab0ff, 0.05);
+    if (r.unit) {
+      damage(G, r.unit, w.dmg * (r.head ? w.head : 1) * bonus, h, r.head);
+      const u = r.unit;
+      if ((u.kind === 'hero' || u.kind === 'minion') && u.alive && u.team !== h.team) {
+        if (u.kind === "hero") { u.magT = h.def.passive.dur; u.magBy = h; }
+        const dx = h.pos.x - u.pos.x, dz = h.pos.z - u.pos.z, d = Math.hypot(dx, dz);
+        if (d > 2.5 && !(u.kind === 'hero' && u.def.passive?.id === 'ballast')) { u.pos.x += dx / d * w.tug; u.pos.z += dz / d * w.tug; resolveXZ(u.pos, u.radius || 0.5, G.colliders); }
+        if (Math.random() < 0.4) burst(G, r.point, 0x7ab0ff, 0.25);
+      }
     } else spark(G, r.point);
   } else if (w.mode === 'ribbon') {                 // Pirouette's ribbon: one sweep cuts enemies and heals friends
     spend();
@@ -642,6 +658,7 @@ export function updateProjectiles(G, dt) {
     const step = p.vel.length() * dt;
     if (p.w.maxRange && (p.trav += step) > p.w.maxRange) p.life = 0;        // shots fizzle out past their weapon's range
     const d = p.vel.clone().normalize();
+    if (G.projHook?.(G, p, d, step)) { G.scene.remove(p.mesh); G.projectiles.splice(i, 1); continue; }   // Smash Ball: it hit the ball
     const r = trace(G, p.pos, d, step, p.team);
     if (p.w.bounce && r.t < step && !r.unit && (p.bounces || 0) < p.w.bounce) {
       // Tilt's steel balls: bounce off floors and walls (whichever way they were mostly heading), a little slower each time
@@ -687,7 +704,7 @@ export function tickHero(G, h, dt) {
   // fountains: heal at home, burn trespassers
   const home = h.team === 'blue' ? -1 : 1;
   const zHome = home * (G.map.L - 5), zEnemy = -zHome;
-  const fountains = G.mode === 'lane' || G.mode === 'hill' || G.mode === 'cart' || G.mode === 'raid' || G.mode === 'paint';
+  const fountains = G.mode === 'lane' || G.mode === 'hill' || G.mode === 'cart' || G.mode === 'raid' || G.mode === 'ball';
   if (fountains && Math.hypot(h.pos.x, h.pos.z - zHome) < 8 && h.hp < h.maxHp) { h.hp = Math.min(h.maxHp, h.hp + TUNING.fountainHeal * dt); setBar(h); }
   if (fountains && Math.hypot(h.pos.x, h.pos.z - zEnemy) < 8) damage(G, h, 90 * dt, null);
   if (G.mode === 'survivor') survivorPreMove(G, h);

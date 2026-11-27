@@ -1,16 +1,16 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { TUNING } from './data.js?v=20261128e';
-import { hasLOS } from './world.js?v=20261128e';
-import { fire, releaseFire, chargeLevel, startReload, eyeOf, chestOf, dirFrom, coreVulnerable } from './units.js?v=20261128e';
-import { ABIL, castSlot, canAct, canMove, moveMult, isHidden, flap } from './abilities.js?v=20261128e';
-import { survivorGoal, inStorm } from './survivor.js?v=20261128e';
-import { hillGoal } from './hill.js?v=20261128e';
-import { cartGoal } from './payload.js?v=20261128e';
-import { potatoGoal } from './potato.js?v=20261128e';
-import { paintGoal } from './paint.js?v=20261128e';
-import { avoidGuardians } from './guardian.js?v=20261128e';
-import { raidGoal } from './raid.js?v=20261128e';
-import { storyGoal } from './story.js?v=20261128e';
+import { TUNING } from './data.js?v=20261128l';
+import { hasLOS } from './world.js?v=20261128l';
+import { fire, releaseFire, chargeLevel, startReload, eyeOf, chestOf, dirFrom, coreVulnerable } from './units.js?v=20261128l';
+import { ABIL, castSlot, canAct, canMove, moveMult, isHidden, flap } from './abilities.js?v=20261128l';
+import { survivorGoal, inStorm } from './survivor.js?v=20261128l';
+import { hillGoal } from './hill.js?v=20261128l';
+import { cartGoal } from './payload.js?v=20261128l';
+import { potatoGoal } from './potato.js?v=20261128l';
+import { ballGoal, ballAim } from './ball.js?v=20261128l';
+import { avoidGuardians } from './guardian.js?v=20261128l';
+import { raidGoal } from './raid.js?v=20261128l';
+import { storyGoal } from './story.js?v=20261128l';
 
 const v1 = new THREE.Vector3(), v2 = new THREE.Vector3();
 
@@ -137,13 +137,15 @@ export function updateBot(G, b, dt, D) {
       sprint = !tgt;
     }
   }
-  else if (G.mode === 'paint') {
-    // the floor decides: go paint what isn't ours yet, and fight whoever gets in the way
-    if (tgt && tgt.kind === 'hero' && tgt.pos.distanceTo(b.pos) < def.prefRange * 1.7) {
+  else if (G.mode === 'ball') {
+    // the ball decides: the nearest bot goes for it, one keeps goal, the rest support and fight
+    const r = ballGoal(G, b, goal);
+    if (r?.role !== 'chase' && tgt && tgt.kind === 'hero' && tgt.pos.distanceTo(b.pos) < def.prefRange * 1.2) {
       const dx = b.pos.x - tgt.pos.x, dz = b.pos.z - tgt.pos.z, d = Math.hypot(dx, dz) || 1;
       goal.set(tgt.pos.x + (dx / d) * def.prefRange, 0, tgt.pos.z + (dz / d) * def.prefRange);
-    } else paintGoal(G, b, goal);
-    sprint = !tgt;
+    }
+    ai.ballAim = r?.aim;
+    sprint = r?.role === 'chase' || !tgt;
   }
   else if (G.mode === 'raid') {
     // the boss is the only enemy: keep at range, circle it, shoot its pods, dodge what it throws
@@ -266,7 +268,8 @@ export function updateBot(G, b, dt, D) {
   } else if (wish.lengthSq() > 0.1) {
     wantYaw = Math.atan2(-wish.x, -wish.z);
   }
-  if (G.mode === 'paint' && !aimAt) wantPitch = -0.4;                  // nobody to shoot: aim at the floor and paint it
+  const shotAt = G.mode === 'ball' && !aimAt && ai.ballAim ? ballAim(G, b) : null;   // nobody to fight: shoot the ball toward their goal
+  if (shotAt) { wantYaw = shotAt.yaw; wantPitch = shotAt.pitch; }
   let dy = wantYaw - b.yaw;
   dy = Math.atan2(Math.sin(dy), Math.cos(dy));
   const turn = D.turn * dt;
@@ -283,7 +286,7 @@ export function updateBot(G, b, dt, D) {
       if (def.weapon.mode === 'charge' && chargeLevel(G, b) >= (ai.chargeGoal ??= 0.6 + Math.random() * 0.4)) { releaseFire(G, b, dirFrom(b.yaw, b.pitch), muzzle); ai.chargeGoal = null; }
     }
   }
-  else if (G.mode === 'paint' && !aimAt && b.pitch < -0.25 && b.ammo > def.weapon.mag * 0.25 && def.weapon.mode !== 'charge' && def.weapon.mode !== 'mend')
+  else if (shotAt && Math.abs(dy) < D.fireCone && Math.abs(wantPitch - b.pitch) < D.fireCone && def.weapon.mode !== 'charge')
     fire(G, b, dirFrom(b.yaw, b.pitch), b.gun.getWorldPosition(new THREE.Vector3()));
   if (!tgt && b.chargeStart != null) b.chargeStart = null;
   if (!tgt && b.ammo < def.weapon.mag * 0.4) startReload(b);

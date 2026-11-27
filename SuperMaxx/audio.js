@@ -1,4 +1,4 @@
-import { cfg } from './settings.js?v=20261128e';
+import { cfg } from './settings.js?v=20261128l';
 
 // Shared Web Audio graph: everything is synthesised, nothing is loaded.
 // master -> compressor -> speakers, with separate effect and music buses under it.

@@ -1,10 +1,10 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { TUNING } from './data.js?v=20261128e';
-import { THEMES, rng, buildSky, buildGround } from './scenery.js?v=20261128e';
-import { buildBackdrop } from './backdrop.js?v=20261128e';
-import { styleBlock, scatterProps, laneGates } from './props.js?v=20261128e';
-import { buildAmbient } from './ambient.js?v=20261128e';
-import { buildStageSky, buildDressing, contactShadows } from './stage.js?v=20261128e';
+import { TUNING } from './data.js?v=20261128l';
+import { THEMES, rng, buildSky, buildGround } from './scenery.js?v=20261128l';
+import { buildBackdrop } from './backdrop.js?v=20261128l';
+import { styleBlock, scatterProps, laneGates } from './props.js?v=20261128l';
+import { buildAmbient } from './ambient.js?v=20261128l';
+import { buildStageSky, buildDressing, contactShadows } from './stage.js?v=20261128l';
 
 // ---------- collision primitives ----------
 // A collider is an axis-aligned box from y=0 (or bottom) to top.

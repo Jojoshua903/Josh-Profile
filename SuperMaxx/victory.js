@@ -1,5 +1,5 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { burst, ring } from './units.js?v=20261128e';
+import { burst, ring } from './units.js?v=20261128l';
 
 // Victory poses: when your team wins, the camera swings round to face your hero, who strikes
 // their own pose with their own effect and line before the results come up. Poses are built on
@@ -67,6 +67,8 @@ export const VICTORY = {
     pose: (R, P, a, t, lift) => { const grab = (t % 1.2) < 0.4; R(a.r, 'x', -2.9); R(a.l, 'x', -2.9); R(a.r, 'z', grab ? 0.05 : 0.5); R(a.l, 'z', grab ? -0.05 : -0.5); R(P?.head, 'x', -0.3); lift(grab ? 0.25 : 0); } },
   pixel: { name: 'Level Clear', line: 'THANK YOU! BUT THE PRINCESS IS IN ANOTHER ARENA.', fx: ['confetti', 0x39ff6a, 0.2],
     pose: (R, P, a, t, lift) => { const hop = (t % 0.8) < 0.4; R(a.r, 'x', hop ? -3 : -2.2); R(P?.elbowR, 'x', hop ? 0 : 0.6); R(a.l, 'x', 0.3); R(a.l, 'z', -0.6); R(P?.elbowL, 'x', 1.4); lift(hop ? Math.sin((t % 0.8) / 0.4 * Math.PI) * 0.55 : 0); } },
+  magnet: { name: 'Pulled It Off', line: 'Told you everything comes to me.', fx: ['zap', 0x7ab0ff, 0.4],
+    pose: (R, P, a, t, lift) => { R(a.r, 'x', -2.4); R(a.r, 'z', 0.25); R(a.l, 'x', -0.4 + Math.sin(t * 6) * 0.1); R(P?.head, 'y', Math.sin(t * 1.5) * 0.25); lift(Math.abs(Math.sin(t * 2)) * 0.08); } },
   unicorn: { name: 'Happily Ever After', line: 'Wishes do come true! For me, anyway.', fx: ['confetti', 0xff8fd0, 0.3],
     pose: (R, P, a, t, lift) => { const hop = (t % 0.9) < 0.45; R(a.r, 'x', -2.6); R(a.l, 'x', -2.6); R(a.r, 'z', 0.4); R(a.l, 'z', -0.4); R(P?.head, 'z', Math.sin(t * 4) * 0.15); lift(hop ? Math.sin((t % 0.9) / 0.45 * Math.PI) * 0.25 : 0); } },
   owl: { name: 'Night Delivery', line: 'Signed, sealed, delivered. Hoo-hoo!', fx: ['confetti', 0xfff0d0, 0.25],

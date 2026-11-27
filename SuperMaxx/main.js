@@ -1,48 +1,48 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { initAccount } from './account.js?v=20261128e';      // first, so it sees every change to the save
-import { HEROES, MAPS, DIFFICULTY, TUNING, SURVIVOR_MAP, SURVIVOR, HILL, DUEL, CART } from './data.js?v=20261128e';
-import { initSurvivor, updateSurvivor, survivorLeaders, stormInfo, inStorm } from './survivor.js?v=20261128e';
-import { initHill, updateHill, hillVisuals, onHill } from './hill.js?v=20261128e';
-import { initCart, updateCart, nearCart, cartLead } from './payload.js?v=20261128e';
-import { initPotato, updatePotato, potatoHit, holdsPotato, POTATO } from './potato.js?v=20261128e';
-import { initPaint, updatePaint, paintKill, paintShare, PAINT } from './paint.js?v=20261128e';
-import { addPlayerXp, storyXp } from './level.js?v=20261128e';
-import { initGuardians, updateGuardians, netGuardSlam, guardianOf } from './guardian.js?v=20261128e';
-import { initMapFx, updateMapFx } from './mapfx.js?v=20261128e';
-import { MISSIONS, initStory, updateStory, storyInfo, finishMission, GOAL, awardMedal, MEDALS, MEDAL_ICON, fmtTime } from './story.js?v=20261128e';
-import { initRaid, updateRaid, raidInfo, raidAlert, RAID } from './raid.js?v=20261128e';
-import { buildWorld, mirror } from './world.js?v=20261128e';
+import { initAccount } from './account.js?v=20261128l';      // first, so it sees every change to the save
+import { HEROES, MAPS, DIFFICULTY, TUNING, SURVIVOR_MAP, SURVIVOR, HILL, DUEL, CART } from './data.js?v=20261128l';
+import { initSurvivor, updateSurvivor, survivorLeaders, stormInfo, inStorm } from './survivor.js?v=20261128l';
+import { initHill, updateHill, hillVisuals, onHill } from './hill.js?v=20261128l';
+import { initCart, updateCart, nearCart, cartLead } from './payload.js?v=20261128l';
+import { initPotato, updatePotato, potatoHit, holdsPotato, POTATO } from './potato.js?v=20261128l';
+import { initBall, updateBall, BALL } from './ball.js?v=20261128l';
+import { addPlayerXp, storyXp } from './level.js?v=20261128l';
+import { initGuardians, updateGuardians, netGuardSlam, guardianOf } from './guardian.js?v=20261128l';
+import { initMapFx, updateMapFx } from './mapfx.js?v=20261128l';
+import { MISSIONS, initStory, updateStory, storyInfo, finishMission, GOAL, awardMedal, MEDALS, MEDAL_ICON, fmtTime } from './story.js?v=20261128l';
+import { initRaid, updateRaid, raidInfo, raidAlert, RAID } from './raid.js?v=20261128l';
+import { buildWorld, mirror } from './world.js?v=20261128l';
 import { PRISM, createHero, spawnHero, createStructure, spawnMinion, fire, releaseFire, chargeLevel, startReload, tickHero, tickCorpse, chestOf,
-  updateMinions, updateStructures, updateProjectiles, updateFx, dirFrom, eyeOf, TEAM_COLOR } from './units.js?v=20261128e';
-import { steer, initBot, updateBot } from './botbrain.js?v=20261128e';
-import { castSlot, updateAbilities } from './abilities.js?v=20261128e';
-import { floatText, poseHero } from './anim.js?v=20261128e';
-import { cfg, applyGraphics } from './settings.js?v=20261128e';
-import { initMenu, showMenu, menuFrame, openSettings, settingsVisible } from './menu.js?v=20261128e';
-import { dressed, heroOwned, wear, myCosIds, resolveCos, matchXp, award, rewardInfo, tierProgress, SEASON, MAX_TIER, cosById, cosOwned, equippedCos } from './pass.js?v=20261128e';
-import { aimSpray, placeSpray, SPRAY_CD } from './sprays.js?v=20261128e';
-import { EMOTES, EMOTE_CD, BOT_EMOTES, startEmote, stopEmote, wheelEmotes } from './emotes.js?v=20261128e';
-import { headshot } from './portraits.js?v=20261128e';
-import './personality.js?v=20261128e';
-import { openSession, tickPuppet, myUid, lobbyState, leaveRoom, onLobby } from './net.js?v=20261128e';
-import { initAudio, applyVolume, tone, noise, ABIL_SFX, audioTap } from './audio.js?v=20261128e';
-import { startClipRec, saveClip, sendClip } from './clips.js?v=20261128e';
-import { playMusic } from './music.js?v=20261128e';
-import { sparks, castFx, lightFlash } from './vfx.js?v=20261128e';
-import { applyEnvironment } from './stage.js?v=20261128e';
-import { perfFrame } from './perf.js?v=20261128e';
-import { gainMastery } from './mastery.js?v=20261128e';
-import { recordMatch, tasksDone } from './contracts.js?v=20261128e';
-import { recordDaily } from './daily.js?v=20261128e';
-import { kb, keyOf } from './keys.js?v=20261128e';
-import { recordHistory } from './history.js?v=20261128e';
-import { hitStop, timeScale, shotBloom, crossScale, landDust, resetJuice, juiceFrame, killIcon } from './juice.js?v=20261128e';
-import { updateOutlines } from './outline.js?v=20261128e';
-import { applyCrosshair } from './crosshair.js?v=20261128e';
-import { victoryOf, poseVictory } from './victory.js?v=20261128e';
-import { publishCard } from './social.js?v=20261128e';
-import { startTutorial, stopTutorial, tickTutorial, tutorialCast, tutorialKill, onTutorialPass } from './tutorial.js?v=20261128e';
-import { initReplay, recFrame, recEvent, recKill, finalClip, startPlayback, tickPlayback, stopPlayback } from './replay.js?v=20261128e';
+  updateMinions, updateStructures, updateProjectiles, updateFx, dirFrom, eyeOf, TEAM_COLOR } from './units.js?v=20261128l';
+import { steer, initBot, updateBot } from './botbrain.js?v=20261128l';
+import { castSlot, updateAbilities } from './abilities.js?v=20261128l';
+import { floatText, poseHero } from './anim.js?v=20261128l';
+import { cfg, applyGraphics } from './settings.js?v=20261128l';
+import { initMenu, showMenu, menuFrame, openSettings, settingsVisible } from './menu.js?v=20261128l';
+import { dressed, heroOwned, wear, myCosIds, resolveCos, matchXp, award, rewardInfo, tierProgress, SEASON, MAX_TIER, cosById, cosOwned, equippedCos } from './pass.js?v=20261128l';
+import { aimSpray, placeSpray, SPRAY_CD } from './sprays.js?v=20261128l';
+import { EMOTES, EMOTE_CD, BOT_EMOTES, startEmote, stopEmote, wheelEmotes } from './emotes.js?v=20261128l';
+import { headshot } from './portraits.js?v=20261128l';
+import './personality.js?v=20261128l';
+import { openSession, tickPuppet, myUid, lobbyState, leaveRoom, onLobby } from './net.js?v=20261128l';
+import { initAudio, applyVolume, tone, noise, ABIL_SFX, audioTap } from './audio.js?v=20261128l';
+import { startClipRec, saveClip, sendClip } from './clips.js?v=20261128l';
+import { playMusic } from './music.js?v=20261128l';
+import { sparks, castFx, lightFlash } from './vfx.js?v=20261128l';
+import { applyEnvironment } from './stage.js?v=20261128l';
+import { perfFrame } from './perf.js?v=20261128l';
+import { gainMastery } from './mastery.js?v=20261128l';
+import { recordMatch, tasksDone } from './contracts.js?v=20261128l';
+import { recordDaily } from './daily.js?v=20261128l';
+import { kb, keyOf } from './keys.js?v=20261128l';
+import { recordHistory } from './history.js?v=20261128l';
+import { hitStop, timeScale, shotBloom, crossScale, landDust, resetJuice, juiceFrame, killIcon } from './juice.js?v=20261128l';
+import { updateOutlines } from './outline.js?v=20261128l';
+import { applyCrosshair } from './crosshair.js?v=20261128l';
+import { victoryOf, poseVictory } from './victory.js?v=20261128l';
+import { publishCard } from './social.js?v=20261128l';
+import { startTutorial, stopTutorial, tickTutorial, tutorialCast, tutorialKill, onTutorialPass } from './tutorial.js?v=20261128l';
+import { initReplay, recFrame, recEvent, recKill, finalClip, startPlayback, tickPlayback, stopPlayback } from './replay.js?v=20261128l';
 let envRT = null;
 
 const $ = id => document.getElementById(id);
@@ -113,6 +113,7 @@ const SHOT = {
   clawbot: v => { noise(0.1, 0.08 * v, 1400, 0, { type: "bandpass", to: 600, q: 2 }); tone(220, 0.1, "sawtooth", 0.03 * v, 0.6); },
   pixel: v => { tone(660, 0.04, "square", 0.03 * v, 1); tone(990, 0.05, "square", 0.025 * v, 1, 0.04); },
   owl: v => { noise(0.05, 0.08 * v, 5200, 0, { type: "highpass", to: 3000 }); noise(0.05, 0.06 * v, 4600, 0.05, { type: "highpass", to: 2800 }); },
+  magnet: v => { tone(220, 0.05, "sawtooth", 0.03 * v, 2.2); tone(880, 0.06, "square", 0.015 * v, 0.6, 0.02); },
   unicorn: v => { tone(1568, 0.06, "triangle", 0.03 * v, 1.5); tone(2093, 0.07, "sine", 0.02 * v, 1.3, 0.03); },
 };
 
@@ -136,7 +137,7 @@ const VIEW = {
   medic: { len: 0.55, w: 0.08, barrel: 0.02, vial: true }, spark: { len: 0.3, w: 0.1, barrel: 0.03, clamps: true }, builder: { len: 0.5, w: 0.16, barrel: 0.07, bricks: true },
   wellington: { len: 0.26, w: 0.14, barrel: 0.03, gravy: true }, shepherd: { len: 0.2, w: 0.06, barrel: 0.01, sling: true }, microwave: { len: 0.3, w: 0.1, barrel: 0.04, dish: true },
   chef: { len: 0.75, w: 0.2, barrel: 0.12, copper: true }, manspider: { len: 0.3, w: 0.1, barrel: 0.03, vial: true },
-  pinball: { len: 0.4, w: 0.14, barrel: 0.06 }, clawbot: { len: 0.45, w: 0.16, barrel: 0.04, clamps: true }, pixel: { len: 0.6, w: 0.07, barrel: 0.02 }, owl: { len: 0.5, w: 0.09, barrel: 0.02 }, unicorn: { len: 0.4, w: 0.08, barrel: 0.03 },
+  pinball: { len: 0.4, w: 0.14, barrel: 0.06 }, clawbot: { len: 0.45, w: 0.16, barrel: 0.04, clamps: true }, pixel: { len: 0.6, w: 0.07, barrel: 0.02 }, owl: { len: 0.5, w: 0.09, barrel: 0.02 }, unicorn: { len: 0.4, w: 0.08, barrel: 0.03 }, magnet: { len: 0.42, w: 0.14, barrel: 0.04 },
 };
 function makeViewGun(def) {
   const v = VIEW[def.id], p = def.palette;
@@ -197,7 +198,7 @@ function startGame(m = mode, online = null) {
   mode = m;
   initAudio();
   const story = mode === 'story' ? MISSIONS.find(s => s.hero === cfg.storyId) || MISSIONS[0] : null;   // Story: one hero's mission
-  const surv = mode === 'survivor', hill = mode === 'hill', duel = mode === 'duel', practice = mode === 'practice', tut = mode === 'tutorial' || practice, cart = mode === 'cart', potato = mode === 'potato', paint = mode === 'paint';
+  const surv = mode === 'survivor', hill = mode === 'hill', duel = mode === 'duel', practice = mode === 'practice', tut = mode === 'tutorial' || practice, cart = mode === 'cart', potato = mode === 'potato', ball = mode === 'ball';
   let raid = mode === 'raid';                                       // the tutorial (and practice) is a Lane Breaker match on the plaza
   const map = surv ? SURVIVOR_MAP : MAPS.find(x => x.id === (tut ? 'plaza' : story ? story.map : online ? online.map : cfg.map)) || MAPS[0];
   playMusic(map.id);
@@ -208,7 +209,7 @@ function startGame(m = mode, online = null) {
   stopTutorial();
   G = { scene, map, mode: tut ? 'lane' : mode, storyM: story, diffKey: cfg.diff, tutorial: tut, practice, heroes: [], minions: [], structures: [], projectiles: [], fx: [], score: { blue: 0, red: 0 },
     zones: [], walls: [], timers: [], camera,
-    time: 0, waveT: surv || hill || duel || tut || cart || potato || paint || raid || story ? Infinity : TUNING.firstWave, playerTeam: online ? mine.team : 'blue', D: DIFFICULTY[(online && DIFFICULTY[online.diff] ? online.diff : cfg.diff)], over: false, ev: events, net: null };
+    time: 0, waveT: surv || hill || duel || tut || cart || potato || ball || raid || story ? Infinity : TUNING.firstWave, playerTeam: online ? mine.team : 'blue', D: DIFFICULTY[(online && DIFFICULTY[online.diff] ? online.diff : cfg.diff)], over: false, ev: events, net: null };
   const world = buildWorld(scene, map);
   G.colliders = world.colliders; G.worldTick = world.tick;
   initMapFx(G);                                                    // gravity, jump pads and the tide, if this stage has them
@@ -243,7 +244,7 @@ function startGame(m = mode, online = null) {
     }
     initSurvivor(G);
   } else {
-    if (!hill && !cart && !potato && !paint && !raid && !story) buildBases(G, map);
+    if (!hill && !cart && !potato && !ball && !raid && !story) buildBases(G, map);
     if (tut) {
       // three training dummies stand in the middle of the plaza, out of both towers' reach
       [['vanguard', -4], ['avalanche', 0], ['croc', 4]].forEach(([id, x], i) => {
@@ -262,12 +263,12 @@ function startGame(m = mode, online = null) {
     if (hill) initHill(G);
     if (cart) initCart(G);
     if (potato) initPotato(G);
-    if (paint) initPaint(G);
+    if (ball) initBall(G);
     if (raid) initRaid(G, cfg.diff, cfg.raidBoss);
   }
-  $('hud').classList.toggle('surv', surv);
-  $('hud').classList.toggle('hill', hill || cart || potato || paint || raid || !!story); $('hud').classList.toggle('duel', duel);
-  $('lB').textContent = story && !raid ? 'Objective' : raid ? G.raid.def.name : hill ? 'Blue hill' : cart ? 'Blue push' : duel ? 'Blue rounds' : potato ? 'Blue blasts' : paint ? 'Blue paint' : 'Blue core'; $('lR').textContent = story && !raid ? (story.stages[0].time ? 'Time left' : 'Time') : raid ? 'Time left' : hill ? 'Red hill' : cart ? 'Red push' : duel ? 'Red rounds' : potato ? 'Red blasts' : paint ? 'Red paint' : 'Red core';
+  $('hud').classList.toggle('surv', surv); $('coreB').classList.remove('objLow');
+  $('hud').classList.toggle('hill', hill || cart || potato || ball || raid || !!story); $('hud').classList.toggle('duel', duel);
+  $('lB').textContent = story && !raid ? 'Objective' : raid ? G.raid.def.name : hill ? 'Blue hill' : cart ? 'Blue push' : duel ? 'Blue rounds' : potato ? 'Blue blasts' : ball ? 'Blue goals' : 'Blue core'; $('lR').textContent = story && !raid ? (story.stages[0].time ? 'Time left' : 'Time') : raid ? 'Time left' : hill ? 'Red hill' : cart ? 'Red push' : duel ? 'Red rounds' : potato ? 'Red blasts' : ball ? 'Red goals' : 'Red core';
   survEndT = 0; hitT = 0; tally.t = 0; flashing.clear(); $('recap').classList.add('hidden'); P._log = [];
   hidePotg();
   if (!surv && !tut && !raid && !story) initReplay(G);                        // team modes get a play of the game
@@ -303,7 +304,7 @@ function startGame(m = mode, online = null) {
   else if (duel) banner('Duel!', '#1d2340', `${map.name} · first to ${DUEL.toWin} rounds`);
   else if (cart) banner('Push the cart', '#3ccf9a', `${map.name} · get it to their flag`);
   else if (potato) banner('Hot Potato', '#ff5a2a', `Hit an enemy to pass the bomb · first to ${POTATO.toWin} blasts`);
-  else if (paint) banner('Paint Party', '#9b5cff', `Shoot the floor to paint it · most paint in ${Math.floor(PAINT.time / 60)}:${String(PAINT.time % 60).padStart(2, '0')} wins`);
+  else if (ball) banner('Smash Ball', '#3ccf9a', `Shoot or run the ball into their goal · first to ${BALL.toWin}`);
   else if (hill) banner('Take the hill', '#e0a100', `${map.name} · first to ${HILL.target}${online ? ' · online' : ''}`);
   else if (tut) { banner(practice ? `Practice · ${def.callsign}` : 'Training', '#1d2340', 'Follow the checklist on the left'); startTutorial(P, practice); onTutorialPass(() => { tone(880, 0.1, 'triangle', 0.06, 1.3); tone(1320, 0.14, 'triangle', 0.05, 1, 0.08); }); }
   else if (story) banner(story.title, '#1d2340', `Part 1 · ${GOAL[story.stages[0].type](story.stages[0])}`);
@@ -322,7 +323,7 @@ function startGame(m = mode, online = null) {
 let survEndT = 0;
 // End the match after a short beat for the banner, unless the player has already left it.
 function endLater(win, ms) { const g = G; setTimeout(() => { if (G && G === g) endGame(win); }, ms); }
-const END_MODE = { lane: 'Lane Breaker', hill: 'Hill Rush', cart: 'Payload', potato: 'Hot Potato', paint: 'Paint Party', survivor: 'Survivor', duel: 'Duel', raid: 'Boss Raid' };
+const END_MODE = { lane: 'Lane Breaker', hill: 'Hill Rush', cart: 'Payload', potato: 'Hot Potato', ball: 'Smash Ball', survivor: 'Survivor', duel: 'Duel', raid: 'Boss Raid' };
 function endGame(win) {
   if (!G || G.ended) return;
   if (G.victory) return;                                // the pose finishes first
@@ -346,9 +347,9 @@ function endGame(win) {
     const p = G.duel.pts;
     $('endTitle').innerHTML = `${win ? 'Duel won' : 'Duel lost'}<small>Rounds ${p.blue} – ${p.red}</small>`;
     $('endTitle').style.color = win ? 'var(--blue)' : 'var(--red)';
-  } else if (G.mode === 'paint') {
-    const s = paintShare(G), us = G.playerTeam, them = us === 'blue' ? 'red' : 'blue', pc = v => Math.round(v * 100) + '%';
-    $('endTitle').innerHTML = `${win ? 'Victory' : s[us] === s[them] ? 'Dead heat' : 'Defeat'}<small>Paint ${pc(s[us])} – ${pc(s[them])}</small>`;
+  } else if (G.mode === 'ball') {
+    const p = G.ball.pts, us = G.playerTeam, them = us === 'blue' ? 'red' : 'blue';
+    $('endTitle').innerHTML = `${win ? 'Victory' : 'Defeat'}<small>Goals ${p[us]} – ${p[them]}${G.ball.ot ? ' · golden goal' : ''}</small>`;
     $('endTitle').style.color = win ? 'var(--blue)' : 'var(--red)';
   } else if (G.mode === 'potato') {
     const p = G.potato.pts, us = G.playerTeam, them = us === 'blue' ? 'red' : 'blue';
@@ -385,10 +386,10 @@ function endGame(win) {
 // Your own line on the results screen: hero, and the numbers that matter for the mode.
 function meCard(win) {
   const s = [['Kills', P.kills], ['Deaths', P.deaths], ['Damage', Math.round(P.dmgDealt)]];
-  if (P.assists > 0 && G.mode !== 'survivor') s.splice(2, 0, ['Assists', P.assists]);
+  if (P.assists > 0) s.splice(2, 0, ['Assists', P.assists]);
   if (P.healDone > 0) s.push(['Healing', Math.round(P.healDone)]);
   if (G.mode === 'hill' || G.mode === 'cart' || G.mode === 'potato') s.push([G.mode === 'hill' ? 'On hill' : G.mode === 'cart' ? 'On cart' : 'Bomb held', fmtT(P.objT || 0)]);
-  if (G.mode === 'paint') s.push(['Painted', Math.round((P.painted || 0) * PAINT.cell * PAINT.cell) + ' m²']);
+  if (G.mode === 'ball') s.push(['Goals', P.goals || 0]);
   if ((G.mode === 'lane' || G.mode === 'raid') && P.objDmg > 0) s.push([G.mode === 'raid' ? 'Boss damage' : 'Siege', Math.round(P.objDmg)]);
   if (G.mode === 'survivor') s.splice(1, 1, ['Place', `#${P.alive ? 1 : P.place}`]);
   return `<img src="${headshot(P.def)}" alt="" style="--hc:${hex(P.def.color)}">
@@ -475,7 +476,7 @@ function mvpAwards() {
     hill: { t: 'Hill hog', v: h => h.objT || 0, f: fmtT, s: 'on the hill' },
     cart: { t: 'Cart pusher', v: h => h.objT || 0, f: fmtT, s: 'on the cart' },
     potato: { t: 'Hot hands', v: h => h.objT || 0, f: fmtT, s: 'holding the bomb' },
-    paint: { t: 'Master painter', v: h => h.painted || 0, f: v => Math.round(v * PAINT.cell * PAINT.cell) + ' m²', s: 'of floor painted' },
+    ball: { t: 'Golden boot', v: h => (h.goals || 0) * 1000 + (h.touches || 0), f: (v, h) => h.goals || 0, s: 'goals scored' },
     lane: { t: 'Siege master', v: h => h.objDmg || 0, f: Math.round, s: 'damage to towers and cores' },
     survivor: { t: 'Last one standing', v: h => h.alive ? 100 : 100 - (h.place || 99), f: (v, h) => `#${h.alive ? 1 : h.place}`, s: 'final place' },
   }[G.mode];
@@ -606,8 +607,8 @@ function fillLevelBar(el, up) {
 function scoreTable() {
   const who = h => `<td class="sb-who"><div><img src="${headshot(h.def)}" alt="" style="--hc:${hex(h.def.color)}"><span><b>${h.isPlayer ? 'You' : h.name}</b><small>${h.def.callsign}</small></span></div></td>`;
   if (G.mode === 'survivor') {
-    const rows = survivorLeaders(G).slice(0, 12).map(h => `<tr class="${h.isPlayer ? 'me' : ''}"><td class="sb-pl">${h.alive ? '★' : '#' + h.place}</td>${who(h)}<td>${h.kills}</td><td>${Math.round(h.dmgDealt)}</td></tr>`).join('');
-    return `<table class="sb"><tr><th>#</th><th>Player</th><th>Kills</th><th>Damage</th></tr>${rows}</table>`;
+    const rows = survivorLeaders(G).slice(0, 12).map(h => `<tr class="${h.isPlayer ? 'me' : ''}"><td class="sb-pl">${h.alive ? '★' : '#' + h.place}</td>${who(h)}<td>${h.kills}</td><td>${h.assists || 0}</td><td>${Math.round(h.dmgDealt)}</td></tr>`).join('');
+    return `<table class="sb"><tr><th>#</th><th>Player</th><th title="Kills">K</th><th title="Assists: 45%+ of the damage on a kill">A</th><th>Damage</th></tr>${rows}</table>`;
   }
   const side = t => {
     const hs = G.heroes.filter(h => h.team === t).sort((a, b) => b.kills - a.kills || b.dmgDealt - a.dmgDealt);
@@ -616,7 +617,7 @@ function scoreTable() {
       + hs.map(h => `<tr class="${h.isPlayer ? 'me' : ''} ${t}">${who(h)}<td>${h.kills}</td><td>${h.deaths}</td><td>${h.assists || 0}</td><td>${Math.round(h.dmgDealt)}</td></tr>`).join('');
   };
   const order = G.playerTeam === 'red' ? ['red', 'blue'] : ['blue', 'red'];
-  return `<table class="sb team"><tr><th>Player</th><th>K</th><th>D</th><th>A</th><th>Damage</th></tr>${order.map(side).join('')}</table>`;
+  return `<table class="sb team"><tr><th>Player</th><th title="Kills">K</th><th title="Deaths">D</th><th title="Assists: 45%+ of the damage on a kill">A</th><th>Damage</th></tr>${order.map(side).join('')}</table>`;
 }
 
 // ---------- hit feedback ----------
@@ -890,7 +891,6 @@ const events = {
   turretShot(m) { const d = m.pos.distanceTo(P.pos); if (d < 30) tone(1200, 0.03, 'square', 0.03 * (1 - d / 30), 0.6); },
   kill(t, src) {
     recKill(G, t, src);
-    if (G.paint) paintKill(G, t, src);                                  // Paint Party: a big splat where they went down
     // bots celebrate now and then (online, only the machine running that bot decides)
     if (t.kind === 'hero' && src?.kind === 'hero' && src !== t && !src.isPlayer && (!G.net || src.local) && !G.tutorial && Math.random() < 0.3)
       G.timers.push({ t: 0.5, fn: () => { const id = pick(BOT_EMOTES); if (src.alive && !src.emote && startEmote(G, src, id)) G.net?.emote(src, id); } });
@@ -946,13 +946,23 @@ const events = {
   immune(t, src) {
     if (src === P && G.time > immuneTipT) { immuneTipT = G.time + 3; banner('Core is shielded. Take down a tower first', '#1d2340'); }
   },
-  // Paint Party: the frenzy, and the final count
-  paint(type, T, winner, s) {
-    if (type === 'frenzy') { banner('Paint frenzy!', '#9b5cff', `${PAINT.frenzy}s left · bigger splats`); [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.12, 'square', 0.05, 1, i * 0.06)); }
+  // Smash Ball: goals, golden goal and full time
+  ball(type, T, team, scorer, own, assist) {
+    const nm = u => u.isPlayer ? 'You' : u.name, us = G.playerTeam;
+    if (type === 'kickoff') { tone(880, 0.08, 'square', 0.05, 1); tone(1320, 0.12, 'square', 0.05, 1, 0.08); }
+    if (type === 'stuck') banner('Ball reset', '#1d2340', 'Nobody could reach it');
+    if (type === 'ot') { banner('Golden goal!', '#e0a100', 'Level at full time · next goal wins'); [523, 659, 784].forEach((f, i) => tone(f, 0.14, 'square', 0.05, 1, i * 0.08)); }
+    if (type === 'goal') {
+      const ours = team === us;
+      banner(ours ? 'GOAL!' : 'They scored', ours ? 'var(--blue)' : 'var(--red)',
+        `${scorer ? (own ? `${nm(scorer)} · own goal!` : `${nm(scorer)} scores${assist ? ` · assist ${nm(assist)}` : ''}`) : 'Goal'} · ${T.pts[us]} – ${T.pts[us === 'blue' ? 'red' : 'blue']}`);
+      (ours ? [523, 659, 784, 1046, 1318] : [330, 262, 196]).forEach((f, i) => tone(f, 0.16, ours ? 'square' : 'triangle', 0.06, 1, i * 0.08));
+      if (scorer === P && !own) killIcon(camera, T.pos.clone().setY(T.pos.y + 2), 'kill', 'Goal!');
+    }
     if (type === 'end' && !G.over) {
       G.over = true;
-      const ours = winner === G.playerTeam, pc = v => Math.round(v * 100) + '%';
-      banner(winner ? (ours ? 'Your colour wins!' : 'Their colour wins') : 'Dead heat!', ours ? 'var(--blue)' : 'var(--red)', `${pc(s.blue)} blue · ${pc(s.red)} red`);
+      const ours = team === us;
+      banner(ours ? 'You win!' : 'They win', ours ? 'var(--blue)' : 'var(--red)', `Full time · ${T.pts[us]} – ${T.pts[us === 'blue' ? 'red' : 'blue']}`);
       tone(ours ? 660 : 160, 0.6, 'triangle', 0.08, ours ? 1.8 : 0.6);
       endLater(ours, 1800);
     }
@@ -1054,7 +1064,7 @@ const events = {
 };
 
 // Per-hero feel for the first-person gun.
-const RECOIL = { vanguard: 0.25, striker: 0.18, ember: 0.7, warden: 1, thicket: 0.9, ratchet: 0.3, mirage: 0.3, avalanche: 0.55, tempo: 0.06, kestrel: 0.4, croc: 0.6, cavalier: 0.45, slime: 0.5, brawler: 0, chipmunk: 0.12, elf: 0.35, dancer: 0.05, mole: 0.7, medic: 0.2, spark: 0.06, builder: 0.6, wellington: 0.45, shepherd: 0.35, microwave: 0.04, chef: 0.9, manspider: 0.15, pinball: 0.2, clawbot: 0.4, pixel: 0.15, owl: 0.12, unicorn: 0.14 };
+const RECOIL = { vanguard: 0.25, striker: 0.18, ember: 0.7, warden: 1, thicket: 0.9, ratchet: 0.3, mirage: 0.3, avalanche: 0.55, tempo: 0.06, kestrel: 0.4, croc: 0.6, cavalier: 0.45, slime: 0.5, brawler: 0, chipmunk: 0.12, elf: 0.35, dancer: 0.05, mole: 0.7, medic: 0.2, spark: 0.06, builder: 0.6, wellington: 0.45, shepherd: 0.35, microwave: 0.04, chef: 0.9, manspider: 0.15, pinball: 0.2, clawbot: 0.4, pixel: 0.15, owl: 0.12, unicorn: 0.14, magnet: 0.16 };
 const ULT_NEAR = 30;                                  // metres: supers further away than this stay quiet
 const VOICE_NEAR = 25;                                // metres: other heroes' voice lines only play inside this
 const SPIN_RELOAD = new Set(['striker', 'mirage', 'ratchet']);
@@ -1394,11 +1404,13 @@ function updateHud(dt) {
   if (P.lurkT > 0) st.push('Lurking'); if (P.rallyT > 0) st.push('Rallied +30% dmg'); if (P.jamT > 0) st.push('Jammed');
   if (P.vigilT > 0) st.push('Vigil'); if (P.frozenT > 0) st.push('Frozen'); if (P.blindT > 0) st.push('Dazzled'); if (P.wet < 1) st.push('Wading');
   $('dazzle').style.opacity = P.blindT > 0 ? Math.min(0.92, P.blindT / 3 * 0.92 + 0.25) : 0;   // Cinder's Grand Finale whites out your screen
-  $('status').textContent = st.join(' · ');
+  // status effects: chips beside the minimap, green for buffs and red for debuffs
+  const html = st.map(s => `<span class="${/^(Haste|Invisible|Shielded|Lurking|Rallied|Vigil)/.test(s) ? 'buff' : 'debuff'}">${s}</span>`).join('');
+  const sEl = $('status'); if (sEl._h !== html) { sEl._h = html; sEl.innerHTML = html; }
   $('hud').classList.toggle('invis', P.invisT > 0);
   const t = Math.floor(G.mode === 'lane' ? Math.max(0, TUNING.laneLimit - G.time) : G.mode === 'cart' ? Math.max(0, CART.limit - G.time) : G.time);
   $('clock').firstChild.textContent = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
-  if (G.mode === 'survivor') updateSurvHud(); else if (G.mode === 'hill') updateHillHud(); else if (G.mode === 'cart') updateCartHud(); else if (G.mode === 'potato') updatePotatoHud(); else if (G.mode === 'paint') updatePaintHud(); else if (G.mode === 'raid') updateRaidHud(); else if (G.story) updateStoryHud(); else if (G.mode === 'duel') updateDuelHud(dt); else {
+  if (G.mode === 'survivor') updateSurvHud(); else if (G.mode === 'hill') updateHillHud(); else if (G.mode === 'cart') updateCartHud(); else if (G.mode === 'potato') updatePotatoHud(); else if (G.mode === 'ball') updateBallHud(); else if (G.mode === 'raid') updateRaidHud(); else if (G.story) updateStoryHud(); else if (G.mode === 'duel') updateDuelHud(dt); else {
     $('kB').textContent = G.score.blue; $('kR').textContent = G.score.red;
     const core = t => G.structures.find(s => s.kind === 'core' && s.team === t);
     $('coreB').style.width = (100 * core('blue').hp / core('blue').maxHp) + '%';
@@ -1580,7 +1592,7 @@ function loop() {
     if (G.mode === 'hill') { if (G.net && !G.net.host) hillVisuals(G, dt); else updateHill(G, dt); }
     if (G.mode === 'cart') updateCart(G, dt);
     if (G.mode === 'potato') updatePotato(G, dt);
-    if (G.mode === 'paint') updatePaint(G, dt);
+    if (G.mode === 'ball') updateBall(G, dt);
     if (G.mode === 'raid') updateRaid(G, dt);
     // stats for the MVP cards: time on the objective and the longest life
     if (!G.over) for (const h of G.heroes) {
@@ -1621,15 +1633,19 @@ function updateStoryHud() {
   const S = storyInfo(G); if (!S || !S.K) return;
   const K = S.K, t = K.time ? S.timeLeft : S.st, m = Math.floor(t / 60), s = String(Math.floor(t % 60)).padStart(2, '0');
   const timed = K.type === 'defend' || K.type === 'survive';
+  // defend: the left side is the thing you're protecting, with its health
+  const O = K.type === 'defend' && S.obj ? S.obj : null, of = O ? Math.max(0, O.hp / O.maxHp) : 0;
+  $('lB').textContent = O ? K.name.replace(/^the /, '').replace(/^./, c => c.toUpperCase()) : 'Objective';
   $('lR').textContent = K.time ? 'Time left' : 'Time';
-  $('kB').textContent = timed ? `${Math.floor(S.have)}s` : K.type === 'heal' ? `${S.have.toLocaleString()}` : `${S.have} / ${S.need}`;
-  $('coreB').style.width = (100 * Math.min(1, S.have / Math.max(1, S.need))) + '%';
+  $('kB').textContent = O ? `${Math.ceil(of * 100)}%` : timed ? `${Math.floor(S.have)}s` : K.type === 'heal' ? `${S.have.toLocaleString()}` : `${S.have} / ${S.need}`;
+  $('coreB').style.width = (100 * (O ? of : Math.min(1, S.have / Math.max(1, S.need)))) + '%';
+  $('coreB').classList.toggle('objLow', !!O && of < 0.35);
   $('kR').textContent = `${m}:${s}`;
   $('coreR').style.width = K.time ? (100 * S.timeLeft / K.time) + '%' : '100%';
   $('wave').textContent = `${S.M.title} · part ${S.stage + 1} of ${S.M.stages.length}`;
   const tag = $('hillTag'), hot = K.time && S.timeLeft < 15 && !timed && !S.rest;
   tag.className = hot || /about to fall/.test(S.hint) ? 'contest' : 'on';
-  tag.textContent = `${S.goal}${S.hint ? ' · ' + S.hint : ''}`;
+  tag.textContent = `${S.goal}${O ? ` · ${Math.max(0, Math.ceil(O.hp)).toLocaleString()} / ${O.maxHp.toLocaleString()} HP` : ""}${S.hint ? " · " + S.hint : ""}`;
 }
 // ---------- Payload HUD ----------
 function updateCartHud() {
@@ -1644,17 +1660,18 @@ function updateCartHud() {
     : C.dir ? 'Enemy pushing the cart' : `Cart · ${Math.round(Math.hypot(P.pos.x - C.pos.x, P.pos.z - C.pos.z))}m`;
 }
 
-// ---------- Paint Party HUD ----------
-function updatePaintHud() {
-  const T = G.paint, s = paintShare(G), pc = v => Math.round(v * 100) + '%';
-  $('kB').textContent = pc(s.blue); $('kR').textContent = pc(s.red);
-  $('coreB').style.width = (100 * s.blue) + '%';
-  $('coreR').style.width = (100 * s.red) + '%';
+// ---------- Smash Ball HUD ----------
+function updateBallHud() {
+  const T = G.ball, p = T.pts;
+  $('kB').textContent = p.blue; $('kR').textContent = p.red;
+  $('coreB').style.width = (100 * p.blue / BALL.toWin) + '%';
+  $('coreR').style.width = (100 * p.red / BALL.toWin) + '%';
   const t = Math.max(0, T.time);
-  $('wave').textContent = G.over ? 'game over' : `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}${T.frenzy ? ' · frenzy!' : ''}`;
-  const tag = $('hillTag'), under = P.alive ? P.onPaint : '';
-  tag.className = under === 'own' ? 'on' : under === 'enemy' ? 'lost' : '';
-  tag.textContent = under === 'own' ? '🎨 On your paint · faster, and healing' : under === 'enemy' ? 'On their paint · slowed. Paint over it!' : 'Shoot the floor to paint it';
+  $('wave').textContent = G.over ? 'game over' : T.ot ? 'golden goal!' : `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+  const tag = $('hillTag'), us = G.playerTeam, ourHalf = (T.pos.z < 0) === (us === 'blue');
+  const d = Math.round(Math.hypot(P.pos.x - T.pos.x, P.pos.z - T.pos.z)), mine = T.last === P, ours = T.last && T.last.team === us;
+  tag.className = T.wait > 0 ? '' : ourHalf ? 'lost' : 'on';
+  tag.textContent = T.wait > 0 ? (T.over ? 'Full time' : 'Kick-off!') : mine ? `⚽ Your ball · ${d}m` : ours ? `⚽ ${T.last.name} has it · ${d}m` : ourHalf ? `⚽ Ball in your half · ${d}m · clear it!` : `⚽ Ball in their half · ${d}m`;
 }
 // ---------- Hill Rush HUD ----------
 function updatePotatoHud() {

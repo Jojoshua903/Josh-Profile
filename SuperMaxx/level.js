@@ -1,4 +1,4 @@
-import { addTokens } from './slots.js?v=20261128e';
+import { addTokens } from './slots.js?v=20261128l';
 
 // Player level: every match (and every story mission) earns player XP, whatever the season pass
 // is doing. Each level takes more XP than the one before, and every level-up pays one token for

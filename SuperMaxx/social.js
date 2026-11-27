@@ -1,14 +1,14 @@
-import { HEROES } from './heroes.js?v=20261128e';
-import { MAPS, SURVIVOR_MAP } from './data.js?v=20261128e';
-import { cfg } from './settings.js?v=20261128e';
-import { headshot } from './portraits.js?v=20261128e';
-import { masteryOf } from './mastery.js?v=20261128e';
-import { statOf } from './contracts.js?v=20261128e';
-import { passXp, tierProgress, heroOwned, MAX_TIER } from './pass.js?v=20261128e';
-import { history } from './history.js?v=20261128e';
-import { loadFirebase, setUserChangeHook, setAccountRedraw, accountHTML, accountAct, accountEnter, accountBusy, accountOpened, myAccount, ago, esc } from './account.js?v=20261128e';
-import * as net from './net.js?v=20261128e';
-import { joinFriend } from './online.js?v=20261128e';
+import { HEROES } from './heroes.js?v=20261128l';
+import { MAPS, SURVIVOR_MAP } from './data.js?v=20261128l';
+import { cfg } from './settings.js?v=20261128l';
+import { headshot } from './portraits.js?v=20261128l';
+import { masteryOf } from './mastery.js?v=20261128l';
+import { statOf } from './contracts.js?v=20261128l';
+import { passXp, tierProgress, heroOwned, MAX_TIER } from './pass.js?v=20261128l';
+import { history } from './history.js?v=20261128l';
+import { loadFirebase, setUserChangeHook, setAccountRedraw, accountHTML, accountAct, accountEnter, accountBusy, accountOpened, myAccount, ago, esc } from './account.js?v=20261128l';
+import * as net from './net.js?v=20261128l';
+import { joinFriend } from './online.js?v=20261128l';
 
 // The Profile screen (👤 on the main menu): your profile card, match history, friends and account.
 //
@@ -19,7 +19,7 @@ import { joinFriend } from './online.js?v=20261128e';
 
 const $ = id => document.getElementById(id);
 const hex = c => '#' + c.toString(16).padStart(6, '0');
-const MODE = { lane: 'Lane Breaker', survivor: 'Survivor', hill: 'Hill Rush', cart: 'Payload', potato: 'Hot Potato', duel: 'Duel', raid: 'Boss Raid' };
+const MODE = { lane: 'Lane Breaker', survivor: 'Survivor', hill: 'Hill Rush', cart: 'Payload', potato: 'Hot Potato', ball: 'Smash Ball', duel: 'Duel', raid: 'Boss Raid' };
 const mapName = id => id === SURVIVOR_MAP.id ? SURVIVOR_MAP.name : MAPS.find(m => m.id === id)?.name || '';
 
 // ---------- your card ----------

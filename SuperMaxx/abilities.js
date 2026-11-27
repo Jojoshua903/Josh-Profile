@@ -1,7 +1,7 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { makeBox, resolveXZ, hasLOS, groundAt, rayWorld } from './world.js?v=20261128e';
-import { buildHeroModel } from './models.js?v=20261128e';
-import { damage, tally, trace, tracer, burst, ring, setBar, makeBar, eyeOf, dirFrom, chestOf, spawnProjectile, TEAM_COLOR } from './units.js?v=20261128e';
+import { makeBox, resolveXZ, hasLOS, groundAt, rayWorld } from './world.js?v=20261128l';
+import { buildHeroModel } from './models.js?v=20261128l';
+import { damage, tally, trace, tracer, burst, ring, setBar, makeBar, eyeOf, dirFrom, chestOf, spawnProjectile, TEAM_COLOR } from './units.js?v=20261128l';
 
 // Abilities, status effects, zones, traps, walls and deployables.
 // Each ability: cast(G, h, a, ctx) -> bool, ai(G, bot, a, ctx) -> bool (should the bot cast now?).
@@ -14,7 +14,7 @@ const RAINBOW = [0xff4d4d, 0xff9a3c, 0xffe14a, 0x5fe07a, 0x4d9aff, 0xb06aff];
 
 // ---------- status ----------
 export function resetStatus(h) {
-  Object.assign(h, { slowT: 0, slowM: 1, stunT: 0, rootT: 0, hasteT: 0, hasteSpeed: 1, hasteFire: 1, markT: 0, markAmp: 1, lurkT: 0, rushT: 0, rallyT: 0, rallyAmp: 1, jamT: 0, grabbed: null,
+  Object.assign(h, { magT: 0, magBy: null, slowT: 0, slowM: 1, stunT: 0, rootT: 0, hasteT: 0, hasteSpeed: 1, hasteFire: 1, markT: 0, markAmp: 1, lurkT: 0, rushT: 0, rallyT: 0, rallyAmp: 1, jamT: 0, grabbed: null,
     invisT: 0, ambush: 1, barrierT: 0, barrierM: 1, noReloadT: 0, knockT: 0, dashT: 0, slamPending: false, airT: 0,
     zoneSlow: 1, zoneMult: 1, glideT: 0, momentum: 0, overdriveT: 0, megaT: 0, burnT: 0, ejected: false, photoOn: false, tunnelCd: 0, twirlT: 0, vigilT: 0, dashSteer: false, blindT: 0, frozenT: 0, oneUpT: 0, scoreStacks: 0, wing: 100, flapT: 0, diving: false, diveT: 0 });
   if (h.iceMesh) { h.iceMesh.parent?.remove(h.iceMesh); h.iceMesh = null; }
@@ -24,7 +24,7 @@ export function resetStatus(h) {
 }
 export const canAct = h => h.stunT <= 0 && !(h.lurkT > 0);   // no shooting or casting while lurking in the mud
 export const canMove = h => h.stunT <= 0 && h.rootT <= 0;
-export const moveMult = h => (pasId(h) === "snowboots" ? 1 : (h.slowT > 0 ? h.slowM : 1) * h.zoneSlow * (h.wet || 1) * (h.zoomA > 0.5 ? 0.8 : 1)) * (h.hasteT > 0 ? h.hasteSpeed : 1) * (h.paintM || 1);   // wet: wading at high tide; zoomed: walk slower; paintM: Paint Party floor
+export const moveMult = h => (pasId(h) === "snowboots" ? 1 : (h.slowT > 0 ? h.slowM : 1) * h.zoneSlow * (h.wet || 1) * (h.zoomA > 0.5 ? 0.8 : 1)) * (h.hasteT > 0 ? h.hasteSpeed : 1);   // wet: wading at high tide; zoomed: walk slower
 export const fireMult = h => (h.hasteT > 0 ? h.hasteFire : 1);
 export function takenMult(h) {
   return (h.barrierT > 0 ? h.barrierM : 1) * h.zoneMult * (h.markT > 0 ? h.markAmp : 1) * (h.lurkT > 0 ? 0.15 : 1) * passiveTaken(h);
@@ -45,7 +45,7 @@ export function breakInvis(h) { if (h.invisT > 0) { h.invisT = 0; } }
 
 export function tickStatus(G, h, dt) {
   tickPassive(G, h, dt);
-  for (const k of ['slowT', 'stunT', 'rootT', 'hasteT', 'markT', 'invisT', 'barrierT', 'noReloadT', 'knockT', 'rushT', 'rallyT', 'jamT', 'overdriveT', 'megaT', 'tunnelCd', 'vigilT', 'blindT', 'frozenT', 'oneUpT', 'nightT']) if (h[k] > 0) h[k] -= dt;
+  for (const k of ['slowT', 'stunT', 'rootT', 'hasteT', 'markT', 'invisT', 'barrierT', 'noReloadT', 'knockT', 'rushT', 'rallyT', 'jamT', 'overdriveT', 'megaT', 'tunnelCd', 'vigilT', 'blindT', 'frozenT', 'oneUpT', 'nightT', 'magT']) if (h[k] > 0) h[k] -= dt;
   if (h.nightOn) {                                                       // Prism's Nightmare: dark sparks while it lasts, back to sunshine after
     if (!(h.nightT > 0)) { h.nightOn = false; h.model?.nightmare?.(false); }
     else if (Math.random() < dt * 14) burst(G, chestOf(h).add(new THREE.Vector3((Math.random() - 0.5) * 0.8, Math.random() * 0.8, (Math.random() - 0.5) * 0.8)), Math.random() < 0.3 ? 0xff2a4a : 0x2a1040, 0.35);
@@ -189,7 +189,7 @@ export function wallClimb(G, h) {
 // ---------- zones ----------
 const ZONE_LOOK = {
   dome: { color: 0x5fe0c0, dome: true }, sanctum: { color: 0xffe08a }, overgrowth: { color: 0x5fb05a },
-  frost: { color: 0xbfeaff }, trap: { color: 0x8a5a3c }, nova: { color: 0xff8a3c }, vortex: { color: 0xff4fa3 },
+  frost: { color: 0xbfeaff }, trap: { color: 0x8a5a3c }, nova: { color: 0xff8a3c }, vortex: { color: 0xff4fa3 }, magnet: { color: 0xe23a4a }, field: { color: 0x7ab0ff },
   banner: { color: 0xffe08a }, goo: { color: 0x7ee85a }, stage: { color: 0xff8fc0 }, pylon: { color: 0xffe14a }, fort: { color: 0xff8a2a }, pen: { color: 0x8a5a3a }, heat: { color: 0xffb35a }, web: { color: 0xe8e8ff }, gravy: { color: 0x9a5a28 },
   bumper: { color: 0xff3fa4 }, claw: { color: 0xffd23c }, capsule: { color: 0x3fd8ff, dome: true },
 };
@@ -211,6 +211,7 @@ function zoneMesh(G, kind, pos, radius) {
     if (kind === 'overgrowth') m = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.9, 5), new THREE.MeshStandardMaterial({ color: i % 4 ? 0x4f9a48 : 0xff5f8f }));
     else if (kind === 'frost') m = new THREE.Mesh(new THREE.OctahedronGeometry(0.25, 0), new THREE.MeshStandardMaterial({ color: 0xe8f8ff, emissive: 0x9fdcff, emissiveIntensity: 0.4 }));
     else if (kind === 'vortex') m = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.18), new THREE.MeshBasicMaterial({ color: i % 2 ? 0x18e0f0 : 0xff4fa3 }));
+    else if (kind === 'magnet' || kind === 'field') m = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.42), new THREE.MeshStandardMaterial({ color: i % 3 ? 0x5a5f6a : kind === 'field' ? 0x7ab0ff : 0xe23a4a, metalness: 0.6, roughness: 0.4 }));
     else if (kind === 'goo') m = new THREE.Mesh(new THREE.SphereGeometry(0.12 + Math.random() * 0.12, 10, 8), new THREE.MeshStandardMaterial({ color: 0x8af06a, emissive: 0x4fc03a, emissiveIntensity: 0.35, roughness: 0.1 }));
     else m = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 4), new THREE.MeshBasicMaterial({ color: look.color }));
     const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * radius * 0.92;
@@ -277,6 +278,13 @@ function zoneMesh(G, kind, pos, radius) {
     const cell = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 10), new THREE.MeshStandardMaterial({ color: 0xffe14a, emissive: 0xffe14a, emissiveIntensity: 1.2 }));
     cell.position.y = 1.8; g.add(cell);
   }
+  if (kind === 'magnet') {                                 // Lodestar's lodestone: a red horseshoe magnet stuck in the ground
+    const shoe = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.14, 10, 20, Math.PI), new THREE.MeshStandardMaterial({ color: 0xe23a4a, roughness: 0.4 }));
+    shoe.position.y = 0.55; shoe.rotation.z = Math.PI; g.add(shoe);
+    for (const s of [-1, 1]) { const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.3, 12), new THREE.MeshStandardMaterial({ color: 0xd8dee8, metalness: 0.7, roughness: 0.25 })); tip.position.set(s * 0.42, 0.25, 0); g.add(tip); }
+    const arc = new THREE.Mesh(new THREE.TorusGeometry(radius * 0.5, 0.03, 4, 32), new THREE.MeshBasicMaterial({ color: 0x7ab0ff, transparent: true, opacity: 0.7 }));
+    arc.rotation.x = Math.PI / 2; arc.position.y = 0.3; g.add(arc);
+  }
   G.scene.add(g);
   return { g, bits, disc };
 }
@@ -332,7 +340,7 @@ export function updateAbilities(G, dt) {
     z.g.scale.setScalar(0.3 + 0.7 * Math.min(1, (z.max - z.life) * 4));
     z.bits.forEach(b => { b.position.y = 0.2 + Math.abs(Math.sin(G.time * 2 + b.userData.p)) * (z.kind === 'sanctum' ? 2 : 0.25); b.rotation.y += dt; });
     z.disc.material.opacity = 0.25 * k;
-    if (z.kind === 'vortex') z.g.rotation.y += dt * 3.5;
+    if (z.kind === 'vortex' || z.kind === 'magnet' || z.kind === 'field') z.g.rotation.y += dt * (z.kind === 'vortex' ? 3.5 : 2.5);
     if (z.kind === 'bumper') { const c = z.g.getObjectByName('cap'), s = z.g.getObjectByName('star'); if (s) s.rotation.y += dt * 4; if (c) c.scale.y += (1 - c.scale.y) * Math.min(1, dt * 10); }
     if (z.kind === 'claw') { const hub = z.g.getObjectByName('hub'); if (hub) hub.position.y = 0.6 + 2.6 * Math.max(0, z.life - 0.15) / Math.max(0.01, z.max - 0.15); }
     if (z.follow) { if (z.follow.alive) { z.pos.copy(z.follow.pos); z.g.position.copy(z.pos); } else z.life = 0; }    // Reheat rides along with the Microwave
@@ -373,7 +381,8 @@ export function updateAbilities(G, dt) {
       if (!ally && z.slow && u.kind === 'hero') u.zoneSlow = Math.min(u.zoneSlow, z.slow);
       if (!ally && z.pull) {                                    // mosh pit: drag toward the middle
         const dx = z.pos.x - u.pos.x, dz = z.pos.z - u.pos.z, d = Math.hypot(dx, dz);
-        if (d > 0.7) { u.pos.x += dx / d * z.pull * dt; u.pos.z += dz / d * z.pull * dt; resolveXZ(u.pos, u.radius, G.colliders); }
+        const pm = z.magnet && u.magT > 0 ? z.owner?.def?.passive?.amp || 1.5 : 1;          // Lodestar: magnetised enemies come in harder
+        if (d > (z.follow ? 2 : 0.7)) { u.pos.x += dx / d * z.pull * pm * dt; u.pos.z += dz / d * z.pull * pm * dt; resolveXZ(u.pos, u.radius, G.colliders); }
       }
     }
     if (z.life <= 0) { G.scene.remove(z.g); G.zones.splice(i, 1); }
@@ -1846,6 +1855,64 @@ export const ABIL = {
       return true;
     },
     ai: (G, b, a, c) => c.heroT && c.near(22) >= 1,
+  },
+  // ---- Lodestar ----
+  lodestone: {
+    cast(G, h, a, ctx) {
+      const p = aimPoint(G, h, ctx, a.range);
+      tracer(G, eyeOf(h), p.clone().setY(p.y + 0.5), 0xe23a4a, 0.4);
+      addZone(G, { kind: 'magnet', pos: p, radius: a.radius, life: a.dur, team: h.team, owner: h, dps: a.dps, pull: a.pull, magnet: true });
+      ring(G, p, 0xe23a4a, a.radius); ring(G, p, 0x7ab0ff, a.radius * 0.6); burst(G, p.clone().setY(p.y + 0.6), 0xd8dee8, 1);
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist < a.range && (c.near(a.radius + 4) >= 1),
+  },
+  attract: {
+    // yank everyone in front of you toward you; magnetised enemies come in harder and get clamped
+    cast(G, h, a, ctx) {
+      const f = flat(ctx.aim || dirFrom(h.yaw, 0)), o = eyeOf(h);
+      for (const u of [...enemiesOf(G, h), ...G.minions.filter(m => m.alive && m.team !== h.team && !m.deploy)]) {
+        const to = v.subVectors(u.pos, h.pos); const d = to.length(); to.y = 0; to.normalize();
+        if (d > a.range || d < 1.2 || to.dot(f) < a.cone || (u.kind === 'hero' && isHidden(u))) continue;
+        if (!hasLOS(o, chestOf(u), G.colliders)) continue;
+        const mag = u.magT > 0, back = to.clone().negate();
+        damage(G, u, a.dmg, h);
+        knock(u, back, Math.min(a.pull * (mag ? 1.3 : 1), d * 1.5), 4);
+        if (u.kind === 'hero') u.knockT = 0.5;
+        if (mag) { stun(u, a.stun); u.magT = 0; G.ev.flash?.(u, 'Clamped!'); }
+        tracer(G, o.clone().setY(o.y - 0.3), chestOf(u), 0xe23a4a, 0.3, 2); tracer(G, o.clone().setY(o.y - 0.25), chestOf(u), 0x7ab0ff, 0.25);
+        burst(G, chestOf(u), mag ? 0x7ab0ff : 0xe23a4a, 0.7);
+      }
+      ring(G, h.pos, 0xe23a4a, 2.4); burst(G, chestOf(h), 0xd8dee8, 1);
+      G.ev.shake?.(h, 0.35);
+      return true;
+    },
+    ai: (G, b, a, c) => {
+      const f = dirFrom(b.yaw, 0);
+      return enemiesOf(G, b).some(e => { const to = v.subVectors(e.pos, b.pos); const d = to.length(); to.y = 0; to.normalize(); return d > 5 && d < a.range * 0.85 && to.dot(f) > a.cone; });
+    },
+  },
+  supermagnet: {
+    // a field that drags every nearby enemy in for a few seconds, then flips and blasts them away
+    cast(G, h, a) {
+      addZone(G, { kind: 'field', pos: h.pos.clone().setY(0), radius: a.radius, life: a.dur, team: h.team, owner: h, follow: h, dps: a.dps, pull: a.pull, magnet: true });
+      h.barrierT = Math.max(h.barrierT, a.dur); h.barrierM = Math.min(h.barrierM || 1, a.mult);
+      ring(G, h.pos, 0xe23a4a, a.radius); ring(G, h.pos, 0x7ab0ff, a.radius * 0.7);
+      burst(G, chestOf(h), 0x7ab0ff, 2); G.ev.shake?.(h, 0.5); G.ev.flash?.(h, 'SUPER MAGNET');
+      G.timers.push({ t: a.dur, fn: () => {
+        if (!h.alive) return;
+        for (const u of [...enemiesOf(G, h), ...G.minions.filter(m => m.alive && m.team !== h.team && !m.deploy)]) {
+          const d = Math.hypot(u.pos.x - h.pos.x, u.pos.z - h.pos.z), out = flat(v.set(u.pos.x - h.pos.x, 0.001, u.pos.z - h.pos.z));
+          if (d > a.blast) continue;
+          damage(G, u, a.dmg, h); knock(u, out, a.knock * (1 - d / a.blast * 0.4), 7);
+          burst(G, chestOf(u), 0x7ab0ff, 0.9);
+        }
+        ring(G, h.pos, 0x7ab0ff, a.blast); ring(G, h.pos, 0xe23a4a, a.blast * 0.6); burst(G, chestOf(h), 0xffffff, 2.2);
+        G.ev.boom?.(h.pos.clone(), { splash: a.blast }); G.ev.shake?.(h, 0.7);
+      } });
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && (c.near(a.radius * 0.8) >= 2 || (c.near(a.radius * 0.6) >= 1 && b.hp > b.maxHp * 0.5)),
   },
   powerup: {
     cast(G, h, a, ctx) {

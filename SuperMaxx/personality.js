@@ -3,7 +3,7 @@
 // win / lose: the results screen · kill: extra elimination lines · rivals: a taunt for knocking out
 // that hero · friends: a hello when that hero spawns on your team · likes, dislikes, fact: Story tab
 
-import { ALL_HEROES as HEROES } from './heroes.js?v=20261128e';
+import { ALL_HEROES as HEROES } from './heroes.js?v=20261128l';
 
 const P = {
   vanguard: {
@@ -201,6 +201,13 @@ const P = {
     thanks: ['GRATITUDE.EXE', 'You are a valued customer.'], win: ['ALL PRIZES COLLECTED.', 'Winner. Winner. Winner.'], lose: ['The claw... slipped.', 'Rigged. As usual.'],
     kill: ['Prize won.', 'Grab complete.'], rivals: { chipmunk: 'Your mech is not a real claw machine, rodent.' }, friends: { microwave: 'Fellow appliance. Greetings.' },
     likes: 'Plush toys, firm grips, the chime of a winner', dislikes: 'Loose screws, tilting, people who say "so close"', fact: 'Has 2,417 plush toys hidden inside his cabinet. He knows every one by name.',
+  },
+  magnet: {
+    select: ['Lodestar on site. Mind your belt buckles.', 'Field’s on. Let’s pull some people together.', 'Everything comes to me eventually.'],
+    death: ['Lost… my… charge…', 'Polarity… failing…'], lowhp: ['Field’s flickering! Need a hand!', 'I’m running low over here!'],
+    thanks: ['Cheers! You’re a real attraction.', 'Thanks, I owe you a spanner.'], win: ['Pulled that one off!', 'Opposites attract. Winners stick together.'], lose: ['Somebody demagnetised me.', 'Back to the scrapyard, then.'],
+    kill: ['Stuck on you.', 'Scrap.'], rivals: { builder: 'Mortar keeps leaving his bricks on my crane.' }, friends: { ratchet: 'Ratchet! Give us a rivet, I’ll catch it.' },
+    likes: 'Big cranes, old radios, the hum of a good generator', dislikes: 'Plastic, aluminium, people who ask her to find their keys', fact: 'Cannot wear a watch. Every watch she has owned now runs backwards.',
   },
   unicorn: {
     select: ['Prism, reporting with sprinkles!', 'Glitter? Check. Horn? Check. Let’s go!', 'Be nice to me. Please. For your sake.'],

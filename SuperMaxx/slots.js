@@ -3,7 +3,7 @@
 // something you don't own yet: a slot-exclusive hero, skin, spray or emote. Daily challenges
 // (daily.js) pay a token too. Saved locally.
 
-import { SEASONS, seasonLive } from './seasons.js?v=20261128e';
+import { SEASONS, seasonLive } from './seasons.js?v=20261128l';
 
 const KEY = 'supermaxx-slots';
 const S = (() => { try { return { tokens: 0, owned: [], spins: 0, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { return { tokens: 0, owned: [], spins: 0 }; } })();
@@ -16,7 +16,7 @@ export const SEASON_HEROES = { 1: ['tempo', 'kestrel', 'cavalier'], 2: ['pinball
 export const RETIRED_HEROES = Object.entries(SEASON_HEROES).filter(([n]) => SEASONS[+n] && seasonLive(SEASONS[+n])).flatMap(([, ids]) => ids);
 export const SLOT_SKINS = ['slime-magma', 'brawler-chrome', 'chipmunk-gold', 'vanguard-cosmos', 'striker-glitch', 'croc-gummy', 'cavalier-phantom', 'mirage-hologram',
   'ember-supernova', 'warden-stained', 'thicket-sakura', 'ratchet-overclock', 'avalanche-volcanic', 'tempo-clockwork', 'kestrel-phoenix', 'elf-winter', 'dancer-blackswan', 'mole-diamond',
-  'medic-plague', 'spark-thunder', 'builder-marble', 'wellington-truffle', 'shepherd-tartan', 'microwave-retro', 'chef-noir', 'manspider-tarantula'];
+  'medic-plague', 'spark-thunder', 'builder-marble', 'wellington-truffle', 'shepherd-tartan', 'microwave-retro', 'chef-noir', 'manspider-tarantula', 'magnet-thunder'];
 export const SLOT_SPRAYS = ['sp-gg', 'sp-splat', 'sp-nuts', 'sp-maxx', 'sp-chomp', 'sp-love', 'sp-bye', 'sp-crown'];
 // emotes you don't start with (see emotes.js); the free four are always yours
 export const SLOT_EMOTES = ['cheer', 'dance', 'taunt', 'bow', 'clap', 'flex', 'facepalm', 'nap', 'kiss', 'drums'];

@@ -1,5 +1,5 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { kit, body, face, finish, gunAt, part, joint, chain, ball, pill, tube, cone, ring, slab, dome, live } from './rig.js?v=20261128e';
+import { kit, body, face, finish, gunAt, part, joint, chain, ball, pill, tube, cone, ring, slab, dome, live } from './rig.js?v=20261128l';
 
 // Season 2 "Insert Coin" heroes on the stylised rig: Tilt, Grabbit and Sir Pixel, plus the contract hero Hoot
 // and the slot machine hero Prism.
@@ -274,4 +274,47 @@ function unicorn(p, team) {
   return o;
 }
 
-export const ROSTER_D = { pinball, clawbot, pixel, owl, unicorn };
+// ---------------- Lodestar: a junkyard crane operator with a giant horseshoe magnet ----------------
+function magnet(p, team) {
+  const K = kit(p);
+  const red = K.c(p.main, { rough: 0.4 }), steel = K.c(0xd8dee8, { rough: 0.25, metal: 0.7 }), denim = K.c(p.dark, { rough: 0.8 });
+  const hat = K.c(0xffc93c, { rough: 0.35 }), blue = K.c(0x7ab0ff, { glow: 0.9, rim: 0 });
+  const P = body(K, { w: 0.95, shoes: 'boot', boots: K.c(0x3a2a20, { rough: 0.8 }), top: K.c(0xfff3e0, { rough: 0.7 }), sleeves: red, forearms: K.skin, pants: denim, gloves: K.c(0xffa23c, { rough: 0.8 }), torso: [0.2, 0.2, 0.27, 0.26, 0.55] });
+  face(P, K, { mouth: 'smirk', lashes: true, cheeks: true, brow: 0.15 });
+  // overall bib with a horseshoe-magnet patch, and a tool belt
+  part(P.spine, slab(0.36, 0.3, 0.04), denim, 0, 0.22, -0.2);
+  for (const s of [-1, 1]) part(P.spine, slab(0.05, 0.36, 0.03), denim, s * 0.14, 0.4, -0.18).rotation.z = s * 0.08;
+  const patch = part(P.spine, new THREE.TorusGeometry(0.06, 0.022, 6, 14, Math.PI), red, 0, 0.24, -0.225); patch.rotation.z = Math.PI;
+  part(P.hips, tube(0.25, 0.26, 0.07, 14), K.c(0x6a4a30, { rough: 0.8 }), 0, 0.02, 0);
+  part(P.hips, slab(0.1, 0.12, 0.08), K.c(0x6a4a30, { rough: 0.8 }), 0.22, -0.04, -0.12);
+  // a yellow hard hat with a light, goggles pushed up, and a long ponytail
+  part(P.head, dome(0.31, Math.PI * 0.5), hat, 0, 0.06, 0, 1.06, 0.95, 1.06);
+  part(P.head, tube(0.38, 0.38, 0.03, 20), hat, 0, 0.06, -0.03, 1, 1, 1.1);
+  part(P.head, slab(0.04, 0.12, 0.3), hat, 0, 0.26, 0);
+  const lamp = live(part(P.head, tube(0.05, 0.05, 0.05, 10), K.c(0xfff6c0, { glow: 1.2, rim: 0 }), 0, 0.2, -0.3)); lamp.rotation.x = Math.PI / 2;
+  part(P.head, tube(0.315, 0.315, 0.05, 20), K.c(0x2a2a34, { rough: 0.5 }), 0, 0.13, 0);
+  for (const s of [-1, 1]) part(P.head, tube(0.07, 0.07, 0.04, 12), K.c(0x9fe6ff, { glow: 0.3, rough: 0.05 }), s * 0.1, 0.17, -0.29).rotation.x = Math.PI / 2;
+  part(P.head, dome(0.3, Math.PI * 0.58), K.c(0x8a3a2a, { rough: 0.7 }), 0, 0.0, 0.03, 1.02, 1, 1.05);
+  const tail = chain(P.head, 5, 0.09, K.c(0x8a3a2a, { rough: 0.7 }), 0, 0.12, 0.27, 0.06, 0.03, [0, -0.7, 0.7]);
+  // bolts and washers orbiting her, held by her own field
+  const orbit = joint(P.spine, 0, 0.2, 0);
+  const bits = [0, 1, 2, 3].map(i => {
+    const b = joint(orbit, Math.cos(i / 4 * Math.PI * 2) * 0.55, (i % 2) * 0.25, Math.sin(i / 4 * Math.PI * 2) * 0.55);
+    if (i % 2) part(b, ring(0.05, 0.015), steel); else { part(b, tube(0.02, 0.02, 0.12, 6), steel); part(b, tube(0.04, 0.04, 0.03, 6), steel, 0, 0.06, 0); }
+    return live(b);
+  });
+  // Polarity Gun: a big red horseshoe magnet with steel tips and a blue arc between them
+  const gun = gunAt(P, 0.28, 1.2, -0.44);
+  part(gun, slab(0.14, 0.16, 0.3), K.c(0x3a3f4a, { rough: 0.4, metal: 0.3 }), 0, 0, 0.08);
+  const shoe = part(gun, new THREE.TorusGeometry(0.15, 0.06, 10, 20, Math.PI), red, 0, 0, -0.14); shoe.rotation.x = -Math.PI / 2; shoe.rotation.z = Math.PI;
+  for (const s of [-1, 1]) part(gun, tube(0.062, 0.062, 0.1, 12), steel, s * 0.15, 0, -0.2).rotation.x = Math.PI / 2;
+  const arc = live(part(gun, tube(0.012, 0.012, 0.3, 6), blue, 0, 0, -0.26)); arc.rotation.z = Math.PI / 2;
+  return finish(P, team, gun, -0.32, (dt, s, t, k) => {
+    tail.wave(t, k, 0.14, 5);
+    orbit.rotation.y += dt * 1.8;
+    bits.forEach((b, i) => { b.position.y = (i % 2) * 0.25 + Math.sin(t * 2 + i) * 0.06; b.rotation.x += dt * (2 + i); });
+    arc.visible = ((t * 14) | 0) % 3 !== 0; arc.scale.x = 0.8 + Math.random() * 0.4;
+  });
+}
+
+export const ROSTER_D = { pinball, clawbot, pixel, owl, unicorn, magnet };

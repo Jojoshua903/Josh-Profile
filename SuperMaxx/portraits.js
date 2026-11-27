@@ -1,8 +1,8 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { buildHeroModel } from './models.js?v=20261128e';
-import { buildWorld } from './world.js?v=20261128e';
-import { createStructure } from './units.js?v=20261128e';
-import { HEROES } from './heroes.js?v=20261128e';
+import { buildHeroModel } from './models.js?v=20261128l';
+import { buildWorld } from './world.js?v=20261128l';
+import { createStructure } from './units.js?v=20261128l';
+import { HEROES } from './heroes.js?v=20261128l';
 
 // Menu artwork, generated once and cached as data URLs: hero splash art (themed
 // painted backdrop + a posed render of the model), headshot tiles, and map previews.
@@ -52,6 +52,7 @@ const POSE = {
   clawbot: { turn: -0.4, arm: -1.0, lean: 0, cam: [-1.6, 0.6, -4.0] },
   pixel: { turn: 0.45, arm: -1.4, lean: 0.04, cam: [-1.3, 0.7, -3.7] },
   owl: { turn: -0.45, arm: -1.2, lean: 0.05, cam: [-1.4, 0.75, -3.8], hop: 0.06 },
+  magnet: { turn: 0.5, arm: -1.4, lean: 0.04, cam: [-1.3, 0.8, -3.6], hop: 0.06 },
   unicorn: { turn: 0.45, arm: -1.5, lean: 0.06, cam: [-1.3, 0.8, -3.6], hop: 0.1 },
 };
 
@@ -319,6 +320,20 @@ const MOTIF = {
     for (let y = h * 0.7; y < h; y += 40) for (let x = (Math.round(y / 40) % 2) * 40; x < w; x += 80) { g.fillStyle = rgba(0x2a2a34, 0.4); g.fillRect(x, y, 40, 40); }
     for (let i = 0; i < 5; i++) { const x = w * (0.12 + i * 0.19), y = h * 0.16; g.strokeStyle = rgba(0x8a4a2a, 0.8); g.lineWidth = 4; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, y - 34); g.stroke(); g.fillStyle = rgba(0xc87a4a, 0.85); g.beginPath(); g.arc(x, y, 34 - (i % 2) * 8, 0, 7); g.fill(); g.fillStyle = rgba(0xffd27a, 0.35); g.beginPath(); g.arc(x - 8, y - 8, 10, 0, 7); g.fill(); }
     for (let i = 0; i < 9; i++) { const x = w * (0.05 + i * 0.115), fh = 90 + (i % 3) * 50; const gr = g.createLinearGradient(0, h * 0.72, 0, h * 0.72 - fh); gr.addColorStop(0, rgba(0xe8423a, 0.7)); gr.addColorStop(1, rgba(0xffd23c, 0)); g.fillStyle = gr; g.beginPath(); g.moveTo(x - 26, h * 0.72); g.quadraticCurveTo(x - 20, h * 0.72 - fh * 0.6, x, h * 0.72 - fh); g.quadraticCurveTo(x + 20, h * 0.72 - fh * 0.6, x + 26, h * 0.72); g.fill(); }
+  },
+  magnet(g, w, h, p) {                         // a scrapyard at dusk: a crane, stacked junk and blue field lines curling round
+    const sky = g.createLinearGradient(0, 0, 0, h); sky.addColorStop(0, rgba(0xff9a6a, 0.6)); sky.addColorStop(1, rgba(0x3a2a4a, 0.6));
+    g.fillStyle = sky; g.fillRect(0, 0, w, h);
+    g.fillStyle = rgba(0x2a2230, 0.8);
+    for (let i = 0; i < 9; i++) { const x = i / 8 * w, bw = 60 + (i * 37) % 70, bh = 60 + (i * 53) % 120; g.fillRect(x - bw / 2, h - bh, bw, bh); }
+    g.strokeStyle = rgba(0x2a2230, 0.85); g.lineWidth = 10;
+    g.beginPath(); g.moveTo(w * 0.82, h); g.lineTo(w * 0.82, h * 0.2); g.lineTo(w * 0.4, h * 0.16); g.stroke();
+    g.lineWidth = 3; g.beginPath(); g.moveTo(w * 0.46, h * 0.17); g.lineTo(w * 0.46, h * 0.36); g.stroke();
+    g.fillStyle = rgba(0xe23a4a, 0.9); g.beginPath(); g.ellipse(w * 0.46, h * 0.4, 34, 10, 0, 0, 7); g.fill();
+    g.strokeStyle = rgba(0x7ab0ff, 0.55); g.lineWidth = 4;
+    for (let i = 1; i <= 5; i++) { g.beginPath(); g.ellipse(w * 0.5, h * 0.62, w * 0.09 * i, h * 0.05 * i, 0, 0, 7); g.stroke(); }
+    g.fillStyle = rgba(0xd8dee8, 0.9);
+    for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2, r = w * (0.2 + (i % 3) * 0.08); g.save(); g.translate(w * 0.5 + Math.cos(a) * r, h * 0.62 + Math.sin(a) * r * 0.5); g.rotate(a); g.fillRect(-8, -2, 16, 4); g.restore(); }
   },
   unicorn(g, w, h, p) {                        // sunshine and rainbows on the left... a storm and red eyes on the right
     const sky = g.createLinearGradient(0, 0, w, 0); sky.addColorStop(0, rgba(0xffd6ec, 0.75)); sky.addColorStop(0.55, rgba(0xd8c8ff, 0.6)); sky.addColorStop(1, rgba(0x1a1024, 0.85));

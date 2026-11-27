@@ -1,11 +1,11 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { FIREBASE_CONFIG } from './firebase-config.js?v=20261128e';
-import { loadFirebase, setUserChangeHook } from './account.js?v=20261128e';
-import { HEROES } from './heroes.js?v=20261128e';
-import { damage, remoteKill, netShoot, spawnHero, setBar, tickCorpse, spawnMinion, unitDown, tracer, chestOf, TEAM_COLOR } from './units.js?v=20261128e';
-import { replayCast } from './abilities.js?v=20261128e';
-import { netHill } from './hill.js?v=20261128e';
-import { poseHero } from './anim.js?v=20261128e';
+import { FIREBASE_CONFIG } from './firebase-config.js?v=20261128l';
+import { loadFirebase, setUserChangeHook } from './account.js?v=20261128l';
+import { HEROES } from './heroes.js?v=20261128l';
+import { damage, remoteKill, netShoot, spawnHero, setBar, tickCorpse, spawnMinion, unitDown, tracer, chestOf, TEAM_COLOR } from './units.js?v=20261128l';
+import { replayCast } from './abilities.js?v=20261128l';
+import { netHill } from './hill.js?v=20261128l';
+import { poseHero } from './anim.js?v=20261128l';
 
 // Online play over Firebase Realtime Database.
 //

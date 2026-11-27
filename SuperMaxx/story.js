@@ -1,9 +1,9 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { createHero, spawnHero, createStructure, setBar, burst, ring } from './units.js?v=20261128e';
-import { initBot } from './botbrain.js?v=20261128e';
-import { HEROES } from './heroes.js?v=20261128e';
-import { addTokens } from './slots.js?v=20261128e';
-import { initRaid, BOSSES } from './raid.js?v=20261128e';
+import { createHero, spawnHero, createStructure, setBar, burst, ring } from './units.js?v=20261128l';
+import { initBot } from './botbrain.js?v=20261128l';
+import { HEROES } from './heroes.js?v=20261128l';
+import { addTokens } from './slots.js?v=20261128l';
+import { initRaid, BOSSES } from './raid.js?v=20261128l';
 
 // Story mode: one solo mission per hero, told in a few lines before, between and after. Every
 // mission has two parts, played back to back on the same map; each part is one of a handful of
@@ -204,6 +204,13 @@ export const MISSIONS = [
       { title: 'Midnight Filing', type: 'race', n: 6, time: 65, cap: 2, line: 'Every file found, sorted and stapled. The tax office closes at midnight, on the far side of the skyline.' },
     ],
     outro: 'Filed with four minutes to spare. Gary celebrated with a second cup of black coffee. Wild.' },
+  { hero: 'magnet', title: 'Scrapyard Rumble', map: 'docks',
+    intro: ['A gang of thieves has broken into the Tidewater scrapyard to strip Ferra’s old crane for parts.', 'They have parked their cutting rigs all over the dockside.', 'Ferra switches her field on. Everything metal in the yard starts to hum.'],
+    stages: [
+      { title: 'Pull the Plug', type: 'destroy', n: 3, name: 'cutting rig', cap: 2 },
+      { title: 'Save the Crane', type: 'defend', time: 75, hp: 2400, name: 'the old crane', cap: 3, line: 'The rigs are scrap. Now the whole gang is coming for the crane itself, and Ferra is standing right underneath it.' },
+    ],
+    outro: 'The crane still works. The thieves’ cutting rigs are now part of it, and Ferra says it has never run better.' },
   { hero: 'unicorn', title: 'Bad Day at the Bakery', map: 'plaza',
     intro: ['Celeste’s pastry stall in Solmare Piazza sells the best sprinkle cakes in town.', 'This morning, a gang knocked it over and ran off with every jar of sprinkles.', 'She is still smiling. For now.'],
     stages: [
@@ -375,7 +382,7 @@ function beginStage(G, i) {
   if (K.type === 'defend') {
     const c = spot(G, 0, 0, 0, 8, 3);
     const o = createStructure(G, 'core', 'blue', c.x, c.z);
-    o.kind = 'objective'; o.name = K.name; o.maxHp = o.hp = Math.round(K.hp * (S.hard > 0 ? 1.1 : S.hard < 0 ? 1.3 : 1.2)); setBar(o, 0x3ccf9a);
+    o.kind = 'objective'; o.name = K.name; o.maxHp = o.hp = Math.round(K.hp * (S.hard > 0 ? 0.95 : S.hard < 0 ? 1.1 : 1)); setBar(o, 0x3ccf9a);
     S.obj = o;
   } else if (K.type === 'destroy') {
     const used = [];

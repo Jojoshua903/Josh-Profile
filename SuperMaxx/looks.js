@@ -1,5 +1,5 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { mat, part, joint, ball, pill, tube, cone, ring, slab, dome, live } from './rig.js?v=20261128e';
+import { mat, part, joint, ball, pill, tube, cone, ring, slab, dome, live } from './rig.js?v=20261128l';
 
 // Skin looks: every skin adds pieces to the hero's body as well as recolouring it. Crowns,
 // horns and visors sit on the head, capes, wings and jetpacks on the back, emblems on the chest,
@@ -430,6 +430,7 @@ export const LOOKS = {
   'microwave-retro': [['antenna', { c: 0xff5a5a }], ['ringback', { c: 0x5ad8c8 }], ['orbit', { shape: 'ball', n: 3, c: 0xff5a5a, glow: 0.6 }]],
   'chef-noir': [['tophat', { c: 0x0c0c12, c2: 0xffc93c }], ['scarf', { c: 0xffc93c }], ['rise', { shape: 'star', c: 0xffc93c, n: 6, speed: 0.3 }]],
   'manspider-tarantula': [['shades', { c: 0x1d1d24 }], ['necklace', { c: 0xff8a3c, c2: 0xff8a3c }], ['belt', { c: 0x2a160a, c2: 0xff8a3c }]],
+  'magnet-thunder': [['visor', { c: 0xffe14a }], ['emblem', { shape: 'bolt', c: 0xffe14a }], ['orbit', { shape: 'bolt', n: 4, c: 0x7ab0ff, glow: 0.9 }], ['aura', { c: 0x7ab0ff }]],
 };
 
 // A short "what it adds" line for the closet.

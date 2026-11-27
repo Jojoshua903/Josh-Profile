@@ -1,7 +1,7 @@
 // The roster. Every hero has a primary weapon, two abilities (Q, E) and an ultimate (F)
 // that charges by dealing damage. Ability ids map to behaviours in abilities.js.
 
-import { SEASONS, seasonLive } from './seasons.js?v=20261128e';
+import { SEASONS, seasonLive } from './seasons.js?v=20261128l';
 export const ALL_HEROES = [
   {
     id: 'vanguard', name: 'Ottilie Brandt', callsign: 'Bulwark', role: 'Frontline tank', color: 0x2fb39a,
@@ -137,6 +137,21 @@ export const ALL_HEROES = [
     ult: { id: 'jaws', name: 'Swamp Jaws', cost: 950, radius: 4.5, dmg: 110, root: 1.5, desc: 'Giant jaws burst out of the ground and snap shut' },
     passive: { id: 'hunger', name: 'Swamp Hunger', frac: 0.25, desc: 'Hitting a slowed, stunned or rooted enemy heals you for 25% of the damage' },
     prefRange: 12,
+  },
+  {
+    id: 'magnet', name: 'Ferra Volkova', callsign: 'Lodestar', role: 'Magnetic controller', color: 0xe23a4a,
+    title: 'What goes around comes straight back to her',
+    bio: 'Ferra ran the big crane at the Solmare scrapyard until the day she climbed inside the electromagnet to fix it and climbed out with the field still on. Now spanners follow her down the street, fridges hum when she walks past, and anyone she points at gets dragged in close, whether they like it or not.',
+    quote: 'Opposites attract. So do you.',
+    palette: { main: 0xe23a4a, trim: 0xd8dee8, dark: 0x3a5a8a, skin: 0xf2c8a8 },
+    quips: { kill: ['Stuck on you.', 'Scrap metal.', 'Polarity reversed.'], ability: ['Come here!', 'Get over here!', 'Clamp!'], ult: ['SUPER MAGNET!', 'Everything comes to Ferra!'], spawn: ['Field’s on. Mind your fillings.'] },
+    hp: 210, speed: 6.9, desc: 'A horseshoe-magnet gun that tugs enemies toward her, a magnet she throws down to drag a crowd together, a yank that hauls everyone in front of her close, and a field that pulls the whole fight into her.',
+    weapon: { name: 'Polarity Gun', type: 'hitscan', mode: 'magnet', dmg: 14, tug: 0.35, rate: 0.22, mag: 20, reload: 1.6, spread: 0.01, range: 45, head: 1.5, tracer: 0xe23a4a, desc: 'Crackling bolts that magnetise what they hit and give enemies a little tug toward you' },
+    q: { id: 'lodestone', name: 'Lodestone', cd: 10, range: 30, radius: 6, dur: 3.5, pull: 5.5, dps: 10, desc: 'Throw a magnet where you aim. For 3.5s it drags every enemy within 6m into the middle and hurts them' },
+    ability: { id: 'attract', name: 'Attract', cd: 11, range: 18, cone: 0.55, dmg: 25, pull: 17, stun: 0.7, desc: 'Yank every enemy in front of you (up to 18m) toward you for 25 damage. Magnetised enemies come in harder and are clamped (stunned) for 0.7s' },
+    ult: { id: 'supermagnet', name: 'Super Magnet', cost: 1000, radius: 15, dur: 4, pull: 6, dps: 16, mult: 0.7, blast: 8, dmg: 60, knock: 16, desc: 'Turn into a giant magnet for 4s: every enemy within 15m is dragged toward you and takes damage while you take 30% less. Then the field flips and blasts everyone close for 60' },
+    passive: { id: 'magnetise', name: 'Magnetised', dur: 4, amp: 1.5, desc: 'Enemies you shoot are magnetised for 4s. Your pulls drag magnetised enemies 50% harder, and Attract clamps them' },
+    prefRange: 14,
   },
   // ---- Season 1 pass heroes (unlocked through the season pass, see pass.js) ----
   {
@@ -486,7 +501,7 @@ const ARCH_OF = {
   vanguard: 'tank', avalanche: 'tank', croc: 'tank', cavalier: 'tank', chipmunk: 'tank', microwave: 'tank', clawbot: 'tank',
   striker: 'damage', ember: 'damage', mirage: 'damage', kestrel: 'damage', brawler: 'damage', elf: 'damage', chef: 'damage', pinball: 'damage',
   warden: 'support', slime: 'support', dancer: 'support', medic: 'support', spark: 'support', wellington: 'support', pixel: 'support',
-  thicket: 'control', ratchet: 'control', tempo: 'control', mole: 'control', builder: 'control', shepherd: 'control', manspider: 'control',
+  thicket: 'control', ratchet: 'control', tempo: 'control', mole: 'control', builder: 'control', shepherd: 'control', manspider: 'control', magnet: 'control',
   owl: 'damage', unicorn: 'damage',
 };
 for (const h of ALL_HEROES) h.arch = ARCH_OF[h.id] || 'damage';

@@ -1,33 +1,33 @@
-import { LOOK, applyEnvironment } from './stage.js?v=20261128e';
-import { masteryOf } from './mastery.js?v=20261128e';
+import { LOOK, applyEnvironment } from './stage.js?v=20261128l';
+import { masteryOf } from './mastery.js?v=20261128l';
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { HEROES, ALL_HEROES, ARCHETYPES, archOf } from './heroes.js?v=20261128e';
-import './personality.js?v=20261128e';
-import { MAPS, DIFFICULTY } from './data.js?v=20261128e';
-import { BOSS_LIST, bossOf } from './raid.js?v=20261128e';
-import { storyMissions, storyDone, storyCount, GOAL, TYPE_ICON, MEDALS, MEDAL_ICON, medalOf, bestTime, parOf, medalCount, fmtTime } from './story.js?v=20261128e';
-import { THEMES } from './scenery.js?v=20261128e';
-import { cfg, save, resetSettings, QUALITY } from './settings.js?v=20261128e';
-import { ACTIONS, FIXED, kb, keyLabel, rebind, resetBinds } from './keys.js?v=20261128e';
-import { splash, headshot, mapArt } from './portraits.js?v=20261128e';
-import { initOnline, enterOnline } from './online.js?v=20261128e';
-import { enterSlots } from './slotmachine.js?v=20261128e';
-import { initVault, enterVault, leaveVault, clipCount } from './vault.js?v=20261128e';
-import { openHub } from './social.js?v=20261128e';
-import { tokens as slotTokens, SEASON_HEROES } from './slots.js?v=20261128e';
-import { playerLevel } from './level.js?v=20261128e';
-import { openHowTo } from './howto.js?v=20261128e';
-import { XH_STYLES, XH_COLORS, applyCrosshair } from './crosshair.js?v=20261128e';
-import { CONTRACTS, contractOf, taskFrac, taskDone, statOf, tasksDone, openContracts, contractsLeft, contractUnlocked, contractDone } from './contracts.js?v=20261128e';
+import { HEROES, ALL_HEROES, ARCHETYPES, archOf } from './heroes.js?v=20261128l';
+import './personality.js?v=20261128l';
+import { MAPS, DIFFICULTY } from './data.js?v=20261128l';
+import { BOSS_LIST, bossOf } from './raid.js?v=20261128l';
+import { storyMissions, storyDone, storyCount, GOAL, TYPE_ICON, MEDALS, MEDAL_ICON, medalOf, bestTime, parOf, medalCount, fmtTime } from './story.js?v=20261128l';
+import { THEMES } from './scenery.js?v=20261128l';
+import { cfg, save, resetSettings, QUALITY } from './settings.js?v=20261128l';
+import { ACTIONS, FIXED, kb, keyLabel, rebind, resetBinds } from './keys.js?v=20261128l';
+import { splash, headshot, mapArt } from './portraits.js?v=20261128l';
+import { initOnline, enterOnline } from './online.js?v=20261128l';
+import { enterSlots } from './slotmachine.js?v=20261128l';
+import { initVault, enterVault, leaveVault, clipCount } from './vault.js?v=20261128l';
+import { openHub } from './social.js?v=20261128l';
+import { tokens as slotTokens, SEASON_HEROES } from './slots.js?v=20261128l';
+import { playerLevel } from './level.js?v=20261128l';
+import { openHowTo } from './howto.js?v=20261128l';
+import { XH_STYLES, XH_COLORS, applyCrosshair } from './crosshair.js?v=20261128l';
+import { CONTRACTS, contractOf, taskFrac, taskDone, statOf, tasksDone, openContracts, contractsLeft, contractUnlocked, contractDone } from './contracts.js?v=20261128l';
 import { SEASON, SEASONS, NEXT_SEASON, TRACKS, seasonLive, seasonTier, seasonStartLabel, skinById, TRACK, MAX_TIER, passXp, tierProgress, heroOwned, heroTier, skinOwned, skinTier, skinsFor, dressed, equip, rewardInfo,
-  COS_TYPES, cosById, cosOwned, equippedCos, equipCos, cosArt, lockShort, lockLong, isSlotItem, isContractHero } from './pass.js?v=20261128e';
+  COS_TYPES, cosById, cosOwned, equippedCos, equipCos, cosArt, lockShort, lockLong, isSlotItem, isContractHero } from './pass.js?v=20261128l';
 
 // Front end: main menu → roster select → stage select → match. Settings overlay on top.
 
 const $ = id => document.getElementById(id);
 const hex = c => '#' + c.toString(16).padStart(6, '0');
 let api = null, screen = 'main', settingsOpen = false, mode = 'lane';
-const MODE_NAME = { lane: 'Lane Breaker', survivor: 'Survivor', hill: 'Hill Rush', cart: 'Payload', potato: 'Hot Potato', paint: 'Paint Party', raid: 'Boss Raid', story: 'Story', online: 'Online' };
+const MODE_NAME = { lane: 'Lane Breaker', survivor: 'Survivor', hill: 'Hill Rush', cart: 'Payload', potato: 'Hot Potato', ball: 'Smash Ball', raid: 'Boss Raid', story: 'Story', online: 'Online' };
 function setMode(m) {
   mode = m;
   $('rosterMode').textContent = MODE_NAME[m];
@@ -585,7 +585,7 @@ const modeChip = m => {
   if (mode === 'hill') { const spots = new Set(m.hills.map(p => p.join())).size; return `${spots} hill spot${spots > 1 ? 's' : ''} ·${m.lanesLabel.split('·')[1]}`; }
   if (mode === 'cart') return `1 cart track ·${m.lanesLabel.split('·')[1]}`;
   if (mode === 'potato') return `one bomb, 3v3 ·${m.lanesLabel.split('·')[1]}`;
-  if (mode === 'paint') return `paint the floor, 3v3 ·${m.lanesLabel.split('·')[1]}`;
+  if (mode === 'ball') return `2 goals, 3v3 ·${m.lanesLabel.split('·')[1]}`;
   if (mode === 'raid') return `1 boss, 3 heroes ·${m.lanesLabel.split('·')[1]}`;
   return m.lanesLabel;
 };
@@ -818,7 +818,7 @@ export function initMenu(opts) {
   $('modeCart').onclick = () => { setMode('cart'); go('roster'); };
   $('modePotato').onclick = () => { setMode('potato'); go('roster'); };
   $('modeRaid').onclick = () => { setMode('raid'); go('roster'); };
-  $('modePaint').onclick = () => { setMode('paint'); go('roster'); };
+  $('modeBall').onclick = () => { setMode('ball'); go('roster'); };
   $('modeStory').onclick = () => { api?.blip?.(760); go('story'); };
   // How to play: the ? on each mode button (it opens the card instead of starting the mode), and the buttons on the hero, stage and story screens
   document.querySelector('.m2-modes').addEventListener('click', e => { const q = e.target.closest('[data-how]'); if (!q) return; e.stopPropagation(); e.preventDefault(); api?.blip?.(700); openHowTo(q.dataset.how); }, true);

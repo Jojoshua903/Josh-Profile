@@ -1,6 +1,6 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { cfg } from './settings.js?v=20261128e';
-import { burst, ring, startReload } from './units.js?v=20261128e';
+import { cfg } from './settings.js?v=20261128l';
+import { burst, ring, startReload } from './units.js?v=20261128l';
 
 // Game feel on top of the HUD: small things that make a match read smoother. Each one is a
 // setting (Gameplay / Video), and everything here only touches the local player's view.
@@ -114,6 +114,7 @@ function objectiveOf(G, P) {
   }
   if (G.mode === 'hill' && G.hill?.pos) return { p: G.hill.pos, y: 1.5, icon: '⛳' };
   if (G.mode === 'cart' && G.cart?.pos) return { p: G.cart.pos, y: 2, icon: '🚂' };
+  if (G.mode === 'ball' && G.ball && G.ball.wait <= 0) return { p: G.ball.pos, y: 2.4, icon: '⚽' };
   return null;
 }
 function objectivePin(G, P, camera) {

@@ -1,12 +1,12 @@
-import { addTokens } from './slots.js?v=20261128e';
-import { ARCHETYPES } from './heroes.js?v=20261128e';
+import { addTokens } from './slots.js?v=20261128l';
+import { ARCHETYPES } from './heroes.js?v=20261128l';
 
 // Daily challenges: three small goals a day, the same for everyone on a given date. Finish all
 // three and you get a token for the slot machine. Progress counts across every match
 // that day (practice and training don't count). A new set arrives at local midnight.
 
 const KEY = 'supermaxx-daily';
-const MODE_NAME = { lane: 'Lane Breaker', survivor: 'Survivor', hill: 'Hill Rush', cart: 'Payload', potato: 'Hot Potato', duel: 'Duel' };
+const MODE_NAME = { lane: 'Lane Breaker', survivor: 'Survivor', hill: 'Hill Rush', cart: 'Payload', potato: 'Hot Potato', ball: 'Smash Ball', duel: 'Duel' };
 // each kind: how to describe it, the goal, and what a match adds toward it
 const KINDS = [
   { id: 'play', text: n => `Play ${n} matches`, goals: [2, 3], add: m => 1 },

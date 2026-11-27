@@ -1,15 +1,15 @@
-import { ALL_HEROES as HEROES } from './heroes.js?v=20261128e';
-import { cfg, save } from './settings.js?v=20261128e';
-import { SLOT_HEROES, RETIRED_HEROES, slotOwned, isSlotItem, setSkinGate, setHeroGate } from './slots.js?v=20261128e';
-import { sprayUrl } from './sprays.js?v=20261128e';
-import { isContractHero, contractDone, tasksDone, contractUnlocked } from './contracts.js?v=20261128e';
-export { isContractHero } from './contracts.js?v=20261128e';
+import { ALL_HEROES as HEROES } from './heroes.js?v=20261128l';
+import { cfg, save } from './settings.js?v=20261128l';
+import { SLOT_HEROES, RETIRED_HEROES, slotOwned, isSlotItem, setSkinGate, setHeroGate } from './slots.js?v=20261128l';
+import { sprayUrl } from './sprays.js?v=20261128l';
+import { isContractHero, contractDone, tasksDone, contractUnlocked } from './contracts.js?v=20261128l';
+export { isContractHero } from './contracts.js?v=20261128l';
 
 // Season pass: XP from matches (mostly from winning) climbs a 30-tier track of hero skins,
 // cosmetics and three season heroes. Each season has its own track and its own XP; whatever
 // you earned in an old season stays yours. Progress is saved locally (and to your account).
 
-import { SEASONS, seasonLive, SEASON, NEXT_SEASON, seasonStartLabel } from './seasons.js?v=20261128e';
+import { SEASONS, seasonLive, SEASON, NEXT_SEASON, seasonStartLabel } from './seasons.js?v=20261128l';
 export { SEASONS, seasonLive, SEASON, NEXT_SEASON, seasonStartLabel };
 
 // Skins override the hero palette (and the accent colour used for art and the view model).
@@ -90,6 +90,7 @@ export const SKINS = [
   { id: 'microwave-retro', hero: 'microwave', slot: true, name: 'Atomic Diner', color: 0x5ad8c8, palette: { main: 0x5ad8c8, trim: 0xff5a5a, dark: 0xf0ece4, skin: 0x5ad8c8, finish: { metal: 0.45, rough: 0.15, glow: 0.35 } } },
   { id: 'chef-noir', hero: 'chef', slot: true, name: 'Midnight Service', color: 0x1d1d24, palette: { main: 0x1d1d24, trim: 0xffc93c, dark: 0x0c0c12, skin: 0xf0c09a, finish: { trimMetal: 0.6, glow: 0.15 } } },
   { id: 'manspider-tarantula', hero: 'manspider', slot: true, name: 'Casual Friday', color: 0xc8642e, palette: { main: 0x6a3a1e, trim: 0xff8a3c, dark: 0x2a160a, skin: 0x6a3a1e, finish: { rough: 0.9 } } },
+  { id: 'magnet-thunder', hero: 'magnet', slot: true, name: 'Thunderhead', color: 0xffe14a, palette: { main: 0x24306a, trim: 0xffe14a, dark: 0x141a3a, skin: 0xf2c8a8, finish: { rough: 0.3, metal: 0.3, glow: 0.2 } } },
 ];
 
 // Cosmetics: slot machine sprays.
