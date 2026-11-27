@@ -1,15 +1,15 @@
-import { ALL_HEROES as HEROES } from './heroes.js?v=20261127l';
-import { cfg, save } from './settings.js?v=20261127l';
-import { SLOT_HEROES, slotOwned, isSlotItem, setSkinGate } from './slots.js?v=20261127l';
-import { sprayUrl } from './sprays.js?v=20261127l';
-import { isContractHero, contractDone, tasksDone, contractUnlocked } from './contracts.js?v=20261127l';
-export { isContractHero } from './contracts.js?v=20261127l';
+import { ALL_HEROES as HEROES } from './heroes.js?v=20261128e';
+import { cfg, save } from './settings.js?v=20261128e';
+import { SLOT_HEROES, RETIRED_HEROES, slotOwned, isSlotItem, setSkinGate, setHeroGate } from './slots.js?v=20261128e';
+import { sprayUrl } from './sprays.js?v=20261128e';
+import { isContractHero, contractDone, tasksDone, contractUnlocked } from './contracts.js?v=20261128e';
+export { isContractHero } from './contracts.js?v=20261128e';
 
 // Season pass: XP from matches (mostly from winning) climbs a 30-tier track of hero skins,
 // cosmetics and three season heroes. Each season has its own track and its own XP; whatever
 // you earned in an old season stays yours. Progress is saved locally (and to your account).
 
-import { SEASONS, seasonLive, SEASON, NEXT_SEASON, seasonStartLabel } from './seasons.js?v=20261127l';
+import { SEASONS, seasonLive, SEASON, NEXT_SEASON, seasonStartLabel } from './seasons.js?v=20261128e';
 export { SEASONS, seasonLive, SEASON, NEXT_SEASON, seasonStartLabel };
 
 // Skins override the hero palette (and the accent colour used for art and the view model).
@@ -62,7 +62,7 @@ export const SKINS = [
   { id: 'wellington-tokens', hero: 'wellington', name: 'Token Tycoon', color: 0xffd23c, palette: { main: 0xffd23c, trim: 0x1d1d24, dark: 0x6a4a10, finish: { metal: 0.7, rough: 0.2 } } },
   { id: 'pinball-chrome', hero: 'pinball', name: 'Chrome Flipper', color: 0xd8dee8, palette: { main: 0xd8dee8, trim: 0xff3fa4, dark: 0x2a2f3c, finish: { metal: 0.75, rough: 0.15 } } },
   { id: 'elf-pixel', hero: 'elf', name: '8-Bit Archer', color: 0x39ff6a, palette: { main: 0x39ff6a, trim: 0x7a5cff, dark: 0x16402a, finish: { rough: 0.9 } } },
-  // ---- slot machine exclusives: louder finishes you can only win with mastery tokens ----
+  // ---- slot machine exclusives: louder finishes you can only win with tokens ----
   { id: 'slime-magma', hero: 'slime', slot: true, name: 'Magma Gloop', color: 0xff6a2a, palette: { main: 0xff6a2a, trim: 0xffe14a, dark: 0x6a1a10, skin: 0xff7a3a, finish: { glow: 0.35 } } },
   { id: 'brawler-chrome', hero: 'brawler', slot: true, name: 'Chrome Champ', color: 0xd8dee8, palette: { main: 0xd8dee8, trim: 0xff4fa3, dark: 0x2a2f3c, finish: { metal: 0.75, rough: 0.18, trimMetal: 0.2 } } },
   { id: 'chipmunk-gold', hero: 'chipmunk', slot: true, name: 'Golden Acorn', color: 0xffc93c, palette: { main: 0xffc93c, trim: 0x8a4a1a, dark: 0x4a3010, finish: { metal: 0.7, rough: 0.22 } } },
@@ -165,7 +165,8 @@ export const heroTier = id => heroReward(id)?.tier || 0;           // 0 = in the
 export const skinTier = id => skinReward(id)?.tier || 0;
 export const rewardSeason = id => (heroReward(id) || skinReward(id))?.season || 0;
 const earned = r => !r || seasonTier(r.season) >= r.tier;           // reached in its own season's track
-export const heroOwned = id => isContractHero(id) ? contractDone(id) : SLOT_HEROES.includes(id) ? slotOwned(id) : earned(heroReward(id));
+export const heroOwned = id => isContractHero(id) ? contractDone(id) : RETIRED_HEROES.includes(id) ? earned(heroReward(id)) || slotOwned(id)
+  : SLOT_HEROES.includes(id) ? slotOwned(id) : earned(heroReward(id));      // a finished season's heroes: earned on its pass, or won at the slots
 // A skin only counts once you have its hero; until then pass skins wait for you and slot skins stay out of the machine.
 export const skinOwned = id => heroOwned(skinById(id)?.hero) && (isSlotItem(id) ? slotOwned(id) : earned(skinReward(id)));
 const skinHeroName = id => HEROES.find(h => h.id === skinById(id)?.hero)?.callsign || 'its hero';
@@ -183,6 +184,7 @@ export { isSlotItem };
 export const skinsFor = heroId => SKINS.filter(s => s.hero === heroId);
 export const skinById = id => SKINS.find(s => s.id === id);
 setSkinGate(id => heroOwned(skinById(id)?.hero));
+setHeroGate(id => { const r = heroReward(id); return !!r && earned(r); });
 
 // A hero def wearing a skin. With no id, uses whatever the player has equipped (if owned).
 export function dressed(def, skinId = cfg.skins?.[def.id]) {

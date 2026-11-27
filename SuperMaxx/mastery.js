@@ -1,9 +1,9 @@
-import { addTokens } from './slots.js?v=20261127l';
+import { addTokens } from './slots.js?v=20261128e';
 
 // Hero mastery: every hero earns its own XP from the matches you play with it.
 // Ten levels, four ranks. Rank shows as a badge on the hero tile and in the hero panel;
 // gold heroes get a gold tile frame, diamond (level 10) an animated one. Saved locally.
-// Every rank-up (Bronze → Silver → Gold → Diamond) pays one mastery token for the slot machine.
+// Every rank-up (Bronze → Silver → Gold → Diamond) pays one token for the slot machine.
 // Past max level, every BONUS_XP more (what Gold → Diamond takes) pays another token.
 
 const KEY = 'supermaxx-mastery';

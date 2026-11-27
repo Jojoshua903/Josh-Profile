@@ -1,19 +1,19 @@
-import { HEROES } from './heroes.js?v=20261127l';
-import { cfg, save } from './settings.js?v=20261127l';
-import { headshot } from './portraits.js?v=20261127l';
-import { skinById, dressedAny, equip, cosById, equipCos, equippedCos } from './pass.js?v=20261127l';
-import { sprayUrl } from './sprays.js?v=20261127l';
-import { tokens, spin, prizes, spins } from './slots.js?v=20261127l';
-import { initAudio, tone, noise } from './audio.js?v=20261127l';
-import { emoteById, emoteBadge, onWheel, toggleWheel, wheelEmotes, WHEEL_SIZE } from './emotes.js?v=20261127l';
-import { dailies, resetsIn } from './daily.js?v=20261127l';
+import { HEROES } from './heroes.js?v=20261128e';
+import { cfg, save } from './settings.js?v=20261128e';
+import { headshot } from './portraits.js?v=20261128e';
+import { skinById, dressedAny, equip, cosById, equipCos, equippedCos } from './pass.js?v=20261128e';
+import { sprayUrl } from './sprays.js?v=20261128e';
+import { tokens, spin, prizes, spins } from './slots.js?v=20261128e';
+import { initAudio, tone, noise } from './audio.js?v=20261128e';
+import { emoteById, emoteBadge, onWheel, toggleWheel, wheelEmotes, WHEEL_SIZE } from './emotes.js?v=20261128e';
+import { dailies, resetsIn } from './daily.js?v=20261128e';
 
 // The slot machine screen: three reels, a lever and the prize board. Pull costs one mastery
 // token; every pull lands three of a kind on something new, then shows what you won.
 
 const $ = id => document.getElementById(id);
 const hex = c => '#' + c.toString(16).padStart(6, '0');
-const SYM = { emote: '😎', slime: '🟢', brawler: '🥊', chipmunk: '🐿️', elf: '🏹', dancer: '🩰', mole: '🕳️', medic: '🩺', spark: '⚡', builder: '🧱', skin: '💎', spray: '🎨' };
+const SYM = { unicorn: '🦄', tempo: '🎵', kestrel: '🦅', cavalier: '🐴', pinball: '🎱', clawbot: '🕹️', pixel: '👾', emote: '😎', slime: '🟢', brawler: '🥊', chipmunk: '🐿️', elf: '🏹', dancer: '🩰', mole: '🕳️', medic: '🩺', spark: '⚡', builder: '🧱', skin: '💎', spray: '🎨' };
 const FILL = ['🍒', '⭐', '🔔', '🍋', '7️⃣', '🍀', '🥜'];
 const ROW = 76, STRIP = 26;              // ROW matches .sl-strip i height in menu.css
 let busy = false, wired = false;
@@ -28,10 +28,10 @@ const info = p => {
 
 function board() {
   const list = prizes(), left = list.filter(p => !p.owned && !p.locked).length, waiting = list.filter(p => p.locked).length;
-  $('slBoard').innerHTML = `<h4>Prize board <small>${list.filter(p => p.owned).length}/${list.length} won</small></h4>` + list.map(p => {
+  $('slBoard').innerHTML = `<h4>Prize board <small>${list.filter(p => p.owned && !p.had).length}/${list.filter(p => !p.had).length} won</small></h4>` + list.map(p => {
     const I = info(p);
     return `<div class="sl-pz ${p.owned ? 'won' : ''} ${p.locked ? 'locked' : ''} ${p.kind}${p.owned && p.kind === 'spray' ? `" data-spray="${p.id}" title="Click to ${equippedCos().spray === p.id ? 'take it off' : 'equip'}` : ''}${p.owned && p.kind === 'emote' ? `" data-emote="${p.id}" title="Click to ${onWheel(p.id) ? 'take it off' : 'put it on'} your emote wheel` : ''}" style="--hc:${hex(I.color)}"${p.locked ? ` title="Unlock ${I.hero.callsign} to add this skin to the machine"` : ''}><img alt="" data-pz="${p.id}"><span><b>${I.title}</b><small>${I.sub}</small></span>
-      <em>${p.owned && p.kind === 'spray' ? (equippedCos().spray === p.id ? '★ On' : 'Equip') : p.owned && p.kind === 'emote' ? (onWheel(p.id) ? '★ On wheel' : 'Add') : p.owned ? '✓ Won' : p.locked ? `🔒 Get ${I.hero.callsign}` : `${Math.round(p.odds * 100)}%`}</em></div>`;
+      <em>${p.owned && p.kind === 'spray' ? (equippedCos().spray === p.id ? '★ On' : 'Equip') : p.owned && p.kind === 'emote' ? (onWheel(p.id) ? '★ On wheel' : 'Add') : p.had ? '✓ Owned' : p.owned ? '✓ Won' : p.locked ? `🔒 Get ${I.hero.callsign}` : `${Math.round(p.odds * 100)}%`}</em></div>`;
   }).join('');
   $('slBoard').querySelectorAll('img[data-pz]').forEach((img, k) => setTimeout(() => {
     const p = list.find(x => x.id === img.dataset.pz); const I = info(p); img.src = I.img || headshot(I.def);
@@ -44,7 +44,7 @@ function board() {
   const t = tokens(), done = !left;
   $('slTok').textContent = t;
   $('slGo').disabled = busy || !t || done;
-  $('slGo').querySelector('small').textContent = done ? (waiting ? 'Unlock more heroes' : 'Every prize won!') : t ? '1 mastery token' : 'No tokens yet';
+  $('slGo').querySelector('small').textContent = done ? (waiting ? 'Unlock more heroes' : 'Every prize won!') : t ? '1 token' : 'No tokens yet';
   $('slHint').textContent = done ? (waiting ? `${waiting} skin${waiting > 1 ? 's are' : ' is'} waiting for heroes you don't have yet. Unlock them and they join the machine.` : 'You have cleaned out the machine. More prizes next season.')
     : t ? `${t} token${t > 1 ? 's' : ''} ready. Every pull wins something new.${waiting ? ` Skins for heroes you don't have stay out until you unlock them.` : ''}` : 'Finish today’s daily challenges, or rank a hero up in mastery (Bronze → Silver → Gold → Diamond) to earn a token. Maxed heroes keep earning one every 7,400 XP.';
 }

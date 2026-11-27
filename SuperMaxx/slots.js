@@ -1,13 +1,19 @@
-// Mastery tokens and the slot machine. A token drops every time one of your heroes ranks up
+// Tokens and the slot machine. A token drops every time one of your heroes ranks up
 // in mastery (Bronze → Silver → Gold → Diamond). One token buys one spin, and every spin wins
 // something you don't own yet: a slot-exclusive hero, skin, spray or emote. Daily challenges
 // (daily.js) pay a token too. Saved locally.
+
+import { SEASONS, seasonLive } from './seasons.js?v=20261128e';
 
 const KEY = 'supermaxx-slots';
 const S = (() => { try { return { tokens: 0, owned: [], spins: 0, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { return { tokens: 0, owned: [], spins: 0 }; } })();
 const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} };
 
-export const SLOT_HEROES = ['slime', 'brawler', 'chipmunk', 'elf', 'dancer', 'mole', 'medic', 'spark', 'builder'];
+export const SLOT_HEROES = ['slime', 'brawler', 'chipmunk', 'elf', 'dancer', 'mole', 'medic', 'spark', 'builder', 'unicorn'];
+// A finished season's heroes join the slot machine the day the next season opens, so anyone who
+// missed them on the pass can still win them. Whoever earned them on the pass keeps them.
+export const SEASON_HEROES = { 1: ['tempo', 'kestrel', 'cavalier'], 2: ['pinball', 'clawbot', 'pixel'] };
+export const RETIRED_HEROES = Object.entries(SEASON_HEROES).filter(([n]) => SEASONS[+n] && seasonLive(SEASONS[+n])).flatMap(([, ids]) => ids);
 export const SLOT_SKINS = ['slime-magma', 'brawler-chrome', 'chipmunk-gold', 'vanguard-cosmos', 'striker-glitch', 'croc-gummy', 'cavalier-phantom', 'mirage-hologram',
   'ember-supernova', 'warden-stained', 'thicket-sakura', 'ratchet-overclock', 'avalanche-volcanic', 'tempo-clockwork', 'kestrel-phoenix', 'elf-winter', 'dancer-blackswan', 'mole-diamond',
   'medic-plague', 'spark-thunder', 'builder-marble', 'wellington-truffle', 'shepherd-tartan', 'microwave-retro', 'chef-noir', 'manspider-tarantula'];
@@ -21,15 +27,16 @@ export const tokens = () => S.tokens;
 export const spins = () => S.spins;
 export function addTokens(n) { if (n > 0) { S.tokens += n; persist(); } }
 export const slotOwned = id => S.owned.includes(id);
-export const isSlotItem = id => SLOT_HEROES.includes(id) || SLOT_SKINS.includes(id) || SLOT_SPRAYS.includes(id) || SLOT_EMOTES.includes(id);
+export const isSlotItem = id => SLOT_HEROES.includes(id) || RETIRED_HEROES.includes(id) || SLOT_SKINS.includes(id) || SLOT_SPRAYS.includes(id) || SLOT_EMOTES.includes(id);
 export const emoteOwned = id => !SLOT_EMOTES.includes(id) || slotOwned(id);
 // Skins only join the pool once you have their hero. pass.js knows who you own, so it plugs that check in here.
-let skinReady = () => true;
+let skinReady = () => true, heroHad = () => false;
 export const setSkinGate = f => { skinReady = f; };
+export const setHeroGate = f => { heroHad = f; };                     // retired heroes you already earned on the pass
 
 export function prizes() {
-  const all = [...SLOT_HEROES.map(id => ({ id, kind: 'hero' })), ...SLOT_SKINS.map(id => ({ id, kind: 'skin' })), ...SLOT_SPRAYS.map(id => ({ id, kind: 'spray' })), ...SLOT_EMOTES.map(id => ({ id, kind: 'emote' }))]
-    .map(p => ({ ...p, owned: slotOwned(p.id), locked: p.kind === 'skin' && !slotOwned(p.id) && !skinReady(p.id) }));
+  const all = [...SLOT_HEROES.map(id => ({ id, kind: 'hero' })), ...RETIRED_HEROES.map(id => ({ id, kind: 'hero' })), ...SLOT_SKINS.map(id => ({ id, kind: 'skin' })), ...SLOT_SPRAYS.map(id => ({ id, kind: 'spray' })), ...SLOT_EMOTES.map(id => ({ id, kind: 'emote' }))]
+    .map(p => ({ ...p, had: !slotOwned(p.id) && RETIRED_HEROES.includes(p.id) && heroHad(p.id), owned: slotOwned(p.id) || (RETIRED_HEROES.includes(p.id) && heroHad(p.id)), locked: p.kind === 'skin' && !slotOwned(p.id) && !skinReady(p.id) }));
   const left = all.filter(p => !p.owned && !p.locked), total = left.reduce((a, p) => a + WEIGHT[p.kind], 0);
   return all.map(p => ({ ...p, odds: p.owned || p.locked || !total ? 0 : WEIGHT[p.kind] / total }));
 }

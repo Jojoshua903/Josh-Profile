@@ -1,6 +1,6 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { M, put } from './scenery.js?v=20261127l';
-import { pine, blossom, snowPine } from './backdrop.js?v=20261127l';
+import { M, put } from './scenery.js?v=20261128e';
+import { pine, blossom, snowPine } from './backdrop.js?v=20261128e';
 
 // Themed cover blocks and scattered props inside the arena. Props are placed on the blue
 // half and point-mirrored, always clear of lanes, bases, towers and cover.

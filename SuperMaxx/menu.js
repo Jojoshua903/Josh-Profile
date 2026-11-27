@@ -1,29 +1,33 @@
-import { LOOK, applyEnvironment } from './stage.js?v=20261127l';
-import { masteryOf } from './mastery.js?v=20261127l';
+import { LOOK, applyEnvironment } from './stage.js?v=20261128e';
+import { masteryOf } from './mastery.js?v=20261128e';
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { HEROES, ARCHETYPES, archOf } from './heroes.js?v=20261127l';
-import './personality.js?v=20261127l';
-import { MAPS, DIFFICULTY } from './data.js?v=20261127l';
-import { BOSS_LIST, bossOf } from './raid.js?v=20261127l';
-import { THEMES } from './scenery.js?v=20261127l';
-import { cfg, save, resetSettings, QUALITY } from './settings.js?v=20261127l';
-import { ACTIONS, FIXED, kb, keyLabel, rebind, resetBinds } from './keys.js?v=20261127l';
-import { splash, headshot, mapArt } from './portraits.js?v=20261127l';
-import { initOnline, enterOnline } from './online.js?v=20261127l';
-import { enterSlots } from './slotmachine.js?v=20261127l';
-import { initVault, enterVault, leaveVault, clipCount } from './vault.js?v=20261127l';
-import { openHub } from './social.js?v=20261127l';
-import { tokens as slotTokens } from './slots.js?v=20261127l';
-import { CONTRACTS, contractOf, taskFrac, taskDone, statOf, tasksDone, openContracts, contractsLeft, contractUnlocked, contractDone } from './contracts.js?v=20261127l';
+import { HEROES, ALL_HEROES, ARCHETYPES, archOf } from './heroes.js?v=20261128e';
+import './personality.js?v=20261128e';
+import { MAPS, DIFFICULTY } from './data.js?v=20261128e';
+import { BOSS_LIST, bossOf } from './raid.js?v=20261128e';
+import { storyMissions, storyDone, storyCount, GOAL, TYPE_ICON, MEDALS, MEDAL_ICON, medalOf, bestTime, parOf, medalCount, fmtTime } from './story.js?v=20261128e';
+import { THEMES } from './scenery.js?v=20261128e';
+import { cfg, save, resetSettings, QUALITY } from './settings.js?v=20261128e';
+import { ACTIONS, FIXED, kb, keyLabel, rebind, resetBinds } from './keys.js?v=20261128e';
+import { splash, headshot, mapArt } from './portraits.js?v=20261128e';
+import { initOnline, enterOnline } from './online.js?v=20261128e';
+import { enterSlots } from './slotmachine.js?v=20261128e';
+import { initVault, enterVault, leaveVault, clipCount } from './vault.js?v=20261128e';
+import { openHub } from './social.js?v=20261128e';
+import { tokens as slotTokens, SEASON_HEROES } from './slots.js?v=20261128e';
+import { playerLevel } from './level.js?v=20261128e';
+import { openHowTo } from './howto.js?v=20261128e';
+import { XH_STYLES, XH_COLORS, applyCrosshair } from './crosshair.js?v=20261128e';
+import { CONTRACTS, contractOf, taskFrac, taskDone, statOf, tasksDone, openContracts, contractsLeft, contractUnlocked, contractDone } from './contracts.js?v=20261128e';
 import { SEASON, SEASONS, NEXT_SEASON, TRACKS, seasonLive, seasonTier, seasonStartLabel, skinById, TRACK, MAX_TIER, passXp, tierProgress, heroOwned, heroTier, skinOwned, skinTier, skinsFor, dressed, equip, rewardInfo,
-  COS_TYPES, cosById, cosOwned, equippedCos, equipCos, cosArt, lockShort, lockLong, isSlotItem, isContractHero } from './pass.js?v=20261127l';
+  COS_TYPES, cosById, cosOwned, equippedCos, equipCos, cosArt, lockShort, lockLong, isSlotItem, isContractHero } from './pass.js?v=20261128e';
 
 // Front end: main menu → roster select → stage select → match. Settings overlay on top.
 
 const $ = id => document.getElementById(id);
 const hex = c => '#' + c.toString(16).padStart(6, '0');
 let api = null, screen = 'main', settingsOpen = false, mode = 'lane';
-const MODE_NAME = { lane: 'Lane Breaker', survivor: 'Survivor', hill: 'Hill Rush', cart: 'Payload', potato: 'Hot Potato', raid: 'Boss Raid', online: 'Online' };
+const MODE_NAME = { lane: 'Lane Breaker', survivor: 'Survivor', hill: 'Hill Rush', cart: 'Payload', potato: 'Hot Potato', paint: 'Paint Party', raid: 'Boss Raid', story: 'Story', online: 'Online' };
 function setMode(m) {
   mode = m;
   $('rosterMode').textContent = MODE_NAME[m];
@@ -171,16 +175,19 @@ function frameShowcase(renderer, dt) {
 function go(name) {
   if (screen === 'vault' && name !== 'vault') leaveVault();
   screen = name;
-  for (const s of ['main', 'roster', 'stage', 'pass', 'online', 'seasons', 'slots', 'contracts', 'vault']) $('scr-' + s).classList.toggle('on', s === name);
+  for (const s of ['main', 'roster', 'stage', 'pass', 'online', 'seasons', 'slots', 'contracts', 'vault', 'story']) $('scr-' + s).classList.toggle('on', s === name);
   if (name === 'main') clipCount().then(n => { $('mmClips').textContent = n || ''; $('mmClips').classList.toggle('on', n > 0); });
   if (name === 'vault') enterVault({ blip: f => api?.blip?.(f) });
   $('front').classList.remove('hidden');
-  if (name === 'main') { refreshPassCard(); $('modeTut')?.classList.toggle('fresh', !cfg.tutorialDone); const t = slotTokens(); $('mmTok').textContent = t || ''; $('mmTok').classList.toggle('on', t > 0); const o = contractsLeft(); $('mmCt').textContent = o || ''; $('mmCt').classList.toggle('on', o > 0); }
+  if (name === 'main') { refreshPassCard(); refreshLevel(); const t = slotTokens(); $('mmTok').textContent = t || ''; $('mmTok').classList.toggle('on', t > 0); const o = contractsLeft(); $('mmCt').textContent = o || ''; $('mmCt').classList.toggle('on', o > 0); const vn = vaultNews() || (NEXT_SEASON && NEXT_SEASON.start > Date.now()); $('mmVlt').textContent = vaultNews() ? '!' : '★'; $('mmVlt').classList.toggle('on', !!vn); }
   if (name === 'slots') enterSlots();
   if (name === 'contracts') enterContracts();
   if (name === 'roster') { enterRoster(); requestAnimationFrame(fitKit); }
   if (name === 'stage') enterStage();
   if (name === 'pass') enterPass();
+  if (name === 'story') enterStory();
+  const firstLook = name === 'roster' ? mode : name === 'story' ? 'story' : null;
+  if (firstLook && !(cfg.seenHow ||= {})[firstLook] && firstLook !== 'online') { cfg.seenHow[firstLook] = 1; save(); setTimeout(() => openHowTo(firstLook), 350); }
   if (name === 'seasons') enterSeasons();
   if (name === 'online') enterOnline();
 }
@@ -316,7 +323,7 @@ function showHero(h, instant) {
     <header class="ih">
       ${own ? `<div class="mline" style="--mc:${m.rank.color}" title="${m.xp} mastery XP">
           <b>${m.rank.name} · Lv ${m.level}</b><i><em style="width:${Math.round(m.frac * 100)}%"></em></i><small>${m.max ? `🎰 ${m.into}/${m.need} to bonus token` : `${m.into}/${m.need}`}</small></div>`
-        : contractOf(h.id) ? contractCard(contractOf(h.id), true) : `<div class="hs-locked">🔒 ${lockLong(h.id)}</div>`}
+        : contractOf(h.id) ? `<div class="hs-locked">📜 ${contractUnlocked(h.id) ? `Recruit ${h.callsign} by finishing their contract on the Contracts screen` : "Their contract arrives on the Contracts screen once a slot is free"}</div>` : `<div class="hs-locked">🔒 ${lockLong(h.id)}</div>`}
       <div class="hs-stats">${STATS(h).map(([k, v, f]) => `<div><small>${k}</small><b>${v}</b><i><em style="width:${Math.round(Math.min(1, f) * 100)}%"></em></i></div>`).join('')}</div>
     </header>
     <nav class="itabs">${tab('kit', 'Abilities')}${tab('story', 'Story')}${tab('skins', `Skins <i>${ownedSkins + 1}/${skins.length + 1}</i>`)}</nav>
@@ -435,6 +442,11 @@ function untilLabel(s) {
   const d = Math.floor(ms / 864e5), h = Math.floor(ms % 864e5 / 36e5), m = Math.ceil(ms % 36e5 / 6e4);
   return d ? `${d}d ${h}h` : h ? `${h}h ${m}m` : `${m}m`;
 }
+// the player level badge under the logo
+function refreshLevel() {
+  const L = playerLevel();
+  $('mmLevel').innerHTML = `<b><small>LV</small>${L.level}</b><span><i style="width:${(L.frac * 100).toFixed(1)}%"></i></span><em>${L.into.toLocaleString()} / ${L.need.toLocaleString()} XP · next level +1 token</em>`;
+}
 function refreshSeasonText() {
   $('pcSeason').textContent = `${seasonTitle(SEASON)} Pass`;
   $('passName').textContent = `${SEASON.name} Pass`;
@@ -447,29 +459,59 @@ function refreshSeasonText() {
 }
 setInterval(() => { if (screen === 'main' || screen === 'pass') refreshSeasonText(); }, 30000);
 // what a finished (or not yet started) season's rewards look like as little chips
-function rewardChip(r, got) {
-  if (r.type === 'hero') { const h = ALL_HEROES.find(x => x.id === r.id); return `<span class="${got ? '' : 'off'}"><img src="${headshot(h)}" alt="" style="--hc:${hex(h.color)}">${h.callsign}</span>`; }
+function rewardChip(r, got, tier) {
+  const tg = tier ? `<em>T${tier}</em>` : '';
+  if (r.type === 'hero') { const h = ALL_HEROES.find(x => x.id === r.id); return `<span class="${got ? '' : 'off'}"><img src="${headshot(h)}" alt="" style="--hc:${hex(h.color)}">${h.callsign}${tg}</span>`; }
   const s = skinById(r.id); if (!s) return '';
   const h = ALL_HEROES.find(x => x.id === s.hero);
-  return `<span class="${got ? '' : 'off'}"><i style="--hc:${hex(s.color)}"></i>${s.name}${h ? ` · ${h.callsign}` : ''}</span>`;
+  return `<span class="${got ? '' : 'off'}"><i style="--hc:${hex(s.color)}"></i>${s.name}${h ? ` · ${h.callsign}` : ''}${tg}</span>`;
 }
+// The Vault: a preview of the next season while it's on its way, the season running now, and
+// every finished season with your final tier. A season moves in here the day the next one opens.
+const VAULT_SEEN = 'supermaxx-vault-seen';
+const vaultNews = () => { try { return SEASON.n > (+localStorage.getItem(VAULT_SEEN) || 1); } catch { return false; } };
 function enterSeasons() {
+  try { localStorage.setItem(VAULT_SEEN, SEASON.n); } catch {}
   const past = SEASONS.filter(s => seasonLive(s) && s.n < SEASON.n).reverse();
   const N = NEXT_SEASON && NEXT_SEASON.start > Date.now() ? NEXT_SEASON : null;
-  if (!past.length && !N) return;                                        // keep the "nothing yet" card
-  const soon = N ? `<div class="ps-card soon"><div class="ps-head"><span class="ps-ico">${N.icon}</span><div><h3>${seasonTitle(N)}</h3>
-      <small>Opens ${seasonStartLabel(N)} · in ${untilLabel(N)}</small></div></div>
-      <div class="ps-note">${N.blurb} ${SEASON.name} rewards stay yours when it starts, and its tier is kept here.</div>
-      <div class="ps-got">${TRACKS[N.n].filter(r => r.type === 'hero').map(r => rewardChip(r, false)).join('')}</div></div>` : '';
+  const started = NEXT_SEASON && !N;                                     // it opened while the game was running
+  const heroOf = id => ALL_HEROES.find(x => x.id === id);
+  // the next season, as a preview: its heroes, its skins and what happens to this one
+  let preview = '';
+  if (N) {
+    const tr = TRACKS[N.n] || [], heroes = tr.filter(r => r.type === 'hero'), skins = tr.filter(r => r.type === 'skin');
+    preview = `<div class="ps-card soon preview"><div class="ps-head"><span class="ps-ico">${N.icon}</span><div><small class="pv-tag">Coming soon · preview</small><h3>${seasonTitle(N)}</h3>
+        <small id="psCount">Opens ${seasonStartLabel(N)} · in ${untilLabel(N)}</small></div></div>
+      <div class="ps-note">${N.blurb}</div>
+      <div class="pv-heroes">${heroes.map(r => { const h = heroOf(r.id); return h ? `<div class="pv-hero" style="--hc:${hex(h.color)}">
+        <div class="pv-pic"><img alt="" data-pv="${h.id}"></div><span class="pv-t">Tier ${r.tier}</span>
+        <div class="pv-tx"><b>${h.callsign}</b><small>${h.name} · ${h.role}</small><p>${h.title}</p></div></div>` : ''; }).join('')}</div>
+      <h4 class="pv-h">${skins.length} new skins on the pass</h4>
+      <div class="ps-got">${skins.map(r => rewardChip(r, true, r.tier)).join('')}</div>
+      <div class="pv-move">🏆 When ${seasonTitle(N)} opens, ${seasonTitle(SEASON)} moves into the Vault with your final tier. Everything you unlocked stays yours, and any of its heroes you haven’t earned (${(SEASON_HEROES[SEASON.n] || []).map(id => heroOf(id)?.callsign).join(', ')}) join the slot machine.</div></div>`;
+  }
+  // the season running now
+  const cur = (() => {
+    const t = seasonTier(SEASON.n), track = TRACKS[SEASON.n].filter(r => !r.cos), got = track.filter(r => r.tier <= t);
+    return `<div class="ps-card now"><div class="ps-head"><span class="ps-ico">${SEASON.icon}</span><div><small class="pv-tag">Now playing</small><h3>${seasonTitle(SEASON)}</h3>
+        <small>${got.length} of ${track.length} rewards earned${N ? ` · moves to the Vault ${seasonStartLabel(N)}` : started ? ' · moves to the Vault when you reload' : ''}</small></div>
+        <div class="ps-final"><small>Tier</small><b>${t}</b></div></div>
+      <div class="ps-got">${track.map(r => rewardChip(r, r.tier <= t, r.tier)).join('')}</div>
+      ${N ? `<div class="ps-note">${track.length - got.length ? `${track.length - got.length} rewards left to earn before ${seasonStartLabel(N)}.` : 'Every reward earned. Nicely done.'}</div>` : ''}</div>`;
+  })();
+  const fresh = started ? `<div class="ps-card soon"><div class="ps-head"><span class="ps-ico">${NEXT_SEASON.icon}</span><div><h3>${seasonTitle(NEXT_SEASON)} is live!</h3>
+      <small>Reload the game to start it. ${SEASON.name} moves into the Vault.</small></div></div></div>` : '';
   const cards = past.map(s => {
-    const t = seasonTier(s.n), track = TRACKS[s.n].filter(r => !r.cos), got = track.filter(r => r.tier <= t);
-    return `<div class="ps-card"><div class="ps-head"><span class="ps-ico">${s.icon}</span><div><h3>${seasonTitle(s)}</h3>
+    const t = seasonTier(s.n), track = TRACKS[s.n].filter(r => !r.cos), got = track.filter(r => r.tier <= t), next = SEASONS[s.n];
+    return `<div class="ps-card past"><div class="ps-head"><span class="ps-ico">${s.icon}</span><div><small class="pv-tag">In the Vault${next ? ` since ${seasonStartLabel(next)}` : ''}</small><h3>${seasonTitle(s)}</h3>
       <small>${got.length} of ${track.length} rewards earned</small></div><div class="ps-final"><small>Final tier</small><b>${t}</b></div></div>
-      <div class="ps-got">${track.map(r => rewardChip(r, r.tier <= t)).join('')}</div>
-      <div class="ps-note">This season is over. Everything you earned is still yours to use.</div></div>`;
+      <div class="ps-got">${track.map(r => rewardChip(r, r.tier <= t, r.tier)).join('')}</div>
+      <div class="ps-note">This season is over. Everything you earned is still yours to use${(SEASON_HEROES[s.n] || []).some(id => !heroOwned(id)) ? ', and the heroes you missed can now be won from the 🎰 slot machine' : ''}.</div></div>`;
   }).join('');
-  $('psBody').innerHTML = `<div class="ps-list">${soon}${cards}</div>`;
+  $('psBody').innerHTML = `<div class="ps-list">${fresh}${preview}${cur}${cards}</div>`;
+  $('psBody').querySelectorAll('img[data-pv]').forEach((img, k) => setTimeout(() => { img.src = splash(heroOf(img.dataset.pv)); }, 30 + k * 60));
 }
+setInterval(() => { const c = $('psCount'); if (screen === 'seasons' && c && NEXT_SEASON) c.textContent = `Opens ${seasonStartLabel(NEXT_SEASON)} · in ${untilLabel(NEXT_SEASON)}`; }, 30000);
 // ---------- season pass ----------
 function passSummary() {
   const pr = tierProgress(), next = TRACK.find(r => r.tier > pr.tier);      // skip over open tiers to the next real reward
@@ -543,6 +585,7 @@ const modeChip = m => {
   if (mode === 'hill') { const spots = new Set(m.hills.map(p => p.join())).size; return `${spots} hill spot${spots > 1 ? 's' : ''} ·${m.lanesLabel.split('·')[1]}`; }
   if (mode === 'cart') return `1 cart track ·${m.lanesLabel.split('·')[1]}`;
   if (mode === 'potato') return `one bomb, 3v3 ·${m.lanesLabel.split('·')[1]}`;
+  if (mode === 'paint') return `paint the floor, 3v3 ·${m.lanesLabel.split('·')[1]}`;
   if (mode === 'raid') return `1 boss, 3 heroes ·${m.lanesLabel.split('·')[1]}`;
   return m.lanesLabel;
 };
@@ -597,22 +640,128 @@ function deployStage(id) {
   api.onStart(mode);
 }
 
+// ---------- Story: a mission for every hero ----------
+// The selected mission fills the screen over its map's artwork; the rail on the right lists
+// every mission (filterable), with arrow keys / W-S to step through and Enter to begin.
+let storyPick = null, storyFilter = 'all', styBgT = 0;
+const MAP_NAME = id => MAPS.find(m => m.id === id)?.name || id;
+const STY_FILTERS = [['all', 'All'], ['todo', 'To play'], ['done', 'Cleared'], ['gold', 'Gold'], ['locked', 'Locked']];
+const styState = m => !heroOwned(m.hero) ? 'locked' : storyDone(m.hero) ? 'done' : 'todo';
+const styShown = () => storyMissions().filter(m => storyFilter === 'all' || (storyFilter === 'gold' ? medalOf(m.hero) >= 3 : styState(m) === storyFilter));
+function enterStory() {
+  const list = storyMissions();
+  storyPick = list.find(m => m.hero === storyPick) ? storyPick : (list.find(m => heroOwned(m.hero) && !storyDone(m.hero)) || list[0]).hero;
+  const n = storyCount(), g = medalCount(3), s = medalCount(2), b = medalCount(1);
+  $('styCount').textContent = `${n} of ${list.length} complete`;
+  $('styProg').innerHTML = `<div class="sp-ring" style="--p:${(n / list.length * 100).toFixed(1)}"><b>${Math.round(n / list.length * 100)}%</b></div>
+    <div class="sp-tx"><b>${n}<small>/${list.length}</small> stories told</b><span><i>🥇 ${g}</i><i>🥈 ${s - g}</i><i>🥉 ${b - s}</i></span></div>`;
+  const count = f => list.filter(m => f === 'all' || (f === 'gold' ? medalOf(m.hero) >= 3 : styState(m) === f)).length;
+  $('styFilter').innerHTML = STY_FILTERS.map(([k, l]) => `<button data-f="${k}" class="${storyFilter === k ? 'on' : ''}">${l}<i>${count(k)}</i></button>`).join('');
+  $('styFilter').onclick = e => { const b = e.target.closest('[data-f]'); if (!b) return; storyFilter = b.dataset.f; api?.blip?.(700); enterStory(); };
+  renderStoryList();
+  showMission();
+}
+function renderStoryList() {
+  const all = storyMissions(), list = styShown();
+  $('styGrid').innerHTML = list.length ? list.map(m => {
+    const h = HEROES.find(x => x.id === m.hero), st = styState(m), md = medalOf(m.hero), no = all.indexOf(m) + 1;
+    return `<button class="sty-row ${st} ${m.hero === storyPick ? 'on' : ''}" data-story="${m.hero}" style="--hc:${hex(h.color)}">
+      <span class="no">${String(no).padStart(2, '0')}</span>
+      <span class="pic"><img alt="" data-sty="${h.id}"></span>
+      <span class="tx"><small>${h.callsign}</small><b>${m.title}</b><em>${m.stages.map(k => TYPE_ICON[k.type]).join('<i>›</i>')}</em></span>
+      <span class="st">${st === 'locked' ? '🔒' : md ? MEDAL_ICON[md] : '<u>NEW</u>'}</span></button>`;
+  }).join('') : `<p class="sty-none">No missions here yet.</p>`;
+  $('styGrid').querySelectorAll('img[data-sty]').forEach((img, k) => setTimeout(() => { img.src = headshot(dressed(HEROES.find(x => x.id === img.dataset.sty))); }, 20 + k * 30));
+  $('styGrid').onclick = e => { const c = e.target.closest('[data-story]'); if (c) pickStory(c.dataset.story); };
+}
+function pickStory(id, scroll) {
+  if (id === storyPick) return;
+  storyPick = id; api?.blip?.(620);
+  for (const el of $('styGrid').children) el.classList.toggle('on', el.dataset.story === storyPick);
+  if (scroll) $('styGrid').querySelector('.on')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  showMission();
+}
+function stepStory(d) {
+  const list = styShown(); if (!list.length) return;
+  const i = list.findIndex(m => m.hero === storyPick);
+  pickStory(list[((i < 0 ? 0 : i + d) + list.length) % list.length].hero, true);
+}
+// the map behind the mission: rendered once per map, after the cursor settles
+function storyBackdrop(m) {
+  const img = $('styBgImg'), map = MAPS.find(x => x.id === m.map);
+  clearTimeout(styBgT);
+  if (!map) { img.classList.remove('in'); return; }
+  if (img.dataset.map === map.id) return;
+  img.classList.remove('in');
+  styBgT = setTimeout(() => {
+    if (storyMissions().find(x => x.hero === storyPick)?.map !== map.id) return;
+    img.onload = () => img.classList.add('in');
+    img.dataset.map = map.id; img.src = mapArt(map, 1280, 720);
+  }, 240);
+}
+function showMission() {
+  const all = storyMissions(), m = all.find(x => x.hero === storyPick); if (!m) return;
+  const h = HEROES.find(x => x.id === m.hero), own = heroOwned(m.hero), done = storyDone(m.hero), md = medalOf(m.hero), no = all.indexOf(m) + 1;
+  const el = $('styDetail');
+  $('scr-story').style.setProperty('--hc', hex(h.color));
+  storyBackdrop(m);
+  el.classList.remove('in'); void el.offsetWidth; el.classList.add('in');
+  el.innerHTML = `
+    <div class="sm-bd">
+      <div class="sm-ch"><b>Chapter ${String(no).padStart(2, '0')}</b><span>${h.name}</span><span>📍 ${MAP_NAME(m.map)}</span></div>
+      <h3>${m.title}</h3>
+      <div class="sm-panels">${m.intro.map((p, j) => `<p style="--d:${0.08 + j * 0.09}s">${p}</p>`).join('')}</div>
+      <div class="sm-route">${m.stages.map((k, j) => `<div class="sm-stop"><i>${TYPE_ICON[k.type]}</i><span><small>Part ${j + 1}${k.title ? ` · ${k.title}` : ''}</small>${GOAL[k.type](k)}</span></div>`).join('<div class="sm-link"></div>')}
+        <div class="sm-link"></div><div class="sm-stop end ${done ? 'got' : ''}"><i>${done ? '🏆' : '🏁'}</i><span><small>${done ? 'Cleared' : 'Reward'}</small>${done ? 'Story complete' : 'First clear: +1 token'}</span></div></div>
+      ${done ? `<div class="sm-ending"><small>How it ended</small>${m.outro}</div>` : ''}
+      <div class="sm-medals">${[1, 2, 3].map(n => `<span class="${md >= n ? 'got' : ''}"><i>${MEDAL_ICON[n]}</i><b>${MEDALS[n]}</b><small>${n === 1 ? 'Finish the mission' : n === 2 ? '1 knockout or fewer' : `No knockouts, under ${fmtTime(parOf(m))}`}</small></span>`).join('')}</div>
+      <div class="sm-foot">
+        ${bestTime(m.hero) ? `<div class="sm-best"><small>Best time</small><b>${fmtTime(bestTime(m.hero))}</b>${md < 3 ? '<em>First gold: +1 token</em>' : ''}</div>` : ''}
+        <button class="sty-go" id="styGo" ${own ? '' : 'disabled'}>${own ? (done ? 'Play again ▸' : 'Begin mission ▸') : `🔒 ${lockLong(h.id)}`}</button>
+      </div>
+    </div>`;
+  $('styGo').onclick = () => {
+    if (!own) return;
+    api?.blip?.(880);
+    cfg.storyId = m.hero; cfg.hero = m.hero; save();
+    $('front').classList.add('hidden');
+    api.onStart('story');
+  };
+}
 // ---------- settings ----------
 const SCHEMA = [
   { id: 'game', group: 'Gameplay', icon: '🎮', blurb: 'How matches feel', items: [
     { key: 'diff', label: 'Bot difficulty', hint: 'How sharp the bots aim and react', type: 'choice', options: Object.entries(DIFFICULTY).map(([k, d]) => [k, d.label]) },
     { key: 'dmgNumbers', label: 'Floating damage numbers', hint: 'Numbers pop off whatever you hit', type: 'toggle' },
     { key: 'voiceLines', label: 'Hero voice lines', hint: 'Quips on kills, abilities and spawns', type: 'toggle' },
+    { key: 'idleReload', label: 'Reload when idle', hint: 'Tops up a part-empty magazine after a moment without shooting', type: 'toggle' },
+    { key: 'objPins', label: 'Objective marker', hint: 'Pins the current objective, even when it’s off-screen', type: 'toggle' },
+    { key: 'hitStop', label: 'Elimination hit-stop', hint: 'A split-second slow-down when you get a kill (offline)', type: 'toggle' },
+    { key: 'killIcons', label: 'Kill and assist icons', hint: 'A skull where your eliminations go down, and a badge for assists', type: 'toggle' },
+    { key: 'outlines', label: 'Enemy outlines', hint: 'A red rim on enemies, and see-through for a moment after they hit you', type: 'toggle' },
   ] },
   { id: 'controls', group: 'Controls', icon: '🖱️', blurb: 'Mouse and aiming', items: [
     { key: 'sens', label: 'Mouse sensitivity', hint: 'How far the camera turns per mouse move', type: 'range', min: 0.3, max: 3, step: 0.05, fmt: v => v.toFixed(2) },
     { key: 'invertY', label: 'Invert mouse Y', hint: 'Push the mouse forward to look down', type: 'toggle' },
+  ] },
+  { id: 'crosshair', group: 'Crosshair', icon: '🎯', blurb: 'Shape, colour and size', items: [
+    { type: 'preview', key: 'xh', label: 'Preview', hint: 'How it looks in a match' },
+    { key: 'xhStyle', label: 'Style', hint: 'The shape of the crosshair', type: 'choice', options: XH_STYLES },
+    { key: 'xhColor', label: 'Colour', hint: 'Pick one that stands out on every map', type: 'choice', options: XH_COLORS },
+    { key: 'xhSize', label: 'Size', hint: 'How big it is overall', type: 'range', min: 0.5, max: 2, step: 0.05, fmt: v => Math.round(v * 100) + '%' },
+    { key: 'xhThick', label: 'Thickness', hint: 'How thick the lines are', type: 'range', min: 1, max: 5, step: 0.5, fmt: v => v.toFixed(1) },
+    { key: 'xhGap', label: 'Centre gap', hint: 'Space between the lines in the middle', type: 'range', min: 0, max: 8, step: 0.5, fmt: v => v.toFixed(1) },
+    { key: 'xhAlpha', label: 'Opacity', hint: 'Lower lets you see through it', type: 'range', min: 0.3, max: 1, step: 0.05, fmt: v => Math.round(v * 100) + '%' },
+    { key: 'xhDot', label: 'Centre dot', hint: 'A dot in the middle of any style', type: 'toggle' },
+    { key: 'xhOutline', label: 'Dark outline', hint: 'Keeps it readable on bright backgrounds', type: 'toggle' },
   ] },
   { id: 'video', group: 'Video', icon: '🖥️', blurb: 'Looks and performance', items: [
     { key: 'fov', label: 'Field of view', hint: 'Wider shows more around you', type: 'range', min: 70, max: 110, step: 1, fmt: v => v + '°' },
     { key: 'quality', label: 'Render quality', hint: 'Lower runs smoother, higher looks sharper', type: 'choice', options: Object.entries(QUALITY).map(([k, q]) => [k, q.label]) },
     { key: 'shadows', label: 'Shadows', hint: 'Soft shadows under heroes and props', type: 'toggle' },
     { key: 'screenShake', label: 'Screen shake', hint: 'Shakes on blasts, slams and big hits', type: 'toggle' },
+    { key: 'speedLines', label: 'Speed lines', hint: 'Streaks at the edges when sprinting, dashing or flung', type: 'toggle' },
+    { key: 'deathFade', label: 'Death colour fade', hint: 'The world turns grey while you wait to respawn', type: 'toggle' },
     { key: 'perf', label: 'Performance overlay', hint: 'Frame rate in the corner (also F3)', type: 'toggle' },
   ] },
   { id: 'audio', group: 'Audio', icon: '🔊', blurb: 'Volume levels', items: [
@@ -630,6 +779,7 @@ function renderSettings() {
   const s = SCHEMA.find(x => x.id === setTab);
   const row = it => {
     const v = cfg[it.key], lab = `<div class="sr-l"><b>${it.label}</b><small>${it.hint}</small></div>`;
+    if (it.type === 'preview') return `<div class="srow xh-row">${lab}<div class="xh-prev" id="xhPrev"></div></div>`;
     if (it.type === 'toggle') return `<div class="srow">${lab}<button class="tog ${v ? 'on' : ''}" data-key="${it.key}" data-type="toggle" aria-pressed="${!!v}"><i></i><em>${v ? 'On' : 'Off'}</em></button></div>`;
     if (it.type === 'choice') return `<div class="srow">${lab}<div class="seg">${it.options.map(([k, l]) => `<button class="${v === k ? 'on' : ''}" data-key="${it.key}" data-type="choice" data-val="${k}">${l}</button>`).join('')}</div></div>`;
     return `<div class="srow">${lab}<div class="rng"><input type="range" data-key="${it.key}" min="${it.min}" max="${it.max}" step="${it.step}" value="${v}" style="--p:${rangeFill(it, +v)}"><output>${it.fmt(+v)}</output></div></div>`;
@@ -640,10 +790,12 @@ function renderSettings() {
         ${FIXED.map(([k, l]) => `<div class="kbrow fixed"><span>${l}</span><kbd>${k}</kbd></div>`).join('')}</div>
       <button class="ghost kb-reset" data-bindreset>↺ Reset keys</button>`
     : `<div class="srows">${s.items.map(row).join('')}</div>`);
+  applyCrosshair($("xhPrev"));
 }
 function setSetting(key, val) {
   cfg[key] = val; save();
   api?.onSettings?.(key);
+  if (key.startsWith("xh")) applyCrosshair($("xhPrev"));
   const el = $('setSaved'); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
   clearTimeout(savedT); savedT = setTimeout(() => el.classList.remove('flash'), 1200);
 }
@@ -666,8 +818,11 @@ export function initMenu(opts) {
   $('modeCart').onclick = () => { setMode('cart'); go('roster'); };
   $('modePotato').onclick = () => { setMode('potato'); go('roster'); };
   $('modeRaid').onclick = () => { setMode('raid'); go('roster'); };
-  $('modeTut').onclick = () => { api?.blip?.(880); $('front').classList.add('hidden'); api.onStart('tutorial'); };
-  $('modeTut').classList.toggle('fresh', !cfg.tutorialDone);
+  $('modePaint').onclick = () => { setMode('paint'); go('roster'); };
+  $('modeStory').onclick = () => { api?.blip?.(760); go('story'); };
+  // How to play: the ? on each mode button (it opens the card instead of starting the mode), and the buttons on the hero, stage and story screens
+  document.querySelector('.m2-modes').addEventListener('click', e => { const q = e.target.closest('[data-how]'); if (!q) return; e.stopPropagation(); e.preventDefault(); api?.blip?.(700); openHowTo(q.dataset.how); }, true);
+  document.querySelectorAll('[data-howto]').forEach(b => { b.onclick = () => { api?.blip?.(700); openHowTo(b.dataset.howto || mode); }; });
   $('modeOnline').onclick = () => go('online');
   $('modeAccount').onclick = () => { api?.blip?.(760); openHub(); };
   $('modeSeasons').onclick = () => { api?.blip?.(760); go('seasons'); };
@@ -763,6 +918,11 @@ export function initMenu(opts) {
       if (e.code === 'ArrowLeft' || e.code === 'KeyA') stepHero(-1);
       if (e.code === 'Enter') $('lockIn').click();
       if (e.code === 'Escape') go('main');
+    } else if (screen === 'story') {
+      if (e.code === 'ArrowDown' || e.code === 'KeyS') { e.preventDefault(); stepStory(1); }
+      if (e.code === 'ArrowUp' || e.code === 'KeyW') { e.preventDefault(); stepStory(-1); }
+      if (e.code === 'Enter') $('styGo')?.click();
+      if (e.code === 'Escape') go('main');
     } else if (screen === 'stage') {
       const i = MAPS.findIndex(m => m.id === stageView);
       if (e.code === 'Escape') go('roster');
@@ -772,6 +932,7 @@ export function initMenu(opts) {
     }
     else if (screen === 'pass' && e.code === 'Escape') go('main');
     else if (screen === 'seasons' && e.code === 'Escape') go('main');
+    else if (screen === 'story' && e.code === 'Escape') go('main');
     else if (screen === 'contracts' && e.code === 'Escape') go('main');
     else if (screen === 'slots' && e.code === 'Escape') go('main');
     else if (screen === 'vault' && e.code === 'Escape') go('main');

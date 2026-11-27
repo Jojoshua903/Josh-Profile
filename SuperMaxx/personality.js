@@ -3,7 +3,7 @@
 // win / lose: the results screen · kill: extra elimination lines · rivals: a taunt for knocking out
 // that hero · friends: a hello when that hero spawns on your team · likes, dislikes, fact: Story tab
 
-import { ALL_HEROES as HEROES } from './heroes.js?v=20261127l';
+import { ALL_HEROES as HEROES } from './heroes.js?v=20261128e';
 
 const P = {
   vanguard: {
@@ -201,6 +201,13 @@ const P = {
     thanks: ['GRATITUDE.EXE', 'You are a valued customer.'], win: ['ALL PRIZES COLLECTED.', 'Winner. Winner. Winner.'], lose: ['The claw... slipped.', 'Rigged. As usual.'],
     kill: ['Prize won.', 'Grab complete.'], rivals: { chipmunk: 'Your mech is not a real claw machine, rodent.' }, friends: { microwave: 'Fellow appliance. Greetings.' },
     likes: 'Plush toys, firm grips, the chime of a winner', dislikes: 'Loose screws, tilting, people who say "so close"', fact: 'Has 2,417 plush toys hidden inside his cabinet. He knows every one by name.',
+  },
+  unicorn: {
+    select: ['Prism, reporting with sprinkles!', 'Glitter? Check. Horn? Check. Let’s go!', 'Be nice to me. Please. For your sake.'],
+    death: ['That… was not… sparkly…', 'Ow! My mane!'], lowhp: ['I’m losing my sparkle!', 'Help! Before I get cranky!'],
+    thanks: ['Thank you! You get extra sprinkles!', 'Aww, you’re the best!'], win: ['Happily ever after!', 'Rainbows for everyone!'], lose: ['I am NOT crying. It’s glitter.', 'Somebody is getting a nightmare tonight.'],
+    kill: ['Sweet dreams.', 'You should have been nicer.'], rivals: { mirage: 'Your magic is fake, Veil. Mine is VERY real.' }, friends: { dancer: 'Odette! Let’s do the twirly one again!' },
+    likes: 'Sprinkles, sunrises, the colour pink, kind people', dislikes: 'Rude people, rain on a day off, anyone who calls her “horse girl”', fact: 'Nobody has ever seen her Nightmare form and stayed on the field to describe it.',
   },
   owl: {
     select: ['Hoot here. Who ordered the trouble?', 'Night shift reporting for duty.', 'Got a delivery for the other team.'],

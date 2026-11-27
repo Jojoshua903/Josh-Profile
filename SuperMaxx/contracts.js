@@ -45,8 +45,8 @@ export const CONTRACTS = [
     hero: 'chef', from: 'The Solmare Grand Hotel Kitchen', seal: '👨‍🍳', waiting: true,
     pitch: 'Wanted: a brigade that can handle the heat. Our head chef is bored and the kitchen is, once again, on fire.',
     tasks: [
-      { stat: 'ults', n: 10, label: 'Use your ultimate 10 times (the kitchen likes a flambé)' },
-      { stat: 'map:plaza', n: 2, label: 'Play 2 matches on Solmare Piazza, home of the Grand Hotel' },
+      { stat: 'ults', n: 10, label: 'Use your ultimate 10 times' },
+      { stat: 'map:plaza', n: 2, label: 'Play 2 matches on Solmare Piazza' },
       { stat: 'dmg', n: 12000, label: 'Deal 12,000 damage' },
     ],
   },
@@ -54,18 +54,18 @@ export const CONTRACTS = [
     hero: 'manspider', from: 'Longlegs & Associates, Chartered Accountants', seal: '🕷️', waiting: true,
     pitch: 'Wanted: a team for a mild-mannered spider with a day job. Must be comfortable with heights, ceilings and expense reports.',
     tasks: [
-      { stat: 'heads', n: 60, label: 'Land 60 headshots (precision is everything in accounting)' },
-      { stat: 'towers', n: 3, label: 'Finish off 3 towers or cores (close the books on them)' },
+      { stat: 'heads', n: 60, label: 'Land 60 headshots' },
+      { stat: 'towers', n: 3, label: 'Finish off 3 towers or cores' },
       { stat: 'wins', n: 4, label: 'Win 4 matches' },
     ],
   },
   {
     hero: 'owl', from: 'The Midnight Post Office', seal: '🦉', waiting: true,
-    pitch: 'Wanted: a team that works nights. Our best courier wants a change of route. Must not mind feathers in the cockpit, or anywhere else.',
+    pitch: 'Wanted: a team that works nights. Our best courier wants a new route. Must not mind feathers.',
     tasks: [
-      { stat: 'air', n: 12, label: 'Get 12 eliminations while in the air (airmail only)' },
       { stat: 'map:skyreach', n: 2, label: 'Play 2 matches on Skyreach Isles' },
-      { stat: 'wins', n: 3, label: 'Win 3 matches (always deliver on time)' },
+      { stat: 'ults', n: 8, label: 'Use your ultimate 8 times' },
+      { stat: 'wins', n: 3, label: 'Win 3 matches' },
     ],
   },
 ];

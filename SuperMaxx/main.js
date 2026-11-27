@@ -1,42 +1,48 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { initAccount } from './account.js?v=20261127l';      // first, so it sees every change to the save
-import { HEROES, MAPS, DIFFICULTY, TUNING, SURVIVOR_MAP, SURVIVOR, HILL, DUEL, CART } from './data.js?v=20261127l';
-import { initSurvivor, updateSurvivor, survivorLeaders, stormInfo, inStorm } from './survivor.js?v=20261127l';
-import { initHill, updateHill, hillVisuals, onHill } from './hill.js?v=20261127l';
-import { initCart, updateCart, nearCart, cartLead } from './payload.js?v=20261127l';
-import { initPotato, updatePotato, potatoHit, holdsPotato, POTATO } from './potato.js?v=20261127l';
-import { initGuardians, updateGuardians, netGuardSlam, guardianOf } from './guardian.js?v=20261127l';
-import { initMapFx, updateMapFx } from './mapfx.js?v=20261127l';
-import { initRaid, updateRaid, raidInfo, raidAlert, RAID } from './raid.js?v=20261127l';
-import { buildWorld, mirror } from './world.js?v=20261127l';
-import { createHero, spawnHero, createStructure, spawnMinion, fire, releaseFire, chargeLevel, startReload, tickHero, tickCorpse, chestOf,
-  updateMinions, updateStructures, updateProjectiles, updateFx, dirFrom, eyeOf, TEAM_COLOR } from './units.js?v=20261127l';
-import { steer, initBot, updateBot } from './botbrain.js?v=20261127l';
-import { castSlot, updateAbilities } from './abilities.js?v=20261127l';
-import { floatText, poseHero } from './anim.js?v=20261127l';
-import { cfg, applyGraphics } from './settings.js?v=20261127l';
-import { initMenu, showMenu, menuFrame, openSettings, settingsVisible } from './menu.js?v=20261127l';
-import { dressed, heroOwned, wear, myCosIds, resolveCos, matchXp, award, rewardInfo, tierProgress, SEASON, MAX_TIER, cosById, cosOwned, equippedCos } from './pass.js?v=20261127l';
-import { aimSpray, placeSpray, SPRAY_CD } from './sprays.js?v=20261127l';
-import { EMOTES, EMOTE_CD, BOT_EMOTES, startEmote, stopEmote, wheelEmotes } from './emotes.js?v=20261127l';
-import { headshot } from './portraits.js?v=20261127l';
-import './personality.js?v=20261127l';
-import { openSession, tickPuppet, myUid, lobbyState, leaveRoom, onLobby } from './net.js?v=20261127l';
-import { initAudio, applyVolume, tone, noise, ABIL_SFX, audioTap } from './audio.js?v=20261127l';
-import { startClipRec, saveClip, sendClip } from './clips.js?v=20261127l';
-import { playMusic } from './music.js?v=20261127l';
-import { sparks, castFx, lightFlash } from './vfx.js?v=20261127l';
-import { applyEnvironment } from './stage.js?v=20261127l';
-import { perfFrame } from './perf.js?v=20261127l';
-import { gainMastery } from './mastery.js?v=20261127l';
-import { recordMatch, tasksDone } from './contracts.js?v=20261127l';
-import { recordDaily } from './daily.js?v=20261127l';
-import { kb, keyOf } from './keys.js?v=20261127l';
-import { recordHistory } from './history.js?v=20261127l';
-import { victoryOf, poseVictory } from './victory.js?v=20261127l';
-import { publishCard } from './social.js?v=20261127l';
-import { startTutorial, stopTutorial, tickTutorial, tutorialCast, tutorialKill, onTutorialPass } from './tutorial.js?v=20261127l';
-import { initReplay, recFrame, recEvent, recKill, finalClip, startPlayback, tickPlayback, stopPlayback } from './replay.js?v=20261127l';
+import { initAccount } from './account.js?v=20261128e';      // first, so it sees every change to the save
+import { HEROES, MAPS, DIFFICULTY, TUNING, SURVIVOR_MAP, SURVIVOR, HILL, DUEL, CART } from './data.js?v=20261128e';
+import { initSurvivor, updateSurvivor, survivorLeaders, stormInfo, inStorm } from './survivor.js?v=20261128e';
+import { initHill, updateHill, hillVisuals, onHill } from './hill.js?v=20261128e';
+import { initCart, updateCart, nearCart, cartLead } from './payload.js?v=20261128e';
+import { initPotato, updatePotato, potatoHit, holdsPotato, POTATO } from './potato.js?v=20261128e';
+import { initPaint, updatePaint, paintKill, paintShare, PAINT } from './paint.js?v=20261128e';
+import { addPlayerXp, storyXp } from './level.js?v=20261128e';
+import { initGuardians, updateGuardians, netGuardSlam, guardianOf } from './guardian.js?v=20261128e';
+import { initMapFx, updateMapFx } from './mapfx.js?v=20261128e';
+import { MISSIONS, initStory, updateStory, storyInfo, finishMission, GOAL, awardMedal, MEDALS, MEDAL_ICON, fmtTime } from './story.js?v=20261128e';
+import { initRaid, updateRaid, raidInfo, raidAlert, RAID } from './raid.js?v=20261128e';
+import { buildWorld, mirror } from './world.js?v=20261128e';
+import { PRISM, createHero, spawnHero, createStructure, spawnMinion, fire, releaseFire, chargeLevel, startReload, tickHero, tickCorpse, chestOf,
+  updateMinions, updateStructures, updateProjectiles, updateFx, dirFrom, eyeOf, TEAM_COLOR } from './units.js?v=20261128e';
+import { steer, initBot, updateBot } from './botbrain.js?v=20261128e';
+import { castSlot, updateAbilities } from './abilities.js?v=20261128e';
+import { floatText, poseHero } from './anim.js?v=20261128e';
+import { cfg, applyGraphics } from './settings.js?v=20261128e';
+import { initMenu, showMenu, menuFrame, openSettings, settingsVisible } from './menu.js?v=20261128e';
+import { dressed, heroOwned, wear, myCosIds, resolveCos, matchXp, award, rewardInfo, tierProgress, SEASON, MAX_TIER, cosById, cosOwned, equippedCos } from './pass.js?v=20261128e';
+import { aimSpray, placeSpray, SPRAY_CD } from './sprays.js?v=20261128e';
+import { EMOTES, EMOTE_CD, BOT_EMOTES, startEmote, stopEmote, wheelEmotes } from './emotes.js?v=20261128e';
+import { headshot } from './portraits.js?v=20261128e';
+import './personality.js?v=20261128e';
+import { openSession, tickPuppet, myUid, lobbyState, leaveRoom, onLobby } from './net.js?v=20261128e';
+import { initAudio, applyVolume, tone, noise, ABIL_SFX, audioTap } from './audio.js?v=20261128e';
+import { startClipRec, saveClip, sendClip } from './clips.js?v=20261128e';
+import { playMusic } from './music.js?v=20261128e';
+import { sparks, castFx, lightFlash } from './vfx.js?v=20261128e';
+import { applyEnvironment } from './stage.js?v=20261128e';
+import { perfFrame } from './perf.js?v=20261128e';
+import { gainMastery } from './mastery.js?v=20261128e';
+import { recordMatch, tasksDone } from './contracts.js?v=20261128e';
+import { recordDaily } from './daily.js?v=20261128e';
+import { kb, keyOf } from './keys.js?v=20261128e';
+import { recordHistory } from './history.js?v=20261128e';
+import { hitStop, timeScale, shotBloom, crossScale, landDust, resetJuice, juiceFrame, killIcon } from './juice.js?v=20261128e';
+import { updateOutlines } from './outline.js?v=20261128e';
+import { applyCrosshair } from './crosshair.js?v=20261128e';
+import { victoryOf, poseVictory } from './victory.js?v=20261128e';
+import { publishCard } from './social.js?v=20261128e';
+import { startTutorial, stopTutorial, tickTutorial, tutorialCast, tutorialKill, onTutorialPass } from './tutorial.js?v=20261128e';
+import { initReplay, recFrame, recEvent, recKill, finalClip, startPlayback, tickPlayback, stopPlayback } from './replay.js?v=20261128e';
 let envRT = null;
 
 const $ = id => document.getElementById(id);
@@ -56,6 +62,7 @@ addEventListener('resize', resize); resize();
 // ---------- settings & front end ----------
 const hex = c => '#' + c.toString(16).padStart(6, '0');
 applyGraphics(renderer);
+applyCrosshair($("cross"));
 initMenu({
   onStart: m => startGame(m),
   onStartOnline: m => startGame('hill', m),
@@ -64,6 +71,7 @@ initMenu({
   onSettings(key) {
     if (key === 'quality' || key === 'shadows') applyGraphics(renderer, G?.scene);
     if (key === 'fov') { camera.fov = cfg.fov; camera.updateProjectionMatrix(); }
+    if (key.startsWith('xh')) applyCrosshair($('cross'));
     if (key === 'volume' || key === 'music' || key === 'sfx') { applyVolume(); if (key !== 'music') tone(660, 0.08, 'triangle', 0.08, 1); }
   },
   onSettingsClosed() { if (running && paused) $('pause').classList.remove('hidden'); },
@@ -105,6 +113,7 @@ const SHOT = {
   clawbot: v => { noise(0.1, 0.08 * v, 1400, 0, { type: "bandpass", to: 600, q: 2 }); tone(220, 0.1, "sawtooth", 0.03 * v, 0.6); },
   pixel: v => { tone(660, 0.04, "square", 0.03 * v, 1); tone(990, 0.05, "square", 0.025 * v, 1, 0.04); },
   owl: v => { noise(0.05, 0.08 * v, 5200, 0, { type: "highpass", to: 3000 }); noise(0.05, 0.06 * v, 4600, 0.05, { type: "highpass", to: 2800 }); },
+  unicorn: v => { tone(1568, 0.06, "triangle", 0.03 * v, 1.5); tone(2093, 0.07, "sine", 0.02 * v, 1.3, 0.03); },
 };
 
 // ---------- game state ----------
@@ -127,7 +136,7 @@ const VIEW = {
   medic: { len: 0.55, w: 0.08, barrel: 0.02, vial: true }, spark: { len: 0.3, w: 0.1, barrel: 0.03, clamps: true }, builder: { len: 0.5, w: 0.16, barrel: 0.07, bricks: true },
   wellington: { len: 0.26, w: 0.14, barrel: 0.03, gravy: true }, shepherd: { len: 0.2, w: 0.06, barrel: 0.01, sling: true }, microwave: { len: 0.3, w: 0.1, barrel: 0.04, dish: true },
   chef: { len: 0.75, w: 0.2, barrel: 0.12, copper: true }, manspider: { len: 0.3, w: 0.1, barrel: 0.03, vial: true },
-  pinball: { len: 0.4, w: 0.14, barrel: 0.06 }, clawbot: { len: 0.45, w: 0.16, barrel: 0.04, clamps: true }, pixel: { len: 0.6, w: 0.07, barrel: 0.02 }, owl: { len: 0.5, w: 0.09, barrel: 0.02 },
+  pinball: { len: 0.4, w: 0.14, barrel: 0.06 }, clawbot: { len: 0.45, w: 0.16, barrel: 0.04, clamps: true }, pixel: { len: 0.6, w: 0.07, barrel: 0.02 }, owl: { len: 0.5, w: 0.09, barrel: 0.02 }, unicorn: { len: 0.4, w: 0.08, barrel: 0.03 },
 };
 function makeViewGun(def) {
   const v = VIEW[def.id], p = def.palette;
@@ -187,17 +196,19 @@ function startGame(m = mode, online = null) {
   if (online) { $('front').classList.add('hidden'); $('end').classList.add('hidden'); }
   mode = m;
   initAudio();
-  const surv = mode === 'survivor', hill = mode === 'hill', duel = mode === 'duel', practice = mode === 'practice', tut = mode === 'tutorial' || practice, cart = mode === 'cart', potato = mode === 'potato', raid = mode === 'raid';   // the tutorial (and practice) is a Lane Breaker match on the plaza
-  const map = surv ? SURVIVOR_MAP : MAPS.find(x => x.id === (tut ? 'plaza' : online ? online.map : cfg.map)) || MAPS[0];
+  const story = mode === 'story' ? MISSIONS.find(s => s.hero === cfg.storyId) || MISSIONS[0] : null;   // Story: one hero's mission
+  const surv = mode === 'survivor', hill = mode === 'hill', duel = mode === 'duel', practice = mode === 'practice', tut = mode === 'tutorial' || practice, cart = mode === 'cart', potato = mode === 'potato', paint = mode === 'paint';
+  let raid = mode === 'raid';                                       // the tutorial (and practice) is a Lane Breaker match on the plaza
+  const map = surv ? SURVIVOR_MAP : MAPS.find(x => x.id === (tut ? 'plaza' : story ? story.map : online ? online.map : cfg.map)) || MAPS[0];
   playMusic(map.id);
   // practice runs can try any hero, owned or not
-  let def = dressed((practice && HEROES.find(h => h.id === practiceId)) || HEROES.find(h => h.id === cfg.hero && heroOwned(h.id)) || HEROES[0]);
+  let def = dressed((practice && HEROES.find(h => h.id === practiceId)) || (story && HEROES.find(h => h.id === story.hero)) || HEROES.find(h => h.id === cfg.hero && heroOwned(h.id)) || HEROES[0]);
   const scene = new THREE.Scene();
   if (G?.net) G.net.close();
   stopTutorial();
-  G = { scene, map, mode: tut ? 'lane' : mode, tutorial: tut, practice, heroes: [], minions: [], structures: [], projectiles: [], fx: [], score: { blue: 0, red: 0 },
+  G = { scene, map, mode: tut ? 'lane' : mode, storyM: story, diffKey: cfg.diff, tutorial: tut, practice, heroes: [], minions: [], structures: [], projectiles: [], fx: [], score: { blue: 0, red: 0 },
     zones: [], walls: [], timers: [], camera,
-    time: 0, waveT: surv || hill || duel || tut || cart || potato || raid ? Infinity : TUNING.firstWave, playerTeam: online ? mine.team : 'blue', D: DIFFICULTY[(online && DIFFICULTY[online.diff] ? online.diff : cfg.diff)], over: false, ev: events, net: null };
+    time: 0, waveT: surv || hill || duel || tut || cart || potato || paint || raid || story ? Infinity : TUNING.firstWave, playerTeam: online ? mine.team : 'blue', D: DIFFICULTY[(online && DIFFICULTY[online.diff] ? online.diff : cfg.diff)], over: false, ev: events, net: null };
   const world = buildWorld(scene, map);
   G.colliders = world.colliders; G.worldTick = world.tick;
   initMapFx(G);                                                    // gravity, jump pads and the tide, if this stage has them
@@ -232,7 +243,7 @@ function startGame(m = mode, online = null) {
     }
     initSurvivor(G);
   } else {
-    if (!hill && !cart && !potato && !raid) buildBases(G, map);
+    if (!hill && !cart && !potato && !paint && !raid && !story) buildBases(G, map);
     if (tut) {
       // three training dummies stand in the middle of the plaza, out of both towers' reach
       [['vanguard', -4], ['avalanche', 0], ['croc', 4]].forEach(([id, x], i) => {
@@ -240,6 +251,8 @@ function startGame(m = mode, online = null) {
         const b = createHero(G, d, 'red', 'Dummy ' + (i + 1), false); initBot(G, b, i);
         b.dummy = true; b.dummyAt = { x, z: -10 }; spawnHero(G, b);
       });
+    } else if (story && !raid) {
+      initStory(G, P, story);                                          // the mission makes its own enemies and allies
     } else {
       // one shuffled pool for both teams, without your hero, so nobody appears twice in the match
       const pool = HEROES.filter(h => h.id !== def.id).sort(() => Math.random() - 0.5);
@@ -249,16 +262,18 @@ function startGame(m = mode, online = null) {
     if (hill) initHill(G);
     if (cart) initCart(G);
     if (potato) initPotato(G);
+    if (paint) initPaint(G);
     if (raid) initRaid(G, cfg.diff, cfg.raidBoss);
   }
   $('hud').classList.toggle('surv', surv);
-  $('hud').classList.toggle('hill', hill || cart || potato || raid); $('hud').classList.toggle('duel', duel);
-  $('lB').textContent = raid ? G.raid.def.name : hill ? 'Blue hill' : cart ? 'Blue push' : duel ? 'Blue rounds' : potato ? 'Blue blasts' : 'Blue core'; $('lR').textContent = raid ? 'Time left' : hill ? 'Red hill' : cart ? 'Red push' : duel ? 'Red rounds' : potato ? 'Red blasts' : 'Red core';
+  $('hud').classList.toggle('hill', hill || cart || potato || paint || raid || !!story); $('hud').classList.toggle('duel', duel);
+  $('lB').textContent = story && !raid ? 'Objective' : raid ? G.raid.def.name : hill ? 'Blue hill' : cart ? 'Blue push' : duel ? 'Blue rounds' : potato ? 'Blue blasts' : paint ? 'Blue paint' : 'Blue core'; $('lR').textContent = story && !raid ? (story.stages[0].time ? 'Time left' : 'Time') : raid ? 'Time left' : hill ? 'Red hill' : cart ? 'Red push' : duel ? 'Red rounds' : potato ? 'Red blasts' : paint ? 'Red paint' : 'Red core';
   survEndT = 0; hitT = 0; tally.t = 0; flashing.clear(); $('recap').classList.add('hidden'); P._log = [];
   hidePotg();
-  if (!surv && !tut && !raid) initReplay(G);                        // team modes get a play of the game
+  if (!surv && !tut && !raid && !story) initReplay(G);                        // team modes get a play of the game
 
   camera.fov = cfg.fov; camera.updateProjectionMatrix();
+  resetJuice();
   scene.add(camera);
   while (camera.children.length) camera.remove(camera.children[0]);
   const vm = makeViewGun(def); viewGun = vm.gun; viewHand = vm.hand; camera.add(viewGun, viewHand);
@@ -268,7 +283,7 @@ function startGame(m = mode, online = null) {
   if (def.passive) { pv.querySelector('span').textContent = def.passive.name; pv.title = def.passive.desc; pv.style.setProperty('--hc', hex(def.color)); }
   for (const [slot, key] of [['q', 'Q'], ['ability', 'E'], ['ult', 'F']]) $('ab' + key).querySelector('span').textContent = def[slot].name;
   ultWasReady = false;
-  $('wName').textContent = def.weapon.name; $('magMax').textContent = def.weapon.mag;
+  $('wName').textContent = def.weapon.name; $('wName').style.color = ''; $('magMax').textContent = def.weapon.mag;
   $('feed').innerHTML = '';
   ['end', 'pause'].forEach(id => $(id).classList.add('hidden'));
   $('again').textContent = online ? 'Back to lobby' : 'Play again';
@@ -288,8 +303,11 @@ function startGame(m = mode, online = null) {
   else if (duel) banner('Duel!', '#1d2340', `${map.name} · first to ${DUEL.toWin} rounds`);
   else if (cart) banner('Push the cart', '#3ccf9a', `${map.name} · get it to their flag`);
   else if (potato) banner('Hot Potato', '#ff5a2a', `Hit an enemy to pass the bomb · first to ${POTATO.toWin} blasts`);
+  else if (paint) banner('Paint Party', '#9b5cff', `Shoot the floor to paint it · most paint in ${Math.floor(PAINT.time / 60)}:${String(PAINT.time % 60).padStart(2, '0')} wins`);
   else if (hill) banner('Take the hill', '#e0a100', `${map.name} · first to ${HILL.target}${online ? ' · online' : ''}`);
   else if (tut) { banner(practice ? `Practice · ${def.callsign}` : 'Training', '#1d2340', 'Follow the checklist on the left'); startTutorial(P, practice); onTutorialPass(() => { tone(880, 0.1, 'triangle', 0.06, 1.3); tone(1320, 0.14, 'triangle', 0.05, 1, 0.08); }); }
+  else if (story) banner(story.title, '#1d2340', `Part 1 · ${GOAL[story.stages[0].type](story.stages[0])}`);
+  else if (raid) banner(G.raid.def.name, 'var(--red)', `${G.raid.def.title} · beat it in 5 minutes`);
   else banner(`Break the ${map.lanes.length > 1 ? 'lanes' : 'lane'}`, '#1d2340', map.name);
   say(P, 'spawn');
   // a hello between friends on the same team, a moment after the match starts
@@ -304,7 +322,7 @@ function startGame(m = mode, online = null) {
 let survEndT = 0;
 // End the match after a short beat for the banner, unless the player has already left it.
 function endLater(win, ms) { const g = G; setTimeout(() => { if (G && G === g) endGame(win); }, ms); }
-const END_MODE = { lane: 'Lane Breaker', hill: 'Hill Rush', cart: 'Payload', potato: 'Hot Potato', survivor: 'Survivor', duel: 'Duel', raid: 'Boss Raid' };
+const END_MODE = { lane: 'Lane Breaker', hill: 'Hill Rush', cart: 'Payload', potato: 'Hot Potato', paint: 'Paint Party', survivor: 'Survivor', duel: 'Duel', raid: 'Boss Raid' };
 function endGame(win) {
   if (!G || G.ended) return;
   if (G.victory) return;                                // the pose finishes first
@@ -317,6 +335,9 @@ function endGame(win) {
   if (G.tutorial) {
     $('endTitle').innerHTML = G.practice ? `Practice complete<small>${P.def.callsign}’s kit, start to finish</small>` : 'Training complete<small>You know the basics</small>';
     $('endTitle').style.color = 'var(--blue)';
+  } else if (G.storyM) {
+    $('endTitle').innerHTML = `${win ? 'Mission complete' : 'Mission failed'}<small>${P.def.callsign} · ${G.storyM.title}</small>`;
+    $('endTitle').style.color = win ? 'var(--blue)' : 'var(--red)';
   } else if (G.mode === 'survivor') {
     const place = win ? 1 : P.place;
     $('endTitle').innerHTML = win ? 'MAXX OUT!<small>#1 of ' + G.heroes.length + '</small>' : `#${place}<small>of ${G.heroes.length} · eliminated</small>`;
@@ -324,6 +345,10 @@ function endGame(win) {
   } else if (G.mode === 'duel') {
     const p = G.duel.pts;
     $('endTitle').innerHTML = `${win ? 'Duel won' : 'Duel lost'}<small>Rounds ${p.blue} – ${p.red}</small>`;
+    $('endTitle').style.color = win ? 'var(--blue)' : 'var(--red)';
+  } else if (G.mode === 'paint') {
+    const s = paintShare(G), us = G.playerTeam, them = us === 'blue' ? 'red' : 'blue', pc = v => Math.round(v * 100) + '%';
+    $('endTitle').innerHTML = `${win ? 'Victory' : s[us] === s[them] ? 'Dead heat' : 'Defeat'}<small>Paint ${pc(s[us])} – ${pc(s[them])}</small>`;
     $('endTitle').style.color = win ? 'var(--blue)' : 'var(--red)';
   } else if (G.mode === 'potato') {
     const p = G.potato.pts, us = G.playerTeam, them = us === 'blue' ? 'red' : 'blue';
@@ -360,8 +385,10 @@ function endGame(win) {
 // Your own line on the results screen: hero, and the numbers that matter for the mode.
 function meCard(win) {
   const s = [['Kills', P.kills], ['Deaths', P.deaths], ['Damage', Math.round(P.dmgDealt)]];
+  if (P.assists > 0 && G.mode !== 'survivor') s.splice(2, 0, ['Assists', P.assists]);
   if (P.healDone > 0) s.push(['Healing', Math.round(P.healDone)]);
   if (G.mode === 'hill' || G.mode === 'cart' || G.mode === 'potato') s.push([G.mode === 'hill' ? 'On hill' : G.mode === 'cart' ? 'On cart' : 'Bomb held', fmtT(P.objT || 0)]);
+  if (G.mode === 'paint') s.push(['Painted', Math.round((P.painted || 0) * PAINT.cell * PAINT.cell) + ' m²']);
   if ((G.mode === 'lane' || G.mode === 'raid') && P.objDmg > 0) s.push([G.mode === 'raid' ? 'Boss damage' : 'Siege', Math.round(P.objDmg)]);
   if (G.mode === 'survivor') s.splice(1, 1, ['Place', `#${P.alive ? 1 : P.place}`]);
   return `<img src="${headshot(P.def)}" alt="" style="--hc:${hex(P.def.color)}">
@@ -433,7 +460,7 @@ const wireLeave = el => { el.querySelector('.pn-leave').onclick = () => toMenu('
 function showEnd() {
   if (!G) return;
   stopPlayback(G); finishClip(); clearTimeout(potgT); potgG = null; $('potg').className = 'hidden'; $('potg').innerHTML = '';
-  if (!G.tutorial && !G.mvpShown) { G.mvpShown = true; if (showMvp()) return; }
+  if (!G.tutorial && !G.storyM && !G.mvpShown) { G.mvpShown = true; if (showMvp()) return; }
   hideMvp();
   $('end').classList.remove('hidden');
 }
@@ -448,6 +475,7 @@ function mvpAwards() {
     hill: { t: 'Hill hog', v: h => h.objT || 0, f: fmtT, s: 'on the hill' },
     cart: { t: 'Cart pusher', v: h => h.objT || 0, f: fmtT, s: 'on the cart' },
     potato: { t: 'Hot hands', v: h => h.objT || 0, f: fmtT, s: 'holding the bomb' },
+    paint: { t: 'Master painter', v: h => h.painted || 0, f: v => Math.round(v * PAINT.cell * PAINT.cell) + ' m²', s: 'of floor painted' },
     lane: { t: 'Siege master', v: h => h.objDmg || 0, f: Math.round, s: 'damage to towers and cores' },
     survivor: { t: 'Last one standing', v: h => h.alive ? 100 : 100 - (h.place || 99), f: (v, h) => `#${h.alive ? 1 : h.place}`, s: 'final place' },
   }[G.mode];
@@ -505,7 +533,25 @@ function showPassGain(win) {
       <div class="pg-parts">Try Lane Breaker, Survivor or Hill Rush from the main menu. Matches earn season pass and hero mastery XP.</div>`;
     return;
   }
+  if (G.storyM) {
+    // Story: the ending, the medal, and a token the first time you clear it (and for the first gold)
+    const M = G.storyM, first = win && finishMission(M.hero), S = G.story;
+    const time = Math.max(0, (S?.endT ?? G.time) - (S?.t0 || 0)), md = win ? awardMedal(M, time, P.deaths) : null;
+    const goal = md && md.got < 3 ? (md.got === 1 ? `🥈 Silver: finish with 1 knockout or fewer` : `🥇 Gold: no knockouts, under ${fmtTime(md.par)}`) : '';
+    const medal = md ? `<div class="pg-medal m${md.got}"><span>${MEDAL_ICON[md.got]}</span><div><b>${MEDALS[md.got]} medal${md.better && md.was ? ' · new best!' : ''}</b>
+        <small>${fmtTime(time)}${md.newBest ? ' (best time!)' : ''} · ${P.deaths} knockout${P.deaths === 1 ? '' : 's'} · par ${fmtTime(md.par)}</small>${goal ? `<em>Next: ${goal}</em>` : ''}</div></div>` : '';
+    $('passGain').innerHTML = `<div class="pg-top"><span>📖 Story · ${P.def.callsign}</span><b>${M.title}</b></div>
+      ${medal}
+      <div class="pg-parts pg-story">${win ? M.outro : 'Not this time. Every hero gets another chance: hit Play again to retry the mission.'}</div>
+      ${first ? '<div class="pg-ct"><span>🎰 First clear: <b>+1 token</b> for the slot machine</span></div>' : ''}
+      ${md?.goldFirst ? '<div class="pg-ct"><span>🥇 First gold: <b>+1 token</b></span></div>' : ''}`;
+    const lv = addPlayerXp(storyXp(win, md?.got || 0));
+    $("passGain").insertAdjacentHTML("beforeend", levelBlock(lv)); fillLevelBar($("passGain"), lv.ups > 0);
+    if (md?.better) setTimeout(() => [523, 659, 784, md.got === 3 ? 1046 : 0].filter(Boolean).forEach((f, i) => tone(f, 0.16, 'triangle', 0.06, 1, i * 0.09)), 600);
+    return;
+  }
   const res = award(matchXp({ mode: G.mode, win, kills: P.kills, place: win ? 1 : P.place, players: G.heroes.length }));
+  const lv = addPlayerXp(res.gained);                  // player level: the same XP, and a token per level
   const mst = gainMastery(P.def.id, { win, kills: P.kills, dmg: P.dmgDealt });
   const ct = recordMatch({ win, kills: P.kills, dmg: P.dmgDealt, heal: P.healDone || 0, arch: P.def.arch, mode: G.mode, map: G.map.id, cs: P.cs || {} });
   const dl = recordDaily({ win, kills: P.kills, dmg: P.dmgDealt, arch: P.def.arch, mode: G.mode });
@@ -526,8 +572,9 @@ function showPassGain(win) {
       <div class="pg-top"><span>${P.def.callsign} mastery</span><b>+${mst.gained} XP</b></div>
       <div class="pg-bar"><i style="width:${mst.levelUp || mst.bonus ? 0 : mst.before.frac * 100}%"></i></div>
       <div class="pg-tier"><span>${mst.after.rank.name} · Lv ${mst.before.level}${mst.levelUp ? ` → <b>${mst.after.level}</b>` : ''}</span><span>${mst.after.max ? `${mst.after.into} / ${mst.after.need} to bonus token` : `${mst.after.into} / ${mst.after.need} XP`}</span></div>
-      ${mst.rankUp ? `<div class="pg-rank">New rank: ${mst.after.rank.name}! <span class="pg-tok">+${(mst.tokens - mst.bonus)} mastery token${(mst.tokens - mst.bonus) > 1 ? "s" : ""} 🎰</span></div>` : ''}
-      ${mst.bonus ? `<div class="pg-rank">Mastery bonus! <span class="pg-tok">+${mst.bonus} mastery token${mst.bonus > 1 ? "s" : ""} 🎰</span></div>` : ''}</div>` : ''}`;
+      ${mst.rankUp ? `<div class="pg-rank">New rank: ${mst.after.rank.name}! <span class="pg-tok">+${(mst.tokens - mst.bonus)} token${(mst.tokens - mst.bonus) > 1 ? "s" : ""} 🎰</span></div>` : ''}
+      ${mst.bonus ? `<div class="pg-rank">Mastery bonus! <span class="pg-tok">+${mst.bonus} token${mst.bonus > 1 ? "s" : ""} 🎰</span></div>` : ''}</div>` : ''}`;
+  el.insertAdjacentHTML("afterbegin", levelBlock(lv)); fillLevelBar(el, lv.ups > 0);
   // recruitment contracts: a chip for anyone just recruited, and a line for contracts that moved
   if (ct.recruited.length || ct.progressed.length || ct.opened.length) el.insertAdjacentHTML('beforeend', `<div class="pg-ct">${
     ct.recruited.map(id => { const h = HEROES.find(x => x.id === id); return `<span class="pg-new" style="--hc:#${h.color.toString(16).padStart(6, '0')}"><img src="${headshot(h)}" alt="">Recruited: <b>${h.callsign}</b>!</span>`; }).join('')}${
@@ -535,13 +582,27 @@ function showPassGain(win) {
     ct.opened.map(id => `<span>✉️ New contract: <b>${HEROES.find(x => x.id === id).callsign}</b> wants to join. See Contracts</span>`).join('')}</div>`);
   // daily challenges: a line for each one just finished, and the token when all three are done
   if (dl.done.length || dl.token) el.insertAdjacentHTML('beforeend', `<div class="pg-ct pg-daily">${dl.done.map(c => `<span>✅ Daily challenge: <b>${c.text}</b></span>`).join('')}${
-    dl.token ? '<span class="pg-tok">All 3 daily challenges done! +1 mastery token 🎰</span>' : ''}</div>`);
+    dl.token ? '<span class="pg-tok">All 3 daily challenges done! +1 token 🎰</span>' : ''}</div>`);
   if (mst) setTimeout(() => { const b = el.querySelector('.pg-mst .pg-bar i'); if (b) b.style.width = (mst.after.frac * 100) + '%'; }, 1700);
   if (mst?.levelUp) setTimeout(() => { tone(523, 0.15, 'square', 0.05, 1); tone(784, 0.25, 'square', 0.05, 1, 0.12); }, 1800);
   setTimeout(() => { el.querySelector('.pg-bar i').style.width = (p1.frac * 100) + '%'; }, 1500);
   if (res.unlocked.length) setTimeout(() => { tone(660, 0.2, 'triangle', 0.08, 1.5); tone(990, 0.3, 'triangle', 0.06, 1.3); }, 1600);
 }
 
+// Player level on the results screen: the XP, the bar, and a token for every level gained
+function levelBlock(lv) {
+  const a = lv.after, up = lv.ups > 0;
+  return `<div class="pg-lvl${up ? ' up' : ''}">
+    <div class="pg-top"><span>Player level</span><b>+${lv.gained} XP</b></div>
+    <div class="pg-bar"><i style="width:${up ? 0 : lv.before.frac * 100}%" data-to="${a.frac * 100}"></i></div>
+    <div class="pg-tier"><span>Level ${lv.before.level}${up ? ` → <b>${a.level}</b>` : ''}</span><span>${a.into.toLocaleString()} / ${a.need.toLocaleString()} XP to level ${a.level + 1}</span></div>
+    ${up ? `<div class="pg-rank">Level up! <span class="pg-tok">+${lv.ups} token${lv.ups > 1 ? 's' : ''} 🎰</span></div>` : ''}</div>`;
+}
+function fillLevelBar(el, up) {
+  const bar = el.querySelector('.pg-lvl .pg-bar i'); if (!bar) return;
+  setTimeout(() => { bar.style.width = bar.dataset.to + '%'; }, 1300);
+  if (up) setTimeout(() => { tone(523, 0.15, 'square', 0.05, 1); tone(784, 0.2, 'square', 0.05, 1, 0.1); tone(1046, 0.3, 'square', 0.05, 1, 0.2); }, 1500);
+}
 function scoreTable() {
   const who = h => `<td class="sb-who"><div><img src="${headshot(h.def)}" alt="" style="--hc:${hex(h.def.color)}"><span><b>${h.isPlayer ? 'You' : h.name}</b><small>${h.def.callsign}</small></span></div></td>`;
   if (G.mode === 'survivor') {
@@ -551,11 +612,11 @@ function scoreTable() {
   const side = t => {
     const hs = G.heroes.filter(h => h.team === t).sort((a, b) => b.kills - a.kills || b.dmgDealt - a.dmgDealt);
     const K = hs.reduce((s, h) => s + h.kills, 0);
-    return `<tr class="sb-team ${t}"><th>${t === 'blue' ? 'Blue' : 'Red'} team${t === G.playerTeam ? ' · yours' : ''}</th><th>${K}</th><th></th><th></th></tr>`
-      + hs.map(h => `<tr class="${h.isPlayer ? 'me' : ''} ${t}">${who(h)}<td>${h.kills}</td><td>${h.deaths}</td><td>${Math.round(h.dmgDealt)}</td></tr>`).join('');
+    return `<tr class="sb-team ${t}"><th>${t === 'blue' ? 'Blue' : 'Red'} team${t === G.playerTeam ? ' · yours' : ''}</th><th>${K}</th><th></th><th></th><th></th></tr>`
+      + hs.map(h => `<tr class="${h.isPlayer ? 'me' : ''} ${t}">${who(h)}<td>${h.kills}</td><td>${h.deaths}</td><td>${h.assists || 0}</td><td>${Math.round(h.dmgDealt)}</td></tr>`).join('');
   };
   const order = G.playerTeam === 'red' ? ['red', 'blue'] : ['blue', 'red'];
-  return `<table class="sb team"><tr><th>Player</th><th>K</th><th>D</th><th>Damage</th></tr>${order.map(side).join('')}</table>`;
+  return `<table class="sb team"><tr><th>Player</th><th>K</th><th>D</th><th>A</th><th>Damage</th></tr>${order.map(side).join('')}</table>`;
 }
 
 // ---------- hit feedback ----------
@@ -735,6 +796,31 @@ const events = {
     if (type === 'in') { banner('High tide!', '#3fa8c8', 'Anyone in the water is slowed'); noise(1.4, 0.08, 600, 0, { type: 'lowpass', to: 200 }); }
     if (type === 'out') banner('The tide is going out', '#3fa8c8', '');
   },
+  // Story missions: pick-ups, deliveries and checkpoints, then the end
+  story(type, S) {
+    if (type === 'pickup') tone(880, 0.12, 'triangle', 0.06, 1.4);
+    else if (type === 'drop') banner(`You dropped the ${S.K.item}`, 'var(--red)', 'Pick it up again where you went down');
+    else if (type === 'deliver') { banner(`${S.have} of ${S.K.n} delivered`, '#3ccf9a', S.have < S.K.n ? 'A new one is waiting' : ''); [523, 659, 784].forEach((f, i) => tone(f, 0.15, 'triangle', 0.06, 1, i * 0.07)); }
+    else if (type === 'part') { banner('Part 1 complete', 'var(--blue)', S.K.title); [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.18, 'triangle', 0.06, 1, i * 0.08)); }
+    else if (type === 'stage') {
+      const K = S.K, line = $('styLine');
+      line.innerHTML = `<small>Part ${S.stage + 1} · ${K.title}</small>${K.line || ''}`;
+      line.classList.remove('on'); void line.offsetWidth; line.classList.add('on');
+      setTimeout(() => {
+        if (G?.story !== S) return;
+        if (K.type === 'boss') { $('lB').textContent = G.raid.def.name; $('lR').textContent = 'Time left'; banner(G.raid.def.name, 'var(--red)', `${G.raid.def.title} · Part ${S.stage + 1}`); tone(80, 1.2, 'sawtooth', 0.1, 0.5); }
+        else banner(`Part ${S.stage + 1} · ${K.title}`, '#1d2340', S.goal);
+      }, 2200);
+    }
+    else if (type === 'checkpoint') { tone(660 + S.cp * 60, 0.15, 'square', 0.05, 1.3); }
+    else if ((type === 'win' || type === 'fail') && !G.over) {
+      S.endT = G.time;
+      G.over = true;
+      banner(type === 'win' ? 'Mission complete!' : 'Mission failed', type === 'win' ? 'var(--blue)' : 'var(--red)', S.M.title);
+      tone(type === 'win' ? 660 : 160, 0.6, 'triangle', 0.08, type === 'win' ? 1.8 : 0.6);
+      endLater(type === 'win', 1800);
+    }
+  },
   // Boss Raid: wind-ups, impacts and phase changes; running out of time or a wipe loses
   raid(type, x, warn) {
     const D = G.raid?.def;
@@ -779,7 +865,7 @@ const events = {
       P._healAcc = (P._healAcc || 0) + amt;
       if (P._healAcc >= 40 && G.time > (P._thanksT || 0)) { P._healAcc = 0; P._thanksT = G.time + 15; say(P, 'thanks'); }
     }
-    if (src?.kind === 'hero' && src !== u) src.healDone = (src.healDone || 0) + amt;
+    if (src?.kind === 'hero' && src !== u) { src.healDone = (src.healDone || 0) + amt; (u.healLog ||= new Map()).set(src, G.time); }   // healing on teammates (stats, contracts, Story) and heal assists
     if (cfg.dmgNumbers && amt >= 1 && (u === P || src === P)) floatText(G, chestOf(u).setY(u.pos.y + 2.1), '+' + Math.round(amt), '#5fe0a0');
   },
   flash(u, text) {
@@ -804,6 +890,7 @@ const events = {
   turretShot(m) { const d = m.pos.distanceTo(P.pos); if (d < 30) tone(1200, 0.03, 'square', 0.03 * (1 - d / 30), 0.6); },
   kill(t, src) {
     recKill(G, t, src);
+    if (G.paint) paintKill(G, t, src);                                  // Paint Party: a big splat where they went down
     // bots celebrate now and then (online, only the machine running that bot decides)
     if (t.kind === 'hero' && src?.kind === 'hero' && src !== t && !src.isPlayer && (!G.net || src.local) && !G.tutorial && Math.random() < 0.3)
       G.timers.push({ t: 0.5, fn: () => { const id = pick(BOT_EMOTES); if (src.alive && !src.emote && startEmote(G, src, id)) G.net?.emote(src, id); } });
@@ -820,18 +907,27 @@ const events = {
       el.className = src === P ? 'me' : t === P ? 'died' : '';
       el.innerHTML = `<span class="${side(src)}">${dot(src)}${nm(src)}</span>`
         + `<span class="arr ${side(src)}">${t.killedByHead && src && src.kind === 'hero' ? '<em>HEAD</em>' : ''}</span>`
-        + `<span class="${side(t)}">${dot(t)}${victim}</span>`;
+        + `<span class="${side(t)}">${dot(t)}${victim}</span>`
+        + (t.assisters?.length ? `<span class="as">+ ${t.assisters.length > 2 ? t.assisters.length : t.assisters.map(nm).join(", ")}</span>` : "");
       $('feed').prepend(el);
       setTimeout(() => el.remove(), 6000);
       while ($('feed').children.length > 6) $('feed').lastChild.remove();
     }
-    if (src === P && t.kind === 'hero') hitMark('kill');
+    if (src === P && t.kind === 'hero') {
+      hitMark('kill'); hitStop(G, t.killedByHead ? 0.11 : 0.08);
+      killIcon(camera, chestOf(t).setY(t.pos.y + 1.6), t.killedByHead ? 'head' : 'kill', streak.multi > 1 ? '×' + streak.multi : t.killedByHead ? 'Headshot' : '');
+      tone(140, 0.14, 'square', 0.05, 0.5); if (t.killedByHead) tone(2400, 0.12, 'triangle', 0.04, 1.2, 0.04);
+    }
+    if (t.kind === 'hero' && src !== P && t.assisters?.includes(P)) {             // you helped: an assist
+      killIcon(camera, chestOf(t).setY(t.pos.y + 1.6), 'assist', 'Assist');
+      tone(740, 0.08, 'triangle', 0.05, 1.3); tone(1110, 0.1, 'triangle', 0.04, 1.2, 0.06);
+    }
     if (t.kind === 'hero' && src === P) { banner(`Eliminated ${t.name}`, 'var(--red)', `“${P.def.rivals?.[t.def.id] && Math.random() < 0.7 ? P.def.rivals[t.def.id] : pick(P.def.quips.kill)}”`); tone(600, 0.25, 'triangle', 0.08, 2); }
     else if (t === P && src?.kind === 'hero' && src.def.rivals?.[P.def.id]) sayLine(src, src.def.rivals[P.def.id]);   // rivals gloat
     else if (t === P) say(P, 'death');
     else if (t.kind === 'hero' && src && src.kind === 'hero') say(src, 'kill', t);
     if (t.kind === 'tower') { const theirs = t.team !== G.playerTeam; banner(theirs ? 'Enemy tower down. Core exposed' : 'Our tower fell', theirs ? 'var(--blue)' : 'var(--red)'); tone(90, 0.6, 'sawtooth', 0.1, 0.4); }
-    if (t.kind === 'boss' && !G.over) { G.over = true; banner(`${G.raid.def.name.toUpperCase()} FALLS!`, 'var(--blue)', `With ${Math.floor(G.raid.time / 60)}:${String(Math.floor(G.raid.time % 60)).padStart(2, '0')} to spare`); tone(110, 1, 'sawtooth', 0.1, 0.3); endLater(true, 2200); }
+    if (t.kind === 'boss' && !G.over) { G.over = true; if (G.story) G.story.endT = G.time; banner(`${G.raid.def.name.toUpperCase()} FALLS!`, 'var(--blue)', `With ${Math.floor(G.raid.time / 60)}:${String(Math.floor(G.raid.time % 60)).padStart(2, '0')} to spare`); tone(110, 1, 'sawtooth', 0.1, 0.3); endLater(true, 2200); }
     if (t.kind === 'core' && !G.over) {                // the host tells everyone, so nobody is left playing after the core falls
       const w = t.team === 'blue' ? 'red' : 'blue', ours = w === G.playerTeam;
       G.over = true;
@@ -849,6 +945,17 @@ const events = {
   },
   immune(t, src) {
     if (src === P && G.time > immuneTipT) { immuneTipT = G.time + 3; banner('Core is shielded. Take down a tower first', '#1d2340'); }
+  },
+  // Paint Party: the frenzy, and the final count
+  paint(type, T, winner, s) {
+    if (type === 'frenzy') { banner('Paint frenzy!', '#9b5cff', `${PAINT.frenzy}s left · bigger splats`); [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.12, 'square', 0.05, 1, i * 0.06)); }
+    if (type === 'end' && !G.over) {
+      G.over = true;
+      const ours = winner === G.playerTeam, pc = v => Math.round(v * 100) + '%';
+      banner(winner ? (ours ? 'Your colour wins!' : 'Their colour wins') : 'Dead heat!', ours ? 'var(--blue)' : 'var(--red)', `${pc(s.blue)} blue · ${pc(s.red)} red`);
+      tone(ours ? 660 : 160, 0.6, 'triangle', 0.08, ours ? 1.8 : 0.6);
+      endLater(ours, 1800);
+    }
   },
   potato(type, T, h, from, scorer) {
     const nm = u => u.isPlayer ? 'You' : u.name;
@@ -947,7 +1054,7 @@ const events = {
 };
 
 // Per-hero feel for the first-person gun.
-const RECOIL = { vanguard: 0.25, striker: 0.18, ember: 0.7, warden: 1, thicket: 0.9, ratchet: 0.3, mirage: 0.3, avalanche: 0.55, tempo: 0.06, kestrel: 0.4, croc: 0.6, cavalier: 0.45, slime: 0.5, brawler: 0, chipmunk: 0.12, elf: 0.35, dancer: 0.05, mole: 0.7, medic: 0.2, spark: 0.06, builder: 0.6, wellington: 0.45, shepherd: 0.35, microwave: 0.04, chef: 0.9, manspider: 0.15, pinball: 0.2, clawbot: 0.4, pixel: 0.15, owl: 0.12 };
+const RECOIL = { vanguard: 0.25, striker: 0.18, ember: 0.7, warden: 1, thicket: 0.9, ratchet: 0.3, mirage: 0.3, avalanche: 0.55, tempo: 0.06, kestrel: 0.4, croc: 0.6, cavalier: 0.45, slime: 0.5, brawler: 0, chipmunk: 0.12, elf: 0.35, dancer: 0.05, mole: 0.7, medic: 0.2, spark: 0.06, builder: 0.6, wellington: 0.45, shepherd: 0.35, microwave: 0.04, chef: 0.9, manspider: 0.15, pinball: 0.2, clawbot: 0.4, pixel: 0.15, owl: 0.12, unicorn: 0.14 };
 const ULT_NEAR = 30;                                  // metres: supers further away than this stay quiet
 const VOICE_NEAR = 25;                                // metres: other heroes' voice lines only play inside this
 const SPIN_RELOAD = new Set(['striker', 'mirage', 'ratchet']);
@@ -1037,6 +1144,7 @@ const toMenu = (where = 'main') => {
   net?.close();
   if (midMatch || (net && where === 'main')) leaveRoom();
   running = false; paused = false; hidePotg(); G = null; document.exitPointerLock?.(); stopTutorial();
+  resetJuice();
   playMusic('menu');
   ['end', 'pause'].forEach(id => $(id).classList.add('hidden')); $('hud').classList.add('hidden');
   showMenu(net && !midMatch && where !== 'main' ? 'online' : where);
@@ -1157,18 +1265,19 @@ function updatePlayer(dt) {
   steer(P, w, sprint, keys.has(kb('jump')), dt);
   const vyBefore = P.vel.y;
   tickHero(G, P, dt);
-  if (!wasGround && P.onGround) landA = Math.min(1, Math.max(0, -fallV - 4) / 10);
+  if (!wasGround && P.onGround) { landA = Math.min(1, Math.max(0, -fallV - 4) / 10); landDust(G, P, landA); }
   wasGround = P.onGround; fallV = vyBefore;
   if (mouseDown) {
     const tip = viewGun.getObjectByName('tip').getWorldPosition(new THREE.Vector3());
     if (fire(G, P, dirFrom(P.yaw, P.pitch), tip)) {
       P.pitch = Math.min(1.5, P.pitch + RECOIL[P.def.id] * 0.03);
+      shotBloom(P.def.weapon.rate < 0.15 ? 0.18 : 0.4);
     }
   }
   if (!mouseDown && P.chargeStart != null) {
     const tip = viewGun.getObjectByName('tip').getWorldPosition(new THREE.Vector3());
     const c = chargeLevel(G, P);
-    if (releaseFire(G, P, dirFrom(P.yaw, P.pitch), tip)) P.pitch = Math.min(1.5, P.pitch + 0.015 + c * 0.04);
+    if (releaseFire(G, P, dirFrom(P.yaw, P.pitch), tip)) { P.pitch = Math.min(1.5, P.pitch + 0.015 + c * 0.04); shotBloom(0.3 + c * 0.4); }
   }
   const spd = Math.hypot(P.vel.x, P.vel.z);
   bob += dt * spd * (P.onGround ? 1.5 : 0);
@@ -1210,7 +1319,7 @@ function updatePlayer(dt) {
   glow.rotation.x += dt * 6; glow.rotation.y += dt * 4; glow.scale.setScalar(1 + cast * 0.8);
   // zoom: narrow the view, bring the gun to the middle and steady the aim (P.zoomA, read by fire)
   zoomA += ((zoomDown && P.alive && !wheel ? 1 : 0) - zoomA) * Math.min(1, dt * 12); P.zoomA = zoomA;
-  $("cross").style.transform = `translate(-50%,-50%) scale(${(1 - zoomA * 0.3).toFixed(3)})`;
+  $("cross").style.transform = `translate(-50%,-50%) scale(${((1 - zoomA * 0.3) * crossScale()).toFixed(3)})`;
   const fovT = cfg.fov * (1 - zoomA * 0.42) + (sprintA * 6 + (P.castA > 1 ? 8 : 0) + (P.dashT > 0 ? 10 : 0)) * (1 - zoomA);
   if (Math.abs(camera.fov - fovT) > 0.1) { camera.fov += (fovT - camera.fov) * Math.min(1, dt * 8); camera.updateProjectionMatrix(); }
 }
@@ -1250,6 +1359,11 @@ function updateHud(dt) {
   $('hpBar').style.background = P.hp / P.maxHp < 0.35 ? 'var(--red)' : 'var(--mint)';
   $('hHp').textContent = `${Math.ceil(P.hp)} / ${P.maxHp}`;
   $('mag').textContent = P.reloadT > 0 ? '··' : P.ammo;
+  if (w.mode === 'prism') {                                                 // Prism: the next colour of the rainbow
+    const n = PRISM[((P.hue ?? -1) + 1) % PRISM.length], el = $('wName'), night = P.nightT > 0;
+    const txt = night ? `${w.name} · NIGHTMARE` : `${w.name} · next ${n.name}`;
+    if (el.textContent !== txt) { el.textContent = txt; el.style.color = night ? '#b06aff' : '#' + n.color.toString(16).padStart(6, '0'); }
+  }
   for (const [slot, key] of [['q', 'Q'], ['ability', 'E']]) {
     const left = P.cd[slot];
     $('cd' + key).style.transform = `scaleX(${Math.min(1, left / P.def[slot].cd)})`;
@@ -1284,7 +1398,7 @@ function updateHud(dt) {
   $('hud').classList.toggle('invis', P.invisT > 0);
   const t = Math.floor(G.mode === 'lane' ? Math.max(0, TUNING.laneLimit - G.time) : G.mode === 'cart' ? Math.max(0, CART.limit - G.time) : G.time);
   $('clock').firstChild.textContent = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
-  if (G.mode === 'survivor') updateSurvHud(); else if (G.mode === 'hill') updateHillHud(); else if (G.mode === 'cart') updateCartHud(); else if (G.mode === 'potato') updatePotatoHud(); else if (G.mode === 'raid') updateRaidHud(); else if (G.mode === 'duel') updateDuelHud(dt); else {
+  if (G.mode === 'survivor') updateSurvHud(); else if (G.mode === 'hill') updateHillHud(); else if (G.mode === 'cart') updateCartHud(); else if (G.mode === 'potato') updatePotatoHud(); else if (G.mode === 'paint') updatePaintHud(); else if (G.mode === 'raid') updateRaidHud(); else if (G.story) updateStoryHud(); else if (G.mode === 'duel') updateDuelHud(dt); else {
     $('kB').textContent = G.score.blue; $('kR').textContent = G.score.red;
     const core = t => G.structures.find(s => s.kind === 'core' && s.team === t);
     $('coreB').style.width = (100 * core('blue').hp / core('blue').maxHp) + '%';
@@ -1430,7 +1544,7 @@ function countdown(dt) {
 }
 function loop() {
   requestAnimationFrame(loop);
-  const dt = Math.min(0.05, clock.getDelta());
+  const raw = Math.min(0.05, clock.getDelta()), dt = raw * (G && running && !paused ? timeScale(raw) : 1);
   perfFrame(renderer, G?.net ? `online · ${G.heroes.length} players` : G ? `${G.heroes.length} heroes · ${G.minions.length} minions` : "menu");
   if (!G) { if (!menuFrame(renderer, dt)) renderer.clear(); return; }
   // online matches can't pause: the sim keeps running behind the pause sheet
@@ -1459,12 +1573,14 @@ function loop() {
     updateStructures(G, dt);
     updateGuardians(G, dt);
     updateMapFx(G, dt);
+    if (G.story) updateStory(G, dt, P);
     updateProjectiles(G, dt);
     recFrame(G, dt);
     if (G.mode === 'survivor') updateSurvivor(G, dt);
     if (G.mode === 'hill') { if (G.net && !G.net.host) hillVisuals(G, dt); else updateHill(G, dt); }
     if (G.mode === 'cart') updateCart(G, dt);
     if (G.mode === 'potato') updatePotato(G, dt);
+    if (G.mode === 'paint') updatePaint(G, dt);
     if (G.mode === 'raid') updateRaid(G, dt);
     // stats for the MVP cards: time on the objective and the longest life
     if (!G.over) for (const h of G.heroes) {
@@ -1475,6 +1591,8 @@ function loop() {
     G.net?.tick(dt);
     tickFlash(dt);
     updateHud(dt);
+    juiceFrame(G, P, camera, dt, { sprintA, mouseDown, raw });
+    updateOutlines(G, P);
   }
   if (live) G.worldTick(dt, G.time);
   const replaying = !!G.replay;
@@ -1498,6 +1616,21 @@ function updateRaidHud() {
   const al = raidAlert(G, P, keyOf('jump'));
   tag.className = al.hot ? 'contest' : 'on'; tag.textContent = al.text;
 }
+// ---------- Story HUD ----------
+function updateStoryHud() {
+  const S = storyInfo(G); if (!S || !S.K) return;
+  const K = S.K, t = K.time ? S.timeLeft : S.st, m = Math.floor(t / 60), s = String(Math.floor(t % 60)).padStart(2, '0');
+  const timed = K.type === 'defend' || K.type === 'survive';
+  $('lR').textContent = K.time ? 'Time left' : 'Time';
+  $('kB').textContent = timed ? `${Math.floor(S.have)}s` : K.type === 'heal' ? `${S.have.toLocaleString()}` : `${S.have} / ${S.need}`;
+  $('coreB').style.width = (100 * Math.min(1, S.have / Math.max(1, S.need))) + '%';
+  $('kR').textContent = `${m}:${s}`;
+  $('coreR').style.width = K.time ? (100 * S.timeLeft / K.time) + '%' : '100%';
+  $('wave').textContent = `${S.M.title} · part ${S.stage + 1} of ${S.M.stages.length}`;
+  const tag = $('hillTag'), hot = K.time && S.timeLeft < 15 && !timed && !S.rest;
+  tag.className = hot || /about to fall/.test(S.hint) ? 'contest' : 'on';
+  tag.textContent = `${S.goal}${S.hint ? ' · ' + S.hint : ''}`;
+}
 // ---------- Payload HUD ----------
 function updateCartHud() {
   const C = G.cart, L = cartLead(C);
@@ -1511,6 +1644,18 @@ function updateCartHud() {
     : C.dir ? 'Enemy pushing the cart' : `Cart · ${Math.round(Math.hypot(P.pos.x - C.pos.x, P.pos.z - C.pos.z))}m`;
 }
 
+// ---------- Paint Party HUD ----------
+function updatePaintHud() {
+  const T = G.paint, s = paintShare(G), pc = v => Math.round(v * 100) + '%';
+  $('kB').textContent = pc(s.blue); $('kR').textContent = pc(s.red);
+  $('coreB').style.width = (100 * s.blue) + '%';
+  $('coreR').style.width = (100 * s.red) + '%';
+  const t = Math.max(0, T.time);
+  $('wave').textContent = G.over ? 'game over' : `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}${T.frenzy ? ' · frenzy!' : ''}`;
+  const tag = $('hillTag'), under = P.alive ? P.onPaint : '';
+  tag.className = under === 'own' ? 'on' : under === 'enemy' ? 'lost' : '';
+  tag.textContent = under === 'own' ? '🎨 On your paint · faster, and healing' : under === 'enemy' ? 'On their paint · slowed. Paint over it!' : 'Shoot the floor to paint it';
+}
 // ---------- Hill Rush HUD ----------
 function updatePotatoHud() {
   const T = G.potato, p = T.pts, h = T.holder;

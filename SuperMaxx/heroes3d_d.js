@@ -1,7 +1,8 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { kit, body, face, finish, gunAt, part, joint, chain, ball, pill, tube, cone, ring, slab, dome, live } from './rig.js?v=20261127l';
+import { kit, body, face, finish, gunAt, part, joint, chain, ball, pill, tube, cone, ring, slab, dome, live } from './rig.js?v=20261128e';
 
-// Season 2 "Insert Coin" heroes on the stylised rig: Tilt, Grabbit and Sir Pixel, plus the contract hero Hoot.
+// Season 2 "Insert Coin" heroes on the stylised rig: Tilt, Grabbit and Sir Pixel, plus the contract hero Hoot
+// and the slot machine hero Prism.
 
 // ---------------- Tilt: a pinball wizard in an arcade jacket ----------------
 function pinball(p, team) {
@@ -216,4 +217,61 @@ function owl(p, team) {
   }, { legs, stride: 1.6 });
   return o;
 }
-export const ROSTER_D = { pinball, clawbot, pixel, owl };
+// ---------------- Prism: a unicorn girl with a rainbow mane (and a nightmare one underneath) ----------------
+function unicorn(p, team) {
+  const K = kit(p);
+  const coat = K.c(p.main, { rough: 0.5 }), pink = K.c(p.trim, { rough: 0.45 }), lilac = K.c(p.dark, { rough: 0.5 });
+  const hoof = K.c(0xd8c8f0, { rough: 0.3, metal: 0.35 });
+  const P = body(K, { w: 0.9, shoes: 'boot', boots: hoof, top: coat, sleeves: coat, forearms: K.skin, pants: lilac, gloves: K.white, torso: [0.2, 0.19, 0.26, 0.25, 0.56] });
+  face(P, K, { mouth: 'smile', lashes: true, cheeks: true, eyeColor: 0x8a4ad8, brow: 0.05 });
+  // a frilly tutu and a star on the chest
+  part(P.hips, tube(0.22, 0.42, 0.2, 18), pink, 0, -0.04, 0);
+  part(P.hips, tube(0.25, 0.46, 0.05, 18), K.c(0xffffff, { rough: 0.6 }), 0, -0.13, 0);
+  const star = joint(P.spine, 0, 0.36, -0.22);
+  for (let i = 0; i < 5; i++) { const s = part(star, cone(0.03, 0.09, 3), K.c(0xffe14a, { glow: 0.5 }), Math.sin(i / 5 * Math.PI * 2) * 0.04, Math.cos(i / 5 * Math.PI * 2) * 0.04, 0, 1, 1, 0.3); s.rotation.z = -i / 5 * Math.PI * 2; }
+  // the horn: a gold spiral on the forehead
+  const horn = joint(P.head, 0, 0.22, -0.17); horn.rotation.x = -0.45;
+  const hornM = K.c(0xffe14a, { rough: 0.25, metal: 0.4, glow: 0.25 });
+  part(horn, cone(0.055, 0.34, 12), hornM, 0, 0.17, 0);
+  for (let i = 0; i < 4; i++) part(horn, ring(0.048 - i * 0.01, 0.009), K.c(0xffffff, { glow: 0.4 }), 0, 0.05 + i * 0.07, 0).rotation.x = Math.PI / 2 + 0.25;
+  // pony ears
+  for (const s of [-1, 1]) {
+    const e = joint(P.head, s * 0.17, 0.22, 0.04); e.rotation.z = -s * 0.35;
+    part(e, cone(0.06, 0.16, 6), coat, 0, 0.07, 0, 1, 1, 0.6); part(e, cone(0.035, 0.1, 6), pink, 0, 0.06, -0.015, 1, 1, 0.4);
+  }
+  // the mane: a pink fringe and six rainbow locks... and a black nightmare mane waiting underneath
+  const RB = [0xff4d4d, 0xff9a3c, 0xffe14a, 0x5fe07a, 0x4d9aff, 0xb06aff];
+  const mane = joint(P.head, 0, 0, 0), dark = joint(P.head, 0, 0, 0);
+  part(mane, dome(0.31, Math.PI * 0.55), K.c(0xff8fd0, { rough: 0.6 }), 0, 0.03, 0.03, 1, 1, 1.04);
+  part(dark, dome(0.31, Math.PI * 0.55), K.c(0x1a1024, { rough: 0.4 }), 0, 0.03, 0.03, 1, 1, 1.04);
+  const locks = RB.map((c, i) => chain(mane, 5, 0.09, K.c(c, { rough: 0.5, glow: 0.12 }), (i - 2.5) * 0.065, 0.1, 0.22, 0.065, 0.03, [0, -0.6, 0.8]));
+  const shade = [0x2a1040, 0x5a2a8a, 0x1a1024, 0x5a2a8a, 0x2a1040, 0xff2a4a];
+  const dLocks = shade.map((c, i) => chain(dark, 6, 0.1, K.c(c, { rough: 0.35, glow: c === 0xff2a4a ? 0.6 : 0.15 }), (i - 2.5) * 0.07, 0.1, 0.22, 0.07, 0.025, [0, -0.5, 0.86]));
+  // red eyes for the nightmare, sitting just in front of her own
+  const red = joint(P.head, 0, 0, 0);
+  for (const s of [-1, 1]) part(red, ball(0.05), K.c(0xff2a4a, { glow: 1.6, rim: 0 }), s * 0.105, 0.035, -0.29, 1, 0.8, 0.4);
+  // a long rainbow tail (and its nightmare twin)
+  const tails = [0xff8fd0, 0xffe14a, 0x4d9aff].map((c, i) => chain(P.hips, 6, 0.1, K.c(c, { rough: 0.5 }), (i - 1) * 0.05, 0.02, 0.2, 0.06, 0.025, [0, -0.45, 0.89]));
+  const dTails = [0x2a1040, 0xff2a4a, 0x5a2a8a].map((c, i) => chain(P.hips, 6, 0.11, K.c(c, { rough: 0.35, glow: c === 0xff2a4a ? 0.5 : 0 }), (i - 1) * 0.05, 0.02, 0.2, 0.065, 0.025, [0, -0.4, 0.92]));
+  // Prism Horn: a pearly blaster with a spinning crystal prism on the end
+  const gun = gunAt(P, 0.26, 1.24, -0.44);
+  part(gun, tube(0.05, 0.07, 0.36, 12), K.c(0xffffff, { rough: 0.3 }), 0, 0, 0).rotation.x = Math.PI / 2;
+  part(gun, ring(0.07, 0.015), K.c(0xffe14a, { metal: 0.4 }), 0, 0, -0.17);
+  part(gun, slab(0.06, 0.12, 0.08), pink, 0, -0.1, 0.06);
+  const prism = live(part(gun, cone(0.09, 0.16, 3), K.c(0xbfe6ff, { glow: 0.6, rough: 0.1 }), 0, 0, -0.27)); prism.rotation.x = -Math.PI / 2;
+  let night = false;
+  const o = finish(P, team, gun, -0.36, (dt, s, t, k) => {
+    for (const c of night ? dLocks : locks) c.wave(t, k, night ? 0.22 : 0.12, night ? 9 : 5);
+    for (const c of night ? dTails : tails) c.wave(t, k, night ? 0.3 : 0.2, night ? 8 : 4);
+    prism.rotation.z += dt * (night ? 9 : 2);
+  });
+  o.nightmare = on => {
+    night = on;
+    mane.visible = !on; dark.visible = on; red.visible = on;
+    for (const c of tails) c[0].visible = !on; for (const c of dTails) c[0].visible = on;
+  };
+  o.nightmare(false);
+  return o;
+}
+
+export const ROSTER_D = { pinball, clawbot, pixel, owl, unicorn };

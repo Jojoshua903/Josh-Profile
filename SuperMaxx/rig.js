@@ -133,6 +133,10 @@ export function face(P, K, o = {}) {
 export function gunAt(P, x = 0.26, y = 1.28, z = -0.46) { const g = joint(P.root, x, y, z); return g; }
 export function tip(gun, z) { const t = new THREE.Object3D(); t.position.z = z; gun.add(t); return t; }
 
+// the skin look for the hero being built right now (set by models.js around each build)
+let LOOK = null;
+export const setLook = l => { LOOK = l; };
+
 export function finish(P, team, gun, muzzleZ, extra, opt = {}) {
   const { root } = P;
   const tr = new THREE.Mesh(new THREE.RingGeometry(0.62, 0.8, 48), new THREE.MeshBasicMaterial({ color: team, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false }));
@@ -167,6 +171,10 @@ export function finish(P, team, gun, muzzleZ, extra, opt = {}) {
     if (P.eyes) { const bl = ((t + blinkAt) % 3.6) < 0.11 ? 0.1 : 1; for (const e of P.eyes) e.scale.y = bl; }
     extra?.(dt, speed, t, k, w);
   };
+  // a skin look (looks.js) adds its pieces now, so they bake with the rest and animate with the hero
+  const lk = LOOK; LOOK = null;
+  const up = lk?.dress(P, lk.look, lk.palette);
+  if (up) { const base = o.anim; o.anim = (dt, speed, t) => { base(dt, speed, t); up(dt, speed, t); }; }
   bake(root);                                                            // merge static pieces: far fewer draw calls
   root.traverse(m => { if (m.isMesh && m !== tr && m !== shield) m.castShadow = true; });
   return o;

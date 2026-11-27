@@ -1,14 +1,16 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { TUNING } from './data.js?v=20261127l';
-import { hasLOS } from './world.js?v=20261127l';
-import { fire, releaseFire, chargeLevel, startReload, eyeOf, chestOf, dirFrom, coreVulnerable } from './units.js?v=20261127l';
-import { ABIL, castSlot, canAct, canMove, moveMult, isHidden, flap } from './abilities.js?v=20261127l';
-import { survivorGoal, inStorm } from './survivor.js?v=20261127l';
-import { hillGoal } from './hill.js?v=20261127l';
-import { cartGoal } from './payload.js?v=20261127l';
-import { potatoGoal } from './potato.js?v=20261127l';
-import { avoidGuardians } from './guardian.js?v=20261127l';
-import { raidGoal } from './raid.js?v=20261127l';
+import { TUNING } from './data.js?v=20261128e';
+import { hasLOS } from './world.js?v=20261128e';
+import { fire, releaseFire, chargeLevel, startReload, eyeOf, chestOf, dirFrom, coreVulnerable } from './units.js?v=20261128e';
+import { ABIL, castSlot, canAct, canMove, moveMult, isHidden, flap } from './abilities.js?v=20261128e';
+import { survivorGoal, inStorm } from './survivor.js?v=20261128e';
+import { hillGoal } from './hill.js?v=20261128e';
+import { cartGoal } from './payload.js?v=20261128e';
+import { potatoGoal } from './potato.js?v=20261128e';
+import { paintGoal } from './paint.js?v=20261128e';
+import { avoidGuardians } from './guardian.js?v=20261128e';
+import { raidGoal } from './raid.js?v=20261128e';
+import { storyGoal } from './story.js?v=20261128e';
 
 const v1 = new THREE.Vector3(), v2 = new THREE.Vector3();
 
@@ -135,6 +137,14 @@ export function updateBot(G, b, dt, D) {
       sprint = !tgt;
     }
   }
+  else if (G.mode === 'paint') {
+    // the floor decides: go paint what isn't ours yet, and fight whoever gets in the way
+    if (tgt && tgt.kind === 'hero' && tgt.pos.distanceTo(b.pos) < def.prefRange * 1.7) {
+      const dx = b.pos.x - tgt.pos.x, dz = b.pos.z - tgt.pos.z, d = Math.hypot(dx, dz) || 1;
+      goal.set(tgt.pos.x + (dx / d) * def.prefRange, 0, tgt.pos.z + (dz / d) * def.prefRange);
+    } else paintGoal(G, b, goal);
+    sprint = !tgt;
+  }
   else if (G.mode === 'raid') {
     // the boss is the only enemy: keep at range, circle it, shoot its pods, dodge what it throws
     const r = raidGoal(G, b, goal);
@@ -168,6 +178,10 @@ export function updateBot(G, b, dt, D) {
       goal.set(goal.x + (fx - goal.x) * k, 0, goal.z + (fz - goal.z) * k);
     }
     sprint = !tgt && fromHill > G.hill.r + 4;
+  }
+  else if (G.story && G.mode === "story") {
+    // Story: enemies push the objective or hunt you down; allies stay at your side
+    const s = storyGoal(G, b, goal, tgt, G.heroes.find(h => h.isPlayer) || b); sprint = !!s?.sprint;
   }
   else if (tgt) {
     const pref = tgt.kind === 'hero' ? def.prefRange : Math.max(6, def.prefRange * 0.8) + (tgt.rad || 0);
@@ -252,6 +266,7 @@ export function updateBot(G, b, dt, D) {
   } else if (wish.lengthSq() > 0.1) {
     wantYaw = Math.atan2(-wish.x, -wish.z);
   }
+  if (G.mode === 'paint' && !aimAt) wantPitch = -0.4;                  // nobody to shoot: aim at the floor and paint it
   let dy = wantYaw - b.yaw;
   dy = Math.atan2(Math.sin(dy), Math.cos(dy));
   const turn = D.turn * dt;
@@ -268,6 +283,8 @@ export function updateBot(G, b, dt, D) {
       if (def.weapon.mode === 'charge' && chargeLevel(G, b) >= (ai.chargeGoal ??= 0.6 + Math.random() * 0.4)) { releaseFire(G, b, dirFrom(b.yaw, b.pitch), muzzle); ai.chargeGoal = null; }
     }
   }
+  else if (G.mode === 'paint' && !aimAt && b.pitch < -0.25 && b.ammo > def.weapon.mag * 0.25 && def.weapon.mode !== 'charge' && def.weapon.mode !== 'mend')
+    fire(G, b, dirFrom(b.yaw, b.pitch), b.gun.getWorldPosition(new THREE.Vector3()));
   if (!tgt && b.chargeStart != null) b.chargeStart = null;
   if (!tgt && b.ammo < def.weapon.mag * 0.4) startReload(b);
 

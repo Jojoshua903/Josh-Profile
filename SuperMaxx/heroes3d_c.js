@@ -1,5 +1,5 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { kit, body, face, finish, gunAt, part, joint, chain, ball, pill, tube, cone, ring, slab, dome, live } from './rig.js?v=20261127l';
+import { kit, body, face, finish, gunAt, part, joint, chain, ball, pill, tube, cone, ring, slab, dome, live } from './rig.js?v=20261128e';
 
 // Slot machine heroes on the stylised rig: Gloop, Torque, Nutcracker, Larkspur, Pirouette, Burrow, Stitch, Dynamo and Mortar, plus the contract heroes Beef Wellington, Crook and The Microwave.
 

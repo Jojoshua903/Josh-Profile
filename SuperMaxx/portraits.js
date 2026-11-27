@@ -1,8 +1,8 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { buildHeroModel } from './models.js?v=20261127l';
-import { buildWorld } from './world.js?v=20261127l';
-import { createStructure } from './units.js?v=20261127l';
-import { HEROES } from './heroes.js?v=20261127l';
+import { buildHeroModel } from './models.js?v=20261128e';
+import { buildWorld } from './world.js?v=20261128e';
+import { createStructure } from './units.js?v=20261128e';
+import { HEROES } from './heroes.js?v=20261128e';
 
 // Menu artwork, generated once and cached as data URLs: hero splash art (themed
 // painted backdrop + a posed render of the model), headshot tiles, and map previews.
@@ -52,6 +52,7 @@ const POSE = {
   clawbot: { turn: -0.4, arm: -1.0, lean: 0, cam: [-1.6, 0.6, -4.0] },
   pixel: { turn: 0.45, arm: -1.4, lean: 0.04, cam: [-1.3, 0.7, -3.7] },
   owl: { turn: -0.45, arm: -1.2, lean: 0.05, cam: [-1.4, 0.75, -3.8], hop: 0.06 },
+  unicorn: { turn: 0.45, arm: -1.5, lean: 0.06, cam: [-1.3, 0.8, -3.6], hop: 0.1 },
 };
 
 function heroScene(def, t = 0.6) {
@@ -318,6 +319,18 @@ const MOTIF = {
     for (let y = h * 0.7; y < h; y += 40) for (let x = (Math.round(y / 40) % 2) * 40; x < w; x += 80) { g.fillStyle = rgba(0x2a2a34, 0.4); g.fillRect(x, y, 40, 40); }
     for (let i = 0; i < 5; i++) { const x = w * (0.12 + i * 0.19), y = h * 0.16; g.strokeStyle = rgba(0x8a4a2a, 0.8); g.lineWidth = 4; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, y - 34); g.stroke(); g.fillStyle = rgba(0xc87a4a, 0.85); g.beginPath(); g.arc(x, y, 34 - (i % 2) * 8, 0, 7); g.fill(); g.fillStyle = rgba(0xffd27a, 0.35); g.beginPath(); g.arc(x - 8, y - 8, 10, 0, 7); g.fill(); }
     for (let i = 0; i < 9; i++) { const x = w * (0.05 + i * 0.115), fh = 90 + (i % 3) * 50; const gr = g.createLinearGradient(0, h * 0.72, 0, h * 0.72 - fh); gr.addColorStop(0, rgba(0xe8423a, 0.7)); gr.addColorStop(1, rgba(0xffd23c, 0)); g.fillStyle = gr; g.beginPath(); g.moveTo(x - 26, h * 0.72); g.quadraticCurveTo(x - 20, h * 0.72 - fh * 0.6, x, h * 0.72 - fh); g.quadraticCurveTo(x + 20, h * 0.72 - fh * 0.6, x + 26, h * 0.72); g.fill(); }
+  },
+  unicorn(g, w, h, p) {                        // sunshine and rainbows on the left... a storm and red eyes on the right
+    const sky = g.createLinearGradient(0, 0, w, 0); sky.addColorStop(0, rgba(0xffd6ec, 0.75)); sky.addColorStop(0.55, rgba(0xd8c8ff, 0.6)); sky.addColorStop(1, rgba(0x1a1024, 0.85));
+    g.fillStyle = sky; g.fillRect(0, 0, w, h);
+    const RB = [0xff4d4d, 0xff9a3c, 0xffe14a, 0x5fe07a, 0x4d9aff, 0xb06aff];
+    RB.forEach((c, i) => { g.strokeStyle = rgba(c, 0.7); g.lineWidth = 22; g.beginPath(); g.arc(w * 0.32, h * 0.95, h * 0.78 - i * 22, Math.PI * 1.02, Math.PI * 1.75); g.stroke(); });
+    for (const [x, y, r] of [[0.1, 0.25, 50], [0.2, 0.22, 40], [0.36, 0.7, 60], [0.46, 0.68, 44]]) { g.fillStyle = rgba(0xffffff, 0.85); g.beginPath(); g.arc(w * x, h * y, r, 0, 7); g.arc(w * x + r * 0.9, h * y + 8, r * 0.75, 0, 7); g.arc(w * x - r * 0.8, h * y + 10, r * 0.6, 0, 7); g.fill(); }
+    g.fillStyle = rgba(0xffffff, 0.9); for (let i = 0; i < 40; i++) { const x = Math.random() * w * 0.55, y = Math.random() * h; g.save(); g.translate(x, y); g.rotate(Math.random() * 3); g.fillRect(-6, -1.5, 12, 3); g.restore(); }
+    // the storm side
+    for (const [x, y, r] of [[0.78, 0.18, 70], [0.92, 0.26, 60], [0.68, 0.3, 46]]) { g.fillStyle = rgba(0x0e0818, 0.75); g.beginPath(); g.arc(w * x, h * y, r, 0, 7); g.arc(w * x + r * 0.8, h * y + 10, r * 0.7, 0, 7); g.fill(); }
+    g.strokeStyle = rgba(0xb06aff, 0.85); g.lineWidth = 5; g.beginPath(); g.moveTo(w * 0.84, h * 0.32); g.lineTo(w * 0.8, h * 0.48); g.lineTo(w * 0.86, h * 0.5); g.lineTo(w * 0.79, h * 0.7); g.stroke();
+    for (const x of [0.88, 0.94]) { g.fillStyle = rgba(0xff2a4a, 0.9); g.beginPath(); g.ellipse(w * x, h * 0.62, 12, 6, 0, 0, 7); g.fill(); }
   },
   owl(g, w, h, p) {                            // a moonlit night over the rooftops: a big full moon, stars and flying letters
     const sky = g.createLinearGradient(0, 0, 0, h); sky.addColorStop(0, rgba(0x141a3a, 0.85)); sky.addColorStop(1, rgba(0x2a2a5a, 0.4));

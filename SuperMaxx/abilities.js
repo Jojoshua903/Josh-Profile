@@ -1,7 +1,7 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { makeBox, resolveXZ, hasLOS, groundAt, rayWorld } from './world.js?v=20261127l';
-import { buildHeroModel } from './models.js?v=20261127l';
-import { damage, tally, trace, tracer, burst, ring, setBar, makeBar, eyeOf, dirFrom, chestOf, spawnProjectile, TEAM_COLOR } from './units.js?v=20261127l';
+import { makeBox, resolveXZ, hasLOS, groundAt, rayWorld } from './world.js?v=20261128e';
+import { buildHeroModel } from './models.js?v=20261128e';
+import { damage, tally, trace, tracer, burst, ring, setBar, makeBar, eyeOf, dirFrom, chestOf, spawnProjectile, TEAM_COLOR } from './units.js?v=20261128e';
 
 // Abilities, status effects, zones, traps, walls and deployables.
 // Each ability: cast(G, h, a, ctx) -> bool, ai(G, bot, a, ctx) -> bool (should the bot cast now?).
@@ -10,6 +10,7 @@ const v = new THREE.Vector3();
 const enemiesOf = (G, h) => G.heroes.filter(e => e.alive && e.team !== h.team);
 const alliesOf = (G, h) => G.heroes.filter(e => e.alive && e.team === h.team);
 const flat = d => new THREE.Vector3(d.x, 0, d.z).normalize();
+const RAINBOW = [0xff4d4d, 0xff9a3c, 0xffe14a, 0x5fe07a, 0x4d9aff, 0xb06aff];
 
 // ---------- status ----------
 export function resetStatus(h) {
@@ -17,12 +18,13 @@ export function resetStatus(h) {
     invisT: 0, ambush: 1, barrierT: 0, barrierM: 1, noReloadT: 0, knockT: 0, dashT: 0, slamPending: false, airT: 0,
     zoneSlow: 1, zoneMult: 1, glideT: 0, momentum: 0, overdriveT: 0, megaT: 0, burnT: 0, ejected: false, photoOn: false, tunnelCd: 0, twirlT: 0, vigilT: 0, dashSteer: false, blindT: 0, frozenT: 0, oneUpT: 0, scoreStacks: 0, wing: 100, flapT: 0, diving: false, diveT: 0 });
   if (h.iceMesh) { h.iceMesh.parent?.remove(h.iceMesh); h.iceMesh = null; }
+  if (h.nightOn) { h.nightOn = false; h.model?.nightmare?.(false); } h.nightT = 0;
   h.cd = { q: 0, ability: 0 };
   h.hist = []; h.histT = 0;
 }
 export const canAct = h => h.stunT <= 0 && !(h.lurkT > 0);   // no shooting or casting while lurking in the mud
 export const canMove = h => h.stunT <= 0 && h.rootT <= 0;
-export const moveMult = h => (pasId(h) === "snowboots" ? 1 : (h.slowT > 0 ? h.slowM : 1) * h.zoneSlow * (h.wet || 1) * (h.zoomA > 0.5 ? 0.8 : 1)) * (h.hasteT > 0 ? h.hasteSpeed : 1);   // wet: wading at high tide; zoomed: walk slower
+export const moveMult = h => (pasId(h) === "snowboots" ? 1 : (h.slowT > 0 ? h.slowM : 1) * h.zoneSlow * (h.wet || 1) * (h.zoomA > 0.5 ? 0.8 : 1)) * (h.hasteT > 0 ? h.hasteSpeed : 1) * (h.paintM || 1);   // wet: wading at high tide; zoomed: walk slower; paintM: Paint Party floor
 export const fireMult = h => (h.hasteT > 0 ? h.hasteFire : 1);
 export function takenMult(h) {
   return (h.barrierT > 0 ? h.barrierM : 1) * h.zoneMult * (h.markT > 0 ? h.markAmp : 1) * (h.lurkT > 0 ? 0.15 : 1) * passiveTaken(h);
@@ -43,7 +45,11 @@ export function breakInvis(h) { if (h.invisT > 0) { h.invisT = 0; } }
 
 export function tickStatus(G, h, dt) {
   tickPassive(G, h, dt);
-  for (const k of ['slowT', 'stunT', 'rootT', 'hasteT', 'markT', 'invisT', 'barrierT', 'noReloadT', 'knockT', 'rushT', 'rallyT', 'jamT', 'overdriveT', 'megaT', 'tunnelCd', 'vigilT', 'blindT', 'frozenT', 'oneUpT']) if (h[k] > 0) h[k] -= dt;
+  for (const k of ['slowT', 'stunT', 'rootT', 'hasteT', 'markT', 'invisT', 'barrierT', 'noReloadT', 'knockT', 'rushT', 'rallyT', 'jamT', 'overdriveT', 'megaT', 'tunnelCd', 'vigilT', 'blindT', 'frozenT', 'oneUpT', 'nightT']) if (h[k] > 0) h[k] -= dt;
+  if (h.nightOn) {                                                       // Prism's Nightmare: dark sparks while it lasts, back to sunshine after
+    if (!(h.nightT > 0)) { h.nightOn = false; h.model?.nightmare?.(false); }
+    else if (Math.random() < dt * 14) burst(G, chestOf(h).add(new THREE.Vector3((Math.random() - 0.5) * 0.8, Math.random() * 0.8, (Math.random() - 0.5) * 0.8)), Math.random() < 0.3 ? 0xff2a4a : 0x2a1040, 0.35);
+  }
   // Torque: moving fills momentum, standing around drains it; Overdrive keeps it full
   const mw = h.def.weapon;
   if (mw.mode === 'melee') {
@@ -1775,6 +1781,72 @@ export const ABIL = {
   },
 
   // ---- Sir Pixel (Season 2) ----
+
+  // ---- Prism ----
+  rainbowdash: {
+    cast(G, h, a, ctx) {
+      const d = ctx.wish && ctx.wish.lengthSq() > 0.01 ? ctx.wish.clone() : dirFrom(h.yaw, 0);
+      d.y = 0; d.normalize();
+      const from = h.pos.clone(), pts = [], hit = new Set();
+      for (let s = 0; s < 30; s++) {
+        h.pos.addScaledVector(d, a.dist / 30); resolveXZ(h.pos, h.radius, G.colliders);
+        if (s % 3 === 0) pts.push(h.pos.clone());
+        for (const u of [...enemiesOf(G, h), ...G.minions.filter(m => m.alive && m.team !== h.team)]) {
+          if (hit.has(u) || u.pos.distanceTo(h.pos) > 1.7) continue;
+          hit.add(u); damage(G, u, a.dmg, h); knock(u, d.clone(), 5, 3); burst(G, chestOf(u), 0xffe14a, 0.8);
+        }
+      }
+      pts.push(h.pos.clone());
+      h.vel.x = d.x * 8; h.vel.z = d.z * 8;
+      // the rainbow: six coloured stripes along the path, fading out
+      const len = Math.max(0.5, from.distanceTo(h.pos)), mid = from.clone().lerp(h.pos, 0.5);
+      const g = new THREE.Group(); g.position.set(mid.x, Math.min(from.y, h.pos.y) + 0.07, mid.z); g.rotation.y = Math.atan2(d.x, d.z); G.scene.add(g);
+      const mats = RAINBOW.map((c, i) => {
+        const m = new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.8, depthWrite: false, side: THREE.DoubleSide });
+        const s = new THREE.Mesh(new THREE.PlaneGeometry(0.26, len), m); s.rotation.x = -Math.PI / 2; s.position.x = (i - 2.5) * 0.26; g.add(s);
+        return m;
+      });
+      const n = Math.round(a.life / 0.25);
+      for (let k = 1; k <= n; k++) G.timers.push({ t: k * 0.25, fn: () => {
+        for (const m of mats) m.opacity = 0.8 * (1 - k / n) + 0.1;
+        for (const u of alliesOf(G, h)) if (u.onGround && pts.some(p => Math.hypot(p.x - u.pos.x, p.z - u.pos.z) < 1.4)) haste(u, 0.4, a.haste);
+        if (k === n) { G.scene.remove(g); g.traverse(o => o.geometry?.dispose()); }
+      } });
+      burst(G, chestOf(h), 0xff8fd0, 1);
+      return true;
+    },
+    ai: (G, b, a, c) => (c.heroT && c.dist < a.dist + 3 && c.dist > 3) || (b.ai.retreat && b.lastHurtT > G.time - 1),
+  },
+  wish: {
+    cast(G, h, a, ctx) {
+      const u = facedAlly(G, h, ctx, a.range) || h;
+      const WISHES = [
+        ['A big heal', () => mend(G, h, u, 90)],
+        ['Speed rush', () => haste(u, 4, 1.4, 1.15)],
+        ['Power up', () => { u.rallyAmp = u.rallyT > 0 ? Math.max(u.rallyAmp, 1.3) : 1.3; u.rallyT = Math.max(u.rallyT, 5); }],
+        ['Fresh cooldowns', () => { u.cd.q = 0; if (u !== h) u.cd.ability = 0; }],
+        ['A shield', () => { u.barrierT = Math.max(u.barrierT, 4); u.barrierM = 0.5; }],
+      ];
+      const [name, fn] = WISHES[Math.floor(Math.random() * WISHES.length)];
+      fn();
+      if (u !== h) tracer(G, chestOf(h), chestOf(u), 0xffe14a, 0.35, 2);
+      burst(G, chestOf(u).setY(u.pos.y + 2.1), 0xffe14a, 1); burst(G, chestOf(u), 0xff8fd0, 1.2); ring(G, u.pos, 0xffe14a, 1.6);
+      G.ev.flash?.(u, `Wish: ${name}!`);
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT || b.hp < b.maxHp * 0.6 || alliesOf(G, b).some(u => u !== b && u.hp < u.maxHp * 0.6 && u.pos.distanceTo(b.pos) < a.range),
+  },
+  nightmare: {
+    cast(G, h, a) {
+      h.nightT = a.dur; h.nightOn = true; h.model?.nightmare?.(true);
+      haste(h, a.dur, a.speed); mend(G, h, h, a.heal);
+      ring(G, h.pos, 0x5a2a8a, 5); ring(G, h.pos, 0xff2a4a, 3);
+      burst(G, chestOf(h), 0x2a1040, 2.4); burst(G, chestOf(h).setY(h.pos.y + 2), 0xff2a4a, 1.2);
+      G.ev.shake?.(h, 0.6); G.ev.flash?.(h, 'NIGHTMARE');
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.near(22) >= 1,
+  },
   powerup: {
     cast(G, h, a, ctx) {
       const u = facedAlly(G, h, ctx, a.range) || h;
@@ -2005,6 +2077,7 @@ export function mend(G, src, u, heal = 0, boost = 0) {
   let got = 0;
   if (heal > 0 && u.hp < u.maxHp) {
     const b = u.hp; healBy(G, u, heal, src); got = u.hp - b;
+    // (healDone is counted in the heal event, which every heal goes through)
     if (src.kind === 'hero' && src.def?.ult) src.ult = Math.min(100, src.ult + got / src.def.ult.cost * 100);
     if (pasId(src) === 'bedside' && u !== src) healBy(G, src, got * src.def.passive.frac, src);
     if (pasId(src) === 'seasoned' && u !== src && got > 0) { const p = src.def.passive; u.rallyAmp = u.rallyT > 0 ? Math.max(u.rallyAmp, p.amp) : p.amp; u.rallyT = Math.max(u.rallyT, p.dur); }

@@ -1,12 +1,12 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { TUNING, HILL, CART } from './data.js?v=20261127l';
-import { buildHeroModel } from './models.js?v=20261127l';
-import { makeBox, moveBody, resolveXZ, rayBox, raySphere, rayWorld, hasLOS } from './world.js?v=20261127l';
+import { TUNING, HILL, CART } from './data.js?v=20261128e';
+import { buildHeroModel } from './models.js?v=20261128e';
+import { makeBox, moveBody, resolveXZ, rayBox, raySphere, rayWorld, hasLOS } from './world.js?v=20261128e';
 import { resetStatus, tickStatus, afterMove, wallClimb, takenMult, fireMult, canAct, breakInvis, isHidden, slow as applySlow, stun as applyStun, knock as applyKnock, dropBlobs,
-  dealtMult, onDealt, onHurt, onKill, mend, thaw } from './abilities.js?v=20261127l';
-import { poseHero, rubble } from './anim.js?v=20261127l';
-import { onEliminated, survivorPreMove, survivorPostMove } from './survivor.js?v=20261127l';
-import { tickVfx, tickLight, blast, sparks } from './vfx.js?v=20261127l';
+  dealtMult, onDealt, onHurt, onKill, mend, thaw } from './abilities.js?v=20261128e';
+import { poseHero, rubble } from './anim.js?v=20261128e';
+import { onEliminated, survivorPreMove, survivorPostMove } from './survivor.js?v=20261128e';
+import { tickVfx, tickLight, blast, sparks } from './vfx.js?v=20261128e';
 
 // Survivor teams are per-hero ids; anything that isn't blue reads as an enemy red.
 export const TEAM_COLOR = new Proxy({ blue: 0x2f5bff, red: 0xff5a36 }, { get: (t, k) => (k in t ? t[k] : 0xff5a36) });
@@ -47,7 +47,7 @@ export function createHero(G, def, team, name, isPlayer) {
     yaw: team === 'blue' ? Math.PI : 0, pitch: 0, onGround: false,
     hp: def.hp, maxHp: def.hp, alive: true, respawnT: 0, ult: 0,
     ammo: def.weapon.mag, reloadT: 0, fireT: 0,
-    kills: 0, deaths: 0, dmgDealt: 0, lastHurtT: -99, lastHitBy: null,
+    kills: 0, deaths: 0, assists: 0, dmgDealt: 0, lastHurtT: -99, lastHitBy: null,
   };
   spawnHero(G, h);
   G.heroes.push(h);
@@ -66,6 +66,7 @@ export function spawnHero(G, h) {
   h.mesh.rotation.set(0, 0, 0); h.mesh.scale.setScalar(1);
   h.yaw = h.team === 'blue' ? Math.PI : 0; h.pitch = 0;
   if (h.dummyAt) h.pos.set(h.dummyAt.x, 0, h.dummyAt.z);               // tutorial training dummies
+  if (h.spawnAt) { const p = h.spawnAt(); h.pos.set(p.x, 0, p.z); }   // Story missions pick their own spots
   h.mesh.visible = !h.isPlayer;
   setBar(h, h.team === G.playerTeam ? 0x3ccf9a : TEAM_COLOR[h.team]);
   if (G.mode === 'hill' || G.mode === 'cart') { const s = HILL.spawnHaste; h.hasteT = s.dur; h.hasteSpeed = s.speed; h.hasteFire = 1; }  // sprint back to the ring
@@ -236,6 +237,7 @@ export function damage(G, target, amt, src, head = false, force = false, dot = f
   target.hp -= amt;
   if (src && src.kind === 'hero' && src.team !== target.team) {
     src.dmgDealt += amt;
+    if (target.kind === "hero") (target.hitLog ||= new Map()).set(src, G.time);     // for assists and enemy outlines
     src.ult = Math.min(100, src.ult + amt / src.def.ult.cost * 100 * (target.kind === 'hero' ? 1 : 0.45));
     if (head && target.kind === "hero") tally(src, "heads");
   }
@@ -247,11 +249,25 @@ export function damage(G, target, amt, src, head = false, force = false, dot = f
   else setBar(target);
 }
 
+// Assists: everyone else who hurt the victim in the last 8s, and anyone who healed the killer in
+// the last 6s (so supports get credit too). Each machine works these out for itself online.
+const ASSIST = { dmg: 8, heal: 6 };
+function assistsOn(G, t, src) {
+  const out = new Set();
+  for (const [h, at] of t.hitLog || []) if (h !== src && h.team !== t.team && G.time - at <= ASSIST.dmg) out.add(h);
+  if (src?.kind === 'hero') for (const [h, at] of src.healLog || []) if (h !== src && h.team === src.team && G.time - at <= ASSIST.heal) out.add(h);
+  out.delete(t);
+  t.hitLog?.clear();
+  const list = [...out];
+  for (const h of list) h.assists = (h.assists || 0) + 1;
+  return list;
+}
+
 function kill(G, t, src) {
   t.alive = false; t.hp = 0;
   burst(G, chestOf(t), TEAM_COLOR[t.team], t.kind === 'minion' ? 1 : 2.2);
   if (t.kind === 'hero') {
-    t.deaths++; t.respawnT = G.mode === 'hill' ? HILL.respawn : G.mode === 'cart' || G.mode === 'potato' ? CART.respawn : G.mode === 'duel' ? Infinity : TUNING.respawn; t.deathT = 0;      // the model plays its fall, then hides
+    t.deaths++; t.respawnT = G.mode === 'hill' ? HILL.respawn : G.mode === 'cart' || G.mode === 'potato' || G.mode === 'paint' ? CART.respawn : G.mode === 'duel' ? Infinity : TUNING.respawn; t.deathT = 0;      // the model plays its fall, then hides
     if (G.mode === 'survivor') onEliminated(G, t);
     if (t.isPlayer) t.mesh.visible = false;
     if (t.shimmer) t.shimmer.visible = false;
@@ -272,6 +288,7 @@ function kill(G, t, src) {
     if (t.kind === "tower" || t.kind === "core") tally(src, "towers");
   }
   if (t.kind === 'hero' && t.def.passive?.id === 'slimedrop') dropBlobs(G, t, t.def.passive);
+  t.assisters = t.kind === "hero" ? assistsOn(G, t, src) : [];
   onKill(G, t, src);
   G.ev.kill(t, src);
   if (G.net && t.kind === 'hero' && t.local) G.net.kill(t, src);
@@ -286,6 +303,7 @@ export function remoteKill(G, t, src, head) {
   if (src && src.kind === "hero") { src.kills++; if (!src.onGround) tally(src, "air"); }
   G.score[src && src.kind === 'hero' ? src.team : t.team === 'blue' ? 'red' : 'blue']++;
   if (t.def.passive?.id === 'slimedrop') dropBlobs(G, t, t.def.passive);
+  t.assisters = assistsOn(G, t, src);
   onKill(G, t, src);
   G.ev.kill(t, src);
 }
@@ -336,6 +354,20 @@ export function releaseFire(G, h, dir, muzzle) {
 }
 
 
+// Prism's rainbow: what each colour does when it lands
+export const PRISM = [
+  { name: 'Red', color: 0xff4d4d, dmg: 1.4 }, { name: 'Orange', color: 0xff9a3c }, { name: 'Yellow', color: 0xffe14a },
+  { name: 'Green', color: 0x5fe07a }, { name: 'Blue', color: 0x4d9aff }, { name: 'Violet', color: 0xb06aff },
+];
+function prismHit(G, h, u, k, d) {
+  const hero = u.kind === 'hero' && u.alive;
+  if (k === 1 && hero) { u.burnT = 2.5; u.burnDps = 9; u.burnSrc = h; }                  // orange: burn
+  if (k === 2 && hero) applySlow(u, 0.65, 1.2);                                          // yellow: slow
+  if (k === 3 && h.alive && h.hp < h.maxHp) { const b = h.hp; h.hp = Math.min(h.maxHp, h.hp + 10); setBar(h); G.ev.heal?.(h, h.hp - b, h); }   // green: heal yourself
+  if (k === 4 && (hero || (u.kind === 'minion' && u.alive))) applyKnock(u, flat(d), 6, 2);  // blue: knock back
+  if (k === 5 && hero) { u.markT = Math.max(u.markT, 2); u.markAmp = Math.max(u.markAmp || 1, 1.15); }             // violet: mark
+}
+
 function shoot(G, h, dir, muzzle, charge, replay = false) {
   const w = h.def.weapon;
   if (G.net && h.local && !replay) G.net.fire(h, dir, charge);
@@ -345,6 +377,7 @@ function shoot(G, h, dir, muzzle, charge, replay = false) {
     rate = w.rate / (1 + h.ramp * (w.rampMax ?? 2.4));
   }
   h.fireT = rate / fireMult(h); h.lastShotT = G.time;
+  G.paintShot?.(G, h, dir, charge);                                     // Paint Party: shots splat the floor
   const bonus = h.ambush || 1; h.ambush = 1;
   breakInvis(h);
   const o = eyeOf(h);
@@ -373,6 +406,22 @@ function shoot(G, h, dir, muzzle, charge, replay = false) {
       };
       if (i === 0) round(); else G.timers.push({ t: i * w.gap, fn: round });
     }
+  } else if (w.mode === 'prism') {                  // Prism: every shot is the next colour of the rainbow
+    spend();
+    const night = h.nightT > 0, k = h.hue = ((h.hue ?? -1) + 1) % PRISM.length, C = PRISM[k];
+    const d = jitter(dir, sp), dmg = w.dmg * bonus * (night ? h.def.ult.dmg : C.dmg || 1);
+    let from = o.clone(), left = w.range, end = o.clone().addScaledVector(d, w.range);
+    const seen = new Set();
+    for (let n = 0; n < (night ? 3 : 1) && left > 0; n++) {           // Nightmare: shots pierce
+      const r = trace(G, from, d, left, h.team);
+      end = r.point;
+      if (!r.unit) { spark(G, r.point); break; }
+      if (!seen.has(r.unit)) { seen.add(r.unit); damage(G, r.unit, dmg * (r.head ? w.head : 1), h, r.head); prismHit(G, h, r.unit, night ? 5 : k, d); }
+      if (r.unit.kind !== 'hero' && r.unit.kind !== 'minion') break;
+      const step = r.t + 1.3; from = from.addScaledVector(d, step); left -= step;
+    }
+    tracer(G, mz, end, night ? 0x5a2a8a : C.color, 0.1);
+    if (night) tracer(G, mz, end, 0xff2a4a, 0.06);
   } else if (w.mode === 'charge') {
     spend();
     const d = dir.clone().normalize();
@@ -638,7 +687,7 @@ export function tickHero(G, h, dt) {
   // fountains: heal at home, burn trespassers
   const home = h.team === 'blue' ? -1 : 1;
   const zHome = home * (G.map.L - 5), zEnemy = -zHome;
-  const fountains = G.mode === 'lane' || G.mode === 'hill' || G.mode === 'cart' || G.mode === 'raid';
+  const fountains = G.mode === 'lane' || G.mode === 'hill' || G.mode === 'cart' || G.mode === 'raid' || G.mode === 'paint';
   if (fountains && Math.hypot(h.pos.x, h.pos.z - zHome) < 8 && h.hp < h.maxHp) { h.hp = Math.min(h.maxHp, h.hp + TUNING.fountainHeal * dt); setBar(h); }
   if (fountains && Math.hypot(h.pos.x, h.pos.z - zEnemy) < 8) damage(G, h, 90 * dt, null);
   if (G.mode === 'survivor') survivorPreMove(G, h);

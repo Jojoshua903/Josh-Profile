@@ -1,8 +1,8 @@
-import { addTokens } from './slots.js?v=20261127l';
-import { ARCHETYPES } from './heroes.js?v=20261127l';
+import { addTokens } from './slots.js?v=20261128e';
+import { ARCHETYPES } from './heroes.js?v=20261128e';
 
 // Daily challenges: three small goals a day, the same for everyone on a given date. Finish all
-// three and you get a mastery token for the slot machine. Progress counts across every match
+// three and you get a token for the slot machine. Progress counts across every match
 // that day (practice and training don't count). A new set arrives at local midnight.
 
 const KEY = 'supermaxx-daily';

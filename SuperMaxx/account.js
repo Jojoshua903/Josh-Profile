@@ -1,4 +1,4 @@
-import { FIREBASE_CONFIG, FIREBASE_VERSION } from './firebase-config.js?v=20261127l';
+import { FIREBASE_CONFIG, FIREBASE_VERSION } from './firebase-config.js?v=20261128e';
 
 // Accounts: sign in with an email and password and your progress (everything the game keeps
 // under the "supermaxx" keys: settings, unlocks, the pass, mastery, contracts, slots) is saved

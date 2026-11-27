@@ -1,8 +1,9 @@
-import { HEROES } from './heroes.js?v=20261127l';
-import { cfg, save } from './settings.js?v=20261127l';
-import { headshot } from './portraits.js?v=20261127l';
+import { HEROES } from './heroes.js?v=20261128e';
+import { cfg, save } from './settings.js?v=20261128e';
+import { headshot } from './portraits.js?v=20261128e';
+import { lookSummary } from './looks.js?v=20261128e';
 import { COS_TYPES, COSMETICS, cosById, cosOwned, cosTier, equippedCos, equipCos, cosArt, bannerCss,
-  heroOwned, heroTier, skinsFor, skinOwned, skinTier, equip, dressed, dressedAny, isSlotItem, cosLock, isContractHero } from './pass.js?v=20261127l';
+  heroOwned, heroTier, skinsFor, skinOwned, skinTier, equip, dressed, dressedAny, isSlotItem, cosLock, isContractHero } from './pass.js?v=20261128e';
 
 // Closet: everything you've collected in one place. The player card on the left shows what you're
 // wearing; hovering any item tries it on. Click an owned item to equip it, click again to take it off.
@@ -69,7 +70,7 @@ function grid() {
         ...skinsFor(h.id).map(s => ({ id: s.id, name: s.name, def: dressedAny(h, s), ok: own && skinOwned(s.id), tier: lockOf(h.id, s.id) }))];
       return `<div class="cl-hero"><h4 style="--hc:${hex(h.color)}">${h.callsign}${own ? '' : ` <small>🔒 ${lockOf(h.id)}</small>`}</h4><div class="cl-row">${items.map(it => {
         const on = own && (cur || '') === it.id;
-        return `<button class="cl-it sk ${it.ok ? 'own' : 'lock'} ${on ? 'eq' : ''}" data-hero="${h.id}" data-skin="${it.id}" style="--hc:${hex(it.def.color)}">
+        return `<button class="cl-it sk ${it.ok ? 'own' : 'lock'} ${on ? 'eq' : ''}" data-hero="${h.id}" data-skin="${it.id}" style="--hc:${hex(it.def.color)}"${it.id && lookSummary(it.id) ? ` title="Adds: ${lookSummary(it.id)}"` : ""}>
           <img alt="" data-src="${h.id}|${it.id}"><b>${it.name}</b><span>${on ? '★ Wearing' : it.ok ? 'Equip' : `🔒 ${it.tier}`}</span></button>`;
       }).join('')}</div></div>`;
     }).join('');
