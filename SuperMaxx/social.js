@@ -1,14 +1,14 @@
-import { HEROES } from './heroes.js?v=20261128l';
-import { MAPS, SURVIVOR_MAP } from './data.js?v=20261128l';
-import { cfg } from './settings.js?v=20261128l';
-import { headshot } from './portraits.js?v=20261128l';
-import { masteryOf } from './mastery.js?v=20261128l';
-import { statOf } from './contracts.js?v=20261128l';
-import { passXp, tierProgress, heroOwned, MAX_TIER } from './pass.js?v=20261128l';
-import { history } from './history.js?v=20261128l';
-import { loadFirebase, setUserChangeHook, setAccountRedraw, accountHTML, accountAct, accountEnter, accountBusy, accountOpened, myAccount, ago, esc } from './account.js?v=20261128l';
-import * as net from './net.js?v=20261128l';
-import { joinFriend } from './online.js?v=20261128l';
+import { HEROES } from './heroes.js?v=20261128r';
+import { MAPS, SURVIVOR_MAP } from './data.js?v=20261128r';
+import { cfg } from './settings.js?v=20261128r';
+import { headshot } from './portraits.js?v=20261128r';
+import { masteryOf } from './mastery.js?v=20261128r';
+import { statOf } from './contracts.js?v=20261128r';
+import { passXp, tierProgress, heroOwned, MAX_TIER } from './pass.js?v=20261128r';
+import { history } from './history.js?v=20261128r';
+import { loadFirebase, setUserChangeHook, setAccountRedraw, accountHTML, accountAct, accountEnter, accountBusy, accountOpened, myAccount, ago, esc } from './account.js?v=20261128r';
+import * as net from './net.js?v=20261128r';
+import { joinFriend } from './online.js?v=20261128r';
 
 // The Profile screen (👤 on the main menu): your profile card, match history, friends and account.
 //

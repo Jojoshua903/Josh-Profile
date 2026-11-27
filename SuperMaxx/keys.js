@@ -1,4 +1,4 @@
-import { cfg, save } from './settings.js?v=20261128l';
+import { cfg, save } from './settings.js?v=20261128r';
 
 // Rebindable controls. cfg.binds holds only the keys a player changed; everything else uses the
 // defaults below. Codes are KeyboardEvent.code values, so they don't change with the keyboard layout.

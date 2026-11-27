@@ -1,9 +1,9 @@
-import { HEROES, ARCHETYPES } from './heroes.js?v=20261128l';
-import { MAPS, DIFFICULTY } from './data.js?v=20261128l';
-import { cfg, save } from './settings.js?v=20261128l';
-import { headshot } from './portraits.js?v=20261128l';
-import { dressed, wear, myCosIds, heroOwned } from './pass.js?v=20261128l';
-import * as net from './net.js?v=20261128l';
+import { HEROES, ARCHETYPES } from './heroes.js?v=20261128r';
+import { MAPS, DIFFICULTY } from './data.js?v=20261128r';
+import { cfg, save } from './settings.js?v=20261128r';
+import { headshot } from './portraits.js?v=20261128r';
+import { dressed, wear, myCosIds, heroOwned } from './pass.js?v=20261128r';
+import * as net from './net.js?v=20261128r';
 
 // Online front end: set up your name and hero, host or join a room by code, then the lobby
 // (mode, teams, stage, start). The match itself starts on every machine when the host hits Start.
@@ -22,6 +22,7 @@ export function initOnline(opts) {
   api = opts;
   net.onLobby((st, extra) => { if (extra?.closed) err = extra.closed; if (api.screen() === 'online') render(); });
   net.onMatchStart(m => api.start(m));
+  net.onChat(() => { if (api.screen() === 'online') renderChat(); });
   $('onBack').onclick = async () => { if (net.lobbyState()) await net.leaveRoom(); err = ''; api.go('main'); };
   const body = $('onBody');
   body.addEventListener('click', onClick);
@@ -32,7 +33,8 @@ export function initOnline(opts) {
     }
     if (e.target.id === 'onCode') e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
   });
-  body.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter' && e.target.id === 'onCode') act('join'); });
+  body.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter' && e.target.id === 'onCode') act('join'); if (e.key === 'Enter' && e.target.id === 'onChat') { e.preventDefault(); say(); } });
+  body.addEventListener('change', e => { if (e.target.dataset.pick === 'map') act('map', e.target.value); });
 }
 
 export function enterOnline() {
@@ -50,6 +52,8 @@ async function act(what, v) {
   const st = net.lobbyState();
   api.blip?.(what === 'start' ? 880 : 620);
   if (what === 'hero') return api.pickHero();
+  if (what === 'say') return say();
+  if (what === 'quick') return say(v);
   if (what === 'card') return document.dispatchEvent(new CustomEvent('smx-card', { detail: v }));
   if (what === 'create' || what === 'join') {
     const code = $('onCode')?.value || '';
@@ -79,12 +83,14 @@ function render() {
   const st = net.lobbyState();
   $('onTitle').textContent = st ? `Room ${st.code}` : 'Play with friends';
   // lobby updates re-render the panel; keep typing in the name or code box uninterrupted
-  const focus = document.activeElement?.id, caret = document.activeElement?.selectionStart, code = $('onCode')?.value;
+  const focus = document.activeElement?.id, caret = document.activeElement?.selectionStart, code = $('onCode')?.value, chat = $('onChat')?.value;
   if (!net.netConfigured()) body.innerHTML = setupHTML();
   else if (st && st.meta?.state === 'draft' && st.draft) body.innerHTML = draftHTML(st);
   else if (st) body.innerHTML = lobbyHTML(st);
   else body.innerHTML = homeHTML();
   if (code && $('onCode')) $('onCode').value = code;
+  if (chat && $('onChat')) $('onChat').value = chat;
+  const log = $('onLog'); if (log) { log.scrollTop = log.scrollHeight; log.dataset.n = net.chatLog().length; }
   if (focus && $(focus)) { $(focus).focus(); try { $(focus).setSelectionRange(caret, caret); } catch {} }
 }
 
@@ -137,58 +143,101 @@ function lobbyHTML(st) {
   const mine = st.players?.[st.me];
   const map = MAPS.find(m => m.id === st.meta?.map) || MAPS[0];
   const mode = MODES[st.meta?.mode] ? st.meta.mode : 'hill', M = MODES[mode], duel = mode === 'duel';
+  const playing = st.meta?.state === 'playing', host = st.host, lock = playing ? 'disabled' : '';
   // in a duel the first two to join face off, whatever team they picked
   const sideOf = (uid, p) => duel ? (players.findIndex(([u]) => u === uid) === 0 ? 'blue' : 'red') : p.team;
+  const botsOn = !st.meta?.noBots, draft = !duel && !!st.meta?.draft, diff = st.meta?.botDiff || 'normal';
   const col = team => {
-    const list = players.filter(([uid, p]) => sideOf(uid, p) === team);
-    const slots = list.map(([uid, p]) => {
+    const list = players.filter(([uid, p]) => sideOf(uid, p) === team), full = list.length >= M.per;
+    const rows = list.map(([uid, p]) => {
       const base = HEROES.find(h => h.id === p.hero) || HEROES[0], d = wear(base, p.skin);
-      return `<div class="slot ${uid === st.me ? 'me' : ''}" data-act="card" data-v="${uid}" title="See their player card" style="--hc:${hex(d.color)}"><img src="${headshot(d)}" alt="">
-        <div><b>${esc(p.name)}${uid === st.meta?.host ? ' <span class="crown" title="Host">♛</span>' : ''}</b><small>${base.callsign}</small></div></div>`;
+      return `<button class="rm-p ${uid === st.me ? 'me' : ''}" data-act="card" data-v="${uid}" title="See their player card" style="--hc:${hex(d.color)}">
+        <img src="${headshot(d)}" alt=""><span><b>${esc(p.name)}</b><small>${base.callsign}</small></span>
+        ${uid === st.meta?.host ? '<i class="rm-host" title="Host">♛ Host</i>' : uid === st.me ? '<i class="rm-you">You</i>' : ''}</button>`;
     });
-    for (let i = list.length; i < M.per; i++) slots.push(st.meta?.noBots ? '<div class="slot bot off"><span>·</span><div><b>Empty</b><small>bots are off</small></div></div>'
-      : '<div class="slot bot"><span>🤖</span><div><b>Bot</b><small>fills this slot</small></div></div>');
-    const full = list.length >= M.per;
-    return `<div class="teamcol ${team}"><h4>${team === 'blue' ? 'Blue' : 'Red'} ${duel ? 'corner' : 'team'} <span>${Math.min(list.length, M.per)}/${M.per}</span></h4>${slots.join('')}
-      ${!duel && mine && mine.team !== team ? `<button class="ghost" data-act="team" data-v="${team}" ${full ? 'disabled' : ''}>${full ? 'Team full' : 'Join ' + team}</button>` : ''}</div>`;
+    for (let i = list.length; i < M.per; i++) rows.push(botsOn ? '<div class="rm-p bot"><span class="rm-ic">🤖</span><span><b>Bot</b><small>fills this seat</small></span></div>'
+      : '<div class="rm-p empty"><span class="rm-ic">·</span><span><b>Open seat</b><small>bots are off</small></span></div>');
+    const join = !duel && mine && mine.team !== team ? `<button class="rm-join" data-act="team" data-v="${team}" ${full ? 'disabled' : ''}>${full ? 'Full' : 'Switch here'}</button>` : '';
+    return `<div class="rm-team ${team}"><header><b>${team === 'blue' ? 'Blue' : 'Red'} ${duel ? 'corner' : 'team'}</b><span>${Math.min(list.length, M.per)}/${M.per}</span>${join}</header>${rows.join('')}</div>`;
   };
-  const playing = st.meta?.state === 'playing';
   const tooMany = duel && players.length > 2;
-  const botsOn = !st.meta?.noBots;
   const bots = !botsOn ? 0 : duel ? Math.max(0, 2 - players.length) : 6 - Math.min(6, players.length);
-  // with bots off, say why the match can't start yet
   const short = botsOn ? '' : duel ? (players.length < 2 ? 'Bots are off: you need a second player to duel.' : '')
     : ['blue', 'red'].find(t => !players.some(([uid, p]) => sideOf(uid, p) === t)) ? 'Bots are off: each team needs at least one player.' : '';
-  return `<div class="lobby">
-    <div class="codebox"><small>Room code</small><b>${st.code}</b><button class="ghost" id="onCopy" data-act="copy">Copy</button><span>Share it. Friends pick <i>Online → Join</i>.</span></div>
-    <div class="modechips">${Object.entries(MODES).map(([id, m]) => st.host
-      ? `<button class="${id === mode ? 'on' : ''}" data-act="mode" data-v="${id}" ${playing ? 'disabled' : ''}><b>${m.name}</b><small>${m.sub}</small></button>`
-      : `<div class="${id === mode ? 'on' : 'off'}"><b>${m.name}</b><small>${m.sub}</small></div>`).join('')}</div>
-    ${duel ? '' : `<div class="draftopt ${st.meta?.draft ? 'on' : ''}">${st.host ? `<button data-act="drafttog" ${playing ? 'disabled' : ''}><i>${st.meta?.draft ? '✓' : ''}</i></button>` : `<i>${st.meta?.draft ? '✓' : '·'}</i>`}
-      <div><b>Draft pick ${st.meta?.draft ? 'on' : 'off'}</b><small>${st.meta?.draft ? 'Teams take turns picking heroes before the match, and nobody can pick the same one.' : st.host ? 'Turn it on to pick heroes in turns, with no duplicates.' : 'Everyone plays the hero they chose.'}</small></div></div>`}
-    <div class="draftopt ${botsOn ? 'on' : ''}">${st.host ? `<button data-act="botstog" ${playing ? 'disabled' : ''}><i>${botsOn ? '✓' : ''}</i></button>` : `<i>${botsOn ? '✓' : '·'}</i>`}
-      <div><b>Bots ${botsOn ? 'on' : 'off'}</b><small>${botsOn ? 'Bots fill any empty seats.' : duel ? 'Players only: you need two to duel.' : 'Players only: empty seats stay empty, and each team needs at least one player.'}</small></div></div>
-    ${botsOn ? `<div class="botdiff"><b>Bot skill</b>${Object.entries(DIFFICULTY).map(([k, d]) => st.host
-      ? `<button class="${(st.meta?.botDiff || 'normal') === k ? 'on' : ''}" data-act="botdiff" data-v="${k}" ${playing ? 'disabled' : ''}>${d.label}</button>`
-      : `<span class="${(st.meta?.botDiff || 'normal') === k ? 'on' : ''}">${d.label}</span>`).join('')}</div>` : ''}
-    <div class="teams ${duel ? 'duel' : ''}">${col('blue')}<div class="vs">VS</div>${col('red')}</div>
-    ${duel && players.length > 2 ? `<div class="spect">Watching: ${players.slice(2).map(([, p]) => esc(p.name)).join(', ')}. Only two can duel.</div>` : ''}
-    <div class="lobbyfoot">
-      ${meCard()}
-      <div class="oncard stage">
-        <h3>Stage</h3>
-        ${st.host ? `<div class="mapchips">${MAPS.map(m => `<button class="${m.id === map.id ? 'on' : ''}" data-act="map" data-v="${m.id}" style="--ma:${hex(m.accent)}">${m.name}</button>`).join('')}</div>`
-          : `<p><b>${map.name}</b><br>The host picks the stage.</p>`}
+  // a settings row: the host gets controls, everyone else sees the current choice
+  const seg = (act, opts, cur) => `<div class="rm-seg">${opts.map(([v, l]) => host
+    ? `<button class="${v === cur ? 'on' : ''}" data-act="${act}" data-v="${v}" ${lock}>${l}</button>`
+    : `<span class="${v === cur ? 'on' : ''}">${l}</span>`).join('')}</div>`;
+  const tog = (act, on) => host ? `<button class="rm-tog ${on ? 'on' : ''}" data-act="${act}" ${lock}><i></i></button>` : `<span class="rm-tog ${on ? 'on' : ''}"><i></i></span>`;
+  const d = myDef();
+  return `<div class="rm">
+    <div class="rm-head">
+      <div class="rm-code"><small>Room code</small><b>${st.code}</b><button class="ghost" id="onCopy" data-act="copy">Copy</button></div>
+      <div class="rm-sum"><b>${M.name}</b><span>${map.name} · ${players.length} player${players.length === 1 ? '' : 's'}${bots ? ` + ${bots} bot${bots === 1 ? '' : 's'}` : ''}${draft ? ' · draft' : ''}</span></div>
+      <div class="rm-state ${playing ? 'live' : ''}">${playing ? '● Match in progress' : host ? 'You’re the host' : 'Waiting for the host'}</div>
+    </div>
+    <div class="rm-grid">
+      <div class="rm-main">
+        <div class="rm-teams ${duel ? 'duel' : ''}">${col('blue')}<div class="rm-vs">VS</div>${col('red')}</div>
+        ${duel && players.length > 2 ? `<div class="rm-note">Watching: ${players.slice(2).map(([, p]) => esc(p.name)).join(', ')}. Only two can duel.</div>` : ''}
+        <div class="rm-chat">
+          <header><b>💬 Room chat</b><small>Only people in this room can see it</small></header>
+          <div class="rm-log" id="onLog">${chatRows(st)}</div>
+          <div class="rm-say"><input id="onChat" maxlength="${net.CHAT.max}" placeholder="Say something…" autocomplete="off" spellcheck="true"><button data-act="say">Send</button></div>
+          <div class="rm-quick">${QUICK.map(q => `<button data-act="quick" data-v="${esc(q)}">${q}</button>`).join('')}</div>
+        </div>
       </div>
-      <div class="oncard go">
-        ${st.host ? `<button class="bigbtn" data-act="start" ${playing || tooMany || short ? 'disabled' : ''}>${!duel && st.meta?.draft ? 'Start draft' : `Start ${M.name.toLowerCase()}`}</button>
-          <p>${tooMany ? 'Duel is 1v1. Switch to Hill Rush or have extra players leave.' : short || `${Math.min(players.length, duel ? 2 : 6)} player${players.length > 1 ? 's' : ''} · ${bots} bot${bots === 1 ? '' : 's'}`}</p>`
-          : `<div class="wait">${playing ? 'Match in progress…' : 'Waiting for the host to start'}</div>`}
-        <button class="ghost" data-act="leave">Leave room</button>
-      </div>
+      <aside class="rm-side">
+        <section class="rm-card">
+          <h4>Match ${host ? '' : '<small>set by the host</small>'}</h4>
+          <label>Mode</label>${seg('mode', Object.entries(MODES).map(([id, m]) => [id, m.name]), mode)}
+          <label>Stage</label>${host ? `<select class="rm-sel" data-pick="map" ${lock}>${MAPS.map(m => `<option value="${m.id}" ${m.id === map.id ? 'selected' : ''}>${m.name}</option>`).join('')}</select>` : `<div class="rm-val">${map.name}</div>`}
+          ${duel ? '' : `<div class="rm-row"><span><b>Draft pick</b><small>Take turns picking, no duplicates</small></span>${tog('drafttog', draft)}</div>`}
+          <div class="rm-row"><span><b>Bots</b><small>${botsOn ? 'Fill any empty seats' : 'Players only'}</small></span>${tog('botstog', botsOn)}</div>
+          ${botsOn ? `<label>Bot skill</label>${seg('botdiff', Object.entries(DIFFICULTY).map(([k, x]) => [k, x.label]), diff)}` : ''}
+        </section>
+        <section class="rm-card rm-me" style="--hc:${hex(d.color)}">
+          <h4>You</h4>
+          <label class="rm-name">Name<input id="onName" maxlength="16" value="${esc(cfg.name)}" placeholder="Player" autocomplete="off"></label>
+          <button class="rm-hero" data-act="hero"><img src="${headshot(d)}" alt=""><span><small>Playing as</small><b>${d.callsign}</b>${d.skinName ? `<em>${esc(d.skinName)}</em>` : ''}</span><i>Change</i></button>
+        </section>
+        <section class="rm-go">
+          ${host ? `<button class="bigbtn" data-act="start" ${playing || tooMany || short ? 'disabled' : ''}>${draft ? 'Start draft ▸' : `Start ${M.name} ▸`}</button>
+            <p>${tooMany ? 'Duel is 1v1. Switch mode or have extra players leave.' : short || 'Everyone in the room joins the match.'}</p>`
+            : `<div class="rm-wait">${playing ? 'Match in progress…' : '<i></i><i></i><i></i> Waiting for the host to start'}</div>`}
+          <button class="ghost rm-leave" data-act="leave">Leave room</button>
+        </section>
+      </aside>
     </div>
     ${err ? `<div class="onmsg err">${esc(err)}</div>` : ''}
   </div>`;
+}
+
+// ---------- chat ----------
+const QUICK = ['Ready!', 'gg', 'One more?', 'Brb', 'Swap teams?', 'Bots on?'];
+const hhmm = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+function chatRows(st) {
+  const log = net.chatLog();
+  if (!log.length) return '<p class="rm-empty">No messages yet. Say hi! 👋</p>';
+  return log.map(m => {
+    if (m.sys) return `<div class="rm-msg sys"><b>${esc(m.name)}</b> ${esc(m.text)}</div>`;
+    const p = st.players?.[m.uid], h = p && HEROES.find(x => x.id === p.hero), me = m.uid === st.me;
+    return `<div class="rm-msg ${me ? 'me' : ''} ${p?.team || ''}" style="--hc:${h ? hex(h.color) : '#8a90a8'}"><b>${esc(m.name)}${m.uid === st.meta?.host ? ' ♛' : ''}</b><time>${hhmm(m.t)}</time><p>${esc(m.text)}</p></div>`;
+  }).join('');
+}
+// redraw just the log (new messages shouldn't disturb what you're typing)
+function renderChat() {
+  const el = $('onLog'), st = net.lobbyState(); if (!el || !st) return;
+  const atEnd = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+  el.innerHTML = chatRows(st);
+  if (atEnd || el.dataset.n !== String(net.chatLog().length)) el.scrollTop = el.scrollHeight;
+  el.dataset.n = net.chatLog().length;
+}
+function say(text) {
+  const inp = $('onChat');
+  if (!net.sendChat(text ?? inp?.value)) { inp?.classList.add('shake'); setTimeout(() => inp?.classList.remove('shake'), 300); return; }
+  if (text == null && inp) inp.value = '';
+  api.blip?.(990);
 }
 
 // ---------- draft ----------

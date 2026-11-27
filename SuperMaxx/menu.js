@@ -1,26 +1,27 @@
-import { LOOK, applyEnvironment } from './stage.js?v=20261128l';
-import { masteryOf } from './mastery.js?v=20261128l';
+import { LOOK, applyEnvironment } from './stage.js?v=20261128r';
+import { masteryOf } from './mastery.js?v=20261128r';
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { HEROES, ALL_HEROES, ARCHETYPES, archOf } from './heroes.js?v=20261128l';
-import './personality.js?v=20261128l';
-import { MAPS, DIFFICULTY } from './data.js?v=20261128l';
-import { BOSS_LIST, bossOf } from './raid.js?v=20261128l';
-import { storyMissions, storyDone, storyCount, GOAL, TYPE_ICON, MEDALS, MEDAL_ICON, medalOf, bestTime, parOf, medalCount, fmtTime } from './story.js?v=20261128l';
-import { THEMES } from './scenery.js?v=20261128l';
-import { cfg, save, resetSettings, QUALITY } from './settings.js?v=20261128l';
-import { ACTIONS, FIXED, kb, keyLabel, rebind, resetBinds } from './keys.js?v=20261128l';
-import { splash, headshot, mapArt } from './portraits.js?v=20261128l';
-import { initOnline, enterOnline } from './online.js?v=20261128l';
-import { enterSlots } from './slotmachine.js?v=20261128l';
-import { initVault, enterVault, leaveVault, clipCount } from './vault.js?v=20261128l';
-import { openHub } from './social.js?v=20261128l';
-import { tokens as slotTokens, SEASON_HEROES } from './slots.js?v=20261128l';
-import { playerLevel } from './level.js?v=20261128l';
-import { openHowTo } from './howto.js?v=20261128l';
-import { XH_STYLES, XH_COLORS, applyCrosshair } from './crosshair.js?v=20261128l';
-import { CONTRACTS, contractOf, taskFrac, taskDone, statOf, tasksDone, openContracts, contractsLeft, contractUnlocked, contractDone } from './contracts.js?v=20261128l';
+import { HEROES, ALL_HEROES, ARCHETYPES, archOf } from './heroes.js?v=20261128r';
+import './personality.js?v=20261128r';
+import { MAPS, DIFFICULTY } from './data.js?v=20261128r';
+import { BOSS_LIST, bossOf } from './raid.js?v=20261128r';
+import { enterHeroes, stepHeroes } from './herodex.js?v=20261128r';
+import { storyMissions, storyDone, storyCount, GOAL, TYPE_ICON, MEDALS, MEDAL_ICON, medalOf, bestTime, parOf, medalCount, fmtTime } from './story.js?v=20261128r';
+import { THEMES } from './scenery.js?v=20261128r';
+import { cfg, save, resetSettings, QUALITY } from './settings.js?v=20261128r';
+import { ACTIONS, FIXED, kb, keyLabel, rebind, resetBinds } from './keys.js?v=20261128r';
+import { splash, headshot, mapArt } from './portraits.js?v=20261128r';
+import { initOnline, enterOnline } from './online.js?v=20261128r';
+import { enterSlots } from './slotmachine.js?v=20261128r';
+import { initVault, enterVault, leaveVault, clipCount } from './vault.js?v=20261128r';
+import { openHub } from './social.js?v=20261128r';
+import { tokens as slotTokens, SEASON_HEROES } from './slots.js?v=20261128r';
+import { playerLevel } from './level.js?v=20261128r';
+import { openHowTo } from './howto.js?v=20261128r';
+import { XH_STYLES, XH_COLORS, applyCrosshair } from './crosshair.js?v=20261128r';
+import { CONTRACTS, contractOf, taskFrac, taskDone, statOf, tasksDone, openContracts, contractsLeft, contractUnlocked, contractDone } from './contracts.js?v=20261128r';
 import { SEASON, SEASONS, NEXT_SEASON, TRACKS, seasonLive, seasonTier, seasonStartLabel, skinById, TRACK, MAX_TIER, passXp, tierProgress, heroOwned, heroTier, skinOwned, skinTier, skinsFor, dressed, equip, rewardInfo,
-  COS_TYPES, cosById, cosOwned, equippedCos, equipCos, cosArt, lockShort, lockLong, isSlotItem, isContractHero } from './pass.js?v=20261128l';
+  COS_TYPES, cosById, cosOwned, equippedCos, equipCos, cosArt, lockShort, lockLong, isSlotItem, isContractHero } from './pass.js?v=20261128r';
 
 // Front end: main menu → roster select → stage select → match. Settings overlay on top.
 
@@ -175,7 +176,7 @@ function frameShowcase(renderer, dt) {
 function go(name) {
   if (screen === 'vault' && name !== 'vault') leaveVault();
   screen = name;
-  for (const s of ['main', 'roster', 'stage', 'pass', 'online', 'seasons', 'slots', 'contracts', 'vault', 'story']) $('scr-' + s).classList.toggle('on', s === name);
+  for (const s of ['main', 'roster', 'stage', 'pass', 'online', 'seasons', 'slots', 'contracts', 'vault', 'story', 'heroes']) $('scr-' + s).classList.toggle('on', s === name);
   if (name === 'main') clipCount().then(n => { $('mmClips').textContent = n || ''; $('mmClips').classList.toggle('on', n > 0); });
   if (name === 'vault') enterVault({ blip: f => api?.blip?.(f) });
   $('front').classList.remove('hidden');
@@ -186,6 +187,7 @@ function go(name) {
   if (name === 'stage') enterStage();
   if (name === 'pass') enterPass();
   if (name === 'story') enterStory();
+  if (name === 'heroes') enterHeroes({ blip: f => api?.blip?.(f), go, practice: id => { $('front').classList.add('hidden'); api.onPractice(id); } });
   const firstLook = name === 'roster' ? mode : name === 'story' ? 'story' : null;
   if (firstLook && !(cfg.seenHow ||= {})[firstLook] && firstLook !== 'online') { cfg.seenHow[firstLook] = 1; save(); setTimeout(() => openHowTo(firstLook), 350); }
   if (name === 'seasons') enterSeasons();
@@ -445,7 +447,7 @@ function untilLabel(s) {
 // the player level badge under the logo
 function refreshLevel() {
   const L = playerLevel();
-  $('mmLevel').innerHTML = `<b><small>LV</small>${L.level}</b><span><i style="width:${(L.frac * 100).toFixed(1)}%"></i></span><em>${L.into.toLocaleString()} / ${L.need.toLocaleString()} XP · next level +1 token</em>`;
+  $('mmLevel').innerHTML = `<b><small>LV</small>${L.level}</b><span><i style="width:${(L.frac * 100).toFixed(1)}%"></i></span><em>${L.into.toLocaleString()} / ${L.need.toLocaleString()} XP</em>`;
 }
 function refreshSeasonText() {
   $('pcSeason').textContent = `${seasonTitle(SEASON)} Pass`;
@@ -738,6 +740,7 @@ const SCHEMA = [
     { key: 'objPins', label: 'Objective marker', hint: 'Pins the current objective, even when it’s off-screen', type: 'toggle' },
     { key: 'hitStop', label: 'Elimination hit-stop', hint: 'A split-second slow-down when you get a kill (offline)', type: 'toggle' },
     { key: 'killIcons', label: 'Kill and assist icons', hint: 'A skull where your eliminations go down, and a badge for assists', type: 'toggle' },
+    { key: 'castCues', label: 'Ability cues', hint: 'A themed screen effect and icon when you use a buff, heal, shield or teleport', type: 'toggle' },
     { key: 'outlines', label: 'Enemy outlines', hint: 'A red rim on enemies, and see-through for a moment after they hit you', type: 'toggle' },
   ] },
   { id: 'controls', group: 'Controls', icon: '🖱️', blurb: 'Mouse and aiming', items: [
@@ -819,6 +822,7 @@ export function initMenu(opts) {
   $('modePotato').onclick = () => { setMode('potato'); go('roster'); };
   $('modeRaid').onclick = () => { setMode('raid'); go('roster'); };
   $('modeBall').onclick = () => { setMode('ball'); go('roster'); };
+  $('mmHeroes').onclick = () => { api?.blip?.(700); go('heroes'); };
   $('modeStory').onclick = () => { api?.blip?.(760); go('story'); };
   // How to play: the ? on each mode button (it opens the card instead of starting the mode), and the buttons on the hero, stage and story screens
   document.querySelector('.m2-modes').addEventListener('click', e => { const q = e.target.closest('[data-how]'); if (!q) return; e.stopPropagation(); e.preventDefault(); api?.blip?.(700); openHowTo(q.dataset.how); }, true);
@@ -917,6 +921,11 @@ export function initMenu(opts) {
       if (e.code === 'ArrowRight' || e.code === 'KeyD') stepHero(1);
       if (e.code === 'ArrowLeft' || e.code === 'KeyA') stepHero(-1);
       if (e.code === 'Enter') $('lockIn').click();
+      if (e.code === 'Escape') go('main');
+    } else if (screen === 'heroes') {
+      if (document.activeElement?.id === 'hxSearch') return;
+      if (e.code === 'ArrowDown' || e.code === 'KeyS') { e.preventDefault(); stepHeroes(1); }
+      if (e.code === 'ArrowUp' || e.code === 'KeyW') { e.preventDefault(); stepHeroes(-1); }
       if (e.code === 'Escape') go('main');
     } else if (screen === 'story') {
       if (e.code === 'ArrowDown' || e.code === 'KeyS') { e.preventDefault(); stepStory(1); }

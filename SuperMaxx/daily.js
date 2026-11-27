@@ -1,5 +1,5 @@
-import { addTokens } from './slots.js?v=20261128l';
-import { ARCHETYPES } from './heroes.js?v=20261128l';
+import { addTokens } from './slots.js?v=20261128r';
+import { ARCHETYPES } from './heroes.js?v=20261128r';
 
 // Daily challenges: three small goals a day, the same for everyone on a given date. Finish all
 // three and you get a token for the slot machine. Progress counts across every match

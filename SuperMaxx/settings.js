@@ -4,7 +4,7 @@ const KEY = 'supermaxx';
 const DEFAULTS = {
   hero: 'vanguard', map: 'plaza', diff: 'normal',
   sens: 1, invertY: false, fov: 90,
-  volume: 0.8, music: 0.6, sfx: 1, perf: false, tutorialDone: false, quality: 'high', shadows: true, dmgNumbers: true, voiceLines: true, screenShake: true, hitStop: true, idleReload: true, objPins: true, speedLines: true, deathFade: true, killIcons: true, outlines: true, xhStyle: 'cross', xhColor: 'white', xhSize: 1, xhThick: 2, xhGap: 0, xhDot: false, xhOutline: true, xhAlpha: 1, skins: {}, cos: {}, name: '',
+  volume: 0.8, music: 0.6, sfx: 1, perf: false, tutorialDone: false, quality: 'high', shadows: true, dmgNumbers: true, voiceLines: true, screenShake: true, hitStop: true, idleReload: true, objPins: true, speedLines: true, deathFade: true, killIcons: true, castCues: true, outlines: true, xhStyle: 'cross', xhColor: 'white', xhSize: 1, xhThick: 2, xhGap: 0, xhDot: false, xhOutline: true, xhAlpha: 1, skins: {}, cos: {}, name: '',
 };
 
 function load() {

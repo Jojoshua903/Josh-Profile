@@ -81,8 +81,8 @@ const MODES = {
   },
   ball: {
     icon: '⚽', name: 'Smash Ball', color: '#3ccf9a', tag: 'Football, but you kick the ball with your gun.',
-    facts: ['3v3 vs bots', 'First to 3', '4:00 · golden goal', 'Respawn 5s'],
-    goal: 'Get the giant ball into the enemy goal. First team to 3 goals wins, or whoever’s ahead after 4 minutes.',
+    facts: ['3v3 vs bots', 'First to 3', '2:30 · golden goal', 'Respawn 5s'],
+    goal: 'Get the giant ball into the enemy goal. First team to 3 goals wins, or whoever’s ahead after 2½ minutes.',
     rules: [
       'Shooting the ball shoves it the way you’re aiming. Harder-hitting shots shove it further: shotguns, rockets and charged rail shots really smash it.',
       'Run into the ball to dribble it ahead of you. Sprint into it to pop it up.',

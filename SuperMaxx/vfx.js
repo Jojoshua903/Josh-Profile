@@ -63,6 +63,7 @@ export function castFx(G, h, slot) {
 
 // Ages the kinds above. Called from updateFx before the shared fade/removal.
 export function tickVfx(G, f, dt, k) {
+  if (f.tick) { f.tick(f, dt, k); return true; }                 // cast cues bring their own motion
   if (f.kind === 'spark') { f.vel.y -= 14 * dt; f.obj.position.addScaledVector(f.vel, dt); f.obj.scale.setScalar(Math.max(0.05, k)); return true; }
   if (f.kind === 'smoke') { f.obj.position.addScaledVector(f.vel, dt); f.vel.multiplyScalar(1 - dt * 1.5); f.obj.scale.addScalar(dt * f.grow); f.obj.material.opacity = Math.min(0.55, k * 0.8); return true; }
   if (f.kind === 'mote') {

@@ -1,9 +1,9 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { createHero, spawnHero, createStructure, setBar, burst, ring } from './units.js?v=20261128l';
-import { initBot } from './botbrain.js?v=20261128l';
-import { HEROES } from './heroes.js?v=20261128l';
-import { addTokens } from './slots.js?v=20261128l';
-import { initRaid, BOSSES } from './raid.js?v=20261128l';
+import { createHero, spawnHero, createStructure, setBar, burst, ring } from './units.js?v=20261128r';
+import { initBot } from './botbrain.js?v=20261128r';
+import { HEROES } from './heroes.js?v=20261128r';
+import { addTokens } from './slots.js?v=20261128r';
+import { initRaid, BOSSES } from './raid.js?v=20261128r';
 
 // Story mode: one solo mission per hero, told in a few lines before, between and after. Every
 // mission has two parts, played back to back on the same map; each part is one of a handful of

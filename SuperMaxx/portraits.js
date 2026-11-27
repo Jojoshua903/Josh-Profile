@@ -1,8 +1,8 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { buildHeroModel } from './models.js?v=20261128l';
-import { buildWorld } from './world.js?v=20261128l';
-import { createStructure } from './units.js?v=20261128l';
-import { HEROES } from './heroes.js?v=20261128l';
+import { buildHeroModel } from './models.js?v=20261128r';
+import { buildWorld } from './world.js?v=20261128r';
+import { createStructure } from './units.js?v=20261128r';
+import { HEROES } from './heroes.js?v=20261128r';
 
 // Menu artwork, generated once and cached as data URLs: hero splash art (themed
 // painted backdrop + a posed render of the model), headshot tiles, and map previews.

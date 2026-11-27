@@ -1,17 +1,17 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { burst, ring } from './units.js?v=20261128l';
-import { makeBox, rayWorld } from './world.js?v=20261128l';
+import { burst, ring } from './units.js?v=20261128r';
+import { makeBox, rayWorld } from './world.js?v=20261128r';
 
 // Smash Ball: 3v3 football with guns. A giant ball sits in the middle of the map and each team
 // defends a goal at its end. Shots shove the ball (harder-hitting shots shove it further), and
-// running into it dribbles it. First to 3 goals, or the most goals after 4 minutes; a draw goes
+// running into it dribbles it. First to 3 goals, or the most goals after 2½ minutes; a draw goes
 // to golden goal. After each goal the ball drops back in at the centre. Offline only.
 
 export const BALL = {
-  r: 1.4, toWin: 3, time: 240, reset: 3.5, idle: 22,
-  grav: 15, bounce: 0.62, wall: 0.72, roll: 0.5, air: 0.08, maxV: 34,
-  shot: 0.17, shotMin: 0.6, shotMax: 15, lift: 0.22,           // shot push: damage × shot, clamped; lift is the share that goes upward
-  goalW: 9, goalH: 4.6, goalD: 3.4, back: 12,                   // goal mouth size, depth, and distance in from each end
+  r: 1.7, toWin: 3, time: 150, reset: 2.5, idle: 18,
+  grav: 15, bounce: 0.62, wall: 0.72, roll: 0.38, air: 0.06, maxV: 38,
+  shot: 0.23, shotMin: 0.9, shotMax: 19, lift: 0.22,           // shot push: damage × shot, clamped; lift is the share that goes upward
+  goalW: 13, goalH: 5.6, goalD: 3.6, back: 12,                   // goal mouth size, depth, and distance in from each end
 };
 const TEAM_HEX = { blue: 0x2f5bff, red: 0xff5a36 };
 const V = new THREE.Vector3(), N = new THREE.Vector3(), AX = new THREE.Vector3();

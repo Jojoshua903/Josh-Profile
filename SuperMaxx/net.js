@@ -1,11 +1,11 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { FIREBASE_CONFIG } from './firebase-config.js?v=20261128l';
-import { loadFirebase, setUserChangeHook } from './account.js?v=20261128l';
-import { HEROES } from './heroes.js?v=20261128l';
-import { damage, remoteKill, netShoot, spawnHero, setBar, tickCorpse, spawnMinion, unitDown, tracer, chestOf, TEAM_COLOR } from './units.js?v=20261128l';
-import { replayCast } from './abilities.js?v=20261128l';
-import { netHill } from './hill.js?v=20261128l';
-import { poseHero } from './anim.js?v=20261128l';
+import { FIREBASE_CONFIG } from './firebase-config.js?v=20261128r';
+import { loadFirebase, setUserChangeHook } from './account.js?v=20261128r';
+import { HEROES } from './heroes.js?v=20261128r';
+import { damage, remoteKill, netShoot, spawnHero, setBar, tickCorpse, spawnMinion, unitDown, tracer, chestOf, TEAM_COLOR } from './units.js?v=20261128r';
+import { replayCast } from './abilities.js?v=20261128r';
+import { netHill } from './hill.js?v=20261128r';
+import { poseHero } from './anim.js?v=20261128r';
 
 // Online play over Firebase Realtime Database.
 //
@@ -80,7 +80,7 @@ export async function createRoom(profile) {
     meta: { host: fb.uid, state: 'lobby', mode: 'hill', map: 'plaza', match: 0, created: f.serverTimestamp() },
     players: { [fb.uid]: { ...profile, team: 'blue', t: Date.now() } },
   });
-  await enter(code, true);
+  await enter(code, true); sendChat("opened the room", true, profile.name);
   return code;
 }
 
@@ -96,13 +96,13 @@ export async function joinRoom(code, profile) {
   if (v.meta.state === 'playing' || v.meta.state === 'draft') throw new Error(v.meta.state === 'draft' ? 'They’re drafting right now. Try again when the match ends' : 'A match is in progress there. Try again when it ends');
   const team = teamCount(players, 'blue') <= teamCount(players, 'red') ? 'blue' : 'red';
   await f.set(f.ref(fb.db, `rooms/${code}/players/${fb.uid}`), { ...profile, team, t: Date.now() });
-  await enter(code, false);
+  await enter(code, false); if (!players[fb.uid]) sendChat("joined", true, profile.name);
   return code;
 }
 
 async function enter(code, isHost) {
   const { f } = fb;
-  room = { code, meta: null, players: {}, unsubs: [], started: 0 };
+  room = { code, meta: null, players: {}, unsubs: [], started: 0, chat: [] };
   f.onDisconnect(R('players/' + fb.uid)).remove();
   if (isHost) f.onDisconnect(R('')).remove();                 // no host migration yet: host leaving closes the room
   room.unsubs.push(f.onValue(R('meta'), s => {
@@ -117,6 +117,14 @@ async function enter(code, isHost) {
   }));
   room.unsubs.push(f.onValue(R('players'), s => { if (!room) return; room.players = s.val() || {}; emit(); }));
   room.unsubs.push(f.onValue(R('draft'), s => { if (!room) return; room.draft = s.val(); emit(); hostDraft(); }));
+  // room chat: the last few dozen messages, newest last
+  room.unsubs.push(f.onChildAdded(f.query(R('chat'), f.limitToLast(CHAT.keep)), s => {
+    if (!room) return;
+    const m = s.val(); if (!m || typeof m.x !== 'string') return;
+    room.chat.push({ id: s.key, uid: m.u, name: String(m.n || 'Player').slice(0, 16), text: m.x.slice(0, CHAT.max), t: m.t || Date.now(), sys: !!m.s });
+    if (room.chat.length > CHAT.keep) room.chat.shift();
+    chatCbs.forEach(cb => cb(room.chat));
+  }));
   if (isHost) { const t = setInterval(hostDraft, 400); room.unsubs.push(() => clearInterval(t)); }   // bot picks and timeouts
 }
 
@@ -129,6 +137,7 @@ function closeLocal(reason) {
 
 export async function leaveRoom() {
   if (!room) return;
+  if (room.meta?.host !== fb.uid) sendChat("left", true);
   const { f } = fb, code = room.code, host = room.meta?.host === fb.uid;
   room.unsubs.forEach(u => u());
   room = null; emit();
@@ -138,6 +147,23 @@ export async function leaveRoom() {
 }
 
 export function setProfile(patch) { if (room) fb.f.update(R('players/' + fb.uid), patch).catch(() => {}); }
+
+// ---------- room chat ----------
+export const CHAT = { max: 140, keep: 40, gap: 700 };
+const chatCbs = new Set();
+let lastSent = 0;
+export const onChat = cb => { chatCbs.add(cb); return () => chatCbs.delete(cb); };
+export const chatLog = () => room?.chat || [];
+// Returns false if there was nothing to send or you're sending too fast.
+export function sendChat(text, sys = false, name) {
+  if (!room) return false;
+  const x = String(text || '').replace(/\s+/g, ' ').trim().slice(0, CHAT.max);
+  if (!x || (!sys && Date.now() - lastSent < CHAT.gap)) return false;
+  if (!sys) lastSent = Date.now();
+  const me = room.players?.[fb.uid];
+  fb.f.push(R('chat'), { u: fb.uid, n: (name || me?.name || 'Player').slice(0, 16), x, t: Date.now(), ...(sys ? { s: 1 } : {}) }).catch(() => {});
+  return true;
+}
 export function setMap(map) { if (room && lobbyState().host) fb.f.update(R('meta'), { map }).catch(() => {}); }
 export function setMode(mode) { if (room && lobbyState().host) fb.f.update(R('meta'), { mode }).catch(() => {}); }
 export function backToLobby() { if (room && lobbyState().host) fb.f.update(R('meta'), { state: 'lobby' }).catch(() => {}); }

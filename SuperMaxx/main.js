@@ -1,48 +1,49 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { initAccount } from './account.js?v=20261128l';      // first, so it sees every change to the save
-import { HEROES, MAPS, DIFFICULTY, TUNING, SURVIVOR_MAP, SURVIVOR, HILL, DUEL, CART } from './data.js?v=20261128l';
-import { initSurvivor, updateSurvivor, survivorLeaders, stormInfo, inStorm } from './survivor.js?v=20261128l';
-import { initHill, updateHill, hillVisuals, onHill } from './hill.js?v=20261128l';
-import { initCart, updateCart, nearCart, cartLead } from './payload.js?v=20261128l';
-import { initPotato, updatePotato, potatoHit, holdsPotato, POTATO } from './potato.js?v=20261128l';
-import { initBall, updateBall, BALL } from './ball.js?v=20261128l';
-import { addPlayerXp, storyXp } from './level.js?v=20261128l';
-import { initGuardians, updateGuardians, netGuardSlam, guardianOf } from './guardian.js?v=20261128l';
-import { initMapFx, updateMapFx } from './mapfx.js?v=20261128l';
-import { MISSIONS, initStory, updateStory, storyInfo, finishMission, GOAL, awardMedal, MEDALS, MEDAL_ICON, fmtTime } from './story.js?v=20261128l';
-import { initRaid, updateRaid, raidInfo, raidAlert, RAID } from './raid.js?v=20261128l';
-import { buildWorld, mirror } from './world.js?v=20261128l';
+import { initAccount } from './account.js?v=20261128r';      // first, so it sees every change to the save
+import { HEROES, MAPS, DIFFICULTY, TUNING, SURVIVOR_MAP, SURVIVOR, HILL, DUEL, CART } from './data.js?v=20261128r';
+import { initSurvivor, updateSurvivor, survivorLeaders, stormInfo, inStorm } from './survivor.js?v=20261128r';
+import { initHill, updateHill, hillVisuals, onHill } from './hill.js?v=20261128r';
+import { initCart, updateCart, nearCart, cartLead } from './payload.js?v=20261128r';
+import { initPotato, updatePotato, potatoHit, holdsPotato, POTATO } from './potato.js?v=20261128r';
+import { initBall, updateBall, BALL } from './ball.js?v=20261128r';
+import { addPlayerXp, storyXp } from './level.js?v=20261128r';
+import { initGuardians, updateGuardians, netGuardSlam, guardianOf } from './guardian.js?v=20261128r';
+import { initMapFx, updateMapFx } from './mapfx.js?v=20261128r';
+import { MISSIONS, initStory, updateStory, storyInfo, finishMission, GOAL, awardMedal, MEDALS, MEDAL_ICON, fmtTime } from './story.js?v=20261128r';
+import { initRaid, updateRaid, raidInfo, raidAlert, RAID } from './raid.js?v=20261128r';
+import { buildWorld, mirror } from './world.js?v=20261128r';
 import { PRISM, createHero, spawnHero, createStructure, spawnMinion, fire, releaseFire, chargeLevel, startReload, tickHero, tickCorpse, chestOf,
-  updateMinions, updateStructures, updateProjectiles, updateFx, dirFrom, eyeOf, TEAM_COLOR } from './units.js?v=20261128l';
-import { steer, initBot, updateBot } from './botbrain.js?v=20261128l';
-import { castSlot, updateAbilities } from './abilities.js?v=20261128l';
-import { floatText, poseHero } from './anim.js?v=20261128l';
-import { cfg, applyGraphics } from './settings.js?v=20261128l';
-import { initMenu, showMenu, menuFrame, openSettings, settingsVisible } from './menu.js?v=20261128l';
-import { dressed, heroOwned, wear, myCosIds, resolveCos, matchXp, award, rewardInfo, tierProgress, SEASON, MAX_TIER, cosById, cosOwned, equippedCos } from './pass.js?v=20261128l';
-import { aimSpray, placeSpray, SPRAY_CD } from './sprays.js?v=20261128l';
-import { EMOTES, EMOTE_CD, BOT_EMOTES, startEmote, stopEmote, wheelEmotes } from './emotes.js?v=20261128l';
-import { headshot } from './portraits.js?v=20261128l';
-import './personality.js?v=20261128l';
-import { openSession, tickPuppet, myUid, lobbyState, leaveRoom, onLobby } from './net.js?v=20261128l';
-import { initAudio, applyVolume, tone, noise, ABIL_SFX, audioTap } from './audio.js?v=20261128l';
-import { startClipRec, saveClip, sendClip } from './clips.js?v=20261128l';
-import { playMusic } from './music.js?v=20261128l';
-import { sparks, castFx, lightFlash } from './vfx.js?v=20261128l';
-import { applyEnvironment } from './stage.js?v=20261128l';
-import { perfFrame } from './perf.js?v=20261128l';
-import { gainMastery } from './mastery.js?v=20261128l';
-import { recordMatch, tasksDone } from './contracts.js?v=20261128l';
-import { recordDaily } from './daily.js?v=20261128l';
-import { kb, keyOf } from './keys.js?v=20261128l';
-import { recordHistory } from './history.js?v=20261128l';
-import { hitStop, timeScale, shotBloom, crossScale, landDust, resetJuice, juiceFrame, killIcon } from './juice.js?v=20261128l';
-import { updateOutlines } from './outline.js?v=20261128l';
-import { applyCrosshair } from './crosshair.js?v=20261128l';
-import { victoryOf, poseVictory } from './victory.js?v=20261128l';
-import { publishCard } from './social.js?v=20261128l';
-import { startTutorial, stopTutorial, tickTutorial, tutorialCast, tutorialKill, onTutorialPass } from './tutorial.js?v=20261128l';
-import { initReplay, recFrame, recEvent, recKill, finalClip, startPlayback, tickPlayback, stopPlayback } from './replay.js?v=20261128l';
+  updateMinions, updateStructures, updateProjectiles, updateFx, dirFrom, eyeOf, TEAM_COLOR } from './units.js?v=20261128r';
+import { steer, initBot, updateBot } from './botbrain.js?v=20261128r';
+import { castSlot, updateAbilities } from './abilities.js?v=20261128r';
+import { floatText, poseHero } from './anim.js?v=20261128r';
+import { cfg, applyGraphics } from './settings.js?v=20261128r';
+import { initMenu, showMenu, menuFrame, openSettings, settingsVisible } from './menu.js?v=20261128r';
+import { dressed, heroOwned, wear, myCosIds, resolveCos, matchXp, award, rewardInfo, tierProgress, SEASON, MAX_TIER, cosById, cosOwned, equippedCos } from './pass.js?v=20261128r';
+import { aimSpray, placeSpray, SPRAY_CD } from './sprays.js?v=20261128r';
+import { EMOTES, EMOTE_CD, BOT_EMOTES, startEmote, stopEmote, wheelEmotes } from './emotes.js?v=20261128r';
+import { headshot } from './portraits.js?v=20261128r';
+import './personality.js?v=20261128r';
+import { openSession, tickPuppet, myUid, lobbyState, leaveRoom, onLobby } from './net.js?v=20261128r';
+import { initAudio, applyVolume, tone, noise, ABIL_SFX, audioTap } from './audio.js?v=20261128r';
+import { startClipRec, saveClip, sendClip } from './clips.js?v=20261128r';
+import { playMusic } from './music.js?v=20261128r';
+import { sparks, castFx, lightFlash } from './vfx.js?v=20261128r';
+import { castCue, clearCastCue } from './castcue.js?v=20261128r';
+import { applyEnvironment } from './stage.js?v=20261128r';
+import { perfFrame } from './perf.js?v=20261128r';
+import { gainMastery } from './mastery.js?v=20261128r';
+import { recordMatch, tasksDone } from './contracts.js?v=20261128r';
+import { recordDaily } from './daily.js?v=20261128r';
+import { kb, keyOf } from './keys.js?v=20261128r';
+import { recordHistory } from './history.js?v=20261128r';
+import { hitStop, timeScale, shotBloom, crossScale, landDust, resetJuice, juiceFrame, killIcon } from './juice.js?v=20261128r';
+import { updateOutlines } from './outline.js?v=20261128r';
+import { applyCrosshair } from './crosshair.js?v=20261128r';
+import { victoryOf, poseVictory } from './victory.js?v=20261128r';
+import { publishCard } from './social.js?v=20261128r';
+import { startTutorial, stopTutorial, tickTutorial, tutorialCast, tutorialKill, onTutorialPass } from './tutorial.js?v=20261128r';
+import { initReplay, recFrame, recEvent, recKill, finalClip, startPlayback, tickPlayback, stopPlayback } from './replay.js?v=20261128r';
 let envRT = null;
 
 const $ = id => document.getElementById(id);
@@ -274,7 +275,7 @@ function startGame(m = mode, online = null) {
   if (!surv && !tut && !raid && !story) initReplay(G);                        // team modes get a play of the game
 
   camera.fov = cfg.fov; camera.updateProjectionMatrix();
-  resetJuice();
+  resetJuice(); clearCastCue();
   scene.add(camera);
   while (camera.children.length) camera.remove(camera.children[0]);
   const vm = makeViewGun(def); viewGun = vm.gun; viewHand = vm.hand; camera.add(viewGun, viewHand);
@@ -566,7 +567,7 @@ function showPassGain(win) {
   el.innerHTML = `
     <div class="pg-top"><span>Season ${SEASON.n} pass</span><b>+${res.gained} XP</b></div>
     <div class="pg-parts">${res.parts.map(([k, v]) => `${k} +${v}`).join(' · ')}</div>
-    <div class="pg-bar"><i style="width:${res.t1 > res.t0 ? 0 : p0.frac * 100}%"></i></div>
+    <div class="pg-bar pg-pass"><i style="width:${res.t1 > res.t0 ? 0 : p0.frac * 100}%"></i></div>
     <div class="pg-tier"><span>Tier ${res.t0}${res.t1 > res.t0 ? ` → <b>${res.t1}</b>` : ''}</span><span>${p1.tier >= MAX_TIER ? 'Pass complete!' : `${p1.into} / ${p1.need} XP to tier ${p1.tier + 1}`}</span></div>
     ${res.unlocked.length ? `<div class="pg-un">${res.unlocked.map(chip).join('')}</div>` : ''}
     ${mst ? `<div class="pg-mst" style="--mc:${mst.after.rank.color}">
@@ -586,7 +587,7 @@ function showPassGain(win) {
     dl.token ? '<span class="pg-tok">All 3 daily challenges done! +1 token 🎰</span>' : ''}</div>`);
   if (mst) setTimeout(() => { const b = el.querySelector('.pg-mst .pg-bar i'); if (b) b.style.width = (mst.after.frac * 100) + '%'; }, 1700);
   if (mst?.levelUp) setTimeout(() => { tone(523, 0.15, 'square', 0.05, 1); tone(784, 0.25, 'square', 0.05, 1, 0.12); }, 1800);
-  setTimeout(() => { el.querySelector('.pg-bar i').style.width = (p1.frac * 100) + '%'; }, 1500);
+  setTimeout(() => { const b = el.querySelector('.pg-pass i'); if (b) b.style.width = (p1.frac * 100) + '%'; }, 1500);
   if (res.unlocked.length) setTimeout(() => { tone(660, 0.2, 'triangle', 0.08, 1.5); tone(990, 0.3, 'triangle', 0.06, 1.3); }, 1600);
 }
 
@@ -1048,7 +1049,7 @@ const events = {
   },
   ability(h, slot) {
     recEvent(G, slot, h);
-    if (h === P || !(h.invisT > 0)) castFx(G, h, slot);
+    if (h === P || !(h.invisT > 0)) { castFx(G, h, slot); castCue(G, h, slot, h === P); }
     if (h === P && G.tutorial) tutorialCast(slot);
     const d = h === P ? 0 : h.pos.distanceTo(P.pos), near = d < 25;
     const sfx = ABIL_SFX[h.def[slot]?.id];
@@ -1154,7 +1155,7 @@ const toMenu = (where = 'main') => {
   net?.close();
   if (midMatch || (net && where === 'main')) leaveRoom();
   running = false; paused = false; hidePotg(); G = null; document.exitPointerLock?.(); stopTutorial();
-  resetJuice();
+  resetJuice(); clearCastCue();
   playMusic('menu');
   ['end', 'pause'].forEach(id => $(id).classList.add('hidden')); $('hud').classList.add('hidden');
   showMenu(net && !midMatch && where !== 'main' ? 'online' : where);
@@ -1460,6 +1461,12 @@ function drawMinimap() {
     mctx.fillStyle = st.alive ? hex(TEAM_COLOR[st.team]) : '#b8ab90';
     const r = st.kind === 'core' ? 6 : 4;
     mctx.fillRect(X(st.pos.x) - r, Y(st.pos.z) - r, r * 2, r * 2);
+    // a small health bar under each standing tower and core
+    if (st.alive && st.maxHp) {
+      const f = Math.max(0, Math.min(1, st.hp / st.maxHp)), bw = r * 2 + 6, bx = X(st.pos.x) - bw / 2, by = Y(st.pos.z) + r + 2;
+      mctx.fillStyle = '#1d2340'; mctx.fillRect(bx - 1, by - 1, bw + 2, 5);
+      mctx.fillStyle = f > 0.5 ? '#3ccf9a' : f > 0.25 ? '#ffc93c' : '#ff3a3a'; mctx.fillRect(bx, by, bw * f, 3);
+    }
   }
   for (const mn of G.minions) { mctx.fillStyle = hex(TEAM_COLOR[mn.team]); mctx.fillRect(X(mn.pos.x) - 1.5, Y(mn.pos.z) - 1.5, 3, 3); }
   if (G.mode === 'hill') {                          // the ring, tinted by who's scoring
