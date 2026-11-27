@@ -1,12 +1,12 @@
-import { HEROES } from './heroes.js?v=20261128w';
-import { cfg, save } from './settings.js?v=20261128w';
-import { headshot } from './portraits.js?v=20261128w';
-import { skinById, dressedAny, equip, cosById, equipCos, equippedCos } from './pass.js?v=20261128w';
-import { sprayUrl } from './sprays.js?v=20261128w';
-import { tokens, spin, prizes, spins } from './slots.js?v=20261128w';
-import { initAudio, tone, noise } from './audio.js?v=20261128w';
-import { emoteById, emoteBadge, onWheel, toggleWheel, wheelEmotes, WHEEL_SIZE } from './emotes.js?v=20261128w';
-import { dailies, resetsIn } from './daily.js?v=20261128w';
+import { HEROES } from './heroes.js?v=20261129f';
+import { cfg, save } from './settings.js?v=20261129f';
+import { headshot } from './portraits.js?v=20261129f';
+import { skinById, dressedAny, equip, cosById, equipCos, equippedCos } from './pass.js?v=20261129f';
+import { sprayUrl } from './sprays.js?v=20261129f';
+import { tokens, spin, prizes, spins } from './slots.js?v=20261129f';
+import { initAudio, tone, noise } from './audio.js?v=20261129f';
+import { emoteById, emoteBadge, onWheel, toggleWheel, wheelEmotes, WHEEL_SIZE } from './emotes.js?v=20261129f';
+import { dailies, resetsIn } from './daily.js?v=20261129f';
 
 // The slot machine screen: three reels, a lever and the prize board. Pull costs one mastery
 // token; every pull lands three of a kind on something new, then shows what you won.

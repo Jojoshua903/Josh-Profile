@@ -1,28 +1,32 @@
-import { LOOK, applyEnvironment } from './stage.js?v=20261128w';
-import { masteryOf } from './mastery.js?v=20261128w';
+import { LOOK, applyEnvironment, canNight } from './stage.js?v=20261129f';
+import { masteryOf } from './mastery.js?v=20261129f';
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { HEROES, ALL_HEROES, ARCHETYPES, archOf } from './heroes.js?v=20261128w';
-import './personality.js?v=20261128w';
-import { MAPS, DIFFICULTY } from './data.js?v=20261128w';
-import { BOSS_LIST, bossOf } from './raid.js?v=20261128w';
-import { enterHeroes, stepHeroes } from './herodex.js?v=20261128w';
-import { storyMissions, storyDone, storyCount, GOAL, TYPE_ICON, MEDALS, MEDAL_ICON, medalOf, bestTime, parOf, medalCount, fmtTime } from './story.js?v=20261128w';
-import { THEMES } from './scenery.js?v=20261128w';
-import { cfg, save, resetSettings, QUALITY } from './settings.js?v=20261128w';
-import { ACTIONS, FIXED, kb, keyLabel, rebind, resetBinds } from './keys.js?v=20261128w';
-import { pad, PAD_LAYOUT, PAD_MENU, padLabel } from './pad.js?v=20261128w';
-import { splash, headshot, mapArt } from './portraits.js?v=20261128w';
-import { initOnline, enterOnline } from './online.js?v=20261128w';
-import { enterSlots } from './slotmachine.js?v=20261128w';
-import { initVault, enterVault, leaveVault, clipCount } from './vault.js?v=20261128w';
-import { openHub } from './social.js?v=20261128w';
-import { tokens as slotTokens, SEASON_HEROES } from './slots.js?v=20261128w';
-import { playerLevel } from './level.js?v=20261128w';
-import { openHowTo } from './howto.js?v=20261128w';
-import { XH_STYLES, XH_COLORS, applyCrosshair } from './crosshair.js?v=20261128w';
-import { CONTRACTS, contractOf, taskFrac, taskDone, statOf, tasksDone, openContracts, contractsLeft, contractUnlocked, contractDone } from './contracts.js?v=20261128w';
+import { HEROES, ALL_HEROES, ARCHETYPES, archOf } from './heroes.js?v=20261129f';
+import './personality.js?v=20261129f';
+import { MAPS, DIFFICULTY } from './data.js?v=20261129f';
+import { BOSS_LIST, bossOf } from './raid.js?v=20261129f';
+import { enterHeroes, stepHeroes } from './herodex.js?v=20261129f';
+import { storyMissions, storyDone, storyCount, GOAL, TYPE_ICON, MEDALS, MEDAL_ICON, medalOf, bestTime, parOf, medalCount, fmtTime } from './story.js?v=20261129f';
+import { THEMES } from './scenery.js?v=20261129f';
+import { cfg, save, resetSettings, QUALITY } from './settings.js?v=20261129f';
+import { ACTIONS, FIXED, kb, keyLabel, rebind, resetBinds } from './keys.js?v=20261129f';
+import { pad, PAD_LAYOUT, PAD_MENU, padLabel } from './pad.js?v=20261129f';
+import { enterTrophies, trophyCount } from './trophies.js?v=20261129f';
+import { ACH } from './achieve.js?v=20261129f';
+import { enterRanked, leaveRanked, rankedDrafting } from './rankedui.js?v=20261129f';
+import { ranked, RANKS, RANK_REWARDS, DIV } from './ranked.js?v=20261129f';
+import { splash, headshot, mapArt } from './portraits.js?v=20261129f';
+import { initOnline, enterOnline } from './online.js?v=20261129f';
+import { enterSlots } from './slotmachine.js?v=20261129f';
+import { initVault, enterVault, leaveVault, clipCount } from './vault.js?v=20261129f';
+import { openHub } from './social.js?v=20261129f';
+import { tokens as slotTokens, SEASON_HEROES } from './slots.js?v=20261129f';
+import { playerLevel } from './level.js?v=20261129f';
+import { openHowTo } from './howto.js?v=20261129f';
+import { XH_STYLES, XH_COLORS, applyCrosshair } from './crosshair.js?v=20261129f';
+import { CONTRACTS, contractOf, taskFrac, taskDone, statOf, tasksDone, openContracts, contractsLeft, contractUnlocked, contractDone } from './contracts.js?v=20261129f';
 import { SEASON, SEASONS, NEXT_SEASON, TRACKS, seasonLive, seasonTier, seasonStartLabel, skinById, TRACK, MAX_TIER, passXp, tierProgress, heroOwned, heroTier, skinOwned, skinTier, skinsFor, dressed, equip, rewardInfo,
-  COS_TYPES, cosById, cosOwned, equippedCos, equipCos, cosArt, lockShort, lockLong, isSlotItem, isContractHero } from './pass.js?v=20261128w';
+  COS_TYPES, cosById, cosOwned, equippedCos, equipCos, cosArt, lockShort, lockLong, isSlotItem, isContractHero } from './pass.js?v=20261129f';
 
 // Front end: main menu → roster select → stage select → match. Settings overlay on top.
 
@@ -168,7 +172,7 @@ function frameShowcase(renderer, dt) {
   const w = innerWidth, h = innerHeight;
   show.cam.aspect = w / h; show.cam.updateProjectionMatrix();
   const a = Math.sin(show.t * 0.12) * 0.25;
-  const off = w > 900 ? 3.4 : 0;                        // camera looks along +z, so +x shifts the view right on screen
+  const off = w >= 1080 && h >= 560 ? 0 : w > 900 ? 3.4 : 0;   // camera looks along +z, so +x shifts the view right; the spread-out menu leaves the centre open
   show.cam.position.set(off + Math.sin(a) * 15, 4.2, -15 + Math.cos(a) * 1.5);
   show.cam.lookAt(off + 0.6, 4.2, 12);                  // tilted up a little: more skyline, searchlights and fireworks
   renderer.render(show.scene, show.cam);
@@ -177,8 +181,9 @@ function frameShowcase(renderer, dt) {
 // ---------- screens ----------
 function go(name) {
   if (screen === 'vault' && name !== 'vault') leaveVault();
+  if (screen === 'ranked' && name !== 'ranked') leaveRanked();
   screen = name;
-  for (const s of ['main', 'roster', 'stage', 'pass', 'online', 'seasons', 'slots', 'contracts', 'vault', 'story', 'heroes']) $('scr-' + s).classList.toggle('on', s === name);
+  for (const s of ['main', 'roster', 'stage', 'pass', 'online', 'seasons', 'slots', 'contracts', 'vault', 'story', 'heroes', 'achievements', 'ranked']) $('scr-' + s).classList.toggle('on', s === name);
   if (name === 'main') clipCount().then(n => { $('mmClips').textContent = n || ''; $('mmClips').classList.toggle('on', n > 0); });
   if (name === 'vault') enterVault({ blip: f => api?.blip?.(f) });
   $('front').classList.remove('hidden');
@@ -189,6 +194,10 @@ function go(name) {
   if (name === 'stage') enterStage();
   if (name === 'pass') enterPass();
   if (name === 'story') enterStory();
+  if (name === 'achievements') enterTrophies({ blip: f => api?.blip?.(f) });
+  if (name === 'ranked') enterRanked({ blip: f => api?.blip?.(f), onRanked: s => { $('front').classList.add('hidden'); api.onRanked(s); } });
+  if (name === 'main') refreshRankCard();
+  if (name === 'main') $('mmAchN').textContent = `${trophyCount()}/${ACH.length}`;
   if (name === 'heroes') enterHeroes({ blip: f => api?.blip?.(f), go, practice: id => { $('front').classList.add('hidden'); api.onPractice(id); } });
   const firstLook = name === 'roster' ? mode : name === 'story' ? 'story' : null;
   if (firstLook && !(cfg.seenHow ||= {})[firstLook] && firstLook !== 'online') { cfg.seenHow[firstLook] = 1; save(); setTimeout(() => openHowTo(firstLook), 350); }
@@ -349,8 +358,8 @@ function showHero(h, instant) {
       <section ${pane('skins')}>
         <div class="skins">
           <button class="sk ${cur ? '' : 'on'}" data-skin="" style="--a:${hex(h.palette.main)};--b:${hex(h.palette.trim)}"><i></i><span>Classic</span></button>
-          ${skins.map(s => { const ok = own && skinOwned(s.id); return `<button class="sk ${cur === s.id ? 'on' : ''} ${ok ? '' : 'locked'}" data-skin="${s.id}" title="${ok ? s.name : lockLong(s.id, true)}"
-            style="--a:${hex(s.palette.main)};--b:${hex(s.palette.trim)}"><i></i><span>${s.name}</span>${ok ? '' : `<em>🔒 ${lockShort(s.id, true)}</em>`}</button>`; }).join('')}
+          ${skins.map(s => { const ok = own && skinOwned(s.id); return `<button class="sk ${cur === s.id ? 'on' : ''} ${ok ? '' : 'locked'} ${s.legendary ? 'legend' : ''}" data-skin="${s.id}" title="${ok ? s.name : lockLong(s.id, true)}"
+            style="--a:${hex(s.palette.main)};--b:${hex(s.palette.trim)}"><i></i><span>${s.name}</span>${s.legendary ? '<b class="sk-leg">★ Legendary</b>' : ''}${ok ? '' : `<em>🔒 ${lockShort(s.id, true)}</em>`}</button>`; }).join('')}
         </div>
       </section>
     </div>`;
@@ -365,8 +374,8 @@ function showHero(h, instant) {
   $('lockIn').querySelector('small').textContent = !own ? (isContractHero(h.id) ? (contractUnlocked(h.id) ? 'Finish the contract' : 'Contract sealed') : isSlotItem(h.id) ? 'Win it at the slots' : `Reach tier ${heroTier(h.id)}`) : mode === 'survivor' ? 'Drop in as' : 'Lock in';
 }
 
-// Size the ability list to the panel: big text when there's room, a little smaller when it's tight.
-// It never shrinks past a comfortable reading size: if the kit still doesn't fit, the list scrolls.
+// Shrink the ability list until every row fits the panel: smaller text first, then two
+// columns, then smaller again. The list never scrolls.
 let kitRO = null, fitRaf = 0;
 const fitSoon = () => { cancelAnimationFrame(fitRaf); fitRaf = requestAnimationFrame(fitKit); };
 function fitKit() {
@@ -382,16 +391,16 @@ function sizeKit(body, kit) {
   if (!body.clientHeight || !kit.offsetParent) return;
   // everything in view, with a few pixels to spare so the last row never loses its bottom edge
   const fits = () => { const last = kit.lastElementChild; return body.scrollHeight <= body.clientHeight - 2 && (!last || last.getBoundingClientRect().bottom <= body.getBoundingClientRect().bottom - 3); };
-  const tries = [1.8, 1.65, 1.5, 1.38, 1.26, 1.2, 1.1, 1, .94];
-  kit.classList.remove('two');
-  for (const s of tries) {
-    kit.style.setProperty('--ks', s);
+  const wide = body.clientWidth >= 380;
+  // big text in one column first, then two columns if the panel is wide enough, then smaller again
+  const tries = [[false, 2.3], [false, 2.1], [false, 1.9], [false, 1.8], [false, 1.65], [false, 1.5], [false, 1.38], [false, 1.26], [false, 1.15], [false, 1.05], [false, 0.96],
+    ...(wide ? [[true, 1.05], [true, 0.96], [true, 0.88]] : []), [wide, 0.8], [wide, 0.72], [wide, 0.65]];
+  for (const [two, s] of tries) {
+    kit.classList.toggle('two', two); kit.style.setProperty('--ks', s);
     if (fits()) return;
   }
-  body.classList.add('spill');
-  // fade the bottom edge while there's more below, so it's clear the list scrolls
-  const edge = () => body.classList.toggle('end', body.scrollTop + body.clientHeight >= body.scrollHeight - 4);
-  body.onscroll = edge; edge();
+  // a really small window: keep shrinking until it fits, so the list never scrolls
+  for (let s = 0.6; s >= 0.3; s -= 0.05) { kit.style.setProperty('--ks', s.toFixed(2)); if (fits()) return; }
 }
 let fitT = 0;
 addEventListener('resize', () => { clearTimeout(fitT); fitT = setTimeout(fitKit, 80); });
@@ -619,8 +628,18 @@ function renderBosses() {
     <p class="sb-desc"><b>${B.name}</b>, ${B.title}. ${B.blurb}</p>`;
   el.onclick = e => { const b = e.target.closest('[data-boss]'); if (!b) return; cfg.raidBoss = b.dataset.boss; save(); api?.blip?.(620); renderBosses(); };
 }
+// Day or night: every daytime stage has a night version (Neon Heights is always night)
+const nightOn = m => !!cfg.night && canNight(m);
+function showTod(m) {
+  const el = $('stgTod'), ok = canNight(m);
+  el.classList.toggle('off', !ok);
+  for (const b of el.querySelectorAll('[data-tod]')) { b.classList.toggle('on', ok ? (b.dataset.tod === 'night') === !!cfg.night : b.dataset.tod === 'night'); b.disabled = !ok; }
+  el.title = ok ? '' : 'This stage is always at night';
+  $('stgView').classList.toggle('night', nightOn(m) || !ok && !!LOOK[m.id]?.night);
+}
 function showStage(m, now) {
-  if (stageView === m.id) return;
+  if (stageView === m.id && !now) return;
+  showTod(m);
   stageView = m.id;
   for (const c of $('cols').children) c.classList.toggle('on', c.dataset.map === m.id);
   const t = THEMES[m.theme], v = $('stgView');
@@ -637,8 +656,9 @@ function showStage(m, now) {
   // wait for the cursor to settle so skimming the list doesn't render every stage
   stageT = setTimeout(() => {
     if (stageView !== m.id) return;
+    const art = nightOn(m) ? { ...m, night: true } : m;
     img.onload = () => { if (stageView === m.id) { img.classList.add('in'); $('stgLoad').classList.remove('on'); } };
-    img.src = mapArt(m, 1280, 720);
+    img.src = mapArt(art, 1280, 720);
   }, now ? 60 : 220);
 }
 function deployStage(id) {
@@ -839,7 +859,10 @@ export function initMenu(opts) {
   $('modePotato').onclick = () => { setMode('potato'); go('roster'); };
   $('modeRaid').onclick = () => { setMode('raid'); go('roster'); };
   $('modeBall').onclick = () => { setMode('ball'); go('roster'); };
+  $('modeRanked').onclick = () => { api?.blip?.(820); go('ranked'); };
+  $('rkBack').onclick = () => { api?.blip?.(500); go('main'); };
   $('mmHeroes').onclick = () => { api?.blip?.(700); go('heroes'); };
+  $('mmAch').onclick = () => { api?.blip?.(700); go('achievements'); };
   $('modeStory').onclick = () => { api?.blip?.(760); go('story'); };
   // How to play: the ? on each mode button (it opens the card instead of starting the mode), and the buttons on the hero, stage and story screens
   document.querySelector('.m2-modes').addEventListener('click', e => { const q = e.target.closest('[data-how]'); if (!q) return; e.stopPropagation(); e.preventDefault(); api?.blip?.(700); openHowTo(q.dataset.how); }, true);
@@ -894,6 +917,11 @@ export function initMenu(opts) {
   };
   $('cols').onmouseover = e => { const c = e.target.closest('.stg-card'); if (c && stageView !== c.dataset.map) { api?.blip?.(300 + [...$('cols').children].indexOf(c) * 80); showStage(MAPS.find(m => m.id === c.dataset.map)); } };
   $('stgGo').onclick = () => { api?.blip?.(880); deployStage(stageView); };
+  $('stgTod').onclick = e => {
+    const b = e.target.closest('[data-tod]'); if (!b || b.disabled || (b.dataset.tod === 'night') === !!cfg.night) return;
+    cfg.night = b.dataset.tod === 'night'; save(); api?.blip?.(cfg.night ? 520 : 820);
+    const m = MAPS.find(x => x.id === stageView); if (m) showStage(m, true);
+  };
   $('setNav').addEventListener('click', e => {
     const b = e.target.closest('[data-stab]'); if (!b || b.dataset.stab === setTab) return;
     setTab = b.dataset.stab; api?.blip?.(640); renderSettings();
@@ -963,11 +991,24 @@ export function initMenu(opts) {
     else if (screen === 'contracts' && e.code === 'Escape') go('main');
     else if (screen === 'slots' && e.code === 'Escape') go('main');
     else if (screen === 'vault' && e.code === 'Escape') go('main');
+    else if (screen === 'achievements' && e.code === 'Escape') go('main');
+    else if (screen === 'ranked' && e.code === 'Escape' && !rankedDrafting()) go('main');
     else if (screen === 'main' && e.code === 'Enter') { setMode('lane'); go('roster'); }
   });
   go('main');
 }
 
+// The Ranked card on the main menu: your rank emblem, progress to the next division and the next reward.
+function refreshRankCard() {
+  const R = ranked(), r = R.rank, legend = r.i === RANKS.length - 1;
+  const el = $('modeRanked'); el.style.setProperty('--rc', hex(r.color));
+  $('mmRankIcon').textContent = r.icon;
+  $('mmRank').textContent = legend ? `${r.label} · ${r.rp.toLocaleString()} RP` : `${r.label} · ${r.into}/${r.need} RP`;
+  $('mmRankBar').style.width = (legend ? 100 : r.frac * 100).toFixed(1) + '%';
+  const next = RANK_REWARDS.find(x => R.best < x.rank * 3 * DIV);
+  $('mmRankNext').textContent = next ? `Next reward at ${RANKS[next.rank].name}: ${next.label.replace(/^Legendary skin: /, '★ ')}` : 'Every ranked reward claimed. Keep climbing!';
+  el.querySelector('.rc-new').classList.toggle('hidden', R.w + R.l > 0);
+}
 export function showMenu(name = 'main') { go(name); }
 export function menuFrame(renderer, dt) {
   if ($('front').classList.contains('hidden') || screen !== 'main') return false;

@@ -1,6 +1,6 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { cfg } from './settings.js?v=20261128w';
-import { bake } from './rig.js?v=20261128w';
+import { cfg } from './settings.js?v=20261129f';
+import { bake } from './rig.js?v=20261129f';
 
 // Stage atmosphere: sky, sun, fill light, haze, image-based lighting and set dressing.
 // Each stage has its own time of day; Maxx Island (Survivor) gets a tropical midday.
@@ -57,7 +57,18 @@ export const LOOK = {
     motes: 0xfff6c8, shafts: 0.05, clouds: 0xffffff,
   },
 };
-export const lookFor = map => LOOK[map.id] || LOOK[map.theme] || LOOK.plaza;
+// Night versions of the daytime stages: the same map under the moon, with each stage's own colours
+// sunk into deep blue, stars and searchlights overhead, and paper lanterns lighting the lanes.
+const mixC = (a, b, k) => new THREE.Color(a).lerp(new THREE.Color(b), k).getHex();
+function nightOf(L) {
+  return { ...L, top: 0x070b26, horizon: mixC(L.horizon, 0x1c2456, 0.78), bottom: mixC(L.bottom, 0x0e1430, 0.85),
+    sun: 0xaabfff, sunI: 1.3, sunPos: [L.sunPos[0] * 0.7, 58, L.sunPos[2] * 0.7],
+    hemiSky: 0x5a6ad8, hemiGround: mixC(L.hemiGround, 0x1a1a30, 0.7), hemiI: 0.85, fill: 0xffb070, fillI: 0.3,
+    fog: mixC(L.fog, 0x141a3a, 0.82), fogD: L.fogD * 1.2, env: 0.42, motes: 0xfff0a0, shafts: 0, mist: false,
+    clouds: 0x1e2648, cloudCol: 0x2a3258, night: true, lanterns: true };
+}
+export const canNight = map => !(LOOK[map.id] || LOOK[map.theme])?.night;      // Neon Heights is already a night stage
+export const lookFor = map => { const L = LOOK[map.id] || LOOK[map.theme] || LOOK.plaza; return map.night && !L.night ? nightOf(L) : L; };
 
 // ---------- sky ----------
 const SKY_VS = 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }';
@@ -227,6 +238,38 @@ function nightSky(scene, map) {
   };
 }
 
+// Night stages: warm paper lanterns floating over each lane, each one a real light, bobbing gently.
+function lanterns(scene, map) {
+  const spots = [];
+  for (const lane of map.lanes) {
+    // walk each lane and drop a lantern every so often on the blue half; the red half is the mirror
+    let acc = 6;
+    for (let i = 0; i < lane.length - 1 && spots.length < 8; i++) {
+      const [ax, az] = lane[i], [bx, bz] = lane[i + 1], len = Math.hypot(bx - ax, bz - az);
+      for (let d = acc; d < len; d += 22) {
+        const x = ax + (bx - ax) * d / len, z = az + (bz - az) * d / len;
+        if (z < -6 && z > -map.L + 14 && !spots.some(s => Math.hypot(s[0] - x, s[1] - z) < 12)) spots.push([x, z]);
+      }
+      acc = 22 - ((len - acc) % 22);
+    }
+  }
+  const glow = new THREE.MeshStandardMaterial({ color: 0xffc07a, emissive: 0xffa040, emissiveIntensity: 2.2, roughness: 0.8 });
+  const cap = new THREE.MeshStandardMaterial({ color: 0x5a2a1a, roughness: 0.9 });
+  const halo = new THREE.MeshBasicMaterial({ map: GLOW, color: 0xffb060, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending });
+  const all = [], lights = cfg.quality === 'low' ? 0 : cfg.quality === 'medium' ? 4 : 8;
+  spots.slice(0, 4).flatMap(([x, z]) => [[x, z], [-x, -z]]).forEach(([x, z], i) => {
+    const g = new THREE.Group(); g.position.set(x, 3.6, z); scene.add(g);
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.36, 0.7, 10), glow); g.add(body);
+    for (const y of [0.4, -0.4]) { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 0.1, 10), cap); c.position.y = y; g.add(c); }
+    const h = new THREE.Sprite(halo); h.scale.setScalar(3.2); g.add(h);
+    if (i < lights) { const l = new THREE.PointLight(0xffa860, 9, 17, 1.6); l.position.y = -0.4; g.add(l); }
+    g.userData = { y: 3.6, ph: i * 1.7 };
+    all.push(g);
+  });
+  return (dt, t) => { for (const g of all) { g.position.y = g.userData.y + Math.sin(t * 0.9 + g.userData.ph) * 0.18; g.rotation.y += dt * 0.3; } };
+}
+const GLOW = softTex((g, w) => { const gr = g.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, w); });
+
 export function buildDressing(scene, map) {
   const L = lookFor(map), ticks = [];
   ticks.push(motes(scene, map, L.motes));
@@ -236,6 +279,7 @@ export function buildDressing(scene, map) {
   if (map.id === 'canals') { ticks.push(skyLanterns(scene, map)); ticks.push(festoons(scene, map, [10], [0xffe1a0, 0xff9ab8, 0x9fe0ff])); }
   if (map.id === 'frostpeak') ticks.push(festoons(scene, map, [20, 40], [0xffd27a, 0xff7a5a, 0x8fe08a, 0x9fd0ff]));
   if (L.night) ticks.push(nightSky(scene, map));
+  if (L.lanterns) ticks.push(lanterns(scene, map));
   if (map.id === 'neon') ticks.push(festoons(scene, map, [16, 36], [0xff5aa8, 0x5af0ff, 0xffc93c, 0x9b5cff]));
   if (map.id === 'mesa') ticks.push(festoons(scene, map, [8, 30], [0xffd27a, 0xff7a5a, 0x3fb3a6, 0xffc93c]));
   if (map.id === 'docks') ticks.push(festoons(scene, map, [12, 34], [0xffe1a0, 0xffc27a, 0xff9a6a]));

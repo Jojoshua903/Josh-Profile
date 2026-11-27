@@ -1,5 +1,5 @@
-import { kb, PAD, setPadLabels, padGlyph } from './keys.js?v=20261128w';
-import { cfg } from './settings.js?v=20261128w';
+import { kb, PAD, setPadLabels, padGlyph } from './keys.js?v=20261129f';
+import { cfg } from './settings.js?v=20261129f';
 
 // Controller support for any pad the browser reports (Xbox, PlayStation, Switch Pro and most
 // others use the "standard" button order). In a match the buttons press the same keys the

@@ -1,7 +1,7 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { createStructure, damage, burst, ring, setBar } from './units.js?v=20261128w';
-import { knock, slow, root, freeze } from './abilities.js?v=20261128w';
-import { golem } from './guardian.js?v=20261128w';
+import { createStructure, damage, burst, ring, setBar } from './units.js?v=20261129f';
+import { knock, slow, root, freeze } from './abilities.js?v=20261129f';
+import { golem } from './guardian.js?v=20261129f';
 
 // Boss Raid: you and two bot allies against one boss in the middle of the stage. Beat it before
 // the clock runs out, and don't all go down at once. Every boss has three phases (at 66% and 33%

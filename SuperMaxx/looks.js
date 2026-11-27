@@ -1,5 +1,5 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { mat, part, joint, ball, pill, tube, cone, ring, slab, dome, live } from './rig.js?v=20261128w';
+import { mat, part, joint, ball, pill, tube, cone, ring, slab, dome, live } from './rig.js?v=20261129f';
 
 // Skin looks: every skin adds pieces to the hero's body as well as recolouring it. Crowns,
 // horns and visors sit on the head, capes, wings and jetpacks on the back, emblems on the chest,
@@ -431,6 +431,11 @@ export const LOOKS = {
   'chef-noir': [['tophat', { c: 0x0c0c12, c2: 0xffc93c }], ['scarf', { c: 0xffc93c }], ['rise', { shape: 'star', c: 0xffc93c, n: 6, speed: 0.3 }]],
   'manspider-tarantula': [['shades', { c: 0x1d1d24 }], ['necklace', { c: 0xff8a3c, c2: 0xff8a3c }], ['belt', { c: 0x2a160a, c2: 0xff8a3c }]],
   'magnet-thunder': [['visor', { c: 0xffe14a }], ['emblem', { shape: 'bolt', c: 0xffe14a }], ['orbit', { shape: 'bolt', n: 4, c: 0x7ab0ff, glow: 0.9 }], ['aura', { c: 0x7ab0ff }]],
+  // legendary skins from Ranked: the most pieces, and everything glows
+  'vanguard-sovereign': [['crown', { c: 0xffd23c, c2: 0x3fe0c8, n: 7, glow: 0.6 }], ['cape', { c: 0x0e3a4a, c2: 0xffd23c }], ['orbit', { shape: 'star', n: 5, c: 0x3fe0c8, glow: 1 }], ['rise', { shape: 'ball', clear: true, c: 0x9af0ff, n: 9, speed: 0.35 }], ['aura', { c: 0x3fe0c8 }]],
+  'ember-supernova': [['halo', { c: 0xffe14a, glow: 1.2 }], ['wings', { c: 0xffe14a, c2: 0xff3f8a, glow: 1.2, fast: false }], ['orbit', { shape: 'star', n: 6, c: 0xffe14a, glow: 1.2, spin: 1.5 }], ['rise', { shape: 'tetra', c: 0xff8a3c, n: 10, speed: 0.7 }], ['aura', { c: 0xffe14a }]],
+  'hippo-riverking': [['crown', { c: 0xffd23c, c2: 0x3fc9b8, n: 5, glow: 0.4 }], ['cape', { c: 0x123048, c2: 0xffd23c }], ['necklace', { c: 0xffd23c, c2: 0x9adcff, shape: 'coin' }], ['rise', { shape: 'ball', clear: true, c: 0x9adcff, n: 10, speed: 0.3 }], ['aura', { c: 0x3fc9b8 }]],
+  'striker-champion': [['halo', { c: 0xff3f8a, glow: 1.2 }], ['wings', { c: 0xffffff, c2: 0xff3f8a, glow: 0.8 }], ['emblem', { shape: 'star', c: 0xff3f8a }], ['orbit', { shape: 'star', n: 4, c: 0xffd23c, glow: 1 }], ['aura', { c: 0xff3f8a }]],
 };
 
 // A short "what it adds" line for the closet.

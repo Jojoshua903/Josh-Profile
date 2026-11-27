@@ -1,6 +1,6 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { burst, ring } from './units.js?v=20261128w';
-import { makeBox, rayWorld } from './world.js?v=20261128w';
+import { burst, ring } from './units.js?v=20261129f';
+import { makeBox, rayWorld } from './world.js?v=20261129f';
 
 // Smash Ball: 3v3 football with guns. A giant ball sits in the middle of the map and each team
 // defends a goal at its end. Shots shove the ball (harder-hitting shots shove it further), and

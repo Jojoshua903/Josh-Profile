@@ -1,6 +1,6 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { setGravity, gravity, resolveXZ } from './world.js?v=20261128w';
-import { burst, ring } from './units.js?v=20261128w';
+import { setGravity, gravity, resolveXZ } from './world.js?v=20261129f';
+import { burst, ring } from './units.js?v=20261129f';
 
 // Map mechanics that change how a stage plays, set in each map's data (data.js):
 //   gravity  a fall-speed multiplier for the whole match (Skyreach Isles floats at 0.6)

@@ -1,8 +1,8 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { kit, body, face, finish, gunAt, part, joint, chain, ball, pill, tube, cone, ring, slab, dome, live } from './rig.js?v=20261128w';
+import { kit, body, face, finish, gunAt, part, joint, chain, ball, pill, tube, cone, ring, slab, dome, live } from './rig.js?v=20261129f';
 
-// Season 2 "Insert Coin" heroes on the stylised rig: Tilt, Grabbit and Sir Pixel, plus the contract hero Hoot
-// and the slot machine hero Prism.
+// Season 2 "Insert Coin" heroes on the stylised rig: Tilt, Grabbit and Sir Pixel, plus the contract hero Hoot,
+// the slot machine heroes Prism and Lodestar, and Bigmouth from Ranked.
 
 // ---------------- Tilt: a pinball wizard in an arcade jacket ----------------
 function pinball(p, team) {
@@ -317,4 +317,101 @@ function magnet(p, team) {
   });
 }
 
-export const ROSTER_D = { pinball, clawbot, pixel, owl, unicorn, magnet };
+
+// ---------------- Bigmouth: a hippo from the river spa with a fire hose ----------------
+function hippo(p, team) {
+  const K = kit(p);
+  const hide = K.main, pink = K.skin, robe = K.c(0xf4ecdc, { rough: 0.85 });
+  const P = body(K, { w: 1.4, headR: 0, torso: [0.36, 0.38, 0.42, 0.36, 0.56], flat: 1, top: hide, pants: hide, boots: hide, gloves: hide, sleeves: hide, forearms: hide, shins: hide });
+  part(P.spine, ball(0.38), pink, 0, 0.2, -0.16, 0.9, 1.05, 0.55);                                   // pink belly
+  // a spa robe: open at the front, a sash, and a towel round the neck
+  for (const s of [-1, 1]) part(P.spine, slab(0.2, 0.62, 0.04), robe, s * 0.27, 0.26, -0.28);
+  part(P.spine, slab(0.86, 0.6, 0.04), robe, 0, 0.26, 0.37);
+  part(P.hips, ring(0.42, 0.04), K.trim, 0, 0.14, 0).rotation.x = Math.PI / 2;
+  part(P.spine, tube(0.3, 0.34, 0.12), K.trim, 0, 0.6, 0.02).rotation.x = 0.1;
+  for (const f of [P.footL, P.footR]) for (const s of [-1, 1]) part(f, ball(0.045), K.dark, s * 0.06, -0.06, -0.22);   // stubby toes
+  // the head: a broad dome, a huge square muzzle with nostrils, tiny ears and eyes on top
+  const H = P.head;
+  part(H, ball(0.28), hide, 0, 0.06, 0.06, 1.15, 0.9, 1.05);
+  part(H, ball(0.26), hide, 0, -0.02, -0.26, 1.35, 0.85, 1.05);
+  for (const s of [-1, 1]) {
+    part(H, ball(0.06), K.dark, s * 0.11, 0.1, -0.5, 1, 0.7, 0.6);                                 // nostrils
+    part(H, ball(0.07), hide, s * 0.18, 0.32, 0.12, 1, 1.2, 0.7);                                  // ears
+    part(H, ball(0.04), pink, s * 0.18, 0.33, 0.08, 1, 1.2, 0.5);
+    part(H, ball(0.08), hide, s * 0.15, 0.24, -0.08);                                              // eye bumps
+    part(H, ball(0.055), K.white, s * 0.15, 0.26, -0.12, 1, 1, 0.8);
+    part(H, ball(0.028), K.ink, s * 0.15, 0.27, -0.165);
+  }
+  const jaw = joint(H, 0, -0.14, -0.08);
+  part(jaw, ball(0.24), hide, 0, -0.04, -0.2, 1.3, 0.5, 1);
+  part(jaw, ball(0.2), K.c(0xd8606a, { rough: 0.5 }), 0, 0.03, -0.2, 1.2, 0.28, 0.9);           // inside the mouth
+  for (const s of [-1, 1]) part(jaw, cone(0.035, 0.13, 8), K.white, s * 0.2, 0.1, -0.36);         // tusks
+  // a shower cap with a little flower on top
+  part(H, dome(0.26, Math.PI * 0.42), K.c(p.trim, { rough: 0.4 }), 0, 0.2, 0.08, 1.15, 0.75, 1.1);
+  part(H, ball(0.06), K.c(0xffe14a, { rough: 0.4 }), 0.1, 0.42, 0.02);
+  const tail = chain(P.hips, 3, 0.12, hide, 0, 0.02, 0.36, 0.08, 0.04, [0, -0.2, 1]);
+  // River Cannon: a brass fire-hose nozzle on a canvas hose, fed from a water barrel on her back
+  const tank = part(P.spine, tube(0.2, 0.2, 0.5), K.c(0x6a4a2e, { rough: 0.8 }), 0, 0.32, 0.46);
+  for (const y of [-0.16, 0.16]) part(tank, ring(0.205, 0.025), K.steel, 0, y, 0).rotation.x = Math.PI / 2;
+  const gun = gunAt(P, 0.32, 1.22, -0.46);
+  part(gun, tube(0.08, 0.11, 0.42), K.c(0xd8a441, { rough: 0.25, metal: 0.6 }), 0, 0, -0.04).rotation.x = Math.PI / 2;
+  part(gun, tube(0.045, 0.07, 0.2), K.c(0xd8a441, { rough: 0.25, metal: 0.6 }), 0, 0, -0.33).rotation.x = Math.PI / 2;
+  part(gun, ring(0.1, 0.025), K.trim, 0, 0, 0.12);
+  part(gun, tube(0.06, 0.06, 0.4), K.c(0xc84a3a, { rough: 0.8 }), 0, -0.08, 0.32).rotation.x = Math.PI / 2 - 0.5;
+  const drip = live(part(gun, ball(0.04), K.c(0x7ad8ff, { rough: 0.05, glow: 0.3 }), 0, -0.04, -0.46));
+  return finish(P, team, gun, -0.44, (dt, s, t, k) => {
+    tail.forEach((g, i) => { g.rotation.y = Math.sin(t * 6 + i) * 0.3; });
+    jaw.rotation.x = 0.05 + Math.max(0, Math.sin(t * 0.9)) * 0.12 + k * 0.1;
+    H.rotation.z = Math.sin(t * 1.2) * 0.04;
+    drip.position.y = -0.04 - ((t * 0.8) % 1) * 0.12; drip.scale.setScalar(1 - ((t * 0.8) % 1) * 0.6);
+  }, { stride: 1.2 });
+}
+
+// ---------------- Switcheroo: a stage magician in a tailcoat with a star-tipped wand ----------------
+function swapper(p, team) {
+  const K = kit(p);
+  const coat = K.main, gold = K.c(p.trim, { rough: 0.25, metal: 0.5 }), silk = K.c(0xb0283a, { rough: 0.45 }), shirt = K.c(0xfff6ea, { rough: 0.7 });
+  const star = K.c(0xffe14a, { glow: 1, rim: 0 });
+  const P = body(K, { w: 0.9, torso: [0.18, 0.19, 0.25, 0.24, 0.54], top: shirt, sleeves: coat, forearms: coat, pants: K.dark, gloves: K.white, shoes: 'boot', boots: K.c(0x14101e, { rough: 0.3 }) });
+  face(P, K, { mouth: 'smirk', lashes: true, cheeks: true, brow: 0.25 });
+  // tailcoat: open front, gold buttons, two long tails behind, and a bow tie
+  for (const s of [-1, 1]) {
+    part(P.spine, slab(0.16, 0.56, 0.04), coat, s * 0.17, 0.26, -0.23);
+    part(P.spine, ball(0.025), gold, s * 0.09, 0.2, -0.26);
+    part(P.spine, ball(0.025), gold, s * 0.09, 0.32, -0.26);
+  }
+  part(P.spine, slab(0.52, 0.6, 0.04), coat, 0, 0.26, 0.23);
+  const tails = [-1, 1].map(s => { const t = joint(P.hips, s * 0.1, 0.05, 0.22); part(t, slab(0.16, 0.5, 0.03), coat, 0, -0.25, 0); return t; });
+  for (const s of [-1, 1]) part(P.spine, cone(0.06, 0.1, 4), silk, s * 0.06, 0.55, -0.24).rotation.z = s * Math.PI / 2;
+  part(P.spine, ball(0.03), silk, 0, 0.55, -0.25);
+  // a cape, red inside, hanging from the shoulders
+  const cape = joint(P.spine, 0, 0.58, 0.2);
+  part(cape, slab(0.62, 0.9, 0.025), K.c(0x14101e, { rough: 0.5 }), 0, -0.45, 0.02);
+  part(cape, slab(0.58, 0.86, 0.02), silk, 0, -0.45, -0.005);
+  // bobbed hair and a tall top hat with a gold band; a playing card tucked in the band
+  part(P.head, dome(0.31, Math.PI * 0.62), K.c(0x1a1222, { rough: 0.6 }), 0, 0.02, 0.03, 1.06, 1, 1.08);
+  const hat = joint(P.head, 0, 0.27, 0.02); hat.rotation.z = -0.12;
+  part(hat, tube(0.36, 0.36, 0.03, 20), K.c(0x14101e, { rough: 0.35 }), 0, 0, 0);
+  part(hat, tube(0.22, 0.23, 0.42, 18), K.c(0x14101e, { rough: 0.35 }), 0, 0.22, 0);
+  part(hat, tube(0.232, 0.232, 0.07, 18), gold, 0, 0.06, 0);
+  part(hat, slab(0.1, 0.14, 0.01), K.white, 0.16, 0.14, -0.16).rotation.y = 0.8;
+  // Switch Wand: black with white ends and a glowing star that spins
+  const gun = gunAt(P, 0.28, 1.2, -0.44);
+  part(gun, tube(0.028, 0.028, 0.5, 10), K.c(0x14101e, { rough: 0.3 }), 0, 0, -0.1).rotation.x = Math.PI / 2;
+  for (const z of [0.15, -0.35]) part(gun, tube(0.031, 0.031, 0.06, 10), K.white, 0, 0, z).rotation.x = Math.PI / 2;
+  const tip = live(joint(gun, 0, 0, -0.42));
+  for (let i = 0; i < 5; i++) { const r = part(tip, cone(0.03, 0.09, 4), star, 0, 0, 0); r.rotation.z = i / 5 * Math.PI * 2; r.position.set(Math.sin(i / 5 * Math.PI * 2) * 0.05, Math.cos(i / 5 * Math.PI * 2) * 0.05, 0); }
+  part(tip, ball(0.04), star);
+  // two playing cards circling her, swapping places as they go
+  const orbit = joint(P.spine, 0, 0.3, 0);
+  const cards = [0, 1].map(i => live(part(joint(orbit, (i ? 1 : -1) * 0.6, 0, 0), slab(0.12, 0.17, 0.01), i ? silk : K.white)));
+  return finish(P, team, gun, -0.38, (dt, s, t, k) => {
+    tip.rotation.z += dt * 3;
+    orbit.rotation.y += dt * 1.6;
+    cards.forEach((c, i) => { c.rotation.y += dt * 4; c.position.y = Math.sin(t * 2 + i * Math.PI) * 0.12; });
+    tails.forEach((g, i) => { g.rotation.x = 0.15 + s * 0.08 + Math.sin(t * 5 + i) * 0.06; });
+    cape.rotation.x = 0.08 + s * 0.12 + Math.sin(t * 2.5) * 0.04;
+    hat.rotation.z = -0.12 + Math.sin(t * 1.3) * 0.03;
+  });
+}
+export const ROSTER_D = { pinball, clawbot, pixel, owl, unicorn, magnet, hippo, swapper };

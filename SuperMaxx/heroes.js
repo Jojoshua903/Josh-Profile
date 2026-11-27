@@ -1,7 +1,7 @@
 // The roster. Every hero has a primary weapon, two abilities (Q, E) and an ultimate (F)
 // that charges by dealing damage. Ability ids map to behaviours in abilities.js.
 
-import { SEASONS, seasonLive } from './seasons.js?v=20261128w';
+import { SEASONS, seasonLive } from './seasons.js?v=20261129f';
 export const ALL_HEROES = [
   {
     id: 'vanguard', name: 'Ottilie Brandt', callsign: 'Bulwark', role: 'Frontline tank', color: 0x2fb39a,
@@ -152,6 +152,37 @@ export const ALL_HEROES = [
     ult: { id: 'supermagnet', name: 'Super Magnet', cost: 1000, radius: 15, dur: 4, pull: 6, dps: 16, mult: 0.7, blast: 8, dmg: 60, knock: 16, desc: 'Turn into a giant magnet for 4s: every enemy within 15m is dragged toward you and takes damage while you take 30% less. Then the field flips and blasts everyone close for 60' },
     passive: { id: 'magnetise', name: 'Magnetised', dur: 4, amp: 1.5, desc: 'Enemies you shoot are magnetised for 4s. Your pulls drag magnetised enemies 50% harder, and Attract clamps them' },
     prefRange: 14,
+  },
+  {
+    id: 'swapper', name: 'Margot Lumière', callsign: 'Switcheroo', role: 'Stage magician', color: 0x7a4fe0,
+    title: 'Now you see her, now you’re standing where she was',
+    bio: 'Margot headlined the Solmare Grand Theatre for nine seasons with one trick: she pointed her wand at someone in the front row and the two of them swapped seats. Nobody ever worked out how it was done, and when the theatre closed she took the trick on the road. Now she points the wand at people who are trying to shoot her.',
+    quote: 'Pick a card. Any card. Actually, pick a spot.',
+    palette: { main: 0x3a2470, trim: 0xffd23c, dark: 0x16102e, skin: 0xf0c8a8 },
+    quips: { kill: ['And for my final trick…', 'Ta-da!', 'Thank you, you’ve been lovely.'], ability: ['Switcheroo!', 'Presto!', 'Change places!'], ult: ['SHUFFLE THE DECK!', 'Everybody, change places!'], spawn: ['Curtain up.'] },
+    hp: 190, speed: 7.1, desc: 'A wand whose bolts swap her places with whoever they hit, a vanishing act, a long-range Switcheroo that works on friends too, and a Grand Shuffle that throws the whole enemy team around.',
+    weapon: { name: 'Switch Wand', type: 'hitscan', mode: 'swap', dmg: 30, rate: 0.75, mag: 6, reload: 1.9, spread: 0.004, range: 40, head: 1.5, tracer: 0xb48cff, desc: 'A star-tipped wand. Every bolt that hits an enemy hero swaps your places with them' },
+    q: { id: 'vanish', name: 'Disappearing Act', cd: 10, dur: 3, bonus: 1.6, desc: 'Vanish in a puff of confetti for 3s. Your next shot deals 60% more damage' },
+    ability: { id: 'switcheroo', name: 'Switcheroo', cd: 12, range: 35, stun: 0.8, guard: 2, mult: 0.6, desc: 'Swap places with the hero you aim at, up to 35m away. Enemies are stunned for 0.8s; teammates take 40% less damage for 2s' },
+    ult: { id: 'shuffle', name: 'Grand Shuffle', cost: 950, radius: 16, dmg: 60, stun: 1.2, desc: 'Shuffle the deck: every enemy within 16m swaps places with another one, takes 60 damage and is stunned for 1.2s' },
+    passive: { id: 'misdirect', name: 'Misdirection', dur: 1.5, mult: 0.7, slow: 0.6, desc: 'After any swap you take 30% less damage for 1.5s, and enemies you swap are dazed (40% slower) for 1.5s' },
+    prefRange: 16,
+  },
+  // ---- Ranked reward hero (reach Platinum in Ranked, see ranked.js) ----
+  {
+    id: 'hippo', name: 'Hortensia Wallow', callsign: 'Bigmouth', role: 'River-bank brawler', color: 0x8f86b8, ranked: true,
+    title: 'The biggest mouth on the river',
+    bio: 'Hortensia ran the mud baths at the Solmare river spa for thirty years, until a developer tried to drain the river to build a car park. She sat in the riverbed for a week and nobody could move her. Now she takes that same stubbornness into every fight, with a fire hose she pulled off the developer’s own truck.',
+    quote: 'I’m not fat. I’m load-bearing.',
+    palette: { main: 0x8f86b8, trim: 0xff9aa8, dark: 0x4a4466, skin: 0xffc4cc },
+    quips: { kill: ['Chomp.', 'Mmm. Crunchy.', 'Should’ve stayed out of the river.'], ability: ['Splash zone!', 'Mud bath’s open!', 'Incoming!'], ult: ['HUNGRY HUNGRY HIPPO!', 'DINNER’S SERVED!'], spawn: ['The river’s rising.'] },
+    hp: 300, speed: 6.4, desc: 'A river-water fire hose that shoves people back, a belly flop that bowls a crowd over, a mud bath that heals her team and toughens her hide, and a jaws-open charge that eats through everyone in the way.',
+    weapon: { name: 'River Cannon', type: 'cone', mode: 'hose', dmg: 6, rate: 0.07, mag: 70, reload: 2.2, range: 12, cone: 0.9, spread: 0, head: 1, push: 9, color: 0x5ac8ff, desc: 'A short-range stream of river water that soaks enemies and steadily shoves them away from you' },
+    q: { id: 'bellyflop', name: 'Belly Flop', cd: 9, radius: 5.5, dmg: 50, knock: 12, desc: 'Leap into the air and land belly-first: everyone within 5.5m takes 50 damage and is bowled over' },
+    ability: { id: 'wallow', name: 'Wallow', cd: 14, radius: 5, dur: 5, hps: 16, slow: 0.6, mult: 0.7, guard: 3, desc: 'Flop down a 5m mud bath for 5s that heals allies 16/s and slows enemies. You take 30% less damage for 3s' },
+    ult: { id: 'hungry', name: 'Hungry Hungry Hippo', cost: 1000, dist: 20, dmg: 80, knock: 10, lift: 8, heal: 0.5, desc: 'Charge forward 20m with your jaws wide open, chomping every enemy in your way for 80 damage, launching them, and healing for half the damage you deal' },
+    passive: { id: 'thickhide', name: 'Thick Hide', knock: 0.55, slow: 0.5, desc: 'Knockback moves you 45% less, and slows are only half as strong on you' },
+    prefRange: 8,
   },
   // ---- Season 1 pass heroes (unlocked through the season pass, see pass.js) ----
   {
@@ -498,10 +529,10 @@ export const ARCHETYPES = [
   { id: 'control', name: 'Control', icon: '🌀', color: 0x9b5cff, desc: 'Traps, stuns and tricks that shape the battlefield' },
 ];
 const ARCH_OF = {
-  vanguard: 'tank', avalanche: 'tank', croc: 'tank', cavalier: 'tank', chipmunk: 'tank', microwave: 'tank', clawbot: 'tank',
+  vanguard: 'tank', avalanche: 'tank', croc: 'tank', hippo: 'tank', cavalier: 'tank', chipmunk: 'tank', microwave: 'tank', clawbot: 'tank',
   striker: 'damage', ember: 'damage', mirage: 'damage', kestrel: 'damage', brawler: 'damage', elf: 'damage', chef: 'damage', pinball: 'damage',
   warden: 'support', slime: 'support', dancer: 'support', medic: 'support', spark: 'support', wellington: 'support', pixel: 'support',
-  thicket: 'control', ratchet: 'control', tempo: 'control', mole: 'control', builder: 'control', shepherd: 'control', manspider: 'control', magnet: 'control',
+  thicket: 'control', ratchet: 'control', tempo: 'control', mole: 'control', builder: 'control', shepherd: 'control', manspider: 'control', magnet: 'control', swapper: 'control',
   owl: 'damage', unicorn: 'damage',
 };
 for (const h of ALL_HEROES) h.arch = ARCH_OF[h.id] || 'damage';

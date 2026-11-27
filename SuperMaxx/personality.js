@@ -3,7 +3,7 @@
 // win / lose: the results screen · kill: extra elimination lines · rivals: a taunt for knocking out
 // that hero · friends: a hello when that hero spawns on your team · likes, dislikes, fact: Story tab
 
-import { ALL_HEROES as HEROES } from './heroes.js?v=20261128w';
+import { ALL_HEROES as HEROES } from './heroes.js?v=20261129f';
 
 const P = {
   vanguard: {
@@ -208,6 +208,20 @@ const P = {
     thanks: ['Cheers! You’re a real attraction.', 'Thanks, I owe you a spanner.'], win: ['Pulled that one off!', 'Opposites attract. Winners stick together.'], lose: ['Somebody demagnetised me.', 'Back to the scrapyard, then.'],
     kill: ['Stuck on you.', 'Scrap.'], rivals: { builder: 'Mortar keeps leaving his bricks on my crane.' }, friends: { ratchet: 'Ratchet! Give us a rivet, I’ll catch it.' },
     likes: 'Big cranes, old radios, the hum of a good generator', dislikes: 'Plastic, aluminium, people who ask her to find their keys', fact: 'Cannot wear a watch. Every watch she has owned now runs backwards.',
+  },
+  swapper: {
+    select: ['Switcheroo, live on stage!', 'For my next trick, I’ll need a volunteer.', 'Keep your eyes on the wand.'],
+    death: ['That… wasn’t part of the act…', 'Curtain… down…'], lowhp: ['The show’s going badly! Help!', 'I need a lovely assistant over here!'],
+    thanks: ['Thank you, darling. Take a bow.', 'Marvellous! You’re in the act.'], win: ['Ta-da! Thank you, you’ve been wonderful!', 'And the crowd goes wild!'], lose: ['Tough crowd.', 'Back to rehearsals.'],
+    kill: ['Ta-da!', 'Pick a card.'], rivals: { mirage: 'Mirage calls it illusion. I call it stealing my act.' }, friends: { unicorn: 'Prism! The only one who claps at every trick.' },
+    likes: 'Standing ovations, velvet curtains, a rabbit that stays in the hat', dislikes: 'Hecklers, people who explain the trick, mirrors at the wrong angle', fact: 'Has swapped places with her own reflection twice. She claims she is the original.',
+  },
+  hippo: {
+    select: ['Bigmouth’s here. Somebody run me a bath.', 'River’s rising, darlings.', 'I’ve sat on bigger problems than you.'],
+    death: ['I just… need… a lie down…', 'Ooof. Somebody fetch my towel.'], lowhp: ['I’m drying out over here!', 'Help! My hide’s only so thick!'],
+    thanks: ['Oh, you’re a treasure.', 'Lovely. Like a warm mud bath.'], win: ['Bath time for the winners!', 'Told you. Load-bearing.'], lose: ['Well. That was a belly flop.', 'Back to the spa, then.'],
+    kill: ['Chomp.', 'Crunchy.'], rivals: { croc: 'Snapjaw thinks that ferry owns the river. It doesn’t.' }, friends: { slime: 'Gloop! The only one who appreciates a proper wallow.' },
+    likes: 'Mud baths, cucumber slices, very long naps', dislikes: 'Car parks, cold showers, anyone who calls her “chubby”', fact: 'Holds her breath for six minutes. Once fell asleep at the bottom of the spa pool and nobody noticed.',
   },
   unicorn: {
     select: ['Prism, reporting with sprinkles!', 'Glitter? Check. Horn? Check. Let’s go!', 'Be nice to me. Please. For your sake.'],

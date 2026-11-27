@@ -1,5 +1,5 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { M, add, sph, box, cyl, cap, limb, common, walk } from './models.js?v=20261128w';
+import { M, add, sph, box, cyl, cap, limb, common, walk } from './models.js?v=20261129f';
 
 // The second half of the roster. Same conventions as models.js: face -z, head near y=1.62.
 const INK = 0x1d2340;

@@ -1,9 +1,10 @@
-import { HEROES, ARCHETYPES } from './heroes.js?v=20261128w';
-import { MAPS, DIFFICULTY } from './data.js?v=20261128w';
-import { cfg, save } from './settings.js?v=20261128w';
-import { headshot } from './portraits.js?v=20261128w';
-import { dressed, wear, myCosIds, heroOwned } from './pass.js?v=20261128w';
-import * as net from './net.js?v=20261128w';
+import { HEROES, ARCHETYPES } from './heroes.js?v=20261129f';
+import { MAPS, DIFFICULTY } from './data.js?v=20261129f';
+import { canNight } from './stage.js?v=20261129f';
+import { cfg, save } from './settings.js?v=20261129f';
+import { headshot } from './portraits.js?v=20261129f';
+import { dressed, wear, myCosIds, heroOwned } from './pass.js?v=20261129f';
+import * as net from './net.js?v=20261129f';
 
 // Online front end: set up your name and hero, host or join a room by code, then the lobby
 // (mode, teams, stage, start). The match itself starts on every machine when the host hits Start.
@@ -142,7 +143,7 @@ function homeHTML() {
 function lobbyHTML(st) {
   const players = Object.entries(st.players || {}).sort((a, b) => a[1].t - b[1].t);
   const mine = st.players?.[st.me];
-  const map = MAPS.find(m => m.id === st.meta?.map) || MAPS[0];
+  const [mapId, tod] = String(st.meta?.map || '').split('@'), map = MAPS.find(m => m.id === mapId) || MAPS[0], night = tod === 'night' && canNight(map);
   const mode = MODES[st.meta?.mode] ? st.meta.mode : 'hill', duel = mode === 'duel', dsz = duel ? st.meta?.duelSize || 1 : 3;
   const M = { ...MODES[mode], per: dsz }, solo = duel && dsz === 1;
   const playing = st.meta?.state === 'playing', host = st.host, lock = playing ? 'disabled' : '';
@@ -194,7 +195,7 @@ function lobbyHTML(st) {
           <h4>Match ${host ? '' : '<small>set by the host</small>'}</h4>
           <label>Mode</label>${seg('mode', Object.entries(MODES).map(([id, m]) => [id, m.name]), mode)}
           ${duel ? `<label>Team size</label>${seg('duelsize', [['1', '1v1'], ['2', '2v2'], ['3', '3v3']], String(dsz))}` : ''}
-          <label>Stage</label>${host ? `<select class="rm-sel" data-pick="map" ${lock}>${MAPS.map(m => `<option value="${m.id}" ${m.id === map.id ? 'selected' : ''}>${m.name}</option>`).join('')}</select>` : `<div class="rm-val">${map.name}</div>`}
+          <label>Stage</label>${host ? `<select class="rm-sel" data-pick="map" ${lock}>${MAPS.flatMap(m => [[m.id, m.name, false], ...(canNight(m) ? [[m.id + "@night", m.name + " · night", true]] : [])]).map(([v, l, n]) => `<option value="${v}" ${v.split("@")[0] === map.id && n === night ? "selected" : ""}>${n ? "🌙 " : ""}${l}</option>`).join("")}</select>` : `<div class="rm-val">${night ? "🌙 " : ""}${map.name}${night ? " · night" : ""}</div>`}
           ${duel ? '' : `<div class="rm-row"><span><b>Draft pick</b><small>Take turns picking, no duplicates</small></span>${tog('drafttog', draft)}</div>`}
           <div class="rm-row"><span><b>Bots</b><small>${botsOn ? 'Fill any empty seats' : 'Players only'}</small></span>${tog('botstog', botsOn)}</div>
           ${botsOn ? `<label>Bot skill</label>${seg('botdiff', Object.entries(DIFFICULTY).map(([k, x]) => [k, x.label]), diff)}` : ''}

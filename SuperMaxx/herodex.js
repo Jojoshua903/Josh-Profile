@@ -1,10 +1,10 @@
-import { HEROES, ARCHETYPES } from './heroes.js?v=20261128w';
-import { splash, headshot } from './portraits.js?v=20261128w';
-import { dressed, heroOwned, lockLong } from './pass.js?v=20261128w';
-import { masteryOf } from './mastery.js?v=20261128w';
-import { keyOf } from './keys.js?v=20261128w';
-import { cfg, save } from './settings.js?v=20261128w';
-import { GUIDES } from './guides.js?v=20261128w';
+import { HEROES, ARCHETYPES } from './heroes.js?v=20261129f';
+import { splash, headshot } from './portraits.js?v=20261129f';
+import { dressed, heroOwned, lockLong } from './pass.js?v=20261129f';
+import { masteryOf } from './mastery.js?v=20261129f';
+import { keyOf } from './keys.js?v=20261129f';
+import { cfg, save } from './settings.js?v=20261129f';
+import { GUIDES } from './guides.js?v=20261129f';
 
 // The Heroes page: every hero's kit, stats and a written guide. A searchable list on the left,
 // grouped by class, and the selected hero on the right.

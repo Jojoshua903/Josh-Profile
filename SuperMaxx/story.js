@@ -1,9 +1,9 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { createHero, spawnHero, createStructure, setBar, burst, ring } from './units.js?v=20261128w';
-import { initBot } from './botbrain.js?v=20261128w';
-import { HEROES } from './heroes.js?v=20261128w';
-import { addTokens } from './slots.js?v=20261128w';
-import { initRaid, BOSSES } from './raid.js?v=20261128w';
+import { createHero, spawnHero, createStructure, setBar, burst, ring } from './units.js?v=20261129f';
+import { initBot } from './botbrain.js?v=20261129f';
+import { HEROES } from './heroes.js?v=20261129f';
+import { addTokens } from './slots.js?v=20261129f';
+import { initRaid, BOSSES } from './raid.js?v=20261129f';
 
 // Story mode: one solo mission per hero, told in a few lines before, between and after. Every
 // mission has two parts, played back to back on the same map; each part is one of a handful of
@@ -211,6 +211,20 @@ export const MISSIONS = [
       { title: 'Save the Crane', type: 'defend', time: 75, hp: 2400, name: 'the old crane', cap: 3, line: 'The rigs are scrap. Now the whole gang is coming for the crane itself, and Ferra is standing right underneath it.' },
     ],
     outro: 'The crane still works. The thieves’ cutting rigs are now part of it, and Ferra says it has never run better.' },
+  { hero: 'swapper', title: 'The Vanishing Fair', map: 'hollow',
+    intro: ['Margot’s travelling show has pitched its tent at the Pumpkin Hollow harvest fair.', 'Overnight, a rival troupe let every one of her rabbits out of their hats.', 'She taps her wand twice. Somebody in that troupe is about to be somewhere else.'],
+    stages: [
+      { title: 'Round Up the Rabbits', type: 'collect', n: 6, time: 130, item: 'runaway rabbit', cap: 3 },
+      { title: 'The Final Act', type: 'elims', n: 8, cap: 3, line: 'The rabbits are back in their hats. Now the rival troupe has come to break up the show, and Margot has a trick for every one of them.' },
+    ],
+    outro: 'The show went on that night, to a full tent. The rival troupe now works as her lovely assistants.' },
+  { hero: 'hippo', title: 'Hold the River', map: 'canals',
+    intro: ['A developer’s crew has come to drain the canal quarter and pave it over.', 'Their pumps are already chugging away along the water’s edge.', 'Hortensia climbs out of her mud bath, picks up her fire hose, and goes to have a word.'],
+    stages: [
+      { title: 'Pull the Pumps', type: 'destroy', n: 3, name: 'drain pump', cap: 2 },
+      { title: 'Sit Tight', type: 'defend', time: 75, hp: 2600, name: 'the old spa', cap: 3, line: 'The pumps are scrap. Now the whole crew is coming for her spa, so Hortensia does what she does best: sits down in front of it and refuses to move.' },
+    ],
+    outro: 'The canals are still full. The developer’s car park is now a very popular mud bath.' },
   { hero: 'unicorn', title: 'Bad Day at the Bakery', map: 'plaza',
     intro: ['Celeste’s pastry stall in Solmare Piazza sells the best sprinkle cakes in town.', 'This morning, a gang knocked it over and ran off with every jar of sprinkles.', 'She is still smiling. For now.'],
     stages: [
@@ -572,3 +586,4 @@ export function storyGoal(G, b, goal, tgt, P) {
   return { sprint: d > pref + 10 };
 }
 export const storyInfo = G => G.story && { ...G.story, title: G.story.M.title };
+export const storyClears = () => Object.keys(SAVE.done).length;

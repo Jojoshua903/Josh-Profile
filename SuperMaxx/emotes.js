@@ -1,6 +1,6 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { cfg, save } from './settings.js?v=20261128w';
-import { emoteOwned } from './slots.js?v=20261128w';
+import { cfg, save } from './settings.js?v=20261129f';
+import { emoteOwned } from './slots.js?v=20261129f';
 
 // Emotes: a short upper-body animation with an emoji bubble over the hero's head. The legs keep
 // walking, so heroes can emote on the move; firing or casting cancels your own. Poses blend in

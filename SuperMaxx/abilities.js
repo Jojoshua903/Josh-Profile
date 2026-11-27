@@ -1,7 +1,7 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { makeBox, resolveXZ, hasLOS, groundAt, rayWorld } from './world.js?v=20261128w';
-import { buildHeroModel } from './models.js?v=20261128w';
-import { damage, tally, trace, tracer, burst, ring, setBar, makeBar, eyeOf, dirFrom, chestOf, spawnProjectile, TEAM_COLOR } from './units.js?v=20261128w';
+import { makeBox, resolveXZ, hasLOS, groundAt, rayWorld } from './world.js?v=20261129f';
+import { buildHeroModel } from './models.js?v=20261129f';
+import { damage, tally, trace, tracer, burst, ring, setBar, makeBar, eyeOf, dirFrom, chestOf, spawnProjectile, TEAM_COLOR } from './units.js?v=20261129f';
 
 // Abilities, status effects, zones, traps, walls and deployables.
 // Each ability: cast(G, h, a, ctx) -> bool, ai(G, bot, a, ctx) -> bool (should the bot cast now?).
@@ -15,7 +15,7 @@ const RAINBOW = [0xff4d4d, 0xff9a3c, 0xffe14a, 0x5fe07a, 0x4d9aff, 0xb06aff];
 // ---------- status ----------
 export function resetStatus(h) {
   Object.assign(h, { magT: 0, magBy: null, slowT: 0, slowM: 1, stunT: 0, rootT: 0, hasteT: 0, hasteSpeed: 1, hasteFire: 1, markT: 0, markAmp: 1, lurkT: 0, rushT: 0, rallyT: 0, rallyAmp: 1, jamT: 0, grabbed: null,
-    invisT: 0, ambush: 1, barrierT: 0, barrierM: 1, noReloadT: 0, knockT: 0, dashT: 0, slamPending: false, airT: 0,
+    invisT: 0, ambush: 1, barrierT: 0, barrierM: 1, noReloadT: 0, knockT: 0, dashT: 0, slamPending: false, flopPending: false, airT: 0,
     zoneSlow: 1, zoneMult: 1, glideT: 0, momentum: 0, overdriveT: 0, megaT: 0, burnT: 0, ejected: false, photoOn: false, tunnelCd: 0, twirlT: 0, vigilT: 0, dashSteer: false, blindT: 0, frozenT: 0, oneUpT: 0, scoreStacks: 0, wing: 100, flapT: 0, diving: false, diveT: 0 });
   if (h.iceMesh) { h.iceMesh.parent?.remove(h.iceMesh); h.iceMesh = null; }
   if (h.nightOn) { h.nightOn = false; h.model?.nightmare?.(false); } h.nightT = 0;
@@ -33,11 +33,16 @@ export const isHidden = h => h.invisT > 0;
 
 export function stun(u, t) { if (u.kind === 'hero') { u.stunT = Math.max(u.stunT, t); breakInvis(u); } else if (u.kind === 'minion') u.stunT = Math.max(u.stunT || 0, t); }
 export function root(u, t) { if (u.kind === 'hero') u.rootT = Math.max(u.rootT, t); else if (u.kind === 'minion') u.stunT = Math.max(u.stunT || 0, t); }
-export function slow(u, mult, t) { if (u.kind === 'hero' && pasId(u) !== 'snowboots') { u.slowT = Math.max(u.slowT, t); u.slowM = Math.min(u.slowT > 0 ? u.slowM : 1, mult); } }
+export function slow(u, mult, t) {
+  if (u.kind !== 'hero' || pasId(u) === 'snowboots') return;
+  if (pasId(u) === 'thickhide') mult = 1 - (1 - mult) * u.def.passive.slow;          // Bigmouth shrugs off half of it
+  u.slowT = Math.max(u.slowT, t); u.slowM = Math.min(u.slowT > 0 ? u.slowM : 1, mult);
+}
 export function knock(u, dir, force, up = 5) {
   if (u.kind !== 'hero' && u.kind !== 'minion') return;
   if (!u.vel) return;
   if (pasId(u) === 'ballast') { force *= u.def.passive.knock; up *= 0.5; }      // Bulwark barely budges
+  if (pasId(u) === 'thickhide') { force *= u.def.passive.knock; up *= 0.7; }
   u.vel.x = dir.x * force; u.vel.z = dir.z * force; u.vel.y = up;
   u.knockT = 0.45;
 }
@@ -101,6 +106,10 @@ export function tickStatus(G, h, dt) {
       if (h.dashMode === 'grab') {
         damage(G, u, h.dashDmg, h);
         if (u.kind === 'hero') { h.grabbed = u; h.dashT = Math.max(h.dashT, 0.35); }
+      } else if (h.dashMode === 'chomp') {                // Hungry Hungry Hippo: eat through everyone
+        damage(G, u, h.dashDmg, h); knock(u, h.dashDir, h.dashKnock, h.dashLift);
+        if (mine(G, h)) healBy(G, h, h.dashDmg * h.dashHeal, h);
+        if (u.kind === 'hero') { G.ev.flash?.(u, 'Chomped!'); G.ev.shake?.(h, 0.25); }
       } else if (h.dashMode === 'joust') {
         const run = h.dashStart ? Math.hypot(h.pos.x - h.dashStart.x, h.pos.z - h.dashStart.z) : 0;
         damage(G, u, h.dashDmg + run * h.dashPerM, h); knock(u, h.dashDir, 4, h.dashLift);
@@ -135,6 +144,7 @@ export function afterMove(G, h, dt) {
   if (!h.onGround) h.airT += dt;
   else {
     if (h.slamPending && h.airT > 0.25) slamLand(G, h);
+    if (h.flopPending && h.airT > 0.2) flopLand(G, h);
     if (h.diving && h.airT > 0.15) diveLand(G, h);
     h.airT = 0;
   }
@@ -191,7 +201,7 @@ const ZONE_LOOK = {
   dome: { color: 0x5fe0c0, dome: true }, sanctum: { color: 0xffe08a }, overgrowth: { color: 0x5fb05a },
   frost: { color: 0xbfeaff }, trap: { color: 0x8a5a3c }, nova: { color: 0xff8a3c }, vortex: { color: 0xff4fa3 }, magnet: { color: 0xe23a4a }, field: { color: 0x7ab0ff },
   banner: { color: 0xffe08a }, goo: { color: 0x7ee85a }, stage: { color: 0xff8fc0 }, pylon: { color: 0xffe14a }, fort: { color: 0xff8a2a }, pen: { color: 0x8a5a3a }, heat: { color: 0xffb35a }, web: { color: 0xe8e8ff }, gravy: { color: 0x9a5a28 },
-  bumper: { color: 0xff3fa4 }, claw: { color: 0xffd23c }, capsule: { color: 0x3fd8ff, dome: true },
+  bumper: { color: 0xff3fa4 }, claw: { color: 0xffd23c }, capsule: { color: 0x3fd8ff, dome: true }, wallow: { color: 0x8a6a42 },
 };
 function zoneMesh(G, kind, pos, radius) {
   const look = ZONE_LOOK[kind];
@@ -212,6 +222,7 @@ function zoneMesh(G, kind, pos, radius) {
     else if (kind === 'frost') m = new THREE.Mesh(new THREE.OctahedronGeometry(0.25, 0), new THREE.MeshStandardMaterial({ color: 0xe8f8ff, emissive: 0x9fdcff, emissiveIntensity: 0.4 }));
     else if (kind === 'vortex') m = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.18), new THREE.MeshBasicMaterial({ color: i % 2 ? 0x18e0f0 : 0xff4fa3 }));
     else if (kind === 'magnet' || kind === 'field') m = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.42), new THREE.MeshStandardMaterial({ color: i % 3 ? 0x5a5f6a : kind === 'field' ? 0x7ab0ff : 0xe23a4a, metalness: 0.6, roughness: 0.4 }));
+    else if (kind === 'wallow') m = new THREE.Mesh(new THREE.SphereGeometry(0.14 + Math.random() * 0.16, 10, 6), new THREE.MeshStandardMaterial({ color: i % 5 ? 0x7a5a36 : 0x9adcff, roughness: i % 5 ? 0.9 : 0.1 }));     // mud, with a few water bubbles
     else if (kind === 'goo') m = new THREE.Mesh(new THREE.SphereGeometry(0.12 + Math.random() * 0.12, 10, 8), new THREE.MeshStandardMaterial({ color: 0x8af06a, emissive: 0x4fc03a, emissiveIntensity: 0.35, roughness: 0.1 }));
     else m = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 4), new THREE.MeshBasicMaterial({ color: look.color }));
     const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * radius * 0.92;
@@ -496,6 +507,19 @@ function thrown(G, h, ctx, w) {
   d.y += w.lift ?? 0.18; d.normalize();
   const from = eyeOf(h).addScaledVector(d, 0.8);
   spawnProjectile(G, h, from, d.multiplyScalar(w.speed), w);
+}
+// Bigmouth's Belly Flop landing: a splash of mud and everyone near bowled over
+function flopLand(G, h) {
+  const a = h.def.q;
+  h.flopPending = false; h.knockT = 0;
+  ring(G, h.pos, 0x9adcff, a.radius); ring(G, h.pos, 0x8a6a42, a.radius * 0.6);
+  burst(G, h.pos.clone().setY(h.pos.y + 0.4), 0x9adcff, a.radius * 0.6); burst(G, h.pos.clone().setY(h.pos.y + 0.3), 0x7a5a36, a.radius * 0.4);
+  for (const u of [...enemiesOf(G, h), ...G.minions.filter(m => m.alive && m.team !== h.team)]) {
+    if (Math.hypot(u.pos.x - h.pos.x, u.pos.z - h.pos.z) > a.radius || Math.abs(u.pos.y - h.pos.y) > 3) continue;
+    damage(G, u, a.dmg, h); knock(u, v.subVectors(u.pos, h.pos).setY(0).normalize(), a.knock, 6);
+  }
+  G.ev.shake?.(h, 0.55);
+  G.ev.surface?.(h);
 }
 function slamLand(G, h) {
   const a = h.def.ult;
@@ -1914,6 +1938,37 @@ export const ABIL = {
     },
     ai: (G, b, a, c) => c.heroT && (c.near(a.radius * 0.8) >= 2 || (c.near(a.radius * 0.6) >= 1 && b.hp > b.maxHp * 0.5)),
   },
+  // ---- Bigmouth ----
+  bellyflop: {
+    cast(G, h, a) {
+      if (!h.onGround) return false;
+      const f = dirFrom(h.yaw, 0);
+      h.vel.set(f.x * 7, 12.5, f.z * 7); h.onGround = false; h.flopPending = true; h.knockT = 1.4; h.airT = 0;
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist < 8 && b.onGround,
+  },
+  wallow: {
+    cast(G, h, a) {
+      const p = h.pos.clone(); p.y = groundAt(p, 0.2, G.colliders);
+      addZone(G, { kind: 'wallow', pos: p, radius: a.radius, life: a.dur, team: h.team, owner: h, hps: a.hps, slow: a.slow });
+      h.barrierT = a.guard; h.barrierM = a.mult;
+      ring(G, p, 0x8a6a42, a.radius); burst(G, p.clone().setY(p.y + 0.4), 0x7a5a36, a.radius * 0.5); burst(G, p.clone().setY(p.y + 0.6), 0x9adcff, 1.2);
+      G.ev.shake?.(h, 0.3);
+      return true;
+    },
+    ai: (G, b, a, c) => (c.heroT && c.dist < 9) || b.hp < b.maxHp * 0.55,
+  },
+  hungry: {
+    cast(G, h, a) {
+      h.dashDir = dirFrom(h.yaw, 0); h.dashT = 0.85; h.dashSpeed = a.dist / 0.85; h.dashDmg = a.dmg; h.dashKnock = a.knock; h.dashHit = new Set();
+      h.dashStun = 0; h.dashColor = 0xff9aa8; h.dashSpin = false; h.dashMode = 'chomp'; h.grabbed = null; h.dashLift = a.lift; h.dashHeal = a.heal;
+      h.barrierT = Math.max(h.barrierT, 0.85); h.barrierM = Math.min(h.barrierT > 0 ? h.barrierM : 1, 0.6);   // tough to stop mid-charge
+      G.ev.shake?.(h, 0.6);
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.dist > 3 && c.dist < a.dist - 2,
+  },
   powerup: {
     cast(G, h, a, ctx) {
       const u = facedAlly(G, h, ctx, a.range) || h;
@@ -1947,6 +2002,41 @@ export const ABIL = {
       return true;
     },
     ai: (G, b, a, c) => c.heroT && c.alliesNear(a.radius) >= 1,
+  },
+  switcheroo: {
+    cast(G, h, a, ctx) {
+      const u = facedHero(G, h, ctx, a.range);
+      if (!u || !swapPlaces(G, h, u)) return false;
+      if (u.team !== h.team) stun(u, a.stun); else protect(u, a.mult, a.guard);
+      return true;
+    },
+    // bots use it to dive a far target, or to pull a hurt teammate out of the fight
+    ai: (G, b, a, c) => (c.heroT && c.dist > 12 && c.dist < a.range && b.hp > b.maxHp * 0.5) || (c.heroT && b.hp < b.maxHp * 0.3 && c.dist < 8),
+  },
+  shuffle: {
+    cast(G, h, a) {
+      const foes = enemiesOf(G, h).filter(u => u.pos.distanceTo(h.pos) < a.radius && !u.grabbed);
+      if (!foes.length) return false;
+      ring(G, h.pos, 0xb48cff, a.radius); ring(G, h.pos, 0xffd23c, a.radius * 0.6);
+      // everyone moves one place along; with only one enemy, they swap with you
+      const spots = (foes.length > 1 ? foes : [h, ...foes]).map(u => u.pos.clone());
+      const movers = foes.length > 1 ? foes : [h, ...foes];
+      movers.forEach((u, i) => {
+        const to = spots[(i + 1) % spots.length];
+        tracer(G, u.pos.clone().setY(u.pos.y + 1), to.clone().setY(to.y + 1), i % 2 ? 0xffd23c : 0xb48cff, 0.5);
+        burst(G, u.pos.clone().setY(u.pos.y + 1), 0xb48cff, 1);
+      });
+      movers.forEach((u, i) => { u.pos.copy(spots[(i + 1) % spots.length]); u.vel.set(0, 0, 0); u.hist && (u.hist.length = 0); });
+      for (const u of foes) {
+        damage(G, u, a.dmg, h); stun(u, a.stun);
+        if (pasId(h) === 'misdirect') slow(u, h.def.passive.slow, h.def.passive.dur + a.stun);
+        burst(G, chestOf(u), 0xffd23c, 1.2); G.ev.flash?.(u, 'Shuffled!');
+      }
+      if (pasId(h) === 'misdirect') protect(h, h.def.passive.mult, h.def.passive.dur);
+      G.ev.shake?.(h, 0.5);
+      return true;
+    },
+    ai: (G, b, a, c) => c.heroT && c.near(a.radius - 2) >= 2,
   },
 };
 
@@ -2180,6 +2270,39 @@ function prizeTag(G, h, u) {
 function protect(u, mult, dur) {
   u.barrierM = u.barrierT > 0 ? Math.min(u.barrierM, mult) : mult;
   u.barrierT = Math.max(u.barrierT, dur);
+}
+// Switcheroo: two heroes trade places in a flash of stars. Her Misdirection passive guards her
+// for a moment afterwards and leaves the enemy she swapped dazed.
+export function swapPlaces(G, h, u) {
+  if (!h?.alive || !u?.alive || u === h || u.kind !== 'hero' || h.grabbed || u.grabbed) return false;
+  const a = h.pos.clone(), b = u.pos.clone();
+  for (let i = 0; i < 3; i++) tracer(G, a.clone().setY(a.y + 0.5 + i * 0.5), b.clone().setY(b.y + 0.5 + i * 0.5), i % 2 ? 0xffd23c : 0xb48cff, 0.35);
+  for (const q of [a, b]) { burst(G, q.clone().setY(q.y + 1), 0xb48cff, 1.1); ring(G, q, 0xffd23c, 1.3); }
+  h.pos.copy(b); u.pos.copy(a);
+  h.vel.set(0, Math.min(0, h.vel.y), 0); u.vel.set(0, Math.min(0, u.vel.y), 0);
+  u.hist && (u.hist.length = 0); h.hist && (h.hist.length = 0);          // no rewinding back through a swap
+  if (pasId(h) === 'misdirect') {
+    const p = h.def.passive;
+    protect(h, p.mult, p.dur);
+    if (u.team !== h.team) slow(u, p.slow, p.dur);
+  }
+  G.ev.flash?.(u, 'Switched!');
+  G.ev.shake?.(h, 0.15);
+  return true;
+}
+// The hero (friend or enemy) closest to where you're facing, in range and in sight.
+function facedHero(G, h, ctx, range) {
+  const d = (ctx.aim || dirFrom(h.yaw, h.pitch)).clone().normalize(), o = eyeOf(h);
+  let pick = null, best = 0.94;
+  for (const u of G.heroes) {
+    if (u === h || !u.alive || (u.team !== h.team && isHidden(u))) continue;
+    const to = chestOf(u).sub(o), dist = to.length();
+    if (dist > range) continue;
+    const dot = to.normalize().dot(d);
+    if (dot > best && hasLOS(o, chestOf(u), G.colliders)) { best = dot; pick = u; }
+  }
+  if (!pick && ctx.target?.kind === 'hero' && ctx.target !== h && ctx.target.alive && ctx.target.pos.distanceTo(h.pos) <= range) pick = ctx.target;
+  return pick;
 }
 // A jagged lightning bolt between two points.
 function zap(G, a, b, color = 0xffe14a) {

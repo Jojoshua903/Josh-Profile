@@ -1,4 +1,4 @@
-import { cfg, save } from './settings.js?v=20261128w';
+import { cfg, save } from './settings.js?v=20261129f';
 
 // Guided first match: a checklist of ten short steps on Solmare Piazza against training
 // dummies that stand still. Each step watches what the player does and ticks itself off.
@@ -45,6 +45,7 @@ const PASSIVE_TRY = {
   highscore: { how: 'Finish off a dummy to start a High Score streak: more damage and healing per stack.', check: (T, P) => P.scoreStacks > 0 },
   nightflight: { how: `Jump with ${K('Space')} and keep holding it to fly. Get above 8m!`, check: (T, P) => P.pos.y > 8 },
   fickle: { how: "Fire six shots at a dummy to go through the whole rainbow: watch it burn, slow and get marked.", check: (T, P, G) => (T.hues = (T.hues || new Set()).add(P.hue ?? -1)).size >= 7 || dummies(G).some(d => d.markT > 0 && d.burnT > 0) },
+  misdirect: { how: 'Shoot a dummy with your wand to swap places with it.', check: (T, P) => P.barrierT > 0 },
   magnetise: { how: `Shoot a dummy to magnetise it, then yank it with Attract (${K('E')}): magnetised targets get clamped.`, check: (T, P, G) => dummies(G).some(d => d.stunT > 0) },
 };
 const WAIT = 7;            // seconds a hands-off passive step stays up before moving on

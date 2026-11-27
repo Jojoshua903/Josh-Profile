@@ -1,12 +1,12 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { TUNING, HILL, CART } from './data.js?v=20261128w';
-import { buildHeroModel } from './models.js?v=20261128w';
-import { makeBox, moveBody, resolveXZ, rayBox, raySphere, rayWorld, hasLOS } from './world.js?v=20261128w';
+import { TUNING, HILL, CART } from './data.js?v=20261129f';
+import { buildHeroModel } from './models.js?v=20261129f';
+import { makeBox, moveBody, resolveXZ, rayBox, raySphere, rayWorld, rayFace, hasLOS } from './world.js?v=20261129f';
 import { resetStatus, tickStatus, afterMove, wallClimb, takenMult, fireMult, canAct, breakInvis, isHidden, slow as applySlow, stun as applyStun, knock as applyKnock, dropBlobs,
-  dealtMult, onDealt, onHurt, onKill, mend, thaw } from './abilities.js?v=20261128w';
-import { poseHero, rubble } from './anim.js?v=20261128w';
-import { onEliminated, survivorPreMove, survivorPostMove } from './survivor.js?v=20261128w';
-import { tickVfx, tickLight, blast, sparks } from './vfx.js?v=20261128w';
+  dealtMult, onDealt, onHurt, onKill, mend, thaw, swapPlaces } from './abilities.js?v=20261129f';
+import { poseHero, rubble } from './anim.js?v=20261129f';
+import { onEliminated, survivorPreMove, survivorPostMove } from './survivor.js?v=20261129f';
+import { tickVfx, tickLight, blast, sparks } from './vfx.js?v=20261129f';
 
 // Survivor teams are per-hero ids; anything that isn't blue reads as an enemy red.
 export const TEAM_COLOR = new Proxy({ blue: 0x2f5bff, red: 0xff5a36 }, { get: (t, k) => (k in t ? t[k] : 0xff5a36) });
@@ -473,6 +473,26 @@ function shoot(G, h, dir, muzzle, charge, replay = false) {
       const v = jitter(d, 0.22).multiplyScalar(13 + Math.random() * 5); v.y += 2.5;
       G.fx.push({ obj: m, life: 0.55, max: 0.55, kind: 'debris', vel: v, spin: 0 });
     }
+  } else if (w.mode === 'hose') {                   // Bigmouth's River Cannon: a soaking stream that shoves enemies back
+    spend();
+    const d = dir.clone().normalize();
+    for (const u of [...G.heroes, ...G.minions, ...G.structures]) {
+      if (!u.alive || u.team === h.team) continue;
+      const c = chestOf(u), to = c.clone().sub(o), dist = to.length();
+      if (dist > w.range + (u.rad || 0) || to.normalize().dot(d) < w.cone || !hasLOS(o, c, G.colliders)) continue;
+      damage(G, u, w.dmg * bonus, h, false);
+      if (u.kind !== 'tower' && u.kind !== 'core' && u.alive && u.vel) {
+        const k = w.push * (1 - dist / (w.range + 1)) * w.rate * (u.def?.passive?.id === 'ballast' ? 0.3 : 1);
+        u.pos.x += d.x * k; u.pos.z += d.z * k; resolveXZ(u.pos, u.radius || 0.5, G.colliders);
+        u.wetT = 0.4;
+      }
+    }
+    for (let k = 0; k < 4; k++) {                  // water droplets
+      const m = new THREE.Mesh(new THREE.SphereGeometry(0.06 + Math.random() * 0.07, 6, 4), new THREE.MeshBasicMaterial({ color: k % 3 ? 0x7ad8ff : 0xffffff, transparent: true }));
+      m.position.copy(mz); G.scene.add(m);
+      const v = jitter(d, 0.12).multiplyScalar(17 + Math.random() * 6); v.y += 1.5;
+      G.fx.push({ obj: m, life: 0.6, max: 0.6, kind: 'debris', vel: v, spin: 0 });
+    }
   } else if (w.mode === 'homing') {
     spend();
     for (let k = 0; k < w.fan; k++) {
@@ -521,6 +541,16 @@ function shoot(G, h, dir, muzzle, charge, replay = false) {
         if (d > 2.5 && !(u.kind === 'hero' && u.def.passive?.id === 'ballast')) { u.pos.x += dx / d * w.tug; u.pos.z += dz / d * w.tug; resolveXZ(u.pos, u.radius || 0.5, G.colliders); }
         if (Math.random() < 0.4) burst(G, r.point, 0x7ab0ff, 0.25);
       }
+    } else spark(G, r.point);
+  } else if (w.mode === 'swap') {                   // Switcheroo's wand: a bolt that swaps her places with the hero it hits
+    spend();
+    const r = trace(G, o, jitter(dir, sp), w.range, h.team);
+    tracer(G, mz, r.point, w.tracer, 0.12); tracer(G, mz, r.point, 0xffd23c, 0.07);
+    if (r.unit) {
+      const u = r.unit;
+      damage(G, u, w.dmg * (r.head ? w.head : 1) * bonus, h, r.head);
+      if (u.kind === 'hero' && u.alive && u.team !== h.team) swapPlaces(G, h, u);
+      else burst(G, r.point, w.tracer, 0.35);
     } else spark(G, r.point);
   } else if (w.mode === 'ribbon') {                 // Pirouette's ribbon: one sweep cuts enemies and heals friends
     spend();
@@ -585,6 +615,7 @@ function shoot(G, h, dir, muzzle, charge, replay = false) {
 
 function explode(G, p, owner, w, direct) {
   if (direct && !w.noDirect && (!w.splash || w.splash <= 0)) {
+    if (w.bounced) direct.unit.bankT = G.time;              // hit by a ball that bounced first (the Bank Shot achievement)
     damage(G, direct.unit, w.dmg * (direct.head ? (w.head || 1) : 1), owner, direct.head);
     if (w.slow) applySlow(direct.unit, w.slow.mult, w.slow.dur);
     burst(G, p, w.color || 0xffb070, 0.35);
@@ -660,15 +691,22 @@ export function updateProjectiles(G, dt) {
     const d = p.vel.clone().normalize();
     if (G.projHook?.(G, p, d, step)) { G.scene.remove(p.mesh); G.projectiles.splice(i, 1); continue; }   // Smash Ball: it hit the ball
     const r = trace(G, p.pos, d, step, p.team);
-    if (p.w.bounce && r.t < step && !r.unit && (p.bounces || 0) < p.w.bounce) {
-      // Tilt's steel balls: bounce off floors and walls (whichever way they were mostly heading), a little slower each time
-      p.pos.copy(r.point).addScaledVector(d, -0.05);
-      const vy = Math.abs(p.vel.y), vh = Math.hypot(p.vel.x, p.vel.z);
-      if (p.vel.y < 0 && vy > vh * 0.45) p.vel.y = vy * 0.72;
-      else if (Math.abs(p.vel.x) > Math.abs(p.vel.z)) p.vel.x *= -0.8; else p.vel.z *= -0.8;
+    // Tilt's steel balls: reflect off whatever face they hit (floor, wall, ledge top or underside, or a
+    // friendly tower), losing a little speed into the surface each time. Enemies still take the hit.
+    const f = p.w.bounce && !(r.t < step && r.unit) && (p.bounces || 0) < p.w.bounce
+      ? rayFace(p.pos, d, step, G.colliders, G.structures.filter(s => s.alive && s.team === p.team).map(s => s.hitbox)) : null;
+    if (f?.n && f.t < step) {
+      const n = v3.set(...f.n), into = p.vel.dot(n), at = p.pos.clone().addScaledVector(d, f.t);
+      if (into < 0) {
+        p.vel.addScaledVector(n, -into);                         // the part along the surface
+        p.vel.multiplyScalar(0.92).addScaledVector(n, -into * 0.72);   // and the part bouncing back off it
+        if (n.y > 0.5 && p.vel.y < 4.5) p.vel.y = 4.5;           // a floor always kicks it back up, so it never skids along
+      }
+      p.pos.copy(at).addScaledVector(n, 0.08); p.mesh.position.copy(p.pos);
       p.bounces = (p.bounces || 0) + 1;
+      p.w = { ...p.w, bounced: p.bounces };
       if (p.owner?.def?.passive?.id === 'extraball') p.w = { ...p.w, dmg: p.w.dmg * (1 + p.owner.def.passive.bonus) };   // Extra Ball
-      spark(G, r.point); G.ev.bump?.(r.point, true);
+      spark(G, at); G.ev.bump?.(at, true);
       continue;
     }
     if (r.t < step || p.life <= 0) {

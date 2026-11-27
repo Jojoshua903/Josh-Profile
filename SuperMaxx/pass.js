@@ -1,15 +1,16 @@
-import { ALL_HEROES as HEROES } from './heroes.js?v=20261128w';
-import { cfg, save } from './settings.js?v=20261128w';
-import { SLOT_HEROES, RETIRED_HEROES, slotOwned, isSlotItem, setSkinGate, setHeroGate } from './slots.js?v=20261128w';
-import { sprayUrl } from './sprays.js?v=20261128w';
-import { isContractHero, contractDone, tasksDone, contractUnlocked } from './contracts.js?v=20261128w';
-export { isContractHero } from './contracts.js?v=20261128w';
+import { ALL_HEROES as HEROES } from './heroes.js?v=20261129f';
+import { cfg, save } from './settings.js?v=20261129f';
+import { SLOT_HEROES, RETIRED_HEROES, slotOwned, isSlotItem, setSkinGate, setHeroGate } from './slots.js?v=20261129f';
+import { sprayUrl } from './sprays.js?v=20261129f';
+import { isContractHero, contractDone, tasksDone, contractUnlocked } from './contracts.js?v=20261129f';
+import { isRankedItem, rankedOwns, rankedLock } from './ranked.js?v=20261129f';
+export { isContractHero } from './contracts.js?v=20261129f';
 
 // Season pass: XP from matches (mostly from winning) climbs a 30-tier track of hero skins,
 // cosmetics and three season heroes. Each season has its own track and its own XP; whatever
 // you earned in an old season stays yours. Progress is saved locally (and to your account).
 
-import { SEASONS, seasonLive, SEASON, NEXT_SEASON, seasonStartLabel } from './seasons.js?v=20261128w';
+import { SEASONS, seasonLive, SEASON, NEXT_SEASON, seasonStartLabel } from './seasons.js?v=20261129f';
 export { SEASONS, seasonLive, SEASON, NEXT_SEASON, seasonStartLabel };
 
 // Skins override the hero palette (and the accent colour used for art and the view model).
@@ -91,6 +92,11 @@ export const SKINS = [
   { id: 'chef-noir', hero: 'chef', slot: true, name: 'Midnight Service', color: 0x1d1d24, palette: { main: 0x1d1d24, trim: 0xffc93c, dark: 0x0c0c12, skin: 0xf0c09a, finish: { trimMetal: 0.6, glow: 0.15 } } },
   { id: 'manspider-tarantula', hero: 'manspider', slot: true, name: 'Casual Friday', color: 0xc8642e, palette: { main: 0x6a3a1e, trim: 0xff8a3c, dark: 0x2a160a, skin: 0x6a3a1e, finish: { rough: 0.9 } } },
   { id: 'magnet-thunder', hero: 'magnet', slot: true, name: 'Thunderhead', color: 0xffe14a, palette: { main: 0x24306a, trim: 0xffe14a, dark: 0x141a3a, skin: 0xf2c8a8, finish: { rough: 0.3, metal: 0.3, glow: 0.2 } } },
+  // ---- Ranked rewards: legendary skins, one for each top rank (see ranked.js) ----
+  { id: 'vanguard-sovereign', hero: 'vanguard', legendary: true, name: 'Sunken Sovereign', color: 0x3fe0c8, palette: { main: 0x0e3a4a, trim: 0xffd23c, dark: 0x061a24, finish: { metal: 0.45, rough: 0.2, trimMetal: 0.6, glow: 0.9 } } },
+  { id: 'ember-supernova', hero: 'ember', legendary: true, name: 'Supernova', color: 0xffe14a, palette: { main: 0x1a0a2a, trim: 0xffe14a, dark: 0x0a0414, finish: { glow: 1.4, rough: 0.2, trimMetal: 0.3 } } },
+  { id: 'hippo-riverking', hero: 'hippo', legendary: true, name: 'River King', color: 0x3fc9b8, palette: { main: 0x2a6a8a, trim: 0xffd23c, dark: 0x123048, skin: 0x9adcff, finish: { metal: 0.25, rough: 0.25, trimMetal: 0.6, glow: 0.5 } } },
+  { id: 'striker-champion', hero: 'striker', legendary: true, name: 'Maxx Champion', color: 0xff3f8a, palette: { main: 0xffffff, trim: 0xff3f8a, dark: 0x1d2340, finish: { rough: 0.18, trimMetal: 0.5, glow: 1.1 } } },
 ];
 
 // Cosmetics: slot machine sprays.
@@ -166,10 +172,10 @@ export const heroTier = id => heroReward(id)?.tier || 0;           // 0 = in the
 export const skinTier = id => skinReward(id)?.tier || 0;
 export const rewardSeason = id => (heroReward(id) || skinReward(id))?.season || 0;
 const earned = r => !r || seasonTier(r.season) >= r.tier;           // reached in its own season's track
-export const heroOwned = id => isContractHero(id) ? contractDone(id) : RETIRED_HEROES.includes(id) ? earned(heroReward(id)) || slotOwned(id)
+export const heroOwned = id => isRankedItem(id) ? rankedOwns(id) : isContractHero(id) ? contractDone(id) : RETIRED_HEROES.includes(id) ? earned(heroReward(id)) || slotOwned(id)
   : SLOT_HEROES.includes(id) ? slotOwned(id) : earned(heroReward(id));      // a finished season's heroes: earned on its pass, or won at the slots
 // A skin only counts once you have its hero; until then pass skins wait for you and slot skins stay out of the machine.
-export const skinOwned = id => heroOwned(skinById(id)?.hero) && (isSlotItem(id) ? slotOwned(id) : earned(skinReward(id)));
+export const skinOwned = id => heroOwned(skinById(id)?.hero) && (isRankedItem(id) ? rankedOwns(id) : isSlotItem(id) ? slotOwned(id) : earned(skinReward(id)));
 const skinHeroName = id => HEROES.find(h => h.id === skinById(id)?.hero)?.callsign || 'its hero';
 const needsHero = id => !heroOwned(skinById(id)?.hero);
 // Where a pass reward lives: this season's tier, a coming season, or one that's over.
@@ -178,8 +184,8 @@ const passLong = r => r.season === SEASON.n ? `season pass tier ${r.tier}` : r.s
   ? `the Season ${r.season} pass, tier ${r.tier} (opens ${seasonStartLabel(SEASONS[r.season - 1])})` : `the Season ${r.season} pass, tier ${r.tier} (that season is over)`;
 const reward = (id, skin) => (skin ? skinReward(id) : heroReward(id));
 // What a locked hero or skin is waiting on, for tiles and chips: the slot machine or a pass tier.
-export const lockShort = (id, skin) => skin && needsHero(id) ? 'Hero' : !skin && isContractHero(id) ? (contractUnlocked(id) ? `📜 ${tasksDone(id)}/3` : '✉️') : isSlotItem(id) ? '🎰' : passTag(reward(id, skin));
-export const lockLong = (id, skin) => skin && needsHero(id) ? `Unlock ${skinHeroName(id)} first, then ${isSlotItem(id) ? 'win it from the slot machine' : `get it from ${passLong(skinReward(id))}`}`
+export const lockShort = (id, skin) => isRankedItem(id) && !(skin && needsHero(id)) ? '🏅 Ranked' : skin && needsHero(id) ? 'Hero' : !skin && isContractHero(id) ? (contractUnlocked(id) ? `📜 ${tasksDone(id)}/3` : '✉️') : isSlotItem(id) ? '🎰' : passTag(reward(id, skin));
+export const lockLong = (id, skin) => isRankedItem(id) && !(skin && needsHero(id)) ? rankedLock(id) : skin && needsHero(id) ? `Unlock ${skinHeroName(id)} first, then ${isRankedItem(id) ? rankedLock(id).replace('Ranked reward · reach', 'reach') : isSlotItem(id) ? 'win it from the slot machine' : `get it from ${passLong(skinReward(id))}`}`
   : !skin && isContractHero(id) ? (contractUnlocked(id) ? `Recruitment contract · ${tasksDone(id)} of 3 tasks done` : 'Sealed contract · finish another recruitment contract to open it') : isSlotItem(id) ? 'Slot machine prize' : `Unlocks at ${passLong(reward(id, skin))}`;
 export { isSlotItem };
 export const skinsFor = heroId => SKINS.filter(s => s.hero === heroId);

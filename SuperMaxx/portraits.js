@@ -1,8 +1,8 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { buildHeroModel } from './models.js?v=20261128w';
-import { buildWorld } from './world.js?v=20261128w';
-import { createStructure } from './units.js?v=20261128w';
-import { HEROES } from './heroes.js?v=20261128w';
+import { buildHeroModel } from './models.js?v=20261129f';
+import { buildWorld } from './world.js?v=20261129f';
+import { createStructure } from './units.js?v=20261129f';
+import { HEROES } from './heroes.js?v=20261129f';
 
 // Menu artwork, generated once and cached as data URLs: hero splash art (themed
 // painted backdrop + a posed render of the model), headshot tiles, and map previews.
@@ -53,6 +53,8 @@ const POSE = {
   pixel: { turn: 0.45, arm: -1.4, lean: 0.04, cam: [-1.3, 0.7, -3.7] },
   owl: { turn: -0.45, arm: -1.2, lean: 0.05, cam: [-1.4, 0.75, -3.8], hop: 0.06 },
   magnet: { turn: 0.5, arm: -1.4, lean: 0.04, cam: [-1.3, 0.8, -3.6], hop: 0.06 },
+  swapper: { turn: 0.45, arm: -1.5, lean: 0.05, cam: [-1.3, 0.85, -3.6], hop: 0.06 },
+  hippo: { turn: 0.45, arm: -1.2, lean: 0.02, cam: [-1.5, 0.9, -4.1], hop: 0.04 },
   unicorn: { turn: 0.45, arm: -1.5, lean: 0.06, cam: [-1.3, 0.8, -3.6], hop: 0.1 },
 };
 
@@ -335,6 +337,34 @@ const MOTIF = {
     g.fillStyle = rgba(0xd8dee8, 0.9);
     for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2, r = w * (0.2 + (i % 3) * 0.08); g.save(); g.translate(w * 0.5 + Math.cos(a) * r, h * 0.62 + Math.sin(a) * r * 0.5); g.rotate(a); g.fillRect(-8, -2, 16, 4); g.restore(); }
   },
+  swapper(g, w, h, p) {                        // a theatre stage: red curtains, a spotlight and a scatter of playing cards
+    const sky = g.createLinearGradient(0, 0, 0, h); sky.addColorStop(0, rgba(0x16102e, 0.85)); sky.addColorStop(1, rgba(0x3a2470, 0.7));
+    g.fillStyle = sky; g.fillRect(0, 0, w, h);
+    const spot = g.createRadialGradient(w * 0.5, h * 0.75, 10, w * 0.5, h * 0.75, w * 0.45); spot.addColorStop(0, rgba(0xfff3c4, 0.55)); spot.addColorStop(1, rgba(0xfff3c4, 0));
+    g.fillStyle = spot; g.fillRect(0, 0, w, h);
+    g.fillStyle = rgba(0xb0283a, 0.9);
+    for (const s of [0, 1]) for (let i = 0; i < 4; i++) { const x = s ? w - (i + 1) * 26 : i * 26; g.beginPath(); g.ellipse(x + 13, h * 0.5, 15, h * 0.55, 0, 0, 7); g.fill(); }
+    g.fillRect(0, 0, w, 34); g.fillStyle = rgba(0xffd23c, 0.9); g.fillRect(0, 30, w, 6);
+    for (let i = 0; i < 14; i++) {
+      const x = w * (0.2 + ((i * 37) % 60) / 100), y = h * (0.15 + ((i * 53) % 60) / 100);
+      g.save(); g.translate(x, y); g.rotate(i * 0.7);
+      g.fillStyle = rgba(0xffffff, 0.9); g.fillRect(-10, -14, 20, 28);
+      g.fillStyle = rgba(i % 2 ? 0xb0283a : 0x16102e, 0.9); g.font = 'bold 14px sans-serif'; g.fillText(i % 2 ? '♥' : '♠', -5, 5);
+      g.restore();
+    }
+  },
+  hippo(g, w, h, p) {                          // a river at sunset: reeds, lily pads and rings of ripples
+    const sky = g.createLinearGradient(0, 0, 0, h); sky.addColorStop(0, rgba(0xffb07a, 0.6)); sky.addColorStop(0.55, rgba(0xff9aa8, 0.45)); sky.addColorStop(1, rgba(0x3a7aa8, 0.65));
+    g.fillStyle = sky; g.fillRect(0, 0, w, h);
+    g.fillStyle = rgba(0x3a7aa8, 0.7); g.fillRect(0, h * 0.62, w, h * 0.38);
+    g.strokeStyle = rgba(0xdff6ff, 0.5); g.lineWidth = 3;
+    for (let i = 1; i <= 5; i++) { g.beginPath(); g.ellipse(w * 0.5, h * 0.78, w * 0.08 * i, h * 0.025 * i, 0, 0, 7); g.stroke(); }
+    g.fillStyle = rgba(0x5a9a4a, 0.9);
+    for (const [x, y, r] of [[0.16, 0.82, 26], [0.8, 0.74, 32], [0.68, 0.9, 22], [0.28, 0.7, 18]]) { g.beginPath(); g.arc(w * x, h * y, r, 0.3, Math.PI * 2 - 0.1); g.lineTo(w * x, h * y); g.fill(); }
+    g.fillStyle = rgba(0xff9aa8, 0.95); g.beginPath(); g.arc(w * 0.8, h * 0.72, 8, 0, 7); g.fill();
+    g.strokeStyle = rgba(0x4a6a2a, 0.85); g.lineWidth = 4;
+    for (let i = 0; i < 14; i++) { const x = (i < 7 ? 0.02 + i * 0.025 : 0.86 + (i - 7) * 0.02) * w; g.beginPath(); g.moveTo(x, h * 0.66); g.quadraticCurveTo(x + 6, h * 0.45, x - 4 + (i % 3) * 4, h * (0.28 + (i % 4) * 0.04)); g.stroke(); }
+  },
   unicorn(g, w, h, p) {                        // sunshine and rainbows on the left... a storm and red eyes on the right
     const sky = g.createLinearGradient(0, 0, w, 0); sky.addColorStop(0, rgba(0xffd6ec, 0.75)); sky.addColorStop(0.55, rgba(0xd8c8ff, 0.6)); sky.addColorStop(1, rgba(0x1a1024, 0.85));
     g.fillStyle = sky; g.fillRect(0, 0, w, h);
@@ -498,7 +528,7 @@ export function headshot(def) {
 // Rendered view of a map from the blue base, looking down the lanes, with a couple of
 // heroes in the foreground for scale.
 export function mapArt(map, W = 640, H = 1000) {
-  const key = 'map:' + map.id;
+  const key = 'map:' + map.id + (map.night ? ':night' : '');
   if (cache.has(key)) return cache.get(key);
   const sc = new THREE.Scene();
   const fake = { scene: sc, colliders: [], structures: [] };

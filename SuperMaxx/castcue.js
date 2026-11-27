@@ -1,5 +1,5 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { cfg } from './settings.js?v=20261128w';
+import { cfg } from './settings.js?v=20261129f';
 
 // Cast cues for the abilities that don't throw, build or blow anything up: buffs, heals, shields,
 // stealth and teleports. In first person those are easy to miss, so each one gets
@@ -37,6 +37,11 @@ export const CUES = {
   warppipe:   { icon: '🟩', c: 0x3ccf5a, screen: 'fade',   bits: '💨', world: 'puff' },
   oneup:      { icon: '💚', c: 0x5ae05a, screen: 'ring',   bits: '1UP', world: 'pillar' },
   submerge:   { icon: '🐊', c: 0x6a8a3a, screen: 'fade',   bits: '🫧', world: 'puff' },
+  bellyflop:  { icon: '🦛', c: 0x9adcff, screen: 'shake',  bits: '💦', world: 'puff' },
+  wallow:     { icon: '🛁', c: 0x8a6a42, screen: 'heal',   bits: '🫧', world: 'puff' },
+  hungry:     { icon: '😮', c: 0xff9aa8, screen: 'ring',   bits: '🦷', world: 'pillar' },
+  switcheroo: { icon: '🔀', c: 0xb48cff, screen: 'fade',   bits: '🃏', world: 'puff' },
+  shuffle:    { icon: '🎩', c: 0xffd23c, screen: 'ring',   bits: '🃏', world: 'pillar' },
   molehole:   { icon: '🕳️', c: 0x8a6a4a, screen: 'ring',   bits: '🪨', world: 'burst' },
   rally:      { icon: '🚩', c: 0xffd23c, screen: 'power',  bits: '⚔', world: 'pillar' },
   pylon:      { icon: '🗼', c: 0xffe14a, screen: 'zap',    bits: '⚡', world: 'burst' },

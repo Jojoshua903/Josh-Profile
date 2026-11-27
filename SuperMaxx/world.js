@@ -1,10 +1,10 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { TUNING } from './data.js?v=20261128w';
-import { THEMES, rng, buildSky, buildGround } from './scenery.js?v=20261128w';
-import { buildBackdrop } from './backdrop.js?v=20261128w';
-import { styleBlock, scatterProps, laneGates } from './props.js?v=20261128w';
-import { buildAmbient } from './ambient.js?v=20261128w';
-import { buildStageSky, buildDressing, contactShadows } from './stage.js?v=20261128w';
+import { TUNING } from './data.js?v=20261129f';
+import { THEMES, rng, buildSky, buildGround } from './scenery.js?v=20261129f';
+import { buildBackdrop } from './backdrop.js?v=20261129f';
+import { styleBlock, scatterProps, laneGates } from './props.js?v=20261129f';
+import { buildAmbient } from './ambient.js?v=20261129f';
+import { buildStageSky, buildDressing, contactShadows } from './stage.js?v=20261129f';
 
 // ---------- collision primitives ----------
 // A collider is an axis-aligned box from y=0 (or bottom) to top.
@@ -97,6 +97,30 @@ export function rayWorld(o, d, maxT, colliders) {
     if (t < best) best = t;
   }
   return best;
+}
+
+// The surface a ray hits first and which way that surface faces: the ground, or the face of a box
+// the ray enters. Used to bounce things off walls, floors, ledges and undersides properly.
+export function rayFace(o, d, maxT, colliders, extra = []) {
+  let best = maxT, n = null;
+  if (d.y < 0) { const tg = -o.y / d.y; if (tg < best) { best = tg; n = [0, 1, 0]; } }
+  const os = [o.x, o.y, o.z], ds = [d.x, d.y, d.z];
+  for (const b of [...colliders, ...extra]) {
+    if (!b.alive || b.unit) continue;
+    const mins = [b.minX, b.bottom, b.minZ], maxs = [b.maxX, b.top, b.maxZ];
+    let t0 = 0, t1 = best, ax = -1, ok = true;
+    for (let i = 0; i < 3; i++) {
+      if (Math.abs(ds[i]) < 1e-9) { if (os[i] < mins[i] || os[i] > maxs[i]) { ok = false; break; } continue; }
+      let a = (mins[i] - os[i]) / ds[i], c = (maxs[i] - os[i]) / ds[i];
+      if (a > c) [a, c] = [c, a];
+      if (a > t0) { t0 = a; ax = i; }
+      t1 = Math.min(t1, c);
+      if (t0 > t1) { ok = false; break; }
+    }
+    if (!ok || ax < 0 || t0 >= best) continue;          // ax < 0: started inside the box
+    best = t0; n = [0, 0, 0]; n[ax] = ds[ax] > 0 ? -1 : 1;
+  }
+  return { t: best, n };
 }
 
 export function hasLOS(a, b, colliders) {

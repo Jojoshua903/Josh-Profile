@@ -1,5 +1,5 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { M, put, mergeStatic } from './scenery.js?v=20261128w';
+import { M, put, mergeStatic } from './scenery.js?v=20261129f';
 
 // Buildings and far scenery around the arena. Everything sits outside the playable
 // rectangle (|x| > W, |z| > L) so it never affects collision.

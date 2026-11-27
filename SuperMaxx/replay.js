@@ -1,7 +1,7 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { poseHero } from './anim.js?v=20261128w';
-import { castFx, sparks } from './vfx.js?v=20261128w';
-import { dirFrom, eyeOf } from './units.js?v=20261128w';
+import { poseHero } from './anim.js?v=20261129f';
+import { castFx, sparks } from './vfx.js?v=20261129f';
+import { dirFrom, eyeOf } from './units.js?v=20261129f';
 
 // Play of the game. Every hero's position, aim and status is recorded 20 times a second into
 // a rolling 12-second buffer. Each elimination is scored (multi-kills, ultimates, towers);
@@ -69,7 +69,7 @@ function capture(G) {
 
 // Called when the match ends: lock in anything still waiting for its last two seconds.
 export function finalClip(G) {
-  const R = G.rec; if (!R) return null;
+  const R = G.rec; if (!R || R.potg === false) return null;
   if (R.pending) capture(G);
   return R.best;
 }

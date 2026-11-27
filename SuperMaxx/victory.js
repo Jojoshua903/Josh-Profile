@@ -1,5 +1,5 @@
 import * as THREE from 'https://artifactcdn.diabrowser.engineering/ajax/libs/three.js/three.module.js';
-import { burst, ring } from './units.js?v=20261128w';
+import { burst, ring } from './units.js?v=20261129f';
 
 // Victory poses: when your team wins, the camera swings round to face your hero, who strikes
 // their own pose with their own effect and line before the results come up. Poses are built on
@@ -69,6 +69,10 @@ export const VICTORY = {
     pose: (R, P, a, t, lift) => { const hop = (t % 0.8) < 0.4; R(a.r, 'x', hop ? -3 : -2.2); R(P?.elbowR, 'x', hop ? 0 : 0.6); R(a.l, 'x', 0.3); R(a.l, 'z', -0.6); R(P?.elbowL, 'x', 1.4); lift(hop ? Math.sin((t % 0.8) / 0.4 * Math.PI) * 0.55 : 0); } },
   magnet: { name: 'Pulled It Off', line: 'Told you everything comes to me.', fx: ['zap', 0x7ab0ff, 0.4],
     pose: (R, P, a, t, lift) => { R(a.r, 'x', -2.4); R(a.r, 'z', 0.25); R(a.l, 'x', -0.4 + Math.sin(t * 6) * 0.1); R(P?.head, 'y', Math.sin(t * 1.5) * 0.25); lift(Math.abs(Math.sin(t * 2)) * 0.08); } },
+  swapper: { name: 'Ta-da!', line: 'Thank you, thank you, you’ve been wonderful!', fx: ['confetti', 0xffd23c, 0.35],
+    pose: (R, P, a, t, lift) => { R(a.r, 'x', -2.5); R(a.r, 'z', 0.35); R(a.l, 'x', -0.6 - Math.max(0, Math.sin(t * 2)) * 0.5); R(a.l, 'z', -0.6); R(P?.head, 'x', Math.sin(t * 2) > 0.7 ? 0.35 : 0); lift(Math.abs(Math.sin(t * 1.5)) * 0.06); } },
+  hippo: { name: 'Big Splash', line: 'Bath time for the winners, darlings!', fx: ['confetti', 0x9adcff, 0.3],
+    pose: (R, P, a, t, lift) => { R(a.r, 'x', -2.6 + Math.sin(t * 3) * 0.15); R(a.l, 'x', -2.6 + Math.sin(t * 3 + 1) * 0.15); R(P?.head, 'x', -0.25); lift(Math.abs(Math.sin(t * 2.4)) * 0.12); } },
   unicorn: { name: 'Happily Ever After', line: 'Wishes do come true! For me, anyway.', fx: ['confetti', 0xff8fd0, 0.3],
     pose: (R, P, a, t, lift) => { const hop = (t % 0.9) < 0.45; R(a.r, 'x', -2.6); R(a.l, 'x', -2.6); R(a.r, 'z', 0.4); R(a.l, 'z', -0.4); R(P?.head, 'z', Math.sin(t * 4) * 0.15); lift(hop ? Math.sin((t % 0.9) / 0.45 * Math.PI) * 0.25 : 0); } },
   owl: { name: 'Night Delivery', line: 'Signed, sealed, delivered. Hoo-hoo!', fx: ['confetti', 0xfff0d0, 0.25],
